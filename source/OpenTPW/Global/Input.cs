@@ -122,7 +122,7 @@ public static partial class Input
 			Forward += 1;
 		if ( IsKeyPressed( Key.S ) )
 			Forward -= 1;
-
+		
 		LastKeysDown = [.. KeysDown];
 		KeysDown.Clear();
 

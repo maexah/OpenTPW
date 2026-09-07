@@ -16,7 +16,7 @@ public partial class Editor
 
 	private List<BaseTab> tabs = new();
 
-	private bool shouldRender = true;
+	public bool shouldRender = false;
 
 	public static ImFontPtr MonospaceFont { get; private set; }
 	public static ImFontPtr SansSerifFont { get; private set; }
@@ -152,6 +152,11 @@ public partial class Editor
 		} );
 
 		return thumbnailPath;
+	}
+
+	public void Render( CommandList commandList ) 
+	{
+		imguiRenderer.Render( graphicsDevice, commandList );
 	}
 }
 

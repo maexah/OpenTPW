@@ -322,9 +322,10 @@ internal sealed class FileBrowser : BaseTab
 				ImGui.TableHeadersRow();
 
 				DrawFiles();
+				
+				ImGui.EndTable();
 			}
 
-			ImGui.EndTable();
 
 			if ( CurrentFile != null )
 			{
@@ -357,9 +358,10 @@ internal sealed class FileBrowser : BaseTab
 							ImGui.TableNextColumn();
 							ImGui.Text( row.Value );
 						}
+						
+						ImGui.EndTable();
 					}
 
-					ImGui.EndTable();
 					ImGui.EndChild();
 				}
 			}

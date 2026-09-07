@@ -9,6 +9,7 @@ public partial class Renderer
 	public CommandList CommandList = null!;
 
 	public Window Window;
+	public ImGuiRenderer imGuiRenderer;
 
 	public Action? PreUpdate;
 	public Action? OnUpdate;
@@ -19,13 +20,17 @@ public partial class Renderer
 	public Renderer()
 	{
 		Window = new( Settings.Default.GameWindowSize.X, Settings.Default.GameWindowSize.Y, "Theme Park World", true );
-		Window.OnResized = OnWindowResized;
-		Window.Visible = true;
+		Window?.OnResized = OnWindowResized;
+		Window?.Visible = true;
 
 		CreateGraphicsDevice();
 		// Swap the buffers so that the screen isn't a mangled mess
 		Device.SwapBuffers();
 		CreateMultisampledFramebuffer();
+
+		imGuiRenderer = new ImGuiRenderer( Device, Device.MainSwapchain.Framebuffer.OutputDescription, Window.Size.X, Window.Size.Y );
+		ModKit.GlobalNamespace.ImGuiManager = imGuiRenderer;
+		new Editor( imGuiRenderer, Device );
 
 		CommandList = Device.ResourceFactory.CreateCommandList();
 		_lastFrame = DateTime.Now;
@@ -157,6 +162,8 @@ public partial class Renderer
 		CommandList.SetGraphicsResourceSet( 0, _blitResourceSet );
 		CommandList.Draw( 3, 1, 0, 0 );
 
+		Editor.Instance?.Render( CommandList );
+
 		CommandList.End();
 
 		Device.SubmitCommands( CommandList );
@@ -172,6 +179,11 @@ public partial class Renderer
 
 		Time.Update( deltaTime );
 		Input.UpdateFrom( inputSnapshot );
+
+		if ( Input.Pressed( InputButton.EditorToggle ) )
+			Editor.Instance.shouldRender = !Editor.Instance.shouldRender;
+		if ( Editor.Instance.shouldRender )
+			Editor.Instance.UpdateFrom( inputSnapshot );
 
 		PreRender();
 		PreUpdate?.Invoke();
@@ -219,6 +231,8 @@ public partial class Renderer
 			ResolveColorTexture,
 			Device.LinearSampler
 		) );
+
+		imGuiRenderer?.WindowResized( newSize.X, newSize.Y );
 	}
 
 	public void ImmediateSubmit( Action<CommandList> action )
