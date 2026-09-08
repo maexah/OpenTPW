@@ -43,7 +43,7 @@ OpenTPW is currently in a very early stage of development, and is not yet playab
 | Materials ([.MTR](https://opentpw.gu3.me/formats/mtr.html))                   | ❌     |
 | Video ([.TQI](https://opentpw.gu3.me/formats/tqi.html))                       | ❌     |
 
-\* Models (.MD2): static mesh geometry (verts/faces/materials) loads reliably. The same extension is also used for a structurally distinct keyframe animation format, of which two track kinds are decoded and played: per-vertex morph animation (282 files) and per-mesh quaternion rotation (686 files) - together 968 of the game's 1279 animation files. The remaining quarter carry only track kinds that aren't decoded yet, and load with no tracks rather than failing.
+\* Models (.MD2): static mesh geometry (verts/faces/materials) loads reliably. The same extension is also used for a structurally distinct keyframe animation format, of which three channel kinds are decoded and played: per-vertex morph animation (768 files), per-mesh quaternion rotation (686 files) and UV scrolling (324 files) - together 1164 of the game's 1279 animation files (91%). The rest either carry only channel kinds that aren't decoded yet or fail validation, and load with no tracks rather than failing.
 
 ### Documentation
 

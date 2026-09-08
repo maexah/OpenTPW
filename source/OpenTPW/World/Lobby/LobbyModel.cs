@@ -17,7 +17,8 @@ public sealed class LobbyModel
 	/// <summary>Each mesh's placement relative to the model origin it was loaded at.</summary>
 	public Vector3[] Offsets { get; }
 
-	public MeshAnimator? Animator { get; }
+	/// <summary>One per mesh this model's animations morph - a model can morph several.</summary>
+	public MeshAnimator[] Animators { get; } = Array.Empty<MeshAnimator>();
 
 	public MeshRotator? Rotator { get; }
 
@@ -89,7 +90,7 @@ public sealed class LobbyModel
 
 		if ( animations.Length > 0 )
 		{
-			Animator = BindVertexAnimations( modelPath, animations, modelFile, models, meshVertices );
+			Animators = BindVertexAnimations( modelPath, animations, modelFile, models, meshVertices );
 			Rotator = BindRotationAnimations( modelPath, animations, Entities, _baseRotations );
 		}
 	}
@@ -97,7 +98,9 @@ public sealed class LobbyModel
 	/// <summary>Advances whichever animations this model turned out to have.</summary>
 	public void Update( float deltaTime )
 	{
-		Animator?.Update( deltaTime );
+		foreach ( var animator in Animators )
+			animator.Update( deltaTime );
+
 		Rotator?.Update( deltaTime );
 	}
 
@@ -144,22 +147,43 @@ public sealed class LobbyModel
 		return [.. animations];
 	}
 
-	private static MeshAnimator? BindVertexAnimations( string modelPath, AnimationFile[] animations,
+	/// <summary>
+	/// One animator per mesh any of these animations morphs or scrolls. The animation names its target
+	/// mesh outright, which matters when several meshes share a vertex count - ratrace morphs
+	/// three 64-vertex meshes that are otherwise indistinguishable.
+	/// </summary>
+	private static MeshAnimator[] BindVertexAnimations( string modelPath, AnimationFile[] animations,
 		ModelFile modelFile, Model[] models, Vertex[][] meshVertices )
 	{
-		for ( int meshIndex = 0; meshIndex < modelFile.Meshes.Count; ++meshIndex )
+		var targets = animations
+			.SelectMany( animation => animation.MorphTracks
+				.Where( t => t.TargetIndex >= 0 && t.TargetIndex < modelFile.Meshes.Count
+					&& t.ChannelCount == modelFile.Meshes[t.TargetIndex].VertexCount + 2 )
+				.Select( t => t.TargetIndex )
+				.Concat( animation.UvTracks.Select( t => t.TargetIndex ) ) )
+			.Where( index => index >= 0 && index < modelFile.Meshes.Count )
+			.Distinct()
+			.OrderBy( index => index )
+			.ToArray();
+
+		if ( targets.Length == 0 )
+			return Array.Empty<MeshAnimator>();
+
+		var animators = new MeshAnimator[targets.Length];
+
+		for ( int i = 0; i < targets.Length; ++i )
 		{
-			var mesh = modelFile.Meshes[meshIndex];
-			if ( !MeshAnimator.Drives( animations[0], mesh ) )
-				continue;
+			var target = targets[i];
+			var mesh = modelFile.Meshes[target];
 
-			Log.Info( $"{modelPath}: animating '{mesh.Name.TrimEnd( '\0' )}' ({mesh.VertexCount} verts) " +
-				$"with {animations.Length} animation(s)" );
-
-			return new MeshAnimator( animations, mesh, models[meshIndex], meshVertices[meshIndex] );
+			animators[i] = new MeshAnimator( animations, target, mesh, models[target], meshVertices[target] );
 		}
 
-		return null;
+		var names = string.Join( ", ", targets.Select( t => $"'{modelFile.Meshes[t].Name.TrimEnd( '\0' )}'" ) );
+		Log.Info( $"{modelPath}: animating {targets.Length} mesh(es) - {names} - " +
+			$"with {animations.Length} animation(s)" );
+
+		return animators;
 	}
 
 	private static MeshRotator? BindRotationAnimations( string modelPath, AnimationFile[] animations,
