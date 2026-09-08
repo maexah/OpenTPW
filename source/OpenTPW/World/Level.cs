@@ -27,7 +27,11 @@ public class Level
 		_ = new Water() { Scale = new Vector3( 10000f ) };
 		_ = new Sky();
 
-		_ = new LobbyIsland( new Vector3( 400, 400, 0 ), "Jungle" );
+		var jungle = new Vector3( 400, 400, 0 );
+		_ = new LobbyIsland( jungle, "Jungle" );
+
+		_ = new LobbyButterfly( "Bfly_YELL", jungle, radius: 31f, height: 26f, speed: 0.45f, phase: 0f );
+		_ = new LobbyButterfly( "Bfly_PINK", jungle, radius: 36f, height: 31f, speed: 0.32f, phase: 2.2f );
 		_ = new LobbyIsland( new Vector3( 600, 400, 0 ), "Hallow" );
 		_ = new LobbyIsland( new Vector3( 600, 600, 0 ), "Fantasy" );
 		_ = new LobbyIsland( new Vector3( 400, 600, 0 ), "Space" );

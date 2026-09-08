@@ -32,8 +32,20 @@ namespace OpenTPW;
 ///   - The value block is entry-major: the value for keyframe e of channel slot k lives at
 ///     p3 + (e * b + k) * 4.
 ///
-/// What a channel drives, and how its 32-bit value decodes, are both still unknown - see
-/// MeshAnimator for where those hypotheses are kept.
+/// Not every animation file is this kind. Measured over all 1279 animation files in the game:
+///
+///   - 282 (22%) are the vertex animation this class reads.
+///   - 686 (54%) are instead rotation animations: 20-byte keyframes of "ushort frame,
+///     ushort flags, then a unit quaternion", grouped by 64-byte track descriptors that hold
+///     the keyframe count at +0x0C and the keyframe data offset at +0x18. Jun_gateM1 decodes
+///     this way into two tracks taking the gate's door01/door02 meshes from identity to a
+///     quarter turn about Y, which is a gate swinging open. What is NOT solved is how to
+///     locate that descriptor table: it is at no fixed header offset and at no fixed distance
+///     from the end, and searching for the descriptor signature only finds it in 38% of them
+///     (71% if the search is loosened enough that a false positive becomes plausible). Since a
+///     mislocated table would produce confidently wrong rotations, this is left unread rather
+///     than guessed at.
+///   - The remaining 311 (24%) match neither shape and are a third layout again.
 /// </summary>
 public class AnimationFile : BaseFormat
 {
