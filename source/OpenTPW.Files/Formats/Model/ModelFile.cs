@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
@@ -83,7 +83,17 @@ public partial class ModelFile : BaseFormat
 		public Vertex[] Vertices { get; set; }
 		public uint[] Indices { get; set; }
 		public Vector2[] TexCoords { get; set; }
+		/// <summary>This mesh's own transform, relative to its parent node.</summary>
 		public Matrix4x4 TransformMatrix { get; set; }
+
+		/// <summary>
+		/// <see cref="TransformMatrix"/> with every ancestor's transform applied, which is where
+		/// the mesh actually belongs in the model. See the hierarchy notes on this class.
+		/// </summary>
+		public Matrix4x4 WorldTransform { get; set; }
+
+		/// <summary>Index into the model's node list, or -1 for a root. See this class's notes.</summary>
+		public int ParentIndex { get; set; } = -1;
 		public MaterialData[] Materials { get; set; }
 
 		public Vector3[] Normals { get; set; }
@@ -153,8 +163,16 @@ public partial class ModelFile : BaseFormat
 				textures.Add( texName );
 			}
 
+			// Meshes are only the first meshCnt of nodeCnt nodes; the rest are transform-only
+			// nodes in a second table. See ResolveHierarchy.
+			reader.BaseStream.Seek( 0x42, SeekOrigin.Begin );
+			ushort nodeCnt = reader.ReadUInt16();
+
 			reader.BaseStream.Seek( 0x44, SeekOrigin.Begin );
 			ushort meshCnt = reader.ReadUInt16();
+
+			reader.BaseStream.Seek( 0x74, SeekOrigin.Begin );
+			uint nodePtr = reader.ReadUInt32();
 
 			reader.BaseStream.Seek( 0x50, SeekOrigin.Begin );
 			uint textureListOffset = reader.ReadUInt32();
@@ -300,6 +318,8 @@ public partial class ModelFile : BaseFormat
 				} );
 			}
 
+			ResolveHierarchy( reader, meshCnt, meshPtr, nodeCnt, nodePtr );
+
 			// Process mesh data
 			for ( int meshIdx = 0; meshIdx < Meshes.Count; meshIdx++ )
 			{
@@ -411,6 +431,117 @@ public partial class ModelFile : BaseFormat
 
 				CalculateNormals( mesh );
 			}
+		}
+	}
+
+	/// <summary>
+	/// Resolves the model's node hierarchy and bakes each mesh's <see cref="Mesh.WorldTransform"/>.
+	///
+	/// A model is a tree of nodes, not a flat list of meshes. The ushort at 0x42 is the total
+	/// node count and the ushort at 0x44 the mesh count; the meshes are the first meshCnt nodes,
+	/// in the 160-byte records at 0x70, and the remainder are transform-only nodes in 88-byte
+	/// records at 0x74. The engine indexes them exactly that way:
+	///
+	///     node &lt; meshCount ? meshTable + node * 0xA0 : nodeTable + (node - meshCount) * 0x58
+	///
+	/// Both record kinds start with the same header: a flags word at +0x00 (bit 0x200 marks a
+	/// transform-only node - the engine skips material processing for those), then three links
+	/// as file offsets - parent at +0x04, next sibling at +0x08, first child at +0x0C - and the
+	/// node's own transform at +0x10.
+	///
+	/// A node's transform is relative to its parent, so ignoring the tree leaves children piled
+	/// at the model origin. Jun_isle is the clear case: its three trees hang off dummy nodes
+	/// named l_tree1 and l_tree2 plus the Island mesh itself, and two of them store their trunk
+	/// and leaves at a local (0, 0, 0) and (0, 3.66, 0) - meaningless until the parent is
+	/// applied, which is what put them under the Dino.
+	/// </summary>
+	private void ResolveHierarchy( BinaryReader reader, ushort meshCount, uint meshPtr,
+		ushort nodeCount, uint nodePtr )
+	{
+		if ( nodeCount < meshCount )
+			nodeCount = meshCount;
+
+		var stream = reader.BaseStream;
+
+		// Node index -> file offset of its record, using the engine's own indexing rule.
+		long RecordAt( int node ) => node < meshCount
+			? meshPtr + (160L * node)
+			: nodePtr + (88L * (node - meshCount));
+
+		// The links are stored as file offsets; turn one back into a node index.
+		int NodeAt( uint pointer )
+		{
+			if ( pointer == 0 )
+				return -1;
+
+			if ( pointer >= meshPtr && pointer < meshPtr + (160L * meshCount) )
+			{
+				var offset = pointer - meshPtr;
+				return offset % 160 == 0 ? (int)(offset / 160) : -1;
+			}
+
+			var extra = nodeCount - meshCount;
+			if ( nodePtr != 0 && extra > 0 && pointer >= nodePtr && pointer < nodePtr + (88L * extra) )
+			{
+				var offset = pointer - nodePtr;
+				return offset % 88 == 0 ? meshCount + (int)(offset / 88) : -1;
+			}
+
+			return -1;
+		}
+
+		var parents = new int[nodeCount];
+		var local = new Matrix4x4[nodeCount];
+
+		for ( int node = 0; node < nodeCount; ++node )
+		{
+			var record = RecordAt( node );
+
+			if ( record < 0 || record + 0x50 > stream.Length )
+			{
+				parents[node] = -1;
+				local[node] = Matrix4x4.Identity;
+				continue;
+			}
+
+			stream.Seek( record + 0x04, SeekOrigin.Begin );
+			parents[node] = NodeAt( reader.ReadUInt32() );
+
+			stream.Seek( record + 0x10, SeekOrigin.Begin );
+			local[node] = new Matrix4x4(
+				reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(),
+				reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(),
+				reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(),
+				reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle() );
+		}
+
+		var world = new Matrix4x4[nodeCount];
+		var resolved = new bool[nodeCount];
+
+		Matrix4x4 World( int node, int guard )
+		{
+			if ( resolved[node] )
+				return world[node];
+
+			// A malformed parent chain must not spin forever - bail out to the local transform.
+			var parent = parents[node];
+			if ( guard <= 0 || parent < 0 || parent >= nodeCount || parent == node )
+			{
+				world[node] = local[node];
+			}
+			else
+			{
+				world[node] = local[node] * World( parent, guard - 1 );
+			}
+
+			resolved[node] = true;
+			return world[node];
+		}
+
+		for ( int i = 0; i < Meshes.Count && i < nodeCount; ++i )
+		{
+			Meshes[i].ParentIndex = parents[i];
+			Meshes[i].WorldTransform = World( i, nodeCount );
 		}
 	}
 

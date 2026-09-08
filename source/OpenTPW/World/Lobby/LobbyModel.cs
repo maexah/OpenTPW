@@ -69,7 +69,9 @@ public sealed class LobbyModel
 			models[meshIndex] = new Model( [.. vertices], mesh.Indices, material );
 			meshVertices[meshIndex] = [.. vertices];
 
-			Matrix4x4.Decompose( mesh.TransformMatrix, out var scl, out var rot, out var pos );
+			// The mesh's place in the model's node tree, not just its own transform - a mesh
+			// parented to a dummy node stores only its offset from that node.
+			Matrix4x4.Decompose( mesh.WorldTransform, out var scl, out var rot, out var pos );
 
 			var offset = new Vector3( pos.X, pos.Z, pos.Y );
 			Offsets[meshIndex] = offset;
