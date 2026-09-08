@@ -38,21 +38,28 @@ namespace OpenTPW;
 /// flag word at +0x04 saying which channels it carries, and the target node at +0x14. Every
 /// channel bit owns a slot elsewhere in the descriptor, so an unknown channel costs nothing:
 ///
-///     bit 0x00008  rotation    count (ushort) at +0x10, keyframes at +0x1C
-///     bit 0x01000  vertex morph                         descriptor at +0x28
-///     bit 0x10000  UV animation                         descriptor at +0x2C
-///     bit 0x00001  unidentified                         data at +0x18
-///     bit 0x20000  unidentified                         data at +0x30
+///     bit          slot                                     tracks  decoded
+///     0x00008   rotation, count (ushort) at +0x10, at +0x1C     3039  yes
+///     0x01000   vertex morph descriptor at +0x28                1766  yes
+///     0x10000   UV animation descriptor at +0x2C                 690  yes
+///     0x20000   unidentified, data at +0x30                     2536  no
+///     0x00001   unidentified, data at +0x18                     1216  no
+///     0x80|0x100 unidentified, data at +0x20                     644  no
+///     0x00200   unidentified, data at +0x24                       71  no
 ///
-/// That correspondence is exact: across all 1279 files no track sets one of those bits without
-/// filling its slot, or fills a slot without setting the bit. The descriptor holds eight
-/// pointer slots in all - +0x18, +0x1C, +0x20, +0x24, +0x28, +0x2C, +0x30 and +0x34 - which is
-/// what the engine's own loader relocates, so the three we don't read (+0x20, +0x24, +0x34) are
-/// further channels rather than padding.
+/// Every one of those correspondences is exact - across all 1279 files, not one track sets a
+/// bit without filling its slot or fills a slot without setting the bit. 0x80 and 0x100 always
+/// appear together and share the one slot.
+///
+/// There is an eighth pointer at +0x34 that no flag bit owns. It is set on 1768 tracks and
+/// every one of them is a rotation track (of 3039), so it is an optional extra for rotation
+/// rather than a channel of its own. What it points at looks like a byte ramp (Advisorm1:
+/// 32, 66, 105, 141, 176, 208, 233, 249), which would be an easing curve, but the records are
+/// not a fixed length and a third of them are not monotonic - noted, not claimed.
 ///
 /// Bit 0x4000 is a modifier rather than a channel: it makes the +0x28 slot point at a different
-/// structure, and the loader branches on it before reading any morph table. Twelve tracks in
-/// the game set it, always alongside 0x1000, and they must not be read as morph.
+/// structure, and the engine's loader branches on it before reading any morph table. Thirty
+/// tracks in the game set it, always alongside 0x1000, and they must not be read as morph.
 ///
 /// The target at +0x14 is a USHORT, not a uint - +0x16 holds a separate value and is nonzero on
 /// 595 of the game's rotation tracks, so reading 32 bits there yields a garbage node index. It
@@ -62,10 +69,15 @@ namespace OpenTPW;
 /// open and shut.
 ///
 /// The full node count is the ushort at the model's 0x42, and the meshes are only the first
-/// ushort-at-0x44 of them; the loader walks the remainder as a separate table of 88-byte
-/// records at header 0x74. 5934 of the game's 5940 animation targets fall inside the node
-/// count, against 4544 inside the mesh count, so a target above the mesh count is a real node
-/// we have no geometry for rather than a bad read. Callers must range-check and skip those.
+/// ushort-at-0x44 of them. The engine indexes a node as
+///
+///     node below meshCount ? meshTable(0x70) + node * 0xA0
+///                          : nodeTable(0x74) + (node - meshCount) * 0x58
+///
+/// so the rest are 88-byte records at header 0x74. 2967 of the game's 2970 animation targets
+/// fall inside the node count, against 2272 inside the mesh count, so a target above the mesh
+/// count is a real node we have no geometry for rather than a bad read. Callers must
+/// range-check and skip those.
 ///
 /// ROTATION (bit 0x8)
 ///
@@ -79,12 +91,12 @@ namespace OpenTPW;
 /// table offset at +0x0C. Each track has its OWN descriptor and its own channel space, so one
 /// animation morphs as many meshes as it has morph tracks - ratraceM1 morphs four (and three of
 /// those meshes share a vertex count, so identifying targets by vertex count cannot tell them
-/// apart; the target index can). 768 animation files carry morph tracks, 368 of them more than
-/// one, 1766 tracks in total.
+/// apart; the target index can). 752 animation files carry readable morph tracks, 360 of them
+/// more than one; there are 1766 morph tracks in all, 30 of which set 0x4000 and are skipped.
 ///
 /// A morph track has exactly one channel per vertex of the mesh it targets, plus two trailing
-/// channels that aren't vertices - 457 of the 465 tracks whose model resolves satisfy that
-/// exactly. The 8 that don't (droidm2 names a 16-vertex mesh but carries 3561 channels) are
+/// channels that aren't vertices - 457 of the 464 tracks whose model resolves satisfy that
+/// exactly. The 7 that don't (droidm2 names a 16-vertex mesh but carries 3561 channels) are
 /// models whose node list evidently isn't their mesh list, the same caveat the target index
 /// carries generally, so callers should check the count and skip a track that fails it rather
 /// than morph the wrong mesh into nonsense.
@@ -117,9 +129,13 @@ namespace OpenTPW;
 ///
 /// COVERAGE
 ///
-/// Of the game's 1279 animation files, 1164 (91%) carry at least one channel read here: 768
-/// morph, 686 rotation, 324 UV. 25 have a readable track table but only channels we don't
-/// decode, and 90 fail the table identity above and are rejected.
+/// Of the game's 1279 animation files, 1151 (90%) carry at least one channel read here: 752
+/// morph, 686 rotation, 324 UV. A further 38 have a readable track table but carry only
+/// channels we don't decode.
+///
+/// The remaining 90 hold no animation at all rather than defeating the parser: 89 declare a
+/// track count of zero, and 1 has no animation block. The table identity above does not fail
+/// on a single file in the game, so nothing is rejected for being unreadable.
 /// </summary>
 public class AnimationFile : BaseFormat
 {
