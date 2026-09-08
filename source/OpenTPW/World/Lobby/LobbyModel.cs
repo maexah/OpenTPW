@@ -6,8 +6,9 @@ namespace OpenTPW;
 /// Loads a lobby model: one <see cref="ModelEntity"/> per mesh, plus a <see cref="MeshAnimator"/>
 /// bound to whichever mesh the model's animations drive, if it has any.
 ///
-/// Animations sit beside the model with an M1, M2, ... suffix and each drives exactly one mesh,
-/// identified by its vertex count - see <see cref="AnimationFile"/>.
+/// Animations sit beside the model with an M1, M2, ... suffix. A vertex animation drives
+/// exactly one mesh, identified by its vertex count; a rotation animation turns whole meshes,
+/// naming each one it drives. A model can have both - see <see cref="AnimationFile"/>.
 /// </summary>
 public sealed class LobbyModel
 {
@@ -17,6 +18,8 @@ public sealed class LobbyModel
 	public Vector3[] Offsets { get; }
 
 	public MeshAnimator? Animator { get; }
+
+	public MeshRotator? Rotator { get; }
 
 	private readonly Quaternion[] _baseRotations;
 
@@ -70,7 +73,7 @@ public sealed class LobbyModel
 			var offset = new Vector3( pos.X, pos.Z, pos.Y );
 			Offsets[meshIndex] = offset;
 
-			var rotation = new Quaternion( rot.X, rot.Z, rot.Y, -rot.W );
+			var rotation = ToWorldSpace( rot );
 			_baseRotations[meshIndex] = rotation;
 
 			Entities[meshIndex] = new ModelEntity()
@@ -82,8 +85,29 @@ public sealed class LobbyModel
 			};
 		}
 
-		Animator = LoadAnimations( modelPath, modelFile, models, meshVertices );
+		var animations = LoadAnimations( modelPath );
+
+		if ( animations.Length > 0 )
+		{
+			Animator = BindVertexAnimations( modelPath, animations, modelFile, models, meshVertices );
+			Rotator = BindRotationAnimations( modelPath, animations, Entities, _baseRotations );
+		}
 	}
+
+	/// <summary>Advances whichever animations this model turned out to have.</summary>
+	public void Update( float deltaTime )
+	{
+		Animator?.Update( deltaTime );
+		Rotator?.Update( deltaTime );
+	}
+
+	/// <summary>
+	/// Model space is Y-up and right-handed; the world we draw into swaps Y and Z, which flips
+	/// handedness, so a rotation has to be conjugated as well as swizzled to survive the trip.
+	/// This is the rotation half of the same mapping the mesh positions go through.
+	/// </summary>
+	public static Quaternion ToWorldSpace( Quaternion modelSpace )
+		=> new( modelSpace.X, modelSpace.Z, modelSpace.Y, -modelSpace.W );
 
 	/// <summary>Moves every mesh of this model, keeping their relative placement.</summary>
 	public void SetOrigin( Vector3 origin )
@@ -104,7 +128,7 @@ public sealed class LobbyModel
 		}
 	}
 
-	private static MeshAnimator? LoadAnimations( string modelPath, ModelFile modelFile, Model[] models, Vertex[][] meshVertices )
+	private static AnimationFile[] LoadAnimations( string modelPath )
 	{
 		var withoutExtension = modelPath[..modelPath.LastIndexOf( '.' )];
 
@@ -117,9 +141,12 @@ public sealed class LobbyModel
 			animations.Add( loaded );
 		}
 
-		if ( animations.Count == 0 )
-			return null;
+		return [.. animations];
+	}
 
+	private static MeshAnimator? BindVertexAnimations( string modelPath, AnimationFile[] animations,
+		ModelFile modelFile, Model[] models, Vertex[][] meshVertices )
+	{
 		for ( int meshIndex = 0; meshIndex < modelFile.Meshes.Count; ++meshIndex )
 		{
 			var mesh = modelFile.Meshes[meshIndex];
@@ -127,12 +154,23 @@ public sealed class LobbyModel
 				continue;
 
 			Log.Info( $"{modelPath}: animating '{mesh.Name.TrimEnd( '\0' )}' ({mesh.VertexCount} verts) " +
-				$"with {animations.Count} animation(s)" );
+				$"with {animations.Length} animation(s)" );
 
-			return new MeshAnimator( [.. animations], mesh, models[meshIndex], meshVertices[meshIndex] );
+			return new MeshAnimator( animations, mesh, models[meshIndex], meshVertices[meshIndex] );
 		}
 
-		Log.Info( $"{modelPath}: {animations[0].ChannelCount} animation channels match no mesh" );
 		return null;
+	}
+
+	private static MeshRotator? BindRotationAnimations( string modelPath, AnimationFile[] animations,
+		ModelEntity[] entities, Quaternion[] baseRotations )
+	{
+		if ( !MeshRotator.Drives( animations[0], entities.Length ) )
+			return null;
+
+		Log.Info( $"{modelPath}: rotating {animations[0].RotationTracks.Count} mesh(es) " +
+			$"with {animations.Length} animation(s)" );
+
+		return new MeshRotator( animations, entities, baseRotations );
 	}
 }

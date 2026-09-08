@@ -32,7 +32,7 @@ public sealed class LobbyButterfly : Entity
 
 	protected override void OnUpdate()
 	{
-		_model.Animator?.Update( Time.Delta );
+		_model.Update( Time.Delta );
 
 		var t = (Time.Now * _speed) + _phase;
 

@@ -21,6 +21,6 @@ public sealed class LobbyIsland : Entity
 
 	protected override void OnUpdate()
 	{
-		_model.Animator?.Update( Time.Delta );
+		_model.Update( Time.Delta );
 	}
 }
