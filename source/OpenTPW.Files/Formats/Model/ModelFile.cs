@@ -6,6 +6,63 @@ using System.Text;
 
 namespace OpenTPW;
 
+/// <summary>
+/// There are (at least) two structurally different .md2 layouts in the game's data, both
+/// sharing the same 4-byte magic number (0x1CD15D46) and the same "0xDD, 0xCB" constants at
+/// offset 0x04/0x08 (likely a fixed format/tool version stamp, always identical).
+///
+/// Verified by parsing all 2401 .md2 files found across the actual game data (via a
+/// throwaway harness reusing this project's own WadArchive/BaseFileSystem/ModelFile code,
+/// not by inspecting a handful of files by hand):
+///
+///   - "Variant A" - what this parser below implements. ~1122 files (47%). Has real
+///     absolute-offset table pointers at 0x50 (textureListOffset), 0x54 (frameListOffset),
+///     0x70 (meshPtr), and embedded ASCII texture-name strings. 1119/1122 of these parse
+///     correctly after the FrameOffset==0 sentinel fix below.
+///
+///   - "Variant B" - NOT implemented by this parser; ~1279 files (53%) hit this. These
+///     files have ZERO at all three of those pointer offsets (0x50/0x54/0x70), and contain
+///     no embedded texture-name strings anywhere in the file. frameCount (0x36) and meshCnt
+///     (0x44) read as plausible small numbers for both variants - only the pointer fields
+///     and everything they'd normally lead to differ.
+///
+/// Confirmed structure for Variant B (verified against many files, cross-referencing
+/// header count fields against manually-identified data by pattern, e.g. finding N
+/// plausible float triples where N matches a header field - not guessed):
+///
+///   - Fixed 184-byte (0xB8) header per mesh, structurally similar in spirit to Variant A's
+///     but NOT at the same offsets - the 0x36/0x44 count fields read correctly, but nothing
+///     resembling Variant A's 0x50/0x54/0x70 pointers exists.
+///   - Vertex position array (3x float per vertex) starts immediately at offset 0xB8. Count
+///     matches the header field at 0x48 (NOT 0x38, which is a different, still-unidentified
+///     count - the 0x38 field looked like "vertex count" in one sample by coincidence but
+///     didn't generalize).
+///   - uint32 at offset 0x98 == fileSize - 72, exactly, on every file tested. The final 72
+///     bytes of the file are a per-mesh footer containing back-pointers (as file-absolute
+///     byte offsets) into: the mesh sub-header, a table of ascending integers followed by a
+///     table of per-entry float triples clustered near 1.0 (semantics unconfirmed - possibly
+///     per-material vertex ranges + blend/weight values, unverified), and a trivial ascending
+///     vertex-order index list (1..vertexCount, 0-terminated).
+///   - NOT located, despite real effort: where UV coordinates and face/triangle index data
+///     live. Every alignment/grouping tried on the remaining bytes produced inconsistent
+///     results (e.g. a value of 16256 = the upper 16 bits of the float 1.0f, suggesting a
+///     2-byte misalignment somewhere nearby that wasn't run to ground). Do not guess at this
+///     - implementing face/UV parsing without being able to actually verify it (there's no
+///     spec, no reference tool, and wrong-but-plausible geometry would be worse than a clear
+///     "unsupported" failure) risks silently-wrong meshes rendering in-game.
+///   - Texture/material assignment for Variant B does not appear to live in the model file at
+///     all (no embedded names, unlike Variant A). Checked the owning ride's .sam config (e.g.
+///     /levels/jungle/rides/tourride/tourride.sam for Bird*.md2) - it only references the
+///     model filename, not per-mesh textures. Sibling "textures" folders next to these models
+///     (e.g. JF_Rbody.wct/JF_Rhead4.wct/JF_Rwing.wct next to Bird*.md2) strongly suggest the
+///     binding is driven by the .RSE ride-script format instead (itself only partially
+///     implemented in this project) - a separate investigation from MD2 parsing itself.
+///
+/// Good sample files for continuing this (small, meshCnt=1, easy to reason about by hand):
+///   /levels/jungle/rides/wateride/wr_ringM.md2 (256 bytes, 1 mesh, minimal)
+///   /levels/jungle/rides/tourride/BirdC.MD2 (832 bytes, 1 mesh, 11 verts - the file most of
+///     the above was derived from)
+/// </summary>
 public partial class ModelFile : BaseFormat
 {
 	public List<Mesh> Meshes { get; private set; }
