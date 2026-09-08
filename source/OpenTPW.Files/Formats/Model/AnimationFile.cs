@@ -7,6 +7,12 @@ namespace OpenTPW;
 /// flags (mesh table pointer at 0x70 is zero). See the notes on <see cref="ModelFile"/> for how
 /// the two kinds relate and for the evidence behind the layout below.
 ///
+/// Layouts marked "confirmed against the engine" below were checked against the original game's
+/// own pointer-relocation routine, which walks a freshly loaded .md2 turning every stored file
+/// offset into an absolute pointer. What it relocates is a pointer and what it skips is not, and
+/// the counts and strides it loops with are the record sizes - so it is a direct statement of
+/// the format rather than an inference from the data.
+///
 /// An animation is a list of TRACKS, each posing one node of the base model over a range of
 /// authoring frames. A track can carry several kinds of channel at once - a fountain's water
 /// meshes carry vertex morph, UV scroll and a timing scalar together - so the channels are read
@@ -15,7 +21,9 @@ namespace OpenTPW;
 /// LOCATING THE TRACKS
 ///
 /// The uint at 0x98 points at a 72-byte animation block; that pointer is valid in 1278 of the
-/// game's 1279 animation files. In the block:
+/// game's 1279 animation files, and the engine only reads it when the uint at 0x08 is exactly
+/// 0xCB - that field is an animation-format version, not the constant it looks like. In the
+/// block:
 ///
 ///   - uint at +0x08 is the last frame of the animation.
 ///   - ushort at +0x12 is the track count, uint at +0x2C the offset of the track table.
@@ -33,19 +41,31 @@ namespace OpenTPW;
 ///     bit 0x00008  rotation    count (ushort) at +0x10, keyframes at +0x1C
 ///     bit 0x01000  vertex morph                         descriptor at +0x28
 ///     bit 0x10000  UV animation                         descriptor at +0x2C
-///     bit 0x20000  timing scalar                        16.16 fixed value at +0x30
 ///     bit 0x00001  unidentified                         data at +0x18
+///     bit 0x20000  unidentified                         data at +0x30
 ///
 /// That correspondence is exact: across all 1279 files no track sets one of those bits without
-/// filling its slot, or fills a slot without setting the bit.
+/// filling its slot, or fills a slot without setting the bit. The descriptor holds eight
+/// pointer slots in all - +0x18, +0x1C, +0x20, +0x24, +0x28, +0x2C, +0x30 and +0x34 - which is
+/// what the engine's own loader relocates, so the three we don't read (+0x20, +0x24, +0x34) are
+/// further channels rather than padding.
+///
+/// Bit 0x4000 is a modifier rather than a channel: it makes the +0x28 slot point at a different
+/// structure, and the loader branches on it before reading any morph table. Twelve tracks in
+/// the game set it, always alongside 0x1000, and they must not be read as morph.
 ///
 /// The target at +0x14 is a USHORT, not a uint - +0x16 holds a separate value and is nonzero on
 /// 595 of the game's rotation tracks, so reading 32 bits there yields a garbage node index. It
 /// indexes the base model's node list, which is its mesh list for models with no extra
 /// hierarchy: Jun_gateM1's two tracks take the gate's door01/door02 meshes from identity to a
 /// quarter turn about model Y (up), and Jun_gateM2 is exactly the inverse - a gate swinging
-/// open and shut. Models with extra nodes index past their meshes (Advisor has 25 meshes and
-/// reaches index 28), so callers must range-check the target and skip what doesn't land.
+/// open and shut.
+///
+/// The full node count is the ushort at the model's 0x42, and the meshes are only the first
+/// ushort-at-0x44 of them; the loader walks the remainder as a separate table of 88-byte
+/// records at header 0x74. 5934 of the game's 5940 animation targets fall inside the node
+/// count, against 4544 inside the mesh count, so a target above the mesh count is a real node
+/// we have no geometry for rather than a bad read. Callers must range-check and skip those.
 ///
 /// ROTATION (bit 0x8)
 ///
@@ -402,7 +422,10 @@ public class AnimationFile : BaseFormat
 			if ( (flags & 0x8) != 0 )
 				ReadRotationChannel( data, offset, target );
 
-			if ( (flags & 0x1000) != 0 )
+			// Bit 0x4000 makes the +0x28 slot point at a different structure entirely - the
+			// engine's own loader branches on it before touching the morph tables. Only 12
+			// tracks in the game set it, but reading them as morph would follow bogus offsets.
+			if ( (flags & 0x1000) != 0 && (flags & 0x4000) == 0 )
 				ReadMorphChannel( data, BitConverter.ToUInt32( data, offset + 0x28 ), target );
 
 			if ( (flags & 0x10000) != 0 )
