@@ -68,7 +68,7 @@ public class Model : Asset
 		commandList.SetVertexBuffer( 0, VertexBuffer );
 		commandList.SetPipeline( Material.Pipeline );
 
-		Material.CreateEphemeralResourceSet( out var resourceSets );
+		Material.GetOrCreateResourceSet( out var resourceSets );
 
 		for ( uint i = 0; i < resourceSets.Length; ++i )
 			commandList.SetGraphicsResourceSet( i, resourceSets[i] );

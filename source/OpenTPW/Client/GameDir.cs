@@ -12,6 +12,9 @@ public static class GameDir
 	/// <returns></returns>
 	public static string GetPath( string path )
 	{
-		return Path.Join( Settings.Default.GamePath, path ).Replace( "/", "\\" );
+		var normalizedPath = path.Replace( '\\', Path.DirectorySeparatorChar )
+			.Replace( '/', Path.DirectorySeparatorChar );
+
+		return Path.Join( Settings.Default.GamePath, normalizedPath );
 	}
 }

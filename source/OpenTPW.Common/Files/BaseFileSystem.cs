@@ -167,7 +167,17 @@ public class BaseFileSystem
 
 		foreach ( var part in parts )
 		{
-			if ( currentPath.Length > 0 )
+			if ( part.Length == 0 )
+			{
+				// Leading separator of a rooted path (e.g. "/home/..." on Linux) -
+				// preserve it so currentPath stays a valid prefix of the original path.
+				if ( currentPath.Length == 0 )
+					currentPath.Append( Path.DirectorySeparatorChar );
+
+				continue;
+			}
+
+			if ( currentPath.Length > 0 && currentPath[currentPath.Length - 1] != Path.DirectorySeparatorChar )
 			{
 				currentPath.Append( Path.DirectorySeparatorChar );
 			}
@@ -197,7 +207,15 @@ public class BaseFileSystem
 
 	public string GetAbsolutePath( string relativePath )
 	{
-		return Path.Combine( basePath, relativePath.TrimStart( '/' ) ).Replace( "/", "\\" );
+		var normalizedPath = relativePath.Replace( '\\', Path.DirectorySeparatorChar )
+			.Replace( '/', Path.DirectorySeparatorChar );
+
+		// Already an absolute path within our base directory (e.g. returned by
+		// Directory.GetFiles/GetDirectories) - use as-is rather than combining again.
+		if ( Path.IsPathRooted( normalizedPath ) && normalizedPath.StartsWith( basePath, StringComparison.OrdinalIgnoreCase ) )
+			return normalizedPath;
+
+		return Path.Combine( basePath, normalizedPath.TrimStart( Path.DirectorySeparatorChar ) );
 	}
 
 	public string GetRelativePath( string absolutePath )

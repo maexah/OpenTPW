@@ -25,9 +25,12 @@ public partial class Material : Asset
 
 	private ResourceLayout[] _resourceLayouts;
 
+	private ResourceSet[]? _cachedResourceSets;
+	private bool _resourceSetsDirty = true;
+
 	public Material( string shaderPath, MaterialFlags flags = MaterialFlags.None )
 	{
-		Shader = new Shader( shaderPath );
+		Shader = Shader.GetOrCreate( shaderPath );
 		Shader.OnRecompile += () => SetupResources( flags );
 
 		All.Add( this );
@@ -36,7 +39,7 @@ public partial class Material : Asset
 
 	protected Material( string shaderPath, Type uniformBufferType, MaterialFlags flags = MaterialFlags.None )
 	{
-		Shader = new Shader( shaderPath );
+		Shader = Shader.GetOrCreate( shaderPath );
 		Shader.OnRecompile += () => SetupResources( flags );
 		UniformBufferType = uniformBufferType;
 
@@ -101,11 +104,8 @@ public partial class Material : Asset
 
 	public void Set<T>( string name, T obj ) where T : unmanaged
 	{
-		Render.ImmediateSubmit( cmd =>
-		{
-			cmd.UpdateBuffer( ScratchBuffer, 0, [obj] );
-			_boundResources[name] = ScratchBuffer;
-		} );
+		Device.UpdateBuffer( ScratchBuffer, 0, [obj] );
+		_boundResources[name] = ScratchBuffer;
 
 		Render.ScheduleDelete( ClearBoundResources );
 	}
@@ -114,18 +114,45 @@ public partial class Material : Asset
 	{
 		for ( int i = 0; i < texture.Length; i++ )
 		{
-			_boundResources[name + $"{i}"] = texture[i].NativeTexture;
+			var key = name + $"{i}";
+			var resource = texture[i].NativeTexture;
+
+			if ( !_boundResources.TryGetValue( key, out var existing ) || existing != resource )
+			{
+				_boundResources[key] = resource;
+				_resourceSetsDirty = true;
+			}
 		}
 
-		_boundResources["s_" + name] = Samplers[(int)SamplerType.AnisotropicWrap];
+		var samplerResource = Samplers[(int)SamplerType.AnisotropicWrap];
+		var samplerKey = "s_" + name;
+
+		if ( !_boundResources.TryGetValue( samplerKey, out var existingSampler ) || existingSampler != samplerResource )
+		{
+			_boundResources[samplerKey] = samplerResource;
+			_resourceSetsDirty = true;
+		}
 
 		Render.ScheduleDelete( ClearBoundResources );
 	}
 
 	public void Set( string name, Texture texture )
 	{
-		_boundResources[name] = texture.NativeTexture;
-		_boundResources["s_" + name] = Samplers[(int)texture.SamplerType];
+		var resource = texture.NativeTexture;
+		var samplerResource = Samplers[(int)texture.SamplerType];
+		var samplerKey = "s_" + name;
+
+		if ( !_boundResources.TryGetValue( name, out var existing ) || existing != resource )
+		{
+			_boundResources[name] = resource;
+			_resourceSetsDirty = true;
+		}
+
+		if ( !_boundResources.TryGetValue( samplerKey, out var existingSampler ) || existingSampler != samplerResource )
+		{
+			_boundResources[samplerKey] = samplerResource;
+			_resourceSetsDirty = true;
+		}
 
 		Render.ScheduleDelete( ClearBoundResources );
 	}
@@ -170,14 +197,21 @@ public partial class Material : Asset
 		return resourceSetDescriptions.Select( x => Device.ResourceFactory.CreateResourceSet( x ) ).ToArray();
 	}
 
-	internal void CreateEphemeralResourceSet( out ResourceSet[] resourceSets )
+	internal void GetOrCreateResourceSet( out ResourceSet[] resourceSets )
 	{
-		// Create a set
-		var newResourceSets = CreateResourceSets();
-		resourceSets = newResourceSets;
+		if ( _resourceSetsDirty || _cachedResourceSets == null )
+		{
+			var oldResourceSets = _cachedResourceSets;
 
-		// Mark set for death
-		Render.ScheduleDelete( () => DestroyResourceSets( newResourceSets ) );
+			_cachedResourceSets = CreateResourceSets();
+			_resourceSetsDirty = false;
+
+			// Mark the previous set for death, once the GPU is done with this frame
+			if ( oldResourceSets != null )
+				Render.ScheduleDelete( () => DestroyResourceSets( oldResourceSets ) );
+		}
+
+		resourceSets = _cachedResourceSets;
 	}
 
 	private static void DestroyResourceSets( ResourceSet[] resourceSets )

@@ -4,7 +4,7 @@ using Vortice.Win32;
 
 namespace OpenTPW;
 
-public class Shader : Asset
+public partial class Shader : Asset
 {
 	private ShaderInfo shaderInfo;
 
@@ -28,11 +28,13 @@ public class Shader : Asset
 
 		watcher = new FileSystemWatcher( directoryName, fileName );
 
+		// Deliberately excludes NotifyFilters.LastAccess: Recompile() calls IsFileReady(),
+		// which opens the file for read - watching LastAccess would make that read itself
+		// re-dirty the shader, forcing a full recompile every single frame.
 		watcher.NotifyFilter = NotifyFilters.Attributes
 							 | NotifyFilters.CreationTime
 							 | NotifyFilters.DirectoryName
 							 | NotifyFilters.FileName
-							 | NotifyFilters.LastAccess
 							 | NotifyFilters.LastWrite
 							 | NotifyFilters.Security
 							 | NotifyFilters.Size;

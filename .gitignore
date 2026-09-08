@@ -9,6 +9,7 @@
 *.user
 *.userosscache
 *.sln.docstates
+*.iso
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -107,7 +108,7 @@ ipch/
 *.opendb
 *.opensdf
 *.sdf
-*.cachefile
+*.cachefileg
 *.VC.db
 *.VC.VC.opendb
 

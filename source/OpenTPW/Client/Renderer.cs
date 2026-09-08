@@ -20,8 +20,8 @@ public partial class Renderer
 	public Renderer()
 	{
 		Window = new( Settings.Default.GameWindowSize.X, Settings.Default.GameWindowSize.Y, "Theme Park World", true );
-		Window?.OnResized = OnWindowResized;
-		Window?.Visible = true;
+		Window.OnResized = OnWindowResized;
+		Window.Visible = true;
 
 		CreateGraphicsDevice();
 		// Swap the buffers so that the screen isn't a mangled mess
@@ -123,7 +123,7 @@ public partial class Renderer
 
 		while ( Window.SdlWindow.Exists )
 		{
-			Update();
+			FrameProfiler.Wrap( Update );
 		}
 	}
 
