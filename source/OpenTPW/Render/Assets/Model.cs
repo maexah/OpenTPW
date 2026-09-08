@@ -61,6 +61,12 @@ public class Model : Asset
 		Device.UpdateBuffer( IndexBuffer, 0, indices );
 	}
 
+	/// <summary>Re-uploads vertex data, for meshes driven by a vertex animation.</summary>
+	internal void UpdateVertices( Vertex[] vertices )
+	{
+		Device.UpdateBuffer( VertexBuffer, 0, vertices );
+	}
+
 	internal void Draw()
 	{
 		var commandList = Render.CommandList;

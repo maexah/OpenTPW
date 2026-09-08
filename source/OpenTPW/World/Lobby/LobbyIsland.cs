@@ -4,9 +4,6 @@ namespace OpenTPW;
 
 public sealed class LobbyIsland : Entity
 {
-	private readonly ModelEntity?[] _meshEntities;
-	private readonly Vector3[] _basePositions;
-	private readonly Quaternion[] _baseRotations;
 	private readonly MeshAnimator? _animator;
 
 	public LobbyIsland( Vector3 _position, string themeName )
@@ -17,9 +14,8 @@ public sealed class LobbyIsland : Entity
 		var modelFile = new ModelFile( $"lobby/terrain/{modelPrefix}_isle.md2" );
 
 		var meshCount = modelFile.Meshes.Count;
-		_meshEntities = new ModelEntity?[meshCount];
-		_basePositions = new Vector3[meshCount];
-		_baseRotations = new Quaternion[meshCount];
+		var models = new Model[meshCount];
+		var meshVertices = new Vertex[meshCount][];
 
 		for ( int meshIndex = 0; meshIndex < meshCount; ++meshIndex )
 		{
@@ -56,48 +52,60 @@ public sealed class LobbyIsland : Entity
 			}
 
 			var model = new Model( [.. vertices], mesh.Indices, material );
+			models[meshIndex] = model;
+			meshVertices[meshIndex] = [.. vertices];
 			Matrix4x4.Decompose( mesh.TransformMatrix, out var scl, out var rot, out var pos );
 
 			var position = new Vector3( pos.X, pos.Z, pos.Y - 2.5f );
 			var rotation = new Quaternion( rot.X, rot.Z, rot.Y, -rot.W );
 			var scale = new Vector3( scl.X, scl.Z, scl.Y );
 
-			_meshEntities[meshIndex] = new ModelEntity()
+			_ = new ModelEntity()
 			{
 				Model = model,
 				Scale = scale,
 				Rotation = rotation,
 				Position = position + Position,
 			};
-
-			_basePositions[meshIndex] = position + Position;
-			_baseRotations[meshIndex] = rotation;
 		}
 
-		var animationPath = $"lobby/terrain/{modelPrefix}_isleM1.md2";
-		if ( AnimationFile.TryLoad( animationPath, out var animation ) && animation != null )
+		// A model can ship several animations, suffixed M1, M2, ... - all driving one mesh.
+		var animations = new List<AnimationFile>();
+		for ( int suffix = 1; ; ++suffix )
 		{
-			_animator = new MeshAnimator( animation );
+			if ( !AnimationFile.TryLoad( $"lobby/terrain/{modelPrefix}_isleM{suffix}.md2", out var loaded ) || loaded == null )
+				break;
 
-			var animated = new List<int>();
-			foreach ( var track in animation.Tracks )
-			{
-				if ( !track.IsConstant )
-					animated.AddRange( track.ChannelIds.Select( x => (int)x ) );
-			}
-			animated.Sort();
+			animations.Add( loaded );
+		}
 
-			Log.Info( $"{modelPrefix}_isleM1: {animation.Tracks.Count} records, {animation.ChannelCount} channels, " +
-				$"frames {animation.FirstFrame}..{animation.LastFrame}, animated [{string.Join( ", ", animated )}]" );
+		if ( animations.Count == 0 )
+		{
+			Log.Info( $"{modelPrefix}_isle: no readable animations" );
 		}
 		else
 		{
-			Log.Info( $"{modelPrefix}_isleM1: no readable animation (unsupported variant)" );
+			// An animation drives exactly one mesh, identified by its vertex count.
+			for ( int meshIndex = 0; meshIndex < meshCount; ++meshIndex )
+			{
+				var mesh = modelFile.Meshes[meshIndex];
+				if ( !MeshAnimator.Drives( animations[0], mesh ) )
+					continue;
+
+				_animator = new MeshAnimator( [.. animations], mesh, models[meshIndex], meshVertices[meshIndex] );
+
+				Log.Info( $"{modelPrefix}_isle: animating '{mesh.Name.TrimEnd( '\0' )}' ({mesh.VertexCount} verts) " +
+					$"with {animations.Count} animation(s)" );
+				break;
+			}
+
+			if ( _animator == null )
+				Log.Info( $"{modelPrefix}_isle: {animations[0].ChannelCount} channels match no mesh" );
 		}
 	}
 
 	protected override void OnUpdate()
 	{
-		_animator?.Apply( Time.Now, _meshEntities, _basePositions, _baseRotations );
+		_animator?.Update( Time.Delta );
 	}
 }

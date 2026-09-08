@@ -7,9 +7,19 @@ namespace OpenTPW;
 /// flags (mesh table pointer at 0x70 is zero). See the notes on <see cref="ModelFile"/> for how
 /// the two kinds relate and for the evidence behind the layout below.
 ///
-/// An animation is a flat list of numbered channels, sampled sparsely: each track record covers
-/// some subset of channels and stores a keyframe per frame index it cares about. Channels the
-/// file doesn't animate are still present, in a record holding a single keyframe of rest values.
+/// This is vertex animation. An animation has exactly one channel per vertex of the single mesh
+/// it drives, plus two trailing channels that aren't vertices - so ChannelCount is that mesh's
+/// vertex count + 2, which is how the target mesh is identified. Verified on Bat.MD2 (14 verts
+/// -> 16 channels), Bfly_YELL/PINK (15 -> 17) and Jun_isle, whose 171 channels pick out the
+/// 169-vertex "Dino" mesh rather than any of its other 14 meshes.
+///
+/// Channels are sampled sparsely: each track record covers some subset of channels and stores a
+/// keyframe per frame index it cares about. Channels the file doesn't animate are still present,
+/// in a record holding a single keyframe of rest values, so sampling every channel reproduces
+/// the whole mesh. That the moving channels really are vertices was checked independently of the
+/// value decode: the 15 channels Jun_isleM1 animates map to vertices with a mean spread of 3.67
+/// about their centroid, where 2000 random 15-vertex samples of the same mesh never came below
+/// 6.49 - they are one tight cluster, the head.
 ///
 /// Layout, verified against the real game data:
 ///   - ushort at 0xBA is the track record count, uint at 0xC4 the offset of the record table.
@@ -83,6 +93,33 @@ public class AnimationFile : BaseFormat
 			Log.Info( $"Couldn't read animation '{path}': {e.Message}" );
 			return false;
 		}
+	}
+
+	/// <summary>
+	/// A keyframe value is a vertex position quantised into three signed 10-bit fields -
+	/// X in bits 0..9, Y in 10..19, Z in 20..29, with bits 30 and 31 unused. Each field spans
+	/// the owning mesh's bounding box, so -512 maps to the box minimum and +511 to its maximum.
+	///
+	/// Verified by decoding the rest keyframe of every channel of Jun_isleM1 and comparing
+	/// against the 169 vertices of the Dino mesh it animates: R^2 = 0.999997 or better per
+	/// axis, max error 0.028 units, which is just the 10-bit quantisation step.
+	/// </summary>
+	public static Vector3 DecodePosition( uint raw, Vector3 boundsMin, Vector3 boundsMax )
+	{
+		return new Vector3(
+			Component( raw, 0, boundsMin.X, boundsMax.X ),
+			Component( raw, 10, boundsMin.Y, boundsMax.Y ),
+			Component( raw, 20, boundsMin.Z, boundsMax.Z ) );
+	}
+
+	private static float Component( uint raw, int shift, float min, float max )
+	{
+		var field = (int)((raw >> shift) & 0x3FF);
+		if ( (field & 0x200) != 0 )
+			field -= 1024;
+
+		var centre = (min + max) * 0.5f;
+		return centre + (field * (max - min) / 1023f);
 	}
 
 	public bool TryGetChannel( int channelId, out Track? track, out int slot )

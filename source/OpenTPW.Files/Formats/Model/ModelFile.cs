@@ -34,23 +34,13 @@ namespace OpenTPW;
 ///   - They are frequently much larger than the model they accompany (droidc.MD2 is 110 KB
 ///     against droid.MD2's 17 KB), which rules out LOD or collision geometry.
 ///
-/// Verified internal structure of an animation file (exact, holds on every file checked):
-///   - uint32 at 0x98 == fileSize - 72, on all 1279 files.
-///   - A table of 20-byte track records: ushort a, ushort b, uint p1, uint p2, uint p3.
-///     p2 - p1 == 2*b and p3 - p2 == 2*a exactly, and a block of a*b*4 bytes follows p3.
-///     p1 holds b channel ids, p2 holds a ascending frame indices.
-///   - Channel ids across a file's records partition 0..15 exactly with no overlap, so a
-///     record groups the channels that share one set of keyframe times.
-///   - Keyframe values repeat bit-for-bit between frames (a small palette of poses reused),
-///     which is why they are not smooth float curves.
+/// The animation format is decoded - see AnimationFile. In short: one channel per vertex of
+/// the mesh it drives (plus two trailing non-vertex channels), sparse keyframes per channel,
+/// and each keyframe value is a vertex position packed into three signed 10-bit fields
+/// spanning that mesh's bounding box.
 ///
-/// Still unknown: how a keyframe's 4-byte value decodes, and where the track table's offset
-/// is stored (it is NOT at a fixed header offset - it varies per file). Do not guess these:
-/// without a spec or reference tool there is no way to confirm a decoding is right, and
-/// wrong-but-plausible animation would be worse than none.
-///
-/// Useful samples: /lobby/terrain/Batm1.MD2 (10 KB, 4 track records, channels 0..15 split
-/// 8/4/2/2) and /levels/jungle/rides/tourride/BirdC.MD2 (832 bytes).
+/// Useful samples: /lobby/terrain/Jun_isleM1.MD2 and Jun_isleM2.MD2, which both animate the
+/// 169-vertex "Dino" mesh of Jun_isle.MD2.
 /// </summary>
 public partial class ModelFile : BaseFormat
 {
@@ -97,6 +87,13 @@ public partial class ModelFile : BaseFormat
 		public MaterialData[] Materials { get; set; }
 
 		public Vector3[] Normals { get; set; }
+
+		/// <summary>Bounding box of this mesh, and the range animation values quantise into.</summary>
+		public Vector3 BoundsMin { get; set; }
+		public Vector3 BoundsMax { get; set; }
+
+		/// <summary>Maps each entry of <see cref="Vertices"/> back to a source vertex index.</summary>
+		public ushort[] VertexOrder { get; set; } = Array.Empty<ushort>();
 	}
 
 	public struct FrameData
@@ -219,7 +216,14 @@ public partial class ModelFile : BaseFormat
 				uint uvOffset = reader.ReadUInt32();
 				uint materialOffset = reader.ReadUInt32();
 				uint faceOffset = reader.ReadUInt32();
-				reader.BaseStream.Seek( 32, SeekOrigin.Current ); // Skip _idk2 to _37
+				// The mesh's bounding box lives in here. Animation files quantise vertex
+				// positions into signed 10-bit fields spanning exactly this box, so it is
+				// needed to dequantise them - see AnimationFile.
+				reader.BaseStream.Seek( 4, SeekOrigin.Current );
+				var boundsMin = new Vector3( reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle() );
+				var boundsMax = new Vector3( reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle() );
+				reader.BaseStream.Seek( 4, SeekOrigin.Current );
+
 				uint vertexOrderOffset = reader.ReadUInt32();
 				reader.BaseStream.Seek( 8, SeekOrigin.Current ); // Skip _38 and _39
 
@@ -290,6 +294,8 @@ public partial class ModelFile : BaseFormat
 					VertexOrderLen = vertexOrderLength,
 					VertexOrderOffset = vertexOrderOffset,
 					TransformMatrix = transformMatrix,
+					BoundsMin = boundsMin,
+					BoundsMax = boundsMax,
 					Materials = materials.ToArray()
 				} );
 			}
@@ -382,6 +388,7 @@ public partial class ModelFile : BaseFormat
 				}
 
 				mesh.Vertices = reorderedVertices;
+				mesh.VertexOrder = vertexOrder;
 
 				// Parse face data
 				reader.BaseStream.Seek( mesh.FaceOffset, SeekOrigin.Begin );
