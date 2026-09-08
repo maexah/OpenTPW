@@ -7,65 +7,60 @@ using System.Text;
 namespace OpenTPW;
 
 /// <summary>
-/// There are (at least) two structurally different .md2 layouts in the game's data, both
-/// sharing the same 4-byte magic number (0x1CD15D46) and the same "0xDD, 0xCB" constants at
-/// offset 0x04/0x08 (likely a fixed format/tool version stamp, always identical).
+/// .md2 files in this game come in two kinds, sharing the same 4-byte magic (0x1CD15D46)
+/// and the same 0xDD/0xCB constants at 0x04/0x08. They are distinguished by the mesh table
+/// pointer at 0x70: a static mesh always has one, an animation file always has zero.
 ///
-/// Verified by parsing all 2401 .md2 files found across the actual game data (via a
-/// throwaway harness reusing this project's own WadArchive/BaseFileSystem/ModelFile code,
-/// not by inspecting a handful of files by hand):
+/// Determined by testing all 2401 .md2 files present in the real game data (using a harness
+/// that reused this project's own WadArchive/BaseFileSystem/ModelFile code), not by reading
+/// a handful of files by hand:
 ///
-///   - "Variant A" - what this parser below implements. ~1122 files (47%). Has real
-///     absolute-offset table pointers at 0x50 (textureListOffset), 0x54 (frameListOffset),
-///     0x70 (meshPtr), and embedded ASCII texture-name strings. 1119/1122 of these parse
-///     correctly after the FrameOffset==0 sentinel fix below.
+///   - Static meshes (1122 files, 47%) - what the parser below implements. Real offsets at
+///     0x50 (textureListOffset), 0x54 (frameListOffset) and 0x70 (meshPtr), plus embedded
+///     ASCII texture names. All but 2 parse correctly.
 ///
-///   - "Variant B" - NOT implemented by this parser; ~1279 files (53%) hit this. These
-///     files have ZERO at all three of those pointer offsets (0x50/0x54/0x70), and contain
-///     no embedded texture-name strings anywhere in the file. frameCount (0x36) and meshCnt
-///     (0x44) read as plausible small numbers for both variants - only the pointer fields
-///     and everything they'd normally lead to differ.
+///   - Animation files (1279 files, 53%) - all three of those offsets are zero. These are
+///     NOT meshes and must not be parsed as such; doing so is what used to throw
+///     EndOfStreamException/ArgumentOutOfRangeException on half the game's .md2 files.
 ///
-/// Confirmed structure for Variant B (verified against many files, cross-referencing
-/// header count fields against manually-identified data by pattern, e.g. finding N
-/// plausible float triples where N matches a header field - not guessed):
+/// Evidence that the second kind is animation data for a base model rather than geometry:
+///   - 1274 of the 1279 sit next to a static-mesh .md2 whose name is a prefix of their own
+///     (droid.MD2 -> droidc/droidi/droidm1/droidm2.MD2). The 5 that don't are named
+///     SCALE.MD2, ROTATE.MD2, FLY.MD2, anim.MD2 and scatM1.md2.
+///   - They contain no float32 array anywhere that reproduces the model bounding box stored
+///     at 0x80, under any layout tried (AoS triples or the grouped-by-4 SoA packing the
+///     static path uses) - i.e. they carry no vertex positions at all.
+///   - They contain no texture names, consistent with inheriting the base model's materials.
+///   - They are frequently much larger than the model they accompany (droidc.MD2 is 110 KB
+///     against droid.MD2's 17 KB), which rules out LOD or collision geometry.
 ///
-///   - Fixed 184-byte (0xB8) header per mesh, structurally similar in spirit to Variant A's
-///     but NOT at the same offsets - the 0x36/0x44 count fields read correctly, but nothing
-///     resembling Variant A's 0x50/0x54/0x70 pointers exists.
-///   - Vertex position array (3x float per vertex) starts immediately at offset 0xB8. Count
-///     matches the header field at 0x48 (NOT 0x38, which is a different, still-unidentified
-///     count - the 0x38 field looked like "vertex count" in one sample by coincidence but
-///     didn't generalize).
-///   - uint32 at offset 0x98 == fileSize - 72, exactly, on every file tested. The final 72
-///     bytes of the file are a per-mesh footer containing back-pointers (as file-absolute
-///     byte offsets) into: the mesh sub-header, a table of ascending integers followed by a
-///     table of per-entry float triples clustered near 1.0 (semantics unconfirmed - possibly
-///     per-material vertex ranges + blend/weight values, unverified), and a trivial ascending
-///     vertex-order index list (1..vertexCount, 0-terminated).
-///   - NOT located, despite real effort: where UV coordinates and face/triangle index data
-///     live. Every alignment/grouping tried on the remaining bytes produced inconsistent
-///     results (e.g. a value of 16256 = the upper 16 bits of the float 1.0f, suggesting a
-///     2-byte misalignment somewhere nearby that wasn't run to ground). Do not guess at this
-///     - implementing face/UV parsing without being able to actually verify it (there's no
-///     spec, no reference tool, and wrong-but-plausible geometry would be worse than a clear
-///     "unsupported" failure) risks silently-wrong meshes rendering in-game.
-///   - Texture/material assignment for Variant B does not appear to live in the model file at
-///     all (no embedded names, unlike Variant A). Checked the owning ride's .sam config (e.g.
-///     /levels/jungle/rides/tourride/tourride.sam for Bird*.md2) - it only references the
-///     model filename, not per-mesh textures. Sibling "textures" folders next to these models
-///     (e.g. JF_Rbody.wct/JF_Rhead4.wct/JF_Rwing.wct next to Bird*.md2) strongly suggest the
-///     binding is driven by the .RSE ride-script format instead (itself only partially
-///     implemented in this project) - a separate investigation from MD2 parsing itself.
+/// Verified internal structure of an animation file (exact, holds on every file checked):
+///   - uint32 at 0x98 == fileSize - 72, on all 1279 files.
+///   - A table of 20-byte track records: ushort a, ushort b, uint p1, uint p2, uint p3.
+///     p2 - p1 == 2*b and p3 - p2 == 2*a exactly, and a block of a*b*4 bytes follows p3.
+///     p1 holds b channel ids, p2 holds a ascending frame indices.
+///   - Channel ids across a file's records partition 0..15 exactly with no overlap, so a
+///     record groups the channels that share one set of keyframe times.
+///   - Keyframe values repeat bit-for-bit between frames (a small palette of poses reused),
+///     which is why they are not smooth float curves.
 ///
-/// Good sample files for continuing this (small, meshCnt=1, easy to reason about by hand):
-///   /levels/jungle/rides/wateride/wr_ringM.md2 (256 bytes, 1 mesh, minimal)
-///   /levels/jungle/rides/tourride/BirdC.MD2 (832 bytes, 1 mesh, 11 verts - the file most of
-///     the above was derived from)
+/// Still unknown: how a keyframe's 4-byte value decodes, and where the track table's offset
+/// is stored (it is NOT at a fixed header offset - it varies per file). Do not guess these:
+/// without a spec or reference tool there is no way to confirm a decoding is right, and
+/// wrong-but-plausible animation would be worse than none.
+///
+/// Useful samples: /lobby/terrain/Batm1.MD2 (10 KB, 4 track records, channels 0..15 split
+/// 8/4/2/2) and /levels/jungle/rides/tourride/BirdC.MD2 (832 bytes).
 /// </summary>
 public partial class ModelFile : BaseFormat
 {
-	public List<Mesh> Meshes { get; private set; }
+	public List<Mesh> Meshes { get; private set; } = new();
+
+	/// <summary>
+	/// True when this file is animation data for a separate base model rather than a mesh.
+	/// <see cref="Meshes"/> is empty in that case - see the notes on this class.
+	/// </summary>
+	public bool IsAnimation { get; private set; }
 
 	public ModelFile( Stream stream )
 	{
@@ -130,6 +125,22 @@ public partial class ModelFile : BaseFormat
 	{
 		using ( BinaryReader reader = new BinaryReader( stream, Encoding.ASCII, true ) )
 		{
+			//
+			// Animation files carry no mesh table. Detect them up front rather than letting
+			// the mesh parse below run off the end of the stream.
+			//
+			reader.BaseStream.Seek( 0x70, SeekOrigin.Begin );
+			uint meshTableOffset = reader.ReadUInt32();
+
+			if ( meshTableOffset == 0 )
+			{
+				IsAnimation = true;
+				return;
+			}
+
+			if ( meshTableOffset >= stream.Length )
+				throw new InvalidDataException( $"Mesh table offset {meshTableOffset} is past the end of this {stream.Length} byte file" );
+
 			reader.BaseStream.Seek( 0x50, SeekOrigin.Begin );
 			uint off2 = reader.ReadUInt32();
 
@@ -221,6 +232,9 @@ public partial class ModelFile : BaseFormat
 					c = reader.ReadChar();
 					name += c;
 				} while ( c != '\0' );
+
+				if ( materialOffset + (20 * (long)materialCount) > stream.Length )
+					throw new InvalidDataException( $"Mesh {meshIdx} wants {materialCount} materials at offset {materialOffset}, which runs past the end of this {stream.Length} byte file" );
 
 				reader.BaseStream.Seek( materialOffset, SeekOrigin.Begin );
 				List<MaterialData> materials = new();
