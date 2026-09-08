@@ -183,6 +183,15 @@ public partial class ModelFile : BaseFormat
 
 				foreach ( var material in materials )
 				{
+					// A FrameOffset of 0 is a sentinel for "no texture" - it isn't a real
+					// offset into the frame table (real offsets start at textureListOffset),
+					// so there's no frame/texture name to resolve for this material.
+					if ( material.FrameOffset == 0 )
+					{
+						material.Name = string.Empty;
+						continue;
+					}
+
 					// start at texIdOffset, divide by 8 to get index
 					uint frameId = (material.FrameOffset - textureListOffset) / 8;
 					var frame = frameData[(int)frameId];

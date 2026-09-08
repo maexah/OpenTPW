@@ -18,7 +18,7 @@ public sealed class LobbyIsland : Entity
 
 			for ( int i = 0; i < 16; ++i )
 			{
-				if ( mesh.Materials.Length <= i )
+				if ( mesh.Materials.Length <= i || string.IsNullOrEmpty( mesh.Materials[i].Name ) )
 				{
 					textures.Add( Texture.Missing );
 				}
