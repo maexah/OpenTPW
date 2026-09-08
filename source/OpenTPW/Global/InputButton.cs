@@ -267,6 +267,13 @@ public enum InputButton
 	/// Help (F1)
 	/// Plays advisor help speech for the current screen/action.
 	/// </summary>
-	[DefaultKey( Key.F1 )] 
+	[DefaultKey( Key.F1 )]
 	Help,
+
+	/// <summary>
+	/// Freeze Camera (X)
+	/// Stops the lobby camera orbiting, so a model can be watched while it animates.
+	/// </summary>
+	[DefaultKey( Key.X )]
+	FreezeCamera,
 }

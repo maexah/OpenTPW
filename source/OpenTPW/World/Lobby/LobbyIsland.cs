@@ -4,6 +4,11 @@ namespace OpenTPW;
 
 public sealed class LobbyIsland : Entity
 {
+	private readonly ModelEntity?[] _meshEntities;
+	private readonly Vector3[] _basePositions;
+	private readonly Quaternion[] _baseRotations;
+	private readonly MeshAnimator? _animator;
+
 	public LobbyIsland( Vector3 _position, string themeName )
 	{
 		Position = _position;
@@ -11,8 +16,14 @@ public sealed class LobbyIsland : Entity
 		var modelPrefix = themeName[0..3];
 		var modelFile = new ModelFile( $"lobby/terrain/{modelPrefix}_isle.md2" );
 
-		foreach ( var mesh in modelFile.Meshes )
+		var meshCount = modelFile.Meshes.Count;
+		_meshEntities = new ModelEntity?[meshCount];
+		_basePositions = new Vector3[meshCount];
+		_baseRotations = new Quaternion[meshCount];
+
+		for ( int meshIndex = 0; meshIndex < meshCount; ++meshIndex )
 		{
+			var mesh = modelFile.Meshes[meshIndex];
 			var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader" );
 			var textures = new List<Texture>();
 
@@ -51,13 +62,42 @@ public sealed class LobbyIsland : Entity
 			var rotation = new Quaternion( rot.X, rot.Z, rot.Y, -rot.W );
 			var scale = new Vector3( scl.X, scl.Z, scl.Y );
 
-			_ = new ModelEntity()
+			_meshEntities[meshIndex] = new ModelEntity()
 			{
 				Model = model,
 				Scale = scale,
 				Rotation = rotation,
 				Position = position + Position,
 			};
+
+			_basePositions[meshIndex] = position + Position;
+			_baseRotations[meshIndex] = rotation;
 		}
+
+		var animationPath = $"lobby/terrain/{modelPrefix}_isleM1.md2";
+		if ( AnimationFile.TryLoad( animationPath, out var animation ) && animation != null )
+		{
+			_animator = new MeshAnimator( animation );
+
+			var animated = new List<int>();
+			foreach ( var track in animation.Tracks )
+			{
+				if ( !track.IsConstant )
+					animated.AddRange( track.ChannelIds.Select( x => (int)x ) );
+			}
+			animated.Sort();
+
+			Log.Info( $"{modelPrefix}_isleM1: {animation.Tracks.Count} records, {animation.ChannelCount} channels, " +
+				$"frames {animation.FirstFrame}..{animation.LastFrame}, animated [{string.Join( ", ", animated )}]" );
+		}
+		else
+		{
+			Log.Info( $"{modelPrefix}_isleM1: no readable animation (unsupported variant)" );
+		}
+	}
+
+	protected override void OnUpdate()
+	{
+		_animator?.Apply( Time.Now, _meshEntities, _basePositions, _baseRotations );
 	}
 }

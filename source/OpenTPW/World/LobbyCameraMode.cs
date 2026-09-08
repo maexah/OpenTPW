@@ -8,10 +8,25 @@ public class LobbyCameraMode : CameraMode
 
 	private Vector3 Target => new Vector3( 400, 400, 12.5f );
 
+	/// <summary>
+	/// Static so it survives <see cref="Camera.SetCameraMode{T}"/> creating a fresh instance.
+	/// </summary>
+	public static bool Paused { get; set; }
+
+	// Accumulated separately from Time.Now so unpausing resumes where it stopped instead of
+	// snapping back onto the wall-clock orbit.
+	private float _orbitTime;
+
 	public override void Update()
 	{
-		float x = MathF.Sin( Time.Now * Speed ) * Distance;
-		float y = MathF.Cos( Time.Now * Speed ) * Distance;
+		if ( Input.Pressed( InputButton.FreezeCamera ) )
+			Paused = !Paused;
+
+		if ( !Paused )
+			_orbitTime += Time.Delta;
+
+		float x = MathF.Sin( _orbitTime * Speed ) * Distance;
+		float y = MathF.Cos( _orbitTime * Speed ) * Distance;
 
 		Position = new Vector3( Target.X + x, Target.Y + y, Height );
 		Rotation = Rotation.LookAt( Target - Position );

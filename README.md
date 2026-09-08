@@ -43,6 +43,8 @@ OpenTPW is currently in a very early stage of development, and is not yet playab
 | Materials ([.MTR](https://opentpw.gu3.me/formats/mtr.html))                   | ❌     |
 | Video ([.TQI](https://opentpw.gu3.me/formats/tqi.html))                       | ❌     |
 
+\* Models (.MD2): static mesh geometry (verts/faces/materials) loads reliably. The same extension is also used for a structurally distinct, still partially-understood keyframe animation format, which is detected but not yet played back.
+
 ### Documentation
 
 File format information is available at the [OpenTPW formats](https://opentpw.gu3.me/formats/) website. Keep in mind that this information is a work-in-progress, and therefore might not be of incredible detail - however, upon completion, it still aims to be as useful, detailed, and as in-depth as possible.
