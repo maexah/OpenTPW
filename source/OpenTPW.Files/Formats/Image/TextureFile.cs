@@ -8,6 +8,13 @@ public partial class TextureFile : BaseFormat
 {
 	public TextureData Data { get; set; }
 
+	/// <summary>
+	/// False when there was no image to read - the file isn't in the archive, or the path is
+	/// wrong. <see cref="Data"/> still holds something drawable in that case, but callers that
+	/// have a better answer than a debug colour should check this first.
+	/// </summary>
+	public bool IsValid { get; private set; }
+
 	static float ComputeDequantizationScaleY( int n ) => 1.0f - ((float)n * -0.5f);
 	static float ComputeDequantizationScaleCbCr( int n ) => 1.0f - ((float)n * -0.25f);
 	static float ComputeDequantizationScaleA( int n ) => (float)n + 1.0f;
@@ -32,6 +39,8 @@ public partial class TextureFile : BaseFormat
 	{
 		if ( stream == null )
 		{
+			// Last resort only. Anything drawn into the world goes through Texture, which
+			// substitutes the game's own not-found texture before this can reach the screen.
 			Data = new TextureData( 1, 1, new byte[] { 255, 0, 255, 255 } );
 			return;
 		}
@@ -149,6 +158,7 @@ public partial class TextureFile : BaseFormat
 		}
 
 		Data = new TextureData( fileData.Width, fileData.Height, textureData.ToArray() );
+		IsValid = true;
 	}
 
 	private static byte[] Decompress( byte[] data )

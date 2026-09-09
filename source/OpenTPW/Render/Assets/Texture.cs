@@ -13,6 +13,12 @@ public partial class Texture : Asset
 
 	public static Texture Missing => new Texture( [255, 255, 255, 255], 1, 1 );
 
+	/// <summary>The game's own stand-in for a texture it can't load - see <see cref="NotFound"/>.</summary>
+	private const string NotFoundPath = "generic/defaulttexture/NotFound.tga";
+
+	/// <summary>Decoded once; <see cref="NotFound"/> hands out copies.</summary>
+	private static TextureData? _notFound;
+
 	internal Veldrid.Texture NativeTexture;
 	internal TextureView NativeTextureView;
 
@@ -70,9 +76,47 @@ public partial class Texture : Asset
 	/// </summary>
 	private void UpdateFromWct( string path, TextureFlags flags )
 	{
-		var textureFileData = new TextureFile( path ).Data;
+		var file = new TextureFile( path );
+		var textureFileData = file.IsValid ? file.Data : NotFound( path );
 
 		CreateTexture( path, textureFileData.Data, (uint)textureFileData.Width, (uint)textureFileData.Height, flags );
+	}
+
+	/// <summary>
+	/// What the original draws in place of a texture it cannot load.
+	///
+	/// Its texture cache installs Data\Generic\defaulttexture\notfound.tga as entry zero when it
+	/// starts up, and the routine that resolves a model's materials assigns that entry to any
+	/// frame whose texture it failed to find - the same branch that logs "Could not load texture
+	/// '%s' from '%s' or '%s'". So a material naming a texture the game doesn't have is not an
+	/// error the original refuses to draw; it has a shipped answer for it.
+	///
+	/// That answer is a plain brown noise tile rather than a loud debug colour, which is why the
+	/// one material in the game that needs it goes unnoticed: hallow's lobby sign frames itself
+	/// with a "signgrab" texture that appears nowhere in the data, and brown reads as weathered
+	/// wood on a haunted sign where magenta read as a bug.
+	/// </summary>
+	private static TextureData NotFound( string wanted )
+	{
+		Log.Warning( $"Could not load texture '{wanted}' - drawing the game's not-found texture instead" );
+
+		if ( _notFound == null )
+		{
+			using var stream = FileSystem.OpenRead( NotFoundPath );
+
+			// An install missing the not-found texture as well leaves TextureFile's own last
+			// resort in place, which is the only thing left to draw.
+			if ( stream == null )
+				return new TextureFile( stream ).Data;
+
+			var image = ImageResult.FromStream( stream, ColorComponents.RedGreenBlueAlpha );
+			_notFound = new TextureData( image.Width, image.Height, image.Data );
+		}
+
+		// CreateTexture rewrites the pixels it is handed - chroma keying does - so every caller
+		// gets its own copy rather than editing the one they all share.
+		var texture = _notFound.Value;
+		return texture with { Data = (byte[])texture.Data.Clone() };
 	}
 
 	private int CalculateMipLevels( int width, int height, int depth )
