@@ -2,7 +2,7 @@
 
 public partial class TextureFile
 {
-	struct TextureFileData
+	internal struct TextureFileData
 	{
 		public TextureFlags Flags { get; set; }
 		public bool HasAlphaChannel { get; set; }

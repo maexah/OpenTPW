@@ -31,7 +31,12 @@ public sealed class LobbyModel
 	/// own root - so a mesh further from the root moves closer to it too, rather than just
 	/// shrinking in place. Baked into <see cref="_linearTransforms"/> at load time.
 	/// </param>
-	public LobbyModel( string modelPath, string textureDirectory, Vector3 origin, float scale = 1f )
+	/// <param name="textureOverrides">
+	/// Textures to use in place of the .wct a material names, keyed by material name. The park
+	/// signs are built at runtime rather than loaded from disk - see <see cref="SignTexture"/>.
+	/// </param>
+	public LobbyModel( string modelPath, string textureDirectory, Vector3 origin, float scale = 1f,
+		IReadOnlyDictionary<string, Texture>? textureOverrides = null )
 	{
 		var modelFile = new ModelFile( modelPath );
 		var meshCount = modelFile.Meshes.Count;
@@ -54,6 +59,8 @@ public sealed class LobbyModel
 			{
 				if ( mesh.Materials.Length <= i || string.IsNullOrEmpty( mesh.Materials[i].Name ) )
 					textures.Add( Texture.Missing );
+				else if ( textureOverrides != null && textureOverrides.TryGetValue( mesh.Materials[i].Name, out var overridden ) )
+					textures.Add( overridden );
 				else
 					textures.Add( new Texture( $"{textureDirectory}/{mesh.Materials[i].Name}.wct", TextureFlags.Repeat ) );
 			}

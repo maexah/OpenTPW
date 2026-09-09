@@ -3,7 +3,7 @@
 public partial class TextureFile
 {
 	[Flags]
-	enum TextureFlags
+	internal enum TextureFlags
 	{
 		None = 0,
 

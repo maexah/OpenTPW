@@ -22,6 +22,12 @@ public partial class TextureFile : BaseFormat
 		ReadFromFile( path );
 	}
 
+	/// <summary>Decodes an image whose header was assembled by the caller - see <see cref="Decode"/>.</summary>
+	internal TextureFile( TextureFileData fileData )
+	{
+		Decode( fileData );
+	}
+
 	protected override void ReadFromStream( Stream stream )
 	{
 		if ( stream == null )
@@ -68,6 +74,18 @@ public partial class TextureFile : BaseFormat
 		if ( fileData.AlphaChunkSize > 0 )
 			fileData.AlphaChunk = binaryReader.ReadBytes( fileData.AlphaChunkSize );
 
+		Decode( fileData );
+	}
+
+	/// <summary>
+	/// Decodes an image from a header plus its already-read colour and alpha chunks.
+	///
+	/// Split out from <see cref="ReadFromStream"/> because a .wct file is not the only thing that
+	/// carries one of these images - a .sgn park sign embeds the same chunks with its header
+	/// fields laid out differently, so it builds the header itself and calls in here.
+	/// </summary>
+	internal void Decode( TextureFileData fileData )
+	{
 		//
 		// Decompress blocks
 		//
