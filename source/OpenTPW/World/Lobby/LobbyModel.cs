@@ -113,6 +113,13 @@ public sealed class LobbyModel
 		Rotator?.Update( deltaTime );
 	}
 
+	/// <summary>Freezes every morph animation this model has on its rest pose - see <see cref="MeshAnimator.Pause"/>.</summary>
+	public void Pause()
+	{
+		foreach ( var animator in Animators )
+			animator.Pause();
+	}
+
 	/// <summary>
 	/// Model space is Y-up; the world we draw into swaps Y and Z, which is the same swizzle the
 	/// mesh positions go through. Conjugating the matrix by that swap converts its rotation,

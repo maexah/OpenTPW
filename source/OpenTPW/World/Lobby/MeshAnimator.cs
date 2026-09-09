@@ -125,6 +125,19 @@ public class MeshAnimator
 	}
 
 	/// <summary>
+	/// Resets to the current animation's first frame and renders it immediately, then holds
+	/// there - time stops advancing - until <see cref="Update"/> is called again, which then
+	/// continues forward from this point rather than jumping back to wherever playback had
+	/// reached before this was called. Every animation this project has decoded so far starts
+	/// and ends a loop at the same pose, so "first frame" is that loop's neutral rest pose.
+	/// </summary>
+	public void Pause()
+	{
+		_elapsed = 0f;
+		Update( 0f );
+	}
+
+	/// <summary>
 	/// Slides the UV components this track names from their start value to their end value,
 	/// each on its own end frame. Components are two per coordinate, so component c is the
 	/// U of vertex c/2 when c is even and the V when it's odd.

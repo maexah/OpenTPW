@@ -22,7 +22,8 @@ namespace OpenTPW;
 /// Movement is fully 3D (it does climb and descend, and does wander in every direction) but
 /// facing only ever reflects the horizontal component of that - see <see cref="FaceDirection"/> -
 /// so it always flies level, banking into nothing. Descending is a distinct visible cue instead:
-/// the wingbeat itself pauses while it's happening, then picks back up.
+/// the wingbeat briefly holds on its rest pose - wings up - right as a descent begins, then
+/// resumes on its own.
 /// </summary>
 public sealed class LobbyButterfly : Entity
 {
@@ -47,14 +48,29 @@ public sealed class LobbyButterfly : Entity
 	private const float ModelScale = 0.75f;
 
 	/// <summary>
-	/// How far below level counts as "descending" for pausing the wingbeat - a small deadband
-	/// (rather than triggering at exactly 0) so gentle wander noise around level flight doesn't
-	/// flicker the animation on and off. <see cref="ResumeFlappingAbove"/> is the matching exit
-	/// threshold, a little higher, so crossing back and forth right at the edge doesn't flicker
-	/// either.
+	/// How far below level counts as "starting to descend" - a deadband below 0 so gentle
+	/// wander noise around level flight doesn't retrigger this constantly. Crossing back above
+	/// <see cref="ResumeDescentTrigger"/>, a little higher, re-arms it, so a single continuous
+	/// descent only pauses the wingbeat once at its start rather than repeatedly.
 	/// </summary>
-	private const float PauseFlappingBelow = -0.15f;
-	private const float ResumeFlappingAbove = -0.05f;
+	private const float DescentTrigger = -0.15f;
+	private const float ResumeDescentTrigger = -0.05f;
+
+	/// <summary>How long the wingbeat holds on its rest pose when a descent begins.</summary>
+	private const float DescentPauseDuration = 0.25f;
+
+	/// <summary>
+	/// Below this horizontal speed (as a fraction of full speed), the direction is close enough
+	/// to straight up or down that its horizontal projection - and so the yaw derived from it -
+	/// is no longer trustworthy. A small, fixed rotation applied near that pole swings the
+	/// projected angle wildly for a fixed rotation angle (checked directly: at 6 degrees off
+	/// vertical, one frame of ordinary wander jitter alone can swing the projected yaw nearly
+	/// 5 degrees, growing without bound closer to the pole) even though the actual 3D direction
+	/// is turning smoothly the whole time. <see cref="_facingYaw"/> is what actually gets faced;
+	/// it keeps its last trustworthy heading through a steep climb or dive instead of chasing
+	/// that noise.
+	/// </summary>
+	private const float MinYawConfidence = 0.3f;
 
 	private readonly LobbyModel _model;
 	private readonly Vector3 _origin;
@@ -64,7 +80,21 @@ public sealed class LobbyButterfly : Entity
 
 	private Vector3 _position;
 	private Vector3 _direction;
-	private bool _descending;
+
+	/// <summary>
+	/// The last yaw (radians) confident enough to face - see <see cref="MinYawConfidence"/>.
+	/// A scalar angle rather than a direction vector deliberately: smoothing this as a vector
+	/// with the same cross-product-based RotateTowards used for movement has its own pole -
+	/// two horizontal vectors that are exactly opposite cross to zero, and the fallback axis
+	/// that then picks is itself horizontal rather than vertical, so rotating about it tips the
+	/// facing out of the horizontal plane right when reversing heading. A plain angle, wrapped
+	/// and clamped with ordinary scalar arithmetic, has no such case - it can't ever leave the
+	/// horizontal plane because it was never anything but horizontal to begin with.
+	/// </summary>
+	private float _facingYaw;
+
+	private bool _canTriggerDescentPause = true;
+	private float _flapPauseRemaining;
 
 	/// <summary>
 	/// <paramref name="seed"/> drives every random choice this butterfly makes for the rest of
@@ -83,6 +113,14 @@ public sealed class LobbyButterfly : Entity
 		_position = startPosition;
 		_direction = startDirection.Normal;
 
+		// Same confidence rule as OnUpdate: only trust the start direction's own horizontal
+		// component if there's enough of it, otherwise face an arbitrary but valid heading -
+		// it'll pick up a real one within a frame or two once it starts actually moving.
+		var startHorizontal = new Vector3( _direction.X, _direction.Y, 0f );
+		_facingYaw = startHorizontal.Length >= MinYawConfidence
+			? MathF.Atan2( startHorizontal.Y, startHorizontal.X )
+			: 0f;
+
 		_model = new LobbyModel( $"lobby/terrain/{modelName}.md2", "lobby/terrain/textures", _position, ModelScale );
 	}
 
@@ -99,16 +137,52 @@ public sealed class LobbyButterfly : Entity
 		_direction = RotateTowards( _direction, desired, TurnRate * dt );
 		_position += _direction * _speed * dt;
 
-		// Hysteresis around the two thresholds, not one, so hovering right at the edge doesn't
-		// flicker the wingbeat on and off every frame.
-		if ( _descending ? _direction.Z > ResumeFlappingAbove : _direction.Z < PauseFlappingBelow )
-			_descending = !_descending;
+		// Only chase the new heading's horizontal projection when it's confident enough to
+		// trust - see MinYawConfidence. Below that, keep facing the last confident heading
+		// rather than let a steep climb or dive spin the facing on projection noise.
+		var horizontal = new Vector3( _direction.X, _direction.Y, 0f );
+		if ( horizontal.Length >= MinYawConfidence )
+		{
+			var targetYaw = MathF.Atan2( horizontal.Y, horizontal.X );
+			var maxStep = TurnRate * dt;
 
-		// Movement itself always uses the real delta time above; only the model's own
-		// animation (the wingbeat) pauses while gliding down.
-		_model.Update( _descending ? 0f : dt );
+			_facingYaw += WrapAngle( targetYaw - _facingYaw ).Clamp( -maxStep, maxStep );
+		}
 
-		_model.SetTransform( _position, FaceDirection( _direction ) );
+		// Edge-triggered: a single continuous descent pauses the wingbeat once, right as it
+		// begins, rather than for as long as the descent lasts.
+		if ( _canTriggerDescentPause && _direction.Z < DescentTrigger )
+		{
+			_flapPauseRemaining = DescentPauseDuration;
+			_canTriggerDescentPause = false;
+			_model.Pause();
+		}
+		else if ( _direction.Z > ResumeDescentTrigger )
+		{
+			_canTriggerDescentPause = true;
+		}
+
+		if ( _flapPauseRemaining > 0f )
+			_flapPauseRemaining -= dt;
+		else
+			_model.Update( dt );
+
+		_model.SetTransform( _position, FaceDirection( _facingYaw ) );
+	}
+
+	/// <summary>Wraps an angle in radians to (-pi, pi], so a shortest-path turn can be found by simple clamping.</summary>
+	private static float WrapAngle( float radians )
+	{
+		const float tau = MathF.PI * 2f;
+
+		radians %= tau;
+
+		if ( radians < -MathF.PI )
+			radians += tau;
+		else if ( radians > MathF.PI )
+			radians -= tau;
+
+		return radians;
 	}
 
 	/// <summary>
@@ -178,13 +252,13 @@ public sealed class LobbyButterfly : Entity
 	}
 
 	/// <summary>
-	/// A yaw-only facing rotation: it turns to face wherever it's heading horizontally, but
-	/// never pitches or rolls, so it always flies with level wings no matter how much it's
-	/// currently climbing or descending (that's real - see <see cref="_position"/> - it just
-	/// isn't reflected in orientation). No banking into turns, by construction rather than by
-	/// damping: for a forward vector with no vertical component, this always resolves to
-	/// exactly world up, with zero roll, for every heading - checked directly before ever
-	/// touching this file, not just assumed.
+	/// A yaw-only facing rotation: it turns to face <paramref name="yaw"/>, but never pitches
+	/// or rolls, so it always flies with level wings no matter how much it's currently climbing
+	/// or descending (that's real - see <see cref="_position"/> - it just isn't reflected in
+	/// orientation). No banking into turns, by construction rather than by damping: for a
+	/// forward vector with no vertical component, this always resolves to exactly world up,
+	/// with zero roll, for every heading - checked directly before ever touching this file,
+	/// not just assumed.
 	///
 	/// This replaced an earlier version that derived up from the actual 3D flight direction
 	/// (tilting to stay perpendicular to it, the usual way to face a moving object), which
@@ -196,19 +270,9 @@ public sealed class LobbyButterfly : Entity
 	/// forward, then -right, then up, matching how a rotation quaternion's matrix places each
 	/// local axis's world-space image.
 	/// </summary>
-	private static Quaternion FaceDirection( Vector3 direction )
+	private static Quaternion FaceDirection( float yaw )
 	{
-		var forward = new Vector3( direction.X, direction.Y, 0f );
-
-		// Only possible when moving essentially straight up or down, which the turn-rate cap
-		// and the floor/ceiling margins together keep this from actually reaching - a safety
-		// net rather than something that happens in practice. Whatever direction is picked
-		// here, it will move away from vertical (and so away from this fallback) within a
-		// frame or two.
-		if ( forward.LengthSquared < 0.0001f )
-			forward = Vector3.Forward;
-
-		forward = forward.Normal;
+		var forward = new Vector3( MathF.Cos( yaw ), MathF.Sin( yaw ), 0f );
 
 		var right = forward.Cross( Vector3.Up ).Normal;
 		var up = right.Cross( forward ).Normal;
