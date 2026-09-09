@@ -21,8 +21,28 @@ public sealed class LobbyIsland : Entity
 	/// <summary>This island's place in the lobby's running order, taken from its script.</summary>
 	public int Index => _script.Index;
 
-	/// <summary>The park's display name - "Lost Kingdom" for the jungle. Empty if unreadable.</summary>
-	public string ParkName => _script.ParkName;
+	/// <summary>The park's name as the player sees it, painted on the gate's sign.</summary>
+	public string ParkName { get; }
+
+	/// <summary>
+	/// What each park is actually called.
+	///
+	/// A park's ISLAND() line does carry a name, but for three of the four it is the backend one
+	/// - "Fantasy", "Halloween", "Space" - and only the jungle's happens to be what the player is
+	/// shown. The displayed names are not in the shipped data at all: decompressing all 312 WADs
+	/// and searching those, the loose language files and the executable turns up "Lost Kingdom"
+	/// and no trace of the other three. So this table is ours rather than the game's, and a park
+	/// outside these four falls back to whatever its script says.
+	///
+	/// All four are two words, which is what puts one on each of the sign's two panels.
+	/// </summary>
+	private static readonly Dictionary<string, string> DisplayNames = new( StringComparer.OrdinalIgnoreCase )
+	{
+		["Jungle"] = "Lost Kingdom",
+		["Fantasy"] = "Wonder Land",
+		["Hallow"] = "Halloween World",
+		["Space"] = "Space Zone"
+	};
 
 	private readonly LobbyModel _model;
 	private readonly IslandScript _script;
@@ -33,9 +53,11 @@ public sealed class LobbyIsland : Entity
 	///     ISLAND(0,"data\lobby\terrain","jun_isle","jun_gate","Lost Kingdom",90.0,12.5)
 	///
 	/// Its index is the lobby's running order, its fourth quoted field is the name painted on the
-	/// sign, and its last number is how far above the island the camera looks. The terrain
-	/// directory and the two model names are paths this class and LobbyGate still build by hand,
-	/// and the number before the last one looks like a heading - none of those are read yet.
+	/// sign, and its last number is how far above the island the camera looks. The number before
+	/// that is the island's heading around the lobby globe in degrees - the original spins the
+	/// globe to it to select a park - which this does not need while the islands are orbited
+	/// where they stand. The terrain directory and the two model names are paths this class and
+	/// LobbyGate still build by hand.
 	/// </summary>
 	private readonly record struct IslandScript( int Index, string ParkName, float CameraHeight );
 
@@ -46,12 +68,25 @@ public sealed class LobbyIsland : Entity
 		var modelPrefix = themeName[0..3];
 		_script = ReadScript( themeName );
 
+		ParkName = DisplayNames.TryGetValue( themeName, out var displayName )
+			? displayName
+			: _script.ParkName;
+
+		// Offered to both models below: the sign panels are meshes of the island for the jungle
+		// and hallow, but of the gate for fantasy and space, and whichever model names sign1 and
+		// sign2 is the one that takes them.
+		var sign = BuildSign( modelPrefix, ParkName );
+
 		// An island's meshes sit 2.5 units below the origin it is placed at.
 		_model = new LobbyModel(
 			$"lobby/terrain/{modelPrefix}_isle.md2",
 			"lobby/terrain/textures",
 			Position - new Vector3( 0, 0, 2.5f ),
-			textureOverrides: BuildSign( modelPrefix, _script.ParkName ) );
+			textureOverrides: sign );
+
+		// An island brings its gate with it, the way a park's script names both models on one
+		// line. Entity.All keeps hold of it.
+		_ = new LobbyGate( Position, themeName, sign );
 	}
 
 	/// <summary>

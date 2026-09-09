@@ -29,7 +29,6 @@ public class Level
 
 		var jungle = new Vector3( 400, 400, 0 );
 		_ = new LobbyIsland( jungle, "Jungle" );
-		_ = new LobbyGate( jungle, "Jungle" );
 
 		SpawnButterflies( jungle, count: 16 );
 
