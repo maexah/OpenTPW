@@ -1,28 +1,61 @@
+using System.Globalization;
+
 namespace OpenTPW;
 
 /// <summary>
-/// Orbits whichever park island is currently on show, and slides between them.
+/// Orbits whichever park island is on show, and moves between them.
 ///
-/// The orbit is the same for every island - one angle, advancing steadily - and what changes
-/// when you move to another park is the point it is centred on. That is deliberate: the camera
-/// is never repositioned, so there is no arrival to snap to a default heading. It just keeps
-/// turning while the centre slides across, and carries on around the new island from wherever
-/// the move left it.
+/// This follows what the original does, which was read out of its own camera update
+/// (FUN_005e1210 in the decompile). It never moves the camera to a place; it works out where the
+/// camera ought to be this frame - the island, plus the orbit offset - and then eases the camera
+/// and its aim towards those separately:
 ///
-/// Because the orbit offset is the same at both ends of a move, sliding the centre and sliding
-/// the camera are the same motion - the island stays framed the whole way over, with the old one
-/// leaving the shot as the new one enters.
+///     position += (wantedPosition - position) * delta * 0.1
+///     lookAt   += (wantedLookAt   - lookAt)   * delta * 0.2
+///
+/// That is a first-order lag, so the speed is set by how far there is left to go: quickest the
+/// moment the island changes, easing down as it arrives. The aim closes at twice the rate of the
+/// camera body, so the shot settles on the new island while the camera is still travelling.
+///
+/// Nothing in there is a transition - there is no arrival, no duration and no second code path.
+/// Selecting another island only changes what the two are chasing, which is also why the orbit
+/// carries on turning straight through a move.
 /// </summary>
 public class LobbyCameraMode : CameraMode
 {
-	/// <summary>How far above the point it is looking at the camera sits.</summary>
-	private const float Height = 7.5f;
+	/// <summary>
+	/// How fast the camera and its aim close on where they are headed.
+	///
+	/// The original's constants are per frame, and only make sense that way: read as per-second
+	/// they would give a ten-second camera lag and a five-minute orbit. At the 25fps the rest of
+	/// the game's data assumes - see <see cref="MeshAnimator.FramesPerSecond"/> - its 0.1 and 0.2
+	/// per frame come out as 2.63/s and 5.58/s, by -25 * ln(1 - perFrame).
+	///
+	/// Only the derivation touches 25fps - the rates themselves are per second, and are applied
+	/// through <see cref="Time.SmoothingFactor"/>, so the camera behaves the same at any frame
+	/// rate. These are deliberately half the original's. It spent those rates spinning a globe
+	/// to the island it wanted, so they had a long move to decelerate over; sliding straight
+	/// between islands the way this does, they arrive in about half a second and the slowing down
+	/// barely reads. The 2:1 ratio between the two is the part worth keeping faithful - it is
+	/// what settles the shot on the new island while the camera is still travelling.
+	/// </summary>
+	private const float PositionRate = 1.32f;   // half of the original's 0.1 per frame
+	private const float LookAtRate = 2.79f;     // half of the original's 0.2 per frame
 
-	private const float Distance = 70f;
-	private const float Speed = 0.2f;
+	/// <summary>
+	/// How fast the orbit turns, in radians per second. The script asks for SPINSPEED(0.02),
+	/// which is per frame - half a radian a second at 25fps, round every 12.6 seconds - and that
+	/// is brisker than this wants, so the rate is tuned rather than taken: a little over half a
+	/// minute to come round.
+	/// </summary>
+	private const float SpinSpeed = 0.2f;
 
-	/// <summary>How long moving between two islands takes.</summary>
-	private const float MoveDuration = 2.5f;
+	/// <summary>
+	/// The script asks for ISLANDFOV(100), but read as a vertical angle in degrees that leaves
+	/// the island a speck in a bowed horizon - so it means something else, or reaches the
+	/// projection some other way. The one lobby setting still to be run down.
+	/// </summary>
+	private const float FieldOfViewDegrees = 60f;
 
 	/// <summary>
 	/// Static so it survives <see cref="Camera.SetCameraMode{T}"/> creating a fresh instance.
@@ -36,15 +69,27 @@ public class LobbyCameraMode : CameraMode
 	// snapping back onto the wall-clock orbit.
 	private float _orbitTime;
 
-	// The point the orbit is centred on right now. While moving between islands it slides from
-	// one island's target to the next; the orbit angle is left alone throughout.
-	private Vector3 _centre;
-	private Vector3 _movingFrom;
-	private float _moveElapsed;
-	private bool _moving;
-	private bool _centred;
+	// Where the camera and its aim have actually got to, as opposed to where they are headed.
+	private Vector3 _position;
+	private Vector3 _lookAt;
+	private bool _placed;
 
 	private List<LobbyIsland>? _islands;
+	private LobbyScript? _script;
+
+	/// <summary>
+	/// The lobby-wide camera settings, which live in lobby.wad's own lobby.txt rather than in any
+	/// one park's script:
+	///
+	///     ISLANDFOV(100)  SPINSPEED(0.02)  SPINRADIUS(70)
+	///     VERTICALOFFSET(20)  GLOBERADIUSOUT(475)  GLOBERADIUSIN(200)
+	///
+	/// The two globe radii are the camera's distance from the lobby globe zoomed out and in. The
+	/// original selects an island by spinning its globe until that island's heading faces the
+	/// camera and then pulling in from one radius to the other; this orbits the islands where
+	/// they stand instead, so nothing reads them yet.
+	/// </summary>
+	private readonly record struct LobbyScript( float SpinRadius, float VerticalOffset );
 
 	public override void Update()
 	{
@@ -59,23 +104,45 @@ public class LobbyCameraMode : CameraMode
 		if ( Input.Pressed( InputButton.PreviousIsland ) )
 			MoveTo( IslandIndex - 1, islands );
 
+		if ( islands.Count == 0 )
+			return;
+
+		var script = Script();
+
 		if ( !Paused )
 			_orbitTime += Time.Delta;
 
-		UpdateCentre( islands );
+		var wantedLookAt = islands[Math.Clamp( IslandIndex, 0, islands.Count - 1 )].CameraTarget;
 
-		var x = MathF.Sin( _orbitTime * Speed ) * Distance;
-		var y = MathF.Cos( _orbitTime * Speed ) * Distance;
+		var angle = _orbitTime * SpinSpeed;
+		var wantedPosition = wantedLookAt + new Vector3(
+			MathF.Sin( angle ) * script.SpinRadius,
+			MathF.Cos( angle ) * script.SpinRadius,
+			script.VerticalOffset );
 
-		Position = _centre + new Vector3( x, y, Height );
-		Rotation = Rotation.LookAt( _centre - Position );
+		if ( _placed )
+		{
+			_position = _position.LerpTo( wantedPosition, Time.SmoothingFactor( PositionRate ) );
+			_lookAt = _lookAt.LerpTo( wantedLookAt, Time.SmoothingFactor( LookAtRate ) );
+		}
+		else
+		{
+			// The first frame has nothing to ease from.
+			_position = wantedPosition;
+			_lookAt = wantedLookAt;
+			_placed = true;
+		}
 
-		FieldOfView = 60;
+		Position = _position;
+		Rotation = Rotation.LookAt( _lookAt - _position );
+
+		FieldOfView = FieldOfViewDegrees;
 	}
 
 	/// <summary>
-	/// Starts moving to another island, wrapping at either end. Pressing again mid-move sets off
-	/// from wherever the camera has got to rather than from the island it left.
+	/// Points the camera at another island, wrapping at either end. There is nothing to reset:
+	/// the camera and its aim simply have somewhere new to chase, so pressing again mid-move
+	/// carries whatever speed they already have into the new heading.
 	/// </summary>
 	private void MoveTo( int index, List<LobbyIsland> islands )
 	{
@@ -84,44 +151,7 @@ public class LobbyCameraMode : CameraMode
 
 		IslandIndex = ((index % islands.Count) + islands.Count) % islands.Count;
 
-		_movingFrom = _centre;
-		_moveElapsed = 0f;
-		_moving = _centred;
-
 		Log.Info( $"Lobby camera: moving to island {IslandIndex}, '{islands[IslandIndex].ParkName}'" );
-	}
-
-	private void UpdateCentre( List<LobbyIsland> islands )
-	{
-		if ( islands.Count == 0 )
-			return;
-
-		var destination = islands[Math.Clamp( IslandIndex, 0, islands.Count - 1 )].CameraTarget;
-
-		// The first frame has nowhere to move from, so it starts already there.
-		if ( !_centred )
-		{
-			_centre = destination;
-			_centred = true;
-			return;
-		}
-
-		if ( !_moving )
-		{
-			_centre = destination;
-			return;
-		}
-
-		_moveElapsed += Time.Delta;
-
-		var t = Math.Clamp( _moveElapsed / MoveDuration, 0f, 1f );
-
-		// Smoothstep, so the camera eases away from one island and settles onto the next rather
-		// than starting and stopping abruptly.
-		_centre = _movingFrom.LerpTo( destination, t * t * (3f - (2f * t)) );
-
-		if ( t >= 1f )
-			_moving = false;
 	}
 
 	/// <summary>
@@ -135,5 +165,55 @@ public class LobbyCameraMode : CameraMode
 			_islands = Entity.All.OfType<LobbyIsland>().OrderBy( island => island.Index ).ToList();
 
 		return _islands;
+	}
+
+	/// <summary>Reads lobby.txt once - see <see cref="LobbyScript"/>.</summary>
+	private LobbyScript Script()
+	{
+		if ( _script is { } cached )
+			return cached;
+
+		// The same values the file ships with, so a missing script changes nothing.
+		var spinRadius = 70f;
+		var verticalOffset = 20f;
+
+		using ( var stream = FileSystem.OpenRead( "lobby/lobby.txt" ) )
+		{
+			if ( stream != null )
+			{
+				using var reader = new StreamReader( stream );
+
+				while ( reader.ReadLine() is { } line )
+				{
+					var trimmed = line.TrimStart();
+
+					if ( TryReadSetting( trimmed, "SPINRADIUS", out var value ) )
+						spinRadius = value;
+					else if ( TryReadSetting( trimmed, "VERTICALOFFSET", out value ) )
+						verticalOffset = value;
+				}
+			}
+		}
+
+		_script = new LobbyScript( spinRadius, verticalOffset );
+		return _script.Value;
+	}
+
+	/// <summary>Reads one NAME(value) setting, if that is what this line is.</summary>
+	private static bool TryReadSetting( string line, string name, out float value )
+	{
+		value = 0f;
+
+		if ( !line.StartsWith( $"{name}(", StringComparison.OrdinalIgnoreCase ) )
+			return false;
+
+		var close = line.IndexOf( ')' );
+
+		if ( close < 0 )
+			return false;
+
+		// Invariant culture because the script writes 0.02 whatever the machine's locale does.
+		return float.TryParse( line[(name.Length + 1)..close], NumberStyles.Float,
+			CultureInfo.InvariantCulture, out value );
 	}
 }

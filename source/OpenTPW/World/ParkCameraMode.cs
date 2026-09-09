@@ -8,6 +8,12 @@ public class ParkCameraMode : CameraMode
 	private bool wasPressed;
 	private Vector2 mouseAnchor;
 	private float cameraSpeed = 128f;
+
+	// Per-second rates for the three things that ease towards a target, applied through
+	// Time.SmoothingFactor so they land the same way at any frame rate.
+	private const float DragRate = 5f;
+	private const float TurnRate = 10f;
+	private const float HeightRate = 10f;
 	private float wishHeight = 2f;
 	private float yaw;
 
@@ -31,8 +37,10 @@ public class ParkCameraMode : CameraMode
 
 		wasPressed = Input.Mouse.Right;
 
-		wishVelocity = Rotation.Forward * wishDir.X * Time.Delta * cameraSpeed;
-		wishVelocity += Rotation.Right * wishDir.Y * Time.Delta * cameraSpeed;
+		// An acceleration, in units per second squared - the frame delta belongs where this is
+		// integrated below, and used to be multiplied in here as well as there.
+		wishVelocity = Rotation.Forward * wishDir.X * cameraSpeed;
+		wishVelocity += Rotation.Right * wishDir.Y * cameraSpeed;
 		wishVelocity.Z = 0;
 
 		wishHeight += -Input.Mouse.Wheel;
@@ -50,14 +58,15 @@ public class ParkCameraMode : CameraMode
 		// Apply velocity
 		velocity += wishVelocity * Time.Delta;
 
-		// Apply drag
-		velocity = velocity.LerpTo( Vector3.Zero, Time.Delta * 5f );
+		// Apply drag. Top speed still settles at cameraSpeed / DragRate, but it holds there at
+		// any frame rate now, and a long frame can no longer drag past a standstill.
+		velocity = velocity.LerpTo( Vector3.Zero, Time.SmoothingFactor( DragRate ) );
 
 		// Rotate camera
-		yaw = yaw.LerpTo( wishYaw, 10f * Time.Delta );
+		yaw = yaw.LerpTo( wishYaw, Time.SmoothingFactor( TurnRate ) );
 
 		// Move camera
-		Position += velocity;
-		Position = Position.WithZ( Position.Z.LerpTo( wishHeight, 10f * Time.Delta ) );
+		Position += velocity * Time.Delta;
+		Position = Position.WithZ( Position.Z.LerpTo( wishHeight, Time.SmoothingFactor( HeightRate ) ) );
 	}
 }
