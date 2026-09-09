@@ -151,6 +151,31 @@ public class LobbyCameraMode : CameraMode
 		FieldOfView = FieldOfViewDegrees;
 	}
 
+	/// <summary>The orbit angle in radians. Written by DebugConsole to reproduce a shot exactly.</summary>
+	internal static float DebugOrbit
+	{
+		get => _orbitTime * SpinSpeed;
+		set => _orbitTime = value / SpinSpeed;
+	}
+
+	/// <summary>Selects an island by index, for DebugConsole. Wraps like the bracket keys do.</summary>
+	internal static void DebugSelect( int index )
+	{
+		var islands = Entity.All.OfType<LobbyIsland>().OrderBy( island => island.Index ).ToList();
+
+		if ( islands.Count == 0 )
+			return;
+
+		IslandIndex = ((index % islands.Count) + islands.Count) % islands.Count;
+		CurrentIsland = islands[IslandIndex];
+	}
+
+	/// <summary>
+	/// Drops the camera onto wherever it is currently headed, for DebugConsole - the same path
+	/// the very first frame takes, so there is no separate teleport to keep working.
+	/// </summary>
+	internal static void DebugSettle() => _placed = false;
+
 	/// <summary>
 	/// Points the camera at another island, wrapping at either end. There is nothing to reset:
 	/// the camera and its aim simply have somewhere new to chase, so pressing again mid-move

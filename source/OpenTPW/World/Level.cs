@@ -63,6 +63,8 @@ public class Level
 
 	public void Update()
 	{
+		DebugConsole.Poll();
+
 		Entity.All.ForEach( entity => entity.Update() );
 	}
 
