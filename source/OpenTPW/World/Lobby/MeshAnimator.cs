@@ -72,6 +72,9 @@ public class MeshAnimator
 		_restUvs = new System.Numerics.Vector2[restVertices.Length];
 		for ( int i = 0; i < restVertices.Length; ++i )
 			_restUvs[i] = restVertices[i].TexCoords;
+
+		// This mesh is rewritten every frame from here on - see the note on this method.
+		_model.EnableFrequentUpdates( _vertices );
 	}
 
 	public void Update( float deltaTime )

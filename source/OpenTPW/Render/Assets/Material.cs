@@ -102,12 +102,17 @@ public partial class Material : Asset
 		}
 	}
 
+	/// <summary>
+	/// Binds this material's uniform block. Called once per model per frame, so it is on the
+	/// hottest path in the renderer: the array literal it used to box the value into allocated
+	/// once per draw, and the deletion it queued ran <see cref="ClearBoundResources"/>, which
+	/// returns immediately and has done for as long as it has been in the tree. Together those
+	/// were a few hundred pointless allocations a frame.
+	/// </summary>
 	public void Set<T>( string name, T obj ) where T : unmanaged
 	{
-		Device.UpdateBuffer( ScratchBuffer, 0, [obj] );
+		Device.UpdateBuffer( ScratchBuffer, 0, ref obj );
 		_boundResources[name] = ScratchBuffer;
-
-		Render.ScheduleDelete( ClearBoundResources );
 	}
 
 	public void Set( string name, Texture[] texture )
