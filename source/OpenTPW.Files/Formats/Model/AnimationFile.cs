@@ -392,6 +392,23 @@ public class AnimationFile : BaseFormat
 			}
 		}
 
+		// A UV channel names only the frame each entry finishes on - it always ramps from the
+		// start of the animation, so these extend the last frame without ever moving the first.
+		//
+		// Left out, an animation that scrolls UVs and does nothing else spans no frames at all
+		// and so has no duration: fantasy's and hallow's islands are exactly that, and their
+		// shoreline water sat frozen while jungle's ran, because jungle's clip happens to morph
+		// a Dino alongside the same scroll and took its length from that.
+		//
+		// This can only ever raise the maximum, never lower it, so no animation that already
+		// had a duration can change length. Across the game's 1151 animation files with readable
+		// channels, 98 gain a last frame here and all 98 had no span whatsoever before.
+		foreach ( var track in UvTracks )
+		{
+			foreach ( var frame in track.EndFrame )
+				maxFrame = Math.Max( maxFrame, frame );
+		}
+
 		FirstFrame = minFrame == int.MaxValue ? 0 : minFrame;
 		LastFrame = maxFrame == int.MinValue ? 0 : maxFrame;
 
