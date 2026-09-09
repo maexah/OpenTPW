@@ -24,5 +24,11 @@ struct ObjectUniformBuffer
 	public Vector3 g_vCameraPos; // 12
 	public float g_flTime; // 4
 
+	/// <summary>
+	/// What distance fades to. It used to be a constant in the shaders, matching the one sky
+	/// colour the lobby ever had; parks set their own SKYCOLOUR, so the distance has to follow
+	/// or the fog band stops meeting the sky at the horizon.
+	/// </summary>
+	public Vector3 g_vFogColour; // 12
 	public float _padding2; // 4
 }

@@ -9,6 +9,12 @@ public class Level
 	public RootPanel Hud { get; set; }
 	public Sun SunLight { get; set; }
 
+	/// <summary>
+	/// What distance fades to, kept in step with the sky - see <see cref="LobbyWeather"/>. Static
+	/// so the shaders' per-draw uniform fill can reach it the same way it reaches the sun.
+	/// </summary>
+	public static Vector3 FogColour { get; set; } = LobbyScript.DefaultSkyColour;
+
 	public SettingsFile Global { get; private init; }
 
 	public Level( string levelName )
@@ -37,6 +43,10 @@ public class Level
 		_ = new LobbyIsland( new Vector3( 600, 400, 0 ), "Fantasy" );
 		_ = new LobbyIsland( new Vector3( 600, 600, 0 ), "Hallow" );
 		_ = new LobbyIsland( new Vector3( 400, 600, 0 ), "Space" );
+
+		// One weather system for the whole lobby, taking its cue from whichever island the
+		// camera is on - see LobbyWeather.
+		_ = new LobbyWeather();
 
 		Camera.SetCameraMode<LobbyCameraMode>();
 	}

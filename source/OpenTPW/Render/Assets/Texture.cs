@@ -119,6 +119,25 @@ public partial class Texture : Asset
 		return texture with { Data = (byte[])texture.Data.Clone() };
 	}
 
+	/// <summary>
+	/// Rewrites this texture's pixels in place, keeping the same GPU texture and view.
+	///
+	/// For anything that changes colour every frame this is the only sane route: constructing a
+	/// Texture allocates a fresh GPU texture and adds it to <see cref="Asset.All"/>, neither of
+	/// which is ever released, so building one per frame would leak steadily. The sky is a 1x1
+	/// texture that follows whichever park is on show - see <see cref="Sky.Colour"/>.
+	/// </summary>
+	public void UpdatePixels( byte[] data )
+	{
+		if ( NativeTexture == null || data.Length < Width * Height * 4 )
+			return;
+
+		var ptr = Marshal.AllocHGlobal( data.Length );
+		Marshal.Copy( data, 0, ptr, data.Length );
+		Device.UpdateTexture( NativeTexture, ptr, (uint)data.Length, 0, 0, 0, Width, Height, 1, 0, 0 );
+		Marshal.FreeHGlobal( ptr );
+	}
+
 	private int CalculateMipLevels( int width, int height, int depth )
 	{
 		int maxDimension = Math.Max( width, Math.Max( height, depth ) );

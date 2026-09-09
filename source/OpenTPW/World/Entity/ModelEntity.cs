@@ -30,6 +30,7 @@ public partial class ModelEntity : Entity
 			g_vLightColor = Level.SunLight?.Color ?? Vector3.One,
 			g_vCameraPos = Camera.Position,
 			g_flTime = Time.Now,
+			g_vFogColour = Level.FogColour,
 
 			_padding0 = 0,
 			_padding1 = 0,

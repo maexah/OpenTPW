@@ -13,6 +13,8 @@ vertex {
         vec3 g_vLightColor;
         vec3 g_vCameraPos;
         float g_flTime;
+
+        vec3 g_vFogColour;
     } g_oUbo;
 
     layout(location = 0) out VS_OUT {
@@ -61,6 +63,8 @@ fragment {
         vec3 g_vLightColor;
         vec3 g_vCameraPos;
         float g_flTime;
+
+        vec3 g_vFogColour;
     } g_oUbo;
 
     layout( set = 1, binding = 0 ) uniform texture2D Color0;
@@ -146,6 +150,6 @@ fragment {
         fogFactor = clamp( fogFactor, 0, 1 );
         
         // Mix with fog
-        fragColor.xyz = mix(fragColor.xyz, vec3( 0.301, 0.84, 1 ), fogFactor);
+        fragColor.xyz = mix(fragColor.xyz, g_oUbo.g_vFogColour, fogFactor);
     }
 }

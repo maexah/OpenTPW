@@ -6,12 +6,19 @@ namespace OpenTPW;
 [Flags]
 public enum MaterialFlags
 {
-	None,
+	None = 0,
 
-	DisableDepthTest,
-	DisableDepthWrite,
+	DisableDepthTest = 1,
+	DisableDepthWrite = 2,
 
-	DisableDepth = DisableDepthTest | DisableDepthWrite
+	DisableDepth = DisableDepthTest | DisableDepthWrite,
+
+	/// <summary>
+	/// Adds to what is already there instead of blending over it, so black contributes nothing.
+	/// Needed by art that carries no alpha channel and relies on a black background being
+	/// invisible - the game's own Raindrop.tga is exactly that.
+	/// </summary>
+	Additive = 4
 }
 
 public partial class Material : Asset
@@ -247,7 +254,9 @@ public partial class Material : Asset
 		//
 		var pipelineDescription = new GraphicsPipelineDescription()
 		{
-			BlendState = BlendStateDescription.SingleAlphaBlend,
+			BlendState = flags.HasFlag( MaterialFlags.Additive )
+				? BlendStateDescription.SingleAdditiveBlend
+				: BlendStateDescription.SingleAlphaBlend,
 
 			DepthStencilState = new DepthStencilStateDescription(
 				!flags.HasFlag( MaterialFlags.DisableDepthTest ),
