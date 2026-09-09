@@ -107,7 +107,8 @@ public sealed class LobbyModel
 		if ( animations.Length > 0 )
 		{
 			Animators = BindVertexAnimations( modelPath, animations, modelFile, models, meshVertices );
-			Rotator = BindRotationAnimations( modelPath, animations, Entities, _linearTransforms );
+			Rotator = BindRotationAnimations( modelPath, animations, Entities, _linearTransforms, Offsets,
+				[.. modelFile.Meshes.Select( mesh => mesh.ParentIndex )] );
 		}
 	}
 
@@ -220,7 +221,7 @@ public sealed class LobbyModel
 	}
 
 	private static MeshRotator? BindRotationAnimations( string modelPath, AnimationFile[] animations,
-		ModelEntity[] entities, Matrix4x4[] baseTransforms )
+		ModelEntity[] entities, Matrix4x4[] baseTransforms, Vector3[] offsets, int[] parentIndices )
 	{
 		if ( !MeshRotator.Drives( animations[0], entities.Length ) )
 			return null;
@@ -228,6 +229,6 @@ public sealed class LobbyModel
 		Log.Info( $"{modelPath}: rotating {animations[0].RotationTracks.Count} mesh(es) " +
 			$"with {animations.Length} animation(s)" );
 
-		return new MeshRotator( animations, entities, baseTransforms );
+		return new MeshRotator( animations, entities, baseTransforms, offsets, parentIndices );
 	}
 }
