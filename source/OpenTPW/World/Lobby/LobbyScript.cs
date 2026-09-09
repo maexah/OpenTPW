@@ -71,36 +71,39 @@ public sealed record LobbyScript
 	///
 	///     FLYINGMESH("data\lobby\terrain","bfly_PINK",10,200.0,100.0,200.0,1.5)
 	///
-	/// The original passes the count, the model, the island's own position, the three floats as a
-	/// volume to wander, the scale, and a hard-coded 500.0 to its flying-mesh spawner.
+	/// The original's swarm constructor (FUN_005d9db0) keeps the count, the model, the island's
+	/// own position as the centre of a volume, the three floats as that volume's size, and the
+	/// last float; its per-flyer update (FUN_005d9b50) is what says what those last two are.
 	///
-	/// The three volume floats are identical in both scripts that use them (200, 100, 200), so
-	/// there is no per-park variation in them to preserve, and they are in the original's globe
-	/// space - islands there sit on a sphere of radius 475 - rather than the flat arrangement
-	/// this draws. They are read and kept for the record; <see cref="LobbyFlyer"/> flies its own
-	/// volume. The count and the scale are used as given.
+	/// The last float is NOT a scale, which is the obvious reading and the wrong one. It lands at
+	/// +0x28 on the flyer, and the update does
+	///
+	///     position += direction * flyer[0x28] * delta
+	///
+	/// so it is <b>speed</b>. Nothing in FLYINGMESH scales the model at all - the meshes are drawn
+	/// at the size they were authored. See <see cref="SpeedPerSecond"/> for the units.
+	///
+	/// The three volume floats are the box's full size, not its half-extents: every random point
+	/// the original picks is <c>centre + extent * (random01 - 0.5)</c>. They are the same in both
+	/// scripts that use them - 200 wide, 100 tall, 200 deep, in the original's Y-up axes.
 	/// </summary>
-	public readonly record struct FlyingMesh( string Directory, string Model, int Count, Vector3 Volume, float Scale )
+	public readonly record struct FlyingMesh( string Directory, string Model, int Count, Vector3 Volume, float Speed )
 	{
 		/// <summary>
-		/// The scale to actually build the model at.
+		/// How fast this flyer moves, per second.
 		///
-		/// The script's number is not this engine's model scale. The butterflies were sized by
-		/// eye long before their script was read, and settled at 0.75 against a script that asks
-		/// for 1.5 - so whatever the original means by it, one of its units is half of one of
-		/// ours. Taken literally the jungle's butterflies come out as big as its palm trees and
-		/// hallow's bats as big as its clock tower, which is what shipping it unconverted looked
-		/// like.
+		/// The original multiplies by a frame delta that is counted in ticks of the 25fps the rest
+		/// of its data assumes, not in seconds - the same reading that makes SPINSPEED(0.02) a
+		/// twelve-second orbit rather than a five-minute one, and the camera's 0.1 a quarter-second
+		/// lag rather than a ten-second one. Three independent constants agree on it.
 		///
-		/// Converting rather than hard-coding keeps what the data actually distinguishes: bats
-		/// are asked for at 2.5 against the butterflies' 1.5, and their mesh is authored 1.7x
-		/// larger again, so they stay markedly the bigger animal.
+		/// So the butterflies' 1.5 is 37.5 units a second and the bats' 2.5 is 62.5.
 		/// </summary>
-		public float EngineScale => Scale * ScriptScaleToEngine;
-	}
+		public float SpeedPerSecond => Speed * MeshAnimator.FramesPerSecond;
 
-	/// <summary>See <see cref="FlyingMesh.EngineScale"/>.</summary>
-	private const float ScriptScaleToEngine = 0.5f;
+		/// <summary>Half of <see cref="Volume"/>, which is what the random point is picked within.</summary>
+		public Vector3 HalfVolume => Volume * 0.5f;
+	}
 
 	/// <summary>The sky the lobby falls back to - what Sky was built with before any park asked.</summary>
 	public static readonly Vector3 DefaultSkyColour = new( 79 / 255f, 214 / 255f, 255 / 255f );
