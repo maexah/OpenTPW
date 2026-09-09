@@ -65,17 +65,26 @@ public class LobbyCameraMode : CameraMode
 	/// <summary>The island being orbited, as an index into the lobby's running order.</summary>
 	private static int IslandIndex { get; set; }
 
+	/// <summary>
+	/// The island the lobby is currently showing, or null before the lobby has built any.
+	///
+	/// The original's lobby keeps the same thing - a pointer to the nearest island - and reads
+	/// that park's weather and sky off it every frame. <see cref="LobbyWeather"/> does the same.
+	/// </summary>
+	public static LobbyIsland? CurrentIsland { get; private set; }
+
 	// Accumulated separately from Time.Now so unpausing resumes where it stopped instead of
-	// snapping back onto the wall-clock orbit.
-	private float _orbitTime;
+	// snapping back onto the wall-clock orbit. Static for the same reason Paused is: the orbit
+	// should not restart just because a camera mode was swapped out and back.
+	private static float _orbitTime;
 
 	// Where the camera and its aim have actually got to, as opposed to where they are headed.
-	private Vector3 _position;
-	private Vector3 _lookAt;
-	private bool _placed;
+	private static Vector3 _position;
+	private static Vector3 _lookAt;
+	private static bool _placed;
 
 	private List<LobbyIsland>? _islands;
-	private LobbyScript? _script;
+	private CameraSettings? _settings;
 
 	/// <summary>
 	/// The lobby-wide camera settings, which live in lobby.wad's own lobby.txt rather than in any
@@ -89,7 +98,7 @@ public class LobbyCameraMode : CameraMode
 	/// camera and then pulling in from one radius to the other; this orbits the islands where
 	/// they stand instead, so nothing reads them yet.
 	/// </summary>
-	private readonly record struct LobbyScript( float SpinRadius, float VerticalOffset );
+	private readonly record struct CameraSettings( float SpinRadius, float VerticalOffset );
 
 	public override void Update()
 	{
@@ -107,18 +116,21 @@ public class LobbyCameraMode : CameraMode
 		if ( islands.Count == 0 )
 			return;
 
-		var script = Script();
+		var settings = Settings();
 
 		if ( !Paused )
 			_orbitTime += Time.Delta;
 
-		var wantedLookAt = islands[Math.Clamp( IslandIndex, 0, islands.Count - 1 )].CameraTarget;
-
 		var angle = _orbitTime * SpinSpeed;
+
+		CurrentIsland = islands[Math.Clamp( IslandIndex, 0, islands.Count - 1 )];
+
+		var wantedLookAt = CurrentIsland.CameraTarget;
+
 		var wantedPosition = wantedLookAt + new Vector3(
-			MathF.Sin( angle ) * script.SpinRadius,
-			MathF.Cos( angle ) * script.SpinRadius,
-			script.VerticalOffset );
+			MathF.Sin( angle ) * settings.SpinRadius,
+			MathF.Cos( angle ) * settings.SpinRadius,
+			settings.VerticalOffset );
 
 		if ( _placed )
 		{
@@ -167,10 +179,10 @@ public class LobbyCameraMode : CameraMode
 		return _islands;
 	}
 
-	/// <summary>Reads lobby.txt once - see <see cref="LobbyScript"/>.</summary>
-	private LobbyScript Script()
+	/// <summary>Reads lobby.txt once - see <see cref="CameraSettings"/>.</summary>
+	private CameraSettings Settings()
 	{
-		if ( _script is { } cached )
+		if ( _settings is { } cached )
 			return cached;
 
 		// The same values the file ships with, so a missing script changes nothing.
@@ -187,33 +199,16 @@ public class LobbyCameraMode : CameraMode
 				{
 					var trimmed = line.TrimStart();
 
-					if ( TryReadSetting( trimmed, "SPINRADIUS", out var value ) )
+					if ( LobbyScript.TryReadSetting( trimmed, "SPINRADIUS", out var value ) )
 						spinRadius = value;
-					else if ( TryReadSetting( trimmed, "VERTICALOFFSET", out value ) )
+					else if ( LobbyScript.TryReadSetting( trimmed, "VERTICALOFFSET", out value ) )
 						verticalOffset = value;
 				}
 			}
 		}
 
-		_script = new LobbyScript( spinRadius, verticalOffset );
-		return _script.Value;
+		_settings = new CameraSettings( spinRadius, verticalOffset );
+		return _settings.Value;
 	}
 
-	/// <summary>Reads one NAME(value) setting, if that is what this line is.</summary>
-	private static bool TryReadSetting( string line, string name, out float value )
-	{
-		value = 0f;
-
-		if ( !line.StartsWith( $"{name}(", StringComparison.OrdinalIgnoreCase ) )
-			return false;
-
-		var close = line.IndexOf( ')' );
-
-		if ( close < 0 )
-			return false;
-
-		// Invariant culture because the script writes 0.02 whatever the machine's locale does.
-		return float.TryParse( line[(name.Length + 1)..close], NumberStyles.Float,
-			CultureInfo.InvariantCulture, out value );
-	}
 }

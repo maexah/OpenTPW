@@ -3,12 +3,15 @@ using System.Numerics;
 namespace OpenTPW;
 
 /// <summary>
-/// A butterfly wandering the airspace around one of the lobby islands, flapping as it goes.
+/// One of a park's FLYINGMESH swarm, wandering the airspace around its island and flapping as it
+/// goes - the jungle's butterflies and hallow's bats.
 ///
-/// The flapping is real animation data - Bfly_YELLm1/Bfly_PINKm1 are 5-frame vertex
-/// animations of the 15-vertex Butterfly mesh. Everything about where it flies is ours:
-/// nothing in the model or animation files describes a flight path, so this is a simple
-/// wander-and-turn-around steering behaviour rather than anything from the original game.
+/// The flapping is real animation data: Bfly_YELLm1/Bfly_PINKm1 are 5-frame vertex animations of
+/// the 15-vertex Butterfly mesh, and Batm1 is a longer one of the 14-vertex h_bat mesh. What
+/// flies, how many, and how big all come from the park's own script - see
+/// <see cref="LobbyScript.FlyingMesh"/>. Everything about where it flies is ours: nothing in the
+/// model or animation files describes a flight path, so this is a simple wander-and-turn-around
+/// steering behaviour rather than anything from the original game.
 ///
 /// Flight is bounded by a sphere - <see cref="MaxRadius"/> from a point centred between
 /// <see cref="MinHeight"/> and <see cref="MaxHeight"/> above the island's origin - plus a
@@ -25,7 +28,7 @@ namespace OpenTPW;
 /// the wingbeat briefly holds on its rest pose - wings up - right as a descent begins, then
 /// resumes on its own.
 /// </summary>
-public sealed class LobbyButterfly : Entity
+public sealed class LobbyFlyer : Entity
 {
 	/// <summary>Never flies lower than this many units above the island's own origin.</summary>
 	public const float MinHeight = 12f;
@@ -43,9 +46,6 @@ public sealed class LobbyButterfly : Entity
 
 	/// <summary>How fast the random wander alone tries to turn - well under TurnRate, so it reads as drifting rather than darting.</summary>
 	private const float WanderRate = 0.4f;
-
-	/// <summary>Physical size relative to the model's authored scale.</summary>
-	private const float ModelScale = 0.75f;
 
 	/// <summary>
 	/// How far below level counts as "starting to descend" - a deadband below 0 so gentle
@@ -97,17 +97,17 @@ public sealed class LobbyButterfly : Entity
 	private float _flapPauseRemaining;
 
 	/// <summary>
-	/// <paramref name="seed"/> drives every random choice this butterfly makes for the rest of
-	/// its life (wander direction, speed variance) - see the swarm seed logged when the lobby
-	/// spawns its butterflies.
+	/// <paramref name="seed"/> drives every random choice this flyer makes for the rest of its
+	/// life (wander direction, speed variance) - see the swarm seed logged by <see cref="Spawn"/>.
 	/// </summary>
-	public LobbyButterfly( string modelName, Vector3 origin, Vector3 startPosition, Vector3 startDirection, int seed )
+	public LobbyFlyer( string modelName, float scale, Vector3 origin, Vector3 startPosition,
+		Vector3 startDirection, int seed )
 	{
 		_origin = origin;
 		_flightCentre = origin + (Vector3.Up * ((MinHeight + MaxHeight) * 0.5f));
 		_rng = new Random( seed );
 
-		// A little per-butterfly speed variety so sixteen of them don't move in lockstep.
+		// A little per-flyer speed variety so a whole swarm doesn't move in lockstep.
 		_speed = Speed * (0.8f + (_rng.NextSingle() * 0.4f));
 
 		_position = startPosition;
@@ -121,7 +121,45 @@ public sealed class LobbyButterfly : Entity
 			? MathF.Atan2( startHorizontal.Y, startHorizontal.X )
 			: 0f;
 
-		_model = new LobbyModel( $"lobby/terrain/{modelName}.md2", "lobby/terrain/textures", _position, ModelScale );
+		_model = new LobbyModel( $"lobby/terrain/{modelName}.md2", "lobby/terrain/textures", _position, scale );
+	}
+
+	/// <summary>
+	/// Spawns one park's FLYINGMESH swarm around its island: as many as the script asks for, at
+	/// the scale it asks for, scattered across the flight volume rather than clustered at one
+	/// radius and height so the swarm looks established from the first frame instead of visibly
+	/// starting from a single ring.
+	///
+	/// Everything random here comes from one seed, logged so a particular arrangement can be
+	/// reproduced if it is ever worth debugging.
+	/// </summary>
+	public static void Spawn( LobbyScript.FlyingMesh mesh, Vector3 islandOrigin )
+	{
+		var seed = Environment.TickCount;
+		var rng = new Random( seed );
+
+		Log.Info( $"Lobby: {mesh.Count}x '{mesh.Model}' at scale {mesh.EngineScale} around {islandOrigin} (seed {seed})" );
+
+		for ( int i = 0; i < mesh.Count; ++i )
+		{
+			var angle = rng.NextSingle() * MathF.PI * 2f;
+			var radius = MathF.Sqrt( rng.NextSingle() ) * MaxRadius * 0.8f;
+			var height = MinHeight + (rng.NextSingle() * (MaxHeight - MinHeight));
+
+			var startPosition = islandOrigin + new Vector3(
+				MathF.Cos( angle ) * radius, MathF.Sin( angle ) * radius, height );
+
+			// Mostly horizontal to start, with a shallow pitch so nobody spawns already diving
+			// or climbing steeply.
+			var headingYaw = rng.NextSingle() * MathF.PI * 2f;
+			var headingPitch = ((rng.NextSingle() * 2f) - 1f) * (MathF.PI / 12f);
+			var startDirection = new Vector3(
+				MathF.Cos( headingYaw ) * MathF.Cos( headingPitch ),
+				MathF.Sin( headingYaw ) * MathF.Cos( headingPitch ),
+				MathF.Sin( headingPitch ) );
+
+			_ = new LobbyFlyer( mesh.Model, mesh.EngineScale, islandOrigin, startPosition, startDirection, rng.Next() );
+		}
 	}
 
 	protected override void OnUpdate()
