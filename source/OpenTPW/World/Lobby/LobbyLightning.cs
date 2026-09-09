@@ -14,9 +14,10 @@ namespace OpenTPW;
 ///
 /// So a bolt runs from ground level up to 500 units, its top offset from its base by a small
 /// random lean, somewhere near the island; the mask decides how often - see
-/// <see cref="LobbyScript.Lightning"/>. The spread constants the original picks those offsets
-/// with are float globals this hasn't run down, so the ones here are chosen to look right at the
-/// distance the lobby camera actually sits at; the 500-unit height is the game's own.
+/// <see cref="LobbyScript.Lightning"/>. The spread it picks those offsets with is
+/// <c>random01 * 100 - 50</c> for the base and a further <c>random01 * 20 - 10</c> for the top,
+/// read out of the executable at 0x00702c94 and 0x00702c8c - so a strike lands within fifty
+/// units of the island and leans by up to ten over its five hundred of height.
 ///
 /// There is no sound system yet, so the thunder is missing.
 /// </summary>
@@ -28,8 +29,8 @@ public sealed class LobbyLightning : WeatherSprites
 	private const float BoltHalfWidth = 9f;
 
 	/// <summary>How far from the island a bolt can come down, and how far its top can lean.</summary>
-	private const float GroundSpread = 90f;
-	private const float LeanSpread = 45f;
+	private const float GroundSpread = 50f;
+	private const float LeanSpread = 10f;
 
 	/// <summary>How long a strike is on screen. Short, and flickering while it lasts.</summary>
 	private const float Duration = 0.42f;
