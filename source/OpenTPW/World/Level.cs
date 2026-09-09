@@ -33,8 +33,12 @@ public class Level
 
 		SpawnButterflies( jungle, count: 16 );
 
-		_ = new LobbyIsland( new Vector3( 600, 400, 0 ), "Hallow" );
-		_ = new LobbyIsland( new Vector3( 600, 600, 0 ), "Fantasy" );
+		// Positions come from lobby.wad's own lobby.txt, which lists one ISLANDCAMERAPOSITION per
+		// island index: 0 (400,400), 1 (600,400), 2 (600,600), 3 (400,600). Each park's script
+		// gives its index - jungle 0, fantasy 1, hallow 2, space 3 - and fantasy and hallow were
+		// the wrong way round here, which put them diagonally opposite where the game has them.
+		_ = new LobbyIsland( new Vector3( 600, 400, 0 ), "Fantasy" );
+		_ = new LobbyIsland( new Vector3( 600, 600, 0 ), "Hallow" );
 		_ = new LobbyIsland( new Vector3( 400, 600, 0 ), "Space" );
 
 		Camera.SetCameraMode<LobbyCameraMode>();

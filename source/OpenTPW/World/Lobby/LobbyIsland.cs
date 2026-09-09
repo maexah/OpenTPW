@@ -1,61 +1,107 @@
+using System.Globalization;
 using System.Numerics;
 
 namespace OpenTPW;
 
 public sealed class LobbyIsland : Entity
 {
+	/// <summary>
+	/// Fallback for a park whose script cannot be read - the height the lobby camera used for
+	/// every island before it started asking.
+	/// </summary>
+	private const float DefaultCameraHeight = 12.5f;
+
+	/// <summary>
+	/// Where the lobby camera looks while this island is the one on show: the island itself,
+	/// raised by the height its script asks for. The four parks differ a lot here - 12.5 for the
+	/// jungle against 38 for hallow - so this is not something the camera can assume.
+	/// </summary>
+	public Vector3 CameraTarget => Position + (Vector3.Up * _script.CameraHeight);
+
+	/// <summary>This island's place in the lobby's running order, taken from its script.</summary>
+	public int Index => _script.Index;
+
+	/// <summary>The park's display name - "Lost Kingdom" for the jungle. Empty if unreadable.</summary>
+	public string ParkName => _script.ParkName;
+
 	private readonly LobbyModel _model;
+	private readonly IslandScript _script;
+
+	/// <summary>
+	/// The single ISLAND() line in a park's lobby script:
+	///
+	///     ISLAND(0,"data\lobby\terrain","jun_isle","jun_gate","Lost Kingdom",90.0,12.5)
+	///
+	/// Its index is the lobby's running order, its fourth quoted field is the name painted on the
+	/// sign, and its last number is how far above the island the camera looks. The terrain
+	/// directory and the two model names are paths this class and LobbyGate still build by hand,
+	/// and the number before the last one looks like a heading - none of those are read yet.
+	/// </summary>
+	private readonly record struct IslandScript( int Index, string ParkName, float CameraHeight );
 
 	public LobbyIsland( Vector3 _position, string themeName )
 	{
 		Position = _position;
 
 		var modelPrefix = themeName[0..3];
+		_script = ReadScript( themeName );
 
 		// An island's meshes sit 2.5 units below the origin it is placed at.
 		_model = new LobbyModel(
 			$"lobby/terrain/{modelPrefix}_isle.md2",
 			"lobby/terrain/textures",
 			Position - new Vector3( 0, 0, 2.5f ),
-			textureOverrides: BuildSign( modelPrefix, ReadParkName( themeName ) ) );
+			textureOverrides: BuildSign( modelPrefix, _script.ParkName ) );
 	}
 
 	/// <summary>
-	/// The name this park shows on its sign, read from the lobby script the game ships rather
-	/// than from a literal here - the jungle's is "Lost Kingdom", which nothing in the theme name
-	/// or the model prefix would tell you.
+	/// Reads the park's ISLAND() line - see <see cref="IslandScript"/> - from the lobby script the
+	/// game ships, rather than keeping the same facts as literals here. The jungle's sign reads
+	/// "Lost Kingdom", which nothing in the theme name or the model prefix would tell you.
 	///
-	/// Each park has a script at the root of lobby.wad named after it, holding one ISLAND() line:
-	///
-	///     ISLAND(0,"data\lobby\terrain","jun_isle","jun_gate","Lost Kingdom",90.0,12.5)
-	///
-	/// The name is its fourth quoted field. The rest of the line - the terrain directory, the two
-	/// model names, and two numbers that look like a heading and a size - is what Level.cs
-	/// currently hardcodes, so this file is worth coming back to.
+	/// A park whose script is missing or malformed falls back to defaults and simply keeps its
+	/// placeholder sign.
 	/// </summary>
-	private static string ReadParkName( string themeName )
+	private static IslandScript ReadScript( string themeName )
 	{
+		var fallback = new IslandScript( 0, string.Empty, DefaultCameraHeight );
+
 		using var stream = FileSystem.OpenRead( $"lobby/{themeName.ToLowerInvariant()}.txt" );
 
 		if ( stream == null )
-			return string.Empty;
+			return fallback;
 
 		using var reader = new StreamReader( stream );
 
 		while ( reader.ReadLine() is { } line )
 		{
+			var trimmed = line.TrimStart();
+
 			// ISLANDFOV and ISLANDCAMERAPOSITION share the prefix but not the bracket.
-			if ( !line.TrimStart().StartsWith( "ISLAND(", StringComparison.OrdinalIgnoreCase ) )
+			if ( !trimmed.StartsWith( "ISLAND(", StringComparison.OrdinalIgnoreCase ) )
 				continue;
 
-			var quoted = line.Split( '"' );
+			// Quoted fields land on the odd indices, so a full line has nine pieces: the index
+			// ahead of the first quote, four quoted fields, and the trailing numbers.
+			var pieces = trimmed.Split( '"' );
 
-			// Quoted fields land on the odd indices; the name is the fourth of them.
-			if ( quoted.Length > 7 )
-				return quoted[7];
+			if ( pieces.Length < 9 )
+				continue;
+
+			_ = int.TryParse( pieces[0]["ISLAND(".Length..].Trim( ',', ' ' ), out var index );
+
+			var numbers = pieces[8].Trim( ',', ')', ' ' ).Split( ',' );
+
+			// Invariant culture because the script writes 12.5 whatever the machine's locale does.
+			var height = numbers.Length > 0
+				&& float.TryParse( numbers[^1], NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed )
+					? parsed
+					: DefaultCameraHeight;
+
+			return new IslandScript( index, pieces[7], height );
 		}
 
-		return string.Empty;
+		return fallback;
 	}
 
 	/// <summary>

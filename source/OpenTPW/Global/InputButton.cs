@@ -283,4 +283,18 @@ public enum InputButton
 	/// </summary>
 	[DefaultKey( Key.F2 )]
 	HideUI,
+
+	/// <summary>
+	/// Previous Island ([)
+	/// Moves the lobby camera around to the park before this one.
+	/// </summary>
+	[DefaultKey( Key.BracketLeft )]
+	PreviousIsland,
+
+	/// <summary>
+	/// Next Island (])
+	/// Moves the lobby camera around to the park after this one.
+	/// </summary>
+	[DefaultKey( Key.BracketRight )]
+	NextIsland,
 }
