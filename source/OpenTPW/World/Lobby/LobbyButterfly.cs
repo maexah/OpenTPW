@@ -18,6 +18,11 @@ namespace OpenTPW;
 /// Both boundaries are approached with a gentle steering bias rather than a hard bounce or a
 /// teleport, and every direction change - wander, boundary avoidance, floor avoidance alike -
 /// is capped by <see cref="TurnRate"/>, so nothing snaps or reverses instantly.
+///
+/// Movement is fully 3D (it does climb and descend, and does wander in every direction) but
+/// facing only ever reflects the horizontal component of that - see <see cref="FaceDirection"/> -
+/// so it always flies level, banking into nothing. Descending is a distinct visible cue instead:
+/// the wingbeat itself pauses while it's happening, then picks back up.
 /// </summary>
 public sealed class LobbyButterfly : Entity
 {
@@ -38,6 +43,19 @@ public sealed class LobbyButterfly : Entity
 	/// <summary>How fast the random wander alone tries to turn - well under TurnRate, so it reads as drifting rather than darting.</summary>
 	private const float WanderRate = 0.4f;
 
+	/// <summary>Physical size relative to the model's authored scale.</summary>
+	private const float ModelScale = 0.75f;
+
+	/// <summary>
+	/// How far below level counts as "descending" for pausing the wingbeat - a small deadband
+	/// (rather than triggering at exactly 0) so gentle wander noise around level flight doesn't
+	/// flicker the animation on and off. <see cref="ResumeFlappingAbove"/> is the matching exit
+	/// threshold, a little higher, so crossing back and forth right at the edge doesn't flicker
+	/// either.
+	/// </summary>
+	private const float PauseFlappingBelow = -0.15f;
+	private const float ResumeFlappingAbove = -0.05f;
+
 	private readonly LobbyModel _model;
 	private readonly Vector3 _origin;
 	private readonly Vector3 _flightCentre;
@@ -46,6 +64,7 @@ public sealed class LobbyButterfly : Entity
 
 	private Vector3 _position;
 	private Vector3 _direction;
+	private bool _descending;
 
 	/// <summary>
 	/// <paramref name="seed"/> drives every random choice this butterfly makes for the rest of
@@ -64,13 +83,11 @@ public sealed class LobbyButterfly : Entity
 		_position = startPosition;
 		_direction = startDirection.Normal;
 
-		_model = new LobbyModel( $"lobby/terrain/{modelName}.md2", "lobby/terrain/textures", _position );
+		_model = new LobbyModel( $"lobby/terrain/{modelName}.md2", "lobby/terrain/textures", _position, ModelScale );
 	}
 
 	protected override void OnUpdate()
 	{
-		_model.Update( Time.Delta );
-
 		var dt = Time.Delta;
 
 		var desired = Wander( _direction, dt );
@@ -81,6 +98,15 @@ public sealed class LobbyButterfly : Entity
 		// toward it at this capped rate - the one place "never drastic" is actually enforced.
 		_direction = RotateTowards( _direction, desired, TurnRate * dt );
 		_position += _direction * _speed * dt;
+
+		// Hysteresis around the two thresholds, not one, so hovering right at the edge doesn't
+		// flicker the wingbeat on and off every frame.
+		if ( _descending ? _direction.Z > ResumeFlappingAbove : _direction.Z < PauseFlappingBelow )
+			_descending = !_descending;
+
+		// Movement itself always uses the real delta time above; only the model's own
+		// animation (the wingbeat) pauses while gliding down.
+		_model.Update( _descending ? 0f : dt );
 
 		_model.SetTransform( _position, FaceDirection( _direction ) );
 	}
@@ -152,39 +178,39 @@ public sealed class LobbyButterfly : Entity
 	}
 
 	/// <summary>
-	/// A stable "keep this side up" facing rotation, built directly rather than through
-	/// <see cref="Rotation.LookAt"/> - that helper is a minimal single-axis rotation from a
-	/// fixed reference (local Forward), which leaves roll around the new forward axis
-	/// completely unconstrained. A butterfly wandering through the full circle of yaw
-	/// regularly passes near that reference's opposite direction, where the axis it rotates
-	/// about goes unstable, and the model would flip, roll or end up flying sideways right as
-	/// it changed direction - which is exactly what this replaced.
+	/// A yaw-only facing rotation: it turns to face wherever it's heading horizontally, but
+	/// never pitches or rolls, so it always flies with level wings no matter how much it's
+	/// currently climbing or descending (that's real - see <see cref="_position"/> - it just
+	/// isn't reflected in orientation). No banking into turns, by construction rather than by
+	/// damping: for a forward vector with no vertical component, this always resolves to
+	/// exactly world up, with zero roll, for every heading - checked directly before ever
+	/// touching this file, not just assumed.
 	///
-	/// Instead this derives a full local frame - forward along the flight direction, up kept
-	/// as close to world up as the tilt of that direction allows, right/left completing it -
-	/// and builds the rotation whose local axes land exactly on that frame. Roll is never
-	/// "whatever falls out of the maths", it is pinned to level: the wings stay upright.
+	/// This replaced an earlier version that derived up from the actual 3D flight direction
+	/// (tilting to stay perpendicular to it, the usual way to face a moving object), which
+	/// read as banking whenever a climb or dive nudged that direction's vertical component -
+	/// exactly what was asked to go away here.
 	///
 	/// Local Forward is (1,0,0), Up is (0,0,1) and Right is (0,-1,0) (so local Y is Left) -
 	/// see the constants on <see cref="Vector3"/> - which is why the matrix rows below are
 	/// forward, then -right, then up, matching how a rotation quaternion's matrix places each
 	/// local axis's world-space image.
 	/// </summary>
-	private static Quaternion FaceDirection( Vector3 forward )
+	private static Quaternion FaceDirection( Vector3 direction )
 	{
+		var forward = new Vector3( direction.X, direction.Y, 0f );
+
+		// Only possible when moving essentially straight up or down, which the turn-rate cap
+		// and the floor/ceiling margins together keep this from actually reaching - a safety
+		// net rather than something that happens in practice. Whatever direction is picked
+		// here, it will move away from vertical (and so away from this fallback) within a
+		// frame or two.
+		if ( forward.LengthSquared < 0.0001f )
+			forward = Vector3.Forward;
+
 		forward = forward.Normal;
 
-		var worldUp = Vector3.Up;
-		var right = forward.Cross( worldUp );
-
-		// Forward is nearly straight up or down, where forward x up degenerates (forward is
-		// then necessarily close to (0,0,+-1), so world Forward is always a safe substitute
-		// reference here) - fall back so we still get a valid frame. Flight is pitch-limited
-		// enough that this is a safety net rather than something that happens in practice.
-		if ( right.LengthSquared < 0.0001f )
-			right = forward.Cross( Vector3.Forward );
-
-		right = right.Normal;
+		var right = forward.Cross( Vector3.Up ).Normal;
 		var up = right.Cross( forward ).Normal;
 		var left = -right;
 

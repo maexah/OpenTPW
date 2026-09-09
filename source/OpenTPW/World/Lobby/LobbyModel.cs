@@ -26,7 +26,12 @@ public sealed class LobbyModel
 	// separate from Position so an animation can turn a mesh without disturbing it.
 	private readonly Matrix4x4[] _linearTransforms;
 
-	public LobbyModel( string modelPath, string textureDirectory, Vector3 origin )
+	/// <param name="scale">
+	/// Uniform scale applied to the whole model, including each mesh's offset from the model's
+	/// own root - so a mesh further from the root moves closer to it too, rather than just
+	/// shrinking in place. Baked into <see cref="_linearTransforms"/> at load time.
+	/// </param>
+	public LobbyModel( string modelPath, string textureDirectory, Vector3 origin, float scale = 1f )
 	{
 		var modelFile = new ModelFile( modelPath );
 		var meshCount = modelFile.Meshes.Count;
@@ -72,8 +77,10 @@ public sealed class LobbyModel
 			meshVertices[meshIndex] = [.. vertices];
 
 			// The mesh's place in the model's node tree, not just its own transform - a mesh
-			// parented to a dummy node stores only its offset from that node.
-			var world = mesh.WorldTransform;
+			// parented to a dummy node stores only its offset from that node. Right-multiplying
+			// by a uniform scale here scales the translation too (not just the 3x3 part), so
+			// this scales the whole model around its root rather than each mesh in place.
+			var world = mesh.WorldTransform * Matrix4x4.CreateScale( scale );
 
 			var offset = new Vector3( world.M41, world.M43, world.M42 );
 			Offsets[meshIndex] = offset;
