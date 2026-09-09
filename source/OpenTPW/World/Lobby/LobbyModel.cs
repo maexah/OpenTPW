@@ -22,7 +22,9 @@ public sealed class LobbyModel
 
 	public MeshRotator? Rotator { get; }
 
-	private readonly Quaternion[] _baseRotations;
+	// Each mesh's orientation, scale and any shear, already converted to world space. Kept
+	// separate from Position so an animation can turn a mesh without disturbing it.
+	private readonly Matrix4x4[] _linearTransforms;
 
 	public LobbyModel( string modelPath, string textureDirectory, Vector3 origin )
 	{
@@ -32,7 +34,7 @@ public sealed class LobbyModel
 		Entities = new ModelEntity[meshCount];
 		Offsets = new Vector3[meshCount];
 
-		_baseRotations = new Quaternion[meshCount];
+		_linearTransforms = new Matrix4x4[meshCount];
 
 		var models = new Model[meshCount];
 		var meshVertices = new Vertex[meshCount][];
@@ -71,19 +73,17 @@ public sealed class LobbyModel
 
 			// The mesh's place in the model's node tree, not just its own transform - a mesh
 			// parented to a dummy node stores only its offset from that node.
-			Matrix4x4.Decompose( mesh.WorldTransform, out var scl, out var rot, out var pos );
+			var world = mesh.WorldTransform;
 
-			var offset = new Vector3( pos.X, pos.Z, pos.Y );
+			var offset = new Vector3( world.M41, world.M43, world.M42 );
 			Offsets[meshIndex] = offset;
 
-			var rotation = ToWorldSpace( rot );
-			_baseRotations[meshIndex] = rotation;
+			_linearTransforms[meshIndex] = ToWorldSpace( world );
 
 			Entities[meshIndex] = new ModelEntity()
 			{
 				Model = models[meshIndex],
-				Scale = new Vector3( scl.X, scl.Z, scl.Y ),
-				Rotation = rotation,
+				LinearTransform = _linearTransforms[meshIndex],
 				Position = offset + origin,
 			};
 		}
@@ -93,7 +93,7 @@ public sealed class LobbyModel
 		if ( animations.Length > 0 )
 		{
 			Animators = BindVertexAnimations( modelPath, animations, modelFile, models, meshVertices );
-			Rotator = BindRotationAnimations( modelPath, animations, Entities, _baseRotations );
+			Rotator = BindRotationAnimations( modelPath, animations, Entities, _linearTransforms );
 		}
 	}
 
@@ -107,12 +107,19 @@ public sealed class LobbyModel
 	}
 
 	/// <summary>
-	/// Model space is Y-up and right-handed; the world we draw into swaps Y and Z, which flips
-	/// handedness, so a rotation has to be conjugated as well as swizzled to survive the trip.
-	/// This is the rotation half of the same mapping the mesh positions go through.
+	/// Model space is Y-up; the world we draw into swaps Y and Z, which is the same swizzle the
+	/// mesh positions go through. Conjugating the matrix by that swap converts its rotation,
+	/// scale and shear together - unlike decomposing to a TRS, which silently drops the shear
+	/// and skewed the jungle island's tallest palm trunk sideways by five units.
+	///
+	/// Only the linear part is converted; the translation is swizzled by the caller.
 	/// </summary>
-	public static Quaternion ToWorldSpace( Quaternion modelSpace )
-		=> new( modelSpace.X, modelSpace.Z, modelSpace.Y, -modelSpace.W );
+	public static Matrix4x4 ToWorldSpace( Matrix4x4 modelSpace )
+		=> new(
+			modelSpace.M11, modelSpace.M13, modelSpace.M12, 0,
+			modelSpace.M31, modelSpace.M33, modelSpace.M32, 0,
+			modelSpace.M21, modelSpace.M23, modelSpace.M22, 0,
+			0, 0, 0, 1 );
 
 	/// <summary>Moves every mesh of this model, keeping their relative placement.</summary>
 	public void SetOrigin( Vector3 origin )
@@ -129,7 +136,10 @@ public sealed class LobbyModel
 			var offset = System.Numerics.Vector3.Transform( Offsets[i].GetSystemVector3(), rotation );
 
 			Entities[i].Position = (Vector3)offset + origin;
-			Entities[i].Rotation = rotation * _baseRotations[i];
+
+			// The mesh's own orientation lives in its LinearTransform, so this only has to
+			// carry the whole model's heading.
+			Entities[i].Rotation = rotation;
 		}
 	}
 
@@ -189,7 +199,7 @@ public sealed class LobbyModel
 	}
 
 	private static MeshRotator? BindRotationAnimations( string modelPath, AnimationFile[] animations,
-		ModelEntity[] entities, Quaternion[] baseRotations )
+		ModelEntity[] entities, Matrix4x4[] baseTransforms )
 	{
 		if ( !MeshRotator.Drives( animations[0], entities.Length ) )
 			return null;
@@ -197,6 +207,6 @@ public sealed class LobbyModel
 		Log.Info( $"{modelPath}: rotating {animations[0].RotationTracks.Count} mesh(es) " +
 			$"with {animations.Length} animation(s)" );
 
-		return new MeshRotator( animations, entities, baseRotations );
+		return new MeshRotator( animations, entities, baseTransforms );
 	}
 }

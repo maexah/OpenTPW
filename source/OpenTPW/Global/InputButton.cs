@@ -1,4 +1,4 @@
-﻿using Veldrid;
+using Veldrid;
 
 namespace OpenTPW;
 
@@ -276,4 +276,11 @@ public enum InputButton
 	/// </summary>
 	[DefaultKey( Key.X )]
 	FreezeCamera,
+
+	/// <summary>
+	/// Hide UI (F2)
+	/// Hides the whole HUD so a screenshot shows the scene with nothing in front of it.
+	/// </summary>
+	[DefaultKey( Key.F2 )]
+	HideUI,
 }

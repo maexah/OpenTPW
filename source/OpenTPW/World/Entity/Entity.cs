@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Reflection;
 using Veldrid;
@@ -24,11 +24,20 @@ public class Entity
 
 	public string Name { get; set; }
 
+	/// <summary>
+	/// Replaces <see cref="Scale"/> when a transform can't be expressed as scale and rotation.
+	/// A little over 1% of .md2 nodes are sheared - their axes aren't perpendicular - and
+	/// decomposing those to a TRS loses the shear, which visibly skews the mesh.
+	/// <see cref="Rotation"/> still applies on top, so an animation can turn the mesh about its
+	/// own origin either way.
+	/// </summary>
+	public Matrix4x4? LinearTransform;
+
 	public Matrix4x4 ModelMatrix
 	{
 		get
 		{
-			var matrix = Matrix4x4.CreateScale( Scale.GetSystemVector3() );
+			var matrix = LinearTransform ?? Matrix4x4.CreateScale( Scale.GetSystemVector3() );
 			matrix *= Matrix4x4.CreateFromQuaternion( Rotation );
 			matrix *= Matrix4x4.CreateTranslation( Position.GetSystemVector3() );
 

@@ -18,16 +18,16 @@ public class MeshRotator
 {
 	private readonly AnimationFile[] _animations;
 	private readonly ModelEntity[] _entities;
-	private readonly Quaternion[] _baseRotations;
+	private readonly Matrix4x4[] _baseTransforms;
 
 	private int _current;
 	private float _elapsed;
 
-	public MeshRotator( AnimationFile[] animations, ModelEntity[] entities, Quaternion[] baseRotations )
+	public MeshRotator( AnimationFile[] animations, ModelEntity[] entities, Matrix4x4[] baseTransforms )
 	{
 		_animations = animations;
 		_entities = entities;
-		_baseRotations = baseRotations;
+		_baseTransforms = baseTransforms;
 	}
 
 	/// <summary>
@@ -59,10 +59,15 @@ public class MeshRotator
 				continue;
 
 			// The keyframes are a delta from the mesh's authored orientation - every animation
-			// that starts from rest starts on the identity quaternion.
-			var rotation = LobbyModel.ToWorldSpace( track.Sample( frame ) );
+			// that starts from rest starts on the identity quaternion. Same Y/Z swap the meshes
+			// go through; that swap flips handedness, so the rotation is conjugated too.
+			var q = track.Sample( frame );
+			var rotation = Matrix4x4.CreateFromQuaternion( new Quaternion( q.X, q.Z, q.Y, -q.W ) );
 
-			_entities[track.TargetIndex].Rotation = _baseRotations[track.TargetIndex] * rotation;
+			// Applied inside the mesh's own transform, so a door turns about its hinge rather
+			// than being swung around by whatever orientation its parent gave it.
+			_entities[track.TargetIndex].LinearTransform =
+				rotation * _baseTransforms[track.TargetIndex];
 		}
 	}
 
