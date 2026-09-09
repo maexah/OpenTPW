@@ -82,11 +82,7 @@ public sealed class LobbyButterfly : Entity
 		_direction = RotateTowards( _direction, desired, TurnRate * dt );
 		_position += _direction * _speed * dt;
 
-		// Entity already declares a field called Rotation (the System.Numerics.Quaternion this
-		// entity is currently facing), which shadows the OpenTPW.Rotation type name in here -
-		// so this has to be qualified.
-		var heading = OpenTPW.Rotation.LookAt( _direction );
-		_model.SetTransform( _position, heading.GetSystemQuaternion() );
+		_model.SetTransform( _position, FaceDirection( _direction ) );
 	}
 
 	/// <summary>
@@ -153,6 +149,52 @@ public sealed class LobbyButterfly : Entity
 		}
 
 		return desired;
+	}
+
+	/// <summary>
+	/// A stable "keep this side up" facing rotation, built directly rather than through
+	/// <see cref="Rotation.LookAt"/> - that helper is a minimal single-axis rotation from a
+	/// fixed reference (local Forward), which leaves roll around the new forward axis
+	/// completely unconstrained. A butterfly wandering through the full circle of yaw
+	/// regularly passes near that reference's opposite direction, where the axis it rotates
+	/// about goes unstable, and the model would flip, roll or end up flying sideways right as
+	/// it changed direction - which is exactly what this replaced.
+	///
+	/// Instead this derives a full local frame - forward along the flight direction, up kept
+	/// as close to world up as the tilt of that direction allows, right/left completing it -
+	/// and builds the rotation whose local axes land exactly on that frame. Roll is never
+	/// "whatever falls out of the maths", it is pinned to level: the wings stay upright.
+	///
+	/// Local Forward is (1,0,0), Up is (0,0,1) and Right is (0,-1,0) (so local Y is Left) -
+	/// see the constants on <see cref="Vector3"/> - which is why the matrix rows below are
+	/// forward, then -right, then up, matching how a rotation quaternion's matrix places each
+	/// local axis's world-space image.
+	/// </summary>
+	private static Quaternion FaceDirection( Vector3 forward )
+	{
+		forward = forward.Normal;
+
+		var worldUp = Vector3.Up;
+		var right = forward.Cross( worldUp );
+
+		// Forward is nearly straight up or down, where forward x up degenerates (forward is
+		// then necessarily close to (0,0,+-1), so world Forward is always a safe substitute
+		// reference here) - fall back so we still get a valid frame. Flight is pitch-limited
+		// enough that this is a safety net rather than something that happens in practice.
+		if ( right.LengthSquared < 0.0001f )
+			right = forward.Cross( Vector3.Forward );
+
+		right = right.Normal;
+		var up = right.Cross( forward ).Normal;
+		var left = -right;
+
+		var matrix = new Matrix4x4(
+			forward.X, forward.Y, forward.Z, 0f,
+			left.X, left.Y, left.Z, 0f,
+			up.X, up.Y, up.Z, 0f,
+			0f, 0f, 0f, 1f );
+
+		return Quaternion.CreateFromRotationMatrix( matrix );
 	}
 
 	/// <summary>Rotates <paramref name="from"/> toward <paramref name="to"/> by at most <paramref name="maxAngle"/> radians.</summary>
