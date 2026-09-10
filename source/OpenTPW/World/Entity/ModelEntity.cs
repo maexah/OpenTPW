@@ -21,6 +21,12 @@ public partial class ModelEntity : Entity
 	/// </summary>
 	public float Opacity { get; set; } = 1f;
 
+	/// <summary>
+	/// Set when this model is drawn by whatever owns it, through <see cref="DrawOverlay"/>, rather
+	/// than as part of the scene - so the world passes leave it alone.
+	/// </summary>
+	public bool DrawnByOwner { get; set; }
+
 	public ModelEntity()
 	{
 		Spawn();
@@ -33,34 +39,55 @@ public partial class ModelEntity : Entity
 
 	protected override void OnRender()
 	{
-		if ( Model == null || Opacity <= 0f )
+		if ( Model == null || Opacity <= 0f || DrawnByOwner )
 			return;
 
-		Draw( Model );
+		Draw( Model, Camera.ViewMatrix, Camera.ProjMatrix, Level.SunLight?.Position ?? Vector3.Zero,
+			Level.SunLight?.Color ?? Vector3.One, Level.FogDensity );
 	}
 
 	protected override void OnRenderTranslucent()
 	{
-		if ( TranslucentModel == null || Opacity <= 0f )
+		if ( TranslucentModel == null || Opacity <= 0f || DrawnByOwner )
 			return;
 
-		Draw( TranslucentModel );
+		Draw( TranslucentModel, Camera.ViewMatrix, Camera.ProjMatrix, Level.SunLight?.Position ?? Vector3.Zero,
+			Level.SunLight?.Color ?? Vector3.One, Level.FogDensity );
 	}
 
-	private void Draw( Model model )
+	/// <summary>
+	/// Draws this model with a view, projection and light of the caller's own, and no fog - for a
+	/// model that sits on the screen rather than in the world. Solid half first, then the
+	/// see-through half, the same order the scene uses.
+	/// </summary>
+	public void DrawOverlay( System.Numerics.Matrix4x4 view, System.Numerics.Matrix4x4 projection,
+		Vector3 lightPosition, Vector3 lightColor )
+	{
+		if ( Opacity <= 0f )
+			return;
+
+		if ( Model != null )
+			Draw( Model, view, projection, lightPosition, lightColor, fogDensity: 0f );
+
+		if ( TranslucentModel != null )
+			Draw( TranslucentModel, view, projection, lightPosition, lightColor, fogDensity: 0f );
+	}
+
+	private void Draw( Model model, System.Numerics.Matrix4x4 view, System.Numerics.Matrix4x4 projection,
+		Vector3 lightPosition, Vector3 lightColor, float fogDensity )
 	{
 		var uniformBuffer = new ObjectUniformBuffer
 		{
 			g_mModel = ModelMatrix,
-			g_mView = Camera.ViewMatrix,
-			g_mProj = Camera.ProjMatrix,
-			g_vLightPos = Level.SunLight?.Position ?? Vector3.Zero,
-			g_vLightColor = Level.SunLight?.Color ?? Vector3.One,
+			g_mView = view,
+			g_mProj = projection,
+			g_vLightPos = lightPosition,
+			g_vLightColor = lightColor,
 			g_vCameraPos = Camera.Position,
 			g_flTime = Time.Now,
 			g_vFogColour = Level.FogColour,
 			g_flOpacity = Opacity,
-			g_flFogDensity = Level.FogDensity,
+			g_flFogDensity = fogDensity,
 
 			_padding0 = 0,
 			_padding1 = 0,

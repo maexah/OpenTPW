@@ -66,6 +66,16 @@ public class Entity
 		OnRenderTranslucent();
 	}
 
+	/// <summary>
+	/// Third render pass, over the finished world with depth cleared - see
+	/// <see cref="Level.Render"/>. For things that belong to the screen rather than the scene; the
+	/// advisor is the one that uses it.
+	/// </summary>
+	public void RenderOverlay()
+	{
+		OnRenderOverlay();
+	}
+
 	public void Update()
 	{
 		OnUpdate();
@@ -77,6 +87,7 @@ public class Entity
 
 	protected virtual void OnRender() { }
 	protected virtual void OnRenderTranslucent() { }
+	protected virtual void OnRenderOverlay() { }
 	protected virtual void OnUpdate() { }
 	protected virtual void OnDelete() { }
 
