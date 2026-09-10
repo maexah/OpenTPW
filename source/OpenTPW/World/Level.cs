@@ -69,6 +69,10 @@ public class Level
 		// islands so the first frame already has one to play.
 		_ = new LobbyAudio();
 
+		// The advisor rides on top of that: he greets a new player on the first frame he gets,
+		// and ducks everything above while he does it.
+		_ = new LobbyAdvisor();
+
 		Camera.SetCameraMode<LobbyCameraMode>();
 	}
 

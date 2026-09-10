@@ -193,13 +193,36 @@ public static class DebugConsole
 				Reply( LobbyAudio.Current?.State() ?? "no lobby audio" );
 				break;
 
+			case "speech":
+				// Auditions one of the 641 global speech samples, ducking the rest of the mix
+				// exactly as a real line would. This is how LobbyAdvisor's first-launch sample
+				// gets confirmed - there is no way to read it out of the executable.
+				if ( LobbyAdvisor.Current == null )
+					Reply( "no advisor" );
+				else if ( parts.Length > 1 )
+					LobbyAdvisor.Current.Say( (int)Argument( 1, 1 ) );
+				else
+					LobbyAdvisor.Current.Hush();
+
+				Reply( LobbyAdvisor.Current?.State() ?? "no advisor" );
+				break;
+
+			case "advisor":
+				Reply( LobbyAdvisor.Current?.State() ?? "no advisor" );
+				break;
+
+			case "duck":
+				Audio.Duck( parts.Length > 1 ? Argument( 1, 1f ) : 1f, 0.3f );
+				Reply( $"duck={Audio.DuckLevel:0.00}" );
+				break;
+
 			case "quit":
 				Reply( "quitting" );
 				Environment.Exit( 0 );
 				break;
 
 			default:
-				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/near/stats/state/volume/mute/sound/quit" );
+				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/near/stats/state/volume/mute/sound/speech/advisor/duck/quit" );
 				break;
 		}
 	}
