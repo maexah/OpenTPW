@@ -1,11 +1,24 @@
-﻿using Veldrid;
+﻿using System.Diagnostics;
+using Veldrid;
 using Veldrid.StartupUtilities;
 
 namespace OpenTPW;
 
 public partial class Renderer
 {
-	private DateTime _lastFrame;
+	/// <summary>
+	/// Frame timing, from a monotonic clock rather than the wall clock.
+	///
+	/// <c>DateTime.Now</c> can step - an NTP correction or a daylight-saving change moves it,
+	/// backwards included - and every frame-rate-independent formula in the project is built on
+	/// the delta being a real, positive elapsed time. A negative one turns
+	/// <see cref="Time.SmoothingFactor"/> negative, which eases away from its target rather than
+	/// toward it. It also reads the local timezone on every call, for a value only ever used as
+	/// a difference.
+	/// </summary>
+	private readonly Stopwatch _frameClock = Stopwatch.StartNew();
+	private TimeSpan _lastFrame;
+
 	public CommandList CommandList = null!;
 
 	public Window Window;
@@ -33,7 +46,7 @@ public partial class Renderer
 		new Editor( imGuiRenderer, Device );
 
 		CommandList = Device.ResourceFactory.CreateCommandList();
-		_lastFrame = DateTime.Now;
+		_lastFrame = _frameClock.Elapsed;
 	}
 
 	private void CreateMultisampledFramebuffer()
@@ -172,8 +185,9 @@ public partial class Renderer
 
 	private void Update()
 	{
-		float deltaTime = (float)(DateTime.Now - _lastFrame).TotalSeconds;
-		_lastFrame = DateTime.Now;
+		var now = _frameClock.Elapsed;
+		float deltaTime = (float)(now - _lastFrame).TotalSeconds;
+		_lastFrame = now;
 
 		InputSnapshot inputSnapshot = Window.SdlWindow.PumpEvents();
 
