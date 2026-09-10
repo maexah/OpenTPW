@@ -29,6 +29,12 @@ public sealed class Voice
 	/// <summary>Whether this restarts from the top rather than ending. Read by the mixer's cull.</summary>
 	internal bool Loop { get; }
 
+	/// <summary>
+	/// Which group this belongs to, which is what decides whether <see cref="Audio.Duck"/>
+	/// applies to it. Fixed for the life of the voice.
+	/// </summary>
+	internal AudioBus Bus { get; }
+
 	/// <summary>Where the fade has got to. Read by the mixer's cull.</summary>
 	internal float Volume => _volume;
 
@@ -44,10 +50,11 @@ public sealed class Voice
 	/// <summary>What is playing, so the lobby can say what it picked.</summary>
 	public string Name => _clip.Name;
 
-	internal Voice( AudioClip clip, float volume, bool loop, float fadeInSeconds )
+	internal Voice( AudioClip clip, float volume, bool loop, float fadeInSeconds, AudioBus bus )
 	{
 		_clip = clip;
 		Loop = loop;
+		Bus = bus;
 		_targetVolume = volume;
 
 		if ( fadeInSeconds > 0f )
@@ -105,7 +112,13 @@ public sealed class Voice
 	/// The volume moves a step per frame rather than a step per buffer. A buffer is 46ms, and a
 	/// fade that jumped in 46ms steps would be a staircase of clicks rather than a fade.
 	/// </summary>
-	internal unsafe bool MixInto( float* output, int frames, float master )
+	/// <param name="duck">
+	/// Where the advisor's ducking ramp stands at the first frame of this buffer, and how much it
+	/// moves per frame. <see cref="Audio"/> works both out once and hands every voice the same
+	/// pair, so the whole mix ducks together rather than each voice reading a value that has
+	/// moved on since the voice before it. Speech ignores it.
+	/// </param>
+	internal unsafe bool MixInto( float* output, int frames, float master, float duck, float duckStep )
 	{
 		if ( _stopped )
 			return false;
@@ -114,6 +127,12 @@ public sealed class Voice
 		var channels = _clip.Channels;
 		var length = _clip.Frames;
 		var step = _volumeRate / Audio.SampleRate;
+
+		if ( Bus == AudioBus.Speech )
+		{
+			duck = 1f;
+			duckStep = 0f;
+		}
 
 		for ( int i = 0; i < frames; ++i )
 		{
@@ -155,7 +174,8 @@ public sealed class Voice
 					at = 0;
 			}
 
-			var gain = _volume * master;
+			var gain = _volume * master * duck;
+			duck += duckStep;
 
 			if ( channels == 1 )
 			{

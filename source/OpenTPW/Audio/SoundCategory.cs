@@ -102,8 +102,9 @@ public sealed class SoundCategory
 	/// through the delay above instead, which is what lets a park whose bed is a one-second bird
 	/// call behave the same way as one whose bed is ninety seconds of jungle.
 	/// </param>
+	/// <param name="bus">Which group the voice joins, and so whether the advisor ducks it.</param>
 	public Voice? Play( int id, float volume = 1f, bool loop = false, float fadeInSeconds = 0f,
-		bool respectDelay = true )
+		bool respectDelay = true, AudioBus bus = AudioBus.Effects )
 	{
 		var effect = _effects.FirstOrDefault( candidate => candidate.Id == id );
 
@@ -123,7 +124,7 @@ public sealed class SoundCategory
 			? float.PositiveInfinity
 			: Time.Now + clip.Duration + (float)effect.RepeatDelay.TotalSeconds;
 
-		return Audio.Play( clip, volume, loop, fadeInSeconds );
+		return Audio.Play( clip, volume, loop, fadeInSeconds, bus );
 	}
 
 	/// <summary>How long effect <paramref name="id"/> waits after finishing before it may replay.</summary>

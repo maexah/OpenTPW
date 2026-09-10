@@ -55,6 +55,26 @@ public static class Audio
 
 	private static float _masterVolume = 0.5f;
 
+	/// <summary>
+	/// How far everything that is not <see cref="AudioBus.Speech"/> is turned down, and where
+	/// that is heading. 1 is unducked.
+	///
+	/// The original does this as a straight multiply on the music and effects group volumes the
+	/// moment the advisor is given a line, and puts it back the moment his sample ends - see
+	/// <see cref="LobbyAdvisor"/> for the two calls. It steps rather than fades, which on a
+	/// sustained park theme is audible as a lurch, so <see cref="Duck"/> ramps instead. The ramp
+	/// is the only place this deliberately departs from the original.
+	/// </summary>
+	private static float _duck = 1f;
+
+	private static float _duckTarget = 1f;
+
+	/// <summary>Movement per second, or 0 to snap.</summary>
+	private static float _duckRate;
+
+	/// <summary>Where the ducking ramp stands, for the debug console to report.</summary>
+	public static float DuckLevel => _duck;
+
 	private static readonly List<Voice> Voices = new( MaxVoices );
 
 	/// <summary>
@@ -156,12 +176,14 @@ public static class Audio
 	/// <param name="volume">0 to 1, before <see cref="MasterVolume"/>.</param>
 	/// <param name="loop">Whether it starts again from the top rather than ending.</param>
 	/// <param name="fadeInSeconds">How long it takes to reach <paramref name="volume"/>.</param>
-	public static Voice? Play( AudioClip? clip, float volume = 1f, bool loop = false, float fadeInSeconds = 0f )
+	/// <param name="bus">Which group it belongs to, and so whether <see cref="Duck"/> applies.</param>
+	public static Voice? Play( AudioClip? clip, float volume = 1f, bool loop = false,
+		float fadeInSeconds = 0f, AudioBus bus = AudioBus.Effects )
 	{
 		if ( !Ready || clip == null || clip.Frames == 0 )
 			return null;
 
-		var voice = new Voice( clip, volume.Clamp( 0f, 1f ), loop, fadeInSeconds );
+		var voice = new Voice( clip, volume.Clamp( 0f, 1f ), loop, fadeInSeconds, bus );
 
 		lock ( Lock )
 		{
@@ -188,6 +210,24 @@ public static class Audio
 	}
 
 	/// <summary>
+	/// Turns everything that is not speech down to <paramref name="level"/>, taking
+	/// <paramref name="seconds"/> to get there. <c>Duck( 1f, ... )</c> puts it back.
+	/// </summary>
+	public static void Duck( float level, float seconds )
+	{
+		level = level.Clamp( 0f, 1f );
+
+		lock ( Lock )
+		{
+			_duckTarget = level;
+			_duckRate = seconds <= 0f ? 0f : MathF.Abs( level - _duck ) / seconds;
+
+			if ( _duckRate == 0f )
+				_duck = level;
+		}
+	}
+
+	/// <summary>
 	/// Fills one buffer. Runs on SDL's audio thread - see <see cref="Lock"/> - so it does no
 	/// allocation, no I/O and no logging.
 	/// </summary>
@@ -203,9 +243,31 @@ public static class Audio
 
 		lock ( Lock )
 		{
+			// Work the ducking ramp out for the whole buffer before any voice is mixed, so every
+			// voice is handed the same starting point and the same step. Advancing a shared field
+			// inside the voice loop instead would duck each voice by a different amount.
+			var duck = _duck;
+			var duckStep = 0f;
+
+			if ( _duckRate > 0f )
+			{
+				var perFrame = _duckRate / SampleRate;
+				var reached = _duck + ((_duck < _duckTarget ? perFrame : -perFrame) * frames);
+
+				if ( (_duck < _duckTarget && reached >= _duckTarget)
+					|| (_duck > _duckTarget && reached <= _duckTarget) )
+				{
+					reached = _duckTarget;
+					_duckRate = 0f;
+				}
+
+				duckStep = frames > 0 ? (reached - _duck) / frames : 0f;
+				_duck = reached;
+			}
+
 			for ( int i = Voices.Count - 1; i >= 0; --i )
 			{
-				if ( !Voices[i].MixInto( output, frames, master ) )
+				if ( !Voices[i].MixInto( output, frames, master, duck, duckStep ) )
 					Voices.RemoveAt( i );
 			}
 		}

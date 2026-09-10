@@ -274,7 +274,8 @@ public sealed class LobbyAudio : Entity
 		if ( _current == null || Muted )
 			return;
 
-		_music = _current.Music.Play( LocalMusic, MusicVolume, fadeInSeconds: CrossfadeSeconds );
+		_music = _current.Music.Play( LocalMusic, MusicVolume, fadeInSeconds: CrossfadeSeconds,
+			bus: AudioBus.Music );
 		_bed = _current.Ambience.Play( LocalBed, BedVolume, fadeInSeconds: CrossfadeSeconds );
 
 		Log.Info( $"Lobby audio: {island.ThemeName} - theme '{Describe( _music )}', bed '{Describe( _bed )}'" );
@@ -293,7 +294,7 @@ public sealed class LobbyAudio : Entity
 	private void KeepPlaying()
 	{
 		if ( _music is not { Playing: true } )
-			_music = _current!.Music.Play( LocalMusic, MusicVolume );
+			_music = _current!.Music.Play( LocalMusic, MusicVolume, bus: AudioBus.Music );
 
 		if ( _bed is not { Playing: true } )
 			_bed = _current!.Ambience.Play( LocalBed, BedVolume );
