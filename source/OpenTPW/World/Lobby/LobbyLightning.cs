@@ -19,7 +19,10 @@ namespace OpenTPW;
 /// read out of the executable at 0x00702c94 and 0x00702c8c - so a strike lands within fifty
 /// units of the island and leans by up to ten over its five hundred of height.
 ///
-/// There is no sound system yet, so the thunder is missing.
+/// The thunder is <see cref="LobbyAudio"/>'s: the original plays it from inside this same test,
+/// on the line after the bolt is drawn, as effect 1 of the global lobby sfx category. Firing it
+/// from <see cref="Strike"/> rather than from the roll keeps the two together however a strike
+/// comes about - the debug console can force one, and that should thunder too.
 /// </summary>
 public sealed class LobbyLightning : WeatherSprites
 {
@@ -88,6 +91,8 @@ public sealed class LobbyLightning : WeatherSprites
 
 		_remaining = Duration;
 		_flicker = 0f;
+
+		LobbyAudio.Current?.Thunder();
 	}
 
 	/// <summary>

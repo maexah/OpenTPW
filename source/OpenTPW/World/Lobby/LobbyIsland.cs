@@ -25,6 +25,13 @@ public sealed class LobbyIsland : Entity
 	public string ParkName { get; }
 
 	/// <summary>
+	/// What this park is called in the data - "Jungle", "Hallow" and so on. Not what the player
+	/// is shown (see <see cref="ParkName"/>); this is the folder its models, script and sound
+	/// banks are under.
+	/// </summary>
+	public string ThemeName { get; }
+
+	/// <summary>
 	/// What each park is actually called.
 	///
 	/// A park's ISLAND() line does carry a name, but for three of the four it is the backend one
@@ -49,6 +56,8 @@ public sealed class LobbyIsland : Entity
 	public LobbyIsland( Vector3 _position, string themeName )
 	{
 		Position = _position;
+
+		ThemeName = themeName;
 
 		var modelPrefix = themeName[0..3];
 		Script = LobbyScript.Read( themeName );

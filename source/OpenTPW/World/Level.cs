@@ -65,6 +65,10 @@ public class Level
 		// camera is on - see LobbyWeather.
 		_ = new LobbyWeather();
 
+		// ...and one sound system, which takes its cue from the same place. Built after the
+		// islands so the first frame already has one to play.
+		_ = new LobbyAudio();
+
 		Camera.SetCameraMode<LobbyCameraMode>();
 	}
 
