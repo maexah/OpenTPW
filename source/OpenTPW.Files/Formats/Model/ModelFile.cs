@@ -144,6 +144,12 @@ public partial class ModelFile : BaseFormat
 		/// eight. Compare against that byte and not against the bit depth: sen_ant1 is stored
 		/// 32-bit but declares no alpha channel, so the two questions give different answers.
 		///
+		/// That tightness is a property of the lobby, not a general one, and it matters as soon as
+		/// anything past the lobby is drawn. Across all 12,773 resolvable material uses in the
+		/// game, the bit still implies an alpha channel 87% of the time, but only 56% of the
+		/// textures that carry one set it - a great deal of the game's 32-bit ground and path art
+		/// is drawn opaque. It is an authoring decision, not a restatement of the texture format.
+		///
 		/// The eight read as authoring choices rather than noise. Six are textures that carry an
 		/// alpha channel and are drawn opaque anyway - the Space hoarding's four sign faces and
 		/// the two Box meshes sharing sfl_cnr3. The other two set the bit over a texture with no
