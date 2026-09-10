@@ -183,8 +183,16 @@ public sealed class AdvisorModel
 	{
 		var projection = ScreenProjection( aspect );
 
+		// Every solid part before any see-through one. His head and body are see-through - flat discs
+		// with the ball painted on, under material flag 0x2 - and write no depth, so drawn a mesh at a
+		// time his head went down before his hands and a hand swung behind it showed straight through.
+		// Drawn after them, it covers whatever is behind it. The see-through parts keep the file's
+		// order among themselves, which puts the head before the mouths and eyelids that sit on it.
 		foreach ( var entity in _model.Entities )
 			entity.DrawOverlay( Matrix4x4.Identity, projection, LightPosition, LightColor, Ambient, worldNormals: true );
+
+		foreach ( var entity in _model.Entities )
+			entity.DrawOverlay( Matrix4x4.Identity, projection, LightPosition, LightColor, Ambient, worldNormals: true, translucent: true );
 	}
 
 	/// <summary>

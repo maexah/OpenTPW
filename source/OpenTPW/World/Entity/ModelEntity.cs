@@ -56,23 +56,25 @@ public partial class ModelEntity : Entity
 	}
 
 	/// <summary>
-	/// Draws this model with a view, projection and light of the caller's own, and no fog - for a
-	/// model that sits on the screen rather than in the world. Solid half first, then the
-	/// see-through half, the same order the scene uses.
+	/// Draws one half of this model - its solid half, or with <paramref name="translucent"/> its
+	/// see-through half - with a view, projection and light of the caller's own, and no fog, for a
+	/// model that sits on the screen rather than in the world.
+	///
+	/// A caller drawing several of these over each other has to draw every solid half before any
+	/// see-through one, the order the scene uses. A see-through half writes no depth, so if it
+	/// goes first, anything solid drawn after it shows straight through it however far behind it is.
 	/// </summary>
 	/// <param name="ambient">Light every surface gets regardless of facing; 0 for the world's own.</param>
 	/// <param name="worldNormals">Light with normals turned by the model matrix - see ObjectUniformBuffer.</param>
+	/// <param name="translucent">Which half to draw: false for the solid one, true for the see-through one.</param>
 	public void DrawOverlay( System.Numerics.Matrix4x4 view, System.Numerics.Matrix4x4 projection,
-		Vector3 lightPosition, Vector3 lightColor, float ambient = 0f, bool worldNormals = false )
+		Vector3 lightPosition, Vector3 lightColor, float ambient = 0f, bool worldNormals = false, bool translucent = false )
 	{
 		if ( Opacity <= 0f )
 			return;
 
-		if ( Model != null )
-			Draw( Model, view, projection, lightPosition, lightColor, 0f, ambient, worldNormals );
-
-		if ( TranslucentModel != null )
-			Draw( TranslucentModel, view, projection, lightPosition, lightColor, 0f, ambient, worldNormals );
+		if ( (translucent ? TranslucentModel : Model) is { } half )
+			Draw( half, view, projection, lightPosition, lightColor, 0f, ambient, worldNormals );
 	}
 
 	private void Draw( Model model, System.Numerics.Matrix4x4 view, System.Numerics.Matrix4x4 projection,
