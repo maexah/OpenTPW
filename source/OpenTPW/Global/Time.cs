@@ -32,6 +32,20 @@ public class Time
 	public static float SmoothingFactor( float rate ) => 1f - MathF.Exp( -rate * Delta );
 
 	/// <summary>
+	/// When a steady beat of <paramref name="interval"/> seconds is next due, now that the one due
+	/// at <paramref name="due"/> has been noticed at <paramref name="now"/>.
+	///
+	/// Counting on from when the beat was due, rather than from the frame that noticed it, keeps
+	/// the beat at its interval at any frame rate. Counting from the frame stretches every interval
+	/// by however much of a frame had gone by when it was noticed - up to a whole one, which at
+	/// 30fps can make a 100ms beat a third longer. A beat that has fallen a whole interval or more
+	/// behind - after a pause, or a stretch with
+	/// nothing to do - starts again from now rather than firing off every beat it missed.
+	/// </summary>
+	public static float NextBeat( float due, float interval, float now )
+		=> now - due < interval ? due + interval : now + interval;
+
+	/// <summary>
 	/// The longest frame anything is told about.
 	///
 	/// Easing through <see cref="SmoothingFactor"/> is safe at any delta - it saturates rather

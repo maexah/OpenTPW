@@ -87,6 +87,38 @@ public class AnimationTimingTests
 		Assert.IsTrue( ClipSequence.Empty.IsFinished( 0f ) );
 	}
 
+	[TestMethod]
+	public void AMouthBeatKeepsItsIntervalAtAnyFrameRate()
+	{
+		foreach ( var rate in FrameRates )
+		{
+			var now = 0f;
+			var due = 0f;
+			var beats = 0;
+
+			while ( now < 10f )
+			{
+				now += 1f / rate;
+
+				if ( now >= due )
+				{
+					beats++;
+					due = Time.NextBeat( due, 0.1f, now );
+				}
+			}
+
+			// Due at 0, 0.1, ... 9.9 - a hundred, give or take the one on the ten-second line.
+			Assert.AreEqual( 100f, beats, 1f, $"{rate}fps" );
+		}
+	}
+
+	[TestMethod]
+	public void AMouthBeatThatFellBehindStartsAgainFromNow()
+	{
+		Assert.AreEqual( 0.2f, Time.NextBeat( 0.1f, 0.1f, 0.13f ), 0.0001f );
+		Assert.AreEqual( 5.1f, Time.NextBeat( 1f, 0.1f, 5f ), 0.0001f );
+	}
+
 	private static float StartOf( int clip )
 	{
 		var start = 0;

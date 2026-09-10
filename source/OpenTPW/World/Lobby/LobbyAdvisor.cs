@@ -44,7 +44,8 @@ namespace OpenTPW;
 /// <b>Timing.</b> Nothing he does is counted in frames, so he moves the same at any frame rate.
 /// His clips sit on a timeline from the moment a line starts - see <see cref="ClipSequence"/> -
 /// where the original starts each one on the frame after it notices the last has finished, and so
-/// falls a little further behind at every change the slower it runs.
+/// falls a little further behind at every change the slower it runs. His mouth keeps a steady
+/// 100ms beat for the same reason - see <see cref="MouthChangeSeconds"/>.
 /// </para>
 /// </summary>
 public sealed class LobbyAdvisor : Entity
@@ -85,7 +86,11 @@ public sealed class LobbyAdvisor : Entity
 	/// <summary>How much past the end of the sample his clips must reach.</summary>
 	private const int GestureMarginMilliseconds = 500;
 
-	/// <summary>How often he changes mouth while talking.</summary>
+	/// <summary>
+	/// How often he changes mouth while talking. Advisor_Update (0x00599880) sets the next change
+	/// for 100ms after the update that makes one, which stretches every beat to the next frame and
+	/// so slows him the lower the frame rate; this keeps to 100ms - see <see cref="Time.NextBeat"/>.
+	/// </summary>
 	private const float MouthChangeSeconds = 0.1f;
 
 	/// <summary>
@@ -405,7 +410,7 @@ public sealed class LobbyAdvisor : Entity
 		else if ( Time.Now >= _nextMouthAt )
 		{
 			SetMouth( _random.Next( 5 ) + 1 );
-			_nextMouthAt = Time.Now + MouthChangeSeconds;
+			_nextMouthAt = Time.NextBeat( _nextMouthAt, MouthChangeSeconds, Time.Now );
 		}
 
 		// Clip 15 takes him down out of sight - its position keys drop his head and body well below
