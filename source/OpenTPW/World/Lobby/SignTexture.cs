@@ -191,7 +191,7 @@ public static class SignTexture
 	/// no alpha channel of their own - so the glyph tints the artwork rather than cutting it out.
 	/// </summary>
 	private static unsafe void Blend( byte[] board, byte* glyph, int width, int height, int x, int y,
-		(float R, float G, float B) colour )
+		SignFile.LineColour colour )
 	{
 		var r = colour.R * 255f;
 		var g = colour.G * 255f;
@@ -211,7 +211,10 @@ public static class SignTexture
 				if ( targetX < 0 || targetX >= BoardWidth )
 					continue;
 
-				var coverage = glyph[(row * width) + column] / 255f;
+				// The sign's own opacity scales the glyph's coverage rather than gating it, which
+				// is what the engine does - so a line set below full strength tints the board
+				// instead of covering it, and keeps the artwork showing through the lettering.
+				var coverage = glyph[(row * width) + column] / 255f * colour.Opacity;
 
 				if ( coverage <= 0f )
 					continue;

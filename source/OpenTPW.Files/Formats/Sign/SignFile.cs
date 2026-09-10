@@ -26,10 +26,17 @@ namespace OpenTPW;
 /// - the colour chunk inflates to 98304 bytes in every park, which is exactly 256*256 + 2*128*128,
 /// and the alpha chunk to 256*256.
 ///
-/// A font record holds a display name and the TrueType file it came from, both in fixed 64-byte
-/// fields, the name again at +0x168, and eight floats at +0x18C. Three of those eight always land
-/// in 0..1 and read as a colour (the jungle's first is 0.40, 0.87, 0.31 - a green), but nothing
-/// here depends on that reading, so they are exposed raw rather than interpreted.
+/// A font record holds a display name in a fixed 64-byte field, then the TrueType file name in a
+/// 260-byte one, two 4-byte fields, and a 60-byte Windows LOGFONTA - which is why the name appears
+/// to occur a second time part-way through, at the LOGFONT's own lfFaceName. The original letters
+/// its signs with GDI, so it stores a LOGFONT rather than a size and a weight of its own.
+///
+/// The ink is not in the font record. Each line's colour is four bytes in a block that follows
+/// both records - see ReadLineColour - and an earlier reading of this format took three floats
+/// from past the end of the LOGFONT as a colour instead. Those floats are real data belonging to
+/// whatever the engine reads next, and they are not a colour: taking them as one lettered the
+/// Fantasy park's board in the same pale mint the board itself is painted, which left its name
+/// invisible.
 /// </summary>
 public sealed class SignFile : BaseFormat
 {
@@ -39,26 +46,42 @@ public sealed class SignFile : BaseFormat
 	private const int FontRecordStride = 436;
 	private const int FontRecordCount = 2;
 	private const int TtfNameOffset = 0x40;
-	private const int ParametersOffset = 0x18C;
-	private const int ParameterCount = 8;
 	private const int NameFieldLength = 64;
+
+	/// <summary>
+	/// Where the per-line ink blocks start - immediately after the second font record, which is
+	/// exactly where the engine's reader gets to when it has finished with them.
+	/// </summary>
+	private const int LineBlockOffset = FontRecordOffset + (FontRecordCount * FontRecordStride);
+
+	/// <summary>Four colour bytes plus four unidentified 4-byte fields.</summary>
+	private const int LineBlockStride = 0x14;
+
+	/// <summary>
+	/// The two line modes, in the seventeen bytes of header the engine reads before the font
+	/// records - see <see cref="ReadLineMode"/>. A zero there means the line is absent entirely
+	/// and its ink block is not written at all, which no shipped sign does.
+	/// </summary>
+	private static readonly int[] LineModeOffsets = [0x09, 0x0D];
 	private const int ImageHeaderOffset = 0x43C5;
 	private const int ChunkSizesOffset = 0x43D5;
 	private const int ColorChunkOffset = 0x43DD;
 
-	/// <param name="Parameters">
-	/// Eight floats whose meaning is only partly established. Three of them are the text colour -
-	/// see <see cref="Colour"/> - and the rest are exposed raw rather than guessed at.
+	/// <param name="Colour">
+	/// The colour this line is lettered in, and how strongly it is laid over the board. Both come
+	/// from the line's own four bytes - see <see cref="LineBlockOffset"/> - not from the font
+	/// record.
 	/// </param>
-	public sealed record Font( string Name, string FileName, float[] Parameters )
-	{
-		/// <summary>
-		/// The colour this line is lettered in. Parameters 2, 3 and 4 are the only ones that
-		/// always land in 0..1, and they differ per park in ways that suit each board - the
-		/// jungle's first line is a green (0.40, 0.87, 0.31) over brown bark.
-		/// </summary>
-		public (float R, float G, float B) Colour => (Parameters[2], Parameters[3], Parameters[4]);
-	}
+	public sealed record Font( string Name, string FileName, LineColour Colour );
+
+	/// <summary>
+	/// One line's ink: a colour and the strength it is blended at, 0..1 each.
+	///
+	/// The engine composites the glyph mask over the board with this, so the opacity is a real
+	/// blend and not a threshold - see FUN_005e7f60, which walks the glyph coverage and moves each
+	/// board pixel that fraction of the way toward this colour.
+	/// </summary>
+	public readonly record struct LineColour( float R, float G, float B, float Opacity );
 
 	/// <summary>False when the file was missing or did not match the layout - never throws.</summary>
 	public bool IsValid { get; private set; }
@@ -148,11 +171,14 @@ public sealed class SignFile : BaseFormat
 	{
 		var fonts = new List<Font>();
 
+		// Both lines drawn as one takes its ink from the first line only - see LineModeOffsets.
+		var merged = ReadLineMode( data, 0 ) == 2 && ReadLineMode( data, 1 ) == 2;
+
 		for ( int i = 0; i < FontRecordCount; ++i )
 		{
 			var record = FontRecordOffset + (i * FontRecordStride);
 
-			if ( record + ParametersOffset + (ParameterCount * 4) > data.Length )
+			if ( record + FontRecordStride > data.Length )
 				break;
 
 			var name = ReadFixedString( data, record );
@@ -160,14 +186,55 @@ public sealed class SignFile : BaseFormat
 			if ( string.IsNullOrEmpty( name ) )
 				continue;
 
-			var parameters = new float[ParameterCount];
-			for ( int p = 0; p < ParameterCount; ++p )
-				parameters[p] = BitConverter.ToSingle( data, record + ParametersOffset + (p * 4) );
-
-			fonts.Add( new Font( name, ReadFixedString( data, record + TtfNameOffset ), parameters ) );
+			fonts.Add( new Font(
+				name,
+				ReadFixedString( data, record + TtfNameOffset ),
+				ReadLineColour( data, merged ? 0 : i ) ) );
 		}
 
 		return [.. fonts];
+	}
+
+	/// <summary>
+	/// How this line is laid down, from the two 4-byte fields near the start of the file - 1 for
+	/// each line inked on its own, 2 for the two masks merged and inked together.
+	///
+	/// It matters only because of what the merged case does with colour: the engine maxes the two
+	/// glyph masks into one surface and then runs a single colour over the result, so the second
+	/// line's own four bytes are never reached and both words come out in the first line's ink.
+	/// Lost Kingdom and Space Zone are the two that do this; Wonder Land and Halloween ink each
+	/// line separately. A file where the two disagree would take a third path that nothing in the
+	/// shipped data exercises.
+	/// </summary>
+	private static int ReadLineMode( byte[] data, int line )
+	{
+		var offset = LineModeOffsets[line];
+
+		return offset + 4 <= data.Length ? BitConverter.ToInt32( data, offset ) : 1;
+	}
+
+	/// <summary>
+	/// The line's ink, from the block the engine reads straight after the two font records.
+	///
+	/// Each line contributes twenty bytes there: the four below, then four more fields that are
+	/// not yet identified. The engine loads the four singly into consecutive bytes of its sign
+	/// object (FUN_005ec3a0) and hands them to the compositor in the order alpha, then the three
+	/// channels (FUN_005ecb40); the board those land in is packed ARGB4444 further down that same
+	/// function, which is what fixes the order as red, green, blue, opacity rather than any other
+	/// reading of the same four bytes.
+	/// </summary>
+	private static LineColour ReadLineColour( byte[] data, int line )
+	{
+		var offset = LineBlockOffset + (line * LineBlockStride);
+
+		if ( offset + 4 > data.Length )
+			return new LineColour( 1f, 1f, 1f, 1f );
+
+		return new LineColour(
+			data[offset + 0] / 255f,
+			data[offset + 1] / 255f,
+			data[offset + 2] / 255f,
+			data[offset + 3] / 255f );
 	}
 
 	private static string ReadFixedString( byte[] data, int offset )
