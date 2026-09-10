@@ -45,7 +45,11 @@ namespace OpenTPW;
 /// His clips sit on a timeline from the moment a line starts - see <see cref="ClipSequence"/> -
 /// where the original starts each one on the frame after it notices the last has finished, and so
 /// falls a little further behind at every change the slower it runs. His mouth keeps a steady
-/// 100ms beat for the same reason - see <see cref="MouthChangeSeconds"/>.
+/// 100ms beat for the same reason - see <see cref="MouthChangeSeconds"/>. And whether his mouth
+/// moves at all is read against where his voice has actually got to, by the audio device's clock
+/// - see <see cref="Voice.Position"/> - where the original reads its lip file against its own
+/// clock from the moment it asked for the sound, which runs ahead of a sound that starts at the
+/// mixer's next buffer and keeps going through a stall.
 /// </para>
 /// </summary>
 public sealed class LobbyAdvisor : Entity
@@ -134,7 +138,6 @@ public sealed class LobbyAdvisor : Entity
 
 	private Voice? _voice;
 	private LipFile? _lips;
-	private float _voiceStartedAt;
 
 	/// <summary>Samples waiting their turn, oldest first.</summary>
 	private readonly Queue<int> _queue = new();
@@ -197,7 +200,6 @@ public sealed class LobbyAdvisor : Entity
 		if ( _pending != 0 && Time.Now >= _speakAt )
 		{
 			_voice = _speech.Play( _pending, SpeechVolume, respectDelay: false, bus: AudioBus.Speech );
-			_voiceStartedAt = Time.Now;
 			_pending = 0;
 		}
 
@@ -400,8 +402,9 @@ public sealed class LobbyAdvisor : Entity
 		if ( _sequence.TryLocate( sinceGesturesStarted, out var clip, out var intoClip ) )
 			_figure.Pose( clip, intoClip );
 
-		var talking = _voice is { Playing: true } && _lips != null
-			&& _lips.IsTalking( TimeSpan.FromSeconds( Time.Now - _voiceStartedAt ) );
+		// Timed by where the sound itself has got to, not by the game's clock - see Voice.Position.
+		var talking = _voice is { Playing: true } voice && _lips != null
+			&& _lips.IsTalking( voice.Position );
 
 		if ( !talking )
 		{

@@ -86,6 +86,54 @@ public static class Audio
 	/// </summary>
 	internal static readonly object Lock = new();
 
+	/// <summary>
+	/// Guards the three fields below, which say where output had got to when the latest buffer was
+	/// handed over. Separate from <see cref="Lock"/>, which the callback holds for the whole mix, so
+	/// the game can read the clock every frame without ever waiting on a mix to finish.
+	/// </summary>
+	private static readonly object ClockLock = new();
+
+	/// <summary>How many frames had been handed to the device before the latest buffer.</summary>
+	private static long _bufferStartFrame;
+
+	/// <summary>How many frames the latest buffer holds.</summary>
+	private static int _bufferFrames;
+
+	/// <summary>When the latest buffer was handed over, on <see cref="System.Diagnostics.Stopwatch"/>'s clock.</summary>
+	private static long _bufferStartedAt;
+
+	/// <summary>
+	/// How far the device has played, in frames since it opened: everything handed over before
+	/// the latest buffer, plus as much of that buffer as there has been time to play since.
+	///
+	/// SDL asks for a buffer when the device is ready to play it, so the moment it asks is close to
+	/// the moment that buffer starts to sound. Reading between asks by the real clock keeps this
+	/// moving smoothly rather than in 46ms steps, and capping it at the buffer's end keeps a late
+	/// ask from running it ahead of what has actually gone out.
+	/// </summary>
+	internal static double PlayedFrames
+	{
+		get
+		{
+			long start;
+			long at;
+			int frames;
+
+			lock ( ClockLock )
+			{
+				start = _bufferStartFrame;
+				at = _bufferStartedAt;
+				frames = _bufferFrames;
+			}
+
+			if ( frames == 0 )
+				return start;
+
+			var since = System.Diagnostics.Stopwatch.GetElapsedTime( at ).TotalSeconds * SampleRate;
+			return start + Math.Min( since, frames );
+		}
+	}
+
 	private static uint _device;
 
 	/// <summary>
@@ -236,6 +284,18 @@ public static class Audio
 		var output = (float*)stream;
 		var frames = lengthInBytes / (sizeof( float ) * 2);
 
+		// Stamp the clock before mixing, so a voice starting in this buffer knows which frame of
+		// the device's output its first sample lands on - see PlayedFrames and Voice.Position.
+		long bufferStart;
+
+		lock ( ClockLock )
+		{
+			bufferStart = _bufferStartFrame + _bufferFrames;
+			_bufferStartFrame = bufferStart;
+			_bufferFrames = frames;
+			_bufferStartedAt = System.Diagnostics.Stopwatch.GetTimestamp();
+		}
+
 		for ( int i = 0; i < frames * 2; ++i )
 			output[i] = 0f;
 
@@ -267,7 +327,7 @@ public static class Audio
 
 			for ( int i = Voices.Count - 1; i >= 0; --i )
 			{
-				if ( !Voices[i].MixInto( output, frames, master, duck, duckStep ) )
+				if ( !Voices[i].MixInto( output, frames, bufferStart, master, duck, duckStep ) )
 					Voices.RemoveAt( i );
 			}
 		}

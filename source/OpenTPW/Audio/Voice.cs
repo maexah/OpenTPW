@@ -50,6 +50,31 @@ public sealed class Voice
 	/// <summary>What is playing, so the lobby can say what it picked.</summary>
 	public string Name => _clip.Name;
 
+	/// <summary>The frame of the device's output its first sample went out on, or -1 until then.</summary>
+	private long _startedAtFrame = -1;
+
+	/// <summary>
+	/// How long this has been sounding, by the audio device's clock rather than the game's - see
+	/// <see cref="Audio.PlayedFrames"/>.
+	///
+	/// The game's clock is the wrong one to time anything against a sound by. A voice only starts
+	/// at the mixer's next buffer, up to 46ms after <see cref="Audio.Play"/>; and the game's clock
+	/// stops for a pause and gives up on a stall longer than a tenth of a second, while the sound
+	/// carries straight on. Zero until the first buffer; read without a lock, like
+	/// <see cref="Playing"/>, and only meaningful while that is true.
+	/// </summary>
+	public TimeSpan Position
+	{
+		get
+		{
+			var started = Interlocked.Read( ref _startedAtFrame );
+
+			return started < 0
+				? TimeSpan.Zero
+				: TimeSpan.FromSeconds( Math.Max( Audio.PlayedFrames - started, 0 ) / Audio.SampleRate );
+		}
+	}
+
 	internal Voice( AudioClip clip, float volume, bool loop, float fadeInSeconds, AudioBus bus )
 	{
 		_clip = clip;
@@ -118,10 +143,14 @@ public sealed class Voice
 	/// pair, so the whole mix ducks together rather than each voice reading a value that has
 	/// moved on since the voice before it. Speech ignores it.
 	/// </param>
-	internal unsafe bool MixInto( float* output, int frames, float master, float duck, float duckStep )
+	/// <param name="bufferStart">Which frame of the device's output this buffer starts at.</param>
+	internal unsafe bool MixInto( float* output, int frames, long bufferStart, float master, float duck, float duckStep )
 	{
 		if ( _stopped )
 			return false;
+
+		if ( _startedAtFrame < 0 )
+			Interlocked.Exchange( ref _startedAtFrame, bufferStart );
 
 		var samples = _clip.Samples;
 		var channels = _clip.Channels;
