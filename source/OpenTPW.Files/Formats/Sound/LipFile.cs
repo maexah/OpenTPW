@@ -14,13 +14,14 @@ namespace OpenTPW;
 /// and its last timestamp is 25,327,573 - and the engine divides by 1000 to compare against its
 /// millisecond clock.
 ///
-/// Which way the first flip goes is less obvious than it looks. The engine marks the advisor as
-/// talking the moment his sample starts, and every file begins with a timestamp of 0, which flips
-/// that straight back to quiet - so the intervals that begin at the odd-numbered timestamps are
-/// the talking ones. That was checked against the audio rather than inferred from the code alone:
-/// across jungle's introduction the odd intervals average 0.12 RMS and the even ones 0.013, and
-/// the odd intervals agree with where the speech actually is 84% of the time against 16% for the
-/// opposite reading.
+/// Which way the flips go is less obvious than it looks. The engine marks the advisor as talking
+/// the moment his sample starts, so he talks before the first timestamp and after every even
+/// number of them. Speech starts almost at once - a median of 20ms in - so the first timestamp is
+/// usually the end of his first phrase; only 18 of the game's 641 files begin with a 0, which ends
+/// a talking stretch before it has started. That was checked against the audio rather than
+/// inferred from the code alone: across the 557 global samples that decode and have a lip file,
+/// this reading agrees with where the speech actually is in 87.6% of 20ms frames against 15.4% for
+/// the opposite one, and its talking stretches are the louder ones in 553 of the 557.
 /// </summary>
 public sealed class LipFile
 {
