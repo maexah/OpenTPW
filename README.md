@@ -10,7 +10,7 @@
     </p>
 </p>
 
-![image](https://github.com/user-attachments/assets/be81a5d3-f99c-4f46-8200-7ea5d9a652e8)
+![The lobby, looking out on Halloween World in the rain, with the advisor on screen](.github/screenshot.png)
 
 ## About
 
@@ -39,13 +39,13 @@ OpenTPW is currently in a very early stage of development, and is not yet playab
 | Ride Scripts ([.RSE](https://opentpw.gu3.me/formats/rsse.html))                | ⚠️     |
 | Save Files ([.TPWS](https://opentpw.gu3.me/formats/tpws-ints-lays.html))                | ⚠️     |
 | Fonts ([.BF4](https://opentpw.gu3.me/formats/bf4.html))                      | ❌     |
-| Lip Sync ([.LIPS](https://opentpw.gu3.me/formats/lips.html))                  | ❌     |
+| Lip Sync ([.LIP](https://opentpw.gu3.me/formats/lips.html))                   | ✅     |
 | Materials ([.MTR](https://opentpw.gu3.me/formats/mtr.html))                   | ❌     |
 | Video ([.TQI](https://opentpw.gu3.me/formats/tqi.html))                       | ❌     |
 | Sound categories (cat_\*.map) \*\*                                             | ⚠️     |
 | Park signs (.SGN) \*\*\*                                                        | ⚠️     |
 
-\* **Models (.MD2)**: static mesh geometry (verts/faces/materials) loads reliably. The same extension is also used for a structurally distinct keyframe animation format, of which three channel kinds are decoded and played: per-vertex morph animation (752 files), per-mesh quaternion rotation (686 files) and UV scrolling (324 files) - together 1151 of the game's 1279 animation files (90%). Of the rest, 38 carry only channel kinds that aren't decoded yet and 90 contain no animation data at all.
+\* **Models (.MD2)**: static mesh geometry (verts/faces/materials) loads reliably, along with the node tree that places the meshes and the ids a character's costume pieces are found by. The same extension is also used for a structurally distinct keyframe animation format, of which five channel kinds are decoded: per-vertex morph animation (768 files), per-node quaternion rotation (686 files), UV scrolling (324 files), position (455 files) and visibility (404 files), counted by the channels each file's tracks declare. 1183 of the game's 1279 animation files carry at least one of them; 6 carry only channel kinds that aren't decoded yet and 90 contain no animation data at all. The lobby plays morph, rotation and UV; so far only the advisor plays position and visibility.
 
 \*\* **Sounds (.SDT, .MP2, cat_\*.map)**: banks are read, and their audio decodes and plays. Despite the .mp2 extension on every name inside a bank, the audio is not always MPEG Layer II - 2,646 of the game's 3,739 streams are Layer I - so both layers are decoded, and Layer III does not occur. Nothing in the game addresses a sound by file name: sounds are grouped into categories and code plays a numbered effect within one, which is what the cat_\*.map pair holds. Its bank half is fully decoded. Of its effect half, the header, the effect table and the sample records are decoded, but the variable-size header in front of each effect's sample list is not, so the records are located by validating them against the banks rather than by offset.
 
