@@ -35,8 +35,14 @@ public sealed class LobbyModel
 	/// Textures to use in place of the .wct a material names, keyed by material name. The park
 	/// signs are built at runtime rather than loaded from disk - see <see cref="SignTexture"/>.
 	/// </param>
+	/// <param name="materialFlags">
+	/// Applied to every mesh's material. Anything that will be faded with <see cref="SetOpacity"/>
+	/// wants <see cref="MaterialFlags.DisableDepthWrite"/> here, or it punches a hole through
+	/// whatever is drawn after it for as long as it is part-transparent.
+	/// </param>
 	public LobbyModel( string modelPath, string textureDirectory, Vector3 origin, float scale = 1f,
-		IReadOnlyDictionary<string, Texture>? textureOverrides = null )
+		IReadOnlyDictionary<string, Texture>? textureOverrides = null,
+		MaterialFlags materialFlags = MaterialFlags.None )
 	{
 		var modelFile = new ModelFile( modelPath );
 		var meshCount = modelFile.Meshes.Count;
@@ -52,7 +58,7 @@ public sealed class LobbyModel
 		for ( int meshIndex = 0; meshIndex < meshCount; ++meshIndex )
 		{
 			var mesh = modelFile.Meshes[meshIndex];
-			var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader" );
+			var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader", materialFlags );
 			var textures = new List<Texture>();
 
 			for ( int i = 0; i < 16; ++i )
@@ -142,6 +148,16 @@ public sealed class LobbyModel
 			modelSpace.M31, modelSpace.M33, modelSpace.M32, 0,
 			modelSpace.M21, modelSpace.M23, modelSpace.M22, 0,
 			0, 0, 0, 1 );
+
+	/// <summary>
+	/// Fades the whole model, 0 to 1 - see <see cref="ModelEntity.Opacity"/>. At 0 none of its
+	/// meshes are drawn at all.
+	/// </summary>
+	public void SetOpacity( float opacity )
+	{
+		foreach ( var entity in Entities )
+			entity.Opacity = opacity;
+	}
 
 	/// <summary>Moves every mesh of this model, keeping their relative placement.</summary>
 	public void SetOrigin( Vector3 origin )

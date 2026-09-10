@@ -6,6 +6,13 @@ public partial class ModelEntity : Entity
 {
 	public Model? Model { get; set; }
 
+	/// <summary>
+	/// How visible this model is, 0 to 1. At 1 - which is everything, normally - the shader's
+	/// output alpha is whatever its texture said, so nothing changes. At 0 it is skipped entirely
+	/// rather than drawn invisibly.
+	/// </summary>
+	public float Opacity { get; set; } = 1f;
+
 	public ModelEntity()
 	{
 		Spawn();
@@ -18,7 +25,7 @@ public partial class ModelEntity : Entity
 
 	protected override void OnRender()
 	{
-		if ( Model == null )
+		if ( Model == null || Opacity <= 0f )
 			return;
 
 		var uniformBuffer = new ObjectUniformBuffer
@@ -31,10 +38,10 @@ public partial class ModelEntity : Entity
 			g_vCameraPos = Camera.Position,
 			g_flTime = Time.Now,
 			g_vFogColour = Level.FogColour,
+			g_flOpacity = Opacity,
 
 			_padding0 = 0,
 			_padding1 = 0,
-			_padding2 = 0,
 		};
 
 		Model.Material.Set( "ObjectUniformBuffer", uniformBuffer );

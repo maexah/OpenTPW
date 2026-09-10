@@ -76,7 +76,7 @@ public sealed class LobbyIsland : Entity
 		// ...and whatever its script says flies around it: ten of each butterfly for the jungle,
 		// fifty bats for hallow, nothing at all for the other two.
 		foreach ( var mesh in Script.FlyingMeshes )
-			LobbyFlyer.Spawn( mesh, Position );
+			LobbyFlyer.Spawn( mesh, this );
 	}
 
 	/// <summary>

@@ -15,6 +15,7 @@ vertex {
         float g_flTime;
 
         vec3 g_vFogColour;
+        float g_flOpacity;
     } g_oUbo;
 
     layout(location = 0) out VS_OUT {
@@ -65,6 +66,7 @@ fragment {
         float g_flTime;
 
         vec3 g_vFogColour;
+        float g_flOpacity;
     } g_oUbo;
 
     layout( set = 1, binding = 0 ) uniform texture2D Color0;
@@ -142,7 +144,9 @@ fragment {
         // Handle opaque alpha testing
         if (vTextureSample.a < 0.1) discard;
 
-        fragColor = vec4(vOutColor, vTextureSample.a);
+        // The alpha test above is on the texture alone, so fading is a real blend rather than a
+        // dissolve - the model keeps its shape all the way out instead of eroding.
+        fragColor = vec4(vOutColor, vTextureSample.a * g_oUbo.g_flOpacity);
 
         // Calculate fog using view space depth
         float viewSpaceDepth = length(vs_out.vWorldPosition);

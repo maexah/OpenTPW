@@ -47,25 +47,6 @@ public sealed class LobbyFlyer : Entity
 	private const float ArrivalRadiusSquared = 500f;
 
 	/// <summary>
-	/// How much of the original's flight volume to actually use.
-	///
-	/// The script asks for a box 200 wide and 100 tall around an island only about 50 across, and
-	/// at face value that is what it gets: the flyers scatter across the whole sky and out over
-	/// the open sea, and stop reading as belonging to the island at all. The original could
-	/// afford it because its lobby camera watches from much further out - it orbits a globe of
-	/// radius 475 - where this one sits 70 units away, so the same box fills far more of the
-	/// screen here.
-	///
-	/// So the whole flight system is scaled down together: the volume, the arrival radius (by the
-	/// square of this, since it is compared squared) and the speed. Scaling all three keeps every
-	/// ratio the original set - how far a flyer travels between destinations, how long that takes,
-	/// how much of the leg it spends turning - and only changes how big the whole thing is. The
-	/// models themselves are not scaled; they are drawn at the size they were authored, which is
-	/// what the original does.
-	/// </summary>
-	private const float VolumeScale = 0.45f;
-
-	/// <summary>
 	/// How far above the island the flight volume starts.
 	///
 	/// The original centres the box on the island, so half of it is underneath - which on its
@@ -74,8 +55,21 @@ public sealed class LobbyFlyer : Entity
 	/// </summary>
 	private const float TerrainClearance = 8f;
 
+	/// <summary>
+	/// How quickly a swarm fades in and out, per second - about as long as the camera's own slide
+	/// between islands.
+	///
+	/// The original never needs this: its islands sit around a globe of radius 475 and its camera
+	/// zooms in on one, so another park's flyers are simply never in shot. Here they are laid out
+	/// flat and 200 apart, close enough that the box the script asks for reaches halfway to the
+	/// neighbours and that a neighbour is visible in the background anyway. So a swarm belongs to
+	/// its island and is only drawn while that island is the one on show.
+	/// </summary>
+	private const float FadeRate = 3.5f;
+
 	private readonly LobbyModel _model;
 	private readonly Random _rng;
+	private readonly LobbyIsland _island;
 	private readonly Vector3 _centre;
 	private readonly Vector3 _halfVolume;
 	private readonly float _speed;
@@ -84,14 +78,20 @@ public sealed class LobbyFlyer : Entity
 	private Vector3 _target;
 	private Vector3 _direction;
 
+	// Starts hidden so the lobby's opening swarm fades in with everything else rather than
+	// being there from the first frame.
+	private float _opacity;
+
 	/// <summary>
 	/// <paramref name="seed"/> drives every random choice this flyer makes for the rest of its
 	/// life - which is only ever where it goes next. See the swarm seed logged by
 	/// <see cref="Spawn"/>.
 	/// </summary>
-	public LobbyFlyer( string modelName, Vector3 centre, Vector3 halfVolume, float speed, int seed )
+	public LobbyFlyer( string modelName, LobbyIsland island, Vector3 centre, Vector3 halfVolume,
+		float speed, int seed )
 	{
 		_rng = new Random( seed );
+		_island = island;
 		_centre = centre;
 		_halfVolume = halfVolume;
 		_speed = speed;
@@ -104,7 +104,15 @@ public sealed class LobbyFlyer : Entity
 		var toTarget = _target - _position;
 		_direction = toTarget.LengthSquared > 0.0001f ? toTarget.Normal : Vector3.Forward;
 
-		_model = new LobbyModel( $"lobby/terrain/{modelName}.md2", "lobby/terrain/textures", _position );
+		// Never writing depth, because a part-faded flyer that did would punch a hole through
+		// whatever is drawn after it - and entity draw order is creation order, so the jungle's
+		// butterflies are drawn before the Fantasy island they can reach. The cost is only
+		// flyer-over-flyer ordering, and these are flat two-winged meshes with nothing to speak
+		// of to self-occlude.
+		_model = new LobbyModel( $"lobby/terrain/{modelName}.md2", "lobby/terrain/textures", _position,
+			materialFlags: MaterialFlags.DisableDepthWrite );
+
+		_model.SetOpacity( 0f );
 	}
 
 	/// <summary>
@@ -118,29 +126,38 @@ public sealed class LobbyFlyer : Entity
 	/// and never more than the script asked for. At full detail that is the script's number,
 	/// which is what this uses.
 	/// </summary>
-	public static void Spawn( LobbyScript.FlyingMesh mesh, Vector3 islandOrigin )
+	public static void Spawn( LobbyScript.FlyingMesh mesh, LobbyIsland island )
 	{
 		var seed = Environment.TickCount;
 		var rng = new Random( seed );
 
-		var half = mesh.HalfVolume * VolumeScale;
+		var half = mesh.HalfVolume;
 
 		// The script's volume is in the original's Y-up axes: X wide, Y tall, Z deep. This world
 		// swaps Y and Z, so the tall one is the last of the three here.
 		var halfVolume = new Vector3( half.X, half.Z, half.Y );
-		var centre = islandOrigin + (Vector3.Up * (halfVolume.Z + TerrainClearance));
-		var speed = mesh.SpeedPerSecond * VolumeScale;
+		var centre = island.Position + (Vector3.Up * (halfVolume.Z + TerrainClearance));
 
-		Log.Info( $"Lobby: {mesh.Count}x '{mesh.Model}' at {speed:F1} units/s "
+		Log.Info( $"Lobby: {mesh.Count}x '{mesh.Model}' at {mesh.SpeedPerSecond:F1} units/s "
 			+ $"in a {halfVolume * 2f} box around {centre} (seed {seed})" );
 
 		for ( int i = 0; i < mesh.Count; ++i )
-			_ = new LobbyFlyer( mesh.Model, centre, halfVolume, speed, rng.Next() );
+			_ = new LobbyFlyer( mesh.Model, island, centre, halfVolume, mesh.SpeedPerSecond, rng.Next() );
 	}
 
 	protected override void OnUpdate()
 	{
 		var dt = Time.Delta;
+
+		var onShow = LobbyCameraMode.CurrentIsland == _island ? 1f : 0f;
+
+		_opacity = _opacity.LerpTo( onShow, Time.SmoothingFactor( FadeRate ) );
+		_model.SetOpacity( _opacity );
+
+		// Out of sight: stop flying and stop flapping too. Three of the four swarms are idle at
+		// any one time, which is the whole of their cost gone rather than just their draw.
+		if ( _opacity < 0.004f && onShow <= 0f )
+			return;
 
 		var toTarget = _target - _position;
 
@@ -157,7 +174,7 @@ public sealed class LobbyFlyer : Entity
 		// Note this is tested after moving, against the position just reached - the same order the
 		// original does it in, so a flyer commits to one more step before looking for a new
 		// destination.
-		if ( (_target - _position).LengthSquared < ArrivalRadiusSquared * VolumeScale * VolumeScale )
+		if ( (_target - _position).LengthSquared < ArrivalRadiusSquared )
 			_target = RandomPoint();
 
 		_model.Update( dt );

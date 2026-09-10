@@ -30,5 +30,11 @@ struct ObjectUniformBuffer
 	/// or the fog band stops meeting the sky at the horizon.
 	/// </summary>
 	public Vector3 g_vFogColour; // 12
-	public float _padding2; // 4
+
+	/// <summary>
+	/// Fades a model out without touching its textures. 1 is the ordinary case and costs nothing;
+	/// below that the model blends, which is how a lobby swarm leaves when its island stops being
+	/// the one on show - see <see cref="LobbyFlyer"/>.
+	/// </summary>
+	public float g_flOpacity; // 4
 }
