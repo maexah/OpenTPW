@@ -9,8 +9,8 @@ namespace OpenTPW;
 /// or reading back frame timings.
 ///
 /// Disabled unless OPENTPW_DEBUG_CONSOLE=1 is set, and costs one boolean test per frame when off.
-/// To remove entirely: delete this file, the one call site in Level.Update(), and the four
-/// members on LobbyCameraMode and LobbyWeather marked as being for it.
+/// To remove entirely: delete this file, the one call site in Level.Update(), Time.Paused and Time.StepFrames, and
+/// the four members on LobbyCameraMode and LobbyWeather marked as being for it.
 ///
 /// Usage:
 ///
@@ -42,7 +42,10 @@ public static class DebugConsole
 		if ( !Enabled )
 			return;
 
-		Record( Time.Delta );
+		// A paused clock reports a zero delta, which would otherwise fill the window with zeroes
+		// and have `stats` claim an infinite frame rate.
+		if ( !Time.Paused )
+			Record( Time.Delta );
 
 		if ( !_started )
 			Start();
@@ -106,6 +109,29 @@ public static class DebugConsole
 				Reply( "frozen" );
 				break;
 
+			// `freeze` stops the camera orbiting but leaves the world running, which is enough to
+			// hold a composition and no use at all for comparing two builds: the ocean keeps
+			// scrolling, the sky keeps drifting and the Dino keeps moving, so no two frames match.
+			// `pause` stops the clock itself, and then a screenshot is repeatable.
+			case "pause":
+				Time.Paused = true;
+				Reply( "paused" );
+				break;
+
+			case "resume":
+				Time.Paused = false;
+				Reply( "resumed" );
+				break;
+
+			// Runs the world on for a counted number of fixed-size frames and stops again, so a
+			// caller can put the lobby at exactly the same point every run: pause, pick an island,
+			// step, shoot. Poll `state` for stepping=0 to know it has finished.
+			case "step":
+				Time.Paused = true;
+				Time.StepFrames = parts.Length > 1 ? (int)Argument( 1 ) : 1;
+				Reply( $"stepping {Time.StepFrames}" );
+				break;
+
 			case "unfreeze":
 				LobbyCameraMode.Paused = false;
 				Reply( "running" );
@@ -154,7 +180,7 @@ public static class DebugConsole
 				break;
 
 			default:
-				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/settle/strike/rain/near/stats/state/quit" );
+				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/near/stats/state/quit" );
 				break;
 		}
 	}
@@ -208,6 +234,7 @@ public static class DebugConsole
 
 		return $"state island={island?.Index} name='{island?.ParkName}' "
 			+ $"orbit={LobbyCameraMode.DebugOrbit:F3} paused={LobbyCameraMode.Paused} "
+			+ $"clock={(Time.Paused ? "paused" : "running")} stepping={Time.StepFrames} "
 			+ $"rainy={script?.Rainy} lightning={script?.Lightning} "
 			+ $"strikes/s={script?.StrikesPerSecond:F3} flyers={script?.FlyingMeshes.Count}";
 	}
