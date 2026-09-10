@@ -84,10 +84,17 @@ public class SdtArchive : IArchive
 		return Array.Empty<string>();
 	}
 
-	public ArchiveFile GetFile( string name )
+	/// <summary>
+	/// Finds an entry by name, or null.
+	///
+	/// StartsWith rather than an equality because the name field in a .sdt is a fixed sixteen
+	/// bytes and a longer name is truncated to fit rather than shortened - "TP SCREECH 11.mp2"
+	/// is stored as "TP SCREECH 11.m" - so a caller asking for the real name would never match.
+	/// </summary>
+	public ArchiveFile? GetFile( string name )
 	{
-		int index = soundFiles.FindIndex( x => x.Name.StartsWith( name ) );
-		return soundFiles[index];
+		int index = soundFiles.FindIndex( x => x.Name.StartsWith( name, StringComparison.OrdinalIgnoreCase ) );
+		return index < 0 ? null : soundFiles[index];
 	}
 
 	public byte[] GetData( int offset, int length )
@@ -96,14 +103,15 @@ public class SdtArchive : IArchive
 		return memoryStream.ReadBytes( length );
 	}
 
-	public Stream OpenFile( string path )
+	public Stream? OpenFile( string path )
 	{
-		return new MemoryStream( GetFile( path ).GetData() );
+		var file = GetFile( path );
+		return file == null ? null : new MemoryStream( file.GetData() );
 	}
 
 	public long GetFileSize( string path )
 	{
-		return GetFile( path ).GetData().Length;
+		return GetFile( path )?.GetData().Length ?? 0L;
 	}
 
 	public DateTime GetModifiedTime()

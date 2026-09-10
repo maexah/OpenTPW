@@ -26,7 +26,7 @@ public interface IArchive : IFileFormat, IDisposable
 	/// </summary>
 	/// <param name="internalPath"></param>
 	/// <returns></returns>
-	ArchiveFile GetFile( string internalPath );
+	ArchiveFile? GetFile( string internalPath );
 
 	/// <summary>
 	/// 
@@ -40,7 +40,7 @@ public interface IArchive : IFileFormat, IDisposable
 	/// </summary>
 	/// <param name="path"></param>
 	/// <returns></returns>
-	Stream OpenFile( string path );
+	Stream? OpenFile( string path );
 
 	long GetFileSize( string path );
 
