@@ -25,9 +25,10 @@ namespace OpenTPW;
 /// <para>
 /// <b>What he wears.</b> Every mesh ships visible - no node in the file carries the engine's
 /// hidden bit, 0x10 - so what he wears is decided at runtime by costume ids (see
-/// <see cref="ModelFile.Node.Id"/>). The parks' Standard.sam files say which way the defaults run:
-/// jungle's advisor has to add its pith helmet (id 4) and take away an antenna (id 19), so the
-/// add-on pieces start hidden and his own antennae and hands (19 to 22) start on. That is what
+/// <see cref="ModelFile.Node.Id"/>). Screenshots of the original settle the defaults: with no
+/// costume on he has his antennae and gloves and nothing else, so the add-on pieces start hidden
+/// and his own antennae and hands (19 to 22) start on - which the parks' costume lists fit, since
+/// jungle's has to switch its pith helmet (id 4) on explicitly. That is what
 /// <see cref="Dress"/> does. His spare mouths and closed eyelids start hidden too; the mouths are
 /// switched one at a time as he talks.
 /// </para>
@@ -128,6 +129,30 @@ public sealed class AdvisorModel
 				_local[node] = Turned( _restLocal[node], track.Sample( frame ) );
 			}
 
+			// A position key replaces where the node sits relative to its parent, as a rotation
+			// key replaces its orientation. Clips 14 and 15 are the ones with these: they raise his
+			// head and body from below the screen and drop them back down out of sight.
+			foreach ( var track in animation.PositionTracks )
+			{
+				var node = track.TargetIndex;
+
+				if ( node < 0 || node >= _local.Length )
+					continue;
+
+				var position = track.Sample( frame );
+				_local[node].M41 = position.X;
+				_local[node].M42 = position.Y;
+				_local[node].M43 = position.Z;
+			}
+
+			// Visibility keys switch a node on or off from a frame on, and leave it that way - which
+			// is how he blinks, swapping his eyes for his eyelids for four frames at a time.
+			foreach ( var track in animation.VisibilityTracks )
+			{
+				if ( track.VisibleAt( frame ) is bool visible )
+					SetMeshVisible( track.TargetIndex, visible );
+			}
+
 			foreach ( var animator in _model.Animators )
 				animator.Pose( animation, frame );
 		}
@@ -166,16 +191,25 @@ public sealed class AdvisorModel
 		var projection = ScreenProjection( aspect );
 
 		foreach ( var entity in _model.Entities )
-			entity.DrawOverlay( Matrix4x4.Identity, projection, LightPosition, Vector3.One );
+			entity.DrawOverlay( Matrix4x4.Identity, projection, LightPosition, LightColor, Ambient, worldNormals: true );
 	}
 
 	/// <summary>
-	/// Where his light is, in the space he is drawn in. The original gives him a light of his own
-	/// at (26.67, -26.67, 800) with a colour of one, but what space those numbers are in is not
-	/// established, so this is placed in front of him and a little to the right and above - which
-	/// is where a light for a face on the screen would have to be for his face to be lit at all.
+	/// How he is lit. The original gives him a light of his own, at (26.67, -26.67, 800) with a
+	/// colour of one (0x00429ba0), but what space those numbers are in is not established. So these
+	/// are set against screenshots of the original instead, by measurement. There his gloves sit at
+	/// a median brightness of 220 to 240 out of 255, brighter than their texture - White.wct
+	/// averages 210, with its creases painted in down to 98 - so he is lit past his textures' own
+	/// colours, and the ambient term alone has to carry the gloves' shaded side. At an ambient of
+	/// 0.6 they came out at 115, and at 1.0 at 155. His eyes saturate either way, and his head's
+	/// shine is in its texture. The light sits in front of him, up and to his right as the viewer
+	/// sees it.
 	/// </summary>
-	private static readonly Vector3 LightPosition = new( 26.67f, -800f, 26.67f );
+	private static readonly Vector3 LightPosition = new( -150f, -400f, 250f );
+
+	private static readonly Vector3 LightColor = new( 0.3f, 0.3f, 0.3f );
+
+	private const float Ambient = 1.4f;
 
 	/// <summary>
 	/// Model to screen: the original's root scale and on-screen translation, as one matrix. Our

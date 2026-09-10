@@ -26,7 +26,9 @@ namespace OpenTPW;
 /// clip 15 to finish. Clip 14 is counted as taking no time. The first clip starts at once, before
 /// his voice does; each following clip starts when the one before it ends. He is busy until the
 /// sample has finished and the clips' total has passed, and only then does the duck lift and the
-/// queue move on. See <see cref="BuildGestures"/>.
+/// queue move on. See <see cref="BuildGestures"/>. Clips 14 and 15 are the ones that move him
+/// bodily: 14 brings him up from below the screen and 15 ducks him back down out of view, after
+/// which he is hidden until his next line.
 /// </para>
 /// <para>
 /// <b>His mouth.</b> Each sample has a .lip file of timings - see <see cref="LipFile"/>. While a
@@ -79,14 +81,6 @@ public sealed class LobbyAdvisor : Entity
 
 	/// <summary>How often he changes mouth while talking.</summary>
 	private const float MouthChangeSeconds = 0.1f;
-
-	/// <summary>
-	/// Whether he stays on screen, holding his last pose, once a line is over. The engine's
-	/// per-model animation handler (0x004735d0) holds a finished animation's pose rather than
-	/// hiding the model for flags like his, and only the abort path (0x005996d0) hides him - but
-	/// that reading rests on how his creation flags land, which is not proven.
-	/// </summary>
-	private const bool StaysAfterSpeaking = true;
 
 	/// <summary>
 	/// How loud the advisor is, before <see cref="Audio.MasterVolume"/>.
@@ -412,7 +406,12 @@ public sealed class LobbyAdvisor : Entity
 			_nextMouthAt = Time.Now + MouthChangeSeconds;
 		}
 
-		if ( !StaysAfterSpeaking && !Busy && _queue.Count == 0 )
+		// Clip 15 takes him down out of sight - its position keys drop his head and body well below
+		// the bottom of the screen - and once it has played out he is gone, until the next line
+		// brings him back up with clip 14. In the original he ducks and is gone, rather than holding
+		// his last pose.
+		if ( !Busy && _queue.Count == 0 && _gesture == _gestures.Count - 1
+			&& _gestureTime >= _figure.ClipMilliseconds( _gestures[_gesture] ) / 1000f )
 			_shown = false;
 	}
 
