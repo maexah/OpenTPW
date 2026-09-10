@@ -42,8 +42,8 @@ namespace OpenTPW;
 ///     0x00008   rotation, count (ushort) at +0x10, at +0x1C     3039  yes
 ///     0x01000   vertex morph descriptor at +0x28                1766  yes
 ///     0x10000   UV animation descriptor at +0x2C                 690  yes
-///     0x20000   unidentified, data at +0x30                     2536  no
-///     0x00001   unidentified, data at +0x18                     1216  no
+///     0x20000   visibility, count (ushort) at +0x16, at +0x30    2536  yes
+///     0x00001   position record at +0x18                          1216  yes
 ///     0x80|0x100 unidentified, data at +0x20                     644  no
 ///     0x00200   unidentified, data at +0x24                       71  no
 ///
@@ -108,6 +108,35 @@ namespace OpenTPW;
 /// slot k lives at p3 + (e * b + k) * 4. Channels the animation doesn't move are still present,
 /// in a record holding a single rest keyframe, so sampling every channel reproduces the mesh.
 ///
+/// POSITION (bit 0x1)
+///
+/// The slot at +0x18 points at a 16-byte record: a uint type, ushort point count, ushort key count,
+/// uint -> points (point count * 3 floats) and uint -> keys (key count * 4 bytes, a ushort frame
+/// then a ushort that is zero in every file). The type says how the points are joined, and the
+/// engine picks its sampler on exactly those bits:
+///
+///   - bit 0x2 (type 0x12, 785 tracks): a cubic Bezier through segments of four points, three new
+///     points per key - so point count is always 3 * (keys - 1) + 1. 0x00474840 evaluates it with
+///     the Bezier basis (constants 1, 3, -3, -6 at 0x006fecb8).
+///   - bit 0x8 (type 0x18, 431 tracks): straight lines, one point per key - 0x00474bf0.
+///   - neither: a Catmull-Rom sampler exists (0x00474cc0) but no file in the game uses it, so it
+///     is not read here.
+///
+/// A point is where the node sits relative to its parent, replacing its authored position - the
+/// advisor's body rests at (0, 0.21, -21.2) and his clip 14 raises it there from -73.2. Every one
+/// of the 1216 records in the game has the point count its type says; key frames never go
+/// backwards, though four tracks repeat a frame.
+///
+/// VISIBILITY (bit 0x20000)
+///
+/// A count at +0x16 (the same ushort that is not part of the target) and an array of that many
+/// signed shorts at +0x30. Each is a frame number whose sign says what happens from that frame
+/// on: above zero the node is shown, zero or below it is hidden. The engine (0x00471860) takes the
+/// last entry whose absolute value is at or before the current frame and sets or clears the
+/// node's hidden bit, 0x10, from it. All 2536 tracks in the game are ordered that way. It is how
+/// the advisor blinks - clip 10 hides his eyes at frame 40 and shows his eyelids, and swaps them
+/// back at 44.
+///
 /// UV ANIMATION (bit 0x10000)
 ///
 /// The slot at +0x2C points at a 20-byte descriptor: uint entry count n at +0x00, uint -> index
@@ -129,13 +158,16 @@ namespace OpenTPW;
 ///
 /// COVERAGE
 ///
-/// Of the game's 1279 animation files, 1151 (90%) carry at least one channel read here: 752
-/// morph, 686 rotation, 324 UV. A further 38 have a readable track table but carry only
-/// channels we don't decode.
+/// Of the game's 1279 animation files, 1189 have tracks, and 1183 of those declare at least one
+/// channel read here - counted by the flag bits their tracks carry: 768 morph, 686 rotation, 324
+/// UV, 455 position and 404 visibility. The other 6 carry only channels we don't decode.
 ///
 /// The remaining 90 hold no animation at all rather than defeating the parser: 89 declare a
 /// track count of zero, and 1 has no animation block. The table identity above does not fail
 /// on a single file in the game, so nothing is rejected for being unreadable.
+///
+/// FirstFrame and LastFrame still span only rotation, morph and UV keys, so the 19 files whose
+/// tracks move nothing but positions and visibility read as having no span.
 /// </summary>
 public class AnimationFile : BaseFormat
 {
@@ -258,6 +290,82 @@ public class AnimationFile : BaseFormat
 
 		public int EntryCount => FirstComponent.Length;
 	}
+
+	/// <summary>Where a node sits over time - channel 0x1. See the class remarks.</summary>
+	public class PositionTrack
+	{
+		public int TargetIndex { get; init; }
+
+		/// <summary>One per key, ascending, though a key can repeat the frame before it.</summary>
+		public ushort[] FrameIndices { get; init; } = Array.Empty<ushort>();
+
+		/// <summary>Three per key after the first for a Bezier track, one per key for a straight one.</summary>
+		public System.Numerics.Vector3[] Points { get; init; } = Array.Empty<System.Numerics.Vector3>();
+
+		public bool IsBezier { get; init; }
+
+		/// <summary>The node's position at <paramref name="frame"/>, held at the ends.</summary>
+		public System.Numerics.Vector3 Sample( float frame )
+		{
+			var keys = FrameIndices.Length;
+			var last = IsBezier ? 3 * (keys - 1) : keys - 1;
+
+			if ( keys == 0 || Points.Length <= last )
+				return System.Numerics.Vector3.Zero;
+
+			if ( frame <= FrameIndices[0] )
+				return Points[0];
+
+			if ( frame >= FrameIndices[^1] )
+				return Points[last];
+
+			var segment = 0;
+			for ( int k = 1; k < keys - 1 && FrameIndices[k] <= frame; ++k )
+				segment = k;
+
+			float from = FrameIndices[segment], to = FrameIndices[segment + 1];
+			var t = to > from ? (frame - from) / (to - from) : 1f;
+
+			if ( !IsBezier )
+				return System.Numerics.Vector3.Lerp( Points[segment], Points[segment + 1], t );
+
+			var i = 3 * segment;
+			var u = 1f - t;
+
+			return (Points[i] * (u * u * u)) + (Points[i + 1] * (3f * u * u * t))
+				+ (Points[i + 2] * (3f * u * t * t)) + (Points[i + 3] * (t * t * t));
+		}
+	}
+
+	/// <summary>When a node is shown - channel 0x20000. See the class remarks.</summary>
+	public class VisibilityTrack
+	{
+		public int TargetIndex { get; init; }
+
+		/// <summary>Frame numbers, positive to show from that frame and zero or negative to hide.</summary>
+		public short[] Entries { get; init; } = Array.Empty<short>();
+
+		/// <summary>
+		/// Whether the node is shown at <paramref name="frame"/>, or null before its first entry -
+		/// in which case the engine leaves the node as it was.
+		/// </summary>
+		public bool? VisibleAt( float frame )
+		{
+			var current = (int)frame;
+
+			for ( int i = Entries.Length - 1; i >= 0; --i )
+			{
+				if ( Math.Abs( (int)Entries[i] ) <= current )
+					return Entries[i] >= 1;
+			}
+
+			return null;
+		}
+	}
+
+	public List<PositionTrack> PositionTracks { get; } = new();
+
+	public List<VisibilityTrack> VisibilityTracks { get; } = new();
 
 	public List<MorphTrack> MorphTracks { get; } = new();
 
@@ -463,9 +571,77 @@ public class AnimationFile : BaseFormat
 
 			if ( (flags & 0x10000) != 0 )
 				ReadUvChannel( data, BitConverter.ToUInt32( data, offset + 0x2C ), target );
+
+			if ( (flags & 0x1) != 0 )
+				ReadPositionChannel( data, BitConverter.ToUInt32( data, offset + 0x18 ), target );
+
+			if ( (flags & 0x20000) != 0 )
+				ReadVisibilityChannel( data, offset, target );
 		}
 
 		return true;
+	}
+
+	private void ReadPositionChannel( byte[] data, uint recordAt, int target )
+	{
+		if ( recordAt < 0x9C || recordAt + 16 > data.Length )
+			return;
+
+		var record = (int)recordAt;
+		var type = BitConverter.ToUInt32( data, record );
+		int pointCount = BitConverter.ToUInt16( data, record + 4 );
+		int keyCount = BitConverter.ToUInt16( data, record + 6 );
+		var pointsAt = BitConverter.ToUInt32( data, record + 8 );
+		var keysAt = BitConverter.ToUInt32( data, record + 12 );
+
+		var bezier = (type & 0x2) != 0;
+		var straight = !bezier && (type & 0x8) != 0;
+
+		// The engine's third sampler, for neither bit, is used by nothing in the game.
+		if ( keyCount <= 0 || (!bezier && !straight) )
+			return;
+
+		if ( pointCount != (bezier ? (3 * (keyCount - 1)) + 1 : keyCount) )
+			return;
+
+		if ( pointsAt < 0x9C || pointsAt + (12L * pointCount) > data.Length
+			|| keysAt < 0x9C || keysAt + (4L * keyCount) > data.Length )
+			return;
+
+		var frames = new ushort[keyCount];
+		for ( int k = 0; k < keyCount; ++k )
+		{
+			frames[k] = BitConverter.ToUInt16( data, (int)keysAt + (4 * k) );
+			if ( k > 0 && frames[k] < frames[k - 1] )
+				return;
+		}
+
+		var points = new System.Numerics.Vector3[pointCount];
+		for ( int i = 0; i < pointCount; ++i )
+		{
+			var at = (int)pointsAt + (12 * i);
+			points[i] = new System.Numerics.Vector3(
+				BitConverter.ToSingle( data, at ),
+				BitConverter.ToSingle( data, at + 4 ),
+				BitConverter.ToSingle( data, at + 8 ) );
+		}
+
+		PositionTracks.Add( new PositionTrack { TargetIndex = target, FrameIndices = frames, Points = points, IsBezier = bezier } );
+	}
+
+	private void ReadVisibilityChannel( byte[] data, int descriptor, int target )
+	{
+		int count = BitConverter.ToUInt16( data, descriptor + 0x16 );
+		var entriesAt = BitConverter.ToUInt32( data, descriptor + 0x30 );
+
+		if ( count <= 0 || entriesAt < 0x9C || entriesAt + (2L * count) > data.Length )
+			return;
+
+		var entries = new short[count];
+		for ( int i = 0; i < count; ++i )
+			entries[i] = BitConverter.ToInt16( data, (int)entriesAt + (2 * i) );
+
+		VisibilityTracks.Add( new VisibilityTrack { TargetIndex = target, Entries = entries } );
 	}
 
 	private void ReadRotationChannel( byte[] data, int descriptor, int target )
