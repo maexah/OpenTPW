@@ -1,0 +1,270 @@
+using System.Runtime.InteropServices;
+
+namespace OpenTPW;
+
+/// <summary>
+/// The game's sound output: one SDL2 audio device, and a software mixer feeding it.
+///
+/// SDL2 rather than anything else because it is already here - the window and the input both
+/// come from it through Veldrid - so opening its audio device adds no native dependency on any
+/// platform. Veldrid's own binding covers only the window and input side of SDL, hence the
+/// handful of imports below.
+///
+/// The mixing is ours rather than SDL_mixer's. It is a few voices of straight addition, which is
+/// less code than binding another library would be, and it keeps the fades and the looping in C#
+/// where the lobby can reach them.
+///
+/// Nothing here throws. A machine with no sound card, a container with no audio server, a test
+/// run - all of them end up with <see cref="Ready"/> false and every call below doing nothing,
+/// because sound going missing should never be the reason the game will not start.
+/// </summary>
+public static class Audio
+{
+	/// <summary>
+	/// What the device runs at, and what every clip is resampled to.
+	///
+	/// 22,050Hz because that is what all but five of the game's 3,739 samples are recorded at -
+	/// see <see cref="AudioClip"/> - so at this rate the mixer is a copy rather than an
+	/// interpolation, and the five odd ones out are converted once when they load.
+	/// </summary>
+	public const int SampleRate = 22050;
+
+	/// <summary>Frames per callback: 1024 is about 46ms here, which is a comfortable buffer.</summary>
+	private const int BufferFrames = 1024;
+
+	/// <summary>How many sounds can be going at once before the quietest is dropped.</summary>
+	private const int MaxVoices = 32;
+
+	/// <summary>Whether there is a device to play through. False leaves every call a no-op.</summary>
+	public static bool Ready { get; private set; }
+
+	/// <summary>
+	/// Scales everything the mixer puts out. 0 is silence.
+	///
+	/// The default leaves headroom rather than filling the range. Every layer's level is already
+	/// set against a target - see <see cref="LobbyAudio"/> - and this sits under all of them so
+	/// that the worst case, everything peaking at once, still lands around 0.6 and the clamp in
+	/// <see cref="Mix"/> stays a backstop. Turning it up to 1 is safe; it will clip on a loud
+	/// moment rather than hurt anything.
+	/// </summary>
+	public static float MasterVolume
+	{
+		get => _masterVolume;
+		set => _masterVolume = value.Clamp( 0f, 1f );
+	}
+
+	private static float _masterVolume = 0.5f;
+
+	private static readonly List<Voice> Voices = new( MaxVoices );
+
+	/// <summary>
+	/// Guards <see cref="Voices"/> against the callback, which SDL runs on a thread of its own.
+	///
+	/// A lock in an audio callback is normally a mistake - if the other side holds it too long
+	/// the buffer runs dry and the output clicks. It is safe here because the game thread only
+	/// ever holds it to add or remove one list entry, and never to decode, load or allocate.
+	/// </summary>
+	internal static readonly object Lock = new();
+
+	private static uint _device;
+
+	/// <summary>
+	/// Held for as long as the device is open. The callback is called from native code, so
+	/// letting the delegate be collected would leave SDL calling into freed memory.
+	/// </summary>
+	private static SdlAudioCallback? _callback;
+
+	/// <summary>
+	/// Opens the device. Safe to call more than once; safe to call on a machine with no audio.
+	/// </summary>
+	public static void Init()
+	{
+		if ( Ready )
+			return;
+
+		try
+		{
+			if ( SDL_InitSubSystem( SdlInitAudio ) != 0 )
+			{
+				Log.Warning( $"No audio: SDL_InitSubSystem said '{LastError()}'" );
+				return;
+			}
+
+			_callback = Mix;
+
+			var wanted = new SdlAudioSpec
+			{
+				Freq = SampleRate,
+				Format = AudioF32Sys,
+				Channels = 2,
+				Samples = BufferFrames,
+				Callback = Marshal.GetFunctionPointerForDelegate( _callback )
+			};
+
+			// allowed_changes 0, so SDL converts for us if the hardware wants something else and
+			// the format we mix in is the format we get.
+			_device = SDL_OpenAudioDevice( IntPtr.Zero, 0, ref wanted, out var got, 0 );
+
+			if ( _device == 0 )
+			{
+				Log.Warning( $"No audio: SDL_OpenAudioDevice said '{LastError()}'" );
+				_callback = null;
+				return;
+			}
+
+			SDL_PauseAudioDevice( _device, 0 );
+			Ready = true;
+
+			Log.Info( $"Audio: {Marshal.PtrToStringAnsi( SDL_GetCurrentAudioDriver() )}, "
+				+ $"{got.Freq}Hz {got.Channels}ch, {got.Samples} frame buffer" );
+		}
+		catch ( DllNotFoundException )
+		{
+			// SDL2 is here - the window came from it - so this only happens if audio was built
+			// out of it. Worth saying, not worth stopping for.
+			Log.Warning( "No audio: this SDL2 has no audio support" );
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"No audio: {e.Message}" );
+		}
+	}
+
+	public static void Shutdown()
+	{
+		if ( !Ready )
+			return;
+
+		Ready = false;
+
+		// Pause first: this stops SDL calling the mixer, so the voice list can be emptied without
+		// racing it, and the delegate is safe to let go of afterwards.
+		SDL_PauseAudioDevice( _device, 1 );
+		SDL_CloseAudioDevice( _device );
+
+		lock ( Lock )
+			Voices.Clear();
+
+		_callback = null;
+		_device = 0;
+	}
+
+	/// <summary>
+	/// Starts <paramref name="clip"/> and hands back the voice playing it, or null if there is no
+	/// device or nothing to play.
+	/// </summary>
+	/// <param name="volume">0 to 1, before <see cref="MasterVolume"/>.</param>
+	/// <param name="loop">Whether it starts again from the top rather than ending.</param>
+	/// <param name="fadeInSeconds">How long it takes to reach <paramref name="volume"/>.</param>
+	public static Voice? Play( AudioClip? clip, float volume = 1f, bool loop = false, float fadeInSeconds = 0f )
+	{
+		if ( !Ready || clip == null || clip.Frames == 0 )
+			return null;
+
+		var voice = new Voice( clip, volume.Clamp( 0f, 1f ), loop, fadeInSeconds );
+
+		lock ( Lock )
+		{
+			if ( Voices.Count >= MaxVoices )
+			{
+				// Full. Drop the quietest one that isn't a loop - the loops are the beds and the
+				// music, and losing one of those is far more noticeable than losing a one-shot.
+				var quietest = -1;
+
+				for ( int i = 0; i < Voices.Count; ++i )
+					if ( !Voices[i].Loop && (quietest < 0 || Voices[i].Volume < Voices[quietest].Volume) )
+						quietest = i;
+
+				if ( quietest < 0 )
+					return null;
+
+				Voices.RemoveAt( quietest );
+			}
+
+			Voices.Add( voice );
+		}
+
+		return voice;
+	}
+
+	/// <summary>
+	/// Fills one buffer. Runs on SDL's audio thread - see <see cref="Lock"/> - so it does no
+	/// allocation, no I/O and no logging.
+	/// </summary>
+	private static unsafe void Mix( IntPtr userData, IntPtr stream, int lengthInBytes )
+	{
+		var output = (float*)stream;
+		var frames = lengthInBytes / (sizeof( float ) * 2);
+
+		for ( int i = 0; i < frames * 2; ++i )
+			output[i] = 0f;
+
+		var master = _masterVolume;
+
+		lock ( Lock )
+		{
+			for ( int i = Voices.Count - 1; i >= 0; --i )
+			{
+				if ( !Voices[i].MixInto( output, frames, master ) )
+					Voices.RemoveAt( i );
+			}
+		}
+
+		// Everything above adds, so the sum can leave the range even when no one voice does.
+		// Clamping is the cheap answer and it is what the range is for; the alternative is a
+		// limiter, which the four or five voices the lobby runs do not need.
+		for ( int i = 0; i < frames * 2; ++i )
+			output[i] = output[i] < -1f ? -1f : (output[i] > 1f ? 1f : output[i]);
+	}
+
+	private static string LastError() => Marshal.PtrToStringAnsi( SDL_GetError() ) ?? "unknown";
+
+	#region SDL2
+
+	private const uint SdlInitAudio = 0x00000010;
+
+	/// <summary>AUDIO_F32SYS - 32-bit float, host byte order.</summary>
+	private const ushort AudioF32Sys = 0x8120;
+
+	[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
+	private delegate void SdlAudioCallback( IntPtr userData, IntPtr stream, int lengthInBytes );
+
+	[StructLayout( LayoutKind.Sequential )]
+	private struct SdlAudioSpec
+	{
+		public int Freq;
+		public ushort Format;
+		public byte Channels;
+		public byte Silence;
+		public ushort Samples;
+		public ushort Padding;
+		public uint Size;
+		public IntPtr Callback;
+		public IntPtr UserData;
+	}
+
+	// "SDL2" resolves to SDL2.dll on Windows - Veldrid.SDL2 puts one beside the executable - and
+	// to libSDL2.so on Linux and macOS, which is the same library Veldrid already has open.
+	private const string Sdl = "SDL2";
+
+	[DllImport( Sdl, CallingConvention = CallingConvention.Cdecl )]
+	private static extern int SDL_InitSubSystem( uint flags );
+
+	[DllImport( Sdl, CallingConvention = CallingConvention.Cdecl )]
+	private static extern IntPtr SDL_GetError();
+
+	[DllImport( Sdl, CallingConvention = CallingConvention.Cdecl )]
+	private static extern IntPtr SDL_GetCurrentAudioDriver();
+
+	[DllImport( Sdl, CallingConvention = CallingConvention.Cdecl )]
+	private static extern uint SDL_OpenAudioDevice( IntPtr device, int isCapture,
+		ref SdlAudioSpec desired, out SdlAudioSpec obtained, int allowedChanges );
+
+	[DllImport( Sdl, CallingConvention = CallingConvention.Cdecl )]
+	private static extern void SDL_PauseAudioDevice( uint device, int pauseOn );
+
+	[DllImport( Sdl, CallingConvention = CallingConvention.Cdecl )]
+	private static extern void SDL_CloseAudioDevice( uint device );
+
+	#endregion
+}

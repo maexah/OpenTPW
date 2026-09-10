@@ -41,6 +41,12 @@ internal static class Game
 		Render = new();
 
 		//
+		// Init audio. Opening the device can fail - no sound card, no audio server - and that is
+		// not a reason to stop, so Audio.Init reports it and leaves everything a no-op.
+		//
+		Audio.Init();
+
+		//
 		// Create level
 		//
 		var level = new Level( "jungle" );
@@ -51,5 +57,7 @@ internal static class Game
 		Render.OnUpdate += level.Update;
 		Render.OnRender += level.Render;
 		Render.Run();
+
+		Audio.Shutdown();
 	}
 }

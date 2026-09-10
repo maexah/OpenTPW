@@ -24,6 +24,14 @@
 	<ItemGroup>
 		<PackageReference Include="ImGui.NET" Version="1.87.2" />
 		<PackageReference Include="NAudio" Version="2.2.1" />
+		<!--
+			Decodes the MPEG Layer I and Layer II streams inside a .sdt - see AudioClip. Pin 3.0.0
+			or newer: 1.16.0 decodes Layer I correctly but gets MPEG-2 Layer II wrong, which is
+			every piece of music in the game. 3.0.0 is sample-exact against ffmpeg on a spread of
+			99 streams covering all five encodings the game ships, give or take a rounding step in
+			the last bit.
+		-->
+		<PackageReference Include="NLayer" Version="3.0.0" />
 		<PackageReference Include="SharpText.Veldrid" Version="0.3.1" />
 		<PackageReference Include="SharpZipLib" Version="1.4.2" />
 		<PackageReference Include="StbImageSharp" Version="2.27.8" />
