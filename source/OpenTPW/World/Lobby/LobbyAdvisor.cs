@@ -38,7 +38,9 @@ namespace OpenTPW;
 /// <para>
 /// Two deliberate differences. The duck is ramped rather than stepped - see
 /// <see cref="Audio.Duck"/> - and held across queued lines, where the original lifts and restores it
-/// between them in a frame nobody hears but a ramp would make a swell.
+/// between them in a frame nobody hears but a ramp would make a swell. And between queued lines he
+/// rests out of sight for <see cref="CooldownSeconds"/>, where the original brings him straight
+/// back up.
 /// </para>
 /// <para>
 /// <b>Timing.</b> Nothing he does is counted in frames, so he moves the same at any frame rate.
@@ -129,12 +131,27 @@ public sealed class LobbyAdvisor : Entity
 	/// <summary>From being handed a line to speaking it: the clock minus 200ms, plus 1000ms.</summary>
 	private const float LeadInSeconds = 0.8f;
 
+	/// <summary>
+	/// How long he stays down out of sight after ducking away before the next queued line brings
+	/// him back up.
+	///
+	/// <b>Not the original's.</b> Its queue, AdvisorQueue_Tick (0x005d5f80), says the next line on
+	/// the first tick after he is free, with no wait of any kind - the only timer it has repeats a
+	/// line while the queue is empty - so he ducks and pops straight back up. This rest was asked
+	/// for, so that a line reads as finished before the next begins. A line that cuts him off does
+	/// not wait for it - see <see cref="Add"/>.
+	/// </summary>
+	private const float CooldownSeconds = 1.5f;
+
 	private readonly Random _random = new();
 
 	private SoundCategory? _speech;
 	private AdvisorModel? _figure;
 	private bool _figureFailed;
 	private bool _shown;
+
+	/// <summary>Until when he rests out of sight before another queued line - see <see cref="CooldownSeconds"/>.</summary>
+	private float _restUntil = float.NegativeInfinity;
 
 	private Voice? _voice;
 	private LipFile? _lips;
@@ -209,9 +226,15 @@ public sealed class LobbyAdvisor : Entity
 			return;
 
 		if ( _queue.Count > 0 )
-			Speak( _queue.Dequeue() );
+		{
+			// Not while he is still ducking away, and not until he has rested once he has.
+			if ( !_shown && Time.Now >= _restUntil )
+				Speak( _queue.Dequeue() );
+		}
 		else
+		{
 			Release();
+		}
 	}
 
 	protected override void OnRenderOverlay()
@@ -248,6 +271,10 @@ public sealed class LobbyAdvisor : Entity
 	/// <summary>
 	/// AdvisorQueue_Add: queues <paramref name="sample"/> behind whatever is waiting, or with
 	/// <paramref name="flush"/> stops him and throws the queue away first.
+	///
+	/// A flushed line is meant to be heard now, so it skips the rest between lines: he is taken
+	/// off the screen, as Advisor_StopSpeaking (0x005994e0) does through its "Kill advisor" call,
+	/// and comes straight back up with it.
 	/// </summary>
 	internal void Add( int sample, bool flush )
 	{
@@ -255,6 +282,8 @@ public sealed class LobbyAdvisor : Entity
 		{
 			_queue.Clear();
 			StopCurrent();
+			_shown = false;
+			_restUntil = float.NegativeInfinity;
 		}
 
 		if ( sample > 0 )
@@ -417,11 +446,13 @@ public sealed class LobbyAdvisor : Entity
 		}
 
 		// Clip 15 takes him down out of sight - its position keys drop his head and body well below
-		// the bottom of the screen - and once it has played out he is gone, until the next line
-		// brings him back up with clip 14. In the original he ducks and is gone, rather than holding
-		// his last pose.
-		if ( !Busy && _queue.Count == 0 && _sequence.Count > 0 && _sequence.IsFinished( sinceGesturesStarted ) )
+		// the bottom of the screen - and once it has played out he is gone, rather than holding his
+		// last pose. He rests there before the next queued line brings him back up with clip 14.
+		if ( !Busy && _sequence.Count > 0 && _sequence.IsFinished( sinceGesturesStarted ) )
+		{
 			_shown = false;
+			_restUntil = Time.Now + CooldownSeconds;
+		}
 	}
 
 	private void SetMouth( int shape )
@@ -466,7 +497,8 @@ public sealed class LobbyAdvisor : Entity
 
 		var what = _pending != 0
 			? $"about to say {_pending}"
-			: _voice is { Playing: true } ? $"saying {_voice.Name}" : Busy ? "finishing" : "quiet";
+			: _voice is { Playing: true } ? $"saying {_voice.Name}" : Busy ? "finishing"
+			: _queue.Count > 0 ? (_shown ? "ducking" : "resting") : "quiet";
 
 		var clip = _sequence.TryLocate( Time.Now - _gesturesStartedAt, out var current, out _ ) ? current : 0;
 
