@@ -4,30 +4,38 @@ namespace OpenTPW;
 /// The advisor talking in the lobby, and the rest of the mix getting out of his way.
 ///
 /// <para>
-/// <b>How the original does it.</b> Every line the advisor says is a "ResponseID". FUN_00599050
-/// - the one that logs "Advisor says ResponseID %d" - looks that id up in a table of 32-byte
-/// records at 0x00768fb8, terminated by 9999, whose fields are, in order: the response id, the
-/// speech sample id, the lip-sync file number, an animation, a packed word holding a
-/// global/local flag in its high half and the advisor's park in its low half, and two more the
-/// lobby does not reach. Sample in hand, it plays it from one of two categories - DAT_00803a34
-/// for global speech, DAT_00803a40 for a park's own - and those are the cat_speech*.map pairs in
-/// data\global\Speech and data\levels\&lt;park&gt;\Speech.
+/// <b>How the original decides what to say.</b> On entering the front end with no player chosen,
+/// FrontEnd_Init (0x005d5970) shows the four-slot player screen, FrontEnd_ShowPlayerSlots
+/// (0x004a6580). That counts the slots in use with Players_CountUsedSlots (0x005c7bb0) - a plain
+/// count of the non-empty entries in a four-entry array - and queues advisor lines on it:
+/// </para>
+/// <list type="bullet">
+/// <item>no slot in use: response 390, then 391 queued behind it - the greeting and the prompt
+/// for a name, <see cref="NewPlayerLines"/></item>
+/// <item>any slot in use: response 398, "don't I know you?"</item>
+/// </list>
+/// <para>
+/// There is no save system yet, so no slot is ever in use and the first of those plays on every
+/// launch. That is the original's own test with nothing to find, not a stand-in for it.
 /// </para>
 /// <para>
-/// The two behaviours worth copying from that function are less obvious than the lookup. It
-/// starts the sample, asks how long it is, then <i>stops it again</i> and sets a timer for a
-/// second later (DAT_00f79694 = now + 1000) - so the advisor never speaks the instant he is
-/// asked to, he speaks a second afterwards. And it calls FUN_0051e6f0(1) before playing, which
-/// sets the flag FUN_0051bd70 reads to decide whether the music and effects group volumes get
-/// multiplied by a percentage; the matching FUN_0051e6f0(0) is in the advisor's update, on the
-/// frame his sample runs out. That is the ducking, and <see cref="Audio.Duck"/> is our version.
+/// <b>How a line is spoken.</b> Lines go through a queue, AdvisorQueue_Add (0x005d6110): a line
+/// added with flush set cuts off whatever he is saying and empties the queue first, and a line
+/// added without it waits its turn. AdvisorQueue_Tick (0x005d5f80) hands the next line to
+/// Advisor_SayResponse (0x00599050) whenever he is not busy. That maps the response id to a
+/// sample through the table at 0x00768fb8 - the ids here are copied from it, because it lives in
+/// the executable rather than in the game data - ducks the rest of the mix, and schedules the
+/// sample 800ms later: it takes the clock minus 200 and adds 1000. He then stays busy until his
+/// talking animations have covered the sample plus at least 500ms, after which Advisor_Update
+/// (0x00599880) lifts the duck and the queue moves on.
 /// </para>
 /// <para>
-/// <b>What is not settled.</b> Which ResponseID the lobby asks for on a first run. The call is
-/// at 0x005d5fcf, which Ghidra has disassembled but never made into a function, so the bridge
-/// cannot decompile it and read the constant; the record table itself is undefined bytes for the
-/// same reason. <see cref="FirstLaunchSample"/> is therefore a guess, and the <c>speech</c>
-/// console command is there to settle it by ear.
+/// Two deliberate differences. The duck is ramped rather than stepped - see
+/// <see cref="Audio.Duck"/>. And it is held across queued lines: the original lifts it and puts
+/// it straight back between one line and the next, which with a step is a frame nobody hears but
+/// with a ramp would be an audible swell. The talking animations are not reproduced, because the
+/// lobby does not draw the advisor yet, so a line's tail is the guaranteed 500ms and not whatever
+/// the animations happen to round it up to.
 /// </para>
 /// </summary>
 public sealed class LobbyAdvisor : Entity
@@ -35,18 +43,23 @@ public sealed class LobbyAdvisor : Entity
 	internal static LobbyAdvisor? Current { get; private set; }
 
 	/// <summary>
-	/// The sample the advisor greets a new player with - <b>not yet confirmed against the
-	/// original</b>, see the class remarks.
-	///
-	/// 617 is a guess with reasons rather than a shot in the dark: the bank holds 641 samples,
-	/// data\Language\&lt;lang&gt;\TAG_SYSTEM.str holds 567 subtitle strings for the in-park
-	/// advisor messages, and this sits in the handful past the end of that range - so it is one
-	/// of the lines that has no in-park subtitle. It is also 23.9 seconds against a median of
-	/// 5.7, which is intro length rather than advice length.
-	///
-	/// Run <c>speech &lt;n&gt;</c> in the debug console to audition another, then change this.
+	/// The samples behind the lobby's response ids, from the original's response table
+	/// (0x00768fb8). Which line is which was confirmed by listening, not inferred from the ids.
 	/// </summary>
-	private const int FirstLaunchSample = 617;
+	private static class Samples
+	{
+		/// <summary>Response 390: "Welcome to Sim Theme Park! I'm the advisor around here..."</summary>
+		public const int Welcome = 465;
+
+		/// <summary>Response 391: "...I don't even know your name! ...click on the New Player button."</summary>
+		public const int AskForName = 466;
+
+		/// <summary>Response 398: "Welcome to Sim Theme Park! Don't I know you?..."</summary>
+		public const int WelcomeBack = 471;
+	}
+
+	/// <summary>What a player with no saved game hears, in order - responses 390 and 391.</summary>
+	private static readonly int[] NewPlayerLines = { Samples.Welcome, Samples.AskForName };
 
 	/// <summary>
 	/// How loud the advisor is, before <see cref="Audio.MasterVolume"/>.
@@ -63,42 +76,46 @@ public sealed class LobbyAdvisor : Entity
 	/// What everything else drops to while he talks.
 	///
 	/// data\sound.sam has exactly one ducking setting, <c>SoundInfo.DUCKINGLEVEL 38</c>, and
-	/// FUN_0051bd70 ducks by <c>(volume * DAT_00785914) / 100</c> - a percentage. That value sits
-	/// in zeroed memory in the image with no writer, so it is filled in from config at runtime,
-	/// and DUCKINGLEVEL is the only candidate the config has. <b>Inferred, not proven</b>: the
-	/// file's own header comment says its numbers are detail levels at which a feature switches
-	/// on, which would make 38 a threshold instead. 38% is a sensible duck either way.
+	/// Sound_ApplyGroupVolumes (0x0051bd70) ducks by <c>(volume * 0x00785914) / 100</c> - a
+	/// percentage. That value sits in zeroed memory in the image with no writer, so it is filled in
+	/// from config at runtime, and DUCKINGLEVEL is the only candidate the config has.
+	/// <b>Inferred, not proven</b>: the file's own header comment says its numbers are detail
+	/// levels at which a feature switches on, which would make 38 a threshold instead.
 	/// </summary>
 	private const float DuckLevel = 0.38f;
 
-	/// <summary>
-	/// The original steps the group volumes; we ramp them. A step down onto a sustained park
-	/// theme is audible as a lurch, and the ramp is short enough that it still reads as the mix
-	/// getting out of the way rather than as a fade.
-	/// </summary>
+	/// <summary>How long the duck takes to come in - see the class remarks on ramping.</summary>
 	private const float DuckSeconds = 0.35f;
 
 	/// <summary>Longer coming back, so the theme swells rather than snapping back in.</summary>
 	private const float UnduckSeconds = 1.2f;
 
+	/// <summary>From being handed a line to speaking it: the clock minus 200ms, plus 1000ms.</summary>
+	private const float LeadInSeconds = 0.8f;
+
 	/// <summary>
-	/// The original's pause between being asked for a line and speaking it: DAT_00f79694 is set
-	/// to the current time plus 1000ms. The duck starts at the beginning of this, so the mix has
-	/// already made room by the time he opens his mouth.
+	/// How long he stays busy after a sample ends before the queue moves on. The original pads
+	/// the sample by at least 500ms when it picks his talking animations.
 	/// </summary>
-	private const float StartDelaySeconds = 1f;
+	private const float TailSeconds = 0.5f;
 
 	private SoundCategory? _speech;
 	private Voice? _voice;
 
-	/// <summary>The sample waiting on <see cref="_speakAt"/>, or 0 when nothing is pending.</summary>
+	/// <summary>Samples waiting their turn, oldest first.</summary>
+	private readonly Queue<int> _queue = new();
+
+	/// <summary>The sample handed over and waiting on <see cref="_speakAt"/>, or 0.</summary>
 	private int _pending;
 
 	private float _speakAt;
 
+	/// <summary>When the line that is playing, or just played, stops keeping him busy.</summary>
+	private float _busyUntil = float.NegativeInfinity;
+
 	private bool _ducked;
 
-	/// <summary>Whether the first-run greeting has been dealt with this session.</summary>
+	/// <summary>Whether the front-end greeting has been dealt with this session.</summary>
 	private bool _greeted;
 
 	public LobbyAdvisor()
@@ -107,13 +124,13 @@ public sealed class LobbyAdvisor : Entity
 	}
 
 	/// <summary>
-	/// Whether any of the four player slots holds a saved game.
+	/// How many of the four player slots hold a saved player - what Players_CountUsedSlots
+	/// answers in the original.
 	///
-	/// Always false, because there is no save system yet - which is what the original tests
-	/// before deciding a player is new, so until saves exist the greeting is correct every time
-	/// rather than being a stub. This is the one line to change when they do.
+	/// Always 0, because there is no save system yet. This is the one line to change when saves
+	/// arrive; everything that depends on it is already the original's behaviour.
 	/// </summary>
-	private static bool HasSavedGame => false;
+	private static int UsedPlayerSlots => 0;
 
 	protected override void OnUpdate()
 	{
@@ -125,64 +142,115 @@ public sealed class LobbyAdvisor : Entity
 		if ( !_greeted )
 		{
 			_greeted = true;
-
-			if ( !HasSavedGame )
-				Say( FirstLaunchSample );
+			Greet();
 		}
 
 		if ( _pending != 0 && Time.Now >= _speakAt )
 		{
 			_voice = _speech.Play( _pending, SpeechVolume, respectDelay: false, bus: AudioBus.Speech );
+			_busyUntil = _voice == null ? Time.Now : float.PositiveInfinity;
 			_pending = 0;
-
-			if ( _voice == null )
-				Release();
 		}
 
-		// The original un-ducks on the frame the sample runs out, in the same update that drives
-		// the lip-sync. Nothing else here holds the duck, so a line that failed to play releases
-		// it above rather than leaving the lobby quiet for good.
-		if ( _ducked && _pending == 0 && _voice is not { Playing: true } )
+		// A playing voice holds him busy until it ends, and the tail starts from there.
+		if ( _pending == 0 && float.IsPositiveInfinity( _busyUntil ) && _voice is not { Playing: true } )
+			_busyUntil = Time.Now + TailSeconds;
+
+		if ( Busy )
+			return;
+
+		if ( _queue.Count > 0 )
+			Speak( _queue.Dequeue() );
+		else
 			Release();
 	}
 
+	private bool Busy => _pending != 0 || Time.Now < _busyUntil;
+
 	/// <summary>
-	/// Has the advisor say <paramref name="sample"/>, a second from now, with the rest of the mix
-	/// ducked from this moment until he finishes.
+	/// What FrontEnd_ShowPlayerSlots says: the new-player greeting when no slot is in use, the
+	/// welcome back otherwise.
 	/// </summary>
+	internal void Greet()
+	{
+		if ( UsedPlayerSlots == 0 )
+		{
+			Add( NewPlayerLines[0], flush: true );
+
+			for ( int i = 1; i < NewPlayerLines.Length; ++i )
+				Add( NewPlayerLines[i], flush: false );
+		}
+		else
+		{
+			Add( Samples.WelcomeBack, flush: true );
+		}
+	}
+
+	/// <summary>
+	/// AdvisorQueue_Add: queues <paramref name="sample"/> behind whatever is waiting, or with
+	/// <paramref name="flush"/> stops him and throws the queue away first.
+	/// </summary>
+	internal void Add( int sample, bool flush )
+	{
+		if ( flush )
+		{
+			_queue.Clear();
+			StopCurrent();
+		}
+
+		if ( sample > 0 )
+			_queue.Enqueue( sample );
+	}
+
+	/// <summary>Plays one sample now, cutting off anything else - for auditioning from the console.</summary>
 	internal void Say( int sample )
 	{
-		if ( !Audio.Ready || _speech is not { IsValid: true } )
-			return;
-
-		// Ids run from 1, so anything below that is "stop talking" rather than a line. 80 of the
-		// 641 in the global bank are a 315-byte stub that is not valid MPEG - response ids with
-		// nothing recorded against them - and those simply come back silent from the decoder.
 		if ( sample <= 0 )
 		{
 			Hush();
 			return;
 		}
 
-		_voice?.FadeOut( 0.2f );
-		_voice = null;
-
-		_pending = sample;
-		_speakAt = Time.Now + StartDelaySeconds;
-
-		_ducked = true;
-		Audio.Duck( DuckLevel, DuckSeconds );
-
-		Log.Info( $"Advisor: sample {sample} in {StartDelaySeconds:0.0}s, ducking to {DuckLevel:0.00}" );
+		Add( sample, flush: true );
 	}
 
-	/// <summary>Stops him mid-sentence and lets the mix back up.</summary>
+	/// <summary>Stops him mid-sentence, forgets what was queued, and lets the mix back up.</summary>
 	internal void Hush()
 	{
-		_pending = 0;
-		_voice?.FadeOut( 0.25f );
-		_voice = null;
+		_queue.Clear();
+		StopCurrent();
 		Release();
+	}
+
+	private void StopCurrent()
+	{
+		_pending = 0;
+		_voice?.FadeOut( 0.2f );
+		_voice = null;
+		_busyUntil = float.NegativeInfinity;
+	}
+
+	/// <summary>
+	/// Advisor_SayResponse: ducks the mix now and speaks the sample after the lead-in.
+	///
+	/// 80 of the 641 samples in the bank are a 315-byte stub that is not valid MPEG - response ids
+	/// with nothing recorded - and those simply come back silent, which ends the line at once.
+	/// </summary>
+	private void Speak( int sample )
+	{
+		if ( _speech is not { IsValid: true } )
+			return;
+
+		_pending = sample;
+		_speakAt = Time.Now + LeadInSeconds;
+
+		if ( !_ducked )
+		{
+			_ducked = true;
+			Audio.Duck( DuckLevel, DuckSeconds );
+		}
+
+		Log.Info( $"Advisor: sample {sample} in {LeadInSeconds:0.0}s, {_queue.Count} more queued" );
 	}
 
 	private void Release()
@@ -202,8 +270,8 @@ public sealed class LobbyAdvisor : Entity
 
 		var what = _pending != 0
 			? $"about to say {_pending}"
-			: _voice is { Playing: true } ? $"saying {_voice.Name}" : "quiet";
+			: _voice is { Playing: true } ? $"saying {_voice.Name}" : Busy ? "finishing" : "quiet";
 
-		return $"{what} duck={Audio.DuckLevel:0.00} samples={_speech?.EffectIds.Count() ?? 0}";
+		return $"{what} queued={_queue.Count} duck={Audio.DuckLevel:0.00} samples={_speech?.EffectIds.Count() ?? 0}";
 	}
 }

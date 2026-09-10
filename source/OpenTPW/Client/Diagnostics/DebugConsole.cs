@@ -211,6 +211,13 @@ public static class DebugConsole
 				Reply( LobbyAdvisor.Current?.State() ?? "no advisor" );
 				break;
 
+			case "greet":
+				// Replays the front-end greeting the way the lobby gives it on arrival, so its
+				// timing and ducking can be captured at a moment of the caller's choosing.
+				LobbyAdvisor.Current?.Greet();
+				Reply( LobbyAdvisor.Current?.State() ?? "no advisor" );
+				break;
+
 			case "duck":
 				Audio.Duck( parts.Length > 1 ? Argument( 1, 1f ) : 1f, 0.3f );
 				Reply( $"duck={Audio.DuckLevel:0.00}" );
@@ -222,7 +229,7 @@ public static class DebugConsole
 				break;
 
 			default:
-				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/near/stats/state/volume/mute/sound/speech/advisor/duck/quit" );
+				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/near/stats/state/volume/mute/sound/speech/advisor/greet/duck/quit" );
 				break;
 		}
 	}
