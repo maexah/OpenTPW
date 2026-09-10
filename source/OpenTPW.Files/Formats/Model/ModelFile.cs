@@ -644,12 +644,19 @@ public partial class ModelFile : BaseFormat
 	/// on a character.
 	///
 	/// The ushort at 0x48 is a record count and the uint at 0x7C the table's offset; each record
-	/// is 20 bytes, a flag word then the id, and the rest zero across the game. Record r belongs
-	/// to node (ushort at 0x46) + r. That pairing is the engine's own: its lookup returns the
-	/// record index, and the costume code adds 0x46 to it to find the node it shows or hides.
+	/// is 20 bytes, a flag word, the id, then 12 bytes that are zero in most records but not in 376
+	/// of the game's 2452, and are not understood. Record r belongs to node (ushort at 0x46) + r.
+	/// That pairing is the engine's own: its lookup (0x0044b220) walks the table for a record whose
+	/// id matches and whose flag word shares a bit with a mask it is given, returns the record
+	/// index, and the costume code adds 0x46 to it to find the node it shows or hides. 346 of the
+	/// game's 839 models carry a table, and in all but one it fits inside the model's node count.
 	///
-	/// On the advisor the ids are costume pieces - his antennae are 19 and 20, which every hat
-	/// hides, and his right hand is 21, which the fast food costume swaps for the spatula (14).
+	/// The table is a general way of naming nodes rather than a costume list - its flag words vary
+	/// widely - but costume lookups ask for flag 0x400, and every record on the advisor has it.
+	///
+	/// On the advisor the ids are costume pieces - his antennae are 19 and 20, which most costumes
+	/// hide (0x00598ca0: all but 3, 8, 12 and 14), and his right hand is 21, which costume 14, his
+	/// spatula, hides.
 	/// </summary>
 	private void ReadNodeIds( BinaryReader reader )
 	{
