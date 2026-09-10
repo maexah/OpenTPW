@@ -1,29 +1,57 @@
 namespace OpenTPW;
 
 /// <summary>
-/// A .sdt bank with every sample in it decoded and ready to play.
+/// A .sdt bank, with its samples decoded and ready to play.
 ///
-/// Banks are loaded whole. The lobby's are small - the four parks' music is 1.5MB of float each
-/// and the biggest sfx bank is jungle's 8MB ambient bed - and loading a sample at the moment it
-/// is wanted would mean decoding on the frame a strike lands.
+/// A small bank is decoded whole when it loads. The lobby's all are - the four parks' music is
+/// 1.5MB of float each and the biggest sfx bank is jungle's 8MB ambient bed - and for those,
+/// decoding a sample at the moment it is wanted would mean decoding on the frame a strike lands.
+///
+/// A big one is not, because one bank is very big indeed: data\global\Speech holds all 641 of
+/// the advisor's lines, and decoding those up front costs 375MB of float and three seconds of
+/// startup for the sake of the one line he is about to say. Past
+/// <see cref="DecodeEverythingBelow"/> a bank keeps the compressed bytes instead and decodes an
+/// entry the first time it is asked for, which for a twenty-second line is a few milliseconds -
+/// and the advisor's own one-second pause before he speaks covers it. See
+/// <see cref="LobbyAdvisor"/>.
 /// </summary>
 public sealed class SoundBank
 {
-	/// <summary>The bank's samples, in the order the .sdt lists them - which is what a category indexes.</summary>
-	public IReadOnlyList<AudioClip?> Clips { get; }
+	/// <summary>
+	/// How much decoded audio a bank may hold before it switches to decoding on demand.
+	///
+	/// 32MB of float is about six minutes of mono at 22,050Hz, which clears every bank the lobby
+	/// touches - the largest is jungle's ambience at 8MB - and catches the speech banks, which
+	/// are the only things anywhere near it.
+	/// </summary>
+	private const int DecodeEverythingBelow = 32 * 1024 * 1024;
 
 	/// <summary>How long each sample is, for <see cref="SoundCategoryFile.ReadSamples"/>.</summary>
 	public IReadOnlyList<TimeSpan> Durations { get; }
 
 	public string Path { get; }
 
-	public int Count => Clips.Count;
+	public int Count => _clips.Length;
 
-	private SoundBank( string path, AudioClip?[] clips, TimeSpan[] durations )
+	private readonly AudioClip?[] _clips;
+
+	/// <summary>
+	/// The still-compressed samples, or null once the whole bank has been decoded. An entry goes
+	/// null as it is decoded, so nothing holds the .mp2 bytes for longer than it needs to.
+	/// </summary>
+	private readonly (string Name, byte[] Data)[]? _encoded;
+
+	/// <summary>Which entries have been through <see cref="AudioClip.Decode"/>, decoded or not.</summary>
+	private readonly bool[] _tried;
+
+	private SoundBank( string path, AudioClip?[] clips, TimeSpan[] durations,
+		(string, byte[])[]? encoded )
 	{
 		Path = path;
-		Clips = clips;
 		Durations = durations;
+		_clips = clips;
+		_encoded = encoded;
+		_tried = new bool[clips.Length];
 	}
 
 	/// <summary>
@@ -58,15 +86,30 @@ public sealed class SoundBank
 			var clips = new AudioClip?[archive.soundFiles.Count];
 			var durations = new TimeSpan[archive.soundFiles.Count];
 
+			// The .sdt header carries each entry's decoded size, so how much this bank would cost
+			// is known before a single frame is decoded.
+			var decoded = archive.soundFiles.Sum( entry => (long)entry.DecodedSize * 2 );
+			var lazy = decoded > DecodeEverythingBelow;
+
+			var encoded = lazy ? new (string, byte[])[archive.soundFiles.Count] : null;
+
 			for ( int i = 0; i < archive.soundFiles.Count; ++i )
 			{
 				var entry = archive.soundFiles[i];
 
 				durations[i] = entry.Duration;
-				clips[i] = AudioClip.Decode( entry.Name, entry.SoundData );
+
+				if ( lazy )
+					encoded![i] = (entry.Name, entry.SoundData);
+				else
+					clips[i] = AudioClip.Decode( entry.Name, entry.SoundData );
 			}
 
-			return new SoundBank( file, clips, durations );
+			if ( lazy )
+				Log.Info( $"Sound bank '{file}': {clips.Length} samples, "
+					+ $"{decoded / (1024 * 1024)}MB decoded - decoding on demand" );
+
+			return new SoundBank( file, clips, durations, encoded );
 		}
 		catch ( Exception e )
 		{
@@ -123,7 +166,34 @@ public sealed class SoundBank
 
 	/// <summary>A bank with nothing in it, for when one named by a category is missing.</summary>
 	public static SoundBank Empty( string path )
-		=> new( path, Array.Empty<AudioClip?>(), Array.Empty<TimeSpan>() );
+		=> new( path, Array.Empty<AudioClip?>(), Array.Empty<TimeSpan>(), null );
 
-	public AudioClip? this[int index] => index >= 0 && index < Clips.Count ? Clips[index] : null;
+	/// <summary>
+	/// The sample at <paramref name="index"/>, decoding it first if this bank is holding it
+	/// compressed, or null if there is nothing there or it would not decode.
+	///
+	/// Called from the game thread only - the mixer is handed clips, never the bank - so the
+	/// caching needs no lock of its own.
+	/// </summary>
+	public AudioClip? this[int index]
+	{
+		get
+		{
+			if ( index < 0 || index >= _clips.Length )
+				return null;
+
+			if ( _encoded == null || _tried[index] )
+				return _clips[index];
+
+			_tried[index] = true;
+
+			var (name, data) = _encoded[index];
+			_clips[index] = AudioClip.Decode( name, data );
+
+			// Whether it decoded or not, the compressed bytes have had their one chance.
+			_encoded[index] = default;
+
+			return _clips[index];
+		}
+	}
 }
