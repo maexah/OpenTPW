@@ -40,6 +40,12 @@ namespace OpenTPW;
 /// <see cref="Audio.Duck"/> - and held across queued lines, where the original lifts and restores it
 /// between them in a frame nobody hears but a ramp would make a swell.
 /// </para>
+/// <para>
+/// <b>Timing.</b> Nothing he does is counted in frames, so he moves the same at any frame rate.
+/// His clips sit on a timeline from the moment a line starts - see <see cref="ClipSequence"/> -
+/// where the original starts each one on the frame after it notices the last has finished, and so
+/// falls a little further behind at every change the slower it runs.
+/// </para>
 /// </summary>
 public sealed class LobbyAdvisor : Entity
 {
@@ -137,8 +143,11 @@ public sealed class LobbyAdvisor : Entity
 	private float _gesturesEndAt = float.NegativeInfinity;
 
 	private readonly List<int> _gestures = new();
-	private int _gesture;
-	private float _gestureTime;
+
+	/// <summary>The clips for the current line, on a timeline that starts at <see cref="_gesturesStartedAt"/>.</summary>
+	private ClipSequence _sequence = ClipSequence.Empty;
+
+	private float _gesturesStartedAt;
 
 	private int _mouth = 1;
 	private float _nextMouthAt;
@@ -298,8 +307,10 @@ public sealed class LobbyAdvisor : Entity
 
 		// The clips' total is counted from the moment the sample is due, not from now.
 		_gesturesEndAt = _speakAt + (gesturesMilliseconds / 1000f);
-		_gesture = 0;
-		_gestureTime = 0f;
+
+		// What he is seen doing is the clips at their full lengths, clip 14 included, starting now.
+		_sequence = new ClipSequence( _gestures, clip => _figure?.ClipMilliseconds( clip ) ?? 0 );
+		_gesturesStartedAt = Time.Now;
 
 		_lips = LipFile.TryLoad( $"global/Speech/lips/sp_{sample:000}.lip", out var lips ) ? lips : null;
 
@@ -377,21 +388,12 @@ public sealed class LobbyAdvisor : Entity
 		if ( _figure == null || !_shown )
 			return;
 
-		if ( _gestures.Count > 0 && _gesture < _gestures.Count )
-		{
-			_gestureTime += Time.Delta;
+		// Each clip starts when the one before it ends and the last holds its final frame - asked of
+		// the timeline by how long ago the line began, so no frame rate can leave him behind.
+		var sinceGesturesStarted = Time.Now - _gesturesStartedAt;
 
-			var length = _figure.ClipMilliseconds( _gestures[_gesture] ) / 1000f;
-
-			// Each clip starts when the one before it ends; the last holds its final frame.
-			if ( _gestureTime >= length && _gesture < _gestures.Count - 1 )
-			{
-				_gesture++;
-				_gestureTime = 0f;
-			}
-
-			_figure.Pose( _gestures[_gesture], _gestureTime );
-		}
+		if ( _sequence.TryLocate( sinceGesturesStarted, out var clip, out var intoClip ) )
+			_figure.Pose( clip, intoClip );
 
 		var talking = _voice is { Playing: true } && _lips != null
 			&& _lips.IsTalking( TimeSpan.FromSeconds( Time.Now - _voiceStartedAt ) );
@@ -410,8 +412,7 @@ public sealed class LobbyAdvisor : Entity
 		// the bottom of the screen - and once it has played out he is gone, until the next line
 		// brings him back up with clip 14. In the original he ducks and is gone, rather than holding
 		// his last pose.
-		if ( !Busy && _queue.Count == 0 && _gesture == _gestures.Count - 1
-			&& _gestureTime >= _figure.ClipMilliseconds( _gestures[_gesture] ) / 1000f )
+		if ( !Busy && _queue.Count == 0 && _sequence.Count > 0 && _sequence.IsFinished( sinceGesturesStarted ) )
 			_shown = false;
 	}
 
@@ -459,7 +460,7 @@ public sealed class LobbyAdvisor : Entity
 			? $"about to say {_pending}"
 			: _voice is { Playing: true } ? $"saying {_voice.Name}" : Busy ? "finishing" : "quiet";
 
-		var clip = _gestures.Count > 0 && _gesture < _gestures.Count ? _gestures[_gesture] : 0;
+		var clip = _sequence.TryLocate( Time.Now - _gesturesStartedAt, out var current, out _ ) ? current : 0;
 
 		return $"{what} queued={_queue.Count} duck={Audio.DuckLevel:0.00} shown={_shown} clip={clip} mouth={_mouth} "
 			+ $"samples={_speech?.EffectIds.Count() ?? 0}";
