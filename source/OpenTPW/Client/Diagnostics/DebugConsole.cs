@@ -10,7 +10,8 @@ namespace OpenTPW;
 ///
 /// Disabled unless OPENTPW_DEBUG_CONSOLE=1 is set, and costs one boolean test per frame when off.
 /// To remove entirely: delete this file, the one call site in Level.Update(), Time.Paused and Time.StepFrames, and
-/// the four members on LobbyCameraMode and LobbyWeather marked as being for it.
+/// the four members on LobbyCameraMode and LobbyWeather marked as being for it, and the two on
+/// LobbyAudio.
 ///
 /// Usage:
 ///
@@ -174,13 +175,31 @@ public static class DebugConsole
 				Reply( State() );
 				break;
 
+			case "volume":
+				if ( parts.Length > 1 )
+					Audio.MasterVolume = Argument( 1, Audio.MasterVolume );
+
+				Reply( $"volume={Audio.MasterVolume:0.00}" );
+				break;
+
+			case "mute":
+				if ( LobbyAudio.Current != null )
+					LobbyAudio.Current.Muted = parts.Length < 2 || parts[1] != "0";
+
+				Reply( $"muted={LobbyAudio.Current?.Muted}" );
+				break;
+
+			case "sound":
+				Reply( LobbyAudio.Current?.State() ?? "no lobby audio" );
+				break;
+
 			case "quit":
 				Reply( "quitting" );
 				Environment.Exit( 0 );
 				break;
 
 			default:
-				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/near/stats/state/quit" );
+				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/near/stats/state/volume/mute/sound/quit" );
 				break;
 		}
 	}
