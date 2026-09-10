@@ -117,14 +117,15 @@ public class Level
 		// scattered, and do not overlap each other.
 		Entity.All.ForEach( entity => entity.RenderTranslucent() );
 
-		// Then whatever sits on the screen rather than in the scene - the advisor. Depth is
-		// cleared first so the world cannot poke through it: the original draws him in screen
-		// space, flattened almost to nothing in depth, in front of everything.
-		global::Global.Render.CommandList.ClearDepthStencil( 1 );
-		Entity.All.ForEach( entity => entity.RenderOverlay() );
-
 		// And the HUD on top of the finished world. Nothing in either pass above can reach it,
 		// because it is not an entity at all - see RootPanel.
 		Hud.Render();
+
+		// Then whatever sits on the screen in front of everything, the HUD included - the advisor,
+		// who covers whatever he pops up over. Depth is cleared first so nothing drawn before can
+		// cut into him: the original draws him in screen space, flattened almost to nothing in
+		// depth.
+		global::Global.Render.CommandList.ClearDepthStencil( 1 );
+		Entity.All.ForEach( entity => entity.RenderOverlay() );
 	}
 }
