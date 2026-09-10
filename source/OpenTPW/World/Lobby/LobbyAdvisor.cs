@@ -303,8 +303,10 @@ public sealed class LobbyAdvisor : Entity
 	}
 
 	/// <summary>
-	/// Stops him mid-sentence, forgets what was queued, and lets the mix back up. Interrupting him
-	/// is the one thing that takes him off the screen - 0x005996d0.
+	/// Stops him mid-sentence, forgets what was queued, and lets the mix back up. He leaves the
+	/// screen at once rather than ducking away, as the original's stop paths take him off it
+	/// (0x005994e0 and 0x005996d0, through their "Kill advisor" call). The original's interruption
+	/// noise - see Advisor_StopSpeaking - is not played yet.
 	/// </summary>
 	internal void Hush()
 	{
