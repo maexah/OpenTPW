@@ -13,17 +13,20 @@ public class Level
 	/// What distance fades to. Static so the shaders' per-draw uniform fill can reach it the same
 	/// way it reaches the sun.
 	///
-	/// The original's lobby uses one constant here, 0xFF44DDFF, and never varies it by park. It is
-	/// also what the frame is cleared to, so the gaps between the sky's cloud layers show sky
-	/// rather than black.
+	/// <see cref="Sky"/> keeps it at roughly what the sky comes to where it meets the horizon, so
+	/// a distant island on a storming Halloween hazes into the storm rather than into a bright
+	/// blue day. It is also what the frame is cleared to, so the gaps between the sky's cloud
+	/// layers show sky rather than black. The value below is only what the first frame uses -
+	/// it is the constant the original's lobby fogs with, 0xFF44DDFF.
 	/// </summary>
 	public static Vector3 FogColour { get; set; } = new( 0x44 / 255f, 0xDD / 255f, 0xFF / 255f );
 
 	/// <summary>
-	/// How thick that fade is, and whether there is one at all. Off in the lobby, as it is in the
-	/// original's island view - see <see cref="ObjectUniformBuffer.g_flFogDensity"/>.
+	/// How thick the haze is, as one over the distance it takes to fade something to 1/e of
+	/// itself. Six hundred puts a neighbouring island at about a third hazed and the far ocean
+	/// effectively gone, which is roughly where the old fixed curve sat before it saturated.
 	/// </summary>
-	public static float FogDensity { get; set; }
+	public static float FogDensity { get; set; } = 1f / 600f;
 
 	public SettingsFile Global { get; private init; }
 

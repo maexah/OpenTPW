@@ -150,12 +150,16 @@ fragment {
         // dissolve - the model keeps its shape all the way out instead of eroding.
         fragColor = vec4(vOutColor, vTextureSample.a * g_oUbo.g_flOpacity);
 
-        // Calculate fog using view space depth
+        // Haze. vWorldPosition is view space despite the name - see where it is written - so this
+        // is distance from the camera, counted in e-foldings of g_flFogDensity.
+        //
+        // Models fog toward a colour rather than fading out the way the water does: they are
+        // solid, they overlap each other, and they are drawn in creation order with no sorting,
+        // so making them translucent would show one island through another.
         float viewSpaceDepth = length(vs_out.vWorldPosition);
-        float fogFactor = exp(viewSpaceDepth * 0.01) * g_oUbo.g_flFogDensity;
+        float fogFactor = 1.0 - exp( -viewSpaceDepth * g_oUbo.g_flFogDensity );
         fogFactor = clamp( fogFactor, 0, 1 );
-        
-        // Mix with fog
+
         fragColor.xyz = mix(fragColor.xyz, g_oUbo.g_vFogColour, fogFactor);
     }
 }

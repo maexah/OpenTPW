@@ -123,22 +123,34 @@ public class Sky : Entity
 	public float Flash { get; set; }
 
 	private readonly SkyPiece[] _pieces;
+	private readonly CloudLayer[] _layers;
 	private readonly byte[] _tintPixel = [255, 255, 255, 255];
 	private readonly Texture _tintRamp;
+
+	// What the sky averages out to, kept so its colour at the horizon can be worked out each
+	// frame without reading anything back off the GPU - see HorizonColour.
+	private readonly Vector3 _bandColour;
+	private readonly Vector3 _gradientColour;
+	private readonly float _cloudCoverage;
 
 	public Sky()
 	{
 		var centre = LobbyCentre();
 		var layers = BuildLayers();
 
+		_layers = layers;
+
 		// Loaded once and shared: a Texture is a GPU allocation that is never released, and four
 		// cloud layers drawing the same file have no reason to hold four copies of it.
-		var bandTexture = LoadTexture( $"{SkyDirectory}/sky_cyl.tga" );
-		var cloudTexture = LoadTexture( $"{SkyDirectory}/sky.tga" );
+		var bandTexture = LoadTexture( $"{SkyDirectory}/sky_cyl.tga", out var bandAverage );
+		var cloudTexture = LoadTexture( $"{SkyDirectory}/sky.tga", out var cloudAverage );
+
+		_bandColour = new Vector3( bandAverage.X, bandAverage.Y, bandAverage.Z );
+		_cloudCoverage = cloudAverage.W;
 
 		_tintRamp = new Texture( _tintPixel, 1, 1 );
 
-		var gradient = GradientRamp();
+		var gradient = GradientRamp( out _gradientColour );
 		var pieces = new List<SkyPiece>
 		{
 			// The band goes down first: it is the furthest thing there is, and the clouds are
@@ -184,6 +196,35 @@ public class Sky : Entity
 
 		foreach ( var piece in _pieces )
 			piece.Brightness = brightness;
+
+		Level.FogColour = HorizonColour( brightness );
+	}
+
+	/// <summary>
+	/// Roughly what the sky comes to where it meets the horizon - the band, with the cloud layers
+	/// composited over it in the order they are drawn, each covering the average fraction of
+	/// sky.tga that is opaque.
+	///
+	/// This is what distance hazes toward, and what the frame is cleared to behind the gaps in the
+	/// clouds. It does not have to be exact: the ocean, which is the one thing that reaches the
+	/// horizon, fades out into the real sky rather than toward this - see content/shaders/water.
+	/// What it has to do is follow the park, so a distant island on a storming Halloween hazes
+	/// into a storm rather than into a bright blue day.
+	/// </summary>
+	private Vector3 HorizonColour( float brightness )
+	{
+		var colour = _bandColour;
+
+		for ( int i = 0; i < _layers.Length; ++i )
+		{
+			// Only the first layer's ramp carries the park's colour; the rest keep the gradient.
+			var layer = (i == 0 ? Tint : _gradientColour) * brightness;
+			var alpha = (_cloudCoverage * _layers[i].Opacity).Clamp( 0f, 1f );
+
+			colour = colour.LerpTo( layer, alpha );
+		}
+
+		return colour;
 	}
 
 	private static byte Component( float value ) => (byte)(value.Clamp( 0f, 1f ) * 255f);
@@ -201,10 +242,12 @@ public class Sky : Entity
 	/// The cloud layers' colour ramp: sky_rgb.tga reduced to 16x16 by sampling the middle of each
 	/// cell, which is how FUN_00585ce0 builds the original's table.
 	/// </summary>
-	private static Texture GradientRamp()
+	private static Texture GradientRamp( out Vector3 average )
 	{
 		var path = $"{SkyDirectory}/sky_rgb.tga";
 		var image = Decode( path );
+
+		average = Vector3.One;
 
 		if ( image == null || image.Width < GridSize || image.Height < GridSize )
 		{
@@ -230,7 +273,31 @@ public class Sky : Entity
 			}
 		}
 
+		var mean = Average( ramp );
+		average = new Vector3( mean.X, mean.Y, mean.Z );
+
 		return new Texture( ramp, GridSize, GridSize );
+	}
+
+	/// <summary>The mean of every pixel, 0-1 per channel, alpha in W.</summary>
+	private static Vector4 Average( byte[] pixels )
+	{
+		if ( pixels.Length < 4 )
+			return Vector4.One;
+
+		double r = 0, g = 0, b = 0, a = 0;
+
+		for ( int i = 0; i + 3 < pixels.Length; i += 4 )
+		{
+			r += pixels[i];
+			g += pixels[i + 1];
+			b += pixels[i + 2];
+			a += pixels[i + 3];
+		}
+
+		var count = (pixels.Length / 4) * 255d;
+
+		return new Vector4( (float)(r / count), (float)(g / count), (float)(b / count), (float)(a / count) );
 	}
 
 	/// <summary>
@@ -250,15 +317,19 @@ public class Sky : Entity
 		return ImageResult.FromMemory( bytes, ColorComponents.RedGreenBlueAlpha );
 	}
 
-	private static Texture LoadTexture( string path )
+	private static Texture LoadTexture( string path, out Vector4 average )
 	{
 		var image = Decode( path );
+
+		average = Vector4.One;
 
 		if ( image == null )
 		{
 			Log.Warning( $"Sky texture '{path}' is missing - that part of the sky will draw white" );
 			return Texture.Missing;
 		}
+
+		average = Average( image.Data );
 
 		// Wrapped rather than clamped, because the cloud layers tile the texture across the grid
 		// several times over and scroll it endlessly.
