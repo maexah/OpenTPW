@@ -171,6 +171,18 @@ namespace OpenTPW;
 /// </summary>
 public class AnimationFile : BaseFormat
 {
+	/// <summary>
+	/// How many keyframes an animation moves through in a second: keyframe numbers are frames at
+	/// thirty a second. The engine advances a playing animation by elapsed milliseconds times 0.03
+	/// (0x00472f60) and works out a clip's length as frames * 1000 / 30 (0x00474070).
+	///
+	/// It is a speed, not a frame rate to draw at. The engine's samplers take the frame as a
+	/// fraction - its Bezier sampler, 0x00474840, splits it into a segment and a position within
+	/// it - so the poses between keyframes are interpolated rather than held, and a pose is the
+	/// same function of time whether it is drawn thirty times a second or a hundred and forty-four.
+	/// </summary>
+	public const float FramesPerSecond = 30f;
+
 	/// <summary>One record of a vertex morph track: some channels, sampled at some frames.</summary>
 	public class Track
 	{

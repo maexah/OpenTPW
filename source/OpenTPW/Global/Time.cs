@@ -14,8 +14,9 @@ public class Time
 	/// independent constants come out sensible - SPINSPEED(0.02) a twelve-second orbit, the
 	/// camera's 0.1 a quarter-second lag, the butterflies' 1.5 a believable 37.5 units a second -
 	/// where read per second they would be a five-minute orbit and a ten-second lag. It is a
-	/// separate question from the rate .md2 animations play at, and is kept apart from it so that
-	/// settling one cannot quietly change the other.
+	/// separate question from <see cref="AnimationFile.FramesPerSecond"/>, the rate .md2 animations
+	/// play at - 30, from the engine's own code - and is kept apart from it so that settling one
+	/// cannot quietly change the other.
 	/// </summary>
 	public const float TicksPerSecond = 25f;
 

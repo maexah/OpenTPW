@@ -80,7 +80,7 @@ public class MeshRotator
 		}
 
 		var animation = _animations[_current];
-		var frame = animation.FirstFrame + (_elapsed * MeshAnimator.FramesPerSecond);
+		var frame = animation.FirstFrame + (_elapsed * AnimationFile.FramesPerSecond);
 
 		foreach ( var track in animation.RotationTracks )
 		{
@@ -213,5 +213,5 @@ public class MeshRotator
 	}
 
 	private float Duration( int index )
-		=> Math.Max( _motionEnds[index] - _animations[index].FirstFrame, 1 ) / MeshAnimator.FramesPerSecond;
+		=> Math.Max( _motionEnds[index] - _animations[index].FirstFrame, 1 ) / AnimationFile.FramesPerSecond;
 }

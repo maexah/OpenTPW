@@ -23,12 +23,6 @@ namespace OpenTPW;
 /// </summary>
 public class MeshAnimator
 {
-	/// <summary>
-	/// Keyframe indices are authoring frames. The lobby animations span 0..100 and 0..200,
-	/// which at 25fps are a 4 and an 8 second loop.
-	/// </summary>
-	public const float FramesPerSecond = 25f;
-
 	private readonly AnimationFile[] _animations;
 	private readonly int _targetIndex;
 	private readonly ModelFile.Mesh _mesh;
@@ -95,7 +89,7 @@ public class MeshAnimator
 			duration = Duration( animation );
 		}
 
-		Pose( animation, animation.FirstFrame + (_elapsed * FramesPerSecond) );
+		Pose( animation, animation.FirstFrame + (_elapsed * AnimationFile.FramesPerSecond) );
 	}
 
 	/// <summary>
@@ -221,7 +215,7 @@ public class MeshAnimator
 	}
 
 	private static float Duration( AnimationFile animation )
-		=> Math.Max( animation.LastFrame - animation.FirstFrame, 1 ) / FramesPerSecond;
+		=> Math.Max( animation.LastFrame - animation.FirstFrame, 1 ) / AnimationFile.FramesPerSecond;
 
 	private Vector3 SamplePosition( AnimationFile.MorphTrack track, int channelId, float frame )
 	{

@@ -35,13 +35,6 @@ namespace OpenTPW;
 /// </summary>
 public sealed class AdvisorModel
 {
-	/// <summary>
-	/// The engine plays .md2 animations at thirty frames a second: it advances an animation by
-	/// elapsed milliseconds times 0.03 (0x00472f60), and works out a clip's length as frames * 1000
-	/// / 30 (0x00474070).
-	/// </summary>
-	public const float FramesPerSecond = 30f;
-
 	/// <summary>The lowest costume id that is part of him rather than something he puts on.</summary>
 	private const int FirstOwnPartId = 19;
 
@@ -102,7 +95,7 @@ public sealed class AdvisorModel
 	/// <summary>How long clip <paramref name="clip"/> plays for, in the engine's whole milliseconds.</summary>
 	public int ClipMilliseconds( int clip )
 		=> clip >= 1 && clip < _clips.Length && _clips[clip] is { } animation
-			? Math.Max( animation.LastFrame - animation.FirstFrame, 0 ) * 1000 / 30
+			? (int)(Math.Max( animation.LastFrame - animation.FirstFrame, 0 ) * 1000 / AnimationFile.FramesPerSecond)
 			: 0;
 
 	/// <summary>
@@ -117,7 +110,7 @@ public sealed class AdvisorModel
 
 		if ( animation != null )
 		{
-			var frame = MathF.Min( animation.FirstFrame + (seconds * FramesPerSecond), animation.LastFrame );
+			var frame = MathF.Min( animation.FirstFrame + (seconds * AnimationFile.FramesPerSecond), animation.LastFrame );
 
 			foreach ( var track in animation.RotationTracks )
 			{
