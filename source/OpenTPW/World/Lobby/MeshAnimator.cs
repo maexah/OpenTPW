@@ -95,6 +95,16 @@ public class MeshAnimator
 			duration = Duration( animation );
 		}
 
+		Pose( animation, animation.FirstFrame + (_elapsed * FramesPerSecond) );
+	}
+
+	/// <summary>
+	/// Shows <paramref name="animation"/> at <paramref name="frame"/> and uploads it, without
+	/// touching this animator's own playback - for a caller that sequences clips itself rather
+	/// than looping through them, which the advisor does. See <see cref="LobbyAdvisor"/>.
+	/// </summary>
+	public void Pose( AnimationFile animation, float frame )
+	{
 		var morph = animation.MorphTrackFor( _targetIndex );
 		var uv = animation.UvTrackFor( _targetIndex );
 
@@ -114,8 +124,6 @@ public class MeshAnimator
 		}
 
 		_atRest = false;
-
-		var frame = animation.FirstFrame + (_elapsed * FramesPerSecond);
 
 		if ( morph != null )
 		{
