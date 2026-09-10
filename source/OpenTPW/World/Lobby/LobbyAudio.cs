@@ -57,11 +57,11 @@ public sealed class LobbyAudio : Entity
 	///
 	/// The original rolls one in sixteen per frame, which taken literally means a busier jungle on
 	/// a faster machine. At the 25fps the rest of its data assumes - see
-	/// <see cref="MeshAnimator.FramesPerSecond"/> - that comes out as about one and a half a
+	/// <see cref="Time.TicksPerSecond"/> - that comes out as about one and a half a
 	/// second, and that is what this uses, so the ambience keeps its pace at any frame rate. The
 	/// effects' own repeat delays do most of the thinning from there.
 	/// </summary>
-	private static readonly float OneShotsPerSecond = MeshAnimator.FramesPerSecond / 16f;
+	private static readonly float OneShotsPerSecond = Time.TicksPerSecond / 16f;
 
 	/// <summary>
 	/// How loud each layer sits, before <see cref="Audio.MasterVolume"/>.

@@ -36,7 +36,7 @@ public sealed class LobbyFlyer : Entity
 	/// <see cref="Time.SmoothingFactor"/> rather than as a raw multiply, which is the same
 	/// behaviour at any frame rate rather than only at 25fps.
 	/// </summary>
-	private const float TurnRate = 0.1f * MeshAnimator.FramesPerSecond;
+	private const float TurnRate = 0.1f * Time.TicksPerSecond;
 
 	/// <summary>
 	/// How close counts as having arrived, squared. The original passes a hard-coded 500 into

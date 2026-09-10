@@ -28,7 +28,7 @@ public class LobbyCameraMode : CameraMode
 	///
 	/// The original's constants are per frame, and only make sense that way: read as per-second
 	/// they would give a ten-second camera lag and a five-minute orbit. At the 25fps the rest of
-	/// the game's data assumes - see <see cref="MeshAnimator.FramesPerSecond"/> - its 0.1 and 0.2
+	/// the game's data assumes - see <see cref="Time.TicksPerSecond"/> - its 0.1 and 0.2
 	/// per frame come out as 2.63/s and 5.58/s, by -25 * ln(1 - perFrame).
 	///
 	/// Only the derivation touches 25fps - the rates themselves are per second, and are applied

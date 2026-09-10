@@ -99,7 +99,7 @@ public sealed record LobbyScript
 		///
 		/// So the butterflies' 1.5 is 37.5 units a second and the bats' 2.5 is 62.5.
 		/// </summary>
-		public float SpeedPerSecond => Speed * MeshAnimator.FramesPerSecond;
+		public float SpeedPerSecond => Speed * Time.TicksPerSecond;
 
 		/// <summary>Half of <see cref="Volume"/>, which is what the random point is picked within.</summary>
 		public Vector3 HalfVolume => Volume * 0.5f;
@@ -118,7 +118,7 @@ public sealed record LobbyScript
 	/// </summary>
 	public float StrikesPerSecond => (Lightning & 1) == 0
 		? 0f
-		: MeshAnimator.FramesPerSecond / (1 << System.Numerics.BitOperations.PopCount( (uint)Lightning ));
+		: Time.TicksPerSecond / (1 << System.Numerics.BitOperations.PopCount( (uint)Lightning ));
 
 	/// <summary>
 	/// Reads a park's script - lobby/jungle.txt and friends. A missing or unreadable file gives

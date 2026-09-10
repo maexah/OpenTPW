@@ -100,7 +100,7 @@ public class Sky : Entity
 			layers[i] = new CloudLayer(
 				Tiling: (7 - i) * MathF.PI / 112f,
 				Scroll: new Vector2( 0.0008f + (i * 0.0005f), 0.00009f - (i * 0.00003f) )
-					* MeshAnimator.FramesPerSecond,
+					* Time.TicksPerSecond,
 				Opacity: (0xCF - (i * 0x38)) / 255f );
 		}
 
