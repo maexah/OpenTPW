@@ -54,17 +54,14 @@ fragment {
     vColor.xyz *= 0.4;
     fragColor = vColor;
 
-    // Haze, as distance over e-foldings rather than the exponential *growth* this used to be -
-    // that reached full strength about three hundred units out and painted everything past it one
-    // flat colour, which on an ocean running to five thousand is most of the water.
+    // Calculate fog using view space depth
     float viewSpaceDepth = length(vs_out.vPositionVs);
-    float fogFactor = 1.0 - exp( -viewSpaceDepth * g_oUbo.g_flFogDensity );
+    float fogFactor = exp(viewSpaceDepth * 0.01) * g_oUbo.g_flFogDensity;
     fogFactor = clamp( fogFactor, 0, 1 );
 
-    // The ocean fades out rather than toward a colour, so it dissolves into whatever the sky
-    // actually is behind it. The sky is drawn first and never writes depth, so this blend is
-    // against the real thing - which means the horizon cannot band however far the sky's own
-    // colour drifts from the fog's, and there is nothing to keep in step by hand.
-    fragColor.a *= 1.0 - fogFactor;
+    // Mix with fog. Opaque, deliberately: the ocean covers everything below the horizon and is
+    // what hides the far edge of the sky's own geometry. Fading it out instead let that show
+    // through as a ridge of grid-shaped peaks.
+    fragColor.xyz = mix(fragColor.xyz, g_oUbo.g_vFogColour, fogFactor);
   }
 }

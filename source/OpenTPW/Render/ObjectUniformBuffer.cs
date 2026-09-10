@@ -39,13 +39,9 @@ struct ObjectUniformBuffer
 	public float g_flOpacity; // 4
 
 	/// <summary>
-	/// How thick the distance fade is, as one over the distance it takes to fade something to 1/e
-	/// of itself.
-	///
-	/// This used to be a fixed exponential *growth* in the shaders, which reached full strength
-	/// about three hundred units out and painted everything past it one flat colour - on an ocean
-	/// running to five thousand, that is most of the water, and it put a hard band between the sea
-	/// and the sky. A real e-folding hazes over the whole distance instead.
+	/// How thick the distance fade is - the multiplier on the shaders' own <c>exp( depth * 0.01 )</c>,
+	/// which used to be hard-coded at 0.025. It is separate so a place can turn the fade off, and
+	/// so its strength is not spread across two shaders.
 	/// </summary>
 	public float g_flFogDensity; // 4
 

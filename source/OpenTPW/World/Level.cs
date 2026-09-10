@@ -22,11 +22,12 @@ public class Level
 	public static Vector3 FogColour { get; set; } = new( 0x44 / 255f, 0xDD / 255f, 0xFF / 255f );
 
 	/// <summary>
-	/// How thick the haze is, as one over the distance it takes to fade something to 1/e of
-	/// itself. Six hundred puts a neighbouring island at about a third hazed and the far ocean
-	/// effectively gone, which is roughly where the old fixed curve sat before it saturated.
+	/// How thick the haze is - the multiplier on the shaders' <c>exp( depth * 0.01 )</c>, so it is
+	/// what the fade is at zero distance and it reaches full strength around three hundred and
+	/// seventy units out. Clear up close and a wall at the horizon, which is the shape this has
+	/// always had.
 	/// </summary>
-	public static float FogDensity { get; set; } = 1f / 600f;
+	public static float FogDensity { get; set; } = 0.025f;
 
 	public SettingsFile Global { get; private init; }
 

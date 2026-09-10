@@ -119,8 +119,21 @@ public class Sky : Entity
 	/// </summary>
 	public Vector3 Tint { get; set; } = LobbyScript.DefaultSkyColour;
 
-	/// <summary>Lifts the whole sky toward white while a strike is on screen.</summary>
-	public float Flash { get; set; }
+
+	/// <summary>
+	/// How far above eye level the sky's haze clears.
+	///
+	/// The sky is not fogged by distance the way everything else is - see the note in
+	/// content/shaders/sky. It hazes by height, fully at eye level and not at all this far above
+	/// it, which is what seals the join with the sea: the dome comes down to eye level exactly
+	/// where the sea reaches the horizon, so both sides of that line are the fog colour whatever
+	/// colour that is and wherever the camera sits.
+	///
+	/// The height is a matter of how many degrees of haze look right rather than of anything read
+	/// out of the original, and the horizon band's own half-height is the scale the sky already
+	/// works in. It puts the haze in the last four degrees or so above the horizon.
+	/// </summary>
+	private const float HazeHeight = BandTop;
 
 	private readonly SkyPiece[] _pieces;
 	private readonly CloudLayer[] _layers;
@@ -164,20 +177,20 @@ public class Sky : Entity
 			// keep the gradient sampled out of sky_rgb.tga.
 			var ramp = i == 0 ? _tintRamp : gradient;
 
-			pieces.Add( SkyPiece.Clouds( centre, layers[i], cloudTexture, ramp, mirrored: false ) );
+			pieces.Add( SkyPiece.Clouds( centre, layers[i], cloudTexture, ramp ) );
 		}
 
-		// And again upside down, which is what the lobby's own flag (0x2000000, set by
-		// FUN_005dcfe0 and tested at the end of the draw) turns on. The dome alone is a disc: it
-		// stops where it would drop below the horizon band, and past that edge there is no sky at
-		// all. Its reflection is a bowl rising from 180 below the centre to meet that edge, and
-		// the two together close the sky into a lens with the camera inside it.
-		for ( int i = 0; i < layers.Length; ++i )
-		{
-			var ramp = i == 0 ? _tintRamp : gradient;
-
-			pieces.Add( SkyPiece.Clouds( centre, layers[i], cloudTexture, ramp, mirrored: true ) );
-		}
+		// The lobby's own flag (0x2000000, set by FUN_005dcfe0 and tested at the end of the draw)
+		// draws all of that a second time upside down, as a bowl below. That is not reproduced,
+		// and the reason is the sea.
+		//
+		// The original's lobby has none: its islands hang around a globe, so below the horizon is
+		// open sky and the bowl is what fills it. Ours sits on an ocean that runs out to five
+		// thousand and covers everything below the horizon by itself. The dome already reaches
+		// three to six degrees below eye level - further down than the sea's own far edge - so
+		// there is no gap for the bowl to fill, and every triangle of it would be behind water.
+		// All it ever did here was show through as a second bank of cloud with a ridge of
+		// grid-shaped peaks along the horizon.
 
 		_pieces = [.. pieces];
 	}
@@ -190,41 +203,41 @@ public class Sky : Entity
 
 		_tintRamp.UpdatePixels( _tintPixel );
 
-		// A strike lights the whole sky rather than only the one layer carrying the park's colour,
-		// so it goes on the brightness every piece is drawn with instead of into the tint.
-		var brightness = 1f + Flash;
-
-		foreach ( var piece in _pieces )
-			piece.Brightness = brightness;
-
-		Level.FogColour = HorizonColour( brightness );
+		Level.FogColour = HorizonColour();
 	}
 
 	/// <summary>
-	/// Roughly what the sky comes to where it meets the horizon - the band, with the cloud layers
-	/// composited over it in the order they are drawn, each covering the average fraction of
-	/// sky.tga that is opaque.
+	/// What the sky comes to where it meets the horizon: the four cloud layers composited in the
+	/// order they are drawn, each covering the average fraction of sky.tga that is opaque, and
+	/// then divided by how much of the result they actually cover.
 	///
-	/// This is what distance hazes toward, and what the frame is cleared to behind the gaps in the
-	/// clouds. It does not have to be exact: the ocean, which is the one thing that reaches the
-	/// horizon, fades out into the real sky rather than toward this - see content/shaders/water.
-	/// What it has to do is follow the park, so a distant island on a storming Halloween hazes
-	/// into a storm rather than into a bright blue day.
+	/// That division is what makes it a fixed point - the colour the sky settles on if you keep
+	/// laying these layers over it - and it is why the horizon band is not in here. The band spans
+	/// 36 either side of the water, and the lobby camera sits between 32 and 58 above it, so at the
+	/// horizon the camera is level with the band's top or above it and a horizontal ray misses the
+	/// band entirely. Compositing over it made this too bright by up to twenty levels, most of it
+	/// on the two parks with the darkest skies.
+	///
+	/// This is what distance hazes toward and what the frame is cleared to behind the gaps in the
+	/// clouds, so it has to follow the park: a distant island on a storming Halloween hazes into
+	/// the storm rather than into a bright blue day.
 	/// </summary>
-	private Vector3 HorizonColour( float brightness )
+	private Vector3 HorizonColour()
 	{
-		var colour = _bandColour;
+		var colour = Vector3.Zero;
+		var covered = 0f;
 
 		for ( int i = 0; i < _layers.Length; ++i )
 		{
 			// Only the first layer's ramp carries the park's colour; the rest keep the gradient.
-			var layer = (i == 0 ? Tint : _gradientColour) * brightness;
+			var layer = i == 0 ? Tint : _gradientColour;
 			var alpha = (_cloudCoverage * _layers[i].Opacity).Clamp( 0f, 1f );
 
 			colour = colour.LerpTo( layer, alpha );
+			covered = covered.LerpTo( 1f, alpha );
 		}
 
-		return colour;
+		return covered > 0.001f ? colour / covered : _bandColour;
 	}
 
 	private static byte Component( float value ) => (byte)(value.Clamp( 0f, 1f ) * 255f);
@@ -353,9 +366,13 @@ public class Sky : Entity
 			public Vector4 g_vTint;
 			public Vector4 g_vUv;
 			public Vector4 g_vRamp;
-		}
 
-		public float Brightness { get; set; } = 1f;
+			/// <summary>The haze colour in xyz - see content/shaders/sky.</summary>
+			public Vector4 g_vFog;
+
+			/// <summary>Eye height in x, how far above it the haze clears in y.</summary>
+			public Vector4 g_vHaze;
+		}
 
 		private readonly Vector4 _tint;
 		private readonly Vector4 _ramp;
@@ -445,17 +462,9 @@ public class Sky : Entity
 			}
 		}
 
-		/// <summary>
-		/// One cloud layer on the 16x16 dome, either the sky above or its reflection below.
-		/// </summary>
-		public static SkyPiece Clouds( Vector3 centre, CloudLayer layer, Texture texture, Texture ramp,
-			bool mirrored )
+		/// <summary>One cloud layer on the shared 16x16 dome.</summary>
+		public static SkyPiece Clouds( Vector3 centre, CloudLayer layer, Texture texture, Texture ramp )
 		{
-			// The original mirrors through the vertical axis as well as the horizon - (-x, -y, -h)
-			// - but the grid is square and centred, so negating x and y only renames the vertices.
-			// What is left that matters is the height.
-			var flip = mirrored ? -1f : 1f;
-
 			var vertices = new Vertex[GridSize * GridSize];
 			var heights = new float[GridSize * GridSize];
 
@@ -468,11 +477,7 @@ public class Sky : Entity
 					var height = GridHeight - (MathF.Sqrt( (x * x) + (y * y) ) * Droop);
 
 					var index = (row * GridSize) + col;
-
-					// Culling is decided on the sky's own heights, so the reflection keeps exactly
-					// the triangles the sky has and its rim lands on the sky's edge.
 					heights[index] = height;
-					height *= flip;
 
 					// The grid index is the texture coordinate and the shader scales and scrolls
 					// it, so all four layers share this mesh and never touch a vertex buffer.
@@ -498,19 +503,16 @@ public class Sky : Entity
 				}
 			}
 
-			// The ramp follows the grid rather than the world, so the reflection reads it from the
-			// far corner backwards - which is the same texel for the same vertex.
-			var scale = 1f / (GridStep * GridSize) * flip;
-			var origin = centre + new Vector3( GridExtent * 0.5f * flip, GridExtent * 0.5f * flip, 0f ) * -1f;
+			var min = centre - new Vector3( GridExtent * 0.5f, GridExtent * 0.5f, 0f );
 
 			return new SkyPiece( vertices, [.. indices], texture, ramp,
 				tint: new Vector4( 1f, 1f, 1f, layer.Opacity ),
 				uv: new Vector4( layer.Tiling, layer.Tiling, 0f, 0f ),
 				// One over the span the sixteen ramp texels cover, plus the half texel that lands
 				// vertex (col,row) on texel (col,row) instead of between two of them.
-				rampMapping: new Vector4( origin.X, origin.Y, scale, 0.5f / GridSize ),
+				rampMapping: new Vector4( min.X, min.Y, 1f / (GridStep * GridSize), 0.5f / GridSize ),
 				scroll: layer.Scroll )
-			{ Name = $"Sky clouds{(mirrored ? " (reflected)" : "")} (x{layer.Tiling:F2}, {layer.Opacity:P0})" };
+			{ Name = $"Sky clouds (x{layer.Tiling:F2}, {layer.Opacity:P0})" };
 		}
 
 		private static void AddIfAbove( List<uint> indices, float[] heights, int a, int b, int c )
@@ -544,9 +546,11 @@ public class Sky : Entity
 				g_mView = Camera.ViewMatrix,
 				g_mProj = Camera.ProjMatrix,
 
-				g_vTint = new Vector4( _tint.X * Brightness, _tint.Y * Brightness, _tint.Z * Brightness, _tint.W ),
+				g_vTint = _tint,
 				g_vUv = _uv,
-				g_vRamp = _ramp
+				g_vRamp = _ramp,
+				g_vFog = new Vector4( Level.FogColour.X, Level.FogColour.Y, Level.FogColour.Z, 0f ),
+				g_vHaze = new Vector4( Camera.Position.Z, HazeHeight, 0f, 0f )
 			} );
 
 			Model.Draw();

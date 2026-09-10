@@ -59,10 +59,15 @@ public sealed class LobbyWeather : Entity
 	}
 
 	/// <summary>
-	/// Eases the park's SKYCOLOUR into the sky, and lifts the whole thing toward white for as long
-	/// as a strike is on screen. The sun goes with it: every lit model multiplies by the sun's
-	/// colour, so pushing that up is what makes a strike light the whole scene rather than just
-	/// draw a bright rectangle in the sky.
+	/// Eases the park's SKYCOLOUR into the sky, and pushes the sun up for as long as a strike is on
+	/// screen: every lit model multiplies by the sun's colour, so that is what makes a strike light
+	/// the scene rather than just draw a bright rectangle in it.
+	///
+	/// The sky itself does not flash. It is what the distance hazes toward, so lifting it toward
+	/// white lifts the haze with it - and the sky can only reach white by clipping each of its
+	/// layers separately against the framebuffer, while the haze reaches it exactly, so the two
+	/// arrive at different colours and the horizon shows for as long as the strike lasts. The
+	/// original does not flash its sky either; its flash is a renderer flag on lit geometry.
 	///
 	/// SKYCOLOUR does not paint the sky - it tints one of its four cloud layers, and the horizon
 	/// stays the blue its texture paints whatever the park asks for. See <see cref="Sky"/>.
@@ -87,10 +92,9 @@ public sealed class LobbyWeather : Entity
 			_placed = true;
 		}
 
-		var flash = _lightning.Flash;
-
 		_sky.Tint = _skyColour;
-		_sky.Flash = flash;
+
+		var flash = _lightning.Flash;
 
 		if ( Level.SunLight != null )
 			Level.SunLight.Color = Vector3.One * (1f + (flash * LobbyLightning.MaxFlash));

@@ -25,11 +25,14 @@ vertex {
       vec4 g_vTint;
       vec4 g_vUv;
       vec4 g_vRamp;
+      vec4 g_vFog;
+      vec4 g_vHaze;
   } g_oUbo;
 
   layout( location = 0 ) out struct VS_OUT {
       vec2 vTexCoords;
       vec2 vRampCoords;
+      float vHaze;
   } vs_out;
 
   void main() {
@@ -38,7 +41,14 @@ vertex {
       // The world is Z-up, so the grid lies in xy and the ramp is indexed by both of them.
       vs_out.vRampCoords = ( position.xy - g_oUbo.g_vRamp.xy ) * g_oUbo.g_vRamp.z + g_oUbo.g_vRamp.w;
 
-      gl_Position = g_oUbo.g_mProj * g_oUbo.g_mView * g_oUbo.g_mModel * vec4( position, 1.0 );
+      vec4 pos = g_oUbo.g_mModel * vec4( position, 1.0 );
+
+      // Haze by height rather than by distance. g_vHaze is the eye's own height and how far above
+      // it the haze clears; this is linear in the vertex's height and heights interpolate
+      // linearly, so working it out here is exact and costs the fragment nothing.
+      vs_out.vHaze = ( g_oUbo.g_vHaze.x + g_oUbo.g_vHaze.y - pos.z ) / g_oUbo.g_vHaze.y;
+
+      gl_Position = g_oUbo.g_mProj * g_oUbo.g_mView * pos;
   }
 }
 
@@ -46,6 +56,7 @@ fragment {
   layout( location = 0 ) in struct VS_OUT {
       vec2 vTexCoords;
       vec2 vRampCoords;
+      float vHaze;
   } vs_out;
 
   layout( location = 0 ) out vec4 fragColor;
@@ -58,6 +69,8 @@ fragment {
       vec4 g_vTint;
       vec4 g_vUv;
       vec4 g_vRamp;
+      vec4 g_vFog;
+      vec4 g_vHaze;
   } g_oUbo;
 
   layout( set = 1, binding = 0 ) uniform texture2D Color;
@@ -74,5 +87,17 @@ fragment {
       vec4 vRamp = texture( sampler2D( Ramp, s_Ramp ), vs_out.vRampCoords );
 
       fragColor = vSky * vRamp * g_oUbo.g_vTint;
+
+      // Haze toward the horizon, and the reason it is keyed to height rather than to distance is
+      // that height is what the horizon *is*. The sky drops to eye level exactly where it meets
+      // the sea, so hazing it fully at eye level makes both sides of that join the fog colour by
+      // construction, whatever colour that happens to be and wherever the camera sits. Distance
+      // cannot do that: the dome reaches the horizon anywhere between 600 and 740 units out
+      // depending on how high the camera is, so any curve steep enough to be finished by 600 has
+      // already eaten ten degrees of cloud above it.
+      //
+      // It also buries the grid's own far edge, which sits well below eye level and is where the
+      // cloud texture stretches to nothing and the triangles start to show.
+      fragColor.xyz = mix(fragColor.xyz, g_oUbo.g_vFog.xyz, clamp( vs_out.vHaze, 0.0, 1.0 ));
   }
 }
