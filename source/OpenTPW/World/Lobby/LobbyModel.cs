@@ -17,6 +17,16 @@ public sealed class LobbyModel
 	/// <summary>Each mesh's placement relative to the model origin it was loaded at.</summary>
 	public Vector3[] Offsets { get; }
 
+	/// <summary>
+	/// How far this model reaches from its own origin, after scaling - a loose bounding radius
+	/// taken from the mesh bounds the animation decoder already relies on, so it covers every
+	/// pose a vertex animation can put the model in rather than just its rest one.
+	///
+	/// Used to decide how close to the camera something can get before it has to fade, so that a
+	/// bat and a butterfly fade over their own size rather than a shared guess.
+	/// </summary>
+	public float Radius { get; }
+
 	/// <summary>One per mesh this model's animations morph - a model can morph several.</summary>
 	public MeshAnimator[] Animators { get; } = Array.Empty<MeshAnimator>();
 
@@ -97,6 +107,11 @@ public sealed class LobbyModel
 
 			var offset = new Vector3( world.M41, world.M43, world.M42 );
 			Offsets[meshIndex] = offset;
+
+			// Furthest bound corner from the mesh's own origin, plus how far that origin sits
+			// from the model's. Loose, but never under.
+			var reach = MathF.Max( mesh.BoundsMin.Length, mesh.BoundsMax.Length ) * scale;
+			Radius = MathF.Max( Radius, offset.Length + reach );
 
 			_linearTransforms[meshIndex] = ToWorldSpace( world );
 

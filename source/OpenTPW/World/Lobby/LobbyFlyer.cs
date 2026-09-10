@@ -67,6 +67,31 @@ public sealed class LobbyFlyer : Entity
 	/// </summary>
 	private const float FadeRate = 3.5f;
 
+	/// <summary>
+	/// How close to the camera a flyer may get, in multiples of its own radius, before it is gone
+	/// entirely - and how far away before it is fully solid again.
+	///
+	/// Nothing stops a flyer flying through the camera: its destinations are picked anywhere in a
+	/// box 200 across, and the camera orbits 70 units out inside that box. Left alone one
+	/// eventually fills the screen and clips through the near plane, which is a jarring flash
+	/// rather than a close pass.
+	///
+	/// In multiples of the model's own radius rather than in units, so a bat and a butterfly both
+	/// disappear at the same apparent size rather than the bigger one lingering. At the far end of
+	/// the band a flyer covers about a third of the screen's height, which is as close as it needs
+	/// to get to read as a close pass; by the near end it would have covered nearly all of it.
+	/// </summary>
+	private const float HiddenWithinRadii = 1.8f;
+	private const float SolidBeyondRadii = 6f;
+
+	/// <summary>
+	/// How close any flyer has come to the camera, in multiples of its own radius, and how close
+	/// while still solid enough to notice. For DebugConsole: the first says close passes are
+	/// actually happening, the second says the fade caught them.
+	/// </summary>
+	internal static float DebugClosestApproach = float.MaxValue;
+	internal static float DebugClosestSolid = float.MaxValue;
+
 	private readonly LobbyModel _model;
 	private readonly Random _rng;
 	private readonly LobbyIsland _island;
@@ -152,12 +177,14 @@ public sealed class LobbyFlyer : Entity
 		var onShow = LobbyCameraMode.CurrentIsland == _island ? 1f : 0f;
 
 		_opacity = _opacity.LerpTo( onShow, Time.SmoothingFactor( FadeRate ) );
-		_model.SetOpacity( _opacity );
 
 		// Out of sight: stop flying and stop flapping too. Three of the four swarms are idle at
 		// any one time, which is the whole of their cost gone rather than just their draw.
 		if ( _opacity < 0.004f && onShow <= 0f )
+		{
+			_model.SetOpacity( 0f );
 			return;
+		}
 
 		var toTarget = _target - _position;
 
@@ -179,6 +206,27 @@ public sealed class LobbyFlyer : Entity
 
 		_model.Update( dt );
 		_model.SetTransform( _position, LookAlong( _direction ) );
+
+		// It still flies while it is fading for being close - freezing one in front of the camera
+		// would be far worse than drawing it.
+		var opacity = _opacity * NearCameraFade();
+		_model.SetOpacity( opacity );
+
+		var radii = (_position - Camera.Position).Length / MathF.Max( _model.Radius, 0.001f );
+
+		DebugClosestApproach = MathF.Min( DebugClosestApproach, radii );
+
+		if ( opacity > 0.5f )
+			DebugClosestSolid = MathF.Min( DebugClosestSolid, radii );
+	}
+
+	/// <summary>Fades this flyer out as it closes on the camera - see <see cref="HiddenWithinRadii"/>.</summary>
+	private float NearCameraFade()
+	{
+		var radius = MathF.Max( _model.Radius, 0.001f );
+
+		return (_position - Camera.Position).Length
+			.FadeBetween( radius * HiddenWithinRadii, radius * SolidBeyondRadii );
 	}
 
 	/// <summary>A uniformly random point in the flight volume - the original's only steering input.</summary>

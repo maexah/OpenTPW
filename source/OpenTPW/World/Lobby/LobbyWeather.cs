@@ -29,6 +29,9 @@ public sealed class LobbyWeather : Entity
 	/// <summary>Overrides the script's rain level when set, for DebugConsole.</summary>
 	internal float? DebugRain { get; set; }
 
+	/// <summary>The live bolt, so DebugConsole can report how near the camera it came.</summary>
+	internal LobbyLightning DebugBolt => _lightning;
+
 	/// <summary>Fires a strike now rather than waiting on the roll, for DebugConsole.</summary>
 	internal void DebugStrike() => _lightning.Strike( LobbyCameraMode.CurrentIsland?.Position ?? Vector3.Zero );
 

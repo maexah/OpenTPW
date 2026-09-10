@@ -36,15 +36,20 @@ public sealed class LobbyRain : WeatherSprites
 	private const float DropHalfHeight = 0.5f;
 
 	/// <summary>
-	/// Drops nearer the camera than this are not drawn.
+	/// Where a drop starts shrinking as it nears the camera, and where it has gone entirely.
 	///
 	/// A drop is a quad of fixed size in the world, so one that happens to wrap in a few units
-	/// from the eye covers a huge part of the screen and reads as a falling icicle rather than
-	/// as rain. Real rain has the same drops at the same size much closer to the eye, but they
-	/// are too fast and too out of focus to register; dropping them is nearer the truth than
-	/// drawing them.
+	/// from the eye covers a huge part of the screen and reads as a falling icicle rather than as
+	/// rain. Real rain has the same drops at the same size much closer to the eye, but they are
+	/// too fast and too out of focus to register; dropping them is nearer the truth.
+	///
+	/// Every drop shares one tint, so there is no per-drop alpha to fade - but shrinking the quad
+	/// does the same job here, because what it cancels is exactly the perspective growth that
+	/// caused the problem. A drop's apparent size stays roughly put as it closes, and then it is
+	/// gone. A hard cutoff was doing this with a pop at ten percent of the screen's height.
 	/// </summary>
-	private const float NearCutoff = 9f;
+	private const float NearHidden = 6f;
+	private const float NearSolid = 14f;
 
 	/// <summary>A slow drift, so it doesn't read as a static column of falling dots.</summary>
 	private static readonly Vector3 Wind = new( 5.5f, 2.5f, 0f );
@@ -100,10 +105,9 @@ public sealed class LobbyRain : WeatherSprites
 
 			_drops[i] = Wrap( drop, centre );
 
-			if ( (_drops[i] - Camera.Position).LengthSquared < NearCutoff * NearCutoff )
-				Collapse( i );
-			else
-				WriteQuad( i, _drops[i], Vector3.Up, DropHalfWidth, DropHalfHeight );
+			var near = (_drops[i] - Camera.Position).Length.FadeBetween( NearHidden, NearSolid );
+
+			WriteQuad( i, _drops[i], Vector3.Up, DropHalfWidth * near, DropHalfHeight * near );
 		}
 
 		// Brightening the drops with the level rather than only adding more of them keeps the

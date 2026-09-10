@@ -130,6 +130,16 @@ public static class DebugConsole
 				Reply( $"rain {LobbyWeather.Current?.DebugRain?.ToString( "F2" ) ?? "script"}" );
 				break;
 
+			case "near":
+				if ( parts.Length > 1 && parts[1] == "reset" )
+				{
+					LobbyFlyer.DebugClosestApproach = float.MaxValue;
+					LobbyFlyer.DebugClosestSolid = float.MaxValue;
+				}
+
+				Reply( Near() );
+				break;
+
 			case "stats":
 				Reply( Stats() );
 				break;
@@ -144,9 +154,33 @@ public static class DebugConsole
 				break;
 
 			default:
-				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/settle/strike/rain/stats/state/quit" );
+				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/settle/strike/rain/near/stats/state/quit" );
 				break;
 		}
+	}
+
+	/// <summary>
+	/// How near things have come to the camera, which is otherwise very hard to catch: a flyer
+	/// passing close is a fraction of a second and a bolt landing on the camera is a one in
+	/// sixty-four roll.
+	///
+	/// "closest" says close passes are actually happening, so a clean "solid" number means the
+	/// fade caught them rather than that nothing came near. Both are in multiples of the flyer's
+	/// own radius, which is what the fade band is written in.
+	/// </summary>
+	private static string Near()
+	{
+		static string Radii( float value ) => value == float.MaxValue ? "-" : value.ToString( "F2" );
+
+		var bolt = LobbyWeather.Current?.DebugBolt;
+
+		var boltDistance = bolt == null || bolt.DebugAxisDistance == float.MaxValue
+			? "-"
+			: bolt.DebugAxisDistance.ToString( "F1" );
+
+		return $"near flyers closest={Radii( LobbyFlyer.DebugClosestApproach )}r "
+			+ $"closestSolid={Radii( LobbyFlyer.DebugClosestSolid )}r "
+			+ $"bolt axisDist={boltDistance} opacity={bolt?.DebugOpacity ?? 0f:F2}";
 	}
 
 	private static string Stats()

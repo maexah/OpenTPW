@@ -59,6 +59,24 @@ public static class MathExtensions
 
 	public static float LerpTo( this float a, float b, float t ) => a * (1 - t) + b * t;
 
+	/// <summary>
+	/// Ramps 0 to 1 across a band: 0 at or below <paramref name="hidden"/>, 1 at or above
+	/// <paramref name="shown"/>, smoothstepped between so it eases off at both ends instead of
+	/// starting and stopping abruptly.
+	///
+	/// A threshold would do the same job with one comparison, but a threshold pops - which is the
+	/// whole thing this exists to avoid.
+	/// </summary>
+	public static float FadeBetween( this float value, float hidden, float shown )
+	{
+		if ( shown <= hidden )
+			return value <= hidden ? 0f : 1f;
+
+		var t = ((value - hidden) / (shown - hidden)).Clamp( 0f, 1f );
+
+		return t * t * (3f - (2f * t));
+	}
+
 	public static Vector3 Normalize( this Vector3 vector ) => vector / vector.Length;
 
 	public static Vector3 RandomVector3( float min = 0.0f, float max = 1.0f )

@@ -39,6 +39,26 @@ public sealed class LobbyLightning : WeatherSprites
 	public const float MaxFlash = 1.35f;
 
 	/// <summary>
+	/// How close the camera may be to the bolt's axis before the bolt itself is not drawn, and how
+	/// far away before it is drawn in full.
+	///
+	/// A strike lands anywhere within fifty units of the island and the camera orbits seventy out,
+	/// so a bolt can come down more or less on top of it - and a bolt is five hundred units tall,
+	/// eighteen wide and drawn additively, so at that range it is a full-screen white flash rather
+	/// than lightning. Beyond the far end of the band it covers about a sixth of the screen's
+	/// width, which is what a bolt near the island should look like.
+	///
+	/// Only the drawn column fades. <see cref="Flash"/> does not, so a strike that comes down too
+	/// close to show still lights the scene - which is what a strike just out of frame should do.
+	/// </summary>
+	private const float HiddenWithin = 25f;
+	private const float SolidBeyond = 55f;
+
+	/// <summary>Where the camera is relative to the bolt, and what that did to it. For DebugConsole.</summary>
+	internal float DebugAxisDistance { get; private set; } = float.MaxValue;
+	internal float DebugOpacity { get; private set; }
+
+	/// <summary>
 	/// 0 when nothing is happening, rising to 1 at the peak of a strike. Read by
 	/// <see cref="LobbyWeather"/> to flash the sun and the sky along with the bolt.
 	/// </summary>
@@ -70,6 +90,27 @@ public sealed class LobbyLightning : WeatherSprites
 		_flicker = 0f;
 	}
 
+	/// <summary>
+	/// How much of the bolt to draw, given how near the camera is to it - see
+	/// <see cref="HiddenWithin"/>.
+	///
+	/// Measured sideways from the bolt's axis at the camera's own height rather than from either
+	/// end of it: the bolt is five hundred units tall and leans by at most ten, so the camera is
+	/// always somewhere along its length and the only distance that means anything is the
+	/// horizontal one.
+	/// </summary>
+	private float NearCameraFade()
+	{
+		var rise = _top.Z - _base.Z;
+		var along = rise <= 0.001f ? 0f : ((Camera.Position.Z - _base.Z) / rise).Clamp( 0f, 1f );
+
+		var axis = _base.LerpTo( _top, along );
+
+		DebugAxisDistance = new Vector3( axis.X - Camera.Position.X, axis.Y - Camera.Position.Y, 0f ).Length;
+
+		return DebugAxisDistance.FadeBetween( HiddenWithin, SolidBeyond );
+	}
+
 	protected override void OnUpdate()
 	{
 		if ( _remaining <= 0f )
@@ -77,6 +118,7 @@ public sealed class LobbyLightning : WeatherSprites
 			if ( Flash > 0f )
 			{
 				Flash = 0f;
+				DebugOpacity = 0f;
 				Upload( 0 );
 			}
 
@@ -105,11 +147,14 @@ public sealed class LobbyLightning : WeatherSprites
 		var centre = (_base + _top) * 0.5f;
 		var along = _top - _base;
 
+		brightness *= NearCameraFade();
+
 		// The quad spans the whole bolt, so its "up" is the lean direction and its half-height
 		// is half the bolt's actual length rather than half its vertical extent.
 		WriteQuad( 0, centre, along.Normal, BoltHalfWidth, along.Length * 0.5f );
 
 		Tint = new System.Numerics.Vector4( 0.85f, 0.88f, 1f, brightness );
+		DebugOpacity = brightness;
 
 		Upload( 1 );
 	}
