@@ -45,7 +45,17 @@ struct ObjectUniformBuffer
 	/// </summary>
 	public float g_flFogDensity; // 4
 
-	public float _padding2; // 4
-	public float _padding3; // 4
+	/// <summary>
+	/// How much light a surface gets whichever way it faces. Zero means the shader's own 0.4, which
+	/// is what everything in the world is lit with - so nothing that doesn't set this changes.
+	/// </summary>
+	public float g_flAmbient; // 4
+
+	/// <summary>
+	/// 1 to light with the model's normals turned by its model matrix, 0 for the untransformed
+	/// normals the world has always used. The advisor needs 1: his meshes are turned every which
+	/// way by his node tree, and lit with their raw normals his face and gloves come out grey.
+	/// </summary>
+	public float g_flWorldNormals; // 4
 	public float _padding4; // 4
 }

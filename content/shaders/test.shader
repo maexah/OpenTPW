@@ -17,6 +17,8 @@ vertex {
         vec3 g_vFogColour;
         float g_flOpacity;
         float g_flFogDensity;
+        float g_flAmbient;
+        float g_flWorldNormals;
     } g_oUbo;
 
     layout(location = 0) out VS_OUT {
@@ -24,6 +26,7 @@ vertex {
         vec3 vNormal;
         vec3 vPosition;
         vec3 vWorldPosition;
+        vec3 vWorldNormal;
     } vs_out;
 
     layout(location = 5) out flat int outTexIndex;
@@ -33,6 +36,10 @@ vertex {
         vs_out.vTexCoords = texCoords;
         vs_out.vTexCoords.y = 1.0 - vs_out.vTexCoords.y;
         vs_out.vNormal = normal;
+        // Normals come from the file untouched while positions have Y and Z swapped - see LobbyModel -
+        // so the same swap goes on before the model matrix turns them. Only read when a draw asks
+        // for g_flWorldNormals.
+        vs_out.vWorldNormal = mat3(g_oUbo.g_mModel) * vec3(normal.x, normal.z, normal.y);
         vs_out.vPosition = vec3(g_oUbo.g_mModel * vec4(position, 1.0));
 
         vec4 pos = g_oUbo.g_mModel * vec4(position, 1.0);
@@ -50,6 +57,7 @@ fragment {
         vec3 vNormal;
         vec3 vPosition;
         vec3 vWorldPosition;
+        vec3 vWorldNormal;
     } vs_out;
 
     layout(location = 5) in flat int texIndex;
@@ -69,6 +77,8 @@ fragment {
         vec3 g_vFogColour;
         float g_flOpacity;
         float g_flFogDensity;
+        float g_flAmbient;
+        float g_flWorldNormals;
     } g_oUbo;
 
     layout( set = 1, binding = 0 ) uniform texture2D Color0;
@@ -97,11 +107,11 @@ fragment {
     {
         vec2 finalTexCoords = vs_out.vTexCoords;
 
-        vec3 N = normalize(vs_out.vNormal);
+        vec3 N = normalize(g_oUbo.g_flWorldNormals > 0.5 ? vs_out.vWorldNormal : vs_out.vNormal);
         vec3 L = normalize(g_oUbo.g_vLightPos - vs_out.vWorldPosition);
         
         vec3 vDiffuse = max(dot(N, L), 0.0) * g_oUbo.g_vLightColor;
-        vec3 vAmbient = vec3(0.4);
+        vec3 vAmbient = vec3(g_oUbo.g_flAmbient > 0.0 ? g_oUbo.g_flAmbient : 0.4);
 
         vec4 vTextureSample = vec4(1, 0, 1, 1);
 

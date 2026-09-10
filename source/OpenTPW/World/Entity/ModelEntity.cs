@@ -60,21 +60,23 @@ public partial class ModelEntity : Entity
 	/// model that sits on the screen rather than in the world. Solid half first, then the
 	/// see-through half, the same order the scene uses.
 	/// </summary>
+	/// <param name="ambient">Light every surface gets regardless of facing; 0 for the world's own.</param>
+	/// <param name="worldNormals">Light with normals turned by the model matrix - see ObjectUniformBuffer.</param>
 	public void DrawOverlay( System.Numerics.Matrix4x4 view, System.Numerics.Matrix4x4 projection,
-		Vector3 lightPosition, Vector3 lightColor )
+		Vector3 lightPosition, Vector3 lightColor, float ambient = 0f, bool worldNormals = false )
 	{
 		if ( Opacity <= 0f )
 			return;
 
 		if ( Model != null )
-			Draw( Model, view, projection, lightPosition, lightColor, fogDensity: 0f );
+			Draw( Model, view, projection, lightPosition, lightColor, 0f, ambient, worldNormals );
 
 		if ( TranslucentModel != null )
-			Draw( TranslucentModel, view, projection, lightPosition, lightColor, fogDensity: 0f );
+			Draw( TranslucentModel, view, projection, lightPosition, lightColor, 0f, ambient, worldNormals );
 	}
 
 	private void Draw( Model model, System.Numerics.Matrix4x4 view, System.Numerics.Matrix4x4 projection,
-		Vector3 lightPosition, Vector3 lightColor, float fogDensity )
+		Vector3 lightPosition, Vector3 lightColor, float fogDensity, float ambient = 0f, bool worldNormals = false )
 	{
 		var uniformBuffer = new ObjectUniformBuffer
 		{
@@ -88,6 +90,8 @@ public partial class ModelEntity : Entity
 			g_vFogColour = Level.FogColour,
 			g_flOpacity = Opacity,
 			g_flFogDensity = fogDensity,
+			g_flAmbient = ambient,
+			g_flWorldNormals = worldNormals ? 1f : 0f,
 
 			_padding0 = 0,
 			_padding1 = 0,
