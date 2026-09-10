@@ -47,6 +47,40 @@ public partial class ModelFile : BaseFormat
 	public List<Mesh> Meshes { get; private set; } = new();
 
 	/// <summary>
+	/// Every node in the model - its meshes first, in the same order as <see cref="Meshes"/>, then
+	/// the transform-only nodes after them. See <see cref="ResolveHierarchy"/> for the layout.
+	///
+	/// Most models never need this: <see cref="Mesh.WorldTransform"/> already has the tree baked
+	/// in. It is for a model whose animations turn a node that has no geometry of its own - the
+	/// advisor's head and arms are three such nodes, with his face and hands hanging off them.
+	/// </summary>
+	public List<Node> Nodes { get; private set; } = new();
+
+	/// <summary>One node of the model's tree.</summary>
+	public class Node
+	{
+		/// <summary>The node's own transform, relative to <see cref="ParentIndex"/>.</summary>
+		public Matrix4x4 LocalTransform { get; set; } = Matrix4x4.Identity;
+
+		public int ParentIndex { get; set; } = -1;
+
+		/// <summary>
+		/// The record's flag word. 0x200 marks a transform-only node, and the engine hides a node
+		/// by setting 0x10 at runtime - no node in the game data ships with it set.
+		/// </summary>
+		public uint Flags { get; set; }
+
+		/// <summary>
+		/// The number the engine looks this node up by when dressing a character, or -1 when the
+		/// node has none. See <see cref="ReadNodeIds"/>.
+		/// </summary>
+		public int Id { get; set; } = -1;
+
+		/// <summary>The flag word of this node's id record; 0 when it has none.</summary>
+		public uint IdFlags { get; set; }
+	}
+
+	/// <summary>
 	/// True when this file is animation data for a separate base model rather than a mesh.
 	/// <see cref="Meshes"/> is empty in that case - see the notes on this class.
 	/// </summary>
@@ -362,6 +396,7 @@ public partial class ModelFile : BaseFormat
 			}
 
 			ResolveHierarchy( reader, meshCnt, meshPtr, nodeCnt, nodePtr );
+			ReadNodeIds( reader );
 
 			// Process mesh data
 			for ( int meshIdx = 0; meshIdx < Meshes.Count; meshIdx++ )
@@ -585,6 +620,61 @@ public partial class ModelFile : BaseFormat
 		{
 			Meshes[i].ParentIndex = parents[i];
 			Meshes[i].WorldTransform = World( i, nodeCount );
+		}
+
+		Nodes = new List<Node>( nodeCount );
+
+		for ( int node = 0; node < nodeCount; ++node )
+		{
+			var record = RecordAt( node );
+			uint flags = 0;
+
+			if ( record >= 0 && record + 4 <= stream.Length )
+			{
+				stream.Seek( record, SeekOrigin.Begin );
+				flags = reader.ReadUInt32();
+			}
+
+			Nodes.Add( new Node { LocalTransform = local[node], ParentIndex = parents[node], Flags = flags } );
+		}
+	}
+
+	/// <summary>
+	/// Attaches each node's lookup id, from the table the engine searches when it puts a costume
+	/// on a character.
+	///
+	/// The ushort at 0x48 is a record count and the uint at 0x7C the table's offset; each record
+	/// is 20 bytes, a flag word then the id, and the rest zero across the game. Record r belongs
+	/// to node (ushort at 0x46) + r. That pairing is the engine's own: its lookup returns the
+	/// record index, and the costume code adds 0x46 to it to find the node it shows or hides.
+	///
+	/// On the advisor the ids are costume pieces - his antennae are 19 and 20, which every hat
+	/// hides, and his right hand is 21, which the fast food costume swaps for the spatula (14).
+	/// </summary>
+	private void ReadNodeIds( BinaryReader reader )
+	{
+		var stream = reader.BaseStream;
+
+		stream.Seek( 0x46, SeekOrigin.Begin );
+		var firstNode = reader.ReadUInt16();
+		var count = reader.ReadUInt16();
+
+		stream.Seek( 0x7C, SeekOrigin.Begin );
+		var table = reader.ReadUInt32();
+
+		if ( count == 0 || table == 0 || table + (20L * count) > stream.Length )
+			return;
+
+		for ( int r = 0; r < count; ++r )
+		{
+			var node = firstNode + r;
+
+			if ( node >= Nodes.Count )
+				break;
+
+			stream.Seek( table + (20L * r), SeekOrigin.Begin );
+			Nodes[node].IdFlags = reader.ReadUInt32();
+			Nodes[node].Id = (int)reader.ReadUInt32();
 		}
 	}
 
