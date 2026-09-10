@@ -62,13 +62,12 @@ public sealed class LobbyModel
 
 		_linearTransforms = new Matrix4x4[meshCount];
 
-		var models = new Model[meshCount];
+		var models = new Model?[meshCount][];
 		var meshVertices = new Vertex[meshCount][];
 
 		for ( int meshIndex = 0; meshIndex < meshCount; ++meshIndex )
 		{
 			var mesh = modelFile.Meshes[meshIndex];
-			var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader", materialFlags );
 			var textures = new List<Texture>();
 
 			for ( int i = 0; i < 16; ++i )
@@ -80,8 +79,6 @@ public sealed class LobbyModel
 				else
 					textures.Add( new Texture( $"{textureDirectory}/{mesh.Materials[i].Name}.wct", TextureFlags.Repeat ) );
 			}
-
-			material.Set( "Color", [.. textures] );
 
 			var vertices = new List<Vertex>();
 			for ( int i = 0; i < mesh.Vertices.Length; ++i )
@@ -96,8 +93,8 @@ public sealed class LobbyModel
 				} );
 			}
 
-			models[meshIndex] = new Model( [.. vertices], mesh.Indices, material );
 			meshVertices[meshIndex] = [.. vertices];
+			models[meshIndex] = BuildModels( mesh, meshVertices[meshIndex], textures, materialFlags );
 
 			// The mesh's place in the model's node tree, not just its own transform - a mesh
 			// parented to a dummy node stores only its offset from that node. Right-multiplying
@@ -117,7 +114,8 @@ public sealed class LobbyModel
 
 			Entities[meshIndex] = new ModelEntity()
 			{
-				Model = models[meshIndex],
+				Model = models[meshIndex][0],
+				TranslucentModel = models[meshIndex][1],
 				LinearTransform = _linearTransforms[meshIndex],
 				Position = offset + origin,
 			};
@@ -196,6 +194,60 @@ public sealed class LobbyModel
 		}
 	}
 
+	/// <summary>
+	/// Splits one mesh into its solid half and its see-through half, as two models over the same
+	/// vertices - see <see cref="ModelFile.MaterialData.IsTranslucent"/> for which is which.
+	///
+	/// The split has to be by triangle rather than by mesh, because a mesh can be some of each:
+	/// the Space island's antenna is a translucent dish and cone on a solid stalk, and its island
+	/// is eight solid materials plus the shoreline ripple. Whether depth is written is a property
+	/// of the pipeline, so the two halves cannot share one.
+	///
+	/// Returns exactly two slots, solid then translucent, either of which may be null when the
+	/// mesh turns out to be all of the other - which most meshes are.
+	/// </summary>
+	private static Model?[] BuildModels( ModelFile.Mesh mesh, Vertex[] vertices,
+		List<Texture> textures, MaterialFlags materialFlags )
+	{
+		var solid = new List<uint>( mesh.Indices.Length );
+		var translucent = new List<uint>();
+
+		for ( int i = 0; i + 2 < mesh.Indices.Length; i += 3 )
+		{
+			// Every vertex of a triangle carries the same material - materials own contiguous runs
+			// of the vertex order, so a triangle never straddles two - which makes the first
+			// corner enough to place it.
+			var corner = mesh.Indices[i];
+			var material = corner < vertices.Length ? vertices[corner].TexIndex : 0;
+
+			var into = material >= 0 && material < mesh.Materials.Length
+				&& mesh.Materials[material].IsTranslucent ? translucent : solid;
+
+			into.Add( mesh.Indices[i] );
+			into.Add( mesh.Indices[i + 1] );
+			into.Add( mesh.Indices[i + 2] );
+		}
+
+		Model? Build( List<uint> indices, MaterialFlags flags )
+		{
+			if ( indices.Count == 0 )
+				return null;
+
+			var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader", flags );
+			material.Set( "Color", [.. textures] );
+
+			return new Model( vertices, [.. indices], material );
+		}
+
+		return [
+			Build( solid, materialFlags ),
+
+			// A see-through surface that writes depth punches a hole through whatever is drawn
+			// after it, which is the whole reason these are separated out.
+			Build( translucent, materialFlags | MaterialFlags.DisableDepthWrite )
+		];
+	}
+
 	private static AnimationFile[] LoadAnimations( string modelPath )
 	{
 		var withoutExtension = modelPath[..modelPath.LastIndexOf( '.' )];
@@ -218,7 +270,7 @@ public sealed class LobbyModel
 	/// three 64-vertex meshes that are otherwise indistinguishable.
 	/// </summary>
 	private static MeshAnimator[] BindVertexAnimations( string modelPath, AnimationFile[] animations,
-		ModelFile modelFile, Model[] models, Vertex[][] meshVertices )
+		ModelFile modelFile, Model?[][] models, Vertex[][] meshVertices )
 	{
 		var targets = animations
 			.SelectMany( animation => animation.MorphTracks
@@ -241,7 +293,10 @@ public sealed class LobbyModel
 			var target = targets[i];
 			var mesh = modelFile.Meshes[target];
 
-			animators[i] = new MeshAnimator( animations, target, mesh, models[target], meshVertices[target] );
+			// Both halves of a split mesh share one vertex array, so both need the animator's
+			// writes - the Space island is animated and split, and so is every shoreline ripple.
+			animators[i] = new MeshAnimator( animations, target, mesh,
+				[.. models[target].OfType<Model>()], meshVertices[target] );
 		}
 
 		var names = string.Join( ", ", targets.Select( t => $"'{modelFile.Meshes[t].Name.TrimEnd( '\0' )}'" ) );

@@ -7,6 +7,14 @@ public partial class ModelEntity : Entity
 	public Model? Model { get; set; }
 
 	/// <summary>
+	/// This mesh's see-through triangles, if it has any, held apart from <see cref="Model"/> so
+	/// they can be drawn without writing depth and after everything solid - see
+	/// <see cref="Level.Render"/>. A mesh is usually all one or all the other, but it doesn't have
+	/// to be: the Space island's antenna is a translucent dish and cone on a solid stalk.
+	/// </summary>
+	public Model? TranslucentModel { get; set; }
+
+	/// <summary>
 	/// How visible this model is, 0 to 1. At 1 - which is everything, normally - the shader's
 	/// output alpha is whatever its texture said, so nothing changes. At 0 it is skipped entirely
 	/// rather than drawn invisibly.
@@ -28,6 +36,19 @@ public partial class ModelEntity : Entity
 		if ( Model == null || Opacity <= 0f )
 			return;
 
+		Draw( Model );
+	}
+
+	protected override void OnRenderTranslucent()
+	{
+		if ( TranslucentModel == null || Opacity <= 0f )
+			return;
+
+		Draw( TranslucentModel );
+	}
+
+	private void Draw( Model model )
+	{
 		var uniformBuffer = new ObjectUniformBuffer
 		{
 			g_mModel = ModelMatrix,
@@ -45,7 +66,7 @@ public partial class ModelEntity : Entity
 			_padding1 = 0,
 		};
 
-		Model.Material.Set( "ObjectUniformBuffer", uniformBuffer );
-		Model.Draw();
+		model.Material.Set( "ObjectUniformBuffer", uniformBuffer );
+		model.Draw();
 	}
 }

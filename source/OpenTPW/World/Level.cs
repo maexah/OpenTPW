@@ -89,6 +89,36 @@ public class Level
 	{
 		Camera.Update();
 
-		Entity.All.ForEach( entity => entity.Render() );
+		// The HUD is an entity like everything else, but it is not part of the world and has to
+		// end up in front of all of it. It draws with no depth test at all - see Material.UI - so
+		// nothing but draw order holds it there, and being the last entity created was enough for
+		// that while the world was a single pass. Adding a second one put every translucent
+		// surface, the flyers and the palm crowns among them, on top of it. So it sits out both
+		// world passes and goes down last instead.
+		Entity.All.ForEach( entity =>
+		{
+			if ( entity != Hud )
+				entity.Render();
+		} );
+
+		// Everything see-through comes after everything solid. A translucent surface doesn't write
+		// depth, so drawn in creation order alongside the rest it would be hidden by any solid
+		// geometry that happened to be drawn after it - which for the Space island's antenna is
+		// the island itself.
+		//
+		// Two passes rather than a sort, and this pass is not sorted within itself. That is not
+		// because nothing overlaps - most of what the flag marks is cut-out foliage, and a palm
+		// crown overlaps itself heavily - but because the alpha test in the shader carries that
+		// case: a frond's texels are either kept or discarded, so the order two fronds arrive in
+		// does not change the result. It is only the handful of genuinely graded surfaces, the
+		// ripple rings and the antenna's cone, that a sort would help, and those are small,
+		// scattered, and do not overlap each other.
+		Entity.All.ForEach( entity =>
+		{
+			if ( entity != Hud )
+				entity.RenderTranslucent();
+		} );
+
+		Hud?.Render();
 	}
 }

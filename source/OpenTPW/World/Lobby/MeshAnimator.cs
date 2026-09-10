@@ -32,7 +32,10 @@ public class MeshAnimator
 	private readonly AnimationFile[] _animations;
 	private readonly int _targetIndex;
 	private readonly ModelFile.Mesh _mesh;
-	private readonly Model _model;
+
+	// One mesh can be two models - see LobbyModel.BuildModels - sharing this one vertex array, so
+	// every write here has to reach all of them.
+	private readonly Model[] _models;
 
 	// Rebuilt each frame and re-uploaded; seeded from the mesh's rest pose so anything the
 	// animation doesn't touch keeps its original normal, UV, texture index and flags.
@@ -52,12 +55,12 @@ public class MeshAnimator
 	private bool _atRest;
 
 	public MeshAnimator( AnimationFile[] animations, int targetIndex, ModelFile.Mesh mesh,
-		Model model, Vertex[] restVertices )
+		Model[] models, Vertex[] restVertices )
 	{
 		_animations = animations;
 		_targetIndex = targetIndex;
 		_mesh = mesh;
-		_model = model;
+		_models = models;
 		_vertices = (Vertex[])restVertices.Clone();
 		_positions = new Vector3[mesh.VertexCount];
 
@@ -74,7 +77,8 @@ public class MeshAnimator
 			_restUvs[i] = restVertices[i].TexCoords;
 
 		// This mesh is rewritten every frame from here on - see the note on this method.
-		_model.EnableFrequentUpdates( _vertices );
+		foreach ( var model in _models )
+			model.EnableFrequentUpdates( _vertices );
 	}
 
 	public void Update( float deltaTime )
@@ -124,7 +128,7 @@ public class MeshAnimator
 		if ( uv != null )
 			WriteUvs( uv, frame );
 
-		_model.UpdateVertices( _vertices );
+		Upload();
 	}
 
 	/// <summary>
@@ -186,8 +190,14 @@ public class MeshAnimator
 		for ( int i = 0; i < _vertices.Length; ++i )
 			_vertices[i].TexCoords = _restUvs[i];
 
-		_model.UpdateVertices( _vertices );
+		Upload();
 		_atRest = true;
+	}
+
+	private void Upload()
+	{
+		foreach ( var model in _models )
+			model.UpdateVertices( _vertices );
 	}
 
 	private void WritePositions( Vector3[] positions )

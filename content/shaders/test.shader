@@ -89,24 +89,13 @@ fragment {
     layout( set = 1, binding = 15 ) uniform texture2D Color15;
     layout( set = 1, binding = 16 ) uniform sampler s_Color;
 
-    const uint FLAG_BASE = 1;
-    const uint FLAG_TRANSPARENT = 2;
-    const uint FLAG_UNK = 4;
-    const uint FLAG_X_AXIS_ANIM = 8;
-    const uint FLAG_Y_AXIS_ANIM = 16;
-    const uint FLAG_GOURAUD_SHADED = 32;
-        
-    void main() 
+    // The only bit of a material's flag word we act on - see ModelFile.MaterialData.IsTranslucent
+    // for how it was established and for what is known about the rest.
+    const uint FLAG_TRANSLUCENT = 2;
+
+    void main()
     {
         vec2 finalTexCoords = vs_out.vTexCoords;
-
-        /*if ((outMatFlags & FLAG_X_AXIS_ANIM) != 0) {
-            finalTexCoords.x = finalTexCoords.x + g_oUbo.g_flTime * 0.1;
-        }
-
-        if ((outMatFlags & FLAG_Y_AXIS_ANIM) != 0) {
-            finalTexCoords.y = finalTexCoords.y + g_oUbo.g_flTime * 0.1;
-        }*/
 
         vec3 N = normalize(vs_out.vNormal);
         vec3 L = normalize(g_oUbo.g_vLightPos - vs_out.vWorldPosition);
@@ -134,21 +123,26 @@ fragment {
         if ( texIndex == 15 ) vTextureSample = texture( sampler2D( Color15, s_Color ), finalTexCoords);
 
         vec3 vShading = vDiffuse + vAmbient;
-        vec3 vOutColor;
+        vec3 vOutColor = vTextureSample.xyz * vShading;
 
-        // Apply Gouraud shading if the flag is set, otherwise use flat shading
-        if ((outMatFlags & FLAG_GOURAUD_SHADED) != 0) {
-            vOutColor = vTextureSample.xyz * vShading;
-        } else {
-            vOutColor = vTextureSample.xyz * vShading;
-        }
+        // A material the model marks translucent keeps its texture's alpha; anything else is solid
+        // whatever its texture happens to carry. Plenty of opaque art ships with an alpha channel
+        // - six of the Space island's materials do - and taking the alpha from all of them ate
+        // holes in geometry the game draws whole.
+        bool bTranslucent = (outMatFlags & FLAG_TRANSLUCENT) != 0;
 
-        // Handle opaque alpha testing
-        if (vTextureSample.a < 0.1) discard;
+        // Most of what the flag marks is cut-out art rather than glass - every palm frond, the
+        // grass, the bushes, the bats - so the test has to stay. It only needs to drop what
+        // contributes nothing: raising the cut back to the old 0.1 leaves the foliage identical
+        // (its cut-out background is flat zero) but takes most of the Space dish's signal cone,
+        // which is a real gradient running out to nearly nothing at its rim.
+        if (bTranslucent && vTextureSample.a < 0.02) discard;
 
-        // The alpha test above is on the texture alone, so fading is a real blend rather than a
-        // dissolve - the model keeps its shape all the way out instead of eroding.
-        fragColor = vec4(vOutColor, vTextureSample.a * g_oUbo.g_flOpacity);
+        // g_flOpacity fades the whole model - see ModelEntity.Opacity. It multiplies the alpha
+        // rather than gating the texture, so fading is a real blend rather than a dissolve: the
+        // model keeps its shape all the way out instead of eroding.
+        float flAlpha = bTranslucent ? vTextureSample.a : 1.0;
+        fragColor = vec4(vOutColor, flAlpha * g_oUbo.g_flOpacity);
 
         // Calculate fog using view space depth. vWorldPosition is view space despite its name -
         // see where it is written - so this is distance from the camera.

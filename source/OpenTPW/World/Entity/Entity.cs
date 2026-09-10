@@ -57,6 +57,15 @@ public class Entity
 		OnRender();
 	}
 
+	/// <summary>
+	/// Second render pass, after every entity has drawn its solid geometry - see
+	/// <see cref="Level.Render"/>. Almost nothing has anything to draw here.
+	/// </summary>
+	public void RenderTranslucent()
+	{
+		OnRenderTranslucent();
+	}
+
 	public void Update()
 	{
 		OnUpdate();
@@ -67,6 +76,7 @@ public class Entity
 	}
 
 	protected virtual void OnRender() { }
+	protected virtual void OnRenderTranslucent() { }
 	protected virtual void OnUpdate() { }
 	protected virtual void OnDelete() { }
 

@@ -125,7 +125,44 @@ public partial class ModelFile : BaseFormat
 		public uint Pad;
 
 		public string Name;
+
+		/// <summary>
+		/// The material's flag word, read from the first four bytes of its texture-list entry - so
+		/// it belongs to the texture within this model rather than to the material alone, and two
+		/// materials naming the same texture share it. Bit 0 is set on every material in the game.
+		/// See <see cref="IsTranslucent"/> for the only bit we act on.
+		/// </summary>
 		public uint Flags;
+
+		/// <summary>
+		/// Whether this material is meant to be drawn see-through, from bit 0x2.
+		///
+		/// Not something the engine tells us outright - it is never read back in the decompile
+		/// where a render state is chosen - so it is established from the data. Of the 246 material
+		/// uses in lobby.wad, 232 name a texture that ships in the same wad; across those the bit
+		/// agrees with the texture header's own alpha-channel byte in 224 cases and disagrees in
+		/// eight. Compare against that byte and not against the bit depth: sen_ant1 is stored
+		/// 32-bit but declares no alpha channel, so the two questions give different answers.
+		///
+		/// The eight read as authoring choices rather than noise. Six are textures that carry an
+		/// alpha channel and are drawn opaque anyway - the Space hoarding's four sign faces and
+		/// the two Box meshes sharing sfl_cnr3. The other two set the bit over a texture with no
+		/// alpha channel at all: base.md2's Sea, the lobby's own water surface, and the Space
+		/// antenna's stalk.
+		///
+		/// 61 of the 246 carry the bit, and they are mostly not glass. The ripple ring on all four
+		/// islands, the Sea, and the antenna's cone are the genuinely see-through ones; the rest is
+		/// cut-out art that needs its alpha tested rather than blended - every palm frond
+		/// (jtr_plm1), the Fantasy grass blades and sunflower, the Hallow bushes and tree, the
+		/// gate rails and fences, the butterflies and the bats. Anything acting on this bit has to
+		/// serve both, which is why the shader still discards near-zero alpha.
+		///
+		/// Bit 0 is the only one set on every material. The engine ORs 0x8030 into this word itself
+		/// for the materials of any mesh carrying a UV animation, but 0x10 and 0x20 are not a pair:
+		/// they occur alone 33 and 36 times respectively. What either selects, and what the 0x40
+		/// seen on just two materials means, is not known.
+		/// </summary>
+		public bool IsTranslucent => (Flags & 0x2) != 0;
 	}
 
 	protected override void ReadFromStream( Stream stream )
