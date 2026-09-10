@@ -37,4 +37,16 @@ struct ObjectUniformBuffer
 	/// the one on show - see <see cref="LobbyFlyer"/>.
 	/// </summary>
 	public float g_flOpacity; // 4
+
+	/// <summary>
+	/// How thick the distance fade is. The original's lobby turns fog off outright for the island
+	/// view (FUN_005d9690) and keeps it only for the globe, and with a sky and an ocean both
+	/// drawn it has to be off here too: fog saturates a couple of hundred units out, which paints
+	/// every distant wave one flat colour and puts a hard band between the sea and the sky.
+	/// </summary>
+	public float g_flFogDensity; // 4
+
+	public float _padding2; // 4
+	public float _padding3; // 4
+	public float _padding4; // 4
 }

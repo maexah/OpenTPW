@@ -18,7 +18,13 @@ public enum MaterialFlags
 	/// Needed by art that carries no alpha channel and relies on a black background being
 	/// invisible - the game's own Raindrop.tga is exactly that.
 	/// </summary>
-	Additive = 4
+	Additive = 4,
+
+	/// <summary>
+	/// Draws both faces. For geometry the camera sits inside - the sky is the whole of it - where
+	/// there is no outward side to cull and getting the winding wrong makes it vanish entirely.
+	/// </summary>
+	DisableCulling = 8
 }
 
 public partial class Material : Asset
@@ -265,7 +271,7 @@ public partial class Material : Asset
 			),
 
 			RasterizerState = new RasterizerStateDescription(
-				FaceCullMode.Back,
+				flags.HasFlag( MaterialFlags.DisableCulling ) ? FaceCullMode.None : FaceCullMode.Back,
 				PolygonFillMode.Solid,
 				FrontFace.Clockwise,
 				true,

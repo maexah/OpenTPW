@@ -12,6 +12,7 @@ common {
     float g_fTime;
 
     vec3 g_vFogColour;
+    float g_flFogDensity;
   } g_oUbo;
 }
 
@@ -55,7 +56,7 @@ fragment {
 
     // Calculate fog using view space depth
     float viewSpaceDepth = length(vs_out.vPositionVs);
-    float fogFactor = exp(viewSpaceDepth * 0.01) * 0.025;
+    float fogFactor = exp(viewSpaceDepth * 0.01) * g_oUbo.g_flFogDensity;
     fogFactor = clamp( fogFactor, 0, 1 );
     
     // Mix with fog

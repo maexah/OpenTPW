@@ -16,6 +16,7 @@ vertex {
 
         vec3 g_vFogColour;
         float g_flOpacity;
+        float g_flFogDensity;
     } g_oUbo;
 
     layout(location = 0) out VS_OUT {
@@ -67,6 +68,7 @@ fragment {
 
         vec3 g_vFogColour;
         float g_flOpacity;
+        float g_flFogDensity;
     } g_oUbo;
 
     layout( set = 1, binding = 0 ) uniform texture2D Color0;
@@ -150,7 +152,7 @@ fragment {
 
         // Calculate fog using view space depth
         float viewSpaceDepth = length(vs_out.vWorldPosition);
-        float fogFactor = exp(viewSpaceDepth * 0.01) * 0.025;
+        float fogFactor = exp(viewSpaceDepth * 0.01) * g_oUbo.g_flFogDensity;
         fogFactor = clamp( fogFactor, 0, 1 );
         
         // Mix with fog

@@ -1,4 +1,4 @@
-namespace OpenTPW;
+﻿namespace OpenTPW;
 
 /// <summary>
 /// The lobby's weather, which belongs to whichever park the camera is looking at rather than to
@@ -59,10 +59,13 @@ public sealed class LobbyWeather : Entity
 	}
 
 	/// <summary>
-	/// Eases the sky toward the current park's colour, and lifts it toward white for as long as a
-	/// strike is on screen. The sun goes with it: every lit model multiplies by the sun's colour,
-	/// so pushing that up is what makes a strike light the whole scene rather than just draw a
-	/// bright rectangle in the sky.
+	/// Eases the park's SKYCOLOUR into the sky, and lifts the whole thing toward white for as long
+	/// as a strike is on screen. The sun goes with it: every lit model multiplies by the sun's
+	/// colour, so pushing that up is what makes a strike light the whole scene rather than just
+	/// draw a bright rectangle in the sky.
+	///
+	/// SKYCOLOUR does not paint the sky - it tints one of its four cloud layers, and the horizon
+	/// stays the blue its texture paints whatever the park asks for. See <see cref="Sky"/>.
 	/// </summary>
 	private void UpdateSky( LobbyScript script )
 	{
@@ -86,13 +89,8 @@ public sealed class LobbyWeather : Entity
 
 		var flash = _lightning.Flash;
 
-		var lit = _skyColour.LerpTo( Vector3.One, flash * 0.8f );
-
-		_sky.Colour = lit;
-
-		// The horizon is where the fogged distance meets the sky, so they have to be the same
-		// colour or there is a hard line across the middle of the screen.
-		Level.FogColour = lit;
+		_sky.Tint = _skyColour;
+		_sky.Flash = flash;
 
 		if ( Level.SunLight != null )
 			Level.SunLight.Color = Vector3.One * (1f + (flash * LobbyLightning.MaxFlash));

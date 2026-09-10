@@ -157,7 +157,12 @@ public partial class Renderer
 		CommandList.SetFullViewports();
 		CommandList.SetFullScissorRects();
 		CommandList.ClearDepthStencil( 1 );
-		CommandList.ClearColorTarget( 0, RgbaFloat.Black );
+
+		// Cleared to the sky rather than to black. The sky is geometry, and the lobby's is four
+		// layers of cloud on an open dome - about a fifth of it is gaps, with nothing behind them
+		// but whatever the frame started as. Black there reads as holes punched in the sky.
+		var sky = Level.FogColour;
+		CommandList.ClearColorTarget( 0, new RgbaFloat( sky.X, sky.Y, sky.Z, 1f ) );
 
 		// Render level to MSAA buffer
 		CommandList.PushDebugGroup( "Main Render" );

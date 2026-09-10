@@ -27,7 +27,7 @@ public class Water : ModelEntity
 		public float g_flTime; // 4
 
 		public Vector3 g_vFogColour; // 12
-		public float _padding2; // 4
+		public float g_flFogDensity; // 4
 	}
 
 	public override void Spawn()
@@ -55,10 +55,10 @@ public class Water : ModelEntity
 			g_vCameraPos = Camera.Position,
 
 			g_vFogColour = Level.FogColour,
+			g_flFogDensity = Level.FogDensity,
 
 			_padding0 = 0,
 			_padding1 = 0,
-			_padding2 = 0,
 			g_flTime = Time.Now
 		};
 

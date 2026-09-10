@@ -39,6 +39,7 @@ public partial class ModelEntity : Entity
 			g_flTime = Time.Now,
 			g_vFogColour = Level.FogColour,
 			g_flOpacity = Opacity,
+			g_flFogDensity = Level.FogDensity,
 
 			_padding0 = 0,
 			_padding1 = 0,
