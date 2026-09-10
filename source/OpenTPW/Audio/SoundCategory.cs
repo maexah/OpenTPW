@@ -127,6 +127,33 @@ public sealed class SoundCategory
 		return Audio.Play( clip, volume, loop, fadeInSeconds, bus );
 	}
 
+	/// <summary>
+	/// How long effect <paramref name="id"/>'s sample runs - its longest, if it has several - or
+	/// zero for an unknown effect. From the bank's headers, so nothing is decoded to answer it.
+	///
+	/// The advisor needs this before he speaks: the original sizes the animations he talks
+	/// through to the length of the line - see <see cref="LobbyAdvisor"/>.
+	/// </summary>
+	public TimeSpan Length( int id )
+	{
+		var effect = _effects.FirstOrDefault( candidate => candidate.Id == id );
+		var longest = TimeSpan.Zero;
+
+		if ( effect == null )
+			return longest;
+
+		foreach ( var variation in effect.Variations )
+		{
+			foreach ( var sample in variation )
+			{
+				if ( sample.Bank < _banks.Count && sample.Index < _banks[sample.Bank].Durations.Count )
+					longest = TimeSpan.FromTicks( Math.Max( longest.Ticks, _banks[sample.Bank].Durations[sample.Index].Ticks ) );
+			}
+		}
+
+		return longest;
+	}
+
 	/// <summary>How long effect <paramref name="id"/> waits after finishing before it may replay.</summary>
 	public TimeSpan RepeatDelay( int id )
 		=> _effects.FirstOrDefault( effect => effect.Id == id )?.RepeatDelay ?? TimeSpan.Zero;

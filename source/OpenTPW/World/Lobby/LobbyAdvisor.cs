@@ -1,41 +1,42 @@
 namespace OpenTPW;
 
 /// <summary>
-/// The advisor talking in the lobby, and the rest of the mix getting out of his way.
+/// The advisor in the lobby: what he says, how he moves while he says it, and the rest of the mix
+/// getting out of his way.
 ///
 /// <para>
-/// <b>How the original decides what to say.</b> On entering the front end with no player chosen,
-/// FrontEnd_Init (0x005d5970) shows the four-slot player screen, FrontEnd_ShowPlayerSlots
-/// (0x004a6580). That counts the slots in use with Players_CountUsedSlots (0x005c7bb0) - a plain
-/// count of the non-empty entries in a four-entry array - and queues advisor lines on it:
-/// </para>
-/// <list type="bullet">
-/// <item>no slot in use: response 390, then 391 queued behind it - the greeting and the prompt
-/// for a name, <see cref="NewPlayerLines"/></item>
-/// <item>any slot in use: response 398, "don't I know you?"</item>
-/// </list>
-/// <para>
-/// There is no save system yet, so no slot is ever in use and the first of those plays on every
-/// launch. That is the original's own test with nothing to find, not a stand-in for it.
+/// <b>What he says.</b> On entering the front end with no player chosen, FrontEnd_Init
+/// (0x005d5970) shows the four-slot player screen, FrontEnd_ShowPlayerSlots (0x004a6580). That
+/// counts the slots in use with Players_CountUsedSlots (0x005c7bb0) and queues advisor lines on
+/// it: with no slot in use, response 390 and then 391 behind it; otherwise response 398. There is
+/// no save system yet, so no slot is ever in use, and the first of those plays on every launch -
+/// the original's own test with nothing to find.
 /// </para>
 /// <para>
 /// <b>How a line is spoken.</b> Lines go through a queue, AdvisorQueue_Add (0x005d6110): a line
-/// added with flush set cuts off whatever he is saying and empties the queue first, and a line
-/// added without it waits its turn. AdvisorQueue_Tick (0x005d5f80) hands the next line to
-/// Advisor_SayResponse (0x00599050) whenever he is not busy. That maps the response id to a
-/// sample through the table at 0x00768fb8 - the ids here are copied from it, because it lives in
-/// the executable rather than in the game data - ducks the rest of the mix, and schedules the
-/// sample 800ms later: it takes the clock minus 200 and adds 1000. He then stays busy until his
-/// talking animations have covered the sample plus at least 500ms, after which Advisor_Update
-/// (0x00599880) lifts the duck and the queue moves on.
+/// added with flush cuts off whatever he is saying and empties the queue first, one added without
+/// waits its turn. When he is free, Advisor_SayResponse (0x00599050) maps the response to a sample
+/// through the table at 0x00768fb8 - the ids here are copied from it, because it lives in the
+/// executable rather than the data - ducks the rest of the mix, and schedules the sample for 800ms
+/// later: the clock minus 200, plus 1000.
+/// </para>
+/// <para>
+/// <b>How he moves.</b> The same call picks the animations he talks through, 0x00598b20: clip 14 to
+/// start, then random picks from clips 1 to 10 until they cover the line plus half a second, then
+/// clip 15 to finish. Clip 14 is counted as taking no time. The first clip starts at once, before
+/// his voice does; each following clip starts when the one before it ends. He is busy until the
+/// sample has finished and the clips' total has passed, and only then does the duck lift and the
+/// queue move on. See <see cref="BuildGestures"/>.
+/// </para>
+/// <para>
+/// <b>His mouth.</b> Each sample has a .lip file of timings - see <see cref="LipFile"/>. While a
+/// file says he is talking, Advisor_Update (0x00599880) gives him one of his five mouths at random
+/// every 100ms; otherwise mouth 1, his mouth at rest.
 /// </para>
 /// <para>
 /// Two deliberate differences. The duck is ramped rather than stepped - see
-/// <see cref="Audio.Duck"/>. And it is held across queued lines: the original lifts it and puts
-/// it straight back between one line and the next, which with a step is a frame nobody hears but
-/// with a ramp would be an audible swell. The talking animations are not reproduced, because the
-/// lobby does not draw the advisor yet, so a line's tail is the guaranteed 500ms and not whatever
-/// the animations happen to round it up to.
+/// <see cref="Audio.Duck"/> - and held across queued lines, where the original lifts and restores it
+/// between them in a frame nobody hears but a ramp would make a swell.
 /// </para>
 /// </summary>
 public sealed class LobbyAdvisor : Entity
@@ -60,6 +61,32 @@ public sealed class LobbyAdvisor : Entity
 
 	/// <summary>What a player with no saved game hears, in order - responses 390 and 391.</summary>
 	private static readonly int[] NewPlayerLines = { Samples.Welcome, Samples.AskForName };
+
+	/// <summary>The clip he starts every line with. Counted as taking no time - see the class remarks.</summary>
+	private const int StartClip = 14;
+
+	/// <summary>The clip he finishes every line with.</summary>
+	private const int EndClip = 15;
+
+	/// <summary>Clips 1 to this are the ones he talks through.</summary>
+	private const int TalkingClips = 10;
+
+	/// <summary>The engine's limit on how many clips one line may string together, clip 15 aside.</summary>
+	private const int MostClipsBeforeEnd = 19;
+
+	/// <summary>How much past the end of the sample his clips must reach.</summary>
+	private const int GestureMarginMilliseconds = 500;
+
+	/// <summary>How often he changes mouth while talking.</summary>
+	private const float MouthChangeSeconds = 0.1f;
+
+	/// <summary>
+	/// Whether he stays on screen, holding his last pose, once a line is over. The engine's
+	/// per-model animation handler (0x004735d0) holds a finished animation's pose rather than
+	/// hiding the model for flags like his, and only the abort path (0x005996d0) hides him - but
+	/// that reading rests on how his creation flags land, which is not proven.
+	/// </summary>
+	private const bool StaysAfterSpeaking = true;
 
 	/// <summary>
 	/// How loud the advisor is, before <see cref="Audio.MasterVolume"/>.
@@ -93,14 +120,16 @@ public sealed class LobbyAdvisor : Entity
 	/// <summary>From being handed a line to speaking it: the clock minus 200ms, plus 1000ms.</summary>
 	private const float LeadInSeconds = 0.8f;
 
-	/// <summary>
-	/// How long he stays busy after a sample ends before the queue moves on. The original pads
-	/// the sample by at least 500ms when it picks his talking animations.
-	/// </summary>
-	private const float TailSeconds = 0.5f;
+	private readonly Random _random = new();
 
 	private SoundCategory? _speech;
+	private AdvisorModel? _figure;
+	private bool _figureFailed;
+	private bool _shown;
+
 	private Voice? _voice;
+	private LipFile? _lips;
+	private float _voiceStartedAt;
 
 	/// <summary>Samples waiting their turn, oldest first.</summary>
 	private readonly Queue<int> _queue = new();
@@ -110,8 +139,15 @@ public sealed class LobbyAdvisor : Entity
 
 	private float _speakAt;
 
-	/// <summary>When the line that is playing, or just played, stops keeping him busy.</summary>
-	private float _busyUntil = float.NegativeInfinity;
+	/// <summary>When the clips for the current line have all played out, on <see cref="Time.Now"/>'s clock.</summary>
+	private float _gesturesEndAt = float.NegativeInfinity;
+
+	private readonly List<int> _gestures = new();
+	private int _gesture;
+	private float _gestureTime;
+
+	private int _mouth = 1;
+	private float _nextMouthAt;
 
 	private bool _ducked;
 
@@ -121,6 +157,11 @@ public sealed class LobbyAdvisor : Entity
 	public LobbyAdvisor()
 	{
 		Current = this;
+
+		// Loaded here, during level setup, and not on his first update: a model is entities, and an
+		// entity joins Entity.All the moment it is made - which, from inside an update, is the list
+		// Level.Update is walking at the time.
+		LoadFigure();
 	}
 
 	/// <summary>
@@ -148,13 +189,11 @@ public sealed class LobbyAdvisor : Entity
 		if ( _pending != 0 && Time.Now >= _speakAt )
 		{
 			_voice = _speech.Play( _pending, SpeechVolume, respectDelay: false, bus: AudioBus.Speech );
-			_busyUntil = _voice == null ? Time.Now : float.PositiveInfinity;
+			_voiceStartedAt = Time.Now;
 			_pending = 0;
 		}
 
-		// A playing voice holds him busy until it ends, and the tail starts from there.
-		if ( _pending == 0 && float.IsPositiveInfinity( _busyUntil ) && _voice is not { Playing: true } )
-			_busyUntil = Time.Now + TailSeconds;
+		Animate();
 
 		if ( Busy )
 			return;
@@ -165,7 +204,17 @@ public sealed class LobbyAdvisor : Entity
 			Release();
 	}
 
-	private bool Busy => _pending != 0 || Time.Now < _busyUntil;
+	protected override void OnRenderOverlay()
+	{
+		if ( _shown && _figure != null )
+			_figure.Draw( Screen.Aspect );
+	}
+
+	/// <summary>
+	/// Busy until the sample is over and so are the clips he talks through - Advisor_Update only
+	/// lets go once both have passed.
+	/// </summary>
+	private bool Busy => _pending != 0 || _voice is { Playing: true } || Time.Now < _gesturesEndAt;
 
 	/// <summary>
 	/// What FrontEnd_ShowPlayerSlots says: the new-player greeting when no slot is in use, the
@@ -214,12 +263,16 @@ public sealed class LobbyAdvisor : Entity
 		Add( sample, flush: true );
 	}
 
-	/// <summary>Stops him mid-sentence, forgets what was queued, and lets the mix back up.</summary>
+	/// <summary>
+	/// Stops him mid-sentence, forgets what was queued, and lets the mix back up. Interrupting him
+	/// is the one thing that takes him off the screen - 0x005996d0.
+	/// </summary>
 	internal void Hush()
 	{
 		_queue.Clear();
 		StopCurrent();
 		Release();
+		_shown = false;
 	}
 
 	private void StopCurrent()
@@ -227,11 +280,13 @@ public sealed class LobbyAdvisor : Entity
 		_pending = 0;
 		_voice?.FadeOut( 0.2f );
 		_voice = null;
-		_busyUntil = float.NegativeInfinity;
+		_lips = null;
+		_gesturesEndAt = float.NegativeInfinity;
 	}
 
 	/// <summary>
-	/// Advisor_SayResponse: ducks the mix now and speaks the sample after the lead-in.
+	/// Advisor_SayResponse: ducks the mix now, starts him moving now, and speaks the sample after
+	/// the lead-in.
 	///
 	/// 80 of the 641 samples in the bank are a 315-byte stub that is not valid MPEG - response ids
 	/// with nothing recorded - and those simply come back silent, which ends the line at once.
@@ -244,13 +299,146 @@ public sealed class LobbyAdvisor : Entity
 		_pending = sample;
 		_speakAt = Time.Now + LeadInSeconds;
 
+		var sampleMilliseconds = (int)_speech.Length( sample ).TotalMilliseconds;
+		var gesturesMilliseconds = BuildGestures( sampleMilliseconds + GestureMarginMilliseconds );
+
+		// The clips' total is counted from the moment the sample is due, not from now.
+		_gesturesEndAt = _speakAt + (gesturesMilliseconds / 1000f);
+		_gesture = 0;
+		_gestureTime = 0f;
+
+		_lips = LipFile.TryLoad( $"global/Speech/lips/sp_{sample:000}.lip", out var lips ) ? lips : null;
+
+		if ( _figure != null )
+			_shown = true;
+
 		if ( !_ducked )
 		{
 			_ducked = true;
 			Audio.Duck( DuckLevel, DuckSeconds );
 		}
 
-		Log.Info( $"Advisor: sample {sample} in {LeadInSeconds:0.0}s, {_queue.Count} more queued" );
+		Log.Info( $"Advisor: sample {sample} in {LeadInSeconds:0.0}s through clips [{string.Join( ", ", _gestures )}] "
+			+ $"({gesturesMilliseconds}ms), {_queue.Count} more queued" );
+	}
+
+	/// <summary>
+	/// The clips he talks through, as 0x00598b20 picks them, and how long they take in all.
+	///
+	/// Clip 14 first. Then while the line is not yet covered, and fewer than nineteen clips are in:
+	/// roll one of clips 1 to 10; if what is left of the line is shorter than the rolled clip, take
+	/// instead the first of clips 1 to 10 that is at least as long as what is left (or clip 10 if
+	/// none is). Clip 15 last. Clip 14's length is set to zero before any of this, so it covers
+	/// nothing and adds nothing to the total.
+	/// </summary>
+	private int BuildGestures( int toCover )
+	{
+		_gestures.Clear();
+		_gestures.Add( StartClip );
+
+		var total = 0;
+
+		while ( toCover >= 1 && _gestures.Count < MostClipsBeforeEnd )
+		{
+			var clip = _random.Next( TalkingClips ) + 1;
+
+			if ( toCover < ClipMilliseconds( clip ) )
+			{
+				clip = TalkingClips;
+
+				for ( int candidate = 1; candidate <= TalkingClips; ++candidate )
+				{
+					if ( toCover <= ClipMilliseconds( candidate ) )
+					{
+						clip = candidate;
+						break;
+					}
+				}
+			}
+
+			var length = ClipMilliseconds( clip );
+
+			// A clip that takes no time cannot cover anything, and the engine would stop at its
+			// nineteen-clip limit; stop now rather than fill the list with it.
+			if ( length <= 0 )
+				break;
+
+			_gestures.Add( clip );
+			total += length;
+			toCover -= length;
+		}
+
+		_gestures.Add( EndClip );
+		total += ClipMilliseconds( EndClip );
+
+		return total;
+	}
+
+	private int ClipMilliseconds( int clip )
+		=> clip == StartClip || _figure == null ? 0 : _figure.ClipMilliseconds( clip );
+
+	/// <summary>Plays his clips one after another and moves his mouth - Advisor_Update's other half.</summary>
+	private void Animate()
+	{
+		if ( _figure == null || !_shown )
+			return;
+
+		if ( _gestures.Count > 0 && _gesture < _gestures.Count )
+		{
+			_gestureTime += Time.Delta;
+
+			var length = _figure.ClipMilliseconds( _gestures[_gesture] ) / 1000f;
+
+			// Each clip starts when the one before it ends; the last holds its final frame.
+			if ( _gestureTime >= length && _gesture < _gestures.Count - 1 )
+			{
+				_gesture++;
+				_gestureTime = 0f;
+			}
+
+			_figure.Pose( _gestures[_gesture], _gestureTime );
+		}
+
+		var talking = _voice is { Playing: true } && _lips != null
+			&& _lips.IsTalking( TimeSpan.FromSeconds( Time.Now - _voiceStartedAt ) );
+
+		if ( !talking )
+		{
+			SetMouth( 1 );
+		}
+		else if ( Time.Now >= _nextMouthAt )
+		{
+			SetMouth( _random.Next( 5 ) + 1 );
+			_nextMouthAt = Time.Now + MouthChangeSeconds;
+		}
+
+		if ( !StaysAfterSpeaking && !Busy && _queue.Count == 0 )
+			_shown = false;
+	}
+
+	private void SetMouth( int shape )
+	{
+		if ( shape == _mouth )
+			return;
+
+		_mouth = shape;
+		_figure?.ShowMouth( shape );
+	}
+
+	private void LoadFigure()
+	{
+		if ( _figure != null || _figureFailed )
+			return;
+
+		try
+		{
+			_figure = new AdvisorModel( "global/advisor/Advisor.md2", "global/advisor/textures" );
+		}
+		catch ( Exception e )
+		{
+			_figureFailed = true;
+			Log.Warning( $"Advisor: model would not load - {e.Message}" );
+		}
 	}
 
 	private void Release()
@@ -272,6 +460,9 @@ public sealed class LobbyAdvisor : Entity
 			? $"about to say {_pending}"
 			: _voice is { Playing: true } ? $"saying {_voice.Name}" : Busy ? "finishing" : "quiet";
 
-		return $"{what} queued={_queue.Count} duck={Audio.DuckLevel:0.00} samples={_speech?.EffectIds.Count() ?? 0}";
+		var clip = _gestures.Count > 0 && _gesture < _gestures.Count ? _gestures[_gesture] : 0;
+
+		return $"{what} queued={_queue.Count} duck={Audio.DuckLevel:0.00} shown={_shown} clip={clip} mouth={_mouth} "
+			+ $"samples={_speech?.EffectIds.Count() ?? 0}";
 	}
 }
