@@ -19,6 +19,12 @@ internal static class Game
 		// Register game data directory
 		FileSystem = new BaseFileSystem( $"{Settings.Default.GamePath}/data/" );
 		FileSystem.RegisterArchiveHandler<WadArchive>( ".wad" );
+
+		// Archives are found by appending the extension and checking the file exists, which is
+		// case sensitive on anything but Windows. One archive in the whole game is spelled in
+		// capitals - data\global\Speech\lips.WAD, the advisor's lip sync - and without this it
+		// is invisible.
+		FileSystem.RegisterArchiveHandler<WadArchive>( ".WAD" );
 		FileSystem.RegisterArchiveHandler<SdtArchive>( ".sdt" );
 
 		//
