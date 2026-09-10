@@ -5,7 +5,7 @@ namespace OpenTPW;
 ///
 /// A morph track has one channel per vertex of the mesh it names (plus two trailing channels
 /// that aren't vertices), and each keyframe value is that vertex's position for that frame,
-/// quantised into the mesh's bounding box - see <see cref="AnimationFile"/>. Channels the
+/// quantised into a box the track carries - see <see cref="AnimationFile.MorphTrack.DecodePosition"/>. Channels the
 /// animation doesn't move still carry a rest keyframe, so sampling every channel reproduces
 /// the whole mesh.
 ///
@@ -225,10 +225,10 @@ public class MeshAnimator
 		var frames = record.FrameIndices;
 
 		if ( record.IsConstant || frame <= frames[0] )
-			return Decode( record.Raw( 0, slot ) );
+			return track.DecodePosition( record.Raw( 0, slot ) );
 
 		if ( frame >= frames[^1] )
-			return Decode( record.Raw( frames.Length - 1, slot ) );
+			return track.DecodePosition( record.Raw( frames.Length - 1, slot ) );
 
 		var hi = 1;
 		while ( hi < frames.Length && frames[hi] < frame )
@@ -240,11 +240,8 @@ public class MeshAnimator
 
 		// Positions are dequantised before interpolating, so a keyframe pair straddling the
 		// quantisation grid still blends smoothly.
-		var a = Decode( record.Raw( lo, slot ) );
-		var b = Decode( record.Raw( hi, slot ) );
+		var a = track.DecodePosition( record.Raw( lo, slot ) );
+		var b = track.DecodePosition( record.Raw( hi, slot ) );
 		return a + ((b - a) * t);
 	}
-
-	private Vector3 Decode( uint raw )
-		=> AnimationFile.DecodePosition( raw, _mesh.BoundsMin, _mesh.BoundsMax );
 }

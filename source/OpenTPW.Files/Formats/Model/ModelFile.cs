@@ -132,7 +132,10 @@ public partial class ModelFile : BaseFormat
 
 		public Vector3[] Normals { get; set; }
 
-		/// <summary>Bounding box of this mesh, and the range animation values quantise into.</summary>
+		/// <summary>
+		/// Bounding box of this mesh. Not the box its animations quantise vertex positions into -
+		/// each morph track carries its own - see AnimationFile.MorphTrack.DecodePosition.
+		/// </summary>
 		public Vector3 BoundsMin { get; set; }
 		public Vector3 BoundsMax { get; set; }
 
@@ -311,9 +314,9 @@ public partial class ModelFile : BaseFormat
 				uint uvOffset = reader.ReadUInt32();
 				uint materialOffset = reader.ReadUInt32();
 				uint faceOffset = reader.ReadUInt32();
-				// The mesh's bounding box lives in here. Animation files quantise vertex
-				// positions into signed 10-bit fields spanning exactly this box, so it is
-				// needed to dequantise them - see AnimationFile.
+				// The mesh's bounding box lives in here. It is not what animation files
+				// quantise vertex positions into - every morph track carries a box of its own -
+				// see AnimationFile.MorphTrack.DecodePosition.
 				reader.BaseStream.Seek( 4, SeekOrigin.Current );
 				var boundsMin = new Vector3( reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle() );
 				var boundsMax = new Vector3( reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle() );

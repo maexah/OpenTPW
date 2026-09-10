@@ -87,8 +87,10 @@ namespace OpenTPW;
 ///
 /// VERTEX MORPH (bit 0x1000)
 ///
-/// The slot at +0x28 points at a 16-byte descriptor: ushort record count at +0x02, uint record
-/// table offset at +0x0C. Each track has its OWN descriptor and its own channel space, so one
+/// The slot at +0x28 points at a descriptor: ushort record count at +0x02, uint record table
+/// offset at +0x0C, and three floats each at +0x14 and +0x20 - the centre and step of the box this
+/// track's positions are quantised into, which is the track's own and not its mesh's (see
+/// MorphTrack.DecodePosition). Each track has its OWN descriptor and its own channel space, so one
 /// animation morphs as many meshes as it has morph tracks - ratraceM1 morphs four (and three of
 /// those meshes share a vertex count, so identifying targets by vertex count cannot tell them
 /// apart; the target index can). 752 animation files carry readable morph tracks, 360 of them
@@ -99,7 +101,10 @@ namespace OpenTPW;
 /// exactly. The 7 that don't (droidm2 names a 16-vertex mesh but carries 3561 channels) are
 /// models whose node list evidently isn't their mesh list, the same caveat the target index
 /// carries generally, so callers should check the count and skip a track that fails it rather
-/// than morph the wrong mesh into nonsense.
+/// than morph the wrong mesh into nonsense. The two trailing channels are the corners of the box
+/// the vertices span at each keyframe, minimum then maximum - the engine reads them as the
+/// animation's bounding box (0x004711d0) - and in all 464 tracks whose model resolves, they sit on
+/// the corners of the first keyframe's vertices to within three quantisation steps.
 ///
 /// Each record is: ushort a (keyframes), ushort b (channels), uint p1, uint p2, uint p3, uint
 /// reserved. p1 is an array of b channel ids, p2 an array of a ascending frame indices, p3 a
@@ -206,6 +211,39 @@ public class AnimationFile : BaseFormat
 		public int TargetIndex { get; init; }
 		public Track[] Records { get; init; } = Array.Empty<Track>();
 		public int ChannelCount { get; private set; }
+
+		/// <summary>
+		/// The middle of the box this track's positions are quantised into - three floats at
+		/// descriptor +0x14. See <see cref="DecodePosition"/>.
+		/// </summary>
+		public Vector3 Centre { get; init; }
+
+		/// <summary>How far one step of a 10-bit field moves along each axis - three floats at descriptor +0x20.</summary>
+		public Vector3 Step { get; init; }
+
+		/// <summary>
+		/// A keyframe value as a position in the mesh's own space. The value is three signed
+		/// 10-bit fields - X in bits 0..9, Y in 10..19, Z in 20..29, bits 30 and 31 unused - and
+		/// each is multiplied by this track's <see cref="Step"/> and added to its
+		/// <see cref="Centre"/>, which is how the engine decodes them (0x00470e90, reading the
+		/// descriptor's +0x14 and +0x20).
+		///
+		/// The box is the track's own, not its mesh's. It is usually close to the mesh's bounding
+		/// box, but in none of the 464 tracks whose model resolves is it the same. Decoded in the
+		/// track's box, the first keyframe lands on the mesh's rest vertices to within one and a
+		/// half quantisation steps in 346 of them; decoded in the mesh's bounding box, in 63. It
+		/// shows most in the advisor's clip 14, whose antennae are quantised into a box nearly twice
+		/// as tall as in his other clips: read in the mesh's box, they came out at a little over half
+		/// their height for as long as he rose, then jumped back when his next clip began.
+		/// </summary>
+		public Vector3 DecodePosition( uint raw )
+			=> new( (Field( raw, 0 ) * Step.X) + Centre.X, (Field( raw, 10 ) * Step.Y) + Centre.Y, (Field( raw, 20 ) * Step.Z) + Centre.Z );
+
+		private static int Field( uint raw, int shift )
+		{
+			var field = (int)((raw >> shift) & 0x3FF);
+			return (field & 0x200) != 0 ? field - 1024 : field;
+		}
 
 		private (int Track, int Slot)[] _channelLookup = Array.Empty<(int, int)>();
 
@@ -449,33 +487,6 @@ public class AnimationFile : BaseFormat
 		return null;
 	}
 
-	/// <summary>
-	/// A keyframe value is a vertex position quantised into three signed 10-bit fields -
-	/// X in bits 0..9, Y in 10..19, Z in 20..29, with bits 30 and 31 unused. Each field spans
-	/// the owning mesh's bounding box, so -512 maps to the box minimum and +511 to its maximum.
-	///
-	/// Verified by decoding the rest keyframe of every channel of Jun_isleM1 and comparing
-	/// against the 169 vertices of the Dino mesh it animates: R^2 = 0.999997 or better per
-	/// axis, max error 0.028 units, which is just the 10-bit quantisation step.
-	/// </summary>
-	public static Vector3 DecodePosition( uint raw, Vector3 boundsMin, Vector3 boundsMax )
-	{
-		return new Vector3(
-			Component( raw, 0, boundsMin.X, boundsMax.X ),
-			Component( raw, 10, boundsMin.Y, boundsMax.Y ),
-			Component( raw, 20, boundsMin.Z, boundsMax.Z ) );
-	}
-
-	private static float Component( uint raw, int shift, float min, float max )
-	{
-		var field = (int)((raw >> shift) & 0x3FF);
-		if ( (field & 0x200) != 0 )
-			field -= 1024;
-
-		var centre = (min + max) * 0.5f;
-		return centre + (field * (max - min) / 1023f);
-	}
-
 	protected override void ReadFromStream( Stream stream )
 	{
 		var length = (int)stream.Length;
@@ -695,11 +706,18 @@ public class AnimationFile : BaseFormat
 
 	private void ReadMorphChannel( byte[] data, uint descriptorAt, int target )
 	{
-		if ( descriptorAt < 0x9C || descriptorAt + 0x10 > data.Length )
+		if ( descriptorAt < 0x9C || descriptorAt + 0x2C > data.Length )
 			return;
 
 		int recordCount = BitConverter.ToUInt16( data, (int)descriptorAt + 0x02 );
 		var tableOffset = BitConverter.ToUInt32( data, (int)descriptorAt + 0x0C );
+
+		float Float( int at ) => BitConverter.ToSingle( data, (int)descriptorAt + at );
+		var centre = new Vector3( Float( 0x14 ), Float( 0x18 ), Float( 0x1C ) );
+		var step = new Vector3( Float( 0x20 ), Float( 0x24 ), Float( 0x28 ) );
+
+		if ( !float.IsFinite( centre.X + centre.Y + centre.Z + step.X + step.Y + step.Z ) )
+			return;
 
 		if ( recordCount <= 0 || recordCount > 4096 )
 			return;
@@ -755,7 +773,7 @@ public class AnimationFile : BaseFormat
 			};
 		}
 
-		var track = new MorphTrack { TargetIndex = target, Records = records };
+		var track = new MorphTrack { TargetIndex = target, Records = records, Centre = centre, Step = step };
 		track.BuildLookup();
 
 		MorphTracks.Add( track );
