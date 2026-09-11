@@ -27,6 +27,18 @@ public static partial class Input
 		set => Sdl2Native.SDL_ShowCursor( value ? 1 : 0 );
 	}
 
+	/// <summary>What was typed this frame, as characters - for a text box that has the keyboard.</summary>
+	public static string TypedText { get; private set; } = "";
+
+	/// <summary>The keys that went down this frame, a held key's repeats included.</summary>
+	public static IReadOnlyList<Key> KeysPressed { get; private set; } = [];
+
+	/// <summary>
+	/// Set while a text box has the keyboard, so typing into it does not also press what its keys are
+	/// bound to - an X in a player's name would otherwise freeze the lobby camera.
+	/// </summary>
+	public static bool TextCaptured { get; set; }
+
 	public static bool Pressed( InputButton button )
 	{
 		return KeysDown.Contains( button ) && !LastKeysDown.Contains( button );
@@ -112,6 +124,9 @@ public static partial class Input
 				.ToList()
 		);
 
+		TypedText = new string( [.. inputSnapshot.KeyCharPresses] );
+		KeysPressed = [.. newKeysDown];
+
 		bool IsKeyPressed( Key k ) => Keyboard.KeysDown.Contains( k );
 
 		if ( IsKeyPressed( Key.A ) )
@@ -125,6 +140,9 @@ public static partial class Input
 		
 		LastKeysDown = [.. KeysDown];
 		KeysDown.Clear();
+
+		if ( TextCaptured )
+			return;
 
 		foreach ( var (button, vkeys) in Bindings )
 		{
