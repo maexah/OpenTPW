@@ -95,6 +95,16 @@ internal sealed class ParticleSystem
 		Current = this;
 	}
 
+	/// <summary>
+	/// Ends the system as its scene ends (Particles_Shutdown, 0x0051fd20): it is no longer the one effects are
+	/// started in or drawn from.
+	/// </summary>
+	public void Shutdown()
+	{
+		if ( Current == this )
+			Current = null;
+	}
+
 	/// <summary>Runs however many 31ms ticks have come due.</summary>
 	public void Update()
 	{

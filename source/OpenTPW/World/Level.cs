@@ -143,6 +143,37 @@ public class Level
 		Hud.Update();
 	}
 
+	/// <summary>
+	/// How long every voice still sounding takes to fade as a level ends. The original's state machine hands its
+	/// stop-all (0x0051bcb0) 90, in the same untraced unit as the 60 that Sound_StopFading is handed when the advisor
+	/// is quietened, which he already takes as milliseconds - so 0.09 seconds. <b>Inferred, not proven.</b>
+	/// </summary>
+	private const float StopAllSeconds = 0.09f;
+
+	/// <summary>
+	/// Ends the level, in the order the original leaves its lobby (state 3). The interface goes first - the windows
+	/// close, and the front end empties the advisor's queue through his crying stop. Then every entity, in the
+	/// order they were made, which ends the lobby's sound and weather before the advisor himself. Then the camera
+	/// lets go of its island, every voice still sounding fades, and the particle system shuts down.
+	///
+	/// Only between frames: nothing may update or draw a level while it ends, or be half way through a walk over
+	/// its entities.
+	/// </summary>
+	public void Unload()
+	{
+		foreach ( var panel in Hud.Children.ToArray() )
+			panel.Delete();
+
+		foreach ( var entity in Entity.All.ToArray() )
+			entity.Delete();
+
+		Entity.ApplyDeletions();
+
+		LobbyCameraMode.ForgetIsland();
+		Audio.StopAll( StopAllSeconds );
+		ParticleSystem.Current?.Shutdown();
+	}
+
 	public void Render()
 	{
 		Camera.Update();

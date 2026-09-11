@@ -102,6 +102,25 @@ internal sealed class WindowStack : Panel
 	/// <summary>Ends the button glints at once - see <see cref="ButtonGlint.Stop"/>.</summary>
 	internal void StopGlint() => _glint.Stop();
 
+	/// <summary>
+	/// The scene is ending. Every window closes, front to back, through <see cref="Close"/>, so each hears it is
+	/// closing - the island panel ends its sparkles while there is still a particle system to end them in - and
+	/// lets go of its text. Then the glints go, nothing is left hovered or pressed, the help bar lets go of its
+	/// text, and typing is no longer captured.
+	/// </summary>
+	protected override void OnDelete()
+	{
+		for ( int i = _windows.Count - 1; i >= 0; --i )
+			Close( _windows[i] );
+
+		_glint.Stop();
+		_hovered = null;
+		_pressed = null;
+		_mouseWasDown = false;
+		_helpBar.ReleaseText();
+		Input.TextCaptured = false;
+	}
+
 	protected override void OnUpdate()
 	{
 		foreach ( var window in _windows.ToArray() )

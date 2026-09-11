@@ -172,7 +172,12 @@ public sealed class Advisor : Entity
 
 	private readonly Random _random = new();
 
-	private SoundCategory? _speech;
+	/// <summary>
+	/// The speech category, made the first time there is a device to play it on and kept from then on, as the
+	/// original registers cat_speech once, as the game starts (0x0051eae0) - so the advisor of the next scene
+	/// speaks from the same one.
+	/// </summary>
+	private static SoundCategory? _speech;
 	private AdvisorModel? _figure;
 	private bool _figureFailed;
 	private bool _shown;
@@ -614,6 +619,21 @@ public sealed class Advisor : Entity
 
 		_ducked = false;
 		Audio.Duck( 1f, UnduckSeconds );
+	}
+
+	/// <summary>
+	/// His scene is ending, as FUN_00598ad0 ends him when the lobby or a park is left: what is queued goes, and so
+	/// does he, quietly, and the mix is let back up. He goes without a cry here; whoever handed him lines empties
+	/// its own queue first, which is where the original's cry comes from - see the front end's end.
+	/// </summary>
+	protected override void OnDelete()
+	{
+		_queue.Clear();
+		Dismiss( QuietenSeconds );
+		Release();
+
+		if ( Current == this )
+			Current = null;
 	}
 
 	/// <summary>What the advisor is doing, for the debug console.</summary>

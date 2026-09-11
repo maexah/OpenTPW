@@ -223,6 +223,13 @@ internal sealed class FrontEnd : Panel
 	}
 
 	/// <summary>
+	/// The lobby is ending. The original's front end empties the advisor's queue as it stops (0x005e4140), through
+	/// AdvisorQueue_Clear (0x005d6060), which cuts him off with Advisor_StopSpeaking when he is busy - so he cries
+	/// out if he was mid-line. Its windows have already been closed by the stack, which ends before it.
+	/// </summary>
+	protected override void OnDelete() => Advisor.Current?.Hush();
+
+	/// <summary>
 	/// Escape, with no box to type into, as the stack hands it over. The lobby's key handler (0x005e41c0)
 	/// opens the game menu on it (GameMenu_Open with 1) unless it is already open, and the menu's handler
 	/// (0x0048bd40) closes it on the same key. Whether the original opens it over a message box or the

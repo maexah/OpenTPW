@@ -33,6 +33,10 @@ namespace OpenTPW;
 /// and doorcls1b in the global kids bank, spacegate1 in space's ambient bank, gateslm1b in
 /// hallow's ride bank - but those belong to rides and queue huts inside a park, not to the
 /// lobby's front gates.
+///
+/// Engine and content: this is the lobby's content - which categories and effects it plays, when, and at
+/// the measured gains below - played through the engine's <see cref="Audio"/> and
+/// <see cref="SoundCategory"/>.
 /// </summary>
 public sealed class LobbyAudio : Entity
 {
@@ -162,6 +166,18 @@ public sealed class LobbyAudio : Entity
 	public LobbyAudio()
 	{
 		Current = this;
+	}
+
+	/// <summary>
+	/// The lobby is ending: what it has playing fades and its effects are let go, as the original frees its global
+	/// lobby sfx on the way out of the lobby (0x0051ea50). Its categories go with it.
+	/// </summary>
+	protected override void OnDelete()
+	{
+		StopEverything();
+
+		if ( Current == this )
+			Current = null;
 	}
 
 	protected override void OnUpdate()

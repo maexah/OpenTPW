@@ -17,6 +17,9 @@ namespace OpenTPW;
 /// Nothing here throws. A machine with no sound card, a container with no audio server, a test
 /// run - all of them end up with <see cref="Ready"/> false and every call below doing nothing,
 /// because sound going missing should never be the reason the game will not start.
+///
+/// Engine and content: all of this is engine - the device, the mixer, the groups, the duck, and stopping
+/// everything between scenes. What plays, and how loud, belongs to whoever plays it.
 /// </summary>
 public static class Audio
 {
@@ -232,6 +235,22 @@ public static class Audio
 
 		_callback = null;
 		_device = 0;
+	}
+
+	/// <summary>
+	/// Fades every voice to silence over <paramref name="fadeSeconds"/> as a scene ends, and leaves the device
+	/// open for the next one - what the original's state machine does between scenes with 0x0051bcb0.
+	/// </summary>
+	public static void StopAll( float fadeSeconds )
+	{
+		if ( !Ready )
+			return;
+
+		lock ( Lock )
+		{
+			foreach ( var voice in Voices )
+				voice.FadeOut( fadeSeconds );
+		}
 	}
 
 	/// <summary>

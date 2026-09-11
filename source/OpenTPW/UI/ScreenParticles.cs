@@ -122,6 +122,10 @@ internal sealed class ScreenParticles : Panel
 	{
 		if ( Current == this )
 			Current = null;
+
+		// Built from its own pictures rather than loaded from a path, so nothing else can be holding it - see
+		// Texture.Delete.
+		_atlas.Delete();
 	}
 
 	/// <summary>Draws the effects started for <paramref name="window"/>, just after the window - see the class remarks.</summary>

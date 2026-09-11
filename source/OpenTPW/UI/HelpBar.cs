@@ -16,6 +16,10 @@ namespace OpenTPW.UI;
 /// Ctrl+H turns that off and back on too, through the binding OpenTPW already had for the help bar
 /// (<see cref="InputButton.ToggleHelpBar"/>).
 /// </para>
+/// <para>
+/// <b>Engine and content.</b> The strip is engine, the same under every scene's windows. Which row a control
+/// shows is the content of the layout that made the control.
+/// </para>
 /// </summary>
 internal sealed class HelpBar
 {
@@ -55,4 +59,7 @@ internal sealed class HelpBar
 	}
 
 	public void Draw() => _bar.Draw();
+
+	/// <summary>Lets go of the text it has drawn, as its scene ends.</summary>
+	public void ReleaseText() => _bar.ReleaseText();
 }

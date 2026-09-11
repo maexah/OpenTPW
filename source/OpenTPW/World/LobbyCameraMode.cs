@@ -20,6 +20,9 @@ namespace OpenTPW;
 /// Nothing in there is a transition - there is no arrival, no duration and no second code path.
 /// Selecting another island only changes what the two are chasing, which is also why the orbit
 /// carries on turning straight through a move.
+///
+/// Engine and content: the lobby's own camera, with its settings read from lobby.txt at the boundary;
+/// a park's camera will be a mode of its own.
 /// </summary>
 public class LobbyCameraMode : CameraMode
 {
@@ -182,6 +185,13 @@ public class LobbyCameraMode : CameraMode
 	/// the very first frame takes, so there is no separate teleport to keep working.
 	/// </summary>
 	internal static void DebugSettle() => _placed = false;
+
+	/// <summary>
+	/// Lets go of the island on show as the lobby ends, so nothing reads an island out of a lobby that has gone.
+	/// Which island it was, and where the camera was, are kept, as they are across camera modes - see
+	/// <see cref="Paused"/> - so the lobby built next picks up where this one left off.
+	/// </summary>
+	internal static void ForgetIsland() => CurrentIsland = null;
 
 	/// <summary>
 	/// Points the camera at another island, wrapping at either end. There is nothing to reset:

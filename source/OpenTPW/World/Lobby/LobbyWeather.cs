@@ -44,6 +44,12 @@ public sealed class LobbyWeather : Entity
 
 	public LobbyWeather() => Current = this;
 
+	protected override void OnDelete()
+	{
+		if ( Current == this )
+			Current = null;
+	}
+
 	private Sky? _sky;
 	private Vector3 _skyColour = LobbyScript.DefaultSkyColour;
 	private bool _placed;
