@@ -238,6 +238,14 @@ public partial class Renderer
 
 		InputSnapshot inputSnapshot = Window.SdlWindow.PumpEvents();
 
+		// Closed while those events were pumped - the window's own close button, or the desktop asking the
+		// game to go. SDL has already destroyed the window, so there is nothing left to draw into and
+		// Present would throw trying to acquire an image from a swapchain whose window has gone. The loop's
+		// own test ends the game on its next turn, which is where whoever is playing is saved. The loading
+		// screen stops for the same reason - see DrawLoadingFrame.
+		if ( !Window.SdlWindow.Exists )
+			return;
+
 		Time.Update( deltaTime );
 		Input.UpdateFrom( inputSnapshot );
 
