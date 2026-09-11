@@ -1,0 +1,306 @@
+namespace OpenTPW.UI;
+
+/// <summary>
+/// One control of the interface: a rectangle on the <see cref="VirtualScreen"/> and what it shows
+/// there - a part of a mesh, some text, or both - with its children drawn over it.
+///
+/// <para>
+/// The original builds its controls from layout data compiled into the executable: a stream of 16-bit
+/// opcodes, read by 0x0065fd58. Op 0 opens a control with a type, flags, an id and a rectangle, and
+/// everything up to op 5 belongs to it - op 1 its mesh, op 3 the rectangle its text goes in, op 0x11
+/// its line of help, and further op 0s its children. The windows here are those streams written out
+/// by hand, each id and rectangle exactly as the data has it.
+/// </para>
+/// </summary>
+internal class UiControl
+{
+	private readonly UiText _text = new();
+	private bool _followsParent;
+
+	public int Id { get; init; }
+
+	public UiRect Rect { get; set; }
+
+	public UiControl? Parent { get; private set; }
+
+	public List<UiControl> Children { get; } = new();
+
+	/// <summary>Whether it and its children are drawn and can be pointed at.</summary>
+	public bool Visible { get; set; } = true;
+
+	public UiMesh? Mesh { get; set; }
+
+	/// <summary>Which part of <see cref="Mesh"/> it shows, before its state is added - set by 0x0065d3a3.</summary>
+	public int Frame { get; set; }
+
+	/// <summary>The row of UIHELPTEXT.str the <see cref="HelpBar"/> shows over it, or -1 for none.</summary>
+	public int HelpText { get; init; } = -1;
+
+	public string? Text { get; set; }
+
+	/// <summary>Which of the <see cref="UiFonts"/> the text is in.</summary>
+	public int Font { get; set; } = -1;
+
+	public UiColour TextColour { get; set; } = UiColour.White;
+
+	public TextAlign TextAcross { get; set; } = TextAlign.Centre;
+
+	public TextAlign TextDown { get; set; } = TextAlign.Centre;
+
+	/// <summary>Where the text goes, when that is not the whole control.</summary>
+	public UiRect? TextRect { get; init; }
+
+	/// <summary>Whether the text has the purple skin's dark edge - see <see cref="UiText"/>.</summary>
+	public bool TextShadow { get; init; }
+
+	/// <summary>Whether text too wide for its rectangle carries on onto further lines.</summary>
+	public bool TextWraps { get; init; }
+
+	/// <summary>Stretched over the whole window instead of keeping the virtual screen's shape - the dimmer behind a dialog.</summary>
+	public bool FillsWindow { get; init; }
+
+	public Action? Clicked { get; set; }
+
+	public Action? Entered { get; set; }
+
+	public Action? Exited { get; set; }
+
+	internal bool Hovered { get; set; }
+
+	internal bool Pressed { get; set; }
+
+	/// <summary>Which edge of the window it keeps to - see <see cref="VirtualScreen"/>.</summary>
+	internal Anchor Anchor => _followsParent && Parent != null ? Parent.Anchor : VirtualScreen.AnchorFor( Rect );
+
+	internal PixelRect Pixels => FillsWindow
+		? new PixelRect( 0, 0, Screen.Width, Screen.Height )
+		: VirtualScreen.ToPixels( Rect, Anchor );
+
+	/// <summary>Which part of the mesh is added to <see cref="Frame"/> for the state it is in.</summary>
+	internal virtual int State => 0;
+
+	/// <summary>Whether the pointer stops at it, rather than passing through to whatever is under it.</summary>
+	internal virtual bool TakesMouse => Clicked != null || Entered != null || HelpText >= 0;
+
+	public T Add<T>( T child ) where T : UiControl
+	{
+		child.Parent = this;
+		child._followsParent = !Rect.IsWholeScreen && Rect.Contains( child.Rect );
+		Children.Add( child );
+		return child;
+	}
+
+	internal void Draw()
+	{
+		if ( !Visible )
+			return;
+
+		OnDraw();
+
+		foreach ( var child in Children )
+			child.Draw();
+	}
+
+	protected virtual void OnDraw()
+	{
+		Mesh?.Draw( Frame + State, Pixels, Rect );
+		DrawText( Text );
+	}
+
+	protected PixelRect TextArea => TextRect is { } rect ? VirtualScreen.ToPixels( rect, Anchor ) : Pixels;
+
+	protected void DrawText( string? text )
+		=> _text.Draw( text, Font, TextColour, TextShadow, TextWraps, TextArea, TextAcross, TextDown );
+
+	/// <summary>The front-most control under a point that takes the pointer, if any.</summary>
+	internal UiControl? HitTest( float x, float y )
+	{
+		if ( !Visible )
+			return null;
+
+		for ( int i = Children.Count - 1; i >= 0; --i )
+		{
+			if ( Children[i].HitTest( x, y ) is { } hit )
+				return hit;
+		}
+
+		return TakesMouse && Pixels.Contains( x, y ) ? this : null;
+	}
+
+	internal bool IsWithin( UiControl ancestor )
+	{
+		for ( var control = this; control != null; control = control.Parent )
+		{
+			if ( control == ancestor )
+				return true;
+		}
+
+		return false;
+	}
+
+	/// <summary>Lets go of the textures its text and its children's text were laid out into.</summary>
+	internal void ReleaseText()
+	{
+		_text.Delete();
+
+		foreach ( var child in Children )
+			child.ReleaseText();
+	}
+}
+
+/// <summary>
+/// A button - control type 2.
+///
+/// Its mesh has a part for each way it can look, in the order b_dellog.md2 names them: normal,
+/// disabled, highlighted, highlighted and pressed, held down, and down. A button that stays down - an
+/// option in a <see cref="UiRadioGroup"/> - shows "down" while it is the one chosen.
+/// </summary>
+internal sealed class UiButton : UiControl
+{
+	private const int Normal = 0;
+	private const int Disabled = 1;
+	private const int Highlighted = 2;
+	private const int HighlightedDown = 3;
+	private const int HeldDown = 4;
+	private const int Down = 5;
+
+	public bool Enabled { get; set; } = true;
+
+	/// <summary>Whether it stays down on its own - the chosen option of a group.</summary>
+	public bool IsDown { get; set; }
+
+	internal override bool TakesMouse => true;
+
+	internal override int State => !Enabled ? Disabled
+		: Pressed ? (Hovered ? HighlightedDown : HeldDown)
+		: IsDown ? (Hovered ? HighlightedDown : Down)
+		: Hovered ? Highlighted
+		: Normal;
+}
+
+/// <summary>
+/// A box to type into - control type 5.
+///
+/// It holds at most <see cref="MaxLength"/> characters: 0x006662b7 gives it its buffer, and
+/// 0x00667833 stops inserting once the text is that long. Text put in with all of it selected is
+/// replaced by the first thing typed - 0x006677ae selects the new player dialog's "Type your name"
+/// that way - and the selection sits on hilight.wct, which the dialog hands it (0x0066656c).
+/// </summary>
+internal sealed class UiEdit : UiControl
+{
+	private static Texture? _highlight;
+
+	private bool _allSelected;
+
+	public int MaxLength { get; init; } = 16;
+
+	/// <summary>Characters it will not take - the dialog refuses the ones a file name cannot hold (0x0066781a).</summary>
+	public string Refused { get; init; } = "";
+
+	public string Value { get; private set; } = "";
+
+	/// <summary>Whether what is typed goes to it.</summary>
+	internal bool HasFocus { get; set; }
+
+	internal override bool TakesMouse => true;
+
+	public void SetText( string text, bool selectAll )
+	{
+		Value = text.Length > MaxLength ? text[..MaxLength] : text;
+		_allSelected = selectAll && Value.Length > 0;
+	}
+
+	internal void Type( string typed )
+	{
+		foreach ( var character in typed )
+		{
+			if ( char.IsControl( character ) || Refused.Contains( character ) )
+				continue;
+
+			if ( _allSelected )
+			{
+				Value = "";
+				_allSelected = false;
+			}
+
+			if ( Value.Length < MaxLength )
+				Value += character;
+		}
+	}
+
+	internal void Backspace()
+	{
+		if ( _allSelected )
+		{
+			Value = "";
+			_allSelected = false;
+		}
+		else if ( Value.Length > 0 )
+		{
+			Value = Value[..^1];
+		}
+	}
+
+	protected override void OnDraw()
+	{
+		Mesh?.Draw( Frame + State, Pixels, Rect );
+
+		if ( HasFocus && UiFonts.Get( Font ) is { } font )
+		{
+			var area = TextArea;
+			var scale = UiFonts.Scale;
+			var width = font.Measure( Value ) * scale;
+			var height = font.LineHeight * scale;
+			var top = area.Y + ((area.Height - height) * 0.5f);
+
+			if ( _allSelected )
+				DrawHighlight( area.X, top, width, height );
+			else if ( Time.Now % 1f < 0.5f )
+				DrawHighlight( area.X + width, top, MathF.Max( 2f, 2f * scale ), height );
+		}
+
+		DrawText( Value );
+	}
+
+	private static void DrawHighlight( float x, float y, float width, float height )
+	{
+		_highlight ??= new Texture( "ui/textures/hilight.wct" );
+		Material.UI.Set( "Color", _highlight );
+
+		using ( _ = new Graphics.Scope( Screen.Size ) )
+			Graphics.Quad( new Rectangle( x, Screen.Height - y - height, width, height ), Material.UI );
+	}
+}
+
+/// <summary>
+/// Buttons of which at most one is down - control type 8.
+///
+/// It starts with none chosen - its constructor, 0x0066a1e8, sets the choice to -1 - and choosing one
+/// puts that one down and lifts the rest (0x0066a295, 0x0066a1b0).
+/// </summary>
+internal sealed class UiRadioGroup : UiControl
+{
+	public int Selected { get; private set; } = -1;
+
+	public Action? SelectionChanged { get; set; }
+
+	public UiButton AddOption( UiButton option )
+	{
+		Add( option );
+		option.Clicked = () => Select( option.Id );
+		return option;
+	}
+
+	public void Select( int id )
+	{
+		if ( id == Selected )
+			return;
+
+		Selected = id;
+
+		foreach ( var option in Children.OfType<UiButton>() )
+			option.IsDown = option.Id == id;
+
+		SelectionChanged?.Invoke();
+	}
+}

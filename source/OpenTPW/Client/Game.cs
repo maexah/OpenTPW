@@ -11,7 +11,7 @@ internal static class Game
 	/// material and mesh registered while it loads. The loading screen logs the real count when it
 	/// closes; this wants bringing into line with it when the lobby comes to load more.
 	/// </summary>
-	private const int LobbyLoadSteps = 2972;
+	private const int LobbyLoadSteps = 3160;
 
 	public static void Run( string[] args )
 	{

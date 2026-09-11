@@ -80,8 +80,9 @@ public class Level
 	{
 		Hud = new();
 
-		var layout = new LobbyLayout() { Hud = Hud };
-		layout.OnInit();
+		// The lobby's interface - the player slots, its dialogs and the island panel. Built here, behind
+		// the loading screen, along with everything its windows draw.
+		Hud.AddChild( new FrontEnd() );
 
 		Hud.AddChild( new Cursor() );
 	}
