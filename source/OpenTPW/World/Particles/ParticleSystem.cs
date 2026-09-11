@@ -34,6 +34,11 @@ namespace OpenTPW;
 /// Not built: drawing effects in the world, and the ground an emitter or effector bounces off, which
 /// is flat at zero - what the system's default callback (0x005d60c0) answers.
 /// </para>
+/// <para>
+/// <b>Engine and content.</b> The system is engine, the same in the lobby and a park. The effects are
+/// content, read from Tp2.plb at the boundary (<see cref="ParticleLibraryFile"/>), and which effect starts
+/// where is up to whoever starts it.
+/// </para>
 /// </summary>
 internal sealed class ParticleSystem
 {
@@ -170,7 +175,7 @@ internal sealed class ParticleSystem
 		if ( template.Linked >= 0 && template.Linked != effect )
 			emitter.Linked = SpawnLinked( emitter, x, y, z );
 
-		return (emitter.Generation << 16) | slot;
+		return Handle( emitter.Generation, slot );
 	}
 
 	/// <summary>Stops an effect emitting (0x0051feb0). Its particles live out their time.</summary>
@@ -227,19 +232,32 @@ internal sealed class ParticleSystem
 		_generation = (_generation % 0xffff) + 1;
 		instance.Generation = _generation;
 
-		return (instance.Generation << 16) | slot;
+		return Handle( instance.Generation, slot );
 	}
+
+	/// <summary>
+	/// A handle: the generation in the top sixteen bits and the slot in the bottom sixteen, as Particles_Spawn
+	/// (0x00521e60) makes one. From generation 0x8000 on it is a negative int.
+	/// </summary>
+	internal static int Handle( int generation, int slot ) => (generation << 16) | slot;
+
+	/// <summary>
+	/// Whether <paramref name="handle"/> is still for what is in its slot, which is of <paramref name="generation"/>
+	/// - compared as the sixteen bits the handle carries, as Particles_Kill (0x0051feb0) compares them. Shifting a
+	/// negative handle down keeps its sign, so the generation is masked back out of it.
+	/// </summary>
+	internal static bool IsCurrent( int handle, int generation ) => generation != 0 && generation == ((handle >> 16) & 0xffff);
 
 	internal bool TryEmitter( int handle, out Emitter emitter )
 	{
 		emitter = Emitters[(handle & 0xffff) % EmitterCount];
-		return handle != 0 && (handle & 0xffff) < EmitterCount && emitter.Generation != 0 && emitter.Generation == handle >> 16;
+		return handle != 0 && (handle & 0xffff) < EmitterCount && IsCurrent( handle, emitter.Generation );
 	}
 
 	private bool TryEffector( int handle, out Effector effector )
 	{
 		effector = Effectors[(handle & 0xffff) % EffectorCount];
-		return handle != 0 && (handle & 0xffff) < EffectorCount && effector.Generation != 0 && effector.Generation == handle >> 16;
+		return handle != 0 && (handle & 0xffff) < EffectorCount && IsCurrent( handle, effector.Generation );
 	}
 
 	/// <summary>
