@@ -91,7 +91,7 @@ public struct Vector4 : IEquatable<Vector4>
 		return false;
 	}
 
-	public bool Equals( Vector4 other ) => Equals( other );
+	public bool Equals( Vector4 other ) => other.X == X && other.Y == Y && other.Z == Z && other.W == W;
 
 	public static float Dot( Vector4 a, Vector4 b ) => System.Numerics.Vector4.Dot( a.internalVector, b.internalVector );
 	public readonly float Dot( Vector4 b ) => Dot( this, b );

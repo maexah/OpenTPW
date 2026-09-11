@@ -76,7 +76,7 @@
 			return false;
 		}
 
-		public bool Equals( Color other ) => Equals( other );
+		public bool Equals( Color other ) => other.R == R && other.G == G && other.B == B && other.A == A;
 
 		public override int GetHashCode() => HashCode.Combine( internalColor );
 		public override string ToString() => internalColor.ToString();
