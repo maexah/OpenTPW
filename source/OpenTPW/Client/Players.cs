@@ -1,13 +1,19 @@
-namespace OpenTPW.UI;
+namespace OpenTPW;
 
 /// <summary>
-/// The front end's four player slots, and who is playing.
+/// The four player slots, and who is playing.
 ///
 /// <para>
 /// Players are kept as the original keeps them: a folder each under save\users, named for the slot and the
 /// name, with their gms.dat inside - see <see cref="SaveFolder"/> and <see cref="PlayerFile"/>. The slots are
-/// filled from those folders as the lobby loads (0x005c7590), so a player made before is waiting in their
-/// slot the next time the game starts.
+/// filled from those folders as the game starts (0x005c7590, whose one caller is WinMain at 0x0045aa74), so a
+/// player made before is waiting in their slot the next time the game starts.
+/// </para>
+/// <para>
+/// There is one set of them for the whole run, <see cref="Roster"/>, as the original makes one in WinMain
+/// (0x0045aa5a) and frees it only as the game ends (state 0xc, 0x005502f6). A park's load reads it
+/// (0x005accf0), and leaving a park for the lobby keeps whoever is playing: nothing on that path saves them or
+/// lets them go.
 /// </para>
 /// <para>
 /// Making a player (0x005c7f40) writes their folder and first gms.dat at once, and picks them (0x005c83b0).
@@ -16,10 +22,18 @@ namespace OpenTPW.UI;
 /// go and when the game closes with them still playing (0x005c8650), and gms.dat again the moment a new
 /// player is handed their first key.
 /// </para>
+/// <para>
+/// <b>Engine and content.</b> Engine: the slots, who is playing, and saving someone and letting them go as one
+/// step. There is no game content here, and the original's save\users layout stays behind
+/// <see cref="SaveFolder"/> and <see cref="PlayerFile"/>.
+/// </para>
 /// </summary>
 internal sealed class Players
 {
 	public const int SlotCount = 4;
+
+	/// <summary>The players, for the whole run - see the class remarks.</summary>
+	public static Players Roster { get; } = new();
 
 	private readonly Player?[] _slots = new Player?[SlotCount];
 

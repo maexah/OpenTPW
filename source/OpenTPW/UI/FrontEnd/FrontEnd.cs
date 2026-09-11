@@ -56,22 +56,13 @@ internal sealed class FrontEnd : Panel
 	private bool _mouseWasDown;
 	private bool _quitting;
 
-	public Players Players { get; } = new();
-
-	/// <summary>The lobby's front end, while there is one - for saving whoever is playing as the game closes.</summary>
-	internal static FrontEnd? Current { get; private set; }
-
 	public FrontEnd()
 	{
-		Current = this;
-
 		foreach ( var mesh in Meshes )
 			UiMesh.Get( mesh );
 
 		UiFonts.Preload();
 		UiSounds.Preload();
-
-		Players.Load();
 
 		_helpBar = new HelpBar();
 		_islandPanel = new IslandPanel( this );
@@ -121,14 +112,14 @@ internal sealed class FrontEnd : Panel
 	/// <summary>A player slot was clicked (0x004a6000): an empty one asks who is playing, a used one plays as whoever is in it.</summary>
 	internal void SlotClicked( int slot )
 	{
-		if ( Players[slot] == null )
+		if ( Players.Roster[slot] == null )
 		{
 			Open( new NewPlayerDialog( this, slot ) );
 			FrontEndLines.ExplainNewPlayer();
 			return;
 		}
 
-		Players.Select( slot );
+		Players.Roster.Select( slot );
 		ClosePlayerSlots( newPlayer: false );
 	}
 
@@ -181,7 +172,7 @@ internal sealed class FrontEnd : Panel
 	/// </summary>
 	internal void SelectNewPlayer()
 	{
-		Players.SaveAndDeselect();
+		Players.Roster.SaveAndDeselect();
 		Close( _islandPanel );
 
 		ShowPlayerSlots();
@@ -203,7 +194,7 @@ internal sealed class FrontEnd : Panel
 		var text = Localization.Get( UIStrings.ConfirmDeletePlayer );
 
 		if ( string.IsNullOrWhiteSpace( text ) )
-			text = $"DELETE PLAYER\n\nAre you sure you want to delete {Players[slot]?.Name} ?\n\n(All of their saved games WILL be lost)";
+			text = $"DELETE PLAYER\n\nAre you sure you want to delete {Players.Roster[slot]?.Name} ?\n\n(All of their saved games WILL be lost)";
 
 		Open( new MessageBox( this, text, () => DeletePlayer( slot ) ) );
 	}
@@ -211,7 +202,7 @@ internal sealed class FrontEnd : Panel
 	/// <summary>The delete box's tick (0x004a61b0): the player goes, folder and all, and the slots are filled again (0x004a62b0).</summary>
 	private void DeletePlayer( int slot )
 	{
-		Players.Delete( slot );
+		Players.Roster.Delete( slot );
 
 		if ( _playerSlots != null )
 			Close( _playerSlots );
@@ -226,7 +217,7 @@ internal sealed class FrontEnd : Panel
 	private void ShowPlayerSlots()
 	{
 		OpenPlayerSlots();
-		FrontEndLines.Greet( Players.UsedSlots );
+		FrontEndLines.Greet( Players.Roster.UsedSlots );
 	}
 
 	/// <summary>The player slots, without a word - what the delete box's tick fills them again with (0x004a62b0).</summary>
@@ -254,13 +245,13 @@ internal sealed class FrontEnd : Panel
 
 		Open( _islandPanel );
 
-		if ( newPlayer && Players.Current is { InstantAction: true } )
+		if ( newPlayer && Players.Roster.Current is { InstantAction: true } )
 		{
 			FrontEndLines.ExplainInstantAction();
 		}
-		else if ( newPlayer && Players.Current != null )
+		else if ( newPlayer && Players.Roster.Current != null )
 		{
-			Players.Current.AddKey();
+			Players.Roster.Current.AddKey();
 
 			// With nobody to hand it over, the key would never show.
 			if ( LobbyAdvisor.Current is { CanSpeak: true } )

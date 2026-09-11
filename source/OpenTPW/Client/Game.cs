@@ -46,6 +46,10 @@ internal static class Game
 		// The machine's options, which the original reads before it sets anything else up.
 		SaveFolder.LoadConfig();
 
+		// The players in save\users, kept for the whole run as the original keeps them (WinMain, 0x0045aa74)
+		// rather than with the lobby.
+		Players.Roster.Load();
+
 		//
 		// Custom OpenTPW cache directory (mainly for editor-related stuff)
 		//
@@ -84,7 +88,7 @@ internal static class Game
 		Render.Run();
 
 		// Whoever is still playing is saved as the game closes, however it was closed (WinMain_Main, 0x0045acfc).
-		UI.FrontEnd.Current?.Players.SaveAndDeselect();
+		Players.Roster.SaveAndDeselect();
 
 		Audio.Shutdown();
 	}

@@ -141,7 +141,7 @@ internal sealed class NewPlayerDialog : UiWindow
 		if ( name.Length == 0 )
 			return;
 
-		var player = FrontEnd.Players.Create( _slot, name, instantAction: _mode.Selected == InstantAction );
+		var player = Players.Roster.Create( _slot, name, instantAction: _mode.Selected == InstantAction );
 		Log.Info( $"Front end: '{player.Name}' is playing in slot {_slot + 1}, {(player.InstantAction ? "Instant Action" : "Full Simulation")}" );
 
 		FrontEnd.PlayerCreated( this );

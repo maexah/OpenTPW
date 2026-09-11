@@ -67,7 +67,7 @@ internal sealed class GameMenu : UiWindow
 		AddChoice( UIStrings.GoOnline, GoOnlineId );
 		AddChoice( UIStrings.Options, OptionsId );
 
-		if ( frontEnd.Players.Current != null )
+		if ( Players.Roster.Current != null )
 			AddChoice( UIStrings.SelectNewPlayer, SelectNewPlayerId );
 
 		AddChoice( UIStrings.ResumeGame, ResumeGameId );

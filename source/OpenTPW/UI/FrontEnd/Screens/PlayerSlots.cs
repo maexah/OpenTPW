@@ -42,7 +42,7 @@ internal sealed class PlayerSlots : UiWindow
 		{
 			var chosen = slot;
 			var top = 46 + (slot * SlotSpacing);
-			var player = frontEnd.Players[slot];
+			var player = Players.Roster[slot];
 
 			var button = Root.Add( new UiControl
 			{

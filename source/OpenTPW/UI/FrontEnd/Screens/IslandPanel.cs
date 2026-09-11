@@ -168,7 +168,7 @@ internal sealed class IslandPanel : UiWindow
 	/// <summary>Looks at the player's keys again and shows the count - 0x004b9340.</summary>
 	public void ShowKeys()
 	{
-		_keysShown = FrontEnd.Players.Current?.Keys ?? 0;
+		_keysShown = Players.Roster.Current?.Keys ?? 0;
 
 		_held.Visible = _keysShown >= 1;
 		_heldNumber.Text = $"{_keysShown} x";
