@@ -74,7 +74,7 @@ public class Level
 
 		// The advisor rides on top of that, ducking everything above while he talks. What he says is
 		// handed to him by the front end, which is built with the HUD below.
-		_ = new LobbyAdvisor();
+		_ = new Advisor();
 
 		Camera.SetCameraMode<LobbyCameraMode>();
 	}

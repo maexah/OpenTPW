@@ -8,7 +8,7 @@ namespace OpenTPW.UI;
 /// (0x005d6110): the greeting as the player slots open (FrontEnd_ShowPlayerSlots, 0x004a6580), how to fill in the
 /// new player dialog as it opens (0x004a6e40), and the tour of the lobby or the Instant Action line once a player is
 /// made (FrontEnd_ClosePlayerSlots, 0x004a6a50). The advisor only says what he is handed - see
-/// <see cref="LobbyAdvisor"/>.
+/// <see cref="Advisor"/>.
 /// </para>
 /// <para>
 /// <b>Engine and content.</b> This is content: which samples the lobby uses, the rule that picks its greeting, and
@@ -78,7 +78,7 @@ internal static class FrontEndLines
 	/// </summary>
 	internal static void Greet( int usedSlots )
 	{
-		if ( LobbyAdvisor.Current is not { } advisor )
+		if ( Advisor.Current is not { } advisor )
 			return;
 
 		if ( usedSlots == 0 )
@@ -98,7 +98,7 @@ internal static class FrontEndLines
 	/// What the new player dialog opens with (0x004a6e40): how to fill it in, cutting in on whatever he
 	/// was saying.
 	/// </summary>
-	internal static void ExplainNewPlayer() => LobbyAdvisor.Current?.Add( Samples.NewPlayerDialog, flush: true );
+	internal static void ExplainNewPlayer() => Advisor.Current?.Add( Samples.NewPlayerDialog, flush: true );
 
 	/// <summary>
 	/// What FrontEnd_ClosePlayerSlots (0x004a6a50) has him say once a new player has been made: his
@@ -106,8 +106,8 @@ internal static class FrontEndLines
 	/// called for - see <see cref="TourKeySeconds"/>.
 	/// </summary>
 	internal static void GiveLobbyTour( Action keyHandedOver )
-		=> LobbyAdvisor.Current?.Add( Samples.LobbyTour, flush: true, TourKeySeconds, keyHandedOver );
+		=> Advisor.Current?.Add( Samples.LobbyTour, flush: true, TourKeySeconds, keyHandedOver );
 
 	/// <summary>What FrontEnd_ClosePlayerSlots has him say instead to a new Instant Action player, who is given no key (response 394).</summary>
-	internal static void ExplainInstantAction() => LobbyAdvisor.Current?.Add( Samples.InstantActionStart, flush: true );
+	internal static void ExplainInstantAction() => Advisor.Current?.Add( Samples.InstantActionStart, flush: true );
 }

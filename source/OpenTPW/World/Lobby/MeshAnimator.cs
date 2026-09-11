@@ -95,7 +95,7 @@ public class MeshAnimator
 	/// <summary>
 	/// Shows <paramref name="animation"/> at <paramref name="frame"/> and uploads it, without
 	/// touching this animator's own playback - for a caller that sequences clips itself rather
-	/// than looping through them, which the advisor does. See <see cref="LobbyAdvisor"/>.
+	/// than looping through them, which the advisor does. See <see cref="Advisor"/>.
 	/// </summary>
 	public void Pose( AnimationFile animation, float frame )
 	{

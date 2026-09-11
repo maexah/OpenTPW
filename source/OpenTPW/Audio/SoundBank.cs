@@ -13,7 +13,7 @@ namespace OpenTPW;
 /// <see cref="DecodeEverythingBelow"/> a bank keeps the compressed bytes instead and decodes an
 /// entry the first time it is asked for, which for a twenty-second line is a few milliseconds -
 /// and the advisor's own one-second pause before he speaks covers it. See
-/// <see cref="LobbyAdvisor"/>.
+/// <see cref="Advisor"/>.
 /// </summary>
 public sealed class SoundBank
 {

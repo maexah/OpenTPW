@@ -10,7 +10,7 @@ namespace OpenTPW.UI;
 /// effect 31, BUTTON01 - or effect 189, Select3, when the control the message is for is flagged
 /// 0x10, which in the lobby's layouts is the new player dialog's pair of game-mode toggles and the
 /// options screen's switches. The game menu's choices play effect 193 themselves when clicked
-/// (0x00492d80). And the advisor's cue in his tour of the lobby (see LobbyAdvisor) plays effect 198,
+/// (0x00492d80). And the advisor's cue in his tour of the lobby (see Advisor) plays effect 198,
 /// goldkey, as the new player's key arrives. The sparkle round an affordable park's key, the burst at that cue and the
 /// glints on a button under the pointer are not sounds at all but particle effects, out of
 /// data\Particle\Tp2.plb, which nothing here draws yet.

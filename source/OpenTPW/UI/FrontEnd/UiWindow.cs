@@ -31,7 +31,7 @@ internal abstract class UiWindow
 	/// message box (0x0047f020) and options screen (OptionsScreen_Open, 0x004a3a30) each ask for a pause as they
 	/// open, through 0x004092a0, and the new player dialog does not. What a pause does is the scene's: that
 	/// helper only acts while a park is running (0x00786ba4), and the lobby holds its advisor instead - see
-	/// <see cref="LobbyAdvisor.Paused"/>.
+	/// <see cref="Advisor.Paused"/>.
 	/// </summary>
 	public bool Pauses { get; protected init; }
 

@@ -61,7 +61,7 @@ public static class Audio
 	///
 	/// The original does this as a straight multiply on the music and effects group volumes the
 	/// moment the advisor is given a line, and puts it back the moment his sample ends - see
-	/// <see cref="LobbyAdvisor"/> for the two calls. It steps rather than fades, which on a
+	/// <see cref="Advisor"/> for the two calls. It steps rather than fades, which on a
 	/// sustained park theme is audible as a lurch, so <see cref="Duck"/> ramps instead. The ramp
 	/// is the only place this deliberately departs from the original.
 	/// </summary>

@@ -130,7 +130,7 @@ internal sealed class OptionsScreen : UiWindow
 		if ( stack.Windows.Any( window => window is OptionsScreen ) )
 			return;
 
-		LobbyAdvisor.Current?.StopQuietly();
+		Advisor.Current?.StopQuietly();
 
 		foreach ( var window in stack.Windows )
 			window.Hidden = true;

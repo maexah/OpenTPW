@@ -1,8 +1,8 @@
 namespace OpenTPW;
 
 /// <summary>
-/// The advisor in the lobby: what he says, how he moves while he says it, and the rest of the mix
-/// getting out of his way.
+/// The advisor: what he says, how he moves while he says it, and the rest of the mix getting out
+/// of his way.
 ///
 /// <para>
 /// <b>What he says</b> is not his to choose: he says the lines he is handed, in the order they are
@@ -72,9 +72,9 @@ namespace OpenTPW;
 /// shows him.
 /// </para>
 /// </summary>
-public sealed class LobbyAdvisor : Entity
+public sealed class Advisor : Entity
 {
-	internal static LobbyAdvisor? Current { get; private set; }
+	internal static Advisor? Current { get; private set; }
 
 	/// <summary>
 	/// The samples of his own, which no line he is handed leads to. What each line's sample is belongs to
@@ -222,7 +222,7 @@ public sealed class LobbyAdvisor : Entity
 
 	private bool _ducked;
 
-	public LobbyAdvisor()
+	public Advisor()
 	{
 		Current = this;
 

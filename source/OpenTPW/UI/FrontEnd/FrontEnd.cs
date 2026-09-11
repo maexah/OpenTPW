@@ -170,14 +170,14 @@ internal sealed class FrontEnd : Panel
 			Players.Roster.Current.AddKey();
 
 			// With nobody to hand it over, the key would never show.
-			if ( LobbyAdvisor.Current is { CanSpeak: true } )
+			if ( Advisor.Current is { CanSpeak: true } )
 				FrontEndLines.GiveLobbyTour( KeyHandedOver );
 			else
 				_islandPanel.ShowKeys();
 		}
 		else
 		{
-			LobbyAdvisor.Current?.Hush();
+			Advisor.Current?.Hush();
 		}
 	}
 
@@ -218,7 +218,7 @@ internal sealed class FrontEnd : Panel
 		// opened or closed what it does, so a choice that closes the menu and opens the options screen in one
 		// go never lets him go in between. Each window says whether it pauses the game; what that means here
 		// is the lobby's to say.
-		if ( LobbyAdvisor.Current is { } advisor )
+		if ( Advisor.Current is { } advisor )
 			advisor.Paused = _stack.AnyPausing;
 	}
 

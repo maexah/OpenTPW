@@ -132,7 +132,7 @@ public sealed class SoundCategory
 	/// zero for an unknown effect. From the bank's headers, so nothing is decoded to answer it.
 	///
 	/// The advisor needs this before he speaks: the original sizes the animations he talks
-	/// through to the length of the line - see <see cref="LobbyAdvisor"/>.
+	/// through to the length of the line - see <see cref="Advisor"/>.
 	/// </summary>
 	public TimeSpan Length( int id )
 	{

@@ -198,27 +198,27 @@ public static class DebugConsole
 
 			case "speech":
 				// Auditions one of the 641 global speech samples, ducking the rest of the mix
-				// exactly as a real line would. This is how LobbyAdvisor's first-launch sample
+				// exactly as a real line would. This is how Advisor's first-launch sample
 				// gets confirmed - there is no way to read it out of the executable.
-				if ( LobbyAdvisor.Current == null )
+				if ( Advisor.Current == null )
 					Reply( "no advisor" );
 				else if ( parts.Length > 1 )
-					LobbyAdvisor.Current.Say( (int)Argument( 1, 1 ) );
+					Advisor.Current.Say( (int)Argument( 1, 1 ) );
 				else
-					LobbyAdvisor.Current.Hush();
+					Advisor.Current.Hush();
 
-				Reply( LobbyAdvisor.Current?.State() ?? "no advisor" );
+				Reply( Advisor.Current?.State() ?? "no advisor" );
 				break;
 
 			case "advisor":
-				Reply( LobbyAdvisor.Current?.State() ?? "no advisor" );
+				Reply( Advisor.Current?.State() ?? "no advisor" );
 				break;
 
 			case "greet":
 				// Replays the front-end greeting the way the lobby gives it on arrival with no saved
 				// players, so its timing and ducking can be captured at a moment of the caller's choosing.
 				UI.FrontEndLines.Greet( usedSlots: 0 );
-				Reply( LobbyAdvisor.Current?.State() ?? "no advisor" );
+				Reply( Advisor.Current?.State() ?? "no advisor" );
 				break;
 
 			case "duck":
