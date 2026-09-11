@@ -19,10 +19,15 @@ namespace OpenTPW;
 /// read out of the executable at 0x00702c94 and 0x00702c8c - so a strike lands within fifty
 /// units of the island and leans by up to ten over its five hundred of height.
 ///
-/// The thunder is <see cref="LobbyAudio"/>'s: the original plays it from inside this same test,
-/// on the line after the bolt is drawn, as effect 1 of the global lobby sfx category. Firing it
-/// from <see cref="Strike"/> rather than from the roll keeps the two together however a strike
-/// comes about - the debug console can force one, and that should thunder too.
+/// It makes no sound. Both of the original's weather drivers play their own thunder after calling the
+/// bolt renderer (0x00580320): the lobby's tick (0x005e0470) plays effect 1 of the global lobby sfx on
+/// the line after it draws the bolt (0x005e1100), and a park's weather controller (0x00512880) calls the
+/// same renderer (0x00512b4c) and plays a thunder of its own. So the sound belongs with whoever strikes -
+/// see <see cref="LobbyWeather"/>.
+///
+/// Engine and content: the bolt - its shape, its flicker, its fade near the camera and its flash - is
+/// engine, and would draw a park's lightning the same way. When it strikes, and what that sounds like,
+/// is the weather's.
 /// </summary>
 public sealed class LobbyLightning : WeatherSprites
 {
@@ -91,8 +96,6 @@ public sealed class LobbyLightning : WeatherSprites
 
 		_remaining = Duration;
 		_flicker = 0f;
-
-		LobbyAudio.Current?.Thunder();
 	}
 
 	/// <summary>

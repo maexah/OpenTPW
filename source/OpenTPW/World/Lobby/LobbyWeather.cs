@@ -12,6 +12,10 @@
 ///
 /// Of the four parks only hallow asks for any of it - RAINY(1) and LIGHTNING(63) - which is why
 /// Halloween World is the only one that storms. All four set a SKYCOLOUR.
+///
+/// Engine and content: this is the lobby's own weather driver, reading each island's script and playing the
+/// lobby's thunder. The sky, the rain and the bolt it drives are engine; a park has a weather controller of
+/// its own (0x00512880) that draws with the same bolt renderer and plays its own thunder.
 /// </summary>
 public sealed class LobbyWeather : Entity
 {
@@ -33,7 +37,7 @@ public sealed class LobbyWeather : Entity
 	internal LobbyLightning DebugBolt => _lightning;
 
 	/// <summary>Fires a strike now rather than waiting on the roll, for DebugConsole.</summary>
-	internal void DebugStrike() => _lightning.Strike( LobbyCameraMode.CurrentIsland?.Position ?? Vector3.Zero );
+	internal void DebugStrike() => Strike( LobbyCameraMode.CurrentIsland?.Position ?? Vector3.Zero );
 
 	private readonly LobbyRain _rain = new();
 	private readonly LobbyLightning _lightning = new();
@@ -116,6 +120,17 @@ public sealed class LobbyWeather : Entity
 		var chance = 1f - MathF.Exp( -rate * Time.Delta );
 
 		if ( Random.Shared.NextSingle() < chance )
-			_lightning.Strike( LobbyCameraMode.CurrentIsland!.Position );
+			Strike( LobbyCameraMode.CurrentIsland!.Position );
+	}
+
+	/// <summary>
+	/// A strike near <paramref name="islandOrigin"/>: the bolt, and then its thunder - effect 1 of the global lobby
+	/// sfx, which the original's lobby tick (0x005e0470) plays on the line after it draws the bolt (0x005e1100).
+	/// The roll and the debug console both come here, so a forced strike thunders too.
+	/// </summary>
+	private void Strike( Vector3 islandOrigin )
+	{
+		_lightning.Strike( islandOrigin );
+		LobbyAudio.Current?.Thunder();
 	}
 }
