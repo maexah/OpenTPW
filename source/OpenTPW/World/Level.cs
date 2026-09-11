@@ -37,6 +37,7 @@ public class Level
 		Current = this;
 
 		SetupEntities();
+		SetupParticles();
 		SetupHud();
 	}
 
@@ -84,7 +85,33 @@ public class Level
 		// the loading screen, along with everything its windows draw.
 		Hud.AddChild( new FrontEnd() );
 
+		// On-screen particle effects go over the interface they decorate, and under the pointer.
+		Hud.AddChild( new ScreenParticles() );
+
 		Hud.AddChild( new Cursor() );
+	}
+
+	/// <summary>
+	/// The particle system, which the state machine loads before the lobby itself (Data\Particle\Tp2.plb).
+	///
+	/// Its density comes from the detail files, which OpenTPW has no setting to choose between yet, so
+	/// it takes the middle one's. Which of them the original starts on was not found.
+	/// </summary>
+	private static void SetupParticles()
+	{
+		var density = 1024;
+
+		try
+		{
+			if ( int.TryParse( new SettingsFile( "/med.sam" )["GameOptions.PARTICLEDENSITY"], out var value ) )
+				density = value;
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"Particles: med.sam would not load, so effects run at their own rates - {e.Message}" );
+		}
+
+		_ = new ParticleSystem( "Particle/Tp2.plb", density );
 	}
 
 	public void Update()
@@ -92,6 +119,8 @@ public class Level
 		DebugConsole.Poll();
 
 		Entity.All.ForEach( entity => entity.Update() );
+
+		ParticleSystem.Current?.Update();
 
 		// The HUD is not an entity - see RootPanel - so it is driven from here. After the world,
 		// which is where it sat when it was the last entity in the list.
