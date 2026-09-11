@@ -171,6 +171,13 @@ public class LobbyCameraMode : CameraMode
 	}
 
 	/// <summary>
+	/// Moves <paramref name="step"/> islands along, wrapping at either end - what the lobby panel's
+	/// arrow buttons and the cursor keys do (see IslandPanel), and the bracket keys too.
+	/// </summary>
+	internal static void Step( int step )
+		=> MoveTo( IslandIndex + step, Entity.All.OfType<LobbyIsland>().OrderBy( island => island.Index ).ToList() );
+
+	/// <summary>
 	/// Drops the camera onto wherever it is currently headed, for DebugConsole - the same path
 	/// the very first frame takes, so there is no separate teleport to keep working.
 	/// </summary>
@@ -181,7 +188,7 @@ public class LobbyCameraMode : CameraMode
 	/// the camera and its aim simply have somewhere new to chase, so pressing again mid-move
 	/// carries whatever speed they already have into the new heading.
 	/// </summary>
-	private void MoveTo( int index, List<LobbyIsland> islands )
+	private static void MoveTo( int index, List<LobbyIsland> islands )
 	{
 		if ( islands.Count == 0 )
 			return;
