@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Numerics;
 
 namespace OpenTPW;
@@ -51,6 +52,17 @@ public sealed class LobbyIsland : Entity
 		["Space"] = "Space Zone"
 	};
 
+	/// <summary>
+	/// How many golden keys it takes to enter this park: Keys.CostToEnter in the park's own
+	/// levels\&lt;park&gt;\global.sam - one for the jungle and hallow, three for fantasy, five for space.
+	///
+	/// The lobby panel asks the park's global.sam for it (0x005b11a0, through 0x005b11c0, which loads
+	/// data\levels\%s\global.sam) and shows it with a numbers mesh that runs from "x 1" to "x 5" -
+	/// which is also exactly the range the four parks' values cover. The advisor's tour agrees: the
+	/// one key he gives a new player opens Halloween World and Lost Kingdom and no more.
+	/// </summary>
+	public int KeysToEnter { get; }
+
 	private readonly LobbyModel _model;
 
 	public LobbyIsland( Vector3 _position, string themeName )
@@ -58,6 +70,7 @@ public sealed class LobbyIsland : Entity
 		Position = _position;
 
 		ThemeName = themeName;
+		KeysToEnter = ReadKeysToEnter( themeName );
 
 		var modelPrefix = themeName[0..3];
 		Script = LobbyScript.Read( themeName );
@@ -116,6 +129,24 @@ public sealed class LobbyIsland : Entity
 
 		Log.Warning( $"{modelPrefix}: no usable sign file - the sign keeps its placeholder texture" );
 		return null;
+	}
+
+	private static int ReadKeysToEnter( string themeName )
+	{
+		try
+		{
+			var global = new SettingsFile( $"/levels/{themeName.ToLowerInvariant()}/global.sam" );
+
+			if ( int.TryParse( global["Keys.CostToEnter"], NumberStyles.Integer, CultureInfo.InvariantCulture, out var keys ) )
+				return keys;
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"{themeName}: global.sam would not load - {e.Message}" );
+		}
+
+		Log.Warning( $"{themeName}: no Keys.CostToEnter - the park costs nothing to enter" );
+		return 0;
 	}
 
 	protected override void OnUpdate()
