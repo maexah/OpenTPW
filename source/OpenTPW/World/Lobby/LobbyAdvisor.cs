@@ -54,6 +54,18 @@ namespace OpenTPW;
 /// clock from the moment it asked for the sound, which runs ahead of a sound that starts at the
 /// mixer's next buffer and keeps going through a stall.
 /// </para>
+/// <para>
+/// <b>Paused.</b> In a park, the game menu (GameMenu_Open, 0x0048c830), a message box (0x0047f020) and
+/// the options screen (0x004a3a30) each pause the game through 0x004092a0 as they open. That stops the
+/// game's clock (0x00402d90) and holds his sample where it has got to (Advisor_PauseVoice, 0x00598960);
+/// his clips, his lead-in and his cue are timed on that clock, so once the game is let go the line
+/// carries on from where it stopped. In the lobby none of that happens. All three pause only while
+/// 0x00786ba4 says a park is running, and the lobby sets it to 0 as it starts (0x0054e682). So there he
+/// talks on over the menu, and a line queued behind the one the options screen quietens starts
+/// straight away, over that screen. This departs from the lobby on purpose: he is paused there as a
+/// park pauses him (see <see cref="Paused"/>), and is not drawn while paused, so none of those windows
+/// shows him.
+/// </para>
 /// </summary>
 public sealed class LobbyAdvisor : Entity
 {
@@ -191,6 +203,14 @@ public sealed class LobbyAdvisor : Entity
 	private bool _figureFailed;
 	private bool _shown;
 
+	/// <summary>
+	/// His own clock, which everything he does is timed on. It follows the game's, but stands still
+	/// while he is paused - see <see cref="Paused"/> - so a line picks up exactly where it was left.
+	/// </summary>
+	private float _now;
+
+	private bool _paused;
+
 	/// <summary>Until when he rests out of sight before another queued line - see <see cref="CooldownSeconds"/>.</summary>
 	private float _restUntil = float.NegativeInfinity;
 
@@ -227,7 +247,7 @@ public sealed class LobbyAdvisor : Entity
 
 	private float _speakAt;
 
-	/// <summary>When the clips for the current line have all played out, on <see cref="Time.Now"/>'s clock.</summary>
+	/// <summary>When the clips for the current line have all played out, on <see cref="_now"/>'s clock.</summary>
 	private float _gesturesEndAt = float.NegativeInfinity;
 
 	private readonly List<int> _gestures = new();
@@ -268,13 +288,19 @@ public sealed class LobbyAdvisor : Entity
 
 		_speech ??= new SoundCategory( "global", "global/Speech", "speech" );
 
+		// Held where he is: his clips, his lead-in, his cue and his queue all wait along with his voice.
+		if ( _paused )
+			return;
+
+		_now += Time.Delta;
+
 		if ( !_greeted )
 		{
 			_greeted = true;
 			Greet( UsedPlayerSlots );
 		}
 
-		if ( _pending != 0 && Time.Now >= _speakAt )
+		if ( _pending != 0 && _now >= _speakAt )
 		{
 			_voice = _speech.Play( _pending, SpeechVolume, respectDelay: false, bus: AudioBus.Speech );
 			_pending = 0;
@@ -282,7 +308,7 @@ public sealed class LobbyAdvisor : Entity
 
 		Animate();
 
-		if ( _cue != null && Time.Now >= _cueAt )
+		if ( _cue != null && _now >= _cueAt )
 		{
 			var cue = _cue;
 			_cue = null;
@@ -295,7 +321,7 @@ public sealed class LobbyAdvisor : Entity
 		if ( _queue.Count > 0 )
 		{
 			// Not while he is still ducking away, and not until he has rested once he has.
-			if ( !_shown && Time.Now >= _restUntil )
+			if ( !_shown && _now >= _restUntil )
 			{
 				var (sample, cue) = _queue.Dequeue();
 				Speak( sample, cue );
@@ -309,7 +335,7 @@ public sealed class LobbyAdvisor : Entity
 
 	protected override void OnRenderOverlay()
 	{
-		if ( _shown && _figure != null )
+		if ( _shown && !_paused && _figure != null )
 			_figure.Draw( Screen.Aspect );
 	}
 
@@ -317,7 +343,7 @@ public sealed class LobbyAdvisor : Entity
 	/// Busy until the sample is over and so are the clips he talks through - Advisor_Update only
 	/// lets go once both have passed.
 	/// </summary>
-	private bool Busy => _pending != 0 || _voice is { Playing: true } || Time.Now < _gesturesEndAt;
+	private bool Busy => _pending != 0 || _voice is { Playing: true } || _now < _gesturesEndAt;
 
 	/// <summary>
 	/// What FrontEnd_ShowPlayerSlots says: the new-player greeting when no slot is in use, the
@@ -361,6 +387,31 @@ public sealed class LobbyAdvisor : Entity
 	/// and a speech bank to say it from.
 	/// </summary>
 	internal bool CanSpeak => GameOptions.Current.Advisor && Audio.Ready && _speech is not { IsValid: false };
+
+	/// <summary>
+	/// Whether he is held where he is: his voice stops where it has got to, and nothing he is doing or
+	/// waiting to do moves on until he is let go, when all of it carries on from the same point. He is
+	/// not drawn while held. The front end holds him while the game menu, a message box or the options
+	/// screen is open - see the class remarks.
+	/// </summary>
+	internal bool Paused
+	{
+		get => _paused;
+		set
+		{
+			if ( _paused == value )
+				return;
+
+			_paused = value;
+
+			if ( value )
+				_voice?.Pause();
+			else
+				_voice?.Resume();
+
+			Log.Info( value ? "Advisor: paused" : "Advisor: carrying on" );
+		}
+	}
 
 	/// <summary>
 	/// AdvisorQueue_Add: queues <paramref name="sample"/> behind whatever is waiting, or with
@@ -493,10 +544,10 @@ public sealed class LobbyAdvisor : Entity
 		}
 
 		_pending = sample;
-		_speakAt = Time.Now + LeadInSeconds;
+		_speakAt = _now + LeadInSeconds;
 
 		_cue = cue?.Action;
-		_cueAt = Time.Now + (cue?.Seconds ?? 0f);
+		_cueAt = _now + (cue?.Seconds ?? 0f);
 
 		var sampleMilliseconds = (int)_speech.Length( sample ).TotalMilliseconds;
 		var gesturesMilliseconds = BuildGestures( sampleMilliseconds + GestureMarginMilliseconds );
@@ -506,7 +557,7 @@ public sealed class LobbyAdvisor : Entity
 
 		// What he is seen doing is the clips at their full lengths, clip 14 included, starting now.
 		_sequence = new ClipSequence( _gestures, clip => _figure?.ClipMilliseconds( clip ) ?? 0 );
-		_gesturesStartedAt = Time.Now;
+		_gesturesStartedAt = _now;
 
 		_lips = LipFile.TryLoad( $"global/Speech/lips/sp_{sample:000}.lip", out var lips ) ? lips : null;
 
@@ -586,7 +637,7 @@ public sealed class LobbyAdvisor : Entity
 
 		// Each clip starts when the one before it ends and the last holds its final frame - asked of
 		// the timeline by how long ago the line began, so no frame rate can leave him behind.
-		var sinceGesturesStarted = Time.Now - _gesturesStartedAt;
+		var sinceGesturesStarted = _now - _gesturesStartedAt;
 
 		if ( _sequence.TryLocate( sinceGesturesStarted, out var clip, out var intoClip ) )
 			_figure.Pose( clip, intoClip );
@@ -599,10 +650,10 @@ public sealed class LobbyAdvisor : Entity
 		{
 			SetMouth( 1 );
 		}
-		else if ( Time.Now >= _nextMouthAt )
+		else if ( _now >= _nextMouthAt )
 		{
 			SetMouth( _random.Next( 5 ) + 1 );
-			_nextMouthAt = Time.NextBeat( _nextMouthAt, MouthChangeSeconds, Time.Now );
+			_nextMouthAt = Time.NextBeat( _nextMouthAt, MouthChangeSeconds, _now );
 		}
 
 		// Clip 15 takes him down out of sight - its position keys drop his head and body well below
@@ -611,7 +662,7 @@ public sealed class LobbyAdvisor : Entity
 		if ( !Busy && _sequence.Count > 0 && _sequence.IsFinished( sinceGesturesStarted ) )
 		{
 			_shown = false;
-			_restUntil = Time.Now + CooldownSeconds;
+			_restUntil = _now + CooldownSeconds;
 		}
 	}
 
@@ -660,9 +711,9 @@ public sealed class LobbyAdvisor : Entity
 			: _voice is { Playing: true } ? $"saying {_voice.Name}" : Busy ? "finishing"
 			: _queue.Count > 0 ? (_shown ? "ducking" : "resting") : "quiet";
 
-		var clip = _sequence.TryLocate( Time.Now - _gesturesStartedAt, out var current, out _ ) ? current : 0;
+		var clip = _sequence.TryLocate( _now - _gesturesStartedAt, out var current, out _ ) ? current : 0;
 
-		return $"{what} queued={_queue.Count} duck={Audio.DuckLevel:0.00} shown={_shown} clip={clip} mouth={_mouth} "
+		return $"{what} paused={_paused} queued={_queue.Count} duck={Audio.DuckLevel:0.00} shown={_shown} clip={clip} mouth={_mouth} "
 			+ $"samples={_speech?.EffectIds.Count() ?? 0}";
 	}
 }

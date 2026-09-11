@@ -26,6 +26,18 @@ public sealed class Voice
 
 	private volatile bool _stopped;
 
+	/// <summary>How long a hold takes to fade the sound out, and letting it go to fade it back in - just long enough not to click.</summary>
+	private const float PauseFadeSeconds = 0.01f;
+
+	/// <summary>Whether it is being held where it has got to - see <see cref="Pause"/>.</summary>
+	private bool _paused;
+
+	/// <summary>Where the hold's fade stands, from 1 playing to 0 held. Only the mixer moves it.</summary>
+	private float _pauseGain = 1f;
+
+	/// <summary>Frames of the device's output that went by while it was held, which <see cref="Position"/> leaves out.</summary>
+	private long _heldFrames;
+
 	/// <summary>Whether this restarts from the top rather than ending. Read by the mixer's cull.</summary>
 	internal bool Loop { get; }
 
@@ -61,17 +73,19 @@ public sealed class Voice
 	/// at the mixer's next buffer, up to 46ms after <see cref="Audio.Play"/>; and the game's clock
 	/// stops for a pause and gives up on a stall longer than a tenth of a second, while the sound
 	/// carries straight on. Zero until the first buffer; read without a lock, like
-	/// <see cref="Playing"/>, and only meaningful while that is true.
+	/// <see cref="Playing"/>, and only meaningful while that is true. Time spent held by
+	/// <see cref="Pause"/> is left out, a buffer at a time.
 	/// </summary>
 	public TimeSpan Position
 	{
 		get
 		{
 			var started = Interlocked.Read( ref _startedAtFrame );
+			var held = Interlocked.Read( ref _heldFrames );
 
 			return started < 0
 				? TimeSpan.Zero
-				: TimeSpan.FromSeconds( Math.Max( Audio.PlayedFrames - started, 0 ) / Audio.SampleRate );
+				: TimeSpan.FromSeconds( Math.Max( Audio.PlayedFrames - started - held, 0 ) / Audio.SampleRate );
 		}
 	}
 
@@ -117,6 +131,25 @@ public sealed class Voice
 		}
 	}
 
+	/// <summary>
+	/// Holds it where it has got to, still playing as far as anything asking is concerned, until
+	/// <see cref="Resume"/>. It fades out over <see cref="PauseFadeSeconds"/> before it holds, so the
+	/// few milliseconds of that fade are the only part heard of what came after the pause. A fade or a
+	/// stop still happens while it is held.
+	/// </summary>
+	public void Pause()
+	{
+		lock ( Audio.Lock )
+			_paused = true;
+	}
+
+	/// <summary>Lets a held voice carry on from where it was held, fading back in over <see cref="PauseFadeSeconds"/>.</summary>
+	public void Resume()
+	{
+		lock ( Audio.Lock )
+			_paused = false;
+	}
+
 	/// <summary>Moves the volume to <paramref name="volume"/>, over <paramref name="seconds"/>.</summary>
 	public void SetVolume( float volume, float seconds = 0f )
 	{
@@ -156,6 +189,8 @@ public sealed class Voice
 		var channels = _clip.Channels;
 		var length = _clip.Frames;
 		var step = _volumeRate / Audio.SampleRate;
+		var pauseStep = 1f / (PauseFadeSeconds * Audio.SampleRate);
+		var held = 0L;
 
 		if ( Bus == AudioBus.Speech )
 		{
@@ -184,6 +219,19 @@ public sealed class Voice
 				}
 			}
 
+			var frameDuck = duck;
+			duck += duckStep;
+
+			// After the volume, so a voice faded or stopped while it is held still goes.
+			if ( _paused ? _pauseGain > 0f : _pauseGain < 1f )
+				_pauseGain = _paused ? MathF.Max( _pauseGain - pauseStep, 0f ) : MathF.Min( _pauseGain + pauseStep, 1f );
+
+			if ( _pauseGain <= 0f )
+			{
+				held++;
+				continue;
+			}
+
 			var at = (int)_frame;
 
 			if ( at >= length )
@@ -203,8 +251,7 @@ public sealed class Voice
 					at = 0;
 			}
 
-			var gain = _volume * master * duck;
-			duck += duckStep;
+			var gain = _volume * master * frameDuck * _pauseGain;
 
 			if ( channels == 1 )
 			{
@@ -221,6 +268,9 @@ public sealed class Voice
 
 			_frame += 1.0;
 		}
+
+		if ( held > 0 )
+			Interlocked.Add( ref _heldFrames, held );
 
 		return true;
 	}

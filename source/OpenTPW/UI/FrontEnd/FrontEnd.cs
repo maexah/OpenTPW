@@ -340,6 +340,11 @@ internal sealed class FrontEnd : Panel
 		Keyboard();
 
 		_helpBar.Update( _hovered?.HelpText ?? -1 );
+
+		// Once a frame, after anything clicked or pressed has opened or closed what it does, so a choice
+		// that closes the menu and opens the options screen in one go never lets him go in between.
+		if ( LobbyAdvisor.Current is { } advisor )
+			advisor.Paused = _windows.Exists( window => window is GameMenu or MessageBox or OptionsScreen );
 	}
 
 	protected override void OnRender()
