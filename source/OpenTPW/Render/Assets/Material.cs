@@ -126,21 +126,94 @@ public partial class Material : Asset
 	{
 		Device.UpdateBuffer( ScratchBuffer, 0, ref obj );
 		_boundResources[name] = ScratchBuffer;
+		_drawingBlock = null;
 	}
 
 	/// <summary>
-	/// Binds this material's uniform block like <see cref="Set{T}"/>, but writes it through the
-	/// frame's command list, so the write lands between the draws either side of it.
+	/// Binds a uniform block like <see cref="Set{T}"/>, for a material drawn several times in one frame:
+	/// each call writes a block of its own, which the draw that follows binds.
 	///
-	/// <see cref="Set{T}"/> writes straight to the device, ahead of everything the frame has
-	/// recorded, so a material drawn several times in one frame draws every time with the last value
-	/// it was given. Nothing in the world is drawn twice with one material, but the interface is:
-	/// four player buttons wear the one purple mesh, and set this way all four landed on the last.
+	/// <para>
+	/// <see cref="Set{T}"/> has the one block, written straight to the device ahead of everything the
+	/// frame records, so a material drawn several times in a frame draws every time with the last value
+	/// it was given. Nothing in the world is drawn twice with one material, but the interface is: four
+	/// player buttons wear the one purple mesh, and all four landed on the last.
+	/// </para>
+	/// <para>
+	/// Writing that one block through the frame's command list, between the draws, mended the buttons
+	/// but was not reliable. With the options screen's two dozen such writes a frame, now and then a draw
+	/// came out with the value before its own - a panel landed on the row above, and that row's thumb and
+	/// text vanished under it, a different few each frame. A block for each draw leaves nothing to order.
+	/// </para>
+	/// <para>
+	/// The blocks are kept and handed out again, in the same order, two frames later: there are two
+	/// rounds of them, used on alternate frames, so a block is never rewritten while the frame before
+	/// might still be drawing with it.
+	/// </para>
 	/// </summary>
 	public void SetInFrame<T>( string name, T obj ) where T : unmanaged
 	{
-		Render.CommandList.UpdateBuffer( ScratchBuffer, 0, ref obj );
-		_boundResources[name] = ScratchBuffer;
+		if ( !_frameEndScheduled )
+		{
+			_frameEndScheduled = true;
+			Render.ScheduleDelete( EndFrame );
+		}
+
+		var round = _frameBlocks[_frameRound];
+
+		if ( _frameBlocksUsed == round.Count )
+		{
+			var description = new BufferDescription( 16 * 128, BufferUsage.UniformBuffer | BufferUsage.Dynamic );
+			round.Add( new FrameBlock( Device.ResourceFactory.CreateBuffer( description ) ) );
+		}
+
+		var block = round[_frameBlocksUsed++];
+		Device.UpdateBuffer( block.Buffer, 0, ref obj );
+
+		if ( block.Sets == null || block.Bindings != _bindings )
+		{
+			if ( block.Sets is { } stale )
+				Render.ScheduleDelete( () => DestroyResourceSets( stale ) );
+
+			_boundResources[name] = block.Buffer;
+			block.Sets = CreateResourceSets();
+			block.Bindings = _bindings;
+		}
+
+		_drawingBlock = block;
+	}
+
+	/// <summary>A uniform block <see cref="SetInFrame{T}"/> hands out, and the resource sets binding it with the textures as they were when the sets were made.</summary>
+	private sealed class FrameBlock( DeviceBuffer buffer )
+	{
+		public DeviceBuffer Buffer { get; } = buffer;
+
+		public ResourceSet[]? Sets { get; set; }
+
+		/// <summary>Which of the material's bindings <see cref="Sets"/> were made from - see <see cref="_bindings"/>.</summary>
+		public int Bindings { get; set; } = -1;
+	}
+
+	/// <summary>The two rounds of blocks - see <see cref="SetInFrame{T}"/>.</summary>
+	private readonly List<FrameBlock>[] _frameBlocks = [new(), new()];
+
+	private int _frameRound;
+	private int _frameBlocksUsed;
+	private bool _frameEndScheduled;
+
+	/// <summary>The block the next draw binds, or null when it binds the material's own.</summary>
+	private FrameBlock? _drawingBlock;
+
+	/// <summary>Counts changes to what the material binds, so a block can tell its resource sets are out of date.</summary>
+	private int _bindings;
+
+	/// <summary>Once the frame is submitted: the other round is up next.</summary>
+	private void EndFrame()
+	{
+		_frameEndScheduled = false;
+		_frameBlocksUsed = 0;
+		_frameRound = 1 - _frameRound;
+		_drawingBlock = null;
 	}
 
 	/// <param name="sampler">How the textures are sampled - wrapping, unless the caller knows better.</param>
@@ -155,6 +228,7 @@ public partial class Material : Asset
 			{
 				_boundResources[key] = resource;
 				_resourceSetsDirty = true;
+				_bindings++;
 			}
 		}
 
@@ -165,6 +239,7 @@ public partial class Material : Asset
 		{
 			_boundResources[samplerKey] = samplerResource;
 			_resourceSetsDirty = true;
+			_bindings++;
 		}
 
 		Render.ScheduleDelete( ClearBoundResources );
@@ -180,12 +255,14 @@ public partial class Material : Asset
 		{
 			_boundResources[name] = resource;
 			_resourceSetsDirty = true;
+			_bindings++;
 		}
 
 		if ( !_boundResources.TryGetValue( samplerKey, out var existingSampler ) || existingSampler != samplerResource )
 		{
 			_boundResources[samplerKey] = samplerResource;
 			_resourceSetsDirty = true;
+			_bindings++;
 		}
 
 		Render.ScheduleDelete( ClearBoundResources );
@@ -233,6 +310,12 @@ public partial class Material : Asset
 
 	internal void GetOrCreateResourceSet( out ResourceSet[] resourceSets )
 	{
+		if ( _drawingBlock is { Sets: { } blockSets } )
+		{
+			resourceSets = blockSets;
+			return;
+		}
+
 		if ( _resourceSetsDirty || _cachedResourceSets == null )
 		{
 			var oldResourceSets = _cachedResourceSets;
