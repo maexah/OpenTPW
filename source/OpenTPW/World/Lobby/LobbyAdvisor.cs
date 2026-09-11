@@ -15,10 +15,11 @@ namespace OpenTPW;
 /// <para>
 /// <b>How a line is spoken.</b> Lines go through a queue, AdvisorQueue_Add (0x005d6110): a line
 /// added with flush cuts off whatever he is saying and empties the queue first, one added without
-/// waits its turn. When he is free, Advisor_SayResponse (0x00599050) maps the response to a sample
-/// through the table at 0x00768fb8 - the ids here are copied from it, because it lives in the
-/// executable rather than the data - ducks the rest of the mix, and schedules the sample for 800ms
-/// later: the clock minus 200, plus 1000.
+/// waits its turn - see <see cref="StopSpeaking"/> for what cutting him off does. When he is free,
+/// Advisor_SayResponse (0x00599050) maps the response to a sample through the table at 0x00768fb8
+/// - the ids here are copied from it, because it lives in the executable rather than the data -
+/// ducks the rest of the mix, and schedules the sample for 800ms later: the clock minus 200, plus
+/// 1000.
 /// </para>
 /// <para>
 /// <b>How he moves.</b> The same call picks the animations he talks through, 0x00598b20: clip 14 to
@@ -85,6 +86,14 @@ public sealed class LobbyAdvisor : Entity
 		/// Kingdom parks right away..."
 		/// </summary>
 		public const int LobbyTour = 468;
+
+		/// <summary>
+		/// What he cries out when he is cut off, one picked at random by Advisor_StopSpeaking
+		/// (0x005994e0) - no response leads to them. Three short takes, each under two-fifths of a second
+		/// with no words a transcriber could find, which the bank names z_z_ouch1, z_z_ouch2 and
+		/// z_z_Ouch3.
+		/// </summary>
+		public static readonly int[] CutOff = { 639, 640, 641 };
 	}
 
 	/// <summary>What a player with no saved game hears, in order - responses 390 and 391.</summary>
@@ -156,6 +165,12 @@ public sealed class LobbyAdvisor : Entity
 	/// </summary>
 	private const float CooldownSeconds = 1.5f;
 
+	/// <summary>
+	/// How long his voice takes to stop when he is cut off. The original stops it dead; this is only
+	/// long enough that stopping a waveform partway through does not click.
+	/// </summary>
+	private const float CutOffSeconds = 0.01f;
+
 	private readonly Random _random = new();
 
 	private SoundCategory? _speech;
@@ -179,8 +194,7 @@ public sealed class LobbyAdvisor : Entity
 	/// (0x00599880) plays goldkey (effect 198 of the interface's sounds), starts a burst of particles
 	/// (effect 87 of data\Particle\Tp2.plb) and refreshes the lobby panel (0x004b9340), which is the
 	/// moment the new key shows up on it - some way into "Here's one now to get you started". What
-	/// the cue does is the caller's; the front end plays goldkey and refreshes the panel, and no
-	/// particles are drawn yet.
+	/// the cue does is the caller's; the front end does all three.
 	/// </summary>
 	private const float TourKeySeconds = 16.8f;
 
@@ -333,19 +347,18 @@ public sealed class LobbyAdvisor : Entity
 
 	/// <summary>
 	/// AdvisorQueue_Add: queues <paramref name="sample"/> behind whatever is waiting, or with
-	/// <paramref name="flush"/> stops him and throws the queue away first.
+	/// <paramref name="flush"/> cuts him off and throws the queue away first - see
+	/// <see cref="StopSpeaking"/>.
 	///
-	/// A flushed line is meant to be heard now, so it skips the rest between lines: he is taken
-	/// off the screen, as Advisor_StopSpeaking (0x005994e0) does through its "Kill advisor" call,
-	/// and comes straight back up with it.
+	/// A flushed line is meant to be heard now, so it skips the rest between lines and he comes
+	/// straight back up with it.
 	/// </summary>
 	private void Add( int sample, bool flush, Cue? cue )
 	{
 		if ( flush )
 		{
 			_queue.Clear();
-			StopCurrent();
-			_shown = false;
+			StopSpeaking();
 			_restUntil = float.NegativeInfinity;
 		}
 
@@ -368,27 +381,56 @@ public sealed class LobbyAdvisor : Entity
 	}
 
 	/// <summary>
-	/// Stops him mid-sentence, forgets what was queued, and lets the mix back up. He leaves the
-	/// screen at once rather than ducking away, as the original's stop paths take him off it
-	/// (0x005994e0 and 0x005996d0, through their "Kill advisor" call). The original's interruption
-	/// noise - see Advisor_StopSpeaking - is not played yet.
+	/// AdvisorQueue_Clear (0x005d6070): cuts him off, forgets what was queued, and lets the mix back
+	/// up - see <see cref="StopSpeaking"/>.
 	/// </summary>
 	internal void Hush()
 	{
 		_queue.Clear();
-		StopCurrent();
+		StopSpeaking();
 		Release();
-		_shown = false;
 	}
 
-	private void StopCurrent()
+	/// <summary>
+	/// Advisor_StopSpeaking (0x005994e0), which everything that cuts him off goes through.
+	///
+	/// His voice stops - with a plain stop in the original (0x0051c2c0), not the fading one that its
+	/// quiet stop (0x005996d0), which opening the options screen uses, can choose - and he leaves the
+	/// screen at once rather than ducking away, through its "Kill advisor" call (0x00429d60).
+	/// Whatever was still to come in the line goes with it.
+	///
+	/// If his voice had started, he cries out: one of <see cref="Samples.CutOff"/> at random, through
+	/// the same category and the same call as his lines. Not otherwise. The original holds no
+	/// handle on the sound through the lead-in, since the sample is only started once that has
+	/// passed, and Advisor_Update (0x00599880) lets go of the handle on the frame the sample
+	/// finishes. So a line still waiting to be said goes quietly, and so does one already said
+	/// while he finishes the clips he talks through.
+	/// </summary>
+	private void StopSpeaking()
 	{
+		var busy = Busy;
+		var sounding = _voice is { Playing: true };
+
 		_pending = 0;
-		_voice?.FadeOut( 0.2f );
+		_voice?.FadeOut( CutOffSeconds );
 		_voice = null;
 		_lips = null;
 		_gesturesEndAt = float.NegativeInfinity;
 		_cue = null;
+		_shown = false;
+
+		if ( !sounding || _speech is not { IsValid: true } )
+		{
+			if ( busy )
+				Log.Info( "Advisor: cut off with nothing sounding, quietly" );
+
+			return;
+		}
+
+		var cry = Samples.CutOff[_random.Next( Samples.CutOff.Length )];
+		_speech.Play( cry, SpeechVolume, respectDelay: false, bus: AudioBus.Speech );
+
+		Log.Info( $"Advisor: cut off mid-line, crying out with sample {cry}" );
 	}
 
 	/// <summary>
