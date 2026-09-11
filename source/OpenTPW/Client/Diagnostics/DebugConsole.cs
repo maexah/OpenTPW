@@ -12,7 +12,8 @@ namespace OpenTPW;
 /// To remove entirely: delete this file, the one call site in Level.Update(), Time.Paused and Time.StepFrames, and
 /// the members marked as being for it - LobbyCameraMode's DebugOrbit, DebugSelect and DebugSettle; LobbyWeather's
 /// Current, DebugRain, DebugBolt and DebugStrike; LobbyAudio's Muted and State; LobbyFlyer's DebugClosestApproach
-/// and DebugClosestSolid; LobbyLightning's DebugAxisDistance and DebugOpacity; and the advisor's Say and State.
+/// and DebugClosestSolid; LobbyLightning's DebugAxisDistance and DebugOpacity; the advisor's Say and State; and
+/// Game's RequestLobbyReload.
 ///
 /// Engine and content: neither. It drives and reads both, and nothing else depends on it.
 ///
@@ -226,13 +227,20 @@ public static class DebugConsole
 				Reply( $"duck={Audio.DuckLevel:0.00}" );
 				break;
 
+			case "reload":
+				// Ends the lobby and builds it again between frames, the way coming back from a park does,
+				// so whatever a scene leaves behind as it ends can be seen and measured.
+				Game.RequestLobbyReload();
+				Reply( "reloading" );
+				break;
+
 			case "quit":
 				Reply( "quitting" );
 				Environment.Exit( 0 );
 				break;
 
 			default:
-				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/near/stats/state/volume/mute/sound/speech/advisor/greet/duck/quit" );
+				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/near/stats/state/volume/mute/sound/speech/advisor/greet/duck/reload/quit" );
 				break;
 		}
 	}
@@ -274,9 +282,11 @@ public static class DebugConsole
 
 		var entities = Entity.All.Count;
 		var models = Asset.All.OfType<Model>().Count();
+		var windows = Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault()?.Windows.Count ?? 0;
 
 		return $"stats fps={1000.0 / mean:F1} mean={mean:F2}ms p99={p99:F2}ms worst={sorted[^1]:F2}ms "
-			+ $"frames={_frameCount} entities={entities} models={models}";
+			+ $"frames={_frameCount} entities={entities} models={models} assets={Asset.All.Count} "
+			+ $"duck={Audio.DuckLevel:0.00} windows={windows}";
 	}
 
 	private static string State()

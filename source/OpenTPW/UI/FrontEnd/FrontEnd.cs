@@ -55,7 +55,12 @@ internal sealed class FrontEnd : Panel
 
 		_islandPanel = new IslandPanel( stack );
 
-		ShowPlayerSlots();
+		// FrontEnd_Init (0x005d5970) opens the player slots only while nobody is playing, which is always so as the
+		// game starts. Coming back to the lobby with someone still playing, their island panel is up instead.
+		if ( Players.Roster.Current == null )
+			ShowPlayerSlots();
+		else
+			_stack.Open( _islandPanel );
 	}
 
 	/// <summary>A player slot was clicked (0x004a6000): an empty one asks who is playing, a used one plays as whoever is in it.</summary>
