@@ -342,8 +342,11 @@ public sealed class LobbyAdvisor : Entity
 	internal void GiveLobbyTour( Action keyHandedOver )
 		=> Add( Samples.LobbyTour, flush: true, new Cue( TourKeySeconds, keyHandedOver ) );
 
-	/// <summary>Whether he can say anything at all - there is an audio device and a speech bank to say it from.</summary>
-	internal bool CanSpeak => Audio.Ready && _speech is not { IsValid: false };
+	/// <summary>
+	/// Whether he can say anything at all: the options have him switched on, and there is an audio device
+	/// and a speech bank to say it from.
+	/// </summary>
+	internal bool CanSpeak => GameOptions.Current.Advisor && Audio.Ready && _speech is not { IsValid: false };
 
 	/// <summary>
 	/// AdvisorQueue_Add: queues <paramref name="sample"/> behind whatever is waiting, or with
@@ -442,7 +445,8 @@ public sealed class LobbyAdvisor : Entity
 	/// </summary>
 	private void Speak( int sample, Cue? cue )
 	{
-		if ( _speech is not { IsValid: true } )
+		// Advisor_SayResponse (0x00599050) says nothing at all while the options have him switched off.
+		if ( !GameOptions.Current.Advisor || _speech is not { IsValid: true } )
 		{
 			// A line that cannot be said still has its consequences.
 			cue?.Action();

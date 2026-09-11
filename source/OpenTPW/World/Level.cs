@@ -67,7 +67,9 @@ public class Level
 		_ = new LobbyWeather();
 
 		// ...and one sound system, which takes its cue from the same place. Built after the
-		// islands so the first frame already has one to play.
+		// islands so the first frame already has one to play, and with each group of sound at the
+		// volume the options give it.
+		GameOptions.Current.ApplySound();
 		_ = new LobbyAudio();
 
 		// The advisor rides on top of that: he greets a new player on the first frame he gets,
@@ -94,21 +96,28 @@ public class Level
 	/// <summary>
 	/// The particle system, which the state machine loads before the lobby itself (Data\Particle\Tp2.plb).
 	///
-	/// Its density comes from the detail files, which OpenTPW has no setting to choose between yet, so
-	/// it takes the middle one's. Which of them the original starts on was not found.
+	/// Its density comes from the detail file for the options' graphics quality - low.sam, med.sam or
+	/// high.sam, going by their names - which starts at medium (0x00423690). The quality is only read as
+	/// a level loads, as the original's state machine reads it for the particles (0x0051fd80).
 	/// </summary>
 	private static void SetupParticles()
 	{
 		var density = 1024;
+		var detail = GameOptions.Current.GraphicsQuality switch
+		{
+			0 => "low.sam",
+			2 => "high.sam",
+			_ => "med.sam"
+		};
 
 		try
 		{
-			if ( int.TryParse( new SettingsFile( "/med.sam" )["GameOptions.PARTICLEDENSITY"], out var value ) )
+			if ( int.TryParse( new SettingsFile( $"/{detail}" )["GameOptions.PARTICLEDENSITY"], out var value ) )
 				density = value;
 		}
 		catch ( Exception e )
 		{
-			Log.Warning( $"Particles: med.sam would not load, so effects run at their own rates - {e.Message}" );
+			Log.Warning( $"Particles: {detail} would not load, so effects run at their own rates - {e.Message}" );
 		}
 
 		_ = new ParticleSystem( "Particle/Tp2.plb", density );

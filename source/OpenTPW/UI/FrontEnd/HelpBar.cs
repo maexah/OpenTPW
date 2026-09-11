@@ -12,7 +12,8 @@ namespace OpenTPW.UI;
 /// UIHELPTEXT.str it shows in its layout data (op 0x11), and a control with none shows nothing.
 /// </para>
 /// <para>
-/// Ctrl+H turns it off and back on, through the binding OpenTPW already had for it
+/// It shows only while the options screen's Popup help is on (<see cref="GameOptions.PopupHelp"/>).
+/// Ctrl+H turns that off and back on too, through the binding OpenTPW already had for the help bar
 /// (<see cref="InputButton.ToggleHelpBar"/>).
 /// </para>
 /// </summary>
@@ -31,18 +32,16 @@ internal sealed class HelpBar
 		Visible = false
 	};
 
-	private bool _enabled = true;
-
 	/// <summary>Whether it is switched on - the original's Popup Help option, which the button glints also wait on.</summary>
-	public bool Enabled => _enabled;
+	public bool Enabled => GameOptions.Current.PopupHelp;
 
 	/// <summary>Shows row <paramref name="helpText"/>, or nothing for -1.</summary>
 	public void Update( int helpText )
 	{
 		if ( Input.Pressed( InputButton.ToggleHelpBar ) )
-			_enabled = !_enabled;
+			GameOptions.Current.PopupHelp = !GameOptions.Current.PopupHelp;
 
-		var text = _enabled && helpText >= 0 ? Localization.Help( helpText ) : "";
+		var text = Enabled && helpText >= 0 ? Localization.Help( helpText ) : "";
 		_bar.Visible = text.Length > 0;
 
 		if ( !_bar.Visible )

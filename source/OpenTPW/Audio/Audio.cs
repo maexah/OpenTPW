@@ -75,6 +75,23 @@ public static class Audio
 	/// <summary>Where the ducking ramp stands, for the debug console to report.</summary>
 	public static float DuckLevel => _duck;
 
+	/// <summary>How loud each group is, as a multiple of its layers' levels - see <see cref="SetBusVolume"/>. By <see cref="AudioBus"/>.</summary>
+	private static readonly float[] BusVolumes = [1f, 1f, 1f];
+
+	/// <summary>
+	/// Turns a whole group up or down - the options screen's volumes, through
+	/// <see cref="GameOptions.ApplySound"/>. 1 leaves it at the levels its layers were set to, 0
+	/// silences it.
+	///
+	/// Silencing speech also stops the advisor ducking everything else. Sound_ApplyGroupVolumes
+	/// (0x0051bd70) only ducks while the speech group's volume is at least 1.
+	/// </summary>
+	public static void SetBusVolume( AudioBus bus, float volume )
+	{
+		lock ( Lock )
+			BusVolumes[(int)bus] = MathF.Max( volume, 0f );
+	}
+
 	private static readonly List<Voice> Voices = new( MaxVoices );
 
 	/// <summary>
@@ -325,9 +342,18 @@ public static class Audio
 				_duck = reached;
 			}
 
+			// The ramp carries on regardless, so the duck is where it should be if speech comes back up.
+			if ( BusVolumes[(int)AudioBus.Speech] <= 0f )
+			{
+				duck = 1f;
+				duckStep = 0f;
+			}
+
 			for ( int i = Voices.Count - 1; i >= 0; --i )
 			{
-				if ( !Voices[i].MixInto( output, frames, bufferStart, master, duck, duckStep ) )
+				var voice = Voices[i];
+
+				if ( !voice.MixInto( output, frames, bufferStart, master * BusVolumes[(int)voice.Bus], duck, duckStep ) )
 					Voices.RemoveAt( i );
 			}
 		}
