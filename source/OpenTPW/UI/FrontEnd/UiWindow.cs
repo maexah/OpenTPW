@@ -34,6 +34,9 @@ internal abstract class UiWindow
 	/// <summary>Escape was pressed with this in front.</summary>
 	protected internal virtual void Cancel() { }
 
+	/// <summary>The window was closed.</summary>
+	protected internal virtual void Closed() { }
+
 	/// <summary>The dimmed backdrop a modal window sits on.</summary>
 	protected static UiControl Backdrop() => new()
 	{

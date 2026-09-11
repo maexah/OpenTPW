@@ -87,6 +87,7 @@ internal sealed class FrontEnd : Panel
 			window.Focus.HasFocus = false;
 
 		window.Root.ReleaseText();
+		window.Closed();
 	}
 
 	/// <summary>A player slot was clicked (0x004a6000): an empty one asks who is playing, a used one plays as whoever is in it.</summary>
@@ -151,12 +152,15 @@ internal sealed class FrontEnd : Panel
 	}
 
 	/// <summary>
-	/// The advisor's cue in his tour of the lobby: goldkey, and the panel looks at the player's keys
-	/// again and shows the one just given (Advisor_Update, 0x00599880).
+	/// The advisor's cue in his tour of the lobby: goldkey, the key effect (87) at the player's key
+	/// count in the top right, and the panel looks at the player's keys again and shows the one just
+	/// given (Advisor_Update, 0x00599880). The effect is a ring of little keys turning round the count,
+	/// which an effector draws back in when it ends before they burst into sparkles.
 	/// </summary>
 	private void KeyHandedOver()
 	{
 		UiSounds.GoldKeyHandedOver();
+		ParticleSystem.Current?.Spawn( (int)ParLib.P_EFFECT_Key, 90000, 0, 7000 );
 		_islandPanel.ShowKeys();
 	}
 

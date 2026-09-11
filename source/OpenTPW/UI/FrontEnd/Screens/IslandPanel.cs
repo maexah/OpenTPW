@@ -19,10 +19,14 @@ namespace OpenTPW.UI;
 /// is <see cref="LobbyIsland.KeysToEnter"/>. At the top right, "N x" in font 2 says how many keys the
 /// player holds, hidden while that is none. The small gold key beside it is hidden when the panel is
 /// built and nothing found shows it again, but screenshots of the original have it beside the count,
-/// so here it comes and goes with the count. As a park the player can afford comes on show the
-/// original also sets particles sparkling round its key (effect 97 of data\Particle\Tp2.plb, through
-/// 0x00521e60, stopped again for a park that is not affordable or when the panel hides); nothing here
-/// draws particles yet.
+/// so here it comes and goes with the count.
+/// </para>
+/// <para>
+/// <b>Sparkles.</b> While the park on show is one the player can afford, twinkles come and go across
+/// the price: effect 97, KeySparkle, started in the middle of the screen at the height of the middle
+/// of the "x N" (0x004b9340) and spread across both the key and the number. It runs until it is
+/// ended - for a park the player cannot afford, or when the panel closes (0x004b8ee0) - and then
+/// its last twinkles fade out.
 /// </para>
 /// <para>
 /// The count is not live. The panel remembers the keys it last showed (0x007cc4b8) and only looks
@@ -60,6 +64,9 @@ internal sealed class IslandPanel : UiWindow
 
 	/// <summary>The keys the panel last looked at - see the class remarks.</summary>
 	private int _keysShown;
+
+	/// <summary>The sparkles across the price while they run, or 0.</summary>
+	private int _sparkle;
 
 	public IslandPanel( FrontEnd frontEnd ) : base( frontEnd )
 	{
@@ -186,6 +193,32 @@ internal sealed class IslandPanel : UiWindow
 		_price.Visible = price > 0;
 		_price.Frame = affordable ? 0 : 1;
 		_priceNumber.Frame = affordable ? price - 1 : price + 4;
+
+		ShowSparkle( price > 0 && affordable );
+	}
+
+	protected internal override void Closed() => ShowSparkle( false );
+
+	/// <summary>Starts the sparkles across the price, or ends them - see the class remarks.</summary>
+	private void ShowSparkle( bool show )
+	{
+		if ( ParticleSystem.Current is not { } particles )
+			return;
+
+		if ( !show )
+		{
+			particles.Kill( _sparkle );
+			_sparkle = 0;
+			return;
+		}
+
+		if ( _sparkle != 0 )
+			return;
+
+		var rect = _priceNumber.Rect;
+		var middle = ((rect.Bottom - rect.Top) >> 1) + rect.Top;
+
+		_sparkle = particles.Spawn( (int)ParLib.P_EFFECT_KeySparkle, 50000, 0, middle * 75000 / VirtualScreen.Height, _priceNumber.Anchor );
 	}
 
 	private void EnterPark()
