@@ -62,7 +62,32 @@ public class BaseFileSystem
 		if ( !Directory.Exists( directoryName ) )
 			Directory.CreateDirectory( directoryName );
 
-		return File.OpenWrite( absolutePath );
+		// Create rather than File.OpenWrite, which keeps a file's old length: writing a shorter file over
+		// a longer one would leave the longer one's tail on the end.
+		return File.Open( absolutePath, FileMode.Create, FileAccess.Write );
+	}
+
+	/// <summary>
+	/// Writes a whole file, replacing whatever was there. The bytes go to a file beside it first, which then
+	/// takes its place, so a game that stops partway through a save leaves the old file whole rather than
+	/// half of the new one.
+	/// </summary>
+	public void WriteAllBytes( string relativePath, byte[] bytes )
+	{
+		var absolutePath = GetAbsolutePath( relativePath );
+		var (archivePath, _) = FindArchivePath( absolutePath );
+
+		if ( !string.IsNullOrEmpty( archivePath ) )
+			throw new NotImplementedException( "Can't write to archives" );
+
+		var directoryName = Path.GetDirectoryName( absolutePath );
+
+		if ( !string.IsNullOrEmpty( directoryName ) )
+			Directory.CreateDirectory( directoryName );
+
+		var temporary = absolutePath + ".tmp";
+		File.WriteAllBytes( temporary, bytes );
+		File.Move( temporary, absolutePath, overwrite: true );
 	}
 
 	public Stream OpenRead( string relativePath )
