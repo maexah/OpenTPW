@@ -491,6 +491,55 @@ internal sealed class FrontEnd : Panel
 		if ( front is { Modal: true } )
 			return;
 
-		Open( new GameMenu( this ) );
+		Open( new GameMenu( this, LobbyMenuChoices() ) );
+	}
+
+	/// <summary>
+	/// The lobby's game menu, as GameMenu_BuildLobby (0x0048c600) adds its choices top to bottom, each with its
+	/// id in the lobby menu's handler (0x0048bd40).
+	///
+	/// <para>
+	/// Go Online (9), or Go Offline (10) while online, which is never here; Options (11), left out while the
+	/// online side is busy, which it never is; Select New Player (12), only when the front end's screen says so,
+	/// taken here to mean while someone is playing; then Resume Game (14) and Quit Game (15). Return To Park (13)
+	/// takes the place of the first three while visiting someone else's park online.
+	/// </para>
+	/// <para>
+	/// Go Online would start connecting (0x005b5cc0), but the online world is a dead end here, so it only closes
+	/// the menu. Options closes it and opens the <see cref="OptionsScreen"/>. Select New Player and Quit Game ask
+	/// first, in a message box over the menu (UITEXT 14 and 9), and the menu stays until the tick (0x0048bc50,
+	/// 0x0048bc30). Resume Game closes it, and so does Escape.
+	/// </para>
+	/// </summary>
+	private List<GameMenu.Item> LobbyMenuChoices()
+	{
+		var choices = new List<GameMenu.Item>
+		{
+			new( UIStrings.GoOnline, 9, menu =>
+			{
+				Close( menu );
+				Log.Info( "Front end: Go Online - the online world is a dead end, so nothing more happens" );
+			} ),
+
+			new( UIStrings.Options, 11, menu =>
+			{
+				Close( menu );
+				OpenOptions();
+			} )
+		};
+
+		if ( Players.Roster.Current != null )
+		{
+			choices.Add( new( UIStrings.SelectNewPlayer, 12, menu => Open( new MessageBox( this, Localization.Get( UIStrings.ConfirmNewPlayer ), () =>
+			{
+				Close( menu );
+				SelectNewPlayer();
+			} ) ) ) );
+		}
+
+		choices.Add( new( UIStrings.ResumeGame, 14, menu => Close( menu ) ) );
+		choices.Add( new( UIStrings.QuitGame, 15, _ => AskToQuit() ) );
+
+		return choices;
 	}
 }
