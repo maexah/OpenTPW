@@ -27,6 +27,12 @@ namespace OpenTPW.UI;
 /// It is a panel on the HUD, so F2 hides it with everything else there. The advisor is not part of
 /// it - he is drawn over the top of all of it, as the original draws him.
 /// </para>
+/// <para>
+/// <b>Engine and content.</b> The lobby's flow is content: which of its screens opens when, what their
+/// choices do, and the lines it has the advisor say (<see cref="FrontEndLines"/>). The window handling it
+/// does for them - the pointer, focus and typing, the help bar and the glints - is the interface's, and
+/// is engine.
+/// </para>
 /// </summary>
 internal sealed class FrontEnd : Panel
 {
@@ -118,7 +124,7 @@ internal sealed class FrontEnd : Panel
 		if ( Players[slot] == null )
 		{
 			Open( new NewPlayerDialog( this, slot ) );
-			LobbyAdvisor.Current?.ExplainNewPlayer();
+			FrontEndLines.ExplainNewPlayer();
 			return;
 		}
 
@@ -179,7 +185,6 @@ internal sealed class FrontEnd : Panel
 		Close( _islandPanel );
 
 		ShowPlayerSlots();
-		LobbyAdvisor.Current?.Greet( Players.UsedSlots );
 	}
 
 	/// <summary>
@@ -211,10 +216,21 @@ internal sealed class FrontEnd : Panel
 		if ( _playerSlots != null )
 			Close( _playerSlots );
 
-		ShowPlayerSlots();
+		OpenPlayerSlots();
 	}
 
+	/// <summary>
+	/// FrontEnd_ShowPlayerSlots (0x004a6580): the player slots open, and the advisor greets whoever is at them
+	/// by how many slots hold a player - see <see cref="FrontEndLines.Greet"/>.
+	/// </summary>
 	private void ShowPlayerSlots()
+	{
+		OpenPlayerSlots();
+		FrontEndLines.Greet( Players.UsedSlots );
+	}
+
+	/// <summary>The player slots, without a word - what the delete box's tick fills them again with (0x004a62b0).</summary>
+	private void OpenPlayerSlots()
 	{
 		_playerSlots = new PlayerSlots( this );
 		Open( _playerSlots );
@@ -240,15 +256,15 @@ internal sealed class FrontEnd : Panel
 
 		if ( newPlayer && Players.Current is { InstantAction: true } )
 		{
-			LobbyAdvisor.Current?.ExplainInstantAction();
+			FrontEndLines.ExplainInstantAction();
 		}
 		else if ( newPlayer && Players.Current != null )
 		{
 			Players.Current.AddKey();
 
 			// With nobody to hand it over, the key would never show.
-			if ( LobbyAdvisor.Current is { CanSpeak: true } advisor )
-				advisor.GiveLobbyTour( KeyHandedOver );
+			if ( LobbyAdvisor.Current is { CanSpeak: true } )
+				FrontEndLines.GiveLobbyTour( KeyHandedOver );
 			else
 				_islandPanel.ShowKeys();
 		}

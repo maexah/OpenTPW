@@ -10,8 +10,11 @@ namespace OpenTPW;
 ///
 /// Disabled unless OPENTPW_DEBUG_CONSOLE=1 is set, and costs one boolean test per frame when off.
 /// To remove entirely: delete this file, the one call site in Level.Update(), Time.Paused and Time.StepFrames, and
-/// the four members on LobbyCameraMode and LobbyWeather marked as being for it, and the two on
-/// LobbyAudio.
+/// the members marked as being for it - LobbyCameraMode's DebugOrbit, DebugSelect and DebugSettle; LobbyWeather's
+/// Current, DebugRain, DebugBolt and DebugStrike; LobbyAudio's Muted and State; LobbyFlyer's DebugClosestApproach
+/// and DebugClosestSolid; LobbyLightning's DebugAxisDistance and DebugOpacity; and the advisor's Say and State.
+///
+/// Engine and content: neither. It drives and reads both, and nothing else depends on it.
 ///
 /// Usage:
 ///
@@ -212,9 +215,9 @@ public static class DebugConsole
 				break;
 
 			case "greet":
-				// Replays the front-end greeting the way the lobby gives it on arrival, so its
-				// timing and ducking can be captured at a moment of the caller's choosing.
-				LobbyAdvisor.Current?.Greet();
+				// Replays the front-end greeting the way the lobby gives it on arrival with no saved
+				// players, so its timing and ducking can be captured at a moment of the caller's choosing.
+				UI.FrontEndLines.Greet( usedSlots: 0 );
 				Reply( LobbyAdvisor.Current?.State() ?? "no advisor" );
 				break;
 

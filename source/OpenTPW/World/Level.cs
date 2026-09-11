@@ -72,8 +72,8 @@ public class Level
 		GameOptions.Current.ApplySound();
 		_ = new LobbyAudio();
 
-		// The advisor rides on top of that: he greets a new player on the first frame he gets,
-		// and ducks everything above while he does it.
+		// The advisor rides on top of that, ducking everything above while he talks. What he says is
+		// handed to him by the front end, which is built with the HUD below.
 		_ = new LobbyAdvisor();
 
 		Camera.SetCameraMode<LobbyCameraMode>();
