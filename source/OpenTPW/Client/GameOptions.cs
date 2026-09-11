@@ -21,7 +21,14 @@ namespace OpenTPW;
 /// <b>What acts on them here.</b> The three volumes set the mixer's groups (<see cref="ApplySound"/>),
 /// Popup help is the help bar and the button glints, Advisor is whether he speaks at all, and graphics
 /// quality picks the detail file particles are set up from when a level loads. Nothing yet reads the
-/// rest, and nothing saves any of them yet.
+/// rest.
+/// </para>
+/// <para>
+/// <b>Where they are kept.</b> The original splits them. Rendering, resolution, graphics quality, the video
+/// card, audio quality and the movie volume belong to the machine, in save\Config.tcf
+/// (<see cref="ConfigFile"/>, through <see cref="SaveFolder"/>). The other volumes and the seven switches
+/// belong to the player, in their gms.dat, with the movie volume again - the player's copy wins when they
+/// are picked. The player's half is not saved yet.
 /// </para>
 /// </summary>
 internal sealed class GameOptions
@@ -87,6 +94,30 @@ internal sealed class GameOptions
 
 	/// <summary>A copy to put back later - 0x00423b00.</summary>
 	public GameOptions Copy() => (GameOptions)MemberwiseClone();
+
+	/// <summary>Takes the machine's options from save\Config.tcf.</summary>
+	public void Apply( ConfigFile file )
+	{
+		CardRendering = file.CardRendering != 0;
+		ScreenResolution = file.ScreenResolution;
+		GraphicsQuality = file.GraphicsQuality;
+		SecondaryVideoCard = file.VideoCard != 0;
+		MovieOn = file.MovieOn;
+		MovieVolume = file.MovieVolume;
+		AudioQuality = file.AudioQuality;
+	}
+
+	/// <summary>The machine's options, as save\Config.tcf holds them.</summary>
+	public ConfigFile ToConfigFile() => new()
+	{
+		CardRendering = CardRendering ? 1 : 0,
+		ScreenResolution = ScreenResolution,
+		GraphicsQuality = GraphicsQuality,
+		VideoCard = SecondaryVideoCard ? 1 : 0,
+		MovieOn = MovieOn,
+		MovieVolume = MovieVolume,
+		AudioQuality = AudioQuality
+	};
 
 	/// <summary>
 	/// Sets each group of sound to its volume, or silences it when it is switched off - 0x00423dd0, and

@@ -43,6 +43,9 @@ internal static class Game
 		// Register save data directory
 		SaveFileSystem = new BaseFileSystem( $"{Settings.Default.GamePath}/save/" );
 
+		// The machine's options, which the original reads before it sets anything else up.
+		SaveFolder.LoadConfig();
+
 		//
 		// Custom OpenTPW cache directory (mainly for editor-related stuff)
 		//

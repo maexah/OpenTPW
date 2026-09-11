@@ -35,7 +35,8 @@ namespace OpenTPW.UI;
 /// <para>
 /// <b>The tick and the cross.</b> The options are copied as the screen opens (0x00423b00). The cross
 /// (-2) puts the copy back and closes (0x00423ad0); the tick (-1) keeps the changes, applies the group
-/// volumes, saves, and closes (0x004237f0). Escape does nothing here - the callback takes no keys. As it
+/// volumes, writes the machine's options to save\Config.tcf (<see cref="ConfigFile"/>), and closes
+/// (0x004237f0). Escape does nothing here - the callback takes no keys. As it
 /// closes, the front end's window comes back and any button glints go (message 0x14).
 /// </para>
 /// <para>
@@ -47,8 +48,8 @@ namespace OpenTPW.UI;
 /// or a graphics quality whose detail file needs a restart (0x00423bc0), shows RESTART GAME (UITEXT 403)
 /// instead of closing. A change of audio quality across one of sound.sam's thresholds sets the sound
 /// library up again (0x0051b920).</item>
-/// <item>Nothing is saved. The original writes these options to the player's save and to a dialog.tcf
-/// beside the game, and neither exists here, so they last until the game closes.</item>
+/// <item>The player's options - the volumes and the seven switches - are not saved yet. The original keeps
+/// them in the player's gms.dat, written when the player is saved; here they last until the game closes.</item>
 /// </list>
 /// </para>
 /// <para>
@@ -230,6 +231,7 @@ internal sealed class OptionsScreen : UiWindow
 	private void Keep()
 	{
 		Options.ApplySound();
+		SaveFolder.SaveConfig();
 		Log.Info( "Options: kept" );
 		FrontEnd.Close( this );
 	}
