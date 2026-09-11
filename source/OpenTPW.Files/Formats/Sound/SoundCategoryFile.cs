@@ -83,6 +83,12 @@ public sealed class SoundCategoryFile
 	/// </summary>
 	private const int NewEffectGap = 32;
 
+	/// <summary>
+	/// How far the length a sample record states may be from the length of the sample it points at,
+	/// before a share of the length takes over - see <see cref="TryReadSample"/>.
+	/// </summary>
+	private const double LengthSlackMilliseconds = 100.0;
+
 	private readonly byte[] _sfx = Array.Empty<byte>();
 
 	/// <summary>
@@ -266,13 +272,17 @@ public sealed class SoundCategoryFile
 		if ( index < 1 || index > samples.Count )
 			return false;
 
-		// The map's length and the sample's own disagree by a frame or two - the map is rounded
-		// down off the encoder's own count and the decoder pads the last frame - so this is a
-		// tolerance rather than an equality. 6% is far tighter than the gap between any two
-		// samples in a bank and far looser than the disagreement, which never exceeds 45ms.
+		// The map's length and the sample's own disagree, so this is a tolerance rather than an
+		// equality. The sample is always the longer, and by an amount that does not grow with its
+		// length - by 26 to 83ms across every record in all thirty-one categories the game ships -
+		// which is what an encoder's delay and the padding of its last frame would add. So the
+		// allowance is a fixed amount, with 6% taking over on long samples. It used to be
+		// 60ms, which turned away effect 639's record (288ms against 366) - and a record turned away
+		// is not just lost, because the next one found then stands in for it, so every effect after
+		// it in the category played the sample of the one after.
 		var actual = samples[index - 1].TotalMilliseconds;
 
-		if ( actual <= 0 || Math.Abs( milliseconds - actual ) > Math.Max( 60.0, actual * 0.06 ) )
+		if ( actual <= 0 || Math.Abs( milliseconds - actual ) > Math.Max( LengthSlackMilliseconds, actual * 0.06 ) )
 			return false;
 
 		sample = new Sample( bank - 1, index - 1, weight, TimeSpan.FromMilliseconds( milliseconds ) );
