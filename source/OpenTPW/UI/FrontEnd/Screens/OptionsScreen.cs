@@ -4,7 +4,7 @@ namespace OpenTPW.UI;
 /// Game Options, which the game menu's Options opens.
 ///
 /// <para>
-/// OptionsScreen_Open (0x004a3a30) quietens the advisor, puts the front end's window away and loads
+/// OptionsScreen_Open (0x004a3a30) quietens the advisor, puts the open windows away and loads
 /// the layout stream at 0x00752f30 over the whole screen, on f_screen.md2, with the callback 0x004a2bf0.
 /// "Game Options" (UITEXT 315) is its title, in font 5 on the purple skin in (234, 239, 102), in a
 /// rectangle widened by half its width either side (0x00485d20). Down the left are the rendering and
@@ -38,7 +38,7 @@ namespace OpenTPW.UI;
 /// volumes, writes the machine's options to save\Config.tcf (<see cref="ConfigFile"/>), and closes
 /// (0x004237f0). The player's options reach their gms.dat only when the player is next saved - on Select
 /// New Player or as the game closes - which is the original's way too. Escape does nothing here - the
-/// callback takes no keys. As it closes, the front end's window comes back and any button glints go
+/// callback takes no keys. As it closes, the windows it put away come back and any button glints go
 /// (message 0x14).
 /// </para>
 /// <para>
@@ -58,6 +58,12 @@ namespace OpenTPW.UI;
 /// Primary, as on a machine with one (0x004a3480). Audio quality, Tutorial, Confirmations, RMB cancel,
 /// Rotation and Scroll are kept, but nothing reads them yet - they belong to the sound library's set-up
 /// and to parks.
+/// </para>
+/// <para>
+/// <b>Engine and content.</b> The screen is engine: one screen for the lobby and parks, opening and closing
+/// itself as OptionsScreen_Open does. The options it shows are kept in <see cref="GameOptions"/>, with their
+/// defaults read from sound.sam at the boundary, and written to the original's save files by
+/// <see cref="SaveFolder"/>.
 /// </para>
 /// </summary>
 internal sealed class OptionsScreen : UiWindow
@@ -113,13 +119,27 @@ internal sealed class OptionsScreen : UiWindow
 
 	private static GameOptions Options => GameOptions.Current;
 
-	/// <summary>The front end, which puts its windows back as the screen closes.</summary>
-	private readonly FrontEnd _frontEnd;
-
-	public OptionsScreen( WindowStack stack, FrontEnd frontEnd ) : base( stack )
+	/// <summary>
+	/// OptionsScreen_Open (0x004a3a30), which the lobby's game menu (0x0048bf28) and a park's (0x0048b977) both
+	/// call. It quietens the advisor, fading his voice rather than cutting it (Advisor_StopQuietly with 1); puts
+	/// away the windows that are open (message 6); and opens the screen over everything. It does nothing while
+	/// the screen is already up (0x007cb2fc).
+	/// </summary>
+	public static void Open( WindowStack stack )
 	{
-		_frontEnd = frontEnd;
+		if ( stack.Windows.Any( window => window is OptionsScreen ) )
+			return;
 
+		LobbyAdvisor.Current?.StopQuietly();
+
+		foreach ( var window in stack.Windows )
+			window.Hidden = true;
+
+		stack.Open( new OptionsScreen( stack ) );
+	}
+
+	private OptionsScreen( WindowStack stack ) : base( stack )
+	{
 		Modal = true;
 		Pauses = true;
 
@@ -201,7 +221,20 @@ internal sealed class OptionsScreen : UiWindow
 		ShowOptions();
 	}
 
-	protected internal override void Closed() => _frontEnd.OptionsClosed();
+	/// <summary>
+	/// The screen has closed (0x004a2bf0, message 0x14): the windows it put away come back, each shown again, and
+	/// any button glints go.
+	/// </summary>
+	protected internal override void Closed()
+	{
+		foreach ( var window in Stack.Windows.Where( window => window.Hidden ).ToArray() )
+		{
+			window.Hidden = false;
+			window.Shown();
+		}
+
+		Stack.StopGlint();
+	}
 
 	/// <summary>Shows every option as it stands - the second half of 0x004a3a30.</summary>
 	private void ShowOptions()

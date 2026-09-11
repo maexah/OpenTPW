@@ -43,7 +43,6 @@ internal sealed class FrontEnd : Panel
 	private readonly WindowStack _stack;
 	private readonly IslandPanel _islandPanel;
 	private PlayerSlots? _playerSlots;
-	private OptionsScreen? _options;
 	private bool _quitting;
 
 	public FrontEnd( WindowStack stack )
@@ -81,39 +80,6 @@ internal sealed class FrontEnd : Panel
 
 	/// <summary>Quit Game (0x004a61d0): asks, and quits on the tick.</summary>
 	internal void AskToQuit() => _stack.Open( new MessageBox( _stack, Localization.Get( UIStrings.ConfirmQuit ), Quit ) );
-
-	/// <summary>
-	/// The game menu's Options (0x0048bd40, item 11). OptionsScreen_Open (0x004a3a30) quietens the
-	/// advisor, fading his voice rather than cutting it (Advisor_StopQuietly with 1); puts the front end's
-	/// window away (message 6); and opens the options screen over everything.
-	/// </summary>
-	internal void OpenOptions()
-	{
-		if ( _options != null )
-			return;
-
-		LobbyAdvisor.Current?.StopQuietly();
-
-		foreach ( var window in _stack.Windows )
-			window.Hidden = true;
-
-		_options = new OptionsScreen( _stack, this );
-		_stack.Open( _options );
-	}
-
-	/// <summary>The options screen has closed (0x004a2bf0, message 0x14): the front end's window comes back, and any glints go.</summary>
-	internal void OptionsClosed()
-	{
-		_options = null;
-
-		foreach ( var window in _stack.Windows.Where( window => window.Hidden ).ToArray() )
-		{
-			window.Hidden = false;
-			window.Shown();
-		}
-
-		_stack.StopGlint();
-	}
 
 	/// <summary>
 	/// Select New Player, once its box is ticked (0x0048bc50). The player is saved and stops playing
@@ -306,7 +272,7 @@ internal sealed class FrontEnd : Panel
 			new( UIStrings.Options, 11, menu =>
 			{
 				_stack.Close( menu );
-				OpenOptions();
+				OptionsScreen.Open( _stack );
 			} )
 		};
 
