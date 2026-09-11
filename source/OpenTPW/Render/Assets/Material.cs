@@ -128,7 +128,23 @@ public partial class Material : Asset
 		_boundResources[name] = ScratchBuffer;
 	}
 
-	public void Set( string name, Texture[] texture )
+	/// <summary>
+	/// Binds this material's uniform block like <see cref="Set{T}"/>, but writes it through the
+	/// frame's command list, so the write lands between the draws either side of it.
+	///
+	/// <see cref="Set{T}"/> writes straight to the device, ahead of everything the frame has
+	/// recorded, so a material drawn several times in one frame draws every time with the last value
+	/// it was given. Nothing in the world is drawn twice with one material, but the interface is:
+	/// four player buttons wear the one purple mesh, and set this way all four landed on the last.
+	/// </summary>
+	public void SetInFrame<T>( string name, T obj ) where T : unmanaged
+	{
+		Render.CommandList.UpdateBuffer( ScratchBuffer, 0, ref obj );
+		_boundResources[name] = ScratchBuffer;
+	}
+
+	/// <param name="sampler">How the textures are sampled - wrapping, unless the caller knows better.</param>
+	public void Set( string name, Texture[] texture, SamplerType sampler = SamplerType.AnisotropicWrap )
 	{
 		for ( int i = 0; i < texture.Length; i++ )
 		{
@@ -142,7 +158,7 @@ public partial class Material : Asset
 			}
 		}
 
-		var samplerResource = Samplers[(int)SamplerType.AnisotropicWrap];
+		var samplerResource = Samplers[(int)sampler];
 		var samplerKey = "s_" + name;
 
 		if ( !_boundResources.TryGetValue( samplerKey, out var existingSampler ) || existingSampler != samplerResource )
