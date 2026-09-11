@@ -138,6 +138,29 @@ public partial class Texture : Asset
 		Marshal.FreeHGlobal( ptr );
 	}
 
+	/// <summary>
+	/// Releases the GPU texture and takes this out of <see cref="Asset.All"/>, once the frame in
+	/// progress is done with it.
+	///
+	/// Only for a texture nothing else can be holding. One constructed from a path that is already
+	/// loaded shares that texture's GPU texture rather than owning one (see TryGetCachedTexture),
+	/// so deleting either would pull it out from under the other. A texture built from pixels is
+	/// never shared.
+	/// </summary>
+	public void Delete()
+	{
+		All.Remove( this );
+
+		var texture = NativeTexture;
+		var view = NativeTextureView;
+
+		Render.ScheduleDelete( () =>
+		{
+			view.Dispose();
+			texture.Dispose();
+		} );
+	}
+
 	private int CalculateMipLevels( int width, int height, int depth )
 	{
 		int maxDimension = Math.Max( width, Math.Max( height, depth ) );
@@ -220,6 +243,6 @@ public partial class Texture : Asset
 			cmd.GenerateMipmaps( NativeTexture );
 		} );
 
-		All.Add( this );
+		Register();
 	}
 }

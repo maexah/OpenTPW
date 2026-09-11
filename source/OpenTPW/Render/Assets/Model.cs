@@ -21,7 +21,7 @@ public class Model : Asset
 
 		SetupMesh( vertices, indices );
 
-		All.Add( this );
+		Register();
 	}
 
 	public Model( Vertex[] vertices, Material material )
@@ -31,7 +31,7 @@ public class Model : Asset
 
 		SetupMesh( vertices );
 
-		All.Add( this );
+		Register();
 	}
 
 	private void SetupMesh( Vertex[] vertices )

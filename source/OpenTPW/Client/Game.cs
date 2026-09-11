@@ -6,6 +6,13 @@
 /// </summary>
 internal static class Game
 {
+	/// <summary>
+	/// How many steps the loading bar expects the lobby to take - one for every texture, shader,
+	/// material and mesh registered while it loads. The loading screen logs the real count when it
+	/// closes; this wants bringing into line with it when the lobby comes to load more.
+	/// </summary>
+	private const int LobbyLoadSteps = 2972;
+
 	public static void Run( string[] args )
 	{
 		Log = new();
@@ -47,15 +54,24 @@ internal static class Game
 		Render = new();
 
 		//
-		// Init audio. Opening the device can fail - no sound card, no audio server - and that is
-		// not a reason to stop, so Audio.Init reports it and leaves everything a no-op.
+		// Everything between here and the lobby's first frame happens behind the loading screen,
+		// which puts itself away for good once the level exists.
 		//
-		Audio.Init();
+		Level level;
 
-		//
-		// Create level
-		//
-		var level = new Level( "jungle" );
+		using ( new LoadingScreen( "the lobby", LobbyLoadSteps ) )
+		{
+			//
+			// Init audio. Opening the device can fail - no sound card, no audio server - and that
+			// is not a reason to stop, so Audio.Init reports it and leaves everything a no-op.
+			//
+			Audio.Init();
+
+			//
+			// Create level
+			//
+			level = new Level( "jungle" );
+		}
 
 		//
 		// Run game loop

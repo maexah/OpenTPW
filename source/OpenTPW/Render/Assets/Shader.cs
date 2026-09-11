@@ -19,7 +19,7 @@ public partial class Shader : Asset
 	internal Shader( string path )
 	{
 		Path = path;
-		All.Add( this );
+		Register();
 
 		Recompile();
 

@@ -46,7 +46,7 @@ public partial class Material : Asset
 		Shader = Shader.GetOrCreate( shaderPath );
 		Shader.OnRecompile += () => SetupResources( flags );
 
-		All.Add( this );
+		Register();
 		SetupResources( flags );
 	}
 
@@ -56,7 +56,7 @@ public partial class Material : Asset
 		Shader.OnRecompile += () => SetupResources( flags );
 		UniformBufferType = uniformBufferType;
 
-		All.Add( this );
+		Register();
 		SetupResources( flags );
 	}
 
