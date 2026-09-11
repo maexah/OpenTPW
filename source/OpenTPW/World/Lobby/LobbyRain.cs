@@ -25,8 +25,30 @@ public sealed class LobbyRain : WeatherSprites
 	/// </summary>
 	private const int MaxLevel = 2;
 
-	/// <summary>Half-extents of the box drops live in, centred a little ahead of the camera.</summary>
+	/// <summary>Half-extents of the box drops live in, centred a little ahead of the camera, at 4:3.</summary>
 	private static readonly Vector3 HalfVolume = new( 44f, 44f, 34f );
+
+	/// <summary>
+	/// How far the box reaches to either side, which is the one extent that cannot just be taken as
+	/// authored. A window wider than 4:3 sees further out to the sides - see
+	/// <see cref="Camera.HorizontalTangent"/> - and a box sized for 4:3 leaves the storm stopping
+	/// short of both edges of it, badly so on an ultrawide, where the frustum is close to twice as
+	/// wide as the box. So the authored width is opened out by however much wider than 4:3 the view
+	/// has become, and never narrowed: at 4:3, and at anything taller, this is the 44 it always was.
+	/// </summary>
+	private static float HalfWidth => HalfVolume.X * Spread;
+
+	/// <summary>How much wider than the original's 4:3 the view is, never less than one.</summary>
+	private static float Spread
+	{
+		get
+		{
+			var reference = Camera.ReferenceHorizontalTangent;
+
+			// Nothing to compare against until the camera has worked out a frustum at least once.
+			return reference > 0f ? MathF.Max( 1f, Camera.HorizontalTangent / reference ) : 1f;
+		}
+	}
 
 	/// <summary>How far ahead of the camera to centre that box, so most of it is on screen.</summary>
 	private const float LookAhead = 26f;
@@ -96,7 +118,8 @@ public sealed class LobbyRain : WeatherSprites
 			_seeded = true;
 		}
 
-		var count = Math.Clamp( (int)(DropsPerLevel * _visible), 0, _drops.Length );
+		// The count opens out with the box, so that a wider window is not simply a thinner storm.
+		var count = Math.Clamp( (int)(DropsPerLevel * _visible * Spread), 0, _drops.Length );
 		var dt = Time.Delta;
 
 		for ( int i = 0; i < count; ++i )
@@ -121,7 +144,7 @@ public sealed class LobbyRain : WeatherSprites
 	private static Vector3 Wrap( Vector3 drop, Vector3 centre )
 	{
 		return new Vector3(
-			WrapAxis( drop.X, centre.X, HalfVolume.X ),
+			WrapAxis( drop.X, centre.X, HalfWidth ),
 			WrapAxis( drop.Y, centre.Y, HalfVolume.Y ),
 			WrapAxis( drop.Z, centre.Z, HalfVolume.Z ) );
 	}
@@ -143,7 +166,7 @@ public sealed class LobbyRain : WeatherSprites
 		for ( int i = 0; i < _drops.Length; ++i )
 		{
 			_drops[i] = centre + new Vector3(
-				((_rng.NextSingle() * 2f) - 1f) * HalfVolume.X,
+				((_rng.NextSingle() * 2f) - 1f) * HalfWidth,
 				((_rng.NextSingle() * 2f) - 1f) * HalfVolume.Y,
 				((_rng.NextSingle() * 2f) - 1f) * HalfVolume.Z );
 		}

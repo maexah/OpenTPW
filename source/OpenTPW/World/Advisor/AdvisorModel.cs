@@ -179,9 +179,9 @@ public sealed class AdvisorModel
 	}
 
 	/// <summary>Draws him over whatever is already on the screen - see <see cref="Level.Render"/>.</summary>
-	public void Draw( float aspect )
+	public void Draw()
 	{
-		var projection = ScreenProjection( aspect );
+		var projection = ScreenProjection();
 
 		// Every solid part before any see-through one. His head and body are see-through - flat discs
 		// with the ball painted on, under material flag 0x2 - and write no depth, so drawn a mesh at a
@@ -217,16 +217,37 @@ public sealed class AdvisorModel
 	/// world axes are the file's with Y and Z swapped - see <see cref="LobbyModel.ToWorldSpace"/> -
 	/// so world X runs across, world Z up, and world Y into the screen, with his face towards -Y.
 	/// </summary>
-	public static Matrix4x4 ScreenProjection( float aspect )
+	/// <para>
+	/// He stands on the interface rather than on the window. The original puts him at 0.6, -0.6 of
+	/// the screen - eight tenths of the way across it and two tenths up from the bottom - and on a
+	/// 4:3 window this puts him in exactly that place at exactly that size. On a window of any other
+	/// shape the interface is a 2048x1536 screen pinned inside it (see <see cref="UI.VirtualScreen"/>),
+	/// and eight tenths across the window is no longer eight tenths across the interface: on a 21:9
+	/// window it would walk him a third of the way into the player slots he is talking about, and
+	/// further in the wider the window. So where he stands and how big he is are both taken from the
+	/// virtual screen, which on a 4:3 window is the window.
+	/// </para>
+	public static Matrix4x4 ScreenProjection()
 	{
-		const float up = 0.015f;
-		var across = up / MathF.Max( aspect, 0.01f );
+		// Where the original has him, on the interface's own screen.
+		const float across = 0.8f * UI.VirtualScreen.Width;
+		const float down = 0.8f * UI.VirtualScreen.Height;
+
+		// A model unit was 0.015 of half the window's height, which on that screen is 11.52 units.
+		const float unit = 0.015f * UI.VirtualScreen.Height / 2f;
+
+		var scale = UI.VirtualScreen.Scale;
+		var up = unit * scale * 2f / Screen.Height;
+		var sideways = unit * scale * 2f / Screen.Width;
+
+		var x = ((UI.VirtualScreen.Offset( UI.Anchor.Right ) + (across * scale)) * 2f / Screen.Width) - 1f;
+		var y = 1f - ((UI.VirtualScreen.OffsetDown( UI.VerticalAnchor.Bottom ) + (down * scale)) * 2f / Screen.Height);
 
 		return new Matrix4x4(
-			across, 0f, 0f, 0f,
+			sideways, 0f, 0f, 0f,
 			0f, 0f, 0.001f, 0f,
 			0f, up, 0f, 0f,
-			0.6f, -0.6f, 0.2f, 1f );
+			x, y, 0.2f, 1f );
 	}
 
 	/// <summary>

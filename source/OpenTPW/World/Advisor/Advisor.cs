@@ -286,7 +286,7 @@ public sealed class Advisor : Entity
 	protected override void OnRenderOverlay()
 	{
 		if ( _shown && !_paused && _figure != null )
-			_figure.Draw( Screen.Aspect );
+			_figure.Draw();
 	}
 
 	/// <summary>
