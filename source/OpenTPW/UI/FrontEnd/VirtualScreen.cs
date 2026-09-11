@@ -34,23 +34,27 @@ internal static class VirtualScreen
 	public static PixelRect ToPixels( UiRect rect, Anchor anchor )
 	{
 		var scale = Scale;
-		var offset = anchor switch
-		{
-			Anchor.Left => 0f,
-			Anchor.Right => Screen.Width - (Width * scale),
-			_ => (Screen.Width - (Width * scale)) * 0.5f
-		};
+		var offset = Offset( anchor );
 
 		return new PixelRect( offset + (rect.Left * scale), rect.Top * scale, rect.Width * scale, rect.Height * scale );
 	}
 
-	/// <summary>Which edge a rectangle was laid out against - see the class remarks.</summary>
-	public static Anchor AnchorFor( UiRect rect )
+	/// <summary>How far across the window, in pixels, the left edge of the virtual screen is for something pinned by <paramref name="anchor"/>.</summary>
+	public static float Offset( Anchor anchor ) => anchor switch
 	{
-		var centre = (rect.Left + rect.Right) * 0.5f;
+		Anchor.Left => 0f,
+		Anchor.Right => Screen.Width - (Width * Scale),
+		_ => (Screen.Width - (Width * Scale)) * 0.5f
+	};
 
-		return centre < Width / 3f ? Anchor.Left
-			: centre > Width * 2f / 3f ? Anchor.Right
+	/// <summary>Which edge a rectangle was laid out against - see the class remarks.</summary>
+	public static Anchor AnchorFor( UiRect rect ) => AnchorAt( (rect.Left + rect.Right) * 0.5f );
+
+	/// <summary>Which edge something centred at <paramref name="x"/> across the virtual screen is pinned to.</summary>
+	public static Anchor AnchorAt( float x )
+	{
+		return x < Width / 3f ? Anchor.Left
+			: x > Width * 2f / 3f ? Anchor.Right
 			: Anchor.Centre;
 	}
 }
