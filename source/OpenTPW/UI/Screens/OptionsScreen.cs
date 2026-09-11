@@ -82,6 +82,9 @@ internal sealed class OptionsScreen : UiWindow
 	/// <summary>The options as they were when the screen opened, for the cross to put back.</summary>
 	private readonly GameOptions _before = GameOptions.Current.Copy();
 
+	/// <summary>The green screen everything sits on, over the dimmed window - see the constructor.</summary>
+	private readonly UiControl _screen;
+
 	private readonly UiControl _rendering;
 	private readonly UiControl _videoCard;
 	private readonly UiControl _advisorLine;
@@ -143,13 +146,20 @@ internal sealed class OptionsScreen : UiWindow
 		Modal = true;
 		Pauses = true;
 
-		Root = new UiControl
+		// f_screen is 4:3 artwork - a green field of waves with its border painted in - so it is
+		// drawn at the interface's own shape rather than stretched over the window. That leaves the
+		// lobby showing down both sides of it on a window of any other shape, which is what every
+		// window that was not 4:3 used to do, so the screen sits on the same dimmed backdrop the
+		// game menu and the message boxes already use and covers the window between them.
+		Root = Backdrop();
+
+		_screen = Root.Add( new UiControl
 		{
 			Id = 0x1d4c0,
 			Rect = VirtualScreen.Whole,
 			Mesh = UiMesh.Get( "f_screen" ),
 			HoldsChildren = true
-		};
+		} );
 
 		// In the order the layout stream has them, but for the buttons, which 0x004a3a30 raises over
 		// everything else after loading - they sit on the panels.
@@ -163,7 +173,7 @@ internal sealed class OptionsScreen : UiWindow
 		_rotationLine = Panel( 0x1d4d0, new UiRect( 1331, 994, 1964, 1143 ), new UiRect( 1401, 1044, 1701, 1089 ) );
 		_scrollLine = Panel( 0x1d4d1, new UiRect( 1331, 1150, 1964, 1299 ), new UiRect( 1401, 1200, 1701, 1245 ) );
 
-		Root.Add( new UiControl
+		_screen.Add( new UiControl
 		{
 			Id = 0x1d4d4,
 			Rect = new UiRect( 788 - 236, 46, 1260 + 236, 126 ),
@@ -180,7 +190,7 @@ internal sealed class OptionsScreen : UiWindow
 		(_speech, _speechLine) = Slider( 0x1d4dc, new UiRect( 52, 1151, 1289, 1301 ), "f_optpanel2", 1190, 1192, 1204, 1157, SpeechMoved );
 		(_movie, _movieLine) = Slider( 0x1d4de, new UiRect( 52, 1307, 1289, 1457 ), "f_optpanel2", 1346, 1348, 1360, 1313, MovieMoved );
 
-		Root.Add( new UiControl
+		_screen.Add( new UiControl
 		{
 			Id = 0x1d4df,
 			Rect = new UiRect( 1742, 1321, 1947, 1443 ),
@@ -414,7 +424,7 @@ internal sealed class OptionsScreen : UiWindow
 	/// <summary>A panel with its line, which is handed back.</summary>
 	private UiControl Panel( int id, UiRect rect, UiRect line )
 	{
-		var panel = Root.Add( new UiControl { Id = id, Rect = rect, Mesh = UiMesh.Get( "f_optpanel" ) } );
+		var panel = _screen.Add( new UiControl { Id = id, Rect = rect, Mesh = UiMesh.Get( "f_optpanel" ) } );
 		return panel.Add( LineControl( line ) );
 	}
 
@@ -425,7 +435,7 @@ internal sealed class OptionsScreen : UiWindow
 	/// </summary>
 	private (UiSlider Slider, UiControl Line) Slider( int id, UiRect rect, string mesh, int trackTop, int thumbTop, int lineTop, int hitTop, Action moved )
 	{
-		var slider = Root.Add( new UiSlider
+		var slider = _screen.Add( new UiSlider
 		{
 			Id = id,
 			Rect = rect,
@@ -448,12 +458,12 @@ internal sealed class OptionsScreen : UiWindow
 	}
 
 	private void Button( int id, UiRect rect, string mesh, Action clicked )
-		=> Root.Add( new UiButton { Id = id, Rect = rect, Mesh = UiMesh.Get( mesh ), Clicked = clicked } );
+		=> _screen.Add( new UiButton { Id = id, Rect = rect, Mesh = UiMesh.Get( mesh ), Clicked = clicked } );
 
 	/// <summary>A b_on switch, which says whether it is on - up - once a click has turned it.</summary>
 	private UiButton Switch( int id, UiRect rect, Action<bool> switched )
 	{
-		var button = Root.Add( new UiButton { Id = id, Rect = rect, Mesh = UiMesh.Get( "b_on" ), Toggles = true } );
+		var button = _screen.Add( new UiButton { Id = id, Rect = rect, Mesh = UiMesh.Get( "b_on" ), Toggles = true } );
 		button.Clicked = () => switched( !button.IsDown );
 		return button;
 	}

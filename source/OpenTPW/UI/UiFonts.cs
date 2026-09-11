@@ -40,16 +40,26 @@ internal static class UiFonts
 			"GAME9.bf4", "GAME10.bf4", "GAME12.bf4", "GAME9.bf4", "CONSOLE6.bf4", "GAME9.bf4", "POSTCARD.bf4"],
 	];
 
-	/// <summary>Which set the window's height calls for.</summary>
+	/// <summary>
+	/// How tall the virtual screen is drawn, which is what the size of the lettering has to be
+	/// measured against rather than the window's own height. They are the same on any window at
+	/// least as wide as 4:3. On a narrower one <see cref="VirtualScreen.Scale"/> is held by the
+	/// width, so a tall window draws a small interface, and choosing the set by the window's height
+	/// would put the largest fonts in the smallest buttons.
+	/// </summary>
+	private static float LayoutHeight => VirtualScreen.Scale * VirtualScreen.Height;
+
+	/// <summary>Which set the size the interface is drawn at calls for.</summary>
 	public static int SetIndex
 	{
 		get
 		{
 			var index = 0;
+			var height = LayoutHeight;
 
 			for ( int i = 0; i < SetHeights.Length; ++i )
 			{
-				if ( Screen.Size.Y >= SetHeights[i] )
+				if ( height >= SetHeights[i] )
 					index = i;
 			}
 
@@ -58,7 +68,7 @@ internal static class UiFonts
 	}
 
 	/// <summary>How much larger than its own pixels a font is drawn.</summary>
-	public static float Scale => Screen.Height / SetHeights[SetIndex];
+	public static float Scale => LayoutHeight / SetHeights[SetIndex];
 
 	/// <summary>The height of the screen the current set was drawn for, in pixels.</summary>
 	public static int SetScreenHeight => SetHeights[SetIndex];

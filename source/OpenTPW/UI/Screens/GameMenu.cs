@@ -81,7 +81,12 @@ internal sealed class GameMenu : UiWindow
 			Text = Localization.Get( item.Text ),
 			Font = ChoiceFont,
 			TextColour = Resting,
-			TextShadow = true
+			TextShadow = true,
+
+			// One column down from the top of the screen, so they keep to the top together however
+			// many there are - a longer menu would otherwise cross into the middle third and the
+			// choices below that would part from the ones above on a tall window.
+			PinDown = VerticalAnchor.Top
 		} );
 
 		choice.Entered = () => choice.Ramp = 1;

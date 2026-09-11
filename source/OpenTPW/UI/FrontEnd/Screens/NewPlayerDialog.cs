@@ -55,7 +55,11 @@ internal sealed class NewPlayerDialog : UiWindow
 		{
 			Id = 0x708,
 			Rect = new UiRect( 500, 233, 1516, 830 ),
-			Mesh = UiMesh.Get( "w_dialog_wave" )
+			Mesh = UiMesh.Get( "w_dialog_wave" ),
+
+			// In the middle of the window whatever shape it is - see MessageBox.
+			PinAcross = Anchor.Centre,
+			PinDown = VerticalAnchor.Middle
 		} );
 
 		dialog.Add( new UiButton

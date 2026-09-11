@@ -41,6 +41,12 @@ internal sealed class MessageBox : UiWindow
 			Id = 0x9873c7,
 			Rect = new UiRect( 500, 233, 1516, 830 ),
 			Mesh = UiMesh.Get( "w_dialog" ),
+
+			// A dialog belongs in the middle of the screen whatever shape the window is. Its own
+			// middle is only just inside the middle third going down, so it says where it keeps to
+			// rather than leaving it to arithmetic that a few units either way would change.
+			PinAcross = Anchor.Centre,
+			PinDown = VerticalAnchor.Middle,
 			TextRect = new UiRect( 610, 276, 1345, 753 ),
 			Text = text,
 			Font = MessageFont,

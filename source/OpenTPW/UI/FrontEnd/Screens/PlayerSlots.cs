@@ -48,11 +48,17 @@ internal sealed class PlayerSlots : UiWindow
 			var top = 46 + (slot * SlotSpacing);
 			var player = Players.Roster[slot];
 
+			// The four slots and Quit Game below them are one column down the right, and their
+			// rectangles straddle the middle of the screen - the top two sit in the upper third and
+			// the lower two in the middle one - so left to the thirds a window taller than 4:3 would
+			// deal them out down its height. They keep to the top together instead, as the column
+			// does in the original.
 			var button = Root.Add( new UiControl
 			{
 				Id = SlotIds[slot],
 				Rect = new UiRect( 884, top, 2048, top + 147 ),
-				Mesh = UiMesh.Get( "b_login" )
+				Mesh = UiMesh.Get( "b_login" ),
+				PinDown = VerticalAnchor.Top
 			} );
 
 			var label = button.Add( new UiControl
@@ -70,6 +76,10 @@ internal sealed class PlayerSlots : UiWindow
 				Id = 0x7a16,
 				Rect = new UiRect( 1919, top + 22, 2021, top + 125 ),
 				Mesh = UiMesh.Get( "b_dellog" ),
+
+				// It reaches past the right edge of the label it hangs off, so it does not travel
+				// with it and has to keep to the same edge as the slot itself.
+				PinDown = VerticalAnchor.Top,
 				Visible = player != null,
 				Clicked = () => frontEnd.AskToDeletePlayer( chosen )
 			} );
@@ -99,6 +109,7 @@ internal sealed class PlayerSlots : UiWindow
 			Id = 0x7a1c,
 			Rect = new UiRect( 1264, 895, 2428, 1042 ),
 			Mesh = UiMesh.Get( "b_login" ),
+			PinDown = VerticalAnchor.Top,
 			TextRect = new UiRect( 1339, 924, 2039, 1013 ),
 			Text = Localization.Get( UIStrings.QuitGame ),
 			Font = ButtonFont,

@@ -176,6 +176,13 @@ internal sealed class ScreenParticles : Panel
 			var ignoresAlpha = adds && (template.DrawFlags & 0x2000) == 0;
 			var offset = VirtualScreen.Offset( emitter.Anchor );
 
+			// And down the screen from wherever the effect itself sits, taken from its own position
+			// the way an effect with no pin of its own takes one across (ParticleSystem.AnchorAt):
+			// the sparkles over the island panel's price keep to the bottom of the window with the
+			// panel, and a button's glints to whichever edge the button keeps to. Zero on any window
+			// at least as wide as 4:3, where there is no room above or below the interface at all.
+			var offsetDown = VirtualScreen.OffsetDown( VirtualScreen.VerticalAnchorAt( ScreenY( emitter.Z ) ) );
+
 			for ( int index = emitter.FirstParticle; index >= 0; index = system.Particles[index].Next )
 			{
 				ref var particle = ref system.Particles[index];
@@ -195,7 +202,7 @@ internal sealed class ScreenParticles : Panel
 				var halfHeight = Math.Max( (short)particle.Size / 64, 0 ) / 2048f;
 
 				layer.Add( (ScreenX( x ) - 1024f) / 1024f, (ScreenY( z ) - 768f) / 768f, halfHeight * region.Aspect, halfHeight,
-					particle.Rotation, region, particle.Colour, ignoresAlpha, offset );
+					particle.Rotation, region, particle.Colour, ignoresAlpha, offset, offsetDown );
 			}
 		}
 
@@ -309,7 +316,8 @@ internal sealed class ScreenParticles : Panel
 		/// <param name="centreY">Down the screen, -1 to 1.</param>
 		/// <param name="rotation">Of 65536.</param>
 		/// <param name="offset">Where the virtual screen starts across the window, for the effect's pin.</param>
-		public void Add( float centreX, float centreY, float halfWidth, float halfHeight, int rotation, Region region, uint colour, bool ignoresAlpha, float offset )
+		/// <param name="offsetDown">Where it starts down the window, for the same.</param>
+		public void Add( float centreX, float centreY, float halfWidth, float halfHeight, int rotation, Region region, uint colour, bool ignoresAlpha, float offset, float offsetDown )
 		{
 			if ( _used >= ParticleSystem.ParticleCount )
 				return;
@@ -339,7 +347,7 @@ internal sealed class ScreenParticles : Panel
 				var y = centreY + (down * cos) - (across * sin);
 
 				var pixelX = offset + ((1024f + (x * 1024f)) * scale);
-				var pixelY = (768f + (y * 768f)) * scale;
+				var pixelY = offsetDown + ((768f + (y * 768f)) * scale);
 
 				_vertices[vertex] = new Vertex
 				{

@@ -142,6 +142,13 @@ internal sealed class IslandPanel : UiWindow
 		{
 			Id = 0x1e0ef,
 			Rect = new UiRect( 477, 1303, 1571, 1437 ),
+
+			// It begins where the panel ends, and the two read as one strip along the bottom. Its
+			// own middle is in the middle third, so on a wide window the thirds would leave the
+			// panel at the left edge and carry the name off towards the centre, opening a gap
+			// through the middle of it.
+			PinAcross = Anchor.Left,
+			PinDown = VerticalAnchor.Bottom,
 			Font = ParkNameFont,
 			TextColour = ParkNameColour,
 			TextShadow = true,

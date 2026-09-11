@@ -66,6 +66,17 @@ internal class UiControl
 	/// </summary>
 	public bool HoldsChildren { get; init; }
 
+	/// <summary>
+	/// Which edge of the window it keeps to across, when the third of the virtual screen it sits in
+	/// is not what it belongs with. The four player slots are one column, and their thirds straddle
+	/// the middle of the screen, so each says which edge it keeps to rather than being spread down a
+	/// tall window. Null leaves it to <see cref="VirtualScreen.AnchorFor"/>.
+	/// </summary>
+	public Anchor? PinAcross { get; init; }
+
+	/// <summary>Which edge it keeps to down the screen, when the thirds are not what it belongs with - see <see cref="PinAcross"/>.</summary>
+	public VerticalAnchor? PinDown { get; init; }
+
 	public Action? Clicked { get; set; }
 
 	public Action? Entered { get; set; }
@@ -77,11 +88,14 @@ internal class UiControl
 	internal bool Pressed { get; set; }
 
 	/// <summary>Which edge of the window it keeps to - see <see cref="VirtualScreen"/>.</summary>
-	internal Anchor Anchor => _followsParent && Parent != null ? Parent.Anchor : VirtualScreen.AnchorFor( Rect );
+	internal Anchor Anchor => PinAcross ?? (_followsParent && Parent != null ? Parent.Anchor : VirtualScreen.AnchorFor( Rect ));
+
+	/// <summary>Which edge of the window it keeps to down the screen - see <see cref="VirtualScreen"/>.</summary>
+	internal VerticalAnchor VerticalAnchor => PinDown ?? (_followsParent && Parent != null ? Parent.VerticalAnchor : VirtualScreen.VerticalAnchorFor( Rect ));
 
 	internal PixelRect Pixels => FillsWindow
 		? new PixelRect( 0, 0, Screen.Width, Screen.Height )
-		: VirtualScreen.ToPixels( Rect, Anchor );
+		: VirtualScreen.ToPixels( Rect, Anchor, VerticalAnchor );
 
 	/// <summary>Which part of the mesh is added to <see cref="Frame"/> for the state it is in.</summary>
 	internal virtual int State => 0;
@@ -117,7 +131,7 @@ internal class UiControl
 		DrawText( Text );
 	}
 
-	protected PixelRect TextArea => TextRect is { } rect ? VirtualScreen.ToPixels( rect, Anchor ) : Pixels;
+	protected PixelRect TextArea => TextRect is { } rect ? VirtualScreen.ToPixels( rect, Anchor, VerticalAnchor ) : Pixels;
 
 	protected void DrawText( string? text )
 		=> _text.Draw( text, Font, TextColour, TextShadow, TextWraps, TextArea, TextAcross, TextDown );
@@ -379,7 +393,7 @@ internal sealed class UiSlider : UiControl
 
 	internal override bool TakesMouse => true;
 
-	internal override PixelRect HitArea => VirtualScreen.ToPixels( HitRect, Anchor );
+	internal override PixelRect HitArea => VirtualScreen.ToPixels( HitRect, Anchor, VerticalAnchor );
 
 	public UiSliderThumb AddThumb( UiSliderThumb thumb )
 	{
