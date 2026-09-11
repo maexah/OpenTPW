@@ -35,6 +35,7 @@ internal sealed class FrontEnd : Panel
 	private readonly List<UiWindow> _windows = new();
 	private readonly HelpBar _helpBar;
 	private readonly IslandPanel _islandPanel;
+	private readonly ButtonGlint _glint = new();
 	private PlayerSlots? _playerSlots;
 
 	private UiControl? _hovered;
@@ -73,6 +74,10 @@ internal sealed class FrontEnd : Panel
 
 		if ( _hovered?.IsWithin( window.Root ) == true )
 		{
+			// A button going away takes its glints with it at once.
+			if ( _hovered is UiButton )
+				_glint.Stop();
+
 			_hovered.Hovered = false;
 			_hovered = null;
 		}
@@ -195,6 +200,9 @@ internal sealed class FrontEnd : Panel
 			{
 				_hovered.Hovered = false;
 				_hovered.Exited?.Invoke();
+
+				if ( _hovered is UiButton )
+					_glint.Leave();
 			}
 
 			_hovered = hit;
@@ -203,8 +211,13 @@ internal sealed class FrontEnd : Panel
 			{
 				hit.Hovered = true;
 				hit.Entered?.Invoke();
+
+				if ( hit is UiButton && _helpBar.Enabled )
+					_glint.Start( hit );
 			}
 		}
+
+		_glint.Update();
 
 		var mouseDown = Input.Mouse.Left;
 

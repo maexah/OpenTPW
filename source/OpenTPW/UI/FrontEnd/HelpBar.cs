@@ -33,6 +33,9 @@ internal sealed class HelpBar
 
 	private bool _enabled = true;
 
+	/// <summary>Whether it is switched on - the original's Popup Help option, which the button glints also wait on.</summary>
+	public bool Enabled => _enabled;
+
 	/// <summary>Shows row <paramref name="helpText"/>, or nothing for -1.</summary>
 	public void Update( int helpText )
 	{
