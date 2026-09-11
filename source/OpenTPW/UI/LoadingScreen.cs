@@ -64,21 +64,23 @@ internal sealed class LoadingScreen : IDisposable
 	private readonly Stopwatch _sinceFrame = new();
 	private bool _drawing;
 
-	// Where the picture goes, in pixels from the window's bottom-left corner. Worked out once, as
-	// the window cannot be resized.
-	private readonly int _left;
-	private readonly int _bottom;
-	private readonly int _width;
-	private readonly int _height;
+	// Where the picture goes, in pixels from the window's bottom-left corner, and the size the window
+	// was when that was worked out - it can be resized while a level loads, and this screen is what
+	// covers the world while it does. See EnsureGeometry.
+	private int _left;
+	private int _bottom;
+	private int _width;
+	private int _height;
+	private Point2 _builtFor;
 
 	private readonly Texture? _picture;
 	private readonly Texture _darkRed;
 	private readonly Texture _red;
 
 	private readonly byte[] _font;
-	private readonly Texture _status;
-	private readonly byte[] _statusPixels;
-	private readonly (int X, int Y, int Width, int Height) _statusBox;
+	private Texture _status = null!;
+	private byte[] _statusPixels = [];
+	private (int X, int Y, int Width, int Height) _statusBox;
 
 	/// <summary>The last line logged. Written from whichever thread logged it.</summary>
 	private volatile string _lastLine = "";
@@ -91,26 +93,15 @@ internal sealed class LoadingScreen : IDisposable
 		_what = what;
 		_expectedSteps = Math.Max( expectedSteps, 1 );
 
-		// Its original 4:3, as large as the window takes it.
-		_height = Math.Min( Screen.Size.Y, Screen.Size.X * 3 / 4 );
-		_width = _height * 4 / 3;
-		_left = (Screen.Size.X - _width) / 2;
-		_bottom = (Screen.Size.Y - _height) / 2;
+		_font = File.ReadAllBytes( FontPath );
+		EnsureGeometry();
 
-		// None of these count as steps: nothing is listening for them yet.
+		// None of these count as steps: nothing is listening for them yet. The picture is chosen for
+		// the size the window is when the load starts and kept, as the original chooses its folder
+		// once (LoadingScreen_Begin, 0x00587479); only where it is drawn follows the window.
 		_picture = LoadPicture( _width );
 		_darkRed = new Texture( [0x80, 0x00, 0x00, 0xFF], 1, 1 );
 		_red = new Texture( [0xFF, 0x00, 0x00, 0xFF], 1, 1 );
-
-		// The strip between the bar's frame and the bottom of the picture - the frame is painted
-		// into the picture, and ends 18 pixels short of the bottom at 640x480.
-		var statusLeft = _width * 14 / 640;
-		var statusTop = _height * 463 / 480;
-		_statusBox = (statusLeft, statusTop, _width - (statusLeft * 2), _height - statusTop);
-
-		_font = File.ReadAllBytes( FontPath );
-		_statusPixels = new byte[_statusBox.Width * _statusBox.Height * 4];
-		_status = new Texture( _statusPixels, _statusBox.Width, _statusBox.Height, TextureFlags.PointFilter );
 
 		Logger.OnLog += OnLog;
 		_current = this;
@@ -210,6 +201,7 @@ internal sealed class LoadingScreen : IDisposable
 
 		try
 		{
+			EnsureGeometry();
 			WriteStatus();
 			Render.DrawLoadingFrame( Draw );
 		}
@@ -217,6 +209,43 @@ internal sealed class LoadingScreen : IDisposable
 		{
 			_drawing = false;
 		}
+	}
+
+	/// <summary>
+	/// Works out where the picture goes for the size the window is now, and does nothing at all
+	/// unless that has changed. A load is one long call with no frames running, so a window resized
+	/// during one would otherwise keep drawing the picture at the size it was when the load began,
+	/// in the corner of the window it has become. Called from <see cref="Pump"/> rather than from
+	/// the draw itself, because it builds a texture and no command list may be open when it does.
+	/// </summary>
+	private void EnsureGeometry()
+	{
+		if ( _builtFor.X == Screen.Size.X && _builtFor.Y == Screen.Size.Y )
+			return;
+
+		_builtFor = Screen.Size;
+
+		// Its original 4:3, as large as the window takes it.
+		_height = Math.Min( Screen.Size.Y, Screen.Size.X * 3 / 4 );
+		_width = _height * 4 / 3;
+		_left = (Screen.Size.X - _width) / 2;
+		_bottom = (Screen.Size.Y - _height) / 2;
+
+		// The strip between the bar's frame and the bottom of the picture - the frame is painted
+		// into the picture, and ends 18 pixels short of the bottom at 640x480.
+		var statusLeft = _width * 14 / 640;
+		var statusTop = _height * 463 / 480;
+
+		_statusBox = (statusLeft, statusTop,
+			Math.Max( _width - (statusLeft * 2), 1 ),
+			Math.Max( _height - statusTop, 1 ));
+
+		_statusPixels = new byte[_statusBox.Width * _statusBox.Height * 4];
+		_status?.Delete();
+		_status = new Texture( _statusPixels, _statusBox.Width, _statusBox.Height, TextureFlags.PointFilter );
+
+		// Whatever was written into the strip that has gone has to be written into the new one.
+		_lineShown = null;
 	}
 
 	private void Draw()

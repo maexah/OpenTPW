@@ -33,13 +33,13 @@ public partial class Renderer
 	public Renderer()
 	{
 		Window = new( Settings.Default.GameWindowSize.X, Settings.Default.GameWindowSize.Y, "Theme Park World", true );
-		Window.OnResized = OnWindowResized;
+		Window.Resized += OnWindowResized;
 		Window.Visible = true;
 
 		CreateGraphicsDevice();
 		// Swap the buffers so that the screen isn't a mangled mess
 		Device.SwapBuffers();
-		CreateMultisampledFramebuffer();
+		CreateMultisampledFramebuffer( Screen.Size );
 
 		imGuiRenderer = new ImGuiRenderer( Device, Device.MainSwapchain.Framebuffer.OutputDescription, Window.Size.X, Window.Size.Y );
 		ModKit.GlobalNamespace.ImGuiManager = imGuiRenderer;
@@ -47,16 +47,15 @@ public partial class Renderer
 
 		CommandList = Device.ResourceFactory.CreateCommandList();
 		CreateBlitPipeline();
-		OnWindowResized( Window.Size );
 
 		_lastFrame = _frameClock.Elapsed;
 	}
 
-	private void CreateMultisampledFramebuffer()
+	private void CreateMultisampledFramebuffer( Point2 size )
 	{
 		var colorTextureInfo = TextureDescription.Texture2D(
-			(uint)(Screen.Size.X),
-			(uint)(Screen.Size.Y),
+			(uint)(size.X),
+			(uint)(size.Y),
 			1,
 			1,
 			PixelFormat.B8_G8_R8_A8_UNorm,
@@ -64,11 +63,11 @@ public partial class Renderer
 			TextureSampleCount.Count4
 		);
 
-		var colorTexture = Device.ResourceFactory.CreateTexture( colorTextureInfo );
+		_colorTarget = Device.ResourceFactory.CreateTexture( colorTextureInfo );
 
 		var depthTextureInfo = TextureDescription.Texture2D(
-			(uint)(Screen.Size.X),
-			(uint)(Screen.Size.Y),
+			(uint)(size.X),
+			(uint)(size.Y),
 			1,
 			1,
 			PixelFormat.D32_Float_S8_UInt,
@@ -76,15 +75,15 @@ public partial class Renderer
 			TextureSampleCount.Count4
 		);
 
-		var depthTexture = Device.ResourceFactory.CreateTexture( depthTextureInfo );
+		_depthTarget = Device.ResourceFactory.CreateTexture( depthTextureInfo );
 
 		colorTextureInfo.SampleCount = TextureSampleCount.Count1;
 		colorTextureInfo.Usage = TextureUsage.Sampled;
 
 		ResolveColorTexture = Device.ResourceFactory.CreateTexture( colorTextureInfo );
 
-		var framebufferAttachmentInfo = new FramebufferAttachmentDescription( colorTexture, 0 );
-		var depthAttachmentInfo = new FramebufferAttachmentDescription( depthTexture, 0 );
+		var framebufferAttachmentInfo = new FramebufferAttachmentDescription( _colorTarget, 0 );
+		var depthAttachmentInfo = new FramebufferAttachmentDescription( _depthTarget, 0 );
 		var framebufferDescription = new FramebufferDescription()
 		{
 			ColorTargets = [framebufferAttachmentInfo],
@@ -96,6 +95,15 @@ public partial class Renderer
 
 	public Framebuffer MultisampledFramebuffer;
 	public Veldrid.Texture ResolveColorTexture;
+
+	/// <summary>
+	/// What <see cref="MultisampledFramebuffer"/> is drawn into. Veldrid does not dispose a
+	/// framebuffer's attachments along with it, so they are held here to be let go of by hand:
+	/// at 1080p the pair is around a hundred megabytes, and a window being dragged would otherwise
+	/// leak that much again every time it settled on a new size.
+	/// </summary>
+	private Veldrid.Texture _colorTarget = null!;
+	private Veldrid.Texture _depthTarget = null!;
 
 	private Pipeline _blitPipeline;
 	private ResourceSet _blitResourceSet;
@@ -186,6 +194,12 @@ public partial class Renderer
 		if ( !Window.SdlWindow.Exists )
 			return;
 
+		// Resized mid-load, which the loading screen itself also answers - see LoadingScreen.Draw.
+		ApplyResize();
+
+		if ( !Window.HasArea )
+			return;
+
 		CommandList.Begin();
 		DrawScene( "Loading Screen", draw, RgbaFloat.Black );
 		Present();
@@ -246,6 +260,19 @@ public partial class Renderer
 		if ( !Window.SdlWindow.Exists )
 			return;
 
+		// Before anything is drawn, and with no command list open - see ApplyResize.
+		ApplyResize();
+
+		// Minimised: there is nothing to draw into, and no swapchain to wait on either, so without
+		// the pause here the loop would spin as fast as the processor allows for as long as the
+		// window stays down. The clock is not advanced, so the world takes up where it left off
+		// rather than lurching forward by however long the window was away.
+		if ( !Window.HasArea )
+		{
+			Thread.Sleep( 16 );
+			return;
+		}
+
 		Time.Update( deltaTime );
 		Input.UpdateFrom( inputSnapshot );
 
@@ -281,27 +308,57 @@ public partial class Renderer
 		Device = GraphicsDevice.CreateVulkan( swapchainDescription: new SwapchainDescription( swapchainSource, (uint)(Window.Size.X), (uint)(Window.Size.Y), options.SwapchainDepthFormat, options.SyncToVerticalBlank, options.SwapchainSrgbFormat ), options: options );
 	}
 
-	public void OnWindowResized( Point2 newSize )
-	{
-		var dpiScale = 1.0f;
-		Device.MainSwapchain.Resize( (uint)(newSize.X * dpiScale), (uint)(newSize.Y * dpiScale) );
+	/// <summary>The size the window has become, until the render targets have been built for it.</summary>
+	private Point2? _resizedTo;
 
-		// Cleanup old MSAA resources
+	/// <summary>
+	/// SDL raises this from inside the event pump, once for every size a window passes through as it
+	/// is dragged. Building a swapchain and a set of multisampled targets for each of those would be
+	/// tens of megabytes of allocation a frame, so only the newest size is kept and the frame builds
+	/// it once - see <see cref="ApplyResize"/>.
+	/// </summary>
+	private void OnWindowResized( Point2 newSize ) => _resizedTo = newSize;
+
+	/// <summary>
+	/// Builds the swapchain and the render targets for the size the window has become, if it has.
+	/// Called from the frame after the events have been pumped and before anything is drawn, so
+	/// there is no command list open and nothing part way through a frame that used the old targets.
+	/// </summary>
+	private void ApplyResize()
+	{
+		if ( _resizedTo is not { } size )
+			return;
+
+		_resizedTo = null;
+
+		// Minimised rather than resized. Veldrid will not build a texture or a swapchain with no
+		// pixels in it, and the window will say so again on its way back up.
+		if ( size.X <= 0 || size.Y <= 0 )
+			return;
+
+		Device.MainSwapchain.Resize( (uint)size.X, (uint)size.Y );
+
+		// The GPU may still be reading the targets the last frame was drawn into: nothing fences
+		// between SwapBuffers and here, so letting go of them now is a use-after-free that Vulkan is
+		// entitled to fault on. A resize is rare enough to afford waiting for the device to finish.
+		Device.WaitForIdle();
+
 		MultisampledFramebuffer?.Dispose();
 		ResolveColorTexture?.Dispose();
-
-		// Recreate MSAA resources
-		CreateMultisampledFramebuffer();
-
-		// Recreate blit resources since they depend on the framebuffer
+		_colorTarget?.Dispose();
+		_depthTarget?.Dispose();
 		_blitResourceSet?.Dispose();
+
+		CreateMultisampledFramebuffer( size );
+
+		// The blit set names the resolve texture, so it is built again with it.
 		_blitResourceSet = Device.ResourceFactory.CreateResourceSet( new ResourceSetDescription(
 			_blitResourceLayout,
 			ResolveColorTexture,
 			Device.LinearSampler
 		) );
 
-		imGuiRenderer?.WindowResized( newSize.X, newSize.Y );
+		imGuiRenderer?.WindowResized( size.X, size.Y );
 	}
 
 	public void ImmediateSubmit( Action<CommandList> action )

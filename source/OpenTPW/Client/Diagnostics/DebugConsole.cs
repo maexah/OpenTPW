@@ -234,13 +234,23 @@ public static class DebugConsole
 				Reply( "reloading" );
 				break;
 
+			// Resizes the window from here rather than from the desktop, so a run can put the game at
+			// an exact size, or change its size while it runs, with no window manager in the way.
+			case "size":
+				// Spelled out, because Window here is this file's own frame-timing constant.
+				if ( parts.Length > 2 )
+					global::OpenTPW.Window.Current?.Resize( (int)Argument( 1 ), (int)Argument( 2 ) );
+
+				Reply( $"size {Screen.Size.X}x{Screen.Size.Y}" );
+				break;
+
 			case "quit":
 				Reply( "quitting" );
 				Environment.Exit( 0 );
 				break;
 
 			default:
-				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/near/stats/state/volume/mute/sound/speech/advisor/greet/duck/reload/quit" );
+				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/near/stats/state/size/volume/mute/sound/speech/advisor/greet/duck/reload/quit" );
 				break;
 		}
 	}
@@ -294,7 +304,7 @@ public static class DebugConsole
 		var island = LobbyCameraMode.CurrentIsland;
 		var script = island?.Script;
 
-		return $"state island={island?.Index} name='{island?.ParkName}' "
+		return $"state size={Screen.Size.X}x{Screen.Size.Y} island={island?.Index} name='{island?.ParkName}' "
 			+ $"orbit={LobbyCameraMode.DebugOrbit:F3} paused={LobbyCameraMode.Paused} "
 			+ $"clock={(Time.Paused ? "paused" : "running")} stepping={Time.StepFrames} "
 			+ $"rainy={script?.Rainy} lightning={script?.Lightning} "
