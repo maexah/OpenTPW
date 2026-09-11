@@ -16,9 +16,8 @@ namespace OpenTPW.UI;
 /// (255, 255, 0) from 0x007540cc, and Quit Game's red (0x004a6000, 0x004a61d0).
 /// </para>
 /// <para>
-/// Nothing is saved yet, so no slot is in use when the lobby opens. A player made in this session keeps
-/// their slot, though, so when Select New Player brings the slots back, theirs has their name on it. Its
-/// delete button has nothing to do yet; the original asks before deleting, in a message box (0x0047f020).
+/// The slots in use are the players saved in save\users (see <see cref="Players"/>). A used slot's delete
+/// button asks first, in a message box, and deletes the player on the tick (0x004a6000, 0x004a61b0).
 /// </para>
 /// </summary>
 internal sealed class PlayerSlots : UiWindow
@@ -41,6 +40,7 @@ internal sealed class PlayerSlots : UiWindow
 
 		for ( int slot = 0; slot < Players.SlotCount; ++slot )
 		{
+			var chosen = slot;
 			var top = 46 + (slot * SlotSpacing);
 			var player = frontEnd.Players[slot];
 
@@ -66,7 +66,8 @@ internal sealed class PlayerSlots : UiWindow
 				Id = 0x7a16,
 				Rect = new UiRect( 1919, top + 22, 2021, top + 125 ),
 				Mesh = UiMesh.Get( "b_dellog" ),
-				Visible = player != null
+				Visible = player != null,
+				Clicked = () => frontEnd.AskToDeletePlayer( chosen )
 			} );
 
 			button.Add( new UiControl
@@ -77,7 +78,6 @@ internal sealed class PlayerSlots : UiWindow
 				Visible = player is { InstantAction: true }
 			} );
 
-			var chosen = slot;
 			button.Entered = () => label.TextColour = Highlighted;
 			button.Exited = () => label.TextColour = Label;
 			button.Clicked = () => frontEnd.SlotClicked( chosen );

@@ -88,6 +88,12 @@ public sealed class LobbyAdvisor : Entity
 		public const int LobbyTour = 468;
 
 		/// <summary>
+		/// Response 394, what a new Instant Action player hears in place of the tour: "...just click on the gate
+		/// of the park you want to play in first and the fun can begin" (transcribed).
+		/// </summary>
+		public const int InstantActionStart = 469;
+
+		/// <summary>
 		/// What he cries out when he is cut off, one picked at random by Advisor_StopSpeaking
 		/// (0x005994e0) - no response leads to them. Three short takes, each under two-fifths of a second
 		/// with no words a transcriber could find, which the bank names z_z_ouch1, z_z_ouch2 and
@@ -250,13 +256,10 @@ public sealed class LobbyAdvisor : Entity
 	}
 
 	/// <summary>
-	/// How many of the four player slots hold a saved player - what Players_CountUsedSlots
-	/// answers in the original.
-	///
-	/// Always 0, because there is no save system yet. This is the one line to change when saves
-	/// arrive; everything that depends on it is already the original's behaviour.
+	/// How many of the four player slots hold a saved player - what Players_CountUsedSlots answers in the
+	/// original - as the front end found them in save\users.
 	/// </summary>
-	private static int UsedPlayerSlots => 0;
+	private static int UsedPlayerSlots => UI.FrontEnd.Current?.Players.UsedSlots ?? 0;
 
 	protected override void OnUpdate()
 	{
@@ -349,6 +352,9 @@ public sealed class LobbyAdvisor : Entity
 	/// </summary>
 	internal void GiveLobbyTour( Action keyHandedOver )
 		=> Add( Samples.LobbyTour, flush: true, new Cue( TourKeySeconds, keyHandedOver ) );
+
+	/// <summary>What FrontEnd_ClosePlayerSlots has him say instead to a new Instant Action player, who is given no key (response 394).</summary>
+	internal void ExplainInstantAction() => Add( Samples.InstantActionStart, flush: true );
 
 	/// <summary>
 	/// Whether he can say anything at all: the options have him switched on, and there is an audio device

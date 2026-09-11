@@ -83,6 +83,9 @@ internal static class Game
 		Render.OnRender += level.Render;
 		Render.Run();
 
+		// Whoever is still playing is saved as the game closes, however it was closed (WinMain_Main, 0x0045acfc).
+		UI.FrontEnd.Current?.Players.SaveAndDeselect();
+
 		Audio.Shutdown();
 	}
 }

@@ -7,7 +7,8 @@ namespace OpenTPW;
 /// <para>
 /// The original keeps the options that belong to the machine in save\Config.tcf (<see cref="ConfigFile"/>),
 /// each player in a folder of their own under save\users\ named for their slot and their name, with their
-/// progress and their own options in gms.dat, and each player's parks under that in a folder per theme.
+/// progress and their own options in gms.dat (<see cref="PlayerFile"/>), and each player's parks in a
+/// folder per theme inside theirs. There is no list of players: the folders are the list.
 /// </para>
 /// <para>
 /// File names are matched without regard to case when reading. The original ran where case never
@@ -23,6 +24,22 @@ namespace OpenTPW;
 internal static class SaveFolder
 {
 	private const string ConfigName = "Config.tcf";
+	private const string UsersFolder = "users";
+	private const string OnlineFolder = "online";
+	private const string PlayerFileName = "gms.dat";
+	private const string EasyModeName = "easymode.TPWI";
+
+	private static string[]? _themes;
+
+	/// <summary>
+	/// The themes every player has a folder and a park record for: the folders under data\levels that hold
+	/// a global.sam - fantasy, hallow, jungle and space. The original walks a list of its own (0x00786b90)
+	/// whose names were not read out of it; these are the names the data itself goes by.
+	/// </summary>
+	public static IReadOnlyList<string> Themes => _themes ??= FindThemes();
+
+	/// <summary>Whether a park record is for a theme the game has - only those count their tickets (0x005af530).</summary>
+	public static bool IsTheme( string name ) => Themes.Contains( name, StringComparer.OrdinalIgnoreCase );
 
 	/// <summary>Reads save\Config.tcf into the options, if there is one - as the original does before anything else starts (0x00424930).</summary>
 	public static void LoadConfig()
@@ -61,6 +78,204 @@ internal static class SaveFolder
 		catch ( Exception e )
 		{
 			Log.Warning( $"Saves: the options could not be written to {path} - {e.Message}" );
+		}
+	}
+
+	/// <summary>
+	/// The players in save\users - 0x005c7590, as the game starts. It makes save\users and save\online if they
+	/// are missing, and takes every folder named for a slot, 1 to 4, and then a name at least one character long.
+	/// The folders are taken in name order, as Windows lists them, and a later folder for a slot replaces an
+	/// earlier one. A folder whose gms.dat is missing or will not read is still a player, with nothing read
+	/// (<see cref="PlayerFile"/> null); each folder is given the theme folders it lacks.
+	/// </summary>
+	public static List<(int Slot, string Name, PlayerFile? File)> ScanPlayers()
+	{
+		var players = new List<(int, string, PlayerFile?)>();
+
+		try
+		{
+			Directory.CreateDirectory( SaveFileSystem.GetAbsolutePath( UsersFolder ) );
+			Directory.CreateDirectory( SaveFileSystem.GetAbsolutePath( OnlineFolder ) );
+
+			var folders = SaveFileSystem.GetDirectories( UsersFolder )
+				.Select( Path.GetFileName )
+				.OfType<string>()
+				.OrderBy( name => name, StringComparer.OrdinalIgnoreCase );
+
+			foreach ( var folder in folders )
+			{
+				if ( folder.Length < 2 || folder[0] < '1' || folder[0] > '4' )
+					continue;
+
+				var slot = folder[0] - '1';
+				var name = folder[1..];
+
+				players.Add( (slot, name, LoadPlayer( slot, name )) );
+				MakeThemeFolders( PlayerFolder( slot, name ) );
+			}
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"Saves: the players could not be looked for - {e.Message}" );
+		}
+
+		return players;
+	}
+
+	/// <summary>A player's gms.dat, or null if there is none or it will not open.</summary>
+	public static PlayerFile? LoadPlayer( int slot, string name )
+	{
+		var folder = PlayerFolder( slot, name );
+
+		if ( Find( PlayerFileName, folder ) is not { } path )
+			return null;
+
+		try
+		{
+			using var stream = SaveFileSystem.OpenRead( path );
+			var file = PlayerFile.Read( stream );
+
+			if ( !file.IsComplete )
+				Log.Warning( $"Saves: {path} ended early or is not a player, so only what came before that was read" );
+
+			return file;
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"Saves: {path} would not open - {e.Message}" );
+			return null;
+		}
+	}
+
+	/// <summary>
+	/// Makes a player's folder - 0x005c7f40 and 0x005c8190: the folder, a folder for each theme, a copy of each
+	/// theme's easymode.TPWI for an Instant Action player (only jungle ships one), and their first gms.dat.
+	/// </summary>
+	public static void CreatePlayer( int slot, string name, PlayerFile file )
+	{
+		var folder = PlayerFolder( slot, name );
+
+		try
+		{
+			Directory.CreateDirectory( SaveFileSystem.GetAbsolutePath( folder ) );
+			MakeThemeFolders( folder );
+
+			if ( file.InstantAction )
+				CopyEasyModeParks( folder );
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"Saves: the folder for '{name}' could not be made - {e.Message}" );
+		}
+
+		SavePlayer( slot, name, file );
+	}
+
+	/// <summary>
+	/// Writes a player's gms.dat. The options in it are always the options as they stand: the original writes
+	/// its options object itself into the file (0x00423e90), whoever set them.
+	/// </summary>
+	public static void SavePlayer( int slot, string name, PlayerFile file )
+	{
+		var folder = PlayerFolder( slot, name );
+		var path = Find( PlayerFileName, folder ) ?? Path.Join( folder, PlayerFileName );
+
+		file.Options = GameOptions.Current.ToPlayerOptions();
+
+		try
+		{
+			using var memory = new MemoryStream();
+			file.Write( memory );
+
+			SaveFileSystem.WriteAllBytes( path, memory.ToArray() );
+			Log.Info( $"Saves: wrote {path}" );
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"Saves: {path} could not be written - {e.Message}" );
+		}
+	}
+
+	/// <summary>
+	/// Deletes a player's folder and everything in it - 0x005c5250. Like the original, it passes over any name
+	/// starting with a dot, so a folder holding one is left behind. A link is removed rather than followed.
+	/// </summary>
+	public static void DeletePlayer( int slot, string name )
+	{
+		var folder = SaveFileSystem.GetAbsolutePath( PlayerFolder( slot, name ) );
+
+		try
+		{
+			if ( Directory.Exists( folder ) )
+				DeleteFolder( folder );
+
+			Log.Info( $"Saves: deleted the player '{name}' in slot {slot + 1}" );
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"Saves: the player '{name}' could not be deleted - {e.Message}" );
+		}
+	}
+
+	/// <summary>save\users\ and the slot's number, 1 to 4, run straight into the name - 0x005c7de0.</summary>
+	private static string PlayerFolder( int slot, string name ) => Path.Join( UsersFolder, $"{slot + 1}{name}" );
+
+	private static void MakeThemeFolders( string folder )
+	{
+		foreach ( var theme in Themes )
+			Directory.CreateDirectory( SaveFileSystem.GetAbsolutePath( Path.Join( folder, theme ) ) );
+	}
+
+	private static void CopyEasyModeParks( string folder )
+	{
+		foreach ( var theme in Themes )
+		{
+			var source = FileSystem.GetFiles( $"levels/{theme}" )
+				.FirstOrDefault( file => string.Equals( Path.GetFileName( file ), EasyModeName, StringComparison.OrdinalIgnoreCase ) );
+
+			if ( source != null )
+				SaveFileSystem.WriteAllBytes( Path.Join( folder, theme, EasyModeName ), FileSystem.ReadAllBytes( source ) );
+		}
+	}
+
+	private static void DeleteFolder( string folder )
+	{
+		foreach ( var file in Directory.GetFiles( folder ) )
+		{
+			if ( !Path.GetFileName( file ).StartsWith( '.' ) )
+				File.Delete( file );
+		}
+
+		foreach ( var directory in Directory.GetDirectories( folder ) )
+		{
+			if ( Path.GetFileName( directory ).StartsWith( '.' ) )
+				continue;
+
+			if ( new DirectoryInfo( directory ).LinkTarget != null )
+				Directory.Delete( directory );
+			else
+				DeleteFolder( directory );
+		}
+
+		if ( !Directory.EnumerateFileSystemEntries( folder ).Any() )
+			Directory.Delete( folder );
+	}
+
+	private static string[] FindThemes()
+	{
+		try
+		{
+			return FileSystem.GetDirectories( "levels" )
+				.Select( Path.GetFileName )
+				.OfType<string>()
+				.Where( name => FileSystem.FileExists( $"levels/{name}/global.sam" ) )
+				.OrderBy( name => name, StringComparer.Ordinal )
+				.ToArray();
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"Saves: the themes could not be listed - {e.Message}" );
+			return [];
 		}
 	}
 

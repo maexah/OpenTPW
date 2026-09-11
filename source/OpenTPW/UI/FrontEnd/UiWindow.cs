@@ -40,6 +40,9 @@ internal abstract class UiWindow
 	/// <summary>Escape was pressed with this in front.</summary>
 	protected internal virtual void Cancel() { }
 
+	/// <summary>The window came into view - opened, or brought back after being put away (message 0x11).</summary>
+	protected internal virtual void Shown() { }
+
 	/// <summary>The window was closed.</summary>
 	protected internal virtual void Closed() { }
 

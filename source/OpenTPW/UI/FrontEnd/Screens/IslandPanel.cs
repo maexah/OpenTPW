@@ -30,9 +30,11 @@ namespace OpenTPW.UI;
 /// </para>
 /// <para>
 /// The count is not live. The panel remembers the keys it last showed (0x007cc4b8) and only looks
-/// again when told to (0x004b9340) - once when it is built, and then on the advisor's cue as he hands
-/// a new player their key - and the price is judged against that remembered count. So a new player
-/// sees every park grey until the key arrives, and then Lost Kingdom and Halloween World turn gold.
+/// again when told to (IslandPanel_Refresh, 0x004b9340): when it is built, whenever it comes into view
+/// (message 0x11 to its callback, 0x004b8b70), and on the advisor's cue as he hands a new player their
+/// key. The price is judged against that remembered count. The slots put the panel up just before a new
+/// player is given their key, so a new player sees every park grey until the key arrives, and then Lost
+/// Kingdom and Halloween World turn gold; a returning player sees their keys at once.
 /// </para>
 /// <para>
 /// <b>Enter this park</b> (0x005e1cc0) does nothing at all for a park the player cannot afford. For one
@@ -198,6 +200,8 @@ internal sealed class IslandPanel : UiWindow
 		// so they would twinkle on over that screen, which nothing found says the original does.
 		ShowSparkle( price > 0 && affordable && !Hidden );
 	}
+
+	protected internal override void Shown() => ShowKeys();
 
 	protected internal override void Closed() => ShowSparkle( false );
 

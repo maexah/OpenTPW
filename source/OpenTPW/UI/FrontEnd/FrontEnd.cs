@@ -52,13 +52,20 @@ internal sealed class FrontEnd : Panel
 
 	public Players Players { get; } = new();
 
+	/// <summary>The lobby's front end, while there is one - for saving whoever is playing as the game closes.</summary>
+	internal static FrontEnd? Current { get; private set; }
+
 	public FrontEnd()
 	{
+		Current = this;
+
 		foreach ( var mesh in Meshes )
 			UiMesh.Get( mesh );
 
 		UiFonts.Preload();
 		UiSounds.Preload();
+
+		Players.Load();
 
 		_helpBar = new HelpBar();
 		_islandPanel = new IslandPanel( this );
@@ -70,8 +77,11 @@ internal sealed class FrontEnd : Panel
 
 	internal void Open( UiWindow window )
 	{
-		if ( !_windows.Contains( window ) )
-			_windows.Add( window );
+		if ( _windows.Contains( window ) )
+			return;
+
+		_windows.Add( window );
+		window.Shown();
 	}
 
 	internal void Close( UiWindow window )
@@ -149,25 +159,45 @@ internal sealed class FrontEnd : Panel
 	{
 		_options = null;
 
-		foreach ( var window in _windows )
+		foreach ( var window in _windows.Where( window => window.Hidden ).ToArray() )
+		{
 			window.Hidden = false;
+			window.Shown();
+		}
 
 		_glint.Stop();
 	}
 
 	/// <summary>
-	/// Select New Player, once its box is ticked (0x0048bc50). The player stops playing - the original saves
-	/// their game first (0x005c8650), and there is nothing to save here - and the player slots open again
-	/// (FrontEnd_ShowPlayerSlots), which greets whoever is at them. A player made earlier is still in their
-	/// slot until the game closes, so the advisor welcomes them back.
+	/// Select New Player, once its box is ticked (0x0048bc50). The player is saved and stops playing
+	/// (0x005c8650), and the player slots open again (FrontEnd_ShowPlayerSlots), which greets whoever is at
+	/// them - with a player in a slot, the advisor welcomes them back.
 	/// </summary>
 	internal void SelectNewPlayer()
 	{
-		Players.Deselect();
+		Players.SaveAndDeselect();
 		Close( _islandPanel );
 
 		ShowPlayerSlots();
 		LobbyAdvisor.Current?.Greet( Players.UsedSlots );
+	}
+
+	/// <summary>
+	/// A used slot's delete button (0x004a6000, message 0x100): asks first, in a message box with UITEXT 399 -
+	/// a line the shipped text leaves empty, so the box asks nothing - and deletes on the tick.
+	/// </summary>
+	internal void AskToDeletePlayer( int slot )
+		=> Open( new MessageBox( this, Localization.Get( UIStrings.ConfirmDeletePlayer ), () => DeletePlayer( slot ) ) );
+
+	/// <summary>The delete box's tick (0x004a61b0): the player goes, folder and all, and the slots are filled again (0x004a62b0).</summary>
+	private void DeletePlayer( int slot )
+	{
+		Players.Delete( slot );
+
+		if ( _playerSlots != null )
+			Close( _playerSlots );
+
+		ShowPlayerSlots();
 	}
 
 	private void ShowPlayerSlots()
@@ -177,10 +207,12 @@ internal sealed class FrontEnd : Panel
 	}
 
 	/// <summary>
-	/// FrontEnd_ClosePlayerSlots (0x004a6a50). It empties the advisor's queue whoever was picked; for a
-	/// player just made it then adds a golden key to their count (0x005afc30) and has the advisor give
-	/// his tour of the lobby (response 393), which shows the key on the panel when he hands it over.
-	/// Then the island panel.
+	/// FrontEnd_ClosePlayerSlots (0x004a6a50). It puts up the island panel, which looks at the player's
+	/// keys as it comes into view, and empties the advisor's queue whoever was picked. A Full Simulation
+	/// player just made is then given a golden key (0x005afc30), written out at once (0x005c8a10), and the
+	/// advisor's tour of the lobby (response 393), which shows the key on the panel when he hands it over.
+	/// An Instant Action player gets no key - every park is open to them - and a line of their own instead
+	/// (response 394).
 	/// </summary>
 	private void ClosePlayerSlots( bool newPlayer )
 	{
@@ -190,9 +222,15 @@ internal sealed class FrontEnd : Panel
 			_playerSlots = null;
 		}
 
-		if ( newPlayer && Players.Current != null )
+		Open( _islandPanel );
+
+		if ( newPlayer && Players.Current is { InstantAction: true } )
 		{
-			Players.Current.Keys += 1;
+			LobbyAdvisor.Current?.ExplainInstantAction();
+		}
+		else if ( newPlayer && Players.Current != null )
+		{
+			Players.Current.AddKey();
 
 			// With nobody to hand it over, the key would never show.
 			if ( LobbyAdvisor.Current is { CanSpeak: true } advisor )
@@ -204,8 +242,6 @@ internal sealed class FrontEnd : Panel
 		{
 			LobbyAdvisor.Current?.Hush();
 		}
-
-		Open( _islandPanel );
 	}
 
 	/// <summary>

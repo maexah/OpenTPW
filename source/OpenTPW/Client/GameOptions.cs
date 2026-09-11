@@ -27,8 +27,8 @@ namespace OpenTPW;
 /// <b>Where they are kept.</b> The original splits them. Rendering, resolution, graphics quality, the video
 /// card, audio quality and the movie volume belong to the machine, in save\Config.tcf
 /// (<see cref="ConfigFile"/>, through <see cref="SaveFolder"/>). The other volumes and the seven switches
-/// belong to the player, in their gms.dat, with the movie volume again - the player's copy wins when they
-/// are picked. The player's half is not saved yet.
+/// belong to the player, in their gms.dat (<see cref="PlayerOptions"/>), with the movie volume again - the
+/// player's copy wins when they are picked. Every gms.dat written takes the options as they stand.
 /// </para>
 /// </summary>
 internal sealed class GameOptions
@@ -117,6 +117,46 @@ internal sealed class GameOptions
 		MovieOn = MovieOn,
 		MovieVolume = MovieVolume,
 		AudioQuality = AudioQuality
+	};
+
+	/// <summary>Takes a player's own options from their gms.dat, as picking them does (0x005c83b0) - the movie volume included.</summary>
+	public void Apply( PlayerOptions options )
+	{
+		EffectsOn = options.EffectsOn;
+		EffectsVolume = options.EffectsVolume;
+		MusicOn = options.MusicOn;
+		MusicVolume = options.MusicVolume;
+		SpeechOn = options.SpeechOn;
+		SpeechVolume = options.SpeechVolume;
+		MovieOn = options.MovieOn;
+		MovieVolume = options.MovieVolume;
+		Advisor = options.Advisor;
+		Tutorial = options.Tutorial;
+		PopupHelp = options.PopupHelp;
+		Confirmations = options.Confirmations;
+		RightButtonScroll = options.RightButtonScroll;
+		RmbCancel = options.RmbCancel;
+		NinetyDegreeRotation = options.NinetyDegreeRotation;
+	}
+
+	/// <summary>A player's own options, as their gms.dat holds them.</summary>
+	public PlayerOptions ToPlayerOptions() => new()
+	{
+		EffectsOn = EffectsOn,
+		EffectsVolume = EffectsVolume,
+		MusicOn = MusicOn,
+		MusicVolume = MusicVolume,
+		SpeechOn = SpeechOn,
+		SpeechVolume = SpeechVolume,
+		MovieOn = MovieOn,
+		MovieVolume = MovieVolume,
+		Advisor = Advisor,
+		Tutorial = Tutorial,
+		PopupHelp = PopupHelp,
+		Confirmations = Confirmations,
+		RightButtonScroll = RightButtonScroll,
+		RmbCancel = RmbCancel,
+		NinetyDegreeRotation = NinetyDegreeRotation
 	};
 
 	/// <summary>

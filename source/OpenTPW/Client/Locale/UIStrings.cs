@@ -354,6 +354,9 @@ public enum UIStrings
 	DeleteItem = 396,
 	DismissEmployee = 397,
 	SettingsChanged = 398,
+
+	/// <summary>What the player slots' delete box asks (0x004a6000). The shipped text leaves this line empty.</summary>
+	ConfirmDeletePlayer = 399,
 	Change = 400,
 	ChangeScreenResolution = 401,
 	ChangeScreenResolutionRestored = 402,
