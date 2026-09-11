@@ -46,6 +46,9 @@ public partial class Renderer
 		new Editor( imGuiRenderer, Device );
 
 		CommandList = Device.ResourceFactory.CreateCommandList();
+		CreateBlitPipeline();
+		OnWindowResized( Window.Size );
+
 		_lastFrame = _frameClock.Elapsed;
 	}
 
@@ -98,7 +101,11 @@ public partial class Renderer
 	private ResourceSet _blitResourceSet;
 	private ResourceLayout _blitResourceLayout;
 
-	public void Run()
+	/// <summary>
+	/// What copies each finished frame to the window. Made with the renderer rather than when the
+	/// game loop starts, as the loading screen presents frames before then.
+	/// </summary>
+	private void CreateBlitPipeline()
 	{
 		var layoutDescription = new ResourceLayoutDescription(
 			new ResourceLayoutElementDescription( "g_tInput", ResourceKind.TextureReadOnly, ShaderStages.Fragment ),
@@ -131,9 +138,10 @@ public partial class Renderer
 			ResolveColorTexture,
 			Device.LinearSampler
 		) );
+	}
 
-		OnWindowResized( Window.Size );
-
+	public void Run()
+	{
 		while ( Window.SdlWindow.Exists )
 		{
 			FrameProfiler.Wrap( Update );
@@ -152,21 +160,54 @@ public partial class Renderer
 
 	private void PostRender()
 	{
+		// Cleared to the sky rather than to black. The sky is geometry, and the lobby's is four
+		// layers of cloud on an open dome - about a fifth of it is gaps, with nothing behind them
+		// but whatever the frame started as. Black there reads as holes punched in the sky.
+		var sky = Level.FogColour;
+		DrawScene( "Main Render", OnRender, new RgbaFloat( sky.X, sky.Y, sky.Z, 1f ) );
+
+		Editor.Instance?.Render( CommandList );
+
+		Present();
+	}
+
+	/// <summary>
+	/// Draws and presents one frame of <paramref name="draw"/> alone, outside the game loop. For the
+	/// loading screen, which has to show something while a level is still being built and nothing
+	/// else can run. Pumps the window's events as well, so the desktop does not take the game for
+	/// hung while it loads.
+	/// </summary>
+	public void DrawLoadingFrame( Action draw )
+	{
+		Window.SdlWindow.PumpEvents();
+
+		// Closed mid-load, so there is nothing left to draw into. The game loop finds the same once
+		// the load is done, and ends.
+		if ( !Window.SdlWindow.Exists )
+			return;
+
+		CommandList.Begin();
+		DrawScene( "Loading Screen", draw, RgbaFloat.Black );
+		Present();
+
+		ProcessDeletionQueue();
+	}
+
+	/// <summary>
+	/// Draws into the multisampled framebuffer, cleared to <paramref name="clear"/>, and copies the
+	/// result to the window. The command list has to have been begun.
+	/// </summary>
+	private void DrawScene( string name, Action? draw, RgbaFloat clear )
+	{
 		CommandList.SetFramebuffer( MultisampledFramebuffer ); // Use MSAA framebuffer
 		CommandList.SetViewport( 0, new Viewport( 0, 0, MultisampledFramebuffer.Width, MultisampledFramebuffer.Height, 0, 1 ) );
 		CommandList.SetFullViewports();
 		CommandList.SetFullScissorRects();
 		CommandList.ClearDepthStencil( 1 );
+		CommandList.ClearColorTarget( 0, clear );
 
-		// Cleared to the sky rather than to black. The sky is geometry, and the lobby's is four
-		// layers of cloud on an open dome - about a fifth of it is gaps, with nothing behind them
-		// but whatever the frame started as. Black there reads as holes punched in the sky.
-		var sky = Level.FogColour;
-		CommandList.ClearColorTarget( 0, new RgbaFloat( sky.X, sky.Y, sky.Z, 1f ) );
-
-		// Render level to MSAA buffer
-		CommandList.PushDebugGroup( "Main Render" );
-		OnRender?.Invoke();
+		CommandList.PushDebugGroup( name );
+		draw?.Invoke();
 		CommandList.PopDebugGroup();
 
 		// Resolve MSAA to non-MSAA texture
@@ -179,9 +220,10 @@ public partial class Renderer
 		CommandList.SetPipeline( _blitPipeline );
 		CommandList.SetGraphicsResourceSet( 0, _blitResourceSet );
 		CommandList.Draw( 3, 1, 0, 0 );
+	}
 
-		Editor.Instance?.Render( CommandList );
-
+	private void Present()
+	{
 		CommandList.End();
 
 		Device.SubmitCommands( CommandList );
