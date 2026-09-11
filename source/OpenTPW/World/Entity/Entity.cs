@@ -78,11 +78,45 @@ public class Entity
 
 	public void Update()
 	{
+		// Deleted earlier in the same walk: still in All until the walk is over, but finished with.
+		if ( IsDeleted )
+			return;
+
 		OnUpdate();
 	}
+
+	/// <summary>Whether <see cref="Delete"/> has been called. It stays in <see cref="All"/> until <see cref="ApplyDeletions"/>.</summary>
+	public bool IsDeleted { get; private set; }
+
+	/// <summary>Entities deleted since the deletions were last applied.</summary>
+	private static readonly List<Entity> Deleted = new();
+
+	/// <summary>
+	/// Ends this entity: <see cref="OnDelete"/> runs now, once, and the entity leaves <see cref="All"/> the next
+	/// time <see cref="ApplyDeletions"/> runs - between passes, never during one. The passes walk All with
+	/// List.ForEach, which throws if the list changes under it, so taking an entity out at once would break
+	/// whatever walk it was deleted from. Deleting it again does nothing.
+	/// </summary>
 	public void Delete()
 	{
+		if ( IsDeleted )
+			return;
+
+		IsDeleted = true;
 		OnDelete();
+		Deleted.Add( this );
+	}
+
+	/// <summary>Takes every deleted entity out of <see cref="All"/>. Only between passes - see <see cref="Delete"/>.</summary>
+	internal static void ApplyDeletions()
+	{
+		if ( Deleted.Count == 0 )
+			return;
+
+		foreach ( var entity in Deleted )
+			All.Remove( entity );
+
+		Deleted.Clear();
 	}
 
 	protected virtual void OnRender() { }

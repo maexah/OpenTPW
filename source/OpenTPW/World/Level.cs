@@ -133,6 +133,9 @@ public class Level
 
 		Entity.All.ForEach( entity => entity.Update() );
 
+		// Whatever was deleted during that walk leaves the list now the walk is over - see Entity.Delete.
+		Entity.ApplyDeletions();
+
 		ParticleSystem.Current?.Update();
 
 		// The HUD is not an entity - see RootPanel - so it is driven from here. After the world,
