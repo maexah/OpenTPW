@@ -32,6 +32,9 @@ internal sealed class Players
 	}
 
 	public void Select( int slot ) => Current = this[slot];
+
+	/// <summary>Nobody is playing - Select New Player (0x005c8650, which saves the player's game first). They keep their slot.</summary>
+	public void Deselect() => Current = null;
 }
 
 /// <summary>Someone playing: their name, their game mode, and their golden keys.</summary>

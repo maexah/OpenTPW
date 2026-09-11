@@ -194,7 +194,9 @@ internal sealed class IslandPanel : UiWindow
 		_price.Frame = affordable ? 0 : 1;
 		_priceNumber.Frame = affordable ? price - 1 : price + 4;
 
-		ShowSparkle( price > 0 && affordable );
+		// Not while the options screen has the panel put away: the sparkles are drawn over the interface,
+		// so they would twinkle on over that screen, which nothing found says the original does.
+		ShowSparkle( price > 0 && affordable && !Hidden );
 	}
 
 	protected internal override void Closed() => ShowSparkle( false );

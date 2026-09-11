@@ -39,6 +39,9 @@ internal static class VirtualScreen
 		return new PixelRect( offset + (rect.Left * scale), rect.Top * scale, rect.Width * scale, rect.Height * scale );
 	}
 
+	/// <summary>How far across the virtual screen a point <paramref name="x"/> pixels across the window is, for something pinned by <paramref name="anchor"/>.</summary>
+	public static float ToVirtualX( float x, Anchor anchor ) => (x - Offset( anchor )) / Scale;
+
 	/// <summary>How far across the window, in pixels, the left edge of the virtual screen is for something pinned by <paramref name="anchor"/>.</summary>
 	public static float Offset( Anchor anchor ) => anchor switch
 	{

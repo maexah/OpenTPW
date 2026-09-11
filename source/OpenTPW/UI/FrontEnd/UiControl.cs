@@ -59,6 +59,13 @@ internal class UiControl
 	/// <summary>Stretched over the whole window instead of keeping the virtual screen's shape - the dimmer behind a dialog.</summary>
 	public bool FillsWindow { get; init; }
 
+	/// <summary>
+	/// Whether its children keep to it even though it covers the whole screen. A screen laid out as one
+	/// piece, like the options screen, needs this: pinned to the window's edges one by one, a row on the
+	/// left and the switch that sits on it would drift apart on a wide window.
+	/// </summary>
+	public bool HoldsChildren { get; init; }
+
 	public Action? Clicked { get; set; }
 
 	public Action? Entered { get; set; }
@@ -82,10 +89,13 @@ internal class UiControl
 	/// <summary>Whether the pointer stops at it, rather than passing through to whatever is under it.</summary>
 	internal virtual bool TakesMouse => Clicked != null || Entered != null || HelpText >= 0;
 
+	/// <summary>Where on the window it takes the pointer, when it does - all of it, unless its layout data says otherwise.</summary>
+	internal virtual PixelRect HitArea => Pixels;
+
 	public T Add<T>( T child ) where T : UiControl
 	{
 		child.Parent = this;
-		child._followsParent = !Rect.IsWholeScreen && Rect.Contains( child.Rect );
+		child._followsParent = (HoldsChildren || !Rect.IsWholeScreen) && Rect.Contains( child.Rect );
 		Children.Add( child );
 		return child;
 	}
@@ -124,8 +134,17 @@ internal class UiControl
 				return hit;
 		}
 
-		return TakesMouse && Pixels.Contains( x, y ) ? this : null;
+		return TakesMouse && HitArea.Contains( x, y ) ? this : null;
 	}
+
+	/// <summary>The pointer went down on it, at (<paramref name="x"/>, <paramref name="y"/>) on the window.</summary>
+	internal virtual void PointerPressed( float x, float y ) { }
+
+	/// <summary>The pointer moved to (<paramref name="x"/>, <paramref name="y"/>) while held down after going down on it.</summary>
+	internal virtual void PointerDragged( float x, float y ) { }
+
+	/// <summary>The pointer came up after going down on it, wherever it is now.</summary>
+	internal virtual void PointerReleased() { }
 
 	internal bool IsWithin( UiControl ancestor )
 	{
@@ -153,9 +172,9 @@ internal class UiControl
 ///
 /// Its mesh has a part for each way it can look, in the order b_dellog.md2 names them: normal,
 /// disabled, highlighted, highlighted and pressed, held down, and down. A button that stays down - an
-/// option in a <see cref="UiRadioGroup"/> - shows "down" while it is the one chosen.
+/// option in a <see cref="UiRadioGroup"/>, or a switch - shows "down" while it is.
 /// </summary>
-internal sealed class UiButton : UiControl
+internal class UiButton : UiControl
 {
 	private const int Normal = 0;
 	private const int Disabled = 1;
@@ -166,8 +185,18 @@ internal sealed class UiButton : UiControl
 
 	public bool Enabled { get; set; } = true;
 
-	/// <summary>Whether it stays down on its own - the chosen option of a group.</summary>
+	/// <summary>Whether it stays down on its own - the chosen option of a group, or a switch that is down.</summary>
 	public bool IsDown { get; set; }
+
+	/// <summary>
+	/// A switch, flagged 0x10 in its layout data: a click puts it down if it was up and up if it was down,
+	/// and whoever it tells reads which it is now (the options screen, 0x004a3480). The flag is also what
+	/// makes UI_Init's hook play Select3 for its click rather than BUTTON01 (0x00485780).
+	/// </summary>
+	public bool Toggles { get; init; }
+
+	/// <summary>Whether a click on it tells its parent, and so plays a click - see <see cref="UiSliderThumb"/> for one that does not.</summary>
+	internal virtual bool Clicks => true;
 
 	internal override bool TakesMouse => true;
 
@@ -303,4 +332,148 @@ internal sealed class UiRadioGroup : UiControl
 
 		SelectionChanged?.Invoke();
 	}
+}
+
+/// <summary>
+/// A slider - control type 3: a thumb that slides along a track, for a whole number between two ends.
+///
+/// <para>
+/// Its constructor (0x0066acf9) gives it a step of 1 and a page of 1, and lays it across unless it is
+/// flagged 0x10; the options screen's all lie across, from 0 to 100 (0x0066b47d). Its layout data gives
+/// it the track (op 3), the thumb - a button of its own, id 3 (op 8) - and the rectangle that takes the
+/// pointer, which reaches a little past the track all round.
+/// </para>
+/// <para>
+/// The thumb sits where the value puts it along the track, less its own width, in whole units
+/// (0x0066b088). Dragging it moves it with the pointer as far as the track goes and reads the value off
+/// where it is (0x0066af19, on the thumb's messages at 0x0066bb9b); letting go puts it exactly where
+/// that value belongs. A press anywhere else in the rectangle moves a page towards the pointer
+/// (0x0066b8aa), and the mouse wheel moves a step a notch, a notch away lowering it (message 0x1000d,
+/// 0x0066ba22). Each change is told as it happens (message 0x800).
+/// </para>
+/// </summary>
+internal sealed class UiSlider : UiControl
+{
+	private const int Step = 1;
+	private const int Page = 1;
+
+	/// <summary>How far into the thumb, across, the pointer took hold of it.</summary>
+	private int _grab;
+
+	/// <summary>What the thumb slides along.</summary>
+	public UiRect Track { get; init; }
+
+	/// <summary>What takes the pointer.</summary>
+	public UiRect HitRect { get; init; }
+
+	public int Minimum { get; init; }
+
+	public int Maximum { get; init; } = 100;
+
+	public int Value { get; private set; }
+
+	public UiSliderThumb? Thumb { get; private set; }
+
+	/// <summary>The pointer or the wheel changed the value - message 0x800.</summary>
+	public Action? Moved { get; set; }
+
+	internal override bool TakesMouse => true;
+
+	internal override PixelRect HitArea => VirtualScreen.ToPixels( HitRect, Anchor );
+
+	public UiSliderThumb AddThumb( UiSliderThumb thumb )
+	{
+		Thumb = Add( thumb );
+		thumb.Slider = this;
+		PlaceThumb();
+		return thumb;
+	}
+
+	/// <summary>Sets the value without telling anyone - whoever sets it shows it themselves.</summary>
+	public void SetValue( int value )
+	{
+		Value = Math.Clamp( value, Minimum, Maximum );
+		PlaceThumb();
+	}
+
+	/// <summary>The mouse wheel turned while the pointer was over it.</summary>
+	internal void Scroll( float notches ) => MoveBy( -(int)notches * Step );
+
+	/// <summary>A press on the slider but not on the thumb: a page towards the pointer.</summary>
+	internal override void PointerPressed( float x, float y )
+	{
+		if ( Thumb == null )
+			return;
+
+		MoveBy( VirtualScreen.ToVirtualX( x, Anchor ) < Thumb.Rect.Left ? -Page : Page );
+	}
+
+	internal void Grab( float x )
+	{
+		if ( Thumb != null )
+			_grab = (int)VirtualScreen.ToVirtualX( x, Anchor ) - Thumb.Rect.Left;
+	}
+
+	internal void Drag( float x )
+	{
+		if ( Thumb == null )
+			return;
+
+		var thumb = Thumb.Rect;
+		var left = Math.Clamp( (int)VirtualScreen.ToVirtualX( x, Anchor ) - _grab, Track.Left, Track.Right - thumb.Width );
+		Thumb.Rect = thumb with { Left = left, Right = left + thumb.Width };
+
+		var travel = Track.Width - thumb.Width;
+		var value = travel > 0 ? ((left - Track.Left) * (Maximum - Minimum) / travel) + Minimum : Minimum;
+
+		if ( value == Value )
+			return;
+
+		Value = value;
+		Moved?.Invoke();
+	}
+
+	internal void LetGo() => PlaceThumb();
+
+	private void MoveBy( int amount )
+	{
+		var value = Math.Clamp( Value + amount, Minimum, Maximum );
+
+		if ( value == Value )
+			return;
+
+		Value = value;
+		PlaceThumb();
+		Moved?.Invoke();
+	}
+
+	private void PlaceThumb()
+	{
+		if ( Thumb == null )
+			return;
+
+		var thumb = Thumb.Rect;
+		var range = Maximum - Minimum;
+		var left = range != 0 ? ((Value - Minimum) * (Track.Width - thumb.Width) / range) + Track.Left : Track.Left;
+
+		Thumb.Rect = thumb with { Left = left, Right = left + thumb.Width };
+	}
+}
+
+/// <summary>
+/// A slider's thumb. It looks and lights up like any button, but pressing it takes hold of the slider
+/// instead of clicking: its handler (0x0066bb9b) keeps the press to itself and tells nobody, so no
+/// click plays.
+/// </summary>
+internal sealed class UiSliderThumb : UiButton
+{
+	internal UiSlider? Slider { get; set; }
+
+	internal override bool Clicks => false;
+
+	internal override void PointerPressed( float x, float y ) => Slider?.Grab( x );
+
+	internal override void PointerDragged( float x, float y ) => Slider?.Drag( x );
+
+	internal override void PointerReleased() => Slider?.LetGo();
 }

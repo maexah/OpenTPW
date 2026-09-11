@@ -16,8 +16,9 @@ namespace OpenTPW.UI;
 /// (255, 255, 0) from 0x007540cc, and Quit Game's red (0x004a6000, 0x004a61d0).
 /// </para>
 /// <para>
-/// There is nothing saved yet, so no slot is ever in use when this opens, and the delete button has
-/// nothing to do. The original asks before deleting, in a message box (0x0047f020).
+/// Nothing is saved yet, so no slot is in use when the lobby opens. A player made in this session keeps
+/// their slot, though, so when Select New Player brings the slots back, theirs has their name on it. Its
+/// delete button has nothing to do yet; the original asks before deleting, in a message box (0x0047f020).
 /// </para>
 /// </summary>
 internal sealed class PlayerSlots : UiWindow

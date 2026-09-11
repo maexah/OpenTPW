@@ -171,6 +171,13 @@ public sealed class LobbyAdvisor : Entity
 	/// </summary>
 	private const float CutOffSeconds = 0.01f;
 
+	/// <summary>
+	/// How long his voice takes to fade when he is quietened. Advisor_StopQuietly (0x005996d0) hands
+	/// Sound_StopFading (0x0051c300) 60, which the sound library takes on to a fade (0x006b8930) in a
+	/// unit that was not traced. It is taken as milliseconds.
+	/// </summary>
+	private const float QuietenSeconds = 0.06f;
+
 	private readonly Random _random = new();
 
 	private SoundCategory? _speech;
@@ -261,7 +268,7 @@ public sealed class LobbyAdvisor : Entity
 		if ( !_greeted )
 		{
 			_greeted = true;
-			Greet();
+			Greet( UsedPlayerSlots );
 		}
 
 		if ( _pending != 0 && Time.Now >= _speakAt )
@@ -311,11 +318,12 @@ public sealed class LobbyAdvisor : Entity
 
 	/// <summary>
 	/// What FrontEnd_ShowPlayerSlots says: the new-player greeting when no slot is in use, the
-	/// welcome back otherwise.
+	/// welcome back otherwise. It says it as the lobby opens, and again when Select New Player brings
+	/// the slots back.
 	/// </summary>
-	internal void Greet()
+	internal void Greet( int usedSlots = 0 )
 	{
-		if ( UsedPlayerSlots == 0 )
+		if ( usedSlots == 0 )
 		{
 			Add( NewPlayerLines[0], flush: true );
 
@@ -412,15 +420,7 @@ public sealed class LobbyAdvisor : Entity
 	private void StopSpeaking()
 	{
 		var busy = Busy;
-		var sounding = _voice is { Playing: true };
-
-		_pending = 0;
-		_voice?.FadeOut( CutOffSeconds );
-		_voice = null;
-		_lips = null;
-		_gesturesEndAt = float.NegativeInfinity;
-		_cue = null;
-		_shown = false;
+		var sounding = Dismiss( CutOffSeconds );
 
 		if ( !sounding || _speech is not { IsValid: true } )
 		{
@@ -434,6 +434,39 @@ public sealed class LobbyAdvisor : Entity
 		_speech.Play( cry, SpeechVolume, respectDelay: false, bus: AudioBus.Speech );
 
 		Log.Info( $"Advisor: cut off mid-line, crying out with sample {cry}" );
+	}
+
+	/// <summary>
+	/// Advisor_StopQuietly (0x005996d0), which opening the options screen calls with 1: everything
+	/// <see cref="StopSpeaking"/> does but the cry, with his voice faded (Sound_StopFading, 0x0051c300)
+	/// rather than cut. What is still queued stays queued.
+	/// </summary>
+	internal void StopQuietly()
+	{
+		var busy = Busy;
+		Dismiss( QuietenSeconds );
+
+		if ( busy )
+			Log.Info( "Advisor: quietened" );
+	}
+
+	/// <summary>
+	/// What being cut off and being quietened share: his voice goes, over <paramref name="fadeSeconds"/>,
+	/// and so does he, with whatever was still to come in the line. Says whether his voice was sounding.
+	/// </summary>
+	private bool Dismiss( float fadeSeconds )
+	{
+		var sounding = _voice is { Playing: true };
+
+		_pending = 0;
+		_voice?.FadeOut( fadeSeconds );
+		_voice = null;
+		_lips = null;
+		_gesturesEndAt = float.NegativeInfinity;
+		_cue = null;
+		_shown = false;
+
+		return sounding;
 	}
 
 	/// <summary>

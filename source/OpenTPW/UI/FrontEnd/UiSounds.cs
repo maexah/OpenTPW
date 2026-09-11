@@ -5,12 +5,13 @@ namespace OpenTPW.UI;
 /// and keeps at 0x00803a2c, out of data\global\sound.
 ///
 /// <para>
-/// <b>What plays them.</b> Two things in the lobby, and nothing else there does. UI_Init hooks every
+/// <b>What plays them.</b> Three things in the lobby, and nothing else there does. UI_Init hooks every
 /// message the interface sends (0x00485780), and on a button's "I was clicked" message it plays
 /// effect 31, BUTTON01 - or effect 189, Select3, when the control the message is for is flagged
-/// 0x10, which in the lobby's layouts is the new player dialog's pair of game-mode toggles. And the
-/// advisor's cue in his tour of the lobby (see LobbyAdvisor) plays effect 198, goldkey, as the new
-/// player's key arrives. The sparkle round an affordable park's key, the burst at that cue and the
+/// 0x10, which in the lobby's layouts is the new player dialog's pair of game-mode toggles and the
+/// options screen's switches. The game menu's choices play effect 193 themselves when clicked
+/// (0x00492d80). And the advisor's cue in his tour of the lobby (see LobbyAdvisor) plays effect 198,
+/// goldkey, as the new player's key arrives. The sparkle round an affordable park's key, the burst at that cue and the
 /// glints on a button under the pointer are not sounds at all but particle effects, out of
 /// data\Particle\Tp2.plb, which nothing here draws yet.
 /// </para>
@@ -19,7 +20,9 @@ namespace OpenTPW.UI;
 /// are, rather than by ear. BUTTON01 measures -21.7 dBFS RMS and peaks at +0.6, Select3 -17.8, and
 /// goldkey -17.7 peaking at -0.3. A click is put at -30 dBFS, under the park's theme (-26) and over
 /// its ambience (-34), and goldkey at -24, level with thunder - it only ever plays while the advisor
-/// talks, so his duck takes it down to about -32.
+/// talks, so his duck takes it down to about -32. Effect 193 is far louder, -12.4 dBFS and peaking at
+/// -0.2 - read back from a capture of the game's own output with nothing else sounding, rather than
+/// decoded on its own - so the menu's click is turned down further to land at -30 with the others.
 /// </para>
 /// <para>
 /// <b>No repeat delay.</b> The category gives every effect a repeat delay - 5.7 seconds for BUTTON01,
@@ -33,10 +36,12 @@ internal static class UiSounds
 	private const int ButtonClick = 31;
 	private const int ToggleClick = 189;
 	private const int GoldKey = 198;
+	private const int MenuChoiceSound = 193;
 
 	private const float ButtonClickVolume = 0.385f;
 	private const float ToggleClickVolume = 0.245f;
 	private const float GoldKeyVolume = 0.484f;
+	private const float MenuChoiceVolume = 0.132f;
 
 	private static SoundCategory? _category;
 
@@ -58,6 +63,9 @@ internal static class UiSounds
 
 	/// <summary>The advisor has handed a new player their first golden key.</summary>
 	public static void GoldKeyHandedOver() => Play( GoldKey, GoldKeyVolume );
+
+	/// <summary>A game menu choice was clicked - which the menu's choices play themselves (0x00492d80).</summary>
+	public static void MenuChoice() => Play( MenuChoiceSound, MenuChoiceVolume );
 
 	private static void Play( int effect, float volume )
 	{

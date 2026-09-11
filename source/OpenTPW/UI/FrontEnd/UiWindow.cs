@@ -22,6 +22,12 @@ internal abstract class UiWindow
 	/// <summary>Whether everything behind it is dimmed and shut out - see the class remarks.</summary>
 	public bool Modal { get; protected init; }
 
+	/// <summary>
+	/// Whether it is put away for the time being: still open, but neither drawn nor pointed at. The
+	/// options screen puts the front end's window away like this while it is up (message 6, 0x004a3a30).
+	/// </summary>
+	public bool Hidden { get; set; }
+
 	/// <summary>The box typing goes to while this is the front window.</summary>
 	internal UiEdit? Focus { get; set; }
 

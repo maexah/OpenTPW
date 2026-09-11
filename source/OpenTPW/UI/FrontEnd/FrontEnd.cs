@@ -15,6 +15,11 @@ namespace OpenTPW.UI;
 /// the tick leaves the game (0x004a6290).
 /// </para>
 /// <para>
+/// Escape brings up the <see cref="GameMenu"/> over whichever of those is showing, and takes it away
+/// again. Its Options opens the <see cref="OptionsScreen"/>, which puts the front end's window away
+/// until it closes, and its Select New Player brings the player slots back.
+/// </para>
+/// <para>
 /// A click is a press and a release on the same control. Only the front window takes the pointer
 /// when it is modal; otherwise the pointer goes to whatever is front-most under it, in any window.
 /// </para>
@@ -29,7 +34,8 @@ internal sealed class FrontEnd : Panel
 	private static readonly string[] Meshes =
 	[
 		"b_login", "b_dellog", "e_joy", "tpwlogo", "LOLIGHT", "w_dialog", "w_dialog_wave", "b_okay", "b_exit",
-		"!frame", "!f_plain", "b_ltoggle", "f_helpbg"
+		"!frame", "!f_plain", "b_ltoggle", "f_helpbg", "f_screen", "f_optpanel", "f_optpanel2", "f_optpanel3",
+		"b_on", "b_on2", "b_scroller"
 	];
 
 	private readonly List<UiWindow> _windows = new();
@@ -37,6 +43,7 @@ internal sealed class FrontEnd : Panel
 	private readonly IslandPanel _islandPanel;
 	private readonly ButtonGlint _glint = new();
 	private PlayerSlots? _playerSlots;
+	private OptionsScreen? _options;
 
 	private UiControl? _hovered;
 	private UiControl? _pressed;
@@ -117,6 +124,51 @@ internal sealed class FrontEnd : Panel
 
 	/// <summary>Quit Game (0x004a61d0): asks, and quits on the tick.</summary>
 	internal void AskToQuit() => Open( new MessageBox( this, Localization.Get( UIStrings.ConfirmQuit ), Quit ) );
+
+	/// <summary>
+	/// The game menu's Options (0x0048bd40, item 11). OptionsScreen_Open (0x004a3a30) quietens the
+	/// advisor, fading his voice rather than cutting it (Advisor_StopQuietly with 1); puts the front end's
+	/// window away (message 6); and opens the options screen over everything.
+	/// </summary>
+	internal void OpenOptions()
+	{
+		if ( _options != null )
+			return;
+
+		LobbyAdvisor.Current?.StopQuietly();
+
+		foreach ( var window in _windows )
+			window.Hidden = true;
+
+		_options = new OptionsScreen( this );
+		Open( _options );
+	}
+
+	/// <summary>The options screen has closed (0x004a2bf0, message 0x14): the front end's window comes back, and any glints go.</summary>
+	internal void OptionsClosed()
+	{
+		_options = null;
+
+		foreach ( var window in _windows )
+			window.Hidden = false;
+
+		_glint.Stop();
+	}
+
+	/// <summary>
+	/// Select New Player, once its box is ticked (0x0048bc50). The player stops playing - the original saves
+	/// their game first (0x005c8650), and there is nothing to save here - and the player slots open again
+	/// (FrontEnd_ShowPlayerSlots), which greets whoever is at them. A player made earlier is still in their
+	/// slot until the game closes, so the advisor welcomes them back.
+	/// </summary>
+	internal void SelectNewPlayer()
+	{
+		Players.Deselect();
+		Close( _islandPanel );
+
+		ShowPlayerSlots();
+		LobbyAdvisor.Current?.Greet( Players.UsedSlots );
+	}
 
 	private void ShowPlayerSlots()
 	{
@@ -222,11 +274,17 @@ internal sealed class FrontEnd : Panel
 		var mouseDown = Input.Mouse.Left;
 
 		if ( mouseDown && !_mouseWasDown )
-			Press( hit );
+			Press( hit, mouse.X, mouse.Y );
+		else if ( mouseDown && _pressed != null )
+			_pressed.PointerDragged( mouse.X, mouse.Y );
 		else if ( !mouseDown && _mouseWasDown )
 			Release( hit );
 
 		_mouseWasDown = mouseDown;
+
+		// The wheel goes to the slider under the pointer, or the slider whose thumb it is.
+		if ( Input.Mouse.Wheel != 0f && (_hovered as UiSlider ?? (_hovered as UiSliderThumb)?.Slider) is { } slider )
+			slider.Scroll( Input.Mouse.Wheel );
 
 		Keyboard();
 
@@ -236,7 +294,10 @@ internal sealed class FrontEnd : Panel
 	protected override void OnRender()
 	{
 		foreach ( var window in _windows )
-			window.Root.Draw();
+		{
+			if ( !window.Hidden )
+				window.Root.Draw();
+		}
 
 		_helpBar.Draw();
 	}
@@ -245,6 +306,9 @@ internal sealed class FrontEnd : Panel
 	{
 		for ( int i = _windows.Count - 1; i >= 0; --i )
 		{
+			if ( _windows[i].Hidden )
+				continue;
+
 			if ( _windows[i].Root.HitTest( x, y ) is { } hit )
 				return hit;
 
@@ -255,7 +319,7 @@ internal sealed class FrontEnd : Panel
 		return null;
 	}
 
-	private void Press( UiControl? hit )
+	private void Press( UiControl? hit, float x, float y )
 	{
 		_pressed = hit;
 
@@ -263,6 +327,7 @@ internal sealed class FrontEnd : Panel
 			return;
 
 		hit.Pressed = true;
+		hit.PointerPressed( x, y );
 
 		if ( hit is UiEdit edit && _windows.FirstOrDefault( window => hit.IsWithin( window.Root ) ) is { } owner )
 			owner.Focus = edit;
@@ -277,6 +342,7 @@ internal sealed class FrontEnd : Panel
 			return;
 
 		pressed.Pressed = false;
+		pressed.PointerReleased();
 
 		if ( pressed != hit || pressed is UiButton { Enabled: false } )
 			return;
@@ -284,8 +350,13 @@ internal sealed class FrontEnd : Panel
 		// A button tells its parent it was clicked, and UI_Init's hook on every message (0x00485780)
 		// clicks on that message whoever it was for. The purple buttons are not buttons to the
 		// original - they take the pointer themselves and tell nobody - so they are silent.
-		if ( pressed is UiButton )
-			UiSounds.Click( toggle: pressed.Parent is UiRadioGroup );
+		if ( pressed is UiButton { Clicks: true } button )
+		{
+			UiSounds.Click( toggle: button.Toggles || pressed.Parent is UiRadioGroup );
+
+			if ( button.Toggles )
+				button.IsDown = !button.IsDown;
+		}
 
 		pressed.Clicked?.Invoke();
 	}
@@ -294,7 +365,7 @@ internal sealed class FrontEnd : Panel
 	/// Typing goes to the front window's box, and so do Enter and Escape: a box sends them on to its
 	/// window (0x802 and 0x804), and no window hears them otherwise. The new player dialog takes Enter
 	/// as its tick by sending itself the same message the tick sends (0x004a6d00), so it clicks as
-	/// the tick does.
+	/// the tick does. With no box to type into, Escape is the game menu's - see <see cref="MenuKey"/>.
 	/// </summary>
 	private void Keyboard()
 	{
@@ -310,7 +381,14 @@ internal sealed class FrontEnd : Panel
 		Input.TextCaptured = focus != null;
 
 		if ( front == null || focus == null )
+		{
+			// Only on the key going down. A held Escape - one that has just closed a dialog, or is
+			// repeating - is still pressed without having gone down this frame.
+			if ( Input.Pressed( InputButton.Menu ) && Input.KeysPressed.Contains( Key.Escape ) )
+				MenuKey( front );
+
 			return;
+		}
 
 		focus.Type( Input.TypedText );
 
@@ -326,5 +404,25 @@ internal sealed class FrontEnd : Panel
 		{
 			front.Cancel();
 		}
+	}
+
+	/// <summary>
+	/// Escape, with no box to type into. The lobby's key handler (0x005e41c0) opens the game menu on it
+	/// (GameMenu_Open with 1) unless it is already open, and the menu's handler (0x0048bd40) closes it on
+	/// the same key. Whether the original opens it over a message box or the options screen was not
+	/// established; here a modal window in front keeps Escape from it.
+	/// </summary>
+	private void MenuKey( UiWindow? front )
+	{
+		if ( front is GameMenu menu )
+		{
+			Close( menu );
+			return;
+		}
+
+		if ( front is { Modal: true } )
+			return;
+
+		Open( new GameMenu( this ) );
 	}
 }
