@@ -9,9 +9,10 @@ internal static class Game
 	/// <summary>
 	/// How many steps the loading bar expects the lobby to take - one for every texture, shader,
 	/// material and mesh registered while it loads. The loading screen logs the real count when it
-	/// closes; this wants bringing into line with it when the lobby comes to load more.
+	/// closes, and this is the count it logs for the lobby as it stands; it wants bringing into line
+	/// again whenever the lobby comes to load more.
 	/// </summary>
-	private const int LobbyLoadSteps = 3166;
+	private const int LobbyLoadSteps = 3214;
 
 	public static void Run( string[] args )
 	{
