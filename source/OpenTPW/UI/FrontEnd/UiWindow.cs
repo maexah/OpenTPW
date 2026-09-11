@@ -13,12 +13,13 @@ namespace OpenTPW.UI;
 /// </summary>
 internal abstract class UiWindow
 {
-	protected UiWindow( FrontEnd frontEnd )
+	protected UiWindow( WindowStack stack )
 	{
-		FrontEnd = frontEnd;
+		Stack = stack;
 	}
 
-	protected FrontEnd FrontEnd { get; }
+	/// <summary>The stack it opens in, and closes itself from.</summary>
+	protected WindowStack Stack { get; }
 
 	public UiControl Root { get; protected set; } = null!;
 

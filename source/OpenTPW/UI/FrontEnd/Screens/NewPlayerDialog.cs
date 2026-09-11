@@ -24,6 +24,10 @@ namespace OpenTPW.UI;
 /// contents are the name whatever they are, so ticking without typing makes a player called "Type
 /// your name", as it does in the original. Enter is the tick and Escape the cross (0x802, 0x804).
 /// </para>
+/// <para>
+/// <b>Engine and content.</b> The lobby's content: a dialog copied from the original's layout stream, which
+/// hands the new player to the front end.
+/// </para>
 /// </summary>
 internal sealed class NewPlayerDialog : UiWindow
 {
@@ -34,12 +38,14 @@ internal sealed class NewPlayerDialog : UiWindow
 	/// <summary>What the name box refuses, from 0x00752588: the characters a file name cannot hold.</summary>
 	private const string NotInNames = "\\/*?:|<>\"";
 
+	private readonly FrontEnd _frontEnd;
 	private readonly int _slot;
 	private readonly UiEdit _name;
 	private readonly UiRadioGroup _mode;
 
-	public NewPlayerDialog( FrontEnd frontEnd, int slot ) : base( frontEnd )
+	public NewPlayerDialog( WindowStack stack, FrontEnd frontEnd, int slot ) : base( stack )
 	{
+		_frontEnd = frontEnd;
 		_slot = slot;
 		Modal = true;
 
@@ -144,8 +150,8 @@ internal sealed class NewPlayerDialog : UiWindow
 		var player = Players.Roster.Create( _slot, name, instantAction: _mode.Selected == InstantAction );
 		Log.Info( $"Front end: '{player.Name}' is playing in slot {_slot + 1}, {(player.InstantAction ? "Instant Action" : "Full Simulation")}" );
 
-		FrontEnd.PlayerCreated( this );
+		_frontEnd.PlayerCreated( this );
 	}
 
-	protected internal override void Cancel() => FrontEnd.Close( this );
+	protected internal override void Cancel() => Stack.Close( this );
 }

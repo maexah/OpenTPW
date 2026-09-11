@@ -83,9 +83,13 @@ public class Level
 	{
 		Hud = new();
 
-		// The lobby's interface - the player slots, its dialogs and the island panel. Built here, behind
-		// the loading screen, along with everything its windows draw.
-		Hud.AddChild( new FrontEnd() );
+		// The interface's windows, and what the pointer and the keys do to them.
+		var windows = Hud.AddChild( new WindowStack() );
+
+		// The lobby's interface - the player slots, its dialogs and the island panel - opened in those windows.
+		// Built here, behind the loading screen, along with everything its windows draw. After the stack, so it
+		// hears about a frame's clicks and keys once the stack has dealt them out.
+		Hud.AddChild( new FrontEnd( windows ) );
 
 		// On-screen particle effects go over the interface they decorate, and under the pointer.
 		Hud.AddChild( new ScreenParticles() );

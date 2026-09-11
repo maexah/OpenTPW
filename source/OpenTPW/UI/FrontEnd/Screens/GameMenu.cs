@@ -47,7 +47,7 @@ internal sealed class GameMenu : UiWindow
 
 	private float _ticks;
 
-	public GameMenu( FrontEnd frontEnd, IReadOnlyList<Item> items ) : base( frontEnd )
+	public GameMenu( WindowStack stack, IReadOnlyList<Item> items ) : base( stack )
 	{
 		Modal = true;
 		Pauses = true;

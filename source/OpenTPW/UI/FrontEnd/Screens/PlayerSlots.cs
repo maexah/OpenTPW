@@ -19,6 +19,10 @@ namespace OpenTPW.UI;
 /// The slots in use are the players saved in save\users (see <see cref="Players"/>). A used slot's delete
 /// button asks first, in a message box, and deletes the player on the tick (0x004a6000, 0x004a61b0).
 /// </para>
+/// <para>
+/// <b>Engine and content.</b> The lobby's content: a screen copied from the original's layout stream, whose
+/// buttons tell the front end what was clicked.
+/// </para>
 /// </summary>
 internal sealed class PlayerSlots : UiWindow
 {
@@ -34,7 +38,7 @@ internal sealed class PlayerSlots : UiWindow
 	/// <summary>How far apart the slots are, on the virtual screen.</summary>
 	private const int SlotSpacing = 199;
 
-	public PlayerSlots( FrontEnd frontEnd ) : base( frontEnd )
+	public PlayerSlots( WindowStack stack, FrontEnd frontEnd ) : base( stack )
 	{
 		Root = new UiControl { Id = 0x7a13, Rect = VirtualScreen.Whole };
 

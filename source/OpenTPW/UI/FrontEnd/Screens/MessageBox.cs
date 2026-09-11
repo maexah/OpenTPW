@@ -17,6 +17,10 @@ namespace OpenTPW.UI;
 /// It takes no keys. Its callback (0x0047eed0) answers its buttons and its own closing and nothing
 /// else; Enter and Escape reach the new player dialog only because its name box sends them.
 /// </para>
+/// <para>
+/// <b>Engine and content.</b> The box is engine: one function behind all 27 of the original's callers, in
+/// the lobby and in parks alike. What it asks and what its tick does are the caller's.
+/// </para>
 /// </summary>
 internal sealed class MessageBox : UiWindow
 {
@@ -24,7 +28,7 @@ internal sealed class MessageBox : UiWindow
 
 	private readonly Action _onTick;
 
-	public MessageBox( FrontEnd frontEnd, string text, Action onTick ) : base( frontEnd )
+	public MessageBox( WindowStack stack, string text, Action onTick ) : base( stack )
 	{
 		_onTick = onTick;
 		Modal = true;
@@ -48,7 +52,7 @@ internal sealed class MessageBox : UiWindow
 			Id = 0x9873c8,
 			Rect = new UiRect( 1387, 610, 1470, 694 ),
 			Mesh = UiMesh.Get( "b_exit" ),
-			Clicked = () => FrontEnd.Close( this )
+			Clicked = () => Stack.Close( this )
 		} );
 
 		box.Add( new UiButton
@@ -62,7 +66,7 @@ internal sealed class MessageBox : UiWindow
 
 	private void Tick()
 	{
-		FrontEnd.Close( this );
+		Stack.Close( this );
 		_onTick();
 	}
 }

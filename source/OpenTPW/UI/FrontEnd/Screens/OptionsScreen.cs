@@ -113,8 +113,13 @@ internal sealed class OptionsScreen : UiWindow
 
 	private static GameOptions Options => GameOptions.Current;
 
-	public OptionsScreen( FrontEnd frontEnd ) : base( frontEnd )
+	/// <summary>The front end, which puts its windows back as the screen closes.</summary>
+	private readonly FrontEnd _frontEnd;
+
+	public OptionsScreen( WindowStack stack, FrontEnd frontEnd ) : base( stack )
 	{
+		_frontEnd = frontEnd;
+
 		Modal = true;
 		Pauses = true;
 
@@ -196,7 +201,7 @@ internal sealed class OptionsScreen : UiWindow
 		ShowOptions();
 	}
 
-	protected internal override void Closed() => FrontEnd.OptionsClosed();
+	protected internal override void Closed() => _frontEnd.OptionsClosed();
 
 	/// <summary>Shows every option as it stands - the second half of 0x004a3a30.</summary>
 	private void ShowOptions()
@@ -234,7 +239,7 @@ internal sealed class OptionsScreen : UiWindow
 		Options.ApplySound();
 		SaveFolder.SaveConfig();
 		Log.Info( "Options: kept" );
-		FrontEnd.Close( this );
+		Stack.Close( this );
 	}
 
 	/// <summary>The cross (-2): the options go back to how they were - 0x00423ad0, and the group volumes with them.</summary>
@@ -243,7 +248,7 @@ internal sealed class OptionsScreen : UiWindow
 		GameOptions.Current = _before;
 		GameOptions.Current.ApplySound();
 		Log.Info( "Options: cancelled" );
-		FrontEnd.Close( this );
+		Stack.Close( this );
 	}
 
 	/// <summary>3D card rendering or software (0x1d4d2): graphics quality goes through the slider again for its new limit.</summary>

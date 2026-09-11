@@ -42,9 +42,13 @@ namespace OpenTPW.UI;
 /// going above the top one), and the sprites are queued after all of the models (0x00582170) at
 /// depth 0, tested less-or-equal and not written, so they pass in front of everything; and nothing
 /// hides them when a menu or box opens. This departs from that on purpose. An effect started for a window (<see cref="Emitter.Owner"/>) is drawn straight after that
-/// window - by the front end, through <see cref="Draw(UiWindow)"/> - so the windows opened after it
+/// window - by the window stack, through <see cref="Draw(UiWindow)"/> - so the windows opened after it
 /// cover it, dimming included, and it is not drawn while its window is put away or closed. Anything
 /// else is still drawn here, over the whole interface.
+/// </para>
+/// <para>
+/// <b>Engine and content.</b> Drawing on-screen effects is engine, the same for a park's interface. Which
+/// effects are started, where, and for which window is the content of whoever starts them.
 /// </para>
 /// </summary>
 internal sealed class ScreenParticles : Panel

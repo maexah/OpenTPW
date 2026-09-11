@@ -50,6 +50,10 @@ namespace OpenTPW.UI;
 /// <para>
 /// The advisor's tour says the cursor keys move between islands as well as the arrows, and they do.
 /// </para>
+/// <para>
+/// <b>Engine and content.</b> The lobby's content: a screen copied from the original's layout stream, over
+/// the lobby's islands and the player's keys.
+/// </para>
 /// </summary>
 internal sealed class IslandPanel : UiWindow
 {
@@ -70,7 +74,7 @@ internal sealed class IslandPanel : UiWindow
 	/// <summary>The sparkles across the price while they run, or 0.</summary>
 	private int _sparkle;
 
-	public IslandPanel( FrontEnd frontEnd ) : base( frontEnd )
+	public IslandPanel( WindowStack stack ) : base( stack )
 	{
 		Root = new UiControl
 		{
@@ -176,7 +180,7 @@ internal sealed class IslandPanel : UiWindow
 
 	protected internal override void Update()
 	{
-		if ( FrontEnd.IsFront( this ) && !Input.TextCaptured )
+		if ( Stack.IsFront( this ) && !Input.TextCaptured )
 		{
 			if ( Input.KeysPressed.Contains( Key.Left ) )
 				LobbyCameraMode.Step( -1 );
