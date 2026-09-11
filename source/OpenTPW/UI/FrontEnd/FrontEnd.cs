@@ -183,11 +183,25 @@ internal sealed class FrontEnd : Panel
 	}
 
 	/// <summary>
-	/// A used slot's delete button (0x004a6000, message 0x100): asks first, in a message box with UITEXT 399 -
-	/// a line the shipped text leaves empty, so the box asks nothing - and deletes on the tick.
+	/// A used slot's delete button (0x004a6000, message 0x100): asks first, in a message box, and deletes on
+	/// the tick.
+	///
+	/// <para>
+	/// The original asks with UITEXT 399, handed the player's name, but both of its languages ship that line
+	/// empty, so its box asks nothing at all. Deleting a player loses everything they have saved, so here the
+	/// box asks in a line of OpenTPW's own, worded as the game words its other deletions (UITEXT 393 to 397),
+	/// unless the text has a line 399 of its own.
+	/// </para>
 	/// </summary>
 	internal void AskToDeletePlayer( int slot )
-		=> Open( new MessageBox( this, Localization.Get( UIStrings.ConfirmDeletePlayer ), () => DeletePlayer( slot ) ) );
+	{
+		var text = Localization.Get( UIStrings.ConfirmDeletePlayer );
+
+		if ( string.IsNullOrWhiteSpace( text ) )
+			text = $"DELETE PLAYER\n\nAre you sure you want to delete {Players[slot]?.Name} ?\n\n(All of their saved games WILL be lost)";
+
+		Open( new MessageBox( this, text, () => DeletePlayer( slot ) ) );
+	}
 
 	/// <summary>The delete box's tick (0x004a61b0): the player goes, folder and all, and the slots are filled again (0x004a62b0).</summary>
 	private void DeletePlayer( int slot )
