@@ -61,6 +61,7 @@ internal sealed class GameMenu : UiWindow
 	public GameMenu( FrontEnd frontEnd ) : base( frontEnd )
 	{
 		Modal = true;
+		Pauses = true;
 
 		Root = Backdrop();
 

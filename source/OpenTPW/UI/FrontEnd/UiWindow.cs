@@ -7,6 +7,9 @@ namespace OpenTPW.UI;
 /// A modal window goes through 0x0047ed80 instead, which puts a control over the whole screen under
 /// it wearing LOLIGHT.MD2 - a quad of half-transparent black - so everything behind is dimmed and
 /// nothing behind can be clicked until the window closes.
+///
+/// Engine and content: a window, and what the window manager does with it, is the interface's engine and the
+/// same in a park; what a window holds and what its controls do belongs to its screen.
 /// </summary>
 internal abstract class UiWindow
 {
@@ -21,6 +24,15 @@ internal abstract class UiWindow
 
 	/// <summary>Whether everything behind it is dimmed and shut out - see the class remarks.</summary>
 	public bool Modal { get; protected init; }
+
+	/// <summary>
+	/// Whether the game is paused while it is open. The original's game menu (GameMenu_Open, 0x0048c830),
+	/// message box (0x0047f020) and options screen (OptionsScreen_Open, 0x004a3a30) each ask for a pause as they
+	/// open, through 0x004092a0, and the new player dialog does not. What a pause does is the scene's: that
+	/// helper only acts while a park is running (0x00786ba4), and the lobby holds its advisor instead - see
+	/// <see cref="LobbyAdvisor.Paused"/>.
+	/// </summary>
+	public bool Pauses { get; protected init; }
 
 	/// <summary>
 	/// Whether it is put away for the time being: still open, but neither drawn nor pointed at. The

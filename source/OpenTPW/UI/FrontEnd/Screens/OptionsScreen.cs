@@ -116,6 +116,7 @@ internal sealed class OptionsScreen : UiWindow
 	public OptionsScreen( FrontEnd frontEnd ) : base( frontEnd )
 	{
 		Modal = true;
+		Pauses = true;
 
 		Root = new UiControl
 		{

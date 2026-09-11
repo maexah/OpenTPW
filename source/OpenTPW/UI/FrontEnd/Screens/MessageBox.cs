@@ -28,6 +28,7 @@ internal sealed class MessageBox : UiWindow
 	{
 		_onTick = onTick;
 		Modal = true;
+		Pauses = true;
 
 		Root = Backdrop();
 
