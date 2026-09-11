@@ -105,9 +105,10 @@ internal sealed class ParticleSystem
 	/// <summary>
 	/// Starts effect <paramref name="effect"/> at a position in the units effects are started at, and
 	/// returns its handle, or 0 if there is no such effect or no free emitter. An on-screen effect is
-	/// pinned by <paramref name="anchor"/>, or by where it starts when that is not given.
+	/// pinned by <paramref name="anchor"/>, or by where it starts when that is not given, and drawn with
+	/// <paramref name="owner"/> when it belongs to a window (see <see cref="Emitter.Owner"/>).
 	/// </summary>
-	public int Spawn( int effect, int x, int y, int z, Anchor? anchor = null )
+	public int Spawn( int effect, int x, int y, int z, Anchor? anchor = null, UiWindow? owner = null )
 	{
 		if ( effect < 0 || effect >= Library.Effects.Length )
 			return 0;
@@ -140,6 +141,7 @@ internal sealed class ParticleSystem
 		emitter.Jitters = !template.Jitter.IsZero;
 		emitter.Linked = 0;
 		emitter.Anchor = anchor ?? AnchorAt( x );
+		emitter.Owner = owner;
 
 		for ( int i = 0; i < 4; ++i )
 			emitter.Rates[i] = template.IgnoresDensity ? template.Rates[i] : ScaleRate( template.Rates[i] );
@@ -197,7 +199,7 @@ internal sealed class ParticleSystem
 	}
 
 	/// <summary>Starts effector <paramref name="effector"/> (0x00522360) and returns its handle, or 0.</summary>
-	public int SpawnEffector( int effector, int x, int y, int z, Anchor anchor )
+	public int SpawnEffector( int effector, int x, int y, int z, Anchor anchor, UiWindow? owner = null )
 	{
 		if ( effector < 0 || effector >= Library.Effectors.Length || _freeEffector < 0 )
 			return 0;
@@ -220,6 +222,7 @@ internal sealed class ParticleSystem
 		instance.Radius = template.Radius;
 		instance.Lifetime = template.Lifetime;
 		instance.Anchor = anchor;
+		instance.Owner = owner;
 
 		_generation = (_generation % 0xffff) + 1;
 		instance.Generation = _generation;
@@ -255,7 +258,7 @@ internal sealed class ParticleSystem
 				(x, y, z) = (x + (linked.X * 16), y + (linked.Y * 16), z + (linked.Z * 16));
 			}
 
-			var handle = SpawnEffector( template.Linked, x, y, z, emitter.Anchor );
+			var handle = SpawnEffector( template.Linked, x, y, z, emitter.Anchor, emitter.Owner );
 
 			if ( template.LinkedFollows && TryEffector( handle, out var effector ) )
 				effector.Moves = false;
@@ -270,7 +273,7 @@ internal sealed class ParticleSystem
 				(x, y, z) = (x + (linked.X * 16), y + (linked.Y * 16), z + (linked.Z * 16));
 			}
 
-			var handle = Spawn( template.Linked, x, y, z, emitter.Anchor );
+			var handle = Spawn( template.Linked, x, y, z, emitter.Anchor, emitter.Owner );
 
 			if ( template.LinkedFollows && TryEmitter( handle, out var follower ) )
 				follower.Moves = false;
@@ -318,9 +321,9 @@ internal sealed class ParticleSystem
 		if ( emitter.EndSpawn >= 0 && emitter.Lifetime == -1 )
 		{
 			if ( template.EndSpawnIsEffector )
-				SpawnEffector( emitter.EndSpawn, emitter.X << 4, emitter.Y << 4, emitter.Z << 4, emitter.Anchor );
+				SpawnEffector( emitter.EndSpawn, emitter.X << 4, emitter.Y << 4, emitter.Z << 4, emitter.Anchor, emitter.Owner );
 			else
-				Spawn( emitter.EndSpawn, emitter.X << 4, emitter.Y << 4, emitter.Z << 4, emitter.Anchor );
+				Spawn( emitter.EndSpawn, emitter.X << 4, emitter.Y << 4, emitter.Z << 4, emitter.Anchor, emitter.Owner );
 
 			emitter.EndSpawn = -1;
 		}
@@ -620,9 +623,9 @@ internal sealed class ParticleSystem
 			if ( effector.Lifetime < 0 )
 			{
 				if ( template.EndSpawnIsEffector )
-					SpawnEffector( template.EndSpawn, effector.X << 4, effector.Y << 4, effector.Z << 4, effector.Anchor );
+					SpawnEffector( template.EndSpawn, effector.X << 4, effector.Y << 4, effector.Z << 4, effector.Anchor, effector.Owner );
 				else
-					Spawn( template.EndSpawn, effector.X << 4, effector.Y << 4, effector.Z << 4, effector.Anchor );
+					Spawn( template.EndSpawn, effector.X << 4, effector.Y << 4, effector.Z << 4, effector.Anchor, effector.Owner );
 
 				Unlink( ref _firstEffector, slot, effector, Effectors );
 				effector.Generation = 0;
@@ -726,7 +729,7 @@ internal sealed class ParticleSystem
 					emitter.Count--;
 
 					if ( template.DeathSpawn >= 0 )
-						Spawn( template.DeathSpawn, particle.X << 4, particle.Y << 4, particle.Z << 4, emitter.Anchor );
+						Spawn( template.DeathSpawn, particle.X << 4, particle.Y << 4, particle.Z << 4, emitter.Anchor, emitter.Owner );
 
 					FreeParticle( index, emitter );
 					index = next;
@@ -938,6 +941,13 @@ internal sealed class Emitter : ILinked
 	public int FirstParticle = -1;
 	public Anchor Anchor;
 
+	/// <summary>
+	/// The window it was started for, which it is drawn with, so that windows opened over that one
+	/// cover it; or none, and it is drawn over the whole interface as the original draws them all. What
+	/// it starts in turn belongs to the same window. See <see cref="ScreenParticles"/>.
+	/// </summary>
+	public UiWindow? Owner;
+
 	public int Next { get; set; } = -1;
 	public int Previous { get; set; } = -1;
 }
@@ -952,6 +962,7 @@ internal sealed class Effector : ILinked
 	public int Radius;
 	public int Lifetime;
 	public Anchor Anchor;
+	public UiWindow? Owner;
 
 	public int Next { get; set; } = -1;
 	public int Previous { get; set; } = -1;

@@ -262,12 +262,13 @@ internal sealed class FrontEnd : Panel
 	/// The advisor's cue in his tour of the lobby: goldkey, the key effect (87) at the player's key
 	/// count in the top right, and the panel looks at the player's keys again and shows the one just
 	/// given (Advisor_Update, 0x00599880). The effect is a ring of little keys turning round the count,
-	/// which an effector draws back in when it ends before they burst into sparkles.
+	/// which an effector draws back in when it ends before they burst into sparkles. It is drawn with
+	/// the panel, so a menu opened over the panel covers it (see <see cref="ScreenParticles"/>).
 	/// </summary>
 	private void KeyHandedOver()
 	{
 		UiSounds.GoldKeyHandedOver();
-		ParticleSystem.Current?.Spawn( (int)ParLib.P_EFFECT_Key, 90000, 0, 7000 );
+		ParticleSystem.Current?.Spawn( (int)ParLib.P_EFFECT_Key, 90000, 0, 7000, owner: _islandPanel );
 		_islandPanel.ShowKeys();
 	}
 
@@ -315,7 +316,7 @@ internal sealed class FrontEnd : Panel
 				hit.Entered?.Invoke();
 
 				if ( hit is UiButton && _helpBar.Enabled )
-					_glint.Start( hit );
+					_glint.Start( hit, _windows.FirstOrDefault( window => hit.IsWithin( window.Root ) ) );
 			}
 		}
 
@@ -343,10 +344,14 @@ internal sealed class FrontEnd : Panel
 
 	protected override void OnRender()
 	{
+		// Each window's effects straight after it, so the windows over it cover them.
 		foreach ( var window in _windows )
 		{
-			if ( !window.Hidden )
-				window.Root.Draw();
+			if ( window.Hidden )
+				continue;
+
+			window.Root.Draw();
+			ScreenParticles.Current?.Draw( window );
 		}
 
 		_helpBar.Draw();

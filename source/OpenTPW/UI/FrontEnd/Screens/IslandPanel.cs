@@ -196,8 +196,8 @@ internal sealed class IslandPanel : UiWindow
 		_price.Frame = affordable ? 0 : 1;
 		_priceNumber.Frame = affordable ? price - 1 : price + 4;
 
-		// Not while the options screen has the panel put away: the sparkles are drawn over the interface,
-		// so they would twinkle on over that screen, which nothing found says the original does.
+		// Not while the options screen has the panel put away. The sparkles are drawn with the panel, so
+		// they would not show, but they would still be running.
 		ShowSparkle( price > 0 && affordable && !Hidden );
 	}
 
@@ -224,7 +224,7 @@ internal sealed class IslandPanel : UiWindow
 		var rect = _priceNumber.Rect;
 		var middle = ((rect.Bottom - rect.Top) >> 1) + rect.Top;
 
-		_sparkle = particles.Spawn( (int)ParLib.P_EFFECT_KeySparkle, 50000, 0, middle * 75000 / VirtualScreen.Height, _priceNumber.Anchor );
+		_sparkle = particles.Spawn( (int)ParLib.P_EFFECT_KeySparkle, 50000, 0, middle * 75000 / VirtualScreen.Height, _priceNumber.Anchor, this );
 	}
 
 	private void EnterPark()

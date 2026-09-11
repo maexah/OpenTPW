@@ -35,6 +35,17 @@ namespace OpenTPW.UI;
 /// builds carries the blend as source and destination nibbles, 0x52 and 0x22. Any other effect is
 /// blended over the screen by its alpha, as the sprite textures ask. The lobby's effects all add.
 /// </para>
+/// <para>
+/// <b>In front of what.</b> The original draws them all over every window, so the key's sparkles and
+/// the ring of keys shine through the game menu's dimming and the quit box. The original's interface
+/// controls are models whose depth goes by how far up they are (<c>1 - level / 40</c>, a menu or box
+/// going above the top one), and the sprites are queued after all of the models (0x00582170) at
+/// depth 0, tested less-or-equal and not written, so they pass in front of everything; and nothing
+/// hides them when a menu or box opens. This departs from that on purpose. An effect started for a window (<see cref="Emitter.Owner"/>) is drawn straight after that
+/// window - by the front end, through <see cref="Draw(UiWindow)"/> - so the windows opened after it
+/// cover it, dimming included, and it is not drawn while its window is put away or closed. Anything
+/// else is still drawn here, over the whole interface.
+/// </para>
 /// </summary>
 internal sealed class ScreenParticles : Panel
 {
@@ -44,8 +55,19 @@ internal sealed class ScreenParticles : Panel
 
 	private readonly List<(SpriteBankFile Bank, Region[] Pictures)> _banks = new();
 	private readonly Region _plain;
-	private readonly Layer _blended;
-	private readonly Layer _added;
+	private readonly Texture _atlas;
+	private readonly Layers _unowned;
+
+	/// <summary>
+	/// A pair of layers for each window drawn with effects so far this frame. A layer's vertices go to
+	/// the device as they are written but its draw only runs with the frame, so one layer cannot be
+	/// drawn twice in a frame with different sprites.
+	/// </summary>
+	private readonly List<Layers> _windowLayers = new();
+	private int _windowLayersUsed;
+	private bool _frameEndScheduled;
+
+	internal static ScreenParticles? Current { get; private set; }
 
 	/// <summary>Particle space across to the virtual screen - see the class remarks.</summary>
 	internal static float ScreenX( int x ) => 1024f + ((x - 3125) * 16 / 49);
@@ -84,17 +106,53 @@ internal sealed class ScreenParticles : Panel
 
 		_plain = regions[^1];
 
-		_blended = new Layer( atlas, MaterialFlags.None );
-		_added = new Layer( atlas, MaterialFlags.Additive );
+		_atlas = atlas;
+		_unowned = new Layers( atlas );
+
+		Current = this;
 	}
 
-	protected override void OnRender()
+	protected override void OnRender() => DrawEffects( null );
+
+	protected override void OnDelete()
+	{
+		if ( Current == this )
+			Current = null;
+	}
+
+	/// <summary>Draws the effects started for <paramref name="window"/>, just after the window - see the class remarks.</summary>
+	internal void Draw( UiWindow window ) => DrawEffects( window );
+
+	private void DrawEffects( UiWindow? owner )
 	{
 		if ( ParticleSystem.Current is not { } system )
 			return;
 
-		_blended.Begin();
-		_added.Begin();
+		Layers layers;
+
+		if ( owner == null )
+		{
+			layers = _unowned;
+		}
+		else
+		{
+			if ( !Array.Exists( system.Emitters, emitter => emitter.Owner == owner && Drawn( emitter ) ) )
+				return;
+
+			if ( !_frameEndScheduled )
+			{
+				_frameEndScheduled = true;
+				Render.ScheduleDelete( () => (_windowLayersUsed, _frameEndScheduled) = (0, false) );
+			}
+
+			if ( _windowLayersUsed == _windowLayers.Count )
+				_windowLayers.Add( new Layers( _atlas ) );
+
+			layers = _windowLayers[_windowLayersUsed++];
+		}
+
+		layers.Blended.Begin();
+		layers.Added.Begin();
 
 		// By slot, as the sprite pass goes through them.
 		for ( int slot = 0; slot < ParticleSystem.EmitterCount; ++slot )
@@ -102,11 +160,11 @@ internal sealed class ScreenParticles : Panel
 			var emitter = system.Emitters[slot];
 			var template = emitter.Template;
 
-			if ( !emitter.Active || emitter.Count == 0 || emitter.Hidden || !template.OnScreen )
+			if ( emitter.Owner != owner || !Drawn( emitter ) )
 				continue;
 
 			var adds = (template.DrawFlags & 0x4) != 0;
-			var layer = adds ? _added : _blended;
+			var layer = adds ? layers.Added : layers.Blended;
 			var ignoresAlpha = adds && (template.DrawFlags & 0x2000) == 0;
 			var offset = VirtualScreen.Offset( emitter.Anchor );
 
@@ -133,8 +191,17 @@ internal sealed class ScreenParticles : Panel
 			}
 		}
 
-		_blended.Draw();
-		_added.Draw();
+		layers.Blended.Draw();
+		layers.Added.Draw();
+	}
+
+	private static bool Drawn( Emitter emitter ) => emitter.Active && emitter.Count > 0 && !emitter.Hidden && emitter.Template.OnScreen;
+
+	/// <summary>The two blends' layers drawn together.</summary>
+	private sealed class Layers( Texture atlas )
+	{
+		public readonly Layer Blended = new( atlas, MaterialFlags.None );
+		public readonly Layer Added = new( atlas, MaterialFlags.Additive );
 	}
 
 	/// <summary>Frame <paramref name="frame"/> of sprite set <paramref name="set"/> - 0x005423a0.</summary>

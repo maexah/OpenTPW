@@ -33,8 +33,8 @@ internal sealed class ButtonGlint
 	private float _halfWidth;
 	private float _halfHeight;
 
-	/// <summary>The pointer came onto <paramref name="button"/>.</summary>
-	public void Start( UiControl button )
+	/// <summary>The pointer came onto <paramref name="button"/>, in <paramref name="window"/>, which the glints are drawn with.</summary>
+	public void Start( UiControl button, UiWindow? window )
 	{
 		var rect = button.Rect;
 
@@ -45,7 +45,7 @@ internal sealed class ButtonGlint
 
 		var count = Math.Clamp( 2 - (int)((_halfWidth * _halfHeight - 0.0016f) / 0.0051f * -3f), 2, 5 );
 
-		SetCount( count, button.Anchor );
+		SetCount( count, button.Anchor, window );
 		_started = Time.Now;
 
 		// Placed before the system next ticks, or the new ones would throw out a glint at the corner.
@@ -53,7 +53,7 @@ internal sealed class ButtonGlint
 	}
 
 	/// <summary>The pointer went off the button: the glints stop, and those already out fade.</summary>
-	public void Leave() => SetCount( 0, default );
+	public void Leave() => SetCount( 0, default, null );
 
 	/// <summary>The button was hidden: the glints go at once.</summary>
 	public void Stop()
@@ -61,7 +61,7 @@ internal sealed class ButtonGlint
 		foreach ( var emitter in _emitters )
 			ParticleSystem.Current?.Hide( emitter, true );
 
-		SetCount( 0, default );
+		SetCount( 0, default, null );
 	}
 
 	/// <summary>Places the glints round the button - 0x005ed770, every frame.</summary>
@@ -89,7 +89,7 @@ internal sealed class ButtonGlint
 	}
 
 	/// <summary>Starts or ends glints until there are <paramref name="count"/> - UIParticles_SetChannelCount, 0x005ed5a0.</summary>
-	private void SetCount( int count, Anchor anchor )
+	private void SetCount( int count, Anchor anchor, UiWindow? window )
 	{
 		var system = ParticleSystem.Current;
 
@@ -100,6 +100,6 @@ internal sealed class ButtonGlint
 		}
 
 		while ( system != null && _emitters.Count < count )
-			_emitters.Add( system.Spawn( (int)ParLib.P_EFFECT_Button, 0, 0, 0, anchor ) );
+			_emitters.Add( system.Spawn( (int)ParLib.P_EFFECT_Button, 0, 0, 0, anchor, window ) );
 	}
 }
