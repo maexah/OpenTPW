@@ -72,6 +72,19 @@ public sealed class LobbyAdvisor : Entity
 
 		/// <summary>Response 398: "Welcome to Sim Theme Park! Don't I know you?..."</summary>
 		public const int WelcomeBack = 471;
+
+		/// <summary>
+		/// Response 570: "First type your name into the text box, then click a button to choose an
+		/// Instant Action or a Full Simulation game. When you're finished, click the checked button..."
+		/// </summary>
+		public const int NewPlayerDialog = 588;
+
+		/// <summary>
+		/// Response 393: "...this area is called the lobby... You need golden keys to enter the parks.
+		/// Here's one now to get you started. This key will get you into the Halloween World and Lost
+		/// Kingdom parks right away..."
+		/// </summary>
+		public const int LobbyTour = 468;
 	}
 
 	/// <summary>What a player with no saved game hears, in order - responses 390 and 391.</summary>
@@ -156,8 +169,31 @@ public sealed class LobbyAdvisor : Entity
 	private Voice? _voice;
 	private LipFile? _lips;
 
-	/// <summary>Samples waiting their turn, oldest first.</summary>
-	private readonly Queue<int> _queue = new();
+	/// <summary>
+	/// When the key in his tour of the lobby is handed over, counted from the moment he is given the
+	/// line.
+	///
+	/// Response 393's row of the gesture table at 0x0076dc18 (row 12) holds no clips - he talks through
+	/// random ones as usual - but one timed event, flag 0x400000 with 17000ms, counted from the clock
+	/// minus 200 that the line was given at (0x00598bf0). When it comes due, Advisor_Update
+	/// (0x00599880) plays goldkey (effect 198 of the interface's sounds), starts a burst of particles
+	/// (effect 87 of data\Particle\Tp2.plb) and refreshes the lobby panel (0x004b9340), which is the
+	/// moment the new key shows up on it - some way into "Here's one now to get you started". What
+	/// the cue does is the caller's; the front end plays goldkey and refreshes the panel, and no
+	/// particles are drawn yet.
+	/// </summary>
+	private const float TourKeySeconds = 16.8f;
+
+	/// <summary>Something to do partway through a line, and how long after the line is given.</summary>
+	private readonly record struct Cue( float Seconds, Action Action );
+
+	/// <summary>Samples waiting their turn, oldest first, each with its cue if it has one.</summary>
+	private readonly Queue<(int Sample, Cue? Cue)> _queue = new();
+
+	/// <summary>The cue of the line being said, until it is due - see <see cref="TourKeySeconds"/>.</summary>
+	private Action? _cue;
+
+	private float _cueAt;
 
 	/// <summary>The sample handed over and waiting on <see cref="_speakAt"/>, or 0.</summary>
 	private int _pending;
@@ -222,6 +258,13 @@ public sealed class LobbyAdvisor : Entity
 
 		Animate();
 
+		if ( _cue != null && Time.Now >= _cueAt )
+		{
+			var cue = _cue;
+			_cue = null;
+			cue();
+		}
+
 		if ( Busy )
 			return;
 
@@ -229,7 +272,10 @@ public sealed class LobbyAdvisor : Entity
 		{
 			// Not while he is still ducking away, and not until he has rested once he has.
 			if ( !_shown && Time.Now >= _restUntil )
-				Speak( _queue.Dequeue() );
+			{
+				var (sample, cue) = _queue.Dequeue();
+				Speak( sample, cue );
+			}
 		}
 		else
 		{
@@ -269,6 +315,23 @@ public sealed class LobbyAdvisor : Entity
 	}
 
 	/// <summary>
+	/// What the new player dialog opens with (0x004a6e40): how to fill it in, cutting in on whatever he
+	/// was saying.
+	/// </summary>
+	internal void ExplainNewPlayer() => Add( Samples.NewPlayerDialog, flush: true );
+
+	/// <summary>
+	/// What FrontEnd_ClosePlayerSlots (0x004a6a50) has him say once a new player has been made: his
+	/// tour of the lobby, and the golden key he hands over, which <paramref name="keyHandedOver"/> is
+	/// called for - see <see cref="TourKeySeconds"/>.
+	/// </summary>
+	internal void GiveLobbyTour( Action keyHandedOver )
+		=> Add( Samples.LobbyTour, flush: true, new Cue( TourKeySeconds, keyHandedOver ) );
+
+	/// <summary>Whether he can say anything at all - there is an audio device and a speech bank to say it from.</summary>
+	internal bool CanSpeak => Audio.Ready && _speech is not { IsValid: false };
+
+	/// <summary>
 	/// AdvisorQueue_Add: queues <paramref name="sample"/> behind whatever is waiting, or with
 	/// <paramref name="flush"/> stops him and throws the queue away first.
 	///
@@ -276,7 +339,7 @@ public sealed class LobbyAdvisor : Entity
 	/// off the screen, as Advisor_StopSpeaking (0x005994e0) does through its "Kill advisor" call,
 	/// and comes straight back up with it.
 	/// </summary>
-	internal void Add( int sample, bool flush )
+	private void Add( int sample, bool flush, Cue? cue )
 	{
 		if ( flush )
 		{
@@ -287,8 +350,10 @@ public sealed class LobbyAdvisor : Entity
 		}
 
 		if ( sample > 0 )
-			_queue.Enqueue( sample );
+			_queue.Enqueue( (sample, cue) );
 	}
+
+	internal void Add( int sample, bool flush ) => Add( sample, flush, cue: null );
 
 	/// <summary>Plays one sample now, cutting off anything else - for auditioning from the console.</summary>
 	internal void Say( int sample )
@@ -323,6 +388,7 @@ public sealed class LobbyAdvisor : Entity
 		_voice = null;
 		_lips = null;
 		_gesturesEndAt = float.NegativeInfinity;
+		_cue = null;
 	}
 
 	/// <summary>
@@ -332,13 +398,20 @@ public sealed class LobbyAdvisor : Entity
 	/// 80 of the 641 samples in the bank are a 315-byte stub that is not valid MPEG - response ids
 	/// with nothing recorded - and those simply come back silent, which ends the line at once.
 	/// </summary>
-	private void Speak( int sample )
+	private void Speak( int sample, Cue? cue )
 	{
 		if ( _speech is not { IsValid: true } )
+		{
+			// A line that cannot be said still has its consequences.
+			cue?.Action();
 			return;
+		}
 
 		_pending = sample;
 		_speakAt = Time.Now + LeadInSeconds;
+
+		_cue = cue?.Action;
+		_cueAt = Time.Now + (cue?.Seconds ?? 0f);
 
 		var sampleMilliseconds = (int)_speech.Length( sample ).TotalMilliseconds;
 		var gesturesMilliseconds = BuildGestures( sampleMilliseconds + GestureMarginMilliseconds );
