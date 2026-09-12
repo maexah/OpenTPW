@@ -126,8 +126,16 @@ public partial class Renderer
 		var shader = new Shader( "content/shaders/blit.shader" );
 		var blitShader = shader.ShaderProgram;
 
+		// Overwritten, not blended. This draw is a copy of the finished frame, and the swapchain
+		// image it copies into is never cleared - it still holds the frame presented two or three
+		// swaps ago. Alpha blending here takes only the new frame's own alpha and lets the rest of
+		// that stale image through, and the finished frame does carry alpha below one wherever
+		// anything was drawn over it: the interface, the cursor, the flyers, the rain and the cut
+		// edges of foliage all blend with SourceAlpha/InverseSourceAlpha, which applies to the
+		// alpha channel as well as to colour and leaves it at srcA^2 + dstA(1 - srcA). So whatever
+		// moved was followed by faint copies of where it had been.
 		var pipelineDescription = new GraphicsPipelineDescription(
-			BlendStateDescription.SingleAlphaBlend,
+			BlendStateDescription.SingleOverrideBlend,
 			DepthStencilStateDescription.Disabled,
 			RasterizerStateDescription.CullNone,
 			PrimitiveTopology.TriangleList,
