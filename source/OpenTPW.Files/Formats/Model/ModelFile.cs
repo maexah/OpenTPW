@@ -65,6 +65,17 @@ public partial class ModelFile : BaseFormat
 		public int ParentIndex { get; set; } = -1;
 
 		/// <summary>
+		/// What the node is called - "ant_emitter", "sound node", "1stperson" - or empty when its
+		/// record names nothing.
+		///
+		/// This is the same word of the record a mesh's name has always come from (+0x54); the
+		/// transform-only nodes are simply the ones it was never read for. It is the only place the
+		/// file says what a node is <i>for</i>: the id table gives a node a number and a capability
+		/// flag - see <see cref="ReadNodeIds"/> - but never a meaning.
+		/// </summary>
+		public string Name { get; set; } = string.Empty;
+
+		/// <summary>
 		/// The record's flag word. 0x200 marks a transform-only node, and the engine hides a node
 		/// by setting 0x10 at runtime - no node in the game data ships with it set.
 		/// </summary>
@@ -638,8 +649,55 @@ public partial class ModelFile : BaseFormat
 				flags = reader.ReadUInt32();
 			}
 
-			Nodes.Add( new Node { LocalTransform = local[node], ParentIndex = parents[node], Flags = flags } );
+			// The name pointer is the last word of the smaller record kind, so a node record is
+				// only whole once it reaches 0x58. Tested apart from the flags above so that a
+				// truncated file still gives up what it can rather than nothing.
+				var name = string.Empty;
+
+				if ( record >= 0 && record + 0x58 <= stream.Length )
+				{
+					stream.Seek( record + 0x54, SeekOrigin.Begin );
+					name = NameAt( reader, reader.ReadUInt32() );
+				}
+
+				Nodes.Add( new Node
+				{
+					LocalTransform = local[node],
+					ParentIndex = parents[node],
+					Flags = flags,
+					Name = name
+				} );
 		}
+	}
+
+	/// <summary>
+	/// The NUL-terminated name a node record points at, or empty when it points nowhere in the file.
+	/// </summary>
+	private static string NameAt( BinaryReader reader, uint offset )
+	{
+		var stream = reader.BaseStream;
+
+		if ( offset == 0 || offset >= stream.Length )
+			return string.Empty;
+
+		stream.Seek( offset, SeekOrigin.Begin );
+
+		var name = new StringBuilder();
+
+		// The longest name in the game is under twenty characters. The cap is against a file whose
+		// pointer lands somewhere with no terminator ahead of it, which would otherwise read to the
+		// end of the file.
+		while ( name.Length < 64 && stream.Position < stream.Length )
+		{
+			var character = reader.ReadChar();
+
+			if ( character == '\0' )
+				break;
+
+			name.Append( character );
+		}
+
+		return name.ToString();
 	}
 
 	/// <summary>
