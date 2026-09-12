@@ -67,6 +67,28 @@ public sealed record LobbyScript
 	public IReadOnlyList<FlyingMesh> FlyingMeshes { get; init; } = Array.Empty<FlyingMesh>();
 
 	/// <summary>
+	/// How many of the lobby's own ticks go by in a second.
+	///
+	/// The lobby works out one delta a frame and multiplies its rates by it:
+	/// <c>lobby[+0x08] = min(now_ms - last_ms, 500) * 0.01</c> (FUN_005d5c50; the constant at
+	/// 0x007029cc reads 0.01). One unit of that is a hundred milliseconds, so the lobby counts ten
+	/// ticks a second and a script's per-tick number is ten times as much per second.
+	///
+	/// Four things in the lobby's resting path multiply that delta: the flyer's step and its turn
+	/// (FUN_005d9b50), both camera eases (FUN_005e1210) and the orbit advance (FUN_005e0470, in its
+	/// resting state). The same delta drives parts of FUN_005e0470 that are not built here - the
+	/// attract camera's wander while no island is picked, the globe-homing step and the decay of
+	/// SPINRADIUS and VERTICALOFFSET through the pull-in - because the original reaches an island by
+	/// spinning a globe where this orbits the islands where they stand.
+	///
+	/// <b>It is the lobby's unit, not the game's.</b> The sky scrolls its clouds off a clock of its
+	/// own at twenty-five a second - see <see cref="Sky"/> - and the particle system runs 31ms ticks
+	/// in the lobby as in a park - see <see cref="ParticleSystem"/>. There is no one rate to share,
+	/// which is why there is no longer a game-wide one to name.
+	/// </summary>
+	public const float TicksPerSecond = 10f;
+
+	/// <summary>
 	/// One FLYINGMESH line:
 	///
 	///     FLYINGMESH("data\lobby\terrain","bfly_PINK",10,200.0,100.0,200.0,1.5)
@@ -92,14 +114,13 @@ public sealed record LobbyScript
 		/// <summary>
 		/// How fast this flyer moves, per second.
 		///
-		/// The original multiplies by a frame delta that is counted in ticks of the 25fps the rest
-		/// of its data assumes, not in seconds - the same reading that makes SPINSPEED(0.02) a
-		/// twelve-second orbit rather than a five-minute one, and the camera's 0.1 a quarter-second
-		/// lag rather than a ten-second one. Three independent constants agree on it.
+		/// The original does <c>position += direction * speed * delta</c> (FUN_005d9b50) against the
+		/// lobby's own delta, and one unit of that is a hundred milliseconds - see
+		/// <see cref="TicksPerSecond"/> - so a script's speed is ten times as much per second.
 		///
-		/// So the butterflies' 1.5 is 37.5 units a second and the bats' 2.5 is 62.5.
+		/// So the butterflies' 1.5 is 15 units a second and the bats' 2.5 is 25.
 		/// </summary>
-		public float SpeedPerSecond => Speed * Time.TicksPerSecond;
+		public float SpeedPerSecond => Speed * TicksPerSecond;
 
 		/// <summary>Half of <see cref="Volume"/>, which is what the random point is picked within.</summary>
 		public Vector3 HalfVolume => Volume * 0.5f;
@@ -109,16 +130,38 @@ public sealed record LobbyScript
 	public static readonly Vector3 DefaultSkyColour = new( 79 / 255f, 214 / 255f, 255 / 255f );
 
 	/// <summary>
+	/// The frame rate the original's per-frame rolls are read at.
+	///
+	/// Two lobby behaviours are rolled once per rendered frame and scaled by no delta at all - the
+	/// strike test below, and the ambient one-shot (see <see cref="LobbyAudio"/>) - both in
+	/// FUN_005e0470. What they came to per second was therefore whatever frame rate the machine
+	/// managed, and nobody has established what that was.
+	///
+	/// <b>So this is a choice, not a recovery.</b> Twenty-five a second, because that is the rate
+	/// the engine's own sky converts seconds to ticks at - the 25.0 at 0x00701f7c, in FUN_00585f10 -
+	/// and it is the rate in the binary shaped like a frame rate that the lobby's own subsystems are
+	/// timed against. It is not a measurement of what the original ran at, and nothing found so far
+	/// is. The alternatives with an equal claim are the animation clock's thirty (0x00472f60,
+	/// 0x00474070 - though that is a playback speed rather than a frame rate) and the state
+	/// machine's 31ms step (0x00520130, about thirty-two a second, which would make both rolls 29%
+	/// busier).
+	///
+	/// Kept apart from <see cref="TicksPerSecond"/> deliberately: sharing one constant is exactly
+	/// what would silently slow the storm and the ambience when the lobby's data rate was corrected.
+	/// </summary>
+	public const float AssumedFrameRate = 25f;
+
+	/// <summary>
 	/// Lightning strikes per second, converted off the original's per-frame chance.
 	///
-	/// The test above runs once per frame, so taken literally the storm gets worse the faster
-	/// your machine is. At the 25fps the rest of the game's data assumes it comes out as a
-	/// strike every 64 frames on average - about one every two and a half seconds - and that is
-	/// what this returns, so the storm is the same on any hardware.
+	/// The test above runs once per rendered frame and is scaled by nothing, so taken literally the
+	/// storm gets worse the faster your machine is. Read at <see cref="AssumedFrameRate"/> it comes
+	/// out as a strike every 64 frames on average - about one every two and a half seconds - and
+	/// that is what this returns, so the storm is the same on any hardware.
 	/// </summary>
 	public float StrikesPerSecond => (Lightning & 1) == 0
 		? 0f
-		: Time.TicksPerSecond / (1 << System.Numerics.BitOperations.PopCount( (uint)Lightning ));
+		: AssumedFrameRate / (1 << System.Numerics.BitOperations.PopCount( (uint)Lightning ));
 
 	/// <summary>
 	/// Reads a park's script - lobby/jungle.txt and friends. A missing or unreadable file gives

@@ -31,12 +31,13 @@ public sealed class LobbyFlyer : Entity
 	/// <summary>
 	/// How sharply a flyer can turn, per second.
 	///
-	/// The original lerps its direction toward the one it wants by <c>delta * 0.1</c>, in the same
-	/// per-tick units as its speed - so 2.5 a second, applied here through
-	/// <see cref="Time.SmoothingFactor"/> rather than as a raw multiply, which is the same
-	/// behaviour at any frame rate rather than only at 25fps.
+	/// The original lerps its direction toward the one it wants by <c>delta * 0.1</c> (FUN_005d9b50,
+	/// the constant at 0x00702ae4 - its own copy of 0.1, not the camera's), in the same per-tick
+	/// units as its speed. The lobby's tick is a tenth of a second, so that is 1.0 a second, applied
+	/// here through <see cref="Time.SmoothingFactor"/> rather than as a raw multiply, which is the
+	/// same behaviour at any frame rate.
 	/// </summary>
-	private const float TurnRate = 0.1f * Time.TicksPerSecond;
+	private const float TurnRate = 0.1f * LobbyScript.TicksPerSecond;
 
 	/// <summary>
 	/// How close counts as having arrived, squared. The original passes a hard-coded 500 into
@@ -56,8 +57,8 @@ public sealed class LobbyFlyer : Entity
 	private const float TerrainClearance = 8f;
 
 	/// <summary>
-	/// How quickly a swarm fades in and out, per second - about as long as the camera's own slide
-	/// between islands.
+	/// How quickly a swarm fades in and out, per second - quicker than the camera's own slide
+	/// between islands, so a swarm is up before the island it belongs to has arrived.
 	///
 	/// The original never needs this: its islands sit around a globe of radius 475 and its camera
 	/// zooms in on one, so another park's flyers are simply never in shot. Here they are laid out

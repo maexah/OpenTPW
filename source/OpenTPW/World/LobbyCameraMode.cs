@@ -27,29 +27,39 @@ namespace OpenTPW;
 public class LobbyCameraMode : CameraMode
 {
 	/// <summary>
-	/// How fast the camera and its aim close on where they are headed.
+	/// How fast the camera and its aim close on where they are headed, per second.
 	///
-	/// The original's constants are per frame, and only make sense that way: read as per-second
-	/// they would give a ten-second camera lag and a five-minute orbit. At the 25fps the rest of
-	/// the game's data assumes - see <see cref="Time.TicksPerSecond"/> - its 0.1 and 0.2
-	/// per frame come out as 2.63/s and 5.58/s, by -25 * ln(1 - perFrame).
+	/// The original's 0.1 and 0.2 (0x00702c7c and 0x00702ca4, in FUN_005e1210) are not per frame:
+	/// they multiply the lobby's delta, which is milliseconds times a hundredth, so a second of it
+	/// comes to ten - see <see cref="LobbyScript.TicksPerSecond"/>. The rates are therefore
+	/// 10 * 0.1 = 1.0 a second for the camera body and 10 * 0.2 = 2.0 for its aim.
 	///
-	/// Only the derivation touches 25fps - the rates themselves are per second, and are applied
-	/// through <see cref="Time.SmoothingFactor"/>, so the camera behaves the same at any frame
-	/// rate. These are deliberately half the original's. It spent those rates spinning a globe
-	/// to the island it wanted, so they had a long move to decelerate over; sliding straight
-	/// between islands the way this does, they arrive in about half a second and the slowing down
-	/// barely reads. The 2:1 ratio between the two is the part worth keeping faithful - it is
-	/// what settles the shot on the new island while the camera is still travelling.
+	/// Because the original already scales by its delta, those are its rates at any frame rate
+	/// rather than at one assumed one, and its per-frame multiply is the first-order approximation
+	/// of the curve <see cref="Time.SmoothingFactor"/> gives exactly. The 2:1 ratio is what settles
+	/// the shot on the new island while the camera is still travelling.
+	///
+	/// These used to be 1.32 and 2.79, from a derivation that was wrong twice over: it read the
+	/// delta as 25 ticks a second rather than 10, and it applied <c>-25 * ln(1 - f)</c> to a factor
+	/// the original already multiplies by a delta. It then halved the result to stop the
+	/// deceleration reading as slow - a correction the faithful rate does not need, being slower
+	/// than the tuned value it replaces.
 	/// </summary>
-	private const float PositionRate = 1.32f;   // half of the original's 0.1 per frame
-	private const float LookAtRate = 2.79f;     // half of the original's 0.2 per frame
+	private const float PositionRate = 1f;
+	private const float LookAtRate = 2f;
 
 	/// <summary>
-	/// How fast the orbit turns, in radians per second. The script asks for SPINSPEED(0.02),
-	/// which is per frame - half a radian a second at 25fps, round every 12.6 seconds - and that
-	/// is brisker than this wants, so the rate is tuned rather than taken: a little over half a
-	/// minute to come round.
+	/// How fast the orbit turns, in radians per second.
+	///
+	/// The script asks for SPINSPEED(0.02), which is per lobby tick, and the lobby ticks ten times a
+	/// second - see <see cref="LobbyScript.TicksPerSecond"/> - so the orbit turns 0.2 radians a
+	/// second and comes round in a little over half a minute. The original's own advance is the same
+	/// arithmetic: its lobby tick (FUN_005e0470, in the resting state) reads SPINSPEED out of the
+	/// settings block every frame, does <c>angle += delta * SPINSPEED</c> and wraps it against 2pi.
+	///
+	/// The value is unchanged by the correction to that tick - the old comment called it tuned
+	/// rather than taken, and it was neither: it is exactly what the file asks for, arrived at by
+	/// luck while the tick rate was being read at 25 a second.
 	/// </summary>
 	private const float SpinSpeed = 0.2f;
 

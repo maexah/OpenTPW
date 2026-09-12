@@ -59,13 +59,17 @@ public sealed class LobbyAudio : Entity
 	/// <summary>
 	/// How likely a one-shot is, per second.
 	///
-	/// The original rolls one in sixteen per frame, which taken literally means a busier jungle on
-	/// a faster machine. At the 25fps the rest of its data assumes - see
-	/// <see cref="Time.TicksPerSecond"/> - that comes out as about one and a half a
-	/// second, and that is what this uses, so the ambience keeps its pace at any frame rate. The
-	/// effects' own repeat delays do most of the thinning from there.
+	/// The original rolls one in sixteen per rendered frame, scaled by nothing, which taken
+	/// literally means a busier jungle on a faster machine. Read at
+	/// <see cref="LobbyScript.AssumedFrameRate"/> that comes out as about one and a half a second,
+	/// and that is what this uses, so the ambience keeps its pace at any frame rate. The effects'
+	/// own repeat delays do most of the thinning from there.
+	///
+	/// The frame rate it is read at is deliberately not the lobby's tick rate: this roll is one of
+	/// the two the original never multiplies by a delta, so correcting that tick rate must leave it
+	/// where it is.
 	/// </summary>
-	private static readonly float OneShotsPerSecond = Time.TicksPerSecond / 16f;
+	private static readonly float OneShotsPerSecond = LobbyScript.AssumedFrameRate / 16f;
 
 	/// <summary>
 	/// How loud each layer sits, before <see cref="Audio.MasterVolume"/>.
@@ -118,8 +122,8 @@ public sealed class LobbyAudio : Entity
 	///
 	/// The original cuts both dead - it spends the change spinning a globe from one island to the
 	/// next, so the cut lands out of sight and out of earshot of anything else. This slides
-	/// straight between islands in about half a second, the same as <see cref="LobbyWeather"/>'s
-	/// sky does, and a cut over half a second of visible travel reads as a fault.
+	/// straight between islands in about a second, the same as <see cref="LobbyWeather"/>'s sky
+	/// does, and a cut over a second of visible travel reads as a fault.
 	/// </summary>
 	private const float CrossfadeSeconds = 0.9f;
 

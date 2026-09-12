@@ -81,13 +81,28 @@ public class Sky : Entity
 	private static readonly float[] LowerV = [0.49f, 0.19f, 0.01f, 0.49f];
 
 	/// <summary>
+	/// How many ticks of cloud scroll go by in a second.
+	///
+	/// The sky's step (FUN_00585f10) works out <c>frameTime * 25.0</c> - the constant at 0x00701f7c -
+	/// and adds <c>rate * step</c> to each layer's scroll offset, dropping the step outright when it
+	/// comes out past +/-25, which is to say when frameTime passes one. <b>That the field is seconds
+	/// is read off that guard</b> rather than out of the code that writes it, which has not been
+	/// found; either way the 25.0 is the sky's own conversion.
+	///
+	/// This is the sky's clock and not the lobby's, which counts ten a second - see
+	/// <see cref="LobbyScript.TicksPerSecond"/>. The sky runs in a park too, and the lobby's delta
+	/// lives on an object that does not exist outside the lobby.
+	/// </summary>
+	private const float TicksPerSecond = 25f;
+
+	/// <summary>
 	/// One of the four cloud layers, from the loop in FUN_00584ef0.
 	///
 	/// <c>Tiling</c> is (7 - layer) * pi / 112, so the first layer repeats the cloud texture about
 	/// three times across the grid and the last about half as often. The scroll rates are per tick
-	/// in the same 25fps units as the rest of this data, restated here per second.
-	/// <c>Opacity</c> starts at 0xCF and steps down by 0x38 a layer, so the first is nearly solid
-	/// and the last is a suggestion.
+	/// of the sky's own clock, twenty-five a second - see <see cref="TicksPerSecond"/> - restated
+	/// here per second. <c>Opacity</c> starts at 0xCF and steps down by 0x38 a layer, so the first
+	/// is nearly solid and the last is a suggestion.
 	/// </summary>
 	private readonly record struct CloudLayer( float Tiling, Vector2 Scroll, float Opacity );
 
@@ -100,7 +115,7 @@ public class Sky : Entity
 			layers[i] = new CloudLayer(
 				Tiling: (7 - i) * MathF.PI / 112f,
 				Scroll: new Vector2( 0.0008f + (i * 0.0005f), 0.00009f - (i * 0.00003f) )
-					* Time.TicksPerSecond,
+					* TicksPerSecond,
 				Opacity: (0xCF - (i * 0x38)) / 255f );
 		}
 

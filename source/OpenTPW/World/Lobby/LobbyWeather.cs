@@ -22,10 +22,11 @@ public sealed class LobbyWeather : Entity
 	/// <summary>
 	/// How fast the sky crossfades between parks. The original snaps, because it spends the
 	/// change spinning a globe from one island to the next and the snap happens out of sight;
-	/// this slides straight between islands in about half a second, where a snap reads as a
-	/// glitch. Matched to the camera's own body rate so the two arrive together.
+	/// this slides straight between islands in about a second, where a snap reads as a glitch.
+	/// Matched to the camera's own body rate - <see cref="LobbyCameraMode"/>'s PositionRate - so
+	/// the two arrive together, which is why it moved when that rate was corrected.
 	/// </summary>
-	private const float SkyRate = 1.32f;
+	private const float SkyRate = 1f;
 
 	/// <summary>The one weather system, so DebugConsole can reach it. There is only ever one.</summary>
 	internal static LobbyWeather? Current { get; private set; }
