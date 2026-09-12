@@ -43,7 +43,33 @@ public class Level
 
 	private void SetupEntities()
 	{
-		SunLight = new Sun() { Position = new( 0, 100, 100 ) };
+		// The sun stands in front of the park gates, which is where every gate in the lobby faces.
+		//
+		// Measured rather than guessed: a gate is authored in its island's own model space and is
+		// never rotated (LobbyGate only sets a position), so the offset from an island's centre to
+		// its gate's centre is the direction that gate faces. Through the engine's own parser that
+		// comes to bearings of 187, 152, 187 and 198 degrees for jungle, fantasy, hallow and space -
+		// all of them the island's -Y side. Fantasy reads furthest off only because its gate is a
+		// 421-vertex worm whose bulk pulls the centroid sideways; its parts sit at -8.5 and -13.3 in
+		// Y with the rest. So one light can face all four, and this is it.
+		//
+		// The shader takes this as a point, not a direction, so how far away it stands decides how
+		// alike the four islands are lit. They span 283 units corner to corner, so the spread in
+		// direction across them is atan(283/distance): at four thousand units it is four degrees,
+		// which reads as a sun rather than as a lamp standing in the sea. The height is that
+		// distance at an elevation of thirty-five degrees.
+		//
+		// <b>This is a choice, not a recovery.</b> The original's world geometry arrives at the card
+		// already transformed, carrying a colour per vertex that its own engine worked out
+		// (FVF 0x1c4, with DIFFUSE and SPECULAR), so Direct3D does no lighting for it and there may
+		// be no sun position in there to find. Alexah's call, from how the game looks: lit from the
+		// front, facing the park gates.
+		//
+		// It replaces (0, 100, 100), which was a leftover of the old test scene and meant nothing
+		// while the light was being subtracted from a view-space position - that made it a headlight
+		// that lit whatever faced the camera, wherever it was standing. Water reads this too, so the
+		// sea takes its shading from the same place.
+		SunLight = new Sun() { Position = new( 500, -3500, 2800 ) };
 
 		// The sky first, because it never writes depth: it has to be laid down before anything
 		// that should cover it, and the ocean runs out further than the sky's own horizon does.
