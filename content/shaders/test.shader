@@ -25,7 +25,7 @@ vertex {
         vec2 vTexCoords;
         vec3 vNormal;
         vec3 vPosition;
-        vec3 vWorldPosition;
+        vec3 vViewPosition;
         vec3 vWorldNormal;
     } vs_out;
 
@@ -43,7 +43,11 @@ vertex {
         vs_out.vPosition = vec3(g_oUbo.g_mModel * vec4(position, 1.0));
 
         vec4 pos = g_oUbo.g_mModel * vec4(position, 1.0);
-        vs_out.vWorldPosition = vec3(g_oUbo.g_mView * pos);
+
+        // View space, and now named for it. The fog at the end of the fragment stage wants distance
+        // from the camera, which is what this is; the lighting wants world space, and takes
+        // vPosition just above instead.
+        vs_out.vViewPosition = vec3(g_oUbo.g_mView * pos);
         gl_Position = g_oUbo.g_mProj * g_oUbo.g_mView * pos;
 
         outTexIndex = texIndex;
@@ -56,7 +60,7 @@ fragment {
         vec2 vTexCoords;
         vec3 vNormal;
         vec3 vPosition;
-        vec3 vWorldPosition;
+        vec3 vViewPosition;
         vec3 vWorldNormal;
     } vs_out;
 
@@ -125,7 +129,11 @@ fragment {
         vec2 finalTexCoords = vs_out.vTexCoords;
 
         vec3 N = normalize(g_oUbo.g_flWorldNormals > 0.5 ? vs_out.vWorldNormal : vs_out.vNormal);
-        vec3 L = normalize(g_oUbo.g_vLightPos - vs_out.vWorldPosition);
+        // g_vLightPos is a world-space point - Level.SunLight.Position - so what it is measured
+        // against has to be world space too. This used to subtract the view-space position, which
+        // pinned the sun to the camera: it rode round with the orbit and lit whichever side of an
+        // island happened to be facing the viewer, wherever the light was actually standing.
+        vec3 L = normalize(g_oUbo.g_vLightPos - vs_out.vPosition);
         
         vec3 vDiffuse = max(dot(N, L), 0.0) * g_oUbo.g_vLightColor;
         vec3 vAmbient = vec3(g_oUbo.g_flAmbient > 0.0 ? g_oUbo.g_flAmbient : 0.4);
@@ -181,9 +189,8 @@ fragment {
         float flAlpha = bTranslucent ? vTextureSample.a : 1.0;
         fragColor = vec4(vOutColor, flAlpha * g_oUbo.g_flOpacity);
 
-        // Calculate fog using view space depth. vWorldPosition is view space despite its name -
-        // see where it is written - so this is distance from the camera.
-        float viewSpaceDepth = length(vs_out.vWorldPosition);
+        // Fog by view-space depth, which is distance from the camera.
+        float viewSpaceDepth = length(vs_out.vViewPosition);
         float fogFactor = exp(viewSpaceDepth * 0.01) * g_oUbo.g_flFogDensity;
         fogFactor = clamp( fogFactor, 0, 1 );
 
