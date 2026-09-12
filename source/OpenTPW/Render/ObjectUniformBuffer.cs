@@ -52,9 +52,18 @@ struct ObjectUniformBuffer
 	public float g_flAmbient; // 4
 
 	/// <summary>
-	/// 1 to light with the model's normals turned by its model matrix, 0 for the untransformed
-	/// normals the world has always used. The advisor needs 1: his meshes are turned every which
-	/// way by his node tree, and lit with their raw normals his face and gloves come out grey.
+	/// 1 to light with the model's normals turned by its model matrix, which is what every draw of a
+	/// model in the world asks for. The untransformed normals are in the file's Y-up space while the
+	/// world is Z-up, so a flat ground normal was lit as though it faced sideways, and any mesh the
+	/// node tree turns was lit at the orientation it was authored in. Measured over the four island
+	/// models, the normal moves by 78 to 101 degrees on average - Jungle 92.6, Fantasy 101.1, Hallow
+	/// 77.6, Space 80.3 - with one mesh, Fantasy's Blade04, at 140.7.
+	///
+	/// 0 is left for the interface, which does not draw through <see cref="ModelEntity"/> at all -
+	/// see <see cref="UI.UiMesh"/>. Its model matrix is a screen projection whose third row is zero,
+	/// and mat3 of that collapses 730 of ui.wad's 10231 normals to nothing, which normalize() would
+	/// turn into a NaN. Ten meshes lose every normal that way, LOLIGHT - the dimmer behind every
+	/// dialog - among them. So this stays a switch rather than becoming the shader's only path.
 	/// </summary>
 	public float g_flWorldNormals; // 4
 	public float _padding4; // 4

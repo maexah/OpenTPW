@@ -44,7 +44,7 @@ public partial class ModelEntity : Entity
 			return;
 
 		Draw( Model, Camera.ViewMatrix, Camera.ProjMatrix, Level.SunLight?.Position ?? Vector3.Zero,
-			Level.SunLight?.Color ?? Vector3.One, Level.FogDensity );
+			Level.SunLight?.Color ?? Vector3.One, Level.FogDensity, worldNormals: true );
 	}
 
 	protected override void OnRenderTranslucent()
@@ -53,7 +53,7 @@ public partial class ModelEntity : Entity
 			return;
 
 		Draw( TranslucentModel, Camera.ViewMatrix, Camera.ProjMatrix, Level.SunLight?.Position ?? Vector3.Zero,
-			Level.SunLight?.Color ?? Vector3.One, Level.FogDensity );
+			Level.SunLight?.Color ?? Vector3.One, Level.FogDensity, worldNormals: true );
 	}
 
 	/// <summary>

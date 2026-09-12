@@ -36,9 +36,12 @@ vertex {
         vs_out.vTexCoords = texCoords;
         vs_out.vTexCoords.y = 1.0 - vs_out.vTexCoords.y;
         vs_out.vNormal = normal;
-        // Normals come from the file untouched while positions have Y and Z swapped - see LobbyModel -
-        // so the same swap goes on before the model matrix turns them. Only read when a draw asks
-        // for g_flWorldNormals.
+        // The loader works these out from the file's own positions - ModelFile.CalculateNormals - so
+        // they are in the file's Y-up space while the positions drawn here have Y and Z swapped (see
+        // LobbyModel), and the same swap goes on before the model matrix turns them. Read by every
+        // draw of a model in the world; the interface leaves g_flWorldNormals at 0, because its model
+        // matrix is a screen projection whose third row is zero and would collapse a good many of its
+        // normals to nothing - see ObjectUniformBuffer.
         vs_out.vWorldNormal = mat3(g_oUbo.g_mModel) * vec3(normal.x, normal.z, normal.y);
         vs_out.vPosition = vec3(g_oUbo.g_mModel * vec4(position, 1.0));
 
