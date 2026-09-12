@@ -8,12 +8,23 @@ public class BaseFileSystem
 	private readonly Dictionary<string, Type> archiveHandlers = new();
 	private readonly Dictionary<string, IArchive> archiveCache = new();
 
+	/// <summary>
+	/// Maps a directory that is already there.
+	///
+	/// <para>
+	/// A missing one is not made. This maps the game's own files, and answering "there is nothing there" by
+	/// making an empty directory of that name turns one clear failure into every read failing with nothing
+	/// said about why - on Linux it made a directory named, in full, "C:\Program Files (x86)\Bullfrog\Theme
+	/// Park World\Data" beside the tests, and six of them then read it and failed. Whatever owns a directory
+	/// - the save folder, the cache - makes it before mapping it.
+	/// </para>
+	/// </summary>
 	public BaseFileSystem( string relativePath )
 	{
-		if ( !Directory.Exists( relativePath ) )
-			Directory.CreateDirectory( relativePath );
-
 		basePath = Path.GetFullPath( relativePath, Directory.GetCurrentDirectory() );
+
+		if ( !Directory.Exists( basePath ) )
+			throw new DirectoryNotFoundException( $"There is no directory at {basePath}" );
 	}
 
 	public void RegisterArchiveHandler<T>( string extension ) where T : IArchive

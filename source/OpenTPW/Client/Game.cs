@@ -19,13 +19,17 @@ internal static class Game
 		Log = new();
 
 		//
-		// Check if the game data directory exists
+		// Find the installed game. Nothing below this can run without it, and GameDir has already said
+		// where it looked and what would put it right, so there is nothing to add by throwing.
 		//
-		if ( !Path.Exists( $"{Settings.Default.GamePath}/data/" ) )
-			throw new DirectoryNotFoundException( "Theme Park World not found" );
+		if ( !GameDir.Find( args ) )
+		{
+			Environment.ExitCode = 1;
+			return;
+		}
 
 		// Register game data directory
-		FileSystem = new BaseFileSystem( $"{Settings.Default.GamePath}/data/" );
+		FileSystem = new BaseFileSystem( GameDir.Data );
 		FileSystem.RegisterArchiveHandler<WadArchive>( ".wad" );
 
 		// Archives are found by appending the extension and checking the file exists, which is
@@ -36,13 +40,14 @@ internal static class Game
 		FileSystem.RegisterArchiveHandler<SdtArchive>( ".sdt" );
 
 		//
-		// Check if the save data directory exists (create if not)
+		// Register save data directory - save\ beside the game's data, where the original keeps it, so that a
+		// park saved by one is seen by the other. Made here if it is not there: a copy of the game that has
+		// never been played has no save folder yet, and mapping one does not make it.
 		//
-		if ( !Path.Exists( $"{Settings.Default.GamePath}/save/" ) )
-			Directory.CreateDirectory( $"{Settings.Default.GamePath}/save/" );
+		var saveFolder = GameDir.FindSaveFolder();
 
-		// Register save data directory
-		SaveFileSystem = new BaseFileSystem( $"{Settings.Default.GamePath}/save/" );
+		Directory.CreateDirectory( saveFolder );
+		SaveFileSystem = new BaseFileSystem( saveFolder );
 
 		// The machine's options, which the original reads before it sets anything else up.
 		SaveFolder.LoadConfig();
@@ -57,7 +62,8 @@ internal static class Game
 		//
 		// Custom OpenTPW cache directory (mainly for editor-related stuff)
 		//
-		CacheFileSystem = new BaseFileSystem( $"./.opentpw" );
+		Directory.CreateDirectory( "./.opentpw" );
+		CacheFileSystem = new BaseFileSystem( "./.opentpw" );
 
 		//
 		// Init renderer
