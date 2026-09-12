@@ -61,6 +61,8 @@ internal sealed class FrontEnd : Panel
 			ShowPlayerSlots();
 		else
 			_stack.Open( _islandPanel );
+
+		ApplyGameMode();
 	}
 
 	/// <summary>A player slot was clicked (0x004a6000): an empty one asks who is playing, a used one plays as whoever is in it.</summary>
@@ -95,6 +97,7 @@ internal sealed class FrontEnd : Panel
 	{
 		Players.Roster.SaveAndDeselect();
 		_stack.Close( _islandPanel );
+		ApplyGameMode();
 
 		ShowPlayerSlots();
 	}
@@ -153,8 +156,9 @@ internal sealed class FrontEnd : Panel
 	/// keys as it comes into view, and empties the advisor's queue whoever was picked. A Full Simulation
 	/// player just made is then given a golden key (0x005afc30), written out at once (0x005c8a10), and the
 	/// advisor's tour of the lobby (response 393), which shows the key on the panel when he hands it over.
-	/// An Instant Action player gets no key - every park is open to them - and a line of their own instead
-	/// (response 394).
+	/// An Instant Action player is given no key at all - the original tests the game type and only adds one
+	/// for a Full Simulation player - and hears a line of their own instead (response 394). They are shown
+	/// no keys and held to one island from there on; see <see cref="IslandPanel"/> for the whole of it.
 	/// </summary>
 	private void ClosePlayerSlots( bool newPlayer )
 	{
@@ -165,6 +169,13 @@ internal sealed class FrontEnd : Panel
 		}
 
 		_stack.Open( _islandPanel );
+
+		// Whoever was picked, the lobby goes back to the first island as the slots close - 0x005e1fa0,
+		// called with 1, takes the head of the island list and forgets the park that was remembered,
+		// rather than walking the list for a name as it does with 0. It is also what leaves an Instant
+		// Action player looking at Lost Kingdom, which is the only island they will ever be shown.
+		LobbyCameraMode.SelectFirst();
+		ApplyGameMode();
 
 		if ( newPlayer && Players.Roster.Current is { InstantAction: true } )
 		{
@@ -184,6 +195,19 @@ internal sealed class FrontEnd : Panel
 		{
 			Advisor.Current?.Hush();
 		}
+	}
+
+	/// <summary>
+	/// Puts the lobby into the game whoever is playing chose, which is the front end's to know. An
+	/// Instant Action game is held to the one island: the original's previous and next island handlers
+	/// (0x005e1ee0, 0x005e1f40) do nothing while the game type is 2, so its arrows, its cursor keys and
+	/// the bracket keys here all go nowhere. What the panel itself shows is in
+	/// <see cref="IslandPanel.ShowKeys"/>, which looks at the same thing at the same moments.
+	/// </summary>
+	private void ApplyGameMode()
+	{
+		LobbyCameraMode.HeldToOneIsland = Players.Roster.Current is { InstantAction: true };
+		_islandPanel.ShowKeys();
 	}
 
 	/// <summary>

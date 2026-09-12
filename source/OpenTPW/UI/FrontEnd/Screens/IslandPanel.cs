@@ -37,6 +37,18 @@ namespace OpenTPW.UI;
 /// Kingdom and Halloween World turn gold; a returning player sees their keys at once.
 /// </para>
 /// <para>
+/// <b>Instant Action.</b> A player in an Instant Action game has no golden keys at all, and the panel
+/// shows them none. IslandPanel_Refresh hides the price and the count and disables both island arrows
+/// whenever the game type is 2 - all four in one call, 0x004b9840 - and the game type is 2 for exactly
+/// the players whose gms.dat says Instant Action (0x005c83b0 reads the byte at +0x24 and hands it to
+/// SetGameType). The arrows are disabled rather than hidden: the button's setter at 0x0065da8d puts
+/// flag 0x2 on the control and its part picker at 0x00668820 draws part 1 - the disabled one - for
+/// that flag. Pressing them would do nothing anyway, because the handlers behind them (0x005e1ee0 and
+/// 0x005e1f40) return unless the game type is not 2. So the lobby stays on the island it opened on,
+/// which is Lost Kingdom - the one park that ships an Easymode.TPWI - and Enter this park lets them
+/// straight in, because 0x005e1cc0 never counts their keys.
+/// </para>
+/// <para>
 /// <b>Enter this park</b> (0x005e1cc0) does nothing at all for a park the player cannot afford. For one
 /// they can, it hands over to 0x005e1e30, which closes this panel, plays effect 4 of the global lobby
 /// sfx and a burst of particles at the key, and sets the lobby leaving for the park. Entering a park
@@ -67,9 +79,14 @@ internal sealed class IslandPanel : UiWindow
 	private readonly UiControl _held;
 	private readonly UiControl _heldNumber;
 	private readonly UiControl _parkName;
+	private readonly UiButton _previousIsland;
+	private readonly UiButton _nextIsland;
 
 	/// <summary>The keys the panel last looked at - see the class remarks.</summary>
 	private int _keysShown;
+
+	/// <summary>Whether whoever is playing is in an Instant Action game, looked at when the keys are - see the class remarks.</summary>
+	private bool _instantAction;
 
 	/// <summary>The sparkles across the price while they run, or 0.</summary>
 	private int _sparkle;
@@ -155,7 +172,7 @@ internal sealed class IslandPanel : UiWindow
 			Text = "Park Name"
 		} );
 
-		Root.Add( new UiButton
+		_previousIsland = Root.Add( new UiButton
 		{
 			Id = 0x1e0f0,
 			Rect = new UiRect( 97, 1299, 250, 1453 ),
@@ -164,7 +181,7 @@ internal sealed class IslandPanel : UiWindow
 			Clicked = () => LobbyCameraMode.Step( -1 )
 		} );
 
-		Root.Add( new UiButton
+		_nextIsland = Root.Add( new UiButton
 		{
 			Id = 0x1e0f1,
 			Rect = new UiRect( 260, 1299, 413, 1453 ),
@@ -176,18 +193,26 @@ internal sealed class IslandPanel : UiWindow
 		ShowKeys();
 	}
 
-	/// <summary>Looks at the player's keys again and shows the count - 0x004b9340.</summary>
+	/// <summary>
+	/// Looks at the player's keys again and shows the count, and puts the panel into the game the
+	/// player is playing - IslandPanel_Refresh (0x004b9340) does both together, and is the only thing
+	/// that looks: the count is not live, and neither is the mode.
+	/// </summary>
 	public void ShowKeys()
 	{
+		_instantAction = Players.Roster.Current is { InstantAction: true };
 		_keysShown = Players.Roster.Current?.Keys ?? 0;
 
-		_held.Visible = _keysShown >= 1;
+		_held.Visible = !_instantAction && _keysShown >= 1;
 		_heldNumber.Text = $"{_keysShown} x";
+
+		_previousIsland.Enabled = !_instantAction;
+		_nextIsland.Enabled = !_instantAction;
 	}
 
 	protected internal override void Update()
 	{
-		if ( Stack.IsFront( this ) && !Input.TextCaptured )
+		if ( Stack.IsFront( this ) && !Input.TextCaptured && !_instantAction )
 		{
 			if ( Input.KeysPressed.Contains( Key.Left ) )
 				LobbyCameraMode.Step( -1 );
@@ -203,13 +228,13 @@ internal sealed class IslandPanel : UiWindow
 		var price = island?.KeysToEnter ?? 0;
 		var affordable = _keysShown >= price;
 
-		_price.Visible = price > 0;
+		_price.Visible = !_instantAction && price > 0;
 		_price.Frame = affordable ? 0 : 1;
 		_priceNumber.Frame = affordable ? price - 1 : price + 4;
 
 		// Not while the options screen has the panel put away. The sparkles are drawn with the panel, so
 		// they would not show, but they would still be running.
-		ShowSparkle( price > 0 && affordable && !Hidden );
+		ShowSparkle( !_instantAction && price > 0 && affordable && !Hidden );
 	}
 
 	protected internal override void Shown() => ShowKeys();
@@ -238,9 +263,17 @@ internal sealed class IslandPanel : UiWindow
 		_sparkle = particles.Spawn( (int)ParLib.P_EFFECT_KeySparkle, 50000, 0, middle * 75000 / VirtualScreen.Height, _priceNumber.Anchor, this );
 	}
 
+	/// <summary>
+	/// Enter this park (0x005e1cc0). A key is only ever asked for in a Full Simulation game - the
+	/// original's handler goes straight to the park for an Instant Action player, without counting
+	/// their keys at all.
+	/// </summary>
 	private void EnterPark()
 	{
-		if ( LobbyCameraMode.CurrentIsland is not { } island || _keysShown < island.KeysToEnter )
+		if ( LobbyCameraMode.CurrentIsland is not { } island )
+			return;
+
+		if ( !_instantAction && _keysShown < island.KeysToEnter )
 			return;
 
 		Log.Info( $"Front end: entering '{island.ParkName}' - entering a park is not built yet" );

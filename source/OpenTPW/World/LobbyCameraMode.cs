@@ -66,6 +66,18 @@ public class LobbyCameraMode : CameraMode
 	public static bool Paused { get; set; }
 
 	/// <summary>
+	/// Whether the lobby stays on the island it is showing, however it is asked to move. An Instant
+	/// Action game is played that way: the original's previous and next island handlers (0x005e1ee0
+	/// and 0x005e1f40) do nothing at all unless the game type is something other than 2, so nothing
+	/// it offers - the panel's arrows, the cursor keys, or the bracket keys here - goes anywhere.
+	///
+	/// Set by the front end, which is what knows who is playing; static for the same reason
+	/// <see cref="Paused"/> is. <see cref="SelectFirst"/> is not held by it - that is the lobby
+	/// putting itself back, not something the player asked for.
+	/// </summary>
+	internal static bool HeldToOneIsland { get; set; }
+
+	/// <summary>
 	/// How far the camera stands from what it is looking at: the orbit's own geometry, and so the
 	/// distance the lobby was composed at.
 	///
@@ -122,10 +134,10 @@ public class LobbyCameraMode : CameraMode
 		if ( Input.Pressed( InputButton.FreezeCamera ) )
 			Paused = !Paused;
 
-		if ( Input.Pressed( InputButton.NextIsland ) )
+		if ( !HeldToOneIsland && Input.Pressed( InputButton.NextIsland ) )
 			MoveTo( IslandIndex + 1, islands );
 
-		if ( Input.Pressed( InputButton.PreviousIsland ) )
+		if ( !HeldToOneIsland && Input.Pressed( InputButton.PreviousIsland ) )
 			MoveTo( IslandIndex - 1, islands );
 
 		if ( islands.Count == 0 )
@@ -193,7 +205,27 @@ public class LobbyCameraMode : CameraMode
 	/// arrow buttons and the cursor keys do (see IslandPanel), and the bracket keys too.
 	/// </summary>
 	internal static void Step( int step )
-		=> MoveTo( IslandIndex + step, Entity.All.OfType<LobbyIsland>().OrderBy( island => island.Index ).ToList() );
+	{
+		if ( HeldToOneIsland )
+			return;
+
+		MoveTo( IslandIndex + step, AllIslands() );
+	}
+
+	/// <summary>
+	/// Puts the lobby back on the first island in the running order, which is Lost Kingdom. The
+	/// original does this every time the player slots close, whoever was picked: 0x005e1fa0, called
+	/// with 1 from FrontEnd_ClosePlayerSlots, takes the head of the island list and forgets the park
+	/// that was remembered, rather than walking the list for a name as it does with 0.
+	/// </summary>
+	internal static void SelectFirst() => MoveTo( 0, AllIslands() );
+
+	/// <summary>
+	/// The islands in the order their scripts give, for the static callers. <see cref="Islands()"/> is the
+	/// same list kept by an instance, which is what the camera itself reads every frame.
+	/// </summary>
+	private static List<LobbyIsland> AllIslands()
+		=> Entity.All.OfType<LobbyIsland>().OrderBy( island => island.Index ).ToList();
 
 	/// <summary>
 	/// Drops the camera onto wherever it is currently headed, for DebugConsole - the same path
