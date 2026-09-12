@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace OpenTPW;
 
 /// <summary>
@@ -24,6 +26,7 @@ namespace OpenTPW;
 internal static class SaveFolder
 {
 	private const string ConfigName = "Config.tcf";
+	private const string DisplayName = "opentpw.cfg";
 	private const string UsersFolder = "users";
 	private const string OnlineFolder = "online";
 	private const string PlayerFileName = "gms.dat";
@@ -78,6 +81,93 @@ internal static class SaveFolder
 		catch ( Exception e )
 		{
 			Log.Warning( $"Saves: the options could not be written to {path} - {e.Message}" );
+		}
+	}
+
+	/// <summary>
+	/// Reads save\opentpw.cfg: the settings that are OpenTPW's own, because the original's files have
+	/// nowhere to put them. How the game fills the screen, and the mode full screen asks the display
+	/// for - see <see cref="Display"/>.
+	///
+	/// <para>
+	/// It is a plain text file of its own rather than more fields in Config.tcf, so that the original's
+	/// file stays a file the original can still read: its resolution field has room for three modes and
+	/// its own options screen shows a blank line for anything else. A line is a name and its values,
+	/// and anything unreadable is passed over, so a file from a later version loses only what this
+	/// version does not know.
+	/// </para>
+	/// </summary>
+	public static void LoadDisplay()
+	{
+		if ( Find( DisplayName ) is not { } path )
+			return;
+
+		try
+		{
+			foreach ( var line in SaveFileSystem.ReadAllText( path ).Split( '\n' ) )
+			{
+				var parts = line.Trim().Split( ' ', StringSplitOptions.RemoveEmptyEntries );
+
+				if ( parts.Length < 2 || parts[0].StartsWith( '#' ) )
+					continue;
+
+				switch ( parts[0].ToLowerInvariant() )
+				{
+					case "display":
+						GameOptions.Current.DisplayMode = parts[1].ToLowerInvariant() switch
+						{
+							"fullscreen" => DisplayMode.FullScreen,
+							"borderless" => DisplayMode.BorderlessFullScreen,
+							_ => DisplayMode.Windowed
+						};
+						break;
+
+					case "fullscreen" when parts.Length >= 3
+						&& int.TryParse( parts[1], out var width )
+						&& int.TryParse( parts[2], out var height ):
+
+						var refresh = parts.Length >= 4 && int.TryParse( parts[3], out var rate ) ? rate : 0;
+						GameOptions.Current.FullScreenSize = new VideoMode( width, height, refresh );
+						break;
+				}
+			}
+
+			Log.Info( $"Saves: read the display settings from {path}" );
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"Saves: {path} would not read, so the display settings keep their defaults - {e.Message}" );
+		}
+	}
+
+	/// <summary>Writes save\opentpw.cfg - see <see cref="LoadDisplay"/>. Written with Config.tcf, by the options screen's tick.</summary>
+	public static void SaveDisplay()
+	{
+		var path = Find( DisplayName ) ?? DisplayName;
+		var options = GameOptions.Current;
+
+		var mode = options.DisplayMode switch
+		{
+			DisplayMode.FullScreen => "fullscreen",
+			DisplayMode.BorderlessFullScreen => "borderless",
+			_ => "windowed"
+		};
+
+		try
+		{
+			var text = new StringBuilder()
+				.AppendLine( "# OpenTPW's own settings. The original's Config.tcf beside this one holds the" )
+				.AppendLine( "# options it knows about; these are the ones it has no room for." )
+				.AppendLine( $"display {mode}" )
+				.AppendLine( $"fullscreen {options.FullScreenSize.Width} {options.FullScreenSize.Height} {options.FullScreenSize.RefreshRate}" )
+				.ToString();
+
+			SaveFileSystem.WriteAllBytes( path, Encoding.UTF8.GetBytes( text ) );
+			Log.Info( $"Saves: wrote the display settings to {path}" );
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"Saves: the display settings could not be written to {path} - {e.Message}" );
 		}
 	}
 

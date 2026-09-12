@@ -47,6 +47,9 @@ internal static class Game
 		// The machine's options, which the original reads before it sets anything else up.
 		SaveFolder.LoadConfig();
 
+		// And the ones it has no room for, which are OpenTPW's own - how the game fills the screen.
+		SaveFolder.LoadDisplay();
+
 		// The players in save\users, kept for the whole run as the original keeps them (WinMain, 0x0045aa74)
 		// rather than with the lobby.
 		Players.Roster.Load();
@@ -60,6 +63,11 @@ internal static class Game
 		// Init renderer
 		//
 		Render = new();
+
+		// Now there is a window to put into it. Only when it is not simply a window, so the usual way
+		// of starting does not ask the display for anything at all.
+		if ( GameOptions.Current.DisplayMode != DisplayMode.Windowed )
+			Display.Apply( Render.Window, GameOptions.Current.DisplayMode, GameOptions.Current.FullScreenSize );
 
 		//
 		// Everything between here and the lobby's first frame happens behind the loading screen,

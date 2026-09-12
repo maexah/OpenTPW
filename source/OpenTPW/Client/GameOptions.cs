@@ -29,6 +29,11 @@ namespace OpenTPW;
 /// (<see cref="ConfigFile"/>, through <see cref="SaveFolder"/>). The other volumes and the seven switches
 /// belong to the player, in their gms.dat (<see cref="PlayerOptions"/>), with the movie volume again - the
 /// player's copy wins when they are picked. Every gms.dat written takes the options as they stand.
+/// <para>
+/// The two that are OpenTPW's own - <see cref="DisplayMode"/> and <see cref="FullScreenSize"/> - go in a
+/// third file, save\opentpw.cfg (<see cref="SaveFolder.LoadDisplay"/>), rather than into fields the
+/// original's own file has no room for. That way Config.tcf stays a file the original can still read.
+/// </para>
 /// </para>
 /// </summary>
 internal sealed class GameOptions
@@ -39,8 +44,27 @@ internal sealed class GameOptions
 	/// <summary>+0x00: rendering on the 3D card rather than in software. <b>Dead</b> for now, by choice.</summary>
 	public bool CardRendering { get; set; } = true;
 
-	/// <summary>+0x04: 512 x 384, 640 x 480 or 800 x 600, as 0, 1 or 2. <b>Decorative</b> for now, by choice.</summary>
+	/// <summary>
+	/// +0x04: 512 x 384, 640 x 480 or 800 x 600, as 0, 1 or 2.
+	///
+	/// This is the original's own field and it only has room for those three. What OpenTPW is really
+	/// set to lives in <see cref="DisplayMode"/> and <see cref="FullScreenSize"/>, which are kept in a
+	/// file of its own; this one is written back holding whichever of the original's three is nearest,
+	/// so save\Config.tcf stays a file the original can still read - see <see cref="ToConfigFile"/>.
+	/// </summary>
 	public int ScreenResolution { get; set; } = 1;
+
+	/// <summary>
+	/// How the game fills the screen. <b>OpenTPW's own</b>: the original has no options row for it and
+	/// no text for one, and chooses between its two ways at startup instead (see <see cref="Display"/>).
+	/// </summary>
+	public DisplayMode DisplayMode { get; set; } = DisplayMode.Windowed;
+
+	/// <summary>
+	/// The mode <see cref="DisplayMode.FullScreen"/> asks the display for. <b>OpenTPW's own.</b> A size
+	/// of nothing means the display's current mode, which is what the first run gets.
+	/// </summary>
+	public VideoMode FullScreenSize { get; set; }
 
 	/// <summary>+0x08: low, medium or high, as 0, 1 or 2.</summary>
 	public int GraphicsQuality { get; set; } = 1;
@@ -107,11 +131,17 @@ internal sealed class GameOptions
 		AudioQuality = file.AudioQuality;
 	}
 
-	/// <summary>The machine's options, as save\Config.tcf holds them.</summary>
+	/// <summary>
+	/// The machine's options, as save\Config.tcf holds them.
+	///
+	/// The resolution is held inside the three the original's own field can express. Its options screen
+	/// maps only 0, 1 and 2 to text and shows a blank line for anything else, so writing the real
+	/// resolution there would leave a file the original cannot show - see <see cref="ScreenResolution"/>.
+	/// </summary>
 	public ConfigFile ToConfigFile() => new()
 	{
 		CardRendering = CardRendering ? 1 : 0,
-		ScreenResolution = ScreenResolution,
+		ScreenResolution = Math.Clamp( ScreenResolution, 0, 2 ),
 		GraphicsQuality = GraphicsQuality,
 		VideoCard = SecondaryVideoCard ? 1 : 0,
 		MovieOn = MovieOn,

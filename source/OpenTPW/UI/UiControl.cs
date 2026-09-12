@@ -380,6 +380,25 @@ internal sealed class UiSlider : UiControl
 	/// <summary>What takes the pointer.</summary>
 	public UiRect HitRect { get; init; }
 
+	/// <summary>
+	/// Whether it can be moved at all. A slider that is switched off shows its thumb in the disabled
+	/// part of its mesh and lets the pointer through, the way a disabled button does: the options
+	/// screen's resolution only means anything in full screen, so elsewhere it is shown but dead.
+	/// </summary>
+	public bool Enabled
+	{
+		get => _enabled;
+		set
+		{
+			_enabled = value;
+
+			if ( Thumb != null )
+				Thumb.Enabled = value;
+		}
+	}
+
+	private bool _enabled = true;
+
 	public int Minimum { get; init; }
 
 	public int Maximum { get; init; } = 100;
@@ -391,7 +410,7 @@ internal sealed class UiSlider : UiControl
 	/// <summary>The pointer or the wheel changed the value - message 0x800.</summary>
 	public Action? Moved { get; set; }
 
-	internal override bool TakesMouse => true;
+	internal override bool TakesMouse => Enabled;
 
 	internal override PixelRect HitArea => VirtualScreen.ToPixels( HitRect, Anchor, VerticalAnchor );
 
@@ -399,6 +418,7 @@ internal sealed class UiSlider : UiControl
 	{
 		Thumb = Add( thumb );
 		thumb.Slider = this;
+		thumb.Enabled = _enabled;
 		PlaceThumb();
 		return thumb;
 	}
@@ -410,13 +430,22 @@ internal sealed class UiSlider : UiControl
 		PlaceThumb();
 	}
 
-	/// <summary>The mouse wheel turned while the pointer was over it.</summary>
-	internal void Scroll( float notches ) => MoveBy( -(int)notches * Step );
+	/// <summary>
+	/// The mouse wheel turned while the pointer was over it, or over its thumb.
+	///
+	/// The thumb takes the pointer whether or not the slider is switched off, as every button does, so
+	/// the wheel arrives here having gone round the hit test that the slider itself refuses.
+	/// </summary>
+	internal void Scroll( float notches )
+	{
+		if ( Enabled )
+			MoveBy( -(int)notches * Step );
+	}
 
 	/// <summary>A press on the slider but not on the thumb: a page towards the pointer.</summary>
 	internal override void PointerPressed( float x, float y )
 	{
-		if ( Thumb == null )
+		if ( Thumb == null || !Enabled )
 			return;
 
 		MoveBy( VirtualScreen.ToVirtualX( x, Anchor ) < Thumb.Rect.Left ? -Page : Page );
@@ -485,9 +514,21 @@ internal sealed class UiSliderThumb : UiButton
 
 	internal override bool Clicks => false;
 
-	internal override void PointerPressed( float x, float y ) => Slider?.Grab( x );
+	internal override void PointerPressed( float x, float y )
+	{
+		if ( Enabled )
+			Slider?.Grab( x );
+	}
 
-	internal override void PointerDragged( float x, float y ) => Slider?.Drag( x );
+	internal override void PointerDragged( float x, float y )
+	{
+		if ( Enabled )
+			Slider?.Drag( x );
+	}
 
-	internal override void PointerReleased() => Slider?.LetGo();
+	internal override void PointerReleased()
+	{
+		if ( Enabled )
+			Slider?.LetGo();
+	}
 }

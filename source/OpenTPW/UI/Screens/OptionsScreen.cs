@@ -20,11 +20,13 @@ namespace OpenTPW.UI;
 /// arrows turn Rotation and Scroll between their two settings, and switch rendering and the video card.
 /// </para>
 /// <para>
-/// <b>Sliders</b> run from 0 to 100. Screen resolution and graphics quality show the setting times 50,
-/// and take back the slider times two over 100 in whole numbers: so 0 to 49 is the first setting, 50 to
-/// 99 the second, and only 100 the third. In software rendering graphics quality takes back only the
-/// slider over 100, so it goes no higher than medium, and switching rendering puts it through that again
-/// (0x004a2e90). The volumes and audio quality show their number.
+/// <b>Sliders</b> run from 0 to 100 in the original. Graphics quality shows the setting times 50 and
+/// takes back the slider times two over 100 in whole numbers, so 0 to 49 is the first setting, 50 to 99
+/// the second and only 100 the third; in software rendering it takes back only the slider over 100, so
+/// it goes no higher than medium (0x004a2e90). The volumes and audio quality show their number.
+/// <b>Screen resolution does not run to 100 here.</b> It steps through the modes the display says it
+/// has (<see cref="Display.Modes"/>), so its range is one less than however many there are and one
+/// notch of the wheel is one mode, rather than a hundredth of a range of three.
 /// </para>
 /// <para>
 /// <b>Changes are made as they happen.</b> A switch or arrow changes its option as it is clicked, and a
@@ -50,14 +52,27 @@ namespace OpenTPW.UI;
 /// or a graphics quality whose detail file needs a restart (0x00423bc0), shows RESTART GAME (UITEXT 403)
 /// instead of closing. A change of audio quality across one of sound.sam's thresholds sets the sound
 /// library up again (0x0051b920).</item>
+/// <item>The display and the resolution are put into effect by the tick instead, and need no restart:
+/// the window here is resized while the game runs. They are the only settings the tick acts on rather
+/// than merely keeping, and it acts only when one of them actually changed, so a tick that moved a
+/// volume leaves the screen alone.</item>
 /// </list>
 /// </para>
 /// <para>
-/// <b>Dead for now, by choice:</b> 3D card or software rendering and the video card do nothing, and
-/// screen resolution only shows its setting. With one video card counted, the video card never leaves
-/// Primary, as on a machine with one (0x004a3480). Audio quality, Tutorial, Confirmations, RMB cancel,
-/// Rotation and Scroll are kept, but nothing reads them yet - they belong to the sound library's set-up
-/// and to parks.
+/// <b>The rendering row is now the display row.</b> The original has no row for windowed or full
+/// screen and no text for one - it chose between its two ways as it started and never showed the
+/// choice (see <see cref="Display"/>) - and on a modern machine "3D card rendering or software" is a
+/// choice about a renderer that will never exist here. So that row carries the display mode instead,
+/// which keeps the screen's layout exactly the original's compiled stream. Rendering itself is no
+/// longer reachable from the interface; <see cref="GameOptions.CardRendering"/> is still read from
+/// Config.tcf and written back to it, and still caps graphics quality, so nothing about the original's
+/// file changes.
+/// <para>
+/// <b>Still dead, by choice:</b> the video card does nothing, and with one card counted it never
+/// leaves Primary, as on a machine with one (0x004a3480). Audio quality, Tutorial, Confirmations, RMB
+/// cancel, Rotation and Scroll are kept, but nothing reads them yet - they belong to the sound
+/// library's set-up and to parks.
+/// </para>
 /// </para>
 /// <para>
 /// <b>Engine and content.</b> The screen is engine: one screen for the lobby and parks, opening and closing
@@ -85,8 +100,11 @@ internal sealed class OptionsScreen : UiWindow
 	/// <summary>The green screen everything sits on, over the dimmed window - see the constructor.</summary>
 	private readonly UiControl _screen;
 
-	private readonly UiControl _rendering;
+	private readonly UiControl _displayLine;
 	private readonly UiControl _videoCard;
+
+	/// <summary>The sizes the display can be put into, which the resolution slider steps through.</summary>
+	private readonly IReadOnlyList<VideoMode> _modes;
 	private readonly UiControl _advisorLine;
 	private readonly UiControl _tutorialLine;
 	private readonly UiControl _popupHelpLine;
@@ -146,6 +164,10 @@ internal sealed class OptionsScreen : UiWindow
 		Modal = true;
 		Pauses = true;
 
+		// Asked once, as the screen opens: the slider steps through these, so it has to know how many
+		// there are before it is built.
+		_modes = Window.Current is { } display ? Display.Modes( display ) : [];
+
 		// f_screen is 4:3 artwork - a green field of waves with its border painted in - so it is
 		// drawn at the interface's own shape rather than stretched over the window. That leaves the
 		// lobby showing down both sides of it on a window of any other shape, which is what every
@@ -163,7 +185,7 @@ internal sealed class OptionsScreen : UiWindow
 
 		// In the order the layout stream has them, but for the buttons, which 0x004a3a30 raises over
 		// everything else after loading - they sit on the panels.
-		_rendering = Panel( 0x1d4c8, new UiRect( 57, 167, 668, 316 ), new UiRect( 124, 218, 424, 263 ) );
+		_displayLine = Panel( 0x1d4c8, new UiRect( 57, 167, 668, 316 ), new UiRect( 124, 218, 424, 263 ) );
 		_videoCard = Panel( 0x1d4ca, new UiRect( 675, 167, 1286, 316 ), new UiRect( 739, 218, 1039, 263 ) );
 		_advisorLine = Panel( 0x1d4cb, new UiRect( 1331, 167, 1964, 316 ), new UiRect( 1401, 215, 1701, 260 ) );
 		_tutorialLine = Panel( 0x1d4cc, new UiRect( 1331, 323, 1964, 472 ), new UiRect( 1401, 371, 1701, 416 ) );
@@ -183,7 +205,8 @@ internal sealed class OptionsScreen : UiWindow
 			TextShadow = true
 		} );
 
-		(_resolution, _resolutionLine) = Slider( 0x1d4d5, new UiRect( 57, 323, 1289, 472 ), "f_optpanel3", 361, 364, 375, 331, ResolutionMoved );
+		// One notch of this one is one mode, rather than one hundredth of a range of three.
+		(_resolution, _resolutionLine) = Slider( 0x1d4d5, new UiRect( 57, 323, 1289, 472 ), "f_optpanel3", 361, 364, 375, 331, ResolutionMoved, Math.Max( _modes.Count - 1, 0 ) );
 		(_quality, _qualityLine) = Slider( 0x1d4d6, new UiRect( 57, 479, 1289, 628 ), "f_optpanel3", 518, 520, 532, 487, QualityMoved );
 		(_effects, _effectsLine) = Slider( 0x1d4d8, new UiRect( 52, 838, 1289, 988 ), "f_optpanel2", 877, 880, 891, 845, EffectsMoved );
 		(_music, _musicLine) = Slider( 0x1d4da, new UiRect( 52, 994, 1289, 1144 ), "f_optpanel2", 1033, 1035, 1047, 1004, MusicMoved );
@@ -199,7 +222,7 @@ internal sealed class OptionsScreen : UiWindow
 
 		(_audioQuality, _audioQualityLine) = Slider( 0x1d4e0, new UiRect( 57, 638, 1289, 787 ), "f_optpanel3", 677, 679, 691, 646, AudioQualityMoved );
 
-		Button( 0x1d4d2, new UiRect( 521, 190, 624, 292 ), "b_on2", SwitchRendering );
+		Button( 0x1d4d2, new UiRect( 521, 190, 624, 292 ), "b_on2", SwitchDisplayMode );
 		Button( 0x1d4d3, new UiRect( 1140, 190, 1242, 292 ), "b_on2", SwitchVideoCard );
 
 		_advisor = Switch( 0x1d4c1, new UiRect( 1786, 190, 1930, 292 ), on => ShowSwitch( _advisorLine, UIStrings.Advisor, Options.Advisor = on ) );
@@ -249,7 +272,7 @@ internal sealed class OptionsScreen : UiWindow
 	/// <summary>Shows every option as it stands - the second half of 0x004a3a30.</summary>
 	private void ShowOptions()
 	{
-		ShowRendering();
+		ShowDisplay();
 		ShowVideoCard();
 
 		_audioQuality.SetValue( Options.AudioQuality );
@@ -260,7 +283,7 @@ internal sealed class OptionsScreen : UiWindow
 		ShowVolume( _speech, _speechSwitch, Options.SpeechVolume, Options.SpeechOn, SpeechMoved );
 		ShowVolume( _movie, _movieSwitch, Options.MovieVolume, Options.MovieOn, MovieMoved );
 
-		_resolution.SetValue( Options.ScreenResolution * 100 / 2 );
+		_resolution.SetValue( NearestMode( Options.FullScreenSize ) );
 		ShowResolution();
 
 		_quality.SetValue( Options.GraphicsQuality * 100 / 2 );
@@ -281,6 +304,17 @@ internal sealed class OptionsScreen : UiWindow
 	{
 		Options.ApplySound();
 		SaveFolder.SaveConfig();
+		SaveFolder.SaveDisplay();
+
+		// The display is changed here rather than as the row is clicked, so that stepping through the
+		// modes does not take the screen with it, and a tick that changed nothing about the display
+		// leaves the window alone entirely.
+		if ( (Options.DisplayMode != _before.DisplayMode || Options.FullScreenSize != _before.FullScreenSize)
+			&& Window.Current is { } window )
+		{
+			Display.Apply( window, Options.DisplayMode, Options.FullScreenSize );
+		}
+
 		Log.Info( "Options: kept" );
 		Stack.Close( this );
 	}
@@ -294,15 +328,18 @@ internal sealed class OptionsScreen : UiWindow
 		Stack.Close( this );
 	}
 
-	/// <summary>3D card rendering or software (0x1d4d2): graphics quality goes through the slider again for its new limit.</summary>
-	private void SwitchRendering()
+	/// <summary>The display row's arrow (0x1d4d2): round the three ways the game can fill the screen.</summary>
+	private void SwitchDisplayMode()
 	{
-		Options.CardRendering = !Options.CardRendering;
+		Options.DisplayMode = Options.DisplayMode switch
+		{
+			DisplayMode.Windowed => DisplayMode.FullScreen,
+			DisplayMode.FullScreen => DisplayMode.BorderlessFullScreen,
+			_ => DisplayMode.Windowed
+		};
 
-		_quality.SetValue( Options.GraphicsQuality * 100 / 2 );
-		QualityMoved();
-
-		ShowRendering();
+		ShowDisplay();
+		ShowResolution();
 	}
 
 	/// <summary>The video card (0x1d4d3): to the secondary if there is one, back to the primary if not.</summary>
@@ -318,8 +355,50 @@ internal sealed class OptionsScreen : UiWindow
 
 	private void ResolutionMoved()
 	{
-		Options.ScreenResolution = _resolution.Value * 2 / 100;
+		if ( Chosen() is { } mode )
+		{
+			Options.FullScreenSize = mode;
+
+			// And the nearest of the original's own three into the field its Config.tcf owns, so that
+			// file still says something true about the game - see GameOptions.ScreenResolution.
+			Options.ScreenResolution = mode.Width <= 512 ? 0 : mode.Width <= 640 ? 1 : 2;
+		}
+
 		ShowResolution();
+	}
+
+	/// <summary>The mode the slider is sitting on, or nothing if the display offered none at all.</summary>
+	private VideoMode? Chosen()
+		=> _modes.Count == 0 ? null : _modes[Math.Clamp( _resolution.Value, 0, _modes.Count - 1 )];
+
+	/// <summary>
+	/// Where in the list a size sits: itself if the display has it, otherwise whichever mode is nearest
+	/// it by area. A size of nothing - a game that has never been put into full screen - starts at the
+	/// mode the desktop is already in, which is what someone switching to full screen expects.
+	/// </summary>
+	private int NearestMode( VideoMode wanted )
+	{
+		if ( _modes.Count == 0 )
+			return 0;
+
+		if ( wanted.Width <= 0 || wanted.Height <= 0 )
+			wanted = (Window.Current is { } window ? Display.Desktop( window ) : null) ?? _modes[^1];
+
+		var best = 0;
+		var closest = long.MaxValue;
+
+		for ( int i = 0; i < _modes.Count; ++i )
+		{
+			var difference = Math.Abs( ((long)_modes[i].Width * _modes[i].Height) - ((long)wanted.Width * wanted.Height) );
+
+			if ( difference < closest )
+			{
+				closest = difference;
+				best = i;
+			}
+		}
+
+		return best;
 	}
 
 	private void QualityMoved()
@@ -361,23 +440,46 @@ internal sealed class OptionsScreen : UiWindow
 		_audioQualityLine.Text = Line( UIStrings.AudioQuality, $" {_audioQuality.Value} %" );
 	}
 
-	private void ShowRendering()
-		=> _rendering.Text = Localization.Get( Options.CardRendering ? UIStrings.GPURendering : UIStrings.SoftwareRendering );
+	/// <summary>
+	/// The display row. Its words are OpenTPW's own: the original's UITEXT has nothing for windowed or
+	/// full screen, because it chose between its two ways as it started and never showed the choice
+	/// (see <see cref="Display"/>), so these are written in the style of the lines around them - the
+	/// same way the delete box's missing question is.
+	/// </summary>
+	private void ShowDisplay()
+	{
+		_displayLine.Text = $"Display: {Name( Options.DisplayMode )}";
+
+		// The resolution is only a choice in full screen - see ShowResolution.
+		_resolution.Enabled = Options.DisplayMode == DisplayMode.FullScreen;
+
+		static string Name( DisplayMode mode ) => mode switch
+		{
+			DisplayMode.FullScreen => "Full screen",
+			DisplayMode.BorderlessFullScreen => "Borderless full screen",
+			_ => "Windowed"
+		};
+	}
 
 	private void ShowVideoCard()
 		=> _videoCard.Text = Line( UIStrings.Videocard, Localization.Get( Options.SecondaryVideoCard && VideoCards > 1 ? UIStrings.Secondary : UIStrings.Primary ) );
 
+	/// <summary>
+	/// The resolution line. It is only a choice in full screen, where the display is given a mode of
+	/// its own. Borderless full screen takes whatever mode the desktop is in, and a window is whatever
+	/// size it has been dragged to, so in both of those the line says what is being used rather than
+	/// offering something that would do nothing.
+	/// </summary>
 	private void ShowResolution()
 	{
-		var name = Options.ScreenResolution switch
+		var text = Options.DisplayMode switch
 		{
-			0 => UIStrings.Resolution512x384,
-			1 => UIStrings.Resolution640x480,
-			2 => UIStrings.Resolution800x600,
-			_ => UIStrings.Blank
+			DisplayMode.FullScreen => Chosen()?.ToString(),
+			DisplayMode.BorderlessFullScreen => (Window.Current is { } window ? Display.Desktop( window ) : null)?.ToString(),
+			_ => $"{Screen.Size.X} x {Screen.Size.Y}"
 		};
 
-		_resolutionLine.Text = Line( UIStrings.ScreenResolution, Localization.Get( name ) );
+		_resolutionLine.Text = Line( UIStrings.ScreenResolution, $" {text ?? "-"}" );
 	}
 
 	private void ShowQuality()
@@ -433,13 +535,14 @@ internal sealed class OptionsScreen : UiWindow
 	/// what takes the pointer, 962 to 1281; so each is given only the tops that differ, of the track, the
 	/// thumb, the line and the pointer's rectangle.
 	/// </summary>
-	private (UiSlider Slider, UiControl Line) Slider( int id, UiRect rect, string mesh, int trackTop, int thumbTop, int lineTop, int hitTop, Action moved )
+	private (UiSlider Slider, UiControl Line) Slider( int id, UiRect rect, string mesh, int trackTop, int thumbTop, int lineTop, int hitTop, Action moved, int maximum = 100 )
 	{
 		var slider = _screen.Add( new UiSlider
 		{
 			Id = id,
 			Rect = rect,
 			Mesh = UiMesh.Get( mesh ),
+			Maximum = maximum,
 			Track = new UiRect( 990, trackTop, 1248, trackTop + 71 ),
 			HitRect = new UiRect( 962, hitTop, 1281, hitTop + 135 )
 		} );
