@@ -177,13 +177,16 @@ public sealed class WadArchive : IArchive
 			if ( !string.IsNullOrEmpty( currentSubdirectory ) )
 			{
 				// Find a subdirectory object..
-				var splitPath = currentSubdirectory.Split( "\\" );
+				var splitPath = SplitPath( currentSubdirectory );
 
 				foreach ( string dir in splitPath )
 				{
 					ArchiveDirectory newSubDir;
 
-					newSubDir = subDirectory.Children.OfType<ArchiveDirectory>().FirstOrDefault( x => x.Name == dir );
+					// The same comparison the tree is read back with. It used to be built with an ordinal,
+					// case-sensitive one and read with a case-insensitive one, so "Generic" and "generic"
+					// became two directories going in and one coming out.
+					newSubDir = subDirectory.Children.OfType<ArchiveDirectory>().FirstOrDefault( x => SameName( x.Name, dir ) );
 
 					if ( newSubDir == null )
 					{
@@ -221,6 +224,23 @@ public sealed class WadArchive : IArchive
 		ReadArchive();
 	}
 
+	/// <summary>
+	/// Whether two names in the archive are the same name.
+	///
+	/// Without regard to case, because the tree is built from names written where case never mattered:
+	/// esprites.wad holds "Generic\Particles\SPR_PA.TPC" while the caller that wants it asks for a ".tpc".
+	/// Ordinal, so the answer is the same wherever the game is run - a culture-sensitive compare makes "LIPS"
+	/// and "lips" different strings under a Turkish locale, where "I" lower-cases to a dotless "ı".
+	/// </summary>
+	private static bool SameName( string? a, string? b ) => string.Equals( a, b, StringComparison.OrdinalIgnoreCase );
+
+	/// <summary>
+	/// The parts of a path inside the archive. Both separators are taken: the archive's own names use "\",
+	/// paths arriving through <see cref="BaseFileSystem"/> use whichever the host uses, and a caller spelling
+	/// one out by hand may use either.
+	/// </summary>
+	private static string[] SplitPath( string path ) => path.Split( ['\\', '/'], StringSplitOptions.RemoveEmptyEntries );
+
 	private T GetItem<T>( string internalPath ) where T : ArchiveItem
 	{
 		var internalDirectory = Root;
@@ -228,7 +248,7 @@ public sealed class WadArchive : IArchive
 		if ( internalPath == "" )
 			throw new Exception( $"Path was empty" );
 
-		var splitPath = internalPath.Split( Path.DirectorySeparatorChar );
+		var splitPath = SplitPath( internalPath );
 
 		for ( int i = 0; i < splitPath.Length; i++ )
 		{
@@ -236,10 +256,10 @@ public sealed class WadArchive : IArchive
 
 			if ( i == splitPath.Length - 1 )
 			{
-				return internalDirectory.Children.OfType<T>().FirstOrDefault( x => x.Name.Equals( dir, StringComparison.CurrentCultureIgnoreCase ) );
+				return internalDirectory.Children.OfType<T>().FirstOrDefault( x => SameName( x.Name, dir ) );
 			}
 
-			internalDirectory = internalDirectory.Children.OfType<ArchiveDirectory>().First( x => x.Name.Equals( dir, StringComparison.CurrentCultureIgnoreCase ) );
+			internalDirectory = internalDirectory.Children.OfType<ArchiveDirectory>().First( x => SameName( x.Name, dir ) );
 		}
 
 		throw new FileNotFoundException( $"File not found: {internalPath}" );
@@ -251,11 +271,9 @@ public sealed class WadArchive : IArchive
 
 		if ( internalPath != "" )
 		{
-			var splitPath = internalPath.Split( Path.DirectorySeparatorChar );
-
-			foreach ( string dir in splitPath )
+			foreach ( string dir in SplitPath( internalPath ) )
 			{
-				internalDirectory = internalDirectory.Children.OfType<ArchiveDirectory>().FirstOrDefault( x => x.Name.Equals( dir, StringComparison.CurrentCultureIgnoreCase ) );
+				internalDirectory = internalDirectory?.Children.OfType<ArchiveDirectory>().FirstOrDefault( x => SameName( x.Name, dir ) );
 			}
 		}
 

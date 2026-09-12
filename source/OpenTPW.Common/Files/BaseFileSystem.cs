@@ -1,12 +1,40 @@
-﻿using System.Text;
+﻿using System.Collections.Concurrent;
+using System.Text;
 
 namespace OpenTPW;
 
 public class BaseFileSystem
 {
 	private readonly string basePath;
-	private readonly Dictionary<string, Type> archiveHandlers = new();
-	private readonly Dictionary<string, IArchive> archiveCache = new();
+
+	/// <summary>The base directory without a trailing separator, so one directory has one name to cache under.</summary>
+	private readonly string baseDirectory;
+
+	/// <summary>
+	/// Extensions are matched without regard to case, because the game's own are not consistent: every archive
+	/// it ships is lower case except data\global\Speech\lips.WAD, the advisor's lip sync.
+	/// </summary>
+	private readonly Dictionary<string, Type> archiveHandlers = new( StringComparer.OrdinalIgnoreCase );
+
+	private readonly ConcurrentDictionary<string, IArchive> archiveCache = new();
+
+	/// <summary>
+	/// What each directory really holds, keyed by the directory's absolute path: a name as it might be asked
+	/// for, mapped to the name the directory really uses. See <see cref="Resolve"/> for why.
+	///
+	/// <para>
+	/// Where a directory holds two names differing only by case there is no one answer, so the entry holds null
+	/// and the name is used exactly as it was asked for - on a filesystem where case matters that is the only
+	/// spelling that can be meant.
+	/// </para>
+	/// <para>
+	/// A listing is dropped when this class writes into the directory (<see cref="Forget"/>), which is the only
+	/// thing it does that changes what one holds. It is a ConcurrentDictionary because the ModKit reads through
+	/// this object from a background task; each listing is built once and never changed, so two threads
+	/// building the same one race only to store the same answer.
+	/// </para>
+	/// </summary>
+	private readonly ConcurrentDictionary<string, Dictionary<string, string?>> listings = new();
 
 	/// <summary>
 	/// Maps a directory that is already there.
@@ -22,6 +50,7 @@ public class BaseFileSystem
 	public BaseFileSystem( string relativePath )
 	{
 		basePath = Path.GetFullPath( relativePath, Directory.GetCurrentDirectory() );
+		baseDirectory = Path.TrimEndingDirectorySeparator( basePath );
 
 		if ( !Directory.Exists( basePath ) )
 			throw new DirectoryNotFoundException( $"There is no directory at {basePath}" );
@@ -73,6 +102,9 @@ public class BaseFileSystem
 		if ( !Directory.Exists( directoryName ) )
 			Directory.CreateDirectory( directoryName );
 
+		// What these directories hold is about to change - see Listing.
+		Forget( absolutePath );
+
 		// Create rather than File.OpenWrite, which keeps a file's old length: writing a shorter file over
 		// a longer one would leave the longer one's tail on the end.
 		return File.Open( absolutePath, FileMode.Create, FileAccess.Write );
@@ -99,6 +131,9 @@ public class BaseFileSystem
 		var temporary = absolutePath + ".tmp";
 		File.WriteAllBytes( temporary, bytes );
 		File.Move( temporary, absolutePath, overwrite: true );
+
+		// What these directories hold has just changed - see Listing.
+		Forget( absolutePath );
 	}
 
 	public Stream OpenRead( string relativePath )
@@ -168,13 +203,19 @@ public class BaseFileSystem
 		if ( directories )
 		{
 			var fileSystemDirectories = Directory.GetDirectories( absolutePath );
-			var fileSystemArchives = Directory.GetFiles( absolutePath ).Where( x => archiveHandlers.Keys.Contains( Path.GetExtension( x ) ) ).Select( x => x[..x.LastIndexOf( "." )] );
+
+			// An archive stands in for a directory of the same name, so it is listed as one, without its
+			// extension. Path.ChangeExtension says that in one word and takes it off the file's own name,
+			// where LastIndexOf( "." ) is the culture-sensitive overload and searches the whole path.
+			var fileSystemArchives = Directory.GetFiles( absolutePath )
+				.Where( x => archiveHandlers.ContainsKey( Path.GetExtension( x ) ) )
+				.Select( x => Path.ChangeExtension( x, null ) );
 
 			return fileSystemDirectories.Concat( fileSystemArchives ).ToArray();
 		}
 		else
 		{
-			return Directory.GetFiles( absolutePath ).Where( x => !archiveHandlers.Keys.Contains( Path.GetExtension( x ) ) ).ToArray();
+			return Directory.GetFiles( absolutePath ).Where( x => !archiveHandlers.ContainsKey( Path.GetExtension( x ) ) ).ToArray();
 		}
 	}
 
@@ -198,44 +239,24 @@ public class BaseFileSystem
 
 	private (string ArchivePath, string InternalPath) FindArchivePath( string path )
 	{
-		var parts = path.Split( Path.DirectorySeparatorChar );
-		var currentPath = new StringBuilder();
+		// Only inside our own tree. Nothing above the base directory is ours to look in, and the parts of an
+		// absolute path above it can never name one of the game's archives.
+		if ( !Inside( path ) )
+			return (string.Empty, path);
 
-		foreach ( var part in parts )
+		var parts = path[baseDirectory.Length..]
+			.Split( Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries );
+
+		var directory = baseDirectory;
+
+		for ( int i = 0; i < parts.Length; ++i )
 		{
-			if ( part.Length == 0 )
-			{
-				// Leading separator of a rooted path (e.g. "/home/..." on Linux) -
-				// preserve it so currentPath stays a valid prefix of the original path.
-				if ( currentPath.Length == 0 )
-					currentPath.Append( Path.DirectorySeparatorChar );
+			// An archive standing in for this part of the path, which is how a .wad is a directory as far as
+			// everything above here is concerned.
+			if ( ArchiveName( directory, parts[i] ) is { } archive )
+				return (Path.Join( directory, archive ), string.Join( Path.DirectorySeparatorChar, parts[(i + 1)..] ));
 
-				continue;
-			}
-
-			if ( currentPath.Length > 0 && currentPath[currentPath.Length - 1] != Path.DirectorySeparatorChar )
-			{
-				currentPath.Append( Path.DirectorySeparatorChar );
-			}
-
-			currentPath.Append( part );
-
-			foreach ( var handler in archiveHandlers )
-			{
-				var extension = handler.Key;
-				var potentialArchivePath = $"{currentPath}{extension}";
-
-				if ( archiveHandlers.ContainsKey( extension ) && File.Exists( potentialArchivePath ) )
-				{
-					var remainingPath = path.Substring( currentPath.Length );
-					return (potentialArchivePath, remainingPath.TrimStart( Path.DirectorySeparatorChar ));
-				}
-			}
-
-			if ( Directory.Exists( currentPath.ToString() ) )
-			{
-				continue;
-			}
+			directory = Path.Join( directory, parts[i] );
 		}
 
 		return (string.Empty, path);
@@ -247,11 +268,118 @@ public class BaseFileSystem
 			.Replace( '/', Path.DirectorySeparatorChar );
 
 		// Already an absolute path within our base directory (e.g. returned by
-		// Directory.GetFiles/GetDirectories) - use as-is rather than combining again.
-		if ( Path.IsPathRooted( normalizedPath ) && normalizedPath.StartsWith( basePath, StringComparison.OrdinalIgnoreCase ) )
+		// Directory.GetFiles/GetDirectories) - use as-is rather than combining again, and without matching it
+		// against the disk, because a name the disk itself gave us is already spelled the way the disk spells
+		// it. The test is ordinal: where case matters, a path differing from the base only by case is not
+		// inside the base at all, and saying that it is hands back a path that cannot be opened.
+		if ( Path.IsPathRooted( normalizedPath ) && Inside( normalizedPath ) )
 			return normalizedPath;
 
-		return Path.Combine( basePath, normalizedPath.TrimStart( Path.DirectorySeparatorChar ) );
+		return Resolve( Path.Combine( basePath, normalizedPath.TrimStart( Path.DirectorySeparatorChar ) ) );
+	}
+
+	/// <summary>
+	/// Whether a path names something inside the mapped directory. The whole name has to match, not just the
+	/// front of it: without that test a sibling called "dataX" counts as being inside "data".
+	/// </summary>
+	private bool Inside( string path )
+		=> path.StartsWith( baseDirectory, StringComparison.Ordinal )
+			&& (path.Length == baseDirectory.Length || path[baseDirectory.Length] == Path.DirectorySeparatorChar);
+
+	/// <summary>
+	/// The path as the disk really spells it.
+	///
+	/// <para>
+	/// The game's data was laid out where case never mattered and it shows: the advisor's lip sync is
+	/// data\global\Speech\lips.WAD where every other archive is lower case, and the sound maps ask for
+	/// "Sound\Sfx" where the folder is "sound". Windows answered all of it. Rather than lower-casing - which
+	/// would break the names that <i>are</i> spelled right - each part of the path is matched against what its
+	/// parent directory really holds. A part matching nothing is kept exactly as it was asked for, so the rest
+	/// of the path is left alone: it is either inside an archive or about to be written, and a file being
+	/// written must keep the name its caller chose.
+	/// </para>
+	/// </summary>
+	private string Resolve( string absolutePath )
+	{
+		if ( !Inside( absolutePath ) )
+			return absolutePath;
+
+		var rest = absolutePath[baseDirectory.Length..].TrimStart( Path.DirectorySeparatorChar );
+
+		if ( rest.Length == 0 )
+			return absolutePath;
+
+		var resolved = baseDirectory;
+
+		foreach ( var part in rest.Split( Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries ) )
+			resolved = Path.Join( resolved, RealName( resolved, part ) );
+
+		return resolved;
+	}
+
+	/// <summary>
+	/// The name <paramref name="directory"/> really holds for <paramref name="name"/>, or the name as it was
+	/// asked for when the directory holds nothing like it, or holds more than one thing like it.
+	/// </summary>
+	private string RealName( string directory, string name )
+		=> Listing( directory ).TryGetValue( name, out var real ) ? real ?? name : name;
+
+	/// <summary>
+	/// The name of the archive standing in for <paramref name="stem"/> in <paramref name="directory"/>, or null
+	/// if there is none.
+	///
+	/// The extension is matched against what the directory really holds rather than tested with File.Exists, so
+	/// lips.WAD is found by the same lookup as every lower-case archive and nothing has to be registered twice;
+	/// and a directory holding no archive at all answers without a syscall.
+	/// </summary>
+	private string? ArchiveName( string directory, string stem )
+	{
+		var listing = Listing( directory );
+
+		foreach ( var extension in archiveHandlers.Keys )
+		{
+			if ( listing.TryGetValue( stem + extension, out var real ) )
+				return real ?? stem + extension;
+		}
+
+		return null;
+	}
+
+	/// <summary>The names <paramref name="directory"/> really holds - see <see cref="listings"/>.</summary>
+	private Dictionary<string, string?> Listing( string directory )
+	{
+		return listings.GetOrAdd( directory, static path =>
+		{
+			var names = new Dictionary<string, string?>( StringComparer.OrdinalIgnoreCase );
+
+			if ( !Directory.Exists( path ) )
+				return names;
+
+			foreach ( var entry in Directory.EnumerateFileSystemEntries( path ) )
+			{
+				var name = Path.GetFileName( entry );
+
+				if ( !names.TryAdd( name, name ) )
+					names[name] = null;
+			}
+
+			return names;
+		} );
+	}
+
+	/// <summary>
+	/// Drops what was remembered about the directories a written file sits in, up to the base directory, so a
+	/// name written since is matched against what is really there. Writing is the only thing this class does
+	/// that changes what a directory holds.
+	/// </summary>
+	private void Forget( string absolutePath )
+	{
+		for ( var directory = Path.GetDirectoryName( absolutePath );
+			!string.IsNullOrEmpty( directory ) && directory.Length >= baseDirectory.Length;
+			directory = Path.GetDirectoryName( directory ) )
+		{
+			listings.TryRemove( directory, out _ );
+		}
 	}
 
 	public string GetRelativePath( string absolutePath )
