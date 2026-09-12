@@ -1,6 +1,4 @@
 ﻿using Veldrid;
-using Vortice.Direct3D11;
-using Vortice.Win32;
 
 namespace OpenTPW;
 

@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
-using Vulkan.Win32;
 
 namespace OpenTPW;
 

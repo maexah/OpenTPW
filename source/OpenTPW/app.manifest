@@ -1,11 +1,17 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
-    <assemblyIdentity version="1.0.0.0" name="YourAppName.app"/>
+    <assemblyIdentity version="1.0.0.0" name="OpenTPW.app"/>
     <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
         <security>
             <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-                <requestedExecutionLevel level="requireAdministrator" uiAccess="false"/>
+                <!--
+                    Asked for as the player, not as an administrator. The game reads the files it was
+                    installed with and writes its saves beside them, so it wants nothing a player does not
+                    already have - and asking for more would raise a prompt on every launch, and fail
+                    outright where the player cannot grant it.
+                -->
+                <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
             </requestedPrivileges>
         </security>
     </trustInfo>
