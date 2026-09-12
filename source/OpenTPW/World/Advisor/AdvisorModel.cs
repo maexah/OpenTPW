@@ -184,10 +184,15 @@ public sealed class AdvisorModel
 		var projection = ScreenProjection();
 
 		// Every solid part before any see-through one. His head and body are see-through - flat discs
-		// with the ball painted on, under material flag 0x2 - and write no depth, so drawn a mesh at a
-		// time his head went down before his hands and a hand swung behind it showed straight through.
-		// Drawn after them, it covers whatever is behind it. The see-through parts keep the file's
-		// order among themselves, which puts the head before the mouths and eyelids that sit on it.
+		// with the ball painted on, under material flag 0x2 - so drawn a mesh at a time his head went
+		// down before his hands and a hand swung behind it showed straight through. Drawn after them,
+		// it covers whatever is behind it.
+		//
+		// The see-through parts now write depth like everything else, and his face survives it because
+		// nothing of his is coplanar: his mouths stand 2.01 model units clear of the head disc and the
+		// bowler's tie 0.96 clear of the body, which through his orthographic screen projection is
+		// thousands of depth values apart, not a rounding error. The one pair that does share a plane,
+		// an eyelid and the eye beneath it, is never drawn at once - a blink swaps one for the other.
 		foreach ( var entity in _model.Entities )
 			entity.DrawOverlay( Matrix4x4.Identity, projection, LightPosition, LightColor, Ambient, worldNormals: true );
 

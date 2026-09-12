@@ -184,18 +184,24 @@ public class Level
 
 		Entity.All.ForEach( entity => entity.Render() );
 
-		// Everything see-through comes after everything solid. A translucent surface doesn't write
-		// depth, so drawn in creation order alongside the rest it would be hidden by any solid
-		// geometry that happened to be drawn after it - which for the Space island's antenna is
-		// the island itself.
+		// Everything see-through comes after everything solid, so a graded surface blends over a
+		// finished picture rather than into a half-drawn one.
 		//
-		// Two passes rather than a sort, and this pass is not sorted within itself. That is not
-		// because nothing overlaps - most of what the flag marks is cut-out foliage, and a palm
-		// crown overlaps itself heavily - but because the alpha test in the shader carries that
-		// case: a frond's texels are either kept or discarded, so the order two fronds arrive in
-		// does not change the result. It is only the handful of genuinely graded surfaces, the
-		// ripple rings and the antenna's cone, that a sort would help, and those are small,
-		// scattered, and do not overlap each other.
+		// This pass is still not sorted within itself, and no longer needs to be for the case that
+		// used to break: these surfaces write depth now, so two of them resolve by distance rather
+		// than by the order their entities happened to be created in. That order is creation
+		// order, and an island builds its own meshes before its gate, so the Hallow gate - whose
+		// every material is see-through - could draw over the tree standing in front of it.
+		//
+		// That last part is reasoned from the draw order, not measured. Hallow carries fifty bats
+		// seeded afresh every run, which put a 5% noise floor on any frame comparison there and
+		// swamp a change of this size.
+		//
+		// What a sort would still buy is blend order between two genuinely graded surfaces that
+		// overlap. The original does sort for exactly that, per triangle and back to front, and
+		// only for its graded and additive batches (FUN_00565590). Nothing in the lobby needs it:
+		// the graded surfaces here are the shoreline ripples and the Space dish's cone, each a
+		// single layer that does not overlap another.
 		Entity.All.ForEach( entity => entity.RenderTranslucent() );
 
 		// And the HUD on top of the finished world. Nothing in either pass above can reach it,

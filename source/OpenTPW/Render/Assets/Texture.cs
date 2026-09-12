@@ -11,6 +11,26 @@ public partial class Texture : Asset
 	public uint Width { get; private set; }
 	public uint Height { get; private set; }
 
+	/// <summary>
+	/// Whether this texture's alpha is a real gradient rather than a cut-out mask.
+	///
+	/// The original decides this from the pixels, not from anything a model says: FUN_00575160
+	/// counts the texels whose alpha lies strictly between zero and the cut-out reference, and
+	/// marks the texture graded once they reach a twentieth of its area (the 0.05 multiplier is
+	/// at 0x00701720). A graded texture is then drawn with the low alpha reference and a cut-out
+	/// one with the high reference - see <see cref="CutOutAlphaReference"/> and the shader.
+	/// </summary>
+	public bool HasGradedAlpha { get; private set; }
+
+	/// <summary>
+	/// The alpha a cut-out texel has to reach to be drawn at all, 240 of 255. The original sets
+	/// ALPHAFUNC to GREATEREQUAL once and never changes it, and picks this reference out of the
+	/// pair at DAT_007012d8 for art whose alpha is effectively binary - so a frond is either there
+	/// or it isn't, and the soft ring the .wct codec leaves around every hard edge is dropped
+	/// rather than blended.
+	/// </summary>
+	private const byte CutOutAlphaReference = 240;
+
 	public static Texture Missing => new Texture( [255, 255, 255, 255], 1, 1 );
 
 	/// <summary>The game's own stand-in for a texture it can't load - see <see cref="NotFound"/>.</summary>
@@ -191,6 +211,25 @@ public partial class Texture : Asset
 		}
 	}
 
+	/// <summary>
+	/// The original's own test for a gradient - see <see cref="HasGradedAlpha"/>. Texels that are
+	/// fully clear don't count, because a cut-out mask is mostly those; it is the partly-clear
+	/// ones that tell a gradient from a mask.
+	/// </summary>
+	private static bool IsGraded( byte[] data )
+	{
+		var texels = data.Length / 4;
+		var partial = 0;
+
+		for ( int i = 3; i < data.Length; i += 4 )
+		{
+			if ( data[i] > 0 && data[i] < CutOutAlphaReference )
+				++partial;
+		}
+
+		return partial * 20 >= texels;
+	}
+
 	private void CreateTexture( string debugName, byte[] data, uint width, uint height, TextureFlags flags )
 	{
 		if ( TryGetCachedTexture( debugName, out var cachedTexture ) )
@@ -198,10 +237,17 @@ public partial class Texture : Asset
 			NativeTexture = cachedTexture!.NativeTexture;
 			NativeTextureView = cachedTexture!.NativeTextureView;
 
+			// Carried across with the GPU handles: it is a property of the pixels those handles
+			// hold, so a texture served from the cache has to answer the same as the one that
+			// loaded it. Left out, every shared texture would read as a cut-out.
+			HasGradedAlpha = cachedTexture!.HasGradedAlpha;
+
 			return;
 		}
 
 		PreprocessTextureData( ref data, ref width, ref height, flags );
+
+		HasGradedAlpha = IsGraded( data );
 
 		if ( flags.HasFlag( TextureFlags.PointFilter ) )
 			SamplerType = SamplerType.Point;

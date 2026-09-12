@@ -103,6 +103,23 @@ fragment {
     // for how it was established and for what is known about the rest.
     const uint FLAG_TRANSLUCENT = 2;
 
+    // Not from the file: set by LobbyModel when a material's texture turns out to be a cut-out
+    // mask rather than a real gradient - see Texture.HasGradedAlpha. The file only ever uses the
+    // flag word's low byte, so the high bits are ours to carry this in.
+    //
+    // Anything that has NOT been classified takes the low reference. This shader is shared with
+    // the interface, which marks all of its own vertices see-through and classifies no textures,
+    // so the unmarked case has to be the gentle one.
+    const uint FLAG_CUTOUT = 0x10000;
+
+    // The two alpha references the original picks between, 16 and 240 of 255, out of the pair at
+    // DAT_007012d8. Its ALPHAFUNC is GREATEREQUAL and is set once for the whole run, so a texel
+    // below the reference is dropped rather than blended. Cut-out art takes the high one - a
+    // frond is either there or it isn't - and a gradient takes the low one so its faint end
+    // survives, which is what the Space dish's signal cone is almost entirely made of.
+    const float GRADED_ALPHA_REFERENCE = 16.0 / 255.0;
+    const float CUTOUT_ALPHA_REFERENCE = 240.0 / 255.0;
+
     void main()
     {
         vec2 finalTexCoords = vs_out.vTexCoords;
@@ -142,11 +159,21 @@ fragment {
         bool bTranslucent = (outMatFlags & FLAG_TRANSLUCENT) != 0;
 
         // Most of what the flag marks is cut-out art rather than glass - every palm frond, the
-        // grass, the bushes, the bats - so the test has to stay. It only needs to drop what
-        // contributes nothing: raising the cut back to the old 0.1 leaves the foliage identical
-        // (its cut-out background is flat zero) but takes most of the Space dish's signal cone,
-        // which is a real gradient running out to nearly nothing at its rim.
-        if (bTranslucent && vTextureSample.a < 0.02) discard;
+        // grass, the bushes, the bats - so the test has to stay. Which reference it uses is the
+        // original's own call, taken from the texture rather than from the model: art whose alpha
+        // is effectively binary is cut hard, and a real gradient is cut low enough to keep its
+        // faint end.
+        //
+        // Measured over the lobby, every see-through material lands on the low reference: the
+        // .wct codec rings a halo of partly-clear texels around each hard edge, and those are
+        // exactly what the original counts. The high reference is reached only by art whose
+        // header switches its alpha channel off, which decodes fully opaque and clears any
+        // reference at all.
+        float flAlphaReference = (outMatFlags & FLAG_CUTOUT) != 0
+            ? CUTOUT_ALPHA_REFERENCE
+            : GRADED_ALPHA_REFERENCE;
+
+        if (bTranslucent && vTextureSample.a < flAlphaReference) discard;
 
         // g_flOpacity fades the whole model - see ModelEntity.Opacity. It multiplies the alpha
         // rather than gating the texture, so fading is a real blend rather than a dissolve: the

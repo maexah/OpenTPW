@@ -8,9 +8,10 @@ public partial class ModelEntity : Entity
 
 	/// <summary>
 	/// This mesh's see-through triangles, if it has any, held apart from <see cref="Model"/> so
-	/// they can be drawn without writing depth and after everything solid - see
-	/// <see cref="Level.Render"/>. A mesh is usually all one or all the other, but it doesn't have
-	/// to be: the Space island's antenna is a translucent dish and cone on a solid stalk.
+	/// they can be drawn after everything solid - see <see cref="Level.Render"/>. They write depth
+	/// just as the solid half does; what they need the separate pass for is blending over a
+	/// finished picture. A mesh is usually all one or all the other, but it doesn't have to be:
+	/// the Space island's antenna is a translucent dish and cone on a solid stalk.
 	/// </summary>
 	public Model? TranslucentModel { get; set; }
 
@@ -61,8 +62,8 @@ public partial class ModelEntity : Entity
 	/// model that sits on the screen rather than in the world.
 	///
 	/// A caller drawing several of these over each other has to draw every solid half before any
-	/// see-through one, the order the scene uses. A see-through half writes no depth, so if it
-	/// goes first, anything solid drawn after it shows straight through it however far behind it is.
+	/// see-through one, the order the scene uses, so that a graded surface blends over finished
+	/// geometry rather than into it.
 	/// </summary>
 	/// <param name="ambient">Light every surface gets regardless of facing; 0 for the world's own.</param>
 	/// <param name="worldNormals">Light with normals turned by the model matrix - see ObjectUniformBuffer.</param>

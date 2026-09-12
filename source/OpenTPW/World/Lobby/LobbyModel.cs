@@ -102,7 +102,7 @@ public sealed class LobbyModel
 					Normal = mesh.Normals[i],
 					TexCoords = mesh.TexCoords[i],
 					TexIndex = (int)mesh.Vertices[i].TextureIndex,
-					MatFlags = mesh.Materials[(int)mesh.Vertices[i].TextureIndex].Flags
+					MatFlags = MaterialFlagsFor( mesh, textures, (int)mesh.Vertices[i].TextureIndex )
 				} );
 			}
 
@@ -247,13 +247,48 @@ public sealed class LobbyModel
 	}
 
 	/// <summary>
+	/// Marks a vertex whose material wants the hard cut-out alpha reference rather than the low one.
+	/// Not a bit the file uses - across all 839 static models only the flag word's low byte is ever
+	/// set, so the high bits are ours. Must match FLAG_CUTOUT in content/shaders/test.shader.
+	///
+	/// Marked for cut-out art rather than for gradients, so the hard cut is only ever applied where
+	/// a texture has positively been classified. test.shader is shared with the interface, and
+	/// <see cref="UiMesh"/> marks every one of its own vertices see-through while having no texture
+	/// classification to offer; flagged the other way round, the whole front end fell through to the
+	/// cut-out reference and lost the soft edge off every button.
+	/// </summary>
+	private const uint CutOutAlphaFlag = 0x10000;
+
+	/// <summary>
+	/// The flag word a vertex carries: what the file gave its material, plus
+	/// <see cref="CutOutAlphaFlag"/> when that material's texture turns out to be a cut-out mask
+	/// rather than a real gradient - see <see cref="Texture.HasGradedAlpha"/>.
+	///
+	/// The original never reads the model's own see-through bit at draw time; it classifies from
+	/// the texture's pixels alone. We keep the model's bit as the gate for whether a surface is
+	/// see-through at all, because taking every texture's alpha at face value ate holes in
+	/// geometry the game draws whole, and use the pixels only to choose between the two alpha
+	/// references - which is the one call the original makes from them.
+	/// </summary>
+	private static uint MaterialFlagsFor( ModelFile.Mesh mesh, List<Texture> textures, int material )
+	{
+		var flags = mesh.Materials[material].Flags;
+
+		return material < textures.Count && !textures[material].HasGradedAlpha
+			? flags | CutOutAlphaFlag
+			: flags;
+	}
+
+	/// <summary>
 	/// Splits one mesh into its solid half and its see-through half, as two models over the same
 	/// vertices - see <see cref="ModelFile.MaterialData.IsTranslucent"/> for which is which.
 	///
 	/// The split has to be by triangle rather than by mesh, because a mesh can be some of each:
 	/// the Space island's antenna is a translucent dish and cone on a solid stalk, and its island
-	/// is eight solid materials plus the shoreline ripple. Whether depth is written is a property
-	/// of the pipeline, so the two halves cannot share one.
+	/// is eight solid materials plus the shoreline ripple. The two halves now ask for the same
+	/// pipeline state, as the original's do - it draws cut-out and graded art with identical
+	/// render states and changes only the alpha reference - so what the split is still for is
+	/// draw order: a graded surface has to blend over finished solid geometry, not into it.
 	///
 	/// Returns exactly two slots, solid then translucent, either of which may be null when the
 	/// mesh turns out to be all of the other - which most meshes are.
@@ -294,9 +329,18 @@ public sealed class LobbyModel
 		return [
 			Build( solid, materialFlags ),
 
-			// A see-through surface that writes depth punches a hole through whatever is drawn
-			// after it, which is the whole reason these are separated out.
-			Build( translucent, materialFlags | MaterialFlags.DisableDepthWrite )
+			// Depth is written here exactly as it is for the solid half, because the original
+			// writes it for every see-through surface too: none of the four state words its
+			// texture classifier can produce sets bit 0x800, which is the only ZWRITEENABLE
+			// control in the engine (FUN_00567620). The one thing that does turn depth writes off
+			// is bit 0x2 of a MESH record's first dword, and across all 839 static models that is
+			// set on five mesh records in the entire game, every one of them a 'heightfield' in a
+			// base.md2 - none of which is drawn through here.
+			//
+			// A caller that fades its model still asks for DisableDepthWrite itself and keeps it:
+			// a part-transparent surface that writes depth punches a hole through whatever comes
+			// after it, which is why LobbyFlyer passes the flag in.
+			Build( translucent, materialFlags )
 		];
 	}
 
