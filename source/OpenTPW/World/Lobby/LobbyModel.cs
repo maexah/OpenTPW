@@ -326,8 +326,20 @@ public sealed class LobbyModel
 			return new Model( vertices, [.. indices], material );
 		}
 
+		// Nothing in the game is one-sided: the original sets CULLMODE to D3DCULL_NONE once, at
+		// 0x0056695c, and never writes that state again in the whole program. Foliage is authored
+		// expecting it - a blade of grass is a single quad meant to be seen from behind as well as
+		// in front, and a canopy is a dome that showed its dark inside when its near face was cut
+		// away.
+		//
+		// This, rather than the depth change beside it, is what visibly repairs the scene. Frames
+		// captured with the clock paused and compared against the branch point: the Fantasy blades
+		// change by 5.0% and the Space canopies by 5.6%, both on a noise floor of 0.00%, against
+		// 0.4% and 0.6% for the depth change measured the same way.
+		var flags = materialFlags | MaterialFlags.DisableCulling;
+
 		return [
-			Build( solid, materialFlags ),
+			Build( solid, flags ),
 
 			// Depth is written here exactly as it is for the solid half, because the original
 			// writes it for every see-through surface too: none of the four state words its
@@ -340,7 +352,7 @@ public sealed class LobbyModel
 			// A caller that fades its model still asks for DisableDepthWrite itself and keeps it:
 			// a part-transparent surface that writes depth punches a hole through whatever comes
 			// after it, which is why LobbyFlyer passes the flag in.
-			Build( translucent, materialFlags )
+			Build( translucent, flags )
 		];
 	}
 
