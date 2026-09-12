@@ -18,4 +18,14 @@
     <ProjectReference Include="..\OpenTPW\OpenTPW.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!--
+      The shader test preprocesses a real shader out of content\shaders, so that folder has to sit beside the
+      test binary: nothing about a test run says what the working directory will be.
+    -->
+    <Content Include="..\..\content\shaders\**\*" LinkBase="content\shaders">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
