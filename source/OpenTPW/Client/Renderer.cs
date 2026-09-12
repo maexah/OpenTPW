@@ -292,20 +292,56 @@ public partial class Renderer
 		ProcessDeletionQueue();
 	}
 
+	/// <summary>
+	/// Which graphics API the game draws with. Vulkan on Linux and Windows; Metal on macOS, which has no
+	/// Vulkan driver of its own - asking for Vulkan there fails inside the native loader, before any of this
+	/// code could say why.
+	///
+	/// <para>
+	/// Windows stays on Vulkan rather than Direct3D 11 deliberately. The shaders are written as Vulkan GLSL,
+	/// and Vulkan is the path exercised here every day, so a report from Windows lands on the same code Linux
+	/// runs. Direct3D is only a cross-compile away - <see cref="ShaderCompiler"/> already maps it to HLSL -
+	/// but nothing would be testing it, and an untested third path is worth less than a second tested one.
+	/// </para>
+	/// </summary>
+	private static GraphicsBackend Backend => OperatingSystem.IsMacOS() ? GraphicsBackend.Metal : GraphicsBackend.Vulkan;
+
 	private void CreateGraphicsDevice()
 	{
 		var options = new GraphicsDeviceOptions()
 		{
+			// Vulkan's clip space has Y running down the screen where Metal's runs up it. This asks Vulkan
+			// for Metal's direction - Veldrid gets it by giving the viewport a negative height - so that one
+			// set of shaders, and the pixel-to-clip-space arithmetic the interface does, mean the same thing
+			// on both.
 			PreferStandardClipSpaceYDirection = true,
+
+			// Both are natively 0-to-1 in depth, which is what System.Numerics builds - see
+			// Camera.CalcViewProjMatrix. Only OpenGL would need converting, and OpenGL is not offered.
 			PreferDepthRangeZeroToOne = true,
+
 			SwapchainDepthFormat = null,
 			SwapchainSrgbFormat = false,
 			SyncToVerticalBlank = true,
 			HasMainSwapchain = true
 		};
 
-		var swapchainSource = VeldridStartup.GetSwapchainSource( Window.SdlWindow );
-		Device = GraphicsDevice.CreateVulkan( swapchainDescription: new SwapchainDescription( swapchainSource, (uint)(Window.Size.X), (uint)(Window.Size.Y), options.SwapchainDepthFormat, options.SyncToVerticalBlank, options.SwapchainSrgbFormat ), options: options );
+		// Built by hand rather than through VeldridStartup.CreateGraphicsDevice, so that the options above
+		// are the ones actually used. It is the same swapchain VeldridStartup would build, and
+		// GetSwapchainSource already answers every window system the game runs on, an NSWindow included.
+		var swapchain = new SwapchainDescription(
+			VeldridStartup.GetSwapchainSource( Window.SdlWindow ),
+			(uint)Window.Size.X,
+			(uint)Window.Size.Y,
+			options.SwapchainDepthFormat,
+			options.SyncToVerticalBlank,
+			options.SwapchainSrgbFormat );
+
+		Device = Backend switch
+		{
+			GraphicsBackend.Metal => GraphicsDevice.CreateMetal( options, swapchain ),
+			_ => GraphicsDevice.CreateVulkan( options, swapchain )
+		};
 	}
 
 	/// <summary>The size the window has become, until the render targets have been built for it.</summary>

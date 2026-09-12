@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Text;
+﻿using System.Text;
 using Veldrid;
 using Veldrid.SPIRV;
 
@@ -39,15 +38,6 @@ internal static class ShaderCompiler
 		};
 	}
 
-	internal static bool HasSpirvHeader( byte[] bytes )
-	{
-		return bytes.Length > 4
-			&& bytes[0] == 0x03
-			&& bytes[1] == 0x02
-			&& bytes[2] == 0x23
-			&& bytes[3] == 0x07;
-	}
-
 	public static ShaderInfo CompileShader( string path )
 	{
 		var target = GetCrossCompileTarget();
@@ -58,27 +48,31 @@ internal static class ShaderCompiler
 
 		var vertexSourceBytes = GetBytes( vertexSource );
 		var fragmentSourceBytes = GetBytes( fragmentSource );
+
+		// Cross-compiled even on Vulkan, where the translation itself is thrown away: the reflection naming
+		// every resource binding - what Material builds its layouts from, and looks its bound resources up by
+		// name with - comes out of this call and nowhere else. It is given the GLSL source rather than
+		// compiled SPIR-V on purpose. SPIR-V built with the default options carries no debug names, and the
+		// reflection read back out of it has empty names for every texture and sampler, which Material throws
+		// on at the first draw.
 		var compilationResult = SpirvCompilation.CompileVertexFragment( vertexSourceBytes, fragmentSourceBytes, target );
 
-		if ( Device.ResourceFactory.BackendType != GraphicsBackend.Vulkan )
-		{
-			vertexSource = compilationResult.VertexShader;
-			fragmentSource = compilationResult.FragmentShader;
-		}
-
-		var vertexSpirv = SpirvCompilation.CompileGlslToSpirv( vertexSource, path, ShaderStages.Vertex, new() );
-		var fragmentSpirv = SpirvCompilation.CompileGlslToSpirv( fragmentSource, path, ShaderStages.Fragment, new() );
-
-		Debug.Assert( HasSpirvHeader( vertexSpirv.SpirvBytes ) );
-		Debug.Assert( HasSpirvHeader( fragmentSpirv.SpirvBytes ) );
-
-		var vertexShader = Device.ResourceFactory.CreateShader( new ShaderDescription( ShaderStages.Vertex, vertexSpirv.SpirvBytes, "main" ) );
-		var fragmentShader = Device.ResourceFactory.CreateShader( new ShaderDescription( ShaderStages.Fragment, fragmentSpirv.SpirvBytes, "main" ) );
+		// The shader objects themselves are left to Veldrid, which is handed the same Vulkan GLSL the
+		// reflection above was read out of. It knows what each backend will accept - which form, which text
+		// encoding, and that a Metal entry point has to be called "main0" because "main" is a reserved word
+		// in MSL - and none of that can be tested here, so none of it is worth restating here.
+		//
+		// What this replaces was Vulkan-only in three separate ways: it fed the cross-compiled result back
+		// into a GLSL compiler, which for Metal means handing MSL to a GLSL parser; it then gave a Metal
+		// device SPIR-V, which wants metallib or MSL text; and it named the entry point "main".
+		var shaders = Device.ResourceFactory.CreateFromSpirv(
+			new ShaderDescription( ShaderStages.Vertex, vertexSourceBytes, "main" ),
+			new ShaderDescription( ShaderStages.Fragment, fragmentSourceBytes, "main" ) );
 
 		return new ShaderInfo()
 		{
-			VertexShader = vertexShader,
-			FragmentShader = fragmentShader,
+			VertexShader = shaders[0],
+			FragmentShader = shaders[1],
 			Reflection = compilationResult.Reflection
 		};
 	}
