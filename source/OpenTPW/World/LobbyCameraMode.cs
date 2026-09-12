@@ -64,9 +64,25 @@ public class LobbyCameraMode : CameraMode
 	private const float SpinSpeed = 0.2f;
 
 	/// <summary>
-	/// The script asks for ISLANDFOV(100), but read as a vertical angle in degrees that leaves
-	/// the island a speck in a bowed horizon - so it means something else, or reaches the
-	/// projection some other way. The one lobby setting still to be run down.
+	/// How wide a view the lobby is framed at, as the vertical angle at 4:3 that <see cref="Camera"/>
+	/// takes. <b>A deliberate deviation from the file, not a derivation of it - do not "correct" this
+	/// by reading ISLANDFOV.</b>
+	///
+	/// What the file asks for is now known. The original has two lobbies: Lobby_Start, the globe one
+	/// that loads data\lobby\globe, writes the camera's field itself - MOV dword ptr [EAX + 0x4],
+	/// 0x42700000, which is 60.0f, at 0x005dd034 - while IslandLobby_Start, the one that calls
+	/// IslandPanel_Create and parses each park's script, copies the file's value instead: FLD [ECX+4] /
+	/// FSTP [EAX+4] at 0x005e13fb, ECX being the lobby.txt settings block and +4 where FUN_005e2cc0 put
+	/// ISLANDFOV. The unit is the projection's - FUN_00578be0 works out <c>half = fov * (pi/180) * 0.5</c>
+	/// and fills cos(half) into m00 and m11 - so ISLANDFOV(100) is a full hundred-degree field, and
+	/// taken as the horizontal angle it comes to 83.58 vertical at 4:3.
+	///
+	/// So this camera, which is the island lobby, could take 83.58 and did briefly. Alexah looked at both
+	/// and preferred 60, which is the number that was already here by accident - it is the globe lobby's.
+	/// The wider view is faithful to the file; the narrower one frames the island better, and that is the
+	/// call being made. Measurement cannot break the tie: projecting the island mesh against the two
+	/// reference screenshots excludes the vertical reading outright, but brackets the horizontal angle
+	/// only at roughly 80 to 95 degrees and cannot separate 100 from the high eighties.
 	/// </summary>
 	private const float FieldOfViewDegrees = 60f;
 
