@@ -149,6 +149,13 @@ public sealed class LobbyIsland : Entity
 		return 0;
 	}
 
+	/// <summary>
+	/// Where a named node of this island's model sits in the world, if it has one - see
+	/// <see cref="LobbyModel.TryGetNode"/>. This is how a place marked in the model, rather than a
+	/// place written down here, is found.
+	/// </summary>
+	public bool TryGetNode( string name, out Vector3 position ) => _model.TryGetNode( name, out position );
+
 	protected override void OnUpdate()
 	{
 		_model.Update( Time.Delta );

@@ -103,8 +103,12 @@ public sealed class SoundCategory
 	/// call behave the same way as one whose bed is ninety seconds of jungle.
 	/// </param>
 	/// <param name="bus">Which group the voice joins, and so whether the advisor ducks it.</param>
+	/// <param name="position">
+	/// Where in the world it is sounding, or null to play it flat - see <see cref="Audio.Play"/>. The
+	/// category neither knows nor cares which; it picks a sample and hands the place straight on.
+	/// </param>
 	public Voice? Play( int id, float volume = 1f, bool loop = false, float fadeInSeconds = 0f,
-		bool respectDelay = true, AudioBus bus = AudioBus.Effects )
+		bool respectDelay = true, AudioBus bus = AudioBus.Effects, Vector3? position = null )
 	{
 		var effect = _effects.FirstOrDefault( candidate => candidate.Id == id );
 
@@ -124,7 +128,7 @@ public sealed class SoundCategory
 			? float.PositiveInfinity
 			: Time.Now + clip.Duration + (float)effect.RepeatDelay.TotalSeconds;
 
-		return Audio.Play( clip, volume, loop, fadeInSeconds, bus );
+		return Audio.Play( clip, volume, loop, fadeInSeconds, bus, position );
 	}
 
 	/// <summary>

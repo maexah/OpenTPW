@@ -62,6 +62,17 @@ public partial class ModelFile : BaseFormat
 		/// <summary>The node's own transform, relative to <see cref="ParentIndex"/>.</summary>
 		public Matrix4x4 LocalTransform { get; set; } = Matrix4x4.Identity;
 
+		/// <summary>
+		/// <see cref="LocalTransform"/> with every ancestor's applied, which is where the node actually
+		/// sits in the model - the same composition <see cref="Mesh.WorldTransform"/> carries, and
+		/// worked out in the same pass.
+		///
+		/// It matters for the nodes that are not meshes, because those are the ones that mark a place
+		/// rather than occupy one: a local transform alone says nothing about where "ant_emitter" is
+		/// until the antenna, the body and the island it hangs off have all been applied.
+		/// </summary>
+		public Matrix4x4 WorldTransform { get; set; } = Matrix4x4.Identity;
+
 		public int ParentIndex { get; set; } = -1;
 
 		/// <summary>
@@ -663,6 +674,10 @@ public partial class ModelFile : BaseFormat
 				Nodes.Add( new Node
 				{
 					LocalTransform = local[node],
+
+					// Already worked out above for the meshes, and memoised, so asking for the rest
+					// costs one walk up each remaining chain rather than a second pass over the tree.
+					WorldTransform = World( node, nodeCount ),
 					ParentIndex = parents[node],
 					Flags = flags,
 					Name = name

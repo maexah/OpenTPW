@@ -18,6 +18,19 @@ public sealed class LobbyModel
 	public Vector3[] Offsets { get; }
 
 	/// <summary>
+	/// Where each named node of the model sits, relative to that same origin.
+	///
+	/// A model's nodes are not all meshes. The ones that are not mark places rather than occupy them -
+	/// a park gate says where its sound belongs with a node called "sound node" - and those are only
+	/// reachable now that names are read. Keyed without regard to case, and trimmed, because the names
+	/// were authored by hand and a few carry a trailing space.
+	/// </summary>
+	private readonly Dictionary<string, Vector3> _nodeOffsets = new( StringComparer.OrdinalIgnoreCase );
+
+	/// <summary>The origin the model was loaded at - see <see cref="TryGetNode"/>.</summary>
+	private readonly Vector3 _origin;
+
+	/// <summary>
 	/// How far this model reaches from its own origin, after scaling - a loose bounding radius
 	/// taken from the mesh bounds the animation decoder already relies on, so it covers every
 	/// pose a vertex animation can put the model in rather than just its rest one.
@@ -121,6 +134,24 @@ public sealed class LobbyModel
 			};
 		}
 
+		_origin = origin;
+
+		// The same composition and the same Y/Z swizzle the meshes above go through, so a node lands
+		// in the world by the rule its model's geometry already landed by.
+		foreach ( var node in modelFile.Nodes )
+		{
+			var name = node.Name.Trim();
+
+			if ( name.Length == 0 )
+				continue;
+
+			var placed = node.WorldTransform * Matrix4x4.CreateScale( scale );
+
+			// Assigned rather than added: nothing stops a model naming two nodes the same, and a
+			// duplicate is not worth throwing a whole island away for.
+			_nodeOffsets[name] = new Vector3( placed.M41, placed.M43, placed.M42 );
+		}
+
 		var animations = LoadAnimations( modelPath );
 
 		if ( animations.Length > 0 )
@@ -170,6 +201,27 @@ public sealed class LobbyModel
 	{
 		foreach ( var entity in Entities )
 			entity.Opacity = opacity;
+	}
+
+	/// <summary>
+	/// Where the node called <paramref name="name"/> sits in the world, if this model has one.
+	///
+	/// This is the node's resting place, taken from the origin the model was loaded at. It does not
+	/// follow <see cref="SetOrigin"/> or <see cref="SetTransform"/>, and it does not follow a mesh the
+	/// animation is turning - only the mesh entities move, and a node has none. That is fine for what
+	/// uses it: an island stands still, and the Space antenna's own emitter sits about two units off
+	/// the axis it spins about, which against a listener seventy units away is under two degrees.
+	/// </summary>
+	public bool TryGetNode( string name, out Vector3 position )
+	{
+		if ( _nodeOffsets.TryGetValue( name.Trim(), out var offset ) )
+		{
+			position = offset + _origin;
+			return true;
+		}
+
+		position = default;
+		return false;
 	}
 
 	/// <summary>Moves every mesh of this model, keeping their relative placement.</summary>

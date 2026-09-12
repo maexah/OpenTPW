@@ -11,7 +11,7 @@ namespace OpenTPW;
 /// Disabled unless OPENTPW_DEBUG_CONSOLE=1 is set, and costs one boolean test per frame when off.
 /// To remove entirely: delete this file, the one call site in Level.Update(), Time.Paused and Time.StepFrames, and
 /// the members marked as being for it - LobbyCameraMode's DebugOrbit, DebugSelect and DebugSettle; LobbyWeather's
-/// Current, DebugRain, DebugBolt and DebugStrike; LobbyAudio's Muted and State; LobbyFlyer's DebugClosestApproach
+/// Current, DebugRain, DebugBolt and DebugStrike; LobbyAudio's Muted, State and DebugPlaceSound; LobbyFlyer's DebugClosestApproach
 /// and DebugClosestSolid; LobbyLightning's DebugAxisDistance and DebugOpacity; the advisor's Say and State; and
 /// Game's RequestLobbyReload.
 ///
@@ -197,6 +197,17 @@ public static class DebugConsole
 				Reply( LobbyAudio.Current?.State() ?? "no lobby audio" );
 				break;
 
+			// Plays one of the island's ambient samples at a place of the caller's choosing, so a pan
+			// can be measured at angles the lobby's own marked place never reaches: the Space antenna
+			// sits almost on the camera's look axis, so it never pans more than about a seventh of the
+			// way across. Bare `place` uses whatever place the island marks.
+			case "place":
+				Reply( LobbyAudio.Current?.DebugPlaceSound(
+					parts.Length > 3
+						? new Vector3( Argument( 1 ), Argument( 2 ), Argument( 3 ) )
+						: null ) ?? "no lobby audio" );
+				break;
+
 			case "speech":
 				// Auditions one of the 641 global speech samples, ducking the rest of the mix
 				// exactly as a real line would. This is how Advisor's first-launch sample
@@ -250,7 +261,7 @@ public static class DebugConsole
 				break;
 
 			default:
-				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/near/stats/state/size/volume/mute/sound/speech/advisor/greet/duck/reload/quit" );
+				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/near/stats/state/size/volume/mute/sound/place/speech/advisor/greet/duck/reload/quit" );
 				break;
 		}
 	}

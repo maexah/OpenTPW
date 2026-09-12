@@ -135,9 +135,23 @@ public sealed class LobbyAudio : Entity
 	/// <summary>One per park, built the first time that park is the one on show.</summary>
 	private readonly Dictionary<string, ParkSounds> _parks = new( StringComparer.OrdinalIgnoreCase );
 
+	/// <summary>
+	/// The node a lobby model marks the place for its ambience with.
+	///
+	/// Exactly one model in the lobby has one: the Space island's antenna carries "ant_emitter", and
+	/// the other three islands and all four gates carry nothing but their particle path nodes and a
+	/// root - checked across all eight. So looking the name up rather than naming Space here is not a
+	/// generalisation for its own sake; it is what lets the other three go on playing flat without a
+	/// park being singled out in code.
+	/// </summary>
+	private const string SoundNodeName = "ant_emitter";
+
 	private ParkSounds? _current;
 	private Voice? _globalBed;
 	private string? _playing;
+
+	/// <summary>Where the island on show wants its ambience to come from, or null to play it flat.</summary>
+	private Vector3? _ambiencePosition;
 	private Voice? _music;
 	private Voice? _bed;
 	private readonly Random _random = new();
@@ -223,6 +237,7 @@ public sealed class LobbyAudio : Entity
 		=> !Audio.Ready
 			? "no audio device"
 			: $"park={_playing ?? "none"} theme={Describe( _music )} bed={Describe( _bed )} "
+				+ $"placed={_ambiencePosition?.ToString() ?? "flat"} "
 				+ $"muted={Muted} volume={Audio.MasterVolume:0.00}";
 
 	private static string Describe( Voice? voice ) => voice is { Playing: true } ? voice.Name : "-";
@@ -287,6 +302,11 @@ public sealed class LobbyAudio : Entity
 		_playing = island.ThemeName;
 		_current = ParkFor( island.ThemeName );
 
+		// Asked of the model rather than remembered here, and asked once per arrival rather than per
+		// sound: an island does not move, and the node it marks does not move with the antenna that
+		// carries it - see LobbyModel.TryGetNode.
+		_ambiencePosition = island.TryGetNode( SoundNodeName, out var marked ) ? marked : null;
+
 		if ( _current == null || Muted )
 			return;
 
@@ -330,7 +350,35 @@ public sealed class LobbyAudio : Entity
 		// The effect's own delay applies, so a roll landing on something still playing comes to
 		// nothing rather than doubling it up. That is the original's behaviour, and it is most of
 		// what keeps the jungle from sounding like a pet shop.
-		_current!.Ambience.Play( LocalOneShotFirst + _random.Next( LocalOneShotCount ), OneShotVolume );
+		//
+		// The place is the island's, where it marks one. This is the one thing here the original did
+		// not do - it played every lobby sound at (0,0,0) - so it is an improvement on the lobby
+		// rather than a restoration of it; see the note at the top of this class.
+		_current!.Ambience.Play( LocalOneShotFirst + _random.Next( LocalOneShotCount ), OneShotVolume,
+			position: _ambiencePosition );
+	}
+
+	/// <summary>
+	/// Plays one of the island's continuous ambient samples at <paramref name="position"/>, or at the
+	/// place the island marks when none is given. For DebugConsole.
+	///
+	/// Effect 2 rather than one of the one-shots because it is the only one of this category's effects
+	/// whose samples are all real. Space's effect 3 is three sounds and six entries of blank.mp2, nine
+	/// milliseconds each, and the odds are cumulative - so two rolls in three play silence, which is no
+	/// use at all to something measuring what came out of the mixer.
+	/// </summary>
+	internal string DebugPlaceSound( Vector3? position )
+	{
+		if ( !Audio.Ready )
+			return "no audio device";
+
+		if ( _current == null )
+			return "no park sounds loaded";
+
+		var at = position ?? _ambiencePosition;
+		var voice = _current.Ambience.Play( LocalBed, BedVolume, respectDelay: false, position: at );
+
+		return $"placed '{Describe( voice )}' at {(at?.ToString() ?? "nowhere - flat")}";
 	}
 
 	/// <summary>
