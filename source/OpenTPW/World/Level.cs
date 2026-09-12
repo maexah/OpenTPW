@@ -178,6 +178,10 @@ public class Level
 	{
 		Camera.Update();
 
+		// The ears go where the camera just went. Here rather than in Update because the camera itself
+		// moves here, so a listener set during the update pass would be a frame behind the picture.
+		Audio.SetListener( Camera.Position, Camera.Rotation.Forward );
+
 		Entity.All.ForEach( entity => entity.Render() );
 
 		// Everything see-through comes after everything solid. A translucent surface doesn't write

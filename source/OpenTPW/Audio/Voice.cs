@@ -26,6 +26,23 @@ public sealed class Voice
 
 	private volatile bool _stopped;
 
+	/// <summary>Where in the world this is sounding, or null for a sound with no place in it.</summary>
+	private readonly Vector3? _position;
+
+	/// <summary>
+	/// How much of this reaches each ear, 0 to 1, and where those are heading as of the last time the
+	/// listener moved.
+	///
+	/// Both are 1 for a sound with no position, which is every sound the game plays today, and 1 and 1
+	/// is exactly what the mixer did before there was a pan at all. They never go above 1: the levels
+	/// every layer was set to already sum close to full scale - see <see cref="LobbyAudio"/> - so
+	/// placing a sound takes the far ear away rather than adding to the near one.
+	/// </summary>
+	private float _gainLeft = 1f;
+	private float _gainRight = 1f;
+	private float _targetGainLeft = 1f;
+	private float _targetGainRight = 1f;
+
 	/// <summary>How long a hold takes to fade the sound out, and letting it go to fade it back in - just long enough not to click.</summary>
 	private const float PauseFadeSeconds = 0.01f;
 
@@ -89,11 +106,13 @@ public sealed class Voice
 		}
 	}
 
-	internal Voice( AudioClip clip, float volume, bool loop, float fadeInSeconds, AudioBus bus )
+	internal Voice( AudioClip clip, float volume, bool loop, float fadeInSeconds, AudioBus bus,
+		Vector3? position )
 	{
 		_clip = clip;
 		Loop = loop;
 		Bus = bus;
+		_position = position;
 		_targetVolume = volume;
 
 		if ( fadeInSeconds > 0f )
@@ -164,6 +183,35 @@ public sealed class Voice
 	}
 
 	/// <summary>
+	/// Works out how much of this voice each ear should get, now the listener is where it is.
+	///
+	/// Runs on the game thread under <see cref="Audio.Lock"/> - see <see cref="Audio.SetListener"/> -
+	/// and leaves the mixer nothing to do but read a pair of numbers and step towards them. A voice
+	/// with no position is left alone, so a flat sound stays flat however the camera moves.
+	/// </summary>
+	/// <param name="immediately">
+	/// Whether to arrive at the new balance rather than glide to it. True when the voice is being
+	/// started, so a placed sound begins at the balance it belongs at instead of sliding there over
+	/// its first buffer.
+	/// </param>
+	internal void Locate( in AudioListener listener, bool immediately )
+	{
+		if ( _position is not { } position )
+			return;
+
+		var pan = listener.PanTo( position );
+
+		_targetGainLeft = 1f - MathF.Max( pan, 0f );
+		_targetGainRight = 1f + MathF.Min( pan, 0f );
+
+		if ( !immediately )
+			return;
+
+		_gainLeft = _targetGainLeft;
+		_gainRight = _targetGainRight;
+	}
+
+	/// <summary>
 	/// Adds this voice into an output buffer that already holds whatever mixed before it, and
 	/// says whether it is still going.
 	///
@@ -191,6 +239,13 @@ public sealed class Voice
 		var step = _volumeRate / Audio.SampleRate;
 		var pauseStep = 1f / (PauseFadeSeconds * Audio.SampleRate);
 		var held = 0L;
+
+		// The pan glides to wherever the listener last put it and arrives by the end of this buffer,
+		// which is the same shape as the ducking ramp above and for the same reason: a buffer is 46ms,
+		// and a pan that moved in 46ms steps would be a staircase of clicks rather than a sound going
+		// past. The listener moves once a frame, so there is always a fresh target to head for.
+		var panStepLeft = frames > 0 ? (_targetGainLeft - _gainLeft) / frames : 0f;
+		var panStepRight = frames > 0 ? (_targetGainRight - _gainRight) / frames : 0f;
 
 		if ( Bus == AudioBus.Speech )
 		{
@@ -221,6 +276,12 @@ public sealed class Voice
 
 			var frameDuck = duck;
 			duck += duckStep;
+
+			var frameLeft = _gainLeft;
+			var frameRight = _gainRight;
+
+			_gainLeft += panStepLeft;
+			_gainRight += panStepRight;
 
 			// After the volume, so a voice faded or stopped while it is held still goes.
 			if ( _paused ? _pauseGain > 0f : _pauseGain < 1f )
@@ -256,18 +317,23 @@ public sealed class Voice
 			if ( channels == 1 )
 			{
 				var value = samples[at] * gain;
-				output[i * 2] += value;
-				output[(i * 2) + 1] += value;
+				output[i * 2] += value * frameLeft;
+				output[(i * 2) + 1] += value * frameRight;
 			}
 			else
 			{
 				var index = at * channels;
-				output[i * 2] += samples[index] * gain;
-				output[(i * 2) + 1] += samples[index + 1] * gain;
+				output[i * 2] += samples[index] * gain * frameLeft;
+				output[(i * 2) + 1] += samples[index + 1] * gain * frameRight;
 			}
 
 			_frame += 1.0;
 		}
+
+		// Arrive exactly, rather than wherever a buffer's worth of additions landed, so nothing
+		// accumulates across buffers.
+		_gainLeft = _targetGainLeft;
+		_gainRight = _targetGainRight;
 
 		if ( held > 0 )
 			Interlocked.Add( ref _heldFrames, held );

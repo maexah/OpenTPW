@@ -261,16 +261,29 @@ public static class Audio
 	/// <param name="loop">Whether it starts again from the top rather than ending.</param>
 	/// <param name="fadeInSeconds">How long it takes to reach <paramref name="volume"/>.</param>
 	/// <param name="bus">Which group it belongs to, and so whether <see cref="Duck"/> applies.</param>
+	/// <param name="position">
+	/// Where in the world it is sounding, or null to play it flat.
+	///
+	/// One entry point with an optional position, rather than a positional path alongside this one,
+	/// because that is the shape the original had: every sound in the game goes through one call
+	/// taking x, y and z, and a sound with no place in the world is played at (0,0,0) - its user
+	/// interface sounds literally are. Null rather than a zero here, because (0,0,0) is a real corner
+	/// of the lobby rather than a way of saying "nowhere".
+	/// </param>
 	public static Voice? Play( AudioClip? clip, float volume = 1f, bool loop = false,
-		float fadeInSeconds = 0f, AudioBus bus = AudioBus.Effects )
+		float fadeInSeconds = 0f, AudioBus bus = AudioBus.Effects, Vector3? position = null )
 	{
 		if ( !Ready || clip == null || clip.Frames == 0 )
 			return null;
 
-		var voice = new Voice( clip, volume.Clamp( 0f, 1f ), loop, fadeInSeconds, bus );
+		var voice = new Voice( clip, volume.Clamp( 0f, 1f ), loop, fadeInSeconds, bus, position );
 
 		lock ( Lock )
 		{
+			// From where the listener stands now, so a placed sound starts at the balance it belongs
+			// at rather than sliding to it across its first buffer.
+			voice.Locate( _listener, immediately: true );
+
 			if ( Voices.Count >= MaxVoices )
 			{
 				// Full. Drop the quietest one that isn't a loop - the loops are the beds and the
@@ -291,6 +304,40 @@ public static class Audio
 		}
 
 		return voice;
+	}
+
+	/// <summary>
+	/// Where the game is heard from. Written only by <see cref="SetListener"/>, on the game thread,
+	/// under <see cref="Lock"/>.
+	/// </summary>
+	private static AudioListener _listener = new( Vector3.Zero, Vector3.Right );
+
+	/// <summary>
+	/// Moves the listener, and works out afresh what every placed voice sounds like from there.
+	///
+	/// Called once a frame, right after the camera has moved - see <see cref="Level.Render"/>. Doing
+	/// every voice in one pass is deliberate: the lock is the one the mixer holds for a whole buffer,
+	/// so this takes it once a frame rather than once per voice, and the work inside it is a dot
+	/// product each.
+	/// </summary>
+	/// <param name="forward">
+	/// Which way it is looking - <c>Camera.Rotation.Forward</c>. Its ears are worked out from that
+	/// rather than passed in, because the obvious thing to pass, <c>Rotation.Right</c>, is rolled by
+	/// an arbitrary amount and would be wrong at most camera angles - see
+	/// <see cref="AudioListener.Facing"/>.
+	/// </param>
+	public static void SetListener( Vector3 position, Vector3 forward )
+	{
+		if ( !Ready )
+			return;
+
+		lock ( Lock )
+		{
+			_listener = AudioListener.Facing( position, forward );
+
+			foreach ( var voice in Voices )
+				voice.Locate( _listener, immediately: false );
+		}
 	}
 
 	/// <summary>
