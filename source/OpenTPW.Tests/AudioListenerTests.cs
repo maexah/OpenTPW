@@ -153,6 +153,78 @@ public class AudioListenerTests
 			$"the antenna should be to the left from there, but panned to {listener.PanTo( emitter )}" );
 	}
 
+	/// <summary>A listener with distance switched on, ten units being the point it starts to fade from.</summary>
+	private static readonly AudioListener Hearing = new( Vector3.Zero, Vector3.Right, 10f );
+
+	/// <summary>
+	/// With no reference distance - which is what the engine starts at - nothing is ever turned down
+	/// for being far away. This is what keeps a scene that has not asked for distance exactly as it was.
+	/// </summary>
+	[TestMethod]
+	public void WithNoReferenceDistanceNothingFades()
+	{
+		Assert.AreEqual( 1f, Listener.AttenuationTo( new Vector3( 10000, 0, 0 ) ), 1e-6f );
+		Assert.AreEqual( 1f, Listener.AttenuationTo( Vector3.Zero ), 1e-6f );
+	}
+
+	/// <summary>
+	/// Inside the reference it holds at 1 rather than climbing. Gains may only ever reduce - the mix
+	/// already sums to 1.18 before the master volume - so walking up to a sound must not amplify it.
+	/// </summary>
+	[TestMethod]
+	public void ComingCloserThanTheReferenceNeverMakesItLouder()
+	{
+		Assert.AreEqual( 1f, Hearing.AttenuationTo( new Vector3( 10, 0, 0 ) ), 1e-6f, "at the reference" );
+		Assert.AreEqual( 1f, Hearing.AttenuationTo( new Vector3( 5, 0, 0 ) ), 1e-6f, "half way in" );
+		Assert.AreEqual( 1f, Hearing.AttenuationTo( new Vector3( 0.01f, 0, 0 ) ), 1e-6f, "almost on top of it" );
+		Assert.AreEqual( 1f, Hearing.AttenuationTo( Vector3.Zero ), 1e-6f, "exactly on the listener" );
+	}
+
+	/// <summary>
+	/// Amplitude falls as one over the distance, so twice as far is half as loud - 6dB - and four
+	/// times as far is a quarter. Getting this wrong by squaring it is the easy mistake, and it would
+	/// be 12dB instead.
+	/// </summary>
+	[TestMethod]
+	public void TwiceAsFarIsHalfAsLoud()
+	{
+		Assert.AreEqual( 0.5f, Hearing.AttenuationTo( new Vector3( 20, 0, 0 ) ), 1e-6f );
+		Assert.AreEqual( 0.25f, Hearing.AttenuationTo( new Vector3( 40, 0, 0 ) ), 1e-6f );
+		Assert.AreEqual( 0.1f, Hearing.AttenuationTo( new Vector3( 100, 0, 0 ) ), 1e-6f );
+	}
+
+	/// <summary>Which way the sound lies says nothing about how far it is.</summary>
+	[TestMethod]
+	public void TheDirectionItLiesInDoesNotChangeHowFarItIs()
+	{
+		foreach ( var source in new[]
+		{
+			new Vector3( 20, 0, 0 ), new Vector3( -20, 0, 0 ), new Vector3( 0, 20, 0 ),
+			new Vector3( 0, -20, 0 ), new Vector3( 0, 0, 20 ), new Vector3( 0, 0, -20 )
+		} )
+		{
+			Assert.AreEqual( 0.5f, Hearing.AttenuationTo( source ), 1e-6f, $"from {source}" );
+		}
+	}
+
+	/// <summary>
+	/// The lobby's own numbers. The camera rig stands sqrt(70^2 + 20^2) from the island it shows, so
+	/// the antenna - which the camera orbits between 61.3 and 81.8 away from - is at full level over
+	/// the near half of the orbit and about a decibel down at the far side.
+	/// </summary>
+	[TestMethod]
+	public void OverTheLobbyOrbitTheAntennaBarelyMoves()
+	{
+		var lobby = new AudioListener( Vector3.Zero, Vector3.Right, MathF.Sqrt( (70f * 70f) + (20f * 20f) ) );
+
+		Assert.AreEqual( 1f, lobby.AttenuationTo( new Vector3( 61.31f, 0, 0 ) ), 1e-4f, "nearest point of the orbit" );
+
+		var far = lobby.AttenuationTo( new Vector3( 81.75f, 0, 0 ) );
+		var decibels = 20f * MathF.Log10( far );
+
+		Assert.IsTrue( decibels < 0f && decibels > -1.5f, $"furthest point came to {decibels:F2}dB" );
+	}
+
 	/// <summary>
 	/// It never leaves the range the mixer turns into gains. Swept over a box the size of the lobby
 	/// around a listener standing where the lobby camera does.

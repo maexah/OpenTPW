@@ -313,6 +313,31 @@ public static class Audio
 	private static AudioListener _listener = new( Vector3.Zero, Vector3.Right );
 
 	/// <summary>
+	/// How far a placed sound may be before it starts to fade - see
+	/// <see cref="AudioListener.AttenuationTo"/> for the law, which is one over the distance.
+	///
+	/// <para>
+	/// <b>Zero, which is what it starts at, turns distance off entirely</b> and leaves a placed sound
+	/// panned but never attenuated. So this is the scene's to switch on: the engine supplies the law
+	/// and whoever builds the world says at what distance a sound is heard at the level it was given.
+	/// The lobby takes it from the camera rig it was composed around - see
+	/// <see cref="LobbyCameraMode.NominalDistance"/>.
+	/// </para>
+	/// <para>
+	/// One distance for the whole mix rather than one per sound. A reference really belongs to the
+	/// source - a cricket and a klaxon do not carry the same distance - but nothing needs that yet,
+	/// and the shape to add later is a value on the voice that falls back to this one.
+	/// </para>
+	/// </summary>
+	public static float ReferenceDistance
+	{
+		get => _referenceDistance;
+		set => _referenceDistance = MathF.Max( value, 0f );
+	}
+
+	private static float _referenceDistance;
+
+	/// <summary>
 	/// Moves the listener, and works out afresh what every placed voice sounds like from there.
 	///
 	/// Called once a frame, right after the camera has moved - see <see cref="Level.Render"/>. Doing
@@ -333,7 +358,7 @@ public static class Audio
 
 		lock ( Lock )
 		{
-			_listener = AudioListener.Facing( position, forward );
+			_listener = AudioListener.Facing( position, forward, _referenceDistance );
 
 			foreach ( var voice in Voices )
 				voice.Locate( _listener, immediately: false );

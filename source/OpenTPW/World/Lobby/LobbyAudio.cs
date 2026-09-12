@@ -190,6 +190,10 @@ public sealed class LobbyAudio : Entity
 	{
 		StopEverything();
 
+		// The lobby's own distance goes with the lobby. A scene that places no sound wants no
+		// attenuation, and whatever comes next sets its own.
+		Audio.ReferenceDistance = 0f;
+
 		if ( Current == this )
 			Current = null;
 	}
@@ -306,6 +310,12 @@ public sealed class LobbyAudio : Entity
 		// sound: an island does not move, and the node it marks does not move with the antenna that
 		// carries it - see LobbyModel.TryGetNode.
 		_ambiencePosition = island.TryGetNode( SoundNodeName, out var marked ) ? marked : null;
+
+		// And how far away "as loud as it was measured" is. The camera orbits at a fixed distance from
+		// the island it is showing, so that distance is what the lobby's levels were set against: a
+		// placed sound is heard at its measured level there, and falls away past it. Never nearer -
+		// see Audio.ReferenceDistance.
+		Audio.ReferenceDistance = LobbyCameraMode.NominalDistance;
 
 		if ( _current == null || Muted )
 			return;

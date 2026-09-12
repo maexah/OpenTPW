@@ -65,6 +65,18 @@ public class LobbyCameraMode : CameraMode
 	/// </summary>
 	public static bool Paused { get; set; }
 
+	/// <summary>
+	/// How far the camera stands from what it is looking at: the orbit's own geometry, and so the
+	/// distance the lobby was composed at.
+	///
+	/// It is <c>sqrt(SPINRADIUS^2 + VERTICALOFFSET^2)</c> - about 72.8 with the numbers lobby.txt
+	/// ships - and it lives here because this is where those two are read. The lobby's sound uses it
+	/// as the distance at which a placed sound is heard at the level it was measured into, so it wants
+	/// to come from the file rather than be written down again somewhere else. Seeded with the same
+	/// values <see cref="Settings"/> falls back to, so it is right before the first frame as well.
+	/// </summary>
+	internal static float NominalDistance { get; private set; } = MathF.Sqrt( (70f * 70f) + (20f * 20f) );
+
 	/// <summary>The island being orbited, as an index into the lobby's running order.</summary>
 	private static int IslandIndex { get; set; }
 
@@ -120,6 +132,9 @@ public class LobbyCameraMode : CameraMode
 			return;
 
 		var settings = Settings();
+
+		NominalDistance = MathF.Sqrt(
+			(settings.SpinRadius * settings.SpinRadius) + (settings.VerticalOffset * settings.VerticalOffset) );
 
 		if ( !Paused )
 			_orbitTime += Time.Delta;

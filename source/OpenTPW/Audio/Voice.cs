@@ -201,8 +201,12 @@ public sealed class Voice
 
 		var pan = listener.PanTo( position );
 
-		_targetGainLeft = 1f - MathF.Max( pan, 0f );
-		_targetGainRight = 1f + MathF.Min( pan, 0f );
+		// Which side it is on, and how far away it is, are one pair of numbers by the time the mixer
+		// sees them - so distance costs the audio thread nothing that the pan was not costing already.
+		var attenuation = listener.AttenuationTo( position );
+
+		_targetGainLeft = (1f - MathF.Max( pan, 0f )) * attenuation;
+		_targetGainRight = (1f + MathF.Min( pan, 0f )) * attenuation;
 
 		if ( !immediately )
 			return;

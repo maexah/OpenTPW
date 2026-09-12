@@ -10,7 +10,12 @@ namespace OpenTPW;
 ///
 /// Engine, not content: what is heard from here, and where from, belongs to whoever plays it.
 /// </summary>
-internal readonly record struct AudioListener( Vector3 Position, Vector3 Right )
+/// <param name="ReferenceDistance">
+/// How far a sound may be before it starts to fade, and so the distance at which it is heard at the
+/// level it was given. Zero turns distance off altogether, which is what the engine starts at - see
+/// <see cref="Audio.ReferenceDistance"/>.
+/// </param>
+internal readonly record struct AudioListener( Vector3 Position, Vector3 Right, float ReferenceDistance = 0f )
 {
 	/// <summary>
 	/// A listener standing at <paramref name="position"/> looking along <paramref name="forward"/>,
@@ -32,14 +37,49 @@ internal readonly record struct AudioListener( Vector3 Position, Vector3 Right )
 	/// (0,-1,0), which is <see cref="Vector3.Right"/>.
 	/// </para>
 	/// </summary>
-	public static AudioListener Facing( Vector3 position, Vector3 forward )
+	public static AudioListener Facing( Vector3 position, Vector3 forward, float referenceDistance = 0f )
 	{
 		var right = Vector3.Cross( forward, Vector3.Up );
 
 		// Looking straight up or straight down, there is no level right ear to find - the two vectors
 		// are parallel and the cross product collapses. The world's own right stands in, rather than
 		// the zero vector, which would put every sound dead centre without saying why.
-		return new AudioListener( position, right.Length <= float.Epsilon ? Vector3.Right : right.Normal );
+		return new AudioListener( position,
+			right.Length <= float.Epsilon ? Vector3.Right : right.Normal,
+			referenceDistance );
+	}
+
+	/// <summary>
+	/// How much a sound at <paramref name="source"/> is turned down for being far away, 0 to 1.
+	///
+	/// <para>
+	/// Amplitude falls as one over the distance. That is the physical law rather than a taste: it is
+	/// intensity that falls as one over the square, and what a gain multiplies here is amplitude. So a
+	/// sound twice as far away is half as loud, which is 6dB, and one four times as far is a quarter.
+	/// </para>
+	/// <para>
+	/// Inside <see cref="ReferenceDistance"/> it stays at 1 rather than climbing. Every layer's level
+	/// was set by measuring the samples themselves - see <see cref="LobbyAudio"/> - and the worst case
+	/// already sums to 1.18 before the master volume, so distance may take a sound away but may never
+	/// add to one. It also means the reference is the distance at which a sound is heard exactly as
+	/// loud as it was calibrated to be.
+	/// </para>
+	/// <para>
+	/// <b>This is ours, not the original's.</b> The original had a distance model - it resolves
+	/// QMixer's SetDistanceMapping, and data\sound.sam carries a RadiusInfo[n].MINRADIUS tiered by
+	/// sound detail, which is the distance inside which it did not attenuate - but it never applied
+	/// any of it to the lobby, which it played entirely flat at (0,0,0). So there is no original lobby
+	/// behaviour to restore here, and this is a choice made to be defensible rather than a recovery.
+	/// </para>
+	/// </summary>
+	public float AttenuationTo( Vector3 source )
+	{
+		if ( ReferenceDistance <= 0f )
+			return 1f;
+
+		var distance = (source - Position).Length;
+
+		return distance <= ReferenceDistance ? 1f : ReferenceDistance / distance;
 	}
 
 	/// <summary>
