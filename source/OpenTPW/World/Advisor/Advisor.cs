@@ -444,6 +444,10 @@ public sealed class Advisor : Entity
 		_cue = null;
 		_shown = false;
 
+		// Cutting a line abandons its clip wherever it had got to, which is what can leave his face
+		// half-posed - see ResetFace.
+		ResetFace();
+
 		return sounding;
 	}
 
@@ -483,7 +487,12 @@ public sealed class Advisor : Entity
 		_lips = LipFile.TryLoad( $"global/Speech/lips/sp_{sample:000}.lip", out var lips ) ? lips : null;
 
 		if ( _figure != null )
+		{
+			// He is about to be seen again, so start him from a known face rather than from
+			// whatever the last line's clips left behind - see ResetFace.
+			ResetFace();
 			_shown = true;
+		}
 
 		if ( !_ducked )
 		{
@@ -594,6 +603,23 @@ public sealed class Advisor : Entity
 
 		_mouth = shape;
 		_figure?.ShowMouth( shape );
+	}
+
+	/// <summary>
+	/// Puts his face back to a known state, for the moments where a clip stops partway through and
+	/// leaves it however it happened to be.
+	///
+	/// Mesh visibility persists between clips - see <see cref="AdvisorModel.OpenEyes"/> for why his
+	/// eyes are the ones that get stranded by it. His mouths are exposed to the same thing from the
+	/// other side: clip 13 hides all five of them partway through and never shows one again, and
+	/// <see cref="SetMouth"/> only tells the model anything when the shape changes, so a mouth left
+	/// hidden would stay hidden. Forgetting the shape here makes the next call assert it whatever
+	/// it turns out to be.
+	/// </summary>
+	private void ResetFace()
+	{
+		_figure?.OpenEyes();
+		_mouth = 0;
 	}
 
 	private void LoadFigure()

@@ -174,6 +174,27 @@ public sealed class AdvisorModel
 				SetMeshVisible( node, id >= FirstOwnPartId );
 		}
 
+		OpenEyes();
+	}
+
+	/// <summary>
+	/// Puts his eyes back where they belong: both open, both eyelids away.
+	///
+	/// A clip's visibility keys are state that outlives the clip, and only the eyelids carry a key
+	/// at frame 0 to re-establish themselves. The eye tracks' first key is the start of a blink -
+	/// frame 10 in clip 8, frame 80 in clip 3 - and <see cref="AnimationFile.VisibilityTrack.VisibleAt"/>
+	/// leaves a mesh alone before a track's first key. So a line cut off inside a blink's four
+	/// frames leaves his eyes hidden, the next line inherits that, and nothing shows them again
+	/// until its first blink: up to 2.7 seconds of him looking out with no eyes at all.
+	///
+	/// Every clip's eye track ends on a key that shows them, which is why this only ever bites a
+	/// line that was interrupted rather than one that played out.
+	/// </summary>
+	public void OpenEyes()
+	{
+		SetMeshVisible( MeshNamed( "right eye" ), true );
+		SetMeshVisible( MeshNamed( "left eye" ), true );
+
 		SetMeshVisible( MeshNamed( "shuteye r" ), false );
 		SetMeshVisible( MeshNamed( "shuteye l" ), false );
 	}
