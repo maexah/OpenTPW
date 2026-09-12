@@ -8,7 +8,9 @@ internal static partial class ShaderPreprocessor
 	{
 		var fileContents = File.ReadAllText( filePath );
 
-		var segmentParser = new ShaderSegmentParser( fileContents );
+		// The parser is given the folder the shader came from, so that an include names its neighbour rather
+		// than the directory the game happened to be started from - see ShaderSegmentParser.Parse.
+		var segmentParser = new ShaderSegmentParser( fileContents, Path.GetDirectoryName( filePath ) ?? "" );
 		segmentParser.Parse( out var vertexStage1, out var fragmentStage1 );
 
 		var result = new PreprocessedShader( vertexStage1, fragmentStage1 );

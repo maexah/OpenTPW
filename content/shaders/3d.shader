@@ -1,4 +1,4 @@
-vertex "content/shaders/includes/3d.vert"
+vertex "includes/3d.vert"
 
 common {
   layout( set = 0, binding = 0 ) uniform ObjectUniformBuffer {

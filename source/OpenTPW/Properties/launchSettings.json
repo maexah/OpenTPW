@@ -1,8 +1,7 @@
 {
   "profiles": {
     "OpenTPW": {
-      "commandName": "Project",
-      "workingDirectory": "$(SolutionDir)\\.."
+      "commandName": "Project"
     }
   }
 }

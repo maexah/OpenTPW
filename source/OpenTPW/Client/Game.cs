@@ -60,10 +60,15 @@ internal static class Game
 		Players.Roster.Load();
 
 		//
-		// Custom OpenTPW cache directory (mainly for editor-related stuff)
+		// Custom OpenTPW cache directory (mainly for editor-related stuff). Kept with the player rather than
+		// in whatever directory the game was started from: a copy of the game may sit somewhere nothing may
+		// write to, and nothing in here is worth keeping if it is lost.
 		//
-		Directory.CreateDirectory( "./.opentpw" );
-		CacheFileSystem = new BaseFileSystem( "./.opentpw" );
+		var cacheFolder = Path.Join(
+			Environment.GetFolderPath( Environment.SpecialFolder.LocalApplicationData ), "OpenTPW", "cache" );
+
+		Directory.CreateDirectory( cacheFolder );
+		CacheFileSystem = new BaseFileSystem( cacheFolder );
 
 		//
 		// Init renderer

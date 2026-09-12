@@ -93,7 +93,7 @@ internal sealed class LoadingScreen : IDisposable
 		_what = what;
 		_expectedSteps = Math.Max( expectedSteps, 1 );
 
-		_font = File.ReadAllBytes( FontPath );
+		_font = File.ReadAllBytes( ContentDir.GetPath( FontPath ) );
 		EnsureGeometry();
 
 		// None of these count as steps: nothing is listening for them yet. The picture is chosen for

@@ -26,6 +26,11 @@ partial class Shader
 	/// </summary>
 	internal static Shader GetOrCreate( string path )
 	{
+		// Resolved before the lookup rather than after it. TryGetCachedShader compares whole path strings, so
+		// a shader asked for by the spelling the code uses would never match the resolved path the shader
+		// itself keeps, and every material would get a compile and a file watcher of its own.
+		path = ContentDir.GetPath( path );
+
 		if ( TryGetCachedShader( path, out var existingShader ) )
 			return existingShader!;
 

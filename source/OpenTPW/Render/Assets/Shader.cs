@@ -18,7 +18,10 @@ public partial class Shader : Asset
 
 	internal Shader( string path )
 	{
-		Path = path;
+		// Resolved here as well as in GetOrCreate, for the one caller that builds a Shader straight from the
+		// constructor - the blit shader, in Renderer.CreateBlitPipeline. Without it the watcher below is
+		// handed a directory relative to wherever the game was started from, which is where it threw.
+		Path = ContentDir.GetPath( path );
 		Register();
 
 		Recompile();

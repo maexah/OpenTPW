@@ -10,8 +10,15 @@ partial class ShaderPreprocessor
 	/// </summary>
 	internal class ShaderSegmentParser : BaseParser
 	{
-		public ShaderSegmentParser( string input ) : base( input )
+		/// <summary>
+		/// Where the shader being parsed came from. An include is spelled relative to the file asking for it,
+		/// so a shader names its neighbours and never the directory it happens to be read from.
+		/// </summary>
+		private readonly string _directory;
+
+		public ShaderSegmentParser( string input, string directory ) : base( input )
 		{
+			_directory = directory;
 		}
 
 		private string ConsumeBlock()
@@ -66,7 +73,7 @@ partial class ShaderPreprocessor
 					var path = ConsumeWhile( x => x != '"' );
 					ConsumeChar(); // "
 
-					var contents = File.ReadAllText( path );
+					var contents = File.ReadAllText( System.IO.Path.Combine( _directory, path ) );
 
 					blocks.Add( name, contents );
 				}
