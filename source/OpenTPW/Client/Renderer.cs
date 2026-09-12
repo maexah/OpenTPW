@@ -36,6 +36,13 @@ public partial class Renderer
 		Window.Resized += OnWindowResized;
 		Window.Visible = true;
 
+		// Only one pointer on screen. The game draws its own - the themed sprite in Cursor.cs, out
+		// of the same four-frame strips the original drew - and the original hid the desktop's while
+		// it did so, with ShowCursor(0) at 0x00489de1 in its UI_Init. Showing both puts two pointers
+		// up, the drawn one always a frame and a present behind the one the window manager
+		// composites. Set once: SDL keeps this, and nothing else in the game asks for it back.
+		Input.IsSystemCursorVisible = false;
+
 		CreateGraphicsDevice();
 		// Swap the buffers so that the screen isn't a mangled mess
 		Device.SwapBuffers();

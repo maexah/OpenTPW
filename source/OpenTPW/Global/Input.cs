@@ -97,8 +97,6 @@ public static partial class Input
 
 	public static void UpdateFrom( InputSnapshot inputSnapshot )
 	{
-		IsSystemCursorVisible = true;
-
 		var mousePos = new Vector2( inputSnapshot.MousePosition.X, inputSnapshot.MousePosition.Y );
 		var mouseInfo = new MouseInfo
 		{
