@@ -180,6 +180,30 @@ public sealed class LobbyAudio : Entity
 	public LobbyAudio()
 	{
 		Current = this;
+
+		// Every park's sound is built here, rather than when the camera first reaches that island.
+		//
+		// The original loads all of it up front too. Its lobby start walks the island list and runs
+		// the island-script parser once per island (0x005e1a44 into 0x005e3210), and that parser
+		// loads that island's two categories inline - cat_locallobbymusic and cat_locallobbysfx, at
+		// 0x0051e8f0 - appending the pair to one table. Selecting an island afterwards only ever
+		// plays out of that table, by the index the island kept; it never loads anything.
+		//
+		// Loading them on arrival instead put a park's worth of MPEG decoding - about a megabyte
+		// compressed, ten times that as float - inside the update of the frame the camera got
+		// there on, and that frame ran to a tenth of a second against the seven milliseconds
+		// either side of it. Only the first arrival at each island, because the cache below keeps
+		// what it builds, which is exactly the "first time" of the report.
+		//
+		// Nothing is decoded twice and nothing is decoded that would not have been: this is the
+		// same ParkFor the arrival path calls, filling the same cache. The work only moves to
+		// where the loading screen is already up. With no audio device there is nothing to play
+		// and OnUpdate never reaches an island, so nothing is loaded at all - as before.
+		if ( !Audio.Ready )
+			return;
+
+		foreach ( var island in Entity.All.OfType<LobbyIsland>() )
+			ParkFor( island.ThemeName );
 	}
 
 	/// <summary>
