@@ -9,7 +9,8 @@ namespace OpenTPW;
 /// the ground is drawn with the park's real textures, its own ground base set. Every theme uses six of
 /// them: <c>jgr_bas1..6</c> for the jungle and fantasy, <c>hrk_bas1..6</c> for hallow,
 /// <c>sfl_bas1..6</c> for space. Index 0 is the exception and is not a ground texture at all - it
-/// covers the cells the river and the paths run over, which something else draws.
+/// covers the cells the river and the park's fixed approach run over, which the scenery draws. The
+/// player's own paths are <b>not</b> among them and are drawn by <see cref="ParkPaths"/>.
 /// </para>
 ///
 /// <para>
@@ -41,12 +42,17 @@ public sealed class ParkGround : ModelEntity
 
 	private readonly string _themeName;
 
-	public ParkGround( string themeName )
+	/// <param name="world">
+	/// The park's own save, or null where the theme ships none. It is asked one question only: which
+	/// cells the player laid a path on, so that those can be left to <see cref="ParkPaths"/> instead of
+	/// being drawn as grass underneath it.
+	/// </param>
+	public ParkGround( string themeName, ParkWorld? world )
 	{
 		_themeName = themeName;
 		Name = $"{themeName} ground";
 
-		Build();
+		Build( world );
 
 		Current = this;
 	}
@@ -73,11 +79,20 @@ public sealed class ParkGround : ModelEntity
 	///
 	/// <para>
 	/// These are exactly the cells whose flag word is 0x1 - 1,159 of each in the jungle, the same cells
-	/// both ways - and they trace the river and the paths. Which is the point: <b>the park's own
-	/// scenery already draws those surfaces.</b> base.MD2 carries the river with its water and its
-	/// stone banks, the waterfall under the bridge, and the brick of the paths. A ground quad over a
+	/// both ways - and they trace the river and the park's fixed approach. Which is the point: <b>the
+	/// park's own scenery already draws those surfaces.</b> base.MD2 carries the river with its water
+	/// and its stone banks, the waterfall under the bridge, and the entrance road. A ground quad over a
 	/// cell marked 0 is not filling a gap, it is putting a lid on what is underneath - which is why
 	/// skipping them does not leave holes but uncovers the park.
+	/// </para>
+	///
+	/// <para>
+	/// <b>The player's own paths are NOT among these, though an earlier note here said they were.</b>
+	/// Measured against the save: all 82 of Lost Kingdom's path and queue cells carry a real ground
+	/// index - mostly 27, <c>jgr_bas1</c> - and not one is 0, while every one of the 66 cells the save
+	/// marks as the fixed approach is 0. So a built path is ordinary drawn ground here, and the cells it
+	/// covers are left out separately, by asking the save rather than the model - see
+	/// <see cref="ParkPaths"/>.
 	/// </para>
 	/// </summary>
 	private const ushort NotGround = 0;
@@ -115,7 +130,7 @@ public sealed class ParkGround : ModelEntity
 		}
 	}
 
-	private void Build()
+	private void Build( ParkWorld? world )
 	{
 		var path = $"levels/{_themeName.ToLowerInvariant()}/terrain/base.MD2";
 
@@ -199,6 +214,12 @@ public sealed class ParkGround : ModelEntity
 				if ( texture == NotGround )
 					continue;
 
+				// A cell the player laid a path on is drawn by ParkPaths instead. These are ordinary
+				// ground cells in the model rather than index 0, so without this the two surfaces would
+				// be built over each other at identical heights and fight for the same depth.
+				if ( world != null && ParkPaths.IsPath( world.CellAt( x, y ) ) )
+					continue;
+
 				var slot = Math.Clamp( indices.IndexOf( texture ), 0, textures.Length - 1 );
 
 				// Which way round this cell's art goes - the low half of the same word the texture
@@ -245,7 +266,7 @@ public sealed class ParkGround : ModelEntity
 		Model = new Model( vertices[..vertex], elements[..element], material );
 
 		Log.Info( $"{_themeName}: ground {element / 6} cells drawn, " +
-			$"{field.CellCount - (element / 6)} left to the scenery" );
+			$"{field.CellCount - (element / 6)} left to the scenery and to the paths" );
 	}
 
 	/// <summary>
@@ -359,7 +380,7 @@ public sealed class ParkGround : ModelEntity
 	/// level ground lights as though it were a wall, which is exactly how it looked.
 	/// </para>
 	/// </summary>
-	private static Vector3 NormalAt( HeightfieldFile field, int x, int y )
+	internal static Vector3 NormalAt( HeightfieldFile field, int x, int y )
 	{
 		var slopeX = (field.HeightAt( x + 1, y ) - field.HeightAt( x - 1, y )) / (2f * field.CellSizeX);
 		var slopeY = (field.HeightAt( x, y + 1 ) - field.HeightAt( x, y - 1 )) / (2f * field.CellSizeY);

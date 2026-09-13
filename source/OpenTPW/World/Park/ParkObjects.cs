@@ -36,12 +36,14 @@ public sealed class ParkObjects : Entity
 	/// <summary>How many objects actually stand in the park - for the log, and for anything wanting to check.</summary>
 	public int Placed => _models.Count;
 
-	public ParkObjects( string themeName )
+	/// <param name="world">
+	/// The park's own save, already walked, or null where the theme ships none. It is read once by
+	/// <see cref="Level"/> and shared, because the ground and the paths need the same file.
+	/// </param>
+	public ParkObjects( string themeName, ParkWorld? world )
 	{
 		ThemeName = themeName;
 		Name = $"{themeName} objects";
-
-		var world = ReadPark( themeName );
 
 		if ( world == null )
 			return;
@@ -60,53 +62,6 @@ public sealed class ParkObjects : Entity
 			Place( item, catalogue );
 
 		Log.Info( $"{themeName}: {Placed} of {wanted.Length} objects stand in the park" );
-	}
-
-	/// <summary>
-	/// The park file for a theme, walked, or null where there is nothing to read.
-	///
-	/// <para>
-	/// Only the jungle ships one of these, which is also why Lost Kingdom is the only park an Instant
-	/// Action player can start in. The other three themes have no saved park at all, so they get their
-	/// ground and their gate and nothing else - which is a fact about the game's data, not a failure, and
-	/// is reported as such.
-	/// </para>
-	/// <para>
-	/// This reads the copy that ships beside the level rather than the player's own. Nothing writes a park
-	/// back yet, so the two are identical; when saving exists, this is the line that has to start asking
-	/// which player is playing.
-	/// </para>
-	/// </summary>
-	private static ParkWorld? ReadPark( string themeName )
-	{
-		var path = $"levels/{themeName.ToLowerInvariant()}/Easymode.TPWI";
-
-		if ( !FileSystem.FileExists( path ) )
-		{
-			Log.Info( $"{themeName}: no park file ships with this theme, so nothing is placed in it" );
-			return null;
-		}
-
-		try
-		{
-			using var stream = FileSystem.OpenRead( path );
-			var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
-
-			if ( world.Problem != null )
-				Log.Warning( $"{themeName}: the park file stopped being readable partway - {world.Problem}" );
-			else if ( !world.ClosedOnTrailer )
-				Log.Warning( $"{themeName}: the park file's world block did not end where it should have" );
-
-			Log.Info( $"{themeName}: park file holds {world.ThingCount} things, {world.Objects.Count} of them objects" );
-
-			return world;
-		}
-		catch ( Exception e )
-		{
-			// A park worth looking at without its shops beats no park at all.
-			Log.Warning( $"{themeName}: the park file would not read, so the park is empty - {e.Message}" );
-			return null;
-		}
 	}
 
 	/// <summary>

@@ -196,16 +196,70 @@ public class Level
 			Color = Balance.Colour( "ThemeEngine.DirectionalLightLevel", Vector3.One )
 		};
 
-		// The ground first, then what stands on it. ParkObjects is last because it asks the ground how
-		// high the land is under each thing it places.
-		_ = new ParkGround( ThemeName );
+		// The park's own save, read once here and handed to everything that needs it: the ground to know
+		// which cells it must leave alone, the paths to draw those cells, and the objects to stand where
+		// it says. It inflates to a megabyte and a half, so reading it three times would be careless.
+		var park = ReadPark( ThemeName );
+
+		// The ground first, then what stands on it. The paths follow the ground because they lie on its
+		// heightfield, and ParkObjects is last because it asks how high the land is under each thing it
+		// places.
+		_ = new ParkGround( ThemeName, park );
+		_ = new ParkPaths( ThemeName, park );
 		_ = new ParkTerrain( ThemeName );
 		_ = new ParkFixedItems( ThemeName );
-		_ = new ParkObjects( ThemeName );
+		_ = new ParkObjects( ThemeName, park );
 
 		GameOptions.Current.ApplySound();
 
 		Camera.SetCameraMode<ParkOrbitCameraMode>();
+	}
+
+	/// <summary>
+	/// The park file for a theme, walked, or null where there is nothing to read.
+	///
+	/// <para>
+	/// Only the jungle ships one of these, which is also why Lost Kingdom is the only park an Instant
+	/// Action player can start in. The other three themes have no saved park at all, so they get their
+	/// ground and their gate and nothing else - which is a fact about the game's data, not a failure, and
+	/// is reported as such.
+	/// </para>
+	/// <para>
+	/// This reads the copy that ships beside the level rather than the player's own. Nothing writes a park
+	/// back yet, so the two are identical; when saving exists, this is the line that has to start asking
+	/// which player is playing.
+	/// </para>
+	/// </summary>
+	private static ParkWorld? ReadPark( string themeName )
+	{
+		var path = $"levels/{themeName.ToLowerInvariant()}/Easymode.TPWI";
+
+		if ( !FileSystem.FileExists( path ) )
+		{
+			Log.Info( $"{themeName}: no park file ships with this theme, so nothing is placed in it" );
+			return null;
+		}
+
+		try
+		{
+			using var stream = FileSystem.OpenRead( path );
+			var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+
+			if ( world.Problem != null )
+				Log.Warning( $"{themeName}: the park file stopped being readable partway - {world.Problem}" );
+			else if ( !world.ClosedOnTrailer )
+				Log.Warning( $"{themeName}: the park file's world block did not end where it should have" );
+
+			Log.Info( $"{themeName}: park file holds {world.ThingCount} things, {world.Objects.Count} of them objects" );
+
+			return world;
+		}
+		catch ( Exception e )
+		{
+			// A park worth looking at without its shops beats no park at all.
+			Log.Warning( $"{themeName}: the park file would not read, so the park is empty - {e.Message}" );
+			return null;
+		}
 	}
 
 	/// <summary>

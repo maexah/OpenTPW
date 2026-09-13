@@ -96,11 +96,11 @@ That substitutes SDL only. SPIRV-Cross and shaderc still come from the build, be
 
 **What works.** The lobby: four islands with their gates, flyers, sky, ocean, weather with thunder and lightning, and the park name signs. The original front end, drawn with the game's own interface meshes and `.bf4` fonts - player slots, the new player dialog, the quit box, the island panel with its golden key prices, and the help bar. The advisor, with lip sync, queued lines and interruption. The original particle system and its on-screen effects. The Escape menu and options screen, with volumes that apply as you drag them, working display modes and resolutions, and a window you can resize to any aspect ratio. Machine options and players save to `save\Config.tcf` and `save\users`, in the original's own formats.
 
-**And a park.** Choosing a park in the front end enters it. Its land is built from the heightfield inside the theme's `base.MD2` and drawn with the park's own ground textures, each cell laid the way its flags say; the attribute map beside it is read, so the engine knows what every cell *is*. The theme's fixed scenery loads, and so do the fixed items the save never gives a position to - the entrance gate, with its doors animating and the park's name painted onto its board, and the traffic lights on both pedestrian crossings.
+**And a park.** Choosing a park in the front end enters it. Its land is built from the heightfield inside the theme's `base.MD2` and drawn with the park's own ground textures, each cell laid the way its flags say; the attribute map beside it is read, so the engine knows what every cell *is*. The theme's fixed scenery loads, and so do the fixed items the save never gives a position to - the entrance gate, with its doors animating and the park's name painted onto its board, and the traffic lights on both pedestrian crossings. The paths the park was laid out with are drawn as well - straights, corners, T-junctions, a crossroads and the edged sides of the double-wide avenue running up from the gate - each cell taking the tile and the quarter turn its save file records, because a path stores both rather than leaving them to be worked out from its neighbours.
 
 **And the things it was laid out with.** The park's own save file is walked, and the eleven objects Lost Kingdom was built with stand on the cells it gives them: a drinks shop, a ride, a sideshow, three toilets, a staff room, two security cameras, a litter bin and a fountain that runs with water. Each takes the art it does not ship itself from the theme's shared texture archive, which is how the original arranges it - without that, most of every item's surfaces have no texture to draw. Each also stands as the thing it was built into rather than the way it first arrived: an item is put up by a one-shot clip, and the last frame of that clip is what a finished one looks like, which is why the ride is a hatched dinosaur rather than an egg with a dinosaur drawn through it.
 
-**What does not.** Leaving a park once you are in one - only the debug console can. The objects a park places now stand in it, but none of them *works*: a ride is scenery, a shop serves nobody, and there are no paths or queues, no staff and no visitors. Nor is there a park interface, ride scripts, video, or anything online - there is no networking code in the project at all.
+**What does not.** Leaving a park once you are in one - only the debug console can. The objects a park places now stand in it, but none of them *works*: a ride is scenery, a shop serves nobody, and there are no queues, no staff and no visitors. Nor is there a park interface, ride scripts, video, or anything online - there is no networking code in the project at all.
 
 ## File formats
 
@@ -162,7 +162,7 @@ dotnet test source/OpenTPW.sln
 
 It does not matter what directory you start the game from; the shaders and the loading screen's font are copied next to the binary and found there.
 
-Forty of the eighty-four unit tests read real game files and skip when no installation is found - so a green run on a machine that has never had the game means 44 ran and 40 did not. Set `OPENTPW_GAME_PATH` to run all of them.
+Forty-three of the eighty-seven unit tests read real game files and skip when no installation is found - so a green run on a machine that has never had the game means 44 ran and 43 did not. Set `OPENTPW_GAME_PATH` to run all of them.
 
 `OPENTPW_DEBUG_CONSOLE=1` reads commands from standard input, for driving a run reproducibly.
 

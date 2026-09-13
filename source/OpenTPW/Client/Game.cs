@@ -188,19 +188,26 @@ internal static class Game
 	///
 	/// <para>
 	/// Measured, not guessed: the loading screen logs the real count as it closes, and a park entered
-	/// from the lobby reports 872. It started at 500 here, which is what the original budgets for its
+	/// from the lobby reports 885. It started at 500 here, which is what the original budgets for its
 	/// own park load (LoadingScreen_Begin with 500, from state 9) - a fair guess, and a quarter short,
 	/// because the two are counting different things. See <see cref="LobbyLoadSteps"/>, measured the
 	/// same way.
 	/// </para>
 	/// <para>
-	/// It has moved six times, and the direction is not always up: 500 guessed, 631 with the scenery,
+	/// It has moved seven times, and the direction is not always up: 500 guessed, 631 with the scenery,
 	/// 649 once the ground was built, back to 637 when the ground's sixteen placeholder colours
 	/// became seven real textures and nine shares of one blank, 671 with the park's fixed items -
 	/// the gate with its three door animations and its painted sign, and the traffic lights - and 872
 	/// once the park's own objects were read out of its save file, which is eleven shops, rides and
 	/// pieces of scenery, each bringing a model and its textures. A step is an <c>Asset.Register</c>,
 	/// so anything that loads fewer assets lowers it.
+	/// </para>
+	/// <para>
+	/// <b>885 since the park's paths are drawn</b>, a rise of thirteen. Eleven of those are the path
+	/// tiles the jungle uses - the straights, corners, T-junctions, crossroads and avenue edges named in
+	/// the theme's own <c>.tct</c>. The other two arrive with the surface they are drawn as and were not
+	/// traced separately; the number here is what the game reports, which is the only thing this constant
+	/// is allowed to be.
 	/// </para>
 	/// <para>
 	/// That last number was 876 until the items were given the theme's shared texture archive to fall
@@ -216,7 +223,7 @@ internal static class Game
 	/// there. Re-measure when that path exists.
 	/// </para>
 	/// </summary>
-	private const int ParkLoadSteps = 872;
+	private const int ParkLoadSteps = 885;
 
 	/// <summary>Builds a park behind the loading screen, the way <see cref="LoadLobby"/> builds the lobby.</summary>
 	private static void LoadPark( string themeName )
