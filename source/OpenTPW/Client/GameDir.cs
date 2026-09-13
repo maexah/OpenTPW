@@ -8,9 +8,9 @@ namespace OpenTPW;
 /// from the folder it was installed into. OpenTPW is meant to be used the same way: copy the disc somewhere
 /// that can be written to, put this build in with the game's files, and start it. <see cref="Find"/> takes
 /// the first of these that holds the game: --game on the command line, OPENTPW_GAME_PATH in the environment,
-/// the GamePath setting if it has been set away from the value it ships with, the folder this build sits in
-/// and the folders above it, the working directory and the folders above it, and last the place the original
-/// installs itself on Windows.
+/// the GamePath setting if it has been set away from the value it ships with, the folder this build sits in,
+/// the working directory, and last the place the original installs itself on Windows. Each of those is one
+/// folder: nothing walks up into the folders above them looking for a game nobody pointed at.
 /// </para>
 /// <para>
 /// A folder holds the game when it has a data folder with the game's levels inside it. Names are matched
@@ -41,14 +41,6 @@ public static class GameDir
 	private const string SaveName = "save";
 	private const string LevelsName = "levels";
 	private const string LongName = "Challenges.sam";
-
-	/// <summary>
-	/// How far above the build and the working directory the game is looked for. Five is the depth of a build
-	/// made inside the game's own folder - &lt;game&gt;\source\OpenTPW\bin\Debug\net10.0 - and there is nothing
-	/// worth walking into above that: past the folder holding the build, the folders above it are the
-	/// player's own.
-	/// </summary>
-	private const int ParentLevels = 5;
 
 	/// <summary>
 	/// Names from the disc's plain ISO 9660 tree, which is in capitals and cut to 8.3. A copy taken from that
@@ -184,13 +176,13 @@ public static class GameDir
 		if ( !string.IsNullOrWhiteSpace( setting ) && setting != byDefault )
 			candidates.Add( (SettingSource, setting) );
 
-		// Where this build is: put in with the game's files in place of TP.exe, or built into a folder
-		// inside the game's own.
-		foreach ( var folder in WithParents( AppContext.BaseDirectory ) )
-			candidates.Add( (BuildSource, folder) );
+		// Where this build is: put in with the game's files, in place of TP.exe. That folder itself and no
+		// further. The folders above it are the player's own, and climbing through them hunting for a game
+		// nobody named is guessing rather than falling back - it can only find a copy that was never pointed
+		// at, and it does it in the one case where the player has already given no direction at all.
+		candidates.Add( (BuildSource, AppContext.BaseDirectory) );
 
-		foreach ( var folder in WithParents( Directory.GetCurrentDirectory() ) )
-			candidates.Add( (WorkingSource, folder) );
+		candidates.Add( (WorkingSource, Directory.GetCurrentDirectory()) );
 
 		if ( !string.IsNullOrWhiteSpace( byDefault ) )
 			candidates.Add( (DefaultSource, byDefault) );
@@ -228,21 +220,6 @@ public static class GameDir
 		}
 
 		return null;
-	}
-
-	/// <summary>A folder and the folders above it, as far as <see cref="ParentLevels"/>.</summary>
-	private static List<string> WithParents( string path )
-	{
-		var folders = new List<string>();
-		var folder = new DirectoryInfo( path );
-
-		for ( int level = 0; level <= ParentLevels && folder != null; ++level )
-		{
-			folders.Add( folder.FullName );
-			folder = folder.Parent;
-		}
-
-		return folders;
 	}
 
 	/// <summary>
@@ -309,14 +286,13 @@ public static class GameDir
 		Log.Error( "Game files: Theme Park World was not found." );
 		Log.Error( $"Game files: a folder counts when it holds a {DataName} folder with the game's {LevelsName} in it - the folder TP.exe was installed in." );
 
-		// One line for each place looked, rather than one for every folder walked through: the folders above
-		// the working directory are the player's own, and naming them all would bury the answer.
+		// One line for each place looked. Distinct, because two of these can name the same folder - a build
+		// started from the directory it sits in - and saying it twice reads as two separate failures.
 		foreach ( var where in tried.Select( entry => entry.Where ).Distinct() )
 		{
 			var first = tried.First( entry => entry.Where == where ).Path;
-			var above = where is BuildSource or WorkingSource ? ", and the folders above it" : "";
 
-			Log.Error( $"Game files: looked in {first}{above} ({where})" );
+			Log.Error( $"Game files: looked in {first} ({where})" );
 		}
 
 		Log.Error( $"Game files: put this build in with the game's files, or start it with {PathArgument} <folder>, or set {PathVariable} to that folder." );

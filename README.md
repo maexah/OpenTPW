@@ -49,7 +49,7 @@ OPENTPW_GAME_PATH="/path/to/Theme Park World" OpenTPW
 
 Quote the path - the folder the original installs into has spaces in its name.
 
-If you tell it nothing, it searches in this order: `--game` on the command line, `OPENTPW_GAME_PATH`, the `GamePath` setting if you have changed it, the folder the build sits in and five folders above that, the working directory and five above that, and finally the default Windows install location.
+If you tell it nothing, it searches in this order: `--game` on the command line, `OPENTPW_GAME_PATH`, the `GamePath` setting if you have changed it, the folder the build sits in, the working directory, and finally the default Windows install location. Each of those is a single folder - it does not climb up through parent directories hunting for a copy of the game. If none of them holds it, OpenTPW stops and lists everywhere it looked.
 
 Saves are written to `save/` beside the game's data, exactly where the original keeps them, so a park saved by one is visible to the other.
 
