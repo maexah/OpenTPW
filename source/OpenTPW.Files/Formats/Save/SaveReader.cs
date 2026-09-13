@@ -35,6 +35,12 @@ public class SaveReader : BaseFormat
 		memoryStream = new ExpandedMemoryStream( buffer );
 	}
 
+	/// <summary>
+	/// Where the 'BILZ' block starts, which is the same in every file of this shape: a fixed 1549-byte
+	/// preamble of version, copyright and zeros comes first.
+	/// </summary>
+	private const int BlockStart = 0x60D;
+
 	public byte[] ReadFile()
 	{
 		memoryStream.Seek( 0, SeekOrigin.Begin );
@@ -42,9 +48,10 @@ public class SaveReader : BaseFormat
 		/*
 			
 		Header
-			4 bytes: Magic number - F4 01 00 00
-			Copyright notice - 0x0004 to 0x033B
-			Padding - 0x033C to 0x0603
+			4 bytes: Version - 400 in the shipped park, 500 in a saved one (NOT a magic number)
+			1 byte:  Padding
+			Copyright notice - 0x0005 to 0x033C, 824 bytes of UTF-16 = 412 characters
+			Padding - 0x033D to 0x0603, all zero
 			
 		File info
 			4 bytes: File type (00 01 22 19)
@@ -55,28 +62,27 @@ public class SaveReader : BaseFormat
 			
 		Data	
 			## ZLIB Header ##
-			4 bytes: Magic number - BILZ
-			4 bytes: Unknown
-			4 bytes: Compressed length
-			16 bytes: Unknown
-			2 bytes: ZLIB Compression Header
-			ZLIB stream begins after this point, continues to end of file
+			4 bytes: Tag - BILZ, at 0x060D
+			4 bytes: Size the payload inflates to
+			4 bytes: Size of this whole block, tag and header included
+			16 bytes: Unknown - 15, 9, 0, 0 in the shipped park
+			ZLIB stream begins at 0x0629 and continues to the end of the file
+			(the 28-byte header counts the tag, so it is 4 + 24, not 4 + 28)
 		*/
 
-		var magicNumber = memoryStream.ReadHex( 4 );
+		// Not a magic number, though this once called it one - it is a version, and the shipped
+		// parks are not the version that was hard-coded here. data/levels/jungle/Easymode.TPWI
+		// carries 400; 500 is what a saved park is expected to carry, so both are allowed and
+		// anything else says what it actually found rather than printing bytes.
+		var version = memoryStream.ReadUInt32();
 
-		if ( magicNumber != "F4010000" )
-			throw new Exception( $"Magic number did not match: {magicNumber}" );
+		if ( version != 400 && version != 500 )
+			throw new Exception( $"Save version {version} is not one this can read (400 or 500)" );
 
-		int copyrightSize = 824; //Character count with spaces adds to 824
-
-		var copyrightCharacters = memoryStream.ReadChars( copyrightSize );
-		string copyright = "";
-		foreach ( char c in copyrightCharacters )
-		{
-			copyright += c;
-		}
-
+		// Then one pad byte, and 824 bytes of copyright notice from 0x005 to 0x33C - which is UTF-16,
+		// not single bytes, so the 824 is a byte count and the notice is 412 characters. Reading it
+		// as characters gave every other byte as a null. Nothing wants it, so it is stepped over
+		// rather than decoded; what follows it, 0x33D to 0x603, is 711 bytes of zero.
 		memoryStream.Seek( 0x0604, SeekOrigin.Begin );
 
 		var fileType = memoryStream.ReadInt32();
@@ -103,28 +109,34 @@ public class SaveReader : BaseFormat
 		if ( dataMagicNumber != "BILZ" )
 			throw new Exception( $"Magic number did not match: {dataMagicNumber}" );
 
-		// Unknown
-		_ = memoryStream.ReadInt32();
+		// The two dwords after the tag are the size the payload INFLATES to and the size of this
+		// whole block including its 28-byte header - neither of them a compressed length, which is
+		// what one of them used to be called. On the shipped jungle park they read 1608309 and
+		// 36930, and 1549 + 36930 is exactly the file's length.
+		var uncompressedSize = memoryStream.ReadInt32();
+		var blockSize = memoryStream.ReadInt32();
 
-		var compressedLength = memoryStream.ReadInt32();
+		if ( BlockStart + blockSize != buffer.Length )
+			throw new Exception(
+				$"The compressed block says it is {blockSize} bytes, which does not reach the end of a " +
+				$"{buffer.Length}-byte file from 0x{BlockStart:x}" );
 
-		// Unknown - 16 bytes
+		// Unknown, and zero except for the first two: 15, 9, 0, 0 in the shipped park. Stepping over
+		// them lands on 0x629, where the zlib header actually is - the 28 bytes include the tag.
 		_ = memoryStream.ReadBytes( 16 );
 
-		// get bytes before ZLIB Header
-		var initialPos = memoryStream.Position;
+		using var uncompressedStream = new MemoryStream();
 
-		// Compression header
-		//var compressionHeader = memoryStream.ReadBytes( 2 );
-
-		byte[] output = new byte[compressedLength];
-
-		using ( MemoryStream uncompressedStream = new MemoryStream() )
-		using ( InflaterInputStream compressed = new InflaterInputStream( memoryStream ) )
-		{
+		using ( var compressed = new InflaterInputStream( memoryStream ) )
 			compressed.CopyTo( uncompressedStream );
-			return uncompressedStream.ToArray();
-		}
+
+		var inflated = uncompressedStream.ToArray();
+
+		if ( inflated.Length != uncompressedSize )
+			throw new Exception(
+				$"The payload inflated to {inflated.Length} bytes where the header said {uncompressedSize}" );
+
+		return inflated;
 	}
 
 	/// <summary>
