@@ -195,7 +195,7 @@ internal static class Game
 	/// hold whatever the last scene put there. Re-measure when that path exists.
 	/// </para>
 	/// </summary>
-	private const int ParkLoadSteps = 631;
+	private const int ParkLoadSteps = 649;
 
 	/// <summary>Builds a park behind the loading screen, the way <see cref="LoadLobby"/> builds the lobby.</summary>
 	private static void LoadPark( string themeName )

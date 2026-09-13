@@ -32,6 +32,13 @@ public class Level
 	public SettingsFile Global { get; private init; }
 
 	/// <summary>
+	/// A park's balance numbers - the theme's own Standard.sam over the global one - or null in the
+	/// lobby, which reads only <see cref="Global"/>. Settable rather than init-only because it is
+	/// built during scene setup rather than in the constructor's own body.
+	/// </summary>
+	public ParkBalance? Balance { get; private set; }
+
+	/// <summary>
 	/// Which of the game's two worlds this is. The original runs them as separate states of one
 	/// machine - the lobby is states 1/2/3 and a park is 9/10/0xb - and they share almost nothing but
 	/// the renderer, the sound device and the player's own files.
@@ -152,11 +159,37 @@ public class Level
 	/// </summary>
 	private void SetupParkEntities()
 	{
-		// The same light the lobby stands in front of its gates. A park has its own answer for this -
-		// Standard.sam carries LightNormal (0.4, -0.8, 0.4) along with ambient and directional colours -
-		// but nothing has yet traced how the original combines them, so borrowing the lobby's sun is
-		// honest placeholder rather than a guess dressed as a finding.
-		SunLight = new Sun() { Position = new( 500, -3500, 2800 ) };
+		// The theme's own numbers, global defaults underneath - see ParkBalance for why that stack
+		// matters more than it looks.
+		Balance = new ParkBalance( ThemeName );
+		Log.Info( $"{ThemeName}: balance stack came to {Balance.Count} keys" );
+
+		// What distance fades to. The lobby's Sky rewrites this every frame from its own horizon; a
+		// park builds no Sky, so setting it once here holds. Jungle and fantasy are a pale blue within
+		// a few points of the lobby's own constant, hallow is nearly black and space is orange.
+		FogColour = Balance.Colour( "ThemeEngine.FogColour", FogColour );
+
+		// LightNormal is written in the original's axes, where Y is up, so it swaps into this engine's
+		// Z-up space the same way a model's vertices do. It is read here as the direction the light
+		// travels, which puts the sun above the park rather than below it - the reading that makes
+		// physical sense, and a CHOICE rather than a finding: nothing traced it as far as the shading
+		// itself, so travels-versus-toward is still unconfirmed. Placed far enough away that its
+		// direction barely changes across a thousand-unit park, which is what makes a point light
+		// stand in for a sun.
+		var lightNormal = Balance.Vector( "LightNormal", new Vector3( 0.4f, -0.8f, 0.4f ) );
+		var travels = new Vector3( lightNormal.X, lightNormal.Z, lightNormal.Y ).Normal;
+
+		SunLight = new Sun()
+		{
+			Position = new Vector3( 480f, 425f, 0f ) - (travels * 4000f),
+
+			// ThemeEngine.DirectionalLightLevel, 0xFFFFFFD8 for every park the game ships - a white
+			// barely warmed at the blue end. AmbientLightLevel (0xFF555568) is deliberately not applied:
+			// the shader's ambient is one float, not a colour, and world draws leave it at zero and take
+			// the shader's own 0.4. Giving a park a coloured ambient means changing what every draw is
+			// handed, which is a job of its own.
+			Color = Balance.Colour( "ThemeEngine.DirectionalLightLevel", Vector3.One )
+		};
 
 		// The ground first, then what stands on it.
 		_ = new ParkGround( ThemeName );

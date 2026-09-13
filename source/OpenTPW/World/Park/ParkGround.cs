@@ -162,12 +162,22 @@ public sealed class ParkGround : ModelEntity
 	/// The surface normal at a grid vertex, from how the land falls away either side of it. Central
 	/// differences rather than a face normal, so that a corner shared by four cells is lit as one
 	/// surface and the ground does not facet along its own grid.
+	///
+	/// <para>
+	/// <b>Returned with Y and Z swapped, on purpose.</b> Every other normal in the game arrives from a
+	/// .md2, where Y is up, and content/shaders/test.shader knows that: it swaps them back itself,
+	/// with <c>vec3(normal.x, normal.z, normal.y)</c>, because the positions beside them have already
+	/// been swapped by <see cref="LobbyModel"/>. A normal worked out here is in the engine's own Z-up
+	/// space and would be turned on its side by that same line - a flat (0,0,1) becoming (0,1,0), so
+	/// level ground lights as though it were a wall, which is exactly how it looked.
+	/// </para>
 	/// </summary>
 	private static Vector3 NormalAt( HeightfieldFile field, int x, int y )
 	{
 		var slopeX = (field.HeightAt( x + 1, y ) - field.HeightAt( x - 1, y )) / (2f * field.CellSizeX);
 		var slopeY = (field.HeightAt( x, y + 1 ) - field.HeightAt( x, y - 1 )) / (2f * field.CellSizeY);
 
-		return new Vector3( -slopeX, -slopeY, 1f ).Normal;
+		// Engine space would be (-slopeX, -slopeY, 1); this is that with Y and Z exchanged.
+		return new Vector3( -slopeX, 1f, -slopeY ).Normal;
 	}
 }
