@@ -3,99 +3,104 @@
         OpenTPW
     </h1>
     <p align="center">
-        OpenTPW is an open-source re-implementation of <a href="https://en.wikipedia.org/wiki/Theme_Park_World">Sim Theme Park / Theme Park World</a>.
+        An open-source re-implementation of <a href="https://en.wikipedia.org/wiki/Theme_Park_World">Sim Theme Park / Theme Park World</a>.
         <br>
         <a href="https://opentpw.gu3.me/formats/">Format documentation</a>
     </p>
 </p>
 
-![The lobby, looking out on Halloween World in the rain, with the advisor on screen](.github/screenshot.png)
+![The lobby looking out on Halloween World: the park gates and their name board, the tree with the carved face, a bolt of lightning over the island, and the advisor on screen](.github/screenshot.png)
 
-## About
+## What this is
 
-OpenTPW is a re-implementation of Theme Park World, requiring an installation of the original game and its assets in order to run. OpenTPW aims to re-create the same experience as the original game. While OpenTPW was initially created as it is quite difficult to get Sim Theme Park to run on modern hardware and on a modern operating system, it also aims to somewhat re-introduce the original online aspect of the game - the servers of which have since been shut down. Nothing of the online game is implemented yet; there is no networking code in the project at all.
+Theme Park World (1999) is hard to run on a modern machine. OpenTPW re-implements the game's engine on top of your own copy of the original, reading its real data files - models, textures, sounds, fonts and saves - and drawing them with Vulkan.
 
-**In order to run OpenTPW, you must have a full legal copy of any version of the original game.**
+**You need a legal copy of the original game.** OpenTPW ships no game content; it is an engine, not a download.
 
-## Requirements
+**It is not playable yet.** You can explore the lobby and the front end - pick a park, look around the islands, hear the advisor - but you cannot enter a park and run it. See [Status](#status) for the full picture.
 
-- The [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). All five projects target `net10.0`.
-- A GPU and driver that can run Vulkan. Vulkan is the one backend on all three platforms; macOS reaches it through MoltenVK, which ships with the build.
-- On Linux and Windows, a Vulkan loader and a driver for your GPU. On Linux the loader is packaged under several names - `libvulkan1`, `vulkan-loader` and `vulkan-icd-loader` are all the same thing - and the driver is Mesa's or your vendor's. On Windows the GPU driver brings both.
-- A copy of the original game, copied off the disc. The data folder is about 380MB.
+## Quick start
 
-**Nothing else needs installing.** SDL2, SPIRV-Cross and shaderc all travel with the build, in `runtimes/`, and OpenTPW opens the ones it shipped rather than any the machine happens to have. Older builds asked you to install your distribution's SDL2 and, before that, to make a `libdl.so` symlink; neither is true any more.
-
-**On Wayland, that costs you something.** The SDL that ships here is built for X11 and KMSDRM and has no Wayland backend, so a Wayland session runs through XWayland - which works, but scales and handles input differently from a native Wayland window. A session with no XWayland installed will not start at all. If your distribution's SDL2 is better than ours, take it:
-
-```sh
-OPENTPW_SYSTEM_SDL=1 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game "/path/to/Theme Park World"
-```
-
-That stands aside for SDL only - SPIRV-Cross and shaderc still come from the build, because those are not libraries a machine usually has.
-
-## The game's files
-
-Copy the disc somewhere you can write to - not Program Files - and put the OpenTPW build in with the game's files, where `TP.exe` was. That is how the original found its own data, as `.\data\2dmap\gsprite.tga`, relative to itself, and it is the arrangement OpenTPW is built around.
-
-It will otherwise look, in this order: `--game <folder>` on the command line, `OPENTPW_GAME_PATH` in the environment, the `GamePath` setting if it has been changed from the value it ships with, the folder the build sits in and five above it, the working directory and five above it, and last the place the original installs itself on Windows.
-
-```sh
-OpenTPW --game "/path/to/Theme Park World"
-OPENTPW_GAME_PATH="/path/to/Theme Park World" OpenTPW
-```
-
-Quote the path: the folder the game installs itself into has spaces in its name.
-
-A folder counts as the game when it holds a `data` folder with the game's `levels` inside it. Case does not matter anywhere: the disc spells its top folder `Data` while an installed copy spells it `data`.
-
-**Copy the disc with its long names.** A CD holds two directory trees, and the plain ISO 9660 one is in capitals and cut to 8.3 - `CHALLE~0.SAM` where the game asks for `Challenges.sam`. Nothing in the game opens in a copy taken from that tree, and no amount of case matching can repair it, because those are different names rather than different spellings. Mount the disc and copy from the mount, or use a tool that keeps the Joliet names. OpenTPW recognises a short-name copy and says so rather than failing later on.
-
-Saves are written to `save/` beside the game's data, where the original keeps them, so a park saved by one is seen by the other.
-
-## Building and running
+1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+2. Copy your Theme Park World disc to a folder you can write to (see [Getting the game's files](#getting-the-games-files) - *how* you copy it matters).
+3. Build and run:
 
 ```sh
 dotnet build source/OpenTPW.sln
 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game "/path/to/Theme Park World"
 ```
 
-It does not matter what directory you start it from. The shaders and the one font OpenTPW draws its loading screen with are copied next to the binary by the build and found there.
+That is the whole setup. SDL, SPIRV-Cross and shaderc travel with the build, and OpenTPW uses the copies it shipped rather than anything installed on your machine.
 
-Some keys, none of which the game tells you about: `Escape` opens the game menu, `F1` asks the advisor for help, `F2` hides the interface, `X` freezes the lobby camera, and `[` and `]` move between islands.
+The one thing you may still need is a **Vulkan driver**, which OpenTPW cannot ship for you. On Windows and macOS your GPU driver already provides it. On Linux, install your distribution's Vulkan loader - packaged as `libvulkan1`, `vulkan-loader` or `vulkan-icd-loader` depending on the distribution - plus Mesa or your vendor's driver.
 
-`dotnet test` runs the unit tests. Fifteen of the fifty-nine read real game files and are skipped when no installation can be found, so the suite is green on a machine that has never had the game - but a green run of 59 means 44 ran and 15 did not. Set `OPENTPW_GAME_PATH` to the game's folder to run all of them.
+## Getting the game's files
+
+**Copy the disc keeping its long file names.** This is the single most common way to end up with a copy that cannot work. A CD carries two directory trees, and the plain ISO 9660 one is uppercase and cut to 8.3 - `CHALLE~0.SAM` where the game asks for `Challenges.sam`. Those are different *names*, not different spellings, so no amount of case-matching can repair them. Mount the disc and copy from the mount, or use a tool that preserves the Joliet names. OpenTPW detects a short-name copy and tells you, rather than failing mysteriously later.
+
+A folder counts as the game when it contains a `data` folder with the game's `levels` inside it. Capitalisation never matters - the disc spells it `Data`, an installed copy spells it `data`.
+
+**Where to put OpenTPW.** The tidiest arrangement is to put the build in with the game's files, where `TP.exe` was. That is how the original located its own data, and it is what OpenTPW is built around. Otherwise just point it at the folder:
+
+```sh
+OpenTPW --game "/path/to/Theme Park World"
+OPENTPW_GAME_PATH="/path/to/Theme Park World" OpenTPW
+```
+
+Quote the path - the folder the original installs into has spaces in its name.
+
+If you tell it nothing, it searches in this order: `--game` on the command line, `OPENTPW_GAME_PATH`, the `GamePath` setting if you have changed it, the folder the build sits in and five folders above that, the working directory and five above that, and finally the default Windows install location.
+
+Saves are written to `save/` beside the game's data, exactly where the original keeps them, so a park saved by one is visible to the other.
+
+## Controls
+
+The game tells you about none of these:
+
+| Key | Does |
+|-----|------|
+| `Escape` | Game menu |
+| `F1` | Ask the advisor for help |
+| `F2` | Hide the interface |
+| `X` | Freeze the lobby camera |
+| `[` `]` | Move between islands |
 
 ## Platforms
 
-| Platform | Backend | Status |
-|----------|---------|--------|
-| Linux (x64) | Vulkan | Developed and run here |
-| Windows (x64, arm64) | Vulkan | Same code path as Linux; not tested recently |
-| macOS (Intel, Apple Silicon) | Vulkan, through MoltenVK | **Untested** - see below |
-| Linux (arm64) | Vulkan | **Untested** - no longer blocked; see below |
+Vulkan is the only backend, on every platform - so a bug report from Windows lands on the same code Linux runs every day. macOS reaches Vulkan through MoltenVK, which ships with the build.
 
-Windows uses Vulkan rather than Direct3D 11 deliberately, so that a report from Windows lands on the same code Linux runs every day.
+| Platform | Builds | Run |
+|----------|--------|-----|
+| Linux x64 | ✅ | ✅ Developed and tested here |
+| Linux arm64 | ✅ | ❔ Never run |
+| Windows x64, arm64 | ✅ | ❔ Not run recently |
+| macOS Intel, Apple Silicon | ✅ | ❔ Never run |
 
-**macOS is written to be correct, not tested.** Nobody on the project has a Mac, so it has never been run there. macOS has no Vulkan driver of its own, and OpenTPW no longer asks for Metal: the graphics library it uses has no Metal backend at all, and carries MoltenVK - Vulkan implemented on top of Metal - instead. That means one code path on all three platforms rather than two, but it also means bugs there will only be found by whoever reports them. Please do report them.
+OpenTPW compiles for all seven runtime identifiers - `linux-x64`, `linux-arm64`, `linux-arm`, `win-x64`, `win-arm64`, `osx-x64`, `osx-arm64` - and each build receives its complete set of native libraries, MoltenVK included on macOS.
 
-**Apple Silicon no longer needs Rosetta 2.** An older version of this file said it did, and that was true of the libraries OpenTPW used then. It is not true now: SDL, MoltenVK, SPIRV-Cross and shaderc all ship arm64 builds, so an arm64 build has everything it needs.
+**But building is not running.** Only Linux x64 is actually exercised; nobody on the project has a Mac or an arm64 machine. The other platforms are written to be correct and are believed to work, and bugs there will be found by whoever reports them first. Please do report them.
 
-**Linux on arm64 is untested, but the library that blocked it is gone.** Every native OpenTPW needs ships for `linux-arm64` except one: `cimgui`, which ImGui.NET builds only for `linux-x64`. It came in with the ModKit editor, whose renderer was constructed whether or not the editor was ever shown, so the game stopped at startup rather than running without it. The game no longer builds the editor in, and no longer asks for `cimgui` at all. Nobody here has an arm64 Linux machine, so what is claimed is only that the known blocker has been removed - not that it has been seen to run.
+### Wayland
+
+The SDL that ships with OpenTPW is built for X11 and KMSDRM, with no Wayland backend, so a Wayland session runs through XWayland. That works, but it scales and handles input differently from a native Wayland window - and a session without XWayland installed will not start at all.
+
+If your distribution's SDL2 is better, use it instead:
+
+```sh
+OPENTPW_SYSTEM_SDL=1 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game "/path/to/Theme Park World"
+```
+
+That substitutes SDL only. SPIRV-Cross and shaderc still come from the build, because those are not libraries a machine usually has.
 
 ## Status
 
-OpenTPW is not yet playable: you can walk around the front end but not enter a park.
+**What works.** The lobby: four islands with their gates, flyers, sky, ocean, weather with thunder and lightning, and the park name signs. The original front end, drawn with the game's own interface meshes and `.bf4` fonts - player slots, the new player dialog, the quit box, the island panel with its golden key prices, and the help bar. The advisor, with lip sync, queued lines and interruption. The original particle system and its on-screen effects. The Escape menu and options screen, with volumes that apply as you drag them, working display modes and resolutions, and a window you can resize to any aspect ratio. Machine options and players save to `save\Config.tcf` and `save\users`, in the original's own formats.
 
-**What works.** The lobby - four islands, their gates and flyers, the sky, the ocean, weather with thunder and lightning, and the park name signs. The original front end, drawn with the game's own interface meshes and `.bf4` fonts: player slots, the new player dialog, the quit box, the island panel with its golden key prices, and the help bar. The advisor, with lip sync, queued lines and interruption. The original particle system and its on-screen effects. The Escape game menu and the options screen, with volumes that apply as you move them, a display mode and a resolution that work, and a window you can resize at any aspect ratio. Machine options and players are saved to `save\Config.tcf` and `save\users`, as the original saves them.
+**What does not.** Entering a park, rides and ride scripts, terrain from map data, video, and anything online - there is no networking code in the project at all.
 
-**What does not.** Entering a park, rides and ride scripts, terrain from map data, video, and anything online.
+## File formats
 
-### File formats
-
-- ❌ - Not Implemented
-- ⚠️ - Partially Implemented
-- ✅ - Implemented
+- ❌ Not implemented &nbsp;&nbsp; ⚠️ Partially implemented &nbsp;&nbsp; ✅ Implemented
 
 | Format                                                  | Status |
 |---------------------------------------------------------|--------|
@@ -117,6 +122,9 @@ OpenTPW is not yet playable: you can walk around the front end but not enter a p
 | Materials ([.MTR](https://opentpw.gu3.me/formats/mtr.html))                   | ❌     |
 | Video ([.TQI](https://opentpw.gu3.me/formats/tqi.html))                       | ❌     |
 
+<details>
+<summary><b>The detail behind the partial ones</b></summary>
+
 \* **Models (.MD2)**: static mesh geometry (verts/faces/materials) loads reliably, along with the node tree that places the meshes and the ids a character's costume pieces are found by. The same extension is also used for a structurally distinct keyframe animation format, of which five channel kinds are decoded: per-vertex morph animation (768 files), per-node quaternion rotation (686 files), UV scrolling (324 files), position (455 files) and visibility (404 files), counted by the channels each file's tracks declare. 1183 of the game's 1279 animation files carry at least one of them; 6 carry only channel kinds that aren't decoded yet and 90 contain no animation data at all. The lobby plays morph, rotation and UV; so far only the advisor plays position and visibility.
 
 \*\* **Sounds (.SDT, .MP2, cat_\*.map)**: banks are read, and their audio decodes and plays. Despite the .mp2 extension on every name inside a bank, the audio is not always MPEG Layer II - 2,646 of the game's 3,739 streams are Layer I - so both layers are decoded, and Layer III does not occur. Nothing in the game addresses a sound by file name: sounds are grouped into categories and code plays a numbered effect within one, which is what the cat_\*.map pair holds. Its bank half is fully decoded. Of its effect half, the header, the effect table and the sample records are decoded, but the variable-size header in front of each effect's sample list is not, so the records are located by validating them against the banks rather than by offset.
@@ -127,30 +135,45 @@ OpenTPW is not yet playable: you can walk around the front end but not enter a p
 
 \*\*\*\*\* **Ride Scripts (.RSE)**: there is no parser. What exists is the opcode scaffolding for the ride virtual machine, against a claimed total of 210 instructions.
 
+</details>
+
 ## Troubleshooting
 
 **"Theme Park World was not found."** OpenTPW lists every folder it looked in. Point it at the game with `--game <folder>` or `OPENTPW_GAME_PATH`, or put the build in with the game's files.
 
-**"its names have been cut short."** The disc was copied from its plain ISO 9660 tree. Copy it again keeping the long names - see [The game's files](#the-games-files).
+**"its names have been cut short."** The disc was copied from its plain ISO 9660 tree. Copy it again keeping the long names - see [Getting the game's files](#getting-the-games-files).
 
-**It stops before a window appears, saying it could not load a native library.** OpenTPW ships the libraries it opens, in `runtimes/`, so this is nearly always the Vulkan loader or the GPU driver, which it does not ship. Install the Vulkan loader your distribution packages - `libvulkan1`, `vulkan-loader` or `vulkan-icd-loader`, depending on which - and the driver for your GPU.
+**It stops before a window appears, saying it could not load a native library.** OpenTPW ships the libraries it opens, so this is almost always the Vulkan loader or the GPU driver, which it does not ship. Install your distribution's Vulkan loader and your GPU's driver.
 
-**On Wayland, the window scales oddly or input feels wrong; or it will not start at all and SDL says "No available video device".** The SDL that ships with the build has no Wayland backend, so it uses XWayland. Install XWayland, or run with `OPENTPW_SYSTEM_SDL=1` to use your distribution's SDL instead - see [Requirements](#requirements).
+**On Wayland the window scales oddly, input feels wrong, or SDL says "No available video device".** Install XWayland, or run with `OPENTPW_SYSTEM_SDL=1` - see [Wayland](#wayland).
 
-**No sound.** Not fatal - OpenTPW warns and carries on. `OPENTPW_DEBUG_CONSOLE=1` reads commands from standard input if you want to drive a run reproducibly.
+**No sound.** Not fatal - OpenTPW warns and carries on.
+
+## Building and testing
+
+```sh
+dotnet build source/OpenTPW.sln
+dotnet test source/OpenTPW.sln
+```
+
+It does not matter what directory you start the game from; the shaders and the loading screen's font are copied next to the binary and found there.
+
+Fifteen of the fifty-nine unit tests read real game files and skip when no installation is found - so a green run on a machine that has never had the game means 44 ran and 15 did not. Set `OPENTPW_GAME_PATH` to run all of them.
+
+`OPENTPW_DEBUG_CONSOLE=1` reads commands from standard input, for driving a run reproducibly.
 
 ## Documentation
 
-File format information is available at the [OpenTPW formats](https://opentpw.gu3.me/formats/) website, whose source is the [OpenTPW.FileFormats](https://github.com/OpenTPW/OpenTPW.FileFormats) repository. Keep in mind that this information is a work-in-progress, and therefore might not be of incredible detail - however, upon completion, it still aims to be as useful, detailed, and as in-depth as possible.
+File format information lives at the [OpenTPW formats](https://opentpw.gu3.me/formats/) site, whose source is the [OpenTPW.FileFormats](https://github.com/OpenTPW/OpenTPW.FileFormats) repository. It is a work in progress, but aims to be thorough.
 
 ## Contributing
 
-Contributions to this project are greatly appreciated; please follow these steps in order to submit your contribution to the project:
+Contributions are very welcome:
 
-1. Fork the [Original Project](https://github.com/OpenTPW/OpenTPW)
-2. Create a branch under the name `YourName/FeatureName`
-3. Once you've made all the changes you need to make, go ahead and submit a Pull Request.
+1. Fork the [original project](https://github.com/OpenTPW/OpenTPW).
+2. Create a branch named `YourName/FeatureName`.
+3. Open a pull request when you are ready.
 
 ## License
 
-This project is licensed under the MIT license; a copy of this license is available at [LICENSE.md](https://github.com/OpenTPW/OpenTPW/blob/main/LICENSE.md).
+MIT - see [LICENSE.md](https://github.com/OpenTPW/OpenTPW/blob/main/LICENSE.md).
