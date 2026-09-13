@@ -34,6 +34,11 @@ public partial class Renderer
 	{
 		Window = new( Settings.Default.GameWindowSize.X, Settings.Default.GameWindowSize.Y, "Theme Park World", true );
 		Window.Resized += OnWindowResized;
+
+		// While it is still hidden, so the window is never shown under the icon the desktop hands out to
+		// a program that has named none.
+		GameIcon.Apply( Window );
+
 		Window.Visible = true;
 
 		// Only one pointer on screen. The game draws its own - the themed sprite in Cursor.cs, out

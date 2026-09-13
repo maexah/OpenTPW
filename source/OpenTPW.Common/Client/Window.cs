@@ -81,6 +81,59 @@ public class Window
 		Resized?.Invoke( Size );
 	}
 
+	/// <summary>
+	/// Puts an image in the window's corner, and on whatever the desktop shows running programs in. The
+	/// pixels are RGBA with the top row first, one byte a channel.
+	///
+	/// <para>
+	/// Veldrid's SDL binding has nothing for any of the three calls this takes, so they are loaded out of
+	/// the SDL it has already opened, the same way the window's minimum size is.
+	/// </para>
+	/// </summary>
+	public void SetIcon( int width, int height, byte[] pixels )
+	{
+		if ( width <= 0 || height <= 0 || pixels.Length < width * height * 4 )
+		{
+			Log.Warning( $"Window: {pixels.Length} bytes is not a {width}x{height} icon" );
+			return;
+		}
+
+		// SDL_CreateRGBSurfaceFrom borrows the pixels where SDL_CreateRGBSurface would copy them, so they
+		// have to stay where they are until SDL_SetWindowIcon has taken its own copy of them.
+		var pinned = GCHandle.Alloc( pixels, GCHandleType.Pinned );
+
+		try
+		{
+			// Masks against the bytes as they sit in memory on a little-endian machine: R is the lowest.
+			var surface = Sdl2Native.LoadFunction<SDL_CreateRGBSurfaceFrom_t>( "SDL_CreateRGBSurfaceFrom" )(
+				pinned.AddrOfPinnedObject(), width, height, 32, width * 4,
+				0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000 );
+
+			if ( surface == IntPtr.Zero )
+			{
+				Log.Warning( "Window: SDL would not make a surface for the icon, so the window keeps the desktop's" );
+				return;
+			}
+
+			Sdl2Native.LoadFunction<SDL_SetWindowIcon_t>( "SDL_SetWindowIcon" )( SdlWindow.SdlWindowHandle, surface );
+			Sdl2Native.LoadFunction<SDL_FreeSurface_t>( "SDL_FreeSurface" )( surface );
+		}
+		finally
+		{
+			pinned.Free();
+		}
+	}
+
+	[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
+	private delegate IntPtr SDL_CreateRGBSurfaceFrom_t( IntPtr pixels, int width, int height, int depth, int pitch,
+		uint rMask, uint gMask, uint bMask, uint aMask );
+
+	[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
+	private delegate void SDL_SetWindowIcon_t( IntPtr window, IntPtr surface );
+
+	[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
+	private delegate void SDL_FreeSurface_t( IntPtr surface );
+
 	[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
 	private delegate void SDL_SetWindowMinimumSize_t( IntPtr window, int w, int h );
 
