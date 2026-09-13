@@ -1,5 +1,24 @@
 ﻿namespace OpenTPW;
 
+/// <summary>
+/// <b>This is not the park camera.</b> It is a free-fly development camera left from the old test scene -
+/// <c>WASD</c> across a plane, right-drag to look, the wheel for height, and ninety-degree yaw steps - and
+/// nothing in the game builds one: the only <see cref="Camera.SetCameraMode{T}"/> call anywhere is the
+/// lobby's, in Level. It has never run in the game as shipped.
+///
+/// <para>
+/// The original's park camera is a different thing entirely - it scrolls, rotates and zooms over the
+/// terrain. When parks are built, that camera wants writing against the original's own code, the way
+/// <see cref="LobbyCameraMode"/> was. Do not take this file as the starting point; it is kept only so the
+/// flycam is not written twice.
+/// </para>
+///
+/// <para>
+/// It is also the only reader of <c>Input.Forward</c>, <c>Input.Right</c> and the
+/// <c>InputButton.RotateLeft</c> / <c>RotateRight</c> bindings, which is why those look wired up when in
+/// fact nothing else in the game touches them.
+/// </para>
+/// </summary>
 public class ParkCameraMode : CameraMode
 {
 	private Vector3 wishVelocity = new();
