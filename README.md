@@ -19,12 +19,12 @@ OpenTPW is a re-implementation of Theme Park World, requiring an installation of
 
 ## Requirements
 
-- The [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0). All five projects target `net8.0`.
-- A GPU and driver that can run Vulkan on Linux and Windows, or Metal on macOS.
-- On Linux, SDL2 from your distribution. The Veldrid.SDL2 package ships a native SDL2 for Windows and macOS only, so on Linux the window, input and audio are loaded from the system by soname - `libSDL2-2.0.so.0`, falling back to `libSDL2-2.0.so.1` and then `libSDL2-2.0.so`. Install your distribution's SDL2 2.x runtime and its Vulkan loader and driver.
+- The [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). All five projects target `net10.0`.
+- A GPU and driver that can run Vulkan. Vulkan is the one backend on all three platforms; macOS reaches it through MoltenVK, which ships with the build.
+- On Linux and Windows, a Vulkan loader and a driver for your GPU. On Linux the loader is packaged under several names - `libvulkan1`, `vulkan-loader` and `vulkan-icd-loader` are all the same thing - and the driver is Mesa's or your vendor's. On Windows the GPU driver brings both.
 - A copy of the original game, copied off the disc. The data folder is about 380MB.
 
-You do **not** need to place a `libdl.so` symlink beside the build. glibc merged libdl into libc in 2.34 and the Vulkan bindings still ask for a bare `libdl`; OpenTPW redirects that itself as it starts.
+**Nothing else needs installing.** SDL2, SPIRV-Cross and shaderc all travel with the build, in `runtimes/`, and OpenTPW opens the ones it shipped rather than any the machine happens to have. Older builds asked you to install your distribution's SDL2 and, before that, to make a `libdl.so` symlink; neither is true any more.
 
 ## The game's files
 
@@ -49,29 +49,31 @@ Saves are written to `save/` beside the game's data, where the original keeps th
 
 ```sh
 dotnet build source/OpenTPW.sln
-dotnet source/OpenTPW/bin/Debug/net8.0/OpenTPW.dll --game "/path/to/Theme Park World"
+dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game "/path/to/Theme Park World"
 ```
 
 It does not matter what directory you start it from. The shaders and the one font OpenTPW draws its loading screen with are copied next to the binary by the build and found there.
 
 Some keys, none of which the game tells you about: `Escape` opens the game menu, `F1` asks the advisor for help, `F2` hides the interface, `X` freezes the lobby camera, `[` and `]` move between islands, and `` ` `` toggles the ModKit editor.
 
-`dotnet test` runs the unit tests. Six of them read real game files and are skipped when no installation can be found, so the suite is green on a machine that has never had the game; set `OPENTPW_GAME_PATH` to run them.
+`dotnet test` runs the unit tests. Fifteen of the fifty-nine read real game files and are skipped when no installation can be found, so the suite is green on a machine that has never had the game - but a green run of 59 means 44 ran and 15 did not. Set `OPENTPW_GAME_PATH` to the game's folder to run all of them.
 
 ## Platforms
 
 | Platform | Backend | Status |
 |----------|---------|--------|
 | Linux (x64) | Vulkan | Developed and run here |
-| Windows (x64) | Vulkan | Same code path as Linux; not tested recently |
-| macOS (Intel) | Metal | **Untested** - see below |
-| macOS (Apple Silicon) | Metal, under Rosetta 2 | **Untested**, and needs an x86-64 build - see below |
+| Windows (x64, arm64) | Vulkan | Same code path as Linux; not tested recently |
+| macOS (Intel, Apple Silicon) | Vulkan, through MoltenVK | **Untested** - see below |
+| Linux (arm64) | Vulkan | **Does not run** - see below |
 
 Windows uses Vulkan rather than Direct3D 11 deliberately, so that a report from Windows lands on the same code Linux runs every day.
 
-**macOS is written to be correct, not tested.** Nobody on the project has a Mac, so the Metal path has never been run. It is written against the same clip-space and depth conventions Vulkan is asked for, and the shader translation is left to Veldrid rather than hand-rolled, but bugs there will only be found by whoever reports them. Please do report them.
+**macOS is written to be correct, not tested.** Nobody on the project has a Mac, so it has never been run there. macOS has no Vulkan driver of its own, and OpenTPW no longer asks for Metal: the graphics library it uses has no Metal backend at all, and carries MoltenVK - Vulkan implemented on top of Metal - instead. That means one code path on all three platforms rather than two, but it also means bugs there will only be found by whoever reports them. Please do report them.
 
-**Apple Silicon needs Rosetta 2.** Two of the native libraries OpenTPW depends on ship no arm64 build at all - `libveldrid-spirv.dylib` and `libsdl2.dylib` are both x86-64 only - so an arm64 build fails at startup, when the window is created, before it ever reaches the graphics device. Build and run for x86-64 instead, with an x64 .NET 8 runtime installed. This is a limitation of those upstream packages.
+**Apple Silicon no longer needs Rosetta 2.** An older version of this file said it did, and that was true of the libraries OpenTPW used then. It is not true now: SDL, MoltenVK, SPIRV-Cross and shaderc all ship arm64 builds, so an arm64 build has everything it needs.
+
+**Linux on arm64 does not work**, and the reason is one library. Every native OpenTPW needs ships for `linux-arm64` except `cimgui`, which ImGui.NET builds only for `linux-x64`. The editor's renderer is constructed whether or not the editor is ever shown, so the game stops at startup rather than running without it. Nothing about this is unfixable - it needs an arm64 `cimgui`, or for the editor to be built only when it is asked for - but neither is done.
 
 ## Status
 
@@ -123,7 +125,7 @@ OpenTPW is not yet playable: you can walk around the front end but not enter a p
 
 **"its names have been cut short."** The disc was copied from its plain ISO 9660 tree. Copy it again keeping the long names - see [The game's files](#the-games-files).
 
-**It stops before a window appears, saying it could not load a native library.** On Linux, install your distribution's SDL2 2.x runtime, and the Vulkan loader and driver for your GPU.
+**It stops before a window appears, saying it could not load a native library.** OpenTPW ships the libraries it opens, in `runtimes/`, so this is nearly always the Vulkan loader or the GPU driver, which it does not ship. Install the Vulkan loader your distribution packages - `libvulkan1`, `vulkan-loader` or `vulkan-icd-loader`, depending on which - and the driver for your GPU. On Linux arm64 the missing library is `cimgui`, which has no arm64 build at all; see [Platforms](#platforms).
 
 **No sound.** Not fatal - OpenTPW warns and carries on. `OPENTPW_DEBUG_CONSOLE=1` reads commands from standard input if you want to drive a run reproducibly.
 

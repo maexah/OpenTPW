@@ -44,7 +44,7 @@ public static class GameDir
 
 	/// <summary>
 	/// How far above the build and the working directory the game is looked for. Five is the depth of a build
-	/// made inside the game's own folder - &lt;game&gt;\source\OpenTPW\bin\Debug\net8.0 - and there is nothing
+	/// made inside the game's own folder - &lt;game&gt;\source\OpenTPW\bin\Debug\net10.0 - and there is nothing
 	/// worth walking into above that: past the folder holding the build, the folders above it are the
 	/// player's own.
 	/// </summary>

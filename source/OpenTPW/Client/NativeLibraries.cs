@@ -8,8 +8,12 @@ namespace OpenTPW;
 /// <para>
 /// A build puts the natives its packages carry in runtimes\&lt;rid&gt;\native, and the runtime finds them
 /// there by itself for anything declared with [DllImport] - which is how ImGui.NET's cimgui is found, and
-/// why that one always worked. Silk.NET does not use DllImport: it opens its libraries itself, and the only
-/// places it looks are the bare name and the folder this build sits in. Neither is where the natives are.
+/// why that one always worked. Silk.NET does not use DllImport: it opens its libraries itself. Its resolver
+/// chain does carry a runtimes\&lt;rid&gt;\native search of its own, so this is not a gap in what it can do -
+/// but for the names these packages ask for it did not offer that path. Asked what it would try for
+/// libspirv-cross.so, the eight-resolver default chain answered with two candidates: the bare name, and the
+/// folder this build sits in. Neither is where the natives are, and why its own runtimes search did not fire
+/// was not established.
 /// </para>
 /// <para>
 /// A bare name reaches whatever the machine already has, so the two failed in different ways and only one
