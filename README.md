@@ -17,7 +17,7 @@ Theme Park World (1999) is hard to run on a modern machine. OpenTPW re-implement
 
 **You need a legal copy of the original game.** OpenTPW ships no game content; it is an engine, not a download.
 
-**It is not playable yet.** You can explore the lobby and the front end - pick a park, look around the islands, hear the advisor - but you cannot enter a park and run it. See [Status](#status) for the full picture.
+**It is not playable yet.** You can explore the lobby and the front end - pick a park, look around the islands, hear the advisor - and you can now enter a park and look around it, but a park does not *run*: there are no rides, no visitors, no interface, and no way back out to the lobby short of restarting. See [Status](#status) for the full picture.
 
 ## Quick start
 
@@ -96,7 +96,9 @@ That substitutes SDL only. SPIRV-Cross and shaderc still come from the build, be
 
 **What works.** The lobby: four islands with their gates, flyers, sky, ocean, weather with thunder and lightning, and the park name signs. The original front end, drawn with the game's own interface meshes and `.bf4` fonts - player slots, the new player dialog, the quit box, the island panel with its golden key prices, and the help bar. The advisor, with lip sync, queued lines and interruption. The original particle system and its on-screen effects. The Escape menu and options screen, with volumes that apply as you drag them, working display modes and resolutions, and a window you can resize to any aspect ratio. Machine options and players save to `save\Config.tcf` and `save\users`, in the original's own formats.
 
-**What does not.** Entering a park, rides and ride scripts, terrain from map data, video, and anything online - there is no networking code in the project at all.
+**And a park, as far as scenery goes.** Choosing a park in the front end enters it. Its land is built from the heightfield inside the theme's `base.MD2` and drawn with the park's own ground textures, each cell laid the way its flags say; the attribute map beside it is read, so the engine knows what every cell *is*. The theme's fixed scenery loads, and so do the fixed items the save never gives a position to - the entrance gate, with its doors animating and the park's name painted onto its board, and the traffic lights on both pedestrian crossings.
+
+**What does not.** Leaving a park once you are in one (only the debug console can), everything a park is made of beyond its scenery - rides, shops, paths and queues, staff and visitors - the park's own interface, ride scripts, video, and anything online, of which there is no networking code in the project at all. The objects a saved park places are not loaded either: the save's container is read, but the block that holds them is not parsed yet.
 
 ## File formats
 
@@ -113,11 +115,11 @@ That substitutes SDL only. SPIRV-Cross and shaderc still come from the build, be
 | Lip Sync ([.LIP](https://opentpw.gu3.me/formats/lips.html))                   | ✅     |
 | Particles (.PLB, .ESP, .TPC)                            | ✅     |
 | Machine and player saves (Config.tcf, gms.dat)          | ✅     |
+| Map Data ([.MAP](https://opentpw.gu3.me/formats/map.html))                    | ✅     |
 | Models ([.MD2](https://opentpw.gu3.me/formats/m3d2.html)) \*                   | ⚠️     |
 | Sound categories (cat_\*.map) \*\*                                             | ⚠️     |
 | Park signs (.SGN) \*\*\*                                                        | ⚠️     |
 | Park saves ([.TPWS](https://opentpw.gu3.me/formats/tpws-ints-lays.html)) \*\*\*\*      | ⚠️     |
-| Map Data ([.MAP](https://opentpw.gu3.me/formats/map.html))                    | ❌     |
 | Ride Scripts ([.RSE](https://opentpw.gu3.me/formats/rsse.html)) \*\*\*\*\*             | ❌     |
 | Materials ([.MTR](https://opentpw.gu3.me/formats/mtr.html))                   | ❌     |
 | Video ([.TQI](https://opentpw.gu3.me/formats/tqi.html))                       | ❌     |
@@ -131,7 +133,7 @@ That substitutes SDL only. SPIRV-Cross and shaderc still come from the build, be
 
 \*\*\* **Park signs (.SGN)**: a park's name board renders with the fonts, colours and artwork the file asks for. Two regions of its header - a 64x64 image at 0x03C5 and 36 bytes at 0x03A1 - are not identified.
 
-\*\*\*\* **Park saves (.TPWS)**: the container is read - the header is parsed and its ZLIB payload inflated - but nothing inside the payload is decoded yet, and nothing in the game calls it. The saves that do work today are the machine's options and the players themselves, listed separately above.
+\*\*\*\* **Park saves (.TPWS)**: the container is read - the header is parsed and its ZLIB payload inflated - and the shipped park's own numbers are pinned by tests, including that its first four bytes are a *version* of 400 rather than the magic number they were once taken for. Inside the payload, the block describing the world has been mapped out and written up in the format documentation, but the engine does not parse it yet, so nothing a saved park places is loaded. The saves that do work today are the machine's options and the players themselves, listed separately above.
 
 \*\*\*\*\* **Ride Scripts (.RSE)**: there is no parser. What exists is the opcode scaffolding for the ride virtual machine, against a claimed total of 210 instructions.
 
@@ -158,7 +160,7 @@ dotnet test source/OpenTPW.sln
 
 It does not matter what directory you start the game from; the shaders and the loading screen's font are copied next to the binary and found there.
 
-Fifteen of the fifty-nine unit tests read real game files and skip when no installation is found - so a green run on a machine that has never had the game means 44 ran and 15 did not. Set `OPENTPW_GAME_PATH` to run all of them.
+Twenty-seven of the seventy-one unit tests read real game files and skip when no installation is found - so a green run on a machine that has never had the game means 44 ran and 27 did not. Set `OPENTPW_GAME_PATH` to run all of them.
 
 `OPENTPW_DEBUG_CONSOLE=1` reads commands from standard input, for driving a run reproducibly.
 
