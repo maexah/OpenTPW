@@ -241,4 +241,133 @@ public class ParkWorldTests
 				$"catalogue number {placed.CatalogueId} at ({placed.CellX},{placed.CellY}) should be one of the jungle's items" );
 		}
 	}
+
+	/// <summary>
+	/// The whole map is read, and what it is made of.
+	///
+	/// <para>
+	/// The counts are pinned rather than sampled because a cell reader that drifts still produces a full
+	/// grid of plausible numbers - the failure looks like data, not like a fault. Every cell of the shipped
+	/// park carries a map record, so a cell that reads as unmapped means the walk lost its place.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheMapIsSixteenThousandCellsAndEveryOneIsRead()
+	{
+		var world = World();
+
+		Assert.IsNull( world.Problem, "nothing should have stopped the walk" );
+		Assert.IsTrue( world.ClosedOnTrailer, "reading the map should not have cost the walk its place" );
+
+		Assert.AreEqual( 128 * 128, world.Cells.Count, "cells in the map" );
+		Assert.AreEqual( world.Cells.Count, world.Cells.Count( cell => cell.IsMapped ),
+			"every cell of this park carries a map record" );
+
+		var types = world.Cells.GroupBy( cell => cell.Type ).ToDictionary( group => group.Key, group => group.Count() );
+
+		Assert.AreEqual( 78, types[1], "cells that are path" );
+		Assert.AreEqual( 35, types[4], "cells something is built on" );
+		Assert.AreEqual( 4, types[3], "cells that are queue" );
+		Assert.AreEqual( 6875, types[0], "cells of type 0" );
+		Assert.AreEqual( 9077, types[7], "cells of type 7" );
+	}
+
+	/// <summary>
+	/// The paths, which are the whole reason for reading the map: a park's walkways are in its save and
+	/// nowhere in its ground model, so without this the rides stand in an empty field.
+	///
+	/// <para>
+	/// The avenue is what makes this more than a count. Two neighbouring columns run twelve cells each,
+	/// unbroken, from the ride loop down to the row the park entrance sits on - which is the double-wide
+	/// path every screenshot of Lost Kingdom shows leading in from the gate. Getting the indexing backwards
+	/// (<c>x * 128 + y</c>, which is how the attribute map in <c>base.map</c> is ordered) scatters these
+	/// same 78 cells into incoherent blobs, so this is also the test that pins the cell order.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void ThePathsRunDownToTheParkEntrance()
+	{
+		var world = World();
+
+		var paths = Enumerable.Range( 0, 128 )
+			.SelectMany( y => Enumerable.Range( 0, 128 ).Select( x => (X: x, Y: y) ) )
+			.Where( at => world.CellAt( at.X, at.Y ).Type == 1 )
+			.ToArray();
+
+		Assert.AreEqual( 78, paths.Length, "path cells" );
+
+		foreach ( var column in new[] { 47, 48 } )
+		{
+			var down = paths.Where( at => at.X == column ).Select( at => at.Y ).OrderBy( y => y ).ToArray();
+
+			CollectionAssert.AreEqual( Enumerable.Range( 17, 12 ).ToArray(), down,
+				$"the entrance avenue's column at x={column} should be unbroken from y17 to y28" );
+		}
+	}
+
+	/// <summary>
+	/// The cells under the Belly Bounce, which is the check that the map and the object list agree with
+	/// each other: the ride's position comes from the thing stream and its footprint from its own
+	/// <c>.hmp</c>, and neither of those knows anything about the map.
+	///
+	/// <para>
+	/// Ten of its twelve cells are marked as built on. The two that are not are both in the middle column
+	/// and at opposite ends of it, and the four queue cells sit in the row directly beyond one of them -
+	/// which is what a ride's way in and way out look like. The types are pinned; naming them entrance and
+	/// exit would be a guess, and this asserts the arrangement instead of the meaning.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheBellyBounceMarksItsFootprintAndItsQueue()
+	{
+		var world = World();
+
+		// The ride stands at (51,23) and its .hmp declares a 3x4 box - see the footprint test above.
+		var box = Enumerable.Range( 23, 4 )
+			.SelectMany( y => Enumerable.Range( 51, 3 ).Select( x => (X: x, Y: y, world.CellAt( x, y ).Type) ) )
+			.ToArray();
+
+		Assert.AreEqual( 10, box.Count( cell => cell.Type == 4 ), "cells of the ride's box marked as built on" );
+		Assert.AreEqual( 9, world.CellAt( 52, 23 ).Type, "the near end of the ride's middle column" );
+		Assert.AreEqual( 10, world.CellAt( 52, 26 ).Type, "the far end of the ride's middle column" );
+
+		var queue = Enumerable.Range( 49, 4 ).Select( x => world.CellAt( x, 22 ).Type ).ToArray();
+
+		CollectionAssert.AreEqual( new[] { 3, 3, 3, 3 }, queue,
+			"the four queue cells should lie in the row beyond the ride's near end" );
+	}
+
+	/// <summary>
+	/// A path cell says which tile it draws and which way that tile is turned, so neither has to be worked
+	/// out from the cells around it.
+	///
+	/// <para>
+	/// This is what says the twelve bytes the original calls <c>mTileData</c> are three dwords rather than
+	/// one opaque run: the first splits the map exactly along the boundary the theme's <c>.tct</c> draws
+	/// between its <c>PathTex</c> and <c>QueueTex</c> sections, and the third is a quarter turn on every
+	/// one of the 16,384 cells and never anything else. A wrong split would have to produce both of those
+	/// by accident.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void APathCellCarriesTheTileItDrawsAndTheTurnItTakes()
+	{
+		var world = World();
+
+		foreach ( var cell in world.Cells )
+		{
+			var expected = cell.Type switch { 1 => 1, 3 => 2, _ => 0 };
+
+			Assert.AreEqual( expected, cell.TileSet,
+				$"a cell of type {cell.Type} should draw from tile set {expected}" );
+
+			Assert.IsTrue( cell.TileAngle is 0 or 90 or 180 or 270,
+				$"a tile is turned by a quarter, not by {cell.TileAngle} degrees" );
+		}
+
+		// PathTex runs 0..21 in the theme's .tct, and every path cell names one of those slots.
+		foreach ( var cell in world.Cells.Where( cell => cell.Type == 1 ) )
+			Assert.IsTrue( cell.TileIndex is >= 0 and <= 21,
+				$"path tile {cell.TileIndex} is outside the PathTex table" );
+	}
 }

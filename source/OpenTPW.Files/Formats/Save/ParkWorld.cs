@@ -14,10 +14,10 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>The map is stepped over, not decoded.</b> Between the header and the thing list sit 16,384 cells -
-/// a 128x128 grid - of litter, hoardings and tile data, about 1.3MB of the 1.5MB block. None of it is
-/// wanted here and all that is needed is its length, so each cell is measured and skipped. That is the
-/// whole reason this reader is short.
+/// <b>The map is the bulk of it.</b> Between the header and the thing list sit 16,384 cells - a 128x128
+/// grid - of litter, hoardings and tile data, about 1.3MB of the 1.5MB block. Each is measured by the
+/// status byte it opens with, which is what makes the block variable length and why no fixed stride ever
+/// walked it. See <see cref="MapCell"/> for what a cell says and <see cref="CellAt"/> for how to ask.
 /// </para>
 ///
 /// <para>
@@ -64,6 +64,66 @@ public sealed class ParkWorld
 	public IReadOnlyList<CatalogueObject> Objects => _objects;
 
 	private readonly List<CatalogueObject> _objects = [];
+
+	/// <summary>
+	/// One cell of the park's 128x128 map - what is built on it, which way it faces, and which of its
+	/// neighbours it joins. This is where a park's <b>paths</b> are: the ground model carries none of them.
+	///
+	/// <para>
+	/// <c>Neighbours</c> and <c>Direction</c> are <b>stored, not computed</b>, so nothing here has to work
+	/// out a neighbour mask from the cells around it. They share one compass: over the shipped park's path
+	/// cells <c>Direction</c> only ever reads 0, 1, 4, 16 or 64 - bits 0, 2, 4 and 6 of
+	/// <c>N NE E SE S SW W NW</c>, which is to say the four cardinals and nothing else.
+	/// </para>
+	/// <para>
+	/// The three tile fields are the original's single <c>mTileData</c>, which is twelve bytes and holds
+	/// three dwords. Splitting them this way is a reading of the shipped park rather than something the
+	/// executable says, and it is a well-supported one: <c>TileSet</c> is 1 on all 78 path cells, 2 on all
+	/// 4 queue cells and 0 on the other 16,302 - which is exactly the split the theme's <c>.tct</c> makes
+	/// with its <c>PathTex</c> and <c>QueueTex</c> sections - while <c>TileAngle</c> is 0, 90, 180 or 270
+	/// on every one of the 16,384 cells and never anything else.
+	/// </para>
+	/// <para>
+	/// <c>Type</c> is the original's <c>mType</c>. Over Lost Kingdom it reads 7 on 9,077 cells, 0 on 6,875,
+	/// 2 on 240, <b>1 on the 78 that are path</b>, 30 on 66, <b>4 on the 35 covered by something built</b>,
+	/// 9 on 8, 3 on 4 and 10 on one. Only 1 and 4 are firmly identified - 1 by drawing it, which gives a
+	/// connected loop with an avenue down to the park entrance, and 4 by its cells landing on the placed
+	/// objects' own footprints.
+	/// </para>
+	/// </summary>
+	public readonly record struct MapCell(
+		int Type, ushort Flags, byte Neighbours, byte Direction,
+		int TileSet, int TileIndex, int TileAngle, byte Status )
+	{
+		/// <summary>
+		/// Whether this cell carried a map record at all. A cell that did not is left at its default, and
+		/// <c>Type 0</c> is a real type rather than a "no answer", so this is the field that tells the two
+		/// apart. Every cell of the one park the game ships carries one.
+		/// </summary>
+		public bool IsMapped => (Status & MapRecord) != 0;
+	}
+
+	/// <summary>
+	/// The map, in the order the file lists it. <b>Indexed <c>y * 128 + x</c></b> - the opposite way round
+	/// from the attribute map in <c>base.map</c>, which is <c>x * 128 + y</c>, and the same way as the
+	/// heightfield. That is the game's own inconsistency and getting it backwards produces a map that still
+	/// looks like a map; it was settled by drawing both and checking them against <c>base.map</c>'s own bus
+	/// road, ticket booths and entrance column, which only the y-major reading reproduces.
+	///
+	/// <para>Empty if the walk stopped before it reached the map.</para>
+	/// </summary>
+	public IReadOnlyList<MapCell> Cells => _cells;
+
+	private MapCell[] _cells = [];
+
+	/// <summary>How many cells the map is across and down, whatever size the park inside it is.</summary>
+	public const int MapSize = 128;
+
+	/// <summary>The cell at a grid position, or a default cell for anywhere off the map.</summary>
+	public MapCell CellAt( int x, int y )
+		=> x < 0 || y < 0 || x >= MapSize || y >= MapSize || _cells.Length != MapCellCount
+			? default
+			: _cells[(y * MapSize) + x];
 
 	/// <summary>
 	/// The thing that <i>is</i> the park gate, and the one that is the traffic lights. These are handles,
@@ -202,12 +262,12 @@ public sealed class ParkWorld
 	private const int ArrivalTailSize = 76;
 
 	/// <summary>The map between the tables and the thing list - a 128x128 grid, whatever the park's own size is.</summary>
-	private const int MapCells = 128 * 128;
+	private const int MapCellCount = MapSize * MapSize;
 
 	/// <summary>
 	/// A cell opens with a status byte saying which of three optional sub-records follow it, one bit
-	/// each. That is the original's own loop: it reads the byte, then a map cell if bit 0 is set, a track
-	/// cell if bit 1 is, and an effects cell if bit 2 is.
+	/// each. That is the original's own loop: it reads the byte, then a map record, then a track record,
+	/// then an effects record, each only if its own bit is set.
 	///
 	/// <para>
 	/// Only two combinations occur in the shipped park - 3 on 16,134 cells and 7 on the other 250, coming
@@ -216,6 +276,11 @@ public sealed class ParkWorld
 	/// nothing else, which is where the block's variable length comes from and why no fixed stride was
 	/// ever going to walk it.
 	/// </para>
+	/// <para>
+	/// These sizes are confirmed cell by cell and not merely in total: measured this way, all 16,384 of
+	/// them land on the next cell's status byte every single time. That is a sharper check than the walk's
+	/// own trailer test, which a pair of compensating errors could still pass.
+	/// </para>
 	/// </summary>
 	private const int MapCellSize = 52;
 
@@ -223,8 +288,29 @@ public sealed class ParkWorld
 
 	private const int EffectsCellSize = 10;
 
+	private const int MapRecord = 0x1;
+
+	private const int TrackRecord = 0x2;
+
+	private const int EffectsRecord = 0x4;
+
 	/// <summary>The bits of the status byte that mean something; any other one set is not understood.</summary>
-	private const int KnownCellBits = 0x7;
+	private const int KnownCellBits = MapRecord | TrackRecord | EffectsRecord;
+
+	/// <summary>
+	/// Where each field sits inside a cell's map record, which begins at the byte after the status. The
+	/// record opens with a twenty-nine byte tile base - the track record repeats it field for field - and
+	/// closes with twenty-three bytes of litter and pylon bookkeeping that nothing here wants.
+	/// </summary>
+	private const int CellDirection = 0;
+
+	private const int CellFlags = 1;
+
+	private const int CellNeighbours = 7;
+
+	private const int CellTileData = 12;
+
+	private const int CellType = 24;
 
 	private readonly byte[] _data;
 	private int _at;
@@ -276,7 +362,7 @@ public sealed class ParkWorld
 		Skip( PoolRecords * PoolRecordSize );
 		Skip( ArrivalTailSize );
 
-		SkipMap();
+		ReadMap();
 
 		// The thing list proper. Its head is an id, not an offset - see ReadThings.
 		var head = ReadInt32();
@@ -303,12 +389,14 @@ public sealed class ParkWorld
 	}
 
 	/// <summary>
-	/// Steps over the 128x128 map, measuring each cell by the status byte it opens with. This is the bulk
-	/// of the block and none of it is read.
+	/// Reads the 128x128 map, measuring each cell by the status byte it opens with. This is the bulk of
+	/// the block - about 1.3MB of its 1.5MB.
 	/// </summary>
-	private void SkipMap()
+	private void ReadMap()
 	{
-		for ( var cell = 0; cell < MapCells; ++cell )
+		_cells = new MapCell[MapCellCount];
+
+		for ( var cell = 0; cell < MapCellCount; ++cell )
 		{
 			if ( _at >= _data.Length )
 				throw new InvalidDataException( $"the map ran off the end of the payload at cell {cell}" );
@@ -319,12 +407,39 @@ public sealed class ParkWorld
 				throw new InvalidDataException(
 					$"map cell {cell} opens with status {status}, which sets a bit this does not know" );
 
-			Skip( 1
-				+ ((status & 1) != 0 ? MapCellSize : 0)
-				+ ((status & 2) != 0 ? TrackCellSize : 0)
-				+ ((status & 4) != 0 ? EffectsCellSize : 0) );
+			var size = 1
+				+ ((status & MapRecord) != 0 ? MapCellSize : 0)
+				+ ((status & TrackRecord) != 0 ? TrackCellSize : 0)
+				+ ((status & EffectsRecord) != 0 ? EffectsCellSize : 0);
+
+			if ( _at + size > _data.Length )
+				throw new InvalidDataException( $"map cell {cell} runs past the end of the payload" );
+
+			// Only the map record is read. A cell carrying a track record and no map record would open
+			// with the same twenty-nine byte tile base, but those are a track's fields rather than a
+			// tile's, and no cell of the one park the game ships is shaped that way.
+			if ( (status & MapRecord) != 0 )
+				_cells[cell] = ReadCell( _at + 1, status );
+
+			_at += size;
 		}
 	}
+
+	/// <summary>
+	/// Reads one cell's map record. The three tile fields are the original's single twelve-byte
+	/// <c>mTileData</c> - see <see cref="MapCell"/> for what says they are three dwords rather than one
+	/// opaque run.
+	/// </summary>
+	private MapCell ReadCell( int at, byte status )
+		=> new(
+			Type: ReadInt32At( at + CellType ),
+			Flags: (ushort)ReadUInt16At( at + CellFlags ),
+			Neighbours: _data[at + CellNeighbours],
+			Direction: _data[at + CellDirection],
+			TileSet: ReadInt32At( at + CellTileData ),
+			TileIndex: ReadInt32At( at + CellTileData + 4 ),
+			TileAngle: ReadInt32At( at + CellTileData + 8 ),
+			Status: status );
 
 	/// <summary>
 	/// Walks the things - every person, object and manager in the park - collecting the catalogue objects
