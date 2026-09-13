@@ -26,6 +26,14 @@ OpenTPW is a re-implementation of Theme Park World, requiring an installation of
 
 **Nothing else needs installing.** SDL2, SPIRV-Cross and shaderc all travel with the build, in `runtimes/`, and OpenTPW opens the ones it shipped rather than any the machine happens to have. Older builds asked you to install your distribution's SDL2 and, before that, to make a `libdl.so` symlink; neither is true any more.
 
+**On Wayland, that costs you something.** The SDL that ships here is built for X11 and KMSDRM and has no Wayland backend, so a Wayland session runs through XWayland - which works, but scales and handles input differently from a native Wayland window. A session with no XWayland installed will not start at all. If your distribution's SDL2 is better than ours, take it:
+
+```sh
+OPENTPW_SYSTEM_SDL=1 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game "/path/to/Theme Park World"
+```
+
+That stands aside for SDL only - SPIRV-Cross, shaderc and cimgui still come from the build, because those are not libraries a machine usually has.
+
 ## The game's files
 
 Copy the disc somewhere you can write to - not Program Files - and put the OpenTPW build in with the game's files, where `TP.exe` was. That is how the original found its own data, as `.\data\2dmap\gsprite.tga`, relative to itself, and it is the arrangement OpenTPW is built around.
@@ -126,6 +134,8 @@ OpenTPW is not yet playable: you can walk around the front end but not enter a p
 **"its names have been cut short."** The disc was copied from its plain ISO 9660 tree. Copy it again keeping the long names - see [The game's files](#the-games-files).
 
 **It stops before a window appears, saying it could not load a native library.** OpenTPW ships the libraries it opens, in `runtimes/`, so this is nearly always the Vulkan loader or the GPU driver, which it does not ship. Install the Vulkan loader your distribution packages - `libvulkan1`, `vulkan-loader` or `vulkan-icd-loader`, depending on which - and the driver for your GPU. On Linux arm64 the missing library is `cimgui`, which has no arm64 build at all; see [Platforms](#platforms).
+
+**On Wayland, the window scales oddly or input feels wrong; or it will not start at all and SDL says "No available video device".** The SDL that ships with the build has no Wayland backend, so it uses XWayland. Install XWayland, or run with `OPENTPW_SYSTEM_SDL=1` to use your distribution's SDL instead - see [Requirements](#requirements).
 
 **No sound.** Not fatal - OpenTPW warns and carries on. `OPENTPW_DEBUG_CONSOLE=1` reads commands from standard input if you want to drive a run reproducibly.
 

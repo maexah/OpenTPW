@@ -60,12 +60,40 @@ internal static class NativeLibraries
 	}
 
 	/// <summary>
+	/// Set to 1 to leave SDL to the machine rather than using the one this build ships.
+	///
+	/// <para>
+	/// The SDL that ships here is built for X11 and KMSDRM and has no Wayland backend, while the copy a
+	/// Linux distribution installs generally has one. Preferring ours is still the right default - it is the
+	/// same SDL everywhere, it works on a machine that has none installed, and window, input and sound all
+	/// come from one library rather than two - but it means a Wayland session runs through XWayland, and a
+	/// session with no XWayland has no video driver at all. This is the way out of that.
+	/// </para>
+	/// </summary>
+	private const string SystemSdlVariable = "OPENTPW_SYSTEM_SDL";
+
+	/// <summary>
 	/// Where this build keeps <paramref name="name"/>. Handed back whether or not it is there: Silk tries
 	/// each path in turn and moves on, so a directory that does not hold this one costs a failed open.
+	///
+	/// <para>
+	/// Nothing is offered for SDL when <see cref="SystemSdlVariable"/> asks for the machine's own, which
+	/// leaves Silk to fall through to the bare name and find whatever is installed. <b>SDL alone</b>: the
+	/// other three natives this build carries - SPIRV-Cross, shaderc and cimgui - are not libraries a
+	/// machine generally has, and standing aside for those is how the game failed to start before any of
+	/// this existed.
+	/// </para>
 	/// </summary>
 	private static IEnumerable<string> Shipped( string name )
 	{
+		if ( _useSystemSdl && name.Contains( "SDL2", StringComparison.OrdinalIgnoreCase ) )
+			yield break;
+
 		foreach ( var directory in SearchDirectories )
 			yield return Path.Combine( directory, name );
 	}
+
+	/// <summary>Read once, before anything can ask for a library - and before there is a log to say so in.</summary>
+	private static readonly bool _useSystemSdl =
+		Environment.GetEnvironmentVariable( SystemSdlVariable ) == "1";
 }
