@@ -129,6 +129,9 @@ public sealed class ParkObjects : Entity
 				textureOverrides: BuildSign( item ),
 				sharedTextureDirectory: $"levels/{ThemeName.ToLowerInvariant()}/sharetex" );
 
+			// Put away whatever building it left behind before it is stood anywhere.
+			PoseAsBuilt( model, item );
+
 			model.SetTransform( OriginFor( placed, item ), Turn( placed.Angle ) );
 
 			_models.Add( model );
@@ -137,6 +140,86 @@ public sealed class ParkObjects : Entity
 		{
 			Log.Warning( $"{ThemeName}: '{item.Name}' would not load, so it is missing from ({placed.CellX},{placed.CellY}) - {e.Message}" );
 		}
+	}
+
+	/// <summary>
+	/// Leaves an item looking the way it does once it has finished being built, rather than the way
+	/// it looked while it was going up.
+	///
+	/// <para>
+	/// An item is put up by a one-shot clip named after itself with a <c>c</c> on the end, and that
+	/// clip decides what is on screen as it plays: the Belly Bounce arrives as an egg, which splits
+	/// at frame 94 to let the dinosaur out, drops its shell at 131, and raises its fence, its posts
+	/// and its two sign boards over the frames after that. The engine plays it when the player
+	/// builds the thing and never again - a park loaded from a save restores the state each object
+	/// settled into instead - so <b>the last frame of that clip is what a built item looks like</b>,
+	/// and playing none of it at all is what left the Belly Bounce sitting inside an unhatched egg.
+	/// </para>
+	///
+	/// <para>
+	/// Only the clip's visibility is taken, which is the part that says what exists. Across all four
+	/// themes 966 of these tracks end with their mesh shown and 57 end with it hidden, and every one
+	/// of the 57 is something the building of the item threw away: this egg and its shell, a witch's
+	/// frog, a monkey's crate and the shards of it, puffs of smoke, and the beams and flashes a ride
+	/// only shows while it is running. Of the eleven objects Lost Kingdom is built with, the Belly
+	/// Bounce is the only one that hides anything at all.
+	/// </para>
+	///
+	/// <para>
+	/// The clip is read directly rather than through <see cref="AnimationFile.TryLoad"/>, which
+	/// answers "is there an animation here worth playing" and rejects one carrying visibility and
+	/// nothing else - six items in the game ship exactly that.
+	/// </para>
+	/// </summary>
+	private void PoseAsBuilt( LobbyModel model, ParkItemCatalogue.Item item )
+	{
+		AnimationFile construction;
+
+		try
+		{
+			using var stream = FileSystem.OpenRead( $"{item.Directory}/{item.Stem}c.md2" );
+
+			if ( stream == null )
+				return;
+
+			construction = new AnimationFile( stream );
+		}
+		catch ( Exception )
+		{
+			// An item with no construction clip is simply there the moment it is placed, and has
+			// nothing left over to put away.
+			return;
+		}
+
+		if ( construction.VisibilityTracks.Count == 0 )
+			return;
+
+		// A clip's last frame spans only the keys that pose it, and a visibility entry can sit past
+		// all of them - bricks keys nothing at all and still switches a snail on at frame 45 - so
+		// the end of the build is the later of the two.
+		var end = (float)construction.LastFrame;
+
+		foreach ( var track in construction.VisibilityTracks )
+		{
+			foreach ( var entry in track.Entries )
+				end = MathF.Max( end, MathF.Abs( entry ) );
+		}
+
+		var leftBehind = 0;
+
+		foreach ( var track in construction.VisibilityTracks )
+		{
+			if ( track.VisibleAt( end ) is not bool visible )
+				continue;
+
+			model.SetMeshVisible( track.TargetIndex, visible );
+
+			if ( !visible )
+				++leftBehind;
+		}
+
+		if ( leftBehind > 0 )
+			Log.Info( $"{ThemeName}: '{item.Name}' finished being built, so {leftBehind} of its meshes are put away" );
 	}
 
 	/// <summary>

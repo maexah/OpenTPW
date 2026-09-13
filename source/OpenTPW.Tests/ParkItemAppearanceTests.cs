@@ -7,8 +7,9 @@ using System.Numerics;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// What an item standing in a park looks like, and which way the parts of it face. These read real
-/// game files and are skipped where there is no installation - see <see cref="GameData"/>.
+/// What an item standing in a park looks like: what its building leaves behind, and which way the
+/// parts of it face. These read real game files and are skipped where there is no installation -
+/// see <see cref="GameData"/>.
 /// </summary>
 [TestClass]
 public class ParkItemAppearanceTests
@@ -29,6 +30,59 @@ public class ParkItemAppearanceTests
 	/// through the global file system, and it turns down a clip that carries only visibility.
 	/// </summary>
 	private AnimationFile Clip( string path ) => new( new MemoryStream( data.ReadAllBytes( path ) ) );
+
+	/// <summary>The frame an item has finished going up on - see ParkObjects.PoseAsBuilt.</summary>
+	private static float EndOfBuild( AnimationFile construction )
+	{
+		var end = (float)construction.LastFrame;
+
+		foreach ( var track in construction.VisibilityTracks )
+		{
+			foreach ( var entry in track.Entries )
+				end = MathF.Max( end, MathF.Abs( entry ) );
+		}
+
+		return end;
+	}
+
+	/// <summary>
+	/// The Belly Bounce arrives as an egg and hatches out of it, and what is left when it has
+	/// finished is a dinosaur with no egg and no shell around it. Read off the clip that builds it:
+	/// the egg is switched off at frame 94, which is the same frame the dinosaur is switched on, and
+	/// the shell it leaves goes at 131.
+	///
+	/// This is the whole of why the ride looked wrong - nothing played that clip, so the egg still
+	/// stood in the finished ride, with the dinosaur that came out of it drawn through the shell.
+	/// </summary>
+	[TestMethod]
+	public void TheBellyBouncesBuildEndsWithItsEggGone()
+	{
+		var model = Model( "levels/jungle/rides/bouncy/bouncy.MD2" );
+		var construction = Clip( "levels/jungle/rides/bouncy/bouncyc.md2" );
+
+		var end = EndOfBuild( construction );
+
+		bool? ShownAtTheEnd( string name )
+		{
+			var mesh = model.Nodes.FindIndex( node => node.Name.Trim() == name );
+
+			Assert.AreNotEqual( -1, mesh,
+				$"no mesh called '{name}' among: {string.Join( ", ", model.Nodes.Select( node => $"'{node.Name.Trim()}'" ) )}" );
+
+			var track = construction.VisibilityTracks.FirstOrDefault( visibility => visibility.TargetIndex == mesh );
+
+			Assert.IsNotNull( track, $"the clip that builds it says nothing about '{name}'" );
+
+			return track!.VisibleAt( end );
+		}
+
+		Assert.AreEqual( false, ShownAtTheEnd( "egg" ), "the egg it hatches out of" );
+		Assert.AreEqual( false, ShownAtTheEnd( "shell06" ), "the shell it drops" );
+
+		Assert.AreEqual( true, ShownAtTheEnd( "jb_bd" ), "the dinosaur itself" );
+		Assert.AreEqual( true, ShownAtTheEnd( "jb_fence" ), "its fence" );
+		Assert.AreEqual( true, ShownAtTheEnd( "jb_sign1" ), "its name board" );
+	}
 
 	/// <summary>
 	/// A rotation key is the orientation a mesh holds <i>inside its parent</i>, not the one it ends
