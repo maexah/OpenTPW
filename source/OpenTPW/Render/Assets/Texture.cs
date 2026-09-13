@@ -31,6 +31,34 @@ public partial class Texture : Asset
 	/// </summary>
 	private const byte CutOutAlphaReference = 240;
 
+	/// <summary>
+	/// A one-pixel white stand-in, for a material slot naming no texture of its own.
+	///
+	/// <para>
+	/// <b>Every read of this builds another one.</b> It is a property rather than a kept instance, so each
+	/// use creates a GPU texture, copies a pixel into it, submits it to the device and registers itself as
+	/// one more step of the loading bar. It can never be served from the cache either: the constructor it
+	/// calls passes an empty path, and <c>TryGetCachedTexture</c> refuses an empty path before it looks
+	/// anything up - so no two of these are ever the same object.
+	/// </para>
+	///
+	/// <para>
+	/// That costs nothing for the callers wanting a single texture - <c>Sky</c> and <c>WeatherSprites</c>
+	/// return it as a fallback, and <c>UiMesh</c> keeps its own with <c>_blank ??= Texture.Missing</c>,
+	/// which is the shape worth copying. It is <c>LobbyModel</c> that pays: it reads this inside a loop over
+	/// sixteen material slots for every mesh of every model, so a mesh naming two materials mints fourteen
+	/// blank textures, each with its own device submit and its own loading step.
+	/// </para>
+	///
+	/// <para>
+	/// <b>How much that actually costs has not been measured.</b> There is a reason to suspect it is a large
+	/// share of the lobby's load - a texture found in the cache returns before it registers a step at all,
+	/// while every one of these registers - but nobody has counted them. <b>Count them before treating this
+	/// as a performance problem worth fixing</b>, because the answer may turn out to be small. Sharing one
+	/// blank would also make it an object many materials hold a handle to, so anything that later deletes a
+	/// texture would need to know not to delete this one.
+	/// </para>
+	/// </summary>
 	public static Texture Missing => new Texture( [255, 255, 255, 255], 1, 1 );
 
 	/// <summary>The game's own stand-in for a texture it can't load - see <see cref="NotFound"/>.</summary>
