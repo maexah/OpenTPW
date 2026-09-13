@@ -42,13 +42,17 @@ public class MeshRotator
 	private int _current;
 	private float _elapsed;
 
+	/// <param name="localTransforms">
+	/// Each mesh's own transform, before its parents' - which is the frame a rotation key is
+	/// authored in. See <see cref="BuildRestInverses"/>.
+	/// </param>
 	public MeshRotator( AnimationFile[] animations, ModelEntity[] entities, Matrix4x4[] baseTransforms,
-		Vector3[] offsets, int[] parentIndices )
+		Matrix4x4[] localTransforms, Vector3[] offsets, int[] parentIndices )
 	{
 		_animations = animations.Take( ClipsUsed ).ToArray();
 		_entities = entities;
 		_baseTransforms = baseTransforms;
-		_restInverses = BuildRestInverses( baseTransforms );
+		_restInverses = BuildRestInverses( localTransforms );
 		_baseOffsets = offsets.Select( offset => offset.GetSystemVector3() ).ToArray();
 		_descendants = BuildDescendants( parentIndices );
 
@@ -119,7 +123,7 @@ public class MeshRotator
 	}
 
 	/// <summary>
-	/// The inverse of each mesh's authored orientation.
+	/// The inverse of each mesh's authored orientation <i>within its parent</i>.
 	///
 	/// A rotation keyframe is the orientation the mesh should be in, not a turn to add to the one
 	/// it was already authored with. Every one of these animations opens on exactly the rotation
@@ -129,18 +133,39 @@ public class MeshRotator
 	/// animated one goes in, or the mesh is turned twice - which laid hallow's doors flat into
 	/// the ground and left space's hatch facing backwards.
 	///
-	/// The jungle gate hid this: its doors are authored square, so composing and replacing agree,
-	/// and it was the model this class was written against.
+	/// <para>
+	/// <b>The orientation a key replaces is the mesh's LOCAL one, not where it ends up in the
+	/// model.</b> Every gate in the game parents its doors straight to a root that carries no
+	/// rotation, where the two are the same matrix - so this class was written against the one
+	/// family of models that cannot tell them apart, and taking the world orientation out was
+	/// wrong everywhere else. It is wrong on 1,078 of the game's 2,592 rotation tracks.
+	/// </para>
+	///
+	/// <para>
+	/// The Jungle Spray is the case that shows it. Its three animal heads hang off a Bench which
+	/// is itself turned a quarter turn, so each head's local orientation is square while its world
+	/// orientation is that quarter turn; every clip keys them square, because square is what they
+	/// are relative to the bench. Read as world orientations those keys flattened two of the three
+	/// heads - the Lion and the Elephant, named by the two clips this class loops - and left the
+	/// Eagle alone only because the clip naming it is never reached.
+	/// </para>
+	///
+	/// <para>
+	/// What settles it is the construction clip, which by definition ends on the built object: the
+	/// Jungle Spray's ends with its fence keyed at 90 degrees, its guns at 180 and one puddle at
+	/// 245, and those are the meshes' local orientations exactly, while disagreeing with every one
+	/// of their world orientations.
+	/// </para>
 	/// </summary>
-	private static Matrix4x4[] BuildRestInverses( Matrix4x4[] baseTransforms )
+	private static Matrix4x4[] BuildRestInverses( Matrix4x4[] localTransforms )
 	{
-		var inverses = new Matrix4x4[baseTransforms.Length];
+		var inverses = new Matrix4x4[localTransforms.Length];
 
-		for ( int i = 0; i < baseTransforms.Length; ++i )
+		for ( int i = 0; i < localTransforms.Length; ++i )
 		{
 			// A sheared node has no rotation to take out - see LobbyModel.ToWorldSpace - so it
 			// keeps the identity here and behaves exactly as it did before.
-			inverses[i] = Matrix4x4.Decompose( baseTransforms[i], out _, out var rotation, out _ )
+			inverses[i] = Matrix4x4.Decompose( localTransforms[i], out _, out var rotation, out _ )
 				&& Matrix4x4.Invert( Matrix4x4.CreateFromQuaternion( rotation ), out var inverse )
 					? inverse
 					: Matrix4x4.Identity;

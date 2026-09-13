@@ -162,8 +162,13 @@ public sealed class LobbyModel
 		if ( animations.Length > 0 )
 		{
 			Animators = BindVertexAnimations( modelPath, animations, modelFile, models, meshVertices );
-			Rotator = BindRotationAnimations( modelPath, animations, Entities, _linearTransforms, Offsets,
-				[.. modelFile.Meshes.Select( mesh => mesh.ParentIndex )] );
+
+			// Each mesh's own transform goes along with its composed one: a rotation key is the
+			// orientation the mesh holds inside its parent, not the one it ends up with in the
+			// model. See MeshRotator.BuildRestInverses.
+			Rotator = BindRotationAnimations( modelPath, animations, Entities, _linearTransforms,
+				[.. modelFile.Meshes.Select( mesh => ToWorldSpace( mesh.TransformMatrix ) )],
+				Offsets, [.. modelFile.Meshes.Select( mesh => mesh.ParentIndex )] );
 		}
 	}
 
@@ -255,6 +260,24 @@ public sealed class LobbyModel
 	{
 		foreach ( var entity in Entities )
 			entity.Opacity = opacity;
+	}
+
+	/// <summary>
+	/// Shows or hides one mesh of this model, leaving the rest of it alone.
+	///
+	/// <para>
+	/// The original hides a node by setting bit 0x10 in its flag word, which nothing in the game
+	/// data ships with set - it is put there at runtime, mostly by an animation's visibility
+	/// channel (see <see cref="AnimationFile.VisibilityTrack"/>). Its node walk tests that bit
+	/// after computing the node's matrix and then carries straight on into the node's children, so
+	/// a hidden mesh takes nothing else with it; a separate bit, 0x20, is what prunes a subtree.
+	/// One entity per mesh means this behaves the same way without having to arrange it.
+	/// </para>
+	/// </summary>
+	public void SetMeshVisible( int mesh, bool visible )
+	{
+		if ( mesh >= 0 && mesh < Entities.Length )
+			Entities[mesh].Opacity = visible ? 1f : 0f;
 	}
 
 	/// <summary>
@@ -469,7 +492,8 @@ public sealed class LobbyModel
 	}
 
 	private static MeshRotator? BindRotationAnimations( string modelPath, AnimationFile[] animations,
-		ModelEntity[] entities, Matrix4x4[] baseTransforms, Vector3[] offsets, int[] parentIndices )
+		ModelEntity[] entities, Matrix4x4[] baseTransforms, Matrix4x4[] localTransforms,
+		Vector3[] offsets, int[] parentIndices )
 	{
 		if ( !MeshRotator.Drives( animations[0], entities.Length ) )
 			return null;
@@ -477,6 +501,6 @@ public sealed class LobbyModel
 		Log.Info( $"{modelPath}: rotating {animations[0].RotationTracks.Count} mesh(es) " +
 			$"with {animations.Length} animation(s)" );
 
-		return new MeshRotator( animations, entities, baseTransforms, offsets, parentIndices );
+		return new MeshRotator( animations, entities, baseTransforms, localTransforms, offsets, parentIndices );
 	}
 }

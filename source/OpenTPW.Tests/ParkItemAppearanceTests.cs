@@ -1,0 +1,112 @@
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.IO;
+using System.Linq;
+using System.Numerics;
+
+namespace OpenTPW.Tests;
+
+/// <summary>
+/// What an item standing in a park looks like, and which way the parts of it face. These read real
+/// game files and are skipped where there is no installation - see <see cref="GameData"/>.
+/// </summary>
+[TestClass]
+public class ParkItemAppearanceTests
+{
+	private BaseFileSystem data = null!;
+
+	[TestInitialize]
+	public void MountTheGame() => data = GameData.Required();
+
+	/// <summary>
+	/// Reads through the file system this test mounted rather than the global one, which belongs to
+	/// a running game and which no test should need to have been set.
+	/// </summary>
+	private ModelFile Model( string path ) => new( new MemoryStream( data.ReadAllBytes( path ) ) );
+
+	/// <summary>
+	/// A clip, read directly rather than through <see cref="AnimationFile.TryLoad"/> - that one goes
+	/// through the global file system, and it turns down a clip that carries only visibility.
+	/// </summary>
+	private AnimationFile Clip( string path ) => new( new MemoryStream( data.ReadAllBytes( path ) ) );
+
+	/// <summary>
+	/// A rotation key is the orientation a mesh holds <i>inside its parent</i>, not the one it ends
+	/// up with in the model. The Jungle Spray is what shows the difference: its three animal heads
+	/// hang off a bench that is itself turned a quarter turn, so each head is square within the
+	/// bench while standing at a quarter turn in the model - and every clip keys them square.
+	///
+	/// Read as orientations in the model, those keys flatten the heads, which is what turned the
+	/// Lion and the Elephant to face the wrong way. See MeshRotator.BuildRestInverses.
+	/// </summary>
+	[TestMethod]
+	public void ARotationKeyIsTheOrientationInsideTheParent()
+	{
+		var model = Model( "levels/jungle/sideshow/junspray/Junspray.MD2" );
+
+		(string Head, string Clip)[] lanes =
+		[
+			("Lion", "JunsprayM1"),
+			("Elephant", "JunsprayM2"),
+			("Eagle", "JunsprayM3")
+		];
+
+		foreach ( var (head, clip) in lanes )
+		{
+			var mesh = model.Nodes.FindIndex( node => node.Name.Trim() == head );
+
+			Assert.AreNotEqual( -1, mesh, $"no mesh called '{head}'" );
+
+			var node = model.Nodes[mesh];
+
+			Assert.IsTrue( Matrix4x4.Decompose( node.LocalTransform, out _, out var local, out _ ), $"{head}'s own transform" );
+			Assert.IsTrue( Matrix4x4.Decompose( node.WorldTransform, out _, out var world, out _ ), $"{head} in the model" );
+
+			Assert.AreEqual( 1f, MathF.Abs( Quaternion.Dot( local, Quaternion.Identity ) ), 0.001f,
+				$"{head} should be square within the bench it sits on" );
+
+			Assert.AreEqual( 90f, Turn( world ), 1f,
+				$"{head} should stand a quarter turn round once the bench is applied" );
+
+			var animation = Clip( $"levels/jungle/sideshow/junspray/{clip}.MD2" );
+			var track = animation.RotationTracks.FirstOrDefault( rotation => rotation.TargetIndex == mesh );
+
+			Assert.IsNotNull( track, $"{clip} is the clip that drives {head}" );
+
+			foreach ( var key in track!.Rotations )
+			{
+				Assert.AreEqual( 1f, MathF.Abs( Quaternion.Dot( key, local ) ), 0.001f,
+					$"{clip}'s keys for {head} should be the orientation it is authored with inside its parent" );
+			}
+		}
+	}
+
+	/// <summary>
+	/// Why this went unnoticed for so long: every gate in the game parents its doors straight to a
+	/// root that carries no turn of its own, and there the two orientations are the same matrix. The
+	/// lobby's gates were the models this was written against, and they cannot tell the two apart.
+	/// </summary>
+	[TestMethod]
+	public void AGateCannotTellTheTwoOrientationsApart()
+	{
+		foreach ( var path in new[] { "lobby/terrain/Jun_gate.md2", "levels/jungle/features/gates/gates.MD2" } )
+		{
+			var model = Model( path );
+
+			for ( int mesh = 0; mesh < model.Meshes.Count; ++mesh )
+			{
+				var node = model.Nodes[mesh];
+
+				Assert.IsTrue( Matrix4x4.Decompose( node.LocalTransform, out _, out var local, out _ ), path );
+				Assert.IsTrue( Matrix4x4.Decompose( node.WorldTransform, out _, out var world, out _ ), path );
+
+				Assert.AreEqual( 1f, MathF.Abs( Quaternion.Dot( local, world ) ), 0.001f,
+					$"{path}: '{node.Name.Trim()}' should sit on a root that does not turn it" );
+			}
+		}
+	}
+
+	/// <summary>How far round a turn is, in degrees, whichever way it is expressed.</summary>
+	private static float Turn( Quaternion rotation )
+		=> 2f * MathF.Acos( MathF.Min( 1f, MathF.Abs( rotation.W ) ) ) * 180f / MathF.PI;
+}
