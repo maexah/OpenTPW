@@ -17,7 +17,7 @@ Theme Park World (1999) is hard to run on a modern machine. OpenTPW re-implement
 
 **You need a legal copy of the original game.** OpenTPW ships no game content; it is an engine, not a download.
 
-**It is not playable yet.** You can explore the lobby and the front end - pick a park, look around the islands, hear the advisor - and you can now enter a park and look around it, but a park does not *run*: there are no rides, no visitors, no interface, and no way back out to the lobby short of restarting. See [Status](#status) for the full picture.
+**It is not playable yet.** You can explore the lobby and the front end - pick a park, look around the islands, hear the advisor - and you can now enter a park and look around it, ground and scenery and the shops and rides it was laid out with. But a park does not *run*: nothing operates, nobody visits, there is no interface, and no way back out to the lobby short of restarting. See [Status](#status) for the full picture.
 
 ## Quick start
 
@@ -96,9 +96,11 @@ That substitutes SDL only. SPIRV-Cross and shaderc still come from the build, be
 
 **What works.** The lobby: four islands with their gates, flyers, sky, ocean, weather with thunder and lightning, and the park name signs. The original front end, drawn with the game's own interface meshes and `.bf4` fonts - player slots, the new player dialog, the quit box, the island panel with its golden key prices, and the help bar. The advisor, with lip sync, queued lines and interruption. The original particle system and its on-screen effects. The Escape menu and options screen, with volumes that apply as you drag them, working display modes and resolutions, and a window you can resize to any aspect ratio. Machine options and players save to `save\Config.tcf` and `save\users`, in the original's own formats.
 
-**And a park, as far as scenery goes.** Choosing a park in the front end enters it. Its land is built from the heightfield inside the theme's `base.MD2` and drawn with the park's own ground textures, each cell laid the way its flags say; the attribute map beside it is read, so the engine knows what every cell *is*. The theme's fixed scenery loads, and so do the fixed items the save never gives a position to - the entrance gate, with its doors animating and the park's name painted onto its board, and the traffic lights on both pedestrian crossings.
+**And a park.** Choosing a park in the front end enters it. Its land is built from the heightfield inside the theme's `base.MD2` and drawn with the park's own ground textures, each cell laid the way its flags say; the attribute map beside it is read, so the engine knows what every cell *is*. The theme's fixed scenery loads, and so do the fixed items the save never gives a position to - the entrance gate, with its doors animating and the park's name painted onto its board, and the traffic lights on both pedestrian crossings.
 
-**What does not.** Leaving a park once you are in one (only the debug console can), everything a park is made of beyond its scenery - rides, shops, paths and queues, staff and visitors - the park's own interface, ride scripts, video, and anything online, of which there is no networking code in the project at all. The objects a saved park places are not loaded either: the save's container is read, but the block that holds them is not parsed yet.
+**And the things it was laid out with.** The park's own save file is walked, and the eleven objects Lost Kingdom was built with stand on the cells it gives them: a drinks shop, a ride, a sideshow, three toilets, a staff room, two security cameras, a litter bin and a fountain that runs with water. Each takes the art it does not ship itself from the theme's shared texture archive, which is how the original arranges it - without that, most of every item's surfaces have no texture to draw.
+
+**What does not.** Leaving a park once you are in one - only the debug console can. The objects a park places now stand in it, but none of them *works*: a ride is scenery, a shop serves nobody, and there are no paths or queues, no staff and no visitors. Nor is there a park interface, ride scripts, video, or anything online - there is no networking code in the project at all.
 
 ## File formats
 
@@ -131,9 +133,9 @@ That substitutes SDL only. SPIRV-Cross and shaderc still come from the build, be
 
 \*\* **Sounds (.SDT, .MP2, cat_\*.map)**: banks are read, and their audio decodes and plays. Despite the .mp2 extension on every name inside a bank, the audio is not always MPEG Layer II - 2,646 of the game's 3,739 streams are Layer I - so both layers are decoded, and Layer III does not occur. Nothing in the game addresses a sound by file name: sounds are grouped into categories and code plays a numbered effect within one, which is what the cat_\*.map pair holds. Its bank half is fully decoded. Of its effect half, the header, the effect table and the sample records are decoded, but the variable-size header in front of each effect's sample list is not, so the records are located by validating them against the banks rather than by offset.
 
-\*\*\* **Park signs (.SGN)**: a park's name board renders with the fonts, colours and artwork the file asks for. Two regions of its header - a 64x64 image at 0x03C5 and 36 bytes at 0x03A1 - are not identified.
+\*\*\* **Park signs (.SGN)**: a park's name board renders with the fonts, colours and artwork the file asks for. Two regions of its header - a 64x64 image at 0x03C5 and 36 bytes at 0x03A1 - are not identified. A ride's name board is a second variant of the format and is not read: the layout the gates and lobby islands use runs to 0x43DD before the image begins, and every ride's sign is 36 bytes short of that, so a ride wears the placeholder its artwork ships with.
 
-\*\*\*\* **Park saves (.TPWS)**: the container is read - the header is parsed and its ZLIB payload inflated - and the shipped park's own numbers are pinned by tests, including that its first four bytes are a *version* of 400 rather than the magic number they were once taken for. Inside the payload, the block describing the world has been mapped out and written up in the format documentation, but the engine does not parse it yet, so nothing a saved park places is loaded. The saves that do work today are the machine's options and the players themselves, listed separately above.
+\*\*\*\* **Park saves (.TPWS)**: the container is read - the header is parsed and its ZLIB payload inflated - and the shipped park's own numbers are pinned by tests, including that its first four bytes are a *version* of 400 rather than the magic number they were once taken for. Inside, the payload is a sequence of seventeen module blocks, and the first and largest of them, the world, is now walked: its header, its 16,384 map cells and its list of forty-two things, which is where the objects a park places are found. The walk is checked the way the original checks it, by having to end exactly on the next module's tag. What it reads out is what each object *is* and where it stands; the rest of that block, and the other sixteen modules, are stepped over rather than understood, and nothing writes a park back. The saves that do work in full are the machine's options and the players themselves, listed separately above.
 
 \*\*\*\*\* **Ride Scripts (.RSE)**: there is no parser. What exists is the opcode scaffolding for the ride virtual machine, against a claimed total of 210 instructions.
 
@@ -160,7 +162,7 @@ dotnet test source/OpenTPW.sln
 
 It does not matter what directory you start the game from; the shaders and the loading screen's font are copied next to the binary and found there.
 
-Twenty-seven of the seventy-one unit tests read real game files and skip when no installation is found - so a green run on a machine that has never had the game means 44 ran and 27 did not. Set `OPENTPW_GAME_PATH` to run all of them.
+Thirty-three of the seventy-seven unit tests read real game files and skip when no installation is found - so a green run on a machine that has never had the game means 44 ran and 33 did not. Set `OPENTPW_GAME_PATH` to run all of them.
 
 `OPENTPW_DEBUG_CONSOLE=1` reads commands from standard input, for driving a run reproducibly.
 
