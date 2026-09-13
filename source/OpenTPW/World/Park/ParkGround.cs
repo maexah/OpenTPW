@@ -15,6 +15,13 @@ namespace OpenTPW;
 /// </summary>
 public sealed class ParkGround : ModelEntity
 {
+	/// <summary>
+	/// The ground of the park currently loaded, or null outside one - the same way the lobby's own
+	/// systems publish themselves. It is how anything that needs to know where the land is finds it
+	/// without being handed a reference: the camera rides on it.
+	/// </summary>
+	public static ParkGround? Current { get; private set; }
+
 	/// <summary>The landscape this was built from - kept so that whatever needs a height can ask for one.</summary>
 	public HeightfieldFile Heightfield { get; private set; } = null!;
 
@@ -26,6 +33,18 @@ public sealed class ParkGround : ModelEntity
 		Name = $"{themeName} ground";
 
 		Build();
+
+		Current = this;
+	}
+
+	/// <summary>
+	/// Lets go of <see cref="Current"/>, but only if it is still this one - a scene that builds its
+	/// replacement before tearing down its predecessor would otherwise have the old one clear the new.
+	/// </summary>
+	protected override void OnDelete()
+	{
+		if ( Current == this )
+			Current = null;
 	}
 
 	/// <summary>

@@ -77,6 +77,34 @@ public sealed class HeightfieldFile
 		return Heights[(y * stride) + x];
 	}
 
+	/// <summary>
+	/// The height of the ground under a world position, interpolated across whichever cell it falls
+	/// in rather than stepped per cell - so something following the ground rides up a slope instead
+	/// of climbing it ten units at a time.
+	///
+	/// <para>
+	/// Outside the map it returns the nearest edge height, because <see cref="HeightAt"/> clamps.
+	/// That is deliberate: a camera scrolled past the edge should sit level with the ground it just
+	/// left, not fall to zero.
+	/// </para>
+	/// </summary>
+	public float HeightAtWorld( float worldX, float worldY )
+	{
+		var gridX = worldX / CellSizeX;
+		var gridY = worldY / CellSizeY;
+
+		var x = (int)MathF.Floor( gridX );
+		var y = (int)MathF.Floor( gridY );
+
+		var alongX = gridX - x;
+		var alongY = gridY - y;
+
+		var near = HeightAt( x, y ) + ((HeightAt( x + 1, y ) - HeightAt( x, y )) * alongX);
+		var far = HeightAt( x, y + 1 ) + ((HeightAt( x + 1, y + 1 ) - HeightAt( x, y + 1 )) * alongX);
+
+		return near + ((far - near) * alongY);
+	}
+
 	/// <summary>The flag word of a cell - the low half of its record.</summary>
 	public ushort FlagsAt( int x, int y ) => (ushort)(Cells[(y * CellsX) + x] & 0xFFFF);
 

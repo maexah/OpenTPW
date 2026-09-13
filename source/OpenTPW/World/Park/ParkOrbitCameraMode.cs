@@ -78,18 +78,53 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	}
 
 	/// <summary>
-	/// How far the eye is lifted to clear the ground under what it is looking at.
+	/// How fast the eye catches up with the ground beneath it.
 	///
 	/// <para>
-	/// <b>Zero until the heightfield is read.</b> The original raises the eye by the terrain height
-	/// beneath the point of interest, smoothed with a one-pole filter at alpha 0.5, so that scrolling
-	/// over a cliff eases the camera up rather than snapping it. That needs a height to sample, and
-	/// sampling heights needs the heightfield block inside <c>base.MD2</c>, which is the next job. Until
-	/// then this is flat - which is right for the entrance plaza the camera starts over, where every
-	/// fixed item sits at height 0, and wrong over the volcano.
+	/// The original eases it with a one-pole filter at alpha 0.5 - half the remaining distance every
+	/// tick - and its park loop ticks at a fixed 31ms. That is a half-life of 31ms, so the rate here
+	/// is <c>ln(2) / 0.031</c>. Written as a rate rather than as a per-frame fraction because a fixed
+	/// fraction settles at a different speed on every machine; see <see cref="Time.SmoothingFactor"/>.
 	/// </para>
 	/// </summary>
-	private static float HeightOverGround => 0f;
+	private const float GroundFollowRate = 22.36f;
+
+	/// <summary>The eased ground height, and whether it has ever been sampled - see <see cref="GroundUnderPoi"/>.</summary>
+	private float _groundHeight;
+
+	private bool _groundSampled;
+
+	/// <summary>
+	/// The ground under the point of interest, eased. The original raises the eye by this so that
+	/// scrolling over a cliff lifts the camera with the land rather than burying it.
+	///
+	/// <para>
+	/// The first sample is taken outright rather than eased into, so that a park opens with the camera
+	/// already at the right height instead of rising into place over the first second. Zero where
+	/// there is no ground to ask - which is any scene that is not a park.
+	/// </para>
+	/// </summary>
+	private float GroundUnderPoi()
+	{
+		var field = ParkGround.Current?.Heightfield;
+
+		if ( field == null )
+			return 0f;
+
+		var sample = field.HeightAtWorld( PointOfInterest.X, PointOfInterest.Y );
+
+		if ( !_groundSampled )
+		{
+			_groundHeight = sample;
+			_groundSampled = true;
+		}
+		else
+		{
+			_groundHeight = _groundHeight.LerpTo( sample, Time.SmoothingFactor( GroundFollowRate ) );
+		}
+
+		return _groundHeight;
+	}
 
 	/// <summary>How fast the point of interest scrolls, in world units a second. Provisional - see Update.</summary>
 	private const float ScrollSpeed = 200f;
@@ -143,7 +178,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		var pitch = Pitch.DegreesToRadians();
 
 		var horizontal = MathF.Cos( pitch ) * Zoom;
-		var height = (MathF.Sin( pitch ) * Zoom) + HeightOverGround;
+		var height = (MathF.Sin( pitch ) * Zoom) + GroundUnderPoi();
 
 		Position = PointOfInterest + new Vector3(
 			horizontal * MathF.Sin( Yaw ),
@@ -156,10 +191,23 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		Rotation = Rotation.LookAt( PointOfInterest - Position );
 	}
 
-	/// <summary>A one-line summary for the debug console. Cell comes back out of the world position by
-	/// the same rule that put it in: <c>grid = (world - 5) / 10</c>.</summary>
+	/// <summary>
+	/// A one-line summary for the debug console. Cell comes back out of the world position by the same
+	/// rule that put it in: <c>grid = (world - 5) / 10</c>.
+	///
+	/// <para>
+	/// <c>ground</c> is sampled fresh rather than being the eased value the camera is actually riding,
+	/// so it says what the land under the point of interest is, not where the eye has caught up to.
+	/// That is the more useful of the two to read back: it is the thing being followed.
+	/// </para>
+	/// </summary>
 	public static string State()
-		=> $"poi=({PointOfInterest.X:F0},{PointOfInterest.Y:F0}) " +
-		   $"cell=({(PointOfInterest.X - 5f) / 10f:F1},{(PointOfInterest.Y - 5f) / 10f:F1}) " +
-		   $"yaw={Yaw:F2} zoom={Zoom:F0} pitch={Pitch:F1}";
+	{
+		var ground = ParkGround.Current?.Heightfield?.HeightAtWorld( PointOfInterest.X, PointOfInterest.Y );
+
+		return $"poi=({PointOfInterest.X:F0},{PointOfInterest.Y:F0}) " +
+			$"cell=({(PointOfInterest.X - 5f) / 10f:F1},{(PointOfInterest.Y - 5f) / 10f:F1}) " +
+			$"yaw={Yaw:F2} zoom={Zoom:F0} pitch={Pitch:F1} " +
+			$"ground={(ground.HasValue ? ground.Value.ToString( "F1" ) : "-")}";
+	}
 }
