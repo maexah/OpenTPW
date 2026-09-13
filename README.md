@@ -32,7 +32,7 @@ OpenTPW is a re-implementation of Theme Park World, requiring an installation of
 OPENTPW_SYSTEM_SDL=1 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game "/path/to/Theme Park World"
 ```
 
-That stands aside for SDL only - SPIRV-Cross, shaderc and cimgui still come from the build, because those are not libraries a machine usually has.
+That stands aside for SDL only - SPIRV-Cross and shaderc still come from the build, because those are not libraries a machine usually has.
 
 ## The game's files
 
@@ -62,7 +62,7 @@ dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game "/path/to/Theme Park 
 
 It does not matter what directory you start it from. The shaders and the one font OpenTPW draws its loading screen with are copied next to the binary by the build and found there.
 
-Some keys, none of which the game tells you about: `Escape` opens the game menu, `F1` asks the advisor for help, `F2` hides the interface, `X` freezes the lobby camera, `[` and `]` move between islands, and `` ` `` toggles the ModKit editor.
+Some keys, none of which the game tells you about: `Escape` opens the game menu, `F1` asks the advisor for help, `F2` hides the interface, `X` freezes the lobby camera, and `[` and `]` move between islands.
 
 `dotnet test` runs the unit tests. Fifteen of the fifty-nine read real game files and are skipped when no installation can be found, so the suite is green on a machine that has never had the game - but a green run of 59 means 44 ran and 15 did not. Set `OPENTPW_GAME_PATH` to the game's folder to run all of them.
 
@@ -73,7 +73,7 @@ Some keys, none of which the game tells you about: `Escape` opens the game menu,
 | Linux (x64) | Vulkan | Developed and run here |
 | Windows (x64, arm64) | Vulkan | Same code path as Linux; not tested recently |
 | macOS (Intel, Apple Silicon) | Vulkan, through MoltenVK | **Untested** - see below |
-| Linux (arm64) | Vulkan | **Does not run** - see below |
+| Linux (arm64) | Vulkan | **Untested** - no longer blocked; see below |
 
 Windows uses Vulkan rather than Direct3D 11 deliberately, so that a report from Windows lands on the same code Linux runs every day.
 
@@ -81,7 +81,7 @@ Windows uses Vulkan rather than Direct3D 11 deliberately, so that a report from 
 
 **Apple Silicon no longer needs Rosetta 2.** An older version of this file said it did, and that was true of the libraries OpenTPW used then. It is not true now: SDL, MoltenVK, SPIRV-Cross and shaderc all ship arm64 builds, so an arm64 build has everything it needs.
 
-**Linux on arm64 does not work**, and the reason is one library. Every native OpenTPW needs ships for `linux-arm64` except `cimgui`, which ImGui.NET builds only for `linux-x64`. The editor's renderer is constructed whether or not the editor is ever shown, so the game stops at startup rather than running without it. Nothing about this is unfixable - it needs an arm64 `cimgui`, or for the editor to be built only when it is asked for - but neither is done.
+**Linux on arm64 is untested, but the library that blocked it is gone.** Every native OpenTPW needs ships for `linux-arm64` except one: `cimgui`, which ImGui.NET builds only for `linux-x64`. It came in with the ModKit editor, whose renderer was constructed whether or not the editor was ever shown, so the game stopped at startup rather than running without it. The game no longer builds the editor in, and no longer asks for `cimgui` at all. Nobody here has an arm64 Linux machine, so what is claimed is only that the known blocker has been removed - not that it has been seen to run.
 
 ## Status
 
@@ -133,7 +133,7 @@ OpenTPW is not yet playable: you can walk around the front end but not enter a p
 
 **"its names have been cut short."** The disc was copied from its plain ISO 9660 tree. Copy it again keeping the long names - see [The game's files](#the-games-files).
 
-**It stops before a window appears, saying it could not load a native library.** OpenTPW ships the libraries it opens, in `runtimes/`, so this is nearly always the Vulkan loader or the GPU driver, which it does not ship. Install the Vulkan loader your distribution packages - `libvulkan1`, `vulkan-loader` or `vulkan-icd-loader`, depending on which - and the driver for your GPU. On Linux arm64 the missing library is `cimgui`, which has no arm64 build at all; see [Platforms](#platforms).
+**It stops before a window appears, saying it could not load a native library.** OpenTPW ships the libraries it opens, in `runtimes/`, so this is nearly always the Vulkan loader or the GPU driver, which it does not ship. Install the Vulkan loader your distribution packages - `libvulkan1`, `vulkan-loader` or `vulkan-icd-loader`, depending on which - and the driver for your GPU.
 
 **On Wayland, the window scales oddly or input feels wrong; or it will not start at all and SDL says "No available video device".** The SDL that ships with the build has no Wayland backend, so it uses XWayland. Install XWayland, or run with `OPENTPW_SYSTEM_SDL=1` to use your distribution's SDL instead - see [Requirements](#requirements).
 

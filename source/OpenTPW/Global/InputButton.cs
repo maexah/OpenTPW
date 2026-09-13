@@ -5,13 +5,6 @@ namespace OpenTPW;
 public enum InputButton
 {
 	/// <summary>
-	/// Editor Toggle (`)
-	/// Toggles the editor, if enabled.
-	/// </summary>
-	[DefaultKey( Key.Grave )]
-	EditorToggle,
-
-	/// <summary>
 	/// Open Park (Ctrl + O)
 	/// Opens the park.
 	/// </summary>

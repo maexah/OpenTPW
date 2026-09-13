@@ -22,7 +22,6 @@ public partial class Renderer
 	public CommandList CommandList = null!;
 
 	public Window Window;
-	public ImGuiRenderer imGuiRenderer;
 
 	public Action? PreUpdate;
 	public Action? OnUpdate;
@@ -52,10 +51,6 @@ public partial class Renderer
 		// Swap the buffers so that the screen isn't a mangled mess
 		Device.SwapBuffers();
 		CreateMultisampledFramebuffer( Screen.Size );
-
-		imGuiRenderer = new ImGuiRenderer( Device, Device.MainSwapchain.Framebuffer.OutputDescription, Window.Size.X, Window.Size.Y );
-		ModKit.GlobalNamespace.ImGuiManager = imGuiRenderer;
-		new Editor( imGuiRenderer, Device );
 
 		CommandList = Device.ResourceFactory.CreateCommandList();
 		CreateBlitPipeline();
@@ -194,8 +189,6 @@ public partial class Renderer
 		var sky = Level.FogColour;
 		DrawScene( "Main Render", OnRender, new RgbaFloat( sky.X, sky.Y, sky.Z, 1f ) );
 
-		Editor.Instance?.Render( CommandList );
-
 		Present();
 	}
 
@@ -295,11 +288,6 @@ public partial class Renderer
 
 		Time.Update( deltaTime );
 		Input.UpdateFrom( inputSnapshot );
-
-		if ( Input.Pressed( InputButton.EditorToggle ) )
-			Editor.Instance.shouldRender = !Editor.Instance.shouldRender;
-		if ( Editor.Instance.shouldRender )
-			Editor.Instance.UpdateFrom( inputSnapshot );
 
 		PreRender();
 		PreUpdate?.Invoke();
@@ -411,8 +399,6 @@ public partial class Renderer
 			ResolveColorTexture,
 			Device.LinearSampler
 		) );
-
-		imGuiRenderer?.WindowResized( size.X, size.Y );
 	}
 
 	public void ImmediateSubmit( Action<CommandList> action )

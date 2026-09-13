@@ -7,8 +7,8 @@ namespace OpenTPW;
 ///
 /// <para>
 /// A build puts the natives its packages carry in runtimes\&lt;rid&gt;\native, and the runtime finds them
-/// there by itself for anything declared with [DllImport] - which is how ImGui.NET's cimgui is found, and
-/// why that one always worked. Silk.NET does not use DllImport: it opens its libraries itself. Its resolver
+/// there by itself for anything declared with [DllImport], which is why libraries bound that way have never
+/// needed help. Silk.NET does not use DllImport: it opens its libraries itself. Its resolver
 /// chain does carry a runtimes\&lt;rid&gt;\native search of its own, so this is not a gap in what it can do -
 /// but for the names these packages ask for it did not offer that path. Asked what it would try for
 /// libspirv-cross.so, the eight-resolver default chain answered with two candidates: the bare name, and the
@@ -79,9 +79,8 @@ internal static class NativeLibraries
 	/// <para>
 	/// Nothing is offered for SDL when <see cref="SystemSdlVariable"/> asks for the machine's own, which
 	/// leaves Silk to fall through to the bare name and find whatever is installed. <b>SDL alone</b>: the
-	/// other three natives this build carries - SPIRV-Cross, shaderc and cimgui - are not libraries a
-	/// machine generally has, and standing aside for those is how the game failed to start before any of
-	/// this existed.
+	/// other natives this build carries - SPIRV-Cross and shaderc - are not libraries a machine generally
+	/// has, and standing aside for those is how the game failed to start before any of this existed.
 	/// </para>
 	/// </summary>
 	private static IEnumerable<string> Shipped( string name )
