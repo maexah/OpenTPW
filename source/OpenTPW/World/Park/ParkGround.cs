@@ -5,12 +5,19 @@ namespace OpenTPW;
 /// surface. <see cref="ParkTerrain"/> is the scenery standing on top of this.
 ///
 /// <para>
-/// <b>The colours are not the park's textures.</b> Each cell carries a texture index, and nothing yet
-/// traces how that index reaches a named texture - it is the largest single gap left in the park work,
-/// and it wants its own pass over the original rather than a guess. So the ground is drawn a flat
-/// colour per distinct index, which is honestly a diagram rather than a picture, and is deliberately
-/// the step before texturing: it shows the shape of the land and where its surfaces change without
-/// pretending to know what they are made of.
+/// Each cell carries a texture index, and that index counts through the model's own frame table - so
+/// the ground is drawn with the park's real textures, its own ground base set. Every theme uses six of
+/// them: <c>jgr_bas1..6</c> for the jungle and fantasy, <c>hrk_bas1..6</c> for hallow,
+/// <c>sfl_bas1..6</c> for space. Index 0 is the exception and is not a ground texture at all - it
+/// covers the cells the river and the paths run over, which something else draws.
+/// </para>
+///
+/// <para>
+/// <b>What is still missing is the texture coordinates.</b> Each cell is mapped corner to corner here,
+/// so the art tiles once a cell and the seams between neighbours are not what the original draws: its
+/// flag word carries rotation in 0x08/0x10/0x20 and a mirror in 0x40, and mirror alone is set on 83%
+/// of the jungle's cells. Until that is traced, the ground is right about what it is made of and only
+/// approximately right about how it is laid.
 /// </para>
 /// </summary>
 public sealed class ParkGround : ModelEntity
@@ -56,39 +63,58 @@ public sealed class ParkGround : ModelEntity
 	}
 
 	/// <summary>
-	/// Placeholder colours, one per distinct cell texture index, in ascending index order. Enough of
-	/// them for every park the game ships - the jungle uses seven - and chosen only to be told apart
-	/// from one another, not to resemble anything. The material carries sixteen texture slots, which
-	/// is the ceiling here.
+	/// The texture index that means "this cell is not ground".
 	///
 	/// <para>
-	/// What the jungle's 8,160 cells actually hold, which is worth knowing before reading a picture of
-	/// them: index 27 on 5,260 cells, 57 on 1,376, 0 on 1,159, and 56/58/59/60 sharing the last 365.
-	/// So the ground is mostly two indices alternating - 40% of neighbouring cells differ, which is
-	/// why it reads as a check rather than as a field - and index 0 is not ground at all but the holes
-	/// in it: its 1,159 cells are exactly the 1,159 whose flag word is 0x1, and they trace out the
-	/// river and the paths.
+	/// It resolves to whatever texture happens to sit first in the model's table - <c>grd_ctr1</c> in
+	/// the jungle, <c>jho_fnt1</c> in the other three - which is the first sign that it is a null slot
+	/// rather than a choice. Drawing it settles the question: <c>grd_ctr1</c> is the road centre, black
+	/// with yellow markings, and it paved the river bed and every path with tarmac.
+	/// </para>
+	///
+	/// <para>
+	/// These are exactly the cells whose flag word is 0x1 - 1,159 of each in the jungle, the same cells
+	/// both ways - and they trace the river and the paths. Which is the point: <b>the park's own
+	/// scenery already draws those surfaces.</b> base.MD2 carries the river with its water and its
+	/// stone banks, the waterfall under the bridge, and the brick of the paths. A ground quad over a
+	/// cell marked 0 is not filling a gap, it is putting a lid on what is underneath - which is why
+	/// skipping them does not leave holes but uncovers the park.
 	/// </para>
 	/// </summary>
-	private static readonly byte[][] Palette =
-	[
-		[ 108, 148,  74, 255 ],   // index 0 - the holes: river, paths, whatever covers the ground
-		[ 150, 120,  80, 255 ],
-		[  96, 132, 168, 255 ],
-		[ 176, 152,  96, 255 ],
-		[ 128, 104, 136, 255 ],
-		[  84, 156, 140, 255 ],
-		[ 168, 112,  92, 255 ],
-		[ 120, 128, 148, 255 ],
-		[ 144, 168, 104, 255 ],
-		[  92, 116,  96, 255 ],
-		[ 160, 136, 160, 255 ],
-		[ 104, 144, 124, 255 ],
-		[ 148,  96, 108, 255 ],
-		[ 112, 160, 168, 255 ],
-		[ 132, 132,  84, 255 ],
-		[ 100, 100, 112, 255 ],
-	];
+	private const ushort NotGround = 0;
+
+	/// <summary>
+	/// What the model calls the texture at an index, or empty if it names none there.
+	/// </summary>
+	private static string TextureName( HeightfieldFile field, int index )
+		=> index >= 0 && index < field.TextureNames.Length ? field.TextureNames[index] : string.Empty;
+
+	/// <summary>
+	/// The texture a cell index draws with. The model names them <c>.tga</c> and the files beside it
+	/// are the same stem as <c>.wct</c>, which is the one translation this needs. A name that will not
+	/// load leaves that slot blank rather than taking the ground down with it - a park missing one
+	/// ground texture is still worth looking at.
+	/// </summary>
+	private Texture Resolve( HeightfieldFile field, int index, string directory )
+	{
+		var name = TextureName( field, index );
+
+		if ( string.IsNullOrEmpty( name ) )
+			return Texture.Missing;
+
+		var dot = name.LastIndexOf( '.' );
+		var stem = dot > 0 ? name[..dot] : name;
+
+		try
+		{
+			return new Texture( $"{directory}/{stem}.wct", TextureFlags.Repeat );
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"{_themeName}: ground texture {index} ('{name}') would not load - {e.Message}" );
+			return Texture.Missing;
+		}
+	}
 
 	private void Build()
 	{
@@ -120,25 +146,35 @@ public sealed class ParkGround : ModelEntity
 		// Which texture indices the park actually uses, in ascending order, each becoming one slot of
 		// the material. More than sixteen would need the ground splitting into several models; no
 		// shipped park comes close, and this says so rather than drawing the excess wrong.
+		// Index 0 is left out, and the cells carrying it are not drawn at all - see NotGround.
 		var indices = new List<ushort>();
 
 		for ( var i = 0; i < field.Cells.Length; ++i )
 		{
 			var texture = (ushort)(field.Cells[i] >> 16);
 
-			if ( !indices.Contains( texture ) )
+			if ( texture != NotGround && !indices.Contains( texture ) )
 				indices.Add( texture );
 		}
 
 		indices.Sort();
 
-		if ( indices.Count > Palette.Length )
-			Log.Warning( $"{_themeName}: {indices.Count} ground texture indices, only {Palette.Length} colours - the rest share the last one" );
-
+		// Sixteen is what the material holds and what the shader switches over. Every park the game
+		// ships uses seven, so this has room to spare; a park that wanted more would need the ground
+		// splitting across several models, and this says so rather than drawing the excess wrong.
 		var textures = new Texture[16];
+		var directory = $"levels/{_themeName.ToLowerInvariant()}/terrain/textures";
+
+		if ( indices.Count > textures.Length )
+			Log.Warning( $"{_themeName}: the ground uses {indices.Count} textures where a material holds {textures.Length}" );
 
 		for ( var slot = 0; slot < textures.Length; ++slot )
-			textures[slot] = new Texture( Palette[Math.Min( slot, Palette.Length - 1 )], 1, 1 );
+			textures[slot] = slot < indices.Count
+				? Resolve( field, indices[slot], directory )
+				: Texture.Missing;
+
+		Log.Info( $"{_themeName}: ground textures - " +
+			string.Join( ", ", indices.Select( index => $"{index}:{TextureName( field, index )}" ) ) );
 
 		// Four corners a cell, not a shared grid. A shared vertex could only carry one texture index
 		// and one pair of texture coordinates, and a cell needs its own of both - now for the colour,
@@ -153,8 +189,14 @@ public sealed class ParkGround : ModelEntity
 		{
 			for ( var x = 0; x < field.CellsX; ++x )
 			{
-				var slot = indices.IndexOf( (ushort)(field.Cells[(y * field.CellsX) + x] >> 16) );
-				slot = Math.Clamp( slot, 0, textures.Length - 1 );
+				var texture = (ushort)(field.Cells[(y * field.CellsX) + x] >> 16);
+
+				// Not ground, so draw nothing: the park's own scenery already covers these cells, and a
+				// ground quad here does not fill a gap, it puts a lid on the river.
+				if ( texture == NotGround )
+					continue;
+
+				var slot = Math.Clamp( indices.IndexOf( texture ), 0, textures.Length - 1 );
 
 				var corner = vertex;
 
@@ -182,7 +224,14 @@ public sealed class ParkGround : ModelEntity
 		var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader", MaterialFlags.DisableCulling );
 		material.Set( "Color", textures );
 
-		Model = new Model( vertices, elements, material );
+		// Sliced to what was actually filled. The arrays are sized for every cell because the count is
+		// not known until the skipped ones have been counted, and handing the whole of them over would
+		// ship several thousand zeroed vertices and a few thousand indices all pointing at vertex 0 -
+		// degenerate triangles that the card would probably discard, which is not a reason to send them.
+		Model = new Model( vertices[..vertex], elements[..element], material );
+
+		Log.Info( $"{_themeName}: ground {element / 6} cells drawn, " +
+			$"{field.CellCount - (element / 6)} left to the scenery" );
 	}
 
 	/// <summary>

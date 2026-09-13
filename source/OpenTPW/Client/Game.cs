@@ -183,19 +183,25 @@ internal static class Game
 	///
 	/// <para>
 	/// Measured, not guessed: the loading screen logs the real count as it closes, and a park entered
-	/// from the lobby reports 649. It started at 500 here, which is what the original budgets for its
-	/// own park load (LoadingScreen_Begin with 500, from state 9) - a fair guess, and a third short,
+	/// from the lobby reports 637. It started at 500 here, which is what the original budgets for its
+	/// own park load (LoadingScreen_Begin with 500, from state 9) - a fair guess, and a quarter short,
 	/// because the two are counting different things. See <see cref="LobbyLoadSteps"/>, measured the
-	/// same way. It was 631 before the ground was built, which registers eighteen more.
+	/// same way.
+	/// </para>
+	/// <para>
+	/// It has moved four times, and the direction is not always up: 500 guessed, 631 with the scenery,
+	/// 649 once the ground was built, then back to 637 when the ground's sixteen placeholder colours
+	/// became seven real textures and nine shares of one blank. A step is an <c>Asset.Register</c>, so
+	/// anything that loads fewer assets lowers it.
 	/// </para>
 	/// <para>
 	/// This is the count for a park entered <i>from the lobby</i>, which is the only way in today. It
-	/// will fall when parks can be entered one after another, for the same reason the lobby's rebuild
-	/// count is lower than its first load: a step is an <c>Asset.Register</c>, and the caches already
-	/// hold whatever the last scene put there. Re-measure when that path exists.
+	/// will fall again when parks can be entered one after another, for the same reason the lobby's
+	/// rebuild count is lower than its first load: the caches already hold whatever the last scene put
+	/// there. Re-measure when that path exists.
 	/// </para>
 	/// </summary>
-	private const int ParkLoadSteps = 649;
+	private const int ParkLoadSteps = 637;
 
 	/// <summary>Builds a park behind the loading screen, the way <see cref="LoadLobby"/> builds the lobby.</summary>
 	private static void LoadPark( string themeName )

@@ -62,6 +62,27 @@ public sealed class HeightfieldFile
 	/// <summary>Where in the file the block header was found, for diagnostics.</summary>
 	public int BlockOffset { get; private init; }
 
+	/// <summary>
+	/// The model's own texture names, in the order a cell's texture index counts through them - so
+	/// <c>TextureNames[Cells[i] &gt;&gt; 16]</c> is the texture that cell is drawn with. They are named
+	/// <c>.tga</c> here and the files on disk are the same stem with <c>.wct</c>.
+	///
+	/// <para>
+	/// Read here, in a class named for the heightfield, because the cell records that index them are
+	/// here and the bytes are already in hand: the alternative is parsing a 272-mesh, 1.3MB model a
+	/// third time during a park load to recover seven strings.
+	/// </para>
+	///
+	/// <para>
+	/// Every park the game ships uses six of these - its ground base set, <c>jgr_bas1..6</c> for the
+	/// jungle and fantasy, <c>hrk_bas1..6</c> for hallow, <c>sfl_bas1..6</c> for space - plus index 0,
+	/// which is not a ground texture at all. Index 0 lands on whatever frame happens to sit first and
+	/// covers exactly the cells whose flag word is 0x1, which are the river and the paths. <b>The
+	/// indices differ per theme</b>, so they are positions in this model's table and nothing more.
+	/// </para>
+	/// </summary>
+	public string[] TextureNames { get; private init; } = [];
+
 	public int VertexCount => (CellsX + 1) * (CellsY + 1);
 
 	public int CellCount => CellsX * CellsY;
@@ -139,6 +160,53 @@ public sealed class HeightfieldFile
 		Cells = new uint[CellCount];
 		for ( var i = 0; i < Cells.Length; ++i )
 			Cells[i] = ReadUInt32( data, cellsOffset + (i * 4) );
+
+		TextureNames = ReadTextureNames( data, length );
+	}
+
+	/// <summary>
+	/// The model's frame table, which is what a cell's texture index counts through. <c>frameCount</c>
+	/// is a u16 at 0x36, the records start at the offset in 0x54 and are sixteen bytes each, and each
+	/// one's name pointer is the dword at +12 - the same layout <see cref="ModelFile"/> reads to name
+	/// its materials.
+	///
+	/// <para>
+	/// Returns empty rather than throwing if any of that does not add up: a landscape with no names is
+	/// still a landscape, and the caller can fall back to drawing it plainly.
+	/// </para>
+	/// </summary>
+	private static string[] ReadTextureNames( byte[] data, int length )
+	{
+		if ( length < 0x58 )
+			return [];
+
+		int count = ReadUInt16( data, 0x36 );
+		var list = (int)ReadUInt32( data, 0x54 );
+
+		if ( count <= 0 || count > 4096 || list <= 0 || list + (count * 16) > length )
+			return [];
+
+		var names = new string[count];
+
+		for ( var i = 0; i < count; ++i )
+		{
+			var at = (int)ReadUInt32( data, list + (i * 16) + 12 );
+
+			if ( at <= 0 || at >= length )
+			{
+				names[i] = string.Empty;
+				continue;
+			}
+
+			var end = at;
+
+			while ( end < length && data[end] != 0 )
+				end++;
+
+			names[i] = System.Text.Encoding.ASCII.GetString( data, at, end - at );
+		}
+
+		return names;
 	}
 
 	/// <summary>
