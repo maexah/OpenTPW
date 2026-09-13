@@ -1,6 +1,4 @@
-﻿using NeoVeldrid.Sdl2;
-
-namespace OpenTPW;
+﻿namespace OpenTPW;
 
 public static partial class Input
 {

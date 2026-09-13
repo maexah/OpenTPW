@@ -28,7 +28,7 @@ fragment {
   void main() {
     out_color = texture( sampler2D( Color, s_Color ), vec2( vs_out.texCoords.x, 1 - vs_out.texCoords.y ) );
 
-    // Veldrid has no support for native alpha-testing, so we have to pull this shit
+    // NeoVeldrid has no support for native alpha-testing, so we have to pull this shit
     // If it causes too many performance issues I guess we'll have to sort on CPU
     if ( out_color.a == 0 )
         discard;
