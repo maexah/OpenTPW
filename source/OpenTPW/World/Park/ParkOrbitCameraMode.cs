@@ -131,13 +131,29 @@ public sealed class ParkOrbitCameraMode : CameraMode
 
 	public ParkOrbitCameraMode()
 	{
-		// The original's park projection is 90, near 0.1, far 1000. Two caveats, both real:
+		// The original's park projection is 90, near 0.1, far 1000, and the 90 is a VERTICAL angle.
 		//
-		// The 90 is certain as a number and uncertain as a meaning - the projection it is handed writes
-		// m[0] == m[5] with no aspect term anywhere, so whether it is horizontal, vertical or diagonal
-		// cannot be read off the code. CameraMode takes a vertical angle at 4:3, so that is what it is
-		// treated as here; if the framing turns out tighter than the original's, this is the first
-		// thing to change.
+		// Both halves of that were read out of the exe on 2026-09-13. FUN_00578be0 builds the matrix
+		// from a half-angle - _DAT_007018b8 is pi/180 and _DAT_007018c0 is 0.5 - and writes
+		// m[0] == m[5] with no aspect term, which on its own leaves the convention open. What closes
+		// it is the CULLING frustum, which has to frame the same volume the matrix draws or geometry
+		// would pop at the edge of the screen: FUN_0056bb00 builds its four corner rays as
+		// (+/-fVar1/DAT_008bcbcc, +/-fVar1, 1). With the 4:3 that every shipped mode except 1280x1024
+		// uses, that is (+/-1.333, +/-1.0, 1) - a vertical half-angle of 45 and a horizontal one of
+		// 53.13. So vertical 90, horizontal 106.26, which is exactly what CameraMode's angle already
+		// means. One link is inferred rather than read: DAT_008bcbcc is written at runtime through a
+		// struct pointer, so its 0.75 comes from the picking code, which carries the same figure as a
+		// literal double and takes atan(0.75) to build the same frustum (FUN_0045bf90).
+		//
+		// The reference screenshots cannot check this, and it is worth saying why so that nobody
+		// spends the time again. Telling a vertical 90 from a horizontal one means locating vanishing
+		// points one to seven thousand pixels outside an 800x600 frame, from edges whose directions
+		// differ by a degree or two, in JPEG. Four estimators were built for it and each was gated on
+		// a frame this engine rendered at a known angle: the careful ones separate the two candidates
+		// by one to five per cent and report undecided, and the naive ones answer confidently and
+		// wrongly. The framing difference that prompted the question - the original showing no sky
+		// where this shows plenty - is content, not lens: their parks are full of rides and trees that
+		// stop the eye, and this one is bare ground.
 		//
 		// The far plane stays Camera's own 10000 rather than the original's 1000. Nothing here depends
 		// on it - it costs only depth precision - so it is left alone rather than reaching into shared
