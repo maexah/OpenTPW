@@ -63,9 +63,14 @@ public sealed class LobbyModel
 	/// wants <see cref="MaterialFlags.DisableDepthWrite"/> here, or it punches a hole through
 	/// whatever is drawn after it for as long as it is part-transparent.
 	/// </param>
+	/// <param name="sharedTextureDirectory">
+	/// Where to look for a texture the model names but does not ship - see <see cref="LoadTexture"/>.
+	/// Null means look nowhere else, which is what the lobby wants: its models carry their own art.
+	/// </param>
 	public LobbyModel( string modelPath, string textureDirectory, Vector3 origin, float scale = 1f,
 		IReadOnlyDictionary<string, Texture>? textureOverrides = null,
-		MaterialFlags materialFlags = MaterialFlags.None )
+		MaterialFlags materialFlags = MaterialFlags.None,
+		string? sharedTextureDirectory = null )
 	{
 		var modelFile = new ModelFile( modelPath );
 		var meshCount = modelFile.Meshes.Count;
@@ -90,7 +95,7 @@ public sealed class LobbyModel
 				else if ( textureOverrides != null && textureOverrides.TryGetValue( mesh.Materials[i].Name, out var overridden ) )
 					textures.Add( overridden );
 				else
-					textures.Add( new Texture( $"{textureDirectory}/{mesh.Materials[i].Name}.wct", TextureFlags.Repeat ) );
+					textures.Add( LoadTexture( mesh.Materials[i].Name, textureDirectory, sharedTextureDirectory ) );
 			}
 
 			var vertices = new List<Vertex>();
@@ -159,6 +164,55 @@ public sealed class LobbyModel
 			Animators = BindVertexAnimations( modelPath, animations, modelFile, models, meshVertices );
 			Rotator = BindRotationAnimations( modelPath, animations, Entities, _linearTransforms, Offsets,
 				[.. modelFile.Meshes.Select( mesh => mesh.ParentIndex )] );
+		}
+	}
+
+	/// <summary>
+	/// One material's texture: the model's own folder first, then the theme's shared one.
+	///
+	/// <para>
+	/// A buildable item ships only the art unique to it and takes the rest from its theme's
+	/// <c>sharetex.wad</c>. A small toilet carries <c>J_wc2</c> and asks besides for <c>J_wc1</c>, a roof
+	/// and a side panel, all three of which it shares with the go-karts and half the jungle. Without a
+	/// second place to look, most of every item's surfaces draw the game's not-found texture - forty
+	/// distinct ones across the eleven objects Lost Kingdom is built with, which is what the park looked
+	/// like before this: sand-coloured boxes.
+	/// </para>
+	///
+	/// <para>
+	/// Whether a texture is there is asked of the file system rather than discovered by failing to load
+	/// it, because <see cref="Texture"/> has a shipped answer for art it cannot find and warns as it uses
+	/// it - so trying the item's own folder first and letting it fail would fill the log with exactly the
+	/// warnings this removes. It asks <c>GetSize</c> rather than <c>FileExists</c> because that one does
+	/// not look inside archives, and every one of these lives in a .wad.
+	/// </para>
+	///
+	/// <para>
+	/// It must resolve to a <i>path</i>, never a stream: <see cref="Texture"/> reads a .wct through
+	/// Bullfrog's own decoder only on the path constructor, and its stream constructor hands the bytes to
+	/// STB instead, which does not know the format.
+	/// </para>
+	/// </summary>
+	private static Texture LoadTexture( string name, string directory, string? shared )
+	{
+		var path = $"{directory}/{name}.wct";
+
+		if ( shared != null && !Exists( path ) && Exists( $"{shared}/{name}.wct" ) )
+			path = $"{shared}/{name}.wct";
+
+		return new Texture( path, TextureFlags.Repeat );
+	}
+
+	/// <summary>Whether the file system can offer this path at all - see <see cref="LoadTexture"/>.</summary>
+	private static bool Exists( string path )
+	{
+		try
+		{
+			return FileSystem.GetSize( path ) > 0;
+		}
+		catch ( Exception )
+		{
+			return false;
 		}
 	}
 

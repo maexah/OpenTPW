@@ -196,10 +196,12 @@ public class Level
 			Color = Balance.Colour( "ThemeEngine.DirectionalLightLevel", Vector3.One )
 		};
 
-		// The ground first, then what stands on it.
+		// The ground first, then what stands on it. ParkObjects is last because it asks the ground how
+		// high the land is under each thing it places.
 		_ = new ParkGround( ThemeName );
 		_ = new ParkTerrain( ThemeName );
 		_ = new ParkFixedItems( ThemeName );
+		_ = new ParkObjects( ThemeName );
 
 		GameOptions.Current.ApplySound();
 

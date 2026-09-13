@@ -188,17 +188,26 @@ internal static class Game
 	///
 	/// <para>
 	/// Measured, not guessed: the loading screen logs the real count as it closes, and a park entered
-	/// from the lobby reports 671. It started at 500 here, which is what the original budgets for its
+	/// from the lobby reports 872. It started at 500 here, which is what the original budgets for its
 	/// own park load (LoadingScreen_Begin with 500, from state 9) - a fair guess, and a quarter short,
 	/// because the two are counting different things. See <see cref="LobbyLoadSteps"/>, measured the
 	/// same way.
 	/// </para>
 	/// <para>
-	/// It has moved five times, and the direction is not always up: 500 guessed, 631 with the scenery,
+	/// It has moved six times, and the direction is not always up: 500 guessed, 631 with the scenery,
 	/// 649 once the ground was built, back to 637 when the ground's sixteen placeholder colours
-	/// became seven real textures and nine shares of one blank, and 671 with the park's fixed items -
-	/// the gate with its three door animations and its painted sign, and the traffic lights. A step is
-	/// an <c>Asset.Register</c>, so anything that loads fewer assets lowers it.
+	/// became seven real textures and nine shares of one blank, 671 with the park's fixed items -
+	/// the gate with its three door animations and its painted sign, and the traffic lights - and 872
+	/// once the park's own objects were read out of its save file, which is eleven shops, rides and
+	/// pieces of scenery, each bringing a model and its textures. A step is an <c>Asset.Register</c>,
+	/// so anything that loads fewer assets lowers it.
+	/// </para>
+	/// <para>
+	/// That last number was 876 until the items were given the theme's shared texture archive to fall
+	/// back on. Four of the textures they ask for are named by two different items - the fountain and the
+	/// belly bounce both want three grasses, the toilet and the drinks shop a side panel - and reaching
+	/// them by one shared path instead of two private ones builds four fewer textures. A fix for how the
+	/// park looks turned out to load less as well.
 	/// </para>
 	/// <para>
 	/// This is the count for a park entered <i>from the lobby</i>, which is the only way in today. It
@@ -207,7 +216,7 @@ internal static class Game
 	/// there. Re-measure when that path exists.
 	/// </para>
 	/// </summary>
-	private const int ParkLoadSteps = 671;
+	private const int ParkLoadSteps = 872;
 
 	/// <summary>Builds a park behind the loading screen, the way <see cref="LoadLobby"/> builds the lobby.</summary>
 	private static void LoadPark( string themeName )
