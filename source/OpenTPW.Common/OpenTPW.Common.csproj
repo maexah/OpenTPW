@@ -4,12 +4,19 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!--
+      Window.cs and Display.cs call SDL through Silk.NET, whose window, surface and display-mode
+      entry points take pointers: SDL_SetWindowMinimumSize has one overload and it is Window*.
+      Nothing else here is unsafe.
+    -->
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Veldrid" Version="4.9.0" />
-    <PackageReference Include="Veldrid.SDL2" Version="4.8.0" />
-    <PackageReference Include="Veldrid.StartupUtilities" Version="4.8.0" />
+    <PackageReference Include="NeoVeldrid" Version="1.2.1" />
+    <PackageReference Include="NeoVeldrid.SDL2" Version="1.2.1" />
+    <PackageReference Include="NeoVeldrid.StartupUtilities" Version="1.2.1" />
     <PackageReference Include="Zio" Version="0.17.0" />
   </ItemGroup>
 

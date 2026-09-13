@@ -1,55 +1,48 @@
-using System.Reflection;
 using System.Runtime.InteropServices;
+using Silk.NET.Core.Loader;
 
 namespace OpenTPW;
 
 /// <summary>
-/// Teaches the Vulkan bindings how to find dlopen on a modern Linux.
+/// Teaches Silk.NET's loader where this build keeps the native libraries it ships with.
 ///
 /// <para>
-/// vk.dll - the Vk package Veldrid draws its Vulkan bindings from - declares its loader as
-/// [DllImport( "libdl" )] on Vulkan.Libdl's dlopen, dlsym, dlclose and dlerror. glibc merged libdl into libc
-/// in 2.34 and distributions now ship only the versioned libdl.so.2, so none of the names the runtime looks
-/// for - libdl.so, liblibdl.so, libdl, liblibdl, in the framework folder and beside the game - exists any
-/// more. The first touch of Vulkan.VulkanNative then dies in its type initializer with "Unable to load shared
-/// library 'libdl'", and the first touch is GraphicsDevice.CreateVulkan in <see cref="Renderer"/>, so the game
-/// never reaches a frame. Until now the way round it was to make a libdl.so symlink beside the build by hand.
+/// A build puts the natives its packages carry in runtimes\&lt;rid&gt;\native, and the runtime finds them
+/// there by itself for anything declared with [DllImport] - which is how ImGui.NET's cimgui is found, and
+/// why that one always worked. Silk.NET does not use DllImport: it opens its libraries itself, and the only
+/// places it looks are the bare name and the folder this build sits in. Neither is where the natives are.
 /// </para>
 /// <para>
-/// A resolver belongs to the assembly that declares the import rather than to the one installing it, so this
-/// is registered against vk.dll itself; registered against ours it would never be consulted. Naming a type in
-/// vk.dll does not run VulkanNative's type initializer, so asking for the assembly here cannot trip the very
-/// failure this prevents - and VkResult is a plain enum with no initializer of its own.
+/// A bare name reaches whatever the machine already has, so the two failed in different ways and only one
+/// of them was visible. libSDL2-2.0.so quietly resolved to the system's copy - the game ran, on an SDL it
+/// did not ship - while libspirv-cross.so, which no system carries, failed outright in the first shader
+/// compiled (see <see cref="ShaderCompiler"/>) and took the game down with it before a frame was drawn.
 /// </para>
 /// <para>
-/// Nothing here is wanted on Windows, where the same bindings use kernel32, nor on macOS, where dl lives in
-/// libSystem and the bare name resolves.
+/// Putting runtimes\&lt;rid&gt;\native at the front of that list answers both: the libraries this build ships
+/// are the ones it opens, and the machine's own are never reached. Registered in <see cref="Program"/>
+/// before anything can ask for a library, and deliberately silent - it runs before there is a log to write to.
 /// </para>
 /// </summary>
 internal static class NativeLibraries
 {
 	/// <summary>
-	/// Called once, before anything can touch the Vulkan bindings. Registering twice for one assembly throws,
-	/// so there is deliberately only the one call site, in <see cref="Program"/>.
+	/// Called once, before anything can open a native library. Nothing is reported if the resolver turns out
+	/// not to be one that keeps a list: the game still starts, and a library that then cannot be found says
+	/// so itself, which is the same message this prevents rather than a quieter one.
 	/// </summary>
 	public static void Register()
 	{
-		if ( !OperatingSystem.IsLinux() )
-			return;
-
-		NativeLibrary.SetDllImportResolver( typeof( Vulkan.VkResult ).Assembly, Resolve );
+		if ( PathResolver.Default is DefaultPathResolver resolver )
+			resolver.Resolvers.Insert( 0, Shipped );
 	}
 
 	/// <summary>
-	/// The main program's handle is handed back rather than a libc named outright: its symbol lookup reaches
-	/// everything already loaded into the process, and the runtime itself calls dlopen, so the four functions
-	/// are always there. Naming a library instead would mean choosing between a glibc new enough to carry dl
-	/// inside libc.so.6 and one still shipping libdl.so.2 - and on an older glibc, libc.so.6 would load
-	/// happily and then fail on the missing entry point instead.
+	/// Where this build keeps <paramref name="name"/>. Handed back whether or not it is there: Silk tries
+	/// each path in turn and moves on, so a platform whose natives live elsewhere costs one failed open.
 	/// </summary>
-	private static IntPtr Resolve( string libraryName, Assembly assembly, DllImportSearchPath? searchPath )
+	private static IEnumerable<string> Shipped( string name )
 	{
-		// Zero means "carry on as usual", which is what everything else vk.dll asks for wants.
-		return libraryName == "libdl" ? NativeLibrary.GetMainProgramHandle() : IntPtr.Zero;
+		yield return Path.Combine( AppContext.BaseDirectory, "runtimes", RuntimeInformation.RuntimeIdentifier, "native", name );
 	}
 }

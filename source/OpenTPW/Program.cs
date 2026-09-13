@@ -7,7 +7,7 @@ public class Program
 {
 	public static void Main( string[] args )
 	{
-		// Before anything can reach the Vulkan bindings - see NativeLibraries.
+		// Before anything can open a native library - see NativeLibraries.
 		NativeLibraries.Register();
 
 		Game.Run( args );

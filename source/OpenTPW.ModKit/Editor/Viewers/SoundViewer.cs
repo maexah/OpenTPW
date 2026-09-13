@@ -1,6 +1,6 @@
 ﻿using ImGuiNET;
 using NAudio.Wave;
-using Veldrid;
+using NeoVeldrid;
 
 namespace OpenTPW.ModKit;
 

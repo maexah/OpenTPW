@@ -4,7 +4,7 @@ global using static OpenTPW.ModKit.GlobalNamespace;
 namespace OpenTPW.ModKit;
 
 using OpenTPW;
-using Veldrid;
+using NeoVeldrid;
 
 public static class GlobalNamespace
 {

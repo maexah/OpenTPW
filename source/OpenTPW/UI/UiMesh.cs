@@ -222,7 +222,7 @@ internal sealed class UiMesh
 				acrossOffset, upOffset, 0.5f, 1f );
 
 			// Through the frame, as one part is drawn for every control that wears it - see Material.SetInFrame.
-			_model.Material.SetInFrame( "ObjectUniformBuffer", new ObjectUniformBuffer
+			_model.Material.SetInFrame( "g_oUbo", new ObjectUniformBuffer
 			{
 				g_mModel = toScreen,
 				g_mView = Matrix4x4.Identity,

@@ -41,8 +41,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="ImGui.NET" Version="1.87.2" />
+		<PackageReference Include="ImGui.NET" Version="1.91.6.1" />
 		<PackageReference Include="NAudio" Version="2.2.1" />
+		<PackageReference Include="NeoVeldrid" Version="1.2.1" />
+		<PackageReference Include="NeoVeldrid.ImGui" Version="1.2.1" />
+		<PackageReference Include="NeoVeldrid.SDL2" Version="1.2.1" />
+		<PackageReference Include="NeoVeldrid.SPIRV" Version="1.2.1" />
+		<PackageReference Include="NeoVeldrid.StartupUtilities" Version="1.2.1" />
 		<!--
 			Decodes the MPEG Layer I and Layer II streams inside a .sdt - see AudioClip. Pin 3.0.0
 			or newer: 1.16.0 decodes Layer I correctly but gets MPEG-2 Layer II wrong, which is
@@ -55,11 +60,6 @@
 		<PackageReference Include="StbImageSharp" Version="2.27.8" />
 		<PackageReference Include="StbTrueTypeSharp" Version="1.26.13" />
 		<PackageReference Include="System.Configuration.ConfigurationManager" Version="6.0.0" />
-		<PackageReference Include="Veldrid" Version="4.9.0" />
-		<PackageReference Include="Veldrid.ImGui" Version="5.72.0" />
-		<PackageReference Include="Veldrid.SDL2" Version="4.8.0" />
-		<PackageReference Include="Veldrid.SPIRV" Version="1.0.14" />
-		<PackageReference Include="Veldrid.StartupUtilities" Version="4.8.0" />
 	</ItemGroup>
 
 	<ItemGroup>

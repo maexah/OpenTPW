@@ -1,5 +1,8 @@
-using System.Runtime.InteropServices;
-using Veldrid.Sdl2;
+using NeoVeldrid.Sdl2;
+
+// Silk names SDL_DisplayMode "DisplayMode", which is also the name of the enum below. The alias keeps
+// both, and keeps the SDL one spelled as what it is.
+using SdlDisplayMode = Silk.NET.SDL.DisplayMode;
 
 namespace OpenTPW;
 
@@ -38,38 +41,13 @@ public readonly record struct VideoMode( int Width, int Height, int RefreshRate 
 /// because it changes no mode and so leaves everything else on the desktop where it was.
 /// </para>
 /// <para>
-/// Veldrid's SDL binding wraps the window states but none of the mode enumeration, so those four calls
-/// are loaded out of the SDL it has already opened, the same way the window's minimum size is.
+/// The mode calls are made on the same SDL the window came out of, <see cref="Sdl2Window.SdlInstance"/>.
+/// They are bound rather than looked up by name, so there is no longer a case where the display can be
+/// asked a question SDL has no function for.
 /// </para>
 /// </summary>
 public static class Display
 {
-	/// <summary>SDL_DisplayMode. Declared here rather than taken from the binding so the layout is stated where it is used.</summary>
-	[StructLayout( LayoutKind.Sequential )]
-	private struct SdlDisplayMode
-	{
-		public uint Format;
-		public int Width;
-		public int Height;
-		public int RefreshRate;
-		public IntPtr DriverData;
-	}
-
-	[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
-	private delegate int SDL_GetWindowDisplayIndex_t( IntPtr window );
-
-	[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
-	private delegate int SDL_GetNumDisplayModes_t( int display );
-
-	[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
-	private delegate int SDL_GetDisplayMode_t( int display, int index, ref SdlDisplayMode mode );
-
-	[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
-	private delegate int SDL_GetDesktopDisplayMode_t( int display, ref SdlDisplayMode mode );
-
-	[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
-	private delegate int SDL_SetWindowDisplayMode_t( IntPtr window, ref SdlDisplayMode mode );
-
 	/// <summary>
 	/// What to offer when SDL will not say what the display can do - the modes the original itself
 	/// lists in _Resolution.sam, which is the one list the game is known to be happy at. Anything
@@ -81,35 +59,20 @@ public static class Display
 		new( 1280, 1024, 0 ), new( 1600, 1200, 0 ), new( 2048, 1536, 0 )
 	];
 
-	private static T? Load<T>( string name ) where T : Delegate
+	private static unsafe int DisplayIndex( Window window )
 	{
-		try
-		{
-			return Sdl2Native.LoadFunction<T>( name );
-		}
-		catch ( Exception e )
-		{
-			Log.Warning( $"Display: SDL has no {name} - {e.Message}" );
-			return null;
-		}
-	}
-
-	private static int DisplayIndex( Window window )
-	{
-		var index = Load<SDL_GetWindowDisplayIndex_t>( "SDL_GetWindowDisplayIndex" )?.Invoke( window.SdlWindow.SdlWindowHandle ) ?? 0;
+		var index = Sdl2Window.SdlInstance.GetWindowDisplayIndex( (Silk.NET.SDL.Window*)window.SdlWindow.SdlWindowHandle );
 		return index < 0 ? 0 : index;
 	}
 
 	/// <summary>The mode the desktop is in, or nothing if SDL will not say.</summary>
 	public static VideoMode? Desktop( Window window )
 	{
-		var get = Load<SDL_GetDesktopDisplayMode_t>( "SDL_GetDesktopDisplayMode" );
-
-		if ( get == null )
-			return null;
-
 		var mode = new SdlDisplayMode();
-		return get( DisplayIndex( window ), ref mode ) == 0 ? new VideoMode( mode.Width, mode.Height, mode.RefreshRate ) : null;
+
+		return Sdl2Window.SdlInstance.GetDesktopDisplayMode( DisplayIndex( window ), ref mode ) == 0
+			? new VideoMode( mode.W, mode.H, mode.RefreshRate )
+			: null;
 	}
 
 	/// <summary>
@@ -121,22 +84,17 @@ public static class Display
 	public static IReadOnlyList<VideoMode> Modes( Window window )
 	{
 		var found = new Dictionary<(int, int), VideoMode>();
-		var count = Load<SDL_GetNumDisplayModes_t>( "SDL_GetNumDisplayModes" );
-		var read = Load<SDL_GetDisplayMode_t>( "SDL_GetDisplayMode" );
+		var sdl = Sdl2Window.SdlInstance;
+		var display = DisplayIndex( window );
 
-		if ( count != null && read != null )
+		for ( int i = 0, count = sdl.GetNumDisplayModes( display ); i < count; ++i )
 		{
-			var display = DisplayIndex( window );
+			var mode = new SdlDisplayMode();
 
-			for ( int i = 0; i < count( display ); ++i )
-			{
-				var mode = new SdlDisplayMode();
+			if ( sdl.GetDisplayMode( display, i, ref mode ) != 0 )
+				continue;
 
-				if ( read( display, i, ref mode ) != 0 )
-					continue;
-
-				Keep( new VideoMode( mode.Width, mode.Height, mode.RefreshRate ) );
-			}
+			Keep( new VideoMode( mode.W, mode.H, mode.RefreshRate ) );
 		}
 
 		if ( found.Count == 0 )
@@ -177,17 +135,17 @@ public static class Display
 
 		// Out of any full screen first: a display cannot be given a new mode while it is being held
 		// at the old one, and SDL only reads the window's mode as it enters full screen.
-		sdl.WindowState = Veldrid.WindowState.Normal;
+		sdl.WindowState = NeoVeldrid.WindowState.Normal;
 
 		switch ( mode )
 		{
 			case DisplayMode.FullScreen:
 				SetFullScreenMode( window, fullScreen );
-				sdl.WindowState = Veldrid.WindowState.FullScreen;
+				sdl.WindowState = NeoVeldrid.WindowState.FullScreen;
 				break;
 
 			case DisplayMode.BorderlessFullScreen:
-				sdl.WindowState = Veldrid.WindowState.BorderlessFullScreen;
+				sdl.WindowState = NeoVeldrid.WindowState.BorderlessFullScreen;
 				break;
 
 			default:
@@ -197,20 +155,15 @@ public static class Display
 		Log.Info( $"Display: {mode}{(mode == DisplayMode.FullScreen ? $" at {fullScreen}" : "")}, window {window.Size.X}x{window.Size.Y}" );
 	}
 
-	private static void SetFullScreenMode( Window window, VideoMode wanted )
+	private static unsafe void SetFullScreenMode( Window window, VideoMode wanted )
 	{
 		if ( wanted.Width <= 0 || wanted.Height <= 0 )
 			return;
 
-		var set = Load<SDL_SetWindowDisplayMode_t>( "SDL_SetWindowDisplayMode" );
-
-		if ( set == null )
-			return;
-
 		// Format and driver data left at zero, which asks SDL for the closest mode it has.
-		var mode = new SdlDisplayMode { Width = wanted.Width, Height = wanted.Height, RefreshRate = wanted.RefreshRate };
+		var mode = new SdlDisplayMode { W = wanted.Width, H = wanted.Height, RefreshRate = wanted.RefreshRate };
 
-		if ( set( window.SdlWindow.SdlWindowHandle, ref mode ) != 0 )
+		if ( Sdl2Window.SdlInstance.SetWindowDisplayMode( (Silk.NET.SDL.Window*)window.SdlWindow.SdlWindowHandle, ref mode ) != 0 )
 			Log.Warning( $"Display: the display would not take {wanted}, so full screen uses whatever mode it is in" );
 	}
 }

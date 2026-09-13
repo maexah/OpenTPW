@@ -1,4 +1,4 @@
-﻿using Veldrid;
+﻿using NeoVeldrid;
 
 namespace OpenTPW;
 
@@ -100,7 +100,7 @@ public partial class ModelEntity : Entity
 			_padding1 = 0,
 		};
 
-		model.Material.Set( "ObjectUniformBuffer", uniformBuffer );
+		model.Material.Set( "g_oUbo", uniformBuffer );
 		model.Draw();
 	}
 }

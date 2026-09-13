@@ -158,7 +158,7 @@ public abstract class WeatherSprites : ModelEntity
 
 		// Vertices are built in world space, so the model transform is identity rather than
 		// this entity's - it has no position of its own to speak of.
-		Model.Material.Set( "ObjectUniformBuffer", new ObjectUniformBuffer
+		Model.Material.Set( "g_oUbo", new ObjectUniformBuffer
 		{
 			g_mModel = Matrix4x4.Identity,
 			g_mView = Camera.ViewMatrix,

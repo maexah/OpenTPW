@@ -1,16 +1,16 @@
 ﻿using System.Text;
-using Veldrid;
-using Veldrid.SPIRV;
+using NeoVeldrid;
+using NeoVeldrid.SPIRV;
 
 namespace OpenTPW;
 
 internal struct ShaderInfo
 {
-	public Veldrid.Shader VertexShader { get; set; }
-	public Veldrid.Shader FragmentShader { get; set; }
+	public NeoVeldrid.Shader VertexShader { get; set; }
+	public NeoVeldrid.Shader FragmentShader { get; set; }
 	public SpirvReflection Reflection { get; set; }
 
-	public readonly Veldrid.Shader[] ShaderProgram => [VertexShader, FragmentShader];
+	public readonly NeoVeldrid.Shader[] ShaderProgram => [VertexShader, FragmentShader];
 }
 
 internal static class ShaderCompiler
@@ -22,7 +22,6 @@ internal static class ShaderCompiler
 			GraphicsBackend.Direct3D11 => CrossCompileTarget.HLSL,
 			GraphicsBackend.OpenGL => CrossCompileTarget.GLSL,
 			GraphicsBackend.Vulkan => CrossCompileTarget.GLSL,
-			GraphicsBackend.Metal => CrossCompileTarget.MSL,
 			GraphicsBackend.OpenGLES => CrossCompileTarget.ESSL,
 			_ => throw new NotImplementedException( $"Unknown cross-compile target" )
 		};
@@ -33,7 +32,6 @@ internal static class ShaderCompiler
 		return Device.ResourceFactory.BackendType switch
 		{
 			GraphicsBackend.Direct3D11 or GraphicsBackend.OpenGL or GraphicsBackend.OpenGLES or GraphicsBackend.Vulkan => Encoding.ASCII.GetBytes( code ),
-			GraphicsBackend.Metal => Encoding.UTF8.GetBytes( code ),
 			_ => throw new SpirvCompilationException( "Unknown target" ),
 		};
 	}
@@ -57,14 +55,13 @@ internal static class ShaderCompiler
 		// on at the first draw.
 		var compilationResult = SpirvCompilation.CompileVertexFragment( vertexSourceBytes, fragmentSourceBytes, target );
 
-		// The shader objects themselves are left to Veldrid, which is handed the same Vulkan GLSL the
-		// reflection above was read out of. It knows what each backend will accept - which form, which text
-		// encoding, and that a Metal entry point has to be called "main0" because "main" is a reserved word
-		// in MSL - and none of that can be tested here, so none of it is worth restating here.
+		// The shader objects themselves are left to NeoVeldrid, which is handed the same Vulkan GLSL the
+		// reflection above was read out of. It knows what each backend will accept - which form and which
+		// text encoding - and none of that can be tested here, so none of it is worth restating here.
 		//
-		// What this replaces was Vulkan-only in three separate ways: it fed the cross-compiled result back
-		// into a GLSL compiler, which for Metal means handing MSL to a GLSL parser; it then gave a Metal
-		// device SPIR-V, which wants metallib or MSL text; and it named the entry point "main".
+		// What this replaces fed the cross-compiled result back into a GLSL compiler and then handed the
+		// device SPIR-V, which is a thing only Vulkan wanted. Handing the source across once and letting
+		// the backend decide is what makes one path work on all of them.
 		var shaders = Device.ResourceFactory.CreateFromSpirv(
 			new ShaderDescription( ShaderStages.Vertex, vertexSourceBytes, "main" ),
 			new ShaderDescription( ShaderStages.Fragment, fragmentSourceBytes, "main" ) );

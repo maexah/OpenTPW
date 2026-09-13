@@ -554,7 +554,7 @@ public class Sky : Entity
 			if ( Model == null )
 				return;
 
-			Model.Material.Set( "ObjectUniformBuffer", new SkyUniformBuffer
+			Model.Material.Set( "g_oUbo", new SkyUniformBuffer
 			{
 				// Vertices are already in world space, so there is no transform of its own here.
 				g_mModel = Matrix4x4.Identity,

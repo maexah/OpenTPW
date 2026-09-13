@@ -1,6 +1,6 @@
 ﻿using StbImageSharp;
 using System.Runtime.InteropServices;
-using Veldrid;
+using NeoVeldrid;
 
 namespace OpenTPW;
 
@@ -67,7 +67,7 @@ public partial class Texture : Asset
 	/// <summary>Decoded once; <see cref="NotFound"/> hands out copies.</summary>
 	private static TextureData? _notFound;
 
-	internal Veldrid.Texture NativeTexture;
+	internal NeoVeldrid.Texture NativeTexture;
 	internal TextureView NativeTextureView;
 
 	/// <summary>

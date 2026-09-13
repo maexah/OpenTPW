@@ -1,5 +1,5 @@
-﻿using Veldrid;
-using Veldrid.Sdl2;
+﻿using NeoVeldrid;
+using NeoVeldrid.Sdl2;
 
 namespace OpenTPW;
 
@@ -23,8 +23,8 @@ public static partial class Input
 
 	public static bool IsSystemCursorVisible
 	{
-		get => Sdl2Native.SDL_ShowCursor( -1 ) == 1;
-		set => Sdl2Native.SDL_ShowCursor( value ? 1 : 0 );
+		get => Sdl2Window.SdlInstance.ShowCursor( -1 ) == 1;
+		set => Sdl2Window.SdlInstance.ShowCursor( value ? 1 : 0 );
 	}
 
 	/// <summary>What was typed this frame, as characters - for a text box that has the keyboard.</summary>

@@ -1,5 +1,5 @@
 ﻿using System.Runtime.InteropServices;
-using Veldrid;
+using NeoVeldrid;
 
 namespace OpenTPW;
 
@@ -65,7 +65,7 @@ public class Model : Asset
 	/// Moves this model's vertices into memory the CPU can write to directly, for a mesh that is
 	/// going to be rewritten every frame.
 	///
-	/// Veldrid only has a fast path for a buffer it has been told is dynamic: that memory stays
+	/// NeoVeldrid only has a fast path for a buffer it has been told is dynamic: that memory stays
 	/// mapped, and an update is a memcpy. For any other buffer an update means fetching a staging
 	/// buffer, recording a copy into a fresh command buffer, submitting it and waiting on a
 	/// fence - per call. That measured at about 0.12ms each here, so the lobby's seventy animated

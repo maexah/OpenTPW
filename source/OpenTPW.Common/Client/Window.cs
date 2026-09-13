@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
-using Veldrid.Sdl2;
-using Veldrid.StartupUtilities;
+using NeoVeldrid.Sdl2;
+using NeoVeldrid.StartupUtilities;
 
 namespace OpenTPW;
 
@@ -49,10 +49,10 @@ public class Window
 			WindowTitle = title,
 			X = 32,
 			Y = 32,
-			WindowInitialState = startHidden ? Veldrid.WindowState.Hidden : Veldrid.WindowState.Normal
+			WindowInitialState = startHidden ? NeoVeldrid.WindowState.Hidden : NeoVeldrid.WindowState.Normal
 		};
 
-		SdlWindow = VeldridStartup.CreateWindow( windowCreateInfo );
+		SdlWindow = NeoVeldridStartup.CreateWindow( windowCreateInfo );
 
 		// Resizing while the game runs is new: the original's window procedure (0x0046b600) answers
 		// no WM_SIZE, WM_SIZING or WM_GETMINMAXINFO at all, and it works its interface scale out once
@@ -86,17 +86,20 @@ public class Window
 	/// pixels are RGBA with the top row first, one byte a channel.
 	///
 	/// <para>
-	/// Veldrid's SDL binding has nothing for any of the three calls this takes, so they are loaded out of
-	/// the SDL it has already opened, the same way the window's minimum size is.
+	/// Called on the same SDL the window itself came out of - <see cref="Sdl2Window.SdlInstance"/> - rather
+	/// than on a second one loaded by name. SDL's subsystem state is per process, so two of them is two
+	/// answers to the same question.
 	/// </para>
 	/// </summary>
-	public void SetIcon( int width, int height, byte[] pixels )
+	public unsafe void SetIcon( int width, int height, byte[] pixels )
 	{
 		if ( width <= 0 || height <= 0 || pixels.Length < width * height * 4 )
 		{
 			Log.Warning( $"Window: {pixels.Length} bytes is not a {width}x{height} icon" );
 			return;
 		}
+
+		var sdl = Sdl2Window.SdlInstance;
 
 		// SDL_CreateRGBSurfaceFrom borrows the pixels where SDL_CreateRGBSurface would copy them, so they
 		// have to stay where they are until SDL_SetWindowIcon has taken its own copy of them.
@@ -105,18 +108,18 @@ public class Window
 		try
 		{
 			// Masks against the bytes as they sit in memory on a little-endian machine: R is the lowest.
-			var surface = Sdl2Native.LoadFunction<SDL_CreateRGBSurfaceFrom_t>( "SDL_CreateRGBSurfaceFrom" )(
-				pinned.AddrOfPinnedObject(), width, height, 32, width * 4,
+			var surface = sdl.CreateRGBSurfaceFrom(
+				(void*)pinned.AddrOfPinnedObject(), width, height, 32, width * 4,
 				0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000 );
 
-			if ( surface == IntPtr.Zero )
+			if ( surface == null )
 			{
 				Log.Warning( "Window: SDL would not make a surface for the icon, so the window keeps the desktop's" );
 				return;
 			}
 
-			Sdl2Native.LoadFunction<SDL_SetWindowIcon_t>( "SDL_SetWindowIcon" )( SdlWindow.SdlWindowHandle, surface );
-			Sdl2Native.LoadFunction<SDL_FreeSurface_t>( "SDL_FreeSurface" )( surface );
+			sdl.SetWindowIcon( (Silk.NET.SDL.Window*)SdlWindow.SdlWindowHandle, surface );
+			sdl.FreeSurface( surface );
 		}
 		finally
 		{
@@ -124,25 +127,10 @@ public class Window
 		}
 	}
 
-	[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
-	private delegate IntPtr SDL_CreateRGBSurfaceFrom_t( IntPtr pixels, int width, int height, int depth, int pitch,
-		uint rMask, uint gMask, uint bMask, uint aMask );
-
-	[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
-	private delegate void SDL_SetWindowIcon_t( IntPtr window, IntPtr surface );
-
-	[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
-	private delegate void SDL_FreeSurface_t( IntPtr surface );
-
-	[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
-	private delegate void SDL_SetWindowMinimumSize_t( IntPtr window, int w, int h );
-
 	/// <summary>
-	/// Veldrid's SDL binding wraps SDL_SetWindowResizable but has nothing for
-	/// SDL_SetWindowMinimumSize, so it is loaded out of the same SDL the binding itself has already
-	/// opened. Without it a resizable window can be dragged down to nothing at all, and the game is
-	/// left being asked to build render targets with no pixels in them.
+	/// Without a minimum, a resizable window can be dragged down to nothing at all, and the game is left
+	/// being asked to build render targets with no pixels in them.
 	/// </summary>
-	private static void SetMinimumSize( Sdl2Window window, Point2 size )
-		=> Sdl2Native.LoadFunction<SDL_SetWindowMinimumSize_t>( "SDL_SetWindowMinimumSize" )( window.SdlWindowHandle, size.X, size.Y );
+	private static unsafe void SetMinimumSize( Sdl2Window window, Point2 size )
+		=> Sdl2Window.SdlInstance.SetWindowMinimumSize( (Silk.NET.SDL.Window*)window.SdlWindowHandle, size.X, size.Y );
 }

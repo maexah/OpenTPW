@@ -1,4 +1,4 @@
-﻿using Veldrid;
+﻿using NeoVeldrid;
 
 namespace OpenTPW;
 
@@ -8,7 +8,7 @@ public partial class Shader : Asset
 
 	public VertexElementDescription[] VertexElements => shaderInfo.Reflection.VertexElements;
 	public ResourceLayoutDescription[] ResourceLayouts => shaderInfo.Reflection.ResourceLayouts;
-	public Veldrid.Shader[] ShaderProgram => shaderInfo.ShaderProgram;
+	public NeoVeldrid.Shader[] ShaderProgram => shaderInfo.ShaderProgram;
 	public bool IsDirty { get; private set; }
 	public Action OnRecompile { get; set; }
 

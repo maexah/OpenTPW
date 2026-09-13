@@ -62,7 +62,7 @@ public class Water : ModelEntity
 			g_flTime = Time.Now
 		};
 
-		Model.Material.Set( "ObjectUniformBuffer", uniformBuffer );
+		Model.Material.Set( "g_oUbo", uniformBuffer );
 		Model.Draw();
 	}
 }

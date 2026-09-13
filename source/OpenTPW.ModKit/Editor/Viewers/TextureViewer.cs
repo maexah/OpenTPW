@@ -1,6 +1,6 @@
 ﻿using ImGuiNET;
 using System.Runtime.InteropServices;
-using Veldrid;
+using NeoVeldrid;
 
 namespace OpenTPW.ModKit;
 
@@ -16,7 +16,7 @@ internal class TextureViewer : IFileViewer
 	public TextureViewer( string fileName )
 	{
 		textureFile = new TextureFile( fileName );
-		CreateVeldridTexture();
+		CreateTexture();
 	}
 
 	private int CalculateMipLevels( int width, int height, int depth )
@@ -27,7 +27,7 @@ internal class TextureViewer : IFileViewer
 		return mipLevels;
 	}
 
-	private void CreateVeldridTexture()
+	private void CreateTexture()
 	{
 		var t = textureFile.Data;
 		var width = (uint)t.Width;

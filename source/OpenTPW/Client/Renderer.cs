@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
-using Veldrid;
-using Veldrid.StartupUtilities;
+using NeoVeldrid;
+using NeoVeldrid.StartupUtilities;
 
 namespace OpenTPW;
 
@@ -106,16 +106,16 @@ public partial class Renderer
 	}
 
 	public Framebuffer MultisampledFramebuffer;
-	public Veldrid.Texture ResolveColorTexture;
+	public NeoVeldrid.Texture ResolveColorTexture;
 
 	/// <summary>
-	/// What <see cref="MultisampledFramebuffer"/> is drawn into. Veldrid does not dispose a
+	/// What <see cref="MultisampledFramebuffer"/> is drawn into. NeoVeldrid does not dispose a
 	/// framebuffer's attachments along with it, so they are held here to be let go of by hand:
 	/// at 1080p the pair is around a hundred megabytes, and a window being dragged would otherwise
 	/// leak that much again every time it settled on a new size.
 	/// </summary>
-	private Veldrid.Texture _colorTarget = null!;
-	private Veldrid.Texture _depthTarget = null!;
+	private NeoVeldrid.Texture _colorTarget = null!;
+	private NeoVeldrid.Texture _depthTarget = null!;
 
 	private Pipeline _blitPipeline;
 	private ResourceSet _blitResourceSet;
@@ -313,10 +313,14 @@ public partial class Renderer
 	}
 
 	/// <summary>
-	/// Which graphics API the game draws with. Vulkan on Linux and Windows; Metal on macOS, which has no
-	/// Vulkan driver of its own - asking for Vulkan there fails inside the native loader, before any of this
-	/// code could say why.
+	/// Builds the device the game draws with. Vulkan, on all three platforms.
 	///
+	/// <para>
+	/// macOS has no Vulkan driver of its own, and this used to ask for Metal there. NeoVeldrid has no Metal
+	/// backend at all - its GraphicsBackend names only Direct3D11, Vulkan, OpenGL and OpenGLES - and it
+	/// carries MoltenVK instead, which is Vulkan built on top of Metal. So one path now runs everywhere, and
+	/// the clip space and depth range below mean one thing rather than two. Not tested: there is no Mac here.
+	/// </para>
 	/// <para>
 	/// Windows stays on Vulkan rather than Direct3D 11 deliberately. The shaders are written as Vulkan GLSL,
 	/// and Vulkan is the path exercised here every day, so a report from Windows lands on the same code Linux
@@ -324,19 +328,17 @@ public partial class Renderer
 	/// but nothing would be testing it, and an untested third path is worth less than a second tested one.
 	/// </para>
 	/// </summary>
-	private static GraphicsBackend Backend => OperatingSystem.IsMacOS() ? GraphicsBackend.Metal : GraphicsBackend.Vulkan;
-
 	private void CreateGraphicsDevice()
 	{
 		var options = new GraphicsDeviceOptions()
 		{
-			// Vulkan's clip space has Y running down the screen where Metal's runs up it. This asks Vulkan
-			// for Metal's direction - Veldrid gets it by giving the viewport a negative height - so that one
-			// set of shaders, and the pixel-to-clip-space arithmetic the interface does, mean the same thing
-			// on both.
+			// Vulkan's clip space has Y running down the screen where OpenGL's and Metal's run up it. This
+			// asks for the upward direction - NeoVeldrid gets it by giving the viewport a negative height -
+			// which is what the shaders, and the pixel-to-clip-space arithmetic the interface does, are
+			// written against.
 			PreferStandardClipSpaceYDirection = true,
 
-			// Both are natively 0-to-1 in depth, which is what System.Numerics builds - see
+			// Vulkan is natively 0-to-1 in depth, which is what System.Numerics builds - see
 			// Camera.CalcViewProjMatrix. Only OpenGL would need converting, and OpenGL is not offered.
 			PreferDepthRangeZeroToOne = true,
 
@@ -346,22 +348,18 @@ public partial class Renderer
 			HasMainSwapchain = true
 		};
 
-		// Built by hand rather than through VeldridStartup.CreateGraphicsDevice, so that the options above
-		// are the ones actually used. It is the same swapchain VeldridStartup would build, and
+		// Built by hand rather than through NeoVeldridStartup.CreateGraphicsDevice, so that the options above
+		// are the ones actually used. It is the same swapchain NeoVeldridStartup would build, and
 		// GetSwapchainSource already answers every window system the game runs on, an NSWindow included.
 		var swapchain = new SwapchainDescription(
-			VeldridStartup.GetSwapchainSource( Window.SdlWindow ),
+			NeoVeldridStartup.GetSwapchainSource( Window.SdlWindow ),
 			(uint)Window.Size.X,
 			(uint)Window.Size.Y,
 			options.SwapchainDepthFormat,
 			options.SyncToVerticalBlank,
 			options.SwapchainSrgbFormat );
 
-		Device = Backend switch
-		{
-			GraphicsBackend.Metal => GraphicsDevice.CreateMetal( options, swapchain ),
-			_ => GraphicsDevice.CreateVulkan( options, swapchain )
-		};
+		Device = GraphicsDevice.CreateVulkan( options, swapchain );
 	}
 
 	/// <summary>The size the window has become, until the render targets have been built for it.</summary>
@@ -387,7 +385,7 @@ public partial class Renderer
 
 		_resizedTo = null;
 
-		// Minimised rather than resized. Veldrid will not build a texture or a swapchain with no
+		// Minimised rather than resized. NeoVeldrid will not build a texture or a swapchain with no
 		// pixels in it, and the window will say so again on its way back up.
 		if ( size.X <= 0 || size.Y <= 0 )
 			return;
