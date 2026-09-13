@@ -205,9 +205,18 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	{
 		var ground = ParkGround.Current?.Heightfield?.HeightAtWorld( PointOfInterest.X, PointOfInterest.Y );
 
+		// The cell the point of interest stands in, which is the world position divided by the cell
+		// size - not the (world - 5) / 10 above, which recovers the cell a CENTRE belongs to and comes
+		// back fractional anywhere else.
+		var cellX = (int)MathF.Floor( PointOfInterest.X / 10f );
+		var cellY = (int)MathF.Floor( PointOfInterest.Y / 10f );
+
+		var attributes = ParkGround.Current?.Attributes;
+
 		return $"poi=({PointOfInterest.X:F0},{PointOfInterest.Y:F0}) " +
 			$"cell=({(PointOfInterest.X - 5f) / 10f:F1},{(PointOfInterest.Y - 5f) / 10f:F1}) " +
 			$"yaw={Yaw:F2} zoom={Zoom:F0} pitch={Pitch:F1} " +
-			$"ground={(ground.HasValue ? ground.Value.ToString( "F1" ) : "-")}";
+			$"ground={(ground.HasValue ? ground.Value.ToString( "F1" ) : "-")} " +
+			$"attr={(attributes != null ? attributes.At( cellX, cellY ).ToString() : "-")}";
 	}
 }

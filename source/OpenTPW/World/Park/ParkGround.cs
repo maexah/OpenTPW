@@ -25,6 +25,14 @@ public sealed class ParkGround : ModelEntity
 	/// <summary>The landscape this was built from - kept so that whatever needs a height can ask for one.</summary>
 	public HeightfieldFile Heightfield { get; private set; } = null!;
 
+	/// <summary>
+	/// What each cell of this park <i>is</i> - the entrance, the bus road, buildable ground - or null if
+	/// the map would not load. Note it is indexed the other way round from the heightfield beside it:
+	/// attributes are <c>x * 128 + y</c> where heights are <c>y * width + x</c>. That is the game's own
+	/// inconsistency, not a mistake here.
+	/// </summary>
+	public AttributeMapFile? Attributes { get; private set; }
+
 	private readonly string _themeName;
 
 	public ParkGround( string themeName )
@@ -93,6 +101,21 @@ public sealed class ParkGround : ModelEntity
 
 		Log.Info( $"{_themeName}: landscape {field.CellsX}x{field.CellsY} cells at " +
 			$"{field.CellSizeX}x{field.CellSizeY} units, {field.VertexCount} heights, block at 0x{field.BlockOffset:x}" );
+
+		// The attribute map beside it - what each cell IS, rather than how high it is or what it looks
+		// like. A park that cannot read it is still worth looking at, so this reports and carries on
+		// rather than taking the ground down with it.
+		try
+		{
+			using ( var stream = FileSystem.OpenRead( $"levels/{_themeName.ToLowerInvariant()}/terrain/base.map" ) )
+				Attributes = new AttributeMapFile( stream );
+
+			Log.Info( $"{_themeName}: attributes {Attributes.Width}x{Attributes.Height}" );
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"{_themeName}: base.map would not load, so nothing can ask what a cell is - {e.Message}" );
+		}
 
 		// Which texture indices the park actually uses, in ascending order, each becoming one slot of
 		// the material. More than sixteen would need the ground splitting into several models; no
