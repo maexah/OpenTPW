@@ -11,8 +11,18 @@ internal static class Game
 	/// material and mesh registered while it loads. The loading screen logs the real count when it
 	/// closes, and this is the count it logs for the lobby as it stands; it wants bringing into line
 	/// again whenever the lobby comes to load more.
+	///
+	/// <para>
+	/// It was 3,214 until the blank texture became a single shared instance - see
+	/// <see cref="Texture.Missing"/>. 2,385 of those steps were blanks being built one per empty
+	/// material slot, so both this number and the rebuild count fell by exactly that much: a first
+	/// load registers 829 where it registered 3,214, and a rebuild 404 where it registered 2,789.
+	/// The gap between the two is 425 either way, because a rebuild re-registers only what the
+	/// caches do not already hold - which is the loading bar's remaining inaccuracy and is not
+	/// addressed here.
+	/// </para>
 	/// </summary>
-	private const int LobbyLoadSteps = 3214;
+	private const int LobbyLoadSteps = 829;
 
 	public static void Run( string[] args )
 	{

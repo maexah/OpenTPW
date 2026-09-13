@@ -32,34 +32,38 @@ public partial class Texture : Asset
 	private const byte CutOutAlphaReference = 240;
 
 	/// <summary>
-	/// A one-pixel white stand-in, for a material slot naming no texture of its own.
+	/// A one-pixel white stand-in, for a material slot naming no texture of its own. One instance, handed
+	/// to everyone who asks.
 	///
 	/// <para>
-	/// <b>Every read of this builds another one.</b> It is a property rather than a kept instance, so each
-	/// use creates a GPU texture, copies a pixel into it, submits it to the device and registers itself as
-	/// one more step of the loading bar. It can never be served from the cache either: the constructor it
-	/// calls passes an empty path, and <c>TryGetCachedTexture</c> refuses an empty path before it looks
-	/// anything up - so no two of these are ever the same object.
+	/// This used to build another every time it was read - a GPU texture, a pixel copied into it, a device
+	/// submit, and one more step of the loading bar - and it could never be served from the cache either,
+	/// because the constructor it calls passes an empty path and <see cref="TryGetCachedTexture"/> refuses
+	/// an empty path before it looks anything up. So no two were ever the same object.
 	/// </para>
 	///
 	/// <para>
-	/// That costs nothing for the callers wanting a single texture - <c>Sky</c> and <c>WeatherSprites</c>
-	/// return it as a fallback, and <c>UiMesh</c> keeps its own with <c>_blank ??= Texture.Missing</c>,
-	/// which is the shape worth copying. It is <c>LobbyModel</c> that pays: it reads this inside a loop over
-	/// sixteen material slots for every mesh of every model, so a mesh naming two materials mints fourteen
-	/// blank textures, each with its own device submit and its own loading step.
+	/// <b>Measured on the lobby before it was shared:</b> 2,386 of the load's 3,214 registered assets were
+	/// these - 74% of the bar - and building them cost 533ms of the 554ms the whole load spent making GPU
+	/// textures. Sharing one takes the lobby from 3,214 registered assets to 829, and the load from 6.73s to
+	/// 6.02s, each the mean of three runs. <c>LobbyModel</c> is what paid: it reads this inside a loop over
+	/// sixteen material slots for every mesh of every model, so a mesh naming two materials minted fourteen
+	/// blank textures. <c>Sky</c> and <c>WeatherSprites</c> want a single fallback and never paid anything;
+	/// <c>UiMesh</c> had already kept its own with <c>_blank ??= Texture.Missing</c>.
 	/// </para>
 	///
 	/// <para>
-	/// <b>How much that actually costs has not been measured.</b> There is a reason to suspect it is a large
-	/// share of the lobby's load - a texture found in the cache returns before it registers a step at all,
-	/// while every one of these registers - but nobody has counted them. <b>Count them before treating this
-	/// as a performance problem worth fixing</b>, because the answer may turn out to be small. Sharing one
-	/// blank would also make it an object many materials hold a handle to, so anything that later deletes a
-	/// texture would need to know not to delete this one.
+	/// <b>Being shared, it must not be written to or released.</b> <see cref="UpdatePixels"/> rewrites a
+	/// texture's pixels where they lie and <see cref="Delete"/> frees its GPU handles; either one done to
+	/// this would reach every material holding it at once. Both refuse it and say so, rather than leaving a
+	/// reader to remember - nothing in the game does either to it today, and the point of the guard is that
+	/// nothing can quietly start to.
 	/// </para>
 	/// </summary>
-	public static Texture Missing => new Texture( [255, 255, 255, 255], 1, 1 );
+	public static Texture Missing => _missing ??= new Texture( [255, 255, 255, 255], 1, 1 );
+
+	/// <summary>The one blank, built on first use - see <see cref="Missing"/>.</summary>
+	private static Texture? _missing;
 
 	/// <summary>The game's own stand-in for a texture it can't load - see <see cref="NotFound"/>.</summary>
 	private const string NotFoundPath = "generic/defaulttexture/NotFound.tga";
@@ -177,6 +181,14 @@ public partial class Texture : Asset
 	/// </summary>
 	public void UpdatePixels( byte[] data )
 	{
+		// See Missing: one instance stands in for every blank material slot in the game, so rewriting its
+		// pixel would repaint all of them.
+		if ( ReferenceEquals( this, _missing ) )
+		{
+			Log.Warning( "Texture: the shared blank was asked to rewrite its pixel, which would repaint every material holding it - ignored" );
+			return;
+		}
+
 		if ( NativeTexture == null || data.Length < Width * Height * 4 )
 			return;
 
@@ -192,11 +204,19 @@ public partial class Texture : Asset
 	///
 	/// Only for a texture nothing else can be holding. One constructed from a path that is already
 	/// loaded shares that texture's GPU texture rather than owning one (see TryGetCachedTexture),
-	/// so deleting either would pull it out from under the other. A texture built from pixels is
-	/// never shared.
+	/// so deleting either would pull it out from under the other. A texture built from pixels owns
+	/// its own, with one exception: <see cref="Missing"/> is a single instance that every blank
+	/// material slot in the game holds, and it is refused here rather than left to a caller to
+	/// remember. Nothing deletes it today; this is so that nothing can begin to by accident.
 	/// </summary>
 	public void Delete()
 	{
+		if ( ReferenceEquals( this, _missing ) )
+		{
+			Log.Warning( "Texture: the shared blank was asked to delete itself, which would take it from every material holding it - ignored" );
+			return;
+		}
+
 		All.Remove( this );
 
 		var texture = NativeTexture;
