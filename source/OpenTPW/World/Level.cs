@@ -199,6 +199,7 @@ public class Level
 		// The ground first, then what stands on it.
 		_ = new ParkGround( ThemeName );
 		_ = new ParkTerrain( ThemeName );
+		_ = new ParkFixedItems( ThemeName );
 
 		GameOptions.Current.ApplySound();
 
