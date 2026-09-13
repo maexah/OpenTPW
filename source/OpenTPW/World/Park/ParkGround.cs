@@ -13,11 +13,10 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>What is still missing is the texture coordinates.</b> Each cell is mapped corner to corner here,
-/// so the art tiles once a cell and the seams between neighbours are not what the original draws: its
-/// flag word carries rotation in 0x08/0x10/0x20 and a mirror in 0x40, and mirror alone is set on 83%
-/// of the jungle's cells. Until that is traced, the ground is right about what it is made of and only
-/// approximately right about how it is laid.
+/// A cell is not simply mapped corner to corner: its flag word says which way round the art goes, and
+/// <see cref="PermuteCorners"/> applies that. The original does it in a handful of lines - it starts
+/// with the four corners in order and shuffles them - so this does too, and the comment there carries
+/// the shuffle exactly as the original writes it.
 /// </para>
 /// </summary>
 public sealed class ParkGround : ModelEntity
@@ -185,6 +184,10 @@ public sealed class ParkGround : ModelEntity
 		var vertex = 0;
 		var element = 0;
 
+		// Which corner's texture coordinate each corner of the quad takes, rewritten per cell by
+		// PermuteCorners. Held out here and reused rather than allocated eight thousand times.
+		var corners = new int[4];
+
 		for ( var y = 0; y < field.CellsY; ++y )
 		{
 			for ( var x = 0; x < field.CellsX; ++x )
@@ -198,17 +201,28 @@ public sealed class ParkGround : ModelEntity
 
 				var slot = Math.Clamp( indices.IndexOf( texture ), 0, textures.Length - 1 );
 
+				// Which way round this cell's art goes - the low half of the same word the texture
+				// index came from.
+				PermuteCorners( (ushort)field.Cells[(y * field.CellsX) + x], corners );
+
 				var corner = vertex;
 
-				vertices[vertex++] = Corner( field, x, y, 0f, 0f, slot );
-				vertices[vertex++] = Corner( field, x + 1, y, 1f, 0f, slot );
-				vertices[vertex++] = Corner( field, x + 1, y + 1, 1f, 1f, slot );
-				vertices[vertex++] = Corner( field, x, y + 1, 0f, 1f, slot );
+				vertices[vertex++] = Corner( field, x, y, CornerUvs[corners[0]], slot );
+				vertices[vertex++] = Corner( field, x + 1, y, CornerUvs[corners[1]], slot );
+				vertices[vertex++] = Corner( field, x + 1, y + 1, CornerUvs[corners[2]], slot );
+				vertices[vertex++] = Corner( field, x, y + 1, CornerUvs[corners[3]], slot );
 
-				// Two triangles over those four corners. Which diagonal to split on is a bit of the
-				// cell's flag word in the original; nothing in the shipped parks sets the bit that
-				// turns that choice on, so both go the same way here and this is where to change it
-				// when a park turns up that does.
+				// Two triangles over those four corners, always split the same way - which is not
+				// what the original does, and this is where to fix it.
+				//
+				// The original chooses the diagonal from 0x0004, but only on cells whose flag word
+				// has 0x0800. Reading that bit off the file finds it nowhere, which is what an
+				// earlier note here concluded from - wrongly. It is never stored: the loader
+				// computes it, building each cell's two triangle normals from its four corner
+				// heights and setting 0x0800 where they diverge by more than about 0.81 degrees,
+				// which is to say "this cell is not flat, so which way it is cut is visible". Doing
+				// the same needs that pass over the heightfield first, so it is left for its own
+				// change rather than smuggled into this one.
 				elements[element++] = (uint)corner;
 				elements[element++] = (uint)(corner + 1);
 				elements[element++] = (uint)(corner + 2);
@@ -239,15 +253,97 @@ public sealed class ParkGround : ModelEntity
 	/// Z up where the original has Y up - the same swap <see cref="LobbyModel"/> makes when it reads a
 	/// model, which is what puts the ground under the scenery rather than beside it.
 	/// </summary>
-	private static Vertex Corner( HeightfieldFile field, int x, int y, float u, float v, int slot )
+	private static Vertex Corner( HeightfieldFile field, int x, int y, Vector2 uv, int slot )
 		=> new()
 		{
 			Position = new Vector3( x * field.CellSizeX, y * field.CellSizeY, field.HeightAt( x, y ) ),
 			Normal = NormalAt( field, x, y ),
-			TexCoords = new Vector2( u, v ),
+			TexCoords = uv,
 			TexIndex = slot,
 			MatFlags = 0
 		};
+
+	/// <summary>
+	/// The texture coordinate belonging to each corner of a cell, in the order the four corners are
+	/// emitted above: the origin corner, then across, then across and along, then along.
+	/// </summary>
+	private static readonly Vector2[] CornerUvs =
+	{
+		new( 0f, 0f ),
+		new( 1f, 0f ),
+		new( 1f, 1f ),
+		new( 0f, 1f )
+	};
+
+	/// <summary>
+	/// A cell's mirror bit, and its rotation - which is one field of three bits, not three flags.
+	/// Named for the cell rather than plainly because a <see cref="ModelEntity"/> carries a Rotation
+	/// of its own, and this is emphatically not it: it turns the art on one cell, not the object.
+	/// </summary>
+	private const ushort CellMirror = 0x40;
+
+	private const ushort CellRotation = 0x38;
+
+	/// <summary>
+	/// Shuffles <paramref name="corners"/> - which starts as 0,1,2,3 - into the order this cell's art
+	/// is laid in. Six thousand of the jungle's cells are mirrored and a hundred are turned, so a
+	/// ground drawn without this is wrong nearly everywhere, if only subtly.
+	///
+	/// <para>
+	/// This is <c>FUN_0056f4f0</c> written out. The original is handed the same 0,1,2,3 - the call site
+	/// literally writes <c>0x03020100</c> onto the stack immediately before calling it - and moves the
+	/// entries about, so what is being permuted is which corner supplies which texture coordinate
+	/// rather than the coordinates themselves. Two details are easy to get backwards and both are the
+	/// original's own order: <b>the mirror is applied first</b>, and it is a <b>diagonal</b> reflection
+	/// - it exchanges the two off-diagonal corners, not a flip in x or in y.
+	/// </para>
+	///
+	/// <para>
+	/// The three rotation bits are one field (<c>0x38</c>), so they are exclusive and this reads as an
+	/// else-chain even though the original writes three separate ifs. They are one, two and three
+	/// quarter turns, which is the same cycle <c>0 -> 0x08 -> 0x10 -> 0x20 -> 0</c> that the original
+	/// steps through when it rotates a ride's footprint.
+	/// </para>
+	///
+	/// <para>
+	/// <b>The one thing not settled is which corner the original calls 0</b>, and which way its ring
+	/// runs. The permutation itself is exact, but if its ring starts elsewhere or turns the other way,
+	/// a quarter turn here would be three quarters there. It shows up on a hundred of the jungle's
+	/// cells and on none of its mirrors, so the mirror - which is the overwhelming majority of the
+	/// effect - is right either way.
+	/// </para>
+	/// </summary>
+	private static void PermuteCorners( ushort flags, int[] corners )
+	{
+		corners[0] = 0;
+		corners[1] = 1;
+		corners[2] = 2;
+		corners[3] = 3;
+
+		if ( (flags & (CellMirror | CellRotation)) == 0 )
+			return;
+
+		if ( (flags & CellMirror) != 0 )
+			(corners[1], corners[3]) = (corners[3], corners[1]);
+
+		switch ( flags & CellRotation )
+		{
+			case 0x08:
+				(corners[0], corners[1], corners[2], corners[3])
+					= (corners[3], corners[0], corners[1], corners[2]);
+				break;
+
+			case 0x10:
+				(corners[0], corners[2]) = (corners[2], corners[0]);
+				(corners[1], corners[3]) = (corners[3], corners[1]);
+				break;
+
+			case 0x20:
+				(corners[0], corners[1], corners[2], corners[3])
+					= (corners[1], corners[2], corners[3], corners[0]);
+				break;
+		}
+	}
 
 	/// <summary>
 	/// The surface normal at a grid vertex, from how the land falls away either side of it. Central
