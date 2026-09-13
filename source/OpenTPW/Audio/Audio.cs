@@ -1,14 +1,20 @@
-using System.Runtime.InteropServices;
+using NeoVeldrid.Sdl2;
+
+using SdlAudioSpec = Silk.NET.SDL.AudioSpec;
+using SdlAudioCallback = Silk.NET.SDL.AudioCallback;
 
 namespace OpenTPW;
 
 /// <summary>
 /// The game's sound output: one SDL2 audio device, and a software mixer feeding it.
 ///
-/// SDL2 rather than anything else because it is already here - the window and the input both
-/// come from it through Veldrid - so opening its audio device adds no native dependency on any
-/// platform. Veldrid's own binding covers only the window and input side of SDL, hence the
-/// handful of imports below.
+/// SDL2 rather than anything else because it is already here - the window and the input both come
+/// from it - so opening its audio device adds no native dependency on any platform. Opened on
+/// <see cref="Sdl2Window.SdlInstance"/>, which is the SDL the window itself came out of. That
+/// matters: SDL keeps its subsystem state inside whichever copy of the library is asked, so naming
+/// one by name instead - as this did, with [DllImport( "SDL2" )] - loaded a second copy out of
+/// whatever the machine happened to have, and left the game holding two SDLs that knew nothing of
+/// one another. The build ships its own in runtimes\&lt;rid&gt;\native; this uses that one.
 ///
 /// The mixing is ours rather than SDL_mixer's. It is a few voices of straight addition, which is
 /// less code than binding another library would be, and it keeps the fades and the looping in C#
@@ -163,57 +169,64 @@ public static class Audio
 	private static SdlAudioCallback? _callback;
 
 	/// <summary>
+	/// The pointer SDL is actually given, kept alongside the delegate it was made from. Silk hands
+	/// the function pointer over in the spec; the delegate above is what keeps it pointing at
+	/// something.
+	/// </summary>
+	private static Silk.NET.SDL.PfnAudioCallback _callbackPointer;
+
+	/// <summary>
 	/// Opens the device. Safe to call more than once; safe to call on a machine with no audio.
 	/// </summary>
-	public static void Init()
+	public static unsafe void Init()
 	{
 		if ( Ready )
 			return;
 
 		try
 		{
-			if ( SDL_InitSubSystem( SdlInitAudio ) != 0 )
+			var sdl = Sdl2Window.SdlInstance;
+
+			if ( sdl.InitSubSystem( Silk.NET.SDL.Sdl.InitAudio ) != 0 )
 			{
-				Log.Warning( $"No audio: SDL_InitSubSystem said '{LastError()}'" );
+				Log.Warning( $"No audio: SDL_InitSubSystem said '{sdl.GetErrorS()}'" );
 				return;
 			}
 
 			_callback = Mix;
+			_callbackPointer = new Silk.NET.SDL.PfnAudioCallback( _callback );
 
 			var wanted = new SdlAudioSpec
 			{
 				Freq = SampleRate,
-				Format = AudioF32Sys,
+				Format = (ushort)Silk.NET.SDL.Sdl.AudioF32Sys,
 				Channels = 2,
 				Samples = BufferFrames,
-				Callback = Marshal.GetFunctionPointerForDelegate( _callback )
+				Callback = _callbackPointer
 			};
 
 			// allowed_changes 0, so SDL converts for us if the hardware wants something else and
-			// the format we mix in is the format we get.
-			_device = SDL_OpenAudioDevice( IntPtr.Zero, 0, ref wanted, out var got, 0 );
+			// the format we mix in is the format we get. A null device name asks for the default one.
+			var got = new SdlAudioSpec();
+			_device = sdl.OpenAudioDevice( (string?)null, 0, ref wanted, ref got, 0 );
 
 			if ( _device == 0 )
 			{
-				Log.Warning( $"No audio: SDL_OpenAudioDevice said '{LastError()}'" );
+				Log.Warning( $"No audio: SDL_OpenAudioDevice said '{sdl.GetErrorS()}'" );
 				_callback = null;
 				return;
 			}
 
-			SDL_PauseAudioDevice( _device, 0 );
+			sdl.PauseAudioDevice( _device, 0 );
 			Ready = true;
 
-			Log.Info( $"Audio: {Marshal.PtrToStringAnsi( SDL_GetCurrentAudioDriver() )}, "
+			Log.Info( $"Audio: {sdl.GetCurrentAudioDriverS()}, "
 				+ $"{got.Freq}Hz {got.Channels}ch, {got.Samples} frame buffer" );
-		}
-		catch ( DllNotFoundException )
-		{
-			// SDL2 is here - the window came from it - so this only happens if audio was built
-			// out of it. Worth saying, not worth stopping for.
-			Log.Warning( "No audio: this SDL2 has no audio support" );
 		}
 		catch ( Exception e )
 		{
+			// A machine with no sound card, a container with no audio server, an SDL built without
+			// audio at all: they all land here, and none of them is a reason not to start the game.
 			Log.Warning( $"No audio: {e.Message}" );
 		}
 	}
@@ -227,8 +240,10 @@ public static class Audio
 
 		// Pause first: this stops SDL calling the mixer, so the voice list can be emptied without
 		// racing it, and the delegate is safe to let go of afterwards.
-		SDL_PauseAudioDevice( _device, 1 );
-		SDL_CloseAudioDevice( _device );
+		var sdl = Sdl2Window.SdlInstance;
+
+		sdl.PauseAudioDevice( _device, 1 );
+		sdl.CloseAudioDevice( _device );
 
 		lock ( Lock )
 			Voices.Clear();
@@ -387,7 +402,7 @@ public static class Audio
 	/// Fills one buffer. Runs on SDL's audio thread - see <see cref="Lock"/> - so it does no
 	/// allocation, no I/O and no logging.
 	/// </summary>
-	private static unsafe void Mix( IntPtr userData, IntPtr stream, int lengthInBytes )
+	private static unsafe void Mix( void* userData, byte* stream, int lengthInBytes )
 	{
 		var output = (float*)stream;
 		var frames = lengthInBytes / (sizeof( float ) * 2);
@@ -456,54 +471,4 @@ public static class Audio
 			output[i] = output[i] < -1f ? -1f : (output[i] > 1f ? 1f : output[i]);
 	}
 
-	private static string LastError() => Marshal.PtrToStringAnsi( SDL_GetError() ) ?? "unknown";
-
-	#region SDL2
-
-	private const uint SdlInitAudio = 0x00000010;
-
-	/// <summary>AUDIO_F32SYS - 32-bit float, host byte order.</summary>
-	private const ushort AudioF32Sys = 0x8120;
-
-	[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
-	private delegate void SdlAudioCallback( IntPtr userData, IntPtr stream, int lengthInBytes );
-
-	[StructLayout( LayoutKind.Sequential )]
-	private struct SdlAudioSpec
-	{
-		public int Freq;
-		public ushort Format;
-		public byte Channels;
-		public byte Silence;
-		public ushort Samples;
-		public ushort Padding;
-		public uint Size;
-		public IntPtr Callback;
-		public IntPtr UserData;
-	}
-
-	// "SDL2" resolves to SDL2.dll on Windows - Veldrid.SDL2 puts one beside the executable - and
-	// to libSDL2.so on Linux and macOS, which is the same library Veldrid already has open.
-	private const string Sdl = "SDL2";
-
-	[DllImport( Sdl, CallingConvention = CallingConvention.Cdecl )]
-	private static extern int SDL_InitSubSystem( uint flags );
-
-	[DllImport( Sdl, CallingConvention = CallingConvention.Cdecl )]
-	private static extern IntPtr SDL_GetError();
-
-	[DllImport( Sdl, CallingConvention = CallingConvention.Cdecl )]
-	private static extern IntPtr SDL_GetCurrentAudioDriver();
-
-	[DllImport( Sdl, CallingConvention = CallingConvention.Cdecl )]
-	private static extern uint SDL_OpenAudioDevice( IntPtr device, int isCapture,
-		ref SdlAudioSpec desired, out SdlAudioSpec obtained, int allowedChanges );
-
-	[DllImport( Sdl, CallingConvention = CallingConvention.Cdecl )]
-	private static extern void SDL_PauseAudioDevice( uint device, int pauseOn );
-
-	[DllImport( Sdl, CallingConvention = CallingConvention.Cdecl )]
-	private static extern void SDL_CloseAudioDevice( uint device );
-
-	#endregion
 }
