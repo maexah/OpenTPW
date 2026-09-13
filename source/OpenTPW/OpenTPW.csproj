@@ -51,7 +51,6 @@
 			the last bit.
 		-->
 		<PackageReference Include="NLayer" Version="3.0.0" />
-		<PackageReference Include="SharpText.Veldrid" Version="0.3.1" />
 		<PackageReference Include="SharpZipLib" Version="1.4.2" />
 		<PackageReference Include="StbImageSharp" Version="2.27.8" />
 		<PackageReference Include="StbTrueTypeSharp" Version="1.26.13" />
