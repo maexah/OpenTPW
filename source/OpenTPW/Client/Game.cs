@@ -176,7 +176,12 @@ internal static class Game
 	/// same reason the lobby's own reload is - see <see cref="ReloadLobbyIfAsked"/> - and in the same
 	/// place the original changes scene, which is its state machine rather than the middle of a tick.
 	/// </summary>
-	internal static void RequestParkLoad( string themeName ) => _parkAsked = themeName;
+	/// <remarks>
+	/// Lower-cased here, at the way in, rather than only in <see cref="Level"/> - the loading screen is
+	/// built from this name before a Level exists, so normalising further down left the bar captioned
+	/// "Jungle" while everything the level itself logged said "jungle".
+	/// </remarks>
+	internal static void RequestParkLoad( string themeName ) => _parkAsked = themeName.ToLowerInvariant();
 
 	/// <summary>
 	/// How many steps the loading bar expects a park to take.

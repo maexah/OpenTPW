@@ -62,7 +62,12 @@ public class Level
 
 	public Level( string levelName, Scene kind = Scene.Lobby )
 	{
-		ThemeName = levelName;
+		// Lower-cased once here rather than at each place that builds a path out of it. The two ways
+		// into a park disagree about case: the debug console passes "jungle" and the island panel
+		// passes the island's own name, "Jungle". Everything downstream lower-cases anyway, so the
+		// only thing that actually differed was the log - but a name that is sometimes capitalised is
+		// a trap set for the first thing that ever keys on it.
+		ThemeName = levelName.ToLowerInvariant();
 		Kind = kind;
 
 		Global = new SettingsFile( $"/levels/{levelName}/global.sam" );

@@ -51,8 +51,10 @@ namespace OpenTPW.UI;
 /// <para>
 /// <b>Enter this park</b> (0x005e1cc0) does nothing at all for a park the player cannot afford. For one
 /// they can, it hands over to 0x005e1e30, which closes this panel, plays effect 4 of the global lobby
-/// sfx and a burst of particles at the key, and sets the lobby leaving for the park. Entering a park
-/// is still to be built, so here an affordable park only says so in the log.
+/// sfx and a burst of particles at the key, and sets the lobby leaving for the park. All four happen
+/// here, in that order, and the park is then built between frames rather than during one - see
+/// <see cref="Game.RequestParkLoad"/>. The cue is silent, because effect 4 ships with no samples at
+/// all; that is the shipped data and not a gap here.
 /// </para>
 /// <para>
 /// <b>View the online world</b> (0x005e1bd0) does nothing unless the game is online, and it never is
@@ -283,8 +285,42 @@ internal sealed class IslandPanel : UiWindow
 		if ( !_instantAction && _keysShown < island.KeysToEnter )
 			return;
 
-		Log.Info( $"Front end: entering '{island.ParkName}' - entering a park is not built yet" );
+		// Pressed twice before the frame ends, the second press would tear the lobby down underneath
+		// the first one's park. The original guards this too: its handler sets the lobby leaving and
+		// everything after that is the state machine's.
+		if ( _leaving )
+			return;
+
+		_leaving = true;
+
+		Stack.Close( this );
+
+		// The cue and the puff are a Full Simulation player's, because both are about the key that was
+		// spent: an Instant Action player has no keys, is shown none, and is let straight in. Skipping
+		// them is what the original does by never reaching that code for game type 2.
+		if ( !_instantAction )
+		{
+			LobbyAudio.Current?.ParkEntry();
+
+			// At the price, not at the number inside it - effect 98, where the sparkle that runs across
+			// the price while it can be afforded is 97.
+			if ( ParticleSystem.Current is { } particles )
+			{
+				var rect = _price.Rect;
+				var middle = ((rect.Bottom - rect.Top) >> 1) + rect.Top;
+
+				_ = particles.Spawn( (int)ParLib.P_EFFECT_KeyPuff, 50000, 0,
+					middle * 75000 / VirtualScreen.Height, _price.Anchor, this );
+			}
+		}
+
+		Log.Info( $"Front end: entering '{island.ParkName}'" );
+
+		Game.RequestParkLoad( island.ThemeName );
 	}
+
+	/// <summary>Whether the lobby is already on its way to a park - see <see cref="EnterPark"/>.</summary>
+	private bool _leaving;
 
 	private static void ViewOnlineWorld() { }
 }

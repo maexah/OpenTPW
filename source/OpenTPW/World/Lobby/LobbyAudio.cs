@@ -134,6 +134,15 @@ public sealed class LobbyAudio : Entity
 	/// </summary>
 	private sealed record ParkSounds( SoundCategory Music, SoundCategory Ambience );
 
+	/// <summary>Effect 4 of the global lobby sfx, played as the lobby leaves for a park - see <see cref="ParkEntry"/>.</summary>
+	private const int GlobalParkEntry = 4;
+
+	/// <summary>
+	/// What <see cref="ParkEntry"/> plays at. Full, because it is a one-shot the player asked for by
+	/// pressing the button - and academic either way while the effect ships with no samples.
+	/// </summary>
+	private const float ParkEntryVolume = 1f;
+
 	private SoundCategory? _global;
 
 	/// <summary>One per park, built the first time that park is the one on show.</summary>
@@ -262,6 +271,26 @@ public sealed class LobbyAudio : Entity
 			return;
 
 		_global?.Play( GlobalThunder, ThunderVolume );
+	}
+
+	/// <summary>
+	/// The cue the lobby plays as it leaves for a park - effect 4 of the global lobby sfx, which is
+	/// what the original's park-entry handler reaches for (0x005e1e30).
+	///
+	/// <para>
+	/// <b>It is silent, and that is the shipped data rather than a fault here.</b> The category loads
+	/// as "3 bank(s), 4 effect(s) [1x4, 2x2, 3x4, 4x0]" - effect 4 carries zero samples. So this is
+	/// wired faithfully and makes no sound, which is exactly what the original does with the same
+	/// files. <see cref="SoundCategory.Play"/> returns null for a sampleless effect, so nothing here
+	/// has to special-case it.
+	/// </para>
+	/// </summary>
+	internal void ParkEntry()
+	{
+		if ( !Audio.Ready || Muted )
+			return;
+
+		_global?.Play( GlobalParkEntry, ParkEntryVolume );
 	}
 
 	/// <summary>What is playing right now, for the debug console.</summary>
