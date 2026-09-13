@@ -183,10 +183,10 @@ internal static class Game
 	///
 	/// <para>
 	/// Measured, not guessed: the loading screen logs the real count as it closes, and a park entered
-	/// from the lobby reports 631. It started at 500 here, which is what the original budgets for its
-	/// own park load (LoadingScreen_Begin with 500, from state 9) - a fair guess, and 26% short,
+	/// from the lobby reports 649. It started at 500 here, which is what the original budgets for its
+	/// own park load (LoadingScreen_Begin with 500, from state 9) - a fair guess, and a third short,
 	/// because the two are counting different things. See <see cref="LobbyLoadSteps"/>, measured the
-	/// same way.
+	/// same way. It was 631 before the ground was built, which registers eighteen more.
 	/// </para>
 	/// <para>
 	/// This is the count for a park entered <i>from the lobby</i>, which is the only way in today. It

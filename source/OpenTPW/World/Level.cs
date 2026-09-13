@@ -158,6 +158,8 @@ public class Level
 		// honest placeholder rather than a guess dressed as a finding.
 		SunLight = new Sun() { Position = new( 500, -3500, 2800 ) };
 
+		// The ground first, then what stands on it.
+		_ = new ParkGround( ThemeName );
 		_ = new ParkTerrain( ThemeName );
 
 		GameOptions.Current.ApplySound();
