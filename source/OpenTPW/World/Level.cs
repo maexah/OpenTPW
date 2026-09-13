@@ -31,10 +31,44 @@ public class Level
 
 	public SettingsFile Global { get; private init; }
 
-	public Level( string levelName )
+	/// <summary>
+	/// Which of the game's two worlds this is. The original runs them as separate states of one
+	/// machine - the lobby is states 1/2/3 and a park is 9/10/0xb - and they share almost nothing but
+	/// the renderer, the sound device and the player's own files.
+	///
+	/// <para>
+	/// This is the smallest form of that split: enough for a park to be built instead of the lobby,
+	/// and no more. Teardown ordering, the state machine proper and the park's own front end are still
+	/// the lobby's - see the park plan's later milestones.
+	/// </para>
+	/// </summary>
+	public enum Scene
 	{
+		Lobby,
+		Park
+	}
+
+	public Scene Kind { get; private init; }
+
+	/// <summary>The theme folder this level was built from - "jungle", "fantasy", "hallow" or "space".</summary>
+	public string ThemeName { get; private init; }
+
+	public Level( string levelName, Scene kind = Scene.Lobby )
+	{
+		ThemeName = levelName;
+		Kind = kind;
+
 		Global = new SettingsFile( $"/levels/{levelName}/global.sam" );
 		Current = this;
+
+		if ( kind == Scene.Park )
+		{
+			SetupParkEntities();
+			SetupParticles();
+			SetupParkHud();
+
+			return;
+		}
 
 		SetupEntities();
 		SetupParticles();
@@ -103,6 +137,42 @@ public class Level
 		_ = new Advisor();
 
 		Camera.SetCameraMode<LobbyCameraMode>();
+	}
+
+	/// <summary>
+	/// A park, as far as it goes today: the ground's scenery and something to look at it with.
+	///
+	/// <para>
+	/// Deliberately short. There is no sky here because <see cref="Sky"/> takes its colours from
+	/// whichever lobby island the camera is on, and no weather, no front end and no advisor, because
+	/// each of those is a job with its own evidence still to gather. What this does have is the part
+	/// that needed no new file format at all - <c>base.MD2</c> out of the park's own terrain.wad,
+	/// through the same model and texture path the lobby already uses.
+	/// </para>
+	/// </summary>
+	private void SetupParkEntities()
+	{
+		// The same light the lobby stands in front of its gates. A park has its own answer for this -
+		// Standard.sam carries LightNormal (0.4, -0.8, 0.4) along with ambient and directional colours -
+		// but nothing has yet traced how the original combines them, so borrowing the lobby's sun is
+		// honest placeholder rather than a guess dressed as a finding.
+		SunLight = new Sun() { Position = new( 500, -3500, 2800 ) };
+
+		_ = new ParkTerrain( ThemeName );
+
+		GameOptions.Current.ApplySound();
+
+		Camera.SetCameraMode<ParkOrbitCameraMode>();
+	}
+
+	/// <summary>
+	/// A park's interface, which for now is only the pointer. The lobby's front end belongs to the
+	/// lobby, and the park's own is a separate build of the same widgets.
+	/// </summary>
+	private void SetupParkHud()
+	{
+		Hud = new();
+		Hud.AddChild( new Cursor() );
 	}
 
 	private void SetupHud()

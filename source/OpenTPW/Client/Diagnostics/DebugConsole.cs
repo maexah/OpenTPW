@@ -255,13 +255,38 @@ public static class DebugConsole
 				Reply( $"size {Screen.Size.X}x{Screen.Size.Y}" );
 				break;
 
+			// Enters a park, and `lobby` comes back out. Standing in for the front end's own park
+			// entry, which is a later job: this is the scene swap on its own, so that what a park
+			// loads and draws can be looked at before anything has to decide when to load it.
+			case "park":
+				Game.RequestParkLoad( parts.Length > 1 ? parts[1].ToLowerInvariant() : "jungle" );
+				Reply( $"entering {(parts.Length > 1 ? parts[1].ToLowerInvariant() : "jungle")}" );
+				break;
+
+			case "lobby":
+				Game.RequestLobbyReload();
+				Reply( "returning to the lobby" );
+				break;
+
+			// Where the park camera is, in world units and in grid cells - the two coordinate systems
+			// a park is described in, and the pair most worth seeing side by side while placing things.
+			case "camera":
+				if ( parts.Length > 2 )
+					ParkOrbitCameraMode.PointOfInterest = new Vector3( Argument( 1 ), Argument( 2 ), 0f );
+
+				if ( parts.Length > 3 )
+					ParkOrbitCameraMode.Zoom = Argument( 3 );
+
+				Reply( ParkOrbitCameraMode.State() );
+				break;
+
 			case "quit":
 				Reply( "quitting" );
 				Environment.Exit( 0 );
 				break;
 
 			default:
-				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/near/stats/state/size/volume/mute/sound/place/speech/advisor/greet/duck/reload/quit" );
+				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/near/stats/state/size/volume/mute/sound/place/speech/advisor/greet/duck/reload/park/lobby/camera/quit" );
 				break;
 		}
 	}

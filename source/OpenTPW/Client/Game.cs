@@ -148,6 +148,17 @@ internal static class Game
 	/// </summary>
 	private static void ReloadLobbyIfAsked()
 	{
+		// A park first, because asking for one supersedes asking for the lobby again.
+		if ( _parkAsked is { } themeName )
+		{
+			_parkAsked = null;
+
+			Level.Current.Unload();
+			LoadPark( themeName );
+
+			return;
+		}
+
 		if ( !_lobbyReloadAsked )
 			return;
 
@@ -155,5 +166,45 @@ internal static class Game
 
 		Level.Current.Unload();
 		LoadLobby( openAudio: false );
+	}
+
+	/// <summary>Which park has been asked for, to be built once the frame in progress has been shown.</summary>
+	private static string? _parkAsked;
+
+	/// <summary>
+	/// Asks for a park to be entered once the frame in progress has been shown. Between frames for the
+	/// same reason the lobby's own reload is - see <see cref="ReloadLobbyIfAsked"/> - and in the same
+	/// place the original changes scene, which is its state machine rather than the middle of a tick.
+	/// </summary>
+	internal static void RequestParkLoad( string themeName ) => _parkAsked = themeName;
+
+	/// <summary>
+	/// How many steps the loading bar expects a park to take.
+	///
+	/// <para>
+	/// Measured, not guessed: the loading screen logs the real count as it closes, and a park entered
+	/// from the lobby reports 631. It started at 500 here, which is what the original budgets for its
+	/// own park load (LoadingScreen_Begin with 500, from state 9) - a fair guess, and 26% short,
+	/// because the two are counting different things. See <see cref="LobbyLoadSteps"/>, measured the
+	/// same way.
+	/// </para>
+	/// <para>
+	/// This is the count for a park entered <i>from the lobby</i>, which is the only way in today. It
+	/// will fall when parks can be entered one after another, for the same reason the lobby's rebuild
+	/// count is lower than its first load: a step is an <c>Asset.Register</c>, and the caches already
+	/// hold whatever the last scene put there. Re-measure when that path exists.
+	/// </para>
+	/// </summary>
+	private const int ParkLoadSteps = 631;
+
+	/// <summary>Builds a park behind the loading screen, the way <see cref="LoadLobby"/> builds the lobby.</summary>
+	private static void LoadPark( string themeName )
+	{
+		using ( new LoadingScreen( themeName, ParkLoadSteps ) )
+		{
+			_ = new Level( themeName, Level.Scene.Park );
+		}
+
+		Audio.Duck( 1f, 0f );
 	}
 }
