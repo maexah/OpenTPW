@@ -94,6 +94,12 @@ public sealed class ParkOrbitCameraMode : CameraMode
 
 	private bool _groundSampled;
 
+	/// <summary>The ground under the point of interest right now, without touching the easing.</summary>
+	/// <remarks>See <c>ParkCamcorderCameraMode.PeekGround</c> - the first un-eased sample belongs to
+	/// the first <see cref="Update"/>, not to a constructor.</remarks>
+	private static float PeekGround()
+		=> ParkGround.Current?.Heightfield?.HeightAtWorld( PointOfInterest.X, PointOfInterest.Y ) ?? 0f;
+
 	/// <summary>
 	/// The ground under the point of interest, eased. The original raises the eye by this so that
 	/// scrolling over a cliff lifts the camera with the land rather than burying it.
@@ -159,6 +165,11 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		// on it - it costs only depth precision - so it is left alone rather than reaching into shared
 		// code to suit one camera.
 		FieldOfView = 90f;
+
+		// Already over the point of interest before anything reads the camera - see Place. The ground
+		// is PEEKED rather than sampled, for the reason ParkCamcorderCameraMode.PeekGround gives: the
+		// one un-eased sample belongs to the first Update, when the statics have settled.
+		Place( PeekGround() );
 	}
 
 	public override void Update()
@@ -205,6 +216,20 @@ public sealed class ParkOrbitCameraMode : CameraMode
 				0f );
 		}
 
+		Place( GroundUnderPoi() );
+	}
+
+	/// <summary>
+	/// Swings the eye around the point of interest and looks back at it.
+	/// </summary>
+	/// <remarks>
+	/// Called from the constructor as well as from <see cref="Update"/>, for the reason
+	/// ParkCamcorderCameraMode.Place gives: the camera is swapped and its view matrix built in the
+	/// same <see cref="Camera.Update"/>, so a mode that waited for its first update would have a
+	/// frame drawn from the world origin - which is what coming back from camcorder mode did.
+	/// </remarks>
+	private void Place( float ground )
+	{
 		// Where the eye goes. The original builds it as the point of interest plus
 		// rotateY( yaw, (0, sin(pitch) * zoom, -cos(pitch) * zoom) ) - a height and a horizontal
 		// distance, swung about the vertical. That is written in the original's axes, where Y is up;
@@ -212,7 +237,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		var pitch = Pitch.DegreesToRadians();
 
 		var horizontal = MathF.Cos( pitch ) * Zoom;
-		var height = (MathF.Sin( pitch ) * Zoom) + GroundUnderPoi();
+		var height = (MathF.Sin( pitch ) * Zoom) + ground;
 
 		Position = PointOfInterest + new Vector3(
 			horizontal * MathF.Sin( Yaw ),

@@ -175,9 +175,11 @@ public partial class Texture : Asset
 	/// Rewrites this texture's pixels in place, keeping the same GPU texture and view.
 	///
 	/// For anything that changes colour every frame this is the only sane route: constructing a
-	/// Texture allocates a fresh GPU texture and adds it to <see cref="Asset.All"/>, neither of
-	/// which is ever released, so building one per frame would leak steadily. The sky is a 1x1
-	/// texture that follows whichever park is on show - see <see cref="Sky.Colour"/>.
+	/// Texture allocates a fresh GPU texture and adds it to <see cref="Asset.All"/>, and both are let
+	/// go of only when whoever owns it calls <see cref="Delete"/> - so building one per frame would
+	/// leak steadily however careful its owner is. The sky is a 1x1 texture that follows whichever
+	/// park is on show - see <see cref="Sky.Colour"/>. (This used to say neither is "ever released",
+	/// which was true of the whole engine before scene release landed and is true of nothing now.)
 	/// </summary>
 	public void UpdatePixels( byte[] data )
 	{

@@ -169,6 +169,14 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	private bool _groundSampled;
 
 	/// <summary>
+	/// Set when the viewer has been put somewhere else outright rather than walking there, so that the
+	/// next ground sample is taken as-is instead of eased into - see <see cref="StandAt"/>. Static
+	/// because the thing doing the putting has no instance to talk to: the camera mode is rebuilt from
+	/// scratch whenever the camera changes.
+	/// </summary>
+	private static bool _restand;
+
+	/// <summary>
 	/// Stands the viewer where the orbit camera was looking, facing the way it faced, and hands the
 	/// camera over. Called when the player asks for camcorder mode.
 	/// </summary>
@@ -209,10 +217,34 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		Pitch = 0f;
 	}
 
+	/// <summary>
+	/// Puts the viewer down somewhere else outright, and takes the ground there as-is.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="Stand"/> on its own is what <see cref="Walk"/> writes a step at a time, and the eye
+	/// eases up to the ground so that walking over a ridge lifts it rather than stepping it. Being
+	/// picked up and put down is not walking: easing from the height of wherever the viewer used to be
+	/// is meaningless, and with the clock stopped - which is how frames are captured - the ease never
+	/// advances at all, so the eye would stay at the old height for good.
+	/// </remarks>
+	public static void StandAt( Vector3 where )
+	{
+		Stand = where;
+		_restand = true;
+	}
+
 	public ParkCamcorderCameraMode()
 	{
 		// The same lens the orbit camera uses - see its constructor for why 90 is a vertical angle.
 		FieldOfView = 90f;
+
+		// Already standing where Enter put the viewer, before anything reads the camera - see Place.
+		// The ground is PEEKED rather than sampled: GroundUnderStand spends its one un-eased sample on
+		// its first call, and whoever spends it decides where the eye snaps to. The debug console sets
+		// Stand AFTER Enter has built this, so spending it here would leave the eye at the height of
+		// wherever the orbit camera had been looking - and with the clock paused, which is how frames
+		// are captured, the ease that should correct it never advances at all.
+		Place( PeekGround() );
 	}
 
 	public override void Update()
@@ -232,7 +264,21 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		Steer();
 		Walk();
 
-		Position = new Vector3( Stand.X, Stand.Y, GroundUnderStand() + EyeHeight );
+		Place( GroundUnderStand() );
+	}
+
+	/// <summary>
+	/// Puts the eye where the viewer stands, at head height, looking the way they are looking.
+	/// </summary>
+	/// <remarks>
+	/// Called from the constructor as well as from <see cref="Update"/>.
+	/// <see cref="Camera.SetCameraMode{T}"/> builds a fresh instance, and <see cref="Camera.Update"/>
+	/// builds the view matrix from it in the same call that swapped it - so a mode that waited for
+	/// its first update would have a frame drawn, and the sound heard, from the world origin.
+	/// </remarks>
+	private void Place( float ground )
+	{
+		Position = new Vector3( Stand.X, Stand.Y, ground + EyeHeight );
 
 		var pitch = Pitch.DegreesToRadians();
 		var flat = MathF.Cos( pitch );
@@ -321,6 +367,16 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		Stand = new Vector3( x.Clamp( 1f, extent ), y.Clamp( 1f, extent ), 0f );
 	}
 
+	/// <summary>The ground under the viewer right now, without touching the easing.</summary>
+	/// <remarks>
+	/// For placing the camera before its first <see cref="Update"/>. <see cref="GroundUnderStand"/>
+	/// takes its one un-eased sample on the first call, so a constructor must not take it while
+	/// <see cref="Stand"/> can still move before that first update - which is exactly what the debug
+	/// console's two-argument <c>camcorder</c> does.
+	/// </remarks>
+	private static float PeekGround()
+		=> ParkGround.Current?.Heightfield?.HeightAtWorld( Stand.X, Stand.Y ) ?? 0f;
+
 	/// <summary>
 	/// The ground under the viewer, eased, so that walking over a ridge lifts the eye with the land
 	/// instead of stepping it. The first sample is taken outright, as the orbit camera's is, so
@@ -335,10 +391,11 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 
 		var sample = field.HeightAtWorld( Stand.X, Stand.Y );
 
-		if ( !_groundSampled )
+		if ( !_groundSampled || _restand )
 		{
 			_groundHeight = sample;
 			_groundSampled = true;
+			_restand = false;
 		}
 		else
 		{

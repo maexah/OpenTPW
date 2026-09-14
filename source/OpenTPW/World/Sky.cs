@@ -213,8 +213,10 @@ public class Sky : Entity
 
 		_layers = layers;
 
-		// Loaded once and shared: a Texture is a GPU allocation that is never released, and four
-		// cloud layers drawing the same file have no reason to hold four copies of it.
+		// Loaded once and shared: four cloud layers drawing the same file have no reason to hold four
+		// copies of it. This sky owns both and lets go of them in OnDelete, which is why they are kept
+		// in fields rather than passed straight through. (This used to say a Texture "is never
+		// released", which stopped being true the moment that OnDelete was written, twenty lines down.)
 		_bandTexture = LoadTexture( $"{_directory}/sky_cyl.tga", out var bandAverage );
 		_cloudTexture = LoadTexture( $"{_directory}/sky.tga", out var cloudAverage );
 

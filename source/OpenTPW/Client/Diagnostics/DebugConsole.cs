@@ -365,7 +365,11 @@ public static class DebugConsole
 					if ( !ParkCamcorderCameraMode.Active )
 						ParkCamcorderCameraMode.Enter();
 
-					ParkCamcorderCameraMode.Stand = new Vector3( Argument( 1 ), Argument( 2 ), 0f );
+					// StandAt rather than Stand: this puts the viewer down somewhere else rather than
+					// walking them there, so the eye takes the ground as-is. Assigning Stand left it
+					// easing up from the old height, which never finishes while the clock is stopped -
+					// and a stopped clock is how frames are captured.
+					ParkCamcorderCameraMode.StandAt( new Vector3( Argument( 1 ), Argument( 2 ), 0f ) );
 				}
 				else if ( ParkCamcorderCameraMode.Active )
 				{
