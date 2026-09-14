@@ -29,6 +29,13 @@ public abstract class WeatherSprites : ModelEntity
 
 	private readonly int _capacity;
 	private readonly string _texturePath;
+
+	/// <summary>
+	/// The art this pool drew with, kept only so that it can be let go of again. It is built from a
+	/// stream rather than loaded by path, so it is in no cache and nothing else can be holding it -
+	/// see <see cref="OnDelete"/>.
+	/// </summary>
+	private Texture? _texture;
 	private Vertex[] _vertices = Array.Empty<Vertex>();
 
 	// How many quads the buffer currently holds live geometry for. Anything past this is
@@ -126,7 +133,8 @@ public abstract class WeatherSprites : ModelEntity
 		var material = new Material<ObjectUniformBuffer>( "content/shaders/weather.shader",
 			MaterialFlags.DisableDepthWrite | MaterialFlags.Additive );
 
-		material.Set( "Color", LoadTexture( _texturePath ) );
+		_texture = LoadTexture( _texturePath );
+		material.Set( "Color", _texture );
 
 		Model = new Model( _vertices, indices, material );
 		Model.EnableFrequentUpdates( _vertices );
@@ -149,6 +157,26 @@ public abstract class WeatherSprites : ModelEntity
 		}
 
 		return new Texture( stream );
+	}
+
+	/// <summary>
+	/// Lets go of the model, through <see cref="ModelEntity.OnDelete"/>, and of the art with it.
+	/// </summary>
+	/// <remarks>
+	/// A material leaves the textures bound into it alone, because those are usually cached by path
+	/// and shared between scenes. This one is not: it comes off a stream, so it is in no cache, and
+	/// every scene that made one left it behind - four a cycle, a rain pool and a lightning pool in
+	/// each of the lobby and a park. The blank <see cref="Texture.Missing"/> that LoadTexture hands
+	/// back when the art will not read is skipped, since Texture.Delete refuses it loudly.
+	/// </remarks>
+	protected override void OnDelete()
+	{
+		base.OnDelete();
+
+		if ( _texture != null && !ReferenceEquals( _texture, Texture.Missing ) )
+			_texture.Delete();
+
+		_texture = null;
 	}
 
 	protected override void OnRender()
