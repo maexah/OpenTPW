@@ -49,6 +49,12 @@ public sealed class ParkFixedItems : Entity
 	private readonly List<LobbyModel> _models = [];
 
 	/// <summary>
+	/// The gate's two sign panels, kept only so that they can be let go of again. They are painted
+	/// for this park rather than loaded by path, so nothing else holds them - see <see cref="OnDelete"/>.
+	/// </summary>
+	private IReadOnlyDictionary<string, Texture>? _sign;
+
+	/// <summary>
 	/// The items to load, by the name of both the archive and the model inside it, and whether that
 	/// model carries the park's name board. Only the gate does; the lights name no sign material, so
 	/// offering them one would be noise.
@@ -70,11 +76,14 @@ public sealed class ParkFixedItems : Entity
 
 			try
 			{
+				if ( carriesSign )
+					_sign = BuildSign( directory, themeName );
+
 				_models.Add( new LobbyModel(
 					$"{directory}/{item}.MD2",
 					$"{directory}/textures",
 					Vector3.Zero,
-					textureOverrides: carriesSign ? BuildSign( directory, themeName ) : null ) );
+					textureOverrides: carriesSign ? _sign : null ) );
 			}
 			catch ( Exception e )
 			{
@@ -83,6 +92,20 @@ public sealed class ParkFixedItems : Entity
 				Log.Warning( $"{themeName}: fixed item '{item}' would not load, so it is missing from the park - {e.Message}" );
 			}
 		}
+	}
+
+	/// <summary>
+	/// Lets go of the gate's sign panels, for the reason LobbyIsland.OnDelete gives: a material
+	/// leaves the textures bound into it alone because they are usually cached by path and shared,
+	/// and these are neither.
+	/// </summary>
+	protected override void OnDelete()
+	{
+		if ( _sign == null )
+			return;
+
+		foreach ( var panel in _sign.Values )
+			panel.Delete();
 	}
 
 	/// <summary>

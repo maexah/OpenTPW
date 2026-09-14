@@ -33,6 +33,13 @@ public sealed class ParkObjects : Entity
 
 	private readonly List<LobbyModel> _models = [];
 
+	/// <summary>
+	/// Every sign painted for an object standing in this park, kept only so that they can be let
+	/// go of again. Each is cut from a board rasterised for that one object, so it is in no cache
+	/// and nothing else holds it - see <see cref="OnDelete"/>.
+	/// </summary>
+	private readonly List<IReadOnlyDictionary<string, Texture>> _signs = [];
+
 	/// <summary>How many objects actually stand in the park - for the log, and for anything wanting to check.</summary>
 	public int Placed => _models.Count;
 
@@ -132,8 +139,13 @@ public sealed class ParkObjects : Entity
 		{
 			// Items keep only their own art beside their model and share the rest with the whole theme,
 			// so the theme's sharetex.wad is the second place to look - see LobbyModel.LoadTexture.
+			var sign = BuildSign( item );
+
+			if ( sign != null )
+				_signs.Add( sign );
+
 			var model = new LobbyModel( $"{item.Directory}/{item.Stem}.MD2", $"{item.Directory}/textures", Vector3.Zero,
-				textureOverrides: BuildSign( item ),
+				textureOverrides: sign,
 				sharedTextureDirectory: $"levels/{ThemeName.ToLowerInvariant()}/sharetex" );
 
 			// Put away whatever building it left behind before it is stood anywhere.
@@ -423,4 +435,20 @@ public sealed class ParkObjects : Entity
 		foreach ( var model in _models )
 			model.Update( GameClock.Delta );
 	}
+	/// <summary>
+	/// Lets go of every sign painted for this park's objects, for the reason
+	/// LobbyIsland.OnDelete gives: a material leaves the textures bound into it alone because they
+	/// are usually cached by path and shared, and these are neither.
+	/// </summary>
+	protected override void OnDelete()
+	{
+		foreach ( var sign in _signs )
+		{
+			foreach ( var panel in sign.Values )
+				panel.Delete();
+		}
+
+		_signs.Clear();
+	}
+
 }

@@ -65,6 +65,13 @@ public sealed class LobbyIsland : Entity
 
 	private readonly LobbyModel _model;
 
+	/// <summary>
+	/// The two sign panels painted for this island, kept only so that they can be let go of again.
+	/// They are built from pixels rather than loaded by path, so they are in no cache and nothing
+	/// else holds them: the gate is handed the same two and draws with them, but does not own them.
+	/// </summary>
+	private readonly IReadOnlyDictionary<string, Texture>? _sign;
+
 	public LobbyIsland( Vector3 _position, string themeName )
 	{
 		Position = _position;
@@ -82,7 +89,7 @@ public sealed class LobbyIsland : Entity
 		// Offered to both models below: the sign panels are meshes of the island for the jungle
 		// and hallow, but of the gate for fantasy and space, and whichever model names sign1 and
 		// sign2 is the one that takes them.
-		var sign = BuildSign( modelPrefix, ParkName );
+		var sign = _sign = BuildSign( modelPrefix, ParkName );
 
 		// An island's meshes sit 2.5 units below the origin it is placed at.
 		_model = new LobbyModel(
@@ -99,6 +106,24 @@ public sealed class LobbyIsland : Entity
 		// fifty bats for hallow, nothing at all for the other two.
 		foreach ( var mesh in Script.FlyingMeshes )
 			LobbyFlyer.Spawn( mesh, this );
+	}
+
+	/// <summary>
+	/// Lets go of the sign panels this island painted.
+	/// </summary>
+	/// <remarks>
+	/// The models and materials go with the entities that hold them, but a material leaves the
+	/// textures bound into it alone - those are normally cached by path and shared between scenes.
+	/// These are not: they are cut from a board rasterised for this island alone, so every lobby
+	/// build left two behind.
+	/// </remarks>
+	protected override void OnDelete()
+	{
+		if ( _sign == null )
+			return;
+
+		foreach ( var panel in _sign.Values )
+			panel.Delete();
 	}
 
 	/// <summary>
