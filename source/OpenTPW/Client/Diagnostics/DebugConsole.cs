@@ -175,9 +175,13 @@ public static class DebugConsole
 				break;
 
 			// Waiting for one is up to forty seconds of real time, which is no way to check a bolt.
+			// It reports where it put it, because a strike leaves nothing else behind to measure.
 			case "bolt":
 				ParkWeather.Current?.DebugStrike();
-				Reply( ParkWeather.Current == null ? "bolt none - not in a park" : "bolt" );
+
+				Reply( ParkWeather.Current == null
+					? "bolt none - not in a park"
+					: $"bolt at {ParkWeather.Current.LastStrike} strikes={ParkWeather.Current.DebugStrikes}" );
 				break;
 
 			case "near":
@@ -366,7 +370,7 @@ public static class DebugConsole
 			+ $"day={GameCalendar.Days} season={GameCalendar.Season} date={GameCalendar.Now:yyyy-MM-dd} "
 			+ $"quality={ParkWeather.Current?.Quality} drops={ParkWeather.Current?.Drops} "
 			+ $"storm={ParkWeather.Current?.Lightning} snow={ParkWeather.Current?.Snowing} "
-			+ $"forecast={ParkWeather.Current?.Forecast} "
+			+ $"strikes={ParkWeather.Current?.DebugStrikes} forecast={ParkWeather.Current?.Forecast} "
 			+ $"rainy={script?.Rainy} lightning={script?.Lightning} "
 			+ $"strikes/s={script?.StrikesPerSecond:F3} flyers={script?.FlyingMeshes.Count}";
 	}

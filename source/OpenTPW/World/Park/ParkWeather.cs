@@ -164,11 +164,42 @@ public sealed class ParkWeather : Entity
 		Log.Info( $"Park weather: quality {Quality}, heading for {_targetDrops} drops, lightning {Lightning}" );
 	}
 
-	/// <summary>Forces a quality, for DebugConsole. Everything follows from it, so this is the one lever needed.</summary>
-	internal void DebugQuality( int quality ) => Apply( quality );
+	/// <summary>
+	/// Forces a quality, for DebugConsole. Everything follows from it, so this is the one lever needed.
+	///
+	/// <para>
+	/// <b>It also holds, and that is not cosmetic.</b> Applying a quality without clearing the schedule
+	/// leaves the next forecast to land within a cycle - about forty real seconds - and quietly replace
+	/// what was forced. The first probe run measured exactly that: it asked for quality 0, and twenty
+	/// seconds later was measuring a delivered 32, which gives 120 drops and no lightning. Both of its
+	/// failures were that one race. So this re-bases the change schedule and drops any pending forecast,
+	/// giving a forced quality a full <c>DaysBetweenChanges</c> to be observed in.
+	/// </para>
+	/// <para>
+	/// The original has a field this may well be for - <c>mOverridden</c> at +0x64, saved and loaded but
+	/// never read by anything traced - but <b>what it does is not established</b>, so this is a debug
+	/// convenience rather than a claim about it.
+	/// </para>
+	/// </summary>
+	internal void DebugQuality( int quality )
+	{
+		Apply( quality );
+
+		Forecast = -1;
+		_forecastDueDay = -1;
+		_lastChangedDay = GameCalendar.Days;
+	}
 
 	/// <summary>Puts a bolt down now rather than waiting on the countdown, for DebugConsole.</summary>
 	internal void DebugStrike() => PlaceBolt();
+
+	/// <summary>
+	/// How many bolts have come down since the park opened, for DebugConsole.
+	///
+	/// Cumulative, where <c>mLightningNumThisPeriod</c> is reset every time the lightning disarms - a
+	/// count that goes backwards cannot be measured against. Nothing but the console reads it.
+	/// </summary>
+	internal int DebugStrikes { get; private set; }
 
 	private static readonly int[] DefaultAverage = [75, 80, 90, 50];
 	private static readonly int[] DefaultTolerance = [25, 20, 10, 15];
@@ -434,6 +465,7 @@ public sealed class ParkWeather : Entity
 				+ Math.Max( _thunderDistance - _strikesThisPeriod, 0 );
 
 		_strikesThisPeriod++;
+		DebugStrikes++;
 	}
 
 	/// <summary>
