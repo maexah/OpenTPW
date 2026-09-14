@@ -414,11 +414,22 @@ public class Level
 	///
 	/// <para>
 	/// <b>Only in a park, which is the original's own rule and not a simplification of it.</b> The helper
-	/// those three screens call to ask for a pause (0x004092a0) does nothing unless a park is running: it
-	/// opens with <c>if ([0x00786ba4] == 1)</c>, and each of the three tests that same global before even
-	/// calling it - the message box (0x0047f251) also requiring the lobby's front end to be gone
-	/// (0x00f82884 == 0). So in the lobby the world carries on behind an open menu, and what the lobby does
-	/// instead is hold its advisor: see <see cref="FrontEnd.OnUpdate"/> and <see cref="Advisor.Paused"/>.
+	/// those screens call (0x004092a0) does nothing unless 0x00786ba4 is exactly 1 - Game+0x3c, the
+	/// pause-permission gate, which the state machine sets to 0 as the lobby comes up (0x0054e682) and to
+	/// 1 as a park loads (0x0054ea4c). See <see cref="GameClock"/> for why that field means both "a park
+	/// is running" and "nobody already holds the pause".
+	/// </para>
+	/// <para>
+	/// <b>This used to say all three screens test that global before calling, and that is wrong.</b> The
+	/// lobby's game menu never reaches the test: GameMenu_Open (0x0048c830) branches on its scene argument
+	/// at 0x0048c83a, and non-zero - which is what the lobby passes, at 0x005e4207 - builds the lobby's
+	/// menu and returns without ever touching the pause. Only the park path reaches the gate at 0x0048c868.
+	/// The other two do test it: the message box at 0x0047f251, also requiring the lobby's front-end object
+	/// to be gone (0x00f82884, a pointer rather than a flag), and the options screen at 0x004a3a4f - which
+	/// the lobby genuinely does reach, so there the gate really is what prevents the pause, by declining to
+	/// pause rather than by refusing to open. So in the lobby the world carries on behind an open menu, and
+	/// what the lobby does instead is hold its advisor: see <see cref="FrontEnd.OnUpdate"/> and
+	/// <see cref="Advisor.Paused"/>.
 	/// </para>
 	/// </summary>
 	private bool PausedByWindow() => Kind == Scene.Park && _windows is { AnyPausing: true };

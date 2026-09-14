@@ -27,11 +27,22 @@ internal abstract class UiWindow
 	public bool Modal { get; protected init; }
 
 	/// <summary>
-	/// Whether the game is paused while it is open. The original's game menu (GameMenu_Open, 0x0048c830),
-	/// message box (0x0047f020) and options screen (OptionsScreen_Open, 0x004a3a30) each ask for a pause as they
-	/// open, through 0x004092a0, and the new player dialog does not. What a pause does is the scene's: that
-	/// helper only acts while a park is running (0x00786ba4), and the lobby holds its advisor instead - see
-	/// <see cref="Advisor.Paused"/>.
+	/// Whether the game is paused while it is open. The original's message box (0x0047f020) and options
+	/// screen (OptionsScreen_Open, 0x004a3a30) ask for a pause as they open, through 0x004092a0; the new
+	/// player dialog does not.
+	///
+	/// <para>
+	/// <b>The game menu is more awkward than this used to say.</b> GameMenu_Open (0x0048c830) asks only on
+	/// its park path: it branches on its scene argument at 0x0048c83a, and the non-zero the lobby passes
+	/// (0x005e4207) builds the lobby's menu and returns without reaching the pause at all. So the same
+	/// widget asks in one scene and not in the other.
+	/// </para>
+	/// <para>
+	/// What a pause does is the scene's either way: the helper acts only while 0x00786ba4 - Game+0x3c, the
+	/// pause-permission gate - is exactly 1, which the state machine sets for a park and clears for the
+	/// lobby, and the lobby holds its advisor instead. See <see cref="GameClock"/> for the whole of it and
+	/// <see cref="Advisor.Paused"/> for the lobby's side.
+	/// </para>
 	/// </summary>
 	public bool Pauses { get; protected init; }
 

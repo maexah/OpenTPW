@@ -3,8 +3,15 @@
 /// <summary>
 /// <b>This is not the park camera.</b> It is a free-fly development camera left from the old test scene -
 /// <c>WASD</c> across a plane, right-drag to look, the wheel for height, and ninety-degree yaw steps - and
-/// nothing in the game builds one: the only <see cref="Camera.SetCameraMode{T}"/> call anywhere is the
-/// lobby's, in Level. It has never run in the game as shipped.
+/// nothing builds one: the lobby sets <see cref="LobbyCameraMode"/> and a park sets
+/// <see cref="ParkOrbitCameraMode"/>, which is the camera that actually flies over a park. It has never
+/// run in the game as shipped.
+///
+/// <para>
+/// <b>This used to say the lobby's was the only SetCameraMode call anywhere</b>, which stopped being true
+/// the moment parks were built. Its numbers give it away too: <c>wishHeight</c> is clamped to 1..10, where
+/// the camera framing a park twelve hundred units across sits ninety-odd units up.
+/// </para>
 ///
 /// <para>
 /// The original's park camera is a different thing entirely - it scrolls, rotates and zooms over the
