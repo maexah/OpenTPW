@@ -202,6 +202,11 @@ public partial class Renderer
 	{
 		Window.SdlWindow.PumpEvents();
 
+		// Those events are pumped and thrown away - nothing runs during a load to read them - so a
+		// key let go of now never arrives as a key-up, and would stay held for the rest of the
+		// session. See Input.ForgetHeldKeys for why a modifier stuck that way is the bad case.
+		Input.ForgetHeldKeys();
+
 		// Closed mid-load, so there is nothing left to draw into. The game loop finds the same once
 		// the load is done, and ends.
 		if ( !Window.SdlWindow.Exists )
@@ -282,6 +287,11 @@ public partial class Renderer
 		// rather than lurching forward by however long the window was away.
 		if ( !Window.HasArea )
 		{
+			// This frame's events have been pumped and are about to be dropped, so anything let go
+			// of while the window is down would stay held once it comes back up - see
+			// Input.ForgetHeldKeys.
+			Input.ForgetHeldKeys();
+
 			Thread.Sleep( 16 );
 			return;
 		}
