@@ -21,6 +21,14 @@ internal static class Game
 	/// caches do not already hold - which is the loading bar's remaining inaccuracy and is not
 	/// addressed here.
 	/// </para>
+	/// <para>
+	/// <b>That inaccuracy is now something a player sees.</b> A rebuild used to be reachable only from the
+	/// debug console, but a park's Exit To Lobby comes back this way - see
+	/// <see cref="RequestLobbyReload"/> - so the bar fills at about half way and waits there every time.
+	/// The honest fix is for the count to know whether a scene is being built cold or again, since a step
+	/// means one <c>Asset.Register</c> and calling <c>Step</c> for work that registers nothing would make
+	/// the bar's rate a lie instead of its length. It is left measured and wrong rather than faked.
+	/// </para>
 	/// </summary>
 	private const int LobbyLoadSteps = 829;
 
@@ -135,9 +143,10 @@ internal static class Game
 	}
 
 	/// <summary>
-	/// Asks for the lobby to be ended and built again once the frame in progress has been shown. For the debug
-	/// console, standing in for a park's exit, which in the original comes back to the lobby the same way: Exit
-	/// To Lobby (FUN_005508b0 with 2), state 0xb ending the park, and state 1 loading the lobby.
+	/// Asks for the lobby to be ended and built again once the frame in progress has been shown. This is a
+	/// park's <b>Exit To Lobby</b>, and the debug console's reload with it - the original answers both the
+	/// same way: Exit To Lobby writes the state machine's exit reason (FUN_005508b0 with 2), state 0xb ends
+	/// the park, and state 1 loads the lobby. See <see cref="UI.ParkFrontEnd"/> for the menu it comes from.
 	/// </summary>
 	internal static void RequestLobbyReload() => _lobbyReloadAsked = true;
 

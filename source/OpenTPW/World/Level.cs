@@ -264,12 +264,23 @@ public class Level
 	}
 
 	/// <summary>
-	/// A park's interface, which for now is only the pointer. The lobby's front end belongs to the
-	/// lobby, and the park's own is a separate build of the same widgets.
+	/// A park's interface: the windows its menu opens in, the park's own build of that menu, and the
+	/// pointer. The lobby's front end belongs to the lobby, and this is the separate build of the same
+	/// widgets the original makes - which is why <see cref="ParkFrontEnd"/> stands beside
+	/// <see cref="FrontEnd"/> rather than a flag being added to it.
 	/// </summary>
 	private void SetupParkHud()
 	{
 		Hud = new();
+
+		// The same window engine the lobby uses, built again for this scene: it deals out the pointer and
+		// the keys and holds the modal stop for whatever opens in it.
+		var windows = Hud.AddChild( new WindowStack() );
+
+		// What Escape does here, and what the menu's choices do, which is this scene's to say. After the
+		// stack, as the lobby's front end is, so it hears about a frame once the stack has dealt it out.
+		Hud.AddChild( new ParkFrontEnd( windows, ThemeName ) );
+
 		Hud.AddChild( new Cursor() );
 	}
 

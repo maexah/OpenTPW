@@ -10,7 +10,8 @@ namespace OpenTPW.UI;
 /// (0x00492e80), and MenuList_AddItem (0x00492f60) stacks the choices on it. Each is its text in font 0 on
 /// the purple skin, centred across the screen, as wide as the text and as tall as a line of it and five
 /// pixels more, turned from the screen's pixels into the layout's units. In the lobby the first starts five
-/// units down and each of the others five below the one before.
+/// units down; in a park it starts at ten, which is GameMenu_BuildPark passing <c>iVar1 * 2</c> with
+/// <c>iVar1</c> of 5. Each of the others sits five below the one before, in both.
 /// </para>
 /// <para>
 /// <b>The pointer.</b> A choice rests at (0, 175, 190), which it is given as it is shown (message 0x11).
@@ -32,8 +33,10 @@ internal sealed class GameMenu : UiWindow
 	internal readonly record struct Item( UIStrings Text, int Id, Action<GameMenu> Chosen );
 
 	private const int ChoiceFont = 0;
-	private const int FirstTop = 5;
 	private const int Gap = 5;
+
+	/// <summary>How far down the first choice starts, which is the scene's to say - see the class remarks.</summary>
+	private readonly int _firstTop;
 
 	/// <summary>How fast the colour ticks - see the class remarks.</summary>
 	private const float TicksPerSecond = 30f;
@@ -47,10 +50,14 @@ internal sealed class GameMenu : UiWindow
 
 	private float _ticks;
 
-	public GameMenu( WindowStack stack, IReadOnlyList<Item> items ) : base( stack )
+	/// <param name="firstTop">
+	/// How far down the first choice starts: five in the lobby and ten in a park - see the class remarks.
+	/// </param>
+	public GameMenu( WindowStack stack, IReadOnlyList<Item> items, int firstTop ) : base( stack )
 	{
 		Modal = true;
 		Pauses = true;
+		_firstTop = firstTop;
 
 		Root = Backdrop();
 
@@ -107,7 +114,7 @@ internal sealed class GameMenu : UiWindow
 		var font = UiFonts.Get( ChoiceFont );
 		var screenHeight = UiFonts.SetScreenHeight;
 		var screenWidth = screenHeight * 4 / 3;
-		var top = FirstTop;
+		var top = _firstTop;
 
 		foreach ( var choice in _choices )
 		{

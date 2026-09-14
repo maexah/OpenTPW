@@ -275,7 +275,8 @@ internal sealed class FrontEnd : Panel
 		if ( front is { Modal: true } )
 			return;
 
-		_stack.Open( new GameMenu( _stack, LobbyMenuChoices() ) );
+		// GameMenu_BuildLobby starts its first choice five units down, where a park's starts at ten.
+		_stack.Open( new GameMenu( _stack, LobbyMenuChoices(), firstTop: 5 ) );
 	}
 
 	/// <summary>
