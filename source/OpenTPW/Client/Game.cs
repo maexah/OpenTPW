@@ -233,10 +233,18 @@ internal static class Game
 	/// park looks turned out to load less as well.
 	/// </para>
 	/// <para>
-	/// This is the count for a park entered <i>from the lobby</i>, which is the only way in today. It
-	/// will fall again when parks can be entered one after another, for the same reason the lobby's
-	/// rebuild count is lower than its first load: the caches already hold whatever the last scene put
-	/// there. Re-measure when that path exists.
+	/// This is the count for a park built <i>cold</i> - entered from the lobby, with nothing of its own
+	/// in the caches. That paragraph used to end "re-measure when that path exists", meaning the path by
+	/// which a park is built twice in one run; <b>Restart Park is now that path, and a rebuilt park costs
+	/// 758</b> against this 918, for the same reason a rebuilt lobby costs 404 against its 829 - the caches
+	/// already hold whatever the last scene put there.
+	/// </para>
+	/// <para>
+	/// <b>The constant stays at the cold number.</b> The bar is a count, so setting it to a reload's would
+	/// make every first load stop short instead; the honest consequence is that a park's bar, like the
+	/// lobby's, now fills to about four fifths and waits there whenever it is not the first build of that
+	/// scene. Left measured and wrong rather than faked, exactly as <see cref="LobbyLoadSteps"/> is, and
+	/// for the same reason - a step means one <c>Asset.Register</c> and nothing else.
 	/// </para>
 	/// </summary>
 	private const int ParkLoadSteps = 918;
