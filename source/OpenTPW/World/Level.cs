@@ -206,6 +206,7 @@ public class Level
 		// places.
 		_ = new ParkGround( ThemeName, park );
 		_ = new ParkPaths( ThemeName, park );
+		_ = new ParkQueues( ThemeName, park );
 		_ = new ParkTerrain( ThemeName );
 		_ = new ParkFixedItems( ThemeName );
 		_ = new ParkObjects( ThemeName, park );

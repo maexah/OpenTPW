@@ -194,7 +194,7 @@ internal static class Game
 	/// same way.
 	/// </para>
 	/// <para>
-	/// It has moved seven times, and the direction is not always up: 500 guessed, 631 with the scenery,
+	/// It has moved eight times, and the direction is not always up: 500 guessed, 631 with the scenery,
 	/// 649 once the ground was built, back to 637 when the ground's sixteen placeholder colours
 	/// became seven real textures and nine shares of one blank, 671 with the park's fixed items -
 	/// the gate with its three door animations and its painted sign, and the traffic lights - and 872
@@ -210,6 +210,13 @@ internal static class Game
 	/// is allowed to be.
 	/// </para>
 	/// <para>
+	/// <b>918 now that a park's queues stand in it</b>, a rise of thirty-three. That rise is the queue's
+	/// own models and their art: its cells are not tiles laid on the ground but small models out of the
+	/// theme's <c>queue.wad</c>, each bringing railings, torches and the <c>jpa_que</c> textures they are
+	/// skinned with. Leaving the ground under a built thing to the thing itself registers nothing at all,
+	/// so it moved this by nothing - it only stops grass being drawn where a floor already is.
+	/// </para>
+	/// <para>
 	/// That last number was 876 until the items were given the theme's shared texture archive to fall
 	/// back on. Four of the textures they ask for are named by two different items - the fountain and the
 	/// belly bounce both want three grasses, the toilet and the drinks shop a side panel - and reaching
@@ -223,7 +230,7 @@ internal static class Game
 	/// there. Re-measure when that path exists.
 	/// </para>
 	/// </summary>
-	private const int ParkLoadSteps = 885;
+	private const int ParkLoadSteps = 918;
 
 	/// <summary>Builds a park behind the loading screen, the way <see cref="LoadLobby"/> builds the lobby.</summary>
 	private static void LoadPark( string themeName )

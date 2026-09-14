@@ -214,11 +214,22 @@ public sealed class ParkGround : ModelEntity
 				if ( texture == NotGround )
 					continue;
 
-				// A cell the player laid a path on is drawn by ParkPaths instead. These are ordinary
-				// ground cells in the model rather than index 0, so without this the two surfaces would
-				// be built over each other at identical heights and fight for the same depth.
-				if ( world != null && ParkPaths.IsPath( world.CellAt( x, y ) ) )
-					continue;
+				// A cell something else draws is not this surface's to draw. Three kinds of cell are
+				// somebody else's: the ones the player laid a path on, which ParkPaths draws; the ones
+				// something is built on, where the item's own model carries a floor plate as wide as its
+				// footprint; and the ones a queue runs over, where each piece of queue brings its own
+				// base. See ParkObjects.CoversGround and ParkQueues.IsQueue.
+				//
+				// All three are ordinary ground cells in the model rather than index 0, so without this
+				// two surfaces are built over each other at identical heights and fight for the same
+				// depth. The grass won, which is what left a shop standing on bare grass.
+				if ( world != null )
+				{
+					var cell = world.CellAt( x, y );
+
+					if ( ParkPaths.IsPath( cell ) || ParkQueues.IsQueue( cell ) || ParkObjects.CoversGround( cell ) )
+						continue;
+				}
 
 				var slot = Math.Clamp( indices.IndexOf( texture ), 0, textures.Length - 1 );
 
@@ -266,7 +277,7 @@ public sealed class ParkGround : ModelEntity
 		Model = new Model( vertices[..vertex], elements[..element], material );
 
 		Log.Info( $"{_themeName}: ground {element / 6} cells drawn, " +
-			$"{field.CellCount - (element / 6)} left to the scenery and to the paths" );
+			$"{field.CellCount - (element / 6)} left to the scenery, to the paths and to what is built on them" );
 	}
 
 	/// <summary>

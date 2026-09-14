@@ -36,6 +36,58 @@ public sealed class ParkObjects : Entity
 	/// <summary>How many objects actually stand in the park - for the log, and for anything wanting to check.</summary>
 	public int Placed => _models.Count;
 
+	/// <summary>
+	/// The body of a built thing's footprint: 35 of Lost Kingdom's cells, and the type that identified
+	/// <see cref="ParkWorld.MapCell.Type"/> 4 in the first place by landing exactly on the placed objects.
+	/// </summary>
+	private const int FootprintBody = 4;
+
+	/// <summary>
+	/// The cell of a footprint a thing is used from - eight in Lost Kingdom, and each one sits where it
+	/// should: the single cell of each of the three toilets, the drinks shop's counter, the litter bin,
+	/// the jungle spray's front, the staff room's door, and the end of the Belly Bounce its queue arrives
+	/// at. <b>That reading is inferred from where they sit</b>; what is measured is that they belong to a
+	/// footprint rather than to the ground.
+	/// </summary>
+	private const int FootprintUsed = 9;
+
+	/// <summary>
+	/// The far end of a footprint, which appears exactly once in Lost Kingdom - on the end of the Belly
+	/// Bounce away from its queue. One cell is too few to name with any confidence, and it is here
+	/// because it is demonstrably part of that ride's twelve-cell footprint, not because "exit" has been
+	/// established.
+	/// </summary>
+	private const int FootprintFar = 10;
+
+	/// <summary>
+	/// Whether something built stands on this cell, which is the question <see cref="ParkGround"/> asks in
+	/// order to leave it alone. It lives here for the same reason <see cref="ParkPaths.IsPath"/> lives
+	/// there: a cell belongs to whatever draws it, and the two must not be able to disagree about which.
+	///
+	/// <para>
+	/// <b>Every item draws its own floor, and that is why the ground must not.</b> The first mesh of an
+	/// item's model is a flat plate exactly as wide as its footprint - <c>J_WC</c> under a toilet,
+	/// <c>wf_floor</c> under the fountain, <c>js_base</c> under the staff room, <c>cn_floor01</c> under the
+	/// drinks shop, <c>jb_floor</c> under the Belly Bounce - lying at the model's own zero, which is the
+	/// height the item is stood at.
+	/// </para>
+	/// <para>
+	/// <b>Without this the two fight over the same depth and the grass wins.</b> A footprint cell carries a
+	/// real ground texture index in <c>base.MD2</c> - measured, all 44 of them, and not one is the
+	/// "something covers this" index 0 that the river and the fixed roads carry - so the ground built a
+	/// grass quad across it at the very heights the floor plate occupies. That is why a shop stood on bare
+	/// grass where the original gives it a floor, and it is the same fault the paths had, in a second
+	/// place.
+	/// </para>
+	/// <para>
+	/// The three types together are exactly the eleven placed objects' footprints over Lost Kingdom - 44
+	/// cells, nothing left over and nothing missing - which is what says this list is complete rather than
+	/// merely sufficient.
+	/// </para>
+	/// </summary>
+	public static bool CoversGround( ParkWorld.MapCell cell )
+		=> cell.Type is FootprintBody or FootprintUsed or FootprintFar;
+
 	/// <param name="world">
 	/// The park's own save, already walked, or null where the theme ships none. It is read once by
 	/// <see cref="Level"/> and shared, because the ground and the paths need the same file.
@@ -87,9 +139,19 @@ public sealed class ParkObjects : Entity
 			// Put away whatever building it left behind before it is stood anywhere.
 			PoseAsBuilt( model, item );
 
-			model.SetTransform( OriginFor( placed, item ), Turn( placed.Angle ) );
+			var origin = OriginFor( placed.CellX, placed.CellY, placed.Angle );
+			var turn = Turn( placed.Angle );
+
+			model.SetTransform( origin, turn );
 
 			_models.Add( model );
+
+			// Where it actually ended up, against where the save says it belongs. The two are worked out
+			// from completely separate things - this from the item's own footprint carried through its
+			// turn, and the save's from the cells it marks as built on - so when they agree the placement
+			// is right for a reason rather than by eye.
+			Log.Info( $"{ThemeName}: '{item.Name}' anchored at ({placed.CellX},{placed.CellY}) turned " +
+				$"{placed.Angle} covers {FootprintOf( item, origin, turn )}" );
 		}
 		catch ( Exception e )
 		{
@@ -239,49 +301,117 @@ public sealed class ParkObjects : Entity
 	/// work out before.
 	/// </para>
 	/// <para>
-	/// So the anchor is the cell's corner, not its middle. The turn, though, has to happen about the
-	/// footprint's middle or a rotated item would swing off the ground it was given - hence rotating the
-	/// centre and putting it back.
+	/// <b>The turn is about the middle of the item's anchor CELL, not the middle of its footprint</b>, and
+	/// that is measured rather than chosen - see <see cref="Turn"/>, which settles the direction from the
+	/// same evidence. Turning about the footprint's middle leaves the box where it is and spins the item
+	/// inside it, which is what this used to do; turning about the anchor cell sweeps the box around that
+	/// one cell. Only the second puts the fountain and the staff room on the cells the save marks for them.
+	/// </para>
+	/// <para>
+	/// The size of the footprint drops out of it entirely, which is why it is no longer asked for: whatever
+	/// an item's width and depth, its origin corner lies half a cell from its anchor's middle in each axis,
+	/// so half a cell is the whole of what has to be turned.
 	/// </para>
 	/// </summary>
-	private static Vector3 OriginFor( ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item )
+	/// <param name="x">The cell the thing is anchored on, across.</param>
+	/// <param name="y">And down.</param>
+	/// <param name="angle">How far round it is saved, in whole degrees.</param>
+	public static Vector3 OriginFor( int x, int y, int angle )
 	{
 		var field = ParkGround.Current?.Heightfield;
 
 		var cellX = field?.CellSizeX ?? DefaultCellSize;
 		var cellY = field?.CellSizeY ?? DefaultCellSize;
 
-		// The ground under the anchor corner. The original flattens the land beneath an item as it is
+		// The ground under the anchor cell. The original flattens the land beneath an item as it is
 		// built - its .sam has a DontDeformBase key for the exceptions - and nothing here does, so an
-		// object on a slope sits at one corner's height rather than being bedded into it.
-		var height = field?.HeightAt( placed.CellX, placed.CellY ) ?? 0f;
+		// object on a slope would sit at one cell's height rather than being bedded into it. Nothing in
+		// Lost Kingdom shows it: the land under all seven of its footprint groups is dead flat, measured
+		// from the heightfield's own vertices.
+		var height = field?.HeightAt( x, y ) ?? 0f;
 
-		var corner = new Vector3( placed.CellX * cellX, placed.CellY * cellY, height );
-		var centre = new Vector3( item.Width * cellX * 0.5f, item.Depth * cellY * 0.5f, 0f );
+		var pivot = new Vector3( (x + 0.5f) * cellX, (y + 0.5f) * cellY, height );
+		var toCorner = new Vector3( -0.5f * cellX, -0.5f * cellY, 0f );
 
-		var turned = (Vector3)System.Numerics.Vector3.Transform( centre.GetSystemVector3(), Turn( placed.Angle ) );
+		var turned = (Vector3)System.Numerics.Vector3.Transform( toCorner.GetSystemVector3(), Turn( angle ) );
 
-		return corner + centre - turned;
+		return pivot + turned;
 	}
 
 	/// <summary>A cell's size in world units, for the one case where there is no ground to ask.</summary>
 	private const float DefaultCellSize = 10f;
 
 	/// <summary>
+	/// Which cells an item actually stands on, as <c>(x0,y0)..(x1,y1)</c>: its footprint's four corners
+	/// carried through the very origin and turn the model was handed, then read back as cells.
+	///
+	/// <para>
+	/// It exists to be checked against the cells the <i>save</i> marks as built on - see
+	/// <see cref="CoversGround"/> - which is an entirely independent statement of where a thing belongs,
+	/// derived from the map rather than from the item. Screenshots cannot settle this: at a pitched
+	/// camera a thing further away rides higher up the frame, so "north of" and "south of" read the same
+	/// as "nearer" and "further", and two items a cell apart are indistinguishable by eye.
+	/// </para>
+	/// </summary>
+	private static string FootprintOf( ParkItemCatalogue.Item item, Vector3 origin, Quaternion turn )
+	{
+		var field = ParkGround.Current?.Heightfield;
+
+		var cellX = field?.CellSizeX ?? DefaultCellSize;
+		var cellY = field?.CellSizeY ?? DefaultCellSize;
+
+		float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
+
+		// The footprint's four corners in the item's own space, where it is authored with that footprint
+		// running from its origin out to its width and depth.
+		for ( var corner = 0; corner < 4; ++corner )
+		{
+			var local = new Vector3(
+				(corner is 1 or 2 ? item.Width : 0) * cellX,
+				(corner is 2 or 3 ? item.Depth : 0) * cellY, 0f );
+
+			var at = (Vector3)System.Numerics.Vector3.Transform( local.GetSystemVector3(), turn ) + origin;
+
+			minX = MathF.Min( minX, at.X );
+			minY = MathF.Min( minY, at.Y );
+			maxX = MathF.Max( maxX, at.X );
+			maxY = MathF.Max( maxY, at.Y );
+		}
+
+		// Half a cell in from each far edge before rounding, so a box that ends exactly on a boundary
+		// names the cell it fills rather than the empty one it touches.
+		return $"({(int)MathF.Floor( minX / cellX )},{(int)MathF.Floor( minY / cellY )}).." +
+			$"({(int)MathF.Floor( (maxX / cellX) - 0.5f )},{(int)MathF.Floor( (maxY / cellY) - 0.5f )})";
+	}
+
+	/// <summary>
 	/// How far round an object stands, about the world's up axis - which is Z here, where the original's
 	/// is Y.
 	///
 	/// <para>
-	/// <b>Which way the original turns is not settled.</b> The saved angles are whole degrees - only 0, 90
-	/// and 270 occur in Lost Kingdom - but nothing has been traced that says whether they run clockwise or
-	/// anticlockwise, and there is nothing to check it against: the attribute map marks only the entrance,
-	/// the roads and the ticket booths, so it says nothing about what an object faces. Every rotated item
-	/// in the shipped park has a square footprint, so the choice cannot move one off its own ground either
-	/// way - it only decides which side of a toilet the door is on.
+	/// <b>The direction is settled, and two independent things settle it.</b> This said for a while that
+	/// there was nothing to check it against, which was true only while the save's map cells were being
+	/// stepped over. They are read now, and they mark the cells each built thing stands on. The staff
+	/// room's two by two is marked at (58,15)..(59,16) and the fountain's three by three at
+	/// (57,17)..(59,19), while both are anchored a row beyond that - at (58,16) and (57,19) - and both are
+	/// saved at 90 degrees. Only a negative turn puts them there. A positive one lands the fountain on
+	/// (55,19)..(57,21) and the staff room on (57,16)..(58,17), which is not a prediction but a
+	/// measurement: the game was made to report its own footprints and that is what it reported.
+	/// </para>
+	/// <para>
+	/// The executable agrees, in the one place it states the convention outright. Placing a queue piece it
+	/// passes <c>0x168 - angle</c> - 360 minus the stored angle, folded back to 0 - which is this same
+	/// negation (FUN_005229e0).
+	/// </para>
+	/// <para>
+	/// Those two are the only rotated things in the shipped park whose footprint is bigger than one cell,
+	/// so 180 and 270 follow the rule the two 90s establish rather than being measured in their own right.
+	/// The three toilets are saved at 270 and are one cell each, where every direction agrees - there it
+	/// decides which way the door faces and nothing else.
 	/// </para>
 	/// </summary>
-	private static Quaternion Turn( int degrees )
-		=> Quaternion.CreateFromAxisAngle( System.Numerics.Vector3.UnitZ, degrees * (MathF.PI / 180f) );
+	public static Quaternion Turn( int degrees )
+		=> Quaternion.CreateFromAxisAngle( System.Numerics.Vector3.UnitZ, -degrees * (MathF.PI / 180f) );
 
 	protected override void OnUpdate()
 	{
