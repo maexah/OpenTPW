@@ -59,7 +59,11 @@ internal sealed class ParkFrontEnd : Panel
 		// They are named by the model files ui.wad ships; the layout stream asks for several of them under
 		// the name of their first mesh node instead, which is why "base" is mainpanel and "guage" is gauge.
 		"mainpanel", "gauge", "date", "b_retract", "b_buy", "b_camera", "b_info", "b_map", "b_money",
-		"b_resrch"
+		"b_resrch",
+
+		// The camcorder's frame and its eject button - see <see cref="ParkViewfinder"/>. Loaded here
+		// rather than as first person is first entered, so the toggle does not hitch.
+		"f_viewfinder", "b_eject"
 	];
 
 	/// <summary>How far down a park's first choice starts - see <see cref="GameMenu"/>.</summary>
@@ -70,6 +74,9 @@ internal sealed class ParkFrontEnd : Panel
 
 	/// <summary>The management gadget, up for as long as the park is - see <see cref="ParkGadget"/>.</summary>
 	private readonly ParkGadget _gadget;
+
+	/// <summary>The camcorder's frame, up only in first person - see <see cref="ParkViewfinder"/>.</summary>
+	private readonly ParkViewfinder _viewfinder;
 
 	private bool _quitting;
 
@@ -89,6 +96,12 @@ internal sealed class ParkFrontEnd : Panel
 		// of the lobby. It is not modal and does not pause, so the park carries on behind it.
 		_gadget = new ParkGadget( stack );
 		_stack.Open( _gadget );
+
+		// The camcorder's frame, opened after the gadget so that it draws over it - the stack renders
+		// back to front. The two are never up together in any case: each puts itself away when the
+		// other's moment comes.
+		_viewfinder = new ParkViewfinder( stack );
+		_stack.Open( _viewfinder );
 	}
 
 	/// <summary>
