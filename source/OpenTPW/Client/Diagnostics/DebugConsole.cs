@@ -221,12 +221,20 @@ public static class DebugConsole
 					foreach ( var asset in Asset.All )
 					{
 						// Most of what a scene leaves behind has no path at all, and a listing of
-						// empty strings cannot be told apart. A texture's size does tell them
-						// apart: a 1x1 sky tint, a gradient ramp, a sign panel and a text label are
-						// all different shapes.
-						var what = asset is Texture texture && string.IsNullOrEmpty( asset.Path )
-							? $"{texture.Width}x{texture.Height}"
-							: asset.Path;
+						// empty strings cannot be told apart. Two things do tell them apart: a
+						// texture's size - a 1x1 sky tint, a 16x16 ramp, a 128x128 sign panel and a
+						// text label are all different shapes - and, for a model or a material, the
+						// shader it draws with, which says what built it.
+						var what = asset switch
+						{
+							Texture texture when string.IsNullOrEmpty( asset.Path )
+								=> $"{texture.Width}x{texture.Height}",
+							Model model when string.IsNullOrEmpty( asset.Path )
+								=> $"shader {model.Material.Shader.Path}",
+							Material material when string.IsNullOrEmpty( asset.Path )
+								=> $"shader {material.Shader.Path}",
+							_ => asset.Path,
+						};
 
 						Reply( $"asset {asset.GetType().Name} {what}" );
 					}
