@@ -399,9 +399,12 @@ public sealed class ParkObjects : Entity
 	/// measurement: the game was made to report its own footprints and that is what it reported.
 	/// </para>
 	/// <para>
-	/// The executable agrees, in the one place it states the convention outright. Placing a queue piece it
-	/// passes <c>0x168 - angle</c> - 360 minus the stored angle, folded back to 0 - which is this same
-	/// negation (FUN_005229e0).
+	/// <b>An earlier version of this comment cited the executable's <c>0x168 - angle</c> as agreeing, and
+	/// that was a misreading worth recording.</b> The constant sits at the <i>queue's</i> own call site
+	/// (FUN_005229e0), so what it says is that a piece of queue turns the <b>opposite</b> way to a built
+	/// thing - it is the difference between the two, not a convention they share. See
+	/// <see cref="ParkQueues"/>, which applies it. The footprint cells above are the whole of the evidence
+	/// for this one, and they are enough on their own.
 	/// </para>
 	/// <para>
 	/// Those two are the only rotated things in the shipped park whose footprint is bigger than one cell,

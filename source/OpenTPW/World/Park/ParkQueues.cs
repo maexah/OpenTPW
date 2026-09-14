@@ -30,6 +30,12 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
+/// <b>A queue piece does not turn the way a built thing turns</b> - it takes 360 minus its saved angle.
+/// See <see cref="TurnOf"/>, which carries the evidence, because this is the one place in a park where
+/// the art is asymmetric enough to prove a rotation at all.
+/// </para>
+///
+/// <para>
 /// Like the paths, these draw <i>instead of</i> the ground rather than on top of it: every queue cell
 /// carries a real ground texture index in <c>base.MD2</c>, so <see cref="ParkGround"/> leaves them to
 /// this - see <see cref="IsQueue"/>.
@@ -72,6 +78,29 @@ public sealed class ParkQueues : Entity
 	/// </summary>
 	private static readonly string[] Pieces =
 		["quedead", "quedead", "questra", "quebnd2", "quebnd1", "queend", "quebin1", "quebin2"];
+
+	/// <summary>
+	/// How far round a piece of queue stands, which is <b>not</b> how far round a built thing stands: the
+	/// executable turns a queue piece by <c>360 - angle</c>, folding 360 back to 0 (FUN_005229e0), where an
+	/// item takes its saved angle as it is (<see cref="ParkObjects.Turn"/>).
+	///
+	/// <para>
+	/// <b>The art proves this and nothing else could.</b> Every piece is one cell square, so the footprint
+	/// cells that settle an item's turn say nothing at all here - a square covers the same square whichever
+	/// way it is facing. What settles it is the one asymmetric detail in the set: <c>queend</c> carries two
+	/// torches along a single edge of its plate, and that edge has to be the one the queue is entered from.
+	/// Lost Kingdom's end piece is at (49,22), the path it serves is at (48,22) due west, and its saved
+	/// angle is 270 - and only this reading puts the torches on the western edge. Taking the angle the way
+	/// an item takes it puts them on the eastern one, standing them in the middle of the run.
+	/// </para>
+	/// <para>
+	/// That is exactly how the fault was reported, by looking: the torches in the middle of the queue and
+	/// the bend turning the wrong way off the ride, which are the same 180 degrees seen on the only two
+	/// pieces whose art is not symmetric. A straight looks identical either way, which is why two of the
+	/// four cells said nothing.
+	/// </para>
+	/// </summary>
+	private static int TurnOf( ParkWorld.MapCell cell ) => (360 - cell.TileAngle) % 360;
 
 	/// <param name="world">
 	/// The park's own save, already walked, or null where the theme ships none. It is read once by
@@ -151,7 +180,12 @@ public sealed class ParkQueues : Entity
 			var model = new LobbyModel( $"{directory}/{piece}.MD2", $"{directory}/textures", Vector3.Zero,
 				sharedTextureDirectory: $"levels/{theme}/sharetex" );
 
-			model.SetTransform( ParkObjects.OriginFor( x, y, cell.TileAngle ), ParkObjects.Turn( cell.TileAngle ) );
+			// The same angle to both, or the model is turned about one point and stood at another. For a
+			// one-cell piece either angle covers the same cell, so a mismatch does not show as a piece in
+			// the wrong place - it shows as one sitting slightly off its own square.
+			var turn = TurnOf( cell );
+
+			model.SetTransform( ParkObjects.OriginFor( x, y, turn ), ParkObjects.Turn( turn ) );
 
 			_models.Add( model );
 		}

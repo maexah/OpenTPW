@@ -182,20 +182,25 @@ public class ParkFootprintTests
 	{
 		var world = World();
 
+		// The angles are pinned as well as the pieces, because a piece of queue turns by 360 minus this
+		// rather than by it - the opposite of a built thing - and the end piece's angle of 270 is the one
+		// that shows it. What a rendered piece is facing cannot be asserted here; that is settled by the
+		// art, on the torches queend carries along a single edge of its plate.
 		var expected = new[]
 		{
-			(X: 49, Y: 22, Index: 5, Mask: 0x44, Piece: "queend"),
-			(X: 50, Y: 22, Index: 2, Mask: 0x44, Piece: "questra"),
-			(X: 51, Y: 22, Index: 2, Mask: 0x44, Piece: "questra"),
-			(X: 52, Y: 22, Index: 3, Mask: 0x50, Piece: "quebnd2"),
+			(X: 49, Y: 22, Index: 5, Angle: 270, Mask: 0x44, Piece: "queend"),
+			(X: 50, Y: 22, Index: 2, Angle: 270, Mask: 0x44, Piece: "questra"),
+			(X: 51, Y: 22, Index: 2, Angle: 270, Mask: 0x44, Piece: "questra"),
+			(X: 52, Y: 22, Index: 3, Angle: 90, Mask: 0x50, Piece: "quebnd2"),
 		};
 
-		foreach ( var (x, y, index, mask, piece) in expected )
+		foreach ( var (x, y, index, angle, mask, piece) in expected )
 		{
 			var cell = world.CellAt( x, y );
 
 			Assert.IsTrue( ParkQueues.IsQueue( cell ), $"({x},{y}) should be a queue cell" );
 			Assert.AreEqual( index, cell.TileIndex, $"the piece ({x},{y}) names" );
+			Assert.AreEqual( angle, cell.TileAngle, $"the angle ({x},{y}) is saved at" );
 			Assert.AreEqual( mask, cell.Neighbours, $"the shape ({x},{y}) makes" );
 
 			var model = data.ReadAllBytes( $"levels/jungle/queue/{piece}.MD2" );
