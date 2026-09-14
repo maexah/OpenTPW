@@ -432,7 +432,7 @@ public class Level
 	/// <see cref="Advisor.Paused"/>.
 	/// </para>
 	/// </summary>
-	private bool PausedByWindow() => Kind == Scene.Park && _windows is { AnyPausing: true };
+	internal bool PausedByWindow() => Kind == Scene.Park && _windows is { AnyPausing: true };
 
 	/// <summary>
 	/// How long every voice still sounding takes to fade as a level ends. The original's state machine hands its
@@ -461,6 +461,14 @@ public class Level
 		Entity.ApplyDeletions();
 
 		LobbyCameraMode.ForgetIsland();
+
+		// And both park cameras let go of where they were. Their state is static so that it survives
+		// Camera.SetCameraMode building a fresh instance, which means it survives the scene as well
+		// unless something says otherwise - so a second park would otherwise open looking at whatever
+		// the first one was left looking at, and standing wherever it was last walked to.
+		ParkCamcorderCameraMode.Forget();
+		ParkOrbitCameraMode.Forget();
+
 		Audio.StopAll( StopAllSeconds );
 		ParticleSystem.Current?.Shutdown();
 	}

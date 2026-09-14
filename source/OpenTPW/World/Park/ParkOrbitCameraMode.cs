@@ -163,6 +163,16 @@ public sealed class ParkOrbitCameraMode : CameraMode
 
 	public override void Update()
 	{
+		// Down to the ground and back, the way the original's 'C' does - see ParkCamcorderCameraMode.
+		// Handled here rather than somewhere central because a camera mode is what knows when it should
+		// give way, which is how LobbyCameraMode takes its own keys. Not while a menu holds the park,
+		// or the key would swap the camera out from under an open window.
+		if ( Level.Current?.PausedByWindow() != true && Input.Pressed( InputButton.CamcorderMode ) )
+		{
+			ParkCamcorderCameraMode.Enter();
+			return;
+		}
+
 		// Spin and zoom. These reuse bindings that already exist rather than inventing new ones: what
 		// the original binds is not traced yet, so the controls are provisional and the geometry below
 		// is the part that matches it.
@@ -181,9 +191,17 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		{
 			var scroll = ScrollSpeed * Time.Delta;
 
+			// The same basis the eye is placed from, and the same one ParkCamcorderCameraMode walks
+			// along. It used to be the mirror of it - forward (sin, cos) and right (cos, -sin), which
+			// is this rotation taken the other way - so the two agreed only at yaw 0 and pi: at a
+			// quarter turn, forward scrolled the view backwards and right scrolled it left.
+			//
+			// It was hard to meet before, because yaw only ever reached multiples of pi/4 from the
+			// rotate keys. Coming back from camcorder mode hands this camera whatever yaw the player
+			// walked to, so it became easy to meet the moment that existed.
 			PointOfInterest += new Vector3(
-				((Input.Forward * MathF.Sin( Yaw )) + (Input.Right * MathF.Cos( Yaw ))) * scroll,
-				((Input.Forward * MathF.Cos( Yaw )) - (Input.Right * MathF.Sin( Yaw ))) * scroll,
+				((Input.Forward * -MathF.Sin( Yaw )) + (Input.Right * MathF.Cos( Yaw ))) * scroll,
+				((Input.Forward * MathF.Cos( Yaw )) + (Input.Right * MathF.Sin( Yaw ))) * scroll,
 				0f );
 		}
 
@@ -217,6 +235,25 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	/// That is the more useful of the two to read back: it is the thing being followed.
 	/// </para>
 	/// </summary>
+	/// <summary>
+	/// Drops where this camera was looking as a scene ends, so the next park does not open wherever
+	/// the last one was left - see <see cref="Level.Unload"/>.
+	///
+	/// <para>
+	/// The three pieces of state here are static so they survive <see cref="Camera.SetCameraMode{T}"/>
+	/// building a fresh instance, which means they survive the scene too unless something says
+	/// otherwise. It matters more since camcorder mode: coming back from a walk writes wherever the
+	/// player wandered to into <see cref="PointOfInterest"/>, so without this a second park opens
+	/// looking at a spot that belonged to the first one.
+	/// </para>
+	/// </summary>
+	public static void Forget()
+	{
+		PointOfInterest = new Vector3( 475f, 175f, 0f );
+		Yaw = 0f;
+		Zoom = 110f;
+	}
+
 	public static string State()
 	{
 		var ground = ParkGround.Current?.Heightfield?.HeightAtWorld( PointOfInterest.X, PointOfInterest.Y );

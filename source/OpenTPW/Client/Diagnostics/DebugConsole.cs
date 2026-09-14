@@ -312,6 +312,40 @@ public static class DebugConsole
 				Reply( ParkOrbitCameraMode.State() );
 				break;
 
+			// Down to eye level and back, which is the only way to see a park's sky: from the orbit
+			// camera the horizon sits above the top of the frame. `camcorder` toggles; two arguments
+			// stand the viewer at a world position first.
+			case "camcorder":
+				// A park only. The camera it swaps in flies park coordinates, so letting this run in
+				// the lobby leaves the islands out of frame with no key to get back - the console can
+				// reach it whether or not a park is up, so the guard belongs here.
+				if ( Level.Current?.Kind != Level.Scene.Park )
+				{
+					Reply( "camcorder: only in a park" );
+					break;
+				}
+
+				if ( parts.Length > 2 )
+				{
+					if ( !ParkCamcorderCameraMode.Active )
+						ParkCamcorderCameraMode.Enter();
+
+					ParkCamcorderCameraMode.Stand = new Vector3( Argument( 1 ), Argument( 2 ), 0f );
+				}
+				else if ( ParkCamcorderCameraMode.Active )
+				{
+					ParkCamcorderCameraMode.Leave();
+				}
+				else
+				{
+					ParkCamcorderCameraMode.Enter();
+				}
+
+				Reply( ParkCamcorderCameraMode.Active
+					? ParkCamcorderCameraMode.State()
+					: $"orbit - {ParkOrbitCameraMode.State()}" );
+				break;
+
 			case "quit":
 				Reply( "quitting" );
 				Environment.Exit( 0 );
