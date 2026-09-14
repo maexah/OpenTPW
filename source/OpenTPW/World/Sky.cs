@@ -31,16 +31,35 @@ namespace OpenTPW;
 /// </summary>
 public class Sky : Entity
 {
-	/// <summary>Where the sky's textures come from. The lobby's choice of park, not ours.</summary>
-	private const string SkyDirectory = "levels/fantasy/sky";
+	/// <summary>
+	/// Where the lobby's sky art comes from. The original's lobby hands its texture loader the
+	/// hard-coded <c>Data\Levels\fantasy</c> (FUN_005d8b50), so every island sits under Wonder
+	/// Land's sky. A park passes its own theme's folder instead: the same three files ship under
+	/// every level, and the loader (FUN_005852b0) builds its paths the same way for both.
+	/// </summary>
+	public const string LobbyDirectory = "levels/fantasy/sky";
+
+	/// <summary>Where this sky's art comes from - see <see cref="LobbyDirectory"/>.</summary>
+	private readonly string _directory;
+
+	/// <summary>How wide the cloud grid is, from the sky object's own init (FUN_00584ef0, 0x960).</summary>
+	private const float GridExtent = 2400f;
 
 	/// <summary>
-	/// How wide the cloud grid is, from the sky object's own init (FUN_00584ef0, 0x960), and how
-	/// high its centre sits in the lobby, from the lobby's call to FUN_00585690( 0, 180, 0 ).
-	/// Outside the lobby the height is 300.
+	/// How high the sky's centre sits in the lobby, from its call to FUN_00585690( 0, 180, 0 ).
 	/// </summary>
-	private const float GridExtent = 2400f;
-	private const float GridHeight = 180f;
+	public const float LobbyHeight = 180f;
+
+	/// <summary>
+	/// The height the sky gives itself: FUN_00584ef0 writes 300 to +0x1f68 with the centre at
+	/// (0, 0), and FUN_005856c0 puts all three back there. That is what a park runs at, because
+	/// <b>nothing re-centres the sky for a park</b> - the setter's only caller is the lobby, and the
+	/// only other caller of the rebuild is engine init (FUN_00572780, its " (tload/rain/sky ok)" step).
+	/// </summary>
+	public const float ParkHeight = 300f;
+
+	/// <summary>How high this sky's centre sits.</summary>
+	private readonly float _height;
 
 	/// <summary>
 	/// How far the dome droops per unit of horizontal distance from its centre - the constant at
@@ -61,8 +80,11 @@ public class Sky : Entity
 	private const float BandRadius = GridExtent * 0.5f * 0.6f;
 	private static readonly float[] RingRadii = [1f, 0.98f, 0.96f, 0.84f];
 
-	/// <summary>Half the band's height, which is where the dome meets it.</summary>
-	private const float BandTop = GridHeight - (BandRadius * Droop);
+	/// <summary>
+	/// Half the band's height, which is where the dome meets it. It follows the sky's own height, so
+	/// a park's band stands taller than the lobby's in the same proportion its dome does.
+	/// </summary>
+	private readonly float _bandTop;
 
 	/// <summary>
 	/// How many columns each half of the horizon band is drawn in. The original walks 0 to pi in
@@ -135,25 +157,17 @@ public class Sky : Entity
 	public Vector3 Tint { get; set; } = LobbyScript.DefaultSkyColour;
 
 
-	/// <summary>
-	/// How far above eye level the sky's haze clears.
-	///
-	/// The sky is not fogged by distance the way everything else is - see the note in
-	/// content/shaders/sky. It hazes by height, fully at eye level and not at all this far above
-	/// it, which is what seals the join with the sea: the dome comes down to eye level exactly
-	/// where the sea reaches the horizon, so both sides of that line are the fog colour whatever
-	/// colour that is and wherever the camera sits.
-	///
-	/// The height is a matter of how many degrees of haze look right rather than of anything read
-	/// out of the original, and the horizon band's own half-height is the scale the sky already
-	/// works in. It puts the haze in the last four degrees or so above the horizon.
-	/// </summary>
-	private const float HazeHeight = BandTop;
-
 	private readonly SkyPiece[] _pieces;
 	private readonly CloudLayer[] _layers;
 	private readonly byte[] _tintPixel = [255, 255, 255, 255];
-	private readonly Texture _tintRamp;
+	/// <summary>
+	/// The one-pixel ramp the first cloud layer is drawn through, flooded with <see cref="Tint"/>
+	/// every frame - or <b>null where nothing floods it</b>, which is a park. That null is the whole
+	/// difference between the two skies: it decides whether the first layer is tinted or keeps the
+	/// gradient like the other three, and whether this sky writes <see cref="Level.FogColour"/>.
+	/// See the constructor.
+	/// </summary>
+	private readonly Texture? _tintRamp;
 
 	// What the sky averages out to, kept so its colour at the horizon can be worked out each
 	// frame without reading anything back off the GPU - see HorizonColour.
@@ -161,38 +175,61 @@ public class Sky : Entity
 	private readonly Vector3 _gradientColour;
 	private readonly float _cloudCoverage;
 
-	public Sky()
+	/// <summary>
+	/// A sky over <paramref name="directory"/>, centred on <paramref name="centre"/> with its middle
+	/// <paramref name="height"/> above the ground. The defaults are the lobby's, so the lobby builds
+	/// one by asking for nothing.
+	///
+	/// <para>
+	/// <paramref name="tinted"/> is the one switch that separates the lobby's sky from a park's, and
+	/// it is one rather than two because both halves follow from the same fact. The lobby floods the
+	/// first cloud layer's ramp with the selected park's SKYCOLOUR every frame (FUN_005d96c0); a park
+	/// has no island script, and nothing in the original ever floods it there, so <b>all four layers
+	/// keep the gradient sampled out of sky_rgb.tga</b>. And because the lobby's horizon then moves
+	/// with whichever park the camera is on, the lobby's sky is what decides
+	/// <see cref="Level.FogColour"/> - while a park's fog is its own ThemeEngine.FogColour, set once
+	/// as the level is built, so a park's sky has to leave it alone.
+	/// </para>
+	/// </summary>
+	public Sky( string? directory = null, Vector3? centre = null, float height = LobbyHeight,
+		bool tinted = true )
 	{
-		var centre = LobbyCentre();
+		_directory = directory ?? LobbyDirectory;
+		_height = height;
+		_bandTop = height - (BandRadius * Droop);
+
+		var middle = centre ?? LobbyCentre();
 		var layers = BuildLayers();
 
 		_layers = layers;
 
 		// Loaded once and shared: a Texture is a GPU allocation that is never released, and four
 		// cloud layers drawing the same file have no reason to hold four copies of it.
-		var bandTexture = LoadTexture( $"{SkyDirectory}/sky_cyl.tga", out var bandAverage );
-		var cloudTexture = LoadTexture( $"{SkyDirectory}/sky.tga", out var cloudAverage );
+		var bandTexture = LoadTexture( $"{_directory}/sky_cyl.tga", out var bandAverage );
+		var cloudTexture = LoadTexture( $"{_directory}/sky.tga", out var cloudAverage );
 
 		_bandColour = new Vector3( bandAverage.X, bandAverage.Y, bandAverage.Z );
 		_cloudCoverage = cloudAverage.W;
 
-		_tintRamp = new Texture( _tintPixel, 1, 1 );
+		// No ramp to flood where nothing floods it - see the note on tinted above.
+		_tintRamp = tinted ? new Texture( _tintPixel, 1, 1 ) : null;
 
-		var gradient = GradientRamp( out _gradientColour );
+		var gradient = GradientRamp( _directory, out _gradientColour );
 		var pieces = new List<SkyPiece>
 		{
 			// The band goes down first: it is the furthest thing there is, and the clouds are
 			// drawn over it.
-			SkyPiece.Band( centre, bandTexture, White() )
+			SkyPiece.Band( middle, _bandTop, bandTexture, White() )
 		};
 
 		for ( int i = 0; i < layers.Length; ++i )
 		{
 			// Only the first ramp copy is flooded, so only the first layer is tinted; the rest
-			// keep the gradient sampled out of sky_rgb.tga.
-			var ramp = i == 0 ? _tintRamp : gradient;
+			// keep the gradient sampled out of sky_rgb.tga. Where nothing floods it at all - a
+			// park - that layer keeps the gradient too, so the sky is four layers of it.
+			var ramp = (i == 0 ? _tintRamp : null) ?? gradient;
 
-			pieces.Add( SkyPiece.Clouds( centre, layers[i], cloudTexture, ramp ) );
+			pieces.Add( SkyPiece.Clouds( middle, _height, _bandTop, layers[i], cloudTexture, ramp ) );
 		}
 
 		// The lobby's own flag (0x2000000, set by FUN_005dcfe0 and tested at the end of the draw)
@@ -212,6 +249,11 @@ public class Sky : Entity
 
 	protected override void OnUpdate()
 	{
+		// A park's sky does neither of these. No SKYCOLOUR reaches it, so there is no ramp to flood;
+		// and its fog is the theme's own, set once as the level is built. See the constructor.
+		if ( _tintRamp == null )
+			return;
+
 		_tintPixel[0] = Component( Tint.X );
 		_tintPixel[1] = Component( Tint.Y );
 		_tintPixel[2] = Component( Tint.Z );
@@ -244,8 +286,9 @@ public class Sky : Entity
 
 		for ( int i = 0; i < _layers.Length; ++i )
 		{
-			// Only the first layer's ramp carries the park's colour; the rest keep the gradient.
-			var layer = i == 0 ? Tint : _gradientColour;
+			// Only the first layer's ramp carries the park's colour, and only where one is flooded
+			// into it at all; the rest keep the gradient.
+			var layer = i == 0 && _tintRamp != null ? Tint : _gradientColour;
 			var alpha = (_cloudCoverage * _layers[i].Opacity).Clamp( 0f, 1f );
 
 			colour = colour.LerpTo( layer, alpha );
@@ -270,9 +313,9 @@ public class Sky : Entity
 	/// The cloud layers' colour ramp: sky_rgb.tga reduced to 16x16 by sampling the middle of each
 	/// cell, which is how FUN_00585ce0 builds the original's table.
 	/// </summary>
-	private static Texture GradientRamp( out Vector3 average )
+	private static Texture GradientRamp( string directory, out Vector3 average )
 	{
-		var path = $"{SkyDirectory}/sky_rgb.tga";
+		var path = $"{directory}/sky_rgb.tga";
 		var image = Decode( path );
 
 		average = Vector3.One;
@@ -392,15 +435,34 @@ public class Sky : Entity
 		private readonly Vector4 _tint;
 		private readonly Vector4 _ramp;
 		private readonly Vector2 _scroll;
+
+		/// <summary>
+		/// How far above eye level the sky's haze clears.
+		///
+		/// The sky is not fogged by distance the way everything else is - see the note in
+		/// content/shaders/sky. It hazes by height, fully at eye level and not at all this far above
+		/// it, which is what seals the join with the sea: the dome comes down to eye level exactly
+		/// where the sea reaches the horizon, so both sides of that line are the fog colour whatever
+		/// colour that is and wherever the camera sits.
+		///
+		/// The height is a matter of how many degrees of haze look right rather than of anything read
+		/// out of the original, and the horizon band's own half-height is the scale the sky already
+		/// works in. It puts the haze in the last four degrees or so above the horizon - and because
+		/// it is the band's top, it follows the sky's own height, so a park hazes over a taller band
+		/// than the lobby does.
+		/// </summary>
+		private readonly float _hazeHeight;
+
 		private Vector4 _uv;
 
 		private SkyPiece( Vertex[] vertices, uint[] indices, Texture texture, Texture ramp,
-			Vector4 tint, Vector4 uv, Vector4 rampMapping, Vector2 scroll )
+			Vector4 tint, Vector4 uv, Vector4 rampMapping, Vector2 scroll, float hazeHeight )
 		{
 			_tint = tint;
 			_uv = uv;
 			_ramp = rampMapping;
 			_scroll = scroll;
+			_hazeHeight = hazeHeight;
 
 			// Never writing depth, because the sky is behind everything and drawn before it -
 			// letting it write would stand a 720-unit wall in front of an ocean that runs out to
@@ -415,35 +477,36 @@ public class Sky : Entity
 		}
 
 		/// <summary>The horizon band: two halves of <see cref="BandColumns"/> columns, four rings each.</summary>
-		public static SkyPiece Band( Vector3 centre, Texture texture, Texture ramp )
+		public static SkyPiece Band( Vector3 centre, float bandTop, Texture texture, Texture ramp )
 		{
 			var vertices = new List<Vertex>();
 			var indices = new List<uint>();
 
 			// The halves are built and indexed separately, as the original does. They meet at pi
 			// on a duplicated column, so there is no quad to bridge and no seam to see.
-			AddBandHalf( vertices, indices, centre, 0f, UpperV );
-			AddBandHalf( vertices, indices, centre, MathF.PI, LowerV );
+			AddBandHalf( vertices, indices, centre, bandTop, 0f, UpperV );
+			AddBandHalf( vertices, indices, centre, bandTop, MathF.PI, LowerV );
 
 			return new SkyPiece( [.. vertices], [.. indices], texture, ramp,
 				tint: Vector4.One,
 				uv: new Vector4( 1f, 1f, 0f, 0f ),
 				rampMapping: Vector4.Zero,
-				scroll: Vector2.Zero )
+				scroll: Vector2.Zero,
+				hazeHeight: bandTop )
 			{ Name = "Sky horizon" };
 		}
 
 		private static void AddBandHalf( List<Vertex> vertices, List<uint> indices, Vector3 centre,
-			float startAngle, float[] ringV )
+			float bandTop, float startAngle, float[] ringV )
 		{
 			// The rings are evenly spaced between the top and the bottom - a quarter and a half of
 			// the way down, from the constants at 0x00701f5c and 0x00701f50.
 			var heights = new[]
 			{
-				BandTop,
-				BandTop - (BandTop * 0.5f),
+				bandTop,
+				bandTop - (bandTop * 0.5f),
 				0f,
-				-BandTop
+				-bandTop
 			};
 
 			var first = (uint)vertices.Count;
@@ -478,7 +541,8 @@ public class Sky : Entity
 		}
 
 		/// <summary>One cloud layer on the shared 16x16 dome.</summary>
-		public static SkyPiece Clouds( Vector3 centre, CloudLayer layer, Texture texture, Texture ramp )
+		public static SkyPiece Clouds( Vector3 centre, float skyHeight, float bandTop, CloudLayer layer,
+			Texture texture, Texture ramp )
 		{
 			var vertices = new Vertex[GridSize * GridSize];
 			var heights = new float[GridSize * GridSize];
@@ -489,7 +553,7 @@ public class Sky : Entity
 				{
 					var x = (col * GridStep) - (GridExtent * 0.5f);
 					var y = (row * GridStep) - (GridExtent * 0.5f);
-					var height = GridHeight - (MathF.Sqrt( (x * x) + (y * y) ) * Droop);
+					var height = skyHeight - (MathF.Sqrt( (x * x) + (y * y) ) * Droop);
 
 					var index = (row * GridSize) + col;
 					heights[index] = height;
@@ -513,8 +577,8 @@ public class Sky : Entity
 					// The dome droops well past the bottom of the horizon band at its corners, and
 					// the original drops any triangle that reaches below it - which is what stops
 					// the far corners hanging down through the world.
-					AddIfAbove( indices, heights, v + 1, v, v + GridSize + 1 );
-					AddIfAbove( indices, heights, v, v + GridSize, v + GridSize + 1 );
+					AddIfAbove( indices, heights, bandTop, v + 1, v, v + GridSize + 1 );
+					AddIfAbove( indices, heights, bandTop, v, v + GridSize, v + GridSize + 1 );
 				}
 			}
 
@@ -526,13 +590,14 @@ public class Sky : Entity
 				// One over the span the sixteen ramp texels cover, plus the half texel that lands
 				// vertex (col,row) on texel (col,row) instead of between two of them.
 				rampMapping: new Vector4( min.X, min.Y, 1f / (GridStep * GridSize), 0.5f / GridSize ),
-				scroll: layer.Scroll )
+				scroll: layer.Scroll,
+				hazeHeight: bandTop )
 			{ Name = $"Sky clouds (x{layer.Tiling:F2}, {layer.Opacity:P0})" };
 		}
 
-		private static void AddIfAbove( List<uint> indices, float[] heights, int a, int b, int c )
+		private static void AddIfAbove( List<uint> indices, float[] heights, float bandTop, int a, int b, int c )
 		{
-			if ( heights[a] > -BandTop && heights[b] > -BandTop && heights[c] > -BandTop )
+			if ( heights[a] > -bandTop && heights[b] > -bandTop && heights[c] > -bandTop )
 				indices.AddRange( [(uint)a, (uint)b, (uint)c] );
 		}
 
@@ -565,7 +630,7 @@ public class Sky : Entity
 				g_vUv = _uv,
 				g_vRamp = _ramp,
 				g_vFog = new Vector4( Level.FogColour.X, Level.FogColour.Y, Level.FogColour.Z, 0f ),
-				g_vHaze = new Vector4( Camera.Position.Z, HazeHeight, 0f, 0f )
+				g_vHaze = new Vector4( Camera.Position.Z, _hazeHeight, 0f, 0f )
 			} );
 
 			Model.Draw();

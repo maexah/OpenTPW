@@ -152,14 +152,14 @@ public class Level
 	}
 
 	/// <summary>
-	/// A park, as far as it goes today: the ground's scenery and something to look at it with.
+	/// A park, as far as it goes today: its own sky, the ground's scenery and something to look at it
+	/// with.
 	///
 	/// <para>
-	/// Deliberately short. There is no sky here because <see cref="Sky"/> takes its colours from
-	/// whichever lobby island the camera is on, and no weather, no front end and no advisor, because
-	/// each of those is a job with its own evidence still to gather. What this does have is the part
-	/// that needed no new file format at all - <c>base.MD2</c> out of the park's own terrain.wad,
-	/// through the same model and texture path the lobby already uses.
+	/// Still short. There is no sound here yet and no weather, and no advisor, because each of those is
+	/// a job with its own evidence still to gather. What it does have is the theme's own throughout -
+	/// its balance numbers, its sun and its sky - over <c>base.MD2</c> out of the park's own
+	/// terrain.wad, through the same model and texture path the lobby already uses.
 	/// </para>
 	/// </summary>
 	private void SetupParkEntities()
@@ -169,9 +169,11 @@ public class Level
 		Balance = new ParkBalance( ThemeName );
 		Log.Info( $"{ThemeName}: balance stack came to {Balance.Count} keys" );
 
-		// What distance fades to. The lobby's Sky rewrites this every frame from its own horizon; a
-		// park builds no Sky, so setting it once here holds. Jungle and fantasy are a pale blue within
-		// a few points of the lobby's own constant, hallow is nearly black and space is orange.
+		// What distance fades to. The lobby's Sky rewrites this every frame from its own horizon,
+		// because that horizon moves with whichever park the camera is on; a park's sky is untinted and
+		// deliberately leaves this alone, so setting it once here holds. Jungle and fantasy are a pale
+		// blue within a few points of the lobby's own constant, hallow is nearly black and space is
+		// orange.
 		FogColour = Balance.Colour( "ThemeEngine.FogColour", FogColour );
 
 		// LightNormal is written in the original's axes, where Y is up, so it swaps into this engine's
@@ -195,6 +197,21 @@ public class Level
 			// handed, which is a job of its own.
 			Color = Balance.Colour( "ThemeEngine.DirectionalLightLevel", Vector3.One )
 		};
+
+		// The park's own sky, and it is a real one: every theme ships a sky/ folder holding the same
+		// three textures the lobby's does, and the original loads them through the same loader -
+		// FUN_005852b0, called by the lobby at 0x005d8bac and by a park's level load at 0x00407f95,
+		// which state 9 reaches through FUN_00407e00 (0x0054ed3f).
+		//
+		// Centred on the world origin at 300, because that is where the sky object puts itself
+		// (FUN_00584ef0 writes both, FUN_005856c0 puts them back) and NOTHING re-centres it for a park:
+		// the setter's only caller is the lobby, and the rebuild's only other caller is engine init.
+		// Untinted, because a park has no island script and so no SKYCOLOUR - see Sky's constructor for
+		// everything that decides.
+		//
+		// First, as in the lobby, because the sky never writes depth and has to go down before anything
+		// that should cover it.
+		_ = new Sky( $"levels/{ThemeName}/sky", centre: Vector3.Zero, height: Sky.ParkHeight, tinted: false );
 
 		// The park's own save, read once here and handed to everything that needs it: the ground to know
 		// which cells it must leave alone, the paths to draw those cells, and the objects to stand where
