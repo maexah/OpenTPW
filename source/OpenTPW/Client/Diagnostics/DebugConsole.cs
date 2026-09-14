@@ -161,6 +161,25 @@ public static class DebugConsole
 				Reply( $"rain {LobbyWeather.Current?.DebugRain?.ToString( "F2" ) ?? "script"}" );
 				break;
 
+			// A park's weather is a different thing entirely from the lobby's - see ParkWeather. Its
+			// quality is the one lever worth having, because everything else follows from it: 0 is the
+			// heaviest storm the game can make and 100 is a clear day.
+			case "weather":
+				if ( ParkWeather.Current != null && parts.Length > 1 )
+					ParkWeather.Current.DebugQuality( (int)Argument( 1 ) );
+
+				Reply( ParkWeather.Current == null
+					? "weather none - not in a park"
+					: $"weather quality={ParkWeather.Current.Quality} drops={ParkWeather.Current.Drops} "
+						+ $"storm={ParkWeather.Current.Lightning}" );
+				break;
+
+			// Waiting for one is up to forty seconds of real time, which is no way to check a bolt.
+			case "bolt":
+				ParkWeather.Current?.DebugStrike();
+				Reply( ParkWeather.Current == null ? "bolt none - not in a park" : "bolt" );
+				break;
+
 			case "near":
 				if ( parts.Length > 1 && parts[1] == "reset" )
 				{
@@ -344,6 +363,10 @@ public static class DebugConsole
 			+ $"orbit={LobbyCameraMode.DebugOrbit:F3} paused={LobbyCameraMode.Paused} "
 			+ $"clock={(Time.Paused ? "paused" : "running")} stepping={Time.StepFrames} "
 			+ $"game={(GameClock.Paused ? "paused" : "running")} ticks={GameClock.Ticks} "
+			+ $"day={GameCalendar.Days} season={GameCalendar.Season} date={GameCalendar.Now:yyyy-MM-dd} "
+			+ $"quality={ParkWeather.Current?.Quality} drops={ParkWeather.Current?.Drops} "
+			+ $"storm={ParkWeather.Current?.Lightning} snow={ParkWeather.Current?.Snowing} "
+			+ $"forecast={ParkWeather.Current?.Forecast} "
 			+ $"rainy={script?.Rainy} lightning={script?.Lightning} "
 			+ $"strikes/s={script?.StrikesPerSecond:F3} flyers={script?.FlyingMeshes.Count}";
 	}

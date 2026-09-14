@@ -251,6 +251,10 @@ public class Level
 		GameOptions.Current.ApplySound();
 		_ = new ParkAudio( ThemeName );
 
+		// After the audio, because a park opens with its weather already rolled and that first roll
+		// may want to start the rain straight away.
+		_ = new ParkWeather();
+
 		Camera.SetCameraMode<ParkOrbitCameraMode>();
 	}
 
