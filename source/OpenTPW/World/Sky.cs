@@ -169,6 +169,16 @@ public class Sky : Entity
 	/// </summary>
 	private readonly Texture? _tintRamp;
 
+	/// <summary>
+	/// The rest of what this sky built for itself, kept only so that it can let go of them again.
+	/// Every one is made from pixels rather than loaded by path, so none is in the cache that scenes
+	/// share and nothing else can be holding them - see <see cref="OnDelete"/>.
+	/// </summary>
+	private readonly Texture _bandTexture;
+	private readonly Texture _cloudTexture;
+	private readonly Texture _bandRamp;
+	private readonly Texture _gradient;
+
 	// What the sky averages out to, kept so its colour at the horizon can be worked out each
 	// frame without reading anything back off the GPU - see HorizonColour.
 	private readonly Vector3 _bandColour;
@@ -205,8 +215,11 @@ public class Sky : Entity
 
 		// Loaded once and shared: a Texture is a GPU allocation that is never released, and four
 		// cloud layers drawing the same file have no reason to hold four copies of it.
-		var bandTexture = LoadTexture( $"{_directory}/sky_cyl.tga", out var bandAverage );
-		var cloudTexture = LoadTexture( $"{_directory}/sky.tga", out var cloudAverage );
+		_bandTexture = LoadTexture( $"{_directory}/sky_cyl.tga", out var bandAverage );
+		_cloudTexture = LoadTexture( $"{_directory}/sky.tga", out var cloudAverage );
+
+		var bandTexture = _bandTexture;
+		var cloudTexture = _cloudTexture;
 
 		_bandColour = new Vector3( bandAverage.X, bandAverage.Y, bandAverage.Z );
 		_cloudCoverage = cloudAverage.W;
@@ -214,12 +227,15 @@ public class Sky : Entity
 		// No ramp to flood where nothing floods it - see the note on tinted above.
 		_tintRamp = tinted ? new Texture( _tintPixel, 1, 1 ) : null;
 
-		var gradient = GradientRamp( _directory, out _gradientColour );
+		_gradient = GradientRamp( _directory, out _gradientColour );
+		_bandRamp = White();
+
+		var gradient = _gradient;
 		var pieces = new List<SkyPiece>
 		{
 			// The band goes down first: it is the furthest thing there is, and the clouds are
 			// drawn over it.
-			SkyPiece.Band( middle, _bandTop, bandTexture, White() )
+			SkyPiece.Band( middle, _bandTop, bandTexture, _bandRamp )
 		};
 
 		for ( int i = 0; i < layers.Length; ++i )
@@ -245,6 +261,34 @@ public class Sky : Entity
 		// grid-shaped peaks along the horizon.
 
 		_pieces = [.. pieces];
+	}
+
+	/// <summary>
+	/// Lets go of the textures this sky built.
+	/// </summary>
+	/// <remarks>
+	/// Its pieces are entities, so their models and materials go when they do. A material leaves the
+	/// textures bound into it alone on purpose, because those are normally cached by path and shared
+	/// across scenes - but a sky's are not. Every one is built from pixels for this sky alone, so
+	/// nothing else can be holding them, and until this they stayed for the life of the process:
+	/// four 256x256, two 16x16 and three 1x1 a cycle, measured with `assets list`.
+	/// </remarks>
+	protected override void OnDelete()
+	{
+		// The blank is one instance that every empty material slot in the game holds, and
+		// Texture.Delete refuses it loudly. LoadTexture hands it back when the art will not read, so
+		// it is skipped here rather than warned about once a scene.
+		static void Release( Texture? texture )
+		{
+			if ( texture != null && !ReferenceEquals( texture, Texture.Missing ) )
+				texture.Delete();
+		}
+
+		Release( _bandTexture );
+		Release( _cloudTexture );
+		Release( _bandRamp );
+		Release( _gradient );
+		Release( _tintRamp );
 	}
 
 	protected override void OnUpdate()
