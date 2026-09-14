@@ -41,7 +41,14 @@ public sealed class SoundCategoryFile
 	/// The shortest gap between two plays of this effect. Every value in the shipped data is a
 	/// round number of milliseconds, from 700 up to 10,000.
 	/// </param>
-	public readonly record struct Effect( int Id, TimeSpan RepeatDelay );
+	/// <param name="Variations">
+	/// How many weighted lists this effect picks between - the second int of its record, which this
+	/// reader used to skip. It is what divides the run of sample records up between the effects:
+	/// jungle's ambient declares 9, 5, 7, 4, 1, 0, 1, 1, 1, summing to exactly the twenty-nine lists
+	/// that follow it. A zero is real and means an effect with nothing to play; hallow's, jungle's
+	/// and space's ambient each carry one. Checked against all thirty-one categories the game ships.
+	/// </param>
+	public readonly record struct Effect( int Id, TimeSpan RepeatDelay, int Variations );
 
 	/// <summary>One sample an effect can pick, with the odds of it being the one picked.</summary>
 	/// <param name="Bank">Which of <see cref="Banks"/> it lives in, already zero-based.</param>
@@ -76,12 +83,8 @@ public sealed class SoundCategoryFile
 	/// </summary>
 	private const int Saturated = 65500;
 
-	/// <summary>
-	/// How far apart two lists have to be for the second to belong to a different effect - see
-	/// <see cref="ReadSamples"/>. Within an effect the gap is 0, 16 or 24; between effects it is
-	/// 42 or more.
-	/// </summary>
-	private const int NewEffectGap = 32;
+	/// <summary>Which int of an effect's record says how many lists it picks between.</summary>
+	private const int EffectVariationField = 1;
 
 	/// <summary>
 	/// How far the length a sample record states may be from the length of the sample it points at,
@@ -165,7 +168,8 @@ public sealed class SoundCategoryFile
 
 			effects[i] = new Effect(
 				BitConverter.ToInt32( data, record ),
-				TimeSpan.FromMilliseconds( BitConverter.ToInt32( data, record + (EffectDelayField * 4) ) ) );
+				TimeSpan.FromMilliseconds( BitConverter.ToInt32( data, record + (EffectDelayField * 4) ) ),
+				BitConverter.ToInt32( data, record + (EffectVariationField * 4) ) );
 		}
 
 		return effects;
@@ -191,14 +195,18 @@ public sealed class SoundCategoryFile
 	/// largest that is <i>not</i> the end of a list is 58,248, so <see cref="Saturated"/> sits in
 	/// the gap between them.
 	///
-	/// An <b>effect</b> ends when the space before the next list is big enough to be a new
-	/// effect's header rather than a continuation. Those two are well separated too: a list
-	/// following another within the same effect starts 0, 16 or 24 bytes later, and a list
-	/// starting a new effect starts 42, 58, 84, 168 or 210 bytes later.
+	/// An <b>effect</b> is over once it has taken as many lists as its own record says it picks
+	/// between - <see cref="Effect.Variations"/>, read out of the file rather than guessed at.
 	///
-	/// The result is one entry per effect - hallow's rain, then its seven pairs of terrors and
-	/// bats, then a blank, then its three bells - and it lines up with the effect table for all
-	/// nine categories the lobby loads.
+	/// <b>This used to measure the gap before the next list instead, and no gap can work.</b> The
+	/// two ranges overlap: jungle's ambient runs sixty-four bytes between two lists of the SAME
+	/// effect, while the smallest gap between two DIFFERENT effects is forty-two. The lobby never
+	/// noticed because all four of its local sfx categories and all four of its music ones declare
+	/// a single variation each, so they group the same either way - but every park category did
+	/// not, and jungle's nine ambient effects came out as twenty-six, which left effects 178 to 192
+	/// each playing one of effect 177's beasts. The global lobby and UI categories were wrong too.
+	///
+	/// The result is one entry per effect, in the effect table's own order.
 	/// </summary>
 	/// <returns>
 	/// One entry per effect, in the order of <see cref="Effects"/>, each holding one or more
@@ -211,11 +219,22 @@ public sealed class SoundCategoryFile
 		if ( !IsValid )
 			return effects;
 
+		// One entry per effect from the start, so callers may index this by effect whatever the
+		// file turns out to hold - and so an effect that declares no variations simply stays empty
+		// rather than having to be padded in afterwards.
+		for ( int i = 0; i < Effects.Count; ++i )
+			effects.Add( new List<List<Sample>>() );
+
 		var list = new List<Sample>();
 		var offset = EffectTableOffset + (Effects.Count * EffectStride);
-		var endOfLast = -1;
+		var effect = 0;
 
-		while ( offset + SampleStride <= _sfx.Length )
+		// Skip anything that takes no lists before reading a single record. The same test moves
+		// past an effect once it is full, so a declared zero needs no special case.
+		while ( effect < Effects.Count && effects[effect].Count >= Effects[effect].Variations )
+			++effect;
+
+		while ( offset + SampleStride <= _sfx.Length && effect < Effects.Count )
 		{
 			if ( !TryReadSample( offset, bankDurations, out var sample ) )
 			{
@@ -223,30 +242,18 @@ public sealed class SoundCategoryFile
 				continue;
 			}
 
-			// Starting a list: how far it is from the end of the one before says whether it
-			// belongs to the effect that was being read or starts the next one.
-			if ( list.Count == 0 && endOfLast >= 0 && offset - endOfLast >= NewEffectGap )
-				effects.Add( new List<List<Sample>>() );
-
-			if ( effects.Count == 0 )
-				effects.Add( new List<List<Sample>>() );
-
 			list.Add( sample );
 			offset += SampleStride;
 
 			if ( sample.Weight < Saturated )
 				continue;
 
-			effects[^1].Add( list );
-			endOfLast = offset;
+			effects[effect].Add( list );
 			list = new List<Sample>();
-		}
 
-		// An effect table can name more effects than the file has lists for - the global lobby
-		// category names four and holds three - so the tail is padded rather than left short,
-		// because callers index this by effect.
-		while ( effects.Count < Effects.Count )
-			effects.Add( new List<List<Sample>>() );
+			while ( effect < Effects.Count && effects[effect].Count >= Effects[effect].Variations )
+				++effect;
+		}
 
 		return effects;
 	}
