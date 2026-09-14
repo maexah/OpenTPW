@@ -197,7 +197,8 @@ public sealed class ParkQueues : Entity
 
 	protected override void OnUpdate()
 	{
+		// Game time, not frame time - see GameClock.
 		foreach ( var model in _models )
-			model.Update( Time.Delta );
+			model.Update( GameClock.Delta );
 	}
 }

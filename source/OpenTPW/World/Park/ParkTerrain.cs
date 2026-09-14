@@ -53,5 +53,6 @@ public sealed class ParkTerrain : Entity
 		_model = new LobbyModel( $"{terrain}/base.MD2", $"{terrain}/textures", Vector3.Zero );
 	}
 
-	protected override void OnUpdate() => _model.Update( Time.Delta );
+	/// <summary>Game time, not frame time, so the park's scenery holds still while the park is held - see <see cref="GameClock"/>.</summary>
+	protected override void OnUpdate() => _model.Update( GameClock.Delta );
 }

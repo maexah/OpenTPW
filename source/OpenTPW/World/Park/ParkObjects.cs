@@ -418,7 +418,9 @@ public sealed class ParkObjects : Entity
 
 	protected override void OnUpdate()
 	{
+		// Game time, not frame time: these are the park's own things, so they stop when the park is
+		// held - see GameClock.
 		foreach ( var model in _models )
-			model.Update( Time.Delta );
+			model.Update( GameClock.Delta );
 	}
 }
