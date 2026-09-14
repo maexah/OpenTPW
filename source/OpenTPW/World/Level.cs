@@ -228,7 +228,13 @@ public class Level
 		_ = new ParkFixedItems( ThemeName );
 		_ = new ParkObjects( ThemeName, park );
 
+		// Each group of sound at the volume the options give it, and then the park's own music - which
+		// is the order the original uses too: it registers the park's categories, re-applies the group
+		// volumes (0x0054ec9a), and only then plays the music (0x0054ec9f). See ParkAudio for what it
+		// does with it afterwards, and for why this plays at a fixed level where the original swells
+		// it with the crowd.
 		GameOptions.Current.ApplySound();
+		_ = new ParkAudio( ThemeName );
 
 		Camera.SetCameraMode<ParkOrbitCameraMode>();
 	}
