@@ -17,7 +17,7 @@ Theme Park World (1999) is hard to run on a modern machine. OpenTPW re-implement
 
 **You need a legal copy of the original game.** OpenTPW ships no game content; it is an engine, not a download.
 
-**It is not playable yet.** You can explore the lobby and the front end - pick a park, look around the islands, hear the advisor - and you can now enter a park and look around it, ground and scenery and the shops and rides it was laid out with. But a park does not *run*: its clock ticks and its weather turns, but nothing in it operates, nobody visits, and its interface is a single menu - enough to change the options or leave for the lobby, and nothing else. See [Status](#status) for the full picture.
+**It is not playable yet.** You can explore the lobby and the front end - pick a park, look around the islands, hear the advisor - and you can now enter a park and look around it, ground and scenery and the shops and rides it was laid out with. But a park does not *run*: its clock ticks and its weather turns, but nothing in it operates and nobody visits. It has the management gadget the original puts in its corner, with a live date on it, but five of that gadget's six buttons have no screen to open yet. See [Status](#status) for the full picture.
 
 ## Quick start
 
@@ -59,7 +59,7 @@ The game tells you about none of these:
 
 | Key | Does |
 |-----|------|
-| `Escape` | Game menu |
+| `Escape` | Game menu - or, standing on the ground in a park, back to the orbit camera first |
 | `Ctrl`+`H` | Show or hide the help bar |
 | `F2` | Hide the interface |
 | `X` | Freeze the lobby camera |
@@ -67,6 +67,7 @@ The game tells you about none of these:
 | `C` | In a park: stand on the ground and look around, and back again |
 | `←` `→` | Turn the park camera |
 | Mouse wheel | Zoom the park camera in and out |
+| Left-click | The park gadget's buttons, and the eject button while standing on the ground |
 
 ## Platforms
 
@@ -111,9 +112,11 @@ That substitutes SDL only. SPIRV-Cross and shaderc still come from the build, be
 
 **And weather.** A park's weather turns on its own. Everything follows from one number - a quality from 1 to 100 that the game reads backwards, so a low one is bad weather: below forty it rains, and below fifteen it throws lightning as well. That quality is rolled from the season's own average and re-rolled every seven game days, and a game day here is about five and three quarter seconds, so a park's weather changes roughly every forty seconds of real time. It is settled three days before it arrives, which is what the original's days-of-warning setting is for. Rain builds and fades rather than switching on and off, twenty drops at a time, four times a second - and the heaviest rain the game can make is five hundred and eighty drops rather than the six hundred its own cap allows, because a quality can never quite reach zero. Lightning comes down anywhere across the park, and its thunder follows a beat or two later and sounds from where the bolt fell, closing in as a storm builds: the first flash is a couple of seconds ahead of its thunder and later ones follow almost at once. **You will mostly not see the bolts from the park camera**, and for the same reason you cannot see the sky from it - they stand three hundred units tall while that camera never looks above the horizon, so what reaches the frame is a bright diagonal near the ground. From the ground, they are the whole height of the sky. The weather is per-theme, which is worth saying because three of the four read the same numbers and Halloween World does not: it rains harder there, throws more lightning, and is the only theme in the game that can snow. Snow is built in the original and its data really does reach it; it is not drawn here, because Halloween World is the one theme with no saved park to enter.
 
-**And a way to stand in it.** Press `C` in a park and the camera comes down to head height, five units above whatever the ground is doing, and the park is yours to look around: the view follows where the pointer sits rather than how far it moved, and the walk keys carry you across the land with the eye riding it, so a ridge lifts you rather than stepping you. Press `C` again and the orbit camera takes back over, looking at wherever you walked to. The original calls this camcorder mode and reaches it two ways - this key, and a button on the park management gadget that does not exist here yet. It is also the only way to see a park's sky and the full height of its lightning.
+**And a way to stand in it.** Press `C` in a park and the camera comes down to head height, five units above whatever the ground is doing, and the park is yours to look around: the view follows where the pointer sits rather than how far it moved, and the walk keys carry you across the land with the eye riding it, so a ridge lifts you rather than stepping you. Press `C` again and the orbit camera takes back over, looking at wherever you walked to. The original calls this camcorder mode and reaches it two ways - this key, and the camera button on the park's management gadget, which now works too. Leaving it has three roads, as the original has: the key again, `Escape`, and the eject button in the corner of the viewfinder. It is also the only way to see a park's sky and the full height of its lightning.
 
-**What does not.** The objects a park places now stand in it, but none of them *works*: a ride is scenery, a shop serves nobody, and there are no staff and no visitors - the queue leading to a ride is drawn, but nobody stands in it. Beyond that menu a park has no interface at all - no HUD and no advisor - and its sound is its music, its rain and its thunder and nothing else: the ambience, the ride sounds and the park speech are all things the original starts from places this does not read yet, the ambience in particular being a list of emitters placed around the world in the level's own `scape.omp`. There are no ride scripts, no video, and nothing online: there is no networking code in the project at all.
+**And a corner to manage it from.** A park wears the management gadget the original puts at its bottom left, read out of the game's own compiled layout data rather than measured off a screenshot: the visitors' happiness gauge, the date - which is live, and turns a day about every five and three-quarter seconds of real time - and the six round buttons, each with the game's own description of it on the help bar. The gauge does not move and five of the six buttons have nothing to open, so they say why rather than pretending: no screen in this game buys an attraction, hires anyone, or shows the finances. The sixth is the camera, and it works. Step down to the ground and the gadget puts itself away, and the camcorder's viewfinder takes the screen instead - the frame, and the eject button that leaves - which is what the original does, and what stops a management panel being swept past while the view turns toward wherever you point.
+
+**What does not.** The objects a park places now stand in it, but none of them *works*: a ride is scenery, a shop serves nobody, and there are no staff and no visitors - the queue leading to a ride is drawn, but nobody stands in it. The gadget draws and its date runs, but the rest of a park's interface is not there: no advisor, no message bar, no map, and no screen behind any of the buttons that promise one. Its sound is its music, its rain and its thunder and nothing else: the ambience, the ride sounds and the park speech are all things the original starts from places this does not read yet, the ambience in particular being a list of emitters placed around the world in the level's own `scape.omp`. There are no ride scripts, no video, and nothing online: there is no networking code in the project at all.
 
 ## File formats
 
