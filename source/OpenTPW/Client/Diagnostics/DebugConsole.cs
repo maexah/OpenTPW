@@ -219,7 +219,17 @@ public static class DebugConsole
 				if ( parts.Length > 1 && parts[1] == "list" )
 				{
 					foreach ( var asset in Asset.All )
-						Reply( $"asset {asset.GetType().Name} {asset.Path}" );
+					{
+						// Most of what a scene leaves behind has no path at all, and a listing of
+						// empty strings cannot be told apart. A texture's size does tell them
+						// apart: a 1x1 sky tint, a gradient ramp, a sign panel and a text label are
+						// all different shapes.
+						var what = asset is Texture texture && string.IsNullOrEmpty( asset.Path )
+							? $"{texture.Width}x{texture.Height}"
+							: asset.Path;
+
+						Reply( $"asset {asset.GetType().Name} {what}" );
+					}
 				}
 
 				break;
