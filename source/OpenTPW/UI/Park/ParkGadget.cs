@@ -31,6 +31,23 @@ namespace OpenTPW.UI;
 /// rests at its lowest part rather than being given an invented one.
 /// </para>
 /// <para>
+/// <b>The golden keys and tickets in the top right are real.</b> The stream's fourth root control,
+/// 0x33, holds two rows of icon-and-count - the ticket 0x35 with its number 0x37, the key 0x34 with its
+/// number 0x36 - and both numbers already exist here, because a player's gms.dat has carried them since
+/// the lobby was built. So this one is not chrome: it shows what the player actually has, in the format
+/// the original seeds it with, "0 x". The key row goes away entirely in Instant Action, which is what
+/// FUN_004a1d70 does with it, and is why <see cref="FrontEnd.Screens.IslandPanel"/> hides its own.
+/// </para>
+/// <para>
+/// <b>Two of the stream's clusters are deliberately NOT built, for the reason the fold-away arm is
+/// not.</b> The aerial (0x2d, 0x2e) is the messages control - its help row is "Right-click to delete ALL
+/// messages" - and there is no message bar and nothing to delete. The bank balance beside it (0x2f
+/// through 0x32) has no artwork of its own but a currency icon, and a park keeps no balance and no
+/// price: 0x30 is the cost of whatever is in your hand, which is why the original starts it hidden and
+/// paints it yellow. Built now, each would be a control with nothing behind it - which is exactly what
+/// b_retract looked like when it was tried.
+/// </para>
+/// <para>
 /// <b>Engine and content.</b> The controls, the pointer and the help bar are engine. Which buttons a
 /// park has, where they sit and what each one does is this file - the park's content, as
 /// <see cref="FrontEnd.FrontEnd"/>'s island panel is the lobby's.
@@ -45,6 +62,19 @@ internal sealed class ParkGadget : UiWindow
 
 	/// <summary>The camcorder button, which follows the mode rather than keeping its own answer.</summary>
 	private readonly UiButton _camcorder;
+
+	/// <summary>
+	/// The count beside each icon, in the font the original gives them - FUN_004a1d70 fetches 0x36 and
+	/// 0x37 and hands both a label skin, white, and font slot 2. The lobby's key count uses the same
+	/// slot for the same reason.
+	/// </summary>
+	private const int CountFont = 2;
+
+	/// <summary>The key row of the top-right cluster, which Instant Action does without.</summary>
+	private readonly UiControl _keyRow;
+
+	private readonly UiControl _keyCount;
+	private readonly UiControl _ticketCount;
 
 	public ParkGadget( WindowStack stack ) : base( stack )
 	{
@@ -141,8 +171,64 @@ internal sealed class ParkGadget : UiWindow
 		buttons.Add( NotYet( 0x2b, new UiRect( 274, 1254, 392, 1372 ), 472, "b_resrch",
 			"Research", "there is nothing to research and nobody to research it" ) );
 
+		// The stream's fourth root control, away in the top right corner of the screen rather than on the
+		// panel - so it is added to the window's root, not to the gadget body, and it anchors top-right on
+		// its own. Two rows: the ticket above, the key below, each an icon with its count to the left.
+		var earned = Root.Add( new UiControl
+		{
+			Id = 0x33,
+			Rect = new UiRect( 1688, 48, 1963, 278 )
+		} );
+
+		// The ticket, which every player has whether or not they have earned any.
+		earned.Add( new UiControl
+		{
+			Id = 0x35,
+			Rect = new UiRect( 1853, 54, 1955, 156 ),
+			Mesh = UiMesh.Get( "gtick" )
+		} );
+
+		_ticketCount = earned.Add( Count( 0x37, new UiRect( 1688, 60, 1829, 150 ) ) );
+
+		// The key row, which FUN_004a1d70 hides outright while the game type is 2 - Instant Action, where
+		// keys mean nothing because every park is already open.
+		_keyRow = earned.Add( new UiControl
+		{
+			Id = 0x1e0f0,
+			Rect = new UiRect( 1688, 165, 1963, 268 )
+		} );
+
+		_keyRow.Add( new UiControl
+		{
+			Id = 0x34,
+			Rect = new UiRect( 1853, 165, 1955, 268 ),
+			Mesh = UiMesh.Get( "gkey" ),
+
+			// gkey.md2 carries four frames - gkey0 to gkey3 in ui.wad - and the original asks for the
+			// last of them here (FUN_0065d3a3 with 3), as the lobby's island panel does with the same
+			// model.
+			Frame = 3
+		} );
+
+		_keyCount = _keyRow.Add( Count( 0x36, new UiRect( 1688, 171, 1829, 261 ) ) );
+
 		ShowDate();
+		ShowEarned();
 	}
+
+	/// <summary>
+	/// One of the two counts in the top right corner: white, font slot 2, and pushed up against the icon
+	/// it belongs to, which is what <see cref="FrontEnd.Screens.IslandPanel"/> does with the lobby's.
+	/// </summary>
+	private static UiControl Count( int id, UiRect rect )
+		=> new()
+		{
+			Id = id,
+			Rect = rect,
+			Font = CountFont,
+			TextAcross = TextAlign.End,
+			TextWraps = true
+		};
 
 	/// <summary>
 	/// One of the five buttons whose screen does not exist. It draws and lights and clicks like the
@@ -176,6 +262,7 @@ internal sealed class ParkGadget : UiWindow
 	protected internal override void Update()
 	{
 		ShowDate();
+		ShowEarned();
 
 		// The C key reaches the same mode without going through this button, so the button follows the
 		// mode rather than the other way about.
@@ -218,4 +305,24 @@ internal sealed class ParkGadget : UiWindow
 	/// </para>
 	/// </summary>
 	private void ShowDate() => _date.Text = GameCalendar.Now.ToShortDateString();
+
+	/// <summary>
+	/// The golden keys and tickets the player has earned, read from their gms.dat the way the lobby's
+	/// island panel reads them - see <see cref="FrontEnd.Screens.IslandPanel.ShowKeys"/>.
+	///
+	/// <para>
+	/// The format is the original's own: the string FUN_004a1d70 seeds both counts with, at 0x00752f24,
+	/// is "0 x", so the number leads and the multiplication sign follows it. Nobody being picked yet -
+	/// a park reached from the debug console rather than through the lobby - reads as none rather than
+	/// as an error, because the count is a fact about a player and there is no player.
+	/// </para>
+	/// </summary>
+	private void ShowEarned()
+	{
+		var player = Players.Roster.Current;
+
+		_keyRow.Visible = player is not { InstantAction: true };
+		_keyCount.Text = $"{player?.Keys ?? 0} x";
+		_ticketCount.Text = $"{player?.Tickets ?? 0} x";
+	}
 }

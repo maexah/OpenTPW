@@ -63,6 +63,11 @@ internal sealed class ParkFrontEnd : Panel
 		"mainpanel", "gauge", "date", "b_retract", "b_buy", "b_camera", "b_info", "b_map", "b_money",
 		"b_resrch",
 
+		// The golden key and ticket in the top right corner, which the gadget shows live - see
+		// <see cref="ParkGadget"/>. The lobby loads gkey too, but a park entered without going through
+		// the lobby first would otherwise fetch them mid-play.
+		"gkey", "gtick",
+
 		// The camcorder's frame and its eject button - see <see cref="ParkViewfinder"/>. Loaded here
 		// rather than as first person is first entered, so the toggle does not hitch.
 		"f_viewfinder", "b_eject"

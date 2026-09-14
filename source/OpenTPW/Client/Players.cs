@@ -145,6 +145,14 @@ internal sealed class Player( int slot, string name, PlayerFile file )
 	/// </summary>
 	public int Keys => File.CountKeys( SaveFolder.IsTheme );
 
+	/// <summary>
+	/// Golden tickets earned - PlayerProgress_CountTickets (0x005af530): the four player-wide records,
+	/// the two bonuses, and each ticket held in a park this install still ships. It is what
+	/// <see cref="Keys"/> is counted from, three tickets to a key, and a park's gadget shows both
+	/// side by side - see <see cref="UI.ParkGadget"/>.
+	/// </summary>
+	public int Tickets => File.CountTickets( SaveFolder.IsTheme );
+
 	/// <summary>Gives a key outright and writes the player out straight away, as the original does (0x005afc30, 0x005c8a10).</summary>
 	public void AddKey()
 	{
