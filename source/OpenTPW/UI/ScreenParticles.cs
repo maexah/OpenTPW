@@ -123,6 +123,15 @@ internal sealed class ScreenParticles : Panel
 		if ( Current == this )
 			Current = null;
 
+		// The layer pools are a model and a material each, built for this interface and held by
+		// nothing else, so they went with it - two of each a scene, for the life of the process.
+		_unowned.Delete();
+
+		foreach ( var layers in _windowLayers )
+			layers.Delete();
+
+		_windowLayers.Clear();
+
 		// Built from its own pictures rather than loaded from a path, so nothing else can be holding it - see
 		// Texture.Delete.
 		_atlas.Delete();
@@ -217,6 +226,13 @@ internal sealed class ScreenParticles : Panel
 	{
 		public readonly Layer Blended = new( atlas, MaterialFlags.None );
 		public readonly Layer Added = new( atlas, MaterialFlags.Additive );
+
+		/// <summary>Lets go of both layers' models, and with them their materials.</summary>
+		public void Delete()
+		{
+			Blended.Delete();
+			Added.Delete();
+		}
 	}
 
 	/// <summary>Frame <paramref name="frame"/> of sprite set <paramref name="set"/> - 0x005423a0.</summary>
@@ -309,6 +325,13 @@ internal sealed class ScreenParticles : Panel
 			_model = new Model( _vertices, indices, material );
 			_model.EnableFrequentUpdates( _vertices );
 		}
+
+		/// <summary>
+		/// Lets go of the pool's model, which frees its buffers and the material built for this
+		/// blend with it. The atlas is not this layer's to free - every layer draws with the one
+		/// <see cref="ScreenParticles"/> owns.
+		/// </summary>
+		public void Delete() => _model.Delete();
 
 		public void Begin() => _used = 0;
 
