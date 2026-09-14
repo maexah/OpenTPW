@@ -68,19 +68,36 @@ public class Time
 
 	private const float StepDelta = 1f / 60f;
 
+	/// <summary>
+	/// The same frame, without the <see cref="LongestFrame"/> clamp: what the frame really took.
+	///
+	/// <para>
+	/// It stops and steps with <see cref="Delta"/> - a paused clock reports zero here too - so the
+	/// only difference is the clamp. <see cref="GameClock"/> counts its ticks from this, because the
+	/// original bounds a long frame at the far end, by refusing to work through more than half a
+	/// second of backlog in the lobby or two in a park, rather than by shortening the frame itself.
+	/// Feeding it the clamped figure instead would leave both of those caps unreachable and so
+	/// meaningless, which is exactly what had quietly happened to the particle system's own.
+	/// </para>
+	/// </summary>
+	public static float RawDelta { get; internal set; }
+
 	public static void Update( float deltaTime )
 	{
 		if ( !Paused )
 		{
+			RawDelta = deltaTime;
 			Delta = deltaTime.Clamp( 0f, LongestFrame );
 		}
 		else if ( StepFrames > 0 )
 		{
+			RawDelta = StepDelta;
 			Delta = StepDelta;
 			StepFrames--;
 		}
 		else
 		{
+			RawDelta = 0f;
 			Delta = 0f;
 		}
 

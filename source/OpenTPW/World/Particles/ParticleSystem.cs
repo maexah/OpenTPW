@@ -11,9 +11,16 @@ namespace OpenTPW;
 /// It follows the game's own code closely, because the effects are tuned to it. Everything is whole
 /// numbers, as there. Particles_Init (0x0051faa0) sets up 120 emitters, 20 effectors and 2048
 /// particles, and the random numbers come from the C library's generator, seeded with 1. The state
-/// machine steps it (0x00520130) every 31 milliseconds, in the lobby as in a park, catching up at
-/// most half a second at a time - so here it ticks on the same beat off <see cref="Time.Delta"/>,
-/// and a paused clock stops it. Nothing moves between ticks: the original draws the last tick.
+/// machine steps it (0x00520130) every 31 milliseconds, in the lobby as in a park - it is the whole
+/// body of the lobby's tick loop, and the first call in a park's - so here it runs on
+/// <see cref="GameClock"/>'s count of that same beat, and a park holding its world stops it. Nothing
+/// moves between ticks: the original draws the last tick.
+/// </para>
+/// <para>
+/// It used to keep its own accumulator and its own half-second catch-up. <b>That cap never once
+/// acted</b>, because what it accumulated was <see cref="Time.Delta"/>, which is already held to a
+/// tenth of a second - so the most arrears it could ever see was a fifth of what it claimed to allow.
+/// The clock counts from the unclamped frame instead, which is where the original's caps are real.
 /// </para>
 /// <para>
 /// A tick steps every emitter, newest first: counts down its life, and either ends it or emits;
@@ -46,9 +53,6 @@ internal sealed class ParticleSystem
 	public const int EffectorCount = 20;
 	public const int ParticleCount = 2048;
 
-	private const float TickSeconds = 0.031f;
-	private const float LongestCatchUp = 0.5f;
-
 	/// <summary>sin() * 256 over 512 steps, as 0x0051f320 builds it.</summary>
 	internal static readonly int[] Sine = Enumerable.Range( 0, 512 ).Select( step => (int)(Math.Sin( step * Math.PI / 256.0 ) * 256.0) ).ToArray();
 
@@ -76,7 +80,6 @@ internal sealed class ParticleSystem
 	private int _seed = 1;
 	private int _generation;
 	private int _ticks;
-	private float _owed;
 
 	public ParticleSystem( string libraryPath, int density )
 	{
@@ -105,16 +108,14 @@ internal sealed class ParticleSystem
 			Current = null;
 	}
 
-	/// <summary>Runs however many 31ms ticks have come due.</summary>
+	/// <summary>
+	/// Runs however many 31ms ticks have come due, which <see cref="GameClock"/> counts for every
+	/// system that runs on the tick rather than each keeping its own accumulator.
+	/// </summary>
 	public void Update()
 	{
-		_owed = MathF.Min( _owed + Time.Delta, LongestCatchUp );
-
-		while ( _owed >= TickSeconds )
-		{
-			_owed -= TickSeconds;
+		for ( int i = 0; i < GameClock.TicksDue; ++i )
 			Tick();
-		}
 	}
 
 	/// <summary>

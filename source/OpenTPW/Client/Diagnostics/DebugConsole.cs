@@ -343,6 +343,7 @@ public static class DebugConsole
 		return $"state size={Screen.Size.X}x{Screen.Size.Y} island={island?.Index} name='{island?.ParkName}' "
 			+ $"orbit={LobbyCameraMode.DebugOrbit:F3} paused={LobbyCameraMode.Paused} "
 			+ $"clock={(Time.Paused ? "paused" : "running")} stepping={Time.StepFrames} "
+			+ $"game={(GameClock.Paused ? "paused" : "running")} ticks={GameClock.Ticks} "
 			+ $"rainy={script?.Rainy} lightning={script?.Lightning} "
 			+ $"strikes/s={script?.StrikesPerSecond:F3} flyers={script?.FlyingMeshes.Count}";
 	}

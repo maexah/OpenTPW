@@ -57,6 +57,12 @@ public class Level
 
 	public Scene Kind { get; private init; }
 
+	/// <summary>
+	/// This scene's windows, kept so <see cref="PausedByWindow"/> can ask whether any of them holds the
+	/// world. Null until the HUD is built, and in any scene that has no window stack at all.
+	/// </summary>
+	private WindowStack? _windows;
+
 	/// <summary>The theme folder this level was built from - "jungle", "fantasy", "hallow" or "space".</summary>
 	public string ThemeName { get; private init; }
 
@@ -72,6 +78,10 @@ public class Level
 
 		Global = new SettingsFile( $"/levels/{levelName}/global.sam" );
 		Current = this;
+
+		// The seconds this scene is about to spend loading are not ticks anybody owes - see GameClock.Rebase,
+		// and the original doing the same as it enters a park (0x0054ed7c).
+		GameClock.Rebase();
 
 		if ( kind == Scene.Park )
 		{
@@ -298,7 +308,7 @@ public class Level
 
 		// The same window engine the lobby uses, built again for this scene: it deals out the pointer and
 		// the keys and holds the modal stop for whatever opens in it.
-		var windows = Hud.AddChild( new WindowStack() );
+		var windows = _windows = Hud.AddChild( new WindowStack() );
 
 		// What Escape does here, and what the menu's choices do, which is this scene's to say. After the
 		// stack, as the lobby's front end is, so it hears about a frame once the stack has dealt it out.
@@ -312,7 +322,7 @@ public class Level
 		Hud = new();
 
 		// The interface's windows, and what the pointer and the keys do to them.
-		var windows = Hud.AddChild( new WindowStack() );
+		var windows = _windows = Hud.AddChild( new WindowStack() );
 
 		// The lobby's interface - the player slots, its dialogs and the island panel - opened in those windows.
 		// Built here, behind the loading screen, along with everything its windows draw. After the stack, so it
@@ -359,6 +369,17 @@ public class Level
 	{
 		DebugConsole.Poll();
 
+		// The world's clock first, so everything below sees one frame's worth of game time and the
+		// same count of ticks. Only a park stops it, and only a park gets the longer catch-up - both
+		// are the original's, and GameClock says where each is read from.
+		//
+		// Whether a window is pausing is read here, at the top of the frame, so it reflects what was
+		// open when the frame began. The interface deals out its clicks in Hud.Update below, so a menu
+		// opened by this frame's click holds the world from the next one. That one frame of lag is the
+		// arrangement the advisor already has, and for the same reason - see FrontEnd.OnUpdate: a
+		// choice that closes one screen and opens another never lets the world go in between.
+		GameClock.Update( PausedByWindow(), Kind == Scene.Park ? GameClock.ParkCatchUp : GameClock.LobbyCatchUp );
+
 		Entity.All.ForEach( entity => entity.Update() );
 
 		// Whatever was deleted during that walk leaves the list now the walk is over - see Entity.Delete.
@@ -370,6 +391,21 @@ public class Level
 		// which is where it sat when it was the last entity in the list.
 		Hud.Update();
 	}
+
+	/// <summary>
+	/// Whether a window open over this scene holds the world - the game menu, a message box or the options
+	/// screen, each of which says so through <see cref="UiWindow.Pauses"/>.
+	///
+	/// <para>
+	/// <b>Only in a park, which is the original's own rule and not a simplification of it.</b> The helper
+	/// those three screens call to ask for a pause (0x004092a0) does nothing unless a park is running: it
+	/// opens with <c>if ([0x00786ba4] == 1)</c>, and each of the three tests that same global before even
+	/// calling it - the message box (0x0047f251) also requiring the lobby's front end to be gone
+	/// (0x00f82884 == 0). So in the lobby the world carries on behind an open menu, and what the lobby does
+	/// instead is hold its advisor: see <see cref="FrontEnd.OnUpdate"/> and <see cref="Advisor.Paused"/>.
+	/// </para>
+	/// </summary>
+	private bool PausedByWindow() => Kind == Scene.Park && _windows is { AnyPausing: true };
 
 	/// <summary>
 	/// How long every voice still sounding takes to fade as a level ends. The original's state machine hands its
