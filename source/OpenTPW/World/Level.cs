@@ -83,6 +83,11 @@ public class Level
 		// and the original doing the same as it enters a park (0x0054ed7c).
 		GameClock.Rebase();
 
+		// And the calendar starts over with it, as the original zeroes its world-tick counter at park
+		// init (0x00515865). Unconditional rather than park-only so a lobby cannot be left showing the
+		// date of the park before it; only a park ever advances it - see the Update below.
+		GameCalendar.Rebase();
+
 		if ( kind == Scene.Park )
 		{
 			SetupParkEntities();
@@ -379,6 +384,13 @@ public class Level
 		// arrangement the advisor already has, and for the same reason - see FrontEnd.OnUpdate: a
 		// choice that closes one screen and opens another never lets the world go in between.
 		GameClock.Update( PausedByWindow(), Kind == Scene.Park ? GameClock.ParkCatchUp : GameClock.LobbyCatchUp );
+
+		// Then the date, which only a park keeps: the original's counter is advanced from the park
+		// loop's every-eighth-tick gate (0x0054f668) and from nowhere else, so the lobby has no calendar
+		// at all. It reads the ticks the line above just counted, so a held park stops the date for
+		// free rather than by testing anything.
+		if ( Kind == Scene.Park )
+			GameCalendar.Update();
 
 		Entity.All.ForEach( entity => entity.Update() );
 
