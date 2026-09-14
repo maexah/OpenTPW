@@ -176,12 +176,21 @@ public static class DebugConsole
 
 			// Waiting for one is up to forty seconds of real time, which is no way to check a bolt.
 			// It reports where it put it, because a strike leaves nothing else behind to measure.
+			//
+			// "bolt x y" aims it. A park is twelve hundred units across and a bolt lands anywhere on
+			// that, as the original's does, while the camera sees a few hundred - so an unaimed bolt
+			// is usually out of frame and proves nothing about whether one can be drawn at all.
 			case "bolt":
-				ParkWeather.Current?.DebugStrike();
+				var aim = parts.Length > 2
+					? new Vector3( Argument( 1 ), Argument( 2 ), 0f )
+					: (Vector3?)null;
+
+				ParkWeather.Current?.DebugStrike( aim );
 
 				Reply( ParkWeather.Current == null
 					? "bolt none - not in a park"
-					: $"bolt at {ParkWeather.Current.LastStrike} strikes={ParkWeather.Current.DebugStrikes}" );
+					: $"bolt at {ParkWeather.Current.LastStrike} from {ParkWeather.Current.LastStrikeGround} "
+						+ $"strikes={ParkWeather.Current.DebugStrikes}" );
 				break;
 
 			case "near":
@@ -371,6 +380,13 @@ public static class DebugConsole
 			+ $"quality={ParkWeather.Current?.Quality} drops={ParkWeather.Current?.Drops} "
 			+ $"storm={ParkWeather.Current?.Lightning} snow={ParkWeather.Current?.Snowing} "
 			+ $"strikes={ParkWeather.Current?.DebugStrikes} forecast={ParkWeather.Current?.Forecast} "
+			+ $"flash={ParkWeather.Current?.DebugBolt.Flash:F3} "
+			+ $"boltOpacity={ParkWeather.Current?.DebugBolt.DebugOpacity:F3} "
+			+ $"boltDist={ParkWeather.Current?.DebugBolt.DebugAxisDistance:F0} "
+			// Compact, because Vector3's own formatting carries spaces and a harness splitting the
+			// reply on whitespace gets a single bracket - which is exactly what the first bolt probe
+			// reported back.
+			+ $"cam={Camera.Position.X:F0},{Camera.Position.Y:F0},{Camera.Position.Z:F0} "
 			+ $"rainy={script?.Rainy} lightning={script?.Lightning} "
 			+ $"strikes/s={script?.StrikesPerSecond:F3} flyers={script?.FlyingMeshes.Count}";
 	}

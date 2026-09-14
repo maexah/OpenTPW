@@ -88,12 +88,29 @@ public sealed class Lightning : WeatherSprites
 	{
 		float Spread( float extent ) => ((_rng.NextSingle() * 2f) - 1f) * extent;
 
-		_base = new Vector3(
+		var ground = new Vector3(
 			islandOrigin.X + Spread( GroundSpread ),
 			islandOrigin.Y + Spread( GroundSpread ),
 			0f );
 
-		_top = _base + new Vector3( Spread( LeanSpread ), Spread( LeanSpread ), BoltHeight );
+		Strike( ground, ground + new Vector3( Spread( LeanSpread ), Spread( LeanSpread ), BoltHeight ) );
+	}
+
+	/// <summary>
+	/// Starts a strike between two points the caller has chosen, replacing any still running.
+	///
+	/// <para>
+	/// A park picks its own rather than scattering them about an origin: FUN_00512c50 puts the ground
+	/// point anywhere across the whole map, clamped only away from the very edge, and the top three
+	/// hundred units up leaning by as much as fifty either way. The lobby's spreads - fifty around the
+	/// island and a ten-unit lean over five hundred of height - cannot express that, so a park hands
+	/// over the pair it has already worked out.
+	/// </para>
+	/// </summary>
+	public void Strike( Vector3 ground, Vector3 top )
+	{
+		_base = ground;
+		_top = top;
 
 		_remaining = Duration;
 		_flicker = 0f;

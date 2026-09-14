@@ -65,6 +65,9 @@ public sealed class ParkWeather : Entity
 	/// <summary>Where the last bolt came down - its top, which is also where its thunder sounds.</summary>
 	public Vector3 LastStrike { get; private set; }
 
+	/// <summary>The foot of that same bolt, on the ground. Kept because drawing one needs both ends.</summary>
+	public Vector3 LastStrikeGround { get; private set; }
+
 	/// <summary>Which way the rain is driven, in degrees, and how hard - both from the quality.</summary>
 	public float WindDirection { get; private set; }
 
@@ -106,6 +109,22 @@ public sealed class ParkWeather : Entity
 	private int _counterSeen;
 
 	private readonly Random _rng = new();
+
+	/// <summary>
+	/// What draws it. Both are engine and both are the lobby's too - see <see cref="Rain"/>, and the
+	/// original keeping one particle and bolt object for the whole game.
+	///
+	/// <para>
+	/// <b>They are built with the lobby's own numbers, which are very likely wrong for a park and are
+	/// deliberately not guessed at.</b> The lobby's drops live in a box forty-four units across,
+	/// centred twenty-six ahead of a camera orbiting islands about seventy units wide; a park is twelve
+	/// hundred units across. Rather than invent a park's figures, this wires the pair up as they stand
+	/// so they can be looked at, and whatever proves wrong becomes a constructor parameter then.
+	/// </para>
+	/// </summary>
+	private readonly Rain _rain = new();
+
+	private readonly Lightning _lightning = new();
 
 	/// <summary>
 	/// How far a bolt may come down from the park's edge, and how far its top leans - straight out of
@@ -190,8 +209,18 @@ public sealed class ParkWeather : Entity
 		_lastChangedDay = GameCalendar.Days;
 	}
 
-	/// <summary>Puts a bolt down now rather than waiting on the countdown, for DebugConsole.</summary>
-	internal void DebugStrike() => PlaceBolt();
+	/// <summary>
+	/// Puts a bolt down now rather than waiting on the countdown, for DebugConsole.
+	///
+	/// <para>
+	/// <paramref name="ground"/> aims it. Without one a bolt lands anywhere across the map, as the
+	/// original's does - and a park is twelve hundred units across while the camera sees a few hundred
+	/// of it, so most strikes are out of frame. That is faithful, and it makes checking that a bolt is
+	/// <i>drawn</i> a lottery: the first attempt landed at x 887 with nothing on screen past x 600.
+	/// Aiming turns that into one deterministic shot.
+	/// </para>
+	/// </summary>
+	internal void DebugStrike( Vector3? ground = null ) => PlaceBolt( ground );
 
 	/// <summary>
 	/// How many bolts have come down since the park opened, for DebugConsole.
@@ -200,6 +229,19 @@ public sealed class ParkWeather : Entity
 	/// count that goes backwards cannot be measured against. Nothing but the console reads it.
 	/// </summary>
 	internal int DebugStrikes { get; private set; }
+
+	/// <summary>
+	/// The live bolt, so DebugConsole can report what it is doing - the same accessor
+	/// <see cref="LobbyWeather"/> has, and for the same reason.
+	///
+	/// <para>
+	/// A strike leaves nothing on screen to measure if it is not being drawn, and a counter that only
+	/// says it fired cannot tell a bolt that never started from one that ran and drew nothing.
+	/// <c>Flash</c> and <c>DebugOpacity</c> separate those: opacity is set immediately before the quad
+	/// is uploaded, so a non-zero one puts the fault downstream of the wiring.
+	/// </para>
+	/// </summary>
+	internal Lightning DebugBolt => _lightning;
 
 	private static readonly int[] DefaultAverage = [75, 80, 90, 50];
 	private static readonly int[] DefaultTolerance = [25, 20, 10, 15];
@@ -236,7 +278,7 @@ public sealed class ParkWeather : Entity
 	{
 		Deliver();
 		Schedule();
-		Rain();
+		StepRain();
 		Strike();
 		Thunder();
 	}
@@ -386,7 +428,7 @@ public sealed class ParkWeather : Entity
 	/// through to the stop or skips the level call entirely.
 	/// </para>
 	/// </summary>
-	private void Rain()
+	private void StepRain()
 	{
 		if ( _targetDrops < 0 )
 			return;
@@ -400,6 +442,7 @@ public sealed class ParkWeather : Entity
 			_drops = 0;
 			Drops = 0;
 
+			_rain.Level = 0f;
 			ParkAudio.Current?.StopRain();
 			return;
 		}
@@ -409,7 +452,14 @@ public sealed class ParkWeather : Entity
 
 		Drops = _drops;
 
-		ParkAudio.Current?.SetRainLevel( _drops / (float)_maxRaindrops );
+		// How hard it is raining, as a fraction of the hardest the balance file allows. The drawn
+		// count is the renderer's own business and is NOT the same number - it draws Level of its own
+		// pool, which is the lobby's nine hundred. Matching the two exactly is a thing to do once
+		// there is a reason to believe the park's pool size, rather than now.
+		var level = _drops / (float)_maxRaindrops;
+
+		_rain.Level = level;
+		ParkAudio.Current?.SetRainLevel( level );
 	}
 
 	/// <summary>
@@ -443,19 +493,26 @@ public sealed class ParkWeather : Entity
 	/// Puts one bolt somewhere in the park and arms its thunder. Split out from the countdown so the
 	/// debug console can force a strike without having to arm the weather first.
 	/// </summary>
-	private void PlaceBolt()
+	/// <param name="at">
+	/// Where to put its foot, or null to let it fall anywhere as the original does. Only the debug
+	/// console passes one - see <see cref="DebugStrike"/>.
+	/// </param>
+	private void PlaceBolt( Vector3? at = null )
 	{
 		// A ground point anywhere across the map, and a top leaning up to fifty either way over three
 		// hundred of height. The original clamps only the ground point, and only away from the very
 		// edge (FUN_00512c50).
-		var groundX = Math.Clamp( (float)_rng.NextDouble() * MapExtent, 1f, MapExtent );
-		var groundY = Math.Clamp( (float)_rng.NextDouble() * MapExtent, 1f, MapExtent );
+		var groundX = Math.Clamp( at?.X ?? (float)_rng.NextDouble() * MapExtent, 1f, MapExtent );
+		var groundY = Math.Clamp( at?.Y ?? (float)_rng.NextDouble() * MapExtent, 1f, MapExtent );
 
 		float Lean() => ((float)_rng.NextDouble() * 2f - 1f) * BoltLean;
 
 		// The original is Y-up; this engine is Z-up, so its three hundred of height is a Z here - the
 		// same swap the bolt over the lobby already makes.
+		LastStrikeGround = new Vector3( groundX, groundY, 0f );
 		LastStrike = new Vector3( groundX + Lean(), groundY + Lean(), BoltHeight );
+
+		_lightning.Strike( LastStrikeGround, LastStrike );
 
 		// Thunder follows the flash, and closes in as the storm builds: the delay is the distance less
 		// however many bolts this period has already thrown, so the first is about ten weather ticks
