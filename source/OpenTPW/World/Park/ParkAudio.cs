@@ -76,15 +76,43 @@ public sealed class ParkAudio : Entity
 	/// The loudest the rain bed gets, at every drop the balance file allows.
 	///
 	/// <para>
-	/// <b>Provisional, and it must be measured before it is believed.</b> Every other level in this
-	/// game was set by measuring the samples and then capturing the mixer's own output - see
-	/// LobbyAudio, and the correction that gave a park's music 0.33 rather than the lobby's 0.50. This
-	/// one has not been through that yet, and the original is no help: it drives the voice's level 0
-	/// to 100 through a control slot (FUN_0051bc40 selector 8) whose default sits behind a runtime
-	/// pointer that cannot be resolved from the binary.
+	/// <b>Measured, not chosen - and the first guess at 0.30 was more than twice this.</b> RAIN.mp2,
+	/// pulled out of AmbientHD.sdt, measures <b>-16.9 dBFS RMS</b> and peaks at full scale. The three
+	/// thunder samples beside it measure -19.9, -14.7 and -16.1, a median of -16.1 - so rain and
+	/// thunder are recorded within a decibel of each other and the samples give no reason to treat one
+	/// as louder than the other.
+	/// </para>
+	/// <para>
+	/// What differs is the role, and <see cref="LobbyAudio"/> is an established scale for it: music
+	/// 0.50, thunder 0.40, one-shots 0.14, a scene's own bed 0.13, the global bed 0.07. Rain is a
+	/// continuous loop belonging to the scene, which is what a bed is, and beds sit about 9.8 dB below
+	/// thunder - <c>20*log10(0.13/0.40)</c>. With the samples level, that puts rain at the bed's own
+	/// 0.13. The headroom argument agrees: these are 1999 samples mastered hard against the rails, and
+	/// LobbyAudio's remarks warn that modest-looking gains still sum past 1.0 and clip. Rain, thunder
+	/// and music together come to 0.86 before <see cref="Audio.MasterVolume"/> and 0.43 after it.
+	/// </para>
+	/// <para>
+	/// The original is no help here, which is why this rests on the game's own scale instead: it drives
+	/// the voice 0 to 100 through a control slot (FUN_0051bc40 selector 8) whose default sits behind a
+	/// runtime pointer that cannot be resolved from the binary.
+	/// </para>
+	/// <para>
+	/// <b>Then confirmed out of the mixer, which is the half that settles it.</b> Capturing through
+	/// SDL's disk driver and measuring a dry window against a wet one, the rain's own contribution by
+	/// power subtraction is <b>-36.3 dBFS</b> - the same figure a park's music was confirmed at - and it
+	/// adds 3.4 dB to the mix at the heaviest rain the game can produce. The level scales with the drop
+	/// count, so ordinary weather sits well below that.
+	/// </para>
+	/// <para>
+	/// <b>One caveat on the reasoning above, because it was half wrong.</b> Arguing from LobbyAudio's
+	/// scale predicted rain would sit <i>below</i> the music, its gain being about a quarter of the
+	/// music's; measured, the two are level. Gains do not compare across samples of different density -
+	/// RAIN.mp2 is a continuous loop peaking at full scale where music has dynamics and gaps, so the
+	/// same RMS falls out of a much lower gain. The number is right; the route to it only half was, and
+	/// the capture is what decided it.
 	/// </para>
 	/// </summary>
-	private const float RainVolume = 0.30f;
+	private const float RainVolume = 0.13f;
 
 	/// <summary>How long the rain takes to come up and to go away, so a storm does not switch on.</summary>
 	private const float RainFadeSeconds = 1.5f;
