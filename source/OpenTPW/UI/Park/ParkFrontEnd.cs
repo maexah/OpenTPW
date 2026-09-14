@@ -9,8 +9,16 @@ namespace OpenTPW.UI;
 /// road in each scene: the lobby's key handler opens it outright (0x005e41c0), while a park hands the key
 /// to the binding tables built in FUN_0040cb80 - game action 0 first closes an open HUD panel or leaves a
 /// camera mode, and only failing that does the shortcut action 0 "menu" (0x0040c4d0) open it. Here both
-/// roads are <see cref="WindowStack.EscapeWithoutFocus"/>, because neither HUD panels nor camera modes
-/// with something to leave exist yet.
+/// roads are <see cref="WindowStack.EscapeWithoutFocus"/>.
+/// </para>
+/// <para>
+/// <b>Leaving a camera mode is part of that now, and this paragraph used to say it could not be.</b> It
+/// read "because neither HUD panels nor camera modes with something to leave exist yet", which stopped
+/// being true when camcorder mode was built. The park's own handler (0x00488a00) answers a key-up on
+/// VK_ESCAPE and one whose bound action is camcorder (16) identically, falling through to put the
+/// interface back on page 1 - so Escape and C are one road out, and the original's third is the
+/// viewfinder's eject button, which is not built here. <see cref="MenuKey"/> takes that road before it
+/// opens the menu.
 /// </para>
 /// <para>
 /// <b>The choices are the park's own, and they are not the lobby's.</b> GameMenu_BuildPark adds them in
@@ -45,7 +53,13 @@ internal sealed class ParkFrontEnd : Panel
 	private static readonly string[] Meshes =
 	[
 		"LOLIGHT", "w_dialog", "b_okay", "b_exit", "!frame", "!f_plain", "b_ltoggle", "f_helpbg",
-		"f_screen", "f_optpanel", "f_optpanel2", "f_optpanel3", "b_on", "b_on2", "b_scroller"
+		"f_screen", "f_optpanel", "f_optpanel2", "f_optpanel3", "b_on", "b_on2", "b_scroller",
+
+		// The management gadget's own, which are up for as long as the park is - see <see cref="ParkGadget"/>.
+		// They are named by the model files ui.wad ships; the layout stream asks for several of them under
+		// the name of their first mesh node instead, which is why "base" is mainpanel and "guage" is gauge.
+		"mainpanel", "gauge", "date", "b_retract", "b_buy", "b_camera", "b_info", "b_map", "b_money",
+		"b_resrch"
 	];
 
 	/// <summary>How far down a park's first choice starts - see <see cref="GameMenu"/>.</summary>
@@ -53,6 +67,10 @@ internal sealed class ParkFrontEnd : Panel
 
 	private readonly WindowStack _stack;
 	private readonly string _themeName;
+
+	/// <summary>The management gadget, up for as long as the park is - see <see cref="ParkGadget"/>.</summary>
+	private readonly ParkGadget _gadget;
+
 	private bool _quitting;
 
 	/// <param name="themeName">
@@ -66,6 +84,11 @@ internal sealed class ParkFrontEnd : Panel
 
 		foreach ( var mesh in Meshes )
 			UiMesh.Get( mesh );
+
+		// The gadget is open for the whole of a park, as the lobby's island panel is open for the whole
+		// of the lobby. It is not modal and does not pause, so the park carries on behind it.
+		_gadget = new ParkGadget( stack );
+		_stack.Open( _gadget );
 	}
 
 	/// <summary>
@@ -83,6 +106,17 @@ internal sealed class ParkFrontEnd : Panel
 
 		if ( front is { Modal: true } )
 			return;
+
+		// Escape leaves first person before it reaches the menu, which is what the original does and
+		// what this file used to say it could not: the park's key handler answers a key-up whose key is
+		// VK_ESCAPE *or* whose action is camcorder (16) the same way, by putting the interface back on
+		// page 1 (0x00488a00). So the two roads out of camcorder mode are Escape and the C key, and in
+		// the original also the viewfinder's own eject button, which is not built here.
+		if ( ParkCamcorderCameraMode.Active )
+		{
+			ParkCamcorderCameraMode.Leave();
+			return;
+		}
 
 		_stack.Open( new GameMenu( _stack, MenuChoices(), FirstTop ) );
 	}
