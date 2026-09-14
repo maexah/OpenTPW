@@ -68,8 +68,18 @@ namespace OpenTPW;
 /// 0x00786ba4 says a park is running, and the lobby sets it to 0 as it starts (0x0054e682). So there he
 /// talks on over the menu, and a line queued behind the one the options screen quietens starts
 /// straight away, over that screen. This departs from the lobby on purpose: he is paused there as a
-/// park pauses him (see <see cref="Paused"/>), and is not drawn while paused, so none of those windows
-/// shows him.
+/// park pauses him (see <see cref="Paused"/>).
+/// </para>
+/// <para>
+/// <b>He is still drawn while he is held, and this paragraph used to say the opposite.</b> Being paused
+/// took him off the screen entirely, on the reasoning that it was what a park does to him. It is not:
+/// the original's pause (0x004092a0) calls Advisor_PauseVoice (0x00598960) and the game clock's stop
+/// and nothing else that touches him, and the one call that removes his model - Advisor_KillModel
+/// (0x00429d60) - has exactly three callers, Advisor_StopSpeaking twice and Advisor_StopQuietly, none of
+/// which is the pause. So the original holds him mid-gesture behind an open menu, and so does this, in
+/// both scenes. What still takes him away is <see cref="Dismiss"/> clearing <c>_shown</c>, which is
+/// reached by those same two stops - so the options screen, which quietens him, does remove him, exactly
+/// as the original's third caller does.
 /// </para>
 /// </summary>
 public sealed class Advisor : Entity
@@ -285,7 +295,10 @@ public sealed class Advisor : Entity
 
 	protected override void OnRenderOverlay()
 	{
-		if ( _shown && !_paused && _figure != null )
+		// Drawn while he is held, not only while he is running - see the class remarks. What takes him off
+		// the screen is Dismiss clearing _shown, which is the quiet stop and the crying one, and those are
+		// the two the original removes his model for. A pause is not one of them.
+		if ( _shown && _figure != null )
 			_figure.Draw();
 	}
 
