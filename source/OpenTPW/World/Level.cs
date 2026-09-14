@@ -171,10 +171,15 @@ public class Level
 	/// with.
 	///
 	/// <para>
-	/// Still short. There is no sound here yet and no weather, and no advisor, because each of those is
-	/// a job with its own evidence still to gather. What it does have is the theme's own throughout -
-	/// its balance numbers, its sun and its sky - over <c>base.MD2</c> out of the park's own
-	/// terrain.wad, through the same model and texture path the lobby already uses.
+	/// Sound, weather and the advisor are all here now - this paragraph used to say that none of them
+	/// were, and each was a job with its own evidence to gather. What it does have is the theme's own
+	/// throughout - its balance numbers, its sun and its sky - over <c>base.MD2</c> out of the park's
+	/// own terrain.wad, through the same model and texture path the lobby already uses.
+	/// </para>
+	/// <para>
+	/// What it still has no part of is the simulation: no guests, no staff, and no ride that operates.
+	/// That is what keeps the advisor to a single line - see <see cref="UI.ParkLines"/> - rather than
+	/// the scored queue of them the original runs, which has nothing here to score.
 	/// </para>
 	/// </summary>
 	private void SetupParkEntities()
@@ -254,6 +259,13 @@ public class Level
 		// After the audio, because a park opens with its weather already rolled and that first roll
 		// may want to start the rain straight away.
 		_ = new ParkWeather();
+
+		// The advisor last, as in the lobby: he rides on top of the rest and ducks everything above him
+		// while he talks, and the teardown runs in the order things were made, so a park's sound and its
+		// weather end before he does. Advisor_Update runs from a park's loop (0x0054f9f9) exactly as it
+		// runs from the lobby's (0x0054e6df) - he is the same speaker in both scenes, and what differs is
+		// who hands him lines. A park's are in ParkFrontEnd, through UI.ParkLines.
+		_ = new Advisor();
 
 		Camera.SetCameraMode<ParkOrbitCameraMode>();
 	}

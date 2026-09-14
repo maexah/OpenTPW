@@ -1,7 +1,8 @@
 namespace OpenTPW.UI;
 
 /// <summary>
-/// A park's interface: for now, the game menu Escape brings up and what its choices do.
+/// A park's interface: the management gadget in the corner, the camcorder's viewfinder, the game menu
+/// Escape brings up and what its choices do, and what the advisor is given to say.
 ///
 /// <para>
 /// The original builds the same widgets twice. GameMenu_Open (0x0048c830) branches to GameMenu_BuildLobby
@@ -38,7 +39,8 @@ namespace OpenTPW.UI;
 /// <para>
 /// <b>Engine and content.</b> The menu, the message box, the options screen and all the window handling
 /// are engine, and are the same code in both scenes. This file is the park's content: which choices it
-/// has, in what order, and what each one does.
+/// has, in what order, what each one does, the lines it has the advisor say (<see cref="ParkLines"/>),
+/// and holding him while a window pauses the game.
 /// </para>
 /// </summary>
 internal sealed class ParkFrontEnd : Panel
@@ -79,6 +81,9 @@ internal sealed class ParkFrontEnd : Panel
 	private readonly ParkViewfinder _viewfinder;
 
 	private bool _quitting;
+
+	/// <summary>Whether the line a park opens with has been said - see <see cref="ParkLines.ExplainGadget"/>.</summary>
+	private bool _explained;
 
 	/// <param name="themeName">
 	/// Which park this is, so Restart Park can load the same one again rather than guessing at it.
@@ -231,4 +236,67 @@ internal sealed class ParkFrontEnd : Panel
 
 		Render.PostUpdate += () => Render.Window.SdlWindow.Close();
 	}
+
+	/// <summary>
+	/// Once a frame, after the stack has dealt out the frame's clicks and keys and anything they did has
+	/// opened or closed what it does - the arrangement <see cref="FrontEnd.OnUpdate"/> already has, and
+	/// for the same reason.
+	/// </summary>
+	protected override void OnUpdate()
+	{
+		if ( Advisor.Current is not { } advisor )
+			return;
+
+		// A park is the scene the original really does pause. The game menu, a message box and the options
+		// screen all set Pauses as they open, so all three arrive here. For the first two that holds his
+		// sample where it has got to and stops the clock his clips and his lead-in are timed on. The
+		// options screen is the exception and this comment used to miss it: OptionsScreen.Open calls
+		// Advisor.StopQuietly first, fading his voice and throwing the line away, so by the time it pauses
+		// there is nothing left to hold. The lobby pauses him too, but there it is a choice - see
+		// Level.PausedByWindow and Advisor.Paused.
+		//
+		// A KNOWN DEPARTURE, traced and left alone deliberately: being paused also takes him OFF SCREEN,
+		// because Advisor.OnRenderOverlay draws only while !_paused. The original does not. Its pause
+		// (FUN_004092a0) calls Advisor_PauseVoice (0x00598960) and the clock stop and nothing else that
+		// touches him, and the one function that removes his model - Advisor_KillModel (0x00429d60) - has
+		// exactly three callers, Advisor_StopSpeaking twice and Advisor_StopQuietly, none of which is the
+		// pause. So the original leaves him standing behind the menu where this makes him vanish and pop
+		// back. Putting it right means changing Advisor, which the lobby shares and where the same
+		// behaviour is a documented choice, so it is Alexah's call and not a thing to change in passing.
+		advisor.Paused = _stack.AnyPausing;
+
+		// The line a park opens with, said from the first running frame rather than from the constructor -
+		// but NOT because the constructor would talk over the loading screen, which is what this comment
+		// used to claim and is wrong. Add only queues; nothing is ever said outside Advisor.OnUpdate, and
+		// no entity updates while a level is still being built, so queueing it there would have behaved
+		// identically. It sits here because this is where the once-a-visit latch belongs, beside the pause
+		// it has to respect.
+		//
+		// The latch is set BEFORE the line is queued, so a line he never voices - switched off in the
+		// options, where Advisor.Speak drops it - still spends the "once". That is the original's own
+		// behaviour, not an oversight: Advisor_SayResponse (0x00599050) returns 0 with the switch off and
+		// the tick writes mLastActionStarted and the per-message counters regardless, spending the once on
+		// the offer rather than on anything being heard. A review raised this as a defect; the binary
+		// refuted it.
+		if ( !_explained && !advisor.Paused )
+		{
+			_explained = true;
+			ParkLines.ExplainGadget();
+		}
+	}
+
+	/// <summary>
+	/// The park is ending: what is still queued goes with it, and he is cut off where he stands - the
+	/// same call the lobby's front end makes as it stops, see <see cref="FrontEnd.OnDelete"/>.
+	///
+	/// <para>
+	/// <b>This is the crying stop, not the quiet one, and this comment said "quietly" until a review
+	/// caught it.</b> <see cref="Advisor.Hush"/> goes through Advisor_StopSpeaking (0x005994e0), which
+	/// cries out - one of samples 639 to 641 - whenever his voice was actually sounding. "Quietly" is a
+	/// term of art here for <see cref="Advisor.StopQuietly"/>, a different path, and the only thing that
+	/// takes it is the options screen. The cry is right rather than unfortunate: the original's own cry
+	/// at the end of a scene comes from its front end emptying the queue, which is this.
+	/// </para>
+	/// </summary>
+	protected override void OnDelete() => Advisor.Current?.Hush();
 }
