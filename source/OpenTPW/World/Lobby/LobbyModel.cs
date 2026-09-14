@@ -88,12 +88,19 @@ public sealed class LobbyModel
 			var mesh = modelFile.Meshes[meshIndex];
 			var textures = new List<Texture>();
 
+			// Which of this mesh's materials had their texture swapped for one built at runtime. Only
+			// signs are, and a sign is see-through whatever the model says - see MaterialFlagsFor.
+			var substituted = new bool[16];
+
 			for ( int i = 0; i < 16; ++i )
 			{
 				if ( mesh.Materials.Length <= i || string.IsNullOrEmpty( mesh.Materials[i].Name ) )
 					textures.Add( Texture.Missing );
 				else if ( textureOverrides != null && textureOverrides.TryGetValue( mesh.Materials[i].Name, out var overridden ) )
+				{
 					textures.Add( overridden );
+					substituted[i] = true;
+				}
 				else
 					textures.Add( LoadTexture( mesh.Materials[i].Name, textureDirectory, sharedTextureDirectory ) );
 			}
@@ -107,12 +114,12 @@ public sealed class LobbyModel
 					Normal = mesh.Normals[i],
 					TexCoords = mesh.TexCoords[i],
 					TexIndex = (int)mesh.Vertices[i].TextureIndex,
-					MatFlags = MaterialFlagsFor( mesh, textures, (int)mesh.Vertices[i].TextureIndex )
+					MatFlags = MaterialFlagsFor( mesh, textures, substituted, (int)mesh.Vertices[i].TextureIndex )
 				} );
 			}
 
 			meshVertices[meshIndex] = [.. vertices];
-			models[meshIndex] = BuildModels( mesh, meshVertices[meshIndex], textures, materialFlags );
+			models[meshIndex] = BuildModels( mesh, meshVertices[meshIndex], textures, substituted, materialFlags );
 
 			// The mesh's place in the model's node tree, not just its own transform - a mesh
 			// parented to a dummy node stores only its offset from that node. Right-multiplying
@@ -337,6 +344,11 @@ public sealed class LobbyModel
 	private const uint CutOutAlphaFlag = 0x10000;
 
 	/// <summary>
+	/// The see-through bit of a material's flags - see <see cref="ModelFile.MaterialData.IsTranslucent"/>.
+	/// </summary>
+	private const uint TranslucentFlag = 0x2;
+
+	/// <summary>
 	/// The flag word a vertex carries: what the file gave its material, plus
 	/// <see cref="CutOutAlphaFlag"/> when that material's texture turns out to be a cut-out mask
 	/// rather than a real gradient - see <see cref="Texture.HasGradedAlpha"/>.
@@ -347,9 +359,25 @@ public sealed class LobbyModel
 	/// geometry the game draws whole, and use the pixels only to choose between the two alpha
 	/// references - which is the one call the original makes from them.
 	/// </summary>
-	private static uint MaterialFlagsFor( ModelFile.Mesh mesh, List<Texture> textures, int material )
+	private static uint MaterialFlagsFor( ModelFile.Mesh mesh, List<Texture> textures, bool[] substituted,
+		int material )
 	{
 		var flags = mesh.Materials[material].Flags;
+
+		// A substituted texture is a sign, and the original makes a sign see-through as it swaps the
+		// texture in rather than trusting what the model was authored with: it ORs the bit into the
+		// material at 0x00467d00 and 0x00467d60, alongside the marker saying which board this is. A
+		// ride's board is authored solid, so without this the 61 signs that carry no artwork letter
+		// their name onto black instead of onto the ride showing through behind them.
+		//
+		// It repairs the painted boards as well. Of the 23 that carry artwork, eight are shaped
+		// rather than rectangular - the Bumper Cars, Candy Cabin, Cat Coaster, Ferris Wheel, Tour
+		// Ride, both Coasters and the Drip - and reach alpha 0 across 5% to 43% of the board. Their
+		// cut-out was being ignored and they were drawn as opaque rectangles. The other fifteen are
+		// solid art whose only partly-clear texels are the 1.6% the .wct codec rings around a hard
+		// edge, so nothing visible changes for them.
+		if ( material < substituted.Length && substituted[material] )
+			flags |= TranslucentFlag;
 
 		return material < textures.Count && !textures[material].HasGradedAlpha
 			? flags | CutOutAlphaFlag
@@ -371,7 +399,7 @@ public sealed class LobbyModel
 	/// mesh turns out to be all of the other - which most meshes are.
 	/// </summary>
 	private static Model?[] BuildModels( ModelFile.Mesh mesh, Vertex[] vertices,
-		List<Texture> textures, MaterialFlags materialFlags )
+		List<Texture> textures, bool[] substituted, MaterialFlags materialFlags )
 	{
 		var solid = new List<uint>( mesh.Indices.Length );
 		var translucent = new List<uint>();
@@ -384,8 +412,14 @@ public sealed class LobbyModel
 			var corner = mesh.Indices[i];
 			var material = corner < vertices.Length ? vertices[corner].TexIndex : 0;
 
-			var into = material >= 0 && material < mesh.Materials.Length
-				&& mesh.Materials[material].IsTranslucent ? translucent : solid;
+			// A substituted sign goes into the see-through half for the same reason it is given the
+			// bit in MaterialFlagsFor - it has to blend over finished solid geometry rather than
+			// into it, and its own ride is some of what it blends over.
+			var seeThrough = material >= 0 && material < mesh.Materials.Length
+				&& (mesh.Materials[material].IsTranslucent
+					|| (material < substituted.Length && substituted[material]));
+
+			var into = seeThrough ? translucent : solid;
 
 			into.Add( mesh.Indices[i] );
 			into.Add( mesh.Indices[i + 1] );

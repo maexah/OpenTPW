@@ -23,7 +23,8 @@ public static class SignTexture
 
 	/// <summary>
 	/// Height of the board. The .sgn image decodes into a 256x256 buffer because that is the
-	/// aligned size its wavelet decoder works at, but only the top half carries artwork.
+	/// aligned size its wavelet decoder works at, but only the top half carries artwork - which the
+	/// file itself confirms, stating 256x128 in the header of every artwork sign that ships.
 	/// </summary>
 	private const int BoardHeight = 128;
 
@@ -44,10 +45,15 @@ public static class SignTexture
 
 		var sign = new SignFile( signPath );
 
-		if ( !sign.IsValid || sign.Image is not { } image )
+		if ( !sign.IsValid )
 			return false;
 
-		var board = CropBoard( image );
+		// Most rides declare no artwork, and the original leaves their board transparent and letters
+		// straight onto nothing, so the name floats with the ride showing through behind it. A board
+		// of zeroes is exactly that: transparent black, the same clear the engine does at 0x005ecd09.
+		var board = sign.Image is { } image
+			? CropBoard( image )
+			: new byte[BoardWidth * BoardHeight * 4];
 
 		var (first, second) = SplitName( parkName );
 
@@ -187,8 +193,16 @@ public static class SignTexture
 	}
 
 	/// <summary>
-	/// Composites one glyph's coverage over the board. The board is opaque - the sign panels have
-	/// no alpha channel of their own - so the glyph tints the artwork rather than cutting it out.
+	/// Composites one glyph's coverage over the board.
+	///
+	/// <para>
+	/// This is ordinary source-over, which matters only because the board underneath is not always
+	/// opaque. Over artwork it comes out as a straight tint, the glyph moving each pixel part of the
+	/// way toward the ink and the board staying solid. Over the transparent board a ride without
+	/// artwork gets, the same arithmetic leaves the letters at full ink strength with the coverage
+	/// as their alpha, so they are antialiased against whatever is behind the sign rather than
+	/// against black - which is what writing the tint straight in would have given.
+	/// </para>
 	/// </summary>
 	private static unsafe void Blend( byte[] board, byte* glyph, int width, int height, int x, int y,
 		SignFile.LineColour colour )
@@ -221,9 +235,17 @@ public static class SignTexture
 
 				var index = ((targetY * BoardWidth) + targetX) * 4;
 
-				board[index] = (byte)((r * coverage) + (board[index] * (1f - coverage)));
-				board[index + 1] = (byte)((g * coverage) + (board[index + 1] * (1f - coverage)));
-				board[index + 2] = (byte)((b * coverage) + (board[index + 2] * (1f - coverage)));
+				var behind = board[index + 3] / 255f;
+				var carried = behind * (1f - coverage);
+				var combined = coverage + carried;
+
+				if ( combined <= 0f )
+					continue;
+
+				board[index] = (byte)(((r * coverage) + (board[index] * carried)) / combined);
+				board[index + 1] = (byte)(((g * coverage) + (board[index + 1] * carried)) / combined);
+				board[index + 2] = (byte)(((b * coverage) + (board[index + 2] * carried)) / combined);
+				board[index + 3] = (byte)(combined * 255f);
 			}
 		}
 	}

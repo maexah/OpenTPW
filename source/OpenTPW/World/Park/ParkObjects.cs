@@ -257,15 +257,15 @@ public sealed class ParkObjects : Entity
 	/// </para>
 	///
 	/// <para>
-	/// <b>A ride's sign does not paint yet, and the reason is known.</b> <see cref="SignFile"/> reads the
-	/// layout the gates and the lobby islands use, whose header runs to 0x43DD before the image begins;
-	/// every ride's sign is 17,337 bytes, which is 36 short of that, so it is refused as too small and
-	/// says so in the log. It is a second variant rather than a broken file - the two differ in the flags
-	/// at offsets 4 and 8, which read 0 and 1 on a gate and 1 and 0 on a ride - and 36 is not a whole
-	/// number of any record the header is made of, so it wants the original's own loader read rather than
-	/// a guess. Until then the Belly Bounce wears the placeholder its artwork ships with, which says
-	/// "SIGN1" and "SIGN2" in magenta: that is the game's own art for an unpainted board, and showing it
-	/// is more honest than hiding it.
+	/// <b>Most rides ship no artwork for their board, and are meant not to.</b> 61 of the 84 signs in the
+	/// game leave the flag at offset 8 clear, and the original answers that by clearing the board to
+	/// transparent black and skipping the picture entirely (0x005ecd09, 0x005ecd18) - the name is lettered
+	/// onto nothing and floats with the ride showing through behind it. An earlier reading of this had a
+	/// ride's sign as a second file variant needing its own decoder, on the grounds that 17,337 bytes was
+	/// "36 short" of the 0x43DD header a gate has and that 36 was not a whole number of any record. It is
+	/// exactly one record: the artwork's own header, twelve bytes of width, height and type, four
+	/// dequantisation floats and the two chunk sizes. A board with a picture has it and a bare board does
+	/// not, which is the whole of the difference.
 	/// </para>
 	///
 	/// <para>
