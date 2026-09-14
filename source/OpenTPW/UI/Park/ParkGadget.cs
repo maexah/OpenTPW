@@ -39,13 +39,29 @@ namespace OpenTPW.UI;
 /// FUN_004a1d70 does with it, and is why <see cref="FrontEnd.Screens.IslandPanel"/> hides its own.
 /// </para>
 /// <para>
-/// <b>Two of the stream's clusters are deliberately NOT built, for the reason the fold-away arm is
-/// not.</b> The aerial (0x2d, 0x2e) is the messages control - its help row is "Right-click to delete ALL
-/// messages" - and there is no message bar and nothing to delete. The bank balance beside it (0x2f
-/// through 0x32) has no artwork of its own but a currency icon, and a park keeps no balance and no
-/// price: 0x30 is the cost of whatever is in your hand, which is why the original starts it hidden and
-/// paints it yellow. Built now, each would be a control with nothing behind it - which is exactly what
-/// b_retract looked like when it was tried.
+/// <b>The arm is a carrier, not a lid.</b> 0x21, with 0x22 and 0x23 on its far end and the retract
+/// button 0x24 beside them. Nothing reaches it except through FUN_004a2590, and every one of that
+/// function's five callers hands it a panel of its own to hold - so the arm is how this gadget shows any
+/// sub-panel at all, and folding it away is how each of them is put back. The one whose contents exist
+/// today is the camcorder panel, stream 0x00751720, which the camcorder button puts on it and either of
+/// that panel's two buttons takes off again.
+/// </para>
+/// <para>
+/// <b>The message bar is deliberately NOT built, and that is a finding rather than a gap.</b> It has a
+/// stream of its own at 0x007501a0 - a messagel/messagem/messager three-slice with an mb_erase button
+/// and three stacked buttons - and the arm would carry it exactly as it carries the camcorder panel.
+/// But nothing here can ever put a message in it. Every message arrives through FUN_00481580, whose one
+/// caller is CTagSystem::ReceiveMessage (FUN_00509bf0), and the only branch of that whose contents can
+/// be read is postcard status - sent, to outbox, failed - which is out of scope; the other two take an
+/// event id from a simulation that does not exist. A bar built now could only ever be empty, and it
+/// would hold at most ten messages it will never be given (DAT_00750610).
+/// </para>
+/// <para>
+/// <b>Two of the stream's clusters are still NOT built.</b> The aerial (0x2d, 0x2e) is the messages
+/// control - its help row is "Right-click to delete ALL messages" - so with no message bar there is
+/// nothing for it to delete. The bank balance beside it (0x2f through 0x32) has no artwork of its own
+/// but a currency icon, and a park keeps no balance and no price: 0x30 is the cost of whatever is in
+/// your hand, which is why the original starts it hidden and paints it yellow.
 /// </para>
 /// <para>
 /// <b>Engine and content.</b> The controls, the pointer and the help bar are engine. Which buttons a
@@ -60,8 +76,11 @@ internal sealed class ParkGadget : UiWindow
 
 	private readonly UiControl _date;
 
-	/// <summary>The camcorder button, which follows the mode rather than keeping its own answer.</summary>
+	/// <summary>The camcorder button, which stays down for as long as the arm it opens is out.</summary>
 	private readonly UiButton _camcorder;
+
+	/// <summary>The arm, and the panel it carries out of the gadget - see the class remarks.</summary>
+	private readonly UiControl _arm;
 
 	/// <summary>
 	/// The count beside each icon, in the font the original gives them - FUN_004a1d70 fetches 0x36 and
@@ -80,19 +99,140 @@ internal sealed class ParkGadget : UiWindow
 	{
 		// Not modal and not pausing: the park carries on behind it, as the lobby's island panel lets the
 		// lobby carry on. A window that paused here would stop the clock, the calendar and every model.
-		Root = new UiControl
+		//
+		// THE ROOT IS A BARE CONTAINER RATHER THAN THE GADGET BODY, and it has to be, because the arm
+		// draws BEHIND the body and nothing here can draw a child behind its parent. FUN_004a1d70 gives
+		// each control a depth through FUN_0065f16b, which writes it to the control's own +0xe0 and hands
+		// children two more; the receivers are legible only in the disassembly, because the setter is
+		// __fastcall and Ghidra hides the receiver - the same trap FUN_006ad810 set for the bank balance:
+		//
+		//     0x21 arm 4   0x22 end 4   0x24 b_retract 7   0x1d body 8   0x23 handle 9   0x25 six 10
+		//
+		// Higher is nearer the front, and a screenshot is what settles the direction: the six buttons sit
+		// at 10 inside a body at 8 and plainly draw over it. So the arm goes in first and the body over
+		// it. The first build of this made the arm a child of the body, and it drew a hard seam straight
+		// across the panel - which is how the ordering came to be questioned at all.
+		//
+		// The handle's 9 would put it in front of the body, and it is still left inside the arm: it sits
+		// out at x 976-1129 where the body stops at 439, so the two never overlap and no ordering between
+		// them can be seen. b_retract's 7 needs no special handling either - inside the arm it already
+		// falls between the arm at 4 and the body at 8.
+		Root = new UiControl { Rect = VirtualScreen.Whole };
+
+		// The arm, which the gadget carries a sub-panel out on: 0x21 with 0x22 inside it, 0x23 inside that
+		// and the retract button 0x24 beside them. It is a carrier, not a lid - FUN_004a2590 is the only
+		// way anything gets onto it, and each of its five callers hands it a panel of its own to hold.
+		//
+		// Branch 54 left it out because "an arm would fold away nothing", which was true then and is not
+		// now: the panel it carries is built below, and one of that panel's two buttons works.
+		_arm = Root.Add( new UiControl
+		{
+			Id = 0x21,
+			Rect = new UiRect( 331, 1069, 1006, 1495 ),
+			Mesh = UiMesh.Get( "panel" ),
+
+			// It reaches out past the body, so UiControl.Add will not let it follow the body's corner and
+			// VirtualScreen.AnchorFor would work its own out from its middle instead. That middle is 668
+			// across and the left third ends at 683, so it would come out left anyway - but by fourteen
+			// units, and an arm bolted to the body should not be held on by a rounding. Its two end pieces
+			// are worse: both their middles fall in the middle third, so each would centre itself and the
+			// arm would come apart across a wide window.
+			PinAcross = Anchor.Left,
+			PinDown = VerticalAnchor.Bottom,
+
+			// In until something is put on it. THE ORIGINAL SLIDES IT, and that is not reproduced here:
+			// LAB_004a14f0, the handler FUN_004a1d70 installs on THIS control - MOV ECX,ESI at 0x004a2387,
+			// where 0x23 is only remembered in DAT_007cb2d0 - is a jump table over messages 0xa to
+			// 0x100 working a state in the control's own +0x134, and FUN_004a25f0 reads states 3 and 4 as
+			// "still moving". Neither how far nor how long is traced, so the arm is here or it is not,
+			// rather than being given an invented travel - as the gauge's moving part was left out rather
+			// than given an invented reading.
+			Visible = false
+		} );
+
+		// The far end of the arm, and the handle on the end of that. panel.md2 and panelend.md2 carry FOUR
+		// parts each and they are not animation frames: they are pan_money/pan_info/pan_buy/pan_staff and
+		// the matching pane_*, so the arm wears the colour of whichever category it is carrying. Nothing on
+		// the camcorder path sets a part, so both stay on part 0 - which is the one the layout stream names
+		// each model by, and so the one its mesh hash resolves to.
+		var armEnd = _arm.Add( new UiControl
+		{
+			Id = 0x22,
+			Rect = new UiRect( 1006, 1069, 1071, 1382 ),
+			Mesh = UiMesh.Get( "panelend" ),
+			PinAcross = Anchor.Left,
+			PinDown = VerticalAnchor.Bottom
+		} );
+
+		armEnd.Add( new UiControl
+		{
+			Id = 0x23,
+			Rect = new UiRect( 976, 1058, 1129, 1503 ),
+			Mesh = UiMesh.Get( "handle" ),
+			PinAcross = Anchor.Left,
+			PinDown = VerticalAnchor.Bottom
+		} );
+
+		// "Left-click to close this arm" - UIHELPTEXT row 481. It goes away with the arm, because it is
+		// inside it, which is also how it comes to follow the arm's corner without being told to.
+		//
+		// The original keeps the whole assembly built and switches this button off instead, calling the
+		// control's vtable+0x14 with 0 exactly as it does for the readouts that are shown but never
+		// clicked. A NOTE CORRECTED HERE: branch 54 drew this button once and wrote that it "showed as a
+		// red cross - the disabled part of b_retract". It is not the disabled part. b_retract.md2's six
+		// nodes are b_retract, disable, hilite, hidown, helddown and down - UiButton's own order - so part
+		// 0 is the NORMAL look, and a button that closes something simply looks like a cross.
+		_arm.Add( new UiButton
+		{
+			Id = 0x24,
+			Rect = new UiRect( 349, 1386, 429, 1466 ),
+			HelpText = 481,
+			Mesh = UiMesh.Get( "b_retract" ),
+			Clicked = CloseArm
+		} );
+
+		// What the arm carries, out of the camcorder panel's own stream at 0x00751720, which FUN_00498b50
+		// builds and parks hidden until FUN_00498bb0 hands it over. Both its buttons close the arm behind
+		// them: FUN_00498ad0 acts on the click, withdraws the advisor line the panel posted, and then calls
+		// FUN_004a25f0(1) - and that argument is what lifts the camcorder button again.
+		var carried = _arm.Add( new UiControl
+		{
+			Id = 0x62,
+			Rect = new UiRect( 466, 1316, 785, 1469 )
+		} );
+
+		carried.Add( new UiButton
+		{
+			Id = 0x63,
+			Rect = new UiRect( 474, 1316, 627, 1469 ),
+			HelpText = 479,
+			Mesh = UiMesh.Get( "b_1person" ),
+			Clicked = EnterCamcorder
+		} );
+
+		carried.Add( new UiButton
+		{
+			Id = 0x64,
+			Rect = new UiRect( 632, 1316, 785, 1469 ),
+			HelpText = 480,
+			Mesh = UiMesh.Get( "b_postcard" ),
+			Clicked = SendPostcard
+		} );
+
+		// The gadget body itself, over the arm - see the draw-order note where the root is made.
+		var body = Root.Add( new UiControl
 		{
 			Id = 0x1d,
 			Rect = new UiRect( 37, 984, 439, 1507 ),
 			Mesh = UiMesh.Get( "mainpanel" )
-		};
+		} );
 
 		// gauge.md2 belongs to THIS control, not to the meter inside it. In the stream the mesh record
 		// comes after the op that closes 0x1f's block, and UI_ParseTreeStream binds a mesh to the
 		// control whose block is running - its case 1 loads ECX from the invocation's own `this`
 		// (0x0065fe75), where case 0 recursed with the new child instead. So once 0x1f has closed, the
 		// running block is 0x1e's again.
-		var gaugeHousing = Root.Add( new UiControl
+		var gaugeHousing = body.Add( new UiControl
 		{
 			Id = 0x1e,
 			Rect = new UiRect( 67, 1080, 163, 1345 ),
@@ -110,7 +250,7 @@ internal sealed class ParkGadget : UiWindow
 			Rect = new UiRect( 85, 1100, 144, 1324 )
 		} );
 
-		_date = Root.Add( new UiControl
+		_date = body.Add( new UiControl
 		{
 			Id = 0x20,
 			Rect = new UiRect( 153, 1044, 404, 1121 ),
@@ -128,14 +268,7 @@ internal sealed class ParkGadget : UiWindow
 			TextColour = UiColour.Black
 		} );
 
-		// The stream also carries the arm the gadget folds away on (0x21, with 0x22/0x23 inside it) and
-		// the button that folds it (0x24, "Left-click to close this arm"). None of it is built here: the
-		// arm exists to uncover the message bar and the rest of the interface, and none of that is built
-		// either, so an arm would fold away nothing. Its retract button was drawn once while this was
-		// being written and it showed as a red cross - the disabled part of b_retract - floating clear of
-		// the panel, which is exactly what a control with nothing behind it looks like.
-
-		var buttons = Root.Add( new UiControl
+		var buttons = body.Add( new UiControl
 		{
 			Id = 0x25,
 			Rect = new UiRect( 170, 1122, 392, 1372 )
@@ -145,10 +278,11 @@ internal sealed class ParkGadget : UiWindow
 		buttons.Add( NotYet( 0x26, new UiRect( 170, 1122, 288, 1240 ), 469, "b_buy",
 			"Buy and build", "nothing buys an attraction or hires anyone yet" ) );
 
-		// The one that works: camcorder mode already exists, and this is the button the original puts it
-		// on - id 99 of the sub-panel FUN_00498b50 builds, reached from this button's press. The mode
-		// has no toggle of its own because the C key asks it the same question from the camera side, so
-		// this asks it here rather than a second way of holding the answer being invented.
+		// The one that works - and it does not enter first person itself, which is what this used to do.
+		// FUN_004a0840's case 0x27 splits on whether the button has just gone down: down calls FUN_00498bb0,
+		// which puts the camcorder panel on the arm, and up calls FUN_00498bd0, which takes it off again.
+		// The button id 99 that actually enters the mode is on that panel, not here. So this is one more
+		// click than it was, and it is the original's click: the C key still goes straight there.
 		_camcorder = buttons.Add( new UiButton
 		{
 			Id = 0x27,
@@ -156,7 +290,7 @@ internal sealed class ParkGadget : UiWindow
 			HelpText = 474,
 			Mesh = UiMesh.Get( "b_camera" ),
 			Toggles = true,
-			Clicked = ToggleCamcorder
+			Clicked = ShowArm
 		} );
 
 		buttons.Add( NotYet( 0x28, new UiRect( 287, 1133, 405, 1252 ), 470, "b_info",
@@ -247,26 +381,52 @@ internal sealed class ParkGadget : UiWindow
 		};
 
 	/// <summary>
-	/// In and out of the first-person view, which is what the original's button id 99 does through
-	/// FUN_00481a10. <see cref="ParkCamcorderCameraMode"/> keeps whether it is on, so this asks it
-	/// rather than keeping a second answer that could disagree with the C key's.
+	/// The camcorder button was clicked, and the arm follows it out or in.
+	///
+	/// <para>
+	/// It reads the button rather than toggling anything: <see cref="WindowStack"/> has already turned a
+	/// switch over by the time the click arrives, so asking whether it is down now is asking what the
+	/// click meant. Toggling here as well would put the arm back where it started.
+	/// </para>
 	/// </summary>
-	private static void ToggleCamcorder()
+	private void ShowArm() => _arm.Visible = _camcorder.IsDown;
+
+	/// <summary>
+	/// Folds the arm away and lifts the camcorder button with it - FUN_004a25f0, whose one argument is
+	/// that lift: it fetches control 0x27 and puts it back up.
+	/// </summary>
+	private void CloseArm()
 	{
-		if ( ParkCamcorderCameraMode.Active )
-			ParkCamcorderCameraMode.Leave();
-		else
-			ParkCamcorderCameraMode.Enter();
+		_arm.Visible = false;
+		_camcorder.IsDown = false;
+	}
+
+	/// <summary>
+	/// b_1person, the panel's id 99: into first person through FUN_00481a10, and the arm closes behind it.
+	/// The C key reaches the same mode without any of this, which is why
+	/// <see cref="ParkCamcorderCameraMode"/> is still the only record of whether it is running.
+	/// </summary>
+	private void EnterCamcorder()
+	{
+		ParkCamcorderCameraMode.Enter();
+		CloseArm();
+	}
+
+	/// <summary>
+	/// b_postcard, the panel's id 100: FUN_004a9380, which pauses the game and writes a picture out - the
+	/// game ships Postcard.wad, postcard.jpg and an HTML template for it. Nothing here writes one yet, and
+	/// it is deliberately out of scope, so it says so and closes the arm as the other one does.
+	/// </summary>
+	private void SendPostcard()
+	{
+		Log.Info( "Park gadget: Postcard - nothing writes a postcard out yet, so nothing more happens" );
+		CloseArm();
 	}
 
 	protected internal override void Update()
 	{
 		ShowDate();
 		ShowEarned();
-
-		// The C key reaches the same mode without going through this button, so the button follows the
-		// mode rather than the other way about.
-		_camcorder.IsDown = ParkCamcorderCameraMode.Active;
 
 		// Put the gadget away in first person, because camcorder mode steers the view from where the
 		// pointer IS rather than from how it moves: outside a dead zone of 0.4 the view turns at up to

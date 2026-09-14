@@ -63,6 +63,12 @@ internal sealed class ParkFrontEnd : Panel
 		"mainpanel", "gauge", "date", "b_retract", "b_buy", "b_camera", "b_info", "b_map", "b_money",
 		"b_resrch",
 
+		// The arm the gadget carries a panel out on, and the camcorder panel that rides on it - see
+		// <see cref="ParkGadget"/>. The two long pieces are another case of the naming above: the stream
+		// asks for them as pan_money and pane_money, which are the first nodes of panel.md2 and
+		// panelend.md2, and each of those models carries one part per category.
+		"panel", "panelend", "handle", "b_1person", "b_postcard",
+
 		// The golden key and ticket in the top right corner, which the gadget shows live - see
 		// <see cref="ParkGadget"/>. The lobby loads gkey too, but a park entered without going through
 		// the lobby first would otherwise fetch them mid-play.
