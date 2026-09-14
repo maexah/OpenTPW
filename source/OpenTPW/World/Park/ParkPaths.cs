@@ -61,6 +61,11 @@ public sealed class ParkPaths : ModelEntity
 	/// </summary>
 	protected override void OnDelete()
 	{
+		// ModelEntity.OnDelete is what lets go of the model and, with it, the material - and an
+		// override that does not chain to it keeps both for the life of the process. The path network is a model
+		// and a material a park builds from scratch every time it is loaded.
+		base.OnDelete();
+
 		if ( Current == this )
 			Current = null;
 	}
