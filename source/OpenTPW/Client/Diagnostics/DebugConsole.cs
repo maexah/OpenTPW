@@ -207,6 +207,23 @@ public static class DebugConsole
 				Reply( Stats() );
 				break;
 
+			// What a scene leaves behind, by name rather than by count. `stats` can say that 33
+			// assets survived a lobby-park-lobby cycle and cannot say which, which is why the
+			// residue has stayed unidentified. Bare `assets` summarises; `assets list` prints one
+			// line each, so a harness can diff the sets between scene builds. The diff has to count
+			// duplicates, not just compare paths: total above distinct means a path was registered
+			// more than once, which is what a missed cache lookup looks like.
+			case "assets":
+				Reply( AssetSummary() );
+
+				if ( parts.Length > 1 && parts[1] == "list" )
+				{
+					foreach ( var asset in Asset.All )
+						Reply( $"asset {asset.GetType().Name} {asset.Path}" );
+				}
+
+				break;
+
 			case "state":
 				Reply( State() );
 				break;
@@ -352,7 +369,10 @@ public static class DebugConsole
 				break;
 
 			default:
-				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/near/stats/state/size/volume/mute/sound/place/speech/advisor/greet/duck/reload/park/lobby/camera/quit" );
+				// Kept in the order the cases appear, so a command added without a line here shows
+				// up as an obvious gap. weather, bolt and camcorder were missing from this list
+				// before assets was added to it.
+				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/weather/bolt/near/stats/assets/state/volume/mute/sound/place/speech/advisor/greet/duck/reload/size/park/lobby/camera/camcorder/quit" );
 				break;
 		}
 	}
@@ -399,6 +419,29 @@ public static class DebugConsole
 		return $"stats fps={1000.0 / mean:F1} mean={mean:F2}ms p99={p99:F2}ms worst={sorted[^1]:F2}ms "
 			+ $"frames={_frameCount} entities={entities} models={models} assets={Asset.All.Count} "
 			+ $"duck={Audio.DuckLevel:0.00} windows={windows}";
+	}
+
+	/// <summary>
+	/// What <see cref="Asset.All"/> holds right now, by kind.
+	/// </summary>
+	/// <remarks>
+	/// <c>distinct</c> counts each kind-and-path once, so a total above it says some path is
+	/// registered more than once - which is what a lookup that missed the cache leaves behind, and
+	/// the first thing worth knowing about a scene's residue.
+	/// </remarks>
+	private static string AssetSummary()
+	{
+		var counts = Asset.All
+			.GroupBy( asset => asset.GetType().Name )
+			.OrderBy( group => group.Key )
+			.Select( group => $"{group.Key.ToLowerInvariant()}={group.Count()}" );
+
+		var distinct = Asset.All
+			.Select( asset => $"{asset.GetType().Name}|{asset.Path}" )
+			.Distinct()
+			.Count();
+
+		return $"assets total={Asset.All.Count} distinct={distinct} {string.Join( " ", counts )}";
 	}
 
 	private static string State()
