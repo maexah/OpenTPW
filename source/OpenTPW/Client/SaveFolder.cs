@@ -129,6 +129,12 @@ internal static class SaveFolder
 						var refresh = parts.Length >= 4 && int.TryParse( parts[3], out var rate ) ? rate : 0;
 						GameOptions.Current.FullScreenSize = new VideoMode( width, height, refresh );
 						break;
+
+					// What a kind of load cost when it was last measured - see LoadStepCounts. Read before
+					// anything loads, which is why this is called from Game.Run rather than with a scene.
+					case LoadStepCounts.LineName when parts.Length >= 3 && int.TryParse( parts[2], out var steps ):
+						LoadStepCounts.Restore( parts[1], steps );
+						break;
 				}
 			}
 
@@ -159,10 +165,15 @@ internal static class SaveFolder
 				.AppendLine( "# OpenTPW's own settings. The original's Config.tcf beside this one holds the" )
 				.AppendLine( "# options it knows about; these are the ones it has no room for." )
 				.AppendLine( $"display {mode}" )
-				.AppendLine( $"fullscreen {options.FullScreenSize.Width} {options.FullScreenSize.Height} {options.FullScreenSize.RefreshRate}" )
-				.ToString();
+				.AppendLine( $"fullscreen {options.FullScreenSize.Width} {options.FullScreenSize.Height} {options.FullScreenSize.RefreshRate}" );
 
-			SaveFileSystem.WriteAllBytes( path, Encoding.UTF8.GetBytes( text ) );
+			// How many steps each kind of load took last time, which is how the loading bar knows how far
+			// to fill without being told - see LoadStepCounts. These are measurements rather than choices,
+			// and they settle: once a situation has been seen, it is only written again if it changes.
+			foreach ( var (key, steps) in LoadStepCounts.All )
+				text.AppendLine( $"{LoadStepCounts.LineName} {key} {steps}" );
+
+			SaveFileSystem.WriteAllBytes( path, Encoding.UTF8.GetBytes( text.ToString() ) );
 			Log.Info( $"Saves: wrote the display settings to {path}" );
 		}
 		catch ( Exception e )

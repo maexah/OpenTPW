@@ -24,8 +24,15 @@ namespace OpenTPW;
 /// The bar is a count, not a clock. Every call site passes 500 as the number of steps a load
 /// takes, and the texture and mesh loaders take a step each while the screen is up, redrawing it
 /// as they go (see <see cref="Asset.Register"/>). Past the expected number it stays full. Here a
-/// step is any asset registering itself, and the caller says how many to expect, as none of
-/// OpenTPW's loads match the original's.
+/// step is any asset registering itself, as none of OpenTPW's loads match the original's.
+/// </para>
+///
+/// <para>
+/// <b>How many to expect is learned rather than written down</b> - see <see cref="LoadStepCounts"/>.
+/// Each situation keeps the count it last measured, so a change to what a scene loads corrects itself
+/// on the next run instead of needing a constant re-measured by hand, and a situation nobody thought
+/// of - a new theme, a scene built a third way - costs nothing. The caller passes only a seed, for a
+/// first-ever run that has nothing measured to go on.
 /// </para>
 ///
 /// <para>
@@ -57,6 +64,10 @@ internal sealed class LoadingScreen : IDisposable
 	private static LoadingScreen? _current;
 
 	private readonly string _what;
+
+	/// <summary>Which situation this load is, so what it costs is remembered against the right one.</summary>
+	private readonly string _key;
+
 	private readonly int _expectedSteps;
 	private int _steps;
 
@@ -86,12 +97,17 @@ internal sealed class LoadingScreen : IDisposable
 	private volatile string _lastLine = "";
 	private string? _lineShown;
 
-	/// <param name="what">What is loading, for the log - "the lobby".</param>
-	/// <param name="expectedSteps">How many steps fill the bar - see <see cref="Asset.Register"/>.</param>
-	public LoadingScreen( string what, int expectedSteps )
+	/// <param name="what">What is loading, for the log and for the count's name - "the lobby".</param>
+	/// <param name="seedSteps">
+	/// How many steps to expect where this situation has never been measured - see
+	/// <see cref="LoadStepCounts.Expect"/>. Only a first-ever run on a fresh install uses it, so it is
+	/// deliberately not kept up to date.
+	/// </param>
+	public LoadingScreen( string what, int seedSteps )
 	{
 		_what = what;
-		_expectedSteps = Math.Max( expectedSteps, 1 );
+		_key = LoadStepCounts.KeyFor( what );
+		_expectedSteps = Math.Max( LoadStepCounts.Expect( _key, seedSteps ), 1 );
 
 		_font = File.ReadAllBytes( ContentDir.GetPath( FontPath ) );
 		EnsureGeometry();
@@ -141,8 +157,18 @@ internal sealed class LoadingScreen : IDisposable
 		_red.Delete();
 		_status.Delete();
 
-		// Says how far off the expected count has drifted, as the lobby loads more.
+		// Says how far off the expectation was. A gap is only news after the first run of a situation:
+		// before that it is the seed being approximate, which is what seeds are.
 		Log.Info( $"Loaded {_what} in {_steps} steps - the loading bar expects {_expectedSteps}" );
+
+		// What it really cost is what the next load of this same situation will expect.
+		LoadStepCounts.Record( _what, _key, _steps );
+
+		// Written only when a count actually moved, so a run that learns nothing new leaves the player's
+		// save folder untouched. SaveDisplay writes the whole file, settings and counts together, so it
+		// is the one writer and the options screen's tick cannot clobber what was learned here.
+		if ( LoadStepCounts.TakeChanged() )
+			SaveFolder.SaveDisplay();
 	}
 
 	/// <summary>

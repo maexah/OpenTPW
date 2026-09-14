@@ -7,10 +7,15 @@
 internal static class Game
 {
 	/// <summary>
-	/// How many steps the loading bar expects the lobby to take - one for every texture, shader,
-	/// material and mesh registered while it loads. The loading screen logs the real count when it
-	/// closes, and this is the count it logs for the lobby as it stands; it wants bringing into line
-	/// again whenever the lobby comes to load more.
+	/// What the loading bar expects the lobby to take on a <b>first-ever run</b> - one step for every
+	/// texture, shader, material and mesh registered while it loads.
+	///
+	/// <para>
+	/// <b>This is a seed, and it is no longer maintained.</b> Every load now records what it really cost,
+	/// and the next load of that same situation expects the measurement instead - see
+	/// <see cref="LoadStepCounts"/>. So this is only what a fresh install uses before anything has been
+	/// measured: it is allowed to drift, and correcting it by hand buys nothing.
+	/// </para>
 	///
 	/// <para>
 	/// It was 3,214 until the blank texture became a single shared instance - see
@@ -193,14 +198,15 @@ internal static class Game
 	internal static void RequestParkLoad( string themeName ) => _parkAsked = themeName.ToLowerInvariant();
 
 	/// <summary>
-	/// How many steps the loading bar expects a park to take.
+	/// What the loading bar expects a park to take on a <b>first-ever run</b>.
 	///
 	/// <para>
-	/// Measured, not guessed: the loading screen logs the real count as it closes, and a park entered
-	/// from the lobby reports 885. It started at 500 here, which is what the original budgets for its
-	/// own park load (LoadingScreen_Begin with 500, from state 9) - a fair guess, and a quarter short,
-	/// because the two are counting different things. See <see cref="LobbyLoadSteps"/>, measured the
-	/// same way.
+	/// <b>A seed, no longer maintained</b>, for the same reason as <see cref="LobbyLoadSteps"/>: what each
+	/// kind of load really costs is measured and remembered now, so this is only where a fresh install
+	/// starts from - see <see cref="LoadStepCounts"/>. It began at 500, which is what the original budgets
+	/// for its own park load (LoadingScreen_Begin with 500, from state 9) - a fair guess, and a quarter
+	/// short, because the two count different things. The history below is kept even so, because it
+	/// records what each part of a park costs to load, which is worth knowing on its own.
 	/// </para>
 	/// <para>
 	/// It has moved eight times, and the direction is not always up: 500 guessed, 631 with the scenery,
