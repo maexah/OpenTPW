@@ -35,13 +35,13 @@ public sealed class LobbyWeather : Entity
 	internal float? DebugRain { get; set; }
 
 	/// <summary>The live bolt, so DebugConsole can report how near the camera it came.</summary>
-	internal LobbyLightning DebugBolt => _lightning;
+	internal Lightning DebugBolt => _lightning;
 
 	/// <summary>Fires a strike now rather than waiting on the roll, for DebugConsole.</summary>
 	internal void DebugStrike() => Strike( LobbyCameraMode.CurrentIsland?.Position ?? Vector3.Zero );
 
-	private readonly LobbyRain _rain = new();
-	private readonly LobbyLightning _lightning = new();
+	private readonly Rain _rain = new();
+	private readonly Lightning _lightning = new();
 
 	public LobbyWeather() => Current = this;
 
@@ -108,7 +108,7 @@ public sealed class LobbyWeather : Entity
 		var flash = _lightning.Flash;
 
 		if ( Level.SunLight != null )
-			Level.SunLight.Color = Vector3.One * (1f + (flash * LobbyLightning.MaxFlash));
+			Level.SunLight.Color = Vector3.One * (1f + (flash * Lightning.MaxFlash));
 	}
 
 	/// <summary>

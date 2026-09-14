@@ -12,7 +12,7 @@ namespace OpenTPW;
 /// To remove entirely: delete this file, the one call site in Level.Update(), Time.Paused and Time.StepFrames, and
 /// the members marked as being for it - LobbyCameraMode's DebugOrbit, DebugSelect and DebugSettle; LobbyWeather's
 /// Current, DebugRain, DebugBolt and DebugStrike; LobbyAudio's Muted, State and DebugPlaceSound; LobbyFlyer's DebugClosestApproach
-/// and DebugClosestSolid; LobbyLightning's DebugAxisDistance and DebugOpacity; the advisor's Say and State; and
+/// and DebugClosestSolid; Lightning's DebugAxisDistance and DebugOpacity; the advisor's Say and State; and
 /// Game's RequestLobbyReload.
 ///
 /// Engine and content: neither. It drives and reads both, and nothing else depends on it.

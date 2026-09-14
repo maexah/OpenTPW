@@ -1,7 +1,8 @@
 namespace OpenTPW;
 
 /// <summary>
-/// A lightning bolt over the lobby, drawn with the game's own lightning.tga.
+/// A lightning bolt, drawn with the game's own lightning.tga. Engine, not either scene's - the lobby
+/// strikes near the island the camera is on, and a park anywhere across its map.
 ///
 /// The original's lobby tick, having picked the island nearest the camera, does this every frame:
 ///
@@ -29,7 +30,7 @@ namespace OpenTPW;
 /// engine, and would draw a park's lightning the same way. When it strikes, and what that sounds like,
 /// is the weather's.
 /// </summary>
-public sealed class LobbyLightning : WeatherSprites
+public sealed class Lightning : WeatherSprites
 {
 	/// <summary>The original's bolt height, straight out of the call above.</summary>
 	private const float BoltHeight = 500f;
@@ -78,7 +79,7 @@ public sealed class LobbyLightning : WeatherSprites
 	private float _remaining;
 	private float _flicker;
 
-	public LobbyLightning() : base( 1, "generic/weather/lightning.tga" )
+	public Lightning() : base( 1, "generic/weather/lightning.tga" )
 	{
 	}
 

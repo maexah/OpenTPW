@@ -1,10 +1,18 @@
 namespace OpenTPW;
 
 /// <summary>
-/// The lobby's rain, drawn with the game's own Raindrop.tga.
+/// Rain, drawn with the game's own Raindrop.tga. Engine, not either scene's: the lobby drives it from
+/// whichever island the camera is on, and a park from its own weather.
+///
+/// <para>
+/// <b>The original keeps exactly one of these for the whole game</b> - the particle object at
+/// DAT_008bcbac, drawn once a frame by FUN_0057ff60 - and the lobby and a park differ only in the
+/// values they push into it. So this belongs beside the engine rather than in either scene's folder,
+/// which is what its own remarks below already said before anything but the lobby used it.
+/// </para>
 ///
 /// RAINY(n) in a park's script sets a rain level, and the original copies the currently selected
-/// island's value into one global every frame - so this is a single system whose intensity
+/// island's value into one global every frame - so in the lobby this is a single system whose intensity
 /// follows the camera rather than rain belonging to a place. Only hallow asks for it, and only
 /// at level 1.
 ///
@@ -14,7 +22,7 @@ namespace OpenTPW;
 /// while still letting the drops have real world positions, so they slide past the islands with
 /// proper parallax instead of hanging off the camera.
 /// </summary>
-public sealed class LobbyRain : WeatherSprites
+public sealed class Rain : WeatherSprites
 {
 	/// <summary>Drops at RAINY(1). The pool is sized for this and never grows.</summary>
 	private const int DropsPerLevel = 900;
@@ -87,7 +95,7 @@ public sealed class LobbyRain : WeatherSprites
 	private float _visible;
 	private bool _seeded;
 
-	public LobbyRain() : base( DropsPerLevel * MaxLevel, "generic/weather/Raindrop.tga" )
+	public Rain() : base( DropsPerLevel * MaxLevel, "generic/weather/Raindrop.tga" )
 	{
 		_drops = new Vector3[DropsPerLevel * MaxLevel];
 	}
