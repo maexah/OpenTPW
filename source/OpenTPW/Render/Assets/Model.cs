@@ -34,6 +34,39 @@ public class Model : Asset
 		Register();
 	}
 
+	/// <summary>
+	/// Releases this model's buffers and its material, and takes it out of <see cref="Asset.All"/>, once
+	/// the frame in progress is done with them.
+	///
+	/// <para>
+	/// A model is never shared: every one is built for the entity that holds it and assigned once - the
+	/// lobby and every park item build their own per mesh, and two copies of the same ride get a model
+	/// each. Its material is its own too, with the one exception the delete itself refuses: the terrain
+	/// draws with the shared <see cref="Material.Default"/>.
+	/// </para>
+	/// <para>
+	/// Its textures and its shader are deliberately left alone. Both are cached by path and shared
+	/// across scenes, and a texture handed out of that cache is held by other <see cref="Texture"/>
+	/// objects that <see cref="Asset.All"/> cannot even enumerate - which is why releasing a scene frees
+	/// what a scene uniquely owns and nothing else.
+	/// </para>
+	/// </summary>
+	public void Delete()
+	{
+		All.Remove( this );
+
+		var vertexBuffer = VertexBuffer;
+		var indexBuffer = IndexBuffer;
+
+		Render.ScheduleDelete( () =>
+		{
+			indexBuffer?.Dispose();
+			vertexBuffer?.Dispose();
+		} );
+
+		Material.Delete();
+	}
+
 	private void SetupMesh( Vertex[] vertices )
 	{
 		var factory = Device.ResourceFactory;

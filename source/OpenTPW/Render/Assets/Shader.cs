@@ -10,7 +10,19 @@ public partial class Shader : Asset
 	public ResourceLayoutDescription[] ResourceLayouts => shaderInfo.Reflection.ResourceLayouts;
 	public NeoVeldrid.Shader[] ShaderProgram => shaderInfo.ShaderProgram;
 	public bool IsDirty { get; private set; }
-	public Action OnRecompile { get; set; }
+
+	/// <summary>
+	/// Run when this shader has been compiled again, so that whatever was built from it can be built
+	/// again too - a <see cref="Material"/> subscribes to rebuild its pipeline.
+	///
+	/// <para>
+	/// Nullable because it genuinely is: nothing is subscribed until a material asks for this shader,
+	/// and <see cref="Recompile"/> has always invoked it as <c>OnRecompile?.Invoke()</c>. It also has
+	/// to be, for a material to take its own handler off again - taking the last one off leaves null
+	/// behind, and a shader outlives every material that ever drew with it.
+	/// </para>
+	/// </summary>
+	public Action? OnRecompile { get; set; }
 
 	private FileSystemWatcher watcher;
 

@@ -41,10 +41,26 @@ public partial class Material : Asset
 	private ResourceSet[]? _cachedResourceSets;
 	private bool _resourceSetsDirty = true;
 
+	/// <summary>
+	/// This material's handler on its shader's recompile, kept so that <see cref="Delete"/> can take it
+	/// off again. It has to be a field: the subscription is a closure over the material's own flags, so
+	/// <c>-=</c> with an equivalent lambda would compare unequal and remove nothing at all.
+	///
+	/// <para>
+	/// A shader outlives every material that ever drew with it - it is cached by path and never
+	/// released - so a material that left its handler on would leave a strong reference to itself in
+	/// that event for the rest of the run, and a recompile would call <see cref="SetupResources"/> on
+	/// a material whose pipeline has been disposed.
+	/// </para>
+	/// </summary>
+	private readonly Action _onShaderRecompiled;
+
 	public Material( string shaderPath, MaterialFlags flags = MaterialFlags.None )
 	{
 		Shader = Shader.GetOrCreate( shaderPath );
-		Shader.OnRecompile += () => SetupResources( flags );
+
+		_onShaderRecompiled = () => SetupResources( flags );
+		Shader.OnRecompile += _onShaderRecompiled;
 
 		Register();
 		SetupResources( flags );
@@ -53,7 +69,10 @@ public partial class Material : Asset
 	protected Material( string shaderPath, Type uniformBufferType, MaterialFlags flags = MaterialFlags.None )
 	{
 		Shader = Shader.GetOrCreate( shaderPath );
-		Shader.OnRecompile += () => SetupResources( flags );
+
+		_onShaderRecompiled = () => SetupResources( flags );
+		Shader.OnRecompile += _onShaderRecompiled;
+
 		UniformBufferType = uniformBufferType;
 
 		Register();
@@ -103,6 +122,76 @@ public partial class Material : Asset
 		);
 
 		return Device.ResourceFactory.CreateSampler( samplerDescription );
+	}
+
+	/// <summary>
+	/// Releases what this material owns and takes it out of <see cref="Asset.All"/>, once the frame in
+	/// progress is done with it.
+	///
+	/// <para>
+	/// <b>Only what it owns.</b> Its layouts and its resource sets are minted here from the shader's
+	/// descriptions - see <see cref="CreateResourceLayouts"/> - so they belong to this material and
+	/// nothing else holds them. Three things it holds are <i>not</i> its: the <see cref="Shader"/>,
+	/// which is cached by path and shared by every material drawn with it; the samplers, which are one
+	/// static set for the whole program; and the textures bound into its resource sets, which are
+	/// cached by path and shared - disposing a resource set does not touch what the set binds, which is
+	/// what makes this safe.
+	/// </para>
+	/// <para>
+	/// The two shared materials refuse, the way <see cref="Texture.Missing"/> does. <see cref="Default"/>
+	/// is held by the terrain and <see cref="UI"/> by the whole interface, so freeing either would take
+	/// it from everything at once.
+	/// </para>
+	/// </summary>
+	public void Delete()
+	{
+		if ( ReferenceEquals( this, Default ) || ReferenceEquals( this, UI ) )
+		{
+			Log.Warning( "Material: one of the shared materials was asked to delete itself, which would take it from everything holding it - ignored" );
+			return;
+		}
+
+		Shader.OnRecompile -= _onShaderRecompiled;
+
+		All.Remove( this );
+
+		// Read out before the queue runs, so what is disposed is what this material held when it was
+		// deleted rather than whatever it might be left pointing at.
+		var pipeline = Pipeline;
+		var scratch = ScratchBuffer;
+		var layouts = _resourceLayouts;
+		var sets = _cachedResourceSets;
+		var rounds = _frameBlocks;
+
+		_boundResources.Clear();
+
+		Render.ScheduleDelete( () =>
+		{
+			if ( sets != null )
+				DestroyResourceSets( sets );
+
+			foreach ( var round in rounds )
+			{
+				foreach ( var block in round )
+				{
+					if ( block.Sets is { } blockSets )
+						DestroyResourceSets( blockSets );
+
+					block.Buffer.Dispose();
+				}
+
+				round.Clear();
+			}
+
+			if ( layouts != null )
+			{
+				foreach ( var layout in layouts )
+					layout.Dispose();
+			}
+
+			scratch?.Dispose();
+			pipeline?.Dispose();
+		} );
 	}
 
 	private void ClearBoundResources()
