@@ -64,6 +64,19 @@ public class RideScriptClockTests
 			writer.Write( word );
 
 		writer.Write( 0 );          // string blob length
+
+		// The variable-name tail, which every real .RSE carries. Writing it is not only fidelity: a file
+		// that declares variables and names none of them sends the reader down a path that logs, and the
+		// logger exists only once some other test class has built one. A blob without this tail passes
+		// in a full run and throws when the class is run on its own, which is how these nine shipped.
+		for ( int i = 0; i < variableCount; ++i )
+		{
+			var name = Encoding.ASCII.GetBytes( $"VAR_{i}\0" );
+
+			writer.Write( name.Length );
+			writer.Write( name );
+		}
+
 		writer.Flush();
 
 		return new RideScriptFile( new MemoryStream( memory.ToArray() ) );
