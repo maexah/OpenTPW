@@ -44,8 +44,12 @@ public class RideScriptTests
 	/// </summary>
 	private static readonly string[] Folders = ["features", "rides", "shops", "sideshow", "upgrades"];
 
-	/// <summary>What the game holds, counted through its own file system: 308 scripts in 262 archives.</summary>
-	private const int ExpectedScripts = 308;
+	/// <summary>
+	/// What the game holds, counted through its own file system: 308 scripts in 262 archives.
+	/// Shared with <see cref="RideScriptRunTests"/> so the two walks cannot disagree about how many
+	/// scripts there are to find.
+	/// </summary>
+	internal const int ExpectedScripts = 308;
 
 	/// <summary>
 	/// Three scripts spell their extension <c>.rse</c> where the other 305 spell it <c>.RSE</c>. On the

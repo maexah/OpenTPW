@@ -111,6 +111,8 @@ public sealed class RideScriptFile : BaseFormat
 
 	private const int VersionOffset = 0x04;
 	private const int VariableCountOffset = 0x08;
+	private const int StackSizeOffset = 0x0C;
+	private const int TimeSliceOffset = 0x10;
 	private const int PadOffset = 0x20;
 	private const int PadLength = 16;
 	private const int LengthOffset = 0x30;
@@ -125,6 +127,25 @@ public sealed class RideScriptFile : BaseFormat
 
 	/// <summary>What the file states, which may not be <see cref="ExpectedVersion"/>.</summary>
 	public int Version { get; private set; }
+
+	/// <summary>
+	/// How many variables the script declares, which is also how many names follow the string blob.
+	/// Taken from the header rather than from <see cref="VariableNames"/>, because a truncated tail
+	/// leaves fewer names than the script actually uses.
+	/// </summary>
+	public int VariableCount { get; private set; }
+
+	/// <summary>
+	/// How much stack the script asked for with <c>#setstack</c>. Two stacks share it: subroutine
+	/// returns fill it from the top down, and <c>HUSH</c>/<c>HOP</c> from the bottom up.
+	/// </summary>
+	public int StackSize { get; private set; }
+
+	/// <summary>
+	/// How many instructions the script may run before it is made to give way, which is 50 in every
+	/// shipped file. It is a count of instructions and not a length of time.
+	/// </summary>
+	public int TimeSlice { get; private set; }
 
 	/// <summary>The body, split into instructions. Empty unless <see cref="IsValid"/>.</summary>
 	public IReadOnlyList<RideInstruction> Instructions { get; private set; } = [];
@@ -187,6 +208,9 @@ public sealed class RideScriptFile : BaseFormat
 		}
 
 		Version = BitConverter.ToInt32( data, VersionOffset );
+		VariableCount = BitConverter.ToInt32( data, VariableCountOffset );
+		StackSize = BitConverter.ToInt32( data, StackSizeOffset );
+		TimeSlice = BitConverter.ToInt32( data, TimeSliceOffset );
 
 		// The loader says so and then reads the file anyway (0x005587f0), so refusing here would turn
 		// a warning the original lives with into a ride that does not load.
