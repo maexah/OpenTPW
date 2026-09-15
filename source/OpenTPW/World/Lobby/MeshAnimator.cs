@@ -147,42 +147,16 @@ public class MeshAnimator
 	}
 
 	/// <summary>
-	/// Slides the UV components this track names from their start value to their end value,
-	/// each on its own end frame. Components are two per coordinate, so component c is the
-	/// U of vertex c/2 when c is even and the V when it's odd.
+	/// Moves each vertex's texture coordinate to where its own keys put it at this frame - see
+	/// <see cref="AnimationFile.UvTrack"/>, which holds the keys and does the blending.
+	///
+	/// One entry drives one vertex, which is how the engine addresses them, so there is no component
+	/// arithmetic here: entry <c>e</c> is vertex <c>e</c>.
 	/// </summary>
 	private void WriteUvs( AnimationFile.UvTrack track, float frame )
 	{
-		for ( int e = 0; e < track.EntryCount; ++e )
-		{
-			var endFrame = track.EndFrame[e];
-			var t = endFrame <= 0 ? 1f : Math.Clamp( frame / endFrame, 0f, 1f );
-
-			var count = track.ComponentCount[e];
-			var values = track.ValueOffset[e];
-
-			for ( int k = 0; k < count; ++k )
-			{
-				var component = track.FirstComponent[e] + k;
-				var slot = component / 2;
-
-				if ( slot >= _vertices.Length )
-					continue;
-
-				var start = track.Values[values + k];
-				var end = track.Values[values + count + k];
-				var value = start + ((end - start) * t);
-
-				var uv = _vertices[slot].TexCoords;
-
-				if ( (component & 1) == 0 )
-					uv.X = value;
-				else
-					uv.Y = value;
-
-				_vertices[slot].TexCoords = uv;
-			}
-		}
+		for ( int entry = 0; entry < track.EntryCount && entry < _vertices.Length; ++entry )
+			_vertices[entry].TexCoords = track.Sample( entry, frame );
 	}
 
 	private void RestorePose()

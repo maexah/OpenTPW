@@ -194,6 +194,7 @@ public class AnimationFile : BaseFormat
 	/// same function of time whether it is drawn thirty times a second or a hundred and forty-four.
 	/// </summary>
 	public const float FramesPerSecond = 30f;
+
 	/// <summary>
 	/// How long one frame lasts, in milliseconds, as the engine holds it: the <b>32-bit float</b> at
 	/// <c>0x006fec08</c> (<c>0x42055555</c>), which is 33.33333206176758 and not the exact 1000/30.
@@ -341,26 +342,110 @@ public class AnimationFile : BaseFormat
 	}
 
 	/// <summary>
-	/// One mesh's UV animation: a set of entries, each sliding some run of UV components from a
-	/// start value to an end value by its own end frame. See the notes on this class.
+	/// One mesh's UV animation: one entry per vertex, each carrying its own run of keyframes.
+	///
+	/// <para>
+	/// <b>An entry is a vertex and its keys, not a run of components between two values.</b> The engine's
+	/// sampler (<c>FUN_004745c0</c>) reads the index table as a <i>first key</i> and a <i>key count</i>,
+	/// takes one frame number per key from the table at descriptor <c>+0x0c</c> and one (u,v) pair per key
+	/// from the one at <c>+0x10</c>, and interpolates between the two keys the frame falls between. It
+	/// writes entry <c>e</c> to the node's UV array at <c>(e &gt;&gt; 2) * 0x20 + (e &amp; 3) * 4</c>, which
+	/// is four u's then four v's - so the entry index <i>is</i> the vertex index, with no component
+	/// arithmetic anywhere.
+	/// </para>
+	///
+	/// <para>
+	/// <b>This was read as a two-point ramp, and that is right only when an entry has exactly two keys.</b>
+	/// Measured over every clip under levels/ on 2026-09-15: of 29,723 entries, 25,332 have two keys and
+	/// 4,391 do not, running as high as 105 - and those fall in <b>289 of the 670 UV tracks, 43%</b>. The
+	/// two readings size their tables identically, which is why the old one passed every bounds check it
+	/// had: a two-key entry packs so that its first key index is exactly twice its entry index, so
+	/// "component 2e, two components" and "key 2e, two keys" address the same bytes. The fountains and the
+	/// advisor's fan are the visible casualties - <c>fountainm.md2</c> carries 44 entries of five keys and
+	/// <c>fountainc.md2</c> 44 of ten, every one of which was flattened to its first and last.
+	/// </para>
 	/// </summary>
 	public class UvTrack
 	{
 		public int TargetIndex { get; init; }
 
-		/// <summary>First UV component each entry drives - two components per coordinate.</summary>
-		public ushort[] FirstComponent { get; init; } = Array.Empty<ushort>();
-		public ushort[] ComponentCount { get; init; } = Array.Empty<ushort>();
+		/// <summary>Where each entry's keys begin in <see cref="Frames"/> and <see cref="Coordinates"/>.</summary>
+		public int[] FirstKey { get; init; } = Array.Empty<int>();
 
-		/// <summary>Index into <see cref="Values"/> where each entry's block begins.</summary>
-		public int[] ValueOffset { get; init; } = Array.Empty<int>();
+		/// <summary>How many keys each entry has - two for most, and up to 105.</summary>
+		public int[] KeyCount { get; init; } = Array.Empty<int>();
 
-		/// <summary>Per entry: its ComponentCount start floats, then that many end floats.</summary>
-		public float[] Values { get; init; } = Array.Empty<float>();
+		/// <summary>One frame number per key, ascending within an entry.</summary>
+		public ushort[] Frames { get; init; } = Array.Empty<ushort>();
 
-		public ushort[] EndFrame { get; init; } = Array.Empty<ushort>();
+		/// <summary>One texture coordinate per key.</summary>
+		public System.Numerics.Vector2[] Coordinates { get; init; } = Array.Empty<System.Numerics.Vector2>();
 
-		public int EntryCount => FirstComponent.Length;
+		/// <summary>One per vertex this track drives.</summary>
+		public int EntryCount => FirstKey.Length;
+
+		/// <summary>The last frame any of this track's keys names - see <see cref="LastFrame"/> on the file.</summary>
+		public int LastKeyFrame
+		{
+			get
+			{
+				var last = 0;
+
+				foreach ( var frame in Frames )
+					last = Math.Max( last, frame );
+
+				return last;
+			}
+		}
+
+		/// <summary>
+		/// Where one entry's vertex has its texture coordinate at <paramref name="frame"/>, interpolated
+		/// between the keys it falls between and held at the last one past the end.
+		///
+		/// <para>
+		/// The engine finds the first key whose frame is above the current one and blends from the key
+		/// before it, falling back to the final pair with a blend of one when the frame is past them all.
+		/// It compares against the <b>truncated</b> frame while blending with the exact one, which is
+		/// reproduced here. Its search would index the key before the first if a run ever began above frame
+		/// nought; <b>none does</b> - all 29,723 entries in the game start at frame 0 - so clamping there
+		/// is a guard against bad data rather than a departure.
+		/// </para>
+		/// </summary>
+		public System.Numerics.Vector2 Sample( int entry, float frame )
+		{
+			if ( entry < 0 || entry >= FirstKey.Length )
+				return System.Numerics.Vector2.Zero;
+
+			var first = FirstKey[entry];
+			var count = KeyCount[entry];
+
+			if ( count <= 0 )
+				return System.Numerics.Vector2.Zero;
+
+			if ( count == 1 )
+				return Coordinates[first];
+
+			// The last pair, blended fully onto its end - what the engine holds when the frame is past
+			// every key this entry has.
+			var lo = count - 2;
+			var t = 1f;
+
+			var current = (int)frame;
+
+			for ( int key = 0; key < count; ++key )
+			{
+				if ( current >= Frames[first + key] )
+					continue;
+
+				lo = Math.Max( key - 1, 0 );
+
+				float from = Frames[first + lo], to = Frames[first + lo + 1];
+				t = to > from ? Math.Clamp( (frame - from) / (to - from), 0f, 1f ) : 0f;
+				break;
+			}
+
+			return System.Numerics.Vector2.Lerp( Coordinates[first + lo], Coordinates[first + lo + 1], t );
+		}
 	}
 
 	/// <summary>Where a node sits over time - channel 0x1. See the class remarks.</summary>
@@ -585,10 +670,7 @@ public class AnimationFile : BaseFormat
 		// had a duration can change length. Across the game's 1151 animation files with readable
 		// channels, 98 gain a last frame here and all 98 had no span whatsoever before.
 		foreach ( var track in UvTracks )
-		{
-			foreach ( var frame in track.EndFrame )
-				maxFrame = Math.Max( maxFrame, frame );
-		}
+			maxFrame = Math.Max( maxFrame, track.LastKeyFrame );
 
 		FirstFrame = minFrame == int.MaxValue ? 0 : minFrame;
 		LastFrame = maxFrame == int.MinValue ? 0 : maxFrame;
@@ -843,59 +925,68 @@ public class AnimationFile : BaseFormat
 
 		long entryCount = BitConverter.ToUInt32( data, (int)descriptorAt + 0x00 );
 		var indicesAt = BitConverter.ToUInt32( data, (int)descriptorAt + 0x04 );
-		long componentTotal = BitConverter.ToUInt32( data, (int)descriptorAt + 0x08 );
-		var durationsAt = BitConverter.ToUInt32( data, (int)descriptorAt + 0x0C );
+		long keyTotal = BitConverter.ToUInt32( data, (int)descriptorAt + 0x08 );
+		var framesAt = BitConverter.ToUInt32( data, (int)descriptorAt + 0x0C );
 		var valuesAt = BitConverter.ToUInt32( data, (int)descriptorAt + 0x10 );
 
-		if ( entryCount <= 0 || entryCount > 65535 || componentTotal <= 0 )
+		if ( entryCount <= 0 || entryCount > 65535 || keyTotal <= 0 )
 			return;
 
-		// The three tables are contiguous and exactly sized by the two counts. Anything else
-		// means this isn't a UV descriptor.
+		// The three tables are contiguous and exactly sized by the two counts: an index pair per entry,
+		// then a coordinate pair per key, then a frame per key. Anything else is not a UV descriptor.
 		if ( indicesAt + (4 * entryCount) != valuesAt )
 			return;
 
-		if ( valuesAt + (8 * componentTotal) != durationsAt )
+		if ( valuesAt + (8 * keyTotal) != framesAt )
 			return;
 
-		if ( indicesAt < 0x9C || durationsAt + (4 * entryCount) > data.Length )
+		if ( indicesAt < 0x9C || framesAt + (2 * keyTotal) > data.Length )
 			return;
 
 		var count = (int)entryCount;
-		var first = new ushort[count];
-		var components = new ushort[count];
-		var valueOffset = new int[count];
-		var endFrame = new ushort[count];
+		var firstKey = new int[count];
+		var keyCount = new int[count];
 
 		var running = 0;
 		for ( int i = 0; i < count; ++i )
 		{
-			first[i] = BitConverter.ToUInt16( data, (int)indicesAt + (4 * i) );
-			components[i] = BitConverter.ToUInt16( data, (int)indicesAt + (4 * i) + 2 );
+			firstKey[i] = BitConverter.ToUInt16( data, (int)indicesAt + (4 * i) );
+			keyCount[i] = BitConverter.ToUInt16( data, (int)indicesAt + (4 * i) + 2 );
 
-			// Each entry stores its start values then its end values, so its block is twice
-			// its component count.
-			valueOffset[i] = running * 2;
-			running += components[i];
+			// Runs are packed end to end in the order the entries name them, which is what lets the
+			// total stand in for a bound on every one of them.
+			if ( firstKey[i] != running )
+				return;
 
-			endFrame[i] = BitConverter.ToUInt16( data, (int)durationsAt + (4 * i) + 2 );
+			running += keyCount[i];
+
+			if ( running > keyTotal )
+				return;
 		}
 
-		if ( running != componentTotal )
+		if ( running != keyTotal )
 			return;
 
-		var values = new float[componentTotal * 2];
-		for ( int v = 0; v < values.Length; ++v )
-			values[v] = BitConverter.ToSingle( data, (int)valuesAt + (4 * v) );
+		var total = (int)keyTotal;
+		var frames = new ushort[total];
+		var coordinates = new System.Numerics.Vector2[total];
+
+		for ( int key = 0; key < total; ++key )
+		{
+			frames[key] = BitConverter.ToUInt16( data, (int)framesAt + (2 * key) );
+
+			coordinates[key] = new System.Numerics.Vector2(
+				BitConverter.ToSingle( data, (int)valuesAt + (8 * key) ),
+				BitConverter.ToSingle( data, (int)valuesAt + (8 * key) + 4 ) );
+		}
 
 		UvTracks.Add( new UvTrack
 		{
 			TargetIndex = target,
-			FirstComponent = first,
-			ComponentCount = components,
-			ValueOffset = valueOffset,
-			Values = values,
-			EndFrame = endFrame
+			FirstKey = firstKey,
+			KeyCount = keyCount,
+			Frames = frames,
+			Coordinates = coordinates
 		} );
 	}
 }
