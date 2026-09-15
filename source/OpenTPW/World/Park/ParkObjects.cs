@@ -34,6 +34,30 @@ public sealed class ParkObjects : Entity
 	private readonly List<LobbyModel> _models = [];
 
 	/// <summary>
+	/// What one placed thing is made of: the model standing in the park, the twelve animation roles its
+	/// own archive ships, and the clip its player last posed.
+	///
+	/// <para>
+	/// The engine keeps all three on the one thing - the model at <c>+0x08</c>, the role table from
+	/// <c>+0x1c</c>, the animation players at <c>+0x10</c> - which is why they are held together here
+	/// rather than a model in one entity and its clips in another. <see cref="ParkRides"/> reaches the
+	/// roles through <see cref="AnimationsFor"/>, so a thing's script and its model are looking at the
+	/// same player rather than at two readings of the same files.
+	/// </para>
+	/// </summary>
+	private sealed class Standing( LobbyModel model, RideAnimations animations )
+	{
+		public LobbyModel Model { get; } = model;
+
+		public RideAnimations Animations { get; } = animations;
+
+		/// <summary>The clip posed last, so a change of clip can put back what the one before it moved.</summary>
+		public AnimationFile? Posed { get; set; }
+	}
+
+	private readonly Dictionary<int, Standing> _standing = [];
+
+	/// <summary>
 	/// Every sign painted for an object standing in this park, kept only so that they can be let
 	/// go of again. Each is cut from a board rasterised for that one object, so it is in no cache
 	/// and nothing else holds it - see <see cref="OnDelete"/>.
@@ -148,9 +172,15 @@ public sealed class ParkObjects : Entity
 			if ( sign != null )
 				_signs.Add( sign );
 
+			// The twelve roles this thing's archive ships, read once here and shared with the script that
+			// drives it. The model is bound against all of them because an animation player names a role
+			// outright - see RideAnimations.AllClips for why probing for a numbered run is not the same set.
+			var animations = RideAnimations.Load( item.Directory, item.Stem, FileSystem );
+
 			var model = new LobbyModel( $"{item.Directory}/{item.Stem}.MD2", $"{item.Directory}/textures", Vector3.Zero,
 				textureOverrides: sign,
-				sharedTextureDirectory: $"levels/{ThemeName.ToLowerInvariant()}/sharetex" );
+				sharedTextureDirectory: $"levels/{ThemeName.ToLowerInvariant()}/sharetex",
+				clips: animations.AllClips );
 
 			// Put away whatever building it left behind before it is stood anywhere.
 			PoseAsBuilt( model, item );
@@ -161,6 +191,7 @@ public sealed class ParkObjects : Entity
 			model.SetTransform( origin, turn );
 
 			_models.Add( model );
+			_standing[placed.ThingId] = new Standing( model, animations );
 
 			// Where it actually ended up, against where the save says it belongs. The two are worked out
 			// from completely separate things - this from the item's own footprint carried through its
@@ -432,12 +463,59 @@ public sealed class ParkObjects : Entity
 	public static Quaternion Turn( int degrees )
 		=> Quaternion.CreateFromAxisAngle( System.Numerics.Vector3.UnitZ, -degrees * (MathF.PI / 180f) );
 
-	protected override void OnUpdate()
+	/// <summary>
+	/// The animation roles a placed thing's archive ships, or null where nothing of that id stands here -
+	/// what <see cref="ParkRides"/> binds to a script instead of reading the same clips a second time.
+	/// </summary>
+	public RideAnimations? AnimationsFor( int thingId )
+		=> _standing.TryGetValue( thingId, out var standing ) ? standing.Animations : null;
+
+	/// <summary>
+	/// Brings every thing's animation player up to <paramref name="now"/> and shows whatever each one has
+	/// reached.
+	///
+	/// <para>
+	/// <b>Once per frame, after the script ticks, which is the order the engine uses.</b> Its channel sweep
+	/// runs from the per-frame update (<c>FUN_0044e410</c> at <c>0054fa96</c>), past the back edge of the
+	/// 31ms catch-up loop the scripts run inside, off a clock snapshot taken once for the whole frame.
+	/// Advancing and posing are one function there (<c>FUN_004735d0</c>), which is why they are one here
+	/// and why this is driven from <see cref="ParkRides"/> rather than from this entity's own update.
+	/// </para>
+	///
+	/// <para>
+	/// <b>Nothing standing in a park keeps a clock of its own any more.</b> These models used to loop
+	/// whatever numbered clips sat beside them, which is neither what their scripts asked for nor anything
+	/// the engine does - so a thing whose player is idle now holds the pose its construction left it in,
+	/// and only a script moves it. That is the engine's own behaviour on a freshly loaded park: the loader
+	/// parks every channel at the sentinel, so the idle default cannot fire until something triggers.
+	/// </para>
+	/// </summary>
+	public void Sweep( int now )
 	{
-		// Game time, not frame time: these are the park's own things, so they stop when the park is
-		// held - see GameClock.
-		foreach ( var model in _models )
-			model.Update( GameClock.Delta );
+		foreach ( var standing in _standing.Values )
+		{
+			standing.Animations.Advance( now );
+
+			if ( standing.Animations.Channel( 0 ) is not { } channel || channel.IsIdle )
+				continue;
+
+			if ( standing.Animations.Clip( channel.AnimID, channel.SubAnim ) is not { } clip )
+				continue;
+
+			// A change of clip puts back what the one before it moved, which is what the engine does on
+			// every role change - see MeshRotator.Rest for how much of it, and for what stays put.
+			if ( !ReferenceEquals( clip, standing.Posed ) )
+			{
+				if ( standing.Posed != null )
+					standing.Model.Rest( standing.Posed );
+
+				standing.Posed = clip;
+			}
+
+			// The frame the player has reached, counted from the start of its own clip - see
+			// MeshRotator.Pose for why that is not the clip's first keyed frame.
+			standing.Model.Pose( clip, channel.AnimFrame );
+		}
 	}
 	/// <summary>
 	/// Lets go of every sign painted for this park's objects, for the reason

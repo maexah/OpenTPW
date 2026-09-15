@@ -76,6 +76,14 @@ public sealed class ParkRides : Entity
 	/// <summary>Where the scripts are read from - see <see cref="ParkItemCatalogue"/> for why this is asked for.</summary>
 	private readonly BaseFileSystem _files;
 
+	/// <summary>
+	/// The things standing in this park, or null where there are none to stand - a test binds scripts
+	/// without a park to draw. Where there is one, a script is given <i>its own thing's</i> animation
+	/// player rather than a second reading of the same clips, and this is also what the per-frame sweep
+	/// poses through.
+	/// </summary>
+	private readonly ParkObjects? _objects;
+
 	/// <summary>The id of the script each placed thing is running, by the thing id the park file gives it.</summary>
 	private readonly Dictionary<int, int> _scripts = [];
 
@@ -124,12 +132,18 @@ public sealed class ParkRides : Entity
 	/// Where to read from, or null for the one a running game mounted. A test passes its own, so that
 	/// binding a real theme's scripts needs no global to have been set.
 	/// </param>
-	public ParkRides( string themeName, ParkWorld? world, ParkItemCatalogue? catalogue, BaseFileSystem? files = null )
+	/// <param name="objects">
+	/// The things already standing in this park, or null where nothing is drawn. It comes last so that a
+	/// caller passing only a file system - which is what every test does - is unaffected.
+	/// </param>
+	public ParkRides( string themeName, ParkWorld? world, ParkItemCatalogue? catalogue, BaseFileSystem? files = null,
+		ParkObjects? objects = null )
 	{
 		ThemeName = themeName;
 		Name = $"{themeName} ride scripts";
 
 		_files = files ?? FileSystem;
+		_objects = objects;
 
 		// The scripts' own way of reaching another script. It is set even where there is nothing to bind,
 		// because it is the scheduler's property and not the park's.
@@ -168,7 +182,12 @@ public sealed class ParkRides : Entity
 			if ( Scheduler.Find( id ) is { } script )
 			{
 				script.ThingId = placed.ThingId;
-				script.Animations = RideAnimations.Load( item.Directory, item.Stem, _files );
+
+				// Its own thing's player where the thing is standing, so that what the script triggers and
+				// what the model is posed from are the same one. Read afresh only where nothing was drawn,
+				// which is what a test binding scripts against a park it never builds is doing.
+				script.Animations = _objects?.AnimationsFor( placed.ThingId )
+					?? RideAnimations.Load( item.Directory, item.Stem, _files );
 
 				if ( script.Animations.Loaded > 0 )
 					++Animated;
@@ -237,6 +256,12 @@ public sealed class ParkRides : Entity
 	{
 		for ( int i = 0; i < GameClock.TicksDue; ++i )
 			Scheduler.Advance( MillisecondsAt( i ) );
+
+		// And then, once, whatever those ticks asked for is shown. The engine sweeps its animation players
+		// from the per-frame update (FUN_0044e410 at 0054fa96), past the back edge of this very catch-up
+		// loop, off one snapshot of the clock - so the sweep belongs after the loop rather than inside it,
+		// and takes the moment the last tick ran at, which is exactly GameClock.Ticks beats in.
+		_objects?.Sweep( (int)(GameClock.Ticks * MillisecondsPerTick) );
 	}
 
 	/// <summary>

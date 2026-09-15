@@ -251,11 +251,13 @@ public class Level
 		_ = new ParkQueues( ThemeName, park );
 		_ = new ParkTerrain( ThemeName );
 		_ = new ParkFixedItems( ThemeName );
-		_ = new ParkObjects( ThemeName, park, catalogue );
+		var objects = new ParkObjects( ThemeName, park, catalogue );
 
 		// And the scripts those objects run. After the objects, because a script belongs to something
-		// standing in the park rather than the other way round.
-		_ = new ParkRides( ThemeName, park, catalogue );
+		// standing in the park rather than the other way round - and now literally so: a script is handed
+		// the very animation player its own thing's model is posed from, and its tick loop is what drives
+		// the sweep that poses it.
+		_ = new ParkRides( ThemeName, park, catalogue, objects: objects );
 
 		// Each group of sound at the volume the options give it, and then the park's own music - which
 		// is the order the original uses too: it registers the park's categories, re-applies the group
