@@ -182,4 +182,96 @@ public class RideScriptModelTests
 		Assert.AreEqual( 7, script.Variables[0], "and through on the millisecond it asked for" );
 		Assert.IsFalse( script.Waiting );
 	}
+
+	/// <summary>
+	/// <b>A trigger landing on a channel that is already running queues behind it, and the answer is both
+	/// lengths added together.</b> This is the number that stops being the clip's own duration the moment a
+	/// park is running: the engine returns the time still to run plus the length of what was just queued,
+	/// each truncated separately (<c>0x0047337b</c> and <c>0x004733cc</c>).
+	///
+	/// <para>
+	/// Ten seconds into a twenty-second clip there are 300 frames left, which is 9999ms, and the clip being
+	/// queued is the same 19999 - so 29998 rather than the 19999 an idle channel answers.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TriggeringInsideAClipQueuesBehindItAndAnswersBothLengths()
+	{
+		var roles = RideAnimations.Load( "levels/space/features/ferry", "ferry", data );
+
+		Assert.AreEqual( 19999, roles.Trigger( 5, 0, 0, 1f, 0 ), "an idle channel starts at once" );
+
+		Assert.AreEqual( 9999 + 19999, roles.Trigger( 5, 0, 0, 1f, 10000 ),
+			"and a busy one answers what is left plus what was queued" );
+
+		Assert.IsTrue( roles.Channel( 0 )!.HasQueued, "which is to say it really did queue it" );
+	}
+
+	/// <summary>
+	/// <c>FLUSHANIM</c> empties the queue and <b>stops nothing</b> - the clip that is running plays on. It
+	/// is the one instruction whose behaviour changes from a genuine no-op to real work the moment a model
+	/// exists, because with none the handler leaves before it reaches the channel.
+	/// </summary>
+	[TestMethod]
+	public void FlushingEmptiesTheQueueAndLeavesTheClipRunning()
+	{
+		var roles = RideAnimations.Load( "levels/space/features/ferry", "ferry", data );
+
+		roles.Trigger( 5, 0, 0, 1f, 0 );
+		roles.Trigger( 5, 1, 0, 1f, 10000 );
+
+		var channel = roles.Channel( 0 )!;
+
+		Assert.IsTrue( channel.HasQueued );
+
+		roles.Flush();
+
+		Assert.IsFalse( channel.HasQueued, "the queue is empty" );
+		Assert.AreEqual( 5, channel.AnimID, "and the clip that was playing is still playing" );
+		Assert.AreEqual( 0, channel.SubAnim );
+	}
+
+	/// <summary>
+	/// <b><c>WAITANIM</c> starts the clip it waits for</b>, which is the shipped behaviour this branch
+	/// restores: the handler calls the same trigger its siblings do (<c>0x00552ab0</c>) and only then
+	/// arms its deadline. Three of the eleven things standing in Lost Kingdom - the Staff Room, both
+	/// Security Cameras and the Litter Bin - execute no other animation instruction at all, so a
+	/// <c>WAITANIM</c> that merely waited would leave them inert for ever.
+	/// </summary>
+	[TestMethod]
+	public void WaitingOutAnAnimationIsWhatStartsIt()
+	{
+		var script = new RideScript( Build( 1, 50,
+			Word( Opcode.WAITANIM ), Lit( 5 ), Lit( 0 ),
+			Word( Opcode.END ) ) )
+		{
+			Animations = RideAnimations.Load( "levels/space/features/ferry", "ferry", data )
+		};
+
+		var channel = script.Animations!.Channel( 0 )!;
+
+		Assert.IsTrue( channel.IsIdle, "nothing is playing before the script runs" );
+
+		script.Turn( 0f );
+
+		Assert.AreEqual( 5, channel.AnimID, "the wait started the clip rather than only waiting for it" );
+		Assert.AreEqual( 0, channel.SubAnim );
+		Assert.IsTrue( script.Waiting );
+
+		// And sitting on it must not trigger it again - the engine triggers only on the visit where its
+		// deadline field is still empty, so the clip carries on from where it had reached.
+		script.Turn( 5000f );
+
+		Assert.AreEqual( 150f, channel.AnimFrame, 0.01f,
+			"half a clip in, rather than back at the beginning it would be if the wait retriggered" );
+
+		// <b>This is the assertion that can actually catch a missing guard, and the frame above is not.</b>
+		// A re-entry that triggered again would not restart anything - the channel is busy, so the engine's
+		// own test would send the clip to the QUEUE - and the frame would read 150 either way. What a
+		// re-trigger really does is leave a second copy of the clip waiting behind the first, which then
+		// plays a second time when it ends. Nothing the original does can queue a clip behind itself by
+		// sitting still, so an empty queue here is the property worth pinning.
+		Assert.IsFalse( channel.HasQueued,
+			"a wait that sits still must not quietly queue the clip it is already waiting for" );
+	}
 }

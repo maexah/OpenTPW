@@ -404,6 +404,16 @@ public sealed class RideScript
 		_critical = false;
 		_budget = _file.TimeSlice > 0 ? _file.TimeSlice : 1;
 
+		// The model's animation players are brought up to the moment before the script can ask about them.
+		// The engine does this somewhere else entirely - once per FRAME, from a snapshot of the game clock
+		// taken outside the fixed-step loop the scripts run in (FUN_0044e410 at 0054fa96) - so a clip there
+		// advances once however many script ticks a frame happens to contain. Doing it here instead ties
+		// the advance to the script's own clock, which is the only clock this class has. What that changes
+		// is nothing a script can see today: a channel is asked about only when an instruction triggers
+		// one, and a trigger brings its own channel up to date first. It will matter when something poses
+		// these clips, and that is the branch this is groundwork for.
+		Animations?.Advance( (int)now );
+
 		while ( _budget > 0 && Running )
 			Step( now );
 	}
@@ -573,8 +583,10 @@ public sealed class RideScript
 			// scripts rather than complete 11, and that "+11" came from a coverage measure that cannot
 			// see blocking at all. It waits on models existing, not on anyone's effort.
 			case Opcode.FLUSHANIM:
-				// The handler's first act is to fetch the model and leave if there is none. With no
-				// model this is the engine's behaviour rather than a stand-in for it.
+				// The handler's first act is to fetch the model and leave if there is none, so with no
+				// model this really is a no-op. With one it empties the channel's QUEUE and nothing else
+				// (FUN_00473270): the clip that is running plays out, and nothing is answered.
+				Animations?.Flush();
 				break;
 
 			case Opcode.TRIGANIM:
@@ -592,9 +604,8 @@ public sealed class RideScript
 				break;
 
 			case Opcode.LOOPANIM:
-				// The key is built from the two operands exactly as the engine builds it, by addition
-				// rather than by an or - which differs only if a variable holds more than sixteen bits.
-				Loop( (Value( operands[1] ) << 16) + Value( operands[0] ) );
+				// Operand one is the role and operand two the entry, the same order the other three take.
+				Loop( now, Value( operands[0] ), Value( operands[1] ) );
 				break;
 
 			case Opcode.WAIT4ANIM:
@@ -1607,7 +1618,7 @@ public sealed class RideScript
 	/// </summary>
 	private void TriggerAnimation( float now, int role, int entry, RideOperand destination )
 	{
-		var length = FloorAnimation( AnimationLength( role, entry ) - AnimationSlack );
+		var length = FloorAnimation( StartAnimation( now, role, entry, 0 ) - AnimationSlack );
 
 		Store( destination, length );
 
@@ -1631,26 +1642,25 @@ public sealed class RideScript
 	/// </para>
 	///
 	/// <para>
-	/// <b>The channel is deliberately not modelled.</b> The engine adds the time still to run on whatever
-	/// that model's channel was already playing, because a trigger queues behind it rather than cutting
-	/// it off. Nothing here plays anything, so there is never anything to queue behind - and the sum is
-	/// then the new clip alone, which is exactly what the engine itself computes when the channel is
-	/// idle. A machine that invented a queue would be guessing at a number no shipped script could check.
+	/// <b>The channel is modelled now, so this starts the clip rather than asking about it.</b> The engine
+	/// takes the channel over only when it is idle, finished or frozen; otherwise the clip goes in a queue
+	/// and the answer becomes <b>the time still to run plus the new clip's length</b>, the two truncated
+	/// separately. So what a script is told stops equalling
+	/// <see cref="RideAnimations.DurationMilliseconds"/> as soon as two triggers land inside one clip -
+	/// which is the engine's own arithmetic, and is reachable in a running park rather than hypothetical.
 	/// </para>
 	/// </summary>
-	private int AnimationLength( int role, int entry )
+	private int StartAnimation( float now, int role, int entry, int flags )
 	{
+		// Null is "no model", which every one of these handlers tests for first. The arithmetic is then
+		// done on nought and the floor catches it - so the 300 a model-less TRIGANIM answers is the
+		// engine's own number, not a stand-in, and a role the model lacks is a different answer again.
 		if ( Animations is null )
 			return 0;
 
-		// EntryCount answers nought for a role outside the twelve, so this covers the sentinel 12 and
-		// anything a script writes that is not a role at all.
-		if ( entry < 0 || entry >= Animations.EntryCount( role ) )
-			return UnknownAnimation;
-
-		var length = Animations.DurationMilliseconds( role, entry );
-
-		return length <= 0 ? UnknownAnimation : length;
+		// A literal 1.0, because every triggering handler pushes 0x3f800000. The channel divides by it, so
+		// anything else here would change the length a script is told as well as the speed it plays at.
+		return Animations.Trigger( role, entry, flags, 1f, (int)now );
 	}
 
 	/// <summary>
@@ -1660,13 +1670,6 @@ public sealed class RideScript
 	/// <see cref="WaitOutAnimation"/>.
 	/// </summary>
 	private static int FloorAnimation( int length ) => length < AnimationSlack ? AnimationSlack : length;
-
-	/// <summary>
-	/// What the engine answers for a role or entry the model does not carry: a flat second rather than a
-	/// clip length - the <c>ADD ESI,0x3e8</c> at <c>0x004733e7</c>, and the <c>MOV EAX,0x3e8</c> its
-	/// other path takes when the worker answers nought.
-	/// </summary>
-	private const int UnknownAnimation = 1000;
 
 	/// <summary>
 	/// <c>WAITANIM</c>: hold while the animation named runs.
@@ -1692,7 +1695,17 @@ public sealed class RideScript
 	/// </summary>
 	private void WaitOutAnimation( float now, int role, int entry, int length )
 	{
-		var duration = AnimationLength( role, entry ) - AnimationSlack;
+		// The handler's first test is whether its deadline field is empty, and only then does it trigger
+		// (0x005529bc: CMP [EBP+0xa0],EDI / JZ). Every later visit takes the re-entry path and only rewinds.
+		// Without this guard the clip would be started again on every turn the script sat here, which would
+		// hold it at its first frame for as long as it waited.
+		if ( _waitUntil is not null )
+		{
+			Wait( now, 0, length );
+			return;
+		}
+
+		var duration = StartAnimation( now, role, entry, 0 ) - AnimationSlack;
 
 		// The floor its sibling applies SIGNED, this one applies UNSIGNED - so a negative sails straight
 		// past it where TRIGANIM's catches it, and only a genuinely short positive length is raised to the
@@ -1710,19 +1723,31 @@ public sealed class RideScript
 	/// <para>
 	/// Asking again for the animation already running is the engine's early exit and does nothing at
 	/// all - which matters because the other path <b>clears the <c>WAIT4ANIM</c> deadline</b>: a loop
-	/// never finishes, so there is nothing left to wait for. That early exit has no effect anything
-	/// here can see, since with no model the two paths differ only in the deadline and a trigger always
-	/// leaves <see cref="_looping"/> at <see cref="OneShot"/>; it is here because the engine does it,
-	/// and it stops an animation being restarted every turn the moment a model exists.
+	/// never finishes, so there is nothing left to wait for. <b>That guard is now load-bearing rather than
+	/// ceremonial</b>: this really does start the clip, so without it a script sitting in a loop would
+	/// restart its animation on every single turn and hold it at the first frame for ever. The Drinks Shop
+	/// runs <c>LOOPANIM 5 0</c> twice and the Belly Bounce <c>LOOPANIM 2 0</c> twice, so it is reached by
+	/// shipped content and not only in principle.
+	/// </para>
+	///
+	/// <para>
+	/// <b>The length is discarded.</b> The engine calls the same trigger the others do and throws the
+	/// answer away without storing it anywhere, which is why <c>LOOPANIM</c> has no destination operand.
 	/// </para>
 	/// </summary>
-	private void Loop( int animation )
+	private void Loop( float now, int role, int entry )
 	{
-		if ( _looping == animation )
+		// The key the engine compares is built by addition rather than by an or, which differs only if a
+		// variable holds more than sixteen bits.
+		var key = (entry << 16) + role;
+
+		if ( _looping == key )
 			return;
 
+		StartAnimation( now, role, entry, AnimTimeControl.LoopFlag );
+
 		_animationUntil = null;
-		_looping = animation;
+		_looping = key;
 	}
 
 	/// <summary>
