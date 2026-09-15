@@ -84,8 +84,29 @@ public class MeshRotator
 		}
 
 		var animation = _animations[_current];
-		var frame = animation.FirstFrame + (_elapsed * AnimationFile.FramesPerSecond);
 
+		Pose( animation, animation.FirstFrame + (_elapsed * AnimationFile.FramesPerSecond) );
+	}
+
+	/// <summary>
+	/// Turns this model's meshes to where <paramref name="animation"/> puts them at
+	/// <paramref name="frame"/>, without touching this rotator's own playback - for a caller that
+	/// sequences clips itself rather than looping through them. <see cref="MeshAnimator.Pose"/> is the
+	/// same split, made for the same reason, and <b>the two have to be driven together</b>: one animation
+	/// player poses every track of one clip, where a private clock each lets a model's morph half and its
+	/// rotation half play different clips at the same time.
+	///
+	/// <para>
+	/// <b>The frame is the clip's own, counted from nought.</b> An animation player counts frames from the
+	/// start of whatever it is playing - see <c>AnimTimeControl.AnimFrame</c> - where <see cref="Update"/>
+	/// counts from <see cref="AnimationFile.FirstFrame"/>. Those are the same number for every clip the
+	/// game ships, because all of them declare nought, but they are not the same rule: the engine plays
+	/// nought to the declared span, and the span a clip declares disagrees with the one its keys cover on
+	/// 159 of them.
+	/// </para>
+	/// </summary>
+	public void Pose( AnimationFile animation, float frame )
+	{
 		foreach ( var track in animation.RotationTracks )
 		{
 			var target = track.TargetIndex;
