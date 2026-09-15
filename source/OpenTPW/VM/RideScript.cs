@@ -33,8 +33,10 @@ namespace OpenTPW;
 /// <b>Only the opcodes whose handlers were actually read are implemented.</b> Everything else is a
 /// no-op that <see cref="NotImplemented"/> counts, because a guessed instruction is worse than an
 /// absent one: it would run, produce a plausible number and take a branch nobody can account for.
-/// The ones left out all reach into a world that does not exist yet - objects, animation, guests,
-/// sound - so they can be filled in beside whatever provides those.
+/// The ones left out reach into a world that does not exist yet - guests, scenery, sound - so they
+/// can be filled in beside whatever provides those. That list is shorter than it was: objects and
+/// animation landed beside <see cref="RideEffects"/> and the deadline fields, and limbo needed no
+/// world at all, because the engine keeps it in the script's own frame.
 /// </para>
 /// </summary>
 public sealed class RideScript
@@ -120,12 +122,49 @@ public sealed class RideScript
 	/// </summary>
 	private const uint DefaultSeed = 1;
 
+	/// <summary>
+	/// One place in limbo - eight bytes of the engine's array at <c>+0x24</c>: whoever is being held,
+	/// and the clock reading they are due back at. <b>A slot is free when its handle is nought</b>,
+	/// which is how the engine finds one: it scans for the first zero rather than keeping a cursor.
+	/// </summary>
+	private struct LimboSlot
+	{
+		public int Handle;
+		public float Release;
+	}
+
+	/// <summary>
+	/// Everyone this script is holding - the engine's <c>+0x24</c>, sized by its <c>+0x58</c>.
+	///
+	/// <para>
+	/// <b>Limbo needs no world, which is what made this family implementable now.</b> The array is part
+	/// of the script's own frame: the loader reads the count out of the file header and allocates
+	/// <c>count * 8</c> bytes for it, and the teardown frees it beside the variables and the stack. So
+	/// unlike everything else still outstanding, none of these five instructions is waiting on guests
+	/// to exist before it can be honest - see <see cref="RideScriptFile.LimboCapacity"/>.
+	/// </para>
+	/// </summary>
+	private readonly LimboSlot[] _limbo;
+
+	/// <summary>
+	/// How many slots are taken - the engine's <c>+0x60</c>, which it keeps rather than recounts, and
+	/// which is why <see cref="SendToLimbo"/> can drive it out of step with the slots themselves.
+	/// </summary>
+	private int _inLimbo;
+
+	/// <summary>
+	/// What <c>LIMBO</c>'s second operand is measured in. The engine multiplies it by a thousand before
+	/// adding it to the clock, so the operand is <b>seconds</b> - see <see cref="SendToLimbo"/>.
+	/// </summary>
+	private const int LimboSecond = 1000;
+
 	public RideScript( RideScriptFile file )
 	{
 		_file = file;
 
 		_variables = new int[Math.Max( file.VariableCount, file.VariableNames.Count )];
 		_stack = new int[Math.Max( file.StackSize, 0 )];
+		_limbo = new LimboSlot[Math.Max( file.LimboCapacity, 0 )];
 		_atAddress = file.Instructions.ToDictionary( instruction => instruction.Address );
 
 		_calls = _stack.Length - 1;
@@ -182,6 +221,15 @@ public sealed class RideScript
 	/// which is the same answer <see cref="Ride"/> gives <c>COAST</c>.
 	/// </summary>
 	public RideEffects? Effects { get; set; }
+
+	/// <summary>How many the script is holding in limbo - what <c>INLIMBO</c> answers.</summary>
+	public int InLimbo => _inLimbo;
+
+	/// <summary>
+	/// How much room is left in limbo - what <c>LIMBOSPACE</c> answers, and nought for the 284 shipped
+	/// scripts whose header declares no slots at all.
+	/// </summary>
+	public int LimboSpace => _limbo.Length - _inLimbo;
 
 	public int this[RideVariables variable] => Read( (int)variable );
 
@@ -381,11 +429,18 @@ public sealed class RideScript
 
 			// The animation family. Every one of these handlers tests the model handle at +0xc8 before
 			// it does anything, and takes a path the engine defines completely when that handle is
-			// nought - which is every script here. TRIGWAITANIM is deliberately NOT among them: it
-			// rewinds itself and walks a channel cursor at +0xbc across turns, which has not been read.
-			// It was left out when the rest of the family landed because it then completed no further
-			// script at all; the effect opcodes below have since changed that, and it now completes 11
-			// and leads every remaining candidate. It is the next thing to weigh, not a settled no.
+			// nought - which is every script here.
+			//
+			// TRIGWAITANIM is NOT among them, and that is now settled rather than deferred. Its handler
+			// (0x552c1a) triggers exactly as TRIGANIM does, marks +0xbc with the animation id PLUS ONE,
+			// rewinds four words onto itself and returns without ending the slice; on re-entry it asks
+			// the model for channel 0 and goes on only when that answer plus one equals the mark. With
+			// no model the query is skipped and the comparison is made against the RAW THIRD OPERAND,
+			// which nothing can ever change - so the instruction parks the script for ever unless
+			// operand three happens to equal operand one. In the 133 shipped uses it never does: 132
+			// differ outright and the last is a variable. Implementing it faithfully would hang 56
+			// scripts rather than complete 11, and that "+11" came from a coverage measure that cannot
+			// see blocking at all. It waits on models existing, not on anyone's effort.
 			case Opcode.FLUSHANIM:
 				// The handler's first act is to fetch the model and leave if there is none. With no
 				// model this is the engine's behaviour rather than a stand-in for it.
@@ -453,6 +508,37 @@ public sealed class RideScript
 
 			case Opcode.KILLOBJ:
 				KillObjects( operands[0] );
+				break;
+
+			// Limbo: where a shop or a toilet keeps a guest while they are inside it. All five handlers
+			// work on the script's own frame - the slots at +0x24, how many there are at +0x58, how many
+			// are taken at +0x60 - so none of them needs a world to be honest, which is what separates
+			// this family from everything else still outstanding. Only the 24 scripts whose header
+			// declares slots can hold anyone; on the other 284 a LIMBO answers nought, and that is the
+			// engine's own JLE rather than a stand-in for it.
+			case Opcode.LIMBO:
+				// Both operands are read and NEITHER is written - the handler sets the result register
+				// and returns without ever testing a destination tag. Every other instruction in the
+				// family answers into its operand, so this asymmetry is easy to get wrong by analogy.
+				Result = SendToLimbo( now, Value( operands[0] ), Value( operands[1] ) ) ? 1 : 0;
+				break;
+
+			case Opcode.UNLIMBO:
+				Store( operands[0], TakeFromLimbo( now ) );
+				break;
+
+			case Opcode.FORCEUNLIMBO:
+				ForceFromLimbo( operands[0] );
+				break;
+
+			case Opcode.INLIMBO:
+				Store( operands[0], _inLimbo );
+				break;
+
+			case Opcode.LIMBOSPACE:
+				// All 24 shipped uses write a literal 0 where a destination would go, so the answer
+				// lands in the result register and the write is stepped over - the COAST 2 0 idiom.
+				Store( operands[0], LimboSpace );
 				break;
 
 			case Opcode.COAST:
@@ -589,6 +675,112 @@ public sealed class RideScript
 		}
 
 		Effects.Kill( Value( tag ) );
+	}
+
+	/// <summary>
+	/// <c>LIMBO</c>: hold someone for a while, and answer whether there was room.
+	///
+	/// <para>
+	/// <b>The duration is in seconds.</b> The engine multiplies the operand by a thousand before adding
+	/// it to the clock - three chained <c>LEA</c>s coming to 125, then a scale of eight - so the twenty
+	/// shipped <c>LIMBO $0 5</c> instructions hold someone for five seconds. The published docs call this
+	/// operand "unknown, possibly related to LIMBOSPACE, but may also be duration".
+	/// </para>
+	///
+	/// <para>
+	/// A free slot is one with no handle in it, and the search starts from the beginning every time, so
+	/// a slot that has been emptied is filled again before any later one. There is no separate test for
+	/// being full: the walk simply finds nothing and falls out with nought.
+	/// </para>
+	///
+	/// <para>
+	/// <b>One engine defect is reproduced rather than quietly fixed:</b> a handle of nought is written
+	/// into the slot and counted, but a slot holding nought is exactly what the engine calls free - so
+	/// the tally and the slots disagree from then on, and whoever it was can never be found again. No
+	/// shipped script can reach it, because all 24 guard the instruction with a test of the variable
+	/// that would name the guest. Inventing a guard the engine does not have would be the bigger lie.
+	/// </para>
+	/// </summary>
+	private bool SendToLimbo( float now, int handle, int seconds )
+	{
+		for ( int slot = 0; slot < _limbo.Length; ++slot )
+		{
+			if ( _limbo[slot].Handle != 0 )
+				continue;
+
+			_limbo[slot] = new LimboSlot { Handle = handle, Release = now + (seconds * LimboSecond) };
+			++_inLimbo;
+
+			return true;
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// <c>UNLIMBO</c>: whoever is due back, or nought when nobody is.
+	///
+	/// <para>
+	/// The engine walks from the first slot and takes the first occupied one whose release has gone
+	/// <b>strictly</b> past the clock - <c>CMP [slot+4],clock</c> and a signed <c>JL</c> - so it is "the
+	/// first one due" rather than "the one who has waited longest". Nought is how it says nobody, and
+	/// every shipped use branches on exactly that.
+	/// </para>
+	/// </summary>
+	private int TakeFromLimbo( float now )
+	{
+		for ( int slot = 0; slot < _limbo.Length; ++slot )
+		{
+			if ( _limbo[slot].Handle == 0 || _limbo[slot].Release >= now )
+				continue;
+
+			return Release( slot );
+		}
+
+		return 0;
+	}
+
+	/// <summary>
+	/// <c>FORCEUNLIMBO</c>: the same walk with the clock test taken out, which is how a shop empties
+	/// itself when it shuts.
+	///
+	/// <para>
+	/// <b>It refuses a destination that is not a variable before it does anything at all.</b> The tag
+	/// test comes first and the handler leaves through <c>NOP</c>'s own exit, so it does not even reach
+	/// the result register - unlike <see cref="Store"/>, which sets the register whatever happens. All 23
+	/// shipped uses name a variable, so the refusal never fires in the corpus; it is here because it is
+	/// the one place in the family where the order of the engine's own tests is visible.
+	/// </para>
+	/// </summary>
+	private void ForceFromLimbo( RideOperand destination )
+	{
+		if ( destination.Kind != RideOperandKind.Variable )
+		{
+			++IgnoredWrites;
+			return;
+		}
+
+		for ( int slot = 0; slot < _limbo.Length; ++slot )
+		{
+			if ( _limbo[slot].Handle == 0 )
+				continue;
+
+			Store( destination, Release( slot ) );
+			return;
+		}
+
+		Store( destination, 0 );
+	}
+
+	/// <summary>Empties a slot and answers who was in it, as both ways out of limbo do.</summary>
+	private int Release( int slot )
+	{
+		var handle = _limbo[slot].Handle;
+
+		_limbo[slot] = default;
+		--_inLimbo;
+
+		return handle;
 	}
 
 	/// <summary>

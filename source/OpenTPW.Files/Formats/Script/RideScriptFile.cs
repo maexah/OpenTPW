@@ -113,6 +113,7 @@ public sealed class RideScriptFile : BaseFormat
 	private const int VariableCountOffset = 0x08;
 	private const int StackSizeOffset = 0x0C;
 	private const int TimeSliceOffset = 0x10;
+	private const int LimboRecordsOffset = 0x14;
 	private const int PadOffset = 0x20;
 	private const int PadLength = 16;
 	private const int LengthOffset = 0x30;
@@ -146,6 +147,19 @@ public sealed class RideScriptFile : BaseFormat
 	/// shipped file. It is a count of instructions and not a length of time.
 	/// </summary>
 	public int TimeSlice { get; private set; }
+
+	/// <summary>
+	/// How many people the script can hold in limbo at once - the header's "limbo records", which the
+	/// loader turns into an array of that many eight-byte slots (<c>FUN_005587f0</c> reads it into the
+	/// frame's <c>+0x58</c> and allocates <c>count * 8</c> bytes for <c>+0x24</c>).
+	///
+	/// <para>
+	/// Exactly 24 of the 308 shipped scripts declare any, every one of them 10, and those 24 are exactly
+	/// the scripts that use a limbo instruction - no script declares slots it never uses, and none uses
+	/// limbo without declaring them. They are shops and toilets rather than rides.
+	/// </para>
+	/// </summary>
+	public int LimboCapacity { get; private set; }
 
 	/// <summary>The body, split into instructions. Empty unless <see cref="IsValid"/>.</summary>
 	public IReadOnlyList<RideInstruction> Instructions { get; private set; } = [];
@@ -211,6 +225,7 @@ public sealed class RideScriptFile : BaseFormat
 		VariableCount = BitConverter.ToInt32( data, VariableCountOffset );
 		StackSize = BitConverter.ToInt32( data, StackSizeOffset );
 		TimeSlice = BitConverter.ToInt32( data, TimeSliceOffset );
+		LimboCapacity = BitConverter.ToInt32( data, LimboRecordsOffset );
 
 		// The loader says so and then reads the file anyway (0x005587f0), so refusing here would turn
 		// a warning the original lives with into a ride that does not load.

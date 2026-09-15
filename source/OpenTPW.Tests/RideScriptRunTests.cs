@@ -32,6 +32,13 @@ public class RideScriptRunTests
 	private const int MainLoopStart = 18;
 	private const int MainLoopEnd = 67;
 
+	/// <summary>
+	/// How many shipped scripts declare limbo slots: 24, every one of them ten. They are exactly the
+	/// scripts that use a limbo instruction - shops and toilets - with none on either side of that line,
+	/// so the count is pinned rather than left to chance.
+	/// </summary>
+	private const int ExpectedLimboScripts = 24;
+
 	[TestInitialize]
 	public void MountTheGame() => _data = GameData.Required();
 
@@ -368,6 +375,58 @@ public class RideScriptRunTests
 
 		Assert.AreEqual( RideScriptTests.ExpectedScripts, ran, "scripts run" );
 		Assert.IsTrue( started > 0, "not one script started an effect, so nothing here was exercised" );
+	}
+
+	/// <summary>
+	/// Every shipped script still runs now that limbo is real, and every script that declares slots
+	/// still has all of them at the end - because there is nobody here to be held.
+	///
+	/// <para>
+	/// The second half is what would catch a mistake. 24 scripts declare ten slots each and 101 limbo
+	/// instructions now run for real rather than being stepped over, but every <c>LIMBO</c> in the corpus
+	/// sits behind a test of the variable that would name a guest, and nothing here ever sets one. So a
+	/// script that came back holding somebody would mean the machine had invented them - which is
+	/// precisely the quiet kind of wrong that a "did it still run" check sails past.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EveryRideScriptStillRunsWithLimboAndNobodyIsEverHeld()
+	{
+		var stopped = new System.Collections.Generic.List<string>();
+		var holding = new System.Collections.Generic.List<string>();
+		var withSlots = 0;
+		var ran = 0;
+
+		foreach ( var (path, file) in EveryScript() )
+		{
+			if ( !file.IsValid )
+				continue;
+
+			var script = new RideScript( file ) { Ride = new RideState(), Effects = new RideEffects() };
+
+			for ( int turn = 0; turn < 40 && script.Running && !script.Waiting; ++turn )
+				script.Turn( 0f );
+
+			++ran;
+
+			if ( file.LimboCapacity > 0 )
+				++withSlots;
+
+			if ( !script.Running )
+				stopped.Add( Path.GetFileName( path ) );
+
+			if ( script.InLimbo != 0 )
+				holding.Add( Path.GetFileName( path ) );
+		}
+
+		Assert.AreEqual( 0, stopped.Count,
+			$"{stopped.Count} of {ran} scripts stopped, starting with '{stopped.FirstOrDefault()}'" );
+
+		Assert.AreEqual( 0, holding.Count,
+			$"{holding.Count} scripts came back holding somebody nothing put there, starting with '{holding.FirstOrDefault()}'" );
+
+		Assert.AreEqual( ExpectedLimboScripts, withSlots, "scripts declaring limbo slots" );
+		Assert.AreEqual( RideScriptTests.ExpectedScripts, ran, "scripts run" );
 	}
 
 	private System.Collections.Generic.IEnumerable<(string Path, RideScriptFile File)> EveryScript()

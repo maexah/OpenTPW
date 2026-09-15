@@ -232,16 +232,24 @@ public class RideScriptAnimationTests
 	}
 
 	/// <summary>
-	/// <c>TRIGWAITANIM</c> is deliberately still counted rather than guessed. It is the one instruction
-	/// in the family that rewinds itself and walks a channel cursor (<c>+0xbc</c>) across turns, which
-	/// has not been read.
+	/// <c>TRIGWAITANIM</c> is counted rather than guessed, and that is now <b>settled</b> rather than
+	/// deferred - it waits on models existing, not on anyone getting round to it.
 	///
 	/// <para>
-	/// <b>The reason it was left out has since expired, and saying so is the point of this note.</b> When
-	/// the rest of the family landed it completed no further script - 109 of 308 either way - which made
-	/// 133 instructions of reach a bad trade. The effect opcodes changed that: with those in, it completes
-	/// <b>11</b> and leads every remaining single-opcode candidate. This test still pins the current
-	/// behaviour, but it is no longer evidence that leaving it out is right.
+	/// The handler was read through on 2026-09-15. It triggers exactly as <c>TRIGANIM</c> does, marks
+	/// <c>+0xbc</c> with the animation id plus one, rewinds four words onto itself and returns without
+	/// ending the slice; on re-entry it asks the model for channel 0 and goes on only when that answer
+	/// plus one matches the mark. <b>With no model the query is skipped and the comparison is made
+	/// against the raw third operand</b>, which nothing can ever change - so the instruction would park
+	/// the script for ever unless operand three happened to equal operand one. Across the 133 shipped
+	/// uses it never does: 132 differ outright and the last is a variable.
+	/// </para>
+	///
+	/// <para>
+	/// So implementing it faithfully would hang <b>56</b> scripts rather than complete 11. The 11 came
+	/// from a coverage measure - "scripts whose only missing opcode is this one" - which cannot see an
+	/// instruction whose honest behaviour is to block. That is worth remembering the next time a ladder
+	/// names a leader.
 	/// </para>
 	/// </summary>
 	[TestMethod]
