@@ -67,10 +67,23 @@ public sealed class LobbyModel
 	/// Where to look for a texture the model names but does not ship - see <see cref="LoadTexture"/>.
 	/// Null means look nowhere else, which is what the lobby wants: its models carry their own art.
 	/// </param>
+	/// <param name="clips">
+	/// The animations to bind players for, or null to probe for this model's own numbered run.
+	///
+	/// <para>
+	/// A thing standing in a park is handed the clips its twelve roles carry, because the animation
+	/// player driving it may name any of them and a player has to exist for a mesh before that mesh can
+	/// be posed. Probing instead would bind against role 5 alone, read through the loader that turns away
+	/// every clip carrying position and visibility only - and four of the eleven things Lost Kingdom
+	/// places, three of them meant to move for ever, would bind nothing at all. See
+	/// <see cref="RideAnimations.AllClips"/>.
+	/// </para>
+	/// </param>
 	public LobbyModel( string modelPath, string textureDirectory, Vector3 origin, float scale = 1f,
 		IReadOnlyDictionary<string, Texture>? textureOverrides = null,
 		MaterialFlags materialFlags = MaterialFlags.None,
-		string? sharedTextureDirectory = null )
+		string? sharedTextureDirectory = null,
+		IReadOnlyList<AnimationFile>? clips = null )
 	{
 		var modelFile = new ModelFile( modelPath );
 		var meshCount = modelFile.Meshes.Count;
@@ -147,6 +160,7 @@ public sealed class LobbyModel
 		}
 
 		_origin = origin;
+		_placedOrigin = origin;
 
 		// The same composition and the same Y/Z swizzle the meshes above go through, so a node lands
 		// in the world by the rule its model's geometry already landed by.
@@ -164,7 +178,8 @@ public sealed class LobbyModel
 			_nodeOffsets[name] = new Vector3( placed.M41, placed.M43, placed.M42 );
 		}
 
-		var animations = LoadAnimations( modelPath );
+		var supplied = clips is { Count: > 0 };
+		var animations = supplied ? clips!.ToArray() : LoadAnimations( modelPath );
 
 		if ( animations.Length > 0 )
 		{
@@ -173,7 +188,7 @@ public sealed class LobbyModel
 			// Each mesh's own transform goes along with its composed one: a rotation key is the
 			// orientation the mesh holds inside its parent, not the one it ends up with in the
 			// model. See MeshRotator.BuildRestInverses.
-			Rotator = BindRotationAnimations( modelPath, animations, Entities, _linearTransforms,
+			Rotator = BindRotationAnimations( modelPath, animations, supplied, Entities, _linearTransforms,
 				[.. modelFile.Meshes.Select( mesh => ToWorldSpace( mesh.TransformMatrix ) )],
 				Offsets, [.. modelFile.Meshes.Select( mesh => mesh.ParentIndex )] );
 		}
@@ -311,23 +326,93 @@ public sealed class LobbyModel
 	/// <summary>Moves every mesh of this model, keeping their relative placement.</summary>
 	public void SetOrigin( Vector3 origin )
 	{
-		for ( int i = 0; i < Entities.Length; ++i )
-			Entities[i].Position = Offsets[i] + origin;
+		_placedOrigin = origin;
+		_placedRotation = Quaternion.Identity;
+
+		Place();
 	}
 
 	/// <summary>Moves and turns the whole model about its origin.</summary>
 	public void SetTransform( Vector3 origin, Quaternion rotation )
 	{
+		_placedOrigin = origin;
+		_placedRotation = rotation;
+
+		Place();
+
+		// The mesh's own orientation lives in its LinearTransform, so this only has to
+		// carry the whole model's heading.
+		foreach ( var entity in Entities )
+			entity.Rotation = rotation;
+	}
+
+	// Where this model was last put. Kept because an animation moves meshes about, and putting one back
+	// means putting it where the model was placed rather than where it was loaded - see Rest.
+	private Vector3 _placedOrigin;
+	private Quaternion _placedRotation = Quaternion.Identity;
+
+	/// <summary>Every mesh at the offset it was built with, about wherever the model was last put.</summary>
+	private void Place()
+	{
 		for ( int i = 0; i < Entities.Length; ++i )
 		{
-			var offset = System.Numerics.Vector3.Transform( Offsets[i].GetSystemVector3(), rotation );
+			var offset = System.Numerics.Vector3.Transform( Offsets[i].GetSystemVector3(), _placedRotation );
 
-			Entities[i].Position = (Vector3)offset + origin;
-
-			// The mesh's own orientation lives in its LinearTransform, so this only has to
-			// carry the whole model's heading.
-			Entities[i].Rotation = rotation;
+			Entities[i].Position = (Vector3)offset + _placedOrigin;
 		}
+	}
+
+	/// <summary>
+	/// Shows <paramref name="animation"/> at <paramref name="frame"/> and leaves it there, without any
+	/// clock of this model's own - for a caller holding an animation player that says which clip is
+	/// running and how far into it the model has reached.
+	///
+	/// <para>
+	/// <b>One clip, every kind of track it carries.</b> The engine poses a clip by walking its track list
+	/// once and dispatching on each track's kind (<c>FUN_004721f0</c> into <c>FUN_00471860</c>), so the
+	/// turning, the morphing, the scrolling and the switching on and off of a model all come from the same
+	/// clip at the same frame. Letting each half keep its own clock instead is what allowed a model's
+	/// rotation and its morph to play different clips at once.
+	/// </para>
+	///
+	/// <para>
+	/// <b>Position tracks are deliberately not applied here</b>, and that is a gap rather than a decision
+	/// that they do nothing: the engine drives them (mask <c>0x1</c> and <c>0x200</c>, writing the node's
+	/// own translation row). A position key is parent-local exactly as a rotation key is, and this class
+	/// composes no per-mesh node tree to put one back into - <c>AdvisorModel</c> keeps one and is the
+	/// pattern to copy when they are wanted.
+	/// </para>
+	/// </summary>
+	public void Pose( AnimationFile animation, float frame )
+	{
+		Rotator?.Pose( animation, frame );
+
+		// Held at whatever the last entry before this frame said, and left alone entirely before the
+		// first - which is what VisibleAt answers null for, and what the engine does by simply not
+		// writing the node's flag.
+		foreach ( var track in animation.VisibilityTracks )
+		{
+			if ( track.VisibleAt( frame ) is bool visible )
+				SetMeshVisible( track.TargetIndex, visible );
+		}
+
+		foreach ( var animator in Animators )
+			animator.Pose( animation, frame );
+	}
+
+	/// <summary>
+	/// Puts back what <paramref name="outgoing"/> moved, which the engine does on every role change -
+	/// see <see cref="MeshRotator.Rest"/> for the mask that decides how much of it, and for why what a
+	/// clip hid stays hidden.
+	/// </summary>
+	public void Rest( AnimationFile outgoing )
+	{
+		Rotator?.Rest( outgoing );
+
+		foreach ( var animator in Animators )
+			animator.Rest();
+
+		Place();
 	}
 
 	/// <summary>
@@ -525,11 +610,26 @@ public sealed class LobbyModel
 		return animators;
 	}
 
+	/// <param name="anyClip">
+	/// Whether to look past the first clip for one that turns a mesh.
+	///
+	/// <para>
+	/// A model probing for its own run is asked about its first clip only, which is how it has always been
+	/// asked and what the lobby's gates and islands were tuned against. A model handed a thing's twelve
+	/// roles is asked about all of them, because there is no first: a channel names a role outright, and a
+	/// model whose turning lives in a role other than the one that happens to sort first would otherwise
+	/// get no rotator at all and stand still whatever its script did.
+	/// </para>
+	/// </param>
 	private static MeshRotator? BindRotationAnimations( string modelPath, AnimationFile[] animations,
-		ModelEntity[] entities, Matrix4x4[] baseTransforms, Matrix4x4[] localTransforms,
+		bool anyClip, ModelEntity[] entities, Matrix4x4[] baseTransforms, Matrix4x4[] localTransforms,
 		Vector3[] offsets, int[] parentIndices )
 	{
-		if ( !MeshRotator.Drives( animations[0], entities.Length ) )
+		var drives = anyClip
+			? animations.Any( animation => MeshRotator.Drives( animation, entities.Length ) )
+			: MeshRotator.Drives( animations[0], entities.Length );
+
+		if ( !drives )
 			return null;
 
 		Log.Info( $"{modelPath}: rotating {animations[0].RotationTracks.Count} mesh(es) " +

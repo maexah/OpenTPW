@@ -195,6 +195,44 @@ public class MeshRotator
 		return inverses;
 	}
 
+	/// <summary>
+	/// Puts back every mesh <paramref name="outgoing"/> turned, and everything those meshes carry, to the
+	/// orientation the model was built with.
+	///
+	/// <para>
+	/// This is the rotation arm of what the engine does whenever a model changes role
+	/// (<c>FUN_00472310</c>): it walks the clip that is <i>leaving</i> and restores, from the model's
+	/// master copy, every component that clip drove - the <c>0x289</c> arm of its restore mask. Without it
+	/// the first clip looks right and every one after it keeps whatever the clip before left behind on any
+	/// mesh it does not itself name.
+	/// </para>
+	///
+	/// <para>
+	/// <b>Visibility is deliberately not put back, because the engine does not put it back either.</b> That
+	/// mask tests <c>0x289</c>, <c>0x1000</c> and <c>0x10000</c> and never <c>0x20000</c>, which is the
+	/// visibility channel - so what a clip switched off stays off across a clip change and is shown again
+	/// only by a later clip saying so. The engine un-hides exactly one thing on the way in, the outgoing
+	/// clip's own hide list, which we do not read. That is what lets a built item keep the state its
+	/// construction clip left it in - see <c>ParkObjects.PoseAsBuilt</c>, which is our stand-in for that
+	/// list rather than a rival to it.
+	/// </para>
+	/// </summary>
+	public void Rest( AnimationFile outgoing )
+	{
+		foreach ( var track in outgoing.RotationTracks )
+		{
+			var target = track.TargetIndex;
+
+			if ( target < 0 || target >= _entities.Length )
+				continue;
+
+			_entities[target].LinearTransform = _baseTransforms[target];
+
+			foreach ( var child in _descendants[target] )
+				_entities[child].LinearTransform = _baseTransforms[child];
+		}
+	}
+
 	/// <summary>Every mesh under each mesh, so a turn can carry the whole subtree.</summary>
 	private static int[][] BuildDescendants( int[] parentIndices )
 	{

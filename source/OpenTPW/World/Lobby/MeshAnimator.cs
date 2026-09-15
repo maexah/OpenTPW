@@ -159,6 +159,19 @@ public class MeshAnimator
 			_vertices[entry].TexCoords = track.Sample( entry, frame );
 	}
 
+	/// <summary>
+	/// Puts this mesh back the way the model was built and leaves it there - which is what the engine
+	/// does to every buffer an outgoing clip drove that the incoming one does not name for itself
+	/// (<c>FUN_00472310</c>, the <c>0x1000</c> and <c>0x10000</c> arms of its restore). <see cref="Pose"/>
+	/// already does this for a clip that names no track for this mesh; this is for a caller that is
+	/// putting the model down rather than posing it.
+	/// </summary>
+	public void Rest()
+	{
+		if ( !_atRest )
+			RestorePose();
+	}
+
 	private void RestorePose()
 	{
 		WritePositions( _restPositions );

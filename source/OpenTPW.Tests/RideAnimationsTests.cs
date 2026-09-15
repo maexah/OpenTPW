@@ -66,6 +66,129 @@ public class RideAnimationsTests
 		Assert.AreEqual( 4, camera.Roles, "roles holding anything at all" );
 	}
 
+	/// <summary>How big a file is, or nought where there is none - <see cref="LobbyModel"/> asks this way too.</summary>
+	private long SizeOf( string path )
+	{
+		try
+		{
+			return data.GetSize( path );
+		}
+		catch ( System.Exception )
+		{
+			return 0;
+		}
+	}
+
+	/// <summary>
+	/// <b>What a model has to bind its animation players against is every role, and the numbered run it
+	/// would find by itself is not that.</b> A player has to exist for a mesh before that mesh can be
+	/// posed, and an animation player names a role outright - so a model built from one role's clips
+	/// cannot pose any of the others.
+	///
+	/// <para>
+	/// The security camera is the case that shows it, and it is also the thing this branch is verified
+	/// against: <b>every clip it ships is a bare <c>&lt;stem&gt;&lt;letter&gt;.md2</c></b> and not one of
+	/// them is numbered, so a model probing <c>cameraM1.md2</c> upwards - which is the whole of what
+	/// <see cref="LobbyModel"/> does on its own - finds nothing and binds nothing, while the thing in fact
+	/// carries four clips across four roles.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EveryRolesClipsAreWhatAModelBindsAgainstAndTheNumberedRunIsNotThem()
+	{
+		var camera = Load( "levels/jungle/features/camera", "camera" );
+
+		Assert.AreEqual( camera.Loaded, camera.AllClips.Length, "as many as were loaded across the roles" );
+		Assert.AreEqual( 4, camera.AllClips.Length, "C, S, M and E" );
+
+		// Role and then entry order, so the clips can be walked alongside the roles that name them.
+		Assert.AreSame( camera.Clip( 0, 0 ), camera.AllClips[0], "C is the first role that holds anything" );
+		Assert.AreSame( camera.Clip( 6, 0 ), camera.AllClips[^1], "and E the last" );
+
+		Assert.IsTrue( SizeOf( "levels/jungle/features/camera/cameram.md2" ) > 0,
+			"it ships its main clip under the bare name" );
+
+		Assert.AreEqual( 0, SizeOf( "levels/jungle/features/camera/cameram1.md2" ),
+			"and ships no numbered one, so probing for a numbered run binds nothing at all" );
+	}
+
+	/// <summary>
+	/// The clip a role and entry name is the same clip whose length those very arguments are answered
+	/// for. They are three separate walks of the role table - <see cref="RideAnimations.Clip"/>,
+	/// <see cref="RideAnimations.FramesFor"/> and <see cref="RideAnimations.DurationMilliseconds"/> - and
+	/// an animation player is posed from the first while having been timed by the other two, so a
+	/// disagreement between them would pose one clip for another clip's duration.
+	/// </summary>
+	[TestMethod]
+	public void TheClipARoleNamesIsTheOneItsLengthIsAnsweredFor()
+	{
+		var camera = Load( "levels/jungle/features/camera", "camera" );
+		var main = camera.Clip( 5, 0 );
+
+		Assert.IsNotNull( main, "the camera ships an M clip" );
+
+		var declared = (float)(main!.DeclaredLastFrame - main.DeclaredFirstFrame);
+
+		Assert.AreEqual( declared, camera.FramesFor( 5, 0 ), 0.001f, "the span the player is given" );
+		Assert.AreEqual( (int)(declared * AnimationFile.MillisecondsPerFrame), camera.DurationMilliseconds( 5, 0 ),
+			"and the milliseconds the script is told" );
+
+		Assert.IsNull( camera.Clip( 5, 1 ), "there is no second entry of that role" );
+		Assert.IsNull( camera.Clip( 1, 0 ), "nor any D role at all" );
+		Assert.IsNull( camera.Clip( RideAnimations.NoRole, 0 ), "nor anything behind the sentinel" );
+	}
+
+	/// <summary>
+	/// <b>The security camera moves by morphing a mesh, and not by turning one.</b> It runs a cycle for
+	/// ever with no peeps and no ride state, which is what makes it the thing this branch is verified
+	/// against - so what it is actually driven by had to be found out rather than assumed. Its main clip
+	/// carries one morph track and nothing else whatever: no rotation, no position, no UV, no visibility.
+	///
+	/// <para>
+	/// That settles a scope question rather than being a curiosity. Posing applies rotation, morph, UV and
+	/// visibility and deliberately does <b>not</b> apply position, because a position key is parent-local
+	/// exactly as a rotation key is and <see cref="LobbyModel"/> composes no per-mesh node tree to put one
+	/// back into. The camera carries no position track at all, so that gap provably cannot reach it.
+	/// </para>
+	///
+	/// <para>
+	/// <b>The last assertion is the one that decides whether it can move at all.</b> A model binds a morph
+	/// animator only where the track's channel count is its mesh's vertex count plus two. The engine's own
+	/// rule is recorded as plus two only where the track descriptor's bit <c>0x2</c> is set and plus one
+	/// otherwise, where ours adds two unconditionally - and that difference has never been measured. If it
+	/// bit here no animator would be bound, and a camera standing still would look exactly like posing
+	/// being broken rather than like one clip being read a channel short.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheSecurityCameraMovesByMorphingOneMesh()
+	{
+		var camera = Load( "levels/jungle/features/camera", "camera" );
+		var main = camera.Clip( 5, 0 )!;
+
+		var carried = $"rotation {main.RotationTracks.Count}, position {main.PositionTracks.Count}, " +
+			$"morph {main.MorphTracks.Count}, UV {main.UvTracks.Count}, visibility {main.VisibilityTracks.Count}";
+
+		Assert.AreEqual( 1, main.MorphTracks.Count, $"one mesh morphs - it carries {carried}" );
+		Assert.AreEqual( 0, main.RotationTracks.Count, $"and nothing turns - it carries {carried}" );
+		Assert.AreEqual( 0, main.PositionTracks.Count,
+			$"and nothing slides, so the tracks this branch does not pose are none of its business - {carried}" );
+
+		var model = new ModelFile( new System.IO.MemoryStream(
+			data.ReadAllBytes( "levels/jungle/features/camera/camera.md2" ) ) );
+
+		var track = main.MorphTracks[0];
+
+		Assert.IsTrue( track.TargetIndex >= 0 && track.TargetIndex < model.Meshes.Count,
+			$"its morph names mesh {track.TargetIndex}, of {model.Meshes.Count}" );
+
+		// Cast because a mesh's vertex count is unsigned where a channel count is not: this assertion boxes
+		// both, and a boxed uint is never equal to a boxed int however equal the two numbers are. The gate
+		// in LobbyModel.BindVertexAnimations compares them numerically and is not affected.
+		Assert.AreEqual( (int)model.Meshes[track.TargetIndex].VertexCount + 2, track.ChannelCount,
+			"an animator is bound only where these agree" );
+	}
+
 	/// <summary>
 	/// <b>The numbered run wins, and the bare file beside it is never reached.</b> The engine tries
 	/// <c>&lt;stem&gt;&lt;letter&gt;&lt;n&gt;.md2</c> first and only falls back to the unnumbered name

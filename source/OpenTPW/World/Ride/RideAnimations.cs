@@ -79,7 +79,23 @@ public sealed class RideAnimations
 			++Roles;
 			Loaded += role.Length;
 		}
+
+		AllClips = [.. roles.SelectMany( clips => clips )];
 	}
+
+	/// <summary>
+	/// Every clip this thing carries, across all twelve roles, in role and then entry order.
+	///
+	/// <para>
+	/// A model binds its animation players against this rather than against one role, because a channel
+	/// may name any of them and a player has to have been built for the mesh before it can be posed.
+	/// <b>It is not the numbered <c>M</c> run a lobby model probes for</b>: that is role 5 alone, read
+	/// through <see cref="AnimationFile.TryLoad"/>, which turns away the 114 clips carrying position and
+	/// visibility only. Four of the eleven things standing in Lost Kingdom - the Round Fountain, both
+	/// Security Cameras and the Drinks Shop - would bind nothing at all from that run.
+	/// </para>
+	/// </summary>
+	public AnimationFile[] AllClips { get; }
 
 	/// <summary>The letter a role's files are named with, or nought where the id names no role.</summary>
 	public static char LetterFor( int role )
@@ -140,6 +156,22 @@ public sealed class RideAnimations
 		var clip = clips[entry];
 
 		return MathF.Max( clip.DeclaredLastFrame - clip.DeclaredFirstFrame, 0 );
+	}
+
+	/// <summary>
+	/// The clip one role and entry names, or null where that pair names nothing at all - what a channel
+	/// running them has to be posed from. <see cref="DurationMilliseconds"/> and <see cref="FramesFor"/>
+	/// answer about this same clip, and all three have to agree about which one it is, which is why they
+	/// are bounded the same way rather than each in its own words.
+	/// </summary>
+	public AnimationFile? Clip( int role, int entry )
+	{
+		if ( role < 0 || role >= RoleCount )
+			return null;
+
+		var clips = _roles[role];
+
+		return entry >= 0 && entry < clips.Length ? clips[entry] : null;
 	}
 
 	/// <summary>
