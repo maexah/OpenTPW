@@ -149,6 +149,12 @@ public sealed class RideScript
 		if ( !Running )
 			return;
 
+		// The engine zeroes its critical flag at the top of every tick, before any script runs
+		// (FUN_005516b0), so a CRIT_LOCK does not outlive the turn that took it. Without this a script
+		// that locks and then yields - ENDSLICE, or a WAIT - would come back with instructions still
+		// costing nothing, and the loop below would never end. No shipped script does that, so nothing
+		// in the corpus can catch it; it is here because the engine's own reset says so.
+		_critical = false;
 		_budget = _file.TimeSlice > 0 ? _file.TimeSlice : 1;
 
 		while ( _budget > 0 && Running )
