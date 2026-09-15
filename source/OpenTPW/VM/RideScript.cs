@@ -248,6 +248,38 @@ public sealed class RideScript
 	/// </summary>
 	public RideEffects? Effects { get; set; }
 
+	/// <summary>
+	/// The thing this script was loaded for - the engine's field <c>+0xac</c>, a sixteen-bit id and not a
+	/// pointer, and nought for a script belonging to nothing.
+	///
+	/// <para>
+	/// The loader takes it as its <b>second argument</b> and stores it before the script runs an
+	/// instruction (<c>0x00558d2e</c>). It is what separates a script that drives something standing in a
+	/// park from one run in a harness.
+	/// </para>
+	/// </summary>
+	public int ThingId { get; set; }
+
+	/// <summary>
+	/// The animations the thing's model can play, or null where it has no model - the engine's field
+	/// <c>+0xc8</c>.
+	///
+	/// <para>
+	/// <b>The world never writes this: the loader seeds it once</b>, from the thing it was handed, by
+	/// looking that thing up and taking its model handle (<c>0x00558d5b</c>-<c>0x00558d68</c>). So a
+	/// script either has its model from the moment it is loaded or never gets one, which is why this is
+	/// set beside <see cref="ThingId"/> and not later.
+	/// </para>
+	/// <para>
+	/// <b>Null is a path the engine defines rather than one left open.</b> Every animation handler tests
+	/// this handle first and substitutes nought for the length it would have asked the model for - so the
+	/// 300ms a model-less <c>TRIGANIM</c> answers is the engine's own arithmetic on nought, not a
+	/// stand-in. Giving a script its animations is therefore purely additive: the model-less answer is
+	/// the general case evaluated at zero.
+	/// </para>
+	/// </summary>
+	public RideAnimations? Animations { get; set; }
+
 	/// <summary>How many the script is holding in limbo - what <c>INLIMBO</c> answers.</summary>
 	public int InLimbo => _inLimbo;
 
@@ -527,7 +559,8 @@ public sealed class RideScript
 
 			// The animation family. Every one of these handlers tests the model handle at +0xc8 before
 			// it does anything, and takes a path the engine defines completely when that handle is
-			// nought - which is every script here.
+			// nought - which is every script run on its own, and no longer every script in a park: a
+			// placed thing is handed its own model when it is bound. See RideScript.Animations.
 			//
 			// TRIGWAITANIM is NOT among them, and that is now settled rather than deferred. Its handler
 			// (0x552c1a) triggers exactly as TRIGANIM does, marks +0xbc with the animation id PLUS ONE,
@@ -545,11 +578,17 @@ public sealed class RideScript
 				break;
 
 			case Opcode.TRIGANIM:
-				TriggerAnimation( now, operands[2] );
+				// Operand one is the role, operand two the entry within it, and operand three is where
+				// the length goes. The first two are resolved like any other value - the handler gives
+				// each the same tag test before it pushes them at 0x00552950 - and the channel it plays
+				// on is a literal nought, which is what the _CH variants exist to vary.
+				TriggerAnimation( now, Value( operands[0] ), Value( operands[1] ), operands[2] );
 				break;
 
 			case Opcode.WAITANIM:
-				WaitOutAnimation( now, 1 + operands.Count );
+				// The same two operands, and no destination: this one keeps the length to itself and
+				// waits on it rather than answering it.
+				WaitOutAnimation( now, Value( operands[0] ), Value( operands[1] ), 1 + operands.Count );
 				break;
 
 			case Opcode.LOOPANIM:
@@ -969,8 +1008,16 @@ public sealed class RideScript
 	/// the loader, and keeps <b>the id</b> that comes back rather than a pointer. It then finds the new
 	/// script in the registry and copies five things into it: this script's id, as the child's parent, and
 	/// the fields at <c>+0xac</c>, <c>+0x9c</c>, <c>+0xb4</c> and <c>+0xc8</c>. The last of those is the
-	/// model handle and the rest are unmodelled here, and all of them are nought on both sides, so the
-	/// parent id is the whole of what there is to copy.
+	/// model handle and <c>+0xac</c> is the thing, both of which are copied here; <c>+0x9c</c> and
+	/// <c>+0xb4</c> remain unmodelled and are nought on both sides.
+	/// </para>
+	///
+	/// <para>
+	/// <b>That copy used to be nothing at all, and this file said so.</b> While no script had a thing or a
+	/// model, every one of the five was nought on both sides and the parent id was the whole of it. Handing
+	/// a placed thing its own model is what made the sentence false - a spawned script drives the same
+	/// thing its parent does, and a child that lost the model would answer the engine's floor where its
+	/// parent answers a real clip length.
 	/// </para>
 	///
 	/// <para>
@@ -1001,8 +1048,17 @@ public sealed class RideScript
 
 		var child = Host.Find( id );
 
-		if ( child is not null )
-			child.ParentId = Id;
+		if ( child is null )
+			return;
+
+		child.ParentId = Id;
+
+		// The engine copies the thing and its model handle into the child too, so a spawned script drives
+		// the same thing its parent does rather than nothing at all. This used to be nothing to copy -
+		// both fields were nought on both sides - and it stopped being nothing the moment a placed thing
+		// was handed its own model.
+		child.ThingId = ThingId;
+		child.Animations = Animations;
 	}
 
 	/// <summary>
@@ -1549,13 +1605,68 @@ public sealed class RideScript
 	/// <c>COAST 2 0</c>.
 	/// </para>
 	/// </summary>
-	private void TriggerAnimation( float now, RideOperand destination )
+	private void TriggerAnimation( float now, int role, int entry, RideOperand destination )
 	{
-		Store( destination, AnimationSlack );
+		var length = FloorAnimation( AnimationLength( role, entry ) - AnimationSlack );
 
-		_animationUntil = now + AnimationSlack;
+		Store( destination, length );
+
+		_animationUntil = now + length;
 		_looping = OneShot;
 	}
+
+	/// <summary>
+	/// How long one entry of one role runs, in milliseconds - the engine's <c>FUN_004732a0</c>, reduced
+	/// to the part a machine with no animation playing can be faithful about.
+	///
+	/// <para>
+	/// <b>Nought means "no model", and it is not the same answer as "no such animation".</b> With no
+	/// model the engine never asks, and nought is what the arithmetic above is done on - which is why a
+	/// model-less <c>TRIGANIM</c> answers the 300 floor rather than a number invented here. With a model
+	/// but a role or entry it has nothing for, the engine substitutes <see cref="UnknownAnimation"/>
+	/// instead. <b>That second branch is shipped content, not a hypothetical:</b> eight of the role
+	/// references in the game name a role whose file its own archive does not carry - <c>royaloo</c>,
+	/// <c>fries</c>, <c>icecream</c> and <c>purse</c> in fantasy, <c>crys_b</c>, <c>scentro</c> and
+	/// <c>spawheel</c> in space.
+	/// </para>
+	///
+	/// <para>
+	/// <b>The channel is deliberately not modelled.</b> The engine adds the time still to run on whatever
+	/// that model's channel was already playing, because a trigger queues behind it rather than cutting
+	/// it off. Nothing here plays anything, so there is never anything to queue behind - and the sum is
+	/// then the new clip alone, which is exactly what the engine itself computes when the channel is
+	/// idle. A machine that invented a queue would be guessing at a number no shipped script could check.
+	/// </para>
+	/// </summary>
+	private int AnimationLength( int role, int entry )
+	{
+		if ( Animations is null )
+			return 0;
+
+		// EntryCount answers nought for a role outside the twelve, so this covers the sentinel 12 and
+		// anything a script writes that is not a role at all.
+		if ( entry < 0 || entry >= Animations.EntryCount( role ) )
+			return UnknownAnimation;
+
+		var length = Animations.DurationMilliseconds( role, entry );
+
+		return length <= 0 ? UnknownAnimation : length;
+	}
+
+	/// <summary>
+	/// <c>TRIGANIM</c>'s floor, which is <b>signed</b> - so a length that came out under the slack, which
+	/// nought always does, reads as the slack itself rather than as a negative. Its sibling
+	/// <c>WAITANIM</c> floors the same number unsigned and gets the opposite answer; see
+	/// <see cref="WaitOutAnimation"/>.
+	/// </summary>
+	private static int FloorAnimation( int length ) => length < AnimationSlack ? AnimationSlack : length;
+
+	/// <summary>
+	/// What the engine answers for a role or entry the model does not carry: a flat second rather than a
+	/// clip length - the <c>ADD ESI,0x3e8</c> at <c>0x004733e7</c>, and the <c>MOV EAX,0x3e8</c> its
+	/// other path takes when the worker answers nought.
+	/// </summary>
+	private const int UnknownAnimation = 1000;
 
 	/// <summary>
 	/// <c>WAITANIM</c>: hold while the animation named runs.
@@ -1579,7 +1690,19 @@ public sealed class RideScript
 	/// second of a game - and reproducing it would only turn an unreachable case into a hang.
 	/// </para>
 	/// </summary>
-	private void WaitOutAnimation( float now, int length ) => Wait( now, -AnimationSlack, length );
+	private void WaitOutAnimation( float now, int role, int entry, int length )
+	{
+		var duration = AnimationLength( role, entry ) - AnimationSlack;
+
+		// The floor its sibling applies SIGNED, this one applies UNSIGNED - so a negative sails straight
+		// past it where TRIGANIM's catches it, and only a genuinely short positive length is raised to the
+		// slack. With no model the length is nought, the subtraction gives -300, and that is what the
+		// deadline gets: already past, so the instruction costs exactly one turn.
+		if ( (uint)duration < (uint)AnimationSlack )
+			duration = AnimationSlack;
+
+		Wait( now, duration, length );
+	}
 
 	/// <summary>
 	/// <c>LOOPANIM</c>: set an animation looping, unless that same one already is.

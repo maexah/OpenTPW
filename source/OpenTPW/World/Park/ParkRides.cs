@@ -42,6 +42,24 @@ namespace OpenTPW;
 /// would matter rather than being harmless - the speed word is the divisor <c>WAIT</c> scales by, and it
 /// is exactly neutral only at the 50 the loader seeds.
 /// </para>
+///
+/// <para>
+/// <b>What handing over the model does and does not include.</b> A bound script gets its thing and the
+/// twelve animation roles that thing's model carries, so the animation instructions answer real clip
+/// lengths instead of the engine's floor. It does <b>not</b> get a playing channel: the engine keeps a
+/// per-model array of animation players, and a trigger queues behind whatever one of them is already
+/// running, adding that remaining time to the length it answers. Nothing here plays anything, so there is
+/// never anything to queue behind - and the answer is then the new clip alone, which is exactly what the
+/// engine itself computes for an idle channel rather than a simplification of it. <c>FLUSHANIM</c> is the
+/// visible consequence: with a model the engine clears that channel's <i>queued</i> role
+/// (<c>FUN_00473270</c>) and nothing else, so with no channel it remains the no-op it always was.
+/// </para>
+///
+/// <para>
+/// <b>Nor is the teardown half modelled.</b> The object's own destructor (<c>FUN_004dd0a0</c>) hands the
+/// id at <c>+0x24</c> to the script teardown with a mode of 0, 4 or 7. Nothing here destroys a script when
+/// the thing it belongs to goes, because nothing yet takes a thing out of a park.
+/// </para>
 /// </summary>
 public sealed class ParkRides : Entity
 {
@@ -63,6 +81,13 @@ public sealed class ParkRides : Entity
 
 	/// <summary>How many placed things were given a script.</summary>
 	public int Bound => _scripts.Count;
+
+	/// <summary>
+	/// How many of those were also given a model with animations on it - the engine's <c>+0xc8</c>. It is
+	/// counted rather than assumed because an item shipping no clips at all is ordinary data: the drinks
+	/// shop ships none and its script names none either.
+	/// </summary>
+	public int Animated { get; private set; }
 
 	/// <summary>
 	/// How many placed things had no script to give them. Ordinary: a litter bin has no more use for one
@@ -135,10 +160,24 @@ public sealed class ParkRides : Entity
 			}
 
 			_scripts[placed.ThingId] = id;
+
+			// What the engine's loader does with the thing it was handed, before the script runs a single
+			// instruction: it keeps the thing at +0xac and seeds the model handle at +0xc8 from that
+			// thing's own entry in the world's table. Nothing writes +0xc8 afterwards, so this is the only
+			// moment there is to do it - see RideScript.Animations.
+			if ( Scheduler.Find( id ) is { } script )
+			{
+				script.ThingId = placed.ThingId;
+				script.Animations = RideAnimations.Load( item.Directory, item.Stem, _files );
+
+				if ( script.Animations.Loaded > 0 )
+					++Animated;
+			}
 		}
 
 		Log.Info( $"{ThemeName}: {Bound} of the park's things are running a script" +
-			(Scriptless > 0 ? $", and {Scriptless} have none to run" : "") );
+			(Scriptless > 0 ? $", and {Scriptless} have none to run" : "") +
+			$"; {Animated} of them can see their own animations" );
 	}
 
 	/// <summary>

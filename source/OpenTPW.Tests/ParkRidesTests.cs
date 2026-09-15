@@ -231,4 +231,61 @@ public class ParkRidesTests
 		Assert.AreEqual( 0, rides.Scheduler.Finished, "a shipped script stopped, which none of them should" );
 		Assert.IsTrue( rides.Scheduler.Count >= rides.Bound, "a script went missing from the registry" );
 	}
+
+	/// <summary>
+	/// Every bound script knows which thing it belongs to, and can see that thing's own animations.
+	///
+	/// <para>
+	/// Both are seeded once, at load, and never again: the engine's loader takes the thing as its second
+	/// argument and keeps it at <c>+0xac</c>, then fills the model handle at <c>+0xc8</c> from that
+	/// thing's own entry in the world's table. Nothing writes either afterwards, so a script that did not
+	/// get them at that moment never will - which is why this checks the binding rather than some later
+	/// state.
+	/// </para>
+	///
+	/// <para>
+	/// <b>The clips are counted twice by separate routes.</b> This test loads each item's roles itself
+	/// where <see cref="ParkRides"/> loads them through the binding, because handing every script the same
+	/// empty table would still look perfectly tidy in its own log.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EveryBoundScriptKnowsItsThingAndCanSeeItsAnimations()
+	{
+		var world = World();
+		var catalogue = Catalogue();
+		var rides = Bind( world, catalogue );
+
+		var withClips = 0;
+
+		foreach ( var placed in world.Objects )
+		{
+			if ( !placed.IsPlaced || !catalogue.TryGet( placed.CatalogueId, out var item ) )
+				continue;
+
+			var id = rides.ScriptFor( placed.ThingId );
+
+			if ( id == 0 )
+				continue;
+
+			var script = rides.Scheduler.Find( id );
+
+			Assert.IsNotNull( script, $"thing {placed.ThingId} names a script the registry has not got" );
+			Assert.AreEqual( placed.ThingId, script!.ThingId, $"'{item.Name}' does not know which thing it drives" );
+			Assert.IsNotNull( script.Animations, $"'{item.Name}' was given no model at all" );
+
+			var ours = RideAnimations.Load( item.Directory, item.Stem, data );
+
+			Assert.AreEqual( ours.Loaded, script.Animations!.Loaded, $"'{item.Name}': clips" );
+			Assert.AreEqual( ours.Roles, script.Animations.Roles, $"'{item.Name}': roles holding anything" );
+
+			if ( ours.Loaded > 0 )
+				++withClips;
+		}
+
+		Assert.IsTrue( withClips > 0,
+			"nothing placed in Lost Kingdom ships a clip, so this test would prove nothing" );
+
+		Assert.AreEqual( withClips, rides.Animated, "things that can see their own animations" );
+	}
 }

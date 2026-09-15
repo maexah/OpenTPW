@@ -509,6 +509,78 @@ public class RideScriptRunTests
 			"no script came back holding a child, so nothing exercised SPAWNCHILD" );
 	}
 
+	/// <summary>
+	/// Every shipped script still runs once it can see its own thing's animations - and this is the first
+	/// time the corpus runs with clip lengths that are real rather than the engine's floor.
+	///
+	/// <para>
+	/// <b>It is a behaviour change at scale, not a no-op.</b> Until now every <c>WAITANIM</c> in the corpus
+	/// set a deadline already in the past and cost a single turn; with a model most of them now wait for a
+	/// real clip, some of them for twenty seconds. So scripts settle onto their waits far earlier than they
+	/// did, and what this checks is that none of them settles anywhere it should not - a wrong role or
+	/// entry index would still run, it would simply wait the wrong length or answer the wrong number.
+	/// </para>
+	///
+	/// <para>
+	/// The clip count at the end is what stops this being a smoke test: if the roles were read from the
+	/// wrong folder, or the numbered walk were broken, every table would come back empty and every answer
+	/// would quietly fall back to the model-less one.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EveryRideScriptStillRunsWithItsModelAttached()
+	{
+		var stopped = new System.Collections.Generic.List<string>();
+		var withClips = 0;
+		var clips = 0;
+		var ran = 0;
+
+		foreach ( var (path, file) in EveryScript() )
+		{
+			if ( !file.IsValid )
+				continue;
+
+			// The item's own folder, which is where its model and every one of its role files sit.
+			var directory = path[..path.LastIndexOf( '/' )];
+			var stem = Path.GetFileName( directory );
+
+			var animations = RideAnimations.Load( directory, stem, _data );
+
+			var script = new RideScript( file )
+			{
+				Ride = new RideState(),
+				Effects = new RideEffects(),
+				Animations = animations
+			};
+
+			for ( int turn = 0; turn < 40 && script.Running && !script.Waiting; ++turn )
+				script.Turn( 0f );
+
+			++ran;
+			clips += animations.Loaded;
+
+			if ( animations.Loaded > 0 )
+				++withClips;
+
+			if ( !script.Running )
+				stopped.Add( Path.GetFileName( path ) );
+		}
+
+		Assert.AreEqual( 0, stopped.Count,
+			$"{stopped.Count} of {ran} scripts stopped, starting with '{stopped.FirstOrDefault()}'" );
+
+		Assert.AreEqual( RideScriptTests.ExpectedScripts, ran, "scripts run" );
+
+		// Measured against the archives themselves: every one of the 308 items ships at least one role
+		// clip, 1,085 between them. Both are pinned rather than loosely bounded, because a table read from
+		// the wrong folder - or a numbered walk that stopped a file early - would still leave most of them
+		// non-empty and sail straight past a "more than a hundred" guard.
+		Assert.AreEqual( RideScriptTests.ExpectedScripts, withClips,
+			$"only {withClips} of {ran} scripts can see any clips at all, so the roles are being read from the wrong place" );
+
+		Assert.AreEqual( 1085, clips, "role clips the corpus can see between them" );
+	}
+
 	private System.Collections.Generic.IEnumerable<(string Path, RideScriptFile File)> EveryScript()
 	{
 		foreach ( var theme in Entries( "levels", directories: true ) )
