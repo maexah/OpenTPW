@@ -24,9 +24,10 @@ namespace OpenTPW.UI;
 /// </para>
 /// <para>
 /// <b>What is here and what is not.</b> The gadget draws, the date is live and the buttons light and
-/// click. <b>Five of the six have nothing to open yet</b> - no screen in this game buys an attraction,
+/// click. <b>Four of the six have nothing to open yet</b> - no screen in this game buys an attraction,
 /// hires anyone, or shows the finances - so they say so and do nothing, the way the park menu's Load
-/// and Save already do. Camcorder mode is the one that works, because it exists. <b>The gauge is not
+/// and Save already do. The map opens <see cref="ParkMapScreen"/> and the camcorder button swings the
+/// arm out with its panel, because both of those exist. <b>The gauge is not
 /// live</b>: it says "Happiness of the park visitors" and there is no such number anywhere yet, so it
 /// rests at its lowest part rather than being given an invented one.
 /// </para>
@@ -296,8 +297,17 @@ internal sealed class ParkGadget : UiWindow
 		buttons.Add( NotYet( 0x28, new UiRect( 287, 1133, 405, 1252 ), 470, "b_info",
 			"Information", "there are no park, staff, item or visitor screens yet" ) );
 
-		buttons.Add( NotYet( 0x29, new UiRect( 81, 1340, 200, 1458 ), 473, "b_map",
-			"Map", "the park map screen is not built" ) );
+		// The one of the six with a screen behind it. FUN_004a0840's case 0x29 goes straight to
+		// FUN_005f0b40 rather than through the remembered-tab picker, because the map is not a category
+		// - see <see cref="ParkMapScreen"/>, which pauses the park as the original does.
+		buttons.Add( new UiButton
+		{
+			Id = 0x29,
+			Rect = new UiRect( 81, 1340, 200, 1458 ),
+			HelpText = 473,
+			Mesh = UiMesh.Get( "b_map" ),
+			Clicked = () => Stack.Open( new ParkMapScreen( Stack ) )
+		} );
 
 		buttons.Add( NotYet( 0x2a, new UiRect( 156, 1241, 274, 1360 ), 471, "b_money",
 			"Finances", "a park keeps no running balance yet" ) );
@@ -441,7 +451,22 @@ internal sealed class ParkGadget : UiWindow
 		// eject button in the far corner - which is the first-person interface in place of this one.
 		// That is not built yet, so this hides and the C key remains the way out. Hidden rather than
 		// closed, which is the stack's own word for a window that is neither drawn nor pointed at.
-		Hidden = ParkCamcorderCameraMode.Active;
+		//
+		// It also goes away while the map is up, for the same reason in a different form: the original
+		// does not leave the two on top of each other. FUN_005f0b40 sends message 6 - put away - to the
+		// interface root (DAT_007cb2ac) before it loads the map's own tree. Without this the map's
+		// scroll arrows and zoom buttons land exactly on this panel's six, because both live in the
+		// bottom-left corner; a screenshot showed them drawn one over the other while every measured
+		// check still passed.
+		//
+		// The map is NAMED rather than asked for as "is anything modal", because GameMenu, MessageBox
+		// and OptionsScreen all set Modal as well, and what the gadget should do underneath those is a
+		// separate question nobody has asked.
+		//
+		// Both conditions belong in ONE assignment. They were briefly written as two, one after the
+		// other, and the second silently overwrote the first - a line that compiles, measures clean and
+		// does nothing.
+		Hidden = ParkCamcorderCameraMode.Active || Stack.Windows.Any( window => window is ParkMapScreen );
 	}
 
 	/// <summary>

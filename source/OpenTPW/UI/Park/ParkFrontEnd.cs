@@ -69,6 +69,13 @@ internal sealed class ParkFrontEnd : Panel
 		// panelend.md2, and each of those models carries one part per category.
 		"panel", "panelend", "handle", "b_1person", "b_postcard",
 
+		// The park map screen - see <see cref="ParkMapScreen"/>. Its scroll arrows are asked for by
+		// their node names nuup/nudown/nuleft/nuright, which belong to b_mapup/dn/left/right.md2, and
+		// the three panel backings are buttpan1/buttpan2/textpan in f_mapbut1/f_mapbut2/f_maptext.md2.
+		// b_okay is already loaded above, for the message box.
+		"b_mapup", "b_mapdn", "b_mapleft", "b_mapright", "b_plus", "b_minus",
+		"f_mapbut1", "f_mapbut2", "f_maptext",
+
 		// The golden key and ticket in the top right corner, which the gadget shows live - see
 		// <see cref="ParkGadget"/>. The lobby loads gkey too, but a park entered without going through
 		// the lobby first would otherwise fetch them mid-play.
