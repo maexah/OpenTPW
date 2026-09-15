@@ -233,9 +233,16 @@ public class RideScriptAnimationTests
 
 	/// <summary>
 	/// <c>TRIGWAITANIM</c> is deliberately still counted rather than guessed. It is the one instruction
-	/// in the family that rewinds itself and walks a channel cursor (<c>+0xbc</c>) across turns, and
-	/// implementing it would unlock no further script - 109 of 308 are complete either way - for 133
-	/// instructions of reach. This test is here so that stays a decision rather than a drift.
+	/// in the family that rewinds itself and walks a channel cursor (<c>+0xbc</c>) across turns, which
+	/// has not been read.
+	///
+	/// <para>
+	/// <b>The reason it was left out has since expired, and saying so is the point of this note.</b> When
+	/// the rest of the family landed it completed no further script - 109 of 308 either way - which made
+	/// 133 instructions of reach a bad trade. The effect opcodes changed that: with those in, it completes
+	/// <b>11</b> and leads every remaining single-opcode candidate. This test still pins the current
+	/// behaviour, but it is no longer evidence that leaving it out is right.
+	/// </para>
 	/// </summary>
 	[TestMethod]
 	public void TriggerAndWaitIsStillCountedRatherThanGuessed()

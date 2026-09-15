@@ -328,6 +328,48 @@ public class RideScriptRunTests
 		Assert.AreEqual( RideScriptTests.ExpectedScripts, ran, "scripts run" );
 	}
 
+	/// <summary>
+	/// Every shipped script still runs with somewhere to put its effects. 164 of the 308 use
+	/// <c>ADDOBJ</c> and 107 use <c>EVENT</c>, so this executes 1,406 instructions that were stepped over
+	/// before - and running them for real must not send any script somewhere else.
+	///
+	/// <para>
+	/// The count at the end is what stops this being a smoke test: if the operands were read in the wrong
+	/// order, or the type guard were wrong, the scripts would still all run and nothing would ever be
+	/// started.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EveryRideScriptStillRunsWithEffectsAttached()
+	{
+		var stopped = new System.Collections.Generic.List<string>();
+		var started = 0;
+		var ran = 0;
+
+		foreach ( var (path, file) in EveryScript() )
+		{
+			if ( !file.IsValid )
+				continue;
+
+			var script = new RideScript( file ) { Ride = new RideState(), Effects = new RideEffects() };
+
+			for ( int turn = 0; turn < 40 && script.Running && !script.Waiting; ++turn )
+				script.Turn( 0f );
+
+			++ran;
+			started += script.Effects!.Started;
+
+			if ( !script.Running )
+				stopped.Add( Path.GetFileName( path ) );
+		}
+
+		Assert.AreEqual( 0, stopped.Count,
+			$"{stopped.Count} of {ran} scripts stopped, starting with '{stopped.FirstOrDefault()}'" );
+
+		Assert.AreEqual( RideScriptTests.ExpectedScripts, ran, "scripts run" );
+		Assert.IsTrue( started > 0, "not one script started an effect, so nothing here was exercised" );
+	}
+
 	private System.Collections.Generic.IEnumerable<(string Path, RideScriptFile File)> EveryScript()
 	{
 		foreach ( var theme in Entries( "levels", directories: true ) )

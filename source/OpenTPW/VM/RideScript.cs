@@ -175,6 +175,14 @@ public sealed class RideScript
 	/// <summary>Whether the script has run <c>COAST_INITIALISE</c>, which is how it claims its ride.</summary>
 	public bool Initialised { get; private set; }
 
+	/// <summary>
+	/// Where this script's particles and sounds go, or null if it has nowhere to put them - see
+	/// <see cref="RideEffects"/>, which is the engine's own list at <c>+0xb0</c>. A script without one
+	/// still runs, and <c>ADDOBJ</c>, <c>EVENT</c> and <c>KILLOBJ</c> are counted rather than guessed,
+	/// which is the same answer <see cref="Ride"/> gives <c>COAST</c>.
+	/// </summary>
+	public RideEffects? Effects { get; set; }
+
 	public int this[RideVariables variable] => Read( (int)variable );
 
 	/// <summary>Reads a variable by the name the script declares it under, or 0 if it has none such.</summary>
@@ -374,8 +382,10 @@ public sealed class RideScript
 			// The animation family. Every one of these handlers tests the model handle at +0xc8 before
 			// it does anything, and takes a path the engine defines completely when that handle is
 			// nought - which is every script here. TRIGWAITANIM is deliberately NOT among them: it
-			// rewinds itself and walks a channel cursor at +0xbc across turns, and implementing it
-			// would unlock no further script (109 either way) for 133 instructions of reach.
+			// rewinds itself and walks a channel cursor at +0xbc across turns, which has not been read.
+			// It was left out when the rest of the family landed because it then completed no further
+			// script at all; the effect opcodes below have since changed that, and it now completes 11
+			// and leads every remaining candidate. It is the next thing to weigh, not a settled no.
 			case Opcode.FLUSHANIM:
 				// The handler's first act is to fetch the model and leave if there is none. With no
 				// model this is the engine's behaviour rather than a stand-in for it.
@@ -426,6 +436,23 @@ public sealed class RideScript
 				// does a bare MOVSX on it, with none of the tag test every value operand gets. A
 				// variable bound would therefore be read as a literal; no shipped script writes one.
 				Store( operands[0], NextRandom( (short)operands[1].Value ) );
+				break;
+
+			// What a ride starts playing, and what stops it again. ADDOBJ keeps the engine's own record so
+			// that a later KILLOBJ can find it by tag; EVENT deliberately keeps nothing, because its
+			// handler throws the handle away and so nothing it starts is ever killable. FADEOBJ and
+			// SETOBJPARAM are NOT among them: 133 instructions that complete no further script, and a fade
+			// differs from a kill only in stopping a sound gently, which nothing here can yet hear.
+			case Opcode.ADDOBJ:
+				AddObject( operands );
+				break;
+
+			case Opcode.EVENT:
+				TriggerEvent( operands );
+				break;
+
+			case Opcode.KILLOBJ:
+				KillObjects( operands[0] );
 				break;
 
 			case Opcode.COAST:
@@ -511,6 +538,57 @@ public sealed class RideScript
 				++NotImplemented;
 				break;
 		}
+	}
+
+	/// <summary>
+	/// <c>ADDOBJ</c>: start a particle or a sound and keep the record a <c>KILLOBJ</c> will look for.
+	///
+	/// <para>
+	/// All four operands are resolved like any other value - the handler gives each one the same tag test
+	/// - and they are, in order, the type, the node, the effect id and the tag. <b>The fourth is a tag and
+	/// not a duration</b>: it is the field <c>KILLOBJ</c> compares against, and the values the corpus
+	/// kills are exactly the values its <c>ADDOBJ</c>s create.
+	/// </para>
+	/// </summary>
+	private void AddObject( IReadOnlyList<RideOperand> operands )
+	{
+		if ( Effects is null )
+		{
+			++NotImplemented;
+			return;
+		}
+
+		Effects.Add( Value( operands[0] ), Value( operands[1] ), Value( operands[2] ), Value( operands[3] ) );
+	}
+
+	/// <summary>
+	/// <c>EVENT</c>: start one and keep nothing. The handler calls the same worker <c>ADDOBJ</c> does and
+	/// then returns without storing what came back, so an event's effect can never be stopped again.
+	/// </summary>
+	private void TriggerEvent( IReadOnlyList<RideOperand> operands )
+	{
+		if ( Effects is null )
+		{
+			++NotImplemented;
+			return;
+		}
+
+		Effects.Trigger( Value( operands[0] ), Value( operands[1] ), Value( operands[2] ) );
+	}
+
+	/// <summary>
+	/// <c>KILLOBJ</c>: stop every record carrying the tag - see <see cref="RideEffects.Kill"/> for why
+	/// every one rather than the first.
+	/// </summary>
+	private void KillObjects( RideOperand tag )
+	{
+		if ( Effects is null )
+		{
+			++NotImplemented;
+			return;
+		}
+
+		Effects.Kill( Value( tag ) );
 	}
 
 	/// <summary>
