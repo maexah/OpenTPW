@@ -62,6 +62,25 @@ public sealed class RideScript
 	private bool _critical;
 	private float _waitUntil;
 
+	/// <summary>
+	/// The deadline <c>SETTIMER</c> last set, on the caller's clock - the engine's field <c>+0xc4</c>.
+	/// One per script, and zero until a <c>SETTIMER</c> has run.
+	/// </summary>
+	private float _timerUntil;
+
+	/// <summary>
+	/// <c>RAND</c>'s generator state - see <see cref="NextRandom"/>, which carries why this is per
+	/// script where the engine's is per game.
+	/// </summary>
+	private uint _random = DefaultSeed;
+
+	/// <summary>
+	/// What <see cref="_random"/> starts at. The engine's own starting value is not established - its
+	/// generator is seeded by a plain setter (<c>FUN_00516370</c>) called from eight places, none of
+	/// them the script system - so this is ours, chosen only so that a run is repeatable.
+	/// </summary>
+	private const uint DefaultSeed = 1;
+
 	public RideScript( RideScriptFile file )
 	{
 		_file = file;
@@ -316,6 +335,35 @@ public sealed class RideScript
 				++NotImplemented;
 				break;
 
+			case Opcode.GETTIME:
+				// The clock as it stands, stored like any other result. The engine reads the game's
+				// own clock object at 0x785970 and stores what it returns with no arithmetic at all -
+				// it is NOT how long this ride has existed, which is what the published docs said.
+				Store( operands[0], (int)now );
+				break;
+
+			case Opcode.SETTIMER:
+				// clock + duration, into the script's single timer. Unlike WAIT, the engine does NOT
+				// scale this by the speed word: SETTIMER resolves its operand and adds it to the
+				// clock reading directly (0x0055641b).
+				_timerUntil = now + Value( operands[0] );
+				break;
+
+			case Opcode.GETTIMER:
+				// What is left of that timer, floored at zero - the engine's own JNS after the
+				// subtraction. Every one of the 21 shipped uses names a literal destination, so the
+				// answer lands in the result register and the store is skipped, exactly as COAST 2 0
+				// does; the branch that follows is what reads it.
+				Store( operands[0], TimerRemaining( now ) );
+				break;
+
+			case Opcode.RAND:
+				// The bound is taken as a sign-extended short WITHOUT being resolved - the handler
+				// does a bare MOVSX on it, with none of the tag test every value operand gets. A
+				// variable bound would therefore be read as a literal; no shipped script writes one.
+				Store( operands[0], NextRandom( (short)operands[1].Value ) );
+				break;
+
 			case Opcode.COAST:
 				Coast( operands );
 				break;
@@ -519,12 +567,24 @@ public sealed class RideScript
 	/// same instruction runs again next turn, and the turn ends.
 	///
 	/// <para>
-	/// The duration is added to the caller's clock unchanged. The original divides it by a factor it
-	/// works out from the script's own speed word before adding it to a clock of its own, and the unit
-	/// of that clock has not been established - so inventing a conversion here would be a guess
-	/// dressed as a measurement. A caller that keeps its clock in the script's units gets the right
-	/// behaviour; one that does not gets waits of the wrong length, which is visible rather than
-	/// silent.
+	/// <b>The duration is added to the caller's clock unchanged, and that is now a finding rather than
+	/// a shrug.</b> This comment used to say the unit was unestablished. It is milliseconds: the engine
+	/// adds the duration to the clock object at <c>0x785970</c>, whose chain
+	/// (<c>0x00402d70</c> -> <c>0x00402f10</c> -> <c>0x004030d0</c> -> <c>0x004033a0</c>) ends at a
+	/// source that falls back to <c>timeGetTime()</c> and scales its <c>QueryPerformanceCounter</c>
+	/// path to agree with it. <b>So a caller must keep its clock in milliseconds</b> - and note that
+	/// <see cref="GameClock.Now"/> is in seconds, which would make every wait a thousand times too
+	/// long.
+	/// </para>
+	///
+	/// <para>
+	/// <b>The engine's speed scaling is deliberately absent, because it cannot ever do anything.</b>
+	/// The dispatcher divides the duration by <c>0.5 + 0.01 * speed</c>, worked out afresh for every
+	/// instruction from the script's speed word at <c>+0xc0</c>. That word is written in exactly two
+	/// places in the whole script system - the loader setting it to 50, and the scheduler copying it
+	/// into a linked script - and <b>no opcode writes it</b>, so it is 50 for every script that ever
+	/// runs and the divisor is exactly 1. Implementing the division would add a field that could never
+	/// differ from one.
 	/// </para>
 	/// </summary>
 	private void Wait( float now, int duration, int length )
@@ -540,5 +600,51 @@ public sealed class RideScript
 
 		Position -= length;
 		_budget = 0;
+	}
+
+	/// <summary>
+	/// What is left of the <c>SETTIMER</c> deadline, never less than zero - the engine stores the
+	/// subtraction and then replaces it with zero if it came out negative (<c>JNS</c> at
+	/// <c>0x0055646d</c>), so a timer that has run out reads as nought rather than going negative.
+	/// </summary>
+	private int TimerRemaining( float now )
+	{
+		var left = (int)(_timerUntil - now);
+
+		return left < 0 ? 0 : left;
+	}
+
+	/// <summary>
+	/// <c>RAND</c>, whole: a value from 0 to <paramref name="bound"/> <b>inclusive</b>, which is what
+	/// the engine's <c>% (bound + 1)</c> gives and what the published docs already said.
+	///
+	/// <para>
+	/// The generator is the engine's own (<c>FUN_00516330</c>): multiply, add, rotate right thirteen,
+	/// and take the absolute value. The opcode then halves that, takes it modulo the bound plus one,
+	/// and takes the absolute value again.
+	/// </para>
+	///
+	/// <para>
+	/// <b>One deviation, named rather than hidden:</b> the engine keeps a single generator for the
+	/// whole game, so its scripts draw from one shared sequence and interleave. This keeps one per
+	/// script. The arithmetic is identical and a run is repeatable, but the numbers are not the ones
+	/// the original would have produced - which they could not be in any case, since what the engine
+	/// seeds its generator with is not established.
+	/// </para>
+	/// </summary>
+	private int NextRandom( int bound )
+	{
+		_random = (_random * 0x19660Du) + 0x3C6EF35Fu;
+		_random = (_random >> 13) | (_random << 19);
+
+		var drawn = Math.Abs( (int)_random ) >> 1;
+		var span = bound + 1;
+
+		// The engine would divide by zero here. No shipped script asks for it - every bound in the
+		// corpus is between 1 and 5000 - so this answers nought rather than inventing a behaviour.
+		if ( span <= 0 )
+			return 0;
+
+		return Math.Abs( drawn % span );
 	}
 }
