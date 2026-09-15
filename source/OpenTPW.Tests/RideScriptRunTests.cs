@@ -216,6 +216,102 @@ public class RideScriptRunTests
 		Assert.IsTrue( script.Name.Length > 0, "the script did not get as far as naming itself" );
 	}
 
+	/// <summary>
+	/// A real script drives a real ride: it claims it, shuts it, opens it again and sets its capacity,
+	/// in that order, without anything here telling it to.
+	///
+	/// <para>
+	/// The capacity landing on zero is the interesting part rather than a weak assertion. Word 22 sets
+	/// it from <c>VAR_CAPACITY</c>, which only a running park ever writes, so zero is the honest answer
+	/// - and it is what makes <c>GETQUEUE</c> report no room further down, which is why no rider is ever
+	/// admitted here.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void ACoasterScriptDrivesTheRideItIsGiven()
+	{
+		var script = new RideScript( CoasterFile() ) { Ride = new RideState() };
+		var ride = script.Ride!;
+
+		Assert.IsFalse( ride.Closed, "a ride starts open, which the script's first close depends on" );
+
+		for ( int turn = 0; turn < 200; ++turn )
+			script.Turn( 0f );
+
+		Assert.IsTrue( script.Initialised, "the script never ran COAST_INITIALISE" );
+
+		// Word 10 shuts it; word 25 opens it again from VAR_RIDECLOSED, which nothing has set.
+		Assert.IsFalse( ride.Closed, "the script left the ride shut" );
+		Assert.AreEqual( 0, ride.Capacity, "the capacity came from somewhere other than VAR_CAPACITY" );
+	}
+
+	/// <summary>
+	/// A rider who has finished comes back out through <c>GETPEEP</c> and lands in the script's own
+	/// variable - the one place a value crosses from the ride into the machine.
+	/// </summary>
+	[TestMethod]
+	public void ARiderWhoHasFinishedComesBackIntoTheScript()
+	{
+		var script = new RideScript( CoasterFile() ) { Ride = new RideState() };
+
+		script.Ride!.FinishRider( 7 );
+
+		for ( int turn = 0; turn < 200; ++turn )
+			script.Turn( 0f );
+
+		// Word 35 is COAST 3 VAR_LETMEOFF: op 3 with the variable as its destination.
+		Assert.AreEqual( 7, script["VAR_LETMEOFF"], "the rider never reached the script" );
+	}
+
+	/// <summary>
+	/// <c>COAST 2 0</c> reads the queue into a literal, which cannot be written to - and the script then
+	/// branches on the answer anyway, because the engine leaves it in the result register first.
+	/// Counting the skipped write is how that shows up here.
+	/// </summary>
+	[TestMethod]
+	public void TheQueueIsReadIntoNowhereAndTheBranchStillWorks()
+	{
+		var script = new RideScript( CoasterFile() ) { Ride = new RideState() };
+
+		for ( int turn = 0; turn < 200; ++turn )
+			script.Turn( 0f );
+
+		Assert.IsTrue( script.IgnoredWrites > 0, "the dummy destination was never exercised" );
+		Assert.IsTrue( script.Running, "the script stopped somewhere in its loop" );
+	}
+
+	/// <summary>
+	/// Every shipped script still runs with a ride attached. The twelve that use <c>COAST</c> now
+	/// execute it for real rather than skipping it, and that must not send any of them somewhere else.
+	/// </summary>
+	[TestMethod]
+	public void EveryRideScriptStillRunsWithARideAttached()
+	{
+		var stopped = new System.Collections.Generic.List<string>();
+		var ran = 0;
+
+		foreach ( var (path, file) in EveryScript() )
+		{
+			if ( !file.IsValid )
+				continue;
+
+			var script = new RideScript( file ) { Ride = new RideState() };
+
+			for ( int turn = 0; turn < 40 && script.Running && !script.Waiting; ++turn )
+				script.Turn( 0f );
+
+			++ran;
+
+			if ( !script.Running )
+				stopped.Add( Path.GetFileName( path ) );
+		}
+
+		Assert.AreEqual( 0, stopped.Count,
+			$"{stopped.Count} of {ran} scripts stopped, starting with '{stopped.FirstOrDefault()}'" );
+
+		Assert.AreEqual( RideScriptTests.ExpectedScripts, ran, "scripts run" );
+	}
+
 	private System.Collections.Generic.IEnumerable<(string Path, RideScriptFile File)> EveryScript()
 	{
 		foreach ( var theme in Entries( "levels", directories: true ) )

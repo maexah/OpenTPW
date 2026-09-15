@@ -7,10 +7,11 @@
 /// empty.
 ///
 /// <para>
-/// The reader it wants is not merely commented out, it is absent: <c>RideScriptFile</c> survives only as a
-/// commented line in RideVM, and no such type exists anywhere in the tree, so that line cannot simply be
-/// uncommented. The path built below is wrong for this project too - it joins with a backslash where
-/// everything else uses forward slashes against the Zio file system.
+/// The reader it wants no longer has to be written: <see cref="RideScriptFile"/> reads the format, and
+/// <see cref="RideScript"/> runs it against a <see cref="RideState"/>. Neither is wired up here, because
+/// this class is still wrong in the ways below - it builds its path with a backslash where everything else
+/// uses forward slashes against the Zio file system, and it drives <c>RideVM</c>, whose constructor throws.
+/// A ride that loads and runs its script belongs in something built for it rather than in this.
 /// </para>
 ///
 /// <para>

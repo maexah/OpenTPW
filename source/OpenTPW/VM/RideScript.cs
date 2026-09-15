@@ -103,6 +103,17 @@ public sealed class RideScript
 	/// <summary>True while the script is sitting on a <c>WAIT</c> that has not come due.</summary>
 	public bool Waiting => _waitUntil > 0f;
 
+	/// <summary>
+	/// The ride this script drives, or null if it has none. The original finds it by walking a list
+	/// for a node whose id matches the script's own (<c>FUN_0043b050</c>) and keeps the handle; there
+	/// is no such registry here, so the caller supplies it. A script without one still runs - every
+	/// <c>COAST</c> op becomes a no-op, which is what the engine does when the handle it kept is null.
+	/// </summary>
+	public RideState? Ride { get; set; }
+
+	/// <summary>Whether the script has run <c>COAST_INITIALISE</c>, which is how it claims its ride.</summary>
+	public bool Initialised { get; private set; }
+
 	public int this[RideVariables variable] => Read( (int)variable );
 
 	/// <summary>Reads a variable by the name the script declares it under, or 0 if it has none such.</summary>
@@ -299,8 +310,86 @@ public sealed class RideScript
 				++NotImplemented;
 				break;
 
+			case Opcode.COAST:
+				Coast( operands );
+				break;
+
 			default:
 				// Reaches into a world that does not exist yet. Counted, never guessed.
+				++NotImplemented;
+				break;
+		}
+	}
+
+	/// <summary>
+	/// <c>COAST</c>, the whole of a script's reach into its own ride - see <see cref="RideState"/>.
+	///
+	/// <para>
+	/// The two halves of the instruction are treated differently, and the difference is load-bearing.
+	/// The selector is fetched <b>without being resolved</b>, so a variable operand keeps its tag and
+	/// falls straight out of the engine's <c>DEC</c> / <c>CMP 7</c> / <c>JA</c> range instead of
+	/// naming an op; all 144 shipped uses are literals, so that never happens in practice. The
+	/// argument is resolved for the ops that set something, and left alone for the two that read,
+	/// because those write their answer to it.
+	/// </para>
+	///
+	/// <para>
+	/// Ops 2 and 3 go through <see cref="Store"/> so the answer lands in the result register whether or
+	/// not the destination is a variable. That is what makes <c>COAST 2 0</c> work, and every one of
+	/// the twelve shipped uses of op 2 is written that way: the literal zero is a deliberate dummy
+	/// destination, the write is skipped, and the branch that follows reads the register.
+	/// </para>
+	/// </summary>
+	private void Coast( IReadOnlyList<RideOperand> operands )
+	{
+		var selector = operands[0].Kind == RideOperandKind.Literal ? operands[0].Value : -1;
+		var argument = operands[1];
+
+		if ( Ride is null )
+		{
+			++NotImplemented;
+			return;
+		}
+
+		switch ( selector )
+		{
+			case 1:
+				Ride.AddRider( Value( argument ) );
+				break;
+
+			case 2:
+				Store( argument, Ride.RoomRemaining() );
+				break;
+
+			case 3:
+				Store( argument, Ride.TakeRider() );
+				break;
+
+			case 4:
+				Ride.SetBroken( Value( argument ) );
+				break;
+
+			case 5:
+				Ride.SetClosed( Value( argument ) );
+				break;
+
+			case 6:
+				Ride.SetCapacity( Value( argument ) );
+				break;
+
+			case 7:
+				// Reads its operand and throws it away, as the shipped handler does.
+				Ride.SetWorn( Value( argument ) );
+				break;
+
+			case 8:
+				// The original looks the ride up here and keeps the handle. The caller has already
+				// supplied one, so all that is left is to record that the script asked.
+				Initialised = true;
+				break;
+
+			default:
+				// Outside 1..8 the engine logs and carries on, which is a no-op with a complaint.
 				++NotImplemented;
 				break;
 		}
