@@ -275,13 +275,27 @@ public class RideScriptEffectTests
 	}
 
 	/// <summary>
-	/// <c>FADEOBJ</c> and <c>SETOBJPARAM</c> are deliberately still counted. Between them they are 133
-	/// instructions and they complete no further script - 165 of 308 either way - and <c>FADEOBJ</c>
-	/// differs from <c>KILLOBJ</c> only in stopping a sound gently, which nothing here can yet hear.
-	/// This test is here so that stays a decision rather than a drift.
+	/// <b><c>FADEOBJ</c> is deliberately still counted; <c>SETOBJPARAM</c> no longer is.</b> This test
+	/// used to assert that both were, and it is kept rather than deleted because the reason they parted
+	/// company is worth pinning.
+	///
+	/// <para>
+	/// <c>FADEOBJ</c> is 113 instructions and completes no further script - 199 of 308 either way - and
+	/// it differs from <c>KILLOBJ</c> only in stopping a sound gently, which nothing here can yet hear.
+	/// <c>SETOBJPARAM</c> completes four, and everything it does is in reach: it matches on a tag in the
+	/// record list this already keeps, and the value it stores is the one the engine's own call answers
+	/// when the sound system is down.
+	/// </para>
+	///
+	/// <para>
+	/// <b>The script below now exercises the particle case by accident, so it asserts it on purpose.</b>
+	/// The record it adds is type 1 - a particle - and carries the very tag the <c>SETOBJPARAM</c> names,
+	/// and the engine's dispatch walks particles past: it is the record's type that decides, not its tag.
+	/// So nothing is reached, and a machine that matched on the tag alone would show one here.
+	/// </para>
 	/// </summary>
 	[TestMethod]
-	public void FadingAndSettingParametersAreStillCountedRatherThanGuessed()
+	public void FadingIsStillCountedButSettingParametersIsNot()
 	{
 		var script = WithEffects(
 			Word( Opcode.ADDOBJ ), Lit( 1 ), Lit( -1 ), Lit( 16 ), Lit( 10 ),
@@ -291,7 +305,8 @@ public class RideScriptEffectTests
 
 		script.Turn( 0f );
 
-		Assert.AreEqual( 2, script.NotImplemented, "counted" );
+		Assert.AreEqual( 1, script.NotImplemented, "only the fade should be counted now" );
 		Assert.AreEqual( 1, script.Effects!.Count, "and the record a fade would have taken is still there" );
+		Assert.AreEqual( 0, script.Effects!.Parameters, "the particle carrying that tag was not walked past" );
 	}
 }

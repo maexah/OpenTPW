@@ -88,8 +88,16 @@ public sealed class RideEffects
 		/// <summary>
 		/// What the spawn answered - the engine's field <c>+0x0c</c>, and <b>ours rather than the
 		/// original's</b>, since nothing here starts a particle or a sound to get a real one.
+		///
+		/// <para>
+		/// It is settable rather than fixed because the engine writes it back: <c>SETOBJPARAM</c> hands
+		/// it to the sound system and stores whatever comes of it - see <see cref="SetParameter"/>.
+		/// It is <c>internal</c> rather than <c>private</c> because a containing type cannot reach a
+		/// nested type's private setter - only the other way round - so <see cref="RideEffects"/> could
+		/// neither create a record nor write one back.
+		/// </para>
 		/// </summary>
-		public int Handle { get; init; }
+		public int Handle { get; internal set; }
 
 		/// <summary>Whether this is one of the two particle types rather than one of the eight sound types.</summary>
 		public bool IsParticle => Type <= LastParticleType;
@@ -195,4 +203,51 @@ public sealed class RideEffects
 
 		return killed;
 	}
+
+	/// <summary>
+	/// <c>SETOBJPARAM</c>: set a parameter on everything carrying a tag, and answer how many that was.
+	///
+	/// <para>
+	/// It walks this same list and matches on the tag exactly as <see cref="Kill"/> does - <b>the first
+	/// operand is a tag and not a slot</b>, which is what the published docs called it - and its type
+	/// dispatch has only two cases (byte map at <c>0x5569c4</c>, jump table at <c>0x5569b8</c>): <b>the
+	/// two particle types do nothing at all</b>, and the eight sound types hand the record's handle to
+	/// the sound system and store back whatever comes of it.
+	/// </para>
+	///
+	/// <para>
+	/// <b>With no sound system that answer is nought, and the nought is the engine's own rather than a
+	/// stand-in for one.</b> <c>FUN_0051bc40</c> tests two flags that only the sound system's own init
+	/// and teardown ever write, and returns 0 when it is down - so the handle is zeroed. The walk, the
+	/// two cases and the zero are all the engine's; nothing here is invented.
+	/// </para>
+	///
+	/// <para>
+	/// The engine also has a complaint for a record whose type is outside 1..10, after which it carries
+	/// on walking. It cannot fire here, because <see cref="Add"/> refuses those types before a record
+	/// ever exists - so there is no branch for it rather than a branch that can never be taken.
+	/// </para>
+	/// </summary>
+	public int SetParameter( int tag, int parameter, int value )
+	{
+		var touched = 0;
+
+		foreach ( var record in _records )
+		{
+			// A particle carrying the tag is walked past in silence - it is the type that decides, not
+			// the tag, so a tag shared between a particle and a sound sets only the sound.
+			if ( record.Tag != tag || record.IsParticle )
+				continue;
+
+			record.Handle = 0;
+			++touched;
+		}
+
+		Parameters += touched;
+
+		return touched;
+	}
+
+	/// <summary>How many records a <c>SETOBJPARAM</c> has reached, so that doing nothing is visible.</summary>
+	public int Parameters { get; private set; }
 }

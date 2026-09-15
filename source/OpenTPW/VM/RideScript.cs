@@ -172,6 +172,18 @@ public sealed class RideScript
 	/// </summary>
 	private int _nameOffset = -1;
 
+	/// <summary>
+	/// Whether this script has muted the music - the engine's frame byte <c>+0xb9</c>.
+	///
+	/// <para>
+	/// <b>Exactly two instructions in the whole subsystem touch that byte</b>: <c>DIPMUSIC</c>'s handler
+	/// writes it, and the teardown reads it. There is no opcode that clears it, and no shipped script
+	/// ever passes nought - all eight uses are a literal 1 - so in practice <b>only a script's death
+	/// ever un-mutes the music</b>, which is why this has to outlive the instruction that set it.
+	/// </para>
+	/// </summary>
+	private bool _dipped;
+
 	public RideScript( RideScriptFile file )
 	{
 		_file = file;
@@ -292,6 +304,12 @@ public sealed class RideScript
 	/// <see cref="_nameOffset"/>.
 	/// </summary>
 	public bool IsNamed => _nameOffset >= 0;
+
+	/// <summary>
+	/// Whether this script is holding the music muted - see <see cref="_dipped"/>. The scheduler reads
+	/// it when the script dies, because that is the only thing that ever lets the music back up.
+	/// </summary>
+	public bool DippedMusic => _dipped;
 
 	public int this[RideVariables variable] => Read( (int)variable );
 
@@ -653,6 +671,14 @@ public sealed class RideScript
 
 			case Opcode.FINDSCRIPTRAND:
 				FindScriptAtRandom( operands[0], operands[1] );
+				break;
+
+			case Opcode.DIPMUSIC:
+				DipMusic( Value( operands[0] ) );
+				break;
+
+			case Opcode.SETOBJPARAM:
+				SetObjectParameter( operands );
 				break;
 
 			case Opcode.COAST:
@@ -1207,6 +1233,58 @@ public sealed class RideScript
 			return;
 
 		Store( destination, matches[Math.Abs( NextDraw() % matches.Count )].Id );
+	}
+
+	/// <summary>
+	/// <c>DIPMUSIC</c>: mute the music, and remember that this script is the one holding it down.
+	///
+	/// <para>
+	/// <b>It is a mute rather than a partial duck</b>, which is worth stating because the opcode's name
+	/// suggests otherwise. The value goes into one global, and when the mixer next re-applies its group
+	/// volumes it tests that global against nought and, if it is set, drives the music group's volume to
+	/// <b>0</b> outright - where the unset branch uses the configured volume. Speech ducking is a
+	/// separate mechanism through a different global that scales by a percentage; this one does not.
+	/// </para>
+	///
+	/// <para>
+	/// <b>Any non-nought value mutes.</b> The test is against zero, not against one, so the operand is
+	/// not the 0-or-1 switch it looks like - though every shipped use passes a literal 1.
+	/// </para>
+	///
+	/// <para>
+	/// <b>The frame byte and the global can disagree, and that is the engine's.</b> It stores the low
+	/// <i>byte</i> as the marker and passes the low <i>word</i> on, so a value of 0x100 would mute while
+	/// the marker read nought - and the music would then never come back up, because the teardown
+	/// consults the marker. Nothing shipped can reach it.
+	/// </para>
+	/// </summary>
+	private void DipMusic( int value )
+	{
+		if ( Host is null )
+		{
+			// The mute is one setting for the whole game, and there is nowhere to put it without the
+			// registry - counted, as COAST is without a ride.
+			++NotImplemented;
+			return;
+		}
+
+		_dipped = (value & 0xFF) != 0;
+		Host.MusicDip = value & 0xFFFF;
+	}
+
+	/// <summary>
+	/// <c>SETOBJPARAM</c>: set a parameter on every effect carrying a tag - see
+	/// <see cref="RideEffects.SetParameter"/>, which is where the engine's two-case type dispatch lives.
+	/// </summary>
+	private void SetObjectParameter( IReadOnlyList<RideOperand> operands )
+	{
+		if ( Effects is null )
+		{
+			++NotImplemented;
+			return;
+		}
+
+		Effects.SetParameter( Value( operands[0] ), Value( operands[1] ), Value( operands[2] ) );
 	}
 
 	/// <summary>

@@ -60,6 +60,19 @@ public sealed class RideScriptScheduler
 	public Func<string, RideScript?>? Loader { get; set; }
 
 	/// <summary>
+	/// Whether the music is muted, and by what value - the engine's one global, which <c>DIPMUSIC</c>
+	/// writes and the mixer tests against nought when it next re-applies its group volumes.
+	///
+	/// <para>
+	/// <b>It is one setting for the whole game rather than one per script</b>, so the last script to set
+	/// it wins and the death of any script that was holding it releases it for everybody. That is the
+	/// engine's shape, not a simplification: the per-script part is only the marker byte recording who
+	/// is holding it - see <see cref="RideScript.DippedMusic"/>.
+	/// </para>
+	/// </summary>
+	public int MusicDip { get; set; }
+
+	/// <summary>
 	/// How many ticks have been taken. The engine counts these in <c>DAT_008791a4</c> and increments it
 	/// at the top of the tick, before it looks at a single script.
 	/// </summary>
@@ -214,9 +227,21 @@ public sealed class RideScriptScheduler
 
 		_entries.RemoveAt( at );
 
+		Release( entry.Script );
 		TakeDown( entry.Script );
 
 		return true;
+	}
+
+	/// <summary>
+	/// What the flat destructor does for the script itself, short of its relations: a script that was
+	/// holding the music down lets it back up as it dies. <b>That is the only thing that ever un-mutes
+	/// it</b>, since no opcode clears the setting and no shipped script passes nought to <c>DIPMUSIC</c>.
+	/// </summary>
+	private void Release( RideScript script )
+	{
+		if ( script.DippedMusic )
+			MusicDip = 0;
 	}
 
 	/// <summary>
@@ -257,8 +282,14 @@ public sealed class RideScriptScheduler
 	{
 		var at = _entries.FindIndex( entry => entry.Id == id );
 
-		if ( at >= 0 )
-			_entries.RemoveAt( at );
+		if ( at < 0 )
+			return;
+
+		var script = _entries[at].Script;
+
+		_entries.RemoveAt( at );
+
+		Release( script );
 	}
 
 	/// <summary>
@@ -297,6 +328,7 @@ public sealed class RideScriptScheduler
 			_entries.RemoveAt( at );
 			++Finished;
 
+			Release( entry.Script );
 			TakeDown( entry.Script );
 		}
 	}
