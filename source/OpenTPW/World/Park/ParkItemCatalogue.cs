@@ -43,8 +43,17 @@ public sealed class ParkItemCatalogue
 	/// </summary>
 	private static readonly string[] Folders = ["features", "shops", "rides", "sideshow"];
 
-	public ParkItemCatalogue( string themeName )
+	/// <summary>
+	/// Where the items are read from. A running game passes nothing and gets the one it mounted; a test
+	/// passes its own, so that cataloguing a real theme needs no global to have been set - which is the
+	/// rule every other park test already follows.
+	/// </summary>
+	private readonly BaseFileSystem _files;
+
+	public ParkItemCatalogue( string themeName, BaseFileSystem? files = null )
 	{
+		_files = files ?? FileSystem;
+
 		var theme = themeName.ToLowerInvariant();
 		var unreadable = 0;
 
@@ -56,7 +65,7 @@ public sealed class ParkItemCatalogue
 
 			try
 			{
-				directories = FileSystem.GetDirectories( path );
+				directories = _files.GetDirectories( path );
 			}
 			catch ( Exception e )
 			{
@@ -95,13 +104,13 @@ public sealed class ParkItemCatalogue
 	/// Reads one item's description, or answers false if that directory does not hold one - which is not
 	/// an error worth a line of its own, because these folders can hold things that are not items.
 	/// </summary>
-	private static bool TryRead( string directory, string stem, out Item item )
+	private bool TryRead( string directory, string stem, out Item item )
 	{
 		item = default;
 
 		try
 		{
-			using var stream = FileSystem.OpenRead( $"{directory}/{stem}.sam" );
+			using var stream = _files.OpenRead( $"{directory}/{stem}.sam" );
 			var description = new ItemDescriptionFile( stream );
 
 			if ( description.Id <= 0 )
@@ -127,11 +136,11 @@ public sealed class ParkItemCatalogue
 	/// Whether the file system can offer this path at all. It asks for a size rather than using
 	/// <c>FileExists</c>, which does not look inside archives - and every one of these lives in a .wad.
 	/// </summary>
-	private static bool Exists( string path )
+	private bool Exists( string path )
 	{
 		try
 		{
-			return FileSystem.GetSize( path ) > 0;
+			return _files.GetSize( path ) > 0;
 		}
 		catch ( Exception )
 		{

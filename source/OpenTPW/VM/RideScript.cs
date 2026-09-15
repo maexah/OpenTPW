@@ -272,6 +272,24 @@ public sealed class RideScript
 	public RideScriptScheduler? Host { get; set; }
 
 	/// <summary>
+	/// The directory this script was loaded from - the engine's field <c>+0x38</c>, which its loader fills
+	/// in by stripping the last component off the path it was handed.
+	///
+	/// <para>
+	/// <b>It exists because a spawned script is named relative to the script that spawns it.</b>
+	/// <c>SPAWNCHILD</c> and <c>SPAWNSOUND</c> concatenate this prefix with their string operand before
+	/// calling the loader, and that is not a detail: all 48 spawn sites in the shipped corpus name a file
+	/// sitting in the asking script's own directory, and the names they ask for are far from unique - 28
+	/// of them ask for <c>EventMap.rse</c>, of which the game ships one copy per item. So a loader given
+	/// the bare name has no way to tell which of them is meant.
+	/// </para>
+	/// <para>
+	/// Empty where nothing set it, which leaves the bare name and is what a script run on its own gets.
+	/// </para>
+	/// </summary>
+	public string Directory { get; set; } = string.Empty;
+
+	/// <summary>
 	/// Who spawned this script - the engine's field <c>+0x10</c>, an id and not a pointer, and nought for
 	/// nobody.
 	/// </summary>
@@ -1037,7 +1055,10 @@ public sealed class RideScript
 		if ( text is null )
 			return false;
 
-		path = text;
+		// The engine builds the path the same way, from the prefix its loader left at +0x38 - see
+		// Directory, and note that the prefix is what makes the answer unambiguous rather than merely
+		// convenient.
+		path = Directory.Length == 0 ? text : $"{Directory}/{text}";
 
 		return true;
 	}

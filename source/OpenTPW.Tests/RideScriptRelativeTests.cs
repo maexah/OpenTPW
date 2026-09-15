@@ -169,6 +169,47 @@ public class RideScriptRelativeTests
 	}
 
 	/// <summary>
+	/// A spawned script is named <b>relative to the folder its parent came from</b> - the engine's field
+	/// <c>+0x38</c>, which its loader fills in by stripping the last component off the path it was itself
+	/// handed, and which both spawning instructions concatenate their operand onto.
+	///
+	/// <para>
+	/// <b>It decides which file is meant, not merely where to look.</b> All 48 spawn sites in the shipped
+	/// corpus name a file sitting in the asking script's own directory, and the names are nowhere near
+	/// unique: 28 of them ask for <c>EventMap.rse</c>, of which the game ships one copy per item. A loader
+	/// handed the bare name therefore cannot tell which of them was wanted, and in a park full of items it
+	/// would confidently answer the wrong one. The empty case is pinned by
+	/// <see cref="SpawningAChildRegistersItAndLinksItBothWays"/>, where a script that came from nowhere
+	/// asks for the bare name it wrote.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void SpawningAsksForTheChildWhereTheParentCameFrom()
+	{
+		var parent = Script( 0, ["EventMap.rse"], Word( Opcode.SPAWNCHILD ), Str( 0 ), Word( Opcode.END ) );
+
+		parent.Directory = "levels/jungle/rides/coaster1";
+
+		var scheduler = new RideScriptScheduler();
+		var asked = string.Empty;
+
+		scheduler.Loader = name =>
+		{
+			asked = name;
+
+			return Script( 1, [], Word( Opcode.END ) );
+		};
+
+		scheduler.Add( 1, parent );
+		parent.Turn( 0f );
+
+		Assert.AreEqual( "levels/jungle/rides/coaster1/EventMap.rse", asked,
+			"the child should have been asked for under the folder its parent came from" );
+
+		Assert.AreNotEqual( 0, parent.ChildId, "nothing was spawned, so this proves nothing" );
+	}
+
+	/// <summary>
 	/// <c>SPAWNCHILD</c> writes no result. Almost every other instruction in the family answers into the
 	/// result register, so a machine that set one here by analogy would change the branch that follows.
 	/// </summary>

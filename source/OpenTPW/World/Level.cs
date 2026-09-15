@@ -241,12 +241,21 @@ public class Level
 		// The ground first, then what stands on it. The paths follow the ground because they lie on its
 		// heightfield, and ParkObjects is last because it asks how high the land is under each thing it
 		// places.
+		// Everything this theme sells, read once and shared: the objects need it to know what to stand on
+		// the ground, and the rides need it to know where each item's script lives. Built only where there
+		// is a park to place anything in, since without one neither of them has anything to ask it.
+		var catalogue = park == null ? null : new ParkItemCatalogue( ThemeName );
+
 		_ = new ParkGround( ThemeName, park );
 		_ = new ParkPaths( ThemeName, park );
 		_ = new ParkQueues( ThemeName, park );
 		_ = new ParkTerrain( ThemeName );
 		_ = new ParkFixedItems( ThemeName );
-		_ = new ParkObjects( ThemeName, park );
+		_ = new ParkObjects( ThemeName, park, catalogue );
+
+		// And the scripts those objects run. After the objects, because a script belongs to something
+		// standing in the park rather than the other way round.
+		_ = new ParkRides( ThemeName, park, catalogue );
 
 		// Each group of sound at the volume the options give it, and then the park's own music - which
 		// is the order the original uses too: it registers the park's categories, re-applies the group

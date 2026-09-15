@@ -99,12 +99,18 @@ public sealed class ParkObjects : Entity
 	/// The park's own save, already walked, or null where the theme ships none. It is read once by
 	/// <see cref="Level"/> and shared, because the ground and the paths need the same file.
 	/// </param>
-	public ParkObjects( string themeName, ParkWorld? world )
+	/// <param name="catalogue">
+	/// Everything this theme can have standing in it, or null where there is no park to place anything in.
+	/// It is built once by <see cref="Level"/> and shared with <see cref="ParkRides"/>, because both need
+	/// the same items and reading every item's description twice would be careless - the same reason the
+	/// park file itself is read once.
+	/// </param>
+	public ParkObjects( string themeName, ParkWorld? world, ParkItemCatalogue? catalogue )
 	{
 		ThemeName = themeName;
 		Name = $"{themeName} objects";
 
-		if ( world == null )
+		if ( world == null || catalogue == null )
 			return;
 
 		var wanted = world.Objects.Where( item => item.IsPlaced ).ToArray();
@@ -114,8 +120,6 @@ public sealed class ParkObjects : Entity
 			Log.Info( $"{themeName}: the park file places nothing, so there is only the ground and its fixed items" );
 			return;
 		}
-
-		var catalogue = new ParkItemCatalogue( themeName );
 
 		foreach ( var item in wanted )
 			Place( item, catalogue );
