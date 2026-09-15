@@ -85,8 +85,9 @@ public class RideScriptModelTests
 
 	/// <summary>
 	/// A ride's script is told the real length of the clip it started. The space ferry's first clip
-	/// declares 600 frames, which at the engine's 1000/30 is twenty seconds; the instruction answers that
-	/// less the 300 the engine always takes off.
+	/// declares 600 frames, which at the engine's own float is a millisecond under twenty seconds - it
+	/// multiplies by 33.33333206176758 and <b>truncates</b>, so 19999 rather than the 20000 an exact
+	/// 1000/30 would give. The instruction answers that less the 300 it always takes off.
 	///
 	/// <para>
 	/// <b>This is the clip <see cref="AnimationFile.TryLoad"/> refuses</b> - it carries no morph or
@@ -101,11 +102,11 @@ public class RideScriptModelTests
 
 		script.Animations = RideAnimations.Load( "levels/space/features/ferry", "ferry", data );
 
-		Assert.AreEqual( 20000, script.Animations.DurationMilliseconds( 5, 0 ), "the clip's own declared length" );
+		Assert.AreEqual( 19999, script.Animations.DurationMilliseconds( 5, 0 ), "the clip's own declared length" );
 
 		script.Turn( 0f );
 
-		Assert.AreEqual( 19700, script.Variables[0], "the length the engine answers, less its 300" );
+		Assert.AreEqual( 19699, script.Variables[0], "the length the engine answers, less its 300" );
 		Assert.IsTrue( script.WaitingForAnimation, "and the deadline WAIT4ANIM waits on was armed" );
 	}
 
@@ -172,11 +173,11 @@ public class RideScriptModelTests
 		Assert.IsTrue( script.Waiting, "it should be sitting on the clip" );
 		Assert.AreEqual( 0, script.Variables[0], "so nothing after it has run" );
 
-		script.Turn( 19699f );
+		script.Turn( 19698f );
 
 		Assert.AreEqual( 0, script.Variables[0], "one millisecond short of the clip's length" );
 
-		script.Turn( 19700f );
+		script.Turn( 19699f );
 
 		Assert.AreEqual( 7, script.Variables[0], "and through on the millisecond it asked for" );
 		Assert.IsFalse( script.Waiting );

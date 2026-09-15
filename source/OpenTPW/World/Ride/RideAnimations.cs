@@ -95,8 +95,9 @@ public sealed class RideAnimations
 	///
 	/// <para>
 	/// <b>The length is the one the file declares, not the one its keys happen to span.</b> The engine
-	/// reads the clip's own frame bounds out of its animation block and multiplies by 1000/30
-	/// (<c>0x004733b1</c>-<c>0x004733db</c>, against the float 33.3333 at <c>0x006fec08</c>). Those two
+	/// reads the clip's own frame bounds out of its animation block and multiplies by the float at
+	/// <c>0x006fec08</c>, then <b>truncates</b> (<c>0x004733b1</c>-<c>0x004733db</c>) - which is not the
+	/// same as dividing by 30, and see <see cref="AnimationFile.MillisecondsPerFrame"/>. Those two
 	/// disagree far more often than they look like they would: across the levels 129 clips declare a
 	/// longer span than their keys cover and 30 declare a shorter one, so computing it from keys would be
 	/// wrong in both directions - see <see cref="AnimationFile.DeclaredLastFrame"/>.
@@ -115,7 +116,10 @@ public sealed class RideAnimations
 		var clip = clips[entry];
 		var frames = clip.DeclaredLastFrame - clip.DeclaredFirstFrame;
 
-		return frames <= 0 ? 0 : frames * 1000 / (int)AnimationFile.FramesPerSecond;
+		// Multiplied by the engine's own float and truncated, not divided - see
+		// AnimationFile.MillisecondsPerFrame for why those are different numbers on a quarter of the
+		// game's clips.
+		return frames <= 0 ? 0 : (int)(frames * AnimationFile.MillisecondsPerFrame);
 	}
 
 	/// <summary>

@@ -115,11 +115,45 @@ public class RideAnimationsTests
 
 		Assert.AreEqual( 3, ferry.EntryCount( 5 ), "all three of the ferry's clips" );
 
-		// 600 frames at the engine's 1000/30 - see RideAnimations.DurationMilliseconds.
-		Assert.AreEqual( 20000, ferry.DurationMilliseconds( 5, 0 ), "twenty seconds, declared in the file" );
+		// 600 frames times the engine's own float, truncated - a millisecond under twenty seconds. See
+		// AnimationFile.MillisecondsPerFrame for why that is not 600 * 1000 / 30.
+		Assert.AreEqual( 19999, ferry.DurationMilliseconds( 5, 0 ), "twenty seconds bar a millisecond, declared in the file" );
 
 		Assert.IsTrue( ferry.DurationMilliseconds( 5, 1 ) > 0, "and the others are not nought either" );
 		Assert.IsTrue( ferry.DurationMilliseconds( 5, 2 ) > 0 );
+	}
+
+	/// <summary>
+	/// <b>A length is truncated from the engine's own float, not divided by thirty.</b> The engine
+	/// multiplies the declared span by the 32-bit float at <c>0x006fec08</c> - 33.33333206176758, not the
+	/// exact 1000/30 - and converts with <c>__ftol</c>, which sets rounding toward zero before it stores.
+	/// So wherever the span is a multiple of three the product lands just under a whole millisecond and
+	/// the answer is one less than dividing would give.
+	///
+	/// <para>
+	/// It is not a rounding curiosity: it moves <b>293 of the 1,237 clips under levels/ that declare a
+	/// span</b>, and every one of those millisecond errors would have gone into a script's own deadline
+	/// through <c>TRIGANIM</c> and <c>WAITANIM</c>.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void ALengthIsTruncatedFromTheEnginesFloatRatherThanDivided()
+	{
+		var ferry = Load( "levels/space/features/ferry", "ferry" );
+
+		Assert.AreEqual( 19999, ferry.DurationMilliseconds( 5, 0 ), "600 frames, as the engine counts them" );
+
+		// What dividing would have answered for the very same clip - kept here so the difference is
+		// stated rather than implied, and so the constant cannot quietly go back to 1000/30.
+		Assert.AreEqual( 20000, 600 * 1000 / (int)AnimationFile.FramesPerSecond, "what dividing gives" );
+
+		Assert.AreEqual( 19999, (int)(600 * AnimationFile.MillisecondsPerFrame), "and what the engine's float gives" );
+
+		// A span that is not a multiple of three lands in the same place either way, which is why this
+		// went unnoticed: the fountain's fifty frames agree exactly.
+		var fountain = Load( "levels/jungle/features/fountain", "fountain" );
+
+		Assert.AreEqual( 1666, fountain.DurationMilliseconds( 5, 0 ), "fifty frames, where the two readings agree" );
 	}
 
 	/// <summary>

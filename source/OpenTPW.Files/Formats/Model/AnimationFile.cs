@@ -194,6 +194,21 @@ public class AnimationFile : BaseFormat
 	/// same function of time whether it is drawn thirty times a second or a hundred and forty-four.
 	/// </summary>
 	public const float FramesPerSecond = 30f;
+	/// <summary>
+	/// How long one frame lasts, in milliseconds, as the engine holds it: the <b>32-bit float</b> at
+	/// <c>0x006fec08</c> (<c>0x42055555</c>), which is 33.33333206176758 and not the exact 1000/30.
+	///
+	/// <para>
+	/// <b>The difference is not academic, because the engine truncates.</b> It computes a clip's length as
+	/// <c>__ftol(frames * this)</c> at <c>0x004733cc</c>-<c>0x004733d6</c>, and <c>__ftol</c>
+	/// (<c>0x0067a830</c>) is not a rounding conversion: it saves the x87 control word, <c>OR AH,0xc</c> to
+	/// set rounding toward zero, <c>FISTP</c>, and restores it. So the product falls to the integer below.
+	/// Where the span is a multiple of three the exact arithmetic lands on a whole millisecond and this one
+	/// lands just under it - 600 frames is 19999 here and 20000 by <c>frames * 1000 / 30</c> - and that is
+	/// <b>293 of the 1,237 clips under levels/ that declare a span</b>, measured 2026-09-15.
+	/// </para>
+	/// </summary>
+	public const double MillisecondsPerFrame = 33.33333206176758;
 
 	/// <summary>One record of a vertex morph track: some channels, sampled at some frames.</summary>
 	public class Track
