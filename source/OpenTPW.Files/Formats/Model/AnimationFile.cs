@@ -171,8 +171,15 @@ namespace OpenTPW;
 /// track count of zero, and 1 has no animation block. The table identity above does not fail
 /// on a single file in the game, so nothing is rejected for being unreadable.
 ///
-/// FirstFrame and LastFrame still span only rotation, morph and UV keys, so the 19 files whose
-/// tracks move nothing but positions and visibility read as having no span.
+/// FirstFrame and LastFrame still span only rotation, morph and UV keys, so a file whose tracks move
+/// nothing but positions and visibility reads as having no span.
+///
+/// That was recorded here as 19 files, and it is wrong. Measured 2026-09-15 against the span each file
+/// declares in its own animation block, over the 1140 clips under levels/ that carry one: 159 disagree
+/// with what the keys cover - 129 where the keys fall short, of which 114 read as no span whatever, and
+/// 30 where the keys run past the declared end. Every one of the 114 declares a real length and some are
+/// long, the ferries running 600 frames. See DeclaredFirstFrame, which is the span the engine itself
+/// answers with and the one to use where a clip's length is wanted rather than its key coverage.
 /// </summary>
 public class AnimationFile : BaseFormat
 {
@@ -429,6 +436,34 @@ public class AnimationFile : BaseFormat
 	public int FirstFrame { get; private set; }
 	public int LastFrame { get; private set; }
 
+	/// <summary>
+	/// The span the file <i>declares</i>, read from its animation block rather than worked out from the
+	/// keys - the two integers at block +0x04 and +0x08.
+	///
+	/// <para>
+	/// <b>This is the length the engine uses</b>, and it is not the same number as
+	/// <see cref="FirstFrame"/> to <see cref="LastFrame"/>. A ride script asking how long an animation
+	/// runs is answered with the declared span times 1000/30 (0x004733b1-0x004733db), so a machine
+	/// computing it from keys answers a different question. Across the game's levels the two disagree on
+	/// <b>159 clips</b>: 129 declare longer than their keys cover and 30 declare shorter, and of those
+	/// 129 there are <b>114 our own reader rejects outright</b> - clips carrying position and visibility
+	/// only, which nonetheless declare real and sometimes long lengths (the ferries run 600 frames).
+	/// </para>
+	/// <para>
+	/// <b>Every clip in the game declares a start of nought and an end of at least one</b> - measured over
+	/// all 1,140 clips under levels/ that carry an animation block, with no exceptions in either
+	/// direction - so there is no such thing as a zero-length clip to guard against.
+	/// </para>
+	/// <para>
+	/// These are filled even when the file carries no track this reader understands, so
+	/// <see cref="IsValid"/> being false does not mean there is no length here.
+	/// </para>
+	/// </summary>
+	public int DeclaredFirstFrame { get; private set; }
+
+	/// <summary>The other end of the declared span - see <see cref="DeclaredFirstFrame"/>.</summary>
+	public int DeclaredLastFrame { get; private set; }
+
 	public AnimationFile( Stream stream )
 	{
 		ReadFromStream( stream );
@@ -561,6 +596,13 @@ public class AnimationFile : BaseFormat
 
 		if ( blockOffset < 0x9C || blockOffset + 0x30 > data.Length )
 			return false;
+
+		// Taken here, before anything below can turn the file away: a clip carrying no track this reader
+		// understands still declares a real length, and 114 of the game's clips are exactly that. Read as
+		// integers rather than floats - the float reading of these two words gives denormal nonsense
+		// (2.1E-43 where the integer is 150), which is how the type was settled rather than assumed.
+		DeclaredFirstFrame = BitConverter.ToInt32( data, (int)blockOffset + 0x04 );
+		DeclaredLastFrame = BitConverter.ToInt32( data, (int)blockOffset + 0x08 );
 
 		int trackCount = BitConverter.ToUInt16( data, (int)blockOffset + 0x12 );
 		var tableOffset = BitConverter.ToUInt32( data, (int)blockOffset + 0x2C );
