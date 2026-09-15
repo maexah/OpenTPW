@@ -60,13 +60,52 @@ public sealed class RideScript
 
 	private int _budget;
 	private bool _critical;
-	private float _waitUntil;
+
+	/// <summary>
+	/// The deadline a <c>WAIT</c> or a <c>WAITANIM</c> is sitting on - the engine's field <c>+0xa0</c>,
+	/// which both of them share.
+	///
+	/// <para>
+	/// <b>Null is the engine's own nought: an empty slot, not a deadline of zero.</b> The distinction
+	/// is load-bearing rather than tidy, because <c>WAITANIM</c> with no model sets a deadline in the
+	/// <b>past</b> - see <see cref="WaitOutAnimation"/> - and a plain float testing <c>&lt;= 0</c> would
+	/// read that back as an empty slot and arm it again every visit, so the script would never move.
+	/// </para>
+	/// </summary>
+	private float? _waitUntil;
 
 	/// <summary>
 	/// The deadline <c>SETTIMER</c> last set, on the caller's clock - the engine's field <c>+0xc4</c>.
 	/// One per script, and zero until a <c>SETTIMER</c> has run.
 	/// </summary>
 	private float _timerUntil;
+
+	/// <summary>
+	/// When the animation last triggered finishes - the engine's field <c>+0xa4</c>, and <b>not</b> the
+	/// one <c>WAIT</c> uses. <c>TRIGANIM</c> arms it, <c>LOOPANIM</c> clears it, and <c>WAIT4ANIM</c> is
+	/// the only instruction that reads it. Null when nothing has been triggered.
+	/// </summary>
+	private float? _animationUntil;
+
+	/// <summary>
+	/// Which animation is looping - the engine's field <c>+0xa8</c>, holding the key
+	/// <c>(second &lt;&lt; 16) + first</c>, and <see cref="OneShot"/> after a one-shot trigger.
+	/// </summary>
+	private int _looping;
+
+	/// <summary>
+	/// What a one-shot <c>TRIGANIM</c> leaves in <see cref="_looping"/>. No <c>LOOPANIM</c> can name it:
+	/// its key is built from two operands the engine sign-extends from sixteen bits, so a literal
+	/// 65535 arrives as -1. That is why a trigger always leaves the next <c>LOOPANIM</c> looking like a
+	/// change.
+	/// </summary>
+	private const int OneShot = 0xFFFF;
+
+	/// <summary>
+	/// The 300ms the engine adds to, or subtracts from, every animation length it is given - the
+	/// constant behind both its <c>ADD EAX,-0x12c</c> and the floor it compares against.
+	/// </summary>
+	private const int AnimationSlack = 300;
 
 	/// <summary>
 	/// <c>RAND</c>'s generator state - see <see cref="NextRandom"/>, which carries why this is per
@@ -119,8 +158,11 @@ public sealed class RideScript
 	/// <summary>Instructions that reach into a world this does not have yet, counted rather than guessed.</summary>
 	public int NotImplemented { get; private set; }
 
-	/// <summary>True while the script is sitting on a <c>WAIT</c> that has not come due.</summary>
-	public bool Waiting => _waitUntil > 0f;
+	/// <summary>True while the script is sitting on a <c>WAIT</c> or <c>WAITANIM</c> not yet come due.</summary>
+	public bool Waiting => _waitUntil is not null;
+
+	/// <summary>True while the script is sitting on a <c>WAIT4ANIM</c> that has not come due.</summary>
+	public bool WaitingForAnimation => _animationUntil is not null;
 
 	/// <summary>
 	/// The ride this script drives, or null if it has none. The original finds it by walking a list
@@ -329,10 +371,32 @@ public sealed class RideScript
 				Wait( now, Value( operands[0] ), 1 + operands.Count );
 				break;
 
+			// The animation family. Every one of these handlers tests the model handle at +0xc8 before
+			// it does anything, and takes a path the engine defines completely when that handle is
+			// nought - which is every script here. TRIGWAITANIM is deliberately NOT among them: it
+			// rewinds itself and walks a channel cursor at +0xbc across turns, and implementing it
+			// would unlock no further script (109 either way) for 133 instructions of reach.
+			case Opcode.FLUSHANIM:
+				// The handler's first act is to fetch the model and leave if there is none. With no
+				// model this is the engine's behaviour rather than a stand-in for it.
+				break;
+
+			case Opcode.TRIGANIM:
+				TriggerAnimation( now, operands[2] );
+				break;
+
+			case Opcode.WAITANIM:
+				WaitOutAnimation( now, 1 + operands.Count );
+				break;
+
+			case Opcode.LOOPANIM:
+				// The key is built from the two operands exactly as the engine builds it, by addition
+				// rather than by an or - which differs only if a variable holds more than sixteen bits.
+				Loop( (Value( operands[1] ) << 16) + Value( operands[0] ) );
+				break;
+
 			case Opcode.WAIT4ANIM:
-				// Nothing animates here yet, so there is never anything to wait for. When animation
-				// arrives this becomes the same shape as WAIT on its own deadline.
-				++NotImplemented;
+				WaitForAnimation( now, 1 + operands.Count );
 				break;
 
 			case Opcode.GETTIME:
@@ -589,12 +653,21 @@ public sealed class RideScript
 	/// </summary>
 	private void Wait( float now, int duration, int length )
 	{
-		if ( _waitUntil <= 0f )
+		if ( _waitUntil is null )
+		{
+			// The engine sets the deadline and leaves without looking at it, so even a wait that is
+			// already over costs the rest of the turn. Nothing shipped asks for one - every WAIT in the
+			// corpus names a positive duration - but WAITANIM, which shares this field, asks for
+			// exactly that, and the old shape here would have let it through in the same turn.
 			_waitUntil = now + duration;
+			Position -= length;
+			_budget = 0;
+			return;
+		}
 
 		if ( now >= _waitUntil )
 		{
-			_waitUntil = 0f;
+			_waitUntil = null;
 			return;
 		}
 
@@ -646,5 +719,100 @@ public sealed class RideScript
 			return 0;
 
 		return Math.Abs( drawn % span );
+	}
+
+	/// <summary>
+	/// <c>TRIGANIM</c>: start a one-shot animation, answer how long it runs, and arm the deadline that
+	/// <c>WAIT4ANIM</c> waits on.
+	///
+	/// <para>
+	/// The engine asks the model how long the animation is, takes 300 off the answer, and floors the
+	/// result at 300 with a <b>signed</b> comparison. With no model it never asks and substitutes
+	/// nought, so the sum is <c>0 - 300</c> and the floor catches it: <b>300ms, and that is the
+	/// engine's own answer rather than a number chosen here.</b>
+	/// </para>
+	///
+	/// <para>
+	/// The length goes through <see cref="Store"/>, so a literal destination - which 64 of the 74
+	/// shipped uses write - leaves it in the result register instead, the same idiom as
+	/// <c>COAST 2 0</c>.
+	/// </para>
+	/// </summary>
+	private void TriggerAnimation( float now, RideOperand destination )
+	{
+		Store( destination, AnimationSlack );
+
+		_animationUntil = now + AnimationSlack;
+		_looping = OneShot;
+	}
+
+	/// <summary>
+	/// <c>WAITANIM</c>: hold while the animation named runs.
+	///
+	/// <para>
+	/// <b>With no model this costs exactly one turn, and the 300 it looks like it should wait is not
+	/// what it waits.</b> Its arithmetic is its sibling's with two differences, and both of them
+	/// matter. It stores the length-less-300 as the <b>low half of a qword whose high half is nought</b>
+	/// and does a <c>FILD qword</c>, so -300 is read as 4,294,966,996; <c>__ftol</c> converts that
+	/// exactly (it is a <c>FISTP qword</c> that hands back the low dword, so nothing overflows) and
+	/// -300 comes back out. It then compares against the 300 floor <b>unsigned</b>, which a negative
+	/// passes. So the deadline is <c>clock - 300</c> - already past - and the instruction rewinds and
+	/// gives up the turn anyway, because the engine sets the deadline without looking at it. The next
+	/// turn walks straight through.
+	/// </para>
+	///
+	/// <para>
+	/// <b>One deviation, named rather than hidden:</b> the engine holds that deadline as an unsigned
+	/// dword, so a clock under 300ms would wrap it to something enormous and park the script for about
+	/// 49 days. Nothing can reach that - a ride's scripts do not run in the first three tenths of a
+	/// second of a game - and reproducing it would only turn an unreachable case into a hang.
+	/// </para>
+	/// </summary>
+	private void WaitOutAnimation( float now, int length ) => Wait( now, -AnimationSlack, length );
+
+	/// <summary>
+	/// <c>LOOPANIM</c>: set an animation looping, unless that same one already is.
+	///
+	/// <para>
+	/// Asking again for the animation already running is the engine's early exit and does nothing at
+	/// all - which matters because the other path <b>clears the <c>WAIT4ANIM</c> deadline</b>: a loop
+	/// never finishes, so there is nothing left to wait for. That early exit has no effect anything
+	/// here can see, since with no model the two paths differ only in the deadline and a trigger always
+	/// leaves <see cref="_looping"/> at <see cref="OneShot"/>; it is here because the engine does it,
+	/// and it stops an animation being restarted every turn the moment a model exists.
+	/// </para>
+	/// </summary>
+	private void Loop( int animation )
+	{
+		if ( _looping == animation )
+			return;
+
+		_animationUntil = null;
+		_looping = animation;
+	}
+
+	/// <summary>
+	/// <c>WAIT4ANIM</c>: hold until the animation last triggered has run its length.
+	///
+	/// <para>
+	/// <b>With nothing triggered it does not wait at all.</b> The handler's first test is whether the
+	/// deadline is nought and it leaves if it is, so a script reaching this without a trigger walks
+	/// past - which is what makes the instruction honest before anything animates, and what stops the
+	/// 74 scripts that use it being parked for ever.
+	/// </para>
+	/// </summary>
+	private void WaitForAnimation( float now, int length )
+	{
+		if ( _animationUntil is null )
+			return;
+
+		if ( now >= _animationUntil )
+		{
+			_animationUntil = null;
+			return;
+		}
+
+		Position -= length;
+		_budget = 0;
 	}
 }

@@ -130,18 +130,34 @@ public class RideScriptRunTests
 
 			var candidate = new RideScript( file );
 
-			for ( int turn = 0; turn < 60 && candidate.Running && !candidate.Waiting; ++turn )
+			for ( int turn = 0; turn < 60 && candidate.Running && waiting == null; ++turn )
+			{
 				candidate.Turn( 0f );
 
-			if ( !candidate.Waiting )
-				continue;
+				if ( !candidate.Waiting )
+					continue;
 
-			waiting = candidate;
-			found = Path.GetFileName( path );
-			break;
+				// Not every wait holds. WAITANIM shares WAIT's deadline field (+0xa0) but, with no model
+				// to ask for a length, sets it 300ms in the PAST: it gives up the turn it is sitting on
+				// and goes straight on the next one. That is the instruction growth.RSE reaches first,
+				// and it is not what this is about - so a candidate has to prove it stays put across a
+				// turn before it is taken. WAITANIM's own rewind is covered in RideScriptAnimationTests.
+				var held = candidate.Position;
+
+				candidate.Turn( 0f );
+
+				if ( candidate.Waiting && candidate.Position == held )
+				{
+					waiting = candidate;
+					found = Path.GetFileName( path );
+				}
+			}
+
+			if ( waiting != null )
+				break;
 		}
 
-		Assert.IsNotNull( waiting, "no shipped script reached a WAIT, so nothing here was exercised" );
+		Assert.IsNotNull( waiting, "no shipped script reached a wait that holds, so nothing here was exercised" );
 
 		var script = waiting!;
 		var waitingAt = script.Position;
