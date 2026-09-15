@@ -35,10 +35,21 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// The gate's doors animate without anything asked of them: <see cref="LobbyModel"/> looks for
-/// companions with an M1, M2... suffix and the archive holds <c>gatesm1</c>, <c>gatesm2</c> and
-/// <c>gatesm3</c>, which match case-insensitively. That is the opposite of the terrain's own
+/// <b>These hold still until something asks them to move, and that is the point.</b> Both are scripted
+/// things in the original - the archives ship <c>Gates.RSE</c> and <c>lights.RSE</c> beside the models -
+/// so what they do belongs to an animation player a script triggers, exactly as a placed thing's does;
+/// see <see cref="ParkObjects.Sweep"/>. What happened instead was that <see cref="LobbyModel"/> picked up
+/// the companions with an M1, M2... suffix - the archive holds <c>gatesm1</c>, <c>gatesm2</c> and
+/// <c>gatesm3</c>, matched case-insensitively - and looped them on a clock of its own, so the gate swung
+/// open and shut for ever with nothing having asked for it. That is the opposite of the terrain's own
 /// <c>basem.MD2</c>, whose bare <c>m</c> nothing picks up.
+/// </para>
+///
+/// <para>
+/// Neither is bound to its script yet, and cannot be as things stand: a fixed item carries no position
+/// and no thing id, so it is not one of the placements <see cref="ParkRides"/> walks. Until that is built
+/// they keep the pose they were built in, which is exactly what the engine shows for a channel its loader
+/// has parked at the sentinel.
 /// </para>
 /// </summary>
 public sealed class ParkFixedItems : Entity
@@ -179,10 +190,8 @@ public sealed class ParkFixedItems : Entity
 	/// <summary>The order THEMENAMES.str lists the parks in - see <see cref="ParkDisplayName"/>.</summary>
 	private static readonly string[] ThemeOrder = ["jungle", "hallow", "fantasy", "space"];
 
-	protected override void OnUpdate()
-	{
-		// Game time, not frame time - see GameClock.
-		foreach ( var model in _models )
-			model.Update( GameClock.Delta );
-	}
+	// There is deliberately no OnUpdate here. These models are kept in _models so that this entity owns
+	// them for as long as the park stands, not so that anything drives them: see the remarks on this class
+	// for why a gate that swings itself open is a clock this program invented rather than behaviour the
+	// original has.
 }
