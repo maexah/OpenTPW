@@ -19,9 +19,11 @@ namespace OpenTPW;
 ///
 /// <para>
 /// <b>What this deliberately does not do.</b> Each turn, the original also pushes the script's speed word
-/// into its ride, its sound and a linked script, and moves any particle objects hung off it. None of
-/// those exist here yet, and inventing them would put motion in the world that nothing asked for - see
-/// <see cref="RideScript"/> for the same reasoning about world-touching opcodes.
+/// into its ride, its sound and <b>its child</b> - that last one found through this same registry, by the
+/// child id at <c>+0x0c</c> - and moves any particle objects hung off it. The speed word is 50 for every
+/// script that ever runs and no opcode writes it, so copying it into a child could not change anything;
+/// the rest does not exist here yet, and inventing it would put motion in the world that nothing asked
+/// for - see <see cref="RideScript"/> for the same reasoning about world-touching opcodes.
 /// </para>
 /// </summary>
 public sealed class RideScriptScheduler
@@ -32,6 +34,32 @@ public sealed class RideScriptScheduler
 	private readonly List<Entry> _entries = [];
 
 	/// <summary>
+	/// The highest id handed out or taken in, so a script from <see cref="Spawn"/> gets one nothing else
+	/// is using. The engine keeps the same counter at <c>DAT_008791a8</c> and only ever increments it - it
+	/// is written in three places, the loader and the two that reset the whole system - so <b>an id is
+	/// never reused while the game runs</b>, and nothing can be left holding an id that has quietly come
+	/// to mean a different script.
+	/// </summary>
+	private int _lastId;
+
+	/// <summary>
+	/// How the name in a <c>SPAWNCHILD</c> or a <c>SPAWNSOUND</c> becomes a script, or null where nothing
+	/// can load one - in which case both instructions are counted rather than guessed.
+	///
+	/// <para>
+	/// The engine's loader takes a whole path, which the instruction builds from the script's own
+	/// directory: <c>FUN_005587f0</c> keeps that at <c>+0x38</c>, having stripped the last component off
+	/// the path it was itself loaded from. Nothing here knows where a script came from, so the caller is
+	/// handed the name as the script wrote it. Two things about those names are worth knowing before
+	/// resolving one: <b>the name already carries its extension</b> - every shipped <c>SPAWNCHILD</c> asks
+	/// for something ending <c>.rse</c> - and <b>its case will not match the file</b>, since scripts ask
+	/// for <c>Effects.rse</c>, <c>clock.rse</c>, <c>worn.rse</c> and <c>anims.rse</c> where the archives
+	/// hold <c>effects.RSE</c>, <c>Clock.RSE</c>, <c>Worn.RSE</c> and <c>Anims.RSE</c>.
+	/// </para>
+	/// </summary>
+	public Func<string, RideScript?>? Loader { get; set; }
+
+	/// <summary>
 	/// How many ticks have been taken. The engine counts these in <c>DAT_008791a4</c> and increments it
 	/// at the top of the tick, before it looks at a single script.
 	/// </summary>
@@ -40,7 +68,11 @@ public sealed class RideScriptScheduler
 	/// <summary>How many scripts are still being given turns.</summary>
 	public int Count => _entries.Count;
 
-	/// <summary>How many scripts have stopped and been dropped since this scheduler was made.</summary>
+	/// <summary>
+	/// How many scripts have stopped and been dropped since this scheduler was made. A script taken down
+	/// because the script that spawned it died is removed without being counted here: it did not finish,
+	/// it was killed - see <see cref="Destroy"/>.
+	/// </summary>
 	public int Finished { get; private set; }
 
 	/// <summary>How many turns have been handed out in total - one per script per tick it was due.</summary>
@@ -64,6 +96,15 @@ public sealed class RideScriptScheduler
 	{
 		ArgumentNullException.ThrowIfNull( script );
 
+		// A script carries its own id in the original - field 2 of its frame - and every instruction that
+		// reaches another script goes through this one registry to find it. So registering a script is
+		// also what tells it who it is and where to look.
+		script.Id = id;
+		script.Host = this;
+
+		if ( id > _lastId )
+			_lastId = id;
+
 		_entries.Add( new Entry( id, script ) );
 	}
 
@@ -78,6 +119,146 @@ public sealed class RideScriptScheduler
 		_entries.RemoveAt( at );
 
 		return true;
+	}
+
+	/// <summary>
+	/// The script with this id, or null where nothing has it - the engine's <c>FUN_0055a070</c>, which
+	/// every instruction that reaches another script goes through.
+	///
+	/// <para>
+	/// <b>Newest first</b>, because the engine's registry is a linked list its loader pushes each new
+	/// script onto the head of, and this is that walk. The order is not cosmetic: <c>FINDSCRIPTRAND</c>
+	/// picks the n-th script matching a name, and walking the other way would pick a different one.
+	/// </para>
+	///
+	/// <para>
+	/// <b>Nought is not special here.</b> The instructions test their child and parent ids against nought
+	/// before they ever call this, exactly as the engine does, so the sentinel stays where the engine puts
+	/// it - and a caller that genuinely registered a script under 0 still finds it.
+	/// </para>
+	/// </summary>
+	public RideScript? Find( int id )
+	{
+		for ( int i = _entries.Count - 1; i >= 0; --i )
+		{
+			if ( _entries[i].Id == id )
+				return _entries[i].Script;
+		}
+
+		return null;
+	}
+
+	/// <summary>Every script, newest first - the order all of the engine's registry walks take.</summary>
+	public IEnumerable<RideScript> NewestFirst()
+	{
+		for ( int i = _entries.Count - 1; i >= 0; --i )
+			yield return _entries[i].Script;
+	}
+
+	/// <summary>
+	/// Loads a script through <see cref="Loader"/> and puts it under this scheduler, answering its new id
+	/// - or nought where nothing was loaded, which is what the engine's loader answers when it cannot open
+	/// the file, and what both spawning instructions test.
+	/// </summary>
+	public int Spawn( string name )
+	{
+		var script = Loader?.Invoke( name );
+
+		if ( script is null )
+			return 0;
+
+		var id = _lastId + 1;
+
+		Add( id, script );
+
+		return id;
+	}
+
+	/// <summary>
+	/// Takes a script down for good - the engine's <c>FUN_00559060</c>, which is both what
+	/// <c>REMOVECHILD</c> calls and what the tick loop calls on a script that has stopped.
+	///
+	/// <para>
+	/// <b>A script does not die alone - but it dies exactly one level deep.</b> It takes its child and
+	/// whatever a <c>SPAWNSOUND</c> spawned down with it, and it tells its parent it has gone. That last
+	/// step is why nothing is ever left holding a child id that names nobody.
+	/// </para>
+	///
+	/// <para>
+	/// <b>One level, and no further.</b> The engine resolves the two it owns and then calls the flat
+	/// destructor on them - <c>FUN_00558500</c>, which never reads their own child, parent or sound
+	/// fields. So <b>a grandchild is not destroyed</b>: it survives with a parent id naming a script that
+	/// no longer exists, and the dying child never performs its own parent fixup. That is reproduced
+	/// rather than tidied into a recursion, and it is dormant in shipped content - of the 48 files the
+	/// corpus spawns, not one contains a spawning instruction itself, so nothing shipped has a grandchild
+	/// at all.
+	/// </para>
+	///
+	/// <para>
+	/// <b>One engine defect is reproduced and one is not.</b> The parent's child slot is cleared without
+	/// checking that it still names the script that is dying, so a parent that has spawned a replacement
+	/// loses hold of it - reproduced, because no shipped script can reach it: all four that spawn inside a
+	/// loop run <c>REMOVECHILD</c> first. The other is a null dereference - where the parent id names
+	/// nobody the engine writes through the null it just failed to find - and reproducing a crash would be
+	/// a reading of the bytes rather than of the engine.
+	/// </para>
+	/// </summary>
+	public bool Destroy( int id )
+	{
+		var at = _entries.FindIndex( entry => entry.Id == id );
+
+		if ( at < 0 )
+			return false;
+
+		var entry = _entries[at];
+
+		_entries.RemoveAt( at );
+
+		TakeDown( entry.Script );
+
+		return true;
+	}
+
+	/// <summary>
+	/// What dying costs a script's relations, once it is already out of the list.
+	///
+	/// <para>
+	/// <b>The sound script goes first</b>, then the child, then the parent is told - the engine's own
+	/// order, three structurally identical arms at <c>0x55924b</c>, <c>0x55928c</c> and <c>0x5592cd</c>.
+	/// Neither of the two it takes with it gets this treatment in turn: they are removed flat, which is
+	/// what stops a grandchild being reached and is the whole of the difference from a recursion.
+	/// </para>
+	/// </summary>
+	private void TakeDown( RideScript script )
+	{
+		if ( script.SoundChildId != 0 )
+			RemoveFlat( script.SoundChildId );
+
+		if ( script.ChildId != 0 )
+			RemoveFlat( script.ChildId );
+
+		script.ChildId = 0;
+		script.SoundChildId = 0;
+
+		if ( script.ParentId == 0 )
+			return;
+
+		var parent = Find( script.ParentId );
+
+		if ( parent is not null )
+			parent.ChildId = 0;
+	}
+
+	/// <summary>
+	/// Takes one script out and does nothing else - the engine's <c>FUN_00558500</c>, which frees a
+	/// script's own storage and unlinks it without ever looking at what it was related to.
+	/// </summary>
+	private void RemoveFlat( int id )
+	{
+		var at = _entries.FindIndex( entry => entry.Id == id );
+
+		if ( at >= 0 )
+			_entries.RemoveAt( at );
 	}
 
 	/// <summary>
@@ -101,9 +282,23 @@ public sealed class RideScriptScheduler
 			entry.Script.Turn( now );
 		}
 
-		var dropped = _entries.RemoveAll( entry => !entry.Script.Running );
+		// The engine drops a script whose program counter has gone negative, and what it calls to do it is
+		// the same teardown REMOVECHILD runs - FUN_00559060, at the foot of FUN_005516b0. So a script that
+		// stops takes its child down with it rather than leaving it running with nobody holding it.
+		while ( true )
+		{
+			var at = _entries.FindIndex( entry => !entry.Script.Running );
 
-		Finished += dropped;
+			if ( at < 0 )
+				break;
+
+			var entry = _entries[at];
+
+			_entries.RemoveAt( at );
+			++Finished;
+
+			TakeDown( entry.Script );
+		}
 	}
 
 	private readonly record struct Entry( int Id, RideScript Script );

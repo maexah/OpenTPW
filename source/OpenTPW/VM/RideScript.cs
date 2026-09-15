@@ -35,8 +35,9 @@ namespace OpenTPW;
 /// absent one: it would run, produce a plausible number and take a branch nobody can account for.
 /// The ones left out reach into a world that does not exist yet - guests, scenery, sound - so they
 /// can be filled in beside whatever provides those. That list is shorter than it was: objects and
-/// animation landed beside <see cref="RideEffects"/> and the deadline fields, and limbo needed no
-/// world at all, because the engine keeps it in the script's own frame.
+/// animation landed beside <see cref="RideEffects"/> and the deadline fields, limbo needed no world
+/// at all because the engine keeps it in the script's own frame, and the instructions that reach
+/// other scripts needed only the registry <see cref="RideScriptScheduler"/> already was.
 /// </para>
 /// </summary>
 public sealed class RideScript
@@ -158,6 +159,19 @@ public sealed class RideScript
 	/// </summary>
 	private const int LimboSecond = 1000;
 
+	/// <summary>
+	/// Where <c>NAME</c>'s string sits in the blob - the engine's field <c>+0x74</c>, and the only thing
+	/// <c>NAME</c> writes anywhere.
+	///
+	/// <para>
+	/// <b>The loader leaves this at -1 rather than at nought</b> (<c>puVar7[0x1d] = 0xffffffff</c>), and
+	/// <c>FINDSCRIPTRAND</c>'s walk skips a script whose value is negative. That is what makes "has never
+	/// named itself" different from "is called whatever sits at offset nought", and it is load-bearing:
+	/// <b>31 of the 308 shipped scripts never run <c>NAME</c></b>, and not one of them can ever be found.
+	/// </para>
+	/// </summary>
+	private int _nameOffset = -1;
+
 	public RideScript( RideScriptFile file )
 	{
 		_file = file;
@@ -230,6 +244,54 @@ public sealed class RideScript
 	/// scripts whose header declares no slots at all.
 	/// </summary>
 	public int LimboSpace => _limbo.Length - _inLimbo;
+
+	/// <summary>
+	/// This script's own id - the engine's field <c>+0x8</c>, handed out by its loader from a counter that
+	/// is only ever incremented. It is what <c>FINDSCRIPTRAND</c> answers, and what every instruction
+	/// reaching another script carries. <see cref="RideScriptScheduler.Add"/> sets it.
+	/// </summary>
+	public int Id { get; set; }
+
+	/// <summary>
+	/// The registry this script is registered in, or null where it is being run on its own. Every
+	/// instruction that reaches another script goes through it, exactly as the engine's do: there is one
+	/// global list and <b>no script ever holds a pointer to another</b>, only an id.
+	/// </summary>
+	public RideScriptScheduler? Host { get; set; }
+
+	/// <summary>
+	/// Who spawned this script - the engine's field <c>+0x10</c>, an id and not a pointer, and nought for
+	/// nobody.
+	/// </summary>
+	public int ParentId { get; set; }
+
+	/// <summary>
+	/// The one child this script has spawned - the engine's field <c>+0x0c</c>. There is room for exactly
+	/// one, and <c>SPAWNCHILD</c> overwrites it without taking down whatever was there.
+	/// </summary>
+	public int ChildId { get; set; }
+
+	/// <summary>
+	/// The script a <c>SPAWNSOUND</c> spawned - the engine's field <c>+0x14</c>, a second and quite
+	/// separate slot. <b><c>SPAWNSOUND</c> is not a sound instruction</b>: it calls the script loader, and
+	/// all 28 shipped uses ask it for the same file, <c>EventMap.rse</c>.
+	///
+	/// <para>
+	/// <b>No instruction ever reads this back, and it is not dead storage.</b> The far side is
+	/// <c>FUN_0055a3e0</c>, which takes a script id and a variable index, follows that script's
+	/// <c>+0x14</c> to the sound script and answers one of <i>its</i> variables - and it has 29 callers,
+	/// none of them in the interpreter. So the point of <c>SPAWNSOUND</c> is to publish a block of
+	/// variables the ride and sound code reads by id, which is why every use loads the same file. Nothing
+	/// here consumes it yet; the slot is kept so that whatever does will find it already filled.
+	/// </para>
+	/// </summary>
+	public int SoundChildId { get; set; }
+
+	/// <summary>
+	/// Whether the script has run <c>NAME</c>, which is what makes it findable at all - see
+	/// <see cref="_nameOffset"/>.
+	/// </summary>
+	public bool IsNamed => _nameOffset >= 0;
 
 	public int this[RideVariables variable] => Read( (int)variable );
 
@@ -331,7 +393,7 @@ public sealed class RideScript
 				break;
 
 			case Opcode.NAME:
-				Name = _file.StringAt( operands[0].Value ) ?? Name;
+				TakeName( operands[0] );
 				break;
 
 			case Opcode.COPY:
@@ -539,6 +601,58 @@ public sealed class RideScript
 				// All 24 shipped uses write a literal 0 where a destination would go, so the answer
 				// lands in the result register and the write is stepped over - the COAST 2 0 idiom.
 				Store( operands[0], LimboSpace );
+				break;
+
+			// Reaching the scripts around it: this script's one child, whoever spawned it, and anything
+			// else in the registry by id or by name. None of these needs a world - every one works on
+			// another script's own frame - and the registry they go through is the scheduler that was
+			// already here.
+			//
+			// NOT ONE OF THEM BLOCKS, which is what made this family safe to take on where TRIGWAITANIM
+			// was not: no handler among them rewinds the program counter onto itself or zeroes the
+			// instruction budget, and every store to +0x3c in their blocks belongs to the inlined operand
+			// fetch. That was checked in the bytes before any of this was written, because the instrument
+			// that ranks these opcodes measures coverage and is blind to blocking.
+			case Opcode.SPAWNCHILD:
+				SpawnChild( operands[0] );
+				break;
+
+			case Opcode.SPAWNSOUND:
+				SpawnSound( operands[0] );
+				break;
+
+			case Opcode.REMOVECHILD:
+				RemoveChild();
+				break;
+
+			case Opcode.SETVARINCHILD:
+				SetVariableIn( ChildId, Value( operands[0] ), Value( operands[1] ) );
+				break;
+
+			case Opcode.SETVARINPARENT:
+				// No shipped script uses this one at all. It is here because it is literally the same
+				// block of engine code as SETVARINCHILD, reached with the other id.
+				SetVariableIn( ParentId, Value( operands[0] ), Value( operands[1] ) );
+				break;
+
+			case Opcode.GETVARINCHILD:
+				GetVariableIn( ChildId, operands[0], Value( operands[1] ) );
+				break;
+
+			case Opcode.GETVARINPARENT:
+				GetVariableIn( ParentId, operands[0], Value( operands[1] ) );
+				break;
+
+			case Opcode.GETREMOTEVAR:
+				GetRemoteVariable( operands[0], Value( operands[1] ), Value( operands[2] ) );
+				break;
+
+			case Opcode.SETREMOTEVAR:
+				SetRemoteVariable( Value( operands[0] ), Value( operands[1] ), Value( operands[2] ) );
+				break;
+
+			case Opcode.FINDSCRIPTRAND:
+				FindScriptAtRandom( operands[0], operands[1] );
 				break;
 
 			case Opcode.COAST:
@@ -784,6 +898,337 @@ public sealed class RideScript
 	}
 
 	/// <summary>
+	/// <c>NAME</c>: the script says what it is called.
+	///
+	/// <para>
+	/// The handler stores the operand's string <b>offset</b> at <c>+0x74</c> and does nothing else, and it
+	/// requires the string tag - a literal where a string belongs leaves through <c>NOP</c>'s own exit.
+	/// All 277 shipped uses carry the tag, so the check turns nothing away; it is here because that offset
+	/// is what <c>FINDSCRIPTRAND</c> reads back, and an untagged one would make a script findable under a
+	/// name it never took.
+	/// </para>
+	/// </summary>
+	private void TakeName( RideOperand operand )
+	{
+		if ( operand.Kind != RideOperandKind.String )
+			return;
+
+		_nameOffset = operand.Value;
+		Name = _file.StringAt( operand.Value ) ?? Name;
+	}
+
+	/// <summary>
+	/// <c>SPAWNCHILD</c>: load another script and keep it as this one's child.
+	///
+	/// <para>
+	/// The engine builds a path from its own directory at <c>+0x38</c> and the string operand, hands it to
+	/// the loader, and keeps <b>the id</b> that comes back rather than a pointer. It then finds the new
+	/// script in the registry and copies five things into it: this script's id, as the child's parent, and
+	/// the fields at <c>+0xac</c>, <c>+0x9c</c>, <c>+0xb4</c> and <c>+0xc8</c>. The last of those is the
+	/// model handle and the rest are unmodelled here, and all of them are nought on both sides, so the
+	/// parent id is the whole of what there is to copy.
+	/// </para>
+	///
+	/// <para>
+	/// <b>It does not take down the child it replaces, and that is reproduced rather than tidied.</b> There
+	/// is one slot; a second <c>SPAWNCHILD</c> overwrites it and the first child runs on with nobody
+	/// holding it. All four shipped scripts that spawn inside a loop run a <c>REMOVECHILD</c> first -
+	/// <c>tvsim</c> at word 205 before 211, <c>arcade</c> at 93 before 127, <c>Volcano</c> at 284 before
+	/// 290, <c>droid</c> at 43 before 69 - so it is the content that keeps the slot tidy, not the engine.
+	/// </para>
+	///
+	/// <para>
+	/// <b>It writes no result.</b> Unlike nearly everything else here the handler never touches the result
+	/// register, so whatever the instruction before it left there survives.
+	/// </para>
+	/// </summary>
+	private void SpawnChild( RideOperand name )
+	{
+		if ( !CanSpawn( name, out var path ) )
+			return;
+
+		var id = Host!.Spawn( path );
+
+		// SPAWNCHILD guards the loader's answer where SPAWNSOUND does not - TEST EAX,EAX / JZ at 0x55512e.
+		if ( id == 0 )
+			return;
+
+		ChildId = id;
+
+		var child = Host.Find( id );
+
+		if ( child is not null )
+			child.ParentId = Id;
+	}
+
+	/// <summary>
+	/// <c>SPAWNSOUND</c>: the same load into a different slot, and <b>no link of any kind</b>.
+	///
+	/// <para>
+	/// The handler is <c>SPAWNCHILD</c>'s twin up to the loader call and then simply stops: it stores the
+	/// id at <c>+0x14</c> and returns. So the script it spawns has no parent, is not this script's child,
+	/// cannot be reached by <c>SETVARINCHILD</c> and cannot be removed by <c>REMOVECHILD</c> - it is taken
+	/// down only when this script itself dies.
+	/// </para>
+	/// </summary>
+	private void SpawnSound( RideOperand name )
+	{
+		if ( !CanSpawn( name, out var path ) )
+			return;
+
+		// No guard here, and the asymmetry is the engine's: SPAWNCHILD tests the loader's answer before it
+		// stores, this one stores whatever came back. So a load that failed writes a nought into the slot
+		// and empties it, where the same failure leaves SPAWNCHILD's slot untouched.
+		SoundChildId = Host!.Spawn( path );
+	}
+
+	/// <summary>
+	/// The half both spawning instructions share: everything that has to hold before the loader is called
+	/// at all.
+	///
+	/// <para>
+	/// A non-string operand is the engine's silent no-op - both handlers test the tag and leave through
+	/// <c>NOP</c>'s exit without touching their slot - so it must be distinguishable from a load that was
+	/// attempted and failed, which is the one case that writes a nought back.
+	/// </para>
+	/// </summary>
+	private bool CanSpawn( RideOperand name, out string path )
+	{
+		path = string.Empty;
+
+		if ( Host is null )
+		{
+			// Nowhere to put a script even if one could be read. Counted, as COAST is without a ride.
+			++NotImplemented;
+			return false;
+		}
+
+		if ( name.Kind != RideOperandKind.String )
+			return false;
+
+		var text = _file.StringAt( name.Value );
+
+		if ( text is null )
+			return false;
+
+		path = text;
+
+		return true;
+	}
+
+	/// <summary>
+	/// <c>REMOVECHILD</c>: kill the child, rather than merely forgetting it.
+	///
+	/// <para>
+	/// The handler hands the child's id to the same teardown the tick loop runs on a script that has
+	/// stopped, with a second argument of nought - which is what decides that the dying script's effects
+	/// are not turned into particles on the way out - and then clears the slot. With no child it does
+	/// nothing whatever, which is every script's state until a <c>SPAWNCHILD</c> has run.
+	/// </para>
+	/// </summary>
+	private void RemoveChild()
+	{
+		if ( ChildId == 0 )
+			return;
+
+		Host?.Destroy( ChildId );
+		ChildId = 0;
+	}
+
+	/// <summary>
+	/// <c>SETVARINCHILD</c> and <c>SETVARINPARENT</c> - one block of engine code reached from two places:
+	/// write a value into another script's variable.
+	///
+	/// <para>
+	/// <b>The bound is checked from above only.</b> The engine compares the index against the target's own
+	/// variable count at <c>+0x8c</c> and gives up if it is not less, and never asks whether it is
+	/// negative - so a negative index writes behind the array. <b>That one is named rather than
+	/// reproduced</b>: where the write would land is a fact about the original's allocator and not about
+	/// the instruction, and every shipped use names a literal 0 or 1 anyway.
+	/// </para>
+	///
+	/// <para>
+	/// The result register is set only when the write actually happened, and the instruction is skipped
+	/// entirely where no such script exists - which in the engine, having found nobody, is a read through
+	/// a null pointer.
+	/// </para>
+	/// </summary>
+	private void SetVariableIn( int id, int index, int value )
+	{
+		if ( id == 0 )
+			return;
+
+		var target = Host?.Find( id );
+
+		if ( target is null || index < 0 || index >= target.Slots )
+			return;
+
+		target._variables[index] = value;
+		Result = value;
+	}
+
+	/// <summary>
+	/// <c>GETVARINCHILD</c> and <c>GETVARINPARENT</c>: read another script's variable into one of ours.
+	///
+	/// <para>
+	/// <b>The destination is tested before anything else happens</b> - before the child or parent id is so
+	/// much as looked at - and one that is not a variable leaves through <c>NOP</c>'s own exit without
+	/// ever reaching the result register. That is <c>FORCEUNLIMBO</c>'s shape rather than
+	/// <see cref="Store"/>'s, and all 19 shipped uses name a variable, so the refusal never fires in the
+	/// corpus.
+	/// </para>
+	///
+	/// <para>
+	/// <b>The missing lower bound is this pair's too, not only the writing pair's.</b> These two share
+	/// their own tail at <c>0x5555ad</c> and it compares the index against the target's count from above
+	/// only, so a negative index is an out-of-bounds <i>read</i> whose value is then written into a
+	/// variable. It is refused here for the same reason the write is - see <see cref="SetVariableIn"/>.
+	/// </para>
+	/// </summary>
+	private void GetVariableIn( int id, RideOperand destination, int index )
+	{
+		if ( destination.Kind != RideOperandKind.Variable )
+		{
+			++IgnoredWrites;
+			return;
+		}
+
+		if ( id == 0 )
+			return;
+
+		var target = Host?.Find( id );
+
+		if ( target is null || index < 0 || index >= target.Slots )
+			return;
+
+		Store( destination, target._variables[index] );
+	}
+
+	/// <summary>
+	/// <c>GETREMOTEVAR</c>: read a variable out of any script at all, by that script's id.
+	///
+	/// <para>
+	/// <b>Its three operands are destination, script id, variable id, in that order</b> - the published
+	/// docs call all three unknown. The handler fetches the first without resolving it, keeping it for the
+	/// write; resolves the second and hands it to the registry lookup; and resolves the third as an index.
+	/// </para>
+	///
+	/// <para>
+	/// <b>Failing is not silence: it answers nought.</b> The handler zeroes the result register before it
+	/// looks anything up, and every way of failing - no such script, an index below nought or past the
+	/// target's count - jumps to a tail that still writes that nought into the destination. So a single
+	/// <see cref="Store"/> covers both paths, and a script branching on the answer reads a real nought
+	/// rather than whatever happened to be lying in the register.
+	/// </para>
+	/// </summary>
+	private void GetRemoteVariable( RideOperand destination, int id, int index )
+	{
+		var target = Host?.Find( id );
+		var found = target is not null && index >= 0 && index < target.Slots;
+
+		Store( destination, found ? target!._variables[index] : 0 );
+	}
+
+	/// <summary>
+	/// <c>SETREMOTEVAR</c>: write a variable in any script at all, by that script's id.
+	///
+	/// <para>
+	/// <b>This one checks both ends of the index</b>, where its parent and child cousins check only the
+	/// top, and it complains and returns rather than writing when it fails - leaving the result register
+	/// alone. The asymmetry is the engine's own: there is a guard here and none fifty lines earlier.
+	/// </para>
+	/// </summary>
+	private void SetRemoteVariable( int id, int index, int value )
+	{
+		var target = Host?.Find( id );
+
+		if ( target is null || index < 0 || index >= target.Slots )
+			return;
+
+		target._variables[index] = value;
+		Result = value;
+	}
+
+	/// <summary>
+	/// <c>FINDSCRIPTRAND</c>: pick one of the scripts calling themselves a given name, at random, and
+	/// answer its id.
+	///
+	/// <para>
+	/// <b>It matches on what <c>NAME</c> stored</b>, comparing the text at the candidate's own <c>+0x34</c>
+	/// plus its <c>+0x74</c> - so a script that has never run <c>NAME</c> can never be found, because the
+	/// loader leaves that offset negative and the walk skips it. Both names the corpus looks for are real:
+	/// <c>bus.RSE</c> asks four times for "Traffic Lights" and <c>zob.RSE</c> once for "Zob Upgrade", and
+	/// a shipped script takes each of those names.
+	/// </para>
+	///
+	/// <para>
+	/// The engine walks the registry twice - once to count the matches, once to reach the chosen one - and
+	/// the draw between them is <c>1 + (drawn mod count)</c> against the same generator <c>RAND</c> uses.
+	/// <b>The caller is not excluded</b>, so a script looking for its own name can find itself.
+	/// </para>
+	///
+	/// <para>
+	/// <b>Which of them it picks cannot be reproduced, and that is settled rather than unfinished.</b> The
+	/// engine's generator is one counter for the whole game, read from some 680 places of which only three
+	/// are instructions, so what this draws in the original depends on how much unrelated game code drew
+	/// before it. A per-script generator gets the distribution right and the particular answer wrong,
+	/// which is the deviation <see cref="NextRandom"/> already carries and names.
+	/// </para>
+	///
+	/// <para>
+	/// <b>A name is not unique, and a machine loading one script per file would make this degenerate.</b>
+	/// The engine loads a script for every placed thing, so a park with five traffic lights has five live
+	/// scripts all answering to "Traffic Lights" and the draw is genuinely over five.
+	/// </para>
+	/// </summary>
+	private void FindScriptAtRandom( RideOperand name, RideOperand destination )
+	{
+		// Zeroed before the operand is so much as tested for being a string, so a wrongly tagged one still
+		// leaves a nought behind rather than the previous instruction's answer.
+		Result = 0;
+
+		if ( name.Kind != RideOperandKind.String || Host is null )
+			return;
+
+		var wanted = _file.StringAt( name.Value );
+
+		if ( wanted is null )
+			return;
+
+		var matches = new List<RideScript>();
+
+		foreach ( var candidate in Host.NewestFirst() )
+		{
+			if ( candidate.IsNamed && string.Equals( candidate.Name, wanted, StringComparison.Ordinal ) )
+				matches.Add( candidate );
+		}
+
+		if ( matches.Count == 0 )
+			return;
+
+		Store( destination, matches[Math.Abs( NextDraw() % matches.Count )].Id );
+	}
+
+	/// <summary>
+	/// How many variables another script will let this one reach - its field <c>+0x8c</c>, which is the
+	/// count out of the file header rather than the length of the array. The two differ only where a
+	/// script names more variables than it declares.
+	/// </summary>
+	private int Slots => Math.Max( _file.VariableCount, 0 );
+
+	/// <summary>
+	/// One turn of the engine's generator (<c>FUN_00516330</c>), halved - what <c>RAND</c> and
+	/// <c>FINDSCRIPTRAND</c> both draw before they take their different remainders of it.
+	/// </summary>
+	private int NextDraw()
+	{
+		_random = (_random * 0x19660Du) + 0x3C6EF35Fu;
+		_random = (_random >> 13) | (_random << 19);
+
+		return Math.Abs( (int)_random ) >> 1;
+	}
+
+	/// <summary>
 	/// An operand read as a number: a variable's value, or the low 16 bits sign-extended. The engine
 	/// resolves every value operand exactly these two ways and no other (FUN_005573a0).
 	/// </summary>
@@ -977,10 +1422,7 @@ public sealed class RideScript
 	/// </summary>
 	private int NextRandom( int bound )
 	{
-		_random = (_random * 0x19660Du) + 0x3C6EF35Fu;
-		_random = (_random >> 13) | (_random << 19);
-
-		var drawn = Math.Abs( (int)_random ) >> 1;
+		var drawn = NextDraw();
 		var span = bound + 1;
 
 		// The engine would divide by zero here. No shipped script asks for it - every bound in the

@@ -429,6 +429,86 @@ public class RideScriptRunTests
 		Assert.AreEqual( RideScriptTests.ExpectedScripts, ran, "scripts run" );
 	}
 
+	/// <summary>
+	/// Every shipped script still runs when they can all reach one another - registered together, able to
+	/// spawn children, and able to find each other by name.
+	///
+	/// <para>
+	/// This is the first time the corpus is run as a <b>system</b> rather than as 308 separate scripts,
+	/// and that is the point: <c>SPAWNCHILD</c> loads a real sibling out of the same archives,
+	/// <c>GETVARINPARENT</c> reads a variable the parent actually set, and <c>FINDSCRIPTRAND</c> searches
+	/// names that real scripts have taken. None of those can be exercised by a script on its own.
+	/// </para>
+	///
+	/// <para>
+	/// <b>The loader has to be case-insensitive and must not add an extension.</b> Scripts ask for
+	/// <c>Effects.rse</c>, <c>clock.rse</c>, <c>worn.rse</c> and <c>anims.rse</c> where the archives hold
+	/// <c>effects.RSE</c>, <c>Clock.RSE</c>, <c>Worn.RSE</c> and <c>Anims.RSE</c> - so a loader matching
+	/// on the name as written would find none of them, every spawn would answer nought, and this test
+	/// would pass while proving nothing.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EveryRideScriptStillRunsWhenTheyCanAllReachEachOther()
+	{
+		var files = new System.Collections.Generic.List<(string Path, RideScriptFile File)>();
+
+		foreach ( var entry in EveryScript() )
+		{
+			if ( entry.File.IsValid )
+				files.Add( entry );
+		}
+
+		var byName = new System.Collections.Generic.Dictionary<string, RideScriptFile>(
+			StringComparer.OrdinalIgnoreCase );
+
+		foreach ( var (path, file) in files )
+			byName[Path.GetFileName( path )] = file;
+
+		var scheduler = new RideScriptScheduler
+		{
+			Loader = name => byName.TryGetValue( name, out var file ) ? new RideScript( file ) : null
+		};
+
+		var scripts = new System.Collections.Generic.List<RideScript>();
+		var id = 0;
+
+		foreach ( var (_, file) in files )
+		{
+			var script = new RideScript( file ) { Ride = new RideState(), Effects = new RideEffects() };
+
+			scheduler.Add( ++id, script );
+			scripts.Add( script );
+		}
+
+		var registered = scheduler.Count;
+		var stopped = new System.Collections.Generic.List<string>();
+
+		for ( int i = 0; i < scripts.Count; ++i )
+		{
+			var script = scripts[i];
+
+			for ( int turn = 0; turn < 40 && script.Running && !script.Waiting; ++turn )
+				script.Turn( 0f );
+
+			if ( !script.Running )
+				stopped.Add( Path.GetFileName( files[i].Path ) );
+		}
+
+		Assert.AreEqual( 0, stopped.Count,
+			$"{stopped.Count} of {scripts.Count} scripts stopped, starting with '{stopped.FirstOrDefault()}'" );
+
+		Assert.AreEqual( RideScriptTests.ExpectedScripts, scripts.Count, "scripts run" );
+
+		// Spawning has to have happened, or the loader silently matched nothing and the run above was the
+		// same one the other corpus tests already do.
+		Assert.IsTrue( scheduler.Count > registered,
+			$"not one script was spawned - {scheduler.Count} registered where {registered} started" );
+
+		Assert.IsTrue( scripts.Any( script => script.ChildId != 0 ),
+			"no script came back holding a child, so nothing exercised SPAWNCHILD" );
+	}
+
 	private System.Collections.Generic.IEnumerable<(string Path, RideScriptFile File)> EveryScript()
 	{
 		foreach ( var theme in Entries( "levels", directories: true ) )
