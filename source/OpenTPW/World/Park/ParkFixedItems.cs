@@ -46,10 +46,23 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// Neither is bound to its script yet, and cannot be as things stand: a fixed item carries no position
-/// and no thing id, so it is not one of the placements <see cref="ParkRides"/> walks. Until that is built
-/// they keep the pose they were built in, which is exactly what the engine shows for a channel its loader
-/// has parked at the sentinel.
+/// <b>Both now run the script they ship, and the two turn out to want opposite things.</b> The save's own
+/// header names which thing is the gate and which is the lights, so each is registered into
+/// <see cref="ParkObjects"/> under that id and <see cref="ParkRides"/> binds its <c>.RSE</c> against it -
+/// which is what the engine does, by a route of its own: it never reads these two out of the save's
+/// placements at all, but searches the item descriptions by name and builds each one through the ordinary
+/// object constructor.
+/// </para>
+///
+/// <para>
+/// <b>Neither of them moves yet, and each is still for its own reason.</b> <c>Gates.RSE</c> idles: with its
+/// variables at nought it cycles five instructions round its dispatch loop, reaching no animation until
+/// something writes <c>VAR_COMMAND</c> - and in the original the only thing that ever does is opening or
+/// closing the park, which this program has no concept of. <c>lights.RSE</c> is the opposite, starting an
+/// unconditional <c>LOOPANIM</c> as its second instruction - but <b>both of the clips it loops declare ten
+/// frames and carry not one track</b>, so a correctly wired crossing spins a channel for ever while nothing
+/// on screen can move. Whatever changes the lamps is not in those clips. That is measured, and it is also
+/// why the old suffix-matching loop was only ever visible on the gate.
 /// </para>
 /// </summary>
 public sealed class ParkFixedItems : Entity
@@ -66,20 +79,39 @@ public sealed class ParkFixedItems : Entity
 	private IReadOnlyDictionary<string, Texture>? _sign;
 
 	/// <summary>
-	/// The items to load, by the name of both the archive and the model inside it, and whether that
-	/// model carries the park's name board. Only the gate does; the lights name no sign material, so
-	/// offering them one would be noise.
+	/// The items to load, by the name of both the archive and the model inside it, whether that model
+	/// carries the park's name board, and which of the save header's two handles names the thing it is.
+	/// Only the gate carries a board; the lights name no sign material, so offering them one would be noise.
+	///
+	/// <para>
+	/// The names are the engine's own: it looks for exactly <c>"gates"</c> and <c>"lights"</c> among the item
+	/// descriptions, which is why these are spelled out here rather than derived from the catalogue. The ids
+	/// those handles hold are <i>not</i> catalogue numbers but thing ids - 11 and 12 in the shipped park.
+	/// </para>
 	/// </summary>
-	private static readonly (string Name, bool CarriesSign)[] Items = [("gates", true), ("lights", false)];
+	private static readonly (string Name, bool CarriesSign, Func<ParkWorld, int> Thing)[] Items =
+	[
+		("gates", true, world => world.ParkGates),
+		("lights", false, world => world.TrafficLights)
+	];
 
-	public ParkFixedItems( string themeName )
+	/// <param name="world">
+	/// The park's own save, or null where the theme ships none - three of the four do not. It is asked for
+	/// one thing only: the two thing ids its header names, which are what a script is bound against.
+	/// </param>
+	/// <param name="objects">
+	/// What is already standing in this park, so these two are swept along with it rather than keeping a
+	/// clock of their own - see <see cref="ParkObjects.Stand"/>. Null leaves them standing and inert, which
+	/// is what a theme with no park file gets.
+	/// </param>
+	public ParkFixedItems( string themeName, ParkWorld? world = null, ParkObjects? objects = null )
 	{
 		ThemeName = themeName;
 		Name = $"{themeName} fixed items";
 
 		var features = $"levels/{themeName.ToLowerInvariant()}/features";
 
-		foreach ( var (item, carriesSign) in Items )
+		foreach ( var (item, carriesSign, thingOf) in Items )
 		{
 			// Each .wad stands in for a directory of its own name, the same way terrain.wad gives the
 			// terrain its terrain/ paths.
@@ -90,11 +122,28 @@ public sealed class ParkFixedItems : Entity
 				if ( carriesSign )
 					_sign = BuildSign( directory, themeName );
 
-				_models.Add( new LobbyModel(
+				// The twelve roles this item's archive ships, read exactly as a placed thing's are. The model
+				// is bound against all of them because an animation player names a role outright: the gate's
+				// own script asks for role 5 entries 0, 1 and 2, and a probe for a numbered run would have
+				// found them by luck rather than because they were asked for.
+				var animations = RideAnimations.Load( directory, item, FileSystem );
+
+				var model = new LobbyModel(
 					$"{directory}/{item}.MD2",
 					$"{directory}/textures",
 					Vector3.Zero,
-					textureOverrides: carriesSign ? _sign : null ) );
+					textureOverrides: carriesSign ? _sign : null,
+					clips: animations.AllClips );
+
+				_models.Add( model );
+
+				// And into the one registry this park sweeps, under the thing id the save's own header gives
+				// it. Nought means the theme ships no park to name one, which is not a failure: the item still
+				// stands over its entrance, it simply has nothing driving it.
+				var thing = world == null ? 0 : thingOf( world );
+
+				if ( thing != 0 )
+					objects?.Stand( thing, model, animations );
 			}
 			catch ( Exception e )
 			{

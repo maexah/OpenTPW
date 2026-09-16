@@ -250,8 +250,13 @@ public class Level
 		_ = new ParkPaths( ThemeName, park );
 		_ = new ParkQueues( ThemeName, park );
 		_ = new ParkTerrain( ThemeName );
-		_ = new ParkFixedItems( ThemeName );
+
+		// The objects before the fixed items, which is the one ordering here that matters: the gate and the
+		// traffic lights are swept out of the very registry the placed things are swept from, so it has to
+		// exist before they can put themselves into it.
 		var objects = new ParkObjects( ThemeName, park, catalogue );
+
+		_ = new ParkFixedItems( ThemeName, park, objects );
 
 		// And the scripts those objects run. After the objects, because a script belongs to something
 		// standing in the park rather than the other way round - and now literally so: a script is handed

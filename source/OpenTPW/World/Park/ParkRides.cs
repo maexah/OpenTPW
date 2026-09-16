@@ -154,7 +154,13 @@ public sealed class ParkRides : Entity
 
 		foreach ( var placed in world.Objects )
 		{
-			if ( !placed.IsPlaced )
+			// Everything this park actually stood up, which is not the same as everything it placed. The gate
+			// and the traffic lights carry no position of their own - the engine builds those two by name out
+			// of the item descriptions rather than from the save's placements (FUN_005156a0) - but they are
+			// catalogue objects like any other and their scripts are bound by the very same constructor. So
+			// what decides is whether this park has one standing, not whether the save gave it a cell. With
+			// nothing drawn this is exactly the old test, which is the case every test here exercises.
+			if ( !placed.IsPlaced && _objects?.AnimationsFor( placed.ThingId ) is null )
 				continue;
 
 			// An id this theme has nothing for is already reported by ParkObjects, which cannot draw it

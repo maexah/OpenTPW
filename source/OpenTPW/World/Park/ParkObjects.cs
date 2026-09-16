@@ -464,6 +464,29 @@ public sealed class ParkObjects : Entity
 		=> Quaternion.CreateFromAxisAngle( System.Numerics.Vector3.UnitZ, -degrees * (MathF.PI / 180f) );
 
 	/// <summary>
+	/// Takes in a thing the park built somewhere else, so that it is swept along with the rest.
+	///
+	/// <para>
+	/// The fixed items are why this exists. <b>The engine does not read them from the save's placements at
+	/// all</b> - <c>FUN_005156a0</c> searches the item descriptions by name for "gates" and "lights" and
+	/// constructs each one itself - but what it constructs is an ordinary catalogue object, through the very
+	/// same constructor a built thing goes through (<c>FUN_004db090</c>), which binds its <c>.RSE</c> and
+	/// gives it an animation player like anything else. <see cref="ParkFixedItems"/> finds those two the same
+	/// way, by name, and hands them here.
+	/// </para>
+	///
+	/// <para>
+	/// <b>They must not come through <see cref="Place"/>.</b> Their positions are baked into their models
+	/// rather than kept in the save, so placing them would move them off the entrance and the crossings, and
+	/// the gate's board carries the <i>park's</i> name rather than an item's. Only the sweep is shared: the
+	/// model and its sign stay owned by whoever built them, which is why neither <c>_models</c> nor the sign
+	/// list is touched here.
+	/// </para>
+	/// </summary>
+	public void Stand( int thingId, LobbyModel model, RideAnimations animations )
+		=> _standing[thingId] = new Standing( model, animations );
+
+	/// <summary>
 	/// The animation roles a placed thing's archive ships, or null where nothing of that id stands here -
 	/// what <see cref="ParkRides"/> binds to a script instead of reading the same clips a second time.
 	/// </summary>

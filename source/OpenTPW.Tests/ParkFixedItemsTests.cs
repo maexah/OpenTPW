@@ -153,4 +153,185 @@ public class ParkFixedItemsTests
 			Assert.AreEqual( cells, (size - 48) / 27, $"{name} occupies" );
 		}
 	}
+
+	/// <summary>The park this theme ships, walked the same way every other park test walks it.</summary>
+	private ParkWorld World()
+	{
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+
+		return new ParkWorld( new SaveReader( stream ).ReadFile() );
+	}
+
+	/// <summary>Whether the file system can offer this at all, treating "not there" and "will not open" alike.</summary>
+	private bool Has( string path )
+	{
+		try
+		{
+			using var stream = data.OpenRead( path );
+
+			return stream != null;
+		}
+		catch ( Exception )
+		{
+			return false;
+		}
+	}
+
+	/// <summary>
+	/// One fixed item's script, holding its own archive's animation roles exactly as <see cref="ParkRides"/>
+	/// hands a placed thing its own. No model and no graphics device are needed for this: a role is pure
+	/// data, which is what makes the two tests below possible at all.
+	/// </summary>
+	private RideScript Bound( string stem )
+	{
+		var directory = $"levels/jungle/features/{stem}";
+
+		using var stream = new MemoryStream( data.ReadAllBytes( $"{directory}/{stem}.RSE" ) );
+
+		var file = new RideScriptFile( stream );
+
+		Assert.IsTrue( file.IsValid, $"{stem}.RSE did not read" );
+
+		return new RideScript( file )
+		{
+			Ride = new RideState(),
+			Effects = new RideEffects(),
+			Animations = RideAnimations.Load( directory, stem, data )
+		};
+	}
+
+	/// <summary>
+	/// The gate and the traffic lights are things in their own right - the save's header names which thing
+	/// each one is - and both ship a script for that thing to run.
+	///
+	/// <para>
+	/// This is the whole basis for binding them. They were passed over for a long time because they carry no
+	/// position, which made them look like data the park had no use for; what they actually are is catalogue
+	/// objects whose places are baked into their models. The header handles are thing ids rather than
+	/// catalogue numbers, and the two are easy to confuse because both are small integers.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheGateAndTheLightsAreThingsOfTheirOwnWithScriptsToRun()
+	{
+		var world = World();
+
+		foreach ( var (handle, stem, catalogueId) in new[]
+		{
+			(world.ParkGates, "gates", 1601),
+			(world.TrafficLights, "lights", 1603)
+		} )
+		{
+			Assert.AreNotEqual( 0, handle, $"the save's header does not name the {stem} at all" );
+
+			var named = world.Objects.Where( thing => thing.ThingId == handle ).ToArray();
+
+			Assert.AreEqual( 1, named.Length, $"the header's {stem} handle should name exactly one thing" );
+			Assert.AreEqual( catalogueId, named[0].CatalogueId, $"the catalogue number of '{stem}'" );
+
+			Assert.IsFalse( named[0].IsPlaced,
+				$"'{stem}' carries a position, so it is not the fixed item this test thinks it is" );
+
+			Assert.IsTrue( Has( $"levels/jungle/features/{stem}/{stem}.RSE" ), $"'{stem}' should ship a script" );
+		}
+	}
+
+	/// <summary>
+	/// The park gate holds still, and holds still <b>because its own script says so</b> rather than because
+	/// nothing is driving it.
+	///
+	/// <para>
+	/// <c>Gates.RSE</c> opens on a dispatch loop that reads <c>VAR_COMMAND</c>, and every variable starts at
+	/// nought - so it cycles five instructions for ever and reaches neither the open branch's
+	/// <c>WAITANIM</c> nor the close branch's <c>TRIGANIM</c>. In the original the only thing that ever
+	/// writes that variable is opening or closing the park, which this program has no concept of yet.
+	/// </para>
+	/// <para>
+	/// The anti-vacuity check matters more than the assertion it guards: an idle channel would also be what
+	/// a gate with no clips at all looked like, so the clips its script names are asserted to exist first.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheGateStandsStillUntilSomethingCommandsIt()
+	{
+		var script = Bound( "gates" );
+
+		// The three clips its own script names - entry 1 to open, 0 to shut, 2 for the sequence behind
+		// command 2 - so "it played nothing" cannot be "it had nothing to play".
+		for ( var entry = 0; entry < 3; ++entry )
+			Assert.IsNotNull( script.Animations!.Clip( 5, entry ), $"the gate ships no role 5 entry {entry}" );
+
+		for ( var turn = 0; turn < 200; ++turn )
+			script.Turn( turn * 31f );
+
+		Assert.IsTrue( script.Running, "the gate's script stopped, which no shipped script should do" );
+
+		var channel = script.Animations!.Channel( 0 );
+
+		Assert.IsTrue( channel == null || channel.IsIdle,
+			$"the gate played role {channel?.AnimID} entry {channel?.SubAnim} with nothing having commanded it" );
+
+		// And it is cycling its dispatch loop rather than having wandered off: with both variables at nought
+		// every word it can be at lies at or before the close branch's own test.
+		Assert.IsTrue( script.Position <= 34, $"the gate's script settled at word {script.Position}" );
+	}
+
+	/// <summary>
+	/// The traffic lights are the opposite case, and the pair is why "fixed items hold their built pose" is
+	/// not a rule: <c>lights.RSE</c> starts an unconditional <c>LOOPANIM</c> as its second instruction, so a
+	/// bound crossing begins animating with nothing having asked it to.
+	/// </summary>
+	[TestMethod]
+	public void TheTrafficLightsStartTheirOwnClipWithNothingAskingThem()
+	{
+		var script = Bound( "lights" );
+
+		for ( var turn = 0; turn < 10; ++turn )
+			script.Turn( turn * 31f );
+
+		var channel = script.Animations!.Channel( 0 );
+
+		Assert.IsNotNull( channel, "the lights started no animation at all" );
+		Assert.IsFalse( channel!.IsIdle, "the lights' channel is idle, so its LOOPANIM never took" );
+		Assert.AreEqual( 5, channel.AnimID, "the role the lights loop" );
+		Assert.AreEqual( 0, channel.SubAnim, "the entry they loop until a crossing changes it" );
+	}
+
+	/// <summary>
+	/// <b>And it will still not look like anything, which is measured rather than assumed.</b> Both clips the
+	/// crossing loops declare a real ten-frame span and carry not one track of any kind - no rotation, no
+	/// position, no morph, no UV, no visibility.
+	///
+	/// <para>
+	/// This is worth pinning because of how it would otherwise be read. A correctly bound crossing spins a
+	/// channel for ever while nothing on screen moves, which looks exactly like posing being broken; it is
+	/// not. Whatever changes the lamps in the original is not in these clips - the archive ships two lamp
+	/// textures and four of the meshes carry a flag this program does not read, which is where to look, and
+	/// this test should be revisited rather than deleted if that is ever chased.
+	/// </para>
+	/// <para>
+	/// The declared span is asserted first so that "no tracks" cannot pass as "the file did not read": these
+	/// are real clips of real length, and they are the limiting case of the 114 the strict loader rejects.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheTrafficLightsLoopTwoClipsThatCannotMoveAnything()
+	{
+		var animations = RideAnimations.Load( "levels/jungle/features/lights", "lights", data );
+
+		for ( var entry = 0; entry < 2; ++entry )
+		{
+			var clip = animations.Clip( 5, entry );
+
+			Assert.IsNotNull( clip, $"the lights ship no role 5 entry {entry}" );
+
+			Assert.AreEqual( 10, clip!.DeclaredLastFrame - clip.DeclaredFirstFrame,
+				$"role 5 entry {entry} declares a span of" );
+
+			Assert.AreEqual( 0,
+				clip.RotationTracks.Count + clip.PositionTracks.Count + clip.MorphTracks.Count
+					+ clip.UvTracks.Count + clip.VisibilityTracks.Count,
+				$"role 5 entry {entry} carries a track after all, so the lights could move" );
+		}
+	}
 }
