@@ -269,6 +269,11 @@ public class Level
 		// objects above and only need the save that named them.
 		_ = new ParkGuestSprites( ThemeName, park );
 
+		// And what those people want, which is deliberately not the same object as what they look like:
+		// the sprites above never run a tick, and this never touches a vertex. It goes after them only
+		// for readability - it asks nothing of them.
+		_ = new ParkPeople( park );
+
 		// Each group of sound at the volume the options give it, and then the park's own music - which
 		// is the order the original uses too: it registers the park's categories, re-applies the group
 		// volumes (0x0054ec9a), and only then plays the music (0x0054ec9f). See ParkAudio for what it

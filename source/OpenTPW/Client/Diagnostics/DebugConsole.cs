@@ -13,8 +13,9 @@ namespace OpenTPW;
 /// the members marked as being for it - LobbyCameraMode's DebugOrbit, DebugSelect and DebugSettle; LobbyWeather's
 /// Current, DebugRain, DebugBolt and DebugStrike; LobbyAudio's Muted, State and DebugPlaceSound; LobbyFlyer's DebugClosestApproach
 /// and DebugClosestSolid; Lightning's DebugAxisDistance and DebugOpacity; the advisor's Say and State;
-/// Game's RequestLobbyReload; and ParkGuestSprites' Current, DebugFacing, Census and WriteGroundDash
-/// (with the white square Load appends to the atlas for it, and the second quad a person Build reserves).
+/// Game's RequestLobbyReload; ParkGuestSprites' Current, DebugFacing, Census and WriteGroundDash
+/// (with the white square Load appends to the atlas for it, and the second quad a person Build reserves);
+/// and ParkPeople's Current and Census.
 ///
 /// Engine and content: neither. It drives and reads both, and nothing else depends on it.
 ///
@@ -351,6 +352,23 @@ public static class DebugConsole
 
 				foreach ( var person in census )
 					Reply( "  " + person );
+
+				break;
+
+			// What each guest wants, as opposed to what they look like - the other half of a person, and
+			// the one that changes while the park runs.
+			case "peeps":
+				if ( ParkPeople.Current is not { } people )
+				{
+					Reply( "peeps: none - a park has to be loaded" );
+					break;
+				}
+
+				var wants = people.Census().ToArray();
+				Reply( $"peeps {wants.Length}" );
+
+				foreach ( var peep in wants )
+					Reply( "  " + peep );
 
 				break;
 
