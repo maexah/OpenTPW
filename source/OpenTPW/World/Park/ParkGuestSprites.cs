@@ -324,11 +324,25 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// One sprite's quad, stood upright at <paramref name="centre"/> and turned to face the camera.
 	///
 	/// <para>
-	/// Up is world up rather than the camera's, so a guest stays standing however the camera is tilted,
-	/// and the across direction is whatever is square to both that and the view - the same arrangement
-	/// rain uses. The picture's own origin decides where the quad sits about that point: it is stored
-	/// negated in the file and read back positive, measured from the picture's top left, so the sprite
-	/// reaches <c>origin</c> above the point and the rest of its height below.
+	/// <b>Square-on to the camera, not merely upright.</b> A quad spanned by world up and a horizontal
+	/// across - which is how rain is built - faces the camera only in plan: tilt the camera down and it
+	/// foreshortens, until a guest is squashed to a fraction of their height and the sprite shows its
+	/// edge. A park camera looks down between 45 and 65 degrees, so that costs between a third and more
+	/// than half of every person's height. The original keeps its people turned to face the camera, so
+	/// the basis has to lean with the camera's pitch rather than stand in world up.
+	/// </para>
+	/// <para>
+	/// The basis comes from the view direction and world up rather than from <c>Rotation.Right</c> and
+	/// <c>Rotation.Up</c>, because <see cref="Rotation.LookAt"/> leaves roll arbitrary and those two
+	/// carry it - the same trap <see cref="AudioListener"/> and <see cref="Audio"/> both record against
+	/// their own use of it. <c>Forward</c> is the one of the three that can be trusted, and a roll-free
+	/// basis follows from it and world up.
+	/// </para>
+	/// <para>
+	/// The picture's own origin decides where the quad sits about that point: it is stored negated in
+	/// the file and read back positive, measured from the picture's top left, so the sprite reaches
+	/// <c>origin</c> above the point and the rest of its height below. Every person's origin sits 85% or
+	/// more down their picture, which is to say on their feet.
 	/// </para>
 	/// </summary>
 	private void WriteQuad( int index, Vector3 centre, Region picture, bool mirrored, int alpha )
@@ -336,23 +350,28 @@ public sealed class ParkGuestSprites : ModelEntity
 		if ( index < 0 || index * 4 >= _vertices.Length )
 			return;
 
-		var toCamera = Camera.Position - centre;
-		var across = Vector3.Up.Cross( toCamera );
+		var forward = Camera.Rotation.Forward;
+		var across = forward.Cross( Vector3.Up );
 
+		// Looking straight down there is no horizontal left to hang the sprite on, and every quad
+		// would be edge-on anyway.
 		if ( across.LengthSquared < 0.000001f )
 		{
 			Collapse( index );
 			return;
 		}
 
-		var scale = WorldPerReference / PictureReference;
-
 		across = across.Normal;
+
+		// Square to both the view and that across, which is the camera's own up with no roll in it.
+		var upward = across.Cross( forward ).Normal;
+
+		var scale = WorldPerReference / PictureReference;
 
 		var left = across * (-picture.OriginX * scale);
 		var right = across * ((picture.Width - picture.OriginX) * scale);
-		var top = Vector3.Up * (picture.OriginY * scale);
-		var bottom = Vector3.Up * (-(picture.Height - picture.OriginY) * scale);
+		var top = upward * (picture.OriginY * scale);
+		var bottom = upward * (-(picture.Height - picture.OriginY) * scale);
 
 		// White at the sprite's own alpha: the shader multiplies the picture by this, so anything else
 		// would tint the art.
