@@ -404,15 +404,21 @@ public sealed class RideScript
 		_critical = false;
 		_budget = _file.TimeSlice > 0 ? _file.TimeSlice : 1;
 
-		// The model's animation players are brought up to the moment before the script can ask about them.
-		// The engine does this somewhere else entirely - once per FRAME, from a snapshot of the game clock
-		// taken outside the fixed-step loop the scripts run in (FUN_0044e410 at 0054fa96) - so a clip there
-		// advances once however many script ticks a frame happens to contain. Doing it here instead ties
-		// the advance to the script's own clock, which is the only clock this class has. What that changes
-		// is nothing a script can see today: a channel is asked about only when an instruction triggers
-		// one, and a trigger brings its own channel up to date first. It will matter when something poses
-		// these clips, and that is the branch this is groundwork for.
-		Animations?.Advance( (int)now );
+		// Nothing brings a channel up to date here, and that is deliberate. The engine sweeps its animation
+		// players once per FRAME, off a clock snapshot taken outside the fixed-step loop the scripts run in,
+		// and never from the script system: FUN_004735d0, which advances and poses, has exactly ONE caller
+		// (FUN_00473c70, at 00473d2e), and not one of that function's ten call sites is FUN_005516b0 or sits
+		// inside the 31ms loop. The park's are FUN_0044e410(2), FUN_00429df0(0) and FUN_00429df0(1), all of
+		// them past the loop's back edge in Game_StateMachine. ParkObjects.Sweep is where that lives here.
+		//
+		// This used to advance per tick, which promoted a queued clip mid-catch-up: with three ticks due, a
+		// clip ending on the first had its successor running before the second tick's instructions could
+		// look at it. The engine cannot do that, because it has not swept yet. End-of-frame state is the
+		// same either way - ParkRides hands the sweep Ticks * 31, which is exactly the instant its last tick
+		// ran at - so what this changes is only what a script can see PART WAY THROUGH a long frame.
+		//
+		// Scripts stay correct without it because every path that reads channel state to answer one goes
+		// through RideAnimations.Trigger, and that calls MoveTo on the channel itself before deciding.
 
 		while ( _budget > 0 && Running )
 			Step( now );

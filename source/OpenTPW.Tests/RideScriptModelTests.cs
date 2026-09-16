@@ -262,6 +262,11 @@ public class RideScriptModelTests
 		// deadline field is still empty, so the clip carries on from where it had reached.
 		script.Turn( 5000f );
 
+		// A script tick no longer moves a channel - the frame sweep does, which is what ParkObjects.Sweep
+		// runs once the turns a frame owes have been taken. Without this the channel would still be sitting
+		// on the frame its trigger left it at, because the re-entry path above never reaches a trigger.
+		script.Animations!.Advance( 5000 );
+
 		Assert.AreEqual( 150f, channel.AnimFrame, 0.01f,
 			"half a clip in, rather than back at the beginning it would be if the wait retriggered" );
 
@@ -273,5 +278,68 @@ public class RideScriptModelTests
 		// sitting still, so an empty queue here is the property worth pinning.
 		Assert.IsFalse( channel.HasQueued,
 			"a wait that sits still must not quietly queue the clip it is already waiting for" );
+	}
+
+	/// <summary>
+	/// <b>A script tick does not move a channel - the frame sweep does.</b> The engine advances and poses its
+	/// animation players once per frame, from outside the fixed-step loop its scripts run in, so a clip that
+	/// runs out part way through a long frame keeps its queued successor waiting until every tick that frame
+	/// owes has been taken.
+	///
+	/// <para>
+	/// <b>Why this needs pinning rather than being obvious.</b> This class advanced its own channels once per
+	/// tick until now, which promoted the queue early: with three ticks due, a clip ending on the first had
+	/// its successor running before the second tick's instructions could look at it, and no state the engine
+	/// can reach looks like that. The mistake is invisible at a frame boundary, because the last tick and the
+	/// sweep land on the same millisecond - <c>ParkRides</c> hands the sweep <c>Ticks * 31</c>, which is
+	/// exactly the instant its last tick ran at. Part way through a long frame is the only place it shows.
+	/// </para>
+	///
+	/// <para>
+	/// The script waits rather than ending, because <see cref="RideScript.Turn"/> leaves at its first line
+	/// once a script has stopped: the turns have to actually reach the point the old advance sat at, or this
+	/// would pass whether or not that advance came back.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void AScriptTickLeavesTheQueueAloneAndTheSweepPromotesIt()
+	{
+		var roles = RideAnimations.Load( "levels/space/features/ferry", "ferry", data );
+
+		// A clip running, and a second one queued behind it.
+		roles.Trigger( 5, 0, 0, 1f, 0 );
+		roles.Trigger( 5, 1, 0, 1f, 0 );
+
+		var channel = roles.Channel( 0 )!;
+
+		Assert.IsTrue( channel.HasQueued, "the second trigger did not queue, so there is nothing to promote" );
+
+		// 30000 rather than anything larger, because a literal is sign-extended from its low sixteen bits:
+		// 60000 arrives as -5536, the deadline lands in the past, and the script falls through to END part
+		// way through the turns below. The Running assertion caught exactly that.
+		var script = new RideScript( Build( 0, 50,
+			Word( Opcode.WAIT ), Lit( 30000 ), Word( Opcode.END ) ) )
+		{
+			Animations = roles
+		};
+
+		// Three ticks' worth of turns, every one of them past the first clip's 600-frame end.
+		script.Turn( 21000f );
+		script.Turn( 21031f );
+		script.Turn( 21062f );
+
+		Assert.IsTrue( script.Running, "the script stopped, so the turns never reached where the advance sat" );
+		Assert.IsTrue( script.Waiting, "and it should still be sitting on its WAIT" );
+
+		// This is the assertion that catches the advance coming back: it would read 631.86 rather than nought.
+		Assert.AreEqual( 0f, channel.AnimFrame, 0.01f, "a script tick moved the channel" );
+		Assert.AreEqual( 0, channel.SubAnim, "a script tick promoted the queued clip" );
+		Assert.IsTrue( channel.HasQueued, "a script tick emptied the queue" );
+
+		// And then the sweep, which is the only thing that promotes.
+		roles.Advance( 21062 );
+
+		Assert.AreEqual( 1, channel.SubAnim, "the sweep did not promote the queued clip" );
+		Assert.IsFalse( channel.HasQueued, "the queue should be empty once it has been promoted" );
 	}
 }
