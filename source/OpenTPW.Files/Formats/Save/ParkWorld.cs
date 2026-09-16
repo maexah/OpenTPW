@@ -287,10 +287,31 @@ public sealed class ParkWorld
 	/// connected loop with an avenue down to the park entrance, and 4 by its cells landing on the placed
 	/// objects' own footprints.
 	/// </para>
+	/// <para>
+	/// The three <c>Track</c> fields come from the cell's <b>second</b> sub-record rather than its map
+	/// record. Every one of the shipped park's cells carries one, and the step check reads it: a cell whose
+	/// track type is 11, 13, 16, 18 or 25 is closed unless the low nibble of its track flags is set, and one
+	/// whose type is 12 or 17 hands the question to the cell its <c>TrackParentId</c> names instead.
+	/// </para>
+	/// <para>
+	/// <b>They are read at the map record's own offsets</b>, because the track record repeats the same
+	/// twenty-nine byte tile base field for field. Three things say that is right rather than a coincidence
+	/// that parses: the types that come out land inside the executable's own set of literals with none
+	/// outside it; the track <c>mDirection</c> takes five values and all five are in the compass set; and
+	/// the parents form a consistent two-level tree - 429 cells of type 12 each naming one of 143 cells of
+	/// type 25, three apiece, and every type 25 naming no parent at all.
+	/// </para>
+	/// <para>
+	/// <b>What those cells are is worth knowing before reading much into them.</b> Drawn out they are nested
+	/// rectangular frames two cells thick, mirrored across the map, sitting almost entirely on open ground -
+	/// only two of the 572 touch a path cell. So the branch is real in the code and very nearly inert for
+	/// anyone walking.
+	/// </para>
 	/// </summary>
 	public readonly record struct MapCell(
 		int Type, ushort Flags, byte Neighbours, byte Direction,
-		int TileSet, int TileIndex, int TileAngle, byte Status )
+		int TileSet, int TileIndex, int TileAngle, byte Status,
+		int TrackType = 0, ushort TrackFlags = 0, ushort TrackParentId = 0 )
 	{
 		/// <summary>
 		/// Whether this cell carried a map record at all. A cell that did not is left at its default, and
@@ -505,6 +526,12 @@ public sealed class ParkWorld
 
 	private const int CellNeighbours = 7;
 
+	/// <summary>
+	/// <c>mParentID</c>. Only read from the track record, where it is the cell number of the record this
+	/// one hangs off - counted from one, like every other cell number in the file.
+	/// </summary>
+	private const int CellParent = 10;
+
 	private const int CellTileData = 12;
 
 	private const int CellType = 24;
@@ -632,7 +659,13 @@ public sealed class ParkWorld
 	/// opaque run.
 	/// </summary>
 	private MapCell ReadCell( int at, byte status )
-		=> new(
+	{
+		// The track record follows the map record, and repeats the same twenty-nine byte tile base field
+		// for field - so its own fields are at the offsets above, counted from where it begins.
+		var track = at + MapCellSize;
+		var tracked = (status & TrackRecord) != 0;
+
+		return new(
 			Type: ReadInt32At( at + CellType ),
 			Flags: (ushort)ReadUInt16At( at + CellFlags ),
 			Neighbours: _data[at + CellNeighbours],
@@ -640,7 +673,11 @@ public sealed class ParkWorld
 			TileSet: ReadInt32At( at + CellTileData ),
 			TileIndex: ReadInt32At( at + CellTileData + 4 ),
 			TileAngle: ReadInt32At( at + CellTileData + 8 ),
-			Status: status );
+			Status: status,
+			TrackType: tracked ? ReadInt32At( track + CellType ) : 0,
+			TrackFlags: tracked ? (ushort)ReadUInt16At( track + CellFlags ) : (ushort)0,
+			TrackParentId: tracked ? (ushort)ReadUInt16At( track + CellParent ) : (ushort)0 );
+	}
 
 	/// <summary>
 	/// Walks the things - every person, object and manager in the park - collecting the catalogue objects

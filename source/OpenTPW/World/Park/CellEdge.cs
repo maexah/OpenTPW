@@ -126,6 +126,60 @@ public sealed class CellEdge
 		_ => 0x04
 	};
 
+	/// <summary>
+	/// Whether a track record hands the question to the one its parent names instead of answering it.
+	///
+	/// <para>
+	/// The name is a reading of what the park contains, not of anything the executable says: all 429 cells
+	/// of type 12 name a parent, every one of those parents is a cell of a type in <see cref="TrackCounts"/>,
+	/// and each parent is named by exactly three of them. Type 17 is grouped with it by the original and
+	/// does not occur in this park at all.
+	/// </para>
+	/// </summary>
+	public static bool TrackDefersToParent( int trackType ) => trackType is 12 or 17;
+
+	/// <summary>
+	/// Whether a track record is one this test applies to at all. Of these five only 25 occurs in Lost
+	/// Kingdom, on 143 cells, none of which names a parent.
+	/// </summary>
+	public static bool TrackCounts( int trackType ) => trackType is 11 or 13 or 16 or 18 or 25;
+
+	/// <summary>
+	/// The bits of a track record's flags that reopen a cell this would otherwise close. Set on exactly
+	/// <b>one</b> cell of the shipped park, which is why the branch closes 568 of the 572 it reaches.
+	/// </summary>
+	public const int TrackOpenFlags = 0xf;
+
+	/// <summary>
+	/// Whether a cell's track record closes it - the original's <c>FUN_005363f0</c> deciding whether the
+	/// question applies, <c>FUN_00536440</c> deciding whose answer to take, and <c>FUN_0053ad20</c> giving
+	/// it.
+	///
+	/// <para>
+	/// A cell that defers answers by its parent's record on both counts: whether the test applies, and
+	/// whether the flags reopen it. A deferring cell that names no parent is not closed, which the original
+	/// says outright rather than leaving to fall through.
+	/// </para>
+	/// </summary>
+	/// <param name="cellById">
+	/// A cell by its number, <b>counted from one</b> as everything in the save is -
+	/// <c>id => world.CellAt(MapStep.CellAt(id))</c> is the whole of it.
+	/// </param>
+	public static bool TrackCloses( ParkWorld.MapCell cell, Func<int, ParkWorld.MapCell> cellById )
+	{
+		ArgumentNullException.ThrowIfNull( cellById );
+
+		if ( !TrackDefersToParent( cell.TrackType ) )
+			return TrackCounts( cell.TrackType ) && (cell.TrackFlags & TrackOpenFlags) == 0;
+
+		if ( cell.TrackParentId == 0 )
+			return false;
+
+		var parent = cellById( cell.TrackParentId );
+
+		return TrackCounts( parent.TrackType ) && (parent.TrackFlags & TrackOpenFlags) == 0;
+	}
+
 	private readonly Func<int, int, ParkWorld.MapCell> _cellAt;
 	private readonly int _mode;
 	private readonly Func<ParkWorld.MapCell, bool> _trackCloses;

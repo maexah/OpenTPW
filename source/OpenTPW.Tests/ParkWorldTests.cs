@@ -370,6 +370,105 @@ public class ParkWorldTests
 	}
 
 	/// <summary>
+	/// Every cell carries a <b>second</b> sub-record as well, and the step check reads it.
+	///
+	/// <para>
+	/// These are read at the map record's own offsets, because the track record repeats the same tile base
+	/// field for field - so the risk is the familiar one of a reader that lands somewhere plausible. What
+	/// makes that checkable is the company the numbers keep: every type that comes out is one of the
+	/// literals the executable compares against, with nothing outside the set, which a misaligned read
+	/// would not manage.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EveryCellCarriesATrackRecordTheStepCheckReads()
+	{
+		var world = World();
+
+		var track = world.Cells.GroupBy( cell => cell.TrackType )
+			.ToDictionary( group => group.Key, group => group.Count() );
+
+		Assert.AreEqual( 9379, track[7], "track records of type 7" );
+		Assert.AreEqual( 6433, track[0], "track records of type 0" );
+		Assert.AreEqual( 429, track[12], "track records that hand the question to a parent" );
+		Assert.AreEqual( 143, track[25], "track records the step check applies to" );
+		Assert.AreEqual( 4, track.Count, "and no other track type anywhere on the map" );
+
+		Assert.AreEqual( 1,
+			world.Cells.Count( cell => (cell.TrackFlags & CellEdge.TrackOpenFlags) != 0 ),
+			"exactly one cell of this park has track flags that reopen it" );
+	}
+
+	/// <summary>
+	/// The deferring track records form a tidy two-level tree, which is the strongest evidence that these
+	/// fields are being read from the right place at all.
+	///
+	/// <para>
+	/// A parent is a cell <i>number</i>, counted from one like everything else in the file. Read one byte
+	/// out, or as an index rather than a number, and the parents would land on arbitrary cells - instead
+	/// every single one lands on a record of the one type that can be a parent, three children apiece.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheDeferringTrackRecordsNameParentsThatAreRoots()
+	{
+		var world = World();
+		var cells = world.Cells;
+
+		var children = cells.Where( cell => CellEdge.TrackDefersToParent( cell.TrackType ) ).ToArray();
+
+		Assert.AreEqual( 429, children.Length, "cells whose track record defers" );
+
+		foreach ( var child in children )
+		{
+			Assert.AreNotEqual( 0, child.TrackParentId, "a deferring cell should name a parent" );
+
+			var parent = cells[child.TrackParentId - 1];
+
+			Assert.AreEqual( 25, parent.TrackType, "a parent should itself be a record this applies to" );
+			Assert.AreEqual( 0, parent.TrackParentId, "and should name no parent of its own" );
+		}
+
+		Assert.AreEqual( 143, children.Select( child => child.TrackParentId ).Distinct().Count(),
+			"distinct parents" );
+
+		foreach ( var named in children.GroupBy( child => child.TrackParentId ) )
+			Assert.AreEqual( 3, named.Count(), $"the cell numbered {named.Key} should be named three times" );
+
+		foreach ( var root in cells.Where( cell => cell.TrackType == 25 ) )
+			Assert.AreEqual( 0, root.TrackParentId, "a root names no parent whether or not it is named" );
+	}
+
+	/// <summary>
+	/// What the track branch does to this park, run through the real predicate rather than described.
+	///
+	/// <para>
+	/// It closes 568 cells - but they are not walls anyone meets. Drawn out they are nested rectangular
+	/// frames two cells thick, mirrored across the map, and every one of them sits on open ground or
+	/// scenery rather than on anything walkable. <b>Of the 572 cells that reach this branch only two touch
+	/// a path cell</b> - that figure is about the 572, not about the 568, which is why it is said here and
+	/// not asserted.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheTrackBranchClosesCellsNobodyWalksOn()
+	{
+		var world = World();
+		var cells = world.Cells;
+
+		ParkWorld.MapCell ById( int id ) => cells[id - 1];
+
+		var closed = cells.Where( cell => CellEdge.TrackCloses( cell, ById ) ).ToArray();
+
+		Assert.AreEqual( 568, closed.Length, "cells the track branch closes" );
+
+		Assert.IsTrue( closed.All( cell => cell.Type is 0 or 7 ),
+			"every cell it closes is open ground or scenery, never path, queue or a footprint" );
+
+		Assert.AreEqual( 0, closed.Count( cell => cell.Type == 1 ), "it closes no path cell at all" );
+	}
+
+	/// <summary>
 	/// The paths, which are the whole reason for reading the map: a park's walkways are in its save and
 	/// nowhere in its ground model, so without this the rides stand in an empty field.
 	///

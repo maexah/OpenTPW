@@ -25,8 +25,10 @@ namespace OpenTPW.Tests;
 public class CellEdgeTests
 {
 	/// <summary>A cell, with everything that is not the point of a given test left at nothing.</summary>
-	private static ParkWorld.MapCell Cell( int type, int neighbours = 0, int direction = 0, int flags = 0 )
-		=> new( type, (ushort)flags, (byte)neighbours, (byte)direction, 0, 0, 0, 1 );
+	private static ParkWorld.MapCell Cell( int type, int neighbours = 0, int direction = 0, int flags = 0,
+		int trackType = 0, int trackFlags = 0, int trackParent = 0 )
+		=> new( type, (ushort)flags, (byte)neighbours, (byte)direction, 0, 0, 0, 1,
+			trackType, (ushort)trackFlags, (ushort)trackParent );
 
 	/// <summary>
 	/// An edge between two cells placed side by side, so a test names the pair and nothing else. The cell
@@ -393,5 +395,93 @@ public class CellEdgeTests
 
 		Assert.IsFalse( MapStep.CanStep( MapStep.CellId( 40, 40 ), MapStep.CellId( 41, 40 ), solid.Blocked ),
 			"nothing may be walked onto a refused type" );
+	}
+
+	/// <summary>
+	/// A track record closes its cell unless its flags reopen it, and says nothing at all about a cell
+	/// whose type this does not apply to.
+	/// </summary>
+	[TestMethod]
+	public void ATrackRecordClosesItsCellUnlessItsFlagsReopenIt()
+	{
+		// A cell that does not defer must answer from its own record without looking anything up.
+		static ParkWorld.MapCell Nowhere( int id )
+			=> throw new InvalidOperationException( "a cell that does not defer looked up a parent" );
+
+		foreach ( var type in new[] { 11, 13, 16, 18, 25 } )
+		{
+			Assert.IsTrue( CellEdge.TrackCounts( type ), $"track type {type}" );
+			Assert.IsTrue( CellEdge.TrackCloses( Cell( CellEdge.Nothing, trackType: type ), Nowhere ),
+				$"track type {type} with nothing reopening it" );
+
+			Assert.IsFalse(
+				CellEdge.TrackCloses( Cell( CellEdge.Nothing, trackType: type, trackFlags: 1 ), Nowhere ),
+				$"track type {type} reopened by its low nibble - one cell of the park is like this" );
+		}
+
+		foreach ( var type in new[] { 0, 7, 24, 26 } )
+		{
+			Assert.IsFalse( CellEdge.TrackCounts( type ), $"track type {type}" );
+			Assert.IsFalse( CellEdge.TrackCloses( Cell( CellEdge.Nothing, trackType: type ), Nowhere ),
+				$"track type {type} is not one this applies to" );
+		}
+	}
+
+	/// <summary>
+	/// <b>A cell whose track defers is answered by its parent's record, and not by its own.</b> Both halves
+	/// come from the parent - whether the test applies and whether the flags reopen it - so the deferring
+	/// cell here is given flags that would have reopened it, and must be closed anyway.
+	/// </summary>
+	[TestMethod]
+	public void ACellWhoseTrackDefersIsAnsweredByItsParent()
+	{
+		var asked = new List<int>();
+
+		Func<int, ParkWorld.MapCell> Lookup( ParkWorld.MapCell parent )
+			=> id => { asked.Add( id ); return parent; };
+
+		Assert.IsTrue( CellEdge.TrackDefersToParent( 12 ) );
+		Assert.IsTrue( CellEdge.TrackDefersToParent( 17 ) );
+		Assert.IsFalse( CellEdge.TrackDefersToParent( 25 ) );
+
+		Assert.IsTrue(
+			CellEdge.TrackCloses(
+				Cell( CellEdge.Nothing, trackType: 12, trackFlags: CellEdge.TrackOpenFlags,
+					trackParent: 130 ),
+				Lookup( Cell( CellEdge.Nothing, trackType: 25 ) ) ),
+			"the parent closes it even though its own flags would have reopened it" );
+
+		CollectionAssert.AreEqual( new[] { 130 }, asked, "the parent is looked up by the id it names" );
+
+		Assert.IsFalse(
+			CellEdge.TrackCloses( Cell( CellEdge.Nothing, trackType: 12, trackParent: 130 ),
+				Lookup( Cell( CellEdge.Nothing, trackType: 25, trackFlags: 1 ) ) ),
+			"a parent whose flags reopen it" );
+
+		Assert.IsFalse(
+			CellEdge.TrackCloses( Cell( CellEdge.Nothing, trackType: 12, trackParent: 130 ),
+				Lookup( Cell( CellEdge.Nothing, trackType: 7 ) ) ),
+			"a parent of a type this does not apply to" );
+
+		// Naming no parent is answered outright, which the original says rather than leaves to fall out.
+		Assert.IsFalse(
+			CellEdge.TrackCloses( Cell( CellEdge.Nothing, trackType: 12, trackParent: 0 ),
+				_ => throw new InvalidOperationException( "parent nought should not be looked up" ) ) );
+	}
+
+	/// <summary>
+	/// The track answer reaches the step, which is what makes it worth reading off the save at all.
+	/// </summary>
+	[TestMethod]
+	public void TheTrackAnswerReachesTheStep()
+	{
+		var from = Cell( CellEdge.Path );
+		var to = Cell( CellEdge.Nothing, trackType: 25 );
+
+		Assert.IsFalse( Blocked( from, to, mode: 1 ),
+			"with the track left unanswered, mode 1 lets a path be left for open ground" );
+
+		Assert.IsTrue( Blocked( from, to, mode: 1, trackCloses: cell => CellEdge.TrackCloses( cell, _ => default ) ),
+			"with the real answer supplied, the same step is closed" );
 	}
 }
