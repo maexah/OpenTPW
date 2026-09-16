@@ -17,13 +17,31 @@ public enum StepDirection
 /// <para>
 /// <b>The edge test itself is not modelled, and is taken as a parameter instead.</b> The original asks
 /// <c>FUN_004d8750(x, y, direction, context)</c> whether a particular side of a particular cell is
-/// closed. That function turns out to be tractable - nearly all of it compares the cell's type against a
-/// literal, and a byte of it is a per-direction wall mask, west <c>0x04</c>, east <c>0x40</c>, north
-/// <c>0x10</c>, south <c>0x01</c> - but it reads those from the cell as the <i>running game</i> lays it
-/// out, and this project reads cells as the <i>save file</i> lays them out. Those are different records
-/// of different sizes, and using one set of offsets for the other is a mistake this project has already
-/// made once. So the geometry is built here, exactly, and the question it asks is left to a caller that
-/// can answer it honestly.
+/// closed, and most of that function compares the cell's type against a literal. Two cell fields decide
+/// the rest, read in two different ways: <c>mNeighbours</c> is <b>bit-tested</b>, and the test reports
+/// blocked when the bit is <i>clear</i> - so it says which ways a cell connects, not which ways it is
+/// walled - while <c>mDirection</c> is compared for <b>equality</b> against a single value and is never
+/// masked. The shipped park bears that out: <c>mNeighbours</c> takes 38 values with 82 cells carrying
+/// more than one bit, and <c>mDirection</c> takes five and never carries two.
+/// </para>
+/// <para>
+/// <b>The predicate reads the bit for the side <i>opposite</i> the way it is going</b>, which is worth
+/// knowing before anyone writes one. Two measurements meet here. The numbering is fixed absolutely by
+/// the original's own boundary guards - it refuses <c>x == 0</c> going 3, <c>y == 0</c> going 0,
+/// <c>x == 0x7f</c> going 1 and <c>y == 0x7f</c> going 2 - so direction 0 is <c>-y</c>, 1 is <c>+x</c>,
+/// 2 is <c>+y</c> and 3 is <c>-x</c>. Separately, across the park's path cells the bit that actually
+/// tracks a <c>-y</c> neighbour is <c>0x01</c> and the one that tracks <c>+y</c> is <c>0x10</c>, which
+/// reproduces real adjacency 94.8% of the time against 75.3% for the opposite pairing. Yet asked about
+/// direction 0 the original tests <c>0x10</c>. Both cannot be the near side, and the reading that fits
+/// is that <c>mNeighbours</c> records which sides a cell may be entered <i>from</i>.
+/// </para>
+/// <para>
+/// <b>The names below are labels, and the axes are the definition.</b> The original names its directions
+/// nothing at all - they are 0 to 3 - and whether <c>-y</c> is north or south is not something this park
+/// answers: its entrance stands at <c>(47,17)</c> and <c>(48,17)</c> with the bus outside the map at
+/// <c>(29.7,-11.5)</c>, so guests walk up from low <c>y</c>, which fixes the geometry without fixing a
+/// compass. Every step computed here is in terms of the axes, so the labels can be read either way
+/// round without changing a single answer.
 /// </para>
 /// <para>
 /// <b>One guard is deliberately missing rather than guessed.</b> The original refuses a step where the
