@@ -23,9 +23,11 @@ public sealed class Peep
 	/// <summary>Which of the eight kinds of guest they are - an index into <c>PeepTypes[0..7]</c>.</summary>
 	public int PersonType { get; }
 
-	public int State { get; set; }
+	/// <summary>What this guest is doing - see <see cref="SetState"/> for what entering one does.</summary>
+	public PeepState State { get; private set; }
 
-	public int SavedState { get; set; }
+	/// <summary>The state to go back to once a one-off animation has finished.</summary>
+	public PeepState SavedState { get; set; }
 
 	public int Cash { get; set; }
 
@@ -54,16 +56,31 @@ public sealed class Peep
 
 	/// <summary>
 	/// The speed term the walk reads to decide whether this guest is hurrying, which also picks a
-	/// different walk animation. Set by the tick and by nothing else, which is why it has no setter.
+	/// different walk animation. Set by the tick and by entering a state, and by nothing else.
 	/// </summary>
 	public int PurposeSpeed { get; private set; }
+
+	/// <summary>
+	/// How long this guest will wait for the park to open, set when they begin waiting. In their own
+	/// ticks, like <see cref="ExitLevel"/>.
+	/// </summary>
+	public int ParkOpeningWait { get; private set; }
+
+	/// <summary>When the guest last began a one-off animation, so that its end can be noticed.</summary>
+	public int TimeOfLastSpotAnim { get; private set; }
+
+	/// <summary>When the guest last began standing about, which the decision state reads.</summary>
+	public int TimeStartedIdling { get; private set; }
+
+	/// <summary>The animation the state they are in asked for as they entered it.</summary>
+	public PeepAnimation Animation { get; private set; } = PeepAnimation.None;
 
 	public Peep( int thingId, ParkWorld.GuestState saved )
 	{
 		ThingId = thingId;
 		PersonType = saved.PersonType;
-		State = saved.State;
-		SavedState = saved.SavedState;
+		State = (PeepState)saved.State;
+		SavedState = (PeepState)saved.SavedState;
 		Cash = saved.Cash;
 		ExitLevel = saved.ExitLevel;
 		Happiness = saved.Happiness;
@@ -164,6 +181,80 @@ public sealed class Peep
 
 		PurposeSpeed = Toilet > HurryAboveToilet ? HurryingSpeed : UnhurriedSpeed;
 	}
+
+	/// <summary>
+	/// Enters a state: the self-contained half of the original's <c>FUN_00501db0</c>.
+	///
+	/// <para>
+	/// That function writes the new state, queues an animation for it, and then does whatever entering
+	/// it calls for. The animation and the effects below are everything it does that depends on the
+	/// guest alone. The rest - joining a queue, being given a balloon, firing the events a ride raises,
+	/// paying at the bus stop - reaches into a ride, the sprite table or the event ring, and is left for
+	/// when those exist rather than half-written here.
+	/// </para>
+	/// </summary>
+	public void SetState( PeepState next, int tick, Random random )
+	{
+		State = next;
+		Animation = AnimationFor( next );
+
+		switch ( next )
+		{
+			// How long they will put up with waiting outside, rolled once as they begin to wait.
+			case PeepState.WaitingForOpening:
+				ParkOpeningWait = (random.Next() % 150) + 200;
+				break;
+
+			case PeepState.PlayingSpotAnimation:
+				TimeOfLastSpotAnim = tick;
+				break;
+
+			case PeepState.InQueue:
+				TimeStartedIdling = tick;
+				break;
+
+			// Shuffling up a queue is never done in a hurry, whatever the guest's needs say.
+			case PeepState.SteppingUpQueue:
+				PurposeSpeed = UnhurriedSpeed;
+				break;
+
+			// Both of these give up on wherever they were going.
+			case PeepState.Leaving:
+			case PeepState.HeadingForExit:
+				MajorDest = 0;
+				break;
+		}
+	}
+
+	/// <summary>
+	/// Which animation a state queues as it is entered.
+	///
+	/// <para>
+	/// Several of the standing states reach it only by falling through to the call at the end of the
+	/// original's setter rather than by asking for it, which is why the two groups look arbitrary until
+	/// they are read as "going somewhere" and "staying put".
+	/// </para>
+	/// <para>
+	/// The four that queue nothing are not an omission. <see cref="PeepState.PlayingSpotAnimation"/> is
+	/// already playing one, <see cref="PeepState.Leaving"/> queues none at all, and
+	/// <see cref="PeepState.OnRide"/> and <see cref="PeepState.Riding"/> choose theirs from the state of
+	/// the ride they are on - which nothing here can ask yet.
+	/// </para>
+	/// </summary>
+	public static PeepAnimation AnimationFor( PeepState state ) => state switch
+	{
+		PeepState.Walking or PeepState.HeadingForGate or PeepState.Entering or PeepState.Wandering
+			or PeepState.GoingToMinorDestination or PeepState.GoingToRide or PeepState.SteppingUpQueue
+			or PeepState.BeingAdmitted or PeepState.HeadingForExit or PeepState.WalkingOutside
+			=> PeepAnimation.Walk,
+
+		PeepState.AtGate or PeepState.WaitingForOpening or PeepState.JudgingTheFee or PeepState.Deciding
+			or PeepState.InQueue or PeepState.EnteringRide or PeepState.PickingACellOutside
+			or PeepState.AtTheBusStop
+			=> PeepAnimation.Stand,
+
+		_ => PeepAnimation.None
+	};
 
 	/// <summary>
 	/// Moves a need and holds it in range - <c>FUN_004fb4f0</c>, the one helper every need change in the

@@ -33,7 +33,7 @@ public class PeepNeedsTests
 	{
 		var peep = Guest( thirst: 36f, hunger: 18f, toilet: 13f );
 
-		Assert.AreEqual( 6, peep.State );
+		Assert.AreEqual( PeepState.Deciding, peep.State );
 		Assert.AreEqual( 36f, peep.Thirst );
 		Assert.AreEqual( 18f, peep.Hunger );
 		Assert.AreEqual( 13f, peep.Toilet );
