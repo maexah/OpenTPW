@@ -51,11 +51,17 @@ namespace OpenTPW;
 /// bit without filling its slot or fills a slot without setting the bit. 0x80 and 0x100 always
 /// appear together and share the one slot.
 ///
-/// There is an eighth pointer at +0x34 that no flag bit owns. It is set on 1768 tracks and
-/// every one of them is a rotation track (of 3039), so it is an optional extra for rotation
-/// rather than a channel of its own. What it points at looks like a byte ramp (Advisorm1:
-/// 32, 66, 105, 141, 176, 208, 233, 249), which would be an easing curve, but the records are
-/// not a fixed length and a third of them are not monotonic - noted, not claimed.
+/// The eighth pointer at +0x34 that no flag bit owns is the EASING CURVE TABLE, and it is read
+/// here now - see RotationTrack.Ease. It is set on 1768 tracks and every one of them is a
+/// rotation track (of 3039), so it is an optional extra for rotation rather than a channel in
+/// its own right.
+///
+/// A record is EIGHT BYTES and the ushort at a key's +0x02 indexes them. That stride is what an
+/// earlier note here was missing: read at no fixed length the records looked ragged and about a
+/// third of them non-monotonic, and the "byte ramp" it quoted (32, 66, 105, 141, 176, 208, 233,
+/// 249) turns out to be exactly curve 0 of the advisor's first clip, read at the right stride by
+/// luck. Measured at eight over the 1,166 clips whose track table validates: 1,759 of 3,022
+/// rotation tracks carry a table and 1,263 do not.
 ///
 /// Bit 0x4000 is a modifier rather than a channel: it makes the +0x28 slot point at a different
 /// structure, and the engine's loader branches on it before reading any morph table. Thirty
@@ -81,9 +87,14 @@ namespace OpenTPW;
 ///
 /// ROTATION (bit 0x8)
 ///
-/// A keyframe is 20 bytes: ushort frame, ushort flags (0 or 0xFFFF), then a float quaternion
-/// x, y, z, w. All 3039 rotation tracks in the game decode to strictly ascending frame indices
-/// and unit quaternions (within 1e-2), which is the check applied here.
+/// A keyframe is 20 bytes: ushort frame, ushort EASING CURVE ID, then a float quaternion x, y,
+/// z, w. That second field was recorded here as "flags (0 or 0xFFFF)", which was wrong in a way
+/// worth naming: 0xFFFF does mean "none", but 0 is not a cleared flag - it is curve number nought,
+/// the commonest id in the game, so the two values it was seen taking were a real index and a
+/// sentinel. Ids reach 100. See RotationTrack.Ease.
+///
+/// All 3039 rotation tracks in the game decode to strictly ascending frame indices and unit
+/// quaternions (within 1e-2), which is the check applied here.
 ///
 /// VERTEX MORPH (bit 0x1000)
 ///
@@ -317,6 +328,101 @@ public class AnimationFile : BaseFormat
 		public ushort[] FrameIndices { get; init; } = Array.Empty<ushort>();
 		public System.Numerics.Quaternion[] Rotations { get; init; } = Array.Empty<System.Numerics.Quaternion>();
 
+		/// <summary>The id a key carries when it blends straight into the next one.</summary>
+		public const ushort NoCurve = 0xFFFF;
+
+		/// <summary>
+		/// The easing curve each key blends <i>out of</i>, or <see cref="NoCurve"/> where it blends evenly -
+		/// the ushort at key +0x02. See <see cref="Ease"/>; the last key of a track never names one.
+		/// </summary>
+		public ushort[] CurveIds { get; init; } = Array.Empty<ushort>();
+
+		/// <summary>
+		/// Eight bytes per curve, indexed by the id a key names - the table at track descriptor +0x34.
+		/// Empty where this track's keys all blend evenly.
+		/// </summary>
+		public byte[][] Curves { get; init; } = Array.Empty<byte[]>();
+
+		/// <summary>
+		/// How many segments a curve's ramp is cut into, as the engine's own constant at
+		/// <c>0x006febe4</c>: <b>8.999995231628418</b>, deliberately a hair under nine.
+		///
+		/// <para>
+		/// The shortfall is the point. The engine truncates <c>t * this</c> toward zero to pick a segment,
+		/// so an exact nine would send <c>t == 1</c> into a tenth segment that has no upper point to reach
+		/// and would answer <c>curve[7]/255</c> instead of 1 - a jump backwards on the very last frame of a
+		/// blend. Just under nine keeps <c>t == 1</c> in segment eight, where it lands on 1 exactly.
+		/// </para>
+		/// </summary>
+		private const float Segments = 8.999995231628418f;
+
+		/// <summary>
+		/// What each curve byte is worth - the float at <c>0x006febec</c>, which is one 255th. So a byte of
+		/// 255 is the whole blend and a byte of 0 is none of it.
+		/// </summary>
+		private const float ByteScale = 0.003921568859368563f;
+
+		/// <summary>
+		/// Where between two keys the pose really is, once the curve the <i>lower</i> key names has had its
+		/// say. <paramref name="t"/> is the even fraction between the two keys and the answer replaces it.
+		///
+		/// <para>
+		/// <b>The curve is ten points and nine straight segments.</b> The eight bytes are the inner points;
+		/// the first and last are implied, nought before the first byte and one after the last. So the ramp
+		/// runs 0 -> curve[0] -> ... -> curve[7] -> 1, and the engine picks its segment by truncating
+		/// <c>t * <see cref="Segments"/></c> and lerps across it with what is left over (0x00471c83-0x00471d32).
+		/// That implied one at the end is doing real work: the last byte is 255 in only <b>112 of the game's
+		/// 12,428 curve entries</b>, so almost every curve climbs to its finish in that ninth segment.
+		/// </para>
+		///
+		/// <para>
+		/// <b>A curve need not rise all the way along, and 2,797 of those 12,428 entries do not.</b> One that
+		/// dips takes the pose back the way it came for a moment, which is an author's overshoot and not a
+		/// bad read - so this reproduces it rather than sorting it. An earlier note here called a third of
+		/// these non-monotonic, which was measured before the record length was known; at the true stride of
+		/// eight it is about 22%.
+		/// </para>
+		/// </summary>
+		public float Ease( int key, float t )
+		{
+			if ( key < 0 || key >= CurveIds.Length )
+				return t;
+
+			var id = CurveIds[key];
+
+			// A track whose table could not be read keeps every blend even, which is what an id past the
+			// end of Curves means. No file in the game is in that state - all 1,759 tracks carrying an id
+			// carry a table in range - so this is a guard against bad data rather than a path the game takes.
+			if ( id == NoCurve || id >= Curves.Length )
+				return t;
+
+			var curve = Curves[id];
+
+			var scaled = t * Segments;
+			var segment = (int)scaled;
+			var into = scaled - segment;
+
+			float from, to;
+
+			if ( segment <= 0 )
+			{
+				from = 0f;
+				to = curve[0] * ByteScale;
+			}
+			else if ( segment < curve.Length )
+			{
+				from = curve[segment - 1] * ByteScale;
+				to = curve[segment] * ByteScale;
+			}
+			else
+			{
+				from = curve[^1] * ByteScale;
+				to = 1f;
+			}
+
+			return (from * (1f - into)) + (to * into);
+		}
+
 		/// <summary>Rotation at an authoring frame, held at the ends and slerped between keys.</summary>
 		public System.Numerics.Quaternion Sample( float frame )
 		{
@@ -337,7 +443,9 @@ public class AnimationFile : BaseFormat
 			var span = FrameIndices[hi] - FrameIndices[lo];
 			var t = span <= 0 ? 0f : (frame - FrameIndices[lo]) / span;
 
-			return System.Numerics.Quaternion.Slerp( Rotations[lo], Rotations[hi], t );
+			// The curve belongs to the key being blended out of, which is why it is the lower one that is
+			// asked - the engine reads the id off the key its own search settled on (0x00471c73).
+			return System.Numerics.Quaternion.Slerp( Rotations[lo], Rotations[hi], Ease( lo, t ) );
 		}
 	}
 
@@ -816,6 +924,7 @@ public class AnimationFile : BaseFormat
 
 		var frames = new ushort[keyCount];
 		var rotations = new System.Numerics.Quaternion[keyCount];
+		var curveIds = new ushort[keyCount];
 
 		for ( int k = 0; k < keyCount; ++k )
 		{
@@ -824,6 +933,8 @@ public class AnimationFile : BaseFormat
 			frames[k] = BitConverter.ToUInt16( data, entry );
 			if ( k > 0 && frames[k] <= frames[k - 1] )
 				return;
+
+			curveIds[k] = BitConverter.ToUInt16( data, entry + 2 );
 
 			rotations[k] = new System.Numerics.Quaternion(
 				BitConverter.ToSingle( data, entry + 4 ),
@@ -839,8 +950,52 @@ public class AnimationFile : BaseFormat
 		{
 			TargetIndex = target,
 			FrameIndices = frames,
-			Rotations = rotations
+			Rotations = rotations,
+			CurveIds = curveIds,
+			Curves = ReadCurves( data, BitConverter.ToUInt32( data, descriptor + 0x34 ), curveIds )
 		} );
+	}
+
+	/// <summary>
+	/// The easing curves this track's keys name, out of the eighth pointer at descriptor +0x34 - eight
+	/// bytes each, indexed by the id rather than by the key, which is why they are read as a table.
+	///
+	/// <para>
+	/// <b>An id is not a key number, though it very often looks like one.</b> Of the game's 12,428 keys that
+	/// name a curve, 9,358 name the one whose id matches their own position and <b>3,070 do not</b> - so
+	/// deriving the curve from the key index would be right four times in five and quietly wrong the rest.
+	/// Ids run as high as 100, well past any key count, and the table is sized here by the highest one the
+	/// keys actually ask for.
+	/// </para>
+	///
+	/// <para>
+	/// No table means no easing rather than a rejected track: the caller keeps the rotation either way, and
+	/// 1,263 of the game's 3,022 rotation tracks have none - every key on those carries
+	/// <see cref="RotationTrack.NoCurve"/>, all 9,051 of them, so the two facts never disagree.
+	/// </para>
+	/// </summary>
+	private static byte[][] ReadCurves( byte[] data, uint tableAt, ushort[] curveIds )
+	{
+		var highest = -1;
+
+		foreach ( var id in curveIds )
+		{
+			if ( id != RotationTrack.NoCurve )
+				highest = Math.Max( highest, id );
+		}
+
+		if ( highest < 0 || tableAt < 0x9C || tableAt + (8L * (highest + 1)) > data.Length )
+			return Array.Empty<byte[]>();
+
+		var curves = new byte[highest + 1][];
+
+		for ( int id = 0; id <= highest; ++id )
+		{
+			curves[id] = new byte[8];
+			Array.Copy( data, (int)tableAt + (8 * id), curves[id], 0, 8 );
+		}
+
+		return curves;
 	}
 
 	private void ReadMorphChannel( byte[] data, uint descriptorAt, int target )
