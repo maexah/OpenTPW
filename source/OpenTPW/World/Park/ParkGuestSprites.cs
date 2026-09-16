@@ -39,11 +39,26 @@ public sealed class ParkGuestSprites : ModelEntity
 {
 	/// <summary>
 	/// Every picture stores 128 in the two fields the engine divides its size by, so a picture's world
-	/// size is its pixels over 128, times the span below. The span is read from the draw path
-	/// (<c>FUN_00589410</c>) and is <b>provisional</b>: that function carries a second factor which is
-	/// filled in at device setup and reads zero in the static image, so it could not be pinned. What
-	/// says this number is about right is the art itself - a guest comes out around six units against a
-	/// ten-unit cell, which is the proportion the shipped park's own meshes keep.
+	/// size is its pixels over 128, times the span below.
+	///
+	/// <para>
+	/// <b>The span is measured rather than chosen.</b> The draw path <c>FUN_00589410</c> scales a picture
+	/// by its instance's own scale times <c>0x0070200c</c>, which holds <b>20.0</b> and sits in read-only
+	/// <c>.rdata</c>. Every other term on the vertical chain is one: the factor at <c>0x00768ab4</c> is
+	/// 1.0 and has no writer anywhere in the image, the call site <c>FUN_00589990</c> passes 1.0f for both
+	/// of its multipliers, and all eighteen of the shipped park's sprites carry scale 1.0/1.0. A picture's
+	/// height in the world is therefore its pixels times twenty over a hundred and twenty-eight, exactly.
+	/// </para>
+	/// <para>
+	/// <b>The one term that is not one belongs to the viewport, and is deliberately not applied here.</b>
+	/// The horizontal chain also multiplies by <c>0x008bcbcc</c>, which reads zero in the static image
+	/// because it is written at device setup. It is the aspect ratio: <c>FUN_0056b790</c> builds the
+	/// frustum corners at unit depth as <c>y = 0.5 * tan(fov/2)</c> and <c>x = y / 0x008bcbcc</c>, and
+	/// since <c>x = y * aspect</c> for any camera, that factor is height over width. Two other users
+	/// agree - one scales only the horizontal of a screen-space quad by it, the other applies it only to a
+	/// default horizontal size. Our projection matrix already carries the aspect, so applying it a second
+	/// time here would squash every person in the park by it.
+	/// </para>
 	/// </summary>
 	private const float PictureReference = 128f;
 
@@ -117,10 +132,13 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// that exist, in the order the type numbers run.
 	///
 	/// <para>
-	/// The three per-theme kinds are <b>provisional</b>: costumes, costume heads and entertainers exist
-	/// once per theme, and whether a park numbers only its own theme's or all four together was not
-	/// settled. Only its own is the reading taken here, because the alternative puts a Fantasy
-	/// entertainer in a Jungle park.
+	/// <b>A park sees its own theme and no other, which is measured rather than assumed.</b> The
+	/// original's table at <c>0x763f88</c> is fourteen bare kind names with no theme among them, and
+	/// <c>Sprites_LoadFolder</c> sweeps each kind under two roots in turn - <c>generic\</c> and the
+	/// current theme's - both feeding one numbering. The archive keeps the two apart: <c>Generic</c>
+	/// holds the eleven kinds below that name it, and each theme holds only costumes, costume heads and
+	/// entertainers. So exactly one of those two sweeps ever finds anything, and a Jungle park can no
+	/// more number a Fantasy entertainer than it can a second Generic.
 	/// </para>
 	/// </summary>
 	private static string? FolderFor( int type, string theme ) => type switch
@@ -136,6 +154,47 @@ public sealed class ParkGuestSprites : ModelEntity
 		8 => "esprites/Generic/Researchers",
 		_ => null
 	};
+
+	/// <summary>
+	/// The four banks the original loads <i>before</i> it sweeps the folder, in this order, and only for
+	/// kids and kid heads. <c>Sprites_LoadFolder</c> matches this table - it is at <c>0x764030</c> in the
+	/// executable - against the folder's files first, loads what it finds, and only then sweeps up
+	/// whatever is left.
+	///
+	/// <para>
+	/// It matters because a bank is numbered by the order it was loaded in, and that number is what the
+	/// save writes down. The archive lists <c>Generic\Kids</c> as BE, BI, CH, FR, KI, SA, SU, TA, so
+	/// sweeping it plainly makes bank 0 the BE child; the original makes bank 0 the BI child and pushes BE
+	/// out to 4. Every one of the shipped park's thirteen guests wears a kids bank, and between them they
+	/// wear banks 0, 2, 4, 5, 6 and 7 - so sweeping plainly dresses the entire park in the wrong children
+	/// while still looking perfectly plausible, which is exactly why it went unnoticed.
+	/// </para>
+	/// </summary>
+	private static readonly string[] AvatarFirst = ["SPR_BI", "SPR_KI", "SPR_TA", "SPR_SU"];
+
+	/// <summary>
+	/// A kind's banks in the order the original numbers them, which is the order it loads them in. Takes
+	/// the file system rather than reaching for the global one so that a test can ask the same question of
+	/// a mount of its own - the rule the park tests already follow.
+	/// </summary>
+	internal static string[] BanksIn( BaseFileSystem data, string folder, int type )
+	{
+		var files = data.GetFiles( folder )
+			.Where( file => file.EndsWith( ".esp", StringComparison.OrdinalIgnoreCase ) )
+			.ToArray();
+
+		// Kinds 0 and 1 are kids and kid heads; every other folder is numbered just as it comes.
+		if ( type is not (0 or 1) )
+			return files;
+
+		var first = AvatarFirst
+			.Select( name => files.FirstOrDefault( file =>
+				Path.GetFileNameWithoutExtension( file ).Equals( name, StringComparison.OrdinalIgnoreCase ) ) )
+			.OfType<string>()
+			.ToArray();
+
+		return [.. first, .. files.Except( first )];
+	}
 
 	public ParkGuestSprites( string themeName, ParkWorld? park )
 	{
@@ -180,9 +239,7 @@ public sealed class ParkGuestSprites : ModelEntity
 			if ( folder == null )
 				continue;
 
-			var files = FileSystem.GetFiles( folder )
-				.Where( file => file.EndsWith( ".esp", StringComparison.OrdinalIgnoreCase ) )
-				.ToArray();
+			var files = BanksIn( FileSystem, folder, key.Type );
 
 			if ( key.Bank < 0 || key.Bank >= files.Length )
 			{
