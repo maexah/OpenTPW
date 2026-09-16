@@ -66,6 +66,62 @@ public sealed class ParkWorld
 	private readonly List<CatalogueObject> _objects = [];
 
 	/// <summary>
+	/// One of the park's people: a guest, or one of the five kinds of staff.
+	///
+	/// <para>
+	/// A person is not built from a model the way a shop is - they are a sprite - and the sprite they
+	/// wear is <b>named</b> by <see cref="SpriteSlot"/> rather than worked out from what they are. See
+	/// <see cref="Sprite"/> for why it has to be read back rather than chosen again.
+	/// </para>
+	/// <para>
+	/// <b>The trap worth naming.</b> <c>+0x10</c> is where a catalogue object keeps its <c>mAngle</c>, and
+	/// a person keeps their sprite slot there instead, so the two readers must never be pointed at each
+	/// other's records. A person's facing is <see cref="Angle"/>, somewhere else entirely, and is not in
+	/// degrees.
+	/// </para>
+	/// </summary>
+	public readonly record struct Person( int ThingId, int Model, int RawX, int RawY, int SpriteSlot, int Angle )
+	{
+		/// <inheritdoc cref="CatalogueObject.CellX"/>
+		public int CellX => RawX >> 8;
+
+		/// <inheritdoc cref="CatalogueObject.CellY"/>
+		public int CellY => RawY >> 8;
+
+		/// <summary>
+		/// Which of eight ways this person faces.
+		///
+		/// <para>
+		/// The stored angle is an <b>eleven-bit turn</b> - 2048 to the circle - and not the degrees a
+		/// catalogue object keeps. The game biases it by <c>0x380</c> before taking the top three bits
+		/// (<c>FUN_004fa030</c>): half an octant of rounding, then three octants of turn. Over the shipped
+		/// park this reproduces, for all eighteen people, the octant the save separately stores on the
+		/// sprite itself - and that is not a mostly-zero column agreeing with itself, because the
+		/// eighteen land on five different octants.
+		/// </para>
+		/// </summary>
+		public int Facing => ((Angle - 0x380) & 0x7ff) >> 8;
+	}
+
+	/// <summary>Every person the walk found, in the order the file lists them.</summary>
+	public IReadOnlyList<Person> People => _people;
+
+	private readonly List<Person> _people = [];
+
+	/// <summary>Every live sprite in the park's sprite table, in slot order.</summary>
+	public IReadOnlyList<Sprite> Sprites => _sprites;
+
+	private readonly List<Sprite> _sprites = [];
+
+	/// <summary>
+	/// Whether the sprite table ended exactly on the tag that follows it. The same check as
+	/// <see cref="ClosedOnTrailer"/> and worth as much: the table is a slot count and a run of fixed
+	/// records, so landing on the next module's tag to the byte says the count and the record size were
+	/// both right.
+	/// </summary>
+	public bool ClosedOnSpriteTrailer { get; private set; }
+
+	/// <summary>
 	/// One cell of the park's 128x128 map - what is built on it, which way it faces, and which of its
 	/// neighbours it joins. This is where a park's <b>paths</b> are: the ground model carries none of them.
 	///
@@ -372,6 +428,10 @@ public sealed class ParkWorld
 		ClosedOnTrailer = Problem == null
 			&& _at + Trailer.Length <= _data.Length
 			&& System.Text.Encoding.ASCII.GetString( _data, _at, Trailer.Length ) == Trailer;
+
+		// And straight on into the sprite table, which needs no searching for: it begins at the four
+		// bytes after the World block's own trailer.
+		ReadSprites();
 	}
 
 	private void ReadHeader()
@@ -484,6 +544,8 @@ public sealed class ParkWorld
 
 			if ( model == CatalogueObjectModel )
 				_objects.Add( ReadCatalogueObject( id, start ) );
+			else if ( Array.IndexOf( PersonModels, model ) >= 0 )
+				_people.Add( ReadPerson( id, model, start ) );
 
 			++ThingCount;
 
@@ -498,6 +560,13 @@ public sealed class ParkWorld
 
 	/// <summary>The model number of a thing that is a catalogue item rather than a person or a manager.</summary>
 	private const int CatalogueObjectModel = 3;
+
+	/// <summary>
+	/// The models that are people: a guest, then the five kinds of staff. The shipped park holds thirteen
+	/// guests and one of each staff, which is eighteen - exactly how many sprites its table has live, and
+	/// the reconciliation the tests pin.
+	/// </summary>
+	private static readonly int[] PersonModels = [1, 4, 5, 6, 7, 8];
 
 	/// <summary>
 	/// The head of every thing, which is the same for all of them - the map base the original gives each
@@ -516,6 +585,187 @@ public sealed class ParkWorld
 			RawX: ReadUInt16At( start + 8 ),           // mX, in 256ths of a cell
 			RawY: ReadUInt16At( start + 10 ),          // mY
 			Angle: ReadInt32At( start + 16 ) );        // mAngle, in degrees - 0, 90 or 270 in the shipped park
+
+	/// <summary>
+	/// A person's record: the same head every thing has, and the two fields that make them drawable.
+	///
+	/// <para>
+	/// <c>mSpriteScript</c> at <c>+0x10</c> is the slot of their sprite in the table at the end of the
+	/// block. It is <b>not</b> a pointer and not an index into any list here: the table's own handles are
+	/// stale heap addresses that appear nowhere else in the payload, so the slot is the only join there
+	/// is. Nor is it the order either list happens to be in - the two disagree - so pairing people to
+	/// sprites by position gives the wrong guests while still looking plausible. Read this way the
+	/// eighteen people carry eighteen distinct slots which are exactly the eighteen live ones.
+	/// </para>
+	/// <para>
+	/// <c>mSpriteAngle</c> at <c>+0xf2</c> is their heading - see <see cref="Person.Facing"/>.
+	/// </para>
+	/// </summary>
+	private Person ReadPerson( int id, int model, int start )
+		=> new(
+			ThingId: id,
+			Model: model,
+			RawX: ReadUInt16At( start + 8 ),            // mX, in 256ths of a cell, as an object's is
+			RawY: ReadUInt16At( start + 10 ),           // mY
+			SpriteSlot: ReadInt32At( start + 0x10 ),    // mSpriteScript
+			Angle: ReadUInt16At( start + 0xf2 ) );      // mSpriteAngle
+
+	/// <summary>
+	/// One live sprite: the picture a person is drawn as, and the state the park was saved in.
+	///
+	/// <para>
+	/// <b>The art was chosen once and written down.</b> When a person is made, the game picks a bank of
+	/// their kind at random and then a set within it at random, and stores both. Nothing recomputes them,
+	/// so a reader must read them back rather than roll again - rolling again would change every guest's
+	/// clothes on each load.
+	/// </para>
+	/// <para>
+	/// <b><see cref="SpriteNumber"/> is two numbers in one.</b> Its low four bits are the set and the
+	/// rest is how far past its kind's first bank this sprite's bank sits; the engine takes it apart
+	/// exactly that way before it looks a picture up.
+	/// </para>
+	/// <para>
+	/// <see cref="Height"/> is an offset above the ground rather than a height - it reads zero on every
+	/// person in the shipped park, and the engine adds the land under them to it as it draws.
+	/// </para>
+	/// </summary>
+	public readonly record struct Sprite(
+		int Slot, int Type, int Bank, int SpriteNumber,
+		float X, float Height, float Y, int Facing, int Frame, int Alpha, int State )
+	{
+		/// <summary>How far past its kind's first bank this sprite's bank is.</summary>
+		public int BankOffset => SpriteNumber >> 4;
+
+		/// <summary>Which set of that bank is being drawn - the stand, the walk, and so on.</summary>
+		public int Set => SpriteNumber & 0xf;
+	}
+
+	/// <summary>
+	/// The sprite table's tag as it appears in the file. Like every other tag here it is written as a
+	/// little-endian dword, so it reads backwards in a dump.
+	/// </summary>
+	public const string SpriteTag = "TPCS";
+
+	/// <summary>The tag written after the sprite table.</summary>
+	public const string SpriteTrailer = "CSPS";
+
+	/// <summary>
+	/// How big one sprite record is. The original checks this number on the way in and refuses the block
+	/// if it differs, so it is the file's own statement rather than a measurement.
+	/// </summary>
+	private const int SpriteRecordSize = 0x118;
+
+	// Where each field sits in a sprite record, from the code that writes them.
+	private const int SpriteState = 0x18;
+
+	private const int SpriteX = 0x88;
+
+	private const int SpriteHeight = 0x8c;
+
+	private const int SpriteY = 0x90;
+
+	private const int SpriteAlpha = 0xa0;
+
+	private const int SpriteType = 0xac;
+
+	private const int SpriteBank = 0xb0;
+
+	private const int SpriteNumberAt = 0xb4;
+
+	private const int SpriteFrame = 0xb8;
+
+	private const int SpriteFacing = 0xc0;
+
+	/// <summary>
+	/// Reads the table of world sprites that follows the World block.
+	///
+	/// <para>
+	/// It needs no searching for: it begins at the four bytes after the World trailer. The shape is a
+	/// tag, the size of one record, how many slots the table has, one handle per slot, and then one
+	/// record for each handle that is not zero - so the records are counted by the handles rather than
+	/// by a number of their own, and slot zero is never used.
+	/// </para>
+	/// <para>
+	/// Like the World walk this proves itself by landing on the next module's tag: a wrong slot count or
+	/// record size misses <c>CSPS</c> by a whole number of records. A surprise is recorded rather than
+	/// thrown, because the people and objects are worth having even when their pictures are not.
+	/// </para>
+	/// </summary>
+	private void ReadSprites()
+	{
+		// Only worth trying where the walk arrived somewhere known. Without the trailer there is no
+		// reason to believe _at points at anything at all.
+		if ( !ClosedOnTrailer )
+			return;
+
+		_at += Trailer.Length;
+
+		if ( _at + 12 > _data.Length )
+		{
+			Problem ??= "the sprite table runs past the end of the payload";
+			return;
+		}
+
+		var tag = System.Text.Encoding.ASCII.GetString( _data, _at, SpriteTag.Length );
+
+		if ( tag != SpriteTag )
+		{
+			Problem ??= $"the block after the world is tagged '{tag}' rather than {SpriteTag}";
+			return;
+		}
+
+		_at += SpriteTag.Length;
+
+		var recordSize = ReadInt32();
+		var slots = ReadInt32();
+
+		if ( recordSize != SpriteRecordSize )
+		{
+			Problem ??= $"a sprite record says it is {recordSize} bytes rather than {SpriteRecordSize}";
+			return;
+		}
+
+		if ( slots < 0 || _at + (slots * 4) > _data.Length )
+		{
+			Problem ??= $"the sprite table says it has {slots} slots";
+			return;
+		}
+
+		var handles = new int[slots];
+
+		for ( var slot = 0; slot < slots; ++slot )
+			handles[slot] = ReadInt32();
+
+		for ( var slot = 0; slot < slots; ++slot )
+		{
+			if ( handles[slot] == 0 )
+				continue;
+
+			if ( _at + recordSize > _data.Length )
+			{
+				Problem ??= $"sprite slot {slot} runs past the end of the payload";
+				return;
+			}
+
+			_sprites.Add( new Sprite(
+				Slot: slot,
+				Type: ReadInt32At( _at + SpriteType ),
+				Bank: ReadInt32At( _at + SpriteBank ),
+				SpriteNumber: ReadInt32At( _at + SpriteNumberAt ),
+				X: ReadSingleAt( _at + SpriteX ),
+				Height: ReadSingleAt( _at + SpriteHeight ),
+				Y: ReadSingleAt( _at + SpriteY ),
+				Facing: ReadInt32At( _at + SpriteFacing ),
+				Frame: ReadInt32At( _at + SpriteFrame ),
+				Alpha: ReadInt32At( _at + SpriteAlpha ),
+				State: ReadInt32At( _at + SpriteState ) ) );
+
+			_at += recordSize;
+		}
+
+		ClosedOnSpriteTrailer = _at + SpriteTrailer.Length <= _data.Length
+			&& System.Text.Encoding.ASCII.GetString( _data, _at, SpriteTrailer.Length ) == SpriteTrailer;
+	}
 
 	private void Skip( int count )
 	{
@@ -545,6 +795,14 @@ public sealed class ParkWorld
 			throw new InvalidDataException( $"a dword at 0x{offset:x} runs past the end of the payload" );
 
 		return BitConverter.ToInt32( _data, offset );
+	}
+
+	private float ReadSingleAt( int offset )
+	{
+		if ( offset + 4 > _data.Length )
+			throw new InvalidDataException( $"a float at 0x{offset:x} runs past the end of the payload" );
+
+		return BitConverter.ToSingle( _data, offset );
 	}
 
 	private int ReadUInt16At( int offset )

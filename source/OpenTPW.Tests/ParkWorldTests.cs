@@ -62,6 +62,103 @@ public class ParkWorldTests
 	}
 
 	/// <summary>
+	/// The people and their sprites, which are two separate tables that have to agree.
+	///
+	/// <para>
+	/// This is the reconciliation the whole reading rests on: the thing list says how many people the
+	/// park holds, the sprite table says how many pictures are live, and they are counted by entirely
+	/// different means - one by walking variable-length records, the other by counting handles that are
+	/// not zero. Thirteen guests and one of each of the five staff is eighteen, and the table has
+	/// eighteen live. A record size that drifted would desynchronise the walk and break this long before
+	/// it produced anything that looked wrong on screen.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EveryPersonInTheParkHasASpriteOfTheirOwn()
+	{
+		var world = World();
+
+		Assert.AreEqual( 18, world.People.Count, "people in the park" );
+		Assert.AreEqual( 13, world.People.Count( person => person.Model == 1 ), "guests among them" );
+
+		var live = world.Sprites.Select( sprite => sprite.Slot ).ToArray();
+
+		Assert.AreEqual( 18, live.Length, "live sprites in the table" );
+		CollectionAssert.AllItemsAreUnique( world.People.Select( person => person.SpriteSlot ).ToArray(),
+			"two people should never share one sprite" );
+
+		foreach ( var person in world.People )
+			CollectionAssert.Contains( live, person.SpriteSlot,
+				$"thing {person.ThingId} names sprite slot {person.SpriteSlot}, which should be live" );
+	}
+
+	/// <summary>
+	/// The sprite table ends exactly on the tag after it, which is worth as much here as the World
+	/// block's own trailer: the table is a slot count and a run of fixed records, so landing on
+	/// <c>CSPS</c> to the byte says both numbers were right. Get the record size wrong and this misses by
+	/// a whole multiple of it.
+	/// </summary>
+	[TestMethod]
+	public void TheSpriteTableEndsExactlyOnTheNextModulesTag()
+	{
+		var world = World();
+
+		Assert.IsTrue( world.ClosedOnSpriteTrailer,
+			$"the sprite table should end on the {ParkWorld.SpriteTrailer} tag" );
+
+		Assert.IsFalse( world.Sprites.Any( sprite => sprite.Slot == 0 ),
+			"slot zero is never used" );
+	}
+
+	/// <summary>
+	/// A person's heading and their sprite's own stored direction, which are two different fields written
+	/// by two different parts of the game, reduced to the same answer.
+	///
+	/// <para>
+	/// A person keeps an eleven-bit angle; the sprite keeps the octant the game last drew them at. The
+	/// rule that turns one into the other biases by <c>0x380</c> - half an octant of rounding and three
+	/// of turn - and if it were wrong this would fail for the five people who are not facing octant zero.
+	/// That is what stops the check being vacuous: thirteen of the eighteen do face zero, so the
+	/// assertion below also pins that the column is not simply all zeros.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EachPersonFacesTheWayTheirSpriteWasDrawnFacing()
+	{
+		var world = World();
+		var sprites = world.Sprites.ToDictionary( sprite => sprite.Slot );
+
+		foreach ( var person in world.People )
+			Assert.AreEqual( sprites[person.SpriteSlot].Facing, person.Facing,
+				$"thing {person.ThingId} faces one way and its sprite another" );
+
+		Assert.IsTrue( world.People.Select( person => person.Facing ).Distinct().Count() >= 4,
+			"the park's people should not all be facing the same way" );
+	}
+
+	/// <summary>
+	/// The art each person wears was rolled once, when they were made, and written down. A reader that
+	/// rolled again on load would keep every count in these tests and still put every guest in different
+	/// clothes each time the park opened, so what is pinned here is that the banks <i>vary</i> and that
+	/// the two people saved mid-stand are still saved mid-stand.
+	/// </summary>
+	[TestMethod]
+	public void ThePeopleWearTheArtTheSaveGaveThem()
+	{
+		var world = World();
+		var guests = world.People.Where( person => person.Model == 1 )
+			.Select( person => world.Sprites.First( sprite => sprite.Slot == person.SpriteSlot ) )
+			.ToArray();
+
+		Assert.IsTrue( guests.All( sprite => sprite.Type == 0 ), "every guest should wear a kids bank" );
+		Assert.IsTrue( guests.Select( sprite => sprite.Bank ).Distinct().Count() >= 2,
+			"the guests should not all have been given the same bank" );
+
+		Assert.AreEqual( 2, world.Sprites.Count( sprite => sprite.Set == 0 ),
+			"the guard and one kid are the two saved standing; the rest are mid-walk" );
+	}
+
+	/// <summary>
 	/// The header's handles. These are not positions and not indices into anything: the original compares
 	/// them against a thing's own id with <c>==</c>, so eleven means "the thing whose id is 11".
 	///
