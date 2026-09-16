@@ -264,6 +264,11 @@ public class Level
 		// the sweep that poses it.
 		_ = new ParkRides( ThemeName, park, catalogue, objects: objects );
 
+		// And the park's people. After the ground, because a guest stands on the land and has to ask how
+		// high it is under them; they are sprites rather than models, so they are nothing to do with the
+		// objects above and only need the save that named them.
+		_ = new ParkGuestSprites( ThemeName, park );
+
 		// Each group of sound at the volume the options give it, and then the park's own music - which
 		// is the order the original uses too: it registers the park's categories, re-applies the group
 		// volumes (0x0054ec9a), and only then plays the music (0x0054ec9f). See ParkAudio for what it
