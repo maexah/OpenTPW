@@ -70,12 +70,46 @@ public sealed class ParkGuestSprites : ModelEntity
 
 	private sealed record Loaded( SpriteBankFile Bank, Region[] Pictures );
 
-	private readonly List<ParkWorld.Sprite> _sprites = [];
+	private readonly List<(ParkWorld.Person Person, ParkWorld.Sprite Sprite)> _people = [];
 	private readonly Dictionary<(int Type, int Bank), Loaded> _banks = [];
 
 	private Texture? _atlas;
+	private Region? _plain;
 	private Vertex[] _vertices = [];
 	private int _uploaded;
+
+	/// <summary>
+	/// The pool this park is drawing with, so the debug console can read the census back. Same
+	/// arrangement as <see cref="ParkGround.Current"/>, and it exists for the console alone.
+	/// </summary>
+	internal static ParkGuestSprites? Current { get; private set; }
+
+	/// <summary>
+	/// Draws a dash on the ground under each person pointing the way they face, coloured by what kind
+	/// of person they are. Off unless the debug console turns it on.
+	///
+	/// <para>
+	/// It exists because a facing that is wrong by a constant looks like people standing oddly rather
+	/// than like a fault, and no amount of looking at fifteen-pixel figures settles it. The dash lies
+	/// flat in the ground plane on purpose - it is the one thing here that should NOT face the camera,
+	/// because its whole job is to show a direction in the world.
+	/// </para>
+	/// </summary>
+	internal static bool DebugFacing { get; set; }
+
+	/// <summary>Enough colours to tell the fourteen kinds of sprite apart at a glance - see <see cref="DebugFacing"/>.</summary>
+	private static readonly uint[] DebugColours =
+	[
+		0xff4fc3f7, // 0 kids
+		0xff4fc3f7, // 1 kidsheads
+		0xffba68c8, // 2 costumes
+		0xffba68c8, // 3 costumeheads
+		0xffffd54f, // 4 entertainers
+		0xff81c784, // 5 handymen
+		0xffff8a65, // 6 mechanics
+		0xffe57373, // 7 guards
+		0xffffffff, // 8 researchers
+	];
 
 	/// <summary>
 	/// Which folder of <c>esprites.wad</c> holds a kind of sprite. The executable builds this table by
@@ -114,16 +148,18 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		foreach ( var sprite in park.Sprites )
 		{
-			if ( byPerson.ContainsKey( sprite.Slot ) )
-				_sprites.Add( sprite );
+			if ( byPerson.TryGetValue( sprite.Slot, out var person ) )
+				_people.Add( (person, sprite) );
 		}
+
+		Current = this;
 
 		// Only the banks those sprites actually wear. Loading every person bank in the archive would be
 		// 5,316 pictures and an atlas 13,885 pixels tall, past what a good many devices will allocate at
 		// all; the shipped park wears nine banks and comes to well under two thousand.
 		Load( themeName, park );
 
-		if ( _sprites.Count > 0 && _atlas != null )
+		if ( _people.Count > 0 && _atlas != null )
 			Build();
 	}
 
@@ -137,7 +173,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		var pictures = new List<SpritePicture>();
 		var placed = new List<(int Type, int Bank, int First, int Count, SpriteBankFile File)>();
 
-		foreach ( var key in _sprites.Select( sprite => (sprite.Type, Bank: sprite.Bank + sprite.BankOffset) ).Distinct() )
+		foreach ( var key in _people.Select( p => (p.Sprite.Type, Bank: p.Sprite.Bank + p.Sprite.BankOffset) ).Distinct() )
 		{
 			var folder = FolderFor( key.Type, themeName );
 
@@ -171,7 +207,13 @@ public sealed class ParkGuestSprites : ModelEntity
 		if ( pictures.Count == 0 )
 			return;
 
+		// A small white square for the debug dash, the way ScreenParticles carries one for effects
+		// with no frames of their own: it makes solid-colour geometry possible without a second
+		// material or a shader that can do without a texture.
+		pictures.Add( new SpritePicture( 4, 4, 2, 2, [.. Enumerable.Repeat( (byte)255, 4 * 4 * 4 )] ) );
+
 		_atlas = BuildAtlas( pictures, out var regions );
+		_plain = regions[^1];
 
 		foreach ( var (type, bank, first, count, file) in placed )
 			_banks[(type, bank)] = new Loaded( file, regions[first..(first + count)] );
@@ -184,11 +226,14 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// </summary>
 	private void Build()
 	{
-		_vertices = new Vertex[_sprites.Count * 4];
+		// Two quads a person: the sprite, and the debug dash that is usually collapsed to nothing.
+		var quads = _people.Count * 2;
 
-		var indices = new uint[_sprites.Count * 6];
+		_vertices = new Vertex[quads * 4];
 
-		for ( uint i = 0; i < _sprites.Count; ++i )
+		var indices = new uint[quads * 6];
+
+		for ( uint i = 0; i < quads; ++i )
 		{
 			var at = i * 6;
 			indices[at] = i * 4;
@@ -273,7 +318,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		var field = ParkGround.Current?.Heightfield;
 		var used = 0;
 
-		foreach ( var sprite in _sprites )
+		foreach ( var (person, sprite) in _people )
 		{
 			if ( !_banks.TryGetValue( (sprite.Type, sprite.Bank + sprite.BankOffset), out var loaded ) )
 				continue;
@@ -292,6 +337,9 @@ public sealed class ParkGuestSprites : ModelEntity
 			var centre = new Vector3( sprite.X, sprite.Y, ground + sprite.Height );
 
 			WriteQuad( used++, centre, picture, mirrored, sprite.Alpha );
+
+			if ( DebugFacing && _plain is { } plain )
+				WriteGroundDash( used++, centre, person, sprite.Type, plain );
 		}
 
 		for ( int i = used; i < _uploaded; ++i )
@@ -391,6 +439,58 @@ public sealed class ParkGuestSprites : ModelEntity
 			=> _vertices[vertex] = new Vertex( position, new Vector2( u, w ) ) { MatFlags = colour };
 	}
 
+	/// <summary>
+	/// A flat dash on the ground pointing the way a person faces, coloured by their kind. For the debug
+	/// console only - see <see cref="DebugFacing"/>.
+	///
+	/// <para>
+	/// <b>Which way is zero has NOT been established.</b> The angle is an eleven-bit turn and this reads
+	/// it as a bearing whose zero runs along +Y, turning toward +X. That is a convention chosen here, not
+	/// a measurement: nothing yet says where the original's zero points. If every dash in the park is
+	/// wrong by the same amount, that is the answer this was drawn to show.
+	/// </para>
+	/// </summary>
+	private void WriteGroundDash( int index, Vector3 feet, ParkWorld.Person person, int type, Region plain )
+	{
+		if ( index < 0 || (index * 4) + 3 >= _vertices.Length )
+			return;
+
+		var turn = person.Angle / 2048f * MathF.Tau;
+		var along = new Vector3( MathF.Sin( turn ), MathF.Cos( turn ), 0f );
+		var side = along.Cross( Vector3.Up );
+
+		if ( side.LengthSquared < 0.000001f )
+		{
+			Collapse( index );
+			return;
+		}
+
+		side = side.Normal * 0.4f;
+
+		// Just clear of the ground, or it fights the terrain it is drawn on.
+		var start = feet + new Vector3( 0f, 0f, 0.15f );
+		var end = start + (along * 4f);
+
+		var colour = DebugColours[Math.Clamp( type, 0, DebugColours.Length - 1 )];
+
+		// The MIDDLE of the white square, not its corner. Every region in the atlas is packed with
+		// clear pixels around it so the smaller mip levels of one picture cannot bleed into the next;
+		// sampling exactly on a region's edge blends with that padding instead, which drew these
+		// dashes as dark grey streaks rather than in the colour asked for.
+		var u = (plain.Left + plain.Right) * 0.5f;
+		var w = (plain.Top + plain.Bottom) * 0.5f;
+
+		var v = index * 4;
+
+		Corner( v, start - side );
+		Corner( v + 1, start + side );
+		Corner( v + 2, end + side );
+		Corner( v + 3, end - side );
+
+		void Corner( int vertex, Vector3 position )
+			=> _vertices[vertex] = new Vertex( position, new Vector2( u, w ) ) { MatFlags = colour };
+	}
+
 	/// <summary>Shrinks a quad to a point, which rasterises to nothing.</summary>
 	private void Collapse( int index )
 	{
@@ -451,7 +551,26 @@ public sealed class ParkGuestSprites : ModelEntity
 	{
 		base.OnDelete();
 
+		if ( Current == this )
+			Current = null;
+
 		_atlas?.Delete();
 		_atlas = null;
+	}
+
+	/// <summary>
+	/// Every person in the park, one line each, for the debug console's <c>guests</c> command. This is
+	/// what a label over each head would have said, without needing a world-to-screen projection that
+	/// does not exist in this engine.
+	/// </summary>
+	internal IEnumerable<string> Census()
+	{
+		foreach ( var (person, sprite) in _people )
+		{
+			yield return $"thing {person.ThingId,2} model {person.Model} " +
+				$"cell ({person.CellX},{person.CellY}) slot {sprite.Slot,2} " +
+				$"type {sprite.Type} bank {sprite.Bank}+{sprite.BankOffset} set {sprite.Set} " +
+				$"frame {sprite.Frame} facing {person.Facing} (angle {person.Angle})";
+		}
 	}
 }

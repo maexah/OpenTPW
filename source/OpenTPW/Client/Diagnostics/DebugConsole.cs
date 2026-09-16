@@ -12,8 +12,9 @@ namespace OpenTPW;
 /// To remove entirely: delete this file, the one call site in Level.Update(), Time.Paused and Time.StepFrames, and
 /// the members marked as being for it - LobbyCameraMode's DebugOrbit, DebugSelect and DebugSettle; LobbyWeather's
 /// Current, DebugRain, DebugBolt and DebugStrike; LobbyAudio's Muted, State and DebugPlaceSound; LobbyFlyer's DebugClosestApproach
-/// and DebugClosestSolid; Lightning's DebugAxisDistance and DebugOpacity; the advisor's Say and State; and
-/// Game's RequestLobbyReload.
+/// and DebugClosestSolid; Lightning's DebugAxisDistance and DebugOpacity; the advisor's Say and State;
+/// Game's RequestLobbyReload; and ParkGuestSprites' Current, DebugFacing, Census and WriteGroundDash
+/// (with the white square Load appends to the atlas for it, and the second quad a person Build reserves).
 ///
 /// Engine and content: neither. It drives and reads both, and nothing else depends on it.
 ///
@@ -333,6 +334,34 @@ public static class DebugConsole
 			case "lobby":
 				Game.RequestLobbyReload();
 				Reply( "returning to the lobby" );
+				break;
+
+			// What a label over each person's head would have said. This engine has no world-to-screen
+			// projection and every font it owns draws in the interface's own virtual screen, so a
+			// printed census is both cheaper and easier to read than text pinned over a 15-pixel figure.
+			case "guests":
+				if ( ParkGuestSprites.Current is not { } guests )
+				{
+					Reply( "guests: none - a park has to be loaded" );
+					break;
+				}
+
+				var census = guests.Census().ToArray();
+				Reply( $"guests {census.Length}" );
+
+				foreach ( var person in census )
+					Reply( "  " + person );
+
+				break;
+
+			// A dash on the ground under each person, pointing the way they face and coloured by kind.
+			// Toggles, or takes 0/1, as `mute` does.
+			case "facing":
+				ParkGuestSprites.DebugFacing = parts.Length > 1
+					? Argument( 1 ) != 0f
+					: !ParkGuestSprites.DebugFacing;
+
+				Reply( $"facing {(ParkGuestSprites.DebugFacing ? "on" : "off")}" );
 				break;
 
 			// Where the park camera is, in world units and in grid cells - the two coordinate systems
