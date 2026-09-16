@@ -85,7 +85,8 @@ public sealed class ParkWorld
 	/// </para>
 	/// </summary>
 	public readonly record struct Person(
-		int ThingId, int Model, int RawX, int RawY, int SpriteSlot, int Angle, GuestState? Guest )
+		int ThingId, int Model, int RawX, int RawY, int SpriteSlot, int Angle,
+		NavigatorState Navigator, GuestState? Guest )
 	{
 		/// <inheritdoc cref="CatalogueObject.CellX"/>
 		public int CellX => RawX >> 8;
@@ -150,6 +151,88 @@ public sealed class ParkWorld
 
 		/// <summary>How many kinds of guest the balance file describes, as <c>PeepTypes[0..7]</c>.</summary>
 		public const int PersonTypes = 8;
+	}
+
+	/// <summary>
+	/// Where a person is going and how they are getting there: the navigator's own saved state.
+	///
+	/// <para>
+	/// <b>Every person has one</b>, staff included - the person base reads this block for all six models,
+	/// which is why it sits here rather than inside <see cref="GuestState"/>. It is 177 bytes beginning at
+	/// <c>+43</c>, and like every other block its fields are written in <b>alphabetical order by name</b>.
+	/// </para>
+	/// <para>
+	/// <b>The numbers are 16.16 fixed point, not floats</b> - <see cref="One"/> is 1.0. A position is
+	/// therefore in 65536ths of a map cell, which is 256 times finer than the <c>mX</c>/<c>mY</c> every
+	/// thing carries; the engine reaches those by shifting this right by eight, and that is exactly the
+	/// check <see cref="X"/> is worth reading for.
+	/// </para>
+	/// <para>
+	/// <b>Nine of the block's fields are deliberately not read, and the reasons are measurements rather
+	/// than taste.</b> <c>force</c> and <c>formation_pos</c> are <c>(0,0)</c> on all eighteen people in the
+	/// shipped park - they are scratch the steering loop rebuilds every step. <c>local_xaxis</c> and
+	/// <c>local_yaxis</c> are a near-unit vector that tracks the normalised velocity, so they are derived
+	/// rather than independent. The five remaining <c>path_*</c> distances carry no unit anything has
+	/// pinned. And <c>subpath_buffer[]</c>/<c>subpath_dist[]</c> are read by nothing here because their
+	/// per-entry meaning is <i>not settled</i>: the unused slots hold <c>0xCDCDCDCD</c>, the uninitialised
+	/// fill, saved verbatim - and the first slot is garbage on one person and a real distance on another
+	/// with the same buffer count. Reading them would mean inventing a rule the data does not support.
+	/// </para>
+	/// </summary>
+	public readonly record struct NavigatorState(
+		int X, int Y, int VelocityX, int VelocityY, int TargetX, int TargetY,
+		int Mass, int Radius, int MaxForce, int MaxSpeed,
+		int NavMode, int CantReachDest, bool PathFinished,
+		int PathCount, int PathTotalCount, int PathBufferCount, int StuckBits )
+	{
+		/// <summary>What 1.0 is in the fixed point every value here uses - one whole map cell.</summary>
+		public const int One = 65536;
+
+		/// <summary>
+		/// How many waypoints the navigator can hold at once. The steering object's constructor builds the
+		/// array as five elements of eight bytes, which is where this comes from rather than from the
+		/// save.
+		/// </summary>
+		public const int SubpathSlots = 5;
+
+		/// <summary>
+		/// The mass the constructor gives every steering object, and the value all eighteen people in the
+		/// shipped park still carry. The steering loop divides the summed force by a literal <c>1.0</c>
+		/// rather than by this field, so nothing has ever been seen to change it.
+		/// </summary>
+		public const int DefaultMass = One;
+
+		/// <summary>
+		/// A person's personal space, <c>0.2</c> of a cell - the constructor's value, and again the one all
+		/// eighteen still carry. The separation behaviour and the arrival tolerance are both measured in
+		/// it.
+		/// </summary>
+		public const int DefaultRadius = One / 5;
+
+		/// <summary>Where the navigator thinks it is, in cells.</summary>
+		public float CellX => X / (float)One;
+
+		/// <inheritdoc cref="CellX"/>
+		public float CellY => Y / (float)One;
+
+		/// <summary>
+		/// The <c>mX</c> this position corresponds to - the engine's own conversion, which is a shift
+		/// rather than a division. Reproducing the <c>mX</c> the save separately stores is what proves this
+		/// block is being read in the right place at all.
+		/// </summary>
+		public int RawX => (X >> 8) & 0xffff;
+
+		/// <inheritdoc cref="RawX"/>
+		public int RawY => (Y >> 8) & 0xffff;
+
+		/// <summary>
+		/// How fast this person is actually travelling, in cells. The steering loop clamps it to
+		/// <see cref="MaxSpeed"/>, and most people in the shipped park are at that cap.
+		/// </summary>
+		public float Speed => MathF.Sqrt( (float)VelocityX * VelocityX + (float)VelocityY * VelocityY ) / One;
+
+		/// <summary>Whether the navigator has given up on reaching where it was sent.</summary>
+		public bool Stuck => CantReachDest != 0;
 	}
 
 	/// <summary>Every person the walk found, in the order the file lists them.</summary>
@@ -666,7 +749,48 @@ public sealed class ParkWorld
 			RawY: ReadUInt16At( start + 10 ),           // mY
 			SpriteSlot: ReadInt32At( start + 0x10 ),    // mSpriteScript
 			Angle: ReadUInt16At( start + 0xf2 ),        // mSpriteAngle
+			Navigator: ReadNavigator( start ),          // every person has one, staff included
 			Guest: model == GuestModel ? ReadGuest( start ) : null );
+
+	/// <summary>
+	/// The navigator's block, which begins at <c>+43</c> - after the eight-byte thing head and the
+	/// thirty-five bytes of person base that precede it - and runs 177 bytes.
+	///
+	/// <para>
+	/// <b>Its place is fixed by two anchors that were already being read before it existed</b>, one either
+	/// side. <c>mX</c> and <c>mY</c> sit at <c>+8</c> and <c>+10</c>, ahead of it; <c>mSpriteAngle</c> sits
+	/// at <c>+242</c>, which is only where it is if this block is exactly 177 bytes long. So a block put in
+	/// the wrong place, or given the wrong size, breaks something already under test.
+	/// </para>
+	/// <para>
+	/// Each offset below is the sum of the sizes before it, and every size is stated outright by the
+	/// original's own write branch. The order is alphabetical, which is what puts <c>mass</c> between
+	/// <c>local_yaxis</c> and <c>max_force</c>, <c>position</c> between <c>path_total_dist</c> and
+	/// <c>radius</c>, and <c>velocity</c> after the subpath array. Those three carry no name in the binary
+	/// and are named here because the slot, the constructor and the steering loop all agree: the
+	/// constructor writes <c>1.0</c>, <c>0.2</c>, <c>0.4</c> and <c>0.2</c> to mass, radius, max force and
+	/// max speed at exactly these places, and the shipped park still holds the first two on all eighteen.
+	/// </para>
+	/// </summary>
+	private NavigatorState ReadNavigator( int start )
+		=> new(
+			X: ReadInt32At( start + 140 ),              // position, 65536ths of a cell
+			Y: ReadInt32At( start + 144 ),
+			VelocityX: ReadInt32At( start + 212 ),      // velocity, clamped to max_speed
+			VelocityY: ReadInt32At( start + 216 ),
+			TargetX: ReadInt32At( start + 120 ),        // path_target_pos
+			TargetY: ReadInt32At( start + 124 ),
+			Mass: ReadInt32At( start + 75 ),
+			Radius: ReadInt32At( start + 148 ),
+			MaxForce: ReadInt32At( start + 79 ),
+			MaxSpeed: ReadInt32At( start + 83 ),
+			NavMode: ReadInt32At( start + 91 ),
+			CantReachDest: ReadInt32At( start + 87 ),   // mCantReachDest
+			PathFinished: ReadByteAt( start + 103 ) != 0,
+			PathCount: ReadInt32At( start + 99 ),       // the cursor into the waypoints
+			PathTotalCount: ReadInt32At( start + 132 ),
+			PathBufferCount: ReadInt32At( start + 95 ),
+			StuckBits: ReadInt32At( start + 108 ) );    // path_stuck_buffer
 
 	/// <summary>
 	/// A guest's own block, which begins at <c>+398</c> - after the eight-byte thing head and the
