@@ -552,11 +552,48 @@ public sealed class LobbyModel
 		];
 	}
 
-	private static AnimationFile[] LoadAnimations( string modelPath )
+	/// <summary>
+	/// The clips a model's M role ships: the numbered run first, and the bare <c>{stem}M.md2</c> only
+	/// where that run found nothing at all.
+	///
+	/// <para>
+	/// <b>The bare file is not a stand-in for a missing clip - it is the other way the same role is
+	/// shipped</b>, and the engine reads both. <c>FUN_00461f10</c> is the loader that probes a role, which
+	/// its own two format strings settle: <c>'%s%s%c%d.md2'</c> at <c>0x004623b3</c> for the numbered run
+	/// and <c>'%s%s%c.md2'</c> at <c>0x004623df</c> for the bare file. <b>197 of the game's 445 base models
+	/// ship only the bare one</b>, and every one of them animated nothing here until this.
+	/// </para>
+	///
+	/// <para>
+	/// <b>Only where the numbered run came back empty</b>, because one archive in the game separates the
+	/// two readings: <c>jungle/mamfount</c> ships <c>mamfountm.md2</c> <i>and</i> <c>mamfountm1/m2.md2</c>,
+	/// and the engine loads the numbered pair and never reaches the bare file. Taking both would give it a
+	/// third clip the original never plays. <see cref="RideAnimations"/> reads a role under exactly this
+	/// rule already.
+	/// </para>
+	///
+	/// <para>
+	/// <b>These still go through <see cref="AnimationFile.TryLoad"/></b>, unlike the clips
+	/// <see cref="RideAnimations"/> reads straight, and that is measured rather than assumed: of the 197
+	/// bare-only clips, <b>not one</b> carries position and visibility alone, so the check that rejects
+	/// those never fires here. 160 carry a rotation, morph or UV track, and the remaining 37 are empty -
+	/// no track of any kind - so they load and move nothing, the same shape as the two <c>lights.RSE</c>
+	/// clips that declare ten frames and drive nothing.
+	/// </para>
+	/// </summary>
+	/// <remarks>
+	/// Internal rather than private only so that it can be tested: a <see cref="LobbyModel"/> cannot be
+	/// built without a graphics device, and asserting the shipped files instead would pass whether or not
+	/// the fallback below is there at all.
+	/// </remarks>
+	internal static AnimationFile[] LoadAnimations( string modelPath )
 	{
 		var withoutExtension = modelPath[..modelPath.LastIndexOf( '.' )];
 
 		var animations = new List<AnimationFile>();
+
+		// Stopping at the first gap is what the engine does, which makes a gap invisible rather than
+		// skipped. No shipped archive has one.
 		for ( int suffix = 1; ; ++suffix )
 		{
 			if ( !AnimationFile.TryLoad( $"{withoutExtension}M{suffix}.md2", out var loaded ) || loaded == null )
@@ -564,6 +601,10 @@ public sealed class LobbyModel
 
 			animations.Add( loaded );
 		}
+
+		if ( animations.Count == 0
+			&& AnimationFile.TryLoad( $"{withoutExtension}M.md2", out var bare ) && bare != null )
+			animations.Add( bare );
 
 		return [.. animations];
 	}
