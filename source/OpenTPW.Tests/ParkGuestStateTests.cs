@@ -1,0 +1,192 @@
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.IO;
+using System.Linq;
+
+namespace OpenTPW.Tests;
+
+/// <summary>
+/// What Lost Kingdom's thirteen guests were doing when the park was saved. These read real game files and
+/// are skipped where there is no installation: see <see cref="GameData"/>.
+///
+/// <para>
+/// A guest's own block is reached by summing the sizes of every field before it, so nothing in it can be
+/// found by searching and a map that is one byte out still produces a full set of plausible numbers. That
+/// is what these tests are for, and it is why they pin values rather than ranges: the whole table below
+/// was measured from this save before any of it was written into a reader, and each row has to come back
+/// exactly.
+/// </para>
+/// </summary>
+[TestClass]
+public class ParkGuestStateTests
+{
+	private BaseFileSystem data = null!;
+
+	[TestInitialize]
+	public void MountTheGame() => data = GameData.Required();
+
+	private const string ShippedPark = "levels/jungle/Easymode.TPWI";
+
+	/// <summary>
+	/// Through a stream of this test's own bytes rather than the global file system, which belongs to a
+	/// running game - the same rule the other park tests follow.
+	/// </summary>
+	private ParkWorld World()
+	{
+		using var stream = new MemoryStream( data.ReadAllBytes( ShippedPark ) );
+		return new ParkWorld( new SaveReader( stream ).ReadFile() );
+	}
+
+	private ParkWorld.Person[] Guests( ParkWorld world ) =>
+		[.. world.People.Where( person => person.Guest != null )];
+
+	/// <summary>
+	/// Every guest in the park, field by field.
+	///
+	/// <para>
+	/// The thing ids are pinned in file order as well as by value, because the record prefix holds the id
+	/// of the <i>next</i> thing rather than its own and reading it the other way round is off by one
+	/// everywhere while still looking entirely plausible - the mistake that once made the gate come out as
+	/// the traffic lights.
+	/// </para>
+	/// <para>
+	/// Cash is the row worth looking at twice. It is not a constant and not a sequence: thirteen guests
+	/// carry eleven different amounts, each drawn when that guest was made from the starting money of
+	/// their kind. What ties those amounts to the kinds in the third column is the balance file, which
+	/// this reader knows nothing about, and which is checked against them separately.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EveryGuestCarriesTheStateTheSaveGaveThem()
+	{
+		var expected = new (int ThingId, int State, int PersonType, int Cash, int ExitLevel,
+			float Thirst, float Hunger, float Toilet)[]
+		{
+			(42, 2, 5, 684, 142, 36, 18, 13),
+			(41, 5, 7, 510,  98, 13, 25, 15),
+			(40, 5, 2, 654,  57, 12, 61, 24),
+			(39, 2, 6, 340,  40, 35, 40,  3),
+			(38, 5, 0, 306,  55, 17, 18, 27),
+			(37, 5, 5, 570,  45, 13,  3, 10),
+			(36, 5, 1, 450, 121, 38, 22, 12),
+			(35, 2, 7, 550,  94, 10,  6,  5),
+			(34, 5, 3, 749, 112,  3,  7,  3),
+			(33, 3, 1, 535,  70, 18, 34, 19),
+			(32, 5, 6, 352,  54, 58, 63, 14),
+			(31, 2, 1, 435,  92, 35, 11,  3),
+			(29, 2, 2, 570, 148, 39,  1, 20)
+		};
+
+		var guests = Guests( World() );
+
+		Assert.AreEqual( expected.Length, guests.Length, "guests in the park" );
+
+		CollectionAssert.AreEqual( expected.Select( row => row.ThingId ).ToArray(),
+			guests.Select( guest => guest.ThingId ).ToArray(),
+			"the guests, by thing id, in the order the file lists them" );
+
+		for ( var i = 0; i < expected.Length; ++i )
+		{
+			var row = expected[i];
+			var guest = guests[i].Guest!.Value;
+
+			Assert.AreEqual( row.State, guest.State, $"guest {row.ThingId} state" );
+			Assert.AreEqual( row.PersonType, guest.PersonType, $"guest {row.ThingId} kind" );
+			Assert.AreEqual( row.Cash, guest.Cash, $"guest {row.ThingId} cash" );
+			Assert.AreEqual( row.ExitLevel, guest.ExitLevel, $"guest {row.ThingId} exit level" );
+			Assert.AreEqual( row.Thirst, guest.Thirst, $"guest {row.ThingId} thirst" );
+			Assert.AreEqual( row.Hunger, guest.Hunger, $"guest {row.ThingId} hunger" );
+			Assert.AreEqual( row.Toilet, guest.Toilet, $"guest {row.ThingId} toilet" );
+		}
+	}
+
+	/// <summary>
+	/// The park is saved a moment after it opened, and every guest says so the same way.
+	///
+	/// <para>
+	/// <b>Why a plain range check would be worthless here, and this is the part worth keeping.</b> The
+	/// needs are floats and the obvious test is <c>0 &lt;= need &lt;= 100</c> - but a small integer read
+	/// as a float is a denormal of about <c>1e-43</c>, which passes that check comfortably. A reader
+	/// pointed a few bytes off the real block therefore still produces needs that look perfectly legal.
+	/// What does not survive being wrong is a value that is <i>specific</i>: happiness being exactly the
+	/// 50 a guest is constructed with, a saved state of exactly 6, and needs that are whole numbers
+	/// rather than merely small ones.
+	/// </para>
+	/// <para>
+	/// The last two assertions are the anti-vacuity guard. Illness, litter, destination and queue
+	/// position are all zero on all thirteen, which is what arriving should look like - but a column of
+	/// zeros agrees with a misread block just as readily, so the needs that are <i>not</i> uniform have
+	/// to be seen to vary.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EveryGuestHasJustArrivedAndNoneHasChosenAnything()
+	{
+		var guests = Guests( World() );
+
+		foreach ( var person in guests )
+		{
+			var guest = person.Guest!.Value;
+			var where = $"guest {person.ThingId}";
+
+			Assert.AreEqual( 50f, guest.Happiness, $"{where} should carry the happiness a guest is made with" );
+			Assert.AreEqual( ParkWorld.GuestState.Deciding, guest.SavedState,
+				$"{where} should have the state a guest is constructed in saved behind them" );
+
+			CollectionAssert.Contains( new[] { 2, 3, 5 }, guest.State,
+				$"{where} is in state {guest.State}, and a park this new should hold only guests heading "
+				+ "for the gate, waiting for it to open, or coming through it" );
+
+			Assert.IsTrue( guest.PersonType is >= 0 and < ParkWorld.GuestState.PersonTypes,
+				$"{where} is kind {guest.PersonType}, which is not one the balance file describes" );
+
+			Assert.AreEqual( 0f, guest.Illness, $"{where} illness" );
+			Assert.AreEqual( 0f, guest.Litter, $"{where} litter carried" );
+			Assert.AreEqual( 0, guest.MajorDest, $"{where} should not have chosen anywhere to go yet" );
+			Assert.AreEqual( 0, guest.QueuePos, $"{where} should not be standing in a queue" );
+
+			foreach ( var (need, name) in new[]
+			{
+				(guest.Happiness, "happiness"), (guest.Thirst, "thirst"), (guest.Hunger, "hunger"),
+				(guest.Toilet, "toilet"), (guest.Illness, "illness"), (guest.Litter, "litter")
+			} )
+			{
+				Assert.IsTrue( need is >= 0f and <= 100f, $"{where} {name} is {need}, outside 0..100" );
+				Assert.AreEqual( MathF.Round( need ), need,
+					$"{where} {name} is {need}, which is not the whole number every need in this save is - "
+					+ "a fractional one means the block is being read at the wrong offset" );
+			}
+		}
+
+		Assert.IsTrue( guests.Select( person => person.Guest!.Value.Cash ).Distinct().Count() >= 8,
+			"the guests should not all be carrying the same money, or this test proves nothing" );
+		Assert.IsTrue( guests.Select( person => person.Guest!.Value.Thirst ).Distinct().Count() >= 8,
+			"the guests should not all be equally thirsty, or this test proves nothing" );
+	}
+
+	/// <summary>
+	/// Staff have no guest block, and this is the control for every test above.
+	///
+	/// <para>
+	/// The five kinds of staff share the same 390-byte person base and then carry a staff base and their
+	/// own fields where a guest carries theirs. Their records are close enough in size - 509 to 513
+	/// against a guest's 533 - that reading a guest's block off one would not run past the end and would
+	/// quietly return numbers. Nothing here reads them, so nothing here can misreport them.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void OnlyGuestsCarryAGuestBlock()
+	{
+		var world = World();
+
+		Assert.AreEqual( 18, world.People.Count, "people in the park" );
+		Assert.AreEqual( 13, world.People.Count( person => person.Guest != null ), "guests among them" );
+
+		foreach ( var person in world.People )
+		{
+			Assert.AreEqual( person.Model == 1, person.Guest != null,
+				$"thing {person.ThingId} is model {person.Model}, so it should "
+				+ (person.Model == 1 ? "carry" : "have no") + " guest block" );
+		}
+	}
+}

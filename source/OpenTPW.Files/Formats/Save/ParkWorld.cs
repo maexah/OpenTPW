@@ -79,8 +79,13 @@ public sealed class ParkWorld
 	/// other's records. A person's facing is <see cref="Angle"/>, somewhere else entirely, and is not in
 	/// degrees.
 	/// </para>
+	/// <para>
+	/// <see cref="Guest"/> is what they were doing, and only a guest has it: the five kinds of staff
+	/// carry a different block in the same place, and none of its fields is read here.
+	/// </para>
 	/// </summary>
-	public readonly record struct Person( int ThingId, int Model, int RawX, int RawY, int SpriteSlot, int Angle )
+	public readonly record struct Person(
+		int ThingId, int Model, int RawX, int RawY, int SpriteSlot, int Angle, GuestState? Guest )
 	{
 		/// <inheritdoc cref="CatalogueObject.CellX"/>
 		public int CellX => RawX >> 8;
@@ -101,6 +106,50 @@ public sealed class ParkWorld
 		/// </para>
 		/// </summary>
 		public int Facing => ((Angle - 0x380) & 0x7ff) >> 8;
+	}
+
+	/// <summary>
+	/// What a guest was doing when the park was saved: the behaviour they are in, the needs driving
+	/// them, and what they are carrying.
+	///
+	/// <para>
+	/// <b>These are not the offsets a decompiler shows, and the difference is not small.</b> A thing is
+	/// written field by field in the order its reader asks for them, so a field's place in the file is
+	/// the sum of the sizes before it and bears no relation to where it sits in memory: <c>mState</c> is
+	/// at <c>+0x220</c> in the running game and at <c>+505</c> in the record. Lifting the memory offsets
+	/// off the executable and using them as file offsets produces something that parses and is wrong.
+	/// </para>
+	/// <para>
+	/// <b>The six needs are floats the original clamps to 0..100</b>, and every one of them reads as a
+	/// whole number in the shipped park. Four are named by the game's own logging, which prints thirst,
+	/// hunger, toilet and illness by name while scoring which ride a guest will choose; litter is named
+	/// by the line it prints over it. The balance file agrees independently - its
+	/// <c>PeepInfo.DecisionVar…Weight</c> keys run Dist, Queue, Excitement, Thirst, Hunger, Toilet,
+	/// Illness, the same terms in the same order the scoring code multiplies them.
+	/// </para>
+	/// <para>
+	/// A seventh float sits between <see cref="Toilet"/> and the needs above it and is deliberately not
+	/// read: it is zero on every guest in the shipped park and nothing has named it, so reading it would
+	/// mean giving it a meaning it has not earned.
+	/// </para>
+	/// </summary>
+	public readonly record struct GuestState(
+		int State, int SavedState, int PersonType, int Cash, int ExitLevel,
+		float Happiness, float Thirst, float Hunger, float Toilet, float Illness, float Litter,
+		int MajorDest, int QueuePos, int PrankeryIndex )
+	{
+		/// <summary>
+		/// The behaviour a guest returns to after a one-off animation. A new guest is constructed with
+		/// this set to <see cref="Deciding"/>, which is why it reads 6 on every guest in a park that has
+		/// only just opened.
+		/// </summary>
+		public const int Deciding = 6;
+
+		/// <summary>How many behaviours there are, so a state outside the range reads as a bad record.</summary>
+		public const int States = 22;
+
+		/// <summary>How many kinds of guest the balance file describes, as <c>PeepTypes[0..7]</c>.</summary>
+		public const int PersonTypes = 8;
 	}
 
 	/// <summary>Every person the walk found, in the order the file lists them.</summary>
@@ -569,6 +618,14 @@ public sealed class ParkWorld
 	private static readonly int[] PersonModels = [1, 4, 5, 6, 7, 8];
 
 	/// <summary>
+	/// The model number of a guest, as opposed to a member of staff. They share the 390-byte person base
+	/// and then part company: a guest adds the 135 bytes <see cref="GuestState"/> reads, and each kind of
+	/// staff adds a 105-byte staff base and a handful of its own fields. That is where the size table's
+	/// numbers come from, and they close exactly - a guest is <c>8 + 390 + 135</c> = 533.
+	/// </summary>
+	private const int GuestModel = 1;
+
+	/// <summary>
 	/// The head of every thing, which is the same for all of them - the map base the original gives each
 	/// thing that has a place in the world - followed by what a catalogue object adds.
 	///
@@ -608,7 +665,36 @@ public sealed class ParkWorld
 			RawX: ReadUInt16At( start + 8 ),            // mX, in 256ths of a cell, as an object's is
 			RawY: ReadUInt16At( start + 10 ),           // mY
 			SpriteSlot: ReadInt32At( start + 0x10 ),    // mSpriteScript
-			Angle: ReadUInt16At( start + 0xf2 ) );      // mSpriteAngle
+			Angle: ReadUInt16At( start + 0xf2 ),        // mSpriteAngle
+			Guest: model == GuestModel ? ReadGuest( start ) : null );
+
+	/// <summary>
+	/// A guest's own block, which begins at <c>+398</c> - after the eight-byte thing head and the
+	/// 390-byte person base - and runs the 135 bytes that make a guest's record 533.
+	///
+	/// <para>
+	/// The order is the original's own, and it is <b>alphabetical by field name</b>, which is why
+	/// <c>mCash</c> precedes <c>mExitLevel</c> and <c>mState</c> comes after <c>mSavedState</c>. That is
+	/// worth knowing because it is what makes the offsets derivable at all: each one is the sum of the
+	/// sizes before it, and a field inserted anywhere shifts every field after it.
+	/// </para>
+	/// </summary>
+	private GuestState ReadGuest( int start )
+		=> new(
+			State: ReadInt32At( start + 505 ),          // mState
+			SavedState: ReadInt32At( start + 501 ),     // mSavedState
+			PersonType: ReadByteAt( start + 468 ),      // mPersonType, an index into PeepTypes[0..7]
+			Cash: ReadInt32At( start + 414 ),           // mCash
+			ExitLevel: ReadInt32At( start + 418 ),      // mExitLevel, the countdown to going home
+			Happiness: ReadSingleAt( start + 422 ),
+			Thirst: ReadSingleAt( start + 509 ),
+			Hunger: ReadSingleAt( start + 426 ),
+			Toilet: ReadSingleAt( start + 525 ),
+			Illness: ReadSingleAt( start + 529 ),
+			Litter: ReadSingleAt( start + 438 ),
+			MajorDest: ReadUInt16At( start + 442 ),     // mMajorDest - the thing they have chosen, or none
+			QueuePos: ReadByteAt( start + 494 ),        // mQueuePos
+			PrankeryIndex: ReadByteAt( start + 469 ) ); // mPrankeryIndex
 
 	/// <summary>
 	/// One live sprite: the picture a person is drawn as, and the state the park was saved in.
@@ -811,5 +897,13 @@ public sealed class ParkWorld
 			throw new InvalidDataException( $"a word at 0x{offset:x} runs past the end of the payload" );
 
 		return BitConverter.ToUInt16( _data, offset );
+	}
+
+	private int ReadByteAt( int offset )
+	{
+		if ( offset >= _data.Length )
+			throw new InvalidDataException( $"a byte at 0x{offset:x} runs past the end of the payload" );
+
+		return _data[offset];
 	}
 }
