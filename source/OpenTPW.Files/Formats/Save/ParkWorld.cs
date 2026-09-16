@@ -168,22 +168,31 @@ public sealed class ParkWorld
 	/// check <see cref="X"/> is worth reading for.
 	/// </para>
 	/// <para>
-	/// <b>Nine of the block's fields are deliberately not read, and the reasons are measurements rather
+	/// <b>Six of the block's fields are deliberately not read, and the reasons are measurements rather
 	/// than taste.</b> <c>force</c> and <c>formation_pos</c> are <c>(0,0)</c> on all eighteen people in the
 	/// shipped park - they are scratch the steering loop rebuilds every step. <c>local_xaxis</c> and
 	/// <c>local_yaxis</c> are a near-unit vector that tracks the normalised velocity, so they are derived
-	/// rather than independent. The five remaining <c>path_*</c> distances carry no unit anything has
-	/// pinned. And <c>subpath_buffer[]</c>/<c>subpath_dist[]</c> are read by nothing here because their
-	/// per-entry meaning is <i>not settled</i>: the unused slots hold <c>0xCDCDCDCD</c>, the uninitialised
-	/// fill, saved verbatim - and the first slot is garbage on one person and a real distance on another
-	/// with the same buffer count. Reading them would mean inventing a rule the data does not support.
+	/// rather than independent. <c>path_last_progress</c> and <c>path_timestamp</c> are understood - the
+	/// second is a map-change stamp rather than a clock, which is how a person notices the ground has been
+	/// rebuilt under them - but nothing here consumes either yet, and a field nothing reads is a field
+	/// that cannot be wrong in an interesting way.
+	/// </para>
+	/// <para>
+	/// <b><c>subpath_buffer[]</c> and <c>subpath_dist[]</c> are not read, and that one is about the data
+	/// rather than about scope.</b> The route is written into the array by <c>SetDest</c>, which fills
+	/// only <c>path_buffer_count - 1</c> of the distances - so a one-waypoint route writes none at all and
+	/// the slot keeps whatever the last route left there. That is why an unused entry reads
+	/// <c>0xCDCDCDCD</c>, the uninitialised fill, on one person and a stale real distance on another with
+	/// the same buffer count. Only <c>i &lt; path_buffer_count - 1</c> means anything, and reading the
+	/// array without carrying that rule would hand out numbers that look perfectly plausible.
 	/// </para>
 	/// </summary>
 	public readonly record struct NavigatorState(
 		int X, int Y, int VelocityX, int VelocityY, int TargetX, int TargetY,
 		int Mass, int Radius, int MaxForce, int MaxSpeed,
 		int NavMode, int CantReachDest, bool PathFinished,
-		int PathCount, int PathTotalCount, int PathBufferCount, int StuckBits )
+		int PathCount, int PathTotalCount, int PathBufferCount,
+		int BufferedDistance, int TailDistance, int TotalDistance, int StuckBits )
 	{
 		/// <summary>What 1.0 is in the fixed point every value here uses - one whole map cell.</summary>
 		public const int One = 65536;
@@ -790,7 +799,13 @@ public sealed class ParkWorld
 			PathCount: ReadInt32At( start + 99 ),       // the cursor into the waypoints
 			PathTotalCount: ReadInt32At( start + 132 ),
 			PathBufferCount: ReadInt32At( start + 95 ),
-			StuckBits: ReadInt32At( start + 108 ) );    // path_stuck_buffer
+			// The three distances are octagonal, in the same fixed point as everything else: the legs
+			// still ahead inside the buffer, the part of the route not yet loaded, and what the whole
+			// route measured when it was planned. Progress is one minus the first two over the third.
+			BufferedDistance: ReadInt32At( start + 112 ),   // path_subpath_dist
+			TailDistance: ReadInt32At( start + 116 ),       // path_tail_dist
+			TotalDistance: ReadInt32At( start + 136 ),      // path_total_dist
+			StuckBits: ReadInt32At( start + 108 ) );        // path_stuck_buffer
 
 	/// <summary>
 	/// A guest's own block, which begins at <c>+398</c> - after the eight-byte thing head and the

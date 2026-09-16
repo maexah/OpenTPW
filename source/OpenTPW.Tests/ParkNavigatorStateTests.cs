@@ -216,6 +216,55 @@ public class ParkNavigatorStateTests
 	}
 
 	/// <summary>
+	/// How long each person's route measured when it was planned, pinned as saved.
+	///
+	/// <para>
+	/// These are the three distances the navigator measures progress against, and they are octagonal
+	/// rather than straight-line: the metric is <c>ax + ay - min(ax, ay) / 2</c>. The totals below are
+	/// specific enough to be evidence on their own - eighteen different six-figure numbers that a reader
+	/// pointed a few bytes out could not reproduce.
+	/// </para>
+	/// <para>
+	/// <b>The other two assertions are not evidence, and are marked rather than dropped.</b> Every person
+	/// in this park has a tail distance of nothing, because no route here is longer than the navigator's
+	/// five slots, and a buffered distance of nothing, because the two people on a route with corners have
+	/// both already reached their last leg. A column of zeros agrees with a misread block just as readily
+	/// as with a correct one, so these say only that the shipped park is in the state it looks to be in.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EveryRouteIsAsLongAsTheSaveSaysItWas()
+	{
+		var expected = new (int ThingId, int TotalDistance)[]
+		{
+			(42, 545989), (41, 270172), (40, 317242), (39, 553109), (38, 306209), (37, 267587),
+			(36, 269625), (35, 623119), (34, 307220), (33, 511906), (32, 290140), (31, 510158),
+			(30, 170889), (29, 512409), (28, 128418), (27, 204458), (26, 194246), (25, 220769)
+		};
+
+		var people = World().People;
+
+		Assert.AreEqual( expected.Length, people.Count, "people in the park" );
+
+		for ( var i = 0; i < expected.Length; ++i )
+		{
+			var row = expected[i];
+			var nav = people[i].Navigator;
+
+			Assert.AreEqual( row.ThingId, people[i].ThingId, "the people, in the order the file lists them" );
+			Assert.AreEqual( row.TotalDistance, nav.TotalDistance, $"thing {row.ThingId} route length" );
+
+			Assert.AreEqual( 0, nav.TailDistance,
+				$"thing {row.ThingId} should have no unbuffered tail, its route fitting the five slots" );
+			Assert.AreEqual( 0, nav.BufferedDistance,
+				$"thing {row.ThingId} is on its last leg, so nothing should be left buffered ahead of it" );
+		}
+
+		Assert.AreEqual( expected.Length, expected.Select( row => row.TotalDistance ).Distinct().Count(),
+			"all eighteen route lengths should differ, or the column above is agreeing with itself" );
+	}
+
+	/// <summary>
 	/// Staff navigate exactly as guests do, and this is the control for the reader being on the person
 	/// base rather than on the guest block.
 	///
