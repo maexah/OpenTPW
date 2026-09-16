@@ -77,7 +77,15 @@ public static class MapStep
 		return (index & (MapSize - 1), index >> 7);
 	}
 
-	/// <summary>The cell a step in this direction arrives at.</summary>
+	/// <summary>
+	/// The cell a step in this direction arrives at.
+	///
+	/// <para>
+	/// These four agree with the executable's own step table at <c>0x007622b0</c>, which
+	/// <see cref="CellLine.StepFor"/> carries - a second source for a numbering that was otherwise known
+	/// only from the boundary guards.
+	/// </para>
+	/// </summary>
 	public static (int X, int Y) Beyond( int x, int y, StepDirection direction ) => direction switch
 	{
 		StepDirection.North => (x, y - 1),
