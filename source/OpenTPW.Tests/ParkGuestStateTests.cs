@@ -22,8 +22,12 @@ public class ParkGuestStateTests
 {
 	private BaseFileSystem data = null!;
 
+	/// <summary>
+	/// The mount is also handed to the global file system, because <see cref="ParkBalance"/> reads its
+	/// files through that rather than taking one - the arrangement <see cref="ParkWeatherTests"/> uses.
+	/// </summary>
 	[TestInitialize]
-	public void MountTheGame() => data = GameData.Required();
+	public void MountTheGame() => FileSystem = data = GameData.Required();
 
 	private const string ShippedPark = "levels/jungle/Easymode.TPWI";
 
@@ -188,5 +192,61 @@ public class ParkGuestStateTests
 				$"thing {person.ThingId} is model {person.Model}, so it should "
 				+ (person.Model == 1 ? "carry" : "have no") + " guest block" );
 		}
+	}
+
+	/// <summary>
+	/// The money a guest arrived with, against the money their kind is supposed to start with.
+	///
+	/// <para>
+	/// This is the strongest thing said about the guest block anywhere, because the two halves come from
+	/// places that know nothing about each other. <c>mCash</c> and <c>mPersonType</c> are offsets derived
+	/// by summing field sizes out of the executable; the amounts and the spread are text a developer
+	/// typed into a balance file. Neither was used to work out the other, so them agreeing thirteen times
+	/// out of thirteen cannot be an artefact of the offsets - if the block were being read a few bytes
+	/// out, the kind and the money would both be wrong and would have no reason to remain consistent.
+	/// </para>
+	/// <para>
+	/// The second loop is the control, and it is what stops the first from being a formality. The eight
+	/// bands overlap heavily, so a good many wrong pairings still land inside a band; what must not
+	/// happen is that <i>every</i> guest survives being matched to the wrong kind. If that ever became
+	/// true the check would have stopped discriminating, and this says so rather than passing quietly.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EachGuestsCashIsWithinTheirKindsBandInTheBalanceFile()
+	{
+		var balance = new ParkBalance( "jungle" );
+		var spread = balance.Int( "PeepInfo.StartingCashVarPc", -1 );
+
+		Assert.AreEqual( 15, spread, "the balance file's spread either way on a guest's starting money" );
+
+		var guests = Guests( World() );
+
+		bool Within( int cash, int type )
+		{
+			var start = balance.Int( $"PeepTypes[{type}].StartingCash", -1 );
+
+			Assert.IsTrue( start > 0, $"PeepTypes[{type}].StartingCash should be in the balance file" );
+
+			return cash >= start * (100 - spread) / 100f && cash <= start * (100 + spread) / 100f;
+		}
+
+		foreach ( var person in guests )
+		{
+			var guest = person.Guest!.Value;
+
+			Assert.IsTrue( Within( guest.Cash, guest.PersonType ),
+				$"guest {person.ThingId} is kind {guest.PersonType}, which starts with "
+				+ $"{balance.Int( $"PeepTypes[{guest.PersonType}].StartingCash", -1 )} give or take {spread}%, "
+				+ $"and they carry {guest.Cash}" );
+		}
+
+		var misfits = guests.Count( person =>
+			!Within( person.Guest!.Value.Cash,
+				(person.Guest!.Value.PersonType + 1) % ParkWorld.GuestState.PersonTypes ) );
+
+		Assert.IsTrue( misfits > 0,
+			"matching every guest to the next kind along should put at least one outside its band, "
+			+ "or the bands are too wide for this check to mean anything" );
 	}
 }
