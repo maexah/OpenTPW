@@ -15,7 +15,8 @@ public enum StepDirection
 /// they tried to cross &gt; 1 cell in one step"</i>.
 ///
 /// <para>
-/// <b>The edge test itself is not modelled, and is taken as a parameter instead.</b> The original asks
+/// <b>The edge test itself is taken as a parameter</b>, so that this stays geometry over cell numbers
+/// and nothing else; <see cref="CellEdge"/> is the real one. The original asks
 /// <c>FUN_004d8750(x, y, direction, context)</c> whether a particular side of a particular cell is
 /// closed, and most of that function compares the cell's type against a literal. Two cell fields decide
 /// the rest, read in two different ways: <c>mNeighbours</c> is <b>bit-tested</b>, and the test reports
@@ -25,15 +26,17 @@ public enum StepDirection
 /// more than one bit, and <c>mDirection</c> takes five and never carries two.
 /// </para>
 /// <para>
-/// <b>The predicate reads the bit for the side <i>opposite</i> the way it is going</b>, which is worth
-/// knowing before anyone writes one. Two measurements meet here. The numbering is fixed absolutely by
+/// <b>The bit is read from the cell being ENTERED, about the side facing the cell being left.</b> This
+/// paragraph used to say something else, so it is worth saying why. The numbering is fixed absolutely by
 /// the original's own boundary guards - it refuses <c>x == 0</c> going 3, <c>y == 0</c> going 0,
 /// <c>x == 0x7f</c> going 1 and <c>y == 0x7f</c> going 2 - so direction 0 is <c>-y</c>, 1 is <c>+x</c>,
-/// 2 is <c>+y</c> and 3 is <c>-x</c>. Separately, across the park's path cells the bit that actually
-/// tracks a <c>-y</c> neighbour is <c>0x01</c> and the one that tracks <c>+y</c> is <c>0x10</c>, which
-/// reproduces real adjacency 94.8% of the time against 75.3% for the opposite pairing. Yet asked about
-/// direction 0 the original tests <c>0x10</c>. Both cannot be the near side, and the reading that fits
-/// is that <c>mNeighbours</c> records which sides a cell may be entered <i>from</i>.
+/// 2 is <c>+y</c> and 3 is <c>-x</c>. Asked about direction 0 the original tests <c>0x10</c>, which is
+/// the <c>+y</c> bit; read as a question about the cell being <i>left</i> that is its far side, which is
+/// where "it consults the side opposite the way it is going" came from. It is not that: the disassembly
+/// loads the <b>destination</b> cell into <c>ECX</c> before the call, and the destination's <c>+y</c>
+/// side is precisely the side facing the source. <b>No measurement on this park can tell those two
+/// readings apart</b>, because <c>mNeighbours</c> is symmetric across all 65,024 of its adjacent pairs -
+/// both score identically, so only the disassembly settles it.
 /// </para>
 /// <para>
 /// <b>The names below are labels, and the axes are the definition.</b> The original names its directions
