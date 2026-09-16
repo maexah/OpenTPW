@@ -64,6 +64,16 @@ namespace OpenTPW;
 /// on screen can move. Whatever changes the lamps is not in those clips. That is measured, and it is also
 /// why the old suffix-matching loop was only ever visible on the gate.
 /// </para>
+///
+/// <para>
+/// <b>The gate half of that is three themes out of four rather than a rule.</b> Every theme ships its own
+/// <c>Gates.RSE</c> and all four differ; jungle, fantasy and hallow open on <c>TEST VAR_COMMAND</c> and idle,
+/// but <b>space opens with an unconditional <c>LOOPANIM_CH</c></b> before it reaches any test at all. Its gate
+/// holds still here regardless, and for a second reason worth knowing rather than relying on:
+/// <c>LOOPANIM_CH</c> is one of the opcodes this interpreter does not implement, so it is counted rather than
+/// obeyed, and implementing it would set that gate moving. The lights are the safe generalisation instead -
+/// <c>lights.RSE</c> is byte-identical across all four themes. See ParkFixedItemsTests, which pins both.
+/// </para>
 /// </summary>
 public sealed class ParkFixedItems : Entity
 {

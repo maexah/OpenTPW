@@ -182,9 +182,12 @@ public class ParkFixedItemsTests
 	/// hands a placed thing its own. No model and no graphics device are needed for this: a role is pure
 	/// data, which is what makes the two tests below possible at all.
 	/// </summary>
-	private RideScript Bound( string stem )
+	private RideScript Bound( string stem ) => BoundIn( "jungle", stem );
+
+	/// <summary>The same for a named theme, because all four ship their own gate script and they differ.</summary>
+	private RideScript BoundIn( string theme, string stem )
 	{
-		var directory = $"levels/jungle/features/{stem}";
+		var directory = $"levels/{theme}/features/{stem}";
 
 		using var stream = new MemoryStream( data.ReadAllBytes( $"{directory}/{stem}.RSE" ) );
 
@@ -332,6 +335,53 @@ public class ParkFixedItemsTests
 				clip.RotationTracks.Count + clip.PositionTracks.Count + clip.MorphTracks.Count
 					+ clip.UvTracks.Count + clip.VisibilityTracks.Count,
 				$"role 5 entry {entry} carries a track after all, so the lights could move" );
+		}
+	}
+
+	/// <summary>
+	/// Every theme's gate holds still, and <b>space's holds still for a different reason than the other
+	/// three</b> - which is why "the gate idles" is three themes out of four rather than a rule about gates.
+	///
+	/// <para>
+	/// All four themes ship their own <c>Gates.RSE</c> and all four differ. Jungle, fantasy and hallow open on
+	/// <c>TEST VAR_COMMAND</c> and cycle their dispatch loop, reaching no animation at all. Space opens with an
+	/// unconditional <c>LOOPANIM_CH</c> at word 2, before any test - and what keeps its gate still here is that
+	/// this interpreter does not implement that opcode, so it is counted rather than obeyed.
+	/// </para>
+	/// <para>
+	/// <b>That distinction is the whole point of the test.</b> Implementing <c>LOOPANIM_CH</c> would set one
+	/// park's gate moving with nothing having commanded it, and without this the only sign would be a gate
+	/// swinging in a theme nobody happened to be looking at. The unimplemented count is therefore asserted in
+	/// both directions, so this says which reason applies to which theme rather than merely that nothing moved.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EveryThemesGateHoldsStillAndSpacesForADifferentReason()
+	{
+		foreach ( var theme in new[] { "jungle", "fantasy", "hallow", "space" } )
+		{
+			var script = BoundIn( theme, "gates" );
+
+			for ( var turn = 0; turn < 200; ++turn )
+				script.Turn( turn * 31f );
+
+			Assert.IsTrue( script.Running, $"{theme}'s gate script stopped, which no shipped script should do" );
+
+			var channel = script.Animations!.Channel( 0 );
+
+			Assert.IsTrue( channel == null || channel.IsIdle,
+				$"{theme}'s gate played role {channel?.AnimID} entry {channel?.SubAnim} with nothing commanding it" );
+
+			if ( theme == "space" )
+			{
+				Assert.IsTrue( script.NotImplemented > 0,
+					"space's gate opens with LOOPANIM_CH, so this should be counting an instruction it cannot obey" );
+			}
+			else
+			{
+				Assert.AreEqual( 0, script.NotImplemented,
+					$"{theme}'s gate idles entirely on instructions this interpreter does implement" );
+			}
 		}
 	}
 }
