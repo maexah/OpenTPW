@@ -67,6 +67,7 @@ public sealed class ParkAdmission
 		AverageMultiplier = balance.Float( "PeepInfo.AveragePriceMultiplier", 1.25f );
 		ExpensiveMultiplier = balance.Float( "PeepInfo.ExpensivePriceMultiplier", 2f );
 		MediumHappinessChange = balance.Int( "PeepInfo.MediumHappinessChange", 15 );
+		BigHappinessChange = balance.Int( "PeepInfo.BigHappinessChange", 25 );
 
 		TicketBoothA = Cell( balance, "TicketBoothA" );
 		TicketBoothB = Cell( balance, "TicketBoothB" );
@@ -104,15 +105,27 @@ public sealed class ParkAdmission
 	/// How much happiness a guest gains or loses over the price - <c>PeepInfo.MediumHappinessChange</c>, 15.
 	///
 	/// <para>
-	/// <b>The one mood constant that lives here, and only because the admission states are the only things
-	/// that use it.</b> The balance file names three (<c>Small</c> 5, <c>Medium</c> 15, <c>Big</c> 25) and
-	/// the original picks between them by an argument to <c>FUN_004fe9c0</c> / <c>FUN_004fea70</c>; judging
-	/// the fee passes 1 on both the cheap and the expensive arm, which is this one. The other two are
-	/// deliberately absent rather than gathered up into a holder nothing yet reads - they belong wherever
-	/// the states that pass 0 and 2 end up living.
+	/// The balance file names three (<c>Small</c> 5, <c>Medium</c> 15, <c>Big</c> 25) and the original picks
+	/// between them by an argument to <c>FUN_004fe9c0</c> / <c>FUN_004fea70</c>; judging the fee passes 1 on
+	/// both the cheap and the expensive arm, which is this one.
 	/// </para>
 	/// </summary>
 	public int MediumHappinessChange { get; }
+
+	/// <summary>
+	/// The largest of the three mood changes - <c>PeepInfo.BigHappinessChange</c>, 25. Losing this is what
+	/// happens to a guest whose park shuts while they are deciding what to do (<c>FUN_004fec90</c> passes 2).
+	/// </summary>
+	/// <remarks>
+	/// <b>Two of the three now live here, and it is worth saying why they still do.</b> When only one was in
+	/// use, gathering all three into a holder of their own would have been a type invented for a single
+	/// reader. Two is not obviously better, but it is not worse either - and the third
+	/// (<c>SmallHappinessChange</c>, 5) is passed by the ride-choosing arm that is deliberately not built.
+	/// <b>When that arm lands, all three should move somewhere that is about a guest's mood rather than
+	/// about the price of coming in</b>; until then, adding a holder would be speculative and splitting them
+	/// across two homes would be worse than keeping them together in an awkward one.
+	/// </remarks>
+	public int BigHappinessChange { get; }
 
 	/// <summary>
 	/// The two cells in front of the gate where a guest stands to be charged - the balance file's

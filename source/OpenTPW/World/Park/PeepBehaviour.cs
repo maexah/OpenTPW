@@ -288,6 +288,30 @@ public sealed class PeepBehaviour
 
 				break;
 
+			// Choosing what to do next - FUN_004fec90, the hub a guest is CONSTRUCTED in and returns to
+			// whenever they finish anything. The seven guests standing in Lost Kingdom's archway are here.
+			case PeepState.Deciding:
+				Decide( peep, walk, tick );
+
+				break;
+
+			// Wandering about the park, and this one is answered inline in the original's own switch rather
+			// than by a handler - case 7 of FUN_005019f0, and it is five lines long.
+			//
+			// Arriving and giving up are treated alike, as they are for SteppingUpQueue: either way a guest
+			// takes a ONE IN FOUR chance of picking somewhere else to wander to and staying here, and
+			// otherwise drops back to Deciding. That loop is what keeps a park in motion.
+			case PeepState.Wandering:
+				if ( Walked( peep, walk, playing ) != WalkVerdict.Walking )
+				{
+					if ( (_random.Next() & (KeepWanderingShare - 1)) == 0 && SetRandomDest( peep, walk ) )
+						peep.SetState( PeepState.Wandering, tick, _random );
+					else
+						peep.SetState( PeepState.Deciding, tick, _random );
+				}
+
+				break;
+
 			// Walking about outside the park, which ends at the bus stop.
 			//
 			// The original picks one of two headings here depending on whether a bus is due, and takes the
@@ -534,5 +558,160 @@ public sealed class PeepBehaviour
 			PeepNavigator.WaypointCentre( cell.X ), PeepNavigator.WaypointCentre( cell.Y ) );
 
 		walk.PlanRoute();
+	}
+
+	/// <summary>
+	/// One turn in four is how often a guest who has finished wandering wanders again rather than stopping
+	/// to think - <c>rand &amp; 3</c> in case 7 of <c>FUN_005019f0</c>.
+	/// </summary>
+	public const int KeepWanderingShare = 4;
+
+	/// <summary>How many turns the original waits between a guest's decisions before it offers them a ride.</summary>
+	public const int ThinkingGap = 30;
+
+	/// <summary>
+	/// The four sides in the order the original tests them, which is <b>not</b> compass order.
+	/// <c>FUN_004f9490</c> reads the cell's connection bits as <c>0x10, 0x04, 0x01, 0x40</c>, and
+	/// <see cref="CellEdge.BitFor"/> - derived separately, from the map - gives those to North, West, South
+	/// and East. So slot and opposite slot differ by two, which is what makes the original's
+	/// "do not turn back" test <c>(slot + 2) &amp; 3</c> correct.
+	/// </summary>
+	private static readonly StepDirection[] SlotOrder =
+		[StepDirection.North, StepDirection.West, StepDirection.South, StepDirection.East];
+
+	/// <summary>
+	/// What a guest does when they finish anything - <c>FUN_004fec90</c>.
+	///
+	/// <para>
+	/// <b>One roll decides, and the original takes it once at the top.</b> A third of the time a guest
+	/// wanders somewhere, a third of the time they are offered a ride, and a third of the time they do
+	/// nothing at all and think again next turn.
+	/// </para>
+	/// <para>
+	/// <b>The ride arm is deliberately NOT built, and the reason is a whole subsystem rather than a
+	/// field.</b> <c>FUN_004fcb10</c> walks the world's object list and scores every candidate with
+	/// <c>FUN_004fcc30</c>, which wants the object's queue cell, its queue length, its price, whether it is
+	/// indoors while it rains, whether it is new, the guest's preferred excitement against the ride's, the
+	/// thirst and hunger a visit would relieve, and the guest's own history of the last four rides - all
+	/// weighted by the seven <c>PeepInfo.DecisionVar…Weight</c> constants. Every candidate must also be
+	/// open for business with room in its queue, and <b>nothing in this tree operates a ride</b>. So a
+	/// guest offered a ride here does nothing, which is what the original does too when it can find no
+	/// candidate worth more than nine.
+	/// </para>
+	/// <para>
+	/// <b>Two of the original's own conditions are absent because they read fields nothing here has
+	/// named.</b> The leave path is reached either when the park has shut or when two unidentified fields
+	/// (<c>+0x1bc</c> and the value behind a float conversion) say so; only the shut-park half is
+	/// reproduced, because guessing at the other would be inventing behaviour. The same goes for the
+	/// need-driven arms at the top of the function, which fire on a need this project does not yet score.
+	/// </para>
+	/// </summary>
+	private void Decide( Peep peep, PeepWalk walk, int tick )
+	{
+		if ( Admission is not { } admission )
+			return;
+
+		// A park that has shut under them: they lose heart badly and set off for a bus stop.
+		if ( ParkIsClosed )
+		{
+			peep.Happiness = Peep.Change( peep.Happiness, -admission.BigHappinessChange );
+
+			SendTo( peep, walk, EitherOf( admission.BusStopA, admission.BusStopB ) );
+			peep.SetState( PeepState.HeadingForExit, tick, _random );
+
+			return;
+		}
+
+		switch ( _random.Next() % 3 )
+		{
+			// Wander off somewhere reachable. Failing to find anywhere leaves them deciding again, which
+			// is the original's own answer - SetRandomDest reports it rather than throwing.
+			case 1:
+				if ( SetRandomDest( peep, walk ) )
+					peep.SetState( PeepState.Wandering, tick, _random );
+
+				peep.TimeStartedIdling = tick;
+
+				break;
+
+			// The ride arm - see the remarks. The gate in front of it is reproduced even though the arm is
+			// not, because the gate is what stops a guest being offered a ride every third turn for ever.
+			case 0:
+				if ( peep.TimeStartedIdling + ThinkingGap < tick )
+					peep.TimeStartedIdling = tick;
+
+				break;
+
+			// And a third of the time, nothing happens at all.
+			default:
+				break;
+		}
+	}
+
+	/// <summary>
+	/// Sends a guest to a random reachable cell next to the one they are standing on - the guest half of
+	/// <c>FUN_004f9490</c>, whose own log line is "Peep can't SetRandomDest anywhere".
+	///
+	/// <para>
+	/// <b>The destination is a random point INSIDE the cell rather than its centre</b>, and that is the
+	/// original's arithmetic rather than a choice: it masks a roll to <c>0x7f</c> and clamps it to 5..123
+	/// of the 256 sub-cell units, so a wandering guest always aims at the near half of the target cell. A
+	/// centre would have been tidier and would not be what the engine does.
+	/// </para>
+	/// <para>
+	/// <b>What is deliberately left out.</b> The staff arms - patrol areas, and the fallback that tries
+	/// five random cells within five of the guest before giving up - belong to the five person-kinds nothing
+	/// here simulates. The stranded bookkeeping is also absent: the original stamps a "do not try again
+	/// until" time and raises a thought bubble, and neither the stamp nor the thought system exists here, so
+	/// a guest who can reach nowhere simply stays where they are and is asked again.
+	/// </para>
+	/// </summary>
+	/// <returns>Whether somewhere was found and a route to it planned.</returns>
+	private bool SetRandomDest( Peep peep, PeepWalk walk )
+	{
+		var (x, y) = walk.Position.Cell;
+
+		// The four candidates, in the original's slot order, empty where that side is closed.
+		var candidates = new (int X, int Y)?[SlotOrder.Length];
+		var found = 0;
+
+		for ( var slot = 0; slot < SlotOrder.Length; ++slot )
+		{
+			if ( walk.Blocked( x, y, SlotOrder[slot] ) )
+				continue;
+
+			candidates[slot] = MapStep.Beyond( x, y, SlotOrder[slot] );
+			++found;
+		}
+
+		if ( found == 0 )
+			return false;
+
+		// Start at a random slot and take the first one open, which is how the original spreads guests
+		// across the ways out of a cell rather than always preferring north.
+		var first = _random.Next() & (SlotOrder.Length - 1);
+
+		for ( var step = 0; step < SlotOrder.Length; ++step )
+		{
+			var slot = (first + step) & (SlotOrder.Length - 1);
+
+			if ( candidates[slot] is not { } cell )
+				continue;
+
+			peep.Navigator.Target = new FixedVector( SomewhereIn( cell.X ), SomewhereIn( cell.Y ) );
+
+			return walk.PlanRoute();
+		}
+
+		return false;
+	}
+
+	/// <summary>The near edge of a cell plus a clamped roll - see <see cref="SetRandomDest"/>.</summary>
+	private int SomewhereIn( int cell )
+	{
+		var within = Math.Clamp( _random.Next() & 0x7f, 5, 0x7b );
+
+		// A cell is 256 of these sub-units and One is a whole cell, so a sub-unit is One / 256.
+		return (cell * PeepNavigator.One) + (within * (PeepNavigator.One / 256));
 	}
 }

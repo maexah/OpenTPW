@@ -113,8 +113,17 @@ public sealed class Peep
 	/// <summary>When the guest last began a one-off animation, so that its end can be noticed.</summary>
 	public int TimeOfLastSpotAnim { get; private set; }
 
-	/// <summary>When the guest last began standing about, which the decision state reads.</summary>
-	public int TimeStartedIdling { get; private set; }
+	/// <summary>
+	/// When the guest last began standing about, which the decision state reads - <c>mTimeStartedIdling</c>.
+	///
+	/// <para>
+	/// <b>Written by two states, not one</b>, which is why the setter is <c>internal</c> rather than
+	/// private: entering a queue stamps it (<see cref="SetState"/>), and <c>FUN_004fec90</c> stamps it again
+	/// each time a guest decides something, because the thirty-turn gate in front of choosing a ride is
+	/// measured from it.
+	/// </para>
+	/// </summary>
+	public int TimeStartedIdling { get; internal set; }
 
 	/// <summary>The animation the state they are in asked for as they entered it.</summary>
 	public PeepAnimation Animation { get; private set; } = PeepAnimation.None;
