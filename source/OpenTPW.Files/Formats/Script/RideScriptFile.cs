@@ -95,8 +95,16 @@ public sealed record RideInstruction( int Address, Opcode Opcode, IReadOnlyList<
 /// </para>
 ///
 /// <para>
-/// This reads a script; it does not run one. There is no ride runtime in the tree - see <c>Ride</c>
-/// and <c>RideVM</c>, neither of which currently works.
+/// This reads a script; it does not run one. <b>Something else does</b> - <c>RideScript</c>, in the game
+/// assembly, which carries 57 of the 106 instructions the opcode table declares and counts what it does
+/// not carry rather than guessing at it. Every ride script the game ships both reads here and runs there.
+/// </para>
+///
+/// <para>
+/// <b>Not to be confused with <c>Ride</c> and <c>RideVM</c>, which are a different pair and are dead.</b>
+/// <c>RideVM</c> is constructed in exactly one place - <c>Ride</c>'s own constructor - and <c>Ride</c> is
+/// constructed nowhere at all, so neither runs. This paragraph used to say "there is no ride runtime in
+/// the tree" and cite those two, which was right about them and wrong about the tree.
 /// </para>
 /// </summary>
 public sealed class RideScriptFile : BaseFormat

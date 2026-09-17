@@ -21,9 +21,14 @@
 /// </para>
 ///
 /// <para>
-/// It is also the only reader of <c>Input.Forward</c>, <c>Input.Right</c> and the
-/// <c>InputButton.RotateLeft</c> / <c>RotateRight</c> bindings, which is why those look wired up when in
-/// fact nothing else in the game touches them.
+/// <b>It is NOT the only reader of the camera bindings, and this paragraph claimed to be until
+/// 2026-09-17.</b> <c>Input.Forward</c> and <c>Input.Right</c> have three readers - this file,
+/// <see cref="ParkOrbitCameraMode"/> and <see cref="ParkCamcorderCameraMode"/> - and
+/// <c>InputButton.RotateLeft</c> / <c>RotateRight</c> have two, this file and
+/// <see cref="ParkOrbitCameraMode"/>; the camcorder turns with the pointer rather than with those keys.
+/// <b>The old sentence was a trap rather than merely stale</b>: anyone deleting this dead flycam on the
+/// strength of it would have believed a park's scrolling and its rotation went with it, when both live in
+/// the orbit camera and neither would have noticed.
 /// </para>
 /// </summary>
 public class ParkCameraMode : CameraMode

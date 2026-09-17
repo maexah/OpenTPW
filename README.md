@@ -154,7 +154,7 @@ That substitutes SDL only. SPIRV-Cross and shaderc still come from the build, be
 
 \*\*\*\* **Park saves (.TPWS)**: the container is read - the header is parsed and its ZLIB payload inflated - and the shipped park's own numbers are pinned by tests, including that its first four bytes are a *version* of 400 rather than the magic number they were once taken for. Inside, the payload is a sequence of seventeen module blocks, and the first and largest of them, the world, is now walked: its header, its 16,384 map cells and its list of forty-two things, which is where the objects a park places are found. The walk is checked the way the original checks it, by having to end exactly on the next module's tag - and each of the 16,384 cells is measured individually, so all of them landing on the next cell's first byte is a sharper check than the tag alone, which a pair of compensating errors would still reach. The cells are read rather than merely stepped over: each says what is built on it, which of its neighbours it joins and which way it faces, and - where the player laid a path - which tile that cell draws and which quarter turn the tile takes, which is where a park's walkways come from, since they are in neither the ground model nor the attribute map. What else the walk reads out is what each object *is* and where it stands; the litter and pylon bookkeeping inside each cell, and the other sixteen modules, are stepped over rather than understood, and nothing writes a park back. The saves that do work in full are the machine's options and the players themselves, listed separately above.
 
-\*\*\*\*\* **Ride Scripts (.RSE)**: there is no parser. What exists is the opcode scaffolding for the ride virtual machine, against a claimed total of 210 instructions.
+\*\*\*\*\* **Ride Scripts (.RSE)**: scripts are read and they run. The container is parsed - header, tag bytes, branch targets and the variable-name tail - and every ride script the game ships both reads and runs, which is what pins the parse: a branch that landed anywhere but the start of an instruction, or a string operand naming a string that is not there, would fail on some script somewhere. The runtime carries 57 of the 106 instructions the opcode table declares; the rest fall to a no-op that is *counted* rather than guessed at, because an instruction implemented wrongly is worse than one left out.
 
 </details>
 
@@ -179,7 +179,7 @@ dotnet test source/OpenTPW.sln
 
 It does not matter what directory you start the game from; the shaders and the loading screen's font are copied next to the binary and found there.
 
-Sixty-two of the hundred and forty-three unit tests read real game files and skip when no installation is found - so a green run on a machine that has never had the game means 81 ran and 62 did not. Set `OPENTPW_GAME_PATH` to run all of them.
+Two hundred and five of the five hundred and fifty-five unit tests read real game files and skip when no installation is found - so a green run on a machine that has never had the game means 350 ran and 205 did not. Set `OPENTPW_GAME_PATH` to run all of them.
 
 `OPENTPW_DEBUG_CONSOLE=1` reads commands from standard input, for driving a run reproducibly.
 
