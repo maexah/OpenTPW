@@ -385,6 +385,55 @@ public sealed class ParkPeople : Entity
 	/// </summary>
 	internal int Visitors => _behaviour.VisitorsToDate;
 
+	/// <summary>
+	/// What this park has taken at the gate since it opened - see <see cref="PeepBehaviour.Takings"/>,
+	/// which says why the running total lives on the behaviours rather than on the park itself.
+	/// </summary>
+	internal int Takings => _behaviour.Takings;
+
+	/// <summary>
+	/// How happy the park's visitors are, which is the number the management gadget's gauge shows - the
+	/// original's <c>FUN_004c7bb0</c>. Its meter asks for it every two seconds: <c>FUN_004a1cd0</c> arms a
+	/// 2000ms timer, id 0x80083, and hands back whatever this comes to.
+	///
+	/// <para>
+	/// <b>A shut park reads nought, and that is the original's own early-out rather than a stand-in.</b> It
+	/// fetches <c>mParkClosed</c> through <c>FUN_0051a280</c> and, if the park is closed, returns
+	/// <c>DAT_0070031c</c> without looking at anybody - and that constant is <b>0.0f</b> in the image. The
+	/// same value comes back when nobody qualifies, so an empty park and a shut one read alike. That is
+	/// what makes the gauge rest at the bottom rather than in the middle.
+	/// </para>
+	/// <para>
+	/// <b>It is an integer mean, and the arithmetic is reproduced rather than tidied.</b> The original
+	/// converts each guest's value with <c>__ftol</c>, masks it to a byte, sums into an integer and
+	/// finishes with <c>FILD</c>/<c>FIDIV</c> - an integer division. So the answer moves in whole numbers
+	/// and rounds towards nought. The byte mask is identity over the 0-100 these meters are clamped to, so
+	/// it is not written out: a mask that can never bite would read as a rule rather than as a no-op.
+	/// </para>
+	/// <para>
+	/// <b>ONE TERM IS DELIBERATELY NOT REPRODUCED, AND IT IS NAMED RATHER THAN GUESSED.</b> The original
+	/// counts a guest only where <c>FUN_004fa990</c> agrees, and that is a predicate on the THING - the
+	/// call site is <c>MOV ECX,ESI</c> with ESI the guest, not a cell - testing the field at
+	/// <c>thing + 8</c> against <c>{0, 1, 3, 9, 10}</c> through five one-line helpers
+	/// (<c>FUN_00536310</c> and its neighbours). <b>What that field holds has not been established</b>, so
+	/// every guest is counted here rather than a meaning being invented for it. The shipped park's guests
+	/// are all outside or at the gate, so no screen can yet tell the two apart - which is the reason to
+	/// write the departure down rather than to lean on it.
+	/// </para>
+	/// </summary>
+	internal int AverageHappiness()
+	{
+		if ( _behaviour.ParkIsClosed || _peeps.Count == 0 )
+			return 0;
+
+		var total = 0;
+
+		foreach ( var peep in _peeps )
+			total += (int)peep.Happiness;
+
+		return total / _peeps.Count;
+	}
+
 	protected override void OnDelete()
 	{
 		if ( Current == this )

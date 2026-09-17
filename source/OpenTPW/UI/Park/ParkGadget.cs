@@ -27,9 +27,10 @@ namespace OpenTPW.UI;
 /// click. <b>Four of the six have nothing to open yet</b> - no screen in this game buys an attraction,
 /// hires anyone, or shows the finances - so they say so and do nothing, the way the park menu's Load
 /// and Save already do. The map opens <see cref="ParkMapScreen"/> and the camcorder button swings the
-/// arm out with its panel, because both of those exist. <b>The gauge is not
-/// live</b>: it says "Happiness of the park visitors" and there is no such number anywhere yet, so it
-/// rests at its lowest part rather than being given an invented one.
+/// arm out with its panel, because both of those exist. <b>The gauge is live now, and this paragraph
+/// said there was no such number anywhere until it was.</b> There is one on every guest, and
+/// FUN_004c7bb0 is what the original does with them - average them, and read nought while the park is
+/// shut, which is what still leaves it resting at its lowest part in a park nobody has entered.
 /// </para>
 /// <para>
 /// <b>The golden keys and tickets in the top right are real.</b> The stream's fourth root control,
@@ -58,11 +59,18 @@ namespace OpenTPW.UI;
 /// would hold at most ten messages it will never be given (DAT_00750610).
 /// </para>
 /// <para>
-/// <b>Two of the stream's clusters are still NOT built.</b> The aerial (0x2d, 0x2e) is the messages
-/// control - its help row is "Right-click to delete ALL messages" - so with no message bar there is
-/// nothing for it to delete. The bank balance beside it (0x2f through 0x32) has no artwork of its own
-/// but a currency icon, and a park keeps no balance and no price: 0x30 is the cost of whatever is in
-/// your hand, which is why the original starts it hidden and paints it yellow.
+/// <b>The aerial cluster (0x2d, 0x2e) is still NOT built.</b> It is the messages control - its help
+/// row is "Right-click to delete ALL messages" - so with no message bar there is nothing for it to
+/// delete.
+/// </para>
+/// <para>
+/// <b>The bank balance beside it IS built now, and this paragraph used to say a park keeps no balance
+/// and no price.</b> 0x2f is the lettering and 0x32 the currency icon, and the number is the save's own
+/// <c>mBalance</c> plus what the gates have taken since - see <see cref="ShowMoney"/> for why those are
+/// two numbers here and one in the original. What is still out is <b>0x30</b>, the cost of whatever is
+/// in your hand, which the original starts hidden and paints yellow because an empty hand has no price;
+/// and <b>0x31</b>, the trend arrow, which wants a history of the balance that nothing here keeps. Both
+/// reasons are written out where the cluster is built.
 /// </para>
 /// <para>
 /// <b>Engine and content.</b> The controls, the pointer and the help bar are engine. Which buttons a
@@ -95,6 +103,25 @@ internal sealed class ParkGadget : UiWindow
 
 	private readonly UiControl _keyCount;
 	private readonly UiControl _ticketCount;
+
+	/// <summary>
+	/// The gauge's moving part - the stream's 0x1f, control type 9. See <see cref="UiMeter"/> for why it
+	/// takes a skin rather than a mesh, and <see cref="ParkPeople.AverageHappiness"/> for the number.
+	/// </summary>
+	private readonly UiMeter _happiness;
+
+	/// <summary>
+	/// The bank balance in the top-left corner - the stream's 0x2f, the lettering itself. Its field is
+	/// sized in the original by measuring the string "999999999" (0x00752f10) rather than being fixed, so
+	/// nine digits is what it is built to hold.
+	/// </summary>
+	private readonly UiControl _balance;
+
+	/// <summary>
+	/// The balance's own font slot - <c>FUN_004a1d70</c> gives 0x2f <c>FUN_00485a70(1)</c>, where the two
+	/// counts in the opposite corner get slot 2 and the date gets slot 3.
+	/// </summary>
+	private const int BalanceFont = 1;
 
 	public ParkGadget( WindowStack stack ) : base( stack )
 	{
@@ -242,10 +269,15 @@ internal sealed class ParkGadget : UiWindow
 		} );
 
 		// Control type 9 in the stream, which is a meter: FUN_0066d750 is the plain control with three
-		// more fields and a 2000ms timer (FUN_004a1cd0) driving it. It carries no mesh at all - the
-		// original hands it a meter.wct skin instead (FUN_00477870, from FUN_004a1d70) - and nothing
-		// measures visitors' happiness yet, so the moving part is left unbuilt rather than invented.
-		gaugeHousing.Add( new UiControl
+		// more fields, and FUN_004a1cd0 arms a 2000ms timer - id 0x80083 - that fills it. It carries no
+		// mesh at all, because the original hands it a meter.wct skin instead (FUN_00477870, from
+		// FUN_004a1d70), which is why a control that draws only a mesh showed nothing whatever here.
+		//
+		// IT HAS A NUMBER NOW, AND THIS USED TO SAY THERE WAS NONE ANYWHERE. What the timer asks for is
+		// FUN_004c7bb0 - the mean happiness of the park's guests, and nought while the park is shut. See
+		// ParkPeople.AverageHappiness for the arithmetic and for the one term of it that is deliberately
+		// not reproduced, and UiMeter for how far up the skin is drawn and why that part is a choice.
+		_happiness = gaugeHousing.Add( new UiMeter
 		{
 			Id = 0x1f,
 			Rect = new UiRect( 85, 1100, 144, 1324 )
@@ -315,6 +347,57 @@ internal sealed class ParkGadget : UiWindow
 		buttons.Add( NotYet( 0x2b, new UiRect( 274, 1254, 392, 1372 ), 472, "b_resrch",
 			"Research", "there is nothing to research and nobody to research it" ) );
 
+		// The bank balance, in the OPPOSITE corner - the stream's 0x2f and 0x32. Root controls like the
+		// cluster below rather than children of the gadget body, so each anchors top-left on its own.
+		//
+		// A PARK KEEPS A BALANCE NOW, and this cluster was left out for as long as it did not. The save's
+		// economy thing (model 16) carries mBalance and mAdmissionFee, and what the gates have taken since
+		// the park opened is on the behaviours - see ShowMoney for why those two are added together rather
+		// than either being read on its own.
+		_balance = Root.Add( new UiControl
+		{
+			Id = 0x2f,
+			Rect = new UiRect( 258, 60, 720, 260 ),
+			Font = BalanceFont,
+
+			// Against the icon rather than adrift in the middle of a wide box, and that is a CHOICE. The
+			// original sizes this field by measuring "999999999" and then computes 0x32's rect from the
+			// width it got, so the two are placed against each other rather than at fixed points. Nothing
+			// here re-flows either, so the stream's own rects are kept and the lettering is pulled to the
+			// side the icon is on.
+			TextAcross = TextAlign.Start
+		} );
+
+		// The currency icon - the one piece of artwork this cluster has of its own.
+		Root.Add( new UiControl
+		{
+			Id = 0x32,
+			Rect = new UiRect( 37, 58, 242, 262 ),
+			Mesh = UiMesh.Get( "i_dollar" )
+		} );
+
+		// TWO OF THE CLUSTER ARE DELIBERATELY NOT BUILT, each for a reason rather than for want of a rect.
+		//
+		// 0x30, the price of whatever is in your hand, (458,273)-(720,363): yellow, font 2, and started
+		// HIDDEN by FUN_004a1d70, which is exactly what an empty hand should show. Nothing here picks
+		// anything up, so it would be hidden for the whole life of a park.
+		//
+		// 0x31, the trend arrow, (728,109)-(831,211) - and it is a CHILD of 0x2f rather than a root
+		// control, which only the disassembly shows: 0x004a0f05 fetches 0x2f from the interface root and
+		// then MOV ECX,EAX fetches 0x31 from THAT. FUN_004a0e30 sets its frame to 0 or 1 by comparing the
+		// newest sample of two ring buffers - base, index, count and a wrapped flag - at +0x1f5a4 and
+		// +0x1fc90 on the thing FUN_00519510 fetches from the world at +0x1da720.
+		//
+		// THOSE HISTORIES ARE NOT ON THE ECONOMY, which is what this comment said first. They are on the
+		// park's STATISTICS manager: FUN_004c5d70 is the serialiser carrying those exact ring offsets,
+		// and it writes mLifetimeVisitors, mMisbehavingKids, mMostPaidForTicket, mLongestStay and
+		// mParkLastOpened beside them. The offsets are what joins the two functions; the header field is
+		// very likely mParkAnalyser, but only the offsets are proven, so the thing is named by what it
+		// serialises rather than by a header slot.
+		//
+		// Nothing in this tree keeps a history of anything, so the arrow would have no two numbers to
+		// compare and would sit on one frame for ever.
+
 		// The stream's fourth root control, away in the top right corner of the screen rather than on the
 		// panel - so it is added to the window's root, not to the gadget body, and it anchors top-right on
 		// its own. Two rows: the ticket above, the key below, each an icon with its count to the left.
@@ -358,6 +441,8 @@ internal sealed class ParkGadget : UiWindow
 
 		ShowDate();
 		ShowEarned();
+		ShowMoney();
+		ShowHappiness();
 	}
 
 	/// <summary>
@@ -437,6 +522,8 @@ internal sealed class ParkGadget : UiWindow
 	{
 		ShowDate();
 		ShowEarned();
+		ShowMoney();
+		ShowHappiness();
 
 		// Put the gadget away in first person, because camcorder mode steers the view from where the
 		// pointer IS rather than from how it moves: outside a dead zone of 0.4 the view turns at up to
@@ -510,4 +597,53 @@ internal sealed class ParkGadget : UiWindow
 		_keyCount.Text = $"{player?.Keys ?? 0} x";
 		_ticketCount.Text = $"{player?.Tickets ?? 0} x";
 	}
+
+	/// <summary>
+	/// What the park is worth, in the corner the original keeps it - the balance the save was left with,
+	/// plus everything the gates have taken since it was loaded.
+	///
+	/// <para>
+	/// <b>The two have to be added, and that is a fact about this program rather than about the game.</b>
+	/// <see cref="ParkWorld"/> describes a file and is deliberately immutable, so taking a fee cannot move
+	/// the number inside it; the running total lives on <see cref="PeepBehaviour.Takings"/> instead, which
+	/// says as much at its own site. The original has no such split - <c>FUN_004d0600</c> adds a fee
+	/// straight onto <c>mBalance</c> and <c>mProfitThisYear</c> together. <b>When a park keeps its own
+	/// mutable state these stop being two numbers and this becomes one read</b>, and that is the moment to
+	/// come back to this line.
+	/// </para>
+	/// <para>
+	/// Plain digits, with no thousands separator, because the original sizes this field by measuring the
+	/// string "999999999" (0x00752f10) - nine digits and nothing between them.
+	/// </para>
+	/// <para>
+	/// A park whose file carries no economy shows <b>nothing at all</b> rather than a nought, for the
+	/// reason the key count shows none rather than an error: having no economy is a fact about the file,
+	/// where a nought would be a claim that the park is broke.
+	/// </para>
+	/// </summary>
+	private void ShowMoney()
+	{
+		if ( Level.Current?.Park?.Economy is not { } money )
+		{
+			_balance.Text = null;
+			return;
+		}
+
+		_balance.Text = $"{money.Balance + (ParkPeople.Current?.Takings ?? 0)}";
+	}
+
+	/// <summary>
+	/// How happy the park's visitors are, which is the one thing the gauge has ever been for - see
+	/// <see cref="ParkPeople.AverageHappiness"/> for the number, and <see cref="UiMeter"/> for the drawing
+	/// and for which part of it is a choice.
+	///
+	/// <para>
+	/// <b>Read every frame where the original reads it every two seconds, and that is a departure.</b> Its
+	/// meter arms a 2000ms timer (<c>FUN_004a1cd0</c>, id 0x80083) because the value costs a walk over
+	/// every thing in the park; this walks a list of thirteen guests. What differs on screen is a gauge
+	/// that moves smoothly rather than in steps, and putting the timer back would mean keeping a clock
+	/// here in order to make the reading worse.
+	/// </para>
+	/// </summary>
+	private void ShowHappiness() => _happiness.Value = ParkPeople.Current?.AverageHappiness() ?? 0;
 }

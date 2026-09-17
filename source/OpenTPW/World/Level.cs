@@ -39,6 +39,21 @@ public class Level
 	public ParkBalance? Balance { get; private set; }
 
 	/// <summary>
+	/// The park's own save as it was read, or null in the lobby and in a theme that ships no park of its
+	/// own. Kept so that the interface can show what the file says - the balance it was left with and what
+	/// it charges - without reading a megabyte and a half a second time.
+	///
+	/// <para>
+	/// <b>It describes a FILE and it is deliberately immutable</b>, which is why everything that moves has
+	/// to be held somewhere else: see <see cref="PeepBehaviour.Takings"/> and
+	/// <see cref="PeepBehaviour.VisitorsToDate"/>, each of which exists only because a park has nowhere yet
+	/// to write its own state back to. Anything that reads this for a running number must add that number
+	/// on rather than expect to find it here.
+	/// </para>
+	/// </summary>
+	public ParkWorld? Park { get; private set; }
+
+	/// <summary>
 	/// Which of the game's two worlds this is. The original runs them as separate states of one
 	/// machine - the lobby is states 1/2/3 and a park is 9/10/0xb - and they share almost nothing but
 	/// the renderer, the sound device and the player's own files.
@@ -243,6 +258,11 @@ public class Level
 		// which cells it must leave alone, the paths to draw those cells, and the objects to stand where
 		// it says. It inflates to a megabyte and a half, so reading it three times would be careless.
 		var park = ReadPark( ThemeName );
+
+		// Kept on the level as well as handed round below, so that the interface can show what the file
+		// says without opening a megabyte and a half a second time - see the Park property, and note that
+		// anything running has to be added to what it holds rather than looked for inside it.
+		Park = park;
 
 		// The ground first, then what stands on it. The paths follow the ground because they lie on its
 		// heightfield, and ParkObjects is last because it asks how high the land is under each thing it
