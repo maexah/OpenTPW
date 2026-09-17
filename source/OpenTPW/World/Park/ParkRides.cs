@@ -259,6 +259,54 @@ public sealed class ParkRides : Entity
 			Log.Warning( $"{ThemeName}: the gate's script declares no {GateCommand}, so it cannot be opened" );
 	}
 
+	/// <summary>The variable the gate's script reports its own state through - see <see cref="GateStatus"/>.</summary>
+	private const string GateState = "VAR_STATUS";
+
+	/// <summary>What <see cref="GateStatus"/> answers where there is no gate, as the original's own does.</summary>
+	public const int NoGate = -1;
+
+	/// <summary>The value the gate reports when it is open and a guest may come through.</summary>
+	public const int GateIsOpen = 1;
+
+	/// <summary>
+	/// What the park's gate says it is doing, which is what a guest waiting outside is waiting on -
+	/// <c>FUN_0051a290</c>.
+	///
+	/// <para>
+	/// <b>It reads the gate script's variable 1, and that index is off the disassembly rather than the
+	/// decompile.</b> The call site pushes <c>1</c> <i>before</i> calling the script-lookup
+	/// <c>FUN_0055a070</c>, whose <c>ADD ESP,0x4</c> cleans only its own argument - so the <c>1</c>
+	/// survives and is consumed as the second argument of <c>FUN_0055a390</c>, cleaned by the later
+	/// <c>ADD ESP,0x8</c>. Ghidra renders that as a one-argument call and hides the index completely. It
+	/// is the same trap that gave the gate command a wrong "0 shuts".
+	/// </para>
+	/// <para>
+	/// <b>The variable is reached by the name the script itself declares</b>, not by the number: all four
+	/// themes' <c>Gates.RSE</c> declare exactly <c>VAR_COMMAND</c>, <c>VAR_STATUS</c> and
+	/// <c>VAR_TEMP</c>, so variable 1 is <c>VAR_STATUS</c> - measured across all four rather than assumed
+	/// from jungle's, because the four gate scripts otherwise differ.
+	/// </para>
+	/// <para>
+	/// <see cref="NoGate"/> where the park has no gate thing at all, which is what the original returns
+	/// and is deliberately not the same as a gate that is shut.
+	/// </para>
+	/// </summary>
+	public int GateStatus( ParkWorld? world )
+	{
+		if ( world == null )
+			return NoGate;
+
+		var id = ScriptFor( world.ParkGates );
+
+		if ( id == 0 || Scheduler.Find( id ) is not { } gate )
+			return NoGate;
+
+		// Nought from a name the script does not declare and nought from a gate that has not opened are
+		// the same answer here, and both mean "not yet" - which is why the command write is the one that
+		// reports a miss and this one does not need to.
+		return gate[GateState];
+	}
+
 	/// <summary>
 	/// Reads one script, or answers null where there is none - which is what both the park's binding and a
 	/// script's own <c>SPAWNCHILD</c> do with the answer, and in both cases nought is a real result rather

@@ -49,9 +49,11 @@ public sealed class PeepBehaviour
 	/// The rolls a state entry makes - only <see cref="PeepState.WaitingForOpening"/> makes one. Taken so
 	/// that a test can seed it; the game does not, because the original rolls from a global generator.
 	/// </param>
-	public PeepBehaviour( ParkWorld? park, Random? random = null )
+	public PeepBehaviour( ParkWorld? park, Random? random = null,
+		ParkAdmission? admission = null, Func<int>? gateStatus = null )
 		// Zero is open, which is the way round the name is not - see ParkWorld.ParkClosed.
-		: this( park is not null && park.ParkClosed != 0, park?.NumberOfVisitorsToDate ?? 0, random )
+		: this( park is not null && park.ParkClosed != 0, park?.NumberOfVisitorsToDate ?? 0, random,
+			admission, gateStatus )
 	{
 	}
 
@@ -66,12 +68,70 @@ public sealed class PeepBehaviour
 	/// that makes both arms reachable.
 	/// </para>
 	/// </summary>
-	public PeepBehaviour( bool parkIsClosed, int visitorsToDate, Random? random = null )
+	/// <param name="admission">
+	/// What the park charges and what a guest makes of it. <b>Null leaves the fee unjudged</b> rather than
+	/// guessed at: a guest who reaches the ticket booths with nothing able to price the park stands there,
+	/// which is what this program did everywhere before any of it was built.
+	/// </param>
+	/// <param name="gateStatus">
+	/// What the park's gate says it is doing - <c>ParkRides.GateStatus</c>, which reads the gate script's
+	/// own <c>VAR_STATUS</c>. See <see cref="GateWillAdmit"/> for what null means and why.
+	/// </param>
+	public PeepBehaviour( bool parkIsClosed, int visitorsToDate, Random? random = null,
+		ParkAdmission? admission = null, Func<int>? gateStatus = null )
 	{
 		ParkIsClosed = parkIsClosed;
 		VisitorsToDate = visitorsToDate;
+		Admission = admission;
+		_gateStatus = gateStatus;
 		_random = random ?? new Random();
 	}
+
+	private readonly Func<int>? _gateStatus;
+
+	/// <summary>What the park charges and how a guest feels about it, or null where nothing can say.</summary>
+	public ParkAdmission? Admission { get; }
+
+	/// <summary>
+	/// What this park has taken in admissions since it opened, counting from nought rather than from the
+	/// balance the save recorded.
+	///
+	/// <para>
+	/// <b>It is kept here for the same reason <see cref="VisitorsToDate"/> is</b>: taking a fee moves
+	/// <c>mBalance</c> and <c>mProfitThisYear</c> by the same amount (<c>FUN_004d0600</c>, which adds it to
+	/// both and to two running totals on the world), and <see cref="ParkWorld"/> describes a file and is
+	/// deliberately immutable. So the park's money on screen is the save's balance plus this.
+	/// </para>
+	/// </summary>
+	public int Takings { get; private set; }
+
+	/// <summary>
+	/// What the park's rides are worth to a guest deciding whether the price is fair - the sum
+	/// <c>FUN_004c8240</c> makes.
+	///
+	/// <para>
+	/// <b>Nought, and by the shipped park's own saved state rather than by omission.</b> That sum counts
+	/// only things with somebody in their queue, and the save records <c>mNumberOfVisitorsToDate</c> as
+	/// nought - nobody has ever been admitted, so no queue can hold anyone. Nothing in this tree operates
+	/// a ride either. It is settable so that the term is visible and testable rather than a zero nobody
+	/// can see.
+	/// </para>
+	/// </summary>
+	public int ParkExcitement { get; set; }
+
+	/// <summary>
+	/// Whether the gate will let anybody through - the pair of questions at the top of
+	/// <c>FUN_004ff7f0</c>, which wants <c>mParkClosed</c> nought <b>and</b> the gate reporting 1.
+	///
+	/// <para>
+	/// <b>A null <paramref name="_gateStatus"/> reads as open, and that is a choice with a precedent.</b>
+	/// The constructor above already treats a null park as an open one, for the same reason: a park with
+	/// no script runtime bound is not a park whose gates are shut, and answering "shut" would strand every
+	/// guest at the bus stop on the strength of missing plumbing rather than of anything in the file.
+	/// </para>
+	/// </summary>
+	public bool GateWillAdmit
+		=> !ParkIsClosed && (_gateStatus == null || _gateStatus() == ParkRides.GateIsOpen);
 
 	/// <summary>
 	/// Whether the park is shut to visitors, as the save left it.
@@ -177,6 +237,29 @@ public sealed class PeepBehaviour
 					peep.SetState( ParkIsClosed ? PeepState.WaitingForOpening : PeepState.JudgingTheFee,
 						tick, _random );
 				}
+
+				break;
+
+			// Standing at a ticket booth making their mind up about the price - FUN_004ff9d0, and the state
+			// Alexah found five of Lost Kingdom's guests stuck in.
+			//
+			// The countdown comes first and nothing else happens on a turn that decrements it. It is the
+			// guest's own mParkOpeningWaitingTime, shared with waiting for the gate - see Peep.ParkOpeningWait.
+			case PeepState.JudgingTheFee:
+				if ( peep.ParkOpeningWait != 0 )
+				{
+					--peep.ParkOpeningWait;
+					break;
+				}
+
+				if ( Admission is { } admission )
+					Judge( peep, walk, admission, tick );
+
+				break;
+
+			// Waiting outside for the gate - FUN_004ff7f0, whose three arms are two questions deep.
+			case PeepState.WaitingForOpening:
+				Wait( peep, walk, tick );
 
 				break;
 
@@ -286,5 +369,170 @@ public sealed class PeepBehaviour
 		peep.NextInterval = SpriteScript.IntervalFor( walk.LastStep.X, walk.LastStep.Y, hurrying );
 
 		return verdict;
+	}
+
+	/// <summary>How long a guest who finds the price merely expensive sulks before judging it again.</summary>
+	/// <remarks>
+	/// <c>rand % 0x32 + 0x32</c>, written into the same field that waiting for the gate rolls 200 to 349
+	/// into. Two states, one countdown - see <see cref="Peep.ParkOpeningWait"/>.
+	/// </remarks>
+	public const int SulkAtLeast = 50;
+
+	/// <inheritdoc cref="SulkAtLeast"/>
+	public const int SulkSpread = 50;
+
+	/// <summary>
+	/// What a guest makes of the admission fee, and what it makes them do - the switch in
+	/// <c>FUN_004ff9d0</c>.
+	///
+	/// <para>
+	/// <b>The cheap arm falls through into the about-right arm in the original</b>, which is why the two
+	/// share their body here: being pleasantly surprised gains a guest some happiness and then they pay
+	/// exactly as somebody who found it fair would.
+	/// </para>
+	/// <para>
+	/// <b>Two fields the original touches on the leaving arms are deliberately not reproduced.</b> It
+	/// writes 1 to <c>+0x188</c> and nought to <c>+0x1bc</c>, and nothing here reads either, so inventing
+	/// names for them would be worse than leaving them out.
+	/// </para>
+	/// </summary>
+	private void Judge( Peep peep, PeepWalk walk, ParkAdmission admission, int tick )
+	{
+		var opinion = admission.OpinionAt( ParkExcitement, _random );
+
+		switch ( opinion )
+		{
+			// "Person: park far too expensive" - they set off for the bus stop and give up on the park.
+			case ParkAdmission.Opinion.FarTooExpensive:
+				SendTo( peep, walk, EitherOf( admission.BusStopA, admission.BusStopB ) );
+				peep.SetState( PeepState.HeadingForExit, tick, _random );
+
+				break;
+
+			// "Person: park on the expensive side" - they sulk, lose heart, and try again later. Only a
+			// guest with no happiness left gives up, and they do so WITHOUT a destination: the original's
+			// expensive arm reaches the shared tail without ever calling SetDest, unlike the arm above.
+			case ParkAdmission.Opinion.OnTheExpensiveSide:
+				peep.ParkOpeningWait = (_random.Next() % SulkSpread) + SulkAtLeast;
+				peep.Happiness = Peep.Change( peep.Happiness, -admission.MediumHappinessChange );
+
+				// The original tests the low byte of the truncated happiness, which cannot mislead here
+				// because Peep.Change clamps it to 0..100 and so it never reaches 256.
+				if ( (int)peep.Happiness == 0 )
+					peep.SetState( PeepState.HeadingForExit, tick, _random );
+
+				break;
+
+			// "Person: park on the cheap side", then straight on into paying.
+			case ParkAdmission.Opinion.OnTheCheapSide:
+			case ParkAdmission.Opinion.AboutRight:
+				if ( opinion == ParkAdmission.Opinion.OnTheCheapSide )
+					peep.Happiness = Peep.Change( peep.Happiness, admission.MediumHappinessChange );
+
+				// FUN_004d0600 - the fee goes on the balance and on the year's profit alike.
+				Takings += admission.Fee;
+
+				peep.PaidAdmission = true;
+				peep.SetState( PeepState.WaitingForOpening, tick, _random );
+
+				break;
+		}
+	}
+
+	/// <summary>
+	/// Waiting outside for the gate - <c>FUN_004ff7f0</c>.
+	///
+	/// <para>
+	/// <b>The paid arm is NOT built, and the reason is a field rather than an omission.</b> A guest who has
+	/// paid waits until the cell they are standing on names <i>them</i>: the original reads a short at
+	/// <c>+0x24</c> of that cell's <b>runtime</b> record - 0x44 bytes each, against the 52 the file
+	/// carries, so the offset cannot be translated into anything the save reader sees - and compares it
+	/// against the guest's own thing id, which <c>FUN_0050b350</c> copies out of the front of the thing.
+	/// That is the gate admitting one guest at a time, and nothing here keeps a mutable map cell or knows
+	/// what writes that field. Three probes came back negative (<c>FUN_004dd0a0</c> destroys a thing,
+	/// <c>FUN_0050afe0</c> constructs one, <c>FUN_004fa990</c> is an unrelated mode check); the next lead
+	/// is <c>FUN_004d8480</c>, which the cell helpers all forward to.
+	/// </para>
+	/// <para>
+	/// So a guest who has paid <b>stands and waits</b>, which is the honest thing for them to do and is
+	/// what the original does on every turn the cell has not yet named them.
+	/// </para>
+	/// </summary>
+	private void Wait( Peep peep, PeepWalk walk, int tick )
+	{
+		if ( Admission is not { } admission )
+			return;
+
+		if ( !GateWillAdmit )
+		{
+			// Still shut. They put up with it for as long as they rolled and then head home.
+			if ( peep.ParkOpeningWait != 0 )
+			{
+				--peep.ParkOpeningWait;
+				return;
+			}
+
+			SendTo( peep, walk, EitherOf( admission.BusStopA, admission.BusStopB ) );
+			peep.SetState( PeepState.HeadingForExit, tick, _random );
+
+			return;
+		}
+
+		if ( !peep.PaidAdmission )
+		{
+			// Back to the booths to be charged. A guest already standing on one of the two keeps it,
+			// which is the original's own order - it tests each booth against where they are before it
+			// rolls for one.
+			SendTo( peep, walk, BoothFor( peep, walk, admission ) );
+
+			peep.ParkOpeningWait = 0;
+			peep.SetState( PeepState.HeadingForGate, tick, _random );
+		}
+
+		// And the paid arm falls off the end on purpose - see the remarks above.
+	}
+
+	/// <summary>
+	/// Which ticket booth a waiting guest heads for: the one they are standing on if it is either of them,
+	/// and otherwise one of the two at random.
+	/// </summary>
+	private (int X, int Y) BoothFor( Peep peep, PeepWalk walk, ParkAdmission admission )
+	{
+		var standing = walk.Position.Cell;
+
+		if ( standing == admission.TicketBoothA )
+			return admission.TicketBoothA;
+
+		if ( standing == admission.TicketBoothB )
+			return admission.TicketBoothB;
+
+		return EitherOf( admission.TicketBoothA, admission.TicketBoothB );
+	}
+
+	/// <summary>One of two cells, by the coin the original flips - <c>rand &amp; 1</c>.</summary>
+	private (int X, int Y) EitherOf( (int X, int Y) first, (int X, int Y) second )
+		=> (_random.Next() & 1) == 0 ? first : second;
+
+	/// <summary>
+	/// Sends a guest to the centre of a cell - the original's <c>FUN_004fa530</c>.
+	///
+	/// <para>
+	/// <b>The centre, not the corner.</b> A route's waypoints are cell centres
+	/// (<see cref="PeepNavigator.WaypointCentre"/>), which is why the shipped park's entering guests are
+	/// saved walking to (47.5,17.5) rather than (47,17) - so a destination set at the corner would be half
+	/// a cell away from where the pathfinder would ever put them.
+	/// </para>
+	/// <para>
+	/// Whether a route was found is deliberately not answered here: <see cref="Walked"/> asks again on the
+	/// guest's next turn and reports a guest who cannot get through as having given up, so a failure has
+	/// one place it is noticed rather than two.
+	/// </para>
+	/// </summary>
+	private static void SendTo( Peep peep, PeepWalk walk, (int X, int Y) cell )
+	{
+		peep.Navigator.Target = new FixedVector(
+			PeepNavigator.WaypointCentre( cell.X ), PeepNavigator.WaypointCentre( cell.Y ) );
+
+		walk.PlanRoute();
 	}
 }

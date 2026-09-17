@@ -186,7 +186,13 @@ public class Level
 	{
 		// The theme's own numbers, global defaults underneath - see ParkBalance for why that stack
 		// matters more than it looks.
-		Balance = new ParkBalance( ThemeName );
+		//
+		// <b>Easy mode, because the only park file this loads is Easymode.TPWI</b> - see ReadPark below,
+		// which names it outright and unconditionally. That is not a guess about what the player chose:
+		// the park it reads carries nought APR on all eight of its loans, which matches
+		// Easy_Standard.sam and matches the global file nowhere. If a park that is NOT the easy one is
+		// ever loaded, this has to move with it rather than stay true.
+		Balance = new ParkBalance( ThemeName, easyMode: true );
 		Log.Info( $"{ThemeName}: balance stack came to {Balance.Count} keys" );
 
 		// What distance fades to. The lobby's Sky rewrites this every frame from its own horizon,
@@ -262,7 +268,7 @@ public class Level
 		// standing in the park rather than the other way round - and now literally so: a script is handed
 		// the very animation player its own thing's model is posed from, and its tick loop is what drives
 		// the sweep that poses it.
-		_ = new ParkRides( ThemeName, park, catalogue, objects: objects );
+		var rides = new ParkRides( ThemeName, park, catalogue, objects: objects );
 
 		// And the park's people. After the ground, because a guest stands on the land and has to ask how
 		// high it is under them; they are sprites rather than models, so they are nothing to do with the
@@ -272,7 +278,10 @@ public class Level
 		// And what those people want, which is deliberately not the same object as what they look like:
 		// the sprites above never run a tick, and this never touches a vertex. It goes after them only
 		// for readability - it asks nothing of them.
-		_ = new ParkPeople( park );
+		// And it is handed the two things the admission states need that the save alone cannot answer: the
+		// balance stack, for what a guest will put up with paying, and the gate's own script state, which
+		// is what a guest waiting outside is actually waiting on.
+		_ = new ParkPeople( park, Balance, () => rides.GateStatus( park ) );
 
 		// Each group of sound at the volume the options give it, and then the park's own music - which
 		// is the order the original uses too: it registers the park's categories, re-applies the group

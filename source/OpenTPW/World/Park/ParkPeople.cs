@@ -63,13 +63,29 @@ public sealed class ParkPeople : Entity
 	/// </summary>
 	public const int WalkingMode = 0;
 
-	public ParkPeople( ParkWorld? park )
+	/// <param name="balance">
+	/// The park's balance stack, for the five numbers that turn an admission fee into an opinion. Null
+	/// leaves the fee unjudged and a guest standing at the booths - see
+	/// <see cref="PeepBehaviour.Admission"/>.
+	/// </param>
+	/// <param name="gateStatus">
+	/// What the gate's own script says it is doing, which is <c>ParkRides.GateStatus</c>. Taken as a
+	/// delegate rather than as the rides themselves, because this needs one number from them and taking
+	/// the object would tie the people to the scripts for nothing else.
+	/// </param>
+	public ParkPeople( ParkWorld? park, ParkBalance? balance = null, System.Func<int>? gateStatus = null )
 	{
 		_peeps = PeepsIn( park );
 
+		// What the park charges is on its economy thing and what a guest will put up with is in the
+		// balance file, so it takes both - and neither on its own is enough to price the gate.
+		var admission = park?.Economy is { } money && balance != null
+			? new ParkAdmission( balance, money.AdmissionFee )
+			: null;
+
 		// Built from the park rather than from the guests: what a guest does on arrival turns on whether
 		// the gates are open and on how many visitors have ever been let in, and both are the park's.
-		_behaviour = new PeepBehaviour( park );
+		_behaviour = new PeepBehaviour( park, random: null, admission, gateStatus );
 
 		Current = this;
 
