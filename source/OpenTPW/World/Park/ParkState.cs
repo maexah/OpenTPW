@@ -284,6 +284,19 @@ public sealed class ParkState
 		return true;
 	}
 
+	/// <summary>
+	/// Forgets who is at the front of a queue, <b>and nothing else</b> - the original's own reach when a
+	/// ride finds its head is no longer queueing (<c>FUN_004e0b90</c> writes <c>mFirstInQ = 0</c>).
+	/// </summary>
+	/// <remarks>
+	/// <b>The rest of the chain is deliberately left standing, and that is not an oversight to tidy.</b>
+	/// The original promotes nobody: whoever was second keeps a <c>mQPrev</c> naming a guest who is no
+	/// longer at the front, and the links are repaired by the next join or leave rather than here. So a
+	/// queue whose head has been dropped measures <b>nought</b> even while its links remain, because the
+	/// walk starts at the head - which is exactly what the engine sees.
+	/// </remarks>
+	public void ClearQueueHead( int objectId ) => _queueHead.Remove( objectId );
+
 	/// <summary>How many cells hold litter, which is what a park's cleanliness comes to.</summary>
 	public int LitteredCells
 	{
