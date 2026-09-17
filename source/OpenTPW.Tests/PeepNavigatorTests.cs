@@ -320,4 +320,35 @@ public class PeepNavigatorTests
 
 		Assert.IsTrue( nav.CannotReach, "giving up should stick" );
 	}
+
+	/// <summary>
+	/// Where the person is standing, which way they are going, what they were heading for, and the two
+	/// limits the steering step clamps to - all of it parsed by the reader and, until now, dropped on the
+	/// way into the running copy. A person who cannot say where they are cannot walk.
+	///
+	/// <para>
+	/// <b><see cref="ParkWorld.NavigatorState.Mass"/> and <c>NavMode</c> are deliberately not carried</b>,
+	/// so this pins what is taken and by omission what is not. The steering loop divides the summed force
+	/// by a literal 1.0 rather than by mass, and what NavMode selects has never been established.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void ANavigatorKnowsWhereItIsAndHowFastItMayGo()
+	{
+		var nav = new PeepNavigator( Saved() );
+
+		Assert.AreEqual( new FixedVector( 3099805, 637724 ), nav.Position, "where they are standing" );
+		Assert.AreEqual( FixedVector.Zero, nav.Velocity, "this one is standing still" );
+		Assert.AreEqual( new FixedVector( 3112960, 884736 ), nav.Target, "what they were heading for" );
+		Assert.AreEqual( 15728, nav.MaxSpeed, "max speed" );
+		Assert.AreEqual( 31457, nav.MaxForce, "max force" );
+
+		// The position is in the same fixed point as everything else, so it names a cell.
+		Assert.AreEqual( (47, 9), nav.Position.Cell, "the cell they are standing in" );
+
+		// Walking is what changes it, so it has to be settable - and the velocity with it.
+		nav.Position += new FixedVector( FixedVector.One, 0 );
+
+		Assert.AreEqual( (48, 9), nav.Position.Cell, "a whole cell east" );
+	}
 }

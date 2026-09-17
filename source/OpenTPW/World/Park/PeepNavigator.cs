@@ -70,6 +70,28 @@ public sealed class PeepNavigator
 	public int Radius { get; }
 
 	/// <summary>
+	/// Where this person is standing, in the same 16.16 fixed point as everything else here - so
+	/// <see cref="FixedVector.One"/> is one map cell and <see cref="FixedVector.Cell"/> says which cell
+	/// they are in. Settable because walking is what changes it.
+	/// </summary>
+	public FixedVector Position { get; set; }
+
+	/// <summary>How fast and which way they are going, held to <see cref="MaxSpeed"/> by the steering step.</summary>
+	public FixedVector Velocity { get; set; }
+
+	/// <summary>
+	/// The point they were heading for - the original's <c>path_target_pos</c>. This is a destination and
+	/// not a waypoint of a route: it survives in the save where the route itself does not.
+	/// </summary>
+	public FixedVector Target { get; set; }
+
+	/// <summary>The speed the steering step clamps velocity to.</summary>
+	public int MaxSpeed { get; }
+
+	/// <summary>The force the steering step clamps the summed behaviours to before applying them.</summary>
+	public int MaxForce { get; }
+
+	/// <summary>
 	/// Which waypoint of the route the person was walking towards - an index, not a place. Nothing here
 	/// can say where that waypoint is; see the class remarks.
 	/// </summary>
@@ -108,6 +130,16 @@ public sealed class PeepNavigator
 	public PeepNavigator( ParkWorld.NavigatorState saved )
 	{
 		Radius = saved.Radius;
+		Position = new FixedVector( saved.X, saved.Y );
+		Velocity = new FixedVector( saved.VelocityX, saved.VelocityY );
+		Target = new FixedVector( saved.TargetX, saved.TargetY );
+		MaxSpeed = saved.MaxSpeed;
+		MaxForce = saved.MaxForce;
+
+		// Mass and NavMode are parsed by the reader and deliberately not carried. The steering loop
+		// divides the summed force by a literal 1.0 rather than by mass - which is why all eighteen
+		// people still hold the value the constructor gave them - and what NavMode selects has not been
+		// established. A field nothing reads cannot be wrong in an interesting way.
 		Cursor = saved.PathCount;
 		TotalWaypoints = saved.PathTotalCount;
 		BufferedWaypoints = saved.PathBufferCount;

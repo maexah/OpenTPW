@@ -104,6 +104,20 @@ public class ParkPeopleTests
 			var carried = peeps[id].Navigator;
 
 			Assert.AreEqual( navigator.Radius, carried.Radius, $"guest {id} radius" );
+
+			// Where they are, which way they are going, and the limits they move under. Checked against
+			// the reader's own record rather than against numbers measured elsewhere - ParkNavigatorState
+			// tests already pin these against the file, and repeating that here would test the reader
+			// twice and the running copy not at all.
+			Assert.AreEqual( new FixedVector( navigator.X, navigator.Y ), carried.Position,
+				$"guest {id} position" );
+			Assert.AreEqual( new FixedVector( navigator.VelocityX, navigator.VelocityY ), carried.Velocity,
+				$"guest {id} velocity" );
+			Assert.AreEqual( new FixedVector( navigator.TargetX, navigator.TargetY ), carried.Target,
+				$"guest {id} target" );
+			Assert.AreEqual( navigator.MaxSpeed, carried.MaxSpeed, $"guest {id} max speed" );
+			Assert.AreEqual( navigator.MaxForce, carried.MaxForce, $"guest {id} max force" );
+
 			Assert.AreEqual( navigator.PathCount, carried.Cursor, $"guest {id} cursor" );
 			Assert.AreEqual( navigator.PathTotalCount, carried.TotalWaypoints, $"guest {id} waypoints" );
 			Assert.AreEqual( navigator.PathBufferCount, carried.BufferedWaypoints, $"guest {id} buffered" );
