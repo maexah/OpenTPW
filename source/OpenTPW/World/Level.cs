@@ -361,6 +361,16 @@ public class Level
 		// stack, as the lobby's front end is, so it hears about a frame once the stack has dealt it out.
 		Hud.AddChild( new ParkFrontEnd( windows, ThemeName ) );
 
+		// The same on-screen effects the lobby has, and for a reason rather than for symmetry: a park
+		// already MAKES button glints and could not draw a single one. SetupParticles runs for parks as
+		// well as for the lobby, the windows here start and stop glints exactly as the lobby's do - see
+		// OptionsScreen.Closed, which calls StopGlint - and WindowStack draws them through
+		// ScreenParticles.Current, which was null for the whole life of a park. So every glint a park
+		// raised was allocated, ticked and killed without ever reaching the screen.
+		//
+		// Over the interface it decorates and under the pointer, which is the order SetupHud uses.
+		Hud.AddChild( new ScreenParticles() );
+
 		Hud.AddChild( new Cursor() );
 	}
 
