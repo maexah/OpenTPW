@@ -195,6 +195,79 @@ public class ParkGuestStateTests
 	}
 
 	/// <summary>
+	/// Where the park's guests are actually going - and the answer explains what a player sees at the gate.
+	///
+	/// <para>
+	/// <b>All seven guests coming through the gate are walking to the exact centre of one of its two
+	/// entrance cells.</b> That is why they stop in the gateway rather than passing under it: the cell
+	/// centre <i>is</i> their destination, and what should happen next - choosing somewhere inside the park
+	/// and setting off again - is the <c>Deciding</c> hub, which is not built. Until it is, a guest who
+	/// arrives stands in the archway.
+	/// </para>
+	/// <para>
+	/// <b>The two halves of this come from files that know nothing about each other</b>, which is what makes
+	/// it worth pinning: the entrance cells are text a developer typed into the balance file, and the
+	/// targets are 16.16 fixed-point coordinates inside a saved park. Neither was used to derive the other,
+	/// so seven targets landing dead on two named cell centres cannot be an artefact of the reader.
+	/// </para>
+	/// <para>
+	/// The five heading <i>for</i> the gate are the control: they stop four cells short of it, which is why
+	/// they are seen queueing in front rather than inside.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheGuestsComingThroughTheGateAreHeadingForItsTwoEntranceCells()
+	{
+		var balance = new ParkBalance( "jungle" );
+		var one = ParkWorld.NavigatorState.One;
+
+		var entranceY = balance.Int( "FixedItemInfo.EntranceAPosY", -1 );
+
+		Assert.AreEqual( 17, entranceY, "the balance file's entrance row" );
+		Assert.AreEqual( 47, balance.Int( "FixedItemInfo.EntranceAPosX", -1 ), "entrance A" );
+		Assert.AreEqual( 48, balance.Int( "FixedItemInfo.EntranceBPosX", -1 ), "entrance B" );
+		Assert.AreEqual( entranceY, balance.Int( "FixedItemInfo.EntranceBPosY", -1 ),
+			"both entrance cells are on one row" );
+
+		var entering = 0;
+		var heading = 0;
+
+		foreach ( var person in Guests( World() ) )
+		{
+			var guest = person.Guest!.Value;
+			var nav = person.Navigator;
+			var where = $"guest {person.ThingId}";
+
+			// The centre of a cell, which is where the pathfinder walks to - cell * One + One / 2.
+			var cellX = nav.TargetX / one;
+			var cellY = nav.TargetY / one;
+
+			if ( guest.State == 5 )
+			{
+				++entering;
+
+				Assert.AreEqual( entranceY, cellY, $"{where} is entering, so should be walking to the gate row" );
+				Assert.IsTrue( cellX == 47 || cellX == 48,
+					$"{where} is entering but is walking to cell ({cellX},{cellY}), not an entrance cell" );
+
+				// Dead centre, not merely inside: the half is what says this is a pathfinder's cell centre.
+				Assert.AreEqual( (cellX * one) + (one / 2), nav.TargetX, $"{where} across" );
+				Assert.AreEqual( (cellY * one) + (one / 2), nav.TargetY, $"{where} down" );
+			}
+			else if ( guest.State == 2 )
+			{
+				++heading;
+
+				Assert.IsTrue( cellY < entranceY,
+					$"{where} is heading for the gate and should stop short of it, not at row {cellY}" );
+			}
+		}
+
+		Assert.AreEqual( 7, entering, "guests coming through the gate" );
+		Assert.AreEqual( 5, heading, "guests still heading for it" );
+	}
+
+	/// <summary>
 	/// The money a guest arrived with, against the money their kind is supposed to start with.
 	///
 	/// <para>
