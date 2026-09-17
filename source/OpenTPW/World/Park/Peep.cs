@@ -80,14 +80,19 @@ public sealed class Peep
 	/// for them.
 	///
 	/// <para>
-	/// <b>It does NOT hold the route itself, and the commit that added this said otherwise.</b> What is
-	/// here is the bookkeeping: the cursor, how many waypoints the route had and how many were buffered,
-	/// the three distances, whether it finished or gave up, and the stuck record. The waypoints ARE the
-	/// route, and the save reader deliberately does not parse them - <c>subpath_buffer[]</c> is filled by
-	/// <c>SetDest</c> for only <c>path_buffer_count - 1</c> entries, so the rest hold
-	/// <c>0xCDCDCDCD</c> or a stale distance from whatever route was there before, and reading them
-	/// without that rule would hand out numbers that look entirely plausible. So a guest knows where they
-	/// had got to and not where they were going, and nothing here should pretend otherwise.
+	/// <b>A guest restored from a save has the bookkeeping and not the route</b>, and keeping those two
+	/// apart is what this paragraph is for. The file carries the cursor, how many waypoints the route had
+	/// and how many were buffered, the three distances, whether it finished or gave up, and the stuck
+	/// record. The waypoints ARE the route, and the save reader deliberately does not parse them -
+	/// <c>subpath_buffer[]</c> is filled by <c>SetDest</c> for only <c>path_buffer_count - 1</c> entries,
+	/// so the rest hold <c>0xCDCDCDCD</c> or a stale distance from whatever route was there before, and
+	/// reading them without that rule would hand out numbers that look entirely plausible.
+	/// </para>
+	/// <para>
+	/// <b>So a route is planned and never resumed.</b> <see cref="PeepNavigator.NavigateTo"/> is what puts
+	/// waypoints here, by searching the live map from where this guest is standing to where they were
+	/// going - the destination being the one part of a route that does survive a save. Until it has been
+	/// called, <see cref="PeepNavigator.Waypoints"/> is empty.
 	/// </para>
 	/// <para>
 	/// <b>Never null, and required rather than optional, because the save always has one.</b> The reader

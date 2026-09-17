@@ -9,13 +9,19 @@ namespace OpenTPW;
 /// has with <see cref="ParkWorld.GuestState"/>.
 /// </para>
 /// <para>
-/// <b>The waypoints themselves are not here, and the counts below must not be read as if they were.</b>
-/// <see cref="Cursor"/>, <see cref="TotalWaypoints"/> and <see cref="BufferedWaypoints"/> are numbers the
-/// save records about a route; no coordinate of that route is carried, because the reader deliberately
-/// does not parse <c>subpath_buffer[]</c>. <c>SetDest</c> writes only <c>path_buffer_count - 1</c> of the
+/// <b>A navigator seeded from a save has no waypoints, and one that has planned a route has them all.</b>
+/// The distinction is not a detail and the two must not be confused. <c>subpath_buffer[]</c> is
+/// deliberately not parsed by the reader: <c>SetDest</c> writes only <c>path_buffer_count - 1</c> of the
 /// distances, so the remaining slots hold the uninitialised fill or a stale value from an earlier route,
-/// and reading them without that rule would produce entirely plausible wrong answers. A person therefore
-/// knows how far along they were and not where they were going.
+/// and reading them would produce entirely plausible wrong answers. So a person restored from a file
+/// knows how far along they were and <i>not</i> where they were going - <see cref="Cursor"/>,
+/// <see cref="TotalWaypoints"/> and <see cref="BufferedWaypoints"/> are then bookkeeping about a route
+/// whose coordinates are gone, and <see cref="Waypoints"/> is empty.
+/// </para>
+/// <para>
+/// <b><see cref="NavigateTo"/> is what fills them, and it computes them rather than recovering them.</b>
+/// A route cannot be resumed from a save; it has to be planned afresh against the map. Once it has been,
+/// every count above describes waypoints that really are here.
 /// </para>
 /// <para>
 /// <b>Everything here is 16.16 fixed point and integer arithmetic, deliberately.</b> The original is, and
@@ -24,12 +30,10 @@ namespace OpenTPW;
 /// floating point would give answers that are close and not the same.
 /// </para>
 /// <para>
-/// <b>What this is not, yet.</b> It does not steer, and it cannot plan a route - the behaviour list that
-/// produces a force, and the pathfinder that fills the waypoints, are both still to come. What it does is
-/// everything the original's arrival behaviour does <i>around</i> those: measure distance, total a route
-/// up, say how far along it a person is, advance the waypoint cursor, and decide when someone has been
-/// blocked often enough to give up. All of that is self-contained, which is why it can be built and
-/// checked before the parts that need a map.
+/// <b>What this is not, yet.</b> It does not steer - the behaviour list that produces a force is
+/// <see cref="PeepSteering"/>, and following the route it plans is <see cref="PeepJourney"/>. Nothing
+/// ticks either of those from the park yet, so planning a route here does not by itself make anybody
+/// walk.
 /// </para>
 /// </summary>
 public sealed class PeepNavigator
@@ -92,29 +96,44 @@ public sealed class PeepNavigator
 	public int MaxForce { get; }
 
 	/// <summary>
-	/// Which waypoint of the route the person was walking towards - an index, not a place. Nothing here
-	/// can say where that waypoint is; see the class remarks.
+	/// Which waypoint of the route the person is walking towards - an index into <see cref="Waypoints"/>.
+	/// After a save it indexes waypoints that are not here; see the class remarks.
 	/// </summary>
 	public int Cursor { get; private set; }
 
 	/// <summary>How many waypoints the whole route had, buffered or not.</summary>
-	public int TotalWaypoints { get; }
+	public int TotalWaypoints { get; private set; }
 
 	/// <summary>
-	/// How many of them the original had loaded at the moment it saved. The route streams when it is
-	/// longer than <see cref="Slots"/>. This is the count the save recorded; the waypoints it counts are
-	/// not carried.
+	/// How many of them are held at once. The route streams when it is longer than <see cref="Slots"/>.
 	/// </summary>
-	public int BufferedWaypoints { get; }
+	public int BufferedWaypoints { get; private set; }
 
 	/// <summary>The distance of the legs still ahead within the buffer, which the cursor eats into.</summary>
 	public int BufferedDistance { get; private set; }
 
 	/// <summary>The distance of the part of the route that has not been loaded yet.</summary>
-	public int TailDistance { get; }
+	public int TailDistance { get; private set; }
 
 	/// <summary>How long the route was when it was planned, which is what progress is measured against.</summary>
-	public int TotalDistance { get; }
+	public int TotalDistance { get; private set; }
+
+	private readonly List<FixedVector> _waypoints = [];
+
+	/// <summary>
+	/// The waypoints being carried, at most <see cref="Slots"/> of them, each the <b>centre</b> of the
+	/// cell the pathfinder named. Empty until <see cref="NavigateTo"/> has planned a route.
+	/// </summary>
+	public IReadOnlyList<FixedVector> Waypoints => _waypoints;
+
+	private readonly List<int> _legLengths = [];
+
+	/// <summary>
+	/// How long each carried leg is, so that passing one can be taken off <see cref="BufferedDistance"/>.
+	/// One shorter than <see cref="Waypoints"/> - these are the gaps between them, and the walk from
+	/// where the person is standing to the first is not one of them.
+	/// </summary>
+	public IReadOnlyList<int> LegLengths => _legLengths;
 
 	/// <summary>Whether the person has reached the end of their route.</summary>
 	public bool Finished { get; private set; }
@@ -288,4 +307,153 @@ public sealed class PeepNavigator
 
 	/// <summary>Gives up on the route, as the original does when it cannot find a way through.</summary>
 	public void GiveUp() => CannotReach = true;
+
+	/// <summary>
+	/// Plans a route to a destination and takes it - the original's <c>FUN_0050f8e0</c>, which is the join
+	/// between the pathfinder and a person, and the thing that has to happen before anybody can walk.
+	///
+	/// <para>
+	/// <b>It plans; it never resumes.</b> The search runs from the cell this person is standing in to the
+	/// cell the destination falls in, so the only thing carried over from a save is the destination itself
+	/// - which survives where the route does not. See the class remarks.
+	/// </para>
+	/// <para>
+	/// <b>The verdict is the search's, not the straightening pass's</b>, and that is worth stating because
+	/// the original makes it look otherwise. <c>FUN_00511420</c> calls the search, hands its answer to
+	/// <c>FUN_005108a0</c> as an argument, and returns what that gives back - and <c>FUN_005108a0</c>
+	/// returns that same argument untouched at <b>both</b> of its exits. So improving a route can never
+	/// change whether one was found, and <c>0x70000000</c> - the failure the caller tests for - is written
+	/// only inside the search itself.
+	/// </para>
+	/// <para>
+	/// <b>Failing is not merely "no route".</b> The original marks the person as having arrived <i>and</i>
+	/// as unable to reach anywhere, zeroes every count and distance, and keeps the destination. Both flags
+	/// are set, which reads oddly and is what the executable does.
+	/// </para>
+	/// </summary>
+	/// <param name="destination">
+	/// Where to go, in the same 16.16 as <see cref="Position"/>. Only the cell it falls in is searched
+	/// for, but the whole point is kept as <see cref="Target"/>, because the last leg closes on the exact
+	/// point rather than on the middle of its cell.
+	/// </param>
+	/// <param name="blocked">
+	/// Whether a side of a cell is shut - <see cref="CellEdge.Blocked"/>, and for a park that is loaded
+	/// <c>CellEdge.For( park, mode ).Blocked</c>. <b>The mode rides inside this</b>: the original keeps it
+	/// in a global that the whole search reads, set from the <c>this + 0xb4</c> field of the object asking.
+	/// That field is <b>not</b> one of the twenty the save reader parses and must not be confused with
+	/// <c>NavigatorState.NavMode</c>, so no mode is chosen here - the caller picks one and says why.
+	/// </param>
+	/// <param name="addCurrent">
+	/// Whether to put the cell the person is standing in on the front of the route. <b>Live at two of the
+	/// original's four call sites</b>: <c>follow_path</c> passes 1 when the ground has changed underneath
+	/// the person and when they have been stuck, and 0 when they have simply run out of carried
+	/// waypoints; <c>FUN_00510100</c>, which is what the state machine reaches, passes 0.
+	/// </param>
+	/// <returns>Whether a route was found. False leaves the person having given up.</returns>
+	public bool NavigateTo( FixedVector destination,
+		Func<int, int, StepDirection, bool> blocked, bool addCurrent )
+	{
+		ArgumentNullException.ThrowIfNull( blocked );
+
+		var from = Position.Cell;
+		var route = new CellRoute { Start = from, Goal = destination.Cell };
+
+		var reached = new CellSearch( route, CellReroute.Budget, blocked ).Run( from.X, from.Y );
+
+		CellReroute.Run( route, blocked );
+
+		// Written whether or not a way was found: the original stores the destination on both paths.
+		Target = destination;
+
+		if ( !reached )
+			return GaveUpOnEverything();
+
+		if ( addCurrent )
+		{
+			route.Waypoints.Insert( 0, from );
+
+			// The original's buffer is a fixed 0xfc slots and it shifts the whole thing up by one, so at
+			// the cap the last waypoint falls off the end and the count does not grow.
+			if ( route.Waypoints.Count > CellSearch.SpliceRoom )
+				route.Waypoints.RemoveAt( route.Waypoints.Count - 1 );
+		}
+
+		Take( route.Waypoints );
+
+		return true;
+	}
+
+	/// <summary>
+	/// What the original does when the search fails: keep the destination, throw away everything else, and
+	/// set <b>both</b> the finished and the cannot-reach flags.
+	/// </summary>
+	private bool GaveUpOnEverything()
+	{
+		_waypoints.Clear();
+		_legLengths.Clear();
+
+		TotalWaypoints = 0;
+		BufferedWaypoints = 0;
+		TotalDistance = 0;
+		BufferedDistance = 0;
+		TailDistance = 0;
+		Cursor = 0;
+		StuckBits = 0;
+		Finished = true;
+		CannotReach = true;
+
+		return false;
+	}
+
+	/// <summary>
+	/// Takes a route the pathfinder found: the waypoints as cell centres, the three distances, and the
+	/// bookkeeping put back to the start of a fresh walk.
+	///
+	/// <para>
+	/// <b>The three distances are not three measurements of the same thing.</b>
+	/// <see cref="TotalDistance"/> is the walk to the first waypoint plus every leg after it, over the
+	/// whole route; <see cref="BufferedDistance"/> is only the legs <i>between</i> carried waypoints, and
+	/// <see cref="TailDistance"/> only the legs beyond them. So the first leg belongs to the total alone,
+	/// and <c>Total = firstLeg + Buffered + Tail</c> rather than the total being the other two added up.
+	/// </para>
+	/// </summary>
+	private void Take( IReadOnlyList<(int X, int Y)> cells )
+	{
+		var centres = new List<(int X, int Y)>( cells.Count );
+
+		foreach ( var (cellX, cellY) in cells )
+			centres.Add( (WaypointCentre( cellX ), WaypointCentre( cellY )) );
+
+		TotalWaypoints = centres.Count;
+		BufferedWaypoints = BufferedFor( TotalWaypoints );
+		TotalDistance = RouteDistance( Position.X, Position.Y, centres );
+
+		_waypoints.Clear();
+		_legLengths.Clear();
+
+		for ( var i = 0; i < BufferedWaypoints; ++i )
+			_waypoints.Add( new FixedVector( centres[i].X, centres[i].Y ) );
+
+		BufferedDistance = 0;
+
+		for ( var i = 0; i + 1 < BufferedWaypoints; ++i )
+		{
+			var leg = Distance( centres[i + 1].X - centres[i].X, centres[i + 1].Y - centres[i].Y );
+
+			_legLengths.Add( leg );
+			BufferedDistance += leg;
+		}
+
+		// The rest of the route, which streams in as the carried waypoints are used up. It starts at the
+		// last carried one, so the leg that crosses out of the buffer is counted here and not above.
+		TailDistance = 0;
+
+		for ( var i = BufferedWaypoints - 1; i + 1 < TotalWaypoints; ++i )
+			TailDistance += Distance( centres[i + 1].X - centres[i].X, centres[i + 1].Y - centres[i].Y );
+
+		Cursor = 0;
+		StuckBits = 0;
+		Finished = false;
+		CannotReach = false;
+	}
 }
