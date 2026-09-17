@@ -3,9 +3,15 @@ using System.Numerics;
 namespace OpenTPW;
 
 /// <summary>
-/// The park's own camera, as the original flies it. <b>Not</b> <see cref="ParkCameraMode"/>, which is a
-/// development flycam left over from an old test scene and has never run in the shipped game - its own
-/// summary says so.
+/// The park's own camera, as the original flies it.
+///
+/// <para>
+/// <b>A development flycam used to sit beside this one and was deleted on 2026-09-17.</b> It was a
+/// leftover from the test scene that predated parks, nothing ever constructed it, and the reason its own
+/// comment gave for keeping it - so that a flycam need not be written twice - stopped applying once this
+/// camera and the camcorder were built. It is named here only because older commits and notes refer to
+/// it, and anyone meeting those should know it is gone rather than go looking.
+/// </para>
 ///
 /// <para>
 /// The original keeps this camera as a save module of its own ("SAD_CAMERA", chunk magic <c>KAME</c>,
