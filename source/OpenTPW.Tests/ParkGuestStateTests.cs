@@ -322,4 +322,100 @@ public class ParkGuestStateTests
 			"matching every guest to the next kind along should put at least one outside its band, "
 			+ "or the bands are too wide for this check to mean anything" );
 	}
+
+	/// <summary>
+	/// Whether each guest has paid to come in, and how long they will go on waiting - the two fields the
+	/// admission states turn on, and the two the reader used to walk straight past.
+	///
+	/// <para>
+	/// <b>The correlation is the assertion; the values are only the evidence.</b> <c>mPaidAdmission</c> is
+	/// false for every one of the five guests still heading for the ticket booths and true for all eight
+	/// who are past them - a clean split with no exceptions. An offset read a few bytes out would give
+	/// numbers that still looked like flags but would have no reason to line up with what each guest is
+	/// doing, so thirteen out of thirteen agreeing is what makes the field identification trustworthy
+	/// rather than merely plausible.
+	/// </para>
+	/// <para>
+	/// <b><c>mParkOpeningWaitingTime</c> is checked against the roll that produces it</b> rather than
+	/// against a remembered constant: entering the waiting state sets it to <c>rand % 150 + 200</c>, so
+	/// every non-zero value must fall in 200..349. Eight of the thirteen carry one, and they are not all
+	/// the same number - which is what says the field is per-guest and not a shared constant being read
+	/// thirteen times.
+	/// </para>
+	/// <para>
+	/// <b>This drives <see cref="ParkPeople.PeepsIn"/> rather than the record</b>, so it covers the seeding
+	/// as well as the parse. A reader that got both fields right while <see cref="Peep"/>'s constructor
+	/// dropped them would pass a test written against <c>GuestState</c> alone.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EveryGuestPastTheTicketBoothsHasPaidAndCarriesTheWaitTheyRolled()
+	{
+		var guests = ParkPeople.PeepsIn( World() );
+
+		Assert.AreEqual( 13, guests.Count, "the shipped park's guests" );
+
+		var paid = 0;
+		var unpaid = 0;
+		var waits = new System.Collections.Generic.List<int>();
+
+		foreach ( var guest in guests )
+		{
+			var where = $"guest {guest.ThingId} in {guest.State}";
+
+			// Heading for the gate is the one state in this park that comes before being charged.
+			var beforeTheBooths = guest.State == PeepState.HeadingForGate;
+
+			Assert.AreEqual( !beforeTheBooths, guest.PaidAdmission,
+				$"{where} should{(beforeTheBooths ? " not" : "")} have paid to come in" );
+
+			if ( beforeTheBooths )
+			{
+				++unpaid;
+
+				Assert.AreEqual( 0, guest.ParkOpeningWait,
+					$"{where} has not begun waiting for anything, so carries no wait" );
+
+				continue;
+			}
+
+			++paid;
+			waits.Add( guest.ParkOpeningWait );
+
+			// The range the roll can produce, and nothing outside it - see Peep.SetState.
+			Assert.IsTrue( guest.ParkOpeningWait is >= 200 and <= 349,
+				$"{where} carries a wait of {guest.ParkOpeningWait}, which no roll of rand % 150 + 200 gives" );
+		}
+
+		Assert.AreEqual( 5, unpaid, "guests still to be charged" );
+		Assert.AreEqual( 8, paid, "guests who have paid - the seven entering and the one waiting for the gate" );
+
+		// Without this the eight could all be one number, which is what a constant misread as a field
+		// would look like.
+		Assert.IsTrue( waits.Distinct().Count() > 1,
+			$"the eight waits should not all be the same number: {string.Join( ", ", waits )}" );
+	}
+
+	/// <summary>
+	/// The one guest saved waiting for the gate has already paid, which is the whole reason
+	/// <c>mPaidAdmission</c> has to be carried out of the file rather than started fresh.
+	///
+	/// <para>
+	/// <c>FUN_004ff7f0</c> tests that flag and nothing else to decide what a waiting guest does: unset,
+	/// they are sent back to the ticket booths; set, they wait to be let through. So thing 33 restored with
+	/// the flag cleared would be sent to queue up and pay a second time.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheGuestWaitingForTheGateHasAlreadyPaid()
+	{
+		var waiting = ParkPeople.PeepsIn( World() )
+			.Where( guest => guest.State == PeepState.WaitingForOpening )
+			.ToList();
+
+		Assert.AreEqual( 1, waiting.Count, "the shipped park saves exactly one guest waiting for the gate" );
+		Assert.AreEqual( 33, waiting[0].ThingId, "and it is thing 33" );
+		Assert.IsTrue( waiting[0].PaidAdmission, "they have paid, so they are waiting to be let in" );
+		Assert.AreEqual( 297, waiting[0].ParkOpeningWait, "and they carry the wait they rolled" );
+	}
 }

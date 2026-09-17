@@ -22,10 +22,31 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>Easy_Standard.sam is deliberately not loaded.</b> The original reads it as a third pass, and
-/// in the jungle it overrides exactly four keys and introduces none - all four
-/// <c>LoanInfo[n].Lendername</c>, which name who lends the money rather than changing any number.
-/// Reading it would be asserting the game is in easy mode, and nothing here knows that yet.
+/// <b>There is a THIRD layer, and it is asked for rather than assumed - <c>Easy_Standard.sam</c>.</b>
+/// The original builds its name with <c>sprintf( dest, "%s\%s%s", theme, "Easy_", "Standard.sam" )</c>
+/// and reads it only when its mode word <c>DAT_00fb3b7c</c> is <b>2</b>, which is Instant Action; a
+/// theme that ships no such file gets the benign line "There is no Easy_standard.sam file for this
+/// theme - This is not critical". So it is a real pass and it is genuinely conditional, which is why
+/// <see cref="ParkBalance(string, bool)"/> takes the answer instead of guessing it.
+/// </para>
+/// <para>
+/// <b>This paragraph used to say the file "overrides exactly four keys and introduces none - all four
+/// LoanInfo[n].Lendername", and that was a description of the WRONG FILE.</b> Those four Lendername
+/// keys are what <c>jungle/Standard.sam</c> overrides. Measured, <c>jungle/Easy_Standard.sam</c> names
+/// 68 keys - all of which the global file already has, so it introduces none - and changes <b>33</b> of
+/// them, among which are two that decide whether anybody gets into the park:
+/// <c>PeepInfo.AveragePriceMultiplier</c> 1.25 to <b>1.5</b> and
+/// <c>PeepInfo.ExpensivePriceMultiplier</c> 2.0 to <b>2.5</b>. The rest are
+/// <c>BankAccountInfo.InitialCash</c> 50000 to 100000, all eight <c>LoanInfo[n].APRInPercent</c> to
+/// nought, and the staff wages, researcher abilities and track costs.
+/// </para>
+/// <para>
+/// <b>And the shipped park proves it is an easy-mode park, so this is not a preference.</b> Its economy
+/// thing carries an APR of <b>nought on all eight loans</b> - which matches
+/// <c>Easy_Standard.sam</c> exactly and matches the global file, whose APRs run 20, 20, 20, 20, 23, 22,
+/// 18 and 21, <b>nowhere</b>. Its balance of 87,987 also sits above the global file's 50,000 starting
+/// cash and below easy mode's 100,000. Two independent fields of the save agree, and the file is
+/// literally called <c>Easymode.TPWI</c>.
 /// </para>
 /// </summary>
 public sealed class ParkBalance
@@ -35,10 +56,23 @@ public sealed class ParkBalance
 	/// <summary>How many keys the stack came to, for the log.</summary>
 	public int Count => _values.Count;
 
-	public ParkBalance( string themeName )
+	/// <param name="easyMode">
+	/// Whether to read the theme's <c>Easy_Standard.sam</c> over the top, as the original does when its
+	/// mode word says Instant Action. <b>Defaulted to false so that asking for a park's balance without
+	/// an opinion gets the standard game</b>, which is what every existing caller and test means; the one
+	/// place that knows better says so.
+	/// </param>
+	public ParkBalance( string themeName, bool easyMode = false )
 	{
+		var theme = themeName.ToLowerInvariant();
+
 		Layer( "levels/Standard.sam" );
-		Layer( $"levels/{themeName.ToLowerInvariant()}/Standard.sam" );
+		Layer( $"levels/{theme}/Standard.sam" );
+
+		// Third and last, and only when asked - see the class remarks for the two fields of the shipped
+		// save that show this park is one of these.
+		if ( easyMode )
+			Layer( $"levels/{theme}/Easy_Standard.sam" );
 	}
 
 	/// <summary>

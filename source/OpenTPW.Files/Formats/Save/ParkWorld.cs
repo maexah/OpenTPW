@@ -66,6 +66,77 @@ public sealed class ParkWorld
 	private readonly List<CatalogueObject> _objects = [];
 
 	/// <summary>
+	/// One of the eight loans a park can be offered, as the save holds it.
+	///
+	/// <para>
+	/// The names are the original's own, spelled as its serialiser announces them -
+	/// <c>mLoans[loan].loan_available</c> and the seven beside it. Eight slots are written whether or not
+	/// a park has been offered anything, so an untouched park carries eight of these with
+	/// <see cref="Available"/> and <see cref="Bought"/> both nought.
+	/// </para>
+	/// </summary>
+	public readonly record struct LoanState(
+		int Available, int AmountAvailable, int AprPercent, int RepaymentMonths,
+		int MonthlyRepayment, int Bought, int MonthsRepaid, int LenderNameIndex );
+
+	/// <summary>
+	/// The park's money: what it charges to come in, what it holds, and what it owes.
+	///
+	/// <para>
+	/// <b>This is thing 8, and the header names it.</b> <see cref="BankAccount"/> is a thing handle rather
+	/// than an amount, and the thing it points at is model 16 - whose serialiser
+	/// (<c>FUN_004cf920</c>) announces every field below by name. <c>FUN_004ff5b0</c> confirms it from the
+	/// other side: it fetches this very thing and reads <c>+0x118</c>, the admission fee, to work out what
+	/// a guest thinks of the price.
+	/// </para>
+	/// <para>
+	/// <b>The offsets below are file offsets and are NOT the ones the decompiler shows</b>, which is the
+	/// same trap <see cref="GuestState"/> warns about: a thing is written in the order its reader asks for
+	/// its fields, so a field's place in the record is the sum of the sizes before it. <c>mAdmissionFee</c>
+	/// is at <c>+0x118</c> in memory and at <b>+16</b> in the record.
+	/// </para>
+	/// <para>
+	/// <b>The layout closes on the record size, which is what makes it more than a reading.</b> Eight bytes
+	/// of thing head, eight of the map base every thing carries (<c>FUN_0050b090</c>, four 2-byte fields),
+	/// seven 4-byte fields and then eight loans of eight 4-byte fields - <c>16 + 28 + 256</c> = <b>300</b>,
+	/// exactly what <c>RecordSizes[16]</c> was measured at from the shipped park long before this was read.
+	/// The loan array's own end corroborates it a second time: in memory it runs from <c>+0x14</c> for
+	/// <c>8 * 0x20</c> bytes and stops at <c>+0x114</c>, which is precisely where the next named field
+	/// (<c>mWithdrawalsEnabled</c>) sits.
+	/// </para>
+	/// <para>
+	/// <b><see cref="Balance"/> is the money and <see cref="BatchBalance"/> is not a second copy of it.</b>
+	/// Taking the admission fee (<c>FUN_004d0600</c>) adds it to <see cref="Balance"/> and to
+	/// <see cref="ProfitThisYear"/> and touches neither of the others, which is how those two are known to
+	/// be the running totals rather than the batch or the last.
+	/// </para>
+	/// </summary>
+	public readonly record struct EconomyState(
+		int AdmissionFee, int Balance, int BatchBalance, int WithdrawalsEnabled,
+		int LastBalance, int TurnEnteredRed, int ProfitThisYear, IReadOnlyList<LoanState> Loans )
+	{
+		/// <summary>How many loan slots are written, offered or not - the serialiser's own loop bound.</summary>
+		public const int LoanSlots = 8;
+
+		/// <summary>
+		/// What the original refuses to bank in one go - <c>FUN_004d0600</c> asserts the fee is under a
+		/// million before it adds it, with the message "Bank account - making enormous d[eposit]". Kept
+		/// because it is the one bound the executable states outright about any of these numbers.
+		/// </summary>
+		public const int EnormousDeposit = 1000000;
+	}
+
+	/// <summary>
+	/// The park's economy, or null where the walk never reached it - see <see cref="EconomyState"/>.
+	///
+	/// <para>
+	/// Nullable rather than defaulted, because a park with no economy thing and a park charging nothing to
+	/// come in are different things and a zero fee would read as the second.
+	/// </para>
+	/// </summary>
+	public EconomyState? Economy { get; private set; }
+
+	/// <summary>
 	/// One of the park's people: a guest, or one of the five kinds of staff.
 	///
 	/// <para>
@@ -147,10 +218,33 @@ public sealed class ParkWorld
 	/// mean giving it a meaning it has not earned.
 	/// </para>
 	/// </summary>
+	/// <param name="PaidAdmission">
+	/// <c>mPaidAdmission</c> - whether this guest has already accepted the price of coming in.
+	///
+	/// <para>
+	/// <b>It is what makes waiting outside a two-way state.</b> <c>FUN_004ff7f0</c> tests this and nothing
+	/// else to decide what a guest waiting for the gate does next: unset, they are sent back to head for
+	/// the ticket booths; set, they wait to be let through and then enter. It is written in one place -
+	/// accepting a fee in <c>FUN_004ff9d0</c> - and read in two, the other being the refund a guest gets at
+	/// the bus stop.
+	/// </para>
+	/// </param>
+	/// <param name="ParkOpeningWait">
+	/// <c>mParkOpeningWaitingTime</c> - a countdown in the guest's own ticks, which two states share.
+	///
+	/// <para>
+	/// <b>Not only about the park opening, despite the name.</b> Entering the waiting state rolls
+	/// <c>rand % 150 + 200</c> into it (<c>FUN_00501db0</c> case 3); a guest who finds the fee merely
+	/// expensive rather than outrageous rolls <c>rand % 50 + 50</c> into the <i>same</i> field and
+	/// re-judges when it runs out (<c>FUN_004ff9d0</c> case 1). The name is the original's own, so it is
+	/// kept rather than improved on.
+	/// </para>
+	/// </param>
 	public readonly record struct GuestState(
 		int State, int SavedState, int PersonType, int Cash, int ExitLevel,
 		float Happiness, float Thirst, float Hunger, float Toilet, float Illness, float Litter,
-		int MajorDest, int QueuePos, int PrankeryIndex )
+		int MajorDest, int QueuePos, int PrankeryIndex,
+		int PaidAdmission = 0, int ParkOpeningWait = 0 )
 	{
 		/// <summary>
 		/// The behaviour a guest returns to after a one-off animation. A new guest is constructed with
@@ -824,6 +918,8 @@ public sealed class ParkWorld
 				_objects.Add( ReadCatalogueObject( id, start ) );
 			else if ( Array.IndexOf( PersonModels, model ) >= 0 )
 				_people.Add( ReadPerson( id, model, start ) );
+			else if ( model == EconomyModel )
+				Economy = ReadEconomy( start );
 
 			++ThingCount;
 
@@ -970,7 +1066,66 @@ public sealed class ParkWorld
 			Litter: ReadSingleAt( start + 438 ),
 			MajorDest: ReadUInt16At( start + 442 ),     // mMajorDest - the thing they have chosen, or none
 			QueuePos: ReadByteAt( start + 494 ),        // mQueuePos
-			PrankeryIndex: ReadByteAt( start + 469 ) ); // mPrankeryIndex
+			PrankeryIndex: ReadByteAt( start + 469 ),   // mPrankeryIndex
+			// These two sit between mNumSideshowsWon and mPersonType, which is where their names sort:
+			// the whole block is written in alphabetical order and mPersonType at +468 is the anchor
+			// immediately after them. See the parameter docs for what each one decides.
+			PaidAdmission: ReadInt32At( start + 460 ),  // mPaidAdmission
+			ParkOpeningWait: ReadInt32At( start + 464 ) ); // mParkOpeningWaitingTime
+
+	/// <summary>
+	/// The model number of the park's economy - the only manager this reader opens, because
+	/// <see cref="BankAccount"/> names it and nothing else in the save says what a park charges.
+	/// </summary>
+	private const int EconomyModel = 16;
+
+	/// <summary>
+	/// Where the economy's own fields begin in its record: the eight-byte thing head and the eight bytes
+	/// of map base that every thing carries in front of whatever it adds.
+	/// </summary>
+	private const int EconomyFieldsAt = 16;
+
+	/// <summary>Where the loan array begins, after the seven single fields in front of it.</summary>
+	private const int LoansAt = 44;
+
+	/// <summary>How long one loan's record is - eight 4-byte fields, and the array's stride.</summary>
+	private const int LoanStride = 32;
+
+	/// <summary>
+	/// The economy thing's block, read in the order <c>FUN_004cf920</c> asks for it - see
+	/// <see cref="EconomyState"/> for why the order rather than the memory offsets is what decides this,
+	/// and for the two independent checks that close it.
+	/// </summary>
+	private EconomyState ReadEconomy( int start )
+	{
+		var at = start + EconomyFieldsAt;
+		var loans = new LoanState[EconomyState.LoanSlots];
+
+		for ( var i = 0; i < loans.Length; ++i )
+		{
+			var loan = start + LoansAt + (i * LoanStride);
+
+			loans[i] = new LoanState(
+				Available: ReadInt32At( loan ),                 // mLoans[loan].loan_available
+				AmountAvailable: ReadInt32At( loan + 4 ),       // amount_available
+				AprPercent: ReadInt32At( loan + 8 ),            // APR_in_percent
+				RepaymentMonths: ReadInt32At( loan + 12 ),      // repayment_period_in_months
+				MonthlyRepayment: ReadInt32At( loan + 16 ),     // monthly_repayment
+				Bought: ReadInt32At( loan + 20 ),               // loan_bought
+				MonthsRepaid: ReadInt32At( loan + 24 ),         // months_repaid
+				LenderNameIndex: ReadInt32At( loan + 28 ) );    // lenderNameIndex
+		}
+
+		return new EconomyState(
+			AdmissionFee: ReadInt32At( at ),                    // mAdmissionFee
+			Balance: ReadInt32At( at + 4 ),                     // mBalance
+			BatchBalance: ReadInt32At( at + 8 ),                // mBatchBalance
+			WithdrawalsEnabled: ReadInt32At( at + 12 ),         // mWithdrawalsEnabled
+			LastBalance: ReadInt32At( at + 16 ),                // mLastBalance
+			TurnEnteredRed: ReadInt32At( at + 20 ),             // mTurnEnteredRed
+			ProfitThisYear: ReadInt32At( at + 24 ),             // mProfitThisYear
+			Loans: loans );
+	}
 
 	/// <summary>
 	/// One live sprite: the picture a person is drawn as, and the state the park was saved in.

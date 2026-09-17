@@ -81,10 +81,34 @@ public sealed class Peep
 	public int VisitorNumber { get; internal set; }
 
 	/// <summary>
-	/// How long this guest will wait for the park to open, set when they begin waiting. In their own
-	/// ticks, like <see cref="ExitLevel"/>.
+	/// How long this guest will go on waiting, in their own ticks, like <see cref="ExitLevel"/> - the
+	/// original's <c>mParkOpeningWaitingTime</c>.
+	///
+	/// <para>
+	/// <b>Two states share it, so the name is narrower than the field.</b> Beginning to wait for a shut
+	/// park rolls <c>rand % 150 + 200</c> here (<see cref="SetState"/>); a guest who thinks the fee
+	/// expensive but not outrageous rolls <c>rand % 50 + 50</c> into the same field and re-judges when it
+	/// reaches nought. The name is the save's own and is kept for that reason.
+	/// </para>
+	/// <para>
+	/// The setter is <c>internal</c> for the same reason <see cref="PurposeSpeed"/>'s is: the behaviour
+	/// writes it, and nothing outside the assembly should.
+	/// </para>
 	/// </summary>
-	public int ParkOpeningWait { get; private set; }
+	public int ParkOpeningWait { get; internal set; }
+
+	/// <summary>
+	/// Whether this guest has already accepted what the park charges - the original's
+	/// <c>mPaidAdmission</c>.
+	///
+	/// <para>
+	/// <b>This is what makes waiting outside a two-way state</b>, and it is carried from the save rather
+	/// than assumed: <c>FUN_004ff7f0</c> tests it and nothing else to choose between sending a guest back
+	/// to the ticket booths and letting them through the gate, so a guest saved mid-wait must be restored
+	/// with whichever answer the file gave.
+	/// </para>
+	/// </summary>
+	public bool PaidAdmission { get; internal set; }
 
 	/// <summary>When the guest last began a one-off animation, so that its end can be noticed.</summary>
 	public int TimeOfLastSpotAnim { get; private set; }
@@ -162,6 +186,12 @@ public sealed class Peep
 		Litter = saved.Litter;
 		MajorDest = saved.MajorDest;
 		QueuePos = saved.QueuePos;
+
+		// Both of these decide what a guest partway through being admitted does next, so they are seeded
+		// rather than started fresh - the shipped park has a guest saved waiting for the gate, and whether
+		// they have paid is the whole of what happens to them.
+		PaidAdmission = saved.PaidAdmission != 0;
+		ParkOpeningWait = saved.ParkOpeningWait;
 	}
 
 	/// <summary>The range every need is held in - <c>FUN_004fb4f0</c> and the clamps inlined beside it.</summary>
