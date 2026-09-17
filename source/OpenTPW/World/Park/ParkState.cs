@@ -71,6 +71,27 @@ public sealed class ParkState
 				Occupant = cell.Occupant
 			};
 		}
+
+		// And the queues as the save left them. Every one is empty in the park that ships - nobody has ever
+		// been admitted to it - so this seeds nothing today and is still what makes a saved queue survive
+		// being loaded, rather than the park quietly starting everybody at the front.
+		foreach ( var thing in park.Objects )
+		{
+			if ( thing.FirstInQueue != 0 )
+				_queueHead[thing.ThingId] = thing.FirstInQueue;
+		}
+
+		foreach ( var person in park.People )
+		{
+			if ( person.Guest is not { } guest )
+				continue;
+
+			if ( guest.QNext != 0 )
+				_queueNext[person.ThingId] = guest.QNext;
+
+			if ( guest.QPrev != 0 )
+				_queuePrev[person.ThingId] = guest.QPrev;
+		}
 	}
 
 	/// <summary>
@@ -144,6 +165,124 @@ public sealed class ParkState
 	/// <summary>Whether a grid position is on the map at all, for a caller that would rather ask than catch.</summary>
 	public static bool OnMap( int x, int y )
 		=> x >= 0 && y >= 0 && x < ParkWorld.MapSize && y < ParkWorld.MapSize;
+
+	// The queues, which are the one structure a running park changes that the save cannot hold for it:
+	// ParkWorld describes a file and is immutable, so a guest joining a queue has nowhere to write. The
+	// shape is the original's own - a head on the object (mFirstInQ) and a doubly-linked list through the
+	// guests themselves (mQNext, mQPrev) - kept here rather than on Peep so that the whole structure lives
+	// in one place and is seeded once.
+	private readonly Dictionary<int, int> _queueHead = [];
+	private readonly Dictionary<int, int> _queueNext = [];
+	private readonly Dictionary<int, int> _queuePrev = [];
+
+	/// <summary>
+	/// How far a queue walk may go before it is treated as broken. The original uses a thousand in
+	/// <c>GetBackOfQueue</c> and complains rather than spinning; this bounds the person walk the same way.
+	/// </summary>
+	public const int LongestQueue = 1000;
+
+	/// <summary>The guest at the head of this object's queue, or nought - <c>mFirstInQ</c>.</summary>
+	public int FirstInQueue( int objectId ) => _queueHead.GetValueOrDefault( objectId );
+
+	/// <summary>The guest behind this one, or nought for the last - <c>mQNext</c>.</summary>
+	public int NextInQueue( int guestId ) => _queueNext.GetValueOrDefault( guestId );
+
+	/// <summary>The guest in front of this one, or nought for the first - <c>mQPrev</c>.</summary>
+	public int PreviousInQueue( int guestId ) => _queuePrev.GetValueOrDefault( guestId );
+
+	/// <summary>How many are queueing for this object, by walking the links.</summary>
+	public int QueueLength( int objectId )
+	{
+		var length = 0;
+
+		for ( var id = FirstInQueue( objectId ); id != 0 && length < LongestQueue; ++length )
+			id = NextInQueue( id );
+
+		return length;
+	}
+
+	/// <summary>
+	/// Puts a guest at the back of a queue and hands back the place they took, counting from nought -
+	/// <c>FUN_004ddb90</c>, whose own line is "Object %d adding person %d to queue".
+	///
+	/// <para>
+	/// <b>It appends at the tail by walking to it</b>, which is what the original does rather than keeping
+	/// a back pointer: with an empty queue the joiner becomes the head, and otherwise the last guest's
+	/// <c>mQNext</c> is pointed at them. Their own <c>mQPrev</c> becomes whoever was last - nought when the
+	/// queue was empty - and their <c>mQNext</c> is cleared.
+	/// </para>
+	/// </summary>
+	public int JoinQueue( int objectId, int guestId )
+	{
+		var head = FirstInQueue( objectId );
+
+		if ( head == 0 )
+		{
+			_queueHead[objectId] = guestId;
+			_queuePrev.Remove( guestId );
+		}
+		else
+		{
+			var last = head;
+			var steps = 0;
+
+			while ( NextInQueue( last ) != 0 && ++steps < LongestQueue )
+				last = NextInQueue( last );
+
+			_queueNext[last] = guestId;
+			_queuePrev[guestId] = last;
+		}
+
+		_queueNext.Remove( guestId );
+
+		return QueueLength( objectId ) - 1;
+	}
+
+	/// <summary>
+	/// Takes a guest out of a queue, joining up whoever stood either side of them - <c>FUN_004ddd20</c>,
+	/// which the original follows with two assertions that both of the leaver's links are nought.
+	/// </summary>
+	/// <returns>Whether they were in that queue to begin with.</returns>
+	public bool LeaveQueue( int objectId, int guestId )
+	{
+		var wasQueueing = FirstInQueue( objectId ) == guestId
+			|| _queueNext.ContainsKey( guestId ) || _queuePrev.ContainsKey( guestId );
+
+		if ( !wasQueueing )
+			return false;
+
+		var previous = PreviousInQueue( guestId );
+		var next = NextInQueue( guestId );
+
+		if ( previous == 0 )
+		{
+			if ( next == 0 )
+				_queueHead.Remove( objectId );
+			else
+				_queueHead[objectId] = next;
+		}
+		else if ( next == 0 )
+		{
+			_queueNext.Remove( previous );
+		}
+		else
+		{
+			_queueNext[previous] = next;
+		}
+
+		if ( next != 0 )
+		{
+			if ( previous == 0 )
+				_queuePrev.Remove( next );
+			else
+				_queuePrev[next] = previous;
+		}
+
+		_queueNext.Remove( guestId );
+		_queuePrev.Remove( guestId );
+
+		return true;
+	}
 
 	/// <summary>How many cells hold litter, which is what a park's cleanliness comes to.</summary>
 	public int LitteredCells

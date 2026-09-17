@@ -69,6 +69,8 @@ public sealed class PeepBehaviour
 		_gateStatus = gateStatus;
 		_random = random ?? new Random();
 		_chooser = new ParkRideChooser( park, catalogue );
+		_park = park;
+		_catalogue = catalogue;
 	}
 
 	/// <summary>
@@ -114,6 +116,8 @@ public sealed class PeepBehaviour
 		// No park, so nothing to choose from - which is the right answer for a guest built out of two
 		// facts rather than out of a save.
 		_chooser = new ParkRideChooser( null );
+		_park = null;
+		_catalogue = null;
 	}
 
 	private readonly Func<int>? _gateStatus;
@@ -123,6 +127,16 @@ public sealed class PeepBehaviour
 	/// chooser with no park behind it simply chooses nothing, which is what the ride arm should do then.
 	/// </summary>
 	private readonly ParkRideChooser _chooser;
+
+	/// <summary>
+	/// The park these guests are in, for the two questions joining a queue asks of it: which object they
+	/// chose, and where its queue ends. Null leaves a guest unable to join one, which is the same answer
+	/// a null park gives everywhere else here.
+	/// </summary>
+	private readonly ParkWorld? _park;
+
+	/// <summary>What the chosen thing actually is, for the excitement a guest turns away from.</summary>
+	private readonly ParkItemCatalogue? _catalogue;
 
 	/// <summary>What the park charges and how a guest feels about it, or null where nothing can say.</summary>
 	public ParkAdmission? Admission { get; }
@@ -314,6 +328,33 @@ public sealed class PeepBehaviour
 				{
 					peep.VisitorNumber = State.Admit();
 					peep.SetState( PeepState.Deciding, tick, _random );
+				}
+
+				break;
+
+			// Walking to something they chose - FUN_004ffbc0, and THE CASE THIS SWITCH DID NOT HAVE.
+			//
+			// <b>Its absence was a real fault rather than a gap.</b> The ride arm of Deciding puts a guest
+			// into this state, IsAWalkingState lists it, and AnimationFor gives it the walk - but with no
+			// case here the walk was never ticked, so a guest who chose a ride stood exactly where they
+			// decided, playing a walk, for ever. No test saw it: the chooser is tested on its own, and the
+			// suite never ran a guest from Deciding through to arriving.
+			case PeepState.GoingToRide:
+				switch ( Walked( peep, walk, playing ) )
+				{
+					case WalkVerdict.Arrived:
+						JoinTheQueue( peep, walk, tick );
+						break;
+
+					// "The person has become stuck on the way to the ride" - they give up on it and think
+					// again, which is what the original does rather than leaving them standing.
+					case WalkVerdict.CannotReach:
+						peep.MajorDest = 0;
+						peep.SetState( PeepState.Deciding, tick, _random );
+						break;
+
+					default:
+						break;
 				}
 
 				break;
@@ -693,6 +734,112 @@ public sealed class PeepBehaviour
 	}
 
 	/// <summary>
+	/// How far a ride's excitement may be from what a guest likes before they turn away at the queue -
+	/// <c>FUN_004ffbc0</c> tests the signed difference against <b>44</b>, and prints "ride is not
+	/// exciting enough" below and "ride is too exciting" above.
+	/// </summary>
+	/// <remarks>
+	/// The sign is the original's own and is worth not tidying: <c>FUN_004fd4e0</c> returns
+	/// <i>preferred minus actual</i>, clamped to fifty, negated - so a NEGATIVE answer means the guest
+	/// wanted more excitement than the ride offers. Only the magnitude is used here, because both arms
+	/// end the same way.
+	/// </remarks>
+	public const int ExcitementRefusal = 44;
+
+	/// <summary>
+	/// What a guest does on reaching something they chose - the arrival half of <c>FUN_004ffbc0</c>.
+	///
+	/// <para>
+	/// <b>Joining is the original's own order:</b> the gates first, then the queue itself, then the place
+	/// in it, and only then the state. A guest who fails a gate goes back to deciding with their choice
+	/// let go of, rather than standing at a ride they cannot join.
+	/// </para>
+	/// <para>
+	/// <b>Two arms of the original are deliberately NOT reproduced, each for a stated reason.</b> Its
+	/// second queue gate (<c>FUN_004ddb60</c>) compares the length against a capacity from
+	/// <c>FUN_004dda40</c>, which divides the ride's operating speed by a per-upgrade descriptor field at
+	/// <c>+0x1a8</c> - the very field whose pairing <see cref="ParkRideScore"/> refuses to guess - so
+	/// reproducing it would mean building a gate on an unverified number. The free-space gate below is
+	/// the one that IS established, twice over: <c>FUN_004dda20</c> is literally
+	/// <c>length &lt; mQueueSizeInCells * 4</c>. And the destination is the queue's END rather than the
+	/// guest's own place in it, because turning a position into a cell means walking the queue path
+	/// (<c>FUN_004de7e0</c>), which nothing here does.
+	/// </para>
+	/// </summary>
+	private void JoinTheQueue( Peep peep, PeepWalk walk, int tick )
+	{
+		if ( peep.MajorDest == 0 || _park == null || Chosen( peep ) is not { } chosen )
+		{
+			GiveUpOnIt( peep, tick );
+
+			return;
+		}
+
+		// The gate that is established - and note it is asked of the park as PLAYED, so a queue that
+		// filled up while this guest was walking to it turns them away.
+		if ( !ParkRideChoice.HasQueueRoom( chosen, State.QueueLength( chosen.ThingId ) )
+			|| TurnsAwayFrom( peep, chosen ) )
+		{
+			GiveUpOnIt( peep, tick );
+
+			return;
+		}
+
+		peep.QueuePos = State.JoinQueue( chosen.ThingId, peep.ThingId );
+
+		// The back of the queue is a packed cell - decode by subtracting one FIRST, the same packing
+		// mEntryPos and the patrol corners use. An object with none leaves them where they stand.
+		if ( chosen.BackOfQueue != 0 )
+		{
+			SendTo( peep, walk,
+				((chosen.BackOfQueue - 1) % ParkWorld.MapSize, (chosen.BackOfQueue - 1) / ParkWorld.MapSize) );
+		}
+
+		peep.SetState( PeepState.SteppingUpQueue, tick, _random );
+	}
+
+	/// <summary>The object this guest set off for, or null if the park no longer has it.</summary>
+	private ParkWorld.CatalogueObject? Chosen( Peep peep )
+	{
+		if ( _park == null )
+			return null;
+
+		foreach ( var thing in _park.Objects )
+		{
+			if ( thing.ThingId == peep.MajorDest )
+				return thing;
+		}
+
+		return null;
+	}
+
+	/// <summary>Lets go of what they chose and thinks again, which is where every refusal above ends.</summary>
+	private void GiveUpOnIt( Peep peep, int tick )
+	{
+		peep.MajorDest = 0;
+		peep.SetState( PeepState.Deciding, tick, _random );
+	}
+
+	/// <summary>
+	/// Whether the ride is too far from what this guest likes - see <see cref="ExcitementRefusal"/>.
+	/// </summary>
+	/// <remarks>
+	/// <b>An item declaring no excitement is never refused</b>, which is the original's own gate rather
+	/// than a guard against missing data: <c>FUN_004e0860(1)</c> decides whether the comparison happens at
+	/// all, and it is the same test that drops the excitement weight out of the ride scorer.
+	/// </remarks>
+	private bool TurnsAwayFrom( Peep peep, ParkWorld.CatalogueObject chosen )
+	{
+		if ( _catalogue == null || !_catalogue.TryGet( chosen.CatalogueId, out var item )
+			|| item.ExcitementLevel == 0 )
+			return false;
+
+		var wanted = _chooser.Score.PreferredExcitementFor( peep.PersonType );
+
+		return Math.Abs( wanted - item.ExcitementLevel ) > ExcitementRefusal;
+	}
+
+	/// <summary>
 	/// Offers this guest the best thing in the park and sets them off for it - <c>FUN_004fcb10</c>, and
 	/// the arm this file recorded as unbuilt until the scorer existed to answer it.
 	///
@@ -721,7 +868,10 @@ public sealed class PeepBehaviour
 		var wants = new ParkRideScore.Wants( peep.PersonType,
 			peep.Thirst, peep.Hunger, peep.Toilet, peep.Vomit );
 
-		if ( _chooser.ChooseFor( wants, x, y, tick ) is not { } chosen )
+		// Queues are measured from the park as it is being PLAYED, not as it was saved - a guest who joined
+		// one a moment ago has to count.
+		if ( _chooser.ChooseFor( wants, x, y, tick, queueLength: o => State.QueueLength( o.ThingId ) )
+			is not { } chosen )
 			return false;
 
 		peep.Navigator.Target = new FixedVector(

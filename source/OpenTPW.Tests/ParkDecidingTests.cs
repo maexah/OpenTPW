@@ -94,9 +94,13 @@ public class ParkDecidingTests
 		// deciding, wandering, or on their way out.
 		foreach ( var id in InTheGateway )
 		{
+			// <b>Three states, and the reason it is only three is the construction rather than the hub.</b>
+			// Run builds the behaviour from two facts, so its chooser has no park and the ride arm can never
+			// return a candidate; given one it would also produce GoingToRide and SteppingUpQueue. Widening
+			// this list would weaken it, so it stays narrow and says why.
 			Assert.IsTrue(
 				guests[id].State is PeepState.Deciding or PeepState.Wandering or PeepState.HeadingForExit,
-				$"guest {id} ended in {guests[id].State}, which the hub cannot produce" );
+				$"guest {id} ended in {guests[id].State}, which the hub cannot produce without a park" );
 		}
 	}
 
@@ -104,7 +108,10 @@ public class ParkDecidingTests
 	/// At least some of them are actually <em>wandering</em>, which is the arm that moves anybody.
 	///
 	/// <para>
-	/// A third of decisions wander, a third offer a ride that cannot be taken yet, and a third do nothing -
+	/// A third of decisions wander, a third offer a ride, and a third do nothing - and in THIS file the ride
+	/// arm is inert, because <see cref="Run"/> builds the behaviour from two facts rather than from a park,
+	/// so its chooser has nothing to choose from. See <see cref="ParkRideJoinTests"/> for the park-ful
+	/// version, which is where that arm is exercised -
 	/// so over a long run a guest passes through <c>Wandering</c> repeatedly. Asserting only the end state
 	/// would be a coin toss; this watches every turn and counts how many distinct guests were ever seen in
 	/// it.
