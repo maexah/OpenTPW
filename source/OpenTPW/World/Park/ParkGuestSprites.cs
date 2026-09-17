@@ -327,14 +327,57 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// </para>
 	/// </summary>
 	private static int Facing( int personFacing )
+		=> Facing( personFacing, CameraOctant( Camera.Rotation.Forward ) );
+
+	/// <summary>
+	/// Which of the eight ways round the camera is looking, from the direction it looks rather than from
+	/// any one camera mode, so the park's orbit and camcorder cameras both work.
+	///
+	/// <para>
+	/// <b>This numbering runs the OPPOSITE way round from a person's.</b> A person's octant comes from
+	/// <see cref="ParkWorld.Person.OctantOf"/> and increases clockwise - north 0, east 2, south 4, west 6.
+	/// This one increases anticlockwise - north 0, west 2, south 4, east 6 - because it is taken from the
+	/// orbit camera's yaw, which turns the eye the other way. Both are pinned by tests, because the two
+	/// running in opposite directions is the whole reason the two must be ADDED rather than subtracted.
+	/// </para>
+	/// </summary>
+	internal static int CameraOctant( Vector3 forward )
 	{
-		var forward = Camera.Rotation.Forward;
 		var yaw = MathF.Atan2( -forward.X, forward.Y );
 
-		var octant = (int)MathF.Floor( ((yaw - (MathF.PI / Compass)) / MathF.Tau * Compass) + 0.5f );
-
-		return (Compass - (octant & (Compass - 1)) + personFacing) & (Compass - 1);
+		// <b>Rounded to the nearest eighth, and the arithmetic that was here only looked like it was.</b>
+		// It read ((yaw - PI/8) / TAU * 8) + 0.5, in which the two corrections CANCEL exactly - PI/8 is a
+		// sixteenth of a turn, so dividing it by TAU and scaling by 8 gives precisely the 0.5 that is then
+		// added back. What was left was a plain floor of yaw in eighths. That would be harmless if the
+		// camera ever sat between two eighths, and it never does: the orbit camera turns in steps of
+		// exactly PI/4, so EVERY position it can hold lands exactly on a boundary, where the answer is
+		// decided by the last bit of a float. Looking due south, atan2 came back as 3.99999989 eighths and
+		// floored to 3. Adding the half AFTER the scaling is what makes a boundary the middle of a bucket
+		// rather than its edge.
+		return (int)MathF.Floor( (yaw / MathF.Tau * Compass) + 0.5f ) & (Compass - 1);
 	}
+
+	/// <summary>
+	/// Which of the eight ways round a sprite is seen from: its own heading, turned by the camera's.
+	///
+	/// <para>
+	/// <b>Added, not subtracted, and that is the whole of it.</b> The two numberings run in opposite
+	/// directions - a person's clockwise, the camera's anticlockwise (see <see cref="CameraOctant"/>) - so
+	/// adding them is what cancels the camera's rotation. Subtracting them, which is what this did, applies
+	/// it twice: the drawn picture then came out wrong by exactly twice the camera's angle, which is why a
+	/// guest looked right from due north and south and exactly backwards from east and west, and appeared
+	/// to swing round to keep facing the viewer as the camera orbited.
+	/// </para>
+	/// <para>
+	/// Split from the camera so it can be tested without one - the same reason <see cref="Standing"/> takes
+	/// a walk rather than the pool. The test that settles it needs no park and no eyesight: turn the camera
+	/// and the person together and the drawn picture must not change, because the view between them has not.
+	/// Both the right arithmetic and the wrong one move the picture by one per eighth of camera turn, so
+	/// only that invariant tells them apart.
+	/// </para>
+	/// </summary>
+	internal static int Facing( int personFacing, int cameraOctant )
+		=> (cameraOctant + personFacing) & (Compass - 1);
 
 	/// <summary>
 	/// The picture for a set at a heading, and whether it has to be drawn reflected.
