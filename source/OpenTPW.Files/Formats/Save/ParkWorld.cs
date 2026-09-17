@@ -39,13 +39,43 @@ public sealed class ParkWorld
 	/// the map altogether.
 	/// </para>
 	/// </summary>
+	/// <summary>
+	/// When a thing was built, as the save breaks it down - the eight <c>tv_t</c> dwords a catalogue
+	/// object writes at file offset 22.
+	///
+	/// <para>
+	/// <b>The order is the SERIALISER's, and it is not the <c>SYSTEMTIME</c> struct's.</b> Windows puts
+	/// <c>wDayOfWeek</c> third and <c>wDay</c> fourth; this file writes <b>Day third and DayOfWeek
+	/// fourth</b>, because the original produces the values with <c>FileTimeToSystemTime</c> and writes
+	/// them in the order that function fills them. Taking the struct's order swaps two fields and still
+	/// parses, which is the kind of wrong that looks right.
+	/// </para>
+	/// <para>
+	/// <b>Day-of-week is written and never read back.</b> Rebuilding the time feeds only seven of the
+	/// eight to <c>SystemTimeToFileTime</c>, which works the weekday out for itself - so the fourth dword
+	/// is carried here for completeness rather than because the game needs it.
+	/// </para>
+	/// <para>
+	/// What it is <i>for</i>: the original measures how old an attraction is by subtracting this from the
+	/// current time and dividing by <c>864,000,000,000</c> - one day in hundred-nanosecond units - and
+	/// compares that against <c>PeepInfo.DecisionVariable1</c>, the number of days before a ride stops
+	/// counting as new.
+	/// </para>
+	/// </summary>
+	public readonly record struct BuiltWhen( int Year, int Month, int Day, int DayOfWeek,
+		int Hour, int Minute, int Second, int Millisecond )
+	{
+		/// <summary>Whether this reads as a date at all, rather than a record nothing ever stamped.</summary>
+		public bool IsSet => Year > 0;
+	}
+
 	public readonly record struct CatalogueObject( int ThingId, int CatalogueId, int RawX, int RawY, int Angle,
 		ushort Flags = 0, ushort EntryPos = 0, ushort NextObject = 0,
 		int RideScript = 0, int TrackRide = 0, int State = 0, ushort TopLeft = 0,
 		ushort AssignedStaff = 0, ushort BackOfQueue = 0, int CanLoad = 0,
 		ushort ExitPos = 0, ushort FirstInQueue = 0, int IsTrackRideValid = 0,
 		int OperatingCapacity = 0, int OperatingDuration = 0, int PricePerUse = 0,
-		int QueueSizeInCells = 0, int TotalTakings = 0 )
+		int QueueSizeInCells = 0, int TotalTakings = 0, BuiltWhen Built = default )
 	{
 		/// <summary>
 		/// The bit that makes an object somewhere a guest can be <i>offered</i> - <c>FUN_004fcb10</c>, the
@@ -592,7 +622,8 @@ public sealed class ParkWorld
 		int TileSet, int TileIndex, int TileAngle, byte Status,
 		int TrackType = 0, ushort TrackFlags = 0, ushort TrackParentId = 0,
 		int Litter = 0, ushort LitterCollector = 0, ushort PylonIndex = 0,
-		byte StatusFlags = 0, int TimeMarkedForLitterCollection = 0, ushort Occupant = 0 )
+		byte StatusFlags = 0, int TimeMarkedForLitterCollection = 0, ushort Occupant = 0,
+		ushort NearbyEffects = 0 )
 	{
 		/// <summary>
 		/// Whether anything has been dropped here. <b>Nought on every cell of the park the game ships</b>,
@@ -968,6 +999,12 @@ public sealed class ParkWorld
 	/// <summary>The unnamed short closing the record - see <see cref="MapCell.Occupant"/>.</summary>
 	private const int CellOccupant = 50;
 
+	/// <summary>
+	/// Where the wanted short sits inside the ten-byte EFFECTS sub-record - its last two bytes. See
+	/// <see cref="MapCell.NearbyEffects"/>; the rest of that record is still stepped over.
+	/// </summary>
+	private const int EffectsNearby = 8;
+
 	private readonly byte[] _data;
 	private int _at;
 
@@ -1122,7 +1159,24 @@ public sealed class ParkWorld
 			PylonIndex: (ushort)ReadUInt16At( at + CellPylonIndex ),
 			StatusFlags: _data[at + CellStatusFlags],
 			TimeMarkedForLitterCollection: ReadInt32At( at + CellTimeMarkedForLitterCollection ),
-			Occupant: (ushort)ReadUInt16At( at + CellOccupant ) );
+			Occupant: (ushort)ReadUInt16At( at + CellOccupant ),
+
+			// The EFFECTS sub-record, which the walk has always sized and stepped over. It follows the map
+			// record and the track record, so where it begins depends on whether this cell has a track.
+			//
+			// The field wanted is the short at its offset 8 - the last two bytes of the ten. The original
+			// divides a candidate's distance score by it when it is not nought, and its own log line for
+			// that branch reads "dist inc nearby fireworks", which is as much as is known about what it
+			// counts. Only 250 of this park's 16,384 cells carry an effects record at all.
+			//
+			// >>> READ BUT NOT CONFIRMED, AND THE DIFFERENCE IS WORTH STATING. <<< Every cell of the one
+			// park that ships reads nought here, and an all-nought field is equally what a correct read of
+			// an unused value looks like and what a wrong offset landing in padding looks like. The only
+			// thing actually established is that nothing non-zero ever appears in a cell carrying no
+			// effects record, which is a check on the STRIDE rather than on this offset within it.
+			NearbyEffects: (status & EffectsRecord) != 0
+				? (ushort)ReadUInt16At( at + MapCellSize + (tracked ? TrackCellSize : 0) + EffectsNearby )
+				: (ushort)0 );
 	}
 
 	/// <summary>
@@ -1286,7 +1340,14 @@ public sealed class ParkWorld
 			OperatingDuration: _data[start + 1035],          // mOperatingDuration, one byte
 			PricePerUse: ReadInt32At( start + 1054 ),        // mPricePerUse - the original clamps it to 0..500
 			QueueSizeInCells: ReadInt32At( start + 1062 ),   // mQueueSizeInCells
-			TotalTakings: ReadInt32At( start + 1090 ) );     // mTotalTakings
+			TotalTakings: ReadInt32At( start + 1090 ),       // mTotalTakings
+
+			// The eight tv_t dwords at 22 - see BuiltWhen for why the order is NOT the struct's.
+			Built: new BuiltWhen(
+				ReadInt32At( start + 22 ), ReadInt32At( start + 26 ),
+				ReadInt32At( start + 30 ), ReadInt32At( start + 34 ),
+				ReadInt32At( start + 38 ), ReadInt32At( start + 42 ),
+				ReadInt32At( start + 46 ), ReadInt32At( start + 50 ) ) );
 
 	/// <summary>
 	/// A person's record: the same head every thing has, and the two fields that make them drawable.
