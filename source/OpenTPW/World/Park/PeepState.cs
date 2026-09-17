@@ -77,9 +77,17 @@ public enum PeepState
 public enum PeepAnimation
 {
 	/// <summary>The state queues nothing, and the guest keeps whatever they were already playing.</summary>
-	None,
+	None = 0,
 
-	Walk,
+	/// <summary>Set 1, eight pictures - <see cref="SpriteScript.Walking"/>.</summary>
+	Walk = 1,
 
-	Stand
+	/// <summary>
+	/// Set 2, eight pictures. Queued instead of <see cref="Walk"/> for a guest who is hurrying, which the
+	/// walk decides from their purpose speed.
+	/// </summary>
+	HurriedWalk = 2,
+
+	/// <summary>Set 0, one picture - <see cref="SpriteScript.Standing"/>.</summary>
+	Stand = 3
 }

@@ -137,6 +137,19 @@ public sealed class PeepWalk
 	public FixedVector Position => _navigator.Position;
 
 	/// <summary>
+	/// How far the last <see cref="Step"/> actually moved this person, in the same 16.16 units, and nothing
+	/// at all unless that step was a walking one.
+	///
+	/// <para>
+	/// The original works this out only on the path where it has not already returned for arriving or giving
+	/// up - <c>004fa404</c> onwards - and it is the only input to how fast the walking picture is played.
+	/// Somebody who has stopped moving therefore asks for no change of rate, rather than asking for a rate
+	/// of nothing.
+	/// </para>
+	/// </summary>
+	public FixedVector LastStep { get; private set; }
+
+	/// <summary>
 	/// Move this person on by one tick.
 	///
 	/// <para>
@@ -151,6 +164,10 @@ public sealed class PeepWalk
 		// Where they were before any of this, which the heading at the end is measured against. The
 		// original reads it first thing, at 004fa2bb, before the steering step runs.
 		var before = _navigator.Position;
+
+		// Cleared rather than left behind: a tick that arrives or gives up computes no distance at all in
+		// the original, and a stale one here would keep asking for a walking animation rate.
+		LastStep = default;
 
 		// The half of follow_path's front that can be built: six of the last fifteen steps blocked and the
 		// person asks for a new way round, keeping the cell they are standing in on the front of it.
@@ -175,6 +192,8 @@ public sealed class PeepWalk
 		// were last facing rather than being turned by the last twitch of a walk that is over. The position
 		// is written every tick; the heading is not.
 		var moved = _navigator.Position - before;
+
+		LastStep = moved;
 
 		Heading = PeepHeading.Of( -moved.X, moved.Y, Heading );
 

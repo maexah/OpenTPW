@@ -33,6 +33,8 @@ public sealed class ParkPeople : Entity
 
 	private readonly Dictionary<int, PeepWalk> _walks = [];
 
+	private readonly Dictionary<int, SpriteScript> _sprites = [];
+
 	/// <summary>
 	/// The mode every edge question in this park is asked in.
 	///
@@ -57,17 +59,31 @@ public sealed class ParkPeople : Entity
 		if ( park != null )
 		{
 			var blocked = CellEdge.For( park, WalkingMode ).Blocked;
-			var saved = park.People.ToDictionary( person => person.ThingId, person => person.Angle );
+			var saved = park.People.ToDictionary( person => person.ThingId, person => person );
+			var pictures = park.Sprites.ToDictionary( picture => picture.Slot );
 
 			foreach ( var peep in _peeps )
 			{
+				if ( !saved.TryGetValue( peep.ThingId, out var person ) )
+					continue;
+
 				// The heading is seeded from the file rather than left at zero: a guest who has not taken a
 				// step yet faces the way they were saved facing, and only a step they actually take turns
 				// them. Starting everyone at zero would swing the whole park round on the first frame.
 				_walks[peep.ThingId] = new PeepWalk( peep.Navigator, blocked )
 				{
-					Heading = saved.GetValueOrDefault( peep.ThingId )
+					Heading = person.Angle
 				};
+
+				// And the animation is picked up exactly where the park was saved - which script, and how
+				// far through it. The same argument as the heading, and the file is emphatic about it: the
+				// sixteen people saved mid-walk are stopped at seven different pictures of the one cycle,
+				// so starting them all at the first would put the entire park in step with itself.
+				if ( pictures.TryGetValue( person.SpriteSlot, out var picture ) )
+				{
+					_sprites[peep.ThingId] = new SpriteScript(
+						picture.Script, picture.Pc, picture.SpriteNumber, picture.Frame );
+				}
 			}
 		}
 
@@ -117,6 +133,32 @@ public sealed class ParkPeople : Entity
 	public const int ThingTickEvery = 8;
 
 	/// <summary>
+	/// How many of the game's 31ms ticks pass between turns of the sprite system, which plays the
+	/// animations - see <see cref="SpriteScript"/>.
+	///
+	/// <para>
+	/// <b>Two, and it is a different gate from the thing engine's eight.</b> The park loop reaches
+	/// <c>FUN_00475360</c> at <c>0054f5fb</c>, inside the same 31ms loop, but behind a test of its own at
+	/// <c>0054f5d7</c> - <c>TEST AL,0x1</c> then <c>JNZ</c> straight past it - so the sprites turn on even
+	/// ticks only. That is 62ms, and it is exactly the interval the sprite constructor writes at
+	/// <c>004759c4</c>, which is what makes a sprite left on that default come due every other turn.
+	/// </para>
+	/// </summary>
+	public const int SpriteTickEvery = 2;
+
+	/// <summary>
+	/// How long one of the game's ticks is in whole milliseconds, which is what the sprite system counts in.
+	///
+	/// <para>
+	/// <b>Written as an integer on purpose.</b> <see cref="GameClock.TickSeconds"/> is <c>0.031f</c>, and
+	/// the nearest float to it is a shade under - so <c>(int)( GameClock.TickSeconds * 1000f )</c> comes
+	/// out as <b>30</b>, not 31. Deriving it the obvious way would run every animation in the park slow by
+	/// a thirty-first, and drift further the longer the park stayed open.
+	/// </para>
+	/// </summary>
+	public const int MillisecondsPerTick = 31;
+
+	/// <summary>
 	/// One turn of every guest for each thing tick that has come due - see
 	/// <see cref="ThingTickEvery"/>, which is why that is not every 31ms tick.
 	///
@@ -134,6 +176,14 @@ public sealed class ParkPeople : Entity
 		{
 			var tick = GameClock.Ticks - GameClock.TicksDue + 1 + i;
 
+			// The park loop steps the sprites BEFORE it reaches the thing gate - FUN_00475360 at 0054f5fb,
+			// the gate at 0054f668 - so they are taken in that order here too.
+			if ( (tick & (SpriteTickEvery - 1)) == 0 )
+			{
+				foreach ( var playing in _sprites.Values )
+					playing.Step( tick * MillisecondsPerTick );
+			}
+
 			if ( (tick & (ThingTickEvery - 1)) != 0 )
 				continue;
 
@@ -149,10 +199,20 @@ public sealed class ParkPeople : Entity
 			{
 				peep.Tick( thingTick );
 
+				var playing = _sprites.GetValueOrDefault( peep.ThingId );
+
 				// Every thing tick, and not one in four: the share gates the needs alone, and walking is
 				// a separate call the original never gates.
 				if ( Peep.IsAWalkingState( peep.State ) && _walks.TryGetValue( peep.ThingId, out var walk ) )
-					WalkOn( peep, walk );
+					WalkOn( peep, walk, playing );
+
+				// FUN_004d4190, whose only caller is the per-guest needs call - so what the walk asked for
+				// lands on that guest's own turn in four rather than at once. Which side of the walk it
+				// sits on is not established, and cannot matter here: the walk asks for an animation only
+				// when the sprite is not already playing it, so a turn either way changes nothing after
+				// the first.
+				if ( playing != null && peep.DueOn( thingTick ) )
+					Apply( peep, playing );
 			}
 		}
 	}
@@ -170,16 +230,65 @@ public sealed class ParkPeople : Entity
 	/// since they did.
 	/// </para>
 	/// </summary>
-	private static void WalkOn( Peep peep, PeepWalk walk )
+	private static void WalkOn( Peep peep, PeepWalk walk, SpriteScript? playing )
 	{
 		if ( !walk.HasRoute && (peep.Navigator.CannotReach || !walk.PlanRoute()) )
 			return;
 
-		walk.Step();
+		var verdict = walk.Step();
+
+		if ( verdict == WalkVerdict.Walking )
+		{
+			var hurrying = peep.PurposeSpeed > Peep.UnhurriedSpeed;
+
+			// FUN_004fa2a0 asks FUN_00475c50 whether the sprite is ALREADY on the walk before asking for
+			// it, which is the whole reason a jump must not change a script's identity: without that test a
+			// walking guest would be restarted at the first picture on every single tick.
+			var wanted = hurrying ? (int)PeepAnimation.HurriedWalk : (int)PeepAnimation.Walk;
+
+			if ( playing != null && !playing.IsOn( wanted ) )
+				peep.NextAnimation = wanted;
+
+			peep.NextInterval = SpriteScript.IntervalFor( walk.LastStep.X, walk.LastStep.Y, hurrying );
+
+			return;
+		}
+
+		// <b>A DEPARTURE, and the same one this method already makes above.</b> The original does not stop
+		// the walking animation here - its state machine does, by moving the guest into a state that asks
+		// for the standing one, and those twenty-two behaviours are not built. Without this a guest who
+		// reached the gate would stride on the spot for ever, which is worse to look at than the frozen
+		// pose they had before any of this existed. The route planning a few lines up is licensed by
+		// exactly this argument, and for exactly this reason.
+		if ( verdict == WalkVerdict.Arrived && playing != null && !playing.IsOn( (int)PeepAnimation.Stand ) )
+			peep.NextAnimation = (int)PeepAnimation.Stand;
+	}
+
+	/// <summary>
+	/// Hands a guest's queued animation and interval to their sprite - <c>FUN_004d4190</c>, which tests each
+	/// against zero rather than assigning it, so that "nothing was asked for" and "run as fast as you can"
+	/// stay different things.
+	/// </summary>
+	private static void Apply( Peep peep, SpriteScript playing )
+	{
+		if ( peep.NextAnimation != 0 )
+		{
+			playing.Start( peep.NextAnimation );
+			peep.NextAnimation = 0;
+		}
+
+		if ( peep.NextInterval != 0 )
+		{
+			playing.Interval = peep.NextInterval;
+			peep.NextInterval = 0;
+		}
 	}
 
 	/// <summary>This guest's walk, for the tests and the debug console.</summary>
 	internal PeepWalk? WalkFor( int thingId ) => _walks.GetValueOrDefault( thingId );
+
+	/// <summary>This guest's animation, for the drawing, the tests and the debug console.</summary>
+	internal SpriteScript? SpriteFor( int thingId ) => _sprites.GetValueOrDefault( thingId );
 
 	protected override void OnDelete()
 	{
@@ -197,7 +306,15 @@ public sealed class ParkPeople : Entity
 		foreach ( var peep in _peeps )
 		{
 			var walk = _walks.GetValueOrDefault( peep.ThingId );
+			var playing = _sprites.GetValueOrDefault( peep.ThingId );
 			var nav = peep.Navigator;
+
+			// What they LOOK like, which is the half of a guest this census could not see until the
+			// scripts ran - a park where nobody animated read exactly like one where everybody did.
+			var anim = playing == null
+				? "none"
+				: $"script {playing.Script} pc {playing.Pc} set {playing.Set} "
+					+ $"frame {playing.Frame} every {playing.Interval}ms";
 
 			yield return $"thing {peep.ThingId,2} kind {peep.PersonType} state {peep.State} "
 				+ $"(saved {peep.SavedState}) cash {peep.Cash,4} exit {peep.ExitLevel,4} "
@@ -213,7 +330,8 @@ public sealed class ParkPeople : Entity
 				+ $"wp {nav.Waypoints.Count}/{nav.TotalWaypoints} cursor {nav.Cursor} "
 				+ $"done {nav.Finished} stuck {nav.CannotReach} "
 				+ $"walks {Peep.IsAWalkingState( peep.State )} "
-				+ $"has {(walk == null ? "no-walk" : walk.HasRoute ? "route" : "no-route")}";
+				+ $"has {(walk == null ? "no-walk" : walk.HasRoute ? "route" : "no-route")} "
+				+ $"anim {anim}";
 		}
 	}
 }

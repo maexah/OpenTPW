@@ -76,6 +76,27 @@ public sealed class Peep
 	public PeepAnimation Animation { get; private set; } = PeepAnimation.None;
 
 	/// <summary>
+	/// The animation asked for but not yet started, and how fast to run it - the person's own
+	/// <c>mNextAnim</c> and <c>mNextServiceInterval</c>, which sit beside the sprite handle in their block.
+	///
+	/// <para>
+	/// <b>A change of animation is queued, not applied.</b> <c>FUN_004217f0</c> does nothing but write the
+	/// number down; <c>FUN_004d4190</c> is what hands it to the sprite, and its only caller is the
+	/// per-guest needs call - so an animation asked for by the walk waits for that guest's own turn in four
+	/// rather than starting the instant it is wanted.
+	/// </para>
+	/// <para>
+	/// <b>Zero means nothing is waiting</b>, for both. That is why an interval of zero leaves the sprite's
+	/// own alone instead of setting it to nothing, which matters because the walk's arithmetic truncates to
+	/// zero for a person in a hurry.
+	/// </para>
+	/// </summary>
+	public int NextAnimation { get; set; }
+
+	/// <inheritdoc cref="NextAnimation"/>
+	public int NextInterval { get; set; }
+
+	/// <summary>
 	/// How far along a route this guest had got - the running copy of the navigator block the save keeps
 	/// for them.
 	///

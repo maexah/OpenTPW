@@ -382,13 +382,15 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		foreach ( var (person, sprite) in _people )
 		{
-			if ( !_banks.TryGetValue( (sprite.Type, sprite.Bank + sprite.BankOffset), out var loaded ) )
+			var (setNumber, frame, bankOffset) = Showing( people?.SpriteFor( person.ThingId ), sprite );
+
+			if ( !_banks.TryGetValue( (sprite.Type, sprite.Bank + bankOffset), out var loaded ) )
 				continue;
 
 			var (x, y, angle) = Standing( people?.WalkFor( person.ThingId ), cellX, cellY, person, sprite );
 
-			var set = loaded.Bank.Sets[sprite.Set & 0xf];
-			var index = Picture( set, sprite.Frame, Facing( ParkWorld.Person.OctantOf( angle ) ),
+			var set = loaded.Bank.Sets[setNumber & 0xf];
+			var index = Picture( set, frame, Facing( ParkWorld.Person.OctantOf( angle ) ),
 				out var mirrored );
 
 			if ( index < 0 || index >= loaded.Pictures.Length )
@@ -476,6 +478,30 @@ public sealed class ParkGuestSprites : ModelEntity
 			(at.Y / (float)FixedVector.One) * cellY,
 			walk.Heading);
 	}
+
+	/// <summary>
+	/// Which picture to draw: from the animation when one is playing, and from the save when it is not.
+	///
+	/// <para>
+	/// <b>This is what stops a guest sliding.</b> Both numbers used to come straight off the save record and
+	/// nothing ever moved them, so a guest crossed the park in a single frozen pose. They now come from the
+	/// little program the original runs, which chooses a set and steps a frame.
+	/// </para>
+	/// <para>
+	/// <b>The bank offset comes from the same word as the set, and has to travel with it.</b> The original
+	/// packs both into one number and its "choose a set" instruction writes the whole word, so taking the
+	/// set from the animation and the bank from the save would be reading one number out of two places -
+	/// and would put a guest in another child's clothes the moment their script ran.
+	/// </para>
+	/// <para>
+	/// It takes the one animation rather than the pool of them for the same reason <see cref="Standing"/>
+	/// does: so the choice can be tested without an entity or a graphics device.
+	/// </para>
+	/// </summary>
+	internal static (int Set, int Frame, int BankOffset) Showing( SpriteScript? playing, ParkWorld.Sprite sprite )
+		=> playing == null || playing.Script == SpriteScript.None
+			? (sprite.Set, sprite.Frame, sprite.BankOffset)
+			: (playing.Set, playing.Frame, playing.BankOffset);
 
 	/// <summary>
 	/// One sprite's quad, stood upright at <paramref name="centre"/> and turned to face the camera.
@@ -694,12 +720,16 @@ public sealed class ParkGuestSprites : ModelEntity
 		foreach ( var (person, sprite) in _people )
 		{
 			var walk = people?.WalkFor( person.ThingId );
+			var playing = people?.SpriteFor( person.ThingId );
 			var (x, y, angle) = Standing( walk, cellX, cellY, person, sprite );
+			var (setNumber, frame, bankOffset) = Showing( playing, sprite );
 
 			yield return $"thing {person.ThingId,2} model {person.Model} " +
 				$"cell ({person.CellX},{person.CellY}) slot {sprite.Slot,2} " +
-				$"type {sprite.Type} bank {sprite.Bank}+{sprite.BankOffset} set {sprite.Set} " +
-				$"frame {sprite.Frame} facing {ParkWorld.Person.OctantOf( angle )} (angle {angle}) " +
+				$"type {sprite.Type} bank {sprite.Bank}+{bankOffset} set {setNumber} " +
+				$"frame {frame} (saved set {sprite.Set} frame {sprite.Frame}) " +
+				$"script {(playing == null ? "none" : $"{playing.Script}@{playing.Pc}")} " +
+				$"facing {ParkWorld.Person.OctantOf( angle )} (angle {angle}) " +
 				$"drawn ({x:0.0},{y:0.0}) saved ({sprite.X:0.0},{sprite.Y:0.0}) " +
 				$"cellsize {cellX:0.##}x{cellY:0.##} walk {(walk == null ? "none" : "found")}";
 		}
