@@ -39,8 +39,31 @@ public sealed class ParkWorld
 	/// the map altogether.
 	/// </para>
 	/// </summary>
-	public readonly record struct CatalogueObject( int ThingId, int CatalogueId, int RawX, int RawY, int Angle )
+	public readonly record struct CatalogueObject( int ThingId, int CatalogueId, int RawX, int RawY, int Angle,
+		ushort Flags = 0, ushort EntryPos = 0, ushort NextObject = 0 )
 	{
+		/// <summary>The bit of <c>mFlags</c> that makes an object a toilet - <c>FUN_004d7880</c> tests it.</summary>
+		public const int ToiletFlag = 0x1;
+
+		/// <summary>
+		/// The bit that makes one a rest area - <c>FUN_00506910</c> tests it, and that function's own
+		/// debug string is "Looking for rest area...", which is as direct a confirmation as this gets.
+		/// </summary>
+		public const int RestAreaFlag = 0x2;
+
+		/// <summary>
+		/// Whether tired guests can use this object - one bit, and the thing a handyman's toilet arm
+		/// looks for.
+		/// </summary>
+		public bool IsToilet => (Flags & ToiletFlag) != 0;
+
+		/// <summary>
+		/// Whether a member of staff can rest here. <b>One byte unlocks rest areas for all five kinds of
+		/// staff</b>, which is why this field was worth chasing: the staff behaviours already have the
+		/// resting states built and had no way to find anywhere to do it.
+		/// </summary>
+		public bool IsRestArea => (Flags & RestAreaFlag) != 0;
+
 		/// <summary>
 		/// What both coordinates read when a thing has no place on the map. It is the raw value, not a
 		/// cell: 128 is half a cell, so a sentinel read as a cell would look like a real object sitting
@@ -514,8 +537,45 @@ public sealed class ParkWorld
 	public readonly record struct MapCell(
 		int Type, ushort Flags, byte Neighbours, byte Direction,
 		int TileSet, int TileIndex, int TileAngle, byte Status,
-		int TrackType = 0, ushort TrackFlags = 0, ushort TrackParentId = 0 )
+		int TrackType = 0, ushort TrackFlags = 0, ushort TrackParentId = 0,
+		int Litter = 0, ushort LitterCollector = 0, ushort PylonIndex = 0,
+		byte StatusFlags = 0, int TimeMarkedForLitterCollection = 0, ushort Occupant = 0 )
 	{
+		/// <summary>
+		/// Whether anything has been dropped here. <b>Nought on every cell of the park the game ships</b>,
+		/// and that is a fact about the file rather than a gap in the reading: the shipped park has never
+		/// been played, so nobody has ever dropped anything in it. A handyman built against this would
+		/// find nothing and fall through to patrolling, which is worth knowing before building one.
+		/// </summary>
+		public bool HasLitter => Litter != 0;
+
+		/// <summary>
+		/// The thing standing on this cell, as a thing id, or nought for a cell nothing occupies. It is
+		/// the unnamed short that closes the record - the serialiser announces no name for it.
+		///
+		/// <para>
+		/// <b>WHAT IT IS WAS MEASURED, NOT INFERRED, AND THE FIRST GUESS WAS WRONG.</b> It was written
+		/// down here as the admission gate's per-guest reservation, because it is the one unnamed field
+		/// and a guest waiting to be let in compares the cell underfoot against their own id. The shipped
+		/// park refutes the narrow reading: <b>twenty-four cells carry a value, and eleven of them are
+		/// exactly the eleven placed catalogue objects, each naming itself at its own cell</b> - (55,15)
+		/// holds 23 and object 23 stands at (55,15), and so on for all eleven. The other thirteen hold
+		/// person ids, gathered on the gateway approach at x 47-48 and at the staff's own positions, with
+		/// (0,0) holding the unplaced sentinel object. So it is occupancy in general, not a gate booking.
+		/// </para>
+		/// <para>
+		/// <b>The mechanism that prompted the wrong name still holds</b>: a guest who waits until the cell
+		/// underfoot names them is waiting until they occupy it. That test is made against the cell's
+		/// RUNTIME record at <c>+0x24</c>, which is <c>0x44</c> bytes where the file carries 52, so the
+		/// runtime offset could not have been translated - only the serialiser's order places this one.
+		/// </para>
+		/// <para>
+		/// <b>Reading it does not finish that arm.</b> Nothing here has been shown to WRITE it - three
+		/// probes for the writer came back negative - so this reports what the file holds and no more.
+		/// </para>
+		/// </summary>
+		public bool IsOccupied => Occupant != 0;
+
 		/// <summary>
 		/// Whether this cell carried a map record at all. A cell that did not is left at its default, and
 		/// <c>Type 0</c> is a real type rather than a "no answer", so this is the field that tells the two
@@ -803,7 +863,8 @@ public sealed class ParkWorld
 	/// <summary>
 	/// Where each field sits inside a cell's map record, which begins at the byte after the status. The
 	/// record opens with a twenty-nine byte tile base - the track record repeats it field for field - and
-	/// closes with twenty-three bytes of litter and pylon bookkeeping that nothing here wants.
+	/// closes with twenty-three bytes of litter and pylon bookkeeping, which is read below. <b>This said
+	/// that closing block was "bookkeeping that nothing here wants" until something did.</b>
 	/// </summary>
 	private const int CellDirection = 0;
 
@@ -820,6 +881,39 @@ public sealed class ParkWorld
 	private const int CellTileData = 12;
 
 	private const int CellType = 24;
+
+	/// <summary>
+	/// The litter and pylon block, which begins where the twenty-nine byte tile base ends and fills the
+	/// remaining twenty-three bytes of the fifty-two. Its fields are in the serialiser's own order:
+	/// <c>mLitter</c> 4, <c>mLitterCollector</c> 2, <c>mLitterScript</c> 4, <c>mLitterScript</c> 4 again,
+	/// <c>mPylonIndex</c> 2, <c>mStatusFlags</c> 1, <c>mTimeMarkedForLitterCollection</c> 4, and one
+	/// unnamed short.
+	///
+	/// <para>
+	/// <b>The same name really is announced for two consecutive dwords</b>, and the arithmetic is what says
+	/// so rather than the reading: 4 + 2 + 4 + 4 + 2 + 1 + 4 + 2 comes to exactly 23, and 29 + 23 is
+	/// exactly the 52 the walk already measured cell by cell. Written once, everything after it would
+	/// shift by four and the record would close four bytes short. The two script handles are stepped over
+	/// rather than read - they are heap handles, stale in a saved file the way the sprite table's are -
+	/// but their bytes are accounted for instead of quietly dropped.
+	/// </para>
+	/// <para>
+	/// <b>This block used to be skipped outright</b>, and the comment above said it was "litter and pylon
+	/// bookkeeping that nothing here wants". Something wants it now.
+	/// </para>
+	/// </summary>
+	private const int CellLitter = 29;
+
+	private const int CellLitterCollector = 33;
+
+	private const int CellPylonIndex = 43;
+
+	private const int CellStatusFlags = 45;
+
+	private const int CellTimeMarkedForLitterCollection = 46;
+
+	/// <summary>The unnamed short closing the record - see <see cref="MapCell.Occupant"/>.</summary>
+	private const int CellOccupant = 50;
 
 	private readonly byte[] _data;
 	private int _at;
@@ -966,7 +1060,16 @@ public sealed class ParkWorld
 			Status: status,
 			TrackType: tracked ? ReadInt32At( track + CellType ) : 0,
 			TrackFlags: tracked ? (ushort)ReadUInt16At( track + CellFlags ) : (ushort)0,
-			TrackParentId: tracked ? (ushort)ReadUInt16At( track + CellParent ) : (ushort)0 );
+			TrackParentId: tracked ? (ushort)ReadUInt16At( track + CellParent ) : (ushort)0,
+
+			// The litter block, which only the map record carries: the track record repeats the tile base
+			// and stops, which is why these are read from `at` and never from `track`.
+			Litter: ReadInt32At( at + CellLitter ),
+			LitterCollector: (ushort)ReadUInt16At( at + CellLitterCollector ),
+			PylonIndex: (ushort)ReadUInt16At( at + CellPylonIndex ),
+			StatusFlags: _data[at + CellStatusFlags],
+			TimeMarkedForLitterCollection: ReadInt32At( at + CellTimeMarkedForLitterCollection ),
+			Occupant: (ushort)ReadUInt16At( at + CellOccupant ) );
 	}
 
 	/// <summary>
@@ -1053,7 +1156,31 @@ public sealed class ParkWorld
 	/// <para>
 	/// <c>mX</c> and <c>mY</c> were unnamed in the decompiler and are named here because the executable's
 	/// own string table says so: the two strings the base reader passes for those fields read exactly
-	/// that. Everything after <c>mId</c> is left alone.
+	/// that.
+	/// </para>
+	/// <para>
+	/// <b>THE REST OF THE RECORD IS NOW WALKED, AND THIS SAID "everything after mId is left alone" UNTIL
+	/// IT WAS.</b> <c>FUN_004db7d0</c> is the model-3 serialiser. It calls the map base first and then
+	/// writes, in this order: <c>mAngle</c> 4, the unnamed short that is <c>mId</c> 2, eight <c>tv_t</c>
+	/// dwords (32), <c>MeshInstanceID</c> 4, <c>mFlags</c> 2, then thirty-three pairs of
+	/// <c>mNameA[i]</c>/<c>mNameB[i]</c> (132), <c>mRideScriptHandle</c>, <c>mTrackRideHandle</c>,
+	/// <c>mState</c>, <c>mTopLeft</c>, <c>mEntryPos</c>, <c>mNext</c>, and a long tail of queue, ride and
+	/// shop fields.
+	/// </para>
+	/// <para>
+	/// <b>Laying that against the file is what turns struct offsets into file offsets, and the first two
+	/// fields check the arithmetic rather than assume it.</b> Eight bytes of thing head, then the map
+	/// base's four shorts, puts <c>mAngle</c> at 16 and <c>mId</c> at 20 - which are exactly the two
+	/// offsets this reader was already using, derived years earlier by a different route. So the running
+	/// total is trustworthy where it continues: <c>mFlags</c> at <b>58</b>, <c>mEntryPos</c> at
+	/// <b>206</b>, <c>mNext</c> at <b>208</b>, all comfortably inside the 1,099 bytes
+	/// <see cref="RecordSizes"/> gives model 3.
+	/// </para>
+	/// <para>
+	/// <b>The runtime offsets are NOT these.</b> The two searches that read this flag do so at
+	/// <c>thing + 0x32</c> in memory, and <c>mEntryPos</c> at <c>+0x36</c>; a reader that took those as
+	/// file offsets would land in the middle of the <c>tv_t</c> block. Struct offsets are not file
+	/// offsets - only the serialiser's own order says where anything is written.
 	/// </para>
 	/// </summary>
 	private CatalogueObject ReadCatalogueObject( int id, int start )
@@ -1062,7 +1189,10 @@ public sealed class ParkWorld
 			CatalogueId: ReadUInt16At( start + 20 ),   // mId - the item's Info.Id, from its own .sam
 			RawX: ReadUInt16At( start + 8 ),           // mX, in 256ths of a cell
 			RawY: ReadUInt16At( start + 10 ),          // mY
-			Angle: ReadInt32At( start + 16 ) );        // mAngle, in degrees - 0, 90 or 270 in the shipped park
+			Angle: ReadInt32At( start + 16 ),          // mAngle, in degrees - 0, 90 or 270 in the shipped park
+			Flags: (ushort)ReadUInt16At( start + 58 ),        // mFlags - see IsToilet and IsRestArea
+			EntryPos: (ushort)ReadUInt16At( start + 206 ),    // mEntryPos - the cell a visitor is sent to
+			NextObject: (ushort)ReadUInt16At( start + 208 ) );// mNext - this object's link in the object list
 
 	/// <summary>
 	/// A person's record: the same head every thing has, and the two fields that make them drawable.
