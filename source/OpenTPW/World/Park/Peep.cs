@@ -129,8 +129,16 @@ public sealed class Peep
 	public const float Least = 0f;
 
 	/// <summary>
-	/// How many ticks apart a guest's needs are updated: <c>(id &amp; 3) == (tick &amp; 3)</c>, so each guest
-	/// takes one turn in four and the park's guests are spread evenly across them.
+	/// How many <b>thing</b> ticks apart a guest's needs are updated: <c>(id &amp; 3) == (tick &amp; 3)</c>,
+	/// so each guest takes one turn in four and the park's guests are spread evenly across them.
+	///
+	/// <para>
+	/// <b>The tick counted here is the thing engine's, not the game's 31ms beat</b> - see
+	/// <see cref="ParkPeople.ThingTickEvery"/>, which is eight of those to one of these. The original
+	/// reads a counter of its own for this test rather than the loop tick the engine is gated on, and the
+	/// distinction is load-bearing: eight divides four, so a share taken over game ticks would be true
+	/// only for guests whose id divides four, and the other three quarters would never age at all.
+	/// </para>
 	///
 	/// <para>
 	/// <b>This gates the needs and nothing else, and an earlier draft of this comment said it gated "the

@@ -95,8 +95,30 @@ public sealed class ParkPeople : Entity
 	internal IReadOnlyList<Peep> Peeps => _peeps;
 
 	/// <summary>
-	/// One turn of every guest for each 31ms that has come due, which is where the original runs the
-	/// thing engine: its per-tick call walks the thing list and gives each guest its needs tick.
+	/// How many of the game's 31ms ticks pass between turns of the thing engine.
+	///
+	/// <para>
+	/// <b>The thing engine is NOT on the 31ms beat, and believing it was made every guest in the park run
+	/// eight times too fast.</b> The park loop gates it at <c>0054f668</c> -
+	/// <c>TEST byte ptr [0x00877d34],0x7</c> then <c>JNZ</c> - so the whole block below that test, which
+	/// contains <b>both</b> routes to <c>FUN_00516380</c> (the direct call at <c>0054f7bb</c> and
+	/// <c>FUN_005166b0</c> at <c>0054f760</c>), runs only when the counter divides by eight. That counter
+	/// is the loop's own tick, incremented once per step at <c>0054f4cd</c>/<c>0054f4d6</c> and zeroed at
+	/// park entry.
+	/// </para>
+	/// <para>
+	/// <b>The arithmetic that confirms it.</b> A person's <c>MaxSpeed</c> is set by <c>FUN_00510190</c> as
+	/// <c>factor * 13107.2</c>, and 13107.2 is <c>0.2 * 65536</c> - so a factor of one is a fifth of a cell
+	/// per <i>thing</i> tick. The shipped park's guests carry 15728, which is a factor of exactly 1.2. At
+	/// eight game ticks to a thing tick that is <b>0.96 cells a second</b>, a walking pace; at one it is
+	/// 7.7, which is what a park looked like before this existed.
+	/// </para>
+	/// </summary>
+	public const int ThingTickEvery = 8;
+
+	/// <summary>
+	/// One turn of every guest for each thing tick that has come due - see
+	/// <see cref="ThingTickEvery"/>, which is why that is not every 31ms tick.
 	///
 	/// <para>
 	/// The tick <i>number</i> is worked back rather than counted locally, because the guests are spread
@@ -112,12 +134,23 @@ public sealed class ParkPeople : Entity
 		{
 			var tick = GameClock.Ticks - GameClock.TicksDue + 1 + i;
 
+			if ( (tick & (ThingTickEvery - 1)) != 0 )
+				continue;
+
+			// <b>The number handed on is the THING tick, not the game tick, and that is not cosmetic.</b>
+			// Peep.Tick spreads guests across four slots by (id & 3) == (tick & 3); every game tick that
+			// reaches here is a multiple of eight, and eight divides four, so passing the game tick would
+			// make that test true only for guests whose id divides four and starve the other three
+			// quarters of their needs for ever. The original has the same split and reads a separate
+			// counter for it.
+			var thingTick = tick / ThingTickEvery;
+
 			foreach ( var peep in _peeps )
 			{
-				peep.Tick( tick );
+				peep.Tick( thingTick );
 
-				// Every tick, and not one in four: the share gates the needs alone, and walking is a
-				// separate call the original never gates. See Peep.TickShare, which used to say otherwise.
+				// Every thing tick, and not one in four: the share gates the needs alone, and walking is
+				// a separate call the original never gates.
 				if ( Peep.IsAWalkingState( peep.State ) && _walks.TryGetValue( peep.ThingId, out var walk ) )
 					WalkOn( peep, walk );
 			}
@@ -163,11 +196,24 @@ public sealed class ParkPeople : Entity
 	{
 		foreach ( var peep in _peeps )
 		{
+			var walk = _walks.GetValueOrDefault( peep.ThingId );
+			var nav = peep.Navigator;
+
 			yield return $"thing {peep.ThingId,2} kind {peep.PersonType} state {peep.State} "
 				+ $"(saved {peep.SavedState}) cash {peep.Cash,4} exit {peep.ExitLevel,4} "
 				+ $"happy {peep.Happiness,3:0} thirst {peep.Thirst,3:0} hunger {peep.Hunger,3:0} "
 				+ $"toilet {peep.Toilet,3:0} ill {peep.Illness,3:0} litter {peep.Litter,3:0} "
-				+ $"speed {peep.PurposeSpeed}";
+				+ $"speed {peep.PurposeSpeed} "
+				// Where they ARE, which is the half of a person this census could not see until a park
+				// was opened and nobody moved. Needs change and position did not, and there was no way
+				// to tell those apart from here.
+				+ $"at ({nav.Position.X / (float)FixedVector.One:0.000},"
+				+ $"{nav.Position.Y / (float)FixedVector.One:0.000}) "
+				+ $"vel ({nav.Velocity.X},{nav.Velocity.Y}) "
+				+ $"wp {nav.Waypoints.Count}/{nav.TotalWaypoints} cursor {nav.Cursor} "
+				+ $"done {nav.Finished} stuck {nav.CannotReach} "
+				+ $"walks {Peep.IsAWalkingState( peep.State )} "
+				+ $"has {(walk == null ? "no-walk" : walk.HasRoute ? "route" : "no-route")}";
 		}
 	}
 }

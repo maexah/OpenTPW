@@ -553,10 +553,18 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// console only - see <see cref="DebugFacing"/>.
 	///
 	/// <para>
-	/// <b>Which way is zero has NOT been established.</b> The angle is an eleven-bit turn and this reads
-	/// it as a bearing whose zero runs along +Y, turning toward +X. That is a convention chosen here, not
-	/// a measurement: nothing yet says where the original's zero points. If every dash in the park is
-	/// wrong by the same amount, that is the answer this was drawn to show.
+	/// <b>Which way zero points IS now established, and this used to have it exactly backwards.</b> The
+	/// paragraph here said the convention was "chosen, not a measurement", and that if every dash in the
+	/// park were wrong by the same amount that would be the answer it was drawn to show. It showed it: the
+	/// first time guests actually walked, every dash pointed half a turn away from the way its owner was
+	/// going.
+	/// </para>
+	/// <para>
+	/// Zero is towards <b>lower</b> y. That is not a choice either - it falls out of
+	/// <see cref="PeepHeading"/>, whose cardinals come from the branch structure of the original's own
+	/// <c>FUN_006e7074</c>: <c>-y</c> is 0, <c>-x</c> is <c>0x200</c>, <c>+y</c> is <c>0x400</c> and
+	/// <c>+x</c> is <c>0x600</c>. Reading the angle as a bearing from <c>+y</c>, as this did, negates both
+	/// components of every direction in the park.
 	/// </para>
 	/// </summary>
 	private void WriteGroundDash( int index, Vector3 feet, int angle, int type, Region plain )
@@ -564,8 +572,8 @@ public sealed class ParkGuestSprites : ModelEntity
 		if ( index < 0 || (index * 4) + 3 >= _vertices.Length )
 			return;
 
-		var turn = angle / 2048f * MathF.Tau;
-		var along = new Vector3( MathF.Sin( turn ), MathF.Cos( turn ), 0f );
+		var turn = angle / (float)PeepHeading.FullTurn * MathF.Tau;
+		var along = new Vector3( -MathF.Sin( turn ), -MathF.Cos( turn ), 0f );
 		var side = along.Cross( Vector3.Up );
 
 		if ( side.LengthSquared < 0.000001f )
@@ -674,12 +682,26 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// </summary>
 	internal IEnumerable<string> Census()
 	{
+		// Exactly what OnRenderTranslucent asks, so this census reports where a person is actually
+		// DRAWN rather than where the file left them. Those were the same thing until the simulation
+		// started moving people, and this printing the saved cell is why a park where nobody moved
+		// looked, from here, identical to one where everybody did.
+		var field = ParkGround.Current?.Heightfield;
+		var cellX = field?.CellSizeX ?? 0f;
+		var cellY = field?.CellSizeY ?? 0f;
+		var people = ParkPeople.Current;
+
 		foreach ( var (person, sprite) in _people )
 		{
+			var walk = people?.WalkFor( person.ThingId );
+			var (x, y, angle) = Standing( walk, cellX, cellY, person, sprite );
+
 			yield return $"thing {person.ThingId,2} model {person.Model} " +
 				$"cell ({person.CellX},{person.CellY}) slot {sprite.Slot,2} " +
 				$"type {sprite.Type} bank {sprite.Bank}+{sprite.BankOffset} set {sprite.Set} " +
-				$"frame {sprite.Frame} facing {person.Facing} (angle {person.Angle})";
+				$"frame {sprite.Frame} facing {ParkWorld.Person.OctantOf( angle )} (angle {angle}) " +
+				$"drawn ({x:0.0},{y:0.0}) saved ({sprite.X:0.0},{sprite.Y:0.0}) " +
+				$"cellsize {cellX:0.##}x{cellY:0.##} walk {(walk == null ? "none" : "found")}";
 		}
 	}
 }
