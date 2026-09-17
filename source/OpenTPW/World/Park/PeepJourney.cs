@@ -27,11 +27,18 @@ namespace OpenTPW;
 /// </summary>
 public sealed class PeepJourney
 {
-	/// <summary>How near the end counts as arriving, in radii - <c>0x19999</c>, which is 1.6.</summary>
-	public const int ArriveWithin = 0x19999;
+	/// <summary>
+	/// How near the end counts as arriving, in radii - <c>0x19999</c>, which is 1.6. <b>The same constant
+	/// as <see cref="PeepNavigator.LastLegTolerance"/></b>, which was here first; it is named again from
+	/// this side because this is where the walking half reads it.
+	/// </summary>
+	public const int ArriveWithin = PeepNavigator.LastLegTolerance;
 
-	/// <summary>How near a middle waypoint counts as passing it, in radii - <c>0x20000</c>, which is 2.</summary>
-	public const int PassWithin = 0x20000;
+	/// <summary>
+	/// How near a middle waypoint counts as passing it, in radii - <c>0x20000</c>, which is 2, and the
+	/// same constant as <see cref="PeepNavigator.MidPathTolerance"/>.
+	/// </summary>
+	public const int PassWithin = PeepNavigator.MidPathTolerance;
 
 	/// <summary>
 	/// What the remaining distance is divided by on the last leg to decide how fast to close on the end.

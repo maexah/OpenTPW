@@ -114,13 +114,14 @@ public sealed class PeepNavigator
 	/// every diagonal direction and by nothing at all along the axes.
 	/// </para>
 	/// </summary>
-	public static int Distance( int dx, int dy )
-	{
-		var ax = dx < 0 ? -dx : dx;
-		var ay = dy < 0 ? -dy : dy;
-
-		return ax + ay - ((ax < ay ? ax : ay) >> 1);
-	}
+	/// <remarks>
+	/// <b>One implementation, here and in <see cref="FixedVector.OctagonalLength"/>.</b> This was written
+	/// twice - once here and once again later, character for character, by someone who had not read this
+	/// file - and the two are now the same code. The tests above are the better of the two sets and are
+	/// what cover it: they pin the metric against Manhattan <i>and</i> Euclidean, and against real legs
+	/// out of the shipped save.
+	/// </remarks>
+	public static int Distance( int dx, int dy ) => new FixedVector( dx, dy ).OctagonalLength;
 
 	/// <summary>
 	/// Where a waypoint sits inside the cell it names. The pathfinder hands back whole cells as single
@@ -191,9 +192,15 @@ public sealed class PeepNavigator
 
 	/// <summary>
 	/// Records whether the step just taken got anywhere, which is what <see cref="BlockedTooOften"/> reads.
-	/// The original shifts this word <b>twice</b> per step - once for a move the map refused, and once for
-	/// a step that made no progress along the route - so fifteen bits cover rather fewer than fifteen
-	/// steps.
+	///
+	/// <para>
+	/// <b>How often the original shifts this word is not the same every step, and an earlier draft of this
+	/// comment said it was.</b> It said "twice per step". Read at <c>0050f54d</c>-<c>0050f5d6</c>: a step
+	/// the map <i>refused</i> shifts and writes a one, and then the end of the tick shifts again - twice.
+	/// A step that was <i>taken</i> does not shift at that first point at all, so it shifts once. Fifteen
+	/// bits therefore cover fifteen steps for someone walking freely and rather fewer for someone blocked,
+	/// which is what makes a truly stuck person trip the six-in-fifteen rule so much faster.
+	/// </para>
 	/// </summary>
 	public void RecordStep( bool blocked )
 		=> StuckBits = (StuckBits << 1) | (blocked ? 1 : 0);
