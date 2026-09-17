@@ -53,7 +53,7 @@ public sealed class ParkPeople : Entity
 			? []
 			: [.. park.People
 				.Where( person => person.Guest != null )
-				.Select( person => new Peep( person.ThingId, person.Guest!.Value ) )];
+				.Select( person => new Peep( person.ThingId, person.Guest!.Value, person.Navigator ) )];
 
 	/// <summary>Every guest, in the order the save lists them.</summary>
 	internal IReadOnlyList<Peep> Peeps => _peeps;

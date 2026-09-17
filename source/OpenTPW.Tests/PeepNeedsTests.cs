@@ -23,7 +23,20 @@ public class PeepNeedsTests
 		=> new( thingId, new ParkWorld.GuestState(
 			State: 6, SavedState: 6, PersonType: 0, Cash: 300, ExitLevel: exitLevel,
 			Happiness: happiness, Thirst: thirst, Hunger: hunger, Toilet: toilet, Illness: illness,
-			Litter: 0f, MajorDest: 0, QueuePos: 0, PrankeryIndex: 0 ) );
+			Litter: 0f, MajorDest: 0, QueuePos: 0, PrankeryIndex: 0 ), StandingStill );
+
+	/// <summary>
+	/// A navigator for a guest who is going nowhere. Nothing in this file reads it - these tests are about
+	/// needs - but a guest cannot be built without one, because the save never produces a person without
+	/// one. Written out here rather than shared with the other peep tests: it is test data, and data is
+	/// clearer at the point of use than behind a helper in another file.
+	/// </summary>
+	private static ParkWorld.NavigatorState StandingStill => new(
+		X: 0, Y: 0, VelocityX: 0, VelocityY: 0, TargetX: 0, TargetY: 0,
+		Mass: ParkWorld.NavigatorState.DefaultMass, Radius: ParkWorld.NavigatorState.DefaultRadius,
+		MaxForce: 0, MaxSpeed: 0, NavMode: 0, CantReachDest: 0, PathFinished: false,
+		PathCount: 0, PathTotalCount: 0, PathBufferCount: 0,
+		BufferedDistance: 0, TailDistance: 0, TotalDistance: 0, StuckBits: 0 );
 
 	/// <summary>
 	/// The save's numbers arrive intact. Worth its own test because everything below starts from them.

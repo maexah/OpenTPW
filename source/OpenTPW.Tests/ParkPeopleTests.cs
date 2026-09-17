@@ -70,6 +70,51 @@ public class ParkPeopleTests
 	}
 
 	/// <summary>
+	/// <b>Every guest arrives carrying the route the save gave them.</b> This is the join between the
+	/// navigator, which has been built and dormant, and the guests the park actually simulates - nothing
+	/// constructed one from real data until now.
+	///
+	/// <para>
+	/// The numbers are not quoted from an outside measurement. Each field is checked against the save
+	/// reader's own <c>Navigator</c> for the same person, so what is pinned is that the value travelled
+	/// intact rather than that it happens to equal some figure written down elsewhere. The buffered count
+	/// is then checked against the rule that derives it, which is a relation the code computes for itself.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EveryGuestArrivesCarryingTheRouteTheSaveGaveThem()
+	{
+		var world = World();
+		var peeps = ParkPeople.PeepsIn( world ).ToDictionary( peep => peep.ThingId );
+		var saved = world.People.Where( person => person.Guest != null )
+			.ToDictionary( person => person.ThingId, person => person.Navigator );
+
+		Assert.AreEqual( saved.Count, peeps.Count, "every guest should have been built" );
+
+		foreach ( var (id, navigator) in saved )
+		{
+			var carried = peeps[id].Navigator;
+
+			Assert.AreEqual( navigator.Radius, carried.Radius, $"guest {id} radius" );
+			Assert.AreEqual( navigator.PathCount, carried.Cursor, $"guest {id} cursor" );
+			Assert.AreEqual( navigator.PathTotalCount, carried.TotalWaypoints, $"guest {id} waypoints" );
+			Assert.AreEqual( navigator.PathBufferCount, carried.BufferedWaypoints, $"guest {id} buffered" );
+			Assert.AreEqual( navigator.TotalDistance, carried.TotalDistance, $"guest {id} route length" );
+			Assert.AreEqual( navigator.StuckBits, carried.StuckBits, $"guest {id} stuck record" );
+
+			// A relation the code works out rather than a number anyone measured.
+			Assert.AreEqual( PeepNavigator.BufferedFor( carried.TotalWaypoints ), carried.BufferedWaypoints,
+				$"guest {id} should buffer as many waypoints as the rule says" );
+		}
+
+		// Each guest must have their OWN navigator - handing every peep the same one would pass every
+		// assertion above for any park whose guests happen to share a route.
+		var distinct = peeps.Values.Select( peep => peep.Navigator ).Distinct().Count();
+
+		Assert.AreEqual( peeps.Count, distinct, "no two guests should share a navigator object" );
+	}
+
+	/// <summary>
 	/// Sixteen ticks of the real park, which is half a second of play.
 	///
 	/// <para>

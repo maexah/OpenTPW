@@ -19,7 +19,18 @@ public class PeepStateTests
 		=> new( thingId, new ParkWorld.GuestState(
 			State: 6, SavedState: 6, PersonType: 0, Cash: 300, ExitLevel: 100,
 			Happiness: 50f, Thirst: 10f, Hunger: 10f, Toilet: toilet, Illness: 0f,
-			Litter: 0f, MajorDest: 0, QueuePos: 0, PrankeryIndex: 0 ) );
+			Litter: 0f, MajorDest: 0, QueuePos: 0, PrankeryIndex: 0 ), StandingStill );
+
+	/// <summary>
+	/// A navigator for a guest going nowhere. Nothing here reads it - these tests are about states - but
+	/// a guest cannot be built without one, because the save never produces a person without one.
+	/// </summary>
+	private static ParkWorld.NavigatorState StandingStill => new(
+		X: 0, Y: 0, VelocityX: 0, VelocityY: 0, TargetX: 0, TargetY: 0,
+		Mass: ParkWorld.NavigatorState.DefaultMass, Radius: ParkWorld.NavigatorState.DefaultRadius,
+		MaxForce: 0, MaxSpeed: 0, NavMode: 0, CantReachDest: 0, PathFinished: false,
+		PathCount: 0, PathTotalCount: 0, PathBufferCount: 0,
+		BufferedDistance: 0, TailDistance: 0, TotalDistance: 0, StuckBits: 0 );
 
 	private static Random Rolls() => new( 1234 );
 

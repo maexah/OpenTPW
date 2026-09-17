@@ -75,8 +75,23 @@ public sealed class Peep
 	/// <summary>The animation the state they are in asked for as they entered it.</summary>
 	public PeepAnimation Animation { get; private set; } = PeepAnimation.None;
 
-	public Peep( int thingId, ParkWorld.GuestState saved )
+	/// <summary>
+	/// Where this guest is going and how far along they are - the running copy of the navigator block the
+	/// save keeps for them.
+	///
+	/// <para>
+	/// <b>Never null, and required rather than optional, because the save always has one.</b> The reader
+	/// calls its navigator parser unconditionally for every person and says so - "every person has one,
+	/// staff included" - so a guest without one would be a state the file cannot produce. Making it
+	/// optional would have left two test helpers untouched at the cost of modelling something that does
+	/// not exist.
+	/// </para>
+	/// </summary>
+	public PeepNavigator Navigator { get; }
+
+	public Peep( int thingId, ParkWorld.GuestState saved, ParkWorld.NavigatorState navigator )
 	{
+		Navigator = new PeepNavigator( navigator );
 		ThingId = thingId;
 		PersonType = saved.PersonType;
 		State = (PeepState)saved.State;
