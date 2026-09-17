@@ -31,9 +31,10 @@ public enum QueueVerdict
 /// <para>
 /// <b>Fourteen of the fifteen are comparisons of the cell's type</b> against a literal, and the types are
 /// already read by <see cref="ParkWorld.MapCell"/>. The fifteenth pair reach a cell's <i>track</i> record,
-/// which is a second sub-record every cell of the shipped park carries and which the save reader does not
-/// yet parse - so that question is taken as a parameter here, the way the whole edge test is a parameter
-/// to <see cref="MapStep"/>.
+/// which is a second sub-record a cell may carry in addition to its map record. That question is taken as
+/// a parameter here, the way the whole edge test is a parameter to <see cref="MapStep"/>, so that a test
+/// can name an answer without building a park - but <b>it no longer has to go unanswered</b>: the save
+/// reader parses the track record, and <see cref="For"/> binds the real one for a park that is loaded.
 /// </para>
 /// <para>
 /// <b>The names given to types are readings, and the numbers are the definition.</b> Only two are firmly
@@ -218,6 +219,42 @@ public sealed class CellEdge
 		_trackCloses = trackCloses ?? (_ => false);
 		_queueAhead = queueAhead ?? (_ => QueueVerdict.NothingThere);
 	}
+
+	/// <summary>
+	/// The edge test for a park that is actually loaded - the form everything that walks needs, and the
+	/// reason this class exists at all.
+	///
+	/// <para>
+	/// Of the three questions the constructor takes, a live park can answer two. The map is
+	/// <see cref="ParkWorld.CellAt"/>. The track record is parsed by the save reader, so the branch that
+	/// every caller until now had to leave saying "no" can be given its real answer: left out it is wrong
+	/// for 568 of the shipped park's cells.
+	/// </para>
+	/// <para>
+	/// <b>The third is still declined, and deliberately.</b> <c>queueAhead</c> needs the per-cell thing
+	/// lists the original's engine keeps and this project does not, so it keeps answering
+	/// <see cref="QueueVerdict.NothingThere"/>. Answering it by guessing which things are where would be
+	/// worse than not answering it, and it only bears on mode 2.
+	/// </para>
+	/// </summary>
+	public static CellEdge For( ParkWorld park, int mode )
+	{
+		ArgumentNullException.ThrowIfNull( park );
+
+		return new CellEdge( park.CellAt, mode, cell => TrackCloses( cell, ById( park ) ) );
+	}
+
+	/// <summary>
+	/// A cell by its number, for the parent a deferring track record names. Counted from one, as every
+	/// reference in the save is - <see cref="MapStep.CellAt"/> is what undoes that.
+	/// </summary>
+	private static Func<int, ParkWorld.MapCell> ById( ParkWorld park )
+		=> id =>
+		{
+			var (x, y) = MapStep.CellAt( id );
+
+			return park.CellAt( x, y );
+		};
 
 	/// <summary>
 	/// Whether this side of this cell is closed. The shape fits <see cref="MapStep.CanStep"/>'s parameter,
