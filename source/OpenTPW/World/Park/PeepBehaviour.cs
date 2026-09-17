@@ -54,8 +54,13 @@ public sealed class PeepBehaviour
 	/// being played hands in the one the level owns, so that what is taken at the gate lands on the
 	/// balance everything else reads - see <see cref="ParkState"/>.
 	/// </param>
+	/// <param name="catalogue">
+	/// What the things in this park actually are, for the ride arm to score them by. Null leaves a guest
+	/// choosing on distance and queue alone - see <see cref="ParkRideChooser"/>.
+	/// </param>
 	public PeepBehaviour( ParkWorld? park, Random? random = null,
-		ParkAdmission? admission = null, Func<int>? gateStatus = null, ParkState? state = null )
+		ParkAdmission? admission = null, Func<int>? gateStatus = null, ParkState? state = null,
+		ParkItemCatalogue? catalogue = null )
 	{
 		// Zero is open, which is the way round the name is not - see ParkWorld.ParkClosed. ParkState
 		// applies that rule itself, so it is not repeated here.
@@ -63,6 +68,7 @@ public sealed class PeepBehaviour
 		Admission = admission;
 		_gateStatus = gateStatus;
 		_random = random ?? new Random();
+		_chooser = new ParkRideChooser( park, catalogue );
 	}
 
 	/// <summary>
@@ -104,9 +110,19 @@ public sealed class PeepBehaviour
 		Admission = admission;
 		_gateStatus = gateStatus;
 		_random = random ?? new Random();
+
+		// No park, so nothing to choose from - which is the right answer for a guest built out of two
+		// facts rather than out of a save.
+		_chooser = new ParkRideChooser( null );
 	}
 
 	private readonly Func<int>? _gateStatus;
+
+	/// <summary>
+	/// What a guest deciding what to do picks from - <c>FUN_004fcb10</c>. Always present, because a
+	/// chooser with no park behind it simply chooses nothing, which is what the ride arm should do then.
+	/// </summary>
+	private readonly ParkRideChooser _chooser;
 
 	/// <summary>What the park charges and how a guest feels about it, or null where nothing can say.</summary>
 	public ParkAdmission? Admission { get; }
@@ -205,13 +221,17 @@ public sealed class PeepBehaviour
 	/// walking everybody who <i>can</i> walk and then asking what it meant - is what this replaces.
 	/// </para>
 	/// <para>
-	/// <b>What is deliberately absent, each with its reason.</b>
-	/// <see cref="PeepState.WaitingForOpening"/> (<c>FUN_004ff7f0</c>) needs the gate thing's script state
-	/// and a destination chosen from two gate cells held in globals; <see cref="PeepState.JudgingTheFee"/>
-	/// (<c>FUN_004ff9d0</c>) needs the admission fee, which lives on the economy thing the header calls
-	/// <c>mBankAccount</c> and nothing reads yet; <see cref="PeepState.Deciding"/> (<c>FUN_004fec90</c>) is
-	/// the hub that picks a ride, a stall or a way home. A guest who reaches one of those <b>stops there</b>,
-	/// and stopping is the honest thing for them to do rather than a state machine guessing.
+	/// <b>This paragraph used to list three states as absent, and all three are built.</b>
+	/// <see cref="PeepState.WaitingForOpening"/> is <see cref="Wait"/>,
+	/// <see cref="PeepState.JudgingTheFee"/> is <see cref="Judge"/>, and
+	/// <see cref="PeepState.Deciding"/> - the hub a guest returns to whenever they finish anything - is
+	/// <see cref="Decide"/>, whose ride arm was the last of them to be answered.
+	/// <para>
+	/// What remains absent is narrower and sits inside those, not instead of them: the paid arm of
+	/// <see cref="Wait"/> needs a runtime map cell nothing here keeps, and two of
+	/// <see cref="Decide"/>'s own conditions read fields nothing has named. Each is recorded where it
+	/// happens rather than here.
+	/// </para>
 	/// </para>
 	/// <para>
 	/// <b>And the give-up path does nothing on purpose.</b> Where the walk reports it cannot get through,
@@ -609,15 +629,13 @@ public sealed class PeepBehaviour
 	/// nothing at all and think again next turn.
 	/// </para>
 	/// <para>
-	/// <b>The ride arm is deliberately NOT built, and the reason is a whole subsystem rather than a
-	/// field.</b> <c>FUN_004fcb10</c> walks the world's object list and scores every candidate with
-	/// <c>FUN_004fcc30</c>, which wants the object's queue cell, its queue length, its price, whether it is
-	/// indoors while it rains, whether it is new, the guest's preferred excitement against the ride's, the
-	/// thirst and hunger a visit would relieve, and the guest's own history of the last four rides - all
-	/// weighted by the seven <c>PeepInfo.DecisionVar…Weight</c> constants. Every candidate must also be
-	/// open for business with room in its queue, and <b>nothing in this tree operates a ride</b>. So a
-	/// guest offered a ride here does nothing, which is what the original does too when it can find no
-	/// candidate worth more than nine.
+	/// <b>The ride arm IS built now, and this said it was not until the scorer existed.</b>
+	/// <see cref="ChooseSomewhereToGo"/> asks <see cref="ParkRideChooser"/>, which walks the world's object
+	/// list, filters it with <see cref="ParkRideChoice"/> and scores the survivors with
+	/// <see cref="ParkRideScore"/> - the seven-term weighted mean of distance, queue, excitement, thirst,
+	/// hunger, relief and illness, weighted by the seven <c>PeepInfo.DecisionVar…Weight</c> constants and
+	/// multiplied for newness and for shelter in the rain. A guest who finds nothing worth more than nine
+	/// still does nothing, which is the original's own answer rather than a shortfall in this one.
 	/// </para>
 	/// <para>
 	/// <b>Two of the original's own conditions are absent because they read fields nothing here has
@@ -655,11 +673,16 @@ public sealed class PeepBehaviour
 
 				break;
 
-			// The ride arm - see the remarks. The gate in front of it is reproduced even though the arm is
-			// not, because the gate is what stops a guest being offered a ride every third turn for ever.
+			// Being offered somewhere to go. The thirty-turn gate in front of it is what stops a guest being
+			// offered a ride every third turn for ever, and it is measured from their own idle stamp.
 			case 0:
-				if ( peep.TimeStartedIdling + ThinkingGap < tick )
-					peep.TimeStartedIdling = tick;
+				if ( peep.TimeStartedIdling + ThinkingGap >= tick )
+					break;
+
+				peep.TimeStartedIdling = tick;
+
+				if ( ChooseSomewhereToGo( peep, walk, tick ) )
+					peep.SetState( PeepState.GoingToRide, tick, _random );
 
 				break;
 
@@ -667,6 +690,50 @@ public sealed class PeepBehaviour
 			default:
 				break;
 		}
+	}
+
+	/// <summary>
+	/// Offers this guest the best thing in the park and sets them off for it - <c>FUN_004fcb10</c>, and
+	/// the arm this file recorded as unbuilt until the scorer existed to answer it.
+	///
+	/// <para>
+	/// <b>The walk is committed to only once a route exists</b>, which is the order the original uses and
+	/// the same one <c>StaffBehaviour.GoAndRest</c> follows: a guest never claims somewhere they cannot
+	/// get to. A candidate that scores well but cannot be reached leaves them deciding again next turn,
+	/// which is what the original does too.
+	/// </para>
+	/// <para>
+	/// <b>The chosen thing is recorded in <see cref="Peep.MajorDest"/></b> - the person's own
+	/// <c>+0x1dc</c>, which is where the original writes it and which the queueing states read back. It is
+	/// written after the route for the same reason the state is.
+	/// </para>
+	/// <para>
+	/// <b>Queue lengths are not passed, and that is this park's own answer rather than a gap.</b> Nothing
+	/// here operates a ride, and the save leaves <c>mFirstInQ</c> at nought on every object - nobody has
+	/// ever queued in it - so every queue is genuinely empty until guests start joining them.
+	/// </para>
+	/// </summary>
+	/// <returns>Whether somewhere was chosen and a route to it planned.</returns>
+	private bool ChooseSomewhereToGo( Peep peep, PeepWalk walk, int tick )
+	{
+		var (x, y) = walk.Position.Cell;
+
+		var wants = new ParkRideScore.Wants( peep.PersonType,
+			peep.Thirst, peep.Hunger, peep.Toilet, peep.Vomit );
+
+		if ( _chooser.ChooseFor( wants, x, y, tick ) is not { } chosen )
+			return false;
+
+		peep.Navigator.Target = new FixedVector(
+			PeepNavigator.WaypointCentre( chosen.EntryCellX ),
+			PeepNavigator.WaypointCentre( chosen.EntryCellY ) );
+
+		if ( !walk.PlanRoute() )
+			return false;
+
+		peep.MajorDest = chosen.ThingId;
+
+		return true;
 	}
 
 	/// <summary>

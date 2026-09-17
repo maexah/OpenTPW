@@ -92,8 +92,13 @@ public sealed class ParkPeople : Entity
 	/// from <paramref name="park"/>, which is what a test wants; a park being played hands in the one the
 	/// level owns, so that everything reads and moves the same numbers.
 	/// </param>
+	/// <param name="catalogue">
+	/// Everything this theme sells, which the level has already read once. Handed on so that a guest
+	/// choosing where to go can score a thing by what it actually is rather than by where it stands -
+	/// see <see cref="ParkRideChooser"/>. Null leaves that arm scoring on distance and queue alone.
+	/// </param>
 	public ParkPeople( ParkWorld? park, ParkBalance? balance = null, System.Func<int>? gateStatus = null,
-		ParkState? state = null )
+		ParkState? state = null, ParkItemCatalogue? catalogue = null )
 	{
 		_peeps = PeepsIn( park );
 
@@ -105,7 +110,7 @@ public sealed class ParkPeople : Entity
 
 		// Built from the park rather than from the guests: what a guest does on arrival turns on whether
 		// the gates are open and on how many visitors have ever been let in, and both are the park's.
-		_behaviour = new PeepBehaviour( park, random: null, admission, gateStatus, state );
+		_behaviour = new PeepBehaviour( park, random: null, admission, gateStatus, state, catalogue );
 
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
 		// none of what a guest needs - the fee, the gate - means anything to them.

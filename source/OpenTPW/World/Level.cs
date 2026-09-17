@@ -317,7 +317,7 @@ public class Level
 		// And it is handed the two things the admission states need that the save alone cannot answer: the
 		// balance stack, for what a guest will put up with paying, and the gate's own script state, which
 		// is what a guest waiting outside is actually waiting on.
-		_ = new ParkPeople( park, Balance, () => rides.GateStatus( park ), ParkState );
+		_ = new ParkPeople( park, Balance, () => rides.GateStatus( park ), ParkState, catalogue );
 
 		// Each group of sound at the volume the options give it, and then the park's own music - which
 		// is the order the original uses too: it registers the park's categories, re-applies the group
