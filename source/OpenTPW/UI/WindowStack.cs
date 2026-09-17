@@ -179,7 +179,7 @@ internal sealed class WindowStack : Panel
 		// Each window's effects straight after it, so the windows over it cover them.
 		foreach ( var window in _windows )
 		{
-			if ( window.Hidden )
+			if ( window.Hidden || window.PutAway )
 				continue;
 
 			window.Root.Draw();
@@ -193,7 +193,7 @@ internal sealed class WindowStack : Panel
 	{
 		for ( int i = _windows.Count - 1; i >= 0; --i )
 		{
-			if ( _windows[i].Hidden )
+			if ( _windows[i].Hidden || _windows[i].PutAway )
 				continue;
 
 			if ( _windows[i].Root.HitTest( x, y ) is { } hit )

@@ -52,6 +52,27 @@ internal abstract class UiWindow
 	/// </summary>
 	public bool Hidden { get; set; }
 
+	/// <summary>
+	/// Whether the front end has <b>put this window away</b> - the original's message 6, which
+	/// <c>OptionsScreen_Open</c> sends to the interface root before it opens over everything.
+	///
+	/// <para>
+	/// <b>Separate from <see cref="Hidden"/> because they have different owners, and sharing one flag was a
+	/// bug.</b> <see cref="Hidden"/> belongs to the window itself: <c>ParkGadget</c> and
+	/// <c>ParkViewfinder</c> both decide it afresh in their own <c>Update</c>, every frame. Putting a window
+	/// away belongs to whatever is opening over it. While the two shared a flag, the options screen would
+	/// put the park's gadget away and the gadget's very next <c>Update</c> would assign over the top of it -
+	/// a window told to go away that came back one frame later, drawn under the options screen's dimmed
+	/// backdrop.
+	/// </para>
+	/// <para>
+	/// <b>Not fixed by leaving hidden windows un-updated, which was the shorter answer and the wrong one.</b>
+	/// <c>ParkViewfinder</c> is constructed hidden and relies on its own <c>Update</c> to bring itself back
+	/// when camcorder mode starts, so a window that stops being updated while hidden would never return.
+	/// </para>
+	/// </summary>
+	public bool PutAway { get; set; }
+
 	/// <summary>The box typing goes to while this is the front window.</summary>
 	internal UiEdit? Focus { get; set; }
 

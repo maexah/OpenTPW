@@ -153,8 +153,10 @@ internal sealed class OptionsScreen : UiWindow
 
 		Advisor.Current?.StopQuietly();
 
+		// Put away rather than hidden - see UiWindow.PutAway. A window's own Update may write Hidden every
+		// frame, and two of a park's do, so setting that here is overwritten before it is ever drawn.
 		foreach ( var window in stack.Windows )
-			window.Hidden = true;
+			window.PutAway = true;
 
 		stack.Open( new OptionsScreen( stack ) );
 	}
@@ -260,9 +262,12 @@ internal sealed class OptionsScreen : UiWindow
 	/// </summary>
 	protected internal override void Closed()
 	{
-		foreach ( var window in Stack.Windows.Where( window => window.Hidden ).ToArray() )
+		// Only what this screen put away, which is the second thing the shared flag got wrong: asking for
+		// every window that is HIDDEN also picks up the ones that hid themselves - a park's viewfinder is
+		// hidden whenever first person is not running - and would show them on the way out.
+		foreach ( var window in Stack.Windows.Where( window => window.PutAway ).ToArray() )
 		{
-			window.Hidden = false;
+			window.PutAway = false;
 			window.Shown();
 		}
 
