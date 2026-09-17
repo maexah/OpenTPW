@@ -372,6 +372,77 @@ public sealed class ParkWorld
 
 	public int Weather { get; private set; }
 
+	/// <summary>
+	/// Whether the park is shut to visitors - <b>zero is open</b>, which is the way round the name is not.
+	///
+	/// <para>
+	/// The original keeps it at <c>world + 0x1da710</c> and reads it through <c>FUN_0051a280</c>. That is
+	/// the first question three of the four states Lost Kingdom's guests are saved in ask before they do
+	/// anything: a guest arriving at the gate goes on to judge the admission fee when it is zero and waits
+	/// outside when it is not. <b>The sense was settled rather than assumed</b> - <c>FUN_00519ef0</c> is
+	/// the open/close command, and it picks the word for its own message with
+	/// <c>mParkClosed == 0 ? "opened" : "closed"</c>.
+	/// </para>
+	/// <para>
+	/// <b>A park is born closed.</b> The world constructor at <c>FUN_00515540</c> writes one here before
+	/// anything is loaded, so a save holding zero is a park that was opened while it was being played.
+	/// </para>
+	/// </summary>
+	public int ParkClosed { get; private set; }
+
+	/// <summary>
+	/// The park's own tick counter as it was saved - <c>world + 0x1da70c</c>. The guest behaviours compare
+	/// their own timestamps against this rather than against any wall clock.
+	/// </summary>
+	public int GameTick { get; private set; }
+
+	/// <summary>
+	/// The thing that keeps the park's money - a <b>handle, not an amount</b>. The name is the original's
+	/// own and describes what the thing is for, not what this field contains.
+	///
+	/// <para>
+	/// <b>This was nearly written down as a balance, and it is not one.</b> The field is two bytes at
+	/// <c>world + 0x1da726</c> and the shipped park holds <c>8</c>, which is no sort of bank balance. The
+	/// executable reads it in exactly one place, <c>FUN_005195d0</c> - which is character for character the
+	/// weather thing's accessor with one offset changed: take the word, return <c>thingTable[id]</c>. So it
+	/// is <c>ThingById(mBankAccount)</c>, the same kind of handle as <see cref="ParkGates"/> and
+	/// <see cref="TrafficLights"/>. Money is read and added up all over an executable; this is fetched once,
+	/// as a word, by a getter.
+	/// </para>
+	/// <para>
+	/// <b>And it names the economy.</b> Model 16 is the thing carrying <c>mAdmissionFee</c>,
+	/// <c>mBalance</c>, <c>mProfitThisYear</c> and the loan table. That accessor has at least forty callers
+	/// - the listing was capped at forty - and one of them sits inside <c>FUN_004ff9d0</c>, the state in
+	/// which a guest judges the admission fee. That a park's economy is <b>thing 8</b> had been recorded as
+	/// unproven, because the reader stores no model for manager things; the header settles it from the
+	/// other side.
+	/// </para>
+	/// </summary>
+	public int BankAccount { get; private set; }
+
+	/// <summary>
+	/// How many guests have ever been admitted - <c>world + 0x1da714</c>. <c>FUN_0051aaf0</c> is the only
+	/// thing that moves it: it adds one and announces "Your park has received its %dth visitor", and its
+	/// single caller is a guest finishing the entering state.
+	/// </summary>
+	public int NumberOfVisitorsToDate { get; private set; }
+
+	/// <summary>
+	/// The world's own state word at <c>world + 0x1da738</c> - the one field kept here that really is a
+	/// value rather than a handle.
+	///
+	/// <para>
+	/// <b>Measured, and deliberately left unnamed.</b> The executable writes <b>1, 2 and 4</b> into it
+	/// (<c>FUN_00515fb0</c>, <c>FUN_00515dd0</c>, <c>FUN_005168f0</c>) and compares it against <b>4</b> in
+	/// eight places, among them the game's own state machine and the build-a-park menu. <b>The shipped park
+	/// holds 0</b>, which is not in that set - so either zero is a state nothing writes while a park is
+	/// being played, or it is what a park carries before it is first entered. Naming it either way would be
+	/// a guess. Nothing in this project reads it; it is kept because it is on the disk, and dropping it
+	/// again would only hide the question.
+	/// </para>
+	/// </summary>
+	public int WorldState { get; private set; }
+
 	/// <summary>How many things the walk stepped through, of every model - people and managers included.</summary>
 	public int ThingCount { get; private set; }
 
@@ -464,10 +535,21 @@ public sealed class ParkWorld
 
 	// Where the fields this class keeps sit in the list above, so the reader can name them rather than
 	// counting along it.
+	//
+	// The list itself is confirmed against the executable rather than merely derived from it: FUN_00516c80
+	// pairs each field's name string with the struct offset it is read into, and the offsets it names -
+	// mRandomSeed 0x1da708, mGameTick 0x1da70c, mParkClosed 0x1da710, mNumberOfVisitorsToDate 0x1da714,
+	// mWeather 0x1da724, mBankAccount 0x1da726, mParkGates 0x1da732, mWorldState 0x1da738 - give the same
+	// order and the same widths as the sizes above, including Guard before Researcher near the end.
+	private const int BankAccountField = 4;
+	private const int GameTickField = 6;
+	private const int ParkClosedField = 9;
+	private const int NumberOfVisitorsToDateField = 10;
 	private const int ParkGatesField = 11;
 	private const int TrafficLightsField = 12;
 	private const int RandomSeedField = 13;
 	private const int WeatherField = 18;
+	private const int WorldStateField = 19;
 	private const int FirstObjectField = 25;
 
 	/// <summary>
@@ -622,10 +704,15 @@ public sealed class ParkWorld
 		for ( var i = 0; i < HeaderFieldSizes.Length; ++i )
 			fields[i] = HeaderFieldSizes[i] == 4 ? ReadInt32() : ReadUInt16();
 
+		BankAccount = fields[BankAccountField];
+		GameTick = fields[GameTickField];
+		ParkClosed = fields[ParkClosedField];
+		NumberOfVisitorsToDate = fields[NumberOfVisitorsToDateField];
 		ParkGates = fields[ParkGatesField];
 		TrafficLights = fields[TrafficLightsField];
 		RandomSeed = fields[RandomSeedField];
 		Weather = fields[WeatherField];
+		WorldState = fields[WorldStateField];
 		FirstObject = fields[FirstObjectField];
 	}
 

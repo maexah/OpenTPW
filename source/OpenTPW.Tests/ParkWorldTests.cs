@@ -184,6 +184,43 @@ public class ParkWorldTests
 	}
 
 	/// <summary>
+	/// The five header fields the reader walked over and threw away until now: what the park holds in the
+	/// bank, how far through its own clock it is, whether it is open, how many guests it has ever let in,
+	/// and its state word.
+	///
+	/// <para>
+	/// <b>The one that carries the others is <c>ParkClosed</c>, and zero is open.</b> Three of the states
+	/// Lost Kingdom's guests are saved in - heading for the gate, waiting for it to open, and entering -
+	/// each consult it before they decide anything at all, so a reader that dropped it left the guest
+	/// behaviours with no way to ask the question. The sense is the executable's own: the command that
+	/// opens and shuts a park chooses the word for its message with <c>mParkClosed == 0 ? "opened"</c>.
+	/// </para>
+	/// <para>
+	/// <b>Pinned to the shipped park's own numbers rather than asserted to be merely present.</b> A field
+	/// read from the wrong place in a packed header produces a number, not a fault - and three of these
+	/// five are zero, which a field that was never assigned would also be. The two that cannot be zero are
+	/// what make the other three worth anything, and the exact values are what stop the whole test passing
+	/// with the five assignments deleted.
+	/// </para>
+	/// <para>
+	/// <b><see cref="ParkWorld.BankAccount"/> is a handle, and its value is the finding.</b> Eight is no
+	/// bank balance. It is the thing that keeps the park's money, and model 16 - the economy - is what that
+	/// thing is. That a park's economy is thing 8 had stood recorded as unproven.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheHeaderSaysWhetherTheParkIsOpenAndWhatItHasTaken()
+	{
+		var world = World();
+
+		Assert.AreEqual( 0, world.ParkClosed, "Lost Kingdom is saved with its gates open" );
+		Assert.AreEqual( 755, world.GameTick, "the tick the park was saved on" );
+		Assert.AreEqual( 8, world.BankAccount, "the thing that keeps the park's money" );
+		Assert.AreEqual( 0, world.NumberOfVisitorsToDate, "nobody has been admitted yet" );
+		Assert.AreEqual( 0, world.WorldState, "the world state word" );
+	}
+
+	/// <summary>
 	/// Everything standing in Lost Kingdom, by catalogue number and cell. The whole table is pinned rather
 	/// than a sample of it, because a walk that drifts produces a table that is still the right shape.
 	///
