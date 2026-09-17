@@ -106,7 +106,20 @@ public sealed class ParkWorld
 		/// eighteen land on five different octants.
 		/// </para>
 		/// </summary>
-		public int Facing => ((Angle - 0x380) & 0x7ff) >> 8;
+		public int Facing => OctantOf( Angle );
+
+		/// <summary>
+		/// The same fold, for a heading that is not on a record - the one the walk works out for itself as a
+		/// person moves.
+		///
+		/// <para>
+		/// <b>Written once and called twice on purpose.</b> There is half an octant of rounding built into
+		/// the bias before the shift, and a second hand-rolled copy of it is exactly how two versions of the
+		/// same rule drift apart - which has already happened once on this project, to the eight-sided
+		/// distance.
+		/// </para>
+		/// </summary>
+		public static int OctantOf( int angle ) => ((angle - 0x380) & 0x7ff) >> 8;
 	}
 
 	/// <summary>

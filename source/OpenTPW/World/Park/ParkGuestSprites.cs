@@ -375,13 +375,21 @@ public sealed class ParkGuestSprites : ModelEntity
 		var field = ParkGround.Current?.Heightfield;
 		var used = 0;
 
+		// The simulation, if this park is running one. Asked once a frame rather than once a person.
+		var people = ParkPeople.Current;
+		var cellX = field?.CellSizeX ?? 0f;
+		var cellY = field?.CellSizeY ?? 0f;
+
 		foreach ( var (person, sprite) in _people )
 		{
 			if ( !_banks.TryGetValue( (sprite.Type, sprite.Bank + sprite.BankOffset), out var loaded ) )
 				continue;
 
+			var (x, y, angle) = Standing( people?.WalkFor( person.ThingId ), cellX, cellY, person, sprite );
+
 			var set = loaded.Bank.Sets[sprite.Set & 0xf];
-			var index = Picture( set, sprite.Frame, Facing( sprite.Facing ), out var mirrored );
+			var index = Picture( set, sprite.Frame, Facing( ParkWorld.Person.OctantOf( angle ) ),
+				out var mirrored );
 
 			if ( index < 0 || index >= loaded.Pictures.Length )
 				continue;
@@ -390,13 +398,13 @@ public sealed class ParkGuestSprites : ModelEntity
 
 			// The stored height is an offset above the ground rather than a height, so the land under
 			// the sprite is what decides where its feet go.
-			var ground = field?.HeightAtWorld( sprite.X, sprite.Y ) ?? 0f;
-			var centre = new Vector3( sprite.X, sprite.Y, ground + sprite.Height );
+			var ground = field?.HeightAtWorld( x, y ) ?? 0f;
+			var centre = new Vector3( x, y, ground + sprite.Height );
 
 			WriteQuad( used++, centre, picture, mirrored, sprite.Alpha );
 
 			if ( DebugFacing && _plain is { } plain )
-				WriteGroundDash( used++, centre, person, sprite.Type, plain );
+				WriteGroundDash( used++, centre, angle, sprite.Type, plain );
 		}
 
 		for ( int i = used; i < _uploaded; ++i )
@@ -423,6 +431,50 @@ public sealed class ParkGuestSprites : ModelEntity
 		} );
 
 		TranslucentModel.Draw();
+	}
+
+	/// <summary>
+	/// Where a person is drawn and which way they are turned: from the simulation when one is running them,
+	/// and from the save when it is not.
+	///
+	/// <para>
+	/// <b>Why this exists at all.</b> <see cref="_people"/> holds record structs copied out of the save when
+	/// the park opened, and nothing writes to them. Before this, a guest the simulation had walked half way
+	/// across the park was still drawn where the file left them.
+	/// </para>
+	/// <para>
+	/// <b>The scale is the heightfield's own, and that is the whole argument for it.</b> A position in the
+	/// simulation is 16.16 fixed point where one is a map cell; <see cref="ParkGround"/> lays its ground
+	/// vertices at <c>cell * CellSize</c>, so multiplying by the same <c>CellSizeX</c>/<c>CellSizeY</c> is
+	/// what keeps a person's feet on the terrain rather than merely near it. The save's own sprite
+	/// coordinates were measured against this and agree on x to about one part in ten thousand, but wander
+	/// by up to a third of a per cent on y - so they are not the thing to calibrate against, and are used
+	/// only as the fallback below.
+	/// </para>
+	/// <para>
+	/// <b>It falls back rather than guessing.</b> With no simulation, or before the ground has loaded and a
+	/// cell size is known, the saved position and heading are what get drawn - which is what this did
+	/// before, so a park without people still looks exactly as it did.
+	/// </para>
+	/// </summary>
+	/// <remarks>
+	/// <b>It takes the walk rather than the pool of them, and a control run is why.</b> Written the other
+	/// way it needed a live <see cref="ParkPeople"/> - an entity - to exercise at all, so nothing tested it;
+	/// a mutation making this ignore the simulation entirely and draw everyone at their saved position left
+	/// the whole suite green. Handing in the one walk makes the choice and the arithmetic testable without a
+	/// graphics device or an entity, and the lookup moves to the caller, which is where it belongs anyway.
+	/// </remarks>
+	internal static (float X, float Y, int Angle) Standing( PeepWalk? walk, float cellX, float cellY,
+		ParkWorld.Person person, ParkWorld.Sprite sprite )
+	{
+		if ( walk == null || cellX <= 0f || cellY <= 0f )
+			return (sprite.X, sprite.Y, person.Angle);
+
+		var at = walk.Position;
+
+		return ((at.X / (float)FixedVector.One) * cellX,
+			(at.Y / (float)FixedVector.One) * cellY,
+			walk.Heading);
 	}
 
 	/// <summary>
@@ -507,12 +559,12 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// wrong by the same amount, that is the answer this was drawn to show.
 	/// </para>
 	/// </summary>
-	private void WriteGroundDash( int index, Vector3 feet, ParkWorld.Person person, int type, Region plain )
+	private void WriteGroundDash( int index, Vector3 feet, int angle, int type, Region plain )
 	{
 		if ( index < 0 || (index * 4) + 3 >= _vertices.Length )
 			return;
 
-		var turn = person.Angle / 2048f * MathF.Tau;
+		var turn = angle / 2048f * MathF.Tau;
 		var along = new Vector3( MathF.Sin( turn ), MathF.Cos( turn ), 0f );
 		var side = along.Cross( Vector3.Up );
 

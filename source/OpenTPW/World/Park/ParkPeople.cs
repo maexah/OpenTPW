@@ -57,9 +57,18 @@ public sealed class ParkPeople : Entity
 		if ( park != null )
 		{
 			var blocked = CellEdge.For( park, WalkingMode ).Blocked;
+			var saved = park.People.ToDictionary( person => person.ThingId, person => person.Angle );
 
 			foreach ( var peep in _peeps )
-				_walks[peep.ThingId] = new PeepWalk( peep.Navigator, blocked );
+			{
+				// The heading is seeded from the file rather than left at zero: a guest who has not taken a
+				// step yet faces the way they were saved facing, and only a step they actually take turns
+				// them. Starting everyone at zero would swing the whole park round on the first frame.
+				_walks[peep.ThingId] = new PeepWalk( peep.Navigator, blocked )
+				{
+					Heading = saved.GetValueOrDefault( peep.ThingId )
+				};
+			}
 		}
 
 		Log.Info( $"People: {_peeps.Count} guests simulating" );

@@ -320,6 +320,79 @@ public class PeepWalkTests
 	}
 
 	/// <summary>
+	/// Walking turns a guest the way they are actually going.
+	///
+	/// <para>
+	/// <b>The bound is derived from the cardinals rather than from the function under test.</b> Asserting
+	/// that the heading equals <c>PeepHeading.Of(...)</c> would only check that function against itself.
+	/// Thing 42 walks from <c>(47,9)</c> to <c>(48,13)</c> - both components positive, with far more y than
+	/// x - and by the decoded branch structure a step like that lands strictly between the heading for
+	/// straight-along-y (<c>0x400</c>) and the one for straight-along-x (<c>0x600</c>), in the half nearer
+	/// y. Both ends are asserted, so a mirrored or rotated table fails here.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void WalkingTurnsAGuestTheWayTheyAreActuallyGoing()
+	{
+		var world = World();
+		var guest = ParkPeople.PeepsIn( world ).Single( peep => peep.ThingId == 42 );
+		var walk = new PeepWalk( guest.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
+
+		Assert.IsTrue( walk.PlanRoute() );
+
+		var before = walk.Position;
+
+		Assert.AreEqual( WalkVerdict.Walking, walk.Step() );
+
+		var moved = walk.Position - before;
+
+		Assert.IsTrue( moved.X > 0 && moved.Y > 0, "they step towards higher x and higher y" );
+		Assert.IsTrue( moved.Y > moved.X, "and much further in y, which is what puts the answer below 0x500" );
+
+		Assert.IsTrue( walk.Heading > 0x400 && walk.Heading < 0x500,
+			$"a step mostly along y and a little along x, but the heading came back {walk.Heading:x}" );
+
+		Assert.AreNotEqual( 0x400, walk.Heading,
+			"and not exactly along y - the guard that the x part of the step is doing something" );
+	}
+
+	/// <summary>
+	/// <b>Arriving does not turn them, and neither does giving up.</b> <c>FUN_004fa2a0</c> returns at both
+	/// of those before it works out any heading, so a person who has finished keeps the way they were last
+	/// facing rather than being spun by the last twitch of a walk that is over. The position is written
+	/// every tick; the heading is not.
+	/// </summary>
+	[TestMethod]
+	public void ArrivingDoesNotTurnThem()
+	{
+		var world = World();
+		var guest = ParkPeople.PeepsIn( world ).Single( peep => peep.ThingId == 42 );
+		var walk = new PeepWalk( guest.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
+
+		Assert.IsTrue( walk.PlanRoute() );
+
+		var facing = walk.Heading;
+
+		for ( var tick = 1; tick <= LongEnough; ++tick )
+		{
+			if ( walk.Step() != WalkVerdict.Walking )
+				break;
+
+			facing = walk.Heading;
+		}
+
+		Assert.IsTrue( guest.Navigator.Finished, "they got there" );
+		Assert.AreNotEqual( 0, facing, "and turned at some point on the way, or this proves nothing" );
+
+		// Every further tick is an arrival, and none of them may move the heading.
+		for ( var tick = 0; tick < 5; ++tick )
+		{
+			Assert.AreEqual( WalkVerdict.Arrived, walk.Step() );
+			Assert.AreEqual( facing, walk.Heading, $"still facing where they were, {tick + 1} ticks on" );
+		}
+	}
+
+	/// <summary>
 	/// <b>A guest is already moving when the park loads.</b> The save records velocity, not just position, so
 	/// the first tick of a walk continues a step rather than starting one from rest - which is worth pinning
 	/// because a reader would reasonably assume otherwise, and a test written on that assumption would pass

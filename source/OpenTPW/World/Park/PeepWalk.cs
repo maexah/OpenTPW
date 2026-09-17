@@ -101,6 +101,18 @@ public sealed class PeepWalk
 	internal PeepSteering Steering => _steering;
 
 	/// <summary>
+	/// Which way this person is facing, as an eleven-bit turn - the heading the original writes onto the
+	/// thing at <c>+0x1c</c>, and what <see cref="ParkWorld.Person.Facing"/> folds into one of eight
+	/// octants for the picture to be chosen from.
+	///
+	/// <para>
+	/// <b>Settable because it starts from the save.</b> A person who has not taken a step yet faces
+	/// whatever the file says they face, and only a step they actually take turns them.
+	/// </para>
+	/// </summary>
+	public int Heading { get; set; }
+
+	/// <summary>
 	/// Gives this person a route to where they were already going, which is what the save says and the only
 	/// part of a route that survives one.
 	///
@@ -118,6 +130,13 @@ public sealed class PeepWalk
 	public bool HasRoute => _navigator.TotalWaypoints > 0 && _navigator.Waypoints.Count > 0;
 
 	/// <summary>
+	/// Where this person is standing, in the 16.16 the simulation uses - so <see cref="FixedVector.One"/>
+	/// is one map cell. Asked by whatever draws them, which should read the walk rather than reach past it
+	/// into the navigator.
+	/// </summary>
+	public FixedVector Position => _navigator.Position;
+
+	/// <summary>
 	/// Move this person on by one tick.
 	///
 	/// <para>
@@ -129,6 +148,10 @@ public sealed class PeepWalk
 	/// </summary>
 	public WalkVerdict Step()
 	{
+		// Where they were before any of this, which the heading at the end is measured against. The
+		// original reads it first thing, at 004fa2bb, before the steering step runs.
+		var before = _navigator.Position;
+
 		// The half of follow_path's front that can be built: six of the last fifteen steps blocked and the
 		// person asks for a new way round, keeping the cell they are standing in on the front of it.
 		if ( !_navigator.Finished && PeepNavigator.BlockedTooOften( _navigator.StuckBits ) )
@@ -144,7 +167,18 @@ public sealed class PeepWalk
 		if ( _navigator.CannotReach )
 			return WalkVerdict.CannotReach;
 
-		return Progress() == PeepNavigator.One ? WalkVerdict.Arrived : WalkVerdict.Walking;
+		if ( Progress() == PeepNavigator.One )
+			return WalkVerdict.Arrived;
+
+		// <b>Only now, and the ordering is the original's.</b> FUN_004fa2a0 returns at both of the cases
+		// above BEFORE it works out any heading, so somebody who has arrived or given up keeps the way they
+		// were last facing rather than being turned by the last twitch of a walk that is over. The position
+		// is written every tick; the heading is not.
+		var moved = _navigator.Position - before;
+
+		Heading = PeepHeading.Of( -moved.X, moved.Y, Heading );
+
+		return WalkVerdict.Walking;
 	}
 
 	/// <summary>
