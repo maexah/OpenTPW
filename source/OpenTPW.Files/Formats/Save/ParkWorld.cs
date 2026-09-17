@@ -1170,6 +1170,27 @@ public sealed class ParkWorld
 			PaidAdmission: ReadInt32At( start + 460 ),  // mPaidAdmission
 			ParkOpeningWait: ReadInt32At( start + 464 ) ); // mParkOpeningWaitingTime
 
+	// <b>There is a SEVENTH float in this block, at +521, and it is deliberately not read.</b>
+	//
+	// The guest block carries exactly seven unnamed floats - +422, +426, +438, +509, +521, +525 and +529 -
+	// and six of them are given names above. The one at +521 has never had a reader.
+	//
+	// It matters because of what it implies about its neighbours. The block's named fields are written in
+	// alphabetical order, and each unnamed float sits where its own name would sort; three of the seven
+	// fall after mTimeStartedIdling, which fits mTiredness, mToilet and mVomit and does NOT fit mIllness -
+	// mIllness would sort between mHunger and mLastPosX, and those two are adjacent with no room between
+	// them. Nor is mIllness anywhere in the 390-byte person base. So the field this reader calls Illness at
+	// +529 is probably mVomit, and PeepInfo.VomitCapacity in the balance file is a second reason to think so.
+	//
+	// <b>It is left alone anyway, and the measurement is why rather than an excuse.</b> +521 and +529 both
+	// read NOUGHT on all thirteen of the shipped park's guests, while +525 varies from 3 to 27. A value
+	// that is nought everywhere is equally what an unused stat looks like in a park nobody has played and
+	// what a wrong offset looks like landing in padding, so the one empirical test available here cannot
+	// tell the two apart. It neither confirmed the reading nor refuted it. Renaming a field on the strength
+	// of an ordering argument whose only measurement came back uninformative would be trading a name that
+	// might be wrong for another name that might be wrong, so the original's own risk is left where it is
+	// and written down instead.
+
 	/// <summary>
 	/// A member of staff's own block, which begins at <c>+398</c> - the same place a guest's does, after the
 	/// eight-byte thing head and the 390-byte person base - and runs the 105 bytes that take a staff record
