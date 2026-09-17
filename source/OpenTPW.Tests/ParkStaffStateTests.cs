@@ -199,7 +199,10 @@ public class ParkStaffStateTests
 
 			// A park that has never admitted anybody cannot have had any work done in it.
 			Assert.AreEqual( 0, saved.JobsDone, $"staff {thing} has done a job in a park with no visitors" );
-			Assert.AreEqual( 0, saved.RestArea, $"staff {thing} is using a rest area this park has not got" );
+			// Nobody is resting when the park is saved. THE REASON GIVEN HERE USED TO BE WRONG: it said
+			// "a rest area this park has not got", and the park has one - catalogue item 1411 at (58,16),
+			// flagged by bit 1 of its mFlags. What is nought is who is using it, not whether one exists.
+			Assert.AreEqual( 0, saved.RestArea, $"staff {thing} is sitting in a rest area in a park nobody has played" );
 		}
 	}
 

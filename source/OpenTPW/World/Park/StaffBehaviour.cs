@@ -27,14 +27,26 @@ namespace OpenTPW;
 /// therefore finish the walk the save left them on and then stand, which is honest rather than invented.
 /// The strike arms are absent for a different reason: reaching them means asking the staff union's thing
 /// what its script says, the same question <c>ParkRides.GateStatus</c> answers for the gate, and nothing
-/// binds a script to the union yet. Rest areas are absent for a third: an object is a rest area by a flag
-/// on its own record that the save reader does not read, so a tired staff member takes the original's own
-/// "couldn't find a rest area" path.
+/// binds a script to the union yet.
+/// </para>
+/// <para>
+/// <b>Rest areas ARE built now, and this said they were absent because the flag naming one was unread.</b>
+/// That flag is read - bit 1 of a catalogue object's <c>mFlags</c> - so a tired staff member does what
+/// <c>FUN_00506a40</c> does: looks for the nearest object flagged as a rest area and walks to it. The
+/// "couldn't find a rest area" path is still here, because the original still takes it when there is none
+/// in reach.
 /// </para>
 /// </summary>
 public sealed class StaffBehaviour
 {
 	private readonly Random _random;
+
+	/// <summary>
+	/// The park's own save, for the one question this needs of it: which objects are rest areas, and where
+	/// each one wants to be approached from. Null leaves a staff member unable to find one, which is the
+	/// original's own "couldn't find a rest area" path rather than a failure.
+	/// </summary>
+	private readonly ParkWorld? _park;
 
 	private readonly int[] _idleDuration = new int[ParkWorld.StaffState.PayGrades];
 	private readonly float[] _recuperation = new float[ParkWorld.StaffState.PayGrades];
@@ -45,9 +57,14 @@ public sealed class StaffBehaviour
 	/// place - the global file's own values - so that a test can drive this without mounting a game.
 	/// </param>
 	/// <param name="random">The rolls this makes. Taken so a test can seed them; the game does not.</param>
-	public StaffBehaviour( ParkBalance? balance = null, Random? random = null )
+	/// <param name="park">
+	/// The park these staff are in, for finding a rest area. Null leaves them unable to find one - see the
+	/// field's own remarks.
+	/// </param>
+	public StaffBehaviour( ParkBalance? balance = null, Random? random = null, ParkWorld? park = null )
 	{
 		_random = random ?? new Random();
+		_park = park;
 
 		// The fallbacks are the shipped global file's own numbers rather than zeros: a missing key should
 		// leave the simulation running, and a zero idle duration would have every staff member decide
@@ -240,11 +257,25 @@ public sealed class StaffBehaviour
 			return;
 		}
 
-		// Too tired to carry on. The original looks for the nearest rest area here and walks to it; rest
-		// areas are named by a flag this project does not read, so what is reproduced is its other arm -
-		// the one it takes when it cannot find one, which loses them heart one turn in sixteen.
+		// Too tired to carry on: find the nearest rest area and set off for it - the tired branch of
+		// FUN_00506a40, which asks FUN_00506910 for the nearest object flagged as one.
+		//
+		// FAILING TO FIND ONE AND FAILING TO REACH IT ARE THE SAME PATH IN THE ORIGINAL, and that is worth
+		// not tidying into two: both fall through to the same "Staff member couldn't find a rest area"
+		// line and the same one-in-sixteen loss of heart. GoAndRest returning false covers both.
+		//
+		// The original also queues animation 0x14 on the way into this branch, before it knows whether it
+		// will find anything. Here the animation follows from the activity - see Staff.AnimationFor - so
+		// the queue is left to SetActivity rather than written twice.
 		if ( staff.Tiredness < RestLevel )
 		{
+			if ( GoAndRest( staff, walk ) )
+			{
+				staff.SetActivity( StaffActivity.GoingToRest, tick );
+
+				return;
+			}
+
 			if ( (_random.Next() & 0xf) == 0 )
 				staff.Happiness = Staff.Change( staff.Happiness, -HappinessHitForNoRestArea );
 
@@ -432,6 +463,70 @@ public sealed class StaffBehaviour
 		}
 
 		return false;
+	}
+
+	/// <summary>
+	/// Finds the nearest rest area and sets off for it, or says it could not - <c>FUN_00506910</c>, which
+	/// is what <c>FUN_00506a40</c> calls the moment a staff member is too tired to work.
+	///
+	/// <para>
+	/// <b>It walks to the object's <c>mEntryPos</c>, not to the object.</b> The original takes what
+	/// <c>FUN_00506910</c> hands back, reads that thing's <c>+0x36</c> - which the serialiser names
+	/// <c>mEntryPos</c> - and gives <i>that</i> to the destination setter. Walking to the object's own cell
+	/// would send them into the thing rather than to the spot it is approached from.
+	/// </para>
+	/// <para>
+	/// <b>The rest area is taken only once a route exists</b>, which is the original's order too: it writes
+	/// <c>mRestArea</c> inside the branch where the destination setter succeeded, so a staff member never
+	/// claims somewhere they cannot get to.
+	/// </para>
+	/// <para>
+	/// Nearest is by squared distance between cells, as the original measures it. <b>One departure, and it
+	/// cannot bite in this park:</b> the original follows the object list by <c>mNext</c> from
+	/// <c>mFirstObject</c> and this walks the reader's list, which holds the same objects in file order.
+	/// The two can only disagree over which of two <i>equally distant</i> rest areas is chosen, and the
+	/// shipped park has exactly one.
+	/// </para>
+	/// </summary>
+	private bool GoAndRest( Staff staff, PeepWalk walk )
+	{
+		if ( _park == null )
+			return false;
+
+		var (x, y) = walk.Position.Cell;
+
+		ParkWorld.CatalogueObject? nearest = null;
+		var nearestDistance = int.MaxValue;
+
+		foreach ( var candidate in _park.Objects )
+		{
+			if ( !candidate.IsRestArea || !candidate.IsPlaced )
+				continue;
+
+			var acrossBy = candidate.CellX - x;
+			var downBy = candidate.CellY - y;
+			var distance = (acrossBy * acrossBy) + (downBy * downBy);
+
+			if ( distance >= nearestDistance )
+				continue;
+
+			nearestDistance = distance;
+			nearest = candidate;
+		}
+
+		if ( nearest is not { } restArea )
+			return false;
+
+		staff.Navigator.Target = new FixedVector(
+			PeepNavigator.WaypointCentre( restArea.EntryCellX ),
+			PeepNavigator.WaypointCentre( restArea.EntryCellY ) );
+
+		if ( !walk.PlanRoute() )
+			return false;
+
+		staff.RestArea = restArea.ThingId;
+
+		return true;
 	}
 
 	/// <summary>The near edge of a cell plus a clamped roll - see <see cref="PeepBehaviour"/>.</summary>

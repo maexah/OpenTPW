@@ -110,7 +110,7 @@ public sealed class ParkPeople : Entity
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
 		// none of what a guest needs - the fee, the gate - means anything to them.
 		_staff = StaffIn( park );
-		_staffBehaviour = new StaffBehaviour( balance );
+		_staffBehaviour = new StaffBehaviour( balance, random: null, park );
 
 		Current = this;
 

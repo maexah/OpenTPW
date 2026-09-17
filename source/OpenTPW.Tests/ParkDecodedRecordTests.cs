@@ -197,24 +197,40 @@ public class ParkDecodedRecordTests
 	}
 
 	/// <summary>
-	/// <c>mEntryPos</c> at file offset 206 is a cell index in the save's own <c>y * 128 + x</c>, and it
-	/// lands beside the object it belongs to. Nine of the eleven are immediately adjacent and the other
-	/// two are two cells out, which is what a wider footprint looks like - so the bound is two, and a
-	/// field that was not a cell index would miss it by the width of the map.
+	/// <c>mEntryPos</c> at file offset 206 is a <b>packed</b> cell id - <c>y * 128 + x + 1</c>, the same
+	/// packing the staff patrol corners use - and it names the object's own cell or one beside it.
+	///
+	/// <para>
+	/// <b>This test used to decode it without the one, and it passed anyway</b>, because every object's
+	/// entry is within two cells under either reading. It was therefore never evidence for the decode it
+	/// asserted. What settles it is reachability, and that is the assertion below: the rest area's plain
+	/// decode lands on a cell with <b>no connected edges</b>, which nobody could ever walk to.
+	/// </para>
 	/// </summary>
 	[TestMethod]
-	public void EachObjectsEntryCellSitsBesideTheObject()
+	public void EachObjectsEntryCellIsItsOwnOrOneBesideIt()
 	{
 		var world = Park();
 
 		foreach ( var o in world.Objects.Where( o => o.IsPlaced ) )
 		{
-			var entryX = o.EntryPos % ParkWorld.MapSize;
-			var entryY = o.EntryPos / ParkWorld.MapSize;
-			var distance = System.Math.Abs( entryX - o.CellX ) + System.Math.Abs( entryY - o.CellY );
+			var distance = System.Math.Abs( o.EntryCellX - o.CellX ) + System.Math.Abs( o.EntryCellY - o.CellY );
 
-			Assert.IsTrue( distance is > 0 and <= 2,
-				$"object {o.ThingId} at ({o.CellX},{o.CellY}) has its entry at ({entryX},{entryY}), {distance} away" );
+			Assert.IsTrue( distance <= 2,
+				$"object {o.ThingId} at ({o.CellX},{o.CellY}) has its entry at ({o.EntryCellX},{o.EntryCellY}), {distance} away" );
 		}
+
+		// The discriminating case, and the reason the packing is not a matter of taste. The rest area's
+		// entry unpacks to a cell with edges; read without the one it lands on a cell with none, and a
+		// cell with no edges is one no route can ever reach.
+		var restArea = world.Objects.Single( o => o.IsRestArea );
+
+		Assert.AreEqual( 58, restArea.EntryCellX, "the rest area is approached from (58,15)" );
+		Assert.AreEqual( 15, restArea.EntryCellY, "the rest area is approached from (58,15)" );
+
+		Assert.AreNotEqual( 0, world.CellAt( restArea.EntryCellX, restArea.EntryCellY ).Neighbours,
+			"the cell it names has connected edges" );
+		Assert.AreEqual( 0, world.CellAt( restArea.EntryPos % ParkWorld.MapSize, restArea.EntryPos / ParkWorld.MapSize ).Neighbours,
+			"where the unpacked-by-nothing reading lands has none, which is what rules it out" );
 	}
 }

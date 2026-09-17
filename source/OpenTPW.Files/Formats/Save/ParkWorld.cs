@@ -81,6 +81,31 @@ public sealed class ParkWorld
 		public int CellX => RawX >> 8;
 
 		public int CellY => RawY >> 8;
+
+		/// <summary>
+		/// The cell people are sent to when they want this object - <c>mEntryPos</c>, unpacked.
+		///
+		/// <para>
+		/// <b>It is a PACKED cell id, <c>y * 128 + x + 1</c>, and the one is not decoration.</b> It is the
+		/// same packing the staff patrol corners use, and the executable's own searches unpack it the same
+		/// way: both the toilet search and the rest-area search build a cell as
+		/// <c>(byteAt7 * 0x80) + 1 + byteAt5</c> and then <b>subtract one</b> before splitting it with
+		/// <c>&amp; 0x7f</c> and <c>&gt;&gt; 7</c>.
+		/// </para>
+		/// <para>
+		/// <b>This was read without the one at first, and measuring is what caught it.</b> Plausibility
+		/// could not: three of the shipped park's objects are toilets whose entry cell is walkable under
+		/// either reading, so they looked like confirmation of whichever was tried. What discriminates is
+		/// reachability. Of the eleven placed objects, five decode differently enough to matter, and all
+		/// five are walkable only under this reading - the rest area's plain decode lands on (59,15),
+		/// which has <b>no connected edges at all</b>, where the packed one lands on (58,15), which every
+		/// member of staff can route to. Three more are unwalkable either way and settle nothing.
+		/// </para>
+		/// </summary>
+		public int EntryCellX => EntryPos == 0 ? 0 : (EntryPos - 1) % MapSize;
+
+		/// <inheritdoc cref="EntryCellX"/>
+		public int EntryCellY => EntryPos == 0 ? 0 : (EntryPos - 1) / MapSize;
 	}
 
 	/// <summary>Every catalogue object the walk found, placed or not, in the order the file lists them.</summary>
