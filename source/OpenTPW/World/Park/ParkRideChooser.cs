@@ -75,9 +75,11 @@ public sealed class ParkRideChooser
 	/// The park's clock, whose <b>bottom bit alone</b> is what settles a tie - see <see cref="Beats"/>.
 	/// </param>
 	/// <param name="queueLength">
-	/// How long each object's queue is, or null to treat every queue as empty. <b>Null is the honest
-	/// answer in this tree</b>: nothing here operates a ride or holds anybody in a queue, and the shipped
-	/// park's <c>mFirstInQ</c> is nought on every object.
+	/// How long each object's queue is. <b>Null now walks the queue for real</b> - from the object's
+	/// <c>mFirstInQ</c> along each guest's own <c>mQNext</c>, which is in the save - rather than assuming
+	/// every queue is empty, which is what this did until that field was located. It still comes to
+	/// nought in the shipped park, because nobody has ever been admitted to it, but it comes to nought by
+	/// measurement instead of by assumption.
 	/// </param>
 	/// <param name="ageInDays">
 	/// How many days ago each thing was built, or null to treat everything as no longer new - see the
@@ -109,7 +111,7 @@ public sealed class ParkRideChooser
 			id = candidate.NextObject;
 
 			var item = ItemFor( candidate );
-			var queue = queueLength?.Invoke( candidate ) ?? 0;
+			var queue = queueLength?.Invoke( candidate ) ?? ParkRideChoice.QueueLength( _park, candidate );
 
 			if ( !ParkRideChoice.CanBeOffered( candidate, queue, item?.TrackType ?? 0 ) )
 				continue;

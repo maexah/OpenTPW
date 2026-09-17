@@ -99,6 +99,77 @@ public static class ParkRideChoice
 		=> queueLength < item.QueueSizeInCells * QueueRoomPerCell;
 
 	/// <summary>
+	/// How many guests are actually queueing for this object, by walking the queue itself - the original's
+	/// <c>GetPositionInQueue</c> (<c>FUN_004ddf50</c>) counting to the end instead of to a particular
+	/// person.
+	///
+	/// <para>
+	/// <b>The walk starts at the object's <c>mFirstInQ</c> and follows each guest's own <c>mQNext</c></b>,
+	/// which is a thing handle and not a cell - the field two bytes before it,
+	/// <see cref="ParkWorld.CatalogueObject.BackOfQueue"/>, IS a cell, and confusing the two is the trap
+	/// that record's own remarks warn about.
+	/// </para>
+	/// <para>
+	/// <b>Every queue in the shipped park measures nought, and that is the park rather than the walk.</b>
+	/// Its <c>mFirstInQ</c> is nought on every object because nobody has ever been admitted to it -
+	/// <c>mNumberOfVisitorsToDate</c> is nought too - so this can only start returning something once
+	/// guests join queues, which nothing here does yet. It is built now because the field it needed was
+	/// the thing blocking it, not because this park can show it off.
+	/// </para>
+	/// </summary>
+	public static int QueueLength( ParkWorld? park, ParkWorld.CatalogueObject item )
+	{
+		if ( park == null )
+			return 0;
+
+		var guests = new Dictionary<int, ParkWorld.GuestState>();
+
+		foreach ( var person in park.People )
+		{
+			if ( person.Guest is { } guest )
+				guests[person.ThingId] = guest;
+		}
+
+		return QueueLengthFrom( item.FirstInQueue,
+			id => guests.TryGetValue( id, out var guest ) ? guest.QNext : null, guests.Count );
+	}
+
+	/// <summary>
+	/// The walk itself, over whatever can answer "who is behind this one" - which is what makes it
+	/// testable at all.
+	/// </summary>
+	/// <remarks>
+	/// <b>The shipped park cannot exercise this, so the seam is the test.</b> Every one of its queues is
+	/// empty, so any assertion made against it would pass just as happily against a method that returned
+	/// nought and walked nothing. Taking the link lookup as a parameter is what lets a real chain - and a
+	/// circular one - be put through it.
+	/// </remarks>
+	/// <param name="nextOf">
+	/// The <c>mQNext</c> of a guest, or null for a handle that names nobody - which ends the walk, as a
+	/// queue naming a thing that is not a guest does in the original.
+	/// </param>
+	/// <param name="guests">
+	/// How many guests there could be, bounding the walk so a circular chain stops instead of hanging -
+	/// the same guard <see cref="Offerable"/> puts on the object list, and for the same reason.
+	/// </param>
+	public static int QueueLengthFrom( int firstInQueue, Func<int, int?> nextOf, int guests )
+	{
+		ArgumentNullException.ThrowIfNull( nextOf );
+
+		var length = 0;
+
+		for ( var id = firstInQueue; id != 0 && length <= guests; ++length )
+		{
+			if ( nextOf( id ) is not { } next )
+				break;
+
+			id = next;
+		}
+
+		return length;
+	}
+
+	/// <summary>
 	/// Every object a guest could be offered, walked in the order the original walks them - from the
 	/// header's <c>mFirstObject</c> along each object's own <c>mNext</c>, rather than in the order the
 	/// reader happens to hold them.

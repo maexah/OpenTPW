@@ -320,9 +320,25 @@ public sealed class ParkWorld
 	/// Illness, the same terms in the same order the scoring code multiplies them.
 	/// </para>
 	/// <para>
-	/// A seventh float sits between <see cref="Toilet"/> and the needs above it and is deliberately not
-	/// read: it is zero on every guest in the shipped park and nothing has named it, so reading it would
-	/// mean giving it a meaning it has not earned.
+	/// A seventh float sits between <see cref="Toilet"/> and the needs above it and is still deliberately
+	/// not read - but <b>it does now have a name, and this paragraph used to say nothing had named it</b>.
+	/// The guest serialiser writes it from the struct's <c>+0x1b8</c>, which lands between
+	/// <c>mTimeStartedIdling</c> at <c>+0x1fc</c> and <c>mToilet</c> at <c>+0x1ac</c> in the alphabetical
+	/// order the block is written in, so it is <c>mTiredness</c>. It stays unread because it is zero on
+	/// every guest in the shipped park and nothing asks for it; the name is recorded so that the next
+	/// reader does not have to derive it twice.
+	/// <para>
+	/// <b>The whole block is now derived end to end and it closes exactly.</b> Walking the serialiser's own
+	/// field sizes from +398: mArrivalDate 398, mArrivalIndex 402, mBalloonScript 406, mBeenAdmitted 410,
+	/// mCash 414, mExitLevel 418, mHappiness 422, mHunger 426, mLastPosX 430, mLastPosY 434, mLitter 438,
+	/// mMajorDest 442, mNumRides 444, mNumShops 448, mNumSideshows 452, mNumSideshowsWon 456,
+	/// mPaidAdmission 460, mParkOpeningWaitingTime 464, mPersonType 468, mPrankeryIndex 469, the two
+	/// interleaved histories 470-485, mQNext 486, mQPrev 488, mQueueMoveDelay 490, mQueuePos 494,
+	/// mRemainingBalloonLife 495, mSavedMajorDest 499, mSavedState 501, mState 505, mThirst 509,
+	/// mTimeOfLastSpotAnim 513, mTimeStartedIdling 517, mTiredness 521, mToilet 525, mVomit 529 - ending
+	/// on <b>533</b>. Every offset this reader already had is reproduced by that walk, which is what makes
+	/// the ones it did not have trustworthy.
+	/// </para>
 	/// </para>
 	/// </summary>
 	/// <param name="PaidAdmission">
@@ -347,11 +363,30 @@ public sealed class ParkWorld
 	/// kept rather than improved on.
 	/// </para>
 	/// </param>
+	/// <param name="QNext">
+	/// <c>mQNext</c> - the guest standing behind this one in a queue, as a thing handle, or nought for the
+	/// last of them. <see cref="QPrev"/> is the one in front.
+	///
+	/// <para>
+	/// <b>The queue is doubly linked, and it took finding the name to find the field.</b> Four sweeps of
+	/// the executable's field names for a queue link came back empty - <c>InQ</c>, <c>mNext</c>,
+	/// <c>Queue</c>, <c>mPrev</c> - and "it is not serialised" was very nearly published as the finding.
+	/// It is serialised; it is simply called <c>mQNext</c>, which none of those four spellings reaches.
+	/// What settled it was reading the guest serialiser's <i>whole</i> field list rather than searching for
+	/// a name, and the original's own diagnostic agrees: "Person %d is in queue for object %d (next %d,
+	/// prev %d) but doesn't think he is".
+	/// </para>
+	/// </param>
+	/// <param name="QPrev">
+	/// <c>mQPrev</c> - the guest standing in front of this one in a queue, or nought for whoever is at the
+	/// head of it. See <paramref name="QNext"/> for how the pair was found.
+	/// </param>
 	public readonly record struct GuestState(
 		int State, int SavedState, int PersonType, int Cash, int ExitLevel,
 		float Happiness, float Thirst, float Hunger, float Toilet, float Vomit, float Litter,
 		int MajorDest, int QueuePos, int PrankeryIndex,
-		int PaidAdmission = 0, int ParkOpeningWait = 0 )
+		int PaidAdmission = 0, int ParkOpeningWait = 0,
+		int QNext = 0, int QPrev = 0 )
 	{
 		/// <summary>
 		/// The behaviour a guest returns to after a one-off animation. A new guest is constructed with
@@ -1453,7 +1488,15 @@ public sealed class ParkWorld
 			// the whole block is written in alphabetical order and mPersonType at +468 is the anchor
 			// immediately after them. See the parameter docs for what each one decides.
 			PaidAdmission: ReadInt32At( start + 460 ),  // mPaidAdmission
-			ParkOpeningWait: ReadInt32At( start + 464 ) ); // mParkOpeningWaitingTime
+			ParkOpeningWait: ReadInt32At( start + 464 ), // mParkOpeningWaitingTime
+			// The queue links, two-byte thing handles written through the same serialiser mMajorDest uses.
+			// They follow the sixteen bytes of interleaved history at 470..485 - mPreviousRides[i] at
+			// 470, 474, 478, 482 and mPreviousTemporaryRides[i] at 472, 476, 480, 484, which the original
+			// writes one PAIR at a time inside a single four-turn loop rather than as two blocks. Those are
+			// the two histories the ride scorer divides a candidate down by; they are located and left
+			// unread until something consumes them.
+			QNext: ReadUInt16At( start + 486 ),         // mQNext
+			QPrev: ReadUInt16At( start + 488 ) );       // mQPrev
 
 	// <b>+529 was called mIllness by this reader until 2026-09-17, and it cannot be.</b>
 	//
