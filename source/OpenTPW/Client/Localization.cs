@@ -41,8 +41,17 @@ public static class Localization
 					var key = ConsumeWhile( x => !char.IsWhiteSpace( x ) );
 					key = key.Trim();
 
-					var enumVal = Enum.Parse<UIStrings>( key );
-					sb.Append( UIStrings[(int)enumVal] );
+					// <b>An unknown token puts its own name on screen rather than taking the frame down
+					// with it.</b> This was a bare Enum.Parse, which throws ArgumentException on anything
+					// it does not recognise - and the one caller this class has is a text draw, so a
+					// single mistyped token in a string file would have thrown straight out of rendering.
+					// Nothing calls Parse today, so that was latent rather than live; it is guarded now
+					// because the whole point of this class is to be wired up eventually, and a crash
+					// waiting for its first caller is worse than one that has already happened.
+					if ( Enum.TryParse<UIStrings>( key, out var enumVal ) )
+						sb.Append( UIStrings[(int)enumVal] );
+					else
+						sb.Append( '#' ).Append( key );
 				}
 			}
 
