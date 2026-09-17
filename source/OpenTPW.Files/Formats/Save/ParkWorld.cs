@@ -40,8 +40,36 @@ public sealed class ParkWorld
 	/// </para>
 	/// </summary>
 	public readonly record struct CatalogueObject( int ThingId, int CatalogueId, int RawX, int RawY, int Angle,
-		ushort Flags = 0, ushort EntryPos = 0, ushort NextObject = 0 )
+		ushort Flags = 0, ushort EntryPos = 0, ushort NextObject = 0,
+		int RideScript = 0, int TrackRide = 0, int State = 0, ushort TopLeft = 0,
+		ushort AssignedStaff = 0, ushort BackOfQueue = 0, int CanLoad = 0,
+		ushort ExitPos = 0, ushort FirstInQueue = 0, int IsTrackRideValid = 0,
+		int OperatingCapacity = 0, int OperatingDuration = 0, int PricePerUse = 0,
+		int QueueSizeInCells = 0, int TotalTakings = 0 )
 	{
+		/// <summary>
+		/// The bit that makes an object somewhere a guest can be <i>offered</i> - <c>FUN_004fcb10</c>, the
+		/// function that walks the object list looking for somewhere to send one, tests exactly this
+		/// before it will even score a candidate.
+		/// </summary>
+		/// <remarks>
+		/// <b>It is not "is a ride".</b> The shipped park sets it on <b>six</b> objects, and the game's own
+		/// catalogue names them: three <c>Small Toilet</c>s, the <c>Drinks Shop</c>, the <c>Jungle Spray</c>
+		/// sideshow and the <c>Belly Bounce</c> ride - one from each of the three folders the game sorts
+		/// its items into. Choosing to visit a toilet is a decision a guest makes like any other. What it
+		/// excludes is the telling part: the object flagged as a rest area is called <c>Staff Room</c>, and
+		/// a guest has no business in one.
+		/// <para>
+		/// <b>Six was measured; I had said seven.</b> Counting bits by eye off a flags dump put one extra
+		/// object in the set, and it took reading the number back off the record to notice. The count is
+		/// pinned by a test for that reason.
+		/// </para>
+		/// </remarks>
+		public const int VisitableFlag = 0x4;
+
+		/// <summary>Whether a guest may be sent here at all - see <see cref="VisitableFlag"/>.</summary>
+		public bool IsVisitable => (Flags & VisitableFlag) != 0;
+
 		/// <summary>The bit of <c>mFlags</c> that makes an object a toilet - <c>FUN_004d7880</c> tests it.</summary>
 		public const int ToiletFlag = 0x1;
 
@@ -1217,7 +1245,48 @@ public sealed class ParkWorld
 			Angle: ReadInt32At( start + 16 ),          // mAngle, in degrees - 0, 90 or 270 in the shipped park
 			Flags: (ushort)ReadUInt16At( start + 58 ),        // mFlags - see IsToilet and IsRestArea
 			EntryPos: (ushort)ReadUInt16At( start + 206 ),    // mEntryPos - the cell a visitor is sent to
-			NextObject: (ushort)ReadUInt16At( start + 208 ) );// mNext - this object's link in the object list
+			NextObject: (ushort)ReadUInt16At( start + 208 ),  // mNext - this object's link in the object list
+
+			// The ride and queue fields. These sit before the record's ring buffers and so are at fixed
+			// offsets whatever those rings hold.
+			//
+			// >>> THE RINGS ARE NOT EMPTY, WHICH I FIRST ASSUMED AND THE ARITHMETIC REFUTED. <<< An empty
+			// ring writes 13 bytes (mCurrentEntry 4, mNumEntries 4, mWrappedAround 1, mTemp 4, then
+			// mNumEntries entries of 4). Laid out that way the whole record totals 379, against the 1,099
+			// that RecordSizes gives model 3 - a gap of exactly 720, which is 6 rings x 30 entries x 4
+			// bytes. At 30 entries each a ring is 133 bytes, and the record then closes on 1,099 EXACTLY,
+			// the same way the map cell's litter block closes on 52.
+			RideScript: ReadInt32At( start + 192 ),          // mRideScriptHandle
+			TrackRide: ReadInt32At( start + 196 ),           // mTrackRideHandle
+			State: ReadInt32At( start + 200 ),               // mState
+			TopLeft: (ushort)ReadUInt16At( start + 204 ),    // mTopLeft - the footprint's own corner
+			AssignedStaff: (ushort)ReadUInt16At( start + 210 ), // mAssignedStaffMember
+			// mBackOfQueue and mFirstInQ sit two bytes apart and are DIFFERENT KINDS OF THING, which is
+			// the sort of pairing that invites a reader to treat them alike. mBackOfQueue is a packed
+			// CELL - the shipped park's two shops carry 3765 and 2866, which unpack to (52,29) and
+			// (49,22), each beside its own object - while mFirstInQ is a PERSON handle, because
+			// FUN_004ddf50 (GetPositionInQueue) starts from it and walks person to person through each
+			// guest's own next-in-queue link. Both are nought here: nobody is queueing.
+			BackOfQueue: (ushort)ReadUInt16At( start + 212 ),   // mBackOfQueue - a packed cell, not a person
+			CanLoad: ReadInt32At( start + 214 ),             // mCanLoad
+			ExitPos: (ushort)ReadUInt16At( start + 218 ),    // mExitPos - packed like mEntryPos
+			FirstInQueue: (ushort)ReadUInt16At( start + 220 ),  // mFirstInQ
+
+			// Load-bearing for "is this open for business": FUN_004dd920 refuses a candidate whose
+			// catalogue type is 1 or 2 unless this is non-zero.
+			IsTrackRideValid: ReadInt32At( start + 222 ),  // mIsTrackRideValid
+
+			// And the fields PAST the last ring buffer. These are safe in a way the ones BETWEEN the
+			// rings are not: 720 bytes of ring content have to be distributed over six rings, and while
+			// six lots of thirty is the obvious reading, nothing here proves the split is even. Any split
+			// summing to 180 entries puts these five at exactly these offsets, because they all follow
+			// the last ring - whereas mNumCustomers and mNumWalkAways sit BETWEEN rings and would move.
+			// So those two are deliberately not read.
+			OperatingCapacity: _data[start + 1034],          // mOperatingCapacity, one byte
+			OperatingDuration: _data[start + 1035],          // mOperatingDuration, one byte
+			PricePerUse: ReadInt32At( start + 1054 ),        // mPricePerUse - the original clamps it to 0..500
+			QueueSizeInCells: ReadInt32At( start + 1062 ),   // mQueueSizeInCells
+			TotalTakings: ReadInt32At( start + 1090 ) );     // mTotalTakings
 
 	/// <summary>
 	/// A person's record: the same head every thing has, and the two fields that make them drawable.
