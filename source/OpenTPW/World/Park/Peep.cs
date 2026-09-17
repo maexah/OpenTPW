@@ -321,6 +321,20 @@ public sealed class Peep
 		State = next;
 		Animation = AnimationFor( next );
 
+		// <b>And QUEUE it, which is what the original does and what this used to leave out.</b>
+		// FUN_00501db0 does not merely record the animation a state wants - it calls FUN_004217f0, which
+		// decompiles to a bare `*(person + 4) = value`, the person's own mNextAnim. Recording it in
+		// Animation and nothing else left ParkPeople.Apply - which reads NextAnimation - with nothing to
+		// hand the sprite, so a guest who arrived somewhere kept playing the walk they arrived on, for
+		// ever, on screen. No test saw it: the one that should have asserted AnimationFor(State), which is
+		// a table lookup that never touches a sprite.
+		//
+		// The four states that queue nothing do not call FUN_004217f0 at all, and they are exactly the
+		// four AnimationFor answers None for - so the guard here is the original's own shape rather than a
+		// defensive check.
+		if ( Animation != PeepAnimation.None )
+			NextAnimation = (int)Animation;
+
 		switch ( next )
 		{
 			// How long they will put up with waiting outside, rolled once as they begin to wait.

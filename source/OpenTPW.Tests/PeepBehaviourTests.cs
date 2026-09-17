@@ -254,16 +254,63 @@ public class PeepBehaviourTests
 	[TestMethod]
 	public void EveryGuestWhoHasStoppedIsStandingRatherThanStridingOnTheSpot()
 	{
-		var (_, guests) = RunPark();
+		var world = World();
+		var people = new ParkPeople( world );
 
-		var arrived = guests.Values.Where( peep => !Peep.IsAWalkingState( peep.State ) ).ToArray();
-
-		Assert.AreEqual( 13, arrived.Length, "every guest in this park ends up somewhere that stands" );
-
-		foreach ( var peep in arrived )
+		try
 		{
-			Assert.AreEqual( PeepAnimation.Stand, Peep.AnimationFor( peep.State ),
-				$"guest {peep.ThingId} is in {peep.State}, which should stand" );
+			EnterPark();
+
+			for ( var tick = 0; tick < 140 * ParkPeople.ThingTickEvery; ++tick )
+			{
+				Frame( GameClock.TickSeconds );
+				people.Update();
+			}
+
+			var arrived = people.Peeps.Where( peep => !Peep.IsAWalkingState( peep.State ) ).ToArray();
+
+			Assert.AreEqual( 13, arrived.Length, "every guest in this park ends up somewhere that stands" );
+
+			foreach ( var peep in arrived )
+			{
+				var playing = people.SpriteFor( peep.ThingId );
+
+				Assert.IsNotNull( playing, $"guest {peep.ThingId} should have a sprite" );
+
+				// <b>The SPRITE, not the table.</b> This test asserted Peep.AnimationFor( peep.State )
+				// until 2026-09-17, which is a pure lookup over an enum - it passed while every guest in
+				// the park stood at the gate playing the eight-picture walk cycle on the spot, which is
+				// what Alexah saw within seconds of opening a park. A test named for what is on screen has
+				// to read what is on screen.
+				Assert.IsTrue( playing!.IsOn( (int)PeepAnimation.Stand ),
+					$"guest {peep.ThingId} is in {peep.State} but their sprite is on script {playing.Script}, "
+					+ $"set {playing.Set}, frame {playing.Frame} - they are striding on the spot" );
+			}
+
+			// And the anti-vacuity guard, which is about MOVEMENT rather than about a particular picture.
+			// An earlier draft of this line asserted frame 0 - a number nobody had measured, taken from
+			// "set 0, one picture" in a doc comment. What "standing still" actually means is that the
+			// picture stops changing, and that cannot pass for a guest still walking: the walk is eight
+			// pictures and turns at least every other sprite step.
+			var before = arrived.ToDictionary( peep => peep.ThingId,
+				peep => people.SpriteFor( peep.ThingId )!.Frame );
+
+			for ( var tick = 0; tick < 32 * ParkPeople.ThingTickEvery; ++tick )
+			{
+				Frame( GameClock.TickSeconds );
+				people.Update();
+			}
+
+			foreach ( var peep in arrived )
+			{
+				Assert.AreEqual( before[peep.ThingId], people.SpriteFor( peep.ThingId )!.Frame,
+					$"guest {peep.ThingId} has stopped walking, so their picture should have stopped too" );
+			}
+		}
+		finally
+		{
+			people.Delete();
+			Entity.ApplyDeletions();
 		}
 	}
 
