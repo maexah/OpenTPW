@@ -244,6 +244,17 @@ public sealed class SpriteScript
 	/// <summary>How many animation numbers the original's table has.</summary>
 	public static int TableSize => Table.Length;
 
+	/// <summary>
+	/// Whether an instruction begins at this word, so a position read out of a save can be checked rather
+	/// than trusted.
+	///
+	/// <para>
+	/// Only the twenty-one scripts people use are copied out of the executable, so this is false for a
+	/// position inside any of the other sixty-two - which is the honest answer, not a denial that they exist.
+	/// </para>
+	/// </summary>
+	public static bool HasInstructionAt( int pc ) => Program.ContainsKey( pc );
+
 	private readonly int[] _locals = new int[LocalCount];
 
 	/// <summary>

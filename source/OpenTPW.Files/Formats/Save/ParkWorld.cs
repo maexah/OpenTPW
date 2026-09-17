@@ -903,10 +903,18 @@ public sealed class ParkWorld
 	/// <see cref="Height"/> is an offset above the ground rather than a height - it reads zero on every
 	/// person in the shipped park, and the engine adds the land under them to it as it draws.
 	/// </para>
+	/// <para>
+	/// <b><see cref="Script"/> and <see cref="Pc"/> are what let a guest carry on mid-stride.</b> They are
+	/// indices into the array of animation scripts compiled into the executable - which script this sprite
+	/// was put on, and how far through it the park had got. Without them every person would restart their
+	/// walk at its first picture on load and the whole park would step in time with itself; sixteen of the
+	/// shipped park's eighteen people are saved at seven different points of the same eight-picture walk.
+	/// </para>
 	/// </summary>
 	public readonly record struct Sprite(
 		int Slot, int Type, int Bank, int SpriteNumber,
-		float X, float Height, float Y, int Facing, int Frame, int Alpha, int State )
+		float X, float Height, float Y, int Facing, int Frame, int Alpha, int State,
+		int Script, int Pc )
 	{
 		/// <summary>How far past its kind's first bank this sprite's bank is.</summary>
 		public int BankOffset => SpriteNumber >> 4;
@@ -932,6 +940,16 @@ public sealed class ParkWorld
 
 	// Where each field sits in a sprite record, from the code that writes them.
 	private const int SpriteState = 0x18;
+
+	/// <summary>
+	/// Which script the sprite is running - the instance's <c>+0x0c</c>, written by the constructor at
+	/// <c>0047590a</c> and again by <c>FUN_00475b80</c> whenever the script is switched. A jump does not
+	/// change it, so it names the script a sprite was STARTED on rather than where its counter now is.
+	/// </summary>
+	private const int SpriteScriptAt = 0x0c;
+
+	/// <summary>How far into that script - the instance's <c>+0x08</c>, the program counter itself.</summary>
+	private const int SpritePcAt = 0x08;
 
 	private const int SpriteX = 0x88;
 
@@ -1033,7 +1051,9 @@ public sealed class ParkWorld
 				Facing: ReadInt32At( _at + SpriteFacing ),
 				Frame: ReadInt32At( _at + SpriteFrame ),
 				Alpha: ReadInt32At( _at + SpriteAlpha ),
-				State: ReadInt32At( _at + SpriteState ) ) );
+				State: ReadInt32At( _at + SpriteState ),
+				Script: ReadInt32At( _at + SpriteScriptAt ),
+				Pc: ReadInt32At( _at + SpritePcAt ) ) );
 
 			_at += recordSize;
 		}
