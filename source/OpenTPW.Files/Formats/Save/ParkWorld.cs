@@ -110,6 +110,32 @@ public sealed class ParkWorld
 		public const int RestAreaFlag = 0x2;
 
 		/// <summary>
+		/// The bit that says this object has a <b>real queue path</b> - a run of queue cells laid out in
+		/// front of it - rather than a "virtual queue" where everybody stands in one cell.
+		/// </summary>
+		/// <remarks>
+		/// <b>It is a branch in the original rather than a label.</b> <c>FUN_004de7e0</c> turns a place in
+		/// the queue into a spot on the ground and picks its route on this bit: set, it walks the path
+		/// (<c>FUN_004de840</c>); clear, it asserts the position is under four with "Virtual queue
+		/// problem!" and puts the guest inside the back-of-queue cell instead (<c>FUN_004dec30</c>), offset
+		/// along the approach direction and jittered across it by <c>rand % 0x1c + 0x72</c>.
+		/// <para>
+		/// So an object without it can still be queued for - the bit decides where the queue <i>stands</i>,
+		/// not whether one exists.
+		/// </para>
+		/// <para>
+		/// <b>It is NOT the same as declaring queue cells, and that was measured after being predicted the
+		/// other way.</b> The expectation was that it would agree with <c>QueueSizeInCells</c> being
+		/// non-zero, since that count is itself produced by walking the path (<c>FUN_004de130</c>). It does
+		/// not: the shipped park's sideshow declares <b>one</b> queue cell and does <b>not</b> carry the
+		/// bit, while the ride declares four and does. Both have a non-zero <c>mBackOfQueue</c>. So a
+		/// single-cell queue is evidently served by the virtual path - which is a reading of one park with
+		/// one flagged object, and is recorded as such rather than as a rule.
+		/// </para>
+		/// </remarks>
+		public const int QueuePathFlag = 0x8;
+
+		/// <summary>
 		/// Whether tired guests can use this object - one bit, and the thing a handyman's toilet arm
 		/// looks for.
 		/// </summary>
@@ -121,6 +147,9 @@ public sealed class ParkWorld
 		/// resting states built and had no way to find anywhere to do it.
 		/// </summary>
 		public bool IsRestArea => (Flags & RestAreaFlag) != 0;
+
+		/// <summary>Whether a queue for this object is laid out on the ground - see <see cref="QueuePathFlag"/>.</summary>
+		public bool HasQueuePath => (Flags & QueuePathFlag) != 0;
 
 		/// <summary>
 		/// What both coordinates read when a thing has no place on the map. It is the raw value, not a
