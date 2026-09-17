@@ -7,16 +7,25 @@ namespace OpenTPW;
 /// <para>
 /// <b>This is the filter, not the choice.</b> <c>FUN_004fcb10</c> walks the object list, asks this of each
 /// candidate, scores the survivors with <c>FUN_004fcc30</c> and takes the best. Only the asking is here;
-/// the scoring is a seven-term weighted mean whose inputs are not all identified yet, and a partial one
-/// would produce numbers the original never would.
+/// the scoring is a seven-term weighted mean, and a partial one would produce numbers the original never
+/// would. Its inputs ARE all identified now - the seven weights are named in the balance file, both
+/// lookup tables were read out of the image, the distance divisor is the effects record's short and the
+/// newness term is each thing's own build date - so what remains is building it rather than finding it.
 /// </para>
 /// <para>
-/// <b>Three arms of the original are deliberately NOT reproduced, and the reason is a field rather than a
-/// choice.</b> It also refuses a candidate whose catalogue item is type 3 unless a model check passes, and
-/// one of type 1 or 2 unless <c>mIsTrackRideValid</c> is set. That type is a field of the item
-/// <i>descriptor</i> which nothing here reads - see <see cref="ItemDescriptionFile"/>, which parses the
-/// keys it does know. Worth knowing before that is treated as a gap: <b>every object in the shipped park
-/// carries <c>mIsTrackRideValid</c> = 1</b>, so two of those three arms would pass whatever the type is.
+/// <b>The track-type arms ARE reproduced, and this said they were not until the field was found.</b> The
+/// original refuses a candidate of type 1 or 2 - a car track or a water track - unless
+/// <c>mIsTrackRideValid</c> is set. The field is <c>Bumper.WhichTrackType</c> on the item's own
+/// description, identified across the whole catalogue rather than from one item: the jungle's
+/// <c>Dino Karts</c> is 1, <c>Splish Splash</c> is 2, its three coasters are 3, and every other ride is
+/// nought.
+/// </para>
+/// <para>
+/// <b>ONE arm is still not reproduced, and it is a different function rather than a missing field.</b> A
+/// type 3 candidate - a coaster - is additionally refused unless <c>FUN_00441970</c> passes, and that is
+/// a check on the thing's MODEL and its flags rather than on the item. Nothing here models that, so a
+/// coaster is admitted where the original might refuse it. <b>The shipped park contains no coaster</b>,
+/// so the arm cannot fire in it either way.
 /// </para>
 /// </summary>
 public static class ParkRideChoice
@@ -45,8 +54,17 @@ public static class ParkRideChoice
 	/// queued in this park - so a park read from the file starts every queue empty and fills it as guests
 	/// join.
 	/// </param>
-	public static bool CanBeOffered( ParkWorld.CatalogueObject item, int queueLength )
+	/// <param name="trackType">
+	/// The item's <c>Bumper.WhichTrackType</c>, or nought where the catalogue cannot say. A car track or a
+	/// water track needs its track ride to be valid before anyone may be sent to it.
+	/// </param>
+	public static bool CanBeOffered( ParkWorld.CatalogueObject item, int queueLength, int trackType = 0 )
 	{
+		// A tracked ride whose track is not valid is not open, whatever else is true of it.
+		if ( trackType is ItemDescriptionFile.CarTrack or ItemDescriptionFile.WaterTrack
+			&& item.IsTrackRideValid == 0 )
+			return false;
+
 		// A guest may only be sent somewhere the item's own description says they may - see
 		// CatalogueObject.IsVisitable, which is the save's side of Info.IsChoosable.
 		if ( !item.IsVisitable )
@@ -89,8 +107,13 @@ public static class ParkRideChoice
 	/// How long each object's queue is, or null to treat every queue as empty - which is what a park
 	/// straight out of the file has.
 	/// </param>
+	/// <param name="trackTypeOf">
+	/// Each object's <c>Bumper.WhichTrackType</c>, from the item catalogue, or null where no catalogue is
+	/// to hand - which treats every object as untracked.
+	/// </param>
 	public static List<ParkWorld.CatalogueObject> Offerable( ParkWorld? park,
-		Func<ParkWorld.CatalogueObject, int>? queueLength = null )
+		Func<ParkWorld.CatalogueObject, int>? queueLength = null,
+		Func<ParkWorld.CatalogueObject, int>? trackTypeOf = null )
 	{
 		var offerable = new List<ParkWorld.CatalogueObject>();
 
@@ -109,7 +132,7 @@ public static class ParkRideChoice
 			if ( !byId.TryGetValue( id, out var item ) )
 				break;
 
-			if ( CanBeOffered( item, queueLength?.Invoke( item ) ?? 0 ) )
+			if ( CanBeOffered( item, queueLength?.Invoke( item ) ?? 0, trackTypeOf?.Invoke( item ) ?? 0 ) )
 				offerable.Add( item );
 
 			id = item.NextObject;

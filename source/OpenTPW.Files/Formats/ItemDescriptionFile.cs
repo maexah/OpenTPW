@@ -118,6 +118,36 @@ public sealed class ItemDescriptionFile
 	/// <summary>The same for hunger. <b>The Drinks Shop sets it to nought</b>, which is a drink rather than a meal.</summary>
 	public int HungerEffect => _hungerEffect ?? _category?.HungerEffect ?? 0;
 
+	/// <summary>
+	/// What kind of track the item runs on - <c>Bumper.WhichTrackType</c>, and the field the original's
+	/// "is this open for business" test keys on.
+	///
+	/// <para>
+	/// <b>The file's own comment undercounts its own enum.</b> <c>Rides.sam</c> documents it as
+	/// "0=no track, 1=car track, 2=water track", and the shipped data carries a <b>3</b> as well: the
+	/// jungle's <c>Dino Karts</c> is 1, <c>Splish Splash</c> is 2, and all three of its coasters -
+	/// <c>Chac Atak</c>, <c>Gorilla Thrilla</c> and <c>Temple Of Gloom</c> - are 3, while every other ride
+	/// is nought.
+	/// </para>
+	/// <para>
+	/// <b>That reading is not taken from the comment but from what the code does with it</b>, across the
+	/// whole set rather than one item: a candidate of type 1 or 2 is refused unless its track ride is
+	/// valid, and a type 3 has its excitement computed from the ride's own script handle instead of from
+	/// its speed, duration and capacity. The three items carrying 3 are exactly the three that declare no
+	/// duration at all, which is what makes the second path necessary for them.
+	/// </para>
+	/// </summary>
+	public int TrackType => _trackType ?? _category?.TrackType ?? 0;
+
+	/// <summary>Track types that need a valid track ride before the item may be offered.</summary>
+	public const int CarTrack = 1;
+
+	/// <inheritdoc cref="CarTrack"/>
+	public const int WaterTrack = 2;
+
+	/// <summary>The coasters - excitement comes from the ride's own script rather than its settings.</summary>
+	public const int CoasterTrack = 3;
+
 	private int? _whichUIType;
 	private int? _isChoosable;
 	private int? _providesRelief;
@@ -128,6 +158,7 @@ public sealed class ItemDescriptionFile
 	private int? _newAttractionDecayTime;
 	private int? _thirstEffect;
 	private int? _hungerEffect;
+	private int? _trackType;
 
 	private void Read( string text )
 	{
@@ -209,6 +240,10 @@ public sealed class ItemDescriptionFile
 
 				case "UsageInfo.HungerEffect":
 					_hungerEffect = Number( line );
+					break;
+
+				case "Bumper.WhichTrackType":
+					_trackType = Number( line );
 					break;
 			}
 		}
