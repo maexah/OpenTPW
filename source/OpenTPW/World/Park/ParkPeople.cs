@@ -13,12 +13,18 @@ namespace OpenTPW;
 /// tested without a graphics device at all.
 /// </para>
 /// <para>
-/// <b>Guests walk. They do not yet choose, queue or leave.</b> The needs loop is the first of the
-/// original's two per-guest calls and the twenty-two state behaviours are the second; of those
-/// twenty-two, what is built is the walking that eleven of them do - see <see cref="PeepWalk"/>. So a guest
-/// goes to where the save was sending them and stops there, because deciding what to do on arrival is the
-/// part of the state machine that does not exist yet. Bringing them up one at a time is how the ride VM
-/// was done, and it is why this can be trusted at each step rather than all at once at the end.
+/// <b>Guests walk, and arriving somewhere now means something.</b> The needs loop is the first of the
+/// original's two per-guest calls and the twenty-two state behaviours are the second - see
+/// <see cref="PeepBehaviour"/>, which is that second call and which decides what a walk coming to an end
+/// amounts to. Of the twenty-two, five are built: a guest reaching the gate judges the admission fee, a
+/// guest coming through it is counted as a visitor and goes on to decide, and the rest stop where the
+/// original's own handler would need something this project has not read yet.
+/// <para>
+/// <b>What they still do not do is choose.</b> Deciding, judging the fee and waiting for the gate are the
+/// three handlers a guest can now reach and none is built, so the park fills up with guests who have
+/// arrived somewhere sensible and stay there. Bringing them up one at a time is how the ride VM was done,
+/// and it is why this can be trusted at each step rather than all at once at the end.
+/// </para>
 /// </para>
 /// </summary>
 public sealed class ParkPeople : Entity
@@ -34,6 +40,13 @@ public sealed class ParkPeople : Entity
 	private readonly Dictionary<int, PeepWalk> _walks = [];
 
 	private readonly Dictionary<int, SpriteScript> _sprites = [];
+
+	/// <summary>
+	/// What each guest is doing, and what arriving somewhere means - the original's <c>FUN_005019f0</c>.
+	/// One for the park rather than one per guest, because it carries the park's own facts: whether the
+	/// gates are open, and how many visitors have ever been let in.
+	/// </summary>
+	private readonly PeepBehaviour _behaviour;
 
 	/// <summary>
 	/// The mode every edge question in this park is asked in.
@@ -53,6 +66,10 @@ public sealed class ParkPeople : Entity
 	public ParkPeople( ParkWorld? park )
 	{
 		_peeps = PeepsIn( park );
+
+		// Built from the park rather than from the guests: what a guest does on arrival turns on whether
+		// the gates are open and on how many visitors have ever been let in, and both are the park's.
+		_behaviour = new PeepBehaviour( park );
 
 		Current = this;
 
@@ -201,10 +218,15 @@ public sealed class ParkPeople : Entity
 
 				var playing = _sprites.GetValueOrDefault( peep.ThingId );
 
-				// Every thing tick, and not one in four: the share gates the needs alone, and walking is
-				// a separate call the original never gates.
-				if ( Peep.IsAWalkingState( peep.State ) && _walks.TryGetValue( peep.ThingId, out var walk ) )
-					WalkOn( peep, walk, playing );
+				// Every thing tick, and not one in four: the share gates the needs alone, and the
+				// behaviours are a separate call the original never gates. FUN_0050b360 makes both of
+				// these for every guest, back to back, needs first.
+				//
+				// The STATE is asked before the walk rather than after it, which is the original's order:
+				// FUN_005019f0 switches on what a guest is doing and only then asks whether they got
+				// anywhere, so a guest in a state that does not walk never reaches the walk at all.
+				if ( _walks.TryGetValue( peep.ThingId, out var walk ) )
+					_behaviour.Step( peep, walk, playing, thingTick );
 
 				// FUN_004d4190, whose only caller is the per-guest needs call - so what the walk asked for
 				// lands on that guest's own turn in four rather than at once. Which side of the walk it
@@ -215,53 +237,6 @@ public sealed class ParkPeople : Entity
 					Apply( peep, playing );
 			}
 		}
-	}
-
-	/// <summary>
-	/// One turn of walking for a guest who is going somewhere, giving them a route first if they have none.
-	///
-	/// <para>
-	/// <b>The planning is a departure and it is named.</b> In the original a route is set by the state
-	/// machine on the way into a walking state, through <c>FUN_00510100</c> - three times from
-	/// <c>FUN_004f9490</c> and once each from <c>FUN_004fa530</c> and <c>FUN_004fa5f0</c>. Those behaviours
-	/// are not built, and a guest restored from a file carries a destination and no route at all, the route
-	/// being the one part of it the save deliberately does not keep. So the first tick of walking is what
-	/// asks for one. A guest who has given up is not asked again, because nothing about them has changed
-	/// since they did.
-	/// </para>
-	/// </summary>
-	private static void WalkOn( Peep peep, PeepWalk walk, SpriteScript? playing )
-	{
-		if ( !walk.HasRoute && (peep.Navigator.CannotReach || !walk.PlanRoute()) )
-			return;
-
-		var verdict = walk.Step();
-
-		if ( verdict == WalkVerdict.Walking )
-		{
-			var hurrying = peep.PurposeSpeed > Peep.UnhurriedSpeed;
-
-			// FUN_004fa2a0 asks FUN_00475c50 whether the sprite is ALREADY on the walk before asking for
-			// it, which is the whole reason a jump must not change a script's identity: without that test a
-			// walking guest would be restarted at the first picture on every single tick.
-			var wanted = hurrying ? (int)PeepAnimation.HurriedWalk : (int)PeepAnimation.Walk;
-
-			if ( playing != null && !playing.IsOn( wanted ) )
-				peep.NextAnimation = wanted;
-
-			peep.NextInterval = SpriteScript.IntervalFor( walk.LastStep.X, walk.LastStep.Y, hurrying );
-
-			return;
-		}
-
-		// <b>A DEPARTURE, and the same one this method already makes above.</b> The original does not stop
-		// the walking animation here - its state machine does, by moving the guest into a state that asks
-		// for the standing one, and those twenty-two behaviours are not built. Without this a guest who
-		// reached the gate would stride on the spot for ever, which is worse to look at than the frozen
-		// pose they had before any of this existed. The route planning a few lines up is licensed by
-		// exactly this argument, and for exactly this reason.
-		if ( verdict == WalkVerdict.Arrived && playing != null && !playing.IsOn( (int)PeepAnimation.Stand ) )
-			peep.NextAnimation = (int)PeepAnimation.Stand;
 	}
 
 	/// <summary>
@@ -289,6 +264,13 @@ public sealed class ParkPeople : Entity
 
 	/// <summary>This guest's animation, for the drawing, the tests and the debug console.</summary>
 	internal SpriteScript? SpriteFor( int thingId ) => _sprites.GetValueOrDefault( thingId );
+
+	/// <summary>
+	/// How many guests this park has admitted, counting on from what the save recorded - see
+	/// <see cref="PeepBehaviour.VisitorsToDate"/>. Exposed so that a test can watch it move through the
+	/// park's own tick rather than by driving the behaviours directly.
+	/// </summary>
+	internal int Visitors => _behaviour.VisitorsToDate;
 
 	protected override void OnDelete()
 	{

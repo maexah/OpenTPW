@@ -9,10 +9,11 @@ namespace OpenTPW;
 /// immutable - it describes a file. This is the running copy, seeded from it once when the park opens.
 /// </para>
 /// <para>
-/// <b>What this is not, yet.</b> It carries the needs and the behaviour a guest was saved in, and ticks
-/// the needs. It does not walk, decide, queue or ride - those are the rest of the original's
-/// <c>FUN_005019f0</c> and are deliberately not attempted here, the way the ride VM was brought up an
-/// instruction at a time rather than all at once.
+/// <b>What this is and is not.</b> It carries the needs and the behaviour a guest was saved in, ticks the
+/// needs, and holds the state that <see cref="PeepBehaviour"/> moves them through - five of the original's
+/// twenty-two cases, which is enough to get a guest to the gate, through it, and no further. Choosing a
+/// ride, queueing for one and going home are the rest of <c>FUN_005019f0</c> and are deliberately not
+/// attempted here, the way the ride VM was brought up an instruction at a time rather than all at once.
 /// </para>
 /// </summary>
 public sealed class Peep
@@ -56,9 +57,28 @@ public sealed class Peep
 
 	/// <summary>
 	/// The speed term the walk reads to decide whether this guest is hurrying, which also picks a
-	/// different walk animation. Set by the tick and by entering a state, and by nothing else.
+	/// different walk animation - the person's own <c>+0xc2</c>.
+	///
+	/// <para>
+	/// Written by the needs tick, by entering a state, and by <see cref="PeepBehaviour"/>, which is why the
+	/// setter is <c>internal</c> rather than private: <c>FUN_004ff730</c> decides afresh every turn whether
+	/// a guest hurries to the gate, before it walks them. Nothing outside the assembly can set it.
+	/// </para>
 	/// </summary>
-	public int PurposeSpeed { get; private set; }
+	public int PurposeSpeed { get; internal set; }
+
+	/// <summary>
+	/// Which visitor this guest was, counting every admission the park has ever made, or zero for somebody
+	/// who has not been admitted.
+	///
+	/// <para>
+	/// The original keeps it at <c>person + 0x1d8</c> and writes it once, as a guest finishes coming
+	/// through the gate: <c>FUN_004ffb20</c> stores what <c>FUN_0051aaf0</c> hands back, which is the
+	/// world's running total after the increment. Not parsed from the save - a guest who was already inside
+	/// when the park was written carries a number this cannot know.
+	/// </para>
+	/// </summary>
+	public int VisitorNumber { get; internal set; }
 
 	/// <summary>
 	/// How long this guest will wait for the park to open, set when they begin waiting. In their own
