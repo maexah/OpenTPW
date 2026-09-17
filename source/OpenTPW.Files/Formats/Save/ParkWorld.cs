@@ -151,13 +151,14 @@ public sealed class ParkWorld
 	/// degrees.
 	/// </para>
 	/// <para>
-	/// <see cref="Guest"/> is what they were doing, and only a guest has it: the five kinds of staff
-	/// carry a different block in the same place, and none of its fields is read here.
+	/// <see cref="Guest"/> is what they were doing, and only a guest has it; <see cref="Staff"/> is the
+	/// block the five kinds of staff carry in that same place instead. <b>Exactly one of the two is ever
+	/// set</b>, decided by <see cref="Model"/>, because the two blocks occupy the same bytes.
 	/// </para>
 	/// </summary>
 	public readonly record struct Person(
 		int ThingId, int Model, int RawX, int RawY, int SpriteSlot, int Angle,
-		NavigatorState Navigator, GuestState? Guest )
+		NavigatorState Navigator, GuestState? Guest, StaffState? Staff = null )
 	{
 		/// <inheritdoc cref="CatalogueObject.CellX"/>
 		public int CellX => RawX >> 8;
@@ -258,6 +259,101 @@ public sealed class ParkWorld
 
 		/// <summary>How many kinds of guest the balance file describes, as <c>PeepTypes[0..7]</c>.</summary>
 		public const int PersonTypes = 8;
+	}
+
+	/// <summary>
+	/// What a member of staff was doing - the block all five kinds share, which the original serialises in
+	/// one place (<c>FUN_00504de0</c>) for every one of them.
+	///
+	/// <para>
+	/// <b>The five kinds are one class with five small overrides, not five state machines.</b> Every staff
+	/// model's per-turn behaviour switches on <see cref="State"/> and answers cases 0 to 7 identically,
+	/// through the same three shared handlers; only the cases above 7 differ, and each kind adds a handful
+	/// of fields of its own after this block. That is why this sits here once rather than five times.
+	/// </para>
+	/// <para>
+	/// <b>The size closes, which is the check worth having.</b> This block is 105 bytes beginning at
+	/// <c>+398</c> - the same place a guest's own block begins, because both follow the identical eight-byte
+	/// head and 390-byte person base. So a staff record is <c>8 + 390 + 105</c> = 503 plus what the kind
+	/// adds, and <see cref="RecordSizes"/> - derived by a completely different route - says 511, 513, 509,
+	/// 511 and 509 for the five. Those are 8, 10, 6, 8 and 6 bytes of extras, and each kind's own serialiser
+	/// declares exactly that many. Five independent agreements.
+	/// </para>
+	/// <para>
+	/// <b>Two of the block's fields carry no name in the binary</b> and are named here the way the
+	/// navigator's three were: the order is alphabetical, so an unnamed field's name is pinned by where it
+	/// sorts. <c>mHappiness</c> sits between <c>mCurrentPayGrade</c> and <c>mJobsDone</c>, and
+	/// <c>mTiredness</c> after <c>mTimeHired</c> - and both readings are confirmed by what the code does
+	/// with them: the resting handler recovers the first by <c>HappinessRecuperationRate</c> and the second
+	/// by <c>RecuperationRate</c>, each indexed by <see cref="PayGrade"/>.
+	/// </para>
+	/// <para>
+	/// <b>The alphabetical rule is not quite a rule here, and that is worth knowing rather than relying
+	/// on.</b> <c>mTimeStartedIdling</c> is written <i>before</i> <c>mTimeHired</c>, which sorts the other
+	/// way. The order below is the serialiser's own rather than the sort's, because the serialiser is what
+	/// the file actually follows.
+	/// </para>
+	/// </summary>
+	/// <param name="PayGrade">
+	/// <c>mCurrentPayGrade</c>, 0 to 4, and an index into the balance file's <c>PerGradeStaffConsts[0..4]</c>
+	/// - which is where how long they idle, how fast they recover and what they are paid all come from.
+	///
+	/// <b>It is not the kind of staff they are</b>, and the three numberings in play are easy to cross: the
+	/// thing model runs mechanic 4, handyman 5, entertainer 6, guard 7, researcher 8; the sprite folder runs
+	/// entertainers 4, handymen 5, mechanics 6, guards 7, researchers 8; and the balance file's
+	/// <c>PerTypeStaffConsts</c> runs handyman 0, mechanic 1, entertainer 2, guard 3, researcher 4. See
+	/// <see cref="PayTypeOf"/>.
+	/// </param>
+	/// <param name="Happiness">How they feel about the job - lost by walking, recovered by resting.</param>
+	/// <param name="Tiredness">
+	/// How rested they are, and the name is the wrong way round from what it measures: it runs <b>down</b> as
+	/// they work and is recovered by resting, and the "too tired" test is <c>value &lt; RestLevel</c>. The
+	/// name is the original's own so it is kept rather than improved on.
+	/// </param>
+	/// <param name="JobsDone">
+	/// <c>mJobsDone</c> - a running count, and what a staff member's usefulness is judged on.
+	/// </param>
+	/// <param name="PatrolBottomLeft">
+	/// <c>mPatrolRegionBL</c> and <c>mPatrolRegionTR</c>, the corners of the rectangle this member of staff
+	/// keeps to, each as a <b>packed cell id</b> - <c>y * 128 + 1 + x</c>, the same one-based packing the
+	/// destination setter takes. Nought means no area, which is the whole map.
+	/// </param>
+	/// <param name="RestArea">
+	/// <c>mRestArea</c> - the thing id of the rest area they are walking to or sitting in, or nought. A
+	/// handle compared with <c>==</c>, not an index.
+	/// </param>
+	/// <param name="PercentageThroughGrade">
+	/// <c>mPercentageThroughGrade</c> - how far along their training is towards the next pay grade.
+	/// </param>
+	public readonly record struct StaffState(
+		int State, int PayGrade, float Happiness, float Tiredness, int JobsDone,
+		int PatrolBottomLeft, int PatrolTopRight, int RestArea, int PercentageThroughGrade,
+		int TimeStartedIdling )
+	{
+		/// <summary>
+		/// How many behaviours a member of staff has. Eight are shared by every kind; the numbers above
+		/// these belong to one kind each, so a state outside the whole range reads as a bad record.
+		/// </summary>
+		public const int SharedStates = 8;
+
+		/// <summary>How many pay grades there are - <c>PerGradeStaffConsts[0..4]</c>.</summary>
+		public const int PayGrades = 5;
+
+		/// <summary>
+		/// Which <c>PerTypeStaffConsts</c> entry a thing model indexes - the third of the three numberings
+		/// described on <see cref="PayGrade"/>, and the one the original uses for pay and for the strike
+		/// register. Read straight off the switch both <c>FUN_00506300</c> and the strike code share.
+		/// </summary>
+		/// <returns>0 to 4, or -1 for a model that is not staff.</returns>
+		public static int PayTypeOf( int model ) => model switch
+		{
+			5 => 0,  // handyman
+			4 => 1,  // mechanic
+			6 => 2,  // entertainer
+			7 => 3,  // guard
+			8 => 4,  // researcher
+			_ => -1
+		};
 	}
 
 	/// <summary>
@@ -992,7 +1088,8 @@ public sealed class ParkWorld
 			SpriteSlot: ReadInt32At( start + 0x10 ),    // mSpriteScript
 			Angle: ReadUInt16At( start + 0xf2 ),        // mSpriteAngle
 			Navigator: ReadNavigator( start ),          // every person has one, staff included
-			Guest: model == GuestModel ? ReadGuest( start ) : null );
+			Guest: model == GuestModel ? ReadGuest( start ) : null,
+			Staff: model == GuestModel ? null : ReadStaff( start ) );
 
 	/// <summary>
 	/// The navigator's block, which begins at <c>+43</c> - after the eight-byte thing head and the
@@ -1072,6 +1169,43 @@ public sealed class ParkWorld
 			// immediately after them. See the parameter docs for what each one decides.
 			PaidAdmission: ReadInt32At( start + 460 ),  // mPaidAdmission
 			ParkOpeningWait: ReadInt32At( start + 464 ) ); // mParkOpeningWaitingTime
+
+	/// <summary>
+	/// A member of staff's own block, which begins at <c>+398</c> - the same place a guest's does, after the
+	/// eight-byte thing head and the 390-byte person base - and runs the 105 bytes that take a staff record
+	/// to 503 before its kind adds anything.
+	///
+	/// <para>
+	/// Each offset is the sum of the sizes before it, and every size is stated outright by the original's
+	/// own serialiser. <c>mName[0..32]</c> fills <c>+410</c> to <c>+475</c> and is deliberately not read: it
+	/// is 33 shorts rather than text, and nothing here puts a staff member's name on screen. <c>mTimeHired</c>
+	/// fills <c>+491</c> to <c>+498</c> and is skipped for the same reason.
+	/// </para>
+	/// <para>
+	/// <b>What each kind adds after this block is decoded and deliberately not read</b>, because the
+	/// behaviour built on top of this is the part all five kinds share and none of these fields reaches it.
+	/// They are recorded here so the next reader need not find them again. A mechanic adds
+	/// <c>mDurationOfRepair</c> (+503, 4), <c>mObjectToRepair</c> (+507, 2) and <c>mNext</c> (+509, 2); a
+	/// handyman <c>mTargetLitterCell</c> (+503, 2), <c>mTimeStartedCleaning</c> (+505, 4),
+	/// <c>mToiletToClean</c> (+509, 2) and <c>mNext</c> (+511, 2); an entertainer
+	/// <c>mTimeStartedEntertaining</c> (+503, 4) and <c>mNext</c> (+507, 2); a guard <c>mPerp</c> (+503, 2),
+	/// <c>mProsecutionTimestamp</c> (+505, 4) and <c>mNext</c> (+509, 2); a researcher
+	/// <c>mTimeStartedResearching</c> (+503, 4) and <c>mNext</c> (+507, 2). Those come to 8, 10, 6, 8 and 6,
+	/// which are exactly what <see cref="RecordSizes"/>'s five numbers leave over 503.
+	/// </para>
+	/// </summary>
+	private StaffState ReadStaff( int start )
+		=> new(
+			State: ReadInt32At( start + 483 ),                  // mState
+			PayGrade: ReadInt32At( start + 398 ),               // mCurrentPayGrade
+			Happiness: ReadSingleAt( start + 402 ),             // unnamed - see StaffState
+			Tiredness: ReadSingleAt( start + 499 ),             // unnamed - see StaffState
+			JobsDone: ReadInt32At( start + 406 ),               // mJobsDone
+			PatrolBottomLeft: ReadUInt16At( start + 476 ),      // mPatrolRegionBL
+			PatrolTopRight: ReadUInt16At( start + 478 ),        // mPatrolRegionTR
+			RestArea: ReadUInt16At( start + 481 ),              // mRestArea
+			PercentageThroughGrade: ReadByteAt( start + 480 ),  // mPercentageThroughGrade
+			TimeStartedIdling: ReadInt32At( start + 487 ) );    // mTimeStartedIdling
 
 	/// <summary>
 	/// The model number of the park's economy - the only manager this reader opens, because
