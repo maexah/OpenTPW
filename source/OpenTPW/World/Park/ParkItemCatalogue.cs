@@ -28,8 +28,17 @@ public sealed class ParkItemCatalogue
 	/// One buildable item: what it is called, where its model lives, how much ground it covers, and the
 	/// artwork for its name board if it has one - see <see cref="ParkObjects"/>, which paints it.
 	/// </summary>
+	/// <param name="UiType">Which kind it is - 0 rides, 1 shops, 2 sideshows, 3 features.</param>
+	/// <param name="IsChoosable">
+	/// Whether a guest may be sent here at all. <b>This is the item file's side of the save's own
+	/// "offerable" flag</b>, and the two agree object for object in the shipped park - see
+	/// <see cref="ItemDescriptionFile.IsChoosable"/>.
+	/// </param>
 	public readonly record struct Item( int Id, string Name, string Directory, string Stem, int Width, int Depth,
-		string? SignPath );
+		string? SignPath, int UiType = ItemDescriptionFile.Feature, bool IsChoosable = false,
+		bool ProvidesRelief = false, bool HasQueue = false, bool IsIndoors = false,
+		int ExcitementLevel = 0, int AttractionValue = 0, int NewAttractionDecayTime = 0,
+		int ThirstEffect = 0, int HungerEffect = 0 );
 
 	private readonly Dictionary<int, Item> _items = [];
 
@@ -75,6 +84,11 @@ public sealed class ParkItemCatalogue
 				continue;
 			}
 
+			// The folder's own description, which every item in it inherits from. An item's file says only
+			// what DIFFERS from this, so reading an item without it misses which kind the item is, whether
+			// a guest may choose it, and whether it has a queue - none of which most items restate.
+			var category = TryReadCategory( path, folder );
+
 			foreach ( var directory in directories )
 			{
 				var stem = Path.GetFileName( directory );
@@ -82,7 +96,7 @@ public sealed class ParkItemCatalogue
 				if ( string.IsNullOrEmpty( stem ) )
 					continue;
 
-				if ( !TryRead( $"{path}/{stem}", stem, out var item ) )
+				if ( !TryRead( $"{path}/{stem}", stem, out var item, category ) )
 				{
 					++unreadable;
 					continue;
@@ -104,14 +118,14 @@ public sealed class ParkItemCatalogue
 	/// Reads one item's description, or answers false if that directory does not hold one - which is not
 	/// an error worth a line of its own, because these folders can hold things that are not items.
 	/// </summary>
-	private bool TryRead( string directory, string stem, out Item item )
+	private bool TryRead( string directory, string stem, out Item item, ItemDescriptionFile? category = null )
 	{
 		item = default;
 
 		try
 		{
 			using var stream = _files.OpenRead( $"{directory}/{stem}.sam" );
-			var description = new ItemDescriptionFile( stream );
+			var description = new ItemDescriptionFile( stream, category );
 
 			if ( description.Id <= 0 )
 				return false;
@@ -122,13 +136,45 @@ public sealed class ParkItemCatalogue
 
 			item = new Item( description.Id, description.Name, directory, stem,
 				description.FootprintWidth, description.FootprintDepth,
-				Exists( sign ) ? sign : null );
+				Exists( sign ) ? sign : null,
+				description.WhichUIType, description.IsChoosable, description.ProvidesRelief,
+				description.HasQueue, description.IsIndoors, description.ExcitementLevel,
+				description.AttractionValue, description.NewAttractionDecayTime,
+				description.ThirstEffect, description.HungerEffect );
 
 			return true;
 		}
 		catch ( Exception )
 		{
 			return false;
+		}
+	}
+
+	/// <summary>
+	/// The folder's own description - <c>rides/Rides.sam</c> and its three siblings - whose values every
+	/// item in that folder inherits. Null where the folder has none, which leaves each item standing on
+	/// its own file alone.
+	/// </summary>
+	/// <remarks>
+	/// <b>The name is asked for in the folder's own case and found in the file's.</b> The folders are
+	/// lower case and the files are not - <c>sideshow/SideShow.sam</c>, <c>rides/Rides.sam</c> - so this
+	/// leans on the same Windows-style case-insensitive matching every other path in the game does. If
+	/// that ever stopped working the symptom would be quiet: every item would read as unchoosable, because
+	/// almost none of them restate it.
+	/// </remarks>
+	private ItemDescriptionFile? TryReadCategory( string path, string folder )
+	{
+		try
+		{
+			using var stream = _files.OpenRead( $"{path}/{folder}.sam" );
+
+			return new ItemDescriptionFile( stream );
+		}
+		catch ( Exception e )
+		{
+			Log.Info( $"no category description for '{folder}', so its items stand on their own files - {e.Message}" );
+
+			return null;
 		}
 	}
 

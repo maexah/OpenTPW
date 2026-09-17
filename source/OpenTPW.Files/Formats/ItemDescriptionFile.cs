@@ -40,13 +40,94 @@ public sealed class ItemDescriptionFile
 
 	public int FootprintDepth { get; private set; } = 1;
 
-	public ItemDescriptionFile( Stream stream )
+	/// <summary>
+	/// The category's own description, whose values this one falls back to - see the constructor.
+	/// </summary>
+	private readonly ItemDescriptionFile? _category;
+
+	/// <param name="category">
+	/// The folder-level description this item inherits from, or null for a description that stands alone.
+	///
+	/// <para>
+	/// <b>An item's file is an OVERRIDE, not a whole description.</b> Each folder carries one
+	/// - <c>rides/Rides.sam</c>, <c>shops/Shops.sam</c>, <c>sideshow/SideShow.sam</c>,
+	/// <c>features/Features.sam</c> - holding the defaults for everything of that kind, and an item's own
+	/// file says only what differs. Read on its own, <c>Bouncy.sam</c> does not say it is a ride, does not
+	/// say people may use it, and does not say it has a queue; all three come from the folder.
+	/// </para>
+	/// </param>
+	public ItemDescriptionFile( Stream stream, ItemDescriptionFile? category = null )
 	{
+		_category = category;
+
 		using var reader = new StreamReader( stream, Encoding.ASCII );
 		Read( reader.ReadToEnd() );
 	}
 
-	public ItemDescriptionFile( string text ) => Read( text );
+	public ItemDescriptionFile( string text, ItemDescriptionFile? category = null )
+	{
+		_category = category;
+		Read( text );
+	}
+
+	/// <summary>
+	/// Which of the four kinds this is - <b>0 rides, 1 shops, 2 sideshows, 3 features</b>, numbered by the
+	/// game's own comment beside the key. Nothing in the jungle overrides it, so in practice it is the
+	/// folder the item lives in.
+	/// </summary>
+	public int WhichUIType => _whichUIType ?? _category?.WhichUIType ?? Feature;
+
+	/// <summary>The value <see cref="WhichUIType"/> takes for a feature, which is what an unknown item reads as.</summary>
+	public const int Feature = 3;
+
+	/// <summary>
+	/// Whether a guest may choose to come here - <c>Info.IsChoosable</c>, whose own comment reads "People
+	/// CAN use this" where it is set and "People CANNOT choose to use most features in their decision
+	/// making" in the features default.
+	/// </summary>
+	/// <remarks>
+	/// <b>This is where the save's own "a guest may be offered this" flag comes from</b>, and the two agree
+	/// exactly in the shipped park: rides, shops and sideshows inherit 1 from their folder, features
+	/// inherit 0, and the Small Toilet overrides itself back to 1 - which is precisely the six objects
+	/// whose record carries the bit.
+	/// </remarks>
+	public bool IsChoosable => (_isChoosable ?? _category?._isChoosable ?? 0) != 0;
+
+	/// <summary>Whether using this relieves a guest who needs the toilet - <c>UsageInfo.ProvidesRelief</c>,
+	/// whose default comment says "set to 1 for toilets". The three Small Toilets set it and nothing else does.</summary>
+	public bool ProvidesRelief => (_providesRelief ?? _category?._providesRelief ?? 0) != 0;
+
+	/// <summary>Whether people queue for this at all - <c>Info.HasQueue</c>, set for rides and not for the rest.</summary>
+	public bool HasQueue => (_hasQueue ?? _category?._hasQueue ?? 0) != 0;
+
+	/// <summary>Whether this is shelter from the rain - <c>UsageInfo.ISIndoors</c>, the game's own spelling.</summary>
+	public bool IsIndoors => (_isIndoors ?? _category?._isIndoors ?? 0) != 0;
+
+	/// <summary>How exciting this is - <c>UsageInfo.ExcitementLevel</c>. Belly Bounce 40, Jungle Spray 35.</summary>
+	public int ExcitementLevel => _excitementLevel ?? _category?.ExcitementLevel ?? 0;
+
+	/// <summary>What this adds to the park's draw - <c>Info.AttractionValue</c>. Belly Bounce overrides it to 25.</summary>
+	public int AttractionValue => _attractionValue ?? _category?.AttractionValue ?? 0;
+
+	/// <summary>How long it stays "new" - <c>Info.NewAttractionDecayTime</c>, 60 for rides and 30 for features.</summary>
+	public int NewAttractionDecayTime => _newAttractionDecayTime ?? _category?.NewAttractionDecayTime ?? 0;
+
+	/// <summary>How much thirst using this takes away - <c>UsageInfo.ThirstEffect</c>. The Drinks Shop sets 40.</summary>
+	public int ThirstEffect => _thirstEffect ?? _category?.ThirstEffect ?? 0;
+
+	/// <summary>The same for hunger. <b>The Drinks Shop sets it to nought</b>, which is a drink rather than a meal.</summary>
+	public int HungerEffect => _hungerEffect ?? _category?.HungerEffect ?? 0;
+
+	private int? _whichUIType;
+	private int? _isChoosable;
+	private int? _providesRelief;
+	private int? _hasQueue;
+	private int? _isIndoors;
+	private int? _excitementLevel;
+	private int? _attractionValue;
+	private int? _newAttractionDecayTime;
+	private int? _thirstEffect;
+	private int? _hungerEffect;
 
 	private void Read( string text )
 	{
@@ -87,6 +168,48 @@ public sealed class ItemDescriptionFile
 				case "Info.Shape":
 					ReadShape( lines, i, out width, out depth );
 					break;
+
+				// The decision keys. Each is left NULL when the item's own file does not mention it, so
+				// that the category's value shows through - see the constructor's remarks.
+				case "Info.WhichUIType":
+					_whichUIType = Number( line );
+					break;
+
+				case "Info.IsChoosable":
+					_isChoosable = Number( line );
+					break;
+
+				case "UsageInfo.ProvidesRelief":
+					_providesRelief = Number( line );
+					break;
+
+				case "Info.HasQueue":
+					_hasQueue = Number( line );
+					break;
+
+				case "UsageInfo.ISIndoors":
+					_isIndoors = Number( line );
+					break;
+
+				case "UsageInfo.ExcitementLevel":
+					_excitementLevel = Number( line );
+					break;
+
+				case "Info.AttractionValue":
+					_attractionValue = Number( line );
+					break;
+
+				case "Info.NewAttractionDecayTime":
+					_newAttractionDecayTime = Number( line );
+					break;
+
+				case "UsageInfo.ThirstEffect":
+					_thirstEffect = Number( line );
+					break;
+
+				case "UsageInfo.HungerEffect":
+					_hungerEffect = Number( line );
+					break;
 			}
 		}
 
@@ -126,6 +249,14 @@ public sealed class ItemDescriptionFile
 			++depth;
 		}
 	}
+
+	/// <summary>
+	/// The line's value as a whole number, or null where it has none. Null rather than nought matters:
+	/// nought is a real answer for every one of these keys, and "the item did not say" has to stay
+	/// distinguishable from "the item said no" or the category's value could never show through.
+	/// </summary>
+	private static int? Number( string line )
+		=> int.TryParse( ValueOf( line ), out var value ) ? value : null;
 
 	/// <summary>The row of dashes that opens and closes a block.</summary>
 	private const string Fence = "---";
