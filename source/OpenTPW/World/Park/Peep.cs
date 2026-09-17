@@ -129,11 +129,55 @@ public sealed class Peep
 	public const float Least = 0f;
 
 	/// <summary>
-	/// How many ticks apart a guest's needs are updated: the original gates the whole tick on
-	/// <c>(id &amp; 3) == (tick &amp; 3)</c>, so each guest takes one turn in four and the park's guests are
-	/// spread evenly across them.
+	/// How many ticks apart a guest's needs are updated: <c>(id &amp; 3) == (tick &amp; 3)</c>, so each guest
+	/// takes one turn in four and the park's guests are spread evenly across them.
+	///
+	/// <para>
+	/// <b>This gates the needs and nothing else, and an earlier draft of this comment said it gated "the
+	/// whole tick".</b> It does not, and the difference is visible: a guest is ticked by
+	/// <c>FUN_0050b360</c>, which switches on the thing's model byte and, for a guest, calls
+	/// <c>FUN_00501650</c> (the needs) and then <c>FUN_005019f0</c> (the twenty-two behaviours) back to
+	/// back. The test above lives <i>inside</i> the first of those - and not even around all of it, since
+	/// the call at its head and the queue check at its tail both sit outside. The second has no such test
+	/// anywhere in it. So <b>walking runs every tick</b> and only the needs take one turn in four; believing
+	/// otherwise would have walked every guest in the park at a quarter speed.
+	/// </para>
 	/// </summary>
 	public const int TickShare = 4;
+
+	/// <summary>
+	/// Whether a guest in this state is walking somewhere, and so should be given a turn of
+	/// <see cref="PeepWalk"/>.
+	///
+	/// <para>
+	/// <b>Eleven of the twenty-two, found by asking which handlers can reach the walk tick at all.</b>
+	/// <c>FUN_005019f0</c> switches on the state and calls <c>FUN_004fa2a0</c> - the walk - from four of its
+	/// cases in its own body; but most cases jump straight to a handler that makes the call itself, one
+	/// level down: <c>FUN_004ff730</c> for <see cref="PeepState.HeadingForGate"/>, <c>FUN_004ffb20</c> for
+	/// <see cref="PeepState.Entering"/>, <c>FUN_004fff20</c>, <c>FUN_004ffbc0</c>, <c>FUN_005006b0</c>,
+	/// <c>FUN_00500900</c> and <c>FUN_00500a50</c> for the rest. Searching every one of the twenty-two
+	/// handlers for a path to the walk gives states 0, 2, 5, 7, 9, 10, 12, 13, 15, 18 and 20.
+	/// </para>
+	/// <para>
+	/// <b>An earlier version of this said four, and it was wrong in a way that mattered.</b> It was read off
+	/// the body of the switch alone - stopping at the calls that function makes itself rather than following
+	/// the ones its handlers make. The cost was not academic: every guest in the shipped park is in
+	/// <see cref="PeepState.HeadingForGate"/> or <see cref="PeepState.Entering"/> or
+	/// <see cref="PeepState.WaitingForOpening"/>, and the first two are among the seven that reading missed,
+	/// so nobody in Lost Kingdom would have taken a single step.
+	/// </para>
+	/// <para>
+	/// <b>Ten of the eleven agree with a list written from the other direction.</b> <see cref="AnimationFor"/>
+	/// queues the walking animation for exactly ten states, and they are these without
+	/// <see cref="PeepState.OnRide"/>. That is not a contradiction: the animation list says which picture is
+	/// shown, and a guest on a ride takes its picture from the ride while still being moved.
+	/// </para>
+	/// </summary>
+	public static bool IsAWalkingState( PeepState state ) => state is
+		PeepState.Walking or PeepState.HeadingForGate or PeepState.Entering or PeepState.Wandering
+		or PeepState.GoingToMinorDestination or PeepState.GoingToRide or PeepState.SteppingUpQueue
+		or PeepState.BeingAdmitted or PeepState.OnRide or PeepState.HeadingForExit
+		or PeepState.WalkingOutside;
 
 	/// <summary>How often the three needs that grow on their own do so - <c>TEST byte ptr [..],0xf</c>.</summary>
 	public const int DriftEvery = 16;

@@ -61,8 +61,15 @@ public sealed class PeepSteering
 	/// <summary>
 	/// The last fifteen ticks of not getting anywhere, newest in the low bits. Two things write into it:
 	/// a refused step and a tick that got no closer.
+	///
+	/// <para>
+	/// <b>Settable because the original keeps only one of these.</b> It lives on the navigator at
+	/// <c>+0xb0</c>, where the steering step writes it and <c>follow_path</c> reads it to decide whether to
+	/// ask for a new route; splitting those across two classes here means <see cref="PeepWalk"/> has to
+	/// carry the one value between them, and a fresh route zeroes it.
+	/// </para>
 	/// </summary>
-	public int StuckBits { get; private set; }
+	public int StuckBits { get; set; }
 
 	/// <summary>How close the person was last tick, which is what "got no closer" is measured against.</summary>
 	public int LastProgress { get; set; }

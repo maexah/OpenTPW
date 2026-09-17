@@ -98,8 +98,16 @@ public sealed class PeepNavigator
 	/// <summary>
 	/// Which waypoint of the route the person is walking towards - an index into <see cref="Waypoints"/>.
 	/// After a save it indexes waypoints that are not here; see the class remarks.
+	///
+	/// <para>
+	/// <b>Written from outside only by <see cref="PeepWalk"/>, and that is why this and the three below are
+	/// <c>internal</c> rather than private.</b> The original keeps all of this on one struct that the
+	/// steering step and the route follower are both methods of; this project split them so each could be
+	/// tested alone, so the join has to hand the follower's answer back. Nothing outside the assembly can
+	/// move a person's cursor.
+	/// </para>
 	/// </summary>
-	public int Cursor { get; private set; }
+	public int Cursor { get; internal set; }
 
 	/// <summary>How many waypoints the whole route had, buffered or not.</summary>
 	public int TotalWaypoints { get; private set; }
@@ -109,8 +117,11 @@ public sealed class PeepNavigator
 	/// </summary>
 	public int BufferedWaypoints { get; private set; }
 
-	/// <summary>The distance of the legs still ahead within the buffer, which the cursor eats into.</summary>
-	public int BufferedDistance { get; private set; }
+	/// <summary>
+	/// The distance of the legs still ahead within the buffer, which the cursor eats into. See
+	/// <see cref="Cursor"/> for why this is settable within the assembly.
+	/// </summary>
+	public int BufferedDistance { get; internal set; }
 
 	/// <summary>The distance of the part of the route that has not been loaded yet.</summary>
 	public int TailDistance { get; private set; }
@@ -135,16 +146,21 @@ public sealed class PeepNavigator
 	/// </summary>
 	public IReadOnlyList<int> LegLengths => _legLengths;
 
-	/// <summary>Whether the person has reached the end of their route.</summary>
-	public bool Finished { get; private set; }
+	/// <summary>
+	/// Whether the person has reached the end of their route. See <see cref="Cursor"/> for why this is
+	/// settable within the assembly.
+	/// </summary>
+	public bool Finished { get; internal set; }
 
 	/// <summary>Whether the person has given up on getting there at all.</summary>
 	public bool CannotReach { get; private set; }
 
 	/// <summary>
 	/// One bit per recent step, most recent lowest, set when that step was blocked or made no progress.
+	/// The original keeps this single copy at <c>+0xb0</c>, written by the steering step and read by
+	/// <c>follow_path</c>; see <see cref="Cursor"/> for why it is settable within the assembly.
 	/// </summary>
-	public int StuckBits { get; private set; }
+	public int StuckBits { get; internal set; }
 
 	public PeepNavigator( ParkWorld.NavigatorState saved )
 	{

@@ -155,6 +155,13 @@ public sealed class PeepJourney
 				Refill?.Invoke();
 		}
 
+		// A refill that failed leaves nothing to aim at: the navigator throws the whole route away when it
+		// cannot find a way through, so the list can come back empty. The original reads the stale slot it
+		// always had and stops on the next tick, which sees a count of zero; there is no stale slot here, so
+		// the person is aimed at where they already are, which asks for no force and stops just the same.
+		if ( Waypoints.Count == 0 )
+			return Position;
+
 		// A departure, named rather than hidden. The original cannot read past the end here, because the
 		// only way to arrive with the index level with the list is to have just navigated again, and that
 		// restocks the list and sets the index back to zero. A stand-in that does neither would walk off

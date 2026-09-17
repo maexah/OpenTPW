@@ -45,9 +45,22 @@ public class PeepRoutePlanningTests
 	/// <summary>
 	/// The mode the edge test is asked in. <b>Not a default and not a guess</b>: the original keeps it in a
 	/// global that the whole search reads, set from the <c>this + 0xb4</c> field of the object doing the
-	/// asking, and that field is not one of the twenty the save reader parses. So no mode can honestly be
-	/// called "the" mode; these tests name the one they use and
-	/// <see cref="WhichModeIsAskedChangesWhatCanBeReached"/> measures how much it matters.
+	/// asking.
+	///
+	/// <para>
+	/// <b>This comment used to end "so no mode can honestly be called the mode", and that has since been
+	/// measured.</b> The field is on the navigator - <c>FUN_0050f3b0</c> reads it at <c>0050f501</c> beside
+	/// position, velocity and the force limits, and <c>avoid_walls</c> reads it twenty times over. Scanning
+	/// every one of the executable's 881,521 instructions for a write to <c>+0xb4</c> finds exactly one that
+	/// lands on a navigator: <c>0051009f</c>, in the constructor <c>FUN_0050ffe0</c>, writing zero. So zero
+	/// is the mode every person in the game walks and searches in, and
+	/// <see cref="ParkPeople.WalkingMode"/> reproduces it rather than defaulting to it. The other hundred
+	/// writes to that offset in the image belong to unrelated structures.
+	/// </para>
+	/// <para>
+	/// <see cref="WhichModeIsAskedChangesWhatCanBeReached"/> still earns its place: it measures how much the
+	/// argument matters, which is what makes hardcoding it a choice worth defending rather than a detail.
+	/// </para>
 	/// </summary>
 	private const int Ordinary = 0;
 

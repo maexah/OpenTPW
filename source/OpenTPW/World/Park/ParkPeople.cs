@@ -13,10 +13,12 @@ namespace OpenTPW;
 /// tested without a graphics device at all.
 /// </para>
 /// <para>
-/// <b>What it does not do yet.</b> Guests do not walk, choose a ride, queue or leave - the needs loop is
-/// the first of the original's two per-guest calls and the twenty-two state behaviours are the second.
-/// Bringing them up one at a time is how the ride VM was done, and it is why this can be trusted at each
-/// step rather than all at once at the end.
+/// <b>Guests walk. They do not yet choose, queue or leave.</b> The needs loop is the first of the
+/// original's two per-guest calls and the twenty-two state behaviours are the second; of those
+/// twenty-two, what is built is the walking that eleven of them do - see <see cref="PeepWalk"/>. So a guest
+/// goes to where the save was sending them and stops there, because deciding what to do on arrival is the
+/// part of the state machine that does not exist yet. Bringing them up one at a time is how the ride VM
+/// was done, and it is why this can be trusted at each step rather than all at once at the end.
 /// </para>
 /// </summary>
 public sealed class ParkPeople : Entity
@@ -29,11 +31,36 @@ public sealed class ParkPeople : Entity
 
 	private readonly List<Peep> _peeps;
 
+	private readonly Dictionary<int, PeepWalk> _walks = [];
+
+	/// <summary>
+	/// The mode every edge question in this park is asked in.
+	///
+	/// <para>
+	/// <b>Measured, not chosen.</b> The original keeps it in a field of the navigator at <c>+0xb4</c>, read
+	/// by the pathfinder at <c>0050f931</c>, by the steering step at <c>0050f501</c> and twenty times over by
+	/// <c>avoid_walls</c>. A scan of all 881,521 instructions in the executable finds exactly one
+	/// instruction that writes that field on a navigator - <c>0051009f</c>, in the constructor at
+	/// <c>FUN_0050ffe0</c>, and it writes zero. So zero is what every person in the game walks in, and this
+	/// is a reproduction rather than a default. (The other hundred writes to <c>+0xb4</c> in the image belong
+	/// to other structures entirely - particles, interface objects and stack frames.)
+	/// </para>
+	/// </summary>
+	public const int WalkingMode = 0;
+
 	public ParkPeople( ParkWorld? park )
 	{
 		_peeps = PeepsIn( park );
 
 		Current = this;
+
+		if ( park != null )
+		{
+			var blocked = CellEdge.For( park, WalkingMode ).Blocked;
+
+			foreach ( var peep in _peeps )
+				_walks[peep.ThingId] = new PeepWalk( peep.Navigator, blocked );
+		}
 
 		Log.Info( $"People: {_peeps.Count} guests simulating" );
 	}
@@ -77,9 +104,40 @@ public sealed class ParkPeople : Entity
 			var tick = GameClock.Ticks - GameClock.TicksDue + 1 + i;
 
 			foreach ( var peep in _peeps )
+			{
 				peep.Tick( tick );
+
+				// Every tick, and not one in four: the share gates the needs alone, and walking is a
+				// separate call the original never gates. See Peep.TickShare, which used to say otherwise.
+				if ( Peep.IsAWalkingState( peep.State ) && _walks.TryGetValue( peep.ThingId, out var walk ) )
+					WalkOn( peep, walk );
+			}
 		}
 	}
+
+	/// <summary>
+	/// One turn of walking for a guest who is going somewhere, giving them a route first if they have none.
+	///
+	/// <para>
+	/// <b>The planning is a departure and it is named.</b> In the original a route is set by the state
+	/// machine on the way into a walking state, through <c>FUN_00510100</c> - three times from
+	/// <c>FUN_004f9490</c> and once each from <c>FUN_004fa530</c> and <c>FUN_004fa5f0</c>. Those behaviours
+	/// are not built, and a guest restored from a file carries a destination and no route at all, the route
+	/// being the one part of it the save deliberately does not keep. So the first tick of walking is what
+	/// asks for one. A guest who has given up is not asked again, because nothing about them has changed
+	/// since they did.
+	/// </para>
+	/// </summary>
+	private static void WalkOn( Peep peep, PeepWalk walk )
+	{
+		if ( !walk.HasRoute && (peep.Navigator.CannotReach || !walk.PlanRoute()) )
+			return;
+
+		walk.Step();
+	}
+
+	/// <summary>This guest's walk, for the tests and the debug console.</summary>
+	internal PeepWalk? WalkFor( int thingId ) => _walks.GetValueOrDefault( thingId );
 
 	protected override void OnDelete()
 	{
