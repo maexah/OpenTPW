@@ -387,6 +387,37 @@ public sealed class RideScript
 	}
 
 	/// <summary>
+	/// Writes one of this script's variables from outside it, by the name the script itself declares it
+	/// under - the engine's <c>FUN_0055a0b0( script, index, value )</c>.
+	///
+	/// <para>
+	/// <b>This is how a park's gate is opened and shut</b>, and in the original it is very nearly the only
+	/// thing that ever writes a script variable from outside: <c>FUN_00519ef0</c> looks the gate's script up
+	/// by handle and writes its variable 0. Everything else that moves a variable is an instruction inside
+	/// some script.
+	/// </para>
+	/// <para>
+	/// <b>It answers whether the write landed, and callers are expected to care.</b> A name this script does
+	/// not declare gives -1 from <see cref="IndexOf"/>, and writing nothing would look on screen exactly
+	/// like a gate that was never commanded - which is the state this whole mechanism exists to leave. The
+	/// bounds check is the engine's own, which refuses an index outside the slot count rather than growing
+	/// the array.
+	/// </para>
+	/// </summary>
+	/// <returns>Whether the script declares that name and the value was written.</returns>
+	internal bool Set( string name, int value )
+	{
+		var index = IndexOf( name );
+
+		if ( index < 0 || index >= _variables.Length )
+			return false;
+
+		_variables[index] = value;
+
+		return true;
+	}
+
+	/// <summary>
 	/// Gives the script one turn, running until it spends its instruction budget, yields, or stops.
 	/// <paramref name="now"/> is whatever clock the caller keeps; <c>WAIT</c> durations are added to
 	/// it unchanged - see <see cref="Wait"/>.

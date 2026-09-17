@@ -200,9 +200,63 @@ public sealed class ParkRides : Entity
 			}
 		}
 
+		// And tell the gate whether this park is open, which is the one thing in the game that ever writes
+		// a script variable from outside a script. Last, because it needs the binding above to have run.
+		CommandTheGate( world );
+
 		Log.Info( $"{ThemeName}: {Bound} of the park's things are running a script" +
 			(Scriptless > 0 ? $", and {Scriptless} have none to run" : "") +
 			$"; {Animated} of them can see their own animations" );
+	}
+
+	/// <summary>The gate's command variable, by the name its own script declares it under.</summary>
+	private const string GateCommand = "VAR_COMMAND";
+
+	/// <summary>Open the gate. <c>FUN_00519ef0</c> writes this when a park is opened.</summary>
+	private const int OpenTheGate = 1;
+
+	/// <summary>Shut it - and it is <b>2</b>, not 0, which only the disassembly says.</summary>
+	private const int ShutTheGate = 2;
+
+	/// <summary>
+	/// Tells the park's gate whether the park is open, which is what makes it move at all.
+	///
+	/// <para>
+	/// <b>Until this existed the gate could not be opened by anything.</b> <c>Gates.RSE</c> opens on a
+	/// dispatch loop that reads <c>VAR_COMMAND</c>; every variable starts at nought, so it cycled five
+	/// instructions for ever and reached neither the open branch nor the close one, and a park saved with
+	/// its gates open drew them shut. The only thing in the original that ever writes that variable is
+	/// opening or closing a park - <c>FUN_00519ef0</c>, which looks the gate's script up from the header's
+	/// own <c>mParkGates</c> handle and writes variable 0.
+	/// </para>
+	/// <para>
+	/// <b>The values are read off the disassembly rather than the decompile, and one of them is not what it
+	/// looks like.</b> The call sites push an extra argument that survives one call and is consumed by the
+	/// next, so Ghidra renders the argument lists wrongly; read as instructions, opening writes <b>1</b> and
+	/// shutting writes <b>2</b>. A decompile-only reading gives "1 opens, 0 shuts", which is wrong.
+	/// </para>
+	/// <para>
+	/// <b>Commanding it as the park loads is a reproduction of the end state, not of a call anybody has
+	/// traced.</b> What the original does with its gate at load time - whether it re-commands, or restores
+	/// the script's variables with the rest of the save - is not established here. What is established is
+	/// that this park is saved open, so its gate belongs open; doing it this way makes the screen agree
+	/// with <c>mParkClosed</c>, and it is the first thing in the tree to read that field for anything.
+	/// </para>
+	/// </summary>
+	private void CommandTheGate( ParkWorld world )
+	{
+		var id = ScriptFor( world.ParkGates );
+
+		if ( id == 0 || Scheduler.Find( id ) is not { } gate )
+			return;
+
+		// Zero is open - see ParkWorld.ParkClosed, where the name runs the other way to the value.
+		var command = world.ParkClosed == 0 ? OpenTheGate : ShutTheGate;
+
+		// Said out loud rather than shrugged off: a script that declares no such variable takes the write
+		// nowhere, and a gate that never moves is exactly what that looks like from the outside.
+		if ( !gate.Set( GateCommand, command ) )
+			Log.Warning( $"{ThemeName}: the gate's script declares no {GateCommand}, so it cannot be opened" );
 	}
 
 	/// <summary>

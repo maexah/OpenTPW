@@ -280,6 +280,41 @@ public class ParkFixedItemsTests
 	}
 
 	/// <summary>
+	/// And it <b>moves</b> when it is commanded, which is the other half of the test above and the half
+	/// that was missing while a park's gates could not be opened at all.
+	///
+	/// <para>
+	/// <b>The index is asserted, not assumed.</b> <c>FUN_00519ef0</c> writes the gate's variable <b>0</b> -
+	/// read off the disassembly, because the decompile renders those call sites with the wrong argument
+	/// lists - and this pins that the script's own name tail agrees, so the command is reached by name
+	/// rather than by a number nobody checked. A name the script does not declare would give -1 and write
+	/// nothing, which on screen is indistinguishable from a gate nobody commanded.
+	/// </para>
+	/// <para>
+	/// One is open and <b>two</b> is shut, which is the value a decompile-only reading gets wrong.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheGateMovesOnceItIsCommandedToOpen()
+	{
+		var script = Bound( "gates" );
+
+		Assert.AreEqual( 0, script.IndexOf( "VAR_COMMAND" ),
+			"the gate's script should declare VAR_COMMAND as its first variable" );
+
+		Assert.IsTrue( script.Set( "VAR_COMMAND", 1 ), "the open command should land in a declared variable" );
+
+		for ( var turn = 0; turn < 200; ++turn )
+			script.Turn( turn * 31f );
+
+		var channel = script.Animations!.Channel( 0 );
+
+		Assert.IsNotNull( channel, "a commanded gate should have started an animation" );
+		Assert.IsFalse( channel!.IsIdle,
+			$"the gate was told to open and its channel is still idle at word {script.Position}" );
+	}
+
+	/// <summary>
 	/// The traffic lights are the opposite case, and the pair is why "fixed items hold their built pose" is
 	/// not a rule: <c>lights.RSE</c> starts an unconditional <c>LOOPANIM</c> as its second instruction, so a
 	/// bound crossing begins animating with nothing having asked it to.
