@@ -60,12 +60,21 @@ internal static partial class Graphics
 		var t2 = uvs.BottomLeft;
 		var t3 = uvs.BottomRight;
 
-		var vertices = new List<Vertex>() { new( v0, t0 ), new( v1, t1 ), new( v2, t2 ), new( v3, t3 ) };
-		var indices = new List<uint>() { 3, 2, 1, 0, 1, 2 };
+		// Filled in place rather than built fresh. This used to allocate two Lists and then immediately
+		// ToArray() both of them - four heap allocations for every quad, every frame, on a path that draws
+		// the whole interface. The indices are the same six numbers every time, so they are not rebuilt at
+		// all, and the four vertices go into a buffer of their own.
+		//
+		// Safe as shared state for the reason the two device buffers above it already are: this is the
+		// render thread's own path, and it is finished with the array before it returns.
+		_quad[0] = new Vertex( v0, t0 );
+		_quad[1] = new Vertex( v1, t1 );
+		_quad[2] = new Vertex( v2, t2 );
+		_quad[3] = new Vertex( v3, t3 );
 
 		var cmd = Render.CommandList;
-		cmd.UpdateBuffer( vertexBuffer, 0, vertices.ToArray() );
-		cmd.UpdateBuffer( indexBuffer, 0, indices.ToArray() );
+		cmd.UpdateBuffer( vertexBuffer, 0, _quad );
+		cmd.UpdateBuffer( indexBuffer, 0, QuadIndices );
 
 		cmd.SetIndexBuffer( indexBuffer, IndexFormat.UInt32 );
 		cmd.SetVertexBuffer( 0, vertexBuffer );
@@ -76,6 +85,12 @@ internal static partial class Graphics
 		for ( uint i = 0; i < resourceSets.Length; ++i )
 			cmd.SetGraphicsResourceSet( i, resourceSets[i] );
 
-		cmd.DrawIndexed( (uint)indices.Count );
+		cmd.DrawIndexed( (uint)QuadIndices.Length );
 	}
+
+	/// <summary>The two triangles of a quad, which never change - see <see cref="Quad"/>.</summary>
+	private static readonly uint[] QuadIndices = [3, 2, 1, 0, 1, 2];
+
+	/// <summary>The four corners of the quad being drawn, refilled per call rather than reallocated.</summary>
+	private static readonly Vertex[] _quad = new Vertex[4];
 }
