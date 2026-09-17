@@ -292,10 +292,20 @@ public class PeepNavigatorTests
 	}
 
 	/// <summary>
-	/// A navigator starts from what the save gave it, which is what lets a park resume mid-walk.
+	/// A navigator starts from the bookkeeping the save gave it - the cursor, the counts, the radius and
+	/// the two flags.
+	///
+	/// <para>
+	/// <b>This said "which is what lets a park resume mid-walk", and that was false.</b> A park cannot
+	/// resume mid-walk: the waypoints are the route, and the reader deliberately does not parse
+	/// <c>subpath_buffer[]</c>, because <c>SetDest</c> fills only <c>path_buffer_count - 1</c> of the
+	/// distances and the rest hold the uninitialised fill or a stale value from an earlier route. Every
+	/// assertion below is sound and not one of them is a waypoint. A route must be planned afresh, not
+	/// continued.
+	/// </para>
 	/// </summary>
 	[TestMethod]
-	public void ANavigatorStartsFromTheRouteTheSaveGaveIt()
+	public void ANavigatorStartsFromTheBookkeepingTheSaveGaveIt()
 	{
 		var nav = new PeepNavigator( Saved( cursor: 1, total: 3, buffered: 3 ) );
 
