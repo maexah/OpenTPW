@@ -22,10 +22,12 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// This plays it at a fixed level instead, and that is a <b>deliberate deviation</b> rather than a
-/// restoration: there are no guests yet, so the faithful reading is silence, and a park with nothing
-/// to hear is worse than a park with its own theme playing. When guests exist this is the one line
-/// that has to start asking how many there are.
+/// <b>It is played that way here now, and the deviation this paragraph used to describe is retired.</b>
+/// It said the fixed level was deliberate "because there are no guests yet, so the faithful reading is
+/// silence", and named the exact condition for ending it: when guests exist. They do - see
+/// <see cref="ParkPeople"/> - so the crowd drives the level, and an empty park really is silent.
+/// <b>The shipped park is quiet, and that is the original's design rather than a fault</b>: thirteen
+/// guests give a level of six out of a hundred, because the music is meant to swell as a park fills.
 /// </para>
 ///
 /// <para>
@@ -145,6 +147,33 @@ public sealed class ParkAudio : Entity
 
 	/// <summary>How long the music takes to fade as the park ends - the same as the lobby's stop.</summary>
 	private const float StopSeconds = 0.15f;
+
+	/// <summary>The top of the level the crowd drives, and the original's own clamp.</summary>
+	public const int LoudestCrowd = 100;
+
+	/// <summary>
+	/// How loud the crowd makes the music, nought through a hundred - the original's
+	/// <c>FUN_004c81e0</c>, which is <c>clamp( counted / 2, 0, 100 )</c> and nothing more.
+	///
+	/// <para>
+	/// <b>It counts GUESTS, not people, and reading it as people would have made a park twice as loud as
+	/// the original.</b> <c>FUN_004c7fa0</c> walks the thing list and counts a thing only where
+	/// <c>*(thing + 2) == 1</c> - the model byte, and model 1 is a guest - so the five staff are not in it.
+	/// The caller clamps the result again to 89, below this hundred, which never binds at any crowd a park
+	/// this size can hold.
+	/// </para>
+	/// <para>
+	/// <b>One term is deliberately missing and is named rather than quietly dropped.</b> The original
+	/// applies a further test to each guest before counting them: <c>FUN_004fa990</c> passes a thing when
+	/// any of five predicates hold, and all five read one dword at <c>thing + 8</c>, against 0, 1, 3, 9 and
+	/// 10. What that field is has not been established - it is not the person type, which runs 0 to 7, and
+	/// not the state, which lives at <c>+0x220</c> - and those predicates are asked of things right across
+	/// the executable rather than of guests alone. So this counts every guest the park simulates, which is
+	/// an <b>upper bound</b> on the original's count; where the filter excludes anybody, a park of ours is
+	/// a little louder than a park of theirs.
+	/// </para>
+	/// </summary>
+	public static int CrowdLevel( int guests ) => Math.Clamp( guests / 2, 0, LoudestCrowd );
 
 	private readonly SoundCategory? _music;
 	private Voice? _voice;
@@ -297,7 +326,15 @@ public sealed class ParkAudio : Entity
 		if ( !Audio.Ready || _music is not { IsValid: true } )
 			return;
 
+		// Asked every pass, as the original asks it: FUN_0051e790 runs from the park loop at 0x0054f870 and
+		// re-counts rather than being told when the crowd changes. Nobody spawns or leaves yet, so today it
+		// is the same number every time - but the shape is the original's, and it will move on its own the
+		// moment guests arrive by bus.
+		var volume = MusicVolume * CrowdLevel( ParkPeople.Current?.Peeps.Count ?? 0 ) / (float)LoudestCrowd;
+
 		if ( _voice is not { Playing: true } )
-			_voice = _music.Play( MusicEffect, MusicVolume, bus: AudioBus.Music );
+			_voice = _music.Play( MusicEffect, volume, bus: AudioBus.Music );
+		else
+			_voice.SetVolume( volume );
 	}
 }
