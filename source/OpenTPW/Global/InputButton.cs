@@ -2,6 +2,34 @@ using NeoVeldrid;
 
 namespace OpenTPW;
 
+/// <summary>
+/// Every key the game binds, with the default each one ships on.
+///
+/// <para>
+/// <b>Nine of these forty-one have a production listener; the other thirty-two are declared, bound,
+/// rebindable in the options screen and consumed by nothing.</b> Counted 2026-09-17 rather than estimated,
+/// and recorded here once so that it is not rediscovered a screen at a time. The nine that work are
+/// <see cref="HideUI"/>, <see cref="Menu"/>, <see cref="ToggleHelpBar"/>, <see cref="FreezeCamera"/>,
+/// <see cref="NextIsland"/>, <see cref="PreviousIsland"/>, <see cref="RotateLeft"/>,
+/// <see cref="RotateRight"/> and <see cref="CamcorderMode"/>.
+/// </para>
+/// <para>
+/// <b>This is not a defect list.</b> Most of the thirty-two wait on features that do not exist yet - there
+/// is no building, no research and no time control to speed up - and they are declared ahead of those on
+/// purpose, because the binding is what the options screen offers and the original ships all of them. The
+/// ones worth noticing are the pairs whose feature <i>does</i> now exist:
+/// <see cref="OpenPark"/> and <see cref="ClosePark"/>, which have had something to talk to since the gate
+/// began taking commands.
+/// </para>
+/// <para>
+/// <b>Two counting traps, both of which have caught somebody.</b> A plain search finds
+/// <see cref="OpenPark"/> in production code, but the only hit is prose inside a doc comment saying it is
+/// unconsumed. And <see cref="Clone"/> cannot be consumed by <c>Input.Pressed</c> at all whatever is wired
+/// to it: it is a modifier-only binding, and a modifier never registers as a press - it has to be asked
+/// with <c>Down</c>. So it is unreachable for a different reason than the rest, and deleting it as "dead"
+/// would be wrong.
+/// </para>
+/// </summary>
 public enum InputButton
 {
 	/// <summary>
