@@ -347,6 +347,15 @@ public class ParkAnimationTests
 	/// <summary>
 	/// <b>And the drawing takes the picture the animation is on, not the one the file recorded.</b> The same
 	/// gap that let a guest be walked half way across the park and still be drawn where the save left them.
+	///
+	/// <para>
+	/// <b>It watches throughout rather than at the end, and a control is why.</b> Written as a single look
+	/// after sixty-four ticks it was aliasable in exactly the way the first draft of
+	/// <see cref="TickingTheParkAdvancesTheGuestsPictures"/> was: widening the sprite gate to every eighth
+	/// tick gives a guest eight advances in that window, eight is the length of the walk, and every drawn
+	/// picture lands back on the saved one. The test then failed for a reason that had nothing to do with
+	/// its name. Counting every tick cannot be aliased by the period of anything.
+	/// </para>
 	/// </summary>
 	[TestMethod]
 	public void TheDrawingTakesTheLivePictureNotTheSavedOne()
@@ -358,25 +367,27 @@ public class ParkAnimationTests
 		{
 			EnterPark();
 
+			var slots = world.People.ToDictionary( person => person.ThingId, person => person.SpriteSlot );
+			var art = world.Sprites.ToDictionary( sprite => sprite.Slot );
+
+			var differing = 0;
+
 			for ( var tick = 0; tick < 64; ++tick )
 			{
 				Frame( GameClock.TickSeconds );
 				people.Update();
+
+				differing += people.Peeps.Count( peep =>
+				{
+					var saved = art[slots[peep.ThingId]];
+					var drawn = ParkGuestSprites.Showing( people.SpriteFor( peep.ThingId ), saved );
+
+					return drawn.Frame != saved.Frame || drawn.Set != saved.Set;
+				} );
 			}
 
-			var slots = world.People.ToDictionary( person => person.ThingId, person => person.SpriteSlot );
-			var art = world.Sprites.ToDictionary( sprite => sprite.Slot );
-
-			var differing = people.Peeps.Count( peep =>
-			{
-				var saved = art[slots[peep.ThingId]];
-				var drawn = ParkGuestSprites.Showing( people.SpriteFor( peep.ThingId ), saved );
-
-				return drawn.Frame != saved.Frame || drawn.Set != saved.Set;
-			} );
-
 			Assert.IsTrue( differing > 0,
-				"after two seconds somebody's drawn picture should differ from the saved one.\n   "
+				"at no point in two seconds did anybody's drawn picture differ from the saved one.\n   "
 				+ Everyone( people ) );
 
 			// And with no animation at all it is the saved one, so a park without a simulation still draws.
