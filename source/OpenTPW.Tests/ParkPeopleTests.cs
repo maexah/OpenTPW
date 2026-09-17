@@ -70,10 +70,18 @@ public class ParkPeopleTests
 	}
 
 	/// <summary>
-	/// <b>Every guest arrives carrying the route the save gave them.</b> This is the join between the
-	/// navigator, which has been built and dormant, and the guests the park actually simulates - nothing
-	/// constructed one from real data until now.
+	/// <b>Every guest arrives knowing how far along a route they had got.</b> This is the join between the
+	/// navigator, which had been built and left dormant, and the guests the park actually simulates -
+	/// nothing constructed one from real data until now.
 	///
+	/// <para>
+	/// <b>This test was called "carrying the route the save gave them", and that was an overclaim.</b>
+	/// Nothing below is a waypoint, because the save reader deliberately does not parse
+	/// <c>subpath_buffer[]</c> - only <c>path_buffer_count - 1</c> of its entries are ever written, so the
+	/// rest hold the uninitialised fill or a stale distance from an earlier route. The waypoints are the
+	/// route; what travels here is the bookkeeping around it, which is real and worth pinning but is not
+	/// the same thing.
+	/// </para>
 	/// <para>
 	/// The numbers are not quoted from an outside measurement. Each field is checked against the save
 	/// reader's own <c>Navigator</c> for the same person, so what is pinned is that the value travelled
@@ -82,7 +90,7 @@ public class ParkPeopleTests
 	/// </para>
 	/// </summary>
 	[TestMethod]
-	public void EveryGuestArrivesCarryingTheRouteTheSaveGaveThem()
+	public void EveryGuestArrivesKnowingHowFarAlongTheirRouteTheyWere()
 	{
 		var world = World();
 		var peeps = ParkPeople.PeepsIn( world ).ToDictionary( peep => peep.ThingId );

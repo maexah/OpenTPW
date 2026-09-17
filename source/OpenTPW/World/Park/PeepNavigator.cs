@@ -1,12 +1,21 @@
 namespace OpenTPW;
 
 /// <summary>
-/// The route a person is following, and the arithmetic that moves them along it.
+/// How far along a route a person has got, and the arithmetic that moves them along it.
 ///
 /// <para>
 /// <see cref="ParkWorld.NavigatorState"/> is what the save reader produces and describes a file. This is
 /// the running copy, seeded from it once when the park opens - the same arrangement <see cref="Peep"/>
 /// has with <see cref="ParkWorld.GuestState"/>.
+/// </para>
+/// <para>
+/// <b>The waypoints themselves are not here, and the counts below must not be read as if they were.</b>
+/// <see cref="Cursor"/>, <see cref="TotalWaypoints"/> and <see cref="BufferedWaypoints"/> are numbers the
+/// save records about a route; no coordinate of that route is carried, because the reader deliberately
+/// does not parse <c>subpath_buffer[]</c>. <c>SetDest</c> writes only <c>path_buffer_count - 1</c> of the
+/// distances, so the remaining slots hold the uninitialised fill or a stale value from an earlier route,
+/// and reading them without that rule would produce entirely plausible wrong answers. A person therefore
+/// knows how far along they were and not where they were going.
 /// </para>
 /// <para>
 /// <b>Everything here is 16.16 fixed point and integer arithmetic, deliberately.</b> The original is, and
@@ -60,13 +69,20 @@ public sealed class PeepNavigator
 
 	public int Radius { get; }
 
-	/// <summary>Which waypoint the person is walking towards.</summary>
+	/// <summary>
+	/// Which waypoint of the route the person was walking towards - an index, not a place. Nothing here
+	/// can say where that waypoint is; see the class remarks.
+	/// </summary>
 	public int Cursor { get; private set; }
 
-	/// <summary>How many waypoints the whole route has, buffered or not.</summary>
+	/// <summary>How many waypoints the whole route had, buffered or not.</summary>
 	public int TotalWaypoints { get; }
 
-	/// <summary>How many of them are loaded. The route streams when it is longer than <see cref="Slots"/>.</summary>
+	/// <summary>
+	/// How many of them the original had loaded at the moment it saved. The route streams when it is
+	/// longer than <see cref="Slots"/>. This is the count the save recorded; the waypoints it counts are
+	/// not carried.
+	/// </summary>
 	public int BufferedWaypoints { get; }
 
 	/// <summary>The distance of the legs still ahead within the buffer, which the cursor eats into.</summary>

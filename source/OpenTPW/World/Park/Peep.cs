@@ -76,9 +76,19 @@ public sealed class Peep
 	public PeepAnimation Animation { get; private set; } = PeepAnimation.None;
 
 	/// <summary>
-	/// Where this guest is going and how far along they are - the running copy of the navigator block the
-	/// save keeps for them.
+	/// How far along a route this guest had got - the running copy of the navigator block the save keeps
+	/// for them.
 	///
+	/// <para>
+	/// <b>It does NOT hold the route itself, and the commit that added this said otherwise.</b> What is
+	/// here is the bookkeeping: the cursor, how many waypoints the route had and how many were buffered,
+	/// the three distances, whether it finished or gave up, and the stuck record. The waypoints ARE the
+	/// route, and the save reader deliberately does not parse them - <c>subpath_buffer[]</c> is filled by
+	/// <c>SetDest</c> for only <c>path_buffer_count - 1</c> entries, so the rest hold
+	/// <c>0xCDCDCDCD</c> or a stale distance from whatever route was there before, and reading them
+	/// without that rule would hand out numbers that look entirely plausible. So a guest knows where they
+	/// had got to and not where they were going, and nothing here should pretend otherwise.
+	/// </para>
 	/// <para>
 	/// <b>Never null, and required rather than optional, because the save always has one.</b> The reader
 	/// calls its navigator parser unconditionally for every person and says so - "every person has one,
