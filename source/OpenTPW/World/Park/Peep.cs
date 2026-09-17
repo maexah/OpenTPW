@@ -47,7 +47,17 @@ public sealed class Peep
 
 	public float Toilet { get; set; }
 
-	public float Illness { get; set; }
+	/// <summary>
+	/// How close this guest is to being sick - <c>PeepInfo.VomitCapacity</c> is the level it is measured
+	/// against, and a ride raises it by the ride's excitement over <c>PeepInfo.RideVomitDivisor</c>.
+	/// </summary>
+	/// <remarks>
+	/// <b>This was called <c>Illness</c> until 2026-09-17 and the name was wrong</b> - see the note beside
+	/// <c>ParkWorld.ReadGuest</c>. The balance file calls the same meter "illness" in
+	/// <c>RegionFX[i].Illness</c> and <c>DecisionVarIllnessWeight</c>, so both words describe it; the
+	/// field's own name in the save is the one carried here.
+	/// </remarks>
+	public float Vomit { get; set; }
 
 	public float Litter { get; set; }
 
@@ -191,7 +201,7 @@ public sealed class Peep
 		Thirst = saved.Thirst;
 		Hunger = saved.Hunger;
 		Toilet = saved.Toilet;
-		Illness = saved.Illness;
+		Vomit = saved.Vomit;
 		Litter = saved.Litter;
 		MajorDest = saved.MajorDest;
 		QueuePos = saved.QueuePos;
@@ -332,8 +342,8 @@ public sealed class Peep
 		}
 
 		// In the original's order, which matters only in that each one takes its bite out of happiness
-		// in turn: illness, hunger, thirst, toilet.
-		foreach ( var need in new[] { Illness, Hunger, Thirst, Toilet } )
+		// in turn: vomit, hunger, thirst, toilet.
+		foreach ( var need in new[] { Vomit, Hunger, Thirst, Toilet } )
 		{
 			// The original truncates to an integer before comparing with 100, so a need has to have
 			// actually reached the top rather than merely be near it.

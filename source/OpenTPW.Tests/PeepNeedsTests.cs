@@ -19,10 +19,10 @@ public class PeepNeedsTests
 	/// <see cref="OnlyAQuarterOfTheGuestsEverGetHungrierOnTheirOwn"/>.
 	/// </summary>
 	private static Peep Guest( int thingId = 4, float thirst = 10f, float hunger = 10f,
-		float toilet = 10f, float illness = 0f, float happiness = 50f, int exitLevel = 100 )
+		float toilet = 10f, float vomit = 0f, float happiness = 50f, int exitLevel = 100 )
 		=> new( thingId, new ParkWorld.GuestState(
 			State: 6, SavedState: 6, PersonType: 0, Cash: 300, ExitLevel: exitLevel,
-			Happiness: happiness, Thirst: thirst, Hunger: hunger, Toilet: toilet, Illness: illness,
+			Happiness: happiness, Thirst: thirst, Hunger: hunger, Toilet: toilet, Vomit: vomit,
 			Litter: 0f, MajorDest: 0, QueuePos: 0, PrankeryIndex: 0 ), StandingStill );
 
 	/// <summary>
@@ -151,7 +151,7 @@ public class PeepNeedsTests
 	{
 		foreach ( var (name, peep) in new (string, Peep)[]
 		{
-			("illness", Guest( illness: 100f )),
+			("vomit", Guest( vomit: 100f )),
 			("hunger", Guest( hunger: 100f )),
 			("thirst", Guest( thirst: 100f )),
 			("toilet", Guest( toilet: 100f ))
@@ -162,7 +162,7 @@ public class PeepNeedsTests
 			Assert.AreEqual( 49f, peep.Happiness, $"{name} at its maximum should cost one happiness" );
 		}
 
-		var wretched = Guest( thirst: 100f, hunger: 100f, toilet: 100f, illness: 100f );
+		var wretched = Guest( thirst: 100f, hunger: 100f, toilet: 100f, vomit: 100f );
 
 		wretched.Tick( 4 );
 
@@ -217,7 +217,7 @@ public class PeepNeedsTests
 
 		Assert.AreEqual( Peep.HurryingSpeed, hurrying.PurposeSpeed, "past eighty they hurry" );
 
-		var strolling = Guest( toilet: 80f, hunger: 100f, illness: 100f );
+		var strolling = Guest( toilet: 80f, hunger: 100f, vomit: 100f );
 
 		strolling.Tick( 4 );
 

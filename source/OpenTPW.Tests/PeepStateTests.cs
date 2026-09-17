@@ -18,7 +18,7 @@ public class PeepStateTests
 	private static Peep Guest( int thingId = 4, float toilet = 10f )
 		=> new( thingId, new ParkWorld.GuestState(
 			State: 6, SavedState: 6, PersonType: 0, Cash: 300, ExitLevel: 100,
-			Happiness: 50f, Thirst: 10f, Hunger: 10f, Toilet: toilet, Illness: 0f,
+			Happiness: 50f, Thirst: 10f, Hunger: 10f, Toilet: toilet, Vomit: 0f,
 			Litter: 0f, MajorDest: 0, QueuePos: 0, PrankeryIndex: 0 ), StandingStill );
 
 	/// <summary>

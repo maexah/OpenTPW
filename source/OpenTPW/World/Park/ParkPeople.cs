@@ -414,7 +414,7 @@ public sealed class ParkPeople : Entity
 			yield return $"thing {peep.ThingId,2} kind {peep.PersonType} state {peep.State} "
 				+ $"(saved {peep.SavedState}) cash {peep.Cash,4} exit {peep.ExitLevel,4} "
 				+ $"happy {peep.Happiness,3:0} thirst {peep.Thirst,3:0} hunger {peep.Hunger,3:0} "
-				+ $"toilet {peep.Toilet,3:0} ill {peep.Illness,3:0} litter {peep.Litter,3:0} "
+				+ $"toilet {peep.Toilet,3:0} vomit {peep.Vomit,3:0} litter {peep.Litter,3:0} "
 				+ $"speed {peep.PurposeSpeed} "
 				// Where they ARE, which is the half of a person this census could not see until a park
 				// was opened and nobody moved. Needs change and position did not, and there was no way

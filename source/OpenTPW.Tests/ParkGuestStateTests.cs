@@ -117,7 +117,7 @@ public class ParkGuestStateTests
 	/// rather than merely small ones.
 	/// </para>
 	/// <para>
-	/// The last two assertions are the anti-vacuity guard. Illness, litter, destination and queue
+	/// The last two assertions are the anti-vacuity guard. Vomit, litter, destination and queue
 	/// position are all zero on all thirteen, which is what arriving should look like - but a column of
 	/// zeros agrees with a misread block just as readily, so the needs that are <i>not</i> uniform have
 	/// to be seen to vary.
@@ -144,7 +144,7 @@ public class ParkGuestStateTests
 			Assert.IsTrue( guest.PersonType is >= 0 and < ParkWorld.GuestState.PersonTypes,
 				$"{where} is kind {guest.PersonType}, which is not one the balance file describes" );
 
-			Assert.AreEqual( 0f, guest.Illness, $"{where} illness" );
+			Assert.AreEqual( 0f, guest.Vomit, $"{where} vomit" );
 			Assert.AreEqual( 0f, guest.Litter, $"{where} litter carried" );
 			Assert.AreEqual( 0, guest.MajorDest, $"{where} should not have chosen anywhere to go yet" );
 			Assert.AreEqual( 0, guest.QueuePos, $"{where} should not be standing in a queue" );
@@ -152,7 +152,7 @@ public class ParkGuestStateTests
 			foreach ( var (need, name) in new[]
 			{
 				(guest.Happiness, "happiness"), (guest.Thirst, "thirst"), (guest.Hunger, "hunger"),
-				(guest.Toilet, "toilet"), (guest.Illness, "illness"), (guest.Litter, "litter")
+				(guest.Toilet, "toilet"), (guest.Vomit, "vomit"), (guest.Litter, "litter")
 			} )
 			{
 				Assert.IsTrue( need is >= 0f and <= 100f, $"{where} {name} is {need}, outside 0..100" );

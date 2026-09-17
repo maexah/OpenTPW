@@ -243,7 +243,7 @@ public sealed class ParkWorld
 	/// </param>
 	public readonly record struct GuestState(
 		int State, int SavedState, int PersonType, int Cash, int ExitLevel,
-		float Happiness, float Thirst, float Hunger, float Toilet, float Illness, float Litter,
+		float Happiness, float Thirst, float Hunger, float Toilet, float Vomit, float Litter,
 		int MajorDest, int QueuePos, int PrankeryIndex,
 		int PaidAdmission = 0, int ParkOpeningWait = 0 )
 	{
@@ -1159,7 +1159,7 @@ public sealed class ParkWorld
 			Thirst: ReadSingleAt( start + 509 ),
 			Hunger: ReadSingleAt( start + 426 ),
 			Toilet: ReadSingleAt( start + 525 ),
-			Illness: ReadSingleAt( start + 529 ),
+			Vomit: ReadSingleAt( start + 529 ),        // see the note below on why this is not mIllness
 			Litter: ReadSingleAt( start + 438 ),
 			MajorDest: ReadUInt16At( start + 442 ),     // mMajorDest - the thing they have chosen, or none
 			QueuePos: ReadByteAt( start + 494 ),        // mQueuePos
@@ -1170,26 +1170,35 @@ public sealed class ParkWorld
 			PaidAdmission: ReadInt32At( start + 460 ),  // mPaidAdmission
 			ParkOpeningWait: ReadInt32At( start + 464 ) ); // mParkOpeningWaitingTime
 
-	// <b>There is a SEVENTH float in this block, at +521, and it is deliberately not read.</b>
+	// <b>+529 was called mIllness by this reader until 2026-09-17, and it cannot be.</b>
 	//
 	// The guest block carries exactly seven unnamed floats - +422, +426, +438, +509, +521, +525 and +529 -
-	// and six of them are given names above. The one at +521 has never had a reader.
+	// of which six are named above and +521 has never had a reader at all.
 	//
-	// It matters because of what it implies about its neighbours. The block's named fields are written in
-	// alphabetical order, and each unnamed float sits where its own name would sort; three of the seven
-	// fall after mTimeStartedIdling, which fits mTiredness, mToilet and mVomit and does NOT fit mIllness -
-	// mIllness would sort between mHunger and mLastPosX, and those two are adjacent with no room between
-	// them. Nor is mIllness anywhere in the 390-byte person base. So the field this reader calls Illness at
-	// +529 is probably mVomit, and PeepInfo.VomitCapacity in the balance file is a second reason to think so.
+	// The argument is structural rather than statistical, which is why it stands on its own. This block is
+	// written in STRICT alphabetical order throughout (unlike the staff block, which transposes one pair),
+	// so every unnamed float sits exactly where its own name would sort. mIllness would sort between
+	// mHunger at +426 and mLastPosX at +430 - and those two are ADJACENT, four bytes apart, with no room
+	// between them for anything. It is not in the 390-byte person base either, whose fields are all now
+	// read. So there is no slot anywhere on a person for a field of that name.
 	//
-	// <b>It is left alone anyway, and the measurement is why rather than an excuse.</b> +521 and +529 both
-	// read NOUGHT on all thirteen of the shipped park's guests, while +525 varies from 3 to 27. A value
-	// that is nought everywhere is equally what an unused stat looks like in a park nobody has played and
-	// what a wrong offset looks like landing in padding, so the one empirical test available here cannot
-	// tell the two apart. It neither confirmed the reading nor refuted it. Renaming a field on the strength
-	// of an ordering argument whose only measurement came back uninformative would be trading a name that
-	// might be wrong for another name that might be wrong, so the original's own risk is left where it is
-	// and written down instead.
+	// Three floats fall after mTimeStartedIdling, which fits mTiredness, mToilet and mVomit in that order -
+	// and the MIDDLE of the three is independently known: +525 is the only one of them that varies (3 to
+	// 27 across the shipped park's guests), which is what a live need looks like, and mToilet sorts exactly
+	// between the other two. That brackets +529 from both sides. PeepInfo.VomitCapacity exists in the
+	// balance file and no illness LEVEL key does; RegionFX[i].Illness and DecisionVarIllnessWeight are the
+	// data files' name for what this meter measures, which is why both can be true at once.
+	//
+	// <b>What the measurement did and did not settle, because it is easy to overclaim here.</b> +521 and
+	// +529 both read nought on all thirteen guests. That is equally what an unused stat looks like in a
+	// park nobody has played and what a wrong offset looks like landing in padding, so it neither confirmed
+	// the reading nor refuted it - it simply does not discriminate. The rename rests on the ordering
+	// argument above, not on it.
+	//
+	// <b>+521 is still NOT named, and that asymmetry is deliberate.</b> Correcting a name that is
+	// demonstrably wrong is a different act from inventing one that is merely plausible: mTiredness fits
+	// the slot, but nothing reads the field and no measurement distinguishes it, so it stays unread and
+	// written down rather than guessed at.
 
 	/// <summary>
 	/// A member of staff's own block, which begins at <c>+398</c> - the same place a guest's does, after the
