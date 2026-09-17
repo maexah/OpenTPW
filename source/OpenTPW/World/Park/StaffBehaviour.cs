@@ -1,0 +1,444 @@
+using System;
+
+namespace OpenTPW;
+
+/// <summary>
+/// One turn of what a member of staff is doing - the shared half of the original's five per-kind
+/// behaviours, which turns out to be nearly all of them.
+///
+/// <para>
+/// <b>The finding this class rests on.</b> Each kind of staff has a per-turn function of its own
+/// (<c>FUN_004da490</c> mechanic, <c>FUN_004d73c0</c> handyman, <c>FUN_004d4810</c> entertainer,
+/// <c>FUN_004d6410</c> guard, <c>FUN_005029f0</c> researcher) and all five open with the same switch on
+/// <c>mState</c>, answering states 0 to 7 through the same three handlers - whose own diagnostics call
+/// them <c>CStaff::</c>. So this is one machine with five extensions, not five machines, and the shared
+/// part moves every kind.
+/// </para>
+/// <para>
+/// <b>What is built.</b> All eight shared states, and the decide arm of the two kinds whose decide arm is
+/// itself shared: a guard and a researcher roll three times in four for somewhere to walk and take it.
+/// That is what makes Lost Kingdom's guard and researcher patrol.
+/// </para>
+/// <para>
+/// <b>What is deliberately not built, each for a named reason.</b> A handyman, a mechanic and an
+/// entertainer finish a walk by jumping into a work-finding function of their own
+/// (<c>FUN_004d7100</c>, <c>FUN_004da5b0</c>, <c>FUN_004d46d0</c>), and those want litter on map cells, a
+/// broken ride and guests close enough to entertain - none of which this project has. Those three
+/// therefore finish the walk the save left them on and then stand, which is honest rather than invented.
+/// The strike arms are absent for a different reason: reaching them means asking the staff union's thing
+/// what its script says, the same question <c>ParkRides.GateStatus</c> answers for the gate, and nothing
+/// binds a script to the union yet. Rest areas are absent for a third: an object is a rest area by a flag
+/// on its own record that the save reader does not read, so a tired staff member takes the original's own
+/// "couldn't find a rest area" path.
+/// </para>
+/// </summary>
+public sealed class StaffBehaviour
+{
+	private readonly Random _random;
+
+	private readonly int[] _idleDuration = new int[ParkWorld.StaffState.PayGrades];
+	private readonly float[] _recuperation = new float[ParkWorld.StaffState.PayGrades];
+	private readonly float[] _happinessRecuperation = new float[ParkWorld.StaffState.PayGrades];
+
+	/// <param name="balance">
+	/// The park's balance stack, which is where every staff constant lives. Null leaves the fallbacks in
+	/// place - the global file's own values - so that a test can drive this without mounting a game.
+	/// </param>
+	/// <param name="random">The rolls this makes. Taken so a test can seed them; the game does not.</param>
+	public StaffBehaviour( ParkBalance? balance = null, Random? random = null )
+	{
+		_random = random ?? new Random();
+
+		// The fallbacks are the shipped global file's own numbers rather than zeros: a missing key should
+		// leave the simulation running, and a zero idle duration would have every staff member decide
+		// again on every single turn.
+		RestLevel = balance?.Int( "AllStaffConstants.RestLevel", 1 ) ?? 1;
+		HappinessHitForNoRestArea = balance?.Int( "AllStaffConstants.HappyHitCosNoRestArea", 2 ) ?? 2;
+
+		int[] idleFallback = [40, 30, 20, 10, 5];
+		float[] restFallback = [0.2f, 0.3f, 0.4f, 0.5f, 0.75f];
+		float[] moodFallback = [1f, 2f, 2f, 3f, 3f];
+
+		for ( var grade = 0; grade < ParkWorld.StaffState.PayGrades; ++grade )
+		{
+			var key = $"PerGradeStaffConsts[{grade}]";
+
+			_idleDuration[grade] = balance?.Int( $"{key}.IdleDuration", idleFallback[grade] )
+				?? idleFallback[grade];
+			_recuperation[grade] = balance?.Float( $"{key}.RecuperationRate", restFallback[grade] )
+				?? restFallback[grade];
+			_happinessRecuperation[grade] =
+				balance?.Float( $"{key}.HappinessRecuperationRate", moodFallback[grade] )
+				?? moodFallback[grade];
+		}
+	}
+
+	/// <summary>How rested a staff member has to be to keep working - <c>AllStaffConstants.RestLevel</c>, 1.</summary>
+	public int RestLevel { get; }
+
+	/// <summary>
+	/// What failing to reach a rest area costs them -
+	/// <c>AllStaffConstants.HappyHitCosNoRestArea</c>, 2.
+	/// </summary>
+	public int HappinessHitForNoRestArea { get; }
+
+	/// <summary>How long a staff member of this grade stands about before looking for something to do.</summary>
+	public int IdleDurationAt( int grade ) => _idleDuration[Math.Clamp( grade, 0, _idleDuration.Length - 1 )];
+
+	/// <summary>How much rest a staff member of this grade recovers per turn sitting in a rest area.</summary>
+	public float RecuperationAt( int grade ) => _recuperation[Math.Clamp( grade, 0, _recuperation.Length - 1 )];
+
+	/// <inheritdoc cref="RecuperationAt"/>
+	public float HappinessRecuperationAt( int grade )
+		=> _happinessRecuperation[Math.Clamp( grade, 0, _happinessRecuperation.Length - 1 )];
+
+	/// <summary>
+	/// How much rest one turn of walking costs, before the grade multiplier - the double at
+	/// <c>0x700848</c>, read out of the executable because it is a code constant rather than a balance key.
+	/// </summary>
+	public const float TirednessPerWalkingTurn = 0.012f;
+
+	/// <summary>The same for mood - the double at <c>0x700850</c>.</summary>
+	public const float HappinessPerWalkingTurn = 0.005f;
+
+	/// <summary>
+	/// What the pay grade is subtracted from to scale both drains: <c>(6 - grade)</c>, so a grade 4 staff
+	/// member tires at a third of the rate of a grade 0 one. Six rather than five, so that even the best
+	/// grade still tires.
+	/// </summary>
+	public const int TiringBase = 6;
+
+	/// <summary>How many times the patrol roll tries for a cell before giving up - <c>FUN_00506f30</c>.</summary>
+	public const int PatrolTries = 30;
+
+	/// <summary>
+	/// One turn in four is the chance a guard or researcher stays put rather than walking somewhere:
+	/// the original takes the walk when <c>roll &amp; 3</c> is <b>not</b> nought.
+	/// </summary>
+	public const int StayPutShare = 4;
+
+	/// <summary>How many idle durations the waiting state waits - three.</summary>
+	public const int WaitingIsIdleTimes = 3;
+
+	/// <summary>
+	/// The four sides in the order the original tests them, which is the same order and the same reason as
+	/// <see cref="PeepBehaviour"/>'s: the connection bits run 0x10, 0x04, 0x01, 0x40.
+	/// </summary>
+	private static readonly StepDirection[] SlotOrder =
+		[StepDirection.North, StepDirection.West, StepDirection.South, StepDirection.East];
+
+	/// <summary>One turn of one staff member's behaviour.</summary>
+	/// <param name="tick">The park's own clock, which the idle stamps are readings of.</param>
+	public void Step( Staff staff, PeepWalk walk, SpriteScript? playing, int tick )
+	{
+		ArgumentNullException.ThrowIfNull( staff );
+		ArgumentNullException.ThrowIfNull( walk );
+
+		// <b>A stamp that reads ahead of the clock is stale, and the original says so itself.</b>
+		// FUN_004f9490 opens by zeroing mStrandedTime whenever it is greater than the current time, which
+		// is the same situation every staff stamp is in the moment a park is loaded: they were taken
+		// against the original's own mGameTick, which Lost Kingdom's save left at 755, and our clock starts
+		// again at nought.
+		//
+		// <b>Without this the whole feature is inert and looks fine.</b> The guard is saved idle with a
+		// stamp of 752, so "have I idled long enough" stayed false for the first 752 ticks of every
+		// session - he stood exactly where the file left him while every state in this class was
+		// reachable, correct and never reached. Found by the test that asserts position rather than state.
+		if ( staff.TimeStartedIdling > tick )
+			staff.TimeStartedIdling = 0;
+
+		switch ( staff.Activity )
+		{
+			// Standing about. They wait out their grade's idle duration and then look for something to do.
+			case StaffActivity.Idle:
+				if ( tick <= staff.TimeStartedIdling + IdleDurationAt( staff.PayGrade ) )
+					break;
+
+				Decide( staff, walk, tick );
+
+				break;
+
+			// Walking somewhere. Still going costs them rest and mood; arriving or giving up both end in
+			// the same decision, which is the original's own shape - it falls out of the switch either way.
+			case StaffActivity.Walking:
+				if ( Walked( staff, walk, playing ) == WalkVerdict.Walking )
+				{
+					Tire( staff );
+
+					break;
+				}
+
+				Decide( staff, walk, tick );
+
+				break;
+
+			// On the way to sit down. Arriving starts the rest; failing to get there costs them the mood
+			// the balance file names for exactly this and puts them back to standing about.
+			case StaffActivity.GoingToRest:
+				switch ( Walked( staff, walk, playing ) )
+				{
+					case WalkVerdict.Arrived:
+						staff.SetActivity( StaffActivity.Resting, tick );
+						break;
+
+					case WalkVerdict.CannotReach:
+						staff.Happiness = Staff.Change( staff.Happiness, -HappinessHitForNoRestArea );
+						staff.SetActivity( StaffActivity.Idle, tick );
+						break;
+
+					default:
+						break;
+				}
+
+				break;
+
+			// Sitting down recovering. Both stats climb by the grade's own rates until one of them is full.
+			case StaffActivity.Resting:
+				Rest( staff, tick );
+
+				break;
+
+			// Walking to the picket. Arriving and giving up are treated alike, as they are for a guest
+			// shuffling up a queue: somebody who cannot reach the picket is still on strike.
+			case StaffActivity.GoingOnStrike:
+				if ( Walked( staff, walk, playing ) != WalkVerdict.Walking )
+					staff.SetActivity( StaffActivity.OnStrike, tick );
+
+				break;
+
+			// Waiting out a spell three times as long as an ordinary idle.
+			case StaffActivity.Waiting:
+				if ( tick - staff.TimeStartedIdling > IdleDurationAt( staff.PayGrade ) * WaitingIsIdleTimes )
+					staff.SetActivity( StaffActivity.Idle, tick );
+
+				break;
+
+			// On strike and being carried both do nothing here. The strike needs the union's script state,
+			// and the original's own case 7 has an empty body.
+			default:
+				break;
+		}
+	}
+
+	/// <summary>
+	/// What a staff member does when they have finished a walk or run out of idling.
+	///
+	/// <para>
+	/// <b>Only a guard and a researcher get past the first line, and that is the original's shape rather
+	/// than a limit of this build.</b> The other three kinds jump into a work-finding function of their
+	/// own here; see the class remarks for what each of those wants.
+	/// </para>
+	/// </summary>
+	private void Decide( Staff staff, PeepWalk walk, int tick )
+	{
+		if ( staff.Model is not (GuardModel or ResearcherModel) )
+		{
+			// They have arrived somewhere and have no work to look for, so they stand. Going to Idle is
+			// what stamps the clock, which is what stops this being asked again every turn.
+			staff.SetActivity( StaffActivity.Idle, tick );
+
+			return;
+		}
+
+		// Too tired to carry on. The original looks for the nearest rest area here and walks to it; rest
+		// areas are named by a flag this project does not read, so what is reproduced is its other arm -
+		// the one it takes when it cannot find one, which loses them heart one turn in sixteen.
+		if ( staff.Tiredness < RestLevel )
+		{
+			if ( (_random.Next() & 0xf) == 0 )
+				staff.Happiness = Staff.Change( staff.Happiness, -HappinessHitForNoRestArea );
+
+			staff.SetActivity( StaffActivity.Idle, tick );
+
+			return;
+		}
+
+		// Three turns in four they walk somewhere; the fourth they stand and are asked again.
+		var walks = (_random.Next() & (StayPutShare - 1)) != 0;
+
+		staff.SetActivity( walks && SetRandomDest( staff, walk ) ? StaffActivity.Walking : StaffActivity.Idle,
+			tick );
+	}
+
+	/// <summary>The thing models whose decide arm is answered inline by the shared switch.</summary>
+	private const int GuardModel = 7;
+
+	/// <inheritdoc cref="GuardModel"/>
+	private const int ResearcherModel = 8;
+
+	/// <summary>
+	/// One turn of recovering - <c>FUN_005061d0</c>, which climbs both stats by this grade's own rates and
+	/// holds each at a hundred.
+	/// </summary>
+	/// <remarks>
+	/// <b>The rest ends when a stat reaches a hundred exactly</b>, which the original tests by truncating
+	/// to a byte and comparing against 'd' - the character whose code is 100. It reads as a character in
+	/// the decompiler and is a number.
+	/// </remarks>
+	private void Rest( Staff staff, int tick )
+	{
+		staff.Tiredness = Staff.Change( staff.Tiredness, RecuperationAt( staff.PayGrade ) );
+		staff.Happiness = Staff.Change( staff.Happiness, HappinessRecuperationAt( staff.PayGrade ) );
+
+		if ( (int)staff.Tiredness < (int)Staff.Most )
+			return;
+
+		// Up and back to work. The rest area is let go of on the way out, which is what the original does
+		// before it hands back to the kind's own resume.
+		staff.RestArea = 0;
+		staff.SetActivity( StaffActivity.Idle, tick );
+	}
+
+	/// <summary>
+	/// What one turn of walking costs - <c>FUN_005066a0</c>, scaled by <c>(6 - grade)</c> so that a better
+	/// trained staff member wears down more slowly.
+	/// </summary>
+	private static void Tire( Staff staff )
+	{
+		var scale = TiringBase - staff.PayGrade;
+
+		staff.Tiredness = Staff.Change( staff.Tiredness, -( scale * TirednessPerWalkingTurn ) );
+		staff.Happiness = Staff.Change( staff.Happiness, -( scale * HappinessPerWalkingTurn ) );
+	}
+
+	/// <summary>
+	/// One turn of walking and the animation that goes with it - the same join
+	/// <see cref="PeepBehaviour"/> makes, and for the same reasons.
+	/// </summary>
+	private static WalkVerdict Walked( Staff staff, PeepWalk walk, SpriteScript? playing )
+	{
+		if ( !walk.HasRoute && (staff.Navigator.CannotReach || !walk.PlanRoute()) )
+			return WalkVerdict.CannotReach;
+
+		var verdict = walk.Step();
+
+		if ( verdict != WalkVerdict.Walking )
+			return verdict;
+
+		var wanted = Staff.AnimationFor( StaffActivity.Walking );
+
+		if ( playing != null && !playing.IsOn( wanted ) )
+			staff.NextAnimation = wanted;
+
+		staff.NextInterval = SpriteScript.IntervalFor( walk.LastStep.X, walk.LastStep.Y, hurrying: false );
+
+		return verdict;
+	}
+
+	/// <summary>
+	/// Sends a staff member somewhere - the staff half of <c>FUN_004f9490</c>, which is a different
+	/// function from the guest half and sits in front of it.
+	///
+	/// <para>
+	/// <b>Standing outside your patrol area is answered before anything else</b>: a staff member who has
+	/// wandered out of their patch heads straight back into it rather than picking a neighbour. Inside it,
+	/// the ordinary neighbour pick runs with any candidate outside the area struck out, and if that leaves
+	/// nothing the patrol roll answers again.
+	/// </para>
+	/// <para>
+	/// <b>A guest in the same position gets a "stranded" stamp and a thought bubble instead</b> - the
+	/// <c>mStrandedTime</c> the person base names at <c>+0x198</c>. Staff never take that path; they take
+	/// the patrol roll, which is why this is not simply the guest's routine with an extra test.
+	/// </para>
+	/// </summary>
+	private bool SetRandomDest( Staff staff, PeepWalk walk )
+	{
+		var (x, y) = walk.Position.Cell;
+
+		if ( !staff.Patrols( x, y ) )
+			return PatrolRoll( staff, walk );
+
+		var candidates = new (int X, int Y)?[SlotOrder.Length];
+		var found = 0;
+
+		for ( var slot = 0; slot < SlotOrder.Length; ++slot )
+		{
+			if ( walk.Blocked( x, y, SlotOrder[slot] ) )
+				continue;
+
+			var cell = MapStep.Beyond( x, y, SlotOrder[slot] );
+
+			// The strike-out the guest version has no idea about.
+			if ( !staff.Patrols( cell.X, cell.Y ) )
+				continue;
+
+			candidates[slot] = cell;
+			++found;
+		}
+
+		if ( found == 0 )
+			return PatrolRoll( staff, walk );
+
+		var first = _random.Next() & (SlotOrder.Length - 1);
+
+		for ( var step = 0; step < SlotOrder.Length; ++step )
+		{
+			var slot = (first + step) & (SlotOrder.Length - 1);
+
+			if ( candidates[slot] is not { } cell )
+				continue;
+
+			// A random point inside the cell rather than its centre, the same clamped roll a wandering
+			// guest takes - this tail is shared between the two halves of the original's function.
+			staff.Navigator.Target = new FixedVector( SomewhereIn( cell.X ), SomewhereIn( cell.Y ) );
+
+			return walk.PlanRoute();
+		}
+
+		return PatrolRoll( staff, walk );
+	}
+
+	/// <summary>
+	/// Thirty tries at a cell inside the patrol area - <c>FUN_00506f30</c>, whose own log line when it runs
+	/// out is "Could not find or reach a destination".
+	/// </summary>
+	/// <remarks>
+	/// <b>This one aims at the cell CENTRE</b>, not at a random point inside it: it goes through the
+	/// ordinary destination setter rather than through the tail that jitters. The two are a few lines apart
+	/// in the original and do different things, which is worth not tidying.
+	/// <para>
+	/// One predicate of the original's is left out: between the bounds check and the route it asks
+	/// something of the map cell that this project has not established. A cell that fails it would almost
+	/// certainly fail to produce a route either, which is the test that follows here.
+	/// </para>
+	/// </remarks>
+	private bool PatrolRoll( Staff staff, PeepWalk walk )
+	{
+		if ( !staff.HasPatrolArea )
+			return false;
+
+		var (fromX, fromY) = staff.PatrolFrom;
+		var (toX, toY) = staff.PatrolTo;
+
+		// A rectangle the wrong way round would divide by nought below rather than merely pick badly. Every
+		// patrol area the shipped park carries is well formed - ParkStaffStateTests pins that - so no test
+		// here would ever have reached it, which is exactly why it is guarded rather than assumed.
+		if ( toX < fromX || toY < fromY )
+			return false;
+
+		for ( var attempt = 0; attempt < PatrolTries; ++attempt )
+		{
+			var x = fromX + (_random.Next() % (toX - fromX + 1));
+			var y = fromY + (_random.Next() % (toY - fromY + 1));
+
+			if ( x < 0 || y < 0 || x >= ParkWorld.MapSize || y >= ParkWorld.MapSize )
+				continue;
+
+			staff.Navigator.Target = new FixedVector(
+				PeepNavigator.WaypointCentre( x ), PeepNavigator.WaypointCentre( y ) );
+
+			if ( walk.PlanRoute() )
+				return true;
+		}
+
+		return false;
+	}
+
+	/// <summary>The near edge of a cell plus a clamped roll - see <see cref="PeepBehaviour"/>.</summary>
+	private int SomewhereIn( int cell )
+	{
+		var within = Math.Clamp( _random.Next() & 0x7f, 5, 0x7b );
+
+		return (cell * PeepNavigator.One) + (within * (PeepNavigator.One / 256));
+	}
+}

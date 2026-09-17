@@ -49,6 +49,20 @@ public sealed class ParkPeople : Entity
 	private readonly PeepBehaviour _behaviour;
 
 	/// <summary>
+	/// The park's five members of staff, which are a different simulation from its guests - see
+	/// <see cref="Staff"/> for why they are a separate type rather than a guest with a job.
+	/// </summary>
+	private readonly List<Staff> _staff;
+
+	private readonly Dictionary<int, PeepWalk> _staffWalks = [];
+
+	/// <summary>
+	/// What each member of staff is doing - the shared half of the original's five per-kind behaviours.
+	/// One for the park, as <see cref="_behaviour"/> is, because the constants it reads are the park's.
+	/// </summary>
+	private readonly StaffBehaviour _staffBehaviour;
+
+	/// <summary>
 	/// The mode every edge question in this park is asked in.
 	///
 	/// <para>
@@ -87,6 +101,11 @@ public sealed class ParkPeople : Entity
 		// the gates are open and on how many visitors have ever been let in, and both are the park's.
 		_behaviour = new PeepBehaviour( park, random: null, admission, gateStatus );
 
+		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
+		// none of what a guest needs - the fee, the gate - means anything to them.
+		_staff = StaffIn( park );
+		_staffBehaviour = new StaffBehaviour( balance );
+
 		Current = this;
 
 		if ( park != null )
@@ -118,9 +137,29 @@ public sealed class ParkPeople : Entity
 						picture.Script, picture.Pc, picture.SpriteNumber, picture.Frame );
 				}
 			}
+
+			// And the staff, seeded exactly as the guests are and for the same two reasons: they are saved
+			// facing a particular way and part-way through a picture, and starting either afresh would turn
+			// the whole park on its first frame.
+			foreach ( var member in _staff )
+			{
+				if ( !saved.TryGetValue( member.ThingId, out var person ) )
+					continue;
+
+				_staffWalks[member.ThingId] = new PeepWalk( member.Navigator, blocked )
+				{
+					Heading = person.Angle
+				};
+
+				if ( pictures.TryGetValue( person.SpriteSlot, out var picture ) )
+				{
+					_sprites[member.ThingId] = new SpriteScript(
+						picture.Script, picture.Pc, picture.SpriteNumber, picture.Frame );
+				}
+			}
 		}
 
-		Log.Info( $"People: {_peeps.Count} guests simulating" );
+		Log.Info( $"People: {_peeps.Count} guests and {_staff.Count} staff simulating" );
 	}
 
 	/// <summary>
@@ -140,8 +179,23 @@ public sealed class ParkPeople : Entity
 				.Where( person => person.Guest != null )
 				.Select( person => new Peep( person.ThingId, person.Guest!.Value, person.Navigator ) )];
 
+	/// <summary>
+	/// Every member of staff the save named, as a running copy - the five kinds of person that are not
+	/// model 1.
+	/// </summary>
+	internal static List<Staff> StaffIn( ParkWorld? park )
+		=> park == null
+			? []
+			: [.. park.People
+				.Where( person => person.Staff != null )
+				.Select( person => new Staff(
+					person.ThingId, person.Model, person.Staff!.Value, person.Navigator ) )];
+
 	/// <summary>Every guest, in the order the save lists them.</summary>
 	internal IReadOnlyList<Peep> Peeps => _peeps;
+
+	/// <summary>Every member of staff, in the order the save lists them.</summary>
+	internal IReadOnlyList<Staff> Staff => _staff;
 
 	/// <summary>
 	/// How many of the game's 31ms ticks pass between turns of the thing engine.
@@ -252,6 +306,46 @@ public sealed class ParkPeople : Entity
 				if ( playing != null && peep.DueOn( thingTick ) )
 					Apply( peep, playing );
 			}
+
+			// The staff run on the same beat. FUN_0050b360 switches on the thing's model byte and gives
+			// every person-kind a needs call and a behaviour call back to back, so a member of staff takes
+			// their turn exactly where a guest takes theirs - there is no second clock.
+			//
+			// <b>The needs half is deliberately absent for staff.</b> A guest's needs are hunger, thirst
+			// and the rest; a staff member's are their pay and their training, which nothing here runs.
+			foreach ( var member in _staff )
+			{
+				var playing = _sprites.GetValueOrDefault( member.ThingId );
+
+				// <b>The GAME tick, not the thing tick, and the difference is a factor of eight.</b> A
+				// guest's behaviours take the thing tick because nothing in them compares against a clock;
+				// a staff member's idle countdown does, and what it reads is named: FUN_004d6410 tests
+				// against [DAT_0080239c + 0x1da70c], which the executable's own field table pairs with
+				// mGameTick. Handing over the thing tick would have made every staff member idle eight
+				// times as long as the balance file asks.
+				//
+				// <b>What is still not established</b> is whether mGameTick advances once per 31ms step or
+				// once per turn of the thing engine - the same open question PeepBehaviour.Step records for
+				// a guest. It decides how long staff pause between decisions and nothing else, so it is
+				// named here rather than guessed at.
+				if ( _staffWalks.TryGetValue( member.ThingId, out var walk ) )
+					_staffBehaviour.Step( member, walk, playing, tick );
+
+				if ( playing == null )
+					continue;
+
+				if ( member.NextAnimation != 0 )
+				{
+					playing.Start( member.NextAnimation );
+					member.NextAnimation = 0;
+				}
+
+				if ( member.NextInterval != 0 )
+				{
+					playing.Interval = member.NextInterval;
+					member.NextInterval = 0;
+				}
+			}
 		}
 	}
 
@@ -277,6 +371,9 @@ public sealed class ParkPeople : Entity
 
 	/// <summary>This guest's walk, for the tests and the debug console.</summary>
 	internal PeepWalk? WalkFor( int thingId ) => _walks.GetValueOrDefault( thingId );
+
+	/// <summary>This staff member's walk, for the same.</summary>
+	internal PeepWalk? StaffWalkFor( int thingId ) => _staffWalks.GetValueOrDefault( thingId );
 
 	/// <summary>This guest's animation, for the drawing, the tests and the debug console.</summary>
 	internal SpriteScript? SpriteFor( int thingId ) => _sprites.GetValueOrDefault( thingId );
