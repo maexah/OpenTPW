@@ -54,6 +54,18 @@ public class Level
 	public ParkWorld? Park { get; private set; }
 
 	/// <summary>
+	/// The park as it is being <i>played</i>, seeded once from <see cref="Park"/> - the balance that
+	/// moves, the visitor count, and the cells anything can change. Null in the lobby.
+	///
+	/// <para>
+	/// <b>The level owns it because nothing smaller can.</b> The guests move the money, the interface
+	/// shows it, and a handyman will read the cells; a number kept by any one of those is a number the
+	/// others cannot see, which is exactly what it replaces - see <see cref="ParkState"/>.
+	/// </para>
+	/// </summary>
+	public ParkState? ParkState { get; private set; }
+
+	/// <summary>
 	/// Which of the game's two worlds this is. The original runs them as separate states of one
 	/// machine - the lobby is states 1/2/3 and a park is 9/10/0xb - and they share almost nothing but
 	/// the renderer, the sound device and the player's own files.
@@ -264,6 +276,10 @@ public class Level
 		// anything running has to be added to what it holds rather than looked for inside it.
 		Park = park;
 
+		// And the running copy of everything in it that moves, made once here so that the guests, the
+		// interface and the staff all read and write the same numbers rather than each keeping their own.
+		ParkState = new ParkState( park );
+
 		// The ground first, then what stands on it. The paths follow the ground because they lie on its
 		// heightfield, and ParkObjects is last because it asks how high the land is under each thing it
 		// places.
@@ -301,7 +317,7 @@ public class Level
 		// And it is handed the two things the admission states need that the save alone cannot answer: the
 		// balance stack, for what a guest will put up with paying, and the gate's own script state, which
 		// is what a guest waiting outside is actually waiting on.
-		_ = new ParkPeople( park, Balance, () => rides.GateStatus( park ) );
+		_ = new ParkPeople( park, Balance, () => rides.GateStatus( park ), ParkState );
 
 		// Each group of sound at the volume the options give it, and then the park's own music - which
 		// is the order the original uses too: it registers the park's categories, re-applies the group

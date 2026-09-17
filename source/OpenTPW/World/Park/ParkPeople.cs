@@ -87,7 +87,13 @@ public sealed class ParkPeople : Entity
 	/// delegate rather than as the rides themselves, because this needs one number from them and taking
 	/// the object would tie the people to the scripts for nothing else.
 	/// </param>
-	public ParkPeople( ParkWorld? park, ParkBalance? balance = null, System.Func<int>? gateStatus = null )
+	/// <param name="state">
+	/// The park's own running state - the balance, the visitor count and the mutable cells. Null makes one
+	/// from <paramref name="park"/>, which is what a test wants; a park being played hands in the one the
+	/// level owns, so that everything reads and moves the same numbers.
+	/// </param>
+	public ParkPeople( ParkWorld? park, ParkBalance? balance = null, System.Func<int>? gateStatus = null,
+		ParkState? state = null )
 	{
 		_peeps = PeepsIn( park );
 
@@ -99,7 +105,7 @@ public sealed class ParkPeople : Entity
 
 		// Built from the park rather than from the guests: what a guest does on arrival turns on whether
 		// the gates are open and on how many visitors have ever been let in, and both are the park's.
-		_behaviour = new PeepBehaviour( park, random: null, admission, gateStatus );
+		_behaviour = new PeepBehaviour( park, random: null, admission, gateStatus, state );
 
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
 		// none of what a guest needs - the fee, the gate - means anything to them.
@@ -390,6 +396,12 @@ public sealed class ParkPeople : Entity
 	/// which says why the running total lives on the behaviours rather than on the park itself.
 	/// </summary>
 	internal int Takings => _behaviour.Takings;
+
+	/// <summary>
+	/// The park as it is being played - see <see cref="ParkState"/>. The same object the level owns, when
+	/// a park is running; one of this simulation's own, when a test built it from a file alone.
+	/// </summary>
+	internal ParkState State => _behaviour.State;
 
 	/// <summary>
 	/// How happy the park's visitors are, which is the number the management gadget's gauge shows - the

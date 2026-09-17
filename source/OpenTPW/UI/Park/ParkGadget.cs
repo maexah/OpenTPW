@@ -603,13 +603,12 @@ internal sealed class ParkGadget : UiWindow
 	/// plus everything the gates have taken since it was loaded.
 	///
 	/// <para>
-	/// <b>The two have to be added, and that is a fact about this program rather than about the game.</b>
-	/// <see cref="ParkWorld"/> describes a file and is deliberately immutable, so taking a fee cannot move
-	/// the number inside it; the running total lives on <see cref="PeepBehaviour.Takings"/> instead, which
-	/// says as much at its own site. The original has no such split - <c>FUN_004d0600</c> adds a fee
-	/// straight onto <c>mBalance</c> and <c>mProfitThisYear</c> together. <b>When a park keeps its own
-	/// mutable state these stop being two numbers and this becomes one read</b>, and that is the moment to
-	/// come back to this line.
+	/// <b>It is ONE number now, and this said it had to be two until it was.</b> The balance used to be
+	/// the save's own figure plus a running total the behaviours kept, because <see cref="ParkWorld"/>
+	/// describes a file and a fee could not move it. <see cref="ParkState"/> is the park as it is played,
+	/// the level owns it, and taking a fee moves its balance directly - which is what the original does
+	/// too (<c>FUN_004d0600</c> adds a fee straight onto <c>mBalance</c> and <c>mProfitThisYear</c>). The
+	/// comment here named that as the moment to come back to this line, and this is it.
 	/// </para>
 	/// <para>
 	/// Plain digits, with no thousands separator, because the original sizes this field by measuring the
@@ -623,13 +622,18 @@ internal sealed class ParkGadget : UiWindow
 	/// </summary>
 	private void ShowMoney()
 	{
-		if ( Level.Current?.Park?.Economy is not { } money )
+		var level = Level.Current;
+
+		// The number comes from the running state, but whether the park HAS an economy is still a fact
+		// about the file - so a theme shipping no economy shows nothing rather than a nought, which would
+		// be a claim that it is broke.
+		if ( level?.ParkState is not { } park || level.Park?.Economy is null )
 		{
 			_balance.Text = null;
 			return;
 		}
 
-		_balance.Text = $"{money.Balance + (ParkPeople.Current?.Takings ?? 0)}";
+		_balance.Text = $"{park.Balance}";
 	}
 
 	/// <summary>

@@ -49,13 +49,33 @@ public sealed class PeepBehaviour
 	/// The rolls a state entry makes - only <see cref="PeepState.WaitingForOpening"/> makes one. Taken so
 	/// that a test can seed it; the game does not, because the original rolls from a global generator.
 	/// </param>
+	/// <param name="state">
+	/// The park's own running state, or null to make one from <paramref name="park"/>. A park that is
+	/// being played hands in the one the level owns, so that what is taken at the gate lands on the
+	/// balance everything else reads - see <see cref="ParkState"/>.
+	/// </param>
 	public PeepBehaviour( ParkWorld? park, Random? random = null,
-		ParkAdmission? admission = null, Func<int>? gateStatus = null )
-		// Zero is open, which is the way round the name is not - see ParkWorld.ParkClosed.
-		: this( park is not null && park.ParkClosed != 0, park?.NumberOfVisitorsToDate ?? 0, random,
-			admission, gateStatus )
+		ParkAdmission? admission = null, Func<int>? gateStatus = null, ParkState? state = null )
 	{
+		// Zero is open, which is the way round the name is not - see ParkWorld.ParkClosed. ParkState
+		// applies that rule itself, so it is not repeated here.
+		State = state ?? new ParkState( park );
+		Admission = admission;
+		_gateStatus = gateStatus;
+		_random = random ?? new Random();
 	}
+
+	/// <summary>
+	/// The park these guests are in, as it is being played rather than as it was saved.
+	///
+	/// <para>
+	/// <b>This is where the two workarounds went.</b> <see cref="Takings"/> and
+	/// <see cref="VisitorsToDate"/> used to be fields here, each documented as living on the behaviours
+	/// only because <see cref="ParkWorld"/> describes a file and could not be moved. Both now read
+	/// through this, and both keep their names so that nothing which already asks has to change.
+	/// </para>
+	/// </summary>
+	public ParkState State { get; }
 
 	/// <summary>
 	/// The same, from the two facts themselves rather than from a park.
@@ -80,8 +100,7 @@ public sealed class PeepBehaviour
 	public PeepBehaviour( bool parkIsClosed, int visitorsToDate, Random? random = null,
 		ParkAdmission? admission = null, Func<int>? gateStatus = null )
 	{
-		ParkIsClosed = parkIsClosed;
-		VisitorsToDate = visitorsToDate;
+		State = new ParkState( parkIsClosed, visitorsToDate );
 		Admission = admission;
 		_gateStatus = gateStatus;
 		_random = random ?? new Random();
@@ -103,7 +122,7 @@ public sealed class PeepBehaviour
 	/// deliberately immutable. So the park's money on screen is the save's balance plus this.
 	/// </para>
 	/// </summary>
-	public int Takings { get; private set; }
+	public int Takings => State.Takings;
 
 	/// <summary>
 	/// What the park's rides are worth to a guest deciding whether the price is fair - the sum
@@ -142,7 +161,7 @@ public sealed class PeepBehaviour
 	/// (<c>InputButton.OpenPark</c> and <c>ClosePark</c>) are among the bindings nothing consumes.
 	/// </para>
 	/// </summary>
-	public bool ParkIsClosed { get; }
+	public bool ParkIsClosed => State.ParkIsClosed;
 
 	/// <summary>
 	/// How many guests this park has ever admitted, counting on from what the save recorded.
@@ -155,7 +174,7 @@ public sealed class PeepBehaviour
 	/// and is deliberately immutable.
 	/// </para>
 	/// </summary>
-	public int VisitorsToDate { get; private set; }
+	public int VisitorsToDate => State.VisitorsToDate;
 
 	/// <summary>
 	/// What a guest heading for the gate does <b>not</b> hurry at. The original writes one of three speeds
@@ -273,7 +292,7 @@ public sealed class PeepBehaviour
 			case PeepState.Entering:
 				if ( Walked( peep, walk, playing ) == WalkVerdict.Arrived )
 				{
-					peep.VisitorNumber = ++VisitorsToDate;
+					peep.VisitorNumber = State.Admit();
 					peep.SetState( PeepState.Deciding, tick, _random );
 				}
 
@@ -453,8 +472,10 @@ public sealed class PeepBehaviour
 				if ( opinion == ParkAdmission.Opinion.OnTheCheapSide )
 					peep.Happiness = Peep.Change( peep.Happiness, admission.MediumHappinessChange );
 
-				// FUN_004d0600 - the fee goes on the balance and on the year's profit alike.
-				Takings += admission.Fee;
+				// FUN_004d0600 - the fee goes on the balance and on the year's profit alike, which is
+				// what ParkState.Take does: one call moving both, where this used to move a running
+				// total the park's own balance knew nothing about.
+				State.Take( admission.Fee );
 
 				peep.PaidAdmission = true;
 				peep.SetState( PeepState.WaitingForOpening, tick, _random );
