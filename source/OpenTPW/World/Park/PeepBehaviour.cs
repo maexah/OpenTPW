@@ -1326,7 +1326,12 @@ public sealed class PeepBehaviour
 			if ( walk.Blocked( x, y, SlotOrder[slot] ) )
 				continue;
 
-			candidates[slot] = MapStep.Beyond( x, y, SlotOrder[slot] );
+			var step = MapStep.Beyond( x, y, SlotOrder[slot] );
+
+			if ( !Connects( step.X, step.Y, SlotOrder[slot] ) )
+				continue;
+
+			candidates[slot] = step;
 			++found;
 		}
 
@@ -1350,6 +1355,40 @@ public sealed class PeepBehaviour
 		}
 
 		return false;
+	}
+
+	/// <summary>
+	/// Whether the cell being entered says it connects the way we are coming from - the stored
+	/// <c>mNeighbours</c> mask, bit-tested, which is what the original builds its wander candidates from.
+	///
+	/// <para>
+	/// <b>Alexah found this by playing: guests walked out of the park and down the road.</b> The original
+	/// picks a wander destination in <c>FUN_004f9490</c> from the byte <c>FUN_00522770</c> hands back -
+	/// the cell's own <c>+0xc</c> - and <b>only 91 of this park's 16,384 cells carry a non-zero one</b>.
+	/// The road outside is cell type 30 and its mask is nought, so the engine can never choose it; ours
+	/// asked only whether an edge was walkable, and the road's edges are.
+	/// </para>
+	/// <para>
+	/// <b>The mask is read from the cell being ENTERED, about the side facing the cell being left</b>, and
+	/// the bit is set when the two connect - see <see cref="MapStep"/>, which records why that reading and
+	/// its mirror image cannot be told apart by measuring this park.
+	/// </para>
+	/// <para>
+	/// <b>This narrows rather than replaces.</b> The original uses the mask <i>instead of</i> an edge test
+	/// here; keeping both means the mask can only ever close a way and never open one, so no route this
+	/// build already walks can be widened by it. A park that was never loaded has no cells to ask, and
+	/// answers yes - the same thing every other null-park arm in this class does.
+	/// </para>
+	/// </summary>
+	private bool Connects( int x, int y, StepDirection direction )
+	{
+		if ( _park == null )
+			return true;
+
+		if ( !ParkState.OnMap( x, y ) )
+			return false;
+
+		return (_park.CellAt( x, y ).Neighbours & CellEdge.BitFor( direction )) != 0;
 	}
 
 	/// <summary>The near edge of a cell plus a clamped roll - see <see cref="SetRandomDest"/>.</summary>
