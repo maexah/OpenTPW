@@ -116,13 +116,15 @@ public class ParkTickTests
 	/// </para>
 	/// </summary>
 	private sealed record Ridden( bool Invited, bool Nominated, bool Boarding,
-		bool Queued, bool AtFront, int LongestQueue, int Ticked, int ThingTicks, string Variables )
+		bool Queued, bool AtFront, int LongestQueue, int Ticked, int ThingTicks, string Variables,
+		string Nominators )
 	{
 		/// <summary>The stages in order, for a failure message that points at the first missing one.</summary>
 		public string Trace =>
 			$"{ThingTicks} thing ticks ({Ticked} game ticks); queued={Queued}, "
 			+ $"longest={LongestQueue}, atFront={AtFront}, invited={Invited}, "
-			+ $"nominated={Nominated}, boarding={Boarding}; script[{Variables}]";
+			+ $"nominated={Nominated}, boarding={Boarding}; nominators=[{Nominators}]; "
+			+ $"script[{Variables}]";
 	}
 
 	/// <summary>
@@ -153,6 +155,10 @@ public class ParkTickTests
 			bool invited = false, nominated = false, boarding = false, queued = false, atFront = false;
 			int ticked = 0, longest = 0;
 
+			// Sorted so the reported set reads the same way every run - it goes into a message a human
+			// compares by eye against the park's own thing ids.
+			var nominators = new SortedSet<int>();
+
 			for ( var frame = 0; frame < frames; ++frame )
 			{
 				Frame( AFrame );
@@ -170,7 +176,15 @@ public class ParkTickTests
 
 				foreach ( var thing in world.Objects )
 				{
-					nominated |= state.PersonBeingLoaded( thing.ThingId ) != 0;
+					if ( state.PersonBeingLoaded( thing.ThingId ) != 0 )
+					{
+						nominated = true;
+
+						// WHICH things call somebody forward, not merely that one did. Shops and sideshows
+						// share the ride handshake - all thirteen of their scripts declare the same common
+						// twelve - so this is where that stops being an inference and becomes an observation.
+						nominators.Add( thing.ThingId );
+					}
 
 					var length = state.QueueLength( thing.ThingId );
 
@@ -181,9 +195,13 @@ public class ParkTickTests
 					longest = System.Math.Max( longest, length );
 				}
 
-				// Everything asked for has been seen, so there is nothing left to learn by running on.
-				if ( invited && nominated && boarding )
-					break;
+				// <b>No early exit, and that is deliberate rather than an oversight.</b> This loop used to
+				// stop as soon as invited, nominated and boarding were all true - which sounds harmless and
+				// is not: the run ended after 430 of its ~2,688 thing ticks, because the ride reached those
+				// three first, and the set of things that had called somebody forward was therefore [13]
+				// alone. Read carelessly that says "only rides invite"; what it actually says is "I stopped
+				// looking". An early exit inside a measuring loop truncates the very thing being measured.
+				// The whole budget costs a few hundred milliseconds, which is not worth a wrong answer.
 			}
 
 			// What the ride's own script holds when the run ends. Which of Invite's gates refuses is not
@@ -205,7 +223,7 @@ public class ParkTickTests
 					+ $"letMeOff={bounce[ParkRideOperation.DismissVariable]}";
 
 			return new Ridden( invited, nominated, boarding, queued, atFront, longest,
-				ticked, ticked / ParkPeople.ThingTickEvery, vars );
+				ticked, ticked / ParkPeople.ThingTickEvery, vars, string.Join( ",", nominators ) );
 		}
 		finally
 		{
@@ -236,6 +254,10 @@ public class ParkTickTests
 	public void TickingTheParkLetsARideCallSomebodyAboard()
 	{
 		var driven = RunPark( wireScripts: true );
+
+		// Printed rather than only asserted on: which THINGS call somebody forward is the evidence that
+		// shops and sideshows share the ride handshake, and a passing test would otherwise say nothing.
+		System.Console.WriteLine( $"ride turn: {driven.Trace}" );
 
 		// Asserted first and separately: if the clock never ran, everything below is vacuously true.
 		Assert.IsTrue( driven.Ticked > 0, "no tick ever came due, so this test proves nothing" );
