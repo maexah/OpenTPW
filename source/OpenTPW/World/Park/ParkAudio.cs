@@ -187,6 +187,54 @@ public sealed class ParkAudio : Entity
 
 	private Voice? _rain;
 
+	/// <summary>
+	/// The guests' own voices, which is where the scream samples live - <c>cat_kids</c>, the category
+	/// <c>Sound_RegisterGlobalCategories</c> parks at <c>DAT_00803a24</c>.
+	/// </summary>
+	/// <remarks>
+	/// <b>The address order does not name it, and guessing from that gives the wrong category.</b> The
+	/// registration assigns <c>0x803a20</c> ambient, <c>0x803a28</c> rides, <c>0x803a2c</c> ui,
+	/// <c>0x803a24</c> <b>kids</b>, <c>0x803a30</c> staff - so the slot between ambient and rides is the
+	/// kids one, and "it is a ride sound, so it must be cat_rides" is wrong. The map corroborates it:
+	/// <c>cat_kidsSFX.map</c> declares exactly the four ids the scream player asks for.
+	/// </remarks>
+	private readonly SoundCategory? _kids;
+
+	/// <summary>The one scream a ride may have going, by the script holding it.</summary>
+	private readonly Dictionary<int, (Voice Voice, int Effect)> _screams = [];
+
+	/// <summary>
+	/// The four looping scream samples, chosen by <c>STARTSCREAM</c>'s first operand -
+	/// <c>FUN_00551130</c>'s bands: nought screams not at all, 1, 2-3, 4-7, then 8 and over.
+	/// </summary>
+	private static readonly int[] ScreamEffects = [0x47, 0x48, 0x49, 0x4a];
+
+	/// <summary>
+	/// The script speed the volume is averaged against - the engine's <c>+0xc0</c>, which its loader
+	/// sets to 50 and <b>no opcode ever writes</b>.
+	/// </summary>
+	/// <remarks>
+	/// <b>A constant rather than a field, and deliberately.</b> <see cref="RideScript"/> leaves the speed
+	/// word out because the dispatcher's <c>0.5 + 0.01 * speed</c> divisor is exactly 1 at 50, so a field
+	/// could never differ from one. That argument holds for <c>WAIT</c> and does NOT hold here: the
+	/// scream's volume is <c>(operand + speed) / 2</c>, where 50 is half the answer rather than an
+	/// identity. So the number is needed even though the field is not.
+	/// </remarks>
+	public const int ScriptSpeed = 50;
+
+	/// <summary>How loud a scream is: the engine's <c>(a + b) / 2</c>, held to nought through 100.</summary>
+	public static int ScreamVolume( int level ) => Math.Clamp( (level + ScriptSpeed) / 2, 0, 100 );
+
+	/// <summary>Which sample a band asks for, or nought when the band is silent.</summary>
+	public static int ScreamEffectFor( int band ) => band switch
+	{
+		<= 0 => 0,
+		1 => ScreamEffects[0],
+		< 4 => ScreamEffects[1],
+		< 8 => ScreamEffects[2],
+		_ => ScreamEffects[3]
+	};
+
 	public ParkAudio( string themeName )
 	{
 		Current = this;
@@ -216,6 +264,16 @@ public sealed class ParkAudio : Entity
 
 		if ( !_ambient.IsValid )
 			Log.Warning( "Park audio: the global ambient category would not load, so the weather is silent" );
+
+		// And the guests' voices, which is where the screams are. Loaded now that something asks for
+		// them: the note above says a category with nowhere for its sounds to go is waste, and this one
+		// has somewhere - see Scream.
+		_kids = new SoundCategory( "global", "global/sound", "kids" );
+
+		if ( !_kids.IsValid )
+			Log.Warning( "Park audio: the global kids category would not load, so nobody can scream" );
+		else
+			Log.Info( $"Park audio: kids category ready, screams are {string.Join( ", ", ScreamEffects )}" );
 	}
 
 	/// <summary>
@@ -278,6 +336,79 @@ public sealed class ParkAudio : Entity
 	}
 
 	/// <summary>
+	/// Starts a ride screaming - <c>STARTSCREAM</c>, through <c>FUN_00551130</c>.
+	///
+	/// <para>
+	/// <b>The engine refuses to start a second one over the first</b>, and says so: its own line is
+	/// "RSSE: Started screaming without s...". Reproduced rather than tidied, because a script that
+	/// does it is doing something wrong and the silence would hide it.
+	/// </para>
+	/// </summary>
+	/// <param name="scriptId">Whose scream this is, so <see cref="StopScream"/> can find it again.</param>
+	/// <param name="band">The first operand: nought is silent, then 1, 2-3, 4-7, 8 and over.</param>
+	/// <param name="level">The second operand, averaged with the script speed - see <see cref="ScreamVolume"/>.</param>
+	/// <param name="at">Where the ride stands. The engine takes this from the script's own thing.</param>
+	/// <returns>Whether anything started.</returns>
+	internal bool Scream( int scriptId, int band, int level, Vector3 at )
+	{
+		if ( !Audio.Ready || _kids is not { IsValid: true } )
+			return false;
+
+		if ( _screams.ContainsKey( scriptId ) )
+		{
+			Log.Warning( $"Park audio: script {scriptId} started screaming without stopping first" );
+			return false;
+		}
+
+		var effect = ScreamEffectFor( band );
+
+		if ( effect == 0 )
+		{
+			Log.Trace( $"Park audio: script {scriptId} asked for band {band}, which screams not at all" );
+			return false;
+		}
+
+		var volume = ScreamVolume( level );
+		var voice = _kids.Play( effect, volume / 100f, loop: true, bus: AudioBus.Effects, position: at );
+
+		if ( voice == null )
+		{
+			Log.Warning( $"Park audio: scream effect {effect} would not start for script {scriptId}" );
+			return false;
+		}
+
+		_screams[scriptId] = (voice, effect);
+
+		Log.Info( $"Park audio: script {scriptId} screaming, band {band} effect {effect} "
+			+ $"volume {volume} at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0})" );
+
+		return true;
+	}
+
+	/// <summary>
+	/// Stops a ride screaming - <c>STOPSCREAM</c>, which fades rather than cuts
+	/// (<c>Sound_StopFading</c>) and forgets the handle.
+	/// </summary>
+	/// <remarks>
+	/// <b>The release is what makes a second scream possible.</b> A looping voice holds its effect for
+	/// ever - <see cref="SoundCategory.Play"/> parks it at positive infinity - so without this the ride
+	/// would scream once per park and then be silent, which looks exactly like the instruction never
+	/// having been built. <see cref="StopRain"/> learned the same lesson.
+	/// </remarks>
+	internal bool StopScream( int scriptId )
+	{
+		if ( !_screams.Remove( scriptId, out var scream ) )
+			return false;
+
+		scream.Voice.FadeOut( StopSeconds );
+		_kids?.Release( scream.Effect );
+
+		Log.Info( $"Park audio: script {scriptId} stopped screaming (effect {scream.Effect} released)" );
+
+		return true;
+	}
+
+	/// <summary>
 	/// Stops the rain, and lets the effect go.
 	///
 	/// The release matters: a looping voice holds its effect for ever - <see cref="SoundCategory.Play"/>
@@ -304,6 +435,16 @@ public sealed class ParkAudio : Entity
 		_rain?.FadeOut( StopSeconds );
 		_rain = null;
 		_ambient?.Release( RainEffect );
+
+		// And whoever is still screaming as the park ends, for the same reason the rain is let go: a
+		// looping voice holds its effect, and the next park in this process would find it taken.
+		foreach ( var (voice, effect) in _screams.Values )
+		{
+			voice.FadeOut( StopSeconds );
+			_kids?.Release( effect );
+		}
+
+		_screams.Clear();
 
 		// The voice was holding the effect - see SoundCategory.Play - so the category has to be told
 		// it may start again, or the next park in this process waits out a delay counted against a

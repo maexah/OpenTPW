@@ -83,6 +83,28 @@ public sealed class ParkObjects : Entity
 	}
 
 	/// <summary>
+	/// Where a placed thing stands, for a sound that belongs to the thing rather than to a node of it.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="TryNodeOn"/> wants a node by name, which is right for a rider on a seat and wrong for
+	/// a ride's own voice: the engine takes a scream's position from the script's thing handle at
+	/// <c>+0xc8</c>, not from any node. This answers that.
+	/// </remarks>
+	internal bool TryPlacedOrigin( int thingId, out Vector3 world )
+	{
+		if ( _standing.TryGetValue( thingId, out var standing ) )
+		{
+			world = standing.Model.PlacedOrigin;
+
+			return true;
+		}
+
+		world = default;
+
+		return false;
+	}
+
+	/// <summary>
 	/// Every sign painted for an object standing in this park, kept only so that they can be let
 	/// go of again. Each is cut from a board rasterised for that one object, so it is in no cache
 	/// and nothing else holds it - see <see cref="OnDelete"/>.

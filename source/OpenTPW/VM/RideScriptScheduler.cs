@@ -256,6 +256,12 @@ public sealed class RideScriptScheduler
 	/// </summary>
 	private void TakeDown( RideScript script )
 	{
+		// A script that dies mid-scream must not leave the voice behind: it loops, and a looping voice
+		// holds its effect until it is released, so the next ride to scream would find it taken. The
+		// engine's own teardown clears +0xd0 for the same reason.
+		if ( script.Screaming )
+			ParkAudio.Current?.StopScream( script.Id );
+
 		if ( script.SoundChildId != 0 )
 			RemoveFlat( script.SoundChildId );
 

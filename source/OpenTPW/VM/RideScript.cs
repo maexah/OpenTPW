@@ -1083,6 +1083,14 @@ public sealed class RideScript
 				SpawnSound( operands[0] );
 				break;
 
+			case Opcode.STARTSCREAM:
+				StartScream( operands );
+				break;
+
+			case Opcode.STOPSCREAM:
+				StopScream();
+				break;
+
 			case Opcode.REMOVECHILD:
 				RemoveChild();
 				break;
@@ -1720,6 +1728,67 @@ public sealed class RideScript
 	/// down only when this script itself dies.
 	/// </para>
 	/// </summary>
+	/// <summary>Whether this script has a scream going - the engine's handle at <c>+0xd0</c>.</summary>
+	/// <remarks>
+	/// A flag rather than the handle itself: the voice belongs to <see cref="ParkAudio"/>, which keys it
+	/// by <see cref="Id"/>, and a script that held an audio object would drag the mixer into every test
+	/// that runs a ride.
+	/// </remarks>
+	public bool Screaming { get; private set; }
+
+	/// <summary>
+	/// <c>STARTSCREAM</c>: the ride starts screaming - <c>FUN_00551130</c>, through
+	/// <see cref="ParkAudio.Scream"/>.
+	///
+	/// <para>
+	/// The first operand bands the sample and the second is averaged with the script's speed for the
+	/// volume; the sound belongs to the RIDE, whose position the engine takes from the script's own
+	/// thing handle at <c>+0xc8</c>. See <see cref="ParkAudio.ScreamEffectFor"/> for the bands.
+	/// </para>
+	/// </summary>
+	/// <remarks>
+	/// <b>The arity is checked rather than assumed.</b> The dispatcher advances by the operand count the
+	/// FILE gives and never tests it against the opcode's declared arity, so a truncated or mis-split
+	/// script can reach a handler with fewer operands than it wants - and indexing one that is not there
+	/// throws out of the middle of a turn, which is how a report on the COAST arm once took five ride
+	/// tests down with it.
+	/// </remarks>
+	private void StartScream( IReadOnlyList<RideOperand> operands )
+	{
+		if ( operands.Count < 2 )
+		{
+			++NotImplemented;
+			Unimplemented.Report( $"{Name}: STARTSCREAM with {operands.Count} operand(s), wanting 2" );
+			return;
+		}
+
+		var band = Value( operands[0] );
+		var level = Value( operands[1] );
+
+		if ( ParkObjects.Current is not { } objects || !objects.TryPlacedOrigin( ThingId, out var at ) )
+		{
+			// Nowhere for it to sound from. Counted and said, as COAST is without a ride - this is the
+			// sink ParkAudio's own note warns about rather than a gap in the instruction.
+			++NotImplemented;
+			Unimplemented.Report( $"{Name}: STARTSCREAM, with no placed thing {ThingId} to sound from" );
+			return;
+		}
+
+		if ( ParkAudio.Current?.Scream( Id, band, level, at ) == true )
+			Screaming = true;
+	}
+
+	/// <summary>
+	/// <c>STOPSCREAM</c>: fades the scream out and forgets it - the engine's <c>Sound_StopFading</c>
+	/// on <c>+0xd0</c>, which it then clears whether or not anything was playing.
+	/// </summary>
+	private void StopScream()
+	{
+		ParkAudio.Current?.StopScream( Id );
+
+		Screaming = false;
+	}
+
 	private void SpawnSound( RideOperand name )
 	{
 		if ( !CanSpawn( name, out var path ) )

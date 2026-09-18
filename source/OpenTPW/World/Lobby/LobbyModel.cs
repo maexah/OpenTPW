@@ -352,6 +352,14 @@ public sealed class LobbyModel
 		return true;
 	}
 
+	/// <summary>Where this model was last put - see <see cref="SetTransform"/>.</summary>
+	/// <remarks>
+	/// Not <c>_origin</c>, which is where it was LOADED: a park object loads at the world origin and is
+	/// moved afterwards, so the loaded one is nought for everything the park places. Same distinction
+	/// <see cref="TryGetPlacedNode"/> turns on.
+	/// </remarks>
+	public Vector3 PlacedOrigin => _placedOrigin;
+
 	/// <summary>Moves every mesh of this model, keeping their relative placement.</summary>
 	public void SetOrigin( Vector3 origin )
 	{
