@@ -372,6 +372,22 @@ public static class DebugConsole
 
 				break;
 
+			// The staff, who are a separate list from the guests and so appear in neither census above.
+			case "staff":
+				if ( ParkPeople.Current is not { } employer )
+				{
+					Reply( "staff: none - a park has to be loaded" );
+					break;
+				}
+
+				var working = employer.StaffCensus().ToArray();
+				Reply( $"staff {working.Length}" );
+
+				foreach ( var member in working )
+					Reply( "  " + member );
+
+				break;
+
 			// A dash on the ground under each person, pointing the way they face and coloured by kind.
 			// Toggles, or takes 0/1, as `mute` does.
 			case "facing":

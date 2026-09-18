@@ -512,6 +512,21 @@ public sealed class ParkPeople : Entity
 	/// <summary>This staff member's walk, for the same.</summary>
 	internal PeepWalk? StaffWalkFor( int thingId ) => _staffWalks.GetValueOrDefault( thingId );
 
+	/// <summary>
+	/// This person's walk, whoever they are. Guests and staff are held in separate pools, but their thing
+	/// ids come from one numbering, so asking each in turn is unambiguous.
+	/// </summary>
+	/// <remarks>
+	/// <b>Alexah found this by playing: "the staff still don't walk".</b> They do. The staff census shows
+	/// the guard and the researcher taking 71 and 72 distinct positions in a single run, both with routes.
+	/// It was the DRAWING that could not see it: it asked <see cref="WalkFor"/>, which knows only
+	/// <c>_walks</c>, got null for every member of staff, and <see cref="ParkGuestSprites.Standing"/> then
+	/// fell back to the position the save left them at. They were simulated, routed, moving - and drawn
+	/// standing still for the whole run, which is indistinguishable from a behaviour that never ran.
+	/// </remarks>
+	internal PeepWalk? AnyWalkFor( int thingId )
+		=> _walks.GetValueOrDefault( thingId ) ?? _staffWalks.GetValueOrDefault( thingId );
+
 	/// <summary>This guest's animation, for the drawing, the tests and the debug console.</summary>
 	internal SpriteScript? SpriteFor( int thingId ) => _sprites.GetValueOrDefault( thingId );
 
@@ -619,6 +634,38 @@ public sealed class ParkPeople : Entity
 				+ $"walks {Peep.IsAWalkingState( peep.State )} "
 				+ $"has {(walk == null ? "no-walk" : walk.HasRoute ? "route" : "no-route")} "
 				+ $"anim {anim}";
+		}
+	}
+
+	/// <summary>
+	/// What each member of STAFF is doing. The guest census cannot show them: <c>_peeps</c> is guests
+	/// only and staff are a separate list, so a park where no member of staff ever moved read, from
+	/// there, exactly like one where they all did.
+	/// </summary>
+	/// <remarks>
+	/// It prints the activity, the idle stamp and whether a route exists because those are what tell the
+	/// two standing-still cases apart: somebody stuck in <see cref="StaffActivity.Walking"/> with no route
+	/// is a different fault from somebody whose idle spell has simply not elapsed.
+	/// </remarks>
+	internal IEnumerable<string> StaffCensus()
+	{
+		foreach ( var member in _staff )
+		{
+			var walk = _staffWalks.GetValueOrDefault( member.ThingId );
+			var nav = member.Navigator;
+
+			yield return $"thing {member.ThingId,2} model {member.Model} {member.Activity} "
+				+ $"grade {member.PayGrade} tired {member.Tiredness,3:0} happy {member.Happiness,3:0} "
+				+ $"idleSince {member.TimeStartedIdling,4} jobs {member.JobsDone} "
+				+ $"patrol {(member.HasPatrolArea ? $"{member.PatrolFrom}-{member.PatrolTo}" : "anywhere")} "
+				+ $"at ({nav.Position.X / (float)FixedVector.One:0.000},"
+				+ $"{nav.Position.Y / (float)FixedVector.One:0.000}) "
+				// Qualified because this class has a Staff PROPERTY, which shadows the type of the same
+				// name; and PARENTHESISED because inside an interpolation a bare ':' opens a format
+				// specifier, so "global::" would otherwise split into the expression "global" and a
+				// format string - which is a compile error rather than a wrong answer, thankfully.
+				+ $"walks {(global::OpenTPW.Staff.IsAWalkingState( member.Activity ))} "
+				+ $"has {(walk == null ? "no-walk" : walk.HasRoute ? "route" : "no-route")}";
 		}
 	}
 }

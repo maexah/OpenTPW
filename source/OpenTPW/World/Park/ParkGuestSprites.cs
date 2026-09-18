@@ -434,7 +434,10 @@ public sealed class ParkGuestSprites : ModelEntity
 			if ( !_banks.TryGetValue( (sprite.Type, sprite.Bank + bankOffset), out var loaded ) )
 				continue;
 
-			var (x, y, angle) = Standing( people?.WalkFor( person.ThingId ), cellX, cellY, person, sprite );
+			// AnyWalkFor rather than WalkFor: staff are drawn from this same list and their walks live in
+			// a separate pool, so asking only the guests' one drew every member of staff at the position
+			// the save left them at - see ParkPeople.AnyWalkFor.
+			var (x, y, angle) = StandingFrom( people, cellX, cellY, person, sprite );
 
 			var set = loaded.Bank.Sets[setNumber & 0xf];
 			var index = Picture( set, frame, Facing( ParkWorld.Person.OctantOf( angle ) ),
@@ -513,6 +516,30 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// the whole suite green. Handing in the one walk makes the choice and the arithmetic testable without a
 	/// graphics device or an entity, and the lookup moves to the caller, which is where it belongs anyway.
 	/// </remarks>
+	/// <summary>
+	/// Where to draw this person, finding their walk for the caller.
+	///
+	/// <para>
+	/// <b>This overload exists because the pool choice was the bug, and the pool choice was the one part
+	/// nothing could test.</b> The arithmetic below has been covered since it was written; the LOOKUP sat
+	/// in the draw loop, which wants a graphics device, so no test could reach it. Reverting it to
+	/// <see cref="ParkPeople.WalkFor"/> - the guests-only pool, which is exactly the defect Alexah saw as
+	/// "the staff still don't walk" - left all 763 tests green. Moving the choice here, and only the
+	/// choice, makes it answerable without a device while leaving the split the overload below describes.
+	/// </para>
+	/// </summary>
+	/// <remarks>
+	/// <b>Named rather than overloaded, and the compiler is what settled it.</b> Written as a second
+	/// <c>Standing</c> it was ambiguous with the one below: an existing test passes a bare <c>null</c> to
+	/// say "no walk, so draw them where the save left them", and <c>null</c> fits
+	/// <see cref="ParkPeople"/> and <see cref="PeepWalk"/> equally well. That test is a real one, so the
+	/// name moved rather than the test.
+	/// </remarks>
+	internal static (float X, float Y, int Angle) StandingFrom( ParkPeople? people, float cellX, float cellY,
+		ParkWorld.Person person, ParkWorld.Sprite sprite )
+		=> Standing( people?.AnyWalkFor( person.ThingId ), cellX, cellY, person, sprite );
+
+	/// <inheritdoc cref="StandingFrom"/>
 	internal static (float X, float Y, int Angle) Standing( PeepWalk? walk, float cellX, float cellY,
 		ParkWorld.Person person, ParkWorld.Sprite sprite )
 	{
@@ -766,7 +793,7 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		foreach ( var (person, sprite) in _people )
 		{
-			var walk = people?.WalkFor( person.ThingId );
+			var walk = people?.AnyWalkFor( person.ThingId );
 			var playing = people?.SpriteFor( person.ThingId );
 			var (x, y, angle) = Standing( walk, cellX, cellY, person, sprite );
 			var (setNumber, frame, bankOffset) = Showing( playing, sprite );
