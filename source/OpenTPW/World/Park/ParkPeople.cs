@@ -37,6 +37,13 @@ public sealed class ParkPeople : Entity
 
 	private readonly List<Peep> _peeps;
 
+	/// <summary>
+	/// The same guests again, by thing id. Built once beside <see cref="_walks"/> rather than searched for,
+	/// because a ride's turn asks "who is at the head of my queue" by id and would otherwise walk the whole
+	/// list per ride per tick - see <see cref="ParkRideOperation"/>, which takes exactly this shape.
+	/// </summary>
+	private readonly Dictionary<int, Peep> _byId = [];
+
 	private readonly Dictionary<int, PeepWalk> _walks = [];
 
 	private readonly Dictionary<int, SpriteScript> _sprites = [];
@@ -61,6 +68,26 @@ public sealed class ParkPeople : Entity
 	/// One for the park, as <see cref="_behaviour"/> is, because the constants it reads are the park's.
 	/// </summary>
 	private readonly StaffBehaviour _staffBehaviour;
+
+	/// <summary>
+	/// A thing's own ride script, or null where nothing binds one - <c>ParkRides.ScriptFor</c> through the
+	/// scheduler.
+	///
+	/// <para>
+	/// <b>A delegate rather than the rides themselves, for the reason the gate already gives:</b> a ride's
+	/// turn needs one script per thing and nothing else from them, and taking the object would tie the
+	/// people to the scripts for far more than that. It also sidesteps the construction order -
+	/// <see cref="Level"/> builds the rides before the people, so the people cannot be handed to them.
+	/// </para>
+	/// </summary>
+	private readonly System.Func<int, RideScript?>? _scriptFor;
+
+	/// <summary>
+	/// What a ride's turn rolls with. Only <see cref="Peep.SetState"/> reads it, and none of the states a
+	/// ride puts a guest into consults it, so the seed is immaterial - it exists because the call asks for
+	/// one.
+	/// </summary>
+	private readonly Random _rideRandom = new();
 
 	/// <summary>
 	/// The mode every edge question in this park is asked in.
@@ -98,9 +125,17 @@ public sealed class ParkPeople : Entity
 	/// see <see cref="ParkRideChooser"/>. Null leaves that arm scoring on distance and queue alone.
 	/// </param>
 	public ParkPeople( ParkWorld? park, ParkBalance? balance = null, System.Func<int>? gateStatus = null,
-		ParkState? state = null, ParkItemCatalogue? catalogue = null )
+		ParkState? state = null, ParkItemCatalogue? catalogue = null,
+		System.Func<int, RideScript?>? scriptFor = null )
 	{
+		_scriptFor = scriptFor;
+
 		_peeps = PeepsIn( park );
+
+		// Indexed once here rather than on demand: the guests are fixed for the life of the park - nothing
+		// yet adds or removes one - so this cannot fall out of step with the list it is built from.
+		foreach ( var peep in _peeps )
+			_byId[peep.ThingId] = peep;
 
 		// What the park charges is on its economy thing and what a guest will put up with is in the
 		// balance file, so it takes both - and neither on its own is enough to price the gate.
@@ -204,6 +239,12 @@ public sealed class ParkPeople : Entity
 
 	/// <summary>Every guest, in the order the save lists them.</summary>
 	internal IReadOnlyList<Peep> Peeps => _peeps;
+
+	/// <summary>
+	/// The park's guests by thing id - what <see cref="ParkRideOperation"/> takes, so that a ride can ask
+	/// what the guest at the head of its queue is doing without being handed the whole simulation.
+	/// </summary>
+	internal IReadOnlyDictionary<int, Peep> Guests => _byId;
 
 	/// <summary>Every member of staff, in the order the save lists them.</summary>
 	internal IReadOnlyList<Staff> Staff => _staff;
@@ -357,8 +398,77 @@ public sealed class ParkPeople : Entity
 					member.NextInterval = 0;
 				}
 			}
+
+			TakeTheRidesTurns( thingTick );
 		}
 	}
+
+	/// <summary>
+	/// Every ride's turn, on the same beat the people take theirs - the original's <c>FUN_004e0b90</c> and
+	/// <c>FUN_004e0e00</c>, which <c>FUN_0050b360</c> reaches for a model-3 thing exactly as it reaches a
+	/// guest's needs and behaviours for a model-1 one.
+	///
+	/// <para>
+	/// <b>It lives here because the original ticks every thing from ONE sweep.</b> <c>FUN_00516380</c>
+	/// walks the whole thing list once and dispatches on the model byte, so guests, staff and rides all
+	/// come off the same loop - which is what this method is. The class is named for its people and now
+	/// does a little more than that; renaming it would be a change to a great deal of unrelated code.
+	/// </para>
+	/// <para>
+	/// <b>The scripts have already advanced when this runs</b>, and that ordering is the original's:
+	/// <c>Game_StateMachine</c> calls the script system at <c>0054f56b</c>, before the thing gate at
+	/// <c>0054f668</c>. So a variable a ride writes here is read by its script on the following turn
+	/// rather than this one.
+	/// </para>
+	/// </summary>
+	private void TakeTheRidesTurns( int thingTick )
+	{
+		if ( _scriptFor == null || _behaviour.Park is not { } world )
+			return;
+
+		var operation = new ParkRideOperation( _behaviour.State, Guests );
+
+		foreach ( var thing in world.Objects )
+		{
+			var script = _scriptFor( thing.ThingId );
+
+			// FUN_004e0b90's tail. States 3 and 4 return before ever reaching it.
+			if ( thing.State is not (3 or ParkRideChoice.StateRefusedFour) )
+				operation.DropStaleQueueHead( thing.ThingId );
+
+			// FUN_004e0e00 is a switch on mState and nothing else.
+			switch ( thing.State )
+			{
+				// FUN_004e14e0: invite, then let anybody off unless the ride has broken. Everything else
+				// that function does is the breakdown and condemned transitions, which nothing here models.
+				case 0:
+					operation.Invite( script, thing, TrackTypeOf( thing ) );
+
+					if ( script != null && script[ParkRideOperation.BrokenVariable] == 0 )
+						operation.Dismiss( script, thing, thingTick, _rideRandom, WalkFor );
+
+					break;
+
+				// Closing or broken: finish whoever was mid-admission, then let them off.
+				case ParkRideChoice.StateRefusedOne:
+				case 2:
+				case ParkRideChoice.StateRefusedFour:
+					operation.CompleteAdmission( script, thing.ThingId, thingTick, _rideRandom );
+					operation.Dismiss( script, thing, thingTick, _rideRandom, WalkFor );
+					break;
+			}
+		}
+	}
+
+	/// <summary>
+	/// What kind of track an item runs on, for the one gate in <see cref="ParkRideOperation.Invite"/> that
+	/// reads the item rather than the object. Reached the same way <c>ParkRideChooser.ItemFor</c> reaches
+	/// it, so there is one lookup rather than two that can disagree.
+	/// </summary>
+	private int TrackTypeOf( ParkWorld.CatalogueObject thing )
+		=> _behaviour.Catalogue is { } catalogue && catalogue.TryGet( thing.CatalogueId, out var item )
+			? item.TrackType
+			: 0;
 
 	/// <summary>
 	/// Hands a guest's queued animation and interval to their sprite - <c>FUN_004d4190</c>, which tests each

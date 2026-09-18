@@ -138,6 +138,22 @@ public sealed class PeepBehaviour
 	/// <summary>What the chosen thing actually is, for the excitement a guest turns away from.</summary>
 	private readonly ParkItemCatalogue? _catalogue;
 
+	/// <summary>
+	/// The park and its catalogue, for a RIDE's turn rather than a guest's - see
+	/// <see cref="ParkRideOperation"/>.
+	///
+	/// <para>
+	/// <b>Exposed rather than duplicated.</b> A ride's turn needs the objects to walk and each item's track
+	/// type, and this already holds both for the guest side; <see cref="ParkPeople"/> owns one of these and
+	/// would otherwise have to keep a second reference to the same two things. Neither is stored anywhere
+	/// else in the park's people, which is why they are reached through here.
+	/// </para>
+	/// </summary>
+	internal ParkWorld? Park => _park;
+
+	/// <inheritdoc cref="Park"/>
+	internal ParkItemCatalogue? Catalogue => _catalogue;
+
 	/// <summary>What the park charges and how a guest feels about it, or null where nothing can say.</summary>
 	public ParkAdmission? Admission { get; }
 

@@ -189,6 +189,28 @@ public sealed class ParkRides : Entity
 			{
 				script.ThingId = placed.ThingId;
 
+				// <b>And what the ride can hold, which nothing else will ever tell its script.</b>
+				// Bouncy.RSE declares VAR_CAPACITY and only ever READS it (one CMP against its rider
+				// count); it carries no COAST instruction at all. The engine writes it, in FUN_004dd7f0 -
+				// which logs "CAPACITY = %d", writes script variable 2, and stores the same number to the
+				// object's mOperatingCapacity. That call sits on the open-and-repair path (FUN_004df8f0),
+				// beside the writes of VAR_DURATION and the speed.
+				//
+				// Without it every variable starts at nought, so a ride's own turn reads capacity 0
+				// against nought aboard, finds itself FULL, and refuses to invite anybody for ever. That
+				// was measured rather than reasoned: a real park ran 2,688 thing ticks with guests queuing
+				// and standing at the front of the queue, and not one was ever called aboard.
+				//
+				// The SAVE's value is used unclamped on purpose. FUN_004dd7f0 clamps the wanted capacity
+				// between the item description's own minimum and maximum and then stores the result in
+				// mOperatingCapacity - so what the file holds is already the clamped answer, and applying
+				// the rule again (against fields nothing here reads) would be doing it twice.
+				// Through the constants rather than by spelling the names again here: two spellings of one
+				// variable are two things that can drift, which is how this file's own track-type pair
+				// went wrong earlier today.
+				script.Set( ParkRideOperation.CapacityVariable, placed.OperatingCapacity );
+				script.Set( ParkRideOperation.DurationVariable, placed.OperatingDuration );
+
 				// Its own thing's player where the thing is standing, so that what the script triggers and
 				// what the model is posed from are the same one. Read afresh only where nothing was drawn,
 				// which is what a test binding scripts against a park it never builds is doing.

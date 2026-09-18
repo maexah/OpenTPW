@@ -242,13 +242,16 @@ public sealed class ParkRideOperation
 	/// does not yet gate the state on it.
 	/// </para>
 	/// </summary>
-	/// <param name="walk">
-	/// How to move the guest, or null where there is nowhere to move them - a test with no park, as every
-	/// caller of this was until a ride's turn existed to drive it.
+	/// <param name="walkFor">
+	/// How to find a guest's walk by thing id, or null where there is nowhere to move anyone.
+	/// <b>A LOOKUP rather than one walk, and that is not a stylistic choice.</b> Which guest comes off is
+	/// decided inside this method, by whoever the script has named in <c>VAR_LETMEOFF</c> - so a caller
+	/// cannot know whose walk to hand over. This took a single <c>PeepWalk</c> when it was written, which
+	/// only a test that already knew the answer could satisfy, and no ride's turn ever could.
 	/// </param>
 	/// <returns>Whether a guest was let off.</returns>
 	public bool Dismiss( RideScript? script, ParkWorld.CatalogueObject ride, int tick, Random random,
-		PeepWalk? walk = null )
+		Func<int, PeepWalk?>? walkFor = null )
 	{
 		ArgumentNullException.ThrowIfNull( random );
 
@@ -267,7 +270,7 @@ public sealed class ParkRideOperation
 
 		// An object that declares no exit has nowhere to put them, which is every unplaced one - its
 		// mExitPos is the sentinel that unpacks to the corner of the map.
-		if ( walk != null && ride.ExitPos != 0 )
+		if ( ride.ExitPos != 0 && walkFor?.Invoke( leaving ) is { } walk )
 			PeepBehaviour.SendTo( peep, walk, (ride.ExitCellX, ride.ExitCellY) );
 
 		peep.SetState( PeepState.OnRide, tick, random );
@@ -281,8 +284,25 @@ public sealed class ParkRideOperation
 	/// <summary>How many are aboard right now - <c>VAR_ONRIDE</c>.</summary>
 	public const string OnRideVariable = "VAR_ONRIDE";
 
+	/// <summary>
+	/// How long a go lasts - <c>VAR_DURATION</c>, which the engine writes beside the capacity when a ride
+	/// is opened (<c>FUN_004df8f0</c>, logging "DUR = %d") and a script only ever reads.
+	/// </summary>
+	public const string DurationVariable = "VAR_DURATION";
+
 	/// <summary>Whether the ride is mid-run - <c>VAR_RUNNING</c>, and it will not invite while it is.</summary>
 	public const string RunningVariable = "VAR_RUNNING";
+
+	/// <summary>
+	/// Whether the ride has broken - <c>VAR_BROKEN</c>, which a ride's own turn reads to decide whether to
+	/// let anybody off at all.
+	/// </summary>
+	/// <remarks>
+	/// <c>FUN_004e14e0</c>, the state-0 turn, invites and then reads variable <b>7</b>: nought lets it
+	/// dismiss, anything else sends it to BROKEN or CONDEMNED instead. Seven is <c>VAR_BROKEN</c> in the
+	/// twelve names every ride script declares - reached by name, as everything here is.
+	/// </remarks>
+	public const string BrokenVariable = "VAR_BROKEN";
 
 	/// <summary>
 	/// Picks the guest at the head of the queue and invites them aboard - the original's

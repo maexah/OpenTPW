@@ -125,7 +125,7 @@ public class ParkRideExitTests
 		script.Set( ParkRideOperation.DismissVariable, 7 );
 
 		Assert.IsTrue( new ParkRideOperation( park, new Dictionary<int, Peep> { [7] = peep } )
-			.Dismiss( script, ride, tick: 9, new Random( 1 ), walk ), "let off" );
+			.Dismiss( script, ride, tick: 9, new Random( 1 ), _ => walk ), "let off" );
 
 		var (targetX, targetY) = peep.Navigator.Target.Cell;
 
