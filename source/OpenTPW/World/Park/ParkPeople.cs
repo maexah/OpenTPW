@@ -455,7 +455,8 @@ public sealed class ParkPeople : Entity
 					operation.Invite( script, thing, TrackTypeOf( thing ) );
 
 					if ( script != null && script[ParkRideOperation.BrokenVariable] == 0 )
-						operation.Dismiss( script, thing, thingTick, _rideRandom, WalkFor, _behaviour.Park );
+						operation.Dismiss( script, thing, thingTick, _rideRandom, WalkFor, _behaviour.Park,
+							_behaviour.Catalogue );
 
 					break;
 
@@ -464,7 +465,8 @@ public sealed class ParkPeople : Entity
 				case 2:
 				case ParkRideChoice.StateRefusedFour:
 					operation.CompleteAdmission( script, thing.ThingId, thingTick, _rideRandom );
-					operation.Dismiss( script, thing, thingTick, _rideRandom, WalkFor, _behaviour.Park );
+					operation.Dismiss( script, thing, thingTick, _rideRandom, WalkFor, _behaviour.Park,
+						_behaviour.Catalogue );
 					break;
 			}
 		}

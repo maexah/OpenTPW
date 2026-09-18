@@ -457,4 +457,126 @@ public class ParkRideExitTests
 		foreach ( var thing in world.Objects )
 			Assert.AreEqual( 0, state.TakingsFor( thing.ThingId ), $"thing {thing.ThingId}" );
 	}
+
+	/// <summary>Thing 16, the <c>Drinks Shop</c> - the one placed object in this park that declares an
+	/// effect block, which is what makes it the only one able to tell a built arm from an inert one.</summary>
+	private const int DrinksShop = 16;
+
+	/// <summary>
+	/// Lets one guest off the named object with the real catalogue behind it, and hands back what became of
+	/// them - <c>FUN_004fd970</c>'s settle-up runs on the way out.
+	/// </summary>
+	/// <remarks>
+	/// <b>The meters start at eighty rather than where <see cref="Guest"/> leaves them, and that is not
+	/// tidying.</b> <see cref="Peep.Change"/> clamps to <see cref="Peep.Least"/> and <see cref="Peep.Most"/>,
+	/// so a guest whose thirst began at ten would read nought afterwards whether the deduction were forty or
+	/// four hundred - and every assertion below would pass against arithmetic it had never looked at.
+	/// </remarks>
+	private (ParkState Park, Peep Guest) LetOffAt( int thingId, int queuePos )
+	{
+		var thing = Park().Objects.Single( o => o.ThingId == thingId );
+		var park = new ParkState( parkIsClosed: false, visitorsToDate: 0 );
+		var script = Script();
+
+		var peep = Guest( 7, PeepState.Riding );
+
+		peep.QueuePos = queuePos;
+		peep.Thirst = 80f;
+		peep.Hunger = 80f;
+
+		script.Set( ParkRideOperation.DismissVariable, 7 );
+
+		Assert.IsTrue( new ParkRideOperation( park, new Dictionary<int, Peep> { [7] = peep } )
+			.Dismiss( script, thing, tick: 9, new Random( 1 ),
+				catalogue: new ParkItemCatalogue( "jungle", data ) ),
+			"the guest should have been let off" );
+
+		return (park, peep);
+	}
+
+	/// <summary>
+	/// <b>What a visit actually does to a guest</b> - the five effects <c>FUN_004fe1e0</c> applies from the
+	/// item descriptor when somebody finishes with a thing.
+	///
+	/// <para>
+	/// <b>Two deduct and three add, and the split is the data's own.</b> The balance file says so in its
+	/// comment column - "How much thirst to deduct" against "How much vomit to add" - and the decompile
+	/// agrees. Thirst falling while happiness and litter rise, in one guest and one call, is what separates a
+	/// built arm from one that applied a single sign to all five.
+	/// </para>
+	/// <para>
+	/// <b>Where the numbers come from, because the obvious place is wrong.</b> They are the Drinks Shop's
+	/// own, resolved through the mounted filesystem. <c>levels/jungle/shops/Shops.sam</c> declares all five
+	/// at <b>5</b> and is the <i>category default</i>; each shop's override lives in the <c>.sam</c> inside
+	/// its own <c>.wad</c>, where a grep of the installed game folder cannot see it. Reading the folder alone
+	/// yields five fives and a test that pins nothing.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void AVisitToAShopChangesTheFiveMetersItsOwnFileNames()
+	{
+		var (park, peep) = LetOffAt( DrinksShop, queuePos: 1 );
+
+		Assert.AreEqual( 40f, peep.Thirst, 0.001f, "eighty less the forty a drink quenches" );
+
+		Assert.AreEqual( 10f, peep.Vomit, 0.001f, "a drink adds ten to how sick they feel" );
+		Assert.AreEqual( 55f, peep.Happiness, 0.001f, "fifty, and the five it cheers them" );
+		Assert.AreEqual( 50f, peep.Litter, 0.001f, "and leaves them holding fifty of litter" );
+
+		// A meter the item declares NOUGHT is left exactly alone, which is the half that says these are read
+		// values rather than a bundle every visit hands out. The Drinks Shop's hunger effect is 0 - it is a
+		// drink - so a build applying some fixed helping of everything would move this one too.
+		Assert.AreEqual( 80f, peep.Hunger, 0.001f, "a drink does nothing for hunger, and the shop says so" );
+
+		Assert.AreEqual( 270, peep.Cash, "and they paid the shop's thirty on the way out" );
+		Assert.AreEqual( 30, park.TakingsFor( DrinksShop ), "which the shop keeps" );
+	}
+
+	/// <summary>
+	/// The settle-up's gate: with <c>mQueuePos</c> at nought the five effects do not run.
+	///
+	/// <para>
+	/// <b>This pins the branch and deliberately not a reading of it.</b> What the byte at <c>+0x1f1</c>
+	/// MEANS is not settled - it is named <c>mQueuePos</c> by the save reader and it is read here, and an
+	/// earlier gloss of it as "whether they won" was an over-read that had to be retracted. So the assertion
+	/// is that the arm is gated on it, which the disassembly shows, and nothing about why.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void AGuestWhoseQueuePosIsNoughtIsChargedButOtherwiseUnchanged()
+	{
+		var (park, peep) = LetOffAt( DrinksShop, queuePos: 0 );
+
+		Assert.AreEqual( 80f, peep.Thirst, 0.001f, "the gate held, so the drink never reached them" );
+		Assert.AreEqual( 0f, peep.Vomit, 0.001f, "nor made them ill" );
+		Assert.AreEqual( 50f, peep.Happiness, 0.001f, "nor cheered them" );
+		Assert.AreEqual( 0f, peep.Litter, 0.001f, "nor left them anything to drop" );
+
+		// And THIS is what says the gate sits inside the settle-up rather than in front of it: the money
+		// moves anyway. A build that returned before charging would read three hundred here.
+		Assert.AreEqual( 270, peep.Cash, "they still paid" );
+		Assert.AreEqual( 30, park.TakingsFor( DrinksShop ), "and the shop still kept it" );
+	}
+
+	/// <summary>
+	/// <b>The anti-vacuity half.</b> The same guest, the same queue byte and the same catalogue - only the
+	/// object differs - and nothing moves at all, because the Belly Bounce declares no effect block.
+	/// <c>Rides.sam</c> and <c>SideShow.sam</c> declare none of the five keys, so a ride reading nought is an
+	/// inherited fallback rather than a coincidence, and that is what makes the arm safe to run on anything a
+	/// guest leaves.
+	/// </summary>
+	[TestMethod]
+	public void LeavingARideThatDeclaresNoEffectsLeavesEveryMeterAlone()
+	{
+		var (park, peep) = LetOffAt( Ride, queuePos: 1 );
+
+		Assert.AreEqual( 80f, peep.Thirst, 0.001f, "a ride is not a drink" );
+		Assert.AreEqual( 80f, peep.Hunger, 0.001f, "nor a meal" );
+		Assert.AreEqual( 0f, peep.Vomit, 0.001f, "and this one declares no effect on how sick they feel" );
+		Assert.AreEqual( 50f, peep.Happiness, 0.001f, "nor on their mood, here" );
+		Assert.AreEqual( 0f, peep.Litter, 0.001f, "nor hands them anything to drop" );
+
+		Assert.AreEqual( 300, peep.Cash, "the Belly Bounce is free, so nobody paid" );
+		Assert.AreEqual( 0, park.TakingsFor( Ride ), "and it took nothing" );
+	}
 }

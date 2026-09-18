@@ -278,7 +278,7 @@ public sealed class ParkRideOperation
 	/// </param>
 	/// <returns>Whether a guest was let off.</returns>
 	public bool Dismiss( RideScript? script, ParkWorld.CatalogueObject ride, int tick, Random random,
-		Func<int, PeepWalk?>? walkFor = null, ParkWorld? park = null )
+		Func<int, PeepWalk?>? walkFor = null, ParkWorld? park = null, ParkItemCatalogue? catalogue = null )
 	{
 		ArgumentNullException.ThrowIfNull( random );
 
@@ -300,7 +300,7 @@ public sealed class ParkRideOperation
 		if ( ride.ExitPos != 0 && walkFor?.Invoke( leaving ) is { } walk )
 			PutDownAtTheExit( peep, walk, ride, park );
 
-		Charge( peep, ride );
+		SettleUp( peep, ride, catalogue );
 
 		peep.SetState( PeepState.LeavingRide, tick, random );
 
@@ -435,6 +435,79 @@ public sealed class ParkRideOperation
 	/// <c>log2( chanceOfWinning / pricePerUse )</c>. It is sized rather than started.
 	/// </para>
 	/// </summary>
+	/// <summary>
+	/// Everything leaving a visitable thing does to a guest - <c>FUN_004fd970</c>, of which the charge is
+	/// one arm rather than the whole.
+	///
+	/// <para>
+	/// <b>The effects are gated, and the gate is a byte this project cannot yet write.</b> The original
+	/// splits on the guest's <c>+0x1f1</c>: nought logs "Person lost this sideshow..." and docks
+	/// happiness, and anything else runs the effects. That byte is <c>mQueuePos</c> by the save reader's
+	/// own naming, but <c>FUN_00501db0</c>'s case <c>0xe</c> <i>overwrites</i> it for a sideshow with
+	/// <c>FUN_004e2670</c>'s roll - so the two meanings share one field. <b>Do not gloss it as "did they
+	/// win"</b>: the sideshow's win is computed inside the effects, after this has already been tested.
+	/// </para>
+	/// <para>
+	/// <b>What is NOT built, and why, rather than a number invented for it.</b> The roll that writes the
+	/// byte needs <c>mChanceOfWinning</c>, which nothing here parses - the balance file states the
+	/// category default as <c>UsageInfo.InitChanceOfLoosing</c> (the game's spelling), 70, and only on
+	/// <c>SideShow.sam</c>. And the two penalty magnitudes are balance globals whose keys are
+	/// unidentified: <c>DAT_0078505c</c> for the "lost" arm's happiness drop, <c>DAT_00785058</c> for the
+	/// two penalties a still-unmet need draws. So the losing arm is left alone rather than docking a
+	/// guest by a figure nobody measured.
+	/// </para>
+	/// <para>
+	/// <b>Also absent, and each with a consumer that does not exist yet:</b> the guest's recent-things
+	/// history (<c>mPreviousRides</c>, four entries shifted by three at <c>+0x1e0</c>, which the ride
+	/// scorer divides a candidate down by) and the three visit counters at <c>+0x1c4</c>/<c>+0x1c8</c>/
+	/// <c>+0x1cc</c> chosen by the descriptor's <c>+0x4ac</c>. Both would be written and never read.
+	/// </para>
+	/// </summary>
+	private void SettleUp( Peep peep, ParkWorld.CatalogueObject ride, ParkItemCatalogue? catalogue )
+	{
+		Charge( peep, ride );
+
+		// No catalogue is a test asking about the money rather than about the visit, and an item the
+		// catalogue does not know cannot say what it does to anybody.
+		if ( catalogue == null || !catalogue.TryGet( ride.CatalogueId, out var item ) )
+			return;
+
+		// The gate. A guest whose byte is nought took nothing from the visit; the original docks their
+		// happiness here, which is the arm left unbuilt above.
+		if ( peep.QueuePos == 0 )
+			return;
+
+		ApplyEffects( peep, item );
+	}
+
+	/// <summary>
+	/// What an item does to the guest who used it - the five effects <c>FUN_004fe1e0</c> applies from the
+	/// descriptor's <c>+0x144</c> to <c>+0x154</c>.
+	///
+	/// <para>
+	/// <b>Deduct two, add three, and the asymmetry is the data's own rather than a choice.</b> The
+	/// balance file says so in its comment column - "How much thirst to deduct" against "How much vomit
+	/// to add" - and the decompile agrees, doing <c>-(float)desc + meter</c> for thirst and hunger and
+	/// <c>+(float)desc + meter</c> for vomit, happiness and litter.
+	/// </para>
+	/// <para>
+	/// <b>Every one is a shops block.</b> The eight items declaring the five keys are the eight shops by
+	/// name; <c>Shops.sam</c> declares all five at 5 as a category default which each then overrides,
+	/// while <c>Rides.sam</c> and <c>SideShow.sam</c> declare none. So a ride reading nought here is a
+	/// real inherited fallback rather than a coincidence - which is what makes this safe to apply to
+	/// anything a guest leaves.
+	/// </para>
+	/// </summary>
+	private static void ApplyEffects( Peep peep, ParkItemCatalogue.Item item )
+	{
+		peep.Thirst = Peep.Change( peep.Thirst, -item.ThirstEffect );
+		peep.Hunger = Peep.Change( peep.Hunger, -item.HungerEffect );
+
+		peep.Vomit = Peep.Change( peep.Vomit, item.VomitEffect );
+		peep.Happiness = Peep.Change( peep.Happiness, item.HappinessEffect );
+		peep.Litter = Peep.Change( peep.Litter, item.LitterEffect );
+	}
+
 	private void Charge( Peep peep, ParkWorld.CatalogueObject ride )
 	{
 		var price = ride.PricePerUse;
