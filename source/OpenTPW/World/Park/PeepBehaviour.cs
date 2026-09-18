@@ -367,10 +367,21 @@ public sealed class PeepBehaviour
 			// person == object's mPersonBeingLoaded - is the ride confirming it means THIS guest. The flag
 			// is cleared on the way past, which is what stops one invitation boarding them twice.
 			//
-			// The rest of that handler is deliberately absent: the boredom countdown, re-taking a place in
-			// a queue that moved, the capacity re-check and the dirt gate all want fields or a queue-path
-			// walk nothing here has. A guest who does not pass the three tests simply keeps queueing,
-			// which is what the original does on every turn they are not being called forward.
+			// The rest of that handler is deliberately absent, and the boredom countdown is absent for a
+			// SHARPER reason than the others, which is worth stating because it looks easy.
+			//
+			// Re-taking a place in a queue that moved needs the queue-path walk (FUN_004de7e0); the
+			// capacity re-check divides by the per-upgrade descriptor field at +0x1a8, whose pairing
+			// ParkRideScore refuses to guess; the dirt gate wants per-object dirt. Those are missing
+			// inputs. <b>Boredom is not.</b> Its test is only `gameTick > mTimeStartedIdling + 100` - but
+			// it sits INSIDE the branch the original takes only while `gameTick - mTimeOfLastSpotAnim` is
+			// under 31, so it fires solely in the window after a spot animation. Nothing here plays one,
+			// so mTimeOfLastSpotAnim stays nought and that branch stops being taken after tick 31.
+			// Reproducing the countdown alone would therefore make guests give up in circumstances the
+			// original never gives up in - a divergence wearing the clothes of a faithful subset.
+			//
+			// A guest who does not pass the three tests simply keeps queueing, which is what the original
+			// does on every turn they are not being called forward.
 			case PeepState.InQueue:
 				if ( peep.QueuePos == 0 && peep.BeenAdmitted && Chosen( peep ) is { } boarding
 					&& State.PersonBeingLoaded( boarding.ThingId ) == peep.ThingId )
