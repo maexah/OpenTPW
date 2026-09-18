@@ -305,11 +305,19 @@ public sealed class ParkRideOperation
 	/// this sideshow..." and docks happiness, and anything else runs the effects.
 	/// </para>
 	/// <para>
-	/// <b>What <c>+0x1f1</c> MEANS is unknown, and this comment used to call it the "won/lost flag" - which
-	/// was over-read.</b> The sideshow win is computed <i>inside</i> the effects function, after this byte
-	/// has already been tested, so the byte gates the effects path rather than recording a win; "lost this
-	/// sideshow" reads more like whether the guest got their go at all. What is certain is only that
-	/// <b>nothing in this tree establishes what writes it</b>.
+	/// <b><c>+0x1f1</c> is <c>mQueuePos</c> - the guest's place in the queue, which this project already
+	/// reads as <see cref="Peep.QueuePos"/>.</b> The game's own save reader names it
+	/// (<c>FUN_004fb530</c>), one byte after <c>mPersonType</c> at <c>+0x1f0</c>, and the same table's
+	/// neighbours are corroborated by code already built: <c>+0x220 mState</c> is what
+	/// <see cref="IsQueueing"/> reads and <c>+0x210 mBalloonScript</c> is where the effects function's
+	/// balloon arm writes. So the split is <b>queue position nought - "Person lost this sideshow..." and
+	/// happiness down - against non-zero, which runs the effects</b>; for a sideshow with lanes the
+	/// position plausibly says which lane the guest got, and nought means none.
+	/// </para>
+	/// <para>
+	/// <b>This comment called that byte a "won/lost flag", then "unknown", and both were wrong</b> - it had
+	/// been named in this project's own notes the whole time. The happiness arm is therefore not blocked on
+	/// an unestablished field at all; it is blocked on the size of the effects model below.
 	/// </para>
 	/// <para>
 	/// <b>And the arm behind it is not a happiness delta - it is a whole model.</b> <c>FUN_004fe1e0</c>
