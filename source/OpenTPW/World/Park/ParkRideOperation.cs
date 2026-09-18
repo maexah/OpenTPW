@@ -303,9 +303,14 @@ public sealed class ParkRideOperation
 	/// <c>state == InQueue &amp;&amp; mQueuePos == 0</c>.
 	/// </para>
 	/// <para>
-	/// <b>The fullness test is skipped for a car or water track</b>, which is the original's own arm:
-	/// those keep loading while running, so their capacity is not a gate. It reads the type from the item
-	/// rather than the object, which is why it is passed in - see <c>ItemDescriptionFile.TrackType</c>.
+	/// <b>The fullness test is skipped for a WATER or COASTER track - and this said "car or water", which
+	/// was wrong.</b> The original compares the item descriptor's track type against <b>3</b> and then
+	/// <b>2</b>, so the exempt pair is <see cref="ItemDescriptionFile.WaterTrack"/> and
+	/// <see cref="ItemDescriptionFile.CoasterTrack"/>; a <see cref="ItemDescriptionFile.CarTrack"/> is
+	/// <b>not</b> exempt and is stopped by being full like anything else. The wrong pair came of carrying
+	/// a phrase over from <see cref="ParkRideChoice.CanBeOffered"/> - which refuses types 1 and 2 for a
+	/// quite different reason, a track ride that is not valid - instead of reading this function's own
+	/// operands. It reads the type from the item rather than the object, which is why it is passed in.
 	/// </para>
 	/// <para>
 	/// <b>This said TWO arms were unreproduced because their fields were unestablished; it is now one.</b>
@@ -322,8 +327,14 @@ public sealed class ParkRideOperation
 		if ( script == null )
 			return 0;
 
-		// mCanLoad, and the original bails on it early - before it looks at the script at all. Same
-		// reading as AdmitPerson's and as ParkRideChoice's: non-zero, not a particular value.
+		// mCanLoad, and the original bails on it before it reads a single script variable. Same reading as
+		// AdmitPerson's and as ParkRideChoice's: non-zero, not a particular value.
+		//
+		// NOT reproduced, and named rather than quietly dropped: on this bail the original does not simply
+		// leave - it calls FUN_004e0450, the completion, on its way out. CompleteAdmission needs a tick and
+		// a Random that this method is not given, so it belongs with whatever drives a ride's turn (where
+		// both exist) rather than with an invented signature here. It cannot fire in the shipped park,
+		// where mCanLoad is 1 on all fourteen objects.
 		if ( ride.CanLoad == 0 )
 			return 0;
 
@@ -331,9 +342,10 @@ public sealed class ParkRideOperation
 		if ( script[AdmitVariable] != 0 )
 			return 0;
 
-		// Full - unless it is a track ride, which loads while it runs.
+		// Full - unless it is a WATER or COASTER track, which keep loading while they run. The original
+		// tests the descriptor against 3 and then 2, so a CAR track is NOT exempt; see the remarks.
 		if ( script[CapacityVariable] <= script[OnRideVariable]
-			&& trackType is not (ItemDescriptionFile.CarTrack or ItemDescriptionFile.WaterTrack) )
+			&& trackType is not (ItemDescriptionFile.WaterTrack or ItemDescriptionFile.CoasterTrack) )
 			return 0;
 
 		if ( script[RunningVariable] != 0 || _state.PersonBeingLoaded( ride.ThingId ) != 0 )

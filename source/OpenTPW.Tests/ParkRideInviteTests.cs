@@ -152,13 +152,22 @@ public class ParkRideInviteTests
 	}
 
 	/// <summary>
-	/// A full ride still invites when it is a car or water track - those keep loading while they run, so
-	/// capacity is not a gate for them.
+	/// A full ride still invites when it is a <b>water or coaster</b> track - those keep loading while they
+	/// run, so capacity is not a gate for them. <b>A car track is not among them.</b>
+	///
+	/// <para>
+	/// <b>This test asserted the wrong pair and so defended a defect.</b> It exempted
+	/// <see cref="ItemDescriptionFile.CarTrack"/> and <see cref="ItemDescriptionFile.WaterTrack"/>, because
+	/// the implementation did, because that phrase was carried over from
+	/// <see cref="ParkRideChoice.CanBeOffered"/> - which refuses types 1 and 2 for an unrelated reason.
+	/// The original compares the descriptor's track type against <b>3</b> then <b>2</b>. The car track is
+	/// now the anti-vacuity case, so the pair cannot drift again without this failing.
+	/// </para>
 	/// </summary>
 	[TestMethod]
-	public void ACarOrWaterTrackIsNotStoppedByBeingFull()
+	public void AWaterOrCoasterTrackIsNotStoppedByBeingFull()
 	{
-		foreach ( var track in new[] { ItemDescriptionFile.CarTrack, ItemDescriptionFile.WaterTrack } )
+		foreach ( var track in new[] { ItemDescriptionFile.WaterTrack, ItemDescriptionFile.CoasterTrack } )
 		{
 			var (park, guests, head) = Queued();
 			var script = ReadyScript();
@@ -169,13 +178,17 @@ public class ParkRideInviteTests
 			Assert.IsTrue( head.BeenAdmitted );
 		}
 
-		// Anti-vacuity: the same setup with an ordinary ride refuses, so the exemption is doing the work.
-		var (ordinary, ordinaryGuests, _) = Queued();
-		var ordinaryScript = ReadyScript();
-		ordinaryScript.Set( ParkRideOperation.OnRideVariable, 5 );
+		// The two that are NOT exempt, and the car track is the one this file used to get wrong.
+		foreach ( var track in new[] { ItemDescriptionFile.CarTrack, 0 } )
+		{
+			var (stopped, stoppedGuests, stoppedHead) = Queued();
+			var script = ReadyScript();
+			script.Set( ParkRideOperation.OnRideVariable, 5 );
 
-		Assert.AreEqual( 0, new ParkRideOperation( ordinary, ordinaryGuests )
-			.Invite( ordinaryScript, TheRide(), trackType: 0 ), "an ordinary ride is stopped by it" );
+			Assert.AreEqual( 0, new ParkRideOperation( stopped, stoppedGuests )
+				.Invite( script, TheRide(), track ), $"track type {track} is stopped by being full" );
+			Assert.IsFalse( stoppedHead.BeenAdmitted );
+		}
 	}
 
 	/// <summary>
