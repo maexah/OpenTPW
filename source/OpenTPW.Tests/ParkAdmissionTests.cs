@@ -278,13 +278,22 @@ public class ParkAdmissionTests
 	/// </para>
 	/// <para>
 	/// The five guests Alexah found standing at the ticket booths walk there, judge 25 against an ideal
-	/// price of 20, find it about right under easy mode's multipliers, pay, and settle down to wait for the
-	/// gate. The park's takings are the arithmetic check on top: five admissions at the fee the save
-	/// carries, and nothing from the eight guests who were already past the booths.
+	/// price of 20, find it about right under easy mode's multipliers, and pay. The park's takings are the
+	/// arithmetic check on top: five admissions at the fee the save carries, and nothing from the eight
+	/// guests who were already past the booths.
+	/// </para>
+	/// <para>
+	/// <b>This paragraph ended "and settle down to wait for the gate" until 2026-09-18, and that was the
+	/// bug rather than the behaviour.</b> <c>Wait</c>'s paid arm was unbuilt, so a guest who had paid stood
+	/// at the booth for ever - Alexah watched six of them do it for a whole run. The arm is built now: a
+	/// guest goes through when the cell they are standing on names them, which is the head of that cell's
+	/// thing list (the original's <c>cell[0x24]</c>, written by <c>FUN_004d91f0</c>). So the assertion is
+	/// no longer that they wait, but that they are <b>counted in</b> - and a visitor number is something
+	/// only arriving through the gate can produce.
 	/// </para>
 	/// </summary>
 	[TestMethod]
-	public void TheGuestsAtTheTicketBoothsPayTheirWayIntoTheParkAndWaitForTheGate()
+	public void TheGuestsAtTheTicketBoothsPayTheirWayIntoTheParkAndAreLetThrough()
 	{
 		var world = Park();
 		var admission = new ParkAdmission( new ParkBalance( "jungle", easyMode: true ), ShippedFee() );
@@ -294,8 +303,18 @@ public class ParkAdmissionTests
 		foreach ( var id in AtTheBooths )
 		{
 			Assert.IsTrue( guests[id].PaidAdmission, $"guest {id} should have paid to come in" );
-			Assert.AreEqual( PeepState.WaitingForOpening, guests[id].State,
-				$"guest {id} should have paid and be waiting for the gate" );
+
+			// <b>This asserted they were STILL WaitingForOpening until 2026-09-18, and that was pinning a
+			// bug</b> - the third test in this suite found doing so. The paid arm of Wait was unbuilt, so a
+			// guest who had paid stood at the booth for ever, and Alexah watched six of them do it.
+			Assert.AreNotEqual( PeepState.WaitingForOpening, guests[id].State,
+				$"guest {id} paid, and should have been let through rather than left at the booth" );
+
+			// <b>The load-bearing one.</b> A visitor number is handed out by ParkState.Admit, which only
+			// completing Entering reaches - so this cannot be satisfied by a guest who was merely
+			// re-labelled, or aimed at the entrance and left standing.
+			Assert.AreNotEqual( 0, guests[id].VisitorNumber,
+				$"guest {id} should have been counted in, which only arriving through the gate does" );
 		}
 
 		Assert.AreEqual( AtTheBooths.Length * admission.Fee, behaviour.Takings,

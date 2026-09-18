@@ -695,6 +695,25 @@ public sealed class PeepBehaviour
 
 				break;
 		}
+
+		// <b>And the cell they are standing on is told, which is what makes the gate work at all.</b>
+		// The original keeps a list of the things on each cell - head at the cell's +0x24, links on the
+		// things themselves - and maintains it when a thing moves cell (FUN_0050b6a0), is created
+		// (FUN_0050afe0) or destroyed. ParkState.StandOn answers the first two together.
+		//
+		// <b>This is called every turn, unconditionally, and that matters.</b> It was written as a
+		// from/to move guarded by "did the cell change", and the one guest the shipped park leaves
+		// STANDING STILL was then never entered into any cell's list at all - so the gate could not see
+		// them, and they waited at the booth through a whole run while the five who walked there went
+		// through. StandOn decides for itself that the cell is unchanged, exactly as FUN_0050b6a0 does.
+		//
+		// <b>It lives here rather than in ParkPeople on purpose.</b> Putting it in the driver would leave
+		// it unreachable from every test that calls Step directly - which is precisely how GoingToRide
+		// came to be set with no case, and how the ride loop came to be reported closed while nothing
+		// drove it. Every caller goes through Step, so every caller keeps the list honest.
+		var (standingX, standingY) = walk.Position.Cell;
+
+		State.StandOn( peep.ThingId, standingX, standingY );
 	}
 
 	/// <summary>
@@ -884,7 +903,38 @@ public sealed class PeepBehaviour
 			peep.SetState( PeepState.HeadingForGate, tick, _random );
 		}
 
-		// And the paid arm falls off the end on purpose - see the remarks above.
+		// <b>And here is the paid arm, which this method went without until 2026-09-18.</b> A guest who has
+		// paid goes through when the cell they are standing on NAMES THEM - the original reads a short at
+		// the cell's +0x24 and compares it with the guest's own thing id.
+		//
+		// <b>That short is the head of the cell's thing list, not a reservation</b>, which is what took so
+		// long to see: FUN_004d91f0 ends `cell[0x24] = thing`, and FUN_004d9280 repairs it. So the test
+		// reads "am I the FIRST thing standing here?", and THAT is the gate letting one guest through at a
+		// time - as each is admitted and steps off the cell, whoever is behind them becomes the head.
+		// ParkState keeps the list; Step maintains it as guests move.
+		//
+		// <b>Alexah found this by playing: six of the park's guests stood at the ticket booths for the
+		// whole of a run</b>, having judged the fee and paid, because nothing here ever let them through.
+		else if ( StandingOnTheirOwnCell( peep, walk ) )
+		{
+			SendTo( peep, walk, EitherOf( admission.EntranceA, admission.EntranceB ) );
+			peep.SetState( PeepState.Entering, tick, _random );
+		}
+	}
+
+	/// <summary>
+	/// Whether the cell this guest is standing on names <b>them</b> as the first thing on it.
+	/// </summary>
+	/// <remarks>
+	/// <b>The map check is asked rather than caught.</b> <see cref="ParkState.CellAt"/> throws off the map
+	/// on purpose - a default cell would be silently writable and the write would go nowhere - and a guest
+	/// who has wandered to the edge should simply not be admitted, not bring the park down.
+	/// </remarks>
+	private bool StandingOnTheirOwnCell( Peep peep, PeepWalk walk )
+	{
+		var (x, y) = walk.Position.Cell;
+
+		return ParkState.OnMap( x, y ) && State.CellAt( x, y ).Occupant == peep.ThingId;
 	}
 
 	/// <summary>

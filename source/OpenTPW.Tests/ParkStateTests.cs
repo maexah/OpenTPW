@@ -94,6 +94,79 @@ public class ParkStateTests
 	}
 
 	/// <summary>
+	/// <b>What is standing on a cell is a LIST, headed by the most recent arrival.</b>
+	///
+	/// <para>
+	/// The original keeps the head in the cell's own <c>+0x24</c> and the links on the things themselves -
+	/// <c>FUN_004d91f0</c> puts one on, <c>FUN_004d9280</c> takes one off. It is LIFO: whoever arrives
+	/// last heads the list. That is not a detail, it is what the gate reads - <c>Wait</c>'s paid arm asks
+	/// whether the cell names <i>this</i> guest.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void WhatStandsOnACellIsAListHeadedByTheLatestArrival()
+	{
+		var state = new ParkState( parkIsClosed: false, visitorsToDate: 0 );
+
+		state.StandOn( 7, 10, 10 );
+		state.StandOn( 8, 10, 10 );
+		state.StandOn( 9, 10, 10 );
+
+		Assert.AreEqual( 9, state.CellAt( 10, 10 ).Occupant, "the last to arrive heads the list" );
+		Assert.AreEqual( 8, state.NextOnCell( 9 ), "with the one before behind them" );
+		Assert.AreEqual( 7, state.NextOnCell( 8 ) );
+		Assert.AreEqual( 0, state.NextOnCell( 7 ), "and nobody behind the first" );
+	}
+
+	/// <summary>
+	/// <b>The load-bearing one, as it is for the queue: taking the MIDDLE one out joins up both sides.</b>
+	/// Dropping a link here only shows from the side nobody checked.
+	/// </summary>
+	[TestMethod]
+	public void SteppingOffACellJoinsUpWhoeverStoodEitherSide()
+	{
+		var state = new ParkState( parkIsClosed: false, visitorsToDate: 0 );
+
+		state.StandOn( 7, 10, 10 );
+		state.StandOn( 8, 10, 10 );
+		state.StandOn( 9, 10, 10 );
+
+		// The middle one walks to another cell.
+		state.StandOn( 8, 12, 12 );
+
+		Assert.AreEqual( 9, state.CellAt( 10, 10 ).Occupant, "the head is untouched" );
+		Assert.AreEqual( 7, state.NextOnCell( 9 ), "and the two either side of them are joined up" );
+		Assert.AreEqual( 8, state.CellAt( 12, 12 ).Occupant, "and they now head the cell they walked to" );
+
+		// And the head leaving promotes whoever is behind it.
+		state.StandOn( 9, 12, 12 );
+
+		Assert.AreEqual( 7, state.CellAt( 10, 10 ).Occupant, "the one left behind becomes the head" );
+		Assert.AreEqual( 9, state.CellAt( 12, 12 ).Occupant, "and the mover heads its new cell" );
+	}
+
+	/// <summary>
+	/// <b>Standing still is a no-op, and that is the original's first test rather than an optimisation.</b>
+	/// <c>FUN_0050b6a0</c> compares the cell before it unlinks anything - a walking guest crosses one cell
+	/// over many steps, and relinking on each would put them back at the head of their own cell every tick.
+	/// </summary>
+	[TestMethod]
+	public void StandingStillDoesNotRelinkAnybody()
+	{
+		var state = new ParkState( parkIsClosed: false, visitorsToDate: 0 );
+
+		state.StandOn( 7, 10, 10 );
+		state.StandOn( 8, 10, 10 );
+
+		// 7 is asked again for the cell it is already on.
+		state.StandOn( 7, 10, 10 );
+
+		Assert.AreEqual( 8, state.CellAt( 10, 10 ).Occupant,
+			"the one standing still must not jump back to the head of its own cell" );
+		Assert.AreEqual( 7, state.NextOnCell( 8 ), "and the order behind it is unchanged" );
+	}
+
+	/// <summary>
 	/// <b>A cell can be changed, and the change sticks.</b> <see cref="ParkState.CellAt"/> hands back a
 	/// reference; had it handed back a copy, every write would compile, run, and go nowhere - which is
 	/// exactly the sort of silent no-op this project keeps catching.

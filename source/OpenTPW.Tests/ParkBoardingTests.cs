@@ -224,6 +224,35 @@ public class ParkBoardingTests
 	}
 
 	/// <summary>
+	/// <b>Joining a queue seeds the move delay from how far back you are</b> - <c>FUN_00501db0</c>'s case
+	/// <c>0xb</c>, which converts <c>mQueuePos</c> to a float, multiplies by the constant at
+	/// <c>0x007007a4</c> (1.2) and truncates it into <c>mQueueMoveDelay</c>.
+	///
+	/// <para>
+	/// The guest at the front waits not at all, which is what keeps the head of a queue responsive to
+	/// being called forward. This was missing when the step-up was first built, so the delay was read
+	/// from the save once and never renewed.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void JoiningAQueueSeedsTheMoveDelayFromHowFarBackYouAre()
+	{
+		var back = Queueing( 7, queuePos: 5, admitted: false );
+
+		back.SetState( PeepState.InQueue, tick: 40, new Random( 1 ) );
+
+		Assert.AreEqual( 6, back.QueueMoveDelay, "five places back, at 1.2 a place, truncated" );
+		Assert.AreEqual( (int)(5 * Peep.QueueDelayPerPlace), back.QueueMoveDelay,
+			"and it is the executable's own constant rather than a literal repeated here" );
+
+		var front = Queueing( 8, queuePos: 0, admitted: false );
+
+		front.SetState( PeepState.InQueue, tick: 40, new Random( 1 ) );
+
+		Assert.AreEqual( 0, front.QueueMoveDelay, "the guest at the front waits not at all" );
+	}
+
+	/// <summary>
 	/// The flag is read from the save, and reading it has not disturbed its neighbours - <c>mCash</c> sits
 	/// four bytes after it and is pinned independently.
 	/// </summary>

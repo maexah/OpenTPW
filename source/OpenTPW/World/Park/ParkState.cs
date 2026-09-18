@@ -218,6 +218,134 @@ public sealed class ParkState
 	private readonly Dictionary<int, int> _queueNext = [];
 	private readonly Dictionary<int, int> _queuePrev = [];
 
+	// What is standing on each cell - a list per cell, headed by RuntimeCell.Occupant and linked
+	// through the THINGS, exactly as the queues above are. The original keeps the links on the thing
+	// itself (+8 previous, +10 next); they are kept here for the same reason mQNext/mQPrev are, so that
+	// the whole structure lives in one place and is seeded once.
+	private readonly Dictionary<int, int> _onCellNext = [];
+	private readonly Dictionary<int, int> _onCellPrev = [];
+
+	/// <summary>
+	/// Puts a thing on a cell, at the head of whatever is already there - the original's
+	/// <c>FUN_004d91f0</c>, which ends <c>cell[0x24] = thing</c>.
+	/// </summary>
+	/// <remarks>
+	/// <b>The list is LIFO</b>, and that is the original's own order rather than a convenience: the thing
+	/// that arrives most recently becomes the head, and the one before it is linked behind. Everything
+	/// that walks onto a cell goes through here, people and placed objects alike - which is why a placed
+	/// object's own thing id is what <see cref="RuntimeCell.Occupant"/> holds in the save.
+	/// </remarks>
+	public void EnterCell( int x, int y, int thingId )
+	{
+		if ( thingId == 0 || !OnMap( x, y ) )
+			return;
+
+		ref var cell = ref CellAt( x, y );
+		var head = cell.Occupant;
+
+		if ( head != 0 )
+			_onCellPrev[head] = thingId;
+
+		_onCellPrev.Remove( thingId );
+
+		if ( head == 0 )
+			_onCellNext.Remove( thingId );
+		else
+			_onCellNext[thingId] = head;
+
+		cell.Occupant = (ushort)thingId;
+	}
+
+	/// <summary>
+	/// Takes a thing off a cell, joining up whatever stood either side of it - <c>FUN_004d9280</c>.
+	/// </summary>
+	/// <remarks>
+	/// <b>Only the head's removal moves <see cref="RuntimeCell.Occupant"/></b>; anything else just relinks,
+	/// which is what the original does and is the whole point of keeping a list rather than a single slot.
+	/// </remarks>
+	public void LeaveCell( int x, int y, int thingId )
+	{
+		if ( thingId == 0 || !OnMap( x, y ) )
+			return;
+
+		ref var cell = ref CellAt( x, y );
+
+		var previous = _onCellPrev.GetValueOrDefault( thingId );
+		var next = _onCellNext.GetValueOrDefault( thingId );
+
+		if ( previous == 0 )
+		{
+			// It was the head - but only if the cell really names it, because a thing that was never
+			// put here must not silently evict whoever is.
+			if ( cell.Occupant == thingId )
+				cell.Occupant = (ushort)next;
+		}
+		else if ( next == 0 )
+		{
+			_onCellNext.Remove( previous );
+		}
+		else
+		{
+			_onCellNext[previous] = next;
+		}
+
+		if ( next != 0 )
+		{
+			if ( previous == 0 )
+				_onCellPrev.Remove( next );
+			else
+				_onCellPrev[next] = previous;
+		}
+
+		_onCellNext.Remove( thingId );
+		_onCellPrev.Remove( thingId );
+	}
+
+	/// <summary>Which cell each thing is currently standing on, so that a move knows what to undo.</summary>
+	private readonly Dictionary<int, int> _cellOf = [];
+
+	/// <summary>
+	/// Records that a thing is standing on a cell, taking it off whatever cell it was on - the original's
+	/// <c>FUN_0050b6a0</c>, whose own assertion is "Attempt to move thing to invalid...".
+	///
+	/// <para>
+	/// <b>It takes where the thing IS, not where it came from, and that is the original's shape rather
+	/// than a convenience.</b> <c>FUN_0050b6a0</c>'s first test is whether the cell actually changed, and
+	/// only then does it unlink and relink - so a walking guest, who crosses one cell over many steps,
+	/// is relinked once rather than put back at the head of their own cell every tick.
+	/// </para>
+	/// <para>
+	/// <b>It also covers a thing being placed for the first time, which a from/to move cannot.</b> The
+	/// original links a thing into its cell when it is CREATED (<c>FUN_0050afe0</c>) as well as when it
+	/// moves. This method was written as a from/to move first, and the cost showed up in a running park
+	/// immediately: <b>the one guest the save leaves standing still was never in any cell's list</b>, so
+	/// the gate could not see them and they waited at the booth for ever while the five who walked there
+	/// went through. Asking "where are you now" answers both cases with one call.
+	/// </para>
+	/// </summary>
+	public void StandOn( int thingId, int x, int y )
+	{
+		if ( thingId == 0 || !OnMap( x, y ) )
+			return;
+
+		var cell = (y * ParkWorld.MapSize) + x;
+
+		if ( _cellOf.TryGetValue( thingId, out var was ) )
+		{
+			if ( was == cell )
+				return;
+
+			LeaveCell( was % ParkWorld.MapSize, was / ParkWorld.MapSize, thingId );
+		}
+
+		EnterCell( x, y, thingId );
+
+		_cellOf[thingId] = cell;
+	}
+
+	/// <summary>The thing standing behind this one on the same cell, or nought - the original's thing <c>+10</c>.</summary>
+	public int NextOnCell( int thingId ) => _onCellNext.GetValueOrDefault( thingId );
+
 	/// <summary>
 	/// How far a queue walk may go before it is treated as broken. The original uses a thousand in
 	/// <c>GetBackOfQueue</c> and complains rather than spinning; this bounds the person walk the same way.

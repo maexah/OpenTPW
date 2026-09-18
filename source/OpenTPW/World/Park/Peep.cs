@@ -333,6 +333,18 @@ public sealed class Peep
 	public const int UnhurriedSpeed = 0;
 
 	/// <summary>
+	/// What each place further back in a queue costs in <see cref="QueueMoveDelay"/> - the float at
+	/// <c>0x007007a4</c>, which is <b>1.2</b>, and which <c>FUN_00501db0</c>'s case <c>0xb</c> multiplies
+	/// <see cref="QueuePos"/> by on the way into <see cref="PeepState.InQueue"/>.
+	/// </summary>
+	/// <remarks>
+	/// Read out of the executable rather than guessed: the instructions are <c>FILD</c> of the queue place,
+	/// <c>FMUL float ptr [0x007007a4]</c>, then the truncation into <c>+0x1f4</c>. A guest at the front
+	/// therefore waits not at all, which is what keeps the head of a queue responsive.
+	/// </remarks>
+	public const float QueueDelayPerPlace = 1.2f;
+
+	/// <summary>
 	/// Whether this guest's needs are updated on this tick. Their thing id decides which of the four
 	/// slots they take, so it is fixed for the life of the guest.
 	/// </summary>
@@ -426,8 +438,15 @@ public sealed class Peep
 				TimeOfLastSpotAnim = tick;
 				break;
 
+			// <b>And the move delay is seeded from how far back they are.</b> FUN_00501db0's case 0xb
+			// reads mQueuePos, converts it to a float, multiplies by the constant at 0x007007a4 - which
+			// is 1.2 - and truncates it back into mQueueMoveDelay. So somebody at the back of a long queue
+			// waits proportionally longer before shuffling up, and the guest at the front waits not at all.
+			// This was missing when the step-up was built, so the delay was read from the save once and
+			// never renewed.
 			case PeepState.InQueue:
 				TimeStartedIdling = tick;
+				QueueMoveDelay = (int)(QueuePos * QueueDelayPerPlace);
 				break;
 
 			// Shuffling up a queue is never done in a hurry, whatever the guest's needs say.

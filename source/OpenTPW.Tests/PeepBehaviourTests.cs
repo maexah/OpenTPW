@@ -488,6 +488,74 @@ public class PeepBehaviourTests
 			"and they should have got there on foot rather than been moved on where they stood" );
 	}
 
+	/// <summary>A guest who has already paid, which the save records at <c>mPaidAdmission</c>.</summary>
+	private static Peep PaidGuest( int thingId )
+		=> new( thingId, new ParkWorld.GuestState(
+			State: (int)PeepState.WaitingForOpening, SavedState: 6, PersonType: 0, Cash: 300,
+			ExitLevel: 100, Happiness: 50f, Thirst: 10f, Hunger: 10f, Toilet: 10f, Vomit: 0f,
+			Litter: 0f, MajorDest: 0, QueuePos: 0, PrankeryIndex: 0, PaidAdmission: 1 ), StandingStill );
+
+	/// <summary>
+	/// <b>A guest who has paid goes through when the cell they stand on names them - and waits while it
+	/// names somebody else.</b>
+	///
+	/// <para>
+	/// This is the gate letting one guest through at a time, and it went unbuilt until 2026-09-18.
+	/// <c>FUN_004ff7f0</c> reads a short at the cell's <c>+0x24</c> and compares it with the guest's own
+	/// thing id; that short is the head of the cell's thing list (<c>FUN_004d91f0</c> writes it), so the
+	/// question is "am I the first thing standing here?". <b>Alexah watched six guests fail it for a whole
+	/// run</b>, having judged the fee and paid.
+	/// </para>
+	/// <para>
+	/// The negative arm turns on the list being LIFO: thing 99 arrives after our guest, so 99 heads the
+	/// cell and our guest - who is standing still, and therefore is not relinked - stays behind them.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void APaidGuestGoesThroughOnlyWhenTheCellNamesThem()
+	{
+		var world = World();
+		var admission = Admission();
+
+		var waiting = new ParkState( world );
+		var behaviour = new PeepBehaviour( world, new Random( 1 ), admission,
+			() => ParkRides.GateIsOpen, waiting );
+
+		var blocked = CellEdge.For( world, ParkPeople.WalkingMode ).Blocked;
+
+		// Somebody else is standing here already, and arrives after our guest, so heads the list.
+		var second = PaidGuest( 7 );
+		var behind = new PeepWalk( second.Navigator, blocked );
+		var (cellX, cellY) = behind.Position.Cell;
+
+		waiting.StandOn( second.ThingId, cellX, cellY );
+		waiting.StandOn( 99, cellX, cellY );
+
+		behaviour.Step( second, behind, playing: null, tick: 1 );
+
+		Assert.AreEqual( PeepState.WaitingForOpening, second.State,
+			"the cell names thing 99, so this guest waits their turn rather than pushing in" );
+
+		// And a guest the cell does name goes through.
+		var first = PaidGuest( 8 );
+		var walk = new PeepWalk( first.Navigator, blocked );
+		var (x, y) = walk.Position.Cell;
+
+		waiting.StandOn( first.ThingId, x, y );
+
+		behaviour.Step( first, walk, playing: null, tick: 2 );
+
+		Assert.AreEqual( PeepState.Entering, first.State, "the cell names them, so they go through" );
+
+		var entrances = new[] { admission.EntranceA, admission.EntranceB }
+			.Select( cell => new FixedVector(
+				PeepNavigator.WaypointCentre( cell.X ), PeepNavigator.WaypointCentre( cell.Y ) ) )
+			.ToArray();
+
+		Assert.IsTrue( entrances.Contains( first.Navigator.Target ),
+			$"and they are aimed at a gateway cell, not at {first.Navigator.Target}" );
+	}
+
 	/// <summary>One frame, through both clocks, in the order <see cref="Level.Update"/> uses.</summary>
 	private static void Frame( float seconds )
 	{
