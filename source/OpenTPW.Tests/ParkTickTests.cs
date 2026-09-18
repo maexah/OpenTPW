@@ -155,9 +155,14 @@ public class ParkTickTests
 			bool invited = false, nominated = false, boarding = false, queued = false, atFront = false;
 			int ticked = 0, longest = 0;
 
-			// Sorted so the reported set reads the same way every run - it goes into a message a human
+			// Sorted so the reported sets read the same way every run - they go into a message a human
 			// compares by eye against the park's own thing ids.
 			var nominators = new SortedSet<int>();
+
+			// And which things were ever QUEUED for, which is a different question from which ever
+			// invited. "Never queued for" and "queued for but never invites" want opposite fixes, and a
+			// single boolean cannot tell them apart.
+			var queuedFor = new SortedSet<int>();
 
 			for ( var frame = 0; frame < frames; ++frame )
 			{
@@ -192,6 +197,7 @@ public class ParkTickTests
 						continue;
 
 					queued = true;
+					queuedFor.Add( thing.ThingId );
 					longest = System.Math.Max( longest, length );
 				}
 
@@ -223,7 +229,8 @@ public class ParkTickTests
 					+ $"letMeOff={bounce[ParkRideOperation.DismissVariable]}";
 
 			return new Ridden( invited, nominated, boarding, queued, atFront, longest,
-				ticked, ticked / ParkPeople.ThingTickEvery, vars, string.Join( ",", nominators ) );
+				ticked, ticked / ParkPeople.ThingTickEvery, vars,
+				$"invited {string.Join( ",", nominators )} | queuedFor {string.Join( ",", queuedFor )}" );
 		}
 		finally
 		{
