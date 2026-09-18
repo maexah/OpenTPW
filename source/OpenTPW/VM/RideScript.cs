@@ -361,7 +361,31 @@ public sealed class RideScript
 	/// </summary>
 	public bool DippedMusic => _dipped;
 
-	public int this[RideVariables variable] => Read( (int)variable );
+	/// <summary>
+	/// Reads one of the common variables by name rather than by the enum's numeric value.
+	///
+	/// <para>
+	/// <b>For a RIDE script the two agree, and that was measured rather than assumed.</b> Bouncy, Monkey,
+	/// Mumbo, Wateride, Spider and Inca God all declare the same twelve common names first and in the
+	/// enum's own order, then append their own (<c>VAR_SCREAMING</c>, <c>VAR_BOATCOUNT</c>,
+	/// <c>VAR_SPACELEFT</c>, and so on). So <c>Read( (int)variable )</c> would have been right for every
+	/// ride in the park.
+	/// </para>
+	/// <para>
+	/// <b>It is the OTHER scripts that make a fixed index unsafe.</b> A ride's archive can hold more than
+	/// one <c>.RSE</c>, and the companions declare none of the common set: <c>child.RSE</c> in
+	/// <c>monkey.wad</c> declares only <c>VAR_TEMP</c>, <c>effects.RSE</c> in <c>mumbo.wad</c> declares
+	/// <c>VAR_TEMP</c> and <c>VAR_RAND</c>, and <c>EventMap.RSE</c> in <c>wateride.wad</c> declares ten
+	/// <c>VAR_EVT</c> slots and a <c>VAR_PAR0</c>. A script numbers its variables in the order it declares
+	/// them, so the enum is a list of NAMES to look up and not a layout to index with.
+	/// </para>
+	/// <para>
+	/// Resolving through <see cref="IndexOf"/> costs nothing here - nothing calls this - and matches what
+	/// <see cref="ParkRides"/> has always done for the park gate, which reaches <c>VAR_COMMAND</c> and
+	/// <c>VAR_STATUS</c> by name for exactly this reason.
+	/// </para>
+	/// </summary>
+	public int this[RideVariables variable] => this[variable.ToString()];
 
 	/// <summary>Reads a variable by the name the script declares it under, or 0 if it has none such.</summary>
 	public int this[string name]
