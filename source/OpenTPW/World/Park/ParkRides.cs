@@ -32,10 +32,12 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>What this deliberately does not do yet.</b> The original's binder goes on to push the item's own
-/// operating speed into the script's speed word (<c>FUN_0055a300</c>, field <c>+0xc0</c>) and its
-/// operating duration into variable 3, which is <see cref="RideVariables.VAR_DURATION"/>, logging
-/// "SPEED = %d" and "DUR = %d" as it does. Neither is done here, because which key of the item's
+/// <b>What this deliberately does not do yet: the SPEED word alone.</b> The original's binder pushes the
+/// item's own operating speed into the script's speed word (<c>FUN_0055a300</c>, field <c>+0xc0</c>) and
+/// its operating duration into variable 3, which is <see cref="RideVariables.VAR_DURATION"/>, logging
+/// "SPEED = %d" and "DUR = %d" as it does. <b>The duration IS pushed now</b> - from the save's own
+/// <c>mOperatingDuration</c>, beside the capacity, further down this file; this said neither was, which
+/// stopped being true when a ride needed a duration to carry anyone for. The speed stays out, because which key of the item's
 /// description feeds which of them is <b>not</b> established: the constructor reads its record through a
 /// two-byte pointer, so the offsets Ghidra prints are not byte offsets, and they do not line up with
 /// where <c>FUN_004db7d0</c> parses <c>mOperatingSpeed</c> and <c>mOperatingDuration</c>. Guessing it
@@ -222,8 +224,10 @@ public sealed class ParkRides : Entity
 			}
 		}
 
-		// And tell the gate whether this park is open, which is the one thing in the game that ever writes
-		// a script variable from outside a script. Last, because it needs the binding above to have run.
+		// And tell the gate whether this park is open. This is one of several writes of a script variable
+		// from outside a script - the capacity and duration above are two more, and ride operation writes
+		// VAR_LETMEON and VAR_LETMEOFF - though it was the only one when this line was written.
+		// Last, because it needs the binding above to have run.
 		CommandTheGate( world );
 
 		Log.Info( $"{ThemeName}: {Bound} of the park's things are running a script" +

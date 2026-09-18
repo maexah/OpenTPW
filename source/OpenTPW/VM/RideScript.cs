@@ -436,7 +436,9 @@ public sealed class RideScript
 	/// <c>+0x14</c> to the sound script and answers one of <i>its</i> variables - and it has 29 callers,
 	/// none of them in the interpreter. So the point of <c>SPAWNSOUND</c> is to publish a block of
 	/// variables the ride and sound code reads by id, which is why every use loads the same file. Nothing
-	/// here consumes it yet; the slot is kept so that whatever does will find it already filled.
+	/// here consumes <i>that block</i>; the slot is kept so that whatever does will find it already
+	/// filled. <b>The slot itself is read</b> - <c>RideScriptScheduler</c>'s teardown follows it to take
+	/// the spawned sound script down with its parent. This said nothing consumed it at all.
 	/// </para>
 	/// </summary>
 	public int SoundChildId { get; set; }
@@ -796,9 +798,10 @@ public sealed class RideScript
 
 			// What a ride starts playing, and what stops it again. ADDOBJ keeps the engine's own record so
 			// that a later KILLOBJ can find it by tag; EVENT deliberately keeps nothing, because its
-			// handler throws the handle away and so nothing it starts is ever killable. FADEOBJ and
-			// SETOBJPARAM are NOT among them: 133 instructions that complete no further script, and a fade
-			// differs from a kill only in stopping a sound gently, which nothing here can yet hear.
+			// handler throws the handle away and so nothing it starts is ever killable. FADEOBJ is NOT
+			// among them - 113 instructions that complete no further script, and a fade differs from a
+			// kill only in stopping a sound gently, which nothing here can yet hear. (This named
+			// SETOBJPARAM alongside it at 133; SETOBJPARAM is implemented, below.)
 			case Opcode.ADDOBJ:
 				AddObject( operands );
 				break;
@@ -1903,7 +1906,7 @@ public sealed class RideScript
 	/// <b>Nought means "no model", and it is not the same answer as "no such animation".</b> With no
 	/// model the engine never asks, and nought is what the arithmetic above is done on - which is why a
 	/// model-less <c>TRIGANIM</c> answers the 300 floor rather than a number invented here. With a model
-	/// but a role or entry it has nothing for, the engine substitutes <see cref="UnknownAnimation"/>
+	/// but a role or entry it has nothing for, the engine substitutes <see cref="RideAnimations.UnknownLength"/>
 	/// instead. <b>That second branch is shipped content, not a hypothetical:</b> eight of the role
 	/// references in the game name a role whose file its own archive does not carry - <c>royaloo</c>,
 	/// <c>fries</c>, <c>icecream</c> and <c>purse</c> in fantasy, <c>crys_b</c>, <c>scentro</c> and

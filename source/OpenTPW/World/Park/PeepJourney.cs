@@ -14,9 +14,10 @@ namespace OpenTPW;
 /// <para>
 /// <b>What is here and what is not.</b> This is the part that answers "which way should I be pushed": the
 /// waypoint to aim at, when to move on to the next one, when to call it arrived, and how to slow down at
-/// the end. The front of the same function - the ground-staleness check, the speed factor, and the
-/// stuck-bit history that decides to renavigate - is deliberately not built yet, because it needs the
-/// terrain stamp grid and the navigator, and naming it here is better than half-building it.
+/// the end. The front of the same function is partly built: <b>the stuck-bit history that decides to
+/// renavigate IS built</b> and runs from <see cref="PeepWalk"/>, which says so at its own site. What is
+/// still absent is the ground-staleness check and the speed factor, which want the terrain stamp grid.
+/// This paragraph called all three unbuilt.
 /// <see cref="Refill"/> stands in for the one call the walking half really does make.
 /// </para>
 /// <para>

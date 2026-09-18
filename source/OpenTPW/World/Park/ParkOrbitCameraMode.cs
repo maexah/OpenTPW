@@ -27,9 +27,9 @@ namespace OpenTPW;
 ///
 /// <para>
 /// The three pieces of state are static so that the debug console can drive the camera without holding
-/// the instance, the same way <see cref="LobbyCameraMode"/> exposes its own. <b>Two things are
-/// deliberately unfinished and both are marked at their site</b> - the field of view's convention, and
-/// riding the ground.
+/// the instance, the same way <see cref="LobbyCameraMode"/> exposes its own. <b>Both of the things this
+/// paragraph called deliberately unfinished are now settled at their sites</b> - the field of view's
+/// convention (vertical 90, read out of the exe) and riding the ground, which the update does.
 /// </para>
 /// </summary>
 public sealed class ParkOrbitCameraMode : CameraMode
@@ -257,16 +257,6 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	}
 
 	/// <summary>
-	/// A one-line summary for the debug console. Cell comes back out of the world position by the same
-	/// rule that put it in: <c>grid = (world - 5) / 10</c>.
-	///
-	/// <para>
-	/// <c>ground</c> is sampled fresh rather than being the eased value the camera is actually riding,
-	/// so it says what the land under the point of interest is, not where the eye has caught up to.
-	/// That is the more useful of the two to read back: it is the thing being followed.
-	/// </para>
-	/// </summary>
-	/// <summary>
 	/// Drops where this camera was looking as a scene ends, so the next park does not open wherever
 	/// the last one was left - see <see cref="Level.Unload"/>.
 	///
@@ -285,6 +275,16 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		Zoom = 110f;
 	}
 
+	/// <summary>
+	/// A one-line summary for the debug console. Cell comes back out of the world position by the same
+	/// rule that put it in: <c>grid = (world - 5) / 10</c>.
+	///
+	/// <para>
+	/// <c>ground</c> is sampled fresh rather than being the eased value the camera is actually riding,
+	/// so it says what the land under the point of interest is, not where the eye has caught up to.
+	/// That is the more useful of the two to read back: it is the thing being followed.
+	/// </para>
+	/// </summary>
 	public static string State()
 	{
 		var ground = ParkGround.Current?.Heightfield?.HeightAtWorld( PointOfInterest.X, PointOfInterest.Y );

@@ -10,10 +10,11 @@ namespace OpenTPW;
 /// </para>
 /// <para>
 /// <b>What this is and is not.</b> It carries the needs and the behaviour a guest was saved in, ticks the
-/// needs, and holds the state that <see cref="PeepBehaviour"/> moves them through - five of the original's
-/// twenty-two cases, which is enough to get a guest to the gate, through it, and no further. Choosing a
-/// ride, queueing for one and going home are the rest of <c>FUN_005019f0</c> and are deliberately not
-/// attempted here, the way the ride VM was brought up an instruction at a time rather than all at once.
+/// needs, and holds the state that <see cref="PeepBehaviour"/> moves them through - thirteen of the
+/// original's twenty-two cases, which is enough to get a guest to the gate, through it, to a ride, onto
+/// it and off again. <b>This said five, and named choosing a ride and queueing for one as deliberately
+/// not attempted</b>; both are built, and what is left of <c>FUN_005019f0</c> is going home and the
+/// states that want a world this does not simulate yet.
 /// </para>
 /// </summary>
 public sealed class Peep

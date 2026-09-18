@@ -23,8 +23,12 @@ namespace OpenTPW;
 /// reads (1, 5, 2, 40). Measured over all 46 banks; nothing here uses them yet.</description></item>
 /// </list>
 /// <para>
-/// The game asks for a sprite by a number whose top part is the bank - banks are numbered in the
-/// order a folder's files are found - and whose low four bits are the set (0x005423a0).
+/// The game asks for a sprite by a number whose top part is the bank and whose low four bits are the
+/// set (0x005423a0). <b>Banks are numbered in the order they are LOADED, which is not always the order
+/// their folder lists them</b> - the four avatar banks come first for the guest kinds that have them.
+/// This said "the order a folder's files are found", which <c>ParkGuestSprites.BanksIn</c> contradicts
+/// and <c>ParkGuestArtTests</c> pins: a sweep of the kids folder gives one order and the load gives
+/// another.
 /// </para>
 /// </summary>
 public sealed class SpriteBankFile : BaseFormat

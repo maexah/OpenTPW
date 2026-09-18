@@ -30,8 +30,9 @@ namespace OpenTPW;
 /// seaplane and end - and none of them is scenery: the bus sits at cell (29.7,-11.5) and the ferry at
 /// (90.0,-17.6), both off the map on negative depth, the seaplane off it on negative x, and end.wad is
 /// three aircraft 59 units in the air. They are vehicles parked at their spawns, driven by the
-/// <c>.RSE</c> scripts whose runtime is not built (see <see cref="Ride"/>), and standing them still on
-/// the ground would be worse than leaving them out.
+/// <c>.RSE</c> scripts - whose runtime <b>is</b> built, in <c>RideScript</c>, though these particular
+/// vehicles are still left out because standing them still on the ground would be worse. This said the
+/// runtime was not built and pointed at <c>World/Ride.cs</c>, which is itself dead code.
 /// </para>
 ///
 /// <para>

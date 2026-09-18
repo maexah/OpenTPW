@@ -10,7 +10,9 @@ namespace OpenTPW;
 ///
 /// <para>
 /// It is <b>not</b> the ground. The playable surface is a 96x85 cell heightfield stored in a block
-/// inside the same file, which is a separate job - see ParkHeightfield when it exists. This entity is
+/// inside the same file, which is a separate job - see <see cref="ParkGround"/>, which owns it and is
+/// built before this one. (This said "see ParkHeightfield when it exists"; no such type was ever
+/// written, and the job shipped under the other name.) This entity is
 /// only the scenery standing on that ground, and it is first because it needs no new file format at
 /// all: <see cref="ModelFile"/> reads it unmodified (it carries the same 0x1CD15D46 magic as every
 /// other model in the game), and all 57 of the material names it asks for resolve as

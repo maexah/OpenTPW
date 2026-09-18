@@ -30,10 +30,11 @@ namespace OpenTPW;
 /// floating point would give answers that are close and not the same.
 /// </para>
 /// <para>
-/// <b>What this is not, yet.</b> It does not steer - the behaviour list that produces a force is
-/// <see cref="PeepSteering"/>, and following the route it plans is <see cref="PeepJourney"/>. Nothing
-/// ticks either of those from the park yet, so planning a route here does not by itself make anybody
-/// walk.
+/// <b>What this is not.</b> It does not steer - the behaviour list that produces a force is
+/// <see cref="PeepSteering"/>, and following the route it plans is <see cref="PeepJourney"/>.
+/// <b>Both are ticked from the park now</b>, through <c>ParkPeople.OnUpdate</c> into
+/// <see cref="PeepBehaviour"/> and <see cref="PeepWalk"/>, so a route planned here does make somebody
+/// walk - this paragraph said nothing ticked them, which was true when it was written.
 /// </para>
 /// </summary>
 public sealed class PeepNavigator
@@ -294,8 +295,9 @@ public sealed class PeepNavigator
 	/// <para>
 	/// On the last leg reaching it ends the route. Anywhere else it takes the leg just walked off the
 	/// buffered distance and moves to the next waypoint; running off the end of the buffer is what asks
-	/// for the rest of a streamed route, which is reported here rather than done, because nothing can
-	/// refill it yet.
+	/// for the rest of a streamed route. <b>Something refills it now</b>: <see cref="PeepWalk"/> hands
+	/// <c>PeepJourney.Refill</c> a renavigate, which the journey calls at exactly this point. This said
+	/// nothing could refill it yet.
 	/// </para>
 	/// </summary>
 	/// <returns>Whether the buffer has run out and needs refilling.</returns>

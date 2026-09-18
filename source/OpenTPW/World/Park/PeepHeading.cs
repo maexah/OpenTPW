@@ -57,7 +57,11 @@ public static class PeepHeading
 		256
 	];
 
-	/// <summary>How many entries the table has, which is also what a ratio is scaled to before indexing.</summary>
+	/// <summary>
+	/// What a ratio is scaled to before indexing. <b>Not the table's length</b>: <c>Arctangent</c> runs
+	/// 0 to 256 inclusive and so has <b>257</b> entries, which is what lets a ratio of exactly 1 index it
+	/// without a bounds check. This said "how many entries the table has", which is off by one.
+	/// </summary>
 	public const int Steps = 256;
 
 	/// <summary>The table itself, so a test can pin it against the values read out of the executable.</summary>

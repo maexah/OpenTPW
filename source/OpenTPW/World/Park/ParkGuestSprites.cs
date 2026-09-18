@@ -112,7 +112,11 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// </summary>
 	internal static bool DebugFacing { get; set; }
 
-	/// <summary>Enough colours to tell the fourteen kinds of sprite apart at a glance - see <see cref="DebugFacing"/>.</summary>
+	/// <summary>
+	/// Enough colours to tell the <b>nine</b> sprite kinds this maps apart at a glance - see
+	/// <see cref="DebugFacing"/>. This said fourteen, which is the original's table size rather than
+	/// this array's: <c>FolderFor</c> covers 0 to 8, and an index past the end clamps.
+	/// </summary>
 	private static readonly uint[] DebugColours =
 	[
 		0xff4fc3f7, // 0 kids

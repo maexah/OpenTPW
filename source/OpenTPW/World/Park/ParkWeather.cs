@@ -31,10 +31,10 @@ namespace OpenTPW;
 /// <c>LobbyAudio</c>.
 /// </para>
 /// <para>
-/// <b>Nothing draws yet.</b> <see cref="Drops"/> and <see cref="LastStrike"/> are the whole of what a
-/// renderer needs, and they are kept correct here so that sight can follow sound without this
-/// changing. The storm is audible in the meantime, which is a real thing to check rather than a
-/// placeholder.
+/// <b>It draws now</b> - see "What draws it" below. <see cref="Drops"/> and <see cref="LastStrike"/>
+/// were designed as the whole of what a renderer needs, kept correct so that sight could follow sound
+/// without this changing, and that is exactly how it went: the sprites arrived and this did not move.
+/// This paragraph said "Nothing draws yet" until the renderer landed.
 /// </para>
 /// </summary>
 public sealed class ParkWeather : Entity

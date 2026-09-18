@@ -120,10 +120,11 @@ public sealed class ParkAdmission
 	/// <b>Two of the three now live here, and it is worth saying why they still do.</b> When only one was in
 	/// use, gathering all three into a holder of their own would have been a type invented for a single
 	/// reader. Two is not obviously better, but it is not worse either - and the third
-	/// (<c>SmallHappinessChange</c>, 5) is passed by the ride-choosing arm that is deliberately not built.
-	/// <b>When that arm lands, all three should move somewhere that is about a guest's mood rather than
-	/// about the price of coming in</b>; until then, adding a holder would be speculative and splitting them
-	/// across two homes would be worse than keeping them together in an awkward one.
+	/// (<c>SmallHappinessChange</c>, 5) is passed by the ride-choosing arm. <b>That arm IS built now</b> -
+	/// this said it was deliberately not - but the constant itself still has no reader, so the move this
+	/// paragraph asks for is now owed rather than blocked: <b>all three belong somewhere that is about a
+	/// guest's mood rather than about the price of coming in.</b> Until something reads the third,
+	/// splitting them across two homes would still be worse than keeping them together in an awkward one.
 	/// </remarks>
 	public int BigHappinessChange { get; }
 
@@ -183,9 +184,10 @@ public sealed class ParkAdmission
 	/// What the park's rides are worth, summed by <c>FUN_004c8240</c>.
 	///
 	/// <b>Nought for the shipped park, and by that park's own saved state rather than by omission:</b> the
-	/// sum counts only things whose queue holds somebody, and the save records that the park has never
-	/// admitted a visitor, so no queue can hold anyone. Nothing in this tree operates a ride either, so
-	/// this is named and passed rather than being a zero nobody can see.
+	/// sum counts only things whose queue holds somebody, and the save records that the park had never
+	/// admitted a visitor, so no queue could hold anyone <i>at load</i>. <b>Rides operate now and guests
+	/// join queues</b>, so that nought is the starting value rather than a permanent one - this said
+	/// nothing in the tree operated a ride. It is named and passed rather than being a zero nobody sees.
 	/// </param>
 	public int IdealPrice( int excitement, Random random )
 	{

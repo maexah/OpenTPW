@@ -107,7 +107,11 @@ public sealed class PeepWalk
 	/// </summary>
 	internal Func<int, int, StepDirection, bool> Blocked => _blocked;
 
-	/// <summary>The route follower, exposed so a test can read how far along it the person has got.</summary>
+	/// <summary>
+	/// The route follower. <b>Nothing reads this accessor</b> - not a test, not the console, nothing -
+	/// so it is unused as it stands; the follower itself is driven through the private field. This said
+	/// it was exposed so a test could read how far along the person had got, which no test does.
+	/// </summary>
 	internal PeepJourney Journey => _journey;
 
 	/// <summary>The steering step, exposed for the same reason - its stuck record is the interesting part.</summary>
@@ -133,8 +137,10 @@ public sealed class PeepWalk
 	/// <b>This is a departure and it is named.</b> In the original nobody plans a route from inside the walk:
 	/// the state machine does it on the way in, through <c>FUN_00510100</c>, which is reached from three
 	/// places in <c>FUN_004f9490</c> and one each in <c>FUN_004fa530</c> and <c>FUN_004fa5f0</c>. Those are
-	/// the twenty-two state behaviours, which are not built. Until they are, a guest restored from a file has
-	/// a destination and no route, and something has to ask for one or nobody ever takes a step.
+	/// the twenty-two state behaviours. <b>Thirteen of those are built now</b> and several plan routes of
+	/// their own - this said none were - but the departure stands for the case it was written for: a guest
+	/// restored from a file has a destination and no route, and something has to ask for one or nobody
+	/// ever takes a step.
 	/// </para>
 	/// </summary>
 	public bool PlanRoute() => Renavigate( addCurrent: false );

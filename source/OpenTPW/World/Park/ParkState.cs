@@ -17,10 +17,11 @@ namespace OpenTPW;
 /// The same gap blocked litter on cells and the admission gate's per-cell occupancy.
 /// </para>
 /// <para>
-/// <b>What is deliberately NOT here.</b> No ride state and no per-object dirt. Those want a ride that
-/// operates, and nothing operates one yet - a layer built for a consumer that does not exist is the
-/// speculative kind this project does not add. The cells below are the opposite case: they are read by
-/// the handyman's litter search, which is built next.
+/// <b>What is deliberately NOT here: per-object dirt.</b> It wants a consumer, and nothing reads it yet -
+/// a layer built for a consumer that does not exist is the speculative kind this project does not add.
+/// <b>Ride state was named here too, and no longer belongs in this list:</b> a ride does operate now, so
+/// the takings and the per-object nominee below arrived with the consumer that needed them. The cells
+/// are the same case: they are read by the handyman's litter search.
 /// </para>
 /// </summary>
 public sealed class ParkState
@@ -201,7 +202,8 @@ public sealed class ParkState
 	public static bool OnMap( int x, int y )
 		=> x >= 0 && y >= 0 && x < ParkWorld.MapSize && y < ParkWorld.MapSize;
 
-	// The queues, which are the one structure a running park changes that the save cannot hold for it:
+	// The queues - once the only structure a running park changed that the save could not hold for it,
+	// and now one of three, beside the takings and the per-object nominee below:
 	// ParkWorld describes a file and is immutable, so a guest joining a queue has nowhere to write. The
 	// shape is the original's own - a head on the object (mFirstInQ) and a doubly-linked list through the
 	// guests themselves (mQNext, mQPrev) - kept here rather than on Peep so that the whole structure lives

@@ -201,8 +201,11 @@ public class ParkGuestStateTests
 	/// <b>All seven guests coming through the gate are walking to the exact centre of one of its two
 	/// entrance cells.</b> That is why they stop in the gateway rather than passing under it: the cell
 	/// centre <i>is</i> their destination, and what should happen next - choosing somewhere inside the park
-	/// and setting off again - is the <c>Deciding</c> hub, which is not built. Until it is, a guest who
-	/// arrives stands in the archway.
+	/// and setting off again - is the <c>Deciding</c> hub. <b>That hub IS built now</b>
+	/// (<see cref="PeepBehaviour"/> handles <c>PeepState.Deciding</c>, and ParkDecidingTests covers it), so a
+	/// guest who arrives no longer stands in the archway - this paragraph said they did until 2026-09-18.
+	/// What is asserted below is unaffected either way: it is about where the save was sending them, which
+	/// is a fact about the file rather than about what happens next.
 	/// </para>
 	/// <para>
 	/// <b>The two halves of this come from files that know nothing about each other</b>, which is what makes

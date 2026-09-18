@@ -33,8 +33,9 @@ namespace OpenTPW;
 /// <b>The admission sequence, for whoever carries it on.</b> HeadingForGate arrives and judges the fee;
 /// a fee it accepts sets a "paid" flag and sends the guest back to wait for the gate; waiting with that
 /// flag set and standing on the right cell becomes Entering; Entering arrives, takes a visitor number and
-/// goes on to decide what to do. Of that loop the two arrivals are here and the middle is not - see
-/// <see cref="Step"/> for each deferral and the reason it is deferred.
+/// goes on to decide what to do. <b>The whole of that loop is here now</b> - judging and waiting
+/// included; this said only the two arrivals were. What is left of it is the paid arm of waiting - see
+/// <see cref="Step"/> for each remaining deferral and the reason it is deferred.
 /// </para>
 /// </summary>
 public sealed class PeepBehaviour
@@ -203,9 +204,10 @@ public sealed class PeepBehaviour
 	/// <para>
 	/// <b>Nought, and by the shipped park's own saved state rather than by omission.</b> That sum counts
 	/// only things with somebody in their queue, and the save records <c>mNumberOfVisitorsToDate</c> as
-	/// nought - nobody has ever been admitted, so no queue can hold anyone. Nothing in this tree operates
-	/// a ride either. It is settable so that the term is visible and testable rather than a zero nobody
-	/// can see.
+	/// nought - nobody had ever been admitted, so no queue could hold anyone <i>at load</i>. <b>That is
+	/// now the starting value rather than the standing one</b>: guests join queues and rides operate, so
+	/// a park that has been running a while answers something else. This said a ride was never operated.
+	/// It is settable so that the term is visible and testable rather than a zero nobody can see.
 	/// </para>
 	/// </summary>
 	public int ParkExcitement { get; set; }
@@ -300,8 +302,9 @@ public sealed class PeepBehaviour
 	/// The thing tick, the same counter <see cref="Peep.Tick"/> is spread across. <b>The original stamps
 	/// its own clock here instead</b> - the states that record a time compare it against the world's
 	/// <c>mGameTick</c> - and which of the two those comparisons want is not established. It matters to
-	/// <see cref="PeepState.PlayingSpotAnimation"/> and <see cref="PeepState.InQueue"/>, neither of which
-	/// is built, so it is named rather than guessed at.
+	/// <see cref="PeepState.PlayingSpotAnimation"/>, which is not built, and
+	/// <see cref="PeepState.InQueue"/>, <b>which is</b> - so for the queue the question is live rather
+	/// than hypothetical. This said neither was built.
 	/// </param>
 	public void Step( Peep peep, PeepWalk walk, SpriteScript? playing, int tick )
 	{
@@ -988,9 +991,10 @@ public sealed class PeepBehaviour
 	/// written after the route for the same reason the state is.
 	/// </para>
 	/// <para>
-	/// <b>Queue lengths are not passed, and that is this park's own answer rather than a gap.</b> Nothing
-	/// here operates a ride, and the save leaves <c>mFirstInQ</c> at nought on every object - nobody has
-	/// ever queued in it - so every queue is genuinely empty until guests start joining them.
+	/// <b>Queue lengths ARE passed, and are measured from the park as played rather than as saved.</b> The
+	/// save leaves <c>mFirstInQ</c> at nought on every object - nobody had ever queued in it - so every
+	/// queue starts genuinely empty; but guests join them now, so the length has to be read live. This
+	/// paragraph said they were not passed, while the call below already passed them.
 	/// </para>
 	/// </summary>
 	/// <returns>Whether somewhere was chosen and a route to it planned.</returns>

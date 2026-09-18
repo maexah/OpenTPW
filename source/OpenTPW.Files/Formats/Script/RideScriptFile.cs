@@ -96,7 +96,7 @@ public sealed record RideInstruction( int Address, Opcode Opcode, IReadOnlyList<
 ///
 /// <para>
 /// This reads a script; it does not run one. <b>Something else does</b> - <c>RideScript</c>, in the game
-/// assembly, which carries 57 of the 106 instructions the opcode table declares and counts what it does
+/// assembly, which carries 63 of the 106 instructions the opcode table declares and counts what it does
 /// not carry rather than guessing at it. Every ride script the game ships both reads here and runs there.
 /// </para>
 ///

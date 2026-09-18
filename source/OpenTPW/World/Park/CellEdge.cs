@@ -195,7 +195,8 @@ public sealed class CellEdge
 	/// outright; on 1 a path may be left for anything that is not path, queue or footprint.
 	/// </param>
 	/// <param name="trackCloses">
-	/// Whether the cell's <i>track</i> record closes it. Not modelled: see the class remarks.
+	/// Whether the cell's <i>track</i> record closes it. <b>Modelled now</b> - see the class remarks, and
+	/// <c>For</c>, which binds it for every real park. This said "Not modelled".
 	///
 	/// <para>
 	/// <b>Measured rather than guessed at, and the measurement is why this is small.</b> Every one of Lost

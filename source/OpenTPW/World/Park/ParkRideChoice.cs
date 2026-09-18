@@ -113,8 +113,9 @@ public static class ParkRideChoice
 	/// <b>Every queue in the shipped park measures nought, and that is the park rather than the walk.</b>
 	/// Its <c>mFirstInQ</c> is nought on every object because nobody has ever been admitted to it -
 	/// <c>mNumberOfVisitorsToDate</c> is nought too - so this can only start returning something once
-	/// guests join queues, which nothing here does yet. It is built now because the field it needed was
-	/// the thing blocking it, not because this park can show it off.
+	/// guests join queues - <b>which they now do</b>, through <c>PeepBehaviour.JoinTheQueue</c>, so this
+	/// does return something in a running park. It was built before that, because the field it needed was
+	/// the thing blocking it rather than because the park could show it off.
 	/// </para>
 	/// </summary>
 	public static int QueueLength( ParkWorld? park, ParkWorld.CatalogueObject item )

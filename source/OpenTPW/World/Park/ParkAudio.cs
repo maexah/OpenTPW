@@ -199,7 +199,9 @@ public sealed class ParkAudio : Entity
 		// .map files sit in - cat_music's bank path reads "Music\Music" - so the root is the level and
 		// the maps are the Music folder beside it. The other three park categories are deliberately
 		// not loaded: cat_ambient's effects are placed emitters that come out of the level's scape.omp
-		// (the OBJ_ chunk FUN_00550e00 reads, type 1 records), cat_rides wants a ride runtime, and
+		// (the OBJ_ chunk FUN_00550e00 reads, type 1 records), cat_rides wants somewhere for a ride's
+		// sounds to GO - the ride runtime itself exists and runs, and this said it did not; what is
+		// missing is the sink, since RideEffects records that nothing it starts is drawn or heard - and
 		// cat_speech wants an advisor in a park. Loading cat_rides alone would decode three hundred
 		// and six samples for nothing that can yet be heard.
 		var root = $"levels/{themeName.ToLowerInvariant()}";

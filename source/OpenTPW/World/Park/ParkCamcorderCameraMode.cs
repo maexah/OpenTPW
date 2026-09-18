@@ -19,7 +19,8 @@ namespace OpenTPW;
 /// <para>
 /// The original reaches it two ways, and both are already named here: the 'C' key
 /// (<see cref="InputButton.CamcorderMode"/>, shortcuts action 16) and button id 99 on the park
-/// management gadget, which does not exist yet. Both end at the same place - the chain, the shortcuts
+/// management gadget, <b>which exists and wires this up</b> - see <c>ParkGadget</c>, where that button's
+/// click calls <see cref="Enter"/>. This said the gadget did not exist yet. Both end at the same place - the chain, the shortcuts
 /// table and the button ids are all in the park engine notes under "Camcorder mode".
 /// </para>
 ///

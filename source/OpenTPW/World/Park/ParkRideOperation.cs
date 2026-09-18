@@ -7,17 +7,20 @@ namespace OpenTPW;
 /// <para>
 /// <b>A ride is ticked like anything else in the park.</b> <c>FUN_0050b360</c> switches on a thing's
 /// model byte and hands model 3 to <c>FUN_004e0b90</c> and then <c>FUN_004e0e00</c>, exactly as it hands
-/// a guest to their needs and then their behaviours. This is the first half's tail, which is the piece
-/// that can be built honestly today: the rest of that tick turns on the ride's own SCRIPT.
+/// a guest to their needs and then their behaviours. <b>The whole of that tick is built now</b>, script
+/// and all - this said only the first half's tail could be built honestly, which was true until the
+/// script binding landed.
 /// </para>
 /// <para>
 /// <b>Ride operation is script-driven, and that is why only this much is here.</b> The object holds a
 /// script handle at <c>+0x24</c>, and the engine talks to the ride through its script's variables -
 /// <b>0</b> admit, <b>1</b> dismiss, <b>4</b> breakdown, <b>6</b> closed, <b>7</b> out of service,
-/// <b>8</b> dirty. Nothing here binds a script to a ride object yet, and one condition is worse than
-/// unbound: <c>FUN_004e0450</c> admits when variable 0 <i>differs</i> from the head of the queue, and
-/// what that difference means is not established. Building an admit on a misread trigger would move
-/// guests onto rides for the wrong reason, which is worse than not moving them at all.
+/// <b>8</b> dirty. <b>Both of the cautions this paragraph used to carry are now settled.</b>
+/// <see cref="ParkRides"/> binds a script to every placed object and pushes the save's own capacity and
+/// duration into it; and the condition once called "worse than unbound" - <c>FUN_004e0450</c> admitting
+/// when variable 0 <i>differs</i> from the head of the queue - is the <c>VAR_LETMEON</c> handshake:
+/// the engine fills that slot and the script zeroes it to acknowledge, so an empty slot is the script
+/// saying it is ready. See <see cref="CompleteAdmission"/>, which reads it the right way round.
 /// </para>
 /// </summary>
 public sealed class ParkRideOperation

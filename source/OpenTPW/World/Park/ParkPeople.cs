@@ -16,14 +16,14 @@ namespace OpenTPW;
 /// <b>Guests walk, and arriving somewhere now means something.</b> The needs loop is the first of the
 /// original's two per-guest calls and the twenty-two state behaviours are the second - see
 /// <see cref="PeepBehaviour"/>, which is that second call and which decides what a walk coming to an end
-/// amounts to. Of the twenty-two, five are built: a guest reaching the gate judges the admission fee, a
-/// guest coming through it is counted as a visitor and goes on to decide, and the rest stop where the
-/// original's own handler would need something this project has not read yet.
+/// amounts to. <b>Thirteen of the twenty-two are built</b> - this said five, and named choosing, judging
+/// the fee and waiting for the gate as the three that were not, all of which have since landed.
 /// <para>
-/// <b>What they still do not do is choose.</b> Deciding, judging the fee and waiting for the gate are the
-/// three handlers a guest can now reach and none is built, so the park fills up with guests who have
-/// arrived somewhere sensible and stay there. Bringing them up one at a time is how the ride VM was done,
-/// and it is why this can be trusted at each step rather than all at once at the end.
+/// <b>They choose now.</b> A guest judges the admission fee, pays it, decides where to go, walks there,
+/// joins the queue and steps up it, is invited aboard, rides, and is let off at the exit. What stops a
+/// guest is no longer a missing handler but a missing thing to want: only two of this park's objects can
+/// be offered at all. Bringing them up one at a time is how the ride VM was done, and it is why this
+/// could be trusted at each step rather than all at once at the end.
 /// </para>
 /// </para>
 /// </summary>
@@ -217,8 +217,10 @@ public sealed class ParkPeople : Entity
 	}
 
 	/// <summary>
-	/// Every guest the save named, as a running copy. Staff are left out: they have a block of their own
-	/// that nothing reads yet, and five state machines of their own that nothing runs.
+	/// Every guest the save named, as a running copy. Staff are left out of <i>this</i> list because they
+	/// are a different kind with a block and a behaviour of their own - both of which are now read and
+	/// run, by <c>StaffIn</c> just below and by <c>StaffBehaviour.Step</c> from the update. This said
+	/// nothing read the block and nothing ran the machines, which was the reason at the time.
 	///
 	/// <para>
 	/// Static, and takes the park rather than reaching for one, so that a test can build the same list
@@ -498,7 +500,11 @@ public sealed class ParkPeople : Entity
 		}
 	}
 
-	/// <summary>This guest's walk, for the tests and the debug console.</summary>
+	/// <summary>
+	/// This guest's walk, looked up by thing id. Used in production by the ride turn, which hands it to
+	/// <c>Dismiss</c> so a guest let off can be walked to the exit, as well as by the tests and the debug
+	/// console. This said it was for the tests and the console alone.
+	/// </summary>
 	internal PeepWalk? WalkFor( int thingId ) => _walks.GetValueOrDefault( thingId );
 
 	/// <summary>This staff member's walk, for the same.</summary>

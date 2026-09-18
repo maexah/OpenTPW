@@ -26,10 +26,11 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>Queues are deliberately left out</b>, though they sit in the same field. Their four cells carry a
-/// tile index of 5 where the theme's <c>QueueTex</c> has only rows 0 to 3, so what a queue tile is
-/// indexed by is not yet known, and no other theme ships a saved park to check against. Drawing four
-/// cells wrong is worse than not drawing them.
+/// <b>Queues are drawn elsewhere, by <see cref="ParkQueues"/>, and are not paths at all.</b> This said
+/// they were "deliberately left out" because their tile index of 5 exceeded the theme's <c>QueueTex</c>
+/// rows 0 to 3 and "what a queue tile is indexed by is not yet known". It is known: a queue is built
+/// from the railed models the theme keeps in its own <c>queue.wad</c>, chosen by the exe's piece table,
+/// not from a ground tile - which is why the index never fitted the texture rows.
 /// </para>
 /// </summary>
 public sealed class ParkPaths : ModelEntity
