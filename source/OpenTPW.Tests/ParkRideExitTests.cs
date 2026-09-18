@@ -225,4 +225,98 @@ public class ParkRideExitTests
 		Assert.AreEqual( 14, objects.Count, "the shipped park's objects, placed and not" );
 		Assert.AreEqual( 0, objects.Count( o => o.CanLoad == 0 ), "none of them refuses to load" );
 	}
+
+	/// <summary>Dismisses one guest from a ride priced as the caller asks, and hands back what happened.</summary>
+	private (ParkState Park, Peep Guest) PayFor( int price, int cash = 300, int balance = 500 )
+	{
+		var ride = Park().Objects.Single( o => o.ThingId == Ride ) with { PricePerUse = price };
+		var park = new ParkState( parkIsClosed: false, visitorsToDate: 0, balance: balance );
+		var script = Script();
+
+		var peep = Guest( 7, PeepState.Riding );
+		peep.Cash = cash;
+
+		script.Set( ParkRideOperation.DismissVariable, 7 );
+
+		Assert.IsTrue( new ParkRideOperation( park, new Dictionary<int, Peep> { [7] = peep } )
+			.Dismiss( script, ride, tick: 9, new Random( 1 ) ), "the guest should have been let off" );
+
+		return (park, peep);
+	}
+
+	/// <summary>
+	/// <b>A guest pays on leaving, and the object keeps what they paid.</b> <c>FUN_004fe1a0</c>: read the
+	/// price, credit the object, take it off the guest.
+	/// </summary>
+	[TestMethod]
+	public void APricedRideTakesTheMoneyAndKeepsIt()
+	{
+		var (park, peep) = PayFor( price: 20 );
+
+		Assert.AreEqual( 280, peep.Cash, "twenty off three hundred" );
+		Assert.AreEqual( 20, park.TakingsFor( Ride ), "and the ride has taken it" );
+	}
+
+	/// <summary>
+	/// <b>The park's own balance does NOT move, and that is the original's arrangement.</b> An admission fee
+	/// goes through <c>FUN_004d0600</c> and lands on <c>mBalance</c>; a charge for a ride goes through
+	/// <c>FUN_004e16b0</c>, which credits the object and a global pool and never touches the balance.
+	/// <b>Do not "fix" this</b> - making the park's money move here would be inventing behaviour.
+	/// </summary>
+	[TestMethod]
+	public void PayingForARideLeavesTheParksBalanceAlone()
+	{
+		var (park, _) = PayFor( price: 20, balance: 500 );
+
+		Assert.AreEqual( 500, park.Balance, "the balance the park started with" );
+		Assert.AreEqual( 0, park.Takings, "and the gate's running total is untouched too" );
+	}
+
+	/// <summary>
+	/// A ride priced at nought charges nothing - and that is <b>this park's own ride</b>, so the refusal is
+	/// the shipped case rather than a contrived one.
+	/// </summary>
+	[TestMethod]
+	public void AFreeRideTakesNothing()
+	{
+		var ride = Park().Objects.Single( o => o.ThingId == Ride );
+
+		Assert.AreEqual( 0, ride.PricePerUse, "the Belly Bounce is free, which is why this is the control" );
+
+		var (park, peep) = PayFor( price: 0 );
+
+		Assert.AreEqual( 300, peep.Cash, "nobody paid anything" );
+		Assert.AreEqual( 0, park.TakingsFor( Ride ), "and the ride took nothing" );
+	}
+
+	/// <summary>
+	/// <b>A guest short of the price is left short, and is not refused.</b> The original subtracts whatever
+	/// the price is with no test and no clamp: what stops it in practice is <c>FUN_004fde50</c>, which
+	/// decides whether a thing is worth its price <i>before</i> a guest is sent to it. A refusal here would
+	/// be one the engine never makes.
+	/// </summary>
+	[TestMethod]
+	public void AGuestShortOfThePriceIsLeftShortRatherThanRefused()
+	{
+		var (park, peep) = PayFor( price: 20, cash: 5 );
+
+		Assert.AreEqual( -15, peep.Cash, "five less twenty, unclamped, as the original leaves it" );
+		Assert.AreEqual( 20, park.TakingsFor( Ride ), "and the ride is credited the full price regardless" );
+	}
+
+	/// <summary>
+	/// Nobody has paid for anything in the park that ships, so per-object takings start at nought - which is
+	/// a fact about the file rather than a gap, and is what the seeding has to reproduce.
+	/// </summary>
+	[TestMethod]
+	public void NothingInThisParkHasEverTakenAnything()
+	{
+		var world = Park();
+		var state = new ParkState( world );
+
+		Assert.AreEqual( 0, world.Objects.Count( o => o.TotalTakings != 0 ), "mTotalTakings across the park" );
+
+		foreach ( var thing in world.Objects )
+			Assert.AreEqual( 0, state.TakingsFor( thing.ThingId ), $"thing {thing.ThingId}" );
+	}
 }

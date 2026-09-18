@@ -79,6 +79,12 @@ public sealed class ParkState
 		{
 			if ( thing.FirstInQueue != 0 )
 				_queueHead[thing.ThingId] = thing.FirstInQueue;
+
+			// And what each has taken so far. Nought on every object in the park that ships - nobody has
+			// ever paid for anything in it - so this seeds nothing today, for the same reason the queues
+			// above seed nothing, and is still what stops a played park's takings being lost on load.
+			if ( thing.TotalTakings != 0 )
+				_takings[thing.ThingId] = thing.TotalTakings;
 		}
 
 		foreach ( var person in park.People )
@@ -149,6 +155,35 @@ public sealed class ParkState
 	/// <summary>Admits one guest and hands back which visitor they are, counting from one.</summary>
 	public int Admit() => ++VisitorsToDate;
 
+	/// <summary>What this object has taken, counting on from what the save recorded.</summary>
+	public int TakingsFor( int objectId ) => _takings.GetValueOrDefault( objectId );
+
+	/// <summary>
+	/// Credits an object with what a guest has just paid it - the object half of <c>FUN_004e16b0</c>,
+	/// which adds the price to <c>mTotalTakings</c> at <c>+0x180</c>.
+	///
+	/// <para>
+	/// <b>It deliberately does NOT move <see cref="Balance"/>, and that is the original's arrangement
+	/// rather than an omission.</b> An admission fee goes through <c>FUN_004d0600</c>, which adds it
+	/// straight onto <c>mBalance</c> - that is what <see cref="Take"/> reproduces. A charge for a ride or a
+	/// shop goes through <c>FUN_004e16b0</c> instead, which credits the object and one of two GLOBAL income
+	/// pools chosen by the item descriptor's <c>+0x4ac</c> (<c>+0x20130</c> for rides, <c>+0x20380</c> for
+	/// shops) and never touches the balance at all. Moving the park's money here so that the interface
+	/// reacted would be inventing behaviour the original does not have.
+	/// </para>
+	/// <para>
+	/// <b>Those two global pools are NOT reproduced</b>, and nothing here keeps them: they are counters on
+	/// the world that no screen this project draws has ever read.
+	/// </para>
+	/// </summary>
+	public void TakeAt( int objectId, int amount )
+	{
+		if ( objectId == 0 || amount == 0 )
+			return;
+
+		_takings[objectId] = TakingsFor( objectId ) + amount;
+	}
+
 	/// <summary>
 	/// The runtime cell at a grid position, by reference so a caller can change it in place. Off the map
 	/// throws rather than returning a default: a default would be silently writable and the write would
@@ -171,6 +206,12 @@ public sealed class ParkState
 	// shape is the original's own - a head on the object (mFirstInQ) and a doubly-linked list through the
 	// guests themselves (mQNext, mQPrev) - kept here rather than on Peep so that the whole structure lives
 	// in one place and is seeded once.
+	/// <summary>
+	/// What each object has taken, by thing id - the original's <c>mTotalTakings</c> at the object's
+	/// <c>+0x180</c>, which a charge moves and <see cref="ParkWorld"/> cannot because it describes a file.
+	/// </summary>
+	private readonly Dictionary<int, int> _takings = [];
+
 	private readonly Dictionary<int, int> _queueHead = [];
 	private readonly Dictionary<int, int> _queueNext = [];
 	private readonly Dictionary<int, int> _queuePrev = [];

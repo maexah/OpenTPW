@@ -273,9 +273,49 @@ public sealed class ParkRideOperation
 		if ( ride.ExitPos != 0 && walkFor?.Invoke( leaving ) is { } walk )
 			PeepBehaviour.SendTo( peep, walk, (ride.ExitCellX, ride.ExitCellY) );
 
+		Charge( peep, ride );
+
 		peep.SetState( PeepState.OnRide, tick, random );
 
 		return script.Set( DismissVariable, 0 );
+	}
+
+	/// <summary>
+	/// Takes what a guest owes for what they have just been on - <c>FUN_004fe1a0</c>, the charge, reached
+	/// from the settle-up <c>FUN_004fd970</c> that <c>ExitRide</c> (<c>FUN_005014e0</c>) runs on the way out.
+	///
+	/// <para>
+	/// <b>A guest pays on LEAVING, not on boarding</b>, and the whole of the charge is three steps: read
+	/// the price from the object (<c>mPricePerUse</c>, <c>+0x194</c>), credit the object, and subtract it
+	/// from the guest's cash at <c>+0x1a0</c>. A price of nought skips all of it - which is this park's one
+	/// ride, priced free, so the arm that fires here is the sideshow at twenty.
+	/// </para>
+	/// <para>
+	/// <b>There is no affordability test and no clamp, and both are the original's.</b> It subtracts
+	/// whatever the price is, so a guest can be left short; what stops that in practice is
+	/// <c>FUN_004fde50</c>, which decides whether a thing is worth its price BEFORE a guest is sent to it -
+	/// a gate on choosing, never on paying. Adding a check here would be inventing a refusal the engine
+	/// does not make.
+	/// </para>
+	/// <para>
+	/// <b>The rest of the settle-up is NOT reproduced, and is named rather than quietly dropped.</b>
+	/// <c>FUN_004fd970</c> also shifts the guest's three-entry recent-things history (<c>+0x1e0</c>),
+	/// bumps one of three visit counters by the descriptor's <c>+0x4ac</c>, relieves a need by its
+	/// <c>+0xe8</c>, plays a sound, and moves happiness by the <b>won/lost flag at <c>+0x1f1</c> - which
+	/// nothing in this tree establishes</b>. The happiness arm is the half a player would feel, and it
+	/// waits on that flag having a known source rather than on anyone's effort.
+	/// </para>
+	/// </summary>
+	private void Charge( Peep peep, ParkWorld.CatalogueObject ride )
+	{
+		var price = ride.PricePerUse;
+
+		if ( price == 0 )
+			return;
+
+		_state.TakeAt( ride.ThingId, price );
+
+		peep.Cash -= price;
 	}
 
 	/// <summary>How many the ride may hold - <c>VAR_CAPACITY</c>, which its own script keeps.</summary>
