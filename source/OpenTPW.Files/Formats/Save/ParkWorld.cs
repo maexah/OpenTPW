@@ -193,6 +193,39 @@ public sealed class ParkWorld
 
 		/// <inheritdoc cref="EntryCellX"/>
 		public int EntryCellY => EntryPos == 0 ? 0 : (EntryPos - 1) / MapSize;
+
+		/// <summary>
+		/// The cell a guest is put down on when they leave - <c>mExitPos</c>, unpacked exactly as
+		/// <see cref="EntryCellX"/> is.
+		///
+		/// <para>
+		/// <b>The engine states this decode outright rather than leaving it to be inferred.</b>
+		/// <c>FUN_004dedf0</c> - the function that answers a point on a thing, and which
+		/// <c>FUN_005014e0</c> ("Person %d: ExitRide, leaving rid...") calls to find where a dismissed
+		/// guest goes - builds the cell as <c>(v - 1) &amp; 0x7f</c> across and <c>(v - 1) &gt;&gt; 7</c>
+		/// down. Its non-zero argument selects the exit at <c>+0x38</c>; nought selects the stand point at
+		/// <c>+0x36</c>.
+		/// </para>
+		/// <para>
+		/// <b>Only ONE object in the shipped park can tell the two decodes apart, and counting the rest
+		/// would have flattered the evidence.</b> <c>mExitPos</c> holds the same value as
+		/// <see cref="EntryPos"/> on ten of the eleven placed objects, so a survey of "how many are
+		/// walkable only when packed" mostly restates the entry cell's answer through a field carrying the
+		/// same number. The one object where they differ is thing 13, the Belly Bounce: its entry is 2997
+		/// -&gt; (52,23) and its exit is 3381 -&gt; <b>(52,26)</b>, which has sixteen connected edges, while
+		/// the reading without the one lands on (53,26), which has <b>none</b> and so could never be walked
+		/// to. That single object is the whole of the evidence, and it is enough.
+		/// </para>
+		/// <para>
+		/// It also means the distinction is worth drawing: the ride's entry and exit are three cells apart,
+		/// on opposite sides of it, so putting a dismissed guest at the exit is a visible difference rather
+		/// than a tidy no-op.
+		/// </para>
+		/// </summary>
+		public int ExitCellX => ExitPos == 0 ? 0 : (ExitPos - 1) % MapSize;
+
+		/// <inheritdoc cref="ExitCellX"/>
+		public int ExitCellY => ExitPos == 0 ? 0 : (ExitPos - 1) / MapSize;
 	}
 
 	/// <summary>Every catalogue object the walk found, placed or not, in the order the file lists them.</summary>

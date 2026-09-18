@@ -669,7 +669,13 @@ public sealed class PeepBehaviour
 	/// one place it is noticed rather than two.
 	/// </para>
 	/// </summary>
-	private static void SendTo( Peep peep, PeepWalk walk, (int X, int Y) cell )
+	/// <remarks>
+	/// <b><c>internal</c> rather than <c>private</c> so that a ride can use it too.</b>
+	/// <see cref="ParkRideOperation.Dismiss"/> puts a guest down at the ride's exit, and the original does
+	/// that through the same pair of steps this does - a destination, then a route. Widening one method is
+	/// cheaper than a second way of moving a peep, which is how the two would drift apart.
+	/// </remarks>
+	internal static void SendTo( Peep peep, PeepWalk walk, (int X, int Y) cell )
 	{
 		peep.Navigator.Target = new FixedVector(
 			PeepNavigator.WaypointCentre( cell.X ), PeepNavigator.WaypointCentre( cell.Y ) );

@@ -137,9 +137,17 @@ public sealed class ParkRideOperation
 	/// would drop whoever was already there, which is why the original refuses instead.
 	/// </para>
 	/// <para>
-	/// <b>One refusal of the original's is NOT reproduced:</b> it also gives up when the object's
-	/// <c>+0x68</c> is nought, and what that field is has not been established. The two ride states it
-	/// refuses on ARE reproduced - they are the same pair <see cref="ParkRideChoice"/> already names.
+	/// <b>Every refusal of the original's is reproduced, and this paragraph used to say one was not.</b> It
+	/// said the object's <c>+0x68</c> "has not been established" - but that field is <c>mCanLoad</c>, it is
+	/// serialised, the save reader has always parsed it under that name, and
+	/// <see cref="ParkRideChoice.CanBeOffered"/> in this same folder has always refused on it. The claim was
+	/// stale rather than the decode missing. The two ride states it refuses on are the pair
+	/// <see cref="ParkRideChoice"/> already names.
+	/// </para>
+	/// <para>
+	/// <b>It cannot fire in the shipped park</b>, where <c>mCanLoad</c> is 1 on all fourteen objects. It is
+	/// here because the identical test already guards the choice, so leaving it out of the admit would mean
+	/// the same field deciding a guest's destination and then being ignored at the door.
 	/// </para>
 	/// </summary>
 	/// <returns>Whether the guest was handed over.</returns>
@@ -150,6 +158,10 @@ public sealed class ParkRideOperation
 
 		// Out of service: the original logs "Object %d, type %d: cannot admit..." and gives up.
 		if ( ride.State is ParkRideChoice.StateRefusedOne or ParkRideChoice.StateRefusedFour )
+			return false;
+
+		// mCanLoad, tested for non-zero rather than for a value - the same reading ParkRideChoice takes.
+		if ( ride.CanLoad == 0 )
 			return false;
 
 		// "admitting wrong person" - a ride holds one nominee, and this must be them.
@@ -214,13 +226,29 @@ public sealed class ParkRideOperation
 	/// collected from yet.
 	/// </para>
 	/// <para>
-	/// <b>What is NOT reproduced is where they go.</b> The original puts them at the ride's exit
-	/// (<c>FUN_004dedf0(1,..)</c>) and gives them a destination; nothing here reads an exit cell, so this
-	/// changes their state and clears the slot and leaves the walking to whoever builds that.
+	/// <b>They are put down at the ride's EXIT, which is a different cell from the one they queued at.</b>
+	/// <c>FUN_004e1410</c> calls <c>FUN_005014e0</c> - whose own line is "Person %d: ExitRide, leaving
+	/// rid..." - and that asks <c>FUN_004dedf0( thing, 1, &amp;x, &amp;y )</c> for the exit point. The
+	/// non-zero argument is what selects the exit over the stand point; see
+	/// <see cref="ParkWorld.CatalogueObject.ExitCellX"/> for why only one object in the shipped park can
+	/// tell that decode from a wrong one.
+	/// </para>
+	/// <para>
+	/// <b>One arm of the original is NOT reproduced, and it is about failure rather than success.</b> There,
+	/// setting the destination can fail - <c>FUN_004fa530</c> answers whether a route exists - and when it
+	/// does the guest is <i>not</i> moved on: it logs "SetDest on ride exit f[ailed]" and takes a fallback
+	/// instead. Reproducing that needs a route to have been attempted, so a call made without a
+	/// <paramref name="walk"/> changes the state as before and a call made with one plans the route but
+	/// does not yet gate the state on it.
 	/// </para>
 	/// </summary>
+	/// <param name="walk">
+	/// How to move the guest, or null where there is nowhere to move them - a test with no park, as every
+	/// caller of this was until a ride's turn existed to drive it.
+	/// </param>
 	/// <returns>Whether a guest was let off.</returns>
-	public bool Dismiss( RideScript? script, int rideId, int tick, Random random )
+	public bool Dismiss( RideScript? script, ParkWorld.CatalogueObject ride, int tick, Random random,
+		PeepWalk? walk = null )
 	{
 		ArgumentNullException.ThrowIfNull( random );
 
@@ -236,6 +264,11 @@ public sealed class ParkRideOperation
 		// who is not on the ride is a fault in the script, not a case to handle quietly.
 		if ( !_guests.TryGetValue( leaving, out var peep ) || peep.State != PeepState.Riding )
 			return false;
+
+		// An object that declares no exit has nowhere to put them, which is every unplaced one - its
+		// mExitPos is the sentinel that unpacks to the corner of the map.
+		if ( walk != null && ride.ExitPos != 0 )
+			PeepBehaviour.SendTo( peep, walk, (ride.ExitCellX, ride.ExitCellY) );
 
 		peep.SetState( PeepState.OnRide, tick, random );
 
@@ -275,16 +308,23 @@ public sealed class ParkRideOperation
 	/// rather than the object, which is why it is passed in - see <c>ItemDescriptionFile.TrackType</c>.
 	/// </para>
 	/// <para>
-	/// <b>Two arms are NOT reproduced because their fields have never been established.</b> The original
-	/// also gives up early when the object's <c>+0x68</c> is nought, and it will invite while running if
-	/// the object's <c>+0x33</c> carries bit 0 - a second flags byte beside the one at <c>+0x32</c> that
-	/// this project reads. Neither is guessed at.
+	/// <b>This said TWO arms were unreproduced because their fields were unestablished; it is now one.</b>
+	/// The object's <c>+0x68</c> is <c>mCanLoad</c> - serialised, parsed under that name, and already
+	/// refused on by <see cref="ParkRideChoice.CanBeOffered"/> - so it is reproduced here too. What remains
+	/// genuinely unestablished is <c>+0x33</c>: the original will invite <i>while running</i> when that
+	/// byte carries bit 0, a second flags byte beside the one at <c>+0x32</c> this project reads. That one
+	/// is still not guessed at.
 	/// </para>
 	/// </summary>
 	/// <returns>The guest invited, or nought if nobody was.</returns>
 	public int Invite( RideScript? script, ParkWorld.CatalogueObject ride, int trackType = 0 )
 	{
 		if ( script == null )
+			return 0;
+
+		// mCanLoad, and the original bails on it early - before it looks at the script at all. Same
+		// reading as AdmitPerson's and as ParkRideChoice's: non-zero, not a particular value.
+		if ( ride.CanLoad == 0 )
 			return 0;
 
 		// The script has not taken the last rider yet.

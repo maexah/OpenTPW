@@ -247,7 +247,7 @@ public class ParkRideAdmitTests
 		script.Set( ParkRideOperation.DismissVariable, 7 );
 
 		Assert.IsTrue( new ParkRideOperation( park, guests )
-			.Dismiss( script, Ride, tick: 9, new Random( 1 ) ), "let off" );
+			.Dismiss( script, TheRide(), tick: 9, new Random( 1 ) ), "let off" );
 
 		Assert.AreEqual( PeepState.OnRide, guests[7].State, "they are leaving the ride" );
 		Assert.AreEqual( 0, script[ParkRideOperation.DismissVariable],
@@ -263,12 +263,12 @@ public class ParkRideAdmitTests
 		var guests = new Dictionary<int, Peep> { [7] = Guest( 7, PeepState.InQueue ) };
 
 		Assert.IsFalse( new ParkRideOperation( park, guests )
-			.Dismiss( script, Ride, 9, new Random( 1 ) ), "nobody reported" );
+			.Dismiss( script, TheRide(), 9, new Random( 1 ) ), "nobody reported" );
 
 		script.Set( ParkRideOperation.DismissVariable, 7 );
 
 		Assert.IsFalse( new ParkRideOperation( park, guests )
-			.Dismiss( script, Ride, 9, new Random( 1 ) ), "reported, but they are not on the ride" );
+			.Dismiss( script, TheRide(), 9, new Random( 1 ) ), "reported, but they are not on the ride" );
 
 		Assert.AreEqual( 7, script[ParkRideOperation.DismissVariable],
 			"and the slot is left alone, so the fault stays visible" );
