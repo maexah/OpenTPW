@@ -219,11 +219,24 @@ public sealed class ParkRideOperation
 	/// Lets off whoever the script has reported - <c>FUN_004e1410</c>.
 	///
 	/// <para>
-	/// <b>This slot runs the other way.</b> The script WRITES it: <c>UNBOUNCE</c> and
-	/// <c>FORCEUNBOUNCE</c> store into their operand, so the script fills <c>VAR_LETMEOFF</c> with whoever
-	/// came off (or leaves nought when nobody did), and the engine clears it once they are on their way.
-	/// That is why a script skips its unbounce while the slot is still full - the ride has not been
+	/// <b>This slot runs the other way.</b> The script WRITES it, filling <c>VAR_LETMEOFF</c> with whoever
+	/// came off (or leaving nought when nobody did), and the engine clears it once they are on their way.
+	/// That is why a script skips its dismissal while the slot is still full - the ride has not been
 	/// collected from yet.
+	/// </para>
+	/// <para>
+	/// <b>WHICH instruction does the writing depends on the ride, and there are six.</b> Across the 22
+	/// Lost Kingdom ride scripts: <c>UNBOUNCE</c>/<c>FORCEUNBOUNCE</c> (Bouncy alone), <c>BUMP 2</c>
+	/// (bumper, GoKarts, Wateride), <c>COAST 3</c> (the three coasters), <c>WALKGET</c> (incagod, Lookout,
+	/// Totem, tvsim), <c>HOP</c> with <c>DELHEAD</c> (Mumbo, PorkPie, Spider, Volcano, Monkey), and
+	/// <c>TOUR 4</c> (TourRide). This paragraph named only the first pair until the scripts were listed,
+	/// which made a claim true of one ride read as a claim about all of them.
+	/// </para>
+	/// <para>
+	/// <b>They are not blocked on the same thing, either.</b> <c>COAST 3</c> is implemented and its
+	/// coasters still never dismiss anybody, because it drains the finished-rider queue that nothing
+	/// fills - see <see cref="RideState.FinishRider"/>, which marks where a ride simulation will connect.
+	/// That is a missing simulation, not a missing opcode.
 	/// </para>
 	/// <para>
 	/// <b>They are put down at the ride's EXIT, which is a different cell from the one they queued at.</b>

@@ -122,6 +122,7 @@ public sealed class RideScriptFile : BaseFormat
 	private const int StackSizeOffset = 0x0C;
 	private const int TimeSliceOffset = 0x10;
 	private const int LimboRecordsOffset = 0x14;
+	private const int BounceRecordsOffset = 0x18;
 	private const int PadOffset = 0x20;
 	private const int PadLength = 16;
 	private const int LengthOffset = 0x30;
@@ -168,6 +169,28 @@ public sealed class RideScriptFile : BaseFormat
 	/// </para>
 	/// </summary>
 	public int LimboCapacity { get; private set; }
+
+	/// <summary>
+	/// How many people the script can have bouncing at once - the header word after the limbo one, which
+	/// the loader turns into an array of that many <b>sixteen</b>-byte slots (<c>FUN_005587f0</c> reads it
+	/// into the frame's <c>+0x64</c> and allocates <c>count &lt;&lt; 4</c> bytes for <c>+0x28</c>, the
+	/// table every <c>BOUNCE</c> instruction walks).
+	///
+	/// <para>
+	/// <b>The same one-to-one rule limbo follows holds here, and it is what identified the field.</b> Of
+	/// the 22 Lost Kingdom ride scripts exactly one declares any - <c>Bouncy.RSE</c>, which declares 10 -
+	/// and that is exactly the one script using the <c>BOUNCE</c> family. The other 21 declare nought and
+	/// use none of it. A field whose non-zero values pick out precisely the scripts that need it is not a
+	/// coincidence of the corpus.
+	/// </para>
+	/// <para>
+	/// <b>This is the array's size, not the ride's capacity.</b> Bouncy declares 10 slots while its
+	/// <c>VAR_CAPACITY</c> comes from the saved object, and the script gates admission on that variable
+	/// itself (<c>BOUNCING VAR_TEMP</c> / <c>CMP VAR_CAPACITY, VAR_TEMP</c>) before ever bouncing anyone.
+	/// The engine's only use of this number is how far to walk.
+	/// </para>
+	/// </summary>
+	public int BounceCapacity { get; private set; }
 
 	/// <summary>The body, split into instructions. Empty unless <see cref="IsValid"/>.</summary>
 	public IReadOnlyList<RideInstruction> Instructions { get; private set; } = [];
@@ -234,6 +257,7 @@ public sealed class RideScriptFile : BaseFormat
 		StackSize = BitConverter.ToInt32( data, StackSizeOffset );
 		TimeSlice = BitConverter.ToInt32( data, TimeSliceOffset );
 		LimboCapacity = BitConverter.ToInt32( data, LimboRecordsOffset );
+		BounceCapacity = BitConverter.ToInt32( data, BounceRecordsOffset );
 
 		// The loader says so and then reads the file anyway (0x005587f0), so refusing here would turn
 		// a warning the original lives with into a ride that does not load.

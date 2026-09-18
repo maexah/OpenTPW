@@ -160,6 +160,97 @@ public sealed class RideScript
 	private const int LimboSecond = 1000;
 
 	/// <summary>
+	/// One place on the ride itself - sixteen bytes of the engine's array at <c>+0x28</c>: who is on it,
+	/// which node of the ride they were put on, when they are due off, and when they got on. <b>A slot is
+	/// free when its handle is nought</b>, and the scan starts from the beginning every time, exactly as
+	/// <see cref="LimboSlot"/>'s does.
+	/// </summary>
+	private struct BounceSlot
+	{
+		public int Handle;
+		public int Node;
+		public float Expiry;
+		public float Start;
+	}
+
+	/// <summary>
+	/// Everyone this script currently has bouncing - the engine's <c>+0x28</c>, sized by its <c>+0x64</c>,
+	/// which the loader fills from the header (<see cref="RideScriptFile.BounceCapacity"/>).
+	///
+	/// <para>
+	/// <b>Like limbo, this needs no world</b>: the array is part of the script's own frame, and every
+	/// instruction in the family answers out of it. Only one Lost Kingdom script declares any slots -
+	/// <c>Bouncy.RSE</c>, with ten - so on the other 21 every <c>BOUNCE</c> refuses and every
+	/// <c>UNBOUNCE</c> answers nought, which is the engine's own behaviour and not a stand-in for it.
+	/// </para>
+	/// </summary>
+	private readonly BounceSlot[] _bounce;
+
+	/// <summary>
+	/// How many are bouncing - the engine's <c>+0x6c</c>, and <b>sixteen bits</b>, which is why
+	/// <c>BOUNCING</c> sign-extends it (<c>MOVSX</c>) rather than simply loading it.
+	/// </summary>
+	private short _bouncing;
+
+	/// <summary>
+	/// What <c>BOUNCESETBASE</c> sets - the engine's <c>+0x6e</c>, a second sixteen-bit field beside the
+	/// tally.
+	///
+	/// <para>
+	/// <b>Nothing in the bounce family reads it.</b> Its only two readers are in <c>FUN_00557ab0</c>,
+	/// which takes it beside the thing's model handle and the slot table to place whoever is bouncing, so
+	/// it is presentation rather than bookkeeping. It is kept because <c>Bouncy.RSE</c> sets it - it is
+	/// the one member of the family that script uses outside the main loop - and a script writing into
+	/// nothing would read as an oversight. Compare <see cref="RideState.SetWorn"/>.
+	/// </para>
+	/// </summary>
+	private short _bounceBase;
+
+	/// <summary>
+	/// What <c>BOUNCESETNODE</c> sets - the engine's <c>+0x70</c>, added to a slot's index to give the
+	/// node a rider is put on.
+	///
+	/// <para>
+	/// <b>The two setters do the opposite of what their names suggest, and this is the trap in the
+	/// family.</b> <c>BOUNCESETNODE</c> writes the base that node numbers are counted from, and
+	/// <c>BOUNCESETBASE</c> writes the unrelated field above. Worse, this one takes its operand
+	/// <b>raw</b>: its handler has no <c>0x40000000</c> tag test at all, so a variable operand would be
+	/// stored as its tagged word rather than its value.
+	/// </para>
+	/// <para>
+	/// <b>Exactly one script in the game uses it</b>, and not in Lost Kingdom: <c>Jelly.RSE</c>, which
+	/// passes a literal 3. Since every use is a literal the raw store can never differ from a resolved
+	/// one in the shipped corpus, which is what makes reproducing the missing test free rather than
+	/// risky - and it is pinned by a test, because the day that stops being true this stops being safe.
+	/// In Lost Kingdom nothing sets it at all, so the base stays nought and a rider's node there is
+	/// simply their slot index.
+	/// </para>
+	/// </summary>
+	private int _bounceNode;
+
+	/// <summary>What <c>BOUNCE</c>'s duration operand is measured in - milliseconds per second, as limbo's is.</summary>
+	private const int BounceSecond = 1000;
+
+	/// <summary>
+	/// The width of the window a rider may leave in. Both ways off divide the milliseconds a rider has
+	/// been on, modulo a second, by <b>200</b> and act only when that is nought - so somebody may only
+	/// come off during the first fifth of each second they have been aboard.
+	///
+	/// <para>
+	/// <b>The divisor was read, not guessed.</b> The idiom is <c>0x51eb851f</c> (2^37/100) with
+	/// <c>SAR EDX,6</c>, which is a total shift of 38 and therefore 200, not the 100 the canonical
+	/// <c>SAR EDX,5</c> spelling gives. That exact byte pair occurs twice in the whole executable - these
+	/// two handlers - and the decompiler renders both as <c>/ 200</c>.
+	/// </para>
+	/// <para>
+	/// <b>It is a poll, which is what makes it sane.</b> Bouncy asks again every pass of its loop, so the
+	/// window costs at most a second rather than turning anyone away; it is also why
+	/// <c>FORCEUNBOUNCE</c> still has a condition despite being the forcible one.
+	/// </para>
+	/// </summary>
+	private const int BounceWindow = 200;
+
+	/// <summary>
 	/// Where <c>NAME</c>'s string sits in the blob - the engine's field <c>+0x74</c>, and the only thing
 	/// <c>NAME</c> writes anywhere.
 	///
@@ -191,6 +282,7 @@ public sealed class RideScript
 		_variables = new int[Math.Max( file.VariableCount, file.VariableNames.Count )];
 		_stack = new int[Math.Max( file.StackSize, 0 )];
 		_limbo = new LimboSlot[Math.Max( file.LimboCapacity, 0 )];
+		_bounce = new BounceSlot[Math.Max( file.BounceCapacity, 0 )];
 		_atAddress = file.Instructions.ToDictionary( instruction => instruction.Address );
 
 		_calls = _stack.Length - 1;
@@ -810,6 +902,36 @@ public sealed class RideScript
 				SetObjectParameter( operands );
 				break;
 
+			// Riding, for the rides that carry people on the ride itself rather than in cars. This is one
+			// of SIX ways a script reports somebody off - the others are COAST 3, BUMP 2, WALKGET, HOP
+			// with DELHEAD, and TOUR 4 - so implementing it frees exactly the scripts that use it, which
+			// in Lost Kingdom is Bouncy.RSE alone.
+			case Opcode.BOUNCESETNODE:
+				// Raw, with no tag test: the handler stores the operand word itself. See _bounceNode.
+				_bounceNode = operands[0].Value;
+				break;
+
+			case Opcode.BOUNCESETBASE:
+				_bounceBase = (short)Value( operands[0] );
+				break;
+
+			case Opcode.BOUNCE:
+				// Answers into the result register and writes no operand, the asymmetry LIMBO has too.
+				Result = Bounce( now, Value( operands[0] ), Value( operands[1] ) ) ? 1 : 0;
+				break;
+
+			case Opcode.UNBOUNCE:
+				Store( operands[0], Unbounce( now, whenDue: true ) );
+				break;
+
+			case Opcode.FORCEUNBOUNCE:
+				Store( operands[0], Unbounce( now, whenDue: false ) );
+				break;
+
+			case Opcode.BOUNCING:
+				Store( operands[0], _bouncing );
+				break;
+
 			case Opcode.COAST:
 				Coast( operands );
 				break;
@@ -1050,6 +1172,92 @@ public sealed class RideScript
 		--_inLimbo;
 
 		return handle;
+	}
+
+	/// <summary>
+	/// <c>BOUNCE</c>: put somebody on the ride for a number of seconds, and say whether there was room.
+	///
+	/// <para>
+	/// The engine fills the first free slot with four words - the rider, the node they are on
+	/// (<see cref="_bounceNode"/> plus the slot's own index), the clock reading they are due off at, and
+	/// the clock reading they got on at - then adds one to the tally. With no free slot it answers nought
+	/// and does nothing, which is the only refusal it has: <b>it never consults
+	/// <c>VAR_CAPACITY</c></b>. Bouncy gates itself on that variable before it ever gets here
+	/// (<c>BOUNCING VAR_TEMP</c> / <c>CMP VAR_CAPACITY, VAR_TEMP</c>), so the array size is a ceiling
+	/// rather than the ride's capacity.
+	/// </para>
+	/// <para>
+	/// The duration is in <b>seconds</b>: the engine multiplies by a thousand before adding it to the
+	/// clock, through the same <c>LEA</c> chain (x5, x25, x125, then x8) it uses elsewhere.
+	/// </para>
+	/// </summary>
+	private bool Bounce( float now, int handle, int seconds )
+	{
+		for ( int slot = 0; slot < _bounce.Length; ++slot )
+		{
+			if ( _bounce[slot].Handle != 0 )
+				continue;
+
+			_bounce[slot] = new BounceSlot
+			{
+				Handle = handle,
+				Node = _bounceNode + slot,
+				Expiry = now + (seconds * BounceSecond),
+				Start = now,
+			};
+
+			++_bouncing;
+
+			return true;
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// <c>UNBOUNCE</c> and <c>FORCEUNBOUNCE</c>: whoever is ready to come off, or nought when nobody is.
+	///
+	/// <para>
+	/// <b>These WRITE their operand rather than reading it</b>, which is the whole reason
+	/// <c>VAR_LETMEOFF</c> is an outbox: the script fills it with whoever came off and the engine clears
+	/// it once they are walked to the exit. The inherited <c>RideVM</c> handler in <c>VM/Handlers</c> has
+	/// this backwards, removing a visitor named by the operand, and is dead code.
+	/// </para>
+	/// <para>
+	/// Both walk from the first slot and take the first occupied one that may leave. The only difference
+	/// is the duration: <c>UNBOUNCE</c> also requires the rider to be past their expiry - strictly past,
+	/// a signed compare - and <c>FORCEUNBOUNCE</c> drops that test alone. <b>Both still honour
+	/// <see cref="BounceWindow"/></b>, so "forcible" means "whatever the duration said", not
+	/// "unconditionally".
+	/// </para>
+	/// <para>
+	/// One difference is deliberate and immaterial: the engine reads the clock once before the walk for
+	/// the expiry test and again inside it for the elapsed time. There is one reading here, because the
+	/// two differ by less than the millisecond either is measured in.
+	/// </para>
+	/// </summary>
+	private int Unbounce( float now, bool whenDue )
+	{
+		for ( int slot = 0; slot < _bounce.Length; ++slot )
+		{
+			if ( _bounce[slot].Handle == 0 )
+				continue;
+
+			if ( whenDue && _bounce[slot].Expiry >= now )
+				continue;
+
+			if ( (int)(now - _bounce[slot].Start) % BounceSecond / BounceWindow != 0 )
+				continue;
+
+			var handle = _bounce[slot].Handle;
+
+			_bounce[slot] = default;
+			--_bouncing;
+
+			return handle;
+		}
+
+		return 0;
 	}
 
 	/// <summary>
