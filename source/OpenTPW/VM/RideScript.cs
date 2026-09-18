@@ -228,6 +228,123 @@ public sealed class RideScript
 	/// </summary>
 	private int _bounceNode;
 
+	/// <summary>
+	/// The four states a walk slot passes through - the engine's <c>+0x18</c>, and the whole of the
+	/// family's machine.
+	/// </summary>
+	/// <remarks>
+	/// <b>The script drives only the ends of it.</b> <c>WALKON</c> puts a slot into
+	/// <see cref="WalkingOn"/> and <c>WALKGET</c> harvests one in <see cref="Done"/>; everything between
+	/// is the engine's per-frame stepper (<c>FUN_00557d80</c>), which promotes a slot once its progress
+	/// ramp passes a thousand.
+	/// </remarks>
+	private enum WalkState
+	{
+		/// <summary>Nobody on it. A slot is free when its state is nought, not when its handle is.</summary>
+		Free = 0,
+
+		/// <summary>Walking on, from the walk node towards the head node.</summary>
+		WalkingOn = 1,
+
+		/// <summary>Arrived and being carried - the state the ride actually holds somebody in.</summary>
+		Carried = 2,
+
+		/// <summary>Walking off, which <c>WALKOFF</c> starts.</summary>
+		WalkingOff = 3,
+
+		/// <summary>Finished, and waiting for <c>WALKGET</c> to collect them.</summary>
+		Done = 4
+	}
+
+	/// <summary>
+	/// One place on a walk-on ride - <b>thirty-two bytes</b> of the engine's array at <c>+0x2c</c>,
+	/// counted by <c>+0x7c</c>.
+	///
+	/// <para>
+	/// <b>Three independent measurements agree on the size</b>: the header field
+	/// (<see cref="RideScriptFile.WalkCapacity"/>) documents 32-byte records, the loader allocates
+	/// <c>count &lt;&lt; 5</c>, and every handler indexes the array with a <c>0x20</c> stride.
+	/// </para>
+	/// </summary>
+	private struct WalkSlot
+	{
+		/// <summary>Who is on it - the engine's <c>+0x10</c>. <b>Not</b> what marks the slot free.</summary>
+		public int Handle;
+
+		/// <summary>Where they walk from, and to - <c>+0x00</c> and <c>+0x02</c>.</summary>
+		public int WalkNode;
+
+		/// <inheritdoc cref="WalkNode"/>
+		public int HeadNode;
+
+		/// <summary>The pair the walk OFF runs between - <c>+0x04</c> and <c>+0x06</c>.</summary>
+		public int OffFrom;
+
+		/// <inheritdoc cref="OffFrom"/>
+		public int OffTo;
+
+		/// <summary>When this leg began and when it is due to end - <c>+0x08</c> and <c>+0x0c</c>.</summary>
+		public float Start;
+
+		/// <inheritdoc cref="Start"/>
+		public float Due;
+
+		/// <summary>
+		/// What kind of walk this is - <c>+0x16</c>, and the sixth operand.
+		///
+		/// <para>
+		/// <b>Four means the destination is a HEAD node</b>, which the engine looks up in a different node
+		/// space (<c>0x80</c> rather than <c>0x800</c>) and attaches the rider to on arrival. Across Lost
+		/// Kingdom's eleven walk-on scripts it only ever takes <b>1, 4, 5 or 6</b>, and the two passing 4
+		/// are <c>Totem</c> and <c>tvsim</c> - which is what confirms the operand mapping from the corpus
+		/// as well as from the push order.
+		/// </para>
+		/// </summary>
+		public int Action;
+
+		/// <summary>How far through the machine this slot is - <c>+0x18</c>.</summary>
+		public WalkState State;
+	}
+
+	/// <summary>
+	/// Everyone this script currently has walking - the engine's <c>+0x2c</c>, sized by its <c>+0x7c</c>
+	/// from the header.
+	///
+	/// <para>
+	/// <b>Only the sideshow declares any in Lost Kingdom</b>, which is the same one-to-one rule that
+	/// identified the bounce table: the scripts declaring slots are exactly the scripts using the family.
+	/// On every other script <c>WALKON</c> refuses and <c>WALKGET</c> answers nought, which is the
+	/// engine's own behaviour rather than a stand-in for it.
+	/// </para>
+	/// </summary>
+	private readonly WalkSlot[] _walk;
+
+	/// <summary>
+	/// How far through a leg counts as finished - the engine compares its progress ramp against
+	/// <b>999</b> and promotes on anything greater.
+	/// </summary>
+	private const int WalkComplete = 1000;
+
+	/// <summary>
+	/// How long a leg lasts here, in milliseconds.
+	///
+	/// <para>
+	/// <b>The engine's own duration is the DISTANCE BETWEEN THE TWO NODES, and that is out of reach.</b>
+	/// <c>FUN_00556f40</c> resolves both nodes, subtracts their positions component by component, sums
+	/// the squares, takes <c>FSQRT</c>, truncates it and multiplies by a hundred - so a rider takes
+	/// 100ms per unit walked, floored at one tick when the two nodes coincide. It is geometry, not an
+	/// operand and not a script field.
+	/// </para>
+	/// <para>
+	/// <b>Nothing here can resolve a model node's position</b> (see <see cref="StepTheWalks"/>), so the
+	/// leg length cannot be computed and every leg lasts one tick instead. That is a divergence and it is
+	/// named rather than dressed up: inventing a plausible constant would make every walk-on ride's dwell
+	/// time fiction, which is worse than a leg that is honestly too short. The state machine, the slots
+	/// and the harvest are all faithful; only the timing waits on model nodes.
+	/// </para>
+	/// </summary>
+	private const int WalkTick = 100;
+
 	/// <summary>What <c>BOUNCE</c>'s duration operand is measured in - milliseconds per second, as limbo's is.</summary>
 	private const int BounceSecond = 1000;
 
@@ -283,6 +400,7 @@ public sealed class RideScript
 		_stack = new int[Math.Max( file.StackSize, 0 )];
 		_limbo = new LimboSlot[Math.Max( file.LimboCapacity, 0 )];
 		_bounce = new BounceSlot[Math.Max( file.BounceCapacity, 0 )];
+		_walk = new WalkSlot[Math.Max( file.WalkCapacity, 0 )];
 		_atAddress = file.Instructions.ToDictionary( instruction => instruction.Address );
 
 		_calls = _stack.Length - 1;
@@ -569,8 +687,62 @@ public sealed class RideScript
 		// Scripts stay correct without it because every path that reads channel state to answer one goes
 		// through RideAnimations.Trigger, and that calls MoveTo on the channel itself before deciding.
 
+		StepTheWalks( now );
+
 		while ( _budget > 0 && Running )
 			Step( now );
+	}
+
+	/// <summary>
+	/// Carries every walking rider along their leg, and promotes the ones who have arrived -
+	/// <c>FUN_00557d80</c>, which is what makes <c>WALKGET</c> ever answer anybody.
+	///
+	/// <para>
+	/// <b>Without this the family is inert.</b> The script only ever puts a slot into
+	/// <see cref="WalkState.WalkingOn"/> and collects one in <see cref="WalkState.Done"/>; nothing it can
+	/// execute moves a slot between those. Building the three instructions and not this would have been a
+	/// ride that swallowed its riders - the exact shape of green feature this project keeps catching.
+	/// </para>
+	/// <para>
+	/// <b>The cadence differs from the engine's and it is named rather than hidden.</b> There the stepper
+	/// runs once per script per FRAME, from the positioner <c>FUN_00557ab0</c>; here it runs once per
+	/// script TURN, which is every eighth tick unless <c>TURBO</c> asked otherwise. Because the ramp is
+	/// computed from the clock - <c>(now - start) * 1000 / (due - start)</c> - and not accumulated, a
+	/// coarser cadence samples the same ramp rather than running it slower: a rider still finishes at the
+	/// same instant, it is simply noticed up to a turn later.
+	/// </para>
+	/// <para>
+	/// <b>What is deliberately absent is every position.</b> The engine spends most of
+	/// <c>FUN_005580a0</c> interpolating between two node positions and handing them to the sprite
+	/// placer, and it resolves those nodes through <c>FUN_00556b90</c> against the ride's own MODEL -
+	/// walk nodes in space <c>0x800</c>, head nodes in <c>0x80</c>. <b>Nothing in this project resolves a
+	/// model node by id</b>: <c>ModelFile.Nodes</c> is a bare list with no lookup. So the bookkeeping is
+	/// reproduced and the placement is not, the same split <see cref="_bounceBase"/> already lives with.
+	/// </para>
+	/// </summary>
+	private void StepTheWalks( float now )
+	{
+		for ( var slot = 0; slot < _walk.Length; ++slot )
+		{
+			ref var walking = ref _walk[slot];
+
+			if ( walking.State is not (WalkState.WalkingOn or WalkState.WalkingOff) )
+				continue;
+
+			// The engine divides by the leg's own length, so a zero-length leg would divide by nought.
+			// It cannot produce one - WALKON floors the duration at a hundred milliseconds - and this
+			// says so rather than relying on it.
+			var leg = walking.Due - walking.Start;
+
+			if ( leg <= 0f || (now - walking.Start) * WalkComplete / leg >= WalkComplete )
+			{
+				walking.State = walking.State == WalkState.WalkingOn
+					? WalkState.Carried
+					: WalkState.Done;
+
+				walking.Start = now;
+			}
+		}
 	}
 
 	private void Step( float now )
@@ -935,6 +1107,22 @@ public sealed class RideScript
 				Store( operands[0], _bouncing );
 				break;
 
+			// Walking, for the rides that carry people ON them rather than in cars - the sideshow's whole
+			// mechanism, and the other half of what a script can do with a visitor. WALKGET is the most
+			// common dismissal in the corpus: ten scripts use it where UNBOUNCE serves one.
+			case Opcode.WALKON:
+				Result = WalkOn( now, Value( operands[0] ), Value( operands[1] ), Value( operands[2] ),
+					Value( operands[3] ), Value( operands[4] ), Value( operands[5] ) ) ? 1 : 0;
+				break;
+
+			case Opcode.WALKOFF:
+				WalkOff( now, Value( operands[0] ) );
+				break;
+
+			case Opcode.WALKGET:
+				Store( operands[0], WalkGet() );
+				break;
+
 			case Opcode.COAST:
 				Coast( operands );
 				break;
@@ -1194,6 +1382,119 @@ public sealed class RideScript
 	/// clock, through the same <c>LEA</c> chain (x5, x25, x125, then x8) it uses elsewhere.
 	/// </para>
 	/// </summary>
+	/// <summary>
+	/// <c>WALKON</c>: put a visitor onto the ride and start them walking - <c>FUN_00556f40</c>, reached
+	/// through the handler at <c>00555963</c>.
+	///
+	/// <para>
+	/// <b>It takes seven operands, the most of any instruction</b>, and only four of them can be named
+	/// honestly. The handle is the first; the <b>action</b> is the one the engine compares against
+	/// <b>4</b>, which selects the head-node space (<c>0x80</c>) rather than the walk-node one
+	/// (<c>0x800</c>) and makes the rider attach to that node when they arrive; and two more are the walk
+	/// node and the head node. <b>The remaining three are not named</b>: Lost Kingdom's only consumer is
+	/// <c>Junspray.RSE</c>, which passes <c>VAR_LETMEON, 4, n, n, 4, 6, 1</c> on all three of its lanes -
+	/// so those constants never vary in the whole corpus and nothing here can tell what they select.
+	/// Inventing names for them would be worse than leaving them unread.
+	/// </para>
+	/// <para>
+	/// A slot is free when its <b>state</b> is nought - not when its handle is, which is the trap the
+	/// bounce table does not share - and the scan starts from the first slot every time. The duration is
+	/// multiplied by <see cref="WalkTick"/>, and a duration of nought becomes one tick rather than an
+	/// instant arrival, which is the engine's own substitution.
+	/// </para>
+	/// </summary>
+	/// <returns>Whether a slot was free, which the engine reports through the result register.</returns>
+	private bool WalkOn( float now, int handle, int walkNode, int headNode, int offFrom, int offTo,
+		int action )
+	{
+		for ( var slot = 0; slot < _walk.Length; ++slot )
+		{
+			if ( _walk[slot].State != WalkState.Free )
+				continue;
+
+			_walk[slot] = new WalkSlot
+			{
+				Handle = handle,
+				WalkNode = walkNode,
+				HeadNode = headNode,
+				OffFrom = offFrom,
+				OffTo = offTo,
+				Action = action,
+				Start = now,
+				Due = now + WalkTick,
+				State = WalkState.WalkingOn,
+			};
+
+			return true;
+		}
+
+		// "RSSE: WALK: Could not add peep t..." - the engine complains and carries on.
+		return false;
+	}
+
+	/// <summary>
+	/// <c>WALKOFF</c>: start a named visitor walking off again - <c>FUN_005571a0</c>.
+	///
+	/// <para>
+	/// <b>It is named by HANDLE rather than by slot</b>, which is why the sideshow keeps each lane's
+	/// rider in a variable of its own (<c>VAR_LANE1..3</c>) and passes that back here. A handle nobody
+	/// holds is the engine's "WALK: Tried to release a p..." complaint and changes nothing.
+	/// </para>
+	/// <para>
+	/// The leg is restamped from now, so walking off takes as long as walking on did. The particle spawn
+	/// the engine performs for action 2, and the model-node attachment it undoes for action 4, are both
+	/// presentation and are absent for the reason given on <see cref="StepTheWalks"/>.
+	/// </para>
+	/// </summary>
+	private void WalkOff( float now, int handle )
+	{
+		for ( var slot = 0; slot < _walk.Length; ++slot )
+		{
+			ref var walking = ref _walk[slot];
+
+			if ( walking.State == WalkState.Free || walking.Handle != handle )
+				continue;
+
+			var leg = walking.Due - walking.Start;
+
+			walking.Start = now;
+			walking.Due = now + (leg > 0f ? leg : WalkTick);
+			walking.State = WalkState.WalkingOff;
+
+			return;
+		}
+	}
+
+	/// <summary>
+	/// <c>WALKGET</c>: collect whoever has finished walking off, or nought - <c>FUN_00557110</c>.
+	///
+	/// <para>
+	/// <b>This WRITES its operand rather than reading it</b>, exactly as <c>UNBOUNCE</c> does: the script
+	/// fills a variable with whoever came off, and the engine clears it once they are dealt with. The
+	/// sideshow's own use is <c>TEST VAR_LETMEOFF</c> / <c>WALKGET VAR_LETMEOFF</c>, followed by
+	/// <c>ADD VAR_ONRIDE, 65535</c> - minus one - when somebody was collected.
+	/// </para>
+	/// <para>
+	/// Only a slot in <see cref="WalkState.Done"/> answers, and collecting it frees the slot outright.
+	/// </para>
+	/// </summary>
+	private int WalkGet()
+	{
+		for ( var slot = 0; slot < _walk.Length; ++slot )
+		{
+			if ( _walk[slot].State != WalkState.Done )
+				continue;
+
+			var handle = _walk[slot].Handle;
+
+			_walk[slot] = default;
+
+			return handle;
+		}
+
+		return 0;
+	}
+
 	private bool Bounce( float now, int handle, int seconds )
 	{
 		for ( int slot = 0; slot < _bounce.Length; ++slot )

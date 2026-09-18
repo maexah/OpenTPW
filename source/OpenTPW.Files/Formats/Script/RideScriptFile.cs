@@ -123,6 +123,7 @@ public sealed class RideScriptFile : BaseFormat
 	private const int TimeSliceOffset = 0x10;
 	private const int LimboRecordsOffset = 0x14;
 	private const int BounceRecordsOffset = 0x18;
+	private const int WalkRecordsOffset = 0x1C;
 	private const int PadOffset = 0x20;
 	private const int PadLength = 16;
 	private const int LengthOffset = 0x30;
@@ -192,6 +193,24 @@ public sealed class RideScriptFile : BaseFormat
 	/// </summary>
 	public int BounceCapacity { get; private set; }
 
+	/// <summary>
+	/// How many people this script can have WALKING at once - the count of 32-byte records at
+	/// <c>0x1c</c>, which the loader allocates as <c>count &lt;&lt; 5</c> and the engine keeps at the
+	/// script's <c>+0x2c</c>, counted by its <c>+0x7c</c>.
+	///
+	/// <para>
+	/// <b>Three independent measurements agree on the 32 bytes</b>: this header field's own
+	/// documentation, <c>RSSE_Load</c>'s <c>count &lt;&lt; 5</c> allocation, and the <c>0x20</c> stride
+	/// every walk handler indexes the array by.
+	/// </para>
+	/// <para>
+	/// It follows the same one-to-one rule that identified <see cref="BounceCapacity"/>: the scripts
+	/// declaring slots are the scripts using the family. In Lost Kingdom the sideshow's
+	/// <c>Junspray.RSE</c> is the consumer, and it walks people onto three lanes.
+	/// </para>
+	/// </summary>
+	public int WalkCapacity { get; private set; }
+
 	/// <summary>The body, split into instructions. Empty unless <see cref="IsValid"/>.</summary>
 	public IReadOnlyList<RideInstruction> Instructions { get; private set; } = [];
 
@@ -258,6 +277,7 @@ public sealed class RideScriptFile : BaseFormat
 		TimeSlice = BitConverter.ToInt32( data, TimeSliceOffset );
 		LimboCapacity = BitConverter.ToInt32( data, LimboRecordsOffset );
 		BounceCapacity = BitConverter.ToInt32( data, BounceRecordsOffset );
+		WalkCapacity = BitConverter.ToInt32( data, WalkRecordsOffset );
 
 		// The loader says so and then reads the file anyway (0x005587f0), so refusing here would turn
 		// a warning the original lives with into a ride that does not load.
