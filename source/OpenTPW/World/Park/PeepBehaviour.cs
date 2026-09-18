@@ -693,6 +693,10 @@ public sealed class PeepBehaviour
 			default:
 				UnansweredState = peep.State;
 
+				// And say so. This was recorded and never looked at by anything but a test, which is the
+				// same silence the state machine had before it recorded anything at all.
+				Unimplemented.Report( $"guest state {peep.State}" );
+
 				break;
 		}
 

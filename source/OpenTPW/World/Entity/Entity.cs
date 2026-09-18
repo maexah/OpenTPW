@@ -8,7 +8,18 @@ namespace OpenTPW;
 public class Entity
 {
 	public Level Level { get; set; }
-	public static List<Entity> All { get; set; } = Assembly.GetCallingAssembly().GetTypes().OfType<Entity>().ToList();
+	/// <summary>
+	/// Every entity alive, which each one joins in its own constructor.
+	/// </summary>
+	/// <remarks>
+	/// <b>This used to be seeded from reflection and the seed could never contain anything.</b> It read
+	/// <c>Assembly.GetCallingAssembly().GetTypes().OfType&lt;Entity&gt;()</c> - a sequence of
+	/// <see cref="Type"/> filtered by <see cref="Entity"/>, which no <see cref="Type"/> ever is - so it
+	/// always yielded empty, and the compiler says so (CA2021). Empty is the right starting value, so
+	/// nothing behaved wrongly; it simply said something untrue about where the list comes from. The list
+	/// comes from the constructor below.
+	/// </remarks>
+	public static List<Entity> All { get; set; } = new();
 
 	/// <summary>
 	/// Right, Up, Forward (FLU)

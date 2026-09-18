@@ -141,6 +141,12 @@ public sealed class RideEffects
 			// The engine allocates its node first and then frees it again on this path, having complained
 			// twice. The visible outcome is that nothing was started and nothing is left behind.
 			++Unknown;
+
+			// And it complained, which is the half this reproduced as a silent counter. Its own doc says
+			// the count exists so a script doing this is "visible rather than silently doing nothing";
+			// nothing ever looked at it.
+			Unimplemented.Report( $"effect type {type} (ADDOBJ)" );
+
 			return;
 		}
 
@@ -172,6 +178,9 @@ public sealed class RideEffects
 		if ( !IsKnown( type ) )
 		{
 			++Unknown;
+
+			Unimplemented.Report( $"effect type {type} (TRIGGEREVENT)" );
+
 			return;
 		}
 

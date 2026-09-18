@@ -390,6 +390,25 @@ public static class DebugConsole
 
 				break;
 
+			// What this session has reached and not built. Each gap announces itself once on the console
+			// when it is first reached and is counted after that, so this is how to ask what a whole run
+			// hit without scrolling back through it - see Unimplemented.
+			case "unimplemented":
+				var gaps = Unimplemented.Summary;
+
+				if ( gaps.Count == 0 )
+				{
+					Reply( "unimplemented: nothing has been reached that is not built" );
+					break;
+				}
+
+				Reply( $"unimplemented {gaps.Count}" );
+
+				foreach ( var gap in gaps )
+					Reply( $"  {gap.Times,5}x {gap.What}" );
+
+				break;
+
 			// The staff, who are a separate list from the guests and so appear in neither census above.
 			case "staff":
 				if ( ParkPeople.Current is not { } employer )

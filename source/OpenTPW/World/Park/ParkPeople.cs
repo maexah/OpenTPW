@@ -452,7 +452,25 @@ public sealed class ParkPeople : Entity
 				// FUN_004e14e0: invite, then let anybody off unless the ride has broken. Everything else
 				// that function does is the breakdown and condemned transitions, which nothing here models.
 				case 0:
-					operation.Invite( script, thing, TrackTypeOf( thing ) );
+					// <b>The watchdog the tail of FUN_004e1220 runs on every turn that does not
+					// invite.</b> Invite bails while the ride already holds a nominee, and the only
+					// other thing that clears one is CompleteAdmission on success - so a guest who was
+					// called forward and then stopped heading for the ride would hold the nomination for
+					// ever and nobody else could be called. DropUnreadyNominee existed, was tested, and
+					// nothing had ever called it.
+					//
+					// <b>Measured before wiring, and it is NOT a fault anybody has seen:</b> over 50
+					// samples of a live park the Belly Bounce held a nominee in 8 of them and the longest
+					// unbroken hold was 2, so nominations clear on their own here. This closes a dead
+					// path and matches the original's order; it does not fix an observed freeze.
+					// <b>NOT PINNED BY THE SUITE, and that is measured rather than assumed.</b> Unwiring
+					// this again leaves all 774 tests green. ParkTickTests does drive the real turn, but
+					// it asserts the handshake SUCCEEDING, and this fires only on a turn that does not
+					// invite - so no test reaches it. Exercising it wants a STALE nominee, which the
+					// shipped park never produces: over 50 samples the longest hold was 2. It stands on
+					// fidelity to FUN_004e1220's tail and on that measurement, not on coverage.
+					if ( operation.Invite( script, thing, TrackTypeOf( thing ) ) == 0 )
+						operation.DropUnreadyNominee( thing );
 
 					if ( script != null && script[ParkRideOperation.BrokenVariable] == 0 )
 						operation.Dismiss( script, thing, thingTick, _rideRandom, WalkFor, _behaviour.Park,
@@ -647,6 +665,10 @@ public sealed class ParkPeople : Entity
 				} ) );
 
 			yield return $"thing {thing.ThingId,2} cat {thing.CatalogueId} '{script.Name}' "
+				// The nominee, because a stale one is invisible otherwise: Invite bails while somebody is
+				// nominated, and the only thing that clears a stale nomination is DropUnreadyNominee,
+				// which nothing calls. A queue stuck on that would look exactly like a quiet ride.
+				+ $"nominee {_behaviour.State.PersonBeingLoaded( thing.ThingId )} "
 				+ $"running {script.Running} letmeon {Read( ParkRideOperation.AdmitVariable )} "
 				+ $"letmeoff {Read( ParkRideOperation.DismissVariable )} "
 				+ $"capacity {Read( ParkRideOperation.CapacityVariable )} "

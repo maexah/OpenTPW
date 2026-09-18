@@ -1176,8 +1176,19 @@ public sealed class RideScript
 				break;
 
 			default:
-				// Reaches into a world that does not exist yet. Counted, never guessed.
+				// Reaches into a world that does not exist yet. Counted, never guessed - and now said
+				// out loud, because a count nobody reads is the same silence as no count at all.
 				++NotImplemented;
+
+				// <b>Two scars here, and both are worth keeping.</b> This first read operands[0] to name
+				// the op and threw ArgumentOutOfRange on the very path that reaches this arm - turning a
+				// silent no-op into an exception that killed the script mid-Turn and took five ride tests
+				// with it. A reporter that breaks the path it reports on is worse than the silence it
+				// replaced. Then it said "COAST op not handled", which was simply WRONG: this is the
+				// opcode dispatch's own default, reached by ANY instruction with no case, not a COAST
+				// sub-op - and a console line naming the wrong thing is worse than none at all.
+				// The instruction knows what it is, and asking it cannot throw.
+				Unimplemented.Report( $"{Name}: {instruction.Opcode} at {instruction.Address}" );
 				break;
 		}
 	}
@@ -1209,6 +1220,7 @@ public sealed class RideScript
 		if ( Ride is null )
 		{
 			++NotImplemented;
+			Unimplemented.Report( $"{Name}: COAST, with no ride state to work on" );
 			return;
 		}
 
@@ -1250,8 +1262,10 @@ public sealed class RideScript
 				break;
 
 			default:
-				// Outside 1..8 the engine logs and carries on, which is a no-op with a complaint.
+				// Outside 1..8 the engine logs and carries on, which is a no-op with a complaint. The
+				// complaint is the half this reproduced as a silent counter.
 				++NotImplemented;
+				Unimplemented.Report( $"{Name}: BUMP op out of 1..8" );
 				break;
 		}
 	}
@@ -1271,6 +1285,7 @@ public sealed class RideScript
 		if ( Effects is null )
 		{
 			++NotImplemented;
+			Unimplemented.Report( $"{Name}: ADDOBJ, with no effects to add to" );
 			return;
 		}
 
@@ -1286,6 +1301,7 @@ public sealed class RideScript
 		if ( Effects is null )
 		{
 			++NotImplemented;
+			Unimplemented.Report( $"{Name}: EVENT, with no effects to start one in" );
 			return;
 		}
 
@@ -1301,6 +1317,7 @@ public sealed class RideScript
 		if ( Effects is null )
 		{
 			++NotImplemented;
+			Unimplemented.Report( $"{Name}: KILLOBJ, with no effects to stop" );
 			return;
 		}
 
@@ -1732,6 +1749,7 @@ public sealed class RideScript
 		{
 			// Nowhere to put a script even if one could be read. Counted, as COAST is without a ride.
 			++NotImplemented;
+			Unimplemented.Report( $"{Name}: SPAWN, with no scheduler to put the script in" );
 			return false;
 		}
 
@@ -1974,6 +1992,7 @@ public sealed class RideScript
 			// The mute is one setting for the whole game, and there is nowhere to put it without the
 			// registry - counted, as COAST is without a ride.
 			++NotImplemented;
+			Unimplemented.Report( $"{Name}: DIPMUSIC, with no scheduler holding the setting" );
 			return;
 		}
 
@@ -1990,6 +2009,7 @@ public sealed class RideScript
 		if ( Effects is null )
 		{
 			++NotImplemented;
+			Unimplemented.Report( $"{Name}: SETOBJPARAM, with no effects to set one on" );
 			return;
 		}
 
