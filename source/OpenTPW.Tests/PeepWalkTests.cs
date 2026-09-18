@@ -79,7 +79,7 @@ public class PeepWalkTests
 		{
 			PeepState.Walking, PeepState.HeadingForGate, PeepState.Entering, PeepState.Wandering,
 			PeepState.GoingToMinorDestination, PeepState.GoingToRide, PeepState.SteppingUpQueue,
-			PeepState.BeingAdmitted, PeepState.OnRide, PeepState.HeadingForExit, PeepState.WalkingOutside
+			PeepState.BeingAdmitted, PeepState.LeavingRide, PeepState.HeadingForExit, PeepState.WalkingOutside
 		};
 
 		var stays = new[]

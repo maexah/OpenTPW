@@ -60,7 +60,7 @@ public class ParkRideOperationTests
 		{
 			PeepState.Walking, PeepState.Deciding, PeepState.Wandering,
 			PeepState.GoingToMinorDestination, PeepState.GoingToRide,
-			PeepState.OnRide, PeepState.Riding, PeepState.HeadingForExit
+			PeepState.LeavingRide, PeepState.Riding, PeepState.HeadingForExit
 		} )
 		{
 			Assert.IsFalse( ParkRideOperation.IsQueueing( Guest( 7, state ) ), $"{state} is not" );

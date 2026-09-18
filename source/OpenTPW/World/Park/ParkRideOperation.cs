@@ -275,7 +275,7 @@ public sealed class ParkRideOperation
 
 		Charge( peep, ride );
 
-		peep.SetState( PeepState.OnRide, tick, random );
+		peep.SetState( PeepState.LeavingRide, tick, random );
 
 		return script.Set( DismissVariable, 0 );
 	}

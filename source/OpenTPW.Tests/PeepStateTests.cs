@@ -59,7 +59,7 @@ public class PeepStateTests
 			(PeepState.SteppingUpQueue, PeepAnimation.Walk),
 			(PeepState.BeingAdmitted, PeepAnimation.Walk),
 			(PeepState.EnteringRide, PeepAnimation.Stand),
-			(PeepState.OnRide, PeepAnimation.None),
+			(PeepState.LeavingRide, PeepAnimation.None),
 			(PeepState.Riding, PeepAnimation.None),
 			(PeepState.Leaving, PeepAnimation.None),
 			(PeepState.HeadingForExit, PeepAnimation.Walk),

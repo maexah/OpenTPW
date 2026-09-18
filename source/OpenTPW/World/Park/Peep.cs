@@ -283,14 +283,14 @@ public sealed class Peep
 	/// <para>
 	/// <b>Ten of the eleven agree with a list written from the other direction.</b> <see cref="AnimationFor"/>
 	/// queues the walking animation for exactly ten states, and they are these without
-	/// <see cref="PeepState.OnRide"/>. That is not a contradiction: the animation list says which picture is
+	/// <see cref="PeepState.LeavingRide"/>. That is not a contradiction: the animation list says which picture is
 	/// shown, and a guest on a ride takes its picture from the ride while still being moved.
 	/// </para>
 	/// </summary>
 	public static bool IsAWalkingState( PeepState state ) => state is
 		PeepState.Walking or PeepState.HeadingForGate or PeepState.Entering or PeepState.Wandering
 		or PeepState.GoingToMinorDestination or PeepState.GoingToRide or PeepState.SteppingUpQueue
-		or PeepState.BeingAdmitted or PeepState.OnRide or PeepState.HeadingForExit
+		or PeepState.BeingAdmitted or PeepState.LeavingRide or PeepState.HeadingForExit
 		or PeepState.WalkingOutside;
 
 	/// <summary>How often the three needs that grow on their own do so - <c>TEST byte ptr [..],0xf</c>.</summary>
@@ -439,7 +439,7 @@ public sealed class Peep
 	/// <para>
 	/// The four that queue nothing are not an omission. <see cref="PeepState.PlayingSpotAnimation"/> is
 	/// already playing one, <see cref="PeepState.Leaving"/> queues none at all, and
-	/// <see cref="PeepState.OnRide"/> and <see cref="PeepState.Riding"/> choose theirs from the state of
+	/// <see cref="PeepState.LeavingRide"/> and <see cref="PeepState.Riding"/> choose theirs from the state of
 	/// the ride they are on - which nothing here can ask yet.
 	/// </para>
 	/// </summary>

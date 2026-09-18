@@ -135,7 +135,7 @@ public class ParkRideExitTests
 		Assert.AreNotEqual( (EntryX, EntryY), (targetX, targetY),
 			"walking them back to the entry would look right on every other object in the park" );
 
-		Assert.AreEqual( PeepState.OnRide, peep.State, "and they are leaving the ride" );
+		Assert.AreEqual( PeepState.LeavingRide, peep.State, "and they are leaving the ride" );
 	}
 
 	/// <summary>
@@ -156,7 +156,7 @@ public class ParkRideExitTests
 			.Dismiss( script, Park().Objects.Single( o => o.ThingId == Ride ), 9, new Random( 1 ) ),
 			"let off with nowhere to go" );
 
-		Assert.AreEqual( PeepState.OnRide, peep.State );
+		Assert.AreEqual( PeepState.LeavingRide, peep.State );
 	}
 
 	/// <summary>

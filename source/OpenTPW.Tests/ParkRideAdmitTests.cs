@@ -249,7 +249,7 @@ public class ParkRideAdmitTests
 		Assert.IsTrue( new ParkRideOperation( park, guests )
 			.Dismiss( script, TheRide(), tick: 9, new Random( 1 ) ), "let off" );
 
-		Assert.AreEqual( PeepState.OnRide, guests[7].State, "they are leaving the ride" );
+		Assert.AreEqual( PeepState.LeavingRide, guests[7].State, "they are leaving the ride" );
 		Assert.AreEqual( 0, script[ParkRideOperation.DismissVariable],
 			"and the slot is cleared, or the same guest would be let off for ever" );
 	}
