@@ -16,12 +16,19 @@ namespace OpenTPW;
 /// </para>
 /// <para>
 /// <b>Eight of the twenty-two cases are answered in the switch's own body; the other fourteen jump to a
-/// handler.</b> That distinction decides what can be built: the inline cases are 0, 7, 8, 12, 14, 16, 17
-/// and 20, and <b>no guest in Lost Kingdom is in any of them</b> - the park's thirteen are in
-/// <see cref="PeepState.HeadingForGate"/>, <see cref="PeepState.Entering"/> and
-/// <see cref="PeepState.WaitingForOpening"/>, all three of which delegate. Building "the inline states"
-/// would therefore have been a green feature that moved nobody, which is exactly the mistake the walk
-/// itself made once when four states were read where eleven were meant.
+/// handler.</b> The inline cases are 0, 7, 8, 12, 14, 16, 17 and 20.
+/// </para>
+/// <para>
+/// <b>This paragraph used to go on to say that no guest in Lost Kingdom is in any of the inline states,
+/// and to conclude that building them would move nobody. That was true of the park as SAVED and became
+/// false the moment the park ran.</b> The save's thirteen are in <see cref="PeepState.HeadingForGate"/>,
+/// <see cref="PeepState.Entering"/> and <see cref="PeepState.WaitingForOpening"/>, all three of which
+/// delegate - but a guest who is admitted to a ride is put into <see cref="PeepState.Riding"/>, which is
+/// inline, and one who finishes deciding is put into <see cref="PeepState.Wandering"/>, which is inline
+/// too. Reasoning about which states matter from the saved file alone is how nine of the twenty-two came
+/// to have no case at all, and Alexah found two of those by playing the game rather than by any test
+/// failing. <b>What decides whether a state matters is whether anything SETS it, not where the park
+/// starts.</b>
 /// </para>
 /// <para>
 /// <b>What decides every one of those three is whether the park is open</b> - <c>FUN_0051a280</c>, which
@@ -268,6 +275,26 @@ public sealed class PeepBehaviour
 	/// turn, written straight onto the thing at <c>+0x1c</c>.
 	/// </summary>
 	public const int ArrivalHeading = 0x400;
+
+	/// <summary>
+	/// The last state <see cref="Step"/> was handed that its switch has <b>no case for at all</b>, or null
+	/// if every state it has been given was answered by something.
+	///
+	/// <para>
+	/// <b>This exists because an unanswered state is invisible.</b> A guest in one is never walked, never
+	/// re-stated, never logged; on screen they stand still - which is also what several perfectly faithful
+	/// states do, so the two cannot be told apart by looking. Thirteen of the twenty-two were answered when
+	/// Alexah reported that guests never entered a ride and never came off one, and the two states
+	/// responsible had shipped that same day inside work that claimed the ride loop was closed. Recording
+	/// the fall-through is what lets a test tell a deliberate stillness from a hole in the machine.
+	/// </para>
+	/// <para>
+	/// <b>It is not a diagnostic switch and it is not tooling.</b> It is one field the behaviour keeps
+	/// about itself, written on the one path that should never be taken; there is nothing to turn on and
+	/// nothing to turn off.
+	/// </para>
+	/// </summary>
+	public PeepState? UnansweredState { get; private set; }
 
 	/// <summary>
 	/// One turn of one guest's behaviour.
@@ -533,6 +560,132 @@ public sealed class PeepBehaviour
 					walk.Heading = ArrivalHeading;
 					peep.SetState( PeepState.AtTheBusStop, tick, _random );
 				}
+
+				break;
+
+			// Standing at the gate having walked to it - FUN_004ff520. They pick one of the two ticket
+			// booths and set off to be charged, which is how a guest who arrives from outside joins the
+			// admission sequence at its head.
+			//
+			// The original gates this on FUN_0051a760, which asks the arrival vehicle's script what it is
+			// doing. With no bus thing in the world that function returns 1 at its first test, so the gate
+			// stands open for every guest here and the branch is unreachable rather than unwritten.
+			case PeepState.AtGate:
+				if ( Admission is { } atTheGate )
+				{
+					SendTo( peep, walk, EitherOf( atTheGate.TicketBoothA, atTheGate.TicketBoothB ) );
+					peep.SetState( PeepState.HeadingForGate, tick, _random );
+				}
+
+				break;
+
+			// Walking away from a ride that has just let them off - FUN_00500900, and THE STATE THAT CLOSES
+			// THE PARK'S LOOP. Arriving at the ride's exit drops them back into Deciding, which is what lets
+			// a guest who has had one go go and have another.
+			//
+			// <b>Its absence is why nobody Alexah watched ever rode twice, and it shipped inside the very
+			// commits that claimed the ride loop was closed.</b> ParkRideOperation.Dismiss sets this state
+			// from the ride's own turn; the switch had no case for it, so a guest who had been let off stood
+			// at the ride's exit for ever. No test saw it because every test of the dismissal asserted the
+			// STATE was reached, and reaching a state says nothing about what the state then does.
+			//
+			// <b>The destination is cleared on the stuck arm only, and that asymmetry is the original's.</b>
+			// FUN_00500900 zeroes +0x1dc when the walk reports it cannot get through, and on arrival keeps
+			// it while it logs "Person %d: successfully left rid[e]". Deciding's ride arm overwrites
+			// MajorDest anyway, so reproducing the asymmetry costs nothing and tidying it would quietly make
+			// this a different function.
+			//
+			// <b>The pending-second-destination arm is absent because nothing writes the field.</b> Before
+			// dropping to Deciding the original reads the person's +0x1de - somewhere they had chosen while
+			// they were on the ride - and resumes it as GoingToRide if that thing still exists. Nothing in
+			// this tree ever writes +0x1de, so the arm is unreachable, not unbuilt.
+			case PeepState.LeavingRide:
+				switch ( Walked( peep, walk, playing ) )
+				{
+					case WalkVerdict.Arrived:
+						peep.SetState( PeepState.Deciding, tick, _random );
+						break;
+
+					case WalkVerdict.CannotReach:
+						peep.MajorDest = 0;
+						peep.SetState( PeepState.Deciding, tick, _random );
+						break;
+
+					default:
+						break;
+				}
+
+				break;
+
+			// On the ride, and doing nothing is the whole of it: case 0x10 of FUN_005019f0 is a single call
+			// that resolves the ride's thing pointer and returns.
+			//
+			// <b>A guest does not take themselves off a ride - the ride takes them off.</b>
+			// ParkRideOperation.Dismiss sets LeavingRide when the script says the go is over, so a guest
+			// with nothing to do on their own turn is faithful rather than stalled. This case exists so
+			// that the state is ANSWERED: see UnansweredState for why a deliberate stillness and a hole in
+			// the switch are indistinguishable on screen, and why the difference is recorded rather than
+			// left to a comment.
+			case PeepState.Riding:
+				break;
+
+			// Heading for the exit, having decided not to stay - FUN_00500a50. They walk to whichever bus
+			// stop the arm that sent them here chose, and on arriving go on to pick a cell outside.
+			//
+			// <b>The change-of-mind arm is absent because two of its four terms have no name.</b> The
+			// original turns a guest back to Deciding - "Make up your mind!" - when +0x1bc is positive AND a
+			// float conversion of something is non-zero AND the park is open AND FUN_004fa990 agrees.
+			// Decide already records +0x1bc as unidentified, so this is that same gap seen from the other
+			// side rather than a second one.
+			//
+			// Getting stuck prints "I'm stuck in the park, even though it's closed!!" and leaves them where
+			// they are, which is the give-up path this switch takes everywhere.
+			case PeepState.HeadingForExit:
+				if ( Walked( peep, walk, playing ) == WalkVerdict.Arrived )
+					peep.SetState( PeepState.PickingACellOutside, tick, _random );
+
+				break;
+
+			// <b>The five states nothing in this tree SETS, grouped so that each is answered and each says
+			// what it waits on.</b> A case that breaks looks exactly like a missing case on screen - the
+			// guest stands still either way - so the difference has to be written down, and
+			// UnansweredState is what lets the program itself tell them apart.
+			//
+			// PlayingSpotAnimation (8) returns to SavedState once ten ticks have passed; FUN_004fc890 is
+			// one line and both halves of it exist here. What does not exist is anything that PLAYS a spot
+			// animation, so the state is never entered.
+			//
+			// GoingToMinorDestination (9) walks to a shop or a toilet and, on arrival, runs THAT THING'S
+			// script - FUN_004fff20 hands the thing's +0x24 to the script runtime. Walking a guest there
+			// without running it would be a guest queueing at a drinks machine that never serves them.
+			//
+			// Leaving (17) deletes the guest unless some thing is holding them - it sweeps the thing list
+			// for one whose +0x212 names this person. Nothing here removes a guest from a park, so entering
+			// this state would strand them rather than end their day.
+			//
+			// PickingACellOutside (19) and AtTheBusStop (21) walk to cells from FUN_004d8650, and WHICH
+			// balance-file pair that getter returns is NOT YET PROVEN. The +1 among its four candidates
+			// ({c, c+1, c-0x100, c-0xff}) rules out BusStopA/B, whose cells are (42,5) and (53,5) and are
+			// not adjacent; CrossingParkSideA/B reads right and is not established. Guessing between two
+			// readings a test cannot tell apart is what made P4's rest areas inert, so the pair stays
+			// unread until it is measured. Both states also consult the BUS - FUN_0051a690 for its script
+			// state, FUN_0051aad0 for whether one is here - and no bus thing runs a script in this project,
+			// under which the original's own answer for 21 is to do nothing at all.
+			case PeepState.PlayingSpotAnimation:
+			case PeepState.GoingToMinorDestination:
+			case PeepState.Leaving:
+			case PeepState.PickingACellOutside:
+			case PeepState.AtTheBusStop:
+				break;
+
+			// <b>And the guard this switch did not have.</b> Twenty-two states were declared, thirteen were
+			// answered, and the nine that were not fell out of the bottom in silence - so a guest put into
+			// one stood still for ever and nothing in the program could say so. Alexah found two of them by
+			// playing the game. The original needs no default because its switch answers all twenty-two;
+			// this one records rather than throws, because crashing a park is worse than a guest standing
+			// still, and because a test can read a record.
+			default:
+				UnansweredState = peep.State;
 
 				break;
 		}

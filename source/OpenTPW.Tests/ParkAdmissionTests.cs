@@ -312,6 +312,13 @@ public class ParkAdmissionTests
 	/// to see anyone leave, and their destination - a bus stop cell centre - is what says they were sent
 	/// somewhere rather than merely relabelled.
 	/// </para>
+	/// <para>
+	/// <b>This asserted <see cref="PeepState.HeadingForExit"/> until 2026-09-18, and that was pinning a
+	/// bug.</b> Nothing answered that state, so a guest who had been aimed at a bus stop stood at the
+	/// booths for ever - and this test passed, because being AIMED somewhere was all it checked. Now that
+	/// the state is answered they walk it, arrive, and go on to
+	/// <see cref="PeepState.PickingACellOutside"/>, so the run asserts the arrival as well as the aim.
+	/// </para>
 	/// </summary>
 	[TestMethod]
 	public void AGateThatNeverOpensSendsThemToTheBusStopEventually()
@@ -329,13 +336,20 @@ public class ParkAdmissionTests
 			.Select( cell => ((cell.X * one) + (one / 2), (cell.Y * one) + (one / 2)) )
 			.ToHashSet();
 
+		var stopCells = new[] { admission.BusStopA, admission.BusStopB }.ToHashSet();
+
 		foreach ( var id in AtTheBooths )
 		{
-			Assert.AreEqual( PeepState.HeadingForExit, guests[id].State,
-				$"guest {id} should have given up on a gate that never opened" );
+			Assert.AreEqual( PeepState.PickingACellOutside, guests[id].State,
+				$"guest {id} should have given up on a gate that never opened, WALKED to a bus stop, and "
+				+ "gone on to pick a cell outside the park" );
 
 			Assert.IsTrue( stops.Contains( (guests[id].Navigator.Target.X, guests[id].Navigator.Target.Y) ),
 				$"guest {id} should be walking to a bus stop, not to {guests[id].Navigator.Target}" );
+
+			Assert.IsTrue( stopCells.Contains( guests[id].Navigator.Position.Cell ),
+				$"guest {id} should have REACHED a bus stop rather than merely been aimed at one - they "
+				+ $"are standing at {guests[id].Navigator.Position.Cell}" );
 		}
 	}
 

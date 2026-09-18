@@ -139,6 +139,78 @@ public class ParkRideExitTests
 	}
 
 	/// <summary>
+	/// <b>And then they walk it, arrive, and go back to deciding what to do - which is the step that closes
+	/// the park's loop and the one that was missing.</b>
+	///
+	/// <para>
+	/// <b>The test above ends at the state, and that is exactly how this shipped broken.</b> Dismissal set
+	/// <see cref="PeepState.LeavingRide"/> and <c>PeepBehaviour.Step</c> had no case for it, so a guest who
+	/// had been let off was never walked again: they stood at the ride for ever, and every test of the
+	/// dismissal passed because reaching a state says nothing about what the state then does. Alexah found
+	/// it by playing the game.
+	/// </para>
+	/// <para>
+	/// <b>The assertion that carries the test is WHERE they were when they thought again, not that they
+	/// thought again.</b> <c>FUN_00500900</c> drops a guest into <see cref="PeepState.Deciding"/> from both
+	/// of its arms - on arriving, and on finding it cannot get through - so a build that only ever reported
+	/// "cannot reach" would satisfy a state check on the first turn while the guest stood where they were.
+	/// This uses one of the park's own saved guests, who is standing on a real connected cell, and requires
+	/// them to be at the ride's exit when it happens.
+	/// </para>
+	/// <para>
+	/// The behaviour is built with <b>no</b> <see cref="ParkAdmission"/> on purpose: deciding then returns
+	/// at its first line, so a guest who has arrived stays arrived instead of immediately choosing
+	/// somewhere new and walking out of the assertion.
+	/// </para>
+	/// </summary>
+	/// <summary>A guest standing on a named cell, rather than at (0,0) where no route can begin.</summary>
+	private static ParkWorld.NavigatorState StandingOn( int cellX, int cellY ) => new(
+		X: PeepNavigator.WaypointCentre( cellX ), Y: PeepNavigator.WaypointCentre( cellY ),
+		VelocityX: 0, VelocityY: 0,
+		TargetX: PeepNavigator.WaypointCentre( cellX ), TargetY: PeepNavigator.WaypointCentre( cellY ),
+		Mass: ParkWorld.NavigatorState.DefaultMass, Radius: ParkWorld.NavigatorState.DefaultRadius,
+		MaxForce: 0, MaxSpeed: 0, NavMode: 0, CantReachDest: 0, PathFinished: false,
+		PathCount: 0, PathTotalCount: 0, PathBufferCount: 0,
+		BufferedDistance: 0, TailDistance: 0, TotalDistance: 0, StuckBits: 0 );
+
+	/// <inheritdoc cref="StandingOn"/>
+	private static Peep GuestAt( int thingId, PeepState state, int cellX, int cellY )
+		=> new( thingId, new ParkWorld.GuestState(
+			State: (int)state, SavedState: (int)PeepState.Deciding, PersonType: 0, Cash: 300,
+			ExitLevel: 100, Happiness: 50f, Thirst: 10f, Hunger: 10f, Toilet: 10f, Vomit: 0f,
+			Litter: 0f, MajorDest: Ride, QueuePos: 0, PrankeryIndex: 0 ), StandingOn( cellX, cellY ) );
+
+	[TestMethod]
+	public void AGuestLetOffARideWalksToItsExitAndThinksAgain()
+	{
+		var world = Park();
+		var park = new ParkState( world );
+
+		// <b>Standing where a dismissed guest is actually put down.</b> A first draft of this test put
+		// the guest in the gateway and asked them to walk to (52,26); they gave up on the second turn,
+		// and the reason is the engine being right rather than wrong. NO ROUTE EXISTS from the park to a
+		// ride's EXIT cell - CellEdge only opens a ride end along the way it faces - because a guest is
+		// put down at an exit and walks AWAY from it, never to it.
+		var peep = GuestAt( 7, PeepState.LeavingRide, ExitX, ExitY );
+		var walk = new PeepWalk( peep.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
+
+		var behaviour = new PeepBehaviour( world, new Random( 1 ), null, () => ParkRides.GateIsOpen,
+			park, new ParkItemCatalogue( "jungle", data ) );
+
+		for ( var tick = 1; tick <= 40 && peep.State == PeepState.LeavingRide; ++tick )
+			behaviour.Step( peep, walk, playing: null, tick );
+
+		Assert.AreEqual( PeepState.Deciding, peep.State,
+			"a guest let off a ride has to end up deciding what to do next, or the park has no loop" );
+
+		// <b>And this is what says WHICH arm ran, which position cannot.</b> FUN_00500900 keeps the
+		// destination on arriving and zeroes it on giving up, so a build that only ever reported "cannot
+		// get through" would reach Deciding too - and would arrive here with MajorDest nought.
+		Assert.AreEqual( Ride, peep.MajorDest,
+			"arriving keeps the destination; only the give-up arm clears it, so this is the arrival" );
+	}
+
+	/// <summary>
 	/// Without somewhere to walk them the state still changes, which is what every caller did before a
 	/// ride's turn existed to supply a route.
 	/// </summary>

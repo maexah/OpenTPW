@@ -22,7 +22,7 @@ public class PeepBehaviourTests
 	private BaseFileSystem data = null!;
 
 	[TestInitialize]
-	public void MountTheGame() => data = GameData.Required();
+	public void MountTheGame() => FileSystem = data = GameData.Required();
 
 	private const string ShippedPark = "levels/jungle/Easymode.TPWI";
 
@@ -218,27 +218,153 @@ public class PeepBehaviourTests
 		Assert.AreEqual( PeepState.InQueue, peep.State, "giving up on the shuffle still leaves them queueing" );
 	}
 
+	/// <summary>The park's fee and the five numbers that turn it into an opinion, with no park needed.</summary>
+	private static ParkAdmission Admission( int fee = 25 )
+		=> new( new ParkBalance( "jungle", easyMode: true ), fee );
+
 	/// <summary>
-	/// A state the machine does not answer leaves the guest untouched. This is the guard that stops the
-	/// switch quietly acquiring a default.
+	/// <b>Every one of the twenty-two states a guest can be in is answered by some case of the switch.</b>
+	///
+	/// <para>
+	/// <b>This is the test whose absence Alexah found by playing the game.</b> <c>Step</c> declared
+	/// twenty-two states and answered thirteen; the other nine fell out of the bottom of the switch in
+	/// silence, so a guest put into one was never walked and never re-stated again. Two of the nine were
+	/// <see cref="PeepState.Riding"/> and <see cref="PeepState.LeavingRide"/>, which had shipped that same
+	/// day inside work that claimed the ride loop was closed - which is why guests entered a ride and
+	/// never came off it.
+	/// </para>
+	/// <para>
+	/// <b>It asserts the property the old test was believed to assert.</b> A guest standing still proves
+	/// nothing either way, because several faithful states do exactly that; what distinguishes them is
+	/// whether the switch <i>recognised</i> the state, which is what
+	/// <see cref="PeepBehaviour.UnansweredState"/> records. Adding a twenty-third state without a case
+	/// fails here rather than in somebody's park.
+	/// </para>
 	/// </summary>
 	[TestMethod]
-	public void AStateThatIsNotBuiltLeavesTheGuestExactlyAsTheyWere()
+	public void EveryStateAGuestCanBeInIsAnsweredByTheSwitch()
 	{
-		var behaviour = new PeepBehaviour( parkIsClosed: false, visitorsToDate: 4, new Random( 1 ) );
+		var behaviour = new PeepBehaviour( parkIsClosed: false, visitorsToDate: 0, new Random( 1 ),
+			Admission() );
 
-		foreach ( var state in new[] { PeepState.Deciding, PeepState.JudgingTheFee, PeepState.InQueue,
-			PeepState.Riding, PeepState.AtTheBusStop } )
+		var states = Enum.GetValues<PeepState>();
+
+		Assert.AreEqual( 22, states.Length,
+			"the numbering is the save's own and runs 0 to 21 - a new member needs a case, not a new count" );
+
+		foreach ( var state in states )
 		{
 			var peep = Guest( 6, (int)state );
 			var walk = new PeepWalk( peep.Navigator, ( _, _, _ ) => true );
 
 			behaviour.Step( peep, walk, playing: null, tick: 1 );
 
-			Assert.AreEqual( state, peep.State, $"{state} is not built, so nothing should have moved" );
+			Assert.IsNull( behaviour.UnansweredState,
+				$"{state} fell out of the bottom of the switch, so a guest in it would stand still for ever" );
+		}
+	}
+
+	/// <summary>
+	/// A guest at the gate picks one of the two ticket booths and sets off to be charged -
+	/// <c>FUN_004ff520</c>, and the head of the admission sequence.
+	///
+	/// <para>
+	/// The assertion is about the <b>destination</b> as well as the state, because a guest who changed
+	/// state without being aimed anywhere would satisfy a state check and then stand at the gate for ever -
+	/// which is the failure this whole day's work is about.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void AGuestAtTheGateHeadsForOneOfTheTwoTicketBooths()
+	{
+		var admission = Admission();
+		var behaviour = new PeepBehaviour( parkIsClosed: false, visitorsToDate: 0, new Random( 1 ),
+			admission );
+
+		var peep = Guest( 6, (int)PeepState.AtGate );
+		var walk = new PeepWalk( peep.Navigator, ( _, _, _ ) => false );
+
+		behaviour.Step( peep, walk, playing: null, tick: 1 );
+
+		Assert.AreEqual( PeepState.HeadingForGate, peep.State, "they should set off for a booth" );
+
+		var booths = new[] { admission.TicketBoothA, admission.TicketBoothB }
+			.Select( cell => new FixedVector(
+				PeepNavigator.WaypointCentre( cell.X ), PeepNavigator.WaypointCentre( cell.Y ) ) )
+			.ToArray();
+
+		Assert.IsTrue( booths.Contains( peep.Navigator.Target ),
+			$"they should be aimed at a ticket booth, not at {peep.Navigator.Target}" );
+	}
+
+	/// <summary>
+	/// A guest on a ride stays on it, and that is the ride's business rather than theirs.
+	///
+	/// <para>
+	/// <b>Doing nothing is the whole of the original's case 0x10</b> - one call that resolves the ride's
+	/// thing pointer and returns. <see cref="ParkRideOperation.Dismiss"/> is what takes them off, from the
+	/// ride's own turn. So this pins two things at once: that they are not moved by themselves, and that
+	/// the state is <i>answered</i> rather than unrecognised - the difference the old test could not see.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void AGuestOnARideIsLeftForTheRideToTakeOff()
+	{
+		var behaviour = new PeepBehaviour( parkIsClosed: false, visitorsToDate: 0, new Random( 1 ),
+			Admission() );
+
+		var peep = Guest( 6, (int)PeepState.Riding );
+		var walk = new PeepWalk( peep.Navigator, ( _, _, _ ) => false );
+
+		for ( var tick = 1; tick <= 40; ++tick )
+			behaviour.Step( peep, walk, playing: null, tick );
+
+		Assert.AreEqual( PeepState.Riding, peep.State, "only the ride may take them off" );
+		Assert.IsNull( behaviour.UnansweredState, "and it is answered on purpose, not fallen through" );
+	}
+
+	/// <summary>
+	/// A guest whose behaviour has nothing to consult is left exactly as they were - and the reason is a
+	/// missing <b>input</b>, not a missing case.
+	///
+	/// <para>
+	/// <b>This test used to say something false, and defended a bug with it.</b> It was called "a state
+	/// that is not built leaves the guest exactly as they were", and it listed
+	/// <see cref="PeepState.Riding"/> and <see cref="PeepState.AtTheBusStop"/> among the unbuilt - pinning
+	/// as correct the very freeze Alexah reported, where a guest admitted to a ride never came off it. It
+	/// was wrong about the other three it named as well: <see cref="PeepState.Deciding"/>,
+	/// <see cref="PeepState.JudgingTheFee"/> and <see cref="PeepState.InQueue"/> all had cases, and stood
+	/// still only because a behaviour built from the two facts has no <see cref="ParkAdmission"/> to ask.
+	/// It conflated "no case" with "nothing to go on", which are the two things that most need telling
+	/// apart here.
+	/// </para>
+	/// <para>
+	/// What it is now is the honest half: with no admission, the states that need one do nothing. The
+	/// property it was believed to guard is guarded by
+	/// <see cref="EveryStateAGuestCanBeInIsAnsweredByTheSwitch"/>.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void AGuestWithNothingToConsultIsLeftExactlyAsTheyWere()
+	{
+		var behaviour = new PeepBehaviour( parkIsClosed: false, visitorsToDate: 4, new Random( 1 ) );
+
+		Assert.IsNull( behaviour.Admission,
+			"the two-fact constructor leaves the fee unjudged on purpose - that is what this test is about" );
+
+		foreach ( var state in new[] { PeepState.Deciding, PeepState.JudgingTheFee, PeepState.AtGate } )
+		{
+			var peep = Guest( 6, (int)state );
+			var walk = new PeepWalk( peep.Navigator, ( _, _, _ ) => true );
+
+			behaviour.Step( peep, walk, playing: null, tick: 1 );
+
+			Assert.AreEqual( state, peep.State,
+				$"{state} has a case, and with no admission to consult it must leave the guest alone" );
 		}
 
 		Assert.AreEqual( 4, behaviour.VisitorsToDate, "and nobody should have been admitted" );
+		Assert.IsNull( behaviour.UnansweredState, "none of the three fell out of the switch" );
 	}
 
 	/// <summary>
@@ -312,6 +438,54 @@ public class PeepBehaviourTests
 			people.Delete();
 			Entity.ApplyDeletions();
 		}
+	}
+
+	/// <summary>
+	/// A guest who will not pay walks out of the park and goes on to pick a cell outside -
+	/// <c>FUN_00500a50</c> arriving, then <c>FUN_00501db0(0x13)</c>.
+	///
+	/// <para>
+	/// <b>This is the state four separate arms of this file send guests into, and it had no case.</b>
+	/// Judging the fee as far too expensive, sulking down to no happiness, giving up on a shut gate and
+	/// deciding in a shut park all set <see cref="PeepState.HeadingForExit"/>; with nothing answering it,
+	/// every one of those guests stood exactly where they had decided, which is what Alexah saw at the
+	/// ticket booths.
+	/// </para>
+	/// <para>
+	/// <b>The route is asserted before the walk begins</b>, because a bus stop that turned out to be
+	/// unreachable would make this pass for the wrong reason - the guest would never arrive, the loop would
+	/// run out, and the final assertion would be the only thing that failed. It is also worth recording
+	/// that the bus stops really are out on the road: (42,5) and (53,5) sit at its two ends, so a guest
+	/// walking the length of the road to reach one is the original's behaviour and not a defect.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void AGuestWhoWillNotPayWalksOutOfTheParkAndPicksACellOutside()
+	{
+		var world = World();
+		var admission = Admission();
+		var behaviour = new PeepBehaviour( world, new Random( 1 ), admission, () => ParkRides.GateIsOpen );
+
+		var peep = ParkPeople.PeepsIn( world ).Single( person => person.ThingId == 41 );
+		var walk = new PeepWalk( peep.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
+
+		peep.SetState( PeepState.HeadingForExit, tick: 0, new Random( 1 ) );
+
+		peep.Navigator.Target = new FixedVector(
+			PeepNavigator.WaypointCentre( admission.BusStopA.X ),
+			PeepNavigator.WaypointCentre( admission.BusStopA.Y ) );
+
+		Assert.IsTrue( walk.PlanRoute(),
+			"the bus stop has to be reachable from inside the park, or this test proves nothing" );
+
+		for ( var tick = 1; tick <= 600 && peep.State == PeepState.HeadingForExit; ++tick )
+			behaviour.Step( peep, walk, playing: null, tick );
+
+		Assert.AreEqual( PeepState.PickingACellOutside, peep.State,
+			"arriving at the bus stop should send them on to pick a cell outside the park" );
+
+		Assert.AreEqual( admission.BusStopA, walk.Position.Cell,
+			"and they should have got there on foot rather than been moved on where they stood" );
 	}
 
 	/// <summary>One frame, through both clocks, in the order <see cref="Level.Update"/> uses.</summary>

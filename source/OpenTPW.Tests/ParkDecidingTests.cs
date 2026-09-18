@@ -224,6 +224,12 @@ public class ParkDecidingTests
 	/// Losing <c>BigHappinessChange</c> rather than the medium one is what separates this from every other
 	/// mood change in the admission states, so the amount is asserted and not just the direction.
 	/// </para>
+	/// <para>
+	/// <b>This asserted <see cref="PeepState.HeadingForExit"/> until 2026-09-18, and that was pinning a
+	/// bug.</b> Nothing answered that state, so these guests were aimed at a bus stop and then stood
+	/// where they had decided - and the test passed, because the aim was all it checked. They now walk it
+	/// and arrive, so the arrival is asserted too.
+	/// </para>
 	/// </summary>
 	[TestMethod]
 	public void AParkThatShutsSendsTheDecidingGuestsHomeUnhappy()
@@ -241,13 +247,20 @@ public class ParkDecidingTests
 			.Select( cell => ((cell.X * one) + (one / 2), (cell.Y * one) + (one / 2)) )
 			.ToHashSet();
 
+		var stopCells = new[] { admission.BusStopA, admission.BusStopB }.ToHashSet();
+
 		foreach ( var id in InTheGateway )
 		{
-			Assert.AreEqual( PeepState.HeadingForExit, guests[id].State,
-				$"guest {id} should have given up on a park that shut under them" );
+			Assert.AreEqual( PeepState.PickingACellOutside, guests[id].State,
+				$"guest {id} should have given up on a park that shut under them, WALKED to a bus stop, "
+				+ "and gone on to pick a cell outside the park" );
 
 			Assert.IsTrue( stops.Contains( (guests[id].Navigator.Target.X, guests[id].Navigator.Target.Y) ),
 				$"guest {id} should be walking to a bus stop, not to {guests[id].Navigator.Target}" );
+
+			Assert.IsTrue( stopCells.Contains( guests[id].Navigator.Position.Cell ),
+				$"guest {id} should have REACHED a bus stop rather than merely been aimed at one - they "
+				+ $"are standing at {guests[id].Navigator.Position.Cell}" );
 
 			// 50 as saved, less the big change, and nothing else in this path touches happiness.
 			Assert.AreEqual( 50f - admission.BigHappinessChange, guests[id].Happiness, 0.01f,
