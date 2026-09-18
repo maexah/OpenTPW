@@ -415,7 +415,7 @@ public sealed class ParkWorld
 		float Happiness, float Thirst, float Hunger, float Toilet, float Vomit, float Litter,
 		int MajorDest, int QueuePos, int PrankeryIndex,
 		int PaidAdmission = 0, int ParkOpeningWait = 0,
-		int QNext = 0, int QPrev = 0 )
+		int QNext = 0, int QPrev = 0, int BeenAdmitted = 0 )
 	{
 		/// <summary>
 		/// The behaviour a guest returns to after a one-off animation. A new guest is constructed with
@@ -1525,7 +1525,10 @@ public sealed class ParkWorld
 			// the two histories the ride scorer divides a candidate down by; they are located and left
 			// unread until something consumes them.
 			QNext: ReadUInt16At( start + 486 ),         // mQNext
-			QPrev: ReadUInt16At( start + 488 ) );       // mQPrev
+			QPrev: ReadUInt16At( start + 488 ),         // mQPrev
+			// mBeenAdmitted, fourth in the block's alphabetical order and the flag a queueing guest is
+			// let onto a ride by - see the field table above, which puts it at 410 and closes on 533.
+			BeenAdmitted: ReadInt32At( start + 410 ) );
 
 	// <b>+529 was called mIllness by this reader until 2026-09-17, and it cannot be.</b>
 	//

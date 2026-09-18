@@ -359,6 +359,30 @@ public sealed class PeepBehaviour
 
 				break;
 
+			// Standing in a queue - the one arm of FUN_004ffff0 that can be built honestly: a guest at the
+			// FRONT who has been invited aboard, and whom the ride really has nominated, goes to board.
+			//
+			// <b>Three things must all hold, and each is the original's own test.</b> QueuePos nought is
+			// "at the front"; mBeenAdmitted is the invitation; and FUN_004e0aa0 - which is nothing but
+			// person == object's mPersonBeingLoaded - is the ride confirming it means THIS guest. The flag
+			// is cleared on the way past, which is what stops one invitation boarding them twice.
+			//
+			// The rest of that handler is deliberately absent: the boredom countdown, re-taking a place in
+			// a queue that moved, the capacity re-check and the dirt gate all want fields or a queue-path
+			// walk nothing here has. A guest who does not pass the three tests simply keeps queueing,
+			// which is what the original does on every turn they are not being called forward.
+			case PeepState.InQueue:
+				if ( peep.QueuePos == 0 && peep.BeenAdmitted && Chosen( peep ) is { } boarding
+					&& State.PersonBeingLoaded( boarding.ThingId ) == peep.ThingId )
+				{
+					peep.BeenAdmitted = false;
+
+					SendTo( peep, walk, (boarding.EntryCellX, boarding.EntryCellY) );
+					peep.SetState( PeepState.BeingAdmitted, tick, _random );
+				}
+
+				break;
+
 			// Shuffling up a queue, which ends the same way whether they got there or gave up - the
 			// original writes the same state from both arms of the test, and that is not a mistake to
 			// tidy: a guest who cannot shuffle forward is still in the queue.

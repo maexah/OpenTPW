@@ -120,6 +120,18 @@ public sealed class Peep
 	/// </summary>
 	public bool PaidAdmission { get; internal set; }
 
+	/// <summary>
+	/// Whether a ride has said this guest may come aboard - the original's <c>mBeenAdmitted</c>.
+	///
+	/// <para>
+	/// <b>It is a one-shot flag the guest clears themselves.</b> A guest standing at the front of a queue
+	/// (<see cref="QueuePos"/> nought) who carries it, and whom the ride has actually nominated, clears it
+	/// and sets off to board - <c>FUN_004ffff0</c>. Clearing it is what stops them boarding twice off one
+	/// invitation.
+	/// </para>
+	/// </summary>
+	public bool BeenAdmitted { get; internal set; }
+
 	/// <summary>When the guest last began a one-off animation, so that its end can be noticed.</summary>
 	public int TimeOfLastSpotAnim { get; private set; }
 
@@ -211,6 +223,10 @@ public sealed class Peep
 		// they have paid is the whole of what happens to them.
 		PaidAdmission = saved.PaidAdmission != 0;
 		ParkOpeningWait = saved.ParkOpeningWait;
+
+		// Carried from the file for the same reason: a guest saved at the front of a queue with a ride
+		// already expecting them must not lose their place by being restored without it.
+		BeenAdmitted = saved.BeenAdmitted != 0;
 	}
 
 	/// <summary>The range every need is held in - <c>FUN_004fb4f0</c> and the clamps inlined beside it.</summary>
