@@ -164,6 +164,12 @@ public class ParkTickTests
 			// single boolean cannot tell them apart.
 			var queuedFor = new SortedSet<int>();
 
+			// <b>EVERY state any guest was ever seen in, rather than a hand-picked pair.</b> Twice now a
+			// disjunction has hidden a missing step - "BeingAdmitted or EnteringRide" could not see that
+			// nothing set the second, and "EnteringRide or Riding" cannot see whether the chain stalls
+			// before Riding. Collecting them all costs one set and cannot be wrong about which it omits.
+			var statesSeen = new SortedSet<string>();
+
 			for ( var frame = 0; frame < frames; ++frame )
 			{
 				Frame( AFrame );
@@ -174,8 +180,16 @@ public class ParkTickTests
 
 				foreach ( var peep in people.Peeps )
 				{
+					statesSeen.Add( peep.State.ToString() );
+
 					invited |= peep.BeenAdmitted;
-					boarding |= peep.State is PeepState.BeingAdmitted or PeepState.EnteringRide;
+					// <b>The far end of the chain, and NOT a disjunction - twice over, that is what hid a
+					// missing step.</b> It read "BeingAdmitted or EnteringRide" while nothing set the
+					// second, then "EnteringRide or Riding" while nothing reached the second; each passed
+					// on its first half alone. A test that spans a step boundary cannot see the boundary.
+					// Riding is only reached by completing an admission, so this asserts that and nothing
+					// weaker. Every state actually seen is reported in the trace regardless.
+					boarding |= peep.State == PeepState.Riding;
 					atFront |= peep.State == PeepState.InQueue && peep.QueuePos == 0;
 				}
 
@@ -230,7 +244,8 @@ public class ParkTickTests
 
 			return new Ridden( invited, nominated, boarding, queued, atFront, longest,
 				ticked, ticked / ParkPeople.ThingTickEvery, vars,
-				$"invited {string.Join( ",", nominators )} | queuedFor {string.Join( ",", queuedFor )}" );
+				$"invited {string.Join( ",", nominators )} | queuedFor {string.Join( ",", queuedFor )}"
+					+ $" | states {string.Join( ",", statesSeen )}" );
 		}
 		finally
 		{
@@ -280,7 +295,8 @@ public class ParkTickTests
 		Assert.IsTrue( driven.Nominated,
 			$"and should have nominated them - the flag alone is half the handshake - {driven.Trace}" );
 		Assert.IsTrue( driven.Boarding,
-			$"and that guest should have set off to board - {driven.Trace}" );
+			"and should have ended up RIDING - which needs the guest's own BeingAdmitted arm to admit them "
+			+ $"and their EnteringRide arm to complete it, neither of which this tree had - {driven.Trace}" );
 
 		// The control. Same park, same frames, no way for a ride to reach its script.
 		var inert = RunPark( wireScripts: false );

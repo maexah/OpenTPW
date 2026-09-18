@@ -58,10 +58,27 @@ public sealed class PeepBehaviour
 	/// What the things in this park actually are, for the ride arm to score them by. Null leaves a guest
 	/// choosing on distance and queue alone - see <see cref="ParkRideChooser"/>.
 	/// </param>
+	/// <param name="admit">
+	/// Asks a ride to take this guest aboard, answering whether it did - the guest's side of
+	/// <c>FUN_004e0900</c>.
+	///
+	/// <para>
+	/// <b>A delegate for the reason <paramref name="gateStatus"/> is one</b>, and for one more: the
+	/// admission needs the ride's SCRIPT and the park's guests by id, and this type has neither. Taking
+	/// <see cref="ParkRideOperation"/> here would tie every guest's turn to the whole of ride operation
+	/// for a single yes-or-no. Null leaves a guest standing at the ride, which is what happened before
+	/// anything called this at all.
+	/// </para>
+	/// </param>
 	public PeepBehaviour( ParkWorld? park, Random? random = null,
 		ParkAdmission? admission = null, Func<int>? gateStatus = null, ParkState? state = null,
-		ParkItemCatalogue? catalogue = null )
+		ParkItemCatalogue? catalogue = null,
+		Func<ParkWorld.CatalogueObject, int, bool>? admit = null,
+		Func<ParkWorld.CatalogueObject, int, bool>? finishAdmission = null )
 	{
+		_admit = admit;
+		_finishAdmission = finishAdmission;
+
 		// Zero is open, which is the way round the name is not - see ParkWorld.ParkClosed. ParkState
 		// applies that rule itself, so it is not repeated here.
 		State = state ?? new ParkState( park );
@@ -121,6 +138,15 @@ public sealed class PeepBehaviour
 	}
 
 	private readonly Func<int>? _gateStatus;
+
+	/// <summary>Asks a ride to take a guest aboard - see the constructor's remarks.</summary>
+	private readonly Func<ParkWorld.CatalogueObject, int, bool>? _admit;
+
+	/// <summary>
+	/// Finishes an admission the script has taken up, given the ride and the tick - the guest's half of
+	/// <c>FUN_00500870</c>. A delegate for the same reason <see cref="_admit"/> is one.
+	/// </summary>
+	private readonly Func<ParkWorld.CatalogueObject, int, bool>? _finishAdmission;
 
 	/// <summary>
 	/// What a guest deciding what to do picks from - <c>FUN_004fcb10</c>. Always present, because a
@@ -407,6 +433,56 @@ public sealed class PeepBehaviour
 					SendTo( peep, walk, (boarding.EntryCellX, boarding.EntryCellY) );
 					peep.SetState( PeepState.BeingAdmitted, tick, _random );
 				}
+
+				break;
+
+			// Walking to the ride that called them forward, and asking it to take them - FUN_005006b0.
+			//
+			// <b>THE ADMISSION IS THE GUEST'S, NOT THE RIDE'S, and this case is what was missing.</b>
+			// Nothing in this tree ever set PeepState.EnteringRide, so CompleteAdmission - which waits on
+			// exactly that state - could never fire in a running park. The chain reached BeingAdmitted and
+			// stopped, and every test past it built the state by hand. That is the third time this project
+			// has shipped an arm no test could see.
+			//
+			// Arriving and getting STUCK are one path, which is the original's own shape: it logs "Person
+			// %d: Got stuck in middle o[f]..." and then carries on into the same test rather than treating
+			// it as a failure.
+			//
+			// <b>Two arms of the original are named rather than invented.</b> Before admitting, it asks
+			// whether the thing is too expensive (FUN_004fde50, which weighs a price against what a guest
+			// thinks the thing is worth) and sends them back to Deciding if it is - nothing here models
+			// that opinion, and ParkAdmission judges the GATE fee, which is a different question. And when
+			// the admission is refused it tries to rejoin the front of the queue (FUN_00501160, unread)
+			// before giving up. A guest here simply waits and asks again next turn, which is right for the
+			// common refusal: AdmitPerson says no while the script still holds the last rider, and the
+			// script clears that on its own next turn.
+			case PeepState.BeingAdmitted:
+				if ( Walked( peep, walk, playing ) != WalkVerdict.Walking
+					&& Chosen( peep ) is { } arriving
+					&& _admit?.Invoke( arriving, peep.ThingId ) == true )
+				{
+					peep.SetState( PeepState.EnteringRide, tick, _random );
+				}
+
+				break;
+
+			// Waiting for the script to take them up, and coming off the queue when it has -
+			// FUN_005019f0's case 0xe, which is FUN_00500870 inlined.
+			//
+			// <b>THE COMPLETION IS THE GUEST'S TOO, and that is why nothing finished one.</b>
+			// ParkPeople's ride turn calls CompleteAdmission only for a ride that is closing or broken
+			// (states 1, 2 and 4), which is faithful - the original does not call it from a healthy
+			// ride's turn either. Its only other callers there are SetState and Invite's mCanLoad bail,
+			// and that bail cannot fire in this park. So a guest reached EnteringRide and stayed in it:
+			// measured, not inferred - a full run saw EnteringRide and never once saw Riding.
+			//
+			// The gate is FUN_004e0a70, four lines: script[VAR_LETMEON] != mFirstInQ. That is exactly
+			// what CompleteAdmission already tests, so nothing new is decided here - this arm only calls
+			// it from the side that calls it in the original. It checks the head, the state, removes them
+			// from the queue and sets Riding.
+			case PeepState.EnteringRide:
+				if ( Chosen( peep ) is { } taking )
+					_finishAdmission?.Invoke( taking, tick );
 
 				break;
 

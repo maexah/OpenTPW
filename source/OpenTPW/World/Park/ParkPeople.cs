@@ -145,7 +145,15 @@ public sealed class ParkPeople : Entity
 
 		// Built from the park rather than from the guests: what a guest does on arrival turns on whether
 		// the gates are open and on how many visitors have ever been let in, and both are the park's.
-		_behaviour = new PeepBehaviour( park, random: null, admission, gateStatus, state, catalogue );
+		// And the way a guest asks a ride to take them aboard. It closes over this object because the
+		// admission needs both halves that PeepBehaviour lacks - the ride's script, and the park's guests
+		// by thing id - and handing it a delegate keeps the guest's turn from depending on ride operation
+		// for anything more than a yes or no.
+		_behaviour = new PeepBehaviour( park, random: null, admission, gateStatus, state, catalogue,
+			( ride, personId ) => new ParkRideOperation( State, Guests )
+				.AdmitPerson( _scriptFor?.Invoke( ride.ThingId ), ride, personId ),
+			( ride, tick ) => new ParkRideOperation( State, Guests )
+				.CompleteAdmission( _scriptFor?.Invoke( ride.ThingId ), ride.ThingId, tick, _rideRandom ) );
 
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
 		// none of what a guest needs - the fee, the gate - means anything to them.
