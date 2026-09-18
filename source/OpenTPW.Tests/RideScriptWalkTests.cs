@@ -212,12 +212,18 @@ public class RideScriptWalkTests
 	/// <b>A visitor handed to the sideshow is walked on, and the ride counts them.</b>
 	///
 	/// <para>
-	/// This is as far as the shipped script goes unaided, and the limit is the script's rather than the
-	/// interpreter's: <c>Junspray</c> only reaches <c>WALKOFF</c> once <c>GETANIM_CH</c> says that lane's
-	/// animation has finished, and nothing plays one in a bare <c>Turn</c> loop - so no slot here ever
-	/// reaches the state <c>WALKGET</c> collects from. <b>This test first asserted the whole round trip
-	/// and failed for exactly that reason</b>; the harvest is proved on a synthetic script instead, where
-	/// the walk off can be asked for directly.
+	/// This is as far as the shipped script goes <b>with no model bound</b>: <c>Junspray</c> only reaches
+	/// <c>WALKOFF</c> once <c>GETANIM_CH</c> says that lane's animation has finished, and a script with no
+	/// players has no animation to finish - so no slot here reaches the state <c>WALKGET</c> collects from.
+	/// <b>This test first asserted the whole round trip and failed for exactly that reason.</b>
+	/// <para>
+	/// <b>The limit was read as the script's and it was the interpreter's.</b> That sentence used to end
+	/// "and nothing plays one in a bare <c>Turn</c> loop", which was true only because the <c>_CH</c> family
+	/// was unbuilt and the player array held one channel where the item declares three. Hand the script its
+	/// own players and the round trip completes - see
+	/// <see cref="WithItsOwnPlayersTheSideshowLetsARiderBackOff"/>, which is the same shipped script and the
+	/// same loop. This one is kept as the no-model case rather than rewritten.
+	/// </para>
 	/// </para>
 	/// <para>
 	/// The clock has to move, because Junspray holds on <c>WAIT 500</c> and <c>WAIT 1000</c>; a test that
@@ -343,6 +349,74 @@ public class RideScriptWalkTests
 		off.Turn( 10_000f );
 
 		Assert.AreEqual( 0, off.NotImplemented, "an instruction in the second script is unimplemented" );
+	}
+
+	/// <summary>
+	/// <b>The whole round trip, on the shipped script: a rider walks on, the lane's clip runs, and the ride
+	/// gives him back.</b> This is what the <c>_CH</c> family was for, and it is the first time
+	/// <c>Junspray</c> has completed a cycle here.
+	///
+	/// <para>
+	/// Three things had to be true together, which is why this could not pass before. The item's own
+	/// <c>UsageInfo.NumSimultAnims</c> has to size the player array at three, or lane one's clip and lane
+	/// three's collide on a single channel. <c>TRIGANIM_CH</c> has to put each lane's clip on its own
+	/// channel. And <c>GETANIM_CH</c> has to answer <c>-1</c> once that clip is held at its end, because the
+	/// script branches away on every other answer - a positive role while it plays, and the positive
+	/// sentinel while the channel is idle.
+	/// </para>
+	/// <para>
+	/// <b><see cref="RideAnimations.Advance"/> is called here because the game calls it</b>, once a frame
+	/// from <c>ParkObjects.Sweep</c> and outside the script's own catch-up loop. A script turn never moves a
+	/// channel's clock on its own - the engine keeps the two apart - so a test that only turned the script
+	/// would hold every clip at its first frame for ever and prove nothing about the exit.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void WithItsOwnPlayersTheSideshowLetsARiderBackOff()
+	{
+		var animations = RideAnimations.Load( "levels/jungle/sideshow/junspray", "Junspray", _data, JunsprayLanes );
+
+		Assert.AreEqual( JunsprayLanes, animations.ChannelCount, "the Jungle Spray declares one player per lane" );
+
+		Unimplemented.Forget();
+
+		var script = new RideScript( JunsprayFile() ) { Animations = animations };
+
+		Assert.IsTrue( script.Set( "VAR_LETMEON", Rider ), "Junspray does not declare VAR_LETMEON" );
+
+		var clock = 0f;
+
+		for ( var turn = 0; turn < 600 && script["VAR_LETMEON"] != 0; ++turn )
+		{
+			clock += 600f;
+			animations.Advance( (int)clock );
+			script.Turn( clock );
+		}
+
+		Assert.AreEqual( 0, script["VAR_LETMEON"], "the sideshow never took the visitor on" );
+		Assert.AreEqual( 1, script["VAR_ONRIDE"], "so it should be counting one aboard" );
+
+		for ( var turn = 0; turn < 600 && script["VAR_LETMEOFF"] == 0; ++turn )
+		{
+			clock += 600f;
+			animations.Advance( (int)clock );
+			script.Turn( clock );
+		}
+
+		Assert.AreEqual( Rider, script["VAR_LETMEOFF"],
+			"the lane's clip finished and GETANIM_CH should have answered -1, letting WALKOFF release the rider" );
+
+		Assert.AreEqual( 0, script["VAR_ONRIDE"], "and the ride should no longer count him aboard" );
+
+		// <b>Not "the whole script is built"</b>, which is a different and larger claim. The cycle does reach
+		// gaps - the world-touching handlers report that this fixture handed them no park to act on - and an
+		// assertion of nought here passed for six turns of arithmetic that happened to match and was wrong
+		// about why. What this work claims is narrower and is what is asserted: no ANIMATION instruction went
+		// unbuilt, so the family the round trip depends on is complete.
+		Assert.IsFalse(
+			Unimplemented.Summary.Any( gap => gap.What.Contains( "ANIM", StringComparison.Ordinal ) ),
+			"an animation instruction went unbuilt during the cycle: "
+				+ string.Join( "; ", Unimplemented.Summary.Select( gap => $"{gap.What} x{gap.Times}" ) ) );
 	}
 
 	/// <summary>

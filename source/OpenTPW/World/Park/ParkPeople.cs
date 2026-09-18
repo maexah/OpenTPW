@@ -666,6 +666,32 @@ public sealed class ParkPeople : Entity
 				catch ( Exception ) { return "-"; }
 			}
 
+			// Every animation player, not just the first. The _CH family gives a sideshow one channel per
+			// lane - the Jungle Spray declares three in UsageInfo.NumSimultAnims - so a census showing only
+			// channel nought would make two idle lanes look exactly like two playing ones, which is the
+			// shape of fault this census exists to tell apart.
+			string Players()
+			{
+				if ( script.Animations is not { } players )
+					return "none";
+
+				return string.Join( ", ", Enumerable.Range( 0, players.ChannelCount ).Select( index =>
+				{
+					if ( players.Channel( index ) is not { } channel )
+						return $"{index}:MISSING";
+
+					if ( channel.IsIdle )
+						return $"{index}:idle";
+
+					// HELD is the bit GETANIM_CH answers -1 for, and -1 is the only answer that lets a
+					// rider off - so it is the single most useful thing this line can say.
+					var held = (channel.Flags & AnimTimeControl.KeepPoseFlag) != 0 ? " HELD" : "";
+
+					return $"{index}:role {channel.AnimID} entry {channel.SubAnim} "
+						+ $"frame {channel.AnimFrame:0.0}/{channel.TotalAnimFrames:0.0}{held}";
+				} ) );
+			}
+
 			var aboard = script.Bouncing().ToArray();
 
 			var seats = aboard.Length == 0
@@ -693,7 +719,8 @@ public sealed class ParkPeople : Entity
 				+ $"duration {Read( ParkRideOperation.DurationVariable )} "
 				+ $"var_running {Read( ParkRideOperation.RunningVariable )} "
 				+ $"onride {Read( ParkRideOperation.OnRideVariable )} "
-				+ $"bouncing {aboard.Length}: {seats}";
+				+ $"bouncing {aboard.Length}: {seats} "
+				+ $"channels [{Players()}]";
 		}
 	}
 

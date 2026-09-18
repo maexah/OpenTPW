@@ -34,12 +34,16 @@ public sealed class ParkItemCatalogue
 	/// "offerable" flag</b>, and the two agree object for object in the shipped park - see
 	/// <see cref="ItemDescriptionFile.IsChoosable"/>.
 	/// </param>
+	/// <param name="AnimationChannels">
+	/// How many animations it can run at once - <see cref="ItemDescriptionFile.NumSimultAnims"/>, which is
+	/// the size of the channel array the <c>_CH</c> instructions index. One unless the item says otherwise.
+	/// </param>
 	public readonly record struct Item( int Id, string Name, string Directory, string Stem, int Width, int Depth,
 		string? SignPath, int UiType = ItemDescriptionFile.Feature, bool IsChoosable = false,
 		bool ProvidesRelief = false, bool HasQueue = false, bool IsIndoors = false,
 		int ExcitementLevel = 0, int AttractionValue = 0, int NewAttractionDecayTime = 0,
 		int ThirstEffect = 0, int HungerEffect = 0, int VomitEffect = 0, int HappinessEffect = 0,
-		int LitterEffect = 0, int TrackType = 0 );
+		int LitterEffect = 0, int TrackType = 0, int AnimationChannels = 1 );
 
 	private readonly Dictionary<int, Item> _items = [];
 
@@ -142,7 +146,7 @@ public sealed class ParkItemCatalogue
 				description.HasQueue, description.IsIndoors, description.ExcitementLevel,
 				description.AttractionValue, description.NewAttractionDecayTime,
 				description.ThirstEffect, description.HungerEffect, description.VomitEffect,
-					description.HappinessEffect, description.LitterEffect, description.TrackType );
+					description.HappinessEffect, description.LitterEffect, description.TrackType, description.NumSimultAnims );
 
 			return true;
 		}

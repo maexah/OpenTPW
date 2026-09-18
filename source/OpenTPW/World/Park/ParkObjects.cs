@@ -51,8 +51,12 @@ public sealed class ParkObjects : Entity
 
 		public RideAnimations Animations { get; } = animations;
 
-		/// <summary>The clip posed last, so a change of clip can put back what the one before it moved.</summary>
-		public AnimationFile? Posed { get; set; }
+		/// <summary>
+		/// The clip posed last on each channel, so a change of clip can put back what the one before it
+		/// moved. One entry per player, because a sideshow runs a lane on each and each lane changes clip
+		/// independently - a single slot here would make lane three's trigger undo lane one's pose.
+		/// </summary>
+		public AnimationFile?[] Posed { get; } = new AnimationFile?[animations.ChannelCount];
 	}
 
 	private readonly Dictionary<int, Standing> _standing = [];
@@ -227,7 +231,7 @@ public sealed class ParkObjects : Entity
 			// The twelve roles this thing's archive ships, read once here and shared with the script that
 			// drives it. The model is bound against all of them because an animation player names a role
 			// outright - see RideAnimations.AllClips for why probing for a numbered run is not the same set.
-			var animations = RideAnimations.Load( item.Directory, item.Stem, FileSystem );
+			var animations = RideAnimations.Load( item.Directory, item.Stem, FileSystem, item.AnimationChannels );
 
 			var model = new LobbyModel( $"{item.Directory}/{item.Stem}.MD2", $"{item.Directory}/textures", Vector3.Zero,
 				textureOverrides: sign,
@@ -571,25 +575,32 @@ public sealed class ParkObjects : Entity
 		{
 			standing.Animations.Advance( now );
 
-			if ( standing.Animations.Channel( 0 ) is not { } channel || channel.IsIdle )
-				continue;
-
-			if ( standing.Animations.Clip( channel.AnimID, channel.SubAnim ) is not { } clip )
-				continue;
-
-			// A change of clip puts back what the one before it moved, which is what the engine does on
-			// every role change - see MeshRotator.Rest for how much of it, and for what stays put.
-			if ( !ReferenceEquals( clip, standing.Posed ) )
+			// Every player, not only the first. A sideshow runs one per lane - the Jungle Spray declares
+			// three in UsageInfo.NumSimultAnims and triggers a lane onto each - and the engine's own sweep
+			// walks the whole array rather than a single channel (FUN_004735d0). Posing only channel nought
+			// would leave lanes two and three standing still however loudly their scripts asked.
+			for ( var index = 0; index < standing.Posed.Length; ++index )
 			{
-				if ( standing.Posed != null )
-					standing.Model.Rest( standing.Posed );
+				if ( standing.Animations.Channel( index ) is not { } channel || channel.IsIdle )
+					continue;
 
-				standing.Posed = clip;
+				if ( standing.Animations.Clip( channel.AnimID, channel.SubAnim ) is not { } clip )
+					continue;
+
+				// A change of clip puts back what the one before it moved, which is what the engine does on
+				// every role change - see MeshRotator.Rest for how much of it, and for what stays put.
+				if ( !ReferenceEquals( clip, standing.Posed[index] ) )
+				{
+					if ( standing.Posed[index] is { } previous )
+						standing.Model.Rest( previous );
+
+					standing.Posed[index] = clip;
+				}
+
+				// The frame the player has reached, counted from the start of its own clip - see
+				// MeshRotator.Pose for why that is not the clip's first keyed frame.
+				standing.Model.Pose( clip, channel.AnimFrame );
 			}
-
-			// The frame the player has reached, counted from the start of its own clip - see
-			// MeshRotator.Pose for why that is not the clip's first keyed frame.
-			standing.Model.Pose( clip, channel.AnimFrame );
 		}
 	}
 	/// <summary>

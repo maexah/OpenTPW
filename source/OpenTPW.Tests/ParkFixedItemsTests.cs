@@ -199,8 +199,26 @@ public class ParkFixedItemsTests
 		{
 			Ride = new RideState(),
 			Effects = new RideEffects(),
-			Animations = RideAnimations.Load( directory, stem, data )
+			Animations = RideAnimations.Load( directory, stem, data, ChannelsFor( directory, stem ) )
 		};
+	}
+
+	/// <summary>
+	/// How many players the item's own <c>.sam</c> asks for, exactly as <see cref="ParkFixedItems"/> reads
+	/// it.
+	///
+	/// <para>
+	/// <b>Binding one channel where the item declares two is not a harmless simplification.</b> Space's gate
+	/// loops on channel 1, so a single-channel fixture starts nothing, leaves channel 0 untouched, and makes
+	/// the gate look still for a reason belonging to the test rather than to the game. That is exactly what
+	/// happened here, and it read as confirmation for two different wrong explanations before this.
+	/// </para>
+	/// </summary>
+	private int ChannelsFor( string directory, string stem )
+	{
+		using var stream = data.OpenRead( $"{directory}/{stem}.sam" );
+
+		return new ItemDescriptionFile( stream ).NumSimultAnims;
 	}
 
 	/// <summary>
@@ -374,24 +392,32 @@ public class ParkFixedItemsTests
 	}
 
 	/// <summary>
-	/// Every theme's gate holds still, and <b>space's holds still for a different reason than the other
-	/// three</b> - which is why "the gate idles" is three themes out of four rather than a rule about gates.
+	/// No theme's gate <i>opens</i> without being commanded - and <b>space's runs an idling loop from its
+	/// second word, on a channel of its own, because its script says so unconditionally</b>.
 	///
 	/// <para>
 	/// All four themes ship their own <c>Gates.RSE</c> and all four differ. Jungle, fantasy and hallow open on
-	/// <c>TEST VAR_COMMAND</c> and cycle their dispatch loop, reaching no animation at all. Space opens with an
-	/// unconditional <c>LOOPANIM_CH</c> at word 2, before any test - and what keeps its gate still here is that
-	/// this interpreter does not implement that opcode, so it is counted rather than obeyed.
+	/// <c>TEST VAR_COMMAND</c> and cycle their dispatch loop, reaching no animation at all. Space's word 2 is
+	/// <c>LOOPANIM_CH 5, 2, 1</c> - role 5 entry 2, which its archive ships as <c>gatesm3.MD2</c>, <b>on
+	/// channel 1</b> - reached before any test and on every run.
 	/// </para>
 	/// <para>
-	/// <b>That distinction is the whole point of the test.</b> Implementing <c>LOOPANIM_CH</c> would set one
-	/// park's gate moving with nothing having commanded it, and without this the only sign would be a gate
-	/// swinging in a theme nobody happened to be looking at. The unimplemented count is therefore asserted in
-	/// both directions, so this says which reason applies to which theme rather than merely that nothing moved.
+	/// <b>This test used to assert the opposite of all that, and what it was really asserting was our own
+	/// gap.</b> It read space's gate as still "because this interpreter does not implement that opcode, so it
+	/// is counted rather than obeyed", and warned that implementing <c>LOOPANIM_CH</c> would set a gate moving
+	/// with nothing having commanded it. Both halves were wrong. The script commands it outright, so the
+	/// original's space gate does loop; and when the opcode was implemented the gate <i>still</i> did not move,
+	/// for a third reason again - <see cref="BoundIn"/> bound ONE channel where the item declares two, so
+	/// channel 1 did not exist to play on. A fixture's limit had been read as the engine's behaviour.
+	/// </para>
+	/// <para>
+	/// So the two channels are asserted apart: channel 0 idle in all four themes, because nothing commands the
+	/// opening; channel 1 looping in space alone. Asserting only "nothing moved" is what let one wrong
+	/// explanation stand in for another.
 	/// </para>
 	/// </summary>
 	[TestMethod]
-	public void EveryThemesGateHoldsStillAndSpacesForADifferentReason()
+	public void NoGateOpensUncommandedAndSpacesIdlesOnAChannelOfItsOwn()
 	{
 		foreach ( var theme in new[] { "jungle", "fantasy", "hallow", "space" } )
 		{
@@ -402,21 +428,31 @@ public class ParkFixedItemsTests
 
 			Assert.IsTrue( script.Running, $"{theme}'s gate script stopped, which no shipped script should do" );
 
-			var channel = script.Animations!.Channel( 0 );
+			Assert.AreEqual( 0, script.NotImplemented,
+				$"{theme}'s gate reaches an instruction this interpreter does not implement" );
 
-			Assert.IsTrue( channel == null || channel.IsIdle,
-				$"{theme}'s gate played role {channel?.AnimID} entry {channel?.SubAnim} with nothing commanding it" );
+			var opening = script.Animations!.Channel( 0 );
 
-			if ( theme == "space" )
+			Assert.IsTrue( opening == null || opening.IsIdle,
+				$"{theme}'s gate played role {opening?.AnimID} entry {opening?.SubAnim} on channel 0 with nothing commanding it" );
+
+			var idling = script.Animations.Channel( 1 );
+
+			if ( theme != "space" )
 			{
-				Assert.IsTrue( script.NotImplemented > 0,
-					"space's gate opens with LOOPANIM_CH, so this should be counting an instruction it cannot obey" );
+				Assert.IsTrue( idling == null || idling.IsIdle,
+					$"{theme}'s gate carries no LOOPANIM_CH, so channel 1 should be running nothing" );
+
+				continue;
 			}
-			else
-			{
-				Assert.AreEqual( 0, script.NotImplemented,
-					$"{theme}'s gate idles entirely on instructions this interpreter does implement" );
-			}
+
+			Assert.IsNotNull( idling, "space's gate declares two players, so channel 1 has to exist" );
+
+			Assert.AreEqual( 5, idling!.AnimID, "space's gate loops role 5 on channel 1" );
+			Assert.AreEqual( 2, idling.SubAnim, "entry 2, which its archive ships as gatesm3.MD2" );
+
+			Assert.AreNotEqual( 0, idling.Flags & AnimTimeControl.LoopFlag,
+				"and it loops rather than playing once" );
 		}
 	}
 }

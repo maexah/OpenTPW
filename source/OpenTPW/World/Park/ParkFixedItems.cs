@@ -106,6 +106,31 @@ public sealed class ParkFixedItems : Entity
 		("lights", false, world => world.TrafficLights)
 	];
 
+	/// <summary>
+	/// How many animation players this fixed item's own description asks for -
+	/// <see cref="ItemDescriptionFile.NumSimultAnims"/>, which is what the engine hands its model loader.
+	///
+	/// <para>
+	/// <b>The park gate declares two, and nothing here would notice if it were read as one</b>: the only
+	/// channel instruction <c>Gates.RSE</c> carries is a single <c>LOOPANIM_CH</c> naming channel nought.
+	/// It is read because it is the item's own number, not because a fault forced it - and a fixed item
+	/// that will not describe itself still gets the one player the engine floors a nought count to.
+	/// </para>
+	/// </summary>
+	private int ChannelsFor( string directory, string stem )
+	{
+		try
+		{
+			using var stream = FileSystem.OpenRead( $"{directory}/{stem}.sam" );
+
+			return new ItemDescriptionFile( stream ).NumSimultAnims;
+		}
+		catch ( Exception )
+		{
+			return 1;
+		}
+	}
+
 	/// <param name="world">
 	/// The park's own save, or null where the theme ships none - three of the four do not. It is asked for
 	/// one thing only: the two thing ids its header names, which are what a script is bound against.
@@ -137,7 +162,7 @@ public sealed class ParkFixedItems : Entity
 				// is bound against all of them because an animation player names a role outright: the gate's
 				// own script asks for role 5 entries 0, 1 and 2, and a probe for a numbered run would have
 				// found them by luck rather than because they were asked for.
-				var animations = RideAnimations.Load( directory, item, FileSystem );
+				var animations = RideAnimations.Load( directory, item, FileSystem, ChannelsFor( directory, item ) );
 
 				var model = new LobbyModel(
 					$"{directory}/{item}.MD2",

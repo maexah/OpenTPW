@@ -66,10 +66,17 @@ public sealed class RideAnimations
 	/// <summary>How many roles hold at least one clip.</summary>
 	public int Roles { get; }
 
-	private RideAnimations( string stem, AnimationFile[][] roles )
+	private RideAnimations( string stem, AnimationFile[][] roles, int channels )
 	{
 		Stem = stem;
 		_roles = roles;
+
+		// Floored at one exactly as the engine floors it: FUN_004629d0 replaces a nought count with 1 before
+		// it ever reaches the loader, so an item that declares none still gets a player.
+		_channels = new AnimTimeControl[Math.Max( channels, 1 )];
+
+		for ( var index = 0; index < _channels.Length; ++index )
+			_channels[index] = new AnimTimeControl();
 
 		foreach ( var role in roles )
 		{
@@ -178,15 +185,19 @@ public sealed class RideAnimations
 	/// The animation players this model carries - the engine's array at <c>model+0x10</c>.
 	///
 	/// <para>
-	/// <b>There is one, and the number is ours rather than the engine's.</b> The original takes its channel
-	/// count as an argument to the model loader: eight call sites pass 1, ride vehicles pass 5, and the main
-	/// thing path reads it out of the thing's own record. Nothing in the file says it, so there is nothing
-	/// here to read it from. One is what every instruction this interpreter implements uses - <c>TRIGANIM</c>,
-	/// <c>WAITANIM</c> and <c>LOOPANIM</c> all pass a literal nought - and the <c>_CH</c> variants that vary
-	/// it are still counted as unimplemented, so widening this now would be a guess in front of a need.
+	/// <b>The number is the item's own, and its file does say it.</b> The original takes the count as an
+	/// argument to the model loader: eight call sites pass 1, ride vehicles pass 5, and the main thing path
+	/// hands over <c>thing+0x170</c> (<c>FUN_00413c10</c>), which <c>FUN_004629d0</c> turns into 1 when it is
+	/// nought. That field is <c>UsageInfo.NumSimultAnims</c> in the item's own <c>.sam</c> - see
+	/// <see cref="ItemDescriptionFile.NumSimultAnims"/>, which carries how it was identified.
+	/// </para>
+	/// <para>
+	/// <b>Nothing in the engine bounds-checks a channel index</b>, so an out-of-range one writes past this
+	/// allocation; <see cref="Channel"/> refuses instead, which is the one place here that deliberately does
+	/// not reproduce what the original does.
 	/// </para>
 	/// </summary>
-	private readonly AnimTimeControl[] _channels = [new AnimTimeControl()];
+	private readonly AnimTimeControl[] _channels;
 
 	/// <summary>How many players this model has - the engine's <c>model+0x0e</c>.</summary>
 	public int ChannelCount => _channels.Length;
@@ -357,19 +368,24 @@ public sealed class RideAnimations
 	/// <param name="directory">The item's own folder, as <see cref="ParkItemCatalogue.Item.Directory"/> gives it.</param>
 	/// <param name="stem">Its own name, which its files are all prefixed with.</param>
 	/// <param name="files">Where to read from, so a test needs no global file system to have been mounted.</param>
-	public static RideAnimations Load( string directory, string stem, BaseFileSystem files )
+	/// <param name="channels">
+	/// How many animation players to give it - the item's own <c>UsageInfo.NumSimultAnims</c>. One is both
+	/// the default and what the engine substitutes for nought, so a caller with no item description to hand
+	/// gets the same single player it always had.
+	/// </param>
+	public static RideAnimations Load( string directory, string stem, BaseFileSystem files, int channels = 1 )
 	{
 		var roles = new AnimationFile[RoleCount][];
 
 		for ( int role = 0; role < RoleCount; ++role )
 			roles[role] = LoadRole( directory, stem, Letters[role], files );
 
-		return new RideAnimations( stem, roles );
+		return new RideAnimations( stem, roles, channels );
 	}
 
 	/// <summary>An item with nothing beside it - what a thing whose archive ships no clips answers.</summary>
-	public static RideAnimations None( string stem = "" )
-		=> new( stem, CreateEmptyRoles() );
+	public static RideAnimations None( string stem = "", int channels = 1 )
+		=> new( stem, CreateEmptyRoles(), channels );
 
 	private static AnimationFile[][] CreateEmptyRoles()
 	{

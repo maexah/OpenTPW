@@ -217,7 +217,7 @@ public sealed class ParkRides : Entity
 				// what the model is posed from are the same one. Read afresh only where nothing was drawn,
 				// which is what a test binding scripts against a park it never builds is doing.
 				script.Animations = _objects?.AnimationsFor( placed.ThingId )
-					?? RideAnimations.Load( item.Directory, item.Stem, _files );
+					?? RideAnimations.Load( item.Directory, item.Stem, _files, item.AnimationChannels );
 
 				if ( script.Animations.Loaded > 0 )
 					++Animated;

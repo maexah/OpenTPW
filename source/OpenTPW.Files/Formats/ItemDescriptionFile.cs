@@ -172,6 +172,27 @@ public sealed class ItemDescriptionFile
 	/// <summary>The coasters - excitement comes from the ride's own script rather than its settings.</summary>
 	public const int CoasterTrack = 3;
 
+	/// <summary>
+	/// How many animations this item can run at once - <c>UsageInfo.NumSimultAnims</c>, whose own comment
+	/// reads "How many different anims can this ride run?  Usu. 1, sideshows more".
+	///
+	/// <para>
+	/// <b>It is the engine's animation-channel count rather than a hint.</b> The thing loader hands this
+	/// field straight to the model loader as its channel count - <c>FUN_00413c10</c> passes
+	/// <c>thing+0x170</c> to <c>FUN_004629d0</c>, which substitutes 1 when it is nought, which is why the
+	/// default here is 1 and not nought. Ride vehicles pass a literal 5 and the queue models pass nothing
+	/// at all, so this is the only route by which an item's own file decides the number.
+	/// </para>
+	/// <para>
+	/// <b>The shipped scripts agree with it exactly, which is what identifies it.</b> Every script that
+	/// names a channel reaches precisely the last one its item allows: the Jungle Spray, Hyenas, Frushy,
+	/// Squirtem and Marsmoon declare 3 and use channel 2, while the Totem declares 4 and uses channel 3 -
+	/// so the declaration and the use move together rather than both happening to be three. It sizes
+	/// <c>RideAnimations</c>' player array, which lives in the game rather than in this assembly.
+	/// </para>
+	/// </summary>
+	public int NumSimultAnims => _numSimultAnims ?? _category?.NumSimultAnims ?? 1;
+
 	private int? _whichUIType;
 	private int? _isChoosable;
 	private int? _providesRelief;
@@ -186,6 +207,7 @@ public sealed class ItemDescriptionFile
 	private int? _happinessEffect;
 	private int? _litterEffect;
 	private int? _trackType;
+	private int? _numSimultAnims;
 
 	private void Read( string text )
 	{
@@ -283,6 +305,10 @@ public sealed class ItemDescriptionFile
 
 				case "Bumper.WhichTrackType":
 					_trackType = Number( line );
+					break;
+
+				case "UsageInfo.NumSimultAnims":
+					_numSimultAnims = Number( line );
 					break;
 			}
 		}

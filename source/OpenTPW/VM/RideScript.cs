@@ -972,6 +972,14 @@ public sealed class RideScript
 				TriggerAnimation( now, Value( operands[0] ), Value( operands[1] ), operands[2] );
 				break;
 
+			case Opcode.TRIGANIM_CH:
+				// The same three operands and a fourth naming the channel, resolved with the same tag test
+				// the other three get (0x00553158). The handler is otherwise instruction-for-instruction
+				// TRIGANIM's - with the one exception TriggerAnimationOn carries.
+				TriggerAnimationOn( now, Value( operands[0] ), Value( operands[1] ), operands[2],
+					Value( operands[3] ) );
+				break;
+
 			case Opcode.WAITANIM:
 				// The same two operands, and no destination: this one keeps the length to itself and
 				// waits on it rather than answering it.
@@ -981,6 +989,17 @@ public sealed class RideScript
 			case Opcode.LOOPANIM:
 				// Operand one is the role and operand two the entry, the same order the other three take.
 				Loop( now, Value( operands[0] ), Value( operands[1] ) );
+				break;
+
+			case Opcode.LOOPANIM_CH:
+				// Role, entry, channel - and the channel is taken RAW, which is the quirk of this handler.
+				LoopOn( now, Value( operands[0] ), Value( operands[1] ), RawChannel( operands[2] ) );
+				break;
+
+			case Opcode.GETANIM_CH:
+				// Destination first and the channel second, the reverse of the triggers' order. GETANIM is
+				// the same handler with the channel a literal nought, and no shipped script uses it.
+				Store( operands[0], RoleOn( Value( operands[1] ) ) );
 				break;
 
 			case Opcode.WAIT4ANIM:
@@ -2337,6 +2356,96 @@ public sealed class RideScript
 	}
 
 	/// <summary>
+	/// <c>TRIGANIM_CH</c>: <see cref="TriggerAnimation"/> onto a named player rather than always the first.
+	///
+	/// <para>
+	/// <b>One difference, and it is not a tidy-up.</b> The two handlers are identical through the operand
+	/// fetches, the call, the <c>-300</c>, the signed floor and the store - and then plain <c>TRIGANIM</c>
+	/// jumps to a shared tail at <c>0x00552fe5</c> which writes the deadline <i>and</i> stamps the looping
+	/// key at <c>+0xa8</c> with <see cref="OneShot"/>, while this one ends inline at <c>0x005531f9</c>
+	/// writing only the deadline. So a <c>_CH</c> trigger leaves the looping key alone, and a
+	/// <c>LOOPANIM</c> that follows one is <b>not</b> forced to look like a change the way it is after a
+	/// plain trigger.
+	/// </para>
+	/// </summary>
+	private void TriggerAnimationOn( float now, int role, int entry, RideOperand destination, int channel )
+	{
+		var length = FloorAnimation( StartAnimation( now, role, entry, 0, channel ) - AnimationSlack );
+
+		Store( destination, length );
+
+		_animationUntil = now + length;
+	}
+
+	/// <summary>
+	/// <c>LOOPANIM_CH</c>: set a channel looping. <b>It is not <see cref="Loop"/> with a channel added</b>,
+	/// and the three differences are all the engine's.
+	///
+	/// <para>
+	/// It has <b>no already-looping guard</b> and <b>never writes the looping key</b> at <c>+0xa8</c> -
+	/// <c>LOOPANIM</c>'s early exit and its store are both absent here - so nothing stops it being asked
+	/// for twice. That costs nothing in practice because a trigger without
+	/// <see cref="AnimTimeControl.StartAtOnceFlag"/> onto a busy channel queues rather than restarts, so a
+	/// repeat cannot pin the clip at its first frame the way an unguarded <see cref="Loop"/> would.
+	/// It does still clear the <c>WAIT4ANIM</c> deadline, because a loop never finishes.
+	/// </para>
+	/// </summary>
+	private void LoopOn( float now, int role, int entry, int channel )
+	{
+		StartAnimation( now, role, entry, AnimTimeControl.LoopFlag, channel );
+
+		_animationUntil = null;
+	}
+
+	/// <summary>
+	/// The channel word <c>LOOPANIM_CH</c> pushes, which is the operand <b>raw</b>.
+	///
+	/// <para>
+	/// <b>Alone in the family it applies no tag test.</b> <c>TRIGANIM_CH</c> and <c>GETANIM_CH</c> both run
+	/// their channel operand through the <c>0x40000000</c> check and resolve a variable; this one fetches
+	/// the word and pushes it (<c>0x00553435</c> to <c>0x00553470</c>). A variable operand therefore
+	/// arrives as its tagged word, which names no channel at all - the original would index that far past
+	/// its allocation, and <see cref="RideAnimations.Channel"/> refuses instead. No shipped script does it:
+	/// the single <c>LOOPANIM_CH</c> in the game names a literal nought.
+	/// </para>
+	/// </summary>
+	private static int RawChannel( RideOperand operand )
+		=> operand.Kind == RideOperandKind.Variable
+			? unchecked((int)0x40000000) | operand.Value
+			: operand.Value;
+
+	/// <summary>
+	/// <c>GETANIM_CH</c>: which role a channel is playing, or <b>-1 once it has finished</b>.
+	///
+	/// <para>
+	/// The engine reads the player through <c>FUN_00473fb0</c> - channels live at <c>model+0x10</c> on a
+	/// <c>0x38</c> stride, and it answers the flag word while writing the role out - then overrides the
+	/// role with <c>-1</c> when that flag carries <c>0x4</c> (<c>TEST AL,0x4</c> at <c>0x0055374e</c>).
+	/// <b>That bit is how "the clip is over" is expressed</b>: a finished channel with nothing queued is
+	/// re-entered with <see cref="AnimTimeControl.HoldAtEnd"/>, which sets <c>0x14</c>.
+	/// </para>
+	/// <para>
+	/// <b>This is the whole of the Jungle Spray's exit gate.</b> Its script tests each lane with
+	/// <c>GETANIM_CH 0, &lt;lane&gt;</c> and branches away on positive or zero, so the only answer that
+	/// reaches <c>WALKOFF</c> is the <c>-1</c>. A running clip answers its role (positive), and an idle
+	/// channel answers <see cref="RideAnimations.NoRole"/>, which is 12 and also positive - so both of
+	/// those correctly keep the rider aboard.
+	/// </para>
+	/// <para>
+	/// With no model the engine reads a stack slot it never wrote, which is genuinely undefined; nought is
+	/// answered here instead, and nought is the safe one - it is the "not finished yet" branch, so a script
+	/// running without a model holds its riders rather than flinging them off.
+	/// </para>
+	/// </summary>
+	private int RoleOn( int channel )
+	{
+		if ( Animations?.Channel( channel ) is not { } player )
+			return 0;
+
+		return (player.Flags & AnimTimeControl.KeepPoseFlag) != 0 ? -1 : player.AnimID;
+	}
+
+	/// <summary>
 	/// How long one entry of one role runs, in milliseconds - the engine's <c>FUN_004732a0</c>, reduced
 	/// to the part a machine with no animation playing can be faithful about.
 	///
@@ -2360,7 +2469,7 @@ public sealed class RideScript
 	/// which is the engine's own arithmetic, and is reachable in a running park rather than hypothetical.
 	/// </para>
 	/// </summary>
-	private int StartAnimation( float now, int role, int entry, int flags )
+	private int StartAnimation( float now, int role, int entry, int flags, int channel = 0 )
 	{
 		// Null is "no model", which every one of these handlers tests for first. The arithmetic is then
 		// done on nought and the floor catches it - so the 300 a model-less TRIGANIM answers is the
@@ -2370,7 +2479,7 @@ public sealed class RideScript
 
 		// A literal 1.0, because every triggering handler pushes 0x3f800000. The channel divides by it, so
 		// anything else here would change the length a script is told as well as the speed it plays at.
-		return Animations.Trigger( role, entry, flags, 1f, (int)now );
+		return Animations.Trigger( role, entry, flags, 1f, (int)now, channel );
 	}
 
 	/// <summary>
