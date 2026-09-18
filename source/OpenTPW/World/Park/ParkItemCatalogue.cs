@@ -38,7 +38,8 @@ public sealed class ParkItemCatalogue
 		string? SignPath, int UiType = ItemDescriptionFile.Feature, bool IsChoosable = false,
 		bool ProvidesRelief = false, bool HasQueue = false, bool IsIndoors = false,
 		int ExcitementLevel = 0, int AttractionValue = 0, int NewAttractionDecayTime = 0,
-		int ThirstEffect = 0, int HungerEffect = 0, int TrackType = 0 );
+		int ThirstEffect = 0, int HungerEffect = 0, int VomitEffect = 0, int HappinessEffect = 0,
+		int LitterEffect = 0, int TrackType = 0 );
 
 	private readonly Dictionary<int, Item> _items = [];
 
@@ -140,7 +141,8 @@ public sealed class ParkItemCatalogue
 				description.WhichUIType, description.IsChoosable, description.ProvidesRelief,
 				description.HasQueue, description.IsIndoors, description.ExcitementLevel,
 				description.AttractionValue, description.NewAttractionDecayTime,
-				description.ThirstEffect, description.HungerEffect, description.TrackType );
+				description.ThirstEffect, description.HungerEffect, description.VomitEffect,
+					description.HappinessEffect, description.LitterEffect, description.TrackType );
 
 			return true;
 		}

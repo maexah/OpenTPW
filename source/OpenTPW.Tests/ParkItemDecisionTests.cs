@@ -103,6 +103,21 @@ public class ParkItemDecisionTests
 		Assert.AreEqual( 0, shop.HungerEffect, "and does nothing at all for hunger, being a drink" );
 		Assert.IsFalse( shop.HasQueue, "shops are not queued for" );
 
+		// The rest of the effect block, which the original applies to five guest meters when somebody
+		// finishes using a thing. The file states each one's meter in its own comment column - "how much
+		// thirst to deduct", "how much vomit to add" - and the two DEDUCT while the three ADD, which is
+		// the same asymmetry the engine's arithmetic has.
+		Assert.AreEqual( 10, shop.VomitEffect, "a drink adds to how sick a guest feels" );
+		Assert.AreEqual( 5, shop.HappinessEffect, "and cheers them up a little" );
+		Assert.AreEqual( 50, shop.LitterEffect, "and leaves them holding a great deal of litter" );
+
+		// Anti-vacuity, and it is the half that gives the three above any meaning: the block is a SHOP
+		// thing. The ride declares none of it, so these are read values rather than a constant every item
+		// happens to carry.
+		Assert.AreEqual( 0, ride.VomitEffect, "the Belly Bounce declares no effect block" );
+		Assert.AreEqual( 0, ride.HappinessEffect, "the Belly Bounce declares no effect block" );
+		Assert.AreEqual( 0, ride.LitterEffect, "the Belly Bounce declares no effect block" );
+
 		Assert.AreEqual( 35, Item( 1303 ).ExcitementLevel, "Jungle Spray sets its own excitement" );
 	}
 

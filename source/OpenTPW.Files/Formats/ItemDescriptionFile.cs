@@ -119,6 +119,30 @@ public sealed class ItemDescriptionFile
 	public int HungerEffect => _hungerEffect ?? _category?.HungerEffect ?? 0;
 
 	/// <summary>
+	/// What using this does to a guest's sickness - <c>UsageInfo.VomitEffect</c>.
+	///
+	/// <para>
+	/// <b>These three complete the effect block, and which meter each moves is what names it.</b> The
+	/// original applies five consecutive descriptor fields to five guest meters when somebody finishes
+	/// using a thing: <c>+0x144</c> to thirst, <c>+0x148</c> to hunger, <c>+0x14c</c> to sickness,
+	/// <c>+0x150</c> to happiness and <c>+0x154</c> to the litter they carry. The <c>.sam</c> files carry
+	/// exactly five <c>UsageInfo.*Effect</c> keys, on the same eight items, so each key is matched to the
+	/// meter its offset writes rather than by assuming the file and the struct share an order.
+	/// </para>
+	/// <para>
+	/// <b>Sickness is spelled "Vomit" here because the file is</b> - the balance file calls the same meter
+	/// illness, and <c>Peep.Vomit</c> carries a note about the two names being one thing.
+	/// </para>
+	/// </summary>
+	public int VomitEffect => _vomitEffect ?? _category?.VomitEffect ?? 0;
+
+	/// <inheritdoc cref="VomitEffect"/>
+	public int HappinessEffect => _happinessEffect ?? _category?.HappinessEffect ?? 0;
+
+	/// <inheritdoc cref="VomitEffect"/>
+	public int LitterEffect => _litterEffect ?? _category?.LitterEffect ?? 0;
+
+	/// <summary>
 	/// What kind of track the item runs on - <c>Bumper.WhichTrackType</c>, and the field the original's
 	/// "is this open for business" test keys on.
 	///
@@ -158,6 +182,9 @@ public sealed class ItemDescriptionFile
 	private int? _newAttractionDecayTime;
 	private int? _thirstEffect;
 	private int? _hungerEffect;
+	private int? _vomitEffect;
+	private int? _happinessEffect;
+	private int? _litterEffect;
 	private int? _trackType;
 
 	private void Read( string text )
@@ -240,6 +267,18 @@ public sealed class ItemDescriptionFile
 
 				case "UsageInfo.HungerEffect":
 					_hungerEffect = Number( line );
+					break;
+
+				case "UsageInfo.VomitEffect":
+					_vomitEffect = Number( line );
+					break;
+
+				case "UsageInfo.HappinessEffect":
+					_happinessEffect = Number( line );
+					break;
+
+				case "UsageInfo.LitterEffect":
+					_litterEffect = Number( line );
 					break;
 
 				case "Bumper.WhichTrackType":
