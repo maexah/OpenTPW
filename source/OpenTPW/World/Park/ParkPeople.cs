@@ -527,6 +527,136 @@ public sealed class ParkPeople : Entity
 	internal PeepWalk? AnyWalkFor( int thingId )
 		=> _walks.GetValueOrDefault( thingId ) ?? _staffWalks.GetValueOrDefault( thingId );
 
+	/// <summary>
+	/// The thing this guest is being carried by and the node they are carried on, or false when they are
+	/// not on anything.
+	///
+	/// <para>
+	/// <b>Alexah found this by playing: the children never appear ON the ride, bouncing - their sprite
+	/// stays at the front of the queue until the ride is over.</b> That is half right of the original,
+	/// which is what made it confusing rather than obviously broken: nothing in the engine moves a rider
+	/// either. All five callers of its "place a person" routine are accounted for - the ride exit, a
+	/// generic put-down, a wrapper, the handyman's litter arm and dropping a staff member - and not one
+	/// of them is a rider. Their world position legitimately stays where they queued, and the DRAWING
+	/// puts them on the ride's own node. We did the first half and never the second.
+	/// </para>
+	/// <para>
+	/// <b>Asked of the scripts rather than of the guest.</b> <see cref="Peep.MajorDest"/> would be the
+	/// obvious handle and is the wrong one: several arms clear it. The ride's script holds the guest's
+	/// thing id in the slot <c>BOUNCE</c> filled in, so it is the only thing that knows.
+	/// </para>
+	/// </summary>
+	internal bool TrySeatOf( int guestThingId, out int rideThingId, out int node )
+	{
+		if ( _scriptFor != null && _behaviour.Park is { } world )
+		{
+			foreach ( var thing in world.Objects )
+			{
+				if ( _scriptFor( thing.ThingId ) is not { } script )
+					continue;
+
+				if ( !script.TryBounceNode( guestThingId, out node ) )
+					continue;
+
+				rideThingId = thing.ThingId;
+
+				return true;
+			}
+		}
+
+		rideThingId = 0;
+		node = 0;
+
+		return false;
+	}
+
+	/// <summary>
+	/// What a ride's bounce node is called in its model - node nought is <c>body</c> and the rest are
+	/// <c>body01</c> upwards.
+	/// </summary>
+	/// <remarks>
+	/// <b>Measured off <c>bouncy.MD2</c>, and corroborated twice over.</b> Its ten rider nodes are named
+	/// <c>body</c>, <c>body01</c> .. <c>body09</c> and carry ids 1 to 10 - so the name order and the id
+	/// order agree, and there are exactly as many as <c>Bouncy.RSE</c> declares bounce slots. They sit
+	/// nine to twelve units up in the air above the ride, which is where a bouncing rider belongs.
+	/// <para>
+	/// <b>Why by name rather than by id.</b> A node's id is only unique within its capability: id 1
+	/// belongs to <c>body</c>, <c>air</c>, <c>camera</c> and <c>body11</c> in this one model, and what
+	/// the capability word means is not decoded. A lookup on the bare number would have drawn riders on
+	/// the camera. The names carry no such ambiguity, and <c>body10</c> upwards belong to other groups
+	/// and are never reached because the slots stop at nine.
+	/// </para>
+	/// </remarks>
+	internal static string BounceNodeName( int node )
+		=> node == 0 ? "body" : $"body{node:00}";
+
+	/// <summary>
+	/// What each placed thing's script is doing, and who it is carrying.
+	///
+	/// <para>
+	/// <b>Written because four different faults produce one symptom.</b> Riders were drawn at the front
+	/// of the queue, and that is equally consistent with: a guest being <see cref="PeepState.Riding"/>
+	/// while holding no bounce slot; the script never reaching <c>BOUNCE</c>; the park's objects not
+	/// being reachable from the drawing; and the node lookup failing on a slot that is properly filled.
+	/// Each wants a different fix, and no census here could tell them apart - there was no ride census
+	/// at all.
+	/// </para>
+	/// </summary>
+	internal IEnumerable<string> RideCensus()
+	{
+		yield return $"objects {(ParkObjects.Current == null ? "NOT REACHABLE - Current is null" : "reachable")}";
+
+		if ( _scriptFor == null )
+		{
+			yield return "no script lookup was handed in, so no ride runs a script here";
+			yield break;
+		}
+
+		if ( _behaviour.Park is not { } world )
+		{
+			yield return "no park";
+			yield break;
+		}
+
+		foreach ( var thing in world.Objects )
+		{
+			if ( _scriptFor( thing.ThingId ) is not { } script )
+				continue;
+
+			// A variable a script does not declare is not a fault worth throwing a census over.
+			string Read( string name )
+			{
+				try { return script[name].ToString(); }
+				catch ( Exception ) { return "-"; }
+			}
+
+			var aboard = script.Bouncing().ToArray();
+
+			var seats = aboard.Length == 0
+				? "nobody"
+				: string.Join( ", ", aboard.Select( slot =>
+				{
+					var node = BounceNodeName( slot.Node );
+
+					if ( ParkObjects.Current is not { } objects )
+						return $"{slot.Handle}@{slot.Node}'{node}' (objects unreachable)";
+
+					return objects.TryNodeOn( thing.ThingId, node, out var at )
+						? $"{slot.Handle}@{slot.Node}'{node}' -> ({at.X:0.0},{at.Y:0.0},{at.Z:0.0})"
+						: $"{slot.Handle}@{slot.Node}'{node}' -> NODE NOT FOUND";
+				} ) );
+
+			yield return $"thing {thing.ThingId,2} cat {thing.CatalogueId} '{script.Name}' "
+				+ $"running {script.Running} letmeon {Read( ParkRideOperation.AdmitVariable )} "
+				+ $"letmeoff {Read( ParkRideOperation.DismissVariable )} "
+				+ $"capacity {Read( ParkRideOperation.CapacityVariable )} "
+				+ $"duration {Read( ParkRideOperation.DurationVariable )} "
+				+ $"var_running {Read( ParkRideOperation.RunningVariable )} "
+				+ $"onride {Read( ParkRideOperation.OnRideVariable )} "
+				+ $"bouncing {aboard.Length}: {seats}";
+		}
+	}
+
 	/// <summary>This guest's animation, for the drawing, the tests and the debug console.</summary>
 	internal SpriteScript? SpriteFor( int thingId ) => _sprites.GetValueOrDefault( thingId );
 

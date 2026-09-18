@@ -372,6 +372,24 @@ public static class DebugConsole
 
 				break;
 
+			// What each ride's script is doing and who it is carrying. Riders are drawn on a node of the
+			// ride's own model, so when one appears at the front of the queue instead this is the census
+			// that says which link of that chain is broken.
+			case "rides":
+				if ( ParkPeople.Current is not { } operators )
+				{
+					Reply( "rides: none - a park has to be loaded" );
+					break;
+				}
+
+				var running = operators.RideCensus().ToArray();
+				Reply( $"rides {running.Length}" );
+
+				foreach ( var ride in running )
+					Reply( "  " + ride );
+
+				break;
+
 			// The staff, who are a separate list from the guests and so appear in neither census above.
 			case "staff":
 				if ( ParkPeople.Current is not { } employer )

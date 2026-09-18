@@ -247,6 +247,41 @@ public class RideScriptBounceTests
 	}
 
 	/// <summary>
+	/// <b>Which node the ride is carrying a rider on, which is what the drawing needs.</b> Alexah found
+	/// the children never appear on the ride: their sprite stays at the front of the queue for the whole
+	/// ride. Nothing in the engine moves a rider either - a rider's position legitimately stays where
+	/// they queued and the DRAWING puts them on a node of the ride's own model - so the slot the
+	/// <c>BOUNCE</c> instruction filled in is the only thing that knows where they are.
+	/// </summary>
+	/// <remarks>
+	/// <b><c>VAR_RUNNING</c> is asserted first, and the helper's own remarks are why.</b> Clearing
+	/// <c>VAR_LETMEON</c> says the script DEALT with the rider, not that it had room for them, so a test
+	/// that went straight to the slot could pass against a ride that had refused them and prove nothing.
+	/// </remarks>
+	[TestMethod]
+	public void TheRideSaysWhichNodeItIsCarryingARiderOn()
+	{
+		var script = new RideScript( BouncyFile() );
+		var clock = TakeARiderAboard( script, capacity: 4, durationSeconds: 2 );
+
+		script.Turn( clock + 600f );
+
+		Assert.AreEqual( 1, script["VAR_RUNNING"], "nobody is actually aboard, so the rest proves nothing" );
+
+		Assert.IsTrue( script.TryBounceNode( Rider, out var node ),
+			"the ride is carrying the rider and cannot say where" );
+
+		// Lost Kingdom's Bouncy never sets a node base - it calls BOUNCESETBASE, which is the field
+		// nothing in the family reads - so a rider's node here is their slot index, one of the ten.
+		Assert.IsTrue( node is >= 0 and < BouncySlots,
+			$"node {node} is outside the ten slots the ride declares" );
+
+		// Anti-vacuity: it answers about THIS rider rather than about anybody at all.
+		Assert.IsFalse( script.TryBounceNode( Rider + 1, out _ ), "a stranger is not aboard" );
+		Assert.IsFalse( script.TryBounceNode( 0, out _ ), "and nought is not a rider, it is an empty slot" );
+	}
+
+	/// <summary>
 	/// A rider comes off inside the window and not outside it - the <c>/ 200</c> the two handlers do.
 	///
 	/// <para>

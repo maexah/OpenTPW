@@ -112,6 +112,58 @@ public class ParkGuestPlacementTests
 	}
 
 	/// <summary>
+	/// <b>A guest a ride is carrying is drawn on the ride, not where they walked to.</b> Alexah found
+	/// this by playing: the children never appeared on the Belly Bounce - their sprite stayed at the
+	/// front of the queue until the ride was over.
+	///
+	/// <para>
+	/// Half of that is the original's own behaviour, which is what made it confusing rather than plainly
+	/// broken: nothing in the engine moves a rider either. All five callers of its "place a person"
+	/// routine are accounted for and not one is a rider, so a rider's walk goes on reporting the cell
+	/// they queued on and the DRAWING is what puts them on a node of the ride's own model.
+	/// </para>
+	/// </summary>
+	/// <remarks>
+	/// <b>Written for the same reason this whole file was.</b> Resolving a seat needs
+	/// <c>ParkObjects</c>, which wants a graphics device, so making the seat lookup answer nothing left
+	/// all 769 tests green - every rider would have gone back to standing in the queue and the suite
+	/// would not have said a word. The arithmetic below needs no device, so the CHOICE is pinned here;
+	/// that a seat is correctly resolved rests on the ride census and the screenshots.
+	/// </remarks>
+	[TestMethod]
+	public void AGuestARideIsCarryingIsDrawnOnTheRide()
+	{
+		// Where the walk says they are - the queue cell, which is where riders used to be drawn.
+		const float WalkX = 525.4f;
+		const float WalkY = 234.0f;
+		const float Ground = 0.5f;
+		const float SpriteHeight = 3f;
+
+		// And where the ride says they are: one of the Belly Bounce's ten body nodes, up in the air.
+		var seat = new Vector3( 525.4f, 252.6f, 10.3f );
+
+		var on = ParkGuestSprites.Centre( seat, WalkX, WalkY, Ground, SpriteHeight );
+
+		Assert.AreEqual( seat.X, on.X, 0.0001f, "a rider is drawn at their seat's x" );
+		Assert.AreEqual( seat.Y, on.Y, 0.0001f, "and its y - this is the one the bug got wrong" );
+		Assert.AreEqual( seat.Z + SpriteHeight, on.Z, 0.0001f,
+			"and above it by the sprite's own offset, exactly as a walker stands above the land" );
+
+		// <b>The guard that kills the bug.</b> Drawing them at the walk position is precisely what left
+		// the children standing in the queue for the whole ride, so the two must not agree.
+		Assert.AreNotEqual( WalkY, on.Y, "a rider drawn at the walk's y is the bug itself" );
+
+		// And with nobody carrying them, the ground answer is unchanged - so this cannot have been
+		// bought by breaking everybody who is merely walking about.
+		var walking = ParkGuestSprites.Centre( null, WalkX, WalkY, Ground, SpriteHeight );
+
+		Assert.AreEqual( WalkX, walking.X, 0.0001f );
+		Assert.AreEqual( WalkY, walking.Y, 0.0001f );
+		Assert.AreEqual( Ground + SpriteHeight, walking.Z, 0.0001f,
+			"the land under them is what decides where their feet go" );
+	}
+
+	/// <summary>
 	/// <b>And before the ground has loaded, likewise.</b> The cell size comes from the heightfield, and
 	/// until there is one there is no scale to place anybody at - so the answer falls back rather than
 	/// multiplying by zero and stacking the whole park on the origin.

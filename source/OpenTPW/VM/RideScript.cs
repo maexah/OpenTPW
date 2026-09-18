@@ -187,6 +187,54 @@ public sealed class RideScript
 	private readonly BounceSlot[] _bounce;
 
 	/// <summary>
+	/// Which node this script is carrying a person on, or false when it is not carrying them at all.
+	///
+	/// <para>
+	/// <b>The script is the authority on who is aboard, which is why this is asked of it rather than of
+	/// the guest.</b> A guest's own <c>mMajorDest</c> is cleared by several arms, and a rider's position
+	/// is never moved by the simulation at all - the original leaves them standing where they queued and
+	/// the DRAWING puts them on the ride. So the only thing that knows a guest is on a ride, and where on
+	/// it, is the slot <see cref="Opcode.BOUNCE"/> filled in.
+	/// </para>
+	/// </summary>
+	public bool TryBounceNode( int handle, out int node )
+	{
+		if ( handle != 0 )
+		{
+			foreach ( var slot in _bounce )
+			{
+				if ( slot.Handle != handle )
+					continue;
+
+				node = slot.Node;
+
+				return true;
+			}
+		}
+
+		node = 0;
+
+		return false;
+	}
+
+	/// <summary>
+	/// Everyone this script is carrying, and the node each is carried on.
+	/// </summary>
+	/// <remarks>
+	/// For the console's ride census. <see cref="TryBounceNode"/> answers about one guest, which cannot
+	/// tell "this guest is not aboard" apart from "nobody is aboard at all" - and those two want
+	/// different fixes.
+	/// </remarks>
+	public IEnumerable<(int Handle, int Node)> Bouncing()
+	{
+		foreach ( var slot in _bounce )
+		{
+			if ( slot.Handle != 0 )
+				yield return (slot.Handle, slot.Node);
+		}
+	}
+
+	/// <summary>
 	/// How many are bouncing - the engine's <c>+0x6c</c>, and <b>sixteen bits</b>, which is why
 	/// <c>BOUNCING</c> sign-extends it (<c>MOVSX</c>) rather than simply loading it.
 	/// </summary>

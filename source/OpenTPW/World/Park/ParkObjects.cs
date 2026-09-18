@@ -58,6 +58,31 @@ public sealed class ParkObjects : Entity
 	private readonly Dictionary<int, Standing> _standing = [];
 
 	/// <summary>
+	/// The park's objects, for the drawing of the people standing on them - the same arrangement
+	/// <see cref="ParkPeople.Current"/> and <see cref="ParkGuestSprites.Current"/> already use, and this
+	/// was the one park entity without it.
+	/// </summary>
+	internal static ParkObjects? Current { get; private set; }
+
+	/// <summary>
+	/// Where a named node of a placed thing stands in the world, or false when this thing has no model
+	/// or no such node.
+	/// </summary>
+	/// <remarks>
+	/// <b>Placed, not loaded.</b> See <see cref="LobbyModel.TryGetPlacedNode"/> for why asking the other
+	/// one would quietly ignore both where the thing stands and which way it faces.
+	/// </remarks>
+	internal bool TryNodeOn( int thingId, string node, out Vector3 world )
+	{
+		if ( _standing.TryGetValue( thingId, out var standing ) )
+			return standing.Model.TryGetPlacedNode( node, out world );
+
+		world = default;
+
+		return false;
+	}
+
+	/// <summary>
 	/// Every sign painted for an object standing in this park, kept only so that they can be let
 	/// go of again. Each is cut from a board rasterised for that one object, so it is in no cache
 	/// and nothing else holds it - see <see cref="OnDelete"/>.
@@ -133,6 +158,11 @@ public sealed class ParkObjects : Entity
 	{
 		ThemeName = themeName;
 		Name = $"{themeName} objects";
+
+		// Before the two bails below, not after them: a park that places nothing still has objects, and
+		// leaving Current null there would make the riders' node lookup a silent no-op in exactly the
+		// case hardest to notice. ParkPeople sets its own the same way, ahead of its null-park guard.
+		Current = this;
 
 		if ( world == null || catalogue == null )
 			return;
@@ -547,6 +577,9 @@ public sealed class ParkObjects : Entity
 	/// </summary>
 	protected override void OnDelete()
 	{
+		if ( Current == this )
+			Current = null;
+
 		foreach ( var sign in _signs )
 		{
 			foreach ( var panel in sign.Values )

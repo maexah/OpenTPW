@@ -448,10 +448,14 @@ public sealed class ParkGuestSprites : ModelEntity
 
 			var picture = loaded.Pictures[index];
 
-			// The stored height is an offset above the ground rather than a height, so the land under
-			// the sprite is what decides where its feet go.
+			// The stored height is an offset above the ground rather than a height, so the land under the
+			// sprite is what decides where its feet go - unless a ride is carrying them, in which case
+			// the ride says where they are. The simulation never moves a rider, here or in the original,
+			// so their walk still reports the cell they queued on; the script holds them in a bounce slot
+			// naming a node of the ride's own model, and that node is where they are drawn, height and
+			// all. See Centre for why the choice lives in a function of its own.
 			var ground = field?.HeightAtWorld( x, y ) ?? 0f;
-			var centre = new Vector3( x, y, ground + sprite.Height );
+			var centre = Centre( Seated( people, person.ThingId ), x, y, ground, sprite.Height );
 
 			WriteQuad( used++, centre, picture, mirrored, sprite.Alpha );
 
@@ -538,6 +542,50 @@ public sealed class ParkGuestSprites : ModelEntity
 	internal static (float X, float Y, int Angle) StandingFrom( ParkPeople? people, float cellX, float cellY,
 		ParkWorld.Person person, ParkWorld.Sprite sprite )
 		=> Standing( people?.AnyWalkFor( person.ThingId ), cellX, cellY, person, sprite );
+
+	/// <summary>
+	/// Where a ride is carrying this person, or null when none is.
+	///
+	/// <para>
+	/// Three things have to agree for a seat to exist: the people have to know which ride holds them and
+	/// on which node (<see cref="ParkPeople.TrySeatOf"/>, asked of the ride's own script), the park's
+	/// objects have to have a model standing for that ride, and that model has to carry the node
+	/// (<see cref="ParkObjects.TryNodeOn"/>). Any one of them missing means the guest is drawn where
+	/// they are walking, which is the right answer for everybody not on a ride.
+	/// </para>
+	/// </summary>
+	/// <summary>
+	/// Where a person's picture is centred: on the ride carrying them when one is, and on the ground
+	/// under them when none is.
+	/// </summary>
+	/// <remarks>
+	/// <b>Split out because the choice was the change, and the choice was the part nothing could
+	/// test.</b> Resolving a seat needs <see cref="ParkObjects"/>, which wants a graphics device, so
+	/// neutering <see cref="Seated"/> left all 769 tests green - riders would have gone back to standing
+	/// at the front of the queue and the suite would not have said a word. That is the same shape as the
+	/// staff bug found the same day: a call site no test could reach. This much is arithmetic and needs
+	/// no device, so the preference itself is now pinned; that a seat is correctly RESOLVED still rests
+	/// on the screenshots and the ride census.
+	/// <para>
+	/// The sprite's own height is an offset above whatever it stands on, so it is added either way -
+	/// a rider sits above their node exactly as a walker stands above the land.
+	/// </para>
+	/// </remarks>
+	internal static Vector3 Centre( Vector3? seat, float x, float y, float ground, float spriteHeight )
+		=> seat is { } on
+			? new Vector3( on.X, on.Y, on.Z + spriteHeight )
+			: new Vector3( x, y, ground + spriteHeight );
+
+	internal static Vector3? Seated( ParkPeople? people, int thingId )
+	{
+		if ( people == null || ParkObjects.Current is not { } objects )
+			return null;
+
+		if ( !people.TrySeatOf( thingId, out var ride, out var node ) )
+			return null;
+
+		return objects.TryNodeOn( ride, ParkPeople.BounceNodeName( node ), out var world ) ? world : null;
+	}
 
 	/// <inheritdoc cref="StandingFrom"/>
 	internal static (float X, float Y, int Angle) Standing( PeepWalk? walk, float cellX, float cellY,
@@ -796,6 +844,15 @@ public sealed class ParkGuestSprites : ModelEntity
 			var walk = people?.AnyWalkFor( person.ThingId );
 			var playing = people?.SpriteFor( person.ThingId );
 			var (x, y, angle) = Standing( walk, cellX, cellY, person, sprite );
+
+			// <b>The same override the drawing applies, and this census lied without it.</b> It computes
+			// a position of its own rather than reading the one the renderer used, so while a rider was
+			// being drawn up on the ride this still reported the cell they queued on - and a run of it
+			// read exactly like a build where the seat did nothing at all.
+			var seated = Seated( people, person.ThingId );
+
+			if ( seated is { } seat )
+				(x, y) = (seat.X, seat.Y);
 			var (setNumber, frame, bankOffset) = Showing( playing, sprite );
 
 			yield return $"thing {person.ThingId,2} model {person.Model} " +
@@ -804,7 +861,8 @@ public sealed class ParkGuestSprites : ModelEntity
 				$"frame {frame} (saved set {sprite.Set} frame {sprite.Frame}) " +
 				$"script {(playing == null ? "none" : $"{playing.Script}@{playing.Pc}")} " +
 				$"facing {ParkWorld.Person.OctantOf( angle )} (angle {angle}) " +
-				$"drawn ({x:0.0},{y:0.0}) saved ({sprite.X:0.0},{sprite.Y:0.0}) " +
+				$"drawn ({x:0.0},{y:0.0}){(seated is { } on ? $" SEATED z {on.Z:0.0}" : "")} " +
+				$"saved ({sprite.X:0.0},{sprite.Y:0.0}) " +
 				$"cellsize {cellX:0.##}x{cellY:0.##} walk {(walk == null ? "none" : "found")}";
 		}
 	}

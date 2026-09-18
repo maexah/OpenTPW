@@ -323,6 +323,35 @@ public sealed class LobbyModel
 		return false;
 	}
 
+	/// <summary>
+	/// Where a node stands now, rather than where it stood when the model was loaded - the same
+	/// composition <see cref="Place"/> gives every mesh, so a node lands by the rule the geometry
+	/// around it lands by.
+	/// </summary>
+	/// <remarks>
+	/// <b>This exists because <see cref="TryGetNode"/> is the wrong answer for anything the park
+	/// places.</b> That one adds <c>_origin</c>, the origin the model was LOADED at, and a park object
+	/// is loaded at <see cref="Vector3.Zero"/> and only afterwards moved with
+	/// <see cref="SetTransform"/>. So it would hand back an offset about the world origin and ignore
+	/// the thing's heading entirely - which happens to look like a plain offset and is not one. A ride
+	/// turned 90 degrees would have its riders drawn in the wrong place, and nothing about the number
+	/// would say so.
+	/// </remarks>
+	public bool TryGetPlacedNode( string name, out Vector3 position )
+	{
+		if ( !_nodeOffsets.TryGetValue( name.Trim(), out var offset ) )
+		{
+			position = default;
+			return false;
+		}
+
+		var turned = System.Numerics.Vector3.Transform( offset.GetSystemVector3(), _placedRotation );
+
+		position = (Vector3)turned + _placedOrigin;
+
+		return true;
+	}
+
 	/// <summary>Moves every mesh of this model, keeping their relative placement.</summary>
 	public void SetOrigin( Vector3 origin )
 	{
