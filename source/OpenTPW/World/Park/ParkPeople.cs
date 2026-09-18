@@ -187,8 +187,22 @@ public sealed class ParkPeople : Entity
 				// so starting them all at the first would put the entire park in step with itself.
 				if ( pictures.TryGetValue( person.SpriteSlot, out var picture ) )
 				{
-					_sprites[peep.ThingId] = new SpriteScript(
+					var sprite = new SpriteScript(
 						picture.Script, picture.Pc, picture.SpriteNumber, picture.Frame );
+
+					// <b>And when it first comes due, which the original's constructor does as the sprite
+					// is made.</b> Ours left Due at nought, so every sprite was due on the first turn the
+					// clock had passed - one interval early, once, at load. ScheduleFrom existed and was
+					// tested eleven times over without ever being called; the codepath audit found it.
+					// Nought is the clock at load, which is the only moment either of these is built.
+					//
+					// <b>NOT pinned by the suite, and that is measured.</b> Taking this away again leaves
+					// all 777 tests green: SpriteScriptTests seeds Due itself in eight places, and no
+					// test drives the park-load path. The tests modelled the original while production
+					// did not, and a green suite could not tell the difference in either direction.
+					sprite.ScheduleFrom( 0 );
+
+					_sprites[peep.ThingId] = sprite;
 				}
 			}
 
@@ -207,8 +221,12 @@ public sealed class ParkPeople : Entity
 
 				if ( pictures.TryGetValue( person.SpriteSlot, out var picture ) )
 				{
-					_sprites[member.ThingId] = new SpriteScript(
+					var sprite = new SpriteScript(
 						picture.Script, picture.Pc, picture.SpriteNumber, picture.Frame );
+
+					sprite.ScheduleFrom( 0 );
+
+					_sprites[member.ThingId] = sprite;
 				}
 			}
 		}
