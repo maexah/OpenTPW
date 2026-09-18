@@ -241,4 +241,103 @@ public sealed class ParkRideOperation
 
 		return script.Set( DismissVariable, 0 );
 	}
+
+	/// <summary>How many the ride may hold - <c>VAR_CAPACITY</c>, which its own script keeps.</summary>
+	public const string CapacityVariable = "VAR_CAPACITY";
+
+	/// <summary>How many are aboard right now - <c>VAR_ONRIDE</c>.</summary>
+	public const string OnRideVariable = "VAR_ONRIDE";
+
+	/// <summary>Whether the ride is mid-run - <c>VAR_RUNNING</c>, and it will not invite while it is.</summary>
+	public const string RunningVariable = "VAR_RUNNING";
+
+	/// <summary>
+	/// Picks the guest at the head of the queue and invites them aboard - the original's
+	/// <c>FUN_004e1220</c>, which a ride runs first thing on its own turn.
+	///
+	/// <para>
+	/// <b>This is the head of the boarding chain, and without it the rest of it never fires.</b> It does
+	/// two things together: it calls <c>OnAdmittance</c> on the guest - which is nothing but
+	/// <c>mBeenAdmitted = 1</c> - and it nominates them at the ride's <c>+0x6c</c>. The guest's own
+	/// <see cref="PeepState.InQueue"/> turn then sees both and sets off to board, which is why neither
+	/// half is any use alone.
+	/// </para>
+	/// <para>
+	/// <b>Four things must be true before it will invite.</b> The admit slot must be empty (the script
+	/// has taken the last rider); the ride must not be full (<c>VAR_CAPACITY</c> above
+	/// <c>VAR_ONRIDE</c>); it must not be mid-run (<c>VAR_RUNNING</c> nought); and it must not already
+	/// hold a nominee. The guest itself must be queueing AND at the front - <c>FUN_00501290</c> is just
+	/// <c>state == InQueue &amp;&amp; mQueuePos == 0</c>.
+	/// </para>
+	/// <para>
+	/// <b>The fullness test is skipped for a car or water track</b>, which is the original's own arm:
+	/// those keep loading while running, so their capacity is not a gate. It reads the type from the item
+	/// rather than the object, which is why it is passed in - see <c>ItemDescriptionFile.TrackType</c>.
+	/// </para>
+	/// <para>
+	/// <b>Two arms are NOT reproduced because their fields have never been established.</b> The original
+	/// also gives up early when the object's <c>+0x68</c> is nought, and it will invite while running if
+	/// the object's <c>+0x33</c> carries bit 0 - a second flags byte beside the one at <c>+0x32</c> that
+	/// this project reads. Neither is guessed at.
+	/// </para>
+	/// </summary>
+	/// <returns>The guest invited, or nought if nobody was.</returns>
+	public int Invite( RideScript? script, ParkWorld.CatalogueObject ride, int trackType = 0 )
+	{
+		if ( script == null )
+			return 0;
+
+		// The script has not taken the last rider yet.
+		if ( script[AdmitVariable] != 0 )
+			return 0;
+
+		// Full - unless it is a track ride, which loads while it runs.
+		if ( script[CapacityVariable] <= script[OnRideVariable]
+			&& trackType is not (ItemDescriptionFile.CarTrack or ItemDescriptionFile.WaterTrack) )
+			return 0;
+
+		if ( script[RunningVariable] != 0 || _state.PersonBeingLoaded( ride.ThingId ) != 0 )
+			return 0;
+
+		var head = _state.FirstInQueue( ride.ThingId );
+
+		if ( head == 0 || !_guests.TryGetValue( head, out var peep ) )
+			return 0;
+
+		// FUN_00501290 - queueing, and at the front of it.
+		if ( peep.State != PeepState.InQueue || peep.QueuePos != 0 )
+			return 0;
+
+		// OnAdmittance, then the nomination - in the original's order.
+		peep.BeenAdmitted = true;
+		_state.NominateForLoading( ride.ThingId, head );
+
+		return head;
+	}
+
+	/// <summary>
+	/// Drops a nominee who has not set off to board - the tail of <c>FUN_004e1220</c>, whose own line is
+	/// "Object %d thinks person %d is be...".
+	///
+	/// <para>
+	/// <b>It is a watchdog, and the ride runs it on every turn it does not invite.</b> A guest who was
+	/// invited but is no longer heading for the ride - they gave up, or the park shut under them - would
+	/// otherwise hold the nomination for ever and stop anybody else being called forward.
+	/// </para>
+	/// </summary>
+	/// <returns>Whether a stale nomination was dropped.</returns>
+	public bool DropUnreadyNominee( ParkWorld.CatalogueObject ride )
+	{
+		var nominee = _state.PersonBeingLoaded( ride.ThingId );
+
+		if ( nominee == 0 )
+			return false;
+
+		if ( _guests.TryGetValue( nominee, out var peep ) && peep.State == PeepState.BeingAdmitted )
+			return false;
+
+		_state.NominateForLoading( ride.ThingId, 0 );
+
+		return true;
+	}
 }
