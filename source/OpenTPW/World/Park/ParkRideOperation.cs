@@ -114,4 +114,131 @@ public sealed class ParkRideOperation
 
 		return dropped;
 	}
+
+	/// <summary>The script variable a ride is handed its next rider in - <b>by name, never by index</b>.</summary>
+	/// <remarks>
+	/// The name matters rather than the number: a script numbers its variables in the order it declares
+	/// them, and a ride archive's companion scripts declare none of the common set - see
+	/// <see cref="RideVariables"/>, and <c>ParkRides</c>, which reaches the gate's variables the same way.
+	/// </remarks>
+	public const string AdmitVariable = "VAR_LETMEON";
+
+	/// <summary>And the one it reports whoever has come off in - see <see cref="Dismiss"/>.</summary>
+	public const string DismissVariable = "VAR_LETMEOFF";
+
+	/// <summary>
+	/// Hands the ride's script the guest it has nominated - the original's <c>FUN_004e0900</c>, whose own
+	/// line is "Object %d: AdmitPerson - person b...".
+	///
+	/// <para>
+	/// <b>It writes only into an EMPTY slot, and that is the whole handshake.</b> The script consumes
+	/// <c>VAR_LETMEON</c> and writes nought back over it (<c>TEST</c> / <c>BOUNCE</c> / <c>COPY x, 0</c>),
+	/// so an empty slot is how the script says it is ready for another rider. Writing into a full one
+	/// would drop whoever was already there, which is why the original refuses instead.
+	/// </para>
+	/// <para>
+	/// <b>One refusal of the original's is NOT reproduced:</b> it also gives up when the object's
+	/// <c>+0x68</c> is nought, and what that field is has not been established. The two ride states it
+	/// refuses on ARE reproduced - they are the same pair <see cref="ParkRideChoice"/> already names.
+	/// </para>
+	/// </summary>
+	/// <returns>Whether the guest was handed over.</returns>
+	public bool AdmitPerson( RideScript? script, ParkWorld.CatalogueObject ride, int personId )
+	{
+		if ( script == null || personId == 0 )
+			return false;
+
+		// Out of service: the original logs "Object %d, type %d: cannot admit..." and gives up.
+		if ( ride.State is ParkRideChoice.StateRefusedOne or ParkRideChoice.StateRefusedFour )
+			return false;
+
+		// "admitting wrong person" - a ride holds one nominee, and this must be them.
+		if ( _state.PersonBeingLoaded( ride.ThingId ) != personId )
+			return false;
+
+		// The slot has to be empty. Asked BEFORE the nomination is let go of, so a refusal leaves the
+		// ride still holding its nominee rather than losing them.
+		if ( script[AdmitVariable] != 0 )
+			return false;
+
+		_state.NominateForLoading( ride.ThingId, 0 );
+
+		return script.Set( AdmitVariable, personId );
+	}
+
+	/// <summary>
+	/// Finishes an admission the script has taken up - <c>FUN_004e0450</c> and the <c>FUN_00500870</c> it
+	/// calls.
+	///
+	/// <para>
+	/// <b>The trigger is the slot being EMPTY while somebody is still at the head of the queue</b>, which
+	/// is the original's "variable 0 differs from <c>mFirstInQ</c>" read the right way round: the script
+	/// has taken the rider and zeroed the slot, so the head can now be taken out of the queue. They must
+	/// be in <see cref="PeepState.EnteringRide"/> to be ready for it.
+	/// </para>
+	/// <para>
+	/// The original asserts the guest keeps no queue links afterwards ("Person not correctly removed from
+	/// queue") - <see cref="ParkState.LeaveQueue"/> clears both, and the tests check it.
+	/// </para>
+	/// </summary>
+	/// <returns>Whether a guest was taken out of the queue and put on the ride.</returns>
+	public bool CompleteAdmission( RideScript? script, int rideId, int tick, Random random )
+	{
+		ArgumentNullException.ThrowIfNull( random );
+
+		if ( script == null )
+			return false;
+
+		var head = _state.FirstInQueue( rideId );
+
+		if ( head == 0 || script[AdmitVariable] == head )
+			return false;
+
+		if ( !_guests.TryGetValue( head, out var peep ) || peep.State != PeepState.EnteringRide )
+			return false;
+
+		_state.LeaveQueue( rideId, head );
+		peep.SetState( PeepState.Riding, tick, random );
+
+		return true;
+	}
+
+	/// <summary>
+	/// Lets off whoever the script has reported - <c>FUN_004e1410</c>.
+	///
+	/// <para>
+	/// <b>This slot runs the other way.</b> The script WRITES it: <c>UNBOUNCE</c> and
+	/// <c>FORCEUNBOUNCE</c> store into their operand, so the script fills <c>VAR_LETMEOFF</c> with whoever
+	/// came off (or leaves nought when nobody did), and the engine clears it once they are on their way.
+	/// That is why a script skips its unbounce while the slot is still full - the ride has not been
+	/// collected from yet.
+	/// </para>
+	/// <para>
+	/// <b>What is NOT reproduced is where they go.</b> The original puts them at the ride's exit
+	/// (<c>FUN_004dedf0(1,..)</c>) and gives them a destination; nothing here reads an exit cell, so this
+	/// changes their state and clears the slot and leaves the walking to whoever builds that.
+	/// </para>
+	/// </summary>
+	/// <returns>Whether a guest was let off.</returns>
+	public bool Dismiss( RideScript? script, int rideId, int tick, Random random )
+	{
+		ArgumentNullException.ThrowIfNull( random );
+
+		if ( script == null )
+			return false;
+
+		var leaving = script[DismissVariable];
+
+		if ( leaving == 0 )
+			return false;
+
+		// The original asserts this rather than testing it - "trying to dismiss person %d" - so somebody
+		// who is not on the ride is a fault in the script, not a case to handle quietly.
+		if ( !_guests.TryGetValue( leaving, out var peep ) || peep.State != PeepState.Riding )
+			return false;
+
+		peep.SetState( PeepState.OnRide, tick, random );
+
+		return script.Set( DismissVariable, 0 );
+	}
 }

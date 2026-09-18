@@ -297,6 +297,31 @@ public sealed class ParkState
 	/// </remarks>
 	public void ClearQueueHead( int objectId ) => _queueHead.Remove( objectId );
 
+	// Who a ride has picked out to load next - the object's own mPersonBeingLoaded at +0x6c. It is
+	// per-object runtime state, which this class deliberately had none of; the remarks at the top said so
+	// and said why ("a layer built for a consumer that does not exist"). Admitting IS that consumer now.
+	private readonly Dictionary<int, int> _beingLoaded = [];
+
+	/// <summary>
+	/// The guest this ride has nominated to load next, or nought - <c>mPersonBeingLoaded</c>.
+	/// </summary>
+	/// <remarks>
+	/// <b>One at a time, which is the original's own shape rather than a simplification.</b>
+	/// <c>FUN_004e0aa0</c> is nothing but <c>person == object[+0x6c]</c>, so a ride holds exactly one
+	/// nominee; and <c>FUN_004e0900</c> asserts the person it is asked to admit is that one, printing
+	/// "admitting wrong person - check d..." when it is not.
+	/// </remarks>
+	public int PersonBeingLoaded( int objectId ) => _beingLoaded.GetValueOrDefault( objectId );
+
+	/// <summary>Nominates a guest to load next, or clears the nomination with nought.</summary>
+	public void NominateForLoading( int objectId, int personId )
+	{
+		if ( personId == 0 )
+			_beingLoaded.Remove( objectId );
+		else
+			_beingLoaded[objectId] = personId;
+	}
+
 	/// <summary>How many cells hold litter, which is what a park's cleanliness comes to.</summary>
 	public int LitteredCells
 	{
