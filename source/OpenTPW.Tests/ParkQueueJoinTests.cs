@@ -154,6 +154,62 @@ public class ParkQueueJoinTests
 		Assert.AreEqual( 9, park.NextInQueue( 7 ), "the sideshow's guest is not in the ride's queue" );
 	}
 
+	/// <summary>
+	/// Where each guest stands, counting from nought - the original's <c>FUN_004ddf50</c>, whose own
+	/// assertion reads "GetPositionInQueue: Could not fi[nd]".
+	/// </summary>
+	[TestMethod]
+	public void EveryGuestKnowsWhereTheyStandInTheQueue()
+	{
+		var park = Park();
+
+		park.JoinQueue( Ride, 7 );
+		park.JoinQueue( Ride, 8 );
+		park.JoinQueue( Ride, 9 );
+
+		Assert.AreEqual( 0, park.PositionInQueue( Ride, 7 ), "the head" );
+		Assert.AreEqual( 1, park.PositionInQueue( Ride, 8 ) );
+		Assert.AreEqual( 2, park.PositionInQueue( Ride, 9 ), "and the last" );
+
+		Assert.AreEqual( -1, park.PositionInQueue( Ride, 99 ), "somebody who is not in it at all" );
+		Assert.AreEqual( -1, park.PositionInQueue( 14, 7 ), "nor standing in another object's queue" );
+	}
+
+	/// <summary>
+	/// <b>The fact the whole step-up exists for: leaving a queue renumbers nobody.</b>
+	///
+	/// <para>
+	/// Neither this nor the original's <c>FUN_004ddd20</c> touches anybody's <c>mQueuePos</c> - both only
+	/// unlink and fix the head. So the place a guest was handed when they joined goes stale the moment
+	/// somebody in front of them boards, and <see cref="ParkState.PositionInQueue"/> is the only thing
+	/// that knows the truth. <b>Leaving that uncompared stopped every queue in the park dead after one
+	/// rider</b>, because <see cref="ParkRideOperation.Invite"/> only calls forward a head whose place is
+	/// nought.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void LeavingRenumbersNobodyWhichIsWhyThePlaceHasToBeRecomputed()
+	{
+		var park = Park();
+
+		var handed = new[]
+		{
+			park.JoinQueue( Ride, 7 ), park.JoinQueue( Ride, 8 ), park.JoinQueue( Ride, 9 )
+		};
+
+		CollectionAssert.AreEqual( new[] { 0, 1, 2 }, handed, "the places they joined with" );
+
+		Assert.IsTrue( park.LeaveQueue( Ride, 7 ), "the head is called forward and comes out" );
+
+		// What the links now say, which is what the guest's own turn has to read.
+		Assert.AreEqual( 0, park.PositionInQueue( Ride, 8 ), "8 is the head now" );
+		Assert.AreEqual( 1, park.PositionInQueue( Ride, 9 ) );
+
+		// And the anti-vacuity half: the number 8 was HANDED on joining is still 1, so a guest who
+		// trusted it would never be invited again.
+		Assert.AreEqual( 1, handed[1], "the place 8 was handed on joining has not moved" );
+	}
+
 	/// <summary>A queue nobody has joined is empty rather than throwing.</summary>
 	[TestMethod]
 	public void AQueueNobodyHasJoinedIsEmpty()

@@ -67,6 +67,19 @@ public sealed class Peep
 	public int QueuePos { get; set; }
 
 	/// <summary>
+	/// How much longer this guest will put up with standing out of place before they re-take their
+	/// position in a queue - <c>mQueueMoveDelay</c>, the four bytes at guest-block offset 490.
+	///
+	/// <para>
+	/// <b>It paces the shuffle rather than gating it.</b> <c>FUN_004ffff0</c> compares
+	/// <see cref="QueuePos"/> against the place the queue links actually give and, when the two differ,
+	/// re-takes it at once if this is nought <b>or</b> if they are more than
+	/// <see cref="PeepBehaviour.QueueDriftAllowed"/> out; otherwise it spends one of these and waits.
+	/// </para>
+	/// </summary>
+	public int QueueMoveDelay { get; set; }
+
+	/// <summary>
 	/// The speed term the walk reads to decide whether this guest is hurrying, which also picks a
 	/// different walk animation - the person's own <c>+0xc2</c>.
 	///
@@ -218,6 +231,7 @@ public sealed class Peep
 		Litter = saved.Litter;
 		MajorDest = saved.MajorDest;
 		QueuePos = saved.QueuePos;
+		QueueMoveDelay = saved.QueueMoveDelay;
 
 		// Both of these decide what a guest partway through being admitted does next, so they are seeded
 		// rather than started fresh - the shipped park has a guest saved waiting for the gate, and whether

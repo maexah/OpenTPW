@@ -454,6 +454,8 @@ public sealed class PeepBehaviour
 			//
 			// A guest who does not pass the three tests simply keeps queueing, which is what the original
 			// does on every turn they are not being called forward.
+			// <b>And the step-up below is what was missing, found by playing the park rather than by any
+			// test.</b> The boarding arm comes first because that is the original's order.
 			case PeepState.InQueue:
 				if ( peep.QueuePos == 0 && peep.BeenAdmitted && Chosen( peep ) is { } boarding
 					&& State.PersonBeingLoaded( boarding.ThingId ) == peep.ThingId )
@@ -462,7 +464,11 @@ public sealed class PeepBehaviour
 
 					SendTo( peep, walk, (boarding.EntryCellX, boarding.EntryCellY) );
 					peep.SetState( PeepState.BeingAdmitted, tick, _random );
+
+					break;
 				}
+
+				StepUpTheQueue( peep );
 
 				break;
 
@@ -1085,6 +1091,68 @@ public sealed class PeepBehaviour
 		}
 
 		peep.SetState( PeepState.SteppingUpQueue, tick, _random );
+	}
+
+	/// <summary>
+	/// How far out of place a guest will tolerate being before they re-take their position at once
+	/// rather than waiting out <see cref="Peep.QueueMoveDelay"/> - the <c>2</c> in <c>FUN_004ffff0</c>.
+	/// </summary>
+	public const int QueueDriftAllowed = 2;
+
+	/// <summary>
+	/// Keeps a queueing guest's recorded place in step with the place the queue actually gives them -
+	/// the middle arm of <c>FUN_004ffff0</c>, and <b>the fix for a park that died after one rider</b>.
+	///
+	/// <para>
+	/// <b>Nothing renumbers a queue when somebody leaves it, in the original or here.</b>
+	/// <see cref="ParkState.LeaveQueue"/> unlinks and fixes the head, exactly as <c>FUN_004ddd20</c>
+	/// does, and neither touches anybody's <c>mQueuePos</c>. The original copes by recomputing it from
+	/// the links every turn - <see cref="ParkState.PositionInQueue"/> - and this was the one arm of
+	/// <see cref="PeepState.InQueue"/> that was left out. The cost was total:
+	/// <see cref="ParkRideOperation.Invite"/> only calls forward a head whose place is nought, so once
+	/// the first rider boarded, the guest who became head still held the 1 they had joined with and no
+	/// further guest was ever invited. Three guests stood on one cell for two minutes of a measured run.
+	/// </para>
+	/// <para>
+	/// <b>The drift is compared in unsigned BYTE arithmetic, and that is not a wart to tidy.</b> The
+	/// original's field is a byte and it tests <c>2 &lt; mQueuePos - truePos</c> on it, so a guest whose
+	/// true place is FURTHER BACK than their recorded one wraps to a large number and re-takes it
+	/// immediately instead of waiting; signed arithmetic would have them sit out the delay instead.
+	/// </para>
+	/// <para>
+	/// <b>What is deliberately not here is the walk.</b> Having recomputed the place, the original hands
+	/// it to <c>FUN_00501160</c>, which turns it into a cell through <c>FUN_004de7e0</c> and sends the
+	/// guest there as <see cref="PeepState.SteppingUpQueue"/>. That needs the queue-path walk - one cell
+	/// per FOUR guests (<c>FUN_004de840</c>), or a virtual queue of at most four places for an object
+	/// with no queue-path flag (<c>FUN_004dec30</c>) - together with the sub-cell placement its own
+	/// direction byte decides. None of that is built, and <b>faking a destination would be worse than
+	/// leaving it</b>: when the original cannot route a guest to their new place it makes them abandon
+	/// the queue altogether. So the place is corrected and the guest stands still, which keeps the ride
+	/// loading while the shuffle stays honestly unbuilt.
+	/// </para>
+	/// </summary>
+	private void StepUpTheQueue( Peep peep )
+	{
+		if ( Chosen( peep ) is not { } queueing )
+			return;
+
+		var place = State.PositionInQueue( queueing.ThingId, peep.ThingId );
+
+		// Not in the queue at all is the original's "Problem with a queue - shouldn't..." arm, which
+		// gives up on it; a guest already in the right place has nothing to do.
+		if ( place < 0 || peep.QueuePos == place )
+			return;
+
+		var drift = (peep.QueuePos - place) & 0xff;
+
+		if ( peep.QueueMoveDelay != 0 && drift <= QueueDriftAllowed )
+		{
+			--peep.QueueMoveDelay;
+
+			return;
+		}
+
+		peep.QueuePos = place;
 	}
 
 	/// <summary>The object this guest set off for, or null if the park no longer has it.</summary>

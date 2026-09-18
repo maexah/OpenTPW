@@ -448,7 +448,7 @@ public sealed class ParkWorld
 		float Happiness, float Thirst, float Hunger, float Toilet, float Vomit, float Litter,
 		int MajorDest, int QueuePos, int PrankeryIndex,
 		int PaidAdmission = 0, int ParkOpeningWait = 0,
-		int QNext = 0, int QPrev = 0, int BeenAdmitted = 0 )
+		int QNext = 0, int QPrev = 0, int BeenAdmitted = 0, int QueueMoveDelay = 0 )
 	{
 		/// <summary>
 		/// The behaviour a guest returns to after a one-off animation. A new guest is constructed with
@@ -1561,7 +1561,12 @@ public sealed class ParkWorld
 			QPrev: ReadUInt16At( start + 488 ),         // mQPrev
 			// mBeenAdmitted, fourth in the block's alphabetical order and the flag a queueing guest is
 			// let onto a ride by - see the field table above, which puts it at 410 and closes on 533.
-			BeenAdmitted: ReadInt32At( start + 410 ) );
+			BeenAdmitted: ReadInt32At( start + 410 ),
+			// mQueueMoveDelay - four bytes sitting exactly between mQPrev at 488 and the mQueuePos byte
+			// at 494, which is what fixes them. This reader has NAMED the field in the table above since
+			// the block was decoded and never read it; the InQueue handler pauses on it before letting a
+			// guest re-take a place in a queue that has moved.
+			QueueMoveDelay: ReadInt32At( start + 490 ) );
 
 	// <b>+529 was called mIllness by this reader until 2026-09-17, and it cannot be.</b>
 	//

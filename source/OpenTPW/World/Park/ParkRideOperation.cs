@@ -250,12 +250,23 @@ public sealed class ParkRideOperation
 	/// tell that decode from a wrong one.
 	/// </para>
 	/// <para>
-	/// <b>One arm of the original is NOT reproduced, and it is about failure rather than success.</b> There,
-	/// setting the destination can fail - <c>FUN_004fa530</c> answers whether a route exists - and when it
-	/// does the guest is <i>not</i> moved on: it logs "SetDest on ride exit f[ailed]" and takes a fallback
-	/// instead. Reproducing that needs a route to have been attempted, so a call made without a
-	/// <paramref name="walk"/> changes the state as before and a call made with one plans the route but
-	/// does not yet gate the state on it.
+	/// <b>A guest is PUT DOWN at the exit and then aimed one cell PAST it, and this used to walk them to
+	/// the exit instead - which the map refuses.</b> <c>FUN_005014e0</c> reads the exit point, calls
+	/// <c>FUN_004fa930</c> to set the person's position outright, and only then sets a destination: the
+	/// neighbour of the exit cell in the direction that cell faces, flipped to the opposite when
+	/// <c>mExitPos</c> equals <c>mEntryPos</c> (which is true of ten of this park's eleven objects). Walking
+	/// a guest TO the exit cannot work and never did: <see cref="CellEdge"/> only opens a ride end along
+	/// the way it faces, so the route fails and the guest gives up where they stand. Alexah asked for a
+	/// test that the guest's position becomes the exit, and that test is what found it.
+	/// </para>
+	/// <para>
+	/// <b>The failure arm is deliberately NOT reproduced, and it is drastic rather than quiet.</b> When the
+	/// destination will not route the original refuses the dismissal and calls <c>FUN_004df150</c>, which
+	/// <i>closes the ride</i>: it clears <c>mCanLoad</c> and <c>mPersonBeingLoaded</c>, logs "Object %d:
+	/// Closing..." and sets the script's <c>VAR_CLOSED</c>. Nothing here writes either field, so building
+	/// half of that would leave a ride that shut itself over a routing failure and never reopened - a
+	/// worse fault than the one this fixes. A guest whose neighbour will not route is dismissed anyway and
+	/// drops to <see cref="PeepState.Deciding"/> standing on the exit, which is where they are.
 	/// </para>
 	/// </summary>
 	/// <param name="walkFor">
@@ -267,7 +278,7 @@ public sealed class ParkRideOperation
 	/// </param>
 	/// <returns>Whether a guest was let off.</returns>
 	public bool Dismiss( RideScript? script, ParkWorld.CatalogueObject ride, int tick, Random random,
-		Func<int, PeepWalk?>? walkFor = null )
+		Func<int, PeepWalk?>? walkFor = null, ParkWorld? park = null )
 	{
 		ArgumentNullException.ThrowIfNull( random );
 
@@ -287,13 +298,94 @@ public sealed class ParkRideOperation
 		// An object that declares no exit has nowhere to put them, which is every unplaced one - its
 		// mExitPos is the sentinel that unpacks to the corner of the map.
 		if ( ride.ExitPos != 0 && walkFor?.Invoke( leaving ) is { } walk )
-			PeepBehaviour.SendTo( peep, walk, (ride.ExitCellX, ride.ExitCellY) );
+			PutDownAtTheExit( peep, walk, ride, park );
 
 		Charge( peep, ride );
 
 		peep.SetState( PeepState.LeavingRide, tick, random );
 
 		return script.Set( DismissVariable, 0 );
+	}
+
+	/// <summary>
+	/// Puts a guest down on the ride's exit cell and aims them one cell beyond it - the first half of
+	/// <c>FUN_005014e0</c>, which is <c>FUN_004fa930</c> (place) followed by <c>FUN_004fa530</c> (aim).
+	///
+	/// <para>
+	/// <b>The placement is a teleport, and the original's is too.</b> <c>FUN_004fa930</c> writes the
+	/// position with zero velocity rather than setting a destination, because a guest on a ride is not
+	/// standing anywhere a route could start from. Doing it through the navigator and then re-planning is
+	/// what makes it stick: <see cref="PeepWalk"/> keeps two views of the position and writes the steering
+	/// one back at the end of every step, so a position set without re-seeding them would be silently
+	/// undone on the guest's next turn.
+	/// </para>
+	/// <para>
+	/// <b>The sub-cell part of the exit point is not reproduced.</b> <c>FUN_004dedf0</c> builds a
+	/// fixed-point position whose low byte comes from the item's own <c>.sam</c> - the descriptor's
+	/// <c>+0xdc</c> and <c>+0xe0</c>, which it validates with "Dodgy X exit point in SAM file" - and
+	/// nothing here reads those. The cell's centre is used instead, which puts a guest in the right cell
+	/// and up to half a cell from the exact spot.
+	/// </para>
+	/// <para>
+	/// <b>Without a park there is no direction to read</b>, so the guest is put down and left: the cell's
+	/// facing lives on the map, and a caller with no world is a test asking about the state change rather
+	/// than about the geography.
+	/// </para>
+	/// <para>
+	/// <b>The placement happens whatever is beyond the exit, and that is the original's behaviour rather
+	/// than a convenience here.</b> Alexah has watched it: in the original, a ride whose exit is not
+	/// connected to the rest of the park still <i>teleports</i> the guest onto the exit, and they then
+	/// stand on it with a <b>?</b> over their head. The decompilation agrees - <c>FUN_004fa930</c> is
+	/// called before the facing is so much as read - so the position is set first and unconditionally,
+	/// and only the aim can fail.
+	/// </para>
+	/// <para>
+	/// <b>What cannot be shown is the ? itself.</b> It is the stranded thought bubble, the same one
+	/// <c>FUN_004f9490</c> raises with "Peep %d: stranded at time %d", and this project has no thought
+	/// system at all - see <see cref="PeepBehaviour.SetRandomDest"/>, which records the same absence from
+	/// the other side. So a guest who cannot leave the exit stands there silently instead of asking.
+	/// </para>
+	/// </summary>
+	private static void PutDownAtTheExit( Peep peep, PeepWalk walk, ParkWorld.CatalogueObject ride,
+		ParkWorld? park )
+	{
+		peep.Navigator.Position = new FixedVector(
+			PeepNavigator.WaypointCentre( ride.ExitCellX ),
+			PeepNavigator.WaypointCentre( ride.ExitCellY ) );
+
+		if ( park == null )
+		{
+			// Re-plan anyway, so the two views are seeded from where they now are.
+			walk.PlanRoute();
+
+			return;
+		}
+
+		var exit = park.CellAt( ride.ExitCellX, ride.ExitCellY );
+
+		// mExitPos == mEntryPos is ten of this park's eleven objects, and for those the original turns
+		// the cell's facing round before stepping off it - FUN_004d8c00.
+		var facing = ride.ExitPos == ride.EntryPos ? CellEdge.Opposite( exit.Direction ) : exit.Direction;
+
+		if ( CellEdge.DirectionFor( facing ) is not { } towards )
+		{
+			walk.PlanRoute();
+
+			return;
+		}
+
+		var (nextX, nextY) = MapStep.Beyond( ride.ExitCellX, ride.ExitCellY, towards );
+
+		if ( !ParkState.OnMap( nextX, nextY ) || CellEdge.IsQueue( park.CellAt( nextX, nextY ).Type ) )
+		{
+			// The original refuses the dismissal here rather than aiming them into a queue - see the
+			// remarks on Dismiss for why the refusal itself is not reproduced.
+			walk.PlanRoute();
+
+			return;
+		}
+
+		PeepBehaviour.SendTo( peep, walk, (nextX, nextY) );
 	}
 
 	/// <summary>

@@ -117,6 +117,112 @@ public class ParkBoardingTests
 		Assert.IsTrue( peep.BeenAdmitted, "and this guest keeps their invitation" );
 	}
 
+	/// <summary>One park, one state, one behaviour - for the tests where a queue has to survive a turn.</summary>
+	private (ParkWorld World, ParkState State, PeepBehaviour Behaviour) Standing()
+	{
+		var world = Park();
+		var state = new ParkState( world );
+
+		return (world, state, new PeepBehaviour( world, new Random( 1 ), null,
+			() => ParkRides.GateIsOpen, state, new ParkItemCatalogue( "jungle", data ) ));
+	}
+
+	/// <summary>
+	/// <b>The guest who becomes head has their place corrected, which is what lets the ride keep
+	/// loading.</b>
+	///
+	/// <para>
+	/// Nothing renumbers a queue when somebody leaves it, here or in the original, so the new head still
+	/// carries the place they joined with - and <see cref="ParkRideOperation.Invite"/> only calls forward
+	/// a head whose place is nought. Until the middle arm of <c>FUN_004ffff0</c> was built, that meant
+	/// <b>exactly one guest could ever ride</b>: measured in a running park, one rode and the three
+	/// behind them stood on the same cell for the remaining two minutes.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheGuestWhoBecomesHeadHasTheirPlaceCorrected()
+	{
+		var (world, state, behaviour) = Standing();
+
+		var head = Queueing( 7, queuePos: state.JoinQueue( Ride, 7 ), admitted: false );
+		var second = Queueing( 8, queuePos: state.JoinQueue( Ride, 8 ), admitted: false );
+
+		Assert.AreEqual( 0, head.QueuePos, "the first to arrive is at the front" );
+		Assert.AreEqual( 1, second.QueuePos, "and the second joined behind them" );
+
+		// The head is taken onto the ride, exactly as CompleteAdmission does it.
+		Assert.IsTrue( state.LeaveQueue( Ride, 7 ), "the head comes out of the queue" );
+
+		var walk = new PeepWalk( second.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
+
+		behaviour.Step( second, walk, playing: null, tick: 40 );
+
+		Assert.AreEqual( 0, second.QueuePos,
+			"the new head's place is recomputed from the links, or they are refused for ever" );
+		Assert.AreEqual( PeepState.InQueue, second.State, "and they are still queueing" );
+	}
+
+	/// <summary>
+	/// A guest only one place out waits out <see cref="Peep.QueueMoveDelay"/> before re-taking it -
+	/// the <c>else</c> arm of the same comparison, which spends one of the delay instead.
+	/// </summary>
+	[TestMethod]
+	public void AGuestOnlyOnePlaceOutWaitsOutTheirMoveDelayFirst()
+	{
+		var (world, state, behaviour) = Standing();
+
+		state.JoinQueue( Ride, 7 );
+
+		var second = Queueing( 8, queuePos: state.JoinQueue( Ride, 8 ), admitted: false );
+		second.QueueMoveDelay = 3;
+
+		Assert.IsTrue( state.LeaveQueue( Ride, 7 ) );
+
+		var walk = new PeepWalk( second.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
+
+		behaviour.Step( second, walk, playing: null, tick: 40 );
+
+		Assert.AreEqual( 1, second.QueuePos, "one place out, so they wait rather than shuffle at once" );
+		Assert.AreEqual( 2, second.QueueMoveDelay, "and one turn of the delay is spent" );
+
+		// Two more turns spend the rest of it, and the third corrects them.
+		behaviour.Step( second, walk, playing: null, tick: 41 );
+		behaviour.Step( second, walk, playing: null, tick: 42 );
+
+		Assert.AreEqual( 0, second.QueueMoveDelay, "the delay is used up" );
+
+		behaviour.Step( second, walk, playing: null, tick: 43 );
+
+		Assert.AreEqual( 0, second.QueuePos, "and now they take their place" );
+	}
+
+	/// <summary>
+	/// <b>A guest whose place has moved BACKWARD re-takes it at once, delay or no delay</b> - the
+	/// original compares the drift in unsigned byte arithmetic, so a negative difference wraps past the
+	/// two it tolerates. Reproducing it signed would have them sit out the delay instead.
+	/// </summary>
+	[TestMethod]
+	public void AGuestWhosePlaceMovedBackwardDoesNotWait()
+	{
+		var (world, state, behaviour) = Standing();
+
+		state.JoinQueue( Ride, 7 );
+		state.JoinQueue( Ride, 8 );
+
+		// Joined third, but carrying a recorded place of nought - so their true place is FURTHER BACK
+		// than the one they hold, and QueuePos - place is negative.
+		var third = Queueing( 9, queuePos: 0, admitted: false );
+		state.JoinQueue( Ride, 9 );
+		third.QueueMoveDelay = 50;
+
+		var walk = new PeepWalk( third.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
+
+		behaviour.Step( third, walk, playing: null, tick: 40 );
+
+		Assert.AreEqual( 2, third.QueuePos, "they take their real place immediately" );
+		Assert.AreEqual( 50, third.QueueMoveDelay, "without spending any of the delay" );
+	}
+
 	/// <summary>
 	/// The flag is read from the save, and reading it has not disturbed its neighbours - <c>mCash</c> sits
 	/// four bytes after it and is pinned independently.

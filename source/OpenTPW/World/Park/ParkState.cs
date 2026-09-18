@@ -245,6 +245,43 @@ public sealed class ParkState
 	}
 
 	/// <summary>
+	/// Where a guest stands in an object's queue, counting from nought, or <b>-1</b> if they are not in
+	/// it at all - the original's <c>FUN_004ddf50</c>, whose own assertion reads "GetPositionInQueue:
+	/// Could not fi[nd]".
+	///
+	/// <para>
+	/// <b>It is walked rather than stored, and that is the whole point of it.</b> Nothing in the original
+	/// ever decrements anybody's <c>mQueuePos</c> when a guest leaves a queue - <c>FUN_004ddd20</c> only
+	/// unlinks <c>mQNext</c>/<c>mQPrev</c> and fixes the head - so a recorded place goes stale the moment
+	/// the queue moves, and <c>FUN_004ffff0</c> compares it against this on every turn a guest spends
+	/// queueing.
+	/// </para>
+	/// <para>
+	/// <b>Leaving that comparison unbuilt is what stopped every queue in the park dead after one rider,
+	/// and it took playing the game to see it.</b>
+	/// <see cref="ParkRideOperation.Invite"/> will only call forward a head whose <c>mQueuePos</c> is
+	/// nought; <see cref="PeepBehaviour"/> wrote the place once when a guest joined and never again, so
+	/// the guest who became head still carried the 1 they joined with and was refused for ever. Measured
+	/// in a running park: one guest rode, and the three behind them stood on the same cell for the whole
+	/// of the rest of the run.
+	/// </para>
+	/// </summary>
+	public int PositionInQueue( int objectId, int guestId )
+	{
+		var place = 0;
+
+		for ( var id = FirstInQueue( objectId ); id != 0 && place < LongestQueue; ++place )
+		{
+			if ( id == guestId )
+				return place;
+
+			id = NextInQueue( id );
+		}
+
+		return -1;
+	}
+
+	/// <summary>
 	/// Puts a guest at the back of a queue and hands back the place they took, counting from nought -
 	/// <c>FUN_004ddb90</c>, whose own line is "Object %d adding person %d to queue".
 	///

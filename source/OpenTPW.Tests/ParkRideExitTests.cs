@@ -127,13 +127,17 @@ public class ParkRideExitTests
 		Assert.IsTrue( new ParkRideOperation( park, new Dictionary<int, Peep> { [7] = peep } )
 			.Dismiss( script, ride, tick: 9, new Random( 1 ), _ => walk ), "let off" );
 
-		var (targetX, targetY) = peep.Navigator.Target.Cell;
+		// <b>The POSITION, not the target, and that changed on 2026-09-18.</b> This asserted that they
+		// were AIMED at the exit, which is what a guest stranded anywhere also looks like - and it was
+		// aiming at the wrong cell besides. FUN_005014e0 PUTS a guest down on the exit (FUN_004fa930)
+		// and then aims them one cell past it, so the exit is where they ARE.
+		var (atX, atY) = peep.Navigator.Position.Cell;
 
-		Assert.AreEqual( ExitX, targetX, "they are put down at the ride's exit" );
-		Assert.AreEqual( ExitY, targetY, "and the same down the map" );
+		Assert.AreEqual( ExitX, atX, "they are put down on the ride's exit" );
+		Assert.AreEqual( ExitY, atY, "and the same down the map" );
 
-		Assert.AreNotEqual( (EntryX, EntryY), (targetX, targetY),
-			"walking them back to the entry would look right on every other object in the park" );
+		Assert.AreNotEqual( (EntryX, EntryY), (atX, atY),
+			"putting them back at the entry would look right on every other object in the park" );
 
 		Assert.AreEqual( PeepState.LeavingRide, peep.State, "and they are leaving the ride" );
 	}
@@ -163,6 +167,68 @@ public class ParkRideExitTests
 	/// somewhere new and walking out of the assertion.
 	/// </para>
 	/// </summary>
+	/// <summary>
+	/// <b>A guest let off a ride ends up STANDING at its exit - their position moves, not just their
+	/// destination.</b>
+	///
+	/// <para>
+	/// <b>This is the assertion the rest of this file was missing.</b> Every other test here checks where
+	/// a dismissed guest is <i>aimed</i>, and being aimed somewhere is exactly what a guest stranded in an
+	/// unanswered state looks like: that is how <see cref="PeepState.LeavingRide"/> shipped with no case
+	/// at all and nothing failed. This one starts them on the ride, has the ride put them off, and
+	/// requires them to be standing on a different cell at the end of it.
+	/// </para>
+	/// <para>
+	/// The Belly Bounce is the only object in the park whose exit differs from its entry - (52,23) in,
+	/// (52,26) out, three cells apart on opposite sides - so it is also the only place where walking a
+	/// guest to the wrong one of the two would show at all.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void AGuestLetOffARideEndsUpStandingAtItsExit()
+	{
+		var world = Park();
+		var ride = world.Objects.Single( o => o.ThingId == Ride );
+		var park = new ParkState( world );
+
+		// On the ride, which is where a guest is when it lets them off: measured in a running park, a
+		// riding guest stands at (52.520, 23.443).
+		var peep = GuestAt( 7, PeepState.Riding, EntryX, EntryY );
+		var walk = new PeepWalk( peep.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
+
+		Assert.AreEqual( (EntryX, EntryY), walk.Position.Cell, "they start on the ride" );
+
+		var script = Script();
+		script.Set( ParkRideOperation.DismissVariable, peep.ThingId );
+
+		// The world is handed over so the real arm runs: without it there is no cell facing to read and
+		// the guest is put down and left, which is the fallback rather than the behaviour under test.
+		Assert.IsTrue( new ParkRideOperation( park, new Dictionary<int, Peep> { [7] = peep } )
+			.Dismiss( script, ride, tick: 1, new Random( 1 ), _ => walk, world ), "the ride lets them off" );
+
+		// <b>The moment that matters is the dismissal itself.</b> They are PUT on the exit there and then,
+		// and only afterwards walk off it - so asserting after the walk would be asserting about the cell
+		// beyond the exit instead.
+		Assert.AreEqual( (ExitX, ExitY), walk.Position.Cell,
+			$"the ride should have put them down on its exit, not left them at {walk.Position.Cell}" );
+
+		Assert.AreNotEqual( (EntryX, EntryY), walk.Position.Cell,
+			"and they should have MOVED there - being aimed somewhere is what a stranded guest looks like" );
+
+		Assert.AreEqual( PeepState.LeavingRide, peep.State, "which puts them on the way out" );
+
+		var behaviour = new PeepBehaviour( world, new Random( 1 ), null, () => ParkRides.GateIsOpen,
+			park, new ParkItemCatalogue( "jungle", data ) );
+
+		for ( var tick = 2; tick <= 400 && peep.State == PeepState.LeavingRide; ++tick )
+			behaviour.Step( peep, walk, playing: null, tick );
+
+		Assert.AreEqual( PeepState.Deciding, peep.State, "and then they think again" );
+
+		Assert.AreNotEqual( (EntryX, EntryY), walk.Position.Cell,
+			"and they are anywhere but back on the ride" );
+	}
+
 	/// <summary>A guest standing on a named cell, rather than at (0,0) where no route can begin.</summary>
 	private static ParkWorld.NavigatorState StandingOn( int cellX, int cellY ) => new(
 		X: PeepNavigator.WaypointCentre( cellX ), Y: PeepNavigator.WaypointCentre( cellY ),

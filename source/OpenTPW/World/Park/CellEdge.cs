@@ -128,6 +128,32 @@ public sealed class CellEdge
 	};
 
 	/// <summary>
+	/// Which side a bit stands for - the inverse of <see cref="BitFor"/>, and <b>null</b> for anything
+	/// that is not one of the four.
+	/// </summary>
+	/// <remarks>
+	/// The original's own table is wider than this one: <c>FUN_004d97e0</c> switches on 1, 2, 4, 8, 0x10,
+	/// 0x20, 0x40 and 0x80, so it answers four <i>diagonals</i> as well. Those are not answered here
+	/// because nothing in this project steps diagonally - <see cref="MapStep"/> has four directions - and
+	/// a null says so rather than a guess quietly picking a neighbour.
+	/// </remarks>
+	public static StepDirection? DirectionFor( int bit ) => bit switch
+	{
+		0x10 => StepDirection.North,
+		0x40 => StepDirection.East,
+		0x01 => StepDirection.South,
+		0x04 => StepDirection.West,
+		_ => null
+	};
+
+	/// <summary>
+	/// The opposite side - the original's <c>FUN_004d8c00</c>, which rotates the byte four bits one way or
+	/// the other. Over the four sides above that is exactly North to South and East to West.
+	/// </summary>
+	public static int Opposite( int bit )
+		=> bit == 0 ? 0 : bit < 0x10 ? (bit & 0xff) << 4 : (bit & 0xff) >> 4;
+
+	/// <summary>
 	/// Whether a track record hands the question to the one its parent names instead of answering it.
 	///
 	/// <para>
