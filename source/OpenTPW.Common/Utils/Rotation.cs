@@ -161,9 +161,14 @@ public partial struct Rotation : IEquatable<Rotation>
 		return new Rotation( -a.X, -a.Y, -a.Z, -a.W );
 	}
 
+	/// <summary>
+	/// Whether two unit rotations are the same, from their dot product: above 1 - 0.000001 counts as equal,
+	/// which is under about 0.16 degrees apart. The dot is signed, so q and -q, which are one rotation, are
+	/// not equal here, while <see cref="Angle"/> takes its size and puts them 0 apart.
+	/// </summary>
 	private static bool IsEqualUsingDot( float dot )
 	{
-		return dot > 1.0f - float.Epsilon;
+		return dot > 1.0f - 0.000001f;
 	}
 
 	public static bool operator ==( Rotation a, Rotation b )
