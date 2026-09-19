@@ -1388,7 +1388,7 @@ public sealed class RideScript
 				// Outside 1..8 the engine logs and carries on, which is a no-op with a complaint. The
 				// complaint is the half this reproduced as a silent counter.
 				++NotImplemented;
-				Unimplemented.Report( $"{Name}: BUMP op out of 1..8" );
+				Unimplemented.Report( $"{Name}: COAST op out of 1..8" );
 				break;
 		}
 	}
