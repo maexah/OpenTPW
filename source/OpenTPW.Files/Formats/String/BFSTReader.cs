@@ -7,7 +7,12 @@ internal sealed class BFSTReader : BaseFormat
 	private ExpandedMemoryStream memoryStream;
 	public byte[] buffer;
 
-	private static BFMUReader LookupTable = new BFMUReader( $"Language/English/MBToUni.dat" );
+	/// <summary>
+	/// The multibyte-to-Unicode table, opened on first use rather than when the type loads. A static
+	/// initialiser that reads through the global file system fails the whole type if nothing has
+	/// mounted one yet, from wherever the first .str happens to be read.
+	/// </summary>
+	private static readonly Lazy<BFMUReader> LookupTable = new( () => new BFMUReader( "Language/English/MBToUni.dat" ) );
 
 	public BFSTReader( string path )
 	{
@@ -105,7 +110,7 @@ internal sealed class BFSTReader : BaseFormat
 			for ( int j = 0; j < stringLength; j++ )
 			{
 				var mtuPos = memoryStream.ReadByte();
-				var readCharacter = LookupTable.GetCharacter( mtuPos );
+				var readCharacter = LookupTable.Value.GetCharacter( mtuPos );
 				str.Append( readCharacter );
 			}
 

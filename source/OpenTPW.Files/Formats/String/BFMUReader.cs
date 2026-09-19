@@ -93,12 +93,15 @@ public sealed class BFMUReader : BaseFormat
 
 	}
 
-	public char GetCharacter(int character)
+	/// <summary>The table, decoded once: it never changes, and a string asks for it once per character.</summary>
+	private List<char>? _characters;
+
+	public char GetCharacter( int character )
 	{
-		var array = CharacterArray();
-		
+		_characters ??= CharacterArray();
+
 		// Characters are offset by 0x01 in the BFMU!
-		return array[character - 0x01];
+		return _characters[character - 0x01];
 	}
 
 }
