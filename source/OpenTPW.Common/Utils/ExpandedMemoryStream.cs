@@ -32,7 +32,7 @@ public sealed class ExpandedMemoryStream : MemoryStream
 
 	public int ReadInt16( bool bigEndian = false )
 	{
-		return BitConverter.ToInt16( ReadBytes( 4, bigEndian ), 0 );
+		return BitConverter.ToInt16( ReadBytes( 2, bigEndian ), 0 );
 	}
 
 	public int ReadInt32( bool bigEndian = false )

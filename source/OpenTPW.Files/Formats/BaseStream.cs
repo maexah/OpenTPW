@@ -2,6 +2,17 @@
 
 namespace OpenTPW;
 
+/// <summary>
+/// <b>Nothing constructs this, and this code does not run.</b> It is an internal copy of
+/// <see cref="ExpandedMemoryStream"/>, the stream the readers use, and no other assembly can see it.
+///
+/// <para>
+/// Its <c>ReadInt16</c> takes four bytes and returns the low sixteen bits, where
+/// <see cref="ExpandedMemoryStream.ReadInt16"/> takes two, so a short read from it would land two bytes past
+/// the next field. Kept rather than deleted, as dead code is here; read it as a note, not a second stream to
+/// build on.
+/// </para>
+/// </summary>
 internal class BaseStream : MemoryStream
 {
 	public BaseStream( byte[] buffer ) : base( buffer ) { }

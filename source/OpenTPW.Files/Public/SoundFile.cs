@@ -60,8 +60,8 @@ public class SoundFile : BaseFormat
 	/// each rather than a word each. Across the whole game they only ever read 22,050 or 44,100
 	/// at 16 bits, and 36 or 37 for the type, which is what fixes the split.
 	///
-	/// The fields are pulled out with <see cref="BitConverter"/> rather than off the stream
-	/// because <see cref="ExpandedMemoryStream.ReadInt16"/> advances four bytes, not two.
+	/// The fields are pulled out with <see cref="BitConverter"/> at their offsets rather than read
+	/// off the stream in sequence.
 	/// </summary>
 	public MP2File GetFile( MemoryStream stream, int offset = 0, bool dataOnly = false )
 	{
