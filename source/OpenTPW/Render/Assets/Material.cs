@@ -194,22 +194,9 @@ public partial class Material : Asset
 		} );
 	}
 
-	private void ClearBoundResources()
-	{
-		return;
-
-		if ( _boundResources.Count > 0 )
-		{
-			_boundResources.Clear();
-		}
-	}
-
 	/// <summary>
 	/// Binds this material's uniform block. Called once per model per frame, so it is on the
-	/// hottest path in the renderer: the array literal it used to box the value into allocated
-	/// once per draw, and the deletion it queued ran <see cref="ClearBoundResources"/>, which
-	/// returns immediately and has done for as long as it has been in the tree. Together those
-	/// were a few hundred pointless allocations a frame.
+	/// hottest path in the renderer and allocates nothing per draw.
 	/// </summary>
 	public void Set<T>( string name, T obj ) where T : unmanaged
 	{
@@ -330,8 +317,6 @@ public partial class Material : Asset
 			_resourceSetsDirty = true;
 			_bindings++;
 		}
-
-		Render.ScheduleDelete( ClearBoundResources );
 	}
 
 	public void Set( string name, Texture texture )
@@ -353,8 +338,6 @@ public partial class Material : Asset
 			_resourceSetsDirty = true;
 			_bindings++;
 		}
-
-		Render.ScheduleDelete( ClearBoundResources );
 	}
 
 	internal ResourceLayout[] CreateResourceLayouts()
