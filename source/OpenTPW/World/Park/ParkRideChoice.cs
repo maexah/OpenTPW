@@ -37,9 +37,11 @@ public static class ParkRideChoice
 	public const int QueueRoomPerCell = 4;
 
 	/// <summary>
-	/// The two states that take an object out of service. <b>Named by their numbers, because what they
-	/// mean is not established</b> - the shipped park holds only 0 and 3, so neither value here occurs in
-	/// it and nothing about them can be checked against this save.
+	/// The two states the offer gate refuses by number: 1 is broken down and 4 is condemned, the values
+	/// <c>FUN_004e14e0</c> hands to SetState (docs/exe/ride-operation.md, "Where an object's state comes
+	/// from"). State 2, an upgrade waiting to be done, is refused through <c>CanLoad</c>, which SetState
+	/// clears; state 3 through <c>IsVisitable</c>, since only an object that is not visitable is given it.
+	/// The shipped park holds only 0 and 3, so neither value here occurs in it.
 	/// </summary>
 	public const int StateRefusedOne = 1;
 

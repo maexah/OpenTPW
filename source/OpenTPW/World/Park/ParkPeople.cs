@@ -1317,7 +1317,14 @@ public sealed class ParkPeople : Entity
 
 					break;
 
-				// Closing or broken: finish whoever was mid-admission, then let them off.
+				// State 3 is what the constructor gives every object whose item is not choosable, so nobody is
+				// ever offered it. FUN_004e0e00's jump table sends 3 straight to its return
+				// (docs/exe/ride-operation.md, "The second half"), and this does nothing either.
+				case 3:
+					break;
+
+				// Broken down (1), waiting for an upgrade (2) or condemned (4): finish whoever was
+				// mid-admission, then let them off.
 				case ParkRideChoice.StateRefusedOne:
 				case 2:
 				case ParkRideChoice.StateRefusedFour:

@@ -86,9 +86,25 @@ In order:
 
 1. **`FUN_004e1220()` — INVITE, unconditionally, first thing.**
 2. Read script var **7** (`VAR_BROKEN`). If nought, **`FUN_004e1410()` — DISMISS** — and return.
-3. Otherwise set BROKEN or CONDEMNED: log `"Object %d: Setting state BROKEN/CONDEMN…"`, call `FUN_00454550( modelSlotTable[ +0x20 ], 2 or 4 )`, then `FUN_004e0e60( 1 or 4 )` = SetState.
+3. Otherwise the wear at `+0x48`, truncated (`__ftol`), decides. Non-zero: log `"Object %d: Setting state BROKEN_DOWN"` (`0x0075c038`), `FUN_00454550( modelSlotTable[ +0x20 ], 2 )`, then `FUN_004e0e60( 1 )` = SetState. Nought: log `"Object %d: Setting state CONDEMNED"` (`0x0075c014`), `FUN_00454550( …, 4 )`, then `FUN_004e0e60( 4 )`.
 
 **So a healthy object's whole turn is: drop a stale queue head → maybe request a breakdown → Invite → Dismiss.** In the shipped Lost Kingdom park every VISITABLE object is state 0 and everything else is state 3, so that path is the live one.
+
+### Where an object's state comes from
+
+`FUN_004e0e60` (SetState) is the only store to `mState` at run time (`0x004e11b5`); the constructor and the save's serialiser are the others. Its nine call sites, by the value each writes:
+
+| State | Meaning | Written by |
+|---|---|---|
+| 0 | Operating | The constructor `FUN_004db090` for a choosable item (descriptor `+0x3c` `Info.IsChoosable`, which becomes flag byte `+0x32` bit `0x04`); every "open" path: `FUN_004de1f0`, `FUN_004df390`, the repair `FUN_004df8f0`, `FUN_004dfe30`, `FUN_004e0050(0)` |
+| 1 | Broken down | `FUN_004e14e0` only, step 3 above |
+| 2 | An upgrade requested, closed until done | `FUN_004e0050(1)` only, and only with bit `0x04` set (it logs `"Object %d: wants maintenance"` first). Left by `FUN_004e0050(0)` (`"Cancelling request for upgrade"`) or by the repair, which on state 2 raises the level at `+0x50`. |
+| 3 | Never offered | The constructor `FUN_004db090` only (`0x004db4fb`), for an item whose `IsChoosable` is nought |
+| 4 | Condemned | `FUN_004e14e0` only, step 3 above |
+
+SetState's own jump table (`0x004e11d0`): 0 and 3 store and do nothing else. 1, 2 and 4 each run `FUN_004e0450` (complete admission), log `"Object %d: Closing..."`, set `mCanLoad` (`+0x68`) and `+0x6c` to nought, write `VAR_RIDECLOSED` (var 6) = 1, call `FUN_00454550( slot, 1 )` and post an event; 4 also logs `"Ride has become CONDEMNED!!!"`. A value above 4 logs `"Unknown state in CObject::SetState"` and is stored anyway.
+
+The offer gate `FUN_004dd920` refuses 1 and 4 by number, 2 through `mCanLoad`, and 3 through bit `0x04`, which it tests first. **Not settled:** whether an "open" path can ever move a state-3 object to 0. The guard `FUN_004df290` tests neither 3 nor bit `0x04`, and the repair, `FUN_004e0050(0)` and three of `FUN_004df390`'s callers have no refusing guard at all: they log `"Opening non-openable ride!"` five times and open anyway.
 
 `Invite` itself completes a pending admission on one arm: `FUN_004e0450` has five callers, and one is **`FUN_004e1220` at `004e13fc`** — the `mCanLoad == 0` bail, which does `FUN_004e0450(); return;` rather than simply returning. The other four are three `FUN_004e0e60` (SetState) paths and the states-1/2/4 arm, all catch-ups while closing. That bail cannot fire in Lost Kingdom, where `mCanLoad` is 1 on all fourteen objects.
 
