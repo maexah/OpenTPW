@@ -1,6 +1,4 @@
-﻿using System.Reflection;
-
-namespace OpenTPW;
+﻿namespace OpenTPW;
 
 internal sealed partial class Refpack
 {
@@ -28,14 +26,12 @@ internal sealed partial class Refpack
 		// Therefore all memorystream operations have bigEndian set to true
 		var decompressedData = new List<byte>();
 
-		var commands = new List<IRefpackCommand>();
-		foreach ( var type in Assembly.GetExecutingAssembly().GetTypes() )
+		// The five commands, in their declaration order in RefpackCommands.cs. Their opcode ranges do
+		// not overlap, so the order is only for reading.
+		IRefpackCommand[] commands =
 		{
-			if ( type.GetInterfaces().Contains( typeof( IRefpackCommand ) ) )
-			{
-				commands.Add( Activator.CreateInstance( type ) as IRefpackCommand );
-			}
-		}
+			new FourByteCommand(), new ThreeByteCommand(), new TwoByteCommand(), new OneByteCommand(), new StopCommand()
+		};
 
 		var currentByte = stream.ReadBytes( 1, bigEndian: true );
 		while ( stream.Position < Data.Length )
