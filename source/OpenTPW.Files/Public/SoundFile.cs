@@ -26,7 +26,7 @@ public class SoundFile : BaseFormat
 		memoryStream.Dispose();
 	}
 
-	protected void ReadFromStream( Stream stream )
+	protected override void ReadFromStream( Stream stream )
 	{
 		// Set up read buffer
 		var tempStreamReader = new StreamReader( stream );
