@@ -91,7 +91,12 @@ Confirmed from the engine as well as the data: `FUN_00471860` indexes the table 
 
 - [ ] **Seen:** the park is permanently the save's 13 guests and 5 staff. Once they have ridden the one
       ride, nothing changes again, ever.
-- **>>> HALF DONE, 2026-09-20: A GUEST CAN NOW ARRIVE, BUT NOTHING MAKES ONE ARRIVE. <<<**
+- **>>> DONE, 2026-09-20: GUESTS ARRIVE BY THEMSELVES AND GO HOME BY THEMSELVES. <<<** A park left
+  alone runs `peeps 13 → 14 → 15 → 13 → 12 → 11` with nothing typed — seven arrivals about 18.6 s
+  apart and ten departures as the saved guests' day ran out. `ParkPeople.StepArrivals` is the manager
+  and `ParkPeople.Depart` the other half; `ExitLevel` is what sends them home, a countdown nothing had
+  ever read. **What is still missing is the vehicles** — see below.
+- **(superseded) HALF DONE: A GUEST CAN NOW ARRIVE, BUT NOTHING MAKES ONE ARRIVE.**
   `ParkPeople.Admit( cellX, cellY )` creates a guest who was never in the save and wires the five
   places that have to know — the simulation list, the by-id index, the walk, the sprite pool and the
   cell's occupancy list — then `ParkState.Admit()` counts them. Confirmed in a live park: `peeps`

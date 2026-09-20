@@ -333,10 +333,39 @@ public sealed class PeepBehaviour
 	/// <see cref="PeepState.InQueue"/>, <b>which is</b> - so for the queue the question is live rather
 	/// than hypothetical. This said neither was built.
 	/// </param>
+	/// <summary>
+	/// Whether a thing has hold of this guest - a queue they are in, or a ride that has them. The
+	/// original's own condition for refusing to delete somebody: <c>Leaving</c> sweeps the thing list
+	/// for one whose <c>+0x212</c> names this person and leaves them alone if it finds one. Removing
+	/// somebody a thing still names would leave the thing pointing at nobody.
+	/// </summary>
+	internal static bool HeldByAThing( PeepState state )
+		=> state is PeepState.InQueue or PeepState.SteppingUpQueue or PeepState.BeingAdmitted
+			or PeepState.EnteringRide or PeepState.Riding or PeepState.LeavingRide;
+
 	public void Step( Peep peep, PeepWalk walk, SpriteScript? playing, int tick )
 	{
 		ArgumentNullException.ThrowIfNull( peep );
 		ArgumentNullException.ThrowIfNull( walk );
+
+		// <b>Their day running out, which nothing has ever acted on.</b> ExitLevel counts down on every
+		// needs tick - once per guest's turn in four - and no code has ever read it, so no guest has
+		// had a reason of their own to go home. The park's four existing ways out all end the same way,
+		// walking to a bus stop and then heading for the exit, so this takes that same path rather than
+		// inventing a second one.
+		//
+		// Tested before the switch, because a day ending interrupts whatever they were doing. A guest
+		// a thing is holding is left alone, for the reason Leaving is.
+		if ( peep.ExitLevel <= 0
+			&& peep.State is not (PeepState.HeadingForExit or PeepState.Leaving)
+			&& !HeldByAThing( peep.State )
+			&& Admission is { } goingHome )
+		{
+			SendTo( peep, walk, EitherOf( goingHome.BusStopA, goingHome.BusStopB ) );
+			peep.SetState( PeepState.HeadingForExit, tick, _random );
+
+			return;
+		}
 
 		switch ( peep.State )
 		{
@@ -655,6 +684,12 @@ public sealed class PeepBehaviour
 
 				break;
 
+			// Their day is done and nothing is holding them - ParkPeople.Depart takes them out of the
+			// park on the next sweep. It is terminal rather than a no-op: this class owns what a guest
+			// wants and never owns the list they are in, so the removal belongs to whoever does.
+			case PeepState.Leaving:
+				break;
+
 			// <b>The five states nothing in this tree SETS, grouped so that each is answered and each says
 			// what it waits on.</b> A case that breaks looks exactly like a missing case on screen - the
 			// guest stands still either way - so the difference has to be written down, and
@@ -667,10 +702,6 @@ public sealed class PeepBehaviour
 			// GoingToMinorDestination (9) walks to a shop or a toilet and, on arrival, runs THAT THING'S
 			// script - FUN_004fff20 hands the thing's +0x24 to the script runtime. Walking a guest there
 			// without running it would be a guest queueing at a drinks machine that never serves them.
-			//
-			// Leaving (17) deletes the guest unless some thing is holding them - it sweeps the thing list
-			// for one whose +0x212 names this person. Nothing here removes a guest from a park, so entering
-			// this state would strand them rather than end their day.
 			//
 			// PickingACellOutside (19) and AtTheBusStop (21) walk to cells from FUN_004d8650, and WHICH
 			// balance-file pair that getter returns is NOT YET PROVEN. The +1 among its four candidates
@@ -687,7 +718,6 @@ public sealed class PeepBehaviour
 			// unanswered on the unproven cell pair ALONE, and answering that would now be enough.
 			case PeepState.PlayingSpotAnimation:
 			case PeepState.GoingToMinorDestination:
-			case PeepState.Leaving:
 			case PeepState.PickingACellOutside:
 			case PeepState.AtTheBusStop:
 				break;

@@ -162,6 +162,13 @@ public sealed class ParkPeople : Entity
 
 		_nextSpriteSlot = 1 + (park?.Sprites.Count > 0 ? park.Sprites.Max( sprite => sprite.Slot ) : 0);
 
+		// <b>The arrival timer starts now, not at nought.</b> Left at nought the first load is due the
+		// instant the park is ticked, because the clock counts from the program starting rather than
+		// from this park opening - so a park would get a busload before anybody could look at it. The
+		// original resets the same mark (FUN_0041a960) every time a load finishes, and this is the same
+		// reset for the load that has not happened yet.
+		_arrivalMark = GameClock.Ticks;
+
 		// What the park charges is on its economy thing and what a guest will put up with is in the
 		// balance file, so it takes both - and neither on its own is enough to price the gate.
 		var admission = park?.Economy is { } money && balance != null
@@ -374,6 +381,127 @@ public sealed class ParkPeople : Entity
 		return thingId;
 	}
 
+	/// <summary>The world state in which nobody arrives at all - <c>FUN_004cf5b0</c>'s first test.</summary>
+	private const int NoArrivalsWorldState = 4;
+
+	/// <summary>
+	/// The most people the original will let a park hold offline, from the cap in <c>FUN_004cf5b0</c>
+	/// that logs "Capping the number of people in o...". Online it is 500 instead.
+	/// </summary>
+	public const int MostPeopleInAPark = 0x5dc;
+
+	// How many of this load are still to be dropped, which vehicle is bringing them, and the tick the
+	// last load finished on. All nought until the first is due.
+	private int _arrivalsRemaining;
+	private int _arrivalVehicle;
+	private int _arrivalMark;
+
+	/// <summary>
+	/// Which of the three vehicles brings a crowd this big. <c>FUN_004cf3e0</c> takes the first for a
+	/// headcount under <c>0x24</c> and otherwise <c>(0x3c &lt; count) + 2</c>, so the second up to 60 and
+	/// the third beyond - and the save's own <c>mArrivalVehicle_Size1..3</c> naming says the same.
+	/// </summary>
+	internal static int VehicleFor( int people )
+		=> people < 36 ? 1 : people > 60 ? 3 : 2;
+
+	/// <summary>
+	/// One turn of the arrival manager - <c>FUN_004cf3e0</c>. It waits out a period, decides how many
+	/// are coming and on what, and then drops <b>one guest per thing tick</b> until that load is spent.
+	///
+	/// <para>
+	/// <b>The headcount is a deviation and this is the whole of it.</b> The original sizes a load from
+	/// a park-attractiveness score summed over the rides (<c>FUN_004c8240</c>: per ride a capacity, a
+	/// duration divided down, and a three-entry table indexed off it), divided by
+	/// <c>Arrival.PointsPerVisitor</c> and floored at <c>Arrival.MinPeople</c>. That score reads four
+	/// ride fields this project has not named, so what is reproduced here is the floor alone - the
+	/// smallest load the original would ever send. Everything else about the cycle is the original's:
+	/// the period, the world-state refusal, the cap, the one-a-tick drip and the choice of vehicle.
+	/// </para>
+	/// </summary>
+	private void StepArrivals( int thingTick )
+	{
+		if ( _blocked == null || _behaviour.Park is not { } park )
+			return;
+
+		if ( park.WorldState == NoArrivalsWorldState )
+			return;
+
+		if ( _arrivalsRemaining > 0 )
+		{
+			var useA = (thingTick & 1) == 0;
+			var stopX = 42;
+			var stopY = 5;
+
+			if ( _behaviour.Admission is { } admission )
+			{
+				stopX = useA ? admission.BusStopA.X : admission.BusStopB.X;
+				stopY = useA ? admission.BusStopA.Y : admission.BusStopB.Y;
+			}
+
+			// A stop that will not take one ends the load rather than retrying it for ever.
+			if ( Admit( stopX, stopY ) == 0 )
+				_arrivalsRemaining = 0;
+			else
+				--_arrivalsRemaining;
+
+			if ( _arrivalsRemaining == 0 )
+				_arrivalMark = GameClock.Ticks;
+
+			return;
+		}
+
+		// The engine's own timer: the game tick shifted down two, against Arrival.TimeBetweenArrivals.
+		var period = _balance?.Int( "Arrival.TimeBetweenArrivals", 150 ) ?? 150;
+
+		if ( (GameClock.Ticks >> 2) - (_arrivalMark >> 2) < period )
+			return;
+
+		if ( _peeps.Count >= MostPeopleInAPark )
+			return;
+
+		_arrivalsRemaining = Math.Max( 1, _balance?.Int( "Arrival.MinPeople", 1 ) ?? 1 );
+		_arrivalVehicle = VehicleFor( _arrivalsRemaining );
+
+		Log.Info( $"People: {_arrivalsRemaining} arriving, vehicle {_arrivalVehicle}" );
+	}
+
+	/// <summary>
+	/// Takes a guest out of the park - the other half of <see cref="Admit"/>, and the thing whose
+	/// absence kept <see cref="PeepState.Leaving"/> unanswered. Answers whether one went.
+	///
+	/// <para>
+	/// <b>Every list <see cref="Admit"/> added them to has to let go, and one of them is not this
+	/// class's.</b> <see cref="ParkState.Forget"/> is what takes them off the map: leaving only the
+	/// cell's own chain unlinked would keep their id naming a cell they are no longer on.
+	/// </para>
+	/// <para>
+	/// <b>A guest a thing is holding stays.</b> That is the original's own refusal rather than caution
+	/// here - see <see cref="PeepBehaviour.HeldByAThing"/> - and without it a ride or a queue would go
+	/// on naming somebody who no longer exists.
+	/// </para>
+	/// </summary>
+	internal bool Depart( int thingId )
+	{
+		if ( !_byId.TryGetValue( thingId, out var peep ) )
+			return false;
+
+		if ( PeepBehaviour.HeldByAThing( peep.State ) )
+			return false;
+
+		_peeps.Remove( peep );
+		_byId.Remove( thingId );
+		_walks.Remove( thingId );
+		_sprites.Remove( thingId );
+
+		_behaviour.State.Forget( thingId );
+
+		ParkGuestSprites.Current?.Remove( thingId );
+
+		Log.Info( $"People: guest {thingId} went home - {_peeps.Count} guests now" );
+
+		return true;
+	}
+
 	/// <summary>
 	/// Every guest the save named, as a running copy. Staff are left out of <i>this</i> list because they
 	/// are a different kind with a block and a behaviour of their own - both of which are now read and
@@ -566,6 +694,27 @@ public sealed class ParkPeople : Entity
 					member.NextInterval = 0;
 				}
 			}
+
+			// Anybody who has walked out of the park goes home, taken out here rather than inside the
+			// loop above because removing from a list while it is being walked would throw - and
+			// walked backwards so that removing one does not skip the next. PeepBehaviour puts them
+			// into these states and deliberately does not act on either: it owns what a guest wants,
+			// never the list they are in.
+			//
+			// <b>The deviation is here rather than in the transition that reaches it.</b> The original
+			// walks a leaver HeadingForExit -> PickingACellOutside (19) -> AtTheBusStop (21) and
+			// deletes them at Leaving (17); 19 and 21 both take their cells from FUN_004d8650, whose
+			// balance-file pair is unproven, so neither can be built and a guest reaching 19 would
+			// stand there for ever. So 19 is treated as the end of the walk rather than the middle of
+			// it. Rerouting HeadingForExit itself was tried first and was worse: it changed a
+			// transition the original really makes, and three tests that pin it said so.
+			for ( var at = _peeps.Count - 1; at >= 0; --at )
+			{
+				if ( _peeps[at].State is PeepState.PickingACellOutside or PeepState.Leaving )
+					Depart( _peeps[at].ThingId );
+			}
+
+			StepArrivals( thingTick );
 
 			TakeTheRidesTurns( thingTick );
 		}

@@ -343,6 +343,28 @@ public sealed class ParkState
 		_cellOf[thingId] = cell;
 	}
 
+	/// <summary>
+	/// Takes a thing off the map entirely - a guest who has gone home, which is the only thing that
+	/// leaves a park so far.
+	///
+	/// <para>
+	/// <b><see cref="LeaveCell"/> is not enough on its own.</b> It unlinks the cell's own chain but
+	/// leaves <see cref="_cellOf"/> naming a cell the thing is no longer on, and that entry is what
+	/// <see cref="StandOn"/> consults to decide what to undo - so a thing id handed out again later
+	/// would evict whoever is standing where its previous owner used to be. Nothing reuses an id today,
+	/// which is exactly why this would have gone unnoticed.
+	/// </para>
+	/// </summary>
+	public void Forget( int thingId )
+	{
+		if ( thingId == 0 || !_cellOf.TryGetValue( thingId, out var cell ) )
+			return;
+
+		LeaveCell( cell % ParkWorld.MapSize, cell / ParkWorld.MapSize, thingId );
+
+		_cellOf.Remove( thingId );
+	}
+
 	/// <summary>The thing standing behind this one on the same cell, or nought - the original's thing <c>+10</c>.</summary>
 	public int NextOnCell( int thingId ) => _onCellNext.GetValueOrDefault( thingId );
 

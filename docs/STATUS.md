@@ -47,6 +47,31 @@ Take counts fresh; these go stale within a day.
 
 ## Recent
 
+**2026-09-20 — the guest loop closes: they arrive by themselves, and they go home.** A park left alone
+now runs `peeps 13 → 14 → 15 → 13 → 12 → 11` without anything typed — seven arrivals and ten
+departures over two and a half minutes.
+
+`ParkPeople.StepArrivals` is the manager (`FUN_004cf3e0`): it waits out `Arrival.TimeBetweenArrivals`,
+picks a vehicle by how big the crowd is, and then drops **one guest per thing tick** until the load is
+spent. The period is in quarter-ticks, so 150 is 600 of the 31 ms ticks — **18.6 s predicted, 18.9 and
+18.8 measured**, which is the clearest evidence yet that it is decoded rather than tuned.
+
+Departures are `ParkPeople.Depart`, triggered by `ExitLevel` running out — a countdown that had been
+ticking since the save was first read with **nothing anywhere reading it**. It reverses everything
+`Admit` wires, including `ParkState.Forget`, which is new: `LeaveCell` unlinks a cell's own chain but
+leaves `_cellOf` naming a cell the thing is no longer on, and that entry decides what a later `StandOn`
+undoes. A guest a ride or a queue is holding is refused, which is the original's own condition.
+
+**The deviation is in what an unbuildable state means, not in a transition that works.** A leaver walks
+`HeadingForExit → PickingACellOutside (19) → AtTheBusStop (21) → Leaving (17)`, and 19 and 21 both read
+a balance-file cell pair that is still unproven. Rerouting `HeadingForExit` was tried first and three
+tests that pin that transition said no — correctly. So 19 is treated as the end of the walk instead,
+which leaves every tested transition untouched.
+
+**Not done: the ferry and the seaplane still do not move.** They are stood and they have ids, but
+scripts are bound by walking the save's object list, and the save names neither — so nothing drives
+them. The vehicle a crowd's size selects is computed and currently discarded.
+
 **2026-09-20 — a guest who was never in the save arrives and walks to the gate.** `ParkPeople.Admit`
 makes one: a thing id above everything the file used, a `GuestState` whose cash comes from
 `PeepTypes[x].StartingCash` and whose exit level comes from `PeepInfo.ExitLevel`, and a navigator at

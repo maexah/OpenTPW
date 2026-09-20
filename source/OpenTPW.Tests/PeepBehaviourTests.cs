@@ -393,7 +393,15 @@ public class PeepBehaviourTests
 				people.Update();
 			}
 
-			var arrived = people.Peeps.Where( peep => !Peep.IsAWalkingState( peep.State ) ).ToArray();
+			// The save's own guests, not everybody in the park. A park ticked this long now gains an
+			// arrival - 1120 ticks against a period of 600 - and this test is about the thirteen the
+			// file named, so it says so rather than counting whoever happens to be standing about.
+			var saved = world.People.Select( person => person.ThingId ).ToHashSet();
+
+			var arrived = people.Peeps
+				.Where( peep => saved.Contains( peep.ThingId ) )
+				.Where( peep => !Peep.IsAWalkingState( peep.State ) )
+				.ToArray();
 
 			Assert.AreEqual( 13, arrived.Length, "every guest in this park ends up somewhere that stands" );
 
@@ -622,8 +630,16 @@ public class PeepBehaviourTests
 			Assert.AreEqual( PeepState.WaitingForOpening, guests[33].State,
 				"thing 33 is waiting for a gate nothing here can open" );
 
-			Assert.AreEqual( 7, people.Visitors,
-				"the seven who came through the gate should have been counted as visitors" );
+			// <b>Seven through the gate, and one who arrived while this was running.</b> The eighth is
+			// not a guest of the save's: the park now brings people in by itself, one load every
+			// Arrival.TimeBetweenArrivals - 150 quarter-ticks, so 600 of the 31ms ticks - and this loop
+			// runs 1120 of them, which fits exactly one. A second would need 1200.
+			//
+			// Counted rather than filtered because the count is the point: admitting somebody at the
+			// gate and admitting somebody off a bus are the same event to the park, and ParkState.Admit
+			// is the one place either is recorded.
+			Assert.AreEqual( 8, people.Visitors,
+				"seven came through the gate, and one arrived during the run" );
 		}
 		finally
 		{

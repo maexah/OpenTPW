@@ -448,6 +448,32 @@ public static class DebugConsole
 
 				break;
 
+			// Sends one guest home, which is the other half of `arrive`. Driven by hand for the same
+			// reason: a guest's own day takes about two minutes of park time to run down, and watching
+			// that is a poor way to find out whether the removal works.
+			//
+			// With no id it takes the first guest no thing is holding, because a guest a ride or a
+			// queue has is refused - see ParkPeople.Depart.
+			case "depart":
+				if ( ParkPeople.Current is not { } departures )
+				{
+					Reply( "depart: none - a park has to be loaded" );
+					break;
+				}
+
+				var asked = (int)Argument( 1, 0 );
+
+				var leaving = asked != 0
+					? asked
+					: departures.Peeps.FirstOrDefault(
+						peep => !PeepBehaviour.HeldByAThing( peep.State ) )?.ThingId ?? 0;
+
+				Reply( leaving != 0 && departures.Depart( leaving )
+					? $"depart: guest {leaving} went home"
+					: "depart: nobody could go" );
+
+				break;
+
 			// What this session has reached and not built. Each gap announces itself once on the console
 			// when it is first reached and is counted after that, so this is how to ask what a whole run
 			// hit without scrolling back through it - see Unimplemented.

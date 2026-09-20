@@ -266,10 +266,22 @@ public sealed class ParkFixedItems : Entity
 				_models.Add( model );
 				_modelNames.Add( item );
 
-				// And into the one registry this park sweeps, under the thing id the save's own header gives
-				// it. Nought means the theme ships no park to name one, which is not a failure: the item still
-				// stands over its entrance, it simply has nothing driving it.
+				// And into the one registry this park sweeps, under the thing id the save's own header
+				// gives it.
 				var thing = world == null ? 0 : thingOf( world );
+
+				// <b>A vehicle the save does not name is given an id here and stood anyway.</b> The save
+				// records a vehicle only once a crowd of that size has arrived, because the engine makes
+				// the thing the first time it needs one (FUN_0051a2f0) rather than shipping it - so Lost
+				// Kingdom names a bus and neither a ferry nor a seaplane. Without an id nothing binds
+				// their scripts and they cannot move, which is exactly what left those two parked.
+				//
+				// The id counts DOWN from the top of the ushort the save keeps thing ids in, because
+				// ParkPeople.Admit hands arriving guests ids UP from one past the highest the file used.
+				// Two allocators sharing one numbering would eventually collide; these cannot meet. It is
+				// derived from the row rather than counted, so a vehicle keeps the same id every load.
+				if ( thing == 0 && item is "bus" or "ferry" or "seaplane" )
+					thing = ushort.MaxValue - Array.FindIndex( Items, row => row.Name == item );
 
 				if ( thing != 0 )
 					objects?.Stand( thing, model, animations );

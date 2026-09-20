@@ -31,6 +31,31 @@ public class ParkPeopleTests
 	}
 
 	/// <summary>
+	/// Which vehicle brings a crowd, which the original decides by how many are coming rather than at
+	/// random - <c>FUN_004cf3e0</c> takes the first under <c>0x24</c> and otherwise
+	/// <c>(0x3c &lt; count) + 2</c>. The save agrees from the other side, naming its three slots
+	/// <c>mArrivalVehicle_Size1..3</c>.
+	///
+	/// <para>
+	/// The boundaries are the point of this rather than the middles: 35 and 36 sit either side of the
+	/// first, and 60 and 61 either side of the second, so an off-by-one in either comparison shows up
+	/// here rather than in a park that quietly never sends a ferry.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void WhichVehicleComesIsDecidedByHowManyAreArriving()
+	{
+		Assert.AreEqual( 1, ParkPeople.VehicleFor( 1 ), "one person takes the bus" );
+		Assert.AreEqual( 1, ParkPeople.VehicleFor( 35 ), "and so do thirty-five" );
+
+		Assert.AreEqual( 2, ParkPeople.VehicleFor( 36 ), "thirty-six is the second vehicle" );
+		Assert.AreEqual( 2, ParkPeople.VehicleFor( 60 ), "and sixty is still the second" );
+
+		Assert.AreEqual( 3, ParkPeople.VehicleFor( 61 ), "sixty-one takes the third" );
+		Assert.AreEqual( 3, ParkPeople.VehicleFor( 500 ), "and so does a full load" );
+	}
+
+	/// <summary>
 	/// Somebody who was never in the save. <see cref="ParkPeople.Admit"/> is what an arrival is, and what
 	/// this is really testing is the wiring rather than the guest: several separate structures have to
 	/// learn about them, and each one fails quietly, and differently, when it does not. A guest missing

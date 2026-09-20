@@ -306,6 +306,32 @@ public sealed class ParkGuestSprites : ModelEntity
 	}
 
 	/// <summary>
+	/// Stops drawing somebody who has gone home. Answers whether there was one to stop drawing.
+	///
+	/// <para>
+	/// A crowd that shrinks needs no more care than one that grows: the draw pass counts what it wrote
+	/// this frame and collapses every quad between that and what it wrote last, so the departed one's
+	/// triangles are folded to nothing rather than left hanging. <see cref="Build"/> is still re-run,
+	/// because the vertex array is sized from the crowd and leaving it long would waste an upload's
+	/// worth of it every frame.
+	/// </para>
+	/// </summary>
+	internal bool Remove( int thingId )
+	{
+		var at = _people.FindIndex( entry => entry.Person.ThingId == thingId );
+
+		if ( at < 0 )
+			return false;
+
+		_people.RemoveAt( at );
+
+		if ( _atlas != null )
+			Build();
+
+		return true;
+	}
+
+	/// <summary>
 	/// A quad per sprite, sized to the crowd and rewritten each frame - the arrangement
 	/// <see cref="WeatherSprites"/> uses, and for the same reason: there is no instancing here, so a
 	/// crowd has to be one mesh.
