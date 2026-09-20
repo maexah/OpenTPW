@@ -1,6 +1,8 @@
 # Status
 
-Last updated: 2026-09-20 on branch `alexah/94-every-state-answered`, tip `88cd6de`.
+Last updated: 2026-09-20 on branch `alexah/94-every-state-answered`, tip `a26e51e` — **33 commits
+ahead of origin's `fe6964e`, none of them pushed.** This line necessarily lags by the commit that
+writes it, so confirm against the server rather than trusting the sha.
 
 The tip is the newest `alexah/N` branch and has everything. Confirm with
 `git branch -r --sort=-committerdate | head -3`.
