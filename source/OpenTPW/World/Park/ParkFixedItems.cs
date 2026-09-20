@@ -133,10 +133,20 @@ public sealed class ParkFixedItems : Entity
 		("gates", true, world => world.ParkGates),
 		("lights", false, world => world.TrafficLights),
 
-		// The bus, which is a vehicle rather than scenery - see the remarks on this class. It stands at
-		// its spawn off the map and does not move yet; what this row buys is that its script is BOUND,
-		// which is the thing that had never been tested.
-		("bus", false, world => ThingByCatalogue( world, BusCatalogueId ))
+		// The three vehicles, which are not scenery - see the remarks on this class.
+		//
+		// ONLY THE BUS MOVES, and that is the shipped park's doing rather than a gap here: Lost Kingdom
+		// names things for catalogue 1600, 1601 and 1603 and for nothing else, so ThingByCatalogue
+		// answers nought for the ferry and the seaplane, no script is bound to them, and they stand at
+		// their spawns. Measured, not assumed: across two polls of a live park the bus went
+		// (647.4, -67.8) -> (510.5, 65.5) while the ferry held at (899.5, -176.0, -10.0) and the
+		// seaplane at (-2.2, 174.5, 88.8), both exactly their rest pose.
+		//
+		// They are loaded anyway because their routes and their progress scalars read correctly, so
+		// whatever ends up driving them needs no more of this class - see docs/PLAYER-GAPS.md.
+		("bus", false, world => ThingByCatalogue( world, BusCatalogueId )),
+		("ferry", false, world => ThingByCatalogue( world, FerryCatalogueId )),
+		("seaplane", false, world => ThingByCatalogue( world, SeaplaneCatalogueId ))
 	];
 
 	/// <summary>
@@ -144,6 +154,10 @@ public sealed class ParkFixedItems : Entity
 	/// 1600 Bus, 1601 Gates, 1602 Seaplane, 1603 Lights, 1604 Ferry, 1605 End.
 	/// </summary>
 	private const int BusCatalogueId = 1600;
+
+	private const int SeaplaneCatalogueId = 1602;
+
+	private const int FerryCatalogueId = 1604;
 
 	/// <summary>
 	/// The id of the thing this park holds for a catalogue number, or nought where it holds none.
