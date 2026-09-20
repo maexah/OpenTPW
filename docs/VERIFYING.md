@@ -81,6 +81,22 @@ The ones that have bitten more than once.
 - **85** — Before filtering a census, print the DISTINCT values of the field you are filtering on and count
   the rows dropped. Never write "never observed" without the sampling interval beside it; where the engine
   offers pause/step, use it, so "I did not see it" becomes something that can be false.
+- **86** — **A pause that stops the world may stop the thing you are measuring**, and rule 85's advice to
+  use it needs this beside it. OpenTPW's debug `pause` sets `Time.Paused`, and `Time.Delta` then reads
+  **nought** — so anything driven by it, an animation or an ease or a timed transition, freezes and never
+  completes, with nothing in the log to say why. That is indistinguishable from a feature that does not
+  work; it cost two runs in one afternoon on a gate that was fine. Before concluding "it never fires", ask
+  what your own control did to the clock the subject runs on. Where the engine offers `step <n>`, advance
+  it deliberately — and note that stepping advances **everything** on that clock, camera and ocean and sky
+  included, not only your subject.
+- **87** — **A capture is of one SIDE of the subject.** A whole run of "the doors never moved" frames was
+  taken of the back of the island, where there is no gate at all: the lobby camera orbits, so the framing
+  was whichever angle the orbit had reached when the shot was taken. Every pixel difference measured was
+  real, and none of it was the thing being measured. Before differencing frames, confirm the subject is
+  *in* them — name the feature you expect to see and find it by eye once — and pin the viewpoint
+  explicitly instead of letting a settle land where it likes. A difference that rises and then falls, or
+  that sits no higher than a control taken elsewhere in the frame, is usually the scene and not the
+  subject.
 
 ## Before you believe an absence
 
@@ -356,6 +372,12 @@ The ones that have bitten more than once.
   `set -e` to enforce a precondition. `git add` is all-or-nothing across its pathspecs, so one stale path
   stages **none** of them — exactly what a rename produces. Make the label and the predicate the same thing,
   and when a check fires, suspect the check before the file.
+- **88** — **An instrument that writes as well as reads measures your own interference.** A debug command
+  that looks like a query can be a setter: OpenTPW's `island` runs `DebugSelect( (int)Argument( 1 ) )` and
+  that argument falls back to **0**, so polling a bare `island` every couple of seconds to see which island
+  was current would have *selected* island 0 each time and then reported what it had just set. Read the
+  handler before polling anything in a loop; prefer a line the subject logs for itself, which cannot
+  perturb it; and where a getter and a setter share a name, assume the setter.
 
 ## Delegates and commissioned work
 

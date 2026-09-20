@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-09-20 on branch `alexah/94-every-state-answered`, tip `61640a9`.
+Last updated: 2026-09-20 on branch `alexah/94-every-state-answered`, tip `3d8a962`.
 
 The tip is the newest `alexah/N` branch and has everything. Confirm with
 `git branch -r --sort=-committerdate | head -3`.
@@ -41,8 +41,9 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | 71 implemented of 106 | 2026-09-20, `case Opcode.` labels vs enum members |
-| Tests | 790 total; 379 run without the game, 411 need it | 2026-09-19 review, **not re-run since** |
-| Build warnings | 126 (71 are CS8618 nullable) | 2026-09-19 review, **not re-run since** |
+| Tests | 793 total, all of them run **with** the game and 0 skip | 2026-09-20, run repeatedly |
+| Tests without the game | 379 ran, 411 skipped — **of 790, and not re-measured since** | 2026-09-19 review |
+| Build warnings | 126 (71 are CS8618 nullable) | 2026-09-20, unmoved by three commits |
 
 ## Recent
 
