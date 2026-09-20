@@ -68,16 +68,27 @@ In a park:
 
 | Frequency | What runs | Status |
 |---|---|---|
-| Every tick | 0x00520130 (`Particles_Tick`), 0x00546c80 (the track-ride tick), 0x005516b0 (RSSE), and 0x00516380 in a normal park. | Verified against the listing. |
+| Every tick | 0x00520130 (`Particles_Tick`), 0x00546c80 (the track-ride tick), 0x005516b0 (RSSE). | Verified against the listing. |
 | Every 2nd | 0x0055abf0 (the flying cars) and 0x00475360. | Verified: 0054f5c0 reloads `[0x00877d34]`, `TEST AL,0x1`, `JNZ` skips both on odd ticks. This puts the sprite step at 62 ms, exactly its own default interval. |
-| Every 32nd | Crowd and sound levels. | **Not re-checked.** This is the one rate on this page that has never been confirmed against the listing. |
+| Every 8th | 0x00516380 (the thing-list sweep) and 0x0055a470. | Verified: `0054f668` is `TEST byte ptr [0x00877d34],0x7` / `JNZ 0x0054f82d`, and that jump clears both calls — 0x00516380 at `0054f7bb` and 0x0055a470 at `0054f828`. The gate sits **before** the mode dispatch below, so a normal park is gated by both. |
+| Every 32nd | Crowd and sound levels. | Verified: `0054f82d`, the target of the every-8th jump, opens `TEST byte ptr [0x00877d34],0x1f` / `JNZ`. Same counter, five bits instead of three. |
 
 Two identifications behind that table:
 
 - **0x00546c80 is the track-ride tick**, not something generic: magic `DAT_00877b58` = 0x4a454647 = "GFEJ", read across 0x00542000–0x0054b000, whose 0x00543560 is the save's **TRAK** module loader.
 - **0x0055abf0 is the flying cars**, not the peep simulation.
 
-**0x00516380 is neither frequency-gated nor online-only** — an earlier claim of "every 8th: online 0x00516380 and 0x0055a470" was wrong on both counts and is **refuted**. It is gated on the game mode `DAT_00fb3b7c`, read from the listing at 0054f6c3–0054f754: mode 0 (normal park) and mode 2 (Instant Action) both jump to it, and mode 1, the ONLINE one, is the single branch that does **not** call it, taking 0x005166b0 instead. So it runs every tick in a normal park, and it is the thing-list sweep that reaches the peeps — it calls 0x0050b360 per thing. The "every 8th" was most likely one of the three one-shot init guards at 0054f691 / 0054f6d8 / 0054f719, which OR bit 0 into `[0x00fb34a8]` and fire once, misread as a divider.
+**0x00516380 is mode-gated AND frequency-gated — both, not either.** An earlier claim of "every 8th: online 0x00516380 and 0x0055a470" was wrong about *online* and right about *every 8th*; a later correction killed the online half and over-corrected on the other. What the listing shows:
+
+- **Mode gating, which stands as previously written.** `DAT_00fb3b7c` is read at 0054f6c3–0054f754: mode 0 (normal park) and mode 2 (Instant Action) both jump to it, and mode 1, the ONLINE one, is the single branch that does **not** call it, taking 0x005166b0 at `0054f760` instead. So it is not online-only — if anything the reverse.
+- **Frequency gating, which was missed.** `0054f668` is `TEST byte ptr [0x00877d34],0x7` / `JNZ 0x0054f82d`, and it sits **above** that mode dispatch, so taking the jump clears the whole of it along with `CALL 0x00516380` at `0054f7bb`. It falls through only when the counter is a multiple of eight.
+- **`DAT_00877d34` is a tick counter, and this page already proved it**: the Every-2nd row above verifies `0054f5c0` reloading it for `TEST AL,0x1`. Its own increment is at `0054f4cd` — `MOV ECX,[0x00877d34]` / `INC ECX` / `MOV [0x00877d34],ECX` — and it is reset to zero on state entry at `0054edb0` and `0054f443`.
+
+So in a normal park it is the thing-list sweep that reaches the peeps — it calls 0x0050b360 per thing — **once every eight ticks**, not every tick.
+
+The refutation of the *init guards* stands and was never the same thing: 0054f691 / 0054f6d8 / 0054f719 test `[0x00fb34a8] & 1` and fire once, and they are **not** a divider. They are simply a different test on a different global, a few instructions below the real one.
+
+**This does not yet give an arrival period.** Turning eight ticks into seconds needs the tick units pinned, which is a separate question from the gate — see the note on `Time.TicksPerSecond` below.
 
 On OpenTPW's side: there is no `Time.TicksPerSecond`. The 25 belongs to `Sky.TicksPerSecond`, a private const of the sky's own drift, and the lobby's own rate is `LobbyScript.TicksPerSecond` = 10; **both are still only inferred**. The one rate that is measured rather than inferred is the 31 ms game tick itself, `GameClock.TickSeconds`.
 
