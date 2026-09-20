@@ -324,6 +324,16 @@ public sealed class ParkFixedItems : Entity
 			yield return scalars == 0
 				? $"{name}: no progress scalar - it cannot move"
 				: $"{name}: {scalars} progress scalar(s), {low:F1}..{high:F1}, {high - low:F1} of the route";
+
+			// Where it actually is, right now. This is the line that says whether a thing MOVES rather
+			// than merely having a route to move along: poll it twice and compare. A route read
+			// correctly and never applied looks identical to one applied, in every other line here.
+			if ( _models[i].Entities.Length > 0 )
+			{
+				var at = _models[i].Entities[0].Position;
+
+				yield return $"{name}: mesh 0 at ({at.X:F1}, {at.Y:F1}, {at.Z:F1})";
+			}
 		}
 	}
 

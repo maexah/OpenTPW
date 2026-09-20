@@ -675,6 +675,13 @@ public class AnimationFile : BaseFormat
 		/// <summary>One per frame, from frame 0. The counts run from 31 to 796.</summary>
 		public float[] Values { get; init; } = Array.Empty<float>();
 
+		/// <summary>
+		/// Whether the thing also turns to face the way it is going - bit 0x400, set on 62 of the
+		/// game's 71 route tracks. The engine samples the route's first derivative (FUN_00474a20,
+		/// the same window with the constant term dropped) and builds a basis from that tangent.
+		/// </summary>
+		public bool OrientsAlongRoute { get; init; }
+
 		/// <summary>How far along at <paramref name="frame"/>, held at the ends.</summary>
 		public float Sample( float frame )
 		{
@@ -916,7 +923,7 @@ public class AnimationFile : BaseFormat
 			// other nine, so it is not a companion to test for - and neither bit changes the record:
 			// all 71 read at +0x24 with their values directly behind it, measured across every one.
 			if ( (flags & 0x200) != 0 )
-				ReadPathChannel( data, BitConverter.ToUInt32( data, offset + 0x24 ), target );
+				ReadPathChannel( data, BitConverter.ToUInt32( data, offset + 0x24 ), target, flags );
 
 			if ( (flags & 0x20000) != 0 )
 				ReadVisibilityChannel( data, offset, target );
@@ -931,7 +938,7 @@ public class AnimationFile : BaseFormat
 	/// behind their header on all 71 of the game's tracks - but it is followed rather than assumed,
 	/// because nothing in the format says it has to be.
 	/// </summary>
-	private void ReadPathChannel( byte[] data, uint recordAt, int target )
+	private void ReadPathChannel( byte[] data, uint recordAt, int target, uint flags )
 	{
 		if ( recordAt < 0x9C || recordAt + 16 > data.Length )
 			return;
@@ -954,7 +961,13 @@ public class AnimationFile : BaseFormat
 		for ( int i = 0; i < count; ++i )
 			values[i] = BitConverter.ToSingle( data, (int)valuesAt + (4 * i) );
 
-		PathTracks.Add( new PathTrack { TargetIndex = target, Start = start, Values = values } );
+		PathTracks.Add( new PathTrack
+		{
+			TargetIndex = target,
+			Start = start,
+			Values = values,
+			OrientsAlongRoute = (flags & 0x400) != 0
+		} );
 	}
 
 	private void ReadPositionChannel( byte[] data, uint recordAt, int target )

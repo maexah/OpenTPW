@@ -30,6 +30,20 @@ public sealed class LobbyModel
 	/// <summary>The origin the model was loaded at - see <see cref="TryGetNode"/>.</summary>
 	private readonly Vector3 _origin;
 
+	// Each mesh's parent, so moving a thing along its route carries what hangs off it: the bus's two
+	// wheels and its sound node all hang off the body the route actually drives.
+	private readonly int[] _meshParents = Array.Empty<int>();
+
+	// Which route each node follows, from its record's +0x52. The engine indexes the model's path
+	// table by exactly this - see ModelFile.ReadPaths.
+	private readonly int[] _nodePathIds = Array.Empty<int>();
+
+	// Each node's own translation, before its parents are applied. A route's points are in the same
+	// space as this - parent-local - so it is what a sampled point replaces. Offsets is no use for
+	// that: it is the COMPOSED position, and using it drops whatever the parents contribute, which
+	// for the three vehicles is their spline root's (480, 0, 170).
+	private readonly Vector3[] _nodeRestLocal = Array.Empty<Vector3>();
+
 	/// <summary>
 	/// How far this model reaches from its own origin, after scaling - a loose bounding radius
 	/// taken from the mesh bounds the animation decoder already relies on, so it covers every
@@ -207,6 +221,19 @@ public sealed class LobbyModel
 
 		Clips = animations;
 		Paths = modelFile.Paths;
+		_meshParents = [.. modelFile.Meshes.Select( mesh => mesh.ParentIndex )];
+		_nodePathIds = [.. modelFile.Nodes.Select( node => node.PathId )];
+
+		// Scaled and swizzled the same way Offsets was, so the two can be subtracted.
+		_nodeRestLocal =
+		[
+			.. modelFile.Nodes.Select( node =>
+			{
+				var local = node.LocalTransform * Matrix4x4.CreateScale( scale );
+
+				return new Vector3( local.M41, local.M43, local.M42 );
+			} )
+		];
 
 		if ( animations.Length > 0 )
 		{
@@ -460,8 +487,142 @@ public sealed class LobbyModel
 				SetMeshVisible( track.TargetIndex, visible );
 		}
 
+		// How far along its route the thing has travelled - channel 0x200. The route is the model's
+		// own, picked by the node's path id, and the scalar is a percentage of it.
+		foreach ( var track in animation.PathTracks )
+		{
+			var target = track.TargetIndex;
+
+			if ( target < 0 || target >= Entities.Length || Paths.Count == 0 )
+				continue;
+
+			var which = target < _nodePathIds.Length ? _nodePathIds[target] : 0;
+
+			if ( which < 0 || which >= Paths.Count )
+				continue;
+
+			var point = SampleRoute( Paths[which], track.Sample( frame ) );
+
+			// The same Y/Z swizzle every mesh offset went through at load, so a route point lands in
+			// the world by the rule the model's own geometry landed by.
+			MoveAlongRoute( target, new Vector3( point.X, point.Z, point.Y ) );
+
+			// The engine also samples the route's tangent and turns the thing to face along it - the
+			// 0x400 that rides with 0x200 on 62 of the game's 71 route tracks. Not built, so the bus
+			// drives its route facing whichever way it was parked.
+			if ( track.OrientsAlongRoute )
+				Unimplemented.Report( "ANIM_PATH_FACING" );
+		}
+
 		foreach ( var animator in Animators )
 			animator.Pose( animation, frame );
+	}
+
+	/// <summary>
+	/// Where a percentage along <paramref name="route"/> puts a thing.
+	///
+	/// <para>
+	/// A hundred is the whole loop. The engine floors <c>percent * 0.01 * segments</c> into a segment
+	/// (the 0.01 is the constant at <c>0x006fec00</c>) and hands the sampler the fraction that is left,
+	/// with the segment riding in a separate argument as <c>3k + 1</c>; it then reads one point either
+	/// side of that, which is the same four points as <c>3k</c> to <c>3k + 3</c>. The last of those
+	/// wraps, because the loop is closed - that is why a Bezier route's point count is a multiple of
+	/// three rather than <c>3n+1</c>.
+	/// </para>
+	/// </summary>
+	private static System.Numerics.Vector3 SampleRoute( ModelFile.ModelPath route, float percent )
+	{
+		var points = route.Points;
+
+		if ( points.Length == 0 )
+			return System.Numerics.Vector3.Zero;
+
+		// Past the end it wraps, and the authored scalars really do go past it: the bus's three clips
+		// run 42.4 to 142.5, one lap that happens to start part of the way round.
+		var wrapped = percent % 100f;
+
+		if ( wrapped < 0f )
+			wrapped += 100f;
+
+		// Only space's slide is a straight route, and its points are plain waypoints.
+		//
+		// The points are this project's own Vector3, not System.Numerics' - a model file's are, where
+		// an animation file's position track spells System.Numerics out - so they are converted rather
+		// than mixed.
+		if ( !route.IsBezier || points.Length < 4 )
+		{
+			var along = wrapped / 100f * points.Length;
+			var first = (int)along % points.Length;
+
+			return System.Numerics.Vector3.Lerp(
+				points[first].GetSystemVector3(),
+				points[(first + 1) % points.Length].GetSystemVector3(),
+				along - (int)along );
+		}
+
+		var segments = points.Length / 3;
+		var travelled = wrapped / 100f * segments;
+		var segment = (int)travelled % segments;
+		var t = travelled - (int)travelled;
+		var b = 3 * segment;
+
+		var p0 = points[b % points.Length].GetSystemVector3();
+		var p1 = points[(b + 1) % points.Length].GetSystemVector3();
+		var p2 = points[(b + 2) % points.Length].GetSystemVector3();
+		var p3 = points[(b + 3) % points.Length].GetSystemVector3();
+
+		var u = 1f - t;
+
+		return (p0 * (u * u * u)) + (p1 * (3f * u * u * t))
+			+ (p2 * (3f * u * t * t)) + (p3 * (t * t * t));
+	}
+
+	/// <summary>
+	/// Puts mesh <paramref name="target"/> at <paramref name="offset"/> in the model's own space, and
+	/// carries everything hanging off it by the same amount - the bus's wheels ride on its body.
+	///
+	/// <para>
+	/// Written straight onto the entity rather than into <see cref="Offsets"/>, which stays the rest
+	/// pose: <see cref="Rest"/> calls <see cref="Place"/>, and that puts every position back from it.
+	/// </para>
+	/// </summary>
+	private void MoveAlongRoute( int target, Vector3 offset )
+	{
+		// Against the node's OWN translation, not its composed one. A route's points are parent-local,
+		// so the distance travelled is how far the sampled point is from where the node rests inside
+		// its parent - and adding that to the composed offsets keeps whatever the parents contribute.
+		// Measured against Offsets instead, the bus drove the right route 480 west and 170 south of
+		// where it belongs, because its spline root sits at (480, 0, 170).
+		var rest = target < _nodeRestLocal.Length ? _nodeRestLocal[target] : Offsets[target];
+		var shift = offset - rest;
+
+		for ( int mesh = 0; mesh < Entities.Length; ++mesh )
+		{
+			if ( mesh != target && !HangsOff( mesh, target ) )
+				continue;
+
+			var moved = System.Numerics.Vector3.Transform(
+				(Offsets[mesh] + shift).GetSystemVector3(), _placedRotation );
+
+			Entities[mesh].Position = (Vector3)moved + _placedOrigin;
+		}
+	}
+
+	/// <summary>Whether <paramref name="mesh"/> is somewhere under <paramref name="ancestor"/>.</summary>
+	private bool HangsOff( int mesh, int ancestor )
+	{
+		var parent = mesh < _meshParents.Length ? _meshParents[mesh] : -1;
+
+		// The guard is against a parent chain that loops back on itself, as MeshRotator's does.
+		for ( int guard = _meshParents.Length; guard > 0 && parent >= 0; --guard )
+		{
+			if ( parent == ancestor )
+				return true;
+
+			parent = parent < _meshParents.Length ? _meshParents[parent] : -1;
+		}
+
+		return false;
 	}
 
 	/// <summary>

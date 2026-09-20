@@ -47,6 +47,24 @@ Take counts fresh; these go stale within a day.
 
 ## Recent
 
+**2026-09-20 — the bus drives its route.** `LobbyModel.Pose` applies channel `0x200`: it samples the
+clip's percentage, finds the point that far along the model's closed Bézier route, and moves the node
+the track names — carrying whatever hangs off it, so the wheels ride on the body. Positions are written
+onto the entities and never into `Offsets`, which stays the rest pose, so the `Rest()` → `Place()`
+restore every clip change already relies on still puts everything back.
+
+The route's points are **parent-local**, which cost a run to learn: measuring the shift against the
+composed `Offsets` instead of the node's own translation dropped the spline root's (480, 0, 170) — the
+same value on all three vehicles — and drove a correctly-shaped route 480 west and 170 south of where
+it belonged. Against the local rest instead, the bus reaches **(510.5, 65.5, 0.0)**, predicted to the
+decimal before it was read. It comes to rest between `BusStopA` and `BusStopB` (cells 42,5 and 53,5 —
+world 425,55 and 535,55) without anything in the code knowing where those are.
+
+**Two things it does not do yet.** It drives its route once and parks, because the clip holds at
+220.0/220.0 and nothing loops it. And it does not turn to face the way it is going — the engine samples
+the route's first derivative for that (`0x400`, on 62 of the game's 71 route tracks), which is unbuilt
+and counted as `ANIM_PATH_FACING`.
+
 **2026-09-20 — animations say how far along its route a thing is.** Channel `0x200`, the last sizeable
 undecoded one, is **path progress**: a record of `{ float start, count, 0, offset }` and then one float
 per frame, the values immediately behind their own header on all 71 of the game's tracks. The value is a
