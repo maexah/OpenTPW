@@ -3,9 +3,9 @@ using System.Numerics;
 namespace OpenTPW;
 
 /// <summary>
-/// A park's fixed items: the gate standing over the entrance and the traffic lights at the two
-/// pedestrian crossings. They are "fixed" in the original's own sense - every park has them, in the
-/// same place, and the player can neither build nor remove them.
+/// A park's fixed items: the gate standing over the entrance, the traffic lights at the two
+/// pedestrian crossings, and the bus at its spawn off the map. They are "fixed" in the original's own
+/// sense - every park has them, in the same place, and the player can neither build nor remove them.
 ///
 /// <para>
 /// <b>They carry no position in the save.</b> Their records in the saved thing list hold the sentinel
@@ -26,13 +26,31 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>Only two of the six fixed items are here, and deliberately.</b> The theme also ships bus, ferry,
-/// seaplane and end - and none of them is scenery: the bus sits at cell (29.7,-11.5) and the ferry at
-/// (90.0,-17.6), both off the map on negative depth, the seaplane off it on negative x, and end.wad is
-/// three aircraft 59 units in the air. They are vehicles parked at their spawns, driven by the
-/// <c>.RSE</c> scripts - whose runtime <b>is</b> built, in <c>RideScript</c>, though these particular
-/// vehicles are still left out because standing them still on the ground would be worse. This said the
-/// runtime was not built and pointed at <c>World/Ride.cs</c>, which is itself dead code.
+/// <b>Three of the six fixed items are here; ferry, seaplane and end are not, yet.</b> None of the
+/// four is scenery: the bus sits at cell (29.7,-11.5) and the ferry at (90.0,-17.6), both off the map
+/// on negative depth, the seaplane off it on negative x, and end.wad is three aircraft 59 units in the
+/// air. They are vehicles parked at their spawns, driven by the <c>.RSE</c> scripts - whose runtime
+/// <b>is</b> built, in <c>RideScript</c>. This paragraph once said that runtime was not built and
+/// pointed at <c>World/Ride.cs</c>, which is itself dead code.
+/// </para>
+///
+/// <para>
+/// <b>The bus is here so that its script is BOUND, and it still does not move.</b> That is the whole of
+/// what this step buys, and it is deliberately small: <c>bus.RSE</c> is 46 instructions over 16 distinct
+/// opcodes and every one of those sixteen has a case in <see cref="RideScript"/>, so the interpreter
+/// should run it without reaching the counted default - which had never actually been tested against a
+/// vehicle. What it cannot do yet is travel. Not one of the nine vehicle clips carries a position
+/// track (<c>Endm1/2/3</c> do, which is the control), because a vehicle's route is not in its clips at
+/// all: it is a Bezier path authored in the model file, and neither <see cref="ModelFile"/> nor the
+/// animation player reads it yet. So the bus stands at its spawn, off the map and out of sight, running
+/// its script - and is confirmed by the <c>rides</c> census rather than by eye.
+/// </para>
+///
+/// <para>
+/// <b>Ferry and seaplane are held back on purpose, and the order matters.</b> Their scripts need
+/// <c>TRIGWAITANIM</c>, which with no model bound compares against a raw operand and parks the script
+/// for ever - so implementing it before a model is bound would hang the great majority of its shipped
+/// uses. It is safe only after the binding this class does.
 /// </para>
 ///
 /// <para>
@@ -103,8 +121,57 @@ public sealed class ParkFixedItems : Entity
 	private static readonly (string Name, bool CarriesSign, Func<ParkWorld, int> Thing)[] Items =
 	[
 		("gates", true, world => world.ParkGates),
-		("lights", false, world => world.TrafficLights)
+		("lights", false, world => world.TrafficLights),
+
+		// The bus, which is a vehicle rather than scenery - see the remarks on this class. It stands at
+		// its spawn off the map and does not move yet; what this row buys is that its script is BOUND,
+		// which is the thing that had never been tested.
+		("bus", false, world => ThingByCatalogue( world, BusCatalogueId ))
 	];
+
+	/// <summary>
+	/// The catalogue numbers the fixed items carry in their own <c>.sam</c>, read off the shipped files:
+	/// 1600 Bus, 1601 Gates, 1602 Seaplane, 1603 Lights, 1604 Ferry, 1605 End.
+	/// </summary>
+	private const int BusCatalogueId = 1600;
+
+	/// <summary>
+	/// The id of the thing this park holds for a catalogue number, or nought where it holds none.
+	///
+	/// <para>
+	/// <b>A vehicle is found this way and not by a header handle, which is a trap worth naming.</b> The
+	/// gate and the lights each have a field of their own in the save header - <c>mParkGates</c> and
+	/// <c>mTrafficLights</c> - and the bus does not. What it has instead is <c>mFirstObject</c>, which in
+	/// the shipped park happens to hold 15, which happens to be the bus. That is a <b>coincidence of list
+	/// order, not an identity</b>: <c>mFirstObject</c> is the head of the object linked list, walked from
+	/// by <c>FUN_004fcb10</c>, sitting beside <c>Used_Thing_Head</c>/<c>Used_Thing_Next</c> in the header
+	/// and with siblings <c>mFirstEntertainer</c>, <c>mFirstGuard</c> and <c>mFirstResearcher</c> - and
+	/// thing 10's own <c>mNextObject</c> is 15, which is what makes it the head. Reading it as "the bus"
+	/// would have looked right in Lost Kingdom and been wrong in every other park.
+	/// </para>
+	///
+	/// <para>
+	/// The catalogue number is the item's own <c>Info.Id</c> (the save calls it <c>mId</c>), so this is
+	/// the same question the engine asks when it builds these by name out of the item descriptions rather
+	/// than from the save's placements.
+	/// </para>
+	/// </summary>
+	/// <remarks>
+	/// Internal rather than private only so that it can be tested, the same reason
+	/// <see cref="LobbyModel.LoadAnimations"/> is. A test that re-derived this lookup over
+	/// <c>world.Objects</c> would pass just as well with the <c>mFirstObject</c> mistake put back, which
+	/// is the shape of test that proves nothing - so the test calls this.
+	/// </remarks>
+	internal static int ThingByCatalogue( ParkWorld world, int catalogueId )
+	{
+		foreach ( var placed in world.Objects )
+		{
+			if ( placed.CatalogueId == catalogueId )
+				return placed.ThingId;
+		}
+
+		return 0;
+	}
 
 	/// <summary>
 	/// How many animation players this fixed item's own description asks for -

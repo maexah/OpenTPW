@@ -258,6 +258,87 @@ public class ParkFixedItemsTests
 	}
 
 	/// <summary>
+	/// The bus is found by its <b>catalogue number</b>, and that is not the same question as "what is the
+	/// head of the object list".
+	///
+	/// <para>
+	/// The gate and the lights each have a field of their own in the save header. The bus does not - what
+	/// it has nearby is <c>mFirstObject</c>, which in this park holds 15, which is the bus. <b>That is a
+	/// coincidence of list order rather than an identity:</b> <c>mFirstObject</c> is the head of the
+	/// object linked list, walked from by <c>FUN_004fcb10</c>, sitting beside <c>Used_Thing_Head</c> and
+	/// <c>Used_Thing_Next</c>, with siblings <c>mFirstEntertainer</c>, <c>mFirstGuard</c> and
+	/// <c>mFirstResearcher</c> - and thing 10's own <c>mNextObject</c> is 15, which is what makes it the
+	/// head. Reading it as "the bus" looks right here and is wrong in general.
+	/// </para>
+	///
+	/// <para>
+	/// <b>This park cannot tell the two apart by their answer for 1600</b>, because they agree, and no
+	/// other theme ships a <c>.TPWI</c> to cross-check against. So the discriminating assertions are the
+	/// other two: the ferry and the seaplane ship no object record in this park, so the lookup must
+	/// answer nought for them. An implementation that returned the list head would ignore its argument
+	/// and answer 15 to all three, and those two assertions are what would catch it.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheBusIsFoundByItsCatalogueNumberRatherThanByTheObjectListHead()
+	{
+		var world = World();
+
+		var bus = ParkFixedItems.ThingByCatalogue( world, 1600 );
+
+		Assert.AreNotEqual( 0, bus, "this park holds no object with the bus's catalogue number" );
+
+		var named = world.Objects.Where( thing => thing.CatalogueId == 1600 ).ToArray();
+
+		Assert.AreEqual( 1, named.Length, "exactly one thing should carry the bus's catalogue number" );
+		Assert.AreEqual( named[0].ThingId, bus, "the lookup should answer that thing's id" );
+
+		Assert.IsFalse( named[0].IsPlaced,
+			"the bus carries a position, so it is not the fixed item this test thinks it is" );
+
+		Assert.IsTrue( Has( "levels/jungle/features/bus/bus.RSE" ), "the bus should ship a script" );
+
+		// The discriminating half. Lost Kingdom ships neither, so a lookup that really keys on the
+		// catalogue number answers nought - and one that answered the list head would answer the bus.
+		Assert.AreEqual( 0, ParkFixedItems.ThingByCatalogue( world, 1604 ),
+			"this park ships no ferry, so nothing should be found for its catalogue number" );
+
+		Assert.AreEqual( 0, ParkFixedItems.ThingByCatalogue( world, 1602 ),
+			"this park ships no seaplane, so nothing should be found for its catalogue number" );
+	}
+
+	/// <summary>
+	/// <b>The bus's own script runs, and reaches nothing this interpreter has not built.</b> That is the
+	/// whole claim of standing the bus: not that it moves - it cannot yet, because a vehicle's route is a
+	/// path authored in its model rather than a track in its clips - but that the runtime really does
+	/// drive a vehicle script, which had never been tested against one.
+	///
+	/// <para>
+	/// The anti-vacuity check matters as much as the assertion it guards, for the reason the gate's test
+	/// gives: a script that reached nothing unbuilt would look identical to one that stopped on its first
+	/// instruction. So it is asserted to be still running, and its role 5 clips are asserted to exist.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheBusScriptRunsWithoutReachingAnythingUnbuilt()
+	{
+		var script = Bound( "bus" );
+
+		// The three clips its own role 5 ships - Busm1, Busm2 and Busm3 - so "it played nothing" cannot
+		// be "it had nothing to play".
+		for ( var entry = 0; entry < 3; ++entry )
+			Assert.IsNotNull( script.Animations!.Clip( 5, entry ), $"the bus ships no role 5 entry {entry}" );
+
+		for ( var turn = 0; turn < 200; ++turn )
+			script.Turn( turn * 31f );
+
+		Assert.IsTrue( script.Running, "the bus's script stopped, which no shipped script should do" );
+
+		Assert.AreEqual( 0, script.NotImplemented,
+			"an instruction in the bus's script is unimplemented, so the opcode histograms were wrong" );
+	}
+
+	/// <summary>
 	/// The park gate holds still, and holds still <b>because its own script says so</b> rather than because
 	/// nothing is driving it.
 	///
