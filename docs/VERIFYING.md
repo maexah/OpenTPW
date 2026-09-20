@@ -372,6 +372,14 @@ The ones that have bitten more than once.
   `set -e` to enforce a precondition. `git add` is all-or-nothing across its pathspecs, so one stale path
   stages **none** of them — exactly what a rename produces. Make the label and the predicate the same thing,
   and when a check fires, suspect the check before the file.
+- **89** — **A behaviour change can delete the instrument you verify with, and the loss looks like the
+  feature being dead.** The lobby's `Lobby audio:` line was the passive observable the attract camera was
+  proved with — 2 island changes in 60s, 7 in 180s. Making all four parks sound at once moved that log
+  behind an early return, correctly, because the island on show no longer changes what is playing; the
+  next run reported **zero** changes and read exactly like a camera that had stopped flying. Before
+  changing code, ask what you last verified it with and whether this edit silences it. Prefer an
+  observable the subject cannot switch off — a pure getter on the console, a counter in a state reply —
+  over a log line emitted from the branch you are editing.
 - **88** — **An instrument that writes as well as reads measures your own interference.** A debug command
   that looks like a query can be a setter: OpenTPW's `island` runs `DebugSelect( (int)Argument( 1 ) )` and
   that argument falls back to **0**, so polling a bare `island` every couple of seconds to see which island

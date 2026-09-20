@@ -9,7 +9,7 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 
 - Lobby: four islands, front end, advisor, weather, particles, options, saves, the island gate
   swinging open as you enter that park, and — with nobody playing — the camera flying itself around
-  all four islands.
+  all four islands with all four heard at once, each from its own island.
 - Park: enter from the lobby; ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (2 of 6 buttons).
 - People: 13 guests and 5 staff read from the save, drawn, walking, paying at the gate, queueing, boarding.
 - Rides: every placed thing runs its script; 71 of 106 opcodes implemented, the rest counted by `Unimplemented`.
@@ -46,6 +46,17 @@ Take counts fresh; these go stale within a day.
 | Build warnings | 126 (71 are CS8618 nullable) | 2026-09-20, unmoved by three commits |
 
 ## Recent
+
+**2026-09-20 — positional lobby audio while the camera flies.** All four parks sound at once, each
+heard from its own island — the marked emitter node where there is one, the island itself where there
+is not — so the blend between parks is distance rather than a cross-fade. With somebody playing it
+collapses to the single island on show, flat or at its node, exactly as before. **A deviation, not a
+restoration:** the engine's 3D is the original's (`Sound_PlayEffect` really takes x, y, z, and the game
+delay-loads QMixer for it), but the original spent none of it in the lobby, which plays everything at
+(0,0,0) — corroborated four ways. Measured by disk capture rather than assumed: `sounding=4` on 17 of
+20 polls, peak 0.2499 (−12.0 dBFS), muted control exactly 0.0, so four parks summing does not clip and
+the levels calibrated for one park stand. The capture also caught a gap a green build could not: the
+one-shots were still flat on three of the four islands.
 
 **2026-09-20 — the attract camera: the lobby flies itself around all four islands.** Lobby plan item
 8. With no player selected the camera wanders a box and aims at whichever island is nearest, which is
