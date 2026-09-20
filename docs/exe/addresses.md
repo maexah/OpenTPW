@@ -1,6 +1,13 @@
 # Executable addresses cited in source
 
-Seed generated mechanically from code comments on branch 94. One row per address; fill in the 'What it is' column from the citing comment, then make the comment point here.
+Seed generated mechanically from code comments. One row per address; fill in the 'What it is' column from the citing comment, then make the comment point here.
+
+**This is an index of what our source cites, not the decode.** The per-subsystem pages beside it hold
+the traced detail — the field tables, the state machines, the evidence and the confidence markers —
+and between them they carry several hundred addresses that are cited in no code comment at all. If an
+address here has an empty 'What it is', try the subsystem page first: `park.md`, `park-engine.md`,
+`ride-operation.md`, `hud.md`, `weather.md`, `advisor-park.md`, `ui.md`, `lobby.md`, `boot.md`,
+`scenes.md`, `audio.md`, `render-states.md`, `saves.md`. See `../README.md` for what each covers.
 
 | Address | What it is | Cited in |
 |---|---|---|

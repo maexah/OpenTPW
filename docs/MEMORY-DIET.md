@@ -33,7 +33,7 @@ The aim: the memory folder holds **rules and the live plan only**, under 40 KB i
 | `park-ride-operation.md` | 90 KB | `docs/exe/ride-operation.md`. Remove the eleven "still additive" update paragraphs. |
 | `park-hud-from-exe.md` | 37 KB | `docs/exe/hud.md`. |
 | `park-weather-from-exe.md` | 31 KB | `docs/exe/weather.md`. |
-| `park-advisor-from-exe.md` | 19 KB | `docs/exe/advisor.md`. |
+| `park-advisor-from-exe.md` | 19 KB | `docs/exe/advisor-park.md` — not `advisor.md`: `ui.md` took the on-screen advisor, so the park advisor's message scoring needs a name that cannot be confused with it. |
 | `original-boot-sequence.md`, `original-lobby-park-sharing.md`, `original-positional-audio.md`, `original-render-states.md`, `original-save-files.md` | 35 KB | `docs/exe/boot.md`, `scenes.md`, `audio.md`, `render-states.md`, `saves.md`. |
 | `lobby-*.md`, `advisor-*.md`, `loading-screen.md`, `esc-menu-and-settings.md`, `theme-names-and-locale-tables.md` | 50 KB | `docs/exe/lobby.md` and `docs/exe/ui.md`. Trim "built on branch N" history. |
 | `opentpw-fileformats-docs.md` | 103 KB | Keep 20 lines (where the clone is, what belongs there, how to build it) in `docs/README.md`. The rest is per-session history. |
