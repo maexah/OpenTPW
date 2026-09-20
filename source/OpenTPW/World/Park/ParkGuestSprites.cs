@@ -281,9 +281,38 @@ public sealed class ParkGuestSprites : ModelEntity
 	}
 
 	/// <summary>
-	/// A quad per sprite, built once and rewritten each frame - the arrangement
+	/// Takes somebody who was not in the save - a guest who has just arrived - so that they are drawn
+	/// alongside everyone else.
+	///
+	/// <para>
+	/// <b>Their bank has to be one this park already packs.</b> The atlas is built once, from the banks
+	/// the save's own people wear, and nothing here adds to it afterwards - so a guest wearing an
+	/// unpacked bank has no picture at all. That reads as a broken arrival rather than as a missing
+	/// texture, which is the worst kind of fault to introduce. Lost Kingdom packs six banks of type 0,
+	/// measured from a running park, and an arrival should choose from those.
+	/// </para>
+	/// <para>
+	/// <see cref="Build"/> is re-run because the vertex array is sized from the size of the crowd. Left
+	/// alone it would be written past the end of on the next frame, which throws rather than dropping
+	/// the newcomer silently - the better of the two failures, but not one to lean on.
+	/// </para>
+	/// </summary>
+	internal void Add( ParkWorld.Person person, ParkWorld.Sprite sprite )
+	{
+		_people.Add( (person, sprite) );
+
+		if ( _atlas != null )
+			Build();
+	}
+
+	/// <summary>
+	/// A quad per sprite, sized to the crowd and rewritten each frame - the arrangement
 	/// <see cref="WeatherSprites"/> uses, and for the same reason: there is no instancing here, so a
 	/// crowd has to be one mesh.
+	///
+	/// <para>
+	/// Re-run whenever the crowd changes size, not only at load - see <see cref="Add"/>.
+	/// </para>
 	/// </summary>
 	private void Build()
 	{

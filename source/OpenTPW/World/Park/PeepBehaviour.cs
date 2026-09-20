@@ -574,8 +574,11 @@ public sealed class PeepBehaviour
 			// admission sequence at its head.
 			//
 			// The original gates this on FUN_0051a760, which asks the arrival vehicle's script what it is
-			// doing. With no bus thing in the world that function returns 1 at its first test, so the gate
-			// stands open for every guest here and the branch is unreachable rather than unwritten.
+			// doing. This used to add that with no bus thing in the world that function returns 1 at its
+			// first test, so the gate stood open for every guest and the branch was unreachable rather
+			// than unwritten. <b>A bus now stands in the park and its script runs</b> - ParkFixedItems
+			// binds it - so that argument no longer holds and whether the branch is reachable has not
+			// been measured. The gate is still left open here, which is what the code has always done.
 			case PeepState.AtGate:
 				if ( Admission is { } atTheGate )
 				{
@@ -674,9 +677,14 @@ public sealed class PeepBehaviour
 			// ({c, c+1, c-0x100, c-0xff}) rules out BusStopA/B, whose cells are (42,5) and (53,5) and are
 			// not adjacent; CrossingParkSideA/B reads right and is not established. Guessing between two
 			// readings a test cannot tell apart is what made P4's rest areas inert, so the pair stays
-			// unread until it is measured. Both states also consult the BUS - FUN_0051a690 for its script
-			// state, FUN_0051aad0 for whether one is here - and no bus thing runs a script in this project,
-			// under which the original's own answer for 21 is to do nothing at all.
+			// unread until it is measured.
+			//
+			// <b>The second half of that argument has since fallen, and only the first still holds.</b>
+			// Both states also consult the BUS - FUN_0051a690 for its script state, FUN_0051aad0 for
+			// whether one is here - and this used to add that no bus thing ran a script here, under which
+			// the original's own answer for 21 was to do nothing. A bus now stands in the park and its
+			// script runs: ParkFixedItems binds it, and the rides census reports it running. So these stay
+			// unanswered on the unproven cell pair ALONE, and answering that would now be enough.
 			case PeepState.PlayingSpotAnimation:
 			case PeepState.GoingToMinorDestination:
 			case PeepState.Leaving:

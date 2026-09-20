@@ -428,6 +428,26 @@ public static class DebugConsole
 
 				break;
 
+			// Puts one new guest at the bus stop, which is what an arrival does - the original makes one
+			// per thing tick while a vehicle unloads. Driven by hand here because nothing yet runs the
+			// timer, and because the question worth answering first is whether a guest who was never in
+			// the save can walk and be seen at all.
+			case "arrive":
+				if ( ParkPeople.Current is not { } arrivals )
+				{
+					Reply( "arrive: none - a park has to be loaded" );
+					break;
+				}
+
+				// BusStopA, which Standard.sam puts at (42,5).
+				var arrivedAt = arrivals.Admit( (int)Argument( 1, 42 ), (int)Argument( 2, 5 ) );
+
+				Reply( arrivedAt == 0
+					? "arrive: the park would not take one"
+					: $"arrive: guest {arrivedAt}" );
+
+				break;
+
 			// What this session has reached and not built. Each gap announces itself once on the console
 			// when it is first reached and is counted after that, so this is how to ask what a whole run
 			// hit without scrolling back through it - see Unimplemented.

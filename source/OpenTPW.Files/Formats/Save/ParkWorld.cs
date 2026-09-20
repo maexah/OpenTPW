@@ -1393,7 +1393,12 @@ public sealed class ParkWorld
 	/// staff adds a 105-byte staff base and a handful of its own fields. That is where the size table's
 	/// numbers come from, and they close exactly - a guest is <c>8 + 390 + 135</c> = 533.
 	/// </summary>
-	private const int GuestModel = 1;
+	/// <remarks>
+	/// Public because <see cref="Person"/> is, and a caller building one - somebody who has just
+	/// arrived, rather than somebody the file named - cannot fill <see cref="Person.Model"/> correctly
+	/// without it.
+	/// </remarks>
+	public const int GuestModel = 1;
 
 	/// <summary>
 	/// The head of every thing, which is the same for all of them - the map base the original gives each

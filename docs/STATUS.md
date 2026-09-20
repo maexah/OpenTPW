@@ -47,6 +47,29 @@ Take counts fresh; these go stale within a day.
 
 ## Recent
 
+**2026-09-20 — a guest who was never in the save arrives and walks to the gate.** `ParkPeople.Admit`
+makes one: a thing id above everything the file used, a `GuestState` whose cash comes from
+`PeepTypes[x].StartingCash` and whose exit level comes from `PeepInfo.ExitLevel`, and a navigator at
+the centre of the cell. Five things then have to learn about them, each failing quietly on its own if
+missed — the simulation list, the by-id index, the walk, the sprite, and the cell's occupancy list,
+without which the gate cannot see them. Driven by hand from the console (`arrive`) because nothing yet
+runs the timer.
+
+Confirmed in a live park: `peeps` 13 → 14 → 15, the newcomer at exactly the cell centre, and then
+`AtGate` → `HeadingForGate` and walking east toward the ticket booths at ~0.12 cells a tick with a real
+two-waypoint route.
+
+**One deviation, declared at the site.** The engine constructs a guest in `Deciding` and walks them in
+from outside through `WalkingOutside` and `AtTheBusStop` — both of which take their cells from a
+balance-file pair that is not proven, so `PeepBehaviour` deliberately answers neither. Left in
+`Deciding` out there a guest stands for ever, because `Decide` looks for somewhere inside the park and
+they are outside it. So this starts them at `AtGate`, the head of the admission sequence the original
+joins them to anyway, and skips the walk in. It goes back the moment that cell pair is measured.
+
+Also corrected: two comments in `PeepBehaviour` argued from "no bus thing runs a script in this
+project", which this session made false. The behaviour they guard is unchanged — the other half of
+each argument still stands — but the reasoning no longer rests on something untrue.
+
 **2026-09-20 — the arrival mechanism, decoded end to end.** How a park gets new guests is now written
 down in `docs/exe/park.md`: `FUN_004cf3e0` waits out a timer, asks `FUN_004cf5b0` for a headcount,
 summons a vehicle, and then makes **one guest per tick** through `FUN_004cf720` until the load is

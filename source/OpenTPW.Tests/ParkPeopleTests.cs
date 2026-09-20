@@ -31,6 +31,50 @@ public class ParkPeopleTests
 	}
 
 	/// <summary>
+	/// Somebody who was never in the save. <see cref="ParkPeople.Admit"/> is what an arrival is, and what
+	/// this is really testing is the wiring rather than the guest: several separate structures have to
+	/// learn about them, and each one fails quietly, and differently, when it does not. A guest missing
+	/// from the walk table stands still; one missing from the visitor count is invisible to the park's
+	/// own arithmetic; one given a saved thing's id overwrites somebody.
+	///
+	/// <para>
+	/// The sprite pool is the one wiring left to the running game. It needs a graphics device, which is
+	/// why <see cref="ParkPeople.Admit"/> reaches it through a null-conditional and why nothing here can
+	/// see it - the same division this file's own remarks describe.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void AnArrivalJoinsEveryListThatHasToKnowAboutIt()
+	{
+		var world = World();
+		var state = new ParkState( world );
+		var people = new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ), null, state );
+
+		var before = people.Peeps.Count;
+		var visitors = state.VisitorsToDate;
+
+		// BusStopA, which Standard.sam puts at (42,5).
+		var id = people.Admit( 42, 5 );
+
+		Assert.AreNotEqual( 0, id, "the park should take a guest at the bus stop" );
+		Assert.AreEqual( before + 1, people.Peeps.Count, "the simulation list" );
+		Assert.IsNotNull( people.WalkFor( id ), "the walk, without which they never move" );
+		Assert.AreEqual( visitors + 1, state.VisitorsToDate, "the park's own count of who has come" );
+
+		// Not a thing the file already named. This is the assertion that would have caught the id being
+		// taken from a documented list rather than computed - the list was a guest short.
+		Assert.IsFalse( world.People.Any( person => person.ThingId == id ),
+			$"id {id} already belongs to a person in the save" );
+		Assert.IsFalse( world.Objects.Any( placed => placed.ThingId == id ),
+			$"id {id} already belongs to an object in the save" );
+
+		// And they begin where the admission sequence begins rather than in the hub a guest is
+		// constructed in, which is a deviation Admit explains at the site.
+		Assert.AreEqual( PeepState.AtGate, people.Peeps.Single( peep => peep.ThingId == id ).State,
+			"an arrival joins the admission sequence at its head" );
+	}
+
+	/// <summary>
 	/// Only guests are simulated. The five staff share the person base and then carry a block of their
 	/// own that nothing reads, and five state machines of their own that nothing runs, so taking them in
 	/// would mean ticking guest needs over fields that are not needs.

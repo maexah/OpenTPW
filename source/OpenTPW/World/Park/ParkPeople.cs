@@ -48,6 +48,20 @@ public sealed class ParkPeople : Entity
 
 	private readonly Dictionary<int, SpriteScript> _sprites = [];
 
+	// Kept rather than rebuilt, so a guest who arrives after the load can be given a walk. It closes
+	// over the park, which never changes, so holding it costs nothing and cannot go stale.
+	private readonly Func<int, int, StepDirection, bool>? _blocked;
+
+	// The balance stack, for what a new guest starts with - see Admit.
+	private readonly ParkBalance? _balance;
+
+	// The next free thing id and sprite slot for somebody who was not in the save. Both are one past
+	// the highest the file used. <b>Neither is provably free:</b> the reader surfaces people and
+	// objects, and the save holds things it does not - the economy manager among them - so this is
+	// "above everything that can be seen" rather than "unused". It has held for this park.
+	private int _nextThingId;
+	private int _nextSpriteSlot;
+
 	/// <summary>
 	/// What each guest is doing, and what arriving somewhere means - the original's <c>FUN_005019f0</c>.
 	/// One for the park rather than one per guest, because it carries the park's own facts: whether the
@@ -132,10 +146,21 @@ public sealed class ParkPeople : Entity
 
 		_peeps = PeepsIn( park );
 
-		// Indexed once here rather than on demand: the guests are fixed for the life of the park - nothing
-		// yet adds or removes one - so this cannot fall out of step with the list it is built from.
+		// Indexed here rather than searched for on demand. <b>This is no longer built once:</b> Admit adds
+		// a guest who was not in the save, so every structure derived from _peeps - this one, _walks and
+		// _sprites - has to be added to in the same breath. Admit is the only place that may do it.
 		foreach ( var peep in _peeps )
 			_byId[peep.ThingId] = peep;
+
+		_balance = balance;
+
+		// One past the highest the file used, for anybody who arrives later. Objects and people share the
+		// one numbering, so both are counted.
+		_nextThingId = 1 + Math.Max(
+			park?.People.Count > 0 ? park.People.Max( person => person.ThingId ) : 0,
+			park?.Objects.Count > 0 ? park.Objects.Max( placed => placed.ThingId ) : 0 );
+
+		_nextSpriteSlot = 1 + (park?.Sprites.Count > 0 ? park.Sprites.Max( sprite => sprite.Slot ) : 0);
 
 		// What the park charges is on its economy thing and what a guest will put up with is in the
 		// balance file, so it takes both - and neither on its own is enough to price the gate.
@@ -164,7 +189,7 @@ public sealed class ParkPeople : Entity
 
 		if ( park != null )
 		{
-			var blocked = CellEdge.For( park, WalkingMode ).Blocked;
+			var blocked = _blocked = CellEdge.For( park, WalkingMode ).Blocked;
 			var saved = park.People.ToDictionary( person => person.ThingId, person => person );
 			var pictures = park.Sprites.ToDictionary( picture => picture.Slot );
 
@@ -232,6 +257,121 @@ public sealed class ParkPeople : Entity
 		}
 
 		Log.Info( $"People: {_peeps.Count} guests and {_staff.Count} staff simulating" );
+	}
+
+	/// <summary>
+	/// Puts one new guest at <paramref name="cellX"/>, <paramref name="cellY"/> - somebody who was not
+	/// in the save. Answers their thing id, or nought where the park cannot take one.
+	///
+	/// <para>
+	/// <b>This is what an arrival is.</b> The original's manager (<c>FUN_004cf3e0</c>) makes exactly one
+	/// of these per thing tick while a vehicle is unloading, through <c>FUN_004cf720</c>, which picks a
+	/// cell and constructs a person on it. Nobody is ever carried inside the vehicle, here or there.
+	/// </para>
+	/// <para>
+	/// <b>Five places have to learn about them, and missing any one fails quietly in its own way.</b>
+	/// <see cref="_peeps"/> is the simulation; <see cref="_byId"/> is how a ride finds who is at its
+	/// queue head; <see cref="_walks"/> is the only reason they move; <see cref="_sprites"/> is the only
+	/// reason they are drawn; and <see cref="ParkState.StandOn"/> is what puts them in a cell's
+	/// occupancy list - without which the gate cannot see them, which is a fault this park has had
+	/// before.
+	/// </para>
+	/// <para>
+	/// <b>Their needs are a deviation and are declared as one.</b> The balance file states a starting
+	/// cash (<c>PeepTypes[x].StartingCash</c>) and a starting exit level (<c>PeepInfo.ExitLevel</c>,
+	/// "starting value... in SECONDS") and says nothing at all about hunger, thirst, toilet, vomit,
+	/// litter or happiness. Those six begin at nought here because a number had to be chosen, not
+	/// because anything was decoded.
+	/// </para>
+	/// </summary>
+	internal int Admit( int cellX, int cellY, int personType = 0, int spriteBank = 0 )
+	{
+		if ( _blocked == null || !ParkState.OnMap( cellX, cellY ) || _peeps.Count == 0 )
+			return 0;
+
+		var one = ParkWorld.NavigatorState.One;
+		var pattern = _peeps[0].Navigator;
+
+		var thingId = _nextThingId++;
+		var slot = _nextSpriteSlot++;
+
+		// The middle of the cell, the way every other position in this park is measured - and the way a
+		// passing test already builds the bus stop's own coordinates.
+		var x = (cellX * one) + (one / 2);
+		var y = (cellY * one) + (one / 2);
+
+		var cash = _balance?.Int( $"PeepTypes[{personType}].StartingCash", 300 ) ?? 300;
+		var exitLevel = _balance?.Int( "PeepInfo.ExitLevel", 120 ) ?? 120;
+
+		// MaxSpeed is factor * 0.2 of a cell per thing tick (FUN_00510190) and the shipped park's guests
+		// carry 1.2 of it; MaxForce has no derivation written down, so it is taken from a guest already
+		// here rather than invented.
+		var navigator = new ParkWorld.NavigatorState(
+			X: x, Y: y, VelocityX: 0, VelocityY: 0, TargetX: x, TargetY: y,
+			Mass: ParkWorld.NavigatorState.DefaultMass,
+			Radius: ParkWorld.NavigatorState.DefaultRadius,
+			MaxForce: pattern.MaxForce, MaxSpeed: pattern.MaxSpeed,
+			NavMode: 0, CantReachDest: 0, PathFinished: true,
+			PathCount: 0, PathTotalCount: 0, PathBufferCount: 0,
+			BufferedDistance: 0, TailDistance: 0, TotalDistance: 0, StuckBits: 0 );
+
+		// <b>A deviation, and the reason is that the faithful path is not buildable yet.</b> The engine
+		// constructs a guest in Deciding and walks them in from outside through WalkingOutside and
+		// AtTheBusStop - both of which take their cells from FUN_004d8650, whose balance-file pair is
+		// unproven, so PeepBehaviour deliberately answers neither. Left in Deciding out here a guest
+		// stands for ever: Decide looks for somewhere inside the park, and they are outside it and
+		// unadmitted. AtGate is the head of the admission sequence the original joins them to anyway -
+		// it picks a ticket booth and sends them to be charged - so this starts them there and skips
+		// the walk in. Put it back the moment that cell pair is measured.
+		var guest = new ParkWorld.GuestState(
+			State: (int)PeepState.AtGate, SavedState: ParkWorld.GuestState.Deciding,
+			PersonType: personType, Cash: cash, ExitLevel: exitLevel,
+			Happiness: 0f, Thirst: 0f, Hunger: 0f, Toilet: 0f, Vomit: 0f, Litter: 0f,
+			MajorDest: 0, QueuePos: 0, PrankeryIndex: 0 );
+
+		var peep = new Peep( thingId, guest, navigator );
+
+		_peeps.Add( peep );
+		_byId[thingId] = peep;
+		_walks[thingId] = new PeepWalk( peep.Navigator, _blocked )
+		{
+			Heading = PeepBehaviour.ArrivalHeading
+		};
+
+		var person = new ParkWorld.Person(
+			ThingId: thingId, Model: ParkWorld.GuestModel, RawX: x >> 8, RawY: y >> 8,
+			SpriteSlot: slot, Angle: PeepBehaviour.ArrivalHeading,
+			Navigator: navigator, Guest: guest );
+
+		// The bank has to be one this park already packs - see ParkGuestSprites.Add.
+		var picture = new ParkWorld.Sprite(
+			Slot: slot, Type: 0, Bank: spriteBank, SpriteNumber: 0,
+			X: cellX, Height: 0f, Y: cellY, Facing: person.Facing,
+			Frame: 0, Alpha: 255, State: 0, Script: SpriteScript.None, Pc: 0 );
+
+		// Standing to begin with - the one picture every one-shot animation ends by jumping into - and
+		// PeepBehaviour puts them on Walking itself as soon as they take a step. Built through Start
+		// rather than by naming a script number, because which script an animation means is the sprite
+		// table's business and the shipped guests are on two different ones.
+		//
+		// ScheduleFrom is handed nought rather than the tick, which the load path does for the same
+		// reason and with the same consequence: it comes due one interval early, once. Admit has no
+		// clock of its own, and a standing sprite coming due a turn early cannot be seen.
+		var animation = new SpriteScript( SpriteScript.None, 0, spriteNumber: 0, frame: 0 );
+
+		animation.Start( SpriteScript.Standing );
+		animation.ScheduleFrom( 0 );
+
+		_sprites[thingId] = animation;
+
+		ParkGuestSprites.Current?.Add( person, picture );
+
+		_behaviour.State.StandOn( thingId, cellX, cellY );
+		_behaviour.State.Admit();
+
+		Log.Info( $"People: guest {thingId} arrived at ({cellX},{cellY}) - {_peeps.Count} guests now" );
+
+		return thingId;
 	}
 
 	/// <summary>

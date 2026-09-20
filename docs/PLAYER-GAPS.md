@@ -91,10 +91,22 @@ Confirmed from the engine as well as the data: `FUN_00471860` indexes the table 
 
 - [ ] **Seen:** the park is permanently the save's 13 guests and 5 staff. Once they have ridden the one
       ride, nothing changes again, ever.
+- **>>> HALF DONE, 2026-09-20: A GUEST CAN NOW ARRIVE, BUT NOTHING MAKES ONE ARRIVE. <<<**
+  `ParkPeople.Admit( cellX, cellY )` creates a guest who was never in the save and wires the five
+  places that have to know — the simulation list, the by-id index, the walk, the sprite pool and the
+  cell's occupancy list — then `ParkState.Admit()` counts them. Confirmed in a live park: `peeps`
+  13 → 14 → 15, the newcomer at the exact cell centre, then `AtGate` → `HeadingForGate` and walking
+  east to the ticket booths with a real route.
+  **What is missing is the trigger.** Arrivals are forced by hand from the debug console (`arrive`);
+  the timer, the headcount and the vehicle choice are decoded (`docs/exe/park.md`, "Arrivals") and
+  unbuilt. Until that lands, no guest arrives unless somebody types the command.
 - **Lives:** `ParkPeople.PeepsIn` is the *only* place a `Peep` is constructed, and it builds the list from
   `park.People` — the save — and never adds. `PeepState.AtTheBusStop` (21) and `ParkAdmission.BusStopA/B`
   already exist as anchor points with nothing feeding them.
-- **Census:** ids 29 and 31-41 are the 13 guests, on the bus road at x 47-48, y 9-15, already walking in.
+- **Census:** ids 29, 31-41 **and 42** are the 13 guests, on the bus road at x 47-48, y 9-15, already
+  walking in. (This line listed only twelve until 2026-09-20; thing 42 is a guest too, which a live
+  census showed when a newly admitted guest was handed id 43 rather than the 42 that was predicted
+  from this list. Compute a free id, never take one from here.)
 - **Not blocked:** the gate-admission path it would feed is built and measured — guests pay at the gate.
 - **Gate:** `park jungle`, then the `guests` census over time. **Predict the count before reading it.**
 - **NOT confirmed in a run** — this rests on code reading alone.
