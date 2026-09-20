@@ -64,6 +64,71 @@ public class LobbyCameraMode : CameraMode
 	private const float SpinSpeed = 0.2f;
 
 	/// <summary>
+	/// The box the camera wanders inside while nobody is playing, from the lobby object's constructor
+	/// (<c>FUN_005dfcd0</c>): centre (500, 75, 500) with extents (400, 50, 400). Those are the
+	/// <b>full</b> sizes rather than half-extents - the original rolls a point as
+	/// <c>centre + rand * extent - extent / 2</c>.
+	///
+	/// <para>
+	/// <b>The middle component is the vertical.</b> The original is Y-up and this world is Z-up, so the
+	/// centre lands at (500, 500, 75) here and the extents at (400, 400, 50): the box spans 300 to 700
+	/// across the lobby and 50 to 100 above it. That is the lobby's own geometry - the four islands
+	/// stand at 400 and 600 in both directions, centred on (500, 500) - which is what says the axes
+	/// have been read the right way round rather than transposed.
+	/// </para>
+	/// </summary>
+	private static readonly Vector3 WanderCentre = new( 500f, 500f, 75f );
+
+	/// <summary>The full size of <see cref="WanderCentre"/>'s box - see there.</summary>
+	private static readonly Vector3 WanderExtent = new( 400f, 400f, 50f );
+
+	/// <summary>
+	/// How fast the camera flies, in units a second. The constructor keeps <b>1.0</b>, which is per
+	/// lobby tick, and the lobby ticks ten times a second - see
+	/// <see cref="LobbyScript.TicksPerSecond"/>.
+	/// </summary>
+	private const float WanderSpeed = 10f;
+
+	/// <summary>
+	/// How close the camera comes to its target before a new one is rolled. The constructor keeps
+	/// <b>100.0</b> and the original tests it against a <b>squared</b> distance, so the radius is ten.
+	/// </summary>
+	private const float ArrivalRadius = 10f;
+
+	/// <summary>
+	/// How fast the aim point chases the island it has picked, in units a second, and how close it gets
+	/// before it slows. The constructor keeps a cap of <b>2.0</b> a tick - twenty a second - and a
+	/// threshold of <b>50.0</b>, squared, so about 7.07.
+	/// </summary>
+	private const float LookSpeedCap = 20f;
+
+	/// <summary>How near the aim point has to be before it starts slowing - see <see cref="LookSpeedCap"/>.</summary>
+	private const float LookArrivalRadius = 7.0710678f;
+
+	/// <summary>
+	/// How much of <see cref="LookSpeedCap"/> the aim point gains or loses each second as it ramps up
+	/// to full speed and back down to nought.
+	///
+	/// <para>
+	/// <b>This is the one number here that was chosen rather than read.</b> The original adds and
+	/// subtracts 0.05 of the cap with no delta at all (<c>0x00702c78</c> and <c>0x00702c84</c>), so it
+	/// is per frame and runs at whatever rate the machine happened to draw - the same shape as the
+	/// lightning roll. Converting it is what this project already does with per-frame rolls, knowingly
+	/// and one system at a time (see <see cref="LobbyWeather"/> and <c>LobbyAudio.RollOneShot</c>), so
+	/// it is converted here too, against sixty frames a second: 0.05 x 60 = 3.0 of the cap a second,
+	/// which reaches full speed in about a third of a second.
+	/// </para>
+	/// </summary>
+	private const float LookRampPerSecond = 3f;
+
+	/// <summary>
+	/// How fast a heading turns toward the bearing it wants, per second. The original eases both the
+	/// flying heading and the aim's at <c>0.1 x delta</c>, which is the same 1.0 a second
+	/// <see cref="PositionRate"/> already carries - the two come from the same constant.
+	/// </summary>
+	private const float DirectionRate = 1f;
+
+	/// <summary>
 	/// How wide a view the lobby is framed at, as the vertical angle at 4:3 that <see cref="Camera"/>
 	/// takes. <b>A deliberate deviation from the file, not a derivation of it - do not "correct" this
 	/// by reading ISLANDFOV.</b>
@@ -174,6 +239,17 @@ public class LobbyCameraMode : CameraMode
 		NominalDistance = MathF.Sqrt(
 			(settings.SpinRadius * settings.SpinRadius) + (settings.VerticalOffset * settings.VerticalOffset) );
 
+		// With nobody playing the lobby flies itself instead of orbiting one island - the same branch
+		// the original takes, on the same condition. Its test is that no player is selected
+		// (FUN_0048bcd0's +0x60 reading -1); ours is the roster having no current player.
+		if ( Players.Roster.Current is null )
+		{
+			Attract( islands );
+
+			FieldOfView = FieldOfViewDegrees;
+			return;
+		}
+
 		if ( !Paused )
 			_orbitTime += Time.Delta;
 
@@ -213,6 +289,137 @@ public class LobbyCameraMode : CameraMode
 		get => _orbitTime * SpinSpeed;
 		set => _orbitTime = value / SpinSpeed;
 	}
+
+	/// <summary>
+	/// The lobby flying itself while nobody is playing, which is what the original does whenever no
+	/// player is selected - <c>FUN_005e0470</c>'s first branch. Decode in <c>docs/exe/lobby.md</c>.
+	///
+	/// <para>
+	/// <b>It steers; it is not placed.</b> The camera keeps a heading, eases that heading toward the
+	/// bearing of a target, and flies along the heading it actually has - which is what rounds the
+	/// corners off and makes the path read as a dolly rather than as a series of straight runs. When it
+	/// comes within <see cref="ArrivalRadius"/> of the target it rolls another one inside the box, so
+	/// the flight never ends and never repeats.
+	/// </para>
+	///
+	/// <para>
+	/// <b>The aim is a second point doing the same thing</b>, chasing whichever island is nearest,
+	/// with a speed that ramps up while it has ground to cover and decays to nothing as it arrives. The
+	/// camera looks at that point rather than at the island, so the shot swings rather than snapping.
+	/// </para>
+	///
+	/// <para>
+	/// The island it picks is put in <see cref="CurrentIsland"/>, because the original keeps the
+	/// nearest island in the very field the picked one uses - which is what makes the lobby's sound and
+	/// its weather follow the camera round for free rather than needing to be told.
+	/// </para>
+	/// </summary>
+	private void Attract( List<LobbyIsland> islands )
+	{
+		if ( !_wandering )
+		{
+			// Seeded exactly as the constructor seeds it: a random point to stand at, another to head
+			// for, and the aim already at full speed.
+			_wanderPosition = RandomPointInBox();
+			_wanderTarget = RandomPointInBox();
+			_wanderDirection = Heading( _wanderPosition, _wanderTarget );
+
+			_lookPosition = RandomPointInBox();
+			_lookDirection = Heading( _lookPosition, RandomPointInBox() );
+			_lookSpeed = LookSpeedCap;
+
+			_wandering = true;
+		}
+
+		if ( !Paused )
+		{
+			_wanderDirection = Steer( _wanderDirection, _wanderPosition, _wanderTarget );
+			_wanderPosition += _wanderDirection * WanderSpeed * Time.Delta;
+
+			if ( (_wanderTarget - _wanderPosition).LengthSquared < ArrivalRadius * ArrivalRadius )
+				_wanderTarget = RandomPointInBox();
+		}
+
+		var nearest = Nearest( islands, _wanderPosition );
+
+		CurrentIsland = nearest;
+		IslandIndex = islands.IndexOf( nearest );
+
+		if ( !Paused )
+		{
+			var wanted = nearest.CameraTarget;
+
+			_lookDirection = Steer( _lookDirection, _lookPosition, wanted );
+			_lookPosition += _lookDirection * _lookSpeed * Time.Delta;
+
+			// Ramped rather than set, so the aim gathers speed while it has somewhere to be and settles
+			// as it arrives - see LookRampPerSecond for the one liberty taken with it.
+			var step = LookSpeedCap * LookRampPerSecond * Time.Delta;
+
+			_lookSpeed = (wanted - _lookPosition).LengthSquared >= LookArrivalRadius * LookArrivalRadius
+				? MathF.Min( _lookSpeed + step, LookSpeedCap )
+				: MathF.Max( _lookSpeed - step, 0f );
+		}
+
+		Position = _wanderPosition;
+		Rotation = Rotation.LookAt( _lookPosition - _wanderPosition );
+	}
+
+	/// <summary>A point somewhere inside <see cref="WanderCentre"/>'s box, the way the original rolls one.</summary>
+	private static Vector3 RandomPointInBox()
+		=> WanderCentre + new Vector3(
+			(Random.Shared.NextSingle() - 0.5f) * WanderExtent.X,
+			(Random.Shared.NextSingle() - 0.5f) * WanderExtent.Y,
+			(Random.Shared.NextSingle() - 0.5f) * WanderExtent.Z );
+
+	/// <summary>
+	/// The unit bearing from one point to another, or straight along X where there is none - which is
+	/// the substitution the original makes rather than dividing by nought.
+	/// </summary>
+	private static Vector3 Heading( Vector3 from, Vector3 to )
+	{
+		var heading = (to - from).Normal;
+
+		return heading.LengthSquared > 0f ? heading : new Vector3( 1f, 0f, 0f );
+	}
+
+	/// <summary>Turns a heading toward the bearing it wants and keeps it a unit vector.</summary>
+	private static Vector3 Steer( Vector3 heading, Vector3 from, Vector3 to )
+		=> heading.LerpTo( Heading( from, to ), Time.SmoothingFactor( DirectionRate ) ).Normal;
+
+	/// <summary>
+	/// Whichever island is nearest a point, by the square of the distance to what the camera would aim
+	/// at - the original walks its whole island list the same way, seeded at 9999999.
+	/// </summary>
+	private static LobbyIsland Nearest( List<LobbyIsland> islands, Vector3 to )
+	{
+		var nearest = islands[0];
+		var best = float.MaxValue;
+
+		foreach ( var island in islands )
+		{
+			var distance = (island.CameraTarget - to).LengthSquared;
+
+			if ( distance >= best )
+				continue;
+
+			best = distance;
+			nearest = island;
+		}
+
+		return nearest;
+	}
+
+	/// <summary>Whether the wander has been seeded - see <see cref="Attract"/>.</summary>
+	private static bool _wandering;
+
+	private static Vector3 _wanderPosition;
+	private static Vector3 _wanderTarget;
+	private static Vector3 _wanderDirection;
+
+	private static Vector3 _lookPosition;
+	private static Vector3 _lookDirection;
+	private static float _lookSpeed;
 
 	/// <summary>Selects an island by index, for DebugConsole. Wraps like the bracket keys do.</summary>
 	internal static void DebugSelect( int index )
@@ -264,7 +471,14 @@ public class LobbyCameraMode : CameraMode
 	/// Which island it was, and where the camera was, are kept, as they are across camera modes - see
 	/// <see cref="Paused"/> - so the lobby built next picks up where this one left off.
 	/// </summary>
-	internal static void ForgetIsland() => CurrentIsland = null;
+	internal static void ForgetIsland()
+	{
+		CurrentIsland = null;
+
+		// The wander is seeded from where it happens to be standing, so a lobby built next has to roll
+		// its own rather than carrying on from a flight through a lobby that has gone.
+		_wandering = false;
+	}
 
 	/// <summary>
 	/// Points the camera at another island, wrapping at either end. There is nothing to reset:

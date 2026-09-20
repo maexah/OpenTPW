@@ -286,6 +286,94 @@ Halloween World in the lobby for twenty seconds.
 The same "looped because nothing sequences it yet" stand-in still applies to the rest of the lobby:
 the Dino and the butterflies.
 
+## The lobby camera has two modes, and only one of them is built
+
+`FUN_005e0470` is the whole lobby camera update. It branches at the top on whether anybody is
+playing: **no islands, or no player selected** (`FUN_0048bcd0()` → `+0x60 == -1`), **or no current
+island** (`[3] == 0`) takes the **attract** path; otherwise the **globe** state machine runs on `[5]`.
+
+OpenTPW builds neither. It orbits whichever island is on show and eases between them, which is
+`FUN_005e1210` — the shared tail both modes call — without either mode in front of it.
+
+### The object
+
+Built by `FUN_005dfcd0`, vtable `0x00702cb0`. Its `[2]` is a 0x10-byte island list (vtable
+`0x00702cac`, head at `+4`, count at `+0xc`) which the update walks; `[3]` is the current island.
+
+| Field | Value at construction | What it is |
+|---|---|---|
+| `[0x16..0x18]` | **500, 75, 500** | Wander box centre |
+| `[0x19..0x1b]` | **400, 50, 400** | Box extents, the **full** size — a point is `centre + rand*extent − extent/2`, so X/Z **300–700** and height **50–100** |
+| `[0x1c]` | **1.0** | Wander speed, per lobby tick — **10 u/s** at ten ticks a second |
+| `[0x1d]` | **100.0** | Arrival threshold, a **squared** distance, so radius **10** |
+| `[0x1e..0x20]` / `[0x21..0x23]` / `[0x24..0x26]` | random / random / normalised | Camera position, its target, and the unit direction between them |
+| `[0x2a]` / `[0x2b]` / `[0x2c]` | **2.0** / seeded at 2.0 / **50.0** | Look-speed cap, current look speed, and its **squared** distance threshold |
+| `[0x2d..0x2f]` / `[0x30..0x32]` / `[0x33..0x35]` | random / nearest island / normalised | Look-at position, its target, and the unit direction |
+
+The box is the lobby's own geometry: the four islands stand at 400 and 600 in X and Z, centred on
+(500, 500), and the camera wanders a 400×400 box around them between heights 50 and 100.
+
+### Attract: fly the box, aim at the nearest island
+
+Per frame, with the lobby's delta (`0.01 × ms`, ten units a second — see `TicksPerSecond`):
+
+1. Take `target − position`, normalise it (a zero vector becomes `(1,0,0)`), ease the **stored
+   direction** toward it at `0.1 × delta`, and re-normalise.
+2. Step the position along that direction by `[0x1c] × delta`.
+3. If the position is within `[0x1d]` of the target, **roll a new target** in the box.
+4. Walk the island list for the **nearest** island to the camera (seeded `9999999.0`, squared
+   distances) and store it in `[3]` and `[0x30..0x32]`.
+5. Ease the **look direction** at the same `0.1 × delta`, re-normalise, and step the look-at along it
+   by `[0x2b] × delta`.
+6. Ramp the look speed: further than `[0x2c]` → `speed += cap × 0.05` clamped to the cap; nearer →
+   `speed −= cap × 0.05` floored at nought.
+
+**Step 6 is per FRAME and is not delta-scaled**, the same trap as the lightning roll — do not convert
+it through a ticks-per-second constant.
+
+### Globe: spin, home, pull in
+
+| State `[5]` | What it does |
+|---|---|
+| 0 | Orbit advance, `angle += delta × SPINSPEED`, wrapped against 2π (`0x00702c18` = π) |
+| 1 | Homes the angle onto the island's own heading `island[+0x14] + π`, shortest way round, at `0.05 × delta`; on arrival calls `FUN_005d83f0(0,0)` and goes to 2 |
+| 2 | Locks that heading, then decays radius `[8]` at **0.07** and vertical `[9]` at **0.6** per delta — the `GLOBERADIUSOUT`→`GLOBERADIUSIN` pull-in — and when the radius falls below **8.0** calls vtable `+0x48` |
+
+`+0x48` is `__amsg_exit(0x19)` — MSVC's **pure virtual** stub — in this vtable, so the running object
+is a derived class that overrides it. **That derived vtable has not been found**: scanning
+`0x00700000`–`0x00790000` finds the pointer `0x005e0470` exactly once, at `0x00702cb8`.
+
+### Island sound is one island at a time, and the previous one is stopped
+
+Three functions manage the per-island pair, all the same shape and all gated on `[5] == 0`:
+
+| Address | Vtable slot | What it is |
+|---|---|---|
+| `FUN_005e1640` | `+0x38` | **Next** island — walks the forward link `[1]` |
+| `FUN_005e1730` | `+0x3c` | **Previous** island — walks the back link `[2]` |
+| `FUN_005e14a0` | — | Reset to the head of the list |
+
+Each one stops the outgoing island's two voices with `Sound_StopFading( island[+0x1c] )` and
+`Sound_StopFading( island[+0x20] )`, zeroes both, picks the neighbour through vtable `+0x4c`, then
+starts the incoming island's **effect 1** from the sfx category (`DAT_00803a4c + 4 + idx*8`) and
+**effect 2** from the music category (`DAT_00803a4c + idx*8`), keeping the voices in those same two
+fields, and calls `Sound_ApplyGroupVolumes`. So the original plays **one island's theme and ambience
+at a time and explicitly stops the previous** — voices do not accumulate. OpenTPW's `LobbyAudio.MoveTo`
+already does the same thing, with a crossfade where the original cuts.
+
+**The attract path never touches `[+0x1c]` or `[+0x20]`.** These are the button and key handlers. So
+while the camera is wandering, no per-island theme is started or stopped by the camera at all; the
+only per-island audio it produces is the **ambient one-shot** — `Sound_PlayEffect` of effect 3, 4 or 5
+by `rand % 3`, gated on `((rand >> 13) & 0xf) == 1` — drawn from whichever island is **nearest that
+frame**. That, rather than any accumulation of themes, is what the attract path makes audible.
+
+### Not sound: `FUN_005d83f0` / `FUN_005d8440`
+
+They call `FUN_004732a0` / `FUN_00473f50` over the handle table at `DAT_007a4610` — the **animation**
+player, not audio. The tail loop of `FUN_005e0470` walks every island and, where its animation is not
+playing, starts a random one of two clips. That is the ISLE's clips 0/1, and it is the only place the
+lobby sequences an island's animation.
+
 ## Park names and the locale tables
 
 The four park display names **are** in the shipped data, measured with OpenTPW's own

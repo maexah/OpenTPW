@@ -7,8 +7,9 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 
 ## Works
 
-- Lobby: four islands, front end, advisor, weather, particles, options, saves, and the island gate
-  swinging open as you enter that park.
+- Lobby: four islands, front end, advisor, weather, particles, options, saves, the island gate
+  swinging open as you enter that park, and — with nobody playing — the camera flying itself around
+  all four islands.
 - Park: enter from the lobby; ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (2 of 6 buttons).
 - People: 13 guests and 5 staff read from the save, drawn, walking, paying at the gate, queueing, boarding.
 - Rides: every placed thing runs its script; 71 of 106 opcodes implemented, the rest counted by `Unimplemented`.
@@ -44,6 +45,16 @@ Take counts fresh; these go stale within a day.
 | Build warnings | 126 (71 are CS8618 nullable) | 2026-09-19 review, **not re-run since** |
 
 ## Recent
+
+**2026-09-20 — the attract camera: the lobby flies itself around all four islands.** Lobby plan item
+8. With no player selected the camera wanders a box and aims at whichever island is nearest, which is
+the first branch of the original's `FUN_005e0470`; with a player it orbits as before. Every number is
+read from the lobby object's constructor `FUN_005dfcd0` — box centre (500, 75, 500), extents
+(400, 50, 400) full-size, speed 1.0 a tick, arrival radius 10, look cap 2.0 a tick — and the box turns
+out to be the lobby's own geometry, which is what says the axes were read the right way round. One
+number was chosen rather than read: the look-speed ramp, which the original applies per frame with no
+delta. Decode in `docs/exe/lobby.md`. Confirmed in the running game over three minutes: seven island
+changes against a predicted six, all four islands reached, and the sound following the camera round.
 
 **2026-09-20 — `docs/PLAYER-GAPS.md` item 1: the gate opens as you enter a park.** It idles shut and
 plays its opening clip once, and the park is asked for when the doors finish. The original does none of
