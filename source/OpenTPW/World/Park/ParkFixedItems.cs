@@ -328,11 +328,19 @@ public sealed class ParkFixedItems : Entity
 			// Where it actually is, right now. This is the line that says whether a thing MOVES rather
 			// than merely having a route to move along: poll it twice and compare. A route read
 			// correctly and never applied looks identical to one applied, in every other line here.
-			if ( _models[i].Entities.Length > 0 )
+			// Every mesh, with the three things that decide whether it is DRAWN - see the gate in
+			// ModelEntity.Render: no model, no opacity, or drawn by its owner. A right-looking
+			// position over an empty road is what sent this line here: the census was reporting
+			// where a thing was without ever saying whether there was anything to see.
+			for ( int mesh = 0; mesh < _models[i].Entities.Length; ++mesh )
 			{
-				var at = _models[i].Entities[0].Position;
+				var entity = _models[i].Entities[mesh];
+				var at = entity.Position;
 
-				yield return $"{name}: mesh 0 at ({at.X:F1}, {at.Y:F1}, {at.Z:F1})";
+				yield return $"{name}: mesh {mesh} at ({at.X:F1}, {at.Y:F1}, {at.Z:F1})"
+					+ $" model={(entity.Model == null ? "NULL" : "yes")}"
+					+ $" translucent={(entity.TranslucentModel == null ? "null" : "yes")}"
+					+ $" opacity={entity.Opacity:F2} ownerDrawn={entity.DrawnByOwner}";
 			}
 		}
 	}
