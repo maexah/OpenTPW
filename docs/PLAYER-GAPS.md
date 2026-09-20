@@ -10,11 +10,17 @@ Tick an item here in the same commit that lands it, and move its detail to the p
 Scope is **Lost Kingdom only**. Anything that changes nothing in `data/levels/jungle` is not on this list,
 however large it looks — that trap has been hit twice.
 
-## >>> THE CURRENT GOAL, SET BY ALEXAH 2026-09-20: CLOSE THE GUEST LOOP. <<<
+## >>> THE CURRENT GOAL, SET BY ALEXAH 2026-09-20: CLOSE THE GUEST LOOP. HALF DONE. <<<
 
 > Guests should be able to visit and purchase from shops and sideshows, new visitors should arrive,
 > visitors should go home, and they should be dropped off and picked up at the front of the park by a
 > **cruise ship**, a **sea plane** and a **bus**.
+
+**Where it stands, 2026-09-20.** The **arrival/leave half is DONE** — guests arrive by themselves, are
+carried by all three vehicles, and go home when their day runs out; confirmed in the running game by
+census **and by screenshot**, all three drawn and visibly moving. **The spending half is not started:**
+sideshows are nearly there and shops are blocked on something structural. So the next goal for this
+line is item 8, taken in that order.
 
 **This reorders the queue.** Items 3 and 6 below stop being separate gaps and become halves of one
 loop; item 8 is new. Items 2, 5 and 7 stand but are no longer next.
@@ -23,8 +29,8 @@ loop; item 8 is new. Items 2, 5 and 7 stand but are no longer next.
 
 | | | why here |
 |---|---|---|
-| **1st** | **Arrivals, and the three vehicles** — item 3 | Nothing else in the loop can be seen without people coming in |
-| **2nd** | **Departures** — item 6 | The same vehicle loop: one that drops off must pick up. Built alone it drains the park |
+| ~~**1st**~~ | ~~**Arrivals, and the three vehicles** — item 3~~ **DONE 2026-09-20** | Nothing else in the loop can be seen without people coming in |
+| ~~**2nd**~~ | ~~**Departures** — item 6~~ **DONE 2026-09-20**, built with the first rather than after it | The same vehicle loop: one that drops off must pick up. Built alone it drains the park |
 | **3rd** | **Sideshow spending** — item 8 | Nearly there already: `CHARGE` is built (`c18ead8`) and pays on leaving |
 | **4th** | **Shops** — item 8 | Last, because it is blocked on something structural rather than unbuilt |
 
@@ -43,10 +49,10 @@ Confirmed from the engine as well as the data: `FUN_00471860` indexes the table 
 |---|---|---|
 | ~~1~~ | ~~The gates never open when you enter a park~~ **DONE 2026-09-20** | — |
 | 2 | Four of the six gadget buttons do nothing | — (to be honest); everything (to work) |
-| 3 | Nobody new ever arrives | — |
+| ~~3~~ | ~~Nobody new ever arrives~~ **DONE 2026-09-20** — and on all three vehicles | — |
 | 4 | The advisor is silent unless you open a screen | — |
 | 5 | The happiness gauge reads wrong | — |
-| 6 | Nobody goes home and no day ever ends | **3** |
+| ~~6~~ | ~~Nobody goes home and no day ever ends~~ **DONE 2026-09-20** — same loop as 3 | — |
 | 7 | A park cannot be saved | — |
 
 ---
@@ -87,10 +93,10 @@ Confirmed from the engine as well as the data: `FUN_00471860` indexes the table 
   largest missing system in the project. Do not start the second one by accident.
 - **Gate:** the `unimplemented` census in the debug console.
 
-## 3. Nobody new ever arrives
+## 3. Nobody new ever arrives — DONE, 2026-09-20
 
-- [ ] **Seen:** the park is permanently the save's 13 guests and 5 staff. Once they have ridden the one
-      ride, nothing changes again, ever.
+- [x] **Was seen:** the park is permanently the save's 13 guests and 5 staff. Once they have ridden the
+      one ride, nothing changes again, ever.
 - **>>> DONE, 2026-09-20: GUESTS ARRIVE BY THEMSELVES AND GO HOME BY THEMSELVES. <<<** A park left
   alone runs `peeps 13 → 14 → 15 → 13 → 12 → 11` with nothing typed — seven arrivals about 18.6 s
   apart and ten departures as the saved guests' day ran out. `ParkPeople.StepArrivals` is the manager
@@ -131,11 +137,11 @@ Confirmed from the engine as well as the data: `FUN_00471860` indexes the table 
 - **(superseded) Still true as written: nobody arrives.** Both halves are built and confirmed in a live
   park: guests are created, carried in by whichever of the three vehicles the crowd size calls for,
   admitted, and removed again when their `ExitLevel` runs out.
-- **What remained for the loop — all of it done, 2026-09-20:** an arrival manager (its rate needs
-  `TimeBetweenArrivals` in ticks, and
-  the sweep is now known to run **one tick in eight** — `docs/exe/boot.md`, corrected 2026-09-20 —
-  though turning that into seconds still needs the tick units pinned); guests created and walked in
-  from the stop; guests walked out and removed; and the ferry and seaplane stood up alongside the bus.
+- **What remained for the loop — all of it done, 2026-09-20:** an arrival manager (its rate is
+  `TimeBetweenArrivals` in **quarter-ticks**, and the sweep runs **one tick in eight** —
+  `docs/exe/boot.md`, corrected 2026-09-20 — which together give the 18.6 s predicted and then measured
+  at 18.9 and 18.8, so the tick units this line once wanted are pinned); guests created and walked in
+  from the stop; guests walked out and removed; and the ferry and seaplane **driving** alongside the bus.
 - **>>> THE WHOLE MECHANISM IS NOW DECODED — see `docs/exe/park.md`, "Arrivals". <<<** It is no longer
   a design question, and the shape to build is not the one this list assumed:
   - `FUN_004cf3e0` waits out a timer, asks `FUN_004cf5b0` for a headcount, summons a vehicle, and then
@@ -147,9 +153,12 @@ Confirmed from the engine as well as the data: `FUN_00471860` indexes the table 
     the other two slots are nought because no crowd that big has ever arrived.
   - **Nobody rides in anything.** The guest is constructed at a cell near the stop, so the vehicles are
     mechanism rather than transport — and state 21 deletes one when it reads 4.
-- **The one thing still missing is the rate.** Nothing in the executable writes the three globals the
-  period comes from, and the timer counts quarter-ticks of the game clock rather than seconds, so
-  "how often" has to come from the balance data or from watching the original.
+- **(resolved 2026-09-20) The one thing still missing is the rate.** It is `Arrival.TimeBetweenArrivals`
+  150 in **quarter-ticks** = 600 game ticks ≈ **18.6 s at 31 ms**, predicted before observing and
+  measured at 18.9 and 18.8. Nothing in the executable writes the globals, so the key-to-global mapping
+  is by arithmetic **role and is not proven** — recorded with that caveat in `docs/exe/park.md`.
+  **In play the rate is now the timer OR the vehicle's circuit, whichever is slower**: gaps measured
+  18.9, then 32.0, 38.7, 38.7, which is what gating arrivals on the vehicle must mean.
 
 ### The three vehicles they arrive and leave on
 
@@ -159,25 +168,28 @@ and a bus**. All three are shipped fixed items, and **none of them is missing ar
 | Item | `Info.Id` | Where it sits now |
 |---|---|---|
 | Bus | **1600** | **Drives.** Spawns at cell (29.7, −11.5), runs its route, parks at the shelter — world (510.5, 65.5), between `BusStopA` and `BusStopB` |
-| Seaplane | **1602** | off the map on negative x |
-| Ferry — **this is the cruise ship**, confirmed by Alexah 2026-09-20 | **1604** | cell (90.0, −17.6) — off the map |
+| Seaplane | **1602** | **Flies, lands and unloads.** Photographed on the water in the bay |
+| Ferry — **this is the cruise ship**, confirmed by Alexah 2026-09-20 | **1604** | **Sails and docks.** Photographed alongside the quay |
 | (Gates 1601, Lights 1603, End 1605 — End is three aircraft 59 units up) | | |
 
-**`ParkFixedItems` now loads gates, lights and the bus.** The ferry and seaplane are still held back,
-and the End sign with them. All six carry `DontApplyOffset 1` and `WhichUIType 4`.
+**`ParkFixedItems` now loads gates, lights and all three vehicles.** Only the End sign is still held
+back. All six carry `DontApplyOffset 1` and `WhichUIType 4`.
 
-**The bus is the worked example the other two follow** — `88cd6de` stood it and bound its script,
-`14d977d` read the routes, `9d4fb04` decoded the progress scalar, `3872a34` drove it. Each was
-confirmed in a live park, and the bus was photographed on the road and at the shelter. The two that
-remain need the same four things, and nothing new is expected: their routes are already measured
-(FERRY 33 points, Seaplane 33, both closed Bézier loops) and both rest **exactly** on their own route,
-which the bus does not quite manage.
+**The bus was the worked example, and the other two followed it** — `88cd6de` stood it and bound its
+script, `14d977d` read the routes, `9d4fb04` decoded the progress scalar, `3872a34` drove it. The other
+two then needed **two** things the bus did not: the `TRIGWAITANIM` opcode (`d132b95`), which their
+scripts use where `bus.RSE` uses plain `TRIGANIM`, and releasing each vehicle at all **three** of its
+`VAR_TRIGGER` spins rather than one. Routes: FERRY 33 points, Seaplane 33, both closed Bézier loops;
+both rest **exactly** on their own route, which the bus does not quite manage.
 
-**Two limitations carried forward, both visible:** the bus drives its route **once and parks**,
-because its clip holds at 220.0/220.0 and nothing loops it; and it **does not turn to face its
-direction of travel**, so it arrives sitting diagonally across the crossing. The facing is a real
-engine behaviour left unbuilt on purpose and counted as `ANIM_PATH_FACING` — the engine samples the
-route's first derivative (`FUN_00474a20`) and builds a basis from the tangent (`FUN_00470780`).
+**One limitation carried forward, and it is visible:** a vehicle **does not turn to face its direction
+of travel**, so the bus arrives sitting diagonally across the crossing. That is a real engine behaviour
+left unbuilt on purpose and counted as `ANIM_PATH_FACING` — the engine samples the route's first
+derivative (`FUN_00474a20`) and builds a basis from the tangent (`FUN_00470780`).
+
+**(resolved) The bus drives its route once and parks.** That was true while only the first of its three
+`VAR_TRIGGER` spins was released. With `ParkPeople.StepVehicle` it runs the circuit repeatedly — watched
+through statuses 1, 2, 3, 4 and 5, and the seaplane and ferry both loop back to the start of theirs.
 
 **The stop geometry is already decoded**, from the theme's own `Standard.sam` — do not re-derive it:
 
@@ -212,11 +224,18 @@ from the crossing. So the arrival path they would take is the one the shipped sa
 - **This is the last fault Alexah found by playing that is still open.** It was found by playing;
   confirm the fix the same way.
 
-## 6. Nobody goes home and no day ever ends
+## 6. Nobody goes home and no day ever ends — DONE, 2026-09-20
 
-- [ ] **Seen:** guests ride, wander, and then do it again forever. The day never closes.
-- **Depends on 3.** Built alone, departures drain the park to empty and leave it that way — there is
-  nothing to refill it.
+- [x] Guests go home when their `ExitLevel` runs out — a countdown that had been ticking since the save
+      was first read with **nothing anywhere reading it**. `ParkPeople.Depart` reverses everything
+      `Admit` wires, including `ParkState.Forget`; a guest a ride or a queue is holding is refused,
+      which is the original's own condition. Confirmed unattended: fourteen departures by name, the
+      population moving both ways rather than only down.
+- **It was built with 3, not after it** — exactly as the note below predicted. Built alone, departures
+  drain the park and leave it that way, and that is not hypothetical: a defect in the vehicle handshake
+  did drain it to nought for a while, which is what caught the fault.
+- **The day still never closes.** Guests leaving is built; a day *ending* is not, and no calendar
+  rollover is wired. That half of this line stands.
 - **Lives:** plan item N3 — "the last of the twenty-two the park can reach".
 - **Gate:** the `peeps` census, with `pause` and `step <n>` to make a short-lived state observable.
 - **Same vehicle loop as item 3**, which is why they are now one job: a bus that drops off must also
@@ -251,7 +270,7 @@ from the crossing. So the arrival path they would take is the one the shipped sa
 
 ## Just behind these
 
-- **35 of 106 opcodes are unimplemented** — but only three are reached by shipped content in this park,
+- **34 of 106 opcodes are unimplemented** (`TRIGWAITANIM` was built 2026-09-20) — but only three are reached by shipped content in this park,
   so it is mostly invisible here. Take the count fresh; three README lines and `RideScriptFile.cs:99`
   still quote older ones.
 
