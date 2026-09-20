@@ -154,6 +154,49 @@ public class ParkFixedItemsTests
 		}
 	}
 
+	/// <summary>
+	/// The three arrival vehicles and whichever is on its way. The header has always carried these four
+	/// and this reader parsed them into its field array and threw them away.
+	///
+	/// <para>
+	/// <b>Lost Kingdom names one of them, and it is the bus this class already stands.</b> The engine
+	/// makes a vehicle thing the first time it needs one and caches the id in the slot for that size of
+	/// crowd (<c>FUN_0051a2f0</c> allocates it, <c>FUN_0050b350</c> hands back the id), and which slot
+	/// is decided by how many people are coming - under 36 the first, up to 60 the second, beyond that
+	/// the third. So this park has only ever had small crowds arrive: the first slot holds the bus and
+	/// the other two have never been needed.
+	/// </para>
+	/// <para>
+	/// That is the whole reason the save places a bus and neither a ferry nor a seaplane, which is
+	/// worth pinning here rather than leaving as a coincidence between two unrelated-looking facts.
+	/// The slot is compared against the bus's catalogue number rather than against the 15 it happens
+	/// to hold, so a reader that mis-indexed the header would still fail this.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheArrivalVehicleForASmallCrowdIsTheBusThisParkAlreadyHas()
+	{
+		var park = World();
+
+		var read = $"small {park.ArrivalVehicleForSmallCrowd}, "
+			+ $"medium {park.ArrivalVehicleForMediumCrowd}, "
+			+ $"large {park.ArrivalVehicleForLargeCrowd}, "
+			+ $"current {park.CurrentArrivalVehicle}";
+
+		var bus = ParkFixedItems.ThingByCatalogue( park, 1600 );
+
+		Assert.AreNotEqual( 0, bus, "this park places a bus at all" );
+		Assert.AreEqual( bus, park.ArrivalVehicleForSmallCrowd,
+			$"the small-crowd arrival vehicle is that same bus - {read}" );
+
+		Assert.AreEqual( 0, park.ArrivalVehicleForMediumCrowd,
+			$"no crowd big enough for the second has ever arrived - {read}" );
+		Assert.AreEqual( 0, park.ArrivalVehicleForLargeCrowd,
+			$"nor the third - {read}" );
+		Assert.AreEqual( 0, park.CurrentArrivalVehicle,
+			$"and none is in transit in a park that was saved at rest - {read}" );
+	}
+
 	/// <summary>The park this theme ships, walked the same way every other park test walks it.</summary>
 	private ParkWorld World()
 	{

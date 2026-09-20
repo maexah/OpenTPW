@@ -47,6 +47,26 @@ Take counts fresh; these go stale within a day.
 
 ## Recent
 
+**2026-09-20 — the arrival mechanism, decoded end to end.** How a park gets new guests is now written
+down in `docs/exe/park.md`: `FUN_004cf3e0` waits out a timer, asks `FUN_004cf5b0` for a headcount,
+summons a vehicle, and then makes **one guest per tick** through `FUN_004cf720` until the load is
+spent. Three findings worth the space. **The vehicle is chosen by how big the crowd is** — under 36
+the bus, up to 60 the seaplane, beyond that the ferry — and the save's own field names,
+`mArrivalVehicle_Size1..3`, say the same thing from the other side. **The vehicle thing is made on
+demand**, which is why the shipped park places a bus and neither of the others: its small-crowd slot
+holds the bus and the other two have never been needed. And **nobody rides in anything** — the guest
+is constructed at a cell near the stop, so the vehicles are mechanism rather than transport.
+
+`ParkWorld` now exposes the four header fields it had been parsing and discarding —
+`ArrivalVehicleForSmallCrowd`, `…MediumCrowd`, `…LargeCrowd` and `CurrentArrivalVehicle`. A test pins
+the small-crowd slot to the bus **by catalogue number rather than by the 15 it happens to hold**. That
+test was written asserting all four were nought, which is what the code comment claimed; it failed,
+and both the comment and the claim were wrong in a way that explained the ferry's absence better than
+the original guess did.
+
+Still not established: the arrival **period**. Nothing in the executable writes the three globals the
+rate comes from, and the timer counts quarter-ticks of the game clock rather than seconds.
+
 **2026-09-20 — the bus drives its route.** `LobbyModel.Pose` applies channel `0x200`: it samples the
 clip's percentage, finds the point that far along the model's closed Bézier route, and moves the node
 the track names — carrying whatever hangs off it, so the wheels ride on the body. Positions are written

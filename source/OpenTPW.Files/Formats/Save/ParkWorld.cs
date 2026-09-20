@@ -972,6 +972,14 @@ public sealed class ParkWorld
 	// mRandomSeed 0x1da708, mGameTick 0x1da70c, mParkClosed 0x1da710, mNumberOfVisitorsToDate 0x1da714,
 	// mWeather 0x1da724, mBankAccount 0x1da726, mParkGates 0x1da732, mWorldState 0x1da738 - give the same
 	// order and the same widths as the sizes above, including Guard before Researcher near the end.
+	// The three arrival vehicles and whichever is on its way. The original picks between the three by
+	// how many people are coming - under 36 takes the first, up to 60 the second, more than 60 the
+	// third (FUN_004cf3e0) - which is what the file's own "_Size1..3" naming is saying.
+	private const int ArrivalVehicleSize1Field = 1;
+	private const int ArrivalVehicleSize2Field = 2;
+	private const int ArrivalVehicleSize3Field = 3;
+	private const int CurrentArrivalVehicleField = 5;
+
 	private const int BankAccountField = 4;
 	private const int GameTickField = 6;
 	private const int ParkClosedField = 9;
@@ -1168,6 +1176,35 @@ public sealed class ParkWorld
 		ReadSprites();
 	}
 
+	/// <summary>
+	/// The thing id of the vehicle that brings a given size of crowd, or nought where the park has
+	/// never needed one. There are three, and which is used is decided by how many people are
+	/// arriving rather than at random: <c>FUN_004cf3e0</c> takes the first for fewer than 36, the
+	/// second up to 60 and the third beyond that, which is what the file's own
+	/// <c>mArrivalVehicle_Size1..3</c> naming means.
+	///
+	/// <para>
+	/// The engine makes the thing the first time a crowd of that size arrives - <c>FUN_0051a2f0</c>
+	/// allocates it and caches the id here - so a slot is nought until it has been needed. Lost
+	/// Kingdom holds its bus in the first and nothing in the other two, which says it has only ever
+	/// had small crowds arrive, and is exactly why the save places a bus and neither a ferry nor a
+	/// seaplane.
+	/// </para>
+	/// </summary>
+	public int ArrivalVehicleForSmallCrowd { get; private set; }
+
+	/// <inheritdoc cref="ArrivalVehicleForSmallCrowd"/>
+	public int ArrivalVehicleForMediumCrowd { get; private set; }
+
+	/// <inheritdoc cref="ArrivalVehicleForSmallCrowd"/>
+	public int ArrivalVehicleForLargeCrowd { get; private set; }
+
+	/// <summary>
+	/// The one on its way, or nought when none is. The original caches it separately from the three
+	/// above and reuses it without choosing again for as long as it is set.
+	/// </summary>
+	public int CurrentArrivalVehicle { get; private set; }
+
 	private void ReadHeader()
 	{
 		var fields = new int[HeaderFieldSizes.Length];
@@ -1185,6 +1222,11 @@ public sealed class ParkWorld
 		Weather = fields[WeatherField];
 		WorldState = fields[WorldStateField];
 		FirstObject = fields[FirstObjectField];
+
+		ArrivalVehicleForSmallCrowd = fields[ArrivalVehicleSize1Field];
+		ArrivalVehicleForMediumCrowd = fields[ArrivalVehicleSize2Field];
+		ArrivalVehicleForLargeCrowd = fields[ArrivalVehicleSize3Field];
+		CurrentArrivalVehicle = fields[CurrentArrivalVehicleField];
 	}
 
 	/// <summary>

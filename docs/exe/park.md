@@ -791,6 +791,73 @@ Corpus counts for the control opcodes: `WAIT` 458, `ENDSLICE` 396, `CRIT_UNLOCK`
 
 ---
 
+## Arrivals: who comes, on what, and how often
+
+`FUN_004cf3e0` is the arrival manager. Its state is two fields of a small block: `+0x10` is "a load is
+being dropped off" and `+0x0c` is how many people are left to drop.
+
+| | |
+|---|---|
+| `FUN_004cf3e0` | the manager |
+| `FUN_004cf5b0` | how many people this load carries |
+| `FUN_0051a2f0` | picks, and if necessary **creates**, the vehicle |
+| `FUN_004cf720` | makes **one** guest |
+| `FUN_0041a990` / `FUN_0041a960` | reads and resets the arrival timer |
+| `FUN_004c7fa0` | the cached count of guests already in the park |
+
+**The cycle.** While no load is in progress it compares `FUN_0041a990()` against `DAT_00785314`. When
+that passes it asks `FUN_004cf5b0` for a headcount, logs `"Bus about to arrive with %d people"`, sets
+the offloading flag, and pushes the count into a ring buffer on the analyser thing (`+0x216dc`, cursor
+`+0x216f0`, capacity `+0x216f4`, wrapped flag `+0x216f8`). While the vehicle reports state **2** it
+logs `"Bus: dropping off kids"` and calls `FUN_004cf720` **once per tick**, decrementing the count and
+bumping a running total at `+0x20cc0`. When the count reaches nought it resets the timer, clears the
+flag, and sends the vehicle away.
+
+**The timer is in quarter-ticks of the game clock**, not seconds: `FUN_0041a990` is
+`(mGameTick >> 2) - (mark >> 2)` where `mGameTick` is the world block's own `+0x1da70c`, and
+`FUN_0041a960` sets the mark to the current tick. Turning the threshold into seconds needs the tick
+rate and **is not established here**.
+
+**Which vehicle comes is decided by how many people are coming, not at random.** `FUN_004cf3e0`
+computes `1` for a headcount under `0x24` (36), otherwise `(0x3c < count) + 2` — so `2` for 36 to 60
+and `3` beyond. That value is `FUN_0051a2f0`'s third argument, where **1, 2 and 3 force the bus, the
+seaplane and the ferry** and **0 means choose at random**. The random arm is an LCG —
+`x = x * 0x19660d + 0x3c6ef35f`, rotated right thirteen, made positive, `% 3` — run over
+**`mRandomSeed`** (`+0x1da708`), the save's own seed. Only the dismiss path passes 0.
+
+The save agrees from the other side: its header fields are named `mArrivalVehicle_Size1`, `_Size2`,
+`_Size3` and `mCurrentArrivalVehicle` (`FUN_00516c80`), and `FUN_0051a2f0` caches the three at
+`+0x1da72c`, `+0x1da72e`, `+0x1da730` with the current one at `+0x1da72a`.
+
+**The vehicle thing is made on demand.** Where the slot is empty, `FUN_0051a2f0` looks the feature up
+by name, allocates `0x450` bytes, calls `FUN_004db090( 1, <name>, 0, 0 )`, takes the id from
+`FUN_0050b350` and caches it. If the pick is unavailable it falls back through the other two by
+bitmask, and if all three fail it dies with `"Fatal error: Could not find either the bus or the plane
+feature"`. A missing feature gives `"Could not find the 'vehicle_name was here' feature"` — the
+placeholder is the shipped string.
+
+**This is why Lost Kingdom places a bus and neither a ferry nor a seaplane.** Its `_Size1` slot holds
+the bus and the other two are nought, which says the park has only ever had small crowds arrive.
+
+**How many come.** `FUN_004cf5b0` returns **0 outright when `mWorldState` (`+0x1da738`) is 4**.
+Otherwise the count is `max(DAT_00785310, <a computed value> / DAT_00785320)`, then capped against the
+population `FUN_004c7fa0` reports: **500 in the online mode** (`DAT_00fb3b7c == 1`) and **1500
+(`0x5dc`) otherwise**, each logging `"Capping the number of people in o..."`. It then logs
+`"Number of people is %d"`.
+
+**A guest is made at a cell, not carried in the vehicle.** `FUN_004cf720` picks a cell through
+`FUN_004d8650`, optionally shifted by `-0x100` — one row of the **runtime packed cell id**, whose
+stride is 256 and which is the same neighbour arithmetic `PeepBehaviour` uses as `{c, c+1, c-0x100,
+c-0xff}`; this is the id's own stride and says nothing about the two map indexings above. It then
+allocates `0x22c` bytes and constructs the person there. **So the vehicles are mechanism rather than
+transport**: nobody is ever inside one.
+
+**Two things here are still open.** Nothing in the executable writes `DAT_00785310`, `DAT_00785314` or
+`DAT_00785320` — all three are zero-valued and read-only, so they are filled by something that leaves
+no direct reference, and the arrival period is therefore not known. And `+0x1da720`, the ushort thing
+id `FUN_00519510` reads to reach the analyser's counters, is not pinned to a name; it is one of the
+header's ushort thing-id fields, of which `mParkAnalyser` is the obvious candidate.
+
 ## The save's world block: map cells
 
 Derived from an emulator field log (`fields_005179c0.txt`, i.e. the fields of `FUN_005179c0`) **which names every field of every one of the 16,384 cells**. Both record sizes match `ParkWorld`'s independently measured skip **to the byte**.

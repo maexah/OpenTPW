@@ -105,9 +105,20 @@ Confirmed from the engine as well as the data: `FUN_00471860` indexes the table 
   the sweep is now known to run **one tick in eight** — `docs/exe/boot.md`, corrected 2026-09-20 —
   though turning that into seconds still needs the tick units pinned); guests created and walked in
   from the stop; guests walked out and removed; and the ferry and seaplane stood up alongside the bus.
-- **One decode already in hand for it:** the vehicles are mechanism, not transport. `FUN_004cf720`
-  creates a guest *at a cell* while the script reports 2, and state 21 deletes one when it reads 4 —
-  so a faithful arrival spawns people at the stop rather than seating them in the bus.
+- **>>> THE WHOLE MECHANISM IS NOW DECODED — see `docs/exe/park.md`, "Arrivals". <<<** It is no longer
+  a design question, and the shape to build is not the one this list assumed:
+  - `FUN_004cf3e0` waits out a timer, asks `FUN_004cf5b0` for a headcount, summons a vehicle, and then
+    makes **one guest per tick** through `FUN_004cf720` until the load is spent.
+  - **The vehicle is chosen by crowd size** — under 36 the bus, up to 60 the seaplane, beyond that the
+    ferry. Not at random, except on the dismiss path.
+  - **The vehicle thing is created on demand** (`FUN_0051a2f0`), which is why this park places a bus
+    and neither of the others: its `mArrivalVehicle_Size1` slot holds the bus (thing 15, measured) and
+    the other two slots are nought because no crowd that big has ever arrived.
+  - **Nobody rides in anything.** The guest is constructed at a cell near the stop, so the vehicles are
+    mechanism rather than transport — and state 21 deletes one when it reads 4.
+- **The one thing still missing is the rate.** Nothing in the executable writes the three globals the
+  period comes from, and the timer counts quarter-ticks of the game clock rather than seconds, so
+  "how often" has to come from the balance data or from watching the original.
 
 ### The three vehicles they arrive and leave on
 
