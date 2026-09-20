@@ -28,10 +28,16 @@ loop; item 8 is new. Items 2, 5 and 7 stand but are no longer next.
 | **3rd** | **Sideshow spending** — item 8 | Nearly there already: `CHARGE` is built (`c18ead8`) and pays on leaving |
 | **4th** | **Shops** — item 8 | Last, because it is blocked on something structural rather than unbuilt |
 
-**>>> THE FIRST THING TO SETTLE, AND ALEXAH CANNOT ANSWER IT - IT MUST BE INVESTIGATED. <<<**
-Do the vehicles need the `.RSE` script runtime built, or can they be driven by our own animation
-player, the way `LobbyGate` now is? **That is the difference between a subsystem and a contained
-job**, and it decides the shape of the whole first step. Settle it before designing anything.
+**>>> THAT FIRST QUESTION IS ANSWERED — 2026-09-20. IT WAS NEITHER OPTION. <<<**
+It asked whether the vehicles need the `.RSE` runtime built, or can be driven by our own animation
+player. Both premises were wrong. The `.RSE` runtime is **already sufficient** — the bus's script
+binds and runs to completion, reaching nothing unbuilt — and the movement is in neither place: it is a
+**Bézier route in the model file** (the array at `0xac`, indexed by a node's `+0x52`) driven by a
+**per-frame percentage in the animation** (channel `0x200`). Our own player applies it, in
+`LobbyModel.Pose`. So it was **a contained job**, and it is done for the bus.
+
+Confirmed from the engine as well as the data: `FUN_00471860` indexes the table as
+`*(model + 0xac) + node[+0x52] * 0x10`, and `FUN_00474840` is the cubic Bézier over it.
 
 | # | What a player sees | Depends on |
 |---|---|---|
@@ -92,6 +98,16 @@ job**, and it decides the shape of the whole first step. Settle it before design
 - **Not blocked:** the gate-admission path it would feed is built and measured — guests pay at the gate.
 - **Gate:** `park jungle`, then the `guests` census over time. **Predict the count before reading it.**
 - **NOT confirmed in a run** — this rests on code reading alone.
+- **Still true as written: nobody arrives.** What has been built so far is the *vehicle* half — see the
+  section below. **No guest has yet been created, carried, or admitted by anything.** Do not let four
+  commits of vehicle work read as progress on this line; the census is still 13 guests and 5 staff.
+- **What remains for the loop:** an arrival manager (its rate needs `TimeBetweenArrivals` in ticks, and
+  the sweep is now known to run **one tick in eight** — `docs/exe/boot.md`, corrected 2026-09-20 —
+  though turning that into seconds still needs the tick units pinned); guests created and walked in
+  from the stop; guests walked out and removed; and the ferry and seaplane stood up alongside the bus.
+- **One decode already in hand for it:** the vehicles are mechanism, not transport. `FUN_004cf720`
+  creates a guest *at a cell* while the script reports 2, and state 21 deletes one when it reads 4 —
+  so a faithful arrival spawns people at the stop rather than seating them in the bus.
 
 ### The three vehicles they arrive and leave on
 
@@ -100,16 +116,26 @@ and a bus**. All three are shipped fixed items, and **none of them is missing ar
 
 | Item | `Info.Id` | Where it sits now |
 |---|---|---|
-| Bus | **1600** | cell (29.7, −11.5) — off the map |
+| Bus | **1600** | **Drives.** Spawns at cell (29.7, −11.5), runs its route, parks at the shelter — world (510.5, 65.5), between `BusStopA` and `BusStopB` |
 | Seaplane | **1602** | off the map on negative x |
 | Ferry — **this is the cruise ship**, confirmed by Alexah 2026-09-20 | **1604** | cell (90.0, −17.6) — off the map |
 | (Gates 1601, Lights 1603, End 1605 — End is three aircraft 59 units up) | | |
 
-**They are parked off-map at their spawns waiting for a driver.** `ParkFixedItems` loads gates and
-lights *only*, and says why: the other four "are vehicles at their spawns, driven by the `.RSE`
-scripts whose runtime is unbuilt — standing them still on the ground would be worse than omitting
-them". So this is a movement problem, not a loading one. All six carry `DontApplyOffset 1` and
-`WhichUIType 4`.
+**`ParkFixedItems` now loads gates, lights and the bus.** The ferry and seaplane are still held back,
+and the End sign with them. All six carry `DontApplyOffset 1` and `WhichUIType 4`.
+
+**The bus is the worked example the other two follow** — `88cd6de` stood it and bound its script,
+`14d977d` read the routes, `9d4fb04` decoded the progress scalar, `3872a34` drove it. Each was
+confirmed in a live park, and the bus was photographed on the road and at the shelter. The two that
+remain need the same four things, and nothing new is expected: their routes are already measured
+(FERRY 33 points, Seaplane 33, both closed Bézier loops) and both rest **exactly** on their own route,
+which the bus does not quite manage.
+
+**Two limitations carried forward, both visible:** the bus drives its route **once and parks**,
+because its clip holds at 220.0/220.0 and nothing loops it; and it **does not turn to face its
+direction of travel**, so it arrives sitting diagonally across the crossing. The facing is a real
+engine behaviour left unbuilt on purpose and counted as `ANIM_PATH_FACING` — the engine samples the
+route's first derivative (`FUN_00474a20`) and builds a basis from the tangent (`FUN_00470780`).
 
 **The stop geometry is already decoded**, from the theme's own `Standard.sam` — do not re-derive it:
 
