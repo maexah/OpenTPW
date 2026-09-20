@@ -85,6 +85,23 @@ forget the vehicle so the next load picks afresh. With `ParkPeople.StepVehicle` 
 through statuses 1, 2, 3, 4 and 5, arrivals recur, and the population moves both ways again -
 13 → 15 → … → 9 → 10 → 7 over three unattended minutes, 5 in and 10 home.
 
+**All three were then watched round a full circuit**, with the `vehicles` census rather than by eye:
+the bus through statuses 1, 2, 3, 4 and 5; the seaplane pc 15 → 29 → 41 → 81 → 29, looping, statuses
+1, 2, 3 and 6, with `VAR_TRIGGER` caught at 1 on the status-6 release; the ferry pc 17 → 24 → 38 → 17,
+looping, while `peeps` climbed 13 → 49 → 109 → … → 258. **The ferry's statuses 4, 5 and 6 were never
+sampled and that is polling, not absence:** returning to pc 17 is reachable only through `BRANCH ->2`
+at instruction 69, which lies past both the status-4 spin at 42-45 and the status-6 spin at 64-67, so
+the loop closing is itself the proof it traversed them. Polls were 23.6s apart and those stages take a
+second or two.
+
+**One probe error worth keeping, because it nearly read as a defect.** An earlier attempt had the
+ferry apparently stuck at pc 24 for seven polls. `parkprobe` re-sends every command each round, so
+`load 70` reset the outstanding count to 70 every 14.4s while only about 58 thing ticks fit in that
+window - the load could never empty, and pc 24 is the spin released by emptying it. `load 40` cleared
+comfortably, which is why the seaplane cycled and the ferry appeared not to. Widening the round to 20s
+showed the circuit at once. A vehicle starved by the instrument looks exactly like a vehicle that is
+stuck.
+
 **Two things about that are honest rather than flattering.** The arrival gaps measured 18.9s and then
 32.0, 38.7, 38.7 - so the rate is no longer `TimeBetweenArrivals` alone but the timer **or the vehicle's
 circuit, whichever is slower**, which is what gating on the vehicle must mean. And the park is still
