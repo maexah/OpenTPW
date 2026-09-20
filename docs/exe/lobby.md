@@ -367,6 +367,12 @@ only per-island audio it produces is the **ambient one-shot** — `Sound_PlayEff
 by `rand % 3`, gated on `((rand >> 13) & 0xf) == 1` — drawn from whichever island is **nearest that
 frame**. That, rather than any accumulation of themes, is what the attract path makes audible.
 
+**OpenTPW deviates here, deliberately and at Alexah's word (2026-09-20).** Its lobby *does* cross-fade
+the theme and bed as the attract camera's nearest island changes — "it should cross fade as it goes
+between parks" — where the original would leave them alone. Measured in game, two changes came 0.97 s
+apart against a 0.9 s fade, so one park is still going out while the next comes in; that overlap is the
+intent. See `LobbyAudio.CrossfadeSeconds`.
+
 ### Not sound: `FUN_005d83f0` / `FUN_005d8440`
 
 They call `FUN_004732a0` / `FUN_00473f50` over the handle table at `DAT_007a4610` — the **animation**

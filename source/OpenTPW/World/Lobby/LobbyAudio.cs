@@ -131,9 +131,18 @@ public sealed class LobbyAudio : Entity
 	/// flying</i>, as often as every second when it passes between two islands - so this fade now runs
 	/// in plain sight, and two of them can overlap. <b>The original does neither</b>: its attract path
 	/// never starts or stops a per-island theme at all, and only the ambient one-shot follows the
-	/// nearest island (<c>docs/exe/lobby.md</c>). Whether to leave theme and bed alone while attracting
-	/// is an open question put to Alexah on 2026-09-20 and not yet answered - do not settle it by
-	/// guessing.
+	/// nearest island (<c>docs/exe/lobby.md</c>).
+	/// </para>
+	///
+	/// <para>
+	/// <b>Fading between parks as the camera travels is a deliberate deviation, and it is Alexah's
+	/// call</b> (2026-09-20): "it should cross fade as it goes between parks". So the fade stays, and
+	/// it stays at this length. It was put to them the other way round - the faithful reading is to
+	/// leave theme and bed alone while attracting - and they chose the fade, which is what the lobby
+	/// sounds like when the camera passes between two islands: measured in game, two changes came
+	/// <b>0.97s apart</b> against this 0.9s, so one park is still going out while the next comes in.
+	/// That overlap is the point of it rather than a fault in it. If it ever wants taming, the thing to
+	/// add is a shortest-dwell before the island on show may change again - not a shorter fade.
 	/// </para>
 	/// </summary>
 	private const float CrossfadeSeconds = 0.9f;
