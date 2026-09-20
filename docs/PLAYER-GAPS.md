@@ -12,7 +12,7 @@ however large it looks — that trap has been hit twice.
 
 | # | What a player sees | Depends on |
 |---|---|---|
-| 1 | The gates never open when you enter a park | — |
+| ~~1~~ | ~~The gates never open when you enter a park~~ **DONE 2026-09-20** | — |
 | 2 | Four of the six gadget buttons do nothing | — (to be honest); everything (to work) |
 | 3 | Nobody new ever arrives | — |
 | 4 | The advisor is silent unless you open a screen | — |
@@ -22,16 +22,28 @@ however large it looks — that trap has been hit twice.
 
 ---
 
-## 1. The gates never open when you enter a park
+## 1. The gates never open when you enter a park — DONE, 2026-09-20
 
-- [ ] **Seen:** you pick a park in the lobby, the entry sound and key-puff play, and you are in the park
-      with no gate animation between the two.
-- **Lives:** the lobby's half — lobby plan item 5; the entry beat is `IslandPanel.cs:296-319`.
-  The park's own `gates.MD2` *does* animate (`ParkFixedItems`), so this is not a model problem.
-- **Trap:** deferred once already because it needs a **held scene transition** to be visible at all.
-  Building the animation without somewhere to play it changes nothing on screen.
-- **Gate:** watch it, with a capture either side — `docs/VERIFYING.md`. Not a test.
-- Alexah named this one themselves (2026-09-20) as the lobby's only remaining gap.
+- [x] The gate now idles **shut** and plays its opening clip **once** as the player commits to the park;
+      the park is asked for the moment the doors finish. `LobbyGate.Open`, called from
+      `IslandPanel.EnterPark`.
+- **The original does not do this**, measured rather than assumed: `IslandLobby_LeaveForPark`
+  (`0x005e1e30`) is three calls — the leaving flag, `IslandPanel_KeyPuffAndEnterSound`, and a UI
+  message 6 that closes the panel — and the state-3 teardown behind it only tears down. So this is
+  `CLAUDE.md` rule 11, marked as a deviation at the call site. The queue's old "needs a held scene
+  transition" note was a previous session's inference and is withdrawn.
+- **Not every gate swings.** Fantasy's is a worm with **no rotation tracks at all**, so it gets no
+  `MeshRotator`; a length taken from the rotator alone left it inert. A gate is played for as long as
+  it *moves* — the rotation movement's end where it has one, the clip's own span otherwise. Full table
+  in `docs/exe/lobby.md`.
+- **Confirmed in the running game**, not from code: jungle held the load for 114–120 stepped frames
+  against a predicted 114 (57 ÷ 30 fps), reproduced three times; fantasy 198–204 against a predicted
+  200, on the other branch. On screen the doors go shut → part-open → open, with the difference
+  localised to a band dead centre on the doors (columns 101–135 of 256, peak 33.6 against a 5.84 mean).
+- **Two traps worth keeping**, both of which cost runs: the debug console's `pause` sets `Time.Paused`
+  and `Time.Delta` then reads **nought**, so anything driven by it freezes and never finishes — use
+  `step <n>`, each one frame of ¹⁄₆₀ s. And the lobby camera orbits, so `settle` alone lands on
+  whichever side it had reached: the gates face their island's **−Y** side, which is `orbit π`.
 
 ## 2. Four of the six gadget buttons do nothing
 

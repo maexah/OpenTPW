@@ -254,13 +254,34 @@ clips it loops carry **zero tracks**, so nothing on screen can move. That is why
 suffix-matching loop was only ever visible on the gate. **Do not read the silent crossing as a
 posing bug.**
 
-### The lobby island gate — still loops, deliberately
+### The lobby island gate — driven by park entry
 
-The lobby gate loops open/shut (`Jun_gateM1` opens, `Jun_gateM2` shuts). Alexah confirmed this is
-fine **as a diagnostic only**; the intended behaviour is doors idle shut, opening when the player
-enters the park. **Nothing raises a park-entry event yet**, so removing the loop would leave the
-lobby gate permanently shut with nothing able to open it — a design change, not a tidy-up. Build the
-park-entry trigger first; the gate is the first thing to convert when that lands.
+The gate idles shut and plays its opening clip **once**, when the player enters that park
+(`LobbyGate.Open`, called from the front end's `EnterPark`). It used to loop open/shut as a
+diagnostic, because nothing raised a park entry; that trigger now exists, so the loop is gone.
+
+**The original does not animate this gate at all**, and that is measured. Its whole entry beat is
+`IslandLobby_LeaveForPark` (`0x005e1e30`): set the lobby leaving, `IslandPanel_KeyPuffAndEnterSound`,
+then `FUN_004b8ec0`, which posts UI message **6** to the island panel's own tree (`DAT_007cc4b4`) —
+a message `IslandPanel_Callback` does not handle, so it falls through to the default and is the
+generic close. The state-3 teardown behind it (`FUN_005d5cf0`, "choice 2 means play a park") only
+tears down. So the swing is **ours**, under `CLAUDE.md` rule 11, and is marked as a deviation at the
+call site.
+
+**Not every gate is a rotation animation.** Measured across all four, not inferred from the jungle's
+hinged pair — the model that cannot catch the mistake:
+
+| gate | M1 carries | frames | movement ends | how it opens |
+|---|---|---|---|---|
+| `Jun_gate` | rotation 2 | 0–60 | 57 | two doors on hinges |
+| `Hal_gate` | rotation 2 (3 clips) | 0–600 | 60 | two rails; the clip runs 10× past the movement |
+| `Spa_gate` | rotation 1 | 0–100 | 60 | the hatch |
+| `Fan_gate` | **morph 2, rotation 0** | 0–100 | — | the worm; it gets no `MeshRotator` at all |
+
+So a gate is played for as long as it **moves**: the rotation movement's end where it has one, and
+the clip's own span otherwise. Taking the length from the rotator alone leaves fantasy with nought
+and its park loads with no animation; playing to `LastFrame` instead would hold a player entering
+Halloween World in the lobby for twenty seconds.
 
 The same "looped because nothing sequences it yet" stand-in still applies to the rest of the lobby:
 the Dino and the butterflies.

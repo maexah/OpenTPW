@@ -45,6 +45,18 @@ public sealed class LobbyModel
 
 	public MeshRotator? Rotator { get; }
 
+	/// <summary>
+	/// The clips this model plays, in the order the engine probes them - M1, M2, and so on.
+	///
+	/// <para>
+	/// Kept so that a caller can sequence them itself through <see cref="Pose"/>, rather than looping
+	/// through them with <see cref="Update"/>. <see cref="LobbyGate"/> is the one that does: a gate idles
+	/// on clip 0's first frame and swings through that one clip when a park is entered, where playing
+	/// them on a loop opens and shuts it for ever.
+	/// </para>
+	/// </summary>
+	public IReadOnlyList<AnimationFile> Clips { get; } = Array.Empty<AnimationFile>();
+
 	// Each mesh's orientation, scale and any shear, already converted to world space. Kept
 	// separate from Position so an animation can turn a mesh without disturbing it.
 	private readonly Matrix4x4[] _linearTransforms;
@@ -180,6 +192,8 @@ public sealed class LobbyModel
 
 		var supplied = clips is { Count: > 0 };
 		var animations = supplied ? clips!.ToArray() : LoadAnimations( modelPath );
+
+		Clips = animations;
 
 		if ( animations.Length > 0 )
 		{

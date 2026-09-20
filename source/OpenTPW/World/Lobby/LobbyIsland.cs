@@ -63,6 +63,11 @@ public sealed class LobbyIsland : Entity
 	/// </summary>
 	public int KeysToEnter { get; }
 
+	/// <summary>
+	/// This island's gate, which is the way into its park and swings open as the player goes through.
+	/// </summary>
+	public LobbyGate Gate { get; }
+
 	private readonly LobbyModel _model;
 
 	/// <summary>
@@ -99,8 +104,9 @@ public sealed class LobbyIsland : Entity
 			textureOverrides: sign );
 
 		// An island brings its gate with it, the way a park's script names both models on one
-		// line. Entity.All keeps hold of it.
-		_ = new LobbyGate( Position, themeName, sign );
+		// line. Kept rather than dropped because entering this park swings it open - see
+		// <see cref="LobbyGate.Open"/> and the front end's EnterPark.
+		Gate = new LobbyGate( Position, themeName, sign );
 
 		// ...and whatever its script says flies around it: ten of each butterfly for the jungle,
 		// fifty bats for hallow, nothing at all for the other two.

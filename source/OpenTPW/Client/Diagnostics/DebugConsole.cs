@@ -324,12 +324,31 @@ public static class DebugConsole
 				Reply( $"size {Screen.Size.X}x{Screen.Size.Y}" );
 				break;
 
-			// Enters a park, and `lobby` comes back out. Standing in for the front end's own park
-			// entry, which is a later job: this is the scene swap on its own, so that what a park
-			// loads and draws can be looked at before anything has to decide when to load it.
+			// Swaps straight to a park, and `lobby` comes back out. The scene swap on its own, with
+			// no gate and no front end in front of it, so that what a park loads and draws can be
+			// looked at without anything deciding when to load it. `enter` below is the path a
+			// player actually takes.
 			case "park":
 				Game.RequestParkLoad( parts.Length > 1 ? parts[1].ToLowerInvariant() : "jungle" );
 				Reply( $"entering {(parts.Length > 1 ? parts[1].ToLowerInvariant() : "jungle")}" );
+				break;
+
+			// The front end's own park entry, which `park` above deliberately skips: the island on
+			// show has its gate swung open, and the park is asked for once the doors have finished.
+			// The same two calls IslandPanel.EnterPark makes, so that the swing can be watched
+			// without having to drive the interface.
+			case "enter":
+				if ( LobbyCameraMode.CurrentIsland is not { } entering )
+				{
+					Reply( "no island on show" );
+					break;
+				}
+
+				// Replied before the gate is opened, because a gate with no clip to play hands the
+				// park load straight on and the scene is gone by the next line.
+				Reply( $"opening {entering.ParkName}'s gate" );
+
+				entering.Gate.Open( () => Game.RequestParkLoad( entering.ThemeName ) );
 				break;
 
 			case "lobby":

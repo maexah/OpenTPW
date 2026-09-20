@@ -7,7 +7,8 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 
 ## Works
 
-- Lobby: four islands, front end, advisor, weather, particles, options, saves.
+- Lobby: four islands, front end, advisor, weather, particles, options, saves, and the island gate
+  swinging open as you enter that park.
 - Park: enter from the lobby; ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (2 of 6 buttons).
 - People: 13 guests and 5 staff read from the save, drawn, walking, paying at the gate, queueing, boarding.
 - Rides: every placed thing runs its script; 71 of 106 opcodes implemented, the rest counted by `Unimplemented`.
@@ -43,6 +44,14 @@ Take counts fresh; these go stale within a day.
 | Build warnings | 126 (71 are CS8618 nullable) | 2026-09-19 review, **not re-run since** |
 
 ## Recent
+
+**2026-09-20 — `docs/PLAYER-GAPS.md` item 1: the gate opens as you enter a park.** It idles shut and
+plays its opening clip once, and the park is asked for when the doors finish. The original does none of
+this — its entry beat is three calls and a UI close — so it is a rule 11 gap-fill, said at the site.
+**Not every gate is a pair of hinged doors**: fantasy's is a worm with no rotation tracks, and taking
+the play length from the rotator alone left it inert, so a gate is played for as long as it *moves*.
+Confirmed in the running game, jungle and fantasy, against predicted durations; the tests that pin the
+rule are mutation-checked, and the two that only pin the file data are recorded as hollow against it.
 
 **2026-09-20 — the memory diet, steps 1 to 5 of `docs/MEMORY-DIET.md`.** Claude Code's project memory
 went from **56 files / 1.9 MB to 18 files / 332 KB**. Four commits, no source file touched:

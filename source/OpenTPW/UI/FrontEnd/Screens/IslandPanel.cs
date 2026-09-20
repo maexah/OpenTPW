@@ -316,7 +316,16 @@ internal sealed class IslandPanel : UiWindow
 
 		Log.Info( $"Front end: entering '{island.ParkName}'" );
 
-		Game.RequestParkLoad( island.ThemeName );
+		// The gate swings open, and the park is asked for once it has.
+		//
+		// <b>This is ours, and the original does not do it.</b> 0x005e1e30 is three calls - set the lobby
+		// leaving, IslandPanel_KeyPuffAndEnterSound, and a UI message 6 to this panel's own tree
+		// (0x007cc4b4) which IslandPanel_Callback does not handle at all, so it is the generic close.
+		// Nothing on that path touches the gate, and neither does the state-3 teardown behind it
+		// (0x005d5cf0, "choice 2 means play a park"). So the original leaves for a park through a gate
+		// that never moves. CLAUDE.md rule 11: the gap is filled in the game's own style - the gate's own
+		// opening clip, played once, at the moment the player commits to the park.
+		island.Gate.Open( () => Game.RequestParkLoad( island.ThemeName ) );
 	}
 
 	/// <summary>Whether the lobby is already on its way to a park - see <see cref="EnterPark"/>.</summary>

@@ -17,19 +17,61 @@ namespace OpenTPW;
 /// The gate is authored in the same model space as the island it belongs to (the island's own
 /// static 'gateway' mesh sits right where this one lands), so it needs no placement of ours.
 ///
-/// The doors loop open and shut continuously, which is a diagnostic rather than the behaviour
-/// we want: the gate should idle shut and swing open only when the player enters the park, and
-/// back again when they leave. Nothing raises a park entry yet, so the loop stands in for it -
-/// it is also the easiest way to see at a glance that rotation animation is still working.
+/// <para>
+/// <b>The doors idle shut and swing open once, as the player enters this park</b> - see
+/// <see cref="Open"/>. They used to loop open and shut for ever, which was a diagnostic standing in
+/// for a park entry that nothing raised yet.
+/// </para>
+///
+/// <para>
+/// <b>Not every gate is a pair of hinged doors, and taking the jungle's for the rule is how this was
+/// first got wrong.</b> Measured across all four rather than inferred from one: <c>Jun</c> two
+/// rotation tracks over frames 0-60, its movement ending at 57; <c>Hal</c> two over 0-600 with the
+/// movement ending at 60, so its clip runs ten times past the point its rails stop; <c>Spa</c> one,
+/// the hatch, over 0-100 ending at 60; and <c>Fan</c> <b>no rotation at all</b> but two morph tracks
+/// over 0-100, because its gate is a worm. Fantasy therefore gets no <see cref="MeshRotator"/>, and a
+/// length taken from the rotator alone left it with nought - its park loading with no animation -
+/// while dropping the model update would have frozen it outright. See <see cref="SwingSeconds"/>.
+/// </para>
+///
+/// <para>
+/// <b>The original does not animate this gate at all, and that is measured rather than assumed.</b>
+/// Its whole entry beat is <c>IslandLobby_LeaveForPark</c> (<c>0x005e1e30</c>): set the lobby leaving,
+/// <c>IslandPanel_KeyPuffAndEnterSound</c>, and a UI message 6 to the island panel's own tree
+/// (<c>0x007cc4b4</c>) which <c>IslandPanel_Callback</c> does not handle at all, so it is the generic
+/// close. Nothing there touches the gate, and the state-3 teardown behind it (<c>0x005d5cf0</c>,
+/// "choice 2 means play a park") only tears down. So the swing is ours, under <c>CLAUDE.md</c> rule
+/// 11: the original is blank at the one moment the player is looking straight at the gate.
+/// </para>
 /// </summary>
 public sealed class LobbyGate : Entity
 {
 	private readonly LobbyModel _model;
 
-	/// <param name="signTextures">
-	/// The park's sign panels, which land here rather than on the island for fantasy and space.
-	/// Ignored by a gate model that does not name sign1 and sign2.
-	/// </param>
+	/// <summary>
+	/// The clip that swings the doors open - M1, the first of the pair every gate is authored as.
+	/// Null for a gate that ships no clip, which must still let its park be entered.
+	/// </summary>
+	private readonly AnimationFile? _opening;
+
+	/// <summary>
+	/// How long <see cref="_opening"/> takes to finish swinging: its <i>movement's</i> length, not the
+	/// clip's - see <see cref="MeshRotator.ClipSeconds"/>. Hallow's carries on for another nine seconds
+	/// after its doors have stopped, and playing to that would hold a park entry open on a gate that
+	/// had finished moving.
+	/// </summary>
+	private readonly float _swingSeconds;
+
+	private enum Doors { Shut, Opening, Open }
+
+	private Doors _doors = Doors.Shut;
+
+	/// <summary>How far into the swing the doors are, in seconds.</summary>
+	private float _swung;
+
+	/// <summary>Run once, when the doors have finished opening - see <see cref="Open"/>.</summary>
+	private Action? _whenOpen;
+
 	public LobbyGate( Vector3 _position, string themeName,
 		IReadOnlyDictionary<string, Texture>? signTextures = null )
 	{
@@ -43,10 +85,106 @@ public sealed class LobbyGate : Entity
 			"lobby/terrain/textures",
 			Position - new Vector3( 0, 0, 2.5f ),
 			textureOverrides: signTextures );
+
+		_opening = _model.Clips.Count > 0 ? _model.Clips[0] : null;
+		_swingSeconds = SwingSeconds( _model.Rotator?.ClipSeconds( 0 ), _model.Animators.Length > 0, _opening );
 	}
 
+	/// <summary>Whether these doors have been asked to open and have not finished - see <see cref="Open"/>.</summary>
+	public bool IsOpening => _doors == Doors.Opening;
+
+	/// <summary>
+	/// How long this gate's opening clip should be played for, in seconds.
+	///
+	/// <para>
+	/// <b>Not every gate swings.</b> The jungle's and hallow's are hinged doors driven by rotation, but
+	/// fantasy's gate is a worm and space's a hatch, and a model whose opening clip turns nothing gets
+	/// no <see cref="MeshRotator"/> at all - so taking the length from the rotator alone left those
+	/// gates with no opening to play and let the park load at once.
+	/// </para>
+	///
+	/// <para>
+	/// A rotation gate is measured by its <i>movement</i> rather than its clip, because hallow's carries
+	/// on for another nine seconds after its doors have stopped. Anything else is played over the span
+	/// its clip declares. A clip that drives nothing this model can play is no opening at all, and
+	/// answers nought so that the park stays reachable.
+	/// </para>
+	/// </summary>
+	/// <param name="rotationSeconds">
+	/// How long the opening clip turns for, or null where this model has no <see cref="MeshRotator"/>
+	/// because that clip turns nothing.
+	/// </param>
+	/// <param name="morphs">Whether the model has an animator the clip can move instead.</param>
+	internal static float SwingSeconds( float? rotationSeconds, bool morphs, AnimationFile? opening )
+	{
+		if ( opening == null )
+			return 0f;
+
+		if ( rotationSeconds is { } turning )
+			return turning;
+
+		if ( !morphs )
+			return 0f;
+
+		return Math.Max( opening.LastFrame - opening.FirstFrame, 0 ) / AnimationFile.FramesPerSecond;
+	}
+
+	/// <summary>
+	/// Swings the doors open, once, and runs <paramref name="whenOpen"/> the moment they finish.
+	///
+	/// <para>
+	/// The callback is how a park entry waits for the gate without the front end having to tick a panel
+	/// it has already closed: this is an <see cref="Entity"/>, so it keeps being updated after the
+	/// island panel has gone. Asking a gate that is already opening, or already open, does nothing -
+	/// the button behind it can be pressed twice before a frame ends.
+	/// </para>
+	/// </summary>
+	public void Open( Action? whenOpen = null )
+	{
+		// A gate shipping no clip, or one with nothing that turns in it, cannot be allowed to make the
+		// player wait for ever: its park still has to be reachable.
+		if ( _opening == null || _swingSeconds <= 0f )
+		{
+			whenOpen?.Invoke();
+			return;
+		}
+
+		if ( _doors != Doors.Shut )
+			return;
+
+		_doors = Doors.Opening;
+		_swung = 0f;
+		_whenOpen = whenOpen;
+	}
+
+	/// <summary>
+	/// Nothing is posed while the doors idle, and that is not an omission: a rotation key is the
+	/// orientation a mesh should hold rather than a turn to add, and every one of these clips opens on
+	/// the orientation its own mesh is authored with - see <c>MeshRotator.BuildRestInverses</c> - so
+	/// <b>the model as it was built is the gate shut</b>. Posing frame 0 each frame would compute the
+	/// transforms it already has.
+	/// </summary>
 	protected override void OnUpdate()
 	{
-		_model.Update( Time.Delta );
+		if ( _doors != Doors.Opening )
+			return;
+
+		// Time.Delta rather than a per-frame step, so the swing takes as long on any frame rate -
+		// CLAUDE.md rule 10.
+		_swung = MathF.Min( _swung + Time.Delta, _swingSeconds );
+
+		_model.Pose( _opening!, _opening!.FirstFrame + (_swung * AnimationFile.FramesPerSecond) );
+
+		if ( _swung < _swingSeconds )
+			return;
+
+		// Held where the swing ended - the pose above leaves the doors open - and whoever is waiting
+		// told exactly once.
+		_doors = Doors.Open;
+
+		var finished = _whenOpen;
+		_whenOpen = null;
+
+		finished?.Invoke();
 	}
 }

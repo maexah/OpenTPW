@@ -89,6 +89,21 @@ public class MeshRotator
 	}
 
 	/// <summary>
+	/// How long clip <paramref name="clip"/> takes to finish moving, in seconds - the span
+	/// <see cref="Update"/> gives it before moving on to the next, and what a caller playing one clip
+	/// itself should play it over. Nought for a clip this rotator does not carry.
+	///
+	/// <para>
+	/// <b>This is the movement's length, not the clip's.</b> See <see cref="MotionEnd"/>: hallow's gate
+	/// keeps going for another nine seconds after its doors have finished swinging, so playing it to
+	/// <see cref="AnimationFile.LastFrame"/> would hold a park entry open on a gate that had stopped
+	/// moving - and end on a pose its own closing clip never starts from.
+	/// </para>
+	/// </summary>
+	public float ClipSeconds( int clip )
+		=> clip >= 0 && clip < _animations.Length ? Duration( clip ) : 0f;
+
+	/// <summary>
 	/// Turns this model's meshes to where <paramref name="animation"/> puts them at
 	/// <paramref name="frame"/>, without touching this rotator's own playback - for a caller that
 	/// sequences clips itself rather than looping through them. <see cref="MeshAnimator.Pose"/> is the
@@ -270,7 +285,12 @@ public class MeshRotator
 	/// is how the closing half is found - hallow's M2 shuts the gate by frame 50 and then reopens
 	/// it.
 	/// </summary>
-	private static int MotionEnd( AnimationFile animation, AnimationFile first )
+	/// <remarks>
+	/// Internal rather than private only so that it can be tested - the same reason
+	/// <see cref="LobbyModel.LoadAnimations"/> is. A <see cref="MeshRotator"/> cannot be built without a
+	/// graphics device, so asserting this through one would mean asserting nothing.
+	/// </remarks>
+	internal static int MotionEnd( AnimationFile animation, AnimationFile first )
 	{
 		var end = animation.LastFrame;
 
