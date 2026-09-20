@@ -18,6 +18,11 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 - The `meter.wct` mapping behind the happiness gauge is wrong — the last fault Alexah found by playing that is still open.
 - 35 opcodes unimplemented. Three README lines and `RideScriptFile.cs:99` still quote older counts.
 
+## Next
+
+`docs/PLAYER-GAPS.md` — the seven gaps a player meets, in the order they meet them. Alexah sets which one
+is the goal; one per session.
+
 ## Not verified on screen
 
 - **The ride loop completing.** The boarding chain is wired and its arithmetic is covered, but only one
