@@ -369,3 +369,6 @@ FodyWeavers.xsd
 [Ii]mgui.ini
 .opentpw
 dumps
+
+# Machine-specific notes for Claude Code (paths, capture recipes)
+CLAUDE.local.md
