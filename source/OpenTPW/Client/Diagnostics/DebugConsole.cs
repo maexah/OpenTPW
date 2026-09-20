@@ -428,6 +428,24 @@ public static class DebugConsole
 
 				break;
 
+			// Where each vehicle's script actually IS. The paths census says where a vehicle is drawn,
+			// and that is the same line whether its script is running or parked for ever waiting on a
+			// trigger - only the program counter separates them. See ParkPeople.VehicleCensus.
+			case "vehicles":
+				if ( ParkPeople.Current is not { } fleet )
+				{
+					Reply( "vehicles: none - a park has to be loaded" );
+					break;
+				}
+
+				var crewed = fleet.VehicleCensus().ToArray();
+				Reply( $"vehicles {crewed.Length}" );
+
+				foreach ( var vehicle in crewed )
+					Reply( "  " + vehicle );
+
+				break;
+
 			// Puts one new guest at the bus stop, which is what an arrival does - the original makes one
 			// per thing tick while a vehicle unloads. Driven by hand here because nothing yet runs the
 			// timer, and because the question worth answering first is whether a guest who was never in
@@ -445,6 +463,24 @@ public static class DebugConsole
 				Reply( arrivedAt == 0
 					? "arrive: the park would not take one"
 					: $"arrive: guest {arrivedAt}" );
+
+				break;
+
+			// Brings a whole load in, of whatever size is asked for, which is the only way to see the
+			// second and third vehicles at all: the headcount is floored at Arrival.MinPeople and a
+			// crowd of one always takes the bus. The banding is the original's own - under 36 the bus,
+			// up to 60 the seaplane, beyond that the ferry.
+			case "load":
+				if ( ParkPeople.Current is not { } loading )
+				{
+					Reply( "load: none - a park has to be loaded" );
+					break;
+				}
+
+				var coming = (int)Argument( 1, 40 );
+				var by = loading.ForceArrival( coming );
+
+				Reply( $"load: {coming} arriving, vehicle {by} - they come one a tick" );
 
 				break;
 

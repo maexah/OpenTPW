@@ -97,6 +97,13 @@ public sealed class RideScript
 	private int _looping;
 
 	/// <summary>
+	/// What <c>TRIGWAITANIM</c> is holding out for - the engine's field <c>+0xbc</c>, holding the role it
+	/// triggered <b>plus one</b>, and nought for "not armed". The plus one is the engine's own and is not
+	/// tidiable away: nought has to mean unarmed, so role nought could not be told from it otherwise.
+	/// </summary>
+	private int _animationMark;
+
+	/// <summary>
 	/// What a one-shot <c>TRIGANIM</c> leaves in <see cref="_looping"/>. No <c>LOOPANIM</c> can name it:
 	/// its key is built from two operands the engine sign-extends from sixteen bits, so a literal
 	/// 65535 arrives as -1. That is why a trigger always leaves the next <c>LOOPANIM</c> looking like a
@@ -947,16 +954,10 @@ public sealed class RideScript
 			// nought - which is every script run on its own, and no longer every script in a park: a
 			// placed thing is handed its own model when it is bound. See RideScript.Animations.
 			//
-			// TRIGWAITANIM is NOT among them, and that is now settled rather than deferred. Its handler
-			// (0x552c1a) triggers exactly as TRIGANIM does, marks +0xbc with the animation id PLUS ONE,
-			// rewinds four words onto itself and returns without ending the slice; on re-entry it asks
-			// the model for channel 0 and goes on only when that answer plus one equals the mark. With
-			// no model the query is skipped and the comparison is made against the RAW THIRD OPERAND,
-			// which nothing can ever change - so the instruction parks the script for ever unless
-			// operand three happens to equal operand one. In the 133 shipped uses it never does: 132
-			// differ outright and the last is a variable. Implementing it faithfully would hang 56
-			// scripts rather than complete 11, and that "+11" came from a coverage measure that cannot
-			// see blocking at all. It waits on models existing, not on anyone's effort.
+			// TRIGWAITANIM is one of them now. It waited on models existing rather than on anyone's
+			// effort, and they exist: ParkFixedItems stands the vehicles and ParkRides binds each one its
+			// animations. See TriggerAndWaitForAnimation, which carries the handler and the single
+			// declared deviation in it - the model-less path, which the engine parks for ever.
 			case Opcode.FLUSHANIM:
 				// The handler's first act is to fetch the model and leave if there is none, so with no
 				// model this really is a no-op. With one it empties the channel's QUEUE and nothing else
@@ -978,6 +979,13 @@ public sealed class RideScript
 				// TRIGANIM's - with the one exception TriggerAnimationOn carries.
 				TriggerAnimationOn( now, Value( operands[0] ), Value( operands[1] ), operands[2],
 					Value( operands[3] ) );
+				break;
+
+			case Opcode.TRIGWAITANIM:
+				// Three operands shaped like TRIGANIM's, and the third is read TWICE by the engine: once
+				// as the destination the length is stored into, and again - raw, unresolved - as what a
+				// script with no model compares against. See the handler for which half is reproduced.
+				TriggerAndWaitForAnimation( now, operands, 1 + operands.Count );
 				break;
 
 			case Opcode.WAITANIM:
@@ -2353,6 +2361,78 @@ public sealed class RideScript
 
 		_animationUntil = now + length;
 		_looping = OneShot;
+	}
+
+	/// <summary>
+	/// <c>TRIGWAITANIM</c> (<c>0x552c1a</c>): trigger an animation, then hold until channel nought is
+	/// actually playing it. See <c>docs/exe/park.md</c>, "The animation opcodes".
+	///
+	/// <para>
+	/// <b>The first visit triggers exactly as <see cref="TriggerAnimation"/> does</b> - the same length,
+	/// the same store into operand three, the same deadline and the same looping key - then marks
+	/// <see cref="_animationMark"/> with the role plus one and rewinds four words onto itself
+	/// <b>without giving up the slice</b>. That omission is the engine's own asymmetry: the not-equal
+	/// re-entry at <c>0x5535d6</c> rewinds <i>and</i> writes <c>+0x98 = 0</c>, while the first visit only
+	/// rewinds - so the same turn re-enters, and a trigger onto an idle channel costs nothing at all.
+	/// </para>
+	///
+	/// <para>
+	/// <b>Re-entry compares channel nought's role plus one against the mark</b>, and that is what the
+	/// instruction is for: a trigger onto a busy channel is QUEUED rather than started, and until the
+	/// queued clip begins the channel still reports the role that was already running. Equal clears the
+	/// mark and falls through (<c>0x5535f4</c>).
+	/// </para>
+	///
+	/// <para>
+	/// <b>One deviation, and this is the whole of it: with no model this steps over rather than parking.</b>
+	/// The engine skips the channel query and compares against the RAW third operand, which nothing can
+	/// ever change, so it parks the script for ever unless operand three equals operand one. Measured
+	/// across every shipped script on 2026-09-20, <b>not one use satisfies that</b>: of 133 uses in 48
+	/// scripts, 132 differ outright and the last is a variable. Reproducing it would hang all 48 to no
+	/// end, so a model-less script counts the instruction and walks past it - which is exactly what it
+	/// did while this opcode had no case at all, and is why the test that pinned that still passes.
+	/// </para>
+	///
+	/// <para>
+	/// <b>What this deliberately does not defend against</b> is a trigger queued behind a clip that LOOPS,
+	/// which never ends and so never lets the queued one start. No vehicle script does it - each triggers
+	/// onto a channel it has not set looping - and an invented timeout would be a worse answer than the
+	/// engine's own, so none is put here.
+	/// </para>
+	/// </summary>
+	private void TriggerAndWaitForAnimation( float now, IReadOnlyList<RideOperand> operands, int length )
+	{
+		if ( Animations is null )
+		{
+			++NotImplemented;
+			Unimplemented.Report( $"{Name}: TRIGWAITANIM with no model to wait on" );
+
+			return;
+		}
+
+		if ( _animationMark == 0 )
+		{
+			var role = Value( operands[0] );
+
+			TriggerAnimation( now, role, Value( operands[1] ), operands[2] );
+
+			_animationMark = role + 1;
+
+			// Rewound, but the budget is deliberately left alone - see the summary above.
+			Position -= length;
+
+			return;
+		}
+
+		if ( RoleOn( 0 ) + 1 == _animationMark )
+		{
+			_animationMark = 0;
+
+			return;
+		}
+
+		Position -= length;
+		_budget = 0;
 	}
 
 	/// <summary>

@@ -95,7 +95,20 @@ Confirmed from the engine as well as the data: `FUN_00471860` indexes the table 
   alone runs `peeps 13 → 14 → 15 → 13 → 12 → 11` with nothing typed — seven arrivals about 18.6 s
   apart and ten departures as the saved guests' day ran out. `ParkPeople.StepArrivals` is the manager
   and `ParkPeople.Depart` the other half; `ExitLevel` is what sends them home, a countdown nothing had
-  ever read. **What is still missing is the vehicles** — see below.
+  ever read. **And the vehicles carry them now — 2026-09-20, all three drive.** The one thing missing
+  was an opcode: `Ferry.RSE` and `seaplane.RSE` start every animation with `TRIGWAITANIM` where
+  `bus.RSE` uses plain `TRIGANIM`, so while that had no case in `RideScript` those two stood still and
+  only the bus moved — the whole of the difference. With it built, `load 40` flies the seaplane in and
+  `load 70` sails the ferry in, and the guests step off once it has landed rather than before: `peeps`
+  holds at 13 through about nine seconds of approach, then 16 → 21 → 25 → 30.
+- **And a second half to it: releasing the vehicle three times a circuit, not once.** Each vehicle
+  script parks at three `TEST VAR_TRIGGER` spins; releasing only the first left the bus stopped at
+  `VAR_STATUS` 4 for ever and, because arrivals are gated on the vehicle reporting 2, **the park
+  drained to nought after one guest**. `ParkPeople.StepVehicle` is the tail of `FUN_004cf3e0`, which
+  runs every tick and re-triggers on status -1, 0, 4 and on 2 with an empty load. Unattended, the
+  population now moves both ways: 13 → 15 → … → 9 → 10 → 7, five in and ten home over three minutes.
+  A `vehicles` console census was added to see this at all - `paths` reports where a vehicle is drawn,
+  which reads identically whether its script is running or parked, and only the pc separates them.
 - **(superseded) HALF DONE: A GUEST CAN NOW ARRIVE, BUT NOTHING MAKES ONE ARRIVE.**
   `ParkPeople.Admit( cellX, cellY )` creates a guest who was never in the save and wires the five
   places that have to know — the simulation list, the by-id index, the walk, the sprite pool and the
@@ -114,11 +127,12 @@ Confirmed from the engine as well as the data: `FUN_00471860` indexes the table 
   from this list. Compute a free id, never take one from here.)
 - **Not blocked:** the gate-admission path it would feed is built and measured — guests pay at the gate.
 - **Gate:** `park jungle`, then the `guests` census over time. **Predict the count before reading it.**
-- **NOT confirmed in a run** — this rests on code reading alone.
-- **Still true as written: nobody arrives.** What has been built so far is the *vehicle* half — see the
-  section below. **No guest has yet been created, carried, or admitted by anything.** Do not let four
-  commits of vehicle work read as progress on this line; the census is still 13 guests and 5 staff.
-- **What remains for the loop:** an arrival manager (its rate needs `TimeBetweenArrivals` in ticks, and
+- **(superseded) NOT confirmed in a run** — true while this rested on code reading alone.
+- **(superseded) Still true as written: nobody arrives.** Both halves are built and confirmed in a live
+  park: guests are created, carried in by whichever of the three vehicles the crowd size calls for,
+  admitted, and removed again when their `ExitLevel` runs out.
+- **What remained for the loop — all of it done, 2026-09-20:** an arrival manager (its rate needs
+  `TimeBetweenArrivals` in ticks, and
   the sweep is now known to run **one tick in eight** — `docs/exe/boot.md`, corrected 2026-09-20 —
   though turning that into seconds still needs the tick units pinned); guests created and walked in
   from the stop; guests walked out and removed; and the ferry and seaplane stood up alongside the bus.

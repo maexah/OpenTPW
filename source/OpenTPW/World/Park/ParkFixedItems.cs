@@ -47,10 +47,12 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>Ferry and seaplane are held back on purpose, and the order matters.</b> Their scripts need
-/// <c>TRIGWAITANIM</c>, which with no model bound compares against a raw operand and parks the script
-/// for ever - so implementing it before a model is bound would hang the great majority of its shipped
-/// uses. It is safe only after the binding this class does.
+/// <b>Ferry and seaplane travel on <c>TRIGWAITANIM</c>, which this class is what made buildable.</b>
+/// Their scripts start every animation with it where <c>bus.RSE</c> uses plain <c>TRIGANIM</c>, so while
+/// that opcode had no case the two stood at the end of their routes with nothing ever triggered - the
+/// one visible difference between a vehicle that drives and two that do not. It compares against a raw
+/// operand and parks the script for ever when no model is bound, which is why it had to wait for the
+/// binding this class does; see <see cref="RideScript"/> for the handler and its one deviation.
 /// </para>
 ///
 /// <para>
@@ -110,6 +112,27 @@ public sealed class ParkFixedItems : Entity
 	// Item names, kept beside _models rather than derived from Items, because an item that would not
 	// load adds neither and the two lists would drift apart.
 	private readonly List<string> _modelNames = [];
+
+	// Which thing each fixed item was stood as, by the item's own name.
+	private readonly Dictionary<string, int> _thingOf = [];
+
+	/// <summary>
+	/// The thing this park stood <paramref name="item"/> as, or nought where it stood none. The three
+	/// vehicles are the ones worth asking for: two of them carry ids the save never gave them, so
+	/// there is nowhere else to look them up.
+	/// </summary>
+	internal int ThingFor( string item ) => _thingOf.GetValueOrDefault( item );
+
+	/// <summary>
+	/// What the arrival manager's choice of vehicle means here - 1, 2 and 3 are the bus, the seaplane
+	/// and the ferry, in the order the save's own <c>mArrivalVehicle_Size1..3</c> name them.
+	/// </summary>
+	internal static string VehicleName( int vehicle ) => vehicle switch
+	{
+		2 => "seaplane",
+		3 => "ferry",
+		_ => "bus"
+	};
 
 	/// <summary>
 	/// The gate's two sign panels, kept only so that they can be let go of again. They are painted
@@ -280,11 +303,36 @@ public sealed class ParkFixedItems : Entity
 				// ParkPeople.Admit hands arriving guests ids UP from one past the highest the file used.
 				// Two allocators sharing one numbering would eventually collide; these cannot meet. It is
 				// derived from the row rather than counted, so a vehicle keeps the same id every load.
-				if ( thing == 0 && item is "bus" or "ferry" or "seaplane" )
+				var catalogueId = item switch
+				{
+					"bus" => BusCatalogueId,
+					"ferry" => FerryCatalogueId,
+					"seaplane" => SeaplaneCatalogueId,
+					_ => 0
+				};
+
+				if ( thing == 0 && catalogueId != 0 )
 					thing = ushort.MaxValue - Array.FindIndex( Items, row => row.Name == item );
 
+				// The catalogue number goes with it, so that a vehicle the save never named can still be
+				// given a script - see ParkObjects.Stood. The gates and the lights carry theirs too and
+				// lose nothing by it: they are in the save's object list already, so ParkRides binds them
+				// on its first pass and the second one steps over them.
 				if ( thing != 0 )
-					objects?.Stand( thing, model, animations );
+					objects?.Stand( thing, model, animations, catalogueId );
+
+				// Kept by name, so that whatever drives a vehicle can find the thing it has to command.
+				// A dictionary rather than a list beside _models, because this one is asked by name and
+				// two lists that must stay in step are two lists that can fall out of it.
+				if ( thing != 0 )
+					_thingOf[item] = thing;
+
+				// Said out loud because two of these carry ids this park's save never gave them, and
+				// whether they were stood at all is otherwise only visible by their not moving - which
+				// looks identical to being stood and never driven.
+				Log.Info( $"{themeName}: fixed item '{item}' is thing {thing}"
+					+ (catalogueId == 0 ? "" : $", catalogue {catalogueId}")
+					+ (thing == 0 ? " - NOT STOOD" : "") );
 			}
 			catch ( Exception e )
 			{

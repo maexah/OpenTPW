@@ -184,6 +184,82 @@ public class RideScriptModelTests
 	}
 
 	/// <summary>
+	/// <c>TRIGWAITANIM</c> onto an idle channel triggers and walks straight through, in the one turn.
+	///
+	/// <para>
+	/// The mark it sets is the <b>role</b> plus one, and a trigger onto an idle channel makes that role
+	/// current at once - so the re-entry the first visit rewinds into matches immediately. This is the
+	/// case every vehicle takes on its first animation, and why implementing a blocking instruction did
+	/// not slow the ferry and the seaplane down: they block only behind a clip of a <i>different</i> role.
+	/// </para>
+	///
+	/// <para>
+	/// It still arms what <c>WAIT4ANIM</c> waits on, because it triggers exactly as <c>TRIGANIM</c> does -
+	/// which is what the two instructions after it in <c>Ferry.RSE</c> rely on.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TriggerAndWaitOnAnIdleChannelGoesStraightThrough()
+	{
+		var script = new RideScript( Build( 1, 50,
+			Word( Opcode.TRIGWAITANIM ), Lit( 5 ), Lit( 0 ), Lit( 0 ),
+			Word( Opcode.COPY ), Var( 0 ), Lit( 7 ),
+			Word( Opcode.END ) ) )
+		{
+			Animations = RideAnimations.Load( "levels/space/features/ferry", "ferry", data )
+		};
+
+		script.Turn( 0f );
+
+		Assert.AreEqual( 7, script.Variables[0], "through in the same turn it rewound in" );
+		Assert.AreEqual( 0, script.NotImplemented, "and nothing counted, because there was a model to ask" );
+		Assert.IsTrue( script.WaitingForAnimation, "the WAIT4ANIM deadline is armed, as TRIGANIM arms it" );
+	}
+
+	/// <summary>
+	/// <b>The mark is cleared when it matches, so a second <c>TRIGWAITANIM</c> triggers like the first.</b>
+	/// The engine clears <c>+0xbc</c> at <c>0x5535f4</c> on the equal branch, and a machine that left it
+	/// standing would sail through every later one <i>without triggering anything</i> - which on a vehicle
+	/// looks exactly like arriving once and never moving again. Both of this park's other vehicle scripts
+	/// run three of these in a loop, so a sticky mark would strand them on their second leg.
+	///
+	/// <para>
+	/// <b>What this asserts is the trigger, not the fall-through, and the difference is the whole test.</b>
+	/// A mark left standing still falls through - the re-entry compare matches the role it never cleared -
+	/// so the instructions after it run either way and asserting those proves nothing. It was written that
+	/// way first and a mutation that removed the clear did not fail it. What does fail is asking whether
+	/// the second one actually started anything: the first clip is still running, so a real trigger
+	/// <b>queues</b> behind it, and a skipped one leaves the channel with nothing queued at all.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheMarkIsClearedSoASecondTriggerAndWaitStillTriggers()
+	{
+		var script = new RideScript( Build( 2, 50,
+			Word( Opcode.TRIGWAITANIM ), Lit( 5 ), Lit( 0 ), Lit( 0 ),
+			Word( Opcode.COPY ), Var( 0 ), Lit( 7 ),
+			Word( Opcode.TRIGWAITANIM ), Lit( 5 ), Lit( 1 ), Lit( 0 ),
+			Word( Opcode.COPY ), Var( 1 ), Lit( 9 ),
+			Word( Opcode.END ) ) )
+		{
+			Animations = RideAnimations.Load( "levels/space/features/ferry", "ferry", data )
+		};
+
+		script.Turn( 0f );
+
+		Assert.AreEqual( 7, script.Variables[0], "the first one completed" );
+		Assert.AreEqual( 9, script.Variables[1], "and so did the second" );
+		Assert.AreEqual( 0, script.NotImplemented );
+
+		var channel = script.Animations!.Channel( 0 );
+
+		Assert.IsNotNull( channel, "the ferry carries a player to ask" );
+		Assert.IsTrue( channel.HasQueued,
+			"the second TRIGWAITANIM triggered - a mark left standing would have stepped over it" );
+		Assert.AreEqual( 1, channel.DeferredSubAnim, "and what it queued is the entry it named" );
+	}
+
+	/// <summary>
 	/// <b>A trigger landing on a channel that is already running queues behind it, and the answer is both
 	/// lengths added together.</b> This is the number that stops being the clip's own duration the moment a
 	/// park is running: the engine returns the time still to run plus the length of what was just queued,

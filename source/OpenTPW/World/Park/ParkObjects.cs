@@ -45,11 +45,18 @@ public sealed class ParkObjects : Entity
 	/// same player rather than at two readings of the same files.
 	/// </para>
 	/// </summary>
-	private sealed class Standing( LobbyModel model, RideAnimations animations )
+	private sealed class Standing( LobbyModel model, RideAnimations animations, int catalogueId )
 	{
 		public LobbyModel Model { get; } = model;
 
 		public RideAnimations Animations { get; } = animations;
+
+		/// <summary>
+		/// Which catalogue item this is, for a thing the save never named - nought where it did.
+		/// <see cref="ParkRides"/> binds scripts by walking the save's object list, so something stood
+		/// without one there would never be given a script; this is how it finds the item to load from.
+		/// </summary>
+		public int CatalogueId { get; } = catalogueId;
 
 		/// <summary>
 		/// The clip posed last on each channel, so a change of clip can put back what the one before it
@@ -247,7 +254,7 @@ public sealed class ParkObjects : Entity
 			model.SetTransform( origin, turn );
 
 			_models.Add( model );
-			_standing[placed.ThingId] = new Standing( model, animations );
+			_standing[placed.ThingId] = new Standing( model, animations, placed.CatalogueId );
 
 			// Where it actually ended up, against where the save says it belongs. The two are worked out
 			// from completely separate things - this from the item's own footprint carried through its
@@ -539,8 +546,23 @@ public sealed class ParkObjects : Entity
 	/// list is touched here.
 	/// </para>
 	/// </summary>
-	public void Stand( int thingId, LobbyModel model, RideAnimations animations )
-		=> _standing[thingId] = new Standing( model, animations );
+	public void Stand( int thingId, LobbyModel model, RideAnimations animations, int catalogueId = 0 )
+		=> _standing[thingId] = new Standing( model, animations, catalogueId );
+
+	/// <summary>
+	/// Everything standing here, with the catalogue item it was stood as. <see cref="ParkRides"/> binds
+	/// scripts by walking the save's own object list, which cannot reach a thing the file never named -
+	/// a vehicle this park has not used yet is not in that list at all, because the engine makes the
+	/// thing the first time it needs one rather than shipping it.
+	/// </summary>
+	internal IEnumerable<(int ThingId, int CatalogueId)> Stood()
+	{
+		foreach ( var (thingId, standing) in _standing )
+		{
+			if ( standing.CatalogueId != 0 )
+				yield return (thingId, standing.CatalogueId);
+		}
+	}
 
 	/// <summary>
 	/// The animation roles a placed thing's archive ships, or null where nothing of that id stands here -

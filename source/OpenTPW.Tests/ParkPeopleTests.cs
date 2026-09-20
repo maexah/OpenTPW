@@ -262,4 +262,49 @@ public class ParkPeopleTests
 		Assert.IsTrue( peeps.All( peep => peep.PurposeSpeed == Peep.UnhurriedSpeed ),
 			"no guest in the shipped park needs the toilet badly enough to hurry" );
 	}
+
+	/// <summary>
+	/// When a vehicle is sent on - the rule out of <c>FUN_004cf3e0</c>'s arms, which decides whether the
+	/// park keeps getting visitors at all.
+	///
+	/// <para>
+	/// <b>Every vehicle script parks three times a circuit</b>, each time spinning on <c>VAR_TRIGGER</c>
+	/// until something writes it. Releasing only one of the three is not a partial fix but a park that
+	/// empties: arrivals are gated on the vehicle answering 2, so a bus stopped at 4 means nobody ever
+	/// arrives again. That was measured in a live park before this rule existed - pc 90, status 4,
+	/// unmoved over a hundred seconds - so these are the states that were actually observed, not a
+	/// guessed set.
+	/// </para>
+	///
+	/// <para>
+	/// <b>The refusal is the assertion that matters.</b> Unloading with somebody still aboard must not be
+	/// released: the original drops one guest per tick for exactly as long as the vehicle answers 2, so a
+	/// rule that let it go early would send the bus away with its passengers still on it - and the park
+	/// would look busy while quietly losing the people it had just been given.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void AVehicleIsSentOnFromEveryStateItParksIn()
+	{
+		Assert.IsFalse( ParkPeople.ReleasesVehicle( 2, 3 ),
+			"unloading with three still aboard: it must NOT be sent away" );
+		Assert.IsFalse( ParkPeople.ReleasesVehicle( 2, 1 ),
+			"nor with the last one still aboard" );
+
+		Assert.IsTrue( ParkPeople.ReleasesVehicle( 2, 0 ),
+			"but a spent load is what sends it away" );
+
+		Assert.IsTrue( ParkPeople.ReleasesVehicle( 4, 0 ), "leaving - the one the bus was stuck at" );
+		Assert.IsTrue( ParkPeople.ReleasesVehicle( 4, 2 ),
+			"and it is stuck there whether or not a load is outstanding, so the count must not gate it" );
+
+		Assert.IsTrue( ParkPeople.ReleasesVehicle( 0, 0 ), "idle between runs" );
+		Assert.IsTrue( ParkPeople.ReleasesVehicle( 6, 0 ), "and finished, which also forgets it" );
+
+		// The states it passes through under its own power. Nudging one of these would release a spin
+		// the script has not reached, which the next COPY VAR_TRIGGER, 0 would then swallow silently.
+		Assert.IsFalse( ParkPeople.ReleasesVehicle( 1, 0 ), "arriving" );
+		Assert.IsFalse( ParkPeople.ReleasesVehicle( 3, 0 ), "pulling away" );
+		Assert.IsFalse( ParkPeople.ReleasesVehicle( 5, 0 ), "running its last clip" );
+	}
 }

@@ -227,6 +227,78 @@ public sealed class ParkRides : Entity
 		// And tell the gate whether this park is open. This is one of several writes of a script variable
 		// from outside a script - the capacity and duration above are two more, and ride operation writes
 		// VAR_LETMEON and VAR_LETMEOFF - though it was the only one when this line was written.
+		// <b>And the things this park stood that the save never named.</b> The loop above walks
+		// world.Objects, so it reaches only what the file placed. A vehicle this park has not used is
+		// not in that list at all - the engine makes the thing the first time a crowd of that size
+		// arrives rather than shipping one - so the ferry and the seaplane were being stood, drawn, and
+		// then left without a script, which is why they sat at their spawns while the bus drove.
+		//
+		// Nothing new is needed to bind them: ParkFixedItems records which catalogue item each was
+		// stood as, and the script path comes from that item exactly as it does above. A thing already
+		// bound by the first pass is stepped over, which is how the gates and the lights - which ARE in
+		// the save's list - fall out of this without being named here.
+		if ( _objects is { } stood )
+		{
+			// What the first pass managed on its own, so that what this one adds is a measured
+			// difference rather than a number inferred from a census counting a different population.
+			// Deducing "one of the two failed" from a total whose baseline had never been taken is
+			// exactly how the wrong half of this got investigated - and the census that total came
+			// from prints a header line of its own, so it was never even counting the same things.
+			//
+			// Only the baseline is said here. What this pass then does is reported thing by thing
+			// below, which is both more use and one fewer walk of an iterator that is about to be
+			// walked anyway.
+			Log.Info( $"{ThemeName}: {Bound} things bound from the save's own list, before the ones it "
+				+ "does not name" );
+
+			foreach ( var (thingId, catalogueId) in stood.Stood() )
+			{
+				// Already bound by the pass above, which is how the gates and the lights - which ARE in
+				// the save's object list - step out of this without being named here.
+				if ( _scripts.ContainsKey( thingId ) )
+				{
+					Log.Info( $"{ThemeName}: thing {thingId} (catalogue {catalogueId}) was already bound" );
+					continue;
+				}
+
+				// Said rather than skipped in silence: a thing standing in the park as a catalogue
+				// number this theme has no item for can never be given a script, and the only symptom
+				// is that it never moves - which looks exactly like a thing that is bound and idle.
+				if ( !catalogue.TryGet( catalogueId, out var item ) )
+				{
+					Log.Warning( $"{ThemeName}: thing {thingId} stands as catalogue item {catalogueId}, "
+						+ "which this theme has no description for, so it can run no script" );
+
+					++Scriptless;
+					continue;
+				}
+
+				var id = Scheduler.Spawn( ScriptPathFor( item ) );
+
+				if ( id == 0 )
+				{
+					++Scriptless;
+					continue;
+				}
+
+				_scripts[thingId] = id;
+
+				Log.Info( $"{ThemeName}: thing {thingId} (catalogue {catalogueId}) now runs "
+					+ ScriptPathFor( item ) );
+
+				if ( Scheduler.Find( id ) is not { } script )
+					continue;
+
+				script.ThingId = thingId;
+
+				script.Animations = stood.AnimationsFor( thingId )
+					?? RideAnimations.Load( item.Directory, item.Stem, _files, item.AnimationChannels );
+
+				if ( script.Animations.Loaded > 0 )
+					++Animated;
+			}
+		}
+
 		// Last, because it needs the binding above to have run.
 		CommandTheGate( world );
 

@@ -404,6 +404,113 @@ public sealed class ParkPeople : Entity
 	internal static int VehicleFor( int people )
 		=> people < 36 ? 1 : people > 60 ? 3 : 2;
 
+	/// <summary>The variable a vehicle's script reports itself through, as its own file declares it.</summary>
+	private const string VehicleState = "VAR_STATUS";
+
+	/// <summary>
+	/// What a vehicle's script spins on until somebody sets it. Ferry.RSE and seaplane.RSE both read
+	/// <c>TEST VAR_TRIGGER / ENDSLICE / BRANCH_Z</c> back onto themselves, so a vehicle that is never
+	/// told to go stands at the stop for ever - which is exactly how they behaved before this.
+	/// </summary>
+	private const string VehicleTrigger = "VAR_TRIGGER";
+
+	/// <summary>
+	/// The state a vehicle reports once it has arrived and is ready to unload. The original drops one
+	/// guest a tick for exactly as long as <c>FUN_0051a690</c> answers this.
+	/// </summary>
+	private const int VehicleIsUnloading = 2;
+
+	/// <summary>
+	/// The state a vehicle reports between runs, waiting to be sent off on the next leg.
+	/// </summary>
+	private const int VehicleIsIdle = 0;
+
+	/// <summary>
+	/// The state a vehicle reports once it has pulled away and is waiting to be released again - the
+	/// second of the three points every vehicle script parks at.
+	/// </summary>
+	private const int VehicleIsLeaving = 4;
+
+	/// <summary>
+	/// The state a vehicle reports when it has finished its circuit. <c>FUN_0051a690</c> answers this by
+	/// <b>forgetting the vehicle</b> - it clears <c>mCurrentArrivalVehicle</c> and reports -1 instead - so
+	/// the next load picks afresh rather than re-using one that has driven off.
+	/// </summary>
+	private const int VehicleIsSpent = 6;
+
+	/// <summary>
+	/// Starts a load of <paramref name="people"/> now, whatever the timer says, and answers which
+	/// vehicle that size calls for. Answering the console rather than the park.
+	///
+	/// <para>
+	/// <b>It exists because the second and third vehicles are otherwise unreachable.</b> The headcount
+	/// is floored at <c>Arrival.MinPeople</c> - one, in every theme the game ships - and
+	/// <see cref="VehicleFor"/> gives one person the bus, so a park left to itself sends the bus every
+	/// time and a seaplane is never asked for. Until the crowd is sized from the park's own draw, this
+	/// is the only way to watch the other two arrive.
+	/// </para>
+	/// </summary>
+	internal int ForceArrival( int people )
+	{
+		_arrivalsRemaining = Math.Max( 1, people );
+		_arrivalVehicle = VehicleFor( _arrivalsRemaining );
+
+		Log.Info( $"People: {_arrivalsRemaining} arriving by hand, vehicle {_arrivalVehicle} "
+			+ $"({ParkFixedItems.VehicleName( _arrivalVehicle )})" );
+
+		return _arrivalVehicle;
+	}
+
+	/// <summary>
+	/// The script of whichever vehicle is bringing this load, or null where this park has no such thing
+	/// standing or nothing bound to it.
+	/// </summary>
+	private RideScript? VehicleScript( int vehicle )
+	{
+		if ( _scriptFor == null || ParkFixedItems.Current is not { } items )
+			return null;
+
+		var thing = items.ThingFor( ParkFixedItems.VehicleName( vehicle ) );
+
+		return thing == 0 ? null : _scriptFor( thing );
+	}
+
+	/// <summary>
+	/// What each of the three vehicles is doing right now - the thing it was stood as, whether a script
+	/// is bound, where that script's program counter has got to, and the two variables the arrival
+	/// handshake turns on. Answering the console rather than the park.
+	///
+	/// <para>
+	/// <b>A vehicle parked for ever looks exactly like one that is running, in every other census here.</b>
+	/// The position lines in <c>paths</c> only move while an animation plays, so a script waiting on a
+	/// trigger nobody will send reads as "arrived, and idle between runs". The program counter is the one
+	/// number that tells those two apart, which is why this exists at all.
+	/// </para>
+	/// </summary>
+	internal IEnumerable<string> VehicleCensus()
+	{
+		for ( var vehicle = 1; vehicle <= 3; ++vehicle )
+		{
+			var name = ParkFixedItems.VehicleName( vehicle );
+			var thing = ParkFixedItems.Current?.ThingFor( name ) ?? 0;
+			var script = VehicleScript( vehicle );
+
+			if ( script is null )
+			{
+				yield return $"{name}: thing {thing}, NO SCRIPT BOUND";
+				continue;
+			}
+
+			var carrying = vehicle == _arrivalVehicle && _arrivalsRemaining > 0
+				? $" <- carrying this load, {_arrivalsRemaining} still to drop"
+				: "";
+
+			yield return $"{name}: thing {thing} script '{script.Name}' pc {script.Position} "
+				+ $"running {script.Running} {VehicleState} {script[VehicleState]} "
+				+ $"{VehicleTrigger} {script[VehicleTrigger]}{carrying}";
+		}
+	}
+
 	/// <summary>
 	/// One turn of the arrival manager - <c>FUN_004cf3e0</c>. It waits out a period, decides how many
 	/// are coming and on what, and then drops <b>one guest per thing tick</b> until that load is spent.
@@ -428,6 +535,18 @@ public sealed class ParkPeople : Entity
 
 		if ( _arrivalsRemaining > 0 )
 		{
+			var vehicle = VehicleScript( _arrivalVehicle );
+
+			// <b>The vehicle says when it is ready, which is the original's own handshake.</b> Its
+			// script plays its arrival animation, sets VAR_STATUS to 2 and then spins on VAR_TRIGGER;
+			// FUN_004cf3e0 drops one guest a tick for exactly as long as FUN_0051a690 reports that.
+			//
+			// <b>Where there is no script to ask, the guests still come.</b> A vehicle that is missing,
+			// unbound, or declares no such variable must not be able to stop a park getting visitors at
+			// all - and gating on a state that will never arrive is precisely what would do that.
+			if ( vehicle != null && vehicle[VehicleState] != VehicleIsUnloading )
+				return;
+
 			var useA = (thingTick & 1) == 0;
 			var stopX = 42;
 			var stopY = 5;
@@ -445,7 +564,19 @@ public sealed class ParkPeople : Entity
 				--_arrivalsRemaining;
 
 			if ( _arrivalsRemaining == 0 )
+			{
 				_arrivalMark = GameClock.Ticks;
+
+				// And send it away. The script will not leave the stop until this changes, so a load
+				// that is finished with and never released leaves the vehicle sitting there - said out
+				// loud when the script declares no such variable, because a vehicle that never departs
+				// looks exactly like one that was never told to.
+				if ( vehicle != null && !vehicle.Set( VehicleTrigger, 1 ) )
+				{
+					Log.Warning( $"People: the {ParkFixedItems.VehicleName( _arrivalVehicle )}'s script "
+						+ $"declares no {VehicleTrigger}, so it cannot be sent away" );
+				}
+			}
 
 			return;
 		}
@@ -463,6 +594,86 @@ public sealed class ParkPeople : Entity
 		_arrivalVehicle = VehicleFor( _arrivalsRemaining );
 
 		Log.Info( $"People: {_arrivalsRemaining} arriving, vehicle {_arrivalVehicle}" );
+	}
+
+	/// <summary>
+	/// One turn of the vehicle itself, which the original does on <b>every</b> tick and not only while a
+	/// load is being dropped - the tail of <c>FUN_004cf3e0</c> at <c>LAB_004cf4b6</c>.
+	///
+	/// <para>
+	/// <b>Every vehicle script parks three times a circuit, and one release is not enough.</b> Each of
+	/// them sets a status, spins on <c>TEST VAR_TRIGGER / ENDSLICE / BRANCH_Z</c> back onto itself, and
+	/// goes no further until something writes that variable - <c>bus.RSE</c> at instructions 42, 87 and
+	/// 117, and the other two the same. Releasing only the first, which is what sending a spent load away
+	/// did, leaves the vehicle stopped at the second for ever: measured in a live park as the bus sitting
+	/// at pc 90 with <c>VAR_STATUS</c> 4 from 69s to 169s while the park emptied itself.
+	/// </para>
+	///
+	/// <para>
+	/// <b>Summoning, releasing and sending away are all one write.</b> <c>FUN_0051a2f0</c> ends at
+	/// <c>0x51a66b</c> by setting variable nought - <c>VAR_TRIGGER</c> - to one on the vehicle it already
+	/// has standing, and the manager reaches it from every arm: when there is no vehicle, when one reports
+	/// idle, when one reports leaving, and when a load is spent. Only a freshly <i>created</i> thing is
+	/// treated differently, getting <c>VAR_STATUS</c> = 1 instead.
+	/// </para>
+	///
+	/// <para>
+	/// <b>State 2 is deliberately not released while a load is outstanding.</b> That is the one the drip
+	/// depends on: the original drops a guest per tick for exactly as long as the vehicle answers 2, so
+	/// nudging it early would send the vehicle off with its passengers still aboard.
+	/// </para>
+	///
+	/// <para>
+	/// <b>One approximation, named rather than hidden.</b> The original chooses between two sets of states
+	/// by <c>FUN_0051a9d0</c>, which answers whether a guest is standing at the stop - a peep (model byte
+	/// 1) in state <c>0x15</c>, <see cref="PeepState.AtTheBusStop"/>, on one of the four cells
+	/// <c>{c, c+1, c-0x100, c-0xff}</c> around <c>FUN_004d8650</c>'s first cell. <b>Which balance-file
+	/// pair that getter returns is still unproven</b> - see <see cref="PeepBehaviour"/>, where the same
+	/// open item blocks two states - so the choice between the arms is not reproduced and every state the
+	/// original ever nudges is nudged here. The difference is confined to which arm fires, never to
+	/// whether a vehicle moves, and no guest in this park reaches those cells to be counted anyway.
+	/// </para>
+	/// </summary>
+	/// <summary>
+	/// Whether a vehicle reporting <paramref name="state"/>, with <paramref name="stillToDrop"/> of its
+	/// load left, should be sent on - the rule out of <c>FUN_004cf3e0</c>'s arms, on its own so that it
+	/// can be read and tested without a park standing around it.
+	///
+	/// <para>
+	/// <b>The one that matters is the refusal.</b> Unloading with somebody still aboard must NOT be
+	/// released: the original drops a guest per tick for exactly as long as the vehicle answers 2, so
+	/// letting it go early would send it off with its passengers still on it. Every other state the
+	/// original ever nudges is nudged.
+	/// </para>
+	/// </summary>
+	internal static bool ReleasesVehicle( int state, int stillToDrop )
+		=> state is VehicleIsIdle or VehicleIsLeaving or VehicleIsSpent
+			|| (state == VehicleIsUnloading && stillToDrop == 0);
+
+	private void StepVehicle()
+	{
+		// Nought is "no vehicle", and it must be refused here: VehicleName answers "bus" for anything it
+		// does not recognise, so asking about vehicle nought would quietly command the bus.
+		if ( _arrivalVehicle == 0 || VehicleScript( _arrivalVehicle ) is not { } vehicle )
+			return;
+
+		var state = vehicle[VehicleState];
+
+		if ( !ReleasesVehicle( state, _arrivalsRemaining ) )
+			return;
+
+		if ( !vehicle.Set( VehicleTrigger, 1 ) )
+		{
+			Log.Warning( $"People: the {ParkFixedItems.VehicleName( _arrivalVehicle )}'s script "
+				+ $"declares no {VehicleTrigger}, so it cannot be released" );
+
+			return;
+		}
+
+		// FUN_0051a690's own answer to state 6: let go of the vehicle, so the next load summons one
+		// rather than commanding one that has already driven off.
+		if ( state == VehicleIsSpent )
+			_arrivalVehicle = 0;
 	}
 
 	/// <summary>
@@ -715,6 +926,11 @@ public sealed class ParkPeople : Entity
 			}
 
 			StepArrivals( thingTick );
+
+			// After the load, and on every tick rather than only while one is running - the original
+			// reaches its own tail the same way, from every arm above. Without this the vehicle is
+			// released once and parks at the next of its three spins for ever.
+			StepVehicle();
 
 			TakeTheRidesTurns( thingTick );
 		}

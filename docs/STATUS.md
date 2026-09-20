@@ -12,13 +12,13 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
   all four islands with all four heard at once, each from its own island.
 - Park: enter from the lobby; ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (2 of 6 buttons).
 - People: 13 guests and 5 staff read from the save, drawn, walking, paying at the gate, queueing, boarding.
-- Rides: every placed thing runs its script; 71 of 106 opcodes implemented, the rest counted by `Unimplemented`.
+- Rides: every placed thing runs its script; 72 of 106 opcodes implemented, the rest counted by `Unimplemented`.
 
 ## Does not
 
 - No buying, building, hiring, finances, shops serving, litter, saving a park back, video, networking.
 - The `meter.wct` mapping behind the happiness gauge is wrong — the last fault Alexah found by playing that is still open.
-- 35 opcodes unimplemented. Three README lines and `RideScriptFile.cs:99` still quote older counts.
+- 34 opcodes unimplemented. Three README lines and `RideScriptFile.cs:99` still quote older counts.
 
 ## Next
 
@@ -47,6 +47,67 @@ Take counts fresh; these go stale within a day.
 
 ## Recent
 
+**2026-09-20 — all three vehicles drive, and `TRIGWAITANIM` is the whole of why they did not.** The
+ferry and the seaplane stood still for one reason: `Ferry.RSE` and `seaplane.RSE` start every animation
+with `TRIGWAITANIM` where `bus.RSE` uses plain `TRIGANIM`, and that opcode had no case — so it fell to
+the counted default and the one instruction that would have started their route was stepped over.
+Setting script variables could never have moved them: `ParkObjects.Sweep` poses a stood thing from its
+animation channel, and a channel nothing triggers does not advance.
+
+It was left counted on purpose — with no model bound it compares against its **raw third operand** and
+parks the script for ever — and `ParkFixedItems` binding models is what made it safe to build. Measured
+across every shipped script rather than taken from the note that claimed it: **133 uses in 48 scripts,
+132 with operand three differing outright and the last a variable, none equal**, so a faithful
+model-less path would hang all 48. The model path is reproduced exactly (`0x552c1a`: mark `+0xbc` with
+the role plus one, rewind four words *without* giving up the slice, re-entry compares channel nought's
+role plus one, clear at `0x5535f4`); the model-less path is a declared deviation that steps over,
+counted — which is why the test pinning the old behaviour still passes **untouched**.
+
+Confirmed in a live park with all three moving in one run: bus `619.3 → 510.5`, seaplane
+`491.9 → 483.5 → 461.4`, ferry `791.9 → 601.7 → 554.2`. Guests now step off *after* the aircraft lands
+rather than before — `peeps` holds at 13 through about nine seconds of approach, then 16 → 21 → 25 → 30.
+**A first run read that pause as a stall and it was not:** the probe had stopped polling too early.
+
+**And then the park emptied itself, which was this session's own defect.** Every vehicle script parks
+**three** times a circuit - `bus.RSE` at instructions 42, 87 and 117 - each setting a status and then
+spinning on `TEST VAR_TRIGGER / ENDSLICE / BRANCH_Z` onto itself. Releasing only the first, which is
+what sending a spent load away did, left the bus stopped at the second: measured with a new `vehicles`
+console census as pc 90, `VAR_STATUS` 4, `VAR_TRIGGER` 0, unchanged from 69s to 169s, with one guest
+still owed. Arrivals are gated on the vehicle reporting 2, so after the very first load nobody else
+ever came and the park drained to nought.
+
+The tail of `FUN_004cf3e0` at `LAB_004cf4b6` is what was missing: it runs on **every** tick, not only
+while a load is being dropped, and re-triggers the vehicle whenever its status is -1, 0 or 4 (and on 2
+with an empty load). Summoning, releasing and sending away are all the **same write** - `FUN_0051a2f0`
+ends by setting variable nought, `VAR_TRIGGER`, to one on the vehicle already standing; only a freshly
+*created* thing is different, getting `VAR_STATUS` = 1. Status 6 additionally makes `FUN_0051a690`
+forget the vehicle so the next load picks afresh. With `ParkPeople.StepVehicle` added the bus cycles
+through statuses 1, 2, 3, 4 and 5, arrivals recur, and the population moves both ways again -
+13 → 15 → … → 9 → 10 → 7 over three unattended minutes, 5 in and 10 home.
+
+**Two things about that are honest rather than flattering.** The arrival gaps measured 18.9s and then
+32.0, 38.7, 38.7 - so the rate is no longer `TimeBetweenArrivals` alone but the timer **or the vehicle's
+circuit, whichever is slower**, which is what gating on the vehicle must mean. And the park is still
+net-negative, because the headcount is floored at `Arrival.MinPeople` = 1 while `FUN_004c8240` stays
+undecoded; that deviation predates this work and is unchanged by it.
+
+**One approximation is named and not built:** `FUN_0051a9d0` chooses between two sets of states by
+asking whether a peep is standing at the stop, on four cells around `FUN_004d8650`'s first cell. Which
+balance-file pair that getter returns is **still unproven** - the `+1` among `{c, c+1, c-0x100, c-0xff}`
+means the pair is adjacent, which rules out `BusStopA/B` at (42,5) and (53,5) and leaves
+`CrossingBSSideA/B` at (47,5) and (48,5) as the likeliest reading rather than an established one. An
+attempt to settle it by cross-reference failed both ways: all four globals are READ-only from
+`FUN_004d8650` itself, and the executable holds **no** `BusStop` or `CrossingBSSide` strings, so the
+balance loader matches those keys without them. Every state the original ever nudges is nudged here
+instead, which changes which arm fires and never whether a vehicle moves.
+
+**Two corrections worth keeping.** The `paths` census's "of the route" figure is static clip data, not
+live progress — it reads 98.8 and 104.0 on every poll while the models are visibly travelling, so a
+reading of "parked at the end of its route" drawn from that column was wrong; mesh 0's position is the
+only honest signal. And the first test written for the mark was **hollow**: a mark left standing still
+falls through, so asserting the instructions after it passed under mutation. It now asserts that the
+second trigger actually *queued*, which is the thing that stops happening.
+
 **2026-09-20 — the guest loop closes: they arrive by themselves, and they go home.** A park left alone
 now runs `peeps 13 → 14 → 15 → 13 → 12 → 11` without anything typed — seven arrivals and ten
 departures over two and a half minutes.
@@ -68,9 +129,10 @@ a balance-file cell pair that is still unproven. Rerouting `HeadingForExit` was 
 tests that pin that transition said no — correctly. So 19 is treated as the end of the walk instead,
 which leaves every tested transition untouched.
 
-**Not done: the ferry and the seaplane still do not move.** They are stood and they have ids, but
-scripts are bound by walking the save's object list, and the save names neither — so nothing drives
-them. The vehicle a crowd's size selects is computed and currently discarded.
+**(superseded the same day) Not done: the ferry and the seaplane still do not move.** They are stood and
+they have ids, but scripts are bound by walking the save's object list, and the save names neither — so
+nothing drives them. Both halves of that were then fixed: a second binding pass gives them scripts, and
+`TRIGWAITANIM` gives those scripts something to drive. See the entry at the top of this file.
 
 **2026-09-20 — a guest who was never in the save arrives and walks to the gate.** `ParkPeople.Admit`
 makes one: a thing id above everything the file used, a `GuestState` whose cash comes from
