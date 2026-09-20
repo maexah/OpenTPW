@@ -34,6 +34,7 @@ Machine-specific paths live in `CLAUDE.local.md` (not committed). Long-form know
 14. **File-format facts go to the FileFormats docs clone in the same session** (bytes in a shipped file). **Executable facts go to `docs/exe/`** (what the game does with them). See `docs/README.md`.
 15. **Do not mention the Gmail, Calendar or Drive connectors.**
 16. **Write the plan down as you go** (2026-09-11). Put a multi-step task's checklist in the live plan and tick it before moving on, not at the end, so an auto-compaction loses nothing. Hand broad read-only sweeps to subagents that report a summary; keep edits, builds, commits and game launches in the main session.
+17. **Show the gap list before every clear** (2026-09-20). When Alexah says they are about to clear the session, show `docs/PLAYER-GAPS.md` — every item, what is done, what is next — so they can see where the project stands before the context goes. **Read the file and show what it says**, rather than reciting it from memory; a half-remembered list handed over at a clear is the one place a stale claim cannot be caught later.
 
 ## Build, test, run
 
