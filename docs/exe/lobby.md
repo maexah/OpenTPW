@@ -377,9 +377,10 @@ The engine end of that is the original's own: `Sound_PlayEffect( handle, categor
 really is positional, and the game delay-loads QMixer (QSound) for it. What the original never did was
 spend any of it in the **lobby**, which is why this is an improvement rather than a restoration.
 
-Measured by disk capture over 60 s of flying (`~/.cache/tpw-harnesses/lobbyaudio.py`): **`sounding=4`
-on 18 of 20 readings** — the two dips to 3 are a voice inside its effect's repeat delay, visible as
-`bed=-` in the same line — with **peak 0.275 (−11.2 dBFS)** and **rms 0.032 (−29.9 dBFS)**. Four parks
+Measured by disk capture over 60 s of flying (`~/.cache/tpw-harnesses/lobbyaudio.py`), on the build
+that shipped: **`sounding=4` on 17 of 20 readings** — the three dips to 3 are a voice inside its
+effect's repeat delay, visible as `bed=-` or `theme=-` in the same line — with **peak 0.2499
+(−12.0 dBFS)** and **rms 0.0280 (−31.0 dBFS)**, and **zero `placed=flat` while flying**. Four parks
 summing therefore does **not** clip: the levels calibrated for one park still stand, against a
 documented worst case of 1.18 before master volume. A muted control measured exactly 0.0, which is what
 proves the capture is the game's own mix. See `LobbyAudio.KeepPlaying`.
