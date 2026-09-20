@@ -126,23 +126,11 @@ public sealed class LobbyAudio : Entity
 	/// does, and a cut over a second of visible travel reads as a fault.
 	///
 	/// <para>
-	/// <b>That reasoning covers a player changing island, and no longer covers the whole of it.</b>
-	/// Since the attract camera landed, the island on show also changes <i>while the camera is
-	/// flying</i>, as often as every second when it passes between two islands - so this fade now runs
-	/// in plain sight, and two of them can overlap. <b>The original does neither</b>: its attract path
-	/// never starts or stops a per-island theme at all, and only the ambient one-shot follows the
-	/// nearest island (<c>docs/exe/lobby.md</c>).
-	/// </para>
-	///
-	/// <para>
-	/// <b>Fading between parks as the camera travels is a deliberate deviation, and it is Alexah's
-	/// call</b> (2026-09-20): "it should cross fade as it goes between parks". So the fade stays, and
-	/// it stays at this length. It was put to them the other way round - the faithful reading is to
-	/// leave theme and bed alone while attracting - and they chose the fade, which is what the lobby
-	/// sounds like when the camera passes between two islands: measured in game, two changes came
-	/// <b>0.97s apart</b> against this 0.9s, so one park is still going out while the next comes in.
-	/// That overlap is the point of it rather than a fault in it. If it ever wants taming, the thing to
-	/// add is a shortest-dwell before the island on show may change again - not a shorter fade.
+	/// <b>This length applies only while somebody is playing.</b> While the camera is flying, nothing
+	/// fades at all: all four parks sound at once, each heard from its own island, and the blend
+	/// between them is distance - see <see cref="KeepPlaying"/>. Alexah asked for the cross-fade
+	/// between parks (2026-09-20) and then for it to come from positional audio, which is what
+	/// replaced the fade in that mode rather than sitting alongside it.
 	/// </para>
 	/// </summary>
 	private const float CrossfadeSeconds = 0.9f;
@@ -185,9 +173,34 @@ public sealed class LobbyAudio : Entity
 
 	/// <summary>Where the island on show wants its ambience to come from, or null to play it flat.</summary>
 	private Vector3? _ambiencePosition;
-	private Voice? _music;
-	private Voice? _bed;
 	private readonly Random _random = new();
+
+	/// <summary>
+	/// The two voices a park has sounding, and where they are heard from.
+	///
+	/// One of these per park rather than one pair for the lobby, because while the camera is flying
+	/// <b>all four sound at once</b> - see <see cref="KeepPlaying"/>.
+	/// </summary>
+	private sealed class ParkVoices
+	{
+		public Voice? Music;
+		public Voice? Bed;
+	}
+
+	/// <summary>What each park has sounding, by theme. A park with nothing playing keeps no entry.</summary>
+	private readonly Dictionary<string, ParkVoices> _voices = new( StringComparer.OrdinalIgnoreCase );
+
+	/// <summary>
+	/// Whether the lobby is flying itself, which is when all four parks sound at once.
+	///
+	/// The same condition the camera branches on - see <see cref="LobbyCameraMode"/> - so the sound
+	/// and the picture cannot disagree about which mode the lobby is in.
+	/// </summary>
+	private static bool Attracting => Players.Roster.Current is null;
+
+	/// <summary>The voices of the park on show, which is the one the one-shots come from.</summary>
+	private ParkVoices? Sounding
+		=> _playing is { } theme && _voices.TryGetValue( theme, out var voices ) ? voices : null;
 
 	/// <summary>
 	/// Silences the lobby without unloading it, for the debug console.
@@ -317,8 +330,10 @@ public sealed class LobbyAudio : Entity
 	internal string State()
 		=> !Audio.Ready
 			? "no audio device"
-			: $"park={_playing ?? "none"} theme={Describe( _music )} bed={Describe( _bed )} "
-				+ $"placed={_ambiencePosition?.ToString() ?? "flat"} "
+			: $"mode={(Attracting ? "flying" : "playing")} park={_playing ?? "none"} "
+				+ $"theme={Describe( Sounding?.Music )} bed={Describe( Sounding?.Bed )} "
+				+ $"sounding={_voices.Values.Count( v => v.Music is { Playing: true } || v.Bed is { Playing: true } )} "
+				+ $"placed={OneShotPosition?.ToString() ?? "flat"} "
 				+ $"muted={Muted} volume={Audio.MasterVolume:0.00}";
 
 	private static string Describe( Voice? voice ) => voice is { Playing: true } ? voice.Name : "-";
@@ -370,16 +385,12 @@ public sealed class LobbyAudio : Entity
 	/// </summary>
 	private void MoveTo( LobbyIsland island )
 	{
-		_music?.FadeOut( CrossfadeSeconds );
-		_bed?.FadeOut( CrossfadeSeconds );
+		// While the camera is flying, every park is already sounding and the one on show is only
+		// which one the one-shots come from - so there is nothing to fade out and nothing to start.
+		// The blend between parks is distance doing it, not this. See KeepPlaying.
+		if ( !Attracting )
+			Silence( _playing );
 
-		// Those voices were holding their effects - see SoundCategory.Play - so the park being
-		// left has to be told it may start them again next time the camera comes round.
-		_current?.Music.Release( LocalMusic );
-		_current?.Ambience.Release( LocalBed );
-
-		_music = null;
-		_bed = null;
 		_playing = island.ThemeName;
 		_current = ParkFor( island.ThemeName );
 
@@ -394,14 +405,45 @@ public sealed class LobbyAudio : Entity
 		// see Audio.ReferenceDistance.
 		Audio.ReferenceDistance = LobbyCameraMode.NominalDistance;
 
-		if ( _current == null || Muted )
+		if ( _current == null || Muted || Attracting )
 			return;
 
-		_music = _current.Music.Play( LocalMusic, MusicVolume, fadeInSeconds: CrossfadeSeconds,
-			bus: AudioBus.Music );
-		_bed = _current.Ambience.Play( LocalBed, BedVolume, fadeInSeconds: CrossfadeSeconds );
+		var voices = VoicesFor( island.ThemeName );
 
-		Log.Info( $"Lobby audio: {island.ThemeName} - theme '{Describe( _music )}', bed '{Describe( _bed )}'" );
+		voices.Music = _current.Music.Play( LocalMusic, MusicVolume, fadeInSeconds: CrossfadeSeconds,
+			bus: AudioBus.Music );
+		voices.Bed = _current.Ambience.Play( LocalBed, BedVolume, fadeInSeconds: CrossfadeSeconds );
+
+		Log.Info( $"Lobby audio: {island.ThemeName} - theme '{Describe( voices.Music )}', bed '{Describe( voices.Bed )}'" );
+	}
+
+	/// <summary>Stops a park and lets its two effects go, so it may start them again next time.</summary>
+	private void Silence( string? theme, float fadeSeconds = CrossfadeSeconds )
+	{
+		if ( theme is null || !_voices.TryGetValue( theme, out var voices ) )
+			return;
+
+		voices.Music?.FadeOut( fadeSeconds );
+		voices.Bed?.FadeOut( fadeSeconds );
+
+		voices.Music = null;
+		voices.Bed = null;
+
+		// Those voices were holding their effects - see SoundCategory.Play - so the park being left
+		// has to be told it may start them again next time the camera comes round.
+		var park = ParkFor( theme );
+
+		park?.Music.Release( LocalMusic );
+		park?.Ambience.Release( LocalBed );
+	}
+
+	/// <summary>The voice holder for a park, made on first use.</summary>
+	private ParkVoices VoicesFor( string theme )
+	{
+		if ( !_voices.TryGetValue( theme, out var voices ) )
+			_voices[theme] = voices = new ParkVoices();
+
+		return voices;
 	}
 
 	/// <summary>
@@ -416,12 +458,62 @@ public sealed class LobbyAudio : Entity
 	/// </summary>
 	private void KeepPlaying()
 	{
-		if ( _music is not { Playing: true } )
-			_music = _current!.Music.Play( LocalMusic, MusicVolume, bus: AudioBus.Music );
+		if ( Attracting )
+		{
+			// >>> ALL FOUR AT ONCE, EACH HEARD FROM ITS OWN ISLAND. <<< Distance does the blending as
+			// the camera flies, so there is no fading in or out here at all - a park is simply always
+			// sounding, and how loud it is is how near you are. That is the whole of the cross-fade in
+			// this mode.
+			foreach ( var island in Entity.All.OfType<LobbyIsland>() )
+				KeepParkPlaying( island.ThemeName, FlyingPositionOf( island ) );
 
-		if ( _bed is not { Playing: true } )
-			_bed = _current!.Ambience.Play( LocalBed, BedVolume );
+			return;
+		}
+
+		// Somebody is playing: only the island on show sounds, flat or at the node it marks, exactly as
+		// it did before any of this. Whatever a flight left sounding is faded out and let go.
+		foreach ( var theme in _voices.Keys.ToArray() )
+		{
+			if ( !string.Equals( theme, _playing, StringComparison.OrdinalIgnoreCase ) )
+				Silence( theme );
+		}
+
+		if ( _playing is { } playing )
+			KeepParkPlaying( playing, _ambiencePosition );
 	}
+
+	/// <summary>
+	/// Starts a park's theme or its bed again when either runs out, at the place that park is heard
+	/// from. Neither loops - see the note on <see cref="KeepPlaying"/>'s caller.
+	/// </summary>
+	private void KeepParkPlaying( string theme, Vector3? position )
+	{
+		if ( ParkFor( theme ) is not { } park )
+			return;
+
+		var voices = VoicesFor( theme );
+
+		if ( voices.Music is not { Playing: true } )
+			voices.Music = park.Music.Play( LocalMusic, MusicVolume, bus: AudioBus.Music, position: position );
+
+		if ( voices.Bed is not { Playing: true } )
+			voices.Bed = park.Ambience.Play( LocalBed, BedVolume, position: position );
+	}
+
+	/// <summary>
+	/// Where a park is heard from while the camera is flying: the place its own model marks, or the
+	/// island itself where it marks none.
+	///
+	/// <para>
+	/// <b>The fallback is only used while flying.</b> Three of the four islands mark no emitter - only
+	/// Space carries <c>ant_emitter</c> - so with somebody playing they go on sounding flat exactly as
+	/// they always have, and <see cref="_ambiencePosition"/> stays null for them. Giving them a place
+	/// unconditionally would have made the ordinary lobby positional as a side effect of this, which is
+	/// not what was asked for.
+	/// </para>
+	/// </summary>
+	private static Vector3? FlyingPositionOf( LobbyIsland island )
+		=> island.TryGetNode( SoundNodeName, out var marked ) ? marked : island.Position;
 
 	/// <summary>
 	/// The one-in-sixteen-a-frame roll, restated as a rate - the same conversion
@@ -442,8 +534,24 @@ public sealed class LobbyAudio : Entity
 		// not do - it played every lobby sound at (0,0,0) - so it is an improvement on the lobby
 		// rather than a restoration of it; see the note at the top of this class.
 		_current!.Ambience.Play( LocalOneShotFirst + _random.Next( LocalOneShotCount ), OneShotVolume,
-			position: _ambiencePosition );
+			position: OneShotPosition );
 	}
+
+	/// <summary>
+	/// Where a one-shot is heard from.
+	///
+	/// <para>
+	/// While the camera is flying it comes from the island it belongs to, the same rule the themes and
+	/// beds follow - otherwise three of the four islands would go on chiming flat in the middle of a
+	/// scene where everything else is placed, because only Space marks an emitter node. With somebody
+	/// playing it is <see cref="_ambiencePosition"/> exactly as before: the node where there is one,
+	/// and flat where there is not.
+	/// </para>
+	/// </summary>
+	private Vector3? OneShotPosition
+		=> Attracting && LobbyCameraMode.CurrentIsland is { } island
+			? FlyingPositionOf( island )
+			: _ambiencePosition;
 
 	/// <summary>
 	/// Plays one of the island's continuous ambient samples at <paramref name="position"/>, or at the
@@ -475,15 +583,13 @@ public sealed class LobbyAudio : Entity
 	/// </summary>
 	private void StopEverything()
 	{
-		foreach ( var voice in new[] { _music, _bed, _globalBed } )
-			voice?.FadeOut( 0.15f );
+		// Every park, not just the one on show: a flight leaves all four sounding.
+		foreach ( var theme in _voices.Keys.ToArray() )
+			Silence( theme, 0.15f );
 
-		_music = null;
-		_bed = null;
+		_globalBed?.FadeOut( 0.15f );
 		_globalBed = null;
 
-		_current?.Music.Release( LocalMusic );
-		_current?.Ambience.Release( LocalBed );
 		_global?.Release( GlobalAmbientBed );
 	}
 

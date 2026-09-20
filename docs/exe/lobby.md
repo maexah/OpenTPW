@@ -367,11 +367,22 @@ only per-island audio it produces is the **ambient one-shot** — `Sound_PlayEff
 by `rand % 3`, gated on `((rand >> 13) & 0xf) == 1` — drawn from whichever island is **nearest that
 frame**. That, rather than any accumulation of themes, is what the attract path makes audible.
 
-**OpenTPW deviates here, deliberately and at Alexah's word (2026-09-20).** Its lobby *does* cross-fade
-the theme and bed as the attract camera's nearest island changes — "it should cross fade as it goes
-between parks" — where the original would leave them alone. Measured in game, two changes came 0.97 s
-apart against a 0.9 s fade, so one park is still going out while the next comes in; that overlap is the
-intent. See `LobbyAudio.CrossfadeSeconds`.
+**OpenTPW deviates here, deliberately and at Alexah's word (2026-09-20), and the deviation is larger
+than a fade.** While its attract camera is flying, **all four parks sound at once**, each positioned at
+its own island — the marked emitter node where there is one, the island itself where there is not — so
+the blend between parks is **distance**, not a cross-fade. With somebody playing it collapses to the
+single island on show, flat or at its node, exactly as before.
+
+The engine end of that is the original's own: `Sound_PlayEffect( handle, category, effect, x, y, z )`
+really is positional, and the game delay-loads QMixer (QSound) for it. What the original never did was
+spend any of it in the **lobby**, which is why this is an improvement rather than a restoration.
+
+Measured by disk capture over 60 s of flying (`~/.cache/tpw-harnesses/lobbyaudio.py`): **`sounding=4`
+on 18 of 20 readings** — the two dips to 3 are a voice inside its effect's repeat delay, visible as
+`bed=-` in the same line — with **peak 0.275 (−11.2 dBFS)** and **rms 0.032 (−29.9 dBFS)**. Four parks
+summing therefore does **not** clip: the levels calibrated for one park still stand, against a
+documented worst case of 1.18 before master volume. A muted control measured exactly 0.0, which is what
+proves the capture is the game's own mix. See `LobbyAudio.KeepPlaying`.
 
 ### Not sound: `FUN_005d83f0` / `FUN_005d8440`
 
