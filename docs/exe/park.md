@@ -858,6 +858,41 @@ no direct reference, and the arrival period is therefore not known. And `+0x1da7
 id `FUN_00519510` reads to reach the analyser's counters, is not pinned to a name; it is one of the
 header's ushort thing-id fields, of which `mParkAnalyser` is the obvious candidate.
 
+### What the balance file supplies, and the one score that is not decoded
+
+Jungle's `Standard.sam` (the theme overrides none of these):
+
+    Arrival.MinPeople            1
+    Arrival.TimeBetweenArrivals  150
+    Arrival.FixedRate            15
+    Arrival.NewParkBonus         20
+    Arrival.PointsPerVisitor     6
+
+**The mapping from those keys to the globals above is by arithmetic ROLE and is NOT proven**, and it
+cannot be traced, because nothing in the executable writes them: `DAT_00785310` is the floor in the
+`max(...)` so it is `MinPeople`; `DAT_00785314` is the period so it is `TimeBetweenArrivals`;
+`DAT_00785320` is the divisor so it is `PointsPerVisitor`; `DAT_0078531c` is `FixedRate` or
+`NewParkBonus` and which is undetermined. Read them with `ParkBalance.Int( "Arrival.X", fallback )` —
+the `SAMParser` quirk applies only to multi-value lines, and these five are ordinary single-value keys.
+
+`TimeBetweenArrivals` is in **quarter-ticks**, so 150 is 600 game ticks — **about 18.6s at 31ms**, a
+figure since confirmed against measured arrivals at 18.9 and 18.8.
+
+**The `<computed value>` in the headcount is `FUN_004c8240`, and it is NOT decoded.** It sums a
+park-attractiveness score over the rides — per ride a capacity, a duration divided down, and a
+three-entry table at `+0x268` — and the result is divided by `Arrival.PointsPerVisitor` and floored at
+`Arrival.MinPeople`. It reads four ride fields this project has not named. **OpenTPW reproduces the
+floor alone**, which is a declared deviation with a visible consequence: `MinPeople` is 1 in every
+theme the game ships, and the vehicle is chosen by crowd size, so a park left to itself **never**
+selects the seaplane or the ferry. Deciding the real headcount is what would change that.
+
+**What a new guest's fields come from**, so nothing here is invented: `Cash` is
+`PeepTypes[x].StartingCash` varied by `PeepInfo.StartingCashVarPc` (15, per cent); `ExitLevel` is
+`PeepInfo.ExitLevel` (120), which the file itself calls *"starting value for the ExitLevel counter, in
+SECONDS"*, varied by `ExitLevelVar` (60). It counts down one per needs tick — `DueOn` is
+`(ThingId & 3) == (tick & 3)` on **thing** ticks, so roughly one a second — and reaching nought is what
+sends a guest home.
+
 ## The save's world block: map cells
 
 Derived from an emulator field log (`fields_005179c0.txt`, i.e. the fields of `FUN_005179c0`) **which names every field of every one of the 16,384 cells**. Both record sizes match `ParkWorld`'s independently measured skip **to the byte**.
