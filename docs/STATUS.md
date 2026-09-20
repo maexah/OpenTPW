@@ -63,7 +63,15 @@ world 425,55 and 535,55) without anything in the code knowing where those are.
 **Two things it does not do yet.** It drives its route once and parks, because the clip holds at
 220.0/220.0 and nothing loops it. And it does not turn to face the way it is going — the engine samples
 the route's first derivative for that (`0x400`, on 62 of the game's 71 route tracks), which is unbuilt
-and counted as `ANIM_PATH_FACING`.
+and counted as `ANIM_PATH_FACING`. The second one is obvious on screen: the bus arrives at the stop
+sitting diagonally across the crossing, keeping whatever heading it was parked with.
+
+**Looked at, not only counted.** The first attempt photographed an empty road and read as "the bus is
+never drawn" — it was a timing miss, because `shotat.py` settles for 2.5 s and the bus does not reach
+the stop until about 13 s after the park loads. Caught at the right moment it is plainly there, on the
+road mid-route and then at the shelter. Every render gate was checked rather than assumed on the way
+past: `Position` is the final translation in `ModelMatrix`, `DrawnByOwner` is set nowhere but the
+advisor, and the wheels carry no opaque model but do carry a translucent one.
 
 **2026-09-20 — animations say how far along its route a thing is.** Channel `0x200`, the last sizeable
 undecoded one, is **path progress**: a record of `{ float start, count, 0, offset }` and then one float
