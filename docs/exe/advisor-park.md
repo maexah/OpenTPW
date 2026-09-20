@@ -164,7 +164,7 @@ Stride `0x38`, validated by `row+0x04 == id`, with a linear-scan fallback bounde
 
 ## Verified by transcript
 
-Speech transcripts already exist — grep `/home/alex/ghidra/notes/global-speech-transcripts.tsv` before transcribing anything. Each row below is also corroborated by the message's own `.sam` field names.
+Speech transcripts already exist — grep the transcripts TSV named in `CLAUDE.local.md` before transcribing anything. Each row below is also corroborated by the message's own `.sam` field names.
 
 | Group | Samples | Transcript | Section |
 |---|---|---|---|
