@@ -124,6 +124,17 @@ public sealed class LobbyAudio : Entity
 	/// next, so the cut lands out of sight and out of earshot of anything else. This slides
 	/// straight between islands in about a second, the same as <see cref="LobbyWeather"/>'s sky
 	/// does, and a cut over a second of visible travel reads as a fault.
+	///
+	/// <para>
+	/// <b>That reasoning covers a player changing island, and no longer covers the whole of it.</b>
+	/// Since the attract camera landed, the island on show also changes <i>while the camera is
+	/// flying</i>, as often as every second when it passes between two islands - so this fade now runs
+	/// in plain sight, and two of them can overlap. <b>The original does neither</b>: its attract path
+	/// never starts or stops a per-island theme at all, and only the ambient one-shot follows the
+	/// nearest island (<c>docs/exe/lobby.md</c>). Whether to leave theme and bed alone while attracting
+	/// is an open question put to Alexah on 2026-09-20 and not yet answered - do not settle it by
+	/// guessing.
+	/// </para>
 	/// </summary>
 	private const float CrossfadeSeconds = 0.9f;
 

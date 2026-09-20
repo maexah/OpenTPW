@@ -3,7 +3,14 @@ using System.Globalization;
 namespace OpenTPW;
 
 /// <summary>
-/// Orbits whichever park island is on show, and moves between them.
+/// The lobby's camera, which has <b>two modes</b>, as the original's does.
+///
+/// <para>
+/// <b>With somebody playing</b> it orbits whichever park island is on show and moves between them,
+/// which is what the rest of this class is about. <b>With nobody playing</b> it flies itself around
+/// all four islands instead - see <see cref="Attract"/>. The original branches between the two in one
+/// function on one condition (<c>FUN_005e0470</c>), and so does <see cref="Update"/>.
+/// </para>
 ///
 /// This follows what the original does, which was read out of its own camera update
 /// (FUN_005e1210 in the decompile). It never moves the camera to a place; it works out where the
