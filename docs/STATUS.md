@@ -40,8 +40,8 @@ Take counts fresh; these go stale within a day.
 
 | | | measured |
 |---|---|---|
-| Opcodes | 71 implemented of 106 | 2026-09-20, `case Opcode.` labels vs enum members |
-| Tests | 805 total, all of them run **with** the game and 0 skip | 2026-09-20, run repeatedly |
+| Opcodes | 72 implemented of 106 | 2026-09-20, `case Opcode.` labels vs enum members |
+| Tests | 811 total, all of them run **with** the game and 0 skip | 2026-09-20, run repeatedly |
 | Tests without the game | 379 ran, 411 skipped — **of 790, and not re-measured since** | 2026-09-19 review |
 | Build warnings | 126 (71 are CS8618 nullable) | 2026-09-20, unmoved by three commits |
 
@@ -101,6 +101,25 @@ window - the load could never empty, and pc 24 is the spin released by emptying 
 comfortably, which is why the seaplane cycled and the ferry appeared not to. Widening the round to 20s
 showed the circuit at once. A vehicle starved by the instrument looks exactly like a vehicle that is
 stuck.
+
+**And then they were looked at, which the censuses above are not a substitute for.** A moving mesh-0
+position proves a transform is being updated, not that anything is drawn - the distinction this project
+has already been caught by once, reading an empty road as "never drawn" when it was a capture that
+settled at 2.5s while the bus arrived at 13s. `vehicleshot.py` in the harness cache takes a burst of
+frames while polling `vehicles`, and writes the pc and status into each file name, so no picture stands
+on its own. Thirty-nine frames, every one presenting (mean brightness 103-119, never black):
+
+| | at `VAR_STATUS` 2, unloading | after it pulls away |
+|---|---|---|
+| bus | at the stop between the two shelters, by the crossing | moved well left along the road (status 3) |
+| seaplane | on the water in the bay, floats down | moved and swung round, heading changed (status 5) |
+| ferry | alongside the quay | moved along the quay (status 3) |
+
+One frame carries all three at once - seaplane on the water, bus on the road above, ferry to the right.
+The arriving crowd is visible too: the entrance path is empty at the start of the seaplane run and a
+column of guests is streaming down it by the time the load is spent, which is the pick-up half of the
+loop seen rather than counted. Frames are in `~/.cache/tpw-harnesses/shot-{bus,seaplane,ferry}/` and
+deliberately not committed - this repo ships no game content.
 
 **Two things about that are honest rather than flattering.** The arrival gaps measured 18.9s and then
 32.0, 38.7, 38.7 - so the rate is no longer `TimeBetweenArrivals` alone but the timer **or the vehicle's
