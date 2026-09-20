@@ -57,6 +57,18 @@ public sealed class LobbyModel
 	/// </summary>
 	public IReadOnlyList<AnimationFile> Clips { get; } = Array.Empty<AnimationFile>();
 
+	/// <summary>
+	/// The routes this model carries, in the model's own space - empty for all but twenty-four of the
+	/// game's models. The bus, the ferry and the seaplane each have one; the haunted house has four.
+	///
+	/// <para>
+	/// Held for the same reason as <see cref="Clips"/>: what drives a thing along one of these is its
+	/// script, which reads a per-frame scalar out of an animation and samples the route with it, so
+	/// both halves have to be reachable from the thing rather than from the file.
+	/// </para>
+	/// </summary>
+	public IReadOnlyList<ModelFile.ModelPath> Paths { get; } = Array.Empty<ModelFile.ModelPath>();
+
 	// Each mesh's orientation, scale and any shear, already converted to world space. Kept
 	// separate from Position so an animation can turn a mesh without disturbing it.
 	private readonly Matrix4x4[] _linearTransforms;
@@ -194,6 +206,7 @@ public sealed class LobbyModel
 		var animations = supplied ? clips!.ToArray() : LoadAnimations( modelPath );
 
 		Clips = animations;
+		Paths = modelFile.Paths;
 
 		if ( animations.Length > 0 )
 		{

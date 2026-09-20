@@ -348,6 +348,14 @@ Channels are per-model animation players, count at `model+0x0e`, array at `+0x10
 | `0x006febe4` | the easing segment constant **8.999995231628418** | deliberately under nine so `t == 1` stays in the last segment |
 | `0x006febec` | the easing byte scale, 1/255 | |
 
+**What those samplers run over, for a vehicle, is not a track but the model's own path table** — the
+array at model file `0xac`, whose records name a run of 12-byte XYZ points. A Bezier route's point count
+is a multiple of three rather than `3n+1` because the loop is **closed**, which is what `FUN_00474840`'s
+modulo arm above is wrapping. The scalar that drives it is a separate per-frame array on an animation
+track setting channel `0x200`, and it is a **percentage**: space's slide runs exactly 0 to 100 and the
+haunted house 0 to 200, which is two laps. It does not always rise — the ferry runs its route backwards.
+Layout and counts are in the FileFormats clone under Models (`*.MD2`); they are not repeated here.
+
 **Rotation keys carry an easing curve id** at key`+0x02` (`0xFFFF` = none) indexing an **8-byte** table at track descriptor `+0x34`, remapped through a **9-segment** ramp: **457 of 1,166 clips carry one**. Three things that matter: the id belongs to the **lower** key of the pair; the id is **not** the key's own index (**3,070 of 12,428 eased keys disagree**, ids reach 100, so the table is indexed not walked); and the ramp's endpoints are **implied** (0 before the first byte, 1 after the last), which is what makes it nine segments from eight bytes.
 
 **The restore mask `0x289` includes position**, so unlike visibility a clip's position IS put back.

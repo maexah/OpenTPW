@@ -100,7 +100,51 @@ public partial class ModelFile : BaseFormat
 
 		/// <summary>The flag word of this node's id record; 0 when it has none.</summary>
 		public uint IdFlags { get; set; }
+
+		/// <summary>
+		/// Which of <see cref="Paths"/> this node follows, from the node record's +0x52.
+		///
+		/// The file draws no distinction between "follows path 0" and "follows no path" - both
+		/// read 0 - so this is not a test for whether a node is a path node. Haunt's four are
+		/// named Kart_path01 to Kart_path04 and carry 0, 1, 2, 3; every other model in the game
+		/// has one path and at most one node naming it, at 0.
+		/// </summary>
+		public int PathId { get; set; }
 	}
+
+	/// <summary>
+	/// A route stored in the model, in the model's own space: the bus, ferry and seaplane each
+	/// have one, the haunted house has four (one per cart), and the four lobby islands have a
+	/// flat 60x80 loop at their origin that is a prop circuit, not the attract camera's track.
+	///
+	/// Twenty-four of the game's models carry one. See <see cref="ReadPaths"/>.
+	///
+	/// Named ModelPath rather than Path because a nested Path shadows System.IO.Path for the whole
+	/// of this file, which reads file names a few lines below.
+	/// </summary>
+	public class ModelPath
+	{
+		/// <summary>
+		/// Which sampler the engine runs the points through. The same word, with the same two
+		/// bits, that a position channel uses: see AnimationFile's position track.
+		/// </summary>
+		public uint Type { get; set; }
+
+		/// <summary>The points are cubic Bezier controls - every vehicle path, and every ride's.</summary>
+		public bool IsBezier => (Type & 0x2) != 0;
+
+		/// <summary>The points are plain waypoints. Only space's slide does this.</summary>
+		public bool IsStraight => (Type & 0x8) != 0;
+
+		/// <summary>
+		/// The route itself. A Bezier path's count is a multiple of three rather than 3n+1,
+		/// because the loop is CLOSED: the last segment's end point is point 0 again.
+		/// </summary>
+		public Vector3[] Points { get; set; } = Array.Empty<Vector3>();
+	}
+
+	/// <summary>The model's routes, empty for the ~2,090 models that have none.</summary>
+	public List<ModelPath> Paths { get; private set; } = new();
 
 	/// <summary>
 	/// True when this file is animation data for a separate base model rather than a mesh.
@@ -423,6 +467,9 @@ public partial class ModelFile : BaseFormat
 			ResolveHierarchy( reader, meshCnt, meshPtr, nodeCnt, nodePtr );
 			ReadNodeIds( reader );
 
+			// After the node pass, because the number of paths is worked out from the nodes.
+			ReadPaths( reader );
+
 			// Process mesh data
 			for ( int meshIdx = 0; meshIdx < Meshes.Count; meshIdx++ )
 			{
@@ -664,10 +711,14 @@ public partial class ModelFile : BaseFormat
 				// only whole once it reaches 0x58. Tested apart from the flags above so that a
 				// truncated file still gives up what it can rather than nothing.
 				var name = string.Empty;
+				var pathId = 0;
 
 				if ( record >= 0 && record + 0x58 <= stream.Length )
 				{
-					stream.Seek( record + 0x54, SeekOrigin.Begin );
+					// +0x52 is the ushort immediately before that name pointer, so reading it
+					// leaves the stream exactly where the name read already expected to start.
+					stream.Seek( record + 0x52, SeekOrigin.Begin );
+					pathId = reader.ReadUInt16();
 					name = NameAt( reader, reader.ReadUInt32() );
 				}
 
@@ -680,7 +731,8 @@ public partial class ModelFile : BaseFormat
 					WorldTransform = World( node, nodeCount ),
 					ParentIndex = parents[node],
 					Flags = flags,
-					Name = name
+					Name = name,
+					PathId = pathId
 				} );
 		}
 	}
@@ -758,6 +810,76 @@ public partial class ModelFile : BaseFormat
 			stream.Seek( table + (20L * r), SeekOrigin.Begin );
 			Nodes[node].IdFlags = reader.ReadUInt32();
 			Nodes[node].Id = (int)reader.ReadUInt32();
+		}
+	}
+
+	/// <summary>
+	/// The routes at file 0xac: a pointer to an array of 16-byte records, each
+	/// { type, point count, offset of the points, 0 }, with the points 12-byte XYZ triples.
+	///
+	/// NOTHING IN THE FILE SAYS HOW MANY RECORDS THERE ARE. Every u16 in 0x90..0xc0 was measured
+	/// against the known counts and none is a count: 0xb8 reads 1 for the haunted house, which
+	/// has four, and 49 for the bus, which has one. What the game does instead is index them by
+	/// node - each node that follows a route carries its index at +0x52 - so the highest index
+	/// any node names is the last route. A model whose route no node names, which is the bus,
+	/// the ferry and the go-karts, still has the one at index 0, hence the floor of one.
+	///
+	/// That matters because the array is not self-delimiting: the bytes after the haunted
+	/// house's fourth record are vertex floats, and read as a record they give a count of
+	/// 1,112,011,916.
+	/// </summary>
+	private void ReadPaths( BinaryReader reader )
+	{
+		var stream = reader.BaseStream;
+
+		if ( stream.Length < 0xb0 )
+			return;
+
+		stream.Seek( 0xac, SeekOrigin.Begin );
+		var table = reader.ReadUInt32();
+
+		if ( table == 0 )
+			return;
+
+		var count = 1;
+
+		foreach ( var node in Nodes )
+		{
+			if ( node.PathId >= count )
+				count = node.PathId + 1;
+		}
+
+		for ( int i = 0; i < count; ++i )
+		{
+			var record = table + (16L * i);
+
+			if ( record + 16 > stream.Length )
+				break;
+
+			stream.Seek( record, SeekOrigin.Begin );
+			var type = reader.ReadUInt32();
+			var pointCount = reader.ReadUInt32();
+			var pointsAt = reader.ReadUInt32();
+			var mustBeZero = reader.ReadUInt32();
+
+			// Every one of the game's 27 records ends in a zero word, and the mesh data that
+			// follows the last one does not. Stop rather than hand the game a route built out
+			// of vertex floats.
+			if ( mustBeZero != 0 || pointCount == 0 || pointsAt == 0
+				|| pointsAt + (12L * pointCount) > stream.Length )
+				break;
+
+			var points = new Vector3[pointCount];
+
+			stream.Seek( pointsAt, SeekOrigin.Begin );
+
+			for ( int p = 0; p < pointCount; ++p )
+			{
+				points[p] = new Vector3(
+					reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle() );
+			}
+
+			Paths.Add( new ModelPath { Type = type, Points = points } );
 		}
 	}
 

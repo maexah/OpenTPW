@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-09-20 on branch `alexah/94-every-state-answered`, tip `3d8a962`.
+Last updated: 2026-09-20 on branch `alexah/94-every-state-answered`, tip `88cd6de`.
 
 The tip is the newest `alexah/N` branch and has everything. Confirm with
 `git branch -r --sort=-committerdate | head -3`.
@@ -41,11 +41,22 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | 71 implemented of 106 | 2026-09-20, `case Opcode.` labels vs enum members |
-| Tests | 793 total, all of them run **with** the game and 0 skip | 2026-09-20, run repeatedly |
+| Tests | 800 total, all of them run **with** the game and 0 skip | 2026-09-20, run repeatedly |
 | Tests without the game | 379 ran, 411 skipped — **of 790, and not re-measured since** | 2026-09-19 review |
 | Build warnings | 126 (71 are CS8618 nullable) | 2026-09-20, unmoved by three commits |
 
 ## Recent
+
+**2026-09-20 — models read the routes they carry.** The `uint` at model file `0xac` is an array of
+16-byte records naming a route's points, and `ModelFile` reads it: the bus, ferry and seaplane have one
+each, the haunted house four, and twenty-four of the game's 2,118 models have any at all. Nothing in the
+file gives a count — every `u16` in `0x90..0xc0` was measured against the known counts and none is one —
+so the number of records comes from the nodes that index them at `+0x52`, floored at one because three
+models have a route no node names. **Confirmed in a live park, not from the suite:** the new `paths`
+console command answered `paths 3`, with gates and lights routeless and `bus: route 0 type 2 bezier 45
+points, first (207.4, 0.0, -247.8)` — every figure predicted before it was read. **The bus still does not
+move**: its script runs to `220.0/220.0 HELD`, because reading a route and following one are different
+steps. Format written up in the FileFormats clone.
 
 **2026-09-20 — positional lobby audio while the camera flies.** All four parks sound at once, each
 heard from its own island — the marked emitter node where there is one, the island itself where there

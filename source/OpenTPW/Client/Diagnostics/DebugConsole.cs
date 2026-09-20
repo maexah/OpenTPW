@@ -409,6 +409,25 @@ public static class DebugConsole
 
 				break;
 
+			// Which routes the park's fixed items loaded, out of the path table at model file 0xac.
+			// The bus is the one worth reading: 45 points, closed Bezier, first point near
+			// (207.4, 0.0, -247.8). Read it in a live park - a test proves the file parses, not that
+			// the park loaded it.
+			case "paths":
+				if ( ParkFixedItems.Current is not { } fixedItems )
+				{
+					Reply( "paths: none - a park has to be loaded" );
+					break;
+				}
+
+				var routes = fixedItems.PathCensus().ToArray();
+				Reply( $"paths {routes.Length}" );
+
+				foreach ( var route in routes )
+					Reply( "  " + route );
+
+				break;
+
 			// What this session has reached and not built. Each gap announces itself once on the console
 			// when it is first reached and is counted after that, so this is how to ask what a whole run
 			// hit without scrolling back through it - see Unimplemented.

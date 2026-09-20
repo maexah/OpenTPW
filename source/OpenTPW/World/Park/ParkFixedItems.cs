@@ -99,7 +99,17 @@ public sealed class ParkFixedItems : Entity
 	/// <summary>The theme folder these were loaded from - "jungle", "fantasy", "hallow" or "space".</summary>
 	public string ThemeName { get; }
 
+	/// <summary>
+	/// The park's fixed items, for the debug console to ask questions of - the same idiom as
+	/// <see cref="ParkPeople.Current"/>. Null outside a park.
+	/// </summary>
+	public static ParkFixedItems? Current { get; private set; }
+
 	private readonly List<LobbyModel> _models = [];
+
+	// Item names, kept beside _models rather than derived from Items, because an item that would not
+	// load adds neither and the two lists would drift apart.
+	private readonly List<string> _modelNames = [];
 
 	/// <summary>
 	/// The gate's two sign panels, kept only so that they can be let go of again. They are painted
@@ -211,6 +221,7 @@ public sealed class ParkFixedItems : Entity
 	{
 		ThemeName = themeName;
 		Name = $"{themeName} fixed items";
+		Current = this;
 
 		var features = $"levels/{themeName.ToLowerInvariant()}/features";
 
@@ -239,6 +250,7 @@ public sealed class ParkFixedItems : Entity
 					clips: animations.AllClips );
 
 				_models.Add( model );
+				_modelNames.Add( item );
 
 				// And into the one registry this park sweeps, under the thing id the save's own header gives
 				// it. Nought means the theme ships no park to name one, which is not a failure: the item still
@@ -258,12 +270,47 @@ public sealed class ParkFixedItems : Entity
 	}
 
 	/// <summary>
+	/// What routes each fixed item loaded. A model reads its routes when it loads, so a reader
+	/// looking at the wrong offset shows up here as "no route" rather than as a crash - which is why
+	/// this prints the point count and the first point rather than merely saying yes.
+	/// </summary>
+	public IEnumerable<string> PathCensus()
+	{
+		for ( int i = 0; i < _models.Count; ++i )
+		{
+			var name = i < _modelNames.Count ? _modelNames[i] : "?";
+			var routes = _models[i].Paths;
+
+			if ( routes.Count == 0 )
+			{
+				yield return $"{name}: no route";
+				continue;
+			}
+
+			for ( int r = 0; r < routes.Count; ++r )
+			{
+				var route = routes[r];
+				var shape = route.IsBezier ? "bezier" : route.IsStraight ? "straight" : "unknown";
+				var first = route.Points.Length > 0 ? route.Points[0] : Vector3.Zero;
+
+				yield return $"{name}: route {r} type {route.Type} {shape} {route.Points.Length} points,"
+					+ $" first ({first.X:F1}, {first.Y:F1}, {first.Z:F1})";
+			}
+		}
+	}
+
+	/// <summary>
 	/// Lets go of the gate's sign panels, for the reason LobbyIsland.OnDelete gives: a material
 	/// leaves the textures bound into it alone because they are usually cached by path and shared,
 	/// and these are neither.
 	/// </summary>
 	protected override void OnDelete()
 	{
+		// Before the early return below, not after it: a park whose sign never built still has to stop
+		// being the one the console reaches, or a deleted park answers for the live one.
+		if ( Current == this )
+			Current = null;
+
 		if ( _sign == null )
 			return;
 

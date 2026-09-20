@@ -66,6 +66,109 @@ public class ModelTests
 	}
 
 	/// <summary>
+	/// The bus's route, at file 0xac. The numbers here were measured out of the file before the reader
+	/// existed, so they fail if the record is read at the wrong offset rather than merely agreeing with
+	/// whatever the reader happens to do.
+	///
+	/// 45 is a multiple of three and not 3n+1, which is what says the loop is CLOSED - the last cubic
+	/// segment ends back at point 0. A reader that assumed an open chain would want 46.
+	/// </summary>
+	[TestMethod]
+	public void TheBusCarriesOneClosedBezierRouteOfFortyFivePoints()
+	{
+		var model = Read( "levels/jungle/features/bus/Bus.MD2" );
+
+		Assert.AreEqual( 1, model.Paths.Count, "the bus has exactly one route" );
+
+		var route = model.Paths[0];
+
+		Assert.AreEqual( 45, route.Points.Length, "45 points" );
+		Assert.AreEqual( 0, route.Points.Length % 3, "a closed Bezier loop is a multiple of three" );
+		Assert.IsTrue( route.IsBezier, "the bus's route is Bezier" );
+		Assert.IsFalse( route.IsStraight, "and not a straight polyline" );
+
+		Assert.AreEqual( 207.449f, route.Points[0].X, 0.01f, "first point X" );
+		Assert.AreEqual( 0f, route.Points[0].Y, 0.01f, "the bus drives on the ground" );
+		Assert.AreEqual( -247.813f, route.Points[0].Z, 0.01f, "first point Z" );
+	}
+
+	/// <summary>
+	/// The haunted house is the only model in the game with more than one route, and it is what the
+	/// count rule exists for: nothing in the file says how many records there are, so they are counted
+	/// from the nodes that name them. This fails against a reader that always reads one.
+	///
+	/// Its four carts share one circuit - the four routes have the same bounding box - and are offset
+	/// in phase instead.
+	/// </summary>
+	[TestMethod]
+	public void TheHauntedHouseCarriesFourRoutesCountedFromItsNodes()
+	{
+		var model = Read( "levels/hallow/rides/haunt/haunt.MD2" );
+
+		Assert.AreEqual( 4, model.Paths.Count, "four routes, one per cart" );
+
+		foreach ( var route in model.Paths )
+			Assert.AreEqual( 48, route.Points.Length, "each is 48 points" );
+
+		for ( int index = 1; index <= 3; ++index )
+		{
+			var name = $"Kart_path0{index + 1}";
+			var node = model.Nodes.FindIndex( n => n.Name == name );
+
+			Assert.AreNotEqual( -1, node, $"no node called {name}" );
+			Assert.AreEqual( index, model.Nodes[node].PathId, $"{name} names route {index}" );
+		}
+	}
+
+	/// <summary>
+	/// The other side of the same rule. Most of the game's models have no route at all, and a reader
+	/// that follows the pointer at 0xac without checking it is zero invents one out of whatever lies
+	/// at the start of the file.
+	/// </summary>
+	[TestMethod]
+	public void AModelWithNoRouteHasNone()
+	{
+		Assert.AreEqual( 0, Read( "levels/jungle/features/gates/gates.MD2" ).Paths.Count, "the gates" );
+		Assert.AreEqual( 0, Read( "levels/jungle/features/end/End.MD2" ).Paths.Count, "the end sign" );
+	}
+
+	/// <summary>
+	/// Space's slide is the only route in the game whose type asks for plain waypoints rather than
+	/// Bezier controls, so it is the single case that tells the two type bits apart.
+	/// </summary>
+	[TestMethod]
+	public void TheSlideIsTheOnlyStraightRoute()
+	{
+		var route = Read( "levels/space/rides/slide/slide.MD2" ).Paths.Single();
+
+		Assert.IsTrue( route.IsStraight, "the slide's route is a straight polyline" );
+		Assert.IsFalse( route.IsBezier, "and not Bezier" );
+		Assert.AreEqual( 12, route.Points.Length, "12 waypoints" );
+	}
+
+	/// <summary>
+	/// A node's path id does not say whether the node follows a route: nought means both "route 0" and
+	/// "no route". The seaplane is the plain case - one route, and one node naming it at nought - and
+	/// it is why the count is a floor of one rather than a test for whether any node names anything.
+	/// </summary>
+	[TestMethod]
+	public void ANodeThatNamesNoRouteReadsTheSameAsOneNamingTheFirst()
+	{
+		var model = Read( "levels/jungle/features/seaplane/Seaplane.MD2" );
+
+		Assert.AreEqual( 1, model.Paths.Count, "one route" );
+
+		var flightpath = model.Nodes.FindIndex( node => node.Name == "Flightpath" );
+
+		Assert.AreNotEqual( -1, flightpath, "the seaplane has a node called Flightpath" );
+		Assert.AreEqual( 0, model.Nodes[flightpath].PathId, "which names route 0" );
+		Assert.IsTrue( model.Nodes.All( node => node.PathId == 0 ), "and it is the only one that names any" );
+
+		Assert.IsTrue( model.Paths[0].Points.Max( point => point.Y ) > 300f,
+			"the seaplane's route climbs, where the bus's and the ferry's are flat" );
+	}
+
+	/// <summary>
 	/// What the names are for. A park's gate marks the spot a sound belongs at with a node called
 	/// "sound node", and that node is the one carrying the sound bit - 0x200 - in its id record's flag
 	/// word, where a particle emitter carries 0x100. The two halves have to agree, or a name would be
