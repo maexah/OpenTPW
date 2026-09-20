@@ -296,6 +296,34 @@ public sealed class ParkFixedItems : Entity
 				yield return $"{name}: route {r} type {route.Type} {shape} {route.Points.Length} points,"
 					+ $" first ({first.X:F1}, {first.Y:F1}, {first.Z:F1})";
 			}
+
+			// What moves a thing along that route is not in the model but in its clips - channel 0x200,
+			// a percentage of the route per frame. A route with no scalar is a thing that cannot move,
+			// which is worth saying out loud rather than leaving to be inferred from a still bus.
+			var scalars = 0;
+			var low = float.MaxValue;
+			var high = float.MinValue;
+
+			foreach ( var clip in _models[i].Clips )
+			{
+				foreach ( var track in clip.PathTracks )
+				{
+					++scalars;
+
+					foreach ( var value in track.Values )
+					{
+						if ( value < low )
+							low = value;
+
+						if ( value > high )
+							high = value;
+					}
+				}
+			}
+
+			yield return scalars == 0
+				? $"{name}: no progress scalar - it cannot move"
+				: $"{name}: {scalars} progress scalar(s), {low:F1}..{high:F1}, {high - low:F1} of the route";
 		}
 	}
 

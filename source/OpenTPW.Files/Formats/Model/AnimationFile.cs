@@ -45,7 +45,7 @@ namespace OpenTPW;
 ///     0x20000   visibility, count (ushort) at +0x16, at +0x30    2536  yes
 ///     0x00001   position record at +0x18                          1216  yes
 ///     0x80|0x100 unidentified, data at +0x20                     644  no
-///     0x00200   unidentified, data at +0x24                       71  no
+///     0x00200   path progress, data at +0x24                      71  yes
 ///
 /// Every one of those correspondences is exact - across all 1279 files, not one track sets a
 /// bit without filling its slot or fills a slot without setting the bit. 0x80 and 0x100 always
@@ -142,6 +142,27 @@ namespace OpenTPW;
 /// advisor's body rests at (0, 0.21, -21.2) and his clip 14 raises it there from -73.2. Every one
 /// of the 1216 records in the game has the point count its type says; key frames never go
 /// backwards, though four tracks repeat a frame.
+///
+/// PATH PROGRESS (bit 0x200)
+///
+/// How far along its route the target has travelled, one float per frame. The record at +0x24 is
+/// { float start, uint count, 0, offset of the values }, and the offset is the record's own address
+/// plus 0x10 on every one of the 71 tracks - the values sit directly behind their header - though it
+/// is followed rather than assumed, because nothing in the format requires it. Start is nought on all
+/// of them.
+///
+/// The value is a PERCENTAGE of the route rather than a distance: space's slide runs exactly 0 to 100
+/// across 121 frames, and the haunted house's carts 0 to 200, which is two laps. It does not always
+/// rise. Of the 71, 46 never fall, only 4 never rise, and 21 do both: the ferry's third clip falls
+/// 33.903 to -0.017, while its first runs 99.983 up past 100 to 104.006 and then round to 43.844. Past
+/// 100 it wraps, which is the modulo the engine's Bezier sampler applies.
+///
+/// The route itself is in the base model, in the path table at file 0xac, with a node naming which one
+/// it follows at its record's +0x52. A thing's journey can be split across clips: the bus's three run
+/// 42.4 to 56.0, 56.0 to 99.8 and 99.8 to 142.5, consecutive legs of one lap of 100.
+///
+/// Bits 0x400 (62 tracks) and 0x800 (12) set alongside this one without owning a slot of their own and
+/// are still undecoded, like 0x4000. Neither changes how the record reads, measured across all 71.
 ///
 /// VISIBILITY (bit 0x20000)
 ///
@@ -628,6 +649,52 @@ public class AnimationFile : BaseFormat
 		}
 	}
 
+	/// <summary>
+	/// How far along its route a node has travelled, frame by frame - channel 0x200.
+	///
+	/// <para>
+	/// The value is a PERCENTAGE of the route rather than a distance: space's slide runs exactly 0 to
+	/// 100 across its 121 frames, and the haunted house's carts 0 to 200, which is two laps. It does
+	/// not always rise: of the game's 71 such tracks, 46 never fall, only 4 never rise, and 21 do both -
+	/// the ferry's first clip runs 99.983 up to 104.006 and then round to 43.844. Values past 100 wrap,
+	/// which is the modulo the engine's Bezier sampler applies.
+	/// </para>
+	///
+	/// <para>
+	/// The route itself is not here. It is in the base model, in the path table at file 0xac, and a
+	/// node says which one it follows at its record's +0x52 - see ModelFile.ModelPath.
+	/// </para>
+	/// </summary>
+	public class PathTrack
+	{
+		public int TargetIndex { get; init; }
+
+		/// <summary>The record's first word, a float. Nought on every one of the game's 71 tracks.</summary>
+		public float Start { get; init; }
+
+		/// <summary>One per frame, from frame 0. The counts run from 31 to 796.</summary>
+		public float[] Values { get; init; } = Array.Empty<float>();
+
+		/// <summary>How far along at <paramref name="frame"/>, held at the ends.</summary>
+		public float Sample( float frame )
+		{
+			if ( Values.Length == 0 )
+				return 0f;
+
+			if ( frame <= 0f )
+				return Values[0];
+
+			if ( frame >= Values.Length - 1 )
+				return Values[^1];
+
+			var i = (int)frame;
+
+			return Values[i] + ((Values[i + 1] - Values[i]) * (frame - i));
+		}
+	}
+
+	public List<PathTrack> PathTracks { get; } = new();
+
 	public List<PositionTrack> PositionTracks { get; } = new();
 
 	public List<VisibilityTrack> VisibilityTracks { get; } = new();
@@ -845,11 +912,49 @@ public class AnimationFile : BaseFormat
 			if ( (flags & 0x1) != 0 )
 				ReadPositionChannel( data, BitConverter.ToUInt32( data, offset + 0x18 ), target );
 
+			// 0x400 sets alongside this bit on 62 of the 71 tracks that carry it and 0x1000 on the
+			// other nine, so it is not a companion to test for - and neither bit changes the record:
+			// all 71 read at +0x24 with their values directly behind it, measured across every one.
+			if ( (flags & 0x200) != 0 )
+				ReadPathChannel( data, BitConverter.ToUInt32( data, offset + 0x24 ), target );
+
 			if ( (flags & 0x20000) != 0 )
 				ReadVisibilityChannel( data, offset, target );
 		}
 
 		return true;
+	}
+
+	/// <summary>
+	/// Channel 0x200's record: { float start, uint count, 0, offset of the values }, and then that
+	/// many floats. The offset is always the record's own address plus 0x10 - the values sit directly
+	/// behind their header on all 71 of the game's tracks - but it is followed rather than assumed,
+	/// because nothing in the format says it has to be.
+	/// </summary>
+	private void ReadPathChannel( byte[] data, uint recordAt, int target )
+	{
+		if ( recordAt < 0x9C || recordAt + 16 > data.Length )
+			return;
+
+		var record = (int)recordAt;
+		var start = BitConverter.ToSingle( data, record );
+		var count = BitConverter.ToUInt32( data, record + 4 );
+		var mustBeZero = BitConverter.ToUInt32( data, record + 8 );
+		var valuesAt = BitConverter.ToUInt32( data, record + 12 );
+
+		// The third word is nought on every one of them, so anything else is not this record.
+		if ( mustBeZero != 0 || count == 0 || count > 0x10000 )
+			return;
+
+		if ( valuesAt < 0x9C || valuesAt + (4L * count) > data.Length )
+			return;
+
+		var values = new float[count];
+
+		for ( int i = 0; i < count; ++i )
+			values[i] = BitConverter.ToSingle( data, (int)valuesAt + (4 * i) );
+
+		PathTracks.Add( new PathTrack { TargetIndex = target, Start = start, Values = values } );
 	}
 
 	private void ReadPositionChannel( byte[] data, uint recordAt, int target )

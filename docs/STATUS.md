@@ -41,11 +41,21 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | 71 implemented of 106 | 2026-09-20, `case Opcode.` labels vs enum members |
-| Tests | 800 total, all of them run **with** the game and 0 skip | 2026-09-20, run repeatedly |
+| Tests | 805 total, all of them run **with** the game and 0 skip | 2026-09-20, run repeatedly |
 | Tests without the game | 379 ran, 411 skipped — **of 790, and not re-measured since** | 2026-09-19 review |
 | Build warnings | 126 (71 are CS8618 nullable) | 2026-09-20, unmoved by three commits |
 
 ## Recent
+
+**2026-09-20 — animations say how far along its route a thing is.** Channel `0x200`, the last sizeable
+undecoded one, is **path progress**: a record of `{ float start, count, 0, offset }` and then one float
+per frame, the values immediately behind their own header on all 71 of the game's tracks. The value is a
+**percentage of the route**, not a distance — space's slide runs exactly 0 to 100 over 121 frames, the
+haunted house 0 to 200, which is two laps — and it does not always rise, because the ferry travels its
+route backwards. `0x200` is read on its own: `0x400` accompanies it on 62 of the 71 and `0x1000` on the
+other nine, and neither changes the record. **Confirmed in a live park:** `bus: 3 progress scalar(s),
+42.4..142.5, 100.0 of the route` — three clips that chain into one lap. This still does not move the
+bus; it is the number that will.
 
 **2026-09-20 — models read the routes they carry.** The `uint` at model file `0xac` is an array of
 16-byte records naming a route's points, and `ModelFile` reads it: the bus, ferry and seaplane have one
