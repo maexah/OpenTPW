@@ -10,8 +10,9 @@ then 7**. It is **untracked by instruction** — never staged, and *not* in `.gi
 every `git status` and a `git add -A` would sweep it in (which is one more reason `CLAUDE.md` rule 13
 forbids that). It lives on this machine only and is **absent from a fresh clone** — read it before
 assuming this file is the whole of the work. **Its items 9 (park load time), 6 (sound held under a
-pause) and 4 (the lobby ocean) are all done, and item 1 is next there.** Nothing in *this* file was
-ticked by any of that work: not one of the three appears here.
+pause) and 4 (the lobby ocean) are all done, and Alexah set its item 5 — one scream, on a loop, at one
+volume — as next on 2026-09-21, choosing it over its item 1.** Nothing in *this* file was ticked by any
+of that work: not one of the three appears here.
 
 **Alexah sets which item is the goal. One item per session** (`CLAUDE.md`, "How a session runs" 4).
 Tick an item here in the same commit that lands it, and move its detail to the page that owns it.
@@ -60,10 +61,11 @@ sideshow** — a filled park took **1110 at the Drinks Shop** (37 sales at 30) a
 Spray** (45 at 20). Both halves were confirmed in the running game by census **and** by screenshot.
 
 **This reordered the queue, and that reorder is now spent.** Items 3, 6 and 8 were halves of one loop
-and all three are ticked. **Items 2, 4, 5 and 7 remain, and Alexah picks which is next.** Item 5 is
-the one worth flagging rather than choosing: it is the last fault Alexah found *by playing* that is
-still open, and it is small — the gauge's own arithmetic is already exonerated, leaving the
-`meter.wct` mapping.
+and all three are ticked. **Items 2, 4, 5 and 7 remained when this was written on 2026-09-20; item 2
+has since been done, so 4, 5 and 7 remain.** Item 5 is the one worth flagging rather than choosing: it
+is the last fault Alexah found *by playing* that is still open — and on 2026-09-21 Alexah described it
+properly, which moves it from arithmetic to **rendering**: the bar draws in the wrong place and
+repeats. See the item itself; do not assume it is small until that is measured.
 
 **The order, agreed with Alexah:**
 
@@ -443,6 +445,19 @@ from the crossing. So the arrival path they would take is the one the shipped sa
 ## 5. The happiness gauge reads wrong
 
 - [ ] **Seen:** the gauge does not track how the park is actually doing.
+- **>>> ALEXAH DESCRIBED IT PROPERLY ON 2026-09-21, AND IT IS A RENDERING FAULT: <<<** *"The bar image
+  just appears to not be rendering within the actual location properly, it looks like two copies of the
+  bar split down the middle like it's repeating."* So the line above — which framed this as the gauge
+  not tracking the park, i.e. as arithmetic — is **the wrong description**. The artwork is in the wrong
+  place and it is repeated.
+- **A lead, READ FROM THE CODE AND NOT MEASURED — do not report it as a finding.** `UiMeter.OnDraw`
+  builds its skin as `new Texture( Skin )` with **no flags**, so `Texture.SamplerFor( None )` returns
+  `AnisotropicRepeat`, which is `SamplerAddressMode.Mirror` — any UV outside 0..1 then draws a
+  **mirrored second copy**, which is exactly what is described, and is the same family as the lobby
+  sea (`docs/CLEANUP-PLAN.md` item 4). **But its own UV rect reads as in-range**
+  (`0, 1 - filled, 1, filled`, the same x/y/w/h shape as its position rect), so look at
+  `Graphics.Quad`'s UV handling and at whether `Pixels` is the housing's true rect **before** touching
+  the meter's arithmetic.
 - **Lives:** the `meter.wct` mapping. `ParkGadget.ShowHappiness` and `UiMeter` draw it;
   `ParkPeople.AverageHappiness` supplies the number and is *not* the fault.
 - **Largely exonerated already:** `UiMeter.Max` is 100 and it is handed 50. The mapping from the skin to
