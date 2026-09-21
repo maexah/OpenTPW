@@ -75,7 +75,8 @@ public sealed class ParkWorld
 		ushort AssignedStaff = 0, ushort BackOfQueue = 0, int CanLoad = 0,
 		ushort ExitPos = 0, ushort FirstInQueue = 0, int IsTrackRideValid = 0,
 		int OperatingCapacity = 0, int OperatingDuration = 0, int OperatingSpeed = 0, int PricePerUse = 0,
-		int QueueSizeInCells = 0, int TotalTakings = 0, BuiltWhen Built = default )
+		int QueueSizeInCells = 0, int TotalTakings = 0,
+		float StateOfRepair = 0f, float RemainingLife = 0f, BuiltWhen Built = default )
 	{
 		/// <summary>
 		/// The bit that makes an object somewhere a guest can be <i>offered</i> - <c>FUN_004fcb10</c>, the
@@ -1494,6 +1495,24 @@ public sealed class ParkWorld
 			OperatingSpeed: ReadInt32At( start + 1036 ),     // mOperatingSpeed, one dword
 			PricePerUse: ReadInt32At( start + 1054 ),        // mPricePerUse - the original clamps it to 0..500
 			QueueSizeInCells: ReadInt32At( start + 1062 ),   // mQueueSizeInCells
+
+			// Three unnamed FLOATS follow mQueueSizeInCells - the serialiser writes them with the
+			// type tag 'pv' and no field name at all, so these are named from what the game DOES
+			// with them, not from the file. FUN_004db7d0 loads them in the order +0x4c, +0x48, +0x44,
+			// which from 1062 puts them on 1066, 1070 and 1074; carrying the order on through
+			// mRequestedService, mTimeMarkedForMaintenance and mTotalCosts lands mTotalTakings on
+			// 1090, exactly where it is read below, and that agreement is the check on all of it.
+			//
+			// +0x48 is what a breakdown eats: FUN_004e0b90 does `*(float *)(this + 0x48) - k` and
+			// clamps to 100. +0x44 is what a repair restores: FUN_004df8f0, "repairing fully",
+			// stores 0x42c80000 - which is 100.0f - into it. The object window shows the first as
+			// REMAINING LIFE (0x3e17) and the second as STATE OF REPAIR (0x3e19).
+			//
+			// The float at 1066 is read by nobody here. Nothing observed says what it is, and a
+			// name invented for it would be indistinguishable from a measured one later.
+			RemainingLife: ReadSingleAt( start + 1070 ),     // +0x48
+			StateOfRepair: ReadSingleAt( start + 1074 ),     // +0x44
+
 			TotalTakings: ReadInt32At( start + 1090 ),       // mTotalTakings
 
 			// The eight tv_t dwords at 22 - see BuiltWhen for why the order is NOT the struct's.

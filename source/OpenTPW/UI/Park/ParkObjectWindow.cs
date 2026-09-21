@@ -115,6 +115,9 @@ internal sealed class ParkObjectWindow : UiWindow
 	/// <summary>The stats table's cells, by the control id the stream gives each.</summary>
 	private readonly Dictionary<int, UiControl> _stats = [];
 
+	/// <summary>The four condition rows, which are gauges rather than text - see <see cref="UiStatBar"/>.</summary>
+	private readonly Dictionary<int, UiStatBar> _bars = [];
+
 	/// <summary>
 	/// Where the red line's bar runs inside each slider - control <c>0x3e2e</c>, from the stream.
 	/// <b>Duration has none</b>: it wears the <c>slider_n</c> mesh with a plus and a minus on its ends,
@@ -240,6 +243,14 @@ internal sealed class ParkObjectWindow : UiWindow
 
 		foreach ( var (id, rect) in StatCells )
 		{
+			// The four condition rows are GAUGES and the rest are text - see UiStatBar. Setting Text
+			// on a gauge is exactly why those four rows sat blank while their labels rendered.
+			if ( id is 0x3e16 or 0x3e17 or 0x3e18 or 0x3e19 )
+			{
+				_bars[id] = stats.Add( new UiStatBar { Id = id, Rect = rect } );
+				continue;
+			}
+
 			_stats[id] = stats.Add( new UiControl
 			{
 				Id = id,
@@ -511,6 +522,10 @@ internal sealed class ParkObjectWindow : UiWindow
 
 		// How old it is, in DAYS. FUN_004dd670 divides the built stamp by 864,000,000,000 - one day in
 		// hundred-nanosecond units - so this is real elapsed time and not the park's own calendar.
+		//
+		// A shipped save therefore answers in the THOUSANDS, and that is right: its rides were built
+		// when the save was made, which is now 26 years ago, so Belly Bounce reads 9759 days. A figure
+		// that size is the save's real age showing through, not a zero epoch to go hunting for.
 		if ( _stats.TryGetValue( 0x3e1b, out var age ) )
 			age.Text = placed.Built.IsSet ? $"{DaysSince( placed.Built )}" : null;
 
@@ -520,11 +535,56 @@ internal sealed class ParkObjectWindow : UiWindow
 		if ( _stats.TryGetValue( 0x3e23, out var scrap ) )
 			scrap.Text = $"{item.BuildPrice}";
 
-		Unimplemented.Report( "RIDE_STAT_BARS" );
+		// The two condition gauges that are fully derived. Both are 0..100 in the save and the
+		// original maps them onto a 0..1024 bar with ((v & 0xff) << 10) / 100, so as a proportion
+		// they are simply v/100 - see UiStatBar for why these rows are gauges and not text.
+		// Named Gauge, not Mark: Mark is the RED LINE helper and takes a slider index, so a stat
+		// control id handed to it would have addressed slider 0x3e17 and written somewhere real.
+		void Gauge( int id, float percent )
+		{
+			if ( !_bars.TryGetValue( id, out var bar ) )
+				return;
+
+			bar.At = Math.Clamp( percent / 100f, 0f, 1f );
+			bar.Known = true;
+		}
+
+		Gauge( 0x3e17, placed.RemainingLife );    // +0x48, what a breakdown eats
+		Gauge( 0x3e19, placed.StateOfRepair );    // +0x44, what a repair restores
+
+		// Excitement (0x3e16) and Reliability (0x3e18) are NOT left out for want of a control - the
+		// gauge above draws them the moment there is a number. They are left out because there is no
+		// number yet: FUN_004ade40 fills them from FUN_004e0560 and FUN_004df640, whose closing
+		// multiply the decompiler dropped into a bare __ftol. The shape is known - two ratios of the
+		// speed and capacity sliders against the item's per-upgrade figures, each clamped to
+		// 0.75..1.25 - and the shape alone would only produce a plausible bar, which is worse than
+		// an empty one because it cannot be told apart from a measured one later.
+		Unimplemented.Report( "RIDE_EXCITEMENT_BAR" );
+		Unimplemented.Report( "RIDE_RELIABILITY_BAR" );
+
+		// Users last month sums thirty entries of one of the object record's six ring buffers
+		// (FUN_004ade40, 0x1e entries). ParkWorld deliberately does not read the rings: 720 bytes
+		// have to be split over six of them and nothing measured says the split is even, so every
+		// field BETWEEN rings would move if the guess were wrong.
 		Unimplemented.Report( "RIDE_USERS_LAST_MONTH" );
 
+		// The age is written as a bare number, and the original's wording for it is NOT known.
+		//
+		// FUN_004ade40 formats it through FUN_006acd60( ..., 0x1f, 0x1b1, &record ) with a VARM
+		// placeholder, and 0x1b1 = 433 read as a UITEXT row is EMPTY. That is not an off-by-one:
+		// sweeping 428..438 in the running game gives "Duration : ", "Duration : ", "Laps : ",
+		// "Cycles : ", "Repetitions : " and then nothing, which is the slider-duration family this
+		// window already uses - the age wording is not in that neighbourhood at all. So 0x1b1 is
+		// something other than a row of UITEXT.str, and until that is decoded a plain number is the
+		// honest output. 0x1f is plainly the 31-byte buffer.
+
+		// The two floats are printed RAW, and at full precision, because a gauge cannot report its own
+		// input: v/100 clamped to 0..1 draws a full bar for 100, for 1e30 and for anything else past
+		// the top, so a wrong offset would look exactly like a healthy ride. The number is the check,
+		// not the picture.
 		Log.Info( $"Ride window: thing {ThingId} stats age {(placed.Built.IsSet ? DaysSince( placed.Built ) : -1)} days," +
-			$" scrap {item.BuildPrice}, built {placed.Built.Year}-{placed.Built.Month:D2}-{placed.Built.Day:D2}" );
+			$" scrap {item.BuildPrice}, built {placed.Built.Year}-{placed.Built.Month:D2}-{placed.Built.Day:D2}," +
+			$" repair {placed.StateOfRepair:R}, life {placed.RemainingLife:R}" );
 	}
 
 	/// <summary>
@@ -852,6 +912,68 @@ internal sealed class ParkObjectWindow : UiWindow
 		}
 
 		private static void Bar( Texture texture, float x, float y, float width, float height )
+		{
+			if ( width <= 0f || height <= 0f )
+				return;
+
+			Material.UI.Set( "Color", texture );
+
+			using ( _ = new Graphics.Scope( Screen.Size ) )
+				Graphics.Quad( new Rectangle( x, Screen.Height - y - height, width, height ), Material.UI );
+		}
+	}
+
+	/// <summary>
+	/// One of the four condition rows - Excitement <c>0x3e16</c>, Remaining life <c>0x3e17</c>,
+	/// Reliability <c>0x3e18</c> and State of repair <c>0x3e19</c>. A proportion of the row filled,
+	/// not a number.
+	/// </summary>
+	/// <remarks>
+	/// <b>These are gauges, and treating them as text is why they showed nothing.</b> The labels
+	/// beside them are text cells and render fine; the value cells are not. <c>FUN_004ade40</c> hands
+	/// each of these four <c>((value &amp; 0xff) &lt;&lt; 10) / 100</c> - a 0..100 percentage mapped onto
+	/// 0..1024 - through the control's <c>+0x1c</c> entry, while the rows either side of them
+	/// (Users last month, Age, Scrap value) are given a string instead.
+	/// <para>
+	/// <b>The colour is chosen, not measured.</b> The original's gauge skin is not something this
+	/// project has read; what IS read is the proportion. So the fill is one flat colour rather than a
+	/// green-to-red scheme that would state a judgement about the value the game never makes here.
+	/// </para>
+	/// </remarks>
+	private sealed class UiStatBar : UiControl
+	{
+		private static Texture? _track;
+		private static Texture? _fill;
+
+		/// <summary>How much of the row is filled, 0 to 1.</summary>
+		internal float At { get; set; }
+
+		/// <summary>Whether a value was set at all - an unfilled bar and a zero one are different things.</summary>
+		internal bool Known { get; set; }
+
+		protected override void OnDraw()
+		{
+			base.OnDraw();
+
+			if ( !Known )
+				return;
+
+			_track ??= new Texture( [0x18, 0x20, 0x18, 0xFF], 1, 1 );
+			_fill ??= new Texture( [0x30, 0xC0, 0x40, 0xFF], 1, 1 );
+
+			var box = Pixels;
+
+			// Inset so the gauge reads as a bar sitting in the row rather than as a filled cell.
+			var inset = box.Height * 0.25f;
+			var y = box.Y + inset;
+			var height = box.Height - (inset * 2f);
+			var filled = box.Width * Math.Clamp( At, 0f, 1f );
+
+			Paint( _track, box.X, y, box.Width, height );
+			Paint( _fill, box.X, y, filled, height );
+		}
+
+		private static void Paint( Texture texture, float x, float y, float width, float height )
 		{
 			if ( width <= 0f || height <= 0f )
 				return;

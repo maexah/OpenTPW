@@ -691,6 +691,49 @@ The per-cell verdict `FUN_00535670` returns a **marker texture index** into a 20
 `m_nopath.tga` ships in `data/generic/dynamic/textures` but its name appears **nowhere** in the
 executable.
 
+### The object window's stats panel
+
+`FUN_004ade40` fills the placed object's own window. It is worth reading as a whole because the seven
+rows are **three different kinds of control**, and treating them alike is why a reimplementation can
+render the labels perfectly and leave every value blank.
+
+| Control | Row | Kind | Filled from |
+|---|---|---|---|
+| `0x3e21` | Users last month | value | Sum of **30** (`0x1e`) entries of a ring buffer; short-cuts to `FUN_00495d40` when the park is younger than that. Asserts on `"CHistory: You asked for the sum…"` |
+| `0x3e1b` | Age | **text** | `FUN_004dd670`, formatted through `FUN_006acd60` with **UITEXT row `0x1b1` = 433** and a `VARM` placeholder; has an explicit negative-sign limb |
+| `0x3e16` | Excitement | **gauge** | `FUN_004e0560( object, speed, capacity, duration )` |
+| `0x3e18` | Reliability | **gauge** | `FUN_004df640` = `100 - FUN_004df450( …, 1 )` |
+| `0x3e19` | State of repair | **gauge** | `FLD float ptr [object + 0x44]` at `004ae057` |
+| `0x3e17` | Remaining life | **gauge** | `FUN_004dd6d0`, which is only `FLD float ptr [ECX + 0x48]; JMP __ftol` |
+| `0x3e23` | Scrap value | value | `FUN_004e2400` — see below |
+
+**Every gauge is handed `((v & 0xff) << 10) / 100`** — a 0..100 percentage mapped onto **0..1024** —
+through the control's `+0x1c` entry. The compiler emits that divide as `IMUL 0x51eb851f; SAR EDX,5`.
+The three non-gauge rows are handed a raw value or a string instead.
+
+**`+0x44` and `+0x48` are two different floats and are easy to swap.** `FUN_004df8f0`
+("repairing fully") stores `0x42c80000` — `100.0f` — into **`+0x44`**, and never touches `+0x48`.
+The breakdown request in `FUN_004e0b90` does `*(float *)(this + 0x48) - _DAT_007005c8`, clamping up to
+`100.0f` and down to zero. So **`+0x48` is the wear a breakdown eats (Remaining life)** and **`+0x44`
+is what a repair restores (State of repair)**.
+
+**Both are in the save, as three unnamed floats.** `FUN_004db7d0` writes them immediately after
+`mQueueSizeInCells` with the type tag `'pv'` and **no field name**, in the order `+0x4c`, `+0x48`,
+`+0x44`. From `mQueueSizeInCells` at 1062 that is **1066, 1070 and 1074**; carrying the serialiser's
+order on through `mRequestedService`, `mTimeMarkedForMaintenance` and `mTotalCosts` lands
+`mTotalTakings` on **1090**, which is independently where it is read — the same self-check that fixes
+`mOperatingSpeed` at 1036. Nothing observed says what the float at 1066 is.
+
+**Excitement and Reliability are computed from the window's own slider values**, not stored: the
+window caches speed, duration and capacity at `+0x2c`, `+0x30`, `+0x34` and passes all three to both
+functions. `FUN_004e0560` divides the speed by the item's per-upgrade `+0x1a8` and the capacity by
+`+0x1a0`, clamps each ratio to **0.75..1.25** (the doubles at `0x007005b8` and `0x007005c0` — as
+`f32` they read `0.0`, which is a trap) and multiplies them; a sideshow (`+0x4ac == 2`) returns
+`20 - x` instead. `FUN_004df450` compares against `+0x19c` and `+0x1ac`, the **red line** figures, and
+drops the result by a further factor past them — so the red line on a slider marks where reliability
+starts falling away. **The closing multiply of both is not yet read**: the decompiler drops it into a
+bare `__ftol`, and the clamped ratios alone would flatten to 0 or 1, so a scale factor is missing.
+
 ### Sell, move and the scrap value
 
 **MOVE (verb 0x3b) is demolish-then-buy-again**, literally: the object is destroyed and refunded at
