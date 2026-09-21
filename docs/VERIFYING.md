@@ -447,6 +447,25 @@ The ones that have bitten more than once.
   the river. If the control is missing, the harness is at fault; if the control is there and the new thing
   is not, only then is it the feature. Nine explanations were offered before that one-frame control was
   tried, and every one of them was wrong.
+- **93** — **Check a threshold against the region's REACHABLE maximum before believing a failure.** A
+  control that is transparent by design can only ever change the fraction of its rectangle its drawn
+  parts cover. The entry-price spinner is 424x173 and its frame mesh resolved to nothing, so only two
+  60x61 buttons and a short number ever painted: 17,633 of 73,352 square units, a **ceiling of 24.0%**.
+  It was judged against a 20% threshold — a bar just under its own ceiling — and "failed" twice at
+  12.2% while the buttons inside it were changing **92.0%** and **93.6%** against a 0.0% floor. Compute
+  what the region *can* do before deciding what it *did*, and judge a mostly-empty control BY ITS PARTS.
+- **94** — **Drain the reply queue before reading a reply.** A harness that pumps output into a queue
+  and then searches it for the next matching line will happily hand back a reply to an EARLIER command.
+  This reported `click: the interface took (727,113)` for a click sent to `(100,609)` — coordinates
+  never sent, from a tab click five steps earlier — which reads exactly like a button being missed. The
+  button had worked. Flush, then send, then wait.
+- **95** — **Every numeric check can pass while the display is wrong. Look at the picture, every
+  time.** Four defects in one session cleared every region check, every gap counter and a green suite:
+  a column heading 160px clear of its column; a tab strip that vanished with the list it hung off,
+  stranding the screen; a kind-to-label table transposed, drawing guards under "Entertainers'
+  Happiness"; and a list rebuilt every frame. The measurements were all real and all beside the point —
+  each was caught by opening the screenshot. A region check proves *something changed there*; only the
+  image proves it is the right thing. Budget for looking, not just for measuring.
 
 ---
 

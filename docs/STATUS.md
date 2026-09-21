@@ -1,8 +1,10 @@
 # Status
 
-Last updated: 2026-09-21 on branch `alexah/95-buy-hire-and-ride-windows`. **Pushed to `maexah/OpenTPW`
-on 2026-09-21**, at Alexah's word, along with `alexah/94-every-state-answered`. Nothing was pushed to
-`upstream` (the `OpenTPW` org), and `wf-review-56` was deliberately held back as a scratch branch.
+Last updated: 2026-09-21 on branch `alexah/96-laying-and-lifting-path`, which is the tip. **Pushed to
+`maexah/OpenTPW` on 2026-09-21**, at Alexah's word — `alexah/94-every-state-answered`,
+`alexah/95-buy-hire-and-ride-windows` and `alexah/96-laying-and-lifting-path`. Every other local branch
+was surveyed against origin with `git ls-remote` and already matched, in both clones. Nothing was pushed
+to `upstream` (the `OpenTPW` org), and `wf-review-56` was deliberately held back as a scratch branch.
 
 **The branch was renamed before it was pushed.** It was `alexah/95-what-a-park-costs`, which is a
 phrase, and one that described only its first commit — `CLAUDE.md` says to name a branch for what it
@@ -15,8 +17,8 @@ instant it was written and went stale three times in one day besides. The count 
 left out for the same reason. Read both from the repository, which cannot lag:
 
     git log --oneline -1
-    git log --oneline origin/alexah/95-buy-hire-and-ride-windows..HEAD | wc -l
-    git ls-remote origin alexah/95-buy-hire-and-ride-windows
+    git log --oneline origin/alexah/96-laying-and-lifting-path..HEAD | wc -l
+    git ls-remote origin alexah/96-laying-and-lifting-path
 
 The tip is the newest `alexah/N` branch and has everything. Confirm with
 `git branch -r --sort=-committerdate | head -3`.
@@ -58,12 +60,6 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 `docs/PLAYER-GAPS.md` — the **eight** gaps a player meets, in the order they meet them. **Five are done**
 (1, 2, 3, 6, 8); **three remain** (4, 5, 7). Alexah sets which one is the goal; one per session.
 
-**The current goal, set 2026-09-20, is item 2 — the management gadget's buttons**, starting with the
-purchase menu and building toward paths, queues, and placing, moving and managing objects. Alexah chose
-the *large* half of that item deliberately; the warning on it is a statement of size, not a veto. The
-purchase menu is `FUN_004acc70` and the dispatch is already decoded in `docs/exe/hud.md` — do not
-re-derive it.
-
 **Where it stands, 2026-09-21. ITEM 2 IS DONE and is ticked.** All four of its parts landed and every
 one was confirmed in a running park: the purchase and hire screens with buy, sell, move, carry, hire,
 fire, pick up and put down underneath; **laying and lifting path**; **laying and lifting queue**, with
@@ -96,8 +92,8 @@ Take counts fresh; these go stale within a day.
 |---|---|---|
 | Opcodes | 72 implemented of 106 | 2026-09-20, `case Opcode.` labels vs enum members |
 | Tests | 827 total, all of them run **with** the game and 0 skip | 2026-09-21, measured after the category screens |
-| Tests without the game | 379 ran, 411 skipped — **of 790, and not re-measured since** | 2026-09-19 review |
-| Build warnings | 126 (71 are CS8618 nullable) | 2026-09-20, measured at `5c66d2e` |
+| Tests without the game | 379 ran, **448 skipped**, of 827 | 2026-09-21, measured fresh |
+| Build warnings | 126 (71 are CS8618 nullable) | 2026-09-21, measured at `2cfb32c` |
 
 ## Recent
 

@@ -10,44 +10,34 @@ Tick an item here in the same commit that lands it, and move its detail to the p
 Scope is **Lost Kingdom only**. Anything that changes nothing in `data/levels/jungle` is not on this list,
 however large it looks — that trap has been hit twice.
 
-## >>> THE CURRENT GOAL, SET BY ALEXAH 2026-09-20: ITEM 2, THE GADGET BUTTONS. <<<
+## >>> ITEM 2 IS DONE, 2026-09-21. NO GOAL IS CURRENTLY SET — ALEXAH PICKS THE NEXT. <<<
 
 > *"let's get the park management gadget buttons working. We can start with the purchase menu, so we
 > can start work on allowing players to build/delete paths, and queues, along with purchasing,
 > deleting, moving, and managing the rides/shops/sideshows themselves."*
 
-**>>> ALEXAH HAS CHOSEN THE BIG HALF ON PURPOSE. <<<** Item 2 below warns that making the buttons
-*honest* is small and making them *work* is "the single largest missing system in the project — do not
-start the second one by accident." **This is not by accident.** The warning stands as a statement of
-SIZE, not as a veto: scope one session at a time, and do not treat it as a reason to hesitate.
+**Every clause of that is now true, and all three steps of Alexah's dependency order are done:**
 
-**The order Alexah gave is a dependency order, not a preference:**
+1. ~~**The purchase menu**~~ — buy and hire, with buy, sell, move, carry, hire, fire, pick up, put down.
+2. ~~**PATHS and QUEUES**~~ — laid and lifted, with `FUN_004de1f0`'s invalidation wired so queues cannot
+   go stale, and **building by pointing** (anchor, then commit — there is no drag, both drag slots are
+   bare `RET` stubs).
+3. ~~**RIDES / SHOPS / SIDESHOWS**~~ — a placed ride's management window cycles, deletes and moves.
 
-1. **The purchase menu first** — every later verb hangs off it.
-2. Then **build / delete PATHS and QUEUES** — the map-editing half.
-3. Then **purchase, delete, move and manage RIDES / SHOPS / SIDESHOWS** — the object half.
+**And the category buttons, 2026-09-21.** Info and Money open four real screens — all staff, all items,
+all visitors and the entry price — every one confirmed on screen. **Five of the six gadget buttons now
+open something.**
 
-**>>> WHERE THIS STANDS, 2026-09-21: STEPS 1 AND 3 ARE DONE. STEP 2 IS NOT. <<<**
+**>>> ONLY RESEARCH REMAINS, AND IT IS BLOCKED BY ABSENCE, NOT BY EFFORT. <<<** It is not a category
+(`FUN_004a0840`'s case `0x2b` goes straight to `FUN_004aa480`, as the map does) and its screen is six
+effort sliders over research groups. This game has no research, no researchers and no groups. It is
+counted, with that reason named at the site. **Do not open it as a task until a research system exists.**
 
-Alexah narrowed the goal for one session: *"Get the purchase/hire UI working per the gap plan please.
-It should be fully functional. Rides can be purchased, moved or sold, clicked to open their management
-menu, staff can be hired, fired, picked up and moved. Patrol areas can stay dead."* **Every clause of
-that is now true and confirmed on screen.** The purchase menu and the hire screen open from the Buy
-button and reach each other; things can be bought, sold, moved and carried; staff can be hired, fired,
-picked up and put down; and clicking a placed ride opens its management window, which cycles, deletes
-and moves.
+**Park status (screen 3) is deferred by Alexah, 2026-09-21** — *"I'm okay delaying work on the Info
+screen. It's not important at the moment."* The Information category is therefore seeded to screen **4**
+where the original seeds **3**, a declared deviation that reverts the day park status is built.
 
-**What is left of item 2, and it is the middle step of the order above:** paths and queues, which is
-where `FUN_004de1f0`'s invalidation has to be wired or queues go stale, and the other three category
-buttons - Info, Money and Research. **Patrol areas were explicitly deferred by Alexah** and are still
-dead.
-
-**One thing item 8 leaves this goal, and it is a live hook rather than a note.**
-`ParkRideChoice.QueueCellsFor` walks queue cells off the **map**, not out of the save — so anything
-that edits paths or queues changes that answer at runtime, and `mBackOfQueue` caches it. The original's
-own invalidate-and-rewalk is `FUN_004de1f0`: it zeroes `+0x3a`, recomputes, and logs *"Object's queue
-is now %d cells long"* — and its callers are exactly the path/cell editing family. **The editing half
-already has its engine-side hook identified; wire the invalidation or queues go stale.**
+**Patrol areas were explicitly deferred by Alexah** and are still dead.
 
 ## >>> THE GOAL BEFORE IT, SET 2026-09-20: CLOSE THE GUEST LOOP. DONE. <<<
 
@@ -89,7 +79,7 @@ Confirmed from the engine as well as the data: `FUN_00471860` indexes the table 
 | # | What a player sees | Depends on |
 |---|---|---|
 | ~~1~~ | ~~The gates never open when you enter a park~~ **DONE 2026-09-20** | — |
-| 2 | Four of the six gadget buttons do nothing | — (to be honest); everything (to work) |
+| ~~2~~ | ~~Four of the six gadget buttons do nothing~~ **DONE 2026-09-21** — five of six now open something | — |
 | ~~3~~ | ~~Nobody new ever arrives~~ **DONE 2026-09-20** — and on all three vehicles | — |
 | 4 | The advisor is silent unless you open a screen | — |
 | 5 | The happiness gauge reads wrong | — |
@@ -97,7 +87,7 @@ Confirmed from the engine as well as the data: `FUN_00471860` indexes the table 
 | 7 | A park cannot be saved | — |
 | ~~8~~ | ~~Guests cannot buy anything from a shop, and barely from a sideshow~~ **DONE 2026-09-20** | — |
 
-**Four remain: 2, 4, 5 and 7.** Every one of them is independent of the others — none is blocked on
+**Three remain: 4, 5 and 7.** Every one of them is independent of the others — none is blocked on
 anything now built, and none blocks another.
 
 ---
@@ -308,10 +298,10 @@ nothing to put behind the button. It is counted, with that reason named at the s
 
 ### The original section, for the part still open
 
-- [ ] **Seen:** Info, Money and Research do nothing. **Buy was the first thing anyone clicks and was
-      inert too; it works as of 2026-09-21**, so this bullet now covers only the three that remain.
-- **Lives:** `ParkGadget.cs:339/354/357` - `b_info`, `b_money` and `b_resrch`, three `NotYet(...)`.
-  Camcorder, Map and now Buy are the three that work.
+- [x] **Was seen:** Info, Money and Research do nothing. **Five of the six now open something**, as of
+      2026-09-21 — Buy, Camcorder, Map, Info and Money. Only Research is left.
+- **Lives:** `ParkGadget.cs` — one `NotYet(...)` remains, `b_resrch`. `b_info` and `b_money` go through
+  `ParkCategoryScreens.Open`, which is the original's own remembered-tab picker.
 - **The real dispatch is decoded** in `docs/exe/hud.md`: `FUN_004a0940( n )` opens *the screen that
   category was last left on*, from three globals seeded 1 / 3 / 10. **The HUD is six category pickers,
   not 17 buttons.**
