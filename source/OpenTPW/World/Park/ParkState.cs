@@ -46,12 +46,135 @@ public sealed class ParkState
 	private readonly RuntimeCell[] _cells;
 
 	/// <summary>
+	/// The park being played, or null outside one - the arrangement <see cref="ParkObjects.Current"/>
+	/// and <see cref="ParkPeople.Current"/> already use, and this was the layer without it. The ground
+	/// needs it to draw cells a player has changed, which it cannot ask the save for.
+	/// </summary>
+	public static ParkState? Current { get; private set; }
+
+	/// <summary>The file this was seeded from, for the cells nothing has changed - see <see cref="Record"/>.</summary>
+	private readonly ParkWorld? _park;
+
+	/// <summary>
+	/// The cells a player has changed since the park was loaded, by packed index. Sparse on purpose:
+	/// a park is 16,384 cells and a session changes a handful, so this holds only the difference.
+	/// </summary>
+	private readonly Dictionary<int, ParkWorld.MapCell> _records = [];
+
+	/// <summary>
+	/// What a cell IS now - built on, path, queue, bare ground - which is a different question from
+	/// <see cref="CellAt"/>, the three fields a running park moves.
+	///
+	/// <para>
+	/// <b><see cref="ParkWorld"/> describes a file and may never be written to</b>, so a cell a player
+	/// builds on cannot be recorded there. This answers the save until something changes a cell and
+	/// that change afterwards, which is the whole of what makes building possible.
+	/// </para>
+	/// </summary>
+	public ParkWorld.MapCell Record( int x, int y )
+	{
+		if ( !OnMap( x, y ) )
+			return default;
+
+		return _records.TryGetValue( (y * ParkWorld.MapSize) + x, out var changed )
+			? changed
+			: _park?.CellAt( x, y ) ?? default;
+	}
+
+	/// <summary>Records what a cell has become. <see cref="ParkGround"/> has to be rebuilt to show it.</summary>
+	public void SetRecord( int x, int y, ParkWorld.MapCell cell )
+	{
+		if ( OnMap( x, y ) )
+			_records[(y * ParkWorld.MapSize) + x] = cell;
+	}
+
+	/// <summary>
+	/// Puts a cell back to whatever the save said it was - what selling something has to do to the
+	/// ground it stood on. Dropping the override rather than writing the old value back is what makes
+	/// this exact: the file is the record, so there is nothing to copy and nothing to get wrong.
+	/// </summary>
+	public void ClearRecord( int x, int y )
+	{
+		if ( OnMap( x, y ) )
+			_records.Remove( (y * ParkWorld.MapSize) + x );
+	}
+
+	/// <summary>Whether any cell has been changed at all - what a rebuild can skip on.</summary>
+	public int ChangedCells => _records.Count;
+
+	private readonly List<ParkWorld.CatalogueObject> _objects = [];
+
+	/// <summary>
+	/// Everything standing in the park <i>now</i>, which is the save's list plus whatever has been
+	/// built since and minus whatever has been sold. <see cref="ParkWorld.Objects"/> is the file's
+	/// list and never moves.
+	/// </summary>
+	public IReadOnlyList<ParkWorld.CatalogueObject> Objects => _objects;
+
+	/// <summary>
+	/// A thing id nothing is using. One past everything the park can see, which is the same rule
+	/// <see cref="ParkPeople"/> follows for a new guest - and carries the same caveat: it is not
+	/// provably free, it is past everything visible.
+	/// </summary>
+	public int NextThingId()
+	{
+		var highest = 0;
+
+		foreach ( var placed in _objects )
+			highest = Math.Max( highest, placed.ThingId );
+
+		if ( _park != null )
+		{
+			foreach ( var person in _park.People )
+				highest = Math.Max( highest, person.ThingId );
+		}
+
+		return highest + 1;
+	}
+
+	/// <summary>Adds something built, and hands back its thing id.</summary>
+	public void AddObject( ParkWorld.CatalogueObject placed ) => _objects.Add( placed );
+
+	/// <summary>Takes something sold out of the park. Answers whether it was there.</summary>
+	public bool RemoveObject( int thingId )
+	{
+		var at = _objects.FindIndex( placed => placed.ThingId == thingId );
+
+		if ( at < 0 )
+			return false;
+
+		_objects.RemoveAt( at );
+
+		return true;
+	}
+
+	/// <summary>The placed object with this thing id, if the park has one.</summary>
+	public bool TryObject( int thingId, out ParkWorld.CatalogueObject placed )
+	{
+		foreach ( var candidate in _objects )
+		{
+			if ( candidate.ThingId == thingId )
+			{
+				placed = candidate;
+				return true;
+			}
+		}
+
+		placed = default;
+
+		return false;
+	}
+
+	/// <summary>
 	/// Seeded from the save. A null park gives an empty, open one - the same answer
 	/// <see cref="PeepBehaviour"/> already gives for a null park, and for the same reason: a park with
 	/// nothing loaded is not a park whose gates are shut.
 	/// </summary>
 	public ParkState( ParkWorld? park )
 	{
+		_park = park;
+		Current = this;
+
 		Balance = park?.Economy?.Balance ?? 0;
 		VisitorsToDate = park?.NumberOfVisitorsToDate ?? 0;
 		ParkIsClosed = park is not null && park.ParkClosed != 0;
@@ -72,6 +195,10 @@ public sealed class ParkState
 				Occupant = cell.Occupant
 			};
 		}
+
+		// Everything the file placed, copied so that what is built and sold afterwards moves here rather
+		// than in ParkWorld, which describes a file.
+		_objects.AddRange( park.Objects );
 
 		// And the queues as the save left them. Every one is empty in the park that ships - nobody has ever
 		// been admitted to it - so this seeds nothing today and is still what makes a saved queue survive
@@ -108,6 +235,7 @@ public sealed class ParkState
 	/// </summary>
 	public ParkState( bool parkIsClosed, int visitorsToDate, int balance = 0 )
 	{
+		Current = this;
 		ParkIsClosed = parkIsClosed;
 		VisitorsToDate = visitorsToDate;
 		Balance = balance;
@@ -170,6 +298,19 @@ public sealed class ParkState
 	/// </para>
 	/// </summary>
 	public void Spend( int cost ) => Balance -= cost;
+
+	/// <summary>
+	/// Gives money back - what selling something does.
+	///
+	/// <para>
+	/// <b>It is not <see cref="Take"/>, and the difference is not cosmetic.</b> Taking a fee moves the
+	/// balance <i>and</i> <see cref="Takings"/>, which is what the gates have taken; a refund that went
+	/// through there would report money the park never earned. The original keeps them apart too - a
+	/// demolition credits through <c>FUN_004d0190</c>, which moves the balance and the lifetime income
+	/// counter, while an admission fee goes through <c>FUN_004d0600</c>.
+	/// </para>
+	/// </summary>
+	public void Refund( int amount ) => Balance += amount;
 
 	/// <summary>Admits one guest and hands back which visitor they are, counting from one.</summary>
 	public int Admit() => ++VisitorsToDate;

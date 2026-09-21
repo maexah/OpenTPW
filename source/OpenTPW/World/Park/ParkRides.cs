@@ -69,6 +69,56 @@ public sealed class ParkRides : Entity
 	public string ThemeName { get; }
 
 	/// <summary>
+	/// The scripts of the park currently loaded, or null outside one - the arrangement
+	/// <see cref="ParkObjects.Current"/> already uses, and needed for the same reason: something bought
+	/// after the park has loaded has to be given a script, and whoever builds it is not holding this.
+	/// </summary>
+	public static ParkRides? Current { get; private set; }
+
+	/// <summary>
+	/// Gives a newly built thing its script, the way the load gives one to everything the save placed.
+	/// Answers whether it got one - an item with no <c>.RSE</c> is ordinary data, not a failure.
+	/// </summary>
+	/// <remarks>
+	/// The engine does this inside the object constructor itself (<c>FUN_004dcf90</c>, called from
+	/// <c>0x004db517</c>), so a bought thing and a loaded one are running the same code. Here they are
+	/// two call sites of the same three steps - spawn, bind the thing, hand over its own animation
+	/// player - and the capacity and duration come from the object record exactly as they do above.
+	/// </remarks>
+	public bool BindNew( ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item )
+	{
+		if ( _scripts.ContainsKey( placed.ThingId ) )
+			return true;
+
+		var id = Scheduler.Spawn( ScriptPathFor( item ) );
+
+		if ( id == 0 )
+		{
+			++Scriptless;
+			return false;
+		}
+
+		_scripts[placed.ThingId] = id;
+
+		if ( Scheduler.Find( id ) is not { } script )
+			return false;
+
+		script.ThingId = placed.ThingId;
+		script.Set( ParkRideOperation.CapacityVariable, placed.OperatingCapacity );
+		script.Set( ParkRideOperation.DurationVariable, placed.OperatingDuration );
+
+		script.Animations = _objects?.AnimationsFor( placed.ThingId )
+			?? RideAnimations.Load( item.Directory, item.Stem, _files, item.AnimationChannels );
+
+		if ( script.Animations.Loaded > 0 )
+			++Animated;
+
+		Log.Info( $"{ThemeName}: thing {placed.ThingId} ('{item.Name}') now runs {ScriptPathFor( item )}" );
+
+		return true;
+	}
+
+	/// <summary>
 	/// Every script this park is running, and the registry each one reaches the others through. It is the
 	/// engine's single global list (<c>DAT_008791b0</c>), which is why there is one of these per park and
 	/// not one per item.
@@ -143,6 +193,10 @@ public sealed class ParkRides : Entity
 	{
 		ThemeName = themeName;
 		Name = $"{themeName} ride scripts";
+
+		// Before the two bails below, for the reason ParkObjects sets its own here: a park that places
+		// nothing still runs scripts, and something bought afterwards has to be able to find this.
+		Current = this;
 
 		_files = files ?? FileSystem;
 		_objects = objects;

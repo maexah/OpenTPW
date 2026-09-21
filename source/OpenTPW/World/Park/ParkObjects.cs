@@ -215,6 +215,54 @@ public sealed class ParkObjects : Entity
 	}
 
 	/// <summary>
+	/// Stands something the player has just bought, and answers whether it went up.
+	///
+	/// <para>
+	/// <b>Nothing could add to a park before this.</b> Every model here was built in the constructor,
+	/// walking the save's own list, so the park was whatever the file said and could never be anything
+	/// else. This is the same <see cref="Place"/> the load uses - deliberately, so a bought thing is
+	/// stood by the identical rule a saved one is, rather than by a second arrangement that could
+	/// drift from it.
+	/// </para>
+	/// </summary>
+	public bool PlaceNow( ParkWorld.CatalogueObject placed, ParkItemCatalogue catalogue )
+	{
+		var before = _models.Count;
+
+		Place( placed, catalogue );
+
+		return _models.Count > before;
+	}
+
+	/// <summary>
+	/// Takes something sold back out of the park: its model stops being drawn and its sign is let go
+	/// of. Answers whether anything was standing there.
+	/// </summary>
+	/// <remarks>
+	/// <b><see cref="LobbyModel"/> has no teardown of its own</b>, so this deletes the entities it owns
+	/// - the same thing <see cref="OnDelete"/> does for the whole park, one thing at a time. The sign
+	/// list is deliberately left alone: a sign is cut per object and is let go of with the park, and
+	/// chasing which entry belonged to this one would be a second bookkeeping that can disagree with
+	/// the first.
+	/// </remarks>
+	public bool Remove( int thingId )
+	{
+		if ( !_standing.TryGetValue( thingId, out var standing ) )
+			return false;
+
+		_standing.Remove( thingId );
+		_models.Remove( standing.Model );
+
+		// A LobbyModel owns one ModelEntity per mesh and has no teardown of its own, so the entities
+		// are what has to go. Entity.Delete defers to Entity.ApplyDeletions, which the level runs after
+		// its own walk - so this is safe from the console's tick, which happens before that walk.
+		foreach ( var entity in standing.Model.Entities )
+			entity.Delete();
+
+		return true;
+	}
+
+	/// <summary>
 	/// Stands one object on the ground, or says why it could not.
 	/// </summary>
 	private void Place( ParkWorld.CatalogueObject placed, ParkItemCatalogue catalogue )

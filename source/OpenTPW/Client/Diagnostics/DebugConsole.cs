@@ -662,6 +662,59 @@ public static class DebugConsole
 					: ParkPicking.State() );
 				break;
 
+			// Buying, selling and moving something, driven by hand. The screens that will do this for a
+			// player do not exist yet, and these exist for the same reason `arrive` did before the
+			// arrival manager: the verb has to be provable in a running park before anything is wrapped
+			// around it.
+			case "buy":
+				Reply( parts.Length > 3
+					? ParkBuilding.Buy( (int)Argument( 1 ), (int)Argument( 2 ), (int)Argument( 3 ),
+						parts.Length > 4 ? (int)Argument( 4 ) : 0 )
+					: "buy <catalogueId> <cellX> <cellY> [angle]" );
+				break;
+
+			case "sell":
+				Reply( parts.Length > 1
+					? ParkBuilding.Sell( (int)Argument( 1 ) )
+					: "sell <thingId>" );
+				break;
+
+			case "move":
+				Reply( parts.Length > 3
+					? ParkBuilding.Move( (int)Argument( 1 ), (int)Argument( 2 ), (int)Argument( 3 ),
+						parts.Length > 4 ? (int)Argument( 4 ) : 0 )
+					: "move <thingId> <cellX> <cellY> [angle]" );
+				break;
+
+			// What the park is worth. It exists so that a test can prove money moved by EXACTLY one
+			// amount: the clock is stopped under `pause`, so between two of these with no `step`
+			// between them no tick runs, nobody pays at the gate, and nothing but the command under
+			// test can have moved the balance. Measuring across a stepped frame instead is how a
+			// refund check came back 25 out - the park had earned it.
+			case "money":
+				Reply( Level.Current?.ParkState is { } purse
+					? $"money balance {purse.Balance} takings {purse.Takings}"
+					: "money: a park has to be loaded" );
+				break;
+
+			// What is standing in the park NOW, which is the save's list plus what has been built and
+			// minus what has been sold - the census that says whether buying actually changed anything.
+			case "objects":
+				var standing = ParkBuilding.Census().ToArray();
+
+				if ( standing.Length == 0 )
+				{
+					Reply( "objects: none - a park has to be loaded" );
+					break;
+				}
+
+				Reply( $"objects {standing.Length}" );
+
+				foreach ( var entry in standing )
+					Reply( "  " + entry );
+
+				break;
+
 			case "quit":
 				Reply( "quitting" );
 				Environment.Exit( 0 );

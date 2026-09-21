@@ -65,6 +65,9 @@ public class Level
 	/// </summary>
 	public ParkState? ParkState { get; private set; }
 
+	/// <summary>Everything this theme sells, for as long as the park is up - see <see cref="ParkBuilding"/>.</summary>
+	public ParkItemCatalogue? Catalogue { get; private set; }
+
 	/// <summary>
 	/// Which of the game's two worlds this is. The original runs them as separate states of one
 	/// machine - the lobby is states 1/2/3 and a park is 9/10/0xb - and they share almost nothing but
@@ -286,7 +289,11 @@ public class Level
 		// Everything this theme sells, read once and shared: the objects need it to know what to stand on
 		// the ground, and the rides need it to know where each item's script lives. Built only where there
 		// is a park to place anything in, since without one neither of them has anything to ask it.
-		var catalogue = park == null ? null : new ParkItemCatalogue( ThemeName );
+		// Kept on the level as well as handed round below, because buying something needs it long after
+		// the park has finished loading - see ParkBuilding.
+		Catalogue = park == null ? null : new ParkItemCatalogue( ThemeName );
+
+		var catalogue = Catalogue;
 
 		_ = new ParkGround( ThemeName, park );
 		_ = new ParkPaths( ThemeName, park );

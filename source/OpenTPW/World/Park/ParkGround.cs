@@ -47,14 +47,44 @@ public sealed class ParkGround : ModelEntity
 	/// cells the player laid a path on, so that those can be left to <see cref="ParkPaths"/> instead of
 	/// being drawn as grass underneath it.
 	/// </param>
+	/// <summary>The park this was built from, so that it can be built again when a cell changes.</summary>
+	private ParkWorld? _world;
+
 	public ParkGround( string themeName, ParkWorld? world )
 	{
 		_themeName = themeName;
+		_world = world;
 		Name = $"{themeName} ground";
 
 		Build( world );
 
 		Current = this;
+	}
+
+	/// <summary>
+	/// Builds the surface again, because a cell has changed underneath it - something built, something
+	/// sold.
+	///
+	/// <para>
+	/// <b>The whole surface, not the cell.</b> The ground is one model of every drawn cell in the park,
+	/// so there is no per-cell edit to make: the arrays are sized, filled and handed over as one. Eight
+	/// thousand cells is cheap enough to do on the rare frame a player builds something, and far
+	/// cheaper than keeping a second structure that can disagree with this one.
+	/// </para>
+	/// <para>
+	/// <b>The old model is let go of first.</b> <see cref="ModelEntity"/> owns its model and the
+	/// material bound into it; building over the top without deleting would leave both for the life of
+	/// the process, which is the residue an earlier branch spent itself getting to zero.
+	/// </para>
+	/// </summary>
+	public void Rebuild()
+	{
+		Model?.Delete();
+		Model = null!;
+
+		Build( _world );
+
+		Log.Info( $"{_themeName}: the ground was rebuilt - {ParkState.Current?.ChangedCells ?? 0} cells have changed" );
 	}
 
 	/// <summary>
@@ -230,7 +260,11 @@ public sealed class ParkGround : ModelEntity
 				// depth. The grass won, which is what left a shop standing on bare grass.
 				if ( world != null )
 				{
-					var cell = world.CellAt( x, y );
+					// The RUNNING park's answer, not the file's - a cell built on since the park loaded
+					// has to stop being drawn as grass, and ParkWorld cannot record that. It falls
+					// through to the save for every cell nobody has changed, which is all of them
+					// until somebody builds something.
+					var cell = ParkState.Current?.Record( x, y ) ?? world.CellAt( x, y );
 
 					if ( ParkPaths.IsPath( cell ) || ParkQueues.IsQueue( cell ) || ParkObjects.CoversGround( cell ) )
 						continue;
