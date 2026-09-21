@@ -123,6 +123,13 @@ only an idle mode (type 0 or 1) opens windows. Proved with clicks alone, no cons
 ride built for **exactly** its 500 and a cleaner hired, the object census and the staff count each up
 one, and `PLACE_BY_POINTING` and `PLACE_STAFF_BY_POINTING` both gone from the `unimplemented` census.
 
+**And what is picked up can be put back.** The right button cancels a carry, which is the original's
+way out of a place mode: nothing is charged for picking something up, so cancelling gives nothing back
+and takes nobody out of the pool. **The button's own edge cannot be driven by any harness here** - no
+more than the left's can - so the console's `drop` reaches the same `Level.CancelCarried` rather than a
+copy of it, and that shared body is what is measured: carry a ride, drop it, click the park, and
+nothing is built. Two copies would have been free to drift, with only one of them ever tested.
+
 **That end-to-end run caught what 818 green tests could not.** Objects and people share **one**
 thing-id numbering, and there were **two allocators** over it: `ParkState.NextThingId` rescanned the
 save's objects and people, so it never saw a hired staff member, while `ParkPeople` kept a private

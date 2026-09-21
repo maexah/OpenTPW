@@ -803,8 +803,12 @@ public static class DebugConsole
 					: ParkBuilding.HandState() );
 				break;
 
+			// Whichever hand is full - an item, or a candidate taken off the hire screen. THE SAME BODY
+			// THE RIGHT MOUSE BUTTON RUNS, rather than a copy: the button's edge cannot be driven from
+			// here, so this reaches Level.CancelCarried and the tested path is the real one.
 			case "drop":
-				Reply( ParkBuilding.Drop() );
+				Reply( Level.Current?.CancelCarried()
+					?? "drop: nothing is being carried" );
 				break;
 
 			// `put`, not `place` - the lobby already has a `place`, which auditions an ambient sample

@@ -533,6 +533,7 @@ public class Level
 	}
 
 	private bool _worldMouseWasDown;
+	private bool _worldRightWasDown;
 
 	/// <summary>
 	/// A press on the park itself. Clicking a placed thing opens its management window -
@@ -546,11 +547,46 @@ public class Level
 
 		_worldMouseWasDown = down;
 
+		// THE RIGHT BUTTON CANCELS whatever is being carried, which is the original's own way out of a
+		// place mode. Nothing was charged for picking it up - the money is taken when the thing goes
+		// up - so cancelling gives nothing back and takes nobody out of the pool.
+		var rightDown = Input.Mouse.Right;
+		var rightPressed = rightDown && !_worldRightWasDown;
+
+		_worldRightWasDown = rightDown;
+
+		if ( rightPressed && CancelCarried() is { } cancelled )
+		{
+			Log.Info( cancelled );
+			return;
+		}
+
 		if ( !pressed || UI.WindowStack.PointerTaken )
 			return;
 
 		if ( ParkPicking.TryCell( out var cellX, out var cellY ) )
 			Log.Info( ClickWorldAt( cellX, cellY, ParkPicking.ThingUnderCursor ) );
+	}
+
+	/// <summary>
+	/// Puts back whatever is on the cursor - an item, or a candidate taken off the hire screen - or
+	/// null when nothing is being carried.
+	/// </summary>
+	/// <remarks>
+	/// <b>One body, shared with the console's <c>drop</c>.</b> The right button's edge cannot be driven
+	/// by a harness any more than the left's can, so the console reaches the same method rather than a
+	/// copy of it; two copies would be free to drift, and only one of them would ever be tested.
+	/// </remarks>
+	internal string? CancelCarried()
+	{
+		// Never both at once: each screen closes as it fills its own hand, and neither fills the other's.
+		if ( ParkStaffPool.Carrying != 0 )
+			return $"world click: {ParkStaffPool.Drop()}";
+
+		if ( ParkBuilding.Carrying != 0 )
+			return $"world click: {ParkBuilding.Drop()}";
+
+		return null;
 	}
 
 	/// <summary>

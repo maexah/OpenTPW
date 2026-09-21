@@ -150,6 +150,11 @@ dependency order is untouched, so this item stays open.
       did not, and **anything in the hand goes down before any window opens** - the original's own
       order, since a place mode consumes the click and only an idle mode opens windows. The console's
       `put` and `hire` still do it in one step, for a test that cannot move the pointer.
+      **The right button cancels** - the original's own way out of a place mode. Nothing is charged
+      for picking something up, so putting it back gives nothing back and takes nobody out of the
+      pool. **That button's edge is no more driveable by a harness than the left's**, so the console's
+      `drop` reaches the same `Level.CancelCarried` rather than a copy, and the shared body is what is
+      measured: carry a ride, drop it, click the park, nothing is built.
 
 ### The original section, for the part still open
 
