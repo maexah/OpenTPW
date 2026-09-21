@@ -1,8 +1,15 @@
 # Status
 
-Last updated: 2026-09-21 on branch `alexah/98-decode-each-texture-once`, which is the tip and is
-**local and unpushed**, stacked on `alexah/97-load-time` — together they close
-`docs/CLEANUP-PLAN.md` item 9. Before them,
+Last updated: 2026-09-21 on branch `alexah/98-decode-each-texture-once`, which is the tip, stacked on
+`alexah/97-load-time` — together they close `docs/CLEANUP-PLAN.md` item 9. **Both were pushed to
+`maexah/OpenTPW` on 2026-09-21** at Alexah's word, verified against the server with `git ls-remote`
+rather than a tracking ref. Every other local branch in both clones was surveyed the same way and
+already matched; `wf-review-56` was held back as a scratch branch, and nothing went to `upstream`
+(the `OpenTPW` org), which carries no `alexah/*` head at all.
+
+**The commit carrying this very line is, by definition, not yet up when it is written** — that is the
+same trap this file records below about shas. Read what is really up from the server, never from here:
+`git ls-remote origin 'refs/heads/alexah/*'`. Before them,
 `alexah/96-laying-and-lifting-path` was **pushed to `maexah/OpenTPW` on 2026-09-21**, at Alexah's
 word — `alexah/94-every-state-answered`,
 `alexah/95-buy-hire-and-ride-windows` and `alexah/96-laying-and-lifting-path`. Every other local branch
