@@ -885,12 +885,23 @@ is the label inside the preview, kept at `this[7]`.
 call `FUN_004aec30` with a mask of **1, 2 or 4**; the values reach the ride only when the window closes
 or either arrow is pressed, and capacity and duration commit byte-wide where speed is a dword.
 
-**17 of 18 mesh hashes resolve, and two of them only by NODE name** - the root is `window2` inside
-`w_med.MD2` and `0x3e25` is `chev` inside `f_chev.MD2`, neither findable from a file stem.
-**`0xaaee5929` (`0x3e37`, help 16, handler `FUN_004e15b0(0)` then close) matches no stem and no
-printable token inside any of ui.wad's 1202 members**, the same shape as the buy and hire screens'
-root frame `0xf76e4200`. A named gap, not a guess. Resolver:
-`~/.cache/tpw-harnesses/meshhash.py`, which hashes stems first and then every token inside each MD2.
+**18 of 18 mesh hashes resolve, and three of them only by NODE name** - the root is `window2` inside
+`w_med.MD2`, `0x3e25` is `chev` inside `f_chev.MD2`, and **`0xaaee5929` (`0x3e37`, help 16, handler
+`FUN_004e15b0(0)` then close) is `b_ride it!` inside `b_rideit.MD2`** - resolved 2026-09-21.
+
+**Why it read as unresolvable.** This page said it matched "no stem and no printable token inside any
+of ui.wad's 1202 members". The token scan it rested on read the members' **raw bytes**, and every one
+of ui.wad's 278 `.md2` files is **refpack-compressed**, so that scan was searching compressed noise and
+could never have matched anything. The node name also carries a **space and an exclamation mark**
+(`b_ride it!`), which a token-splitting scan drops even on decompressed data. Decompress with the
+tree's own `WadArchive` + `ModelFile` and read `ModelFile.Nodes[].Name` - 1,563 node names across
+ui.wad and lobby.wad, and every outstanding hash falls out at once.
+
+The same scan is what left the buy and hire screens' root frame `0xf76e4200` recorded as a named gap;
+it is `window4` inside `w_big.MD2`, one of a family - `window1` `w_small`, `window2` `w_med`,
+`window3` `w_park`, `window4` `w_big`. Five screens wore no backdrop because of it. See
+`docs/exe/hud.md`. Resolver: `~/.cache/tpw-harnesses/nodenames/`, which decompresses and reads node
+names; the older `meshhash.py`, which hashes stems and raw tokens, cannot see any of this.
 
 **A trap for any re-implementation that anchors controls:** `0x3e25`'s rect (300..828) is **wider than
 its parent's** (348..762), so a rule that only inherits a parent's edge when the child sits inside it

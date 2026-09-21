@@ -27,10 +27,13 @@ namespace OpenTPW.UI;
 /// </para>
 ///
 /// <para>
-/// <b>Three things are deliberately NOT built, each for a reason rather than for want of a rect.</b>
-/// The root's frame mesh (<c>0xf76e4200</c>) <b>resolves to no name in the executable or any shipped
-/// file</b>, after a search of all 2,488 of them, so the screen draws without a backdrop rather than
-/// wearing a guess. The stats panel <c>0x1ed</c> and its seven readouts are excitement, reliability
+/// <b>Two things are deliberately NOT built, each for a reason rather than for want of a rect.</b>
+/// <b>The root's frame mesh is <c>w_big</c>, and this paragraph said for months that it resolved to
+/// nothing.</b> It claimed <c>0xf76e4200</c> matched "no name in the executable or any shipped file,
+/// after a search of all 2,488 of them" - but that search was over FILE names, and the stream hashes
+/// a model's first NODE name. The node is <c>window4</c>, inside <c>w_big.MD2</c>. Five screens share
+/// it and all five drew without a backdrop until it was found. The stats panel <c>0x1ed</c> and its
+/// seven readouts are excitement, reliability
 /// and capacity - simulation values this game does not have, the same reason the map screen's overlays
 /// are refused. And the row's third column is a tick-box in the original, skinned with
 /// <c>i_boxtick</c> and framed from the row state; until that is drawn it shows the state in the
@@ -82,7 +85,12 @@ internal sealed class ParkBuyScreen : UiWindow
 		// Modal so the park behind cannot be clicked through, but NOT pausing - see the class remarks.
 		Modal = true;
 
-		Root = new UiControl { Id = 0x1e9, Rect = new UiRect( 186, 30, 2018, 1007 ) };
+		Root = new UiControl
+		{
+			Id = 0x1e9,
+			Rect = new UiRect( 186, 30, 2018, 1007 ),
+			Mesh = UiMesh.Get( "w_big" )
+		};
 
 		_title = Root.Add( new UiControl
 		{

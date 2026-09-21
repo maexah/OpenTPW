@@ -124,6 +124,22 @@ internal sealed class ParkFrontEnd : Panel
 		"b_finance", "b_loans", "b_staffcost", "b_door", "b_plus", "b_minus",
 		"b_parkinfo", "b_kids",
 
+		// THE SCREEN FRAMES, found by hashing the models' NODE names rather than their file names.
+		// w_big is the node "window4" and w_small the node "window1"; f_varibox is the boxed number the
+		// entry-price spinner sits in. The buy screen's remarks recorded 0xf76e4200 as resolving to
+		// nothing "after a search of all 2,488 files" - that search was over file names, and every one
+		// of these five screens drew without a backdrop because of it.
+		"w_big", "w_small", "f_varibox",
+
+		// The per-object management window, stream 0x00755150 - see <see cref="ParkObjectWindow"/>.
+		// NONE of these was on this list, so the window fetched all ten the first time a player clicked
+		// a ride, which is the hitch this list exists to prevent. w_med is the node "window2", the
+		// third of the same frame family as w_big and w_small; f_chev is the node "chev"; and
+		// b_rideit is the node "b_ride it!", whose space and exclamation mark are why no token scan
+		// ever matched its hash.
+		"w_med", "f_chev", "b_rideit", "b_erase", "b_move", "b_track", "b_queue",
+		"b_callmech", "b_upgrade", "b_scrollera",
+
 		// The staff list asks for the guard and scientist tabs by names the HIRE screen does not:
 		// b_sresrcher here against b_sresrhcer there. Both files ship; the misspelling is the model
 		// file's own and only one of the two screens asks for it.

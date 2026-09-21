@@ -75,7 +75,14 @@ internal sealed class ParkHireScreen : UiWindow
 		// for a pause, unlike the map screen, which plainly does.
 		Modal = true;
 
-		Root = new UiControl { Id = 0x247f, Rect = new UiRect( 186, 30, 2018, 1007 ) };
+		// w_big, the node "window4" - the same frame the buy screen and the three Information lists
+		// wear. See ParkBuyScreen, where the correction is written out.
+		Root = new UiControl
+		{
+			Id = 0x247f,
+			Rect = new UiRect( 186, 30, 2018, 1007 ),
+			Mesh = UiMesh.Get( "w_big" )
+		};
 
 		_title = Root.Add( new UiControl
 		{

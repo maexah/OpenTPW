@@ -56,10 +56,16 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 		// ask for no pause where the map screen's plainly does.
 		Modal = true;
 
-		// The root's own mesh (hash 0xf76e42eb) resolves to no FILE in ui.wad, as the buy screen's
-		// 0xf76e4200 does - both are node names this project has not read back - so it draws without a
-		// backdrop rather than wearing a guess.
-		Root = new UiControl { Id = 0x4f3aa, Rect = new UiRect( 328, 130, 1720, 901 ) };
+		// w_small, and it took reading the MODELS to find it. The stream asks for this frame as hash
+		// 0xf76e42eb, which matches no file stem in ui.wad - which is why this screen, and the buy and
+		// hire screens before it, drew as text floating over the park. The hash is over a model's first
+		// NODE name, and the node is "window1" inside w_small.MD2. See docs/exe/hud.md.
+		Root = new UiControl
+		{
+			Id = 0x4f3aa,
+			Rect = new UiRect( 328, 130, 1720, 901 ),
+			Mesh = UiMesh.Get( "w_small" )
+		};
 
 		// The heading. THE ORIGINAL PUTS A THING'S NAME HERE, not a fixed string: the builder fetches a
 		// thing out of the world by an index at +0x1da732 and calls UI_SetTitle with its name. Which
@@ -74,25 +80,17 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 			TextColour = UiColour.White
 		} );
 
-		// "Ticket Price" - UITEXT 160, which the builder passes as FUN_00485b00( 0xa0 ). Black, font 6:
-		// the builder calls the colour setter with (0,0,0,0xff) for this control and for the spinner
-		// alike, as the gadget's date is black where the rest of the interface is white.
-		Root.Add( new UiControl
-		{
-			Id = 0x4f3b0,
-			Rect = new UiRect( 796, 551, 1182, 596 ),
-			Font = TextFont,
-			TextColour = UiColour.Black,
-			Text = Localization.Get( UIStrings.TicketPrice )
-		} );
-
 		// The spinner itself - control type 12. Its own rect is the frame; the number sits in the text
 		// rect the stream gives it separately (op 3), between the two buttons.
 		var spinner = Root.Add( new UiControl
 		{
 			Id = 0x4f3ae,
 			Rect = new UiRect( 773, 446, 1197, 619 ),
-			HelpText = 192
+			HelpText = 192,
+
+			// f_varibox - hash 0x257b71f9, the node "varibox". A type-12 control is a boxed number
+			// with a button either side, and this is the box.
+			Mesh = UiMesh.Get( "f_varibox" )
 		} );
 
 		_fee = spinner.Add( new UiControl
@@ -106,6 +104,24 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 		// which is what their resolved meshes say rather than what their order suggests.
 		spinner.Add( Nudge( new UiRect( 789, 468, 849, 529 ), "b_minus", -Step ) );
 		spinner.Add( Nudge( new UiRect( 1127, 468, 1188, 529 ), "b_plus", Step ) );
+
+		// "Ticket Price" - UITEXT 160, which the builder passes as FUN_00485b00( 0xa0 ). Black, font 6:
+		// the builder calls the colour setter with (0,0,0,0xff) for this control and for the spinner
+		// alike, as the gadget's date is black where the rest of the interface is white.
+		//
+		// ADDED AFTER THE SPINNER, because its rect (796,551)-(1182,596) sits INSIDE the spinner's
+		// (773,446)-(1197,619) and children draw in the order they are added. The stream has the same
+		// order - 0x4f3ae closes before 0x4f3b0 opens - so this is the original's own layering, not a
+		// workaround. Added first, it was painted over the moment the spinner was given its f_varibox
+		// artwork, and the label simply vanished; before that the spinner drew nothing and hid nothing.
+		Root.Add( new UiControl
+		{
+			Id = 0x4f3b0,
+			Rect = new UiRect( 796, 551, 1182, 596 ),
+			Font = TextFont,
+			TextColour = UiColour.Black,
+			Text = Localization.Get( UIStrings.TicketPrice )
+		} );
 
 		// This category's other three screens. Each closes this one behind it, as the buy screen's
 		// cross-link to hire does.

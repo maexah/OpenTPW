@@ -245,6 +245,37 @@ Time In Park and Rides Ridden are counted rather than filled: putting an object'
 "Total Profit" would be a different quantity wearing that label, which is the mistake the hire
 screen's own remarks already warn against.
 
+**2026-09-21 - the screens have their FRAMES, and five had been drawing without one.** Alexah looked at
+the result and said it seemed to be floating info panels. It was: every one of these screens, and the
+buy and hire screens built before them, had no backdrop, because the tree recorded their frame mesh as
+unresolvable. `ParkBuyScreen` had said so for months - `0xf76e4200` matched "no name in the executable
+or any shipped file, after a search of all 2,488 of them" - while its own next sentence noted that the
+hash is over a model's first NODE name, which need not be a filename at all. **The search was never
+widened to node names.**
+
+Reading them needs decompression: all **278** of ui.wad's `.md2` members are refpack-compressed, so
+every scan of raw bytes - including the `meshhash.py` resolver this project already had - was searching
+compressed noise. A throwaway harness over the tree's own `WadArchive` + `ModelFile` yields **1,563**
+node names, and every outstanding hash falls out at once:
+
+| Hash | Node | File | Wanted by |
+|---|---|---|---|
+| `0xf76e4200` | `window4` | `w_big.MD2` | buy, hire, allstaff, allitems, allpeeps |
+| `0xf76e42eb` | `window1` | `w_small.MD2` | entryprice |
+| `0x257b71f9` | `varibox` | `f_varibox.MD2` | the fee spinner |
+| `0xaaee5929` | `b_ride it!` | `b_rideit.MD2` | the ride window's last unresolved button |
+
+The frames are a family - `window1` `w_small`, `window2` `w_med` (the ride window, already known),
+`window3` `w_park`, `window4` `w_big` - and the two root hashes differ by `0xEB` = **47 x 5**, the
+signature of two names differing in one trailing character, which was visible before either was named.
+`b_ride it!` carries a **space and an exclamation mark**, which is why a token scan would have missed
+it even uncompressed.
+
+**Adding the artwork broke something only a screenshot could catch.** The entry-price label sits inside
+the spinner's rect, and was added before it, so the moment the spinner gained an opaque mesh it painted
+over "Ticket Price" and the words vanished. The stream's own order closes the spinner before opening
+the label; matching it puts the text back.
+
 **2026-09-21 - a park can be built, staffed and managed.** The purchase menu, the hire screen and a
 placed ride's management window all open, and the verbs under them work: buy, sell, move, carry, hire,
 fire, pick up, put down. Three screens, one new widget (the original's control **type 7**, a scrolling

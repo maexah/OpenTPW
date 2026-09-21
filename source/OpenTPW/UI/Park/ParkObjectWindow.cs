@@ -50,9 +50,16 @@ internal sealed class ParkObjectWindow : UiWindow
 		(0x3e2a, 10, "b_track",    "show the track"),
 		(0x3e34,  9, "b_queue",    "show the queue"),
 
-		// 0xaaee5929 matches no member stem and no node name inside any of ui.wad's 1202 members - the
-		// same shape as the buy and hire screens' root frame. A named gap, not a guess.
-		(0x3e37, 16, null,         "the unnamed one"),
+		// RESOLVED 2026-09-21: 0xaaee5929 is the node "b_ride it!" inside b_rideit.MD2, so this button
+		// had artwork all along and drew nothing. This comment said the hash matched "no member stem
+		// and no node name inside any of ui.wad's 1202 members" - the scan behind that read the
+		// members' RAW BYTES, and every one of ui.wad's 278 models is refpack-compressed, so it was
+		// searching compressed noise. The name also carries a space and an exclamation mark, which a
+		// token-splitting scan drops even once decompressed.
+		//
+		// The ARTWORK is named; the VERB still is not. Its handler is FUN_004e15b0( 0 ) followed by a
+		// close, which is not decoded, so the button draws and reports itself like the others.
+		(0x3e37, 16, "b_rideit",   "ride it"),
 
 		(0x3e36,  8, "b_callmech", "call a mechanic"),
 		(0x3e35, 19, "b_upgrade",  "upgrades"),

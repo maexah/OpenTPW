@@ -63,7 +63,15 @@ internal sealed class ParkVisitorsScreen : UiWindow
 	{
 		Modal = true;
 
-		Root = new UiControl { Id = 0x1e496, Rect = new UiRect( 186, 30, 2018, 1007 ) };
+		// w_big, the node "window4" inside w_big.MD2 - the frame five screens share, and which the
+		// tree recorded as unresolvable until the models' node names were read rather than their file
+		// names. Without it this screen is a list floating over the park. See docs/exe/hud.md.
+		Root = new UiControl
+		{
+			Id = 0x1e496,
+			Rect = new UiRect( 186, 30, 2018, 1007 ),
+			Mesh = UiMesh.Get( "w_big" )
+		};
 
 		Root.Add( new UiControl
 		{

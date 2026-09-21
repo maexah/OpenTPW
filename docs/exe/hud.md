@@ -320,9 +320,22 @@ all 1202 entries instead of the 278 models picks up textures and gives names tha
 
 Resolved this way: `list_allstaff`, `list_kids` (allpeeps), `list_all` (the allitems tab group),
 `b_finance`, `b_loans`, `b_staffcost`, `b_door`, `b_plus`, `b_minus`, `b_parkinfo`, `b_kids`,
-`b_allstaff`, `b_allthings`, `b_sguard`, `b_sresrhcer`. The four screen root frames
-(`0xf76e42eb`, `0xf76e4200`, `0x257b71f9`) resolve to **no model at all**, as the buy screen's already
-did — those screens genuinely draw without a backdrop.
+`b_allstaff`, `b_allthings`, `b_sguard`, `b_sresrhcer`.
+
+**The screen ROOT FRAMES resolve too, and this paragraph first said they did not.** Hashing file
+stems leaves them unmatched, and scanning the models' raw bytes finds nothing either — every one of
+ui.wad's 278 `.md2` members is **refpack-compressed**, so a byte scan reads compressed noise. Decompress
+them (the tree's own `WadArchive` + `ModelFile` do it) and read the node names, and all three fall out:
+
+| Hash | Node | File | Used by |
+|---|---|---|---|
+| `0xf76e4200` | `window4` | `w_big.MD2` | buy, hire, allstaff, allitems, allpeeps |
+| `0xf76e42eb` | `window1` | `w_small.MD2` | entryprice |
+| `0x257b71f9` | `varibox` | `f_varibox.MD2` | the entry-price spinner |
+
+The two root hashes differ by `0xEB` = 235 = **47 × 5**, which is the signature of two names sharing
+every character but the last — `window4` against `window1` — and that was visible before either was
+identified. The ride window's `window2` in `w_med.MD2` is the third of the same family.
 
 **A caution about every debug string quoted on this page and the next.** `FUN_005da3c0`, the logger
 they are all handed to, is an **empty stub in the shipped build** — `void FUN_005da3c0(void) { return; }`.
@@ -729,7 +742,7 @@ conflating them looks correct here and breaks elsewhere.
 
 **BUY — `0x00754cf8`, 1080 bytes, 32 controls.** Handler `FUN_004ac270`.
 
-    0x1e9  root (186,30)-(2018,1007)          mesh 0xf76e4200 (UNRESOLVED - see below)
+    0x1e9  root (186,30)-(2018,1007)          mesh 0xf76e4200 = node "window4" in w_big.MD2
       0x1ea  panel  + text rect               !frame
         0x1eb, 0x1ec
       0x1ed  stats panel                      !frame
@@ -745,7 +758,7 @@ conflating them looks correct here and breaks elsewhere.
 
 **HIRE — `0x00751fa8`, 1074 bytes, 31 controls.** Handler `FUN_0049b650`.
 
-    0x247f root                                mesh 0xf76e4200
+    0x247f root                                mesh 0xf76e4200 = node "window4" in w_big.MD2
       0x2480 TITLE ; id -2 EXIT
       0x2481 staffinfo   -> 0x2482 skill bar, 0x2483 label
       0x2484 PORTRAIT    staffpic
@@ -790,10 +803,13 @@ SLOT INDEX (0 to 0x1f), which is what `FUN_00507bd0` takes back.
 **The walk is corroborated three ways**: the tab help rows, the resolved mesh names, and each screen's
 own tab-index switch all give the same ordering, and it matches UITEXT 119–122 and 139–143.
 
-**The root frame mesh `0xf76e4200` resolves to no name in the executable or any shipped file**, after a
-search of all 2,488 files and every MD2 stem in `ui.wad`. Both screens' backdrop depends on it. It is a
-named gap, not a guess — and note the hash is over the model's first mesh NODE name, which need not
-appear as a filename at all.
+**The root frame mesh `0xf76e4200` is `w_big.MD2`, node `window4` — RESOLVED 2026-09-21, and this
+paragraph claimed the opposite for months.** It said the hash matched "no name in the executable or any
+shipped file, after a search of all 2,488 files and every MD2 stem in `ui.wad`", and then noted in its
+own last sentence that the hash is over a NODE name which need not appear as a filename — which is
+exactly why searching stems could never have found it. The search was never widened. Both screens, and
+the three Information lists built later, drew with no backdrop because of it. See the resolution table
+above for the method.
 
 ### The node name is not the file name — measured, after seven meshes failed to load
 

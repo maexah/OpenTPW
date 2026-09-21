@@ -100,7 +100,15 @@ internal sealed class ParkItemsScreen : UiWindow
 	{
 		Modal = true;
 
-		Root = new UiControl { Id = 0x12c4b7, Rect = new UiRect( 186, 30, 2018, 1007 ) };
+		// w_big, the node "window4" inside w_big.MD2 - the frame five screens share, and which the
+		// tree recorded as unresolvable until the models' node names were read rather than their file
+		// names. Without it this screen is a list floating over the park. See docs/exe/hud.md.
+		Root = new UiControl
+		{
+			Id = 0x12c4b7,
+			Rect = new UiRect( 186, 30, 2018, 1007 ),
+			Mesh = UiMesh.Get( "w_big" )
+		};
 
 		Root.Add( new UiControl
 		{
@@ -121,10 +129,6 @@ internal sealed class ParkItemsScreen : UiWindow
 		BuildList( 6, new UiRect( 261, 318, 1825, 876 ), new UiRect( 273, 428, 1741, 876 ), Six, SixHeadings );
 		BuildList( 2, new UiRect( 266, 318, 1825, 876 ), new UiRect( 275, 428, 1739, 875 ), Two, TwoHeadings );
 
-		// The tab group hangs off the FIVE-column list, because in the original's tree the tabs are
-		// children of whichever list is loaded. Parenting them to one of the three keeps them alive
-		// across a tab change, where parenting them to the list being swapped would take them away
-		// with it.
 		// THE TAB STRIP HANGS OFF THE SCREEN, NOT OFF A LIST, and that is a deliberate departure.
 		//
 		// The original parents its tabs to the list, and can afford to: it loads ONE list tree into one
