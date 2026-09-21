@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-09-20 on branch `alexah/94-every-state-answered`. **Nothing on this branch is
+Last updated: 2026-09-21 on branch `alexah/95-what-a-park-costs`. **Nothing on this branch is
 pushed.**
 
 **No sha is written here any more, and that is deliberate.** This line used to name the tip, and it was
@@ -9,8 +9,8 @@ instant it was written and went stale three times in one day besides. The count 
 left out for the same reason. Read both from the repository, which cannot lag:
 
     git log --oneline -1
-    git log --oneline origin/alexah/94-every-state-answered..HEAD | wc -l
-    git ls-remote origin alexah/94-every-state-answered
+    git log --oneline origin/alexah/95-what-a-park-costs..HEAD | wc -l
+    git ls-remote origin alexah/95-what-a-park-costs
 
 The tip is the newest `alexah/N` branch and has everything. Confirm with
 `git branch -r --sort=-committerdate | head -3`.
@@ -20,14 +20,16 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 - Lobby: four islands, front end, advisor, weather, particles, options, saves, the island gate
   swinging open as you enter that park, and — with nobody playing — the camera flying itself around
   all four islands with all four heard at once, each from its own island.
-- Park: enter from the lobby; ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (2 of 6 buttons).
+- Park: enter from the lobby; ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (3 of 6 buttons).
+- Building and staffing: the **purchase menu** and the **hire screen** both open from the gadget's Buy button and reach each other. Things can be bought, sold, moved and carried; staff hired, fired, picked up and put down. **Clicking a placed ride opens its management window**, which cycles between rides, deletes and moves.
 - Spending: guests choose, queue for and **buy from the Drinks Shop and the Jungle Spray**, are charged on leaving, take the item's effects, and a sideshow winner is paid its prize.
 - People: 13 guests and 5 staff read from the save, drawn, walking, paying at the gate, queueing, boarding.
 - Rides: every placed thing runs its script; 72 of 106 opcodes implemented, the rest counted by `Unimplemented`.
 
 ## Does not
 
-- No building, hiring, finances, litter, saving a park back, video, networking. The two global income pools, the balloon and costume arms, and the litter-bin errand (guest state 9) are named and unbuilt.
+- No **paths or queues** to build or delete, no finances, litter, saving a park back, video, networking. Three gadget buttons (Info, Money, Research) are still inert. The two global income pools, the balloon and costume arms, and the litter-bin errand (guest state 9) are named and unbuilt.
+- **Nothing is placed by POINTING yet.** The buy and hire screens put an item or a person in the hand and the console's `put` and `hire` finish the job; counted as `PLACE_BY_POINTING` and `PLACE_STAFF_BY_POINTING`. Eight of the nine per-object windows are unbuilt (only the ride's), as are the ride window's stats table, preview and slider commit.
 - The `meter.wct` mapping behind the happiness gauge is wrong — the last fault Alexah found by playing that is still open.
 - 34 opcodes unimplemented. Three README lines and `RideScriptFile.cs:99` still quote older counts.
 
@@ -41,6 +43,13 @@ purchase menu and building toward paths, queues, and placing, moving and managin
 the *large* half of that item deliberately; the warning on it is a statement of size, not a veto. The
 purchase menu is `FUN_004acc70` and the dispatch is already decoded in `docs/exe/hud.md` — do not
 re-derive it.
+
+**Where it stands, 2026-09-21.** The half Alexah named in this session's goal is done and confirmed on
+screen: the purchase menu, the hire screen, and a placed ride's management window, with buy, sell,
+move, carry, hire, fire, pick up and put down all working underneath. **Item 2 is NOT ticked**, and
+should not be until the rest of it lands: **paths and queues** (step 2 of Alexah's own dependency
+order, and the half that still needs the `FUN_004de1f0` queue invalidation hooked up) and the other
+three category buttons, Info, Money and Research.
 
 ## Not verified on screen
 
@@ -64,6 +73,48 @@ Take counts fresh; these go stale within a day.
 | Build warnings | 126 (71 are CS8618 nullable) | 2026-09-20, measured at `5c66d2e` |
 
 ## Recent
+
+**2026-09-21 - a park can be built, staffed and managed.** The purchase menu, the hire screen and a
+placed ride's management window all open, and the verbs under them work: buy, sell, move, carry, hire,
+fire, pick up, put down. Three screens, one new widget (the original's control **type 7**, a scrolling
+multi-column list, which nothing in the tree had), and the first world-click path this project has had.
+
+**Clicking a ride opens its window, and there are NINE such windows, not one.** They share base opener
+`FUN_0048cea0` and are dispatched by `FUN_00486920( thing )` on the thing's kind byte at `+2` and then
+on the item's `WhichUIType`. The ride's is built from the stream at `0x00755150`, walked to a balanced
+op 5. **Every verb was identified twice over**: `FUN_0048cd10` sets map tool **0x33** (demolish) and
+wears `b_erase`; `FUN_0048cfa0` demolishes and then carries with **0x3b** and wears `b_move` - which
+independently confirms that the original's move IS demolish-then-carry, the shape `ParkBuilding.Move`
+had already been given from the other direction.
+
+**Three corrections the screenshots caught and the region checks did not.** The hire screen's
+"Balance" row was showing the park's cash; `FUN_0049bdd0` fills it from three monthly ring buffers as
+cash-in minus total costs, which is last month's NET - a different quantity wearing that label, put on
+screen twice. It is blank now, with only the staff bill answered. Its two COST rows are **red**
+(`FUN_0065c5d5( 0xff, 0, 0, 0xff )` is called on those two and never the other two). And nothing is
+selected when that screen opens - `FUN_0049b5b0` fills the list and never calls the select - so a
+build that opened with a filled info panel would be wrong.
+
+**Four instrument faults are worth more than the features.** A region check passed on the buy screen
+while every tab inside it was missing, because the list's backing panel covered the rectangle. Crops
+anchored by their own centre landed on park grass and reported its colour as a label's - a control's
+anchor is **inherited from the window root**, not computed per rect. An ink detector measuring
+luminance scored a cell containing "538" identically to the blank cell beside it, because the change
+under test was to make that text **red** and pure red is L=76. And a title check "passed" at 98.97%
+ink with the window **shut**, because the title sits over sky. Each was replaced by a claim that can
+fail: lettering arriving in a cell that was empty, a cycle reaching a different **thing id**, a census
+count dropping by exactly one - every one of them paired with a line the game itself wrote.
+
+**Confirmed in a running park, by capture and by console.** The hire screen: clicking a row fills the
+info panel with *"Duke Mighten  grade 1  36 a month"*, 0.00% ink to 6.39% against a 0.00% floor. The
+ride window: opens over a 1.89% floor at 97.23%, its own close button returns it to 2.65%, the cycle
+arrows reach a second ride and the title follows (19.25%), and delete takes the census 15 -> 14 with
+the game reporting *"sold 'Belly Bounce' (thing 13) for 500"*. `save/` unchanged within every run.
+
+**Synthetic pointer motion never reaches the game** - a warp with no real movement behind it reaches X
+and not SDL, measured twice - so `WindowStack.ClickAt` and a `click x y` console command exist to enter
+the real press-and-release path. Only SDL is skipped: the hit test, the row arithmetic and both
+handlers are the real ones. `openthing` and `catalogue` were added for the same reason.
 
 **2026-09-20 — guests buy things: `docs/PLAYER-GAPS.md` item 8, both halves.** A filled park took
 **1110 at the Drinks Shop** (37 sales at 30) and **900 at the Jungle Spray** (45 at 20), with the new

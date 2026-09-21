@@ -57,6 +57,23 @@ internal sealed class WindowStack : Panel
 	/// </summary>
 	internal static bool WheelTaken { get; private set; }
 
+	/// <summary>
+	/// Whether the interface took this frame's press, so the world does not act on it as well.
+	///
+	/// <para>
+	/// Read after <see cref="Level.Update"/> has called <c>Hud.Update</c>, in the same frame it is
+	/// written - the same arrangement as <see cref="WheelTaken"/>, and the reason a click on the gadget
+	/// never also opens whatever is drawn behind it.
+	/// </para>
+	/// <para>
+	/// <b>An open MODAL window counts as having taken it, even where nothing was hit.</b> The hit test
+	/// stops at a modal and answers null for a press outside it, so "nothing was hit" and "a modal
+	/// swallowed it" arrive here looking identical - and treating them the same would let a click pass
+	/// straight through a dimmed screen into the park behind.
+	/// </para>
+	/// </summary>
+	internal static bool PointerTaken { get; private set; }
+
 	public WindowStack()
 	{
 		UiFonts.Preload();
@@ -143,6 +160,7 @@ internal sealed class WindowStack : Panel
 		// Cleared at the top of the frame the interface deals with, not at the end: the camera reads it
 		// later in the same frame, so clearing it after would put the answer a frame behind.
 		WheelTaken = false;
+		PointerTaken = false;
 
 		foreach ( var window in _windows.ToArray() )
 			window.Update();
@@ -178,7 +196,12 @@ internal sealed class WindowStack : Panel
 		var mouseDown = Input.Mouse.Left;
 
 		if ( mouseDown && !_mouseWasDown )
+		{
+			PointerTaken = hit != null
+				|| _windows.Exists( window => window.Modal && !window.Hidden && !window.PutAway );
+
 			Press( hit, mouse.X, mouse.Y );
+		}
 		else if ( mouseDown && _pressed != null )
 			_pressed.PointerDragged( mouse.X, mouse.Y );
 		else if ( !mouseDown && _mouseWasDown )

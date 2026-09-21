@@ -523,6 +523,79 @@ public class Level
 		// The HUD is not an entity - see RootPanel - so it is driven from here. After the world,
 		// which is where it sat when it was the last entity in the list.
 		Hud.Update();
+
+		// And a click on the WORLD, after the interface has had this frame's - so a press that landed
+		// on a button never also opens whatever is drawn behind it. The original reaches the same place
+		// from the park's own window proc (FUN_004879d0), which acts only while the current interaction
+		// mode is idle and hands the click to the mode otherwise.
+		if ( Kind == Scene.Park )
+			WorldClick();
+	}
+
+	private bool _worldMouseWasDown;
+
+	/// <summary>
+	/// A press on the park itself. Clicking a placed thing opens its management window -
+	/// <c>FUN_004879d0</c> reads the hover category and sends category 4, a placed object, to
+	/// <c>FUN_00486920</c>.
+	/// </summary>
+	private void WorldClick()
+	{
+		var down = Input.Mouse.Left;
+		var pressed = down && !_worldMouseWasDown;
+
+		_worldMouseWasDown = down;
+
+		if ( !pressed || UI.WindowStack.PointerTaken || ParkPicking.ThingUnderCursor == 0 )
+			return;
+
+		OpenObjectWindow( ParkPicking.ThingUnderCursor );
+	}
+
+	/// <summary>
+	/// Opens the management window for one thing - the original's <c>FUN_00486920</c>, which switches
+	/// on the thing's kind byte at <c>+2</c> and then, for a placed object, on the item's
+	/// <c>WhichUIType</c>. <b>Nine windows share one base</b>; only the ride's is built.
+	/// </summary>
+	internal void OpenObjectWindow( int thingId )
+	{
+		if ( Kind != Scene.Park || _windows is not { } windows )
+			return;
+
+		if ( ParkState is not { } state || !state.TryObject( thingId, out var placed ) )
+			return;
+
+		if ( Catalogue is not { } catalogue || !catalogue.TryGet( placed.CatalogueId, out var item ) )
+			return;
+
+		// 0 rides, 1 shops, 2 sideshows, 3 features - the files' own numbering, and the same field the
+		// buy screen's four tabs are sorted by.
+		if ( item.UiType != 0 )
+		{
+			Unimplemented.Report( item.UiType switch
+			{
+				1 => "SHOP_WINDOW",
+				2 => "SIDESHOW_WINDOW",
+				_ => "FEATURE_WINDOW"
+			} );
+
+			Log.Info( $"Object window: '{item.Name}' is UI type {item.UiType}, whose window is not built" );
+
+			return;
+		}
+
+		// One window, retargeted - the original keeps the shown thing in a global rather than opening a
+		// second copy, which is what makes the two arrows work the way they do.
+		foreach ( var open in windows.Windows )
+		{
+			if ( open is ParkObjectWindow already )
+			{
+				already.Show( thingId );
+				return;
+			}
+		}
+
+		windows.Open( new ParkObjectWindow( windows, thingId ) );
 	}
 
 	/// <summary>

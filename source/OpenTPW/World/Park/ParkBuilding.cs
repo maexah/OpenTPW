@@ -326,12 +326,21 @@ public static class ParkBuilding
 
 		foreach ( var placed in state.Objects )
 		{
-			var name = level.Catalogue is { } catalogue && catalogue.TryGet( placed.CatalogueId, out var item )
-				? item.Name
-				: $"item {placed.CatalogueId}";
+			var name = $"item {placed.CatalogueId}";
+			var type = -1;
 
-			yield return $"thing {placed.ThingId,3} '{name}' at ({placed.CellX},{placed.CellY}) " +
-				$"turned {placed.Angle}{(placed.IsPlaced ? "" : " (not placed)")}";
+			if ( level.Catalogue is { } catalogue && catalogue.TryGet( placed.CatalogueId, out var item ) )
+			{
+				name = item.Name;
+				type = item.UiType;
+			}
+
+			// The UI TYPE is here because it is what decides which of the nine object windows a click
+			// opens, and a test that wants a ride should not have to probe the park one thing at a time
+			// to find one - doing that stopped at the first ride and left two things unclassified.
+			yield return $"thing {placed.ThingId,3} '{name}' item {placed.CatalogueId} type {type} " +
+				$"at ({placed.CellX},{placed.CellY}) turned {placed.Angle}" +
+				$"{(placed.IsPlaced ? "" : " (not placed)")}";
 		}
 	}
 }

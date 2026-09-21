@@ -27,6 +27,21 @@ SIZE, not as a veto: scope one session at a time, and do not treat it as a reaso
 2. Then **build / delete PATHS and QUEUES** — the map-editing half.
 3. Then **purchase, delete, move and manage RIDES / SHOPS / SIDESHOWS** — the object half.
 
+**>>> WHERE THIS STANDS, 2026-09-21: STEPS 1 AND 3 ARE DONE. STEP 2 IS NOT. <<<**
+
+Alexah narrowed the goal for one session: *"Get the purchase/hire UI working per the gap plan please.
+It should be fully functional. Rides can be purchased, moved or sold, clicked to open their management
+menu, staff can be hired, fired, picked up and moved. Patrol areas can stay dead."* **Every clause of
+that is now true and confirmed on screen.** The purchase menu and the hire screen open from the Buy
+button and reach each other; things can be bought, sold, moved and carried; staff can be hired, fired,
+picked up and put down; and clicking a placed ride opens its management window, which cycles, deletes
+and moves.
+
+**What is left of item 2, and it is the middle step of the order above:** paths and queues, which is
+where `FUN_004de1f0`'s invalidation has to be wired or queues go stale, and the other three category
+buttons - Info, Money and Research. **Patrol areas were explicitly deferred by Alexah** and are still
+dead.
+
 **One thing item 8 leaves this goal, and it is a live hook rather than a note.**
 `ParkRideChoice.QueueCellsFor` walks queue cells off the **map**, not out of the save — so anything
 that edits paths or queues changes that answer at runtime, and `mBackOfQueue` caches it. The original's
@@ -110,7 +125,30 @@ anything now built, and none blocks another.
   `step <n>`, each one frame of ¹⁄₆₀ s. And the lobby camera orbits, so `settle` alone lands on
   whichever side it had reached: the gates face their island's **−Y** side, which is `orbit π`.
 
-## 2. Four of the six gadget buttons do nothing
+## 2. Four of the six gadget buttons do nothing - BUY IS DONE, 2026-09-21; THREE REMAIN
+
+**>>> NOT TICKED, ON PURPOSE. <<<** Buy now works and carries the whole purchase/hire/management half
+behind it. **Info, Money and Research are still inert**, and the paths-and-queues half of Alexah's own
+dependency order is untouched, so this item stays open.
+
+- [x] **Buy** opens `ParkBuyScreen` (stream `0x00754cf8`), which cross-links to `ParkHireScreen`
+      (stream `0x00751fa8`). Both are built on the original's control **type 7**, a scrolling
+      multi-column list that nothing in this tree had - `UiList`. A row's payload is sized by the
+      COLUMN COUNT, which is why buy pushes three and hire two.
+- [x] **Clicking a placed ride opens its management window** - `ParkObjectWindow`, stream
+      `0x00755150`. **There are nine such windows**, dispatched by `FUN_00486920` on the thing's kind
+      byte and the item's `WhichUIType`; the other eight are counted by name. Close, delete, move and
+      the two cycle arrows work; the stats table, the preview and the sliders' commit are counted.
+- [x] **The verbs underneath**: `ParkBuilding` buys, sells, moves and carries; `ParkStaffPool` and
+      `ParkPeople` hire, fire, pick up and put down. Money is taken at PLACE time, from the item's
+      `+0x1b8`, which is why cancelling a carry needs no refund.
+- [ ] **Info, Money and Research** - still `NotYet(...)` at `ParkGadget.cs`.
+- [ ] **Paths and queues** - step 2 of the order Alexah gave, and the one that needs
+      `FUN_004de1f0`'s invalidate-and-rewalk hooked up or `mBackOfQueue` goes stale.
+- [ ] **Placing by pointing** - both screens put the item or the person in the hand and the console's
+      `put` and `hire` finish the job. Counted as `PLACE_BY_POINTING` and `PLACE_STAFF_BY_POINTING`.
+
+### The original section, for the part still open
 
 - [ ] **Seen:** Buy is the first thing anyone clicks in a theme park game, and it is inert. So are Info,
       Money and Research.

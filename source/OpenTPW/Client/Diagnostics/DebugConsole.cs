@@ -838,6 +838,40 @@ public static class DebugConsole
 				Reply( "hirescreen: opened" );
 				break;
 
+			// The per-object management window, by thing id rather than by pointing - the same reason
+			// `pick` and `click` take coordinates. `objects` lists what is standing in the park.
+			case "openthing":
+				if ( Level.Current is not { Kind: Level.Scene.Park } thingPark )
+				{
+					Reply( "openthing: only in a park" );
+					break;
+				}
+
+				if ( parts.Length < 2 )
+				{
+					Reply( "openthing: openthing <thingId> - `objects` lists them" );
+					break;
+				}
+
+				thingPark.OpenObjectWindow( (int)Argument( 1 ) );
+				Reply( $"openthing: asked for thing {(int)Argument( 1 )}" );
+				break;
+
+			// Everything this theme offers. The UI type is the useful column: it is what sorts the four
+			// buy tabs AND what picks which of the nine object windows a click opens, so a test that
+			// needs "a ride, any ride" can find one without knowing the park by heart.
+			case "catalogue":
+				if ( Level.Current?.Catalogue is not { } theCatalogue )
+				{
+					Reply( "catalogue: a park has to be loaded" );
+					break;
+				}
+
+				foreach ( var entry in theCatalogue.All.OrderBy( one => one.Id ) )
+					Reply( $"item {entry.Id,3} '{entry.Name}' type {entry.UiType} price {entry.BuildPrice}" );
+
+				break;
+
 			// What the park is worth. It exists so that a test can prove money moved by EXACTLY one
 			// amount: the clock is stopped under `pause`, so between two of these with no `step`
 			// between them no tick runs, nobody pays at the gate, and nothing but the command under

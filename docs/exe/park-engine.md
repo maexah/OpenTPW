@@ -772,6 +772,63 @@ capacity and duration commit **byte-wide** where speed is a dword.
 **Ctrl+click on a placed object does not open its window** - it buys another copy of the same item and
 puts it in the cursor.
 
+#### The RIDE window, walked: `0x00755150`, 1536 bytes, 31 controls
+
+Builder `FUN_004af980`, handler `FUN_004af600`. The walk starts on op 0 and ends on a balanced op 5
+exactly where the next stream begins at `0x00755750`.
+
+    0x3e14 root          (248,30,1800,1007)    mesh -> node "window2" in w_med
+      0x3e28 TITLE       (746,74,1219,153)  help 3
+      0x3e24 PREVIEW     (348,162,762,576)     mesh !frame
+        0x3e25           (300,275,828,462)     mesh -> node "chev" in f_chev ; text (328,304,799,435)
+      0x3e15 STATS       (853,162,1565,549)    mesh !frame
+        seven rows, two columns at x 876..1273 and x 1315..1550, y 177/228/279/331/382/433/484
+        the RIGHT column is a type-9 bar on four rows and text on three, which is why the ids
+        interleave: 0x3e20/0x3e21, 0x3e1a/0x3e1b, 0x3e1c/0x3e16, 0x3e1e/0x3e18, 0x3e1f/0x3e19,
+        0x3e1d/0x3e17, 0x3e22/0x3e23
+      0x3e26 b_arup      (1662,126,1745,210) help 21   cycle NEXT
+      0x3e27 b_ardown    (1662,216,1745,299) help 20   cycle PREVIOUS
+      0x3e29 b_allthings (1648,583,1750,686) help 17
+      id -1  b_okay      (1671,818,1754,901) help 1    close
+      three sliders, flags 0x61: 0x3e30 help 5, 0x3e2d help 6, 0x3e2f help 7
+        the control's own rect takes the pointer, op 3 is the TRACK, op 8 the thumb (b_scrollera)
+        tracks slider_w, slider_w, slider_n ; each of the first two holds a type-9 0x3e2e
+      the bottom row, left to right:
+        0x3e2b b_erase help 15 | 0x3e2c b_move help 14 | 0x3e2a b_track help 10
+        0x3e34 b_queue help 9  | 0x3e37 ??? help 16    | 0x3e36 b_callmech help 8 (toggle)
+        0x3e35 b_upgrade help 19 | 0x3e38 b_door help 13 + second help 12 (toggle)
+
+**Every verb is identified twice over, by two independent routes.** `FUN_0048cd10` reads the thing's
+cell from the bytes at `+7` and `+5`, sets the map tool to **0x33** (demolish) and applies it there,
+raising a confirm box on UITEXT `0x18c` first when `DAT_0078d90f` is set; its control wears
+**`b_erase`**. `FUN_0048cfa0` demolishes at the same cell and then takes the item into the hand with
+**0x3b** (move an existing object), `FUN_0046c5a0( 0x3b, itemId )`; its control wears **`b_move`**.
+**So the original's move IS demolish-then-carry**, which is what makes it cost the full price again on
+put-down and need no refund when cancelled. The cycle pair `FUN_0048cbe0` / `FUN_0048caf0` are the
+same function but for `FUN_00483770` against `FUN_00483740`, and wear `b_arup` / `b_ardown`; each maps
+the window's own kind tag to a class mask - ride 0x80, shop 0x200, sideshow 0x100, feature 0x800,
+staff 0x40, visitor 1 - so the arrows walk every thing of that class without closing the window.
+
+**The shared base's three ids.** `FUN_0048cea0( stream, handler, a, b, c )` is called here as
+`(0x00755150, FUN_004af600, 0x3e24, 0x3e15, 0x3e25)`: `a` is the preview panel, kept at `this[6]` and
+filled through vtable `+0x10`; `b` is the stats panel at `this[5]`, filled through vtable `+0xc`; `c`
+is the label inside the preview, kept at `this[7]`.
+
+**The sliders are BUFFERED.** `0x800` arms write `DAT_007cc244` / `DAT_007cc248` / `DAT_007cc24c` and
+call `FUN_004aec30` with a mask of **1, 2 or 4**; the values reach the ride only when the window closes
+or either arrow is pressed, and capacity and duration commit byte-wide where speed is a dword.
+
+**17 of 18 mesh hashes resolve, and two of them only by NODE name** - the root is `window2` inside
+`w_med.MD2` and `0x3e25` is `chev` inside `f_chev.MD2`, neither findable from a file stem.
+**`0xaaee5929` (`0x3e37`, help 16, handler `FUN_004e15b0(0)` then close) matches no stem and no
+printable token inside any of ui.wad's 1202 members**, the same shape as the buy and hire screens'
+root frame `0xf76e4200`. A named gap, not a guess. Resolver:
+`~/.cache/tpw-harnesses/meshhash.py`, which hashes stems first and then every token inside each MD2.
+
+**A trap for any re-implementation that anchors controls:** `0x3e25`'s rect (300..828) is **wider than
+its parent's** (348..762), so a rule that only inherits a parent's edge when the child sits inside it
+will pin this one somewhere else and draw it 160px out of place on a 1280x720 window.
+
 ### A correction that reaches every string in the game
 
 `FUN_005da3c0` is **not** an assert taking a condition - its first argument is a severity/channel and it
