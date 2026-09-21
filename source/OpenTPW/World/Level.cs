@@ -225,8 +225,13 @@ public class Level
 		// the park it reads carries nought APR on all eight of its loans, which matches
 		// Easy_Standard.sam and matches the global file nowhere. If a park that is NOT the easy one is
 		// ever loaded, this has to move with it rather than stay true.
+		// What each phase below costs, in milliseconds - see LoadTimer for why this is left on where
+		// the frame profiler is not.
+		var load = new LoadTimer( ThemeName );
+
 		Balance = new ParkBalance( ThemeName, easyMode: true );
 		Log.Info( $"{ThemeName}: balance stack came to {Balance.Count} keys" );
+		load.Mark( "balance" );
 
 		// What distance fades to. The lobby's Sky rewrites this every frame from its own horizon,
 		// because that horizon moves with whichever park the camera is on; a park's sky is untinted and
@@ -271,11 +276,13 @@ public class Level
 		// First, as in the lobby, because the sky never writes depth and has to go down before anything
 		// that should cover it.
 		_ = new Sky( $"levels/{ThemeName}/sky", centre: Vector3.Zero, height: Sky.ParkHeight, tinted: false );
+		load.Mark( "sky" );
 
 		// The park's own save, read once here and handed to everything that needs it: the ground to know
 		// which cells it must leave alone, the paths to draw those cells, and the objects to stand where
 		// it says. It inflates to a megabyte and a half, so reading it three times would be careless.
 		var park = ReadPark( ThemeName );
+		load.Mark( "the save" );
 
 		// Kept on the level as well as handed round below, so that the interface can show what the file
 		// says without opening a megabyte and a half a second time - see the Park property, and note that
@@ -285,6 +292,7 @@ public class Level
 		// And the running copy of everything in it that moves, made once here so that the guests, the
 		// interface and the staff all read and write the same numbers rather than each keeping their own.
 		ParkState = new ParkState( park );
+		load.Mark( "park state" );
 
 		// The ground first, then what stands on it. The paths follow the ground because they lie on its
 		// heightfield, and ParkObjects is last because it asks how high the land is under each thing it
@@ -295,31 +303,43 @@ public class Level
 		// Kept on the level as well as handed round below, because buying something needs it long after
 		// the park has finished loading - see ParkBuilding.
 		Catalogue = park == null ? null : new ParkItemCatalogue( ThemeName );
+		load.Mark( "catalogue" );
 
 		var catalogue = Catalogue;
 
 		_ = new ParkGround( ThemeName, park );
+		load.Mark( "ground" );
+
 		_ = new ParkPaths( ThemeName, park );
+		load.Mark( "paths" );
+
 		_ = new ParkQueues( ThemeName, park );
+		load.Mark( "queues" );
+
 		_ = new ParkTerrain( ThemeName );
+		load.Mark( "terrain" );
 
 		// The objects before the fixed items, which is the one ordering here that matters: the gate and the
 		// traffic lights are swept out of the very registry the placed things are swept from, so it has to
 		// exist before they can put themselves into it.
 		var objects = new ParkObjects( ThemeName, park, catalogue );
+		load.Mark( "objects" );
 
 		_ = new ParkFixedItems( ThemeName, park, objects );
+		load.Mark( "fixed items" );
 
 		// And the scripts those objects run. After the objects, because a script belongs to something
 		// standing in the park rather than the other way round - and now literally so: a script is handed
 		// the very animation player its own thing's model is posed from, and its tick loop is what drives
 		// the sweep that poses it.
 		var rides = new ParkRides( ThemeName, park, catalogue, objects: objects );
+		load.Mark( "rides" );
 
 		// And the park's people. After the ground, because a guest stands on the land and has to ask how
 		// high it is under them; they are sprites rather than models, so they are nothing to do with the
 		// objects above and only need the save that named them.
 		_ = new ParkGuestSprites( ThemeName, park );
+		load.Mark( "guest sprites" );
 
 		// And what those people want, which is deliberately not the same object as what they look like:
 		// the sprites above never run a tick, and this never touches a vertex. It goes after them only
@@ -334,9 +354,11 @@ public class Level
 		// already in it - see ParkStaffPool. Built before the park's own people only for readability;
 		// neither asks anything of the other.
 		StaffPool = new ParkStaffPool( Balance );
+		load.Mark( "staff pool" );
 
 		_ = new ParkPeople( park, Balance, () => rides.GateStatus( park ), ParkState, catalogue,
 			thingId => rides.Scheduler.Find( rides.ScriptFor( thingId ) ) );
+		load.Mark( "people" );
 
 		// Each group of sound at the volume the options give it, and then the park's own music - which
 		// is the order the original uses too: it registers the park's categories, re-applies the group
@@ -345,10 +367,12 @@ public class Level
 		// it with the crowd.
 		GameOptions.Current.ApplySound();
 		_ = new ParkAudio( ThemeName );
+		load.Mark( "audio" );
 
 		// After the audio, because a park opens with its weather already rolled and that first roll
 		// may want to start the rain straight away.
 		_ = new ParkWeather();
+		load.Mark( "weather" );
 
 		// The advisor last, as in the lobby: he rides on top of the rest and ducks everything above him
 		// while he talks, and the teardown runs in the order things were made, so a park's sound and its
@@ -356,6 +380,9 @@ public class Level
 		// runs from the lobby's (0x0054e6df) - he is the same speaker in both scenes, and what differs is
 		// who hands him lines. A park's are in ParkFrontEnd, through UI.ParkLines.
 		_ = new Advisor();
+		load.Mark( "advisor" );
+
+		load.Done();
 
 		Camera.SetCameraMode<ParkOrbitCameraMode>();
 	}
