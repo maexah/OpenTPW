@@ -869,6 +869,59 @@ public static class DebugConsole
 					: "delqueue <cellX> <cellY>" );
 				break;
 
+			// A world click AT A CELL. `click` takes window pixels and needs the pointer to be over the
+			// map, which is right for a real frame and useless for reaching one named cell - so this
+			// reaches the very method a real frame reaches, Level.ClickWorldAt, which its own remarks
+			// say was split out of WorldClick for exactly this purpose. The thing under the cell is the
+			// cell's own occupant rather than a ray cast, because a harness has no cursor to cast from.
+			case "worldclick":
+				if ( parts.Length < 3 )
+				{
+					Reply( "worldclick <cellX> <cellY>" );
+					break;
+				}
+
+				if ( Level.Current is not { Kind: Level.Scene.Park } clickedPark
+					|| clickedPark.ParkState is not { } clickedState )
+				{
+					Reply( "worldclick: only in a park" );
+					break;
+				}
+
+				var clickedX = (int)Argument( 1 );
+				var clickedY = (int)Argument( 2 );
+
+				var clickedThing = ParkState.OnMap( clickedX, clickedY )
+					? clickedState.CellAt( clickedX, clickedY ).Occupant
+					: (ushort)0;
+
+				Reply( clickedPark.ClickWorldAt( clickedX, clickedY, clickedThing ) );
+				break;
+
+			// Arms a build mode, so that clicking the park lays a RUN rather than one cell. The mouse
+			// half is Level.WorldClick; this exists for the reason `click` and `put` do - a harness
+			// cannot press a button, and without it the anchor-and-commit path is unreachable by any
+			// test. `tool` alone reports what is armed.
+			case "tool":
+				if ( parts.Length < 2 )
+				{
+					Reply( $"tool: mode {ParkBuildMode.Current}" +
+						(ParkBuildMode.Anchored
+							? $", anchored at ({ParkBuildMode.Anchor.X},{ParkBuildMode.Anchor.Y})"
+							: ", not anchored") +
+						" - `tool path`, `tool queue <thingId>`, `tool off`" );
+					break;
+				}
+
+				Reply( parts[1].ToLowerInvariant() switch
+				{
+					"path" => ParkBuildMode.Arm( ParkBuildMode.Path ),
+					"queue" => ParkBuildMode.Arm( ParkBuildMode.Queue,
+						parts.Length > 2 ? (int)Argument( 2 ) : 0 ),
+					_ => ParkBuildMode.Arm( ParkBuildMode.None )
+				} );
+				break;
+
 			// What a cell actually holds, which is the measuring instrument for everything above: the
 			// type, the neighbour mask the link pass built, and the tile the mask chose.
 			case "cell":

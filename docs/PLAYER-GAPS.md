@@ -193,11 +193,30 @@ dependency order is untouched, so this item stays open.
       returns the cached pair whenever the save sets it - and this park sets it on exactly that ride.
       **Deleting a queue cell ORPHANS the remainder and that is correct** - the original has no
       trimming loop anywhere.
-- [ ] **Building by POINTING rather than by console.** The verbs work; the mouse path does not yet
-      arm them. The original has **no drag** - both drag vtable slots are bare `RET` stubs - so a run
-      is click-to-anchor then click-to-commit, with the target snapped to the dominant axis. You
-      reach the path tool by clicking **plain ground or an existing path cell** (hover classes 2 and
-      1), never from the purchase menu: paths are not catalogue items and have no buy row.
+- [x] **Building by POINTING - DONE 2026-09-21, confirmed by console.** `ParkBuildMode` holds the
+      original's single MODE global and its anchor pair. There is **no drag** - both drag vtable
+      slots are bare `RET` stubs - so a run is click-to-anchor then click-to-commit, the target
+      snapped to the dominant axis, **and the anchor then advances to that snapped target rather than
+      to where the run reached**, which is exactly what lets an L be laid click by click.
+      Measured: click one anchored and laid nothing; click two laid **6 cells (8,9)→(13,9)**; click
+      three laid **4 more** down the other axis, and the corner came out as tile index 3 at 90 - a
+      corner piece - with end pieces at both tips. Money fell **87987 → 87787**, exactly 200 for ten
+      cells. **An armed mode consumed a click on the Belly Bounce instead of opening its window, and
+      once disarmed the identical click opened thing 13's window** - the original's rule, shown both
+      ways. A run **aborts entirely on the first cell that refuses**, as the original's line walker
+      does.
+      **NOT YET SEEN ON SCREEN** - the capture instrument was returning stale frames (see below), so
+      this rests on console evidence alone. The tool is still reached only from the console; wiring
+      it to the hover classifier (class 1 = a path cell, class 2 = **plain ground**) is what remains.
+- **A capture trap worth more than the feature, found the hard way.** `step <n>` pauses the clock and
+  spends a frame budget; once spent **the game stops presenting**, and a root-window grab then
+  returns whatever the compositor still holds. That frame is not black - it is the picture from
+  *before* the work, and it is entirely plausible. In one run the console read money 87987 → 87787
+  and the surfaces rebuilt from 78 to 88 path cells while the captured frame still showed 87987 and
+  205 changed pixels. **A claim drawn from an earlier capture is withdrawn because of it:** that the
+  HUD money moved 87987 → 87887 on screen. The plus of path in that image is real; the money
+  corroboration is not safe. The harness now raises and focuses the window and grabs until two
+  consecutive frames agree, and says so when one never settles.
 - [x] **Placing by pointing - DONE 2026-09-21.** Both screens put the item or the person in the hand,
       and clicking the park puts them down. `Level.WorldClick` takes the click only when the interface
       did not, and **anything in the hand goes down before any window opens** - the original's own

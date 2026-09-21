@@ -615,6 +615,16 @@ public class Level
 		if ( ParkPeople.Current is { CarriedStaff: not 0 } people )
 			return $"world click: put staff down at ({cellX},{cellY}) - {people.DropStaff( cellX, cellY )}";
 
+		// A BUILD MODE CONSUMES THE CLICK, and it is tested here for the same reason the hand is: in
+		// the original only an IDLE mode opens a window, so a player mid-run cannot accidentally open
+		// a ride's panel by clicking past the end of their path.
+		//
+		// There is no drag - the original's drag slots are bare RET stubs - so the first click anchors
+		// and the second lays the run between. The anchor then advances to the SNAPPED TARGET rather
+		// than to wherever the run reached, which is what makes an L-shaped run work click by click.
+		if ( ParkBuildMode.Current != ParkBuildMode.None )
+			return $"world click: {RunBuildMode( cellX, cellY )}";
+
 		if ( thingUnderCursor != 0 )
 		{
 			OpenObjectWindow( thingUnderCursor );
@@ -623,6 +633,68 @@ public class Level
 		}
 
 		return $"world click: nothing to do at ({cellX},{cellY})";
+	}
+
+	/// <summary>
+	/// One click of an armed build mode: the first anchors, the second lays the run between.
+	/// </summary>
+	/// <remarks>
+	/// <b>The run aborts entirely on the first cell that refuses</b>, which is the original's own
+	/// behaviour - its line walker stops and reports failure rather than skipping the bad cell and
+	/// carrying on. A refused run leaves the anchor where it was, so the player can try a different
+	/// second click without starting again.
+	/// </remarks>
+	private static string RunBuildMode( int cellX, int cellY )
+	{
+		if ( !ParkBuildMode.Anchored )
+		{
+			ParkBuildMode.AnchorAt( cellX, cellY );
+
+			return $"anchored a {(ParkBuildMode.Current == ParkBuildMode.Path ? "path" : "queue")} " +
+				$"run at ({cellX},{cellY}) - click again to lay it";
+		}
+
+		var (toX, toY) = ParkBuildMode.SnapToAxis( cellX, cellY );
+		var (fromX, fromY) = ParkBuildMode.Anchor;
+
+		var steps = Math.Max( Math.Abs( toX - fromX ), Math.Abs( toY - fromY ) );
+		var acrossBy = Math.Sign( toX - fromX );
+		var downBy = Math.Sign( toY - fromY );
+
+		var laid = 0;
+		var (atX, atY) = (fromX, fromY);
+		var why = string.Empty;
+
+		for ( var step = 0; step <= steps; ++step )
+		{
+			var x = fromX + (acrossBy * step);
+			var y = fromY + (downBy * step);
+
+			var answer = ParkBuildMode.Current == ParkBuildMode.Path
+				? ParkPathBuilding.Lay( x, y )
+				: ParkPathBuilding.LayQueue( x, y, ParkBuildMode.Serves, atX, atY, step == steps );
+
+			// A cell already of that type is not a refusal - the original charges nothing and carries
+			// straight on, which is what makes running back over your own path free.
+			if ( !answer.Contains( "laid at" ) && !answer.Contains( "already" ) )
+			{
+				why = answer;
+				break;
+			}
+
+			if ( answer.Contains( "laid at" ) )
+				++laid;
+
+			(atX, atY) = (x, y);
+		}
+
+		if ( why.Length > 0 )
+			return $"run from ({fromX},{fromY}) stopped after {laid} - {why}";
+
+		// Only a run that finished advances the anchor, and it advances to the SNAPPED TARGET.
+		ParkBuildMode.AnchorAt( toX, toY );
+
+		return $"laid {laid} cell{(laid == 1 ? "" : "s")} from ({fromX},{fromY}) to ({toX},{toY})";
 	}
 
 	/// <summary>
@@ -758,6 +830,12 @@ public class Level
 		// the first one was left looking at, and standing wherever it was last walked to.
 		ParkCamcorderCameraMode.Forget();
 		ParkOrbitCameraMode.Forget();
+
+		// And whatever build mode was armed, for exactly the reason the two cameras above are forgotten:
+		// it is static so that it survives a frame, which means it survives the SCENE as well unless
+		// something says otherwise - and a park entered after one left mid-run would otherwise open with
+		// a path tool armed and an anchor pointing at a cell in a different park.
+		ParkBuildMode.Forget();
 
 		Audio.StopAll( StopAllSeconds );
 		ParticleSystem.Current?.Shutdown();

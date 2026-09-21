@@ -28,6 +28,12 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
   all four islands with all four heard at once, each from its own island.
 - Park: enter from the lobby; ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (3 of 6 buttons).
 - Building and staffing: the **purchase menu** and the **hire screen** both open from the gadget's Buy button and reach each other. Things can be bought, sold, moved and carried; staff hired, fired, picked up and put down. **Clicking a placed ride opens its management window**, which cycles between rides, deletes and moves.
+- **Building by POINTING**, through the original's own shape: there is **no drag** - both drag slots
+  of its build mode are bare `RET` stubs - so a run is **click to anchor, click to commit**, with the
+  target snapped to the dominant axis and the anchor then advancing to that snapped target, which is
+  what lets an L be laid click by click. An armed mode **consumes** the click, so a player mid-run
+  cannot open a ride's window by overshooting; disarmed, the same click opens it. Confirmed by console
+  in a running park - **not yet confirmed on screen**, see the capture note below.
 - **Laying and lifting QUEUE**, at 75 a cell, which **refunds** where a path does not - the original's
   own asymmetry. A queue cell records the object it serves and a flow direction that is the opposite
   of the step taken into it, which is what makes the queue measurable at all. **The queue rewalk is
