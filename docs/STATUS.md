@@ -29,7 +29,7 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 ## Does not
 
 - No **paths or queues** to build or delete, no finances, litter, saving a park back, video, networking. Three gadget buttons (Info, Money, Research) are still inert. The two global income pools, the balloon and costume arms, and the litter-bin errand (guest state 9) are named and unbuilt.
-- Eight of the nine per-object windows are unbuilt (only the ride's), as are the ride window's stats table, preview and slider commit. Patrol areas are dead, deferred by Alexah.
+- Eight of the nine per-object windows are unbuilt (only the ride's). Its stats table fills **four of seven** rows — Users last month, Excitement and Reliability are counted gaps. Patrol areas are dead, deferred by Alexah.
 - The `meter.wct` mapping behind the happiness gauge is wrong — the last fault Alexah found by playing that is still open.
 - 34 opcodes unimplemented. Three README lines and `RideScriptFile.cs:99` still quote older counts.
 
@@ -92,25 +92,78 @@ order on from 1036 lands exactly on **1054**, where this project already read `P
 agreement is what makes it an offset. `ParkRides` had recorded this as "not established" and refused
 to guess it.
 
-**The stats table's labels were already ours.** The builder gives its seven left cells UITEXT rows
-17-23 - Users last month, Age, Excitement, Reliability, State of repair, Remaining life, Scrap value -
-and `UIStrings` names every one, so nothing needed inventing. Age is real elapsed days over the built
-stamp and **Scrap value is the build price**, with depreciation still counted. The four bars and the
-monthly history are named gaps, not numbers.
+**The stats table's labels were already ours, and four of its seven rows now carry numbers.** The
+builder gives its seven left cells UITEXT rows 17-23 - Users last month, Age, Excitement, Reliability,
+State of repair, Remaining life, Scrap value - and `UIStrings` names every one, so nothing needed
+inventing. Age is real elapsed days over the built stamp (a shipped save reads in the thousands
+because its rides really are 26 years old) and **Scrap value is the build price**, with depreciation
+still counted.
+
+**The four condition rows are GAUGES, and that is why they were blank.** `FUN_004ade40` hands
+Excitement, Remaining life, Reliability and State of repair each `((v & 0xff) << 10) / 100` - a 0..100
+percentage onto a 0..1024 bar - while the rows either side of them take a string. Setting Text on a
+gauge renders nothing, which is why the labels looked perfect and the values showed nothing at all.
+
+**Two of the four are filled, from floats the save was not reading.** `FUN_004db7d0` writes three
+unnamed floats after `mQueueSizeInCells` with the tag `'pv'` and no field name, in the order `+0x4c`,
+`+0x48`, `+0x44` - so from 1062 they land on **1066, 1070 and 1074**, and carrying the order on lands
+`mTotalTakings` on **1090**, where it is already read. Which is which came from two directions rather
+than adjacency: `FUN_004df8f0` stores `0x42c80000` - `100.0f` - into `+0x44` and never touches `+0x48`,
+while the breakdown does `*(float *)(this + 0x48) - k`. Measured: Belly Bounce **repair 100, life 100**.
+
+**Excitement and Reliability are counted, not fitted, and the reason is recorded.** Their whole
+arithmetic is now read - base `item[+0x13c] * 60 / 100` scaled by two ratios each clamped to
+**0.75..1.25** - but the ratios divide by the descriptor's `+0x1a8` and `+0x1a0`, and `park.md` already
+records that **which `.sam` key feeds either is unproven and must not be guessed**. Having the formula
+does not supply its inputs. Users last month needs the record's ring buffers, which `ParkWorld`
+deliberately does not read. And **Age's wording is not decoded**: `0x1b1` read as a UITEXT row is
+empty, and sweeping 428..438 in the running game gives the slider-duration family, so that number is
+not a row index and a bare figure is the honest output.
 
 **The preview is the model standing in the park, drawn again rather than moved.** `DrawOverlay` takes a
 transform now, so the ride is shown mid-animation without dragging it across the park; it is drawn in
 `Level.Render`'s depth-cleared overlay pass, after the HUD, which is where the advisor already draws.
 `LobbyModel` gained a real bounding box because `Radius` is a distance from the ORIGIN: Belly Bounce
 reported 100.2 while its true footprint is 3x4 cells, so a preview sized by it drew the ride at about
-a fifth of its panel. Fitted by the box instead - `half 22.0`, `perUnit 3.530`, **span 143px of 194** -
-it fills the panel, and turns **16.62%** between frames against a **0.00%** control in the same window.
+a fifth of its panel.
 
-**Two caveats, said rather than smoothed over.** The spin **stops while the clock is held**: the
-original differences a real-time clock and keeps turning through a pause, and nothing here exposes
-wall-clock time while paused - `Now`, `Delta` and `RawDelta` freeze together - so adding one for a
-spinning model was judged wider than it is worth. And **the scissor is unproven**: the clip check
-passes, but the model now fits inside its panel, so nothing would spill with or without it.
+**And then it orbited, which took a burst of frames to see at all.** Two frames apart proved the panel
+changed; they could not say whether the ride turned in place or swung round a point beside itself. A
+burst of sixteen showed the centroid tracing a **circle of constant radius**, which is a rigid body
+rotating about the wrong point - not a wobble and not the animation. The cause was `LobbyModel`'s
+per-mesh box: it swizzled and scaled a mesh's raw bounds and added its offset but never put the mesh's
+own rotation through, and its own comment called that "a little loose". It is not loose, it is
+**displaced**, and a box displaced by a constant gives a centre displaced by a constant. Belly Bounce's
+first mesh keeps its bulk 25 units from its own origin, so the centre came out about nineteen units
+wide of the geometry and the spin swung the leftover. All eight corners now go through the very linear
+transform the geometry is drawn with. Measured, same park, same ride:
+
+| | before | after |
+|---|---|---|
+| centroid spread | across 0.387, down 0.299 | **across 0.040, down 0.024** |
+| centre | (20.2, 34.2, 9.1) | (15.0, 20.0, 9.1) |
+| half / perUnit / span | 39.9 / 1.945 / 79px of 194 | 25.1 / 3.099 / **93px of 194** |
+
+**Four wrong hypotheses came before the right one**, each tested through pixels rather than through the
+terms themselves: a stale `PlacedOrigin`, a double-counted mesh offset, a double-applied park heading,
+and a mismatch between the drawn set and the boxed set. That last one was built and changed the lit
+pixel count by about twenty and the spread by 0.002 - it was refuted outright. What ended it was
+logging each mesh's live position beside its boxed centre, which made the two spaces comparable
+instead of arguable.
+
+**The ride sits low in its panel and that is NOT a framing fault.** The drawn box's centre and the fit's
+centre agree to **(0.0, 0.0, 0.0)**, with every mesh's live position equal to its rest offset, and the
+camera is orthographic and aimed at the origin - so a centred box cannot land off-centre. The
+lit-pixel centroid still reads 0.591 down the panel because that is **where the pixels are**: the wide
+wooden base carries far more of them than the thin figure on it. Centring the silhouette instead would
+be a deviation from the engine, which fits from the model's box (`FUN_004689f0`), so it is left alone.
+
+**One caveat, and one correction.** The spin **stops while the clock is held**: the original differences
+a real-time clock and keeps turning through a pause, and nothing here exposes wall-clock time while
+paused - `Now`, `Delta` and `RawDelta` freeze together - so adding one for a spinning model was judged
+wider than it is worth. **The scissor is no longer unproven**: this file called it untested because the
+model fitted inside its panel, and then Alexah reported a *"harsh cutoff"* across the bottom of the
+ride - which is the scissor clipping, observed. It works.
 
 **Four instrument faults, and every one of them failed working code.** A stats check demanded MORE ink
 after opening, when a dark panel replacing bright park makes the crop darker - it read 90% shut and 2%

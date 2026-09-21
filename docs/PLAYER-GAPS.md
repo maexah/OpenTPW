@@ -139,18 +139,32 @@ dependency order is untouched, so this item stays open.
       `0x00755150`. **There are nine such windows**, dispatched by `FUN_00486920` on the thing's kind
       byte and the item's `WhichUIType`; the other eight are counted by name. Close, delete, move and
       the two cycle arrows work.
-- [x] **The rides panel itself - DONE 2026-09-21.** All three sliders take their range from the item
-      and their value from the ride, and **save**: capacity 5 of 1..10 clicked to 6 read back as 6
-      after the window was closed and reopened. The stats table letters its seven rows from UITEXT
-      17-23 and fills Age and Scrap value; the four bars and the monthly history are named gaps. The
-      preview draws the ride's **own** model - the one standing in the park, so it animates as the
-      ride runs - fitted by a real bounding box to 143px of a 194px panel and turning 16.62% between
-      frames against a 0.00% control.
-      **Two caveats rather than a clean tick.** The spin **stops while the clock is held**: the
-      original differences a real-time clock and keeps turning through a pause, and nothing here
-      exposes wall-clock time while paused, so that deviation is declared at the site instead of a
-      wider clock being invented for it. And **the scissor is unproven** - the clip check passes, but
-      the model now fits inside its panel, so nothing would spill with or without it.
+- [x] **The rides panel - 2026-09-21, with three rows still counted.** All three sliders take their
+      range from the item and their value from the ride, and **save**: capacity 5 of 1..10 clicked to
+      6 read back as 6 after the window was closed and reopened.
+      **The stats table fills four of its seven rows.** The four condition rows are GAUGES, not text -
+      `FUN_004ade40` hands each `((v & 0xff) << 10) / 100`, a 0..100 percentage onto a 0..1024 bar -
+      which is why they rendered their labels perfectly and showed no values at all. State of repair
+      and Remaining life are now drawn, from two floats at save **1074** and **1070** that nothing was
+      reading; Belly Bounce measures **repair 100, life 100**. Age and Scrap value were already there.
+      **Excitement, Reliability and Users last month stay counted**, and not for want of a control:
+      the first two divide by the descriptor's `+0x1a8` and `+0x1a0`, whose `.sam` mapping `park.md`
+      records as unproven and not to be guessed, and the third needs the record's ring buffers, which
+      `ParkWorld` deliberately does not read.
+      **The preview draws the ride's own model** - the one standing in the park, so it animates as the
+      ride runs - fitted by a real bounding box, filling 93px of a 194px panel.
+      **It orbited until the per-mesh box was fixed.** A burst of sixteen frames showed the centroid
+      tracing a circle of constant radius; `LobbyModel` was boxing each mesh without putting the mesh's
+      own rotation through, which displaces the box and so displaces the centre it spins about. Spread
+      fell from across 0.387 / down 0.299 to **across 0.040 / down 0.024**.
+      **The ride sitting low in the panel is not a fault**: the drawn box and the fit centre agree to
+      (0.0, 0.0, 0.0), and the 0.591 centroid is where the pixels are - a wide wooden base under a thin
+      figure. Centring the silhouette would deviate from the engine, which fits from the box.
+      **One caveat.** The spin **stops while the clock is held**: the original differences a real-time
+      clock and keeps turning through a pause, and nothing here exposes wall-clock time while paused,
+      so that deviation is declared at the site rather than a wider clock invented for it. (This entry
+      previously called the scissor unproven - Alexah's report of a *"harsh cutoff"* across the model
+      is that scissor clipping, observed, so it is proven.)
 - [x] **The verbs underneath**: `ParkBuilding` buys, sells, moves and carries; `ParkStaffPool` and
       `ParkPeople` hire, fire, pick up and put down. Money is taken at PLACE time, from the item's
       `+0x1b8`, which is why cancelling a carry needs no refund.

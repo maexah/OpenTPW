@@ -731,8 +731,32 @@ functions. `FUN_004e0560` divides the speed by the item's per-upgrade `+0x1a8` a
 `f32` they read `0.0`, which is a trap) and multiplies them; a sideshow (`+0x4ac == 2`) returns
 `20 - x` instead. `FUN_004df450` compares against `+0x19c` and `+0x1ac`, the **red line** figures, and
 drops the result by a further factor past them — so the red line on a slider marks where reliability
-starts falling away. **The closing multiply of both is not yet read**: the decompiler drops it into a
-bare `__ftol`, and the clamped ratios alone would flatten to 0 or 1, so a scale factor is missing.
+starts falling away.
+
+The closing multiply the decompiler hides in a bare `__ftol` **is** readable in the instructions:
+
+    004e0729: LEA EAX,[EBX + EBX*0x2]    ; EBX*3
+    004e072c: LEA ECX,[EAX + EAX*0x4]    ; *5   -> EBX*15
+    004e0734: SHL ECX,0x2                ; *4   -> EBX*60
+    004e0737: IMUL 0x51eb851f / SAR 5    ; /100
+    004e0743: ADD EDX,EDI                ; + the crowd term, clamped 0..0x28
+    ...       clamp 0..100
+    004e0838: FILD dword ptr [ESP + 0x30]  ; that base, as an integer
+    004e083e: FMUL float ptr [ESP + 0x2c]  ; x clamped speed ratio
+    004e0846: FMUL float ptr [ESP + 0x28]  ; x clamped capacity ratio
+
+So excitement is `(item[+0x13c] * 60 / 100 + crowd)` clamped 0..100, scaled by the two ratios. The
+crowd term is `3a + b + 2c` from `FUN_00545310`, clamped 0..40, and is reached only when the object's
+`mTrackRideHandle` (`+0x28`) is non-zero.
+
+**It is still not implementable, and the blocker is a mapping this page must not paper over.** The
+ratios divide by the descriptor's `+0x1a8` and `+0x1a0`, and `park.md` already records that **which
+`.sam` key feeds either of those is unproven and must not be guessed** — the constructor reads its
+record through an `undefined2 *`, and that reading disagrees with where `FUN_004db7d0` parses
+`mOperatingSpeed` and `mOperatingDuration`. `+0x13c`, which supplies the base above, appears in no
+offset table at all; the nearest established pair is `+0x124`/`+0x128` = `UsageInfo.MinCapacity` /
+`MaxCapacity` (`ride-operation.md`). Having the arithmetic does not supply its inputs, so
+`RIDE_EXCITEMENT_BAR` and `RIDE_RELIABILITY_BAR` stay counted rather than fitted.
 
 ### Sell, move and the scrap value
 

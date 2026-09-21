@@ -728,6 +728,26 @@ internal sealed class ParkObjectWindow : UiWindow
 			// from REST offsets at load. If those two spaces disagree by any CONSTANT, the leftover is
 			// rigid and `spin` swings it round - which is exactly the clean ring of fixed radius a
 			// burst of frames showed. One line per mesh settles which, instead of editing and looking.
+			// The box of what is ACTUALLY DRAWN, built alongside, to say whether the ride sitting low in
+			// its panel is a framing fault or just where its pixels are. MeshBoxes[i] is offset +
+			// geometry, so taking Offsets[i] off it leaves the mesh's own extent, and putting that back
+			// on the LIVE position gives the pose on screen rather than the pose at rest. The gap
+			// between this centre and the one the fit uses IS the error, in model units - the camera is
+			// orthographic and aimed at the origin, so a centred box cannot land off-centre.
+			//
+			// >>> IT ANSWERED NOUGHT, AND THE FIT IS THEREFORE NOT WHAT SITS THE RIDE LOW. <<< Belly
+			// Bounce reports off by (0.0, 0.0, 0.0), with every mesh's live position equal to its rest
+			// offset. A burst of frames still puts the lit-pixel centroid at 0.591 down the panel
+			// against a 0.500 middle, and that gap is WHERE THE PIXELS ARE: the ride's wide wooden base
+			// carries far more of them than the thin figure standing on it, so the centroid sits below
+			// the geometry's centre while the geometry's centre is exactly where it should be.
+			//
+			// So this is left alone deliberately. Centring the SILHOUETTE instead would be a deviation
+			// from the engine, which fits a preview from the model's box - (max + min) / 2 and
+			// max - min, FUN_004689f0 - and not from its pixels.
+			var liveLow = new Vector3( float.MaxValue, float.MaxValue, float.MaxValue );
+			var liveHigh = new Vector3( float.MinValue, float.MinValue, float.MinValue );
+
 			for ( var i = 0; i < model.Entities.Length && i < model.MeshBoxes.Count; ++i )
 			{
 				if ( model.Entities[i].Model is null || model.Entities[i].Opacity <= 0f )
@@ -737,10 +757,31 @@ internal sealed class ParkObjectWindow : UiWindow
 				var (meshLow, meshHigh) = model.MeshBoxes[i];
 				var rest = (meshLow + meshHigh) * 0.5f;
 
+				var lowAt = live + (meshLow - model.Offsets[i]);
+				var highAt = live + (meshHigh - model.Offsets[i]);
+
+				liveLow = new Vector3( MathF.Min( liveLow.X, lowAt.X ), MathF.Min( liveLow.Y, lowAt.Y ),
+					MathF.Min( liveLow.Z, lowAt.Z ) );
+
+				liveHigh = new Vector3( MathF.Max( liveHigh.X, highAt.X ), MathF.Max( liveHigh.Y, highAt.Y ),
+					MathF.Max( liveHigh.Z, highAt.Z ) );
+
 				Log.Info( $"Ride window: preview mesh {i}" +
 					$" live ({live.X:F1},{live.Y:F1},{live.Z:F1})" +
+					$" restoff ({model.Offsets[i].X:F1},{model.Offsets[i].Y:F1},{model.Offsets[i].Z:F1})" +
 					$" restbox ({rest.X:F1},{rest.Y:F1},{rest.Z:F1})" +
 					$" minus centre ({(live.X - centre.X):F1},{(live.Y - centre.Y):F1},{(live.Z - centre.Z):F1})" );
+			}
+
+			if ( drawn > 0 )
+			{
+				var liveCentre = (liveLow + liveHigh) * 0.5f;
+				var off = liveCentre - centre;
+
+				Log.Info( $"Ride window: preview drawn box centre" +
+					$" ({liveCentre.X:F1},{liveCentre.Y:F1},{liveCentre.Z:F1})" +
+					$" vs fit centre ({centre.X:F1},{centre.Y:F1},{centre.Z:F1})" +
+					$" off by ({off.X:F1},{off.Y:F1},{off.Z:F1})" );
 			}
 
 			// `drawn` is reported because its being NOUGHT is invisible otherwise: the fallback quietly
