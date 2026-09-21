@@ -7850,3 +7850,608 @@ consecutive fields `mX, mY, mMapChild, mMapParent, mNextObject` and printing the
 is the gate.
 
 The record of everything before the park is [[project-history-archive]] - **grep it, never read it whole**.
+
+---
+
+## Archived 2026-09-21 from current-task-progress: two FINISHED goals
+
+The purchase/hire UI goal (set 2026-09-20) and the rides panel goal (set 2026-09-21),
+including Alexah's feedback round on the finished panel. Both landed; the live plan was
+1,267 lines against its own stated 300, which is exactly the signal that says finished work
+is still sitting in it. Verbatim, nothing reworded.
+
+# >>> IN PROGRESS, SET BY ALEXAH 2026-09-20: THE PURCHASE / HIRE UI. <<<
+
+**Their words this session, verbatim:**
+
+> *"Get the purchase/hire UI working per the gap plan please. It should be fully functional. Rides can
+> be purchased, moved or sold, clicked to open their management menu, staff can be hired, fired,
+> picked up and moved. Patrol areas can stay dead and we come back to it for now if it's easier."*
+
+**PATROL AREAS ARE EXPLICITLY OUT OF SCOPE THIS SESSION.** Alexah said so. Decode what is cheap, build
+nothing.
+
+## The checklist - tick each as it lands, never at the end
+
+- [x] **A. Enumerate the catalogue.** DONE - `ParkItemCatalogue.All`.
+- [x] **B. The BUILD PRICE is `Upgrades[0].CostOfUpgrade`** - MEASURED, not guessed. DONE:
+      `ItemDescriptionFile.BuildPrice` + `Item.BuildPrice`. The game's own comment beside the key reads
+      *"cash cost when buying this item"*. **The item's own `.sam` decides it, not the category's** -
+      the categories declare a flat 1000/100, the jungle's items run 100 to 12,500. Measured spread:
+      Belly Bounce 500, Crazy Ape 2000, Chac Atak 10,000, Gorilla Thrilla 12,500, Dino Karts 6500,
+      Drinks Shop 650, Costume Shop 1750, Gift Shop 2000, Jungle Spray 1750, Arcade 2000, Small Toilet
+      100, Fountain 150, Staff Room 500, Litter Bin 100. `Upgrades[1]`/`[2]` are the later TIERS and are
+      not this (Belly Bounce 400 and 500; nought on every shop, sideshow and feature).
+      **>>> READ IT WITH `~/.cache/tpw-harnesses/wadcat.py` <<<** - a per-item `.sam` lives INSIDE the
+      item's `.wad`, so the category file alone gives a different park. That harness is a faithful port
+      of `WadArchive` + `Refpack` and is **validated against two values the tree documents
+      independently**: Jungle Spray `InitCostOfGoods` 50 and `InitChanceOfLoosing` 75.
+      `wadcat.py <wad> list|cat <name>|grep <regex>`.
+- [x] **C/D/E DONE together and PROVEN in a live park** - `ParkBuilding` is the verb, with
+      `ParkState` carrying a sparse cell-record override plus the running object list,
+      `ParkObjects.PlaceNow`/`Remove`, `ParkGround.Rebuild` and `ParkRides.BindNew`. **`ParkWorld` is
+      never written to.** Console: **`buy <item> <x> <y> [angle]`**, **`sell <thing>`**,
+      **`move <thing> <x> <y>`**, **`objects`**, **`money`**.
+      Measured: buy a Small Toilet at (60,40) -> balance -100, census 14 -> 15, 5.5% of the crop
+      changed; the same cell again refused with the balance IDENTICAL either side; sell -> +100
+      exactly and census back to 14.
+      **>>> THREE TRAPS, ALL OF WHICH GAVE A WRONG ANSWER FIRST. <<<**
+      **(1) `CellEdge.IsSolid` IS NOT A BUILDABILITY TEST.** It answers "a guest may not step here".
+      Type 7 alone is **9,077 of 16,384 cells**, so using it made more than half the park
+      unbuildable. The terrain rule is deliberately NOT reproduced and is counted as
+      `PLACEMENT_TERRAIN_RULE`; `FUN_00535670`'s type list has no proven semantics.
+      **(2) THE BALANCE MOVES WHILE YOU MEASURE IT.** A refund check read 25 too HIGH because guests
+      paid at the gate between the two reads. **Read `money` either side with NO `step` between** -
+      the clock is stopped, so no tick runs and only the command under test can move it.
+      **(3) `ParkState.Objects` INCLUDES UNPLACED THINGS.** The census reads **14**, not the 11 this
+      folder's notes quote: eleven placed plus the Gates, Lights and Bus, which the save carries
+      unplaced. **Filter `IsPlaced`**, as `ParkObjects` already does.
+      **Still open on this unit:** paths and queues are not re-meshed (only the ground is), and
+      `ParkRideChoice.QueueCellsFor` is not invalidated when cells change - `FUN_004de1f0` is the
+      original's hook and its callers are exactly the cell-editing family.
+- [x] **F. Footprint, promoted.** DONE - `ParkObjects.FootprintOf` returns
+      `(Left, Top, Right, Bottom)` and is public, with `FootprintAt( item, cellX, cellY, angle )`
+      composing `OriginFor` + `Turn`. **`ParkFootprintTests.Covers` held a verbatim COPY of that
+      arithmetic**, so the suite pinned the copy and the shipped method could have broken unnoticed;
+      it now calls the real one. `CatalogueObject.TopLeft` is still parsed and read by nothing - a
+      free cross-check for placement.
+- [x] **G. World picking.** DONE and **proven in a running park** - `ParkPicking`, driven once a frame
+      from `Level.Update` before the HUD deals out clicks. Centre of the window picks the camera's
+      point of interest to the decimal; right raises x, down LOWERS y (the eye sits south looking
+      north); moving the camera moves the answer. Console: **`pick`** for the pointer, **`pick x y`**
+      for a named point.
+      **>>> TWO INSTRUMENT TRAPS, EACH OF WHICH GAVE A CONFIDENT WRONG ANSWER FIRST. <<<**
+      **(1) `warp_pointer` NEVER REACHES THE GAME.** Two runs warped the pointer and polled; every
+      probe read `mouse (640,14)`, where the *previous* run had left the physical pointer. A warp with
+      no real motion behind it reaches X and not SDL. That is why `pick x y` exists - it takes the
+      window system out of the loop, the same justification `arrive`/`load`/`thirst` carry.
+      **WHETHER THE LIVE POINTER REACHES THE PICKER IS STILL UNPROVEN** - an input question, not a
+      picking one, and the next thing to chase before any click verb is trusted.
+      **(2) THE CAMERA EASES ITS EYE HEIGHT, so a pick over a SLOPE wanders until it settles.** One
+      cell and two world units between two runs. The ray starts at the eye and
+      `ParkOrbitCameraMode` lerps it with `Time.SmoothingFactor`. **`step 3` is not enough; step ~30.**
+      Over flat ground it reproduces exactly, which is what hid it.
+- [x] **H. `ParkState.Spend`.** DONE. It does NOT refuse - the original tests affordability at the
+      moment a buy row is clicked (`FUN_004ac270` compares against `FUN_006ad810()` before building the
+      placement mode), so a second silent refusal here would be wrong. Moves `Balance` alone; `Takings`
+      is what the gates took and spending is not negative takings.
+
+**>>> THE GAME'S OWN WORDS FOR EVERY VERB, from `UIHELPTEXT.str`. Do not re-derive these. <<<**
+Each management screen carries **open / close / move / delete**, and the refund readout on all of them
+is called **"Scrap value"** (UITEXT 23, 37, 47, 59, 63):
+
+    ride      3-21   name, track-invalid, speed/capacity/duration sliders, call a mechanic,
+                     build-or-edit queue (9), build-or-edit track (10), open 12, close 13,
+                     MOVE 14, DELETE 15, ride it 16, list all 17, settings 18, upgrades 19
+    shop     22-36   name, local happiness, quality/sugar/salt/ice/fat, sale price +/-,
+                     open 30, close 31, MOVE 32, DELETE 33
+    sideshow 37-48   name, local happiness, chance-of-winning, cost of prize +/-, price of game +/-,
+                     open 42, close 43, MOVE 44, DELETE 45
+    feature  49-55   name, MOVE 50, DELETE 51, look through the camera 52
+    toilet   76-84   call a cleaner 77, open 78, close 79, MOVE 80, DELETE 81
+    STAFF    85-94   name 85, SET patrol area 86, CLEAR patrol area 87, **PICK UP 88**,
+                     **DISMISS 89**, follow 90, cycle 91/92
+    buy list 140-146 the four tabs, then sort by name / price / already-owned-or-recently-researched
+                     -- which CONFIRMS the row-state 1/2 reading rather than leaving it a hypothesis
+    buy      151/152 "Left-click to buy this item" / "You don't have enough golden TICKETS to buy this
+                     item!" -- so some items are bought with tickets, not cash
+    hire     153-163 the five tabs, sort by name / wage, "hire this person" 161, and 163 the
+                     "mini-balance ... financial effects of hiring the selected person"
+
+**Hire's mini-balance is fully decoded**: controls 0x2489/0x248c/0x248b/0x2487 are UITEXT 357 "Cash in",
+358 "- Staff costs", 359 "- Other costs", 361 "Balance".
+
+**>>> WAGES AND HIRE COST, MEASURED from `data/levels/Standard.sam`; NOTHING READS THEM YET. <<<**
+`StaffPoolInfo.BaseCostPerStaff` **2000**, `.CostPerQualityLevel` **100** (neither overridden anywhere).
+`PerGradeStaffConsts[0..4].BaseWage` 4,5,6,8,12 and `PerTypeStaffConsts[0..4].PayMultiplier`
+10,30,15,20,35 - **but `Level` builds the balance with `easyMode: true`**, and jungle's
+`Easy_Standard.sam` overrides both: BaseWage **3,4,5,7,9** and PayMultiplier **9,23,12,15,25**. Those
+are the numbers a running jungle park actually has. Also `Max<Kind>InPark` 30/15/30/15/10 (easy: 6
+researchers).
+
+**>>> "Buy Land" IS ITEM 101 AND "Clear Land" IS 102 <<<** - `features/ground.wad` and
+`features/groundc.wad`, both `Info.WhichUIType` **4**, annotated in the files themselves *"Not to be
+shown in UI"*. That is exactly WHY `FUN_004aaf70` appends them as synthetic rows **-1** and **-2** on
+tab 3 instead of finding them in the walk: the filter keeps only `WhichUIType == tab`, and 4 matches no
+tab. An independent confirmation of the decode from the data side.
+
+**>>> SELLING HAS AN UNBUILT HALF ALREADY NAMED IN THE TREE. <<<** `ParkRides`' own class doc: the
+script TEARDOWN is not modelled, "because nothing yet takes a thing out of a park". The original's is
+`FUN_004dd0a0`, handing the id at thing `+0x24` a mode of 0, 4 or 7. Selling is the first thing that
+will need it. Binding a NEW object is already fully worked out in that file: `Scheduler.Spawn(
+ScriptPathFor( item ) )`, then `script.ThingId`, `script.Set( Capacity/Duration )`, then
+`script.Animations = objects.AnimationsFor( thingId ) ?? RideAnimations.Load( ... )`.
+- [x] **I. The scrolling LIST control - DONE**, `UiList`, the original's control **type 7**. Rows are
+      NOT controls: one reusable widget chain per VISIBLE SLOT, values pushed in on refresh. **A row's
+      payload is sized by the COLUMN COUNT** - buy pushes 3, hire 2 - so a fixed `{name,value,state}`
+      record is wrong for hire.
+      **>>> FOUR TRAPS, EVERY ONE OF WHICH LOOKED FINE AT FIRST. <<<**
+      **(1) THE NODE NAME IS NOT THE FILE NAME.** The stream hashes the model's first NODE name;
+      `UiMesh.Get` opens `ui/<file>.md2`. Seven meshes silently failed. Measured from `ui.wad`:
+      `buyitem`->`f_buyitem`, `hirestaff`->`list_hirestaff`, `balance`->`f_balance`,
+      `staffinfo`/`staffpic`->`f_staffinfo`/`f_staffpic`, `b_sride`->**`b_srides`**, and
+      `b_sresrcher`->**`b_sresrhcer`**, which is MISSPELLED in the archive where its texture is not.
+      Read it with `wadcat.py <wad> list`.
+      **(2) `UiList.Build()` CLEARED CHILDREN ITS OWNER GAVE IT.** The tab group is a child of the
+      LIST (the tree's own nesting), so `Children.Clear()` deleted all four tabs - no error, screen
+      drew perfectly, no tabs on it. Build now removes only its own slot cells.
+      **(3) THE TEST THAT MISSED IT.** The list's backing panel covered its rectangle and scored 63%,
+      so the region passed while every tab inside was absent. **Measure a small region on its own**;
+      the tab strip's floor is 0.0%.
+      **(4) "A PATCH OF PARK" IS NOT A CONTROL.** A park is never still - and the patch chosen was
+      where the gadget draws the BANK BALANCE, which moves whenever a guest pays. **Measure a noise
+      floor from two frames** instead of assuming anything holds.
+- [x] **J. The BUY screen - DONE and ON SCREEN**, `ParkBuyScreen` from stream `0x00754cf8`, opened by
+      `b_buy` (one of the four dead buttons) and by the console's `buyscreen`. Four tabs, live balance,
+      the park's own catalogue at measured prices, and a tick-box on what the park already owns. The
+      state column is 51 units wide because it is a **TICK-BOX, not text** - writing "owned" into it
+      overran the price and read as "500owned".
+      **Still bare on it:** the description and stats panels (they want a model preview and simulation
+      values), and **clicking a row does not carry anything yet** - counted as `CARRY_A_BOUGHT_ITEM`.
+- [ ] **J. The BUY screen** - `FUN_004acc70`, stream `0x00754cf8`, handler `FUN_004ac270`. Four tabs,
+      tab index == `Info.WhichUIType` (0 rides, 1 shops, 2 sideshows, 3 features). Titles UITEXT
+      119-122. Tab 3 appends **id -1 "Buy Land"** (UITEXT 134) and **id -2 "Clear Land"** (135) -
+      those are LAND tools, **not** paths/queues; an earlier guess said paths and was wrong.
+- [x] **K. THE HAND - DONE and proven.** Clicking a buy row carries the item and closes the screen;
+      `ParkBuilding.Carry`/`Drop`/`PlaceCarried`. Console: **`carry [item]`**, **`drop`**,
+      **`put <x> <y> [angle]`**.
+      **>>> CARRYING COSTS NOTHING - the money is taken at PUT-DOWN, inside the object constructor.
+      <<<** That is the original's ordering and the reason cancelling needs no refund. Measured:
+      carry leaves the balance at 87987, `put` takes it to 87887 (-100 exactly), drop is free, and a
+      REFUSED put leaves the item STILL HELD rather than losing it.
+      **The command is `put`, NOT `place`** - the lobby already has a `place` that auditions an
+      ambient sample. Caught by the compiler; the quiet version of that mistake is a command meaning
+      two things in two scenes.
+      **Still missing: `PLACE_BY_POINTING`** - the mode that follows the cursor. The hand is full and
+      `put x y` finishes it from the console; what is absent between them is the pointer. NOTE that
+      **synthetic mouse input never reaches the game** (see G), so that last step is verifiable only
+      by a person, not by a harness.
+- [ ] **K2. Land tools** - `FUN_0046c580( 0x39 )` Buy Land / `( 0x3a )` Clear Land, rows -1/-2 on the
+      features tab. Counted as `BUY_LAND_TOOL`.
+- [ ] **L. Click a placed object -> its management menu.**
+- [ ] **M. MOVE and SELL.** Refund arithmetic must be measured, not assumed to be half.
+- [x] **N1. The CANDIDATE POOL - DONE and proven.** `ParkStaffPool`, built by `Level`, console
+      **`candidates`**. Measured in a live park: **22** waiting (5/5/5/5/2 from
+      `StaffPoolInfo.BeginningNumberOf*`), grades **1-3**, real names from the five 35-entry tables,
+      and every wage `BaseWage[grade] * PayMultiplier[kind]`.
+      **>>> A PARK RUNS ON THE *EASY* BALANCE LAYER. <<<** `Level` builds `ParkBalance( easyMode: true )`
+      and `jungle/Easy_Standard.sam` overrides BOTH halves: base wages 3,4,5,7,9 and multipliers
+      9,23,12,15,25. Grade-2 cleaner = **45**, grade-2 mechanic = **115**. Off the global file they
+      would be 54 and 180 - so any wage test must compare against the EASY products.
+      **>>> THERE IS NO HIRING FEE. <<<** `BaseCostPerStaff` 2000 and `CostPerQualityLevel` 100 are in
+      the balance file and **never read by the executable**. Only the monthly wage, plus one month on
+      dismissal.
+      **TWO SHAPES THAT WOULD HAVE BEEN WRONG IF ASSUMED:** `STAFF_TYPES.str` holds **TEN** entries -
+      singular/plural pairs, kind k at k*2 - and the balance keys are irregularly pluralised
+      (`BeginningNumberOfHandymen` but `...OfMechanics`). A wrong key returns the fallback in silence.
+      **KNOWN GAP, mine:** two candidates can share a name. `FUN_00507580` re-rolls up to 15 times
+      against the pool and every employed staff member; not reproduced.
+- [x] **N2. The HIRE screen - DONE and ON SCREEN.** `ParkHireScreen` from stream `0x00751fa8`, opened
+      by the buy screen's cross-link `0x1ff`, by its own `0x2495` back to buy, and by the console's
+      **`hirescreen`**. Five tabs (ids NOT sequential: `0x2490`,`0x2493`,`0x2492`,`0x2494`,`0x2491`),
+      list is **2 columns** (name, wage) - a fixed `{name,value,state}` record would be wrong here,
+      which is why `UiList.Row` carries a value per column.
+      Measured: list **62.4%** against a 5.9% floor, tab strip **51.2%** against 0.0%, info panel
+      **52.0%** against 0.0%, every mesh resolved.
+      **The mini-balance is only half-filled ON PURPOSE.** Its four rows (UITEXT 357/358/359/361) read
+      monthly RING BUFFERS on the park thing; this game keeps no monthly history, so only the balance
+      and the current staff bill are answered and the other two are left blank rather than invented.
+      **Clicking a row cannot place a person** - counted as `PLACE_STAFF_BY_POINTING`.
+      **`UIStrings` names are `CashIn`/`StaffCosts`/`OtherCosts`/`Balance`** - two of the four I first
+      wrote were invented and would not compile. Fourth time this session that confirming a name beat
+      assuming one.
+- [x] **A HIRED GUARD REALLY PATROLS - measured, not reasoned.** Thing 44 (model 7) went
+      **(58.5,40.5) -> (57.538,43.425)**, census `Walking ... walks True has route`. That settles the
+      earlier open question: a hired CLEANER standing still is faithful (`StaffBehaviour.Decide` lets
+      only models 7 and 8 past its early return), not a broken wiring.
+      **The census's `walks` column is `IsAWalkingState(activity)`**; the separate `has
+      route|no-route|no-walk` column is the one that reports whether a `PeepWalk` exists. `no-walk`
+      would mean a missing wiring - `no-route` means attached and idle.
+- [x] **N3. THE PER-OBJECT MANAGEMENT WINDOW - decoded and built for rides.** `ParkObjectWindow` from
+      stream `0x00755150` (1536 bytes, walked to a balanced op 5), builder `FUN_004af980`, handler
+      `FUN_004af600`. **There is no single management screen - there are NINE**, sharing base opener
+      `FUN_0048cea0` and dispatched by `FUN_00486920( thing )` on the kind byte at `+2`: 1 visitor,
+      4-8 the five staff, 3 a placed object - and then by the item's `WhichUIType` (0 ride, 1 shop,
+      2 sideshow, 3 feature, which splits again on the flags at `+0x32` into toilet / staff room /
+      misc). Only the ride's is built; the other eight are counted by name.
+      **Every verb was identified TWICE, by two independent routes.** `FUN_0048cd10` sets map tool
+      **0x33** (demolish) at the thing's own cell, and its control wears **`b_erase`**; `FUN_0048cfa0`
+      demolishes then carries with **0x3b** (move), and wears **`b_move`** - which independently
+      confirms that the original's move IS demolish-then-carry, the same shape `ParkBuilding.Move`
+      already had. The cycle pair differs only in `FUN_00483770` vs `FUN_00483740` and wears
+      `b_arup`/`b_ardown`.
+      **The mesh hashes needed NODE names, not file stems**: the root is node `window2` inside
+      `w_med.MD2`, and `0x3e25` is `chev` inside `f_chev.MD2`. 17 of 18 resolved;
+      **`0xaaee5929` (`0x3e37`, help 16) matches no stem and no node token in any of ui.wad's 1202
+      members** - a named gap, like the buy/hire root `0xf76e4200`.
+      **`0x3e25`'s rect is WIDER than its parent's** (300..828 against 348..762), so it does not
+      inherit the window's edge and needs an explicit `PinAcross`/`PinDown` or it draws 160px out of
+      place on any window that is not 4:3.
+      Resolver: `~/.cache/tpw-harnesses/meshhash.py`, which hashes stems then every printable token
+      inside each MD2.
+- [x] **PLACING BY POINTING - DONE.** `Level.WorldClick` reads whether the interface took the press
+      (`WindowStack.PointerTaken`) and otherwise hands the picked cell to `ClickWorldAt`. **Anything in
+      the hand goes down BEFORE any window opens** - the original's order, since a place mode consumes
+      the click and only an idle mode (type 0 or 1) opens windows.
+      **The console can drive it**: `click x y` runs `WindowStack.ClickAt` first and, only if the
+      interface declines, calls the same `ClickWorldAt`. Without that the whole path would be
+      **unreachable by any test** - `WorldClick` reads `Input.Mouse.Left`, which no console command
+      sets, and synthetic pointer motion reaches X and never SDL.
+      Measured: a ride and a cleaner both placed by clicking the park, census +1, balance down by
+      **exactly** the price, `PLACE_BY_POINTING` and `PLACE_STAFF_BY_POINTING` gone from the census.
+- [x] **A MEASURED THING-ID COLLISION, now fixed - worth remembering for the save work.**
+      **Objects and people share ONE thing-id numbering**, and there were **two allocators** over it:
+      `ParkState.NextThingId()` rescanned the save's objects and people (so it never saw a hired staff
+      member) while `ParkPeople` kept a private counter (so it never saw a bought object). Both were
+      seeded correctly from the same maximum and drifted apart on the first allocation - **a ride and a
+      cleaner in one run were both handed thing 43.**
+      `ParkState` now counts rather than rescans and is the only thing that hands ids out; `ParkPeople`
+      delegates to it and keeps its counter only as a fallback for a park-less construction (the
+      tests). **Counting also stops an id being re-issued after the highest-numbered object is sold**,
+      which the rescan would have done.
+      **Neither the unit suite nor any single-feature probe could have caught this** - it needs a buy
+      and a hire in the same run, which is why the end-to-end harness found it and 818 green tests did
+      not.
+- [x] **MOVE verified end to end - the last clause of the goal that still rested on its parts.**
+      `Sell`, `Carry` and `PlaceCarried` each had measurements; the COMPOSITION did not. Clicking
+      `b_move` on a ride's window refunds 500 and fills the hand, and the next click on the park
+      rebuilds it: things **14 -> 13 -> 14**, balance **87987 -> 88487 -> 87987** (net **zero**), cell
+      **(51,23) -> (38,15)**. The cell check is the one that separates "moved" from "sold and rebuilt
+      where it stood", and a move that sold without replacing fails all three.
+      **Its first run read +25 and blamed correct code.** The harness stepped the clock ten ticks
+      between two balance readings so the gate earned mid-measurement - while its own docstring
+      claimed the clock was stopped. **`pause` stops the clock, `step` restarts it, and the debug
+      console is polled once a FRAME**, which runs regardless - so a console-driven test never needs
+      `step` at all unless it wants the world to advance. Same trap as the earlier refund check, hit
+      again in a fresh harness. `~/.cache/tpw-harnesses/ridemove.py`.
+
+## >>> GOAL SET BY ALEXAH 2026-09-21: FINISH THE RIDES PANEL. <<<
+
+> *"Finish implementing the rides panel. All 3 sliders should work and save. The stats panel should
+> work and so should the ride preview with the spinning 30 animated looped model of the ride like the
+> original game."*
+
+Three clauses. `ParkObjectWindow` already draws the panel; these are the three things it leaves blank
+and counts (`RIDE_STATS_PANEL`, `RIDE_PREVIEW_ACTOR`, `RIDE_SETTINGS_COMMIT`).
+
+- [ ] **S1. The three sliders work and SAVE.** Ids `0x3e30` (help 5), `0x3e2d` (help 6), `0x3e2f`
+      (help 7). **Their values live in the window at `+0x2c`, `+0x30`, `+0x34`**, mirrored at
+      `DAT_007cc244/248/24c` (base `0x007cc218`). They are BUFFERED: `0x800` writes the field and
+      calls `FUN_004aec30( mask )`, masks **1/2/4**, which only re-letters the readout labels
+      `0x3e33`, `0x3e31`, `0x3e32`. **The commit is elsewhere** - both cycle functions call vtable
+      `+0x3c` before moving, which matches "commits on close or cycle". Capacity and duration commit
+      byte-wide, speed a dword. Still needed: the ranges, where the initial values are READ from, and
+      what `+0x3c` writes them into.
+      **ALL OF THAT IS ANSWERED AND BUILT 2026-09-21 - not yet measured.** Ranges come from the ITEM
+      (`UsageInfo.Min/MaxSpeed`, `Min/MaxCapacity`, `Min/MaxDuration`), values from the THING
+      (`+0x58` dword speed, `+0x5d` capacity, `+0x5c` duration), starting values from
+      `Upgrades[0].Init*` which `ParkBuilding.Buy` now stamps, and the commit is vtable `+0x3c` =
+      `0x004af440`: `FUN_004dd6e0`/`FUN_004dd7f0`/`FUN_004dd720`, each clamping again and each pushing
+      into the running script as well as the thing. `ParkState.ReplaceObject` and `UiSlider.SetRange`
+      were added for it; `Closed()` and both cycle arrows commit.
+      **HIDING IS PER-SLIDER AND ONLY WHERE THE ORIGINAL HIDES.** Capacity hides on `min == max`,
+      duration on `DurationUnit == 0`, and **speed never does** - `FUN_004af030` leaves a speed slider
+      standing with an empty range, and Belly Bounce declares no speed keys, so it is exactly that
+      case. A generic "hide an empty slider" rule was written first and would have looked correct in
+      my own test while diverging from the game.
+      **SPEED IS SAVED BUT NOT PUSHED INTO THE SCRIPT, on purpose.** `RideScript` argues the wait
+      divisor `0.5 + 0.01 * speed` can never differ from 1 because no opcode writes the word at
+      `+0xc0` - true of the SCRIPT system, but this panel is outside it and `FUN_004dd6e0` writes that
+      very word from this slider. Writing it would re-time every `WAIT` in every script, so it is
+      counted as `RIDE_SPEED_SCALES_WAITS` rather than made as a side effect of a slider.
+      Harness `~/.cache/tpw-harnesses/ridesliders.py` predicts Belly Bounce opens at capacity **5** of
+      1..10, duration **30** of 10..60, speed 0 of 0..0, and that one click right of the capacity thumb
+      pages it to **6** and survives a close and reopen.
+      **CORRECTION, and it was a prediction rather than the code: THESE KEYS INHERIT FROM THE
+      CATEGORY.** `Bouncy.sam` declares no speed keys at all, so I predicted `speed 0 of 0..0` and
+      called Belly Bounce the dead-but-visible speed slider. Wrong: `rides/Rides.sam`, the CATEGORY
+      file, declares `UsageInfo.MinSpeed 1` and `MaxSpeed 100`, and `ItemDescriptionFile` falls
+      through to `_category?.MinSpeed` - so the shipped ride inherits a **live 1..100 speed range**.
+      Two consequences. The dead-but-visible case needs an item whose category gives it nothing, not
+      this one. And **`RIDE_SPEED_SCALES_WAITS` is reachable by a player immediately**, which is a good
+      reason it was counted rather than quietly implemented.
+      **When a key seems absent from an item, check the category before concluding anything** - the
+      whole point of the `_x ?? _category?.X ?? default` shape is that an item's silence is meaningful.
+- [x] **S2. The stats panel - DONE 2026-09-21, measured and looked at.** Seven labels lettered from
+      `UIStrings` 17..23, `Age` and `Scrap value` filled, the four bars and Users-Last-Month counted.
+      Measured: table changed **99.99%** from closed, label ink **1.99%** (text-on-dark band), and
+      **labels carry 4x the ink of values** - the discriminator, since blank labels invert it.
+      `scrap 500` matches Belly Bounce's build price exactly.
+      **The pairing was corroborated three ways before a line was written**: the builder's UITEXT order
+      (`0x3e20<-17` .. `0x3e22<-23`), the refresh's value targets, and the stream's own rectangles.
+      **AGE READS 9759 DAYS, built 2000-01-01, and that is the arithmetic being RIGHT about a
+      26-year-old file.** `FUN_004dd670` divides the built stamp by 864,000,000,000 - one day in 100ns
+      units - so age is REAL elapsed time, not the park's calendar. A ride built during play should
+      read ~0 and count up. **Still to check**: `ParkBuilding.Buy` does not stamp `Built` at all, so a
+      bought ride may read 0 for the wrong reason.
+      **INSTRUMENT LESSON: I asserted the wrong DIRECTION.** The first checks demanded MORE ink after
+      opening; the panel is dark and the park behind it bright, so those crops read **90% ink shut**
+      and **2% open and full** - filling a dark table with white text makes the region darker. Ink
+      measured against whatever is behind a window is not a measure of anything. The fix was to judge
+      inside the panel: a band for text-on-dark, plus labels-versus-values, which needs nothing
+      outside the window at all.
+- **S2's decode, kept because the detail is still the reference:** Filled by vtable `+0xc`; `FUN_004ade40` is the refresh and shows the
+      shape. **The four type-9 BARS are computed FROM the slider values** (`param_1[0xb]/[0xc]/[0xd]`
+      are exactly `+0x2c/+0x30/+0x34`), each scaled `((v & 0xff) << 10) / 100`:
+      `0x3e16 <- FUN_004e0560(s0,s2,s1)`, `0x3e18 <- FUN_004df640(s0,s1,s2)` = `100 - FUN_004df450(..,1)`,
+      `0x3e19 <- __ftol(...)`, `0x3e17 <- FUN_004dd6d0()`. Text cells: `0x3e21` a 30-month history
+      sum, `0x3e1b <- FUN_004dd670()` with UITEXT `0x1b1`, `0x3e23 <- FUN_004e2400()`.
+      `FUN_004e0560` multiplies two clamped ratios - a slider over a per-item maximum at `+0x1a0` /
+      `+0x1a8` indexed by `*(byte*)(this+0x50) * 0x40` - clamped between `_DAT_007005b8` and
+      `_DAT_007005c0`, with an early arm returning `0x14 - x` when `+0x4ac == 2`.
+- **S3's groundwork, all confirmed 2026-09-21:** the overlay pass is `Level.cs:804-805` -
+      `ClearDepthStencil(1)` then `Entity.All.ForEach( e => e.RenderOverlay() )` - which runs AFTER the
+      world and AFTER `Hud.Render()`, so a model drawn there sits in front of the interface and
+      nothing in the scene can cut into it. That is how the original's view region survives over the
+      panel. `LobbyModel.Radius` is a loose bounding radius after scaling, covering every pose, and is
+      the counterpart of the bounding box `FUN_004689f0` fits by - so the preview's scale is derived,
+      not authored. `ParkObjects.ModelFor( thingId )` reaches the standing model, and
+      `ModelEntity.DrawOverlay` now takes a `transform` so **the park's own model can be shown
+      elsewhere without being moved** - which matters because it is mid-animation in the park and the
+      preview should show it running, not a still of it.
+      **The trap to avoid: `transform` replaces `ModelMatrix` WHOLESALE.** A ride is many meshes, each
+      with its own `LinearTransform` and `Offsets[i]`, and `Position = offset + origin` is where the
+      park position enters. Handing every entity one matrix collapses the meshes onto one spot;
+      reusing each entity's own `ModelMatrix` drags the ride's park position into the panel. The
+      preview matrix has to be built per mesh from the LOCAL parts only.
+      **The placement maths comes from `AdvisorModel.ScreenProjection`**, which maps model X to NDC x,
+      model Z to NDC y and Y to depth: the same matrix with `sideways`/`up` scaled by
+      `panelHalf * VirtualScreen.Scale / Radius`, translated to panel `0x3e24`'s centre.
+      A scissor over the panel is reachable through `global::Global.Render.CommandList`, which
+      `Level.Render` already uses at 804.
+      **FIRST ATTEMPT DRAWS THE MODEL, BUT TINY AND OUTSIDE THE PANEL** - a pink smudge near the stats
+      panel's left edge, and the spin measured **exactly 0.00%** because whatever sat in the panel crop
+      was not the model at all. Two faults, not one: the placement, and a scissor that plainly is not
+      confining anything (nothing could paint there if it were).
+      **A HYPOTHESIS THAT WAS REFUTED, recorded so it is not re-derived:** I suspected `PlacedOrigin`
+      was stale, leaving the park position in each mesh. It is not - `SetTransform` sets
+      `_placedOrigin` and `ParkObjects:302` calls it, so `Position - PlacedOrigin` does strip the park
+      position correctly.
+      **AND A "FIX" I NEARLY MADE TO WORKING CODE:** the preview inherits the ride's park heading
+      through `entity.Rotation`. That is NOT a double rotation - `Place()` pre-rotates the offsets and
+      `ModelMatrix` turns the mesh geometry, which are consistent - and on a model that spins
+      continuously an inherited heading only changes the phase.
+      **`LobbyModel.Radius` is deliberately conservative**: `reach` is the distance to the furthest
+      bounding-box CORNER, then `Radius = max( offset.Length + reach )`. Dividing by it shrinks the
+      model relative to its visible half-size, but by roughly 1.5-2.5x - not nearly enough to explain
+      a smudge, so the real cause is still open and is being measured rather than tuned.
+      **>>> THE "UNIT ERROR" BELOW IS WRONG - MY OWN ARITHMETIC SLIP, CORRECTED HERE. <<<** The unit
+      chain was right all along: the advisor goes model -> virtual -> pixels -> NDC ending at
+      `unit * scale` = 11.52 * 0.46875 = **5.4 px per model unit**, and mine is pixels-per-model-unit
+      converted to NDC the same way. And `0.774 px/unit * 100.2 units = 77.6px from centre`, about
+      **155px across a 194px panel** - the model should FILL it. I had read that as "0.77px from
+      centre", which is simply a multiplication I got wrong, and I nearly rewrote a correct projection
+      on the strength of it.
+      **The real cause is `Radius` being a distance from the ORIGIN.** It is
+      `max( offset.Length + reach )` over **8 meshes**: one mesh far out gives 100.2 while the bulk is
+      a fraction of that, so the visible geometry drew at about 8px and off-centre, because a radius
+      carries no CENTRE. `FUN_004689f0` fits by the model's BOX - `(max+min)/2` for the centre and
+      `max-min` for the size - which is the part I skipped. `LobbyModel` now keeps a real box
+      (`BoundsMin`/`BoundsMax`/`HasBounds`) and the preview centres and scales by it.
+      **The superseded reading, kept so the slip is visible rather than tidied away:** The diagnostic reads
+      `radius 100.2, meshes 8, panel (323,76) 194x194, screen 1280x720`. So
+      `perUnit = 194 * 0.5 * 0.8 / 100.2 = 0.774` PIXELS per model unit, and a vertex at the full
+      radius lands **0.77px from centre** - the whole ride inside about a pixel and a half. That is two
+      orders of magnitude, not the 1.5-2.5x `Radius`'s looseness could account for.
+      **The cause: I copied `AdvisorModel.ScreenProjection`'s SHAPE but not its UNITS.** It works in
+      VIRTUAL-screen units - `unit = 0.015 * VirtualScreen.Height / 2` is about 11.5, multiplied by
+      `VirtualScreen.Scale` before going to NDC - and I fed pixels into the same slots. The panel is
+      194 pixels but 414 virtual units wide with `Scale` 0.46875, and that mismatch is the factor.
+      `meshes 8` and the panel rect both match what the stream predicts independently, so `ModelFor`
+      and the panel lookup are right and the fault is confined to the projection.
+      **Do not nudge `Fill` or pick a divisor that makes it fit** - the unit chain has to be right end
+      to end, and only then is the scissor separately testable.
+      **THE TRANSLATION FAULT IS FIXED, CONFIRMED BY EYE.** Subtracting the box centre moved the model
+      from outside the panel (x~595) into the chevron box at ~(430,170). What remains is SCALE: it
+      draws at roughly 20px where the arithmetic says 155px.
+      **A SECOND HYPOTHESIS REFUTED: the mesh offset is NOT double-counted.** I suspected
+      `LinearTransform` carried `world`'s translation while `Position` carried the same offset again.
+      It does not - `ToWorldSpace` returns its last row as `0,0,0,1` and conjugates only the 3x3 part
+      by the Y/Z swap, so the offset is applied exactly once.
+      **AND THE HARNESS WAS MEASURING THE WRONG RECT.** It cropped the panel `0x3e24` (348..762) while
+      the model lands in the chevron `0x3e25` (300..828), which reaches further LEFT and HIGHER than
+      the panel it sits on - so a moving model read a flat 0.00% spin. The crop is now the chevron,
+      with the panel kept as a second reading so the blind spot cannot simply move.
+      **Still open:** whether `half` is inflated by `reach` (corner padding, ~50 units for a mesh at
+      the origin) rather than bounding real geometry - the next run logs `half`, `perUnit` and the
+      predicted span in pixels so it is arithmetic and not eyesight.
+      **AND THAT IS EXACTLY WHAT IT WAS, measured against the ride's own footprint.** `ParkBuilding.Buy`
+      logs Belly Bounce as `covering (38,15)..(40,18)` - **3 x 4 cells, so 30 x 40 world units** and a
+      true half-extent of 15-20. The box gave `half` **73.7**, about 4x too large, and the tell was
+      already in the diagnostic: a box minimum of exactly `(-50.1,-50.1,-50.1)` is isotropic padding
+      from a mesh at the origin, not the shape of a ride. At `perUnit` 1.053 a 40-unit ride draws
+      ~42px, which is the order of what was on screen; with `half` ~20 it would be ~3.9 and span
+      ~155px, filling the panel.
+      **Fix: bound the real geometry.** The box now takes each mesh's own `BoundsMin`/`BoundsMax`,
+      swizzled by the same Y/Z swap the offset takes, about that mesh's offset - instead of an
+      isotropic corner radius. `Radius` is LEFT ALONE: it has other callers (fade distance) and
+      changing it would alter behaviour nothing here is testing.
+      **THE FIT IS NOW RIGHT, and every prediction landed before the run:** `box
+      (-0.0,-0.2,-25.8)..(40.4,68.7,18.2)`, **half 22.0** (predicted 15-25), **perUnit 3.530**
+      (predicted 3-5), **span 143px of 194** (predicted ~155). 40.4 units across matches the 3-cell
+      footprint the buy log records. Confirmed by eye: the ride is large and plainly drawn.
+      **THE SPIN WAS FROZEN BY MY OWN HARNESS - the fourth instrument fault this session.** `Time.cs`
+      does `Now += Delta`, and a paused clock sets `Delta` AND `RawDelta` to zero, so `Time.Now`
+      stops. The harness held the park with `pause` and then demanded rotation, and its docstring
+      claimed "it runs off the frame clock" - which was never true. Bit-identical frames (0.00% to two
+      decimals) were the tell: a slow spin gives a small number, not an exact zero. Same shape as the
+      `step`-in-the-middle fault: the test created the condition it then reported as a defect.
+      **A REAL DEVIATION FOUND BY THAT, and declared at the site:** the original differences a
+      real-time clock (`FUN_00468e50`), so ITS preview keeps turning through a pause. Nothing here
+      exposes wall-clock while paused - `Now`, `Delta` and `RawDelta` freeze together - so ours stops.
+      Adding such a clock is wider than a spinning model warrants; it is named rather than invented.
+      **The scissor is STILL not clipping** - the model overflows the chevron's top edge over the
+      stats panel. No `SetScissorRect` precedent exists in the tree and the NeoVeldrid package ships
+      no XML docs for the core assembly, so the y convention will be settled by experiment: set a
+      deliberately lopsided rect and see which edge is cut.
+- [x] **S3. The preview - DONE 2026-09-21, measured and looked at.** The ride's own model (not a copy,
+      so it animates as the park runs it), fitted by `LobbyModel`'s new bounding box to **143px of a
+      194px panel**, turning **16.62%** between frames against a **0.00%** control in the same window.
+      Drawn from `Level.Render`'s depth-cleared overlay pass via `DrawOverlay`'s new `transform`.
+      **CAVEAT 1, declared at the site: the spin stops while the clock is held.** The original
+      differences a real-time clock (`FUN_00468e50`) and keeps turning through a pause; `Time.Now`
+      only advances by `Delta`, and a held clock zeroes `Delta` AND `RawDelta`. Nothing here exposes
+      wall-clock while paused, and adding such a clock for a spinning model is wider than it is worth.
+      **CAVEAT 2: the scissor is UNPROVEN.** The outside-the-panel crop reads 0.00%, but the model now
+      fits within its panel, so that is consistent with a working clip AND with an inert one. Recorded
+      as untested rather than claimed. To settle it properly, set a deliberately lopsided rect and see
+      which edge is cut.
+
+### Alexah's feedback on the finished panel, 2026-09-21 - three faults, two of them mine to have known
+
+- **THE CHEVRON SHOULD ONLY SHOW WHEN THE RIDE IS BROKEN, and the decode already said so.**
+  `FUN_004ad720` (vtable `+0x10`) sets `0x3e25`'s frame and then calls **`UI_SetVisible(0)`** - it
+  starts HIDDEN. It is the border of a message box that appears over the preview, not decoration on
+  it. I read that function, wrote "hides the control" in my own notes, and drew it anyway, leaving a
+  yellow-and-black bar across a working preview. It is now hidden and shown from
+  `script[ParkRideOperation.BrokenVariable] != 0`, read per frame because a ride can break while its
+  window is open.
+- **"A HARSH CUTOFF ON THE BOTTOM" IS EVIDENCE THE SCISSOR WORKS** - which I had recorded as
+  *unproven*, on the grounds that the model fitted so nothing would spill either way. It did not fit:
+  it overflowed downward and the clip cut it clean across. The caveat was right to record and wrong
+  in its conclusion.
+- **The straight-on look came from copying `AdvisorModel.ScreenProjection`**, which is a flat
+  elevation - X across, Z up, Y squashed into depth - so the ride had no perspective at all. Replaced
+  with a real `CreateLookAt` plus `CreateOrthographic` composed into the panel, at a **45 degree**
+  pitch. The park's own camera runs **45 pulled in to 65 pushed out**
+  (`ParkOrbitCameraMode.Pitch`); reading it live would swing the preview whenever the player zoomed,
+  which the original's does not do, so 45 is a marked CHOICE.
+- **The fit has to account for the angle, and that is why it overflowed.** Sizing by
+  `max( size.X, size.Z )` assumes a square-on view; tilted, the model's DEPTH climbs into the picture
+  too, reaching `depth * sin(pitch) + height * cos(pitch)`. Across, the spin turns X and Y through
+  each other, so the widest it can be is the diagonal of its own footprint. Fitting by the larger of
+  those two is principled rather than tuned.
+- **`0x3e2e` IS THE RED LINE, and the walk dismissed it as "decorative fill bars".** Alexah asked for
+  "red/green indicators where there's currently a black bar", and the stream had already said so: the
+  walk found `0x3e2e` twice - inside `0x3e2d` at (813,619,1127,635) and inside `0x3e30` at
+  (378,619,692,635) - and I wrote it off. `FUN_004af030` sets it to
+  **`(redline << 10) / (max - min)`**, reading the item at `+ upgrade*0x40 + 0x1ac` for speed and
+  `+0x19c` for capacity. Green below the mark, red beyond: it is where the ride starts being run
+  harder than it should be.
+  **That shift and divide CANCEL** - out of 1024 it is plain `redline / (max - min)` - and it does NOT
+  subtract the minimum, which the obvious reading would. For speed's 1..100 that is 0.606 against
+  0.596: invisible on screen, and a real deviation if it were quietly "corrected".
+- **The two kinds of slider were in the walk too.** Speed and capacity wear **`slider_w`** and carry
+  the red line; duration wears **`slider_n`**, which has the plus and minus on its ends instead. I
+  recorded both mesh names and never asked why they differed.
+- **Inheritance again:** Belly Bounce names `RedLineCapacity 5` itself and no `RedLineSpeed` at all,
+  taking **60** from `rides/Rides.sam`, which annotates it "Percentage". Its speed currently sits at
+  60 - exactly ON its own red line.
+- **Solid colours are 1x1 textures from bytes** (`new Texture( [r,g,b,a], 1, 1 )`), which is how
+  `LoadingScreen` already makes one; the quad goes through `Material.UI` with the same y-flip every
+  other `Graphics.Quad` caller in this interface uses. Two colours meeting at a movable point is not
+  something a `UiMesh` frame can express, which is why this one control draws itself.
+- **Readout text is BLACK.** White on the slider's bright green bar is unreadable, which is plain the
+  moment the window is looked at rather than measured.
+- **The spin pivot was the box centre, and that is why it swung.** The box is measured over every mesh
+  the model ships - including ones `PoseAsBuilt` hides and each mesh's own padding - so its centre is
+  not the centre of what is drawn. The pivot now comes from the drawn meshes' origins, which also
+  tracks animation and hidden parts. The SIZE still comes from the box, because Alexah confirmed the
+  size itself is right.
+- **CONFIRMED BY EYE after that round:** readouts legible in black, red/green bars on speed and
+  capacity splitting at ~60% and ~55% of their tracks, duration keeping its plus and minus, chevron
+  gone, ride angled on its base, and the SWING gone - the pivot moved from (20.2,34.2,-3.8) to
+  (10.6,18.5,0.0).
+- **STILL HIGH, and the Z=0 pivot is why - flagged before looking, then seen.** Every drawn mesh's
+  origin sits on the base plane, so a look-at aimed at them aims at the ride's FEET and the body
+  rises above. **The pivot and the framing want different centres**: X and Y from the drawn meshes
+  (only those decide whether a vertical-axis spin turns in place), Z from the geometry's extent. My
+  "about 7px" estimate was too kind, because the box's own Z is padded too.
+- **One caveat on reading a single frame:** it catches one rotation phase, so "left of centre" may be
+  partly the model's own asymmetry at that instant. The HEIGHT is not phase-dependent, which is the
+  part worth acting on.
+- **>>> A BURST OF FRAMES IS THE INSTRUMENT FOR MOTION. Alexah asked for one and it caught in a single
+  run what four checks had missed across three attempts. <<<** `~/.cache/tpw-harnesses/ridespin.py`
+  takes 16 frames 0.2s apart and plots the centroid's path. The ride traced a **clean ring about the
+  panel's centre** - spread **0.386 across, 0.299 down**, mean (0.55, 0.53). A pair of frames can only
+  say "it changed"; the SHAPE of the track says whether it turns, orbits, wobbles or drifts.
+- **The cause: `drawn 4 of 8`.** The box was built over the meshes that pass a visibility test while
+  **every** mesh was drawn - `DrawOverlay` does not consult `Opacity` the way `ModelEntity.OnRender`
+  does. Centring on half a ride and rotating all of it IS an orbit of the offset between the two
+  centres. **The drawn set and the boxed set have to be the same set**, which is now true by
+  construction: both skip `Model is null || Opacity <= 0f`.
+- **Two instrument lessons worth keeping.** A check that has never FAILED anything is not evidence: the
+  two-frame spin check passed this same ring three times. And the centring check certified an EMPTY
+  panel - four captures from before the preview existed scored (0.48, 0.50) on the chevron's pixels
+  alone, and still passed at 597 lit pixels after yellow was dropped, because the floor was 200. Floors
+  belong between the thing and the nothing: an empty panel lights ~600, a ride ~2300, the park ~18900.
+- **S3's groundwork and decode, kept because the detail is still the reference:** Filled by vtable
+      `+0x10` on a panel `0x3e24` holding `0x3e25`. **`ModelEntity.DrawOverlay( view, projection, .. )`
+      already exists** and the advisor is drawn that way, so this is likely WIRING rather than a new
+      renderer - confirm before relying on it.
+- **A NEAR-MISS WORTH KEEPING: capacity and duration are NOT swapped in the save reader.** The engine
+  writes capacity to `thing+0x5d` and duration to `thing+0x5c` - duration the LOWER byte - while
+  `ParkWorld` reads capacity at `start+1034` and duration at `start+1035`, the other way round. That
+  looks like a bug and is not: `ParkRideRecordTests` pins the park's one ride at duration **30** and
+  capacity **5**, and `Bouncy.sam` independently declares `Upgrades[0].InitDuration 30` and
+  `InitCapacity 5`. **The save record's field order simply is not the runtime struct's.** Do not
+  "fix" it. Checking beat asserting by one step here.
+- **`item+0x70` is `Info.DurationUnit`** - 0 on coaster1, 1 on Bumper, 2 on GoKarts - and **0 hides
+  the duration slider and its readout**, which is right: a coaster's ride length comes from its track.
+  `item+0x9c` is the matching selector for the capacity readout's wording (3 / 2 / else).
+- **THE SAVE'S SPEED OFFSET IS `start + 1036`, derived and self-checking.** `FUN_004db7d0` is the
+  object serialiser and writes, in this order: 1 byte `mOperatingCapacity` from `+0x5d`, 1 byte
+  `mOperatingDuration` from `+0x5c`, **4 bytes `mOperatingSpeed` from `+0x58`**. So the FILE order is
+  capacity, duration, speed even though the runtime struct has duration below capacity - which is why
+  the existing reader is right. Continuing the chain from 1036: +4 `mPersonBeingLoaded`(2)
+  `mCostOfGoods`(4) `mQualityOfGoods`(4) `mChanceOfWinning`(4) lands on **1054**, exactly where this
+  project already reads `PricePerUse`. **`ParkRides.cs` records this offset as "not established" and
+  refuses to guess it; it is established now** - update that comment when the field lands.
+- **THE PREVIEW SPINS THE CAMERA, NOT THE MODEL.** `FUN_00468e50` is the per-frame update:
+  `angle -= elapsed * k` off a clock delta, then two reads of a sin/cos table
+  `(&DAT_007b0968)[ROUND(angle * k) & mask]` - the mask is what makes it loop. `FUN_004689f0` fits the
+  model to the panel by its BOUNDING BOX (`+0x18`/`+0x24`), so the scale is derived, not authored.
+  **The same preview is shared by SEVEN handlers** - the buy screen, all the object windows - so it is
+  a general "show this item spinning in a panel", not a ride-window feature.
+- **Age (`0x3e1b`) is in DAYS**: `FUN_004dd670` divides the built-when stamp by 864,000,000,000, which
+  is 100ns ticks in a day. **Scrap value (`0x3e23`)** is `FUN_004e2290() * BuildPrice / 100`, the
+  age-bucket percentage already counted as `SCRAP_VALUE_DEPRECIATION`, so today it is just BuildPrice.
+- **Method note carried in:** every claim here gets a measurement. A slider that moves on screen is
+  not a slider that saved; the saving half needs a value read back after a close and re-open.
+- [x] **O. HIRE / FIRE / PICK UP / DROP - DONE and proven.** `ParkPeople.Hire`/`Fire`/`PickUp`/
+      `DropStaff`. Console: **`hire <candidate> <x> <y>`**, **`fire <thing>`**, **`pickup <thing>`**,
+      **`putstaff <x> <y>`**. Measured: staff 5->6, candidates 22->21, **balance UNCHANGED by hiring**,
+      a refused hire keeps the candidate, drop lands on the named cell, fire costs **exactly 36**.
+      **>>> A NEW HIRE MUST WEAR A SPRITE THE ATLAS ALREADY PACKS. <<<** It is built once from the
+      banks the save's own people wear and **nothing adds to it** - an invented pair gives a worker
+      who exists, is counted, and is INVISIBLE. `Hire` copies the pair from the save's staff of the
+      same model, captured at load.
+      **THREE NUMBERINGS, all different permutations:** kind (tab order) 0-4, thing MODEL 5/4/6/7/8,
+      sprite BANK 4/5/6/7/8. `ParkStaffPool.KindFor`/`ModelFor` are the only places the first two are
+      converted.
+      **THE CENSUS'S `walks` COLUMN IS `IsAWalkingState(activity)`, NOT "has a walk object"** - the
+      separate `has route|no-route|no-walk` column is that one. Reading `walks False` as a missing
+      wiring is wrong; `no-walk` is the one that would mean it.
+      **STILL UNMEASURED:** whether a hired GUARD (model 7) actually patrols. `StaffBehaviour.Decide`
+      lets only models 7 and 8 past, so a standing cleaner is faithful - but that has been reasoned,
+      not shown.
+- [ ] **P. Guard the mouse.** Nothing consumes the mouse for the world: the park camera reads
+      `Input.Mouse.Wheel` with no window guard, so a wheel over a HUD list also zooms the park. Only
+      the camcorder key guards today. **Generalise that before shipping any scrolling list.**
+
+**THREE CONSTRAINTS THAT BIND ALL OF IT** (`docs/exe/hud.md`): a HUD panel must leave `Pauses` FALSE
+or it stops `GameClock` and with it the calendar, particles and every animation (the map screen is
+the one genuine exception); nothing consumes the mouse for the world yet; and **HUD work is
+verifiable by eye and capture, NOT by test** - a green suite says almost nothing here, so plan a
+capture harness the way the gate and the vehicles were done.
+

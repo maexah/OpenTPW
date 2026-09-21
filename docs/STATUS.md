@@ -1,7 +1,13 @@
 # Status
 
-Last updated: 2026-09-21 on branch `alexah/95-what-a-park-costs`. **Nothing on this branch is
-pushed.**
+Last updated: 2026-09-21 on branch `alexah/95-buy-hire-and-ride-windows`. **Pushed to `maexah/OpenTPW`
+on 2026-09-21**, at Alexah's word, along with `alexah/94-every-state-answered`. Nothing was pushed to
+`upstream` (the `OpenTPW` org), and `wf-review-56` was deliberately held back as a scratch branch.
+
+**The branch was renamed before it was pushed.** It was `alexah/95-what-a-park-costs`, which is a
+phrase, and one that described only its first commit — `CLAUDE.md` says to name a branch for what it
+CHANGES. What it changes is the purchase menu, the hire screen, the ride management window, placing
+by pointing, and the ride panel.
 
 **No sha is written here any more, and that is deliberate.** This line used to name the tip, and it was
 wrong every time — a line inside the commit that moves the tip cannot name it, so it was stale the
@@ -9,8 +15,8 @@ instant it was written and went stale three times in one day besides. The count 
 left out for the same reason. Read both from the repository, which cannot lag:
 
     git log --oneline -1
-    git log --oneline origin/alexah/95-what-a-park-costs..HEAD | wc -l
-    git ls-remote origin alexah/95-what-a-park-costs
+    git log --oneline origin/alexah/95-buy-hire-and-ride-windows..HEAD | wc -l
+    git ls-remote origin alexah/95-buy-hire-and-ride-windows
 
 The tip is the newest `alexah/N` branch and has everything. Confirm with
 `git branch -r --sort=-committerdate | head -3`.
