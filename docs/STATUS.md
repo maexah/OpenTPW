@@ -1,10 +1,14 @@
 # Status
 
-Last updated: 2026-09-20 on branch `alexah/94-every-state-answered`, tip `cff6687` — **nothing on this
-branch is pushed.** This line necessarily lags by the commit that writes it, and the count of commits
-ahead is deliberately not written here because it went stale three times in one day; read both against
-the server rather than trusting anything written down:
+Last updated: 2026-09-20 on branch `alexah/94-every-state-answered`. **Nothing on this branch is
+pushed.**
 
+**No sha is written here any more, and that is deliberate.** This line used to name the tip, and it was
+wrong every time — a line inside the commit that moves the tip cannot name it, so it was stale the
+instant it was written and went stale three times in one day besides. The count of commits ahead is
+left out for the same reason. Read both from the repository, which cannot lag:
+
+    git log --oneline -1
     git log --oneline origin/alexah/94-every-state-answered..HEAD | wc -l
     git ls-remote origin alexah/94-every-state-answered
 
@@ -40,9 +44,10 @@ re-derive it.
 
 ## Not verified on screen
 
-- **The ride loop completing.** The boarding chain is wired and its arithmetic is covered, but only one
-  test method drives it through the production entry point, and no run of the game was made this session.
-  Treat "guests ride" as tested, not as confirmed in the game.
+- ~~**The ride loop completing.**~~ **CONFIRMED ON SCREEN 2026-09-20** — four runs of the park showed
+  guests reaching `Riding`, the Belly Bounce's queue holding 2 of its 16 places, and the whole chain
+  landing as money: the sideshow's till reached 900 and the shop's 1110. This bullet said "no run of the
+  game was made this session", which outlived the sessions that ran one.
 - `SpriteScript.ScheduleFrom` and `DropUnreadyNominee`: both are called from `ParkPeople`, and neither is
   pinned by the suite — unwiring either leaves it green. They rest on the decode, not on coverage.
 - Staff never enter the cell-occupancy lists (`ParkState.StandOn` is called only from `PeepBehaviour`).
@@ -54,9 +59,9 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | 72 implemented of 106 | 2026-09-20, `case Opcode.` labels vs enum members |
-| Tests | 817 total, all of them run **with** the game and 0 skip | 2026-09-20, run repeatedly |
+| Tests | 818 total, all of them run **with** the game and 0 skip | 2026-09-20, measured at `5c66d2e` |
 | Tests without the game | 379 ran, 411 skipped — **of 790, and not re-measured since** | 2026-09-19 review |
-| Build warnings | 126 (71 are CS8618 nullable) | 2026-09-20, unmoved by three commits |
+| Build warnings | 126 (71 are CS8618 nullable) | 2026-09-20, measured at `5c66d2e` |
 
 ## Recent
 
