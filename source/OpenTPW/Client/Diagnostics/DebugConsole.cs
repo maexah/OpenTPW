@@ -673,6 +673,29 @@ public static class DebugConsole
 					: "buy <catalogueId> <cellX> <cellY> [angle]" );
 				break;
 
+			// The hand: what the buy screen puts an item into, and what a click on the ground would
+			// take out of it. Carrying costs nothing - the money is taken when the thing goes up.
+			case "carry":
+				Reply( parts.Length > 1
+					? ParkBuilding.Carry( (int)Argument( 1 ) )
+					: ParkBuilding.HandState() );
+				break;
+
+			case "drop":
+				Reply( ParkBuilding.Drop() );
+				break;
+
+			// `put`, not `place` - the lobby already has a `place`, which auditions an ambient sample
+			// at a position. Two cases with one label does not compile, which is how this was caught,
+			// but the quieter version of the same mistake is a command that works in one scene and
+			// silently means something else in the other.
+			case "put":
+				Reply( parts.Length > 2
+					? ParkBuilding.PlaceCarried( (int)Argument( 1 ), (int)Argument( 2 ),
+						parts.Length > 3 ? (int)Argument( 3 ) : 0 )
+					: "put <cellX> <cellY> [angle]" );
+				break;
+
 			case "sell":
 				Reply( parts.Length > 1
 					? ParkBuilding.Sell( (int)Argument( 1 ) )

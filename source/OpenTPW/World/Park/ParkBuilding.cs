@@ -236,6 +236,88 @@ public static class ParkBuilding
 		}
 	}
 
+	/// <summary>
+	/// The catalogue item in the player's hand, or nought for an empty one.
+	///
+	/// <para>
+	/// <b>Carrying costs nothing, and that is the original's arrangement rather than a convenience.</b>
+	/// Clicking a buy row compares the price against the balance and builds a mode holding the item's
+	/// id - <c>FUN_0046c5a0( 4, itemId )</c> - but the money is not taken until the thing is actually
+	/// put down, inside the object constructor. Which is why cancelling needs no refund: nothing was
+	/// ever taken.
+	/// </para>
+	/// </summary>
+	public static int Carrying { get; private set; }
+
+	/// <summary>
+	/// Takes an item into the hand, refusing the ones no buy list offers and the ones the park cannot
+	/// afford - the two tests the original makes before it builds the placement mode.
+	/// </summary>
+	public static string Carry( int catalogueId )
+	{
+		if ( Level.Current is not { } level || level.ParkState is not { } state
+			|| level.Catalogue is not { } catalogue )
+			return "carry: a park has to be loaded";
+
+		if ( !catalogue.TryGet( catalogueId, out var item ) )
+			return $"carry: this theme has no item {catalogueId}";
+
+		if ( item.UiType is < 0 or > ItemDescriptionFile.Feature )
+			return $"carry: '{item.Name}' is UI type {item.UiType}, which no buy tab lists";
+
+		if ( state.Balance < item.BuildPrice )
+			return $"carry: '{item.Name}' costs {item.BuildPrice} and the park has {state.Balance}";
+
+		Carrying = catalogueId;
+
+		return $"carry: holding '{item.Name}' ({catalogueId}) at {item.BuildPrice}";
+	}
+
+	/// <summary>
+	/// Puts down whatever is in the hand. <b>No refund, because nothing was charged</b> - see
+	/// <see cref="Carrying"/>.
+	/// </summary>
+	public static string Drop()
+	{
+		if ( Carrying == 0 )
+			return "drop: the hand is already empty";
+
+		var was = Carrying;
+		Carrying = 0;
+
+		return $"drop: put item {was} back - nothing was charged for holding it";
+	}
+
+	/// <summary>
+	/// Builds what is in the hand at a cell. The hand is emptied only if it actually went up, so a
+	/// refused placement leaves the item held rather than losing it.
+	/// </summary>
+	public static string PlaceCarried( int cellX, int cellY, int angle = 0 )
+	{
+		if ( Carrying == 0 )
+			return "put: the hand is empty - `carry <item>` first, or click a row on the buy screen";
+
+		var answer = Buy( Carrying, cellX, cellY, angle );
+
+		if ( answer.StartsWith( "buy: '" ) && answer.Contains( "built as thing" ) )
+			Carrying = 0;
+
+		return answer;
+	}
+
+	/// <summary>What is in the hand, for the debug console.</summary>
+	public static string HandState()
+	{
+		if ( Carrying == 0 )
+			return "hand: empty";
+
+		var name = Level.Current?.Catalogue is { } catalogue && catalogue.TryGet( Carrying, out var item )
+			? $"'{item.Name}' ({Carrying}) at {item.BuildPrice}"
+			: $"item {Carrying}";
+
+		return $"hand: holding {name}";
+	}
+
 	/// <summary>Every object standing in the park now, for the debug console.</summary>
 	public static IEnumerable<string> Census()
 	{

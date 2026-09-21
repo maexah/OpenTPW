@@ -277,17 +277,18 @@ internal sealed class ParkBuyScreen : UiWindow
 		if ( Level.Current?.Catalogue is not { } catalogue || !catalogue.TryGet( rowId, out var item ) )
 			return;
 
-		if ( Level.Current?.ParkState is { } state && state.Balance < item.BuildPrice )
-		{
-			// The original's own refusal, before it ever builds the placement mode.
-			Log.Info( $"Buy screen: '{item.Name}' costs {item.BuildPrice} and the park has {state.Balance}" );
+		// Into the hand, and the screen closes behind it - which is what the original does, and why
+		// the money is not taken here: it is taken when the thing is actually put down.
+		Log.Info( "Buy screen: " + ParkBuilding.Carry( item.Id ) );
+
+		if ( ParkBuilding.Carrying != item.Id )
 			return;
-		}
 
-		Unimplemented.Report( "CARRY_A_BOUGHT_ITEM" );
+		Stack.Close( this );
 
-		Log.Info( $"Buy screen: would carry '{item.Name}' ({item.Id}) at {item.BuildPrice} - " +
-			"placing it needs the carry mode, which is not built; `buy` from the console does it now" );
+		// What is still missing between a full hand and a built thing: the mode that follows the
+		// cursor and puts it down where it is clicked. `put <x> <y>` does it from the console.
+		Unimplemented.Report( "PLACE_BY_POINTING" );
 	}
 
 	/// <summary>What the park has, in the corner the stream puts it - control 0x200.</summary>
