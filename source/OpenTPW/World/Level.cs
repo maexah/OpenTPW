@@ -500,6 +500,11 @@ public class Level
 
 		ParticleSystem.Current?.Update();
 
+		// What the pointer is over, before the interface deals out this frame's clicks - so a click
+		// and the cell it landed on are the same frame's answer. Only a park has ground to point at.
+		if ( Kind == Scene.Park )
+			ParkPicking.Update();
+
 		// The HUD is not an entity - see RootPanel - so it is driven from here. After the world,
 		// which is where it sat when it was the last entity in the list.
 		Hud.Update();

@@ -641,6 +641,27 @@ public static class DebugConsole
 					: $"orbit - {ParkOrbitCameraMode.State()}" );
 				break;
 
+			// What the pointer is over. The instrument for every verb that starts by pointing at the
+			// ground, and the only way to see whether the ray lands where the cursor is drawn - which
+			// a screenshot alone cannot settle, because a cell is ten units across and a pitched
+			// camera makes "further away" and "higher up the frame" look the same.
+			case "pick":
+				if ( Level.Current?.Kind != Level.Scene.Park )
+				{
+					Reply( "pick: only in a park" );
+					break;
+				}
+
+				// With two arguments it asks about a point of the window instead of the pointer. That is
+				// not a convenience: the pointer is not something a harness can move reliably - a warp
+				// with no real motion behind it reaches the window system and never reaches the game -
+				// so a test that could only ask about the cursor would be measuring X as much as the
+				// arithmetic. `arrive`, `load` and `thirst` exist for the same reason.
+				Reply( parts.Length > 2
+					? ParkPicking.PickAt( Argument( 1 ), Argument( 2 ) )
+					: ParkPicking.State() );
+				break;
+
 			case "quit":
 				Reply( "quitting" );
 				Environment.Exit( 0 );
