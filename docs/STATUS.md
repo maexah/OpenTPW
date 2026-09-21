@@ -29,8 +29,14 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 
 ## Next
 
-`docs/PLAYER-GAPS.md` — the seven gaps a player meets, in the order they meet them. Alexah sets which one
-is the goal; one per session.
+`docs/PLAYER-GAPS.md` — the **eight** gaps a player meets, in the order they meet them. **Four are done**
+(1, 3, 6, 8); **four remain** (2, 4, 5, 7). Alexah sets which one is the goal; one per session.
+
+**The current goal, set 2026-09-20, is item 2 — the management gadget's buttons**, starting with the
+purchase menu and building toward paths, queues, and placing, moving and managing objects. Alexah chose
+the *large* half of that item deliberately; the warning on it is a statement of size, not a veto. The
+purchase menu is `FUN_004acc70` and the dispatch is already decoded in `docs/exe/hud.md` — do not
+re-derive it.
 
 ## Not verified on screen
 
