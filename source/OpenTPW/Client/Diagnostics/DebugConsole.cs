@@ -673,6 +673,23 @@ public static class DebugConsole
 					: "buy <catalogueId> <cellX> <cellY> [angle]" );
 				break;
 
+			// Who the park may hire. A population of its own - the five staff read from the save are
+			// the ones already employed, and these are the ones waiting.
+			case "candidates":
+				if ( Level.Current?.StaffPool is not { } pool )
+				{
+					Reply( "candidates: none - a park has to be loaded" );
+					break;
+				}
+
+				var waiting = pool.Census().ToArray();
+				Reply( $"candidates {waiting.Length}" );
+
+				foreach ( var person in waiting )
+					Reply( "  " + person );
+
+				break;
+
 			// The hand: what the buy screen puts an item into, and what a click on the ground would
 			// take out of it. Carrying costs nothing - the money is taken when the thing goes up.
 			case "carry":

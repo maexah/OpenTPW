@@ -68,6 +68,9 @@ public class Level
 	/// <summary>Everything this theme sells, for as long as the park is up - see <see cref="ParkBuilding"/>.</summary>
 	public ParkItemCatalogue? Catalogue { get; private set; }
 
+	/// <summary>Who the park may hire - see <see cref="ParkStaffPool"/>.</summary>
+	public ParkStaffPool? StaffPool { get; private set; }
+
 	/// <summary>
 	/// Which of the game's two worlds this is. The original runs them as separate states of one
 	/// machine - the lobby is states 1/2/3 and a park is 9/10/0xb - and they share almost nothing but
@@ -327,6 +330,11 @@ public class Level
 		// And the scripts a ride's own turn drives, by the same delegate argument the gate already uses: the
 		// people need one script per thing and nothing else from the rides, and the rides are built above
 		// this line so they cannot be handed the people instead.
+		// Who the park may hire, which is a population of its own and nothing to do with the people
+		// already in it - see ParkStaffPool. Built before the park's own people only for readability;
+		// neither asks anything of the other.
+		StaffPool = new ParkStaffPool( Balance );
+
 		_ = new ParkPeople( park, Balance, () => rides.GateStatus( park ), ParkState, catalogue,
 			thingId => rides.Scheduler.Find( rides.ScriptFor( thingId ) ) );
 
