@@ -686,6 +686,20 @@ public static class DebugConsole
 					: "move <thingId> <cellX> <cellY> [angle]" );
 				break;
 
+			// Opens the purchase menu. A screen is verifiable by eye and capture rather than by test,
+			// and the pointer is not something a harness can move reliably - so this opens it the way
+			// the gadget's own button does, leaving the capture to photograph.
+			case "buyscreen":
+				if ( Level.Current is not { Kind: Level.Scene.Park } park )
+				{
+					Reply( "buyscreen: only in a park" );
+					break;
+				}
+
+				park.OpenBuyScreen();
+				Reply( "buyscreen: opened" );
+				break;
+
 			// What the park is worth. It exists so that a test can prove money moved by EXACTLY one
 			// amount: the clock is stopped under `pause`, so between two of these with no `step`
 			// between them no tick runs, nobody pays at the gate, and nothing but the command under

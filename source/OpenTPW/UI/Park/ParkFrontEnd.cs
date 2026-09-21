@@ -87,7 +87,31 @@ internal sealed class ParkFrontEnd : Panel
 
 		// The camcorder's frame and its eject button - see <see cref="ParkViewfinder"/>. Loaded here
 		// rather than as first person is first entered, so the toggle does not hitch.
-		"f_viewfinder", "b_eject"
+		"f_viewfinder", "b_eject",
+
+		// The buy and hire screens, from their own layout streams at 0x00754cf8 and 0x00751fa8 - see
+		// docs/exe/hud.md, where both are walked. The frame and the list backings first, then the four
+		// buy tabs, the five hire tabs, the scrollbar's three pieces, and the two cross-link buttons
+		// each screen carries to the other.
+		//
+		// THE NAME THE STREAM HASHES IS NOT ALWAYS THE NAME OF THE FILE, and seven of these were wrong
+		// on the first attempt because of it. The layout stream asks for a mesh by a hash of the
+		// model's first NODE name; UiMesh.Get loads ui/<name>.md2 by FILE name. Where an artist named
+		// the node differently from the file, the two diverge - and the decode that recovered these
+		// hashes matched them against substrings of FILE names, which is why it read "b_sride" for a
+		// model actually shipped as b_srides.MD2.
+		//
+		// These are the names ui.wad really holds, listed from the archive rather than inferred:
+		//     buyitem -> f_buyitem      hirestaff -> list_hirestaff    balance -> f_balance
+		//     staffinfo -> f_staffinfo  staffpic  -> f_staffpic        b_sride -> b_srides
+		//     b_sresrcher -> b_sresrhcer   <- the FILE is misspelled; its own texture is not
+		//
+		// A name that does not resolve loads nothing and warns, which is the visible failure rather
+		// than the silent one - that log is what caught all seven.
+		"!frame", "!slider", "f_buyitem", "list_hirestaff", "f_staffinfo", "f_staffpic", "f_balance",
+		"b_srides", "b_sshop", "b_sshow", "b_sfeature",
+		"b_shandy", "b_smech", "b_senter", "b_sguard", "b_sresrhcer",
+		"b_scroller", "b_up", "b_down", "b_allstaff", "b_allthings", "i_boxtick"
 	];
 
 	/// <summary>How far down a park's first choice starts - see <see cref="GameMenu"/>.</summary>

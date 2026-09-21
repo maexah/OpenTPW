@@ -505,3 +505,194 @@ cell size. **Only the arithmetic one could not have been talked into.**
   camcorder key guards, via `Level.Current?.PausedByWindow() != true`. A HUD needs that generalised.
 - **HUD work is verifiable by eye and capture, not by test** — it needs someone to look at the running
   game.
+
+---
+
+## The buy and hire screens, and the list control under them
+
+Decoded 2026-09-20 by an eight-dimension pass, every claim then re-derived by a second agent that was
+told to refute it. **The refutations are part of the record**: several load-bearing claims did not
+survive, and where a correction is noted below it is the corrected reading that is written down.
+
+### The scrolling list is UI control **type 7**, and nothing in OpenTPW has one
+
+Both screens are a single multi-column scrolling list class — ctor `FUN_00662562`, 0x178 bytes, vtable
+`0x007059f0`, type getter returns **7**. This is the one widget that must be built from scratch;
+everything else on these screens already has an analogue.
+
+| Function | What it is |
+|---|---|
+| `FUN_006649d5` | Clear — frees each TEXT column's string, rebuilds the free-node chain, resets count/selection/scroll |
+| `FUN_0066403b( &rec, id, insertAfter, commit )` | Add a row. **`rec` is `columnCount` dwords, not a fixed struct** |
+| `FUN_00663324` | Commit/refresh — the only thing that moves data into widgets |
+| `FUN_006639cb( factory, styler )` | Builds the reusable row widgets. **Neither argument is a draw or sort callback** |
+| `FUN_006636b2( col, type )` | Column type: 0 = text (string, strcmp-sorted), 1 = numeric |
+| `FUN_00664c71( rowIndex, &out )` | Row index → that row's stored id |
+| `FUN_0066a295( memberId )` | Selects a member of a type-8 radio group (the tabs) |
+
+**The record is sized by the column count.** Buy pushes **three** — `{char* name, int price, int state}`
+— and hire pushes **two**, `{char* name, int wage}`. A fixed three-field struct is wrong for hire.
+
+**The state column is a tick-box, not a number.** Buy's styler skins column 2 with the mesh
+`i_boxtick` and calls SetValue, so the {0,1,2} picks one of three frames.
+
+**`FUN_006636b2` must be called AFTER the tree is parsed**, because op `0xb` resets every column's type
+to 1. A hard ordering constraint that fails silently.
+
+**Row widgets are a fixed reused pool.** `FUN_006639cb` builds one chain per *visible slot*, and the
+slot count is derived from the measured height of the factory's first widget — so the prototype row
+must exist before the number of slots is knowable. Rows are never drawn; their values are pushed into
+the pool on every refresh.
+
+### The messages, and why one signature will not do
+
+    0x400  row activated      (listId, selected ROW INDEX)
+    0x401  selection changed  (listId, selected ROW INDEX)
+    0x406  sort changed       (listId, signed column+1)
+    0x100  button clicked     (CONTROL id, no row at all)
+
+`param_3` means different things for `0x100` and for `0x400`/`0x401`. Index and id diverge as soon as
+the list is sorted, which is what `FUN_00664c71` is for.
+
+Three further messages are implemented by the class and handled by **neither** screen: `0x402`
+right-click a row, `0x404` column hit, `0x405` visible range changed. By this project's own rule they
+are dead by CONTENT, not by CODE.
+
+**With flag `0x80` set — buy is `0x91`, hire `0x291`, both have it — `0x400` fires twice per click**,
+once on press and once on release. The buy handler's first one closes the screen, so the second finds
+the tree gone and is a no-op. **A re-implementation that fires once on release behaves correctly; one
+that copies the press path without the close-then-guard sequence purchases twice.** This is INFERRED,
+and is worth confirming in the running game by holding a click on a buy row and predicting one carried
+item before looking.
+
+### The structural surprise: the tab group is a CHILD of the list
+
+In both trees the tab button group, the column headers and the scrollbar are all children of the list
+control. **Tab clicks reach the screen only by bubbling to the list's handler** — parenting the tabs to
+the dialog instead would mean never seeing them.
+
+### Ops 9 and 10 are runtime-conditional, and that is not optional detail
+
+Op 9 creates the scrollbar (type 3 slider, flags 0x10, id 1) and op `0xa` writes the list's **row-area**
+rect. **Both consume their operand only when the enclosing control's type is 4 or 7**; under any other
+parent they read nothing. A walker that always eats 8 bytes for op `0xa` desynchronises the whole tail.
+Op 3's text rect and op `0xa`'s row area happen to hold the same values on both these screens, so
+conflating them looks correct here and breaks elsewhere.
+
+### Both trees, walked to a balanced op 5
+
+**BUY — `0x00754cf8`, 1080 bytes, 32 controls.** Handler `FUN_004ac270`.
+
+    0x1e9  root (186,30)-(2018,1007)          mesh 0xf76e4200 (UNRESOLVED - see below)
+      0x1ea  panel  + text rect               !frame
+        0x1eb, 0x1ec
+      0x1ed  stats panel                      !frame
+        0x1ee 0x1ef 0x1f0 (type 9 bars) ; 0x1f1 0x1f2 0x1f3 0x1f4 0x1f5 0x1f6 0x1f7 (labels)
+      0x1f8  THE LIST (1009,179)-(1813,902)   mesh buyitem, 3 columns
+        0x1f9  TAB GROUP
+          0x1fa b_sshow help 142 | 0x1fb b_sride help 140
+          0x1fc b_sfeature help 143 | 0x1fd b_sshop help 141
+        0x10 0x11 0x12  column headers ; op 0xa row area (1037,427)-(1727,871)
+        op 9 SCROLLBAR id 1  (!slider, b_up, b_down, b_scroller thumb)
+      0x1fe  TITLE     0x200  MONEY
+      id -2  EXIT b_exit help 2 ; 0x1ff -> HIRE  b_allstaff help 153
+
+**HIRE — `0x00751fa8`, 1074 bytes, 31 controls.** Handler `FUN_0049b650`.
+
+    0x247f root                                mesh 0xf76e4200
+      0x2480 TITLE ; id -2 EXIT
+      0x2481 staffinfo   -> 0x2482 skill bar, 0x2483 label
+      0x2484 PORTRAIT    staffpic
+      0x2485 MINI-BALANCE help 163             mesh balance
+        0x2486/0x2487  Balance      0x2488/0x2489  Cash in
+        0x248a/0x248b  Other costs  0x248c/0x248d  Staff costs
+      0x248e THE LIST                          mesh hirestaff, 2 columns
+        0x248f TAB GROUP
+          0x2490 b_shandy 154 | 0x2493 b_smech 155 | 0x2492 b_senter 156
+          0x2494 b_sguard 157 | 0x2491 b_sresrcher 158
+        0x11 then 0x10 column headers (reversed in the stream) ; op 9 SCROLLBAR
+      0x2495 -> BUY  b_allthings help 162 ; 0x2496 MONEY
+
+**The walk is corroborated three ways**: the tab help rows, the resolved mesh names, and each screen's
+own tab-index switch all give the same ordering, and it matches UITEXT 119–122 and 139–143.
+
+**The root frame mesh `0xf76e4200` resolves to no name in the executable or any shipped file**, after a
+search of all 2,488 files and every MD2 stem in `ui.wad`. Both screens' backdrop depends on it. It is a
+named gap, not a guess — and note the hash is over the model's first mesh NODE name, which need not
+appear as a filename at all.
+
+### The node name is not the file name — measured, after seven meshes failed to load
+
+The decode above recovered these names by hashing and matching **substrings of file names**, and flagged
+that as inferred. It is worth more than a footnote: the stream hashes the model's first **node** name,
+while the loader opens `ui/<file>.md2`. Where an artist named the two differently they diverge, and a
+name taken from the hash table simply does not load.
+
+Listed out of `ui.wad` itself rather than inferred:
+
+    buyitem   -> f_buyitem        hirestaff -> list_hirestaff     balance  -> f_balance
+    staffinfo -> f_staffinfo      staffpic  -> f_staffpic
+    b_sride   -> b_srides         b_sresrcher -> b_sresrhcer
+
+**`b_sresrhcer.MD2` is misspelled in the archive** — the h and c transposed — while its own textures are
+spelled `b_sresrcher.wct`. That one cannot be guessed at from the hash or from the texture beside it.
+
+The rest of the set (`b_sshop`, `b_sshow`, `b_sfeature`, `b_shandy`, `b_smech`, `b_senter`, `b_sguard`,
+`b_scroller`, `b_allstaff`, `b_allthings`, `i_boxtick`, `!frame`, `!slider`) load as-is, because there
+the node and the file happen to agree — which is exactly what made the failures look arbitrary until
+the archive was listed. **`b_up` and `b_down` remain unconfirmed**: both load, but `b_up` had three
+preimages in the shipped data.
+
+Read the archive with `~/.cache/tpw-harnesses/wadcat.py <wad> list` — a port of this tree's own
+`WadArchive` and `Refpack`, validated against two values the codebase documents independently.
+
+### The gate that looks like a bug, and is not — **now named**
+
+`docs/exe/hud.md` has recorded for a while that `FUN_004a0940` does nothing when `FUN_0048c8d0()`
+returns 1, needing both `DAT_007c2534` and `FUN_006ad810()` non-zero, "identified but not yet named".
+**Both halves are named now, and the second one was being read wrongly.**
+
+- `DAT_007c2534` is the in-game **Escape menu object** — a 0x14-byte MenuList built by
+  `GameMenu_BuildPark` / `GameMenu_BuildLobby`. Non-zero means the menu exists.
+- **`FUN_006ad810` is not a money function at all.** It is a two-byte COMDAT-folded accessor,
+  `MOV EAX,[ECX+0xc]; RET`, shared by unrelated classes across 29 references — its meaning is entirely
+  the receiver's. Here the receiver is the MenuList, so it is `MenuList::IsShown()`.
+
+So **`FUN_0048c8d0()` means "the game menu exists AND is on screen"**, and the buy button refusing
+while the pause menu is up is correct behaviour rather than an unbuilt path. The same function on the
+bank Thing is what reads the balance, which is how it was mistaken for one.
+
+**A caveat that bit the first reading of the teardown**: several menu arms do NOT clear
+`DAT_007c2534` — those that open a confirm box leave it set until that box's own callback runs, so the
+menu object outlives the menu on screen.
+
+### What the buy list actually filters on
+
+The list is built from a per-item descriptor array at `world+0x1d943c`, stride 0x20, 150 slots. The
+four filter fields, as **byte** offsets:
+
+    +0x508  the item's model failed to load
+    +0x4AC  Info.WhichUIType      (4 = "not shown in the UI", the files' own words)
+    +0x284  AddOn.UpgradesId      (must be 0 - a standalone item, not a ride's upgrade)
+    desc+0x10  researched/available
+
+**Two premises were wrong and are corrected here.** `desc+0x10` is not a static "is this listed" flag —
+it is the **researched** flag, set at level start for items whose `Upgrades[0].CostOfResearch` is nought
+and again the moment research completes. And `item+0xC4` is not a research countdown — it is
+`Research.Group`, a **golden-ticket tier** that placing the item literally spends.
+
+**The row state is {0,1,2} and both non-zero values are now pinned**: 1 = you already own at least one
+(`desc+0x18`, incremented on placement and decremented on demolition), 2 = one of the three most
+recently **RESEARCHED** items in that tab — a 3-entry ring per tab fed only by the research-complete
+message, **not** by building. The game's own help row 146 says the same thing: "sort the list by items
+already owned or recently researched".
+
+**The mystery row**: when `Research.Group > 0` and the item is not yet unlocked, the name becomes
+UITEXT 137 "??? Mystery Ride! ???" and **the price column becomes the NEGATED group value**. There is
+also a second, unpriced acquisition gate on that path — such an item is bought against a golden-ticket
+count rather than against cash, and that arm is NOT TRACED.
+
+**Buy Land is item 101 and Clear Land is 102**, both `WhichUIType` 4 — which is exactly *why*
+`FUN_004aaf70` appends them as synthetic rows **-1** and **-2** on tab 3 rather than finding them in the
+walk. The Buy Land price is `Costs.MapCell`; the executable ships no default for it and the four
+sibling cell prices, so they are all zero in the image and filled from the balance file.

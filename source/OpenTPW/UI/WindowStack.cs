@@ -40,6 +40,23 @@ internal sealed class WindowStack : Panel
 	private UiControl? _pressed;
 	private bool _mouseWasDown;
 
+	/// <summary>
+	/// Whether the interface used this frame's wheel, so that the world does not use it as well.
+	///
+	/// <para>
+	/// <b>Nothing consumed the mouse for the world before this.</b> The park camera reads
+	/// <c>Input.Mouse.Wheel</c> with no guard at all, so a wheel over a scrolling list would scroll the
+	/// list AND zoom the park behind it. There was nothing to guard while no list existed, which is why
+	/// it was left until one did.
+	/// </para>
+	/// <para>
+	/// It is read by <see cref="ParkOrbitCameraMode"/> in the same frame it is written: the HUD updates
+	/// in <see cref="Level.Update"/> and the camera in <see cref="Level.Render"/>, in that order, so
+	/// there is no lag and no ordering hazard.
+	/// </para>
+	/// </summary>
+	internal static bool WheelTaken { get; private set; }
+
 	public WindowStack()
 	{
 		UiFonts.Preload();
@@ -123,6 +140,10 @@ internal sealed class WindowStack : Panel
 
 	protected override void OnUpdate()
 	{
+		// Cleared at the top of the frame the interface deals with, not at the end: the camera reads it
+		// later in the same frame, so clearing it after would put the answer a frame behind.
+		WheelTaken = false;
+
 		foreach ( var window in _windows.ToArray() )
 			window.Update();
 
@@ -167,7 +188,19 @@ internal sealed class WindowStack : Panel
 
 		// The wheel goes to the slider under the pointer, or the slider whose thumb it is.
 		if ( Input.Mouse.Wheel != 0f && (_hovered as UiSlider ?? (_hovered as UiSliderThumb)?.Slider) is { } slider )
+		{
 			slider.Scroll( Input.Mouse.Wheel );
+			WheelTaken = true;
+		}
+
+		// And to a list, which scrolls by whole rows. The original reaches the same place by a longer
+		// road - its list owns the scrollbar as a child and the wheel arrives through that - but the
+		// effect is this.
+		if ( Input.Mouse.Wheel != 0f && _hovered is UiList list )
+		{
+			list.ScrollByWheel( Input.Mouse.Wheel );
+			WheelTaken = true;
+		}
 
 		Keyboard();
 

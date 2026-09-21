@@ -544,6 +544,22 @@ public class Level
 	internal bool PausedByWindow() => Kind == Scene.Park && _windows is { AnyPausing: true };
 
 	/// <summary>
+	/// Opens the purchase menu on this scene's own window stack.
+	///
+	/// <para>
+	/// It exists for the debug console. A screen is verifiable by eye and capture rather than by test,
+	/// and the pointer is not something a harness can move reliably - a warp with no real motion
+	/// behind it reaches the window system and never reaches the game - so the console needs a way in
+	/// that does not go through the gadget's button. The button opens the very same screen.
+	/// </para>
+	/// </summary>
+	internal void OpenBuyScreen()
+	{
+		if ( Kind == Scene.Park && _windows is { } windows )
+			windows.Open( new UI.ParkBuyScreen( windows ) );
+	}
+
+	/// <summary>
 	/// How long every voice still sounding takes to fade as a level ends. The original's state machine hands its
 	/// stop-all (0x0051bcb0) 90, in the same untraced unit as the 60 that Sound_StopFading is handed when the advisor
 	/// is quietened, which he already takes as milliseconds - so 0.09 seconds. <b>Inferred, not proven.</b>

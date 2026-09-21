@@ -308,8 +308,18 @@ internal sealed class ParkGadget : UiWindow
 		} );
 
 		// The six, in the stream's own order. Each one's help row is the game's description of it.
-		buttons.Add( NotYet( 0x26, new UiRect( 170, 1122, 288, 1240 ), 469, "b_buy",
-			"Buy and build", "nothing buys an attraction or hires anyone yet" ) );
+		// The first of the four dead ones to have something behind it. FUN_004a0940( 1 ) opens whichever
+		// of buy and hire that category was last left on, from a remembered-tab global seeded to 1 -
+		// so buy is what a park opens on, and the hire screen is its sibling rather than a second
+		// button. See docs/exe/hud.md.
+		buttons.Add( new UiButton
+		{
+			Id = 0x26,
+			Rect = new UiRect( 170, 1122, 288, 1240 ),
+			HelpText = 469,
+			Mesh = UiMesh.Get( "b_buy" ),
+			Clicked = () => Stack.Open( new ParkBuyScreen( Stack ) )
+		} );
 
 		// The one that works - and it does not enter first person itself, which is what this used to do.
 		// FUN_004a0840's case 0x27 splits on whether the button has just gone down: down calls FUN_00498bb0,

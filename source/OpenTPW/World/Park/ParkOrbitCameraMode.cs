@@ -199,7 +199,14 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		if ( Input.Pressed( InputButton.RotateRight ) )
 			Yaw += MathF.PI / 4f;
 
-		if ( Input.Mouse.Wheel != 0 )
+		// Not if the interface already used it. Nothing consumed the mouse for the world before there
+		// was anything to consume it - the wheel over a scrolling list would scroll the list AND zoom
+		// the park behind it. Read in the same frame it is written: the HUD updates in Level.Update
+		// and this runs from Level.Render, in that order, so there is no lag.
+		//
+		// Handled here rather than centrally for the reason the camcorder key above gives: a camera
+		// mode is what knows when it should give way.
+		if ( Input.Mouse.Wheel != 0 && !UI.WindowStack.WheelTaken )
 			Zoom = (Zoom - (Input.Mouse.Wheel * 5f)).Clamp( MinZoom, MaxZoom );
 
 		// Scroll the point of interest across the ground, in whatever direction the camera faces, so
