@@ -208,15 +208,24 @@ dependency order is untouched, so this item stays open.
       **NOT YET SEEN ON SCREEN** - the capture instrument was returning stale frames (see below), so
       this rests on console evidence alone. The tool is still reached only from the console; wiring
       it to the hover classifier (class 1 = a path cell, class 2 = **plain ground**) is what remains.
-- **A capture trap worth more than the feature, found the hard way.** `step <n>` pauses the clock and
-  spends a frame budget; once spent **the game stops presenting**, and a root-window grab then
-  returns whatever the compositor still holds. That frame is not black - it is the picture from
-  *before* the work, and it is entirely plausible. In one run the console read money 87987 → 87787
-  and the surfaces rebuilt from 78 to 88 path cells while the captured frame still showed 87987 and
-  205 changed pixels. **A claim drawn from an earlier capture is withdrawn because of it:** that the
-  HUD money moved 87987 → 87887 on screen. The plus of path in that image is real; the money
-  corroboration is not safe. The harness now raises and focuses the window and grabs until two
-  consecutive frames agree, and says so when one never settles.
+- **>>> THE CAPTURE INSTRUMENT IS NOT TRUSTWORTHY, AND THREE DIAGNOSES OF IT WERE WRONG. <<<**
+  The rendered frame and the console disagree about the same run, repeatedly and in different ways.
+  In one run the console read money 87987 → 87787 with the surfaces rebuilt from 78 to 88 path cells,
+  while the frame showed 87987 and 205 changed pixels. In the next, the frame showed **88012** — a
+  figure in neither reading, being the starting balance with the 200 **never spent**.
+  - *"The compositor holds stale content"* — refuted; raising and focusing changed nothing.
+  - *"Grab until two consecutive frames agree"* — refuted, and it made things worse: the delta fell
+    to **exactly 0**, two byte-identical frames. **A frozen renderer passes that test perfectly**, so
+    it cannot tell "settled" from "not drawing". That check was worse than none.
+  - *"`step` spends a frame budget, so resume first"* — partly right; presentation resumed (0.15%)
+    and the frame still disagreed.
+  **What is not in doubt**, because the console, the censuses and the game's own log agree across many
+  runs: the cells are laid, the masks and tiles are right, the money moves, the surfaces rebuild, and
+  `save/` never changes. **What is in doubt is every screenshot claim.** A claim from an earlier
+  capture is therefore withdrawn — that the HUD money moved 87987 → 87887 on screen. The plus of path
+  in that image is real geometry; the timing and the cost it seemed to corroborate are not safe.
+  **The next step is not a fourth guess**: have the game report, per frame, the path-cell count and
+  the balance it is actually drawing, so the picture and the numbers come from one place.
 - [x] **Placing by pointing - DONE 2026-09-21.** Both screens put the item or the person in the hand,
       and clicking the park puts them down. `Level.WorldClick` takes the click only when the interface
       did not, and **anything in the hand goes down before any window opens** - the original's own
