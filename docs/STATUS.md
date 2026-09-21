@@ -1,7 +1,8 @@
 # Status
 
-Last updated: 2026-09-21 on branch `alexah/97-load-time`, which is the tip and is **local and
-unpushed** — four commits for `docs/CLEANUP-PLAN.md` item 9. Before it,
+Last updated: 2026-09-21 on branch `alexah/98-decode-each-texture-once`, which is the tip and is
+**local and unpushed**, stacked on `alexah/97-load-time` — together they close
+`docs/CLEANUP-PLAN.md` item 9. Before them,
 `alexah/96-laying-and-lifting-path` was **pushed to `maexah/OpenTPW` on 2026-09-21**, at Alexah's
 word — `alexah/94-every-state-answered`,
 `alexah/95-buy-hire-and-ride-windows` and `alexah/96-laying-and-lifting-path`. Every other local branch
@@ -101,9 +102,60 @@ Take counts fresh; these go stale within a day.
 | Tests | 827 total, all of them run **with** the game and 0 skip | 2026-09-21, measured after the category screens |
 | Tests without the game | 379 ran, **448 skipped**, of 827 | 2026-09-21, measured fresh |
 | Build warnings | 125 | 2026-09-21, measured at `e543129` - one fewer since the refpack reflection went |
-| Park load | 18.8 s, of which `terrain` is 16.3 s | 2026-09-21, mean of two runs, per phase, `LoadTimer` |
+| Park load | **2.5 s**, worst phase `terrain` at 0.72 s | 2026-09-21, three jungle runs, per phase, `LoadTimer` |
+| Other themes | fantasy 1.0 s, hallow 1.1 s, space 1.2 s | 2026-09-21, one run each, first time ever timed |
 
 ## Recent
+
+**2026-09-21 - a park loads in 2.5 s where it took 23.3 s, and `docs/CLEANUP-PLAN.md` item 9 is
+closed.** Branch `alexah/98-decode-each-texture-once`, stacked on `alexah/97-load-time`. About **9.4x**.
+
+**The cause was found by timing inside `ParkTerrain`, and it killed two theories on the way.** The
+16,465 ms split into **read 9 ms, textures 16,390 ms, buildmodels 60 ms** - so 99.5% was the texture
+slot loop, and the idea that building 812 materials and their resource sets was expensive died at
+60 ms. Counting gave the rest: `base.MD2` makes **1,047 texture loads of 57 distinct**, 18.4:1.
+
+**`Texture`'s path constructor decoded the file and then asked the cache.** `CreateTexture` consults
+the cache at the very end of the constructor - by which point the .wct has been decompressed and put
+through the whole wavelet decode, and the answer is thrown away for the copy already in memory. So
+the cache saved the GPU upload and none of the work. **Asking first is behaviour-identical**: the set
+of hits does not change, a hit already returned before sampler, size and path were assigned, and
+`PreprocessTextureData` and `IsGraded` only touch the local pixel array. Predicted **892 ms** from
+16,383 × 57/1047 before running it; measured **683 ms**.
+
+| phase | 2026-09-21 first measure | after the three fixes | now |
+|---|---|---|---|
+| **terrain** | 19,627 / 20,333 ms | 16,335 / 16,348 ms | **718 / 736 / 720 ms** |
+| objects | 1,428 / 1,547 ms | 1,147 / 1,150 ms | **656 ms** |
+| **total** | **22,888 / 23,709 ms** | **18,819 / 18,823 ms** | **2,488 / 2,520 / 2,502 ms** |
+
+**All four themes were loaded and timed, which had never been done** - and it closes the "only jungle"
+gap the previous entry left open: **fantasy 1,016 ms**, **hallow 1,124 ms**, **space 1,229 ms**. The
+lobby gained too (Jun_isle 412 → 259 ms).
+
+**Also removed:** a `.ToList()` in `TryGetCachedTexture` that built a list of every texture in the
+game on every lookup. It stays a scan rather than a dictionary on purpose - `Delete` removes from
+`Asset.All`, which is the list being scanned, so the cache self-invalidates and a dictionary would
+need invalidating by hand for no measurable gain.
+
+**`TextureDecodeTests` is new, and it is regression cover rather than proof.** The buffer resize in
+`8c74ead` changed how much scratch the decode allocates and nothing anywhere pinned it; this decodes
+every texture `base.MD2` names and checks each against its own header. What proves the work right is
+the park on the screen in all four themes, with `save/` unchanged within every run.
+
+**Its mutation check turned up a fact worth keeping.** The mutation the test was written for -
+dropping the row buffer's extra `size*size/2` - **survived**, and that is correct rather than a hole:
+the headroom is indexed only when a texture is alpha **and** half-scale, and **of the 656 `.wct` files
+across the four themes' terrain and shared directories, 0 are half-scale** (211 carry alpha, all
+full-scale). That path is **dead by CONTENT**, so nothing tested against shipped art can pin it; it
+stays because it is right for a texture the decoder supports and the game never ships. Two mutations
+on paths the art does reach - either buffer at `size*size/2` - both fail, so the test is not hollow.
+It is recorded at the test, per `docs/VERIFYING.md` rule 48.
+
+**A first attempt at that test was hollow for a duller reason**, and it is the kind that repeats: it
+selected textures with `FileExists`, which **does not look inside archives**, so it found 0 of them
+and passed its own filter vacuously. `LobbyModel.LoadTexture`'s doc comment says exactly this and was
+read earlier the same session. Use `GetSize` for anything inside a `.wad`.
 
 **2026-09-21 - a park load is measured phase by phase, and costs 18.8 s where it cost 23.3 s.**
 `docs/CLEANUP-PLAN.md` item 9, **part done and explicitly not finished**. Branch

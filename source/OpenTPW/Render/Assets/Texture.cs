@@ -79,6 +79,12 @@ public partial class Texture : Asset
 	/// </summary>
 	public Texture( string path, TextureFlags flags = TextureFlags.None )
 	{
+		// Before the file is touched, not after it has been decoded - see TryAdoptCached, which
+		// carries the measurement. A model names the same texture once per mesh that uses it, so
+		// this is the difference between decoding a .wct once and decoding it eighteen times.
+		if ( TryAdoptCached( path ) )
+			return;
+
 		if ( path.HasExtension( ".wct" ) )
 			UpdateFromWct( path, flags );
 		else
@@ -282,18 +288,10 @@ public partial class Texture : Asset
 
 	private void CreateTexture( string debugName, byte[] data, uint width, uint height, TextureFlags flags )
 	{
-		if ( TryGetCachedTexture( debugName, out var cachedTexture ) )
-		{
-			NativeTexture = cachedTexture!.NativeTexture;
-			NativeTextureView = cachedTexture!.NativeTextureView;
-
-			// Carried across with the GPU handles: it is a property of the pixels those handles
-			// hold, so a texture served from the cache has to answer the same as the one that
-			// loaded it. Left out, every shared texture would read as a cut-out.
-			HasGradedAlpha = cachedTexture!.HasGradedAlpha;
-
+		// Still asked here as well as in the path constructor: this is also reached from the byte[]
+		// and Stream constructors, and from SignFile, which have no path to check beforehand.
+		if ( TryAdoptCached( debugName ) )
 			return;
-		}
 
 		PreprocessTextureData( ref data, ref width, ref height, flags );
 
