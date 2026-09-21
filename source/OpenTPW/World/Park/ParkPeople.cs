@@ -78,6 +78,13 @@ public sealed class ParkPeople : Entity
 	private readonly Dictionary<int, PeepWalk> _staffWalks = [];
 
 	/// <summary>
+	/// A sprite the save's own staff of each thing model wear, so that a new hire can be dressed in
+	/// one the atlas already holds - see <see cref="Hire"/>. Keyed by MODEL, which is the number a
+	/// <see cref="Staff"/> carries.
+	/// </summary>
+	private readonly Dictionary<int, ParkWorld.Sprite> _staffSprite = [];
+
+	/// <summary>
 	/// What each member of staff is doing - the shared half of the original's five per-kind behaviours.
 	/// One for the park, as <see cref="_behaviour"/> is, because the constants it reads are the park's.
 	/// </summary>
@@ -264,6 +271,12 @@ public sealed class ParkPeople : Entity
 					sprite.ScheduleFrom( 0 );
 
 					_sprites[member.ThingId] = sprite;
+
+					// Kept so that somebody hired later can WEAR a pair this park already packs - see
+					// Hire. The atlas is built once from the banks the save's own people wear and
+					// nothing adds to it, so a newcomer in an unpacked bank has no picture at all and
+					// reads as a broken hire rather than a missing texture.
+					_staffSprite[member.Model] = picture;
 				}
 			}
 		}
@@ -384,6 +397,206 @@ public sealed class ParkPeople : Entity
 		Log.Info( $"People: guest {thingId} arrived at ({cellX},{cellY}) - {_peeps.Count} guests now" );
 
 		return thingId;
+	}
+
+	/// <summary>
+	/// Puts a hired candidate into the park at a cell. Answers their thing id, or nought.
+	///
+	/// <para>
+	/// <b>It is <see cref="Admit"/> for staff, and the list of things that have to learn about them is
+	/// the same shape</b> - the simulation, the walk, the animation, the drawing and the cell's
+	/// occupancy - with two differences. There is no by-id index, because <see cref="_byId"/> is how a
+	/// ride finds who is at its queue head and staff never queue. And <see cref="ParkState.Admit"/> is
+	/// NOT called: that counts <i>visitors</i>, and an employee is not one.
+	/// </para>
+	/// <para>
+	/// <b>No money moves here.</b> Hiring has no fee in the original - <c>BaseCostPerStaff</c> sits in
+	/// the balance file unread - and the wage is monthly. See <see cref="ParkStaffPool"/>.
+	/// </para>
+	/// </summary>
+	internal int Hire( ParkStaffPool.Candidate candidate, int cellX, int cellY )
+	{
+		if ( _blocked == null || !ParkState.OnMap( cellX, cellY ) )
+			return 0;
+
+		var model = ParkStaffPool.ModelFor( candidate.Kind );
+
+		// Dressed in a pair this park already packs, never an invented one - see _staffSprite. A park
+		// with nobody of that kind cannot clothe them, and that is said out loud rather than drawn as
+		// nothing.
+		if ( !_staffSprite.TryGetValue( model, out var picture ) )
+		{
+			Log.Warning( $"People: nothing in this park wears model {model}, so a " +
+				$"{ParkStaffPool.NameOfKind( candidate.Kind ).ToLowerInvariant()} would have no picture - not hired" );
+
+			return 0;
+		}
+
+		var one = ParkWorld.NavigatorState.One;
+		var pattern = _staff.Count > 0 ? _staff[0].Navigator : _peeps.Count > 0 ? _peeps[0].Navigator : null;
+
+		if ( pattern == null )
+			return 0;
+
+		var thingId = _nextThingId++;
+		var slot = _nextSpriteSlot++;
+
+		var x = (cellX * one) + (one / 2);
+		var y = (cellY * one) + (one / 2);
+
+		var navigator = new ParkWorld.NavigatorState(
+			X: x, Y: y, VelocityX: 0, VelocityY: 0, TargetX: x, TargetY: y,
+			Mass: ParkWorld.NavigatorState.DefaultMass,
+			Radius: ParkWorld.NavigatorState.DefaultRadius,
+			MaxForce: pattern.MaxForce, MaxSpeed: pattern.MaxSpeed,
+			NavMode: 0, CantReachDest: 0, PathFinished: true,
+			PathCount: 0, PathTotalCount: 0, PathBufferCount: 0,
+			BufferedDistance: 0, TailDistance: 0, TotalDistance: 0, StuckBits: 0 );
+
+		// Idle, with no patrol area - nought and nought is the whole map, which is what a staff member
+		// hired without one keeps. Their training starts at the grade they were hired at.
+		var state = new ParkWorld.StaffState(
+			State: (int)StaffActivity.Idle, PayGrade: candidate.Grade,
+			Happiness: 100f, Tiredness: 100f, JobsDone: 0,
+			PatrolBottomLeft: 0, PatrolTopRight: 0, RestArea: 0,
+			PercentageThroughGrade: 0, TimeStartedIdling: 0 );
+
+		var member = new global::OpenTPW.Staff( thingId, model, state, navigator );
+
+		_staff.Add( member );
+		_staffWalks[thingId] = new PeepWalk( member.Navigator, _blocked );
+
+		var person = new ParkWorld.Person(
+			ThingId: thingId, Model: model, RawX: x >> 8, RawY: y >> 8,
+			SpriteSlot: slot, Angle: 0, Navigator: navigator, Guest: null, Staff: state );
+
+		var animation = new SpriteScript( SpriteScript.None, 0, spriteNumber: 0, frame: 0 );
+
+		animation.Start( SpriteScript.Standing );
+		animation.ScheduleFrom( 0 );
+
+		_sprites[thingId] = animation;
+
+		ParkGuestSprites.Current?.Add( person, picture with { Slot = slot, X = cellX, Y = cellY, Facing = 0 } );
+
+		// Staff have never been in a cell's occupancy list - StandOn is called only from PeepBehaviour,
+		// which is guests. This is the first thing to put one there.
+		_behaviour.State.StandOn( thingId, cellX, cellY );
+
+		Log.Info( $"People: hired {candidate.Name}, a grade {candidate.Grade} " +
+			$"{ParkStaffPool.NameOfKind( candidate.Kind ).ToLowerInvariant()} at {candidate.Wage} a month, " +
+			$"as thing {thingId} at ({cellX},{cellY}) - {_staff.Count} staff now" );
+
+		return thingId;
+	}
+
+	/// <summary>
+	/// Dismisses a member of staff, charging one further month's wage. Answers whether there was one.
+	/// </summary>
+	/// <remarks>
+	/// <b>It is <see cref="Depart"/> for staff, and the worker is deleted outright rather than walked
+	/// out</b> - <c>FUN_00505790</c> charges, spawns a particle and calls the thing's delete, with no
+	/// state change and no walk to the gate. The severance is exactly one wage, by the same expression
+	/// the monthly charge uses.
+	/// </remarks>
+	internal bool Fire( int thingId )
+	{
+		var at = _staff.FindIndex( member => member.ThingId == thingId );
+
+		if ( at < 0 )
+			return false;
+
+		var member = _staff[at];
+		var kind = ParkStaffPool.KindFor( member.Model );
+		var severance = kind >= 0
+			? Level.Current?.StaffPool?.WageFor( kind, member.PayGrade ) ?? 0
+			: 0;
+
+		_staff.RemoveAt( at );
+		_staffWalks.Remove( thingId );
+		_sprites.Remove( thingId );
+
+		_behaviour.State.Forget( thingId );
+		ParkGuestSprites.Current?.Remove( thingId );
+
+		if ( severance > 0 )
+			_behaviour.State.Spend( severance );
+
+		Log.Info( $"People: dismissed thing {thingId}, a grade {member.PayGrade} " +
+			$"{ParkStaffPool.NameOfKind( kind ).ToLowerInvariant()} - one month's wage of {severance} paid, " +
+			$"{_staff.Count} staff left" );
+
+		return true;
+	}
+
+	/// <summary>The staff member in the player's hand, or nought - the save's <c>mStaffMemberPickedUp</c>.</summary>
+	private int _carriedStaff;
+
+	/// <summary>Who is being carried, for the debug console.</summary>
+	internal int CarriedStaff => _carriedStaff;
+
+	/// <summary>
+	/// Picks a member of staff up. They stop doing whatever they were doing and wait to be put down.
+	/// </summary>
+	/// <remarks>
+	/// <b><see cref="StaffActivity.Held"/> already existed for exactly this and nothing ever set it.</b>
+	/// Its own doc says "a staff member being carried by the player is put here", and the shared
+	/// behaviour switch answers case 7 with an empty body - so a held worker is idle by construction
+	/// rather than by a special case. <c>FUN_00505c50</c> also proceeds whatever they were doing;
+	/// there is no state it refuses from.
+	/// </remarks>
+	internal bool PickUp( int thingId )
+	{
+		var member = _staff.Find( person => person.ThingId == thingId );
+
+		if ( member == null )
+			return false;
+
+		member.SetActivity( StaffActivity.Held, (int)GameClock.Ticks );
+		_carriedStaff = thingId;
+
+		Log.Info( $"People: picked up thing {thingId}" );
+
+		return true;
+	}
+
+	/// <summary>
+	/// Puts a carried member of staff down on a cell.
+	/// </summary>
+	/// <remarks>
+	/// <b>It TELEPORTS them, and that is the difference between the two carry modes rather than a
+	/// shortcut.</b> A fresh hire is carried by mode type 5, which CONSTRUCTS a worker where it is
+	/// clicked; an existing one picked up is carried by type 6, which moves the thing that already
+	/// exists to the centre of the cell and sets it idle. Their destination is not set and no patrol
+	/// anchor is written.
+	/// </remarks>
+	internal bool DropStaff( int cellX, int cellY )
+	{
+		if ( _carriedStaff == 0 || !ParkState.OnMap( cellX, cellY ) )
+			return false;
+
+		var member = _staff.Find( person => person.ThingId == _carriedStaff );
+
+		if ( member == null )
+		{
+			_carriedStaff = 0;
+			return false;
+		}
+
+		var centre = new FixedVector(
+			PeepNavigator.WaypointCentre( cellX ), PeepNavigator.WaypointCentre( cellY ) );
+
+		member.Navigator.Position = centre;
+		member.Navigator.Target = centre;
+		member.SetActivity( StaffActivity.Idle, (int)GameClock.Ticks );
+
+		_behaviour.State.StandOn( member.ThingId, cellX, cellY );
+
+		Log.Info( $"People: put thing {member.ThingId} down at ({cellX},{cellY})" );
+
+		_carriedStaff = 0;
+
+		return true;
 	}
 
 	/// <summary>The world state in which nobody arrives at all - <c>FUN_004cf5b0</c>'s first test.</summary>

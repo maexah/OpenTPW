@@ -98,6 +98,26 @@ public sealed class ParkStaffPool
 	};
 
 	/// <summary>
+	/// The kind a thing model belongs to - the inverse of <see cref="ModelFor"/>, and <b>-1</b> for a
+	/// model that is not staff at all.
+	/// </summary>
+	/// <remarks>
+	/// Written as its own switch rather than a search of the other one, because it is the direction a
+	/// wage lookup goes: a <see cref="Staff"/> carries its MODEL, and what it is paid is indexed by
+	/// KIND. <see cref="ParkWorld.StaffState.PayTypeOf"/> is the same mapping from the save's side and
+	/// the two must agree.
+	/// </remarks>
+	public static int KindFor( int model ) => model switch
+	{
+		5 => 0,
+		4 => 1,
+		6 => 2,
+		7 => 3,
+		8 => 4,
+		_ => -1
+	};
+
+	/// <summary>
 	/// What one kind is called, from the game's own <c>STAFF_TYPES.str</c>.
 	/// </summary>
 	/// <remarks>

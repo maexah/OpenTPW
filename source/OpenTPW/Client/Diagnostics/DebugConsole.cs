@@ -673,6 +673,70 @@ public static class DebugConsole
 					: "buy <catalogueId> <cellX> <cellY> [angle]" );
 				break;
 
+			// Hiring, firing, and carrying somebody from one place to another. The hire screen is not
+			// built yet, so these drive the verbs directly - the same reason `arrive` existed before
+			// the arrival manager.
+			case "hire":
+				if ( parts.Length < 4 )
+				{
+					Reply( "hire <candidateId> <cellX> <cellY>" );
+					break;
+				}
+
+				if ( Level.Current?.StaffPool is not { } hiring || ParkPeople.Current is not { } staffing )
+				{
+					Reply( "hire: a park has to be loaded" );
+					break;
+				}
+
+				var wanted = (int)Argument( 1 );
+				var candidate = hiring.Candidates.FirstOrDefault( person => person.Id == wanted );
+
+				if ( candidate.Id != wanted )
+				{
+					Reply( $"hire: nobody in the pool is candidate #{wanted}" );
+					break;
+				}
+
+				// Taken out of the pool only once they are actually standing in the park - a failed
+				// hire must not quietly destroy the candidate.
+				var hired = staffing.Hire( candidate, (int)Argument( 2 ), (int)Argument( 3 ) );
+
+				if ( hired == 0 )
+				{
+					Reply( $"hire: '{candidate.Name}' could not be put there, and is still waiting" );
+					break;
+				}
+
+				hiring.Take( wanted, out _ );
+
+				Reply( $"hire: '{candidate.Name}' is thing {hired}, {candidate.Wage} a month" );
+				break;
+
+			case "fire":
+				Reply( parts.Length > 1 && ParkPeople.Current is { } employer2
+					? employer2.Fire( (int)Argument( 1 ) )
+						? $"fire: thing {(int)Argument( 1 )} dismissed"
+						: $"fire: nobody in the park is thing {(int)Argument( 1 )}"
+					: "fire <thingId>" );
+				break;
+
+			case "pickup":
+				Reply( parts.Length > 1 && ParkPeople.Current is { } holder
+					? holder.PickUp( (int)Argument( 1 ) )
+						? $"pickup: holding thing {(int)Argument( 1 )}"
+						: $"pickup: nobody in the park is thing {(int)Argument( 1 )}"
+					: "pickup <thingId>" );
+				break;
+
+			case "putstaff":
+				Reply( parts.Length > 2 && ParkPeople.Current is { } dropper
+					? dropper.DropStaff( (int)Argument( 1 ), (int)Argument( 2 ) )
+						? $"putstaff: put down at ({(int)Argument( 1 )},{(int)Argument( 2 )})"
+						: "putstaff: nobody is being carried, or that cell is off the map"
+					: "putstaff <cellX> <cellY>" );
+				break;
+
 			// Who the park may hire. A population of its own - the five staff read from the save are
 			// the ones already employed, and these are the ones waiting.
 			case "candidates":
