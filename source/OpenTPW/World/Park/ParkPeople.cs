@@ -1486,6 +1486,10 @@ public sealed class ParkPeople : Entity
 				// a held park stops the VM one instruction short of STOPSCREAM, so "still screaming"
 				// and "gone quiet" have to be readable apart. A pure getter, so polling cannot perturb it.
 				+ $"running {script.Running} screaming {script.Screaming} "
+				// WHICH scream, not just whether: a ride that replays a fresh sample every pass and one
+				// that loops a single clip for ever both read "screaming True", which is exactly the
+				// fault cleanup item 5 was about. The sample name and the pass count tell them apart.
+				+ $"scream [{ParkAudio.Current?.ScreamState( script.Id ) ?? "no park audio"}] "
 				+ $"letmeon {Read( ParkRideOperation.AdmitVariable )} "
 				+ $"letmeoff {Read( ParkRideOperation.DismissVariable )} "
 				+ $"capacity {Read( ParkRideOperation.CapacityVariable )} "

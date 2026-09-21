@@ -436,7 +436,8 @@ public static class DebugConsole
 				}
 
 				var running = operators.RideCensus().ToArray();
-				Reply( $"rides {running.Length}" );
+				Reply( $"rides {running.Length} distinct scream samples heard "
+					+ $"{ParkAudio.Current?.ScreamSamplesHeard ?? 0}" );
 
 				foreach ( var ride in running )
 					Reply( "  " + ride );

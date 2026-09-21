@@ -200,14 +200,59 @@ public sealed class ParkAudio : Entity
 	/// </remarks>
 	private readonly SoundCategory? _kids;
 
+	/// <summary>
+	/// A scream a ride is holding: what it asked for, so it can be asked for <i>again</i>.
+	///
+	/// <para>
+	/// The band and the place never change while a scream is held - the script tears the whole thing
+	/// down and starts another when the rider count crosses a band edge - but the level does, because
+	/// <c>SCREAMLEVEL</c> moves it under a scream already playing.
+	/// </para>
+	/// </summary>
+	private sealed class HeldScream
+	{
+		public int Effect;
+		public int Band;
+		public int Level;
+		public Vector3 At;
+
+		/// <summary>The voice sounding this pass, or null between passes while the delay runs out.</summary>
+		public Voice? Voice;
+
+		/// <summary>How many samples this held scream has played, and which it is on now.</summary>
+		public int Plays;
+		public string Sample = "";
+	}
+
 	/// <summary>The one scream a ride may have going, by the script holding it.</summary>
-	private readonly Dictionary<int, (Voice Voice, int Effect)> _screams = [];
+	private readonly Dictionary<int, HeldScream> _screams = [];
 
 	/// <summary>
-	/// The four looping scream samples, chosen by <c>STARTSCREAM</c>'s first operand -
+	/// Every distinct sample any scream in this park has played, which is what makes "the screams vary"
+	/// a number the game reports about itself rather than something inferred from a recording -
+	/// <c>docs/VERIFYING.md</c> rule 89.
+	/// </summary>
+	private readonly HashSet<string> _screamSamples = [];
+
+	/// <summary>
+	/// The four held scream effects, chosen by <c>STARTSCREAM</c>'s first operand -
 	/// <c>FUN_00551130</c>'s bands: nought screams not at all, 1, 2-3, 4-7, then 8 and over.
 	/// </summary>
 	private static readonly int[] ScreamEffects = [0x47, 0x48, 0x49, 0x4a];
+
+	/// <summary>
+	/// How loud a <c>SINGLESCREAM</c> is, and <b>this one is a choice rather than a reading</b>.
+	///
+	/// <para>
+	/// The engine sets <i>no level at all</i> for a one-shot: neither <c>FUN_00551320</c> nor
+	/// <c>FUN_00551560</c> calls <c>FUN_0051bc40</c>, so the voice plays at whatever the driver's
+	/// default is - and that default lives in <c>QMixer.dll</c>, which is not in the Ghidra project.
+	/// So this is the same gain Lost Kingdom's own ride screams at, <c>(20 + 50) / 2</c> over a
+	/// hundred, standing in for a number nobody has measured. Said here rather than left to look
+	/// like a decode, exactly as <see cref="Audio.HoldPlaced"/>'s silence does.
+	/// </para>
+	/// </summary>
+	private const float SingleScreamVolume = 0.35f;
 
 	/// <summary>
 	/// The script speed the volume is averaged against - the engine's <c>+0xc0</c>, which its loader
@@ -234,6 +279,62 @@ public sealed class ParkAudio : Entity
 		< 8 => ScreamEffects[2],
 		_ => ScreamEffects[3]
 	};
+
+	/// <summary>
+	/// The second axis of <c>SINGLESCREAM</c>'s grid: <c>(level + speed) / 50</c>, held at three.
+	///
+	/// <b>Held at the top only</b>, which is the engine's own asymmetry - <c>FUN_00551320</c> does
+	/// <c>if ( 3 &lt; i ) i = 3;</c> and nothing at the bottom, then falls out of its own switch
+	/// returning nought for any index it does not recognise. A level below nought cannot reach here
+	/// anyway, because the handler sends it to the band-only branch first.
+	/// </summary>
+	public static int ScreamGridIndex( int level ) => Math.Min( (level + ScriptSpeed) / 50, 3 );
+
+	/// <summary>
+	/// Which one-shot <c>SINGLESCREAM</c> plays, or nought when nothing does.
+	///
+	/// <para>
+	/// <b>Two branches, and the handler picks between them on the SECOND operand</b> (<c>0x00555f6b</c>,
+	/// <c>CMP ESI,EDI</c> then <c>JGE</c>). A negative level takes <c>FUN_00551560</c>, which picks on
+	/// the band alone - <b>and skips <c>0x6b</c></b>, which is the original's own gap and is matched by
+	/// the shipped category, where 107 is absent. Anything else takes <c>FUN_00551320</c>'s 4x4 grid,
+	/// the band crossed with <see cref="ScreamGridIndex"/>, giving <c>0x4b</c> through <c>0x5a</c>.
+	/// </para>
+	/// <para>
+	/// <b>Both branches are reached by shipped content</b>, which is why neither is a guess: of the 46
+	/// uses across all 308 scripts, 44 pass 65535 - which <c>Value</c> sign-extends to -1 - while
+	/// <c>Monkey.rse</c> passes 90 and <c>Totem.RSE</c> passes 100, landing on grid steps 2 and 3.
+	/// </para>
+	/// </summary>
+	public static int SingleScreamEffectFor( int band, int level )
+	{
+		if ( band <= 0 )
+			return 0;
+
+		if ( level < 0 )
+			return band switch
+			{
+				1 => 0x69,
+				< 4 => 0x6a,
+				< 8 => 0x6c,
+				_ => 0x6d
+			};
+
+		var step = ScreamGridIndex( level );
+
+		if ( step is < 0 or > 3 )
+			return 0;
+
+		var first = band switch
+		{
+			1 => 0x4b,
+			< 4 => 0x4f,
+			< 8 => 0x53,
+			_ => 0x57
+		};
+
+		return first + step;
+	}
 
 	public ParkAudio( string themeName )
 	{
@@ -368,21 +469,71 @@ public sealed class ParkAudio : Entity
 			return false;
 		}
 
-		var volume = ScreamVolume( level );
-		var voice = _kids.Play( effect, volume / 100f, loop: true, bus: AudioBus.Effects, position: at );
+		var scream = new HeldScream { Effect = effect, Band = band, Level = level, At = at };
 
-		if ( voice == null )
-		{
-			Log.Warning( $"Park audio: scream effect {effect} would not start for script {scriptId}" );
-			return false;
-		}
+		_screams[scriptId] = scream;
 
-		_screams[scriptId] = (voice, effect);
+		// The first pass now, the rest from OnUpdate. A pass that does not sound is not a failure:
+		// the effect may still be inside its own repeat delay from whatever screamed last, and the
+		// ride is screaming either way - the script has said so, and the pump will catch it up.
+		Pass( scream );
 
 		Log.Info( $"Park audio: script {scriptId} screaming, band {band} effect {effect} "
-			+ $"volume {volume} at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0})" );
+			+ $"volume {ScreamVolume( level )} at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0})" );
 
 		return true;
+	}
+
+	/// <summary>
+	/// One pass of a held scream: ask the category for a sample and start it, <b>not looped</b>.
+	///
+	/// <para>
+	/// <b>This is the whole of why a ride no longer screams the same clip for ever, and it rests on the
+	/// shipped data rather than on a decode of the driver.</b> Looping is not a parameter of the
+	/// engine's play call at all - <c>Sound_PlayEffect( handle, category, effect, x, y, z )</c> has no
+	/// such argument, and <c>STARTSCREAM</c> and <c>SINGLESCREAM</c> make the identical call - so
+	/// whether effect <c>0x47</c> repeats is decided below it, in <c>QMixer.dll</c>, which is not in
+	/// the Ghidra project. What the data says is plain: the four scream effects each declare
+	/// <b>four variations over 25, 50, 60 and 59 samples</b>, behind a <b>2700 ms repeat delay</b>,
+	/// with samples averaging about 800 ms. A repeat delay is meaningless for a seamless loop, and a
+	/// seamless loop would leave 24 of effect 71's 25 samples unreachable. It is the same shape as a
+	/// park's music - see <see cref="OnUpdate"/>, which replays that for the same reason - so a scream
+	/// is replayed too, and the category's own delay is what becomes the gap between screams.
+	/// </para>
+	/// </summary>
+	private void Pass( HeldScream scream )
+	{
+		// respectDelay left at its default on purpose: that delay IS the cadence here, and turning it
+		// off would give a scream every 800ms rather than every 3.5 seconds.
+		var voice = _kids?.Play( scream.Effect, ScreamVolume( scream.Level ) / 100f,
+			bus: AudioBus.Effects, position: scream.At );
+
+		if ( voice == null )
+			return;
+
+		scream.Voice = voice;
+		scream.Sample = voice.Name;
+		++scream.Plays;
+
+		_screamSamples.Add( voice.Name );
+	}
+
+	/// <summary>
+	/// Starts the next pass of every held scream whose voice has ended - the screams' half of
+	/// <see cref="OnUpdate"/>.
+	/// </summary>
+	private void PumpScreams()
+	{
+		if ( _kids is not { IsValid: true } )
+			return;
+
+		foreach ( var scream in _screams.Values )
+		{
+			if ( scream.Voice is { Playing: true } )
+				continue;
+
+			Pass( scream );
+		}
 	}
 
 	/// <summary>
@@ -400,13 +551,90 @@ public sealed class ParkAudio : Entity
 		if ( !_screams.Remove( scriptId, out var scream ) )
 			return false;
 
-		scream.Voice.FadeOut( StopSeconds );
+		// There may be no voice at all right now - a held scream is silent between passes - and the
+		// stop still has to happen, because what is being torn down is the ride's claim on the effect.
+		scream.Voice?.FadeOut( StopSeconds );
 		_kids?.Release( scream.Effect );
 
-		Log.Info( $"Park audio: script {scriptId} stopped screaming (effect {scream.Effect} released)" );
+		Log.Info( $"Park audio: script {scriptId} stopped screaming after {scream.Plays} "
+			+ $"sample(s) (effect {scream.Effect} released)" );
 
 		return true;
 	}
+
+	/// <summary>
+	/// <c>SINGLESCREAM</c> - one scream, once, belonging to nobody: the engine keeps no handle for it
+	/// and sets no level (<c>FUN_00551320</c> and <c>FUN_00551560</c>, neither of which touches
+	/// <c>FUN_0051bc40</c>). See <see cref="SingleScreamEffectFor"/> for which one, and
+	/// <see cref="SingleScreamVolume"/> for why its gain is a declared choice.
+	/// </summary>
+	/// <returns>Whether anything started.</returns>
+	internal bool SingleScream( int band, int level, Vector3 at )
+	{
+		if ( !Audio.Ready || _kids is not { IsValid: true } )
+			return false;
+
+		var effect = SingleScreamEffectFor( band, level );
+
+		if ( effect == 0 )
+		{
+			Log.Trace( $"Park audio: a single scream at band {band} level {level} plays nothing" );
+			return false;
+		}
+
+		var voice = _kids.Play( effect, SingleScreamVolume, bus: AudioBus.Effects, position: at );
+
+		if ( voice == null )
+			return false;
+
+		_screamSamples.Add( voice.Name );
+
+		Log.Info( $"Park audio: single scream, band {band} level {level} effect {effect} "
+			+ $"sample '{voice.Name}' at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0})" );
+
+		return true;
+	}
+
+	/// <summary>
+	/// <c>SCREAMLEVEL</c> - moves the volume of the scream a script is already holding, by the same
+	/// <c>(operand + speed) / 2</c> the start used (<c>FUN_00551290</c>). It does nothing at all when
+	/// no scream is held, which is the engine's own guard on a nought handle.
+	/// </summary>
+	/// <remarks>
+	/// <b>One thing the engine does here is deliberately NOT reproduced.</b> Its handler writes the
+	/// return of the <i>volume call</i> back over the scream handle at <c>+0xd0</c>
+	/// (<c>0x00556009</c>), and what that value is cannot be determined from the executable - the
+	/// chain ends in a bare virtual call. Copying it would mean a later <c>STOPSCREAM</c> fading
+	/// something that is not the voice. The level is carried on the held scream instead, so a replay
+	/// keeps it.
+	/// </remarks>
+	/// <returns>Whether a scream was there to change.</returns>
+	internal bool ScreamLevel( int scriptId, int level )
+	{
+		if ( !_screams.TryGetValue( scriptId, out var scream ) )
+			return false;
+
+		scream.Level = level;
+
+		var volume = ScreamVolume( level );
+
+		scream.Voice?.SetVolume( volume / 100f );
+
+		Log.Info( $"Park audio: script {scriptId} scream level {level} -> volume {volume}" );
+
+		return true;
+	}
+
+	/// <summary>What a script's scream is doing, for the <c>rides</c> census. A pure getter.</summary>
+	internal string ScreamState( int scriptId )
+		=> _screams.TryGetValue( scriptId, out var scream )
+			? $"effect {scream.Effect} band {scream.Band} level {scream.Level} "
+				+ $"sample '{scream.Sample}' plays {scream.Plays}"
+				+ (scream.Voice is { Playing: true } ? "" : " (between)")
+			: "none";
+
+	/// <summary>How many distinct scream samples this park has played, across every ride.</summary>
+	internal int ScreamSamplesHeard => _screamSamples.Count;
 
 	/// <summary>
 	/// Stops the rain, and lets the effect go.
@@ -438,10 +666,10 @@ public sealed class ParkAudio : Entity
 
 		// And whoever is still screaming as the park ends, for the same reason the rain is let go: a
 		// looping voice holds its effect, and the next park in this process would find it taken.
-		foreach ( var (voice, effect) in _screams.Values )
+		foreach ( var scream in _screams.Values )
 		{
-			voice.FadeOut( StopSeconds );
-			_kids?.Release( effect );
+			scream.Voice?.FadeOut( StopSeconds );
+			_kids?.Release( scream.Effect );
 		}
 
 		_screams.Clear();
@@ -479,6 +707,13 @@ public sealed class ParkAudio : Entity
 		// own `pause` is deliberately NOT this: that one stops Time so a screenshot repeats, and a
 		// park whose screams fell silent for it would be reporting the instrument rather than the game.
 		Audio.HoldPlaced( GameClock.Paused );
+
+		// The screams are pumped BEFORE the music's own guard below, because a theme whose music would
+		// not load must still let its rides scream - and not while the world is held, because a replay
+		// starting mid-pause would be a new voice nobody asked for. A voice already sounding is held
+		// rather than ended, so it is still Playing and this does not fire for it.
+		if ( Audio.Ready && !GameClock.Paused )
+			PumpScreams();
 
 		if ( !Audio.Ready || _music is not { IsValid: true } )
 			return;

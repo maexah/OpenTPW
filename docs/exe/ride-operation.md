@@ -535,26 +535,75 @@ The record is **16 bytes**: handle `+0`, node `+4` = `*(EBP+0x70) + slotIndex`, 
 
 All of it plays from **`cat_kids`** — `DAT_00803a24`, named outright by `Sound_RegisterGlobalCategories`, whose slots are **not in address order**: `0x803a20` ambient, `0x803a28` rides, `0x803a2c` ui, **`0x803a24` kids**, `0x803a30` staff, `0x803a34` speech. Guessing the name from the address gives `cat_rides` and is wrong.
 
-The family's dispatch-table handlers sit at **`0x00555e5e`** and **`0x00555ef7`**, in the same `0x555…` region as the bounce and walk handlers. Like the walk handlers, both were **undefined bytes** in the raw disassembly rather than recognised functions, which is why an automated scan of named functions misses them; they are reached through the pointer table like every other opcode.
+The family's dispatch-table handlers sit at **`0x00555e5e`** (86), **`0x00555ef7`** (87), **`0x00555f1b`** (88) and **`0x00555fda`** (89), in the same `0x555…` region as the bounce and walk handlers. Like the walk handlers, all four were **undefined bytes** in the raw disassembly rather than recognised functions, which is why an automated scan of named functions misses them; they are reached through the pointer table like every other opcode. Read them out of the table rather than hunting them: the jump table is at **`0x005567d8`**, so opcode *n*'s handler is the dword at `0x005567d8 + n*4`.
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
 | `FUN_00551130` | `STARTSCREAM` | Opcode **86**, 2 operands. **Refuses if a scream handle is already held**, logging `"RSSE: Started screaming without s…"`. Operand 2 bands the sample: 0 plays nothing, 1 → effect **0x47**, 2-3 → **0x48**, 4-7 → **0x49**, 8+ → **0x4a**. Volume applied as parameter **6** via `FUN_0051bc40`. The handle is kept on the script at **`+0xd0`**. | Its own string |
 | — | `STOPSCREAM` | Opcode **87**, 0 operands. Fades the held handle (`Sound_StopFading`) and clears `+0xd0`. | Disassembly |
-| `FUN_00551320` | `SINGLESCREAM` | Opcode **88**, 2 operands. A **4×4 grid**: the same first-operand band crossed with `(a+b)/0x32` clamped 0..3, giving ids **0x4b..0x5a**. So 71-74 are the LOOPING screams and 75-90 the one-shots. | Disassembly |
+| `FUN_00551320` | `SINGLESCREAM` | Opcode **88**, 2 operands. A **4×4 grid**: the same first-operand band crossed with `(a+b)/0x32` clamped 0..3, giving ids **0x4b..0x5a**. So 71-74 are the LOOPING screams and 75-90 the one-shots. **It applies NO volume and keeps NO handle** — every arm calls `Sound_PlayEffect` and returns it, and the handler at `0x00555f1b` throws the result away rather than storing it at `+0xd0` or `+0x48`. Fire and forget. | Disassembly |
 | `FUN_00551560` | — | `SINGLESCREAM`'s **negative branch**, `if ( operand2 < 0 )`: picks on band alone — 1 → **0x69**, 2-3 → **0x6a**, 4-7 → **0x6c**, 8+ → **0x6d** — and sets no volume. **0x6b is skipped; that is the original's own gap, not a transcription slip.** | Disassembly |
-| `FUN_00551290` | `SCREAMLEVEL` | Opcode **89**, 1 operand. `FUN_00551290( handle, operand, speed )`: re-sets the volume of the scream ALREADY playing by the same `(a+b)/2` clamp, and stores the answer back in `+0xd0`. | Disassembly |
+| `FUN_00551290` | `SCREAMLEVEL` | Opcode **89**, 1 operand. `FUN_00551290( handle, operand, speed )`: re-sets the volume of the scream ALREADY playing by the same `(a+b)/2` clamp. It does nothing at all when no handle is held. | Disassembly |
+| `0x00556009` | — | **`SCREAMLEVEL` overwrites the scream handle with the VOLUME CALL's return value** — `MOV dword ptr [EBP + 0xd0],EAX` straight after `CALL 0x00551290`, whose own return is `FUN_0051bc40`'s, which is `FUN_006b5b80`'s, which is a bare virtual call that Ghidra types `void`. **What lands in `+0xd0` therefore cannot be determined from this executable**, and a later `STOPSCREAM` fades whatever it is. Do not reproduce this without saying so. | Disassembly |
 | `FUN_0051bc40` | — | Applies a sound parameter; volume is parameter 6. | Disassembly |
 | `FUN_00466b70` | — | The sound position: indexes `DAT_007a4610` by the script's thing handle and fills SIX floats — two points with heights from the model's `+0x1c`/`+0x28`. **It is the RIDE's position, never a rider's.** | Disassembly |
 | `+0xc8` | — | The script's thing handle, which is where the position comes from. | Disassembly |
 
 **The volume is `(operand + the script's SPEED) / 2`, clamped 0..100.** `+0xc0` is not a scream field: it is the script's speed word, a short the loader sets to 50, the same one `WAIT` divides by. All three instructions READ it and none writes it. So `Bouncy`'s `STARTSCREAM VAR_TEMP, 20` at default speed is volume `(20+50)/2 = 35` — **a scream gets louder as the script runs faster.** `SCREAMLEVEL` does not write this field.
 
-`Bouncy` passes `SINGLESCREAM VAR_ONRIDE, 65535`, and 65535 as a SHORT is **-1**, so it takes the negative branch.
+`Bouncy` passes `SINGLESCREAM VAR_ONRIDE, 65535`, and 65535 as a SHORT is **-1**, so it takes the negative branch. The handler chooses between the two at `0x00555f6b` (`CMP ESI,EDI` against a zeroed EDI, then `JGE`), so the test is on the **second** operand and `>= 0` takes the grid.
 
-**Who uses the family**: `STARTSCREAM` and `STOPSCREAM` in 7 scripts each (Bouncy, incagod, Lookout, Mumbo, PorkPie, Spider, Volcano), `SINGLESCREAM` in 9, `SCREAMLEVEL` in 6. Only Bouncy is placed in Lost Kingdom.
+**Both branches are live in shipped content, and the split is lopsided**: of the **46** uses, **44** pass 65535 and take the negative branch, while **`jungle/rides/monkey.wad/Monkey.rse @259`** passes **90** and **`jungle/rides/totem.wad/Totem.RSE @136`** passes **100** — the only two that reach the 4×4 grid at all, and both in jungle. A reading that called the grid dead would be wrong.
+
+**Who uses the family — counted fresh over all 306 wads and all 308 scripts, 0 rejected:**
+
+| opcode | uses | scripts |
+|---|---|---|
+| `STARTSCREAM` | 40 | 40 |
+| `STOPSCREAM` | 80 | 41 |
+| `SINGLESCREAM` | 46 | 44 |
+| `SCREAMLEVEL` | **81** | **36** |
+
+**>>> THIS CORRECTS THE FOUR NUMBERS THAT STOOD HERE (7, 7, 9 and 6), AND THE WAY THEY WERE WRONG IS WORTH MORE THAN THE FIGURES. <<<** They were **jungle-only** — the sentence read as a whole-corpus claim and named seven jungle scripts — and even as a jungle count they were short by one, because **`Monkey.rse` has a lower-case extension** and a case-sensitive `.RSE` match drops it silently. Jungle alone is **8** `STARTSCREAM` scripts: Bouncy, incagod, Lookout, **Monkey**, Mumbo, PorkPie, Spider, Volcano. `SCREAMLEVEL` being twelve times commoner than "6 scripts" suggested is the headline: it is the third-most-used member of the family.
+
+Only **Bouncy** is placed in Lost Kingdom, and **Bouncy never calls `SCREAMLEVEL`** — so that opcode is dead by CONTENT there while being unavoidable corpus-wide.
 
 **The category listing corroborates the decode from an unrelated direction**: `global/sound/kids` declares `[105x1, 106x1, 108x2, 109x1, … 71x25, …]` — exactly the `0x69`, `0x6a`, `0x6c`, `0x6d` of the negative branch, **with 107 (`0x6b`) absent**, matching the gap in the original's own switch. That gap was read off the disassembly before the category was ever loaded. `cat_kidsSFX.map` declares 71-74 at offsets 312/332/352/372, a 20-byte stride.
+
+## How a scream VARIES, and it is the script that does it
+
+The variety is not inside the sound engine. It is `Bouncy.RSE`'s own subroutine at **193**, reached by `JSR ->193` from **22** and **116** — that is, on **every pass** of the ride loop:
+
+```
+193  BOUNCING     VAR_TEMP        ; how many riders are bouncing NOW
+195  CMP          VAR_SCREAMING, VAR_TEMP
+198  BRANCH_Z     ->207           ; unchanged? return, leave the scream alone
+200  STOPSCREAM
+201  STARTSCREAM  VAR_TEMP, 20    ; band = the RIDER COUNT
+204  COPY         VAR_SCREAMING, VAR_TEMP
+207  RETURN
+```
+
+So **the band operand is the rider count**, and the scream is torn down and restarted whenever that count crosses one of `STARTSCREAM`'s own boundaries (1, 2-3, 4-7, 8+). `COPY VAR_SCREAMING, 65535` at instruction **17** seeds the cache with -1, a value `BOUNCING` can never return, so the first pass always starts one. This is also why `STOPSCREAM` outnumbers `STARTSCREAM` two to one across the corpus: the pair is a restart idiom, not a start/stop pair.
+
+## Whether the held scream LOOPS one clip or is REPLAYED
+
+**`Sound_PlayEffect( handle, category, effect, x, y, z )` has no loop parameter at all**, and `STARTSCREAM` and `SINGLESCREAM` make the *identical* call — `Sound_PlayEffect(0, DAT_00803a24, id, x, y, z)`. The only difference between a "looping" scream and a "one-shot" one is that `STARTSCREAM` keeps the returned handle at `+0xd0` and `SINGLESCREAM` drops it. So **nothing in the call site distinguishes them**, and whether effect 0x47 repeats is decided somewhere below `Sound_PlayEffect`.
+
+**That "somewhere" could not be reached in this executable.** The sound manager at `DAT_00802bcc` is dispatched through `vtable+8` and has **only READ xrefs** — it is filled by data-driven init, the trap `ghidra-headless` already records for balance-loaded globals — and the play path runs into COM-style virtual dispatch (`FUN_006bf330` is the `BANK.map`/`SFX.map` *file opener*, not the effect parser). `docs/exe/audio.md`'s own Unknowns record the rest: QMixer's behaviour lives in **`QMixer.dll`**, which is not in the Ghidra project.
+
+**What the shipped data says, and it says replay.** From `data/global/sound/cat_kidsSFX.map`:
+
+| effect | variations | samples | repeat delay | sample length |
+|---|---|---|---|---|
+| 71 (`0x47`) | 4 | **25** | **2700 ms** | 392-1341 ms, mean 771 |
+| 72 (`0x48`) | 4 | **50** | 2700 ms | 294-3030 ms, mean 805 |
+| 73 (`0x49`) | 4 | **60** | 2700 ms | 310-3378 ms, mean 847 |
+| 74 (`0x4a`) | 4 | **59** | 2700 ms | 284-4400 ms, mean 888 |
+
+Three things follow. A **repeat delay is meaningless for a seamless loop** — it only becomes behaviour when a voice is allowed to end and the effect is asked for again. A seamless loop would make **24 of effect 71's 25 samples unreachable**, and 194 scream samples ship across the four bands. And this is the same shape as a park's **music**, which declares 5-7 arrangements of ~8.5 s behind a 10,000 ms delay, and which `ParkAudio.OnUpdate` already documents as *replayed, not looped*, "which is what the lobby does with its beds".
+
+**A dead end recorded so nobody walks it twice.** The effect record's fifth int (`EffectStride` 20, field 4) is **not** a loop flag, though it looks like one in `cat_kids` alone: it is 0 for every one-shot and `0x00060404` for all four scream bands. Swept across all **1267** effect records in all **31** shipped categories, **45** carry a value ≥ `0x10000` — and they include **`music` effect 2**, which is replayed rather than looped, and **`ui` effects 154 and 155**, which are button sounds. Whatever that field means, it does not mean "loops".
 
 ## Presence in a placed script is not execution
 

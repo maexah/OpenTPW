@@ -505,6 +505,26 @@ The ones that have bitten more than once.
   defect it was built to find. **Pair the picture with a number the game reports about itself** —
   here `water: requested Wrap sampler AnisotropicRepeat`, which does discriminate, where nothing
   computed from the pixels did.
+- **100** — **A threshold taken from each run's own distribution cannot compare two runs.** Comparing a
+  looped scream against a replayed one, the harness cut at "this window's 35th percentile plus 6 dB" —
+  a sensible floor for *one* recording and worthless across two. It landed at **−29.95 dBFS** for the
+  control and **−69.17 dBFS** for the subject, 39 dB apart, so the duty cycles, burst counts and gap
+  medians computed from them were three confident numbers measuring two different things: it reported
+  "155 onsets against 47" and "median gap 0.30 s against 1.30 s", which reads exactly like a result.
+  The same two captures against **fixed** thresholds answered cleanly — sounding above −60 dBFS, 93.3%
+  against 52.4%, and a 10th percentile of −55.1 dBFS against −180.0, the latter being true digital
+  silence. **An adaptive threshold is an instrument that re-calibrates itself to whatever it is shown**,
+  which is the one thing a control exists to prevent. This is rule 5's saturating measure wearing a
+  percentile. Note also what the census did instead: `plays 1` against `plays 8` needed no threshold.
+- **101** — **A `trap … EXIT` restore with a relative path dies if the script has changed directory,
+  and it still prints as though it ran.** A control substitution wrapped its restore in a trap —
+  correct, per rule 50 — then `cd`'d elsewhere to launch the harness. On exit the trap fired, `cp`
+  failed with "No such file or directory", `md5sum` printed nothing, and the line read `restored:`
+  with an empty value: a restore that reported success by saying nothing. The mutation stayed on disk
+  and the next build compiled it. **Use absolute paths in anything that runs at exit**, and make the
+  restore *assert* — print the md5 and compare it against the one taken before, so a silent failure
+  cannot pass for a quiet success. Rule 50 already says to verify the md5 after every control; this is
+  why it says "after **every**" rather than "at the end".
 
 ---
 

@@ -1,10 +1,16 @@
 # Status
 
-Last updated: 2026-09-21 on branch `alexah/100-cache-hit-keeps-its-sampler`, which is the tip, stacked
-on `alexah/99-pause-holds-sound`. It closes `docs/CLEANUP-PLAN.md` item 4: a texture served out of the
+Last updated: 2026-09-21 on branch `alexah/101-screams-vary-and-single-scream`, which is the tip,
+stacked on `alexah/100-cache-hit-keeps-its-sampler`. It closes `docs/CLEANUP-PLAN.md` item 5: a ride's
+scream is **replayed rather than looped**, so it picks a fresh sample every pass instead of repeating
+one clip for ever, and the two opcodes the family was missing — `SINGLESCREAM` and `SCREAMLEVEL` —
+are built. **LOCAL AND UNPUSHED** — rule 1 wants a fresh yes, and this line being written inside the
+commit it describes is exactly why no sha is named here.
+
+Before it: 2026-09-21 on branch `alexah/100-cache-hit-keeps-its-sampler`. It closes
+`docs/CLEANUP-PLAN.md` item 4: a texture served out of the
 cache now carries the sampler its flags asked for, so the lobby's sea comes back from a park drawn as
-ripples rather than as a diamond lattice. **LOCAL AND UNPUSHED** — rule 1 wants a fresh yes, and this
-line being written inside the commit it describes is exactly why no sha is named here.
+ripples rather than as a diamond lattice. **Also local and unpushed.**
 
 Before it: 2026-09-21 on branch `alexah/99-pause-holds-sound`, which closes item 6 — a park's menu now
 holds the sounds that have a place in the world, and leaves the ones that do not. **Also local and
@@ -66,14 +72,14 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 - **Laying and lifting PATH**, at 20 a cell from the theme's own `Costs.PathCell`. The cell joins itself to its neighbours by the original's own incremental rule and picks its art from the executable's own tile tables, so a run draws straights, ends, corners, T-junctions and a crossroads as the shape demands. Confirmed in the running game by census **and** by screenshot.
 - Spending: guests choose, queue for and **buy from the Drinks Shop and the Jungle Spray**, are charged on leaving, take the item's effects, and a sideshow winner is paid its prize.
 - People: 13 guests and 5 staff read from the save, drawn, walking, paying at the gate, queueing, boarding.
-- Rides: every placed thing runs its script; 72 of 106 opcodes implemented, the rest counted by `Unimplemented`.
+- Rides: every placed thing runs its script; 74 of 106 opcodes implemented, the rest counted by `Unimplemented`. **A ride screams with a different sample each pass**, at the band its own rider count asks for.
 
 ## Does not
 
 - No finances, litter, saving a park back, video, networking. **One** gadget button (Research) is still inert, and it is the one with nothing behind it to build: its screen is six effort sliders over research groups, and this game has no research, no researchers and no groups. The two global income pools, the balloon and costume arms, and the litter-bin errand (guest state 9) are named and unbuilt.
 - Eight of the nine per-object windows are unbuilt (only the ride's). Its stats table fills **four of seven** rows — Users last month, Excitement and Reliability are counted gaps. Patrol areas are dead, deferred by Alexah.
 - The `meter.wct` mapping behind the happiness gauge is wrong — the last fault Alexah found by playing that is still open.
-- 34 opcodes unimplemented. Three README lines and `RideScriptFile.cs:99` still quote older counts.
+- 32 opcodes unimplemented. Three README lines and `RideScriptFile.cs:99` still quote older counts.
 
 ## Next
 
@@ -129,14 +135,69 @@ Take counts fresh; these go stale within a day.
 
 | | | measured |
 |---|---|---|
-| Opcodes | 72 implemented of 106 | 2026-09-20, `case Opcode.` labels vs enum members |
-| Tests | **839** total, all of them run **with** the game and 0 skip | 2026-09-21, measured on `alexah/100` — seven added, `TextureSamplerTests` |
-| Tests without the game | **386** ran, **453 skipped**, of 839 | 2026-09-21, measured on `alexah/100`, taken fresh rather than computed |
+| Opcodes | **74** implemented of 106 | 2026-09-21, `case Opcode.` labels vs enum members — `SINGLESCREAM` and `SCREAMLEVEL` added |
+| Tests | **842** total, all of them run **with** the game and 0 skip | 2026-09-21, measured on `alexah/101` — three added to `ParkScreamTests` |
+| Tests without the game | **389** ran, **453 skipped**, of 842 | 2026-09-21, measured on `alexah/101`, taken fresh rather than computed — all three new scream tests are pure, so they run device-free |
 | Build warnings | 125 | 2026-09-21, measured at `3fb2d9c` — one fewer than 126 since the refpack reflection went |
 | Park load | **2.5 s**, worst phase `terrain` at 0.72 s | 2026-09-21, three jungle runs, per phase, `LoadTimer` |
 | Other themes | fantasy 1.0 s, hallow 1.1 s, space 1.2 s | 2026-09-21, one run each, first time ever timed |
 
 ## Recent
+
+**2026-09-21 — a ride screams with a different sample each pass, and `docs/CLEANUP-PLAN.md` item 5 is
+closed.** Branch `alexah/101-screams-vary-and-single-scream`. One harness on two builds differing in
+**one line**, `save/` unchanged within both runs:
+
+| the Belly Bounce, by the new `rides` census | control (one clip looped) | after (replayed) |
+|---|---|---|
+| effect 71, passes within one held scream | **1** | **8** |
+| effect 72, passes within one held scream | **1** | **6** |
+| distinct scream samples heard, whole park | 7 | **22** |
+
+**`plays` is the statistic, and `distinct` would have lied.** The control still reaches 7 distinct
+samples, because the ride starts and stops screaming about seven times in four minutes and each *start*
+picks a fresh clip — so "distinct went up" was satisfied by the broken build too. What separates them is
+passes *within one held scream*: 1 against 8. Predicted before the run.
+
+**Looping is not a parameter of the original's play call at all.** `Sound_PlayEffect( handle, category,
+effect, x, y, z )` takes no such argument and `STARTSCREAM` and `SINGLESCREAM` make the *identical*
+call — only the kept handle differs — so whether effect `0x47` repeats is decided below it, in
+`QMixer.dll`, which is not in the Ghidra project. **The shipped data settles it**: the four scream
+effects declare **4 variations over 25, 50, 60 and 59 samples behind a 2700 ms repeat delay**, with
+samples averaging ~800 ms. A repeat delay is meaningless for a seamless loop, and a loop leaves 24 of
+effect 71's 25 samples unreachable. It is the same shape as a park's music, which this file already
+records as replayed rather than looped.
+
+**The variety is the SCRIPT's, not the engine's**, and that is the decode that reframed the item:
+`Bouncy.RSE` calls a subroutine on every pass of its ride loop that re-issues `STOPSCREAM` +
+`STARTSCREAM` whenever the rider count changes band. Both effects 71 and 72 appear in one run, so the
+count really did cross a band edge — the decode seen happening.
+
+**Four corpus counts in `docs/exe/ride-operation.md` were wrong and are corrected.** Measured over all
+306 wads and all 308 scripts: `STARTSCREAM` **40**, `STOPSCREAM` **80**, `SINGLESCREAM` **46**,
+`SCREAMLEVEL` **81 uses in 36 scripts** — against the 7 / 7 / 9 / 6 that stood there. They were
+**jungle-only**, and short even for jungle, because **`Monkey.rse` has a lower-case extension** that a
+case-sensitive `.RSE` match drops silently.
+
+**Two clauses of the item's own "Confirm" could not be met as written.** "Show the level moving" is
+`SCREAMLEVEL`, and **no placed ride in Lost Kingdom calls it** — Bouncy has none — so the level cannot
+move in the shipped park; it is built because it is the third-most-used member of the family
+corpus-wide. And counting distinct samples *from the mix* would mean correlating against 25 candidate
+clips, so the game reports the count itself instead, which rule 89 prefers anyway.
+
+**Mutation-checked, including one expected to survive** (rule 48): `0x6c → 0x6b` fails exactly the
+negative-branch test; the grid base `0x4f → 0x4e` fails two, the second because `0x4f` then becomes
+reachable as a first-column id. **Removing the replay itself passes all 842**, said in advance — the
+pump needs an audio device and a loaded category, which a test run has neither of, so it rests on the
+capture, as items 4 and 6 did.
+
+**Two instrument faults of mine, both now rules.** Rule **100**: the first mix comparison took its
+threshold from each run's own 35th percentile, which put the two baselines **39 dB apart** and produced
+three confident numbers measuring different things. Against *fixed* thresholds the same captures
+answered cleanly — 93.3% against 52.4% sounding above −60 dBFS, and a 10th percentile of −55.1 dBFS
+against **−180**, true digital silence. Rule **101**: a `trap … EXIT` restore with a *relative* path
+died once the script had `cd`'d away and printed `restored:` with an empty md5 — a failure that reads
+as success, which left the mutation on disk for the next build.
 
 **2026-09-21 — the lobby's sea comes back from a park drawn right, and `docs/CLEANUP-PLAN.md` item 4
 is closed.** Branch `alexah/100-cache-hit-keeps-its-sampler`.

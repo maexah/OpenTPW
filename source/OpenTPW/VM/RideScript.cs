@@ -1118,6 +1118,14 @@ public sealed class RideScript
 				StopScream();
 				break;
 
+			case Opcode.SINGLESCREAM:
+				SingleScream( operands );
+				break;
+
+			case Opcode.SCREAMLEVEL:
+				ScreamLevel( operands );
+				break;
+
 			case Opcode.REMOVECHILD:
 				RemoveChild();
 				break;
@@ -1814,6 +1822,70 @@ public sealed class RideScript
 		ParkAudio.Current?.StopScream( Id );
 
 		Screaming = false;
+	}
+
+	/// <summary>
+	/// <c>SINGLESCREAM</c>: one scream, once - <c>FUN_00551320</c> and its negative twin
+	/// <c>FUN_00551560</c>, through <see cref="ParkAudio.SingleScream"/>.
+	///
+	/// <para>
+	/// Nothing is remembered about it. The engine keeps no handle (its handler throws the returned one
+	/// away) and this keeps no flag, so <see cref="Screaming"/> is untouched: a one-shot is not
+	/// something <c>STOPSCREAM</c> can stop, and a ride mid-breakdown may have both going at once.
+	/// </para>
+	/// </summary>
+	/// <remarks>
+	/// <b>Bouncy reaches this on the breakdown limb only</b> - instruction 162, after
+	/// <c>COPY VAR_BROKEN, 1</c> and a <c>STOPSCREAM</c> - so in a healthy Lost Kingdom park it is
+	/// live code that never fires. Break the ride and it announces itself.
+	/// </remarks>
+	private void SingleScream( IReadOnlyList<RideOperand> operands )
+	{
+		if ( operands.Count < 2 )
+		{
+			++NotImplemented;
+			Unimplemented.Report( $"{Name}: SINGLESCREAM with {operands.Count} operand(s), wanting 2" );
+			return;
+		}
+
+		var band = Value( operands[0] );
+		var level = Value( operands[1] );
+
+		if ( ParkObjects.Current is not { } objects || !objects.TryPlacedOrigin( ThingId, out var at ) )
+		{
+			++NotImplemented;
+			Unimplemented.Report( $"{Name}: SINGLESCREAM, with no placed thing {ThingId} to sound from" );
+			return;
+		}
+
+		ParkAudio.Current?.SingleScream( band, level, at );
+	}
+
+	/// <summary>
+	/// <c>SCREAMLEVEL</c>: moves the volume of the scream this script is already holding -
+	/// <c>FUN_00551290</c>, through <see cref="ParkAudio.ScreamLevel"/>.
+	///
+	/// <para>
+	/// One operand, averaged with the script's speed exactly as <c>STARTSCREAM</c>'s second is. The
+	/// engine does nothing when no handle is held, and neither does this.
+	/// </para>
+	/// </summary>
+	/// <remarks>
+	/// <b>No placed script in Lost Kingdom calls this</b> - Bouncy has no <c>SCREAMLEVEL</c> at all -
+	/// so it is dead by CONTENT there. It is built rather than counted because it is the third-most
+	/// used member of the family across the shipped corpus: <b>81 uses in 36 scripts</b>, measured over
+	/// all 306 wads. The eight jungle rides that do use it are all unplaced in the shipped save.
+	/// </remarks>
+	private void ScreamLevel( IReadOnlyList<RideOperand> operands )
+	{
+		if ( operands.Count < 1 )
+		{
+			++NotImplemented;
+			Unimplemented.Report( $"{Name}: SCREAMLEVEL with no operand, wanting 1" );
+			return;
+		}
+
+		ParkAudio.Current?.ScreamLevel( Id, Value( operands[0] ) );
 	}
 
 	private void SpawnSound( RideOperand name )
