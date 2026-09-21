@@ -130,6 +130,22 @@ more than the left's can - so the console's `drop` reaches the same `Level.Cance
 copy of it, and that shared body is what is measured: carry a ride, drop it, click the park, and
 nothing is built. Two copies would have been free to drift, with only one of them ever tested.
 
+**The MOVE button, measured last of all.** It was the one clause of the goal still resting on its
+parts rather than on a run: `Sell`, `Carry` and `PlaceCarried` each had measurements behind them, but
+the composition did not. Clicking `b_move` on a ride's window refunds 500 and fills the hand, and the
+next click on the park rebuilds it - the object count goes **14 -> 13 -> 14**, the balance
+**87987 -> 88487 -> 87987** for a net of **zero**, and the ride lands on a different cell,
+**(51,23) -> (38,15)**. That last assertion is the one that separates "moved" from "sold and rebuilt
+exactly where it stood", and a half-done move - sold and never replaced - fails all three.
+
+**The first run of that harness failed, for a reason worth keeping.** It read a net of **+25** and
+called a correct move broken. The harness stepped the game clock ten ticks between two balance
+readings, so guests paid at the gate mid-measurement - while its own docstring claimed the clock was
+stopped. `pause` stops the clock and `step` restarts it, and the debug console is polled once a
+**frame**, which runs regardless, so nothing in that test ever needed the clock to advance at all.
+The two amounts are now also read from the game's own lines, which no gate takings can move. This is
+the same trap recorded against the refund check earlier in the project, hit again in a new harness.
+
 **That end-to-end run caught what 818 green tests could not.** Objects and people share **one**
 thing-id numbering, and there were **two allocators** over it: `ParkState.NextThingId` rescanned the
 save's objects and people, so it never saw a hired staff member, while `ParkPeople` kept a private
