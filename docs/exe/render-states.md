@@ -94,6 +94,34 @@ drawn through `LobbyModel`.
 **Trap when sweeping `.md2`:** an animation file has `meshPtr` (`+0x70`) `== 0` and must be skipped, or
 its matrices are read as flag words and come out as float bit patterns.
 
+## Texture addressing is CLAMP, and nothing in the image ever wraps
+
+| Address / value | Original name | What it is | Evidence |
+|---|---|---|---|
+| `0x00566ce3` | `D3DTSS_ADDRESS = 3 = D3DTADDRESS_CLAMP` | Stage 0, in the renderer's own init block | `PUSH 0x3` / `PUSH 0xc` / `PUSH 0x0` before `CALL [ECX + 0xa0]` |
+| `0x00566dae` | `D3DTSS_ADDRESS = 3` | The same write, on the stage that block's register holds | Disassembly |
+
+Swept across **all 104 calls through the device vtable's `+0xa0`** (`SetTextureStageState`): 98 push a
+literal state, and the only **two** that write `D3DTSS_ADDRESS` (`0xc`) both write **3,
+`D3DTADDRESS_CLAMP`**. **No site writes `ADDRESSU` (`0xd`) or `ADDRESSV` (`0xe`) at all.**
+
+The literal states that do appear are the positive control that the sweep can see a state when there
+is one: `TEXCOORDINDEX` ×15, `COLORARG1` ×14, `COLOROP` ×13, `ALPHAOP` ×12, `ALPHAARG2` ×10,
+`COLORARG2` ×8, `ALPHAARG1` ×7, `MINFILTER` ×4, `MAGFILTER` and `MIPFILTER` ×3 each, `ADDRESS` ×2,
+and one each of the four `BUMPENVMAT` slots, `BUMPENVLSCALE`, `BUMPENVLOFFSET` and `MIPMAPLODBIAS` —
+98 in total.
+
+**Bounded:** 6 of the 104 push the state through a register (four of them inside that same init
+block, where it is the block's own counter) and are not covered. So this is "no literal site ever
+asks for wrapping", not "the engine cannot wrap".
+
+**What it does not license.** OpenTPW's lobby sea is a 10,000-unit plane whose UVs the shader computes
+as `position * 0.05`, so it runs hundreds of tiles wide and `CLAMP` would stretch a single texel over
+the whole ocean. The original's sea is its own mesh with authored UVs, which is why clamping costs it
+nothing there. Porting this constant onto that plane would be a faithful-looking change that wrecks
+the picture — the sea's `TextureFlags.Wrap` stays, and re-sourcing the sea from the original's mesh is
+where this becomes relevant.
+
 ## Three back-to-front sorts — which OpenTPW does not do
 
 World geometry is FVF `0x1c4` (`XYZRHW`, stride `0x20`), so vertex `+8` is screen Z. The original sorts

@@ -30,9 +30,18 @@ public class Water : ModelEntity
 		public float g_flFogDensity; // 4
 	}
 
+	/// <summary>
+	/// The sea's own texture, kept so that the debug console can say which sampler it is really being
+	/// drawn with. The shader scrolls past the edge of it every frame, so how it is addressed at that
+	/// edge is the whole of how the sea looks - see <see cref="Spawn"/>.
+	/// </summary>
+	public Texture? Sea { get; private set; }
+
 	public override void Spawn()
 	{
 		var texture = new Texture( "lobby/terrain/textures/jri_lak3.wct", TextureFlags.Wrap );
+
+		Sea = texture;
 
 		var material = new Material<ObjectUniformBuffer>( "content/shaders/water.shader" );
 		material.Set( "Color", texture );

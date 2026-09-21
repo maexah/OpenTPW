@@ -10,10 +10,10 @@ namespace OpenTPW;
 ///
 /// Disabled unless OPENTPW_DEBUG_CONSOLE=1 is set, and costs one boolean test per frame when off.
 /// To remove entirely: delete this file, the one call site in Level.Update(), Time.Paused and Time.StepFrames, and
-/// the members marked as being for it - LobbyCameraMode's DebugOrbit, DebugSelect and DebugSettle; LobbyWeather's
+/// the members marked as being for it - LobbyCameraMode's DebugOrbit, DebugSelect, DebugSettle and DebugHoldOrbit; LobbyWeather's
 /// Current, DebugRain, DebugBolt and DebugStrike; LobbyAudio's Muted, State and DebugPlaceSound; LobbyFlyer's DebugClosestApproach
 /// and DebugClosestSolid; Lightning's DebugAxisDistance and DebugOpacity; the advisor's Say and State;
-/// Game's RequestLobbyReload; ParkGuestSprites' Current, DebugFacing, Census and WriteGroundDash
+/// Game's RequestLobbyReload; Water's Sea; ParkGuestSprites' Current, DebugFacing, Census and WriteGroundDash
 /// (with the white square Load appends to the atlas for it, and the second quad a person Build reserves);
 /// ParkFrontEnd's DebugOpenMenu; and ParkPeople's Current and Census.
 ///
@@ -144,6 +144,16 @@ public static class DebugConsole
 				Reply( "running" );
 				break;
 
+			// Which of the lobby's two cameras runs. With nobody playing it FLIES - and that flight is
+			// seeded afresh every time a lobby is built, so `island`, `orbit` and `settle` are all
+			// ignored and two lobbies in one run stand in different places. `attract off` forces the
+			// orbiting camera instead, whose position comes from the island and the orbit angle alone,
+			// which is the only way to photograph the lobby before and after something from one spot.
+			case "attract":
+				LobbyCameraMode.DebugHoldOrbit = parts.Length > 1 && parts[1].ToLowerInvariant() == "off";
+				Reply( $"attract {(LobbyCameraMode.DebugHoldOrbit ? "off - orbiting the selected island" : "on - the camera flies itself")}" );
+				break;
+
 			case "settle":
 				// Drops the camera straight onto where it is headed, so a screenshot taken next
 				// frame is the same every run instead of depending on how long the ease had.
@@ -242,6 +252,30 @@ public static class DebugConsole
 					}
 				}
 
+				break;
+
+			// The sea's texture, and the sampler it is ACTUALLY drawn with. Water asks for
+			// TextureFlags.Wrap, but what comes back may have been served out of the texture cache,
+			// and a cache hit returns before the sampler is assigned - so `requested` and `sampler`
+			// disagreeing is the fault itself, said by the game rather than inferred from a
+			// photograph. `adopted` says which of the two roads the texture came down, and `size`
+			// is nought for a hit because the size is assigned on the same line the sampler is.
+			case "water":
+				if ( Entity.All.OfType<Water>().FirstOrDefault() is not { } waterEntity )
+				{
+					Reply( "water: no sea in this scene" );
+					break;
+				}
+
+				if ( waterEntity.Sea is not { } seaTexture )
+				{
+					Reply( "water: the sea has no texture" );
+					break;
+				}
+
+				Reply( $"water: path '{seaTexture.Path}' requested {seaTexture.Requested} " +
+					$"sampler {seaTexture.SamplerType} size {seaTexture.Width}x{seaTexture.Height} " +
+					$"adopted {seaTexture.Adopted}" );
 				break;
 
 			case "state":

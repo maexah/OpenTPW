@@ -164,6 +164,25 @@ public class LobbyCameraMode : CameraMode
 	public static bool Paused { get; set; }
 
 	/// <summary>
+	/// Holds the orbiting camera even with nobody playing, for DebugConsole.
+	///
+	/// <para>
+	/// The attract flight is seeded from <see cref="RandomPointInBox"/>, and <see cref="ForgetIsland"/>
+	/// clears <see cref="_wandering"/> as a lobby ends - so every lobby build rolls a fresh place to
+	/// stand. <see cref="DebugSelect"/>, <see cref="DebugOrbit"/> and <see cref="DebugSettle"/> are all
+	/// ignored while it is flying, because <see cref="Update"/> returns before it reads any of them.
+	/// Two lobbies in one run therefore cannot be photographed from the same viewpoint, which is what
+	/// this is for: the orbit branch takes its position from the island and the orbit angle alone.
+	/// </para>
+	///
+	/// <para>
+	/// Off unless a harness asks. The shipping game never sets it, and <see cref="Paused"/>'s reason for
+	/// being static is this one's as well.
+	/// </para>
+	/// </summary>
+	internal static bool DebugHoldOrbit { get; set; }
+
+	/// <summary>
 	/// Whether the lobby stays on the island it is showing, however it is asked to move. An Instant
 	/// Action game is played that way: the original's previous and next island handlers (0x005e1ee0
 	/// and 0x005e1f40) do nothing at all unless the game type is something other than 2, so nothing
@@ -249,7 +268,7 @@ public class LobbyCameraMode : CameraMode
 		// With nobody playing the lobby flies itself instead of orbiting one island - the same branch
 		// the original takes, on the same condition. Its test is that no player is selected
 		// (FUN_0048bcd0's +0x60 reading -1); ours is the roster having no current player.
-		if ( Players.Roster.Current is null )
+		if ( Players.Roster.Current is null && !DebugHoldOrbit )
 		{
 			Attract( islands );
 

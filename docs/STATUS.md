@@ -1,10 +1,14 @@
 # Status
 
-Last updated: 2026-09-21 on branch `alexah/99-pause-holds-sound`, which is the tip, stacked on
-`alexah/98-decode-each-texture-once`. It closes `docs/CLEANUP-PLAN.md` item 6: a park's menu now holds
-the sounds that have a place in the world, and leaves the ones that do not. **LOCAL AND UNPUSHED** —
-rule 1 wants a fresh yes, and this line being written inside the commit it describes is exactly why no
-sha is named here.
+Last updated: 2026-09-21 on branch `alexah/100-cache-hit-keeps-its-sampler`, which is the tip, stacked
+on `alexah/99-pause-holds-sound`. It closes `docs/CLEANUP-PLAN.md` item 4: a texture served out of the
+cache now carries the sampler its flags asked for, so the lobby's sea comes back from a park drawn as
+ripples rather than as a diamond lattice. **LOCAL AND UNPUSHED** — rule 1 wants a fresh yes, and this
+line being written inside the commit it describes is exactly why no sha is named here.
+
+Before it: 2026-09-21 on branch `alexah/99-pause-holds-sound`, which closes item 6 — a park's menu now
+holds the sounds that have a place in the world, and leaves the ones that do not. **Also local and
+unpushed.**
 
 Before it: 2026-09-21 on branch `alexah/98-decode-each-texture-once`, which was the tip, stacked on
 `alexah/97-load-time` — together they close `docs/CLEANUP-PLAN.md` item 9. **Both were pushed to
@@ -80,9 +84,12 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 player sees, in Alexah's order 9, 6, 4, then 1, 5, 3, 8, 2, then 7. **Item 9 is DONE and closed**: a
 park load went 23,298 ms → 2,488 ms, about 9.4x, with the worst phase now `terrain` at 718 ms.
 **Item 6 is DONE and closed too**: opening a park's menu now drops the mix by **34.96 dB** against a
-**0.00 dB** floor, where before it moved by −0.01 dB. **Next in that order is item 4** — the lobby
-ocean rendering wrongly on the way back from a park — which is not started. Neither load time nor this
-is in `PLAYER-GAPS.md`, and nothing there was ticked by either.
+**0.00 dB** floor, where before it moved by −0.01 dB. **And item 4 is DONE and closed**: the lobby's
+sea is served out of the texture cache on the way back from a park, and it now comes back carrying the
+**AnisotropicWrap** sampler it asked for instead of the default **AnisotropicRepeat** — which mirrors,
+and had been drawing the ocean as a diamond lattice. **Next in Alexah's order is item 1** — a ride
+playing its "being built" clip when a saved park loads — which is not started. None of the three is in
+`PLAYER-GAPS.md`, and nothing there was ticked by any of them.
 
 **Because that file is untracked it does not exist in a fresh clone.** It lives only on this machine;
 if it is lost, the eight remaining items are gone with it.
@@ -118,13 +125,61 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | 72 implemented of 106 | 2026-09-20, `case Opcode.` labels vs enum members |
-| Tests | **832** total, all of them run **with** the game and 0 skip | 2026-09-21, measured on `alexah/99` — four added, `VoicePlacementTests` |
-| Tests without the game | 379 ran, **453 skipped**, of 832 | 2026-09-21, measured on `alexah/99`, taken fresh rather than computed |
+| Tests | **839** total, all of them run **with** the game and 0 skip | 2026-09-21, measured on `alexah/100` — seven added, `TextureSamplerTests` |
+| Tests without the game | **386** ran, **453 skipped**, of 839 | 2026-09-21, measured on `alexah/100`, taken fresh rather than computed |
 | Build warnings | 125 | 2026-09-21, measured at `3fb2d9c` — one fewer than 126 since the refpack reflection went |
 | Park load | **2.5 s**, worst phase `terrain` at 0.72 s | 2026-09-21, three jungle runs, per phase, `LoadTimer` |
 | Other themes | fantasy 1.0 s, hallow 1.1 s, space 1.2 s | 2026-09-21, one run each, first time ever timed |
 
 ## Recent
+
+**2026-09-21 — the lobby's sea comes back from a park drawn right, and `docs/CLEANUP-PLAN.md` item 4
+is closed.** Branch `alexah/100-cache-hit-keeps-its-sampler`.
+
+`Water.Spawn` asks for `TextureFlags.Wrap`. Coming back from a park that request is served out of the
+texture cache — and a hit returned **before** the sampler, the size and the path were ever assigned, so
+the sea was drawn with the field's own default `AnisotropicRepeat`, which is `SamplerAddressMode.Mirror`.
+Every other tile was flipped in both axes, each wave line met its own reflection at the seam, and the
+ocean came back as a **diamond lattice**.
+
+| the sea, by the new `water` census | first lobby | back from a park, before | back from a park, after |
+|---|---|---|---|
+| `sampler` | AnisotropicWrap | **AnisotropicRepeat** | **AnisotropicWrap** |
+| `size` | 128x128 | **0x0** | **128x128** |
+| `path` | `…/jri_lak3.wct` | **empty** | `…/jri_lak3.wct` |
+
+One harness on both builds, the camera pinned to `cam=452,353,32` in all four shots, `save/` unchanged
+within both runs. The island, the jetty, the Dino and the sky are alike either side — they ask for
+`Repeat`, which already **is** the default — and that is the two-sided control.
+
+**A hit is now refused outright when its flags differ from the request**, because the flags decide the
+pixels as well as the sampler — `PinkChromaKey` rewrites them in place. **It cost nothing**:
+`texture=542` and `distinct=535` are identical before and after, so nothing in the game asks for one
+path under two sets of flags. Predicted before the run, then measured.
+
+**The scalar could not see it and the picture could not miss it.** Same crop, mean 55.69 → 55.62 and
+variance 221.83 → 222.79 — under half a percent, because mirroring changes *where* texels land and not
+*which* they are. A verdict resting on that number would have reported "no change" about a defect
+covering half the screen. `docs/VERIFYING.md` rule 99.
+
+**One instrument fault of mine cost a run.** The first pass photographed two quite different viewpoints
+while the console answered `island 0 'Lost Kingdom'` both times: with nobody playing the lobby camera is
+in **attract** mode, so `island`, `orbit` and `settle` are read only by an orbit branch that `Update`
+returns before reaching — and `ForgetIsland` reseeds the wander on every lobby build, so two lobbies in
+one run can never stand in the same place. A debug-only `attract off` forces the orbit branch.
+`lobbyshot.py`'s own recipe had gone stale the same way, without anyone touching it. Rule 98.
+
+**Mutation-checked, including one expected to survive** (rule 48): breaking `SamplerFor(Wrap)` fails
+**exactly** the three tests named for it; **removing the fix itself passes all 839**, because every road
+to a cached texture runs through `CreateTexture` and a test run has no graphics device. That is written
+at the test — the wiring rests on the capture, as item 6's audio wiring does.
+
+**A decode fact that changes none of it.** Of all **104** calls through the device vtable's `+0xa0`
+(`SetTextureStageState`), the only **two** writing `D3DTSS_ADDRESS` both write **`D3DTADDRESS_CLAMP`**,
+and nothing writes `ADDRESSU` or `ADDRESSV` — the original never wraps anything. It must **not** be
+ported onto OpenTPW's sea, which is a 10,000-unit plane whose UVs the shader computes from position:
+clamping would stretch one texel over the whole ocean, where the original's sea is a mesh with authored
+UVs. `docs/exe/render-states.md`, and it becomes live when the sea is re-sourced from that mesh.
 
 **2026-09-21 — a park's menu silences what a park's menu should, and `docs/CLEANUP-PLAN.md` item 6 is
 closed.** Branch `alexah/99-pause-holds-sound`. Open the menu mid-ride and the mix drops **34.96 dB**;

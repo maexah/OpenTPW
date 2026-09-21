@@ -9,9 +9,9 @@ Nine things a player sees, handed over 2026-09-21, in Alexah's order **9, 6, 4, 
 then 7**. It is **untracked by instruction** — never staged, and *not* in `.gitignore`, so it shows in
 every `git status` and a `git add -A` would sweep it in (which is one more reason `CLAUDE.md` rule 13
 forbids that). It lives on this machine only and is **absent from a fresh clone** — read it before
-assuming this file is the whole of the work. Its item 9 (park load
-time) is **done**; item 6 is next there. Nothing in *this* file was ticked by that work: load time
-does not appear here.
+assuming this file is the whole of the work. **Its items 9 (park load time), 6 (sound held under a
+pause) and 4 (the lobby ocean) are all done, and item 1 is next there.** Nothing in *this* file was
+ticked by any of that work: not one of the three appears here.
 
 **Alexah sets which item is the goal. One item per session** (`CLAUDE.md`, "How a session runs" 4).
 Tick an item here in the same commit that lands it, and move its detail to the page that owns it.

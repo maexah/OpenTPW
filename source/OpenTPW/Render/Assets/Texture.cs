@@ -12,6 +12,20 @@ public partial class Texture : Asset
 	public uint Height { get; private set; }
 
 	/// <summary>
+	/// The flags this texture was ASKED for, recorded before the cache is consulted so that it says
+	/// the same thing whether the file was read or an already-loaded texture was taken over.
+	/// <see cref="SamplerType"/> is what the texture ended up being drawn with; the two are meant to
+	/// agree, and this is here so that a harness can see whether they do.
+	/// </summary>
+	public TextureFlags Requested { get; private set; }
+
+	/// <summary>
+	/// Whether this took over an already-loaded texture's GPU handles instead of reading the file -
+	/// see <see cref="TryAdoptCached"/>.
+	/// </summary>
+	public bool Adopted { get; private set; }
+
+	/// <summary>
 	/// Whether this texture's alpha is a real gradient rather than a cut-out mask.
 	///
 	/// The original decides this from the pixels, not from anything a model says: FUN_00575160
@@ -79,10 +93,12 @@ public partial class Texture : Asset
 	/// </summary>
 	public Texture( string path, TextureFlags flags = TextureFlags.None )
 	{
+		Requested = flags;
+
 		// Before the file is touched, not after it has been decoded - see TryAdoptCached, which
 		// carries the measurement. A model names the same texture once per mesh that uses it, so
 		// this is the difference between decoding a .wct once and decoding it eighteen times.
-		if ( TryAdoptCached( path ) )
+		if ( TryAdoptCached( path, flags ) )
 			return;
 
 		if ( path.HasExtension( ".wct" ) )
@@ -286,25 +302,44 @@ public partial class Texture : Asset
 		return partial * 20 >= texels;
 	}
 
+	/// <summary>
+	/// The sampler a request's flags ask for.
+	///
+	/// <para>
+	/// Pulled out of <see cref="CreateTexture"/> so the rule can be tested without a graphics device,
+	/// which a test run has none of. The precedence is the one the three assignments it replaces had,
+	/// where each overwrote the last: Repeat beats Wrap beats PointFilter, and asking for nothing
+	/// leaves the same <see cref="SamplerType.AnisotropicRepeat"/> the field is declared with.
+	/// </para>
+	/// </summary>
+	internal static SamplerType SamplerFor( TextureFlags flags )
+	{
+		if ( flags.HasFlag( TextureFlags.Repeat ) )
+			return SamplerType.AnisotropicRepeat;
+
+		if ( flags.HasFlag( TextureFlags.Wrap ) )
+			return SamplerType.AnisotropicWrap;
+
+		if ( flags.HasFlag( TextureFlags.PointFilter ) )
+			return SamplerType.Point;
+
+		return SamplerType.AnisotropicRepeat;
+	}
+
 	private void CreateTexture( string debugName, byte[] data, uint width, uint height, TextureFlags flags )
 	{
+		Requested = flags;
+
 		// Still asked here as well as in the path constructor: this is also reached from the byte[]
 		// and Stream constructors, and from SignFile, which have no path to check beforehand.
-		if ( TryAdoptCached( debugName ) )
+		if ( TryAdoptCached( debugName, flags ) )
 			return;
 
 		PreprocessTextureData( ref data, ref width, ref height, flags );
 
 		HasGradedAlpha = IsGraded( data );
 
-		if ( flags.HasFlag( TextureFlags.PointFilter ) )
-			SamplerType = SamplerType.Point;
-
-		if ( flags.HasFlag( TextureFlags.Wrap ) )
-			SamplerType = SamplerType.AnisotropicWrap;
-
-		if ( flags.HasFlag( TextureFlags.Repeat ) )
-			SamplerType = SamplerType.AnisotropicRepeat;
+		SamplerType = SamplerFor( flags );
 
 		uint mipLevels = (uint)CalculateMipLevels( (int)width, (int)height, 1 );
 

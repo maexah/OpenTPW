@@ -483,6 +483,28 @@ The ones that have bitten more than once.
   fell through to "the mix DROPPED" on +0.70 dB, manufacturing a result from a missing control; the
   same run's real answer was "no change". Make the no-floor branch say so explicitly, because the
   default branch will otherwise say something confident.
+- **98** — **A debug selector can be read by a branch the subject never takes, and its reply will
+  still say it worked.** With nobody playing, `LobbyCameraMode.Update` returns early into
+  `Attract()` — a wander seeded from `RandomPointInBox`, and reseeded on *every* lobby build because
+  `ForgetIsland` clears `_wandering`. `island`, `orbit` and `settle` are read only by the orbit
+  branch that early return never reaches. So a harness that carefully pinned the camera photographed
+  two quite different viewpoints, and the console answered `island 0 'Lost Kingdom'` **both times** —
+  the reply echoes the selection, not where the camera is, which is rule 88's shape again. Two
+  lobbies in one run cannot be compared at all until the orbit branch is forced. **Assert the state
+  the subject actually uses, not the one you set**: `state` reports `cam=`, and an identical
+  `cam=452,353,32` in both shots is what finally made the frames comparable. Note also that a
+  recipe can go stale without anyone touching it — `lobbyshot.py`'s `pause → island → settle` dates
+  from before the attract camera existed and silently stopped pinning anything.
+- **99** — **A region's mean and variance can be identical while the texture on it is plainly
+  wrong.** The lobby sea drawn with mirrored addressing instead of wrapping is a **diamond lattice**
+  where it should be parallel ripples — unmistakable at a glance, across half the screen — and the
+  crop's statistics barely moved: mean 55.69 → 55.62, variance 221.83 → 222.79, under half a
+  percent. Mirroring rearranges *where* the same texels land without changing *which* texels they
+  are, so every summary statistic survives it intact. This is rule 90's "shape, not scalar" in its
+  purest form: a verdict resting on those percentages would have reported "no change" for the
+  defect it was built to find. **Pair the picture with a number the game reports about itself** —
+  here `water: requested Wrap sampler AnisotropicRepeat`, which does discriminate, where nothing
+  computed from the pixels did.
 
 ---
 

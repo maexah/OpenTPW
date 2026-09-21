@@ -41,12 +41,20 @@ partial class Texture
 	/// </para>
 	///
 	/// <para>
-	/// <b>The set of cache hits is unchanged, so nothing about the result differs.</b> A hit already
-	/// returned before the sampler, size and path were assigned, and before
-	/// <see cref="PreprocessTextureData"/> and <see cref="IsGraded"/> - both of which only touch the
-	/// local pixel array - so the only difference is the work that is no longer done. A texture
-	/// taken over here is not registered, exactly as a hit inside <c>CreateTexture</c> was not, which
-	/// is what keeps the loading bar's learned step count the same.
+	/// <b>A hit carries across everything the loading road assigns</b>, because a texture served from
+	/// here never runs <c>CreateTexture</c> at all and would otherwise keep the field initialisers -
+	/// the default sampler instead of the one its flags asked for, and no size and no path. <b>That is
+	/// not hypothetical: it is what the lobby's sea was drawn with.</b> <c>Water.Spawn</c> asks for
+	/// <c>TextureFlags.Wrap</c>, and on the way back from a park the request was served from here and
+	/// drawn with the default <c>Mirror</c> instead, which flips every other tile and turns the sea's
+	/// wave ripples into a diamond lattice. The paragraph this replaces claimed the skipped
+	/// assignments made no difference to the result; they made that one.
+	/// </para>
+	///
+	/// <para>
+	/// A texture taken over here is not registered, exactly as a hit inside <c>CreateTexture</c> is
+	/// not, which is what keeps the loading bar's learned step count the same - and it is also why
+	/// assigning <see cref="Asset.Path"/> here cannot put a second entry in the cache.
 	/// </para>
 	///
 	/// <para>
@@ -56,18 +64,34 @@ partial class Texture
 	/// rather than becoming a dictionary that would need invalidating by hand.
 	/// </para>
 	/// </summary>
-	private bool TryAdoptCached( string path )
+	private bool TryAdoptCached( string path, TextureFlags flags )
 	{
 		if ( !TryGetCachedTexture( path, out var cached ) )
 			return false;
 
-		NativeTexture = cached!.NativeTexture;
-		NativeTextureView = cached!.NativeTextureView;
+		// Served only to a request that asked for the same thing. The flags decide the sampler AND
+		// the pixels - PinkChromaKey rewrites them in place - so a texture loaded under one set is
+		// not the answer to a request carrying another, and handing it over would give the second
+		// caller the first's wrapping or an un-keyed copy. Nothing the game ships asks for one path
+		// under two sets of flags, so this refuses nothing today; what it stops is the next caller
+		// that does from quietly getting somebody else's.
+		if ( cached!.Requested != flags )
+			return false;
 
-		// Carried across with the GPU handles: it is a property of the pixels those handles hold, so
-		// a texture served from the cache has to answer the same as the one that loaded it. Left
-		// out, every shared texture would read as a cut-out.
-		HasGradedAlpha = cached!.HasGradedAlpha;
+		Adopted = true;
+
+		NativeTexture = cached.NativeTexture;
+		NativeTextureView = cached.NativeTextureView;
+
+		// Everything the loading road assigns. HasGradedAlpha is a property of the pixels these
+		// handles hold, so a shared texture has to answer the same as the one that loaded it - left
+		// out, every one of them read as a cut-out. The other four are the same argument: the
+		// sampler its flags asked for, the size, and the path it came from.
+		HasGradedAlpha = cached.HasGradedAlpha;
+		SamplerType = cached.SamplerType;
+		Width = cached.Width;
+		Height = cached.Height;
+		Path = cached.Path;
 
 		return true;
 	}
