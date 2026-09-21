@@ -10,7 +10,31 @@ Tick an item here in the same commit that lands it, and move its detail to the p
 Scope is **Lost Kingdom only**. Anything that changes nothing in `data/levels/jungle` is not on this list,
 however large it looks — that trap has been hit twice.
 
-## >>> THE CURRENT GOAL, SET BY ALEXAH 2026-09-20: CLOSE THE GUEST LOOP. DONE. <<<
+## >>> THE CURRENT GOAL, SET BY ALEXAH 2026-09-20: ITEM 2, THE GADGET BUTTONS. <<<
+
+> *"let's get the park management gadget buttons working. We can start with the purchase menu, so we
+> can start work on allowing players to build/delete paths, and queues, along with purchasing,
+> deleting, moving, and managing the rides/shops/sideshows themselves."*
+
+**>>> ALEXAH HAS CHOSEN THE BIG HALF ON PURPOSE. <<<** Item 2 below warns that making the buttons
+*honest* is small and making them *work* is "the single largest missing system in the project — do not
+start the second one by accident." **This is not by accident.** The warning stands as a statement of
+SIZE, not as a veto: scope one session at a time, and do not treat it as a reason to hesitate.
+
+**The order Alexah gave is a dependency order, not a preference:**
+
+1. **The purchase menu first** — every later verb hangs off it.
+2. Then **build / delete PATHS and QUEUES** — the map-editing half.
+3. Then **purchase, delete, move and manage RIDES / SHOPS / SIDESHOWS** — the object half.
+
+**One thing item 8 leaves this goal, and it is a live hook rather than a note.**
+`ParkRideChoice.QueueCellsFor` walks queue cells off the **map**, not out of the save — so anything
+that edits paths or queues changes that answer at runtime, and `mBackOfQueue` caches it. The original's
+own invalidate-and-rewalk is `FUN_004de1f0`: it zeroes `+0x3a`, recomputes, and logs *"Object's queue
+is now %d cells long"* — and its callers are exactly the path/cell editing family. **The editing half
+already has its engine-side hook identified; wire the invalidation or queues go stale.**
+
+## >>> THE GOAL BEFORE IT, SET 2026-09-20: CLOSE THE GUEST LOOP. DONE. <<<
 
 > Guests should be able to visit and purchase from shops and sideshows, new visitors should arrive,
 > visitors should go home, and they should be dropped off and picked up at the front of the park by a
