@@ -35,12 +35,17 @@ namespace OpenTPW;
 /// digit away and a different field entirely - see the remarks below.
 /// </para>
 /// <para>
-/// A pause also reaches out and does things a clock cannot, so copying only the clock is a deliberate
-/// simplification rather than the whole of it: it holds the advisor's voice, and it sets DAT_00803ad2,
-/// which makes the listener update replace its own second coordinate with 10000 (FUN_0051c1d0) - so
-/// every placed sound attenuates to nothing while the game is held. One caller in the game also
-/// freezes the interface's own timers, but none of the three screens modelled here is that caller:
-/// they all pass (0,0), which takes the other branch.
+/// A pause also reaches out and does things a clock cannot: it holds the advisor's voice, and it sets
+/// DAT_00803ad2, which makes the per-frame listener update (FUN_0051c1d0, called from three sites in
+/// Game_StateMachine) replace the listener's HEIGHT with 10000.0 - the original is Y-up, and the lobby's
+/// own call site passes a (0,1,0) top vector, which is what says so. <see cref="Audio.HoldPlaced"/> is
+/// where that is reproduced, and it carries the account of what is restored and what is ours.
+/// <b>How far that lift actually turned a sound down is UNDETERMINED</b> - QMixer's distance model is
+/// not in the executable - so this comment no longer says "every placed sound attenuates to nothing",
+/// which is what it used to say and what nothing measured supports. What the lift decides is WHICH
+/// sounds, not how much: a listener cannot reach one that was never placed against it.
+/// One caller in the game also freezes the interface's own timers, but none of the three screens
+/// modelled here is that caller: they all pass (0,0), which takes the other branch.
 /// </para>
 /// <para>
 /// <b>Only a park pauses, and it takes three separate things to arrange that.</b> 0x00786ba4 is

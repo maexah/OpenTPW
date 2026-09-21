@@ -218,6 +218,19 @@ internal sealed class ParkFrontEnd : Panel
 	}
 
 	/// <summary>
+	/// Escape, for the debug console - see <see cref="Level.OpenBuyScreen"/> for why the console needs a
+	/// way in that does not go through a key.
+	///
+	/// <para>
+	/// It goes through <see cref="MenuKey"/> rather than opening a <see cref="GameMenu"/> itself, so the
+	/// console takes the real road including the toggle, the modal guard and the camcorder exit. A command
+	/// that opened the menu directly would be testing a path no player reaches - and this one exists to
+	/// hold the game clock, which is exactly what a second, private road would be free to get wrong.
+	/// </para>
+	/// </summary>
+	internal void DebugOpenMenu() => MenuKey( _stack.Windows.Count > 0 ? _stack.Windows[^1] : null );
+
+	/// <summary>
 	/// The park's game menu, in the order GameMenu_BuildPark adds its choices, each with its id in the park
 	/// menu's handler - see the class remarks for where the order and the ids come from.
 	/// </summary>

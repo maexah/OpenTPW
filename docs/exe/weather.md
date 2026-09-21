@@ -332,7 +332,9 @@ Then: the gate is 0 all through the lobby anyway, and `Game_Pause` refuses regar
 
 ### `Game_Pause` is not unconditional
 
-`thunk_FUN_0048a6e0` runs only when **arg1 == 1**, and `Advisor_PauseVoice` + `FUN_0051c1c0(1)` are the **ELSE branch of arg2**. Every screen-driven site passes **(0,0)**, so for them the thunk never fires and the advisor path always does. **A pause also moves the 3D listener**: `DAT_00803ad2` is set, and `FUN_0051c1d0` then replaces the listener's second coordinate with **10000.0**.
+`thunk_FUN_0048a6e0` runs only when **arg1 == 1**, and `Advisor_PauseVoice` + `FUN_0051c1c0(1)` are the **ELSE branch of arg2**. Every screen-driven site passes **(0,0)**, so for them the thunk never fires and the advisor path always does. **A pause also moves the 3D listener**: `DAT_00803ad2` is set, and `FUN_0051c1d0` then replaces the listener's second coordinate with **10000.0**. That second coordinate is **height** — the original is Y-up, which its own lobby listener call site settles by passing a `(0,1,0)` top vector. Full decode in `audio.md`, "The listener, and what a pause does to it".
+
+**Two cautions added 2026-09-21.** The window procedure's `WM_ACTIVATEAPP` branch passes **`(1,1)`** at `0x0046b74c`, so "every call site passes (0,0)" — asserted by `park-engine.md` and corrected there — is false, and on **alt-tab** the *voice-pausing* path runs instead of the listener one. And **how far that 10,000-unit lift actually turns a sound down is undetermined**: QMixer's distance model is not in the executable. Do not read this row as "every placed sound attenuates to nothing".
 
 > Ghidra's xref index hides live code: `0x0040bf72` above is undisassembled, as were `FUN_0048b6a0` and the camcorder thunks. **An audit resting on Ghidra's xrefs silently undercounts.**
 

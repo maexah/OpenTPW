@@ -423,7 +423,12 @@ Stopwatch fields: `+0x30` = paused, `+0x28` = the time captured at the pause, `+
 
 Pause object fields: **`+0x1c` = paused, `+0x20` = quiet flag, `+0x3c` = park running.**
 
-**Every call site passes `PUSH 0x0; PUSH 0x0`**, so the quiet flag is always 0 and the sound half of a pause is `Advisor_PauseVoice()` + `FUN_0051c1c0(1)` (which only writes `DAT_00803ad2`). The voice-pausing path (`FUN_0051bcf0` / `FUN_0051bd30`) is never taken offline. **So a park's music keeps playing under the menu.**
+**>>> CORRECTED 2026-09-21: "every call site" was wrong, and so was the sentence built on it. <<<**
+**Every SCREEN-DRIVEN call site passes `PUSH 0x0; PUSH 0x0`** — six of them (`0x0047f26c`, `0x0049f29f`, `0x004a93d7`, `0x0048c87e`, `0x0049efba`, `0x004a3a6c`) — so for a menu, a message box or the options screen the quiet flag is 0 and the sound half of a pause is `Advisor_PauseVoice()` + `FUN_0051c1c0(1)` (which only writes `DAT_00803ad2`). **So a park's music keeps playing under the menu**, which is the part that stands.
+
+**But the window procedure passes `(1, 1)`.** `FUN_0046b600`'s `WM_ACTIVATEAPP` branch calls `Game_Pause(1,1)` at `0x0046b74c`, and arg2 non-zero takes the **voice-pausing** path `FUN_0051bcf0` and never touches the listener. So that path **is** taken offline — on **alt-tab** — and this page's "never taken offline" is refuted. (One site, `0x005f0b7f`, pushes `EBP` twice and its value was not established.)
+
+`FUN_0051bcf0` / `FUN_0051bd30` post commands differing only in payload address (`0x0070a268` vs `0x0070a270`), whose handlers `0x006b8e40` / `0x006b8eb0` are byte-identical but for one operand — `CALL [EDX+0x38]` against `CALL [EDX+0x3c]`, two adjacent virtual slots on the same sound object. That shape is a **suspend-all / resume-all pair**. Which matters for more than accuracy: **the original owns a primitive that holds the whole mix, spends it on losing focus, and pointedly does not use it for the park menu** — the menu takes the listener branch instead. That is the best evidence available that a park menu was never meant to silence everything.
 
 ### What the 31 ms tick drives
 

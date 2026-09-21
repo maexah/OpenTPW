@@ -134,7 +134,18 @@ The level is `clamp(things / 2, 0, 100)`, further clamped to 89. So the original
 
 ### Positioning
 
-Lobby sounds are flat, emitted at `(0, 0, 0)` with a fixed listener at `(0, 0, -50)`. Park sounds are positional, with the camera as the listener.
+Lobby sounds are flat, emitted at `(0, 0, 0)` with a fixed listener at `(0, 0, -50)`. **Confirmed exactly, 2026-09-21:** the lobby's listener call at `0x0054e70e` passes nine literals — position `(0, 0, -50)` (`0xc2480000` = −50.0f) with orientation vectors `(0, 0, 1)` and `(0, 1, 0)`. That `(0,1,0)` top vector is what independently establishes the original is **Y-up**, and therefore that the coordinate a pause overwrites with 10000.0 is **height**.
+
+**Park sounds are positional — but "with the camera as the listener" is incomplete.** A park has **two** listener call sites, chosen by the camera-mode mask `[0x00790ab0] & 0x16`:
+
+| Site | When | Listener position |
+|---|---|---|
+| `0x0054f958` | mask set | the camera globals `0x007909c0` / `c4` / `c8` |
+| `0x0054f9e4` | mask clear | the **midpoint** between the camera and a second point (`0x00790ab8` / `bc` / `c0`), lerped by the `0.5` at `0x00700f88` |
+
+Both share the orientation globals `0x007909b0`/`b4`/`b8` and `0x007909a0`/`a4`/`a8`. The camera block is written by `FUN_0042a990` and `FUN_0042b1c0`, which sets the orientation globals from a matrix's rows (`0x0042cb63`, `0x0042cb70`) and writes `0x00790ab8` at `0x0042c6ac`, right beside its own `TEST CL,0x16` on the same mask.
+
+All three sites call **`FUN_0051c1d0`**, which is the per-frame listener update — see `audio.md`, where this answers a question that page had recorded as "not found, and the search was stopped".
 
 ### Park parameters
 

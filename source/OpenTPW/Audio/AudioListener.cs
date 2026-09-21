@@ -66,10 +66,20 @@ internal readonly record struct AudioListener( Vector3 Position, Vector3 Right, 
 	/// </para>
 	/// <para>
 	/// <b>This is ours, not the original's.</b> The original had a distance model - it resolves
-	/// QMixer's SetDistanceMapping, and data\sound.sam carries a RadiusInfo[n].MINRADIUS tiered by
-	/// sound detail, which is the distance inside which it did not attenuate - but it never applied
-	/// any of it to the lobby, which it played entirely flat at (0,0,0). So there is no original lobby
-	/// behaviour to restore here, and this is a choice made to be defensible rather than a recovery.
+	/// QMixer's SetDistanceMapping - but it never applied any of it to the lobby, which it played
+	/// entirely flat at (0,0,0). So there is no original lobby behaviour to restore here, and this is
+	/// a choice made to be defensible rather than a recovery.
+	/// <para>
+	/// <b>This used to name data\sound.sam's RadiusInfo[n].MINRADIUS as that model's inner radius, and
+	/// it is not.</b> MINRADIUS feeds FUN_0051c700, a sound-detail ladder whose value reaches a
+	/// software per-voice level through FUN_006b8180 and an obstacle test (FUN_006c4c80) that uses
+	/// only two of the three axes - it never reaches SetDistanceMapping at all. The real parameters
+	/// are three dwords at a params record +0x38, passed from the single call site 0x006c581b, gated
+	/// on a request bit whose writer does not exist anywhere in the image; so QMixer's own default
+	/// mapping probably governs, and that lives in QMixer.dll rather than in the executable.
+	/// <b>The original's falloff law is therefore unknown, and the one here is not a reconstruction
+	/// of it.</b>
+	/// </para>
 	/// </para>
 	/// </summary>
 	public float AttenuationTo( Vector3 source )

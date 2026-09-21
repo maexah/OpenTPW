@@ -1482,7 +1482,11 @@ public sealed class ParkPeople : Entity
 				// nominated, and the only thing that clears a stale nomination is DropUnreadyNominee,
 				// which nothing calls. A queue stuck on that would look exactly like a quiet ride.
 				+ $"nominee {_behaviour.State.PersonBeingLoaded( thing.ThingId )} "
-				+ $"running {script.Running} letmeon {Read( ParkRideOperation.AdmitVariable )} "
+				// Whether it is screaming, because the pause holds a scream's VOICE and not the script:
+				// a held park stops the VM one instruction short of STOPSCREAM, so "still screaming"
+				// and "gone quiet" have to be readable apart. A pure getter, so polling cannot perturb it.
+				+ $"running {script.Running} screaming {script.Screaming} "
+				+ $"letmeon {Read( ParkRideOperation.AdmitVariable )} "
 				+ $"letmeoff {Read( ParkRideOperation.DismissVariable )} "
 				+ $"capacity {Read( ParkRideOperation.CapacityVariable )} "
 				+ $"duration {Read( ParkRideOperation.DurationVariable )} "

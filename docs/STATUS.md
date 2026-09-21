@@ -1,6 +1,12 @@
 # Status
 
-Last updated: 2026-09-21 on branch `alexah/98-decode-each-texture-once`, which is the tip, stacked on
+Last updated: 2026-09-21 on branch `alexah/99-pause-holds-sound`, which is the tip, stacked on
+`alexah/98-decode-each-texture-once`. It closes `docs/CLEANUP-PLAN.md` item 6: a park's menu now holds
+the sounds that have a place in the world, and leaves the ones that do not. **LOCAL AND UNPUSHED** —
+rule 1 wants a fresh yes, and this line being written inside the commit it describes is exactly why no
+sha is named here.
+
+Before it: 2026-09-21 on branch `alexah/98-decode-each-texture-once`, which was the tip, stacked on
 `alexah/97-load-time` — together they close `docs/CLEANUP-PLAN.md` item 9. **Both were pushed to
 `maexah/OpenTPW` on 2026-09-21** at Alexah's word, verified against the server with `git ls-remote`
 rather than a tracking ref. Every other local branch in both clones was surveyed the same way and
@@ -73,8 +79,10 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 **And `docs/CLEANUP-PLAN.md`, which is a second queue and is deliberately untracked** — nine things a
 player sees, in Alexah's order 9, 6, 4, then 1, 5, 3, 8, 2, then 7. **Item 9 is DONE and closed**: a
 park load went 23,298 ms → 2,488 ms, about 9.4x, with the worst phase now `terrain` at 718 ms.
-**Next in that order is item 6** — screams keep playing while the game is paused — which is not
-started. Load time is **not** in `PLAYER-GAPS.md` and nothing there was ticked by this work.
+**Item 6 is DONE and closed too**: opening a park's menu now drops the mix by **34.96 dB** against a
+**0.00 dB** floor, where before it moved by −0.01 dB. **Next in that order is item 4** — the lobby
+ocean rendering wrongly on the way back from a park — which is not started. Neither load time nor this
+is in `PLAYER-GAPS.md`, and nothing there was ticked by either.
 
 **Because that file is untracked it does not exist in a fresh clone.** It lives only on this machine;
 if it is lost, the eight remaining items are gone with it.
@@ -110,13 +118,72 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | 72 implemented of 106 | 2026-09-20, `case Opcode.` labels vs enum members |
-| Tests | **828** total, all of them run **with** the game and 0 skip | 2026-09-21, measured at `3fb2d9c` — one added, `TextureDecodeTests` |
-| Tests without the game | 379 ran, **449 skipped**, of 828 | 2026-09-21, measured at `3fb2d9c` |
+| Tests | **832** total, all of them run **with** the game and 0 skip | 2026-09-21, measured on `alexah/99` — four added, `VoicePlacementTests` |
+| Tests without the game | 379 ran, **453 skipped**, of 832 | 2026-09-21, measured on `alexah/99`, taken fresh rather than computed |
 | Build warnings | 125 | 2026-09-21, measured at `3fb2d9c` — one fewer than 126 since the refpack reflection went |
 | Park load | **2.5 s**, worst phase `terrain` at 0.72 s | 2026-09-21, three jungle runs, per phase, `LoadTimer` |
 | Other themes | fantasy 1.0 s, hallow 1.1 s, space 1.2 s | 2026-09-21, one run each, first time ever timed |
 
 ## Recent
+
+**2026-09-21 — a park's menu silences what a park's menu should, and `docs/CLEANUP-PLAN.md` item 6 is
+closed.** Branch `alexah/99-pause-holds-sound`. Open the menu mid-ride and the mix drops **34.96 dB**;
+close it and the same scream carries on from where it was.
+
+| | music only | floor | A shut | B **MENU OPEN** | C shut | A → B |
+|---|---|---|---|---|---|---|
+| before | −38.3 | 0.04 dB | −24.1 | −24.1 | −23.9 | **−0.01 dB** |
+| after | −56.3 | **0.00 dB** | −25.2 | **−60.1** | −25.2 | **+34.96 dB** |
+
+Same harness both runs, with the game clock **proven held** in each (`ticks 2840→2840` and
+`1975→1975`, +0 in 1.2 s). `save/` unchanged within both.
+
+**The item said to do it through the listener, and that could not have worked.** Its build line reads
+"hold every voice that has a position … through the listener, so it needs no per-voice bookkeeping".
+The rule is right; the route is inert here, twice over. A park never sets `Audio.ReferenceDistance` —
+the only two writes in the tree are both in `LobbyAudio`, and one of them zeroes it on unload — so
+`AudioListener.AttenuationTo` returns 1 before it measures anything; and `Voice.Locate` returns
+immediately for a voice with no position, which is three of the five kinds a park can have sounding.
+A ported listener lift would have silenced **nothing** and read exactly like a broken harness. It is
+built on `Voice.Pause` instead, which already existed with a 10 ms fade and has been carrying the
+advisor for weeks. **The walk lives in `Audio`, not `ParkAudio`** — because `ParkAudio` never keeps
+thunder's voice handle at all, and an engine-side walk also catches ride sounds when they arrive.
+
+**Three of this item's own premises were wrong, and the decode is what corrected them.**
+- *"Music is not placed, so it carries on"* — **false**. `FUN_0051e730` plays the park's music through
+  `Sound_PlayEffect(…, 2, 0, 0, 0)`, at the origin. Nothing in the original is unplaced. The
+  conclusion survives; the reason does not. What is safe to assert is structural: the pause acts
+  through the **listener**, and a listener cannot reach a sound never placed against it.
+- *"Every placed sound attenuates to nothing"* — **not established, in either direction**, and it is
+  not written anywhere any more. `SetDistanceMapping` has exactly one call site (`0x006c581b`), gated
+  on a request bit with **no writer anywhere in the image**, so QMixer's default mapping probably
+  governs and that lives in `QMixer.dll`. OpenTPW holds to **silence** — a choice standing in for a
+  curve nobody has measured, said at the site.
+- *"(screams, rain, thunder, the fountain)"* — wrong on **two of four**. Rain is played flat, and
+  there is no fountain voice of any kind. **Rain is left sounding**, which all three of the project's
+  own criteria agree on: the rule as written selects on having a position, the original's mechanism
+  cannot reach a flat sound, and the shipped data marks rain like the music. One line to flip.
+
+**`FUN_0051c1d0` is the per-frame listener update** — three call sites in `Game_StateMachine` — and a
+pause replaces its **height** with 10000.0. `docs/exe/audio.md` had recorded that search as stopped
+and not found; it is answered, along with the QMixer wrapper vtable at `0x00711920`. Two pages were
+**wrong** rather than merely stale: `park-engine.md`'s "every call site passes (0,0)" (the window
+proc passes `(1,1)`, so the voice-pausing path **is** taken offline — on alt-tab), and `scenes.md`'s
+"the camera as the listener" (a park has **two** listener sites, and the other is a midpoint).
+`AudioListener`'s own remarks asserted the refuted `MINRADIUS`→`SetDistanceMapping` binding **in
+code**, and that is corrected too.
+
+**Two instrument faults, both mine, both caught before they became findings.** The first baseline's
+floor read *digital silence*, which looks exactly like a device that never opened — it is not: a park's
+music is **replayed, not looped**, so the mix is genuinely silent for over half of every cycle and a
+3 s window fell in a gap; and with no floor my own verdict code called +0.70 dB a DROP. And
+`pkill -f "OpenTPW.dll"` **kills the shell running it**, because `-f` matches that shell's own command
+line — it killed the mutation check at its first line. Match on `pgrep -x dotnet` instead.
+
+**Mutation-checked, including one expected to survive** (rule 48): inverting `Voice.IsPlaced` fails
+**3 of 4** new tests; **deleting the wiring passes all four**, because `Audio.HoldPlaced` and
+`Audio.Play` both need an audio device that a test run has none of. That is written at the test rather
+than papered over — the wiring rests on the capture, which is what the item always said it would.
 
 **2026-09-21 - a park loads in 2.5 s where it took 23.3 s, and `docs/CLEANUP-PLAN.md` item 9 is
 closed.** Branch `alexah/98-decode-each-texture-once`, stacked on `alexah/97-load-time`. About **9.4x**.

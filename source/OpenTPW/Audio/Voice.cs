@@ -59,6 +59,19 @@ public sealed class Voice
 	internal bool Loop { get; }
 
 	/// <summary>
+	/// Whether this sounds somewhere in the world rather than flat - the same distinction
+	/// <see cref="Locate"/> turns on, asked from outside.
+	///
+	/// <para>
+	/// It is what <see cref="Audio.HoldPlaced"/> selects on, and the selection is the original's own:
+	/// a park's pause acts through the LISTENER, and a listener cannot reach a sound that was never
+	/// placed against it. So "has a position" is not a convenient proxy for which sounds a pause
+	/// should take - it is the very thing the original's mechanism can and cannot touch.
+	/// </para>
+	/// </summary>
+	internal bool IsPlaced => _position is not null;
+
+	/// <summary>
 	/// Which group this belongs to, which is what decides whether <see cref="Audio.Duck"/>
 	/// applies to it. Fixed for the life of the voice.
 	/// </summary>

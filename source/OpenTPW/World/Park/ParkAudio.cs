@@ -466,6 +466,20 @@ public sealed class ParkAudio : Entity
 	/// </summary>
 	protected override void OnUpdate()
 	{
+		// What the park's menu does to sound. The engine supplies the hold and the park says when, the
+		// same split the rest of this file sits on - and <see cref="Audio.HoldPlaced"/> carries the
+		// whole account of what is restoration here and what is ours.
+		//
+		// Before the guards below, not after: a theme whose music would not load must still go quiet
+		// when the world is held.
+		//
+		// GameClock.Paused rather than the window stack, because this is about the WORLD being held
+		// rather than about a window being open, and it is already correct for this frame -
+		// Level.Update sets it from PausedByWindow() before it updates any entity. The debug console's
+		// own `pause` is deliberately NOT this: that one stops Time so a screenshot repeats, and a
+		// park whose screams fell silent for it would be reporting the instrument rather than the game.
+		Audio.HoldPlaced( GameClock.Paused );
+
 		if ( !Audio.Ready || _music is not { IsValid: true } )
 			return;
 

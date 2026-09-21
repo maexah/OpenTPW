@@ -15,7 +15,7 @@ namespace OpenTPW;
 /// and DebugClosestSolid; Lightning's DebugAxisDistance and DebugOpacity; the advisor's Say and State;
 /// Game's RequestLobbyReload; ParkGuestSprites' Current, DebugFacing, Census and WriteGroundDash
 /// (with the white square Load appends to the atlas for it, and the second quad a person Build reserves);
-/// and ParkPeople's Current and Census.
+/// ParkFrontEnd's DebugOpenMenu; and ParkPeople's Current and Census.
 ///
 /// Engine and content: neither. It drives and reads both, and nothing else depends on it.
 ///
@@ -979,6 +979,31 @@ public static class DebugConsole
 				Reply( $"cell ({probeX},{probeY}) type {probed.Type} neighbours 0x{probed.Neighbours:x2} " +
 					$"direction 0x{probed.Direction:x2} flags 0x{probed.Flags:x4} " +
 					$"tile set {probed.TileSet} index {probed.TileIndex} angle {probed.TileAngle}" );
+				break;
+
+			// Opens the park's own game menu - the thing that actually HOLDS THE WORLD. A window with
+			// Pauses set is the only thing that stops GameClock, and until this was added nothing here
+			// could produce one: buyscreen, hirescreen and openthing all leave the clock running, and
+			// ParkObjectWindow sets Pauses = false outright.
+			//
+			// `pause` is a DIFFERENT pause and must not be used for this. That one sets Time.Paused so a
+			// screenshot repeats; this one is the game's own, which a park's menu asks for and the lobby's
+			// never does. Escape through XTEST reaches the same road, and this exists so the audio half
+			// can be driven without X at all.
+			//
+			// The reply reads the WINDOW STACK, not GameClock.Paused, and the difference is not
+			// cosmetic: Level.Update calls DebugConsole.Poll() BEFORE GameClock.Update, so the clock
+			// still carries last frame's answer at the moment this line is written and would report
+			// "running" on the very frame it pauses. PausedByWindow() is true the instant the window opens.
+			case "menu":
+				if ( Level.Current is not { Kind: Level.Scene.Park } menuPark )
+				{
+					Reply( "menu: only in a park - the lobby's menu does not pause, which is the original's own rule" );
+					break;
+				}
+
+				menuPark.Hud?.Children.OfType<UI.ParkFrontEnd>().FirstOrDefault()?.DebugOpenMenu();
+				Reply( $"menu: toggled, pausing={menuPark.PausedByWindow()}" );
 				break;
 
 			// Opens the purchase menu. A screen is verifiable by eye and capture rather than by test,

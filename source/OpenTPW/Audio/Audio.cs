@@ -266,6 +266,75 @@ public static class Audio
 			foreach ( var voice in Voices )
 				voice.FadeOut( fadeSeconds );
 		}
+
+		// A scene that ends while it is held does not carry the hold into the next one - see
+		// HoldPlaced. Nothing that survives this call is still sounding, so the flag is the only
+		// thing left that could be stale, and a voice started in the next scene would be born held.
+		_placedHeld = false;
+	}
+
+	/// <summary>
+	/// Whether voices that sound somewhere in the world are being held - see <see cref="HoldPlaced"/>.
+	/// </summary>
+	private static bool _placedHeld;
+
+	/// <summary>
+	/// Holds every voice that sounds somewhere in the world, or lets them all go again, while the
+	/// rest of the mix carries on. Idempotent: telling it what it already is costs nothing.
+	///
+	/// <para>
+	/// <b>This is what a park's menu does to sound, and the WHICH is a restoration while the HOW and
+	/// the HOW MUCH are deviations.</b> The original's pause helper (0x004092a0) sets DAT_00803ad2,
+	/// and the per-frame listener update (FUN_0051c1d0) then replaces the listener's height with
+	/// 10000.0 - so what a pause takes away is exactly what was placed against the listener, and what
+	/// it leaves is everything that never was. That division is the restoration, and it holds without
+	/// knowing a single number, because a listener cannot reach a sound it was never given a place for.
+	/// </para>
+	/// <para>
+	/// <b>The mechanism is ours, and it has to be.</b> Moving the listener would do nothing here: a
+	/// park never sets <see cref="ReferenceDistance"/>, so <see cref="AudioListener.AttenuationTo"/>
+	/// returns 1 before it measures anything, and three of the five kinds of voice a park can have
+	/// sounding carry no position for <see cref="Voice.Locate"/> to act on. Giving a park a reference
+	/// distance to make the trick work would start attenuating screams and thunder by camera distance
+	/// during ordinary play, which is a change to UNPAUSED behaviour that nothing asked for.
+	/// </para>
+	/// <para>
+	/// <b>And the amount is a choice standing in for a curve nobody has measured.</b> How far the
+	/// original's 10,000-unit lift actually turned a sound down is <i>undetermined</i>: QMixer's
+	/// distance model is not in the executable, SetDistanceMapping has one call site (0x006c581b)
+	/// gated on a request bit with no writer anywhere in the image, and the parameters live in
+	/// QMixer.dll. This holds to silence instead. <b>Do not write "attenuates to nothing"</b> - that
+	/// is the claim three documents assert without evidence, and this is not it.
+	/// </para>
+	/// <para>
+	/// Rain and the music sound straight through, which is not a decision but what the mechanism
+	/// gives: both are played flat. The interface's own sounds carry on for the same reason, which
+	/// matters more than it looks - the menu holding the world is what plays them.
+	/// </para>
+	/// </summary>
+	public static void HoldPlaced( bool held )
+	{
+		if ( _placedHeld == held )
+			return;
+
+		_placedHeld = held;
+
+		if ( !Ready )
+			return;
+
+		lock ( Lock )
+		{
+			foreach ( var voice in Voices )
+			{
+				if ( !voice.IsPlaced )
+					continue;
+
+				if ( held )
+					voice.Pause();
+				else
+					voice.Resume();
+			}
+		}
 	}
 
 	/// <summary>
@@ -298,6 +367,14 @@ public static class Audio
 			// From where the listener stands now, so a placed sound starts at the balance it belongs
 			// at rather than sliding to it across its first buffer.
 			voice.Locate( _listener, immediately: true );
+
+			// A placed voice started while the world is held is born held, so "nothing placed sounds
+			// while a park is paused" is true by construction rather than by the accident that every
+			// placed source happens to be driven by the game clock. Nothing can reach here today with
+			// the clock stopped - the weather and the ride VM both tick on it - which is exactly why
+			// the invariant is worth stating in code instead of resting on that.
+			if ( _placedHeld && voice.IsPlaced )
+				voice.Pause();
 
 			if ( Voices.Count >= MaxVoices )
 			{
