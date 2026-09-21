@@ -64,9 +64,13 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 (1, 2, 3, 6, 8); **three remain** (4, 5, 7). Alexah sets which one is the goal; one per session.
 
 **And `docs/CLEANUP-PLAN.md`, which is a second queue and is deliberately untracked** — nine things a
-player sees, in Alexah's order 9, 6, 4, then 1, 5, 3, 8, 2, then 7. **Item 9 is part done**: the load
-is measured and 4.5 s faster, and its remaining 16.3 s in the `.wct` decode is named at the item.
-Load time is **not** in `PLAYER-GAPS.md` and nothing there was ticked by this work.
+player sees, in Alexah's order 9, 6, 4, then 1, 5, 3, 8, 2, then 7. **Item 9 is DONE and closed**: a
+park load went 23,298 ms → 2,488 ms, about 9.4x, with the worst phase now `terrain` at 718 ms.
+**Next in that order is item 6** — screams keep playing while the game is paused — which is not
+started. Load time is **not** in `PLAYER-GAPS.md` and nothing there was ticked by this work.
+
+**Because that file is untracked it does not exist in a fresh clone.** It lives only on this machine;
+if it is lost, the eight remaining items are gone with it.
 
 **Where it stands, 2026-09-21. ITEM 2 IS DONE and is ticked.** All four of its parts landed and every
 one was confirmed in a running park: the purchase and hire screens with buy, sell, move, carry, hire,
@@ -99,9 +103,9 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | 72 implemented of 106 | 2026-09-20, `case Opcode.` labels vs enum members |
-| Tests | 827 total, all of them run **with** the game and 0 skip | 2026-09-21, measured after the category screens |
-| Tests without the game | 379 ran, **448 skipped**, of 827 | 2026-09-21, measured fresh |
-| Build warnings | 125 | 2026-09-21, measured at `e543129` - one fewer since the refpack reflection went |
+| Tests | **828** total, all of them run **with** the game and 0 skip | 2026-09-21, measured at `3fb2d9c` — one added, `TextureDecodeTests` |
+| Tests without the game | 379 ran, **449 skipped**, of 828 | 2026-09-21, measured at `3fb2d9c` |
+| Build warnings | 125 | 2026-09-21, measured at `3fb2d9c` — one fewer than 126 since the refpack reflection went |
 | Park load | **2.5 s**, worst phase `terrain` at 0.72 s | 2026-09-21, three jungle runs, per phase, `LoadTimer` |
 | Other themes | fantasy 1.0 s, hallow 1.1 s, space 1.2 s | 2026-09-21, one run each, first time ever timed |
 
@@ -157,8 +161,10 @@ selected textures with `FileExists`, which **does not look inside archives**, so
 and passed its own filter vacuously. `LobbyModel.LoadTexture`'s doc comment says exactly this and was
 read earlier the same session. Use `GetSize` for anything inside a `.wad`.
 
+**(superseded the same day — see the entry above, which took it to 2.5 s and closed the item. Kept for
+its method and its measurements, not as a statement of where things stand.)**
 **2026-09-21 - a park load is measured phase by phase, and costs 18.8 s where it cost 23.3 s.**
-`docs/CLEANUP-PLAN.md` item 9, **part done and explicitly not finished**. Branch
+`docs/CLEANUP-PLAN.md` item 9, part done at that point. Branch
 `alexah/97-load-time`, four commits, local and unpushed.
 
 **The measurement came first, and it overturned the item's own prediction.** The log already stamped
@@ -190,7 +196,7 @@ the refpack command list no longer rebuilt by reflection on every decompress, an
 table opened lazily and decoded once. **The branch they were said to be on does not exist in this
 clone** - `claude/opentpw-code-review-e9vkqf` is absent and all three SHAs are invalid objects here.
 
-**NOT DONE, and named rather than glossed:** `terrain` is still **16,333 ms**. It is inside the `.wct`
+**NOT DONE AS OF THIS ENTRY, and fixed by the entry above on the same day:** `terrain` was **16,333 ms**. It is inside the `.wct`
 decode. `Texture.UpdateFromWct` decodes before `CreateTexture` consults its cache, so the cache saves
 only the GPU upload - but measured at **≥2,000 decodes for ≥510 distinct textures**, that redundancy
 is only ~4:1 and **does not explain 16 s on its own**, which refuted my own first reading of it.

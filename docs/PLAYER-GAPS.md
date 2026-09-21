@@ -4,6 +4,15 @@ The work queue, **ordered by when a player meets it**, not by size or by how int
 Drawn up 2026-09-20 from `docs/STATUS.md`, the 42-thing Lost Kingdom census
 (`docs/history/current-task-archive.md`, grep `THE PARK IS FULLY DECODED`) and the live plan.
 
+**>>> THIS IS NOT THE ONLY QUEUE. `docs/CLEANUP-PLAN.md` IS A SECOND ONE AND IS UNTRACKED. <<<**
+Nine things a player sees, handed over 2026-09-21, in Alexah's order **9, 6, 4, then 1, 5, 3, 8, 2,
+then 7**. It is **untracked by instruction** — never staged, and *not* in `.gitignore`, so it shows in
+every `git status` and a `git add -A` would sweep it in (which is one more reason `CLAUDE.md` rule 13
+forbids that). It lives on this machine only and is **absent from a fresh clone** — read it before
+assuming this file is the whole of the work. Its item 9 (park load
+time) is **done**; item 6 is next there. Nothing in *this* file was ticked by that work: load time
+does not appear here.
+
 **Alexah sets which item is the goal. One item per session** (`CLAUDE.md`, "How a session runs" 4).
 Tick an item here in the same commit that lands it, and move its detail to the page that owns it.
 
