@@ -427,6 +427,26 @@ The ones that have bitten more than once.
   absence can use (`not built`, `nothing drives`, `no consumer`, `does not exist yet`, `until .* exists`),
   but note the worst cases use none of them: a stale COUNT reads as precision, not as a claim. Write
   comments that cannot rot by dating the negative and naming the *reason* rather than the *state*.
+- **90** — **Measure the CONTROL FLOOR before quoting any pixel percentage.** Two frames of a running park
+  with *nothing done between them* differ by **2.54–2.60%**: guests walk, flags move, water animates. A
+  whole-frame percentage below that floor is not weak evidence, it is *no* evidence — and a session was
+  spent treating 1.42%, 1.04% and 0.15% as results when all three were smaller than doing nothing at all.
+  Shoot a before/before pair first, then a before/after pair, and report both. Above the floor, a scalar
+  still cannot say *what* changed: build a DIFFERENCE IMAGE and look at the SHAPE. Ten path cells are a
+  connected block; a guest is a scattered blob. Shape discriminates where a number cannot.
+- **91** — **Never grab a frame while the game is paused.** `pause` plus `step <n>` gives the renderer a
+  frame budget, and once it is spent the game stops presenting entirely — so a grab returns the picture
+  from *before* the work while the console cheerfully reports the new state. It is not black and it is not
+  obviously wrong; it is plausible, which is what makes it dangerous. Worse, a "wait until two consecutive
+  grabs agree" check *passes instantly and perfectly* on a frozen renderer: it cannot tell "settled" from
+  "not drawing", so that check is worse than none. Determinism and screenshots are mutually exclusive here.
+- **92** — **Aim at the built park, and photograph something already there first.** Ten new cells out on
+  empty terrain at zoom 80 are a few pixels near the horizon, which is what several "nothing rendered"
+  captures were actually showing. Before concluding a feature does not draw, take a CONTROL SHOT of
+  something known to exist — the shipped avenue at cell (47,21) renders the gate, the rides, the guests and
+  the river. If the control is missing, the harness is at fault; if the control is there and the new thing
+  is not, only then is it the feature. Nine explanations were offered before that one-frame control was
+  tried, and every one of them was wrong.
 
 ---
 

@@ -351,8 +351,12 @@ internal sealed class ParkGadget : UiWindow
 			Clicked = () => Stack.Open( new ParkMapScreen( Stack ) )
 		} );
 
+		// Of this category's four screens only ENTRY PRICE is within reach: it is one row that writes the
+		// park's admission fee, where the finance, loans and staff-cost screens all rest on monthly ring
+		// buffers and a loan record this project does not read. See docs/exe/hud.md, which censuses all
+		// nine screens behind these three buttons with what each would need.
 		buttons.Add( NotYet( 0x2a, new UiRect( 156, 1241, 274, 1360 ), 471, "b_money",
-			"Finances", "a park keeps no running balance yet" ) );
+			"Finances", "only the entry price is reachable; the rest need monthly takings and loans" ) );
 
 		buttons.Add( NotYet( 0x2b, new UiRect( 274, 1254, 392, 1372 ), 472, "b_resrch",
 			"Research", "there is nothing to research and nobody to research it" ) );
