@@ -153,6 +153,24 @@ public sealed class ParkState
 		Takings += fee;
 	}
 
+	/// <summary>
+	/// Pays for something - the first thing in this project ever to take money OUT of a park.
+	///
+	/// <para>
+	/// <b>It does not refuse, and the refusal is deliberately the caller's.</b> The original tests
+	/// affordability at the moment a buy row is clicked - <c>FUN_004ac270</c> compares the item's price
+	/// against <c>FUN_006ad810()</c> and only then builds the placement mode - so by the time anything is
+	/// paid for the decision has already been made somewhere with a screen to complain on. A refusal here
+	/// would be a second, silent one.
+	/// </para>
+	/// <para>
+	/// <b>It moves <see cref="Balance"/> alone</b>, where <see cref="Take"/> moves the balance and the
+	/// running total together: <see cref="Takings"/> is what the gates have taken, and spending is not
+	/// negative takings.
+	/// </para>
+	/// </summary>
+	public void Spend( int cost ) => Balance -= cost;
+
 	/// <summary>Admits one guest and hands back which visitor they are, counting from one.</summary>
 	public int Admit() => ++VisitorsToDate;
 

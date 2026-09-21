@@ -47,13 +47,17 @@ public sealed class ParkItemCatalogue
 	/// <param name="CostOfGoods">
 	/// What the item costs the park to provide - and, for a sideshow, <b>the prize it pays a winner</b>.
 	/// </param>
+	/// <param name="BuildPrice">
+	/// What buying and building one costs - <see cref="ItemDescriptionFile.BuildPrice"/>. Nought on the
+	/// items no buy list can reach, which are exactly the <see cref="UiType"/> 4 ones.
+	/// </param>
 	public readonly record struct Item( int Id, string Name, string Directory, string Stem, int Width, int Depth,
 		string? SignPath, int UiType = ItemDescriptionFile.Feature, bool IsChoosable = false,
 		bool ProvidesRelief = false, bool HasQueue = false, bool IsIndoors = false,
 		int ExcitementLevel = 0, int AttractionValue = 0, int NewAttractionDecayTime = 0,
 		int ThirstEffect = 0, int HungerEffect = 0, int VomitEffect = 0, int HappinessEffect = 0,
 		int LitterEffect = 0, int TrackType = 0, int AnimationChannels = 1,
-		int ChanceOfWinning = 100, int CostOfGoods = 0 );
+		int ChanceOfWinning = 100, int CostOfGoods = 0, int BuildPrice = 0 );
 
 	private readonly Dictionary<int, Item> _items = [];
 
@@ -157,7 +161,7 @@ public sealed class ParkItemCatalogue
 				description.AttractionValue, description.NewAttractionDecayTime,
 				description.ThirstEffect, description.HungerEffect, description.VomitEffect,
 					description.HappinessEffect, description.LitterEffect, description.TrackType, description.NumSimultAnims,
-					description.ChanceOfWinning, description.CostOfGoods );
+					description.ChanceOfWinning, description.CostOfGoods, description.BuildPrice );
 
 			return true;
 		}
@@ -213,4 +217,17 @@ public sealed class ParkItemCatalogue
 
 	/// <summary>The item that calls itself <paramref name="id"/>, if this theme has one.</summary>
 	public bool TryGet( int id, out Item item ) => _items.TryGetValue( id, out item );
+
+	/// <summary>
+	/// Everything this theme catalogued, in no particular order - what a screen listing what a park may
+	/// buy walks, where <see cref="TryGet"/> answers only for a number already in hand.
+	/// </summary>
+	/// <remarks>
+	/// <b>It is unfiltered on purpose.</b> The original's buy list does the choosing itself, keeping a row
+	/// only where the item's <c>Info.WhichUIType</c> equals the tab being shown - so the four tabs are one
+	/// walk with one test, and the <see cref="ItemDescriptionFile.Feature"/>-and-above kinds that belong
+	/// to no tab (the vehicles, the gates, the lights, the land tools) fall out of that same test rather
+	/// than needing a rule of their own.
+	/// </remarks>
+	public IEnumerable<Item> All => _items.Values;
 }

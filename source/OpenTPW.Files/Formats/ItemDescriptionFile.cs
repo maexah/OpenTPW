@@ -244,6 +244,32 @@ public sealed class ItemDescriptionFile
 	/// </summary>
 	public int CostOfGoods => _costOfGoods ?? _category?.CostOfGoods ?? 0;
 
+	/// <summary>
+	/// What it costs to buy and build one - <c>Upgrades[0].CostOfUpgrade</c>, whose own comment in every
+	/// category file reads "cash cost when buying this item".
+	///
+	/// <para>
+	/// <b>It is the item's own file that decides it, not the category's</b>, the same way
+	/// <see cref="CostOfGoods"/> is: the categories declare a flat 1000 for rides and 100 for the other
+	/// three, while the jungle's own items run from <b>100</b> (Small Toilet, Litter Bin, every small rock
+	/// and bush) to <b>12,500</b> (Gorilla Thrilla). Belly Bounce 500, Drinks Shop 650, Jungle Spray 1750,
+	/// Round Fountain 150, Staff Room 500. Reading the category alone would price every ride the same.
+	/// </para>
+	/// <para>
+	/// <b><c>Upgrades[1]</c> and <c>[2]</c> are the later tiers and are NOT this</b> - the Belly Bounce's
+	/// are 400 and 500, and the shops, sideshows and features declare both as nought with the comment
+	/// "Always zero for shops (no upgrades possible)". Only slot nought is the purchase.
+	/// </para>
+	/// <para>
+	/// The items that declare nought are exactly the ones no buy list can reach: the three arrival
+	/// vehicles, the gates, the lights, the End sign, Mystery, and the two land tools - every one of them
+	/// <c>Info.WhichUIType</c> <b>4</b>, which the files themselves annotate "Not to be shown in UI".
+	/// </para>
+	/// </summary>
+	public int BuildPrice => _buildPrice ?? _category?.BuildPrice ?? 0;
+
+	private int? _buildPrice;
+
 	private int? _whichUIType;
 	private int? _isChoosable;
 	private int? _providesRelief;
@@ -371,6 +397,11 @@ public sealed class ItemDescriptionFile
 
 				case "UsageInfo.InitCostOfGoods":
 					_costOfGoods = Number( line );
+					break;
+
+				// Slot nought only - the later two are upgrade tiers, not the purchase. See BuildPrice.
+				case "Upgrades[0].CostOfUpgrade":
+					_buildPrice = Number( line );
 					break;
 			}
 		}

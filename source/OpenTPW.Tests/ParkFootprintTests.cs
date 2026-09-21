@@ -134,37 +134,26 @@ public class ParkFootprintTests
 	}
 
 	/// <summary>
-	/// Which cells a footprint of this size, anchored here and turned this far, ends up on - the item's
-	/// four footprint corners carried through the very origin and turn the model is handed.
+	/// Which cells a footprint of this size, anchored here and turned this far, ends up on.
+	///
+	/// <para>
+	/// <b>It asks the game rather than working it out, and it used to do the second.</b> This held its own
+	/// copy of the corner-carrying arithmetic, written out beside <see cref="ParkObjects"/>'s - so the
+	/// assertions below pinned the copy, and the shipped method could have broken without one of them
+	/// noticing. The real one answers cells now instead of a line of log text, so there is no longer any
+	/// reason to keep a second.
+	/// </para>
 	/// </summary>
+	/// <remarks>
+	/// Only <see cref="ParkItemCatalogue.Item.Width"/> and <see cref="ParkItemCatalogue.Item.Depth"/> are
+	/// filled in: the footprint is the whole of what this arithmetic reads, and naming the rest would
+	/// suggest otherwise. With no park built, cell size falls back to its default ten and the ground under
+	/// the anchor reads flat - which is what the numbers below were measured against.
+	/// </remarks>
 	private static (int X0, int Y0, int X1, int Y1) Covers( int cellX, int cellY, int angle, int width, int depth )
-	{
-		const float size = 10f;
-
-		var origin = ParkObjects.OriginFor( cellX, cellY, angle );
-		var turn = ParkObjects.Turn( angle );
-
-		float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
-
-		for ( var corner = 0; corner < 4; ++corner )
-		{
-			var local = new System.Numerics.Vector3(
-				(corner is 1 or 2 ? width : 0) * size,
-				(corner is 2 or 3 ? depth : 0) * size, 0f );
-
-			var at = System.Numerics.Vector3.Transform( local, turn );
-
-			minX = MathF.Min( minX, at.X + origin.X );
-			minY = MathF.Min( minY, at.Y + origin.Y );
-			maxX = MathF.Max( maxX, at.X + origin.X );
-			maxY = MathF.Max( maxY, at.Y + origin.Y );
-		}
-
-		// Half a cell in from each far edge, so a box ending exactly on a boundary names the cell it
-		// fills rather than the empty one it touches.
-		return ((int)MathF.Floor( minX / size ), (int)MathF.Floor( minY / size ),
-			(int)MathF.Floor( (maxX / size) - 0.5f ), (int)MathF.Floor( (maxY / size) - 0.5f ));
-	}
+		=> ParkObjects.FootprintAt(
+			new ParkItemCatalogue.Item( 0, string.Empty, string.Empty, string.Empty, width, depth, null ),
+			cellX, cellY, angle );
 
 	/// <summary>
 	/// A queue cell's tile index names a model, not a texture row - which is what the index of 5 on one of

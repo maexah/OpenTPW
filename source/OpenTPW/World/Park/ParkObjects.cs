@@ -260,8 +260,10 @@ public sealed class ParkObjects : Entity
 			// from completely separate things - this from the item's own footprint carried through its
 			// turn, and the save's from the cells it marks as built on - so when they agree the placement
 			// is right for a reason rather than by eye.
+			var footprint = FootprintOf( item, origin, turn );
+
 			Log.Info( $"{ThemeName}: '{item.Name}' anchored at ({placed.CellX},{placed.CellY}) turned " +
-				$"{placed.Angle} covers {FootprintOf( item, origin, turn )}" );
+				$"{placed.Angle} covers ({footprint.Left},{footprint.Top})..({footprint.Right},{footprint.Bottom})" );
 		}
 		catch ( Exception e )
 		{
@@ -452,7 +454,7 @@ public sealed class ParkObjects : Entity
 	private const float DefaultCellSize = 10f;
 
 	/// <summary>
-	/// Which cells an item actually stands on, as <c>(x0,y0)..(x1,y1)</c>: its footprint's four corners
+	/// Which cells an item actually stands on, inclusive at both ends: its footprint's four corners
 	/// carried through the very origin and turn the model was handed, then read back as cells.
 	///
 	/// <para>
@@ -462,8 +464,14 @@ public sealed class ParkObjects : Entity
 	/// camera a thing further away rides higher up the frame, so "north of" and "south of" read the same
 	/// as "nearer" and "further", and two items a cell apart are indistinguishable by eye.
 	/// </para>
+	/// <para>
+	/// <b>It answered as a string until placing things became possible.</b> It was written to be printed
+	/// into the line below and nothing else, so the one piece of arithmetic in the tree that knows which
+	/// cells an item covers could only be read by a person. Anything that builds, moves or sells needs
+	/// the same answer as numbers - which cells to mark, and which to give back.
+	/// </para>
 	/// </summary>
-	private static string FootprintOf( ParkItemCatalogue.Item item, Vector3 origin, Quaternion turn )
+	public static (int Left, int Top, int Right, int Bottom) FootprintOf( ParkItemCatalogue.Item item, Vector3 origin, Quaternion turn )
 	{
 		var field = ParkGround.Current?.Heightfield;
 
@@ -490,9 +498,26 @@ public sealed class ParkObjects : Entity
 
 		// Half a cell in from each far edge before rounding, so a box that ends exactly on a boundary
 		// names the cell it fills rather than the empty one it touches.
-		return $"({(int)MathF.Floor( minX / cellX )},{(int)MathF.Floor( minY / cellY )}).." +
-			$"({(int)MathF.Floor( (maxX / cellX) - 0.5f )},{(int)MathF.Floor( (maxY / cellY) - 0.5f )})";
+		return (
+			(int)MathF.Floor( minX / cellX ),
+			(int)MathF.Floor( minY / cellY ),
+			(int)MathF.Floor( (maxX / cellX) - 0.5f ),
+			(int)MathF.Floor( (maxY / cellY) - 0.5f ) );
 	}
+
+	/// <summary>
+	/// Which cells an item would stand on if it were anchored at a cell and turned that far - the same
+	/// answer as <see cref="FootprintOf"/>, for a caller holding a position rather than a transform.
+	/// </summary>
+	/// <remarks>
+	/// Anything deciding whether a thing may be built somewhere has the cell and the angle and not the
+	/// origin, so composing the two here keeps the pairing of <see cref="OriginFor"/> with
+	/// <see cref="Turn"/> in one place. Getting that pairing wrong is not hypothetical: turning about the
+	/// footprint's middle instead of the anchor cell's spun items inside their own box, and it took the
+	/// save's own footprint cells to catch it.
+	/// </remarks>
+	public static (int Left, int Top, int Right, int Bottom) FootprintAt( ParkItemCatalogue.Item item, int cellX, int cellY, int angle )
+		=> FootprintOf( item, OriginFor( cellX, cellY, angle ), Turn( angle ) );
 
 	/// <summary>
 	/// How far round an object stands, about the world's up axis - which is Z here, where the original's
