@@ -614,6 +614,171 @@ A mode reports its type from **vtable `+0x24`**, which is a one-instruction `MOV
 
 **The odd row is not an unknown mode — it is the base class.** `0x006fe9b0`'s type getter is `FUN_0067b0c0`, which is nothing but `__amsg_exit(0x19)`, the CRT's "pure virtual function called" abort. So the seven concrete modes (types 1, 3, 5, 6, 7, 8, 9) derive from it and `FUN_0046ced0` is the base constructor. **The table is complete; there is no eighth mode to go looking for.**
 
+### The twelve vtable slots, fixed by the two dispatchers
+
+    +0x00 deleting dtor   +0x04 LEFT down    +0x08 LEFT up     +0x0c RIGHT down
+    +0x10 RIGHT up        +0x14 (unnamed)    +0x18 MOVE(x,y,leftHeld,rightHeld)
+    +0x1c drag-with-left  +0x20 drag-with-right
+    +0x24 GetType         +0x28 OnInstall    +0x2c OnUninstall
+
+`FUN_0046c210` dispatches the buttons and `FUN_0046c2a0` the move and drags.
+
+### Type 1, the idle mode, does nothing at all
+
+**Every mouse slot in `0x006fea10` is a RET stub**, and its OnUninstall is a bare RET. So a world click
+in idle is not handled by the mode - it is handled by the park's window message proc at `0x004881a0`,
+which calls the hover updater `FUN_00486d90` and then the world click `FUN_004879d0`.
+
+**`FUN_004879d0` acts only when the current mode's type is 0 or 1**, which is what makes clicking the
+world an idle-mode-only behaviour. It switches on the hover category `DAT_007c24f4`:
+
+    category 4      a placed object  -> FUN_00486920, the per-object window dispatcher
+    category 7      a guest          -> FUN_004b79b0
+    categories 8-c  the five staff   -> FUN_004b6080, the staff detail window
+
+**A left click reaches the mode's own handler only when `FUN_004879d0` returned non-zero** - i.e. only
+when the world click did not consume it. A fixed "click then dispatch" sequence is wrong.
+
+### Picking is a real ray cast, not a grid lookup
+
+`FUN_0045bf90` builds a camera ray from the cursor, walks the terrain height grid testing the two
+triangles of each cell, then marches the ray testing object meshes. The hit point becomes a packed cell
+id in `FUN_0045d560`:
+
+    DAT_007b05cc = y * 0x80 + 1 + x        -- identical to this project's y*128 + x + 1
+
+Written as a **16-bit** store, 0 when the point is off the map. The "y" is really the **Z** component of
+the world hit point. The hovered *thing* is latched separately into the mouse-manager object at
+`0x007b05a8`, and a click **snapshots** it (`FUN_0048c960`) rather than re-reading it live.
+
+**The type-3 handlers do NOT test the cell for zero** before unpacking it; the out-of-range value is
+caught downstream by the bounds test inside the callees instead.
+
+### The verb space of mode type 3
+
+Type 3 is a 20-byte shell - `{vptr, 1, verb, carrying, u16 itemId}` - that publishes its verb to the one
+global current-tool `DAT_0081ae2c` and forwards three mouse events into the map-tool layer. **All the
+real work is a switch on that global**, not in the mode.
+
+    0    idle/clear        1    build path        3    build queue
+    4    PLACE a purchased item                   0xe/0x13  track kinds
+    0x14 recompute the selected object's queue    0x15/0x16 raise/lower land
+    0x1a link track        0x33 DEMOLISH/SELL     0x36 staff patrol rectangle
+    0x39 Buy Land          0x3a Clear Land        0x3b MOVE an existing object
+    0xb, 0x10, 0x19, 0x34, 0x35, 0x38  also live; 0x32 is dispatched but NOT TRACED to a setter
+
+**`FUN_0052f200` is not the only setter** - `FUN_0052f580` has 24 further call sites. And reading "the
+literal PUSH before the call" is unsound as a blanket method: several sites pass a register.
+
+Commit is on **button UP**, into `FUN_00528a70( x, y, verb, rotation, apply, second )` - the footprint
+validator and applier, which walks every footprint cell, rotates the offsets for the four rotations
+`0 / 0x5a / 0xb4 / 0x10e`, and bounds-tests each. Hover calls the same function with apply = 0.
+
+**Money is debited at PLACE time**, inside the object constructor `FUN_004db090`, from the item's
+`+0x1b8`. **So right-click cancel needs no refund - nothing was taken.** The mode's OnUninstall is a
+bare RET; switching away frees 20 bytes and nothing else.
+
+**Rotation is never changed by a user input on any traced path.** It is reset to 0 on commit,
+auto-oriented from the cell's direction bits when re-placing an existing thing, and inherited from the
+source on move or clone. Whether the original has a manual rotate is an open question.
+
+### Placement feedback: the `m_*` textures are the game's own vocabulary
+
+The per-cell verdict `FUN_00535670` returns a **marker texture index** into a 20-entry table at
+`0x00763b38`: 0 blue (allowed), 1 red (refused), 2 orange, 3 `m_enter`, 4 `m_exit`, 5 `m_direct`,
+6 `m_front`, 7 `m_inout`, 8 `m_link`, 9 `m_break`, 10 `m_cross`, 11 `m_end`, 12 `m_nocash`,
+13 `m_erase`. **`m_cross` and `m_nocash` have no producer** - no path passes either index. And
+`m_nopath.tga` ships in `data/generic/dynamic/textures` but its name appears **nowhere** in the
+executable.
+
+### Sell, move and the scrap value
+
+**MOVE (verb 0x3b) is demolish-then-buy-again**, literally: the object is destroyed and refunded at
+pickup, the footprint fully released, and the full price re-charged at put-down by the same constructor
+a fresh purchase uses. Nothing in the construction path distinguishes a move from a purchase.
+
+**DEMOLISH (verb 0x33) refunds `price * percent / 100`**, where percent is `FUN_004e2290` - a per-item,
+per-build-state, **per-age-bucket** field selected from a four-year scrap table at
+`Upgrades[level]+0x08..+0x14`, returning a literal **100 for a brand-new object**. It is *not* a flat
+half. The same expression is packaged as `FUN_004e2400` and shown on the object's own window before the
+player sells, which is UITEXT 23 **"Scrap value"**.
+
+**Delete does NOT go through the interaction-mode system** - `FUN_0048cd10` calls `FUN_0052f200(0x33,1)`
+and then the map-click apply directly. Only MOVE builds a mode.
+
+**Nothing refuses to sell a ride with guests queueing or riding, and nothing evicts them**; each peep
+discovers it on its own tick and unlinks itself.
+
+There IS a confirmation box, UITEXT 396, **gated on an options checkbox** (`DAT_0078d90f`) - the same
+flag gates the staff dismissal box, UITEXT 397.
+
+**Every caller of `FUN_004de1f0` is in the cell-editing family**, as this project suspected: five
+functions, eight call sites, all of them the map-click apply, the cell-type setter, the drag-step apply
+and the footprint stamp.
+
+### Hiring is a placement verb, and there is no hire fee
+
+**`FUN_00507bf0` does not create a person.** It builds a **type-5** "place staff" mode carrying
+(thingType, grade, costume, nameIndex); the staff thing is constructed on the next left click at the
+cursor cell. Cancelling returns the candidate to the pool; completing removes it.
+
+**There is no one-off hire fee anywhere on that path.** `StaffPoolInfo.BaseCostPerStaff` (2000) and
+`CostPerQualityLevel` (100) exist in the balance file and are **never read by the executable**. The only
+money is a monthly wage, `PerGradeStaffConsts[grade].BaseWage * PerTypeStaffConsts[kind].PayMultiplier`,
+debited per staff thing on the new-month event - and dismissal charges exactly one further month.
+
+**Type 5 and type 6 are different modes and the difference matters**: type 5 (a fresh hire)
+**constructs** a new thing; type 6 (an existing worker picked up) **teleports** the existing thing to
+the cell centre and sets it idle. Pick-up always proceeds whatever the worker was doing.
+
+The candidate pool is 32 records of 20 bytes:
+`{int kind; int nameIndex; byte grade; byte costume; byte occupied; byte takenForPlacement; int createdTick; int lifetime}`.
+Grade runs 0..4 and the hire screen draws it as `(grade << 10) / 5`, **so a maximum-grade candidate
+fills only 80% of its meter**. Names come from five per-kind tables of 35 entries each; there is no
+`MALE_NAMES` table in the executable at all.
+
+**Two staff numberings, and they are different permutations** - the thing type (handyman 5, mechanic 4,
+entertainer 6, guard 7, researcher 8) and the sprite bank (entertainers 4, handymen 5, mechanics 6,
+guards 7, researchers 8).
+
+### The per-object management screen is nine screens
+
+There is no single one. Nine window classes share one base whose opener is `FUN_0048cea0`. Clicking a
+placed object runs `FUN_00486920( thing )`, which switches on the thing's kind byte at `+2` and, for a
+placed object, on the item's `WhichUIType`:
+
+| Window | Builder | Stream | Handler |
+|---|---|---|---|
+| Ride | `FUN_004af980` | `0x00755150` | `FUN_004af600` |
+| Shop | `FUN_004b0e30` | `0x00755908` | `FUN_004b0b30` |
+| Sideshow | `FUN_004b2430` | `0x00755e80` | `FUN_004b2150` |
+| Toilet | `FUN_00497990` | `0x00751190` | `FUN_00497640` |
+| Staff room | `FUN_004b5290` | `0x00756ba0` | `FUN_004b4fc0` |
+| Misc item | `FUN_00499eb0` | `0x00751a68` | `0x00499bb0` |
+| Upgrade | `FUN_004b6ae0` | `0x007573c8` | `0x004b67f0` |
+| **Staff** | `FUN_004b6080` | `0x00756f48` | `FUN_004b5cb0` |
+| Visitor | `FUN_004b79b0` | `0x007575e0` | `FUN_004b7720` |
+
+**The identification is proven by the UIHELPTEXT rows compiled into each stream** - "delete the ride"
+vs "the shop" vs "the sideshow" vs "the toilet" - not inferred.
+
+Five verbs live in the shared base: cycle forward, cycle back, move, delete, close. **The ride's three
+sliders are buffered and committed only when the window closes OR either cycle button is pressed**, and
+capacity and duration commit **byte-wide** where speed is a dword.
+
+**On the staff window**: FIRE is control **0x50c**, PICK UP is **0x50e**, and the patrol-area toggle is
+**0x510** (map tool 0x36), whose "no area" sentinel is the pair (1, 0x4000) - the whole map.
+
+**Ctrl+click on a placed object does not open its window** - it buys another copy of the same item and
+puts it in the cursor.
+
+### A correction that reaches every string in the game
+
+`FUN_005da3c0` is **not** an assert taking a condition - its first argument is a severity/channel and it
+is a printf-style logger. **In the retail image its entire body is a single `RET`.** So every diagnostic
+quoted anywhere in these pages - "Can't put staff here", "Dropping staff member %d", "SPEED = %d" - is a
+stripped no-op that the player never sees. Re-implement them as debug logging, never as UI.
+
 ---
 
 ## Postcard
