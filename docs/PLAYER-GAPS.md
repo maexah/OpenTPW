@@ -169,8 +169,27 @@ dependency order is untouched, so this item stays open.
       `ParkPeople` hire, fire, pick up and put down. Money is taken at PLACE time, from the item's
       `+0x1b8`, which is why cancelling a carry needs no refund.
 - [ ] **Info, Money and Research** - still `NotYet(...)` at `ParkGadget.cs`.
-- [ ] **Paths and queues** - step 2 of the order Alexah gave, and the one that needs
-      `FUN_004de1f0`'s invalidate-and-rewalk hooked up or `mBackOfQueue` goes stale.
+- [x] **PATHS - DONE 2026-09-21, and verified in the running game.** `path 10 10` lays one for
+      **20** (`Costs.PathCell`, measured from `Standard.sam` and confirmed through the game's own
+      balance reader); `delpath` lifts one and **refunds nothing**, which is the original's own
+      asymmetry - only a queue cell credits anything back. A laid cell joins itself up by
+      `FUN_005348d0`'s rule and takes its art from the executable's own two tile tables.
+      **Photographed:** a plus of five cells drew end pieces at all four tips and a **crossroads** at
+      the centre, and the HUD money went **87987 -> 87887** - exactly 100 for five cells, on screen.
+      **The running game found a defect no test could have:** tiles were stale by one operation,
+      because `Lay` retiled only the cell it laid while the link pass had also rewritten its
+      NEIGHBOURS' masks. The lift path was always right, and that is what identified it.
+- [ ] **QUEUES** - the other half of step 2, and the one that needs `FUN_004de1f0`'s
+      invalidate-and-rewalk hooked up or `mBackOfQueue` goes stale. Now decoded end to end: a queue
+      is a re-derivable WALK, not a stored link, resting on a flow byte written as the opposite of
+      the step into the cell (first writer wins) and an owner-cell id; **the bond to a ride entrance
+      is attempted only on the FIRST cell of a run**; and deleting a queue cell **orphans** the
+      remainder, which is correct rather than a bug to fix.
+- [ ] **Building by POINTING rather than by console.** The verbs work; the mouse path does not yet
+      arm them. The original has **no drag** - both drag vtable slots are bare `RET` stubs - so a run
+      is click-to-anchor then click-to-commit, with the target snapped to the dominant axis. You
+      reach the path tool by clicking **plain ground or an existing path cell** (hover classes 2 and
+      1), never from the purchase menu: paths are not catalogue items and have no buy row.
 - [x] **Placing by pointing - DONE 2026-09-21.** Both screens put the item or the person in the hand,
       and clicking the park puts them down. `Level.WorldClick` takes the click only when the interface
       did not, and **anything in the hand goes down before any window opens** - the original's own

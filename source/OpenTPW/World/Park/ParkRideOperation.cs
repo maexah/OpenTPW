@@ -414,7 +414,10 @@ public sealed class ParkRideOperation
 			return;
 		}
 
-		var exit = park.CellAt( ride.ExitCellX, ride.ExitCellY );
+		// The running park's cell, not the file's - a queue a player has laid at a ride's exit since the
+		// park loaded exists only in the overlay, and this is the test that keeps a dismissed guest from
+		// being aimed into one. See ParkRideChoice.LiveCell, which reads the same seam for the same reason.
+		var exit = ParkState.CellFor( park, ride.ExitCellX, ride.ExitCellY );
 
 		// mExitPos == mEntryPos is ten of this park's eleven objects, and for those the original turns
 		// the cell's facing round before stepping off it - FUN_004d8c00.
@@ -429,7 +432,9 @@ public sealed class ParkRideOperation
 
 		var (nextX, nextY) = MapStep.Beyond( ride.ExitCellX, ride.ExitCellY, towards );
 
-		if ( !ParkState.OnMap( nextX, nextY ) || CellEdge.IsQueue( park.CellAt( nextX, nextY ).Type ) )
+		var beyond = ParkState.CellFor( park, nextX, nextY );
+
+		if ( !ParkState.OnMap( nextX, nextY ) || CellEdge.IsQueue( beyond.Type ) )
 		{
 			// The original refuses the dismissal here rather than aiming them into a queue - see the
 			// remarks on Dismiss for why the refusal itself is not reproduced.

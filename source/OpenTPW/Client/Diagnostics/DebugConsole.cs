@@ -835,6 +835,47 @@ public static class DebugConsole
 					: "move <thingId> <cellX> <cellY> [angle]" );
 				break;
 
+			// Laying and lifting path one cell at a time. The original has no drag - both drag slots of
+			// its build mode are bare RET stubs - so a run really is a sequence of single commits, and
+			// driving them one at a time from here is the same shape the game uses rather than a
+			// shortcut around it. The pointer half is Level.WorldClick; this exists for the same reason
+			// `put` does, because a harness cannot move the mouse.
+			case "path":
+				Reply( parts.Length > 2
+					? ParkPathBuilding.Lay( (int)Argument( 1 ), (int)Argument( 2 ) )
+					: "path <cellX> <cellY>" );
+				break;
+
+			case "delpath":
+				Reply( parts.Length > 2
+					? ParkPathBuilding.Lift( (int)Argument( 1 ), (int)Argument( 2 ) )
+					: "delpath <cellX> <cellY>" );
+				break;
+
+			// What a cell actually holds, which is the measuring instrument for everything above: the
+			// type, the neighbour mask the link pass built, and the tile the mask chose.
+			case "cell":
+				if ( parts.Length < 3 )
+				{
+					Reply( "cell <cellX> <cellY>" );
+					break;
+				}
+
+				if ( Level.Current?.Park is not { } cellPark )
+				{
+					Reply( "cell: a park has to be loaded" );
+					break;
+				}
+
+				var probeX = (int)Argument( 1 );
+				var probeY = (int)Argument( 2 );
+				var probed = ParkState.CellFor( cellPark, probeX, probeY );
+
+				Reply( $"cell ({probeX},{probeY}) type {probed.Type} neighbours 0x{probed.Neighbours:x2} " +
+					$"direction 0x{probed.Direction:x2} flags 0x{probed.Flags:x4} " +
+					$"tile set {probed.TileSet} index {probed.TileIndex} angle {probed.TileAngle}" );
+				break;
+
 			// Opens the purchase menu. A screen is verifiable by eye and capture rather than by test,
 			// and the pointer is not something a harness can move reliably - so this opens it the way
 			// the gadget's own button does, leaving the capture to photograph.

@@ -1498,7 +1498,12 @@ public sealed class PeepBehaviour
 		if ( !ParkState.OnMap( x, y ) )
 			return false;
 
-		return (_park.CellAt( x, y ).Neighbours & CellEdge.BitFor( direction )) != 0;
+		// The RUNNING park's mask, not the file's. A path a player has just laid carries its connections
+		// only in the overlay, and asking ParkWorld would answer nought for every one of them - so a new
+		// walkway would draw perfectly and no guest would ever wander onto it.
+		var cell = ParkState.CellFor( _park, x, y );
+
+		return (cell.Neighbours & CellEdge.BitFor( direction )) != 0;
 	}
 
 	/// <summary>The near edge of a cell plus a clamped roll - see <see cref="SetRandomDest"/>.</summary>

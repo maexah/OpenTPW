@@ -117,6 +117,21 @@ public static class ParkRideChoice
 	public const int QueueCellType = 3;
 
 	/// <summary>
+	/// A cell as the RUNNING park holds it: the player's changes first, and the file for everything
+	/// nobody has touched.
+	///
+	/// <para>
+	/// <b>A queue cell a player has just laid exists only in the overlay</b> - <see cref="ParkWorld"/>
+	/// describes the file and may never be written to - so a walk that asked the save would step
+	/// straight past it and report the queue short by exactly the cells the player had built. It falls
+	/// through to the save for every cell nobody has changed, so a park nobody has edited answers
+	/// exactly as it did before.
+	/// </para>
+	/// </summary>
+	private static ParkWorld.MapCell LiveCell( ParkWorld park, int x, int y )
+		=> ParkState.CellFor( park, x, y );
+
+	/// <summary>
 	/// Where an object's queue begins - the original's <c>FUN_004de040</c>.
 	///
 	/// <para>
@@ -155,7 +170,7 @@ public static class ParkRideChoice
 		if ( !ParkState.OnMap( item.EntryCellX, item.EntryCellY ) )
 			return 0;
 
-		var connections = park.CellAt( item.EntryCellX, item.EntryCellY ).Neighbours;
+		var connections = LiveCell( park, item.EntryCellX, item.EntryCellY ).Neighbours;
 
 		foreach ( var (bit, acrossBy, downBy) in StartSides )
 		{
@@ -222,7 +237,7 @@ public static class ParkRideChoice
 			if ( !ParkState.OnMap( nextX, nextY ) )
 				continue;
 
-			var cell = park.CellAt( nextX, nextY );
+			var cell = LiveCell( park, nextX, nextY );
 
 			if ( cell.Type == QueueCellType && cell.Direction == facingBack )
 				return MapStep.CellId( nextX, nextY );

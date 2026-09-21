@@ -260,11 +260,12 @@ public sealed class ParkGround : ModelEntity
 				// depth. The grass won, which is what left a shop standing on bare grass.
 				if ( world != null )
 				{
-					// The RUNNING park's answer, not the file's - a cell built on since the park loaded
-					// has to stop being drawn as grass, and ParkWorld cannot record that. It falls
-					// through to the save for every cell nobody has changed, which is all of them
-					// until somebody builds something.
-					var cell = ParkState.Current?.Record( x, y ) ?? world.CellAt( x, y );
+					// The RUNNING park's answer, not the file's - a cell built on, or laid with path,
+					// since the park loaded has to stop being drawn as grass, and ParkWorld cannot
+					// record that. ParkState.CellFor is the one statement of that rule, shared with the
+					// paths, the queues, the edge test and the queue walk, so that none of them can
+					// disagree about who owns a cell.
+					var cell = ParkState.CellFor( world, x, y );
 
 					if ( ParkPaths.IsPath( cell ) || ParkQueues.IsQueue( cell ) || ParkObjects.CoversGround( cell ) )
 						continue;

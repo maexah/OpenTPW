@@ -102,6 +102,21 @@ public sealed class ParkQueues : Entity
 	/// </summary>
 	private static int TurnOf( ParkWorld.MapCell cell ) => (360 - cell.TileAngle) % 360;
 
+	/// <summary>
+	/// The queues of the park currently loaded, or null outside one - the arrangement
+	/// <see cref="ParkPaths.Current"/> and <see cref="ParkGround.Current"/> already have.
+	///
+	/// <para>
+	/// <b>This class had none, and that was the whole of why a queue could not be rebuilt.</b> The
+	/// models were reachable only through <c>Entity.All</c>, so nothing outside could ask the queues to
+	/// lay themselves again after a cell changed.
+	/// </para>
+	/// </summary>
+	public static ParkQueues? Current { get; private set; }
+
+	/// <summary>The park this was built from, so that it can be built again when a cell changes.</summary>
+	private readonly ParkWorld? _world;
+
 	/// <param name="world">
 	/// The park's own save, already walked, or null where the theme ships none. It is read once by
 	/// <see cref="Level"/> and shared with the ground, the paths and the objects.
@@ -109,11 +124,77 @@ public sealed class ParkQueues : Entity
 	public ParkQueues( string themeName, ParkWorld? world )
 	{
 		ThemeName = themeName;
+		_world = world;
 		Name = $"{themeName} queues";
 
+		Build( world );
+
+		Current = this;
+	}
+
+	/// <summary>
+	/// Stands the queue pieces again, because a cell has changed - a queue built, a queue deleted.
+	///
+	/// <para>
+	/// <b>A queue is not one model, so this is not the ground's rebuild.</b> The ground and the paths
+	/// are each a single mesh that is dropped and rebuilt; a queue is one <see cref="LobbyModel"/> a
+	/// cell, and <see cref="LobbyModel"/> has no teardown of its own - so each one's entities are
+	/// deleted individually, which is the shape <see cref="ParkObjects.Remove"/> already uses for a
+	/// placed thing. Skipping that leaves every old piece standing in the park beside its replacement.
+	/// </para>
+	/// </summary>
+	public void Rebuild()
+	{
+		TakeDown();
+
+		Build( _world );
+	}
+
+	/// <summary>
+	/// Lets go of <see cref="Current"/>, but only if it is still this one - the guard the ground and the
+	/// paths both use, for a scene that builds its replacement before tearing down its predecessor.
+	/// </summary>
+	protected override void OnDelete()
+	{
+		base.OnDelete();
+
+		TakeDown();
+
+		if ( Current == this )
+			Current = null;
+	}
+
+	/// <summary>
+	/// Takes every piece of queue out of the park.
+	///
+	/// <para>
+	/// <b>One statement of it, shared by <see cref="Rebuild"/> and <see cref="OnDelete"/>.</b> Written
+	/// twice these would be free to drift, and only the rebuild path is ever exercised by a test - the
+	/// same argument that has the debug console's <c>drop</c> reach <c>Level.CancelCarried</c> rather
+	/// than a copy of it.
+	/// </para>
+	/// <para>
+	/// Deleting the same entity twice is harmless - <see cref="Entity.Delete"/> returns at once when it
+	/// has already run - which matters because <see cref="Level.Unload"/> deletes every entity in the
+	/// scene, these among them, and then this runs as well.
+	/// </para>
+	/// </summary>
+	private void TakeDown()
+	{
+		foreach ( var model in _models )
+		{
+			foreach ( var entity in model.Entities )
+				entity.Delete();
+		}
+
+		_models.Clear();
+	}
+
+	private void Build( ParkWorld? world )
+	{
 		if ( world == null || world.Cells.Count == 0 )
 		{
-			Log.Info( $"{themeName}: no saved park, so it has no queues of its own" );
+			Log.Info( $"{ThemeName}: no saved park, so it has no queues of its own" );
 			return;
 		}
 
@@ -123,7 +204,7 @@ public sealed class ParkQueues : Entity
 
 		if ( field == null )
 		{
-			Log.Warning( $"{themeName}: the ground is not built, so its queues have nothing to stand on" );
+			Log.Warning( $"{ThemeName}: the ground is not built, so its queues have nothing to stand on" );
 			return;
 		}
 
@@ -133,7 +214,9 @@ public sealed class ParkQueues : Entity
 		{
 			for ( var x = 0; x < field.CellsX; ++x )
 			{
-				var cell = world.CellAt( x, y );
+				// The running park's answer, not the file's - see ParkPaths.Build, which reads the same
+				// overlay for the same reason.
+				var cell = ParkState.CellFor( world, x, y );
 
 				if ( !IsQueue( cell ) )
 					continue;
@@ -150,10 +233,10 @@ public sealed class ParkQueues : Entity
 
 		// A park of a shape this has not seen would show up here rather than by drawing the wrong piece.
 		if ( unnamed > 0 )
-			Log.Warning( $"{themeName}: {unnamed} queue cells name a piece outside the game's own table of {Pieces.Length}" );
+			Log.Warning( $"{ThemeName}: {unnamed} queue cells name a piece outside the game's own table of {Pieces.Length}" );
 
 		if ( Placed > 0 )
-			Log.Info( $"{themeName}: {Placed} queue cells stand in the park" );
+			Log.Info( $"{ThemeName}: {Placed} queue cells stand in the park" );
 	}
 
 	/// <summary>

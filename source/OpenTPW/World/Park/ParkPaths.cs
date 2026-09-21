@@ -46,14 +46,42 @@ public sealed class ParkPaths : ModelEntity
 
 	private readonly string _themeName;
 
+	/// <summary>The park this was built from, so that it can be built again when a cell changes.</summary>
+	private readonly ParkWorld? _world;
+
 	public ParkPaths( string themeName, ParkWorld? world )
 	{
 		_themeName = themeName;
+		_world = world;
 		Name = $"{themeName} paths";
 
 		Build( world );
 
 		Current = this;
+	}
+
+	/// <summary>
+	/// Lays the walkways again, because a cell has changed - a path built, a path deleted.
+	///
+	/// <para>
+	/// <b>The same shape as <see cref="ParkGround.Rebuild"/>, deliberately.</b> The paths are one model
+	/// of every path cell in the park, so there is no per-cell edit to make, and the two surfaces have
+	/// to be rebuilt together or they disagree about which cell belongs to whom: the ground stops
+	/// drawing grass on a cell the moment the overlay calls it a path, so a path that did not rebuild
+	/// alongside it would leave <b>a hole</b> rather than a walkway.
+	/// </para>
+	/// <para>
+	/// <b>The old model is let go of first</b>, for the reason the ground gives: a
+	/// <see cref="ModelEntity"/> owns its model and the material bound into it, and building over the
+	/// top keeps both for the life of the process.
+	/// </para>
+	/// </summary>
+	public void Rebuild()
+	{
+		Model?.Delete();
+		Model = null!;
+
+		Build( _world );
 	}
 
 	/// <summary>
@@ -116,7 +144,13 @@ public sealed class ParkPaths : ModelEntity
 		{
 			for ( var x = 0; x < field.CellsX; ++x )
 			{
-				var cell = world.CellAt( x, y );
+				// The RUNNING park's answer, not the file's - a cell a player has laid a path on since the
+				// park loaded has to be drawn as one, and ParkWorld cannot record that. It falls through
+				// to the save for every cell nobody has changed, which is all of them until somebody
+				// builds something. This is the same seam ParkGround reads, and the two have to agree:
+				// the ground stops drawing grass the moment the overlay calls a cell a path, so a path
+				// that did not read the overlay too would leave a hole exactly where the walkway belongs.
+				var cell = ParkState.CellFor( world, x, y );
 
 				if ( !IsPath( cell ) )
 					continue;

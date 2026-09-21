@@ -82,8 +82,9 @@ public static class ParkBuilding
 		state.Spend( item.BuildPrice );
 
 		// The ground draws every cell nothing else owns, so it has to be told that these are owned now
-		// or it keeps drawing grass through the new floor.
-		ParkGround.Current?.Rebuild();
+		// or it keeps drawing grass through the new floor - and the paths and queues are rebuilt with it,
+		// because the three divide the map by cell and one rebuilt alone leaves a hole. See ParkSurfaces.
+		ParkSurfaces.Rebuild();
 
 		ParkRides.Current?.BindNew( placed, item );
 
@@ -146,7 +147,7 @@ public static class ParkBuilding
 
 		state.Refund( refund );
 
-		ParkGround.Current?.Rebuild();
+		ParkSurfaces.Rebuild();
 
 		Log.Info( $"Building: sold '{item.Name}' (thing {thingId}) for {refund} - the park has {state.Balance}" );
 

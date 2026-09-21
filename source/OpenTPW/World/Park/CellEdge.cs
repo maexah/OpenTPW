@@ -253,9 +253,9 @@ public sealed class CellEdge
 	///
 	/// <para>
 	/// Of the three questions the constructor takes, a live park can answer two. The map is
-	/// <see cref="ParkWorld.CellAt"/>. The track record is parsed by the save reader, so the branch that
-	/// every caller until now had to leave saying "no" can be given its real answer: left out it is wrong
-	/// for 568 of the shipped park's cells.
+	/// <see cref="Live"/> - the running park's cells, not the file's. The track record is parsed by the
+	/// save reader, so the branch that every caller until now had to leave saying "no" can be given its
+	/// real answer: left out it is wrong for 568 of the shipped park's cells.
 	/// </para>
 	/// <para>
 	/// <b>The third is still declined, and deliberately.</b> <c>queueAhead</c> needs the per-cell thing
@@ -268,8 +268,28 @@ public sealed class CellEdge
 	{
 		ArgumentNullException.ThrowIfNull( park );
 
-		return new CellEdge( park.CellAt, mode, cell => TrackCloses( cell, ById( park ) ) );
+		return new CellEdge( Live( park ), mode, cell => TrackCloses( cell, ById( park ) ) );
 	}
+
+	/// <summary>
+	/// A cell as the RUNNING park holds it: the player's changes first, and the file for everything
+	/// nobody has touched.
+	///
+	/// <para>
+	/// <b>This was reading the file alone, and that was a defect rather than a simplification.</b>
+	/// <c>ParkBuilding.Stamp</c> records a bought thing's footprint in <see cref="ParkState"/>, and
+	/// <see cref="ParkGround"/> reads the same overlay and stops drawing grass there - so while this
+	/// asked <see cref="ParkWorld"/>, the ground and the pathfinder disagreed about the very same cell
+	/// and <b>guests walked straight through anything the player had just bought</b>. A path a player
+	/// lays has exactly that shape, so it would have arrived unwalkable for the same reason.
+	/// </para>
+	/// <para>
+	/// The overlay falls through to the save for every cell nobody has changed, which is all of them
+	/// until somebody builds something, so a park nobody has edited answers exactly as it did before.
+	/// </para>
+	/// </summary>
+	private static Func<int, int, ParkWorld.MapCell> Live( ParkWorld park )
+		=> ( x, y ) => ParkState.CellFor( park, x, y );
 
 	/// <summary>
 	/// A cell by its number, for the parent a deferring track record names. Counted from one, as every
@@ -280,7 +300,7 @@ public sealed class CellEdge
 		{
 			var (x, y) = MapStep.CellAt( id );
 
-			return park.CellAt( x, y );
+			return ParkState.CellFor( park, x, y );
 		};
 
 	/// <summary>

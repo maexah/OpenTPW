@@ -214,6 +214,78 @@ It does nothing at all when `FUN_0048c8d0()` returns 1, which needs **both** `DA
 **and** `FUN_006ad810()` non-zero — a two-part gate, **identified but not yet named**. This is why the 17
 shortcut actions and the gadget's button count never reconciled — they are not meant to.
 
+### The nine screens behind Info, Money and Research — censused 2026-09-21
+
+Every one located, with its builder, its layout stream, its refresh callback, the size of the builder
+and the control count parsed out of its stream. **The control counts are LOWER BOUNDS**: the stream
+walk misses children of composite controls (a list's own column headers never appear).
+
+| # | Screen | Builder | Stream | Callback | Builder bytes | Controls |
+|---|---|---|---|---|---|---|
+| 3 | parkstatus | `FUN_004a52a0` | `0x7537d0` | `0x4a4830` | 2926 | 38 |
+| 4 | allstaff | `FUN_00496620` | `0x750e10` | `0x495da0` | 1438 | 37 |
+| 5 | allitems | `FUN_00495aa0` | `0x7508e0` | `0x495290` | 342 + four sub-builders | 11 |
+| 6 | allpeeps | `FUN_00493530` | `0x7506c8` | `0x493230` | 677 | 5 + 6 columns |
+| 7 | financeinfo | `FUN_0049ac60` | `0x751ca8` | `0x49a0b0` | 2238 | 18 |
+| 8 | loans | `FUN_0049fb30` | `0x7525a0` | `0x49f4e0` | 1905 | 18 |
+| 9 | staffcosts | `FUN_004b2750` | `0x756400` | `0x4b24b0` | 2990 | 16 |
+| 10 | entryprice | `FUN_00498d80` | `0x751798` | `0x498c60` | 721 | 7 |
+| — | research | `FUN_004aa480` | `0x754490` | `0x4a96b0` | 2616 | 34, six sliders |
+
+What each shows, from its own decoded labels:
+
+- **parkstatus** — People in park / Arrival rate / Average happiness / Average time in park / Park
+  rating, Top 3 Thoughts, Happiness Levels (`hap.wct` and `sad_undec.wct` gauges), Total park
+  visitors, and a 1/3/12-year graph.
+- **allstaff** — a five-column list: Name / Current Status / Monthly Wage / Skill / Happiness, plus
+  average-happiness gauges.
+- **allitems** — four tabs of placed objects, the same four categories the buy screen uses.
+- **allpeeps** — a six-column guest list: Visitor Number / Cash Remaining / Time In Park / Rides
+  Ridden / "?" / Happiness.
+- **financeinfo** — Bank balance / Park value / Money in / Gate takings / Shop takings / Sideshow
+  takings / Money out / Staff costs, over the same year graph.
+- **loans** — "Available Loans": Lender Name / Amount / Interest Rate / Monthly Repayment.
+- **staffcosts** — "Staff Training Budgets": Cash in / − Staff costs / − Other costs / − Loan
+  payments / Balance.
+- **entryprice** — one "Ticket Price" row. It writes the park object's `+0x118` through
+  `FUN_004d05d0`, whose format string reads *"Admission fee set to %d"*.
+
+**A caution about every debug string quoted on this page and the next.** `FUN_005da3c0`, the logger
+they are all handed to, is an **empty stub in the shipped build** — `void FUN_005da3c0(void) { return; }`.
+So none of these lines is ever printed at runtime. They remain first-class evidence of **field names
+and intent**, which is what this project uses them for and why they are quoted verbatim; they are
+**not** evidence that the game emits anything, and "the original logs X" is wrong as a statement of
+behaviour.
+- **research** — six effort sliders, plus *"You need to hire some scientists before you can carry out
+  any research!"* and *"Research is automatic in Instant Action mode."*
+
+**Four are cheap and five are blocked on simulation this project does not have.** Buildable today
+because the data already exists: **entryprice** (one number, one setter), **allpeeps** and
+**allstaff** (walk the thing array), **allitems** (four lists of placed objects). Blocked: **loans**
+(the `mLoans[]` records), **financeinfo** (the money-in/out split and the graph history),
+**staffcosts** (training budgets, other costs, loan payments), **research** (`mResearchDone`,
+`mResearchGroup`, `mFirstResearcher`, and per-group research points), and **parkstatus** (Top 3
+Thoughts, arrival rate, park rating, multi-year history).
+
+So the three buttons are not one job: **Info is 3 of 4 buildable, Money is 1 of 4, and Research is
+none.**
+
+### A caution: `0x10`/`0x11`/`0x12` are column headers, not buttons
+
+They are children of the buy list control `0x1f8`, numbered `0x10 + column`, and the UI library sorts
+on them — labels UITEXT `0x7b` *Name*, `0x7c` *Price*, `0x8a` *"."*, help rows `0x90`/`0x91`/`0x92`
+(*"sort the list by item name"* / *"by price"* / *"by items already owned or recently researched"*).
+The buy stream itself contains ids `0x1e9`..`0x200` and **no** `0x10`/`0x11`/`0x12`, so they cannot be
+top-level controls. The list widget sorts internally and the screen only remembers which column was
+chosen. **Do not read them as gadget buttons** — the gadget's own six are `0x26`..`0x2b`.
+
+### `FUN_00486b00` is a different id space from UIHELPTEXT
+
+It goes to the advisor/message system (`FUN_0059b590` → `FUN_0059bf20`), not to the help table.
+Reading its ids as UIHELPTEXT rows yields text that is plausible and wrong — the pylon button's
+`0x125` decodes there as *"Left-click to view item's details"*. **Unresolved**, and the likely table
+is `TAG_SYSTEM.str`.
+
 ### The arm is the gadget's panel carrier
 
 `FUN_004a2590` puts a panel on the arm, `FUN_004a25f0` takes it off, and the message bar is only one of

@@ -780,7 +780,7 @@ There IS a confirmation box, UITEXT 396, **gated on an options checkbox** (`DAT_
 flag gates the staff dismissal box, UITEXT 397.
 
 **Every caller of `FUN_004de1f0` is in the cell-editing family**, as this project suspected: five
-functions, eight call sites, all of them the map-click apply, the cell-type setter, the drag-step apply
+functions, eight call sites, all of them the map-click apply, the cell-type setter, the run-step apply
 and the footprint stamp.
 
 ### Hiring is a placement verb, and there is no hire fee
@@ -1024,6 +1024,313 @@ Mixing them up is exactly the trap the cross-check warned about.
 9. Whether `mTileData` carries per-corner deformation.
 
 ---
+
+## Building and deleting paths and queues
+
+Decoded 2026-09-21 by a six-dimension pass over `/testme.exe`, each dimension re-derived by a second
+agent told to refute it. **The brief that opened the work was wrong about its central function and
+says so here**, because the wrong premise is the thing most likely to be re-invented.
+
+### `FUN_00524960` is the build-tool APPLY DISPATCHER, not a placement engine
+
+It is a flat chain of `FUN_0052f860( id )` tests, and `FUN_0052f860` is literally
+`return DAT_0081ae2c == id`. It writes no cell field itself; every mutation is delegated. The real
+functions are:
+
+| Address | What it is |
+|---|---|
+| `FUN_005348d0` | **The neighbour rule** — an incremental, order-dependent symmetric link pass |
+| `FUN_00535dd0` + `FUN_005365d0` | **The tile rule** — a two-pass mask lookup over two tables, then the write |
+| `FUN_00528a70` | The object-footprint placer, and where an entrance/exit cell's `mDirection` is authored |
+| `FUN_005367a0` | `ClearCell` — the one per-cell teardown, shared by deletion and demolition |
+| `FUN_00532fc0` | The per-cell op worker; `FUN_00536100` applies one op along a line of cells |
+
+### The runtime cell is not the save cell, and there are two parallel arrays
+
+`CMapCell` is **0x44 bytes** at `DAT_007cf83c + 0x294`, indexed by the packed id `y*128 + x + 1`.
+Field offsets come from the serialiser's own debug strings:
+
+    +0x08 mType (signed int)   +0x0c mNeighbours   +0x0d flow direction   +0x0e mFlags
+    +0x10 owning object's packed cell   +0x14/+0x18/+0x1c tile set / index / angle
+    +0x20 crossing counter   +0x24 head thing id   +0x26 the design-map seed
+
+**The `+0x29c` that appears all over the code is not a field** — it is base `0x294` plus `mType` at
+`+0x08`. And `CTrackCell` is a **second** array, 0x28 bytes at `base + (cell + 0x6cde) * 0x28`, which
+also carries a type dword at `+0x08` and a link at `+0x10`: sharing one struct silently corrupts one
+of them.
+
+### The direction ring, and the trap in reusing this project's own helper
+
+Measured three ways (static initialisers, the `FUN_004d97e0` switch, and each initialiser's init-once
+guard bit):
+
+    0x01 (0,-1)   0x02 (+1,-1)   0x04 (+1,0)   0x08 (+1,+1)
+    0x10 (0,+1)   0x20 (-1,+1)   0x40 (-1,0)   0x80 (-1,-1)      Opposite(b) = b<0x10 ? b<<4 : b>>4
+
+**`CellEdge.BitFor` is the mirror of this and both are right.** It answers about the cell being
+*entered*, on the side facing the cell being left, so it reads North as `0x10` where the ring reads
+North as `0x01`. `ParkRideChoice.StartSides` already records the same mirror. **Reuse
+`CellEdge.Opposite`, which is the generic nibble swap; never reuse `BitFor` for an outward step.**
+
+### Why no sweep could ever reproduce `mNeighbours`
+
+`FUN_005348d0` is **incremental and order-dependent**, keyed on the cell that has just become a path:
+
+- **the cardinal test is type-dependent** — mType 1 links unconditionally; mType 10 only when
+  `nb.mDirection & Opposite(D)`; mType 9 only when `nb.mDirection & D`; **mType 3 never forms a new
+  link**, it only refreshes the neighbour's tile;
+- **diagonals have two non-equivalent rules** — a strict symmetric one on this cell (the diagonal and
+  both intervening cardinals all mType 1), and a **weak one-sided** fix-up applied to the neighbour
+  whose intervening cardinal need only be "not 3 and not 9". The weak one sets a single bit and never
+  its partner, so **`mNeighbours` is legitimately asymmetric**;
+- a final **prune loop clears the two diagonals flanking any cardinal that points at an mType 3 or 9
+  cell**.
+
+Measured against the shipped park: one member set for cardinals and diagonals alike tops out at
+**67/78**; splitting them so cardinals admit `{1,9,10}` and diagonals only `{1}` reaches **73/78**.
+Neither can reach 78, and that is the point. **Validate by replaying creation order, never by
+evaluating a predicate over the finished map.**
+
+### The tile rule is two tables, and both reproduce the shipped park exactly
+
+`FUN_00535dd0`: path table **49 entries at `DAT_00763138`**, queue table **11 at `DAT_007630b0`**,
+each row twelve bytes `{ u32 (set << 16) | index, i32 angle, u8 mask, 3 pad }`. Two passes, and the
+**table order is load-bearing** because pass two takes the first match:
+
+    pass 1   first row with  mask == mNeighbours
+    pass 2   first row with  (mNeighbours & mask) == mask
+
+Early outs: `mType <= 0` or `== 5` gives `(set 0, index 55, angle 0)`; `abs(mType)` in
+`{2,4,7,9,10,0x15,0x1e}` gives `(0, 8, 0)`. **No height or slope term enters the tile rule at all** —
+a path on a slope gets the same tile plus separately generated skirt geometry (`FUN_00532fc0` op
+`0x100`).
+
+Three modifiers. `DAT_00820ac0` carries **`rand() & 1`** between calls and rewrites **index 2 to 19
+and 10 to 20** for tile set 1. A queue's angle takes a base of **0 when its flow direction is `0x40`
+or `0x10` and 180 otherwise — and that base applies to a STRAIGHT, not to a corner**: the guard is a
+cardinal count of two with the pair opposite (N+S or E+W). The **`+1` bump is the corner case**, on
+the pairs `(0x40,0x50)`, `(0x10,0x14)`, `(0x01,0x41)`, `(0x04,0x05)`. *(The first reading of this
+attached the base to an L and the bump to a straight, exactly backwards. Lost Kingdom cannot tell the
+two apart — its single corner carries direction `0x10`, which gives a base of nought either way — so
+the park is not evidence here and the disassembly is what settles it.)* And tile set 2 takes **`+3`
+for each cardinal link reaching a path cell**, but only when the link is **mutual** (the neighbour's
+own mask carries the opposite bit) and a low-nibble flags test passes **on the TRACK cell** beside it
+— a separate `0x28`-stride array, re-targeted through its parent where that cell defers — **not on
+the path cell**.
+
+**Queue cells need a filler ground tile as well as a model.** When the set is 2, `FUN_005365d0` frees
+any existing mesh, instantiates a per-cell model through `FUN_005229e0`, stores the handle in
+`mMeshInstance`, and *then* calls the ground renderer with a hard-coded **(set 0, index 8, angle 0)** —
+not the index the table returned.
+
+**Checked against Lost Kingdom, which the executable never saw when the save was written:**
+
+| | result |
+|---|---|
+| path cells, angle | **78 / 78** exact |
+| path cells, index with the variant allowed | **78 / 78** |
+| path cells, index exact | 51 / 78 — the other 27 all carry a variant, never anything else |
+| queue cells, index (with the `+3`) | **4 / 4** |
+| queue cells, angle (with the direction base) | **4 / 4** |
+
+Pass one answered 53 of the 78 and pass two the other 25, so both passes are exercised by real data.
+**So a path tile is NOT a function of the neighbour mask** and a test demanding one fixed index for a
+straight will be flaky; assert the base or its variant.
+
+**A latent defect in the shipped table, to reproduce rather than fix:** rows 27 and 29 both carry
+mask `0x77` and rows 28 and 30 both carry `0xdd`, and the first match wins — so tile 12 at 180 and at
+270 can never be selected.
+
+### Deleting is not demolishing
+
+**The demolish tool (`0x33`) cannot delete a path or a queue cell.** `FUN_00527ee0` resolves a thing
+through `FUN_00527d60`, which yields one only when `mType` is 4, 9 or 10, and returns at once
+otherwise. Paths and queues are cleared by `FUN_005367a0` through ops `0x32` and `0x87`, and object
+demolition calls that same function over each footprint cell.
+
+- A deleted path cell resets `mType`, the mask, the flow byte, the flags, the owner cell and the
+  crossing counter to nought, then retiles. **The neighbour unlink loop runs BEFORE the reset**,
+  while the cell's own mask is still intact — it clears the mirrored bit on each neighbour and retiles
+  that neighbour. **That is the PATH arm.** The queue arm's unlink runs **only while the force flag
+  `DAT_0081d7a8` is nought** — so under force, which is exactly object demolition and queue-over-path,
+  **queue cells are torn down with no neighbour unlink at all**. The two arms also step by different
+  amounts: the path arm walks all eight directions, the queue arm only the four cardinals.
+- **Deleting a path refunds nothing; deleting a queue cell refunds** `perCellQueueCost * pct / 100`
+  credited through `FUN_004d0190`. The asymmetry is in the code, not in the evidence. **Two
+  preconditions the refund carries**: a cell of mType 9 never refunds, and neither does a queue cell
+  whose owner cell has mType nought. *(An earlier reading that object demolition DEBITS rather than
+  credits is withdrawn — the queue cells drained during demolition each run this refund path, so the
+  net is not a plain subtraction.)*
+- The one hard refusal is **NOMODIFY, `mFlags & 0x20`**, which `FUN_00536490` sets on each path cell
+  it rebuilds from the level's design map. The single escape is a path cell with no neighbours, which
+  logs *"Removing path cell with no neighbours but NOMODIFY set"* and clears its own flag.
+
+  **That is the RUNTIME flag, and the shipped save does not match it — measured.** Of Lost Kingdom's
+  78 path cells, **only 18 carry `0x20` in the save** (19 cells park-wide, the extra one being a
+  queue cell). So "the player cannot delete the level's own paths" holds of the original's
+  reconstructed state, and a reader that takes its flags from the save — as OpenTPW does — protects
+  18 cells, not 78. *A hypothesis, left as one: the 18 are plausibly the author's own fixed paths and
+  the other 60 were laid while the scenario was authored. Checking those 18 against `base.map`'s
+  design bits would settle it.*
+- **mType 30 is outside the jump table** and is silently untouched.
+
+**The four per-cell costs are zero in the image and come from game data** — which closes here rather
+than staying open: `data/levels/Standard.sam` carries `Costs.PathCell` **20** and `Costs.QueueCell`
+**75**, and jungle's `Easy_Standard.sam` overrides `MapCell`, `KartTrackCell` and `WaterTrackCell`
+but **not** those two.
+
+### A queue is a re-derivable walk, not a stored link
+
+An object caches only `mBackOfQueue` (`+0x3a`) and a cell count (`+0x40`); `FUN_004de1f0` exists
+solely to throw both away and rewalk. Two cell fields make the walk possible: **`+0x0d`, a flow
+direction written as the OPPOSITE of the step the run took into that cell, and only if still nought** (first writer wins), and
+**`+0x10`, the owning object's packed cell**. The bond to a ride entrance is made only when a queue
+cell is orthogonally adjacent to `mEntryPos` and the entrance's own flow byte points at it.
+
+    start    first set neighbour bit of the entrance cell, in the fixed order 1, 0x10, 0x40, 4
+    step     fixed probe order N, S, E, W; accept only mType 3 (never 9) whose +0x0d is the
+             opposite of the direction probed            <- that fixed order IS the fork rule
+
+**Deleting a queue cell orphans the remainder, and that is correct** — there is no trimming loop
+anywhere. Peeps past the new end leave (`position >= count * 4`, state not `0xe`); the rest are told
+to re-evaluate, all but the one named by `obj+0x6c`. Deleting the path a queue hangs off leaves the
+queue cells untouched and merely reports the back of queue as not connected, so the ride is not
+reopened.
+
+**Eight invalidation sites, and every one fires at the same moment** — immediately after cells have
+been written and retiled, with the object in ECX. So a re-implementation needs **one hook at the end
+of each cell-write transaction**, not per-cell bookkeeping.
+
+### There is no drag: a run of path is click-to-anchor, click-to-commit
+
+**`DAT_0081ae2c` is the MODE**, named by the replay actions its two setters record —
+`ACTION_SET_MODE` (`FUN_0052f200`) and `ACTION_SET_MODE_NR` (`FUN_0052f580`), from the dictionary
+`FUN_004041d0` prints verbatim. It has exactly **three writers** in the whole image, so the id table
+is closed.
+
+**But the recorded action is NOT what separates the two setters — the ANCHOR is.** `FUN_0052f200`
+clears `DAT_0081ede4`/`DAT_0081ede8` to `-1` on every call; `FUN_0052f580` never touches them. That
+is the whole reason the "NR" variant exists: the drain can swap the mode to the internal `0x34`/`0x35`
+and back **without destroying the run in progress**. Build the pair that way round — an
+implementation that distinguishes them only by a log line will wipe its own anchor mid-run.
+
+**Mode 1 is path and mode 3 is queue**, fixed by the cursor table: `FUN_00489720` registers
+`c_path.ani` as id 3 and `c_queue.ani` as id 4. **Mode 1 takes cursor 3 only while
+`DAT_00816d60` and `DAT_00816d4c` are both nought** — otherwise it shows `c_link.ani` (5) or
+`c_end.ani` (0x12) — and cursor 3 is not unique to it, since mode `0x39` shares the same label.
+
+**The build-tool interaction mode is object type 3, vtable `0x006fe9e0`** (constructors
+`FUN_0046c580` / `FUN_0046c5a0`), *not* type 8. Type 8 (`0x006feaa0`, ctor `FUN_0046cfc0`) is the
+**coaster/track editor**: its mouse slots tail into `FUN_00446300`, which records
+`ACTION_COASTER_LOFT`, `_ROTATE`, `_WOBBLE`, `_STACKUP`, `_STACKDOWN` and `_DELETEMULTI`.
+
+**The type id does NOT identify a class, and leaning on it is the COMDAT trap this project has been
+caught by before.** `FUN_006b71c0` (`MOV EAX,3`) is the GetType of **four** different vtables, and
+`0x0040f3f0` (`MOV EAX,8`) of three. **Identify a mode by its constructor and its non-stub slots,
+never by the number its GetType returns.** There are also **four** interaction-mode classes in play,
+not two: the one that matters most is the **idle/default** mouse mode (vtable `0x006fea10`, GetType 1,
+ctor `FUN_0046c6a0`, ~70 call sites), which is what both setters install when the mode goes to nought.
+
+    +0x04 LEFT down  FUN_0046c5d0 -> FUN_00524790      +0x18 MOVE  FUN_0046c660 -> FUN_005234d0 (preview only)
+    +0x08 LEFT up    FUN_0046c610 -> FUN_00524960      +0x1c drag-with-left   RET 8   <- EMPTY
+    +0x24 GetType    returns 3                         +0x20 drag-with-right  RET 8   <- EMPTY
+
+**Both drag slots are bare `RET 8`, so there is no drag mechanism at all.** The commit runs on button
+**up**. The anchor lives in `DAT_0081ede4`/`DAT_0081ede8` (`-1` = none): the first click stores the
+anchor, and the next click **snaps the target to the dominant axis** (the larger of `|dx|`,`|dy|`
+wins and the other is forced back to the anchor's value) and walks the line. **The anchor then
+advances to that axis-snapped TARGET — not to the cell the run actually reached** — and that is
+precisely what lets a player lay an L-shaped run click by click. It advances only when the closing
+retile did **not** report failure; a failed run leaves the anchor where it was. The action recorder corroborates it independently: one
+record per click carrying a single cell (`AR - %d (%d, %d)`), where a real drag would have to record
+every intermediate cell or a start/end pair.
+
+**Per cell, in order:** `0x87` clear, `<mode id>` stamp, `0x80` join neighbours, `0x82` flow
+direction, `0x85`/`0x86` fix-ups, `0x83` owner, `0x81` retile. `FUN_00536100` walks the line and
+**aborts the whole run** the moment one cell refuses.
+
+**`FUN_005346d0` is the stamp**, and its order matters: stamping a cell that is *already* that type
+just bumps the re-stamp counter at `+0x20` and returns success **having charged nothing**; queue over
+path **force-clears the path with no refund**; the affordability test is `cash - price >= 0` and
+refuses the cell, and therefore the run; the debit happens **after** the type write; and a path
+stamped over a queue cell **invalidates the owning object's queue**.
+
+**Refusals are shown as a CURSOR, not as text** (`FUN_0052f950` → `FUN_004a2aa0`): `0x14` is
+cannot-afford, `8` is blocked. Off-map is `FUN_004d8300`, `0 <= x,y < 0x80`.
+
+**You do not pick "queue" as a tool.** Mode 3 is never installed from the UI at all — it is reached
+only from inside the commit handler, the demolish path, or mode `0x14` ("edit this ride's queue"),
+which refills the pending list from the object, rewalks the queue and *then* drops into mode 3.
+What the UI does install: clicking a path cell or bare ground gives mode 1, clicking a queue cell
+gives `0x14`, and the **buy window** gives mode 4 for a real item and **`0x39` / `0x3a` for the
+pseudo-item ids −1 and −2** — which are exactly the Buy Land and Clear Land rows.
+
+### What the adversarial pass overturned, and it is not cosmetic
+
+Each dimension was re-derived by a second agent told to refute it. Two findings change what a
+re-implementation must *do*, rather than merely how it is described:
+
+- **You bond a queue to a ride entrance only if you START the run next to it.** The entrance-bond
+  block in `FUN_005348d0` is wrapped in `if (DAT_00820aa4 != 0)`, and `FUN_00536100` sets that flag at
+  entry and clears it immediately after the **first** cell of the line. So the bond is attempted on
+  the first cell only. Built to the unrefuted reading, a re-implementation would bond from any cell of
+  any run — a substantive gameplay difference.
+- **A cell is not deleted until a counter goes negative.** `cell+0x20` is a signed 16-bit per-cell
+  count: `FUN_005367a0` decrements it and then **returns without removing anything** while it is still
+  `>= 0` (unless the force flag `DAT_0081d7a8` is set). Queue *corners* are the exception — two
+  perpendicular links force `+0x20 = 0xffff`, i.e. immediate removal. Every statement above about what
+  deleting a cell does is subject to this.
+
+Also corrected: the ordinary cell-to-cell link additionally requires the neighbour's **degree < 2**
+and its owner id to be either the object being built or nought — so the builder largely prevents
+forks from ever existing, and the walk's fixed probe order is a tie-break for states the builder does
+not produce, not the primary fork rule. And the eight direction statics are laid out in **source
+order, not bit order**: six of eight addresses pair differently than a naive reading gives
+(`0x7cdba8` is S, `0x7cdbc8` is E, `0x7cdbd8` is NE). The bit→delta table itself survived; only the
+address shorthand was wrong. **Cite the initialisers and `FUN_004d97e0`'s jump table, never the
+address ordering.**
+
+### Two things these dimensions disagree about, recorded rather than resolved
+
+**Which array the build code mutates — STILL CONTESTED, and it changed sides twice.** One decode read
+it as the **0x44-byte** `CMapCell` at `DAT_007cf83c + 0x294`, the other as the **0x28-byte** record at
+`DAT_007cf83c + 0x1102B0`, and their field offsets agree exactly (`+0x08` type, `+0x0c` mask, `+0x0d`
+direction, `+0x0e` flags, `+0x10` owner, `+0x14/+0x18/+0x1c` tile) — which is what made it look like a
+flat contradiction rather than two readings of two arrays.
+
+Where it now rests: the adversarial pass over the placement decode calls the 0x28 reading **backwards
+and refutes it four ways**, the clearest being the line walker `FUN_00536100`, which forms the cell
+pointer as `SHL ECX,4; ADD ECX,EAX; LEA ECX,[EDX + ECX*0x4 + 0x294]` — id × 17 × 4 = id × `0x44`. So
+**the build path writes the 0x44 record**, and the 0x28 array is the separate track layer. Against
+that, the adversarial pass over the *tools* decode has `FUN_00522850` fetching the direction byte from
+the **0x28** record. Both cannot be right about the same byte, and no third witness has settled it.
+
+**Do not cite either as settled.** Nothing in OpenTPW depends on it — cells are modelled as records
+rather than as raw memory — which is exactly why it is safe to leave open rather than guessed.
+
+**Still genuinely open:** who calls `FUN_0052fe50` — one dimension has it as the general pending-cell
+drain, the other finds its callers only inside `FUN_00527ee0`.
+
+**And the drain step is not the simple pop it looks like.** Each call commits **up to two cells**, so
+interior cells are committed **twice**; the bottom element is never committed and the count is left at
+**1**, not nought — `while (step())` therefore terminates with one element still in the list. There is
+also an **off-by-one in the shipped guard**: the push rejects only when the count exceeds `0x400`, so
+element `0x400` is writable and lands exactly on `DAT_0081d740`, the map-width global. Reproduce the
+behaviour, not the overrun.
+
+**Who calls `FUN_0052fe50`.** One dimension has it as the general pending-cell drain step; the other
+finds its only callers inside `FUN_00527ee0` (demolition). Unresolved.
+
+### Still open
+
+- Which `ItemDescription` fields drive the object flag word at `obj+0x32`; only bit `0x08` (owns a
+  queue, starts closed) is pinned by behaviour.
+- What the low nibble of `mFlags` means — it gates the queue `+3` bump and only `0x20` = NOMODIFY is
+  established.
+- Whether mType 9 and 10 really are entrance and exit: only their mirrored `mDirection` senses and
+  mirrored footprint offsets are measured, and no debug string names them.
+- mType 2 and mType 5 are unidentified; the decode refused to guess water or rock.
+- Whether tool `0x32` is ever armed as a live tool — nothing pushes it to either setter.
 
 ## The Ghidra project was changed to get here
 

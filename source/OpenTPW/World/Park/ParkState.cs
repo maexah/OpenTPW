@@ -81,7 +81,39 @@ public sealed class ParkState
 			: _park?.CellAt( x, y ) ?? default;
 	}
 
-	/// <summary>Records what a cell has become. <see cref="ParkGround"/> has to be rebuilt to show it.</summary>
+	/// <summary>The save this was seeded from, so that a caller can tell whether this overlay is the one
+	/// describing the park it has in hand - see <see cref="CellFor"/>.</summary>
+	public ParkWorld? Park => _park;
+
+	/// <summary>
+	/// A cell as the RUNNING park holds it: the player's changes first, and the file for everything
+	/// nobody has touched. <b>The one statement of that rule</b>, for the reason
+	/// <see cref="ParkPaths.IsPath"/> is shared rather than repeated - everything that reads a cell
+	/// must get the same answer or the drawing, the pathing and the queue walk disagree about the same
+	/// square.
+	/// </summary>
+	/// <remarks>
+	/// <b>It consults <see cref="Current"/> only when that overlay describes THIS park, and the guard is
+	/// load-bearing rather than defensive.</b> <see cref="Current"/> is a static that nothing clears, so
+	/// an overlay built for another park - or the two-fact overlay a test constructs, whose
+	/// <see cref="Park"/> is null - would otherwise answer for this one. Its <see cref="Record"/> falls
+	/// back to <c>default</c> when it has no save, and a default cell is <b>type 0</b>: every cell in the
+	/// park would read as bare ground, which silently rewrites every route, every queue walk and every
+	/// edge test rather than failing. Tying the overlay to the park it was seeded from makes a mismatch
+	/// answer from the file, which is exactly what it did before any of this existed.
+	/// </remarks>
+	public static ParkWorld.MapCell CellFor( ParkWorld? park, int x, int y )
+	{
+		if ( park == null )
+			return default;
+
+		return Current is { } state && ReferenceEquals( state.Park, park )
+			? state.Record( x, y )
+			: park.CellAt( x, y );
+	}
+
+	/// <summary>Records what a cell has become. The park's surfaces have to be rebuilt to show it -
+	/// see <see cref="ParkSurfaces.Rebuild"/>, which lays all three together.</summary>
 	public void SetRecord( int x, int y, ParkWorld.MapCell cell )
 	{
 		if ( OnMap( x, y ) )

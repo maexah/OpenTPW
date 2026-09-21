@@ -151,4 +151,152 @@ public class ParkPathTests
 		Assert.AreEqual( 78, laid, "path cells inside the heightfield" );
 		Assert.AreEqual( 66, approach, "cells of the fixed approach" );
 	}
+
+	/// <summary>
+	/// The tile tables read out of the executable reproduce the shipped park's own tiles.
+	///
+	/// <para>
+	/// <b>Neither source can have been fitted to the other</b>, which is what makes this worth
+	/// asserting: the tables are compiled into <c>testme.exe</c> (<c>FUN_00535dd0</c>, 49 path rows at
+	/// <c>DAT_00763138</c> and 11 queue rows at <c>DAT_007630b0</c>) and the save was written by a
+	/// different program years earlier. A park being EDITED needs this, because a cell nobody has drawn
+	/// yet has no stored tile to read.
+	/// </para>
+	/// <para>
+	/// <b>The index is asserted against the base OR its variant, deliberately.</b> The original carries
+	/// <c>rand() &amp; 1</c> between calls and rewrites index 2 to 19 and 10 to 20, so a path tile is
+	/// not a function of the mask at all - 51 of these 78 cells carry the base and the other 27 carry a
+	/// variant. Demanding one fixed index would be asserting something the original does not do.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheExecutablesTileTablesReproduceTheShippedPark()
+	{
+		var world = World();
+
+		var paths = 0;
+		var queues = 0;
+
+		for ( var y = 0; y < ParkWorld.MapSize; ++y )
+		{
+			for ( var x = 0; x < ParkWorld.MapSize; ++x )
+			{
+				var cell = world.CellAt( x, y );
+
+				if ( cell.Type == 1 )
+				{
+					var (set, index, angle) = ParkPathTiles.TileFor( cell.Type, cell.Neighbours, cell.Direction );
+
+					Assert.AreEqual( ParkPaths.PathTileSet, set, $"tile set at ({x},{y})" );
+					Assert.AreEqual( cell.TileAngle, angle, $"tile angle at ({x},{y}), mask 0x{cell.Neighbours:x2}" );
+
+					Assert.IsTrue( cell.TileIndex == index || cell.TileIndex == ParkPathTiles.Vary( index ),
+						$"tile index at ({x},{y}), mask 0x{cell.Neighbours:x2}: stored {cell.TileIndex}, " +
+						$"table {index} or its variant {ParkPathTiles.Vary( index )}" );
+
+					++paths;
+				}
+
+				if ( cell.Type != ParkRideChoice.QueueCellType )
+					continue;
+
+				// A queue's index takes three more for each cardinal link that reaches a path, which is
+				// what makes the cell where the queue meets the path draw the end piece.
+				var links = 0;
+
+				foreach ( var (bit, acrossBy, downBy) in new[] { (0x01, 0, -1), (0x04, 1, 0), (0x10, 0, 1), (0x40, -1, 0) } )
+				{
+					if ( (cell.Neighbours & bit) != 0 && world.CellAt( x + acrossBy, y + downBy ).Type == 1 )
+						++links;
+				}
+
+				var queue = ParkPathTiles.TileFor( cell.Type, cell.Neighbours, cell.Direction, links );
+
+				Assert.AreEqual( ParkQueues.QueueTileSet, queue.Set, $"queue tile set at ({x},{y})" );
+				Assert.AreEqual( cell.TileIndex, queue.Index, $"queue tile index at ({x},{y})" );
+				Assert.AreEqual( cell.TileAngle, queue.Angle, $"queue tile angle at ({x},{y})" );
+
+				++queues;
+			}
+		}
+
+		Assert.AreEqual( 78, paths, "path cells the tables were checked against" );
+		Assert.AreEqual( 4, queues, "queue cells the tables were checked against" );
+	}
+
+	/// <summary>
+	/// A cell a player has changed is answered from the running park, and a cell nobody has touched is
+	/// answered from the file - <see cref="ParkState.CellFor"/>, which is the one statement of that rule
+	/// and is read by the ground, the paths, the queues, the edge test and the queue walk alike.
+	/// </summary>
+	[TestMethod]
+	public void TheRunningParkAnswersForCellsAPlayerHasChanged()
+	{
+		var world = World();
+		var state = new ParkState( world );
+
+		// Untouched, so the file answers: (47,21) is one of the 78 the shipped park lays path on.
+		Assert.AreEqual( 1, ParkState.CellFor( world, 47, 21 ).Type, "an untouched path cell" );
+		Assert.IsTrue( ParkPaths.IsPath( ParkState.CellFor( world, 47, 21 ) ) );
+
+		// Changed, so the overlay answers - and this is the whole of what makes building possible,
+		// because ParkWorld describes a file and may never be written to.
+		Assert.IsFalse( ParkPaths.IsPath( ParkState.CellFor( world, 10, 10 ) ), "bare ground to begin with" );
+
+		state.SetRecord( 10, 10, world.CellAt( 10, 10 ) with { Type = 1, TileSet = ParkPaths.PathTileSet } );
+
+		Assert.IsTrue( ParkPaths.IsPath( ParkState.CellFor( world, 10, 10 ) ),
+			"a cell the player has laid path on should read as path" );
+
+		// And putting it back reaches the file again rather than writing the old value over the top.
+		state.ClearRecord( 10, 10 );
+
+		Assert.IsFalse( ParkPaths.IsPath( ParkState.CellFor( world, 10, 10 ) ), "cleared back to the file" );
+	}
+
+	/// <summary>
+	/// An overlay belonging to a DIFFERENT park - or to no park at all - must not answer for this one.
+	///
+	/// <para>
+	/// <b>This pins a guard whose removal would otherwise leave the whole suite green, which is why it is
+	/// written as a mutation test rather than as a happy path.</b> <see cref="ParkState.Current"/> is a
+	/// static that nothing clears, and sixteen test classes build an edge test over the shipped park
+	/// through <see cref="CellEdge.For"/>. Let a park-less overlay answer and
+	/// <see cref="ParkState.Record"/> returns <c>default</c> for every cell - and a default cell is
+	/// <b>type 0</b>, bare ground - so every route, every queue walk and every edge test in the park
+	/// would quietly change its answer instead of failing.
+	/// </para>
+	/// <para>
+	/// <b>Measured by putting the bug back: take the <c>ReferenceEquals</c> out of
+	/// <see cref="ParkState.CellFor"/> and SEVEN tests fail</b> - this one, and six more across the
+	/// queue walk and the offer filter, because a park-less overlay makes every cell read as type 0.
+	/// The ride's queue walk drops from four cells to nought, and the objects a guest may be offered
+	/// collapse from six to two. <i>(This said "nothing else does" until the mutation was actually
+	/// run. That was a guess, and it was wrong: the guard protects far more than one test.)</i>
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void AnOverlayForAnotherParkDoesNotAnswerForThisOne()
+	{
+		var world = World();
+
+		// The two-fact overlay a behaviour test builds. Its park is null, and constructing it makes it
+		// ParkState.Current - which is exactly the accident this guards against.
+		_ = new ParkState( parkIsClosed: false, visitorsToDate: 0 );
+
+		Assert.AreEqual( 1, ParkState.CellFor( world, 47, 21 ).Type,
+			"a park-less overlay must not answer - the file says this cell is path" );
+
+		// Belly Bounce's footprint, which would also read as bare ground under a mismatched overlay.
+		Assert.AreEqual( 4, ParkState.CellFor( world, 51, 23 ).Type,
+			"a park-less overlay must not answer - the file says this cell is a footprint" );
+
+		// A second park's overlay is the same mistake wearing a real save, so it is refused the same way.
+		var other = new ParkState( World() );
+
+		Assert.AreEqual( 1, ParkState.CellFor( world, 47, 21 ).Type,
+			"an overlay seeded from a different ParkWorld must not answer for this one" );
+
+		Assert.IsNotNull( other.Park, "the other overlay really does have a park of its own" );
+	}
 }

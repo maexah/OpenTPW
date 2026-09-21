@@ -931,7 +931,15 @@ Jungle: **16,134 cells are status 3 and 250 are status 7**. The first cell's sta
 
 The compass is `0x01 N, 0x02 NE, 0x04 E, 0x08 SE, 0x10 S, 0x20 SW, 0x40 W, 0x80 NW` **with N at -y**, so `0x44` (E+W) is a horizontal straight at angle 90 while `0x11` (N+S) is a vertical one at angle 0. **The two edge masks are the proof of the bit order**: `0x1f` is N,NE,E,SE,S and `0xf1` is N,S,SW,W,NW — every connection on one side, which is what an edge tile is.
 
-**Still open, and deliberately not chased: the rule that GENERATED `mNeighbours`.** A sweep of member sets x diagonal rules tops out at **67/78**; the 11 dissenters set bits toward mType 9, 3 and 10 cells, and withhold four diagonals, so mType alone does not decide connectability. **Rendering a saved park does not need this** — the mask, the tile and the angle are all stored. It is only needed to *place* new paths, so it belongs with editing, not with drawing.
+**ANSWERED 2026-09-21 — the rule that GENERATED `mNeighbours` is `FUN_005348d0`, and the reason no sweep could ever fit it is that it is INCREMENTAL and ORDER-DEPENDENT.** Full decode in `docs/exe/park-engine.md`, "Building and deleting paths and queues". A sweep of member sets x diagonal rules tops out at **67/78**, and splitting the member set so cardinals admit `{1,9,10}` while diagonals admit only `{1}` reaches **73/78** — but no pure function of the final map can reach 78, because:
+
+- the cardinal test is **type-dependent**: mType 1 links unconditionally, mType 10 only when `nb.mDirection & Opposite(D)`, mType 9 only when `nb.mDirection & D`, and mType 3 **never forms a new link at all**;
+- diagonals are set by **two non-equivalent tests**, one strict and symmetric on the cell being placed, one weak and **one-sided** on its neighbour — so `mNeighbours` is legitimately asymmetric;
+- a final **prune loop clears the two diagonals flanking any cardinal that points at an mType 3 or 9 cell**, which is exactly the "withholds four diagonals" this line used to record as unexplained.
+
+So the 11 dissenters were never dissenters: 9 of their differing bits point at mType 9, 3 and 10 cells (the type-dependent cardinal rule) and all 4 of the others are diagonals (the prune loop). **Validate any implementation by replaying creation order, never by evaluating a predicate over the finished map.**
+
+**Rendering a saved park still does not need any of this** — the mask, the tile and the angle are all stored. It is needed to *place* new paths, so it belongs with editing, not with drawing.
 
 ### `mTileData` is three dwords — tile set, tile index, rotation in degrees
 
