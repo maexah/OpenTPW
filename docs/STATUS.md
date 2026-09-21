@@ -1,7 +1,9 @@
 # Status
 
-Last updated: 2026-09-21 on branch `alexah/96-laying-and-lifting-path`, which is the tip. **Pushed to
-`maexah/OpenTPW` on 2026-09-21**, at Alexah's word — `alexah/94-every-state-answered`,
+Last updated: 2026-09-21 on branch `alexah/97-load-time`, which is the tip and is **local and
+unpushed** — four commits for `docs/CLEANUP-PLAN.md` item 9. Before it,
+`alexah/96-laying-and-lifting-path` was **pushed to `maexah/OpenTPW` on 2026-09-21**, at Alexah's
+word — `alexah/94-every-state-answered`,
 `alexah/95-buy-hire-and-ride-windows` and `alexah/96-laying-and-lifting-path`. Every other local branch
 was surveyed against origin with `git ls-remote` and already matched, in both clones. Nothing was pushed
 to `upstream` (the `OpenTPW` org), and `wf-review-56` was deliberately held back as a scratch branch.
@@ -60,6 +62,11 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 `docs/PLAYER-GAPS.md` — the **eight** gaps a player meets, in the order they meet them. **Five are done**
 (1, 2, 3, 6, 8); **three remain** (4, 5, 7). Alexah sets which one is the goal; one per session.
 
+**And `docs/CLEANUP-PLAN.md`, which is a second queue and is deliberately untracked** — nine things a
+player sees, in Alexah's order 9, 6, 4, then 1, 5, 3, 8, 2, then 7. **Item 9 is part done**: the load
+is measured and 4.5 s faster, and its remaining 16.3 s in the `.wct` decode is named at the item.
+Load time is **not** in `PLAYER-GAPS.md` and nothing there was ticked by this work.
+
 **Where it stands, 2026-09-21. ITEM 2 IS DONE and is ticked.** All four of its parts landed and every
 one was confirmed in a running park: the purchase and hire screens with buy, sell, move, carry, hire,
 fire, pick up and put down underneath; **laying and lifting path**; **laying and lifting queue**, with
@@ -93,9 +100,56 @@ Take counts fresh; these go stale within a day.
 | Opcodes | 72 implemented of 106 | 2026-09-20, `case Opcode.` labels vs enum members |
 | Tests | 827 total, all of them run **with** the game and 0 skip | 2026-09-21, measured after the category screens |
 | Tests without the game | 379 ran, **448 skipped**, of 827 | 2026-09-21, measured fresh |
-| Build warnings | 126 (71 are CS8618 nullable) | 2026-09-21, measured at `2cfb32c` |
+| Build warnings | 125 | 2026-09-21, measured at `e543129` - one fewer since the refpack reflection went |
+| Park load | 18.8 s, of which `terrain` is 16.3 s | 2026-09-21, mean of two runs, per phase, `LoadTimer` |
 
 ## Recent
+
+**2026-09-21 - a park load is measured phase by phase, and costs 18.8 s where it cost 23.3 s.**
+`docs/CLEANUP-PLAN.md` item 9, **part done and explicitly not finished**. Branch
+`alexah/97-load-time`, four commits, local and unpushed.
+
+**The measurement came first, and it overturned the item's own prediction.** The log already stamped
+every line, but only to the **second** - and with a U+202F narrow no-break space before the AM/PM,
+which defeats a naive parse. Mining all **141** park loads on this machine with that stamp put the
+stall between the queue message and the object message (median **22 s** of a **23 s** load) and could
+go no finer, because `base.MD2` logs nothing while it loads. `LoadTimer` then reported milliseconds
+per phase:
+
+| | before (2 runs) | after (2 runs) |
+|---|---|---|
+| **terrain** | 19,627 / 20,333 ms | **16,335 / 16,348 ms** |
+| objects | 1,428 / 1,547 ms | 1,147 / 1,150 ms |
+| staff pool | 187 / 191 ms | **5 / 4 ms** |
+| **total** | **22,888 / 23,709 ms** | **18,819 / 18,823 ms** |
+
+Run-to-run spread on the untouched build was **821 ms**, taken as a before/before pair before any
+before/after was quoted (`docs/VERIFYING.md` rule 90, which is about pixels and applies just as well
+to clocks).
+
+**`ParkTerrain` is 86% of the load, and the plan's guess of "ParkObjects took 9,400 ms" was wrong by
+an order of magnitude** - objects costs 1.4 s. The plan's third suspect is refuted for this item too:
+`ParkStaffPool` ran **187 ms**, so the BFMU string cost is a 40x win worth 0.18 s, not a load-time fix.
+
+**Three fixes landed, and they are Alexah's own**, supplied as a patch and applied with `git am` so
+their authorship and messages survive: the texture decode buffers sized from the indices used rather
+than the cube of the side (`size³` floats **twice** per decode - 134 MB for a 256-pixel texture),
+the refpack command list no longer rebuilt by reflection on every decompress, and the BFST lookup
+table opened lazily and decoded once. **The branch they were said to be on does not exist in this
+clone** - `claude/opentpw-code-review-e9vkqf` is absent and all three SHAs are invalid objects here.
+
+**NOT DONE, and named rather than glossed:** `terrain` is still **16,333 ms**. It is inside the `.wct`
+decode. `Texture.UpdateFromWct` decodes before `CreateTexture` consults its cache, so the cache saves
+only the GPU upload - but measured at **≥2,000 decodes for ≥510 distinct textures**, that redundancy
+is only ~4:1 and **does not explain 16 s on its own**, which refuted my own first reading of it.
+`TryGetCachedTexture` rebuilding a list of every texture per construction is a real defect worth
+milliseconds. So the decode itself is slow, and timing it is the next session's first step.
+
+**Confirmed on screen and by census, both.** The loading bar was photographed *while* the stall was
+happening - no previous harness could, since they all wait for `Loaded jungle` first, by which point
+the bar is gone - with the instrument's own line written underneath it by the bar's status strip.
+`assets total=2176 distinct=535`, `rides 15`, `peeps 13`, `staff 5`, `unimplemented 1` in every run,
+and `save/` unchanged within all five.
 
 **2026-09-21 - the rides panel is finished: three sliders that save, a live stats table, and the ride
 itself spinning in its preview.**
