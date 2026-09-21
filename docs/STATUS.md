@@ -29,7 +29,7 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 ## Does not
 
 - No **paths or queues** to build or delete, no finances, litter, saving a park back, video, networking. Three gadget buttons (Info, Money, Research) are still inert. The two global income pools, the balloon and costume arms, and the litter-bin errand (guest state 9) are named and unbuilt.
-- **Nothing is placed by POINTING yet.** The buy and hire screens put an item or a person in the hand and the console's `put` and `hire` finish the job; counted as `PLACE_BY_POINTING` and `PLACE_STAFF_BY_POINTING`. Eight of the nine per-object windows are unbuilt (only the ride's), as are the ride window's stats table, preview and slider commit.
+- Eight of the nine per-object windows are unbuilt (only the ride's), as are the ride window's stats table, preview and slider commit. Patrol areas are dead, deferred by Alexah.
 - The `meter.wct` mapping behind the happiness gauge is wrong — the last fault Alexah found by playing that is still open.
 - 34 opcodes unimplemented. Three README lines and `RideScriptFile.cs:99` still quote older counts.
 
@@ -115,6 +115,23 @@ the game reporting *"sold 'Belly Bounce' (thing 13) for 500"*. `save/` unchanged
 and not SDL, measured twice - so `WindowStack.ClickAt` and a `click x y` console command exist to enter
 the real press-and-release path. Only SDL is skipped: the hit test, the row arithmetic and both
 handlers are the real ones. `openthing` and `catalogue` were added for the same reason.
+
+**Placing by POINTING, and the thing-id collision it exposed.** Both screens put an item or a person
+into the hand and a click on the park puts them down - `Level.WorldClick`, where **anything in the hand
+goes down before any window opens**, which is the original's order: a place mode consumes the click and
+only an idle mode (type 0 or 1) opens windows. Proved with clicks alone, no console placement verb: a
+ride built for **exactly** its 500 and a cleaner hired, the object census and the staff count each up
+one, and `PLACE_BY_POINTING` and `PLACE_STAFF_BY_POINTING` both gone from the `unimplemented` census.
+
+**That end-to-end run caught what 818 green tests could not.** Objects and people share **one**
+thing-id numbering, and there were **two allocators** over it: `ParkState.NextThingId` rescanned the
+save's objects and people, so it never saw a hired staff member, while `ParkPeople` kept a private
+counter that never saw a bought object. Both were seeded correctly from the same maximum and drifted
+apart on the first allocation - **a ride and a cleaner in one run were both handed thing 43**.
+`ParkState` now counts rather than rescans and is the only thing that issues an id; counting also stops
+one being re-issued after the highest-numbered object is sold, which a rescan would do. Seeing it at
+all needs a buy **and** a hire in the same run, which is why building one feature at a time never
+would have.
 
 **2026-09-20 — guests buy things: `docs/PLAYER-GAPS.md` item 8, both halves.** A filled park took
 **1110 at the Drinks Shop** (37 sales at 30) and **900 at the Jungle Spray** (45 at 20), with the new

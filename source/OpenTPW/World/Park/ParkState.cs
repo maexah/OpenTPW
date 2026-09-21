@@ -116,7 +116,37 @@ public sealed class ParkState
 	/// <see cref="ParkPeople"/> follows for a new guest - and carries the same caveat: it is not
 	/// provably free, it is past everything visible.
 	/// </summary>
+	/// <summary>
+	/// The next free thing id. <b>Objects and people share one numbering, and this is the only thing
+	/// that hands ids out of it.</b>
+	///
+	/// <para>
+	/// <b>It counts rather than rescanning, and that is the fix for a measured collision.</b> While
+	/// this rescanned the save, and <see cref="ParkPeople"/> kept a counter of its own, there were two
+	/// allocators over one space and each was blind to the other's additions: a rescan never sees a
+	/// hired staff member, and a private counter never sees a bought object. Both were seeded
+	/// correctly from the same maximum and drifted apart on the first allocation - a ride bought and a
+	/// cleaner hired in one run were both handed <b>thing 43</b>.
+	/// </para>
+	/// <para>
+	/// Counting also stops an id being handed out twice after the thing holding it is sold, which a
+	/// rescan would do as soon as the highest-numbered object was demolished.
+	/// </para>
+	/// </summary>
 	public int NextThingId()
+	{
+		// Seeded on first use rather than at load, so a state that was never bound to a park still
+		// answers something usable - nought is the sentinel for "nothing", never an id.
+		if ( _nextThingId == 0 )
+			_nextThingId = HighestThingId() + 1;
+
+		return _nextThingId++;
+	}
+
+	private int _nextThingId;
+
+	/// <summary>The highest id the file and everything built since have used.</summary>
+	private int HighestThingId()
 	{
 		var highest = 0;
 
@@ -129,7 +159,7 @@ public sealed class ParkState
 				highest = Math.Max( highest, person.ThingId );
 		}
 
-		return highest + 1;
+		return highest;
 	}
 
 	/// <summary>Adds something built, and hands back its thing id.</summary>

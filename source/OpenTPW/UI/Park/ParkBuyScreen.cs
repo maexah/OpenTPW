@@ -290,9 +290,9 @@ internal sealed class ParkBuyScreen : UiWindow
 
 		Stack.Close( this );
 
-		// What is still missing between a full hand and a built thing: the mode that follows the
-		// cursor and puts it down where it is clicked. `put <x> <y>` does it from the console.
-		Unimplemented.Report( "PLACE_BY_POINTING" );
+		// And clicking the park puts it down - Level.WorldClick, which takes the click only when the
+		// interface did not. `put <x> <y>` still does it from the console, for a test that cannot move
+		// the pointer.
 	}
 
 	/// <summary>What the park has, in the corner the stream puts it - control 0x200.</summary>

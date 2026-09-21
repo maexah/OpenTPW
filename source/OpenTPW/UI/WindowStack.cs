@@ -256,12 +256,19 @@ internal sealed class WindowStack : Panel
 	/// interface. <c>ParkPicking.PickAt</c> was given coordinates for the same reason and says so.
 	/// Only SDL is skipped: the hit test, the row arithmetic and both handlers are the real ones.
 	/// </remarks>
-	internal void ClickAt( float x, float y )
+	/// <returns>
+	/// Whether the interface took it, on the same reading as <see cref="PointerTaken"/> - so a caller
+	/// can hand the click on to the world exactly when a real frame would.
+	/// </returns>
+	internal bool ClickAt( float x, float y )
 	{
 		var hit = HitTest( x, y );
 
 		Press( hit, x, y );
 		Release( hit );
+
+		return hit != null
+			|| _windows.Exists( window => window.Modal && !window.Hidden && !window.PutAway );
 	}
 
 	private UiControl? HitTest( float x, float y )

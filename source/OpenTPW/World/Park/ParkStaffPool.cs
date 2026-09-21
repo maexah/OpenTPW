@@ -34,6 +34,74 @@ public sealed class ParkStaffPool
 	/// <summary>The pool of the park currently loaded, or null outside one.</summary>
 	public static ParkStaffPool? Current { get; private set; }
 
+	/// <summary>
+	/// The candidate on the cursor, or nought.
+	///
+	/// <para>
+	/// <b>Choosing somebody on the hire screen does not hire them.</b> The original puts them into a
+	/// place-staff mode - interaction type 5 - and constructs the worker on the next click at a cell,
+	/// which is why a cancelled hire costs nothing and takes nobody out of the pool. The same shape as
+	/// <see cref="ParkBuilding.Carrying"/>, and for the same reason.
+	/// </para>
+	/// </summary>
+	public static int Carrying { get; private set; }
+
+	/// <summary>Takes a candidate onto the cursor. They stay in the pool until they are put down.</summary>
+	public static string Carry( int candidateId )
+	{
+		if ( Current is not { } pool )
+			return "carry: a park has to be loaded";
+
+		foreach ( var person in pool.Candidates )
+		{
+			if ( person.Id != candidateId )
+				continue;
+
+			Carrying = candidateId;
+
+			return $"carrying {person.Name}, a grade {person.Grade} " +
+				$"{NameOfKind( person.Kind ).ToLowerInvariant()} at {person.Wage} a month - " +
+				"click the park to put them down";
+		}
+
+		return $"carry: no candidate {candidateId}";
+	}
+
+	/// <summary>Puts the carried candidate back. Nothing was taken, so there is nothing to give back.</summary>
+	public static string Drop()
+	{
+		if ( Carrying == 0 )
+			return "drop: nobody is on the cursor";
+
+		var was = Carrying;
+
+		Carrying = 0;
+
+		return $"drop: put candidate {was} back - they were never taken out of the pool";
+	}
+
+	/// <summary>
+	/// Hires whoever is on the cursor onto a cell. <b>The pool loses them only now</b>, which is the
+	/// order the original takes: the worker is constructed by the place-staff mode's own click.
+	/// </summary>
+	public static string PlaceCarried( int cellX, int cellY )
+	{
+		if ( Carrying == 0 )
+			return "put: nobody is on the cursor";
+
+		if ( Current is not { } pool || ParkPeople.Current is not { } people )
+			return "put: a park has to be loaded";
+
+		if ( !pool.Take( Carrying, out var taken ) )
+			return $"put: candidate {Carrying} is no longer in the pool";
+
+		Carrying = 0;
+
+		var thingId = people.Hire( taken, cellX, cellY );
+
+		return $"put: hired {taken.Name} as thing {thingId} at ({cellX},{cellY})";
+	}
+
 	/// <summary>How many candidates the pool can hold at once - the original's fixed array.</summary>
 	public const int Slots = 32;
 

@@ -299,28 +299,17 @@ internal sealed class ParkHireScreen : UiWindow
 	/// - a "place staff" mode - and the worker is constructed on the next click at a cell.
 	/// </summary>
 	/// <remarks>
-	/// <b>That last step needs the pointer, which is not built</b>, so this reports what it would do
-	/// and counts the gap rather than inventing a cell to drop somebody on. <c>hire</c> from the
-	/// console finishes the job, and is proven in a running park.
+	/// <b>They are not hired here.</b> The candidate goes onto the cursor and the worker is built by
+	/// the next click at a cell, in <c>Level.WorldClick</c> - which is the original's order, and the
+	/// reason a cancelled hire costs nothing and takes nobody out of the pool. <c>hire</c> from the
+	/// console still does the whole thing in one step, for a test that cannot move the pointer.
 	/// </remarks>
 	private void Chose( int candidateId )
 	{
-		Unimplemented.Report( "PLACE_STAFF_BY_POINTING" );
+		Log.Info( $"Hire screen: {ParkStaffPool.Carry( candidateId )}" );
 
-		if ( Level.Current?.StaffPool is not { } pool )
-			return;
-
-		foreach ( var person in pool.Candidates )
-		{
-			if ( person.Id == candidateId )
-			{
-				Log.Info( $"Hire screen: would carry {person.Name}, a grade {person.Grade} " +
-					$"{ParkStaffPool.NameOfKind( person.Kind ).ToLowerInvariant()} at {person.Wage} a month - " +
-					"putting them down needs the pointer; `hire` from the console does it now" );
-
-				return;
-			}
-		}
+		// Out of the way, so the park underneath can be clicked.
+		Stack.Close( this );
 	}
 
 	/// <summary>

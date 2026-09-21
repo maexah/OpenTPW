@@ -154,6 +154,33 @@ public static class ParkPicking
 	}
 
 	/// <summary>
+	/// The cell under an arbitrary point of the window, without disturbing what the pointer is over.
+	/// False where that point is not over the map at all.
+	/// </summary>
+	/// <remarks>
+	/// The same justification <see cref="PickAt"/> carries, one step further on: a harness cannot press
+	/// the mouse button either, so a console-driven click has to be able to say which cell it means.
+	/// </remarks>
+	public static bool TryCellAt( float screenX, float screenY, out int cellX, out int cellY )
+	{
+		var answer = Resolve( new Vector2( screenX, screenY ) );
+
+		cellX = cellY = 0;
+
+		if ( answer.Cell <= 0 )
+			return false;
+
+		cellX = (answer.Cell - 1) % ParkWorld.MapSize;
+		cellY = (answer.Cell - 1) / ParkWorld.MapSize;
+
+		return true;
+	}
+
+	/// <summary>The thing standing under an arbitrary point of the window, or nought.</summary>
+	public static int ThingAt( float screenX, float screenY )
+		=> Resolve( new Vector2( screenX, screenY ) ).Thing;
+
+	/// <summary>
 	/// The direction the pointer points, in world space.
 	///
 	/// <para>

@@ -546,10 +546,47 @@ public class Level
 
 		_worldMouseWasDown = down;
 
-		if ( !pressed || UI.WindowStack.PointerTaken || ParkPicking.ThingUnderCursor == 0 )
+		if ( !pressed || UI.WindowStack.PointerTaken )
 			return;
 
-		OpenObjectWindow( ParkPicking.ThingUnderCursor );
+		if ( ParkPicking.TryCell( out var cellX, out var cellY ) )
+			Log.Info( ClickWorldAt( cellX, cellY, ParkPicking.ThingUnderCursor ) );
+	}
+
+	/// <summary>
+	/// What a click on the park does at one cell.
+	/// </summary>
+	/// <remarks>
+	/// <b>Split out from <see cref="WorldClick"/> so the debug console can drive the same path.</b> The
+	/// mouse button is not something a harness can press - synthetic motion reaches the window system
+	/// and never reaches SDL - so without this the whole placing-by-pointing path would be unreachable
+	/// by any test, which is the same reason <c>ParkPicking.PickAt</c> takes coordinates.
+	/// </remarks>
+	internal string ClickWorldAt( int cellX, int cellY, int thingUnderCursor )
+	{
+		// ANYTHING IN THE HAND GOES DOWN FIRST, and only an empty hand opens a window. That is the
+		// original's own order: a place mode consumes the click - FUN_004879d0 acts only while the
+		// current interaction mode is idle, type 0 or 1 - and the modes that carry something are types
+		// 4 and 5. Nothing is charged until it actually goes up, which is why cancelling needs no
+		// refund; see ParkBuilding.Carrying.
+		if ( ParkBuilding.Carrying != 0 )
+			return $"world click: {ParkBuilding.PlaceCarried( cellX, cellY )}";
+
+		if ( ParkStaffPool.Carrying != 0 )
+			return $"world click: {ParkStaffPool.PlaceCarried( cellX, cellY )}";
+
+		// Somebody already employed, picked up off the park rather than taken out of the pool.
+		if ( ParkPeople.Current is { CarriedStaff: not 0 } people )
+			return $"world click: put staff down at ({cellX},{cellY}) - {people.DropStaff( cellX, cellY )}";
+
+		if ( thingUnderCursor != 0 )
+		{
+			OpenObjectWindow( thingUnderCursor );
+
+			return $"world click: opened the window for thing {thingUnderCursor}";
+		}
+
+		return $"world click: nothing to do at ({cellX},{cellY})";
 	}
 
 	/// <summary>

@@ -679,8 +679,28 @@ public static class DebugConsole
 					break;
 				}
 
-				clickStack.ClickAt( Argument( 1 ), Argument( 2 ) );
-				Reply( $"click: pressed and released at ({Argument( 1 ):F0},{Argument( 2 ):F0})" );
+				if ( clickStack.ClickAt( Argument( 1 ), Argument( 2 ) ) )
+				{
+					Reply( $"click: the interface took ({Argument( 1 ):F0},{Argument( 2 ):F0})" );
+					break;
+				}
+
+				// The interface did not want it, so the world gets it - the same order a real frame
+				// takes, where Level.WorldClick runs after Hud.Update.
+				if ( Level.Current is not { Kind: Level.Scene.Park } clickPark )
+				{
+					Reply( $"click: nothing took ({Argument( 1 ):F0},{Argument( 2 ):F0})" );
+					break;
+				}
+
+				if ( !ParkPicking.TryCellAt( Argument( 1 ), Argument( 2 ), out var clickX, out var clickY ) )
+				{
+					Reply( "click: that point is not over the map" );
+					break;
+				}
+
+				Reply( clickPark.ClickWorldAt( clickX, clickY,
+					ParkPicking.ThingAt( Argument( 1 ), Argument( 2 ) ) ) );
 				break;
 
 			// Buying, selling and moving something, driven by hand. The screens that will do this for a

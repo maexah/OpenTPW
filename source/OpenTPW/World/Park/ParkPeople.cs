@@ -317,7 +317,10 @@ public sealed class ParkPeople : Entity
 		var one = ParkWorld.NavigatorState.One;
 		var pattern = _peeps[0].Navigator;
 
-		var thingId = _nextThingId++;
+		// ParkState owns the ONE numbering objects and people share - see ParkState.NextThingId, which
+		// records the collision that made this necessary. The counter here is the fallback for a
+		// ParkPeople built without a running park, which the tests do.
+		var thingId = ParkState.Current?.NextThingId() ?? _nextThingId++;
 		var slot = _nextSpriteSlot++;
 
 		// The middle of the cell, the way every other position in this park is measured - and the way a
@@ -438,7 +441,10 @@ public sealed class ParkPeople : Entity
 		if ( pattern == null )
 			return 0;
 
-		var thingId = _nextThingId++;
+		// ParkState owns the ONE numbering objects and people share - see ParkState.NextThingId, which
+		// records the collision that made this necessary. The counter here is the fallback for a
+		// ParkPeople built without a running park, which the tests do.
+		var thingId = ParkState.Current?.NextThingId() ?? _nextThingId++;
 		var slot = _nextSpriteSlot++;
 
 		var x = (cellX * one) + (one / 2);

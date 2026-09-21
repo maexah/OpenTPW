@@ -350,8 +350,8 @@ internal sealed class ParkObjectWindow : UiWindow
 		Log.Info( $"Ride window: {ParkBuilding.Sell( ThingId )}" );
 		Log.Info( $"Ride window: {ParkBuilding.Carry( item )}" );
 
-		Unimplemented.Report( "PLACE_BY_POINTING" );
-
+		// The window gets out of the way so the park can be clicked - Level.WorldClick puts whatever
+		// is in the hand down on the cell under the pointer.
 		Stack.Close( this );
 	}
 }

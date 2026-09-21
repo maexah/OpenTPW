@@ -145,14 +145,18 @@ dependency order is untouched, so this item stays open.
 - [ ] **Info, Money and Research** - still `NotYet(...)` at `ParkGadget.cs`.
 - [ ] **Paths and queues** - step 2 of the order Alexah gave, and the one that needs
       `FUN_004de1f0`'s invalidate-and-rewalk hooked up or `mBackOfQueue` goes stale.
-- [ ] **Placing by pointing** - both screens put the item or the person in the hand and the console's
-      `put` and `hire` finish the job. Counted as `PLACE_BY_POINTING` and `PLACE_STAFF_BY_POINTING`.
+- [x] **Placing by pointing - DONE 2026-09-21.** Both screens put the item or the person in the hand,
+      and clicking the park puts them down. `Level.WorldClick` takes the click only when the interface
+      did not, and **anything in the hand goes down before any window opens** - the original's own
+      order, since a place mode consumes the click and only an idle mode opens windows. The console's
+      `put` and `hire` still do it in one step, for a test that cannot move the pointer.
 
 ### The original section, for the part still open
 
-- [ ] **Seen:** Buy is the first thing anyone clicks in a theme park game, and it is inert. So are Info,
-      Money and Research.
-- **Lives:** `ParkGadget.cs:311/329/344/347`, all four `NotYet(...)`. Camcorder and Map are the two that work.
+- [ ] **Seen:** Info, Money and Research do nothing. **Buy was the first thing anyone clicks and was
+      inert too; it works as of 2026-09-21**, so this bullet now covers only the three that remain.
+- **Lives:** `ParkGadget.cs:339/354/357` - `b_info`, `b_money` and `b_resrch`, three `NotYet(...)`.
+  Camcorder, Map and now Buy are the three that work.
 - **The real dispatch is decoded** in `docs/exe/hud.md`: `FUN_004a0940( n )` opens *the screen that
   category was last left on*, from three globals seeded 1 / 3 / 10. **The HUD is six category pickers,
   not 17 buttons.**
