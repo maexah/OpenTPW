@@ -710,9 +710,19 @@ public sealed class PeepBehaviour
 			// one line and both halves of it exist here. What does not exist is anything that PLAYS a spot
 			// animation, so the state is never entered.
 			//
-			// GoingToMinorDestination (9) walks to a shop or a toilet and, on arrival, runs THAT THING'S
-			// script - FUN_004fff20 hands the thing's +0x24 to the script runtime. Walking a guest there
-			// without running it would be a guest queueing at a drinks machine that never serves them.
+			// <b>GoingToMinorDestination (9) is a LITTER-BIN ERRAND, and this comment said "a shop or a
+			// toilet", which is wrong.</b> Decoded 2026-09-20: FUN_004fff20 is entered from exactly one
+			// place - FUN_004fec90 at 004fedf6, when the guest's litter (+0x1b4) reaches 90 - and it
+			// finds the nearest thing carrying flag +0x32 & 0x40 within squared distance 9, walks there,
+			// writes that thing's script variable 0 to one, ZEROES the guest's litter and returns them
+			// to Deciding. It never queues, never charges and never touches +0x1de. In Lost Kingdom
+			// there is exactly one such target: thing 17, the Litter Bin at (44,29).
+			//
+			// <b>It has just become reachable content, which it never was before.</b> Nothing in this
+			// tree raised litter until the Drinks Shop began serving - its LitterEffect is 50, so two
+			// drinks put a guest over the threshold. So a guest can now reach the condition and, with
+			// this state unanswered, simply carries the litter. That is a gap of its own rather than
+			// part of spending; the separate "Minor Decision" (FUN_004fd570) stays in state 10.
 			//
 			// PickingACellOutside (19) and AtTheBusStop (21) walk to cells from FUN_004d8650, and WHICH
 			// balance-file pair that getter returns is NOT YET PROVEN. The +1 among its four candidates

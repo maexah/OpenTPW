@@ -10,20 +10,22 @@ Tick an item here in the same commit that lands it, and move its detail to the p
 Scope is **Lost Kingdom only**. Anything that changes nothing in `data/levels/jungle` is not on this list,
 however large it looks — that trap has been hit twice.
 
-## >>> THE CURRENT GOAL, SET BY ALEXAH 2026-09-20: CLOSE THE GUEST LOOP. HALF DONE. <<<
+## >>> THE CURRENT GOAL, SET BY ALEXAH 2026-09-20: CLOSE THE GUEST LOOP. DONE. <<<
 
 > Guests should be able to visit and purchase from shops and sideshows, new visitors should arrive,
 > visitors should go home, and they should be dropped off and picked up at the front of the park by a
 > **cruise ship**, a **sea plane** and a **bus**.
 
-**Where it stands, 2026-09-20.** The **arrival/leave half is DONE** — guests arrive by themselves, are
-carried by all three vehicles, and go home when their day runs out; confirmed in the running game by
-census **and by screenshot**, all three drawn and visibly moving. **The spending half is not started:**
-sideshows are nearly there and shops are blocked on something structural. So the next goal for this
-line is item 8, taken in that order.
+**Where it stands, 2026-09-20: every clause of that is now true.** Guests arrive by themselves, are
+carried by all three vehicles, go home when their day runs out, and **buy from both the shop and the
+sideshow** — a filled park took **1110 at the Drinks Shop** (37 sales at 30) and **900 at the Jungle
+Spray** (45 at 20). Both halves were confirmed in the running game by census **and** by screenshot.
 
-**This reorders the queue.** Items 3 and 6 below stop being separate gaps and become halves of one
-loop; item 8 is new. Items 2, 5 and 7 stand but are no longer next.
+**This reordered the queue, and that reorder is now spent.** Items 3, 6 and 8 were halves of one loop
+and all three are ticked. **Items 2, 4, 5 and 7 remain, and Alexah picks which is next.** Item 5 is
+the one worth flagging rather than choosing: it is the last fault Alexah found *by playing* that is
+still open, and it is small — the gauge's own arithmetic is already exonerated, leaving the
+`meter.wct` mapping.
 
 **The order, agreed with Alexah:**
 
@@ -54,6 +56,10 @@ Confirmed from the engine as well as the data: `FUN_00471860` indexes the table 
 | 5 | The happiness gauge reads wrong | — |
 | ~~6~~ | ~~Nobody goes home and no day ever ends~~ **DONE 2026-09-20** — same loop as 3 | — |
 | 7 | A park cannot be saved | — |
+| ~~8~~ | ~~Guests cannot buy anything from a shop, and barely from a sideshow~~ **DONE 2026-09-20** | — |
+
+**Four remain: 2, 4, 5 and 7.** Every one of them is independent of the others — none is blocked on
+anything now built, and none blocks another.
 
 ---
 
