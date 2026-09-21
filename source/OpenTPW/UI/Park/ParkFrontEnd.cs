@@ -111,7 +111,23 @@ internal sealed class ParkFrontEnd : Panel
 		"!frame", "!slider", "f_buyitem", "list_hirestaff", "f_staffinfo", "f_staffpic", "f_balance",
 		"b_srides", "b_sshop", "b_sshow", "b_sfeature",
 		"b_shandy", "b_smech", "b_senter", "b_sguard", "b_sresrhcer",
-		"b_scroller", "b_up", "b_down", "b_allstaff", "b_allthings", "i_boxtick"
+		"b_scroller", "b_up", "b_down", "b_allstaff", "b_allthings", "i_boxtick",
+
+		// The Information and Money categories' own screens - allstaff (0x750e10), allitems (0x7508e0
+		// and its three list trees), allpeeps (0x7506c8) and entryprice (0x751798). Every one of these
+		// names was RESOLVED from the hash its layout stream carries, against ui.wad's own table, rather
+		// than guessed: the stream asks for a mesh as h = (c ^ h) * 47 over the model's first node name,
+		// and the arithmetic was checked against two hashes this file already knew before any of it was
+		// trusted. That is what turned the entry-price screen's three right-hand buttons from a supposed
+		// spinner into b_staffcost / b_loans / b_finance, which the handler then confirmed.
+		"list_allstaff", "list_kids", "list_all",
+		"b_finance", "b_loans", "b_staffcost", "b_door", "b_plus", "b_minus",
+		"b_parkinfo", "b_kids",
+
+		// The staff list asks for the guard and scientist tabs by names the HIRE screen does not:
+		// b_sresrcher here against b_sresrhcer there. Both files ship; the misspelling is the model
+		// file's own and only one of the two screens asks for it.
+		"b_sguard"
 	];
 
 	/// <summary>How far down a park's first choice starts - see <see cref="GameMenu"/>.</summary>

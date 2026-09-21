@@ -29,11 +29,16 @@ namespace OpenTPW.UI;
 /// </summary>
 internal sealed class UiMeter : UiControl
 {
-	/// <summary>The skin the original gives it - see the class remarks.</summary>
-	private const string Skin = "ui/textures/meter.wct";
+	/// <summary>
+	/// The skin the original gives it. <b>Which skin is the CALLER's, not this class's</b>: the
+	/// gadget's gauge takes <c>meter.wct</c> (<c>FUN_00477870</c>), and the staff screen's two take
+	/// <c>happygrad.wct</c> - <c>FUN_00496620</c> loads that one by name for both of its meters. A
+	/// single hardcoded skin here would have painted the staff screen in the gauge's artwork.
+	/// </summary>
+	public string Skin { get; init; } = "ui/textures/meter.wct";
 
-	/// <summary>Loaded once and shared, as <see cref="UiEdit"/>'s selection highlight is.</summary>
-	private static Texture? _skin;
+	/// <summary>Loaded once per skin and shared, as <see cref="UiEdit"/>'s selection highlight is.</summary>
+	private static readonly Dictionary<string, Texture> Skins = [];
 
 	/// <summary>
 	/// What counts as full. The original's own clamp is 1024 (see the class remarks), and a caller
@@ -60,8 +65,10 @@ internal sealed class UiMeter : UiControl
 		if ( filled <= 0f )
 			return;
 
-		_skin ??= new Texture( Skin );
-		Material.UI.Set( "Color", _skin );
+		if ( !Skins.TryGetValue( Skin, out var skin ) )
+			Skins[Skin] = skin = new Texture( Skin );
+
+		Material.UI.Set( "Color", skin );
 
 		var area = Pixels;
 		var height = area.Height * filled;

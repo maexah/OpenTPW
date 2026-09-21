@@ -24,10 +24,11 @@ namespace OpenTPW.UI;
 /// </para>
 /// <para>
 /// <b>What is here and what is not.</b> The gadget draws, the date is live and the buttons light and
-/// click. <b>Four of the six have nothing to open yet</b> - no screen in this game buys an attraction,
-/// hires anyone, or shows the finances - so they say so and do nothing, the way the park menu's Load
-/// and Save already do. The map opens <see cref="ParkMapScreen"/> and the camcorder button swings the
-/// arm out with its panel, because both of those exist. <b>The gauge is live now, and this paragraph
+/// click. <b>Five of the six now open something</b>: buy and hire, the map, the camcorder arm, the
+/// Information category's staff/items/visitors lists, and the Money category's entry price. <b>Only
+/// Research still does nothing</b> - it is not a category and its one screen is six effort sliders
+/// over research groups that do not exist - so it says so, the way the park menu's Load and Save
+/// already do. This paragraph said four of the six were inert until they were not. <b>The gauge is live now, and this paragraph
 /// said there was no such number anywhere until it was.</b> There is one on every guest, and
 /// FUN_004c7bb0 is what the original does with them - average them, and read nought while the park is
 /// shut, which is what still leaves it resting at its lowest part in a park nobody has entered.
@@ -336,8 +337,14 @@ internal sealed class ParkGadget : UiWindow
 			Clicked = ShowArm
 		} );
 
-		buttons.Add( NotYet( 0x28, new UiRect( 287, 1133, 405, 1252 ), 470, "b_info",
-			"Information", "there are no park, staff, item or visitor screens yet" ) );
+		buttons.Add( new UiButton
+		{
+			Id = 0x28,
+			Rect = new UiRect( 287, 1133, 405, 1252 ),
+			HelpText = 470,
+			Mesh = UiMesh.Get( "b_info" ),
+			Clicked = () => ParkCategoryScreens.Open( Stack, ParkCategoryScreens.Information )
+		} );
 
 		// The one of the six with a screen behind it. FUN_004a0840's case 0x29 goes straight to
 		// FUN_005f0b40 rather than through the remembered-tab picker, because the map is not a category
@@ -351,13 +358,24 @@ internal sealed class ParkGadget : UiWindow
 			Clicked = () => Stack.Open( new ParkMapScreen( Stack ) )
 		} );
 
-		// Of this category's four screens only ENTRY PRICE is within reach: it is one row that writes the
-		// park's admission fee, where the finance, loans and staff-cost screens all rest on monthly ring
-		// buffers and a loan record this project does not read. See docs/exe/hud.md, which censuses all
-		// nine screens behind these three buttons with what each would need.
-		buttons.Add( NotYet( 0x2a, new UiRect( 156, 1241, 274, 1360 ), 471, "b_money",
-			"Finances", "only the entry price is reachable; the rest need monthly takings and loans" ) );
+		// Of this category's four screens only ENTRY PRICE is within reach, and it is the one the
+		// category is seeded to - FUN_004a0810(3,10) - so the button opens on it. Finances, loans and
+		// staff costs all rest on monthly ring buffers and a loan record this project does not read, and
+		// the entry-price screen carries a button to each of the three regardless, because the original's
+		// own screen does. See docs/exe/hud.md.
+		buttons.Add( new UiButton
+		{
+			Id = 0x2a,
+			Rect = new UiRect( 156, 1241, 274, 1360 ),
+			HelpText = 471,
+			Mesh = UiMesh.Get( "b_money" ),
+			Clicked = () => ParkCategoryScreens.Open( Stack, ParkCategoryScreens.Finance )
+		} );
 
+		// THE LAST ONE STILL DOES NOTHING, and it is not a category: FUN_004a0840's case 0x2b goes
+		// straight to FUN_004aa480 rather than through the remembered-tab picker, exactly as the map
+		// does. Its screen is six effort sliders over research groups, and this game has no research,
+		// no researchers and no groups - so there is nothing behind it to open.
 		buttons.Add( NotYet( 0x2b, new UiRect( 274, 1254, 392, 1372 ), 472, "b_resrch",
 			"Research", "there is nothing to research and nobody to research it" ) );
 

@@ -259,6 +259,7 @@ public sealed class ParkState
 		Current = this;
 
 		Balance = park?.Economy?.Balance ?? 0;
+		AdmissionFee = park?.Economy?.AdmissionFee ?? 0;
 		VisitorsToDate = park?.NumberOfVisitorsToDate ?? 0;
 		ParkIsClosed = park is not null && park.ParkClosed != 0;
 
@@ -351,8 +352,60 @@ public sealed class ParkState
 	/// </summary>
 	public int VisitorsToDate { get; private set; }
 
-	/// <summary>Whether the park is shut to visitors, as the save left it - <b>zero is open</b>.</summary>
-	public bool ParkIsClosed { get; }
+	/// <summary>
+	/// Whether the park is shut to visitors, seeded from the save - <b>zero is open</b> - and movable
+	/// afterwards, because the entry-price screen carries the switch that moves it.
+	/// </summary>
+	public bool ParkIsClosed { get; private set; }
+
+	/// <summary>
+	/// What the park charges at the gate - the economy thing's <c>mAdmissionFee</c>, seeded from the
+	/// save and <b>movable afterwards</b>, which is the whole point of it being here.
+	///
+	/// <para>
+	/// <b>It lives on the running state for the reason <see cref="Balance"/> does.</b>
+	/// <see cref="ParkWorld"/> describes a file and may never be written to, and
+	/// <c>ParkAdmission.Fee</c> is read-only and captured once when the gate is built - so a player
+	/// changing the ticket price had nowhere to put the new number. The entry-price screen is the
+	/// consumer that needed it; before that screen there was nothing to move it, which is why this
+	/// was not here already.
+	/// </para>
+	/// </summary>
+	public int AdmissionFee { get; private set; }
+
+	/// <summary>
+	/// Sets what the gate charges. The original's own setter logs <i>"Admission fee set to %d"</i>
+	/// (<c>FUN_004d05d0</c>) - though that logger is an empty stub in the shipped build, so the string
+	/// is evidence of the field's name and not of anything the game prints.
+	/// </summary>
+	/// <remarks>
+	/// <b>Negative fees are refused rather than clamped silently.</b> The gate's own judgement reads
+	/// the fee against the balance file's bands, and a negative one would make every guest think the
+	/// park was paying them in - which the original cannot express, since its screen only ever offers
+	/// a spinner over non-negative values.
+	/// </remarks>
+	public bool SetAdmissionFee( int fee )
+	{
+		if ( fee < 0 )
+			return false;
+
+		AdmissionFee = fee;
+
+		return true;
+	}
+
+	/// <summary>
+	/// Opens the park to visitors or shuts it - the <c>b_door</c> switch on the entry-price screen,
+	/// which is the original's <c>FUN_00519ef0( closed, 0 )</c>.
+	/// </summary>
+	/// <remarks>
+	/// <b>Everything downstream already reads this; nothing could write it until now.</b>
+	/// <see cref="PeepBehaviour"/> turns on it in three places - whether the gate admits anyone, which
+	/// state a waiting guest is put in, and whether the happiness gauge reads at all - so a park shut
+	/// here stops admitting immediately, with no other wiring. That is also why it is worth having: the
+	/// switch was the only missing half of a mechanism that was otherwise complete.
+	/// </remarks>
+	public void SetParkClosed( bool closed ) => ParkIsClosed = closed;
 
 	/// <summary>
 	/// Takes an admission fee: onto the balance and onto the running total alike, which is the one place

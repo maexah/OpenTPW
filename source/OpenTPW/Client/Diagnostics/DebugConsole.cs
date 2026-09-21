@@ -1047,9 +1047,13 @@ public static class DebugConsole
 			// between them no tick runs, nobody pays at the gate, and nothing but the command under
 			// test can have moved the balance. Measuring across a stepped frame instead is how a
 			// refund check came back 25 out - the park had earned it.
+			// The FEE and the GATE are here beside the balance because the entry-price screen moves both,
+			// and a screenshot can show that a number changed without saying what it changed to. With
+			// them printed, "the plus button charged one more" is a measurement rather than a picture.
 			case "money":
 				Reply( Level.Current?.ParkState is { } purse
-					? $"money balance {purse.Balance} takings {purse.Takings}"
+					? $"money balance {purse.Balance} takings {purse.Takings} " +
+						$"fee {purse.AdmissionFee} gate {(purse.ParkIsClosed ? "shut" : "open")}"
 					: "money: a park has to be loaded" );
 				break;
 
@@ -1068,6 +1072,50 @@ public static class DebugConsole
 
 				foreach ( var entry in standing )
 					Reply( "  " + entry );
+
+				break;
+
+			// One of the gadget's CATEGORY screens, by the original's own screen number: 3 park status,
+			// 4 all staff, 5 all items, 6 all visitors, 7 finances, 8 loans, 9 staff costs, 10 entry
+			// price. It exists for the reason `buyscreen` does - a screen is verifiable by eye and by
+			// capture rather than by test - and `screen info` / `screen money` open whichever screen
+			// each category was last left on, which is exactly what the gadget's own button does.
+			case "screen":
+				if ( Level.Current is not { Kind: Level.Scene.Park } screenPark )
+				{
+					Reply( "screen: only in a park" );
+					break;
+				}
+
+				if ( parts.Length < 2 )
+				{
+					Reply( "screen: `screen info`, `screen money`, or `screen <3-10>`" );
+					break;
+				}
+
+				switch ( parts[1].ToLowerInvariant() )
+				{
+					case "info":
+						screenPark.OpenCategoryScreen( UI.ParkCategoryScreens.Information );
+						Reply( "screen: opened the Information category" );
+						break;
+
+					case "money":
+						screenPark.OpenCategoryScreen( UI.ParkCategoryScreens.Finance );
+						Reply( "screen: opened the Finance category" );
+						break;
+
+					default:
+						var askedFor = (int)Argument( 1 );
+
+						// 7 and up are the Finance category's; 3 to 6 are the Information category's.
+						screenPark.OpenCategoryScreen(
+							askedFor >= 7 ? UI.ParkCategoryScreens.Finance : UI.ParkCategoryScreens.Information,
+							askedFor );
+
+						Reply( $"screen: asked for screen {askedFor}" );
+						break;
+				}
 
 				break;
 

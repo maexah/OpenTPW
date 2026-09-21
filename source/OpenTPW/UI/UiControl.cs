@@ -72,10 +72,14 @@ internal class UiControl
 	/// the middle of the screen, so each says which edge it keeps to rather than being spread down a
 	/// tall window. Null leaves it to <see cref="VirtualScreen.AnchorFor"/>.
 	/// </summary>
-	public Anchor? PinAcross { get; init; }
+	/// <remarks>
+	/// The setter is <c>internal</c> rather than <c>init</c> so that a container can pin a child it did
+	/// not construct - see <see cref="UiRadioGroup.AddOption"/>, which pins every option to the group.
+	/// </remarks>
+	public Anchor? PinAcross { get; internal set; }
 
 	/// <summary>Which edge it keeps to down the screen, when the thirds are not what it belongs with - see <see cref="PinAcross"/>.</summary>
-	public VerticalAnchor? PinDown { get; init; }
+	public VerticalAnchor? PinDown { get; internal set; }
 
 	public Action? Clicked { get; set; }
 
@@ -327,9 +331,33 @@ internal sealed class UiRadioGroup : UiControl
 
 	public Action? SelectionChanged { get; set; }
 
+	/// <summary>
+	/// Adds one option, pinned to the GROUP rather than to whichever third of the virtual screen its
+	/// own middle lands in.
+	/// </summary>
+	/// <remarks>
+	/// <b>One pixel of overhang is enough to tear a tab strip apart, and it did.</b> The staff screen's
+	/// fifth tab ends at 1738 where its group ends at 1737, so the group does not CONTAIN it, so it
+	/// resolved an anchor of its own - and its middle falls past the two-thirds line, so it took the
+	/// window's right edge where its four neighbours took the centre. On the 4:3 screen the original
+	/// lays out for, every anchor gives the same answer and nothing shows; on a 16:9 window the
+	/// scientists tab sat 160 pixels clear of the strip, and a click aimed at it landed in the gap and
+	/// selected nobody. Photographed as a row of guards under a label reading "Entertainers".
+	/// <para>
+	/// The buy and hire screens' tabs are all comfortably inside their groups, so this changes nothing
+	/// for them - it only stops the next screen out by a pixel from being wrong in a way that is
+	/// invisible at 4:3.
+	/// </para>
+	/// </remarks>
 	public UiButton AddOption( UiButton option )
 	{
 		Add( option );
+
+		// Pinned AFTER Add, because the group's own anchor is only resolvable once the group itself has
+		// a parent - and every caller adds the group to its screen before adding any option to it.
+		option.PinAcross = Anchor;
+		option.PinDown = VerticalAnchor;
+
 		option.Clicked = () => Select( option.Id );
 		return option;
 	}

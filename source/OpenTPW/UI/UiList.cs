@@ -38,7 +38,15 @@ internal sealed class UiList : UiControl
 	/// One row: what it is called, a value per column after the name, and the id the screen knows it
 	/// by. The id is not the position - <see cref="Rows"/> can be re-ordered under it.
 	/// </summary>
-	internal readonly record struct Row( int Id, string Name, int Value, int State = 0 );
+	/// <remarks>
+	/// <b><see cref="Values"/> is what makes the remarks above true rather than aspirational.</b> This
+	/// record said a row carried "a value per column" while being fixed at one, so a screen wanting
+	/// five columns - the staff list - could not be expressed at all. <see cref="Value"/> is kept as
+	/// the first of them, because two screens already push exactly one and reading them is easier than
+	/// rewriting them.
+	/// </remarks>
+	internal readonly record struct Row( int Id, string Name, int Value, int State = 0,
+		IReadOnlyList<string>? Values = null );
 
 	private readonly List<Row> _rows = [];
 
@@ -68,6 +76,19 @@ internal sealed class UiList : UiControl
 
 	/// <summary>Which font the rows are lettered in.</summary>
 	internal int RowFont { get; init; } = 6;
+
+	/// <summary>
+	/// Which way each column's text is pushed, where the default is not what the screen wants. Empty
+	/// leaves the default: the name reads from the left and every number from the right.
+	/// </summary>
+	/// <remarks>
+	/// <b>The default is not a rule, and treating it as one gets one screen wrong.</b> The original
+	/// sets this per column, through <c>FUN_006636b2( column, rightAligned )</c> - and the visitor
+	/// list calls it with <b>1 for all six</b>, its name column included, where the staff and item
+	/// lists use 0 for the name and 1 for the rest. So a hardcoded "column nought reads from the
+	/// left" is right three times and wrong once.
+	/// </remarks>
+	internal TextAlign[] ColumnAligns { get; init; } = [];
 
 	/// <summary>
 	/// A mesh the LAST column draws instead of text, framed by the row's state - the original's
@@ -146,8 +167,11 @@ internal sealed class UiList : UiControl
 
 					// The name reads from the left and the numbers from the right, which is how the
 					// original's own columns are skinned - a label for column nought and a right
-					// aligned value cell for the rest.
-					TextAcross = column == 0 ? TextAlign.Start : TextAlign.End,
+					// aligned value cell for the rest. A screen whose own layout data says otherwise
+					// overrides it per column; see ColumnAligns.
+					TextAcross = column < ColumnAligns.Length
+						? ColumnAligns[column]
+						: column == 0 ? TextAlign.Start : TextAlign.End,
 					TextColour = UiColour.White
 				} );
 			}
@@ -157,6 +181,47 @@ internal sealed class UiList : UiControl
 
 		Refresh();
 	}
+
+	/// <summary>
+	/// One column heading - the stream's <c>op 0xc</c> children, which carry a rect and nothing else.
+	/// </summary>
+	/// <remarks>
+	/// <b>The heading TEXT is not in the layout stream at all</b>, which is why walking the stream alone
+	/// leaves five unnamed boxes. Each builder fetches the child by id <c>0x10 + index</c> and hands it a
+	/// UITEXT row - <c>FUN_00485b00( row, ..., sortMessage )</c> - so the headings live in code and the
+	/// rects live in data. The sort message each carries is the other half of that call and is not
+	/// reproduced here; these headings label, they do not sort.
+	/// <para>
+	/// They are children of the LIST, and they survive <see cref="Build"/> because it clears only the row
+	/// cells it made itself - the same reason the tab groups survive it.
+	/// </para>
+	/// </remarks>
+	internal UiControl AddHeading( int column, UiRect rect, string text )
+		=> Add( new UiControl
+		{
+			Id = 0x10 + column,
+			Rect = rect,
+			Font = RowFont,
+			TextColour = UiColour.White,
+			TextAcross = column < ColumnAligns.Length
+				? ColumnAligns[column]
+				: column == 0 ? TextAlign.Start : TextAlign.End,
+			TextWraps = true,
+			Text = text,
+
+			// PINNED TO THE LIST, rather than to whichever third of the virtual screen each heading's
+			// own middle happens to land in.
+			//
+			// Three of the item screen's five headings have a top of 317 against the list's 318, so the
+			// list does not CONTAIN them, so each resolved an anchor of its own - and the last one's
+			// middle falls past the two-thirds line, so it took the window's right edge where its
+			// neighbours took the centre. On the 4:3 screen the original lays out for there is no slack
+			// and every anchor gives the same answer; on a 16:9 window it slid "Remaining Life" 160
+			// pixels clear of the column it belongs to, with the rows underneath still correct because
+			// they ARE inside the row area. Photographed before it was understood.
+			PinAcross = Anchor,
+			PinDown = VerticalAnchor
+		} );
 
 	/// <summary>Empties the list - the original's <c>FUN_006649d5</c>.</summary>
 	internal void Clear()
@@ -200,11 +265,22 @@ internal sealed class UiList : UiControl
 
 			cells[0].Text = row.Name;
 
-			if ( cells.Length > 1 )
-				cells[1].Text = row.Value.ToString();
+			// Every column after the name takes its own text where the row supplies one, which is what
+			// lets a five-column staff list and a six-column visitor list exist at all. Where it does
+			// not, the single Value fills the first of them - the shape the buy and hire screens push.
+			var tickBox = StateMesh != null && cells.Length > 2;
+			var last = tickBox ? cells.Length - 1 : cells.Length;
+
+			for ( var column = 1; column < last; ++column )
+			{
+				cells[column].Text = row.Values is { } values
+					? column - 1 < values.Count ? values[column - 1] : null
+					: column == 1 ? row.Value.ToString() : null;
+			}
 
 			// The last column is the tick-box: a sprite framed by the state, never text - see StateMesh.
-			if ( cells.Length > 2 )
+			// A list with no StateMesh has no such column and fills that cell with text like any other.
+			if ( tickBox )
 			{
 				cells[^1].Text = null;
 				cells[^1].Frame = row.State;

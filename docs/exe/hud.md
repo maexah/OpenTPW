@@ -240,6 +240,7 @@ What each shows, from its own decoded labels:
 - **allstaff** — a five-column list: Name / Current Status / Monthly Wage / Skill / Happiness, plus
   average-happiness gauges.
 - **allitems** — four tabs of placed objects, the same four categories the buy screen uses.
+  **The four tabs do NOT share a list shape** — see below.
 - **allpeeps** — a six-column guest list: Visitor Number / Cash Remaining / Time In Park / Rides
   Ridden / "?" / Happiness.
 - **financeinfo** — Bank balance / Park value / Money in / Gate takings / Shop takings / Sideshow
@@ -249,6 +250,79 @@ What each shows, from its own decoded labels:
   payments / Balance.
 - **entryprice** — one "Ticket Price" row. It writes the park object's `+0x118` through
   `FUN_004d05d0`, whose format string reads *"Admission fee set to %d"*.
+
+### The four screens built 2026-09-21, and what walking their streams alone could not give
+
+**Column headings are in CODE, not in the layout stream.** Every `op 0xc` header child carries a rect
+and nothing else; each builder then fetches it by id **`0x10 + index`** and hands it a UITEXT row
+through `FUN_00485b00( row, …, sortMessage )`. A stream walk therefore yields the right number of
+unnamed boxes and no labels at all. The rows, read back from `UITEXT.str`:
+
+| Screen | Header ids | UITEXT rows | Headings |
+|---|---|---|---|
+| allstaff | `0x10`–`0x14` | 101–105 | Name / Current Status / Monthly Wage / Skill / Happiness |
+| allpeeps | `0x10`–`0x15` | 113–118 | Visitor Number / Cash Remaining / Time In Park / Rides Ridden / **`?`** / Happiness |
+| allitems, rides | `0x10`–`0x14` | 82–86 | Name / Users Last Month / Excitement / State Of Repair / Remaining Life |
+| allitems, shops | `0x10`–`0x14` | 87–91 | Name / Customers Last Month / Profit Last Month / Total Profit / Customer Satisfaction |
+| allitems, sideshows | `0x10`–`0x15` | 92–97 | Name / Customers Last Month / Excitement / Profit Last Month / Total Profit / Customer Satisfaction |
+| allitems, misc | `0x10`–`0x11` | 98–99 | Name / Number Owned |
+
+**UITEXT row 117 is literally `"?"` in the shipped file.** The fifth visitor column has no heading in
+the original either; it is not a decode failure.
+
+**allitems loads THREE different list trees for its four tabs**, through four sub-builders that
+`FUN_00495aa0` dispatches on the tab index:
+
+    case 0 rides      FUN_00494ec0 -> tree 0x750ab8   5 columns
+    case 1 shops      FUN_00494c70 -> tree 0x750ab8   5 columns (the same tree)
+    case 2 sideshows  FUN_00494250 -> tree 0x750ba0   6 columns
+    case 3 misc       FUN_00495110 -> tree 0x750ca0   2 columns
+
+`FUN_006636b2( column, rightAligned )` sets alignment per column: allstaff passes 0,0,1,1,1 and
+allitems 0,1,1,1,1, but **allpeeps passes 1 for all six** — its name column is a visitor *number*.
+
+**Tab ids are not in screen order.** allitems' switch takes case 1 to `0x12c4bc` (at x 1521–1623) and
+case 2 to `0x12c4bb` (at 1402–1504), so laying the tabs out as a stride from the first one puts shops
+and sideshows in each other's places while looking correct.
+
+**`FUN_004a0810( category, screen )` is the seed setter**, called at the top of every builder —
+`(2,4)` in allstaff, `(2,5)` allitems, `(2,6)` allpeeps, `(3,10)` entryprice. It confirms the
+1 / 3 / 10 seeding above from the other direction.
+
+**entryprice is not what its rects suggest.** Its three stacked right-hand buttons are **not** a
+spinner: they resolve to `b_staffcost`, `b_loans` and `b_finance`, and `FUN_00498c60` sends them to
+`FUN_004b2750`, `FUN_0049fb30` and `FUN_0049ac60` — this category's other three screens. The spinner
+is `0x4f3ae`, control **type 12**, whose `op 0x0f` child is `b_minus` (left) and `op 0x0e` child is
+`b_plus` (right); `FUN_0066a5c4(&0,&10000)` gives it a range of **0–10000** and `FUN_0066a68d(&1)` a
+step of **1**. `0x4f3b0` is the black "Ticket Price" label (UITEXT 160), and `0x4f3b1` is `b_door`,
+the park open/closed switch — `FUN_00519ef0( closed, 0 )`, where the argument is the CLOSED flag, so
+**down is open**. The fee is held in a global as the spinner moves (message `0x800`) and written on
+dismissal (message `0x14`).
+
+**allstaff's kind → happiness-label switch is deliberately out of order**: case 0→`0x6b`, 1→`0x6c`,
+**2→`0x6e`**, **3→`0x6d`**, 4→`0x6f`. The string file lists guards (109) before entertainers (110)
+while the kinds run cleaners, mechanics, entertainers, guards, scientists. Written as a plain 107–111
+run, the guards tab draws a list of guards under the heading *"Entertainers' Happiness"*.
+
+**Both list screens arm a 2000ms refresh timer** — `FUN_0065ef90( 0x80083, 2000 )`, the same timer id
+the gadget's happiness gauge uses. Rebuilding such a list every frame instead is measurably wrong,
+not merely untidy.
+
+#### Resolving a mesh hash to a file name
+
+The layout stream names a mesh by `h = (c ^ h) * 47` from zero over the model's **first node name**,
+which is often not the file's name. Hashing every stem in `ui.wad` and matching resolves them — but
+**only `.md2` entries are candidates**, because `UiMesh.Get` loads `ui/<name>.md2`. Matching against
+all 1202 entries instead of the 278 models picks up textures and gives names that load nothing:
+`b_pkinfo` and `b_sresrcher` are both `.wct` stems whose models ship as **`b_parkinfo.MD2`** and
+**`b_sresrhcer.MD2`**. Validate the arithmetic against a known pair before trusting any match —
+`b_buy` → `0x2135e13d` and `base` → `0x1beb0695`.
+
+Resolved this way: `list_allstaff`, `list_kids` (allpeeps), `list_all` (the allitems tab group),
+`b_finance`, `b_loans`, `b_staffcost`, `b_door`, `b_plus`, `b_minus`, `b_parkinfo`, `b_kids`,
+`b_allstaff`, `b_allthings`, `b_sguard`, `b_sresrhcer`. The four screen root frames
+(`0xf76e42eb`, `0xf76e4200`, `0x257b71f9`) resolve to **no model at all**, as the buy screen's already
+did — those screens genuinely draw without a backdrop.
 
 **A caution about every debug string quoted on this page and the next.** `FUN_005da3c0`, the logger
 they are all handed to, is an **empty stub in the shipped build** — `void FUN_005da3c0(void) { return; }`.

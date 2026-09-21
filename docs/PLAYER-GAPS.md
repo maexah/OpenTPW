@@ -125,11 +125,15 @@ anything now built, and none blocks another.
   `step <n>`, each one frame of ¹⁄₆₀ s. And the lobby camera orbits, so `settle` alone lands on
   whichever side it had reached: the gates face their island's **−Y** side, which is `orbit π`.
 
-## 2. Four of the six gadget buttons do nothing - BUY IS DONE, 2026-09-21; THREE REMAIN
+## 2. Four of the six gadget buttons do nothing - DONE 2026-09-21, five of six now open something
 
-**>>> NOT TICKED, ON PURPOSE. <<<** Buy now works and carries the whole purchase/hire/management half
-behind it. **Info, Money and Research are still inert**, and the paths-and-queues half of Alexah's own
-dependency order is untouched, so this item stays open.
+**>>> TICKED. Only RESEARCH still does nothing, and it is the one with nothing behind it. <<<**
+Buy carries the whole purchase/hire/management half; paths, queues and building by pointing are all
+laid and verified; and Info and Money now open real screens - **all four of their buildable screens
+drew in a running park and were photographed**. Research is not a category at all (`FUN_004a0840`'s
+case `0x2b` goes straight to `FUN_004aa480`, as the map does), and its one screen is six effort
+sliders over research groups: this game has **no research, no researchers and no groups**, so there is
+nothing to put behind the button. It is counted, with that reason named at the site.
 
 - [x] **Buy** opens `ParkBuyScreen` (stream `0x00754cf8`), which cross-links to `ParkHireScreen`
       (stream `0x00751fa8`). Both are built on the original's control **type 7**, a scrolling
@@ -168,7 +172,33 @@ dependency order is untouched, so this item stays open.
 - [x] **The verbs underneath**: `ParkBuilding` buys, sells, moves and carries; `ParkStaffPool` and
       `ParkPeople` hire, fire, pick up and put down. Money is taken at PLACE time, from the item's
       `+0x1b8`, which is why cancelling a carry needs no refund.
-- [ ] **Info, Money and Research** - still `NotYet(...)` at `ParkGadget.cs`.
+- [x] **INFO and MONEY - DONE 2026-09-21, four screens, all confirmed on screen.** The HUD is six
+      CATEGORY pickers, not seventeen buttons: `FUN_004a0940( n )` opens whichever screen a category
+      was last left on, and `FUN_004a0810( category, screen )` in each builder confirms the seeding
+      from the other direction. Built: **allstaff** (`0x750e10`), **allitems** (`0x7508e0`),
+      **allpeeps** (`0x7506c8`) and **entryprice** (`0x751798`).
+      **The Info and Money buttons were pressed for real** - through `click`, the genuine hit test and
+      both handlers, only SDL skipped - and each opened its screen: `the interface took (162,558)`
+      and `(100,609)`.
+      **The numbers were predicted before they were read.** The fee reads **25** and the spinner moved
+      it **25 -> 26 -> 24**; `b_door` took the gate **open -> shut -> open**; the cleaner's wage read
+      **63** and the scientist's **125**, which are `PerGradeStaffConsts[grade].BaseWage` times
+      `PerTypeStaffConsts[kind].PayMultiplier` on the EASY numbers (7x9 and 5x25). All Miscellaneous
+      Items counted **Small Toilet 3**, which the save's own `VisitableFlag` census independently
+      records as three.
+      **Three of the four screens' columns are filled only where this game has the number.** Rides
+      fill State Of Repair and Remaining Life; miscellaneous items fill both columns; shops,
+      sideshows, visitors' Time In Park and Rides Ridden stay blank and counted rather than carrying a
+      plausible wrong quantity. **UITEXT row 117 is literally `"?"`** - the original ships that visitor
+      column unnamed too.
+      **The screenshots found four defects every green check had passed.** A column heading 160px
+      clear of its column and a tab strip that vanished with the list it hung off, both invisible at
+      4:3 and both only on a 16:9 window; a kind->label table transposed because the executable's own
+      switch is out of order (case 2 takes `0x6e`, case 3 `0x6d`), which drew guards under
+      "Entertainers' Happiness"; and a visitor list rebuilt every frame, caught as **260** gap reports
+      from one visit. See `docs/exe/hud.md`.
+- [ ] **RESEARCH** - counted, and blocked on a system that does not exist rather than on effort. See
+      the note at the head of this item.
 - [x] **PATHS - DONE 2026-09-21, and verified in the running game.** `path 10 10` lays one for
       **20** (`Costs.PathCell`, measured from `Standard.sam` and confirmed through the game's own
       balance reader); `delpath` lifts one and **refunds nothing**, which is the original's own

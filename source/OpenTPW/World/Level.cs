@@ -797,6 +797,26 @@ public class Level
 	}
 
 	/// <summary>
+	/// Opens one of the gadget's CATEGORY screens - see <see cref="OpenBuyScreen"/> for why the console
+	/// needs a way in that does not go through the gadget, and <see cref="UI.ParkCategoryScreens"/> for
+	/// what a category is and why a button opens whichever screen it was last left on.
+	/// </summary>
+	/// <param name="screen">
+	/// The original's own screen number, or nought for whichever one the category was last left on -
+	/// which is what the gadget's button itself asks for.
+	/// </param>
+	internal void OpenCategoryScreen( int category, int screen = 0 )
+	{
+		if ( Kind != Scene.Park || _windows is not { } windows )
+			return;
+
+		if ( screen > 0 )
+			UI.ParkCategoryScreens.Show( windows, category, screen );
+		else
+			UI.ParkCategoryScreens.Open( windows, category );
+	}
+
+	/// <summary>
 	/// How long every voice still sounding takes to fade as a level ends. The original's state machine hands its
 	/// stop-all (0x0051bcb0) 90, in the same untraced unit as the 60 that Sound_StopFading is handed when the advisor
 	/// is quietened, which he already takes as milliseconds - so 0.09 seconds. <b>Inferred, not proven.</b>

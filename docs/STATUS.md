@@ -26,8 +26,9 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 - Lobby: four islands, front end, advisor, weather, particles, options, saves, the island gate
   swinging open as you enter that park, and — with nobody playing — the camera flying itself around
   all four islands with all four heard at once, each from its own island.
-- Park: enter from the lobby; ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (3 of 6 buttons).
+- Park: enter from the lobby; ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (5 of 6 buttons).
 - Building and staffing: the **purchase menu** and the **hire screen** both open from the gadget's Buy button and reach each other. Things can be bought, sold, moved and carried; staff hired, fired, picked up and put down. **Clicking a placed ride opens its management window**, which cycles between rides, deletes and moves.
+- Information and money: the gadget's **Info** and **Money** buttons open real screens — **all staff** (five tabs, live wages and happiness meters), **all items** (four tabs over three different list shapes), **all visitors**, and the **entry price**, whose spinner moves the gate fee and whose `b_door` switch opens and shuts the park.
 - **Building by POINTING**, through the original's own shape: there is **no drag** - both drag slots
   of its build mode are bare `RET` stubs - so a run is **click to anchor, click to commit**, with the
   target snapped to the dominant axis and the anchor then advancing to that snapped target, which is
@@ -47,15 +48,15 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 
 ## Does not
 
-- No finances, litter, saving a park back, video, networking. Three gadget buttons (Info, Money, Research) are still inert. The two global income pools, the balloon and costume arms, and the litter-bin errand (guest state 9) are named and unbuilt.
+- No finances, litter, saving a park back, video, networking. **One** gadget button (Research) is still inert, and it is the one with nothing behind it to build: its screen is six effort sliders over research groups, and this game has no research, no researchers and no groups. The two global income pools, the balloon and costume arms, and the litter-bin errand (guest state 9) are named and unbuilt.
 - Eight of the nine per-object windows are unbuilt (only the ride's). Its stats table fills **four of seven** rows — Users last month, Excitement and Reliability are counted gaps. Patrol areas are dead, deferred by Alexah.
 - The `meter.wct` mapping behind the happiness gauge is wrong — the last fault Alexah found by playing that is still open.
 - 34 opcodes unimplemented. Three README lines and `RideScriptFile.cs:99` still quote older counts.
 
 ## Next
 
-`docs/PLAYER-GAPS.md` — the **eight** gaps a player meets, in the order they meet them. **Four are done**
-(1, 3, 6, 8); **four remain** (2, 4, 5, 7). Alexah sets which one is the goal; one per session.
+`docs/PLAYER-GAPS.md` — the **eight** gaps a player meets, in the order they meet them. **Five are done**
+(1, 2, 3, 6, 8); **three remain** (4, 5, 7). Alexah sets which one is the goal; one per session.
 
 **The current goal, set 2026-09-20, is item 2 — the management gadget's buttons**, starting with the
 purchase menu and building toward paths, queues, and placing, moving and managing objects. Alexah chose
@@ -63,12 +64,19 @@ the *large* half of that item deliberately; the warning on it is a statement of 
 purchase menu is `FUN_004acc70` and the dispatch is already decoded in `docs/exe/hud.md` — do not
 re-derive it.
 
-**Where it stands, 2026-09-21.** The half Alexah named in this session's goal is done and confirmed on
-screen: the purchase menu, the hire screen, and a placed ride's management window, with buy, sell,
-move, carry, hire, fire, pick up and put down all working underneath. **Item 2 is NOT ticked**, and
-should not be until the rest of it lands: **paths and queues** (step 2 of Alexah's own dependency
-order, and the half that still needs the `FUN_004de1f0` queue invalidation hooked up) and the other
-three category buttons, Info, Money and Research.
+**Where it stands, 2026-09-21. ITEM 2 IS DONE and is ticked.** All four of its parts landed and every
+one was confirmed in a running park: the purchase and hire screens with buy, sell, move, carry, hire,
+fire, pick up and put down underneath; **laying and lifting path**; **laying and lifting queue**, with
+the `FUN_004de1f0` invalidation hooked up; **building by pointing**, anchor-then-commit with no drag
+because both drag slots are bare `RET` stubs; and the **Info and Money categories**, whose four
+buildable screens all drew.
+
+**Only Research still does nothing, and that is not deferred work.** It is not a category —
+`FUN_004a0840`'s case `0x2b` goes straight to `FUN_004aa480`, as the map does — and its screen is six
+effort sliders over research groups. This game has no research, no researchers and no groups, so
+there is nothing to put behind the button; it is counted with that reason named at the site.
+
+**The next goal is Alexah's to set** from the three that remain: 4, 5 and 7.
 
 ## Not verified on screen
 
@@ -87,7 +95,7 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | 72 implemented of 106 | 2026-09-20, `case Opcode.` labels vs enum members |
-| Tests | 818 total, all of them run **with** the game and 0 skip | 2026-09-20, measured at `5c66d2e` |
+| Tests | 827 total, all of them run **with** the game and 0 skip | 2026-09-21, measured after the category screens |
 | Tests without the game | 379 ran, 411 skipped — **of 790, and not re-measured since** | 2026-09-19 review |
 | Build warnings | 126 (71 are CS8618 nullable) | 2026-09-20, measured at `5c66d2e` |
 
@@ -193,6 +201,49 @@ bit-identical frames, 0.00% to two decimals, were the tell, because a slow rotat
 number and never an exact zero. Two of my own diagnoses were wrong before the evidence corrected them:
 "nothing is drawn" when a smudge was plainly there, and "a unit error" resting on a multiplication I
 had got wrong.
+
+**2026-09-21 - the Info and Money buttons open four real screens, and item 2 is finished.** allstaff
+(`0x750e10`), allitems (`0x7508e0`), allpeeps (`0x7506c8`) and entryprice (`0x751798`), built from
+their own layout streams. **The HUD is six CATEGORY pickers, not seventeen buttons**, and
+`FUN_004a0810( category, screen )` at the head of every builder confirms the 1 / 3 / 10 seeding from
+the opposite direction to `FUN_004a0940`'s globals.
+
+**Walking the streams was not enough, and that is the transferable part.** A column heading is not in
+the layout data at all: each builder fetches the header child by id `0x10 + index` and hands it a
+UITEXT row, so a stream walk yields the right number of unnamed boxes. Reading the four sub-builders
+gave the rows - rides 82-86, shops 87-91, sideshows 92-97, miscellaneous 98-99, staff 101-105,
+visitors 113-118 - and revealed that **allitems loads three different list trees for its four tabs**
+(5, 5, 6 and 2 columns). **UITEXT 117 is literally `"?"`**: the original ships that visitor column
+unnamed too.
+
+**Mesh names were resolved by hash rather than guessed**, and the method is worth keeping: the stream
+asks for a mesh as `h = (c ^ h) * 47` over the model's first NODE name, so hashing `ui.wad`'s table
+resolves them - but **only the 278 `.md2` entries are candidates**, because `UiMesh.Get` loads
+`ui/<name>.md2`. Matching all 1202 entries instead picked up two textures and produced names that
+loaded nothing (`b_pkinfo`, `b_sresrcher`, whose models ship as `b_parkinfo` and `b_sresrhcer`). The
+arithmetic was checked against two known pairs first. It also refuted the reading that entryprice's
+three right-hand buttons are a spinner: they are `b_staffcost`, `b_loans` and `b_finance`, and the
+handler sends them to this category's other three screens.
+
+**Predicted, then measured.** Fee **25**, moved **25 -> 26 -> 24**; gate **open -> shut -> open**;
+cleaner's wage **63** and scientist's **125** (`BaseWage * PayMultiplier` on the easy numbers, 7x9 and
+5x25); All Miscellaneous Items counted **Small Toilet 3**, which the save's own `VisitableFlag` census
+independently records as three. Both buttons were pressed through the real hit test, not opened behind
+their backs: *"the interface took (162,558)"* and *"(100,609)"*.
+
+**Four defects the screenshots caught that every green check passed.** Two were invisible at 4:3 and
+only appeared on a 16:9 window, both from the same cause - a control **one pixel outside its parent**
+stops following it and resolves its own anchor: a column heading landed 160px clear of its column, and
+a tab strip parented to one of three swappable lists **vanished with it**, stranding the screen. One
+was a transposition: the executable's kind->label switch is deliberately out of order (case 2 takes
+`0x6e`, case 3 `0x6d`), so a plain 107-111 run drew guards under *"Entertainers' Happiness"*. And the
+visitor list rebuilt **every frame** - caught as **260** gap reports from a single visit, fixed to the
+original's own 2000ms timer.
+
+**What stays blank stays blank.** Shops, sideshows, "Users Last Month" and "Excitement", and visitors'
+Time In Park and Rides Ridden are counted rather than filled: putting an object's gross takings under
+"Total Profit" would be a different quantity wearing that label, which is the mistake the hire
+screen's own remarks already warn against.
 
 **2026-09-21 - a park can be built, staffed and managed.** The purchase menu, the hire screen and a
 placed ride's management window all open, and the verbs under them work: buy, sell, move, carry, hire,
