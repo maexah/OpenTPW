@@ -662,6 +662,27 @@ public static class DebugConsole
 					: ParkPicking.State() );
 				break;
 
+			// A click at a point of the window, and it takes coordinates for exactly the reason `pick`
+			// does: synthetic pointer motion reaches X and never reaches SDL, so a harness cannot select
+			// a row by moving the cursor onto it. Only SDL is skipped - the hit test, the row
+			// arithmetic and both the press and the release handlers are the real ones.
+			case "click":
+				if ( parts.Length < 3 )
+				{
+					Reply( "click: click <x> <y>, in window pixels" );
+					break;
+				}
+
+				if ( Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault() is not { } clickStack )
+				{
+					Reply( "click: no window stack" );
+					break;
+				}
+
+				clickStack.ClickAt( Argument( 1 ), Argument( 2 ) );
+				Reply( $"click: pressed and released at ({Argument( 1 ):F0},{Argument( 2 ):F0})" );
+				break;
+
 			// Buying, selling and moving something, driven by hand. The screens that will do this for a
 			// player do not exist yet, and these exist for the same reason `arrive` did before the
 			// arrival manager: the verb has to be provable in a running park before anything is wrapped
@@ -802,6 +823,19 @@ public static class DebugConsole
 
 				park.OpenBuyScreen();
 				Reply( "buyscreen: opened" );
+				break;
+
+			// The other half of the same gadget button - the two screens are siblings and reach each
+			// other directly, which is what FUN_004a0940( 1 ) does from a remembered-tab global.
+			case "hirescreen":
+				if ( Level.Current is not { Kind: Level.Scene.Park } hirePark )
+				{
+					Reply( "hirescreen: only in a park" );
+					break;
+				}
+
+				hirePark.OpenHireScreen();
+				Reply( "hirescreen: opened" );
 				break;
 
 			// What the park is worth. It exists so that a test can prove money moved by EXACTLY one

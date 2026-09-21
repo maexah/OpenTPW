@@ -613,6 +613,34 @@ conflating them looks correct here and breaks elsewhere.
         0x11 then 0x10 column headers (reversed in the stream) ; op 9 SCROLLBAR
       0x2495 -> BUY  b_allthings help 162 ; 0x2496 MONEY
 
+#### The mini-balance is a MONTHLY ACCOUNT, not the park's cash
+
+From `FUN_0049bdd0`, corroborated by the `0x401` arm of `FUN_0049b650`. Three monthly ring buffers on
+the park object (`FUN_00519510`), each stored as samples / index / count / wrapped:
+
+| Samples | Index | Count | Wrapped | Becomes |
+|---|---|---|---|---|
+| `+0x1fc94` | `+0x1fed4` | `+0x1fed8` | `+0x1fedc` | `DAT_007ca2f0`, cash in |
+| `+0x1f7f4` | `+0x1fa34` | `+0x1fa38` | `+0x1fa3c` | `DAT_007ca2fc`, staff costs |
+| `+0x1f5a4` | `+0x1f7e4` | `+0x1f7e8` | `+0x1f7ec` | `DAT_007ca2f8`, total costs |
+
+    0x2489 Cash in     <- DAT_007ca2f0
+    0x248c Staff costs <- DAT_007ca2fc              (on 0x401, plus the candidate's wage)
+    0x248b Other costs <- DAT_007ca2f8 - DAT_007ca2fc
+    0x2487 Balance     <- DAT_007ca2f0 - DAT_007ca2f8
+
+A negative index reads `index + count`, and only when the wrapped byte is set - a ring that has not
+filled once yet. **The balance row is last month's net, so the park's cash does not belong in it**; a
+build that puts it there shows the same figure twice, once correctly as `0x2496` and once mislabelled.
+
+**The two cost rows are red.** `FUN_0065c5d5( 0xff, 0, 0, 0xff )` is called while `0x248d`/`0x248c` and
+`0x248a`/`0x248b` are the current control, and never for `0x2488`/`0x2489` or `0x2486`/`0x2487`.
+
+**Nothing is selected when the screen opens.** `FUN_0049b5b0` fills the list and commits; it never
+calls the select. The info panel, the skill bar and the portrait are blank until the player picks
+somebody, so a build that opens with a filled panel is wrong. The row id pushed is the candidate's
+SLOT INDEX (0 to 0x1f), which is what `FUN_00507bd0` takes back.
+
 **The walk is corroborated three ways**: the tab help rows, the resolved mesh names, and each screen's
 own tab-index switch all give the same ordering, and it matches UITEXT 119–122 and 139–143.
 

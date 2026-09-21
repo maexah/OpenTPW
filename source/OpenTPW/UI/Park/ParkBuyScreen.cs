@@ -178,7 +178,11 @@ internal sealed class ParkBuyScreen : UiWindow
 			Rect = new UiRect( 1866, 583, 1968, 686 ),
 			HelpText = 153,
 			Mesh = UiMesh.Get( "b_allstaff" ),
-			Clicked = () => Log.Info( "Buy screen: the hire screen is not built yet" )
+			Clicked = () =>
+			{
+				Stack.Close( this );
+				Stack.Open( new ParkHireScreen( Stack ) );
+			}
 		} );
 
 		// The stream gives the close button id -2 and UIHELPTEXT row 2, "Left-click to cancel".

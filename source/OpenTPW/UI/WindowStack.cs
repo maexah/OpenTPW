@@ -222,6 +222,25 @@ internal sealed class WindowStack : Panel
 		_helpBar.Draw();
 	}
 
+	/// <summary>
+	/// Presses and releases at a point of the window, as though the pointer had been there - the hit
+	/// test and both halves of a real click.
+	/// </summary>
+	/// <remarks>
+	/// <b>This exists because a harness cannot move the pointer.</b> A warp with no real motion behind
+	/// it reaches the window system and never reaches SDL - measured twice against this game - so a
+	/// test that could only click where the cursor already sits would be measuring X rather than this
+	/// interface. <c>ParkPicking.PickAt</c> was given coordinates for the same reason and says so.
+	/// Only SDL is skipped: the hit test, the row arithmetic and both handlers are the real ones.
+	/// </remarks>
+	internal void ClickAt( float x, float y )
+	{
+		var hit = HitTest( x, y );
+
+		Press( hit, x, y );
+		Release( hit );
+	}
+
 	private UiControl? HitTest( float x, float y )
 	{
 		for ( int i = _windows.Count - 1; i >= 0; --i )

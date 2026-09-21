@@ -568,6 +568,17 @@ public class Level
 	}
 
 	/// <summary>
+	/// Opens the hire screen - the sibling of the purchase menu rather than a button of its own. See
+	/// <see cref="OpenBuyScreen"/> for why the console needs a way in that does not go through the
+	/// gadget.
+	/// </summary>
+	internal void OpenHireScreen()
+	{
+		if ( Kind == Scene.Park && _windows is { } windows )
+			windows.Open( new UI.ParkHireScreen( windows ) );
+	}
+
+	/// <summary>
 	/// How long every voice still sounding takes to fade as a level ends. The original's state machine hands its
 	/// stop-all (0x0051bcb0) 90, in the same untraced unit as the 60 that Sound_StopFading is handed when the advisor
 	/// is quietened, which he already takes as milliseconds - so 0.09 seconds. <b>Inferred, not proven.</b>
