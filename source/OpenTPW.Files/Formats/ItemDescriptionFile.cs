@@ -314,6 +314,26 @@ public sealed class ItemDescriptionFile
 	/// </summary>
 	public int DurationUnit => _durationUnit ?? _category?.DurationUnit ?? 0;
 
+	/// <summary>
+	/// Where the red line falls on the speed and capacity sliders - the point past which a ride is
+	/// being run harder than it should be.
+	///
+	/// <para>
+	/// <b>The ride window marks it with a coloured bar along the track</b>, green below and red beyond
+	/// (control <c>0x3e2e</c>, which sits inside those two sliders and not inside duration - duration
+	/// wears the <c>slider_n</c> mesh with its plus and minus instead). The engine places the mark at
+	/// <c>(redline &lt;&lt; 10) / (max - min)</c>.
+	/// </para>
+	/// <para>
+	/// <b>Inherited like everything else here</b>, and Belly Bounce shows why that matters: it names a
+	/// <c>RedLineCapacity</c> of its own and no <c>RedLineSpeed</c> at all, taking 60 from the rides
+	/// category - which the category file annotates "Percentage".
+	/// </para>
+	/// </summary>
+	public int RedLineSpeed => _redLineSpeed ?? _category?.RedLineSpeed ?? 0;
+
+	public int RedLineCapacity => _redLineCapacity ?? _category?.RedLineCapacity ?? 0;
+
 	private int? _buildPrice;
 
 	private int? _whichUIType;
@@ -344,6 +364,8 @@ public sealed class ItemDescriptionFile
 	private int? _maxDuration;
 	private int? _initDuration;
 	private int? _durationUnit;
+	private int? _redLineSpeed;
+	private int? _redLineCapacity;
 
 	private void Read( string text )
 	{
@@ -503,6 +525,16 @@ public sealed class ItemDescriptionFile
 				// Nought means "no duration at all" - see DurationUnit.
 				case "Info.DurationUnit":
 					_durationUnit = Number( line );
+					break;
+
+				// Slot nought again, for the same reason the price and the starting values are - see
+				// RedLineSpeed for what the window does with these.
+				case "Upgrades[0].RedLineSpeed":
+					_redLineSpeed = Number( line );
+					break;
+
+				case "Upgrades[0].RedLineCapacity":
+					_redLineCapacity = Number( line );
 					break;
 			}
 		}

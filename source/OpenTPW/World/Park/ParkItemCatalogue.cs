@@ -63,7 +63,11 @@ public sealed class ParkItemCatalogue
 		// newly built one starts. DurationUnit nought means the ride has no duration slider at all.
 		int MinSpeed = 0, int MaxSpeed = 0, int InitSpeed = 0,
 		int MinCapacity = 0, int MaxCapacity = 0, int InitCapacity = 0,
-		int MinDuration = 0, int MaxDuration = 0, int InitDuration = 0, int DurationUnit = 0 );
+		int MinDuration = 0, int MaxDuration = 0, int InitDuration = 0, int DurationUnit = 0,
+
+		// Where the red line sits on the speed and capacity tracks - the window marks it with a
+		// coloured bar, green below and red beyond.
+		int RedLineSpeed = 0, int RedLineCapacity = 0 );
 
 	private readonly Dictionary<int, Item> _items = [];
 
@@ -171,7 +175,8 @@ public sealed class ParkItemCatalogue
 					description.MinSpeed, description.MaxSpeed, description.InitSpeed,
 					description.MinCapacity, description.MaxCapacity, description.InitCapacity,
 					description.MinDuration, description.MaxDuration, description.InitDuration,
-					description.DurationUnit );
+					description.DurationUnit,
+					description.RedLineSpeed, description.RedLineCapacity );
 
 			return true;
 		}

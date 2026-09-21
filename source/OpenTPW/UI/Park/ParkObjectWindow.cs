@@ -115,6 +115,20 @@ internal sealed class ParkObjectWindow : UiWindow
 	/// <summary>The stats table's cells, by the control id the stream gives each.</summary>
 	private readonly Dictionary<int, UiControl> _stats = [];
 
+	/// <summary>
+	/// Where the red line's bar runs inside each slider - control <c>0x3e2e</c>, from the stream.
+	/// <b>Duration has none</b>: it wears the <c>slider_n</c> mesh with a plus and a minus on its ends,
+	/// where speed and capacity wear <c>slider_w</c> and carry this instead.
+	/// </summary>
+	private static readonly UiRect?[] RedLineRects =
+	[
+		new UiRect( 378, 619, 692, 635 ),
+		new UiRect( 813, 619, 1127, 635 ),
+		null,
+	];
+
+	private readonly UiRedLine?[] _redLines = new UiRedLine?[3];
+
 	private readonly UiSlider[] _sliders = new UiSlider[3];
 	private readonly UiControl[] _readouts = new UiControl[3];
 
@@ -122,6 +136,20 @@ internal sealed class ParkObjectWindow : UiWindow
 
 	/// <summary>The panel the ride is shown spinning in - control <c>0x3e24</c>.</summary>
 	private readonly UiControl _preview;
+
+	/// <summary>
+	/// The message box's border over the preview - control <c>0x3e25</c>, the yellow-and-black chevron.
+	/// <b>Shown only while the ride is broken down</b>; see where it is built for why.
+	/// </summary>
+	private readonly UiControl _broken;
+
+	/// <summary>
+	/// How far the preview looks down at the ride, in degrees. <b>A choice, and marked as one.</b> The
+	/// park's own camera runs 45 pulled in to 65 pushed out (<see cref="ParkOrbitCameraMode.Pitch"/>),
+	/// and this takes the pulled-in end: reading the live pitch would swing the preview whenever the
+	/// player zoomed, which the original's does not do.
+	/// </summary>
+	private const float PreviewPitch = 45f;
 
 	/// <summary>Whether the preview has already reported what it found. Once, not once a frame.</summary>
 	private bool _previewSaidWhy;
@@ -181,9 +209,14 @@ internal sealed class ParkObjectWindow : UiWindow
 			Mesh = UiMesh.Get( "!frame" )
 		} );
 
-		_preview.Add( new UiControl
+		// HIDDEN UNTIL THE RIDE BREAKS DOWN. This is not decoration over the preview: it is the border
+		// of a message box that appears on top of it, and the builder says so - FUN_004ad720 sets its
+		// frame and then calls UI_SetVisible(0), so it starts hidden. This decode recorded that and
+		// then drew it anyway, which left a yellow-and-black bar across a working preview.
+		_broken = _preview.Add( new UiControl
 		{
 			Id = 0x3e25,
+			Visible = false,
 			Rect = new UiRect( 300, 275, 828, 462 ),
 			Mesh = UiMesh.Get( "f_chev" ),
 			TextRect = new UiRect( 328, 304, 799, 435 ),
@@ -273,16 +306,23 @@ internal sealed class ParkObjectWindow : UiWindow
 				Moved = () => Moved( which )
 			} );
 
+			// The red line goes on BEFORE the thumb, so the thumb rides over it rather than under it.
+			if ( RedLineRects[i] is { } line )
+				_redLines[i] = slider.Add( new UiRedLine { Id = 0x3e2e, Rect = line } );
+
 			slider.AddThumb( new UiSliderThumb { Id = 3, Rect = thumb, Mesh = UiMesh.Get( "b_scrollera" ) } );
 
 			_sliders[i] = slider;
 
+			// BLACK, because these sit on the slider's own bright green bar - white on green is not
+			// readable at this size, which is plain the moment the window is looked at rather than
+			// measured.
 			_readouts[i] = Root.Add( new UiControl
 			{
 				Id = ReadoutIds[i],
 				Rect = ReadoutRects[i],
 				Font = 6,
-				TextColour = UiColour.White
+				TextColour = UiColour.Black
 			} );
 		}
 
@@ -407,6 +447,10 @@ internal sealed class ParkObjectWindow : UiWindow
 		// Nought is not "no minimum": it means this ride has no duration at all.
 		if ( item.DurationUnit == 0 )
 			Hide( Duration );
+
+		// And where the red line falls on the two tracks that have one.
+		Mark( Speed, item.RedLineSpeed, item.MinSpeed, item.MaxSpeed );
+		Mark( Capacity, item.RedLineCapacity, item.MinCapacity, item.MaxCapacity );
 
 		for ( var i = 0; i < _sliders.Length; ++i )
 			Letter( i );
@@ -546,11 +590,68 @@ internal sealed class ParkObjectWindow : UiWindow
 		if ( !model.HasBounds )
 			return;
 
-		var centre = (model.BoundsMin + model.BoundsMax) * 0.5f;
-		var size = model.BoundsMax - model.BoundsMin;
+		// THE PIVOT COMES FROM WHAT IS ACTUALLY DRAWN, not from the static box, and that is what stops
+		// the spin looking odd. The box is measured over every mesh the model ships - including the
+		// ones PoseAsBuilt hides once the ride is up, and including each mesh's own padding - so its
+		// centre is not the centre of what you can see. Turning about a point that is not the visual
+		// centre swings the model round instead of rotating it in place.
+		//
+		// IT TURNS ABOUT THE RIDE'S OWN CENTRE, which is all a preview wants - and two wrong turns got
+		// here. The model's whole box covers every mesh it ships, INCLUDING the building meshes
+		// PoseAsBuilt hides once the ride is up, so its centre sits below what can be seen and the ride
+		// rode high. Taking the drawn meshes' ORIGINS instead cured the swing and not the height,
+		// because a ride's meshes all have their origins on its base plane. What is wanted is the box
+		// of the geometry actually DRAWN, and one centre serves both the pivot and the framing.
+		//
+		// The REST boxes are used rather than live positions deliberately: a pivot that followed the
+		// animation would bob about as the ride moved, and spinning about a moving point is the very
+		// wobble this is meant to remove.
+		var low = new Vector3( float.MaxValue, float.MaxValue, float.MaxValue );
+		var high = new Vector3( float.MinValue, float.MinValue, float.MinValue );
+		var drawn = 0;
 
-		// Across and up as this projection uses them: model X across, model Z up.
-		var half = MathF.Max( MathF.Max( size.X, size.Z ) * 0.5f, 0.001f );
+		for ( var i = 0; i < model.Entities.Length && i < model.MeshBoxes.Count; ++i )
+		{
+			if ( model.Entities[i].Model is null || model.Entities[i].Opacity <= 0f )
+				continue;
+
+			var (meshLow, meshHigh) = model.MeshBoxes[i];
+
+			low = new Vector3( MathF.Min( low.X, meshLow.X ), MathF.Min( low.Y, meshLow.Y ),
+				MathF.Min( low.Z, meshLow.Z ) );
+
+			high = new Vector3( MathF.Max( high.X, meshHigh.X ), MathF.Max( high.Y, meshHigh.Y ),
+				MathF.Max( high.Z, meshHigh.Z ) );
+
+			++drawn;
+		}
+
+		// A model with nothing drawable in it falls back to its whole box.
+		if ( drawn == 0 )
+		{
+			low = model.BoundsMin;
+			high = model.BoundsMax;
+		}
+
+		// One centre, for the pivot and the framing alike, and the size off the same box - so what is
+		// turned about is what is looked at, and what is fitted is what is drawn.
+		var centre = (low + high) * 0.5f;
+		var size = high - low;
+
+		// FITTED FOR THE ANGLE IT IS SEEN AT, which the first version was not. Sizing by
+		// max( size.X, size.Z ) assumes the model is looked at square on; tilted down by PreviewPitch
+		// the model's DEPTH climbs into the picture as well, so it reaches
+		// depth * sin(pitch) + height * cos(pitch) up the screen. Ignoring that is what pushed the
+		// ride off the bottom of its panel and into the scissor, which cut it clean across.
+		//
+		// Across, the spin turns X and Y through each other, so the widest it can ever be is the
+		// diagonal of its own footprint - not either side of it.
+		var pitch = PreviewPitch.DegreesToRadians();
+
+		var across = MathF.Sqrt( (size.X * size.X) + (size.Y * size.Y) );
+		var tall = (size.Y * MathF.Sin( pitch )) + (size.Z * MathF.Cos( pitch ));
+
+		var half = MathF.Max( MathF.Max( across, tall ) * 0.5f, 0.001f );
 
 		var perUnit = MathF.Min( panel.Width, panel.Height ) * 0.5f * Fill / half;
 
@@ -562,7 +663,30 @@ internal sealed class ParkObjectWindow : UiWindow
 				? entityLocal( model.Entities[0] )
 				: Vector3.Zero;
 
-			Log.Info( $"Ride window: preview fit half {half:F1}, perUnit {perUnit:F3}," +
+			// THE TERMS THEMSELVES, not another guess about them. The preview translates each mesh by
+			// (Position - PlacedOrigin - centre) while `centre` comes from MeshBoxes, which are built
+			// from REST offsets at load. If those two spaces disagree by any CONSTANT, the leftover is
+			// rigid and `spin` swings it round - which is exactly the clean ring of fixed radius a
+			// burst of frames showed. One line per mesh settles which, instead of editing and looking.
+			for ( var i = 0; i < model.Entities.Length && i < model.MeshBoxes.Count; ++i )
+			{
+				if ( model.Entities[i].Model is null || model.Entities[i].Opacity <= 0f )
+					continue;
+
+				var live = model.Entities[i].Position - model.PlacedOrigin;
+				var (meshLow, meshHigh) = model.MeshBoxes[i];
+				var rest = (meshLow + meshHigh) * 0.5f;
+
+				Log.Info( $"Ride window: preview mesh {i}" +
+					$" live ({live.X:F1},{live.Y:F1},{live.Z:F1})" +
+					$" restbox ({rest.X:F1},{rest.Y:F1},{rest.Z:F1})" +
+					$" minus centre ({(live.X - centre.X):F1},{(live.Y - centre.Y):F1},{(live.Z - centre.Z):F1})" );
+			}
+
+			// `drawn` is reported because its being NOUGHT is invisible otherwise: the fallback quietly
+			// reframes the ride by its whole box, and the only tell was a centre that looked familiar.
+			Log.Info( $"Ride window: preview fit drawn {drawn} of {model.Entities.Length}," +
+				$" half {half:F1}, perUnit {perUnit:F3}," +
 				$" span {(size.X * perUnit):F0}px of {panel.Width:F0}," +
 				$" centre ({centre.X:F1},{centre.Y:F1},{centre.Z:F1})," +
 				$" mesh0 local ({first.X:F1},{first.Y:F1},{first.Z:F1})" );
@@ -570,17 +694,28 @@ internal sealed class ParkObjectWindow : UiWindow
 			Vector3 entityLocal( ModelEntity one ) => one.Position - model.PlacedOrigin - centre;
 		}
 
-		var sideways = perUnit * 2f / Screen.Width;
-		var up = perUnit * 2f / Screen.Height;
+		// LOOKED AT FROM ABOVE AND IN FRONT, the way the park's camera sees a ride, rather than square
+		// on. The first version copied AdvisorModel.ScreenProjection, which is a flat elevation - model
+		// X across, Z up, Y squashed almost out of depth - and gave a ride with no perspective on it at
+		// all. Here the eye sits back and up by the pitch and looks at the model's own centre, so the
+		// centring stops being arithmetic to get right and becomes a consequence of what is aimed at.
+		var eye = new System.Numerics.Vector3( 0f, -MathF.Cos( pitch ), MathF.Sin( pitch ) ) * (half * 4f);
+
+		var view = System.Numerics.Matrix4x4.CreateLookAt( eye,
+			System.Numerics.Vector3.Zero, new System.Numerics.Vector3( 0f, 0f, 1f ) );
+
+		// A box big enough to hold the model at any angle of spin, then squeezed from the whole screen
+		// down into the panel: scale by the panel's share of the screen, then move it to the panel's
+		// own centre in normalised coordinates.
+		var ortho = System.Numerics.Matrix4x4.CreateOrthographic(
+			2f * half / Fill, 2f * half / Fill, -8f * half, 8f * half );
 
 		var x = ((panel.X + (panel.Width * 0.5f)) * 2f / Screen.Width) - 1f;
 		var y = 1f - ((panel.Y + (panel.Height * 0.5f)) * 2f / Screen.Height);
 
-		var projection = new System.Numerics.Matrix4x4(
-			sideways, 0f, 0f, 0f,
-			0f, 0f, 0.001f, 0f,
-			0f, up, 0f, 0f,
-			x, y, 0.2f, 1f );
+		var projection = ortho
+			* System.Numerics.Matrix4x4.CreateScale( panel.Width / Screen.Width, panel.Height / Screen.Height, 1f )
+			* System.Numerics.Matrix4x4.CreateTranslation( x, y, 0f );
 
 		// Turning about the model's own up axis, off the frame clock.
 		//
@@ -599,16 +734,34 @@ internal sealed class ParkObjectWindow : UiWindow
 		command.SetScissorRect( 0, (uint)MathF.Max( 0f, panel.X ), (uint)MathF.Max( 0f, panel.Y ),
 			(uint)MathF.Max( 0f, panel.Width ), (uint)MathF.Max( 0f, panel.Height ) );
 
+		// THE DRAWN SET AND THE BOXED SET MUST BE THE SAME SET, and they were not: the box covered the
+		// four meshes that pass the visibility test while all eight were drawn. Centring on half a ride
+		// and turning all of it is an ORBIT of the offset between the two centres - which is exactly
+		// what a burst of frames showed, the centroid tracing a clean ring about the panel's middle.
+		//
+		// A hidden mesh is one PoseAsBuilt put away when the ride finished going up, and it has no more
+		// business in the preview than in the park. DrawOverlay does not consult Opacity the way
+		// ModelEntity.OnRender does, so the skip has to be made here.
+		foreach ( var entity in model.Entities )
+		{
+			if ( entity.Model is null || entity.Opacity <= 0f )
+				continue;
+
+			entity.DrawOverlay( view, projection, PreviewLight, PreviewLightColour,
+				PreviewAmbient, worldNormals: true, transform: PreviewTransform( entity, model, centre, spin ) );
+		}
+
 		// Every solid half before any see-through one, the order the scene uses - see AdvisorModel.Draw
 		// for what drawing them a mesh at a time costs.
 		foreach ( var entity in model.Entities )
-			entity.DrawOverlay( System.Numerics.Matrix4x4.Identity, projection, PreviewLight, PreviewLightColour,
-				PreviewAmbient, worldNormals: true, transform: PreviewTransform( entity, model, centre, spin ) );
+		{
+			if ( entity.TranslucentModel is null || entity.Opacity <= 0f )
+				continue;
 
-		foreach ( var entity in model.Entities )
-			entity.DrawOverlay( System.Numerics.Matrix4x4.Identity, projection, PreviewLight, PreviewLightColour,
+			entity.DrawOverlay( view, projection, PreviewLight, PreviewLightColour,
 				PreviewAmbient, worldNormals: true, translucent: true,
 				transform: PreviewTransform( entity, model, centre, spin ) );
+		}
 
 		command.SetFullScissorRects();
 	}
@@ -641,6 +794,73 @@ internal sealed class ParkObjectWindow : UiWindow
 			(entity.Position - model.PlacedOrigin - centre).GetSystemVector3() );
 
 		return matrix * spin;
+	}
+
+	/// <summary>
+	/// Puts the red line where the item says it falls, as a fraction of the track.
+	/// </summary>
+	/// <remarks>
+	/// <b>The engine writes <c>(redline &lt;&lt; 10) / (max - min)</c> out of 1024</b>, which reduces
+	/// to plain <c>redline / (max - min)</c> - the shift and the divide cancel. The simple form is
+	/// written here rather than carrying fixed-point arithmetic that looks meaningful and is not.
+	/// <b>Note it does NOT subtract the minimum</b>, which the obvious reading would: for speed's 1..100
+	/// that is 0.606 against 0.596, too small to see and a real deviation if it were quietly corrected.
+	/// </remarks>
+	private void Mark( int which, int redLine, int lowest, int highest )
+	{
+		if ( _redLines[which] is not { } bar )
+			return;
+
+		bar.At = highest > lowest ? Math.Clamp( redLine / (float)(highest - lowest), 0f, 1f ) : 0f;
+		bar.Visible = _sliders[which].Visible && bar.At > 0f;
+	}
+
+	/// <summary>
+	/// The red line along a slider's track - control <c>0x3e2e</c>, which sits inside the speed and
+	/// capacity sliders and marks the point past which the ride is being run harder than it should be.
+	/// Green below it, red beyond.
+	/// </summary>
+	/// <remarks>
+	/// Drawn rather than skinned because two colours meeting at a movable point is not something a
+	/// <see cref="UiMesh"/> frame can express. The solid colours are 1x1 textures, which is how
+	/// <c>LoadingScreen</c> already makes one, and the quad goes through <see cref="Material.UI"/>
+	/// with the y-flip every other <c>Graphics.Quad</c> caller in this interface uses.
+	/// </remarks>
+	private sealed class UiRedLine : UiControl
+	{
+		private static Texture? _green;
+		private static Texture? _red;
+
+		/// <summary>How far along the track the line falls, 0 to 1.</summary>
+		internal float At { get; set; }
+
+		protected override void OnDraw()
+		{
+			base.OnDraw();
+
+			if ( At <= 0f )
+				return;
+
+			_green ??= new Texture( [0x20, 0xB0, 0x20, 0xFF], 1, 1 );
+			_red ??= new Texture( [0xC0, 0x20, 0x20, 0xFF], 1, 1 );
+
+			var box = Pixels;
+			var split = box.Width * Math.Clamp( At, 0f, 1f );
+
+			Bar( _green, box.X, box.Y, split, box.Height );
+			Bar( _red, box.X + split, box.Y, box.Width - split, box.Height );
+		}
+
+		private static void Bar( Texture texture, float x, float y, float width, float height )
+		{
+			if ( width <= 0f || height <= 0f )
+				return;
+
+			Material.UI.Set( "Color", texture );
+
+			using ( _ = new Graphics.Scope( Screen.Size ) )
+				Graphics.Quad( new Rectangle( x, Screen.Height - y - height, width, height ), Material.UI );
+		}
 	}
 
 	/// <summary>How the preview is lit. <b>Chosen, not measured</b> - the original lights it from its own scene.</summary>
@@ -801,6 +1021,30 @@ internal sealed class ParkObjectWindow : UiWindow
 
 	/// <summary>The window closing commits, the same as either arrow does - see <see cref="Commit"/>.</summary>
 	protected internal override void Closed() => Commit();
+
+	/// <summary>
+	/// The chevron border belongs to a message box that appears over the preview when the ride breaks
+	/// down, so it follows the ride's own state rather than being drawn as decoration.
+	/// </summary>
+	/// <remarks>
+	/// Read every frame because a ride can break while its window is open - the window does not pause
+	/// the game, which is the whole reason its cycle arrows are worth having.
+	/// </remarks>
+	protected internal override void Update() => _broken.Visible = IsBroken();
+
+	/// <summary>Whether the ride being shown has broken down - <c>VAR_BROKEN</c> on its own script.</summary>
+	private bool IsBroken()
+	{
+		if ( ParkRides.Current is not { } rides )
+			return false;
+
+		var id = rides.ScriptFor( ThingId );
+
+		if ( id == 0 || rides.Scheduler.Find( id ) is not { } script )
+			return false;
+
+		return script[ParkRideOperation.BrokenVariable] != 0;
+	}
 
 	/// <summary>
 	/// One of the bottom row's verbs. Delete and move are built; the rest are counted by name.

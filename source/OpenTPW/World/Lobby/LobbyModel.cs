@@ -73,6 +73,21 @@ public sealed class LobbyModel
 	/// <summary>Whether any mesh contributed to <see cref="BoundsMin"/> - false for a model with none.</summary>
 	public bool HasBounds => BoundsMax.X >= BoundsMin.X;
 
+	/// <summary>
+	/// Each mesh's own box, in the same order as <see cref="Entities"/>, about the model's origin.
+	///
+	/// <para>
+	/// <b>The whole model's box is not a substitute when only some of it is drawn.</b> A ride hides
+	/// its building meshes once it is up (<c>ParkObjects.PoseAsBuilt</c>), and those still sit in
+	/// <see cref="BoundsMin"/> - so a caller framing the model by the whole box aims below what is
+	/// actually visible and leaves it riding high. Boxing only the meshes being drawn needs their
+	/// bounds one at a time, which is what this is for.
+	/// </para>
+	/// </summary>
+	public IReadOnlyList<(Vector3 Low, Vector3 High)> MeshBoxes => _meshBoxes;
+
+	private readonly List<(Vector3 Low, Vector3 High)> _meshBoxes = [];
+
 	/// <summary>One per mesh this model's animations morph - a model can morph several.</summary>
 	public MeshAnimator[] Animators { get; } = Array.Empty<MeshAnimator>();
 
@@ -212,24 +227,47 @@ public sealed class LobbyModel
 			// every direction: Belly Bounce - a 3x4 cell ride, thirty by forty world units - came out
 			// 147 units across, and a preview sized by that drew it at about a fifth of its panel.
 			//
-			// The swizzle is the one the offset above already takes: a mesh's bounds are model space,
-			// Y-up, while this box lives in the world's Z-up. Each mesh's own rotation within the model
-			// is NOT applied to its bounds here, so the box stays a little loose - but loose by a
-			// mesh's own size rather than by its distance to a corner.
-			var low = new Vector3( mesh.BoundsMin.X, mesh.BoundsMin.Z, mesh.BoundsMin.Y ) * scale;
-			var high = new Vector3( mesh.BoundsMax.X, mesh.BoundsMax.Z, mesh.BoundsMax.Y ) * scale;
+			// <b>The mesh's own orientation is applied, by carrying all eight corners through the very
+			// transform its geometry is drawn with.</b> Leaving it out does not merely loosen the box,
+			// it MOVES it, and a box that is off by a constant gives a centre that is off by a constant:
+			// Belly Bounce's first mesh keeps its bulk 25 units from its own origin, so the model's
+			// centre came out about nineteen units wide of the geometry, and the ride preview - which
+			// spins about that centre - swung the ride round a ring instead of turning it in place.
+			//
+			// The corners go in swizzled but UNSCALED: a mesh's bounds are model space, Y-up, while this
+			// box lives in the world's Z-up, and `world` already folded the scale into the linear part.
+			var linear = ToWorldSpace( world );
+			var low = new Vector3( float.MaxValue, float.MaxValue, float.MaxValue );
+			var high = new Vector3( float.MinValue, float.MinValue, float.MinValue );
+
+			for ( var corner = 0; corner < 8; ++corner )
+			{
+				var pick = new Vector3(
+					(corner & 1) == 0 ? mesh.BoundsMin.X : mesh.BoundsMax.X,
+					(corner & 2) == 0 ? mesh.BoundsMin.Z : mesh.BoundsMax.Z,
+					(corner & 4) == 0 ? mesh.BoundsMin.Y : mesh.BoundsMax.Y );
+
+				var at = (Vector3)System.Numerics.Vector3.Transform( pick.GetSystemVector3(), linear ) + offset;
+
+				low = new Vector3( MathF.Min( low.X, at.X ), MathF.Min( low.Y, at.Y ), MathF.Min( low.Z, at.Z ) );
+				high = new Vector3( MathF.Max( high.X, at.X ), MathF.Max( high.Y, at.Y ), MathF.Max( high.Z, at.Z ) );
+			}
+
+			// Kept per mesh as well as folded into the whole - see MeshBoxes for why a caller that
+			// draws only some of the meshes cannot use the whole model's box.
+			_meshBoxes.Add( (low, high) );
 
 			BoundsMin = new Vector3(
-				MathF.Min( BoundsMin.X, offset.X + MathF.Min( low.X, high.X ) ),
-				MathF.Min( BoundsMin.Y, offset.Y + MathF.Min( low.Y, high.Y ) ),
-				MathF.Min( BoundsMin.Z, offset.Z + MathF.Min( low.Z, high.Z ) ) );
+				MathF.Min( BoundsMin.X, low.X ),
+				MathF.Min( BoundsMin.Y, low.Y ),
+				MathF.Min( BoundsMin.Z, low.Z ) );
 
 			BoundsMax = new Vector3(
-				MathF.Max( BoundsMax.X, offset.X + MathF.Max( low.X, high.X ) ),
-				MathF.Max( BoundsMax.Y, offset.Y + MathF.Max( low.Y, high.Y ) ),
-				MathF.Max( BoundsMax.Z, offset.Z + MathF.Max( low.Z, high.Z ) ) );
+				MathF.Max( BoundsMax.X, high.X ),
+				MathF.Max( BoundsMax.Y, high.Y ),
+				MathF.Max( BoundsMax.Z, high.Z ) );
 
-			_linearTransforms[meshIndex] = ToWorldSpace( world );
+			_linearTransforms[meshIndex] = linear;
 
 			Entities[meshIndex] = new ModelEntity()
 			{
