@@ -869,6 +869,41 @@ public static class DebugConsole
 					: "delqueue <cellX> <cellY>" );
 				break;
 
+			// >>> WHAT THE RENDERER ACTUALLY HOLDS, as opposed to what the simulation believes. <<<
+			//
+			// This exists because a whole session was lost correlating screenshots against console
+			// replies BY HAND and getting a different answer each time - the console said the cells
+			// were laid and the money spent, the picture showed neither, and seven explanations for
+			// that were each plausible and each wrong. A capture cannot arbitrate between the two
+			// halves of the program; only the program can. So this reports the DRAW side - how many
+			// cells the path mesh actually contains, how many queue pieces are standing, whether the
+			// surfaces exist at all - beside the simulation side, in one reply, from one frame.
+			//
+			// If these two ever disagree, the defect is in the game and not in the harness. If they
+			// agree and a photograph still disagrees with both, the harness is at fault and this says
+			// so without anybody having to guess.
+			case "drawn":
+				if ( Level.Current is not { Kind: Level.Scene.Park } drawnPark )
+				{
+					Reply( "drawn: only in a park" );
+					break;
+				}
+
+				var drawnState = drawnPark.ParkState;
+				var sameState = ReferenceEquals( drawnState, ParkState.Current );
+
+				var overlay = 0;
+
+				if ( drawnState is not null )
+					overlay = drawnState.ChangedCells;
+
+				Reply( $"drawn: paths {ParkPaths.Current?.Drawn.ToString() ?? "<no ParkPaths>"} cells, " +
+					$"queues {ParkQueues.Current?.Placed.ToString() ?? "<no ParkQueues>"} pieces, " +
+					$"ground {(ParkGround.Current is null ? "<none>" : "built")} | " +
+					$"overlay {overlay} changed cells, balance {drawnState?.Balance.ToString() ?? "?"} | " +
+					$"Level.ParkState is ParkState.Current: {sameState}" );
+				break;
+
 			// A world click AT A CELL. `click` takes window pixels and needs the pointer to be over the
 			// map, which is right for a real frame and useless for reaching one named cell - so this
 			// reaches the very method a real frame reaches, Level.ClickWorldAt, which its own remarks

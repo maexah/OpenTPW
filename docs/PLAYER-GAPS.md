@@ -208,7 +208,46 @@ dependency order is untouched, so this item stays open.
       **NOT YET SEEN ON SCREEN** - the capture instrument was returning stale frames (see below), so
       this rests on console evidence alone. The tool is still reached only from the console; wiring
       it to the hover classifier (class 1 = a path cell, class 2 = **plain ground**) is what remains.
-- **>>> THE CAPTURE INSTRUMENT IS NOT TRUSTWORTHY, AND THREE DIAGNOSES OF IT WERE WRONG. <<<**
+- **>>> SETTLED: NEWLY BUILT PATH DOES RENDER, AND THE METHOD THAT SETTLED IT IS THE POINT. <<<**
+  A **difference image** against a **control pair** is what finally answered it, after nine wrong
+  explanations. Lay one cell and the diff shows a single clean quadrilateral on open grass; lay nine
+  more along the same row and it becomes a continuous band. Both are plainly distinct from the
+  guest-shaped and advisor-shaped blobs elsewhere in the frame. **Shape discriminates where a scalar
+  cannot.**
+  **The control pair is the part worth keeping.** Two frames with *nothing done between them* differ
+  by **2.54–2.60%** of the frame, because a running park moves guests, flags and water. So every
+  whole-frame percentage quoted earlier in this work — 1.42%, 1.04%, 0.15% — was **below the noise
+  floor**, and the 1.42% once offered as proof was smaller than doing nothing at all. Measure the
+  floor first; a percentage above it means nothing until its *shape* is inspected.
+  **Two further traps, both real:** never grab while paused (`pause` + `step` stops presentation and
+  yields byte-identical frames even as the renderer reports new geometry); and aim the camera at the
+  *built park*, since ten cells out on empty terrain at zoom 80 are a few pixels near the horizon.
+  **What was NOT wrong:** the game. No deferred-disposal race, no material-slot fault, no diverging
+  `ParkState`, no HUD refresh defect — all of those were my hypotheses and all were refuted. The
+  `drawn` console command settled the other half in one frame: `paths 88 cells, overlay 10 changed
+  cells, balance 87912`, with `money` reporting 87912 in the same run and
+  `Level.ParkState is ParkState.Current: True`.
+  *(The superseded diagnoses are kept below, because the sequence of wrong answers is the useful
+  record - each was plausible, and two were asserted confidently before the cited line was read.)*
+- **The superseded readings, wrong but instructive on their own terms.**
+  A control shot settled it in one frame — aim the camera at the park's *own* shipped avenue, cell
+  (47,21), and everything renders: the walkways, the gate, the Belly Bounce, the guests, the river.
+  Every failed capture was aimed at cells x≈4–13, y≈9–15, which is **bare ground outside the built
+  park**, where ten new path cells at zoom 80 are a few pixels near the horizon. The cells were laid
+  correctly the whole time; the camera was looking at the wrong corner of the map.
+  **So the game was never at fault and the harness was never broken** — the *test location* was. The
+  `drawn` console command settled the other half: in one frame it reported `paths 88 cells, overlay
+  10 changed cells, balance 87912`, and `money` in the same run reported 87912. Simulation and
+  renderer agree exactly, and `Level.ParkState is ParkState.Current: True`.
+  **The earlier withdrawal is itself withdrawn:** the HUD money *does* track spending. What looked
+  like a divergence was two readings half a second apart with gate takings arriving between them.
+  **The lesson worth keeping is the method, not the bug.** Seven explanations were offered — stale
+  compositor, unsettled frames, frame budget, leftover processes, a HUD refresh defect, two diverging
+  `ParkState` instances — each plausible, each wrong, and two of them asserted confidently before the
+  cited line was read. What ended it was a **control**: photograph something already known to be
+  there. That is cheaper than any theory and should have been the first move.
+  *(Kept below for the record: the three superseded diagnoses.)*
+- **The superseded reading, wrong but instructive on its own terms.**
   The rendered frame and the console disagree about the same run, repeatedly and in different ways.
   In one run the console read money 87987 → 87787 with the surfaces rebuilt from 78 to 88 path cells,
   while the frame showed 87987 and 205 changed pixels. In the next, the frame showed **88012** — a
