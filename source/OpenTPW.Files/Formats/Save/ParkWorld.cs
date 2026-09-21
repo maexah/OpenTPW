@@ -721,7 +721,7 @@ public sealed class ParkWorld
 		int TrackType = 0, ushort TrackFlags = 0, ushort TrackParentId = 0,
 		int Litter = 0, ushort LitterCollector = 0, ushort PylonIndex = 0,
 		byte StatusFlags = 0, int TimeMarkedForLitterCollection = 0, ushort Occupant = 0,
-		ushort NearbyEffects = 0 )
+		ushort NearbyEffects = 0, ushort ParentId = 0 )
 	{
 		/// <summary>
 		/// Whether anything has been dropped here. <b>Nought on every cell of the park the game ships</b>,
@@ -1291,6 +1291,12 @@ public sealed class ParkWorld
 			TrackType: tracked ? ReadInt32At( track + CellType ) : 0,
 			TrackFlags: tracked ? (ushort)ReadUInt16At( track + CellFlags ) : (ushort)0,
 			TrackParentId: tracked ? (ushort)ReadUInt16At( track + CellParent ) : (ushort)0,
+
+			// The MAP record carries mParentID as well, at the same offset within its own record, and
+			// for a QUEUE cell it names the object that queue serves - the original stamps it there as
+			// the cell is laid. Nothing read it until editing needed it: a queue cell being deleted has
+			// to be able to say whose queue just changed.
+			ParentId: (ushort)ReadUInt16At( at + CellParent ),
 
 			// The litter block, which only the map record carries: the track record repeats the tile base
 			// and stops, which is why these are read from `at` and never from `track`.

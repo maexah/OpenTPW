@@ -28,6 +28,12 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
   all four islands with all four heard at once, each from its own island.
 - Park: enter from the lobby; ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (3 of 6 buttons).
 - Building and staffing: the **purchase menu** and the **hire screen** both open from the gadget's Buy button and reach each other. Things can be bought, sold, moved and carried; staff hired, fired, picked up and put down. **Clicking a placed ride opens its management window**, which cycles between rides, deletes and moves.
+- **Laying and lifting QUEUE**, at 75 a cell, which **refunds** where a path does not - the original's
+  own asymmetry. A queue cell records the object it serves and a flow direction that is the opposite
+  of the step taken into it, which is what makes the queue measurable at all. **The queue rewalk is
+  hooked up** (`FUN_004de1f0`): deleting a middle cell took the Belly Bounce from **4 cells ending
+  2866 to 2 ending 2868** while the save's own cached count sat unchanged at 4, which is the whole
+  point of the hook.
 - **Laying and lifting PATH**, at 20 a cell from the theme's own `Costs.PathCell`. The cell joins itself to its neighbours by the original's own incremental rule and picks its art from the executable's own tile tables, so a run draws straights, ends, corners, T-junctions and a crossroads as the shape demands. Confirmed in the running game by census **and** by screenshot.
 - Spending: guests choose, queue for and **buy from the Drinks Shop and the Jungle Spray**, are charged on leaving, take the item's effects, and a sideshow winner is paid its prize.
 - People: 13 guests and 5 staff read from the save, drawn, walking, paying at the gate, queueing, boarding.
@@ -35,7 +41,7 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 
 ## Does not
 
-- No **queues** to build or delete, no finances, litter, saving a park back, video, networking. Three gadget buttons (Info, Money, Research) are still inert. The two global income pools, the balloon and costume arms, and the litter-bin errand (guest state 9) are named and unbuilt.
+- No finances, litter, saving a park back, video, networking. Three gadget buttons (Info, Money, Research) are still inert. The two global income pools, the balloon and costume arms, and the litter-bin errand (guest state 9) are named and unbuilt.
 - Eight of the nine per-object windows are unbuilt (only the ride's). Its stats table fills **four of seven** rows — Users last month, Excitement and Reliability are counted gaps. Patrol areas are dead, deferred by Alexah.
 - The `meter.wct` mapping behind the happiness gauge is wrong — the last fault Alexah found by playing that is still open.
 - 34 opcodes unimplemented. Three README lines and `RideScriptFile.cs:99` still quote older counts.

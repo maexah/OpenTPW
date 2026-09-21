@@ -769,6 +769,33 @@ public sealed class ParkState
 	/// </remarks>
 	public void ClearQueueHead( int objectId ) => _queueHead.Remove( objectId );
 
+	/// <summary>
+	/// The objects whose saved queue measurements have been thrown away, because the player has edited
+	/// the cells they were measured from.
+	/// </summary>
+	private readonly HashSet<int> _queuesInvalidated = [];
+
+	/// <summary>
+	/// Throws away what the save recorded about an object's queue, so the next question re-walks the
+	/// map - the original's <c>FUN_004de1f0</c>, which zeroes <c>mBackOfQueue</c> for exactly this
+	/// reason and then logs <i>"Object's queue is now %d cells long"</i>.
+	/// </summary>
+	/// <remarks>
+	/// <b>Without this, editing a queue would change nothing at all for the two objects that matter.</b>
+	/// <see cref="ParkRideChoice.QueueCellsFor"/> returns the save's cached pair whenever it is set,
+	/// and the shipped park sets it on the Belly Bounce (4 cells ending 2866) and the Jungle Spray
+	/// (1 cell ending 3765) - so those two would keep answering the numbers their file was written
+	/// with however many cells the player laid or lifted.
+	/// </remarks>
+	public void InvalidateQueue( int objectId )
+	{
+		if ( objectId != 0 )
+			_queuesInvalidated.Add( objectId );
+	}
+
+	/// <summary>Whether this object's saved queue pair has been thrown away - see <see cref="InvalidateQueue"/>.</summary>
+	public bool QueueWasInvalidated( int objectId ) => _queuesInvalidated.Contains( objectId );
+
 	// Who a ride has picked out to load next - the object's own mPersonBeingLoaded at +0x6c. It is
 	// per-object runtime state, which this class deliberately had none of; the remarks at the top said so
 	// and said why ("a layer built for a consumer that does not exist"). Admitting IS that consumer now.

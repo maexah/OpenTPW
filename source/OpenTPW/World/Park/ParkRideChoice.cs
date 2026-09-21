@@ -280,7 +280,12 @@ public static class ParkRideChoice
 	{
 		// The cached pair. The original returns mBackOfQueue without touching the count whenever it is set,
 		// which is what leaves the ride and the sideshow on the numbers their file was saved with.
-		if ( item.BackOfQueue != 0 )
+		//
+		// UNLESS THE PLAYER HAS EDITED THE CELLS IT WAS MEASURED FROM. FUN_004de1f0 zeroes mBackOfQueue
+		// precisely so the next question re-walks the map, and without that the shipped park's two
+		// cached objects - the Belly Bounce and the Jungle Spray - would answer their file's numbers
+		// however much queue was laid or lifted. ParkState.InvalidateQueue is where that is recorded.
+		if ( item.BackOfQueue != 0 && ParkState.Current?.QueueWasInvalidated( item.ThingId ) != true )
 			return (item.BackOfQueue, item.QueueSizeInCells);
 
 		var cell = StartOfQueue( park, item );

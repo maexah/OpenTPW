@@ -55,7 +55,13 @@ public static class ParkPathBuilding
 	/// over queue; a footprint over path; and a coaster footprint over itself. <b>Notably 4-over-4 is
 	/// refused</b>, which is a carve-out from the "same type is allowed" rule it otherwise follows.
 	/// </remarks>
-	public static bool MayBecome( int existing, int wanted )
+	/// <param name="lastOfRun">
+	/// Whether this is the final cell of a run, which decides one arm on its own: <b>queue may be laid
+	/// over path on the cells in the middle of a run and not on the last one</b>. The original gates
+	/// that on a flag its line walker sets only for the closing cell, and the gameplay intent is
+	/// inferred rather than measured - what is measured is the flag and the branch.
+	/// </param>
+	public static bool MayBecome( int existing, int wanted, bool lastOfRun = true )
 	{
 		if ( wanted == NothingType )
 			return true;
@@ -68,6 +74,9 @@ public static class ParkPathBuilding
 
 		if ( wanted == PathType && existing == ParkRideChoice.QueueCellType )
 			return true;
+
+		if ( wanted == ParkRideChoice.QueueCellType && existing == PathType )
+			return !lastOfRun;
 
 		if ( wanted == CellEdge.Footprint && existing == PathType )
 			return true;
@@ -182,6 +191,184 @@ public static class ParkPathBuilding
 	/// </para>
 	/// </summary>
 	public const int NoModify = 0x20;
+
+	/// <summary>What one queue cell costs - <c>Costs.QueueCell</c>, <b>75</b> in Lost Kingdom.</summary>
+	public const string QueueCellCostKey = "Costs.QueueCell";
+
+	private const int QueueCellCostFallback = 75;
+
+	/// <summary>What one queue cell costs in the park now loaded.</summary>
+	public static int QueueCost( Level? level )
+		=> level?.Balance?.Int( QueueCellCostKey, QueueCellCostFallback ) ?? QueueCellCostFallback;
+
+	/// <summary>
+	/// Lays one cell of queue for a named object, entered from <paramref name="fromX"/>,
+	/// <paramref name="fromY"/>.
+	///
+	/// <para>
+	/// <b>Where it was entered from is not bookkeeping - it is what makes the queue measurable.</b> The
+	/// cell records a flow direction that is the <b>opposite of the step taken into it</b>, so the
+	/// direction points back down the queue toward the ride, and the walk that measures the queue
+	/// accepts a neighbour only when its flow byte is the opposite of the direction probed. Written
+	/// the other way round, every queue measures nought cells long.
+	/// </para>
+	/// <para>
+	/// <b>First writer wins</b>, which is the original's own rule: the byte is written only while it is
+	/// still nought, so laying over an existing queue cell does not turn it round.
+	/// </para>
+	/// </summary>
+	public static string LayQueue( int cellX, int cellY, int servesThingId, int fromX, int fromY,
+		bool lastOfRun = true )
+	{
+		if ( Level.Current is not { } level || level.ParkState is not { } state || level.Park is not { } park )
+			return "queue: a park has to be loaded";
+
+		if ( !ParkState.OnMap( cellX, cellY ) )
+			return $"queue: ({cellX},{cellY}) is off the map";
+
+		if ( !state.TryObject( servesThingId, out var serves ) )
+			return $"queue: nothing in the park is thing {servesThingId}";
+
+		var cell = ParkState.CellFor( park, cellX, cellY );
+
+		if ( cell.Type == ParkRideChoice.QueueCellType )
+			return $"queue: ({cellX},{cellY}) is already queue - nothing charged";
+
+		if ( !MayBecome( cell.Type, ParkRideChoice.QueueCellType, lastOfRun ) )
+			return $"queue: ({cellX},{cellY}) is type {cell.Type}, which queue may not be laid over"
+				+ (cell.Type == PathType ? " on the last cell of a run" : "");
+
+		if ( (cell.Flags & NoModify) != 0 )
+			return $"queue: ({cellX},{cellY}) is marked NOMODIFY - the level owns that cell";
+
+		var price = QueueCost( level );
+
+		if ( state.Balance < price )
+			return $"queue: a cell costs {price} and the park has {state.Balance}";
+
+		var flow = FlowFrom( fromX, fromY, cellX, cellY );
+
+		state.SetRecord( cellX, cellY, cell with
+		{
+			Type = ParkRideChoice.QueueCellType,
+			TileSet = ParkQueues.QueueTileSet,
+			Direction = cell.Direction != 0 ? cell.Direction : (byte)flow,
+			ParentId = (ushort)MapStep.CellId( serves.CellX, serves.CellY )
+		} );
+
+		state.Spend( price );
+
+		// The END of the transaction, which is where every one of the original's eight invalidation
+		// sites fires - after the cells are written, never once per cell as they are written.
+		state.InvalidateQueue( servesThingId );
+
+		RetileAround( state, park, cellX, cellY );
+
+		ParkSurfaces.Rebuild();
+
+		return $"queue: laid at ({cellX},{cellY}) for thing {serves.ThingId}, flow 0x{flow:x2}, "
+			+ $"cost {price}, balance {state.Balance}";
+	}
+
+	/// <summary>
+	/// Lifts one cell of queue. <b>It refunds</b>, where lifting a path does not - that asymmetry is
+	/// the original's, and only the queue arm of its teardown calls the credit at all.
+	/// </summary>
+	/// <remarks>
+	/// <b>Whatever lies beyond the break is ORPHANED, and that is correct rather than a gap.</b> The
+	/// original has no trimming loop anywhere: the cells past the break keep their type, their flow
+	/// and their owner and are simply never walked to again, so the measured queue just gets shorter.
+	/// </remarks>
+	public static string LiftQueue( int cellX, int cellY )
+	{
+		if ( Level.Current is not { } level || level.ParkState is not { } state || level.Park is not { } park )
+			return "delqueue: a park has to be loaded";
+
+		if ( !ParkState.OnMap( cellX, cellY ) )
+			return $"delqueue: ({cellX},{cellY}) is off the map";
+
+		var cell = ParkState.CellFor( park, cellX, cellY );
+
+		if ( cell.Type != ParkRideChoice.QueueCellType )
+			return $"delqueue: ({cellX},{cellY}) is type {cell.Type}, not queue";
+
+		if ( (cell.Flags & NoModify) != 0 )
+			return $"delqueue: ({cellX},{cellY}) is marked NOMODIFY - the level owns that cell";
+
+		// The percentage the original scales a refund by is per-item, per-build-state and per-age, and
+		// nothing here keeps a thing's age in those units - the same gap ParkBuilding.Sell records. So
+		// this gives the cell back in full, which is right the moment it was laid.
+		Unimplemented.Report( "QUEUE_REFUND_DEPRECIATION" );
+
+		var refund = QueueCost( level );
+		var owner = OwnerOf( state, cell );
+
+		Unlink( state, park, cellX, cellY );
+
+		state.SetRecord( cellX, cellY, cell with
+		{
+			Type = NothingType,
+			Neighbours = 0,
+			Direction = 0,
+			ParentId = 0,
+			TileSet = 0,
+			TileIndex = 0,
+			TileAngle = 0
+		} );
+
+		state.Refund( refund );
+
+		if ( owner != 0 )
+			state.InvalidateQueue( owner );
+
+		ParkSurfaces.Rebuild();
+
+		return $"delqueue: lifted ({cellX},{cellY}) for {refund}, "
+			+ (owner != 0 ? $"thing {owner}'s queue re-walks" : "no owner recorded")
+			+ $", balance {state.Balance}";
+	}
+
+	/// <summary>Which object a queue cell says it serves, from the packed cell its owner stands on.</summary>
+	private static int OwnerOf( ParkState state, ParkWorld.MapCell cell )
+	{
+		if ( cell.ParentId == 0 )
+			return 0;
+
+		var (ownerX, ownerY) = MapStep.CellAt( cell.ParentId );
+
+		foreach ( var placed in state.Objects )
+		{
+			if ( placed.CellX == ownerX && placed.CellY == ownerY )
+				return placed.ThingId;
+		}
+
+		return 0;
+	}
+
+	/// <summary>The flow byte for a step, which is the <b>opposite</b> of the direction travelled.</summary>
+	/// <remarks>
+	/// <b>The four tests are sequential rather than exclusive in the original, and that is reproduced:</b>
+	/// a step with both axes non-zero has its horizontal answer overwritten by its vertical one, so a
+	/// diagonal leaves only the vertical opposite.
+	/// </remarks>
+	private static int FlowFrom( int fromX, int fromY, int toX, int toY )
+	{
+		var flow = 0;
+
+		if ( toX - fromX == -1 )
+			flow = 0x04;
+
+		if ( toX - fromX == 1 )
+			flow = 0x40;
+
+		if ( toY - fromY == -1 )
+			flow = 0x10;
+
+		if ( toY - fromY == 1 )
+			flow = 0x01;
+
+		return flow;
+	}
 
 	/// <summary>
 	/// Clears this cell's bit from every neighbour it was joined to, and retiles each of them.

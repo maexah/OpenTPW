@@ -179,12 +179,20 @@ dependency order is untouched, so this item stays open.
       **The running game found a defect no test could have:** tiles were stale by one operation,
       because `Lay` retiled only the cell it laid while the link pass had also rewritten its
       NEIGHBOURS' masks. The lift path was always right, and that is what identified it.
-- [ ] **QUEUES** - the other half of step 2, and the one that needs `FUN_004de1f0`'s
-      invalidate-and-rewalk hooked up or `mBackOfQueue` goes stale. Now decoded end to end: a queue
-      is a re-derivable WALK, not a stored link, resting on a flow byte written as the opposite of
-      the step into the cell (first writer wins) and an owner-cell id; **the bond to a ride entrance
-      is attempted only on the FIRST cell of a run**; and deleting a queue cell **orphans** the
-      remainder, which is correct rather than a bug to fix.
+- [x] **QUEUES - DONE 2026-09-21, and the `FUN_004de1f0` HOOK IS PROVEN.** `queue <x> <y> <thing>
+      <fromX> <fromY>` lays one for **75**; `delqueue` lifts one and **refunds**, where a path does
+      not - the original's own asymmetry. A cell records the object it serves and a flow direction
+      that is the **opposite of the step taken into it** (first writer wins), which is what makes the
+      queue measurable: the walk accepts a neighbour only when its flow points back the way the walk
+      came.
+      **The hook this item has flagged from the beginning now works, and the numbers were predicted
+      before they were read.** Deleting a middle cell took the Belly Bounce from **4 cells ending
+      2866** to **2 ending 2868**, and the capacity readout followed it from 0/16 to 0/8 - while the
+      save's own `mQueueSizeInCells` sat unchanged at 4, correctly ignored. Without
+      `ParkState.InvalidateQueue` that number could not have moved at all, because `QueueCellsFor`
+      returns the cached pair whenever the save sets it - and this park sets it on exactly that ride.
+      **Deleting a queue cell ORPHANS the remainder and that is correct** - the original has no
+      trimming loop anywhere.
 - [ ] **Building by POINTING rather than by console.** The verbs work; the mouse path does not yet
       arm them. The original has **no drag** - both drag vtable slots are bare `RET` stubs - so a run
       is click-to-anchor then click-to-commit, with the target snapped to the dominant axis. You

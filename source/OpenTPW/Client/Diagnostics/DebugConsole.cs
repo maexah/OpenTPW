@@ -852,6 +852,23 @@ public static class DebugConsole
 					: "delpath <cellX> <cellY>" );
 				break;
 
+			// A queue cell has to say which object it serves and which way it was entered from: the
+			// flow byte it stores is the OPPOSITE of that step, and the walk that measures the queue
+			// accepts a cell only when its flow points back the way the walk came. So the `from` pair
+			// is not decoration - written the other way round, every queue measures nought long.
+			case "queue":
+				Reply( parts.Length > 5
+					? ParkPathBuilding.LayQueue( (int)Argument( 1 ), (int)Argument( 2 ),
+						(int)Argument( 3 ), (int)Argument( 4 ), (int)Argument( 5 ) )
+					: "queue <cellX> <cellY> <servesThingId> <fromX> <fromY>" );
+				break;
+
+			case "delqueue":
+				Reply( parts.Length > 2
+					? ParkPathBuilding.LiftQueue( (int)Argument( 1 ), (int)Argument( 2 ) )
+					: "delqueue <cellX> <cellY>" );
+				break;
+
 			// What a cell actually holds, which is the measuring instrument for everything above: the
 			// type, the neighbour mask the link pass built, and the tile the mask chose.
 			case "cell":
