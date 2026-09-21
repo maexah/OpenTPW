@@ -95,7 +95,54 @@ internal sealed class ParkObjectWindow : UiWindow
 			new UiRect( 1367, 641, 1434, 709 ), "slider_n"),
 	];
 
+	/// <summary>
+	/// The readout under each slider, in the same order. <c>FUN_004aec30</c> re-letters exactly these
+	/// three from the window's own buffered values - which is why the words change as a slider moves,
+	/// before anything has been committed to the ride.
+	/// </summary>
+	private static readonly int[] ReadoutIds = [0x3e33, 0x3e31, 0x3e32];
+
+	private static readonly UiRect[] ReadoutRects =
+	[
+		new( 346, 711, 725, 753 ), new( 782, 711, 1161, 753 ), new( 1216, 711, 1595, 753 ),
+	];
+
+	/// <summary>Speed, capacity and duration - the order <see cref="Sliders"/> is in.</summary>
+	private const int Speed = 0;
+	private const int Capacity = 1;
+	private const int Duration = 2;
+
+	/// <summary>The stats table's cells, by the control id the stream gives each.</summary>
+	private readonly Dictionary<int, UiControl> _stats = [];
+
+	private readonly UiSlider[] _sliders = new UiSlider[3];
+	private readonly UiControl[] _readouts = new UiControl[3];
+
 	private readonly UiControl _title;
+
+	/// <summary>The panel the ride is shown spinning in - control <c>0x3e24</c>.</summary>
+	private readonly UiControl _preview;
+
+	/// <summary>Whether the preview has already reported what it found. Once, not once a frame.</summary>
+	private bool _previewSaidWhy;
+
+	/// <summary>The same, for the fit it worked out - reported after the scale exists to report.</summary>
+	private bool _previewSaidFit;
+
+	/// <summary>
+	/// How fast the preview turns, in radians a second. <b>A choice, and marked as one.</b> The
+	/// original advances its angle by <c>elapsed * _DAT_006fe804</c> and indexes a sine table masked
+	/// to wrap (<c>FUN_00468e50</c>); the table and the mask are decoded, that constant is not.
+	/// </summary>
+	private const float SpinRate = 0.9f;
+
+	/// <summary>
+	/// How much of the panel the model fills. <b>Also a choice.</b> The original fits by the model's
+	/// bounding box against the panel's width and height and takes whichever is tighter
+	/// (<c>FUN_004689f0</c>); this fits by <see cref="LobbyModel.Radius"/>, which is that box's loose
+	/// radius, so the margin below stands in for the difference.
+	/// </summary>
+	private const float Fill = 0.8f;
 
 	/// <summary>Which thing the window is showing. The original keeps the same in <c>DAT_007c2658</c>.</summary>
 	internal int ThingId { get; private set; }
@@ -127,14 +174,14 @@ internal sealed class ParkObjectWindow : UiWindow
 			TextColour = UiColour.White
 		} );
 
-		var preview = Root.Add( new UiControl
+		_preview = Root.Add( new UiControl
 		{
 			Id = 0x3e24,
 			Rect = new UiRect( 348, 162, 762, 576 ),
 			Mesh = UiMesh.Get( "!frame" )
 		} );
 
-		preview.Add( new UiControl
+		_preview.Add( new UiControl
 		{
 			Id = 0x3e25,
 			Rect = new UiRect( 300, 275, 828, 462 ),
@@ -160,7 +207,7 @@ internal sealed class ParkObjectWindow : UiWindow
 
 		foreach ( var (id, rect) in StatCells )
 		{
-			stats.Add( new UiControl
+			_stats[id] = stats.Add( new UiControl
 			{
 				Id = id,
 				Rect = rect,
@@ -210,8 +257,11 @@ internal sealed class ParkObjectWindow : UiWindow
 			Clicked = () => Stack.Close( this )
 		} );
 
-		foreach ( var (id, help, rect, track, thumb, mesh) in Sliders )
+		for ( var i = 0; i < Sliders.Length; ++i )
 		{
+			var (id, help, rect, track, thumb, mesh) = Sliders[i];
+			var which = i;
+
 			var slider = Root.Add( new UiSlider
 			{
 				Id = id,
@@ -220,10 +270,20 @@ internal sealed class ParkObjectWindow : UiWindow
 				Track = track,
 				HelpText = help,
 				Mesh = UiMesh.Get( mesh ),
-				Moved = Buffered
+				Moved = () => Moved( which )
 			} );
 
 			slider.AddThumb( new UiSliderThumb { Id = 3, Rect = thumb, Mesh = UiMesh.Get( "b_scrollera" ) } );
+
+			_sliders[i] = slider;
+
+			_readouts[i] = Root.Add( new UiControl
+			{
+				Id = ReadoutIds[i],
+				Rect = ReadoutRects[i],
+				Font = 6,
+				TextColour = UiColour.White
+			} );
 		}
 
 		Show( thingId );
@@ -231,8 +291,11 @@ internal sealed class ParkObjectWindow : UiWindow
 		// Reached every time the window opens, and none of them answerable from what is decoded: the
 		// stats table and the preview are filled by the shared base's own vtable slots against UITEXT
 		// rows this has not read, and the sliders commit into the ride's script variables.
-		Unimplemented.Report( "RIDE_STATS_PANEL" );
-		Unimplemented.Report( "RIDE_PREVIEW_ACTOR" );
+		// RIDE_STATS_PANEL is gone: the table's seven labels and two of its figures are filled now, and
+		// what is left unanswerable is counted by name from FillStats instead.
+		// RIDE_PREVIEW_ACTOR is gone: the panel shows the ride's own model now, turning, drawn from
+		// Level.Render's overlay pass - see DrawPreview. A counter left on a path that works is a lie
+		// in the gap census in the same way a missing one is.
 	}
 
 	private UiButton Arrow( int id, int help, string mesh, UiRect rect, bool forward )
@@ -261,6 +324,11 @@ internal sealed class ParkObjectWindow : UiWindow
 
 		_title.Text = name;
 
+		// The sliders and the stats belong to the ride being shown, not to the window, so both are
+		// rebuilt every time it changes - which is what makes the cycle arrows work.
+		ShowSettings();
+		FillStats();
+
 		// Said out loud so a test can pair what is on screen with what the window thinks it is showing.
 		// A region that changed when the arrows were pressed proves something moved, not that the
 		// right ride arrived.
@@ -274,6 +342,10 @@ internal sealed class ParkObjectWindow : UiWindow
 	/// </summary>
 	private void Cycle( bool forward )
 	{
+		// The buffered sliders are written BEFORE moving on - FUN_0048cbe0 and FUN_0048caf0 both call
+		// vtable +0x3c first - so the ride you were adjusting keeps what you set it to.
+		Commit();
+
 		if ( Level.Current is not { } level || level.ParkState is not { } state
 			|| level.Catalogue is not { } catalogue )
 			return;
@@ -306,12 +378,429 @@ internal sealed class ParkObjectWindow : UiWindow
 	}
 
 	/// <summary>
-	/// A slider moved. <b>Nothing is committed here</b>, and that is the original's arrangement rather
-	/// than an omission: the three values are buffered and written only when the window closes or
-	/// either arrow is pressed - <c>FUN_004aec30</c> with a mask of 1, 2 or 4 - and they land in the
-	/// ride's own script variables, which this does not yet write.
+	/// Puts the three sliders where the ride has them, with the bounds its item allows.
 	/// </summary>
-	private static void Buffered() => Unimplemented.Report( "RIDE_SETTINGS_COMMIT" );
+	/// <remarks>
+	/// <c>FUN_004af030</c>: each slider takes its range from the ITEM and its value from the THING -
+	/// speed from <c>+0x58</c> as a dword, capacity from <c>+0x5d</c> and duration from <c>+0x5c</c> as
+	/// bytes. <b>A slider whose item gives it no room hides itself</b>, and the duration one hides
+	/// whenever <c>DurationUnit</c> is nought, which is how a coaster says its ride length comes from
+	/// its track rather than from a slider.
+	/// </remarks>
+	private void ShowSettings()
+	{
+		if ( Level.Current is not { } level || level.ParkState is not { } state
+			|| !state.TryObject( ThingId, out var placed )
+			|| level.Catalogue is not { } catalogue || !catalogue.TryGet( placed.CatalogueId, out var item ) )
+			return;
+
+		// EACH SLIDER HIDES ON ITS OWN TERMS, and only where the original hides it. FUN_004af030 hides
+		// the capacity slider AND its readout when the item leaves it no room (min == max), and hides
+		// the duration one when DurationUnit is nought. It does NEITHER for speed: it sets the range
+		// and the value and leaves the control standing, dead, for an item that declares no speed keys
+		// - and Lost Kingdom's Belly Bounce is exactly that item. Hiding it would be this project's
+		// idea rather than the game's.
+		Set( Speed, item.MinSpeed, item.MaxSpeed, placed.OperatingSpeed, hideWhenEmpty: false );
+		Set( Capacity, item.MinCapacity, item.MaxCapacity, placed.OperatingCapacity, hideWhenEmpty: true );
+		Set( Duration, item.MinDuration, item.MaxDuration, placed.OperatingDuration, hideWhenEmpty: true );
+
+		// Nought is not "no minimum": it means this ride has no duration at all.
+		if ( item.DurationUnit == 0 )
+			Hide( Duration );
+
+		for ( var i = 0; i < _sliders.Length; ++i )
+			Letter( i );
+
+		// Said out loud with the RANGES as well as the values, so a test can check both what the ride
+		// carries and which bounds its item allowed - and can read a value back after the window has
+		// been closed and opened again, which is the only way "it saved" is observable at all. A thumb
+		// sitting somewhere new proves a thumb moved.
+		Log.Info( $"Ride window: thing {ThingId} settings" +
+			$" speed {placed.OperatingSpeed} of {item.MinSpeed}..{item.MaxSpeed}," +
+			$" capacity {placed.OperatingCapacity} of {item.MinCapacity}..{item.MaxCapacity}," +
+			$" duration {placed.OperatingDuration} of {item.MinDuration}..{item.MaxDuration}," +
+			$" unit {item.DurationUnit}" );
+	}
+
+	/// <summary>
+	/// Fills the stats table - the shared base's vtable <c>+0xc</c> (<c>0x004ad890</c>) for the labels,
+	/// and <c>FUN_004ade40</c> for the figures beside them.
+	/// </summary>
+	/// <remarks>
+	/// <b>The pairing is corroborated twice over.</b> The builder gives the seven LEFT cells UITEXT
+	/// rows 0x11 to 0x17 in the order 0x3e20, 0x3e1a, 0x3e1c, 0x3e1e, 0x3e1f, 0x3e1d, 0x3e22; the
+	/// refresh writes the RIGHT cells of the same rows. Both orders agree, and they agree with the
+	/// rectangles the stream lays out, so the table below is read off three sources rather than one.
+	/// <para>
+	/// <b>Four of the seven figures are not answerable here and are counted rather than invented.</b>
+	/// Excitement, reliability, state of repair and remaining life are type-9 bars skinned
+	/// <c>ridestatbar.wct</c>, and the engine computes each from the ride's own condition and from the
+	/// three sliders - <c>FUN_004e0560</c> divides two slider values by per-upgrade maxima this decode
+	/// has not read. Users last month reads a thirty-month ring buffer, and this game keeps no monthly
+	/// history at all, which is the same gap the hire screen's mini-balance already records.
+	/// </para>
+	/// </remarks>
+	private void FillStats()
+	{
+		// label cell, value cell, what the label says.
+		(int Label, int Value, UIStrings Text)[] rows =
+		[
+			(0x3e20, 0x3e21, UIStrings.UsersLastMonth),
+			(0x3e1a, 0x3e1b, UIStrings.Age),
+			(0x3e1c, 0x3e16, UIStrings.Excitement),
+			(0x3e1e, 0x3e18, UIStrings.Reliability),
+			(0x3e1f, 0x3e19, UIStrings.StateOfRepair),
+			(0x3e1d, 0x3e17, UIStrings.RemainingLife),
+			(0x3e22, 0x3e23, UIStrings.ScrapValue),
+		];
+
+		foreach ( var (label, _, text) in rows )
+		{
+			if ( _stats.TryGetValue( label, out var cell ) )
+				cell.Text = Localization.Get( text );
+		}
+
+		if ( Level.Current is not { } level || level.ParkState is not { } state
+			|| !state.TryObject( ThingId, out var placed )
+			|| level.Catalogue is not { } catalogue || !catalogue.TryGet( placed.CatalogueId, out var item ) )
+			return;
+
+		// How old it is, in DAYS. FUN_004dd670 divides the built stamp by 864,000,000,000 - one day in
+		// hundred-nanosecond units - so this is real elapsed time and not the park's own calendar.
+		if ( _stats.TryGetValue( 0x3e1b, out var age ) )
+			age.Text = placed.Built.IsSet ? $"{DaysSince( placed.Built )}" : null;
+
+		// FUN_004e2400: the age-bucket scrap percentage times the item's build price. That percentage
+		// is SCRAP_VALUE_DEPRECIATION, already counted where Sell refunds - it answers 100 for anything
+		// newly built, so today this is the build price and is increasingly wrong as a ride ages.
+		if ( _stats.TryGetValue( 0x3e23, out var scrap ) )
+			scrap.Text = $"{item.BuildPrice}";
+
+		Unimplemented.Report( "RIDE_STAT_BARS" );
+		Unimplemented.Report( "RIDE_USERS_LAST_MONTH" );
+
+		Log.Info( $"Ride window: thing {ThingId} stats age {(placed.Built.IsSet ? DaysSince( placed.Built ) : -1)} days," +
+			$" scrap {item.BuildPrice}, built {placed.Built.Year}-{placed.Built.Month:D2}-{placed.Built.Day:D2}" );
+	}
+
+	/// <summary>
+	/// Draws the ride itself, turning, inside the preview panel.
+	/// </summary>
+	/// <remarks>
+	/// <b>It is the model standing in the park, not a copy of it.</b> So the preview shows a ride that
+	/// is running - its animation is whatever the park has it doing this frame - and the entities must
+	/// not be moved to centre them: <see cref="ModelEntity.DrawOverlay"/> takes a transform of the
+	/// caller's own for exactly this.
+	/// <para>
+	/// <b>Drawn in the overlay pass, not with the interface.</b> <c>Level.Render</c> clears depth and
+	/// runs that pass after the HUD, which is how the advisor sits in front of everything; a model
+	/// drawn in the HUD's own pass would be flat UI geometry competing with the window frame. The
+	/// scissor keeps it inside the panel, which is what the original's view region does - it builds one
+	/// over the panel's rect and replaces it whenever the shown thing changes (<c>FUN_00486410</c>).
+	/// </para>
+	/// </remarks>
+	internal void DrawPreview()
+	{
+		if ( ParkObjects.Current?.ModelFor( ThingId ) is not { } model || model.Radius <= 0f )
+		{
+			// Said out loud: an empty panel and a panel drawn off its own edge look identical from
+			// outside, and guessing between them is how a matrix gets "adjusted" until something
+			// appears. Once a frame is too noisy, so this reports the first time it cannot draw.
+			if ( !_previewSaidWhy )
+			{
+				_previewSaidWhy = true;
+
+				Log.Info( $"Ride window: no preview for thing {ThingId} - " +
+					$"model {(ParkObjects.Current?.ModelFor( ThingId ) is null ? "not found" : "found")}, " +
+					$"objects {(ParkObjects.Current is null ? "null" : "live")}" );
+			}
+
+			return;
+		}
+
+		var panel = _preview.Pixels;
+
+		if ( panel.Width <= 0f || panel.Height <= 0f )
+			return;
+
+		if ( !_previewSaidWhy )
+		{
+			_previewSaidWhy = true;
+
+			var box = model.HasBounds
+				? $"box ({model.BoundsMin.X:F1},{model.BoundsMin.Y:F1},{model.BoundsMin.Z:F1})" +
+					$"..({model.BoundsMax.X:F1},{model.BoundsMax.Y:F1},{model.BoundsMax.Z:F1})"
+				: "box none";
+
+			Log.Info( $"Ride window: preview thing {ThingId} radius {model.Radius:F1}," +
+				$" meshes {model.Entities.Length}, {box}, panel ({panel.X:F0},{panel.Y:F0})" +
+				$" {panel.Width:F0}x{panel.Height:F0}, screen {Screen.Width:F0}x{Screen.Height:F0}" );
+		}
+
+		// FIT BY THE BOX, NOT BY THE RADIUS. Radius is a distance from the model's ORIGIN, and Belly
+		// Bounce reports 100.2 across eight meshes while its bulk is a fraction of that - so sizing by
+		// it drew the ride at about eight pixels, off the panel entirely. The engine fits its own
+		// preview from the model's box, taking (max + min) / 2 as the centre and max - min as the
+		// size (FUN_004689f0), which is what this does: the centre is subtracted in PreviewTransform
+		// and the half-extent is what the panel is divided by.
+		if ( !model.HasBounds )
+			return;
+
+		var centre = (model.BoundsMin + model.BoundsMax) * 0.5f;
+		var size = model.BoundsMax - model.BoundsMin;
+
+		// Across and up as this projection uses them: model X across, model Z up.
+		var half = MathF.Max( MathF.Max( size.X, size.Z ) * 0.5f, 0.001f );
+
+		var perUnit = MathF.Min( panel.Width, panel.Height ) * 0.5f * Fill / half;
+
+		if ( !_previewSaidFit )
+		{
+			_previewSaidFit = true;
+
+			var first = model.Entities.Length > 0
+				? entityLocal( model.Entities[0] )
+				: Vector3.Zero;
+
+			Log.Info( $"Ride window: preview fit half {half:F1}, perUnit {perUnit:F3}," +
+				$" span {(size.X * perUnit):F0}px of {panel.Width:F0}," +
+				$" centre ({centre.X:F1},{centre.Y:F1},{centre.Z:F1})," +
+				$" mesh0 local ({first.X:F1},{first.Y:F1},{first.Z:F1})" );
+
+			Vector3 entityLocal( ModelEntity one ) => one.Position - model.PlacedOrigin - centre;
+		}
+
+		var sideways = perUnit * 2f / Screen.Width;
+		var up = perUnit * 2f / Screen.Height;
+
+		var x = ((panel.X + (panel.Width * 0.5f)) * 2f / Screen.Width) - 1f;
+		var y = 1f - ((panel.Y + (panel.Height * 0.5f)) * 2f / Screen.Height);
+
+		var projection = new System.Numerics.Matrix4x4(
+			sideways, 0f, 0f, 0f,
+			0f, 0f, 0.001f, 0f,
+			0f, up, 0f, 0f,
+			x, y, 0.2f, 1f );
+
+		// Turning about the model's own up axis, off the frame clock.
+		//
+		// <b>A DECLARED DEVIATION: this stops while the clock is held, and the original's does not.</b>
+		// The engine advances its angle by differencing a real-time clock every frame and wrapping
+		// through a masked sine table (FUN_00468e50), so its preview keeps turning through a pause.
+		// Here Time.Now only advances by Time.Delta, and a held clock reports zero - Now, Delta and
+		// RawDelta all freeze together, and nothing in this project exposes wall-clock time while
+		// paused. Adding such a clock for a spinning model would be a wider change than the model is
+		// worth, so the deviation is said here instead. In normal play the window does not pause the
+		// game, so it turns.
+		var spin = System.Numerics.Matrix4x4.CreateRotationZ( Time.Now * SpinRate );
+
+		var command = global::Global.Render.CommandList;
+
+		command.SetScissorRect( 0, (uint)MathF.Max( 0f, panel.X ), (uint)MathF.Max( 0f, panel.Y ),
+			(uint)MathF.Max( 0f, panel.Width ), (uint)MathF.Max( 0f, panel.Height ) );
+
+		// Every solid half before any see-through one, the order the scene uses - see AdvisorModel.Draw
+		// for what drawing them a mesh at a time costs.
+		foreach ( var entity in model.Entities )
+			entity.DrawOverlay( System.Numerics.Matrix4x4.Identity, projection, PreviewLight, PreviewLightColour,
+				PreviewAmbient, worldNormals: true, transform: PreviewTransform( entity, model, centre, spin ) );
+
+		foreach ( var entity in model.Entities )
+			entity.DrawOverlay( System.Numerics.Matrix4x4.Identity, projection, PreviewLight, PreviewLightColour,
+				PreviewAmbient, worldNormals: true, translucent: true,
+				transform: PreviewTransform( entity, model, centre, spin ) );
+
+		command.SetFullScissorRects();
+	}
+
+	/// <summary>
+	/// Where one of the model's meshes goes in the preview: its own placement within the model, spun,
+	/// with the park position taken out.
+	/// </summary>
+	/// <remarks>
+	/// This is <see cref="Entity.ModelMatrix"/> with one substitution. That composes
+	/// <c>LinearTransform * Rotation * Translate( Position )</c>, and <see cref="LobbyModel"/> sets
+	/// each mesh's <c>Position</c> to its own offset PLUS the model's origin - so subtracting
+	/// <see cref="LobbyModel.PlacedOrigin"/> leaves the mesh where it belongs inside the model and
+	/// drops where the ride happens to stand in the park. Reading the live position rather than the
+	/// rest-pose <c>Offsets</c> is what makes the preview show the ride animating.
+	/// </remarks>
+	private static System.Numerics.Matrix4x4 PreviewTransform( ModelEntity entity, LobbyModel model,
+		Vector3 centre, System.Numerics.Matrix4x4 spin )
+	{
+		var matrix = entity.LinearTransform
+			?? System.Numerics.Matrix4x4.CreateScale( entity.Scale.GetSystemVector3() );
+
+		matrix *= System.Numerics.Matrix4x4.CreateFromQuaternion( entity.Rotation );
+
+		// TWO subtractions, and both are needed. PlacedOrigin takes out where the ride stands in the
+		// park; the box's centre takes out where the model sits relative to its OWN origin. Without
+		// the second the model is scaled right and still hangs off the panel by exactly that offset,
+		// which is the fault this was written to fix.
+		matrix *= System.Numerics.Matrix4x4.CreateTranslation(
+			(entity.Position - model.PlacedOrigin - centre).GetSystemVector3() );
+
+		return matrix * spin;
+	}
+
+	/// <summary>How the preview is lit. <b>Chosen, not measured</b> - the original lights it from its own scene.</summary>
+	private static readonly Vector3 PreviewLight = new( -400f, -600f, 400f );
+
+	private static readonly Vector3 PreviewLightColour = Vector3.One;
+
+	private const float PreviewAmbient = 0.55f;
+
+	/// <summary>Whole days between a built stamp and now, never negative.</summary>
+	private static int DaysSince( ParkWorld.BuiltWhen built )
+	{
+		try
+		{
+			var when = new DateTime( built.Year, built.Month, built.Day,
+				built.Hour, built.Minute, built.Second, DateTimeKind.Utc );
+
+			return Math.Max( 0, (int)(DateTime.UtcNow - when).TotalDays );
+		}
+		catch ( ArgumentOutOfRangeException )
+		{
+			// A stamp the save never filled in, or one this calendar cannot hold.
+			return 0;
+		}
+	}
+
+	private void Set( int which, int lowest, int highest, int value, bool hideWhenEmpty )
+	{
+		var slider = _sliders[which];
+
+		if ( hideWhenEmpty && highest <= lowest )
+		{
+			Hide( which );
+			return;
+		}
+
+		slider.Visible = true;
+		_readouts[which].Visible = true;
+
+		slider.SetRange( lowest, highest );
+		slider.SetValue( value );
+	}
+
+	private void Hide( int which )
+	{
+		_sliders[which].Visible = false;
+		_readouts[which].Visible = false;
+	}
+
+	/// <summary>
+	/// A slider moved. <b>Nothing is committed here</b> - the original buffers all three and writes
+	/// them only when the window closes or either arrow is pressed. What does happen is the readout
+	/// under it changes, which is <c>FUN_004aec30</c> with a mask of 1, 2 or 4.
+	/// </summary>
+	private void Moved( int which ) => Letter( which );
+
+	/// <summary>
+	/// Re-letters one readout - <c>FUN_004aec30</c>. The wording of the duration one comes from the
+	/// item's <c>DurationUnit</c>, and the engine picks a singular row for a value of one and a plural
+	/// for anything else.
+	/// </summary>
+	private void Letter( int which )
+	{
+		if ( !_readouts[which].Visible )
+			return;
+
+		var value = _sliders[which].Value;
+
+		_readouts[which].Text = which switch
+		{
+			Speed => $"{Localization.Get( UIStrings.Speed )} {value}",
+			Capacity => $"{Localization.Get( UIStrings.Capacity )} {value}",
+			_ => $"{DurationWord( value )} {value}"
+		};
+	}
+
+	/// <summary>
+	/// What a duration is counted in. <c>FUN_004aec30</c> switches on the item's <c>DurationUnit</c>:
+	/// 1 picks UITEXT 428 for a value of one and 429 otherwise, 2 picks Laps, 3 Cycles, 4 Repetitions.
+	/// </summary>
+	/// <remarks>
+	/// <b>429 has no name in <see cref="UIStrings"/></b> - it is the plural of 428 - so it is read by
+	/// row rather than given an invented one. See <see cref="Localization.Text"/>.
+	/// </remarks>
+	private string DurationWord( int value )
+	{
+		var unit = Level.Current is { } level && level.ParkState is { } state
+			&& state.TryObject( ThingId, out var placed )
+			&& level.Catalogue is { } catalogue && catalogue.TryGet( placed.CatalogueId, out var item )
+				? item.DurationUnit
+				: 1;
+
+		return unit switch
+		{
+			1 => value == 1 ? Localization.Get( UIStrings.Duration ) : Localization.Text( 429 ),
+			2 => Localization.Get( UIStrings.Laps ),
+			3 => Localization.Get( UIStrings.Cycles ),
+			4 => Localization.Get( UIStrings.Repetitions ),
+			_ => Localization.Get( UIStrings.Duration )
+		};
+	}
+
+	/// <summary>
+	/// Writes the three buffered values onto the ride - the shared base's vtable <c>+0x3c</c>
+	/// (<c>0x004af440</c>), which both cycle buttons call before they move on and the close path calls
+	/// on the way out.
+	/// </summary>
+	/// <remarks>
+	/// <b>The original writes each through a setter that clamps again</b> - <c>FUN_004dd6e0</c> for
+	/// speed, <c>FUN_004dd7f0</c> for capacity, <c>FUN_004dd720</c> for duration - and the duration one
+	/// is skipped entirely when the item has no duration. Each setter writes the thing's own field AND
+	/// pushes the value into the running script, which is why a change takes effect on the ride rather
+	/// than only on the screen.
+	/// </remarks>
+	private void Commit()
+	{
+		if ( Level.Current is not { } level || level.ParkState is not { } state
+			|| !state.TryObject( ThingId, out var placed )
+			|| level.Catalogue is not { } catalogue || !catalogue.TryGet( placed.CatalogueId, out var item ) )
+			return;
+
+		var speed = _sliders[Speed].Visible ? _sliders[Speed].Value : placed.OperatingSpeed;
+		var capacity = _sliders[Capacity].Visible ? _sliders[Capacity].Value : placed.OperatingCapacity;
+		var duration = item.DurationUnit != 0 && _sliders[Duration].Visible
+			? _sliders[Duration].Value
+			: placed.OperatingDuration;
+
+		if ( speed == placed.OperatingSpeed && capacity == placed.OperatingCapacity
+			&& duration == placed.OperatingDuration )
+			return;
+
+		state.ReplaceObject( placed with
+		{
+			OperatingSpeed = speed,
+			OperatingCapacity = capacity,
+			OperatingDuration = duration
+		} );
+
+		// Into the running script as well, which is what makes the ride carry the new number rather
+		// than the window remembering it. Capacity and duration are named variables; speed is not.
+		if ( ParkRides.Current is { } rides && rides.ScriptFor( ThingId ) is var id and not 0
+			&& rides.Scheduler.Find( id ) is { } script )
+		{
+			script.Set( ParkRideOperation.CapacityVariable, capacity );
+			script.Set( ParkRideOperation.DurationVariable, duration );
+		}
+
+		// THE SPEED WORD IS A SEPARATE THING and deliberately not written. RideScript records that the
+		// engine divides every wait by 0.5 + 0.01 * speed, worked out afresh per instruction from the
+		// word at +0xc0, and argues the divisor can never differ from one because no opcode writes it.
+		// That argument is about the SCRIPT system and this panel is outside it: FUN_004dd6e0 writes
+		// that word from this very slider. So moving speed here would re-time every WAIT in the script,
+		// which is a behaviour change too wide to make as a side effect of a slider.
+		Unimplemented.Report( "RIDE_SPEED_SCALES_WAITS" );
+
+		Log.Info( $"Ride window: thing {ThingId} set to speed {speed}, capacity {capacity}, duration {duration}" );
+	}
+
+	/// <summary>The window closing commits, the same as either arrow does - see <see cref="Commit"/>.</summary>
+	protected internal override void Closed() => Commit();
 
 	/// <summary>
 	/// One of the bottom row's verbs. Delete and move are built; the rest are counted by name.

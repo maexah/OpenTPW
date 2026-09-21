@@ -54,6 +54,25 @@ public sealed class LobbyModel
 	/// </summary>
 	public float Radius { get; }
 
+	/// <summary>
+	/// The box this model's meshes occupy, in its own space, about its own origin.
+	///
+	/// <para>
+	/// <b><see cref="Radius"/> is not a substitute for it, and using one where the other belongs is a
+	/// real mistake.</b> Radius is a distance from the ORIGIN, so a model whose origin sits off to one
+	/// side - or which carries one far-flung mesh among eight - reports a radius far larger than the
+	/// bulk of it, and anything sized by that shrinks to nothing while sitting off-centre. A box gives
+	/// a CENTRE as well as a size, which is what the engine itself fits a preview by: it reads the
+	/// model's box and takes <c>(max + min) / 2</c> and <c>max - min</c> (<c>FUN_004689f0</c>).
+	/// </para>
+	/// </summary>
+	public Vector3 BoundsMin { get; private set; } = new( float.MaxValue, float.MaxValue, float.MaxValue );
+
+	public Vector3 BoundsMax { get; private set; } = new( float.MinValue, float.MinValue, float.MinValue );
+
+	/// <summary>Whether any mesh contributed to <see cref="BoundsMin"/> - false for a model with none.</summary>
+	public bool HasBounds => BoundsMax.X >= BoundsMin.X;
+
 	/// <summary>One per mesh this model's animations morph - a model can morph several.</summary>
 	public MeshAnimator[] Animators { get; } = Array.Empty<MeshAnimator>();
 
@@ -185,6 +204,30 @@ public sealed class LobbyModel
 			// from the model's. Loose, but never under.
 			var reach = MathF.Max( mesh.BoundsMin.Length, mesh.BoundsMax.Length ) * scale;
 			Radius = MathF.Max( Radius, offset.Length + reach );
+
+			// And the box this mesh's OWN bounds make about its place.
+			//
+			// <b>Not the isotropic +/- reach the radius uses.</b> reach is the distance to the furthest
+			// bounding CORNER, so a mesh sitting at the model's origin padded the box by fifty units in
+			// every direction: Belly Bounce - a 3x4 cell ride, thirty by forty world units - came out
+			// 147 units across, and a preview sized by that drew it at about a fifth of its panel.
+			//
+			// The swizzle is the one the offset above already takes: a mesh's bounds are model space,
+			// Y-up, while this box lives in the world's Z-up. Each mesh's own rotation within the model
+			// is NOT applied to its bounds here, so the box stays a little loose - but loose by a
+			// mesh's own size rather than by its distance to a corner.
+			var low = new Vector3( mesh.BoundsMin.X, mesh.BoundsMin.Z, mesh.BoundsMin.Y ) * scale;
+			var high = new Vector3( mesh.BoundsMax.X, mesh.BoundsMax.Z, mesh.BoundsMax.Y ) * scale;
+
+			BoundsMin = new Vector3(
+				MathF.Min( BoundsMin.X, offset.X + MathF.Min( low.X, high.X ) ),
+				MathF.Min( BoundsMin.Y, offset.Y + MathF.Min( low.Y, high.Y ) ),
+				MathF.Min( BoundsMin.Z, offset.Z + MathF.Min( low.Z, high.Z ) ) );
+
+			BoundsMax = new Vector3(
+				MathF.Max( BoundsMax.X, offset.X + MathF.Max( low.X, high.X ) ),
+				MathF.Max( BoundsMax.Y, offset.Y + MathF.Max( low.Y, high.Y ) ),
+				MathF.Max( BoundsMax.Z, offset.Z + MathF.Max( low.Z, high.Z ) ) );
 
 			_linearTransforms[meshIndex] = ToWorldSpace( world );
 

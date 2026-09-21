@@ -645,6 +645,19 @@ public sealed class ParkObjects : Entity
 		=> _standing.TryGetValue( thingId, out var standing ) ? standing.Animations : null;
 
 	/// <summary>
+	/// The model a placed thing is standing as, or null where nothing of that id stands here.
+	/// </summary>
+	/// <remarks>
+	/// <b>It is the same model the park is drawing</b>, not a copy - the ride window's preview shows
+	/// the very thing that is standing in the park, animations and all, which is what makes the preview
+	/// follow a ride that is running rather than a still of it. A caller drawing it somewhere else must
+	/// therefore not move it: see <see cref="ModelEntity.DrawOverlay"/>, which takes a view and a
+	/// projection of the caller's own and leaves the entity's own transform alone.
+	/// </remarks>
+	internal LobbyModel? ModelFor( int thingId )
+		=> _standing.TryGetValue( thingId, out var standing ) ? standing.Model : null;
+
+	/// <summary>
 	/// Brings every thing's animation player up to <paramref name="now"/> and shows whatever each one has
 	/// reached.
 	///

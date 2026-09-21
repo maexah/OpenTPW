@@ -88,22 +88,34 @@ public partial class ModelEntity : Entity
 	/// <param name="ambient">Light every surface gets regardless of facing; 0 for the world's own.</param>
 	/// <param name="worldNormals">Light with normals turned by the model matrix - see ObjectUniformBuffer.</param>
 	/// <param name="translucent">Which half to draw: false for the solid one, true for the see-through one.</param>
+	/// <param name="transform">
+	/// Where to put it, instead of where the entity itself stands.
+	///
+	/// <para>
+	/// <b>It exists so a thing can be shown somewhere without being moved.</b> The ride window's
+	/// preview draws the very model that is standing in the park - the same entities, mid-animation -
+	/// and moving them to centre one in a panel would drag the ride across the park with it.
+	/// </para>
+	/// </param>
 	public void DrawOverlay( System.Numerics.Matrix4x4 view, System.Numerics.Matrix4x4 projection,
-		Vector3 lightPosition, Vector3 lightColor, float ambient = 0f, bool worldNormals = false, bool translucent = false )
+		Vector3 lightPosition, Vector3 lightColor, float ambient = 0f, bool worldNormals = false,
+		bool translucent = false, System.Numerics.Matrix4x4? transform = null )
 	{
 		if ( Opacity <= 0f )
 			return;
 
 		if ( (translucent ? TranslucentModel : Model) is { } half )
-			Draw( half, view, projection, lightPosition, lightColor, 0f, ambient, worldNormals );
+			Draw( half, view, projection, lightPosition, lightColor, 0f, ambient, worldNormals, transform );
 	}
 
 	private void Draw( Model model, System.Numerics.Matrix4x4 view, System.Numerics.Matrix4x4 projection,
-		Vector3 lightPosition, Vector3 lightColor, float fogDensity, float ambient = 0f, bool worldNormals = false )
+		Vector3 lightPosition, Vector3 lightColor, float fogDensity, float ambient = 0f, bool worldNormals = false,
+		System.Numerics.Matrix4x4? transform = null )
 	{
 		var uniformBuffer = new ObjectUniformBuffer
 		{
-			g_mModel = ModelMatrix,
+			// Where the caller says, or where this entity stands. See DrawOverlay's transform.
+			g_mModel = transform ?? ModelMatrix,
 			g_mView = view,
 			g_mProj = projection,
 			g_vLightPos = lightPosition,

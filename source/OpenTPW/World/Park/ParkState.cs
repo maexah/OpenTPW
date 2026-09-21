@@ -178,6 +178,27 @@ public sealed class ParkState
 		return true;
 	}
 
+	/// <summary>
+	/// Puts a changed object back in place of the one carrying its thing id, and answers whether there
+	/// was one to replace.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="ParkWorld.CatalogueObject"/> is a record, so anything that changes one - the ride
+	/// window's three sliders - builds a new one from the old and hands it here. Replacing in place
+	/// keeps the list's order, which is what the censuses and the cycle arrows walk.
+	/// </remarks>
+	public bool ReplaceObject( ParkWorld.CatalogueObject placed )
+	{
+		var at = _objects.FindIndex( candidate => candidate.ThingId == placed.ThingId );
+
+		if ( at < 0 )
+			return false;
+
+		_objects[at] = placed;
+
+		return true;
+	}
+
 	/// <summary>The placed object with this thing id, if the park has one.</summary>
 	public bool TryObject( int thingId, out ParkWorld.CatalogueObject placed )
 	{

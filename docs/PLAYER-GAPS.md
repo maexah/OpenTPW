@@ -138,7 +138,19 @@ dependency order is untouched, so this item stays open.
 - [x] **Clicking a placed ride opens its management window** - `ParkObjectWindow`, stream
       `0x00755150`. **There are nine such windows**, dispatched by `FUN_00486920` on the thing's kind
       byte and the item's `WhichUIType`; the other eight are counted by name. Close, delete, move and
-      the two cycle arrows work; the stats table, the preview and the sliders' commit are counted.
+      the two cycle arrows work.
+- [x] **The rides panel itself - DONE 2026-09-21.** All three sliders take their range from the item
+      and their value from the ride, and **save**: capacity 5 of 1..10 clicked to 6 read back as 6
+      after the window was closed and reopened. The stats table letters its seven rows from UITEXT
+      17-23 and fills Age and Scrap value; the four bars and the monthly history are named gaps. The
+      preview draws the ride's **own** model - the one standing in the park, so it animates as the
+      ride runs - fitted by a real bounding box to 143px of a 194px panel and turning 16.62% between
+      frames against a 0.00% control.
+      **Two caveats rather than a clean tick.** The spin **stops while the clock is held**: the
+      original differences a real-time clock and keeps turning through a pause, and nothing here
+      exposes wall-clock time while paused, so that deviation is declared at the site instead of a
+      wider clock being invented for it. And **the scissor is unproven** - the clip check passes, but
+      the model now fits inside its panel, so nothing would spill with or without it.
 - [x] **The verbs underneath**: `ParkBuilding` buys, sells, moves and carries; `ParkStaffPool` and
       `ParkPeople` hire, fire, pick up and put down. Money is taken at PLACE time, from the item's
       `+0x1b8`, which is why cancelling a carry needs no refund.

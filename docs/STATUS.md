@@ -74,6 +74,54 @@ Take counts fresh; these go stale within a day.
 
 ## Recent
 
+**2026-09-21 - the rides panel is finished: three sliders that save, a live stats table, and the ride
+itself spinning in its preview.**
+
+**The sliders are the ride's, not the window's.** Ranges come from the item - `UsageInfo.Min/MaxSpeed`,
+`Min/MaxCapacity`, `Min/MaxDuration` - and values from the thing, at `+0x58` as a dword and `+0x5d` /
+`+0x5c` as bytes; `Upgrades[0].Init*` is what a newly bought ride is stamped with, so one no longer
+opens carrying nobody for no time. Each hides only where the original hides it: capacity on
+`min == max`, duration on `DurationUnit` nought - which is how a coaster says its length comes from
+its track - and **never speed**, where the original leaves a dead control standing. The commit is
+vtable `+0x3c`, which both cycle arrows and the close path call. Measured: capacity **5 of 1..10**
+moved to **6** by one click and read back as 6 after the window was closed and reopened.
+
+**`mOperatingSpeed` is at save offset 1036, and the offset is derived rather than guessed.**
+`FUN_004db7d0` is the object's own serialiser and writes capacity, duration, then speed; carrying its
+order on from 1036 lands exactly on **1054**, where this project already read `PricePerUse`. That
+agreement is what makes it an offset. `ParkRides` had recorded this as "not established" and refused
+to guess it.
+
+**The stats table's labels were already ours.** The builder gives its seven left cells UITEXT rows
+17-23 - Users last month, Age, Excitement, Reliability, State of repair, Remaining life, Scrap value -
+and `UIStrings` names every one, so nothing needed inventing. Age is real elapsed days over the built
+stamp and **Scrap value is the build price**, with depreciation still counted. The four bars and the
+monthly history are named gaps, not numbers.
+
+**The preview is the model standing in the park, drawn again rather than moved.** `DrawOverlay` takes a
+transform now, so the ride is shown mid-animation without dragging it across the park; it is drawn in
+`Level.Render`'s depth-cleared overlay pass, after the HUD, which is where the advisor already draws.
+`LobbyModel` gained a real bounding box because `Radius` is a distance from the ORIGIN: Belly Bounce
+reported 100.2 while its true footprint is 3x4 cells, so a preview sized by it drew the ride at about
+a fifth of its panel. Fitted by the box instead - `half 22.0`, `perUnit 3.530`, **span 143px of 194** -
+it fills the panel, and turns **16.62%** between frames against a **0.00%** control in the same window.
+
+**Two caveats, said rather than smoothed over.** The spin **stops while the clock is held**: the
+original differences a real-time clock and keeps turning through a pause, and nothing here exposes
+wall-clock time while paused - `Now`, `Delta` and `RawDelta` freeze together - so adding one for a
+spinning model was judged wider than it is worth. And **the scissor is unproven**: the clip check
+passes, but the model now fits inside its panel, so nothing would spill with or without it.
+
+**Four instrument faults, and every one of them failed working code.** A stats check demanded MORE ink
+after opening, when a dark panel replacing bright park makes the crop darker - it read 90% shut and 2%
+open and full. The preview harness cropped the panel `0x3e24` while the model lands in the chevron
+`0x3e25`, which reaches further left and higher. A `difference` helper was used without being defined.
+And the spin was measured with the park **paused**, which freezes the very clock the spin runs on -
+bit-identical frames, 0.00% to two decimals, were the tell, because a slow rotation gives a small
+number and never an exact zero. Two of my own diagnoses were wrong before the evidence corrected them:
+"nothing is drawn" when a smudge was plainly there, and "a unit error" resting on a multiplication I
+had got wrong.
+
 **2026-09-21 - a park can be built, staffed and managed.** The purchase menu, the hire screen and a
 placed ride's management window all open, and the verbs under them work: buy, sell, move, carry, hire,
 fire, pick up, put down. Three screens, one new widget (the original's control **type 7**, a scrolling

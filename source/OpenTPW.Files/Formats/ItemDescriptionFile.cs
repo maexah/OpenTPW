@@ -268,6 +268,52 @@ public sealed class ItemDescriptionFile
 	/// </summary>
 	public int BuildPrice => _buildPrice ?? _category?.BuildPrice ?? 0;
 
+	/// <summary>
+	/// What the ride window's three sliders may be set to, and what a newly built one starts at.
+	///
+	/// <para>
+	/// <b>These are the bounds the engine itself clamps to</b>, not a presentation detail: the setters
+	/// behind the sliders refuse anything outside them - <c>FUN_004dd7f0</c> clamps capacity to
+	/// <c>Min/MaxCapacity</c> and <c>FUN_004dd720</c> clamps duration to <c>Min/MaxDuration</c>, each
+	/// re-reading the item's own record rather than trusting its caller.
+	/// </para>
+	/// <para>
+	/// <b>Slot nought only for the starting values</b>, the same reading <see cref="BuildPrice"/>
+	/// records: <c>Upgrades[1]</c> and <c>[2]</c> are the later tiers, and every shop, sideshow and
+	/// feature declares them nought.
+	/// </para>
+	/// </summary>
+	public int MinSpeed => _minSpeed ?? _category?.MinSpeed ?? 0;
+
+	public int MaxSpeed => _maxSpeed ?? _category?.MaxSpeed ?? 0;
+
+	public int InitSpeed => _initSpeed ?? _category?.InitSpeed ?? 0;
+
+	public int MinCapacity => _minCapacity ?? _category?.MinCapacity ?? 0;
+
+	public int MaxCapacity => _maxCapacity ?? _category?.MaxCapacity ?? 0;
+
+	public int InitCapacity => _initCapacity ?? _category?.InitCapacity ?? 0;
+
+	public int MinDuration => _minDuration ?? _category?.MinDuration ?? 0;
+
+	public int MaxDuration => _maxDuration ?? _category?.MaxDuration ?? 0;
+
+	public int InitDuration => _initDuration ?? _category?.InitDuration ?? 0;
+
+	/// <summary>
+	/// Which units a go on this lasts in, and <b>whether it has a duration at all</b>.
+	///
+	/// <para>
+	/// <b>Nought means the ride has no duration slider</b>, which is a real distinction rather than a
+	/// missing value: the window hides both the slider and its readout when this is nought
+	/// (<c>FUN_004af030</c>), and the commit skips the duration setter entirely. Lost Kingdom's coaster
+	/// declares nought, which is right - a coaster's ride length comes from the length of its track.
+	/// Bumper cars declare 1 and the go-karts 2, and the readout's wording changes with it.
+	/// </para>
+	/// </summary>
+	public int DurationUnit => _durationUnit ?? _category?.DurationUnit ?? 0;
+
 	private int? _buildPrice;
 
 	private int? _whichUIType;
@@ -287,6 +333,17 @@ public sealed class ItemDescriptionFile
 	private int? _numSimultAnims;
 	private int? _chanceOfLosing;
 	private int? _costOfGoods;
+
+	private int? _minSpeed;
+	private int? _maxSpeed;
+	private int? _initSpeed;
+	private int? _minCapacity;
+	private int? _maxCapacity;
+	private int? _initCapacity;
+	private int? _minDuration;
+	private int? _maxDuration;
+	private int? _initDuration;
+	private int? _durationUnit;
 
 	private void Read( string text )
 	{
@@ -402,6 +459,50 @@ public sealed class ItemDescriptionFile
 				// Slot nought only - the later two are upgrade tiers, not the purchase. See BuildPrice.
 				case "Upgrades[0].CostOfUpgrade":
 					_buildPrice = Number( line );
+					break;
+
+				// The ride window's three sliders: what they may be set to, and where they start. The
+				// bounds are UsageInfo's and apply to the item however it was upgraded; the starting
+				// values are the purchase tier's - slot nought, for the same reason BuildPrice is.
+				case "UsageInfo.MinSpeed":
+					_minSpeed = Number( line );
+					break;
+
+				case "UsageInfo.MaxSpeed":
+					_maxSpeed = Number( line );
+					break;
+
+				case "UsageInfo.MinCapacity":
+					_minCapacity = Number( line );
+					break;
+
+				case "UsageInfo.MaxCapacity":
+					_maxCapacity = Number( line );
+					break;
+
+				case "UsageInfo.MinDuration":
+					_minDuration = Number( line );
+					break;
+
+				case "UsageInfo.MaxDuration":
+					_maxDuration = Number( line );
+					break;
+
+				case "Upgrades[0].InitSpeed":
+					_initSpeed = Number( line );
+					break;
+
+				case "Upgrades[0].InitCapacity":
+					_initCapacity = Number( line );
+					break;
+
+				case "Upgrades[0].InitDuration":
+					_initDuration = Number( line );
+					break;
+
+				// Nought means "no duration at all" - see DurationUnit.
+				case "Info.DurationUnit":
+					_durationUnit = Number( line );
 					break;
 			}
 		}

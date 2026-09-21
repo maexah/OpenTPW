@@ -63,9 +63,16 @@ public static class ParkBuilding
 
 		var thingId = state.NextThingId();
 
+		// A NEWLY BUILT RIDE STARTS AT ITS ITEM'S OWN SETTINGS, not at nought. The original seeds these
+		// three from the purchase tier - Upgrades[0].InitSpeed / InitCapacity / InitDuration - and they
+		// are what the ride window's sliders open on. Left at nought a bought ride would carry nobody
+		// and last no time, and ParkRides.BindNew would push those noughts straight into its script.
 		var placed = new ParkWorld.CatalogueObject(
 			ThingId: thingId, CatalogueId: catalogueId,
-			RawX: cellX << 8, RawY: cellY << 8, Angle: angle );
+			RawX: cellX << 8, RawY: cellY << 8, Angle: angle,
+			OperatingSpeed: item.InitSpeed,
+			OperatingCapacity: item.InitCapacity,
+			OperatingDuration: item.InitDuration );
 
 		if ( !objects.PlaceNow( placed, catalogue ) )
 			return $"buy: '{item.Name}' would not load, so nothing was built and nothing was charged";

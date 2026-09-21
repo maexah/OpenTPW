@@ -74,7 +74,7 @@ public sealed class ParkWorld
 		int RideScript = 0, int TrackRide = 0, int State = 0, ushort TopLeft = 0,
 		ushort AssignedStaff = 0, ushort BackOfQueue = 0, int CanLoad = 0,
 		ushort ExitPos = 0, ushort FirstInQueue = 0, int IsTrackRideValid = 0,
-		int OperatingCapacity = 0, int OperatingDuration = 0, int PricePerUse = 0,
+		int OperatingCapacity = 0, int OperatingDuration = 0, int OperatingSpeed = 0, int PricePerUse = 0,
 		int QueueSizeInCells = 0, int TotalTakings = 0, BuiltWhen Built = default )
 	{
 		/// <summary>
@@ -1482,6 +1482,16 @@ public sealed class ParkWorld
 			// So those two are deliberately not read.
 			OperatingCapacity: _data[start + 1034],          // mOperatingCapacity, one byte
 			OperatingDuration: _data[start + 1035],          // mOperatingDuration, one byte
+
+			// mOperatingSpeed, FOUR bytes, and the offset is derived rather than guessed. FUN_004db7d0
+			// is the object's own serialiser and writes these three in this order: capacity from
+			// +0x5d as one byte, duration from +0x5c as one byte, then speed from +0x58 as a dword -
+			// so the FILE's order is not the struct's, which is also why the two bytes above are the
+			// right way round. Carrying the serialiser's order on from here gives
+			// mPersonBeingLoaded(2), mCostOfGoods(4), mQualityOfGoods(4), mChanceOfWinning(4), which
+			// lands on 1054 - exactly where mPricePerUse is read below, and that agreement is what
+			// makes this an offset rather than a hope.
+			OperatingSpeed: ReadInt32At( start + 1036 ),     // mOperatingSpeed, one dword
 			PricePerUse: ReadInt32At( start + 1054 ),        // mPricePerUse - the original clamps it to 0..500
 			QueueSizeInCells: ReadInt32At( start + 1062 ),   // mQueueSizeInCells
 			TotalTakings: ReadInt32At( start + 1090 ),       // mTotalTakings

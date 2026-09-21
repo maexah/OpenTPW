@@ -399,11 +399,31 @@ internal sealed class UiSlider : UiControl
 
 	private bool _enabled = true;
 
-	public int Minimum { get; init; }
+	private int _minimum;
+	private int _maximum = 100;
 
-	public int Maximum { get; init; } = 100;
+	public int Minimum { get => _minimum; init => _minimum = value; }
+
+	public int Maximum { get => _maximum; init => _maximum = value; }
 
 	public int Value { get; private set; }
+
+	/// <summary>
+	/// Moves the two ends, the original's <c>Slider_SetRange</c>.
+	/// </summary>
+	/// <remarks>
+	/// <b>A slider whose range can only be set once cannot serve two different rides</b>, and the ride
+	/// window's cycle arrows show a second one without closing: its three sliders take their bounds
+	/// from whichever item is on screen. The value is clamped into the new range and the thumb put
+	/// where it now belongs, because a range that moves under a thumb strands it off the track.
+	/// </remarks>
+	internal void SetRange( int lowest, int highest )
+	{
+		_minimum = lowest;
+		_maximum = highest;
+
+		SetValue( Value );
+	}
 
 	public UiSliderThumb? Thumb { get; private set; }
 

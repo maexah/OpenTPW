@@ -22,6 +22,17 @@ public static class Localization
 	/// </summary>
 	public static string Help( int id ) => id >= 0 && id < HelpTexts.Entries.Length ? HelpTexts[id] : string.Empty;
 
+	/// <summary>
+	/// A row of UITEXT.str by number, for the rows <see cref="UIStrings"/> does not name.
+	/// </summary>
+	/// <remarks>
+	/// <b>It exists so that an unnamed row need not be given an invented name.</b> The ride window's
+	/// duration readout picks between a singular row and a plural one - 428 and 429 - and only the
+	/// first is in the enum. Naming the second from a guess would put a word this project does not own
+	/// into the interface, where a wrong one reads exactly like a right one.
+	/// </remarks>
+	public static string Text( int row ) => row >= 0 && row < UIStrings.Entries.Length ? UIStrings[row] : string.Empty;
+
 	private class LocalizationParser : BaseParser
 	{
 		public LocalizationParser( string input ) : base( input ) { }

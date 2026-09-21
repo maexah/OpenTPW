@@ -57,7 +57,13 @@ public sealed class ParkItemCatalogue
 		int ExcitementLevel = 0, int AttractionValue = 0, int NewAttractionDecayTime = 0,
 		int ThirstEffect = 0, int HungerEffect = 0, int VomitEffect = 0, int HappinessEffect = 0,
 		int LitterEffect = 0, int TrackType = 0, int AnimationChannels = 1,
-		int ChanceOfWinning = 100, int CostOfGoods = 0, int BuildPrice = 0 );
+		int ChanceOfWinning = 100, int CostOfGoods = 0, int BuildPrice = 0,
+
+		// The ride window's operating envelope - what its three sliders may be set to, and where a
+		// newly built one starts. DurationUnit nought means the ride has no duration slider at all.
+		int MinSpeed = 0, int MaxSpeed = 0, int InitSpeed = 0,
+		int MinCapacity = 0, int MaxCapacity = 0, int InitCapacity = 0,
+		int MinDuration = 0, int MaxDuration = 0, int InitDuration = 0, int DurationUnit = 0 );
 
 	private readonly Dictionary<int, Item> _items = [];
 
@@ -161,7 +167,11 @@ public sealed class ParkItemCatalogue
 				description.AttractionValue, description.NewAttractionDecayTime,
 				description.ThirstEffect, description.HungerEffect, description.VomitEffect,
 					description.HappinessEffect, description.LitterEffect, description.TrackType, description.NumSimultAnims,
-					description.ChanceOfWinning, description.CostOfGoods, description.BuildPrice );
+					description.ChanceOfWinning, description.CostOfGoods, description.BuildPrice,
+					description.MinSpeed, description.MaxSpeed, description.InitSpeed,
+					description.MinCapacity, description.MaxCapacity, description.InitCapacity,
+					description.MinDuration, description.MaxDuration, description.InitDuration,
+					description.DurationUnit );
 
 			return true;
 		}

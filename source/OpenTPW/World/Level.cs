@@ -802,6 +802,19 @@ public class Level
 		// cut into him: the original draws him in screen space, flattened almost to nothing in
 		// depth.
 		global::Global.Render.CommandList.ClearDepthStencil( 1 );
+
+		// A ride's window shows the ride itself, turning, in a panel. It is drawn HERE rather than with
+		// the interface because it is a model: the HUD pass draws flat UI meshes, and this needs the
+		// depth-cleared overlay stage the advisor already uses. A scissor keeps it inside the panel.
+		if ( _windows is { } showing )
+		{
+			foreach ( var window in showing.Windows )
+			{
+				if ( window is UI.ParkObjectWindow ride )
+					ride.DrawPreview();
+			}
+		}
+
 		Entity.All.ForEach( entity => entity.RenderOverlay() );
 	}
 }
