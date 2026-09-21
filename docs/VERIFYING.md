@@ -466,6 +466,23 @@ The ones that have bitten more than once.
   Happiness"; and a list rebuilt every frame. The measurements were all real and all beside the point —
   each was caught by opening the screenshot. A region check proves *something changed there*; only the
   image proves it is the right thing. Budget for looking, not just for measuring.
+- **96** — **`pkill -f PATTERN` kills the shell running it** whenever the pattern appears in that
+  shell's own command line. `pkill -f "OpenTPW.dll"` inside a script that mentions `OpenTPW.dll`
+  matched itself and died at its first line, taking the mutation check with it — and an earlier
+  `pgrep -af "OpenTPW.dll"` had reported "game still alive" about *itself*, which is the same trap
+  reading as evidence. Match on the executable instead (`pgrep -x dotnet`), so the pattern cannot
+  describe the shell. Generally: **any process query whose pattern is also in your own command line
+  is self-referential**, and it fails in the direction of looking like a result.
+- **97** — **A control window can land inside a genuine silence of the subject, and that is a reading,
+  not a broken instrument.** A park's music is *replayed, not looped* — about 8.5 s of arrangement then
+  a ten-second wait — so a park's mix is digitally silent for more than half of every cycle. A 3 s
+  music-only floor fell in a gap and read −999 dBFS, which is indistinguishable from an audio device
+  that never opened. Span the subject's own duty cycle before calling a window representative, and ask
+  what the subject does *between* its events, not only during them. **And when the floor cannot be
+  measured, the comparison is INCONCLUSIVE — never a direction.** With `floor = None` a harness of mine
+  fell through to "the mix DROPPED" on +0.70 dB, manufacturing a result from a missing control; the
+  same run's real answer was "no change". Make the no-floor branch say so explicitly, because the
+  default branch will otherwise say something confident.
 
 ---
 
