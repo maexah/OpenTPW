@@ -409,6 +409,42 @@ public static class DebugConsole
 
 				break;
 
+			// Makes every guest thirsty. An INSTRUMENT rather than a behaviour, and it is here for the
+			// reason `load` is: a park left alone almost never holds a guest who is thirsty AND still
+			// deciding, which is the one condition a drinks shop is chosen under. Only a quarter of
+			// guests grow thirsty on their own, and by the time they have, their day is usually over.
+			// It moves a meter the game itself moves and nothing else - no choosing, no placing, no till.
+			case "thirst":
+				if ( ParkPeople.Current is not { } drinkers )
+				{
+					Reply( "thirst: none - a park has to be loaded" );
+					break;
+				}
+
+				Reply( $"thirst: {drinkers.MakeThirsty( Peep.Most )} guests are now as thirsty "
+					+ "as the meter allows" );
+
+				break;
+
+			// What every thing a guest may be sent to has taken, and whether it can be offered at all. The
+			// two censuses either side of this one cannot answer that: `rides` says what a script is doing
+			// and `peeps` says what a guest carries, while whether a shop is REACHABLE turns on a walk over
+			// the map that neither makes. It prints every visitable thing, refused ones included.
+			case "spend":
+				if ( ParkPeople.Current is not { } spending )
+				{
+					Reply( "spend: none - a park has to be loaded" );
+					break;
+				}
+
+				var tills = spending.SpendCensus().ToArray();
+				Reply( $"spend {tills.Length}" );
+
+				foreach ( var till in tills )
+					Reply( "  " + till );
+
+				break;
+
 			// Which routes the park's fixed items loaded, out of the path table at model file 0xac.
 			// The bus is the one worth reading: 45 points, closed Bezier, first point near
 			// (207.4, 0.0, -247.8). Read it in a live park - a test proves the file parses, not that

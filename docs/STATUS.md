@@ -13,12 +13,13 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
   swinging open as you enter that park, and — with nobody playing — the camera flying itself around
   all four islands with all four heard at once, each from its own island.
 - Park: enter from the lobby; ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (2 of 6 buttons).
+- Spending: guests choose, queue for and **buy from the Drinks Shop and the Jungle Spray**, are charged on leaving, take the item's effects, and a sideshow winner is paid its prize.
 - People: 13 guests and 5 staff read from the save, drawn, walking, paying at the gate, queueing, boarding.
 - Rides: every placed thing runs its script; 72 of 106 opcodes implemented, the rest counted by `Unimplemented`.
 
 ## Does not
 
-- No buying, building, hiring, finances, shops serving, litter, saving a park back, video, networking.
+- No building, hiring, finances, litter, saving a park back, video, networking. The two global income pools, the balloon and costume arms, and the litter-bin errand (guest state 9) are named and unbuilt.
 - The `meter.wct` mapping behind the happiness gauge is wrong — the last fault Alexah found by playing that is still open.
 - 34 opcodes unimplemented. Three README lines and `RideScriptFile.cs:99` still quote older counts.
 
@@ -43,11 +44,47 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | 72 implemented of 106 | 2026-09-20, `case Opcode.` labels vs enum members |
-| Tests | 811 total, all of them run **with** the game and 0 skip | 2026-09-20, run repeatedly |
+| Tests | 817 total, all of them run **with** the game and 0 skip | 2026-09-20, run repeatedly |
 | Tests without the game | 379 ran, 411 skipped — **of 790, and not re-measured since** | 2026-09-19 review |
 | Build warnings | 126 (71 are CS8618 nullable) | 2026-09-20, unmoved by three commits |
 
 ## Recent
+
+**2026-09-20 — guests buy things: `docs/PLAYER-GAPS.md` item 8, both halves.** A filled park took
+**1110 at the Drinks Shop** (37 sales at 30) and **900 at the Jungle Spray** (45 at 20), with the new
+`spend` census showing the cause before the effect and a screenshot showing guests queued at the
+kiosk. `save/` unchanged in all four runs.
+
+**The shop's "structural blocker" was a misread field.** The offer filter compares a queue's length
+against the object's `+0x40`, and this project read that as `mQueueSizeInCells` out of the save —
+nought for the shop and all three toilets, so nothing could pass. It is not that field as loaded:
+`FUN_004de130` **overwrites** `+0x40` by walking real type-3 cells off the map whenever `mBackOfQueue`
+is nought, and `FUN_004dd920` calls it *before* reading the count. `+0x40` is a cache, and the save's
+copy is the cached answer to that walk — which the implementation proves by **reproducing both cached
+pairs the save already holds**: the Belly Bounce recomputes to 4 cells ending at 2866, the Jungle
+Spray to 1 ending at 3765, and neither number was put in. The argument that should have raised the
+doubt years earlier is that the three toilets are in the identical position: under the old reading no
+toilet in any park could ever be visited.
+
+**And a shop needed no new mechanism at all.** `docs/exe/ride-operation.md` said a shop takes its money
+through LIMBO; `Coconut.RSE` declares **zero** limbo and walk slots and uses neither family, running
+the same `VAR_LETMEON` → `WAIT 1000` → `VAR_LETMEOFF` handshake a ride runs. That page contradicted its
+own list of limbo users, and the list was right. Four claims on it are corrected, including
+`FUN_004e1a10`, which is **`mCostOfGoods`** and not the chance-of-winning accessor it was called twice.
+
+**What made a visit do anything was the win roll, which nothing had ever written.** `FUN_004e2670`
+rolls as a guest enters and writes the result into `mQueuePos`; the settle-up splits on that byte, so
+with it always nought **every visit in the park took the losing arm** — which is why a sideshow charged
+twenty and did nothing else. The chance is `100 - UsageInfo.InitChanceOfLoosing`: a shop declares none,
+so its chance is 100 and a drink is always served; the Jungle Spray declares 75, so 25.
+
+**Two things got predicted wrong and measured right.** The Jungle Spray's prize is **50**, not the 5
+two separate readings transcribed — which flips winning from costing 30 happiness to gaining 19, and a
+test caught it. And the first explanation of why no shop sale appeared in a live run (thirst) was
+refuted by the instrument built to test it: `thirstMax 100` with 21 guests over 50 and still no sale.
+The real reason is that thirsty guests are rarely still *deciding* — of 148 samples at thirst 50+,
+**73 were HeadingForExit and only 11 Deciding** — so a `thirst` console command was added to create
+the condition, justified exactly as `load` is for the seaplane.
 
 **2026-09-20 — all three vehicles drive, and `TRIGWAITANIM` is the whole of why they did not.** The
 ferry and the seaplane stood still for one reason: `Ferry.RSE` and `seaplane.RSE` start every animation

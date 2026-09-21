@@ -27,16 +27,52 @@ public sealed class ParkRideOperation
 {
 	private readonly ParkState _state;
 	private readonly IReadOnlyDictionary<int, Peep> _guests;
+	private readonly ParkAdmission? _admission;
 
 	/// <param name="state">The park as it is being played, which owns the queues.</param>
 	/// <param name="guests">Every guest by thing id, for asking what the head of a queue is doing.</param>
-	public ParkRideOperation( ParkState state, IReadOnlyDictionary<int, Peep> guests )
+	/// <param name="admission">
+	/// The park's own mood constants, for the settle-up alone - <c>PeepInfo.MediumHappinessChange</c>, which
+	/// is <b>both</b> the penalty for getting nothing out of a visit and the multiplier on what winning is
+	/// worth. <b>One balance value with two uses, not two settings.</b> Null leaves both arms alone rather
+	/// than moving happiness by a number nobody read, which is what a test asking about the money means.
+	/// </param>
+	public ParkRideOperation( ParkState state, IReadOnlyDictionary<int, Peep> guests,
+		ParkAdmission? admission = null )
 	{
 		ArgumentNullException.ThrowIfNull( state );
 		ArgumentNullException.ThrowIfNull( guests );
 
 		_state = state;
 		_guests = guests;
+		_admission = admission;
+	}
+
+	/// <summary>
+	/// Whether this visit gave the guest what they came for - the original's <c>FUN_004e2670</c>, rolled as
+	/// a guest enters the thing and written into their <c>mQueuePos</c> by <c>FUN_00501db0</c>'s case
+	/// <c>0xe</c>.
+	///
+	/// <para>
+	/// <b>It is <c>rand() % 100 &lt;= chance</c>, and the chance lives on the OBJECT at <c>+0x190</c></b>,
+	/// built as <c>100 - UsageInfo.InitChanceOfLoosing</c> when the thing is made. This project's notes
+	/// recorded that byte as possibly the person's and left it unsettled;
+	/// <c>FUN_004e2670</c> settles it, because the same pointer it reads is the one it takes the catalogue
+	/// id and the script handle from, and both of those are object fields.
+	/// </para>
+	/// <para>
+	/// <b>A shop always wins, and that is the mechanism rather than an accident.</b> Nothing in the
+	/// <c>shops</c> folder declares a chance of losing, so a shop's chance is a hundred and the roll cannot
+	/// fail - which is why a drink is always served. The Jungle Spray declares 75 in its own file, so its
+	/// chance is <b>25</b>. The original's own assertion says the same from the other side: it insists the
+	/// object is a sideshow <i>or</i> that this value is a hundred.
+	/// </para>
+	/// </summary>
+	public static bool Succeeds( ParkItemCatalogue.Item item, Random random )
+	{
+		ArgumentNullException.ThrowIfNull( random );
+
+		return random.Next() % 100 <= item.ChanceOfWinning;
 	}
 
 	/// <summary>
@@ -128,6 +164,23 @@ public sealed class ParkRideOperation
 
 	/// <summary>And the one it reports whoever has come off in - see <see cref="Dismiss"/>.</summary>
 	public const string DismissVariable = "VAR_LETMEOFF";
+
+	/// <summary>
+	/// The slot a thing's script is told how the visit went in - <b>variable 11</b>, which every item's main
+	/// script declares as <c>VAR_PARAM</c>.
+	///
+	/// <para>
+	/// <b>It is what makes a sideshow play the right animation.</b> <c>FUN_004e2670</c> writes the roll into
+	/// it as a guest enters, and <c>Junspray.RSE</c> copies it per lane
+	/// (<c>COPY VAR_LANERESn, VAR_PARAM</c>) and then branches on it to trigger one of two clips - the
+	/// winning one or the losing one. Left unwritten, every guest gets the losing animation.
+	/// </para>
+	/// <para>
+	/// <b>Reached by name like everything else here</b>, though this one is written to scripts that all
+	/// declare the common twelve in order, so the name and the index agree.
+	/// </para>
+	/// </summary>
+	public const string OutcomeVariable = "VAR_PARAM";
 
 	/// <summary>
 	/// Hands the ride's script the guest it has nominated - the original's <c>FUN_004e0900</c>, whose own
@@ -472,12 +525,81 @@ public sealed class ParkRideOperation
 		if ( catalogue == null || !catalogue.TryGet( ride.CatalogueId, out var item ) )
 			return;
 
-		// The gate. A guest whose byte is nought took nothing from the visit; the original docks their
-		// happiness here, which is the arm left unbuilt above.
+		// <b>The gate, and it is the ROLL rather than a place in a queue.</b> Entering the thing writes
+		// Succeeds() into mQueuePos, and the original splits on that byte here: nought logs "Person lost
+		// this sideshow..." and docks happiness, anything else runs the effects.
 		if ( peep.QueuePos == 0 )
+		{
+			// The middle of the three mood changes - fifteen in this park. NOT a penalty of its own: the
+			// same number multiplies what winning is worth a few lines below.
+			if ( _admission is { } lost )
+				peep.Happiness = Peep.Change( peep.Happiness, -lost.MediumHappinessChange );
+
 			return;
+		}
 
 		ApplyEffects( peep, item );
+
+		// Everything past here is a sideshow's alone. A shop stops at the effects, which is where its
+		// thirst, its litter and its five points of happiness come from.
+		if ( item.UiType != SideshowUiType )
+			return;
+
+		// <b>A sideshow PAYS OUT, and it pays the cost of goods rather than the price.</b> FUN_004fe1e0
+		// adds FUN_004e1a10 - the object's +0x188, built from UsageInfo.InitCostOfGoods - straight onto the
+		// guest's cash. Five, for the Jungle Spray, against the twenty they were just charged.
+		peep.Cash += item.CostOfGoods;
+
+		peep.Happiness = Peep.Change( peep.Happiness, WinningIsWorth( item, ride ) );
+	}
+
+	/// <summary>
+	/// Which <c>Info.WhichUIType</c> a sideshow is - the file's own comment reads "0=rides, 1=shops,
+	/// 2=sideshows, 3=features".
+	/// </summary>
+	/// <remarks>
+	/// <b>Only the sideshow value is used, and that is deliberate.</b> The original splits on the
+	/// descriptor's <c>+0x4ac</c> and every reading of this project's agrees that <b>2</b> is a sideshow,
+	/// while what <b>1</b> means is recorded as unsettled - the field table says "ride" and the economy feed
+	/// says "shops". Nothing here needs to know, so nothing here decides it.
+	/// </remarks>
+	public const int SideshowUiType = 2;
+
+	/// <summary>
+	/// What winning at a sideshow does to a guest's mood -
+	/// <c>log2( costOfGoods / pricePerUse ) * MediumHappinessChange</c>, the tail of <c>FUN_004fe1e0</c>.
+	///
+	/// <para>
+	/// <b>It is a RISE for the shipped sideshow, and the first reading of it here was wrong.</b> The Jungle
+	/// Spray's own file sets a cost of goods of <b>50</b> against a price of 20 - so the ratio is two and a
+	/// half, its log is about 1.32, and fifteen of those is <b>+19</b>. A guest pays twenty, wins fifty and
+	/// cheers up, which is what makes the engine's own "Sideshow won - happiness up %d points" an honest
+	/// line rather than a perverse one.
+	/// </para>
+	/// <para>
+	/// <b>That number was predicted as 5 and measured as 50, and the test is what caught it</b> - a
+	/// mis-transcription of the item's own <c>.sam</c> that had reached three comments before the
+	/// arithmetic refused it. The sign of this whole arm turns on it: a prize SMALLER than the price would
+	/// make the log negative and the winner unhappy, which is what the wrong number implied.
+	/// </para>
+	/// <para>
+	/// <b>The divisor is applied as an integer while the numerator is a float</b>, which is the original's
+	/// <c>FILD</c> / <c>FIDIV</c> pair rather than a tidy-up, and the whole product is truncated toward
+	/// nought by its <c>__ftol</c>.
+	/// </para>
+	/// <para>
+	/// <b>A price or a prize of nought is refused rather than computed</b>, and that is a declared
+	/// deviation: the original guards neither, so it would divide by nought or take the log of nought. No
+    /// shipped sideshow does either, so reproducing the fault would be inventing behaviour nothing can
+	/// show - and returning nought keeps the arm honest instead of producing an infinity.
+	/// </para>
+	/// </summary>
+	private int WinningIsWorth( ParkItemCatalogue.Item item, ParkWorld.CatalogueObject ride )
+	{
+		if ( _admission is not { } mood || item.CostOfGoods <= 0 || ride.PricePerUse <= 0 )
+			return 0;
+
+		return (int)(Math.Log2( item.CostOfGoods / (float)ride.PricePerUse ) * mood.MediumHappinessChange);
 	}
 
 	/// <summary>

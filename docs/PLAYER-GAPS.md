@@ -31,8 +31,8 @@ loop; item 8 is new. Items 2, 5 and 7 stand but are no longer next.
 |---|---|---|
 | ~~**1st**~~ | ~~**Arrivals, and the three vehicles** — item 3~~ **DONE 2026-09-20** | Nothing else in the loop can be seen without people coming in |
 | ~~**2nd**~~ | ~~**Departures** — item 6~~ **DONE 2026-09-20**, built with the first rather than after it | The same vehicle loop: one that drops off must pick up. Built alone it drains the park |
-| **3rd** | **Sideshow spending** — item 8 | Nearly there already: `CHARGE` is built (`c18ead8`) and pays on leaving |
-| **4th** | **Shops** — item 8 | Last, because it is blocked on something structural rather than unbuilt |
+| ~~**3rd**~~ | ~~**Sideshow spending** — item 8~~ **DONE 2026-09-20** | It needed the win roll, which nothing had ever written: every visit took the losing arm |
+| ~~**4th**~~ | ~~**Shops** — item 8~~ **DONE 2026-09-20** | The "structural blocker" was a misread field. Nothing structural was in the way |
 
 **>>> THAT FIRST QUESTION IS ANSWERED — 2026-09-20. IT WAS NEITHER OPTION. <<<**
 It asked whether the vehicles need the `.RSE` runtime built, or can be driven by our own animation
@@ -251,20 +251,50 @@ from the crossing. So the arrival path they would take is the one the shipped sa
 
 ---
 
-## 8. Guests cannot buy anything from a shop, and barely from a sideshow
+## 8. Guests cannot buy anything from a shop, and barely from a sideshow — DONE, 2026-09-20
 
-- [ ] **Seen:** the park has a Drinks Shop and a sideshow, and a guest's money never reaches either.
-- **Spending is half built.** `CHARGE` is built (`c18ead8`, 727 tests) and pays **on leaving**, not on
-  boarding. Its payoff today is the **sideshow alone**.
-- **>>> THE SHOP IS BLOCKED ON SOMETHING STRUCTURAL, WHICH IS WHY IT IS LAST. <<<** The Drinks Shop
-  (census id 16, cell (43,30)) carries the "**may be offered**" flag — bit `0x4`, which
-  `FUN_004fcb10` tests before it will even score a candidate — **but declares no queue cells**, and the
-  filter `FUN_004dda20` is `length < mQueueSizeInCells * 4`. With zero cells nothing passes, so the
-  chooser never sends anyone and the dismiss path cannot reach it either. `ParkRideChooserTests` pins
-  the consequence: "the sideshow and the ride, and nothing else".
-- **So the question to decode first** is whether the original reaches a shop by a path *other* than the
-  ride/sideshow queue. Do not "fix" it by inventing queue cells for the shop.
-- **Unbuilt in spending:** the happiness arm of the settle-up, and the two income pools.
+- [x] **Guests buy from both.** Confirmed in the running game: a filled park took **1110 at the Drinks
+      Shop** (37 sales at 30) and **900 at the Jungle Spray** (45 at 20) across two runs, with the
+      `spend` census showing the cause before the effect — guests `heading {shop:16}` and then the till
+      moving. `save/` unchanged within every run.
+- **>>> THE "STRUCTURAL BLOCKER" WAS A MISREAD FIELD, NOT A BLOCKER. <<<** The filter compares a
+  queue's length against the object's **`+0x40`**, and this project read that as `mQueueSizeInCells`
+  out of the save — nought for the shop and all three toilets. It is not: `FUN_004de130`
+  (`GetBackOfQueue`) **overwrites** `+0x40` by walking real type-3 cells off the map whenever
+  `mBackOfQueue` is nought, and `FUN_004dd920` calls it **before** it reads the count. So `+0x40` is a
+  cache, and the save's copy is the cached answer to that very walk.
+  - **The walk reproduces both cached pairs the save already holds, and neither number was put in**:
+    the Belly Bounce recomputes to 4 cells ending at 2866 = (49,22), the Jungle Spray to 1 cell ending
+    at 3765 = (52,29). Those *are* its `mQueueSizeInCells` and `mBackOfQueue`.
+  - The corroborating argument, which is what should have raised the doubt years earlier: **the three
+    toilets are in the identical position.** Under the old reading no toilet in any park could ever be
+    visited.
+  - `FUN_004de040` reads the entry cell's **`mNeighbours`**, never its `mDirection`, and takes the
+    first set bit in the order `0x01`, `0x10`, `0x40`, `0x04`. Full decode in `docs/exe/ride-operation.md`.
+- **>>> AND THE SHOP NEEDED NO NEW SCRIPT MECHANISM. <<<** `docs/exe/ride-operation.md` claimed "a shop
+  takes its money through the LIMBO mechanism"; **`Coconut.RSE` declares zero limbo slots and zero walk
+  slots and uses neither family.** It runs the identical `VAR_LETMEON` → `WAIT 1000` → `VAR_LETMEOFF`
+  handshake a ride runs, so the boarding chain already built for the Belly Bounce *is* the shop. Limbo
+  is real but belongs to `steak`, `giftshop`, `balloon`, `Cost_shp` and `arc2x3`.
+- **What made the visit do anything: the win roll.** `FUN_004e2670` rolls `rand()%100 <= chance` as a
+  guest enters and writes it into `mQueuePos`, which the settle-up splits on. Nothing here ever wrote
+  that byte, so **every visit in the park took the losing arm** — which is why a sideshow charged 20 and
+  did nothing else. Chance of winning is `100 - UsageInfo.InitChanceOfLoosing`: a shop declares none, so
+  its chance is **100** and a drink is always served; the Jungle Spray declares 75, so **25**.
+- **Built with it:** the losing arm (happiness down by `MediumHappinessChange`), the sideshow's prize
+  (`+50`, its `InitCostOfGoods`) and the win's happiness, `log2( cost / price ) * 15` = **+19**.
+- **A number that was predicted wrong and measured right:** the Jungle Spray's prize is **50**, not 5.
+  Predicted as 5, it made winning cost 30 happiness; measured at 50 it gains 19, and the engine's own
+  "Sideshow won - happiness up %d points" reads honestly. The test caught it.
+- **Still unbuilt, and named rather than quietly skipped:** the two global income pools
+  (`+0x20130` / `+0x20380`), the `SpecialIngredient` and `AppearanceEffect` arms (balloons and
+  costumes), and `FUN_004fdcc0`'s excitement-match happiness.
+- **One honest limit.** A park left entirely alone still rarely buys a *drink*: only a quarter of guests
+  ever grow thirsty (`Peep.Tick` shares the drift by thing id) and by then their exit countdown has
+  usually run out — measured, of 148 samples at thirst 50+, **73 were HeadingForExit and only 11
+  Deciding**. The shop is chosen the moment a thirsty guest *is* deciding, which
+  `ParkRideChoiceTests` pins from four cells across the park. The `thirst` console command exists to
+  create that condition, for the same reason `load` exists for the seaplane.
 
 ---
 

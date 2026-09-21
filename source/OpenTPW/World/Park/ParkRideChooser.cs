@@ -113,7 +113,7 @@ public sealed class ParkRideChooser
 			var item = ItemFor( candidate );
 			var queue = queueLength?.Invoke( candidate ) ?? ParkRideChoice.QueueLength( _park, candidate );
 
-			if ( !ParkRideChoice.CanBeOffered( candidate, queue, item?.TrackType ?? 0 ) )
+			if ( !ParkRideChoice.CanBeOffered( candidate, queue, item?.TrackType ?? 0, _park ) )
 				continue;
 
 			var score = ScoreOf( wants, candidate, item, queue, fromX, fromY,

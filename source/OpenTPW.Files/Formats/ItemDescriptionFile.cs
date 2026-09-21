@@ -193,6 +193,57 @@ public sealed class ItemDescriptionFile
 	/// </summary>
 	public int NumSimultAnims => _numSimultAnims ?? _category?.NumSimultAnims ?? 1;
 
+	/// <summary>
+	/// How often a guest <b>loses</b> at this thing - <c>UsageInfo.InitChanceOfLoosing</c>, the game's own
+	/// spelling. The chance of WINNING is <see cref="ChanceOfWinning"/>, which is a hundred less this.
+	///
+	/// <para>
+	/// <b>The category default is 70 and it is declared only by <c>sideshow/SideShow.sam</c></b>; the Jungle
+	/// Spray overrides it to <b>75</b> in its own <c>.sam</c>, inside <c>junspray.wad</c>. Nothing in the
+	/// <c>shops</c> or <c>rides</c> folders declares it at all, which is not an omission but the whole
+	/// mechanism - see <see cref="ChanceOfWinning"/>.
+	/// </para>
+	/// </summary>
+	public int ChanceOfLosing => _chanceOfLosing ?? _category?.ChanceOfLosing ?? 0;
+
+	/// <summary>
+	/// How often a guest gets what they came for - the object's <c>+0x190</c>, which
+	/// <c>FUN_004db090</c> builds as <c>100 - UsageInfo.InitChanceOfLoosing</c> at
+	/// <c>004db38f</c>..<c>004db3a1</c>.
+	///
+	/// <para>
+	/// <b>A thing that declares no chance of losing therefore always succeeds, and that is what makes a
+	/// shop work.</b> <c>FUN_004e2670</c> rolls <c>rand() % 100 &lt;= chance</c> and writes the answer into
+	/// the guest's <c>mQueuePos</c>, which the settle-up then uses to decide whether the visit did anything
+	/// at all. A shop declares nothing, so its chance is <b>100</b>, the roll never fails, and the drink is
+	/// always served; the Jungle Spray declares 75, so its chance is <b>25</b>.
+	/// </para>
+	/// <para>
+	/// <b>The assertion in that function is what confirms the reading rather than a guess at it</b>: it
+	/// insists the object is a sideshow <i>or</i> that this value is <c>'d'</c> - decimal <b>100</b> - which
+	/// is exactly the case a shop falls into.
+	/// </para>
+	/// </summary>
+	public int ChanceOfWinning => 100 - ChanceOfLosing;
+
+	/// <summary>
+	/// What this costs the park to provide - <c>UsageInfo.InitCostOfGoods</c>, descriptor <c>+0x140</c>,
+	/// which the object keeps at <c>+0x188</c> and <c>FUN_004e1a10</c> answers.
+	///
+	/// <para>
+	/// <b>It is the PRIZE a sideshow pays out</b>, added straight to the winner's cash by
+	/// <c>FUN_004fe1e0</c>, and the numerator of the happiness the win is worth. The Jungle Spray's own
+	/// file sets it to <b>50</b> against a price of 20 - so winning it is worth more than playing it cost;
+	/// the Drinks Shop's sets <b>20</b> against a price of 30.
+	/// </para>
+	/// <para>
+	/// <b>Both come from the item's own <c>.sam</c> INSIDE its <c>.wad</c>, not from the category file</b>,
+	/// and the difference reverses the sign of the result - the category declares 30 against 10. Anything
+	/// asking this question of the category alone gets a different park.
+	/// </para>
+	/// </summary>
+	public int CostOfGoods => _costOfGoods ?? _category?.CostOfGoods ?? 0;
+
 	private int? _whichUIType;
 	private int? _isChoosable;
 	private int? _providesRelief;
@@ -208,6 +259,8 @@ public sealed class ItemDescriptionFile
 	private int? _litterEffect;
 	private int? _trackType;
 	private int? _numSimultAnims;
+	private int? _chanceOfLosing;
+	private int? _costOfGoods;
 
 	private void Read( string text )
 	{
@@ -309,6 +362,15 @@ public sealed class ItemDescriptionFile
 
 				case "UsageInfo.NumSimultAnims":
 					_numSimultAnims = Number( line );
+					break;
+
+				// The game's own spelling of "losing", and it must be matched exactly - see ChanceOfLosing.
+				case "UsageInfo.InitChanceOfLoosing":
+					_chanceOfLosing = Number( line );
+					break;
+
+				case "UsageInfo.InitCostOfGoods":
+					_costOfGoods = Number( line );
 					break;
 			}
 		}

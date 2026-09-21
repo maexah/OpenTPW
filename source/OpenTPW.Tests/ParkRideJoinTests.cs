@@ -118,6 +118,65 @@ public class ParkRideJoinTests
 			"a guest who arrives at a ride should start shuffling up its queue" );
 	}
 
+	/// <summary>Thing 16, the <c>Drinks Shop</c> - which declares no chance of losing, so its roll cannot fail.</summary>
+	private const int DrinksShop = 16;
+
+	/// <summary>
+	/// <b>The win roll is WIRED, not merely implemented - and nothing pinned that until this existed.</b>
+	///
+	/// <para>
+	/// A mutation that made <see cref="ParkRideOperation.Succeeds"/> always fail left both settle-up tests
+	/// GREEN, because each sets <see cref="Peep.QueuePos"/> by hand and asks what the settle-up does with
+	/// it. Neither could see whether anything ever WRITES that byte - and before this session nothing did,
+	/// which is precisely why every visit in the park took the losing arm and a sideshow charged twenty
+	/// for nothing. This drives the real transition instead: a guest in
+	/// <see cref="PeepState.BeingAdmitted"/> whose ride accepts them.
+	/// </para>
+	/// <para>
+	/// <b>It is the unit half and the wiring half in one test on purpose</b>, because the two have failed
+	/// apart in this project three times - see <c>docs/VERIFYING.md</c> rule 75.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EnteringAThingRollsForTheVisitAndTellsItsScript()
+	{
+		var world = Park();
+		var state = new ParkState( world );
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+
+		var told = -1;
+
+		var behaviour = new PeepBehaviour( world, new Random( 5 ), Admission( world ),
+			() => ParkRides.GateIsOpen, state, catalogue,
+			admit: ( _, _ ) => true,
+			finishAdmission: null,
+			tellTheScript: ( _, outcome ) => told = outcome );
+
+		var blocked = CellEdge.For( world, ParkPeople.WalkingMode ).Blocked;
+		var shop = world.Objects.Single( o => o.ThingId == DrinksShop );
+
+		var peep = ParkPeople.PeepsIn( world ).First();
+		var walk = new PeepWalk( peep.Navigator, blocked );
+
+		// Standing at the shop's door with nowhere further to go, so the arrival arm is the one taken.
+		peep.Navigator.Position = new FixedVector(
+			PeepNavigator.WaypointCentre( shop.EntryCellX ), PeepNavigator.WaypointCentre( shop.EntryCellY ) );
+		peep.Navigator.Target = peep.Navigator.Position;
+
+		peep.MajorDest = shop.ThingId;
+		peep.QueuePos = 0;
+		peep.SetState( PeepState.BeingAdmitted, 1, new Random( 5 ) );
+
+		behaviour.Step( peep, walk, playing: null, tick: 2 );
+
+		Assert.AreEqual( PeepState.EnteringRide, peep.State, "the guest was admitted" );
+
+		// The byte the settle-up splits on. A shop's chance of winning is a hundred, so this is not a
+		// coin that happened to land - it is the one value the roll can give for this object.
+		Assert.AreEqual( 1, peep.QueuePos, "the roll succeeded and was written into mQueuePos" );
+		Assert.AreEqual( 1, told, "and the thing's script was told, for its winning animation" );
+	}
+
 	/// <summary>
 	/// Somebody actually ends up in a queue - the park's queues start empty, so anything above nought had
 	/// to be put there by a guest arriving.

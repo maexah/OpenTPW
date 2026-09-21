@@ -38,12 +38,22 @@ public sealed class ParkItemCatalogue
 	/// How many animations it can run at once - <see cref="ItemDescriptionFile.NumSimultAnims"/>, which is
 	/// the size of the channel array the <c>_CH</c> instructions index. One unless the item says otherwise.
 	/// </param>
+	/// <param name="ChanceOfWinning">
+	/// How often a guest gets what they came for - the object's <c>+0x190</c>, which the original derives as
+	/// <c>100 - UsageInfo.InitChanceOfLoosing</c> as the thing is built. <b>The default of a hundred is the
+	/// mechanism rather than a convenience</b>: a shop declares no chance of losing, so its roll never fails
+	/// and it always serves. See <see cref="ItemDescriptionFile.ChanceOfWinning"/>.
+	/// </param>
+	/// <param name="CostOfGoods">
+	/// What the item costs the park to provide - and, for a sideshow, <b>the prize it pays a winner</b>.
+	/// </param>
 	public readonly record struct Item( int Id, string Name, string Directory, string Stem, int Width, int Depth,
 		string? SignPath, int UiType = ItemDescriptionFile.Feature, bool IsChoosable = false,
 		bool ProvidesRelief = false, bool HasQueue = false, bool IsIndoors = false,
 		int ExcitementLevel = 0, int AttractionValue = 0, int NewAttractionDecayTime = 0,
 		int ThirstEffect = 0, int HungerEffect = 0, int VomitEffect = 0, int HappinessEffect = 0,
-		int LitterEffect = 0, int TrackType = 0, int AnimationChannels = 1 );
+		int LitterEffect = 0, int TrackType = 0, int AnimationChannels = 1,
+		int ChanceOfWinning = 100, int CostOfGoods = 0 );
 
 	private readonly Dictionary<int, Item> _items = [];
 
@@ -146,7 +156,8 @@ public sealed class ParkItemCatalogue
 				description.HasQueue, description.IsIndoors, description.ExcitementLevel,
 				description.AttractionValue, description.NewAttractionDecayTime,
 				description.ThirstEffect, description.HungerEffect, description.VomitEffect,
-					description.HappinessEffect, description.LitterEffect, description.TrackType, description.NumSimultAnims );
+					description.HappinessEffect, description.LitterEffect, description.TrackType, description.NumSimultAnims,
+					description.ChanceOfWinning, description.CostOfGoods );
 
 			return true;
 		}

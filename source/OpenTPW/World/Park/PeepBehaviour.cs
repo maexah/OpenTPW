@@ -82,10 +82,12 @@ public sealed class PeepBehaviour
 		ParkAdmission? admission = null, Func<int>? gateStatus = null, ParkState? state = null,
 		ParkItemCatalogue? catalogue = null,
 		Func<ParkWorld.CatalogueObject, int, bool>? admit = null,
-		Func<ParkWorld.CatalogueObject, int, bool>? finishAdmission = null )
+		Func<ParkWorld.CatalogueObject, int, bool>? finishAdmission = null,
+		Action<ParkWorld.CatalogueObject, int>? tellTheScript = null )
 	{
 		_admit = admit;
 		_finishAdmission = finishAdmission;
+		_tellTheScript = tellTheScript;
 
 		// Zero is open, which is the way round the name is not - see ParkWorld.ParkClosed. ParkState
 		// applies that rule itself, so it is not repeated here.
@@ -155,6 +157,13 @@ public sealed class PeepBehaviour
 	/// <c>FUN_00500870</c>. A delegate for the same reason <see cref="_admit"/> is one.
 	/// </summary>
 	private readonly Func<ParkWorld.CatalogueObject, int, bool>? _finishAdmission;
+
+	/// <summary>
+	/// Hands a thing's script the outcome of the roll a guest entering it makes -
+	/// <see cref="ParkRideOperation.OutcomeVariable"/>. A delegate for the reason <see cref="_admit"/> is
+	/// one: the write needs the thing's SCRIPT, which this type has no way to reach.
+	/// </summary>
+	private readonly Action<ParkWorld.CatalogueObject, int>? _tellTheScript;
 
 	/// <summary>
 	/// What a guest deciding what to do picks from - <c>FUN_004fcb10</c>. Always present, because a
@@ -527,6 +536,8 @@ public sealed class PeepBehaviour
 					&& _admit?.Invoke( arriving, peep.ThingId ) == true )
 				{
 					peep.SetState( PeepState.EnteringRide, tick, _random );
+
+					RollForTheVisit( peep, arriving );
 				}
 
 				break;
@@ -1164,7 +1175,12 @@ public sealed class PeepBehaviour
 
 		// The gate that is established - and note it is asked of the park as PLAYED, so a queue that
 		// filled up while this guest was walking to it turns them away.
-		if ( !ParkRideChoice.HasQueueRoom( chosen, State.QueueLength( chosen.ThingId ) )
+		// The cell count comes off the MAP, not out of the record - the same correction ParkRideChoice
+		// makes, and it has to be made here too or a guest could be offered a shop and then turned away at
+		// the door by a gate reading a different number from the one that sent them.
+		var (backOfQueue, queueCells) = ParkRideChoice.QueueCellsFor( _park, chosen );
+
+		if ( !ParkRideChoice.HasQueueRoom( State.QueueLength( chosen.ThingId ), queueCells )
 			|| TurnsAwayFrom( peep, chosen ) )
 		{
 			GiveUpOnIt( peep, tick );
@@ -1176,13 +1192,55 @@ public sealed class PeepBehaviour
 
 		// The back of the queue is a packed cell - decode by subtracting one FIRST, the same packing
 		// mEntryPos and the patrol corners use. An object with none leaves them where they stand.
-		if ( chosen.BackOfQueue != 0 )
+		//
+		// <b>It is the WALKED cell, not the record's.</b> This read chosen.BackOfQueue, which is nought for
+		// the shop and for all three toilets - so a guest who joined one of those queues was counted into
+		// it and then never given anywhere to stand, which is a guest queueing on the spot they decided
+		// from. The room check a few lines up already uses the walked pair; using the record here as well
+		// would have let the two disagree about the same queue.
+		if ( backOfQueue != 0 )
 		{
 			SendTo( peep, walk,
-				((chosen.BackOfQueue - 1) % ParkWorld.MapSize, (chosen.BackOfQueue - 1) / ParkWorld.MapSize) );
+				((backOfQueue - 1) % ParkWorld.MapSize, (backOfQueue - 1) / ParkWorld.MapSize) );
 		}
 
 		peep.SetState( PeepState.SteppingUpQueue, tick, _random );
+	}
+
+	/// <summary>
+	/// Rolls whether this visit gives the guest what they came for, as they enter the thing - the write
+	/// <c>FUN_00501db0</c>'s case <c>0xe</c> makes, <c>person[+0x1f1] = FUN_004e2670( object )</c>.
+	///
+	/// <para>
+	/// <b>This is the gate the whole of spending hangs on, and nothing in this tree ever wrote it.</b> The
+	/// settle-up splits on that byte: nought means the guest took nothing from the visit and loses
+	/// happiness, anything else runs the item's effects. Since no guest's <see cref="Peep.QueuePos"/> was
+	/// ever non-zero at the moment they left a thing, <b>every visit in this park took the losing arm</b> -
+	/// which is why a sideshow charged twenty and did nothing else whatever.
+	/// </para>
+	/// <para>
+	/// <b>It overwrites the guest's place in the queue, and that is the original's own overloading rather
+	/// than a collision here.</b> The save reader names <c>+0x1f1</c> <c>mQueuePos</c> and the state setter
+	/// writes the roll into the same byte; by this point the guest has already been called forward, so the
+	/// place is spent. Nothing reads it as a position again before the settle-up reads it as an outcome.
+	/// </para>
+	/// <para>
+	/// <b>Without a catalogue the roll is not made at all</b>, rather than defaulting to a win: an item
+	/// nothing can describe has no chance to roll against, and the settle-up refuses the same case one step
+	/// later for the same reason.
+	/// </para>
+	/// </summary>
+	private void RollForTheVisit( Peep peep, ParkWorld.CatalogueObject entering )
+	{
+		if ( _catalogue == null || !_catalogue.TryGet( entering.CatalogueId, out var item ) )
+			return;
+
+		var succeeded = ParkRideOperation.Succeeds( item, _random );
+
+		peep.QueuePos = succeeded ? 1 : 0;
+
+		// And the script is told, so a sideshow can play the winning clip rather than the losing one.
+		_tellTheScript?.Invoke( entering, succeeded ? 1 : 0 );
 	}
 
 	/// <summary>

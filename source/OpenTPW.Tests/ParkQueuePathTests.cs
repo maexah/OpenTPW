@@ -97,7 +97,10 @@ public class ParkQueuePathTests
 		Assert.IsFalse( world.Objects.Single( o => o.ThingId == JungleSpray ).HasQueuePath,
 			"and it still has no path" );
 
-		Assert.AreEqual( 2, offerable.Count, "two objects can be offered" );
+		// Six, not two - see ParkRideChoiceTests for why the four that declare no queue cells in their own
+		// record are still offered. The point this test makes is unchanged: having a PATH is a stricter
+		// thing than being offerable, and exactly one object has one.
+		Assert.AreEqual( 6, offerable.Count, "all six choosable objects can be offered" );
 		Assert.AreEqual( 1, withPath.Length, "and only one of them has a path" );
 	}
 

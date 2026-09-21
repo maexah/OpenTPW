@@ -58,7 +58,15 @@ public static class ParkRideChoice
 	/// The item's <c>Bumper.WhichTrackType</c>, or nought where the catalogue cannot say. A car track or a
 	/// water track needs its track ride to be valid before anyone may be sent to it.
 	/// </param>
-	public static bool CanBeOffered( ParkWorld.CatalogueObject item, int queueLength, int trackType = 0 )
+	/// <param name="park">
+	/// The park this object stands in, so that its queue can be <b>walked on the map</b> rather than read
+	/// from the save - see <see cref="QueueCellsFor"/>, which is the whole of why the Drinks Shop and the
+	/// three toilets were wrongly excluded. <b>Null falls back to the save's own cached pair</b>, which is
+	/// what the original does whenever <c>mBackOfQueue</c> is already set, and is the honest answer for a
+	/// test holding an object with no world around it.
+	/// </param>
+	public static bool CanBeOffered( ParkWorld.CatalogueObject item, int queueLength, int trackType = 0,
+		ParkWorld? park = null )
 	{
 		// A tracked ride whose track is not valid is not open, whatever else is true of it.
 		if ( trackType is ItemDescriptionFile.CarTrack or ItemDescriptionFile.WaterTrack
@@ -82,21 +90,204 @@ public static class ParkRideChoice
 		if ( !item.IsPlaced || item.EntryPos == 0 )
 			return false;
 
-		return HasQueueRoom( item, queueLength );
+		var (backOfQueue, cells) = QueueCellsFor( park, item );
+
+		// GetBackOfQueue answering nought is the original's FIRST refusal, and it is a different one from
+		// having no room: FUN_004dd920 tests the returned cell before it ever reaches the multiply, so an
+		// object with nowhere for a queue to begin never gets as far as counting anybody.
+		if ( backOfQueue == 0 )
+			return false;
+
+		return HasQueueRoom( queueLength, cells );
 	}
 
 	/// <summary>
-	/// Whether the queue has room - <c>queueLength &lt; mQueueSizeInCells * 4</c>.
+	/// Whether the queue has room - <c>queueLength &lt; cells * 4</c>, the original's <c>FUN_004dda20</c>.
 	/// </summary>
 	/// <remarks>
-	/// <b>An object with no queue cells has no room, and that is the original's arithmetic rather than a
-	/// special case:</b> nought cells times four is nought, and nothing is less than nought. It matters
-	/// because the shipped park's Drinks Shop and its three toilets all declare nought queue cells, so this
-	/// is the term that decides them - and the two objects that do declare some are the sideshow and the
-	/// ride.
+	/// <b>The count is the one <see cref="QueueCellsFor"/> produces, NOT <c>mQueueSizeInCells</c> read
+	/// straight out of the save</b>, and this method took the object until that distinction was measured.
+	/// The two agree wherever the save carries a cached pair and differ on exactly the objects that do not.
 	/// </remarks>
-	public static bool HasQueueRoom( ParkWorld.CatalogueObject item, int queueLength )
-		=> queueLength < item.QueueSizeInCells * QueueRoomPerCell;
+	public static bool HasQueueRoom( int queueLength, int cells )
+		=> queueLength < cells * QueueRoomPerCell;
+
+	/// <summary>The cell type a queue is laid out on - <c>FUN_00536320</c> accepts 3 and 9, and
+	/// <c>FUN_00536340</c> then rejects 9, so a queue cell is exactly <b>3</b>.</summary>
+	public const int QueueCellType = 3;
+
+	/// <summary>
+	/// Where an object's queue begins - the original's <c>FUN_004de040</c>.
+	///
+	/// <para>
+	/// <b>It reads the entry cell's <c>mNeighbours</c>, not its <c>mDirection</c>, and that is the single
+	/// fact this whole feature turned on.</b> <c>FUN_004de040</c> calls <c>FUN_00522770</c> with the
+	/// object's own entry cell - <c>LEA ECX,[EDX + ECX*0x4 + -0x44]</c> built from <c>mEntryPos</c> - and
+	/// that function is a one-line read of the cell's <c>+0xc</c>, which the game's own cell serialiser
+	/// (<c>FUN_004d0b30</c>) names <c>mNeighbours</c>. It then takes the <b>first bit that is set</b>, in a
+	/// fixed order that is not compass order, and steps one cell that way.
+	/// </para>
+	/// <para>
+	/// <b>The bit-to-vector table is the executable's own</b>, out of the jump table in
+	/// <c>FUN_004d97e0</c> (<c>CMapCell::GetNeighbouringCell( Direction )</c>, named by its own assert):
+	/// <c>0x01</c> is <c>(0,-1)</c>, <c>0x10</c> is <c>(0,+1)</c>, <c>0x40</c> is <c>(-1,0)</c> and
+	/// <c>0x04</c> is <c>(+1,0)</c>.
+	/// </para>
+	/// <para>
+	/// <b>These constants are the mirror of <see cref="CellEdge.BitFor"/> and neither is wrong.</b> That
+	/// table answers a different question - the bit of the cell being <i>entered</i>, on the side facing the
+	/// cell being left - so it is reverse-facing by design. This one is an outward step. Reading either as
+	/// the other inverts every answer, which is why they are written out separately instead of shared.
+	/// </para>
+	/// <para>
+	/// <b>No check of any kind is made on the cell it lands on</b> - not its type, not the map's edge.
+	/// <c>FUN_004de040</c>'s whole body holds exactly one call and it is the neighbours read; the checking
+	/// belongs to <see cref="StepToNextQueueCell"/>. Adding a guard here would quietly change which objects
+	/// have a queue at all.
+	/// </para>
+	/// </summary>
+	/// <returns>The packed cell the queue starts at, or nought where the entry cell connects to nothing.</returns>
+	public static int StartOfQueue( ParkWorld? park, ParkWorld.CatalogueObject item )
+	{
+		if ( park == null || item.EntryPos == 0 )
+			return 0;
+
+		if ( !ParkState.OnMap( item.EntryCellX, item.EntryCellY ) )
+			return 0;
+
+		var connections = park.CellAt( item.EntryCellX, item.EntryCellY ).Neighbours;
+
+		foreach ( var (bit, acrossBy, downBy) in StartSides )
+		{
+			if ( (connections & bit) != 0 )
+				return item.EntryPos + (downBy * ParkWorld.MapSize) + acrossBy;
+		}
+
+		return 0;
+	}
+
+	/// <summary>
+	/// The four sides <c>FUN_004de040</c> tries, <b>in its own order</b> - the bit it tests in
+	/// <c>mNeighbours</c> and the step that bit stands for. The order is the tested order and not compass
+	/// order, and it decides which way a queue runs when an entry cell connects two ways.
+	/// </summary>
+	private static readonly (int Bit, int AcrossBy, int DownBy)[] StartSides =
+	[
+		(0x01, 0, -1),
+		(0x10, 0, 1),
+		(0x40, -1, 0),
+		(0x04, 1, 0)
+	];
+
+	/// <summary>
+	/// The four probes <c>FUN_004de670</c> makes, in its own order: the step, and the <c>mDirection</c> the
+	/// cell it finds must carry.
+	/// </summary>
+	/// <remarks>
+	/// <b>Each expected value is the OPPOSITE of the step</b>, so a queue cell's direction points back down
+	/// the queue toward the thing it serves. It is an equality test on the whole byte rather than a mask,
+	/// which is the original's own comparison - a cell carrying two direction bits matches none of them.
+	/// <b>Note the order differs from <see cref="StartSides"/></b>: this one probes east before west.
+	/// </remarks>
+	private static readonly (int AcrossBy, int DownBy, int FacingBack)[] StepSides =
+	[
+		(0, -1, 0x10),
+		(0, 1, 0x01),
+		(1, 0, 0x40),
+		(-1, 0, 0x04)
+	];
+
+	/// <summary>
+	/// One step outward along a queue - the original's <c>FUN_004de670</c>.
+	///
+	/// <para>
+	/// <b>This is where the checking lives.</b> A neighbour counts only if it is on the map, its type is
+	/// exactly <see cref="QueueCellType"/> - <c>FUN_00536320</c> admits 3 or 9 and <c>FUN_00536340</c> then
+	/// rejects 9, so the ride-end cells a queue touches are excluded - and its own <c>mDirection</c> equals
+	/// the bit facing back the way this step came.
+	/// </para>
+	/// </summary>
+	/// <returns>The packed cell one further along, or nought at the end of the queue.</returns>
+	public static int StepToNextQueueCell( ParkWorld? park, int cellId )
+	{
+		if ( park == null || cellId == 0 )
+			return 0;
+
+		var (x, y) = MapStep.CellAt( cellId );
+
+		foreach ( var (acrossBy, downBy, facingBack) in StepSides )
+		{
+			var (nextX, nextY) = (x + acrossBy, y + downBy);
+
+			if ( !ParkState.OnMap( nextX, nextY ) )
+				continue;
+
+			var cell = park.CellAt( nextX, nextY );
+
+			if ( cell.Type == QueueCellType && cell.Direction == facingBack )
+				return MapStep.CellId( nextX, nextY );
+		}
+
+		return 0;
+	}
+
+	/// <summary>
+	/// Where an object's queue ends and how many cells long it is - the original's <c>FUN_004de130</c>,
+	/// <c>GetBackOfQueue</c>, named by its own <c>"*** GetBackOfQueue() crashed! ***"</c>.
+	///
+	/// <para>
+	/// <b>This is the correction that made the Drinks Shop reachable, and the belief it replaces was a
+	/// misread field rather than a missing one.</b> The offer filter compares a queue's length against the
+	/// object's <c>+0x40</c>, and this project read that as <c>mQueueSizeInCells</c> straight out of the
+	/// save - which is nought for the shop and for all three toilets, so nothing could ever pass. The save
+	/// loader does write that field (<c>FUN_004db7d0</c> names it at <c>004dcde6</c>), but
+	/// <c>FUN_004de130</c> <b>overwrites it</b> by walking the map whenever <c>mBackOfQueue</c> is nought -
+	/// and the filter calls this before it reads the count. So <c>+0x40</c> is a <b>cache</b>, and the save's
+	/// copy is the cached answer to this very walk rather than a declaration.
+	/// </para>
+	/// <para>
+	/// <b>The shipped park proves the walk twice over, which is why it can be trusted.</b> Run against the
+	/// two objects whose save carries a cached pair, it reproduces both exactly: the Jungle Spray starts at
+	/// (52,29), finds no queue cell beyond it and comes to <b>1 cell ending at 3765</b>, which is what its
+	/// record holds; the Belly Bounce starts at (52,22) and walks (51,22), (50,22), (49,22) - each type 3
+	/// with <c>mDirection</c> <c>0x04</c> - for <b>4 cells ending at 2866</b>, which is what its record
+	/// holds. Neither number was put in.
+	/// </para>
+	/// <para>
+	/// <b>A start cell that exists but leads nowhere still counts as one.</b> The loop body runs before its
+	/// step can fail, so an object whose entry cell merely touches a path has a queue of one - which is
+	/// four places by the <c>* 4</c> rule, and is exactly how a shop with no queue drawn on the ground comes
+	/// to be offerable at all.
+	/// </para>
+	/// </summary>
+	/// <returns>The packed back-of-queue cell and the number of cells, or <c>(0, 0)</c> for neither.</returns>
+	public static (int BackOfQueue, int Cells) QueueCellsFor( ParkWorld? park, ParkWorld.CatalogueObject item )
+	{
+		// The cached pair. The original returns mBackOfQueue without touching the count whenever it is set,
+		// which is what leaves the ride and the sideshow on the numbers their file was saved with.
+		if ( item.BackOfQueue != 0 )
+			return (item.BackOfQueue, item.QueueSizeInCells);
+
+		var cell = StartOfQueue( park, item );
+
+		if ( cell == 0 )
+			return (0, 0);
+
+		var back = cell;
+		var cells = 0;
+
+		// Bounded exactly as the original bounds it - a thousand, after which it complains rather than
+		// spinning. See ParkState.LongestQueue, which carries the same constant for the person walk.
+		while ( cell != 0 && cells < ParkState.LongestQueue )
+		{
+			back = cell;
+			cell = StepToNextQueueCell( park, cell );
+
+			++cells;
+		}
+
+		return (back, cells);
+	}
 
 	/// <summary>
 	/// How many guests are actually queueing for this object, by walking the queue itself - the original's
@@ -204,7 +395,9 @@ public static class ParkRideChoice
 			if ( !byId.TryGetValue( id, out var item ) )
 				break;
 
-			if ( CanBeOffered( item, queueLength?.Invoke( item ) ?? 0, trackTypeOf?.Invoke( item ) ?? 0 ) )
+			// The park goes in, so that an object whose queue is not in its record gets it walked off the
+			// map - which is the whole of why this answers six objects in the shipped park and not two.
+			if ( CanBeOffered( item, queueLength?.Invoke( item ) ?? 0, trackTypeOf?.Invoke( item ) ?? 0, park ) )
 				offerable.Add( item );
 
 			id = item.NextObject;

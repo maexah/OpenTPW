@@ -45,12 +45,22 @@ public class ParkRideChooserTests
 	private static ParkRideScore.Wants Guest( int personType = 0 )
 		=> new( personType, 0f, 0f, 0f, 0f );
 
+	private const int DrinksShop = 16;
+
 	/// <summary>
-	/// Whatever a guest is offered, it is one of the two objects with a queue - never the shop and never a
-	/// toilet, however close they are standing to one.
+	/// What a guest is actually offered, standing at each visitable thing in turn.
+	///
+	/// <para>
+	/// <b>This said "the sideshow and the ride, and nothing else" until 2026-09-20, and the shop's absence
+	/// was a misread field rather than a rule.</b> The filter walks a queue off the map now - see
+	/// <see cref="ParkRideChoice.QueueCellsFor"/> - so the Drinks Shop is chosen when a guest is standing by
+	/// it. <b>Measured rather than predicted:</b> the answer is four of the six, not all six. Toilets 21 and
+	/// 22 are never the best candidate from any of these six cells, because 23 stands between them and
+	/// scores higher on distance from the same places; that is the scorer working, not the filter.
+	/// </para>
 	/// </summary>
 	[TestMethod]
-	public void OnlyTheTwoThingsWithAQueueAreEverOffered()
+	public void TheShopIsAmongWhatAGuestIsOfferedAndTwoOfTheToiletsAreNot()
 	{
 		var park = Park();
 		var chooser = Chooser( park );
@@ -64,8 +74,13 @@ public class ParkRideChooserTests
 				offered.Add( chosen.ThingId );
 		}
 
-		CollectionAssert.AreEquivalent( new[] { JungleSpray, BellyBounce }, offered.ToArray(),
-			"the sideshow and the ride, and nothing else" );
+		CollectionAssert.AreEquivalent( new[] { BellyBounce, JungleSpray, DrinksShop, 23 }, offered.ToArray(),
+			"the ride, the sideshow, the drinks shop and the first of the three toilets" );
+
+		// The half that matters for spending, said on its own so a future change cannot quietly drop it
+		// back into the set it came from: a guest really is sent to the shop.
+		Assert.IsTrue( offered.Contains( DrinksShop ),
+			"the Drinks Shop is chosen - this is the whole of PLAYER-GAPS item 8's shop half" );
 
 		// Anti-vacuity: the guest really was stood next to things that were passed over.
 		Assert.AreEqual( 6, park.Objects.Count( o => o.IsVisitable ),

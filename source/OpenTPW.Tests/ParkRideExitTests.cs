@@ -472,7 +472,14 @@ public class ParkRideExitTests
 	/// so a guest whose thirst began at ten would read nought afterwards whether the deduction were forty or
 	/// four hundred - and every assertion below would pass against arithmetic it had never looked at.
 	/// </remarks>
-	private (ParkState Park, Peep Guest) LetOffAt( int thingId, int queuePos )
+	/// <param name="admission">
+	/// The park's mood constants, or null to leave the two happiness arms of the settle-up alone.
+	/// <b>Null is what every test here passed before 2026-09-20, and it made those arms invisible</b>: with
+	/// no admission the losing arm and the sideshow's winnings both do nothing, so a test could not tell a
+	/// built one from an absent one. The tests that care now pass one.
+	/// </param>
+	private (ParkState Park, Peep Guest) LetOffAt( int thingId, int queuePos,
+		ParkAdmission? admission = null )
 	{
 		var thing = Park().Objects.Single( o => o.ThingId == thingId );
 		var park = new ParkState( parkIsClosed: false, visitorsToDate: 0 );
@@ -486,12 +493,113 @@ public class ParkRideExitTests
 
 		script.Set( ParkRideOperation.DismissVariable, 7 );
 
-		Assert.IsTrue( new ParkRideOperation( park, new Dictionary<int, Peep> { [7] = peep } )
+		Assert.IsTrue( new ParkRideOperation( park, new Dictionary<int, Peep> { [7] = peep }, admission )
 			.Dismiss( script, thing, tick: 9, new Random( 1 ),
 				catalogue: new ParkItemCatalogue( "jungle", data ) ),
 			"the guest should have been let off" );
 
 		return (park, peep);
+	}
+
+	/// <summary>The park's own mood constants - <c>PeepInfo.MediumHappinessChange</c> is 15 in this stack.</summary>
+	private static ParkAdmission Mood() => new( new ParkBalance( "jungle", easyMode: true ), 25 );
+
+	/// <summary>Thing 14, the <c>Jungle Spray</c> - the park's only sideshow, and the only thing in it that
+	/// pays a prize.</summary>
+	private const int JungleSpray = 14;
+
+	/// <summary>
+	/// <b>What the two items' own files say, because every number below is derived from them</b> and the
+	/// category defaults say something different. Read from inside each <c>.wad</c>, which is where an
+	/// item's overrides live and where a grep of the installed folder cannot see them.
+	/// </summary>
+	[TestMethod]
+	public void TheChanceOfWinningComesFromEachItemsOwnFileAndAShopAlwaysWins()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+
+		Assert.IsTrue( catalogue.TryGet( 1203, out var coconut ), "the Drinks Shop's description" );
+		Assert.IsTrue( catalogue.TryGet( 1303, out var junspray ), "the Jungle Spray's description" );
+
+		// A shop declares no chance of LOSING at all, so its chance of winning is a hundred and its roll
+		// cannot fail. That is why a drink is always served, and it is the mechanism rather than a default.
+		Assert.AreEqual( 100, coconut.ChanceOfWinning, "a shop always serves" );
+		Assert.AreEqual( 20, coconut.CostOfGoods, "and its own file sets the cost of goods to twenty" );
+
+		// The sideshow declares 75, overriding its category's 70 - so it is won one time in four.
+		Assert.AreEqual( 25, junspray.ChanceOfWinning, "a hundred less the seventy-five it declares" );
+
+		// FIFTY, and this assertion was written as five and failed. The item's own file overrides its
+		// category's thirty, and the sign of the happiness arm turns on the prize beating the price.
+		Assert.AreEqual( 50, junspray.CostOfGoods, "its prize is fifty, against the twenty it charges" );
+
+		// Anti-vacuity: the two differ, so neither is a constant the parser fell back to.
+		Assert.AreNotEqual( coconut.ChanceOfWinning, junspray.ChanceOfWinning );
+
+		// And the roll itself, over enough draws that a hundred and a twenty-five cannot be confused.
+		var random = new Random( 7 );
+		var shopWins = 0;
+		var sprayWins = 0;
+
+		for ( var draw = 0; draw < 1000; ++draw )
+		{
+			if ( ParkRideOperation.Succeeds( coconut, random ) )
+				++shopWins;
+
+			if ( ParkRideOperation.Succeeds( junspray, random ) )
+				++sprayWins;
+		}
+
+		Assert.AreEqual( 1000, shopWins, "every single one, because its chance is a hundred" );
+		Assert.IsTrue( sprayWins is > 150 and < 400, $"about a quarter of a thousand, and it was {sprayWins}" );
+	}
+
+	/// <summary>
+	/// <b>The losing arm, which had never run.</b> A guest whose roll failed is charged, gets none of the
+	/// item's effects, and loses <c>PeepInfo.MediumHappinessChange</c> - the original's "Person lost this
+	/// sideshow..." path.
+	/// </summary>
+	[TestMethod]
+	public void AGuestWhoGotNothingOutOfAVisitLosesTheMiddleMoodChange()
+	{
+		var (park, peep) = LetOffAt( DrinksShop, queuePos: 0, Mood() );
+
+		Assert.AreEqual( 15, Mood().MediumHappinessChange, "the constant this arm spends, from the file" );
+		Assert.AreEqual( 35f, peep.Happiness, 0.001f, "fifty less the fifteen the middle change costs" );
+
+		// The effects still did not run, which is what separates this arm from the one below it.
+		Assert.AreEqual( 80f, peep.Thirst, 0.001f, "the gate held, so the drink never reached them" );
+
+		Assert.AreEqual( 270, peep.Cash, "and they paid regardless" );
+		Assert.AreEqual( 30, park.TakingsFor( DrinksShop ), "which the shop kept" );
+	}
+
+	/// <summary>
+	/// <b>A sideshow pays a prize and then makes the winner unhappy, and both halves are the original's.</b>
+	/// <c>FUN_004fe1e0</c> adds the cost of goods to the guest's cash and then moves happiness by
+	/// <c>log2( costOfGoods / pricePerUse ) * MediumHappinessChange</c>.
+	///
+	/// <para>
+	/// <b>The prize is bigger than the price, so the winner gains.</b> Fifty over twenty is two and a half,
+	/// its log is about 1.32, and fifteen of those is +19. <b>This test was written asserting a LOSS of
+	/// thirty and failed</b>: the prize had been transcribed as five rather than fifty, and every comment
+	/// that had been written around it said the winner ends up unhappy. The arithmetic refused it.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void WinningAtTheSideshowPaysAPrizeWorthMoreThanThePriceAndCheersTheGuest()
+	{
+		var (park, peep) = LetOffAt( JungleSpray, queuePos: 1, Mood() );
+
+		// Charged twenty, handed fifty back: three hundred less twenty plus fifty.
+		Assert.AreEqual( 330, peep.Cash, "the twenty it charges, less the fifty it pays a winner" );
+		Assert.AreEqual( 20, park.TakingsFor( JungleSpray ), "and the sideshow keeps the full price" );
+
+		Assert.AreEqual( 69f, peep.Happiness, 0.001f, "fifty, and log2(50/20) * 15 truncates to +19" );
+
+		// Anti-vacuity: the sideshow declares no effect block at all, so a build that ran the five effects
+		// here would still read eighty - the thirty must have come from the winnings arm and nowhere else.
+		Assert.AreEqual( 80f, peep.Thirst, 0.001f, "a sideshow quenches nothing, and its file says so" );
 	}
 
 	/// <summary>

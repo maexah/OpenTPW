@@ -185,7 +185,12 @@ public sealed class ParkPeople : Entity
 			( ride, personId ) => new ParkRideOperation( State, Guests )
 				.AdmitPerson( _scriptFor?.Invoke( ride.ThingId ), ride, personId ),
 			( ride, tick ) => new ParkRideOperation( State, Guests )
-				.CompleteAdmission( _scriptFor?.Invoke( ride.ThingId ), ride.ThingId, tick, _rideRandom ) );
+				.CompleteAdmission( _scriptFor?.Invoke( ride.ThingId ), ride.ThingId, tick, _rideRandom ),
+			// And the third: telling a thing's script how the visit went, which only something holding the
+			// script lookup can do. A script that declares no such variable takes the write nowhere, which
+			// is the right answer for the shop - Coconut.RSE declares VAR_PARAM and never reads it.
+			( ride, outcome ) =>
+				_scriptFor?.Invoke( ride.ThingId )?.Set( ParkRideOperation.OutcomeVariable, outcome ) );
 
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
 		// none of what a guest needs - the fee, the gate - means anything to them.
@@ -459,6 +464,43 @@ public sealed class ParkPeople : Entity
 			+ $"({ParkFixedItems.VehicleName( _arrivalVehicle )})" );
 
 		return _arrivalVehicle;
+	}
+
+	/// <summary>
+	/// Makes every guest as thirsty as asked. Answering the console rather than the park.
+	///
+	/// <para>
+	/// <b>It exists for the reason <see cref="ForceArrival"/> does: the condition it creates is otherwise
+	/// almost unreachable, and without it a built feature cannot be watched.</b> A drinks shop is chosen on
+	/// the thirst term - measured in <c>ParkRideChoiceTests</c>, where a parched guest picks it from four
+	/// cells across the park and an unthirsty one picks the ride from the same spot. But a park left alone
+	/// hardly ever holds a guest who is thirsty <i>and</i> still deciding: only a quarter of guests grow
+	/// thirsty at all (<see cref="Peep.Tick"/> shares the drift by thing id, and 16 divides 4), and by the
+	/// time they do their exit countdown has usually run out. Measured over a 400-second run: of 148
+	/// samples carrying thirst 50 or more, <b>73 were HeadingForExit and only 11 were Deciding</b>, and 68%
+	/// had an exit countdown already past nought.
+	/// </para>
+	/// <para>
+	/// <b>It sets a meter the game itself moves, and nothing else.</b> It does not choose for anybody, does
+	/// not place anybody and does not touch a till - whatever happens next is the chooser, the walk and the
+	/// settle-up running exactly as they do unattended.
+	/// </para>
+	/// </summary>
+	/// <returns>How many guests were made thirsty.</returns>
+	internal int MakeThirsty( float level )
+	{
+		var touched = 0;
+
+		foreach ( var peep in _peeps )
+		{
+			peep.Thirst = Math.Clamp( level, Peep.Least, Peep.Most );
+
+			++touched;
+		}
+
+		Log.Info( $"People: {touched} guests are now thirst {level}" );
+
+		return touched;
 	}
 
 	/// <summary>
@@ -959,7 +1001,10 @@ public sealed class ParkPeople : Entity
 		if ( _scriptFor == null || _behaviour.Park is not { } world )
 			return;
 
-		var operation = new ParkRideOperation( _behaviour.State, Guests );
+		// The admission goes in for the SETTLE-UP alone: it carries PeepInfo.MediumHappinessChange, which is
+		// both what a guest loses when a visit gives them nothing and the multiplier on what winning is
+		// worth. Without it both arms leave happiness alone rather than moving it by an invented number.
+		var operation = new ParkRideOperation( _behaviour.State, Guests, _behaviour.Admission );
 
 		foreach ( var thing in world.Objects )
 		{
@@ -1229,6 +1274,60 @@ public sealed class ParkPeople : Entity
 		}
 	}
 
+	/// <summary>
+	/// What every thing a guest may be sent to has taken, and why it can or cannot be sent to.
+	///
+	/// <para>
+	/// <b>No other census here can answer the question this one exists for.</b> <c>rides</c> reports what a
+	/// script is doing and <c>peeps</c> reports what a guest is carrying, but whether a guest can be
+	/// OFFERED a thing at all is decided by a walk over the map that neither of them makes - and that walk
+	/// is the whole of why the Drinks Shop and the three toilets were unreachable. So this prints the
+	/// computed cell count beside the record's own, which is the one line that tells a shop that is
+	/// genuinely refused apart from a shop the filter never considered.
+	/// </para>
+	/// <para>
+	/// <b>It prints every visitable thing rather than the ones that pass</b>, because a census that showed
+	/// only the survivors would read identically whether four objects were refused or never looked at -
+	/// which is exactly the confusion this replaces (<c>docs/VERIFYING.md</c> rule 85).
+	/// </para>
+	/// </summary>
+	internal IEnumerable<string> SpendCensus()
+	{
+		if ( _behaviour.Park is not { } world )
+		{
+			yield return "no park - one has to be loaded";
+			yield break;
+		}
+
+		var catalogue = _behaviour.Catalogue;
+
+		foreach ( var thing in world.Objects )
+		{
+			if ( !thing.IsVisitable )
+				continue;
+
+			ParkItemCatalogue.Item item = default;
+			var described = catalogue != null && catalogue.TryGet( thing.CatalogueId, out item );
+
+			var queue = State.QueueLength( thing.ThingId );
+			var (back, cells) = ParkRideChoice.QueueCellsFor( world, thing );
+			var offerable = ParkRideChoice.CanBeOffered( thing, queue, TrackTypeOf( thing ), world );
+
+			yield return $"thing {thing.ThingId,2} cat {thing.CatalogueId} "
+				+ $"'{(described ? item.Name : "unknown")}' "
+				+ $"price {thing.PricePerUse,3} took {State.TakingsFor( thing.ThingId ),6} "
+				// The record's own count beside the walked one. They agree wherever the save cached a
+				// back-of-queue and differ on exactly the objects that made this work necessary.
+				+ $"cells {cells} (record {thing.QueueSizeInCells}) back {back} "
+				+ $"queue {queue}/{cells * ParkRideChoice.QueueRoomPerCell} "
+				+ $"win {(described ? item.ChanceOfWinning : -1)}% "
+				+ $"prize {(described ? item.CostOfGoods : -1)} "
+				+ $"OFFERABLE {offerable}";
+		}
+
+		yield return $"park balance {State.Balance} gate takings {State.Takings}";
+	}
+
 	/// <summary>This guest's animation, for the drawing, the tests and the debug console.</summary>
 	internal SpriteScript? SpriteFor( int thingId ) => _sprites.GetValueOrDefault( thingId );
 
@@ -1320,7 +1419,12 @@ public sealed class ParkPeople : Entity
 				: $"script {playing.Script} pc {playing.Pc} set {playing.Set} "
 					+ $"frame {playing.Frame} every {playing.Interval}ms";
 
+			// <b>Where they are HEADING, which no census here could say.</b> Without it a park where
+			// nobody ever chooses the shop reads exactly like a park where everybody chooses it and
+			// something downstream refuses them - and those want opposite fixes. MajorDest is the thing
+			// they picked, nought for a guest who has picked nothing.
 			yield return $"thing {peep.ThingId,2} kind {peep.PersonType} state {peep.State} "
+				+ $"dest {peep.MajorDest,2} "
 				+ $"(saved {peep.SavedState}) cash {peep.Cash,4} exit {peep.ExitLevel,4} "
 				+ $"happy {peep.Happiness,3:0} thirst {peep.Thirst,3:0} hunger {peep.Hunger,3:0} "
 				+ $"toilet {peep.Toilet,3:0} vomit {peep.Vomit,3:0} litter {peep.Litter,3:0} "
