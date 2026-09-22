@@ -261,4 +261,40 @@ public class ParkPathBuildingTests
 		Assert.AreEqual( 7, index,
 			"one link is dropped and one kept - as many as the table can express, rather than none" );
 	}
+
+	/// <summary>
+	/// A queue cell says which thing it serves, through the packed cell its owner stands on.
+	///
+	/// <para>
+	/// <b>This had no test, and its only caller was a path nobody drives.</b> <c>OwnerOf</c> is read by
+	/// <see cref="ParkPathBuilding.LiftQueue"/> - which no test and no run had exercised - and now by
+	/// the click that re-arms the queue tool on a queue cell, so an answer of nought here reads exactly
+	/// like "that cell is not a queue" and sends the click somewhere else entirely.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void AQueueCellNamesTheThingItServes()
+	{
+		var park = World();
+		var state = new ParkState( park );
+
+		state.AddObject( new ParkWorld.CatalogueObject(
+			ThingId: 77, CatalogueId: 1100, RawX: 41 << 8, RawY: 23 << 8, Angle: 0 ) );
+
+		var cell = ParkState.CellFor( park, 20, 12 ) with
+		{
+			Type = ParkRideChoice.QueueCellType,
+			ParentId = (ushort)MapStep.CellId( 41, 23 )
+		};
+
+		state.SetRecord( 20, 12, cell );
+
+		Assert.AreEqual( 2986, (int)cell.ParentId, "the packed cell of (41,23), counted from one" );
+		Assert.AreEqual( 77, ParkPathBuilding.OwnerOf( state, cell ),
+			"the queue cell names the thing anchored on the cell its ParentId packs" );
+
+		// And a cell naming nobody answers nought rather than the first object in the list.
+		Assert.AreEqual( 0, ParkPathBuilding.OwnerOf( state, cell with { ParentId = 0 } ),
+			"a cell with no owner recorded names nobody" );
+	}
 }

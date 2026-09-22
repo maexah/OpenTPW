@@ -104,11 +104,26 @@ public static class ParkBuilding
 		var (entryX, entryY) = RotateDelta( item.EntryDeltaX, item.EntryDeltaY, angle );
 		var (exitX, exitY) = RotateDelta( item.ExitDeltaX, item.ExitDeltaY, angle );
 
-		var entryPos = ParkState.OnMap( cellX + entryX, cellY + entryY )
+		// AN ITEM WHOSE PICTURE MARKS NO ENTRANCE GETS NEITHER END, rather than both of them on its own
+		// anchor. ItemDescriptionFile zeroes all four deltas when there is no S - even where the picture
+		// carries a 2 - so marking them anyway types a CORNER of the footprint as a ride entrance and
+		// joins that corner to whatever happens to lie north of it. Six of the jungle's seventeen rides
+		// are in this case, the three coasters among them.
+		//
+		// THE ORIGINAL IS NOT SIMPLY DOING THIS, and the difference is not decoded. Its placer walks the
+		// shape grid itself with independent case 9 and case 10 arms, so it plausibly marks the way out
+		// of an item carrying a 2 and no S, where the DERIVATION it shares with this (FUN_00413410)
+		// takes the no-9 fallback and zeroes both. Which governs is unread, so the ends are left unmarked
+		// and counted: a ride nobody can queue for is visible and correctable, where a footprint corner
+		// silently acting as an entrance is neither.
+		if ( !item.HasEntrance )
+			Unimplemented.Report( "PLACED_ITEM_WITH_NO_ENTRANCE_MARK" );
+
+		var entryPos = item.HasEntrance && ParkState.OnMap( cellX + entryX, cellY + entryY )
 			? MapStep.CellId( cellX + entryX, cellY + entryY )
 			: 0;
 
-		var exitPos = ParkState.OnMap( cellX + exitX, cellY + exitY )
+		var exitPos = item.HasEntrance && ParkState.OnMap( cellX + exitX, cellY + exitY )
 			? MapStep.CellId( cellX + exitX, cellY + exitY )
 			: 0;
 
@@ -413,6 +428,13 @@ public static class ParkBuilding
 			return;
 
 		ParkPathNeighbours.LinkPath( state, park, nextX, nextY );
+
+		// AND THE ART, which is the half that was missing and the reason a ride stood against a path
+		// looked unconnected. LinkPath rewrites this cell's mask and its neighbours' masks, while
+		// ParkPaths redraws each cell from its STORED tile index - so without this the masks say joined
+		// and the path goes on drawing the piece it drew before the ride arrived. It is the same defect
+		// ParkPathBuilding.RetileAround already records for the path tool, on the placement path.
+		ParkPathBuilding.RetileAround( state, park, nextX, nextY );
 	}
 
 	/// <summary>

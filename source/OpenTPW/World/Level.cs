@@ -652,6 +652,23 @@ public class Level
 		if ( ParkBuildMode.Current != ParkBuildMode.None )
 			return $"world click: {RunBuildMode( cellX, cellY )}";
 
+		// CLICKING A QUEUE CELL RE-ARMS THE QUEUE TOOL for the thing that queue serves - the original's
+		// mode 0x14, "edit this ride's queue", which refills its pending list from the object, rewalks
+		// the queue and then drops into the queue mode. It has to be tested BEFORE the thing under the
+		// cursor, because a queue cell names its ride through the owner a queue carries, so the click
+		// would otherwise resolve to that ride and open its window instead.
+		if ( ParkState is { } state && Park is { } park
+			&& ParkState.CellFor( park, cellX, cellY ).Type == ParkRideChoice.QueueCellType
+			&& ParkPathBuilding.OwnerOf( state, ParkState.CellFor( park, cellX, cellY ) ) is var owner
+			&& owner != 0 )
+		{
+			// The rewalk is the half of 0x14 that is decoded: the saved pair is thrown away so the next
+			// question measures the cells as they are now rather than as the file recorded them.
+			state.InvalidateQueue( owner );
+
+			return $"world click: {ParkBuildMode.Arm( ParkBuildMode.Queue, owner )}";
+		}
+
 		if ( thingUnderCursor != 0 )
 		{
 			OpenObjectWindow( thingUnderCursor );

@@ -1236,6 +1236,20 @@ internal sealed class ParkObjectWindow : UiWindow
 				Move();
 				return;
 
+			// The player's only route to a ride's FIRST queue, and a declared deviation in mechanism.
+			// This button's own handler is not decoded - park-engine.md lists b_queue in the bottom row
+			// with no function against it - and the original's queue mode is never installed from the
+			// UI: it is reached from the commit handler, the demolish path, or mode 0x14, "edit this
+			// ride's queue", which is entered by clicking a queue cell that ALREADY EXISTS. So none of
+			// the decoded routes can start a first queue, and without something here a player cannot
+			// build one at all. This arms the queue tool against this thing - exactly what the console
+			// has always done - and counts the undecoded handler rather than claiming to reproduce it.
+			case 0x3e34:
+				Unimplemented.Report( "RIDE_WINDOW_QUEUE_BUTTON_HANDLER" );
+				Log.Info( $"Ride window: {ParkBuildMode.Arm( ParkBuildMode.Queue, ThingId )}" );
+				Stack.Close( this );
+				return;
+
 			default:
 				Unimplemented.Report( $"RIDE_WINDOW_{what.ToUpperInvariant().Replace( ' ', '_' )}" );
 				Log.Info( $"Ride window: '{what}' is not built yet" );

@@ -1086,9 +1086,18 @@ public static class DebugConsole
 				var probeY = (int)Argument( 2 );
 				var probed = ParkState.CellFor( cellPark, probeX, probeY );
 
+				// PARENT AND OCCUPANT ARE PRINTED because nothing else prints them, and a cell's owner is
+				// what decides whose queue a cell belongs to and which thing a click on a footprint
+				// finds. Diagnosing either without them means reasoning about a field no instrument can
+				// show, which is how a queue cell that named no owner went unnoticed.
 				Reply( $"cell ({probeX},{probeY}) type {probed.Type} neighbours 0x{probed.Neighbours:x2} " +
 					$"direction 0x{probed.Direction:x2} flags 0x{probed.Flags:x4} " +
-					$"tile set {probed.TileSet} index {probed.TileIndex} angle {probed.TileAngle}" );
+					$"tile set {probed.TileSet} index {probed.TileIndex} angle {probed.TileAngle} " +
+					$"parent {probed.ParentId}" +
+					(probed.ParentId != 0
+						? $" = ({MapStep.CellAt( probed.ParentId ).X},{MapStep.CellAt( probed.ParentId ).Y})"
+						: "") +
+					$" occupant {ParkState.Current?.CellAt( probeX, probeY ).Occupant ?? 0}" );
 				break;
 
 			// Opens the park's own game menu - the thing that actually HOLDS THE WORLD. A window with

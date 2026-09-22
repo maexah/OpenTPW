@@ -838,17 +838,21 @@ So the bit a queue needs is authored at placement time, on both cells together, 
 neighbour rule — which is exactly why no replay of `FUN_005348d0` and no predicate over the finished
 map can reproduce it.
 
-**The `mDirection` half of the FACED-CELL write is refuted by the shipped park.** The pair above has
-the faced cell taking `mDirection = H` as well as the bit. The Belly Bounce's **exit** at (52,26)
-carries `direction 0x10`, and the exit table sends `0x10` to (x, y+1) = **(52,27)** — which reads
-`neighbours 0x39 direction 0x00` in a running park. It carries the bit `0x01` pointing back at the
-exit and **no direction byte at all**. The entrance side cannot separate the two readings, because its
-faced cell (52,22) is a queue cell whose `0x10` the queue tool's own flow byte would write anyway; the
-exit's faced cell is the only shipped cell that can testify, and it says the direction is not written.
-So OpenTPW reproduces `mNeighbours |= …` on both cells and the direction on the end cell only
-(`ParkBuilding.Mark`, `JoinToWhateverIsThere`). Whether the placer's second write is conditional, or is
-overwritten by whatever later laid (52,27)'s path, is **not established** — only that writing it
-unconditionally contradicts the one cell that can be checked.
+**The `mDirection` half of the FACED-CELL write and the shipped park CONTRADICT each other, and the
+contradiction is not resolved.** The pair above has the faced cell taking `mDirection = H` as well as
+the bit, and the disassembly supports it: `FUN_005227e0` is an unconditional `MOV` into `+0x0d`, with
+no guard between it and the `FUN_00522700` beside it. Against that, the Belly Bounce's **exit** at
+(52,26) carries `direction 0x10`, whose exit-table step sends `0x10` to (x, y+1) = **(52,27)** — and
+that cell reads `neighbours 0x39 direction 0x00` in a running park: the bit, and no direction byte.
+The entrance side cannot arbitrate, because its faced cell (52,22) is a queue cell whose `0x10` the
+queue tool's own flow byte would write anyway.
+
+So there are two readings and neither is disposed of: either the placer's second write is reached
+conditionally, or something that later laid (52,27)'s path cleared the byte. **OpenTPW writes the bit
+on both cells and the direction on the end cell only** (`ParkBuilding.Mark`,
+`JoinToWhateverIsThere`) — the state the shipped park is actually in, since a queue cell's direction
+is supplied by the flow byte regardless. An earlier version of this page called the decode "refuted",
+which was stronger than the evidence: one shipped cell contradicts it, and the instruction does not.
 
 The arm is reached only when the build flag (`param_5`) is set, the test flag (`param_6`) is clear, and
 `FUN_0052fab0()` is non-zero — that gate is `DAT_008187f8 != 0 ? 0 : DAT_0081b0cc`. The exit half

@@ -303,4 +303,98 @@ public class ParkEntryCellTests
 		Assert.AreNotEqual( 0, ParkState.CellFor( park, 17, 10 ).Neighbours & 0x04,
 			"so the cell it faces is the one to the WEST - turned the other way it faced east, back across the thing" );
 	}
+
+	/// <summary>
+	/// A way out placed against an existing path <b>retiles that path</b>, so the join is visible and
+	/// not merely recorded.
+	///
+	/// <para>
+	/// <b>This is the case Alexah reported and the one nothing in this suite reached.</b> Both tests
+	/// above stand their ends on bare ground, so the arm that runs when the faced cell IS a path - the
+	/// link pass, and the retile after it - had no cover at all. The link was being made correctly the
+	/// whole time; what was missing was the art, because <see cref="ParkPaths"/> redraws each cell from
+	/// its STORED tile index and nothing asked the joined cell to work out a new one.
+	/// </para>
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutation:</b> removing the <c>RetileAround</c> call from <c>JoinToWhateverIsThere</c> leaves
+	/// the path drawing tile 0 and fails the last two assertions, while the mask assertions still pass -
+	/// which is exactly the shape of the fault as it was reported.
+	/// </remarks>
+	[TestMethod]
+	public void AWayOutPlacedAgainstAPathRetilesThatPath()
+	{
+		var park = World( GameData.Required() );
+		var state = new ParkState( park );
+
+		// A path cell with no neighbours, drawing the tile a lone path cell draws. (16,11) is clear of
+		// the park's own walkways, which run x 39..57, y 15..29.
+		state.SetRecord( 16, 11, ParkState.CellFor( park, 16, 11 ) with
+		{
+			Type = CellEdge.Path,
+			TileSet = ParkPaths.PathTileSet,
+			Neighbours = 0,
+			TileIndex = 0,
+			TileAngle = 0
+		} );
+
+		Assert.AreEqual( 0, ParkState.CellFor( park, 16, 11 ).TileIndex, "a lone path cell draws tile 0" );
+		Assert.AreEqual( 0, ParkState.CellFor( park, 16, 11 ).Neighbours & 0x01,
+			"and starts with no link northward, which is the one this places" );
+
+		// The way out at (16,10) faces +y onto that path; the way in is put well clear of it.
+		ParkBuilding.MarkWaysInAndOut( state, park, 16, 7, 16, 10, 0 );
+
+		Assert.AreEqual( CellEdge.RideFarEnd, ParkState.CellFor( park, 16, 10 ).Type, "the way out is typed 10" );
+		Assert.AreNotEqual( 0, ParkState.CellFor( park, 16, 11 ).Neighbours & 0x01,
+			"the path gains the link back toward the way out" );
+
+		// And the art follows the mask, which is the half that was missing: mask 0x01 is the table's
+		// own single-ended piece, index 1 at 180 degrees.
+		Assert.AreEqual( 1, ParkState.CellFor( park, 16, 11 ).TileIndex,
+			"the joined path redraws as a single-ended piece instead of the lone tile it was" );
+		Assert.AreEqual( 180, ParkState.CellFor( park, 16, 11 ).TileAngle,
+			"and faces the way out it joined" );
+	}
+
+	/// <summary>
+	/// How many of the jungle's rides declare an entrance at all - <b>and six of them do not</b>, which
+	/// is why they get no way in, no way out and nothing a queue can attach to.
+	/// </summary>
+	/// <remarks>
+	/// <b>Measured from the shipped item descriptions, not chosen.</b> An item whose picture carries no
+	/// <c>S</c> has all four of its deltas zeroed by <see cref="ItemDescriptionFile"/> - the <c>2</c> it
+	/// may carry is discarded with them - so entry and exit would both fall on the anchor. The six are
+	/// the three coasters, the go-karts, the water ride and the TV simulator.
+	/// <para>
+	/// <b>The original may well mark the way out of those six anyway</b>, since its placer walks the
+	/// shape grid with independent <c>case 9</c> and <c>case 10</c> arms rather than using the
+	/// derivation that takes the no-9 fallback. That is not decoded, so
+	/// <see cref="ParkBuilding"/> marks neither end and counts it.
+	/// </para>
+	/// </remarks>
+	[TestMethod]
+	public void SixOfTheJunglesRidesDeclareNoEntranceAtAll()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", GameData.Required() );
+
+		var rides = 0;
+		var withEntrance = 0;
+
+		foreach ( var item in catalogue.All )
+		{
+			if ( item.UiType != 0 )
+				continue;
+
+			++rides;
+
+			if ( item.HasEntrance )
+				++withEntrance;
+		}
+
+		Assert.AreEqual( 17, rides, "UI type 0 items in the jungle catalogue" );
+		Assert.AreEqual( 11, withEntrance, $"of {rides} jungle rides, this many mark an entrance" );
+		Assert.AreEqual( 6, rides - withEntrance,
+			"the rest declare none, so nothing can be queued for them until the shape grid is decoded" );
+	}
 }

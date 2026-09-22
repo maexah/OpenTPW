@@ -250,8 +250,13 @@ nothing to put behind the button. It is counted, with that reason named at the s
       ways. A run **aborts entirely on the first cell that refuses**, as the original's line walker
       does.
       **NOT YET SEEN ON SCREEN** - the capture instrument was returning stale frames (see below), so
-      this rests on console evidence alone. The tool is still reached only from the console; wiring
-      it to the hover classifier (class 1 = a path cell, class 2 = **plain ground**) is what remains.
+      this rests on console evidence alone.
+      **THE QUEUE TOOL IS NO LONGER CONSOLE-ONLY, 2026-09-22.** The ride window's own queue button
+      arms it against that ride (`ParkObjectWindow`, verb `0x3e34`), and clicking a queue cell re-arms
+      it for the thing that queue serves - the original's mode `0x14`. Both were driven through the
+      real interface and the armed mode read back as `mode 3`. **The PATH tool is still reached only
+      from the console**; wiring it to the hover classifier (class 1 = a path cell, class 2 = **plain
+      ground**) is what remains of this item.
 - **>>> SETTLED: NEWLY BUILT PATH DOES RENDER, AND THE METHOD THAT SETTLED IT IS THE POINT. <<<**
   A **difference image** against a **control pair** is what finally answered it, after nine wrong
   explanations. Lay one cell and the diff shows a single clean quadrilateral on open grass; lay nine

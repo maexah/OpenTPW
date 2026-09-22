@@ -150,7 +150,43 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   this session, thing 29 `Riding`, `queue 1/12`. Photographed against a control frame of the shipped
   queue and a before frame of the same view at the same zoom. `save/` unchanged within every run.
   Mutations, each predicted before running: **2, 2, 3, 1, 1** red, plus one deliberate survivor.
-  guest walking it.
+  **>>> REOPENED THE SAME DAY BY ALEXAH, WHO PLAYED IT. Two faults, both real, both outside what the
+  confirm above had tested. <<<**
+  *"I'm unable to build queues for newly purchased rides still. The node never shows up to begin
+  building a queue. The exit doesn't seem to connect up to an existing path when placed against one
+  either."*
+  **(1) NO PLAYER COULD START A QUEUE AT ALL, and the confirm above did not notice because it armed the
+  tool from the debug console.** `ParkBuildMode.Arm` had exactly two call sites and both were
+  `DebugConsole`; no UI armed any build mode, so every number above was produced through a route the
+  game does not have. The ride window's queue button (`0x3e34`) was built and clickable and fell into
+  `Verb`'s default arm. It now arms the tool against that ride, and **clicking a queue cell re-arms it
+  for the thing that queue serves** - the original's mode `0x14`. Both are declared deviations in
+  mechanism: `b_queue`'s own handler is undecoded, and `0x14` is entered from an EXISTING queue cell so
+  it cannot be the route to a first one.
+  **(2) THE EXIT WAS JOINING ALL ALONG AND NOTHING RETILED THE PATH.** `ParkBuilding` had no
+  `Retile` call anywhere, and `ParkPaths` redraws each cell from its STORED tile index - so the mask
+  said joined and the art went on showing the piece it drew before the ride arrived. The entrance side
+  was repaired by accident, because laying a queue against it calls `RetileAround`; the exit side never
+  was, which is exactly the asymmetry reported. Measured twice on clean builds: (36,27) goes
+  `neighbours 0x00 index 0 angle 0` to `neighbours 0x01 index 1 angle 180` on the purchase alone.
+  **(3) A ride whose picture marks no entrance no longer has a footprint CORNER typed as its way in.**
+  `ItemDescriptionFile` zeroes all four deltas when there is no `S`, so entry and exit both fell on the
+  anchor. Six of the jungle's seventeen rides are in that case - the three coasters, the go-karts, the
+  water ride and the TV simulator - and they are now counted (`PLACED_ITEM_WITH_NO_ENTRANCE_MARK`)
+  rather than given an entrance the picture does not declare.
+  **Confirmed through the PLAYER'S OWN ROUTE this time**, against a clean build: `worldclick` opens the
+  ride window, `click` on its queue button replies `the interface took` and `tool` reads back **mode
+  3**, the window closes itself, two world clicks lay the run (`anchored`, then `stopped after 3`), and
+  `drawn` goes `queues 4 pieces` to **7**. Clicking a laid queue cell re-arms the tool for thing 43,
+  repeatably. **Photographed: the queue the player built, standing and joined, with no window over it.**
+  **NOT photographed: the exit joining its path** - the ride is still an unhatched egg over its own
+  exit cell, and a pale cyan band traces the cell edges beside it. `ParkObjects.CoversGround` is true
+  for types 4, 9 and 10 so the ground leaves those cells alone, while `ParkPaths` draws tile set 1 and
+  `ParkQueues` set 2 - **so a ride-end cell is drawn by nobody**, which is the same shape as the hole
+  fixed above. Not chased this session; it is the next thing to look at.
+  **One instrument defect found and recorded as `VERIFYING.md` 116:** a mutation harness restores the
+  SOURCE and leaves the last mutation's BINARY on disk, and the game run minutes later drove it - which
+  reported the queue-cell click as broken when it was not.
 - [ ] **Q4. Sell leaves the ride's script bound and scheduled.** `ParkBuilding.Sell`
   (`ParkBuilding.cs:115-160`) removes the model and the state object; `ParkRides` has no unbind. Add
   it, and drop queue cells keyed to the sold thing. Confirm: sell a running ride, `rides` census no

@@ -673,6 +673,16 @@ The ones that have bitten more than once.
   once.** For a block with awkward characters, replace it by line range with an assertion on the first
   and last line rather than by string match - an off-by-one there fired the assert and wrote nothing,
   where a fuzzy string match would have eaten the next item's heading.
+- **116** — **A mutation harness that restores the SOURCE leaves the last mutation's BINARY on disk,
+  and the next run of the game silently tests it.** Rule 113 says check the build's exit code before
+  believing a number below it; this is its other half, and it bit on the very next task. A harness put
+  four mutations through build-test-restore, ending with one that disabled a new click handler, and its
+  `finally` copied the file back without rebuilding. The game harness run minutes later drove a binary
+  in which that handler did not exist, so the feature reported as not working - and every other part of
+  the same run was valid, which is what made it convincing. **Rebuild after the final restore, inside
+  the harness**, and have it print the md5 of the built assembly as well as of the sources; better, make
+  the game harness refuse to start unless the build is newer than every source file it cares about. A
+  restored working tree is not a restored program.
 
 ---
 

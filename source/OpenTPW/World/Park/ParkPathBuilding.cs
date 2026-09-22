@@ -344,7 +344,11 @@ public static class ParkPathBuilding
 	}
 
 	/// <summary>Which object a queue cell says it serves, from the packed cell its owner stands on.</summary>
-	private static int OwnerOf( ParkState state, ParkWorld.MapCell cell )
+	/// <remarks>
+	/// Internal rather than private so that <see cref="Level"/> can answer "whose queue is this cell",
+	/// which is what clicking a queue cell has to know before it can re-arm the tool against that ride.
+	/// </remarks>
+	internal static int OwnerOf( ParkState state, ParkWorld.MapCell cell )
 	{
 		if ( cell.ParentId == 0 )
 			return 0;
@@ -422,7 +426,7 @@ public static class ParkPathBuilding
 	/// build.
 	/// </para>
 	/// </summary>
-	private static void RetileAround( ParkState state, ParkWorld park, int x, int y )
+	internal static void RetileAround( ParkState state, ParkWorld park, int x, int y )
 	{
 		Retile( state, park, x, y );
 
