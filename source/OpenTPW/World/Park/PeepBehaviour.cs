@@ -1318,19 +1318,19 @@ public sealed class PeepBehaviour
 	}
 
 	/// <summary>The object this guest set off for, or null if the park no longer has it.</summary>
+	/// <remarks>
+	/// <b>It asks the park as PLAYED, and reading the file's list here was the last thing keeping a
+	/// bought ride unused.</b> <see cref="JoinTheQueue"/> bails into <see cref="GiveUpOnIt"/> when this
+	/// answers null, which clears <see cref="Peep.MajorDest"/> and returns the guest to
+	/// <see cref="PeepState.Deciding"/> - so a guest chose the new ride, walked the whole way to it,
+	/// arrived on its entrance cell, quietly gave up, and chose it again. Measured over eleven driven
+	/// runs before it was found: the chooser picked the bought ride in 534 of 557 samples, every one of
+	/// 30 <c>dest</c> readings stayed <see cref="PeepState.GoingToRide"/> and not one reached
+	/// <see cref="PeepState.InQueue"/>, and no guest was ever stuck or routeless. A silent loop leaves
+	/// exactly that signature: everything works except the arrival, and nothing complains.
+	/// </remarks>
 	private ParkWorld.CatalogueObject? Chosen( Peep peep )
-	{
-		if ( _park == null )
-			return null;
-
-		foreach ( var thing in _park.Objects )
-		{
-			if ( thing.ThingId == peep.MajorDest )
-				return thing;
-		}
-
-		return null;
-	}
+		=> State.TryObject( peep.MajorDest, out var chosen ) ? chosen : null;
 
 	/// <summary>Lets go of what they chose and thinks again, which is where every refusal above ends.</summary>
 	private void GiveUpOnIt( Peep peep, int tick )
@@ -1380,6 +1380,52 @@ public sealed class PeepBehaviour
 	/// paragraph said they were not passed, while the call below already passed them.
 	/// </para>
 	/// </summary>
+	/// <summary>
+	/// What the chooser answers for one guest, and whether they could actually get there - the two
+	/// halves <see cref="ChooseSomewhereToGo"/> collapses into a single bool.
+	/// </summary>
+	/// <remarks>
+	/// <b>It exists because no census here can tell those halves apart.</b> <see cref="Peep.MajorDest"/>
+	/// is written only after <see cref="PeepWalk.PlanRoute"/> succeeds, so a guest who chooses somewhere
+	/// and cannot route to it leaves no trace whatever - and an empty <c>dest</c> census then reads
+	/// exactly like "nothing was ever chosen". The two want opposite fixes, and four driven runs were
+	/// spent guessing between them before this was written.
+	/// <para>
+	/// It makes the SAME call <see cref="ChooseSomewhereToGo"/> makes and uses the guest's own blocked
+	/// predicate, rather than asking the question its own way: a census that recomputes is not an
+	/// observation.
+	/// </para>
+	/// </remarks>
+	internal string Explain( Peep peep, PeepWalk walk, int tick )
+	{
+		var (x, y) = walk.Position.Cell;
+
+		var wants = new ParkRideScore.Wants( peep.PersonType,
+			peep.Thirst, peep.Hunger, peep.Toilet, peep.Vomit );
+
+		if ( _chooser.ChooseFor( wants, x, y, tick, queueLength: o => State.QueueLength( o.ThingId ) )
+			is not { } chosen )
+			return $"at ({x},{y}) the chooser picked NOTHING";
+
+		// <b>THE ROUTE IS DELIBERATELY NOT TESTED HERE, and both ways of testing it were wrong.</b>
+		//
+		// Asking <c>CellRoute.Reaches</c> - the accessible static - measures the wrong thing: it is a
+		// straight-LINE test, the one route straightening uses, not the pathfinder. It answered OPEN
+		// only for a guest already standing beside the queue and SHUT from everywhere else, which reads
+		// exactly like "nothing can reach it" and means "nothing can see it in a clear line".
+		//
+		// Calling the real <c>PlanRoute</c> is worse, because it PERTURBS: <c>Renavigate</c> rebuilds
+		// the route through <c>NavigateTo</c> and zeroes the steering's last-progress mark on failure,
+		// and restoring <c>Navigator.Target</c> afterwards undoes neither. A census that re-planned
+		// every guest every few seconds would steer the park it is supposed to be watching, and any
+		// boarding it then saw would be its own doing.
+		//
+		// So this answers the half it can answer honestly. The other half is read from the guest's own
+		// state and <see cref="Peep.MajorDest"/>, which the simulation writes for itself.
+		return $"at ({x},{y}) chose thing {chosen.ThingId} entry "
+			+ $"({chosen.EntryCellX},{chosen.EntryCellY}) dest {peep.MajorDest}";
+	}
+
 	/// <returns>Whether somewhere was chosen and a route to it planned.</returns>
 	private bool ChooseSomewhereToGo( Peep peep, PeepWalk walk, int tick )
 	{

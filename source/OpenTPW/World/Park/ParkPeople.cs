@@ -1360,6 +1360,23 @@ public sealed class ParkPeople : Entity
 	/// </summary>
 	internal PeepWalk? WalkFor( int thingId ) => _walks.GetValueOrDefault( thingId );
 
+	/// <summary>
+	/// Why each guest is or is not setting off anywhere - what the chooser answers them, and whether a
+	/// route to it exists. See <see cref="PeepBehaviour.Explain"/> for why the `peeps` census cannot
+	/// answer this and this one has to.
+	/// </summary>
+	internal IEnumerable<string> WhyCensus()
+	{
+		foreach ( var (thingId, peep) in _byId )
+		{
+			if ( !_walks.TryGetValue( thingId, out var walk ) )
+				continue;
+
+			yield return $"thing {thingId,3} {peep.State,-18} "
+				+ _behaviour.Explain( peep, walk, GameClock.Ticks );
+		}
+	}
+
 	/// <summary>This staff member's walk, for the same.</summary>
 	internal PeepWalk? StaffWalkFor( int thingId ) => _staffWalks.GetValueOrDefault( thingId );
 

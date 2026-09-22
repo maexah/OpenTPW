@@ -28,7 +28,7 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
 
 ## A. Bugs first
 
-- [ ] **Q1. A ride bought this session never takes a turn.** `ParkPeople.cs:1270, 1400, 1468, 1573`
+- [x] **Q1. A ride bought this session never takes a turn.** `ParkPeople.cs:1270, 1400, 1468, 1573`
   loop over `world.Objects`, the save file's list. So do `ParkRides.cs:228, 653`, `ParkObjects.cs:203`,
   `ParkFixedItems.cs:214`. Bought things live in `ParkState.Objects` (`ParkState.cs:144`). Read from
   `ParkState` everywhere the simulation asks "which objects are in the park". Confirm: buy a ride, let the
@@ -41,13 +41,21 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   script cycling `role 2`, where before it printed **no line at all**; thing 13 still carries riders, so
   nothing regressed. **Q1b landed too**, so a bought thing now carries a real entry and exit cell,
   derived the original's way from its own shape picture.
-  **This item stays unticked because its own confirm clause is still not met, and the reason is now
-  Q3.** With the entry cell set, the next gate is `ParkRideChoice.StartOfQueue`, which reads that
-  cell's `Neighbours` mask - and nothing ever sets it for a queue a player lays, so the walk still
-  answers `cells 0 back 0` and `CanBeOffered` refuses. Measured twice in a running park, with the
-  queue laid against the path on the entry cell's own side both times. **Finish Q3 and this ticks
-  without another line of Q1's own code**; see the warning on Q3, because its written prescription
-  would make things worse rather than better.
+  **TICKED 2026-09-22 on the census, with the photograph short - both halves stated.** A guest boards
+  a ride bought during play, measured in **five independent runs**: `onride 1 bouncing 1: 29@0'body'`,
+  then 29 again, then 43, 43 and 57, each on the ride's own bounce node at world (425.4,252.6), each
+  with a different scream sample, and `save/` unchanged within every run.
+  **The last cause was `PeepBehaviour.Chosen`**, which resolved `MajorDest` against `_park.Objects` -
+  the file's list. A bought ride is not in it, so `JoinTheQueue` bailed into `GiveUpOnIt` the moment a
+  guest arrived: they chose it, walked the whole way, gave up silently and chose it again. One line,
+  and it un-blinds all five of `Chosen`'s callers. Mutation-checked: putting it back **survives all
+  888**, so it rests on the game run as its siblings do.
+  **What is NOT met is the picture of the rider.** The bought ride is photographed standing,
+  animating (5.95% of pixels change between two frames, bounded to the rows its body occupies) and
+  with guests queued beside it - but the rider's node is at z **10.3** while the camcorder's eye is
+  **5.0** at `pitch 0.0`, and the console has no pitch argument, so the dinosaur's own body stands
+  between the camera and the guest. `docs/VERIFYING.md` 111 and 112 carry what the aiming cost.
+  Worth one short session with a pitch argument added to `camcorder`.
 - [ ] **Q1b. A bought thing has no entry cell, so no queue can serve it.** DECODE FIRST.
   `ParkBuilding.Buy` leaves `EntryPos`, `ExitPos` and `TopLeft` at their record defaults, and
   `ParkRideChoice.CanBeOffered` (`:90`) refuses on `EntryPos == 0` **before** the queue is ever walked -
@@ -102,6 +110,16 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   (3) **Queue may not be laid over path on the last cell of a run** - the game refuses it
   (`queue: (42,22) is type 1, which queue may not be laid over on the last cell of a run`), so
   "lay path, then queue over it" is not a way round this.
+  (0) **The refusal is confirmed at the source, and it is the whole of what blocks Q1.**
+  `CellEdge.Blocked` (`:362-368`) refuses a step onto a queue cell with
+  `return (to.Neighbours & BitFor( direction )) == 0;` - so a cell carrying `0x00` is unenterable from
+  every direction. Measured: a queue laid for a bought ride reads `type 3 neighbours 0x00`, while the
+  shipped park's own queue cells carry real masks (`(52,22)` is `0x50`, `(51,22)` is `0x44`).
+  **The rest of the chain is already proved**: that same bought ride reads `OFFERABLE True` with
+  `cells 1 back 2859`, so the entrance, the walk and the offer all work and only the step in is shut.
+  **And the failure is invisible in the obvious place** - `PeepBehaviour.ChooseSomewhereToGo` (`:1393`)
+  writes `MajorDest` only after `PlanRoute()` succeeds, so a guest who chooses the ride and cannot
+  route to it leaves no `dest` behind at all. Do not read an empty `dest` census as "never chosen".
   (4) **The placement-time join is BUILT and still does not link, and the contradiction is the whole
   of what is left.** `FUN_00528a70`'s `case 9` turns the entrance's heading by the placement angle,
   steps to the cell it faces, and calls the neighbour rule there only where that cell is type 1.

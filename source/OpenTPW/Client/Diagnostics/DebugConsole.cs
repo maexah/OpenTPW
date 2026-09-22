@@ -1041,6 +1041,25 @@ public static class DebugConsole
 				} );
 				break;
 
+			// WHY a guest is not going anywhere, which `peeps` cannot answer and four driven runs were
+			// wasted guessing at. MajorDest is written only after a route succeeds, so a guest who
+			// chose somewhere unreachable looks identical to one who chose nothing - and those two
+			// want opposite fixes. This asks the chooser and the router separately.
+			case "why":
+				if ( ParkPeople.Current is not { } undecided )
+				{
+					Reply( "why: none - a park has to be loaded" );
+					break;
+				}
+
+				var reasons = undecided.WhyCensus().ToArray();
+				Reply( $"why {reasons.Length}" );
+
+				foreach ( var reason in reasons )
+					Reply( "  " + reason );
+
+				break;
+
 			// What a cell actually holds, which is the measuring instrument for everything above: the
 			// type, the neighbour mask the link pass built, and the tile the mask chose.
 			case "cell":

@@ -630,6 +630,21 @@ The ones that have bitten more than once.
   anything is measured, and ignore transitions inside it**, because the first observation of any state
   is a transition from nothing. This is rule 103's shape again: the segmentation, not the subject,
   produced the result.
+- **111** — **Read the units off the call site before aiming a capture, and check the reply agrees.**
+  `camcorder x y [yaw]` takes **world units and radians** — its own site says "an optional heading, in
+  radians" — and four frames were lost passing cells and degrees. The game said so both times and was
+  not read: `camcorder 44 25` replied `stand=(44,25) cell=(4.4,2.5) at=(4,2)`, the camera parked in the
+  far corner of the map, and every shot came back empty terrain at **mean 110–111**, indistinguishable
+  from the shots it was meant to differ from. A heading of `180` was twenty-eight turns. **The reply
+  carries `stand=`, `cell=`, `at=` and `yaw=` precisely so a misaimed capture can be caught before it is
+  believed** — and brightness cannot catch it, which is rule 99 again.
+- **112** — **Establish a facing from something you can recognise in the frame, never from the formula
+  alone.** Rule 108's `dx = forward * -sin(Yaw) + right * cos(Yaw)` gives the x component, and reading
+  forward off it as `-y` at yaw 0 was backwards: a camera at cell (42,28) on yaw 0 photographed the
+  Drinks Shop at (43,30), which is **+y**. Four more frames were spent on the inverted pair before a
+  landmark settled it. **Photograph a thing whose cell you already know, name it in the frame, and only
+  then aim at the subject.** The side headings `±π/2` were right throughout; only the pair I had
+  reasoned about was wrong.
 
 ---
 

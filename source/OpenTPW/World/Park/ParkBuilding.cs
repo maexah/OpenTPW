@@ -402,22 +402,43 @@ public static class ParkBuilding
 		_ => (0, 0)
 	};
 
-	/// <summary>One cell of a footprint given the type and the heading that let something join to it.</summary>
+	/// <summary>
+	/// One cell of a footprint given the type, the heading, and the link that lets a queue be found from
+	/// it.
+	/// </summary>
 	/// <remarks>
-	/// <b>The neighbour bit is deliberately NOT written here.</b> An earlier version of this authored it
-	/// beside the heading, on the strength of the shipped park carrying the two fields equal on both of
-	/// the Belly Bounce's end cells - and <c>FUN_00528a70</c> refutes that. Its <c>case 9</c> arm turns
-	/// the entrance's heading by the placement angle, steps to the cell that heading points at, and
-	/// <b>only where that cell is a path (type 1) does it call <c>FUN_005348d0</c></b>, the neighbour
-	/// rule, on the path. So the link is earned by re-running the generator on whatever is already
-	/// there, never stamped onto the ride's own cell.
+	/// <b>The neighbour bit is a DECLARED DEVIATION: the end state is the original's, the step that
+	/// produces it is not.</b> Every route the engine takes to that bit has been followed and none of
+	/// them writes it for a thing built in play. <c>FUN_005348d0</c> is the only writer, through paired
+	/// <c>FUN_00522700</c> calls, and its cardinal test refuses here: a cell laid on the entrance's own
+	/// queue side steps toward it with the opposite bit to the heading the entrance carries, so
+	/// <c>neighbour.Direction &amp; bit</c> is nought. <c>FUN_00528a70</c>'s <c>case 9</c> only re-runs
+	/// that same rule on an adjacent path, and <c>FUN_00532fc0</c>'s ops <c>0x81</c>, <c>0x85</c> and
+	/// <c>0x86</c> - the obvious candidates, called right after it - retile, do track bookkeeping and
+	/// notify the thing. <b>The shipped park's own entrance could not have earned its bit under the
+	/// decoded rule either</b>, so in the original it comes from somewhere still unfound.
+	/// <para>
+	/// What IS measured is the state that must hold: the Belly Bounce's entrance reads
+	/// <c>neighbours 0x01 direction 0x01</c> with its queue on the <c>-y</c> side, and
+	/// <see cref="ParkRideChoice.StartOfQueue"/> maps that <c>0x01</c> to the step <c>(0,-1)</c> - the
+	/// queue cell. So the bit is written to match the shipped data rather than invented, and without it
+	/// nothing a player builds can ever be queued for, which is the risky blank rule 11 is about.
+	/// The mechanism is counted, not the value.
+	/// </para>
 	/// </remarks>
 	private static void Mark( ParkState state, int x, int y, int type, int direction )
 	{
 		if ( !ParkState.OnMap( x, y ) )
 			return;
 
-		state.SetRecord( x, y, state.Record( x, y ) with { Type = type, Direction = (byte)direction } );
+		Unimplemented.Report( "RIDE_END_NEIGHBOUR_AUTHORING" );
+
+		state.SetRecord( x, y, state.Record( x, y ) with
+		{
+			Type = type,
+			Direction = (byte)direction,
+			Neighbours = (byte)direction
+		} );
 	}
 
 	/// <summary>Marks every cell of a footprint as built on, and names the thing standing there.</summary>

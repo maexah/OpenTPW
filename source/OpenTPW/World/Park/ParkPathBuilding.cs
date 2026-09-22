@@ -248,11 +248,31 @@ public static class ParkPathBuilding
 
 		var flow = FlowFrom( fromX, fromY, cellX, cellY );
 
+		// The bits that let a guest step INTO this cell and on toward what it serves. <b>Without them
+		// the cell is unenterable from every direction</b>: CellEdge.Blocked refuses a step onto a queue
+		// with `(to.Neighbours & BitFor( direction )) == 0`, and a cell laid without a mask carries
+		// nought. Measured in a running park - a bought ride reached OFFERABLE True with a walked queue
+		// and still nobody could join it, because this was 0x00.
+		//
+		// <b>FlowFrom is already in the sense Blocked tests.</b> It answers 0x01 for a step in +y, and
+		// CellTrace.Ahead puts South at +y while CellEdge.BitFor( South ) is 0x01 - the same bit for the
+		// same step, so the byte needs no converting.
+		//
+		// <b>A DECLARED DEVIATION in mechanism, not in value</b>: the shipped park's queue cells carry
+		// real masks ((52,22) is 0x50, (51,22) is 0x44) and the engine step that authors them is not
+		// decoded - it is not FUN_005348d0, whose cardinal rule says a type-3 neighbour never forms a
+		// link. So the end state is reproduced and the mechanism is counted. Only the two bits this
+		// cell needs are set; joining a queue along its length is the rest of Q3 and is left alone.
+		var onward = FlowFrom( cellX, cellY, serves.EntryCellX, serves.EntryCellY );
+
+		Unimplemented.Report( "QUEUE_CELL_NEIGHBOUR_AUTHORING" );
+
 		state.SetRecord( cellX, cellY, cell with
 		{
 			Type = ParkRideChoice.QueueCellType,
 			TileSet = ParkQueues.QueueTileSet,
 			Direction = cell.Direction != 0 ? cell.Direction : (byte)flow,
+			Neighbours = (byte)(cell.Neighbours | flow | onward),
 			ParentId = (ushort)MapStep.CellId( serves.CellX, serves.CellY )
 		} );
 

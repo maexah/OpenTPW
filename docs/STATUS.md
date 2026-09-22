@@ -33,24 +33,23 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - No finances, litter, saving a park back, video, networking. Research is inert and has nothing behind it.
 - Eight of the nine per-object windows are unbuilt. Patrol areas are dead, deferred by Alexah.
 - The `meter.wct` mapping behind the happiness gauge is wrong - the last fault Alexah found by playing.
-- **Nothing can be joined to a thing built during play**, so no guest boards one. Its way in is typed and
-  headed correctly now; what is missing is the entrance's own `Neighbours` bit, which the shipped park
-  has **authored in the save** and no rule here computes. `docs/QUEUE.md` Q3, whose written prescription
-  is unsafe - see the warning there.
+- A laid queue cell still has **no tile piece** and the neighbour bit it needs is authored here rather
+  than earned, because the engine step that writes it is undecoded - `docs/QUEUE.md` Q3, whose written
+  prescription is unsafe; see the warning there.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 is unticked and Q1b is done**: everything Q1 names has landed and is
-confirmed by census, and its own confirm clause - a guest boarding - now waits on **Q3** alone. Finishing
-Q3 ticks Q1 without another line of Q1's own code.
+`docs/QUEUE.md`, from the top. **Q1 and Q1b are ticked**; the next unticked item is **Q2**, things loaded
+from the save not being clickable. Q3 keeps what this work measured for it, including two refuted leads.
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
 
 ## Not verified on screen
 
-- **A guest boarding a ride bought this session.** Blocked by Q3, not by anything Q1 names; measured
-  three times in a running park, the last with the way in typed 9 and a path laid against it.
+- **The RIDER on a ride bought this session.** The boarding is measured five times over; the bought ride
+  is photographed standing, animating and queued for, but its rider sits at z 10.3 while the camcorder's
+  eye is 5.0 at pitch 0 and the console has no pitch argument, so the ride's own body hides him.
 - `SpriteScript.ScheduleFrom` and `DropUnreadyNominee`: called from `ParkPeople`, neither pinned by the
   suite - unwiring either leaves it green. They rest on the decode, not on coverage.
 - Nothing puts a staff member in a cell's occupancy list *as they walk*.
@@ -87,12 +86,14 @@ enough alone. That closes `park-engine.md`'s "whether mType 9 and 10 really are 
 **Its way in and out are typed too** - entrance `type 9`, exit `type 10`, both headings measured off the
 game rather than derived (`cell (42,23) type 9 direction 0x01` after a buy, against the shipped ride's
 own `(52,23)` reading), because this tree holds two compasses that disagree by name.
-**Still no guest boards it.** The placement-time join is built and measured not to link: `Cardinal`
-steps bit `0x10` while the entrance carries `0x01`, so its type-9 test can never pass, and the shipped
-park's own bit could not have been earned under that rule either. **Either the authored heading or that
-test's sense is wrong** - that, and two further findings, are recorded on Q3.
-Mutations, each called in advance: **7**, **3**, **1** and **1** red; three survivals named at their
-tests, because nothing in the suite buys anything.
+**And a guest RIDES it.** The last cause was `PeepBehaviour.Chosen`, resolving `MajorDest` against the
+FILE's list: a bought ride is not in it, so `JoinTheQueue` gave up the instant a guest arrived - they
+chose it, walked the whole way, gave up silently and chose it again. One line, and it un-blinds all five
+of `Chosen`'s callers. Measured in **five** runs - `bouncing 1` on the ride's own node at (425.4,252.6),
+a different scream each time, `save/` unchanged within every one. Mutations called in advance: **7**,
+**3**, **1**, **1** red and **four** survivals said at their tests. **The rider is not photographed**:
+he rides at z 10.3, the camcorder's eye is 5.0 and the console has no pitch argument - `VERIFYING.md`
+111 and 112 carry what the aiming cost.
 
 **2026-09-22 - the two Confirm clauses that were owed photographs have them.** Branch
 `alexah/108-photograph-the-two-confirms`, no code changed. All four camcorder stops read `type 4`,
