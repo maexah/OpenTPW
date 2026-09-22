@@ -150,7 +150,7 @@ Evidence is a Ghidra trace of `/testme.exe` throughout; the column names what in
 | `DAT_00877b58` | | That magic word, read across 0x00542000–0x0054b000. | Read sites |
 | 0x00543560 | | The save's **TRAK** module loader, inside that range. | Module tag |
 | 0x005516b0 | | The RSSE tick, every tick. | State 10 |
-| 0x00516380 | | The thing-list sweep that reaches the peeps; every tick in a normal park. | 0054f6c3–0054f754 |
+| 0x00516380 | | The thing-list sweep that reaches the peeps. **Every 8th tick**, not every tick — it is mode-gated AND frequency-gated, as the prose below this table says. | 0054f6c3–0054f754, gate 0054f668 |
 | 0x0050b360 | | Called per thing by that sweep. | Loop body |
 | `DAT_00fb3b7c` | | Game mode: 0 normal park, 1 online, 2 Instant Action. | 0054f6c3–0054f754 |
 | 0x005166b0 | | Taken instead of 0x00516380 in mode 1, the online one. | Same branch |
@@ -158,7 +158,7 @@ Evidence is a Ghidra trace of `/testme.exe` throughout; the column names what in
 | 0x0055abf0 | | The flying cars, every 2nd tick — **not** the peep simulation. | 0054f5c0 |
 | 0x00475360 | | The sprite step, every 2nd tick, so 62 ms — exactly its own default interval. | 0054f5c0 |
 | `DAT_00877d34` | | The tick counter whose low bit gates the every-2nd pair. | `TEST AL,0x1` at 0054f5c0 |
-| 0x0055a470 | | Named only in the **refuted** "every 8th, online" claim. | Refuted |
+| 0x0055a470 | | Called from inside the every-8th gate (cleared by its `JNZ` at `0054f828`). The **"online"** half of the old "every 8th, online" claim is refuted; the **every-8th** half is verified — see the prose below, which keeps them apart. | 0054f828 |
 | `DAT_00879088` | | Leave-the-park reason: 1 → 0xd, 2 or 3 → 0xb, 3 quits. | State 10 |
 | 0x005996d0 | | Called (1) to stop the advisor. | State 0xe |
 | 0x005ac5f0 | | Runs with it in state 0xe. | State 0xe |

@@ -9,11 +9,14 @@ Nine things a player sees, handed over 2026-09-21, in Alexah's order **9, 6, 4, 
 then 7**. It is **untracked by instruction** — never staged, and *not* in `.gitignore`, so it shows in
 every `git status` and a `git add -A` would sweep it in (which is one more reason `CLAUDE.md` rule 13
 forbids that). It lives on this machine only and is **absent from a fresh clone** — read it before
-assuming this file is the whole of the work. **Its items 9 (park load time), 6 (sound held under a
-pause), 4 (the lobby ocean) and 5 (one scream, on a loop, at one volume) are all done**, the last of
-them on 2026-09-21 — a held scream is now replayed rather than looped, so it re-picks a sample every
-pass, and `SINGLESCREAM` and `SCREAMLEVEL` are built. **Its item 1 is next in Alexah's order.**
-Nothing in *this* file was ticked by any of that work: not one of the four appears here.
+assuming this file is the whole of the work. **Five of its nine are now done: 9 (park load time), 6
+(sound held under a pause), 4 (the lobby ocean), 5 (one scream, on a loop, at one volume) and 3 (guests
+move in jumps, not smoothly)** — the last two both on 2026-09-21. A held scream is now replayed rather
+than looped, so it re-picks a sample every pass; and a walking peep's drawn position is interpolated
+per frame between two stored positions 248 ms apart, taking distinct drawn positions within one thing
+tick from a median of 2 to a median of 30. **Its remaining four are 1, 8, 2 and 7**, with item 1 the
+only untouched one before 7 — Alexah picks, and has twice picked past it.
+Nothing in *this* file was ticked by any of that work: not one of the five appears here.
 
 **Alexah sets which item is the goal. One item per session** (`CLAUDE.md`, "How a session runs" 4).
 Tick an item here in the same commit that lands it, and move its detail to the page that owns it.
@@ -486,7 +489,7 @@ from the crossing. So the arrival path they would take is the one the shipped sa
 ## 7. A park cannot be saved
 
 - [ ] **Seen:** Load, Save and Publish do nothing, which a player meets at the moment they try to stop.
-- **Lives:** `ParkFrontEnd.cs:172/173/178`, all three `NotYet(...)`.
+- **Lives:** `ParkFrontEnd.cs:241/242/247`, all three `NotYet(...)` — Load 241, Save 242, Publish Park 247, with the helper itself at `:307`. (This said `:172/173/178`, which are not those calls; the file is 393 lines.)
 - **The real cost is not the button.** **No `.TPWS` has ever been read** — the reader must not be assumed
   to generalise from the one file the game ships. `docs/exe/saves.md` also records an unreconciled
   divergence between the traced preamble byte counts and what the shipped file measures.
@@ -543,8 +546,10 @@ from the crossing. So the arrival path they would take is the one the shipped sa
 ## Just behind these
 
 - **32 of 106 opcodes are unimplemented** (`TRIGWAITANIM` 2026-09-20; `SINGLESCREAM` and `SCREAMLEVEL` 2026-09-21) — but only three are reached by shipped content in this park,
-  so it is mostly invisible here. Take the count fresh; three README lines and `RideScriptFile.cs:99`
-  still quote older ones.
+  so it is mostly invisible here. Take the count fresh — and the stale quotes this line used to warn
+  about are **fixed**: `README.md:121` and `:163` are the only two places it appears and both read "74
+  of the 106", as does `RideScriptFile.cs`'s own doc comment. Measured fresh 2026-09-21: **74** distinct
+  `case Opcode.` labels against **106** enum members.
 
 ## Deliberately not on this list
 

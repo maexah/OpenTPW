@@ -240,10 +240,12 @@ public sealed class ParkPeople : Entity
 					// tested eleven times over without ever being called; the codepath audit found it.
 					// Nought is the clock at load, which is the only moment either of these is built.
 					//
-					// <b>NOT pinned by the suite, and that is measured.</b> Taking this away again leaves
-					// all 777 tests green: SpriteScriptTests seeds Due itself in eight places, and no
-					// test drives the park-load path. The tests modelled the original while production
-					// did not, and a green suite could not tell the difference in either direction.
+					// <b>NOT pinned by the suite, and that is measured.</b> Taking this away again left
+					// the whole suite green when that was measured - 777 tests then, 848 now, and it
+					// has not been re-measured since: SpriteScriptTests seeds Due itself in eight
+					// places, and no test drives the park-load path. The tests modelled the original
+					// while production did not, and a green suite could not tell the difference in
+					// either direction.
 					sprite.ScheduleFrom( 0 );
 
 					_sprites[peep.ThingId] = sprite;

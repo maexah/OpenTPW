@@ -445,9 +445,11 @@ The park's loop runs from `0x0054f4bf` onward, with the tick counter at `[0x0087
 
 `0x0054f5c0` reloads the tick counter from `[0x00877d34]` and `TEST AL,0x1` / `JNZ` skips the last two on odd ticks, so they run **every 2nd 31 ms tick = every 62 ms**.
 
-The real peep module is `0x004f9000`-`0x00512000`, **281 functions / 95,152 bytes**, plus a queue module at `0x004dd000`-`0x004e2000` (89 functions / 19,684 bytes). **Which tick drives the peeps is NOT yet established — do not assume it is any of the above.**
+The real peep module is `0x004f9000`-`0x00512000`, **281 functions / 95,152 bytes**, plus a queue module at `0x004dd000`-`0x004e2000` (89 functions / 19,684 bytes).
 
-**Entering a park re-bases the baselines**: `0x0054ed7c` reads the clock three times into `[0x00878c74]`, `[0x0087879c]` and `[0x008786bc]`, so the seconds spent loading are not owed as ticks.
+**>>> ANSWERED 2026-09-21: WHICH TICK DRIVES THE PEEPS. <<<** This said it was "NOT yet established — do not assume it is any of the above", and it is now decoded in both halves. The peeps are **simulated** off the every-8th-tick thing sweep — `FUN_00516380` → `FUN_0050b360` behind the gate at `0054f668` — and they are **placed for drawing once per FRAME** by `FUN_00518f90`, called from `0x0054fa85`, which lies past the 31 ms catch-up loop's back edge at `0x0054f8da`. So neither answer alone is right: the position is stepped on the 248 ms beat and interpolated to the frame. Full decode in `ride-operation.md`, "Where a WALKING peep is drawn".
+
+**Entering a park re-bases the baselines**: `0x0054ed7c` reads the clock three times into `[0x00878c74]`, `[0x0087879c]` and **`[0x00878a1c]`**, so the seconds spent loading are not owed as ticks. *(This third one read `[0x008786bc]` and was wrong by one dword: `0054eda4` is `a3 1c 8a 87 00` = `MOV [0x00878a1c],EAX`. `0x008786bc` is the per-frame clock SAMPLE all three alphas are measured against, not a baseline, and `0x008786c0` — one along — is written at `0054edb6`. The three baselines pair with the three rates 1/31, 1/62 and 1/248.)*
 
 ---
 

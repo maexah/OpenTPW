@@ -52,10 +52,10 @@ park load went 23,298 ms → 2,488 ms, about 9.4x, with the worst phase now `ter
 **0.00 dB** floor, where before it moved by −0.01 dB. **And item 4 is DONE and closed**: the lobby's
 sea is served out of the texture cache on the way back from a park, and it now comes back carrying the
 **AnisotropicWrap** sampler it asked for instead of the default **AnisotropicRepeat** — which mirrors,
-and had been drawing the ocean as a diamond lattice. **Alexah set item 5 as next on 2026-09-21** — one
-scream, on a loop, at one volume — **choosing it over item 1**, which stays queued behind it. Neither
-is started. None of the three closed items is in `PLAYER-GAPS.md`, and nothing there was ticked by any
-of them.
+and had been drawing the ocean as a diamond lattice. **And items 5 and 3 are DONE and closed too** — Alexah
+picked 5 ahead of item 1 on 2026-09-21, then picked **3** ahead of it as well, so **9, 6, 4, 5 and 3
+are closed and 1, 8, 2 and 7 remain**, item 1 still untouched. **No goal is set now.** None of the five
+closed items is in `PLAYER-GAPS.md`, and nothing there was ticked by any of them.
 
 **Because that file is untracked it does not exist in a fresh clone.** It lives only on this machine;
 if it is lost, the eight remaining items are gone with it.
@@ -72,8 +72,9 @@ buildable screens all drew.
 effort sliders over research groups. This game has no research, no researchers and no groups, so
 there is nothing to put behind the button; it is counted with that reason named at the site.
 
-**The next goal is set, and it is in the OTHER queue:** `docs/CLEANUP-PLAN.md` item 5, one scream on a
-loop at one volume. Of `PLAYER-GAPS.md`'s own three remaining — 4, 5 and 7 — none is picked. Its item 5
+**No goal is set as of 2026-09-21.** `docs/CLEANUP-PLAN.md` item 5 *was* the goal named here and is now
+closed, as is item 3 after it. Of `PLAYER-GAPS.md`'s own three remaining — 4, 5 and 7 — none is picked,
+and of the cleanup plan's four remaining — 1, 8, 2, 7 — none is picked either. Its item 5
 gained a proper description from Alexah on 2026-09-21: the gauge's **bar renders in the wrong place and
 repeats, split down the middle**, which makes it a rendering fault rather than the arithmetic one that
 entry had assumed.
@@ -86,7 +87,10 @@ entry had assumed.
   game was made this session", which outlived the sessions that ran one.
 - `SpriteScript.ScheduleFrom` and `DropUnreadyNominee`: both are called from `ParkPeople`, and neither is
   pinned by the suite — unwiring either leaves it green. They rest on the decode, not on coverage.
-- Staff never enter the cell-occupancy lists (`ParkState.StandOn` is called only from `PeepBehaviour`).
+- ~~Staff never enter the cell-occupancy lists (`ParkState.StandOn` is called only from `PeepBehaviour`).~~
+  **Stale as written**: `StandOn` has **four** call sites — `PeepBehaviour.cs:779` and `ParkPeople.cs:397`,
+  `:490` and `:604` — so staff do reach it on the hire and put-down paths. What remains true is narrower:
+  nothing puts a staff member in a cell's list *as they walk*.
 
 ## Numbers
 
@@ -96,7 +100,7 @@ Take counts fresh; these go stale within a day.
 |---|---|---|
 | Opcodes | **74** implemented of 106 | 2026-09-21, `case Opcode.` labels vs enum members — `SINGLESCREAM` and `SCREAMLEVEL` added |
 | Tests | **848** total, all of them run **with** the game and 0 skip | 2026-09-21, measured on `alexah/103` — six added for the walk interpolation |
-| Tests without the game | **389** ran, **453 skipped**, of 842 | 2026-09-21, measured on `alexah/101`, taken fresh rather than computed — all three new scream tests are pure, so they run device-free |
+| Tests without the game | **391** ran, **457 skipped**, of 848 | 2026-09-21, measured fresh on `alexah/103` rather than computed — of item 3's six new tests, two are pure (`GameClock`) and four need the game |
 | Build warnings | 125 | 2026-09-21, measured at `3fb2d9c` — one fewer than 126 since the refpack reflection went |
 | Park load | **2.5 s**, worst phase `terrain` at 0.72 s | 2026-09-21, three jungle runs, per phase, `LoadTimer` |
 | Other themes | fantasy 1.0 s, hallow 1.1 s, space 1.2 s | 2026-09-21, one run each, first time ever timed |
@@ -120,7 +124,9 @@ past the 31 ms catch-up loop's back edge. `t` is time since the last thing sweep
 | tick period from alpha wraps | — | **247 ms** |
 | navigator `peeps at`, first twelve | identical | identical |
 
-**The navigator is byte-identical either side, which is the two-sided control**: the interpolation is
+**The navigator matched wherever the two runs were compared, which is the two-sided control**: the
+first twelve positions identical to three decimals, 48 against 47 distinct cells over 111 samples — not
+byte-identical, which two separate launches of a live park cannot be. The interpolation is
 entirely in the drawing, so smoothing the *simulation* — the wrong fix — fails exactly there. And the
 whole-run distinct count (48 against 1498) is the figure that would have lied, since a guest moves four
 times a second on either build; only positions *within* a tick separate a slide from a jump.

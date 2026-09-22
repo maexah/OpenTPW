@@ -22,7 +22,9 @@ One line each. If a word is used two ways in the code, both are listed and the p
 | **Time** | Frame clock. Never pauses. UI runs on it. | |
 | **GameClock** | The game's 31 ms tick. A park menu freezes it. Simulation runs on it. | |
 | **GameCalendar** | In-game date, advanced by a park's ticks only. | |
-| **Tick** | One `GameClock` step. Ride scripts take a turn every 8th tick; the "thing engine" once in eight. | |
+| **Tick** | One `GameClock` step: 31 ms. Counted by `GameClock.Ticks`. | |
+| **Thing tick** | **Eight** game ticks — 248 ms, about four a second. The beat the thing engine, peep behaviour and ride scripts all take their turn on (`ParkPeople.ThingTickEvery`); the original gates it at `0054f668`. | ✅ say *thing tick* when you mean the eight, not "tick" |
+| **Frame** | One pass of `Level.Update` and the render, at whatever rate the machine manages. **A peep's position is simulated on the thing tick and DRAWN every frame**, interpolated between the two by `ParkPeople.ThingTickFraction` — so frame, tick and thing tick are three different beats and are not interchangeable. | |
 | **RideScript** | The live ride-script VM (`VM/RideScript.cs`) and its scheduler. | ✅ |
 | RideVM | The OLD upstream VM (`VM/RideVM.cs`, `Handlers/`, `Includes/`). Never constructed. Dead. | ❌ |
 | **Opcode** | One of 106 instructions in `OpenTPW.Files/Formats/Script/Opcode.cs`. Unbuilt ones call `Unimplemented.Report`. | |

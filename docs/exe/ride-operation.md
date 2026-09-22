@@ -349,7 +349,7 @@ The save reader names the byte `mQueuePos`; the state setter writes the sideshow
 | `+0x6c` | `mPersonBeingLoaded` | |
 | `+0x70` | takings accumulator credited alongside `+0x180` | |
 | `+0x180` | `mTotalTakings` | File 1090 |
-| `+0x190` | `mChanceOfWinning` | File 1050 claimed, **unverified** |
+| `+0x190` | `mChanceOfWinning` | File 1050 claimed, **unverified**. **This is an OBJECT offset.** Do not confuse it with the **person** `+0x190` (`mPreviousX`) in "Where a WALKING peep is drawn" below — different records, same number |
 | `+0x194` | `mPricePerUse` | File 1054 |
 | `+0x19c` | `mState` | |
 
