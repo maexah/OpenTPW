@@ -991,8 +991,15 @@ public static class DebugConsole
 			// A world click AT A CELL. `click` takes window pixels and needs the pointer to be over the
 			// map, which is right for a real frame and useless for reaching one named cell - so this
 			// reaches the very method a real frame reaches, Level.ClickWorldAt, which its own remarks
-			// say was split out of WorldClick for exactly this purpose. The thing under the cell is the
-			// cell's own occupant rather than a ray cast, because a harness has no cursor to cast from.
+			// say was split out of WorldClick for exactly this purpose.
+			//
+			// THE THING UNDER THE CELL IS RESOLVED THE WAY A FRAME RESOLVES IT - ParkPicking.ThingOn,
+			// exactly as Level.WorldClick reaches it through ParkPicking.ThingUnderCursor. Only the ray
+			// is skipped, because a harness has no cursor to cast from. Reading the cell's own occupant
+			// here instead made an instrument that could not see the thing it was pointed at: a placed
+			// thing sits on ONE cell's occupancy list and owns the rest of its footprint through
+			// mParentID, so this answered on the anchor alone, and a measurement taken through it read
+			// 1 of 12 cells of a ride whatever the picking code did.
 			case "worldclick":
 				if ( parts.Length < 3 )
 				{
@@ -1011,8 +1018,8 @@ public static class DebugConsole
 				var clickedY = (int)Argument( 2 );
 
 				var clickedThing = ParkState.OnMap( clickedX, clickedY )
-					? clickedState.CellAt( clickedX, clickedY ).Occupant
-					: (ushort)0;
+					? ParkPicking.ThingOn( clickedState, clickedX, clickedY )
+					: 0;
 
 				Reply( clickedPark.ClickWorldAt( clickedX, clickedY, clickedThing ) );
 				break;

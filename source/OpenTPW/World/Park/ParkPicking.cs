@@ -126,10 +126,61 @@ public static class ParkPicking
 			return default;
 
 		var thing = Level.Current?.ParkState is { } state
-			? state.CellAt( cellX, cellY ).Occupant
+			? ThingOn( state, cellX, cellY )
 			: 0;
 
 		return new Answer( (cellY * ParkWorld.MapSize) + cellX + 1, hit, thing );
+	}
+
+	/// <summary>
+	/// What a click on one cell resolves to: whoever is standing on it, or - failing that - the object
+	/// that owns it.
+	/// </summary>
+	/// <remarks>
+	/// <b>A placed thing is on ONE cell's occupancy list, and it is not usually the one you click.</b>
+	/// The save names the thing on its anchor cell alone; every other cell of its footprint carries the
+	/// owner in <c>mParentID</c> instead, as the packed cell that owner stands on. Measured over the
+	/// shipped park: the Belly Bounce's twelve cells all read <c>par 2996</c> and only (51,23) reads
+	/// <c>occ 13</c>; the Jungle Spray's nine read <c>par 3892</c>; the Drinks Shop's four <c>par
+	/// 3884</c>. So a click that asked occupancy alone answered on <b>1 of 12</b> cells of a ride and
+	/// nothing anywhere else on it.
+	/// <para>
+	/// <b>Occupancy is asked FIRST and that order matters</b>: a guest standing on a ride's footprint is
+	/// the head of that cell's list, and clicking them should reach them rather than the ride under
+	/// their feet. The owner is the fallback, not the answer.
+	/// </para>
+	/// <para>
+	/// The lookup is <see cref="ParkPathBuilding"/>'s own, which a queue cell already uses to name the
+	/// thing it serves - the same field, read the same way.
+	/// </para>
+	/// </remarks>
+	/// <remarks>
+	/// Internal rather than private only so that it can be tested, the same reason
+	/// <see cref="ParkFixedItems.ThingByCatalogue"/> is: a test that re-derived this over the picking
+	/// ray would need a camera, a heightfield and a loaded park, and would pass just as well with the
+	/// owner lookup put back.
+	/// </remarks>
+	internal static int ThingOn( ParkState state, int cellX, int cellY )
+	{
+		var standing = state.CellAt( cellX, cellY ).Occupant;
+
+		if ( standing != 0 )
+			return standing;
+
+		var parent = state.Record( cellX, cellY ).ParentId;
+
+		if ( parent == 0 )
+			return 0;
+
+		var (ownerX, ownerY) = MapStep.CellAt( parent );
+
+		foreach ( var placed in state.Objects )
+		{
+			if ( placed.CellX == ownerX && placed.CellY == ownerY )
+				return placed.ThingId;
+		}
+
+		return 0;
 	}
 
 	/// <summary>

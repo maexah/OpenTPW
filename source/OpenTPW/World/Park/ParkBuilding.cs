@@ -127,7 +127,14 @@ public static class ParkBuilding
 			return $"buy: '{item.Name}' would not load, so nothing was built and nothing was charged";
 
 		state.AddObject( placed );
-		Stamp( state, footprint, thingId );
+		Stamp( state, footprint, cellX, cellY );
+
+		// And onto its anchor cell's own list, which is the ONE cell the save puts a placed thing on -
+		// through EnterCell, so a guest standing there is kept behind it rather than evicted. The rest
+		// of the footprint is reached through the owner Stamp just wrote, not through occupancy: a
+		// thing cannot be on twelve cells' lists, because those links are keyed per thing and the
+		// twelfth would overwrite the first.
+		state.EnterCell( cellX, cellY, thingId );
 
 		// After the footprint, never before: Stamp types every cell it covers, and the way in and the way
 		// out are two of those cells wearing a different type.
@@ -189,16 +196,7 @@ public static class ParkBuilding
 		objects.Remove( thingId );
 		state.RemoveObject( thingId );
 
-		for ( var y = footprint.Top; y <= footprint.Bottom; ++y )
-		{
-			for ( var x = footprint.Left; x <= footprint.Right; ++x )
-			{
-				state.ClearRecord( x, y );
-
-				if ( ParkState.OnMap( x, y ) )
-					state.CellAt( x, y ).Occupant = 0;
-			}
-		}
+		Unstamp( state, footprint, placed.CellX, placed.CellY, thingId );
 
 		state.Refund( refund );
 
@@ -441,8 +439,49 @@ public static class ParkBuilding
 		} );
 	}
 
+	/// <summary>
+	/// Takes a footprint back off the map - the exact undoing of <see cref="Stamp"/>, which is why the two
+	/// sit together rather than this living as a loop inside <see cref="Sell"/>.
+	/// </summary>
+	/// <remarks>
+	/// <b>Every cell loses its record, but only the ANCHOR is left.</b> A placed thing is on exactly one
+	/// cell's occupancy list, so that is the only cell there is anything to leave - and
+	/// <see cref="ParkState.LeaveCell"/> ends by dropping the thing's own next and previous whether or not
+	/// it found it on the cell asked about. Sweeping it across the whole footprint therefore wipes those
+	/// links on the first cell and arrives at the anchor with nothing left to relink, putting nought into
+	/// the head instead of promoting whoever stood behind the thing. The sweep starts at
+	/// <c>footprint.Top/Left</c>, which is NOT the anchor for a turned thing - the shipped Staff Room is
+	/// anchored (58,16) and covers (58,15)..(59,16) - so that ordering lost a guest for real, and only
+	/// for turned things, which is why every test and a whole driven run stayed green over it.
+	/// </remarks>
+	internal static void Unstamp( ParkState state, (int Left, int Top, int Right, int Bottom) footprint,
+		int anchorX, int anchorY, int thingId )
+	{
+		for ( var y = footprint.Top; y <= footprint.Bottom; ++y )
+		{
+			for ( var x = footprint.Left; x <= footprint.Right; ++x )
+				state.ClearRecord( x, y );
+		}
+
+		state.LeaveCell( anchorX, anchorY, thingId );
+	}
+
 	/// <summary>Marks every cell of a footprint as built on, and names the thing standing there.</summary>
-	private static void Stamp( ParkState state, (int Left, int Top, int Right, int Bottom) footprint, int thingId )
+	/// <param name="anchorX">
+	/// The cell the thing is anchored at, which is what every cell of its footprint names as its owner.
+	/// <b>It is not the footprint's top-left</b>, and for a turned thing the two differ: the shipped
+	/// park's Staff Room is anchored (58,16) and covers (58,15)..(59,16), its Round Fountain anchored
+	/// (57,19) covering (57,17)..(59,19). <see cref="ParkPicking.ThingOn"/> matches the owner against
+	/// each object's own cell, so keying this on the corner would leave exactly those two unfindable.
+	/// </param>
+	/// <remarks>
+	/// Internal rather than private only so that it can be tested, the same reason
+	/// <see cref="ParkPicking.ThingOn"/> is. A test that re-derives the owner instead of calling this one
+	/// passes just as happily with the owner keyed on the footprint's corner - which is precisely the
+	/// mutation that survived twice, until this became reachable.
+	/// </remarks>
+	internal static void Stamp( ParkState state, (int Left, int Top, int Right, int Bottom) footprint,
+		int anchorX, int anchorY )
 	{
 		for ( var y = footprint.Top; y <= footprint.Bottom; ++y )
 		{
@@ -453,11 +492,16 @@ public static class ParkBuilding
 
 				var cell = state.Record( x, y );
 
-				state.SetRecord( x, y, cell with { Type = FootprintType } );
-
-				// The save's own arrangement: a placed object names itself on its cells, which is what
-				// the eleven objects of the shipped park do - see ParkWorld.MapCell.Occupant.
-				state.CellAt( x, y ).Occupant = (ushort)thingId;
+				// The type, and the OWNER - which is how the save marks a footprint and therefore how a
+				// click finds a thing anywhere but its anchor cell. Every cell of the shipped park's
+				// footprints carries its owner's packed cell in mParentID while only the anchor carries
+				// an occupant, so writing one without the other would leave a bought thing clickable on
+				// a twelfth of itself. See ParkPicking.ThingOn.
+				state.SetRecord( x, y, cell with
+				{
+					Type = FootprintType,
+					ParentId = (ushort)MapStep.CellId( anchorX, anchorY )
+				} );
 			}
 		}
 	}

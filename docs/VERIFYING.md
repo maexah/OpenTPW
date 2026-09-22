@@ -645,6 +645,23 @@ The ones that have bitten more than once.
   landmark settled it. **Photograph a thing whose cell you already know, name it in the frame, and only
   then aim at the subject.** The side headings `±π/2` were right throughout; only the pair I had
   reasoned about was wrong.
+- **113** — **A test step that can run without a build will happily test the previous build.**
+  `dotnet test --no-build` runs the assembly already on disk, so a compile error does not fail the run -
+  it hands back the last good build's numbers. A mutation harness that built with `capture_output=True`
+  and never read the exit code reported an identical clean **894 passed** four times over, against a
+  binary that predated every edit in the turn, and each one read exactly like a mutation surviving. The
+  only thing that caught it was the build line printed above the results. **Check the build's exit code
+  before believing any number below it, and make the harness refuse to return a verdict when the build
+  failed** - a fabricated survival is worse than no measurement, because it gets written down as
+  evidence that a fix rests on nothing.
+- **114** — **A mutation is only tested by a test that calls the mutated code.** Keying a footprint's
+  owner on the wrong corner survived the whole suite twice. The diagnosis was right the first time - no
+  test built a *turned* thing, where anchor and corner differ - but the fix was to add a turned case to a
+  file whose own helper *rebuilt* the stamping logic instead of calling `ParkBuilding.Stamp`, so the
+  mutation stayed invisible and survived a second time. **Before adding a test to kill a mutation, name
+  the function the mutation edits and check the test reaches it**; a fixture that re-derives the subject
+  proves the fixture. Making the real function internal, the way `ParkPicking.ThingOn` already is, is
+  what closed it - and it immediately exposed a second defect in the same shape, in the sell path.
 
 ---
 

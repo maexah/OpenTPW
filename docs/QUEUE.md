@@ -56,7 +56,12 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   **5.0** at `pitch 0.0`, and the console has no pitch argument, so the dinosaur's own body stands
   between the camera and the guest. `docs/VERIFYING.md` 111 and 112 carry what the aiming cost.
   Worth one short session with a pitch argument added to `camcorder`.
-- [ ] **Q1b. A bought thing has no entry cell, so no queue can serve it.** DECODE FIRST.
+- [x] **Q1b. A bought thing has no entry cell, so no queue can serve it.** Done inside Q1's commit
+  (`95dcf29`), decode and build together rather than in two sessions: the shape picture's markers are
+  parsed, carried through the catalogue and set on buy, and the derivation was confirmed in a running
+  park as `cell (42,23) type 9` after a buy, against the shipped ride's own `mEntryPos` 2997 = (52,23).
+  The checkbox was left unticked by oversight; `docs/STATUS.md` has said it was ticked since that day.
+  DECODE FIRST.
   `ParkBuilding.Buy` leaves `EntryPos`, `ExitPos` and `TopLeft` at their record defaults, and
   `ParkRideChoice.CanBeOffered` (`:90`) refuses on `EntryPos == 0` **before** the queue is ever walked -
   `QueueCellsFor` (`:167`) bails on the same test. So a queue laid and connected to a path still measures
@@ -73,11 +78,49 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   to `docs/exe/`, and stop. The build is the next session: parse the markers, carry them through
   `ParkItemCatalogue.Item`, set the three fields on buy. Confirm then: buy a ride, lay a queue to it,
   screenshot a guest boarding it with the `rides` census beside it - Q1's clause, finally reachable.
-- [ ] **Q2. Things loaded from the save cannot be clicked.** The pick reads `CellAt( x, y ).Occupant`
-  (`ParkPicking.cs:129`). Only `ParkBuilding.Buy` (`:242`) and peeps ever set it. Nothing sets it for
-  the save's own objects, so every pre-placed thing picks as 0. Stamp each loaded object's footprint at
-  park load, the way `Buy` does. Confirm: click the Belly Bounce from the save, its window opens,
-  screenshot and the log line. (Hover highlight is Q24; do not build it here.)
+- [x] **Q2. Things loaded from the save cannot be clicked.** Done 2026-09-22,
+  `alexah/110-click-a-thing-the-save-placed`. **The stated cause was half right and the prescription
+  was unsafe.** Occupancy is not merely unset for the save's objects: a placed thing is on exactly
+  **one** cell's occupancy list - its anchor - and owns the rest of its footprint through `mParentID`,
+  the packed cell of the owner. Measured over the shipped park: all twelve cells of the Belly Bounce
+  read `par 2996` while only (51,23) reads `occ 13`; the Jungle Spray's nine read `par 3892`; the
+  Drinks Shop's four `par 3884`. **Stamping the footprint "the way `Buy` does" was tried first and
+  broke guests**: the occupancy links are keyed per THING, so pushing one thing onto twelve cells makes
+  the twelfth overwrite the first and a guest underneath is lost -
+  `AGuestStandingOnACellIsKeptBehindTheThingBuiltOverThem` went red, expected 7 got 0. The fix is
+  `ParkPicking.ThingOn`: whoever is standing there, else the object that owns the cell. `Buy` now writes
+  the owner over the footprint and enters only the anchor; `Sell` leaves the list rather than zeroing
+  its head.
+  **The instrument was wrong too, and would have hidden the whole thing.** `worldclick` resolved the
+  thing with `CellAt( x, y ).Occupant` directly and only then called `ClickWorldAt`, so it never went
+  through the picking code at all - the baseline and every confirming run through it would have read
+  1 of 12 whatever the fix did. It now resolves the way a frame does.
+  Measured in a running park, every count predicted before it was read: the save's Belly Bounce
+  **12 of 12** cells (was 1), Jungle Spray **9 of 9** (was 1), Drinks Shop **4 of 4** (was 1), open
+  ground beside the ride **0 of 4**, a ride **bought** this session **12 of 12** - a half that had no
+  baseline, since `Stamp` no longer writes occupancy - and **0 of 12** after selling it. Clicking
+  (52,25), a cell the anchor does not cover, printed `Ride window: showing 'Belly Bounce' (thing 13)`
+  and `world click: opened the window for thing 13`, photographed open. `save/` unchanged within the run.
+  **A mutation survived twice and was closed rather than declared.** Keying the owner on the
+  footprint's top-left instead of the anchor passed all 892, and still passed after a turned-thing test
+  was added - because `ParkFootprintOccupancyTests` writes the owner in its own helper and never called
+  the mutated code at all. Diagnosing the cause ("no test builds a turned thing") and then fixing the
+  wrong thing is the whole of that miss. `Stamp` is now internal and called directly by a test using the
+  shipped Staff Room's own numbers - anchored (58,16), covering (58,15)..(59,16) - which is the same
+  reason `ParkPicking.ThingOn` is internal.
+  **A second defect was found while closing it.** `Sell` swept `LeaveCell` across the whole footprint,
+  and `LeaveCell` drops a thing's own links whether or not it found it on the cell asked about - so the
+  sweep reached the anchor with nothing left to relink and put nought into the head instead of promoting
+  whoever stood behind it. It lost a guest only for a **turned** thing, since every other footprint
+  starts at its own anchor and the sweep happened to reach it first, which is why the suite and a whole
+  driven run stayed green over it. The cleanup is now `Unstamp`, the exact undoing of `Stamp`, beside it.
+  Final mutation record, each called in advance: the owner fallback removed **5 red** (predicted 4),
+  occupancy no longer asked first **2 red** (predicted 1) - both under by one, because
+  `LeavingACellTheThingIsNotOnKeepsWhoeverStandsBehindIt` rests on both and was counted for neither -
+  `Stamp` keyed on the corner **1 red**, `Unstamp` leaving the corner **1 red**, both as predicted.
+  **Four mutation results before those were fiction and were thrown away**: the build was failing on a
+  brace, `dotnet test --no-build` ran the previous assembly, and the harness swallowed the compile error,
+  so four runs reported an identical clean 894 and read exactly like four survivals. See `VERIFYING.md`.
 - [ ] **Q3. A laid queue cell has no neighbours and no tile piece.** `LayQueue`
   (`ParkPathBuilding.cs:249-256`) writes Type, TileSet, Direction, ParentId only. It never calls
   `ParkPathNeighbours.LinkPath` (the path arm does, `:126`) and `Retile` (`:426`) returns for anything
