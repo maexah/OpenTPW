@@ -33,6 +33,31 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   `ParkFixedItems.cs:214`. Bought things live in `ParkState.Objects` (`ParkState.cs:144`). Read from
   `ParkState` everywhere the simulation asks "which objects are in the park". Confirm: buy a ride, let the
   park run, screenshot a guest boarding it, `rides` census beside it.
+  **SPLIT 2026-09-22, and the first half has landed** on `alexah/109-bought-things-join-the-park`. What
+  is done and confirmed in a running park: the four `ParkPeople` reads, a **live object chain** on
+  `ParkState` (the original links a new thing at the HEAD, `FUN_00519d80`, and unlinks on demolish,
+  `FUN_00519dc0` - one call site each), and the `CanLoad` / `Flags` that `Buy` never set. Measured: a
+  bought Belly Bounce appears in `objects` (14 → 15) and in `rides` with `capacity 5 duration 30`, its
+  script cycling `role 2`, where before it printed **no line at all**; thing 13 still carries riders, so
+  nothing regressed. **This item stays unticked because its own confirm clause is not met** - no guest
+  boards it yet, and Q1b is why.
+- [ ] **Q1b. A bought thing has no entry cell, so no queue can serve it.** DECODE FIRST.
+  `ParkBuilding.Buy` leaves `EntryPos`, `ExitPos` and `TopLeft` at their record defaults, and
+  `ParkRideChoice.CanBeOffered` (`:90`) refuses on `EntryPos == 0` **before** the queue is ever walked -
+  `QueueCellsFor` (`:167`) bails on the same test. So a queue laid and connected to a path still measures
+  `cells 0 back 0`, which looks exactly like a queue fault and is not one. The original derives all three
+  in the object constructor, and the derivation is already read off the disassembly at `0x004db2da`..
+  `0x004db36b`: `mTopLeft` (`+0x34`) = anchor + `MapDelta::Rotate( descriptor+0x4b0, angle + 180 )`,
+  `mEntryPos` (`+0x36`) = anchor + `Rotate( descriptor+0x494, angle )`, `mExitPos` (`+0x38`) =
+  anchor + `Rotate( descriptor+0x4a0, angle )`, each as `dy * 0x80 + dx` on the packed `y*128 + x + 1`
+  cell. `FUN_004d9cc0` is `MapDelta::Rotate` and is decoded: 0 → (x,y), 90 → (y,−x), 180 → (−x,−y),
+  270 → (−y,x). **What is NOT established is where the delta comes from.** The category `.sam` files
+  carry only `UsageInfo.EntryCellStandPosX/Y`, which are fractions of a cell (0.5), not cell offsets;
+  the likely source is the `Info.Shape` picture's own marker characters, which `ItemDescriptionFile.
+  ReadShape` (`:555`) currently measures for width and depth and then **discards**. Decode that, write it
+  to `docs/exe/`, and stop. The build is the next session: parse the markers, carry them through
+  `ParkItemCatalogue.Item`, set the three fields on buy. Confirm then: buy a ride, lay a queue to it,
+  screenshot a guest boarding it with the `rides` census beside it - Q1's clause, finally reachable.
 - [ ] **Q2. Things loaded from the save cannot be clicked.** The pick reads `CellAt( x, y ).Occupant`
   (`ParkPicking.cs:129`). Only `ParkBuilding.Buy` (`:242`) and peeps ever set it. Nothing sets it for
   the save's own objects, so every pre-placed thing picks as 0. Stamp each loaded object's footprint at

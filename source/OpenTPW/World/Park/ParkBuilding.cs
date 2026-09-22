@@ -67,9 +67,34 @@ public static class ParkBuilding
 		// three from the purchase tier - Upgrades[0].InitSpeed / InitCapacity / InitDuration - and they
 		// are what the ride window's sliders open on. Left at nought a bought ride would carry nobody
 		// and last no time, and ParkRides.BindNew would push those noughts straight into its script.
+		// The flags word the original builds bit by bit out of the item's own description while it
+		// constructs the object, and mCanLoad, which the same constructor writes as 1 outright
+		// (FUN_004db090: `*(param_1 + 0x68) = 1`). A bought thing left at the record's defaults carries
+		// neither, and then invites nobody: ParkRideOperation.Invite bails on mCanLoad before it reads a
+		// single script variable, and ParkRideChoice.CanBeOffered refuses anything without the visitable
+		// bit - so the thing stands and animates and is never used.
+		//
+		// ONLY the two bits whose descriptor key is established are set. Info.IsChoosable is the save's
+		// visitable bit and the two agree on all six flagged objects in the shipped park;
+		// UsageInfo.ProvidesRelief is the toilet bit, which exactly the three Small Toilets carry. Each
+		// remaining bit comes from a different descriptor field, none of them pinned - the queue-path bit
+		// in particular reads from a field this project has not named, and agreeing with Info.HasQueue on
+		// the two objects this park can compare is not establishing it. They are left clear and counted.
+		var flags = 0;
+
+		if ( item.IsChoosable )
+			flags |= ParkWorld.CatalogueObject.VisitableFlag;
+
+		if ( item.ProvidesRelief )
+			flags |= ParkWorld.CatalogueObject.ToiletFlag;
+
+		Unimplemented.Report( "BOUGHT_OBJECT_FLAG_BITS" );
+
 		var placed = new ParkWorld.CatalogueObject(
 			ThingId: thingId, CatalogueId: catalogueId,
 			RawX: cellX << 8, RawY: cellY << 8, Angle: angle,
+			Flags: (ushort)flags,
+			CanLoad: 1,
 			OperatingSpeed: item.InitSpeed,
 			OperatingCapacity: item.InitCapacity,
 			OperatingDuration: item.InitDuration );

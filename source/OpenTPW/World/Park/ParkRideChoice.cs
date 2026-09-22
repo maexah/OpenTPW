@@ -385,6 +385,13 @@ public static class ParkRideChoice
 	/// Every object a guest could be offered, walked in the order the original walks them - from the
 	/// header's <c>mFirstObject</c> along each object's own <c>mNext</c>, rather than in the order the
 	/// reader happens to hold them.
+	///
+	/// <para>
+	/// <b>This walks the FILE's chain, so it reaches only what the save placed.</b> The live offer path is
+	/// <see cref="ParkRideChooser.ChooseFor"/>, which walks the running park's chain and therefore reaches
+	/// something bought this session; this one answers the narrower question of what the save itself
+	/// offers, which is what the tests that call it mean by it.
+	/// </para>
 	/// </summary>
 	/// <param name="queueLength">
 	/// How long each object's queue is, or null to treat every queue as empty - which is what a park

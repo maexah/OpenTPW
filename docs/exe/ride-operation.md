@@ -17,6 +17,38 @@ Two kinds of offset appear on this page and they are **not** interchangeable. A 
 | `0054f7bb` | — | The thing sweep's call site. | Disassembly |
 | `+0x1da70c` | — | The global tick counter the sweep increments; the same counter `FUN_004e0b90` masks with `& 7`. | Disassembly |
 
+### Two object iterations, and they are not the same list
+
+Reading either of these as "the object list" gets the other wrong.
+
+| | What walks it | Over what |
+|---|---|---|
+| A ride's **turn** | `FUN_00516380` → `FUN_0050b360`, the rows above | the **thing** list — every live thing, guests and staff included |
+| A guest's **choice** | `FUN_004fcb10` | the **`mFirstObject`** chain — placed catalogue objects only |
+
+`FUN_004e0e00` has exactly one caller (`FUN_0050b360`), and that one has exactly one (`FUN_00516380`), so a ride's turn comes off the thing sweep and nothing else.
+
+**The object chain is LIVE, and a newly built object joins it at the HEAD.**
+
+| Address | What it is | Evidence |
+|---|---|---|
+| `+0x1da746` | `mFirstObject`, the chain head | `FUN_00516c80` writes the literal string `mFirstObject` against this offset |
+| thing `+0xc` | the link — the save's `mNextObject`, file 208 | `FUN_004db090` zeroes it before linking; `FUN_004fcb10` advances by it |
+| `FUN_00519d80( world, thing )` | **LINK.** `head = this; if (oldHead) this->next = oldHead` | Decompiled |
+| `FUN_00519dc0( world, thing )` | **UNLINK.** Walks from the head matching `+0xc`, patches the predecessor, or moves the head | Decompiled |
+
+**One call site each, so there are no exceptions to hunt**: `FUN_00519d80` only from the object constructor `FUN_004db090` at `0x004db1ec`, `FUN_00519dc0` only from the demolish `FUN_004dd0a0` at `0x004dd0eb`. Every object built is linked; every one demolished is unlinked.
+
+**Head insertion is observable rather than cosmetic**: `FUN_004fcb10` keeps the later candidate on a tie only when `mGameTick & 1` (`+0x1da70c`, named by the same writer), so where an object sits in the walk decides ties between equally good candidates.
+
+**`mFirstObject` is a live runtime head, not a save artefact.** `FUN_00516c80` writes it as a world variable beside `mParkGates` and `mTrafficLights`, while the thing array is saved separately under `Used_Thing_Head` / `Used_Thing_Next` (`DAT_007cf56c`). Two chains, two save mechanisms. Model byte 3 is a placed catalogue object, corroborated from the other side by that writer's own model switch sending case 3 to `FUN_004db7d0`, the object serialiser.
+
+**The header's family of list heads**, from `FUN_00516c80`: `mFirstHandyman` `+0x1da73c`, `mFirstMechanic` `+0x1da73e`, `mFirstEntertainer` `+0x1da740`, `mFirstResearcher` `+0x1da742`, `mFirstGuard` `+0x1da744`, `mFirstObject` `+0x1da746`. The writer emits Guard **before** Researcher while their offsets run the other way, so the save's field order is the write order and not ascending offset — which corroborates `ParkWorld.cs`'s existing remark from the save side. **This does not close** the open item on `+0x1da744` walked through `+0x210` / `+0x212`: that head is `mFirstGuard`, a staff chain with different link offsets, and `FUN_005019f0` case `0x11` is still undecoded.
+
+**`FUN_004d3d10` is not a chain.** It is `CControlManager::GetObjectControl…`, a linear scan of 32-byte per-item records with a one-entry cache, and its `+0x18` is a count of how many of that item stand in the park — incremented by the constructor, decremented by the demolish.
+
+**A correction made on the way, kept because the shape repeats.** A first reading of `FUN_004db090` and `FUN_004dd0a0` concluded that the constructor performs no insertion and the demolish no unlink, which would have justified abandoning the chain walk as unfaithful. Both delegate to a one-line helper — `FUN_00519d80` among sixty-odd field initialisations, `FUN_00519dc0` behind the refund arithmetic. A structural absence claimed from a decompilation is only as good as the calls you followed, and the tell was that the conclusion proved too much: it implied the original itself could never offer a ride the player had just built.
+
 Two consequences of that ordering, both settled by reading the straight-line region rather than by comparing addresses (address order only implies execution order *inside* one straight-line region):
 
 - **Scripts run before things.** A ride's write to a script variable is seen by that script on the **next** pass, not the same one.

@@ -143,6 +143,56 @@ public sealed class ParkState
 	/// </summary>
 	public IReadOnlyList<ParkWorld.CatalogueObject> Objects => _objects;
 
+	/// <summary>The head of the object chain - the save's <c>mFirstObject</c>, the engine's <c>+0x1da746</c>.</summary>
+	private int _firstObject;
+
+	/// <summary>
+	/// Each object's link to the next, by thing id - the save's <c>mNextObject</c>, which is the engine's
+	/// thing <c>+0xc</c>.
+	/// </summary>
+	private readonly Dictionary<int, int> _nextObject = [];
+
+	/// <summary>
+	/// Every object in the order a guest considers them - from <c>mFirstObject</c> along each object's own
+	/// <c>mNext</c>, newest first.
+	/// </summary>
+	/// <remarks>
+	/// <b>The chain is LIVE in the original, and that is why it is kept here rather than read off the
+	/// save.</b> <c>FUN_00519d80</c> links a newly built object at the <b>head</b> and has exactly one
+	/// caller, the object constructor <c>FUN_004db090</c>; <c>FUN_00519dc0</c> unlinks and has exactly one,
+	/// the demolish <c>FUN_004dd0a0</c>. So every object the player builds joins the chain and every one
+	/// they sell leaves it, and a walk that followed <see cref="ParkWorld"/>'s copy would reach only what
+	/// the file placed.
+	/// <para>
+	/// <b>Newest first is observable rather than cosmetic.</b> <c>FUN_004fcb10</c> keeps the later candidate
+	/// on a tie only when <c>mGameTick &amp; 1</c>, so where an object sits in this walk decides ties between
+	/// equally good ones - see <see cref="ParkRideChooser"/>, which reproduces that rule.
+	/// </para>
+	/// <para>
+	/// The walk is bounded by the object count for the same reason <see cref="ParkRideChoice.Offerable"/>
+	/// bounds its own: a chain that came back on itself would otherwise hang instead of ending.
+	/// </para>
+	/// </remarks>
+	public IEnumerable<ParkWorld.CatalogueObject> ObjectsInChainOrder()
+	{
+		var byId = new Dictionary<int, ParkWorld.CatalogueObject>( _objects.Count );
+
+		foreach ( var placed in _objects )
+			byId[placed.ThingId] = placed;
+
+		var seen = 0;
+
+		for ( var id = _firstObject; id != 0 && seen <= byId.Count; ++seen )
+		{
+			if ( !byId.TryGetValue( id, out var placed ) )
+				break;
+
+			yield return placed;
+
+			id = _nextObject.GetValueOrDefault( id );
+		}
+	}
+
 	/// <summary>
 	/// A thing id nothing is using. One past everything the park can see, which is the same rule
 	/// <see cref="ParkPeople"/> follows for a new guest - and carries the same caveat: it is not
@@ -194,10 +244,27 @@ public sealed class ParkState
 		return highest;
 	}
 
-	/// <summary>Adds something built, and hands back its thing id.</summary>
-	public void AddObject( ParkWorld.CatalogueObject placed ) => _objects.Add( placed );
+	/// <summary>
+	/// Adds something built, and links it into the object chain at the <b>head</b> - the original's
+	/// <c>FUN_00519d80</c>, whose only caller is the object constructor.
+	/// </summary>
+	/// <remarks>
+	/// Without the link the thing stands, draws and runs its script, and is still never offered to
+	/// anybody: the walk a guest's choice makes starts at <c>mFirstObject</c>, so an object in no chain
+	/// cannot be reached however the list beside it is built.
+	/// </remarks>
+	public void AddObject( ParkWorld.CatalogueObject placed )
+	{
+		_objects.Add( placed );
 
-	/// <summary>Takes something sold out of the park. Answers whether it was there.</summary>
+		_nextObject[placed.ThingId] = _firstObject;
+		_firstObject = placed.ThingId;
+	}
+
+	/// <summary>
+	/// Takes something sold out of the park and unlinks it from the object chain - the original's
+	/// <c>FUN_00519dc0</c>, whose only caller is the demolish. Answers whether it was there.
+	/// </summary>
 	public bool RemoveObject( int thingId )
 	{
 		var at = _objects.FindIndex( placed => placed.ThingId == thingId );
@@ -206,8 +273,44 @@ public sealed class ParkState
 			return false;
 
 		_objects.RemoveAt( at );
+		Unlink( thingId );
 
 		return true;
+	}
+
+	/// <summary>
+	/// Takes one thing id out of the object chain, moving the head where it was the head and patching
+	/// its predecessor's link where it was not.
+	/// </summary>
+	private void Unlink( int thingId )
+	{
+		var next = _nextObject.GetValueOrDefault( thingId );
+
+		_nextObject.Remove( thingId );
+
+		if ( _firstObject == thingId )
+		{
+			_firstObject = next;
+			return;
+		}
+
+		// Bounded by the link count for the same reason the walk is: a chain that came back on itself
+		// would otherwise spin here rather than end.
+		var steps = 0;
+
+		for ( var id = _firstObject; id != 0 && steps <= _nextObject.Count; ++steps )
+		{
+			if ( !_nextObject.TryGetValue( id, out var following ) )
+				return;
+
+			if ( following == thingId )
+			{
+				_nextObject[id] = next;
+				return;
+			}
+
+			id = following;
+		}
 	}
 
 	/// <summary>
@@ -283,6 +386,14 @@ public sealed class ParkState
 		// Everything the file placed, copied so that what is built and sold afterwards moves here rather
 		// than in ParkWorld, which describes a file.
 		_objects.AddRange( park.Objects );
+
+		// And the chain that threads them, which the original keeps live and this one now does too - see
+		// ObjectsInChainOrder. Seeded from the save's own head and links, so a park straight out of the
+		// file is considered in exactly the order the file's chain gives.
+		_firstObject = park.FirstObject;
+
+		foreach ( var thing in park.Objects )
+			_nextObject[thing.ThingId] = thing.NextObject;
 
 		// And the queues as the save left them. Every one is empty in the park that ships - nobody has ever
 		// been admitted to it - so this seeds nothing today and is still what makes a saved queue survive

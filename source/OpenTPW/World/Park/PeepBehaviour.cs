@@ -95,7 +95,9 @@ public sealed class PeepBehaviour
 		Admission = admission;
 		_gateStatus = gateStatus;
 		_random = random ?? new Random();
-		_chooser = new ParkRideChooser( park, catalogue );
+		// The state goes in so the chooser walks the RUNNING park's object chain: something bought this
+		// session is in that one and in no other, and a guest is never offered what the walk cannot reach.
+		_chooser = new ParkRideChooser( park, catalogue, state: State );
 		_park = park;
 		_catalogue = catalogue;
 	}

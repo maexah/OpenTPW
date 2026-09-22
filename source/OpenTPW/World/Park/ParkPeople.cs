@@ -1259,7 +1259,7 @@ public sealed class ParkPeople : Entity
 	/// </summary>
 	private void TakeTheRidesTurns( int thingTick )
 	{
-		if ( _scriptFor == null || _behaviour.Park is not { } world )
+		if ( _scriptFor == null )
 			return;
 
 		// The admission goes in for the SETTLE-UP alone: it carries PeepInfo.MediumHappinessChange, which is
@@ -1267,7 +1267,11 @@ public sealed class ParkPeople : Entity
 		// worth. Without it both arms leave happiness alone rather than moving it by an invented number.
 		var operation = new ParkRideOperation( _behaviour.State, Guests, _behaviour.Admission );
 
-		foreach ( var thing in world.Objects )
+		// <b>The park as it stands, not as the file left it.</b> A thing bought this session lives in
+		// ParkState's list and in no other, so a sweep over the save's list hands it no turn at all - it
+		// binds a script and animates, and then never invites, never dismisses and never takes a fare,
+		// which is a ride that looks alive and is not.
+		foreach ( var thing in _behaviour.State.Objects )
 		{
 			var script = _scriptFor( thing.ThingId );
 
@@ -1395,9 +1399,12 @@ public sealed class ParkPeople : Entity
 	/// </summary>
 	internal bool TrySeatOf( int guestThingId, out int rideThingId, out int node )
 	{
-		if ( _scriptFor != null && _behaviour.Park is { } world )
+		if ( _scriptFor != null )
 		{
-			foreach ( var thing in world.Objects )
+			// ParkState's list, so a guest aboard something bought this session is found too. Missed here,
+			// the drawing falls back to their ground position and they are drawn standing at the front of
+			// the queue instead of on the ride's own node.
+			foreach ( var thing in _behaviour.State.Objects )
 			{
 				if ( _scriptFor( thing.ThingId ) is not { } script )
 					continue;
@@ -1459,13 +1466,16 @@ public sealed class ParkPeople : Entity
 			yield break;
 		}
 
-		if ( _behaviour.Park is not { } world )
+		if ( _behaviour.Park is null )
 		{
 			yield return "no park";
 			yield break;
 		}
 
-		foreach ( var thing in world.Objects )
+		// ParkState's list, because this census is the instrument that has to be able to SEE a thing
+		// bought this session. Walking the save's list, a bought ride prints no line at all and reads
+		// exactly like one that was never built.
+		foreach ( var thing in _behaviour.State.Objects )
 		{
 			if ( _scriptFor( thing.ThingId ) is not { } script )
 				continue;
@@ -1570,7 +1580,9 @@ public sealed class ParkPeople : Entity
 
 		var catalogue = _behaviour.Catalogue;
 
-		foreach ( var thing in world.Objects )
+		// ParkState's list for the same reason `rides` takes it. The world is still wanted below, because
+		// the queue is walked over the MAP rather than read from the record.
+		foreach ( var thing in _behaviour.State.Objects )
 		{
 			if ( !thing.IsVisitable )
 				continue;

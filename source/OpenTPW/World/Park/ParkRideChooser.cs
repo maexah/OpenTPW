@@ -6,10 +6,17 @@ namespace OpenTPW;
 /// scores the survivors with <see cref="ParkRideScore"/> and takes the best.
 ///
 /// <para>
-/// <b>The list is walked the original's way</b>, from the header's <c>mFirstObject</c> along each object's
-/// own <c>mNext</c>, rather than in whatever order the reader happens to hold them. That matters here in a
+/// <b>The list is walked the original's way</b>, from <c>mFirstObject</c> along each object's own
+/// <c>mNext</c>, rather than in whatever order the reader happens to hold them. That matters here in a
 /// way it does not in <see cref="ParkRideChoice.Offerable"/>: two candidates can tie, and which one a tie
 /// goes to depends on where each sits in the walk.
+/// </para>
+/// <para>
+/// <b>The chain it walks is the RUNNING park's, not the file's.</b> The original's is live - the object
+/// constructor links a newly built thing in at the head (<c>FUN_00519d80</c>) and the demolish unlinks it
+/// (<c>FUN_00519dc0</c>), one call site apiece - so something bought this session is considered, and
+/// considered first. Given no <see cref="ParkState"/> this falls back to the save's own chain, which
+/// reaches only what the file placed and is what a test holding a bare <see cref="ParkWorld"/> means.
 /// </para>
 /// <para>
 /// <b>Nothing is chosen unless it beats nine.</b> The original compares each score against 9 and keeps
@@ -42,6 +49,7 @@ public sealed class ParkRideChooser
 {
 	private readonly ParkWorld? _park;
 	private readonly ParkItemCatalogue? _catalogue;
+	private readonly ParkState? _state;
 
 	/// <param name="park">
 	/// The park being chosen from. Null chooses nothing, which is what a guest in a park with no save
@@ -52,11 +60,53 @@ public sealed class ParkRideChooser
 	/// shelter. <b>Null leaves every candidate scoring as a bare object</b> rather than guessing at those,
 	/// which costs the thirst, hunger, relief and shelter terms and keeps the distance and queue ones.
 	/// </param>
-	public ParkRideChooser( ParkWorld? park, ParkItemCatalogue? catalogue = null, ParkRideScore? score = null )
+	/// <param name="state">
+	/// The park as it is being played, whose object chain is the live one. Null falls back to the save's
+	/// chain - see the class remarks.
+	/// </param>
+	public ParkRideChooser( ParkWorld? park, ParkItemCatalogue? catalogue = null, ParkRideScore? score = null,
+		ParkState? state = null )
 	{
 		_park = park;
 		_catalogue = catalogue;
+		_state = state;
 		Score = score ?? new ParkRideScore();
+	}
+
+	/// <summary>
+	/// The candidates in the order the original considers them. The running park's chain where there is
+	/// one, and the save's own where there is not.
+	/// </summary>
+	private IEnumerable<ParkWorld.CatalogueObject> Candidates()
+	{
+		if ( _state != null )
+			return _state.ObjectsInChainOrder();
+
+		return FileChainOrder();
+	}
+
+	/// <summary>The save's chain, walked from its header's <c>mFirstObject</c>.</summary>
+	private IEnumerable<ParkWorld.CatalogueObject> FileChainOrder()
+	{
+		if ( _park == null )
+			yield break;
+
+		var byId = new Dictionary<int, ParkWorld.CatalogueObject>();
+
+		foreach ( var thing in _park.Objects )
+			byId[thing.ThingId] = thing;
+
+		var seen = 0;
+
+		for ( var id = _park.FirstObject; id != 0 && seen <= byId.Count; ++seen )
+		{
+			if ( !byId.TryGetValue( id, out var candidate ) )
+				break;
+
+			yield return candidate;
+
+			id = candidate.NextObject;
+		}
 	}
 
 	/// <summary>The scorer this chooses with - <c>FUN_004fcc30</c>.</summary>
@@ -94,22 +144,11 @@ public sealed class ParkRideChooser
 		if ( _park == null )
 			return null;
 
-		var byId = new Dictionary<int, ParkWorld.CatalogueObject>();
-
-		foreach ( var thing in _park.Objects )
-			byId[thing.ThingId] = thing;
-
 		ParkWorld.CatalogueObject? best = null;
 		var bestScore = WorthGoingTo;
-		var seen = 0;
 
-		for ( var id = _park.FirstObject; id != 0 && seen <= byId.Count; ++seen )
+		foreach ( var candidate in Candidates() )
 		{
-			if ( !byId.TryGetValue( id, out var candidate ) )
-				break;
-
-			id = candidate.NextObject;
-
 			var item = ItemFor( candidate );
 			var queue = queueLength?.Invoke( candidate ) ?? ParkRideChoice.QueueLength( _park, candidate );
 
