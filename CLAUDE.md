@@ -79,10 +79,11 @@ Inside `source/OpenTPW/`: `Client/` (startup, `GameDir`, options, renderer, `Dia
 - Reverse-engineered facts are written **once**: file layouts in the FileFormats docs, executable behaviour in `docs/exe/`. Code comments and commit messages point at them.
 
 ## Branches
-
-- Work is a chain of stacked branches `alexah/N-<what-it-does>`, each a prefix of the next. Fork `main` is an exact mirror of upstream and is never merged into. The newest `alexah/N` is the tip and has everything.
-- Find the tip with `git branch -r --sort=-committerdate | head -3`. It is also written in `docs/STATUS.md`.
-- Name a branch for what it changes (`alexah/95-ride-state-3`), not with a phrase. One branch per task.
+- main has everything and is the tip. A fresh session starts from main.
+- One short branch per task, alexah/N-<what-it-changes>, based on main.
+  When the task is confirmed in the game, fast-forward merge it into main.
+- upstream/main is the mirror of the upstream project. Merge it into main
+  when it moves. Never rebase or force-push main.
 
 ## How a session runs
 

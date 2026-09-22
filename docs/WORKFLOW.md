@@ -4,10 +4,10 @@ These are the rules already in force, written down where every session sees them
 
 ## Branches
 
-- Fork `main` is an exact mirror of `upstream/main` and is never merged into. That is deliberate: the upstream maintainer can merge the work in stages.
-- Work is a chain of stacked branches `alexah/N-<what-it-changes>`, each a prefix of the next. The newest is the tip and has everything.
+- `main` has everything and is the tip. A fresh session starts from `main`.
+- One short branch per task, `alexah/N-<what-it-changes>`, based on `main`. When the task is confirmed in the game, fast-forward merge it into `main`.
+- `upstream/main` is the mirror of the upstream project. Merge it into `main` when it moves. Never rebase or force-push `main`.
 - Name a branch for what it changes, not with a phrase. One branch per task.
-- The current tip is written in `docs/STATUS.md`, and found with `git branch -r --sort=-committerdate | head -3`.
 
 ## Pushing
 

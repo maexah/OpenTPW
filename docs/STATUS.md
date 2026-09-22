@@ -1,53 +1,12 @@
 # Status
 
-Last updated: 2026-09-21 on branch `alexah/101-screams-vary-and-single-scream`, which is the tip,
-stacked on `alexah/100-cache-hit-keeps-its-sampler`. It closes `docs/CLEANUP-PLAN.md` item 5: a ride's
-scream is **replayed rather than looped**, so it picks a fresh sample every pass instead of repeating
-one clip for ever, and the two opcodes the family was missing — `SINGLESCREAM` and `SCREAMLEVEL` —
-are built. **LOCAL AND UNPUSHED** — rule 1 wants a fresh yes, and this line being written inside the
-commit it describes is exactly why no sha is named here.
+Last updated: 2026-09-21.
 
-Before it: 2026-09-21 on branch `alexah/100-cache-hit-keeps-its-sampler`. It closes
-`docs/CLEANUP-PLAN.md` item 4: a texture served out of the
-cache now carries the sampler its flags asked for, so the lobby's sea comes back from a park drawn as
-ripples rather than as a diamond lattice. **Also local and unpushed.**
-
-Before it: 2026-09-21 on branch `alexah/99-pause-holds-sound`, which closes item 6 — a park's menu now
-holds the sounds that have a place in the world, and leaves the ones that do not. **Also local and
-unpushed.**
-
-Before it: 2026-09-21 on branch `alexah/98-decode-each-texture-once`, which was the tip, stacked on
-`alexah/97-load-time` — together they close `docs/CLEANUP-PLAN.md` item 9. **Both were pushed to
-`maexah/OpenTPW` on 2026-09-21** at Alexah's word, verified against the server with `git ls-remote`
-rather than a tracking ref. Every other local branch in both clones was surveyed the same way and
-already matched; `wf-review-56` was held back as a scratch branch, and nothing went to `upstream`
-(the `OpenTPW` org), which carries no `alexah/*` head at all.
-
-**The commit carrying this very line is, by definition, not yet up when it is written** — that is the
-same trap this file records below about shas. Read what is really up from the server, never from here:
-`git ls-remote origin 'refs/heads/alexah/*'`. Before them,
-`alexah/96-laying-and-lifting-path` was **pushed to `maexah/OpenTPW` on 2026-09-21**, at Alexah's
-word — `alexah/94-every-state-answered`,
-`alexah/95-buy-hire-and-ride-windows` and `alexah/96-laying-and-lifting-path`. Every other local branch
-was surveyed against origin with `git ls-remote` and already matched, in both clones. Nothing was pushed
-to `upstream` (the `OpenTPW` org), and `wf-review-56` was deliberately held back as a scratch branch.
-
-**The branch was renamed before it was pushed.** It was `alexah/95-what-a-park-costs`, which is a
-phrase, and one that described only its first commit — `CLAUDE.md` says to name a branch for what it
-CHANGES. What it changes is the purchase menu, the hire screen, the ride management window, placing
-by pointing, and the ride panel.
-
-**No sha is written here any more, and that is deliberate.** This line used to name the tip, and it was
-wrong every time — a line inside the commit that moves the tip cannot name it, so it was stale the
-instant it was written and went stale three times in one day besides. The count of commits ahead is
-left out for the same reason. Read both from the repository, which cannot lag:
+**This header names no branch and no sha, deliberately.** A line written inside the commit that moves
+the tip cannot name it, so every attempt to do so here went stale the instant it was written — three
+times in one day, once. Read the current state from the repository, which cannot lag:
 
     git log --oneline -1
-    git log --oneline origin/alexah/96-laying-and-lifting-path..HEAD | wc -l
-    git ls-remote origin alexah/96-laying-and-lifting-path
-
-The tip is the newest `alexah/N` branch and has everything. Confirm with
-`git branch -r --sort=-committerdate | head -3`.
 
 ## Works
 
