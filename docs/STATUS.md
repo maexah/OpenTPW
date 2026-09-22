@@ -124,8 +124,19 @@ is median 0.0688° against a max of 0.3258°, with **zero** frames stepping more
 median.
 
 The item blamed `LookAtRate`, which belongs to the **orbit** branch — `Attract` never touches it, and
-keeps a look *point* with its own ramped speed instead. So what remains is a deviation request rather
-than a defect, and under rule 11 that is Alexah's to ask for.
+keeps a look *point* with its own ramped speed instead. So what remained was a deviation request rather
+than a defect. **Alexah was asked and chose to fly closer**, so one was taken under rule 11, marked at
+the site with the original's numbers kept beside it.
+
+**And the obvious way to do that made it worse.** Shrinking the box "to hug the island cluster" took the
+median distance from **101.5 to 104.3** — slightly *farther*, against a prediction of 65. The box did
+shrink, so the change took effect and the reasoning was wrong: the islands stand at the **corners** of
+the square, so the original's box already centres each in its own quadrant and pulling the camera toward
+(500,500) moves it to the point farthest from all four. The lever is the **height** — 64 of those 104
+units were vertical. Putting the horizontal box back as the original has it and lowering only the band
+to 30–60 gives a measured **74.0**, predicted at 72–78 beforehand: 27% closer, and within a unit of
+`NominalDistance` 72.8, the distance the lobby was composed at. Only the box moved; the aim, the speeds,
+the arrival radii and both eases are still the original's.
 
 **A pure getter had to be added before any of it was measurable**: `attract` is a **setter** and must
 never be polled (rule 88), and `state` reports `cam=` but nothing about where the camera is *looking*.

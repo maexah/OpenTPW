@@ -84,10 +84,44 @@ public class LobbyCameraMode : CameraMode
 	/// have been read the right way round rather than transposed.
 	/// </para>
 	/// </summary>
-	private static readonly Vector3 WanderCentre = new( 500f, 500f, 75f );
+	/// <remarks>
+	/// <b>>>> A DELIBERATE DEVIATION, AND THE ORIGINAL'S OWN NUMBERS ARE KEPT BELOW. <<<</b>
+	/// The original's box is <c>centre (500, 75, 500)</c> with extents <c>(400, 50, 400)</c>, which in
+	/// this world's axes is centre <c>(500, 500, 75)</c> and extents <c>(400, 400, 50)</c> - X and Z
+	/// spanning 300 to 700, height 50 to 100. That was reproduced exactly, and then **measured in
+	/// flight**: the camera really does stay inside it, a median of **101.5 units** from the nearest
+	/// island with a maximum of 143.5.
+	///
+	/// <para>
+	/// Alexah judged that too far away on 2026-09-22, having been shown that it is faithful, and asked
+	/// for it closer - so this is `CLAUDE.md` rule 11, a deviation taken knowingly rather than a
+	/// correction. <b>Nothing here was wrong.</b> The aim mechanism, the speeds, the arrival radii and
+	/// both eases are all still the original's and must stay that way; only the box moves.
+	/// </para>
+	///
+	/// <para>
+	/// <b>>>> AND THE OBVIOUS WAY TO DO IT MAKES IT WORSE. MEASURED, NOT REASONED. <<<</b> The first
+	/// attempt shrank the horizontal box to 360-640 "to hug the island cluster", and the median distance
+	/// to the nearest island went <b>101.5 -> 104.3</b>: very slightly <i>farther</i>. The box really did
+	/// shrink, so the change took effect - the flight was measured inside it - and the reasoning was
+	/// simply wrong. <b>The islands stand at the CORNERS of the square</b>, (400,400), (600,400),
+	/// (600,600) and (400,600), so the original's 300-700 box already centres each island in its own
+	/// quadrant, and pulling the camera in toward (500,500) moves it to the one point that is farthest
+	/// from all four - 141 units from each. A smaller box is not a closer one.
+	/// </para>
+	/// <para>
+	/// <b>The lever is the HEIGHT.</b> With a horizontal median of 82.6 and a 3-D median of 104.3, about
+	/// 64 units of that distance is vertical. So the horizontal box is put back exactly as the original
+	/// has it and only the band is lowered, from 50-100 to <b>30-60</b>. The islands' own camera targets
+	/// sit 12.5 (jungle) to 38 (hallow) above them, so that leaves roughly 20 units of height over the
+	/// thing being looked at, and brings the distance to about <see cref="NominalDistance"/> - the
+	/// <c>sqrt(SPINRADIUS^2 + VERTICALOFFSET^2)</c> the lobby was actually composed at.
+	/// </para>
+	/// </remarks>
+	private static readonly Vector3 WanderCentre = new( 500f, 500f, 45f );
 
 	/// <summary>The full size of <see cref="WanderCentre"/>'s box - see there.</summary>
-	private static readonly Vector3 WanderExtent = new( 400f, 400f, 50f );
+	private static readonly Vector3 WanderExtent = new( 400f, 400f, 30f );
 
 	/// <summary>
 	/// How fast the camera flies, in units a second. The constructor keeps <b>1.0</b>, which is per
