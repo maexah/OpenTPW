@@ -331,6 +331,36 @@ Per frame, with the lobby's delta (`0.01 × ms`, ten units a second — see `Tic
 **Step 6 is per FRAME and is not delta-scaled**, the same trap as the lightning roll — do not convert
 it through a ticks-per-second constant.
 
+#### Every constant of it, read out of `.rdata` 2026-09-22
+
+Taken with the `read_memory` tool rather than `run_python`, per rule 102. These are the numbers the
+whole flight is made of, and they are recorded here because a later reading of the box as a *half*
+width would halve the camera's distance and look like a fix:
+
+| Where | Value | What it is |
+|---|---|---|
+| `_DAT_00702c58` | 2⁻³⁰ | Scales the 30-bit masked random to 0..1 |
+| **`_DAT_00702c5c`** | **0.5** | The roll is `centre + rand*extent − extent*0.5`, so **the extent is the FULL width** |
+| `_DAT_00702c7c` | 0.1 | The ease on **both** stored directions, per delta |
+| `_DAT_00702c78` / `_DAT_00702c84` | **+0.05 / −0.05** | The look-speed ramp: far subtracts the negative (ramps up, clamped to the cap), near subtracts the positive (decays, floored at nought) |
+| `FUN_005dfcd0` `[0x16..0x18]` | 500, 75, 500 | Box centre, middle component vertical |
+| `[0x19..0x1b]` | 400, 50, 400 | Box extents, full size |
+| `[0x1c]` / `[0x1d]` | 1.0 / 100.0 | Wander speed per tick; arrival threshold, **squared** |
+| `[0x2a]` / `[0x2b]` / `[0x2c]` | 2.0 / 2.0 / 50.0 | Look-speed cap, look speed seeded at the cap, arrival threshold **squared** |
+
+**OpenTPW matches every one of them**, and the flight was then measured in the running game to confirm
+it rather than only the constants: over 60 s the camera stayed inside the box on all three axes
+(z 55–79 of the 50–100 the box allows), a median of **101.5 units** from the nearest island, and
+three island changes. The per-frame movement independently re-derives the speed: 10 units a second
+over a 6.95 ms frame is 0.0695 units, against a measured median step of **0.0694**.
+
+**The aim is eased, and it does not snap.** A change of nearest island moves only the *target*
+`[0x30..0x32]`; the look **point** `[0x2d..0x2f]` then travels toward it at a ramped speed with its
+direction eased at the same 0.1. Measured over 150 s and 8 island changes, the view turns **no faster**
+near a change than away from one — median 5.31 against 5.59 degrees a second, with a *lower* maximum
+(15.62 against 19.07) — and over 120 s **no frame at all** stepped more than five times the median
+per-frame step. There is no swing and no jerk to find.
+
 ### Globe: spin, home, pull in
 
 | State `[5]` | What it does |

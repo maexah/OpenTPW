@@ -608,6 +608,28 @@ The ones that have bitten more than once.
   wrong with the game, the command or the reply. **When a harness sets an orientation, recompute what
   its own movement arguments mean in that orientation**, and prefer a command whose arguments are in the
   frame you are reasoning in — or assert the destination, not merely that something moved.
+- **109** — **Sampling faster than the thing you measure turns frame pacing into a rate, and storing
+  only your derived statistic means you cannot go back.** Measuring how fast a camera turns, a harness
+  polled a pure getter as fast as it could — about 144 Hz — and differenced each reply against the one
+  before. Consecutive polls either land in the same frame, giving an angle of nought that drags every
+  median down, or straddle one, in which case a whole frame's turning is divided by a 7 ms gap. Its
+  headline, "max 143.12 degrees a second", is exactly **1.0 degree in one 7 ms sample**: an artefact of
+  the sampling interval wearing the units of the subject. **Difference over a fixed window** (100 ms
+  here) so the denominator is yours and not the scheduler's, and deduplicate repeated readings before
+  any statistic. The second half cost a whole extra run: the harness wrote only the rate it had
+  computed, so when the computation proved aliased there was nothing to re-analyse. **Write the raw
+  samples to a file as well as the summary** — they are small, and the question you will want to ask of
+  them is not the one you built the harness for.
+- **110** — **The start of a run is not an event, and counting it as one can invert the verdict.** Asked
+  whether a camera swings when it changes which island it looks at, a harness bucketed every sample by
+  whether it fell within 1.5 s of a change. The **first** sample necessarily "changes" island — there
+  was no previous value — so the run's own settling landed squarely in the treatment bucket, and **20
+  of 20** of the fastest turns were inside the first 5 s. It reported near-a-change 13.48 against
+  away 10.18 and a maximum of 143 against 48: a swing, confidently. Discarding a warm-up reversed it —
+  6.66 against 8.99, with the treatment now *quieter* than the control. **Discard a warm-up before
+  anything is measured, and ignore transitions inside it**, because the first observation of any state
+  is a transition from nothing. This is rule 103's shape again: the segmentation, not the subject,
+  produced the result.
 
 ---
 

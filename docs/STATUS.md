@@ -109,6 +109,35 @@ Take counts fresh; these go stale within a day.
 
 ## Recent
 
+**2026-09-22 — the lobby's attract camera was measured against the original and is faithful, so
+`docs/CLEANUP-PLAN.md` item 8 changed nothing and is now Alexah's call.** Branch
+`alexah/106-attract-camera-aim`, which carries the instrument and the decode record only.
+
+All three of that item's claims are refuted. **The wander box is the original's own, field for
+field** — centre 500/75/500, extents 400/50/400, wander speed 1.0 a tick, arrival 100.0 squared, look
+cap 2.0, threshold 50.0 squared, both eases 0.1, the ramp ±0.05 — and its own first decode question is
+answered by `_DAT_00702c5c` = **0.5**, which makes the extent a **full** width, exactly as
+`RandomPointInBox` already had it. **The aim does not swing**: over 150 s and 8 island changes the view
+turns *no faster* near a change than away from one, median **5.31 against 5.59 °/s** with a lower
+maximum, 15.62 against 19.07. **And nothing jerks**: over 16,407 frames the per-frame step of the aim
+is median 0.0688° against a max of 0.3258°, with **zero** frames stepping more than five times the
+median.
+
+The item blamed `LookAtRate`, which belongs to the **orbit** branch — `Attract` never touches it, and
+keeps a look *point* with its own ramped speed instead. So what remains is a deviation request rather
+than a defect, and under rule 11 that is Alexah's to ask for.
+
+**A pure getter had to be added before any of it was measurable**: `attract` is a **setter** and must
+never be polled (rule 88), and `state` reports `cam=` but nothing about where the camera is *looking*.
+The console's new `aim` answers that, and polling it cannot perturb it.
+
+**Two instrument faults of mine, both now rules.** Rule **109**: polling at 144 Hz a value the game
+recomputes once a frame turned frame pacing into a rate — the first headline, "max 143.12 °/s", is
+exactly 1.0° in one 7 ms sample — and that harness stored only its derived statistic, so when the
+derivation proved aliased the run had to be repeated rather than re-analysed. Rule **110**: the start
+of the run counted as an island change, putting the flight's own settling in the treatment bucket;
+**20 of 20** fastest turns were in the first 5 s, and discarding a warm-up **inverted the verdict**.
+
 **2026-09-22 — the camcorder stops at a ride instead of walking through it, and
 `docs/CLEANUP-PLAN.md` item 2 is closed.** Branch `alexah/105-camcorder-stops-at-objects`.
 

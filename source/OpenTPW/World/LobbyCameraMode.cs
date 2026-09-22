@@ -493,6 +493,46 @@ public class LobbyCameraMode : CameraMode
 	internal static void DebugSettle() => _placed = false;
 
 	/// <summary>
+	/// What the ATTRACT flight is doing, for the debug console.
+	///
+	/// <para>
+	/// <b>A pure getter, and it exists because nothing here was observable.</b> <see cref="DebugSelect"/>,
+	/// <see cref="DebugOrbit"/> and <see cref="DebugSettle"/> are all read by the orbit branch that
+	/// <see cref="Update"/> returns before reaching while the camera is flying, and the console's
+	/// `attract` is a <b>setter</b> - polling it would select a mode rather than report one, which is
+	/// exactly the shape <c>docs/VERIFYING.md</c> rule 88 warns about. `state` carries `cam=` and so can
+	/// say where the camera stands, but nothing at all about where it is <i>looking</i> - and the aim is
+	/// the whole of the complaint this was added for.
+	/// </para>
+	/// <para>
+	/// <b>`aimDir` is the quantity that matters.</b> The camera looks along
+	/// <c>_lookPosition - _wanderPosition</c>, so the angle between that on consecutive frames is the
+	/// rate the view is turning - which is what separates a shot that eases from one that swings.
+	/// `aimDist` is beside it because the two points share one box and can pass arbitrarily close, and a
+	/// direction taken between two nearly coincident points is ill-conditioned however smoothly each of
+	/// them moves.
+	/// </para>
+	/// </summary>
+	internal static string AttractState()
+	{
+		var islands = AllIslands();
+		var nearest = islands.Count > 0 ? Nearest( islands, _wanderPosition ) : null;
+
+		var aim = _lookPosition - _wanderPosition;
+		var direction = aim.Normal;
+
+		return $"aim wandering={_wandering} " +
+			$"pos=({_wanderPosition.X:F3},{_wanderPosition.Y:F3},{_wanderPosition.Z:F3}) " +
+			$"target=({_wanderTarget.X:F3},{_wanderTarget.Y:F3},{_wanderTarget.Z:F3}) " +
+			$"look=({_lookPosition.X:F3},{_lookPosition.Y:F3},{_lookPosition.Z:F3}) " +
+			$"lookSpeed={_lookSpeed:F4} " +
+			$"aimDir=({direction.X:F5},{direction.Y:F5},{direction.Z:F5}) " +
+			$"aimDist={MathF.Sqrt( aim.LengthSquared ):F3} " +
+			$"island={(nearest != null ? islands.IndexOf( nearest ) : -1)} " +
+			$"name='{nearest?.ParkName}'";
+	}
+
+	/// <summary>
 	/// Lets go of the island on show as the lobby ends, so nothing reads an island out of a lobby that has gone.
 	/// Which island it was, and where the camera was, are kept, as they are across camera modes - see
 	/// <see cref="Paused"/> - so the lobby built next picks up where this one left off.

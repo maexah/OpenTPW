@@ -154,6 +154,16 @@ public static class DebugConsole
 				Reply( $"attract {(LobbyCameraMode.DebugHoldOrbit ? "off - orbiting the selected island" : "on - the camera flies itself")}" );
 				break;
 
+			// Where the flying camera is AIMING, which nothing could report. `attract` above is a SETTER
+			// and must never be polled (VERIFYING rule 88), and `state` carries cam= but nothing about
+			// the aim - so "the view swings when it changes island" was not a measurable claim at all.
+			// This is a pure getter, so polling it at frame rate cannot perturb what it measures.
+			case "aim":
+				Reply( Level.Current?.Kind == Level.Scene.Lobby
+					? LobbyCameraMode.AttractState()
+					: "aim: only in the lobby" );
+				break;
+
 			case "settle":
 				// Drops the camera straight onto where it is headed, so a screenshot taken next
 				// frame is the same every run instead of depending on how long the ease had.
