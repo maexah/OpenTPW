@@ -733,6 +733,36 @@ validator and applier, which walks every footprint cell, rotates the offsets for
 `+0x1b8`. **So right-click cancel needs no refund - nothing was taken.** The mode's OnUninstall is a
 bare RET; switching away frees 20 bytes and nothing else.
 
+### `FUN_005348d0`'s cardinal test, in its own terms
+
+Decompiled 2026-09-22. The rule runs on **one cell as it is created** and walks the ring; for each
+cardinal step it fetches the neighbour and branches on the neighbour's type:
+
+| Neighbour type | What it does |
+|---|---|
+| 1 (path) | links unconditionally — sets the step's bit on this cell and the opposite on the neighbour |
+| 9 (entrance) | links **only when `neighbour.Direction & (the bit of the step taken toward it)`** |
+| 10 (exit) | the same test, on the **opposite** bit |
+| 3 (queue) | forms no link at all; it only retiles, and plays effect `0x8b` |
+
+The four blocks make the bit explicit: stepping north (`DAT_007cdba0` = (0,−1)) tests `& 0x01`,
+south (`…ba8`) `& 0x10`, east (`…bc8`) `& 0x04`, west (`…bd0`) `& 0x40`. **So the tested bit is the
+direction FROM the cell being laid TO the neighbour**, and `ParkPathNeighbours.Cardinal` already
+matches it exactly — its sense is right.
+
+**The consequence is worth stating, because it is what blocks queueing for a thing built in play.**
+A path laid on the `-y` side of an entrance steps south, so it tests `& 0x10`; the shipped Belly
+Bounce's entrance at (52,23) carries `direction 0x01` with its queue on that same `-y` side. Under
+this rule that link could never have been earned — **so the shipped entrance's `mNeighbours` bit is
+authored, not computed**, which is what `park.md:940`'s "replay creation order" warning is about.
+What authors it is still open, and is the whole of `docs/QUEUE.md` Q3.
+
+**`FUN_004d8c20( baseBit, direction )` is a bit rotate**, not a lookup: it counts the right-shifts
+that reduce `baseBit` to 1 — i.e. its log2 — and left-rotates `direction` by that many places inside
+a byte, folding anything past `0x80` back down with `>> 8`. The placer passes the angle's base bit
+(1, 0x40, 0x10, 4 for 0, 0x5a, 0xb4, 0x10e), so an entrance's heading is **the shape grid's own
+per-cell direction turned by the placement angle**, and at angle 0 it is that value unchanged.
+
 ### Where a built thing's entry and exit cells come from
 
 The same constructor derives all three cell handles, at `0x004db2da`..`0x004db36b`, each as a delta
