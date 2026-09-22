@@ -40,7 +40,8 @@ public static class ParkBuilding
 	public static string Buy( int catalogueId, int cellX, int cellY, int angle = 0 )
 	{
 		if ( Level.Current is not { } level || level.ParkState is not { } state
-			|| level.Catalogue is not { } catalogue || ParkObjects.Current is not { } objects )
+			|| level.Catalogue is not { } catalogue || ParkObjects.Current is not { } objects
+			|| level.Park is not { } park )
 			return "buy: a park has to be loaded";
 
 		if ( !catalogue.TryGet( catalogueId, out var item ) )
@@ -130,7 +131,8 @@ public static class ParkBuilding
 
 		// After the footprint, never before: Stamp types every cell it covers, and the way in and the way
 		// out are two of those cells wearing a different type.
-		MarkWaysInAndOut( state, cellX + entryX, cellY + entryY, cellX + exitX, cellY + exitY, angle );
+		MarkWaysInAndOut( state, park, cellX + entryX, cellY + entryY,
+			cellX + exitX, cellY + exitY, angle );
 
 		state.Spend( item.BuildPrice );
 
@@ -341,18 +343,75 @@ public static class ParkBuilding
 	/// else - so no path and therefore no queue could ever attach to it, and
 	/// <see cref="ParkRideChoice.StartOfQueue"/> would read an empty neighbour mask for ever.
 	/// </summary>
-	private static void MarkWaysInAndOut( ParkState state, int entryCellX, int entryCellY,
+	private static void MarkWaysInAndOut( ParkState state, ParkWorld park, int entryCellX, int entryCellY,
 		int exitCellX, int exitCellY, int angle )
 	{
-		Mark( state, entryCellX, entryCellY, CellEdge.RideEnd, RotateBit( WayIn, angle ) );
+		var wayIn = RotateBit( WayIn, angle );
+
+		Mark( state, entryCellX, entryCellY, CellEdge.RideEnd, wayIn );
+		JoinToWhateverIsThere( state, park, entryCellX, entryCellY, wayIn );
 
 		// The far end only where the item declares one. An item whose picture marks no exit leaves it on
 		// the entrance, and writing type 10 over the 9 would lose the way in.
-		if ( exitCellX != entryCellX || exitCellY != entryCellY )
-			Mark( state, exitCellX, exitCellY, CellEdge.RideFarEnd, RotateBit( WayOut, angle ) );
+		if ( exitCellX == entryCellX && exitCellY == entryCellY )
+			return;
+
+		var wayOut = RotateBit( WayOut, angle );
+
+		Mark( state, exitCellX, exitCellY, CellEdge.RideFarEnd, wayOut );
+		JoinToWhateverIsThere( state, park, exitCellX, exitCellY, wayOut );
 	}
 
-	/// <summary>One cell of a footprint given the type and heading that let something join to it.</summary>
+	/// <summary>
+	/// Runs the neighbour rule over whatever the way in or out points at, <b>and only where that is
+	/// already a path</b> - the original's <c>FUN_00528a70</c>, whose <c>case 9</c> and <c>case 10</c>
+	/// arms each turn the cell's heading by the placement angle, step to the cell it names, and call
+	/// <c>FUN_005348d0</c> there when that cell's type is 1.
+	/// </summary>
+	/// <remarks>
+	/// <b>So the join is earned at PLACEMENT, against what is already standing.</b> Building beside a
+	/// path links the two; laying a path beside a thing already built is the other arm, and belongs to
+	/// the path tool rather than here.
+	/// </remarks>
+	private static void JoinToWhateverIsThere( ParkState state, ParkWorld park, int x, int y, int heading )
+	{
+		var (acrossBy, downBy) = StepFor( heading );
+		var (nextX, nextY) = (x + acrossBy, y + downBy);
+
+		if ( (acrossBy == 0 && downBy == 0) || !ParkState.OnMap( nextX, nextY ) )
+			return;
+
+		if ( ParkState.CellFor( park, nextX, nextY ).Type != CellEdge.Path )
+			return;
+
+		ParkPathNeighbours.LinkPath( state, park, nextX, nextY );
+	}
+
+	/// <summary>
+	/// The step one compass bit stands for. The ring is the executable's own, confirmed from the static
+	/// initialisers and <c>FUN_004d97e0</c>'s jump table rather than from save statistics: <c>0x01</c> is
+	/// (0,−1) and <c>0x10</c> is (0,+1). <b>This is the outward sense</b>, the mirror of
+	/// <see cref="CellEdge.BitFor"/>, and mixing the two inverts every answer.
+	/// </summary>
+	private static (int X, int Y) StepFor( int bit ) => bit switch
+	{
+		0x01 => (0, -1),
+		0x04 => (1, 0),
+		0x10 => (0, 1),
+		0x40 => (-1, 0),
+		_ => (0, 0)
+	};
+
+	/// <summary>One cell of a footprint given the type and the heading that let something join to it.</summary>
+	/// <remarks>
+	/// <b>The neighbour bit is deliberately NOT written here.</b> An earlier version of this authored it
+	/// beside the heading, on the strength of the shipped park carrying the two fields equal on both of
+	/// the Belly Bounce's end cells - and <c>FUN_00528a70</c> refutes that. Its <c>case 9</c> arm turns
+	/// the entrance's heading by the placement angle, steps to the cell that heading points at, and
+	/// <b>only where that cell is a path (type 1) does it call <c>FUN_005348d0</c></b>, the neighbour
+	/// rule, on the path. So the link is earned by re-running the generator on whatever is already
+	/// there, never stamped onto the ride's own cell.
+	/// </remarks>
 	private static void Mark( ParkState state, int x, int y, int type, int direction )
 	{
 		if ( !ParkState.OnMap( x, y ) )

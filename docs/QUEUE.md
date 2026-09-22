@@ -102,6 +102,18 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   (3) **Queue may not be laid over path on the last cell of a run** - the game refuses it
   (`queue: (42,22) is type 1, which queue may not be laid over on the last cell of a run`), so
   "lay path, then queue over it" is not a way round this.
+  (4) **The placement-time join is BUILT and still does not link, and the contradiction is the whole
+  of what is left.** `FUN_00528a70`'s `case 9` turns the entrance's heading by the placement angle,
+  steps to the cell it faces, and calls the neighbour rule there only where that cell is type 1.
+  `ParkBuilding.JoinToWhateverIsThere` reproduces exactly that. Measured with the path laid **first**
+  and the ride built beside it: the path stayed `neighbours 0x01` (pointing north at the pre-existing
+  path) and the entrance stayed `neighbours 0x00`. The arithmetic says why - `Cardinal` steps
+  `(0,+1)` = bit `0x10` and the type-9 arm tests `nb.Direction & bit`, so `0x01 & 0x10 = 0`.
+  **Either the heading authored on the entrance is wrong, or `Cardinal`'s type-9 sense is.** The
+  shipped entrance carries `direction 0x01` with its queue on the `-y` side, which under this rule
+  could never have linked either, so its bit really is authored rather than earned. `park.md:936`
+  states the rule as `nb.mDirection & D`, agreeing with the code. **Settle that before writing
+  anything else here**; it is one decode, and Q1 ticks behind it.
 - [x] **Q1b. A bought thing has no entry cell.** DONE 2026-09-22, same branch as Q1's first half. `ParkQueues.cs:224-257` draws `Pieces[TileIndex]`, so every laid queue cell is piece 0 at
   0 degrees, and `CellEdge.Blocked` refuses it. Confirm: lay a queue to the ride from Q1, screenshot the
   pieces joined, `peeps` census showing a guest walking it.

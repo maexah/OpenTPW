@@ -87,9 +87,10 @@ enough alone. That closes `park-engine.md`'s "whether mType 9 and 10 really are 
 **Its way in and out are typed too** - entrance `type 9`, exit `type 10`, both headings measured off the
 game rather than derived (`cell (42,23) type 9 direction 0x01` after a buy, against the shipped ride's
 own `(52,23)` reading), because this tree holds two compasses that disagree by name.
-**Still no guest boards it**: the entrance's own `Neighbours` bit is authored in the save and no rule
-here computes it, `LinkPath` would demote the cell rather than link it, and queue may not be laid over
-path on a run's last cell. All three are recorded on Q3, which starts further along for them.
+**Still no guest boards it.** The placement-time join is built and measured not to link: `Cardinal`
+steps bit `0x10` while the entrance carries `0x01`, so its type-9 test can never pass, and the shipped
+park's own bit could not have been earned under that rule either. **Either the authored heading or that
+test's sense is wrong** - that, and two further findings, are recorded on Q3.
 Mutations, each called in advance: **7**, **3**, **1** and **1** red; three survivals named at their
 tests, because nothing in the suite buys anything.
 
