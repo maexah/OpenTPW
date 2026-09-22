@@ -214,6 +214,15 @@ public sealed class ParkRides : Entity
 		if ( world == null || catalogue == null )
 			return;
 
+		// Said out loud, because the consequence is silent and looks exactly like the bug this fixes: with
+		// no saved script state every thing starts at its own first instruction and builds itself again.
+		// The model half warns from inside PairSavedThings for the same reason.
+		if ( world.ScriptStates.Problem != null )
+		{
+			Log.Warning( $"{ThemeName}: the park file's script states would not read, so everything in it "
+				+ $"starts from its own beginning and will replay its construction - {world.ScriptStates.Problem}" );
+		}
+
 		_saved = PairSavedThings( world, catalogue );
 
 		foreach ( var placed in world.Objects )
@@ -377,9 +386,16 @@ public sealed class ParkRides : Entity
 		// Last, because it needs the binding above to have run.
 		CommandTheGate( world );
 
+		// The restore counts go in this line because otherwise nothing anywhere reports them. A park whose
+		// saved state stops reading does not fail: every script quietly starts at its own first
+		// instruction again and the whole park replays its construction, which is the exact fault this
+		// class exists to prevent - and with no count printed, the only way to notice is to watch it.
 		Log.Info( $"{ThemeName}: {Bound} of the park's things are running a script" +
 			(Scriptless > 0 ? $", and {Scriptless} have none to run" : "") +
-			$"; {Animated} of them can see their own animations" );
+			$"; {Animated} of them can see their own animations" +
+			$"; {Resumed} resumed where the save left them" +
+			(NotResumed > 0 ? $" and {NotResumed} did not" : "") +
+			$"; {ChannelsRestored} animation channels put back" );
 	}
 
 	/// <summary>The gate's command variable, by the name its own script declares it under.</summary>
@@ -518,9 +534,12 @@ public sealed class ParkRides : Entity
 	/// </para>
 	///
 	/// <para>
-	/// The channel is started rather than having its timebase copied field by field. The file does not
-	/// carry the frame counts anyway - the engine recomputes <c>TotalAnimFrames</c> and <c>AnimFrame</c>
-	/// on the way in - so what is restorable is which clip was running and how, which is what this does.
+	/// The channel is started rather than having its timebase copied field by field: the file carries no
+	/// frame counts, and the engine recomputes <c>TotalAnimFrames</c> and <c>AnimFrame</c> on the way in.
+	/// <b>It does carry the speed, though, and that is restored.</b> Saying the file held nothing further
+	/// was wrong - the record's sixth dword lands on the channel's <c>+0xc</c>, and while fourteen of the
+	/// fifteen running channels are saved at 1, the Belly Bounce is saved at <b>1.1</b>, so passing a
+	/// literal 1 ran the park's only ride at the wrong rate for the whole session.
 	/// </para>
 	/// </summary>
 	private void Restore( RideScript script, SavedThing saved, int now )
@@ -545,18 +564,26 @@ public sealed class ParkRides : Entity
 			// therefore read a held channel as a keep-pose request, and AnimTimeControl.Start clears
 			// 0x6 on the way in, so the hold was dropped and the clip restarted from frame nought as an
 			// ordinary one-shot. Eleven of this park's fifteen restored channels carry 0x4.
+			// A channel saved as running carries a real speed; nought only ever appears on one that was
+			// not, and those are skipped above. Floored anyway, because a nought here would stop the
+			// clip dead rather than play it slowly.
+			var speed = channel.Speed > 0f ? channel.Speed : 1f;
+
 			players.Trigger( channel.Role, channel.Entry,
 				channel.Flags & (AnimTimeControl.LoopFlag | AnimTimeControl.KeepShownFlag),
-				1f, now, index );
+				speed, now, index );
 
 			// And then the state it was left in, which the engine expresses by re-entering the channel
 			// with a pseudo-role rather than by a flag: both act on the clip just loaded, and Start
 			// returns early for them having moved only the timebase - a hold backdates it a whole clip
 			// so the elapsed frame lands exactly on the total.
+			// The same speed, because a hold backdates the timebase by a whole clip and that arithmetic
+			// is done in it - handing these a different figure would put the channel somewhere its own
+			// clip never reaches.
 			if ( (channel.Flags & HeldAtEnd) != 0 )
-				players.Trigger( AnimTimeControl.HoldAtEnd, 0, AnimTimeControl.KeepShownFlag, 1f, now, index );
+				players.Trigger( AnimTimeControl.HoldAtEnd, 0, AnimTimeControl.KeepShownFlag, speed, now, index );
 			else if ( (channel.Flags & FrozenAtStart) != 0 )
-				players.Trigger( AnimTimeControl.FreezeAtStart, 0, AnimTimeControl.KeepShownFlag, 1f, now, index );
+				players.Trigger( AnimTimeControl.FreezeAtStart, 0, AnimTimeControl.KeepShownFlag, speed, now, index );
 
 			++ChannelsRestored;
 		}

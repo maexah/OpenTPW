@@ -58,7 +58,7 @@ picked 5 ahead of item 1 on 2026-09-21, then picked **3** ahead of it as well. *
 of the six closed items is in `PLAYER-GAPS.md`, and nothing there was ticked by any of them.
 
 **Because that file is untracked it does not exist in a fresh clone.** It lives only on this machine;
-if it is lost, the eight remaining items are gone with it.
+if it is lost, the three remaining items go with it, and so does the record of the six that are done.
 
 **Where it stands, 2026-09-21. ITEM 2 IS DONE and is ticked.** All four of its parts landed and every
 one was confirmed in a running park: the purchase and hire screens with buy, sell, move, carry, hire,
@@ -158,14 +158,17 @@ translated properly, with `0x1` and `0x8` carried across and held and frozen re-
 and that any reader failure degraded silently back to the frozen park; both are covered now. The counter is not guessed: the struct's length field
 equals the following body block's word count for all fourteen scripts, which pins the alignment; every
 one of the fourteen counters then lands on an exact instruction boundary, and on a `BRANCH`,
-`BRANCH_Z`, `TEST` or `WAIT`. Bouncy's 46 is the target of `BRANCH ->46` from words 33 and 38, the top
-of its idle loop. The saved variables agree with the **object records** — a separate part of the file —
+`BRANCH_Z`, `TEST` or `WAIT`. Bouncy's 46 holds a `WAIT 500` and is branched to from words
+**36 and 41** — 33 and 38 are the `LOOPANIM`s those branches follow. The fact lives once, in
+`docs/exe/ride-operation.md`; this line said 33 and 38 until the two pages were made to agree. The saved variables agree with the **object records** — a separate part of the file —
 on capacity for all six things that declare one. **The mutation was run**: disabling the single call
-site turned the suite red on `Expected:<46>. Actual:<0>`, while the seven new format tests stayed
+site turned the suite red on `Expected:<46>. Actual:<0>`, while the nine new format tests stayed
 green, which is what says they cover the reader rather than the wiring.
 
 Byte layout went to the FileFormats clone's `saves.md`; the executable decode to
-`docs/exe/ride-operation.md`. Two instrument rules came out of it, `VERIFYING.md` **104** and **105**.
+`docs/exe/ride-operation.md`. **Three** instrument rules came out of it — `VERIFYING.md` **104**, **105**
+and **106** — and 106 is the one this branch paid for: a before/after on the thing you changed cannot
+see something else going missing.
 
 **2026-09-21 — a guest is drawn between the simulation's steps instead of jumping, and
 `docs/CLEANUP-PLAN.md` item 3 is closed.** Branch `alexah/103-guests-walk-smoothly`.

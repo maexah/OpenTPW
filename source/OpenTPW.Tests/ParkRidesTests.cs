@@ -156,6 +156,40 @@ public class ParkRidesTests
 		// would show up here and nowhere else.
 		Assert.AreEqual( RideAnimations.NoRole, RoleOn( StaffRoomThing ),
 			"the Staff Room is saved running nothing, and must stay that way" );
+
+		// <b>And the channel's STATE, not just which clip it holds.</b> Every assertion above reads only
+		// AnimID, which Start sets from the role whatever the flags say - so handing the saved flag word
+		// straight in as a caller flag, or dropping the held re-entry entirely, passed all of them while
+		// eleven of the park's fifteen channels silently restarted their clip from frame nought.
+		AnimTimeControl ChannelOn( int thing, int channel = 0 )
+		{
+			var script = rides.Scheduler.Find( rides.ScriptFor( thing ) );
+			var player = script?.Animations?.Channel( channel );
+
+			Assert.IsNotNull( player, $"thing {thing} channel {channel} should exist" );
+
+			return player!;
+		}
+
+		// A Small Toilet is saved HELD on its last frame - the engine's own way of saying the clip has
+		// finished - so it must come back parked at the end rather than playing from the beginning.
+		var held = ChannelOn( ToiletThing );
+
+		Assert.IsTrue( held.TotalAnimFrames > 0f, "the toilet's clip should have a length" );
+		Assert.AreEqual( held.TotalAnimFrames, held.AnimFrame,
+			"a thing saved held belongs at the end of its clip, not at frame nought" );
+		Assert.AreNotEqual( 0, held.Flags & HeldFlag, "and must carry the engine's own held mark" );
+
+		// The Fountain is saved LOOPING, which is the other arm: it starts at the beginning and repeats.
+		var looping = ChannelOn( FountainThing );
+
+		Assert.AreNotEqual( 0, looping.Flags & LoopFlag, "the Fountain is saved looping" );
+		Assert.AreEqual( 0f, looping.AnimFrame, "so it starts at the beginning of its clip" );
+
+		// And the speed the save carries, which is not always one: this ride is saved at 1.1, and passing
+		// a literal 1f ran it at the wrong rate for the whole session.
+		Assert.AreEqual( 1.1f, ChannelOn( BellyBounceThing ).Speed, 0.001f,
+			"the Belly Bounce's saved playback speed" );
 	}
 
 	/// <summary>The Belly Bounce - thing 13, the shipped park's only ride.</summary>
@@ -173,6 +207,15 @@ public class ParkRidesTests
 
 	/// <summary>The Staff Room - thing 20, whose record saves the sentinel rather than a role.</summary>
 	private const int StaffRoomThing = 20;
+
+	/// <summary>One of the three Small Toilets - thing 21, saved HELD on its clip's last frame.</summary>
+	private const int ToiletThing = 21;
+
+	/// <summary>The engine's own mark for a channel holding its last frame - <c>AnimTimeControl</c>'s 0x4.</summary>
+	private const int HeldFlag = 0x4;
+
+	/// <summary>And for one that loops.</summary>
+	private const int LoopFlag = 0x1;
 
 	/// <summary>
 	/// Every placed thing whose archive holds a script is running one, and every one whose archive does

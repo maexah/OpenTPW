@@ -1,8 +1,13 @@
 # Memory diet
 
-What to do with each of the 56 files in `~/.claude/projects/-home-alex-repos-OpenTPW/memory/`.
+What to do with each of the files in `~/.claude/projects/-home-alex-repos-OpenTPW/memory/`.
 
-Today the folder is 1.85 MB, about 462,000 tokens. The index tells a session to read about 125,000 tokens of it before opening any code. That is more than half of a 200,000-token window, and it is why sessions compact and then forget.
+**The opening figures below are the diet's STARTING POINT, not today's.** It began at 56 files and
+1.85 MB; measured 2026-09-22 the folder is **18 files and about 4,000 lines**, so most of the move has
+happened. What has not is in the table rows still marked outstanding, and four files are still over
+`CLAUDE.md`'s 300-line rule. Do not read the next sentence as a description of the folder now.
+
+When this was written the folder was 1.85 MB, about 462,000 tokens. The index tells a session to read about 125,000 tokens of it before opening any code. That is more than half of a 200,000-token window, and it is why sessions compact and then forget.
 
 The aim: the memory folder holds **rules and the live plan only**, under 40 KB in total. Everything else moves into the repo (versioned, backed up, readable by humans and by any session) or into git history.
 

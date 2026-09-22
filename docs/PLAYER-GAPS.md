@@ -9,13 +9,14 @@ Nine things a player sees, handed over 2026-09-21, in Alexah's order **9, 6, 4, 
 then 7**. It is **untracked by instruction** — never staged, and *not* in `.gitignore`, so it shows in
 every `git status` and a `git add -A` would sweep it in (which is one more reason `CLAUDE.md` rule 13
 forbids that). It lives on this machine only and is **absent from a fresh clone** — read it before
-assuming this file is the whole of the work. **Five of its nine are now done: 9 (park load time), 6
-(sound held under a pause), 4 (the lobby ocean), 5 (one scream, on a loop, at one volume) and 3 (guests
-move in jumps, not smoothly)** — the last two both on 2026-09-21. A held scream is now replayed rather
+assuming this file is the whole of the work. **Six of its nine are now done: 9 (park load time), 6
+(sound held under a pause), 4 (the lobby ocean), 5 (one scream, on a loop, at one volume), 3 (guests
+move in jumps, not smoothly) and 1 (everything replaying its "being built" clip on every park load)** —
+3 on 2026-09-21 and 1 on 2026-09-22. A held scream is now replayed rather
 than looped, so it re-picks a sample every pass; and a walking peep's drawn position is interpolated
 per frame between two stored positions 248 ms apart, taking distinct drawn positions within one thing
-tick from a median of 2 to a median of 30. **Its remaining four are 1, 8, 2 and 7**, with item 1 the
-only untouched one before 7 — Alexah picks, and has twice picked past it.
+tick from a median of 2 to a median of 30. **Its remaining three are 8, 2 and 7**, with item 8 now the
+only untouched one before 7 — Alexah picks.
 Nothing in *this* file was ticked by any of that work: not one of the five appears here.
 
 **Alexah sets which item is the goal. One item per session** (`CLAUDE.md`, "How a session runs" 4).

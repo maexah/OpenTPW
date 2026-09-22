@@ -12,7 +12,14 @@ namespace OpenTPW;
 /// <c>0x4</c> is the one that makes a channel hold its last frame rather than count as busy - which is
 /// what most of the shipped park's things are saved doing.
 /// </param>
-public readonly record struct SavedChannel( int Role, int Entry, int Flags );
+/// <param name="Speed">
+/// How fast the clip was playing. <b>Saved state, and not always 1.</b> The engine restores it -
+/// <c>FUN_004647a0</c> copies this dword onto the channel's <c>+0xc</c>, the field its own debug
+/// dumper pointedly cannot name - and in the shipped park it is nought on every idle channel, 1 on
+/// fourteen of the fifteen running ones, and <b>1.1 on the Belly Bounce</b>, which is the park's only
+/// ride. Dropping it ran that ride's idle loop at the wrong rate for a whole session.
+/// </param>
+public readonly record struct SavedChannel( int Role, int Entry, int Flags, float Speed );
 
 /// <summary>
 /// One thing as a park save left its MODEL: the animation channels it was running.
@@ -38,11 +45,22 @@ public readonly record struct SavedThing( int CatalogueId, int Slot, SavedChanne
 /// </para>
 ///
 /// <para>
-/// <b>Measured, not assumed.</b> Of the fourteen placed things in Lost Kingdom, eleven are saved
+/// <b>Measured, not assumed.</b> Of the fourteen placed things in Lost Kingdom, <b>ten</b> are saved
 /// holding exactly the role the game settles them into when its scripts are run from the beginning -
 /// the Fountain on role 5, the three Toilets on role 5, the Jungle Spray on role 2 across all three of
-/// its lanes, the Traffic Lights looping role 5. The three that differ (the two Cameras, the Staff Room
-/// and the Bus) are things whose scripts cycle roles, so a saved snapshot is simply a different moment.
+/// its lanes, the Traffic Lights looping role 5. <b>The four that differ</b> - the two Cameras, the
+/// Staff Room and the Bus - are things whose scripts cycle roles, so a saved snapshot is simply a
+/// different moment. (Ten and four, because the count and the list have to add to fourteen; this said
+/// eleven and three until they were made to agree.)
+/// </para>
+///
+/// <para>
+/// <b>The per-node flag words are read past rather than read, and that is a deviation.</b> The engine
+/// restores them here too - bit <c>0x10</c> is the one that hides a node - so the original gets a
+/// built item's visibility from the save. This does not: <c>ParkObjects.PoseAsBuilt</c> works it out
+/// from the last frame of the construction clip instead, which is a stand-in for the same answer and
+/// is where that decision is written down. Their lengths are still walked, because the channels sit
+/// behind them and the walk has to add up.
 /// </para>
 ///
 /// <para>
@@ -212,10 +230,14 @@ public sealed class ParkThingStates
 		{
 			var at = _at + (index * ChannelDwords * 4);
 
+			// Dwords 0, 1, 2 and 6. The record's order is the engine's restore order, not the channel's
+			// own field order: FUN_004647a0 walks these eleven dwords onto a fourteen-dword channel, and
+			// its sixth lands on +0xc, the speed.
 			channels[index] = new SavedChannel(
 				Role: ReadInt32At( at + 4 ),
 				Entry: ReadInt32At( at + 8 ),
-				Flags: ReadInt32At( at ) );
+				Flags: ReadInt32At( at ),
+				Speed: ReadSingleAt( at + 24 ) );
 		}
 
 		_at += count * ChannelDwords * 4;
@@ -274,5 +296,13 @@ public sealed class ParkThingStates
 			throw new InvalidDataException( $"a word at 0x{offset:x} runs past the end of the payload" );
 
 		return BitConverter.ToInt16( _data, offset );
+	}
+
+	private float ReadSingleAt( int offset )
+	{
+		if ( offset < 0 || offset + 4 > _data.Length )
+			throw new InvalidDataException( $"a float at 0x{offset:x} runs past the end of the payload" );
+
+		return BitConverter.ToSingle( _data, offset );
 	}
 }

@@ -27,10 +27,11 @@ public readonly record struct SavedScript( int Handle, int Position, int BodyWor
 /// <para>
 /// <b>Why this exists.</b> A park loaded from a save must not replay what its things did when they
 /// were built, and the original does not suppress that with a guard - it restores each script where
-/// it left off. The Belly Bounce is the case that shows it: word 4 of <c>Bouncy.RSE</c> - its
-/// <b>second</b> instruction, after the <c>NAME</c> every one of these scripts opens with - is
+/// it left off. The Belly Bounce is the case that shows it: <c>Bouncy.RSE</c> body <b>word 4</b> is
 /// <c>WAITANIM 0 0</c>, which starts role 0, the construction clip, and with every script started
 /// from nought the ride hatches out of its egg again on every single load. Its saved counter is 46.
+/// (Word 0 is <c>NAME</c> and word 2 <c>BOUNCESETBASE</c>, so word 4 is its third instruction - the
+/// ordinal is given as a word index here because counting it has already been got wrong twice.)
 /// </para>
 ///
 /// <para>

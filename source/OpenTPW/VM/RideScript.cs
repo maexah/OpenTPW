@@ -715,8 +715,8 @@ public sealed class RideScript
 	/// <b>A park loaded from a save must not replay what its things did as they were built</b>, and the
 	/// original does not suppress that with a guard of any kind: <c>FUN_005597a0</c> restores every
 	/// script's whole record, program counter and all, so a script resumes mid-flight. The Belly Bounce
-	/// is what shows it - word 4 of <c>Bouncy.RSE</c>, its <b>second</b> instruction after the opening
-	/// <c>NAME</c>, is <c>WAITANIM 0 0</c>, which starts the construction clip; its saved counter is 46.
+	/// is what shows it - <c>Bouncy.RSE</c> body <b>word 4</b> is <c>WAITANIM 0 0</c>, which starts the
+	/// construction clip; its saved counter is 46, well past it.
 	/// </para>
 	///
 	/// <para>
