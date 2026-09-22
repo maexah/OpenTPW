@@ -86,6 +86,22 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   own confirm clause: `ParkRideChoice.StartOfQueue` (`:165-182`) reads the entry cell's `Neighbours`
   and returns nought when no bit is set, so `CanBeOffered` refuses and no guest can ever be sent.
   Decode first, then build.
+  **Three things measured for it on 2026-09-22, so this item starts further along.**
+  (1) **The way in and the way out are typed now** - `ParkBuilding` marks the entry cell `type 9` and
+  the exit `type 10`, each with the heading the shipped park carries, so Q3 no longer has to do that.
+  Read back out of a running park after a buy: `cell (42,23) type 9 direction 0x01`, against the
+  shipped Belly Bounce's own `(52,23) type 9 direction 0x01`.
+  (2) **Typing it is not enough, and this is the real gap.** Laying a path beside that cell links the
+  PATH (`cell (42,22) type 1 neighbours 0x01`) but leaves the entrance at `neighbours 0x00` - that
+  `0x01` points north at the pre-existing path, which links unconditionally as type 1, not at the
+  type-9 cell, whose rule is `nb.Direction & bit` and does not fire on that step. In the shipped park
+  the entrance's bit is **authored in the save**, never computed. `park.md:940` says exactly how to
+  approach that: *"Validate any implementation by replaying creation order, never by evaluating a
+  predicate over the finished map"*, and the generator is `FUN_005348d0`, decoded in
+  `park-engine.md` under "Building and deleting paths and queues".
+  (3) **Queue may not be laid over path on the last cell of a run** - the game refuses it
+  (`queue: (42,22) is type 1, which queue may not be laid over on the last cell of a run`), so
+  "lay path, then queue over it" is not a way round this.
 - [x] **Q1b. A bought thing has no entry cell.** DONE 2026-09-22, same branch as Q1's first half. `ParkQueues.cs:224-257` draws `Pieces[TileIndex]`, so every laid queue cell is piece 0 at
   0 degrees, and `CellEdge.Blocked` refuses it. Confirm: lay a queue to the ride from Q1, screenshot the
   pieces joined, `peeps` census showing a guest walking it.

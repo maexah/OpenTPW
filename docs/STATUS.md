@@ -33,9 +33,10 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - No finances, litter, saving a park back, video, networking. Research is inert and has nothing behind it.
 - Eight of the nine per-object windows are unbuilt. Patrol areas are dead, deferred by Alexah.
 - The `meter.wct` mapping behind the happiness gauge is wrong - the last fault Alexah found by playing.
-- **A queue a player lays is never linked to what it serves**, so no guest can board anything built during
-  play. `StartOfQueue` reads the entry cell's `Neighbours` and nothing ever sets that bit for a laid
-  queue. `docs/QUEUE.md` Q3, and its written prescription is unsafe - see the warning there.
+- **Nothing can be joined to a thing built during play**, so no guest boards one. Its way in is typed and
+  headed correctly now; what is missing is the entrance's own `Neighbours` bit, which the shipped park
+  has **authored in the save** and no rule here computes. `docs/QUEUE.md` Q3, whose written prescription
+  is unsafe - see the warning there.
 
 ## Next
 
@@ -48,8 +49,8 @@ and is still untracked, so it exists on this machine only; Q13 moves it into `do
 
 ## Not verified on screen
 
-- **A guest boarding a ride bought this session.** Blocked by Q3's missing queue link, not by anything
-  Q1 names; measured twice in a running park with the queue laid on the entry cell's own side.
+- **A guest boarding a ride bought this session.** Blocked by Q3, not by anything Q1 names; measured
+  three times in a running park, the last with the way in typed 9 and a path laid against it.
 - `SpriteScript.ScheduleFrom` and `DropUnreadyNominee`: called from `ParkPeople`, neither pinned by the
   suite - unwiring either leaves it green. They rest on the decode, not on coverage.
 - Nothing puts a staff member in a cell's occupancy list *as they walk*.
@@ -61,8 +62,8 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **887**, 0 fail, 0 skip with the game | 2026-09-22, seven for the object chain and seven for the entry cell |
-| Tests without the game | **417** ran, **470 skipped**, of 887 | 2026-09-22, measured either side rather than computed |
+| Tests | **888**, 0 fail, 0 skip with the game | 2026-09-22, seven for the object chain and eight for the entry cell |
+| Tests without the game | **418** ran, **470 skipped**, of 888 | 2026-09-22, measured either side rather than computed |
 | Build warnings | 125 | 2026-09-22 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
@@ -83,12 +84,14 @@ riders, which is the two-sided control. **And its entry and exit cells are deriv
 `S` at column 1 row 0 and `2` at column 1 row 3 land exactly on the save's own `mEntryPos` 2997 = (52,23)
 and `mExitPos` 3381 = (52,26) for the shipped Belly Bounce - two records meeting on one cell, neither
 enough alone. That closes `park-engine.md`'s "whether mType 9 and 10 really are entrance and exit".
-**Still no guest boards it**, and the remaining gate is Q3: `StartOfQueue` reads the entry cell's
-`Neighbours`, and nothing sets that bit for a laid queue. **`LinkPath` must not be called to fix it** -
-it demotes a queue cell to path and clears its direction, and its own rule says a type-3 neighbour never
-forms a link. Mutations, each called in advance: never-become-head **7 failed**, no-unlink **3 failed**,
-swapped quarter turns **1 failed**, and both the sweep reverted to the file's list and the entry cell
-removed **survived all 887** - said at the tests, because nothing in the suite buys anything.
+**Its way in and out are typed too** - entrance `type 9`, exit `type 10`, both headings measured off the
+game rather than derived (`cell (42,23) type 9 direction 0x01` after a buy, against the shipped ride's
+own `(52,23)` reading), because this tree holds two compasses that disagree by name.
+**Still no guest boards it**: the entrance's own `Neighbours` bit is authored in the save and no rule
+here computes it, `LinkPath` would demote the cell rather than link it, and queue may not be laid over
+path on a run's last cell. All three are recorded on Q3, which starts further along for them.
+Mutations, each called in advance: **7**, **3**, **1** and **1** red; three survivals named at their
+tests, because nothing in the suite buys anything.
 
 **2026-09-22 - the two Confirm clauses that were owed photographs have them.** Branch
 `alexah/108-photograph-the-two-confirms`, no code changed. All four camcorder stops read `type 4`,

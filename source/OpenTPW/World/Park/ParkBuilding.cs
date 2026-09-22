@@ -127,6 +127,11 @@ public static class ParkBuilding
 
 		state.AddObject( placed );
 		Stamp( state, footprint, thingId );
+
+		// After the footprint, never before: Stamp types every cell it covers, and the way in and the way
+		// out are two of those cells wearing a different type.
+		MarkWaysInAndOut( state, cellX + entryX, cellY + entryY, cellX + exitX, cellY + exitY, angle );
+
 		state.Spend( item.BuildPrice );
 
 		// The ground draws every cell nothing else owns, so it has to be told that these are owned now
@@ -298,6 +303,63 @@ public static class ParkBuilding
 			270 => (-y, x),
 			_ => (x, y)
 		};
+
+	/// <summary>
+	/// The direction byte the shipped park puts on a ride's way in and way out, at no turn. <b>Both are
+	/// measured off the game rather than derived</b>, because the two compasses in this tree disagree by
+	/// name: <see cref="CellEdge.BitFor"/> calls <c>0x10</c> north while the save's own compass
+	/// (<c>docs/exe/park.md</c>) calls <c>0x01</c> north at −y. Reasoning from either would have had even
+	/// odds of storing the byte inverted, which reads exactly like the cell not being marked at all.
+	/// </summary>
+	/// <remarks>
+	/// Read out of the running game at the Belly Bounce, thing 13, anchored (51,23) at angle 0:
+	/// its entrance (52,23) is <c>type 9 direction 0x01</c> and its exit (52,26) <c>type 10 direction
+	/// 0x10</c> — the two ends of its middle column, each pointing out of the footprint — while every
+	/// other cell of the box is <c>type 4 direction 0x00</c>.
+	/// </remarks>
+	private const int WayIn = 0x01;
+
+	/// <inheritdoc cref="WayIn"/>
+	private const int WayOut = 0x10;
+
+	/// <summary>
+	/// Turns one compass bit by a quarter for each quarter the thing is turned. The compass is a ring of
+	/// eight - <c>0x01 N, 0x02 NE, 0x04 E, …</c> - so a quarter turn is two places round it, which is the
+	/// same nibble arithmetic <see cref="CellEdge.Opposite"/> does for a half turn.
+	/// </summary>
+	internal static int RotateBit( int bit, int angle )
+	{
+		var quarters = ((((angle % 360) + 360) % 360) / 90) * 2;
+
+		return ((bit << quarters) | (bit >> (8 - quarters))) & 0xff;
+	}
+
+	/// <summary>
+	/// Types the cell a guest goes in by and the one they come out of, so that something can be joined to
+	/// them. <b>Without this a bought thing is type 4 all over</b>, and
+	/// <see cref="ParkPathNeighbours"/>'s cardinal rule links a neighbour of type 1, 9 or 10 and nothing
+	/// else - so no path and therefore no queue could ever attach to it, and
+	/// <see cref="ParkRideChoice.StartOfQueue"/> would read an empty neighbour mask for ever.
+	/// </summary>
+	private static void MarkWaysInAndOut( ParkState state, int entryCellX, int entryCellY,
+		int exitCellX, int exitCellY, int angle )
+	{
+		Mark( state, entryCellX, entryCellY, CellEdge.RideEnd, RotateBit( WayIn, angle ) );
+
+		// The far end only where the item declares one. An item whose picture marks no exit leaves it on
+		// the entrance, and writing type 10 over the 9 would lose the way in.
+		if ( exitCellX != entryCellX || exitCellY != entryCellY )
+			Mark( state, exitCellX, exitCellY, CellEdge.RideFarEnd, RotateBit( WayOut, angle ) );
+	}
+
+	/// <summary>One cell of a footprint given the type and heading that let something join to it.</summary>
+	private static void Mark( ParkState state, int x, int y, int type, int direction )
+	{
+		if ( !ParkState.OnMap( x, y ) )
+			return;
+
+		state.SetRecord( x, y, state.Record( x, y ) with { Type = type, Direction = (byte)direction } );
+	}
 
 	/// <summary>Marks every cell of a footprint as built on, and names the thing standing there.</summary>
 	private static void Stamp( ParkState state, (int Left, int Top, int Right, int Bottom) footprint, int thingId )

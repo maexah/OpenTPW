@@ -155,4 +155,36 @@ public class ParkEntryCellTests
 		Assert.IsTrue( items > 200, $"only {items} items were catalogued across four themes" );
 		Assert.IsTrue( withEntrance > 0, "no item anywhere declared an entrance" );
 	}
+
+	/// <summary>
+	/// The compass bit a way in or a way out wears, carried round with the thing it belongs to. The ring
+	/// is eight wide - <c>0x01 N, 0x02 NE, 0x04 E, …</c> - so a quarter turn moves a bit two places.
+	/// </summary>
+	/// <remarks>
+	/// <b>The unturned values are measured, not chosen</b>: the shipped Belly Bounce at angle 0 carries
+	/// <c>direction 0x01</c> on its type-9 entrance at (52,23) and <c>0x10</c> on its type-10 exit at
+	/// (52,26), read out of the running game.
+	/// <para>
+	/// <b>Mutation:</b> rotating one place a quarter instead of two puts the byte on a diagonal, which no
+	/// cell of the shipped park carries on either field, and fails here.
+	/// </para>
+	/// </remarks>
+	[TestMethod]
+	public void AWayInCarriesItsHeadingRoundWithTheThing()
+	{
+		Assert.AreEqual( 0x01, ParkBuilding.RotateBit( 0x01, 0 ), "no turn leaves it alone" );
+		Assert.AreEqual( 0x04, ParkBuilding.RotateBit( 0x01, 90 ), "a quarter moves it two places" );
+		Assert.AreEqual( 0x10, ParkBuilding.RotateBit( 0x01, 180 ), "a half is the opposite bit" );
+		Assert.AreEqual( 0x40, ParkBuilding.RotateBit( 0x01, 270 ) );
+
+		Assert.AreEqual( 0x01, ParkBuilding.RotateBit( 0x01, 360 ), "a full circle comes home" );
+
+		// The way out starts on the opposite bit to the way in and stays opposite through every turn,
+		// which is what keeps a ride's two ends at the two ends of its middle column.
+		foreach ( var angle in new[] { 0, 90, 180, 270 } )
+		{
+			Assert.AreEqual( CellEdge.Opposite( ParkBuilding.RotateBit( 0x01, angle ) ),
+				ParkBuilding.RotateBit( 0x10, angle ), $"the two ends stay opposite at {angle}" );
+		}
+	}
 }
