@@ -112,4 +112,153 @@ public class ParkPathBuildingTests
 		Assert.AreEqual( 18, protectedCells,
 			"the save carries NOMODIFY on 18 of them - the loader's runtime flag is a different thing" );
 	}
+
+	/// <summary>
+	/// A QUEUE cell is given a piece, which <see cref="ParkPathBuilding.Retile"/> answered only for paths.
+	///
+	/// <para>
+	/// <b>The failure this pins was invisible rather than wrong-looking.</b> A laid queue cell kept
+	/// whatever tile index the ground under it carried - <b>55</b> on bare ground - which is outside
+	/// <see cref="ParkQueues"/>'s table of eight, so the cell drew <b>nothing at all</b> and was counted
+	/// as naming a piece the game has no model for. Measured in a running park before the arm existed:
+	/// a queue laid at (42,22) read <c>tile set 2 index 55 angle 0</c>, and <c>drawn</c> reported the
+	/// park's four shipped pieces with five queue cells standing in it.
+	/// </para>
+	/// </summary>
+	/// <remarks>
+	/// <b>The expected values are the shipped park's own art, not a reading of the table.</b> Its three
+	/// straight queue cells at (50,22) and (51,22) carry <c>index 2 angle 270</c> against a table row of
+	/// <c>index 2 angle 90</c> - the 180 comes from the direction base, which applies to a straight.
+	/// <para>
+	/// <b>Mutation:</b> taking the queue arm out of <see cref="ParkPathBuilding.Retile"/> leaves the
+	/// index at 55 and fails here.
+	/// </para>
+	/// </remarks>
+	[TestMethod]
+	public void ALaidQueueCellIsGivenAPieceFromTheGamesOwnTable()
+	{
+		var park = World();
+		var state = new ParkState( park );
+
+		Assert.AreEqual( 0, ParkState.CellFor( park, 15, 10 ).Type, "(15,10) should be bare ground to begin with" );
+		Assert.AreEqual( 55, ParkState.CellFor( park, 15, 10 ).TileIndex,
+			"bare ground names no piece, and 55 is what a queue cell was left carrying" );
+
+		// A queue running east to west, which is the shape three of the shipped park's four carry.
+		state.SetRecord( 15, 10, ParkState.CellFor( park, 15, 10 ) with
+		{
+			Type = ParkRideChoice.QueueCellType,
+			Neighbours = 0x44,
+			Direction = 0x04
+		} );
+
+		ParkPathBuilding.Retile( state, park, 15, 10 );
+
+		Assert.AreEqual( ParkQueues.QueueTileSet, ParkState.CellFor( park, 15, 10 ).TileSet, "a queue cell's set is 2" );
+		Assert.AreEqual( 2, ParkState.CellFor( park, 15, 10 ).TileIndex, "mask 0x44 is a straight" );
+		Assert.AreEqual( 270, ParkState.CellFor( park, 15, 10 ).TileAngle,
+			"and direction 0x04 carries the table's 90 round to 270 - the shipped (50,22) and (51,22) exactly" );
+	}
+
+	/// <summary>
+	/// The queue cell where a queue meets a path draws the <b>end</b> piece - three more on the index for
+	/// each cardinal link that reaches a path, which is the shipped (49,22)'s own <c>index 5</c>.
+	/// </summary>
+	/// <remarks>
+	/// <b>The link has to be MUTUAL, and the second half of this is what pins that.</b> The original
+	/// counts a neighbour only where this cell's mask carries the bit AND the neighbour's own mask
+	/// carries the opposite one - a park's mask is legitimately full of one-sided bits, so counting
+	/// those would bump cells the original leaves alone.
+	/// </remarks>
+	[TestMethod]
+	public void TheQueueCellWhereItMeetsAPathDrawsTheEndPiece()
+	{
+		var park = World();
+		var state = new ParkState( park );
+
+		Assert.AreEqual( 0, ParkState.CellFor( park, 24, 10 ).Type,
+			"(24,10) should be bare ground, or the east side would bump the index too" );
+
+		// A path to the WEST naming the queue cell back - 0x40 from the queue, 0x04 returning.
+		state.SetRecord( 22, 10, ParkState.CellFor( park, 22, 10 ) with
+		{
+			Type = CellEdge.Path,
+			Neighbours = 0x04
+		} );
+
+		state.SetRecord( 23, 10, ParkState.CellFor( park, 23, 10 ) with
+		{
+			Type = ParkRideChoice.QueueCellType,
+			Neighbours = 0x44,
+			Direction = 0x04
+		} );
+
+		ParkPathBuilding.Retile( state, park, 23, 10 );
+
+		Assert.AreEqual( 5, ParkState.CellFor( park, 23, 10 ).TileIndex,
+			"two for the straight and three for the path it meets - the shipped (49,22) exactly" );
+
+		// One-sided is not a link. A second overlay, so the first half's records cannot answer:
+		// ParkState.Current is whichever was built last.
+		var second = new ParkState( park );
+
+		second.SetRecord( 22, 10, ParkState.CellFor( park, 22, 10 ) with { Type = CellEdge.Path, Neighbours = 0 } );
+		second.SetRecord( 23, 10, ParkState.CellFor( park, 23, 10 ) with
+		{
+			Type = ParkRideChoice.QueueCellType,
+			Neighbours = 0x44,
+			Direction = 0x04
+		} );
+
+		ParkPathBuilding.Retile( second, park, 23, 10 );
+
+		Assert.AreEqual( 2, ParkState.CellFor( park, 23, 10 ).TileIndex,
+			"a bit the neighbour does not carry back is not a link, so the straight stands" );
+	}
+
+	/// <summary>
+	/// A queue cell always names a piece the game actually has, however many paths it meets.
+	///
+	/// <para>
+	/// <b>This was found by looking at a screenshot, and no number in the run reported it.</b> Two
+	/// mutual path links bump a corner's index to 4 + 3 + 3 = <b>10</b> against a table of
+	/// <see cref="ParkQueues.PieceCount"/> pieces, and <see cref="ParkQueues"/> then declines to draw a
+	/// piece it has no model for - while <see cref="ParkGround"/> has already left the cell alone
+	/// because its tile set is 2. The result is a hole with the sky showing through it, photographed in
+	/// a running park at (44,22).
+	/// </para>
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutation:</b> removing the loop that drops links until the index fits puts the index at 10 and
+	/// fails here - and in a park it puts the hole back.
+	/// </remarks>
+	[TestMethod]
+	public void AQueueCellMeetingTwoPathsStillNamesAPieceTheGameHas()
+	{
+		var park = World();
+		var state = new ParkState( park );
+
+		// Paths to the west and to the north, each naming the queue cell back, so both links are mutual.
+		state.SetRecord( 25, 10, ParkState.CellFor( park, 25, 10 ) with { Type = CellEdge.Path, Neighbours = 0x04 } );
+		state.SetRecord( 26, 9, ParkState.CellFor( park, 26, 9 ) with { Type = CellEdge.Path, Neighbours = 0x10 } );
+
+		// A corner facing north - mask 0x41 with direction 0x01 is one of the four pairs the original
+		// bumps by one, so this starts at 4 before either link is counted.
+		state.SetRecord( 26, 10, ParkState.CellFor( park, 26, 10 ) with
+		{
+			Type = ParkRideChoice.QueueCellType,
+			Neighbours = 0x41,
+			Direction = 0x01
+		} );
+
+		ParkPathBuilding.Retile( state, park, 26, 10 );
+
+		var index = ParkState.CellFor( park, 26, 10 ).TileIndex;
+
+		Assert.IsTrue( index < ParkQueues.PieceCount,
+			$"index {index} is outside the game's table of {ParkQueues.PieceCount} pieces, so the cell draws "
+			+ "nothing and the sky shows through the ground" );
+		Assert.AreEqual( 7, index,
+			"one link is dropped and one kept - as many as the table can express, rather than none" );
+	}
 }

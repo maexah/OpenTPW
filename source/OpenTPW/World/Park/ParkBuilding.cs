@@ -324,14 +324,28 @@ public static class ParkBuilding
 
 	/// <summary>
 	/// Turns one compass bit by a quarter for each quarter the thing is turned. The compass is a ring of
-	/// eight - <c>0x01 N, 0x02 NE, 0x04 E, …</c> - so a quarter turn is two places round it, which is the
-	/// same nibble arithmetic <see cref="CellEdge.Opposite"/> does for a half turn.
+	/// eight - <c>0x01 N, 0x02 NE, 0x04 E, …</c> - and a quarter turn is two places <b>backwards</b> round
+	/// it, which is the way <see cref="RotateDelta"/> turns a cell delta.
 	/// </summary>
+	/// <remarks>
+	/// <b>The sense is read off <c>FUN_004d8c20</c>, and this turned the other way until it was.</b> That
+	/// function left-rotates the byte by <c>log2</c> of the angle's base bit, and the placer pairs the
+	/// bases <c>1</c>, <c>0x40</c>, <c>0x10</c>, <c>4</c> with the angles 0, 90, 180 and 270
+	/// (<c>0x00528f62</c>..<c>0x00528f8b</c>) - so a quarter is a left-rotate of six, which is a
+	/// right-rotate of two: east <c>0x04</c> becomes north <c>0x01</c>. <c>MapDelta::Rotate</c> sends the
+	/// east delta <c>(1,0)</c> to <c>(0,-1)</c> at that same angle, so the two agree at all four.
+	/// <para>
+	/// <b>Turned the other way, a thing built at a quarter or three quarters put its way in 180 degrees
+	/// from where <see cref="RotateDelta"/> had just put its entry cell</b> - pointing back into its own
+	/// footprint - so nothing could ever be joined to it. The two agree at 0 and 180 whichever way this
+	/// turns, which is why every test and every run stayed green over it.
+	/// </para>
+	/// </remarks>
 	internal static int RotateBit( int bit, int angle )
 	{
-		var quarters = ((((angle % 360) + 360) % 360) / 90) * 2;
+		var places = (8 - (((((angle % 360) + 360) % 360) / 90) * 2)) & 7;
 
-		return ((bit << quarters) | (bit >> (8 - quarters))) & 0xff;
+		return ((bit << places) | (bit >> (8 - places))) & 0xff;
 	}
 
 	/// <summary>
@@ -341,7 +355,7 @@ public static class ParkBuilding
 	/// else - so no path and therefore no queue could ever attach to it, and
 	/// <see cref="ParkRideChoice.StartOfQueue"/> would read an empty neighbour mask for ever.
 	/// </summary>
-	private static void MarkWaysInAndOut( ParkState state, ParkWorld park, int entryCellX, int entryCellY,
+	internal static void MarkWaysInAndOut( ParkState state, ParkWorld park, int entryCellX, int entryCellY,
 		int exitCellX, int exitCellY, int angle )
 	{
 		var wayIn = RotateBit( WayIn, angle );
@@ -370,6 +384,12 @@ public static class ParkBuilding
 	/// <b>So the join is earned at PLACEMENT, against what is already standing.</b> Building beside a
 	/// path links the two; laying a path beside a thing already built is the other arm, and belongs to
 	/// the path tool rather than here.
+	/// <para>
+	/// <b>The bit pointing back is written whatever is standing there, and only the re-link is
+	/// conditional.</b> The placer writes its pair into the two cells outright, before it looks at what
+	/// the faced cell is - which is what gives a ride built on bare ground somewhere for a queue to
+	/// attach, rather than only one built against an existing path.
+	/// </para>
 	/// </remarks>
 	private static void JoinToWhateverIsThere( ParkState state, ParkWorld park, int x, int y, int heading )
 	{
@@ -379,7 +399,17 @@ public static class ParkBuilding
 		if ( (acrossBy == 0 && downBy == 0) || !ParkState.OnMap( nextX, nextY ) )
 			return;
 
-		if ( ParkState.CellFor( park, nextX, nextY ).Type != CellEdge.Path )
+		// The other half of the placer's pair: the cell the way in or out faces gains the bit pointing
+		// back at it, so the two adjoin. Without it the end cell names a neighbour that does not name it
+		// back, and CellEdge.Blocked refuses the step in from every direction.
+		var faced = ParkState.CellFor( park, nextX, nextY );
+
+		state.SetRecord( nextX, nextY, faced with
+		{
+			Neighbours = (byte)(faced.Neighbours | CellEdge.Opposite( heading ))
+		} );
+
+		if ( faced.Type != CellEdge.Path )
 			return;
 
 		ParkPathNeighbours.LinkPath( state, park, nextX, nextY );
@@ -405,23 +435,16 @@ public static class ParkBuilding
 	/// it.
 	/// </summary>
 	/// <remarks>
-	/// <b>The neighbour bit is a DECLARED DEVIATION: the end state is the original's, the step that
-	/// produces it is not.</b> Every route the engine takes to that bit has been followed and none of
-	/// them writes it for a thing built in play. <c>FUN_005348d0</c> is the only writer, through paired
-	/// <c>FUN_00522700</c> calls, and its cardinal test refuses here: a cell laid on the entrance's own
-	/// queue side steps toward it with the opposite bit to the heading the entrance carries, so
-	/// <c>neighbour.Direction &amp; bit</c> is nought. <c>FUN_00528a70</c>'s <c>case 9</c> only re-runs
-	/// that same rule on an adjacent path, and <c>FUN_00532fc0</c>'s ops <c>0x81</c>, <c>0x85</c> and
-	/// <c>0x86</c> - the obvious candidates, called right after it - retile, do track bookkeeping and
-	/// notify the thing. <b>The shipped park's own entrance could not have earned its bit under the
-	/// decoded rule either</b>, so in the original it comes from somewhere still unfound.
+	/// <b>The bit is the placer's own, written where the placer writes it.</b> <c>FUN_00528a70</c> sets
+	/// the pair itself after its footprint sweep (<c>0x005297f0</c>..<c>0x00529837</c>) - this cell takes
+	/// the bit pointing at the cell it faces, and that cell takes the opposite bit back. Neither end is
+	/// earned by the neighbour rule: <c>FUN_005348d0</c>'s type-9 arm tests
+	/// <c>neighbour.Direction &amp; bit</c>, and a cell on the entrance's own queue side steps toward it
+	/// with the opposite bit, so <b>the shipped park's own entrance could not have earned its bit
+	/// either</b>. See <c>docs/exe/park-engine.md</c>, "What authors an entrance's <c>mNeighbours</c>".
 	/// <para>
-	/// What IS measured is the state that must hold: the Belly Bounce's entrance reads
-	/// <c>neighbours 0x01 direction 0x01</c> with its queue on the <c>-y</c> side, and
-	/// <see cref="ParkRideChoice.StartOfQueue"/> maps that <c>0x01</c> to the step <c>(0,-1)</c> - the
-	/// queue cell. So the bit is written to match the shipped data rather than invented, and without it
-	/// nothing a player builds can ever be queued for, which is the risky blank rule 11 is about.
-	/// The mechanism is counted, not the value.
+	/// <b>The bit is OR'd rather than written over</b>, which is the original's <c>mNeighbours |=</c> and
+	/// matters for an end cell that already adjoins something.
 	/// </para>
 	/// </remarks>
 	private static void Mark( ParkState state, int x, int y, int type, int direction )
@@ -429,13 +452,13 @@ public static class ParkBuilding
 		if ( !ParkState.OnMap( x, y ) )
 			return;
 
-		Unimplemented.Report( "RIDE_END_NEIGHBOUR_AUTHORING" );
+		var cell = state.Record( x, y );
 
-		state.SetRecord( x, y, state.Record( x, y ) with
+		state.SetRecord( x, y, cell with
 		{
 			Type = type,
 			Direction = (byte)direction,
-			Neighbours = (byte)direction
+			Neighbours = (byte)(cell.Neighbours | direction)
 		} );
 	}
 

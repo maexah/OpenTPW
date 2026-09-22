@@ -80,6 +80,13 @@ public sealed class ParkQueues : Entity
 		["quedead", "quedead", "questra", "quebnd2", "quebnd1", "queend", "quebin1", "quebin2"];
 
 	/// <summary>
+	/// How many pieces the game's own table holds, which is what a queue cell's tile index has to
+	/// address. <see cref="ParkPathBuilding"/> asks so that an index landing outside it is counted where
+	/// it is computed rather than only where it fails to draw.
+	/// </summary>
+	internal static int PieceCount => Pieces.Length;
+
+	/// <summary>
 	/// How far round a piece of queue stands, which is <b>not</b> how far round a built thing stands: the
 	/// executable turns a queue piece by <c>360 - angle</c>, folding 360 back to 0 (FUN_005229e0), where an
 	/// item takes its saved angle as it is (<see cref="ParkObjects.Turn"/>).

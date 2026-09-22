@@ -838,6 +838,18 @@ So the bit a queue needs is authored at placement time, on both cells together, 
 neighbour rule — which is exactly why no replay of `FUN_005348d0` and no predicate over the finished
 map can reproduce it.
 
+**The `mDirection` half of the FACED-CELL write is refuted by the shipped park.** The pair above has
+the faced cell taking `mDirection = H` as well as the bit. The Belly Bounce's **exit** at (52,26)
+carries `direction 0x10`, and the exit table sends `0x10` to (x, y+1) = **(52,27)** — which reads
+`neighbours 0x39 direction 0x00` in a running park. It carries the bit `0x01` pointing back at the
+exit and **no direction byte at all**. The entrance side cannot separate the two readings, because its
+faced cell (52,22) is a queue cell whose `0x10` the queue tool's own flow byte would write anyway; the
+exit's faced cell is the only shipped cell that can testify, and it says the direction is not written.
+So OpenTPW reproduces `mNeighbours |= …` on both cells and the direction on the end cell only
+(`ParkBuilding.Mark`, `JoinToWhateverIsThere`). Whether the placer's second write is conditional, or is
+overwritten by whatever later laid (52,27)'s path, is **not established** — only that writing it
+unconditionally contradicts the one cell that can be checked.
+
 The arm is reached only when the build flag (`param_5`) is set, the test flag (`param_6`) is clear, and
 `FUN_0052fab0()` is non-zero — that gate is `DAT_008187f8 != 0 ? 0 : DAT_0081b0cc`. The exit half
 repeats the whole thing for `iStack_44`/`iStack_48` behind a second `FUN_0052fab0()` test.
@@ -861,6 +873,22 @@ that reduce `baseBit` to 1 — i.e. its log2 — and left-rotates `direction` by
 a byte, folding anything past `0x80` back down with `>> 8`. The placer passes the angle's base bit
 (1, 0x40, 0x10, 4 for 0, 0x5a, 0xb4, 0x10e), so an entrance's heading is **the shape grid's own
 per-cell direction turned by the placement angle**, and at angle 0 it is that value unchanged.
+
+**WHICH WAY it turns, because the mechanism above does not say it and a reimplementation has to
+choose.** A quarter turn pairs with base `0x40`, whose log2 is 6, and a left-rotate of six inside a
+byte is a **right-rotate of two** — so east `0x04` becomes north `0x01` and the ring runs backwards
+against the angle. `MapDelta::Rotate` (`FUN_004d9cc0`) turns a cell delta the same way, sending the
+east delta `(1,0)` to `(0,−1)` at `0x5a`, and **the two agree at all four angles**. The base-to-angle
+pairing is read from the placer's own dispatch rather than taken from the table above:
+`0x00528f8b` writes base `1` for angle 0, `0x0052900f` `0x40` for `0x5a`, `0x00528fe7` `0x10` for
+`0xb4`, `0x00528fb7` `4` for `0x10e`. The rotate itself is `0x004d8c2a`..`0x004d8c4b`, and the
+`> 0x80` fold means a MULTI-bit input would not rotate correctly — the placer only ever passes one bit.
+
+**A bit and a delta turn the same way at 0 and at 180 whichever sense is chosen**, so only a quarter or
+three quarters can tell a wrong one apart. That is how OpenTPW's `ParkBuilding.RotateBit` carried the
+inverted sense — with a test asserting the inverted value, and `RotateDelta` beside it correct — until
+this was read: a thing built at a quarter turn had its way in pointing 180 degrees from its own entry
+cell, back across its own footprint, where nothing could ever be joined to it.
 
 ### Where a built thing's entry and exit cells come from
 
@@ -1344,6 +1372,15 @@ for each cardinal link reaching a path cell**, but only when the link is **mutua
 own mask carries the opposite bit) and a low-nibble flags test passes **on the TRACK cell** beside it
 — a separate `0x28`-stride array, re-targeted through its parent where that cell defers — **not on
 the path cell**.
+
+**That `+3` can exceed the MODEL table, and a reimplementation without the gate reaches it.** The queue
+models are a table of **eight** (`0x76338c`, walked by `FUN_00522900` and indexed by `FUN_005229e0`),
+so an index of 8 or more names nothing at all. A straight with two mutual path links takes
+`2 + 3 + 3 = 8`; a corner takes its `+1` first and reaches `3 + 1 + 3 + 3 = 10`. **Lost Kingdom cannot
+arbitrate** — its one end piece at (49,22) has a single path link, so no cell in it ever gets past 5 —
+and whether the track-cell flags gate is what keeps the original inside the table is therefore **not
+established**. Measured in OpenTPW with that gate unreproduced: such a cell drew nothing, and because
+the ground leaves any tile-set-2 cell to the queue renderer, the **sky showed through the hole**.
 
 **Queue cells need a filler ground tile as well as a model.** When the set is 2, `FUN_005365d0` frees
 any existing mesh, instantiates a per-cell model through `FUN_005229e0`, stores the handle in

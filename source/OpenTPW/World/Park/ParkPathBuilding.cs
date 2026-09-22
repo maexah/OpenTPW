@@ -248,23 +248,18 @@ public static class ParkPathBuilding
 
 		var flow = FlowFrom( fromX, fromY, cellX, cellY );
 
-		// The bits that let a guest step INTO this cell and on toward what it serves. <b>Without them
-		// the cell is unenterable from every direction</b>: CellEdge.Blocked refuses a step onto a queue
-		// with `(to.Neighbours & BitFor( direction )) == 0`, and a cell laid without a mask carries
-		// nought. Measured in a running park - a bought ride reached OFFERABLE True with a walked queue
-		// and still nobody could join it, because this was 0x00.
+		// The flow byte is the original's +0x0d, written as the OPPOSITE of the step the run took into
+		// this cell and only while it is still nought - first writer wins, which is why a cell the placer
+		// has already pointed at its ride keeps that heading rather than being turned round by the run.
 		//
-		// <b>FlowFrom is already in the sense Blocked tests.</b> It answers 0x01 for a step in +y, and
-		// CellTrace.Ahead puts South at +y while CellEdge.BitFor( South ) is 0x01 - the same bit for the
-		// same step, so the byte needs no converting.
-		//
-		// <b>A DECLARED DEVIATION in mechanism, not in value</b>: the shipped park's queue cells carry
-		// real masks ((52,22) is 0x50, (51,22) is 0x44) and the engine step that authors them is not
-		// decoded - it is not FUN_005348d0, whose cardinal rule says a type-3 neighbour never forms a
-		// link. So the end state is reproduced and the mechanism is counted. Only the two bits this
-		// cell needs are set; joining a queue along its length is the rest of Q3 and is left alone.
-		var onward = FlowFrom( cellX, cellY, serves.EntryCellX, serves.EntryCellY );
-
+		// THE MASK BIT IS THE ONE PART STILL NOT DECODED, and it is one bit rather than the pair it was.
+		// The way in is authored by the placer now (ParkBuilding.Mark), so a cell laid against a ride
+		// already adjoins it; what has no decoded writer is this cell's own bit back toward the cell the
+		// run came from - op 0x82 writes the flow byte and nothing else, and FUN_005348d0's cardinal rule
+		// says a type-3 neighbour never forms a link. Without some bit here CellEdge.Blocked refuses the
+		// step in from every direction, so it is set to match the shipped park's own queue cells and
+		// counted. FlowFrom is already in the sense Blocked tests: it answers 0x01 for a step in +y, and
+		// CellEdge.BitFor( South ) is 0x01 for that same step.
 		Unimplemented.Report( "QUEUE_CELL_NEIGHBOUR_AUTHORING" );
 
 		state.SetRecord( cellX, cellY, cell with
@@ -272,7 +267,7 @@ public static class ParkPathBuilding
 			Type = ParkRideChoice.QueueCellType,
 			TileSet = ParkQueues.QueueTileSet,
 			Direction = cell.Direction != 0 ? cell.Direction : (byte)flow,
-			Neighbours = (byte)(cell.Neighbours | flow | onward),
+			Neighbours = (byte)(cell.Neighbours | flow),
 			ParentId = (ushort)MapStep.CellId( serves.CellX, serves.CellY )
 		} );
 
@@ -439,19 +434,98 @@ public static class ParkPathBuilding
 	}
 
 	/// <summary>Works out what a cell should draw now and records it - the original's <c>FUN_005365d0</c>.</summary>
-	private static void Retile( ParkState state, ParkWorld park, int x, int y )
+	/// <remarks>
+	/// <b>A QUEUE cell is retiled too, and this answered only for paths until it was.</b>
+	/// <c>FUN_00535dd0</c> takes <c>abs(mType)</c> and sends 3 to its own eleven-row table at
+	/// <c>DAT_007630b0</c>, exactly as it sends a path to the forty-nine at <c>DAT_00763138</c> - so a
+	/// laid queue cell has a piece like any other cell. Left out, a queue cell kept whatever tile index
+	/// the ground under it carried - <b>55 on bare ground</b>, which is outside
+	/// <c>ParkQueues.Pieces</c> - so it drew <b>nothing at all</b> and was counted as a cell naming a
+	/// piece the game has no table for.
+	/// <para>
+	/// Internal rather than private only so that it can be tested, the same reason
+	/// <see cref="ParkBuilding.Stamp"/> is: <see cref="LayQueue"/> needs a loaded level, and a test that
+	/// re-derived the lookup instead of calling this would pass just as happily with the queue arm put
+	/// back.
+	/// </para>
+	/// </remarks>
+	internal static void Retile( ParkState state, ParkWorld park, int x, int y )
 	{
 		var cell = ParkState.CellFor( park, x, y );
+		var queue = cell.Type == ParkRideChoice.QueueCellType;
 
-		if ( cell.Type != PathType )
+		if ( cell.Type != PathType && !queue )
 			return;
 
 		// The art variant is a coin the original carries between calls, so a straight is not a
 		// function of its neighbours at all - see ParkPathTiles.Vary. Nothing here reproduces the
 		// original's RNG sequence, and it is cosmetic either way.
-		var (set, index, angle) = ParkPathTiles.TileFor( cell.Type, cell.Neighbours, cell.Direction );
+		var links = queue ? PathLinks( park, x, y, cell ) : 0;
+		var (set, index, angle) = ParkPathTiles.TileFor( cell.Type, cell.Neighbours, cell.Direction, links );
+
+		// A queue cell whose index lands outside the game's own table of pieces draws NOTHING, and the
+		// ground has already been told to leave a tile-set-2 cell alone - so the SKY SHOWS THROUGH a
+		// hole where the piece belongs. Photographed once: a cell with two mutual path links takes
+		// 2 + 3 + 3 = 8 against a table of eight, and the park had a flat sky-coloured square in it.
+		//
+		// The BUMP is the uncertain part here, not the table row. The original gates each link on a
+		// flags test against the TRACK cell beside this one - a separate array this project has no
+		// layer for - so it cannot say which of the two links the original would have refused. Dropping
+		// links until the index is one the table holds keeps the game's own art and the end piece the
+		// cell is asking for; the alternative is the hole. The shipped park cannot arbitrate: its one
+		// end piece at (49,22) has a single path link, so no cell in it ever reaches this.
+		while ( queue && index >= ParkQueues.PieceCount && links > 0 )
+		{
+			Unimplemented.Report( "QUEUE_TILE_INDEX_OUTSIDE_TABLE" );
+
+			--links;
+
+			(set, index, angle) = ParkPathTiles.TileFor( cell.Type, cell.Neighbours, cell.Direction, links );
+		}
 
 		state.SetRecord( x, y, cell with { TileSet = set, TileIndex = index, TileAngle = angle } );
+	}
+
+	/// <summary>
+	/// How many of a queue cell's cardinal links reach a path - the <b>three</b> the original adds to a
+	/// queue's tile index for each one, which is what makes the cell where a queue meets a path draw the
+	/// end piece rather than a straight.
+	/// </summary>
+	/// <remarks>
+	/// <b>The link has to be MUTUAL.</b> <c>FUN_00535dd0</c> walks the four cardinals and counts a
+	/// neighbour only where this cell's mask carries the bit, the neighbour is type 1, and the
+	/// neighbour's own mask carries the opposite bit - so a one-sided bit, which a park's mask is
+	/// legitimately full of, does not count.
+	/// <para>
+	/// <b>Its fourth test is NOT reproduced and is counted instead.</b> The original also asks
+	/// <c>FUN_0053ad20</c> of the TRACK cell beside this one - a separate <c>0x28</c>-stride array,
+	/// re-targeted through its parent where that cell defers - and this project has no track-cell layer
+	/// to ask. So a link this vouches for might be one the original refuses.
+	/// </para>
+	/// </remarks>
+	private static int PathLinks( ParkWorld park, int x, int y, ParkWorld.MapCell cell )
+	{
+		var links = 0;
+
+		foreach ( var (bit, acrossBy, downBy) in Sides )
+		{
+			if ( bit is not (0x01 or 0x04 or 0x10 or 0x40) )
+				continue;
+
+			if ( (cell.Neighbours & bit) == 0 || !ParkState.OnMap( x + acrossBy, y + downBy ) )
+				continue;
+
+			var nb = ParkState.CellFor( park, x + acrossBy, y + downBy );
+
+			if ( nb.Type != PathType || (nb.Neighbours & CellEdge.Opposite( bit )) == 0 )
+				continue;
+
+			Unimplemented.Report( "QUEUE_TILE_TRACK_FLAGS_GATE" );
+
+			++links;
+		}
+
+		return links;
 	}
 
 	/// <summary>The eight sides, in ring order, matching <see cref="ParkPathNeighbours"/>'s own table.</summary>

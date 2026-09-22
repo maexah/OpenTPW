@@ -112,87 +112,44 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   **Four mutation results before those were fiction and were thrown away**: the build was failing on a
   brace, `dotnet test --no-build` ran the previous assembly, and the harness swallowed the compile error,
   so four runs reported an identical clean 894 and read exactly like four survivals. See `VERIFYING.md`.
-- [ ] **Q3. A laid queue cell has no neighbours and no tile piece.** `LayQueue`
-  (`ParkPathBuilding.cs:249-256`) writes Type, TileSet, Direction, ParentId only. It never calls
-  `ParkPathNeighbours.LinkPath` (the path arm does, `:126`) and `Retile` (`:426`) returns for anything
-  not a path. `ParkQueues.cs:224-257` draws `Pieces[TileIndex]`, so every laid queue cell is piece 0 at
-  0 degrees, and `CellEdge.Blocked` refuses it.
-  **>>> DO NOT TAKE THAT PRESCRIPTION LITERALLY - measured 2026-09-22 and it is unsafe. <<<**
-  Calling `LinkPath` from the queue arm would **destroy the cell it was meant to link**:
-  `ParkPathNeighbours.cs:78-79` demotes a type-3 cell to path and clears its direction at the top of
-  the very function, because in the original a path laid *over* a queue demotes it. And the linking
-  rule itself excludes queues - `Cardinal` (`:115-121`) links a neighbour of type 1 unconditionally,
-  types 9 and 10 on opposite senses of the direction byte, and **type 3 never forms a new link at
-  all**. So whatever writes the entry cell's `mNeighbours` when a player lays a queue, it is not this
-  function, and in the shipped park those bits are **authored in the save** rather than computed.
-  **That mechanism is undecoded, and it is what this item really needs.** It is also what blocks Q1's
-  own confirm clause: `ParkRideChoice.StartOfQueue` (`:165-182`) reads the entry cell's `Neighbours`
-  and returns nought when no bit is set, so `CanBeOffered` refuses and no guest can ever be sent.
-  Decode first, then build.
-  **Three things measured for it on 2026-09-22, so this item starts further along.**
-  (1) **The way in and the way out are typed now** - `ParkBuilding` marks the entry cell `type 9` and
-  the exit `type 10`, each with the heading the shipped park carries, so Q3 no longer has to do that.
-  Read back out of a running park after a buy: `cell (42,23) type 9 direction 0x01`, against the
-  shipped Belly Bounce's own `(52,23) type 9 direction 0x01`.
-  (2) **Typing it is not enough, and this is the real gap.** Laying a path beside that cell links the
-  PATH (`cell (42,22) type 1 neighbours 0x01`) but leaves the entrance at `neighbours 0x00` - that
-  `0x01` points north at the pre-existing path, which links unconditionally as type 1, not at the
-  type-9 cell, whose rule is `nb.Direction & bit` and does not fire on that step. In the shipped park
-  the entrance's bit is **authored in the save**, never computed. `park.md:940` says exactly how to
-  approach that: *"Validate any implementation by replaying creation order, never by evaluating a
-  predicate over the finished map"*, and the generator is `FUN_005348d0`, decoded in
-  `park-engine.md` under "Building and deleting paths and queues".
-  (3) **Queue may not be laid over path on the last cell of a run** - the game refuses it
-  (`queue: (42,22) is type 1, which queue may not be laid over on the last cell of a run`), so
-  "lay path, then queue over it" is not a way round this.
-  (0) **The refusal is confirmed at the source, and it is the whole of what blocks Q1.**
-  `CellEdge.Blocked` (`:362-368`) refuses a step onto a queue cell with
-  `return (to.Neighbours & BitFor( direction )) == 0;` - so a cell carrying `0x00` is unenterable from
-  every direction. Measured: a queue laid for a bought ride reads `type 3 neighbours 0x00`, while the
-  shipped park's own queue cells carry real masks (`(52,22)` is `0x50`, `(51,22)` is `0x44`).
-  **The rest of the chain is already proved**: that same bought ride reads `OFFERABLE True` with
-  `cells 1 back 2859`, so the entrance, the walk and the offer all work and only the step in is shut.
-  **And the failure is invisible in the obvious place** - `PeepBehaviour.ChooseSomewhereToGo` (`:1393`)
-  writes `MajorDest` only after `PlanRoute()` succeeds, so a guest who chooses the ride and cannot
-  route to it leaves no `dest` behind at all. Do not read an empty `dest` census as "never chosen".
-  (4) **The placement-time join is BUILT and still does not link, and the contradiction is the whole
-  of what is left.** `FUN_00528a70`'s `case 9` turns the entrance's heading by the placement angle,
-  steps to the cell it faces, and calls the neighbour rule there only where that cell is type 1.
-  `ParkBuilding.JoinToWhateverIsThere` reproduces exactly that. Measured with the path laid **first**
-  and the ride built beside it: the path stayed `neighbours 0x01` (pointing north at the pre-existing
-  path) and the entrance stayed `neighbours 0x00`. The arithmetic says why - `Cardinal` steps
-  `(0,+1)` = bit `0x10` and the type-9 arm tests `nb.Direction & bit`, so `0x01 & 0x10 = 0`.
-  **SETTLED 2026-09-22, and the answer is that `Cardinal` is right.** `FUN_005348d0` is decompiled
-  in `park-engine.md`: for each cardinal step it tests `neighbour.Direction & (the bit of the step
-  taken toward it)` - north `& 0x01`, south `& 0x10`, east `& 0x04`, west `& 0x40` - which is
-  `ParkPathNeighbours.Cardinal` exactly. So the heading is the half that does not fit: the shipped
-  entrance carries `0x01` with its queue on the `-y` side, and a cell laid there steps south and
-  tests `& 0x10`, so **that link could never have been earned under the rule either**. Its bit is
-  authored, not computed.
-  **So the one question left is what authors it.** Two leads are already **refuted**, and both are
-  the obvious ones, so start past them. It is not the placer's `case 9`, which only re-runs the rule
-  on an adjacent path. And it is **not** `FUN_00532fc0`'s ops `0x81`, `0x85` or `0x86`, which the
-  placer calls right after each `FUN_005348d0`: that worker is decompiled in `park-engine.md` and
-  those three retile, do track bookkeeping and notify the thing. `FUN_00522700`, which is what writes
-  `mNeighbours`, has **six** callers - and the placer's two are the ones that matter, below.
-  **>>> THE DECODE HALF IS DONE, 2026-09-22 - `alexah/112-decode-what-authors-an-entrance-link`. <<<**
-  The standing lead was right about the SHAPE and wrong about the author: it is a symmetric pair giving
-  the entrance one bit and its queue cell the opposite, but nothing runs `FUN_005348d0` there. **The
-  placer `FUN_00528a70` writes both cells itself, after its footprint sweep**, at `0x005297f0`..
-  `0x00529837` - entrance `mNeighbours |= Opposite(H)` and `mDirection = Opposite(H)`, the cell it faces
-  `mNeighbours |= H` and `mDirection = H`, where `H` is the shape cell's direction byte turned by the
-  angle's base bit. Written up in `park-engine.md` under "What authors an entrance's `mNeighbours`",
-  with the entrance/exit stepping tables and the four call sites. It also **corrects this entry's own
-  claim** that `mNeighbours` is written in exactly one place: `FUN_00522700` has six callers, and the
-  placer's two are the ones that matter. Confirmed against the shipped park before the park was
-  consulted: entrance (52,23) `direction 0x01` gives `H = 0x10`, which steps to (52,22), its queue cell,
-  which the save reads as `0x50`.
-  **The build is the next session**: author the same pair in `ParkBuilding` when a thing is placed, so a
-  queue laid against a bought ride is enterable. Nothing in Q3's build needs `LinkPath`.
-  `FUN_004d8c20` is decoded as a bit rotate if the heading needs re-deriving: it left-rotates the
-  shape grid's per-cell direction by log2 of the angle's base bit. **Q1 ticks behind this and needs
-  no further Q1 code.**
-  Confirm: lay a queue to the ride from Q1, screenshot the pieces joined, `peeps` census showing a
+- [x] **Q3. A laid queue cell has no neighbours and no tile piece.** Done 2026-09-22,
+  `alexah/114-a-laid-queue-joins-up`, the build half behind `alexah/112`'s decode. **Both halves of the
+  title were real, and this entry's account of each was wrong in a different way.**
+  **The neighbour half is a PAIR and only one end of it existed.** `ParkBuilding.Mark` wrote the end
+  cell's bit; nothing ever wrote the bit back on the cell it faces, so the two did not adjoin and
+  `CellEdge.Blocked` refused the step in. `JoinToWhateverIsThere` now writes it - OR'd rather than
+  over, the way `FUN_00528a70` does at `0x005297f0`..`0x00529837`. Measured: a ride bought at (41,23)
+  leaves (42,22) `neighbours 0x10 direction 0x00` on bare ground, where the baseline read `0x00/0x00`.
+  **The `mDirection` half of that pair is REFUTED and is deliberately not built.** The decode has the
+  faced cell taking a direction byte too; the shipped exit at (52,26) faces (52,27), which reads
+  `neighbours 0x39 direction 0x00` - the bit, and no direction. It is the only shipped cell that can
+  testify, because the entrance's faced cell is a queue cell whose byte the queue tool would write
+  anyway. Written up in `park-engine.md`.
+  **The tile half, and "piece 0" was wrong.** `Retile` returned for anything not a path, so a laid
+  queue cell kept the tile index of the ground under it - **55 on bare ground, not piece 0** - which is
+  outside `ParkQueues.Pieces`, so it drew **nothing at all**. `FUN_00535dd0` has an `abs(mType) == 3`
+  arm and `ParkPathTiles.TileFor` already held its eleven-row table, so the fix was a caller plus the
+  mutual-path-link count.
+  **A third defect was found by LOOKING, and no number in the run reported it.** Two mutual path links
+  bump the index past the game's eight models; the ground has already left the cell to the queue
+  renderer, so **the sky showed through a hole in the park**. Links are now dropped until the index is
+  one the table holds, counted as `QUEUE_TILE_INDEX_OUTSIDE_TABLE` - the original gates that bump on a
+  TRACK-cell flags test this project has no layer for.
+  **The rotate was inverted, with a test pinning it that way.** `RotateBit` turned a compass bit two
+  places the wrong way, so a thing built at 90 or 270 pointed its way in back across its own footprint.
+  `FUN_004d8c20` left-rotates by `log2` of the angle's base bit - a RIGHT rotate of two per quarter -
+  and `MapDelta::Rotate` agrees at all four angles. Only a quarter turn separates the two senses, and
+  nothing in the suite had ever built one.
+  **Note (3) below was an INSTRUMENT limit, not a game rule.** The console's `queue` always passes
+  `lastOfRun: true` so it can never lay queue over path; `Level.RunBuildMode` passes it correctly, and
+  the decoded gesture - lay a path run, then queue over it - works.
+  **Confirmed in a running park, every count predicted first:** the run reported `stopped after 3`,
+  exactly the refusal the original makes on the last cell; the three cells read `index 5/5/5` against a
+  baseline of `55`; `drawn` went `queues 4 pieces` to **7**; thing 43 went `cells 1` to **`cells 3`**,
+  `OFFERABLE True`; and a guest **walked it** - thing 35 `InQueue at (44.385,22.498)` on a cell laid
+  this session, thing 29 `Riding`, `queue 1/12`. Photographed against a control frame of the shipped
+  queue and a before frame of the same view at the same zoom. `save/` unchanged within every run.
+  Mutations, each predicted before running: **2, 2, 3, 1, 1** red, plus one deliberate survivor.
   guest walking it.
 - [ ] **Q4. Sell leaves the ride's script bound and scheduled.** `ParkBuilding.Sell`
   (`ParkBuilding.cs:115-160`) removes the model and the state object; `ParkRides` has no unbind. Add
