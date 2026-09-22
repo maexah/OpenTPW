@@ -733,6 +733,30 @@ validator and applier, which walks every footprint cell, rotates the offsets for
 `+0x1b8`. **So right-click cancel needs no refund - nothing was taken.** The mode's OnUninstall is a
 bare RET; switching away frees 20 bytes and nothing else.
 
+### `FUN_00532fc0`'s op codes, and what does NOT write `mNeighbours`
+
+Decompiled 2026-09-22. The per-cell op worker switches on its op byte:
+
+| Op | What it does |
+|---|---|
+| `0x80` | calls `FUN_005348d0` — this op **is** "run the link pass" |
+| `0x81` | calls `FUN_005365d0` — the **tile** rule, i.e. retile |
+| `0x82` | calls `FUN_005227e0` — sets the cell's **direction** byte |
+| `0x83` | `cell[+0x10] = DAT_00818698` — the **owning object** |
+| `0x84` | `cell[+0x20] = DAT_008186bc++` — the **crossing counter** |
+| `0x85`, `0x86` | track bookkeeping and the thing notification |
+| `0x87` | the teardown arm, into `FUN_005367a0` / `FUN_00527ee0` |
+| `0x32` | `ClearCell` plus a direction-driven relink of what is left |
+
+**So `mNeighbours` is written in exactly one place: inside `FUN_005348d0`, through paired
+`FUN_00522700` calls** — the cell being laid gains the step's bit and the neighbour gains the
+opposite, which is the symmetric link `ParkPathNeighbours.Cardinal` already performs.
+
+**A lead recorded as refuted, because it is the obvious thing to chase next and it is wrong.** The
+placer calls ops `0x81`, `0x85` and `0x86` immediately after each `FUN_005348d0`, which invites the
+reading that one of them authors the entrance's bit. None of them does: they retile, do track
+bookkeeping, and notify the thing. Do not spend a session on them.
+
 ### `FUN_005348d0`'s cardinal test, in its own terms
 
 Decompiled 2026-09-22. The rule runs on **one cell as it is created** and walks the ring; for each

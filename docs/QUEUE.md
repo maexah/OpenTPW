@@ -116,12 +116,19 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   entrance carries `0x01` with its queue on the `-y` side, and a cell laid there steps south and
   tests `& 0x10`, so **that link could never have been earned under the rule either**. Its bit is
   authored, not computed.
-  **So the one question left is what authors it**, and it is not `FUN_005348d0` and not the placer's
-  `case 9` (which only re-runs the rule on an adjacent path). Look at what writes `mNeighbours`
-  outside the generator - the level editor's own path/queue tooling is the obvious candidate, and
-  `FUN_004d8c20` is now decoded as a bit rotate if the heading itself needs re-deriving: it
-  left-rotates the shape grid's per-cell direction by log2 of the angle's base bit. **Q1 ticks behind
-  this and needs no further Q1 code.**
+  **So the one question left is what authors it.** Two leads are already **refuted**, and both are
+  the obvious ones, so start past them. It is not the placer's `case 9`, which only re-runs the rule
+  on an adjacent path. And it is **not** `FUN_00532fc0`'s ops `0x81`, `0x85` or `0x86`, which the
+  placer calls right after each `FUN_005348d0`: that worker is decompiled in `park-engine.md` and
+  those three retile, do track bookkeeping and notify the thing. `mNeighbours` is written in exactly
+  one place - inside `FUN_005348d0`, through paired `FUN_00522700` calls.
+  **Which leaves one reading worth testing first:** that the generator is run on the ENTRANCE cell
+  itself at some point, stepping toward its queue, since the symmetric link would then give the
+  entrance the step's bit (`0x01` north) and the queue the opposite (`0x10`) - which is exactly the
+  pair the shipped park carries. Nothing found so far runs it there; find what does.
+  `FUN_004d8c20` is decoded as a bit rotate if the heading needs re-deriving: it left-rotates the
+  shape grid's per-cell direction by log2 of the angle's base bit. **Q1 ticks behind this and needs
+  no further Q1 code.**
 - [x] **Q1b. A bought thing has no entry cell.** DONE 2026-09-22, same branch as Q1's first half. `ParkQueues.cs:224-257` draws `Pieces[TileIndex]`, so every laid queue cell is piece 0 at
   0 degrees, and `CellEdge.Blocked` refuses it. Confirm: lay a queue to the ride from Q1, screenshot the
   pieces joined, `peeps` census showing a guest walking it.
