@@ -662,6 +662,17 @@ The ones that have bitten more than once.
   the function the mutation edits and check the test reaches it**; a fixture that re-derives the subject
   proves the fixture. Making the real function internal, the way `ParkPicking.ThingOn` already is, is
   what closed it - and it immediately exposed a second defect in the same shape, in the sell path.
+- **115** — **Editing a structured document by matching a fragment silently destroys structure.** Twice
+  in two sessions an edit to `docs/QUEUE.md` replaced text that ran *into the middle of an item*: once a
+  heading was written over the fragment "not a path.", severing Q3's body so its tile-piece half and its
+  whole Confirm clause became a phantom ticked "Q1b" sixty lines away; once an item's heading line was
+  replaced while its original body was left dangling underneath, so the entry read as done and
+  not-started at once. Neither was noticed by the edit, the build, or the tests - **only counting the
+  headings found them** (`grep -c` on the item pattern, two `Q1b`). **Match the whole entry, or anchor
+  on a line you can see is a boundary; then count the headings afterwards and check each number appears
+  once.** For a block with awkward characters, replace it by line range with an assertion on the first
+  and last line rather than by string match - an off-by-one there fired the assert and wrote nothing,
+  where a fuzzy string match would have eaten the next item's heading.
 
 ---
 

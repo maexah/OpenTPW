@@ -57,27 +57,18 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   between the camera and the guest. `docs/VERIFYING.md` 111 and 112 carry what the aiming cost.
   Worth one short session with a pitch argument added to `camcorder`.
 - [x] **Q1b. A bought thing has no entry cell, so no queue can serve it.** Done inside Q1's commit
-  (`95dcf29`), decode and build together rather than in two sessions: the shape picture's markers are
-  parsed, carried through the catalogue and set on buy, and the derivation was confirmed in a running
-  park as `cell (42,23) type 9` after a buy, against the shipped ride's own `mEntryPos` 2997 = (52,23).
-  The checkbox was left unticked by oversight; `docs/STATUS.md` has said it was ticked since that day.
-  DECODE FIRST.
-  `ParkBuilding.Buy` leaves `EntryPos`, `ExitPos` and `TopLeft` at their record defaults, and
-  `ParkRideChoice.CanBeOffered` (`:90`) refuses on `EntryPos == 0` **before** the queue is ever walked -
-  `QueueCellsFor` (`:167`) bails on the same test. So a queue laid and connected to a path still measures
-  `cells 0 back 0`, which looks exactly like a queue fault and is not one. The original derives all three
-  in the object constructor, and the derivation is already read off the disassembly at `0x004db2da`..
-  `0x004db36b`: `mTopLeft` (`+0x34`) = anchor + `MapDelta::Rotate( descriptor+0x4b0, angle + 180 )`,
-  `mEntryPos` (`+0x36`) = anchor + `Rotate( descriptor+0x494, angle )`, `mExitPos` (`+0x38`) =
-  anchor + `Rotate( descriptor+0x4a0, angle )`, each as `dy * 0x80 + dx` on the packed `y*128 + x + 1`
-  cell. `FUN_004d9cc0` is `MapDelta::Rotate` and is decoded: 0 → (x,y), 90 → (y,−x), 180 → (−x,−y),
-  270 → (−y,x). **What is NOT established is where the delta comes from.** The category `.sam` files
-  carry only `UsageInfo.EntryCellStandPosX/Y`, which are fractions of a cell (0.5), not cell offsets;
-  the likely source is the `Info.Shape` picture's own marker characters, which `ItemDescriptionFile.
-  ReadShape` (`:555`) currently measures for width and depth and then **discards**. Decode that, write it
-  to `docs/exe/`, and stop. The build is the next session: parse the markers, carry them through
-  `ParkItemCatalogue.Item`, set the three fields on buy. Confirm then: buy a ride, lay a queue to it,
-  screenshot a guest boarding it with the `rides` census beside it - Q1's clause, finally reachable.
+  (`95dcf29`) - decode and build in one session rather than two. `ParkBuilding.Buy` left `EntryPos` and
+  `ExitPos` at their record defaults, and `ParkRideChoice.CanBeOffered` (`:90`) refuses on
+  `EntryPos == 0` **before** the queue is ever walked (`QueueCellsFor` (`:167`) bails on the same test),
+  so a queue laid and joined to a path still measured `cells 0 back 0` - which reads exactly like a
+  queue fault and is not one. The `Info.Shape` picture's markers are now parsed, carried through
+  `ParkItemCatalogue.Item` and set on buy, confirmed in a running park as `cell (42,23) type 9` after a
+  buy, against the shipped ride's own `mEntryPos` 2997 = (52,23). **The derivation itself is written
+  once, in `docs/exe/park-engine.md`** under "Where a built thing's entry and exit cells come from"
+  (`:790`): the three formulas at `0x004db2da`..`0x004db36b`, and `FUN_004d9cc0` named as
+  `MapDelta::Rotate` from its own assert. `mTopLeft` is deliberately still not set - nothing in this
+  tree reads it. The checkbox was left unticked when the work shipped, while `docs/STATUS.md` has said
+  it was ticked since that day.
 - [x] **Q2. Things loaded from the save cannot be clicked.** Done 2026-09-22,
   `alexah/110-click-a-thing-the-save-placed`. **The stated cause was half right and the prescription
   was unsafe.** Occupancy is not merely unset for the save's objects: a placed thing is on exactly
@@ -124,7 +115,8 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
 - [ ] **Q3. A laid queue cell has no neighbours and no tile piece.** `LayQueue`
   (`ParkPathBuilding.cs:249-256`) writes Type, TileSet, Direction, ParentId only. It never calls
   `ParkPathNeighbours.LinkPath` (the path arm does, `:126`) and `Retile` (`:426`) returns for anything
-  not a path.
+  not a path. `ParkQueues.cs:224-257` draws `Pieces[TileIndex]`, so every laid queue cell is piece 0 at
+  0 degrees, and `CellEdge.Blocked` refuses it.
   **>>> DO NOT TAKE THAT PRESCRIPTION LITERALLY - measured 2026-09-22 and it is unsafe. <<<**
   Calling `LinkPath` from the queue arm would **destroy the cell it was meant to link**:
   `ParkPathNeighbours.cs:78-79` demotes a type-3 cell to path and clears its direction at the top of
@@ -190,9 +182,8 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   `FUN_004d8c20` is decoded as a bit rotate if the heading needs re-deriving: it left-rotates the
   shape grid's per-cell direction by log2 of the angle's base bit. **Q1 ticks behind this and needs
   no further Q1 code.**
-- [x] **Q1b. A bought thing has no entry cell.** DONE 2026-09-22, same branch as Q1's first half. `ParkQueues.cs:224-257` draws `Pieces[TileIndex]`, so every laid queue cell is piece 0 at
-  0 degrees, and `CellEdge.Blocked` refuses it. Confirm: lay a queue to the ride from Q1, screenshot the
-  pieces joined, `peeps` census showing a guest walking it.
+  Confirm: lay a queue to the ride from Q1, screenshot the pieces joined, `peeps` census showing a
+  guest walking it.
 - [ ] **Q4. Sell leaves the ride's script bound and scheduled.** `ParkBuilding.Sell`
   (`ParkBuilding.cs:115-160`) removes the model and the state object; `ParkRides` has no unbind. Add
   it, and drop queue cells keyed to the sold thing. Confirm: sell a running ride, `rides` census no
