@@ -39,8 +39,15 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   `FUN_00519dc0` - one call site each), and the `CanLoad` / `Flags` that `Buy` never set. Measured: a
   bought Belly Bounce appears in `objects` (14 → 15) and in `rides` with `capacity 5 duration 30`, its
   script cycling `role 2`, where before it printed **no line at all**; thing 13 still carries riders, so
-  nothing regressed. **This item stays unticked because its own confirm clause is not met** - no guest
-  boards it yet, and Q1b is why.
+  nothing regressed. **Q1b landed too**, so a bought thing now carries a real entry and exit cell,
+  derived the original's way from its own shape picture.
+  **This item stays unticked because its own confirm clause is still not met, and the reason is now
+  Q3.** With the entry cell set, the next gate is `ParkRideChoice.StartOfQueue`, which reads that
+  cell's `Neighbours` mask - and nothing ever sets it for a queue a player lays, so the walk still
+  answers `cells 0 back 0` and `CanBeOffered` refuses. Measured twice in a running park, with the
+  queue laid against the path on the entry cell's own side both times. **Finish Q3 and this ticks
+  without another line of Q1's own code**; see the warning on Q3, because its written prescription
+  would make things worse rather than better.
 - [ ] **Q1b. A bought thing has no entry cell, so no queue can serve it.** DECODE FIRST.
   `ParkBuilding.Buy` leaves `EntryPos`, `ExitPos` and `TopLeft` at their record defaults, and
   `ParkRideChoice.CanBeOffered` (`:90`) refuses on `EntryPos == 0` **before** the queue is ever walked -
@@ -66,7 +73,20 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
 - [ ] **Q3. A laid queue cell has no neighbours and no tile piece.** `LayQueue`
   (`ParkPathBuilding.cs:249-256`) writes Type, TileSet, Direction, ParentId only. It never calls
   `ParkPathNeighbours.LinkPath` (the path arm does, `:126`) and `Retile` (`:426`) returns for anything
-  not a path. `ParkQueues.cs:224-257` draws `Pieces[TileIndex]`, so every laid queue cell is piece 0 at
+  not a path.
+  **>>> DO NOT TAKE THAT PRESCRIPTION LITERALLY - measured 2026-09-22 and it is unsafe. <<<**
+  Calling `LinkPath` from the queue arm would **destroy the cell it was meant to link**:
+  `ParkPathNeighbours.cs:78-79` demotes a type-3 cell to path and clears its direction at the top of
+  the very function, because in the original a path laid *over* a queue demotes it. And the linking
+  rule itself excludes queues - `Cardinal` (`:115-121`) links a neighbour of type 1 unconditionally,
+  types 9 and 10 on opposite senses of the direction byte, and **type 3 never forms a new link at
+  all**. So whatever writes the entry cell's `mNeighbours` when a player lays a queue, it is not this
+  function, and in the shipped park those bits are **authored in the save** rather than computed.
+  **That mechanism is undecoded, and it is what this item really needs.** It is also what blocks Q1's
+  own confirm clause: `ParkRideChoice.StartOfQueue` (`:165-182`) reads the entry cell's `Neighbours`
+  and returns nought when no bit is set, so `CanBeOffered` refuses and no guest can ever be sent.
+  Decode first, then build.
+- [x] **Q1b. A bought thing has no entry cell.** DONE 2026-09-22, same branch as Q1's first half. `ParkQueues.cs:224-257` draws `Pieces[TileIndex]`, so every laid queue cell is piece 0 at
   0 degrees, and `CellEdge.Blocked` refuses it. Confirm: lay a queue to the ride from Q1, screenshot the
   pieces joined, `peeps` census showing a guest walking it.
 - [ ] **Q4. Sell leaves the ride's script bound and scheduled.** `ParkBuilding.Sell`

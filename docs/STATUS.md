@@ -25,27 +25,31 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Rides: every placed thing runs its script; 74 of 106 opcodes built, the rest counted. A ride screams
   with a different sample each pass, at the band its rider count asks for.
 - **A thing bought this session is a member of the running park**: it takes its turn, appears in every
-  census, and joins the object chain the original keeps live. See the top entry under Recent.
+  census, joins the object chain the original keeps live, and carries the entry and exit cells derived
+  from its own shape picture. See the top entry under Recent.
 
 ## Does not
 
 - No finances, litter, saving a park back, video, networking. Research is inert and has nothing behind it.
 - Eight of the nine per-object windows are unbuilt. Patrol areas are dead, deferred by Alexah.
 - The `meter.wct` mapping behind the happiness gauge is wrong - the last fault Alexah found by playing.
-- **A bought thing still has no entry cell**, so no queue can serve it and no guest can board one. That is
-  `docs/QUEUE.md` Q1b, and it is a decode task before it is a build.
+- **A queue a player lays is never linked to what it serves**, so no guest can board anything built during
+  play. `StartOfQueue` reads the entry cell's `Neighbours` and nothing ever sets that bit for a laid
+  queue. `docs/QUEUE.md` Q3, and its written prescription is unsafe - see the warning there.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 is split and unticked**: its list-reads half has landed and is
-confirmed by census, and its own confirm clause waits on **Q1b**, the entry/exit cell derivation.
+`docs/QUEUE.md`, from the top. **Q1 is unticked and Q1b is done**: everything Q1 names has landed and is
+confirmed by census, and its own confirm clause - a guest boarding - now waits on **Q3** alone. Finishing
+Q3 ticks Q1 without another line of Q1's own code.
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
 
 ## Not verified on screen
 
-- **A guest boarding a ride bought this session.** Blocked by Q1b, not by the object-list work.
+- **A guest boarding a ride bought this session.** Blocked by Q3's missing queue link, not by anything
+  Q1 names; measured twice in a running park with the queue laid on the entry cell's own side.
 - `SpriteScript.ScheduleFrom` and `DropUnreadyNominee`: called from `ParkPeople`, neither pinned by the
   suite - unwiring either leaves it green. They rest on the decode, not on coverage.
 - Nothing puts a staff member in a cell's occupancy list *as they walk*.
@@ -57,8 +61,8 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **880**, 0 fail, 0 skip with the game | 2026-09-22, seven added for the object chain |
-| Tests without the game | **411** ran, **469 skipped**, of 880 | 2026-09-22, the skip count unmoved by the seven |
+| Tests | **887**, 0 fail, 0 skip with the game | 2026-09-22, seven for the object chain and seven for the entry cell |
+| Tests without the game | **417** ran, **470 skipped**, of 887 | 2026-09-22, measured either side rather than computed |
 | Build warnings | 125 | 2026-09-22 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
@@ -74,11 +78,17 @@ the original links at the HEAD (`FUN_00519d80`) and unlinks on demolish (`FUN_00
 each - and `Buy` sets `CanLoad` and the two flag bits whose descriptor key is established, counting the
 rest. Measured in a running park: `objects` 14 → 15, and thing 44 in `rides` with `capacity 5 duration
 30` and its script cycling `role 2`, where before it printed no line at all. Thing 13 still carries
-riders, which is the two-sided control. **No guest boards it yet** - `EntryPos` is also unset, so the
-queue walk has nowhere to start; split out as Q1b with the derivation already read off the disassembly.
-Mutations, each called in advance: never-become-head **7 failed**, no-unlink **3 failed**, and the sweep
-reverted to the file's list **survived all 880** - said at the test, because nothing in the suite buys
-anything.
+riders, which is the two-sided control. **And its entry and exit cells are derived** the original's way:
+`FUN_00413410` reads the item's shape grid for the cells holding **9** and **10**, and `bouncy.sam`'s
+`S` at column 1 row 0 and `2` at column 1 row 3 land exactly on the save's own `mEntryPos` 2997 = (52,23)
+and `mExitPos` 3381 = (52,26) for the shipped Belly Bounce - two records meeting on one cell, neither
+enough alone. That closes `park-engine.md`'s "whether mType 9 and 10 really are entrance and exit".
+**Still no guest boards it**, and the remaining gate is Q3: `StartOfQueue` reads the entry cell's
+`Neighbours`, and nothing sets that bit for a laid queue. **`LinkPath` must not be called to fix it** -
+it demotes a queue cell to path and clears its direction, and its own rule says a type-3 neighbour never
+forms a link. Mutations, each called in advance: never-become-head **7 failed**, no-unlink **3 failed**,
+swapped quarter turns **1 failed**, and both the sweep reverted to the file's list and the entry cell
+removed **survived all 887** - said at the tests, because nothing in the suite buys anything.
 
 **2026-09-22 - the two Confirm clauses that were owed photographs have them.** Branch
 `alexah/108-photograph-the-two-confirms`, no code changed. All four camcorder stops read `type 4`,

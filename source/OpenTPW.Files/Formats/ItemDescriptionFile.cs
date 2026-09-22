@@ -367,6 +367,55 @@ public sealed class ItemDescriptionFile
 	private int? _redLineSpeed;
 	private int? _redLineCapacity;
 
+	private int? _entryDeltaX;
+	private int? _entryDeltaY;
+	private int? _exitDeltaX;
+	private int? _exitDeltaY;
+	private int? _hasEntrance;
+
+	/// <summary>
+	/// How far from the anchor cell a guest is sent to reach this - the <c>S</c> in <c>Info.Shape</c>,
+	/// as a column and a row of the unrotated footprint picture.
+	/// </summary>
+	/// <remarks>
+	/// <b>The picture's letters are cell kinds, and the engine reads two of them by number.</b> The object
+	/// constructor's helper <c>FUN_00413410</c> walks the item's shape grid looking for the value
+	/// <b>9</b> and stores that cell's column and row as the entrance, then looks for <b>10</b> and stores
+	/// that as the exit; finding no 10 leaves the exit equal to the entrance, and finding no 9 leaves both
+	/// at nought, which is the anchor cell itself.
+	/// <para>
+	/// <b>Which letter is which was measured rather than assumed.</b> <c>bouncy.sam</c> draws
+	/// <c>*S*</c> / <c>***</c> / <c>***</c> / <c>*2*</c>, so its <c>S</c> is at column 1 row 0 and its
+	/// <c>2</c> at column 1 row 3 - and the shipped save records that Belly Bounce, anchored at (51,23),
+	/// with <c>mEntryPos</c> 2997 = <b>(52,23)</b> and <c>mExitPos</c> 3381 = <b>(52,26)</b>. Those are
+	/// exactly anchor + (1,0) and anchor + (1,3). Two independent records meeting on one cell is what
+	/// names the letters; neither alone would.
+	/// </para>
+	/// <para>
+	/// <b>Measured across the corpus, not from one file.</b> Of the <b>263</b> items carrying a shape
+	/// block across all four themes, <b>44</b> have an <c>S</c> and <b>137</b> a <c>2</c>, and every one
+	/// of the 44 has both - so 93 items declare an exit and no entrance and fall to the anchor, which is
+	/// the branch the engine's own fallthrough takes.
+	/// </para>
+	/// </remarks>
+	public int EntryDeltaX => _entryDeltaX ?? _category?.EntryDeltaX ?? 0;
+
+	/// <inheritdoc cref="EntryDeltaX"/>
+	public int EntryDeltaY => _entryDeltaY ?? _category?.EntryDeltaY ?? 0;
+
+	/// <summary>Where a guest is put down on leaving - the <c>2</c>, and the entrance where there is none.</summary>
+	public int ExitDeltaX => _exitDeltaX ?? _category?.ExitDeltaX ?? 0;
+
+	/// <inheritdoc cref="ExitDeltaX"/>
+	public int ExitDeltaY => _exitDeltaY ?? _category?.ExitDeltaY ?? 0;
+
+	/// <summary>
+	/// Whether the picture marks an entrance at all. Without one the engine leaves both cells at the
+	/// anchor, so this is what tells "its entrance is the anchor cell" apart from "it declared column
+	/// nought, row nought".
+	/// </summary>
+	public bool HasEntrance => (_hasEntrance ?? _category?._hasEntrance ?? 0) != 0;
+
 	private void Read( string text )
 	{
 		var lines = text.Split( '\n' );
@@ -552,7 +601,7 @@ public sealed class ItemDescriptionFile
 	/// longest row and depth the number of rows, both of the box the picture is drawn in rather than of
 	/// the marks inside it.
 	/// </summary>
-	private static void ReadShape( string[] lines, int keyLine, out int width, out int depth )
+	private void ReadShape( string[] lines, int keyLine, out int width, out int depth )
 	{
 		width = 0;
 		depth = 0;
@@ -561,6 +610,8 @@ public sealed class ItemDescriptionFile
 
 		while ( at < lines.Length && lines[at].Trim() != Fence )
 			++at;
+
+		int? entryX = null, entryY = null, exitX = null, exitY = null;
 
 		for ( ++at; at < lines.Length && lines[at].Trim() != Fence; ++at )
 		{
@@ -571,10 +622,48 @@ public sealed class ItemDescriptionFile
 			if ( row.Length == 0 )
 				continue;
 
+			// The row index is the one that counts rows kept, so a blank line inside the fence does not
+			// push every marker below it one cell down.
+			for ( var column = 0; column < row.Length; ++column )
+			{
+				if ( row[column] == Entrance && entryX == null )
+				{
+					entryX = column;
+					entryY = depth;
+				}
+				else if ( row[column] == Exit && exitX == null )
+				{
+					exitX = column;
+					exitY = depth;
+				}
+			}
+
 			width = Math.Max( width, row.Length );
 			++depth;
 		}
+
+		// The engine's own order, from FUN_00413410: no entrance leaves BOTH cells at the anchor, and an
+		// entrance with no exit leaves the exit on the entrance. Reproduced rather than tidied, because
+		// the second case is what makes mExitPos equal mEntryPos on ten of the shipped park's eleven.
+		if ( entryX == null )
+		{
+			_hasEntrance = 0;
+			_entryDeltaX = _entryDeltaY = _exitDeltaX = _exitDeltaY = 0;
+			return;
+		}
+
+		_hasEntrance = 1;
+		_entryDeltaX = entryX;
+		_entryDeltaY = entryY;
+		_exitDeltaX = exitX ?? entryX;
+		_exitDeltaY = exitY ?? entryY;
 	}
+
+	/// <summary>The shape picture's entrance and exit marks - see <see cref="EntryDeltaX"/>.</summary>
+	private const char Entrance = 'S';
+
+	/// <inheritdoc cref="Entrance"/>
+	private const char Exit = '2';
 
 	/// <summary>
 	/// The line's value as a whole number, or null where it has none. Null rather than nought matters:

@@ -67,7 +67,13 @@ public sealed class ParkItemCatalogue
 
 		// Where the red line sits on the speed and capacity tracks - the window marks it with a
 		// coloured bar, green below and red beyond.
-		int RedLineSpeed = 0, int RedLineCapacity = 0 );
+		int RedLineSpeed = 0, int RedLineCapacity = 0,
+
+		// Where a guest walks up to this and where one is put down leaving it, as a column and a row of
+		// the item's own unrotated footprint picture - see ItemDescriptionFile.EntryDeltaX. Without
+		// these a thing the player builds has no entry cell, and nothing can queue for it.
+		int EntryDeltaX = 0, int EntryDeltaY = 0,
+		int ExitDeltaX = 0, int ExitDeltaY = 0, bool HasEntrance = false );
 
 	private readonly Dictionary<int, Item> _items = [];
 
@@ -176,7 +182,9 @@ public sealed class ParkItemCatalogue
 					description.MinCapacity, description.MaxCapacity, description.InitCapacity,
 					description.MinDuration, description.MaxDuration, description.InitDuration,
 					description.DurationUnit,
-					description.RedLineSpeed, description.RedLineCapacity );
+					description.RedLineSpeed, description.RedLineCapacity,
+					description.EntryDeltaX, description.EntryDeltaY,
+					description.ExitDeltaX, description.ExitDeltaY, description.HasEntrance );
 
 			return true;
 		}

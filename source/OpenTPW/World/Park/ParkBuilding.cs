@@ -90,11 +90,34 @@ public static class ParkBuilding
 
 		Unimplemented.Report( "BOUGHT_OBJECT_FLAG_BITS" );
 
+		// Where a guest walks up to it, and where one is put down leaving it. The original derives both in
+		// the same constructor, from the item's own footprint picture turned by the angle it is being
+		// built at: mEntryPos is the anchor cell plus MapDelta::Rotate( entrance delta, angle ), and
+		// mExitPos the same with the exit's. Left at the record's default of nought, CanBeOffered refuses
+		// the thing before the queue is ever walked - so a queue laid and joined to a path still measures
+		// no cells at all, which reads exactly like a queue fault and is not one.
+		//
+		// mTopLeft is NOT set. The original writes it from a third descriptor pair this project has not
+		// named, and nothing in this tree reads the field, so setting it would be a guess with no
+		// consequence either way.
+		var (entryX, entryY) = RotateDelta( item.EntryDeltaX, item.EntryDeltaY, angle );
+		var (exitX, exitY) = RotateDelta( item.ExitDeltaX, item.ExitDeltaY, angle );
+
+		var entryPos = ParkState.OnMap( cellX + entryX, cellY + entryY )
+			? MapStep.CellId( cellX + entryX, cellY + entryY )
+			: 0;
+
+		var exitPos = ParkState.OnMap( cellX + exitX, cellY + exitY )
+			? MapStep.CellId( cellX + exitX, cellY + exitY )
+			: 0;
+
 		var placed = new ParkWorld.CatalogueObject(
 			ThingId: thingId, CatalogueId: catalogueId,
 			RawX: cellX << 8, RawY: cellY << 8, Angle: angle,
 			Flags: (ushort)flags,
 			CanLoad: 1,
+			EntryPos: (ushort)entryPos,
+			ExitPos: (ushort)exitPos,
 			OperatingSpeed: item.InitSpeed,
 			OperatingCapacity: item.InitCapacity,
 			OperatingDuration: item.InitDuration );
@@ -247,6 +270,34 @@ public static class ParkBuilding
 
 		return null;
 	}
+
+	/// <summary>
+	/// Turns a cell delta by the angle a thing is built at - the original's <c>MapDelta::Rotate</c>,
+	/// <c>FUN_004d9cc0</c>, which names itself in its own assert string.
+	/// </summary>
+	/// <remarks>
+	/// <b>This is not <see cref="ParkObjects.Turn"/> and must not be folded into it.</b> That one is a
+	/// quaternion about the world's up axis, with a deliberately negative sense measured off the save's
+	/// own footprint cells; this is an integer map delta in cell space. The original keeps them apart too,
+	/// and pairing the wrong one with the wrong space is the mistake <see cref="ParkObjects"/>'s own
+	/// remarks record having made once already.
+	/// <para>
+	/// The engine asserts on any angle that is not a quarter turn, so the four arms are the whole of it.
+	/// </para>
+	/// </remarks>
+	/// <remarks>
+	/// Internal rather than private only so that it can be tested, the same reason
+	/// <see cref="ParkFixedItems.ThingByCatalogue"/> is: a test that re-derived the turn table over the
+	/// public verb would need a loaded park and would pass just as well with the table put back wrong.
+	/// </remarks>
+	internal static (int X, int Y) RotateDelta( int x, int y, int angle )
+		=> (((angle % 360) + 360) % 360) switch
+		{
+			90 => (y, -x),
+			180 => (-x, -y),
+			270 => (-y, x),
+			_ => (x, y)
+		};
 
 	/// <summary>Marks every cell of a footprint as built on, and names the thing standing there.</summary>
 	private static void Stamp( ParkState state, (int Left, int Top, int Right, int Bottom) footprint, int thingId )

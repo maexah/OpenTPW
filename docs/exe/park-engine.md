@@ -733,6 +733,38 @@ validator and applier, which walks every footprint cell, rotates the offsets for
 `+0x1b8`. **So right-click cancel needs no refund - nothing was taken.** The mode's OnUninstall is a
 bare RET; switching away frees 20 bytes and nothing else.
 
+### Where a built thing's entry and exit cells come from
+
+The same constructor derives all three cell handles, at `0x004db2da`..`0x004db36b`, each as a delta
+added to the anchor cell and packed the usual way (`y * 0x80 + x`, on the `y*128 + x + 1` ids):
+
+    mTopLeft  (+0x34) = anchor + MapDelta::Rotate( descriptor + 0x4b0, angle + 180 )
+    mEntryPos (+0x36) = anchor + MapDelta::Rotate( descriptor + 0x494, angle )
+    mExitPos  (+0x38) = anchor + MapDelta::Rotate( descriptor + 0x4a0, angle )
+
+**`FUN_004d9cc0` is `MapDelta::Rotate`** — it names itself in its own assert, *"MapDelta::Rotate:
+illegal angle"* — and is a four-arm table on `angle % 0x168`: 0 → `(x, y)`, 0x5a → `(y, -x)`,
+0xb4 → `(-x, -y)`, 0x10e → `(-y, x)`, with the negative angles folding onto the same three forms.
+Anything else asserts, so quarter turns are the whole of it. **Read the call sites as disassembly**:
+the decompiler prints only two of its three arguments and calls it `void` while the code reads a
+result, which is the trap this page already warns of for `CellEdge`.
+
+**The deltas come from the item's shape picture, and `FUN_00413410` is what reads them.** It walks the
+grid at descriptor `+0x18`, stores the column and row of the cell holding **9** into `+0x494`/`+0x498`
+as the entrance, then looks for **10** and stores that into `+0x4a0`/`+0x4a4` as the exit. Two
+fallbacks matter and both are reproduced rather than tidied: **no 10 leaves the exit on the entrance**,
+which is why `mExitPos == mEntryPos` on ten of Lost Kingdom's eleven placed objects; and **no 9 leaves
+both at nought**, the anchor cell itself. `+0x4b0`/`+0x4b4` is copied straight from `+0x30`/`+0x34`.
+
+**Which characters those are was measured, not assumed.** `bouncy.sam` draws `*S*` / `***` / `***` /
+`*2*`, putting its `S` at column 1 row 0 and its `2` at column 1 row 3 — and the shipped save gives
+that Belly Bounce, anchored at (51,23), `mEntryPos` **2997** = (52,23) and `mExitPos` **3381** =
+(52,26), which are exactly anchor + (1,0) and anchor + (1,3). Neither the picture nor the save alone
+names a letter; the two meeting on one cell does. Across all four themes **263** items carry a shape
+block, **44** an `S` and **137** a `2`, and **every one of the 44 has both** — so 93 items declare an
+exit with no entrance and take the second fallback. The rest of the alphabet (`.`, `N`, `<`, `>`, `E`)
+is **not** decoded and must not be guessed at.
+
 **Rotation is never changed by a user input on any traced path.** It is reset to 0 on commit,
 auto-oriented from the cell's direction bits when re-placing an existing thing, and inherited from the
 source on move or clone. Whether the original has a manual rotate is an open question.
@@ -1393,8 +1425,11 @@ finds its only callers inside `FUN_00527ee0` (demolition). Unresolved.
   queue, starts closed) is pinned by behaviour.
 - What the low nibble of `mFlags` means — it gates the queue `+3` bump and only `0x20` = NOMODIFY is
   established.
-- Whether mType 9 and 10 really are entrance and exit: only their mirrored `mDirection` senses and
-  mirrored footprint offsets are measured, and no debug string names them.
+- ~~Whether mType 9 and 10 really are entrance and exit.~~ **CLOSED 2026-09-22: they are.**
+  `FUN_00413410` walks the item's shape grid at descriptor `+0x18` testing each cell against the
+  literals **9** and **10**, and stores the matching cell's column and row as the entrance and the exit
+  — see "Where a built thing's entry and exit cells come from" above. No debug string names them and
+  none is needed: the constructor tests the numbers outright.
 - mType 2 and mType 5 are unidentified; the decode refused to guess water or rock.
 - Whether tool `0x32` is ever armed as a live tool — nothing pushes it to either setter.
 
