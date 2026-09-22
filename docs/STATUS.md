@@ -155,7 +155,18 @@ into the held state anyway: right by accident, resting on a second oddity, and i
 the moment the clock was corrected — including the Litter Bin, which is saved on role 0. Now
 translated properly, with `0x1` and `0x8` carried across and held and frozen re-entered through roles
 14 and 13 the way the engine does it. The same review found the channel half had **no test at all**,
-and that any reader failure degraded silently back to the frozen park; both are covered now. The counter is not guessed: the struct's length field
+and that any reader failure degraded silently back to the frozen park; both are covered now.
+
+**A third review found the restore was still throwing a field away.** Dword 6 of a saved channel is its
+playback **speed** — the engine's restore copies it onto the channel's `+0xc`, and the engine's own debug
+dumper prints every field of that record except this one and its deferred twin. It is nought on idle
+channels, 1 on fourteen of the fifteen running ones, and **1.1 on the Belly Bounce**. It is read now.
+**What that is worth is bounded, and the bound was measured rather than assumed**: a restored speed
+survives loop wraps and holds, but the script's next trigger on that channel replaces it with 1, and
+Bouncy's script reaches its `LOOPANIM`s again about twenty seconds into a load — so for the one channel
+here saved at anything but 1, this fixes that window rather than the session. An earlier reading that
+Bouncy "never returns to the `LOOPANIM` at word 43" is **refuted by the census**: it plainly does, and
+it is the Fountain — whose resumed loop closes over `{17, 18}` — for which that is true. The counter is not guessed: the struct's length field
 equals the following body block's word count for all fourteen scripts, which pins the alignment; every
 one of the fourteen counters then lands on an exact instruction boundary, and on a `BRANCH`,
 `BRANCH_Z`, `TEST` or `WAIT`. Bouncy's 46 holds a `WAIT 500` and is branched to from words

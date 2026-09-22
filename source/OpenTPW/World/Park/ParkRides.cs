@@ -538,8 +538,17 @@ public sealed class ParkRides : Entity
 	/// frame counts, and the engine recomputes <c>TotalAnimFrames</c> and <c>AnimFrame</c> on the way in.
 	/// <b>It does carry the speed, though, and that is restored.</b> Saying the file held nothing further
 	/// was wrong - the record's sixth dword lands on the channel's <c>+0xc</c>, and while fourteen of the
-	/// fifteen running channels are saved at 1, the Belly Bounce is saved at <b>1.1</b>, so passing a
-	/// literal 1 ran the park's only ride at the wrong rate for the whole session.
+	/// fifteen running channels are saved at 1, the Belly Bounce is saved at <b>1.1</b>.
+	/// </para>
+	///
+	/// <para>
+	/// <b>How long a restored speed lasts, measured rather than assumed.</b> It survives loop wraps and
+	/// holds, because <see cref="RideAnimations.Advance"/> carries the channel's own speed into both -
+	/// but the next trigger from the script replaces it, since <c>RideScript.StartAnimation</c> passes a
+	/// literal 1 exactly as the engine's handlers push <c>0x3f800000</c>. The Belly Bounce's script does
+	/// reach its <c>LOOPANIM</c>s again about twenty seconds into a load, so for the one channel in this
+	/// park saved at anything but 1, what this fixes is that window and not the session. A thing whose
+	/// resumed loop never re-triggers keeps its saved speed indefinitely; none here is such a thing.
 	/// </para>
 	/// </summary>
 	private void Restore( RideScript script, SavedThing saved, int now )

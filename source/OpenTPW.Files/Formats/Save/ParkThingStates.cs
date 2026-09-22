@@ -17,7 +17,8 @@ namespace OpenTPW;
 /// <c>FUN_004647a0</c> copies this dword onto the channel's <c>+0xc</c>, the field its own debug
 /// dumper pointedly cannot name - and in the shipped park it is nought on every idle channel, 1 on
 /// fourteen of the fifteen running ones, and <b>1.1 on the Belly Bounce</b>, which is the park's only
-/// ride. Dropping it ran that ride's idle loop at the wrong rate for a whole session.
+/// ride. What a restored speed is worth is bounded and was measured: it survives loop wraps and holds,
+/// and the script's next trigger on that channel replaces it with 1 - see <c>ParkRides.Restore</c>.
 /// </param>
 public readonly record struct SavedChannel( int Role, int Entry, int Flags, float Speed );
 
