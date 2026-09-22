@@ -709,6 +709,86 @@ public sealed class RideScript
 	}
 
 	/// <summary>
+	/// Puts this script back where a save left it, rather than starting it from the beginning.
+	///
+	/// <para>
+	/// <b>A park loaded from a save must not replay what its things did as they were built</b>, and the
+	/// original does not suppress that with a guard of any kind: <c>FUN_005597a0</c> restores every
+	/// script's whole record, program counter and all, so a script resumes mid-flight. The Belly Bounce
+	/// is what shows it - word 4 of <c>Bouncy.RSE</c>, its <b>second</b> instruction after the opening
+	/// <c>NAME</c>, is <c>WAITANIM 0 0</c>, which starts the construction clip; its saved counter is 46.
+	/// </para>
+	///
+	/// <para>
+	/// <b>It refuses a position it cannot find, and the refusal matters.</b> <see cref="Step"/> treats an
+	/// unknown position as the end of the script, so a counter landing between instructions would not
+	/// error - it would leave the thing standing there doing nothing at all, which is a worse fault than
+	/// the one this fixes. Every one of the fourteen counters in the shipped park lands on an exact
+	/// instruction boundary, so this is a guard against a file that is not what we think rather than
+	/// against the ones we have read.
+	/// </para>
+	/// </summary>
+	/// <returns>Whether that position is the start of an instruction, and was taken.</returns>
+	internal bool ResumeAt( int position )
+	{
+		if ( !_atAddress.ContainsKey( position ) )
+			return false;
+
+		Position = position;
+
+		return true;
+	}
+
+	/// <summary>
+	/// Writes one variable by its slot rather than by its name, which is what restoring a save means.
+	///
+	/// <para>
+	/// <b>The project's rule is to reach a variable by name</b>, because a script's variables are its own
+	/// and nothing outside it should assume an order. A save is the one case where that does not apply:
+	/// the file stores the array positionally, in the order
+	/// <see cref="RideScriptFile.VariableNames"/> names them, so a slot is exactly what it has to hand.
+	/// Reading the names back out to look each one up again would add a step that could disagree with the
+	/// file rather than removing one.
+	/// </para>
+	/// </summary>
+	/// <returns>Whether this script has a slot there, and the value was written.</returns>
+	internal bool SeedVariable( int index, int value )
+	{
+		if ( index < 0 || index >= _variables.Length )
+			return false;
+
+		_variables[index] = value;
+
+		return true;
+	}
+
+	/// <summary>
+	/// Takes the name this script gives itself, without running any of it.
+	///
+	/// <para>
+	/// <b>Needed because resuming skips the prologue, and the name is not in the saved struct.</b> All
+	/// fourteen scripts in the shipped park open with <c>NAME</c>, so a resumed script would never run
+	/// it and would have no name at all - and a name is not decoration here: <c>FINDSCRIPTRAND</c> looks
+	/// another script up by it, and one of those fourteen uses that instruction. The original has the
+	/// name because it restores the whole record; this reads it off the script's own first instruction
+	/// instead, which resolves a string-blob offset and touches nothing else.
+	/// </para>
+	/// </summary>
+	/// <returns>Whether the script opens with a <c>NAME</c> and a name was taken.</returns>
+	internal bool TakeDeclaredName()
+	{
+		if ( !_atAddress.TryGetValue( 0, out var first ) || first.Opcode != Opcode.NAME )
+			return false;
+
+		if ( first.Operands.Count == 0 )
+			return false;
+
+		TakeName( first.Operands[0] );
+
+		return IsNamed;
+	}
+
+	/// <summary>
 	/// Gives the script one turn, running until it spends its instruction budget, yields, or stops.
 	/// <paramref name="now"/> is whatever clock the caller keeps; <c>WAIT</c> durations are added to
 	/// it unchanged - see <see cref="Wait"/>.

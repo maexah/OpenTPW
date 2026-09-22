@@ -547,6 +547,43 @@ The ones that have bitten more than once.
   restore *assert* — print the md5 and compare it against the one taken before, so a silent failure
   cannot pass for a quiet success. Rule 50 already says to verify the md5 after every control; this is
   why it says "after **every**" rather than "at the end".
+- **104** — **A control can fire because its EXPECTED value is wrong, and "the control failed" is then the
+  wrong conclusion to draw from it.** Reading a saved script struct, the alignment was checked against the
+  speed word, which every shipped `.RSE` carries as 50. Thirteen of the fourteen records read 50 and one
+  read **60**, and the honest-looking conclusion — "the control fails, so the alignment is wrong, so the
+  program counter I just read is noise" — would have thrown away a correct decode. The 60 was real: 50 is
+  what the *loader* writes, and the engine pushes an object's own operating speed over it
+  (`FUN_0055a300`), and that object's `mOperatingSpeed` was independently measured at 60. **Before
+  believing a control, ask what WRITES the field it reads** — a field with more than one writer cannot
+  have one expected value. What actually settled the alignment was a second control with only one
+  possible answer: the struct's length field equalled the body block's own word count for all fourteen.
+  The lesson is rule 12's, one turn further on: a control that fires is a reason to check the control,
+  and checking it means checking its expectation, not just its arithmetic.
+- **105** — **A four-character tag compared as a dword is stored BACKWARDS, so searching for it the right
+  way round finds nothing and reads as proof the thing is absent.** Looking for the seventeen module tags
+  in a park save's inflated payload, a search for `WRLD`, `GSYS`, `RSYS` and the rest returned **not found
+  for sixteen of seventeen**, with the one hit being unrelated. The natural reading — "this file is not
+  written by that code path at all" — was wrong and would have redirected the whole task. The executable
+  compares a 4-byte read against a constant like `0x57524c44`, so the bytes on disk spell `DLRW`; searched
+  reversed, **all seventeen** appeared, in the exact order the code reads them. This is rule 17's "say what
+  you measured, not what it means" applied to endianness: a dword constant in a decompiler listing is not
+  a byte string, and one of the two orders is a fact about the file while the other is a fact about how the
+  constant was printed. Check both orders before recording an absence.
+- **106** — **A before/after on the thing you CHANGED cannot see something else going missing.** A park's
+  things were replaying the clip that builds them. The fix was verified by watching one ride across a
+  load — "role 0 never appears" — before and after, with the number predicted first and then confirmed.
+  It was also a net regression: **ten of the fourteen placed things stopped animating at all, for good**,
+  and the single ride that was watched happened to be among the four that survived. The instrument was
+  sound, the control was real, and the prediction was right. **The population was wrong.** The tell was
+  there to be read in the change's own justification: the mechanism being altered — how every script
+  resumes — applied to every script, while the measurement named one ride, so the scope of the claim and
+  the scope of the evidence never matched and only the narrower one was checked. **Before believing a
+  before/after, ask what else runs through the code being changed and measure THAT set.** Where the game
+  can census a whole population as cheaply as one member — every thing, not the thing in question —
+  census all of it; the run costs the same either way. This is rule 85's "a census that showed only the
+  survivors" one level up: there the instrument did the filtering, here the author did. And the other
+  half of it: the regression was found by an adversarial review rather than by the verification, because
+  a check the author designs inherits the author's blind spot about where to point it.
 
 ---
 

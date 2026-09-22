@@ -107,6 +107,12 @@ public sealed class ParkRides : Entity
 		script.Set( ParkRideOperation.CapacityVariable, placed.OperatingCapacity );
 		script.Set( ParkRideOperation.DurationVariable, placed.OperatingDuration );
 
+		// <b>Nothing is resumed here, and that asymmetry with the load above is deliberate.</b> This is the
+		// path a player takes by BUILDING the thing, which is the one moment its construction clip is meant
+		// to play: the engine's build path checks role 0 exists, triggers it, and queues role 13 behind it
+		// (FUN_00463060), which freezes the model on the clip's last frame once it has run. A save has state
+		// to restore and a new thing has none, so calling Resume here would be putting back a past it never
+		// had - and would stop the one animation a player is waiting to watch.
 		script.Animations = _objects?.AnimationsFor( placed.ThingId )
 			?? RideAnimations.Load( item.Directory, item.Stem, _files, item.AnimationChannels );
 
@@ -208,6 +214,8 @@ public sealed class ParkRides : Entity
 		if ( world == null || catalogue == null )
 			return;
 
+		_saved = PairSavedThings( world, catalogue );
+
 		foreach ( var placed in world.Objects )
 		{
 			// Everything this park actually stood up, which is not the same as everything it placed. The gate
@@ -267,6 +275,13 @@ public sealed class ParkRides : Entity
 				script.Set( ParkRideOperation.CapacityVariable, placed.OperatingCapacity );
 				script.Set( ParkRideOperation.DurationVariable, placed.OperatingDuration );
 
+				// And where this script had got to when the park was saved, which is the whole of why a
+				// loaded park does not watch everything in it being built again. Before this, every script
+				// started at its own first instruction - and for the Belly Bounce that instruction is
+				// WAITANIM 0 0, the construction clip, so the ride hatched out of its egg on every load.
+				// See ParkScriptStates, and RideScript.ResumeAt for what it refuses.
+				Resume( script, placed, world );
+
 				// Its own thing's player where the thing is standing, so that what the script triggers and
 				// what the model is posed from are the same one. Read afresh only where nothing was drawn,
 				// which is what a test binding scripts against a park it never builds is doing.
@@ -275,6 +290,12 @@ public sealed class ParkRides : Entity
 
 				if ( script.Animations.Loaded > 0 )
 					++Animated;
+
+				// And the other half of the restore, which has to come AFTER the player exists: putting
+				// the script back without putting its model's channels back leaves ten of this park's
+				// fourteen things frozen for good. See Restore.
+				if ( _saved.TryGetValue( placed.ThingId, out var savedThing ) )
+					Restore( script, savedThing, 0 );
 			}
 		}
 
@@ -457,6 +478,216 @@ public sealed class ParkRides : Entity
 		// the same answer here, and both mean "not yet" - which is why the command write is the one that
 		// reports a miss and this one does not need to.
 		return gate[GateState];
+	}
+
+	/// <summary>
+	/// How many scripts were put back where the save left them, rather than started from the beginning.
+	/// </summary>
+	public int Resumed { get; private set; }
+
+	/// <summary>
+	/// How many were left at their own first instruction because the save had nothing usable for them.
+	///
+	/// <para>
+	/// <b>Not a failure on its own.</b> A script the save never ran has no saved state to restore, and
+	/// starting at the beginning is exactly right for it - that is what happens to anything the player
+	/// builds while playing. It is only worth reading beside <see cref="Resumed"/>: in the shipped park
+	/// every one of the fourteen placed things has a saved counter, so a large number here means the
+	/// script module stopped being readable and everything is about to replay its construction.
+	/// </para>
+	/// </summary>
+	public int NotResumed { get; private set; }
+
+	/// <summary>
+	/// Puts one thing's animation channels back where the park file left them.
+	///
+	/// <para>
+	/// <b>Without this, resuming the script alone is a net loss.</b> A thing whose steady-state loop holds
+	/// no animation instruction never reaches the <c>LOOPANIM</c> in its prologue again, so it stands
+	/// frozen for good: measured on the shipped park, ten of the fourteen placed things - the Fountain,
+	/// the Coconut Kiosk, all three lanes of the Jungle Spray, the Traffic Lights, the Gates, the Staff
+	/// Room, the Litter Bin and the three Toilets - animated before the script counter was restored and
+	/// not at all after it. The original restores both halves, and so does this.
+	/// </para>
+	///
+	/// <para>
+	/// <b>The saved flags are carried through and they matter.</b> Bit <c>0x1</c> loops; bit <c>0x4</c> is
+	/// what makes a channel hold its last frame rather than count as busy, which is what the Gates, the
+	/// Toilets, the Jungle Spray and the Bus are all saved doing. Dropping them would restart those clips
+	/// as ordinary one-shots and lose the held pose.
+	/// </para>
+	///
+	/// <para>
+	/// The channel is started rather than having its timebase copied field by field. The file does not
+	/// carry the frame counts anyway - the engine recomputes <c>TotalAnimFrames</c> and <c>AnimFrame</c>
+	/// on the way in - so what is restorable is which clip was running and how, which is what this does.
+	/// </para>
+	/// </summary>
+	private void Restore( RideScript script, SavedThing saved, int now )
+	{
+		if ( script.Animations is not { } players )
+			return;
+
+		for ( var index = 0; index < saved.Channels.Length && index < players.ChannelCount; ++index )
+		{
+			var channel = saved.Channels[index];
+
+			// The sentinel is the engine's own "this channel was running nothing", and it is the common
+			// case: of the 163 channels the shipped park saves, 148 hold it.
+			if ( channel.Role == ParkThingStates.NoRole )
+				continue;
+
+			// <b>The saved word is the engine's INTERNAL flag field, and only two of its bits mean the
+			// same thing to a caller.</b> 0x1 (loop) and 0x8 (do not apply the hide list) carry across
+			// unchanged; 0x2 and 0x4 do not. Internally those two say the channel was FROZEN at frame
+			// nought or HELD at its last frame, and a caller's 0x2 and 0x4 mean "start at once" and "do
+			// not lay the rest pose down" - different questions entirely. Passing the word through
+			// therefore read a held channel as a keep-pose request, and AnimTimeControl.Start clears
+			// 0x6 on the way in, so the hold was dropped and the clip restarted from frame nought as an
+			// ordinary one-shot. Eleven of this park's fifteen restored channels carry 0x4.
+			players.Trigger( channel.Role, channel.Entry,
+				channel.Flags & (AnimTimeControl.LoopFlag | AnimTimeControl.KeepShownFlag),
+				1f, now, index );
+
+			// And then the state it was left in, which the engine expresses by re-entering the channel
+			// with a pseudo-role rather than by a flag: both act on the clip just loaded, and Start
+			// returns early for them having moved only the timebase - a hold backdates it a whole clip
+			// so the elapsed frame lands exactly on the total.
+			if ( (channel.Flags & HeldAtEnd) != 0 )
+				players.Trigger( AnimTimeControl.HoldAtEnd, 0, AnimTimeControl.KeepShownFlag, 1f, now, index );
+			else if ( (channel.Flags & FrozenAtStart) != 0 )
+				players.Trigger( AnimTimeControl.FreezeAtStart, 0, AnimTimeControl.KeepShownFlag, 1f, now, index );
+
+			++ChannelsRestored;
+		}
+	}
+
+	/// <summary>How many animation channels were put back where the save left them.</summary>
+	public int ChannelsRestored { get; private set; }
+
+	/// <summary>
+	/// The bit a saved channel carries when it was HELD on its last frame - the engine's own internal
+	/// mark, set by <c>AnimTimeControl.Start</c> as part of <c>0x14</c> for the hold pseudo-role. It is
+	/// <b>not</b> the caller flag of the same value, which asks for something else entirely.
+	/// </summary>
+	private const int HeldAtEnd = 0x4;
+
+	/// <summary>The same, for a channel frozen at frame nought. No record in Lost Kingdom carries it.</summary>
+	private const int FrozenAtStart = 0x2;
+
+	/// <summary>What the save says each thing's model was doing, by thing id - empty where it would not read.</summary>
+	private Dictionary<int, SavedThing> _saved = [];
+
+	/// <summary>
+	/// Matches each placed thing to its saved model state.
+	///
+	/// <para>
+	/// <b>The module names an ITEM, not a thing</b>, so three Small Toilets are three records that read
+	/// alike and something has to say which is which. In the shipped park the records of placed things
+	/// run in ascending script-handle order, so pairing them off in that order lines them up - and this
+	/// walks the objects in that order deliberately, because <see cref="ParkWorld.Objects"/> is in the
+	/// file's own order, which is the reverse. Pairing in the order the objects happen to arrive would
+	/// hand the toilets each other's records.
+	/// </para>
+	/// <para>
+	/// <b>Within one catalogue id the pairing is unobservable</b> - those records' channels are
+	/// identical in this park - so this is an ordering that matches rather than a decoded thing handle,
+	/// and nothing here relies on telling two of a kind apart.
+	/// </para>
+	/// </summary>
+	private Dictionary<int, SavedThing> PairSavedThings( ParkWorld world, ParkItemCatalogue catalogue )
+	{
+		var paired = new Dictionary<int, SavedThing>();
+
+		// How many channels an item runs at once - the one thing the module does not carry, and without
+		// which its records cannot be stepped over at all.
+		var states = world.ThingStates(
+			id => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1 );
+
+		if ( states.Problem != null )
+		{
+			Log.Warning( $"{ThemeName}: the park file's model states would not read, so everything in it "
+				+ $"keeps whatever its construction left - {states.Problem}" );
+
+			return paired;
+		}
+
+		var taken = new Dictionary<int, int>();
+
+		foreach ( var placed in world.Objects.OrderBy( o => o.RideScript ) )
+		{
+			var ordinal = taken.TryGetValue( placed.CatalogueId, out var seen ) ? seen : 0;
+
+			if ( states.For( placed.CatalogueId, ordinal ) is { } saved )
+				paired[placed.ThingId] = saved;
+
+			taken[placed.CatalogueId] = ordinal + 1;
+		}
+
+		return paired;
+	}
+
+	/// <summary>
+	/// Puts one script back where the park file left it - its counter, its variables and its name.
+	///
+	/// <para>
+	/// <b>This is what stops a loaded park building itself all over again.</b> The original restores each
+	/// script's whole record (<c>FUN_005597a0</c>) rather than guarding the construction clip anywhere, so
+	/// a script resumes mid-flight; started from nought instead, the Belly Bounce runs the
+	/// <c>WAITANIM 0 0</c> at word 4 and hatches out of its egg on every single load.
+	/// </para>
+	///
+	/// <para>
+	/// <b>It is only half of a restore, and the other half is not optional.</b> Resuming a script past its
+	/// prologue means it never runs the <c>LOOPANIM</c> in it again, so without <see cref="Restore"/>
+	/// putting the model's channels back, ten of this park's fourteen things stand frozen for good.
+	/// </para>
+	///
+	/// <para>
+	/// <b>The save wins over the capacity and duration written just above.</b> In the shipped park the two
+	/// agree exactly - the file's own variable slots hold 5 and 30, and so do the object record's
+	/// <c>mOperatingCapacity</c> and <c>mOperatingDuration</c> - so today this changes nothing either way.
+	/// Where a future park disagreed, what it was saved holding is the better answer for a park being
+	/// loaded, which is why this runs second rather than first.
+	/// </para>
+	/// </summary>
+	private void Resume( RideScript script, ParkWorld.CatalogueObject placed, ParkWorld world )
+	{
+		if ( world.ScriptStates.For( placed.RideScript ) is not { } saved )
+		{
+			++NotResumed;
+			return;
+		}
+
+		// The name first, because resuming steps over the NAME every one of these scripts opens with, and
+		// a nameless script cannot be found by FINDSCRIPTRAND - see RideScript.TakeDeclaredName.
+		script.TakeDeclaredName();
+
+		// A script whose saved array is a different length from the one it declares is not the script this
+		// record belongs to. Said rather than silently truncated, because the slots would still be written.
+		if ( saved.Variables.Length != script.Variables.Count )
+		{
+			Log.Info( $"{ThemeName}: thing {placed.ThingId} declares {script.Variables.Count} variables and "
+				+ $"the save holds {saved.Variables.Length} for script handle {saved.Handle}" );
+		}
+
+		var slots = Math.Min( saved.Variables.Length, script.Variables.Count );
+
+		for ( var slot = 0; slot < slots; ++slot )
+			script.SeedVariable( slot, saved.Variables[slot] );
+
+		// Last, and only if the position is real: an unknown one would stop the script dead rather than
+		// erring, so a thing that cannot be resumed is better left running from its beginning.
+		if ( !script.ResumeAt( saved.Position ) )
+		{
+			Log.Warning( $"{ThemeName}: thing {placed.ThingId} was saved at word {saved.Position} of "
+				+ $"{saved.BodyWords}, which is not the start of an instruction, so it starts from the beginning" );
+
+			++NotResumed;
+			return;
+		}
+
+		++Resumed;
 	}
 
 	/// <summary>

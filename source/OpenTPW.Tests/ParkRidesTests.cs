@@ -83,6 +83,98 @@ public class ParkRidesTests
 	}
 
 	/// <summary>
+	/// <b>A bound script starts where the park file left it, not at its own first instruction.</b> This is
+	/// what stops a loaded park playing everything in it being built again: the Belly Bounce's script
+	/// opens with <c>WAITANIM 0 0</c>, which starts its construction clip, and the save has it parked
+	/// twenty instructions past that - so binding has to put it at word 46 rather than at nought.
+	///
+	/// <para>
+	/// The name is asserted beside the counter because resuming steps over the <c>NAME</c> the script
+	/// opens with, and a nameless script cannot be found by <c>FINDSCRIPTRAND</c> - so a resume that
+	/// gained the right counter and lost the name would have traded one fault for another.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void ABoundScriptResumesWhereTheSaveLeftIt()
+	{
+		var world = World();
+		var rides = Bind( world, Catalogue() );
+
+		var id = rides.ScriptFor( BellyBounceThing );
+
+		Assert.AreNotEqual( 0, id, "the Belly Bounce should have been given a script" );
+
+		var script = rides.Scheduler.Find( id );
+
+		Assert.IsNotNull( script, "and that script should be in the scheduler" );
+		Assert.AreEqual( 46, script!.Position, "where its script was saved, and so where it must start" );
+		Assert.AreNotEqual( 0, script.Position, "starting at nought is what replayed the construction clip" );
+
+		Assert.IsTrue( script.IsNamed, "a resumed script still has to know its own name" );
+		Assert.AreNotEqual( string.Empty, script.Name, "and to have taken it" );
+
+		// <b>NotResumed is the load-bearing one</b>: it says every counter that was offered landed on an
+		// instruction boundary, across all the scripts this park binds rather than just this one.
+		//
+		// What is deliberately NOT asserted is `Bound == Resumed`. That equality holds only because this
+		// fixture passes no ParkObjects: with one, the second binding pass spawns things the save never
+		// named - the ferry and the seaplane - which have no saved state and correctly do not resume, so
+		// the running game has Bound > Resumed. Asserting it here would have pinned a property of the
+		// fixture that production breaks.
+		Assert.AreEqual( 0, rides.NotResumed, "no bound script was left at its beginning" );
+		Assert.AreNotEqual( 0, rides.Resumed, "and something was actually resumed" );
+		Assert.IsTrue( rides.Resumed <= rides.Bound,
+			$"{rides.Resumed} resumed of {rides.Bound} bound" );
+
+		// <b>And the other half, which nothing asserted until a review pointed out that gutting it left
+		// the suite green.</b> Resuming a script past its prologue means it never runs the LOOPANIM in
+		// that prologue again, so a thing whose channels are not also put back stands frozen for the
+		// whole session. These are named things rather than a count, because a count here would be a
+		// property of this fixture - it binds no ParkObjects, so three of the fourteen never arrive.
+		Assert.AreNotEqual( 0, rides.ChannelsRestored, "some channel was put back" );
+
+		int RoleOn( int thing, int channel = 0 )
+		{
+			var script = rides.Scheduler.Find( rides.ScriptFor( thing ) );
+
+			Assert.IsNotNull( script, $"thing {thing} should be running a script" );
+			Assert.IsNotNull( script!.Animations, $"and thing {thing} should have animation players" );
+
+			return script.Animations!.Channel( channel )?.AnimID ?? -1;
+		}
+
+		// The Fountain is the case the regression was found on: its script resumes into a two-instruction
+		// loop that can never reach the LOOPANIM that starts this clip, so only the restore puts it on.
+		Assert.AreEqual( 5, RoleOn( FountainThing ), "the Fountain's saved role" );
+
+		// All three of the sideshow's lanes, which is what needs the per-item channel count to be right.
+		Assert.AreEqual( 2, RoleOn( JungleSprayThing, 0 ), "the Jungle Spray's first lane" );
+		Assert.AreEqual( 2, RoleOn( JungleSprayThing, 1 ), "its second" );
+		Assert.AreEqual( 2, RoleOn( JungleSprayThing, 2 ), "its third" );
+
+		// And the one that must NOT be given a clip: its record saves the sentinel, so a blanket restore
+		// would show up here and nowhere else.
+		Assert.AreEqual( RideAnimations.NoRole, RoleOn( StaffRoomThing ),
+			"the Staff Room is saved running nothing, and must stay that way" );
+	}
+
+	/// <summary>The Belly Bounce - thing 13, the shipped park's only ride.</summary>
+	private const int BellyBounceThing = 13;
+
+	/// <summary>
+	/// The Fountain Feature - thing 24, and the case that showed restoring the script alone is a loss.
+	/// Its script resumes into a two-instruction loop that can never reach the <c>LOOPANIM</c> starting
+	/// the only clip it has, so nothing but the channel restore ever puts that clip on.
+	/// </summary>
+	private const int FountainThing = 24;
+
+	/// <summary>The Jungle Spray - thing 14, the one thing here that runs three animation channels.</summary>
+	private const int JungleSprayThing = 14;
+
+	/// <summary>The Staff Room - thing 20, whose record saves the sentinel rather than a role.</summary>
+	private const int StaffRoomThing = 20;
+
+	/// <summary>
 	/// Every placed thing whose archive holds a script is running one, and every one whose archive does
 	/// not is counted as having none.
 	///

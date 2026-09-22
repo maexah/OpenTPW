@@ -53,9 +53,9 @@ park load went 23,298 ms → 2,488 ms, about 9.4x, with the worst phase now `ter
 sea is served out of the texture cache on the way back from a park, and it now comes back carrying the
 **AnisotropicWrap** sampler it asked for instead of the default **AnisotropicRepeat** — which mirrors,
 and had been drawing the ocean as a diamond lattice. **And items 5 and 3 are DONE and closed too** — Alexah
-picked 5 ahead of item 1 on 2026-09-21, then picked **3** ahead of it as well, so **9, 6, 4, 5 and 3
-are closed and 1, 8, 2 and 7 remain**, item 1 still untouched. **No goal is set now.** None of the five
-closed items is in `PLAYER-GAPS.md`, and nothing there was ticked by any of them.
+picked 5 ahead of item 1 on 2026-09-21, then picked **3** ahead of it as well. **Item 1 then closed on
+2026-09-22**, so **9, 6, 4, 5, 3 and 1 are closed and 8, 2 and 7 remain**. **No goal is set now.** None
+of the six closed items is in `PLAYER-GAPS.md`, and nothing there was ticked by any of them.
 
 **Because that file is untracked it does not exist in a fresh clone.** It lives only on this machine;
 if it is lost, the eight remaining items are gone with it.
@@ -99,13 +99,73 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** implemented of 106 | 2026-09-21, `case Opcode.` labels vs enum members — `SINGLESCREAM` and `SCREAMLEVEL` added |
-| Tests | **848** total, all of them run **with** the game and 0 skip | 2026-09-21, measured on `alexah/103` — six added for the walk interpolation |
-| Tests without the game | **391** ran, **457 skipped**, of 848 | 2026-09-21, measured fresh on `alexah/103` rather than computed — of item 3's six new tests, two are pure (`GameClock`) and four need the game |
+| Tests | **858** total, all of them run **with** the game and 0 skip | 2026-09-22, measured on `alexah/104` — ten added for the saved-state restore |
+| Tests without the game | **391** ran, **467 skipped**, of 858 | 2026-09-22, measured fresh rather than computed — all ten new tests read the shipped park, so the ran count is unchanged and every one of them lands in the skip column |
 | Build warnings | 125 | 2026-09-21, measured at `3fb2d9c` — one fewer than 126 since the refpack reflection went |
 | Park load | **2.5 s**, worst phase `terrain` at 0.72 s | 2026-09-21, three jungle runs, per phase, `LoadTimer` |
 | Other themes | fantasy 1.0 s, hallow 1.1 s, space 1.2 s | 2026-09-21, one run each, first time ever timed |
 
 ## Recent
+
+**2026-09-22 — a loaded park's scripts resume where the save left them, so nothing builds itself
+again, and `docs/CLEANUP-PLAN.md` item 1 is closed.** Branch `alexah/104-built-not-building`.
+
+Every ride, shop and feature script started at its own first instruction. For the Belly Bounce the
+**second** one — `Bouncy.RSE` body word **4**, after the `NAME` at word 0 that every one of these
+scripts opens with — is `WAITANIM 0 0`, role 0 entry 0, the clip that builds the ride, and `WAITANIM`
+starts a clip as well as waiting on it. So `ParkObjects.Sweep` posed the
+construction clip every frame and `LobbyModel.Pose` re-applied its visibility tracks over the built
+pose: the ride hatched out of its egg on every entry to Lost Kingdom, for five seconds, then settled.
+`PoseAsBuilt` was never the fault — it hides the egg correctly and still does.
+
+**The original has no guard against this anywhere.** `FUN_00415270` restores seventeen modules in
+order, and two of them end it: `FUN_004647a0` overwrites every animation channel from the saved record,
+and `FUN_005597a0` reads each script's whole 244-byte struct back from the file, **program counter
+included**. A loaded park therefore resumes mid-flight; the same build path (`FUN_00463060`) that plays
+role 0 for a thing the *player* builds is simply overwritten on load. Built here: a reader for the
+save's `RSSE` module restoring each script's counter, variables and declared name.
+
+**Both halves are restored, and taking only the first one was a worse bug than the one being fixed.**
+Restoring the counter alone left every thing whose steady-state loop holds no animation instruction
+unable ever to reach the `LOOPANIM` in its prologue: **ten of the fourteen placed things stood frozen
+for the whole session**. An adversarial review caught it; the whole-park census then measured it.
+
+| `rides` census, whole park | control | script only | **both halves** |
+|---|---|---|---|
+| 13 Belly Bounce | role **0**, 150-frame clip | role 2 | **role 2 from the first sample** |
+| 24 Fountain Feature | role 5 | **idle for ever** | **role 5** |
+| 21–23 Small Toilets | role 5 HELD | **idle for ever** | **role 5 HELD** |
+| 14 Jungle Spray, 3 lanes | role 2 HELD ×3 | **idle ×3** | **role 2 HELD ×3** |
+| 12 Traffic Lights | role 5, cycling | **idle for ever** | **role 5, cycling** |
+| 11 Gates, 16 Coconut, 17 Litter Bin | animating | **idle for ever** | **animating** |
+| 20 Staff Room | role 0 HELD | idle | **idle — what its record saves** |
+| screenshot at 2.0 s | a speckled egg, no dinosaur | — | the built ride, fence and name board |
+
+The construction replay is gone and nothing is frozen. The only role 0 left anywhere is the Litter
+Bin's, which is exactly what its own record stores. The Staff Room ends up *more* faithful than the
+control: the save says idle, and the control's role 0 HELD was itself the accidental prologue.
+
+**Two adversarial reviews, and each found something the suite and the game both missed.** The first
+found the regression above. The second found that a saved channel's flag word is the engine's own
+**internal** field and was being handed in as a **caller** flag: the two collide on `0x4`, which
+internally marks a channel held on its last frame and to a caller asks to keep the pose, and the
+channel's `Start` clears `0x6` on the way in — so the hold was dropped for **eleven of the fifteen**
+restored channels. It read correctly only because starting each channel at time nought backdates it
+into the held state anyway: right by accident, resting on a second oddity, and it would have come back
+the moment the clock was corrected — including the Litter Bin, which is saved on role 0. Now
+translated properly, with `0x1` and `0x8` carried across and held and frozen re-entered through roles
+14 and 13 the way the engine does it. The same review found the channel half had **no test at all**,
+and that any reader failure degraded silently back to the frozen park; both are covered now. The counter is not guessed: the struct's length field
+equals the following body block's word count for all fourteen scripts, which pins the alignment; every
+one of the fourteen counters then lands on an exact instruction boundary, and on a `BRANCH`,
+`BRANCH_Z`, `TEST` or `WAIT`. Bouncy's 46 is the target of `BRANCH ->46` from words 33 and 38, the top
+of its idle loop. The saved variables agree with the **object records** — a separate part of the file —
+on capacity for all six things that declare one. **The mutation was run**: disabling the single call
+site turned the suite red on `Expected:<46>. Actual:<0>`, while the seven new format tests stayed
+green, which is what says they cover the reader rather than the wiring.
+
+Byte layout went to the FileFormats clone's `saves.md`; the executable decode to
+`docs/exe/ride-operation.md`. Two instrument rules came out of it, `VERIFYING.md` **104** and **105**.
 
 **2026-09-21 — a guest is drawn between the simulation's steps instead of jumping, and
 `docs/CLEANUP-PLAN.md` item 3 is closed.** Branch `alexah/103-guests-walk-smoothly`.

@@ -28,6 +28,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00409303` | | OpenTPW/Global/GameClock.cs  |
 | `0x00409353` | | OpenTPW/Global/GameClock.cs  |
 | `0x0040c4d0` | | OpenTPW/UI/WindowStack.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
+| `0x00415270` | the whole-game restore chain: seventeen modules in order, each checked against a four-character tag that follows it | OpenTPW.Files/Formats/Save/ParkScriptStates.cs  |
 | `0x00419710` | | OpenTPW/UI/UiFonts.cs  |
 | `0x00423690` | | OpenTPW/World/Level.cs OpenTPW/Client/GameOptions.cs  |
 | `0x004237f0` | | OpenTPW/UI/Screens/OptionsScreen.cs OpenTPW/Client/SaveFolder.cs OpenTPW.Files/Formats/Save/ConfigFile.cs  |
@@ -51,7 +52,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0045acfc` | | OpenTPW/Client/Game.cs  |
 | `0x004623b3` | | OpenTPW/World/Lobby/LobbyModel.cs OpenTPW.Tests/LobbyModelAnimationTests.cs  |
 | `0x004623df` | | OpenTPW/World/Lobby/LobbyModel.cs OpenTPW.Tests/LobbyModelAnimationTests.cs  |
+| `0x00463060` | the build path: checks role 0 exists, triggers it, then queues role 13 to freeze the model on its last frame. Why a newly built thing plays its construction clip and a loaded one does not | OpenTPW/World/Park/ParkRides.cs  |
 | `0x004646a1` | | OpenTPW/World/Ride/AnimTimeControl.cs  |
+| `0x004647a0` | the `RSYS` arm of the restore chain: overwrites every animation channel from the saved record and restores the per-node flag words with it, which is what stops a loaded park's things standing frozen | OpenTPW.Files/Formats/Save/ParkThingStates.cs  |
 | `0x00467d00` | | OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x00467d60` | | OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x0046b600` | | OpenTPW.Common/Client/Window.cs  |
@@ -229,6 +232,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00558d2e` | | OpenTPW/VM/RideScript.cs  |
 | `0x00558d5b` | | OpenTPW/VM/RideScript.cs  |
 | `0x00558d68` | | OpenTPW/VM/RideScript.cs  |
+| `0x005597a0` | the `RSSE` arm of the restore chain: reads each script's whole 244-byte struct back from the file, program counter included, so a loaded park's scripts resume mid-flight | OpenTPW.Files/Formats/Save/ParkScriptStates.cs OpenTPW/VM/RideScript.cs OpenTPW/World/Park/ParkRides.cs  |
 | `0x0056695c` | | OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x00579e00` | | OpenTPW/Render/Assets/Asset.cs  |
 | `0x0057c620` | | OpenTPW/UI/ScreenParticles.cs  |

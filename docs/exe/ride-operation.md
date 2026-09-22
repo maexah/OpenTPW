@@ -668,6 +668,72 @@ Of the opcodes that appear in the scripts of things actually **placed** in Lost 
 
 `STARTSCREAM` is 2 operands, `STOPSCREAM` 0, **`TRIGANIM_CH` is opcode 23 with 4 operands**.
 
+## Loading a park does not rebuild what is in it — and there is no guard anywhere
+
+A ride's script starts by playing the clip that builds the ride. `Bouncy.RSE`'s **second** instruction,
+body word 4, is `WAITANIM 0 0` — role 0 entry 0, the construction clip — and `WAITANIM` starts the
+animation as well as waiting on it. (The **first** is `NAME`, at word 0, in all fourteen of the shipped
+park's scripts; calling the `WAITANIM` the first instruction would contradict that, and it was written
+that way here until the decode was checked.) So anything that starts these scripts from word 0 watches every
+placed thing build itself again. **Nothing in the engine guards against that**: what prevents it is
+that a loaded park never starts its scripts from the beginning at all.
+
+`FUN_00415270` is the whole-game restore chain. It reads module after module, each followed by a
+four-character tag it checks on the way back in; the tags are compared as **dwords**, so they sit
+little-endian in the file and read backwards in a dump (`WRLD` as `DLRW`). Two of its arms matter here.
+
+| Address / offset | Original name (if known) | What it is | Evidence |
+|---|---|---|---|
+| `FUN_00415270` | — | the restore chain: 17 modules in order, each checked against its trailing tag. Logs `"<module> loaded %d bytes"` per arm | read |
+| `FUN_004647a0` | — | the `RSYS` arm, "Ride System". Calls the build path per object, then **overwrites every animation channel from the saved record** and restores the per-node flag words (bit `0x10` = hidden) | read |
+| `FUN_005597a0` | — | the `RSSE` arm, "RSSE scripts". Mallocs 244 bytes per script and reads **the whole struct from the file**, preserving only the two list pointers around the read — so the program counter at `+0x3c` comes back with it | read |
+| `FUN_00463060` | — | the build path. Checks role 0 exists, triggers it, then triggers `0xd` — role **13**, freeze-at-frame-0 — which queues behind role 0 and pins the model on the clip's last frame once it has run | read |
+| `FUN_00473e30` | — | the channel reset the build path calls first. With its second argument set it writes the sentinel `0xc` into every channel's `AnimID` *and* `DeferredAnimID` | read |
+| `FUN_00473550` | — | called when the restore put **no** channel on role 0; walks the nodes and clears `0x800` off any carrying `0x100` | read |
+| `FUN_00472cb0` | — | binds a clip to a channel: writes the span and the elapsed-frame scale | read |
+| `FUN_00464580` | — | a debug dumper that prints one channel field by field, and the source of every `AnimTimeControl` field name | read |
+| `FUN_0055a300` | — | a two-byte setter, `*(short *)(script + 0xc0) = value`. The **third writer** of the speed word, and the one that pushes an object's operating speed over the loader's hardcoded 50 | read |
+
+So a newly built thing and a loaded one are the same code with opposite outcomes. The player building
+one reaches `FUN_00463060` and nothing overwrites it afterwards, so role 0 plays and role 13 freezes it
+on its last frame — which is exactly what a built item should look like. A **loaded** one runs the same
+path and then has its channels and its script state written over from the file before a frame is drawn,
+so the trigger is discarded and the construction clip never appears.
+
+**Measured in the shipped park** (`Easymode.TPWI`, 14 saved scripts): every counter is parked mid-flight,
+not at nought — 120 of 124, 216 of 329, 46 of 208 for the Belly Bounce, and so on — and each lands on a
+`BRANCH`, `BRANCH_Z`, `TEST` or `WAIT`. Bouncy's 46 holds a `WAIT 500` and is the target of `BRANCH ->46`
+from words **36 and 41** — words 33 and 38 are the `LOOPANIM 5 0` and `LOOPANIM 5 1` those branches
+follow — so it is **one** instruction past the `LOOPANIM 2 0` at word 43 that starts the clip it idles
+on. Decoded from the body the save itself carries: `33 LOOPANIM 5 0 / 36 BRANCH ->46 / 38 LOOPANIM 5 1 /
+41 BRANCH ->46 / 43 LOOPANIM 2 0 / 46 WAIT 500`. The saved variables come back too, and their slot 2 (`VAR_CAPACITY`) agrees with each
+object record's own `mOperatingCapacity`. The byte layout is in the FileFormats docs, not here.
+
+**A channel's flag word is the engine's own field, and it is NOT the flag word a caller passes in.** The
+two overlap and disagree. A caller's flags are `0x1` loop, `0x2` start at once, `0x4` do not lay the rest
+pose down, `0x8` do not apply the hide list. The field stored on the channel uses `0x1` and `0x8` the
+same way, but its `0x2` means **frozen at frame nought** and its `0x4` means **held on the last frame** —
+states rather than requests, and `FUN_004732a0`'s own `Start` clears `0x6` on the way in and then sets
+`0x2` or `0x14` itself for the two pseudo-roles. So the engine does not express "this channel was held"
+as a flag at all: it re-enters the channel with role **14**, which acts on the clip already loaded and
+backdates the timebase a whole clip so the elapsed frame lands exactly on the total. Role **13** is the
+same for a freeze at frame nought. In the shipped park **eleven of the fifteen** saved channels carry
+`0x4`, so a restore that passes the saved word through as caller flags drops the held pose on nearly all
+of them and restarts the clip — including the Litter Bin, which is saved on role 0.
+
+**What OpenTPW does with this.** It restores **both halves**: from `RSSE` the script's counter, its
+variables and its declared name, and from `RSYS` each thing's animation channels — the role, the entry
+and the flag word, with the two bits that mean the same thing carried across and the held and frozen
+states re-entered through the pseudo-roles exactly as above. Restoring only the script is a net loss, and measurably so: a thing whose
+steady-state loop holds no animation instruction never reaches the `LOOPANIM` in its prologue again, and
+ten of Lost Kingdom's fourteen placed things stood frozen for the whole session when the counter alone
+was put back. The rest is counted rather than guessed — the wait deadlines, the call stack and the
+limbo, bounce and walk tables are stepped over by length so the walk still has to add up. The name is **not** in the
+saved struct and is taken off the script's own opening `NAME` instead, which matters because resuming
+skips that instruction and `FINDSCRIPTRAND` looks a script up by name. `ParkRides.BindNew` — the path a
+player takes by building something — deliberately restores nothing, because a new thing has no past and
+role 0 is the one animation it is meant to play.
+
 ## Faithful, not defects
 
 Behaviour that reads like a bug and is the original:

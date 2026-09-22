@@ -1135,7 +1135,30 @@ public sealed class ParkWorld
 		{
 			Problem ??= e.Message;
 		}
+
+		// And the eleventh module, which says where each of those things' scripts had got to. It is read
+		// separately rather than from inside Walk() because the two are independent: the world block is
+		// the only thing most of the program needs, and a script module that will not read must not cost
+		// a park its shops. See ParkScriptStates for what it is for and how it is found.
+		ScriptStates = new ParkScriptStates( _data );
 	}
+
+	/// <summary>
+	/// Where every script in this park had got to when it was saved - see <see cref="ParkScriptStates"/>.
+	/// Never null; ask it for its own <see cref="ParkScriptStates.Problem"/>.
+	/// </summary>
+	public ParkScriptStates ScriptStates { get; }
+
+	/// <summary>
+	/// What every thing's MODEL was doing when the park was saved - see <see cref="ParkThingStates"/>,
+	/// which is the other half of a park that loads without rebuilding itself.
+	/// </summary>
+	/// <remarks>
+	/// Read on demand rather than in the constructor, because it needs something this file cannot know:
+	/// how many animation channels each item runs at once, which lives in the item descriptions and not
+	/// in the save. The caller has the catalogue; this has the bytes.
+	/// </remarks>
+	public ParkThingStates ThingStates( Func<int, int> channelsFor ) => new( _data, channelsFor );
 
 	private void Walk()
 	{
