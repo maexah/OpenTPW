@@ -114,6 +114,29 @@ Take counts fresh; these go stale within a day.
 
 ## Recent
 
+**2026-09-22 — the two Confirm clauses that were owed photographs have them, and
+`docs/CLEANUP-PLAN.md` items 2 and 7 are now met in full.** Branch
+`alexah/108-photograph-the-two-confirms`. **No code changed**: both were capture tasks the existing
+`camcorder x y [yaw]`, `walk` and `at=`/`type=` census already allowed.
+
+**Item 2, all four stops photographed** — only one approach had ever been shot. Every target cell was
+printed from the game first and all four read `type 4`; the viewer stopped at **(50,24)**, **(54,24)**,
+**(53,22)** and **(51,27)**, which is **4 of 4 where predicted and 0 of 4 inside the footprint**, with
+`pitch=0.0` and the yaw exactly as set in every reading. The heading differs per approach because the
+step is facing-relative: at those yaws `walk 1 0` walks into the ride *and* looks at it.
+
+**Item 7, the burst from the click to the loading screen.** At 7.4 s (radius 21.09) the camera is
+square-on to the gate with **"Lost KINGDOM" legible** on the sign and both carved posts in frame; by
+8.7 s (radius 8.43) it is hard against the gateway with the park's path visible through the arch; then
+`Loaded jungle in 1745 steps` at 11.6 s. `save/` unchanged within both runs.
+
+**Two caveats rather than a clean claim.** The apparent approach in the first frames is the ordinary
+orbit ease from the attract position, not the leave sequence — the leave's own approach is the
+`FlyingIn` frames. And the front-end panels stay up because the console's `enter` does not close the
+front end the way `IslandPanel.EnterPark` does. Both are harness artefacts. Worth a look in play: at
+radius 8 the camera ends up *inside* the gateway with a good deal of stonework across the frame, which
+is what the original's own 8.0 threshold produces.
+
 **2026-09-22 — the camera swings onto the gate and flies into the island before a park loads, and
 `docs/CLEANUP-PLAN.md` item 7 is closed.** Branch `alexah/107-camera-flies-into-the-park`.
 
