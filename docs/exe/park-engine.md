@@ -592,6 +592,54 @@ The "operator new twice behind SEH" part is a **shared prologue**, not camcorder
 
 **The handler chain is all read-only.** Entry 16's handler `0x0040c5c0` is one of a run of 24 identical **16-byte thunks** (`MOV ECX,<object>; CALL <handler>; MOV EAX,1; RET`) living at `0x0040c3a0`..`0x0040c820`. **None of them is a function to Ghidra** — they are only ever reached through the table's pointer, so `decompile` refuses them and xrefs find nothing. Decode the bytes by hand, or create the function. Camcorder's thunk calls `FUN_00481a10`, which happens to be the one call target in that run that Ghidra *does* have as a function.
 
+### Walking on the ground is swept against the cell edges, by the guests' own test
+
+`FUN_0046cff0` builds only `{vptr, 0}` — the camcorder *interaction mode* holds no position at all, and
+its vtable `0x006fead0` is mouse handlers plus `GetType`. **The movement is in the camera update**,
+`FUN_0042b1c0`, and it is not the plain integration the orbit branch does.
+
+The orbit branch adds the whole step at once:
+
+    DAT_007908f0 = dt * velX + DAT_007908f0        // gui_CameraFlags & 0x16 clear, or & 0x3c set
+    DAT_007908f8 = dt * velZ + DAT_007908f8
+
+The **first-person** branch — `& 0x16` set and `& 0x3c` clear — instead sweeps the step cell by cell,
+and at each boundary asks **`FUN_004d8750`**, which is the same edge test every guest walks on:
+
+| Address | Call | Direction pushed |
+|---|---|---|
+| `0x0042c093` | `FUN_004d8750( EBX=x, EBP=y, ECX=dir, 2 )` | **3** if `velX < 0`, else **1** |
+| `0x0042c290` | `FUN_004d8750( EBX=x, EBP=y, EDX=dir, 2 )` | **0** if `velZ < 0`, else **2** |
+
+**Both push mode 2**, the strict mode, not the 0 a guest walks on. The direction numbering matches the
+boundary guards already recorded for that function: 0 is `-y`, 1 `+x`, 2 `+y`, 3 `-x`.
+
+Per pass it computes, for each axis, the fraction of the remaining step that reaches the next cell
+boundary — `(1 - frac)/(v * 0.1)` going positive and `frac/(v * 0.1)` going negative, where `frac` is the
+fractional part of `position * 0.1`. **Ten world units to a cell**, `_DAT_006fdd58` = 0.1. It takes
+whichever boundary is nearer, tests that side, and then either advances through it or **zeroes that one
+axis while the other carries on** — which is what makes a viewer slide along a wall rather than stick to
+it. Both axes always advance by the fraction that was consumed.
+
+| Constant | Value | What it is |
+|---|---|---|
+| `_DAT_006fdd58` | 0.1 | World units to cells |
+| `_DAT_006fdd7c` / `_DAT_006fdd5c` | 10.0 / −10.0 | Cells back to world units |
+| `0x0074c9c4` | **9.999** | The far edge of a cell, already carrying the epsilon below |
+| `0x0074c9d0` | **0.001** | Parked this far inside the cell a side refused |
+| `_DAT_006fde00` / `_DAT_006fde04` | ∓1e-4 | A step smaller than this is zeroed before anything is swept |
+
+**One guard is worth naming because leaving it out stalls the sweep.** Having advanced to a boundary it
+re-derives the cell and, *only where that cell has not changed*, nudges by `0x0074c9d0` in the direction
+of travel. A step going negative lands exactly on `cell * 10`, whose floor is still the cell being left —
+so without the nudge the next pass measures nought distance to the same side, consumes nothing, and never
+arrives.
+
+**One branch is decoded but not built here.** Having moved, the loop calls `FUN_0042a340( x, y )`, which
+indexes the per-cell thing list at `+0x2a4` by the packed cell id `y * 0x80 + 1 + x` and returns the first
+thing whose kind byte at `+2` is **3** and whose `FUN_004dd4e0()+0x118` is nought; on finding one it runs
+`FUN_00412e90` and `FUN_004e15b0`. What that does to the viewer is not traced.
+
 ---
 
 ## The interaction modes

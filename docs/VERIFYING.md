@@ -584,6 +584,30 @@ The ones that have bitten more than once.
   survivors" one level up: there the instrument did the filtering, here the author did. And the other
   half of it: the regression was found by an adversarial review rather than by the verification, because
   a check the author designs inherits the author's blind spot about where to point it.
+- **107** — **A view steered by where the pointer IS drifts for as long as the clock runs, and one of its
+  two axes cannot be set from a console at all.** The camcorder's `Steer` reads the pointer's *position*,
+  not its movement, and the two axes are not alike: yaw **accumulates**
+  (`Yaw -= Beyond(x) * YawRate * Time.Delta`) so it winds on every frame the pointer sits outside the
+  dead zone — which is wherever X last left it — while pitch is **assigned**
+  (`Pitch = Beyond(y) * PitchScale`) so anything a console writes to it is gone by the next frame. Both
+  bit in one session. A four-sided walk test came back with "east" having moved the viewer three cells
+  **north**, because the heading had spun between the approaches and every one of them resolved against
+  a different one; and a screenshot meant to show a ride came back as 41.3 degrees of empty sky. The
+  fixes are different for each: freeze the drift with `pause` (which zeroes `Time.Delta`, and is *not*
+  rule 91 — that forbids **grabbing a frame** while held, not measuring), and for the picture put the
+  pointer itself inside the dead zone with **XTEST motion**, not a warp, since a warp with no motion
+  behind it reaches X and never reaches SDL. **Then read the heading back and assert it**, per rule 98:
+  had the reply not carried `yaw=`, all four readings would have looked perfectly well-formed and been
+  measurements of nothing.
+- **108** — **A facing-relative command means a different world direction at every heading, so aiming the
+  camera silently re-aims the controls.** `walk <forward> <right>` resolves as
+  `dx = forward * -sin(Yaw) + right * cos(Yaw)`. At yaw 0 `right` is exactly `+x`, which is why a census
+  harness could walk east with `walk 0 1` and be right. The moment a second harness set the heading to
+  face that same ride — yaw `-pi/2` — `right` became `-y`, the identical command walked the viewer away
+  along a different axis, and the census it printed was internally consistent the whole way. Nothing was
+  wrong with the game, the command or the reply. **When a harness sets an orientation, recompute what
+  its own movement arguments mean in that orientation**, and prefer a command whose arguments are in the
+  frame you are reasoning in — or assert the destination, not merely that something moved.
 
 ---
 

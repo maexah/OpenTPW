@@ -53,9 +53,11 @@ park load went 23,298 ms → 2,488 ms, about 9.4x, with the worst phase now `ter
 sea is served out of the texture cache on the way back from a park, and it now comes back carrying the
 **AnisotropicWrap** sampler it asked for instead of the default **AnisotropicRepeat** — which mirrors,
 and had been drawing the ocean as a diamond lattice. **And items 5 and 3 are DONE and closed too** — Alexah
-picked 5 ahead of item 1 on 2026-09-21, then picked **3** ahead of it as well. **Item 1 then closed on
-2026-09-22**, so **9, 6, 4, 5, 3 and 1 are closed and 8, 2 and 7 remain**. **No goal is set now.** None
-of the six closed items is in `PLAYER-GAPS.md`, and nothing there was ticked by any of them.
+picked 5 ahead of item 1 on 2026-09-21, then picked **3** ahead of it as well. **Items 1 and 2 then
+closed on 2026-09-22**, so **9, 6, 4, 5, 3, 1 and 2 are closed and 8 and 7 remain** — 8 being the
+lobby's attract camera and 7 the park-entry animation, which is blocked on Alexah describing what the
+original shows before anyone opens Ghidra for it. None of the seven closed items is in
+`PLAYER-GAPS.md`, and nothing there was ticked by any of them.
 
 **Because that file is untracked it does not exist in a fresh clone.** It lives only on this machine;
 if it is lost, the three remaining items go with it, and so does the record of the six that are done.
@@ -99,13 +101,52 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** implemented of 106 | 2026-09-21, `case Opcode.` labels vs enum members — `SINGLESCREAM` and `SCREAMLEVEL` added |
-| Tests | **858** total, all of them run **with** the game and 0 skip | 2026-09-22, measured on `alexah/104` — ten added for the saved-state restore |
-| Tests without the game | **391** ran, **467 skipped**, of 858 | 2026-09-22, measured fresh rather than computed — all ten new tests read the shipped park, so the ran count is unchanged and every one of them lands in the skip column |
+| Tests | **865** total, all of them run **with** the game and 0 skip | 2026-09-22, measured on `alexah/105` — seven added for the camcorder's swept step |
+| Tests without the game | **396** ran, **469 skipped**, of 865 | 2026-09-22, measured fresh rather than computed — five of the seven new tests are pure arithmetic over a stub edge test and run anywhere; the two that read the shipped park skip |
 | Build warnings | 125 | 2026-09-21, measured at `3fb2d9c` — one fewer than 126 since the refpack reflection went |
 | Park load | **2.5 s**, worst phase `terrain` at 0.72 s | 2026-09-21, three jungle runs, per phase, `LoadTimer` |
 | Other themes | fantasy 1.0 s, hallow 1.1 s, space 1.2 s | 2026-09-21, one run each, first time ever timed |
 
 ## Recent
+
+**2026-09-22 — the camcorder stops at a ride instead of walking through it, and
+`docs/CLEANUP-PLAN.md` item 2 is closed.** Branch `alexah/105-camcorder-stops-at-objects`.
+
+On the ground you could walk straight through the Belly Bounce. The original cannot: its camera update
+`FUN_0042b1c0` has a **first-person branch** that does not integrate the step the way the orbit branch
+above it does — it sweeps the step cell by cell and at each boundary asks **`FUN_004d8750`**, which is
+the very function `CellEdge` already models, at **mode 2**. Both call sites push that literal:
+`0x0042c093` for the X axis with direction 3 or 1, `0x0042c290` for the Y with 0 or 2 — read as
+disassembly, since the decompiler drops the arguments, exactly as `CellEdge`'s own remarks warn.
+
+| walking into the footprint, 40 frames, four sides | control | after |
+|---|---|---|
+| ended **inside** the footprint | **4 of 4** | **0 of 4** |
+| ended where predicted | 0 of 4 | **4 of 4** |
+| heading drift (readings void if any) | 0.000 | 0.000 |
+
+Two builds one line apart, `save/` unchanged within both, and all four control endpoints — (53,24),
+(51,24), (53,25), (51,24) — were named before the run and all four matched. The harness prints each
+target cell's type from the game's own `cell` command, so an approach aimed at the wrong place cannot
+pass unnoticed.
+
+**A guard worth naming, because leaving it out stalls the sweep.** Having advanced to a boundary the
+original re-derives the cell and nudges 0.001 along the direction of travel *only where that cell has
+not changed* — a negative step lands exactly on `cell * 10`, whose floor is still the cell being left,
+so without it the next pass measures nought distance to the same side and never arrives.
+
+**Mutation-checked, with the survival called in advance** (rule 48): **the wiring mutation survived all
+865**, said at the test, because the seven new tests call the sweep directly and so pin the arithmetic
+and not the wiring; inverting the Y direction and removing the nudge each turned the suite red, the
+second through its anti-vacuity control rather than its main assertion.
+
+**Two instrument faults of mine, both now rules.** Rule **107**: the view is steered by where the
+pointer *is*, and its axes differ — yaw **accumulates**, so it drifts for as long as the clock runs,
+while pitch is **assigned**, so a console cannot set it at all. A four-sided walk came back with "east"
+having moved the viewer three cells **north**, and the first screenshot was 41.3 degrees of empty sky.
+Rule **108**: `walk <forward> <right>` is facing-relative, so aiming the camera silently re-aims the
+controls — at yaw 0 `right` is +x, but facing the ride it is −y, and the identical command walked the
+viewer away while printing a perfectly consistent census.
 
 **2026-09-22 — a loaded park's scripts resume where the save left them, so nothing builds itself
 again, and `docs/CLEANUP-PLAN.md` item 1 is closed.** Branch `alexah/104-built-not-building`.

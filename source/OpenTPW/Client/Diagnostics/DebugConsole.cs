@@ -661,6 +661,15 @@ public static class DebugConsole
 					// easing up from the old height, which never finishes while the clock is stopped -
 					// and a stopped clock is how frames are captured.
 					ParkCamcorderCameraMode.StandAt( new Vector3( Argument( 1 ), Argument( 2 ), 0f ) );
+
+					// An optional heading, in radians, because a capture cannot otherwise be AIMED.
+					// Steer() turns the view from where the POINTER is - not from how far it moved - and
+					// a harness cannot move the pointer, so without this a screenshot faces wherever the
+					// mouse was last left and then drifts for as long as the clock runs. Same reason item
+					// 4 of the cleanup plan added `attract off`: the shot the work had to be confirmed by
+					// could not be framed with what already existed.
+					if ( parts.Length > 3 )
+						ParkCamcorderCameraMode.Yaw = Argument( 3 );
 				}
 				else if ( ParkCamcorderCameraMode.Active )
 				{
@@ -674,6 +683,32 @@ public static class DebugConsole
 				Reply( ParkCamcorderCameraMode.Active
 					? ParkCamcorderCameraMode.State()
 					: $"orbit - {ParkOrbitCameraMode.State()}" );
+				break;
+
+			// Walking on the ground, driven by hand, because `camcorder x y` TELEPORTS - it calls
+			// StandAt - and so crosses no cell edge at all. The whole of cleanup item 2 is about what
+			// happens BETWEEN two cells, so nothing that already existed could show it.
+			//
+			// It reaches ParkCamcorderCameraMode.Step, the same body Walk() runs with the real keys, so
+			// only the reading of Input is skipped. Frames rather than seconds, because the step is
+			// per-frame: 60 frames is a second of walking at the ordinary speed.
+			case "walk":
+				if ( !ParkCamcorderCameraMode.Active )
+				{
+					Reply( "walk: camcorder mode is not active - use `camcorder` first" );
+					break;
+				}
+
+				if ( parts.Length < 3 )
+				{
+					Reply( "walk <forward> <right> [frames]" );
+					break;
+				}
+
+				ParkCamcorderCameraMode.DebugWalk( Argument( 1 ), Argument( 2 ),
+					parts.Length > 3 ? (int)Argument( 3 ) : 60 );
+
+				Reply( ParkCamcorderCameraMode.State() );
 				break;
 
 			// What the pointer is over. The instrument for every verb that starts by pointing at the
