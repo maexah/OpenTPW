@@ -748,9 +748,14 @@ Decompiled 2026-09-22. The per-cell op worker switches on its op byte:
 | `0x87` | the teardown arm, into `FUN_005367a0` / `FUN_00527ee0` |
 | `0x32` | `ClearCell` plus a direction-driven relink of what is left |
 
-**So `mNeighbours` is written in exactly one place: inside `FUN_005348d0`, through paired
-`FUN_00522700` calls** — the cell being laid gains the step's bit and the neighbour gains the
-opposite, which is the symmetric link `ParkPathNeighbours.Cardinal` already performs.
+`FUN_005348d0` writes `mNeighbours` through paired `FUN_00522700` calls — the cell being laid gains
+the step's bit and the neighbour gains the opposite, which is the symmetric link
+`ParkPathNeighbours.Cardinal` already performs.
+
+**It is NOT the only writer, and an earlier version of this page said it was.** `FUN_00522700` is
+called from `FUN_00524960`, `FUN_00528a70`, `FUN_0052a050`, `FUN_0052fc80` and `FUN_0053b280` as well
+as from inside the rule. The placer's two are the ones that matter — see "What authors an entrance's
+`mNeighbours`" below — and missing them is what left Q3's central question open for a session.
 
 **A lead recorded as refuted, because it is the obvious thing to chase next and it is wrong.** The
 placer calls ops `0x81`, `0x85` and `0x86` immediately after each `FUN_005348d0`, which invites the
@@ -779,7 +784,77 @@ A path laid on the `-y` side of an entrance steps south, so it tests `& 0x10`; t
 Bounce's entrance at (52,23) carries `direction 0x01` with its queue on that same `-y` side. Under
 this rule that link could never have been earned — **so the shipped entrance's `mNeighbours` bit is
 authored, not computed**, which is what `park.md:940`'s "replay creation order" warning is about.
-What authors it is still open, and is the whole of `docs/QUEUE.md` Q3.
+What authors it is the next section.
+
+### What authors an entrance's `mNeighbours` — the placer's post-sweep pair
+
+Decoded 2026-09-22 from `FUN_00528a70( x, y, ?, angle, build, test )`. **It is not `FUN_005348d0` run
+anywhere, and it is not an op code.** The placer writes both cells itself, after its footprint sweep
+has finished.
+
+The sweep walks the shape grid (stride `0x14`), reading two values per cell out of the descriptor
+`DAT_00818c18`: a **kind** at `[i*2 + 2]` and a **direction byte** at `[i*2 + 3]`. The kind drives the
+switch at `0x0052916c`; `case 9` is the entrance and `case 10` the exit. During the sweep each arm only
+rotates and remembers:
+
+- the direction byte turned by the angle's base bit — `FUN_004d8c20( base, dir )`, base `1`, `0x40`,
+  `0x10`, `4` for angle `0`, `0x5a`, `0xb4`, `0x10e` — kept in `uStack_5c` (entrance) / `uStack_50` (exit);
+- the coordinates of the cell that heading steps to, kept in `iStack_54`/`iStack_58` (entrance) and
+  `iStack_44`/`iStack_48` (exit).
+
+**The two stepping tables are opposite senses**, which is what makes a thing's way in and way out face
+apart. Note that the step is the mirror of the direction ring above — heading `0x01` steps to `+y`:
+
+| heading | entrance steps to | exit steps to |
+|---|---|---|
+| `0x01` | (x, y+1) | (x, y−1) |
+| `0x04` | (x−1, y) | (x+1, y) |
+| `0x10` | (x, y−1) | (x, y+1) |
+| `0x40` | (x+1, y) | (x−1, y) |
+
+Then, **after the sweep**, both kept headings are passed through `FUN_004d8c00` (`Opposite`) and the
+pair is written straight into the two cells, at `0x005297f0`..`0x00529837`, where `H` is the rotated
+heading:
+
+    entrance cell    mNeighbours |= Opposite(H)    FUN_00522700    0x005297f0
+                     mDirection   = Opposite(H)    FUN_005227e0    0x005297f8
+    the cell it faces  mNeighbours |= H            FUN_00522700    0x00529826
+                       mDirection   = H            FUN_005227e0    0x00529837
+
+The entrance is addressed through the globals `DAT_00818c20` (x) and `DAT_00818c24` (y), written in the
+`case 9` arm at `0x005293a1`; the cell it faces through `iStack_54`/`iStack_58`. **Read these four call
+sites as disassembly.** The decompiler drops the `this` pointer, so all four print as bare
+`FUN_00522700( uStack_5c )` / `FUN_005227e0( … )` with the two *different* cells invisible — only
+`ECX = EDI` against `ECX = ESI` separates them. Reading the decompilation alone is what produced the
+"written in exactly one place" claim corrected above.
+
+**The shipped park confirms both cells at once.** The Belly Bounce is anchored (51,23) at angle 0, so
+the base bit is 1 and the rotate is the identity. Its entrance at (52,23) carries `direction 0x01`,
+which is `Opposite(H)`, so `H = 0x10`; the entrance table sends `0x10` to (x, y−1) = **(52,22)**, which
+is its queue cell, and that cell is given `mNeighbours |= 0x10`. The save reads (52,22) as `0x50`,
+which carries that bit. Both halves were predicted from the disassembly before the park was consulted.
+
+So the bit a queue needs is authored at placement time, on both cells together, and never earned by the
+neighbour rule — which is exactly why no replay of `FUN_005348d0` and no predicate over the finished
+map can reproduce it.
+
+The arm is reached only when the build flag (`param_5`) is set, the test flag (`param_6`) is clear, and
+`FUN_0052fab0()` is non-zero — that gate is `DAT_008187f8 != 0 ? 0 : DAT_0081b0cc`. The exit half
+repeats the whole thing for `iStack_44`/`iStack_48` behind a second `FUN_0052fab0()` test.
+
+| Address | What it is |
+|---|---|
+| `FUN_00522700( cell, bit )` | `cell.mNeighbours \|= bit` (`+0x0c`) |
+| `FUN_005227e0( cell, b )` | `cell.mDirection = b` (`+0x0d`) |
+| `FUN_00522850( cell )` | reads `cell.mDirection` |
+| `FUN_004d8c00( b )` | `Opposite` — 0 → 0, `< 0x10` → `<< 4`, else `>> 4` |
+
+**`FUN_00522700` has a second arm that does not touch `mNeighbours` at all.** When `DAT_0081b4cc` is
+non-zero *and* the cell's `+2` byte is `2`, the bit is OR'd into a shadow mask at `+0x22` instead. That
+flag is raised only inside `FUN_005323f0`, which sets it on entry and clears it on exit around a prefab
+build, so it is 0 for anything a player places — but a reimplementation that mirrors this setter must
+not mirror that arm blindly. The same flag is read by the whole setter family
+(`FUN_00522730`, `…770`, `…790`, `…810`).
 
 **`FUN_004d8c20( baseBit, direction )` is a bit rotate**, not a lookup: it counts the right-shifts
 that reduce `baseBit` to 1 — i.e. its log2 — and left-rotates `direction` by that many places inside

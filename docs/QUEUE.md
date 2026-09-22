@@ -173,12 +173,22 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   the obvious ones, so start past them. It is not the placer's `case 9`, which only re-runs the rule
   on an adjacent path. And it is **not** `FUN_00532fc0`'s ops `0x81`, `0x85` or `0x86`, which the
   placer calls right after each `FUN_005348d0`: that worker is decompiled in `park-engine.md` and
-  those three retile, do track bookkeeping and notify the thing. `mNeighbours` is written in exactly
-  one place - inside `FUN_005348d0`, through paired `FUN_00522700` calls.
-  **Which leaves one reading worth testing first:** that the generator is run on the ENTRANCE cell
-  itself at some point, stepping toward its queue, since the symmetric link would then give the
-  entrance the step's bit (`0x01` north) and the queue the opposite (`0x10`) - which is exactly the
-  pair the shipped park carries. Nothing found so far runs it there; find what does.
+  those three retile, do track bookkeeping and notify the thing. `FUN_00522700`, which is what writes
+  `mNeighbours`, has **six** callers - and the placer's two are the ones that matter, below.
+  **>>> THE DECODE HALF IS DONE, 2026-09-22 - `alexah/112-decode-what-authors-an-entrance-link`. <<<**
+  The standing lead was right about the SHAPE and wrong about the author: it is a symmetric pair giving
+  the entrance one bit and its queue cell the opposite, but nothing runs `FUN_005348d0` there. **The
+  placer `FUN_00528a70` writes both cells itself, after its footprint sweep**, at `0x005297f0`..
+  `0x00529837` - entrance `mNeighbours |= Opposite(H)` and `mDirection = Opposite(H)`, the cell it faces
+  `mNeighbours |= H` and `mDirection = H`, where `H` is the shape cell's direction byte turned by the
+  angle's base bit. Written up in `park-engine.md` under "What authors an entrance's `mNeighbours`",
+  with the entrance/exit stepping tables and the four call sites. It also **corrects this entry's own
+  claim** that `mNeighbours` is written in exactly one place: `FUN_00522700` has six callers, and the
+  placer's two are the ones that matter. Confirmed against the shipped park before the park was
+  consulted: entrance (52,23) `direction 0x01` gives `H = 0x10`, which steps to (52,22), its queue cell,
+  which the save reads as `0x50`.
+  **The build is the next session**: author the same pair in `ParkBuilding` when a thing is placed, so a
+  queue laid against a bought ride is enterable. Nothing in Q3's build needs `LinkPath`.
   `FUN_004d8c20` is decoded as a bit rotate if the heading needs re-deriving: it left-rotates the
   shape grid's per-cell direction by log2 of the angle's base bit. **Q1 ticks behind this and needs
   no further Q1 code.**

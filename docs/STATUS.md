@@ -34,15 +34,16 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - No finances, litter, saving a park back, video, networking. Research is inert and has nothing behind it.
 - Eight of the nine per-object windows are unbuilt. Patrol areas are dead, deferred by Alexah.
 - The `meter.wct` mapping behind the happiness gauge is wrong - the last fault Alexah found by playing.
-- A laid queue cell still has **no tile piece** and the neighbour bit it needs is authored here rather
-  than earned, because the engine step that writes it is undecoded - `docs/QUEUE.md` Q3, whose written
+- A laid queue cell still has **no tile piece**, and the neighbour bit it needs is authored here rather
+  than earned. **The engine step that writes it is now decoded** - `docs/exe/park-engine.md`, "What
+  authors an entrance's `mNeighbours`" - and `docs/QUEUE.md` Q3 builds it next. That entry's written
   prescription is unsafe; see the warning there.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1, Q1b and Q2 are ticked**; the next unticked item is **Q3**, a laid
-queue cell having no neighbours and no tile piece - whose written prescription is unsafe, and whose entry
-carries two refuted leads and what this work measured for it.
+`docs/QUEUE.md`, from the top. **Q1, Q1b and Q2 are ticked**, and **Q3's decode half is done** - the
+build is the next session: author the entrance/queue bit pair at placement, the way the placer does.
+Q3's own written prescription is unsafe; the entry carries three refuted leads and the decode's addresses.
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -70,6 +71,16 @@ Take counts fresh; these go stale within a day.
 
 ## Recent
 
+**2026-09-22 - what authors an entrance's queue link is decoded.** Branch
+`alexah/112-decode-what-authors-an-entrance-link`, no code changed. Q3's standing lead had the shape
+right and the author wrong: it is a symmetric pair, but nothing runs the neighbour rule on the entrance.
+**The placer `FUN_00528a70` writes both cells itself, after its footprint sweep** (`0x005297f0`..
+`0x00529837`) - the entrance takes `mNeighbours |= Opposite(H)` and `mDirection = Opposite(H)`, the cell
+it faces takes `H` in both, where `H` is the shape cell's direction byte turned by the angle's base bit.
+Predicted off the disassembly, then confirmed against the shipped park: entrance (52,23) `direction 0x01`
+gives `H = 0x10`, which steps to (52,22), its queue cell, and the save reads that cell as `0x50`. It also
+refutes this project's own "written in exactly one place" - `FUN_00522700` has six callers.
+
 **2026-09-22 - a thing the save placed can be clicked anywhere on it.** Branch
 `alexah/110-click-a-thing-the-save-placed`. The item blamed unset occupancy; the truth is that a placed
 thing is on **one** cell's list - its anchor - and owns the rest of its footprint through `mParentID`.
@@ -79,34 +90,24 @@ standing there, then the owner. Measured in a running park, every count predicte
 Bounce **12 of 12** cells (was 1), Jungle Spray **9 of 9**, Drinks Shop **4 of 4**, open ground 0 of 4, a
 ride bought this session 12 of 12, and 0 of 12 once sold. Clicking (52,25) printed `Ride window: showing
 'Belly Bounce' (thing 13)`, photographed against a control frame with no window on it.
-**The instrument was measuring the wrong thing**: `worldclick` read the cell's occupant itself and never
-entered the picking code, so every reading through it would have been 1 of 12 whatever the fix did.
-Closing a twice-surviving mutation exposed a second defect - `Sell` swept `LeaveCell` across the whole
-footprint and orphaned the guest under a **turned** thing - now `Unstamp`, tested. `VERIFYING.md` 113 and
-114 carry what the two blind spots cost.
+**The instrument was measuring the wrong thing**: `worldclick` read the cell's occupant itself, never
+entering the picking code. Closing a twice-surviving mutation then exposed a second defect - `Sell` swept
+`LeaveCell` and orphaned the guest under a **turned** thing - now `Unstamp`. `VERIFYING.md` 113-114.
 
 **2026-09-22 - a thing bought this session joins the park.** Branch
-`alexah/109-bought-things-join-the-park`. Q1 had one named cause and turned out to have four. The ride
-sweep, the rider-seat lookup and the `rides` and `spend` censuses all read the save's immutable list, so
-a bought ride took no turn and no census saw it; the offer walk followed the file's `mFirstObject` chain,
-which nothing splices a bought thing into; and `Buy` left `CanLoad` and `Flags` at the record's defaults,
-so `Invite` bailed and nothing was visitable. `ParkState` now owns a live chain - the original links at
-the HEAD (`FUN_00519d80`) and unlinks on demolish (`FUN_00519dc0`) - and `Buy` sets `CanLoad` and the two
-flag bits whose descriptor key is established, counting the rest. Measured in a running park: `objects` 14 → 15, and thing 44 in `rides` with `capacity 5 duration
-30` and its script cycling `role 2`, where before it printed no line at all. Thing 13 still carries
-riders, which is the two-sided control. **And its entry and exit cells are derived** the original's way:
-`FUN_00413410` reads the shape grid for the cells holding **9** and **10**, and `bouncy.sam`'s `S` and
-`2` land exactly on the save's own `mEntryPos` 2997 and `mExitPos` 3381 for the shipped Belly Bounce -
-two records meeting on one cell, neither enough alone, which closes `park-engine.md`'s open question on
-mType 9 and 10. Both ends are typed and their headings measured off the game rather than derived
-(`cell (42,23) type 9 direction 0x01` after a buy), this tree holding two compasses that disagree by name.
+`alexah/109-bought-things-join-the-park`. Q1 had one named cause and turned out to have four: four reads
+of the save's immutable list, the `mFirstObject` chain nothing splices a bought thing into, and `Buy`
+leaving `CanLoad` and `Flags` at their defaults so `Invite` bailed. `ParkState` now owns a live chain
+(`FUN_00519d80` links at the head, `FUN_00519dc0` unlinks on demolish) and `Buy` sets both. Measured:
+`objects` 14 → 15, thing 44 in `rides` with `capacity 5 duration 30`, where before it printed no line at
+all, with thing 13 still carrying riders as the two-sided control. **Its entry and exit cells are
+derived** from the shape picture, landing on the save's own `mEntryPos` 2997 and `mExitPos` 3381.
 **And a guest RIDES it.** The last cause was `PeepBehaviour.Chosen`, resolving `MajorDest` against the
-FILE's list: a bought ride is not in it, so `JoinTheQueue` gave up the instant a guest arrived - they
-chose it, walked the whole way, gave up silently and chose it again. One line, and it un-blinds all five
-of `Chosen`'s callers. Measured in **five** runs - `bouncing 1` on the ride's own node at (425.4,252.6),
-a different scream each time, `save/` unchanged within every one. Mutations called in advance: **7**,
-**3**, **1**, **1** red and **four** survivals said at their tests. **The rider is not photographed**: he
-rides at z 10.3, the camcorder's eye is 5.0 and the console has no pitch argument (`VERIFYING.md` 111-112).
+FILE's list, so `JoinTheQueue` gave up the instant a guest arrived - they chose it, walked the whole way,
+gave up silently and chose it again. One line, un-blinding all five of `Chosen`'s callers. **Five** runs,
+`save/` unchanged within each; mutations **7**, **3**, **1**, **1** red, four survivals named at their
+tests. **The rider is not photographed** - z 10.3 against a 5.0 eye, no pitch argument (`VERIFYING.md`
+111-112).
 
 **2026-09-22 - four earlier items, kept now only in the git log.** `alexah/108` photographed the two
 Confirm clauses that were owed pictures; `alexah/107` swung the camera onto the gate and flew it into the
