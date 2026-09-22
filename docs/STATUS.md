@@ -79,7 +79,7 @@ The tip is the newest `alexah/N` branch and has everything. Confirm with
 - No finances, litter, saving a park back, video, networking. **One** gadget button (Research) is still inert, and it is the one with nothing behind it to build: its screen is six effort sliders over research groups, and this game has no research, no researchers and no groups. The two global income pools, the balloon and costume arms, and the litter-bin errand (guest state 9) are named and unbuilt.
 - Eight of the nine per-object windows are unbuilt (only the ride's). Its stats table fills **four of seven** rows — Users last month, Excitement and Reliability are counted gaps. Patrol areas are dead, deferred by Alexah.
 - The `meter.wct` mapping behind the happiness gauge is wrong — the last fault Alexah found by playing that is still open.
-- 32 opcodes unimplemented. Three README lines and `RideScriptFile.cs:99` still quote older counts.
+- 32 opcodes unimplemented. **The stale counts this line used to flag are fixed**: `README.md` said 63 in one place and 57 in another, and `RideScriptFile.cs:99` said 63; all three now say 74, measured the same day. `docs/history/` still carries older figures and is left alone on purpose — history is verbatim.
 
 ## Next
 

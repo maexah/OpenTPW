@@ -10,9 +10,10 @@ then 7**. It is **untracked by instruction** — never staged, and *not* in `.gi
 every `git status` and a `git add -A` would sweep it in (which is one more reason `CLAUDE.md` rule 13
 forbids that). It lives on this machine only and is **absent from a fresh clone** — read it before
 assuming this file is the whole of the work. **Its items 9 (park load time), 6 (sound held under a
-pause) and 4 (the lobby ocean) are all done, and Alexah set its item 5 — one scream, on a loop, at one
-volume — as next on 2026-09-21, choosing it over its item 1.** Nothing in *this* file was ticked by any
-of that work: not one of the three appears here.
+pause), 4 (the lobby ocean) and 5 (one scream, on a loop, at one volume) are all done**, the last of
+them on 2026-09-21 — a held scream is now replayed rather than looped, so it re-picks a sample every
+pass, and `SINGLESCREAM` and `SCREAMLEVEL` are built. **Its item 1 is next in Alexah's order.**
+Nothing in *this* file was ticked by any of that work: not one of the four appears here.
 
 **Alexah sets which item is the goal. One item per session** (`CLAUDE.md`, "How a session runs" 4).
 Tick an item here in the same commit that lands it, and move its detail to the page that owns it.
@@ -541,7 +542,7 @@ from the crossing. So the arrival path they would take is the one the shipped sa
 
 ## Just behind these
 
-- **34 of 106 opcodes are unimplemented** (`TRIGWAITANIM` was built 2026-09-20) — but only three are reached by shipped content in this park,
+- **32 of 106 opcodes are unimplemented** (`TRIGWAITANIM` 2026-09-20; `SINGLESCREAM` and `SCREAMLEVEL` 2026-09-21) — but only three are reached by shipped content in this park,
   so it is mostly invisible here. Take the count fresh; three README lines and `RideScriptFile.cs:99`
   still quote older ones.
 
