@@ -482,6 +482,12 @@ public sealed class ParkGuestSprites : ModelEntity
 		var cellX = field?.CellSizeX ?? 0f;
 		var cellY = field?.CellSizeY ?? 0f;
 
+		// How far through the current thing tick this frame is, so a walking person is drawn between the
+		// two positions the simulation gave them rather than at the later one for eight ticks running.
+		// One value for the whole frame, as the original computes one alpha per frame and hands it to
+		// every peep (FUN_00518f90).
+		var alpha = ParkPeople.ThingTickFraction;
+
 		foreach ( var (person, sprite) in _people )
 		{
 			var (setNumber, frame, bankOffset) = Showing( people?.SpriteFor( person.ThingId ), sprite );
@@ -492,7 +498,7 @@ public sealed class ParkGuestSprites : ModelEntity
 			// AnyWalkFor rather than WalkFor: staff are drawn from this same list and their walks live in
 			// a separate pool, so asking only the guests' one drew every member of staff at the position
 			// the save left them at - see ParkPeople.AnyWalkFor.
-			var (x, y, angle) = StandingFrom( people, cellX, cellY, person, sprite );
+			var (x, y, angle) = StandingFrom( people, cellX, cellY, person, sprite, alpha );
 
 			var set = loaded.Bank.Sets[setNumber & 0xf];
 			var index = Picture( set, frame, Facing( ParkWorld.Person.OctantOf( angle ) ),
@@ -595,8 +601,8 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// name moved rather than the test.
 	/// </remarks>
 	internal static (float X, float Y, int Angle) StandingFrom( ParkPeople? people, float cellX, float cellY,
-		ParkWorld.Person person, ParkWorld.Sprite sprite )
-		=> Standing( people?.AnyWalkFor( person.ThingId ), cellX, cellY, person, sprite );
+		ParkWorld.Person person, ParkWorld.Sprite sprite, float alpha = 1f )
+		=> Standing( people?.AnyWalkFor( person.ThingId ), cellX, cellY, person, sprite, alpha );
 
 	/// <summary>
 	/// Where a ride is carrying this person, or null when none is.
@@ -643,16 +649,32 @@ public sealed class ParkGuestSprites : ModelEntity
 	}
 
 	/// <inheritdoc cref="StandingFrom"/>
+	/// <param name="alpha">
+	/// How far through the current thing tick this frame is - <see cref="ParkPeople.ThingTickFraction"/>.
+	/// <b>One by default, which is the position the simulation actually left them at</b>, so a caller with
+	/// no frame to place - a test, or anything asking "where is this person" rather than "where do I draw
+	/// them this frame" - gets exactly what it got before interpolation existed.
+	/// </param>
 	internal static (float X, float Y, int Angle) Standing( PeepWalk? walk, float cellX, float cellY,
-		ParkWorld.Person person, ParkWorld.Sprite sprite )
+		ParkWorld.Person person, ParkWorld.Sprite sprite, float alpha = 1f )
 	{
 		if ( walk == null || cellX <= 0f || cellY <= 0f )
 			return (sprite.X, sprite.Y, person.Angle);
 
 		var at = walk.Position;
+		var from = walk.Previous;
 
-		return ((at.X / (float)FixedVector.One) * cellX,
-			(at.Y / (float)FixedVector.One) * cellY,
+		// prev + (cur - prev) * alpha, per axis - FUN_004f9f00, whose two halves are at 0x004f9f89 and
+		// 0x004f9fb6. The simulation moves somebody once every eight ticks, about four times a second;
+		// this is what carries them there over the frames in between instead of jumping.
+		var x = from.X + (at.X - from.X) * alpha;
+		var y = from.Y + (at.Y - from.Y) * alpha;
+
+		// <b>The heading is deliberately NOT blended</b>, and that is the original's own arrangement:
+		// 0x004fa015 copies the octant straight off the thing into the out-param while the positions
+		// either side of it are being interpolated. So a guest's position glides and their facing snaps.
+		return ((x / FixedVector.One) * cellX,
+			(y / FixedVector.One) * cellY,
 			walk.Heading);
 	}
 
@@ -894,11 +916,15 @@ public sealed class ParkGuestSprites : ModelEntity
 		var cellY = field?.CellSizeY ?? 0f;
 		var people = ParkPeople.Current;
 
+		// The same fraction the drawing uses, for the same reason this census asks Standing at all: a
+		// census computing a position of its own is a census that can disagree with the picture.
+		var alpha = ParkPeople.ThingTickFraction;
+
 		foreach ( var (person, sprite) in _people )
 		{
 			var walk = people?.AnyWalkFor( person.ThingId );
 			var playing = people?.SpriteFor( person.ThingId );
-			var (x, y, angle) = Standing( walk, cellX, cellY, person, sprite );
+			var (x, y, angle) = Standing( walk, cellX, cellY, person, sprite, alpha );
 
 			// <b>The same override the drawing applies, and this census lied without it.</b> It computes
 			// a position of its own rather than reading the one the renderer used, so while a rider was
@@ -916,7 +942,11 @@ public sealed class ParkGuestSprites : ModelEntity
 				$"frame {frame} (saved set {sprite.Set} frame {sprite.Frame}) " +
 				$"script {(playing == null ? "none" : $"{playing.Script}@{playing.Pc}")} " +
 				$"facing {ParkWorld.Person.OctantOf( angle )} (angle {angle}) " +
-				$"drawn ({x:0.0},{y:0.0}){(seated is { } on ? $" SEATED z {on.Z:0.0}" : "")} " +
+				// Three decimals, not one: a guest covers about 0.24 of a cell per thing tick, so one
+				// interpolated frame moves them roughly 0.16 world units - which at one decimal place is
+				// barely above the printing granularity and could not be told from a jump.
+				$"drawn ({x:0.000},{y:0.000}) alpha {alpha:0.00}" +
+				$"{(seated is { } on ? $" SEATED z {on.Z:0.0}" : "")} " +
 				$"saved ({sprite.X:0.0},{sprite.Y:0.0}) " +
 				$"cellsize {cellX:0.##}x{cellY:0.##} walk {(walk == null ? "none" : "found")}";
 		}

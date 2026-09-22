@@ -123,6 +123,28 @@ The ones that have bitten more than once.
   early. A truncated measurement reads exactly like a finding, and the other numbers in the line truncate
   with it. Where you can foresee that an instrument might manufacture the result, write that prediction
   down before looking.
+- **102** — **A reader that answers "there is no such memory" can be wrong about it, and that answer reads
+  as structural rather than as a failure.** Inside Ghidra's `run_python`, `memory.getBytes`, `api.getBytes`
+  **and** `memory.getBlock` all denied `0x00700f94` existed — `getBlock` returning `None`, which is not "I
+  could not read this" but "there is nothing here" — while the `read_memory` tool read it at once and the
+  executable on disk agreed byte for byte (`.rdata`, file offset `0x002ff794`). `list_segments` compounded
+  it by printing **PE section headers instead of Ghidra memory blocks**, so the address sat inside a range
+  the listing called initialized while the reader said no block existed. On the strength of that I was one
+  step from recording "the delegated probes fabricated these constants" as a finding; they had not, and all
+  eleven floats they reported were correct. **Before disbelieving a number, read it by a second code path —
+  and for anything load-bearing, read it out of the file the program came from**, which needs no analysis
+  tool and so cannot share a bug with one. A negative from a single reader is rule 33's "statement about the
+  instrument's reach" even when the reader phrases it as a fact about the data.
+- **103** — **A derived statistic must not be segmented by the very quantity under test, or the verdict
+  inverts.** Measuring whether a guest's drawn position slides between simulation steps, I split the run
+  into thing ticks by watching the interpolation fraction wrap from high to low. That works perfectly on
+  the interpolating build and is meaningless on the control, whose fraction never moves: the wrap never
+  fires, the whole run collapses into **one** segment, and "distinct positions within one tick" comes
+  back as the whole-run figure — about seventy — against the good build's thirty-one. **The broken build
+  would have scored twenty times better than the fixed one**, from a harness that was correct on the
+  build I happened to write it against. Segment by something the change cannot touch: here the tick's own
+  248 ms period, taken off the timestamps, which needs nothing the subject prints. The tell to look for is
+  a control whose score is *higher* than the treatment's on a metric that should floor it.
 
 ## Controls and mutations
 

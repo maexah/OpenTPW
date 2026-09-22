@@ -427,6 +427,86 @@ public class ParkTickTests
 	}
 
 	/// <summary>
+	/// <b>The drawing moves between thing ticks; the simulation does not.</b> That pair is the whole of
+	/// cleanup item 3: the walk turns once every eight game ticks, about four times a second, and the
+	/// original slides the picture between the two positions over the frames in between rather than
+	/// holding it still and jumping (<c>FUN_004f9f00</c>, per frame from <c>FUN_00518f90</c>).
+	///
+	/// <para>
+	/// <b>It is asserted as a two-sided control, and that is what makes it a test rather than a
+	/// tautology.</b> The navigator is held to ONE value across the window while the drawn position is
+	/// required to take several. Interpolating in the simulation instead - which would be the wrong fix -
+	/// fails the first half; not interpolating at all fails the second.
+	/// </para>
+	/// <para>
+	/// <b>What this does NOT pin, said here rather than assumed away</b> (<c>docs/VERIFYING.md</c> rule
+	/// 48). Making <c>ParkGuestSprites.OnRenderTranslucent</c> pass a literal <c>1f</c> instead of the
+	/// live fraction <b>passes all 848 tests</b>: this test reaches <c>Standing</c> directly, and the
+	/// render path it would break needs a graphics device a test run has none of. So the drawing's own
+	/// wiring rests on the capture and not on the suite - the same division items 4, 5 and 6 of the
+	/// cleanup plan each recorded. What IS pinned here is the fraction: hard-wiring
+	/// <see cref="ParkPeople.ThingTickFraction"/> to one fails this test and nothing else.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void BetweenThingTicksTheDrawingMovesAndTheSimulationDoesNot()
+	{
+		var world = World();
+		var people = new ParkPeople( world );
+
+		try
+		{
+			EnterPark();
+
+			var person = world.People.Single( p => p.ThingId == 42 );
+			var sprite = world.Sprites.Single( s => s.Slot == person.SpriteSlot );
+			var walk = people.WalkFor( person.ThingId );
+
+			Assert.IsNotNull( walk, "thing 42 is one of the twelve guests that walk" );
+
+			// Get them walking, and then to the far side of a turn so the window below starts fresh.
+			var start = walk.Position;
+
+			for ( var frame = 0; frame < 600 && walk.Position == start; ++frame )
+			{
+				Frame( AFrame );
+				people.Update();
+			}
+
+			Assert.AreNotEqual( start, walk.Position, "the guest never moved at all" );
+
+			// Now across ONE thing tick: sample what the drawing would put on screen each frame while
+			// the walk holds the position it just reached.
+			var held = walk.Position;
+			var drawn = new HashSet<(float, float)>();
+			var navigator = new HashSet<FixedVector>();
+
+			for ( var frame = 0; frame < 600 && walk.Position == held; ++frame )
+			{
+				var (x, y, _) = ParkGuestSprites.Standing( walk, 10f, 10f, person, sprite,
+					ParkPeople.ThingTickFraction );
+
+				drawn.Add( (x, y) );
+				navigator.Add( walk.Position );
+
+				Frame( AFrame );
+				people.Update();
+			}
+
+			Assert.AreEqual( 1, navigator.Count,
+				"the simulation moved inside the window, so this measures nothing" );
+
+			Assert.IsTrue( drawn.Count > 1,
+				$"the drawing should slide across a thing tick; it took {drawn.Count} position(s)" );
+		}
+		finally
+		{
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
 	/// And the drawing reads that moved position rather than the saved one - the same lookup
 	/// <c>ParkGuestSprites.OnRenderTranslucent</c> does, by thing id, through the live pool.
 	/// </summary>

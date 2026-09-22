@@ -220,6 +220,128 @@ public class ParkGuestPlacementTests
 		Assert.AreEqual( 0f, down.X - here.X, 0.0001f, "and nothing at all along x" );
 	}
 
+	/// <summary>
+	/// <b>The blend: nought draws where the tick started, one where it ended, and a half half way
+	/// between.</b> That is the arithmetic of <c>FUN_004f9f00</c> - <c>prev + (cur - prev) * t</c> -
+	/// whose two halves sit at <c>0x004f9f89</c> and <c>0x004f9fb6</c>.
+	///
+	/// <para>
+	/// <b>The default is asserted as carefully as the blend, because that is what makes the change
+	/// safe.</b> One is the default, and alpha one returns the position the simulation actually reached,
+	/// so every caller that knows nothing about frames - including the four tests above, written before
+	/// any of this existed - keeps exactly the answer it always had.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheDrawnPositionIsBlendedBetweenTheTwoPositionsOfATick()
+	{
+		var world = World();
+		var (person, sprite, _) = Guest( world );
+		var blocked = CellEdge.For( world, ParkPeople.WalkingMode ).Blocked;
+
+		// Mid-tick: stamped standing on (40,20), and since moved to (41,20).
+		var navigator = At( 40, 20 );
+		var walk = new PeepWalk( navigator, blocked );
+
+		navigator.Position = new FixedVector( 41 * FixedVector.One, 20 * FixedVector.One );
+
+		Assert.AreEqual( 40 * Cell, walk.Previous.X / (float)FixedVector.One * Cell, 0.0001f,
+			"the stamp should still hold where the tick started" );
+
+		var started = ParkGuestSprites.Standing( walk, Cell, Cell, person, sprite, 0f );
+		var halfway = ParkGuestSprites.Standing( walk, Cell, Cell, person, sprite, 0.5f );
+		var arrived = ParkGuestSprites.Standing( walk, Cell, Cell, person, sprite, 1f );
+		var byDefault = ParkGuestSprites.Standing( walk, Cell, Cell, person, sprite );
+
+		Assert.AreEqual( 40 * Cell, started.X, 0.0001f, "alpha nought is where the tick started" );
+		Assert.AreEqual( 41 * Cell, arrived.X, 0.0001f, "alpha one is where it ended" );
+		Assert.AreEqual( 40.5f * Cell, halfway.X, 0.0001f, "and a half is half way between the two" );
+
+		Assert.AreEqual( arrived.X, byDefault.X, 0.0001f, "the default should be alpha one" );
+		Assert.AreEqual( arrived.Y, byDefault.Y, 0.0001f );
+
+		// Nothing moved on the other axis, so nothing is blended along it either.
+		Assert.AreEqual( 20 * Cell, started.Y, 0.0001f );
+		Assert.AreEqual( 20 * Cell, halfway.Y, 0.0001f );
+	}
+
+	/// <summary>
+	/// <b>The heading is NOT blended, and that is the original's own choice rather than something left
+	/// out here.</b> <c>0x004fa015</c> copies the octant straight off the thing into the out-param while
+	/// the two positions either side of it are being interpolated - so a guest's position glides and
+	/// their facing snaps, about four times a second.
+	/// </summary>
+	[TestMethod]
+	public void TheHeadingIsNotBlendedWithThePosition()
+	{
+		var world = World();
+		var (person, sprite, _) = Guest( world );
+		var blocked = CellEdge.For( world, ParkPeople.WalkingMode ).Blocked;
+
+		var navigator = At( 40, 20 );
+		var walk = new PeepWalk( navigator, blocked ) { Heading = 512 };
+
+		navigator.Position = new FixedVector( 41 * FixedVector.One, 21 * FixedVector.One );
+
+		var started = ParkGuestSprites.Standing( walk, Cell, Cell, person, sprite, 0f );
+		var halfway = ParkGuestSprites.Standing( walk, Cell, Cell, person, sprite, 0.5f );
+		var arrived = ParkGuestSprites.Standing( walk, Cell, Cell, person, sprite, 1f );
+
+		// The position moved across all three - so the angle holding still is a result, not a vacuum.
+		Assert.AreNotEqual( started.X, arrived.X, "the position should differ across the tick" );
+
+		Assert.AreEqual( 512, started.Angle );
+		Assert.AreEqual( 512, halfway.Angle );
+		Assert.AreEqual( 512, arrived.Angle );
+	}
+
+	/// <summary>
+	/// <b>Somebody standing still is drawn standing still, whatever the frame.</b>
+	///
+	/// <para>
+	/// This is the test for the trap that decides <i>where</i> the stamp lives. The original stamps
+	/// previous := current in <c>FUN_004fa870</c>, the first call of <b>every</b> person's tick handler
+	/// and ahead of the guest handler's own <c>(id &amp; 3)</c> stagger, so it happens whatever state
+	/// they are in. Stamping it inside the walk instead - which is the obvious place and the wrong one -
+	/// would leave a guest who had stopped holding two different positions for ever, and the drawing
+	/// would swing them between the two on every frame, about a quarter of a cell, for as long as they
+	/// stood there.
+	/// </para>
+	/// <para>
+	/// <b>This test carries that claim alone, and the mutation check says so</b>
+	/// (<c>docs/VERIFYING.md</c> rule 48). Deleting the stamp from <c>ParkPeople.OnUpdate</c>'s peep loop
+	/// - the wiring that puts it ahead of the state dispatch for everybody rather than only for walkers
+	/// - <b>passes all 848 tests</b>, because nothing in the suite drives a guest who has STOPPED through
+	/// a running park: the park-level test watches thing 42, who is walking throughout. So the placement
+	/// of the stamp rests on this arithmetic plus the decode of <c>FUN_004fa870</c>, and the oscillation
+	/// it prevents would have to be seen in a running park to be caught from the outside.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void AGuestWhoHasStoppedIsDrawnInOnePlace()
+	{
+		var world = World();
+		var (person, sprite, _) = Guest( world );
+		var blocked = CellEdge.For( world, ParkPeople.WalkingMode ).Blocked;
+
+		var navigator = At( 40, 20 );
+		var walk = new PeepWalk( navigator, blocked );
+
+		// They moved last tick...
+		navigator.Position = new FixedVector( 41 * FixedVector.One, 20 * FixedVector.One );
+
+		// ...and then a tick began in which they did not, which is exactly what the stamp records.
+		navigator.StampPrevious();
+
+		foreach ( var alpha in new[] { 0f, 0.25f, 0.5f, 0.75f, 1f } )
+		{
+			var at = ParkGuestSprites.Standing( walk, Cell, Cell, person, sprite, alpha );
+
+			Assert.AreEqual( 41 * Cell, at.X, 0.0001f, $"alpha {alpha} moved a standing guest" );
+			Assert.AreEqual( 20 * Cell, at.Y, 0.0001f, $"alpha {alpha} moved a standing guest" );
+		}
+	}
+
 	/// <summary>A navigator standing exactly on a cell corner, so the arithmetic divides cleanly.</summary>
 	private static PeepNavigator At( int cellX, int cellY )
 		=> new( new ParkWorld.NavigatorState(

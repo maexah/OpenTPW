@@ -81,6 +81,43 @@ public sealed class PeepNavigator
 	/// </summary>
 	public FixedVector Position { get; set; }
 
+	/// <summary>
+	/// Where this person stood when the thing tick now running began - the original's <c>mPreviousX</c>
+	/// and <c>mPreviousY</c> at person <c>+0x190</c>/<c>+0x194</c>, named by its own person-base
+	/// serialiser <c>FUN_004f8b10</c>.
+	///
+	/// <para>
+	/// <b>It exists so the drawing can interpolate.</b> The simulation moves somebody once every eight
+	/// ticks - 248ms - and the original slides the picture between these two positions across the frames
+	/// in between: <c>FUN_004f9f00</c> is <c>prev + (cur - prev) * t</c> per axis. See
+	/// <c>docs/exe/ride-operation.md</c>, "Where a WALKING peep is drawn".
+	/// </para>
+	/// <para>
+	/// <b>This is NOT the save's <c>mLastPosX</c>/<c>mLastPosY</c> at 430/434.</b> Those are a trailing
+	/// sprite's own last placement, read only by <c>FUN_004fe900</c> behind a gate, and nothing here
+	/// reads them at all - taking them for a previous position is the trap that field invites.
+	/// </para>
+	/// </summary>
+	public FixedVector Previous { get; private set; }
+
+	/// <summary>
+	/// Marks where this person is standing now as where they started this tick.
+	///
+	/// <para>
+	/// The original does this in <c>FUN_004fa870</c>, which is the <b>first call of every person kind's
+	/// tick handler</b> - <c>FUN_00501650</c> at <c>0x00501658</c> for a guest, ahead of that handler's
+	/// own <c>(id &amp; 3)</c> needs stagger - so it happens for everybody on every sweep, whatever state
+	/// they are in. That last part is load-bearing: stamping only where somebody walks would leave a
+	/// person who stopped with two different positions for ever, and the drawing would slide them back
+	/// and forth between them.
+	/// </para>
+	/// <para>
+	/// A teleport re-stamps it as well (<c>0x004fa95d</c>), or the picture slides all the way from
+	/// wherever the person used to be.
+	/// </para>
+	/// </summary>
+	public void StampPrevious() => Previous = Position;
+
 	/// <summary>How fast and which way they are going, held to <see cref="MaxSpeed"/> by the steering step.</summary>
 	public FixedVector Velocity { get; set; }
 
@@ -167,6 +204,10 @@ public sealed class PeepNavigator
 	{
 		Radius = saved.Radius;
 		Position = new FixedVector( saved.X, saved.Y );
+
+		// Standing still until something moves them, so where they started is where they are. Without
+		// this a restored person would interpolate out of (0,0) on the park's very first frames.
+		Previous = Position;
 		Velocity = new FixedVector( saved.VelocityX, saved.VelocityY );
 		Target = new FixedVector( saved.TargetX, saved.TargetY );
 		MaxSpeed = saved.MaxSpeed;

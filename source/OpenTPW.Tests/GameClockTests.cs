@@ -138,4 +138,56 @@ public class GameClockTests
 		// Where the frame clamp, had it been what counted, would have allowed three.
 		Assert.AreEqual( 0.1f, Time.Delta, 0.0001f );
 	}
+
+	/// <summary>
+	/// The sub-tick remainder, which is what a park's drawing interpolates with.
+	///
+	/// <para>
+	/// <b>It is a fraction of ONE tick and not of anything else.</b> Composing it with the eight-tick
+	/// thing beat belongs to <see cref="ParkPeople.ThingTickFraction"/>, because the original keeps a
+	/// separate baseline and a separate reciprocal per rate - 1/31, 1/62 and 1/248 - rather than one
+	/// fraction everything divides down.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void ThePartialTickIsWhateverHasNotComeDueYet()
+	{
+		Start();
+
+		// Half a tick: none comes due, and the whole of it is still owed.
+		Frame( GameClock.TickSeconds / 2f );
+		Assert.AreEqual( 0, GameClock.TicksDue );
+		Assert.AreEqual( 0.5f, GameClock.PartialTick, 0.02f );
+
+		// The other half: one comes due, and next to nothing is left owed.
+		Frame( GameClock.TickSeconds / 2f );
+		Assert.AreEqual( 1, GameClock.TicksDue );
+		Assert.IsTrue( GameClock.PartialTick < 0.05f, $"{GameClock.PartialTick} was left owed" );
+
+		// And it can never reach one, because a whole tick's worth comes due instead of being owed.
+		for ( var frame = 0; frame < 200; ++frame )
+		{
+			Frame( 1f / 60f );
+
+			Assert.IsTrue( GameClock.PartialTick is >= 0f and < 1f,
+				$"the partial tick left its range at {GameClock.PartialTick}" );
+		}
+	}
+
+	/// <summary>
+	/// A held world holds its interpolation too - nothing is owed while paused, so a paused park stops
+	/// mid-stride rather than snapping anybody to where the simulation last left them.
+	/// </summary>
+	[TestMethod]
+	public void APausedClockDoesNotAdvanceThePartialTick()
+	{
+		Frame( GameClock.TickSeconds / 2f );
+
+		var held = GameClock.PartialTick;
+
+		for ( var frame = 0; frame < 30; ++frame )
+			Frame( 1f / 60f, paused: true );
+
+		Assert.AreEqual( held, GameClock.PartialTick, 0.0001f, "a held clock moved the interpolation" );
+	}
 }

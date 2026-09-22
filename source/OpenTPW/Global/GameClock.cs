@@ -148,6 +148,25 @@ public static class GameClock
 	private static float _owed;
 
 	/// <summary>
+	/// How far through the tick that has not yet come due this frame is, from nought to just under one.
+	///
+	/// <para>
+	/// <b>This is the frame-level remainder, and on its own it is not what anything draws with.</b> The
+	/// original interpolates at three different rates off one clock sample - placed objects every 31ms,
+	/// particles every 62ms and <b>peeps every 248ms</b> - each dividing by its own reciprocal constant
+	/// against its own baseline (<c>0x0054fa0d</c>, <c>0x0054fa38</c>, <c>0x0054fa5c</c>). So a consumer
+	/// composes this with its own beat rather than reading it as a fraction of anything; see
+	/// <see cref="ParkPeople.ThingTickFraction"/>, which is the 248ms one.
+	/// </para>
+	/// <para>
+	/// A held world leaves this where it stands, because <see cref="Update"/> adds nothing to
+	/// <see cref="_owed"/> while paused - so a paused park holds its interpolation still rather than
+	/// snapping anybody, which is what pausing should look like.
+	/// </para>
+	/// </summary>
+	public static float PartialTick => _owed / TickSeconds;
+
+	/// <summary>
 	/// Whether the next frame's elapsed time is the one a <see cref="Rebase"/> is throwing away - see
 	/// there for why a scene must not be billed for its own loading.
 	/// </summary>

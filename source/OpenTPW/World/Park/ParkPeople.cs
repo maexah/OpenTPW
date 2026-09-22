@@ -594,6 +594,11 @@ public sealed class ParkPeople : Entity
 
 		member.Navigator.Position = centre;
 		member.Navigator.Target = centre;
+
+		// Put down, not walked - so the previous position moves with them and the drawing does not slide
+		// them across the park from wherever they were picked up. Same re-stamp the original's own
+		// placement makes at 0x004fa95d.
+		member.Navigator.StampPrevious();
 		member.SetActivity( StaffActivity.Idle, (int)GameClock.Ticks );
 
 		_behaviour.State.StandOn( member.ThingId, cellX, cellY );
@@ -1066,6 +1071,28 @@ public sealed class ParkPeople : Entity
 	public const int MillisecondsPerTick = 31;
 
 	/// <summary>
+	/// How far through the current thing tick the frame being drawn is, from nought to one - what the
+	/// drawing interpolates a walking person's position with.
+	///
+	/// <para>
+	/// <b>The beat is 248ms, not 31ms, and that is the whole point.</b> The original computes three of
+	/// these in one per-frame block off a single clock sample at <c>[0x008786bc]</c>, each against its own
+	/// baseline and its own reciprocal: 1/31 for placed objects, 1/62 for particles, and <b>1/248.000007
+	/// for peeps and staff</b> (<c>0x0054fa5c</c>, driving <c>FUN_00518f90</c>). Its baseline
+	/// <c>[0x00878a1c]</c> is re-stamped at <c>0x0054f683</c>, <i>inside</i> the every-eighth-tick gate -
+	/// so the fraction measures time since the last thing sweep, and eight 31ms ticks is 248ms exactly.
+	/// </para>
+	/// <para>
+	/// Clamped, as the original clamps it: <c>FUN_004f9f00</c>'s placement sample is held to [0, 1] with
+	/// immediate stores of nought and <c>0x3f800000</c>. So a frame that arrives late draws somebody at
+	/// the position the simulation actually reached and never extrapolates past it.
+	/// </para>
+	/// </summary>
+	public static float ThingTickFraction
+		=> Math.Clamp( ((GameClock.Ticks % ThingTickEvery) + GameClock.PartialTick) / ThingTickEvery,
+			0f, 1f );
+
+	/// <summary>
 	/// One turn of every guest for each thing tick that has come due - see
 	/// <see cref="ThingTickEvery"/>, which is why that is not every 31ms tick.
 	///
@@ -1104,6 +1131,14 @@ public sealed class ParkPeople : Entity
 
 			foreach ( var peep in _peeps )
 			{
+				// Where they start this tick, before anything moves them - the original's FUN_004fa870,
+				// which is the first call of the guest tick handler (0x00501658) and sits ahead of that
+				// handler's own (id & 3) stagger. So it runs for every guest on every sweep whatever
+				// state they are in, and NOT only for the ones that walk: see
+				// PeepNavigator.StampPrevious for why stamping only walkers makes a stopped guest
+				// oscillate for ever.
+				peep.Navigator.StampPrevious();
+
 				peep.Tick( thingTick );
 
 				var playing = _sprites.GetValueOrDefault( peep.ThingId );
@@ -1135,6 +1170,11 @@ public sealed class ParkPeople : Entity
 			// and the rest; a staff member's are their pay and their training, which nothing here runs.
 			foreach ( var member in _staff )
 			{
+				// The same stamp, for the same reason: the original gives every person kind a needs call
+				// and a behaviour call back to back off one switch, and FUN_00505490 opens with
+				// FUN_004fa870 at 0x00505495 exactly as the guest handler does.
+				member.Navigator.StampPrevious();
+
 				var playing = _sprites.GetValueOrDefault( member.ThingId );
 
 				// <b>The GAME tick, not the thing tick, and the difference is a factor of eight.</b> A

@@ -156,6 +156,13 @@ public sealed class PeepWalk
 	public FixedVector Position => _navigator.Position;
 
 	/// <summary>
+	/// Where this person stood when the tick now running began - <see cref="PeepNavigator.Previous"/>,
+	/// which is what the drawing interpolates from. Read through the walk for the same reason
+	/// <see cref="Position"/> is.
+	/// </summary>
+	public FixedVector Previous => _navigator.Previous;
+
+	/// <summary>
 	/// How far the last <see cref="Step"/> actually moved this person, in the same 16.16 units, and nothing
 	/// at all unless that step was a walking one.
 	///

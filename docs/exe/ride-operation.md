@@ -463,7 +463,7 @@ The slot array is the script's `+0x2c`, counted by `+0x7c`, **`0x20` = 32 bytes 
 | `FUN_00556f40` | — | `WALKON`'s implementation. Takes the first slot whose STATE is 0, stores the handle and both nodes, sets due = now + `duration * 100` (a zero duration becomes 100), derives the facing with `fpatan` between the two node positions **masked to 3 bits (8 octants)**, and sets **state 1**. Asserts `"Walknodes need a `setwalk`…"` if no node table is declared, and `"WALK: Could not add peep t…"` when every slot is busy. | Disassembly |
 | `FUN_005571a0` | — | `WALKOFF`: finds the slot holding that visitor, restamps the timers, recomputes the facing, spawns particles when the action is 2, sets **state 3**. | Disassembly |
 | `FUN_00557110` | — | `WALKGET`: scans for a slot in **state 4**, clears its state and handle, returns the handle — 0 if none. | Disassembly |
-| `FUN_00557d80` | — | The per-tick stepper, called once per script **per frame** from the positioner. Progress is `(now - start) * 1000 / (due - start)`; at **≥ 1000** state 1 becomes **2** (and action 4 attaches the rider to the head node), and state 3 becomes **4**. | Disassembly |
+| `FUN_00557d80` | — | The **per-frame** stepper, called once per script per frame from the positioner. Progress is `(now - start) * 1000 / (due - start)`; at **≥ 1000** state 1 becomes **2** (and action 4 attaches the rider to the head node), and state 3 becomes **4**. | Disassembly |
 | `FUN_00557ab0` | — | The positioner; also the only reader of `+0x6e`. | Disassembly |
 | `FUN_005580a0` | — | Pure presentation: interpolates between two node positions and calls `FUN_004f9e60` to place the sprite. | Disassembly |
 | `FUN_00556b90` | — | Resolves a node id **in the ride's MODEL** — space `0x800` for a walk node, `0x80` for a head node — and logs `"RSSE: Invalid Node ID"` on a miss. | Its own string |
@@ -530,6 +530,57 @@ The record is **16 bytes**: handle `+0`, node `+4` = `*(EBP+0x70) + slotIndex`, 
 - Park objects load at the origin and are afterwards moved, so a node position must have the placed rotation and origin applied; the load origin is not the placed one.
 - `UsageInfo.RideHandlesSprite` is the flag "If the script handles the person sprite".
 - **Measured in the running game**: node 0 of thing 13 resolves to **(525.4, 252.6, 10.3)**, against the queue front at (525, 234).
+
+## Where a WALKING peep is drawn, and it is INTERPOLATED per frame
+
+**The simulation moves a peep once every eight ticks; the renderer slides them there across the frames
+between.** This is a wholly different path from the rider case above — it never touches `FUN_004f9e60` —
+and it is the answer to why a peep would otherwise step rather than walk.
+
+| Address / offset | What it is | Evidence |
+|---|---|---|
+| person `+0x190` / `+0x194` | `mPreviousX` / `mPreviousY` — the position as it stood at the **last** thing sweep. `+0x194` is the one that pairs with the Z axis. | Named by the person-base serialiser `FUN_004f8b10` |
+| person `+0xd4`, its `+0x8` / `+0xc` | the mover sub-object's live position, 16.16 fixed point, `0x10000` = one cell (the constructor seeds `(cellX << 16) + 0x8000`, the cell centre) | Disassembly |
+| `FUN_004fa870` | Stamps `previous := current`, ending `FUN_00510160( person+0x190, person+0x194 )` — a **thiscall** on the mover, so the decompiler drops `ECX` and it reads as two args. It is **the first call of every person kind's tick handler** — `FUN_00501650` at `0x00501658` (guests), `FUN_00505490` at `0x00505495` (staff) — and in the guest handler it sits **ahead of the `(id & 3)` needs stagger**, so it is unconditional: every peep, every sweep. Straight-line, no early return. | Disassembly |
+| `FUN_004f9f00` | **The blend.** `0x004f9f89`–`0x004f9fd2`: `MOV EAX,[ESI+0x194]` / `SUB` / `FILD` / `FMUL [ESP+0x14]` / `FIADD`, then the identical six instructions for `[ESI+0x190]` — i.e. `prev + (cur − prev) · t` per axis. | Disassembly |
+| — | **Height is forced to nought, not interpolated**: `0x004f9ffd MOV dword ptr [EAX],0x0`. The ground under the sprite is resolved separately. | Disassembly |
+| — | **Facing is NOT interpolated**: `0x004fa015 MOV EDX,[ESI+0x1c]` goes straight to the out-param. So a peep's position glides while its octant **snaps** at sweep boundaries. | Disassembly |
+| — | Both axes leave scaled by `FMUL [0x00700698]` (**10.0**, world units per cell) then `FMUL [0x007006d8]` (**1/65536**). | `read_memory` + the file on disk |
+| `FUN_00518f90` | The per-frame driver, single caller `0x0054fa85` — **past the 31 ms catch-up loop's back edge at `0x0054f8da`**, so once per frame and not once per tick. Walks the same thing list the sweep walks; admits kinds 1, 4, 5, 6, 7, 8 and `0x12`. | Disassembly |
+| `t` | `0x0054fa5c`: `[0x008786bc]` (now, sampled once a frame) minus `[0x00878a1c]` (the baseline), `FILD`, then `FMUL [0x00700f94]` = **1/248.000007**. | Disassembly + file |
+| the baseline | `0x0054f683` writes `[0x00878a1c]` from `[0x00878c74]` **inside** the every-8th gate `0x0054f668 TEST byte ptr [0x00877d34],0x7 / JNZ 0x0054f82d`. So `t` is literally "how far through the current thing sweep are we", and 8 × 31 ms = **248 ms** exactly. | Disassembly |
+| the clamp | The placement sample clamps to **[0.0, 1.0]**, readable as immediates rather than data (`0x004f9f3a` stores `0x3f800000`). The other mode, a trailing sample at `t − 0.35`, clamps to **[−1.0, 2.0]** (`0xbf800000`, `0x40000000`). | Disassembly |
+| `FUN_004fa930` | The teleport **re-stamps** `previous := current`, so a placed peep does not streak from wherever it used to be. | Disassembly |
+
+**It is an engine-wide convention at three rates, off one shared "now".** All three alphas are computed in
+the same per-frame block from `[0x008786bc]`, each against its own baseline and its own reciprocal:
+
+| Constant | Value | Baseline | Driver | What it paces |
+|---|---|---|---|---|
+| `0x00700f8c` | 1/31.000001 | `[0x00878c74]` | `FUN_00519060` | placed objects, track rides |
+| `0x00700f90` | 1/62.000002 | `[0x0087879c]` | `FUN_0055ce60` | particles and models |
+| `0x00700f94` | **1/248.000007** | `[0x00878a1c]` | `FUN_00518f90` | **peeps and staff** |
+
+**The every-2nd-tick sprite step moves NOBODY — a clean negative worth keeping.** `FUN_00475360`'s only
+callee is the sprite-script VM `FUN_00475010`, and a sweep of all 698 instructions of the handler region
+`0x00476000`–`0x00476a40` plus its four helpers touches the instance's position `+0x88`/`+0x8c`/`+0x90`
+**nowhere**. That 62 ms beat advances which frame of the walk cycle is drawn, and never a position.
+
+**`mLastPosX`/`mLastPosY` are NOT this pair, and reading them as a previous position is a trap.** They are
+live at person `+0x218`/`+0x21c` (save 430 / 434), and their only live reader is `FUN_004fe900`, gated on
+`+0x210`: it places a *secondary* sprite at the pair's old value and only then overwrites them, which is
+one frame of deliberate lag for something trailing its owner. **What that something is remains unsettled** —
+one reading is a held balloon (`+0x210` is named `mBalloonScript` by the guest serialiser, and the height
+term shortens as the owner moves), another a ground effect — and `+0x210`'s name is already flagged as
+uncertain in the object-fields table above. It does not bear on the walking case either way.
+
+### What these constants cost to confirm, because the first reading of them was wrong
+
+`run_python`'s `memory.getBytes`, `api.getBytes` **and** `memory.getBlock` all report **no block** at
+`0x00700f94`, while the `read_memory` tool reads it immediately and the file on disk agrees byte for byte.
+`list_segments` compounds it by printing PE section headers rather than Ghidra blocks, so the address looks
+initialized while the reader denies it exists. Every constant above was therefore taken **twice** — once
+through `read_memory`, once out of the executable — and `docs/VERIFYING.md` rule 102 records the trap.
 
 ## The SCREAM family
 

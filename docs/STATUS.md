@@ -30,7 +30,7 @@ times in one day, once. Read the current state from the repository, which cannot
   point of the hook.
 - **Laying and lifting PATH**, at 20 a cell from the theme's own `Costs.PathCell`. The cell joins itself to its neighbours by the original's own incremental rule and picks its art from the executable's own tile tables, so a run draws straights, ends, corners, T-junctions and a crossroads as the shape demands. Confirmed in the running game by census **and** by screenshot.
 - Spending: guests choose, queue for and **buy from the Drinks Shop and the Jungle Spray**, are charged on leaving, take the item's effects, and a sideshow winner is paid its prize.
-- People: 13 guests and 5 staff read from the save, drawn, walking, paying at the gate, queueing, boarding.
+- People: 13 guests and 5 staff read from the save, drawn, walking, paying at the gate, queueing, boarding. **A walking peep is drawn between the simulation's 248 ms steps rather than jumping four times a second** — position interpolated per frame, facing snapping, as the original does both.
 - Rides: every placed thing runs its script; 74 of 106 opcodes implemented, the rest counted by `Unimplemented`. **A ride screams with a different sample each pass**, at the band its own rider count asks for.
 
 ## Does not
@@ -95,13 +95,59 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** implemented of 106 | 2026-09-21, `case Opcode.` labels vs enum members — `SINGLESCREAM` and `SCREAMLEVEL` added |
-| Tests | **842** total, all of them run **with** the game and 0 skip | 2026-09-21, measured on `alexah/101` — three added to `ParkScreamTests` |
+| Tests | **848** total, all of them run **with** the game and 0 skip | 2026-09-21, measured on `alexah/103` — six added for the walk interpolation |
 | Tests without the game | **389** ran, **453 skipped**, of 842 | 2026-09-21, measured on `alexah/101`, taken fresh rather than computed — all three new scream tests are pure, so they run device-free |
 | Build warnings | 125 | 2026-09-21, measured at `3fb2d9c` — one fewer than 126 since the refpack reflection went |
 | Park load | **2.5 s**, worst phase `terrain` at 0.72 s | 2026-09-21, three jungle runs, per phase, `LoadTimer` |
 | Other themes | fantasy 1.0 s, hallow 1.1 s, space 1.2 s | 2026-09-21, one run each, first time ever timed |
 
 ## Recent
+
+**2026-09-21 — a guest is drawn between the simulation's steps instead of jumping, and
+`docs/CLEANUP-PLAN.md` item 3 is closed.** Branch `alexah/103-guests-walk-smoothly`.
+
+The walk turns once every eight ticks — 248 ms, about four times a second — and the drawing took that
+position and held it until the next one. The original does not: `FUN_004f9f00` is
+`prev + (cur - prev) * t` per axis, driven per **frame** by `FUN_00518f90` at `0x0054fa85`, which sits
+past the 31 ms catch-up loop's back edge. `t` is time since the last thing sweep over **248 ms**
+(`0x0054fa5c`, times `[0x00700f94]` = 1/248.000007, baseline re-stamped inside the every-8th gate at
+`0x0054f683`), clamped to [0, 1].
+
+| the same guest, one line of difference | control | after |
+|---|---|---|
+| distinct drawn positions **within one 248 ms tick** | median **2** | median **30** |
+| `alpha` distinct values | **1** (constant) | **101** (0.000 → 1.000) |
+| tick period from alpha wraps | — | **247 ms** |
+| navigator `peeps at`, first twelve | identical | identical |
+
+**The navigator is byte-identical either side, which is the two-sided control**: the interpolation is
+entirely in the drawing, so smoothing the *simulation* — the wrong fix — fails exactly there. And the
+whole-run distinct count (48 against 1498) is the figure that would have lied, since a guest moves four
+times a second on either build; only positions *within* a tick separate a slide from a jump.
+
+**X and Z only, and the facing deliberately snaps.** Height is forced to nought at `0x004f9ffd` and the
+octant is copied raw from `[ESI+0x1c]` at `0x004fa015` while the positions either side of it are blended,
+so the original's own guest glides and turns in eight discrete steps. Both are reproduced.
+
+**Two of the item's own premises were wrong.** `mLastPosX`/`mLastPosY` (save 430/434) are **not** the
+previous position — they are a trailing sprite's last placement, and OpenTPW neither reads nor stores
+them; the real pair is `mPreviousX`/`mPreviousY` at `+0x190`/`+0x194`. And the period is 248 ms, not the
+31 ms tick.
+
+**Where the stamp lives is load-bearing.** `FUN_004fa870` is the first call of *every* person kind's tick
+handler, ahead of the guest handler's own `(id & 3)` stagger — so it runs whatever state a peep is in.
+Stamping inside the walk instead would leave a guest who had **stopped** holding two positions for ever
+and swing them between the two on every frame. There is a test for it, and **deleting that wiring still
+passes all 848**, because nothing in the suite drives a stopped guest through a running park — said at
+the test, per rule 48. Six mutations, both survivals called in advance; every restore md5-verified.
+
+**Two instrument faults of mine, both now rules.** Rule **102**: Ghidra's `run_python` reported **no
+memory block** at `0x00700f94` from all three of its readers, while the `read_memory` tool and the file
+on disk both read it fine — `list_segments` prints PE section headers, not Ghidra blocks. I was one step
+from recording "the probes fabricated these constants". Rule **103**: the first harness segmented thing
+ticks by watching the interpolation fraction **wrap**, which cannot work on a control whose fraction
+never moves — the run collapses to one segment and the broken build scores twenty times better than the
+fixed one. **The verdict would have inverted.**
 
 **2026-09-21 — a ride screams with a different sample each pass, and `docs/CLEANUP-PLAN.md` item 5 is
 closed.** Branch `alexah/101-screams-vary-and-single-scream`. One harness on two builds differing in

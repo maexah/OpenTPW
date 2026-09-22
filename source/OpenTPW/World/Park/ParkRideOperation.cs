@@ -406,6 +406,11 @@ public sealed class ParkRideOperation
 			PeepNavigator.WaypointCentre( ride.ExitCellX ),
 			PeepNavigator.WaypointCentre( ride.ExitCellY ) );
 
+		// A teleport carries its previous position with it, or the drawing would slide the guest all the
+		// way from the queue to the exit over the next quarter of a second. The original does exactly this
+		// at 0x004fa95d, re-stamping previous := current at the end of its own place-a-peep routine.
+		peep.Navigator.StampPrevious();
+
 		if ( park == null )
 		{
 			// Re-plan anyway, so the two views are seeded from where they now are.
