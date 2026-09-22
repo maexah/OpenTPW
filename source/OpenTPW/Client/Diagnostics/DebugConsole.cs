@@ -392,7 +392,11 @@ public static class DebugConsole
 				// park load straight on and the scene is gone by the next line.
 				Reply( $"opening {entering.ParkName}'s gate" );
 
-				entering.Gate.Open( () => Game.RequestParkLoad( entering.ThemeName ) );
+				// The same two calls IslandPanel.EnterPark makes, in the same order: the gate swings
+					// (ours) while the camera swings onto it and flies in (the original's), and the park
+					// is asked for when the CAMERA arrives, not when the gate finishes.
+					entering.Gate.Open();
+					LobbyCameraMode.LeaveForPark( () => Game.RequestParkLoad( entering.ThemeName ) );
 				break;
 
 			case "lobby":
@@ -1312,6 +1316,10 @@ public static class DebugConsole
 
 		return $"state size={Screen.Size.X}x{Screen.Size.Y} island={island?.Index} name='{island?.ParkName}' "
 			+ $"orbit={LobbyCameraMode.DebugOrbit:F3} paused={LobbyCameraMode.Paused} "
+			// How far through swinging onto the gate and flying into it the camera is. A pure getter,
+			// and the only way to see the park-entry move at all: it finishes by loading the park, so
+			// by the time anything else could be asked the lobby is gone.
+			+ $"{LobbyCameraMode.LeaveDescription()} "
 			+ $"clock={(Time.Paused ? "paused" : "running")} stepping={Time.StepFrames} "
 			+ $"game={(GameClock.Paused ? "paused" : "running")} ticks={GameClock.Ticks} "
 			+ $"day={GameCalendar.Days} season={GameCalendar.Season} date={GameCalendar.Now:yyyy-MM-dd} "

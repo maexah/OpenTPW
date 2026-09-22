@@ -316,16 +316,24 @@ internal sealed class IslandPanel : UiWindow
 
 		Log.Info( $"Front end: entering '{island.ParkName}'" );
 
-		// The gate swings open, and the park is asked for once it has.
+		// The gate swings open, the camera swings round onto it and flies in, and the park is asked for
+		// when the CAMERA arrives - not when the gate finishes and not when this panel closes.
 		//
-		// <b>This is ours, and the original does not do it.</b> 0x005e1e30 is three calls - set the lobby
-		// leaving, IslandPanel_KeyPuffAndEnterSound, and a UI message 6 to this panel's own tree
-		// (0x007cc4b4) which IslandPanel_Callback does not handle at all, so it is the generic close.
-		// Nothing on that path touches the gate, and neither does the state-3 teardown behind it
-		// (0x005d5cf0, "choice 2 means play a park"). So the original leaves for a park through a gate
-		// that never moves. CLAUDE.md rule 11: the gap is filled in the game's own style - the gate's own
-		// opening clip, played once, at the moment the player commits to the park.
-		island.Gate.Open( () => Game.RequestParkLoad( island.ThemeName ) );
+		// >>> AN EARLIER NOTE HERE SAID THE ORIGINAL DOES NOTHING AT ALL ON THIS PATH. IT WAS WRONG,
+		// AND IT WAS WRONG BY STOPPING AT THE FIRST OF FIVE STEPS. <<< 0x005e1e30 really is three calls -
+		// set the lobby leaving, IslandPanel_KeyPuffAndEnterSound, and a UI message 6 to this panel's own
+		// tree (0x007cc4b4) which IslandPanel_Callback does not handle, so it is the generic close. But
+		// the field it sets, +0x14, is param_1[5] in the camera update: the lobby camera's own STATE
+		// MACHINE, and 1 means "swing onto the island's heading". The camera then flies in, and below a
+		// radius of 8 it calls vtable +0x48, which sets the scene's choice to 2 - the very "choice 2 means
+		// play a park" the state-3 teardown returns. So closing the panel STARTS the beat. See
+		// LobbyCameraMode.LeaveForPark, which reproduces both states and their measured rates.
+		//
+		// The gate's swing is still ours under CLAUDE.md rule 11 - the original's gate never moves - but
+		// it now plays over the camera move the original does have, rather than standing in for nothing.
+		island.Gate.Open();
+
+		LobbyCameraMode.LeaveForPark( () => Game.RequestParkLoad( island.ThemeName ) );
 	}
 
 	/// <summary>Whether the lobby is already on its way to a park - see <see cref="EnterPark"/>.</summary>

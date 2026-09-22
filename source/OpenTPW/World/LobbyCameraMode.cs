@@ -302,7 +302,13 @@ public class LobbyCameraMode : CameraMode
 		// With nobody playing the lobby flies itself instead of orbiting one island - the same branch
 		// the original takes, on the same condition. Its test is that no player is selected
 		// (FUN_0048bcd0's +0x60 reading -1); ours is the roster having no current player.
-		if ( Players.Roster.Current is null && !DebugHoldOrbit )
+		// Leaving for a park takes precedence over the attract flight, and that guard is OURS rather than
+		// the original's - it cannot reach this case at all, because IslandLobby_EnterPark is only
+		// reachable with a player selected and the attract branch is only taken when none is. Here the
+		// debug console can ask for a park entry with nobody playing, and without this the camera would
+		// carry on wandering while the leave sequence never stepped: the park would never load and the
+		// game would look hung rather than wrong.
+		if ( Players.Roster.Current is null && !DebugHoldOrbit && _leaving == Leaving.No )
 		{
 			Attract( islands );
 
@@ -310,19 +316,24 @@ public class LobbyCameraMode : CameraMode
 			return;
 		}
 
-		if ( !Paused )
+		if ( !Paused && _leaving == Leaving.No )
 			_orbitTime += Time.Delta;
 
-		var angle = _orbitTime * SpinSpeed;
-
 		CurrentIsland = islands[Math.Clamp( IslandIndex, 0, islands.Count - 1 )];
+
+		// Leaving for a park runs the original's own two states in front of the ordinary orbit, and
+		// while they run they decide the heading and the distance instead of it - see LeaveForPark.
+		var angle = _leaving == Leaving.No ? _orbitTime * SpinSpeed : StepLeaving( settings );
+
+		var radius = _leaving == Leaving.FlyingIn ? _leaveRadius : settings.SpinRadius;
+		var vertical = _leaving == Leaving.FlyingIn ? _leaveVertical : settings.VerticalOffset;
 
 		var wantedLookAt = CurrentIsland.CameraTarget;
 
 		var wantedPosition = wantedLookAt + new Vector3(
-			MathF.Sin( angle ) * settings.SpinRadius,
-			MathF.Cos( angle ) * settings.SpinRadius,
-			settings.VerticalOffset );
+			MathF.Sin( angle ) * radius,
+			MathF.Cos( angle ) * radius,
+			vertical );
 
 		if ( _placed )
 		{
@@ -342,6 +353,182 @@ public class LobbyCameraMode : CameraMode
 
 		FieldOfView = FieldOfViewDegrees;
 	}
+
+	/// <summary>Which part of the leaving sequence is running - see <see cref="LeaveForPark"/>.</summary>
+	private enum Leaving { No, Homing, FlyingIn }
+
+	private static Leaving _leaving;
+	private static float _leaveAngle;
+	private static float _leaveRadius;
+	private static float _leaveVertical;
+	private static Action? _whenArrived;
+
+	/// <summary>
+	/// How fast the orbit swings round onto the gate side, in radians a second.
+	///
+	/// <para>
+	/// The original turns by <c>delta * 0.05</c> each frame (<c>_DAT_00702c78</c>), and its delta is
+	/// milliseconds times a hundredth - ten a second, see <see cref="LobbyScript.TicksPerSecond"/> - so
+	/// the rate is 0.5 a second. It is a <b>constant-rate</b> turn rather than an ease: the original adds
+	/// or subtracts a fixed step and stops when it is within half a step of the target, which is why this
+	/// is not written with <see cref="Time.SmoothingFactor"/>.
+	/// </para>
+	/// </summary>
+	private const float HomingRate = 0.5f;
+
+	/// <summary>
+	/// How fast the camera closes on the island once it has swung round, as a fraction of what is left
+	/// each second - <c>_DAT_00702c60</c>, 0.07 per delta, so 0.7 a second.
+	/// </summary>
+	private const float RadiusDecay = 0.7f;
+
+	/// <summary>
+	/// How fast the eye drops to the island's own level - <c>_DAT_00702c64</c>, 0.6 per delta, so 6.0 a
+	/// second. Nearly ten times the radius rate, so the camera comes down to the island long before it
+	/// arrives at it.
+	/// </summary>
+	private const float VerticalDecay = 6f;
+
+	/// <summary>
+	/// How close the camera gets before the park is asked for - <c>_DAT_00702c68</c>, <b>8.0</b>. From
+	/// SPINRADIUS 70 decaying at <see cref="RadiusDecay"/> that is <c>ln(70/8) / 0.7</c>, about
+	/// <b>3.1 seconds</b> of flying in.
+	/// </summary>
+	private const float ArrivedRadius = 8f;
+
+	/// <summary>
+	/// The heading the camera swings onto before it flies in.
+	///
+	/// <para>
+	/// The original homes onto <c>island[+0x14] + pi</c>, the island's own heading turned about. These
+	/// islands are all placed at the same heading, and this project has already measured that their gates
+	/// face the island's <b>-Y</b> side - which is <c>orbit pi</c>. The two agree, so the gate is what the
+	/// camera ends up looking at, which is the point of the manoeuvre.
+	/// </para>
+	/// </summary>
+	private const float GateHeading = MathF.PI;
+
+	/// <summary>
+	/// Swings the camera round onto the gate and flies it into the island, then runs
+	/// <paramref name="whenArrived"/> - which is how a park entry waits for the camera.
+	///
+	/// <para>
+	/// <b>This is the original's, and an earlier reading that said the original does nothing here was
+	/// wrong because it stopped at the first of five steps.</b> <c>IslandLobby_EnterPark</c>
+	/// (<c>0x005e1cc0</c>, vtable <c>+0x40</c>) checks the keys and calls <c>+0x44</c>,
+	/// <c>IslandLobby_LeaveForPark</c> (<c>0x005e1e30</c>) - which sets the lobby's <c>+0x14</c> to
+	/// <b>1</b>, plays the key puff and closes the panel. That field is <c>param_1[5]</c> in the camera
+	/// update, <b>the state machine's own state</b>, and 1 is "home the angle". So closing the panel is
+	/// not the end of the beat, it is the start of it:
+	/// </para>
+	/// <list type="number">
+	/// <item>state 1 turns the orbit onto the island's heading at <see cref="HomingRate"/>, then sets 2;</item>
+	/// <item>state 2 locks that heading and decays the radius and the vertical offset
+	/// (<see cref="RadiusDecay"/>, <see cref="VerticalDecay"/>) - the camera flies in;</item>
+	/// <item>below <see cref="ArrivedRadius"/> it calls vtable <c>+0x48</c>, which the island lobby
+	/// overrides with <c>FUN_005e1e50</c>;</item>
+	/// <item>that sets the scene's own choice to <b>2</b>, and <c>FUN_005d5cf0</c> - the state-3
+	/// teardown - <i>returns</i> that field, which is the documented "choice 2 means play a park".</item>
+	/// </list>
+	/// <para>
+	/// So the park loads when the camera arrives, not when the panel closes. The gate swinging open
+	/// alongside it is still ours - see <see cref="LobbyGate"/>.
+	/// </para>
+	/// </summary>
+	internal static void LeaveForPark( Action whenArrived )
+	{
+		// The original refuses a second press by testing that the state is still nought.
+		if ( _leaving != Leaving.No )
+			return;
+
+		_leaveAngle = Wrap( _orbitTime * SpinSpeed );
+		_whenArrived = whenArrived;
+		_leaving = Leaving.Homing;
+	}
+
+	/// <summary>One frame of the leaving sequence, answering the heading to place the camera at.</summary>
+	private static float StepLeaving( CameraSettings settings )
+	{
+		if ( Paused )
+			return _leaving == Leaving.Homing ? _leaveAngle : GateHeading;
+
+		if ( _leaving == Leaving.Homing )
+		{
+			_leaveAngle = NextAngle( _leaveAngle, GateHeading, HomingRate * Time.Delta, out var arrived );
+
+			if ( arrived )
+			{
+				_leaveRadius = settings.SpinRadius;
+				_leaveVertical = settings.VerticalOffset;
+				_leaving = Leaving.FlyingIn;
+			}
+
+			return _leaveAngle;
+		}
+
+		_leaveRadius = Decayed( _leaveRadius, RadiusDecay, Time.Delta );
+		_leaveVertical = Decayed( _leaveVertical, VerticalDecay, Time.Delta );
+
+		if ( _leaveRadius < ArrivedRadius )
+		{
+			// Told exactly once, and the state cleared first so that a park load asking anything of this
+			// camera on its way out does not find it still leaving.
+			var landed = _whenArrived;
+
+			_whenArrived = null;
+			_leaving = Leaving.No;
+
+			landed?.Invoke();
+		}
+
+		return GateHeading;
+	}
+
+	/// <summary>
+	/// One step of a constant-rate turn toward <paramref name="target"/>, the shorter way round.
+	/// </summary>
+	/// <remarks>
+	/// Pure, so the shortest-way arithmetic can be pinned without a clock, a lobby or a device - the
+	/// division <c>docs/VERIFYING.md</c> rule 48 asks to be explicit about. <b>The wiring cannot be</b>:
+	/// the state machine reads <see cref="Time.Delta"/> and drives a park load, so it rests on the
+	/// capture.
+	///
+	/// <para>
+	/// <paramref name="arrived"/> is true once the gap is under half a step, which is the original's own
+	/// test (<c>_DAT_00702c5c</c> = 0.5 applied to the step) rather than an equality a fixed step would
+	/// step straight over and then oscillate about for ever.
+	/// </para>
+	/// </remarks>
+	internal static float NextAngle( float angle, float target, float step, out bool arrived )
+	{
+		var difference = Wrap( angle - target );
+
+		arrived = difference < step * 0.5f || difference > MathF.Tau - (step * 0.5f);
+
+		if ( arrived )
+			return Wrap( target );
+
+		// Past half a turn it is shorter to keep going the way the difference points.
+		return Wrap( target + (difference >= MathF.PI ? difference + step : difference - step) );
+	}
+
+	/// <summary>
+	/// One step of the original's decay: it subtracts a fraction of what is LEFT each time, so the
+	/// approach is exponential rather than linear and never quite reaches nought.
+	/// </summary>
+	internal static float Decayed( float value, float rate, float delta ) => value - (delta * value * rate);
+
+	/// <summary>An angle wrapped into 0..2pi, as the original wraps its own with two while loops.</summary>
+	private static float Wrap( float angle )
+	{
+		angle %= MathF.Tau;
+
+		return angle < 0f ? angle + MathF.Tau : angle;
+	}
+
+	/// <summary>How far through leaving for a park the camera is, for the debug console. A pure getter.</summary>
+	internal static string LeaveDescription()
+		=> $"leave={_leaving} angle={_leaveAngle:F3} radius={_leaveRadius:F2} vertical={_leaveVertical:F2}";
 
 	/// <summary>The orbit angle in radians. Written by DebugConsole to reproduce a shot exactly.</summary>
 	internal static float DebugOrbit

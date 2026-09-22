@@ -370,8 +370,40 @@ per-frame step. There is no swing and no jerk to find.
 | 2 | Locks that heading, then decays radius `[8]` at **0.07** and vertical `[9]` at **0.6** per delta — the `GLOBERADIUSOUT`→`GLOBERADIUSIN` pull-in — and when the radius falls below **8.0** calls vtable `+0x48` |
 
 `+0x48` is `__amsg_exit(0x19)` — MSVC's **pure virtual** stub — in this vtable, so the running object
-is a derived class that overrides it. **That derived vtable has not been found**: scanning
-`0x00700000`–`0x00790000` finds the pointer `0x005e0470` exactly once, at `0x00702cb8`.
+is a derived class that overrides it.
+
+### The derived vtable, found 2026-09-22 — and it is the park-entry animation
+
+**That derived vtable was previously recorded as "not found". It is at `0x00702ec0`**, and it was
+located by searching for the pointer bytes of `IslandLobby_EnterPark` rather than by scanning for the
+base's update. Its slots:
+
+| Slot | Address | What it is |
+|---|---|---|
+| `+0x08` | `FUN_005e1830` | The island lobby's **own update** — and its first instruction is `CALL 0x005e0470`, so the base camera update really does run here |
+| `+0x38` / `+0x3c` | `0x005e1ee0` / `0x005e1f40` | The island arrow handlers, overriding the base's next/previous island |
+| `+0x40` | `IslandLobby_EnterPark` `0x005e1cc0` | Checks `[5] == 0` and the key count, then calls `+0x44` |
+| `+0x44` | `IslandLobby_LeaveForPark` `0x005e1e30` | Sets `+0x14` to **1**, key puff and sound, closes the panel |
+| `+0x48` | `FUN_005e1e50` | The override of the pure-virtual slot above |
+| `+0x58` | `0x0067b0c0` | Still pure virtual |
+
+**`+0x14` is `param_1[5]`** — the update takes `int *`, so `param_1[5]` is byte offset `0x14`. So
+`IslandLobby_LeaveForPark` does not merely close the panel: **it puts the camera into globe state 1**,
+and the whole sequence above is what happens next. The park is asked for when the **camera** arrives:
+
+1. `+0x40` → `+0x44`, which sets state **1** and closes the panel;
+2. state 1 turns the orbit onto `island[+0x14] + π` at `0.05 × delta`, arriving within half a step;
+3. state 2 locks it and decays radius at **0.07** and vertical at **0.6** per delta;
+4. below radius **8.0** it calls `+0x48` = `FUN_005e1e50`, which ends `MOV [EAX+0x14], 2` on the scene
+   object at `DAT_00f82884`;
+5. `FUN_005d5cf0`, the state-3 teardown, **returns that field** — the documented "choice 2 means play
+   a park".
+
+From SPINRADIUS 70 at 0.7 a second that is `ln(70/8) / 0.7` ≈ **3.1 s** of flying in, with the vertical
+offset collapsing about ten times faster. **So the original is not blank between Enter and the loading
+screen** — it swings the camera round onto the gate side and flies it into the island. `FUN_005d83f0`,
+called on the state transitions, is *not* a gate animation: it is `__thiscall` on the island and plays
+the ISLE model's clip 0 or 1, the same pair the update's tail loop picks between.
 
 ### Island sound is one island at a time, and the previous one is stopped
 

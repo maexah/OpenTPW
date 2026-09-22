@@ -9,15 +9,23 @@ Nine things a player sees, handed over 2026-09-21, in Alexah's order **9, 6, 4, 
 then 7**. It is **untracked by instruction** — never staged, and *not* in `.gitignore`, so it shows in
 every `git status` and a `git add -A` would sweep it in (which is one more reason `CLAUDE.md` rule 13
 forbids that). It lives on this machine only and is **absent from a fresh clone** — read it before
-assuming this file is the whole of the work. **Six of its nine are now done: 9 (park load time), 6
-(sound held under a pause), 4 (the lobby ocean), 5 (one scream, on a loop, at one volume), 3 (guests
-move in jumps, not smoothly) and 1 (everything replaying its "being built" clip on every park load)** —
-3 on 2026-09-21 and 1 on 2026-09-22. A held scream is now replayed rather
-than looped, so it re-picks a sample every pass; and a walking peep's drawn position is interpolated
-per frame between two stored positions 248 ms apart, taking distinct drawn positions within one thing
-tick from a median of 2 to a median of 30. **Its remaining three are 8, 2 and 7**, with item 8 now the
-only untouched one before 7 — Alexah picks.
-Nothing in *this* file was ticked by any of that work: not one of the five appears here.
+assuming this file is the whole of the work.
+
+**>>> ALL NINE OF ITS ITEMS ARE NOW CLOSED, as of 2026-09-22. <<<** 9 (park load time), 6 (sound held
+under a pause), 4 (the lobby ocean), 5 (one scream on a loop), 3 (guests moving in jumps), 1
+(everything replaying its "being built" clip), 2 (the camcorder walking through rides), 8 (the lobby's
+attract camera) and 7 (no "entering the park" animation).
+
+**Three of the nine were mis-diagnosed in the writing, and that is the part worth carrying forward.**
+Item 8's three claims were *all* refuted by measurement — the wander box is the original's own field
+for field, the aim does not swing, and not one frame of 16,407 stepped out of line — so it closed as
+measured-faithful plus a deviation Alexah chose afterwards. Item 7 was the reverse: **Alexah's memory
+was right and the decode was wrong**, having stopped at the first of five steps; the original really
+does swing the camera onto the gate and fly it in before the park loads. And item 1's two guessed
+causes were both refuted on the way to a real fix.
+
+**Nothing in *this* file was ticked by any of that work — not one of the nine appears here**, so this
+queue is untouched and its own 4, 5 and 7 are where the next goal should come from.
 
 **Alexah sets which item is the goal. One item per session** (`CLAUDE.md`, "How a session runs" 4).
 Tick an item here in the same commit that lands it, and move its detail to the page that owns it.

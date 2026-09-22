@@ -36,12 +36,23 @@ namespace OpenTPW;
 ///
 /// <para>
 /// <b>The original does not animate this gate at all, and that is measured rather than assumed.</b>
-/// Its whole entry beat is <c>IslandLobby_LeaveForPark</c> (<c>0x005e1e30</c>): set the lobby leaving,
+/// <c>IslandLobby_LeaveForPark</c> (<c>0x005e1e30</c>) sets the lobby leaving,
 /// <c>IslandPanel_KeyPuffAndEnterSound</c>, and a UI message 6 to the island panel's own tree
 /// (<c>0x007cc4b4</c>) which <c>IslandPanel_Callback</c> does not handle at all, so it is the generic
-/// close. Nothing there touches the gate, and the state-3 teardown behind it (<c>0x005d5cf0</c>,
-/// "choice 2 means play a park") only tears down. So the swing is ours, under <c>CLAUDE.md</c> rule
-/// 11: the original is blank at the one moment the player is looking straight at the gate.
+/// close. Nothing there touches the gate, so the swing is ours, under <c>CLAUDE.md</c> rule 11.
+/// </para>
+///
+/// <para>
+/// <b>&gt;&gt;&gt; BUT "THE ORIGINAL IS BLANK AT THIS MOMENT" WAS WRONG, AND THIS COMMENT USED TO SAY
+/// IT. &lt;&lt;&lt;</b> The field <c>LeaveForPark</c> sets, <c>+0x14</c>, is <c>param_1[5]</c> in the
+/// lobby camera's own update - its <b>state machine</b> - and 1 means "swing round onto the island's
+/// heading". The camera then flies in, and once its radius falls below 8 it calls vtable <c>+0x48</c>,
+/// which the island lobby overrides with <c>FUN_005e1e50</c>: that sets the scene's choice to <b>2</b>,
+/// and the state-3 teardown (<c>0x005d5cf0</c>) <i>returns</i> that field - the documented "choice 2
+/// means play a park". So the original is <b>not</b> blank here. It moves the camera for about three
+/// seconds and loads the park when the camera arrives, which is built in
+/// <see cref="LobbyCameraMode.LeaveForPark"/>. The gate's swing remains a deviation, but it now plays
+/// <i>over</i> a move the original really makes rather than standing in for nothing.
 /// </para>
 /// </summary>
 public sealed class LobbyGate : Entity

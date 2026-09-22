@@ -53,11 +53,16 @@ park load went 23,298 ms → 2,488 ms, about 9.4x, with the worst phase now `ter
 sea is served out of the texture cache on the way back from a park, and it now comes back carrying the
 **AnisotropicWrap** sampler it asked for instead of the default **AnisotropicRepeat** — which mirrors,
 and had been drawing the ocean as a diamond lattice. **And items 5 and 3 are DONE and closed too** — Alexah
-picked 5 ahead of item 1 on 2026-09-21, then picked **3** ahead of it as well. **Items 1 and 2 then
-closed on 2026-09-22**, so **9, 6, 4, 5, 3, 1 and 2 are closed and 8 and 7 remain** — 8 being the
-lobby's attract camera and 7 the park-entry animation, which is blocked on Alexah describing what the
-original shows before anyone opens Ghidra for it. None of the seven closed items is in
-`PLAYER-GAPS.md`, and nothing there was ticked by any of them.
+picked 5 ahead of item 1 on 2026-09-21, then picked **3** ahead of it as well. **Items 1, 2, 8 and 7
+then closed on 2026-09-22, so ALL NINE of that file's items are closed.** None of them is in
+`PLAYER-GAPS.md`, and nothing there was ticked by any of them — **`PLAYER-GAPS.md`'s own 4, 5 and 7
+still remain** and are where the next goal should come from.
+
+**Three of the nine were mis-diagnosed in writing, and only measurement or Alexah caught it.** Item 8's
+three claims were all refuted — the wander box is the original's own, the aim does not swing and
+nothing jerks — so it closed as *measured faithful* plus a deviation Alexah chose afterwards. Item 7
+was the reverse: Alexah's memory was right and the decode was wrong, having stopped at the first of
+five steps. And item 1's two guessed causes were both refuted on the way to a real fix.
 
 **Because that file is untracked it does not exist in a fresh clone.** It lives only on this machine;
 if it is lost, the three remaining items go with it, and so does the record of the six that are done.
@@ -101,13 +106,47 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** implemented of 106 | 2026-09-21, `case Opcode.` labels vs enum members — `SINGLESCREAM` and `SCREAMLEVEL` added |
-| Tests | **865** total, all of them run **with** the game and 0 skip | 2026-09-22, measured on `alexah/105` — seven added for the camcorder's swept step |
-| Tests without the game | **396** ran, **469 skipped**, of 865 | 2026-09-22, measured fresh rather than computed — five of the seven new tests are pure arithmetic over a stub edge test and run anywhere; the two that read the shipped park skip |
+| Tests | **873** total, all of them run **with** the game and 0 skip | 2026-09-22, measured on `alexah/107` — seven added for the camcorder's swept step, eight for the lobby's park-entry move |
+| Tests without the game | **404** ran, **469 skipped**, of 873 | 2026-09-22, measured fresh rather than computed — the skip count is **unchanged** from before the eight park-entry tests, which is what says every one of them is pure arithmetic needing no installation |
 | Build warnings | 125 | 2026-09-21, measured at `3fb2d9c` — one fewer than 126 since the refpack reflection went |
 | Park load | **2.5 s**, worst phase `terrain` at 0.72 s | 2026-09-21, three jungle runs, per phase, `LoadTimer` |
 | Other themes | fantasy 1.0 s, hallow 1.1 s, space 1.2 s | 2026-09-21, one run each, first time ever timed |
 
 ## Recent
+
+**2026-09-22 — the camera swings onto the gate and flies into the island before a park loads, and
+`docs/CLEANUP-PLAN.md` item 7 is closed.** Branch `alexah/107-camera-flies-into-the-park`.
+
+Alexah remembered the original showing something between clicking Enter and the loading screen, and
+the decode standing in `docs/exe/lobby.md` said it showed nothing. **Alexah was right.** That reading
+had stopped at the first of five steps: `IslandLobby_LeaveForPark` sets `*(param_1 + 0x14) = 1`, and
+the camera update takes `int *`, so **`+0x14` is `param_1[5]` — the lobby camera's own state machine**.
+Closing the panel starts the beat rather than ending it. State 1 turns the orbit onto the island's
+heading at `0.05 × delta`; state 2 locks it and decays the radius at **0.07** and the vertical at
+**0.6** per delta; below a radius of **8.0** it calls vtable `+0x48`, which the island lobby overrides
+with `FUN_005e1e50`, and that sets the scene's choice to **2** — the "choice 2 means play a park" the
+state-3 teardown returns.
+
+The **derived vtable is at `0x00702ec0`**, which that page recorded as "not found". Finding it also
+proved the base camera update really runs here (`FUN_005e1830` opens `CALL 0x005e0470`) and ruled out
+the obvious candidate for a gate animation: `FUN_005d83f0` plays the island's own idle clip 0 or 1.
+
+| in Lost Kingdom | predicted | measured |
+|---|---|---|
+| homing, 2.814 rad at 0.5 rad/s | **5.63 s** | **5.63 s** |
+| flying in, radius 64.75 → 8.60 at 0.7/s | **2.88 s** | **2.88 s** |
+| heading held during the fly-in | π = 3.1416 | 3.1420 |
+
+then `Loaded jungle in 1745 steps`, with `save/` unchanged within the run.
+
+**Mutation-checked, with both survivals called in advance** (rule 48): the **wiring** survived all 873,
+and so did **`RadiusDecay` 0.7 → 0.07** — which names a real unpinned claim rather than an oversight,
+since the tests pass their own rates instead of reading the constants (rule 2). Breaking the
+shortest-way turn failed 2 tests and moving arrival from half a step to a whole one failed 1.
+
+**One guard is ours and it prevents a hang**: `Update` returns early into the attract flight with no
+player selected, and the leave sequence lives in the orbit branch, so without it a console-driven entry
+would wander for ever and the park would never load. The original cannot reach that case.
 
 **2026-09-22 — the lobby's attract camera was measured against the original and is faithful, so
 `docs/CLEANUP-PLAN.md` item 8 changed nothing and is now Alexah's call.** Branch
