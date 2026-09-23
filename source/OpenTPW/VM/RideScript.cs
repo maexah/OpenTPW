@@ -1856,9 +1856,10 @@ public sealed class RideScript
 	/// <see cref="ParkAudio.Scream"/>.
 	///
 	/// <para>
-	/// The first operand bands the sample and the second is averaged with the script's speed for the
-	/// volume; the sound belongs to the RIDE, whose position the engine takes from the script's own
-	/// model handle at <c>+0xc8</c>. See <see cref="ParkAudio.ScreamEffectFor"/> for the bands.
+	/// The first operand bands the sample and the second is averaged with the script's speed into the
+	/// voice's parameter 6 (<c>0x00551265</c>); the sound belongs to the RIDE, whose position the engine
+	/// takes from the script's own model handle at <c>+0xc8</c>. See <see cref="ParkAudio.ScreamEffectFor"/>
+	/// for the bands and <see cref="ParkScreams"/> for what the parameter does.
 	/// </para>
 	/// </summary>
 	/// <remarks>
@@ -1894,7 +1895,7 @@ public sealed class RideScript
 	}
 
 	/// <summary>
-	/// <c>STOPSCREAM</c>: fades the scream out and forgets it - the engine's <c>Sound_StopFading</c>
+	/// <c>STOPSCREAM</c>: takes the scream down and forgets it - the engine's <c>Sound_StopFading</c>
 	/// on <c>+0xd0</c>, which it then clears whether or not anything was playing.
 	/// </summary>
 	private void StopScream()

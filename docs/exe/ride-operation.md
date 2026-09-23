@@ -623,17 +623,17 @@ The family's dispatch-table handlers sit at **`0x00555e5e`** (86), **`0x00555ef7
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
-| `FUN_00551130` | `STARTSCREAM` | Opcode **86**, 2 operands. **Refuses if a scream handle is already held**, logging `"RSSE: Started screaming without s…"`. Operand 2 bands the sample: 0 plays nothing, 1 → effect **0x47**, 2-3 → **0x48**, 4-7 → **0x49**, 8+ → **0x4a**. Volume applied as parameter **6** via `FUN_0051bc40`. The handle is kept on the script at **`+0xd0`**. | Its own string |
-| — | `STOPSCREAM` | Opcode **87**, 0 operands. Fades the held handle (`Sound_StopFading`) and clears `+0xd0`. | Disassembly |
+| `FUN_00551130` | `STARTSCREAM` | Opcode **86**, 2 operands. **Refuses if a scream handle is already held**, logging `"RSSE: Started screaming without s…"`, and then stores the refusal's 0 over `+0xd0` (`0x00555ee6`), so the old chain screams on unstopped. Operand 2 bands the sample: 0 plays nothing, 1 → effect **0x47**, 2-3 → **0x48**, 4-7 → **0x49**, 8+ → **0x4a**. Straight after the play it sets the voice's **parameter 6** to `(operand + speed) / 2` via `FUN_0051bc40` (`0x00551261`..`0x00551265`). The handle is kept on the script at **`+0xd0`**. | Its own string |
+| — | `STOPSCREAM` | Opcode **87**, 0 operands. Calls `Sound_StopFading` on the held handle when there is one, and clears `+0xd0` (`0x00555ef7`..`0x00555f0a`). For a held scream that is a **hard cut** of its chain's newest child, fading on or off - see `audio.md`, "How the engine plays an effect". | Disassembly |
 | `FUN_00551320` | `SINGLESCREAM` | Opcode **88**, 2 operands. A **4×4 grid**: the same first-operand band crossed with `(a+b)/0x32` clamped 0..3, giving ids **0x4b..0x5a**. So 71-74 are the LOOPING screams and 75-90 the one-shots. **It applies NO volume and keeps NO handle** — every arm calls `Sound_PlayEffect` and returns it, and the handler at `0x00555f1b` throws the result away rather than storing it at `+0xd0` or `+0x48`. Fire and forget. | Disassembly |
 | `FUN_00551560` | — | `SINGLESCREAM`'s **negative branch**, `if ( operand2 < 0 )`: picks on band alone — 1 → **0x69**, 2-3 → **0x6a**, 4-7 → **0x6c**, 8+ → **0x6d** — and sets no volume. **0x6b is skipped; that is the original's own gap, not a transcription slip.** | Disassembly |
-| `FUN_00551290` | `SCREAMLEVEL` | Opcode **89**, 1 operand. `FUN_00551290( handle, operand, speed )`: re-sets the volume of the scream ALREADY playing by the same `(a+b)/2` clamp. It does nothing at all when no handle is held. | Disassembly |
-| `0x00556009` | — | **`SCREAMLEVEL` overwrites the scream handle with the VOLUME CALL's return value** — `MOV dword ptr [EBP + 0xd0],EAX` straight after `CALL 0x00551290`, whose own return is `FUN_0051bc40`'s, which is `FUN_006b5b80`'s, which is a bare virtual call that Ghidra types `void`. **What lands in `+0xd0` therefore cannot be determined from this executable**, and a later `STOPSCREAM` fades whatever it is. Do not reproduce this without saying so. | Disassembly |
-| `FUN_0051bc40` | — | Applies a sound parameter; volume is parameter 6. | Disassembly |
+| `FUN_00551290` | `SCREAMLEVEL` | Opcode **89**, 1 operand. `FUN_00551290( handle, operand, speed )`: re-sets **parameter 6** of the scream ALREADY held, by the same `(a+b)/2` clamp (`0x005512b8 PUSH 0x6`). It does nothing at all when no handle is held. | Disassembly |
+| `0x00556009` | — | **`SCREAMLEVEL` overwrites the scream handle with the PARAMETER CALL's return value** — `MOV dword ptr [EBP + 0xd0],EAX` straight after `CALL 0x00551290`, whose own return is `FUN_0051bc40`'s, which is `FUN_006b5b80`'s, which is a bare virtual call that Ghidra types `void`. **What lands in `+0xd0` is not proven from this executable.** The engine's own music and kids-91 code stores the same call's return back into its handle global (`0x0051e75f`, `0x0051e808`), the same idiom, so it is most likely the handle itself. Do not reproduce this without saying so. | Disassembly |
+| `FUN_0051bc40` | — | Sets a sound parameter on a handle. For a held scream, parameter 6 binds to the voice's slot 0, which picks each later child's variation (`0x006c3e1c`). **Whether anything also reads it as a volume is not established.** | Disassembly |
 | `FUN_00466b70` | — | The sound position: indexes `DAT_007a4610` by the script's model handle and fills SIX floats — two points with heights from the model's `+0x1c`/`+0x28`. **It is the RIDE's position, never a rider's.** | Disassembly |
 | `+0xc8` | — | The script's model handle, which is where the position comes from. | Disassembly |
 
-**The volume is `(operand + the script's SPEED) / 2`, clamped 0..100.** `+0xc0` is not a scream field: it is the script's speed word, a short the loader sets to 50, the same one `WAIT` divides by. All three instructions READ it and none writes it. So `Bouncy`'s `STARTSCREAM VAR_TEMP, 20` at default speed is volume `(20+50)/2 = 35` — **a scream gets louder as the script runs faster.** `SCREAMLEVEL` does not write this field.
+**Parameter 6 is `(operand + the script's SPEED) / 2`, clamped 0..100.** `+0xc0` is not a scream field. It is the script's speed word, a short the loader sets to 50, the same one `WAIT` divides by. All three instructions READ it and none writes it. So `Bouncy`'s `STARTSCREAM VAR_TEMP, 20` at default speed gives `(20+50)/2 = 35`, which the zones of all four scream effects send to **variation 2**. The first child of a chain always plays variation 1. This page used to call the value the scream's volume. The only reader found is the variation pick, and OpenTPW's use of it as a gain is a choice, Q43. `SCREAMLEVEL` does not write the speed field.
 
 `Bouncy` passes `SINGLESCREAM VAR_ONRIDE, 65535`, and 65535 as a SHORT is **-1**, so it takes the negative branch. The handler chooses between the two at `0x00555f6b` (`CMP ESI,EDI` against a zeroed EDI, then `JGE`), so the test is on the **second** operand and `>= 0` takes the grid.
 
@@ -670,24 +670,33 @@ The variety is not inside the sound engine. It is `Bouncy.RSE`'s own subroutine 
 
 So **the band operand is the rider count**, and the scream is torn down and restarted whenever that count crosses one of `STARTSCREAM`'s own boundaries (1, 2-3, 4-7, 8+). `COPY VAR_SCREAMING, 65535` at instruction **17** seeds the cache with -1, a value `BOUNCING` can never return, so the first pass always starts one. This is also why `STOPSCREAM` outnumbers `STARTSCREAM` two to one across the corpus: the pair is a restart idiom, not a start/stop pair.
 
-## Whether the held scream LOOPS one clip or is REPLAYED
+## A held scream is REPLAYED, by a chain in the executable
 
-**`Sound_PlayEffect( handle, category, effect, x, y, z )` has no loop parameter at all**, and `STARTSCREAM` and `SINGLESCREAM` make the *identical* call — `Sound_PlayEffect(0, DAT_00803a24, id, x, y, z)`. The only difference between a "looping" scream and a "one-shot" one is that `STARTSCREAM` keeps the returned handle at `+0xd0` and `SINGLESCREAM` drops it. So **nothing in the call site distinguishes them**, and whether effect 0x47 repeats is decided somewhere below `Sound_PlayEffect`.
+**`Sound_PlayEffect( handle, category, effect, x, y, z )` has no loop parameter**, and QMixer is never asked to loop: its one `QSWaveMixPlayEx` call passes `nLoops` 0 (`0x006d2463`, `0x006d2470`). What makes `STARTSCREAM`'s handle go on screaming is the **effect's flags word**. Effects 71-74 carry `0x0404`, which builds a voice that plays nothing itself and keeps a chain of one-shot children. Each child gets a fresh variation, a fresh sample and a fresh wait, until the handle is stopped. `SINGLESCREAM`'s effects carry no bit `0x4`, so each is a one-shot that dies after its sample. The whole mechanism is in `audio.md`, "How the engine plays an effect: priority, not a repeat delay".
 
-**That "somewhere" could not be reached in this executable.** The sound manager at `DAT_00802bcc` is dispatched through `vtable+8` and has **only READ xrefs** — it is filled by data-driven init, the trap `ghidra-headless` already records for balance-loaded globals — and the play path runs into COM-style virtual dispatch (`FUN_006bf330` is the `BANK.map`/`SFX.map` *file opener*, not the effect parser). `docs/exe/audio.md`'s own Unknowns record the rest: QMixer's behaviour lives in **`QMixer.dll`**, which is not in the Ghidra project.
+**This section used to say otherwise, three ways:**
+- that the play path below `Sound_PlayEffect` could not be reached;
+- that the decision lay in `QMixer.dll`;
+- that `FUN_006bf330` opened the map files and the effect parser was elsewhere.
 
-**What the shipped data says, and it says replay.** From `data/global/sound/cat_kidsSFX.map`:
+The first two were wrong. `DAT_00802bcc` is a forwarder, written through a pointer, which is why it shows only reads, and the play is the manager's `+0x10`, `0x006b87d0`. `FUN_006bf330` does open both map files, but it is the whole category load, reached only from registration and never from a play. Its conclusion, replay and not a loop, was right.
 
-| effect | variations | samples | repeat delay | sample length |
-|---|---|---|---|---|
-| 71 (`0x47`) | 4 | **25** | **2700 ms** | 392-1341 ms, mean 771 |
-| 72 (`0x48`) | 4 | **50** | 2700 ms | 294-3030 ms, mean 805 |
-| 73 (`0x49`) | 4 | **60** | 2700 ms | 310-3378 ms, mean 847 |
-| 74 (`0x4a`) | 4 | **59** | 2700 ms | 284-4400 ms, mean 888 |
+**What the shipped data says, now that the headers are decoded.** From `data/global/sound/cat_kidsSFX.map`:
 
-Three things follow. A **repeat delay is meaningless for a seamless loop** — it only becomes behaviour when a voice is allowed to end and the effect is asked for again. A seamless loop would make **24 of effect 71's 25 samples unreachable**, and 194 scream samples ship across the four bands. And this is the same shape as a park's **music**, which declares 5-7 arrangements of ~8.5 s behind a 10,000 ms delay, and which `ParkAudio.OnUpdate` already documents as *replayed, not looped*, "which is what the lobby does with its beds".
+| effect | variations | samples | wait between children | record `+0xc` (a priority, not a delay) | sample length |
+|---|---|---|---|---|---|
+| 71 (`0x47`) | 4 | **25** | **1000-3000 ms** | 2700 | 392-1341 ms, mean 771 |
+| 72 (`0x48`) | 4 | **50** | 500-2000 ms | 2700 | 294-3030 ms, mean 805 |
+| 73 (`0x49`) | 4 | **60** | 100-1000 ms | 2700 | 310-3378 ms, mean 847 |
+| 74 (`0x4a`) | 4 | **59** | 0-500 ms | 2700 | 284-4400 ms, mean 888 |
 
-**A dead end recorded so nobody walks it twice.** The effect record's fifth int (`EffectStride` 20, field 4) is **not** a loop flag, though it looks like one in `cat_kids` alone: it is 0 for every one-shot and `0x00060404` for all four scream bands. Swept across all **1267** effect records in all **31** shipped categories, **45** carry a value ≥ `0x10000` — and they include **`music` effect 2**, which is replayed rather than looped, and **`ui` effects 154 and 155**, which are button sounds. Whatever that field means, it does not mean "loops".
+The wait is drawn per child and counted from that child's start, so a busy ride screams more often and can overlap itself. A chain belongs to one handle, and nothing is kept per effect. **Two rides in one band each scream on their own clock, and one stopping leaves the other exactly as it was.** OpenTPW had one "available at" time per effect, and a stop reset it. That was `docs/QUEUE.md` Q9.
+
+**The record's fifth int is not a loop flag, and now it is decoded.** It looks like one in `cat_kids` alone, where it is 0 for every one-shot and `0x00060404` for all four scream bands. It is `{u16 flags, u8 parameter id, u8 0}`:
+- The flags pick the voice class (`0x006b6774`). The `0x0404` of 71-74 is the chaining class.
+- The byte is the parameter that drives the chain's variation (`0x006bbfae`). It is 6 for the screams, 4 for music, and 7 for kids 91.
+
+The 45 values at or above `0x10000` include `music` effect 2 and `ui` 154 and 155. Those carry the bits `0x4|0x2` of a different class, not the chain.
 
 ## Presence in a placed script is not execution
 

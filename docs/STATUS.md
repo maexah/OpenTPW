@@ -31,7 +31,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - People: guests and staff read from the save, drawn, walking, paying, queueing, boarding. A walking peep
   is interpolated between the simulation's 248 ms steps rather than jumping four times a second.
 - Rides: every placed thing runs its script; 74 of 106 opcodes built, the rest counted. A ride screams
-  with a different sample each pass, at the band its rider count asks for.
+  at the band its rider count asks for, as the original's chain: a fresh sample every 1-3 s on **its own
+  clock**, so a second ride in the same band is neither held up by it nor set off by its stop.
 - **A thing bought this session is a member of the running park**: it takes its turn, appears in every
   census, joins the object chain the original keeps live, and carries the entry and exit cells derived
   from its own shape picture. See the top entry under Recent.
@@ -46,11 +47,12 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Escape during the park-entry fly-in opens the game menu over it; the original's cancels the fly-in (Q41).
   The lobby's keys act on the press, not the release, and Enter does not enter a park (Q42).
 - The `meter.wct` mapping behind the happiness gauge is wrong - the last fault Alexah found by playing.
+- Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q8, and Q35, are ticked.** Next is **Q9**: stopping one ride's scream
-releases the effect every ride in its band shares. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, and Q8 Q41-Q42.
+`docs/QUEUE.md`, from the top. **Q1 to Q9, and Q35, are ticked.** Next is **Q10**: the camcorder's blocked-cell
+cache is static and never forgotten. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, and Q9 Q43.
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -69,12 +71,20 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **953**, 0 fail, 0 skip with the game | 2026-09-23, after Q8 |
-| Tests without the game | **435** ran, **518** skipped, of 953 | 2026-09-23, after Q8 |
-| Build warnings | 125 | 2026-09-23, after Q8 |
+| Tests | **961**, 0 fail, 0 skip with the game | 2026-09-23, after Q9 |
+| Tests without the game | **435** ran, **526** skipped, of 961 | 2026-09-23, after Q9 |
+| Build warnings | 125 | 2026-09-23, after Q9 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-09-23 - each ride screams on its own clock.** Branch `alexah/123-each-ride-screams-on-its-own-clock`,
+`docs/QUEUE.md` Q9. The decode is in `docs/exe/audio.md`, every claim put to two refuters. The original keeps
+nothing per effect: the "2700 ms repeat delay" is a voice priority. A held scream is a chain: a child every 1-3 s,
+the wait drawn from its variation header, and the variation picked by zones and parameter 6. A stop cuts only its own
+ride. `ParkScreams` builds that chain. Confirmed with two Belly Bounces, predicted first: on `main` the other ride
+screamed at once after 6 of 8 stops (the mix went from -80 dB to -25 dB in 60 ms); with the fix it kept its own time
+after 8 of 8. Photographed.
 
 **2026-09-23 - the island keys wait for the fly-in.** Branch `alexah/122-island-keys-wait-for-the-fly-in`,
 `docs/QUEUE.md` Q8. Decoded first, every claim put to two refuters: the original's next and previous handlers
@@ -93,16 +103,8 @@ player's routes, every number predicted: on `main` a moved Belly Bounce outlived
 first click built a second one for 500, and a candidate outlived it into Wonder Land and was hired back in the jungle;
 with the fix the hand came back empty and the click only picked up the path tool, 87987 and candidates 22, photographed.
 
-**2026-09-23 - a refused staff drop keeps the candidate.** Branch `alexah/120-a-refused-drop-keeps-the-candidate`,
-`docs/QUEUE.md` Q6. Decoded first, every claim put to a refuter: the original's place-staff click answers a
-refused cell with an inert log line and nothing else, and the pool loses a carried candidate only on an
-accepted click. `ParkStaffPool.Hire` is now the one body for the click and the console's `hire`, hire first
-and take second. Confirmed in the game, every number predicted: on `main` a drop off the map printed `hired Duke Mighten
-as thing 0` and his row left the hire screen, 22 candidates to 21 with 5 staff; with the fix he stayed, 22
-and 5, and the next click hired him as thing 43, 21 and 6, photographed. The cell rule and the carry preview
-are counted and filed as Q40.
-
-**Earlier items, kept now only in the git log.** `alexah/119` kept a moved thing in the hand until a cell
+**Earlier items, kept now only in the git log.** `alexah/120` kept a refused staff drop's candidate on the
+cursor (Q6, filing Q40); `alexah/119` kept a moved thing in the hand until a cell
 takes it (Q5, filing Q39); `alexah/118` made a sold thing take its script down and leave
 bare ground (Q4, filing Q36-Q38); `alexah/115` made a placed ride lay its
 queue's first cell and hand the player the queue tool there, fixing the `Info.Shape` alphabet on the way

@@ -176,6 +176,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0051b920` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x0051bcb0` | | OpenTPW/World/Level.cs OpenTPW/Audio/Audio.cs  |
 | `0x0051bd70` | | OpenTPW/World/Park/ParkAudio.cs OpenTPW/World/Advisor/Advisor.cs OpenTPW/Audio/Audio.cs  |
+| `0x0051bfab` | Sound_ApplyGroupVolumes posting the voice service (message `0x700b6c`) | OpenTPW/World/Park/ParkScreams.cs  |
 | `0x0051c2c0` | | OpenTPW/World/Advisor/Advisor.cs  |
 | `0x0051c300` | | OpenTPW/World/Advisor/Advisor.cs  |
 | `0x0051e8f0` | | OpenTPW/World/Lobby/LobbyAudio.cs  |
@@ -278,6 +279,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0054f870` | | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x0054f9f9` | | OpenTPW/World/Level.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x005502f6` | | OpenTPW/Client/Players.cs  |
+| `0x00551241` | STARTSCREAM: `(a + b) / 2`, clamped, for parameter 6 | OpenTPW/World/Park/ParkAudio.cs  |
+| `0x00551265` | STARTSCREAM: sets parameter 6 on the new handle | OpenTPW/World/Park/ParkAudio.cs OpenTPW/VM/RideScript.cs  |
 | `0x00551df5` | | OpenTPW.Files/Formats/Script/RideScriptFile.cs  |
 | `0x00552950` | | OpenTPW/VM/RideScript.cs  |
 | `0x005529bc` | | OpenTPW/VM/RideScript.cs  |
@@ -381,6 +384,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005ed920` | | OpenTPW/UI/ButtonGlint.cs  |
 | `0x005edac0` | | OpenTPW/UI/ButtonGlint.cs  |
 | `0x005f0ad0` | | OpenTPW/UI/Park/ParkMapScreen.cs  |
+| `0x005f5fa0` | The sound clock: wall-time milliseconds | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x005f8ae0` | | OpenTPW/Client/GameDir.cs  |
 | `0x006584df` | | OpenTPW/UI/WindowStack.cs  |
 | `0x00658f97` | | OpenTPW/UI/Screens/GameMenu.cs  |
@@ -411,7 +415,24 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x006b0680` | | OpenTPW/UI/BitmapFont.cs  |
 | `0x006b15f0` | | OpenTPW/UI/BitmapFont.cs  |
 | `0x006b4aa0` | | OpenTPW/UI/BitmapFont.cs  |
+| `0x006b88d7` | The other read of `+0xc`: a play replaces a live handle only for a higher priority | OpenTPW.Files/Formats/Sound/SoundCategoryFile.cs  |
 | `0x006b8930` | | OpenTPW/World/Advisor/Advisor.cs  |
+| `0x006bb9f9` | The effect record's `+0xc` copied into the voice's priority - `audio.md` | OpenTPW.Files/Formats/Sound/SoundCategoryFile.cs  |
+| `0x006bc2d0` | A variation's wait between a held voice's samples: `min + LCG % (max - min)` | OpenTPW/World/Park/ParkScreams.cs OpenTPW.Files/Formats/Sound/SoundCategoryFile.cs  |
+| `0x006bcc71` | A held voice's fade step taking the no-channel exit, so its stop is a cut | OpenTPW/World/Park/ParkScreams.cs  |
+| `0x006bd9b0` | A held voice's stop: its own children only | OpenTPW/World/Park/ParkScreams.cs OpenTPW/World/Park/ParkAudio.cs  |
+| `0x006bdae0` | A held voice's tick: extend the chain, prune it | OpenTPW/World/Park/ParkScreams.cs  |
+| `0x006bdb50` | A held voice's chain extension | OpenTPW/World/Park/ParkScreams.cs  |
+| `0x006bdb88` | Make a child once the clock passes the newest child's time | OpenTPW/World/Park/ParkScreams.cs  |
+| `0x006bdc3e` | A pruned child deleted without its channel being stopped | OpenTPW/World/Park/ParkScreams.cs  |
+| `0x006c0314` | The SFX.map header word that says the weights are shares | OpenTPW.Files/Formats/Sound/SoundCategoryFile.cs  |
+| `0x006c0510` | The SFX.map loader's walk: effects, variation headers, samples, zones | OpenTPW.Files/Formats/Sound/SoundCategoryFile.cs  |
+| `0x006c0676` | Running-total variation weights turned into shares at load | OpenTPW.Files/Formats/Sound/SoundCategoryFile.cs  |
+| `0x006c3a80` | A held voice's child: variation, sample, and the time of the next | OpenTPW/World/Park/ParkScreams.cs OpenTPW/Audio/SoundCategory.cs  |
+| `0x006c3d80` | Whether a variation takes its wait from the voice's parameter (mask `+0x18` bit 4) | OpenTPW/World/Park/ParkScreams.cs OpenTPW.Files/Formats/Sound/SoundCategoryFile.cs  |
+| `0x006c3e00` | A held voice's next variation: the first first, then by the zones and the parameter | OpenTPW/World/Park/ParkScreams.cs OpenTPW.Files/Formats/Sound/SoundCategoryFile.cs  |
+| `0x006c3e1c` | The held voice's parameter byte read for the variation pick | OpenTPW/World/Park/ParkAudio.cs  |
+| `0x006c3f49` | No zone covers the parameter: the chain is parked | OpenTPW/World/Park/ParkScreams.cs  |
 | `0x006e71b4` | | OpenTPW/World/Park/PeepHeading.cs OpenTPW.Tests/PeepHeadingTests.cs  |
 | `0x006fe6bc` | | OpenTPW/World/Ride/RideAnimations.cs OpenTPW.Tests/RideAnimationsTests.cs  |
 | `0x006febe4` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
@@ -435,6 +456,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00702c8c` | | OpenTPW/World/Weather/Lightning.cs  |
 | `0x00702c94` | | OpenTPW/World/Weather/Lightning.cs  |
 | `0x00702ca4` | | OpenTPW/World/LobbyCameraMode.cs  |
+| `0x0070a2e0` | vtable of the held-chain voice class (flags `0x0404`) | OpenTPW/World/Park/ParkScreams.cs  |
 | `0x007396c8` | The `Info.Shape` alphabet, 19 rows of `{char, kind, bit}` | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
 | `0x00741c8c` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00741d40` | | OpenTPW/World/Park/ParkWeather.cs  |
@@ -480,3 +502,4 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00877d34` | | OpenTPW/World/Park/ParkPeople.cs OpenTPW/Global/GameCalendar.cs OpenTPW/Global/GameClock.cs  |
 | `0x00878128` | | OpenTPW/Global/GameClock.cs  |
 | `0x008bcbcc` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
+| `0x00fb1f20` | The sound engine's one random seed | OpenTPW/World/Park/ParkScreams.cs  |

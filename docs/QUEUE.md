@@ -324,7 +324,34 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   the island keys while leaving; clear all the leave state in `ForgetIsland`. Confirm: press next-island
   during the fly-in, the camera keeps flying into the island you chose; screenshot mid-flight and the
   log line.
-- [ ] **Q9. Stopping one ride's scream releases the scream effect every ride in that band shares.**
+- [x] **Q9. Stopping one ride's scream releases the scream effect every ride in that band shares.** Done 2026-09-23,
+  `alexah/123-each-ride-screams-on-its-own-clock`. The decode is in `docs/exe/audio.md`, "How the engine plays an
+  effect: priority, not a repeat delay"; every claim was put to two refuters, and `0x006bc2d0`, `0x006c3e00` and
+  `0x006c0676` were re-read by hand. **The shared claim has no counterpart at all.** The original keeps nothing per
+  effect, and the "2700 ms repeat delay" is a voice priority. A held scream is a chain:
+  - the first child plays at once, from variation 1;
+  - each later child waits a random 1000-3000 ms (effect 71), drawn from its variation header and counted from
+    its own start;
+  - later children take their variation from the zones, keyed by parameter 6;
+  - a stop hard-cuts that ride's newest child and nothing else.
+
+  What was built:
+  - `ParkScreams` is that chain, one per ride;
+  - `SoundCategory.PickFrom` picks a child's sample with no gate;
+  - `SoundCategoryFile.ReadVariations` walks all 31 maps to the byte (1,267 effects, 1,595 variations).
+
+  Confirmed in the game, two Belly Bounces with guests, `save/` unchanged in both runs:
+  - **On `main`:** of 8 stops while the other ride held the same scream, the other's plays rose at the first
+    poll after the stop in **6**. The mix went from -80 dB to -25 dB **60 ms** after one such stop.
+  - **With the fix:** in **8 of 8**, the other ride's next child came on its own logged time (+1 to +6 ms),
+    0.9-2.3 s after the stop and never at it.
+  - All 147 child intervals lay inside their range, at most 8 ms past the logged wait.
+  - In 11 places the two rides' children started within 100 ms of each other.
+  - One stop's mix fell to digital silence 0.4-1.0 s after it.
+  - Two later onsets that no scream accounts for are unattributed (probably the music; not checked).
+
+  Mutations M1-M8 all went red as predicted. M9, the old `Release` line put back, survives as predicted, because
+  nothing a chain does reads the throttle, which M3 pins. Filed Q43. The item as written:
   `ParkAudio.StopScream` (`ParkAudio.cs:557`) calls `_kids.Release( effect )`, which sets the shared
   effect's `AvailableAt` to minus infinity (`SoundCategory.cs:169-175`). With two rides in one band, one
   stopping makes the other scream again at once instead of after its declared delay. Make the claim
@@ -492,6 +519,22 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   in their costume under the pointer and puts a red square on a cell the click would refuse; here the
   pointer is plain (`STAFF_CARRY_PREVIEW`). Confirm: carry a candidate over a cell the rule refuses, click,
   still in the hand and the red square photographed; then a path cell, hired.
+- [ ] **Q43. The number read as a repeat delay is a priority, and the original throttles nothing.** Found by
+  Q9's decode (`docs/exe/audio.md`, "How the engine plays an effect: priority, not a repeat delay").
+  `SoundCategoryFile.Effect.RepeatDelay` is the effect record's `+0x0c`, which the original reads only as a voice
+  priority, and nothing on its play path reads a clock. So `SoundCategory.Play`'s per-effect throttle has no
+  counterpart, and neither have the replays it times: the lobby's beds and one-shots, the park's music and
+  weather, and SINGLESCREAM. The original's repeating voices come from the flags word instead. There are two kinds:
+  - `0x0404` chains, built by Q9 for the screams only (staff 188 and the ambient beds are not);
+  - the `0x4|0x2` class, which hands a variation's wait to the mixer (music 2, kids 91, ambient 33). It is undecoded.
+
+  Also owed:
+  - the top-N voice pool, keyed by priority and closeness (N is 12, at most 30);
+  - weighted variation picks (4 of 63 effects are uneven, and `SoundCategory.Pick` is even);
+  - whether parameter 6 is also a level (OpenTPW hears it as the scream's gain);
+  - replacing `ReadSamples`' scan with the structural walk.
+
+  Decode the `0x4|0x2` class first. Confirm: capture the lobby's mix and a park's mix, before and after.
 - [x] **Q35. The path tool from the interface, and Backspace.** Done 2026-09-22,
   `alexah/117-the-path-tool-from-the-interface`; `docs/exe/park-engine.md` "The path tool" has the decode.
   No button arms it: a click on grass or path does, and anchors in the same click. Backspace pops the run

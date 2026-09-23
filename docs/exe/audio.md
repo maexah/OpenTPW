@@ -28,7 +28,7 @@ The delay-load IAT *can* be found, but not by searching for a string or a VA: th
 
     Sound_PlayEffect( handle, category, effectId, x, y, z )
 
-The three ints become floats in a stack record `{vtable 00700b90, category, effect, x, y, z}`, virtual-called on the sound manager at `DAT_00802bcc` through vtable+8.
+The three ints become floats in a stack record `{vtable 00700b90, category, effect, x, y, z}`, virtual-called through `DAT_00802bcc`'s vtable+8. `DAT_00802bcc` is not the manager: it is an 8-byte forwarder (vptr `0x0070a288`, the manager at `+4`) whose `+8` (`0x006b5b40`) calls the manager's `+0x10`, `0x006b87d0`, which is the real play. See "How the engine plays an effect" below.
 
 **A 2D sound is just one played at (0,0,0).** `UI_PlaySound` is literally `Sound_PlayEffect(0, uiCat, id, 0, 0, 0)`. Copy that shape — one call, optional position — rather than adding a parallel positional path.
 
@@ -36,8 +36,86 @@ The three ints become floats in a stack record `{vtable 00700b90, category, effe
 |---|---|---|---|
 | `0051bfc0` | `Sound_PlayEffect` | The single entry point for every sound, positional or not | Decompiled; all callers below reach audio through it |
 | `00700b90` | — | vtable stored in the stack record it builds | Decompiled |
-| `DAT_00802bcc` | — | The sound manager the record is dispatched on, through vtable+8 | Decompiled |
+| `DAT_00802bcc` | — | An 8-byte forwarder to the sound manager, written through a pointer (`0x0051b6a6 PUSH 0x802bcc`, `0x006b5de6`), which is why it shows only reads | Disassembly |
 | `00485aa0` | `UI_PlaySound` | 2D wrapper: `Sound_PlayEffect(0, uiCat, id, 0, 0, 0)` | Decompiled |
+
+## How the engine plays an effect: priority, not a repeat delay
+
+Decoded 2026-09-23 for `docs/QUEUE.md` Q9. Five decoders each had their claims checked by two refuters (workflow `wf_99a15f42-84d`). `0x006bc2d0`, `0x006c3e00` and `0x006c0676` were then re-read by hand, and the layout was re-measured over all 31 shipped `cat_*SFX.map`. The file layout itself is on the FileFormats site (`formats/sound-categories.md`).
+
+**The engine keeps no time per effect.** No part of the path from `Sound_PlayEffect` down to a voice reads a clock or writes one into an effect record or a category:
+- the play entry `0x006b87d0` does not;
+- neither does the device gate `0x006b88e9` → `0x006b9bd0`, which is `MOV EAX,1; RET 8` on both device vtables;
+- neither does anything else before the voice is made.
+
+A second caller of the same category and effect is always let through and gets a new voice with a new handle. **So a stop cannot change what another caller hears, except by freeing capacity** (see the pool below).
+
+**The effect record's fourth int is a priority.** OpenTPW's `SoundCategoryFile` reads it as `RepeatDelay`: 2700 for every kids scream, 10000 for music, 6000 for speech. It has two readers:
+- **Voice creation.** It is copied into the voice (`0x006bb9f9 MOV DX,[EAX+0xc]`, `0x006bb9fd MOV [ECX+0x22],DX`) as the high word of the sort key at `voice+0x20`. The low word is closeness to the listener (`0x006bba6c`).
+- **The play entry.** When the caller passes in a live handle, the new effect replaces that handle's voice only if its priority is strictly higher (`0x006b88d3`..`0x006b88da`). STARTSCREAM and SINGLESCREAM pass handle 0 (`0x00551165`), so this never applies to them.
+
+Every use of that int as a delay in OpenTPW is OpenTPW's own: `SoundCategory.Play`'s throttle, and the lobby's and the park music's replays, which the throttle times. These are filed as Q43.
+
+**The voice class comes from the record's flags word**, the `u16` at `+0x10` (`0x006b6774`..`0x006b67f2`):
+
+| Flags word | Voice class | Shipped users |
+|---|---|---|
+| no bit `0x4` (for example 0, `0x200`, `0x8`) | One-shot: plays one sample and dies. Freed at start + length + 250 ms (`0x006bc01b`), or when its channel ends. | 1,067 of the 1,267 records, SINGLESCREAM's 75-90 and 105-109 among them; 30 more carry bit `0x1` and go through a deferred queue first (`0x006b66d0`) |
+| `0x0404` | Held chain, final vtable `0x0070a2e0`. The constructor stores `0x0070a390`, then overwrites it at `0x006bdde5`. | 18 records: kids 71-74, staff 188, and the ambient beds with `0x120404`/`0x170404` |
+| bits `0x4` and `0x2` (`0x0406`, `0x0606`, ...) | A class that passes the variation's wait to the mixer channel (`0x006bdf00` → `0x006c5220`). Not decoded further. | 135 records, music 2, kids 91 and global ambient 33 among them |
+
+**A held voice is a chain.** The parent of a `0x0404` voice never plays a sample.
+- **Its tick** (vtable `+0x14`, `0x006bdae0`) only extends and prunes a chain of one-shot children (`0x006bdb50`, `0x006bdc10`).
+- **When a child is made.** Each pass, if the clock has passed the newest child's time (`0x006bdb88 CMP EBP,[ESI+0x1c]; JBE`), a new child is made. It is a 0x50-byte voice of class `0x0070a9e0` (`0x006bdbba` → `0x006b72f0` → `0x006c3ded`).
+- **What a child gets.** `0x006c3a80` gives it:
+  - a variation (`0x006c3e00`);
+  - a fresh weighted sample (`0x006bc680`);
+  - its time: now plus a wait drawn from that variation's header (`0x006c3abe`..`0x006c3ac5`).
+- **How the wait is drawn.** The wait is the header's `u16` pair at `+0x10`/`+0x12` (`0x006bc2d0`):
+  - nought when both are nought;
+  - otherwise the pair is swapped if the second is the smaller, then `min + LCG % (max - min)`, which is min when they are equal.
+  - Bit 4 of the header's `+0x18` takes the wait from the voice's parameter instead (`0x006c3d80`). No scream variation sets it.
+  - It is counted from the child's start, and the sample's length does not come into it.
+  - Shipped for the four screams: 71 1000-3000 ms, 72 500-2000, 73 100-1000, 74 0-500.
+- **Which variation it plays.** The first child takes the effect's first variation, whatever the parameter (`0x006c3e26`..`0x006c3e33`). Every later child draws, weighted by each target's `+0x1e`, among the current variation's zone records whose `lo..hi` holds the voice's parameter byte (`0x006c3e1c`, `0x006c3e89`..`0x006c3e97`). No match parks the chain until a new parameter arrives (`0x006c3f49`).
+- **Where the parameter comes from.** For the screams it is parameter 6. STARTSCREAM sets it to `clamp((operand + speed) / 2, 0, 100)` straight after the play (`0x00551261`..`0x00551265`), and SCREAMLEVEL resets it. The zones send 0-25 to variation 1, 26-50 to 2, 51-75 to 3 and 76-100 to 4, so Lost Kingdom's Belly Bounce, at `(20 + 50) / 2 = 35`, screams variation 1 once and variation 2 ever after.
+- **Pruning.** A child is pruned when the clock reaches its time (`0x006bdc23`). The prune deletes it without stopping its channel (`0x006b71f0` → `0x006bb9b0`), so its sample most likely plays out over the next one's start. Whether the device reclaims that channel early is **not traced**.
+- **The clock.** It is wall time in milliseconds (`0x005f5fa0`: QueryPerformanceCounter, or timeGetTime), read once per service pass (`0x006b62c1`). It does not pause with the game.
+- **The service.** The service runs whenever `Sound_ApplyGroupVolumes` posts message `0x700b6c` (`0x0051bfab`). How often that is has **not been measured**. A child made in one pass starts on the next (`0x006bdb79`).
+
+**A stop takes down one chain.**
+- `Sound_Stop` and `Sound_StopFading` find the voice by its exact handle (`0x006b6830`, generation-checked at `0x006b6876`).
+- A held parent's stop (`0x006bd9b0`) hard-stops each child still in its chain, down to `QSWaveMixStopChannel` (`0x006d24d7`). It deletes the children, clears the chain and flags itself finished (`0x006bcade`).
+- With fading on, StopFading still ends in the same hard stop. The parent has no channel, so its first fade step takes the no-channel exit (`0x006bcc71`), and the next service stops it (`0x006b62fe` → `0x006b6320`).
+- Nothing on any stop or free path writes an effect record, a category or a manager gate. STOPSCREAM zeroes the script's `+0xd0` itself (`0x00555f0a`).
+
+**Where two callers of one effect do meet: the pool.**
+- Each service keeps only the top N voices by that `(priority << 16) | closeness` key and ticks only those (`0x006b6358`, `0x006b637b`). N is 12 by default (`0x006b83b0`) and is reset from the options, up to 30 (`0x006b6140`).
+- The hardware channels are taken by the same key (`0x006bad28`).
+- A held chain that falls out of the top N makes no children, and a stop elsewhere can let it back in. Not built here (Q43).
+
+**Two rides screaming the same band, therefore:**
+- two parents, two handles, each chain starting at once and going on its own random clock;
+- one ride's STOPSCREAM cuts that ride's newest child and changes nothing about the other.
+
+OpenTPW's `ParkScreams` builds exactly this: `ParkAudio.StopScream` no longer releases anything, and `SoundCategory.PickFrom` picks a child's sample with no gate.
+
+| Address | Original name | What it is | Evidence |
+|---|---|---|---|
+| `0x0070a288` | — | vtable of the 8-byte forwarder at `DAT_00802bcc`: `+8` play → manager `+0x10` | Disassembly (`0x006b5dd6`, `0x006b5b4f`) |
+| `0x0070a2a0` | — | The sound manager's vtable: `+8` `0x006b8720` registers a category (→ `0x006bf330`), `+0x10` `0x006b87d0` plays, `+0x18` `0x006b89b0` stops a handle | Read from the image |
+| `0x006bf330` | — | Registers a category: looks the name up and loads `<name>BANK.map` and `<name>SFX.map` into a 0x34-byte category. It does not play | Disassembly (`0x006bf3c2`, `0x006bf520`) |
+| `0x006b87d0` | — | Play. It reads no clock | Disassembly |
+| `0x006bb9f9` | — | The effect record's `+0xc` copied into the voice's priority | Disassembly |
+| `0x006b88d7` | — | The only other read of `+0xc`: replace a live handle only for a higher priority | Disassembly |
+| `0x006bdae0` | — | A held voice's tick: extend the chain, prune it | Disassembly |
+| `0x006bdb88` | — | Make a child once the clock passes the newest child's time | Disassembly |
+| `0x006c3a80` | — | A child's variation, sample and time | Disassembly |
+| `0x006bc2d0` | — | A variation's wait: `min + LCG % (max - min)` | Disassembly, re-read by hand |
+| `0x006c3e00` | — | A child's variation: the first variation first, then by the zones and the parameter | Disassembly, re-read by hand |
+| `0x006bd9b0` | — | A held voice's stop: its own children only | Disassembly |
+| `0x005f5fa0` | — | The sound clock: wall-time milliseconds | Disassembly |
+| `0x00fb1f20` | — | The one random seed every draw above advances | Disassembly |
 
 ## Where positional audio actually lived
 

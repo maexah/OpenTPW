@@ -24,11 +24,12 @@ namespace OpenTPW;
 /// length-prefixed, NUL-terminated path per bank. All thirty that ship parse to exactly the end
 /// of the file with nothing over.
 ///
-/// <b>The SFX file is understood in part.</b> Its header and effect table are read below and are
-/// solid: the counts land where they should in all thirty-one files and every delay comes out a
-/// round number of milliseconds. What is <i>not</i> decoded is the per-effect header that sits
-/// before each effect's sample list - it varies in size, so the lists cannot simply be stepped
-/// over. <see cref="ReadSamples"/> explains how they are found instead.
+/// <b>The SFX file is decoded to its last byte.</b> After the effect table each effect holds one
+/// 42-byte header per variation, and then, per variation, its 16-byte sample records and its 8-byte
+/// zone records - <see cref="ReadVariations"/> walks exactly that, and ends at the end of the file in
+/// all thirty-one categories the game ships. <see cref="ReadSamples"/> still finds the sample
+/// records by what they contain, which it did before the headers were decoded, and the two readers
+/// agree on every list.
 /// </summary>
 public sealed class SoundCategoryFile
 {
@@ -38,8 +39,11 @@ public sealed class SoundCategoryFile
 	/// not start at 1 or run in order, and the ride categories' run into the hundreds.
 	/// </param>
 	/// <param name="RepeatDelay">
-	/// The shortest gap between two plays of this effect. Every value in the shipped data is a
-	/// round number of milliseconds, from 700 up to 10,000.
+	/// The record's fourth int, read here as the shortest gap between two plays of this effect.
+	/// <b>The original reads it as a voice PRIORITY and never as a time</b> - it is copied to the
+	/// voice's sort key (<c>0x006bb9f9</c>) and compared when a play would replace a handle
+	/// (<c>0x006b88d7</c>); see <c>docs/exe/audio.md</c>. Every use of it as a delay is this project's
+	/// own, <c>docs/QUEUE.md</c> Q43. A held scream no longer uses it: see <see cref="Variation"/>.
 	/// </param>
 	/// <param name="Variations">
 	/// How many weighted lists this effect picks between - the second int of its record, which this
@@ -60,6 +64,37 @@ public sealed class SoundCategoryFile
 	/// <param name="Duration">How long the sample is, as the map states it.</param>
 	public readonly record struct Sample( int Bank, int Index, int Weight, TimeSpan Duration );
 
+	/// <summary>
+	/// One variation's 42-byte header: how many samples and zones follow it, how long a voice
+	/// waits before its next sample, and its weight among its effect's variations.
+	/// </summary>
+	/// <param name="Samples">The sample records that follow, the header's first <c>u16</c>.</param>
+	/// <param name="GapMin">
+	/// The shortest wait, in milliseconds, before a held voice starts its next sample (<c>u16</c> at
+	/// <c>+0x10</c>). The original draws the wait per voice from <c>GapMin</c> up to
+	/// <see cref="GapMax"/> (<c>0x006bc2d0</c>), counted from when the sample before it started.
+	/// </param>
+	/// <param name="GapMax">The longest such wait (<c>u16</c> at <c>+0x12</c>). Four shipped variations
+	/// hold it below <see cref="GapMin"/>, and the original swaps the pair when it draws.</param>
+	/// <param name="GapByParameter">
+	/// The <c>u16</c> at <c>+0x18</c>. With bit 4 set the original takes the wait from the voice's
+	/// parameter rather than at random (<c>0x006c3d80</c>); no scream variation sets it.
+	/// </param>
+	/// <param name="Weight">
+	/// The <c>u32</c> at <c>+0x1e</c>, as the original holds it after loading: a variation's own
+	/// share, where most files store a running total that the loader turns into shares.
+	/// </param>
+	/// <param name="Zones">Where a held voice may go next, by the value of its parameter.</param>
+	public readonly record struct Variation( int Samples, int GapMin, int GapMax, int GapByParameter,
+		long Weight, IReadOnlyList<Zone> Zones );
+
+	/// <summary>
+	/// One 8-byte zone record: a held voice whose parameter lies within <paramref name="Low"/> to
+	/// <paramref name="High"/> may take <paramref name="Variation"/> next (<c>0x006c3e00</c>).
+	/// </summary>
+	/// <param name="Variation">The variation it leads to, zero-based; the file stores it one-based.</param>
+	public readonly record struct Zone( int Variation, int Low, int High );
+
 	/// <summary>The banks this category draws on, as paths relative to the category's own folder.</summary>
 	public IReadOnlyList<string> Banks { get; private set; } = Array.Empty<string>();
 
@@ -75,6 +110,11 @@ public sealed class SoundCategoryFile
 	private const int EffectStride = 20;
 	private const int EffectDelayField = 3;
 	private const int SampleStride = 16;
+	private const int VariationHeaderSize = 42;
+	private const int ZoneStride = 8;
+
+	/// <summary>The header word that says whether variation weights are running totals - see <see cref="ReadVariations"/>.</summary>
+	private const int WeightsAreSharesOffset = 0x10;
 
 	/// <summary>
 	/// What the cumulative odds have to reach for a list to be over. See
@@ -256,6 +296,78 @@ public sealed class SoundCategoryFile
 		}
 
 		return effects;
+	}
+
+	/// <summary>
+	/// Every effect's variation headers, walked the way the original's loader walks them
+	/// (<c>0x006c0510</c> onwards): after the effect table, each effect's headers, then for each of
+	/// its variations that many sample records and that many zone records.
+	///
+	/// <para>
+	/// <b>It is strict</b>: a walk that does not end exactly at the end of the file answers nothing,
+	/// because a layout that is off by a byte anywhere puts every header after it in the wrong place.
+	/// All thirty-one shipped categories end exactly - 1,267 effects, 1,595 variations.
+	/// </para>
+	/// </summary>
+	/// <returns>One entry per effect, in the order of <see cref="Effects"/>; empty if the walk failed.</returns>
+	public List<List<Variation>> ReadVariations()
+	{
+		var effects = new List<List<Variation>>();
+
+		if ( !IsValid )
+			return effects;
+
+		// The loader turns running totals into shares when this word is nought, and leaves them when
+		// it is not (0x006c0314, 0x006c0676) - speech and music store shares already.
+		var runningTotals = BitConverter.ToUInt32( _sfx, WeightsAreSharesOffset ) == 0;
+		var offset = EffectTableOffset + (Effects.Count * EffectStride);
+
+		foreach ( var effect in Effects )
+		{
+			var headers = new List<(int Samples, int Zones, int GapMin, int GapMax, int GapByParameter, long Weight)>();
+			long previous = 0;
+
+			for ( int i = 0; i < effect.Variations; ++i )
+			{
+				if ( offset + VariationHeaderSize > _sfx.Length )
+					return [];
+
+				var weight = (long)BitConverter.ToUInt32( _sfx, offset + 0x1e );
+
+				headers.Add( (
+					BitConverter.ToUInt16( _sfx, offset ),
+					BitConverter.ToInt32( _sfx, offset + 4 ),
+					BitConverter.ToUInt16( _sfx, offset + 0x10 ),
+					BitConverter.ToUInt16( _sfx, offset + 0x12 ),
+					BitConverter.ToUInt16( _sfx, offset + 0x18 ),
+					runningTotals ? weight - previous : weight ) );
+
+				previous = weight;
+				offset += VariationHeaderSize;
+			}
+
+			var variations = new List<Variation>();
+
+			foreach ( var header in headers )
+			{
+				offset += header.Samples * SampleStride;
+
+				if ( header.Zones < 0 || offset + (header.Zones * ZoneStride) > _sfx.Length )
+					return [];
+
+				var zones = new Zone[header.Zones];
+
+				for ( int z = 0; z < zones.Length; ++z, offset += ZoneStride )
+					zones[z] = new Zone( BitConverter.ToInt32( _sfx, offset ) - 1, _sfx[offset + 6], _sfx[offset + 7] );
+
+				variations.Add( new Variation( header.Samples, header.GapMin, header.GapMax, header.GapByParameter,
+					header.Weight, zones ) );
+			}
+
+			effects.Add( variations );
+		}
+
+		return offset == _sfx.Length ? effects : [];
 	}
 
 	private bool TryReadSample( int offset, IReadOnlyList<IReadOnlyList<TimeSpan>> bankDurations, out Sample sample )

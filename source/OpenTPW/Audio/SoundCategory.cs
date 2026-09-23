@@ -22,6 +22,12 @@ public sealed class SoundCategory
 		/// </summary>
 		public List<List<SoundCategoryFile.Sample>> Variations = new();
 
+		/// <summary>
+		/// Each variation's header - its gap and its zones - in the order of <see cref="Variations"/>,
+		/// or empty when the file's headers would not walk. See <see cref="SoundCategoryFile.ReadVariations"/>.
+		/// </summary>
+		public IReadOnlyList<SoundCategoryFile.Variation> Headers = [];
+
 		public int SampleCount => Variations.Sum( variation => variation.Count );
 
 		/// <summary>
@@ -64,6 +70,10 @@ public sealed class SoundCategory
 			_banks.Add( SoundBank.Load( root, bankPath ) ?? SoundBank.Empty( bankPath ) );
 
 		var lists = file.ReadSamples( _banks.Select( bank => bank.Durations ).ToList() );
+		var headers = file.ReadVariations();
+
+		if ( headers.Count != file.Effects.Count )
+			Log.Warning( $"Sound category {Name}: its variation headers did not walk to the end of the file" );
 
 		// The lists come back in the order the file gives them, which is the order of the effect
 		// table - so effect n takes list n. An effect with no list plays nothing rather than
@@ -74,7 +84,8 @@ public sealed class SoundCategory
 			{
 				Id = file.Effects[i].Id,
 				RepeatDelay = file.Effects[i].RepeatDelay,
-				Variations = i < lists.Count ? lists[i] : new List<List<SoundCategoryFile.Sample>>()
+				Variations = i < lists.Count ? lists[i] : new List<List<SoundCategoryFile.Sample>>(),
+				Headers = i < headers.Count ? headers[i] : []
 			} );
 		}
 
@@ -93,9 +104,11 @@ public sealed class SoundCategory
 	/// recently.
 	/// </summary>
 	/// <param name="respectDelay">
-	/// Whether the effect's own repeat delay applies. The original throttles every effect this
-	/// way, which is what stops the lobby's one-shot roll - see <see cref="LobbyAudio"/> - from
-	/// stacking the same frog on top of itself.
+	/// Whether the effect's own repeat delay applies, which is what stops the lobby's one-shot roll -
+	/// see <see cref="LobbyAudio"/> - from stacking the same frog on top of itself. <b>The original
+	/// has no such throttle</b>: the number read as the delay is a voice priority there, and nothing on
+	/// its play path reads a clock (<c>docs/exe/audio.md</c>). The throttle is this project's own,
+	/// <c>docs/QUEUE.md</c> Q43; a held scream does not go through it - see <see cref="PickFrom"/>.
 	/// </param>
 	/// <param name="loop">
 	/// Whether the clip repeats seamlessly. The lobby does not use this: its beds are replayed
@@ -158,6 +171,31 @@ public sealed class SoundCategory
 		return longest;
 	}
 
+	/// <summary>
+	/// Picks one sample of variation <paramref name="variation"/> of effect <paramref name="id"/>, at that
+	/// variation's odds - what a child of a held voice plays, the way the original's chain picks one
+	/// (<c>0x006c3a80</c>). <b>Nothing shared gates it and it leaves nothing behind</b>: the effect's
+	/// <see cref="Play"/> throttle is neither asked nor set, since in the original no play of an effect
+	/// waits on another.
+	/// </summary>
+	/// <returns>The sample, or null for an unknown effect or variation, or one that would not decode.</returns>
+	public AudioClip? PickFrom( int id, int variation )
+	{
+		var effect = _effects.FirstOrDefault( candidate => candidate.Id == id );
+
+		if ( effect == null || variation < 0 || variation >= effect.Variations.Count )
+			return null;
+
+		return PickIn( effect.Variations[variation] );
+	}
+
+	/// <summary>
+	/// Effect <paramref name="id"/>'s variation headers - how long a held voice waits between samples,
+	/// and which variation it may take next - or empty for an unknown effect.
+	/// </summary>
+	public IReadOnlyList<SoundCategoryFile.Variation> VariationsOf( int id )
+		=> _effects.FirstOrDefault( effect => effect.Id == id )?.Headers ?? [];
+
 	/// <summary>How long effect <paramref name="id"/> waits after finishing before it may replay.</summary>
 	public TimeSpan RepeatDelay( int id )
 		=> _effects.FirstOrDefault( effect => effect.Id == id )?.RepeatDelay ?? TimeSpan.Zero;
@@ -186,9 +224,11 @@ public sealed class SoundCategory
 	/// quietly change the odds, and nothing in the lobby's banks fails to decode anyway.
 	/// </summary>
 	private AudioClip? Pick( Effect effect )
-	{
-		var variation = effect.Variations[_random.Next( effect.Variations.Count )];
+		=> PickIn( effect.Variations[_random.Next( effect.Variations.Count )] );
 
+	/// <summary>One sample of one weighted list, by its running total out of 65,535.</summary>
+	private AudioClip? PickIn( List<SoundCategoryFile.Sample> variation )
+	{
 		if ( variation.Count == 0 )
 			return null;
 
@@ -204,5 +244,4 @@ public sealed class SoundCategory
 
 		return null;
 	}
-
 }
