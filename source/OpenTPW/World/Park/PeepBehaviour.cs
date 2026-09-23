@@ -642,9 +642,9 @@ public sealed class PeepBehaviour
 			//
 			// <b>The destination is cleared on the stuck arm only, and that asymmetry is the original's.</b>
 			// FUN_00500900 zeroes +0x1dc when the walk reports it cannot get through, and on arrival keeps
-			// it while it logs "Person %d: successfully left rid[e]". Deciding's ride arm overwrites
-			// MajorDest anyway, so reproducing the asymmetry costs nothing and tidying it would quietly make
-			// this a different function.
+			// it while it logs "Person %d: successfully left rid[e]". Deciding's ride arm clears MajorDest
+			// before it chooses, so the kept id lasts until then - and until then a sale of that ride still
+			// puts them off, as it does in the original.
 			//
 			// <b>The pending-second-destination arm is absent because nothing writes the field.</b> Before
 			// dropping to Deciding the original reads the person's +0x1de - somewhere they had chosen while
@@ -1515,6 +1515,9 @@ public sealed class PeepBehaviour
 	/// <returns>Whether somewhere was chosen and a route to it planned.</returns>
 	private bool ChooseSomewhereToGo( Peep peep, PeepWalk walk, int tick )
 	{
+		// Whatever they named before is let go of first, chosen or not (FUN_004fcb10, 0x004fcb21).
+		peep.MajorDest = 0;
+
 		var (x, y) = walk.Position.Cell;
 
 		var wants = new ParkRideScore.Wants( peep.PersonType,

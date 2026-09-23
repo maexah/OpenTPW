@@ -168,14 +168,18 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fb383` | The guest's type-10 answer `FUN_004fb360` chooses a guest by `mMajorDest` alone | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb38d` | `FUN_004fb360`'s rider arm: state `0x10` exactly | OpenTPW.Tests/ParkEvictionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb3cd` | `FUN_004fb360` makes a rider a new sprite when admission destroyed theirs; its position is still nought | OpenTPW/World/Park/ParkPeople.cs  |
-| `0x004fb3f5` | `FUN_004fb360` plays the kids' effect `0x80` at the rider's sprite | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004fb3f5` | `FUN_004fb360` plays the kids' effect `0x80` at the rider's sprite | OpenTPW.Tests/ParkPutOffSoundTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb4a1` | `FUN_004fb360` puts the guest into state 6, deciding | OpenTPW.Tests/ParkEvictionTests.cs  |
+| `0x004fcb21` | The guest's chooser `FUN_004fcb10` clears `mMajorDest` before it chooses, chosen or not | OpenTPW.Tests/ParkEvictionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fe453` | `FUN_004fe1e0` docks `SmallHappinessChange` behind a gate on descriptor `+0x148` | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe4a5` | `FUN_004fe1e0` docks `SmallHappinessChange` behind a gate on descriptor `+0x144` | OpenTPW/World/Park/ParkRideOperation.cs  |
-| `0x0050133d` | `FUN_005012f0` plays the kids' effect `0x80` only when the guest's id `& 7` is nought | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004fe4cf` | `FUN_004fe1e0`: happiness gains the object's byte `+0x198` times the happiness effect over a hundred (to `0x004fe525`) | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe525` | `FUN_004fe1e0`: the end of that gain | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x0050133d` | `FUN_005012f0` plays the kids' effect `0x80` only when the guest's id `& 7` is nought | OpenTPW.Tests/ParkPutOffSoundTests.cs OpenTPW/World/Park/ParkAudio.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x0050212b` | Admission tests the object's flag bit `0x20`, which keeps the rider's sprite | OpenTPW.Files/Formats/Save/ParkWorld.cs  |
 | `0x00502147` | Admission destroys the rider's sprite on an object without flag bit `0x20` | OpenTPW.Files/Formats/Save/ParkWorld.cs  |
 | `0x00504d8f` | `FUN_00504c70`: a staff member put out of a sold rest area claims another and stays in state 0 | OpenTPW.Tests/ParkEvictionTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x00506286` | `FUN_005061d0`: the normal end of a rest calls `FUN_00506d10`, which takes one off `VAR_STAFFIN` | OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x0050cd80` | | OpenTPW/World/Park/FixedVector.cs  |
 | `0x0050f870` | | OpenTPW/World/Park/FixedVector.cs  |
 | `0x00511fc4` | | OpenTPW/World/Park/ParkWeather.cs  |
@@ -498,9 +502,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0076e300` | | OpenTPW/UI/Park/ParkLines.cs  |
 | `0x00774ce0` | | OpenTPW/World/Lobby/LobbyScript.cs  |
 | `0x00774da0` | | OpenTPW/UI/Park/ParkMapScreen.cs  |
-| `0x00785058` | `PeepInfo.SmallHappinessChange`, 5 in Lost Kingdom, read as a byte | OpenTPW/World/Park/ParkAdmission.cs  |
-| `0x0078505c` | `PeepInfo.MediumHappinessChange`, 15 in Lost Kingdom, read as a byte | OpenTPW/World/Park/ParkAdmission.cs  |
-| `0x00785060` | `PeepInfo.BigHappinessChange`, 25 in Lost Kingdom, read as a byte | OpenTPW/World/Park/ParkAdmission.cs  |
+| `0x00785058` | `PeepInfo.SmallHappinessChange`, 5 in Lost Kingdom, read as a byte | OpenTPW.Tests/ParkMoodChangeTests.cs OpenTPW/World/Park/ParkAdmission.cs  |
+| `0x0078505c` | `PeepInfo.MediumHappinessChange`, 15 in Lost Kingdom, read as a byte | OpenTPW.Tests/ParkMoodChangeTests.cs OpenTPW/World/Park/ParkAdmission.cs  |
+| `0x00785060` | `PeepInfo.BigHappinessChange`, 25 in Lost Kingdom, read as a byte | OpenTPW.Tests/ParkMoodChangeTests.cs OpenTPW/World/Park/ParkAdmission.cs  |
 | `0x007854f4` | | OpenTPW/Global/GameCalendar.cs  |
 | `0x00785914` | | OpenTPW/World/Advisor/Advisor.cs  |
 | `0x00786b84` | | OpenTPW/Global/GameClock.cs  |

@@ -246,9 +246,10 @@ public static class ParkBuilding
 	/// <remarks>
 	/// <b>The order is the original's</b> where anything can see it: the demolisher (<c>FUN_00527ee0</c>)
 	/// drains the queue, lets the ends go and clears the footprint, and then the object destructor unlinks the
-	/// thing, refunds it, takes its script down and destroys its model last - <c>docs/exe/park-engine.md</c>,
-	/// "The demolisher's order, and the cells it leaves". Nothing runs inside this call, so where the
-	/// footprint's clear falls against the unlink changes nothing.
+	/// thing, tells the park's people it has gone (the type-10 message, <c>0x004dd150</c>), refunds it, takes
+	/// its script down and destroys its model last - <c>docs/exe/park-engine.md</c>, "The demolisher's order,
+	/// and the cells it leaves". Nothing runs between the unlink and the footprint's clear, and the people
+	/// answer only after both, so where the clear falls against the unlink changes nothing.
 	/// </remarks>
 	private static Sold Demolish( ParkState state, ParkWorld park, ParkItemCatalogue catalogue, ParkObjects? objects,
 		ParkRides? rides, int thingId, ParkPeople? people )

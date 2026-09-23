@@ -1416,9 +1416,8 @@ public sealed class ParkPeople : Entity
 	/// see <see cref="PeepBehaviour.ThingRemoved"/> and <see cref="StaffBehaviour.ThingRemoved"/>.
 	/// </summary>
 	/// <remarks>
-	/// <b>Being put off makes a sound</b>, the kids' effect <c>0x80</c> where the guest's sprite is: always
-	/// for a rider (<c>0x004fb3f5</c>), and for a queuer only when their thing id is a multiple of eight
-	/// (<c>0x0050133d</c>). See <see cref="RiderSpriteAt"/> for where a rider's sprite is.
+	/// <b>Being put off makes a sound</b>, the kids' effect <c>0x80</c> where the guest's sprite is - see
+	/// <see cref="SoundFor"/> for when and where.
 	/// <para>
 	/// The original delivers the message in ascending thing id across every kind (<c>FUN_0040fb10</c>).
 	/// No answer reads another person, so guests and then staff come to the same thing.
@@ -1431,6 +1430,11 @@ public sealed class ParkPeople : Entity
 
 		foreach ( var peep in _peeps )
 		{
+			// Asked before the answer, while the ride's script still holds them.
+			var seat = peep.MajorDest == thing.ThingId && peep.State == PeepState.Riding
+				? SeatOn( thing, peep )
+				: null;
+
 			var how = _behaviour.ThingRemoved( peep, thing.ThingId, thingTick );
 
 			if ( how == PeepBehaviour.PutOff.No )
@@ -1439,11 +1443,11 @@ public sealed class ParkPeople : Entity
 			Log.Info( $"People: guest {peep.ThingId} put off thing {thing.ThingId} ({how}), "
 				+ $"now {peep.State} with happiness {peep.Happiness:0}" );
 
-			var heardAt = how switch
+			Vector3? heardAt = SoundFor( how, peep.ThingId, thing.Flags, seat is not null ) switch
 			{
-				PeepBehaviour.PutOff.Riding => RiderSpriteAt( thing, peep ),
-				PeepBehaviour.PutOff.Queueing when (peep.ThingId & 7) == 0
-					=> ParkGuestSprites.Feet( peep.Navigator.Position ),
+				PutOffSound.Origin => Vector3.Zero,
+				PutOffSound.Seat => seat,
+				PutOffSound.Feet => ParkGuestSprites.Feet( peep.Navigator.Position ),
 				_ => null
 			};
 
@@ -1456,29 +1460,53 @@ public sealed class ParkPeople : Entity
 				tick );
 	}
 
+	/// <summary>Where the put-off sound plays for one guest - see <see cref="SoundFor"/>.</summary>
+	internal enum PutOffSound
+	{
+		None,
+		Origin,
+		Seat,
+		Feet
+	}
+
 	/// <summary>
-	/// Where a rider's sprite is as a sale puts them off, for the sound <see cref="ThingRemoved"/> plays
-	/// there. Asked while the ride's script still holds them.
+	/// Whether a guest's answer to a sale makes the put-off sound, and where: always for a rider
+	/// (<c>0x004fb3f5</c>), for a queuer only when their thing id is a multiple of eight
+	/// (<c>0x0050133d</c>), and for nobody else.
 	/// </summary>
 	/// <remarks>
-	/// On a thing with <see cref="ParkWorld.CatalogueObject.KeepsRidersSpriteFlag"/> the sprite is where the
-	/// ride holds it: the seat node, or where the rider stands when no seat names them. Without the flag,
-	/// admission destroyed the sprite; the eviction makes a new one whose position is still nought when the
-	/// sound reads it (<c>0x004fb3cd</c>, then <c>FUN_004faa00</c>), so the sound plays at the world's
-	/// origin. A thing bought this session carries no such flag yet (<c>BOUGHT_OBJECT_FLAG_BITS</c>).
+	/// <b>A rider's sprite decides the place.</b> On a thing with
+	/// <see cref="ParkWorld.CatalogueObject.KeepsRidersSpriteFlag"/> the ride holds the sprite: a bounce rider
+	/// is on the seat node. Without the flag, admission destroyed the sprite; the eviction makes a new one
+	/// whose position is still nought when the sound reads it (<c>0x004fb3cd</c>, then <c>FUN_004faa00</c>),
+	/// so it plays at the world's origin. A thing bought this session carries no such flag yet
+	/// (<c>BOUGHT_OBJECT_FLAG_BITS</c>).
+	/// <para>
+	/// <b>A deviation:</b> a walk-on rider (the Jungle Spray's <c>WALKON</c>) is where the <c>WALK</c> stepper
+	/// last put their sprite (<c>FUN_005580a0</c>, <c>FUN_004f9e60</c>). Nothing here places a walk-on rider, so
+	/// with no seat the sound plays at the rider's feet.
+	/// </para>
 	/// </remarks>
-	private Vector3? RiderSpriteAt( ParkWorld.CatalogueObject thing, Peep rider )
-	{
-		if ( (thing.Flags & ParkWorld.CatalogueObject.KeepsRidersSpriteFlag) == 0 )
-			return Vector3.Zero;
+	internal static PutOffSound SoundFor( PeepBehaviour.PutOff how, int guestId, int thingFlags, bool seated )
+		=> how switch
+		{
+			PeepBehaviour.PutOff.Riding when (thingFlags & ParkWorld.CatalogueObject.KeepsRidersSpriteFlag) == 0
+				=> PutOffSound.Origin,
+			PeepBehaviour.PutOff.Riding => seated ? PutOffSound.Seat : PutOffSound.Feet,
+			PeepBehaviour.PutOff.Queueing when (guestId & 7) == 0 => PutOffSound.Feet,
+			_ => PutOffSound.None
+		};
 
+	/// <summary>The seat node a ride's script holds this rider on, in the world, or null.</summary>
+	private Vector3? SeatOn( ParkWorld.CatalogueObject thing, Peep rider )
+	{
 		if ( _scriptFor?.Invoke( thing.ThingId ) is { } script
 			&& script.TryBounceNode( rider.ThingId, out var node )
 			&& ParkObjects.Current is { } objects
 			&& objects.TryNodeOn( thing.ThingId, BounceNodeName( node ), out var seat ) )
 			return seat;
 
-		return ParkGuestSprites.Feet( rider.Navigator.Position );
+		return null;
 	}
 
 	/// <summary>

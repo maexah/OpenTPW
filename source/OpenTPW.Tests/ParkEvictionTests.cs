@@ -216,6 +216,89 @@ public class ParkEvictionTests
 	}
 
 	/// <summary>
+	/// Each dock is held at nought, as <c>FUN_004fb4f0</c> and the clamp inlined in <c>FUN_004fea70</c> hold
+	/// it: a rider with 3 left and a queuer with 12 both end at nought, not below.
+	/// </summary>
+	[TestMethod]
+	public void AGuestWithLittleHappinessLeftIsHeldAtNought()
+	{
+		var park = Open();
+
+		try
+		{
+			var rider = Bound( park, 0, BellyBounce, PeepState.Riding );
+			var queuer = Queueing( park, 1, BellyBounce );
+
+			rider.Happiness = 3f;
+			queuer.Happiness = 12f;
+
+			Sell( park, BellyBounce );
+
+			Assert.AreEqual( 0f, rider.Happiness, "3 less 5, held at nought" );
+			Assert.AreEqual( 0f, queuer.Happiness, "12 less 15, held at nought, less 5, held again" );
+		}
+		finally
+		{
+			Close( park );
+		}
+	}
+
+	/// <summary>
+	/// A guest's choice lets go of whatever they named first, chosen or not (<c>FUN_004fcb10</c>,
+	/// <c>0x004fcb21</c>) - so a guest who left a ride and then failed to choose is no longer bound to it,
+	/// and a sale of it later passes them by, as in the original.
+	/// </summary>
+	[TestMethod]
+	public void AFailedChoiceLetsGoOfWhatTheyNamedBefore()
+	{
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var admission = new ParkAdmission( new ParkBalance( Theme, easyMode: true ), world.Economy!.Value.AdmissionFee );
+
+		// A seed whose first roll is the ride arm, and a behaviour with no park, so the choice finds nothing.
+		var seed = Enumerable.Range( 0, 100 ).First( candidate => new Random( candidate ).Next() % 3 == 0 );
+		var behaviour = new PeepBehaviour( parkIsClosed: false, world.NumberOfVisitorsToDate, new Random( seed ),
+			admission );
+
+		var guest = ParkPeople.PeepsIn( world ).First();
+		var walk = new PeepWalk( guest.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
+
+		guest.SetState( PeepState.Deciding, tick: 1, new Random( 1 ) );
+		guest.MajorDest = BellyBounce;
+		guest.TimeStartedIdling = 0;
+
+		behaviour.Step( guest, walk, playing: null, tick: 100 );
+
+		Assert.AreEqual( PeepState.Deciding, guest.State, "nothing was chosen" );
+		Assert.AreEqual( 0, guest.MajorDest, "and the ride they named before is let go of" );
+	}
+
+	/// <summary>
+	/// Which arm each guest takes, which decides the sound: riding is state 16 exactly, queueing is
+	/// <c>FUN_00502430</c>'s, anyone else still naming the thing is heading, and a guest naming something else
+	/// takes none.
+	/// </summary>
+	[TestMethod]
+	[DataRow( PeepState.Riding, BellyBounce, (int)PeepBehaviour.PutOff.Riding )]
+	[DataRow( PeepState.InQueue, BellyBounce, (int)PeepBehaviour.PutOff.Queueing )]
+	[DataRow( PeepState.BeingAdmitted, BellyBounce, (int)PeepBehaviour.PutOff.Queueing )]
+	[DataRow( PeepState.GoingToRide, BellyBounce, (int)PeepBehaviour.PutOff.Heading )]
+	[DataRow( PeepState.Riding, JungleSpray, (int)PeepBehaviour.PutOff.No )]
+	public void EachGuestTakesTheArmTheirStateCallsFor( PeepState state, int boundFor, int expected )
+	{
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var behaviour = new PeepBehaviour( parkIsClosed: false, world.NumberOfVisitorsToDate, new Random( 1 ) );
+
+		var guest = ParkPeople.PeepsIn( world ).First();
+
+		guest.MajorDest = boundFor;
+		guest.SetState( state, tick: 1, new Random( 1 ) );
+
+		Assert.AreEqual( (PeepBehaviour.PutOff)expected, behaviour.ThingRemoved( guest, BellyBounce, tick: 2 ) );
+	}
+
+	/// <summary>
 	/// Only the destination chooses, not the state: a guest walking to it or away from it is stopped too,
 	/// and loses only the small change.
 	/// </summary>

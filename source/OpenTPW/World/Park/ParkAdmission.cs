@@ -128,7 +128,7 @@ public sealed class ParkAdmission
 	/// about the price of coming in, and each is read by something that is not the gate: the settle-up, the
 	/// sold-thing eviction, a park shutting. The balance loader places them side by side in its
 	/// <c>PeepInfo</c> block (<c>0x00785058</c>, <c>0x0078505c</c>, <c>0x00785060</c>; see
-	/// <c>docs/exe/park-engine.md</c>, "Selling and the people on it"). Moving all three into a holder of
+	/// <c>docs/exe/park-engine.md</c>, "How a key finds its global"). Moving all three into a holder of
 	/// their own is owed. Splitting them across two homes would be worse than this.
 	/// </remarks>
 	public int BigHappinessChange { get; }

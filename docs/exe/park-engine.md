@@ -455,7 +455,7 @@ The park's loop runs from `0x0054f4bf` onward, with the tick counter at `[0x0087
 
 The real peep module is `0x004f9000`-`0x00512000`, **281 functions / 95,152 bytes**, plus a queue module at `0x004dd000`-`0x004e2000` (89 functions / 19,684 bytes).
 
-**>>> ANSWERED 2026-09-21: WHICH TICK DRIVES THE PEEPS. <<<** This said it was "NOT yet established — do not assume it is any of the above", and it is now decoded in both halves. The peeps are **simulated** off the every-8th-tick thing sweep — `FUN_00516380` → `FUN_0050b360` behind the gate at `0054f668` — and they are **placed for drawing once per FRAME** by `FUN_00518f90`, called from `0x0054fa85`, which lies past the 31 ms catch-up loop's back edge at `0x0054f8da`. So neither answer alone is right: the position is stepped on the 248 ms beat and interpolated to the frame. Full decode in `ride-operation.md`, "Where a WALKING peep is drawn".
+**>>> ANSWERED 2026-09-21: WHICH TICK DRIVES THE PEEPS. <<<** This said it was "NOT yet established — do not assume it is any of the above", and it is now decoded in both halves. The peeps are **simulated** off the every-8th-tick thing sweep — `FUN_00516380` → `FUN_0050b360` behind the gate at `0054f668` — and they are **placed for drawing once per FRAME** by `FUN_00518f90`, called from `0x0054fa85`, which lies past the 31 ms catch-up loop's back edge at `0x0054f8da`. So neither answer alone is right: the position is stepped on the 248 ms beat and interpolated to the frame. Full decode in `ride-operation.md`, "Where a WALKING peep is drawn". **`mGameTick` (`[0x0080239c] + 0x1da70c`) counts those sweeps**: `FUN_00516380` increments it (`0x00516394`) and is called at `0x0054f7bb`, inside the block the every-8th gate skips (checked 2026-09-23, Q36). So every peep comparison against it - a guest's 30-sweep thinking gap in `FUN_004fec90` among them - is in thing sweeps.
 
 **Entering a park re-bases the baselines**: `0x0054ed7c` reads the clock three times into `[0x00878c74]`, `[0x0087879c]` and **`[0x00878a1c]`**, so the seconds spent loading are not owed as ticks. *(This third one read `[0x008786bc]` and was wrong by one dword: `0054eda4` is `a3 1c 8a 87 00` = `MOV [0x00878a1c],EAX`. `0x008786bc` is the per-frame clock SAMPLE all three alphas are measured against, not a baseline, and `0x008786c0` — one along — is written at `0054edb6`. The three baselines pair with the three rates 1/31, 1/62 and 1/248.)*
 
@@ -1358,13 +1358,20 @@ object with flag bit `0x02` by squared cell distance along the live chain, **tes
 (`0x00504d8f`), so the claim waits for the next time they are sent to rest. **One on the way there (state 2)** has
 `+0x208` cleared and goes to state 0. Other states keep the claim.
 
+**Who a sale reaches depends on `MajorDest` being let go of where the original lets it go.** The chooser
+`FUN_004fcb10` clears it before it chooses (`0x004fcb21`), chosen or not; a guest leaving a ride keeps it on arrival
+(`0x005009f9`) until then, so a sale of the ride just left still puts them off.
+
 **What OpenTPW builds** (`PeepBehaviour.ThingRemoved`, `StaffBehaviour.ThingRemoved`, called through
 `ParkPeople.ThingRemoved` from the demolisher): all of the guest's answer but the event ring, `+0x1de` and
-`mPreviousRides`, none of which it keeps; the sound, at the seat node, where the rider stands, or the origin by flag
-`0x20`, which a thing bought this session does not carry yet (`BOUGHT_OBJECT_FLAG_BITS`); and the staff rest-area
-arms. Nothing here holds a job on a thing, and the `VAR_STAFFIN` count and message 15 are unbuilt at both ends -
-arriving to rest (`FUN_00505fe0`) is where they start - so the eviction counts `REST_AREA_OCCUPANCY`. A tired
-member of staff's search walks the live chain too, so a sold rest area is never offered.
+`mPreviousRides`, none of which it keeps; the sound, at the seat node, the origin by flag `0x20` (which a thing bought
+this session does not carry yet, `BOUGHT_OBJECT_FLAG_BITS`), or - a deviation - at the feet of a walk-on rider, whom
+the original's `WALK` stepper places and nothing here does; and the staff rest-area arms. Nothing here holds a job on a
+thing. The `VAR_STAFFIN` count and message 15 are unbuilt wherever the original touches them - arriving to rest
+(`FUN_00505fe0`), the end of a rest (`FUN_005061d0` at `0x00506286`) and the eviction - and all three count
+`REST_AREA_OCCUPANCY`. Entering state 0 queues the stand (`FUN_005054d0` through `FUN_004fa460`), which OpenTPW's
+`Staff.AnimationFor` does not. A tired member of staff's search walks the live chain too, so a sold rest area is
+never offered.
 
 #### Moving a thing
 

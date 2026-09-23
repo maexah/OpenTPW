@@ -447,19 +447,24 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
     does not tell the thing). A rider plays the kids' effect `0x80` at the seat (the origin on a thing without flag
     `0x20`, which admission then destroys the sprite of). Staff resting in it stand Idle and claim the nearest other
     rest area; staff on the way give it up. `GoAndRest` walks the live object chain, so a sold room is never offered.
-  - **Proof:** 14 tests; 13 mutations each predicted, and two that stayed green showed two hollow asserts (a lone
-    queuer has no link to lose; a sold room's entry cannot be routed to), both fixed and red. The whole bug back turns
-    12 of 14 red. 993 tests with the game, 447 ran and 546 skipped without, 123 warnings.
+  - **Proof:** 33 tests in three classes; 19 mutations, each predicted and each red. Two that first stayed green showed
+    two hollow asserts (a lone queuer has no link to lose; a sold room's entry cannot be routed to), both fixed. The
+    whole bug back turns nine test methods red. A 19-agent review found 13 real faults, all fixed or said at the site:
+    among them the chooser now lets `MajorDest` go before it chooses (`FUN_004fcb10`, `0x004fcb21`), which decides who
+    a sale reaches; the sound's place is a tested rule; and each mood key is pinned by a balance file of its own.
+    1012 tests with the game, 459 ran and 553 skipped without, 123 warnings.
   - **Confirmed in the game**, `~/.cache/tpw-harnesses/q36confirm.py`, a control on `main` and the fix, each staged by
     letting the park run to a guest riding the Belly Bounce while two queue: on `main` all three still name thing 13
     after the sale and twelve seconds on. On the fix, all three predictions held: rider 35 `Deciding dest 0 happy 45`,
     queuers 29 and 42 `Deciding dest 0 happy 30`, none moved; one `put off` sound, `bootout.mp2`, at the seat
     `(525.4,252.6,10.3)`; `SOLD_THING_EVICTION` gone. Photographed before, just after and later. `save/` unchanged.
+    Again on the committed build after the review (`q36-confirm2/`), 4 of 4: rider 43 held at 0, queuer 29 to 30,
+    and two walking to it, 42 to 45 and 44 held at 0; the same sound at the seat.
     **One miss:** I predicted all three would leave Deciding within twelve seconds. The rider chose the Jungle Spray;
-    the queuers stood still, stranded on cleared cells no neighbour connects to (Q53). A probe run's put-off queuer
-    left by going home.
+    the queuers stood still on cleared cells no neighbour connects to, so every wander fails and restamps the
+    30-sweep gap - which the original's does too (Q53). A probe run's put-off queuer left by going home.
   - **Not confirmed on screen:** the staff arms - nobody rests in this park in the first minute (`staff` now prints
-    `rest`). **Found:** Q50 to Q54.
+    `rest`). **Found:** Q50 to Q55.
 - [ ] **Q39. The hand's ways out are not the original's.** Found by Q5's review. `Level.WorldClick` empties
   the hand on any right-button press, before `RmbCancel` or the quick-click timing is consulted, where the
   original cancels only on a quick release with the option on and otherwise leaves the hand alone (the
@@ -534,16 +539,19 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   six unlink the guest first (`FUN_004ddd20`): the queue edited or shortened under them (`FUN_00501390`), a ride
   closing mid-admission (`FUN_004e0450`), "Couldn't get to my place in the queue" (`FUN_004ffbc0`), bored and leaving
   (`FUN_004ffff0`), and two in state 13 (`FUN_005006b0`: too expensive, which docks twice, and "Couldn't rejoin FOQ").
-  Check which of those OpenTPW builds and whether each docks. Confirm: a guest who leaves a queue that way, `peeps`
-  happiness before and after.
-- [ ] **Q53. A guest stranded where no neighbour connects never decides again. Decode first.** Found by Q36's game run:
-  two queuers put off the sold Belly Bounce stood in Deciding for twelve seconds on cells the sale cleared, where
-  `SetRandomDest` has no candidate. `Decide` restamps the thinking gap after every wander roll; the original's wander
-  arm (`FUN_004fec90`, `0x004ff3cd`..`0x004ff400`) stamps `+0x1fc` only when the wander FAILS, and measures the gap
-  on `mGameTick` - which clock that is, is the open question `PeepBehaviour.Step` records. If it is the 31 ms tick,
-  this gap is eight times the original's. Also there: the original docks `SmallHappinessChange` when the chooser
-  finds nothing (`0x004ff492`), which nothing here does. Decode, then build. Confirm: the Q36 staging, the queuers
-  leaving Deciding, `peeps`.
+  It also writes event 6 and plays the kids' `0x80` when the guest's id is a multiple of eight (`0x0050133d`); today
+  only the sale plays it, from `ParkPeople.ThingRemoved`, so build it with the dock. Check which of those OpenTPW
+  builds and whether each docks. Confirm: a guest who leaves a queue that way, `peeps` happiness before and after, and
+  the `put off` log line for an id that is a multiple of eight.
+- [ ] **Q53. A put-off queuer on cleared ground can leave only by going home. Decode first.** Found by Q36's game
+  run: two queuers put off the sold Belly Bounce stood in Deciding for twelve seconds on cells the sale cleared, where
+  no neighbour connects and `SetRandomDest` has no candidate; a probe's queuer left only as its day ran out. Every
+  failed wander restamps the 30-sweep thinking gap, as the original's does (`FUN_004fec90`, `0x004ff3f4`..`0x004ff400`),
+  and `mGameTick` counts thing sweeps (`0x00516394`, called inside the every-8th block), so the gap matches too. Two
+  differences are known: `Decide` also restamps after a SUCCESSFUL wander, which the original does not
+  (`0x004ff3d6` returns first), and the original docks `SmallHappinessChange` when the chooser finds nothing
+  (`0x004ff492`). Decode whether the original strands these guests as well - `FUN_004f9490`'s other arms, the stranded
+  stamp and its "?" - then build what differs. Confirm: the Q36 staging, `peeps` for the put-off queuers.
 
 ## B. Docs and comments
 
@@ -698,9 +706,14 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
 - [ ] **Q51. Rest-area occupancy is unbuilt at both ends.** Found by Q36's decode. Arriving to rest
   (`FUN_00505fe0`) adds one to the rest area's script variable 0 (`VAR_STAFFIN` in every staff room) and sends
   message 15 to the resting-staff list (UI control `0x1e7b`); leaving (`FUN_00506d10`, from the normal end of a rest
-  and from a sale) takes the one back. Neither half is built; the sale counts `REST_AREA_OCCUPANCY`, and arriving is
-  reached uncounted. Decode what the staff-room script does with `VAR_STAFFIN`, and whether a resting member of staff
-  is hidden (entering state 3 frees the sprite). Confirm: a guard resting, `rides` showing the room's variable.
+  and from a sale) takes the one back. Neither half is built, and all three sites count `REST_AREA_OCCUPANCY`. Decode
+  what the staff-room script does with `VAR_STAFFIN`, and whether a resting member of staff is hidden (entering state
+  3 frees the sprite). Confirm: a guard resting, `rides` showing the room's variable.
+- [ ] **Q55. A member of staff going idle queues no stand.** Found by Q36's review. The original's state-0 setter
+  queues animation 3 every time (`FUN_005054d0` case 0, through `FUN_004fa460`: `PUSH 3`, `FUN_004217f0`);
+  `Staff.AnimationFor` answers nothing for `Idle`, so a member who stops keeps the cycle they had - a guard put out of
+  a sold rest area walks on the spot. Check every state-0 entry the original makes against the kinds' own sprite
+  scripts before adding it. Confirm: a guard walking, then idle, `guests` showing the set change, photographed.
 - [ ] **Q52. A rider on a thing without flag `0x20` is hidden in the original.** Found by Q36's decode. Admission
   tests the object's flag bit `0x20` (`0x0050212b`) and, without it, destroys the rider's sprite (`0x00502147`);
   OpenTPW never hides a rider. Every visitable thing in Lost Kingdom's save carries the bit, so nothing there shows

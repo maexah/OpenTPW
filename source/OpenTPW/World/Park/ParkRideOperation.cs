@@ -456,7 +456,7 @@ public sealed class ParkRideOperation
 	/// one arm rather than the whole.
 	///
 	/// <para>
-	/// <b>The effects are gated, and the gate is a byte this project cannot yet write.</b> The original
+	/// <b>The effects are gated, and the gate is the roll's byte.</b> The original
 	/// splits on the guest's <c>+0x1f1</c>: nought logs "Person lost this sideshow..." and docks
 	/// happiness, and anything else runs the effects. That byte is <c>mQueuePos</c> by the save reader's
 	/// own naming, but <c>FUN_00501db0</c>'s case <c>0xe</c> <i>overwrites</i> it for a sideshow with
@@ -464,13 +464,16 @@ public sealed class ParkRideOperation
 	/// win"</b>: the sideshow's win is computed inside the effects, after this has already been tested.
 	/// </para>
 	/// <para>
-	/// <b>What is NOT built, and why.</b> The roll that writes the byte needs <c>mChanceOfWinning</c>,
-	/// which nothing here parses - the balance file states the category default as
-	/// <c>UsageInfo.InitChanceOfLoosing</c> (the game's spelling), 70, and only on <c>SideShow.sam</c>. The
-	/// "lost" arm docks <c>PeepInfo.MediumHappinessChange</c> (<c>DAT_0078505c</c>), which is built below.
-	/// The two penalties a still-unmet need draws in <c>FUN_004fe1e0</c> (<c>0x004fe453</c>,
-	/// <c>0x004fe4a5</c>) dock <c>PeepInfo.SmallHappinessChange</c> (<c>DAT_00785058</c>) behind a gate on
-	/// descriptor fields not yet named, and are not built.
+	/// The byte is written on admission by <see cref="PeepBehaviour"/>'s roll through <see cref="Succeeds"/>,
+	/// and the "lost" arm docks <c>PeepInfo.MediumHappinessChange</c> (<c>DAT_0078505c</c>), both built.
+	/// </para>
+	/// <para>
+	/// <b>What is NOT built, and why.</b> Three more happiness changes in <c>FUN_004fe1e0</c> each read the
+	/// object's byte <c>+0x198</c>, which is not decoded. For the hunger effect (<c>+0x148</c>) and then the
+	/// thirst effect (<c>+0x144</c>), whichever is non-zero, the original docks
+	/// <c>PeepInfo.SmallHappinessChange</c> (<c>DAT_00785058</c>) when <c>(rand &amp; 7)</c> plus that byte
+	/// plus the effect is under 30 (<c>0x004fe453</c>, <c>0x004fe4a5</c>); then it adds the byte times the
+	/// happiness effect over a hundred (<c>0x004fe4cf</c>..<c>0x004fe525</c>).
 	/// </para>
 	/// <para>
 	/// <b>Also absent, and each with a consumer that does not exist yet:</b> the guest's recent-things

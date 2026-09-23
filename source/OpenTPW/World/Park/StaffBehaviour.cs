@@ -194,7 +194,10 @@ public sealed class StaffBehaviour
 			case StaffActivity.GoingToRest:
 				switch ( Walked( staff, walk, playing ) )
 				{
+					// Arriving adds one to the rest area's VAR_STAFFIN and tells the resting-staff list
+					// (FUN_00505fe0); neither is built.
 					case WalkVerdict.Arrived:
+						Unimplemented.Report( "REST_AREA_OCCUPANCY" );
 						staff.SetActivity( StaffActivity.Resting, tick );
 						break;
 
@@ -315,7 +318,9 @@ public sealed class StaffBehaviour
 			return;
 
 		// Up and back to work. The rest area is let go of on the way out, which is what the original does
-		// before it hands back to the kind's own resume.
+		// before it hands back to the kind's own resume; it also takes the one back off VAR_STAFFIN
+		// (FUN_00506d10, at 0x00506286), which is not built.
+		Unimplemented.Report( "REST_AREA_OCCUPANCY" );
 		staff.RestArea = 0;
 		staff.SetActivity( StaffActivity.Idle, tick );
 	}
@@ -534,16 +539,22 @@ public sealed class StaffBehaviour
 	/// </summary>
 	/// <remarks>
 	/// Only a staff member whose <see cref="Staff.RestArea"/> is the thing answers, and only while resting
-	/// or on the way to rest. <b>One resting there is put out</b> (<c>FUN_00506d10</c>) and stands up
+	/// or on the way to rest. <b>One resting there is put out</b> (<c>FUN_00506d10</c>) and goes
 	/// <see cref="StaffActivity.Idle"/>, then is pointed at the nearest other rest area and claims it if a
 	/// route exists. They stay Idle either way (<c>0x00504d8f</c>), so the claim goes unused until they are
-	/// next sent to rest. <b>One on the way there</b> gives the claim up and stands Idle.
+	/// next sent to rest. <b>One on the way there</b> gives the claim up and goes Idle.
 	/// <para>
 	/// <b>Not built, and each has nothing here to act on.</b> A mechanic's ride job (<c>+0x218</c>) and a
 	/// handyman's toilet job (<c>+0x21a</c>) are dropped by their own arms first; no staff member holds a
 	/// job on a thing in this build. <c>FUN_00506d10</c> also takes one off the rest area's
-	/// <c>VAR_STAFFIN</c> and tells the resting-staff list (message 15); arriving to rest adds the one and
-	/// tells the list (<c>FUN_00505fe0</c>), and neither half is built, so this counts it.
+	/// <c>VAR_STAFFIN</c>, tells the resting-staff list (message 15) and rebuilds the sprite; the count and
+	/// the list are unbuilt wherever the original touches them, and each site counts
+	/// <c>REST_AREA_OCCUPANCY</c>.
+	/// </para>
+	/// <para>
+	/// <b>A deviation both arms share:</b> the original's state-0 setter queues the stand, animation 3
+	/// (<c>FUN_005054d0</c> case 0, through <c>FUN_004fa460</c>). <see cref="Staff.AnimationFor"/> queues
+	/// nothing for <see cref="StaffActivity.Idle"/>, so a member put out keeps the cycle they had.
 	/// </para>
 	/// </remarks>
 	internal void ThingRemoved( Staff staff, PeepWalk? walk, int thingId, int tick )
