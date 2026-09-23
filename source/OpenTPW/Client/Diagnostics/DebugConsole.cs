@@ -91,6 +91,20 @@ public static class DebugConsole
 	}
 
 	/// <summary>
+	/// The voices the mixer holds, in the order they were started: name, bus, placed or flat, and whether each is
+	/// held or has been told to stop.
+	/// </summary>
+	private static string Voices()
+	{
+		lock ( Audio.Lock )
+		{
+			return $"voices {Audio.Voices.Count}: " + string.Join( ", ", Audio.Voices.Select( voice =>
+				$"{voice.Name} {voice.Bus} {(voice.IsPlaced ? "placed" : "flat")}" +
+				(voice.IsHeld ? " held" : "") + (voice.Playing ? "" : " stopped") ) );
+		}
+	}
+
+	/// <summary>
 	/// Each park save seen, alive or collected after a full blocking collection, and for one still alive
 	/// the static roots known to reach it: the level on show, <see cref="ParkState.Current"/>,
 	/// <see cref="ParkRides.Current"/> through the level its entity was made in, and the camcorder's edge
@@ -385,6 +399,12 @@ public static class DebugConsole
 
 			case "sound":
 				Reply( LobbyAudio.Current?.State() ?? "no lobby audio" );
+				break;
+
+			// Every voice sounding, placed or flat, and whether it is held - what a park's pause does to
+			// sound, said by the mixer's own list rather than heard (see Audio.HoldPlaced).
+			case "voices":
+				Reply( Voices() );
 				break;
 
 			// Plays one of the island's ambient samples at a place of the caller's choosing, so a pan

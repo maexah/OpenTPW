@@ -89,8 +89,10 @@ camcorder walk, lobby fly-in and park-pause tests each stayed green with their f
 does every smaller piece of those fixes that a 28-agent review's mutation hunters found surviving: 46 mutations, each
 predicted red and red. The tests reach the wiring through stand-ins made without a constructor (a cached texture, a
 level holding Lost Kingdom), `Audio.Ready` set for a test, and the lobby sequence stepped at two frame rates - one
-rate cannot tell `* Time.Delta` from `/ 60` (VERIFYING rule 120). No behaviour changed and no game run, as the item
-said. Filed Q47 (two more hollow tests), Q48 (three holes in the camcorder's sweep) and Q49.
+rate cannot tell `* Time.Delta` from `/ 60` (VERIFYING rule 120). No behaviour changed; the item asked for no game
+run, and the game confirmed it all the same, every reading predicted and photographed: the sea adopted with its Wrap
+sampler, the fly-in's stepped readings, the camcorder stopped at the Belly Bounce, and a new `voices` census holding
+the placed thunder behind the menu. Filed Q47 (two more hollow tests), Q48 (three holes in the camcorder's sweep), Q49.
 
 **2026-09-23 - the small fixes.** Branch `alexah/125-small-fixes`, `docs/QUEUE.md` Q11, eight commits: the six
 patches from `~/Downloads/opentpw/`, each checked against the executable or the compiler and corrected where it

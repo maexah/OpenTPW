@@ -427,7 +427,15 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   - **Proof:** 46 mutations, each predicted and each red, the four fixes reverted among them. Still unpinned, said
     at each site: `Walk` reading the keys, `Update` placing the lobby camera, the panel's Enter, the texture's GPU
     handles, the mixer's fade, and a threshold moved by less than one frame. 979 tests with the game, 447 ran and
-    532 skipped without, 123 warnings. No game run, as the item says.
+    532 skipped without, 123 warnings.
+  - **Confirmed in the game as well**, though the item asked for no run: `~/.cache/tpw-harnesses/q12confirm.py`,
+    one silent run, every reading predicted from the tests' own numbers and photographed. The first lobby's sea read
+    `requested Wrap sampler AnisotropicWrap size 128x128 adopted False`, and back from the park `adopted True` with
+    the same. The fly-in, stepped at 1/60 from `orbit 2.6`, read 70.00/20.00 after 66 frames, then 62.25/6.97,
+    34.62/0.04 and 8.08, and asked for the park on its 185th frame. The camcorder, walked east into the Belly
+    Bounce, stopped at `at=(50,23) type=0`. With the menu open, the new `voices` census read
+    `Thunder4.mp2 Effects placed held` and the music flat and playing. One miss: the advisor's `Speech flat` line
+    read `held` too - his own hold (`Advisor.Paused`), which I had not predicted. `save/` unchanged.
   - **Found:** Q47 (two more hollow tests), Q48 (three holes in the camcorder's sweep), Q49 (two doubted comments).
 - [ ] **Q36. Selling a thing lets nobody go.** Found by Q4's decode (`park-engine.md`, "Selling and the
   people on it"). The destructor's type-10 message takes every guest whose `MajorDest` is the sold thing
@@ -526,11 +534,10 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   near them: `SettleUp`'s summary (three claims the code now contradicts) and its body's "Five, for the Jungle Spray" (the
   prize is fifty), `Explain`'s "whether they could actually get there", and `AGuestLetOffARideEndsUpStandingAtItsExit`'s "every other test here checks where a guest is aimed".
   No game run.
-- [ ] **Q49. Two comment claims Q12's review doubted.** `TryAdoptCached` says nothing the game ships asks for one
-  path under two sets of flags: `Water` asks for `lobby/terrain/textures/jri_lak3.wct` with Wrap, `LobbyModel` asks
-  for every lobby texture with Repeat, and `jri_lak3` appears twice in `lobby.wad` - find whether a lobby mesh names
-  it. `CreateTexture` says its cache check is also reached from `SignFile`, but sign textures are built by the
-  byte[] constructor, with no path. No game run.
+- [ ] **Q49. A stale comment in `CreateTexture`.** It says its cache check is also reached from `SignFile`, but sign
+  textures are built by the byte[] constructor, with no path. (Q12's review also doubted `TryAdoptCached`'s "nothing
+  the game ships asks for one path under two sets of flags"; ddfd089 measured it, texture=542 distinct=535 with and
+  without the guard, and Q12's run found the sea adopted on the way back from a park.) No game run.
 - [ ] **Q14. Comment sweep of the 24 cleanup commits.** Replace history-voice comments with what the
   code does now: `IslandPanel.cs:319-320`, `LobbyGate.cs:46-47`, `LobbyCameraMode.cs:88, 96, 103`,
   `ParkCamcorderCameraMode.cs:396, 526-527`, `ParkThingStates.cs:54-55`, `ParkScriptStates.cs:33-34`,

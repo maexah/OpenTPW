@@ -102,8 +102,8 @@ public static class Audio
 	}
 
 	/// <summary>
-	/// Every voice sounding, which only <see cref="Play"/> adds to. Internal so that a test, which has no device to
-	/// close, can take back the voices it played.
+	/// Every voice sounding, which only <see cref="Play"/> adds to. Internal so that the debug console can list it,
+	/// and a test, which has no device to close, can take back the voices it played.
 	/// </summary>
 	internal static readonly List<Voice> Voices = new( MaxVoices );
 
