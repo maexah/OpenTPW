@@ -17,9 +17,8 @@ namespace OpenTPW.Tests;
 /// on by identity alone, so these need no installation.
 /// </para>
 /// <para>
-/// <b>What these cannot see</b> is <c>Step</c> handing <see cref="ParkCamcorderCameraMode.EdgeTest"/> the
-/// park on show, which reads <c>Level.Current</c>, and no test can build a level - the game run is what
-/// shows a real walk filling it (the console's <c>parks</c>).
+/// <c>Step</c> handing <see cref="ParkCamcorderCameraMode.EdgeTest"/> the park on show is
+/// <see cref="ParkCamcorderWalkTests.TheWalkStopsAtARidesFootprint"/>'s, which walks with a stand-in level.
 /// </para>
 /// </summary>
 [TestClass]

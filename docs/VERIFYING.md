@@ -704,6 +704,11 @@ The ones that have bitten more than once.
   blocking collection, ask whether it is alive, and only then name the roots as the explanation. Print
   "nothing named" when it is alive and no root you know of holds it. In a test, make the object in a
   non-inlined helper, because a debug build keeps a method's locals alive until the method returns.
+- **120** — **A test stepped at one frame rate cannot tell a rate taken per second from one taken per
+  frame.** Q12 stepped the lobby's leave sequence with `Time.Delta` at 1/60 and pinned every count exactly,
+  and `HomingRate * Time.Delta` rewritten as `HomingRate / 60f` still passed: at that one rate the two are
+  the same number. **Step it at a second rate** with its own predicted counts - 30 a second was enough, and
+  the mutation then failed that row only. The same holds for any `Time.SmoothingFactor` ease a test drives.
 
 ---
 

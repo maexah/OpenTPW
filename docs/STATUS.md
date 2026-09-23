@@ -51,11 +51,13 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - A left park stays in memory through the lobby, held by `ParkState.Current` and `ParkRides.Current` (Q44).
 - The VM charges `CRIT_LOCK` against a script's budget, so a section reached with one unit left runs over two turns,
   unlocked; the original runs it whole (Q45).
+- By a probe, not yet the game: the camcorder slips through a shut side at exactly 45 degrees, and is trapped at the
+  east edge of the map (Q48).
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q11, and Q35, are ticked.** Next is **Q12**: four hollow tests.
-Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, and Q11 Q45-Q46.
+`docs/QUEUE.md`, from the top. **Q1 to Q12, and Q35, are ticked.** Next is **Q36**: selling a thing lets nobody go.
+Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, and Q12 Q47-Q49.
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -75,12 +77,20 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **968**, 0 fail, 0 skip with the game | 2026-09-23, after Q11 |
-| Tests without the game | **442** ran, **526** skipped, of 968 | 2026-09-23, after Q11 |
-| Build warnings | 123 | 2026-09-23, after Q11 |
+| Tests | **979**, 0 fail, 0 skip with the game | 2026-09-23, after Q12 |
+| Tests without the game | **447** ran, **532** skipped, of 979 | 2026-09-23, after Q12 |
+| Build warnings | 123 | 2026-09-23, after Q12 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-09-23 - four hollow tests.** Branch `alexah/126-four-hollow-tests`, `docs/QUEUE.md` Q12. The texture cache,
+camcorder walk, lobby fly-in and park-pause tests each stayed green with their fix reverted; each now fails, and so
+does every smaller piece of those fixes that a 28-agent review's mutation hunters found surviving: 46 mutations, each
+predicted red and red. The tests reach the wiring through stand-ins made without a constructor (a cached texture, a
+level holding Lost Kingdom), `Audio.Ready` set for a test, and the lobby sequence stepped at two frame rates - one
+rate cannot tell `* Time.Delta` from `/ 60` (VERIFYING rule 120). No behaviour changed and no game run, as the item
+said. Filed Q47 (two more hollow tests), Q48 (three holes in the camcorder's sweep) and Q49.
 
 **2026-09-23 - the small fixes.** Branch `alexah/125-small-fixes`, `docs/QUEUE.md` Q11, eight commits: the six
 patches from `~/Downloads/opentpw/`, each checked against the executable or the compiler and corrected where it
@@ -90,15 +100,8 @@ instead. None of the 150 shipped sections loops; the longest runs 23 instruction
 park frame at load is pixel-identical and the sound banks log the same; after 60 s `rides` read `critical longest
 5 cap 10000 reached 0`, as predicted. Photographed. Filed Q45 (the VM charges `CRIT_LOCK`) and Q46.
 
-**2026-09-23 - the camcorder forgets the park.** Branch `alexah/124-the-camcorder-forgets-the-park`, `docs/QUEUE.md`
-Q10. `Forget` lets go of the edge test the camcorder built for a park, which held that park's save until the first
-camcorder step in a later park with a save. The original keeps none: its edge test reads the live world, freed on
-leaving (`docs/exe/park-engine.md`). Measured by the console's new `parks`, a weak reference per save and a forced
-collection, every reply predicted: with the second jungle up and the camcorder unused, the control kept `#1 jungle
-alive, held by camcorder`; the fix read `#1 jungle collected`. Collecting it was worth 2.4 MB of heap, measured
-within the control run. Photographed. The sweep found two more roots holding a left park through the lobby, filed as Q44.
-
-**Earlier items, kept now only in the git log.** `alexah/123` gave each ride's screams their own clock (Q9, filing
+**Earlier items, kept now only in the git log.** `alexah/124` let the camcorder forget a left park's save (Q10,
+filing Q44); `123` gave each ride's screams their own clock (Q9, filing
 Q43); `122` made the island keys wait for the fly-in (Q8, filing Q41-Q42); `121` emptied the hand as a park is left (Q7);
 `120` kept a refused staff drop's candidate on the cursor (Q6, filing Q40); `119` kept a moved thing in the
 hand until a cell takes it (Q5, filing Q39); `118` made a sold thing take its script down and leave bare

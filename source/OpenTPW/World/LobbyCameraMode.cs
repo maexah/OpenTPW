@@ -276,7 +276,7 @@ public class LobbyCameraMode : CameraMode
 	/// camera and then pulling in from one radius to the other; this orbits the islands where
 	/// they stand instead, so nothing reads them yet.
 	/// </summary>
-	private readonly record struct CameraSettings( float SpinRadius, float VerticalOffset );
+	internal readonly record struct CameraSettings( float SpinRadius, float VerticalOffset );
 
 	public override void Update()
 	{
@@ -450,7 +450,8 @@ public class LobbyCameraMode : CameraMode
 	}
 
 	/// <summary>One frame of the leaving sequence, answering the heading to place the camera at.</summary>
-	private static float StepLeaving( CameraSettings settings )
+	/// <remarks>Internal so that a test can step the sequence without a lobby; only <see cref="Update"/> calls it.</remarks>
+	internal static float StepLeaving( CameraSettings settings )
 	{
 		if ( Paused )
 			return _leaving == Leaving.Homing ? _leaveAngle : GateHeading;
@@ -491,10 +492,10 @@ public class LobbyCameraMode : CameraMode
 	/// One step of a constant-rate turn toward <paramref name="target"/>, the shorter way round.
 	/// </summary>
 	/// <remarks>
-	/// Pure, so the shortest-way arithmetic can be pinned without a clock, a lobby or a device - the
-	/// division <c>docs/VERIFYING.md</c> rule 48 asks to be explicit about. <b>The wiring cannot be</b>:
-	/// the state machine reads <see cref="Time.Delta"/> and drives a park load, so it rests on the
-	/// capture.
+	/// Pure, so the shortest-way arithmetic can be pinned without a clock, a lobby or a device.
+	/// <see cref="StepLeaving"/>, which calls it at the decode's rates, is stepped by a test with a set
+	/// <see cref="Time.Delta"/>; <see cref="Update"/> placing the camera from what it answers needs a lobby's
+	/// islands, and rests on the capture.
 	///
 	/// <para>
 	/// <paramref name="arrived"/> is true once the gap is under half a step, which is the original's own

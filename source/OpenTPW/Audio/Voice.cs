@@ -71,6 +71,9 @@ public sealed class Voice
 	/// </summary>
 	internal bool IsPlaced => _position is not null;
 
+	/// <summary>Whether it is being held - between <see cref="Pause"/> and <see cref="Resume"/>.</summary>
+	internal bool IsHeld => _paused;
+
 	/// <summary>
 	/// Which group this belongs to, which is what decides whether <see cref="Audio.Duck"/>
 	/// applies to it. Fixed for the life of the voice.

@@ -1,9 +1,12 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.Collections.Generic;
 
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// Which voices a park's pause takes away, and which it leaves - <c>docs/CLEANUP-PLAN.md</c> item 6.
+/// Which voices a park's pause takes away, and which it leaves - <see cref="Audio.HoldPlaced"/>, and
+/// <see cref="ParkAudio"/> calling it as the world is held.
 ///
 /// <para>
 /// <b>The rule is not a convenience, it is the original's own reach.</b> A park's pause acts through
@@ -14,40 +17,69 @@ namespace OpenTPW.Tests;
 /// bus, a category or a list of names.
 /// </para>
 /// <para>
-/// <b>WHAT THIS DOES NOT PIN, said plainly because it is most of the feature</b> (and recorded here
-/// per <c>docs/VERIFYING.md</c> rule 48, which asks for the mutations expected to SURVIVE). Two
-/// mutations survive this class and are known to:
-/// </para>
-/// <list type="bullet">
-/// <item>Deleting <c>Audio.HoldPlaced( GameClock.Paused )</c> from <c>ParkAudio.OnUpdate</c> - the
-/// wiring - leaves every test here green. Nothing in the suite drives a park's pause.</item>
-/// <item>Emptying the body of <see cref="Audio.HoldPlaced"/> does the same. Both it and
-/// <c>Audio.Play</c> need an <b>audio device</b> (<c>Audio.Ready</c>), and a test run has none, so a
-/// voice can never reach <c>Audio.Voices</c> for the walk to find.</item>
-/// </list>
-/// <para>
-/// That is not a hole to paper over with a weaker assertion: it is why the item says a unit test here
-/// is regression cover and never the proof. What proves it is the capture -
-/// <c>~/.cache/tpw-harnesses/screampause.py</c>, which measures the mixer's own output either side of
-/// a real park menu, with the game clock proven frozen. The mutation that WOULD fail this class is
-/// the one it exists for: changing which voices are selected.
-/// </para>
-/// <para>
-/// The mixer half needs no cover of its own - <see cref="Voice.Pause"/> and its 10 ms ramp have been
-/// carrying the advisor since long before this, which is the whole reason item 6 needed no new
-/// mechanism. It cannot be reached from here anyway: <c>Voice.MixInto</c> is <c>unsafe</c> and this
-/// project does not set <c>AllowUnsafeBlocks</c>.
+/// <b>Without an audio device.</b> A test run has none, so the tests that play stand in for one by setting
+/// <see cref="Audio.Ready"/> for their length. Everything they reach - <see cref="Audio.Play"/>,
+/// <see cref="Audio.HoldPlaced"/>, <see cref="Audio.StopAll"/> - works on the voice list alone and opens
+/// nothing, and each takes its voices back out of <see cref="Audio.Voices"/> afterwards. The hold is read
+/// from <see cref="Voice.IsHeld"/>. What happens to a held voice in the mixer - its 10 ms fade - is not
+/// reached: <c>Voice.MixInto</c> is <c>unsafe</c> and this project does not set <c>AllowUnsafeBlocks</c>.
 /// </para>
 /// </summary>
 [TestClass]
 public class VoicePlacementTests
 {
+	/// <summary>Where the placed voices here sound from - a real cell of Lost Kingdom, and any would do.</summary>
+	private static readonly Vector3 Somewhere = new( 510f, 230f, 0f );
+
+	/// <summary>The voices a test played, which it takes back out of <see cref="Audio.Voices"/>.</summary>
+	private readonly List<Voice> _played = new();
+
 	[TestInitialize]
 	public void MountTheGame()
 	{
 		// SoundBank reads through the GLOBAL file system, as SoundCategoryTests does and for the same
 		// reason: the game has exactly one, so a test wanting real samples has to put one there.
 		FileSystem = GameData.Required();
+	}
+
+	/// <summary>
+	/// Runs <paramref name="play"/> as if there were a device, then lets go of the hold, takes back every voice it
+	/// played, and leaves the clock as a scene change leaves it.
+	/// </summary>
+	private void WithADevice( Action play )
+	{
+		var ready = typeof( Audio ).GetProperty( nameof( Audio.Ready ) )!;
+
+		Assert.IsFalse( Audio.Ready, "a test run has no audio device, so nothing here should find one" );
+
+		ready.SetValue( null, true );
+
+		try
+		{
+			play();
+		}
+		finally
+		{
+			Audio.HoldPlaced( false );
+
+			lock ( Audio.Lock )
+				Audio.Voices.RemoveAll( _played.Contains );
+
+			ready.SetValue( null, false );
+			GameClock.Rebase();
+		}
+	}
+
+	/// <summary>Plays <paramref name="clip"/> through <see cref="Audio.Play"/>, somewhere or flat.</summary>
+	private Voice Played( AudioClip clip, bool loop, AudioBus bus, Vector3? position )
+	{
+		var voice = Audio.Play( clip, 1f, loop, 0f, bus, position );
+
+		Assert.IsNotNull( voice, "with a device standing in, Play plays" );
+
+		_played.Add( voice! );
+
+		return voice!;
 	}
 
 	/// <summary>
@@ -125,5 +157,136 @@ public class VoicePlacementTests
 		var voice = new Voice( AScream(), 1f, loop: false, 0f, AudioBus.Effects, Vector3.Zero );
 
 		Assert.IsTrue( voice.IsPlaced, "a voice at (0,0,0) is placed there, not unplaced" );
+	}
+
+	/// <summary>
+	/// <b>A hold takes the placed voices and leaves the flat ones</b>, and letting go gives the placed ones
+	/// back where they were: a ride's scream and a one-shot stop behind the menu while the music and the rain
+	/// carry on.
+	/// </summary>
+	/// <remarks>
+	/// The flat voices are played first, so a walk that stopped at the first of them would reach neither placed
+	/// one; one of each kind loops and one does not, so a walk that picked by looping would hold the wrong ones.
+	/// <b>Mutations:</b> emptying <see cref="Audio.HoldPlaced"/>, taking out or loosening its test of
+	/// <see cref="Voice.IsPlaced"/>, stopping at the first flat voice, or letting go without resuming, each fail
+	/// an assertion here.
+	/// </remarks>
+	[TestMethod]
+	public void AHoldTakesThePlacedVoicesAndLeavesTheFlatOnes()
+	{
+		var clip = AScream();
+
+		WithADevice( () =>
+		{
+			var music = Played( clip, loop: true, AudioBus.Music, position: null );
+			var rain = Played( clip, loop: true, AudioBus.Effects, position: null );
+			var scream = Played( clip, loop: false, AudioBus.Effects, Somewhere );
+			var ride = Played( clip, loop: true, AudioBus.Effects, Somewhere + new Vector3( 40f, 0f, 0f ) );
+
+			Assert.IsFalse( scream.IsHeld || ride.IsHeld, "nothing is held before the hold" );
+
+			Audio.HoldPlaced( true );
+
+			Assert.IsTrue( scream.IsHeld, "the placed one-shot is held" );
+			Assert.IsTrue( ride.IsHeld, "and so is the placed loop" );
+			Assert.IsFalse( music.IsHeld, "the music carries on" );
+			Assert.IsFalse( rain.IsHeld, "and so does the rain" );
+
+			Audio.HoldPlaced( false );
+
+			Assert.IsFalse( scream.IsHeld || ride.IsHeld, "letting go gives the placed voices back" );
+			Assert.IsTrue( scream.Playing && ride.Playing, "still sounding, from where they were held" );
+		} );
+	}
+
+	/// <summary>
+	/// <b>A park holds its placed sounds while its clock is held</b>, and lets them go when it runs again -
+	/// <see cref="ParkAudio"/>'s update asks for the hold from <see cref="GameClock.Paused"/>, which a park's
+	/// menu sets. The same frame with the clock running is the control.
+	/// </summary>
+	/// <remarks>
+	/// The park's audio is built before the device stands in, so it loads nothing and has nothing of its own to
+	/// play; its update still asks for the hold first. <b>Mutations:</b> taking the call out of that update, or
+	/// passing it anything but <see cref="GameClock.Paused"/>, fails an assertion here.
+	/// </remarks>
+	[TestMethod]
+	public void AParkHoldsItsPlacedSoundsWhileItsClockIsHeld()
+	{
+		var clip = AScream();
+		var park = new ParkAudio( "jungle" );
+
+		try
+		{
+			WithADevice( () =>
+			{
+				var scream = Played( clip, loop: false, AudioBus.Effects, Somewhere );
+
+				GameClock.Update( paused: false, GameClock.ParkCatchUp );
+				park.Update();
+
+				Assert.IsFalse( scream.IsHeld, "a running park leaves its screams alone" );
+
+				GameClock.Update( paused: true, GameClock.ParkCatchUp );
+				park.Update();
+
+				Assert.IsTrue( scream.IsHeld, "a held park holds them" );
+
+				GameClock.Update( paused: false, GameClock.ParkCatchUp );
+				park.Update();
+
+				Assert.IsFalse( scream.IsHeld, "and running again lets them go" );
+			} );
+		}
+		finally
+		{
+			park.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
+	/// <b>A voice started while the world is held is born held if it is placed, and plays if it is flat</b> - so
+	/// a scream that starts behind the menu waits for it, and the menu's own clicks, which are flat, are heard.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> <see cref="Audio.Play"/> not holding a placed voice born during a hold, or holding
+	/// every voice born during one, fails an assertion here.
+	/// </remarks>
+	[TestMethod]
+	public void AVoiceStartedDuringAHoldIsBornHeldOnlyIfPlaced()
+	{
+		var clip = AScream();
+
+		WithADevice( () =>
+		{
+			Audio.HoldPlaced( true );
+
+			var scream = Played( clip, loop: false, AudioBus.Effects, Somewhere );
+			var click = Played( clip, loop: false, AudioBus.Effects, position: null );
+
+			Assert.IsTrue( scream.IsHeld, "a placed voice started during the hold is born held" );
+			Assert.IsFalse( click.IsHeld, "a flat one plays" );
+		} );
+	}
+
+	/// <summary>
+	/// <b>A scene that ends while the world is held does not carry the hold into the next</b>: a placed voice
+	/// the next scene starts is heard.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <see cref="Audio.StopAll"/> not letting go of the hold fails here.</remarks>
+	[TestMethod]
+	public void ASceneEndingWhileHeldDoesNotCarryTheHold()
+	{
+		var clip = AScream();
+
+		WithADevice( () =>
+		{
+			Audio.HoldPlaced( true );
+			Audio.StopAll( 0f );
+
+			var next = Played( clip, loop: false, AudioBus.Effects, Somewhere );
+
+			Assert.IsFalse( next.IsHeld, "the next scene's first placed voice plays" );
+		} );
 	}
 }

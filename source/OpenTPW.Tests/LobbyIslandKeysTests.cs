@@ -10,8 +10,9 @@ namespace OpenTPW.Tests;
 /// <para>
 /// <b>What these cannot see.</b> No test can build a lobby's islands, so a move that is not refused reaches an
 /// empty list and goes nowhere; <see cref="LobbyCameraMode.Step"/> answers whether it refused, which is what these
-/// ask. The one-line call to <see cref="LobbyCameraMode.IslandKeys"/> from <see cref="LobbyCameraMode.Update"/>,
-/// and the flight's own radius and vertical offset, are reached only by a running lobby - the game run shows both.
+/// ask. The one-line call to <see cref="LobbyCameraMode.IslandKeys"/> from <see cref="LobbyCameraMode.Update"/> is
+/// reached only by a running lobby - the game run shows it. The flight itself is stepped by
+/// <see cref="LobbyLeaveForParkTests"/>.
 /// </para>
 /// </summary>
 [TestClass]

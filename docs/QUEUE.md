@@ -411,11 +411,24 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
     quarter turn, whose dot rounds below 1, and the tolerance pinned from both sides), and three in
     `RideScriptClockTests`. 968 tests with the game. Mutations M1-M9 all red.
   - **Found:** Q45 (the VM charges `CRIT_LOCK`; the original does not) and Q46 (seven more stacked doc comments).
-- [ ] **Q12. Four hollow tests.** Each stays green with its fix reverted: `VoicePlacementTests` (nothing
-  pins `HoldPlaced` or its call at `ParkAudio.cs:709`), `TextureSamplerTests` (nothing pins the copy at
-  `Texture.Cache.cs:90-94`), `ParkCamcorderWalkTests` (nothing pins that `Step` calls `Slide`),
-  `LobbyLeaveForParkTests` (nothing pins the wiring, and `RadiusDecay` can change freely). Make each
-  fail when its fix is reverted. No game run.
+- [x] **Q12. Four hollow tests.** Done 2026-09-23, `alexah/126-four-hollow-tests`. Each now fails with its fix
+  reverted, and with every smaller piece of that fix a 28-agent review (four mutation hunters) found surviving:
+  - `TextureSamplerTests`: two stand-in cached textures of opposite values, made without a constructor, adopted by
+    the real path constructor. Pins the five copies, `Requested`, and no second registration. No production change.
+  - `ParkCamcorderWalkTests`: `Step` walked with a stand-in level holding Lost Kingdom - 64 ways into a footprint,
+    forward and sideways, and the 105 sides where mode 2 answers otherwise than mode 0 (one side than mode 1) - and
+    the dead band's upper side. No production change.
+  - `LobbyLeaveForParkTests`: `StepLeaving` and `CameraSettings` internal. The sequence is stepped at 60 and at 30
+    frames a second from four laps into the orbit, every count exact (121 and 185, 61 and 92), with a second Enter
+    refused. The second rate is what catches a rate per frame of 60 (`docs/VERIFYING.md` rule 120).
+  - `VoicePlacementTests`: `Audio.Voices` internal and `Voice.IsHeld`. The tests stand in for a device by setting
+    `Audio.Ready` and play through `Audio.Play`: the hold and its release, `ParkAudio.Update` under a held
+    `GameClock`, a voice born during a hold, and `StopAll` letting the hold go.
+  - **Proof:** 46 mutations, each predicted and each red, the four fixes reverted among them. Still unpinned, said
+    at each site: `Walk` reading the keys, `Update` placing the lobby camera, the panel's Enter, the texture's GPU
+    handles, the mixer's fade, and a threshold moved by less than one frame. 979 tests with the game, 447 ran and
+    532 skipped without, 123 warnings. No game run, as the item says.
+  - **Found:** Q47 (two more hollow tests), Q48 (three holes in the camcorder's sweep), Q49 (two doubted comments).
 - [ ] **Q36. Selling a thing lets nobody go.** Found by Q4's decode (`park-engine.md`, "Selling and the
   people on it"). The destructor's type-10 message takes every guest whose `MajorDest` is the sold thing
   off it or out of its queue, docks happiness (a queuer twice), clears `MajorDest` and sends them to
@@ -480,6 +493,21 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   1 without saying so; every shipped file says 50, so that is dead by CONTENT and wants only a comment. Confirm: the
   test at 4, and in the jungle a section at one of those sites run whole in one turn, by the `rides` figure against
   its path length.
+- [ ] **Q47. Two more hollow tests.** The other two of `docs/REVIEW-2026-09-22.md` section 5, re-measured by Q12's
+  review at its tip. `ParkGuestPlacementTests.AGuestWhoHasStoppedIsDrawnInOnePlace` stamps by hand, so deleting
+  `peep.Navigator.StampPrevious()` from `ParkPeople.OnUpdate`'s peep loop, or moving it into `PeepWalk.Step`, leaves
+  every test green. `ParkScreamChainTests` now pins the chain itself (a chain that never replays fails three), but
+  deleting `_screams.Pump( Time.Now )` from `ParkAudio.OnUpdate`, or looping each child, leaves every test green.
+  Q12's two patterns reach both: a stand-in level with a real `ParkState`, and `Audio.Ready` set for a test. No game run.
+- [ ] **Q48. Three holes in the camcorder's sweep. Decode first.** Found by Q12's mutation hunt, with a probe, not
+  yet in the game. (1) At exactly 45 degrees - reachable, since the rotate keys keep the orbit's yaw at multiples of
+  pi/4 and entering the camcorder copies it - the fraction that reaches the nearer boundary carries the other axis
+  onto its own, `floor` puts the viewer in the next cell, and that side is never asked: 16,034 leaking frames in
+  5,684 of 254,016 probe walks, e.g. from (249.999, 30.001) at 5pi/4 through the east side of (24,3). (2) A step
+  whose reach is exactly 1 is taken whole without asking, and a positive-going one lands in the refused cell.
+  (3) `Step` clamps to 1..1280, and 1280 is cell 128, off the map, where every crossing is refused: entering the
+  camcorder past the east edge traps the viewer there. Decode what `FUN_0042b1c0` does in each case first - the
+  original may share (1) and (2) - then build. Confirm: each case walked in the game, photographed, with `camcorder`.
 
 ## B. Docs and comments
 
@@ -498,6 +526,11 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   near them: `SettleUp`'s summary (three claims the code now contradicts) and its body's "Five, for the Jungle Spray" (the
   prize is fifty), `Explain`'s "whether they could actually get there", and `AGuestLetOffARideEndsUpStandingAtItsExit`'s "every other test here checks where a guest is aimed".
   No game run.
+- [ ] **Q49. Two comment claims Q12's review doubted.** `TryAdoptCached` says nothing the game ships asks for one
+  path under two sets of flags: `Water` asks for `lobby/terrain/textures/jri_lak3.wct` with Wrap, `LobbyModel` asks
+  for every lobby texture with Repeat, and `jri_lak3` appears twice in `lobby.wad` - find whether a lobby mesh names
+  it. `CreateTexture` says its cache check is also reached from `SignFile`, but sign textures are built by the
+  byte[] constructor, with no path. No game run.
 - [ ] **Q14. Comment sweep of the 24 cleanup commits.** Replace history-voice comments with what the
   code does now: `IslandPanel.cs:319-320`, `LobbyGate.cs:46-47`, `LobbyCameraMode.cs:88, 96, 103`,
   `ParkCamcorderCameraMode.cs:396, 526-527`, `ParkThingStates.cs:54-55`, `ParkScriptStates.cs:33-34`,

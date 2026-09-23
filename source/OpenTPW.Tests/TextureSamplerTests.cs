@@ -1,23 +1,19 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Runtime.CompilerServices;
 
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// Which sampler a texture's flags ask for - <see cref="Texture.SamplerFor"/>.
+/// Which sampler a texture's flags ask for - <see cref="Texture.SamplerFor"/> - and what a texture served
+/// out of the cache carries across from the one that loaded it - <c>Texture.TryAdoptCached</c>.
 ///
 /// <para>
-/// <b>This is the half of the texture cache's behaviour a test can reach, and it is not the proof.</b>
-/// What the cache does with a hit - carrying the sampler, the size and the path across to the texture
-/// that adopts it - cannot be tested here at all: every road to a cached texture runs through
-/// <c>CreateTexture</c>, which builds a GPU texture, and a test run has no graphics device. That
-/// wiring rests on the capture instead, where the lobby's sea was photographed on first load and
-/// again on the way back from a park. This is written down rather than papered over, the way the
-/// audio wiring's own gap is.
-/// </para>
-///
-/// <para>
-/// The rule was pulled out of <c>CreateTexture</c> into a static precisely so that this much could be
-/// pinned without a device - the parameter was shrunk until the test became possible.
+/// <b>The cache is reached without a graphics device</b>, which a test run has none of. Loading a texture
+/// builds a GPU texture, so the one already loaded is a stand-in: a <see cref="Texture"/> made without
+/// running a constructor, given the flags, sampler, size, path and alpha a load would have given it, and
+/// put in <see cref="Asset.All"/> where the cache looks. The texture under test is then built by the real
+/// path constructor, which asks the cache before it touches a file. Its GPU handles are not pinned: the
+/// stand-in's are null, and so are those of a texture that failed to copy them.
 /// </para>
 /// </summary>
 [TestClass]
@@ -48,11 +44,9 @@ public class TextureSamplerTests
 		=> Assert.AreEqual( SamplerType.AnisotropicRepeat, Texture.SamplerFor( TextureFlags.None ) );
 
 	/// <summary>
-	/// <b>The assertion that carries the defect.</b> A texture served out of the cache used to keep
-	/// the default sampler rather than the one its flags asked for, and the reason that showed on
-	/// screen at all is that these two are different things: the default mirrors, so every other tile
-	/// of the sea was flipped and its wave ripples came out as a diamond lattice. If these two are
-	/// ever made equal, the fault becomes invisible rather than fixed - so this fails first.
+	/// A wrap request and a request for nothing are drawn differently. The default mirrors, and the lobby's
+	/// sea drawn with it has every other tile flipped and its wave ripples in a diamond lattice - which is
+	/// what makes a cached texture that kept the default a fault that shows, rather than one that cannot.
 	/// </summary>
 	[TestMethod]
 	public void TheWrappingSamplerIsNotTheDefaultOne()
@@ -83,4 +77,76 @@ public class TextureSamplerTests
 	public void TheChromaKeyDoesNotChooseASampler()
 		=> Assert.AreEqual( Texture.SamplerFor( TextureFlags.None ),
 			Texture.SamplerFor( TextureFlags.PinkChromaKey ) );
+
+	/// <summary>
+	/// <b>A texture served out of the cache is drawn the way the one that loaded it was</b>: with the
+	/// sampler its flags asked for, at its size, under its path, and graded or cut out as its pixels are.
+	/// The first row is the lobby's sea on the way back from a park - <c>Water.Spawn</c> asks for
+	/// <see cref="TextureFlags.Wrap"/>, and the texture it gets is the one the first visit loaded.
+	/// </summary>
+	/// <remarks>
+	/// The two rows carry opposite values, and between them every value differs from what a texture that
+	/// copied nothing would read - the default sampler, 0 by 0, no path, a cut-out - so each copy is pinned on
+	/// its own, and so is copying rather than assuming. A texture taken over is not registered, so
+	/// <see cref="Asset.All"/> is the same length afterwards.
+	/// <b>Mutations:</b> taking any one of the five copies out of <c>TryAdoptCached</c>, or replacing one with
+	/// a constant, fails the assertion that names it.
+	/// </remarks>
+	[DataTestMethod]
+	[DataRow( TextureFlags.Wrap, SamplerType.AnisotropicWrap, 64, 32, true )]
+	[DataRow( TextureFlags.PointFilter, SamplerType.Point, 16, 8, false )]
+	public void ACachedTextureIsDrawnTheWayTheLoadedOneWas( TextureFlags flags, SamplerType sampler, int width,
+		int height, bool graded )
+	{
+		// Nowhere on disk, so only the cache can answer it.
+		var path = $"opentpw-tests/lobby/{flags}.wct";
+
+		var loaded = Loaded( path, flags, sampler, (uint)width, (uint)height, graded );
+
+		Asset.All.Add( loaded );
+
+		var registered = Asset.All.Count;
+
+		try
+		{
+			var served = new Texture( path, flags );
+
+			Assert.IsTrue( served.Adopted, "the same path under the same flags is served from the cache" );
+			Assert.AreEqual( flags, served.Requested, "it says what it was asked for" );
+			Assert.AreEqual( sampler, served.SamplerType, "the sampler its flags asked for" );
+			Assert.AreEqual( (uint)width, served.Width, "its width" );
+			Assert.AreEqual( (uint)height, served.Height, "its height" );
+			Assert.AreEqual( path, served.Path, "the path it came from" );
+			Assert.AreEqual( graded, served.HasGradedAlpha, "graded or cut out, as the pixels it shares are" );
+			Assert.AreEqual( registered, Asset.All.Count, "and it is not registered a second time" );
+		}
+		finally
+		{
+			Asset.All.Remove( loaded );
+		}
+	}
+
+	/// <summary>
+	/// A texture as a load would have left it, made without a device: no constructor runs, so nothing
+	/// reaches the GPU, and each property a load assigns is set the way the load would set it.
+	/// </summary>
+	private static Texture Loaded( string path, TextureFlags flags, SamplerType sampler, uint width, uint height,
+		bool graded )
+	{
+		var texture = (Texture)RuntimeHelpers.GetUninitializedObject( typeof( Texture ) );
+
+		Set( texture, nameof( Texture.Requested ), flags );
+		Set( texture, nameof( Texture.SamplerType ), sampler );
+		Set( texture, nameof( Texture.Width ), width );
+		Set( texture, nameof( Texture.Height ), height );
+		Set( texture, nameof( Texture.HasGradedAlpha ), graded );
+
+		texture.Path = path;
+
+		return texture;
+	}
+
+	/// <summary>Sets a property through its private setter.</summary>
+	private static void Set( Texture texture, string property, object value )
+		=> typeof( Texture ).GetProperty( property )!.SetValue( texture, value );
 }

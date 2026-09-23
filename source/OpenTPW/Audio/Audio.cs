@@ -101,7 +101,11 @@ public static class Audio
 			BusVolumes[(int)bus] = MathF.Max( volume, 0f );
 	}
 
-	private static readonly List<Voice> Voices = new( MaxVoices );
+	/// <summary>
+	/// Every voice sounding, which only <see cref="Play"/> adds to. Internal so that a test, which has no device to
+	/// close, can take back the voices it played.
+	/// </summary>
+	internal static readonly List<Voice> Voices = new( MaxVoices );
 
 	/// <summary>
 	/// Guards <see cref="Voices"/> against the callback, which SDL runs on a thread of its own.
