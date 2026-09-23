@@ -56,7 +56,7 @@ The mode is one global, and it is the reason this project loads only one park fi
 | `0x0065da8d` | — | The enable/disable setter: puts flag **`0x2`** on the control at `+0x48` | Disassembly |
 | `0x00668820` | — | Part picker: draws **part 1**, the disabled part, for a control carrying `0x2` | Disassembly |
 | `0x0065d9dd` | UI_SetVisible | The hide. **Never a vtable entry** — so a virtual call at slot `+0x14` is always the enable, never the hide. That is how the two operations tell apart in a decompile | Vtable scan |
-| `0x005e1ee0`, `0x005e1f40` | — | The handlers behind the island arrows. Both return having done nothing unless the type is something other than 2 | Disassembly |
+| `0x005e1ee0`, `0x005e1f40` | — | The handlers behind the island arrows, **next** and **previous**. Both return having done nothing while the camera is leaving for a park (`[this+0x14]` non-zero, their first test), and unless the type is something other than 2 — see "The island keys wait for the fly-in" | Disassembly |
 | `0x005e1cc0` | — | Enter this park. In Instant Action it goes straight in without counting keys | Disassembly |
 | `0x005e1fa0` | — | Puts the lobby back on an island. Called with `1` it selects the **first** island and forgets the remembered park; called with `0` it walks the list matching a name | Call sites |
 | — | global.sam | `Keys.CostToEnter` per park: jungle 1, hallow 1, fantasy 3, space 5 | Shipped `global.sam` |
@@ -262,9 +262,10 @@ diagnostic, because nothing raised a park entry; that trigger now exists, so the
 
 **The original does not animate this gate at all**, and that is measured. Its whole entry beat is
 `IslandLobby_LeaveForPark` (`0x005e1e30`): set the lobby leaving, `IslandPanel_KeyPuffAndEnterSound`,
-then `FUN_004b8ec0`, which posts UI message **6** to the island panel's own tree (`DAT_007cc4b4`) —
-a message `IslandPanel_Callback` does not handle, so it falls through to the default and is the
-generic close. The state-3 teardown behind it (`FUN_005d5cf0`, "choice 2 means play a park") only
+then `FUN_004b8ec0`, which hands UI message **6**, with 0, to the island panel's own tree (`DAT_007cc4b4`) —
+a message `IslandPanel_Callback` does not handle, so it falls through to the default control procedure
+(`0x0065f6d1`), which makes it `UI_SetVisible( 0 )`: the panel is **hidden**, not destroyed, and message 6
+with 1 (`0x004b8ea0`) shows it again. The state-3 teardown behind it (`FUN_005d5cf0`, "choice 2 means play a park") only
 tears down. So the swing is **ours**, under `CLAUDE.md` rule 11, and is marked as a deviation at the
 call site.
 
@@ -381,17 +382,17 @@ base's update. Its slots:
 | Slot | Address | What it is |
 |---|---|---|
 | `+0x08` | `FUN_005e1830` | The island lobby's **own update** — and its first instruction is `CALL 0x005e0470`, so the base camera update really does run here |
-| `+0x38` / `+0x3c` | `0x005e1ee0` / `0x005e1f40` | The island arrow handlers, overriding the base's next/previous island |
+| `+0x38` / `+0x3c` | `0x005e1ee0` / `0x005e1f40` | The island arrow handlers, overriding the base's next (`0x005e1640`) and previous (`0x005e1730`) island |
 | `+0x40` | `IslandLobby_EnterPark` `0x005e1cc0` | Checks `[5] == 0` and the key count, then calls `+0x44` |
-| `+0x44` | `IslandLobby_LeaveForPark` `0x005e1e30` | Sets `+0x14` to **1**, key puff and sound, closes the panel |
+| `+0x44` | `IslandLobby_LeaveForPark` `0x005e1e30` | Sets `+0x14` to **1**, key puff and sound, hides the panel |
 | `+0x48` | `FUN_005e1e50` | The override of the pure-virtual slot above |
-| `+0x58` | `0x0067b0c0` | Still pure virtual |
+| `+0x4c` | `0x005e2750` | SetIsland: writes `[3]` and puts `+0x14` back to **0**. The table's last slot — `0x00702f10` is a list class's own vtable (stored by `FUN_005e4020`, `FUN_005e40a0`, `FUN_005e4320`), so a `+0x58` read past `+0x4c` is that class's |
 
 **`+0x14` is `param_1[5]`** — the update takes `int *`, so `param_1[5]` is byte offset `0x14`. So
-`IslandLobby_LeaveForPark` does not merely close the panel: **it puts the camera into globe state 1**,
+`IslandLobby_LeaveForPark` does not merely hide the panel: **it puts the camera into globe state 1**,
 and the whole sequence above is what happens next. The park is asked for when the **camera** arrives:
 
-1. `+0x40` → `+0x44`, which sets state **1** and closes the panel;
+1. `+0x40` → `+0x44`, which sets state **1** and hides the panel;
 2. state 1 turns the orbit onto `island[+0x14] + π` at `0.05 × delta`, arriving within half a step;
 3. state 2 locks it and decays radius at **0.07** and vertical at **0.6** per delta;
 4. below radius **8.0** it calls `+0x48` = `FUN_005e1e50`, which ends `MOV [EAX+0x14], 2` on the scene
@@ -405,19 +406,78 @@ screen** — it swings the camera round onto the gate side and flies it into the
 called on the state transitions, is *not* a gate animation: it is `__thiscall` on the island and plays
 the ISLE model's clip 0 or 1, the same pair the update's tail loop picks between.
 
+### The island keys wait for the fly-in, and the fly-in dies with the lobby
+
+Decoded 2026-09-23 for `docs/QUEUE.md` Q8, every claim put to two refuters.
+
+**Every way the player asks for another island ends in the two handlers, and both refuse while the camera
+is leaving.** `0x005e1ee0` (`+0x38`, **next**) and `0x005e1f40` (`+0x3c`, **previous**) are identical but
+for the mover they call. Each opens `MOV EAX,[ESI+0x14]` / `TEST` / `JNZ` to its `RET` (`0x005e1ee3`,
+`0x005e1f43`) before anything else — before the one-time guard that builds the game-type object at
+`0x00fb3b7c` (`0x00550ca0`) and before the Instant Action test. The movers, `0x005e1640` and `0x005e1730`,
+test `+0x14` again, and change the island only through `+0x4c`. The routes in:
+
+| Route | How it reaches the handlers |
+|---|---|
+| The panel's arrows | `IslandPanel_Callback`, message `0x100`: `0x1e0f1` (right) calls `+0x38`, `0x1e0f0` (left) calls `+0x3c`, both on `[[0x00f85614]+4]` |
+| Cursor Right / Left | On key **up** (`0x1000b`), as `0x2700` / `0x2500` (an extended key's byte shifted by 8): `IslandLobby_OnKey` hands every key to each active child's `+0x14`, and the camera's `0x005e2310` maps them to `+0x38` / `+0x3c`. It also maps Enter (`0xd`) and a left button down (`0x10005`) to `+0x40` |
+
+**There are no bracket keys.** No `[` or `]` (nor `0x5b`, `0x5d`, `0xdb`, `0xdd`) is compared anywhere in
+the lobby's code, and no key-binding table has an island row. OpenTPW's `[` and `]` are its own.
+
+**No other route was found that moves the island mid-flight** — a route search, not a proof. The update
+writes `[3]` only in the attract branch, which runs only with no islands, no player or no current island.
+`0x005e1fa0` writes it ungated, but its one caller is `FrontEnd_ClosePlayerSlots`, whose slots open from the
+game menu — which Escape cannot open during a leave (below) — and from `FrontEnd_Init` (`0x005d5bec`) when
+nobody is playing. Whether Enter can start a leave while those first slots are up is not decoded.
+
+**Escape during a leave cancels it.** `IslandLobby_OnKey` asks every active child's `+0x18` first and
+opens the game menu (`GameMenu_Open( 1 )`, `0x0048c830`) only if none answers. The island camera's `+0x18`,
+`0x005e1890`, answers whenever `+0x14` is 1 or 2: it puts the state to **0** (`0x005e18b0`) — from state 2
+it first replays the island's clip 1 (`0x005d83f0( 1, 0 )`) — shows the panel again (`0x004b8ea0`,
+`0x004b90f0`) and returns 1. States 0 and 1 reassign the radius and height from the settings every update,
+so the orbit's wanted point jumps straight back out, and the camera body eases out to it through
+`FUN_005e1210` as it always does. Once `+0x48` has run, the scene's choice is 2 and Escape cannot stop the
+park. **OpenTPW does not do this yet: its Escape opens the game menu over the
+flight (`docs/QUEUE.md` Q41).**
+
+**The leave state lives and dies with the camera.** The island camera is a heap object (0xe8 bytes, built
+by `g_FrontEnd`'s `+4`, `0x005e3dc0`, in `FrontEnd_Init`, which state 1 calls on every entry to the lobby)
+and the state-3 teardown deletes it (`0x005d5cf0` → `0x005e4140`). Its six writers of `+0x14`: the
+constructor (0, `0x005dfd2d`), `IslandLobby_Start` (0, `0x005e199f`, with `[3]` and `+0x10`),
+`IslandLobby_LeaveForPark` (1), the update (1 → 2, `0x005e06e9`), the Escape cancel (0), and SetIsland (0,
+`0x005e275b`). Nothing writes it on arrival: state 2 calls `+0x48` once the radius is below 8 — once in
+practice, since that call sets the scene's choice and the lobby loop leaves on the same pass (`0x0054e7a2`).
+
+**The park is chosen at arrival, not at Enter.** `FUN_005e1e50` reads the current island `[3]` when it
+runs: it assigns the island's name (`+0x30`) to the static string at `0x00f85480` — which the next
+`IslandLobby_Start` uses to put the lobby back on that island, and `0x005e1fa0( 1 )` empties — selects the
+level entry by that name (`0x00409480` on `0x786b68`), and sets the scene's choice to 2.
+`IslandLobby_EnterPark` stores nothing about the park.
+
+**OpenTPW.** `LobbyCameraMode.Step` is the pair of handlers: it refuses while leaving (logging `Lobby
+camera: staying on island N`) and while held to one island, and the panel's arrows, its cursor keys and
+the bracket keys all ask through it. `ForgetIsland`, part of the lobby's unload, clears the whole leave.
+Confirmed in the game with a real `]` mid-flight. Which park is fixed at Enter in a closure, where the
+original reads it at arrival; the island keys cannot tell the two apart, but `SelectFirst` still can, reached
+mid-flight through the game menu that the original's Escape would have cancelled (`docs/QUEUE.md` Q41). The
+cursor keys act on the press where the original's act on the release, and Enter does not enter the park
+(Q42).
+
 ### Island sound is one island at a time, and the previous one is stopped
 
-Three functions manage the per-island pair, all the same shape and all gated on `[5] == 0`:
+Three functions manage the per-island pair. The first two move the island and are gated on `[5] == 0`;
+the third is neither:
 
 | Address | Vtable slot | What it is |
 |---|---|---|
 | `FUN_005e1640` | `+0x38` | **Next** island — walks the forward link `[1]` |
 | `FUN_005e1730` | `+0x3c` | **Previous** island — walks the back link `[2]` |
-| `FUN_005e14a0` | — | Reset to the head of the list |
+| `FUN_005e14a0` | — | Stops the current island's pair and starts the **head** island's. No `[5]` test, and `[3]` is left as it was. Called by `FrontEnd_ShowPlayerSlots` (`0x004a6a33`) |
 
-Each one stops the outgoing island's two voices with `Sound_StopFading( island[+0x1c] )` and
-`Sound_StopFading( island[+0x20] )`, zeroes both, picks the neighbour through vtable `+0x4c`, then
-starts the incoming island's **effect 1** from the sfx category (`DAT_00803a4c + 4 + idx*8`) and
+The two movers stop the outgoing island's two voices with `Sound_StopFading( island[+0x1c] )` and
+`Sound_StopFading( island[+0x20] )`, zero both, pick the neighbour through vtable `+0x4c`, then
+start the incoming island's **effect 1** from the sfx category (`DAT_00803a4c + 4 + idx*8`) and
 **effect 2** from the music category (`DAT_00803a4c + idx*8`), keeping the voices in those same two
 fields, and calls `Sound_ApplyGroupVolumes`. So the original plays **one island's theme and ambience
 at a time and explicitly stops the previous** — voices do not accumulate. OpenTPW's `LobbyAudio.MoveTo`

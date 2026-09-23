@@ -303,7 +303,21 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   the Alt+L quick load keeps the hand in the original (static). The item as written: `Level.Unload`
   (`Level.cs:862-890`) forgets the cameras and the build mode but not `ParkBuilding.Carrying` or
   `ParkStaffPool.Carrying`. Confirm: leave mid-carry, enter another theme, click, nothing placed, log line.
-- [ ] **Q8. The island keys work during the fly-in, and the fly-in state survives the lobby.**
+- [x] **Q8. The island keys work during the fly-in, and the fly-in state survives the lobby.** Done 2026-09-23,
+  `alexah/122-island-keys-wait-for-the-fly-in`; decode in `docs/exe/lobby.md` "The island keys wait for the
+  fly-in", every claim put to two refuters. The original's arrow handlers (next `0x005e1ee0`, previous
+  `0x005e1f40`) refuse while the camera's state `+0x14` is non-zero, before the Instant Action test, and every
+  route in (the panel's arrows, the cursor keys on key-up) goes through them; its leave state is a field of a
+  camera every lobby builds afresh at nought. `LobbyCameraMode.Step` is now that pair: the bracket keys
+  (OpenTPW's own) ask through it, and it refuses while leaving. `ForgetIsland` clears the whole leave.
+  Confirmed in the game with a real `]` through XTEST at radius 52.82, every number predicted: on `main` it
+  logged `moving to island 1, 'Wonder Land'`, the camera turned to Wonder Land and the jungle loaded anyway,
+  and a lobby rebuilt mid-flight kept `leave=FlyingIn radius=52.82` and loaded the jungle unasked. With the
+  fix it logged `staying on island 0`, the flight ran on to 26.12 into Lost Kingdom's gate, photographed
+  (0.14 from a run with no press, against noise floors of 0.17 and 0.25; `main`'s frame 38.28), and the
+  rebuilt lobby read `leave=No ... waiting=False` and loaded nothing in 180 frames. The decode also found
+  that Escape cancels the fly-in in the original, and that its lobby keys act on release and take Enter:
+  filed as Q41 and Q42. The item as written:
   `LobbyCameraMode.cs:288-292` answers next/previous island whenever the player is not Instant Action.
   `LeaveForPark` (`:439-447`) guards only its own re-entry. `ForgetIsland` (`:761-768`) clears
   `CurrentIsland` and `_wandering` but not `_leaving`, `_whenArrived` or the three leave numbers. Block
@@ -352,6 +366,24 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   `docs/exe/park-engine.md` "Moving a thing", and for a carried candidate "Putting a candidate down: the
   type-5 mode", where every way out but a drop returns them to the pool. Confirm: RMB cancel off, Move a ride from its window, right press, still in the hand;
   Escape, hand empty, menu not opened.
+- [ ] **Q41. Escape during the park-entry fly-in opens the menu instead of cancelling the fly-in.** Found by
+  Q8's decode (`docs/exe/lobby.md`, "The island keys wait for the fly-in"). In the original, Escape while the
+  camera is leaving goes first to the island camera's `+0x18` (`0x005e1890`). That puts it back to orbit (from
+  state 2 it first replays the island's clip 1), shows the island panel again and swallows the key, so the
+  game menu does not open. Once `+0x48` has run, nothing stops the park. Read from the code, not yet run:
+  here `FrontEnd.MenuKey` opens the game menu over the flight, and the flight runs on under it and loads
+  the park; Select New Player in those seconds, then a slot, runs `SelectFirst`, which turns the camera to
+  Lost Kingdom while the park chosen at Enter loads - or the flight lands with nobody playing. Do not gate
+  `SelectFirst` (the original's `0x005e1fa0` has no gate); the cancel is what closes that route. Confirm:
+  Escape mid-flight; `state` reads `leave=No`, the panel is back, no menu, no park load; screenshot.
+- [ ] **Q42. The lobby's keys act on the press, and Enter does not enter the park.** Found by Q8's decode
+  (`docs/exe/lobby.md`, "The island keys wait for the fly-in"). The original's lobby takes its keys on
+  release (UI message `0x1000b`): the island camera's `0x005e2310` maps cursor Left and Right to previous and
+  next, and Enter to Enter this park (`+0x40`, with its key test). Here `IslandPanel.Update` moves on the
+  press (`Input.KeysPressed`, a held key's repeats included) and nothing takes Enter. Open in the decode:
+  whether a left button press on the lobby view (`0x10005`, also mapped to `+0x40`) reaches the camera,
+  which depends on the root control's hit test. Confirm: hold Right, one island per release; Enter on an
+  affordable island starts the fly-in; log lines and a screenshot.
 
 ## B. Docs and comments
 

@@ -307,7 +307,8 @@ public enum InputButton
 
 	/// <summary>
 	/// Previous Island ([)
-	/// Moves the lobby camera around to the park before this one.
+	/// Moves the lobby camera around to the park before this one. OpenTPW's own, with Next Island: the original
+	/// moves between islands only with the island panel's arrows and the cursor keys (docs/exe/lobby.md).
 	/// </summary>
 	[DefaultKey( Key.BracketLeft )]
 	PreviousIsland,

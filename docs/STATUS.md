@@ -12,7 +12,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 - Lobby: four islands, front end, advisor, weather, particles, options, saves, the island gate, and the
   attract camera flying itself around all four islands with all four heard at once. Clicking Enter swings
-  the camera onto the gate and flies into the island before the loading screen.
+  the camera onto the gate and flies into the island before the loading screen; **the island keys wait for
+  that flight**, and a lobby that ends mid-flight forgets it.
 - Park: ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (5 of 6).
 - Building and staffing: purchase menu and hire screen, both reachable from Buy. Things bought, sold,
   moved, carried; staff hired, fired, picked up, put down. **A staff drop the park refuses keeps the
@@ -42,12 +43,14 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Selling a thing lets nobody go: its riders stay aboard and its queuers stay put (`docs/QUEUE.md` Q36).
 - Any right press empties the hand, which for a moved thing is a sale; Escape opens the menu over it (Q39).
 - Nothing shows a carried candidate, and any cell on the map takes one; the original's rule is decoded (Q40).
+- Escape during the park-entry fly-in opens the game menu over it; the original's cancels the fly-in (Q41).
+  The lobby's keys act on the press, not the release, and Enter does not enter a park (Q42).
 - The `meter.wct` mapping behind the happiness gauge is wrong - the last fault Alexah found by playing.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q7, and Q35, are ticked.** Next is **Q8**: the island keys work during the
-fly-in, and the fly-in state survives the lobby. Q4 filed Q36-Q38 (eviction, terrain rule, effects); Q6 filed Q40.
+`docs/QUEUE.md`, from the top. **Q1 to Q8, and Q35, are ticked.** Next is **Q9**: stopping one ride's scream
+releases the effect every ride in its band shares. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, and Q8 Q41-Q42.
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -66,12 +69,21 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **949**, 0 fail, 0 skip with the game | 2026-09-23, after Q7 |
-| Tests without the game | **431** ran, **518** skipped, of 949 | 2026-09-23, after Q7 |
-| Build warnings | 125 | 2026-09-23, after Q7 |
+| Tests | **953**, 0 fail, 0 skip with the game | 2026-09-23, after Q8 |
+| Tests without the game | **435** ran, **518** skipped, of 953 | 2026-09-23, after Q8 |
+| Build warnings | 125 | 2026-09-23, after Q8 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-09-23 - the island keys wait for the fly-in.** Branch `alexah/122-island-keys-wait-for-the-fly-in`,
+`docs/QUEUE.md` Q8. Decoded first, every claim put to two refuters: the original's next and previous handlers
+refuse while its camera is leaving for a park, and every lobby builds that camera afresh with the leave at
+nought. `LobbyCameraMode.Step` is the pair; the bracket keys (ours) ask through it; `ForgetIsland` clears the
+leave. Confirmed in the game with a real `]` mid-flight, every number predicted: on `main` the camera turned
+to Wonder Land and the jungle loaded anyway, and a rebuilt lobby flew on and loaded it unasked; with the fix
+`staying on island 0`, the flight ran on into Lost Kingdom's gate, photographed, and a rebuilt lobby read
+`leave=No`. The decode found the original's Escape cancels the fly-in (Q41) and its keys act on release (Q42).
 
 **2026-09-23 - leaving a park empties the hand.** Branch `alexah/121-leaving-a-park-empties-the-hand`, `docs/QUEUE.md`
 Q7. Decoded first, every claim put to three refuters: the original's park end takes its interaction mode down while
@@ -90,17 +102,8 @@ as thing 0` and his row left the hire screen, 22 candidates to 21 with 5 staff; 
 and 5, and the next click hired him as thing 43, 21 and 6, photographed. The cell rule and the carry preview
 are counted and filed as Q40.
 
-**2026-09-23 - a move keeps the thing in the hand until a cell takes it.** Branch
-`alexah/119-move-keeps-the-thing-in-the-hand`, `docs/QUEUE.md` Q5. Decoded first, every claim put to two
-refuters: the original's move is Delete's demolish, refund banked, then the move tool holding the item **and
-the thing's own angle**; a red cell keeps it in the hand, and money reddens a cell only at put-down.
-`ParkBuilding.PickUp` is the one body for the window's Move and the console's `move`, which is that and one
-click; the sale answers a value the pickup reads, where Move parsed a string. Confirmed in the game, every
-number predicted: a refused `move` left the Belly Bounce in the hand (`carry` says so; nothing draws a carried
-thing), scripts 16 to 15, balance 87987 to 88712; the next click stood it back up, through the window too after
-a refused click; the Staff Room came back turned 90, frame identical. Its review filed Q39, the hand's ways out.
-
-**Earlier items, kept now only in the git log.** `alexah/118` made a sold thing take its script down and leave
+**Earlier items, kept now only in the git log.** `alexah/119` kept a moved thing in the hand until a cell
+takes it (Q5, filing Q39); `alexah/118` made a sold thing take its script down and leave
 bare ground (Q4, filing Q36-Q38); `alexah/115` made a placed ride lay its
 queue's first cell and hand the player the queue tool there, fixing the `Info.Shape` alphabet on the way
 (Q3), and `116` made its squares wave; `alexah/117` made the path tool picked up from the park, with

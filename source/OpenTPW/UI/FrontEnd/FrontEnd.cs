@@ -199,7 +199,7 @@ internal sealed class FrontEnd : Panel
 
 	/// <summary>
 	/// Puts the lobby into the game whoever is playing chose, which is the front end's to know. An
-	/// Instant Action game is held to the one island: the original's previous and next island handlers
+	/// Instant Action game is held to the one island: the original's next and previous island handlers
 	/// (0x005e1ee0, 0x005e1f40) do nothing while the game type is 2, so its arrows, its cursor keys and
 	/// the bracket keys here all go nowhere. What the panel itself shows is in
 	/// <see cref="IslandPanel.ShowKeys"/>, which looks at the same thing at the same moments.

@@ -218,7 +218,7 @@ public class LobbyCameraMode : CameraMode
 
 	/// <summary>
 	/// Whether the lobby stays on the island it is showing, however it is asked to move. An Instant
-	/// Action game is played that way: the original's previous and next island handlers (0x005e1ee0
+	/// Action game is played that way: the original's next and previous island handlers (0x005e1ee0
 	/// and 0x005e1f40) do nothing at all unless the game type is something other than 2, so nothing
 	/// it offers - the panel's arrows, the cursor keys, or the bracket keys here - goes anywhere.
 	///
@@ -285,11 +285,7 @@ public class LobbyCameraMode : CameraMode
 		if ( Input.Pressed( InputButton.FreezeCamera ) )
 			Paused = !Paused;
 
-		if ( !HeldToOneIsland && Input.Pressed( InputButton.NextIsland ) )
-			MoveTo( IslandIndex + 1, islands );
-
-		if ( !HeldToOneIsland && Input.Pressed( InputButton.PreviousIsland ) )
-			MoveTo( IslandIndex - 1, islands );
+		IslandKeys( Input.Pressed( InputButton.NextIsland ), Input.Pressed( InputButton.PreviousIsland ) );
 
 		if ( islands.Count == 0 )
 			return;
@@ -417,8 +413,8 @@ public class LobbyCameraMode : CameraMode
 	/// wrong because it stopped at the first of five steps.</b> <c>IslandLobby_EnterPark</c>
 	/// (<c>0x005e1cc0</c>, vtable <c>+0x40</c>) checks the keys and calls <c>+0x44</c>,
 	/// <c>IslandLobby_LeaveForPark</c> (<c>0x005e1e30</c>) - which sets the lobby's <c>+0x14</c> to
-	/// <b>1</b>, plays the key puff and closes the panel. That field is <c>param_1[5]</c> in the camera
-	/// update, <b>the state machine's own state</b>, and 1 is "home the angle". So closing the panel is
+	/// <b>1</b>, plays the key puff and hides the panel. That field is <c>param_1[5]</c> in the camera
+	/// update, <b>the state machine's own state</b>, and 1 is "home the angle". So hiding the panel is
 	/// not the end of the beat, it is the start of it:
 	/// </para>
 	/// <list type="number">
@@ -431,8 +427,15 @@ public class LobbyCameraMode : CameraMode
 	/// teardown - <i>returns</i> that field, which is the documented "choice 2 means play a park".</item>
 	/// </list>
 	/// <para>
-	/// So the park loads when the camera arrives, not when the panel closes. The gate swinging open
+	/// So the park loads when the camera arrives, not when the panel goes. The gate swinging open
 	/// alongside it is still ours - see <see cref="LobbyGate"/>.
+	/// </para>
+	/// <para>
+	/// <b>Which park</b> is the caller's, fixed here in <paramref name="whenArrived"/>, where the original reads
+	/// its current island at arrival (<c>0x005e1e50</c>). The island keys cannot move the island in flight - see
+	/// <see cref="Step"/> - and a lobby that ends mid-flight forgets the closure (<see cref="ForgetIsland"/>). The
+	/// one mover left is <see cref="SelectFirst"/>, which a player reaches mid-flight only through the game menu
+	/// Escape opens over it; the original's Escape cancels the flight instead (<c>docs/QUEUE.md</c> Q41).
 	/// </para>
 	/// </summary>
 	internal static void LeaveForPark( Action whenArrived )
@@ -526,9 +529,13 @@ public class LobbyCameraMode : CameraMode
 		return angle < 0f ? angle + MathF.Tau : angle;
 	}
 
-	/// <summary>How far through leaving for a park the camera is, for the debug console. A pure getter.</summary>
+	/// <summary>
+	/// How far through leaving for a park the camera is, for the debug console. A pure getter. `waiting` says whether
+	/// a park is still to be asked for when the camera arrives.
+	/// </summary>
 	internal static string LeaveDescription()
-		=> $"leave={_leaving} angle={_leaveAngle:F3} radius={_leaveRadius:F2} vertical={_leaveVertical:F2}";
+		=> $"leave={_leaving} angle={_leaveAngle:F3} radius={_leaveRadius:F2} vertical={_leaveVertical:F2} " +
+			$"waiting={_whenArrived != null}";
 
 	/// <summary>The orbit angle in radians. Written by DebugConsole to reproduce a shot exactly.</summary>
 	internal static float DebugOrbit
@@ -681,15 +688,41 @@ public class LobbyCameraMode : CameraMode
 	}
 
 	/// <summary>
+	/// The bracket keys, which are OpenTPW's own - the original moves between islands only with the panel's arrows
+	/// and the cursor keys - and ask through <see cref="Step"/> as both of those do, so all three are refused alike.
+	/// </summary>
+	/// <returns>Whether either key moved the island.</returns>
+	internal static bool IslandKeys( bool next, bool previous )
+	{
+		var moved = next && Step( 1 );
+
+		return (previous && Step( -1 )) || moved;
+	}
+
+	/// <summary>
 	/// Moves <paramref name="step"/> islands along, wrapping at either end - what the lobby panel's
 	/// arrow buttons and the cursor keys do (see IslandPanel), and the bracket keys too.
+	///
+	/// <para>
+	/// Like the original's next and previous handlers it refuses while the camera is leaving for a park - their
+	/// first test (<c>0x005e1ee3</c>), before the game type is looked at - and while an Instant Action game holds
+	/// the lobby to one island. See <c>docs/exe/lobby.md</c>, "The island keys wait for the fly-in".
+	/// </para>
 	/// </summary>
-	internal static void Step( int step )
+	/// <returns>False when it refused; true when it went to the islands, however many there are.</returns>
+	internal static bool Step( int step )
 	{
+		if ( _leaving != Leaving.No )
+		{
+			Log.Info( $"Lobby camera: staying on island {IslandIndex} - the camera is leaving for a park" );
+			return false;
+		}
+
 		if ( HeldToOneIsland )
-			return;
+			return false;
 
 		MoveTo( IslandIndex + step, AllIslands() );
+		return true;
 	}
 
 	/// <summary>
@@ -754,9 +787,10 @@ public class LobbyCameraMode : CameraMode
 	}
 
 	/// <summary>
-	/// Lets go of the island on show as the lobby ends, so nothing reads an island out of a lobby that has gone.
-	/// Which island it was, and where the camera was, are kept, as they are across camera modes - see
-	/// <see cref="Paused"/> - so the lobby built next picks up where this one left off.
+	/// Lets go of the island on show as the lobby ends, so nothing reads an island out of a lobby that has gone,
+	/// and of any leave for a park still under way. Which island it was, and where the camera was, are kept, as
+	/// they are across camera modes - see <see cref="Paused"/> - so the lobby built next picks up where this one
+	/// left off.
 	/// </summary>
 	internal static void ForgetIsland()
 	{
@@ -765,6 +799,18 @@ public class LobbyCameraMode : CameraMode
 		// The wander is seeded from where it happens to be standing, so a lobby built next has to roll
 		// its own rather than carrying on from a flight through a lobby that has gone.
 		_wandering = false;
+
+		// A lobby that ends mid-flight takes the flight with it. The original keeps its leave state on the camera
+		// object, which every lobby builds afresh with the state at nought (0x005dfd2d), so the next lobby starts
+		// in orbit and the park the last one was flying into is never asked for.
+		if ( _leaving != Leaving.No )
+			Log.Info( "Lobby camera: the lobby ended while leaving for a park, so that leave is forgotten" );
+
+		_leaving = Leaving.No;
+		_whenArrived = null;
+		_leaveAngle = 0f;
+		_leaveRadius = 0f;
+		_leaveVertical = 0f;
 	}
 
 	/// <summary>

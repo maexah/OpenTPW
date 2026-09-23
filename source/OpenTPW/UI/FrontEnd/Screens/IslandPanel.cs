@@ -221,6 +221,8 @@ internal sealed class IslandPanel : UiWindow
 
 	protected internal override void Update()
 	{
+		// The cursor keys move on the press. The original's move on the key's release, and its Enter enters the
+		// park; neither is built yet (docs/QUEUE.md Q42).
 		if ( Stack.IsFront( this ) && !Input.TextCaptured && !_instantAction )
 		{
 			if ( Input.KeysPressed.Contains( Key.Left ) )
@@ -322,7 +324,7 @@ internal sealed class IslandPanel : UiWindow
 		// >>> AN EARLIER NOTE HERE SAID THE ORIGINAL DOES NOTHING AT ALL ON THIS PATH. IT WAS WRONG,
 		// AND IT WAS WRONG BY STOPPING AT THE FIRST OF FIVE STEPS. <<< 0x005e1e30 really is three calls -
 		// set the lobby leaving, IslandPanel_KeyPuffAndEnterSound, and a UI message 6 to this panel's own
-		// tree (0x007cc4b4) which IslandPanel_Callback does not handle, so it is the generic close. But
+		// tree (0x007cc4b4) which IslandPanel_Callback does not handle, so the default procedure hides it. But
 		// the field it sets, +0x14, is param_1[5] in the camera update: the lobby camera's own STATE
 		// MACHINE, and 1 means "swing onto the island's heading". The camera then flies in, and below a
 		// radius of 8 it calls vtable +0x48, which sets the scene's choice to 2 - the very "choice 2 means

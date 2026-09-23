@@ -355,6 +355,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005d8bac` | | OpenTPW/World/Level.cs  |
 | `0x005d96fc` | | OpenTPW/World/Sky.cs  |
 | `0x005dd034` | | OpenTPW/World/LobbyCameraMode.cs  |
+| `0x005dfd2d` | Lobby camera constructor: the leave state `+0x14` set to 0 | OpenTPW/World/LobbyCameraMode.cs  |
 | `0x005e0470` | | OpenTPW/World/Lobby/LobbyWeather.cs OpenTPW/World/Weather/Lightning.cs  |
 | `0x005e1100` | | OpenTPW/World/Lobby/LobbyWeather.cs OpenTPW/World/Weather/Lightning.cs  |
 | `0x005e13fb` | | OpenTPW/World/LobbyCameraMode.cs  |
@@ -362,8 +363,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005e1bd0` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x005e1cc0` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x005e1e30` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs OpenTPW/World/Lobby/LobbyAudio.cs  |
-| `0x005e1ee0` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs OpenTPW/World/LobbyCameraMode.cs  |
-| `0x005e1f40` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs OpenTPW/World/LobbyCameraMode.cs  |
+| `0x005e1e50` | The fly-in's arrival (`+0x48`): takes the park from the current island, sets the scene's choice to 2 | OpenTPW/World/LobbyCameraMode.cs  |
+| `0x005e1ee0` | Island arrow handler, **next** (`+0x38`): refuses while the camera is leaving (`+0x14`), then in Instant Action; `lobby.md` "The island keys wait for the fly-in" | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs OpenTPW/World/LobbyCameraMode.cs  |
+| `0x005e1ee3` | Next-island handler's first test: `[this+0x14]` non-zero returns | OpenTPW/World/LobbyCameraMode.cs OpenTPW.Tests/LobbyIslandKeysTests.cs  |
+| `0x005e1f40` | Island arrow handler, **previous** (`+0x3c`): the same two refusals | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs OpenTPW/World/LobbyCameraMode.cs  |
 | `0x005e1fa0` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/World/LobbyCameraMode.cs  |
 | `0x005e3210` | | OpenTPW/World/Lobby/LobbyAudio.cs  |
 | `0x005e4140` | | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
