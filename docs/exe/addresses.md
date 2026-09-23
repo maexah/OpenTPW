@@ -172,6 +172,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00512a5e` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00512b4c` | | OpenTPW/World/Weather/Lightning.cs  |
 | `0x00515865` | | OpenTPW/World/Level.cs OpenTPW/Global/GameCalendar.cs  |
+| `0x00516d13` | World save `FUN_00516c80`: installs the idle mode before anything is written, so leaving a park lets go of the hand | OpenTPW/World/Level.cs  |
 | `0x0051b920` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x0051bcb0` | | OpenTPW/World/Level.cs OpenTPW/Audio/Audio.cs  |
 | `0x0051bd70` | | OpenTPW/World/Park/ParkAudio.cs OpenTPW/World/Advisor/Advisor.cs OpenTPW/Audio/Audio.cs  |

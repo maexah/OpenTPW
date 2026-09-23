@@ -887,7 +887,7 @@ public class Level
 		// ANYTHING IN THE HAND GOES DOWN FIRST, and only an empty hand opens a window. That is the
 		// original's own order: a place mode consumes the click - FUN_004879d0 acts only while the
 		// current interaction mode is idle, type 0 or 1 - and the modes that carry something are types
-		// 4 and 5. Nothing is charged until it actually goes up, which is why cancelling needs no
+		// 3, 5 and 6. Nothing is charged until it actually goes up, which is why cancelling needs no
 		// refund; see ParkBuilding.Carrying.
 		if ( ParkBuilding.Carrying != 0 )
 			return $"world click: {ParkBuilding.PlaceCarried( cellX, cellY )}";
@@ -1107,8 +1107,20 @@ public class Level
 		Entity.ApplyDeletions();
 
 		LobbyCameraMode.ForgetIsland();
+		ForgetPark();
 
-		// And both park cameras let go of where they were. Their state is static so that it survives
+		Audio.StopAll( StopAllSeconds );
+		ParticleSystem.Current?.Shutdown();
+	}
+
+	/// <summary>
+	/// Lets go of the park's static state that would otherwise carry into the next park: where both park cameras
+	/// were, the armed build tool, the pinned pick, and whatever is in either hand. Part of <see cref="Unload"/>,
+	/// and apart from it only so a test can reach it.
+	/// </summary>
+	internal static void ForgetPark()
+	{
+		// Both park cameras let go of where they were. Their state is static so that it survives
 		// Camera.SetCameraMode building a fresh instance, which means it survives the scene as well
 		// unless something says otherwise - so a second park would otherwise open looking at whatever
 		// the first one was left looking at, and standing wherever it was last walked to.
@@ -1122,8 +1134,17 @@ public class Level
 		ParkBuildMode.Forget();
 		ParkPicking.Pinned = null;
 
-		Audio.StopAll( StopAllSeconds );
-		ParticleSystem.Current?.Shutdown();
+		// And whatever is in the hand, which would otherwise go down at the next park's first click. The
+		// original's park end takes its interaction mode down while the park still stands - the save it makes on
+		// leaving installs the idle mode over it (0x00516d13), and online, where nothing is saved, the teardown
+		// installs none - and either way that runs the same uninstall as every other way out: a candidate goes
+		// back to the pool, and an item is let go of with nothing built and nothing refunded, so a moved thing
+		// stays sold. See docs/exe/park-engine.md, "Leaving a park with something in the hand".
+		if ( ParkBuilding.Carrying != 0 )
+			Log.Info( $"Leaving the park: {ParkBuilding.Drop()}" );
+
+		if ( ParkStaffPool.Carrying != 0 )
+			Log.Info( $"Leaving the park: {ParkStaffPool.Drop()}" );
 	}
 
 	public void Render()

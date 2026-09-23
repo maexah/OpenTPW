@@ -288,9 +288,21 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   photographed standing. Filed Q40. The item as written: `ParkStaffPool.PlaceCarried`
   (`ParkStaffPool.cs:95-100`): Take, then Carrying = 0, then Hire, which can return 0. Use the console's own
   safe order. Confirm: put down on an off-map cell, candidate still in the list, screenshot.
-- [ ] **Q7. Leaving a park does not empty the hand.** `Level.Unload` (`Level.cs:862-890`) forgets the
-  cameras and the build mode but not `ParkBuilding.Carrying` or `ParkStaffPool.Carrying`. Confirm:
-  leave mid-carry, enter another theme, click, nothing placed, log line.
+- [x] **Q7. Leaving a park does not empty the hand.** Done 2026-09-23, `alexah/121-leaving-a-park-empties-the-hand`;
+  decode in `docs/exe/park-engine.md` "Leaving a park with something in the hand", every claim put to three
+  refuters. The original's park end takes its interaction mode down while the park still stands - the save it makes
+  on leaving installs the idle mode over it (`0x00516d13`), and online `FUN_00515dd0` installs none - so its hand never
+  outlives the park. `Level.ForgetPark`, part
+  of `Unload`, now lets both hands go through their own `Drop` and logs `Leaving the park:`. Confirmed in the game by
+  the player's routes (the window's Move, the hire screen's row, Exit To Lobby, the island gates), every number
+  predicted: on `main` a moved Belly Bounce outlived Exit To Lobby and the jungle's next first click built a second
+  one at (42,24) for 500; a candidate outlived it into Wonder Land, where a click still tried to put him down, and
+  was hired back in the jungle as thing 43. With the fix the hand came back empty, the click only picked up the path
+  tool, 87987 and scripts 16, candidates 22 and staff 5, photographed; the two crops differ from `main`'s by 22.17
+  and 16.41 against noise floors of 0.02 and 0.00. Found on the way: the purchase carry is mode type 3, not 4, and
+  the Alt+L quick load keeps the hand in the original (static). The item as written: `Level.Unload`
+  (`Level.cs:862-890`) forgets the cameras and the build mode but not `ParkBuilding.Carrying` or
+  `ParkStaffPool.Carrying`. Confirm: leave mid-carry, enter another theme, click, nothing placed, log line.
 - [ ] **Q8. The island keys work during the fly-in, and the fly-in state survives the lobby.**
   `LobbyCameraMode.cs:288-292` answers next/previous island whenever the player is not Instant Action.
   `LeaveForPark` (`:439-447`) guards only its own re-entry. `ForgetIsland` (`:761-768`) clears

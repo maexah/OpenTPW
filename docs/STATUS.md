@@ -16,7 +16,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Park: ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (5 of 6).
 - Building and staffing: purchase menu and hire screen, both reachable from Buy. Things bought, sold,
   moved, carried; staff hired, fired, picked up, put down. **A staff drop the park refuses keeps the
-  candidate on the cursor and in the pool.** **A sold thing's script goes with it**, and
+  candidate on the cursor and in the pool.** **Leaving a park lets go of whatever is in the hand.** **A sold thing's script goes with it**, and
   its ground is left bare. **A moved thing stays in the hand until a cell takes it**, facing the way it stood. Clicking a placed ride **anywhere on its
   footprint** opens its window - the save's own and ones bought this session alike.
 - Information and money: Info and Money open all-staff, all-items, all-visitors and entry-price screens.
@@ -46,8 +46,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q6, and Q35, are ticked.** Next is **Q7**: leaving a park does not
-empty the hand. Q4 filed Q36-Q38 (eviction, terrain rule, effects); Q6 filed Q40 (the staff cell rule).
+`docs/QUEUE.md`, from the top. **Q1 to Q7, and Q35, are ticked.** Next is **Q8**: the island keys work during the
+fly-in, and the fly-in state survives the lobby. Q4 filed Q36-Q38 (eviction, terrain rule, effects); Q6 filed Q40.
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -66,12 +66,20 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **946**, 0 fail, 0 skip with the game | 2026-09-23, after Q6 |
-| Tests without the game | **431** ran, **515** skipped, of 946 | 2026-09-23, after Q6 |
-| Build warnings | 125 | 2026-09-23, after Q6 |
+| Tests | **949**, 0 fail, 0 skip with the game | 2026-09-23, after Q7 |
+| Tests without the game | **431** ran, **518** skipped, of 949 | 2026-09-23, after Q7 |
+| Build warnings | 125 | 2026-09-23, after Q7 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-09-23 - leaving a park empties the hand.** Branch `alexah/121-leaving-a-park-empties-the-hand`, `docs/QUEUE.md`
+Q7. Decoded first, every claim put to three refuters: the original's park end takes its interaction mode down while
+the park stands - in the save it makes on leaving, or online in its teardown - so a moved thing stays sold and a
+candidate goes back. `Level.ForgetPark`, part of `Unload`, lets both hands go through their own `Drop`. Confirmed in the game by the
+player's routes, every number predicted: on `main` a moved Belly Bounce outlived Exit To Lobby and the jungle's next
+first click built a second one for 500, and a candidate outlived it into Wonder Land and was hired back in the jungle;
+with the fix the hand came back empty and the click only picked up the path tool, 87987 and candidates 22, photographed.
 
 **2026-09-23 - a refused staff drop keeps the candidate.** Branch `alexah/120-a-refused-drop-keeps-the-candidate`,
 `docs/QUEUE.md` Q6. Decoded first, every claim put to a refuter: the original's place-staff click answers a
@@ -92,17 +100,8 @@ number predicted: a refused `move` left the Belly Bounce in the hand (`carry` sa
 thing), scripts 16 to 15, balance 87987 to 88712; the next click stood it back up, through the window too after
 a refused click; the Staff Room came back turned 90, frame identical. Its review filed Q39, the hand's ways out.
 
-**2026-09-23 - a sold thing takes its script down, and leaves bare ground.** Branch
-`alexah/118-a-sold-thing-takes-its-script-down`, `docs/QUEUE.md` Q4. Decoded first, every claim put to a refuter:
-the destructor tears the script down with mode 7, whose bits spawn the item's death particle and take
-`ADDHEAD` heads off the model. `Sell` now unbinds through the scheduler's one-level `Destroy`, and counts
-the particle, the demolish sound and the eviction of riders and queuers it does not build (Q36-Q38).
-**The item's Confirm was hollow**: the `rides` census drops a sold thing either way, so its header now
-prints `scripts N bound M`. **Its unmeasured finding was real**: a sold save-placed ride left a sky-blue
-hole in its footprint and refused a rebuild; `Unstamp` writes the original's cleared cell now. Confirmed
-through the ride window's Delete: scripts 16 to 15, back on its own spot, then 15, 14, 13 and still 13.
-
-**2026-09-22 - eleven earlier items, kept now only in the git log.** `alexah/115` made a placed ride lay its
+**Earlier items, kept now only in the git log.** `alexah/118` made a sold thing take its script down and leave
+bare ground (Q4, filing Q36-Q38); `alexah/115` made a placed ride lay its
 queue's first cell and hand the player the queue tool there, fixing the `Info.Shape` alphabet on the way
 (Q3), and `116` made its squares wave; `alexah/117` made the path tool picked up from the park, with
 Backspace taking a run back up (Q35); `alexah/114` let a player build a queue that

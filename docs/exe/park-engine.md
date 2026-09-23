@@ -650,7 +650,7 @@ There is **one "current interaction mode" object** in the game, and camcorder is
 |---|---|
 | `DAT_007b05e8` | The interaction-mode holder — **not a camcorder global** |
 | `DAT_007b05d8` | The current mode object |
-| `FUN_0046c350` | The setter: tears the old mode down (vtable `+0x2c`, then the destructor at `+0x00`), installs the new one and enters it (`+0x28`), reading a type id from `+0x24`. A mode whose type is 1 is replaced by one built from `0x006fe980`. ~110 call sites — modes are switched all over the game; `Game_StateMachine` (`0x00550317`) is one of them |
+| `FUN_0046c350` | The setter: tears the old mode down (vtable `+0x2c`, then the destructor at `+0x00`), installs the new one and enters it (`+0x28`), reading a type id from `+0x24`. In an online game (`DAT_00fb3b7c` is 1, `0x0046c3b4`) a mode whose type is 1 is replaced by one built from `0x006fe980`. ~110 call sites — modes are switched all over the game; `Game_StateMachine` (`0x00550317`) is one of them |
 
 A mode reports its type from **vtable `+0x24`**, which is a one-instruction `MOV EAX,imm32; RET` in every case but one:
 
@@ -658,10 +658,10 @@ A mode reports its type from **vtable `+0x24`**, which is a one-instruction `MOV
 |---|---|---|---|
 | `0x006fea10` | 1 | `FUN_0046c6a0` | The default / idle mode |
 | `0x006fe9b0` | — | `FUN_0046ced0` | The **abstract base** — its getter is pure virtual |
-| `0x006fe9e0` | 3 | `FUN_0046c580` / `FUN_0046c5a0` | |
-| `0x006fea40` | 5 | `FUN_0046c6d0` | |
-| `0x006fea70` | 6 | `FUN_0046cbc0` | |
-| `0x006fe980` | 7 | — | What `FUN_0046c350` substitutes for a type-1 mode |
+| `0x006fe9e0` | 3 | `FUN_0046c580` / `FUN_0046c5a0` | The carry shell: an item bought (tool 4) or moved (tool `0x3b`) |
+| `0x006fea40` | 5 | `FUN_0046c6d0` | Place staff: a candidate off the hire screen |
+| `0x006fea70` | 6 | `FUN_0046cbc0` | An employed worker picked up |
+| `0x006fe980` | 7 | — | What `FUN_0046c350` substitutes for a type-1 mode, online only |
 | `0x006feaa0` | 8 | `FUN_0046cfc0` | The build tools |
 | `0x006fead0` | 9 | `FUN_0046cff0` | **CAMCORDER** |
 
@@ -1347,7 +1347,7 @@ put-down is a purchase that keeps the old thing's facing.**
   `FUN_0052f200( 0, 1 )`, which zeroes the rotation. **With the option off a right click leaves the move in
   the hand** - the shell's right-button slots are `RET 8` - and so does a held or dragged one with it on.
   Another tool is installed straight over it (`FUN_0046c350`), which leaves the rotation as it was; whether
-  a purchase then inherits it is open. Leaving the park drops the shell through `FUN_0046c350( 0 )`.
+  a purchase then inherits it is open. Leaving the park drops the shell too; see "Leaving a park with something in the hand".
 - **Open.** Whether the preview's path snap near `0x005237f7` can turn a carried move (the two refuters
   disagree); what a purchase's facing starts at; the add-on and `+0xc4` cases; whether a moved thing gets
   its old thing id back.
@@ -1440,7 +1440,7 @@ the default (`0x0048842b` installs the idle mode whatever the current one is); E
 unless a panel is on the gadget arm, which it takes off instead, and the menu does not open; the extended
 Delete key, which installs Clear Land (`FUN_0040c5e0`); picking another candidate, if the hire screen can
 be reopened while carrying (see Open), the old one returning first, after which every untaken candidate of a kind at its staff cap is purged (`0x00507f9b`..
-`0x00507fcd`); and leaving the park (`FUN_00515dd0` tears the mode down while the park still exists). A
+`0x00507fcd`); and leaving the park (see "Leaving a park with something in the hand"). A
 held or dragged right press, or any right press with the option off, leaves the candidate in the hand.
 
 **The picker never hands the mode a cell off the map.** `FUN_0045d560` clamps the pick to an edge cell,
@@ -1460,6 +1460,39 @@ the worker goes up first and the pool loses them second, and a refusal leaves th
 and in the pool. **Its refusals are its own**: a cell off the map, a kind the park packs no picture
 for, and any hire while the park has nobody, staff or guest, to copy a walk from. The cell rule is counted, not built (`STAFF_PLACEMENT_CELL_RULE`), and so are the carry cursor, the
 preview and its red square (`STAFF_CARRY_PREVIEW`); both are `docs/QUEUE.md` Q40.
+
+### Leaving a park with something in the hand
+
+Decoded for `docs/QUEUE.md` Q7; every claim was put to three refuters.
+
+**The hand never outlives the park.** Leaving is state 0xb of `Game_StateMachine`, reached from the park menu's Exit
+To Lobby (case 6, `FUN_005508b0( 2 )`) and from `Game_Shutdown` when the state is 0xa. The interaction mode goes
+before the park does, by one of two routes:
+
+- **A normal or Instant Action park is saved first** (`0x0054fef5`..`0x0054ff10`, skipped only when the game mode
+  `DAT_00fb3b7c` is 1, online). The save reaches the world writer `FUN_00516c80`, which builds the idle mode and
+  installs it through the setter (`0x00516d13`) before it writes anything. So the park on disk already has a moved
+  thing sold and a carried candidate back in the pool, which lives in the world object.
+- **Then `FUN_00409180` (`0x0054ff91`) runs `FUN_00515dd0` on the world before destroying it**, and that opens by
+  installing no mode (`FUN_0046c350( 0 )` at `0x00515def`), freeing the holder `DAT_007b05e8` and zeroing it.
+  Online, where nothing was saved, this is what drops the hand.
+
+The setter runs the outgoing mode's `+0x2c` OnUninstall and then its deleting destructor, so leaving is answered as
+every other way out is. The carry shell's uninstall is a bare `RET`: nothing is built and nothing refunded, and a
+moved thing stays sold. The place-staff mode returns an unplaced candidate (`FUN_005083b0( 1 )`). A picked-up worker's
+mode (`0x0046cdc0`) puts them down where they were picked up. The next park's entry (state 9, `FUN_0052f050`, which
+reaches `FUN_0052f200( 0, 1 )`) installs the idle mode again and zeroes the tool and the rotation. The item global
+`DAT_008186e0` is never reset, but every read of it is gated on tool 4 or `0x3b`.
+
+**In-park loads keep the hand**, a static finding not observed. Restart Park (0xa, 0xd, 0xe and back to 0xa), the
+load screen and the Alt+L quick load all load into the running world, none of them through state 0xb or a mode
+teardown. Escape, the menu's usual way in, drops the hand first, so the Alt+L quick load is the one route found that
+carries a hand into a reloaded park. Two other callers of `GameMenu_Open` (`0x004be537`, `0x004a2942`) were not
+traced.
+
+**OpenTPW** (`Level.ForgetPark`, part of `Level.Unload`): each hand lets go through its own `Drop`, logged as
+`Leaving the park:`. Nothing is saved, and Restart Park reloads through the same `Unload`, so the hand leaves empty
+either way. A picked-up worker belongs to the park's own `ParkPeople` and goes with it.
 
 ### The per-object management screen is nine screens
 
