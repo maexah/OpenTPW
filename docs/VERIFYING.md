@@ -696,6 +696,14 @@ The ones that have bitten more than once.
   after the change rewrites that file as the park loads - inside the run, which is the one place a
   checksum difference is supposed to mean something. **Name the file that changed before calling it
   either way**, and re-run: the second run of the same build must be unchanged, and it was.
+- **119** — **Whether something is still in memory is the collector's to say, and a root list read from the
+  code misses links through a base class.** Q10 asked which statics keep a left park's save alive. Of four
+  readings of the code, two said `ParkRides.Current` reached no save, since it has no `ParkWorld` field. The
+  other two found that it does: every `Entity` keeps the `Level` it was made in, so any never-cleared static
+  of an entity type holds a whole level. **Measure it first:** hold the object in a `WeakReference`, force a full
+  blocking collection, ask whether it is alive, and only then name the roots as the explanation. Print
+  "nothing named" when it is alive and no root you know of holds it. In a test, make the object in a
+  non-inlined helper, because a debug build keeps a method's locals alive until the method returns.
 
 ---
 

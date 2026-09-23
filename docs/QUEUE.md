@@ -362,9 +362,32 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   effect's `AvailableAt` to minus infinity (`SoundCategory.cs:169-175`). With two rides in one band, one
   stopping makes the other scream again at once instead of after its declared delay. Make the claim
   per ride, not per effect. Confirm: needs the second ride from Q1; capture the mix over one stop.
-- [ ] **Q10. The camcorder's blocked-cell cache is static and never forgotten.**
-  `ParkCamcorderCameraMode.cs:443-458` keys it on the `ParkWorld`; `Forget` (`:213-219`) clears stand,
-  yaw and pitch only. The previous park's whole save stays alive through the lobby. Clear it in
+- [x] **Q10. The camcorder's blocked-cell cache is static and never forgotten.** Done 2026-09-23,
+  `alexah/124-the-camcorder-forgets-the-park`. `Forget` now lets go of the edge test and the park it was built for.
+  The original keeps nothing of the kind: its edge test reads the live world every step, and that world is
+  freed on leaving (`docs/exe/park-engine.md`, "Walking on the ground").
+  - **The sweep** (8 agents: four investigations, each put to a refuter) found three roots holding a left park in the lobby:
+    `ParkState.Current`, `ParkRides.Current` (through `Entity.Level`) and the camcorder. So the fix frees the
+    park when the next one is built, not in the lobby, and the other two are filed as Q44.
+  - **Before the fix,** the left park lived until the first camcorder step in a later park with a save; a park
+    with no save never replaced it.
+  - **The instrument** is the console's new `parks`: every save seen, held weakly, reported alive or collected
+    after a forced full collection, with the named roots that hold it.
+  - **Confirmed in the game,** jungle, camcorder walk into the Belly Bounce, lobby, jungle again. With the second
+    park up and the camcorder unused:
+    - control (the fix taken out): `parks seen 2 alive 2 | #1 jungle alive, held by camcorder`;
+    - fix: `alive 1 | #1 jungle collected`.
+    
+    The camcorder's walk in the second park then collected #1 in the control, and the heap fell 2.4 MB within that
+    run; the same walk left the heap unchanged in both fix runs. Heap figures from different runs differ by more
+    than that, so they are not compared. All 24 predictions held across three runs, the last on the committed
+    build. The fix's walk in the second park still stopped at (50,24), photographed, and `save/` was unchanged in
+    every run.
+  - **The test** is `ParkCamcorderForgetTests`, a weak reference after a forced collection. M1-M4 (either field
+    kept, the call from `ForgetPark` removed, no fix) all go red.
+
+  The item as written: `ParkCamcorderCameraMode.cs:443-458` keys it on the `ParkWorld`; `Forget` (`:213-219`)
+  clears stand, yaw and pitch only. The previous park's whole save stays alive through the lobby. Clear it in
   `Forget`. No game run needed; a test that enters two parks and checks the reference is released.
 - [ ] **Q11. Small fixes.** `git am ~/Downloads/opentpw/small-fixes-v2.patch` (six commits: ride state
   3 named, COAST message, `ReadInt16` reads two bytes, `SoundFile` overrides instead of hides,
@@ -417,6 +440,21 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   whether a left button press on the lobby view (`0x10005`, also mapped to `+0x40`) reaches the camera,
   which depends on the root control's hit test. Confirm: hold Right, one island per release; Enter on an
   affordable island starts the fly-in; log lines and a screenshot.
+
+- [ ] **Q44. A left park stays in memory through the lobby.** Found by Q10's sweep (8 agents: four
+  investigations, each put to a refuter) and measured with the console's `parks`. In the lobby after the jungle,
+  `#1 jungle alive, held by state rides`:
+  - `ParkState.Current` holds the save directly. Its setter is private and nothing clears it; `ParkState.cs`
+    says so itself.
+  - `ParkRides.Current` is never cleared either: `ParkRides` has no `OnDelete`, unlike every other park
+    entity's `Current`. It reaches the save through `Entity.Level`, and that keeps the whole of the old
+    level alive: its HUD, its catalogue and its `ParkObjects`.
+
+  Both are replaced when the next park is built, so this costs memory through the lobby, not a wrong answer
+  in the next park. The original frees its world on leaving (`FUN_00409180`, `docs/exe/park-engine.md`,
+  "Walking on the ground"). `ParkStaffPool.Current` is never cleared either, but it reaches no save. Clear both
+  in `Level.ForgetPark`, or on the entity's delete, and check every reader of either for a null in the lobby.
+  Confirm: `parks` in the lobby after a park reads `#1 jungle collected`.
 
 ## B. Docs and comments
 

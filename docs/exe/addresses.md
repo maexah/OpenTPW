@@ -23,6 +23,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004030d0` | | OpenTPW/VM/RideScript.cs  |
 | `0x004033a0` | | OpenTPW/VM/RideScript.cs  |
 | `0x00407f95` | | OpenTPW/World/Level.cs  |
+| `0x00409180` | The park teardown on leaving (called at `0x0054ff91`): frees the world and zeroes `0x007cf83c` at `0x004091b8` | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x004092a0` | | OpenTPW/UI/UiWindow.cs OpenTPW/World/Level.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x004092a3` | | OpenTPW/Global/GameClock.cs  |
 | `0x004092ad` | | OpenTPW/Global/GameClock.cs  |

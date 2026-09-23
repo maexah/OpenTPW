@@ -210,12 +210,21 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// <see cref="Level.Unload"/>. The state here is static, because a camera mode is rebuilt from
 	/// scratch every time the camera changes, so it outlives the scene unless something says otherwise.
 	/// </summary>
+	/// <remarks>
+	/// That includes the edge test <see cref="EdgeTest"/> keeps, which holds the left park's save: the
+	/// next park replaces it only at its first step on the ground, and a park with no save never does.
+	/// The original's edge test reads its live world on every step, and that world is freed on leaving
+	/// (<c>FUN_00409180</c>; <c>docs/exe/park-engine.md</c>, "Walking on the ground").
+	/// </remarks>
 	public static void Forget()
 	{
 		Active = false;
 		Stand = Vector3.Zero;
 		Yaw = 0f;
 		Pitch = 0f;
+
+		_blockedFor = null;
+		_blocked = null;
 	}
 
 	/// <summary>
@@ -423,7 +432,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 
 		// No park means no cells to ask about - a scene that is not a park cannot reach this camera, but
 		// the sweep is written so that the answer without one is the plain step it always was.
-		var walked = Slide( Stand, dx, dy, EdgeTest() );
+		var walked = Slide( Stand, dx, dy, EdgeTest( Level.Current?.ParkState?.Park ) );
 
 		Stand = new Vector3( walked.X.Clamp( 1f, extent ), walked.Y.Clamp( 1f, extent ), 0f );
 	}
@@ -439,10 +448,13 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 			Step( forward, right, WalkSpeed / 60f );
 	}
 
-	/// <summary>The park's own edge test, built once per park rather than once per frame.</summary>
-	private static Func<int, int, StepDirection, bool>? EdgeTest()
+	/// <summary>
+	/// The park's own edge test, built once per park rather than once per frame, and let go of by
+	/// <see cref="Forget"/>. Null for no park, which leaves what is kept alone.
+	/// </summary>
+	internal static Func<int, int, StepDirection, bool>? EdgeTest( ParkWorld? park )
 	{
-		if ( Level.Current?.ParkState?.Park is not { } park )
+		if ( park == null )
 			return null;
 
 		if ( !ReferenceEquals( park, _blockedFor ) )
@@ -453,6 +465,9 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 
 		return _blocked;
 	}
+
+	/// <summary>The park <see cref="EdgeTest"/> is kept for, for the debug console's <c>parks</c>.</summary>
+	internal static ParkWorld? EdgeTestPark => _blockedFor;
 
 	private static ParkWorld? _blockedFor;
 	private static Func<int, int, StepDirection, bool>? _blocked;

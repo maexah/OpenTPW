@@ -48,11 +48,12 @@ from the repository, which cannot lag: `git log --oneline -1`.
   The lobby's keys act on the press, not the release, and Enter does not enter a park (Q42).
 - The `meter.wct` mapping behind the happiness gauge is wrong - the last fault Alexah found by playing.
 - Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
+- A left park stays in memory through the lobby, held by `ParkState.Current` and `ParkRides.Current` (Q44).
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q9, and Q35, are ticked.** Next is **Q10**: the camcorder's blocked-cell
-cache is static and never forgotten. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, and Q9 Q43.
+`docs/QUEUE.md`, from the top. **Q1 to Q10, and Q35, are ticked.** Next is **Q11**: the small fixes from
+`~/Downloads/opentpw/`. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, and Q10 Q44.
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -71,12 +72,20 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **961**, 0 fail, 0 skip with the game | 2026-09-23, after Q9 |
-| Tests without the game | **435** ran, **526** skipped, of 961 | 2026-09-23, after Q9 |
-| Build warnings | 125 | 2026-09-23, after Q9 |
+| Tests | **962**, 0 fail, 0 skip with the game | 2026-09-23, after Q10 |
+| Tests without the game | **436** ran, **526** skipped, of 962 | 2026-09-23, after Q10 |
+| Build warnings | 125 | 2026-09-23, after Q10 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-09-23 - the camcorder forgets the park.** Branch `alexah/124-the-camcorder-forgets-the-park`, `docs/QUEUE.md`
+Q10. `Forget` lets go of the edge test the camcorder built for a park, which held that park's save until the first
+camcorder step in a later park with a save. The original keeps none: its edge test reads the live world, freed on
+leaving (`docs/exe/park-engine.md`). Measured by the console's new `parks`, a weak reference per save and a forced
+collection, every reply predicted: with the second jungle up and the camcorder unused, the control kept `#1 jungle
+alive, held by camcorder`; the fix read `#1 jungle collected`. Collecting it was worth 2.4 MB of heap, measured
+within the control run. Photographed. The sweep found two more roots holding a left park through the lobby, filed as Q44.
 
 **2026-09-23 - each ride screams on its own clock.** Branch `alexah/123-each-ride-screams-on-its-own-clock`,
 `docs/QUEUE.md` Q9. The decode is in `docs/exe/audio.md`, every claim put to two refuters. The original keeps
@@ -95,25 +104,15 @@ to Wonder Land and the jungle loaded anyway, and a rebuilt lobby flew on and loa
 `staying on island 0`, the flight ran on into Lost Kingdom's gate, photographed, and a rebuilt lobby read
 `leave=No`. The decode found the original's Escape cancels the fly-in (Q41) and its keys act on release (Q42).
 
-**2026-09-23 - leaving a park empties the hand.** Branch `alexah/121-leaving-a-park-empties-the-hand`, `docs/QUEUE.md`
-Q7. Decoded first, every claim put to three refuters: the original's park end takes its interaction mode down while
-the park stands - in the save it makes on leaving, or online in its teardown - so a moved thing stays sold and a
-candidate goes back. `Level.ForgetPark`, part of `Unload`, lets both hands go through their own `Drop`. Confirmed in the game by the
-player's routes, every number predicted: on `main` a moved Belly Bounce outlived Exit To Lobby and the jungle's next
-first click built a second one for 500, and a candidate outlived it into Wonder Land and was hired back in the jungle;
-with the fix the hand came back empty and the click only picked up the path tool, 87987 and candidates 22, photographed.
-
-**Earlier items, kept now only in the git log.** `alexah/120` kept a refused staff drop's candidate on the
-cursor (Q6, filing Q40); `alexah/119` kept a moved thing in the hand until a cell
-takes it (Q5, filing Q39); `alexah/118` made a sold thing take its script down and leave
-bare ground (Q4, filing Q36-Q38); `alexah/115` made a placed ride lay its
-queue's first cell and hand the player the queue tool there, fixing the `Info.Shape` alphabet on the way
-(Q3), and `116` made its squares wave; `alexah/117` made the path tool picked up from the park, with
-Backspace taking a run back up (Q35); `alexah/114` let a player build a queue that
-joins the paths around it (the first half of Q3); `alexah/110` made a thing the save
-placed clickable anywhere on its footprint (`ParkPicking.ThingOn`, `VERIFYING.md` 113-114); `109` made a
-thing bought this session join the park (Q1, Q1b - the rider is still not photographed); `112` decoded
-what authors an entrance's queue link; `108` photographed two owed Confirm clauses; `107` flew the camera
-into the island; `106` refuted all three of its item's claims; `105` stopped the camcorder at a ride.
+**Earlier items, kept now only in the git log.** `alexah/121` emptied the hand as a park is left (Q7);
+`120` kept a refused staff drop's candidate on the cursor (Q6, filing Q40); `119` kept a moved thing in the
+hand until a cell takes it (Q5, filing Q39); `118` made a sold thing take its script down and leave bare
+ground (Q4, filing Q36-Q38); `115` made a placed ride lay its queue's first cell and hand the player the queue
+tool there, fixing the `Info.Shape` alphabet (Q3), and `116` made its squares wave; `117` picked up the path
+tool from the park, with Backspace (Q35); `114` let a player build a queue that joins the paths around it;
+`110` made a thing the save placed clickable anywhere on its footprint; `109` made a thing bought this session
+join the park (Q1, Q1b - the rider is still not photographed); `112` decoded what authors an entrance's queue
+link; `108` photographed two owed Confirm clauses; `107` flew the camera into the island; `106` refuted all
+three of its item's claims; `105` stopped the camcorder at a ride.
 
 Everything older is the git log.

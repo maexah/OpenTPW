@@ -15,7 +15,7 @@ namespace OpenTPW;
 /// and DebugClosestSolid; Lightning's DebugAxisDistance and DebugOpacity; the advisor's Say and State;
 /// Game's RequestLobbyReload; Water's Sea; ParkGuestSprites' Current, DebugFacing, Census and WriteGroundDash
 /// (with the white square Load appends to the atlas for it, and the second quad a person Build reserves);
-/// ParkFrontEnd's DebugOpenMenu; and ParkPeople's Current and Census.
+/// ParkFrontEnd's DebugOpenMenu; ParkCamcorderCameraMode's EdgeTestPark; and ParkPeople's Current and Census.
 ///
 /// Engine and content: neither. It drives and reads both, and nothing else depends on it.
 ///
@@ -54,6 +54,8 @@ public static class DebugConsole
 		if ( !Time.Paused )
 			Record( Time.Delta );
 
+		Notice( Level.Current );
+
 		if ( !_started )
 			Start();
 
@@ -66,6 +68,74 @@ public static class DebugConsole
 		_frames[_frameIndex] = delta * 1000.0;
 		_frameIndex = (_frameIndex + 1) % Window;
 		_frameCount = Math.Min( _frameCount + 1, Window );
+	}
+
+	/// <summary>
+	/// Every park save seen up, in the order they came, held WEAKLY so that watching one cannot be what
+	/// keeps it alive - see <see cref="Parks"/>.
+	/// </summary>
+	private static readonly List<(int Number, string Theme, WeakReference<ParkWorld> Save)> _parks = [];
+
+	private static void Notice( Level? level )
+	{
+		if ( level?.Park is not { } save )
+			return;
+
+		foreach ( var seen in _parks )
+		{
+			if ( seen.Save.TryGetTarget( out var known ) && ReferenceEquals( known, save ) )
+				return;
+		}
+
+		_parks.Add( (_parks.Count + 1, level.ThemeName, new WeakReference<ParkWorld>( save )) );
+	}
+
+	/// <summary>
+	/// Each park save seen, alive or collected after a full blocking collection, and for one still alive
+	/// the static roots known to reach it: the level on show, <see cref="ParkState.Current"/>,
+	/// <see cref="ParkRides.Current"/> through the level its entity was made in, and the camcorder's edge
+	/// test. The collector's answer is the measurement; the named roots only say why, and one alive with
+	/// none of them named is held by something this does not know about.
+	/// </summary>
+	private static string Parks()
+	{
+		GC.Collect();
+		GC.WaitForPendingFinalizers();
+		GC.Collect();
+
+		var heap = GC.GetTotalMemory( forceFullCollection: false ) / (1024.0 * 1024.0);
+		var alive = 0;
+		var each = new List<string>();
+
+		foreach ( var (number, theme, weak) in _parks )
+		{
+			if ( !weak.TryGetTarget( out var save ) )
+			{
+				each.Add( $"#{number} {theme} collected" );
+				continue;
+			}
+
+			++alive;
+
+			var by = new List<string>();
+
+			if ( ReferenceEquals( Level.Current?.Park, save ) )
+				by.Add( "level" );
+
+			if ( ReferenceEquals( ParkState.Current?.Park, save ) )
+				by.Add( "state" );
+
+			if ( ReferenceEquals( ParkRides.Current?.Level?.Park, save ) )
+				by.Add( "rides" );
+
+			if ( ReferenceEquals( ParkCamcorderCameraMode.EdgeTestPark, save ) )
+				by.Add( "camcorder" );
+
+			each.Add( $"#{number} {theme} alive, held by {(by.Count > 0 ? string.Join( " ", by ) : "nothing named")}" );
+		}
+
+		return $"parks seen {_parks.Count} alive {alive} heap={heap:F1}MB"
+			+ string.Concat( each.Select( line => $" | {line}" ) );
 	}
 
 	private static void Start()
@@ -262,6 +332,13 @@ public static class DebugConsole
 					}
 				}
 
+				break;
+
+			// Every park save the game has had up, and whether it is still in memory after a full
+			// collection - the question a left park's save staying alive is, asked of the collector
+			// rather than inferred from which statics look as if they hold it. See Parks.
+			case "parks":
+				Reply( Parks() );
 				break;
 
 			// The sea's texture, and the sampler it is ACTUALLY drawn with. Water asks for

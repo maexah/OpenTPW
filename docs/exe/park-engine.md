@@ -640,6 +640,28 @@ indexes the per-cell thing list at `+0x2a4` by the packed cell id `y * 0x80 + 1 
 thing whose kind byte at `+2` is **3** and whose `FUN_004dd4e0()+0x118` is nought; on finding one it runs
 `FUN_00412e90` and `FUN_004e15b0`. What that does to the viewer is not traced.
 
+**Nothing of the edge test is kept, and the world it reads dies with the park.** Read for `docs/QUEUE.md` Q10 and
+put to a refuter, then re-read by hand. `FUN_004d8750` writes no global, and neither do the functions it calls.
+On every call it reaches the world afresh, by three routes:
+- `[[0x007cf6ec]]`, in its own body (`0x004d87d1`, `0x004d888e`, `0x004d89f7`). The one writer of `0x007cf6ec`,
+  `0x00515350`, runs once from the startup initialiser table and points it at `0x007cf83c`, the world pointer.
+- `[0x008023a0]` = world + `0x2d8`, in `FUN_004d0af0` (`0x004d0af5`, called at `0x004d89db`). It adds
+  `0x10ffd8`, which reaches the `0x28`-byte records at world + `0x1102b0`.
+- `[0x007cf83c]` directly, in `FUN_005363f0` (`0x0053640c`, called at `0x004d89c5`).
+
+Its only other data read is the thing array at `0x007cfb90`.
+
+The world is made at park load: `FUN_00407d80` in state 9 allocates `0x1da748` bytes and stores them at
+`0x00407dc8`. `FUN_00515660` (`0x00407de0`) then copies the world into `0x0080239c`, and world + `0x2d8` into
+`0x008023a0`. The world is destroyed on leaving: `FUN_00409180`, called at `0x0054ff91`, runs the teardown, frees
+it (`0x004091b0`) and zeroes `0x007cf83c` (`0x004091b8`). So the world a left park ran on does not outlive the lobby.
+The two copies each have that one writer and are never zeroed. They dangle through the lobby, keeping nothing
+alive, and are rewritten at the next load before anything can step.
+
+**OpenTPW** builds the edge test once per park (`ParkCamcorderCameraMode.EdgeTest`), which the original does not
+do. `Forget`, part of `Level.Unload`, lets it go. `ParkState.Current` and `ParkRides.Current` still hold a left
+park until the next one is built (Q44).
+
 ---
 
 ## The interaction modes
