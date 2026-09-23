@@ -717,10 +717,11 @@ real work is a switch on that global**, not in the mode.
 
     0    idle/clear        1    build path        3    build queue
     4    PLACE a purchased item                   0xe/0x13  track kinds
-    0x14 recompute the selected object's queue    0x15/0x16 raise/lower land
+    0x14 recompute the selected object's queue    0x15/0x16 coaster bar: cb_track / cb_move
     0x1a link track        0x33 DEMOLISH/SELL     0x36 staff patrol rectangle
     0x39 Buy Land          0x3a Clear Land        0x3b MOVE an existing object
-    0xb, 0x10, 0x19, 0x34, 0x35, 0x38  also live; 0x32 is dispatched but NOT TRACED to a setter
+    0x32 clear one cell, armed for one apply by Backspace          0x34 delete a line (Backspace's undo)
+    0xb, 0x10, 0x19, 0x35, 0x38  also live
 
 **`FUN_0052f200` is not the only setter** - `FUN_0052f580` has 24 further call sites. And reading "the
 literal PUSH before the call" is unsound as a blanket method: several sites pass a register.
@@ -1704,7 +1705,9 @@ anchor, and the next click **snaps the target to the dominant axis** (the larger
 wins and the other is forced back to the anchor's value) and walks the line. **The anchor then
 advances to that axis-snapped TARGET — not to the cell the run actually reached** — and that is
 precisely what lets a player lay an L-shaped run click by click. It advances only when the closing
-retile did **not** report failure; a failed run leaves the anchor where it was. The action recorder corroborates it independently: one
+`0x81` pass answers non-zero; an answer of 0 means the run's last cell was already path or queue, and
+**that puts the tool away** (`DAT_00820abc`, `0x005275a9`..`0x005275f2`). A red run is refused before
+any pass runs; see "The path tool" below. The action recorder corroborates it independently: one
 record per click carrying a single cell (`AR - %d (%d, %d)`), where a real drag would have to record
 every intermediate cell or a start/end pair.
 
@@ -1726,9 +1729,100 @@ cannot-afford, `8` is blocked. Off-map is `FUN_004d8300`, `0 <= x,y < 0x80`.
 the commit handler (placing or moving a queued thing), the demolish path, or mode `0x14` ("edit this
 ride's queue"), which the ride window's queue button and a click on a queue cell both install. See "The
 commit hands the player the queue tool" and "Editing a queue" above. What the UI also installs:
-clicking a path cell or bare ground gives mode 1, and the **buy window** gives mode 4 for a real item
+clicking a path cell or bare ground gives mode 1 — the idle world click `FUN_004879d0` constructs
+`FUN_0046c580(1)` on hover categories 1 and 2, the only construction with verb 1 (`0x00487cd6`) — and
+the **buy window** gives mode 4 for a real item
 and **`0x39` / `0x3a` for the pseudo-item ids −1 and −2** — which are exactly the Buy Land and Clear
 Land rows.
+
+### The path tool
+
+Decoded 2026-09-22 (Q35) and confirmed in OpenTPW's running game through the player's route. Built in
+`ParkPathBuilding.PathStrip` / `RunPath` / `UndoPathRun` and `Level.ClickWorldAt`.
+
+**There is no button and no key for it.** With nothing armed and nothing in hand, a left click on bare
+ground (hover category 2) or path (category 1) installs the build shell with verb 1: the press
+constructs `FUN_0046c580(1)`, whose `OnInstall` `FUN_0046d5a0` calls `FUN_0052f200(1,1)` (mode 1, no
+anchor, cursor 3), and the release applies at the same cell, which anchors. **One click arms and
+anchors.** Idle, the pointer already wears `c_path` over those cells, with UIHELPTEXT 441 "Left-click to
+build path" over ground and 442 "Left-click to extend this path" over path. What comes before the
+categories: staff under the pointer (their window), an active locator, **Shift** (the guest pick), the
+gate and ticket booth, and track cells — type `0xb` and `0x10` have categories of their own, and a type
+`0xc` cell whose parent is `0x19` has none at all (`0x004873b3`..`0x004873c5`), so the 429 such cells in
+Lost Kingdom arm nothing. A guest on the cell does not stop it.
+
+**The preview** (`FUN_005234d0` → `FUN_00536100(0x101, …)`, every UI tick): unanchored, one square
+under the pointer, which is both the first and the last cell; anchored, the line from the anchor to the
+pointer snapped to the longer axis (a tie runs along X). Off-map cells get no square. The per-cell
+verdict `FUN_00535670(1,0)`, in its own order (`0x005357c7`..`0x00535d63`):
+
+| # | Test | Answer |
+|---|---|---|
+| 1 | `mFlags & 0x40` — land outside the park | red, **no latch** |
+| 2 | mType 4, 9 or 10 | red and latch, unless the item's `+0x54` is below 2 (rides and shops are 5) |
+| 3 | an earlier latch | red |
+| 4 | track type `0x19`, after the parent redirect for 12 and 17 (`FUN_004d0af0`) | red, latch |
+| 5 | cost: mType 0 or 3 adds `Costs.PathCell` to the run; cash below the total | red, latch, `c_cash` |
+| 6 | mType 1 as the last cell | `m_end` (11) |
+| 7 | mType `0x15` | red, latch |
+| 8 | track corner (`FUN_0053ae00`: two cardinal links at right angles) or junction (`FUN_0053ae90`: three or more) | red, latch |
+| 9 | mType 1 or 0 | blue |
+| 10 | mType 3 with exactly one of its eight bits set, toward another queue cell | `m_link` (8); any other queue cell red and latch — **the owner is never asked** |
+| 11 | any other mType | red, **no latch** |
+
+NOMODIFY is never read for a path. The cursor (`FUN_0052f950`) is `c_link` if any square was `m_link`,
+else `c_end` if any was `m_end`, else `c_path`; a red square overrides with `c_noplace`, a cash refusal
+with `c_cash`. Two details are not reproduced: for the one preview after the pointer leaves an anchor it
+was resting on, the anchor still shows `m_end` (`DAT_00818688`), and a red strip adds to the run's total
+a second time through a verdict call whose answer is thrown away.
+
+**A click** (`0x005271b7`..`0x00527655`, on release at the preview's target): any red square lays
+nothing, plays `0xaf` and puts the tool away — the arming click included, so a click outside the park's
+land arms and refuses at once. Otherwise sound `0x65`, then: unanchored, set the anchor, empty the
+pending list, push the cell, advisor `0xb8`; anchored, count the click (advisor `0xd6` at the third,
+`0x00527316`..`0x0052733d`), snap, and if the target is the anchor with a run already laid, put the tool
+away; else push the target and run the passes — `0x87`, the stamp, `0x80`, `0x82`, `0x85`, `0x86`,
+`0x83`, `0x81`, each over the whole line. A click on the anchor with no run yet lays that one cell,
+whose one-cell walk steps +1 in y, so it flows `0x01`. What each pass does to a path:
+
+| Op | On a path run |
+|---|---|
+| stamp `FUN_005346d0` | bare and queue cells cost `Costs.PathCell` (20); **path over path is free and bumps `+0x20`**; path over queue invalidates the owner's queue |
+| `0x80` | the link pass; a queue neighbour already joined back is retiled with sound `0x8b` |
+| `0x82` | the opposite of the step, into cells whose direction is 0: −x `0x04`, +x `0x40`, −y `0x10`, +y `0x01` |
+| `0x85`, `0x86` | track types 11, 13, 16, 18 only — none in Lost Kingdom |
+| `0x83` | owner := the low word of `DAT_00818698`, the selected thing's cell; nought for a plain grass click is inferred |
+| `0x81` | retile |
+
+**Leaving the tool**, every exit through `FUN_0052f200(0,…)`: a run that ends on path or queue; a
+click on the anchor; a red click; a quick right click with RMB cancel on; **Escape** — game-table row 0,
+handler `0x0040c180`, which closes a locator first and otherwise, with a type-3 tool armed, calls
+`FUN_0052f200(0,1)` (`0x0040c368`) and returns 1, so the menu does not open; and **Delete** — row 3,
+`FUN_0040c5e0`, which swaps whatever is armed for Clear Land (`0x3a`).
+
+**Backspace** is game-table row 5 (key `0x08`), and the coaster table's row 1 `backtrack`, both handler
+`0x0040bda0`, fired on key-up. With a type-3 tool armed it calls `FUN_0052fe50(0,1)`: pop the top of
+the pending list `0x0081b740` (count `DAT_00820a8c`) as T, take the new top as P, arm `0x34` and apply
+at T then P — op `0x32` then `0x86` over the line T..P — then anchor at P and re-arm with
+`FUN_0052f580(1,1)`. The tool stays armed; no sound; one run per press, back to the first click, whose
+cell is never popped. Idle with an empty hand and the pointer on a path (`0x0040bdde`..`0x0040be9c`):
+sound `0x5f`, `FUN_0052f200(0x32,1)`, one apply at the cell with step (0,+1), `FUN_0052f200(0,1)`. The
+game's tutorial (sample 464) mentions only the armed branch.
+
+**The clear's path arm, `FUN_005367a0`** (`0x005367b1`..`0x0053682c`): a NOMODIFY cell with links
+returns untouched; one without gives up the flag; then the counter at `+0x20` is set to −1 for a step of
+(0,0) or decremented for any other, and **the cell is removed only once it is below nought**. Nothing is
+refunded. So Backspace takes up exactly what a run laid fresh and leaves what it crossed.
+
+**`+0x20` is `mOverlapCounter`.** The serialiser `FUN_004d0b30` pairs the string at `0x0075a054` with
+`LEA ECX,[ESI+0x20]`; in the save it is record offset `+8` (see the FileFormats `saves.md`). The shipped
+Lost Kingdom has 14 non-zero path cells, all corners and junctions — eleven at 1, (47,21), (48,21) and
+(48,28) at 2 — and the queue node (52,22) at 1.
+
+**`mFlags & 0x40` marks land outside the park** — the meaning is inferred from a census, the writer is
+not found (Buy Land, `0x39`, is the likely clearer). 13,878 of Lost Kingdom's 16,384 cells carry it, all
+of mType 7, 0, 2 or 30; every path, queue, footprint and entrance is among the 2,506 without it. **Every track record's `mNeighbours` is 0**, so the corner
+test never fires on the shipped park.
 
 ### What the adversarial pass overturned, and it is not cosmetic
 
@@ -1773,8 +1867,9 @@ the **0x28** record. Both cannot be right about the same byte, and no third witn
 **Do not cite either as settled.** Nothing in OpenTPW depends on it — cells are modelled as records
 rather than as raw memory — which is exactly why it is safe to leave open rather than guessed.
 
-**`FUN_0052fe50` is called only by the demolisher `FUN_00527ee0`**, and each call clears a whole
-straight run: it pops the top element, anchors there in the delete-line mode `0x34`, and runs op `0x32`
+**`FUN_0052fe50` is called by the demolisher `FUN_00527ee0` and by the Backspace handler
+`0x0040bda0`** — which is undefined bytes in Ghidra, so a cross-reference search misses it. Each call
+clears a whole straight run: it pops the top element, anchors there in the delete-line mode `0x34`, and runs op `0x32`
 along the line to the next element. The bottom element is cleared as the far end of the last run (unless
 it is a path), and the count is left at **1** when the list empties. There is also an **off-by-one in the
 shipped guard**: the push rejects only when the count exceeds `0x400`, so element `0x400` is writable and
@@ -1792,7 +1887,8 @@ lands exactly on `DAT_0081d740`, the map-width global. Reproduce the behaviour, 
   — see "Where a built thing's entry and exit cells come from" above. No debug string names them and
   none is needed: the constructor tests the numbers outright.
 - mType 2 and mType 5 are unidentified; the decode refused to guess water or rock.
-- Whether tool `0x32` is ever armed as a live tool — nothing pushes it to either setter.
+- ~~Whether tool `0x32` is ever armed as a live tool.~~ **CLOSED 2026-09-22:** Backspace's idle branch
+  arms it for one apply (`FUN_0052f200(0x32,1)` at `0x0040be7d`). See "The path tool".
 
 ## The Ghidra project was changed to get here
 

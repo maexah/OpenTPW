@@ -203,6 +203,13 @@ internal sealed class ParkFrontEnd : Panel
 		if ( front is { Modal: true } )
 			return;
 
+		// Escape puts an armed build tool away and is spent doing it (0x0040c368); the next opens the menu.
+		if ( ParkBuildMode.Current != ParkBuildMode.None )
+		{
+			ParkBuildMode.Disarm();
+			return;
+		}
+
 		// Escape leaves first person before it reaches the menu, which is what the original does and
 		// what this file used to say it could not: the park's key handler answers a key-up whose key is
 		// VK_ESCAPE *or* whose action is camcorder (16) the same way, by putting the interface back on

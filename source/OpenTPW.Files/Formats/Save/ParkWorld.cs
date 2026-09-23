@@ -721,7 +721,7 @@ public sealed class ParkWorld
 		int TrackType = 0, ushort TrackFlags = 0, ushort TrackParentId = 0,
 		int Litter = 0, ushort LitterCollector = 0, ushort PylonIndex = 0,
 		byte StatusFlags = 0, int TimeMarkedForLitterCollection = 0, ushort Occupant = 0,
-		ushort NearbyEffects = 0, ushort ParentId = 0 )
+		ushort NearbyEffects = 0, ushort ParentId = 0, short OverlapCounter = 0, byte TrackNeighbours = 0 )
 	{
 		/// <summary>
 		/// Whether anything has been dropped here. <b>Nought on every cell of the park the game ships</b>,
@@ -1063,6 +1063,15 @@ public sealed class ParkWorld
 	private const int CellNeighbours = 7;
 
 	/// <summary>
+	/// <c>mOverlapCounter</c>, a signed short - the runtime cell's <c>+0x20</c>, paired with that name by
+	/// the serialiser <c>FUN_004d0b30</c>. The stamp adds one each time a cell is stamped with the type it
+	/// already is, and clearing a cell takes one off and removes it only once it goes below nought - so a
+	/// path laid over twice needs two lifts. Fourteen of Lost Kingdom's path cells carry it, every one at a
+	/// corner or a junction.
+	/// </summary>
+	private const int CellOverlapCounter = 8;
+
+	/// <summary>
 	/// <c>mParentID</c>. Only read from the track record, where it is the cell number of the record this
 	/// one hangs off - counted from one, like every other cell number in the file.
 	/// </summary>
@@ -1314,6 +1323,8 @@ public sealed class ParkWorld
 			TrackType: tracked ? ReadInt32At( track + CellType ) : 0,
 			TrackFlags: tracked ? (ushort)ReadUInt16At( track + CellFlags ) : (ushort)0,
 			TrackParentId: tracked ? (ushort)ReadUInt16At( track + CellParent ) : (ushort)0,
+			TrackNeighbours: tracked ? _data[track + CellNeighbours] : (byte)0,
+			OverlapCounter: (short)ReadUInt16At( at + CellOverlapCounter ),
 
 			// The MAP record carries mParentID as well, at the same offset within its own record, and
 			// for a QUEUE cell it names the object that queue serves - the original stamps it there as

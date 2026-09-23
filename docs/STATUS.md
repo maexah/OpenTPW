@@ -19,7 +19,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
   footprint** opens its window - the save's own and ones bought this session alike.
 - Information and money: Info and Money open all-staff, all-items, all-visitors and entry-price screens.
 - Building by POINTING - click to anchor, click to commit, no drag, because both of the original's drag
-  slots are bare `RET` stubs. Laying and lifting PATH (20 a cell) and QUEUE (75, which refunds).
+  slots are bare `RET` stubs. A click on grass or path picks up the PATH tool (20 a cell) with its own
+  squares and cursors; Backspace takes the last run up, Escape puts the tool away. QUEUE is 75, refunded.
 - **Placing a ride lays its queue's first cell before the entrance and hands the player the queue tool
   there**, with the original's coloured squares showing where a click will lay it; one click onto a path
   lays and joins the queue. Guests queue in it and ride.
@@ -36,13 +37,11 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 - No finances, litter, saving a park back, video, networking. Research is inert and has nothing behind it.
 - Eight of the nine per-object windows are unbuilt. Patrol areas are dead, deferred by Alexah.
-- **The PATH tool is still console-only.** The queue tool is reachable now - the ride window's queue
-  button arms it, and clicking a queue cell re-arms it - but nothing in the UI arms path laying.
 - The `meter.wct` mapping behind the happiness gauge is wrong - the last fault Alexah found by playing.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1, Q1b, Q2 and Q3 are ticked.** Next is **Q4**: `Sell` leaves a sold
+`docs/QUEUE.md`, from the top. **Q1, Q1b, Q2, Q3 and Q35 are ticked.** Next is **Q4**: `Sell` leaves a sold
 ride's script bound and scheduled, and leaves the queue cells keyed to a thing that is gone.
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
@@ -62,12 +61,20 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **915**, 0 fail, 0 skip with the game | 2026-09-22, after the queue squares' wave |
-| Tests without the game | **428** ran, **487** skipped, of 915 | 2026-09-22, in a clean worktree of the wave commit |
+| Tests | **930**, 0 fail, 0 skip with the game | 2026-09-22, after the path tool |
+| Tests without the game | **431** ran, **499** skipped, of 930 | 2026-09-22, after the path tool |
 | Build warnings | 125 | 2026-09-22 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-09-22 - the path tool is picked up from the park, and Backspace takes a run back up.** Branch
+`alexah/117-the-path-tool-from-the-interface`, `docs/QUEUE.md` Q35. There is no button: a click on grass
+or path arms the tool and anchors it in one go, and the pointer says so beforehand (UIHELPTEXT 441/442).
+The preview follows the original's verdict, which first refuses land flagged `0x40`, outside the park.
+`mOverlapCounter` counts a cell built over, so Backspace takes up what a run laid and keeps the corner it
+crossed; Escape puts the tool away without opening the menu; idle Backspace deletes the path under the
+pointer, as the executable does. Confirmed through the player's route, with the real keys.
 
 **2026-09-22 - a placed ride lays its queue's first cell, and the player lays the rest from it.** Branch
 `alexah/115-a-placed-ride-lays-its-queue-node`, `docs/QUEUE.md` Q3, which Alexah reopened twice: *"the node
@@ -85,9 +92,6 @@ the original's wave (`alexah/116`), decoded once Alexah confirmed they were see-
 `alexah/114-a-laid-queue-joins-up`, the first half of Q3: the placer's link is a pair, a laid queue cell
 is retiled, `RotateBit` turned the wrong way, the ride window's queue button arms the tool, and an exit
 retiles the path it joins. Six defects; `docs/QUEUE.md` Q3 and the git log carry them.
-
-**2026-09-22 - what authors an entrance's queue link is decoded.** Branch `alexah/112`, no code
-changed; the decode the entry above builds on, written up in `docs/exe/park-engine.md`.
 
 **2026-09-22 - a thing the save placed can be clicked anywhere on it.** Branch
 `alexah/110-click-a-thing-the-save-placed`. The item blamed unset occupancy; the truth is that a placed
@@ -107,7 +111,8 @@ entering the picking code. Closing a twice-surviving mutation then exposed a sec
 detail is in `docs/QUEUE.md` Q1 and the git log. **The rider is still not photographed** - z 10.3
 against a 5.0 eye with no pitch argument (`VERIFYING.md` 111-112).
 
-**2026-09-22 - four earlier items, kept now only in the git log.** `alexah/108` photographed two owed
+**2026-09-22 - five earlier items, kept now only in the git log.** `alexah/112` decoded what authors an
+entrance's queue link; `alexah/108` photographed two owed
 Confirm clauses; `107` flew the camera into the island; `106` refuted all three of its item's claims;
 `105` stopped the camcorder at a ride.
 

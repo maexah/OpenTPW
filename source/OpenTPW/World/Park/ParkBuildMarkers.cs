@@ -1,7 +1,7 @@
 namespace OpenTPW;
 
 /// <summary>
-/// The coloured squares the queue tool lays over the ground from its anchor to the pointer - the
+/// The coloured squares the path and queue tools lay over the ground from the anchor to the pointer - the
 /// original's <c>BlueprintMesh</c>, one of the three "dynamic faces" meshes <c>FUN_0053bfe0</c> builds.
 ///
 /// <para>
@@ -9,8 +9,8 @@ namespace OpenTPW;
 /// The strip always starts at the anchor, so the moment a queued ride goes down the cell before its
 /// entrance carries a square, and moving the pointer draws the run a click would lay: blue where it
 /// may go, red where it may not, <c>m_link</c> where it would join a path and <c>m_end</c> where it
-/// would close on the ride's own queue. See <see cref="ParkPathBuilding.QueueStrip"/>, which the
-/// click itself obeys.
+/// would close on the ride's own queue. See <see cref="ParkPathBuilding.QueueStrip"/> and
+/// <see cref="ParkPathBuilding.PathStrip"/>, which the click itself obeys.
 /// </para>
 /// <para>
 /// <b>One square a cell, 10 by 10, at the ground's own corner heights plus 1.5, see-through, and
@@ -108,7 +108,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 			_phase = (_phase + (WavePerSecond * Time.Delta)) % (MathF.PI * 2f);
 
 		var strip = ParkPicking.TryCell( out var x, out var y )
-			? ParkPathBuilding.QueueStrip( x, y )
+			? ParkPathBuilding.Strip( x, y )
 			: [];
 
 		var built = string.Join( ";", strip.Select( square => $"{square.X},{square.Y},{square.Marker}" ) );

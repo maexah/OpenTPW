@@ -113,6 +113,11 @@ public static class ParkPathNeighbours
 		var nb = ParkState.CellFor( park, nx, ny );
 		var back = CellEdge.Opposite( bit );
 
+		// A queue already joined this way is retiled - which the caller's RetileAround does - with a
+		// sound (0x8b), and is not linked again.
+		if ( nb.Type == QueueType && (nb.Neighbours & back) != 0 )
+			Unimplemented.Report( "PATH_LINK_SOUND_0x8B" );
+
 		var links = nb.Type switch
 		{
 			PathType => true,

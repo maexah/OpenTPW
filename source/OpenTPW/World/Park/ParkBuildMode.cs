@@ -111,11 +111,58 @@ public static class ParkBuildMode
 			: (Anchor.X, toY);
 	}
 
+	/// <summary>
+	/// The ends of the runs laid since the tool anchored, oldest first - the original's pending list at
+	/// <c>0x0081b740</c>, count <c>DAT_00820a8c</c>. The first click pushes its cell and every run pushes
+	/// its snapped target before it is laid, so while the tool is live the top is the anchor, and Backspace
+	/// undoes one run by popping it (<c>FUN_0052fe50</c>).
+	/// </summary>
+	/// <remarks>
+	/// The original's push refuses only past <c>0x400</c> entries, so one entry more lands on the next
+	/// global; this refuses at 1,024 exactly.
+	/// </remarks>
+	public static IReadOnlyList<(int X, int Y)> Pending => _pending;
+
+	private static readonly List<(int X, int Y)> _pending = [];
+
+	private const int PendingLimit = 0x400;
+
+	/// <summary>How many runs have been laid since the tool anchored - the advisor speaks at the third (<c>DAT_008186dc</c>).</summary>
+	public static int Clicks { get; set; }
+
+	public static void Push( int x, int y )
+	{
+		if ( _pending.Count < PendingLimit )
+			_pending.Add( (x, y) );
+	}
+
+	public static void ClearPending() => _pending.Clear();
+
+	/// <summary>
+	/// Takes the last run off the list: its far end, and the end it started from, which becomes the anchor
+	/// again. False when only the tool's first cell is left - that one is never popped.
+	/// </summary>
+	public static bool TryPopRun( out (int X, int Y) end, out (int X, int Y) start )
+	{
+		end = start = (-1, -1);
+
+		if ( _pending.Count < 2 )
+			return false;
+
+		end = _pending[^1];
+		_pending.RemoveAt( _pending.Count - 1 );
+		start = _pending[^1];
+
+		return true;
+	}
+
 	/// <summary>Forgets everything, for a park being torn down - these are statics and outlive a scene.</summary>
 	public static void Forget()
 	{
 		Current = None;
 		Serves = 0;
 		Anchor = (-1, -1);
+		Clicks = 0;
+		_pending.Clear();
 	}
 }

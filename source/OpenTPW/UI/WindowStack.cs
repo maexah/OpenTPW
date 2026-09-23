@@ -74,6 +74,12 @@ internal sealed class WindowStack : Panel
 	/// </summary>
 	internal static bool PointerTaken { get; private set; }
 
+	/// <summary>
+	/// The help row for what the pointer is over in the world, shown when it is over no control - or -1.
+	/// The scene sets it each frame before the stack updates; only the park has one.
+	/// </summary>
+	internal static int WorldHelpText { get; set; } = -1;
+
 	public WindowStack()
 	{
 		UiFonts.Preload();
@@ -227,7 +233,9 @@ internal sealed class WindowStack : Panel
 
 		Keyboard();
 
-		_helpBar.Update( _hovered?.HelpText ?? -1 );
+		// The world's row only where a click would reach the world: over no control, and no modal up.
+		var modal = _windows.Exists( window => window.Modal && !window.Hidden && !window.PutAway );
+		_helpBar.Update( _hovered?.HelpText ?? (modal ? -1 : WorldHelpText) );
 	}
 
 	protected override void OnRender()

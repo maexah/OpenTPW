@@ -906,6 +906,19 @@ public static class DebugConsole
 						$"{(GameOptions.Current.RmbCancel ? "on" : "off")})" );
 				break;
 
+			// What the pointer shows over the park: the cursor, and the help row the world gives it.
+			case "pointer":
+				Reply( Level.Current is { Kind: Level.Scene.Park } pointed
+					? $"pointer: cursor {pointed.ParkCursor}, help row {UI.WindowStack.WorldHelpText}"
+					: "pointer: only in a park" );
+				break;
+
+			// Backspace, as the key reaches it - the same body. It acts on the pointer's cell, so pair it
+			// with `hover` for the idle delete.
+			case "backspace":
+				Reply( Level.Current?.BackspaceKey() ?? "backspace: a park has to be loaded" );
+				break;
+
 			// `put`, not `place` - the lobby already has a `place`, which auditions an ambient sample
 			// at a position. Two cases with one label does not compile, which is how this was caught,
 			// but the quieter version of the same mistake is a command that works in one scene and
@@ -1046,6 +1059,7 @@ public static class DebugConsole
 						(ParkBuildMode.Anchored
 							? $", anchored at ({ParkBuildMode.Anchor.X},{ParkBuildMode.Anchor.Y})"
 							: ", not anchored") +
+						$", {ParkBuildMode.Pending.Count} pending, {ParkBuildMode.Clicks} clicks" +
 						" - `tool path`, `tool queue <thingId>`, `tool off`" );
 					break;
 				}
@@ -1083,7 +1097,7 @@ public static class DebugConsole
 
 				break;
 
-			// The queue tool's preview as the SIMULATION computes it for a cell, beside what the marker mesh
+			// The armed tool's preview as the SIMULATION computes it for a cell, beside what the marker mesh
 			// last drew for the pointer - the two halves, in one reply, for the reason `drawn` gives.
 			case "strip":
 				if ( parts.Length < 3 )
@@ -1092,7 +1106,7 @@ public static class DebugConsole
 					break;
 				}
 
-				Reply( "strip: " + string.Join( " ", ParkPathBuilding.QueueStrip( (int)Argument( 1 ), (int)Argument( 2 ) )
+				Reply( "strip: " + string.Join( " ", ParkPathBuilding.Strip( (int)Argument( 1 ), (int)Argument( 2 ) )
 					.Select( square => $"({square.X},{square.Y}):{square.Marker}" + (square.Why is { } why ? $"[{why}]" : "") ) ) );
 				break;
 
@@ -1145,7 +1159,8 @@ public static class DebugConsole
 					(probed.ParentId != 0
 						? $" = ({MapStep.CellAt( probed.ParentId ).X},{MapStep.CellAt( probed.ParentId ).Y})"
 						: "") +
-					$" occupant {ParkState.Current?.CellAt( probeX, probeY ).Occupant ?? 0}" );
+					$" occupant {ParkState.Current?.CellAt( probeX, probeY ).Occupant ?? 0}" +
+					$" overlap {probed.OverlapCounter} track type {probed.TrackType} links 0x{probed.TrackNeighbours:x2}" );
 				break;
 
 			// Opens the park's own game menu - the thing that actually HOLDS THE WORLD. A window with

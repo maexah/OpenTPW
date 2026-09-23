@@ -88,9 +88,10 @@ public static class ParkPathBuilding
 	/// Lays one cell of path, and answers a line saying what happened.
 	///
 	/// <para>
-	/// <b>A cell that is already path costs nothing and changes nothing</b>, which is the original's
-	/// own shortcut: it bumps a re-stamp counter and returns success before any price is fetched. This
-	/// keeps that meaning without the counter, which nothing here reads yet.
+	/// <b>A cell that is already path costs nothing</b>, which is the original's own shortcut: its overlap
+	/// counter goes up by one and the stamp answers success before any price is fetched. The cell is laid
+	/// as a one-cell run of <see cref="LayPathRun"/>, so it is joined, given a flow byte and retiled as a
+	/// click on the anchor would.
 	/// </para>
 	/// </summary>
 	public static string Lay( int cellX, int cellY )
@@ -102,41 +103,32 @@ public static class ParkPathBuilding
 			return $"path: ({cellX},{cellY}) is off the map";
 
 		var cell = ParkState.CellFor( park, cellX, cellY );
-
-		// Already path: free, and the original returns success rather than refusing.
-		if ( cell.Type == PathType )
-			return $"path: ({cellX},{cellY}) is already path - nothing charged";
-
-		if ( !MayBecome( cell.Type, PathType ) )
-			return $"path: ({cellX},{cellY}) is type {cell.Type}, which path may not be laid over";
-
-		// NOMODIFY marks a cell the player may not change - the level's avenue, and the cells the placer
-		// lays before a thing's ends. See NoModify.
-		if ( (cell.Flags & NoModify) != 0 )
-			return $"path: ({cellX},{cellY}) is marked NOMODIFY - the level owns that cell";
-
 		var price = CellCost( level );
 
-		if ( state.Balance < price )
-			return $"path: a cell costs {price} and the park has {state.Balance}";
+		if ( cell.Type != PathType )
+		{
+			if ( !MayBecome( cell.Type, PathType ) )
+				return $"path: ({cellX},{cellY}) is type {cell.Type}, which path may not be laid over";
 
-		// The write, then the money - the original's order.
-		state.SetRecord( cellX, cellY, cell with { Type = PathType, TileSet = ParkPaths.PathTileSet } );
+			// NOMODIFY marks a cell the player may not change - the level's avenue, and the cells the placer
+			// lays before a thing's ends. See NoModify.
+			if ( (cell.Flags & NoModify) != 0 )
+				return $"path: ({cellX},{cellY}) is marked NOMODIFY - the level owns that cell";
 
-		ParkPathNeighbours.LinkPath( state, park, cellX, cellY );
+			if ( state.Balance < price )
+				return $"path: a cell costs {price} and the park has {state.Balance}";
+		}
 
-		state.Spend( price );
+		var (laid, _) = LayPathRun( state, park, cellX, cellY, cellX, cellY, price );
 
-		RetileAround( state, park, cellX, cellY );
-
-		ParkSurfaces.Rebuild();
-
-		return $"path: laid at ({cellX},{cellY}) for {price}, balance {state.Balance}";
+		return laid == 0
+			? $"path: ({cellX},{cellY}) is already path - nothing charged, laid over {ParkState.CellFor( park, cellX, cellY ).OverlapCounter} times"
+			: $"path: laid at ({cellX},{cellY}) for {price}, balance {state.Balance}";
 	}
 
 	/// <summary>
-	/// Lifts one cell of path back to bare ground. <b>It refunds nothing</b>, and that asymmetry is the
-	/// original's: only a queue cell's removal credits anything back.
+	/// One press of the clear on a cell of path - see <see cref="ClearPathCell"/>. <b>It refunds nothing</b>,
+	/// and that asymmetry is the original's: only a queue cell's removal credits anything back.
 	/// </summary>
 	public static string Lift( int cellX, int cellY )
 	{
@@ -151,22 +143,12 @@ public static class ParkPathBuilding
 		if ( cell.Type != PathType )
 			return $"delpath: ({cellX},{cellY}) is type {cell.Type}, not path";
 
-		if ( (cell.Flags & NoModify) != 0 )
-			return $"delpath: ({cellX},{cellY}) is marked NOMODIFY - the level owns that cell";
-
-		// The neighbours are unlinked BEFORE the cell is reset, while its own mask is still intact -
-		// the original's order, and the reason it can find who to unlink at all.
-		Unlink( state, park, cellX, cellY );
-
-		state.SetRecord( cellX, cellY, cell with
+		if ( !ClearPathCell( state, park, cellX, cellY, stepped: true ) )
 		{
-			Type = NothingType,
-			Neighbours = 0,
-			Direction = 0,
-			TileSet = 0,
-			TileIndex = 0,
-			TileAngle = 0
-		} );
+			return (cell.Flags & NoModify) != 0
+				? $"delpath: ({cellX},{cellY}) is marked NOMODIFY and joined up - the level owns that cell"
+				: $"delpath: ({cellX},{cellY}) was laid over - {cell.OverlapCounter} more press(es) to lift it";
+		}
 
 		ParkSurfaces.Rebuild();
 
@@ -463,6 +445,10 @@ public static class ParkPathBuilding
 
 		var cell = ParkState.CellFor( park, x, y );
 
+		// The verdict's first test for every tool (0x005357c7): land outside the park.
+		if ( (cell.Flags & OutsideThePark) != 0 )
+			return (MarkerRed, "is outside the park");
+
 		// Any path may end a run, NOMODIFY or not: that is the join, and the path stays a path.
 		if ( last && cell.Type == PathType )
 			return (MarkerLink, null);
@@ -512,6 +498,449 @@ public static class ParkPathBuilding
 			return (MarkerRed, $"would bring the run to {owed} against a balance of {state.Balance}");
 
 		return (MarkerBlue, null);
+	}
+
+	/// <summary>
+	/// The cell flag that marks land outside the park - carried by 13,878 of Lost Kingdom's 16,384 cells,
+	/// all of them water, rock or unbuilt ground, and by none of the 2,506 that hold a path, a queue or a
+	/// thing. Every tool's preview answers red on it first. What sets it is not traced; Buy Land is the
+	/// likely clearer.
+	/// </summary>
+	public const int OutsideThePark = 0x40;
+
+	/// <summary>The squares the armed tool shows for the pointer's cell - the path tool's or the queue tool's.</summary>
+	public static List<QueueSquare> Strip( int toX, int toY ) => ParkBuildMode.Current switch
+	{
+		ParkBuildMode.Path => PathStrip( toX, toY ),
+		ParkBuildMode.Queue => QueueStrip( toX, toY ),
+		_ => []
+	};
+
+	/// <summary>
+	/// The squares the path tool shows - the original's hover pass in mode 1, <c>FUN_00536100( 0x101, … )</c>
+	/// with the verdict <c>FUN_00535670( 1 )</c>. With nothing anchored it is one square under the pointer,
+	/// both the first cell and the last; anchored, it runs from the anchor to the pointer snapped to the
+	/// longer axis. Cells off the map get no square.
+	/// </summary>
+	/// <remarks>
+	/// <b>Two things the original does are not reproduced</b>: for the one preview after the pointer leaves
+	/// an anchor it was resting on, the anchor still shows <c>m_end</c> (<c>DAT_00818688</c>) - here the
+	/// end square is only ever the last - and after a red square it adds each cell's price to the run a
+	/// second time, through a verdict call whose answer it throws away, which can only change the cursor.
+	/// </remarks>
+	public static List<QueueSquare> PathStrip( int toX, int toY )
+	{
+		if ( ParkBuildMode.Current != ParkBuildMode.Path || Level.Current is not { } level
+			|| level.ParkState is not { } state || level.Park is not { } park )
+			return [];
+
+		return PathStrip( state, park, toX, toY, CellCost( level ) );
+	}
+
+	internal static List<QueueSquare> PathStrip( ParkState state, ParkWorld park, int toX, int toY, int price )
+	{
+		var strip = new List<QueueSquare>();
+		var (fromX, fromY) = ParkBuildMode.Anchored ? ParkBuildMode.Anchor : (toX, toY);
+		var (endX, endY) = ParkBuildMode.SnapToAxis( toX, toY );
+
+		var steps = Math.Max( Math.Abs( endX - fromX ), Math.Abs( endY - fromY ) );
+		var (acrossBy, downBy) = (Math.Sign( endX - fromX ), Math.Sign( endY - fromY ));
+		var owed = 0;
+		var latched = false;
+
+		for ( var step = 0; step <= steps; ++step )
+		{
+			var (x, y) = (fromX + (acrossBy * step), fromY + (downBy * step));
+
+			if ( !ParkState.OnMap( x, y ) )
+				continue;
+
+			var (marker, why, broke) = PathVerdict( state, park, x, y, step == steps, price, ref owed, ref latched );
+
+			strip.Add( new( x, y, marker, why, broke ) );
+		}
+
+		return strip;
+	}
+
+	/// <summary>
+	/// One square of the path tool's preview - <c>FUN_00535670</c>'s op-1 arm, in its own order
+	/// (<c>0x005357c7</c>..<c>0x00535d63</c>). NOMODIFY is never read for a path.
+	/// </summary>
+	/// <param name="latched">
+	/// The original's <c>d50</c>/<c>d58</c>: once one square refuses in a way that latches, every square
+	/// after it is red. Outside-the-park land and an unknown cell type refuse without latching.
+	/// </param>
+	private static (int Marker, string? Why, bool Unaffordable) PathVerdict( ParkState state, ParkWorld park,
+		int x, int y, bool last, int price, ref int owed, ref bool latched )
+	{
+		var cell = ParkState.CellFor( park, x, y );
+
+		if ( (cell.Flags & OutsideThePark) != 0 )
+			return (MarkerRed, "is outside the park", false);
+
+		// A thing's own cells: red unless its overwrite priority is below the path tool's 2, which no
+		// shipped ride or shop's is. Nothing here would bulldoze it anyway.
+		if ( cell.Type is CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd )
+		{
+			Unimplemented.Report( "PATH_RUN_OVER_A_LOW_PRIORITY_THING" );
+			latched = true;
+
+			return (MarkerRed, "has something built on it", false);
+		}
+
+		if ( latched )
+			return (MarkerRed, "comes after a refused square", false);
+
+		var track = TrackRecord( park, cell );
+
+		if ( track.TrackType == 0x19 )
+		{
+			latched = true;
+
+			return (MarkerRed, "is part of a track", false);
+		}
+
+		// Only bare ground and queue are paid for: laying over path is free.
+		if ( cell.Type is NothingType or ParkRideChoice.QueueCellType )
+			owed += price;
+
+		if ( state.Balance < owed )
+		{
+			latched = true;
+
+			return (MarkerRed, $"would bring the run to {owed} against a balance of {state.Balance}", true);
+		}
+
+		if ( cell.Type == PathType && last )
+			return (MarkerEnd, null, false);
+
+		if ( cell.Type == 0x15 )
+		{
+			latched = true;
+
+			return (MarkerRed, "is part of a track", false);
+		}
+
+		if ( TrackCornerOrJunction( track ) )
+		{
+			latched = true;
+
+			return (MarkerRed, "is a track corner or junction", false);
+		}
+
+		if ( cell.Type is PathType or NothingType )
+			return (MarkerBlue, null, false);
+
+		// A queue: only a dangling end - one link, and that to another queue cell - may be paved over.
+		if ( cell.Type == ParkRideChoice.QueueCellType )
+		{
+			var only = Sides.FirstOrDefault( side => side.Bit == cell.Neighbours );
+
+			if ( only.Bit != 0 && ParkState.OnMap( x + only.AcrossBy, y + only.DownBy )
+				&& ParkState.CellFor( park, x + only.AcrossBy, y + only.DownBy ).Type == ParkRideChoice.QueueCellType )
+				return (MarkerLink, null, false);
+
+			latched = true;
+
+			return (MarkerRed, "is a queue that is not a loose end", false);
+		}
+
+		return (MarkerRed, $"is type {cell.Type}, which path may not be laid over", false);
+	}
+
+	/// <summary>
+	/// The track record a cell answers by: its own, or for a track cell of type 12 or 17, its parent's
+	/// (<c>FUN_004d0af0</c>).
+	/// </summary>
+	private static ParkWorld.MapCell TrackRecord( ParkWorld park, ParkWorld.MapCell cell )
+	{
+		if ( !CellEdge.TrackDefersToParent( cell.TrackType ) || cell.TrackParentId == 0 )
+			return cell;
+
+		var (parentX, parentY) = MapStep.CellAt( cell.TrackParentId );
+
+		return ParkState.OnMap( parentX, parentY ) ? ParkState.CellFor( park, parentX, parentY ) : cell;
+	}
+
+	/// <summary>
+	/// Whether a track record is a corner - exactly two cardinal links, at right angles
+	/// (<c>FUN_0053ae00</c>) - or a junction, three or more (<c>FUN_0053ae90</c>). Every track record in
+	/// Lost Kingdom's save has no links at all, so this never answers yes there.
+	/// </summary>
+	internal static bool TrackCornerOrJunction( ParkWorld.MapCell track )
+	{
+		var cardinal = track.TrackNeighbours & (0x01 | 0x04 | 0x10 | 0x40);
+		var count = System.Numerics.BitOperations.PopCount( (uint)cardinal );
+
+		return count >= 3 || (count == 2 && cardinal is not (0x01 | 0x10) and not (0x04 | 0x40));
+	}
+
+	/// <summary>
+	/// One click of the path tool - the original's mode-1 arm of the apply dispatcher
+	/// (<c>0x005271b7</c>..<c>0x00527655</c>), the same arm the queue tool shares.
+	/// </summary>
+	/// <remarks>
+	/// <b>The first click only anchors</b>, and a click on a red square refuses and puts the tool away. A
+	/// later click lays a straight run from the anchor to the pointer snapped to the longer axis, <b>one op
+	/// at a time over the whole line</b> as the original does - every cell stamped, then every cell joined,
+	/// given a flow byte and an owner, and retiled - and the tool puts itself away when the run ended on
+	/// a path or a queue, or when the click was on the anchor. Otherwise the anchor moves to the run's end,
+	/// so an L is laid a click at a time. The run's end is pushed for Backspace to undo.
+	/// </remarks>
+	public static string RunPath( int clickX, int clickY )
+	{
+		if ( Level.Current is not { } level || level.ParkState is not { } state || level.Park is not { } park )
+			return "path: a park has to be loaded";
+
+		var price = CellCost( level );
+		var strip = PathStrip( state, park, clickX, clickY, price );
+
+		if ( strip.Count == 0 )
+		{
+			ParkBuildMode.Disarm();
+			Unimplemented.Report( "PATH_TOOL_REFUSED_SOUND_0xAF" );
+
+			return $"path: ({clickX},{clickY}) is off the map, so the path tool is put away";
+		}
+
+		if ( strip.FindIndex( square => square.Marker == MarkerRed ) is var red and >= 0 )
+		{
+			ParkBuildMode.Disarm();
+			Unimplemented.Report( "PATH_TOOL_REFUSED_SOUND_0xAF" );
+
+			return $"path: nothing laid - ({strip[red].X},{strip[red].Y}) {strip[red].Why}, so the path tool is put away";
+		}
+
+		Unimplemented.Report( "PATH_TOOL_CLICK_SOUND_0x65" );
+
+		if ( !ParkBuildMode.Anchored )
+		{
+			ParkBuildMode.AnchorAt( clickX, clickY );
+			ParkBuildMode.ClearPending();
+			ParkBuildMode.Push( clickX, clickY );
+			ParkBuildMode.Clicks = 0;
+			Unimplemented.Report( "PATH_TOOL_ADVISOR_MESSAGE_0xB8" );
+
+			return $"path: anchored at ({clickX},{clickY}) - click again to lay a run";
+		}
+
+		if ( ++ParkBuildMode.Clicks == 3 )
+			Unimplemented.Report( "PATH_TOOL_ADVISOR_MESSAGE_0xD6" );
+
+		var (fromX, fromY) = ParkBuildMode.Anchor;
+		var (toX, toY) = ParkBuildMode.SnapToAxis( clickX, clickY );
+
+		// The anchor itself: with no run laid yet its one cell is laid, and either way the tool is put away.
+		if ( toX == fromX && toY == fromY && ParkBuildMode.Pending.Count != 1 )
+		{
+			ParkBuildMode.Disarm();
+
+			return $"path: clicked the anchor ({fromX},{fromY}) - the path tool is put away";
+		}
+
+		ParkBuildMode.Push( toX, toY );
+
+		var (laid, ended) = LayPathRun( state, park, fromX, fromY, toX, toY, price );
+
+		if ( ended || (toX == fromX && toY == fromY) )
+		{
+			ParkBuildMode.Disarm();
+
+			return $"path: laid {laid} from ({fromX},{fromY}) to ({toX},{toY}) - the path tool is put away";
+		}
+
+		ParkBuildMode.AnchorAt( toX, toY );
+
+		return $"path: laid {laid} from ({fromX},{fromY}) to ({toX},{toY}) - click again to carry on";
+	}
+
+	/// <summary>
+	/// Lays one straight run of path, pass by pass, and answers how many cells it paid for and whether the
+	/// run ended on a path or a queue that was already there - which is what puts the tool away.
+	/// </summary>
+	/// <remarks>
+	/// Internal so a test can lay a run on real ground without a loaded level. The owner every cell is given
+	/// is nought: the original writes the selected thing's cell (op <c>0x83</c>), and a click on grass
+	/// selects nothing - inferred, not traced.
+	/// </remarks>
+	internal static (int Laid, bool Ended) LayPathRun( ParkState state, ParkWorld park, int fromX, int fromY,
+		int toX, int toY, int price )
+	{
+		var steps = Math.Max( Math.Abs( toX - fromX ), Math.Abs( toY - fromY ) );
+
+		// A one-cell walk steps +1 down (FUN_00536100's y-major branch), so its cell flows 0x01.
+		var (acrossBy, downBy) = steps == 0 ? (0, 1) : (Math.Sign( toX - fromX ), Math.Sign( toY - fromY ));
+		var cells = Enumerable.Range( 0, steps + 1 )
+			.Select( step => steps == 0 ? (X: fromX, Y: fromY) : (X: fromX + (acrossBy * step), Y: fromY + (downBy * step)) )
+			.Where( cell => ParkState.OnMap( cell.X, cell.Y ) )
+			.ToList();
+
+		var laid = 0;
+		var ended = false;
+
+		// The stamp: bare ground and queue are paid for; a path stamped again only counts once more.
+		foreach ( var (x, y) in cells )
+		{
+			var cell = ParkState.CellFor( park, x, y );
+			var last = (x, y) == (toX, toY);
+
+			if ( last && cell.Type is PathType or ParkRideChoice.QueueCellType )
+				ended = true;
+
+			if ( CellEdge.TrackCounts( TrackRecord( park, cell ).TrackType ) )
+				Unimplemented.Report( "PATH_RUN_OVER_TRACK" );
+
+			if ( cell.Type == PathType )
+			{
+				state.SetRecord( x, y, cell with { OverlapCounter = (short)(cell.OverlapCounter + 1) } );
+				continue;
+			}
+
+			if ( cell.Type == ParkRideChoice.QueueCellType && OwnerOf( state, cell ) is var owner && owner != 0 )
+				state.InvalidateQueue( owner );
+
+			state.SetRecord( x, y, cell with { Type = PathType, TileSet = ParkPaths.PathTileSet } );
+			state.Spend( price );
+			++laid;
+		}
+
+		// Then the join, the flow byte where there is none, the owner, and the art.
+		foreach ( var (x, y) in cells )
+			ParkPathNeighbours.LinkPath( state, park, x, y );
+
+		foreach ( var (x, y) in cells )
+		{
+			var cell = ParkState.CellFor( park, x, y );
+			var flow = FlowFrom( x - acrossBy, y - downBy, x, y );
+
+			state.SetRecord( x, y, cell with
+			{
+				Direction = cell.Direction != 0 ? cell.Direction : (byte)flow,
+				ParentId = 0
+			} );
+		}
+
+		foreach ( var (x, y) in cells )
+			RetileAround( state, park, x, y );
+
+		ParkSurfaces.Rebuild();
+
+		return (laid, ended);
+	}
+
+	/// <summary>
+	/// One press of the clear on a path cell - <c>FUN_005367a0</c>'s path arm. <b>A path is only removed
+	/// once its overlap counter goes below nought</b>: each press takes one off (or, unstepped, sets it to
+	/// −1), so a cell laid over twice needs three. A NOMODIFY cell with links is never removed; one with
+	/// none gives up the flag and goes. Nothing is refunded. Answers whether the cell went.
+	/// </summary>
+	internal static bool ClearPathCell( ParkState state, ParkWorld park, int x, int y, bool stepped )
+	{
+		if ( !ParkState.OnMap( x, y ) )
+			return false;
+
+		var cell = ParkState.CellFor( park, x, y );
+
+		if ( cell.Type != PathType )
+			return false;
+
+		if ( (cell.Flags & NoModify) != 0 )
+		{
+			if ( cell.Neighbours != 0 )
+				return false;
+
+			Log.Info( "Removing path cell with no neighbours but NOMODIFY set" );
+		}
+
+		var counter = stepped ? cell.OverlapCounter - 1 : -1;
+
+		if ( counter >= 0 )
+		{
+			state.SetRecord( x, y, cell with { OverlapCounter = (short)counter } );
+			return false;
+		}
+
+		// The neighbours are unlinked BEFORE the cell is reset, while its own mask is still intact.
+		Unlink( state, park, x, y );
+
+		state.SetRecord( x, y, ParkState.CellFor( park, x, y ) with
+		{
+			Type = NothingType,
+			Neighbours = 0,
+			Direction = 0,
+			Flags = 0,
+			ParentId = 0,
+			OverlapCounter = 0,
+			TileSet = 0,
+			TileIndex = 0,
+			TileAngle = 0
+		} );
+
+		return true;
+	}
+
+	/// <summary>
+	/// Backspace with the path tool armed: the last run laid is taken up again, and the tool anchors where
+	/// that run started - <c>FUN_0052fe50( 0, 1 )</c> from the Backspace handler <c>0x0040bda0</c>. Each
+	/// cell of the run gets one press of the clear, so the cells the run laid go and a cell it crossed
+	/// that was already path stays. Nothing is refunded. The first click's cell is never taken up.
+	/// </summary>
+	public static string UndoPathRun()
+	{
+		if ( Level.Current is not { } level || level.ParkState is not { } state || level.Park is not { } park )
+			return "backspace: a park has to be loaded";
+
+		if ( !ParkBuildMode.TryPopRun( out var end, out var start ) )
+			return "backspace: nothing laid since the path tool anchored";
+
+		var removed = UndoRun( state, park, end, start );
+
+		ParkBuildMode.AnchorAt( start.X, start.Y );
+		ParkSurfaces.Rebuild();
+
+		return $"backspace: took up the run from ({start.X},{start.Y}) to ({end.X},{end.Y}), {removed} cells went";
+	}
+
+	/// <summary>The clear, pressed once on every cell of the line from a run's end back to its start.</summary>
+	internal static int UndoRun( ParkState state, ParkWorld park, (int X, int Y) end, (int X, int Y) start )
+	{
+		var steps = Math.Max( Math.Abs( start.X - end.X ), Math.Abs( start.Y - end.Y ) );
+		var (acrossBy, downBy) = (Math.Sign( start.X - end.X ), Math.Sign( start.Y - end.Y ));
+		var removed = 0;
+
+		for ( var step = 0; step <= steps; ++step )
+		{
+			if ( ClearPathCell( state, park, end.X + (acrossBy * step), end.Y + (downBy * step), stepped: true ) )
+				++removed;
+		}
+
+		return removed;
+	}
+
+	/// <summary>
+	/// Backspace with nothing armed and the pointer on a path: that one cell takes one press of the clear
+	/// (the handler's idle branch, <c>0x0040bdde</c>..<c>0x0040be9c</c>). Alexah's memory of the original
+	/// has Backspace working only while laying path, and so does the game's tutorial; the executable does
+	/// this as well, and it is built as it is written.
+	/// </summary>
+	public static string DeletePathUnderPointer( int x, int y )
+	{
+		if ( Level.Current is not { } level || level.ParkState is not { } state || level.Park is not { } park )
+			return "backspace: a park has to be loaded";
+
+		if ( !ParkState.OnMap( x, y ) || ParkState.CellFor( park, x, y ).Type != PathType )
+			return $"backspace: ({x},{y}) is not a path";
+
+		Unimplemented.Report( "BACKSPACE_DELETE_SOUND_0x5F" );
+
+		var gone = ClearPathCell( state, park, x, y, stepped: true );
+
+		ParkSurfaces.Rebuild();
+
+		return gone
+			? $"backspace: the path at ({x},{y}) is gone"
+			: $"backspace: the path at ({x},{y}) was laid over, or is the park's own - it stays";
 	}
 
 	/// <summary>

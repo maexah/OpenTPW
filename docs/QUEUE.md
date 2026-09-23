@@ -380,7 +380,13 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   side-by-side screenshots of the same view.
 - [ ] **Q30. Waving flags at the bus stop.** Nothing found in code or docs. Decode what the original
   draws at `BusStopA/B` (`park.md:54, 98`), then build.
-- [ ] **Q35. The path tool from the interface, and Backspace.** Path laying is still console-only: nothing
+- [x] **Q35. The path tool from the interface, and Backspace.** Done 2026-09-22,
+  `alexah/117-the-path-tool-from-the-interface`; `docs/exe/park-engine.md` "The path tool" has the decode.
+  No button arms it: a click on grass or path does, and anchors in the same click. Backspace pops the run
+  list and clears each cell once, which the new `mOverlapCounter` makes remove only what the run laid;
+  idle, it deletes the path under the pointer (kept at Alexah's word). Escape disarms without opening the
+  menu; Delete is Clear Land, counted. Confirmed in the game, R1-R17 predicted first. The item as written:
+  Path laying is still console-only: nothing
   in the UI arms mode 1 (`park-engine.md` has "clicking a path cell or bare ground gives mode 1" without
   the control that does it). Alexah, 2026-09-22, from playing the original: *"Backspace deletes the last
   section of path that was placed, but only in path building mode."* Decode both - which control arms

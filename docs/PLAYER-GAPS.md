@@ -254,9 +254,10 @@ nothing to put behind the button. It is counted, with that reason named at the s
       **THE QUEUE TOOL IS NO LONGER CONSOLE-ONLY, 2026-09-22.** The ride window's own queue button
       arms it against that ride (`ParkObjectWindow`, verb `0x3e34`), and clicking a queue cell re-arms
       it for the thing that queue serves - the original's mode `0x14`. Both were driven through the
-      real interface and the armed mode read back as `mode 3`. **The PATH tool is still reached only
-      from the console**; wiring it to the hover classifier (class 1 = a path cell, class 2 = **plain
-      ground**) is what remains of this item.
+      real interface and the armed mode read back as `mode 3`.
+      **THE PATH TOOL IS NO LONGER CONSOLE-ONLY, 2026-09-22 (Q35).** A click on grass or path arms and
+      anchors it, Backspace takes the last run back up, and Escape puts it away - confirmed in the
+      running game with the real keys.
 - **>>> SETTLED: NEWLY BUILT PATH DOES RENDER, AND THE METHOD THAT SETTLED IT IS THE POINT. <<<**
   A **difference image** against a **control pair** is what finally answered it, after nine wrong
   explanations. Lay one cell and the diff shows a single clean quadrilateral on open grass; lay nine

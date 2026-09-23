@@ -507,6 +507,9 @@ public sealed class ParkPeople : Entity
 	/// state change and no walk to the gate. The severance is exactly one wage, by the same expression
 	/// the monthly charge uses.
 	/// </remarks>
+	/// <summary>Whether a thing id is one of the park's staff.</summary>
+	internal bool IsStaff( int thingId ) => _staff.Exists( member => member.ThingId == thingId );
+
 	internal bool Fire( int thingId )
 	{
 		var at = _staff.FindIndex( member => member.ThingId == thingId );

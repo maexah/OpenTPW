@@ -550,6 +550,9 @@ public class Level
 		if ( Kind == Scene.Park )
 			ParkPicking.Update();
 
+		// The help row the world shows for the cell under the pointer - see WorldHelpRow.
+		UI.WindowStack.WorldHelpText = Kind == Scene.Park ? WorldHelpRow() : -1;
+
 		// The HUD is not an entity - see RootPanel - so it is driven from here. After the world,
 		// which is where it sat when it was the last entity in the list.
 		Hud.Update();
@@ -561,6 +564,7 @@ public class Level
 		if ( Kind == Scene.Park )
 		{
 			WorldClick();
+			BuildKeys();
 			ShowToolCursor();
 		}
 	}
@@ -570,6 +574,9 @@ public class Level
 
 	/// <summary>The park's own pointer, so an armed tool can show its cursor.</summary>
 	private Cursor? _cursor;
+
+	/// <summary>The cursor the park's pointer wears, for the console's <c>pointer</c>.</summary>
+	internal Input.CursorTypes? ParkCursor => _cursor?.CursorType;
 
 	/// <summary>
 	/// The cursor an armed build tool shows - <c>c_path</c> for path and <c>c_queue</c> for queue, the ids
@@ -581,11 +588,13 @@ public class Level
 		if ( _cursor is not { } cursor )
 			return;
 
+		// Idle, the pointer already says what a click would do over ground a path can go on
+		// (FUN_0052f950 with the hover category, cursor 3).
 		var wanted = ParkBuildMode.Current switch
 		{
 			ParkBuildMode.Queue => QueueCursor(),
 			ParkBuildMode.Path => PathCursor(),
-			_ => Input.CursorTypes.Normal
+			_ => IdleOverPath() ? Input.CursorTypes.Path : Input.CursorTypes.Normal
 		};
 
 		if ( cursor.CursorType != wanted )
@@ -641,14 +650,151 @@ public class Level
 	}
 
 	/// <summary>
-	/// The path tool's cursor. The original switches it to <c>c_link</c> and <c>c_end</c> from the path
-	/// tool's own preview (<c>FUN_0052f950</c>'s mode-1 arm), and that preview is not built.
+	/// The path tool's cursor follows its preview as the queue tool's does (<c>FUN_0052f950</c>):
+	/// <c>c_cash</c>, then <c>c_noplace</c> for any red square, then <c>c_link</c> when the run would pave
+	/// a loose queue end, <c>c_end</c> when it would end on a path, and <c>c_path</c> otherwise.
 	/// </summary>
 	private static Input.CursorTypes PathCursor()
 	{
-		Unimplemented.Report( "PATH_TOOL_PREVIEW" );
+		if ( !ParkPicking.TryCell( out var x, out var y ) )
+			return Input.CursorTypes.Path;
 
-		return Input.CursorTypes.Path;
+		var strip = ParkPathBuilding.PathStrip( x, y );
+
+		if ( strip.Any( square => square.Unaffordable ) )
+			return Input.CursorTypes.Cash;
+
+		if ( strip.Any( square => square.Marker == ParkPathBuilding.MarkerRed ) )
+			return Input.CursorTypes.NoGo;
+
+		if ( strip.Any( square => square.Marker == ParkPathBuilding.MarkerLink ) )
+			return Input.CursorTypes.Line;
+
+		return strip.Any( square => square.Marker == ParkPathBuilding.MarkerEnd )
+			? Input.CursorTypes.End
+			: Input.CursorTypes.Path;
+	}
+
+	/// <summary>
+	/// Whether a click here with nothing armed and an empty hand would pick up the path tool - the
+	/// original's hover categories 2 (bare ground) and 1 (path), which <c>FUN_004879d0</c> answers by
+	/// installing the path tool. See <see cref="ArmsThePathTool"/>.
+	/// </summary>
+	private bool IdleOverPath()
+		=> ParkBuildMode.Current == ParkBuildMode.None && HandEmpty()
+			&& ParkPicking.TryCell( out var x, out var y ) && ArmsThePathTool( x, y, ParkPicking.ThingUnderCursor );
+
+	private static bool HandEmpty()
+		=> ParkBuilding.Carrying == 0 && ParkStaffPool.Carrying == 0 && ParkPeople.Current is not { CarriedStaff: not 0 };
+
+	/// <summary>
+	/// The help row for the cell under the pointer, idle: UIHELPTEXT 441 "Left-click to build path" over
+	/// bare ground and 442 "Left-click to extend this path" over path. Nothing is found in the original to
+	/// show 443, "BACKSPACE to undo", so nothing here does.
+	/// </summary>
+	private int WorldHelpRow()
+	{
+		if ( !IdleOverPath() || Park is not { } park || !ParkPicking.TryCell( out var x, out var y ) )
+			return -1;
+
+		return ParkState.CellFor( park, x, y ).Type == CellEdge.Path ? 442 : 441;
+	}
+
+	/// <summary>
+	/// Whether a click on this cell, idle and empty-handed, picks up the path tool: bare ground or path
+	/// (<c>FUN_00486d90</c>'s categories 2 and 1), with no Shift held - Shift is the guest pick - and no
+	/// member of staff under the pointer, whose window comes first. A guest on the cell, or the ride a
+	/// path serves, does not stop it. Track cells of type 11 and 16 have a category of their own, and a
+	/// type-12 track cell whose parent is type 25 has none at all (<c>0x004873b3</c>).
+	/// </summary>
+	private bool ArmsThePathTool( int x, int y, int thingUnderCursor )
+	{
+		if ( Park is not { } park || !ParkState.OnMap( x, y ) )
+			return false;
+
+		var cell = ParkState.CellFor( park, x, y );
+
+		if ( cell.Type is not (CellEdge.Nothing or CellEdge.Path) )
+			return false;
+
+		if ( cell.TrackType is 11 or 16 )
+		{
+			Unimplemented.Report( "HOVER_TRACK_CELL_CATEGORY" );
+			return false;
+		}
+
+		if ( cell.TrackType == 12 && cell.TrackParentId != 0 )
+		{
+			var (parentX, parentY) = MapStep.CellAt( cell.TrackParentId );
+
+			if ( ParkState.OnMap( parentX, parentY ) && ParkState.CellFor( park, parentX, parentY ).TrackType == 25 )
+				return false;
+		}
+
+		if ( Input.ShiftHeld )
+			return false;
+
+		return thingUnderCursor == 0 || ParkPeople.Current?.IsStaff( thingUnderCursor ) != true;
+	}
+
+	/// <summary>
+	/// The build keys, on release as the original's game table fires them: Backspace and Delete. Not
+	/// while a box has the keyboard, and not while a window holds the park - which is inferred, the
+	/// original's table-enable gate not being traced.
+	/// </summary>
+	/// <remarks>
+	/// The release edge here also fires when a modifier changes while the key is held, which the
+	/// original's key-up does not.
+	/// </remarks>
+	private void BuildKeys()
+	{
+		if ( Input.TextCaptured || PausedByWindow() )
+			return;
+
+		if ( Input.Released( InputButton.Delete ) )
+			Log.Info( BackspaceKey() );
+
+		if ( Input.Released( InputButton.Clear ) )
+			Log.Info( ClearKey() );
+	}
+
+	/// <summary>
+	/// Backspace - the game table's row 5, handler <c>0x0040bda0</c>. With the path tool armed it takes up
+	/// the last run laid; with nothing armed and an empty hand it takes one press of the clear off the path
+	/// under the pointer. One body, shared with the console's <c>backspace</c>.
+	/// </summary>
+	internal string BackspaceKey()
+	{
+		switch ( ParkBuildMode.Current )
+		{
+			case ParkBuildMode.Path:
+				return ParkPathBuilding.UndoPathRun();
+
+			case ParkBuildMode.Queue:
+				Unimplemented.Report( "BACKSPACE_UNDO_QUEUE_RUN" );
+				return "backspace: undoing a queue run is not built";
+
+			case ParkBuildMode.None when HandEmpty():
+				if ( !ParkPicking.TryCell( out var x, out var y ) )
+					return "backspace: the pointer is not on the park";
+
+				return ParkPathBuilding.DeletePathUnderPointer( x, y );
+
+			default:
+				return "backspace: nothing to do";
+		}
+	}
+
+	/// <summary>
+	/// Delete - the game table's row 3, <c>FUN_0040c5e0</c>, which swaps whatever tool is armed for Clear
+	/// Land (mode <c>0x3a</c>). Clear Land is not built, so this only puts the tool away.
+	/// </summary>
+	internal static string ClearKey()
+	{
+		ParkBuildMode.Disarm();
+		Unimplemented.Report( "CLEAR_LAND_TOOL" );
+
+		return "delete: the clear-land tool is not built - the build tool is put away";
 	}
 
 	/// <summary>When and where the right button last went down, for telling a quick click from a hold.</summary>
@@ -773,6 +919,18 @@ public class Level
 			&& owner != 0 )
 			return $"world click: {ParkPathBuilding.EditQueue( owner )}";
 
+		// BARE GROUND OR PATH PICKS UP THE PATH TOOL - there is no button for it - and the same click
+		// anchors it, the original's press installing the tool and its release applying it.
+		if ( ArmsThePathTool( cellX, cellY, thingUnderCursor ) )
+		{
+			ParkBuildMode.Arm( ParkBuildMode.Path );
+
+			return $"world click: {ParkPathBuilding.RunPath( cellX, cellY )}";
+		}
+
+		if ( thingUnderCursor != 0 && ParkPeople.Current?.IsStaff( thingUnderCursor ) == true )
+			Unimplemented.Report( "STAFF_WINDOW" );
+
 		if ( thingUnderCursor != 0 )
 		{
 			OpenObjectWindow( thingUnderCursor );
@@ -784,70 +942,23 @@ public class Level
 	}
 
 	/// <summary>
-	/// One click of an armed build mode: the first anchors, the second lays the run between.
+	/// One click of an armed build mode - see <see cref="ParkPathBuilding.RunPath"/> and
+	/// <see cref="ParkPathBuilding.RunQueue"/>.
 	/// </summary>
 	/// <remarks>
-	/// <b>The path tool's run stops at the first cell that refuses</b>, keeping what it laid and the anchor
-	/// where it was. The original refuses a red run before laying anything, from the path tool's own
-	/// preview, which is not built (<c>PATH_TOOL_PREVIEW</c>) - so this is the path tool's deviation; the
-	/// queue tool has its preview and follows it (<see cref="ParkPathBuilding.RunQueue"/>).
+	/// <b>It acts on the press</b>; the original applies on the release, at the preview's target.
 	/// </remarks>
 	private static string RunBuildMode( int cellX, int cellY )
 	{
-		// The queue tool has rules of its own for where a run may go and when the tool is finished - see
-		// ParkPathBuilding.RunQueue. The path tool keeps the plain loop below.
-		if ( ParkBuildMode.Current == ParkBuildMode.Queue && ParkBuildMode.Anchored )
+		if ( ParkBuildMode.Current == ParkBuildMode.Path )
+			return ParkPathBuilding.RunPath( cellX, cellY );
+
+		if ( ParkBuildMode.Anchored )
 			return ParkPathBuilding.RunQueue( cellX, cellY );
 
-		if ( !ParkBuildMode.Anchored )
-		{
-			ParkBuildMode.AnchorAt( cellX, cellY );
+		ParkBuildMode.AnchorAt( cellX, cellY );
 
-			return $"anchored a {(ParkBuildMode.Current == ParkBuildMode.Path ? "path" : "queue")} " +
-				$"run at ({cellX},{cellY}) - click again to lay it";
-		}
-
-		var (toX, toY) = ParkBuildMode.SnapToAxis( cellX, cellY );
-		var (fromX, fromY) = ParkBuildMode.Anchor;
-
-		var steps = Math.Max( Math.Abs( toX - fromX ), Math.Abs( toY - fromY ) );
-		var acrossBy = Math.Sign( toX - fromX );
-		var downBy = Math.Sign( toY - fromY );
-
-		var laid = 0;
-		var (atX, atY) = (fromX, fromY);
-		var why = string.Empty;
-
-		for ( var step = 0; step <= steps; ++step )
-		{
-			var x = fromX + (acrossBy * step);
-			var y = fromY + (downBy * step);
-
-			var answer = ParkBuildMode.Current == ParkBuildMode.Path
-				? ParkPathBuilding.Lay( x, y )
-				: ParkPathBuilding.LayQueue( x, y, ParkBuildMode.Serves, atX, atY, step == steps );
-
-			// A cell already of that type is not a refusal - the original charges nothing and carries
-			// straight on, which is what makes running back over your own path free.
-			if ( !answer.Contains( "laid at" ) && !answer.Contains( "already" ) )
-			{
-				why = answer;
-				break;
-			}
-
-			if ( answer.Contains( "laid at" ) )
-				++laid;
-
-			(atX, atY) = (x, y);
-		}
-
-		if ( why.Length > 0 )
-			return $"run from ({fromX},{fromY}) stopped after {laid} - {why}";
-
-		// Only a run that finished advances the anchor, and it advances to the SNAPPED TARGET.
-		ParkBuildMode.AnchorAt( toX, toY );
-
-		return $"laid {laid} cell{(laid == 1 ? "" : "s")} from ({fromX},{fromY}) to ({toX},{toY})";
+		return $"anchored a queue run at ({cellX},{cellY}) - click again to lay it";
 	}
 
 	/// <summary>

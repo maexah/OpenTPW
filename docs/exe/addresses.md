@@ -29,6 +29,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004092c3` | | OpenTPW/Global/GameCalendar.cs  |
 | `0x00409303` | | OpenTPW/Global/GameClock.cs  |
 | `0x00409353` | | OpenTPW/Global/GameClock.cs  |
+| `0x0040bda0` | Backspace handler, game-table row 5 and the coaster table's `backtrack` (undefined bytes in Ghidra) | OpenTPW/World/Level.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x0040bdde` | Backspace handler: start of the idle branch - one press of the clear on the hovered path | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x0040be9c` | Backspace handler: end of the idle branch | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x0040c368` | Escape handler `0x0040c180`: puts an armed build tool away, `FUN_0052f200(0,1)`, and consumes the key | OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x0040c4d0` | | OpenTPW/UI/WindowStack.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x00415270` | the whole-game restore chain: seventeen modules in order, each checked against a four-character tag that follows it | OpenTPW.Files/Formats/Save/ParkScriptStates.cs  |
 | `0x00419710` | | OpenTPW/UI/UiFonts.cs  |
@@ -94,6 +98,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00485a70` | | OpenTPW/UI/UiFonts.cs  |
 | `0x00485d20` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x00486bce` | | OpenTPW/Global/GameClock.cs  |
+| `0x004873b3` | Hover category: a type-12 track cell under a type-25 parent gets no category | OpenTPW/World/Level.cs  |
 | `0x0048842b` | Park mouse proc: a quick right click installs the idle mode (RMB cancel) | OpenTPW/World/Level.cs  |
 | `0x00488434` | Park mouse proc: and ends the build tool, `FUN_0052f200(0,1)` | OpenTPW/World/Level.cs  |
 | `0x00488a00` | | OpenTPW/UI/Park/ParkFrontEnd.cs  |
@@ -201,8 +206,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005253c4` | Place commit: a thing with no queue goes idle, `FUN_0052f580(0,0)` | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x005260f5` | Mode `0x14`: `FUN_00530120` anchors on the queue's end | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00526120` | Mode `0x14`: then `FUN_0052f580(3,0)` | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x005271b7` | Apply dispatcher `FUN_00524960`: start of the path/queue arm | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00527222` | Mode-3 commit: start of the queue run arm | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005275f2` | Mode-3 commit: the tool ends through `FUN_0052f200(0,0)` | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00527655` | Apply dispatcher: end of the path/queue arm | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005292b2` | Placer sweep: the exit takes its turned bit as its direction | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x005293c3` | Placer sweep: the entrance takes its turned bit as its direction | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00529744` | Placer: returns null when the entrance faces off the map | OpenTPW/World/Park/ParkBuilding.cs  |
@@ -227,8 +234,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0053525a` | Queue arm: first of the four entrance-bond probes | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00535323` | Queue arm: last entrance-bond probe | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00535597` | Queue arm: end | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x005357c7` | Verdict `FUN_00535670`: the `0x40` outside-the-park test, first for every tool | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005358e9` | Queue verdict: the cash total skips queue over path | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005358f1` | Queue verdict: end of that guard | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00535d63` | Verdict: end of the path arm | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0053c755` | `FUN_0053c3f0`: the marker wave's phase gains 0.1 a frame unless paused | OpenTPW/World/Park/ParkBuildMarkers.cs  |
 | `0x0053c773` | `FUN_0053c3f0`: the phase store | OpenTPW/World/Park/ParkBuildMarkers.cs  |
 | `0x00540d90` | | OpenTPW.Files/Formats/Sprite/SpriteBankFile.cs  |
@@ -454,6 +463,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00803a2c` | | OpenTPW/UI/UiSounds.cs  |
 | `0x0080ced8` | | OpenTPW.Files/Formats/Particle/ParticleLibraryFile.cs  |
 | `0x0080cef8` | | OpenTPW/World/Particles/ParticleSystem.cs  |
+| `0x0081b740` | The pending list of run ends Backspace pops; count `DAT_00820a8c` | OpenTPW/World/Park/ParkBuildMode.cs  |
 | `0x00877d34` | | OpenTPW/World/Park/ParkPeople.cs OpenTPW/Global/GameCalendar.cs OpenTPW/Global/GameClock.cs  |
 | `0x00878128` | | OpenTPW/Global/GameClock.cs  |
 | `0x008bcbcc` | | OpenTPW/World/Park/ParkGuestSprites.cs  |

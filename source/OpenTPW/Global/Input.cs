@@ -154,6 +154,9 @@ public static partial class Input
 	/// </summary>
 	public static bool ControlAlone => HeldIn( Keyboard.KeysDown ) == Modifiers.Control;
 
+	/// <summary>Whether either Shift is held, whatever else is.</summary>
+	public static bool ShiftHeld => (HeldIn( Keyboard.KeysDown ) & Modifiers.Shift) != 0;
+
 	private static Modifiers HeldIn( IReadOnlyCollection<Key> keysDown )
 	{
 		var held = Modifiers.None;
