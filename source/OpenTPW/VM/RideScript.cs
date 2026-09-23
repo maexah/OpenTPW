@@ -789,6 +789,28 @@ public sealed class RideScript
 	}
 
 	/// <summary>
+	/// How many instructions a critical section may run in one turn: the turn ends after the first one past
+	/// this, if that one left the section open and the turn going, so a capped turn has run one more.
+	/// <b>The original has no such cap, and this one is ours:</b> <c>FUN_005516b0</c>'s turn ends only when
+	/// the budget runs out or the position goes negative, so a section that branches back without reaching
+	/// <c>CRIT_UNLOCK</c> or a yield hangs its game thread (docs/exe/park.md, "The scheduler"). None of the
+	/// 150 shipped sections can loop and the longest runs 23 instructions, so nothing the game ships
+	/// comes near it.
+	/// </summary>
+	public const int CriticalStepCap = 10_000;
+
+	private int _criticalSteps;
+
+	/// <summary>
+	/// The most instructions this script has run inside one critical section in one turn, for the console's
+	/// <c>rides</c>: it is how the cap is seen not to be reached.
+	/// </summary>
+	public int LongestCritical { get; private set; }
+
+	/// <summary>Whether this script has run into <see cref="CriticalStepCap"/>, which it says once.</summary>
+	public bool ReachedCriticalCap { get; private set; }
+
+	/// <summary>
 	/// Gives the script one turn, running until it spends its instruction budget, yields, or stops.
 	/// <paramref name="now"/> is whatever clock the caller keeps; <c>WAIT</c> durations are added to
 	/// it unchanged - see <see cref="Wait"/>.
@@ -798,12 +820,12 @@ public sealed class RideScript
 		if ( !Running )
 			return;
 
-		// The engine zeroes its critical flag at the top of every tick, before any script runs
-		// (FUN_005516b0), so a CRIT_LOCK does not outlive the turn that took it. Without this a script
-		// that locks and then yields - ENDSLICE, or a WAIT - would come back with instructions still
-		// costing nothing, and the loop below would never end. No shipped script does that, so nothing
-		// in the corpus can catch it; it is here because the engine's own reset says so.
+		// The engine clears its critical flag as each script's turn begins (FUN_005516b0, 0x00551701), so a
+		// CRIT_LOCK does not outlive the turn that took it. Seven shipped sections yield while locked - the
+		// Jungle Spray and the Hyenas WAIT after a WALKON - and the rest of each runs unlocked next turn.
+		// This does not end a section that loops without yielding; CriticalStepCap does.
 		_critical = false;
+		_criticalSteps = 0;
 		_budget = _file.TimeSlice > 0 ? _file.TimeSlice : 1;
 
 		// Nothing brings a channel up to date here, and that is deliberate. The engine sweeps its animation
@@ -891,11 +913,35 @@ public sealed class RideScript
 		Position += 1 + instruction.Operands.Count;
 
 		// A critical section stops instructions costing anything, so everything up to CRIT_UNLOCK runs
-		// in one go however long it is.
-		if ( !_critical )
+		// in one go however long it is - up to CriticalStepCap, where the original would hang.
+		var locked = _critical;
+
+		if ( !locked )
 			--_budget;
+		else
+			LongestCritical = Math.Max( LongestCritical, ++_criticalSteps );
 
 		Execute( instruction, now );
+
+		// Only a section still open, in a turn still going: one the instruction ended anyway is not capped.
+		if ( locked && _critical && _budget > 0 && Running && _criticalSteps > CriticalStepCap )
+			EndTheCriticalTurn();
+	}
+
+	/// <summary>
+	/// Ends a turn whose critical section has run past <see cref="CriticalStepCap"/>. The script is not
+	/// stopped: the lock goes with the turn, so it carries on next turn, paying for its instructions.
+	/// </summary>
+	private void EndTheCriticalTurn()
+	{
+		_budget = 0;
+
+		if ( ReachedCriticalCap )
+			return;
+
+		ReachedCriticalCap = true;
+		Log?.Warning( $"{Name}: a critical section ran {CriticalStepCap} instructions in one turn without "
+			+ "CRIT_UNLOCK or a yield, where the original would hang; the turn ends here instead" );
 	}
 
 	private void Execute( RideInstruction instruction, float now )

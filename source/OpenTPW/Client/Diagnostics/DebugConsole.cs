@@ -529,9 +529,12 @@ public static class DebugConsole
 				// The scheduler's own count beside the census, because the census walks what is standing and
 				// so stops listing a sold thing whether or not its script was taken down with it.
 				var running = operators.RideCensus().ToArray();
+				var scripts = ParkRides.Current?.Scheduler.Scripts.ToArray() ?? [];
 				Reply( $"rides {running.Length} distinct scream samples heard "
 					+ $"{ParkAudio.Current?.ScreamSamplesHeard ?? 0} scripts {ParkRides.Current?.Scheduler.Count ?? 0} "
-					+ $"bound {ParkRides.Current?.Bound ?? 0}" );
+					+ $"bound {ParkRides.Current?.Bound ?? 0} "
+					+ $"critical longest {scripts.Select( script => script.LongestCritical ).DefaultIfEmpty().Max()} "
+					+ $"cap {RideScript.CriticalStepCap} reached {scripts.Count( script => script.ReachedCriticalCap )}" );
 
 				foreach ( var ride in running )
 					Reply( "  " + ride );

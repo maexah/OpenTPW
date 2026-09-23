@@ -389,14 +389,28 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   The item as written: `ParkCamcorderCameraMode.cs:443-458` keys it on the `ParkWorld`; `Forget` (`:213-219`)
   clears stand, yaw and pitch only. The previous park's whole save stays alive through the lobby. Clear it in
   `Forget`. No game run needed; a test that enters two parks and checks the reference is released.
-- [ ] **Q11. Small fixes.** `git am ~/Downloads/opentpw/small-fixes-v2.patch` (six commits: ride state
-  3 named, COAST message, `ReadInt16` reads two bytes, `SoundFile` overrides instead of hides,
-  `Material.ClearBoundResources` deleted with its two call sites, `Rotation ==` can be true). Then by
-  hand: the six doc comments in `~/Downloads/opentpw/doc-comments.patch` (it no longer applies; read it
-  and move each comment to the member it describes). Then check whether the guard described at
-  `RideScript.cs:802` already ends a spinning `CRIT_LOCK` turn; if it does not,
-  `~/Downloads/opentpw/crit-cap.patch` shows the intent. Confirm: build and test; load the lobby and a
-  park once and screenshot each, because the `SoundFile` and `Material` commits touch the load path.
+- [x] **Q11. Small fixes.** Done 2026-09-23, `alexah/125-small-fixes`, eight commits. The six from
+  `small-fixes-v2.patch` went in by `git am`, each checked against the executable or the compiler first (10 agents,
+  three of them refuters), and each corrected in place where its prose overstated: state 3 has a jump-table arm of
+  its own, a bare return; the log strings are `BROKEN_DOWN` and `CONDEMNED`; `==` was true whenever rounding pushed a
+  dot above 1; `BaseStream` now carries its dead-code label. Then the six doc comments, moved by hand (three had stale
+  text, and the Charge one gave the sideshow formula wrong, as `docs/exe/ride-operation.md` did too). Then the cap.
+  - **The guard at `Turn` does not end a spinning section.** It stops a lock outliving its turn, but `CRIT_LOCK`
+    and a backward `BRANCH` with no unlock or yield loops for ever inside one `Turn`. So does the original:
+    `FUN_005516b0`'s loop ends only on the budget or a negative PC (`docs/exe/park.md`, "The scheduler").
+    `RideScript.CriticalStepCap` (10,000) ends such a turn, a deviation said at the site. None of the 150 shipped
+    sections can loop, and the longest runs 23 instructions, 19 in Lost Kingdom ("Corpus shape").
+  - **The instrument:** `rides` prints `critical N` per thing, the longest section it has run in one turn, and a
+    header `critical longest N cap 10000 reached K`.
+  - **Confirmed in the game,** a control on `main` and the fix, lobby then jungle, both photographed. The park frame
+    paused on load is pixel-identical to `main`'s, and the 14 `Sound category` lines are identical, which is the
+    `Material` and `SoundFile` commits on the load path. After 60 s: `critical longest 5 cap 10000 reached 0`, the
+    Bouncy Dino's boarding path, as predicted; toilets, kiosk and Jungle Spray 3 each, the quiet path. At load I
+    predicted 3 and read 0: no script had reached its lock before the pause. `save/` unchanged.
+  - **Tests:** `ExpandedMemoryStreamTests`, `SoundFileTests`, `EqualityTests.RotationComparesByValue` (now with a
+    quarter turn, whose dot rounds below 1, and the tolerance pinned from both sides), and three in
+    `RideScriptClockTests`. 968 tests with the game. Mutations M1-M9 all red.
+  - **Found:** Q45 (the VM charges `CRIT_LOCK`; the original does not) and Q46 (seven more stacked doc comments).
 - [ ] **Q12. Four hollow tests.** Each stays green with its fix reverted: `VoicePlacementTests` (nothing
   pins `HoldPlaced` or its call at `ParkAudio.cs:709`), `TextureSamplerTests` (nothing pins the copy at
   `Texture.Cache.cs:90-94`), `ParkCamcorderWalkTests` (nothing pins that `Step` calls `Slide`),
@@ -456,6 +470,17 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   in `Level.ForgetPark`, or on the entity's delete, and check every reader of either for a null in the lobby.
   Confirm: `parks` in the lobby after a park reads `#1 jungle collected`.
 
+- [ ] **Q45. The VM charges `CRIT_LOCK` against the budget; the original does not.** Found by Q11's decode.
+  `FUN_005516b0` reads the critical flag after the instruction has run (`0x00551724`), so `CRIT_LOCK` is free and a
+  lock reached with one unit of budget left still runs its whole section in that turn. `RideScript.Step` charges
+  before `Execute`, by the flag as it stood: there the turn ends locked, `Turn` clears the flag, and the section runs
+  next turn unlocked and budgeted. Reachable, by static walk, at 68 of the 150 locks, 18 of them in Lost Kingdom;
+  not yet seen in a run. `RideScriptSchedulerTests.ACriticalSectionDoesNotOutliveItsTurn` pins 3 where the engine
+  gives 4. In the same loop, a time slice of nought or less skips the turn in the original, where `Turn` floors it to
+  1 without saying so; every shipped file says 50, so that is dead by CONTENT and wants only a comment. Confirm: the
+  test at 4, and in the jungle a section at one of those sites run whole in one turn, by the `rides` figure against
+  its path length.
+
 ## B. Docs and comments
 
 - [ ] **Q13. STATUS diet, and track the loose files.** `docs/STATUS.md` is 1,163 lines; "Recent" alone is
@@ -463,6 +488,16 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   Commit this `QUEUE.md` under `docs/`. Move `docs/CLEANUP-PLAN.md` (every item closed) into
   `docs/history/` and commit it there. Commit `docs/REVIEW-2026-09-21.md` and
   `docs/REVIEW-2026-09-22.md`. No game run.
+- [ ] **Q46. Seven more stacked doc comments.** Found by Q11's scan of every source file (the six in Q11 were
+  the first). Each sits on another member's summary, so it documents the wrong member. By member, since line numbers
+  go stale: in `ParkGuestSprites`, `Standing`'s block lands on `StandingFrom` (Standing's own `<inheritdoc>` must go);
+  in `ParkPeople`, `Fire`'s lands on `IsStaff` and `StepVehicle`'s on `ReleasesVehicle`; in `PeepBehaviour`, `Step`'s
+  lands on `HeldByAThing` with a stray `<param name="tick">`, and `ChooseSomewhereToGo`'s on `Explain` (merge it with
+  its `<returns>`); in `ParkGround`, the constructor's `<param name="world">` lands on the `_world` field; and in
+  `ParkState`, `NextThingId`'s upper summary ("A thing id nothing is using") is stale, to delete rather than move. Stale in their own right,
+  near them: `SettleUp`'s summary (three claims the code now contradicts) and its body's "Five, for the Jungle Spray" (the
+  prize is fifty), `Explain`'s "whether they could actually get there", and `AGuestLetOffARideEndsUpStandingAtItsExit`'s "every other test here checks where a guest is aimed".
+  No game run.
 - [ ] **Q14. Comment sweep of the 24 cleanup commits.** Replace history-voice comments with what the
   code does now: `IslandPanel.cs:319-320`, `LobbyGate.cs:46-47`, `LobbyCameraMode.cs:88, 96, 103`,
   `ParkCamcorderCameraMode.cs:396, 526-527`, `ParkThingStates.cs:54-55`, `ParkScriptStates.cs:33-34`,

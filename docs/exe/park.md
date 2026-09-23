@@ -478,12 +478,12 @@ The loader's otherwise unexplained `field[0x10] = field[0x15] - 1` is `index = s
 
 ### The scheduler — who gets a turn and when
 
-`FUN_005516b0` is the RSSE tick and the **only** caller of the dispatcher; `Game_StateMachine` calls it at `0x0054f56b`. Every field below is read, not inherited.
+`FUN_005516b0` is the RSSE tick and the **only** caller of the dispatcher (`0x0055171f`). It has 17 call sites: `Game_StateMachine` at `0x0054f56b`, and the layout replay `FUN_004041d0` sixteen times, in two runs of eight at `0x00404482`-`0x004044a5` and `0x0040455a`-`0x0040457d`. Every field below is read, not inherited.
 
     tick counter    DAT_008791a4     incremented once per tick, before any script runs
     script list     DAT_008791b0     doubly linked registry, newest at the head; next pointer at offset 0
     initialised?    DAT_008791a0     zero -> logs "RSSE: Need to initialise before you can tick" and bails
-    critical flag   DAT_0087919c     RESET TO 0 AT THE START OF EVERY TURN
+    critical flag   DAT_0087919c     RESET TO 0 AT THE START OF EVERY TURN (0x00551701, per script)
 
     field 2    +0x08   the script's id - the SAME id COAST_INITIALISE matches on
     field 3    +0x0c   id of a script to mirror the speed word into
@@ -497,19 +497,21 @@ The loader's otherwise unexplained `field[0x10] = field[0x15] - 1` is `index = s
 
     run this script if  byte[+0xb8] != 0   OR   ((scriptId ^ tick) & 7) == 0
     budget = field[0x25];  field[0x26] = budget
-    while (budget > 0 && PC >= 0) { dispatch one instruction; budget--; }
+    while (budget > 0 && PC >= 0) { dispatch one instruction; if (!critical) budget--; }
     if (PC < 0) tear the script down (FUN_00559060)
 
 **A script gets a turn only every eighth tick, staggered by its id** — unless `+0xb8` is set, which makes it run every tick. **`TURBO` is what sets that byte** (`0x005542b9` writes `[EBP+0xb8]`), so TURBO means "run me every tick", not "run me faster". **`TURBO` stores the RAW low byte of its operand word**, not a resolved value — harmless because all 20 shipped uses are literals, and they are exactly **ten `1`s and ten `0`s**, a boolean confirmed by the data.
 
-The budget is decremented **only while the critical flag is clear**. **The time slice is an INSTRUCTION BUDGET, not a duration.**
+The budget is decremented **only while the critical flag is clear**, and the flag is read **after** the instruction has run (`0x00551724`-`0x00551730`): `CRIT_LOCK` itself costs nothing, and a lock reached with one unit left still runs its section in that turn, up to the unlock or a yield. **The time slice is an INSTRUCTION BUDGET, not a duration.**
+
+**Nothing else bounds the loop** (`0x00551719`-`0x0055173c`): it ends only when the budget is spent or the PC goes negative - no instruction count, no clock, no watchdog, no tick or frame deadline - and no callee of the dispatcher writes the flag or the budget. So a section that branches back without reaching `CRIT_UNLOCK`, a yield or a negative PC hangs the game thread. The flag is reset once per script turn, after the stagger and body tests, not once per tick. A time slice of nought or less skips the loop and leaves the script alive; every shipped file says 50.
 
 | Address | Opcode | Behaviour |
 |---|---|---|
 | `0x00551d44` | `CRIT_LOCK` | `MOV [0087919c],1` — instructions stop costing budget |
 | `0x00551d59` / `0x00551d5f` | `CRIT_UNLOCK` | `MOV [0087919c],0`, then `MOV [+0x98],0` — **and ends the slice on the way out** |
 
-So a locked region runs **atomically, unbounded by the 50-instruction slice**, and **leaving it yields** — that second instruction stops a script monopolising the loop after unlocking. **`CRIT_LOCK` is a VM critical section, not a ride lock**; the docs page's "locks a ride, preventing visitors from accessing the ride" is wrong.
+So a locked region runs **atomically, unbounded by the 50-instruction slice**, unless it yields (seven shipped sections do - see "Corpus shape"), and **leaving it yields** — that second instruction stops a script monopolising the loop after unlocking. **`CRIT_LOCK` is a VM critical section, not a ride lock**; the docs page's "locks a ride, preventing visitors from accessing the ride" is wrong.
 
 **`ENDSLICE` and `WAIT` yield by zeroing the budget**, which is why `ENDSLICE`'s whole body is one instruction: `MOV [+0x98], 0`. `field[0x26]` and `+0x98` are the same field.
 
@@ -544,7 +546,8 @@ So **"speed is 50 for every script that ever runs" is false**: it is 50 for a sc
 The other time opcodes:
 
     GETTIME  (7)  00551f1e  resolve dest, read clock, store RAW - nothing per-ride, nothing subtracted
-    WAITABS (45)  00553828  operand IS the deadline; shares WAIT's compare path; ZERO shipped uses
+    WAITABS (45)  00553828  first visit stores clock + operand, unscaled by speed (0x005538cb), then
+                            rewinds and yields like WAIT and shares its compare (0x00553859); ZERO shipped uses
     SETTIMER(95)  0055641b  field[+0xc4] = clock + resolve(operand)  -  NOT speed-scaled, unlike WAIT
     GETTIMER(96)  0055644d  result = field[+0xc4] - clock, floored at 0 by the JNS at 0x0055646d
 
@@ -811,6 +814,8 @@ Every one of those functions opens with `ride = *(int *)(&DAT_00790bd0 + handle 
 **84 of the 106 opcodes are used**; scripts end in `BRANCH` (294) or `RETURN` (14) and **never** in `END`, so they are endless loops by construction; **277 of 308** open with `NAME`, which is a tendency and not an invariant.
 
 Corpus counts for the control opcodes: `WAIT` 458, `ENDSLICE` 396, `CRIT_UNLOCK` 240, `WAIT4ANIM` 170, `CRIT_LOCK` 150, `JSR` 70 (all targeting labels), `HUSH`/`HOP` 39 each (always a variable), `RETURN` 33, `TURBO` 20, `NOP` 2, and **`END` zero times**.
+
+**The critical sections, walked as control flow** (every branch arm taken as possible, `JSR`/`RETURN` followed, each section walked to its `CRIT_UNLOCK`, a yield or `END`; measured twice, by the project's reader and by an independent one): the 150 `CRIT_LOCK`s sit in 128 scripts, 36 of them in 81 Lost Kingdom scripts. Every one is reached at call depth 0 and none while already locked. **No section contains a loop.** Nine branch backward inside the section, and none of those edges closes a cycle: five to a test after the lock (the lane choice in `Junspray`, `Hyenas`, `Squirtem`, `frushy` and `Marsmoon`), and four to a `CRIT_UNLOCK` placed before it (`TourRide` @142 in Lost Kingdom and Hallowe'en, `twetours` @169, `scitour` @176). **The longest runs 23 instructions** after its lock, the unlock included (Hallowe'en `GoKarts.RSE` @69); in Lost Kingdom 19 (`GoKarts.RSE` @52), then 17 (`SupBog` @46, `Wateride` @77). **Seven sections can yield while still locked**, so the rest of each runs unlocked on the next turn: the four lane sideshows, `Junspray` @22 and `Hyenas` @22 in Lost Kingdom and `Squirtem` @22 and `frushy` @20, each with a `WAIT` after a `WALKON`; `Purse` @22 (`WAITANIM`); and the Hallowe'en and space `bumper` (@86, @95).
 
 **A world-less interpreter cannot reach most `WAIT`s, and that is correct.** `Coaster1.RSE` disassembles to 122 words with **exactly one `WAIT`, at word 88**, and it sits behind `TEST $VAR_BREAKSTAT` / `BRANCH_NZ` at word 63. **Nothing in the script ever writes `VAR_BREAKSTAT`** — only a running park does — so with no world it stays 0 and the script loops `18 -> 67 -> 18` forever, never reaching 88. A test asserting "it reaches a WAIT" fails against a perfectly correct machine.
 

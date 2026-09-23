@@ -1,7 +1,9 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace OpenTPW.Tests;
 
@@ -236,6 +238,125 @@ public class RideScriptClockTests
 		script.Turn( 3000f );
 
 		Assert.IsFalse( script.Waiting, "and on it the wait is over" );
+	}
+
+	/// <summary>
+	/// A critical section that loops without unlocking or yielding ends its turn at the cap, where the
+	/// original's turn would never end: <c>CRIT_LOCK</c> makes instructions free, so the budget never runs
+	/// out. The turn runs on a thread of its own so that a turn which never ends fails this test rather
+	/// than hanging the run. The script is not stopped; the second turn runs and is capped the same way, as
+	/// the count it keeps shows, and the cap is reported once, not every turn.
+	/// </summary>
+	[TestMethod]
+	public void ACriticalSectionThatNeverUnlocksEndsTheTurnInsteadOfHangingIt()
+	{
+		// Lock, count, branch back to the lock: each pass is three locked instructions after the first.
+		var script = new RideScript( Build( 1, 50,
+			Word( Opcode.CRIT_LOCK ),
+			Word( Opcode.ADD ), Var( 0 ), Lit( 1 ),
+			Word( Opcode.BRANCH ), Loc( 0 ) ) );
+
+		var previousLog = Log;
+		var warnings = 0;
+		Logger.LogDelegate count = ( severity, text ) =>
+		{
+			if ( severity == Logger.Level.Warning && text.Contains( "a critical section ran" ) )
+				++warnings;
+		};
+
+		Log ??= new();
+		Logger.OnLog += count;
+
+		try
+		{
+			Exception? failure = null;
+			var afterTheFirst = 0;
+
+			var turns = new Thread( () =>
+			{
+				try
+				{
+					script.Turn( 0f );
+					afterTheFirst = script.Variables[0];
+					script.Turn( 0f );
+				}
+				catch ( Exception e )
+				{
+					failure = e;
+				}
+			} ) { IsBackground = true };
+
+			turns.Start();
+
+			Assert.IsTrue( turns.Join( TimeSpan.FromSeconds( 10 ) ), "a turn inside a critical section never ended" );
+
+			if ( failure != null )
+				throw failure;
+
+			Assert.IsTrue( script.Running, "paused until its next turn, not stopped" );
+			Assert.IsTrue( script.ReachedCriticalCap, "and it says it ran into the cap" );
+			Assert.AreEqual( RideScript.CriticalStepCap + 1, script.LongestCritical,
+				"each turn ends on the first instruction past the cap" );
+
+			// 10,001 locked steps run ADD, BRANCH, CRIT_LOCK in turn from the first ADD, so the ADD is steps
+			// 1, 4, ... 10,000 of them: 3,334 a turn.
+			Assert.AreEqual( 3334, afterTheFirst, "the first turn counted to the cap" );
+			Assert.AreEqual( 2 * 3334, script.Variables[0], "and the second ran, and was capped the same way" );
+			Assert.AreEqual( 1, warnings, "the cap is reported once, not every turn" );
+		}
+		finally
+		{
+			Logger.OnLog -= count;
+			Log = previousLog;
+		}
+	}
+
+	/// <summary>
+	/// A section whose <c>CRIT_UNLOCK</c> is the first instruction past the cap ends its turn by unlocking, as
+	/// it would without the cap, and is not reported: the cap is tested after the instruction has run.
+	/// </summary>
+	[TestMethod]
+	public void ASectionThatUnlocksOnTheStepPastTheCapIsNotCapped()
+	{
+		var body = new int[RideScript.CriticalStepCap + 4];
+		body[0] = Word( Opcode.CRIT_LOCK );
+
+		for ( var word = 1; word <= RideScript.CriticalStepCap; ++word )
+			body[word] = Word( Opcode.NOP );
+
+		body[RideScript.CriticalStepCap + 1] = Word( Opcode.CRIT_UNLOCK );
+		body[RideScript.CriticalStepCap + 2] = Word( Opcode.BRANCH );
+		body[RideScript.CriticalStepCap + 3] = Loc( 0 );
+
+		var script = new RideScript( Build( 0, 50, body ) );
+
+		script.Turn( 0f );
+
+		Assert.AreEqual( RideScript.CriticalStepCap + 1, script.LongestCritical, "every NOP and the unlock ran locked" );
+		Assert.AreEqual( RideScript.CriticalStepCap + 2, script.Position, "and the unlock ended the turn" );
+		Assert.IsFalse( script.ReachedCriticalCap, "a section that unlocked is not reported as capped" );
+	}
+
+	/// <summary>
+	/// A real section runs whole and is counted the way the census counts it: every instruction after the
+	/// <c>CRIT_LOCK</c> up to and including the <c>CRIT_UNLOCK</c>, which ends the turn.
+	/// </summary>
+	[TestMethod]
+	public void AShortCriticalSectionRunsWholeAndIsCounted()
+	{
+		var script = new RideScript( Build( 0, 50,
+			Word( Opcode.CRIT_LOCK ),
+			Word( Opcode.NOP ),
+			Word( Opcode.NOP ),
+			Word( Opcode.NOP ),
+			Word( Opcode.CRIT_UNLOCK ),
+			Word( Opcode.BRANCH ), Loc( 0 ) ) );
+
+		script.Turn( 0f );
+
+		Assert.AreEqual( 4, script.LongestCritical, "three NOPs and the unlock ran locked" );
+		Assert.AreEqual( 5, script.Position, "and the unlock ended the turn" );
+		Assert.IsFalse( script.ReachedCriticalCap );
 	}
 
 	/// <summary>

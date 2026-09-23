@@ -11,10 +11,10 @@ namespace OpenTPW.Tests;
 /// <para>
 /// These build their own scripts rather than using the shipped ones, which is the opposite of what
 /// <see cref="RideScriptRunTests"/> does and is deliberate. The shipped corpus is the right instrument
-/// for "does the machine agree with the data"; it is the wrong one for "what happens in a case the data
-/// does not contain", and one of the cases below is exactly that - a critical section left open across
-/// the end of a turn, which no shipped script does and which the engine's own per-tick reset says must
-/// still work.
+/// for "does the machine agree with the data"; it is the wrong one for a case the data holds only rarely,
+/// and one of the cases below is exactly that - a critical section left open across the end of a turn,
+/// which seven shipped sections do (docs/exe/park.md, "Corpus shape") and which the engine makes harmless
+/// by clearing its flag as each script's turn begins.
 /// </para>
 ///
 /// <para>
@@ -174,16 +174,16 @@ public class RideScriptSchedulerTests
 	}
 
 	/// <summary>
-	/// <b>A critical section does not outlive the turn that took it.</b> The engine zeroes its critical
-	/// flag at the top of every tick, before any script runs, so a <c>CRIT_LOCK</c> that is never
-	/// unlocked stops mattering the moment the turn ends.
+	/// <b>A critical section does not outlive the turn that took it.</b> The engine clears its critical
+	/// flag as each script's turn begins, so a <c>CRIT_LOCK</c> that is never unlocked stops mattering the
+	/// moment the turn ends.
 	///
 	/// <para>
 	/// The script below locks, ends its slice while still locked, and then has two <c>NOP</c>s and an
 	/// <c>END</c>. With the reset it takes one instruction per turn and is at word 3 after three turns,
 	/// still running. Without it the budget is never decremented again, so the third turn runs both
-	/// <c>NOP</c>s and the <c>END</c> in one go and the script is stopped at word 5. <b>No shipped
-	/// script does this</b>, so all 308 running proves nothing about it either way.
+	/// <c>NOP</c>s and the <c>END</c> in one go and the script is stopped at word 5. Seven shipped
+	/// sections do yield while locked (docs/exe/park.md, "Corpus shape").
 	/// </para>
 	/// </summary>
 	[TestMethod]

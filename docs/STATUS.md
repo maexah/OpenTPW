@@ -49,11 +49,13 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - The `meter.wct` mapping behind the happiness gauge is wrong - the last fault Alexah found by playing.
 - Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
 - A left park stays in memory through the lobby, held by `ParkState.Current` and `ParkRides.Current` (Q44).
+- The VM charges `CRIT_LOCK` against a script's budget, so a section reached with one unit left runs over two turns,
+  unlocked; the original runs it whole (Q45).
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q10, and Q35, are ticked.** Next is **Q11**: the small fixes from
-`~/Downloads/opentpw/`. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, and Q10 Q44.
+`docs/QUEUE.md`, from the top. **Q1 to Q11, and Q35, are ticked.** Next is **Q12**: four hollow tests.
+Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, and Q11 Q45-Q46.
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -64,6 +66,7 @@ and is still untracked, so it exists on this machine only; Q13 moves it into `do
   rider sits at z 10.3 against a 5.0 camcorder eye at pitch 0 and the console has no pitch argument.
 - `SpriteScript.ScheduleFrom` and `DropUnreadyNominee`: unwiring either leaves the suite green.
 - Nothing puts a staff member in a cell's occupancy list *as they walk*.
+- The critical-section cap trips only in a test: nothing the game ships can reach it (Q11).
 
 ## Numbers
 
@@ -72,12 +75,20 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **962**, 0 fail, 0 skip with the game | 2026-09-23, after Q10 |
-| Tests without the game | **436** ran, **526** skipped, of 962 | 2026-09-23, after Q10 |
-| Build warnings | 125 | 2026-09-23, after Q10 |
+| Tests | **968**, 0 fail, 0 skip with the game | 2026-09-23, after Q11 |
+| Tests without the game | **442** ran, **526** skipped, of 968 | 2026-09-23, after Q11 |
+| Build warnings | 123 | 2026-09-23, after Q11 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-09-23 - the small fixes.** Branch `alexah/125-small-fixes`, `docs/QUEUE.md` Q11, eight commits: the six
+patches from `~/Downloads/opentpw/`, each checked against the executable or the compiler and corrected where it
+overstated; six doc comments moved to their members; and a cap on a critical section. The original's turn loop has
+no bound (`docs/exe/park.md`), so a `CRIT_LOCK` that loops hangs it; `RideScript.CriticalStepCap` ends that turn
+instead. None of the 150 shipped sections loops; the longest runs 23 instructions. Confirmed against a control on `main`: the
+park frame at load is pixel-identical and the sound banks log the same; after 60 s `rides` read `critical longest
+5 cap 10000 reached 0`, as predicted. Photographed. Filed Q45 (the VM charges `CRIT_LOCK`) and Q46.
 
 **2026-09-23 - the camcorder forgets the park.** Branch `alexah/124-the-camcorder-forgets-the-park`, `docs/QUEUE.md`
 Q10. `Forget` lets go of the edge test the camcorder built for a park, which held that park's save until the first
@@ -87,24 +98,8 @@ collection, every reply predicted: with the second jungle up and the camcorder u
 alive, held by camcorder`; the fix read `#1 jungle collected`. Collecting it was worth 2.4 MB of heap, measured
 within the control run. Photographed. The sweep found two more roots holding a left park through the lobby, filed as Q44.
 
-**2026-09-23 - each ride screams on its own clock.** Branch `alexah/123-each-ride-screams-on-its-own-clock`,
-`docs/QUEUE.md` Q9. The decode is in `docs/exe/audio.md`, every claim put to two refuters. The original keeps
-nothing per effect: the "2700 ms repeat delay" is a voice priority. A held scream is a chain: a child every 1-3 s,
-the wait drawn from its variation header, and the variation picked by zones and parameter 6. A stop cuts only its own
-ride. `ParkScreams` builds that chain. Confirmed with two Belly Bounces, predicted first: on `main` the other ride
-screamed at once after 6 of 8 stops (the mix went from -80 dB to -25 dB in 60 ms); with the fix it kept its own time
-after 8 of 8. Photographed.
-
-**2026-09-23 - the island keys wait for the fly-in.** Branch `alexah/122-island-keys-wait-for-the-fly-in`,
-`docs/QUEUE.md` Q8. Decoded first, every claim put to two refuters: the original's next and previous handlers
-refuse while its camera is leaving for a park, and every lobby builds that camera afresh with the leave at
-nought. `LobbyCameraMode.Step` is the pair; the bracket keys (ours) ask through it; `ForgetIsland` clears the
-leave. Confirmed in the game with a real `]` mid-flight, every number predicted: on `main` the camera turned
-to Wonder Land and the jungle loaded anyway, and a rebuilt lobby flew on and loaded it unasked; with the fix
-`staying on island 0`, the flight ran on into Lost Kingdom's gate, photographed, and a rebuilt lobby read
-`leave=No`. The decode found the original's Escape cancels the fly-in (Q41) and its keys act on release (Q42).
-
-**Earlier items, kept now only in the git log.** `alexah/121` emptied the hand as a park is left (Q7);
+**Earlier items, kept now only in the git log.** `alexah/123` gave each ride's screams their own clock (Q9, filing
+Q43); `122` made the island keys wait for the fly-in (Q8, filing Q41-Q42); `121` emptied the hand as a park is left (Q7);
 `120` kept a refused staff drop's candidate on the cursor (Q6, filing Q40); `119` kept a moved thing in the
 hand until a cell takes it (Q5, filing Q39); `118` made a sold thing take its script down and leave bare
 ground (Q4, filing Q36-Q38); `115` made a placed ride lay its queue's first cell and hand the player the queue
