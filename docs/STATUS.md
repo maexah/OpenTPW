@@ -63,7 +63,7 @@ Take counts fresh; these go stale within a day.
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
 | Tests | **914**, 0 fail, 0 skip with the game | 2026-09-22, after Q3's node |
-| Tests without the game | **not remeasured** - last read 426 ran / 470 skipped of 896 | the game was present for every run this session; take it fresh |
+| Tests without the game | **427** ran, **487** skipped, of 914 | 2026-09-22, in a clean worktree of the Q3 commit |
 | Build warnings | 125 | 2026-09-22 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
