@@ -1200,8 +1200,8 @@ player sells, which is UITEXT 23 **"Scrap value"**.
 **Delete does NOT go through the interaction-mode system** - `FUN_0048cd10` calls `FUN_0052f200(0x33,1)`
 and then the map-click apply directly. Only MOVE builds a mode.
 
-**Nothing refuses to sell a ride with guests queueing or riding, and nothing evicts them**; each peep
-discovers it on its own tick and unlinks itself.
+**Nothing refuses to sell a ride with guests queueing or riding, and it lets them all go at once** -
+see "Selling and the people on it" below.
 
 There IS a confirmation box, UITEXT 396, **gated on an options checkbox** (`DAT_0078d90f`) - the same
 flag gates the staff dismissal box, UITEXT 397.
@@ -1229,6 +1229,71 @@ second pass clears the footprint, unlinking the entrance from its four cardinals
 eight, so each such path also loses its bit toward the end. The path the queue joined keeps the ride as
 its owner, pointing at an empty cell. **Move is the same call with the same flag**, after one extra walk
 that saves the corner list.
+
+#### The demolisher's order, and the cells it leaves
+
+Decoded 2026-09-23, every claim re-derived by a refuter unless marked. **`FUN_00527ee0( x, y, reentered )`**
+resolves the thing through `FUN_00527d60`, which answers only for a cell typed 4, 9 or 10
+(`0x00527db3`..`0x00527dc7`), and nothing refuses an occupied thing. In the Lost Kingdom save the gates,
+the lights and the vehicles stand on no such cell (measured over the whole map), so the demolisher is
+**inferred** never to reach them; whether anything else deletes one in play is untraced. The third
+argument is 1 only from the track-record clear `FUN_0053b280` (`0x0053b703`); Delete and the move pickup
+both pass 0 (`0x00525e7f`).
+
+Then, in order: only for a queued thing, the queue drain above (force raised around it and lowered
+after); a first footprint pass letting the ends' paths go; **a second footprint pass
+(`0x0052842b`..`0x00528570`) that calls `FUN_005367a0( 0, 0 )` on every on-map cell of the shape except
+its empty `.` ones** (skipped at `0x00528462`), with the force flag at nought (`0x00528506`); the BUMP
+physics world freed unless re-entered (`FUN_00545610`); then `FUN_0050b780` at `0x00528590`, which sends
+message `0x1b` and runs the object destructor `FUN_004dd0a0`; and last, unless a layout is being
+replayed, a demolish sound - **`0x96`, `0x97`, `0x98` or `0x99`** for fewer than 4, 8 or 16 body cells,
+or more.
+
+**A footprint cell of type 4 goes straight to the clear's reset** (`0x00536bc9`), the block its queue arm
+also ends in; the path arm writes the same fields itself (`0x0053696a`..`0x00536994`) and joins at
+`0x00536bf3` for the type and the retile. The reset leaves `mType` 0, `mNeighbours` 0, direction 0, **the
+whole `mFlags` word** 0, owner 0, tile `(0, 55, 0)` - the tile every bare cell of the shipped park carries -
+and the mesh freed. The overlap counter is **kept** on type 4 and **zeroed** on the ends (the queue arm at
+`0x00536abf` for type 9, the path arm at `0x00536834` for type 10), which also unlink their cardinals and
+all eight neighbours respectively. The ground cell is restored from the snapshot at `DAT_0079fc54`,
+keeping `0x0100`.
+
+**So a sold thing leaves bare in-park ground.** The build pass clears each cell before it stamps it
+(`FUN_005367a0` at `0x0052910c`), `FUN_00535600` allows type 4 only over type 0 or 1, and the placement
+verdict `FUN_00535670` refuses `0x40` land (`0x005357c7`). That is what the cells held unless a path ran
+there, and that path does not come back. Whether every placement route reaches that verdict is open -
+`FUN_00532fc0` consults it only for ops carrying `0x100` or `0x200` (QUEUE Q37).
+
+**OpenTPW writes that reset** (`ParkPathBuilding.Cleared`) from `Unstamp`, the queue drain and the path
+clear. `Unstamp` clears only the cells the thing owns, which for a thing the save placed leaves out its
+`.` cells as the original does, and it differs twice, both because its placement verdict is unbuilt
+(`PLACEMENT_TERRAIN_RULE`) and a thing can stand where the original's cannot: it keeps the `0x40` flag, and
+a cell the save records as terrain the original never builds on goes back to the save's own record.
+The path and queue verdicts refuse `0x40` land, so the other two writers clear the whole word as the
+original does. The demolish sound is counted (`DEMOLISH_SOUND`).
+
+**The object destructor `FUN_004dd0a0`** (one caller, `FUN_0050b780` at `0x0050b866`), in order: the
+item's built count down (`FUN_004d3d10`, record `+0x18`); the object chain unlink (`FUN_00519dc0`); **the
+type-10 "object removed" message** on the bus at `DAT_00788d3c` (`0x004dd0f0`..`0x004dd150`); the refund,
+`price * FUN_004e2290 / 100`; the region effects of flag bits `0x10`, `0x80` (only while script variable 0
+reads below 2) and `0x01`; the upgrade sprite at `+0x54`; **the script teardown, mode 0, 4 or 7**
+(`0x004dd2c9`, see `park.md`, "What selling a thing does to its script"); the build tool's picked thing
+cleared if it is this one; and `FUN_0050b980`, which leaves the anchor cell's list and destroys the model.
+
+#### Selling and the people on it
+
+**The type-10 message evicts everyone at once.** Each subscriber answers it before the refund: a guest
+(`FUN_004fb360`) whose `MajorDest` (`+0x1dc`) is the sold thing is taken off it if riding (state `0x10`:
+the sprite brought back, memory event `0xd`), or out of its queue if queueing (`FUN_005012f0`, which docks
+happiness too, so a queuer loses twice), loses happiness, has `MajorDest` and any `mPreviousRides` entry
+naming it cleared, and goes to Deciding (state 6). A mechanic or handyman with a job on it drops the job.
+**Every kind of staff member whose rest area (`+0x208`) it is answers through `FUN_00504c70`**: one resting
+there (state 3) is put out by `FUN_00506d10`, which decrements the rest area's script variable 0 - so the
+script must still be alive, which it is: the teardown comes later - clears `+0x208`, goes to state 0 and
+heads for the nearest other rest area `FUN_00506910` can reach; one on the way there (state 2) has the
+claim cleared and goes to state 0. The only tick-side check is `FUN_00500900`'s defensive kind-3 test.
+**OpenTPW does not build it** (`SOLD_THING_EVICTION`): a rider or queuer of a sold thing stays as it was,
+and in OpenTPW only guards and researchers rest.
 
 ### Hiring is a placement verb, and there is no hire fee
 
@@ -1619,8 +1684,9 @@ demolition calls that same function over each footprint cell.
   crossing counter to nought, then retiles. **The neighbour unlink loop runs BEFORE the reset**,
   while the cell's own mask is still intact — it clears the mirrored bit on each neighbour and retiles
   that neighbour. **That is the PATH arm.** The queue arm's unlink runs **only while the force flag
-  `DAT_0081d7a8` is nought** — so under force, which is exactly object demolition and queue-over-path,
-  **queue cells are torn down with no neighbour unlink at all**. The two arms also step by different
+  `DAT_0081d7a8` is nought** — so under force, which is exactly a demolished thing's queue drain and
+  queue-over-path, **queue cells are torn down with no neighbour unlink at all**. The demolisher's
+  footprint pass runs with the flag at nought, so a demolished thing's entrance IS unlinked. The two arms also step by different
   amounts: the path arm walks all eight directions, the queue arm only the four cardinals.
 - **Deleting a path refunds nothing; deleting a queue cell refunds** `perCellQueueCost * pct / 100`
   credited through `FUN_004d0190`. The asymmetry is in the code, not in the evidence. **Two
@@ -1877,8 +1943,11 @@ lands exactly on `DAT_0081d740`, the map-width global. Reproduce the behaviour, 
 
 ### Still open
 
-- Which `ItemDescription` fields drive the object flag word at `obj+0x32`; only bit `0x08` (owns a
-  queue, starts closed) is pinned by behaviour.
+- ~~Which `ItemDescription` fields drive the object flag word at `obj+0x32`.~~ **CLOSED 2026-09-23:** the
+  constructor `FUN_004db090` builds it from descriptor fields named by the key table at `0x00744b6c`:
+  `0x01` ProvidesRelief (`+0xf4`), `0x02` ChillsYouOut (`+0xfc`), `0x04` IsChoosable (`+0x3c`), `0x08`
+  HasQueue (`+0x40`), `0x10` ProvidesSecurity (`+0xf0`), `0x20` RideHandlesSprite (`+0x104`), `0x40`
+  HoldsLitter (`+0xf8`), `0x80` IsFireworks (`+0x110`); and `+0x33` bit 0 is RunsContinuously (`+0x48`).
 - What the low nibble of `mFlags` means — it gates the queue `+3` bump and only `0x20` = NOMODIFY is
   established.
 - ~~Whether mType 9 and 10 really are entrance and exit.~~ **CLOSED 2026-09-22: they are.**

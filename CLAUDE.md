@@ -40,14 +40,14 @@ Machine-specific paths live in `CLAUDE.local.md` (not committed). Long-form know
 
 ```sh
 dotnet build source/OpenTPW.sln --no-incremental    # 0 errors expected; ~125 warnings are known, leave them
-dotnet test  source/OpenTPW.sln --no-build          # ~1 s. Without the game: 431 pass, 499 skip
-OPENTPW_GAME_PATH="<game folder>" dotnet test source/OpenTPW.sln --no-build   # all 930
+dotnet test  source/OpenTPW.sln --no-build          # ~1 s. Without the game: 431 pass, 508 skip
+OPENTPW_GAME_PATH="<game folder>" dotnet test source/OpenTPW.sln --no-build   # all 939
 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game "<game folder>"
 OPENTPW_DEBUG_CONSOLE=1 ...                          # commands on stdin; `unimplemented` prints the gap census
 ```
 
 - `dotnet test` does not accept `--no-incremental`; build first, then test with `--no-build`.
-- Tests that need the game call `GameData.Required()` and skip when it is absent. A green run with 499 skips is normal without the game.
+- Tests that need the game call `GameData.Required()` and skip when it is absent. A green run with 508 skips is normal without the game.
 - Take every count fresh (tests, warnings, opcodes). Never quote one from memory; the numbers in prose go stale within a day.
 
 ## Where things are

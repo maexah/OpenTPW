@@ -112,6 +112,15 @@ public sealed class ItemDescriptionFile
 	/// <summary>How long it stays "new" - <c>Info.NewAttractionDecayTime</c>, 60 for rides and 30 for features.</summary>
 	public int NewAttractionDecayTime => _newAttractionDecayTime ?? _category?.NewAttractionDecayTime ?? 0;
 
+	/// <summary>
+	/// The particle effect a demolished one gives off - <c>Info.DestroyParticleEffect</c>, the descriptor's
+	/// <c>+0x64</c>, which the script teardown <c>FUN_00559060</c> spawns over the footprint. Each category
+	/// sets its own (rides 75, sideshows 76, shops 77, features 78), and a feature may override it: the
+	/// vehicles, the gates, the lights and the End sign set <b>0</b>, which spawns nothing, and others take
+	/// another value - the Jungle's Round Fountain 77.
+	/// </summary>
+	public int DestroyParticleEffect => _destroyParticleEffect ?? _category?.DestroyParticleEffect ?? 0;
+
 	/// <summary>How much thirst using this takes away - <c>UsageInfo.ThirstEffect</c>. The Drinks Shop sets 40.</summary>
 	public int ThirstEffect => _thirstEffect ?? _category?.ThirstEffect ?? 0;
 
@@ -344,6 +353,7 @@ public sealed class ItemDescriptionFile
 	private int? _excitementLevel;
 	private int? _attractionValue;
 	private int? _newAttractionDecayTime;
+	private int? _destroyParticleEffect;
 	private int? _thirstEffect;
 	private int? _hungerEffect;
 	private int? _vomitEffect;
@@ -503,6 +513,10 @@ public sealed class ItemDescriptionFile
 
 				case "Info.NewAttractionDecayTime":
 					_newAttractionDecayTime = Number( line );
+					break;
+
+				case "Info.DestroyParticleEffect":
+					_destroyParticleEffect = Number( line );
 					break;
 
 				case "UsageInfo.ThirstEffect":

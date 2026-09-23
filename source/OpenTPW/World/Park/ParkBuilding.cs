@@ -213,15 +213,43 @@ public static class ParkBuilding
 			|| level.Park is not { } park )
 			return "sell: a park has to be loaded";
 
+		return Sell( state, park, catalogue, objects, ParkRides.Current, thingId );
+	}
+
+	/// <summary>
+	/// The whole of <see cref="Sell(int)"/> once the park is in hand - internal so a test can sell something
+	/// without a running <see cref="Level"/>, the way <see cref="Stamp"/> and <see cref="ReleaseEnds"/> are.
+	/// </summary>
+	/// <remarks>
+	/// <b>The order is the original's</b> where anything can see it: the demolisher (<c>FUN_00527ee0</c>)
+	/// drains the queue, lets the ends go and clears the footprint, and then the object destructor unlinks the
+	/// thing, refunds it, takes its script down and destroys its model last - <c>docs/exe/park-engine.md</c>,
+	/// "The demolisher's order, and the cells it leaves". Nothing runs inside this call, so where the
+	/// footprint's clear falls against the unlink changes nothing.
+	/// </remarks>
+	internal static string Sell( ParkState state, ParkWorld park, ParkItemCatalogue catalogue, ParkObjects? objects,
+		ParkRides? rides, int thingId )
+	{
 		if ( !state.TryObject( thingId, out var placed ) )
 			return $"sell: nothing in the park is thing {thingId}";
 
 		if ( !catalogue.TryGet( placed.CatalogueId, out var item ) )
 			return $"sell: thing {thingId} is catalogue item {placed.CatalogueId}, which this theme has none of";
 
+		// The test Buy makes. The demolisher finds a thing only through a cell typed 4, 9 or 10
+		// (FUN_00527d60), and the gates, the lights and the vehicles stand on no such cell, so nothing
+		// in the original can sell one - inferred from that, not traced. Selling the gate would take its
+		// script down with it, and with no gate no guest is ever let in again.
+		if ( item.UiType is < 0 or > ItemDescriptionFile.Feature )
+			return $"sell: thing {thingId} ('{item.Name}') is UI type {item.UiType}, which nothing can demolish";
+
 		// The age-based scrap percentage, which nothing here can compute - see the remarks. Reported
 		// once and counted, rather than a number invented to fill the gap.
 		Unimplemented.Report( "SCRAP_VALUE_DEPRECIATION" );
+
+		// The demolish sound, one of 0x96..0x99 by how many body cells the thing covered (FUN_00527ee0,
+		// after the destructor, whenever a saved layout is not being replayed).
+		Unimplemented.Report( "DEMOLISH_SOUND" );
 
 		var refund = item.BuildPrice;
 		var footprint = ParkObjects.FootprintAt( item, placed.CellX, placed.CellY, placed.Angle );
@@ -232,12 +260,19 @@ public static class ParkBuilding
 
 		ReleaseEnds( state, park, placed );
 
-		objects.Remove( thingId );
 		state.RemoveObject( thingId );
 
 		Unstamp( state, footprint, placed.CellX, placed.CellY, thingId );
 
+		// The destructor's "object removed" message (0x004dd0f0), which every guest and staff member whose
+		// destination is this thing answers by giving it up - a rider is let off, a queuer leaves the queue,
+		// staff resting in it or heading there to rest go elsewhere. Not built: they stay as they are.
+		Unimplemented.Report( "SOLD_THING_EVICTION" );
+
 		state.Refund( refund );
+
+		rides?.Unbind( thingId, item );
+		objects?.Remove( thingId );
 
 		ParkSurfaces.Rebuild();
 
@@ -741,11 +776,31 @@ public static class ParkBuilding
 	}
 
 	/// <summary>
-	/// Takes a footprint back off the map - the exact undoing of <see cref="Stamp"/>, which is why the two
-	/// sit together rather than this living as a loop inside <see cref="Sell"/>.
+	/// Takes a footprint back off the map - the demolisher's second footprint pass (<c>0x0052842b</c>),
+	/// which clears each cell of the thing's shape. Each becomes <see cref="ParkPathBuilding.Cleared"/> bare
+	/// ground, whoever placed the thing: the save's own things included, whose cells the save still records
+	/// as theirs. See <c>docs/exe/park-engine.md</c>, "The demolisher's order, and the cells it leaves".
 	/// </summary>
 	/// <remarks>
-	/// <b>Every cell loses its record, but only the ANCHOR is left.</b> A placed thing is on exactly one
+	/// <para>
+	/// <b>The ends' overlap counters go to nought and the body's are kept</b>, as the clear's arms do for
+	/// types 9 and 10 and do not for type 4.
+	/// </para>
+	/// <para>
+	/// <b>A cell of the rectangle the thing does not own is left alone.</b> That is the shape's empty
+	/// <c>.</c> cells, which the demolisher skips, for a thing the save placed. <see cref="Stamp"/> owns
+	/// them for a thing bought here, so for that one they are cleared too (<c>SHAPE_KIND_0_PLACEMENT</c>).
+	/// </para>
+	/// <para>
+	/// <b>Two deviations, both because the placement verdict is unbuilt</b> (<c>PLACEMENT_TERRAIN_RULE</c>),
+	/// so a thing can stand where the original's refuses one. The outside-the-park flag is kept where the
+	/// original clears the whole flag word, or selling would turn land outside the park into park. And a
+	/// cell the save records as terrain the original never builds on - anything but bare ground, path,
+	/// queue or a thing's footprint - goes back to the save's own record, since nothing but building on it
+	/// can have changed it; clearing it would leave walkable ground where the save has rock.
+	/// </para>
+	/// <para>
+	/// <b>Every cell it owns is cleared, but only the ANCHOR is left.</b> A placed thing is on exactly one
 	/// cell's occupancy list, so that is the only cell there is anything to leave - and
 	/// <see cref="ParkState.LeaveCell"/> ends by dropping the thing's own next and previous whether or not
 	/// it found it on the cell asked about. Sweeping it across the whole footprint therefore wipes those
@@ -754,6 +809,7 @@ public static class ParkBuilding
 	/// <c>footprint.Top/Left</c>, which is NOT the anchor for a turned thing - the shipped Staff Room is
 	/// anchored (58,16) and covers (58,15)..(59,16) - so that ordering lost a guest for real, and only
 	/// for turned things, which is why every test and a whole driven run stayed green over it.
+	/// </para>
 	/// </remarks>
 	internal static void Unstamp( ParkState state, (int Left, int Top, int Right, int Bottom) footprint,
 		int anchorX, int anchorY, int thingId )
@@ -761,11 +817,41 @@ public static class ParkBuilding
 		for ( var y = footprint.Top; y <= footprint.Bottom; ++y )
 		{
 			for ( var x = footprint.Left; x <= footprint.Right; ++x )
-				state.ClearRecord( x, y );
+			{
+				if ( !ParkState.OnMap( x, y ) )
+					continue;
+
+				var cell = state.Record( x, y );
+
+				if ( cell.ParentId != MapStep.CellId( anchorX, anchorY ) )
+					continue;
+
+				if ( state.Park?.CellAt( x, y ) is { } saved && !BuiltOver( saved.Type ) )
+				{
+					state.ClearRecord( x, y );
+					continue;
+				}
+
+				var end = cell.Type is CellEdge.RideEnd or CellEdge.RideFarEnd;
+
+				state.SetRecord( x, y, ParkPathBuilding.Cleared( cell ) with
+				{
+					Flags = (ushort)(cell.Flags & ParkPathBuilding.OutsideThePark),
+					OverlapCounter = end ? (short)0 : cell.OverlapCounter
+				} );
+			}
 		}
 
 		state.LeaveCell( anchorX, anchorY, thingId );
 	}
+
+	/// <summary>
+	/// Whether a cell of this type is one the original builds a thing over or clears to bare ground - bare
+	/// ground, path, queue and a footprint's three kinds. Anything else is terrain; see <see cref="Unstamp"/>.
+	/// </summary>
+	private static bool BuiltOver( int type )
+		=> type is CellEdge.Nothing or CellEdge.Path or ParkRideChoice.QueueCellType
+			or FootprintType or CellEdge.RideEnd or CellEdge.RideFarEnd;
 
 	/// <summary>Marks every cell of a footprint as built on, and names the thing standing there.</summary>
 	/// <param name="anchorX">

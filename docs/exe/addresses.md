@@ -155,6 +155,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004d49a0` | | OpenTPW/World/Park/FixedVector.cs  |
 | `0x004db517` | | OpenTPW/World/Park/ParkRides.cs  |
 | `0x004dcf90` | | OpenTPW.Tests/ParkRidesTests.cs  |
+| `0x004dd0f0` | The object destructor's type-10 "object removed" message, which evicts riders, queuers and resting staff | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x004dd2c9` | The object destructor `FUN_004dd0a0` calls the script teardown `FUN_00559060` with mode 0, 4 or 7 | OpenTPW/World/Park/ParkRides.cs OpenTPW.Tests/ParkSellTests.cs  |
 | `0x004f7ea9` | | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f8321` | | OpenTPW/Global/GameCalendar.cs OpenTPW.Tests/GameCalendarTests.cs  |
 | `0x004f8792` | | OpenTPW/Global/GameCalendar.cs  |
@@ -210,6 +212,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00527222` | Mode-3 commit: start of the queue run arm | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005275f2` | Mode-3 commit: the tool ends through `FUN_0052f200(0,0)` | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00527655` | Apply dispatcher: end of the path/queue arm | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x0052842b` | The demolisher's second footprint pass: `FUN_005367a0( 0, 0 )` on every cell of the shape but its `.` ones | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x005292b2` | Placer sweep: the exit takes its turned bit as its direction | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x005293c3` | Placer sweep: the entrance takes its turned bit as its direction | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00529744` | Placer: returns null when the entrance faces off the map | OpenTPW/World/Park/ParkBuilding.cs  |
@@ -238,6 +241,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005358e9` | Queue verdict: the cash total skips queue over path | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005358f1` | Queue verdict: end of that guard | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00535d63` | Verdict: end of the path arm | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00536a07` | The clear's queue arm zeroes the overlap counter under force | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00536abf` | The clear's queue arm zeroes the overlap counter before its reset | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00536bc9` | The clear's reset, which type 4 and the queue arm jump to and the path arm repeats: bare, unlinked, unflagged, unowned, tile 55 | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0053c755` | `FUN_0053c3f0`: the marker wave's phase gains 0.1 a frame unless paused | OpenTPW/World/Park/ParkBuildMarkers.cs  |
 | `0x0053c773` | `FUN_0053c3f0`: the phase store | OpenTPW/World/Park/ParkBuildMarkers.cs  |
 | `0x00540d90` | | OpenTPW.Files/Formats/Sprite/SpriteBankFile.cs  |

@@ -104,7 +104,7 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   sweep reached the anchor with nothing left to relink and put nought into the head instead of promoting
   whoever stood behind it. It lost a guest only for a **turned** thing, since every other footprint
   starts at its own anchor and the sweep happened to reach it first, which is why the suite and a whole
-  driven run stayed green over it. The cleanup is now `Unstamp`, the exact undoing of `Stamp`, beside it.
+  driven run stayed green over it. The cleanup is now `Unstamp`, beside `Stamp`.
   Final mutation record, each called in advance: the owner fallback removed **5 red** (predicted 4),
   occupancy no longer asked first **2 red** (predicted 1) - both under by one, because
   `LeavingACellTheThingIsNotOnKeepsWhoeverStandsBehindIt` rests on both and was counted for neither -
@@ -243,15 +243,22 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   corner rises by `sin( phase + x + z )`, one world unit, from `FUN_004708d0`'s 4,096-entry table, the
   phase gaining 0.1 a frame unless paused. Confirmed by two frame pairs: under `pause` identical, running
   the strip's band moving. The brightness half of the wave is counted (`MARKER_RIPPLE_SHADING`).
-- [ ] **Q4. Sell leaves the ride's script bound and scheduled.** `ParkBuilding.Sell`
-  (`ParkBuilding.cs:115-160`) removes the model and the state object; `ParkRides` has no unbind. Add
-  it, and drop queue cells keyed to the sold thing. Confirm: sell a running ride, `rides` census no
-  longer lists it, no errors in the log, screenshot.
-  **The queue half landed with Q3's node** (`alexah/115`): `Sell` drains the queue and releases the ends'
-  paths, because the node made its absence a regression. The script unbind is still the whole of this.
-  **Also found, not measured:** `Unstamp` clears a footprint with `ClearRecord`, which falls back to the
-  SAVE's record - so selling a thing the save placed would leave its cells typed 4, 9 and 10 in the
-  running park. Read from the code only; check it when this item is taken.
+- [x] **Q4. Sell leaves the ride's script bound and scheduled.** Done 2026-09-23,
+  `alexah/118-a-sold-thing-takes-its-script-down`; decode in `docs/exe/park.md` "What selling a thing
+  does to its script" and `park-engine.md` "The demolisher's order, and the cells it leaves". `Sell` now
+  unbinds (`ParkRides.Unbind`, the scheduler's one-level `Destroy`, mode 7), which also takes whatever
+  the script spawned; the death particle, the demolish sound and the eviction are counted, not built.
+  **The Confirm as written was hollow**: the `rides` census walks what is standing, so it dropped a sold
+  thing with or without the fix. The header now prints `scripts N bound M`. **The unmeasured finding was
+  real and visible**: on the unfixed build a sold save-placed ride left a sky-blue hole in its
+  footprint's shape and refused anything built there again. `Unstamp` now writes the original's cleared
+  cell (tile 55, the ends' counters zeroed) to the cells the thing owns, and so does the queue drain,
+  which had left the node's counter at one. The gates can no longer be sold from the console. Confirmed in the game, every number
+  predicted: scripts 16, 15 after the window's Delete, 16 back on its own spot, then 15, 14, 13, and 13
+  after 20 s running. The item as written: `ParkBuilding.Sell` removes the model and the state object;
+  `ParkRides` has no unbind. Add it, and drop queue cells keyed to the sold thing. Confirm: sell a running
+  ride, `rides` census no longer lists it, no errors in the log, screenshot. Also check `Unstamp`'s
+  `ClearRecord`, which falls back to the SAVE's record.
 - [ ] **Q5. Console Move is Sell then Buy.** `ParkBuilding.cs:163-177`. A refused cell loses the
   object and banks the refund. Do Sell then Carry, as `ParkObjectWindow.Move` does. Return a result
   value, not a string the caller parses (`:171`). Confirm: move to a cell that refuses, screenshot the
@@ -292,6 +299,16 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   `Texture.Cache.cs:90-94`), `ParkCamcorderWalkTests` (nothing pins that `Step` calls `Slide`),
   `LobbyLeaveForParkTests` (nothing pins the wiring, and `RadiusDecay` can change freely). Make each
   fail when its fix is reverted. No game run.
+- [ ] **Q36. Selling a thing lets nobody go.** Found by Q4's decode (`park-engine.md`, "Selling and the
+  people on it"). The destructor's type-10 message takes every guest whose `MajorDest` is the sold thing
+  off it or out of its queue, docks happiness (a queuer twice), clears `MajorDest` and sends them to
+  Deciding; any staff member resting in it or on the way to rest there gives it up; a mechanic's or
+  handyman's job goes. Here a rider stays
+  Riding for ever (`PeepBehaviour.cs`, the empty Riding arm), a queuer stands on a drained queue for ever,
+  and `StaffBehaviour.GoAndRest` still offers a sold save-placed Staff Room (it walks the save's list).
+  Counted as `SOLD_THING_EVICTION`. The two happiness docks' keys (`DAT_00785058`, `DAT_0078505c`) are
+  unsettled - trace the loader first. Confirm: a guest riding and one queueing at the moment of a sale
+  both go to Deciding, `peeps` before and after.
 
 ## B. Docs and comments
 
@@ -380,6 +397,18 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   side-by-side screenshots of the same view.
 - [ ] **Q30. Waving flags at the bus stop.** Nothing found in code or docs. Decode what the original
   draws at `BusStopA/B` (`park.md:54, 98`), then build.
+- [ ] **Q37. The placement terrain rule.** `ParkBuilding.Refusal` counts `PLACEMENT_TERRAIN_RULE` and lets a
+  thing stand on types 2, 7 and 30 and on land flagged `0x40`, outside the park. The original allows a
+  footprint only over in-park bare ground or path (`FUN_00535600`, `FUN_00535670` refusing `0x40` at
+  `0x005357c7`); whether every placement route goes through that verdict (its op-`0x104` branch) is
+  still open. When it is built, `Unstamp`'s two declared deviations go: keeping `0x40` where the original
+  clears the whole flag word, and giving terrain back its save's record rather than clearing it.
+- [ ] **Q38. What building and selling look and sound like.** Counted, not built: the death particle
+  (`DESTROY_PARTICLE_EFFECT`, `Info.DestroyParticleEffect`, 75-78, a world effect spread over the
+  footprint) and the demolish sound (`DEMOLISH_SOUND`, `0x96`-`0x99` by size). Not yet counted: the
+  build side - `Info.CreateParticleEffect` and the `+0xd4` sound zone the script loader makes when an
+  item has one (`park.md`, "What selling a thing does to its script"). Needs a world particle pass,
+  which nothing here has; the screen pass draws only `OnScreen` templates.
 - [x] **Q35. The path tool from the interface, and Backspace.** Done 2026-09-22,
   `alexah/117-the-path-tool-from-the-interface`; `docs/exe/park-engine.md` "The path tool" has the decode.
   No button arms it: a click on grass or path does, and anchors in the same click. Backspace pops the run

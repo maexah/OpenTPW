@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-09-22.
+Last updated: 2026-09-23.
 
 **This header names no branch and no sha, deliberately.** A line written inside the commit that moves
 the tip cannot name it, so every attempt went stale the instant it was written. Read the current state
@@ -15,7 +15,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
   the camera onto the gate and flies into the island before the loading screen.
 - Park: ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (5 of 6).
 - Building and staffing: purchase menu and hire screen, both reachable from Buy. Things bought, sold,
-  moved, carried; staff hired, fired, picked up, put down. Clicking a placed ride **anywhere on its
+  moved, carried; staff hired, fired, picked up, put down. **A sold thing's script goes with it**, and
+  its ground is left bare. Clicking a placed ride **anywhere on its
   footprint** opens its window - the save's own and ones bought this session alike.
 - Information and money: Info and Money open all-staff, all-items, all-visitors and entry-price screens.
 - Building by POINTING - click to anchor, click to commit, no drag, because both of the original's drag
@@ -37,12 +38,13 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 - No finances, litter, saving a park back, video, networking. Research is inert and has nothing behind it.
 - Eight of the nine per-object windows are unbuilt. Patrol areas are dead, deferred by Alexah.
+- Selling a thing lets nobody go: its riders stay aboard and its queuers stay put (`docs/QUEUE.md` Q36).
 - The `meter.wct` mapping behind the happiness gauge is wrong - the last fault Alexah found by playing.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1, Q1b, Q2, Q3 and Q35 are ticked.** Next is **Q4**: `Sell` leaves a sold
-ride's script bound and scheduled, and leaves the queue cells keyed to a thing that is gone.
+`docs/QUEUE.md`, from the top. **Q1 to Q4, and Q35, are ticked.** Next is **Q5**: console Move is Sell then
+Buy, so a refused cell loses the object and banks the refund. Q4 filed Q36-Q38 (eviction, terrain rule, effects).
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -61,12 +63,22 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **930**, 0 fail, 0 skip with the game | 2026-09-22, after the path tool |
-| Tests without the game | **431** ran, **499** skipped, of 930 | 2026-09-22, after the path tool |
-| Build warnings | 125 | 2026-09-22 |
+| Tests | **939**, 0 fail, 0 skip with the game | 2026-09-23, after Q4 |
+| Tests without the game | **431** ran, **508** skipped, of 939 | 2026-09-23, after Q4 |
+| Build warnings | 125 | 2026-09-23 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-09-23 - a sold thing takes its script down, and leaves bare ground.** Branch
+`alexah/118-a-sold-thing-takes-its-script-down`, `docs/QUEUE.md` Q4. Decoded first, every claim put to a refuter:
+the destructor tears the script down with mode 7, whose bits spawn the item's death particle and take
+`ADDHEAD` heads off the model. `Sell` now unbinds through the scheduler's one-level `Destroy`, and counts
+the particle, the demolish sound and the eviction of riders and queuers it does not build (Q36-Q38).
+**The item's Confirm was hollow**: the `rides` census drops a sold thing either way, so its header now
+prints `scripts N bound M`. **Its unmeasured finding was real**: a sold save-placed ride left a sky-blue
+hole in its footprint and refused a rebuild; `Unstamp` writes the original's cleared cell now. Confirmed
+through the ride window's Delete: scripts 16 to 15, back on its own spot, then 15, 14, 13 and still 13.
 
 **2026-09-22 - the path tool is picked up from the park, and Backspace takes a run back up.** Branch
 `alexah/117-the-path-tool-from-the-interface`, `docs/QUEUE.md` Q35. There is no button: a click on grass
@@ -93,27 +105,10 @@ the original's wave (`alexah/116`), decoded once Alexah confirmed they were see-
 is retiled, `RotateBit` turned the wrong way, the ride window's queue button arms the tool, and an exit
 retiles the path it joins. Six defects; `docs/QUEUE.md` Q3 and the git log carry them.
 
-**2026-09-22 - a thing the save placed can be clicked anywhere on it.** Branch
-`alexah/110-click-a-thing-the-save-placed`. The item blamed unset occupancy; the truth is that a placed
-thing is on **one** cell's list - its anchor - and owns the rest of its footprint through `mParentID`.
-Stamping occupancy across the footprint, as the item prescribed, was tried and lost a guest: those links
-are keyed per thing, so the twelfth cell overwrites the first. `ParkPicking.ThingOn` now asks whoever is
-standing there, then the owner. Measured in a running park, every count predicted first: the save's Belly
-Bounce **12 of 12** cells (was 1), Jungle Spray **9 of 9**, Drinks Shop **4 of 4**, open ground 0 of 4, a
-ride bought this session 12 of 12, and 0 of 12 once sold. Clicking (52,25) printed `Ride window: showing
-'Belly Bounce' (thing 13)`, photographed against a control frame with no window on it.
-**The instrument was measuring the wrong thing**: `worldclick` read the cell's occupant itself, never
-entering the picking code. Closing a twice-surviving mutation then exposed a second defect - `Sell` swept
-`LeaveCell` and orphaned the guest under a **turned** thing - now `Unstamp`. `VERIFYING.md` 113-114.
-
-**2026-09-22 - a thing bought this session joins the park, and a guest rides it.** Branch
-`alexah/109-bought-things-join-the-park`, Q1 and Q1b. Four causes, not the one the item named; the
-detail is in `docs/QUEUE.md` Q1 and the git log. **The rider is still not photographed** - z 10.3
-against a 5.0 eye with no pitch argument (`VERIFYING.md` 111-112).
-
-**2026-09-22 - five earlier items, kept now only in the git log.** `alexah/112` decoded what authors an
-entrance's queue link; `alexah/108` photographed two owed
-Confirm clauses; `107` flew the camera into the island; `106` refuted all three of its item's claims;
-`105` stopped the camcorder at a ride.
+**2026-09-22 - seven earlier items, kept now only in the git log.** `alexah/110` made a thing the save
+placed clickable anywhere on its footprint (`ParkPicking.ThingOn`, `VERIFYING.md` 113-114); `109` made a
+thing bought this session join the park (Q1, Q1b - the rider is still not photographed); `112` decoded
+what authors an entrance's queue link; `108` photographed two owed Confirm clauses; `107` flew the camera
+into the island; `106` refuted all three of its item's claims; `105` stopped the camcorder at a ride.
 
 Everything older is the git log.

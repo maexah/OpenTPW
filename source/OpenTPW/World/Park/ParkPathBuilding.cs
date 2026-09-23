@@ -830,6 +830,27 @@ public static class ParkPathBuilding
 	}
 
 	/// <summary>
+	/// What a cell becomes once <c>FUN_005367a0</c> has cleared it, whichever arm it took - the reset its
+	/// footprint and queue arms jump to (<c>0x00536bc9</c>) and its path arm repeats: bare ground with no
+	/// links, no direction, no flags and no owner, tiled as piece <b>55</b>, the tile every bare cell of the
+	/// shipped park carries. The overlap counter is the arm's own business and is left as it was.
+	/// </summary>
+	internal static ParkWorld.MapCell Cleared( ParkWorld.MapCell cell ) => cell with
+	{
+		Type = NothingType,
+		Neighbours = 0,
+		Direction = 0,
+		Flags = 0,
+		ParentId = 0,
+		TileSet = 0,
+		TileIndex = BareTile,
+		TileAngle = 0
+	};
+
+	/// <summary>The piece a cleared cell is tiled as - see <see cref="Cleared"/>.</summary>
+	private const int BareTile = 55;
+
+	/// <summary>
 	/// One press of the clear on a path cell - <c>FUN_005367a0</c>'s path arm. <b>A path is only removed
 	/// once its overlap counter goes below nought</b>: each press takes one off (or, unstepped, sets it to
 	/// −1), so a cell laid over twice needs three. A NOMODIFY cell with links is never removed; one with
@@ -864,18 +885,7 @@ public static class ParkPathBuilding
 		// The neighbours are unlinked BEFORE the cell is reset, while its own mask is still intact.
 		Unlink( state, park, x, y );
 
-		state.SetRecord( x, y, ParkState.CellFor( park, x, y ) with
-		{
-			Type = NothingType,
-			Neighbours = 0,
-			Direction = 0,
-			Flags = 0,
-			ParentId = 0,
-			OverlapCounter = 0,
-			TileSet = 0,
-			TileIndex = 0,
-			TileAngle = 0
-		} );
+		state.SetRecord( x, y, Cleared( ParkState.CellFor( park, x, y ) ) with { OverlapCounter = 0 } );
 
 		return true;
 	}
@@ -1252,17 +1262,9 @@ public static class ParkPathBuilding
 		{
 			var (x, y) = MapStep.CellAt( cell );
 
-			state.SetRecord( x, y, ParkState.CellFor( park, x, y ) with
-			{
-				Type = NothingType,
-				Neighbours = 0,
-				Direction = 0,
-				Flags = 0,
-				ParentId = 0,
-				TileSet = 0,
-				TileIndex = 0,
-				TileAngle = 0
-			} );
+			// The queue arm zeroes the counter under force (0x00536a07), so the node the placer laid at one
+			// is left at nought.
+			state.SetRecord( x, y, Cleared( ParkState.CellFor( park, x, y ) ) with { OverlapCounter = 0 } );
 
 			state.Refund( price );
 		}
@@ -1308,16 +1310,8 @@ public static class ParkPathBuilding
 
 		Unlink( state, park, cellX, cellY );
 
-		state.SetRecord( cellX, cellY, cell with
-		{
-			Type = NothingType,
-			Neighbours = 0,
-			Direction = 0,
-			ParentId = 0,
-			TileSet = 0,
-			TileIndex = 0,
-			TileAngle = 0
-		} );
+		// The queue arm zeroes the counter before its reset (0x00536abf).
+		state.SetRecord( cellX, cellY, Cleared( cell ) with { OverlapCounter = 0 } );
 
 		state.Refund( refund );
 

@@ -188,8 +188,9 @@ public sealed class RideScriptScheduler
 	}
 
 	/// <summary>
-	/// Takes a script down for good - the engine's <c>FUN_00559060</c>, which is both what
-	/// <c>REMOVECHILD</c> calls and what the tick loop calls on a script that has stopped.
+	/// Takes a script down for good - the engine's <c>FUN_00559060</c>, which is what <c>REMOVECHILD</c>
+	/// calls, what the tick loop calls on a script that has stopped, and what selling a thing calls
+	/// (<see cref="ParkRides.Unbind"/>).
 	///
 	/// <para>
 	/// <b>A script does not die alone - but it dies exactly one level deep.</b> It takes its child and

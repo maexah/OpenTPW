@@ -98,7 +98,7 @@ public sealed class ParkObjects : Entity
 	/// </summary>
 	/// <remarks>
 	/// <see cref="TryNodeOn"/> wants a node by name, which is right for a rider on a seat and wrong for
-	/// a ride's own voice: the engine takes a scream's position from the script's thing handle at
+	/// a ride's own voice: the engine takes a scream's position from the script's model handle at
 	/// <c>+0xc8</c>, not from any node. This answers that.
 	/// </remarks>
 	internal bool TryPlacedOrigin( int thingId, out Vector3 world )

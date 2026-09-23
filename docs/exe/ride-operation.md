@@ -67,7 +67,7 @@ Two consequences of that ordering, both settled by reading the straight-line reg
 
 In order:
 
-1. If `mFlags & 0x80`: read script var **0** (`VAR_LETMEON`); if it reads **1**, run `FUN_004cd4e0` / `FUN_004d8460(7, …)` and write **2** back. **The `0x80` bit is unexplained.**
+1. If `mFlags & 0x80`: read script var **0** (`VAR_LETMEON`); if it reads **1**, run `FUN_004cd4e0` / `FUN_004d8460(7, …)` and write **2** back. **The `0x80` bit is `IsFireworks`** (descriptor `+0x110`, set by `FUN_004db090`); no jungle item sets it.
 2. **States 3 and 4 return immediately** — a state-3 object does nothing at all on its turn.
 3. **The breakdown request.** Unless the state is 1, or `mCanLoad` is nought, or a global counter's low three bits are set, it checks the ride and — for a non-toilet whose `VAR_BREAKSTAT` is nought — logs `"Object %d: requested breakdown"`, takes a constant off the wear at `+0x48` (clamped 0..100), and writes **`VAR_BREAKSTAT` = 1**. So var 4 is an engine → script channel, confirmed from the other side by `FUN_004e0db0` setting it and `FUN_004e03f0` clearing it.
 4. **The worn flag.** A wear value below a threshold writes **`VAR_WORN` (var 8) = 1**.
@@ -106,7 +106,7 @@ In order:
 | `FUN_004e0ac0` | — | Tells the object to forget a person. | Disassembly |
 | `FUN_00454550` | — | Called only from `FUN_004e14e0`, with the model slot from `+0x20` and 2 (broken) or 4 (condemned). | Xref sweep |
 | `+0x19c` | `mState` | The object's state byte. | Disassembly |
-| `+0x33` bit 0 | — | **UNESTABLISHED.** It lets a ride invite while running; the one arm of `Invite` whose meaning is not settled. | Disassembly |
+| `+0x33` bit 0 | RunsContinuously | Descriptor `+0x48`, set by `FUN_004db090`. It lets a ride invite while running. | Disassembly |
 
 ## Opening a ride — where capacity and duration come from
 
@@ -366,9 +366,10 @@ The save reader names the byte `mQueuePos`; the state setter writes the sideshow
 | Offset | Name | Note |
 |---|---|---|
 | `+0x20` | model slot | Indexed into `modelSlotTable` by `FUN_004e14e0` |
-| `+0x24` | script handle | |
-| `+0x32` bit 3 (`0x8`) | queue-path flag | Jungle Spray: one queue cell, no bit. Belly Bounce: four cells, bit set |
-| `+0x33` bit 0 | **UNESTABLISHED** | Lets a ride invite while running |
+| `+0x24` | script id | The destructor hands it to the script teardown (`0x004dd2c9`) - see `park.md`, "What selling a thing does to its script" |
+| `+0x32` | the flag byte | `FUN_004db090` builds it from the descriptor: `0x01` ProvidesRelief, `0x02` ChillsYouOut, `0x04` IsChoosable, `0x08` HasQueue, `0x10` ProvidesSecurity, `0x20` RideHandlesSprite, `0x40` HoldsLitter, `0x80` IsFireworks - see `park-engine.md`, "Still open" |
+| `+0x32` bit 3 (`0x8`) | queue-path flag | HasQueue. Jungle Spray: one queue cell, no bit. Belly Bounce: four cells, bit set |
+| `+0x33` bit 0 | RunsContinuously | Descriptor `+0x48`, set by `FUN_004db090`. Lets a ride invite while running |
 | `+0x36` | `mEntryPos` | File 206, packed |
 | `+0x38` | `mExitPos` | File 218, packed |
 | `+0x3a` | `mBackOfQueue` | File 212 |
@@ -445,7 +446,7 @@ The one-to-one rule — declares walk slots ⟺ uses the walk family — holds p
 | `0x00765280` | — | A table of `{name, operand-count-as-a-STRING}`, **107 entries from `NOP`**. Confirms operand counts (WALKON 7, BOUNCE 2, WALKST_FLOAT 3, WALKFLOATSTOP 0). **Its ORDER matches the handler table's**, which is what confirms the numbering. | Table read |
 | `FUN_00551600` | `RSSE_Initialise` | `"Tried to Initialise twice"`. Its only use of the opcode name table is to SUM ITS CHARACTERS into a checksum at `DAT_00879190`. Not a dispatch. | Its own string |
 | `FUN_005597a0` | `RSSE_Load` | `RSSE` magic `0x45535352`, per-script mallocs, then the `OBJ ` list `0x204a424f`. Allocates walk slots as `count << 5`. | Disassembly |
-| `FUN_0055abf0` | — | The per-tick driver, 5,712 bytes, the largest in the region; walks the script instance table at `[0x8791f8]`. Contains **no CMP/SUB against 73..78 at all**, so it is not the decoder. | Disassembly |
+| `FUN_0055abf0` | — | The per-tick driver, 5,712 bytes, the largest in the region; walks the TOUR ride records at `[0x8791f8]` (slots 1..99, `0x122c` bytes each, twenty cars at stride `0xe4`, made by `FUN_0055a620`). Contains **no CMP/SUB against 73..78 at all**, so it is not the decoder. | Disassembly |
 | `FUN_00557a70` | — | Fetch the next operand word: advances the IP at `+0x3c`, bounds-checked against `+0x50`, logging `"Tried to read outside scri…"` and parking the IP at `0xffffd8f0`. | Its own string |
 | `FUN_005573a0` | — | Resolve an operand: tagged `0x40000000` indexes the variable array at `+0x1c`, otherwise sign-extend the low 16 bits. | Disassembly |
 
@@ -465,7 +466,7 @@ Script-frame layout used by the families below:
 | `+0x70` | bounce node base, written by `BOUNCESETNODE` |
 | `+0x7c` | walk slot count |
 | `+0xc0` | the script's **speed word**, a short the loader sets to 50 (`MOV word ptr [EBP+0xc0],0x32`); the same one `WAIT` divides by |
-| `+0xc8` | the script's thing handle |
+| `+0xc8` | the script's **model** handle, `[ThingArray[+0xac].ptr+0x20]` (loader `0x00558d5e`..`0x00558d68`); the thing index is `+0xac` |
 | `+0xd0` | the held scream handle |
 
 ## The WALK family
@@ -629,8 +630,8 @@ The family's dispatch-table handlers sit at **`0x00555e5e`** (86), **`0x00555ef7
 | `FUN_00551290` | `SCREAMLEVEL` | Opcode **89**, 1 operand. `FUN_00551290( handle, operand, speed )`: re-sets the volume of the scream ALREADY playing by the same `(a+b)/2` clamp. It does nothing at all when no handle is held. | Disassembly |
 | `0x00556009` | — | **`SCREAMLEVEL` overwrites the scream handle with the VOLUME CALL's return value** — `MOV dword ptr [EBP + 0xd0],EAX` straight after `CALL 0x00551290`, whose own return is `FUN_0051bc40`'s, which is `FUN_006b5b80`'s, which is a bare virtual call that Ghidra types `void`. **What lands in `+0xd0` therefore cannot be determined from this executable**, and a later `STOPSCREAM` fades whatever it is. Do not reproduce this without saying so. | Disassembly |
 | `FUN_0051bc40` | — | Applies a sound parameter; volume is parameter 6. | Disassembly |
-| `FUN_00466b70` | — | The sound position: indexes `DAT_007a4610` by the script's thing handle and fills SIX floats — two points with heights from the model's `+0x1c`/`+0x28`. **It is the RIDE's position, never a rider's.** | Disassembly |
-| `+0xc8` | — | The script's thing handle, which is where the position comes from. | Disassembly |
+| `FUN_00466b70` | — | The sound position: indexes `DAT_007a4610` by the script's model handle and fills SIX floats — two points with heights from the model's `+0x1c`/`+0x28`. **It is the RIDE's position, never a rider's.** | Disassembly |
+| `+0xc8` | — | The script's model handle, which is where the position comes from. | Disassembly |
 
 **The volume is `(operand + the script's SPEED) / 2`, clamped 0..100.** `+0xc0` is not a scream field: it is the script's speed word, a short the loader sets to 50, the same one `WAIT` divides by. All three instructions READ it and none writes it. So `Bouncy`'s `STARTSCREAM VAR_TEMP, 20` at default speed is volume `(20+50)/2 = 35` — **a scream gets louder as the script runs faster.** `SCREAMLEVEL` does not write this field.
 
@@ -804,8 +805,8 @@ The Jungle Spray is queued for and invited in **about one run in five** at that 
 
 ## Open and unverified
 
-- **`+0x33` bit 0** on the object — lets a ride invite while running. Unestablished.
-- **The `0x80` flag bit** tested at the top of `FUN_004e0b90`. Unexplained.
+- ~~**`+0x33` bit 0** on the object — lets a ride invite while running. Unestablished.~~ **CLOSED 2026-09-23: it is RunsContinuously** (descriptor `+0x48`) - see `park-engine.md`, "Still open".
+- ~~**The `0x80` flag bit** tested at the top of `FUN_004e0b90`. Unexplained.~~ **CLOSED 2026-09-23: it is IsFireworks** (descriptor `+0x110`); no jungle item sets it.
 - **The original's writer of `mQueuePos` in the ordinary queue flow.** Join, leave, the guest-side completion and the state-12 shuffle are all decoded and write nothing.
 - **What `+0x1f1` means at settle-up time.** The byte is overloaded between a queue position and a sideshow roll.
 - ~~**`mChanceOfWinning`'s file offset (1050).**~~ **CLOSED 2026-09-20: there is no file offset.** The field is derived at build from the descriptor, `100 - UsageInfo.InitChanceOfLoosing`, and nothing reads it out of the record — which is why no decoded read lands at 1050.

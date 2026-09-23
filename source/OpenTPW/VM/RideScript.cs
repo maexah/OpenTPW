@@ -1858,7 +1858,7 @@ public sealed class RideScript
 	/// <para>
 	/// The first operand bands the sample and the second is averaged with the script's speed for the
 	/// volume; the sound belongs to the RIDE, whose position the engine takes from the script's own
-	/// thing handle at <c>+0xc8</c>. See <see cref="ParkAudio.ScreamEffectFor"/> for the bands.
+	/// model handle at <c>+0xc8</c>. See <see cref="ParkAudio.ScreamEffectFor"/> for the bands.
 	/// </para>
 	/// </summary>
 	/// <remarks>

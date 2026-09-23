@@ -58,9 +58,8 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>Nor is the teardown half modelled.</b> The object's own destructor (<c>FUN_004dd0a0</c>) hands the
-/// id at <c>+0x24</c> to the script teardown with a mode of 0, 4 or 7. Nothing here destroys a script when
-/// the thing it belongs to goes, because nothing yet takes a thing out of a park.
+/// <b>Selling a thing takes its script down</b> - see <see cref="Unbind"/>, the object destructor's call of
+/// the script teardown (<c>FUN_004dd0a0</c> at <c>0x004dd2c9</c>).
 /// </para>
 /// </summary>
 public sealed class ParkRides : Entity
@@ -117,9 +116,52 @@ public sealed class ParkRides : Entity
 			?? RideAnimations.Load( item.Directory, item.Stem, _files, item.AnimationChannels );
 
 		if ( script.Animations.Loaded > 0 )
-			++Animated;
+			_animated.Add( placed.ThingId );
 
 		Log.Info( $"{ThemeName}: thing {placed.ThingId} ('{item.Name}') now runs {ScriptPathFor( item )}" );
+
+		return true;
+	}
+
+	/// <summary>
+	/// Takes a sold thing's script down, and whatever that script spawned with it - the object destructor's
+	/// last word on its script (<c>0x004dd2c9</c>). Answers whether the thing had been given a script at all;
+	/// one that never was is the original's id-nought no-op. See <c>docs/exe/park.md</c>, "What selling a
+	/// thing does to its script".
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// <b>The teardown is the one <c>REMOVECHILD</c> and a finished script already go through</b>,
+	/// <see cref="RideScriptScheduler.Destroy"/>, with the mode it is called with while a park is played,
+	/// <b>7</b>, which sets both bits the teardown reads. <c>0x2</c> spawns the item's
+	/// <c>Info.DestroyParticleEffect</c> over the footprint, for the script named here and not for the ones it
+	/// takes with it; it is counted rather than drawn, because nothing here draws a particle effect in the
+	/// world rather than on the screen. <c>0x4</c> takes the heads <c>ADDHEAD</c> hung on the model off it,
+	/// and there are none to take: nothing here hangs one.
+	/// </para>
+	/// <para>
+	/// <b>A script that has already run off its end spawns nothing</b>, because the original's teardown finds
+	/// no such id in its registry and returns. Its thing's id comes off the map either way.
+	/// </para>
+	/// </remarks>
+	public bool Unbind( int thingId, ParkItemCatalogue.Item item )
+	{
+		if ( !_scripts.Remove( thingId, out var id ) )
+			return false;
+
+		_animated.Remove( thingId );
+
+		var before = Scheduler.Count;
+		var live = Scheduler.Find( id ) is not null;
+
+		if ( live && item.DestroyParticleEffect != 0 )
+			Unimplemented.Report( "DESTROY_PARTICLE_EFFECT" );
+
+		Scheduler.Destroy( id );
+
+		Log.Info( $"{ThemeName}: thing {thingId} ('{item.Name}') sold - script {id} " +
+			(live ? $"torn down with {before - Scheduler.Count} script(s)" : "had already finished") +
+			$", {Scheduler.Count} running" );
 
 		return true;
 	}
@@ -145,7 +187,7 @@ public sealed class ParkRides : Entity
 	/// <summary>The id of the script each placed thing is running, by the thing id the park file gives it.</summary>
 	private readonly Dictionary<int, int> _scripts = [];
 
-	/// <summary>How many placed things were given a script.</summary>
+	/// <summary>How many things standing in the park were given a script - selling one takes it off.</summary>
 	public int Bound => _scripts.Count;
 
 	/// <summary>
@@ -153,7 +195,10 @@ public sealed class ParkRides : Entity
 	/// counted rather than assumed because an item shipping no clips at all is ordinary data: the drinks
 	/// shop ships none and its script names none either.
 	/// </summary>
-	public int Animated { get; private set; }
+	public int Animated => _animated.Count;
+
+	/// <summary>The things counted by <see cref="Animated"/>, so that selling one takes it back off.</summary>
+	private readonly HashSet<int> _animated = [];
 
 	/// <summary>
 	/// How many placed things had no script to give them. Ordinary: a litter bin has no more use for one
@@ -298,7 +343,7 @@ public sealed class ParkRides : Entity
 					?? RideAnimations.Load( item.Directory, item.Stem, _files, item.AnimationChannels );
 
 				if ( script.Animations.Loaded > 0 )
-					++Animated;
+					_animated.Add( placed.ThingId );
 
 				// And the other half of the restore, which has to come AFTER the player exists: putting
 				// the script back without putting its model's channels back leaves ten of this park's
@@ -379,7 +424,7 @@ public sealed class ParkRides : Entity
 					?? RideAnimations.Load( item.Directory, item.Stem, _files, item.AnimationChannels );
 
 				if ( script.Animations.Loaded > 0 )
-					++Animated;
+					_animated.Add( thingId );
 			}
 		}
 

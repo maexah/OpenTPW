@@ -700,6 +700,33 @@ Ten handlers, and **every one reaches another script by ID through one global re
 
 **Corpus:** `SPAWNCHILD` 20/16, `SPAWNSOUND` 28/28, `REMOVECHILD` 4/4, `SETVARINCHILD` 7/3, `GETVARINCHILD` 9/2, `GETVARINPARENT` 10/6, `SETVARINPARENT` **0**, `GETREMOTEVAR` 2 (both in `zob.RSE`, both with a literal destination, so both are test-and-branch), `SETREMOTEVAR` 10/5, `FINDSCRIPTRAND` 5/2.
 
+### What selling a thing does to its script
+
+Decoded 2026-09-23 as disassembly, every claim re-derived by a refuter.
+
+**The object destructor takes the script down with a mode.** `FUN_004dd0a0` (`0x004dd29b`..`0x004dd2c9`) calls `FUN_00559060( [obj+0x24], mode )` with:
+
+| Mode | When | Evidence |
+|---|---|---|
+| **0** | the whole park is being emptied: `[[0x80239c]+0x1da738]` (the world state) is 2, which only `FUN_00515dd0` (`0x515dd7`, `0x515e17`) and `FUN_00515fb0` (`0x515fba`) write as a constant, each deleting every thing and then writing 1. The field is also saved and loaded (`0x5172ee`, `0x517fcd`), so a save could carry another value | three immediate writers |
+| **4** | a loaded save's layout is being replayed: `DAT_00785a2c`, field `+0x24` of the action recorder at `0x785a08`, set to 1 only at `0x0040414e` by `FUN_00404140` ("Starting layout replay"), cleared at `0x4034fb`, `0x404478`, `0x404550` | disassembly |
+| **7** | everything else — every sell and every move pickup in play, through the demolisher's call at `0x00528590`. `FUN_0050b780` also reaches the destructor from `0x4e850e` and `0x516c65`; whether either deletes a placed thing in play is untraced | disassembly |
+
+`REMOVECHILD` (`0x55526a`) and the tick loop's negative-PC path (`0x551ac6`) pass **0**. The RSSE shutdown `FUN_005584b0` and the save-state reader `FUN_005597a0` call the flat destructor directly with 0.
+
+**The mode is a bitmask, and only two bits are read.** It is passed unchanged to all four `FUN_00558500` calls.
+- **`0x2`** (`TEST BL,2` at `0x00559102`), for the script named in the call only, and only when its thing word `+0xac` is set: the item's `Info.DestroyParticleEffect` (descriptor `+0x64`) is spawned by `Particles_Spawn` (`FUN_00521e60`) at the centre of the model's box at its base height (`FUN_00466b70`, the footprint cells ×10), and its emitter's area is set to the box by `FUN_00520030` — emitter `+0x44/+0x48/+0x4c`, which is the template's `Area`. With no model it spawns at the origin (`0x00559170`). The value is the item's own where it declares one and its category's otherwise (FileFormats `sam.md`, "The particle effects an item gives off"); 0 spawns nothing (`0x005590f7`), and every value the jungle's items use, 75 to 78, is a world effect (`OnScreen` 0 in `Tp2.plb`).
+- **`0x4`** (`0x00558582`, `0x005585f8`, inside `FUN_00558500`): the heads `ADDHEAD` hung on the model are taken off it (`FUN_0044b220` → `FUN_0044b4c0`, which frees the head's render object), and so are those of walk slots in action 4, state 2. The peep is untouched.
+- Bit `0x1`, and anything above `0x4`, is read nowhere.
+
+**Whatever the mode**, inside the `+0xac` block: a sound-engine zone at `+0xd4` is released by `FUN_0051c6b0` and cleared. The loader makes it at `0x00558fda`, only when the item's `Info.CreateParticleEffect` (`+0x60`) is non-zero; the save-state reader makes one too (`0x00559f0a`). What the zone does to the sound is not decoded.
+
+**`FUN_00558500`, the flat destructor, releases in this order** (`0x00558500`..`0x005587cd`): the music dip (`+0xb9` → `FUN_0051e710(0)`); the TOUR ride record when `+0xc8` is set (`FUN_0055d3d0(+0x9c)`, whose head detaches ignore the mode, and which kills each car's particle, frees its model and stops its sound); the repair particle (`+0xcc`, `FUN_0051ff70(h,-2)`, cleared); the scream (`+0xd0`, `Sound_StopFading` with fade `0x3c`, **not** cleared); the ADDHEAD array `+0x30` and the walk slots `+0x2c` as above; the live count `DAT_008791ac`; the registry link; the body, variables, stack, limbo slots, bounce slots, walk slots, head array, strings and directory; and last the `+0xb0` effect list — particle types 1-2 by `FUN_0051ff70(h,-2)`, sound types 3-10 by a plain `Sound_Stop` (not a fade), `DAT_008791b4` decremented per node. **It releases no peep**: limbo, bounce and walk storage is only freed. The destructor's "object removed" message has already let everybody go — see `park-engine.md`, "Selling and the people on it".
+
+**Two writes through NULL**: where the parent id names nobody, `MOV [EAX+0xc],EAX` with `EAX` = 0 at `0x005592f3`, and on the empty-registry arm at `0x00559316`. **`FUN_005da3c0` is a single `RET`**, so every log and assert string this family passes it is inert.
+
+**OpenTPW** takes a sold thing's script down through `ParkRides.Unbind`, the scheduler's `Destroy` with mode 7's meaning: the particle is counted (`DESTROY_PARTICLE_EFFECT`), and `0x4` has nothing to undo because nothing hangs a head.
+
 ### `COAST` — the script-to-ride interface, and it is small
 
 Handler `0x00554a5a`: it fetches the selector **raw** (no value resolution), does `DEC` / `CMP 7` / `JA`, and jumps through an **8-entry table at `0x556a5c`**:

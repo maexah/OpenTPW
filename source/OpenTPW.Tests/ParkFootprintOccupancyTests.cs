@@ -232,7 +232,7 @@ public class ParkFootprintOccupancyTests
 
 	/// <summary>
 	/// A cell naming an owner that is no longer in the park answers nothing - what selling leaves
-	/// behind for the instant before the record is dropped.
+	/// behind for the instant before its footprint is cleared to bare ground.
 	/// </summary>
 	[TestMethod]
 	public void ACellWhoseOwnerHasGoneFindsNothing()

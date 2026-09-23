@@ -79,7 +79,10 @@ public sealed class ParkItemCatalogue
 		int EntryDirection = 0x01, int ExitDirection = 0x10,
 
 		// Every cell kind the picture uses - ItemDescriptionFile.CellKinds.
-		IReadOnlyList<int>? CellKinds = null );
+		IReadOnlyList<int>? CellKinds = null,
+
+		// The particle effect selling one gives off - ItemDescriptionFile.DestroyParticleEffect.
+		int DestroyParticleEffect = 0 );
 
 	private readonly Dictionary<int, Item> _items = [];
 
@@ -191,7 +194,8 @@ public sealed class ParkItemCatalogue
 					description.RedLineSpeed, description.RedLineCapacity,
 					description.EntryDeltaX, description.EntryDeltaY,
 					description.ExitDeltaX, description.ExitDeltaY, description.HasEntrance,
-					description.EntryDirection, description.ExitDirection, description.CellKinds );
+					description.EntryDirection, description.ExitDirection, description.CellKinds,
+					description.DestroyParticleEffect );
 
 			return true;
 		}
