@@ -30,16 +30,6 @@ namespace OpenTPW;
 public sealed class ParkWorld
 {
 	/// <summary>
-	/// One object standing in the park - a shop, a ride, a bin, a fountain.
-	///
-	/// <para>
-	/// The position is in 256ths of a cell, which was settled by sweeping the shift and asking which one
-	/// puts every value somewhere legal: at <c>&gt;&gt; 8</c> all of them land inside the map's own
-	/// 96x85 extent and most land on a meaningful attribute, and at <c>&gt;&gt; 7</c> several fall off
-	/// the map altogether.
-	/// </para>
-	/// </summary>
-	/// <summary>
 	/// When a thing was built, as the save breaks it down - the eight <c>tv_t</c> dwords a catalogue
 	/// object writes at file offset 22.
 	///
@@ -69,6 +59,15 @@ public sealed class ParkWorld
 		public bool IsSet => Year > 0;
 	}
 
+	/// <summary>
+	/// One object standing in the park - a shop, a ride, a bin, a fountain.
+	///
+	/// <para>
+	/// The position is in 256ths of a cell. At <c>&gt;&gt; 8</c> every value in the shipped save lands inside
+	/// the map's own 96x85 extent, and most on a meaningful attribute; at <c>&gt;&gt; 7</c> several fall off
+	/// the map altogether.
+	/// </para>
+	/// </summary>
 	public readonly record struct CatalogueObject( int ThingId, int CatalogueId, int RawX, int RawY, int Angle,
 		ushort Flags = 0, ushort EntryPos = 0, ushort NextObject = 0,
 		int RideScript = 0, int TrackRide = 0, int State = 0, ushort TopLeft = 0,

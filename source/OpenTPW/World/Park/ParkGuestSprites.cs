@@ -605,17 +605,6 @@ public sealed class ParkGuestSprites : ModelEntity
 		=> Standing( people?.AnyWalkFor( person.ThingId ), cellX, cellY, person, sprite, alpha );
 
 	/// <summary>
-	/// Where a ride is carrying this person, or null when none is.
-	///
-	/// <para>
-	/// Three things have to agree for a seat to exist: the people have to know which ride holds them and
-	/// on which node (<see cref="ParkPeople.TrySeatOf"/>, asked of the ride's own script), the park's
-	/// objects have to have a model standing for that ride, and that model has to carry the node
-	/// (<see cref="ParkObjects.TryNodeOn"/>). Any one of them missing means the guest is drawn where
-	/// they are walking, which is the right answer for everybody not on a ride.
-	/// </para>
-	/// </summary>
-	/// <summary>
 	/// Where a person's picture is centred: on the ride carrying them when one is, and on the ground
 	/// under them when none is.
 	/// </summary>
@@ -637,6 +626,17 @@ public sealed class ParkGuestSprites : ModelEntity
 			? new Vector3( on.X, on.Y, on.Z + spriteHeight )
 			: new Vector3( x, y, ground + spriteHeight );
 
+	/// <summary>
+	/// Where a ride is carrying this person, or null when none is.
+	///
+	/// <para>
+	/// Three things have to agree for a seat to exist: the people have to know which ride holds them and
+	/// on which node (<see cref="ParkPeople.TrySeatOf"/>, asked of the ride's own script), the park's
+	/// objects have to have a model standing for that ride, and that model has to carry the node
+	/// (<see cref="ParkObjects.TryNodeOn"/>). Any one of them missing means the guest is drawn where
+	/// they are walking, which is the right answer for everybody not on a ride.
+	/// </para>
+	/// </summary>
 	internal static Vector3? Seated( ParkPeople? people, int thingId )
 	{
 		if ( people == null || ParkObjects.Current is not { } objects )

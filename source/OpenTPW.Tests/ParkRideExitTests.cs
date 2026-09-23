@@ -143,31 +143,6 @@ public class ParkRideExitTests
 	}
 
 	/// <summary>
-	/// <b>And then they walk it, arrive, and go back to deciding what to do - which is the step that closes
-	/// the park's loop and the one that was missing.</b>
-	///
-	/// <para>
-	/// <b>The test above ends at the state, and that is exactly how this shipped broken.</b> Dismissal set
-	/// <see cref="PeepState.LeavingRide"/> and <c>PeepBehaviour.Step</c> had no case for it, so a guest who
-	/// had been let off was never walked again: they stood at the ride for ever, and every test of the
-	/// dismissal passed because reaching a state says nothing about what the state then does. Alexah found
-	/// it by playing the game.
-	/// </para>
-	/// <para>
-	/// <b>The assertion that carries the test is WHERE they were when they thought again, not that they
-	/// thought again.</b> <c>FUN_00500900</c> drops a guest into <see cref="PeepState.Deciding"/> from both
-	/// of its arms - on arriving, and on finding it cannot get through - so a build that only ever reported
-	/// "cannot reach" would satisfy a state check on the first turn while the guest stood where they were.
-	/// This uses one of the park's own saved guests, who is standing on a real connected cell, and requires
-	/// them to be at the ride's exit when it happens.
-	/// </para>
-	/// <para>
-	/// The behaviour is built with <b>no</b> <see cref="ParkAdmission"/> on purpose: deciding then returns
-	/// at its first line, so a guest who has arrived stays arrived instead of immediately choosing
-	/// somewhere new and walking out of the assertion.
-	/// </para>
-	/// </summary>
-	/// <summary>
 	/// <b>A guest let off a ride ends up STANDING at its exit - their position moves, not just their
 	/// destination.</b>
 	///
@@ -246,6 +221,29 @@ public class ParkRideExitTests
 			ExitLevel: 100, Happiness: 50f, Thirst: 10f, Hunger: 10f, Toilet: 10f, Vomit: 0f,
 			Litter: 0f, MajorDest: Ride, QueuePos: 0, PrankeryIndex: 0 ), StandingOn( cellX, cellY ) );
 
+	/// <summary>
+	/// <b>And then they walk it, arrive, and go back to deciding what to do - which is the step that closes
+	/// the park's loop.</b>
+	///
+	/// <para>
+	/// <see cref="ADismissedGuestIsWalkedToTheExit"/> ends at the state, and reaching
+	/// <see cref="PeepState.LeavingRide"/> says nothing about what the state then does: a guest let off has
+	/// to be walked again, which needs <c>PeepBehaviour.Step</c> to have a case for it.
+	/// </para>
+	/// <para>
+	/// <b>The assertion that carries the test is WHICH arm ran, not that they thought again.</b>
+	/// <c>FUN_00500900</c> drops a guest into <see cref="PeepState.Deciding"/> from both of its arms - on
+	/// arriving, and on finding it cannot get through. Giving up zeroes <see cref="Peep.MajorDest"/>;
+	/// arriving keeps it for a guest with no saved destination behind it (<c>+0x1de</c>, which nothing here
+	/// writes), so a destination still naming the ride is what proves they arrived. The guest starts on the
+	/// ride's exit cell, where dismissal puts them down.
+	/// </para>
+	/// <para>
+	/// The behaviour is built with <b>no</b> <see cref="ParkAdmission"/> on purpose: deciding then returns
+	/// at its first line, so a guest who has arrived stays arrived instead of immediately choosing
+	/// somewhere new and walking out of the assertion.
+	/// </para>
+	/// </summary>
 	[TestMethod]
 	public void AGuestLetOffARideWalksToItsExitAndThinksAgain()
 	{

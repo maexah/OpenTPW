@@ -1554,23 +1554,6 @@ public sealed class RideScript
 	}
 
 	/// <summary>
-	/// <c>BOUNCE</c>: put somebody on the ride for a number of seconds, and say whether there was room.
-	///
-	/// <para>
-	/// The engine fills the first free slot with four words - the rider, the node they are on
-	/// (<see cref="_bounceNode"/> plus the slot's own index), the clock reading they are due off at, and
-	/// the clock reading they got on at - then adds one to the tally. With no free slot it answers nought
-	/// and does nothing, which is the only refusal it has: <b>it never consults
-	/// <c>VAR_CAPACITY</c></b>. Bouncy gates itself on that variable before it ever gets here
-	/// (<c>BOUNCING VAR_TEMP</c> / <c>CMP VAR_CAPACITY, VAR_TEMP</c>), so the array size is a ceiling
-	/// rather than the ride's capacity.
-	/// </para>
-	/// <para>
-	/// The duration is in <b>seconds</b>: the engine multiplies by a thousand before adding it to the
-	/// clock, through the same <c>LEA</c> chain (x5, x25, x125, then x8) it uses elsewhere.
-	/// </para>
-	/// </summary>
-	/// <summary>
 	/// <c>WALKON</c>: put a visitor onto the ride and start them walking - <c>FUN_00556f40</c>, reached
 	/// through the handler at <c>00555963</c>.
 	///
@@ -1683,6 +1666,23 @@ public sealed class RideScript
 		return 0;
 	}
 
+	/// <summary>
+	/// <c>BOUNCE</c>: put somebody on the ride for a number of seconds, and say whether there was room.
+	///
+	/// <para>
+	/// The engine fills the first free slot with four words - the rider, the node they are on
+	/// (<see cref="_bounceNode"/> plus the slot's own index), the clock reading they are due off at, and
+	/// the clock reading they got on at - then adds one to the tally. With no free slot it answers nought
+	/// and does nothing, which is the only refusal it has: <b>it never consults
+	/// <c>VAR_CAPACITY</c></b>. Bouncy gates itself on that variable before it ever gets here
+	/// (<c>BOUNCING VAR_TEMP</c> / <c>CMP VAR_CAPACITY, VAR_TEMP</c>), so the array size is a ceiling
+	/// rather than the ride's capacity.
+	/// </para>
+	/// <para>
+	/// The duration is in <b>seconds</b>: the engine multiplies by a thousand before adding it to the
+	/// clock, through the same <c>LEA</c> chain (x5, x25, x125, then x8) it uses elsewhere.
+	/// </para>
+	/// </summary>
 	private bool Bounce( float now, int handle, int seconds )
 	{
 		for ( int slot = 0; slot < _bounce.Length; ++slot )
@@ -1833,16 +1833,6 @@ public sealed class RideScript
 		child.Animations = Animations;
 	}
 
-	/// <summary>
-	/// <c>SPAWNSOUND</c>: the same load into a different slot, and <b>no link of any kind</b>.
-	///
-	/// <para>
-	/// The handler is <c>SPAWNCHILD</c>'s twin up to the loader call and then simply stops: it stores the
-	/// id at <c>+0x14</c> and returns. So the script it spawns has no parent, is not this script's child,
-	/// cannot be reached by <c>SETVARINCHILD</c> and cannot be removed by <c>REMOVECHILD</c> - it is taken
-	/// down only when this script itself dies.
-	/// </para>
-	/// </summary>
 	/// <summary>Whether this script has a scream going - the engine's handle at <c>+0xd0</c>.</summary>
 	/// <remarks>
 	/// A flag rather than the handle itself: the voice belongs to <see cref="ParkAudio"/>, which keys it
@@ -1969,6 +1959,16 @@ public sealed class RideScript
 		ParkAudio.Current?.ScreamLevel( Id, Value( operands[0] ) );
 	}
 
+	/// <summary>
+	/// <c>SPAWNSOUND</c>: <c>SPAWNCHILD</c>'s load into a different slot, and <b>no link of any kind</b>.
+	///
+	/// <para>
+	/// The handler is <c>SPAWNCHILD</c>'s twin up to the loader call and then simply stops: it stores the
+	/// id at <c>+0x14</c> and returns. So the script it spawns has no parent, is not this script's child,
+	/// cannot be reached by <c>SETVARINCHILD</c> and cannot be removed by <c>REMOVECHILD</c> - it is taken
+	/// down only when this script itself dies.
+	/// </para>
+	/// </summary>
 	private void SpawnSound( RideOperand name )
 	{
 		if ( !CanSpawn( name, out var path ) )

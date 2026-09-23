@@ -452,53 +452,6 @@ public sealed class ParkRideOperation
 	}
 
 	/// <summary>
-	/// Takes what a guest owes for what they have just been on - <c>FUN_004fe1a0</c>, the charge, reached
-	/// from the settle-up <c>FUN_004fd970</c> that <c>ExitRide</c> (<c>FUN_005014e0</c>) runs on the way out.
-	///
-	/// <para>
-	/// <b>A guest pays on LEAVING, not on boarding</b>, and the whole of the charge is three steps: read
-	/// the price from the object (<c>mPricePerUse</c>, <c>+0x194</c>), credit the object, and subtract it
-	/// from the guest's cash at <c>+0x1a0</c>. A price of nought skips all of it - which is this park's one
-	/// ride, priced free, so the arm that fires here is the sideshow at twenty.
-	/// </para>
-	/// <para>
-	/// <b>There is no affordability test and no clamp, and both are the original's.</b> It subtracts
-	/// whatever the price is, so a guest can be left short; what stops that in practice is
-	/// <c>FUN_004fde50</c>, which decides whether a thing is worth its price BEFORE a guest is sent to it -
-	/// a gate on choosing, never on paying. Adding a check here would be inventing a refusal the engine
-	/// does not make.
-	/// </para>
-	/// <para>
-	/// <b>The rest of the settle-up is NOT reproduced, and is named rather than quietly dropped.</b>
-	/// <c>FUN_004fd970</c> also shifts the guest's three-entry recent-things history (<c>+0x1e0</c>),
-	/// bumps one of three visit counters by the descriptor's <c>+0x4ac</c>, relieves a need by its
-	/// <c>+0xe8</c>, plays a sound, and then splits on the byte at <c>+0x1f1</c>: nought logs "Person lost
-	/// this sideshow..." and docks happiness, and anything else runs the effects.
-	/// </para>
-	/// <para>
-	/// <b><c>+0x1f1</c> is <c>mQueuePos</c> - the guest's place in the queue, which this project already
-	/// reads as <see cref="Peep.QueuePos"/>.</b> The game's own save reader names it
-	/// (<c>FUN_004fb530</c>), one byte after <c>mPersonType</c> at <c>+0x1f0</c>, and the same table's
-	/// neighbours are corroborated by code already built: <c>+0x220 mState</c> is what
-	/// <see cref="IsQueueing"/> reads and <c>+0x210 mBalloonScript</c> is where the effects function's
-	/// balloon arm writes. So the split is <b>queue position nought - "Person lost this sideshow..." and
-	/// happiness down - against non-zero, which runs the effects</b>; for a sideshow with lanes the
-	/// position plausibly says which lane the guest got, and nought means none.
-	/// </para>
-	/// <para>
-	/// <b>This comment called that byte a "won/lost flag", then "unknown", and both were wrong</b> - it had
-	/// been named in this project's own notes the whole time. The happiness arm is therefore not blocked on
-	/// an unestablished field at all; it is blocked on the size of the effects model below.
-	/// </para>
-	/// <para>
-	/// <b>And the arm behind it is not a happiness delta - it is a whole model.</b> <c>FUN_004fe1e0</c>
-	/// applies the item's own effects from five descriptor fields this project does not read, gives out
-	/// balloons and takes back costumes through a sprite path that does not exist here, and for a sideshow
-	/// <i>pays a prize INTO</i> the guest's cash before raising happiness by
-	/// <c>log2( chanceOfWinning / pricePerUse )</c>. It is sized rather than started.
-	/// </para>
-	/// </summary>
-	/// <summary>
 	/// Everything leaving a visitable thing does to a guest - <c>FUN_004fd970</c>, of which the charge is
 	/// one arm rather than the whole.
 	///
@@ -640,6 +593,24 @@ public sealed class ParkRideOperation
 		peep.Litter = Peep.Change( peep.Litter, item.LitterEffect );
 	}
 
+	/// <summary>
+	/// Takes what a guest owes for what they have just been on - <c>FUN_004fe1a0</c>, the charge, reached
+	/// from the settle-up <c>FUN_004fd970</c> that <c>ExitRide</c> (<c>FUN_005014e0</c>) runs on the way out.
+	///
+	/// <para>
+	/// <b>A guest pays on LEAVING, not on boarding</b>, and the whole of the charge is three steps: read
+	/// the price from the object (<c>mPricePerUse</c>, <c>+0x194</c>), credit the object, and subtract it
+	/// from the guest's cash at <c>+0x1a0</c>. A price of nought skips all of it - which is this park's one
+	/// ride, priced free; the Jungle Spray charges 20 and the Drinks Shop 30.
+	/// </para>
+	/// <para>
+	/// <b>There is no affordability test and no clamp, and both are the original's.</b> It subtracts
+	/// whatever the price is, so a guest can be left short; what stops that in practice is
+	/// <c>FUN_004fde50</c>, which decides whether a thing is worth its price BEFORE a guest is sent to it -
+	/// a gate on choosing, never on paying. Adding a check here would be inventing a refusal the engine
+	/// does not make.
+	/// </para>
+	/// </summary>
 	private void Charge( Peep peep, ParkWorld.CatalogueObject ride )
 	{
 		var price = ride.PricePerUse;

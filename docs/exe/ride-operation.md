@@ -307,7 +307,7 @@ Named by its own strings: `"Litter gone up by %d, is now %d"`, `"Customer bought
 2. **The item's own effects**, each added to a guest meter and clamped 0..100: the descriptor's `+0x144` and `+0x148` (with a sound of `0x83` or `0x84` depending which is larger), `+0x14c` → `+0x1b0`, `+0x150` → happiness `+0x19c`, `+0x154` → litter `+0x1b4`.
 3. **Shop arms on the descriptor's `+0x15c`:** 1 gives a BALLOON (asserting the guest has none, building a sprite, and clamping a value between `DAT_0075d0f0` and `DAT_0075d0f4`); 2 hands out or takes back a COSTUME via the guest's `+0x24`/`+0x20`; anything else is a balance-file error.
 4. **A toilet (`mFlags & 1`)** zeroes `+0x1ac`, may zero `+0x1b0` above 90, and stamps `+0xc2`.
-5. **Then, for a sideshow only:** `person[+0x1d0] += 1` and a happiness rise computed from **`log2( chanceOfWinning / pricePerUse )`**, logged as `"Sideshow won - happiness up %d percent"`.
+5. **Then, for a sideshow only:** `person[+0x1d0] += 1` and a happiness rise computed from **`log2( costOfGoods / pricePerUse )`** - `FUN_004e1a10` (`+0x188`, cost of goods) over `FUN_004e1a00` (`+0x194`, price), `FILD`/`FIDIV` at `0x004fe835`/`0x004fe84b`, the logarithm by `FYL2X` over `ln 2` - scaled by the byte at `DAT_0078505c`, and logged as `"Sideshow won - happiness up %d percent"`.
 
 **The signs are not uniform**, and the decompile shows it: `FUN_004fe1e0` does `-(float)desc + meter` for thirst and hunger but `+(float)desc + meter` for vomit, happiness and litter. **Deduct two, add three** — which is exactly what the balance file's own comment column says.
 
