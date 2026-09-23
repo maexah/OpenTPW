@@ -342,13 +342,19 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
 
   Confirmed in the game, two Belly Bounces with guests, `save/` unchanged in both runs:
   - **On `main`:** of 8 stops while the other ride held the same scream, the other's plays rose at the first
-    poll after the stop in **6**. The mix went from -80 dB to -25 dB **60 ms** after one such stop.
+    poll after the stop in **6**. Those were exactly the 6 where it was between samples; in the other 2 it was
+    mid-sample. In 4 of the 6 it had been kept from even its first scream (`plays 0`). At one such stop the mix
+    went from -80 dB to -25 dB, and the onset is `nkwoop1.mp2` (cross-correlation 1.00), starting at the stop.
+    The census names that same sample for the other ride.
   - **With the fix:** in **8 of 8**, the other ride's next child came on its own logged time (+1 to +6 ms),
     0.9-2.3 s after the stop and never at it.
   - All 147 child intervals lay inside their range, at most 8 ms past the logged wait.
   - In 11 places the two rides' children started within 100 ms of each other.
-  - One stop's mix fell to digital silence 0.4-1.0 s after it.
-  - Two later onsets that no scream accounts for are unattributed (probably the music; not checked).
+  - Every sound in one stop's mix is identified by cross-correlation against every global and jungle bank:
+    - the other ride's `nkwoo2.mp2` at -232 ms and `kid22.mp2` at +2322 ms (both 1.00 and 0.99), where the log
+      has -257 ms and +2300 ms, so the mix trails the log by a steady ~23 ms;
+    - digital silence from +0.4 to +1.0 s;
+    - then the park music's next arrangement from +1.11 s (1.00, `levels/jungle/Music`).
 
   Mutations M1-M8 all went red as predicted. M9, the old `Release` line put back, survives as predicted, because
   nothing a chain does reads the throttle, which M3 pins. Filed Q43. The item as written:
