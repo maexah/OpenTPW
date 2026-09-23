@@ -922,6 +922,22 @@ public sealed class ParkState
 	}
 
 	/// <summary>
+	/// Zeroes a guest's own two queue links <b>and nothing else</b> - the writes of <c>mQPrev</c> and
+	/// <c>mQNext</c> in <c>FUN_005012f0</c>, when a guest is put out of the queue of a thing being sold.
+	/// </summary>
+	/// <remarks>
+	/// <b>This is not <see cref="LeaveQueue"/></b>: on a sale the original never calls <c>FUN_004ddd20</c>,
+	/// so the thing keeps its head and nobody's neighbours are joined up. Everybody in that queue is put
+	/// out the same way, so no guest is left with a link. The head stays keyed by a thing id that is never
+	/// reused.
+	/// </remarks>
+	public void ForgetQueueLinks( int guestId )
+	{
+		_queueNext.Remove( guestId );
+		_queuePrev.Remove( guestId );
+	}
+
+	/// <summary>
 	/// Forgets who is at the front of a queue, <b>and nothing else</b> - the original's own reach when a
 	/// ride finds its head is no longer queueing (<c>FUN_004e0b90</c> writes <c>mFirstInQ = 0</c>).
 	/// </summary>

@@ -58,7 +58,8 @@ public class ParkRestAreaTests
 	private (StaffBehaviour Behaviour, Staff Member, PeepWalk Walk) Worn( int thingId, ParkWorld? knownPark )
 	{
 		var world = Park();
-		var behaviour = new StaffBehaviour( Balance(), new Random( 7 ), knownPark );
+		var behaviour = new StaffBehaviour( Balance(), new Random( 7 ),
+			knownPark == null ? null : new ParkState( knownPark ) );
 		var blocked = CellEdge.For( world, ParkPeople.WalkingMode ).Blocked;
 
 		var member = ParkPeople.StaffIn( world ).Single( staff => staff.ThingId == thingId );

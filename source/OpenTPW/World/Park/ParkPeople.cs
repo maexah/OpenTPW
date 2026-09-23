@@ -30,8 +30,9 @@ namespace OpenTPW;
 public sealed class ParkPeople : Entity
 {
 	/// <summary>
-	/// The simulation this park is running, so the debug console can read the census back. Same
-	/// arrangement as <see cref="ParkGuestSprites.Current"/>, and it exists for the console alone.
+	/// The simulation this park is running, so the debug console can read the census back and a sale can
+	/// tell the park's people a thing has gone (<see cref="ThingRemoved"/>). Same arrangement as
+	/// <see cref="ParkGuestSprites.Current"/>.
 	/// </summary>
 	internal static ParkPeople? Current { get; private set; }
 
@@ -202,7 +203,7 @@ public sealed class ParkPeople : Entity
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
 		// none of what a guest needs - the fee, the gate - means anything to them.
 		_staff = StaffIn( park );
-		_staffBehaviour = new StaffBehaviour( balance, random: null, park );
+		_staffBehaviour = new StaffBehaviour( balance, random: null, State );
 
 		Current = this;
 
@@ -1409,6 +1410,78 @@ public sealed class ParkPeople : Entity
 		=> _walks.GetValueOrDefault( thingId ) ?? _staffWalks.GetValueOrDefault( thingId );
 
 	/// <summary>
+	/// Tells everybody in the park a thing has gone - the type-10 message the object destructor
+	/// <c>FUN_004dd0a0</c> sends at <c>0x004dd150</c>, after the thing has left the object chain and before
+	/// its refund and its script teardown. Every guest and every member of staff answers it on their own:
+	/// see <see cref="PeepBehaviour.ThingRemoved"/> and <see cref="StaffBehaviour.ThingRemoved"/>.
+	/// </summary>
+	/// <remarks>
+	/// <b>Being put off makes a sound</b>, the kids' effect <c>0x80</c> where the guest's sprite is: always
+	/// for a rider (<c>0x004fb3f5</c>), and for a queuer only when their thing id is a multiple of eight
+	/// (<c>0x0050133d</c>). See <see cref="RiderSpriteAt"/> for where a rider's sprite is.
+	/// <para>
+	/// The original delivers the message in ascending thing id across every kind (<c>FUN_0040fb10</c>).
+	/// No answer reads another person, so guests and then staff come to the same thing.
+	/// </para>
+	/// </remarks>
+	internal void ThingRemoved( ParkWorld.CatalogueObject thing )
+	{
+		var tick = GameClock.Ticks;
+		var thingTick = tick / ThingTickEvery;
+
+		foreach ( var peep in _peeps )
+		{
+			var how = _behaviour.ThingRemoved( peep, thing.ThingId, thingTick );
+
+			if ( how == PeepBehaviour.PutOff.No )
+				continue;
+
+			Log.Info( $"People: guest {peep.ThingId} put off thing {thing.ThingId} ({how}), "
+				+ $"now {peep.State} with happiness {peep.Happiness:0}" );
+
+			var heardAt = how switch
+			{
+				PeepBehaviour.PutOff.Riding => RiderSpriteAt( thing, peep ),
+				PeepBehaviour.PutOff.Queueing when (peep.ThingId & 7) == 0
+					=> ParkGuestSprites.Feet( peep.Navigator.Position ),
+				_ => null
+			};
+
+			if ( heardAt is { } at )
+				ParkAudio.Current?.PutOff( at );
+		}
+
+		foreach ( var member in _staff )
+			_staffBehaviour.ThingRemoved( member, _staffWalks.GetValueOrDefault( member.ThingId ), thing.ThingId,
+				tick );
+	}
+
+	/// <summary>
+	/// Where a rider's sprite is as a sale puts them off, for the sound <see cref="ThingRemoved"/> plays
+	/// there. Asked while the ride's script still holds them.
+	/// </summary>
+	/// <remarks>
+	/// On a thing with <see cref="ParkWorld.CatalogueObject.KeepsRidersSpriteFlag"/> the sprite is where the
+	/// ride holds it: the seat node, or where the rider stands when no seat names them. Without the flag,
+	/// admission destroyed the sprite; the eviction makes a new one whose position is still nought when the
+	/// sound reads it (<c>0x004fb3cd</c>, then <c>FUN_004faa00</c>), so the sound plays at the world's
+	/// origin. A thing bought this session carries no such flag yet (<c>BOUGHT_OBJECT_FLAG_BITS</c>).
+	/// </remarks>
+	private Vector3? RiderSpriteAt( ParkWorld.CatalogueObject thing, Peep rider )
+	{
+		if ( (thing.Flags & ParkWorld.CatalogueObject.KeepsRidersSpriteFlag) == 0 )
+			return Vector3.Zero;
+
+		if ( _scriptFor?.Invoke( thing.ThingId ) is { } script
+			&& script.TryBounceNode( rider.ThingId, out var node )
+			&& ParkObjects.Current is { } objects
+			&& objects.TryNodeOn( thing.ThingId, BounceNodeName( node ), out var seat ) )
+			return seat;
+
+		return ParkGuestSprites.Feet( rider.Navigator.Position );
+	}
+
+	/// <summary>
 	/// The thing this guest is being carried by and the node they are carried on, or false when they are
 	/// not on anything.
 	///
@@ -1776,7 +1849,7 @@ public sealed class ParkPeople : Entity
 
 			yield return $"thing {member.ThingId,2} model {member.Model} {member.Activity} "
 				+ $"grade {member.PayGrade} tired {member.Tiredness,3:0} happy {member.Happiness,3:0} "
-				+ $"idleSince {member.TimeStartedIdling,4} jobs {member.JobsDone} "
+				+ $"idleSince {member.TimeStartedIdling,4} jobs {member.JobsDone} rest {member.RestArea} "
 				+ $"patrol {(member.HasPatrolArea ? $"{member.PatrolFrom}-{member.PatrolTo}" : "anywhere")} "
 				+ $"at ({nav.Position.X / (float)FixedVector.One:0.000},"
 				+ $"{nav.Position.Y / (float)FixedVector.One:0.000}) "

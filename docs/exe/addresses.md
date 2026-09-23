@@ -158,13 +158,24 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004d49a0` | | OpenTPW/World/Park/FixedVector.cs  |
 | `0x004db517` | | OpenTPW/World/Park/ParkRides.cs  |
 | `0x004dcf90` | | OpenTPW.Tests/ParkRidesTests.cs  |
-| `0x004dd0f0` | The object destructor's type-10 "object removed" message, which evicts riders, queuers and resting staff | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x004dd150` | The object destructor `FUN_004dd0a0` sends the type-10 message on the bus: every guest and member of staff bound to the thing answers it | OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004dd2c9` | The object destructor `FUN_004dd0a0` calls the script teardown `FUN_00559060` with mode 0, 4 or 7 | OpenTPW/World/Park/ParkRides.cs OpenTPW.Tests/ParkSellTests.cs  |
 | `0x004f7ea9` | | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f8321` | | OpenTPW/Global/GameCalendar.cs OpenTPW.Tests/GameCalendarTests.cs  |
 | `0x004f8792` | | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f87e7` | | OpenTPW/Global/GameCalendar.cs OpenTPW.Tests/GameCalendarTests.cs  |
 | `0x004fae10` | | OpenTPW.Files/Formats/Save/RecordStream.cs  |
+| `0x004fb383` | The guest's type-10 answer `FUN_004fb360` chooses a guest by `mMajorDest` alone | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fb38d` | `FUN_004fb360`'s rider arm: state `0x10` exactly | OpenTPW.Tests/ParkEvictionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fb3cd` | `FUN_004fb360` makes a rider a new sprite when admission destroyed theirs; its position is still nought | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004fb3f5` | `FUN_004fb360` plays the kids' effect `0x80` at the rider's sprite | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004fb4a1` | `FUN_004fb360` puts the guest into state 6, deciding | OpenTPW.Tests/ParkEvictionTests.cs  |
+| `0x004fe453` | `FUN_004fe1e0` docks `SmallHappinessChange` behind a gate on descriptor `+0x148` | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe4a5` | `FUN_004fe1e0` docks `SmallHappinessChange` behind a gate on descriptor `+0x144` | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x0050133d` | `FUN_005012f0` plays the kids' effect `0x80` only when the guest's id `& 7` is nought | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x0050212b` | Admission tests the object's flag bit `0x20`, which keeps the rider's sprite | OpenTPW.Files/Formats/Save/ParkWorld.cs  |
+| `0x00502147` | Admission destroys the rider's sprite on an object without flag bit `0x20` | OpenTPW.Files/Formats/Save/ParkWorld.cs  |
+| `0x00504d8f` | `FUN_00504c70`: a staff member put out of a sold rest area claims another and stays in state 0 | OpenTPW.Tests/ParkEvictionTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x0050cd80` | | OpenTPW/World/Park/FixedVector.cs  |
 | `0x0050f870` | | OpenTPW/World/Park/FixedVector.cs  |
 | `0x00511fc4` | | OpenTPW/World/Park/ParkWeather.cs  |
@@ -487,6 +498,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0076e300` | | OpenTPW/UI/Park/ParkLines.cs  |
 | `0x00774ce0` | | OpenTPW/World/Lobby/LobbyScript.cs  |
 | `0x00774da0` | | OpenTPW/UI/Park/ParkMapScreen.cs  |
+| `0x00785058` | `PeepInfo.SmallHappinessChange`, 5 in Lost Kingdom, read as a byte | OpenTPW/World/Park/ParkAdmission.cs  |
+| `0x0078505c` | `PeepInfo.MediumHappinessChange`, 15 in Lost Kingdom, read as a byte | OpenTPW/World/Park/ParkAdmission.cs  |
+| `0x00785060` | `PeepInfo.BigHappinessChange`, 25 in Lost Kingdom, read as a byte | OpenTPW/World/Park/ParkAdmission.cs  |
 | `0x007854f4` | | OpenTPW/Global/GameCalendar.cs  |
 | `0x00785914` | | OpenTPW/World/Advisor/Advisor.cs  |
 | `0x00786b84` | | OpenTPW/Global/GameClock.cs  |

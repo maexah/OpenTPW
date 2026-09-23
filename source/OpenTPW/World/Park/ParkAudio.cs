@@ -531,6 +531,38 @@ public sealed class ParkAudio : Entity
 	}
 
 	/// <summary>
+	/// The kids' effect <c>0x80</c>, which the original plays for a guest put off a ride or out of a queue by
+	/// a sale (<c>FUN_004fb360</c>, <c>FUN_005012f0</c>) and for one it throws out of the park
+	/// (<c>FUN_004feb50</c>). What the sample says has not been checked by listening.
+	/// </summary>
+	/// <remarks>
+	/// The engine sets no level for it (<c>Sound_PlayEffect</c> with no handle, no <c>FUN_0051bc40</c>), as
+	/// for <c>SINGLESCREAM</c>, so it plays at the same declared stand-in, <see cref="SingleScreamVolume"/>.
+	/// It is not held back by the repeat delay: a sale puts several guests off at once, and the original
+	/// throttles nothing.
+	/// </remarks>
+	/// <returns>Whether anything started.</returns>
+	internal bool PutOff( Vector3 at )
+	{
+		if ( !Audio.Ready || _kids is not { IsValid: true } )
+			return false;
+
+		var voice = _kids.Play( PutOffEffect, SingleScreamVolume, respectDelay: false, bus: AudioBus.Effects,
+			position: at );
+
+		if ( voice == null )
+			return false;
+
+		Log.Info( $"Park audio: put off, effect {PutOffEffect} sample '{voice.Name}' "
+			+ $"at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0})" );
+
+		return true;
+	}
+
+	/// <summary>The kids' category effect a guest put off something plays - see <see cref="PutOff"/>.</summary>
+	private const int PutOffEffect = 0x80;
+
+	/// <summary>
 	/// <c>SCREAMLEVEL</c> - moves the parameter of the scream a script is already holding, by the same
 	/// <c>(operand + speed) / 2</c> the start used (<c>FUN_00551290</c>, parameter 6). The chain's later
 	/// children pick their variation by it, and here the newest child's gain follows it too - see

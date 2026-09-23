@@ -437,16 +437,29 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
     `Thunder4.mp2 Effects placed held` and the music flat and playing. One miss: the advisor's `Speech flat` line
     read `held` too - his own hold (`Advisor.Paused`), which I had not predicted. `save/` unchanged.
   - **Found:** Q47 (two more hollow tests), Q48 (three holes in the camcorder's sweep), Q49 (two doubted comments).
-- [ ] **Q36. Selling a thing lets nobody go.** Found by Q4's decode (`park-engine.md`, "Selling and the
-  people on it"). The destructor's type-10 message takes every guest whose `MajorDest` is the sold thing
-  off it or out of its queue, docks happiness (a queuer twice), clears `MajorDest` and sends them to
-  Deciding; any staff member resting in it or on the way to rest there gives it up; a mechanic's or
-  handyman's job goes. Here a rider stays
-  Riding for ever (`PeepBehaviour.cs`, the empty Riding arm), a queuer stands on a drained queue for ever,
-  and `StaffBehaviour.GoAndRest` still offers a sold save-placed Staff Room (it walks the save's list).
-  Counted as `SOLD_THING_EVICTION`. The two happiness docks' keys (`DAT_00785058`, `DAT_0078505c`) are
-  unsettled - trace the loader first. Confirm: a guest riding and one queueing at the moment of a sale
-  both go to Deciding, `peeps` before and after.
+- [x] **Q36. Selling a thing lets nobody go.** Done 2026-09-23, `alexah/128-selling-lets-the-people-go`. Decoded
+  first (11 agents, each report put to two refuters; `park-engine.md`, "Selling and the people on it" and "How a key
+  finds its global"): `DAT_00785058` is `PeepInfo.SmallHappinessChange` (5) and `DAT_0078505c` is
+  `MediumHappinessChange` (15), by the balance table's slot order and by `FUN_004fe980`.
+  - Built: `ParkPeople.ThingRemoved`, called by the demolisher where it counted `SOLD_THING_EVICTION`, so a sale and a
+    move's pickup both send it. A guest whose `MajorDest` is the thing, in any state, loses 5 and goes to Deciding where
+    they stand; a queuer first loses 15, their own two queue links, the invitation and the place (`FUN_005012f0`, which
+    does not tell the thing). A rider plays the kids' effect `0x80` at the seat (the origin on a thing without flag
+    `0x20`, which admission then destroys the sprite of). Staff resting in it stand Idle and claim the nearest other
+    rest area; staff on the way give it up. `GoAndRest` walks the live object chain, so a sold room is never offered.
+  - **Proof:** 14 tests; 13 mutations each predicted, and two that stayed green showed two hollow asserts (a lone
+    queuer has no link to lose; a sold room's entry cannot be routed to), both fixed and red. The whole bug back turns
+    12 of 14 red. 993 tests with the game, 447 ran and 546 skipped without, 123 warnings.
+  - **Confirmed in the game**, `~/.cache/tpw-harnesses/q36confirm.py`, a control on `main` and the fix, each staged by
+    letting the park run to a guest riding the Belly Bounce while two queue: on `main` all three still name thing 13
+    after the sale and twelve seconds on. On the fix, all three predictions held: rider 35 `Deciding dest 0 happy 45`,
+    queuers 29 and 42 `Deciding dest 0 happy 30`, none moved; one `put off` sound, `bootout.mp2`, at the seat
+    `(525.4,252.6,10.3)`; `SOLD_THING_EVICTION` gone. Photographed before, just after and later. `save/` unchanged.
+    **One miss:** I predicted all three would leave Deciding within twelve seconds. The rider chose the Jungle Spray;
+    the queuers stood still, stranded on cleared cells no neighbour connects to (Q53). A probe run's put-off queuer
+    left by going home.
+  - **Not confirmed on screen:** the staff arms - nobody rests in this park in the first minute (`staff` now prints
+    `rest`). **Found:** Q50 to Q54.
 - [ ] **Q39. The hand's ways out are not the original's.** Found by Q5's review. `Level.WorldClick` empties
   the hand on any right-button press, before `RmbCancel` or the quick-click timing is consulted, where the
   original cancels only on a quick release with the option on and otherwise leaves the hand alone (the
@@ -516,6 +529,21 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   (3) `Step` clamps to 1..1280, and 1280 is cell 128, off the map, where every crossing is refused: entering the
   camcorder past the east edge traps the viewer there. Decode what `FUN_0042b1c0` does in each case first - the
   original may share (1) and (2) - then build. Confirm: each case walked in the game, photographed, with `camcorder`.
+- [ ] **Q50. Every other way out of a queue costs `MediumHappinessChange` too.** Found by Q36's decode.
+  `FUN_005012f0` docks it unconditionally (`0x00501359`) and has seven callers; Q36 built only the sale's. The other
+  six unlink the guest first (`FUN_004ddd20`): the queue edited or shortened under them (`FUN_00501390`), a ride
+  closing mid-admission (`FUN_004e0450`), "Couldn't get to my place in the queue" (`FUN_004ffbc0`), bored and leaving
+  (`FUN_004ffff0`), and two in state 13 (`FUN_005006b0`: too expensive, which docks twice, and "Couldn't rejoin FOQ").
+  Check which of those OpenTPW builds and whether each docks. Confirm: a guest who leaves a queue that way, `peeps`
+  happiness before and after.
+- [ ] **Q53. A guest stranded where no neighbour connects never decides again. Decode first.** Found by Q36's game run:
+  two queuers put off the sold Belly Bounce stood in Deciding for twelve seconds on cells the sale cleared, where
+  `SetRandomDest` has no candidate. `Decide` restamps the thinking gap after every wander roll; the original's wander
+  arm (`FUN_004fec90`, `0x004ff3cd`..`0x004ff400`) stamps `+0x1fc` only when the wander FAILS, and measures the gap
+  on `mGameTick` - which clock that is, is the open question `PeepBehaviour.Step` records. If it is the 31 ms tick,
+  this gap is eight times the original's. Also there: the original docks `SmallHappinessChange` when the chooser
+  finds nothing (`0x004ff492`), which nothing here does. Decode, then build. Confirm: the Q36 staging, the queuers
+  leaving Deciding, `peeps`.
 
 ## B. Docs and comments
 
@@ -667,6 +695,22 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   mode 1, and the Backspace handler (Backspace reaches the key tables as `0x08`, `park-engine.md`
   "Keyboard bindings") - then build: the path tool's own preview squares and cursor states
   (`PATH_TOOL_PREVIEW`) come with it.
+- [ ] **Q51. Rest-area occupancy is unbuilt at both ends.** Found by Q36's decode. Arriving to rest
+  (`FUN_00505fe0`) adds one to the rest area's script variable 0 (`VAR_STAFFIN` in every staff room) and sends
+  message 15 to the resting-staff list (UI control `0x1e7b`); leaving (`FUN_00506d10`, from the normal end of a rest
+  and from a sale) takes the one back. Neither half is built; the sale counts `REST_AREA_OCCUPANCY`, and arriving is
+  reached uncounted. Decode what the staff-room script does with `VAR_STAFFIN`, and whether a resting member of staff
+  is hidden (entering state 3 frees the sprite). Confirm: a guard resting, `rides` showing the room's variable.
+- [ ] **Q52. A rider on a thing without flag `0x20` is hidden in the original.** Found by Q36's decode. Admission
+  tests the object's flag bit `0x20` (`0x0050212b`) and, without it, destroys the rider's sprite (`0x00502147`);
+  OpenTPW never hides a rider. Every visitable thing in Lost Kingdom's save carries the bit, so nothing there shows
+  it; a thing bought this session carries none of the unpinned bits (`BOUGHT_OBJECT_FLAG_BITS`). Decode which
+  descriptor field sets `0x20`, then build both. Confirm: a guest riding a bought Belly Bounce, `guests`, photographed.
+- [ ] **Q54. The `.sam` reader against the original's parser.** Found by Q36's decode (`park-engine.md`, "How a key
+  finds its global"). In the original the first bad line ends the file - an unknown key, a bounded value out of
+  range, or a negative in a non-negative field - and an array's count is the highest index written plus one, so
+  Lost Kingdom's guest type is `rand % 8`. Compare `ParkBalance` with both. Confirm: a test per behaviour against the
+  shipped files, and the guest types a loaded park draws from.
 
 ## E. Large
 

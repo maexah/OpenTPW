@@ -208,7 +208,15 @@ The attribute array on disk packs the other way round — see "Axis and handedne
 
 ## Standard.sam is a generic Bullfrog balance file, loaded twice and merged
 
-`data/levels/Standard.sam` is read first for defaults, then the theme's own file as an **override onto the same dictionary** (`FUN_005156a0`), then a third `Easy_Standard.sam` pass. **A loader must merge, not replace** — values absent from the theme file keep the global value. The format is `Group[idx].Field value` with `#` comments; a generic parser suffices and the schema table is not needed.
+`data/levels/Standard.sam` is read first for defaults, then the theme's own file as an **override onto the same dictionary** (`FUN_005156a0`), then a third `Easy_Standard.sam` pass. **A loader must merge, not replace** — values absent from the theme file keep the global value. The format is `Group[idx].Field value` with `#` comments.
+
+### How a key finds its global
+
+Decoded 2026-09-23 (`docs/QUEUE.md` Q36), put to two refuters. **The address comes from the key's place in the executable's own table, not from the file's order.** Each balance family is one static object whose vtable slot 0 returns record `i` of a table in `.rdata` (stride `0x3c`: a type dword, then the name) and whose slot 1 (`0x005b0d60`) returns `this + 8`. `FUN_00401030` gives every value record (types 4 to `0xb`) the next dword, starting at slot 1, so record `i`'s global is `this + 8 + 4*slot`. The parser `FUN_004017a0` resolves `Group.Field` through `FUN_00401280`, which searches back from the table's end for the group and then for the field, case-sensitively. Types: 0 section start, 1 section end with the group name, 2/3 an array, 4 int, 5 int ≥ 0, 6 bounded int, 7 float, 8 float ≥ 0, 9 bounded float, `0xa` string, `0xb` a multi-line block, `0xc` the end.
+
+The `PeepInfo` object is at `0x00785040` (built at `0x00402ae0`, table `0x0073fc70`): `0x0078504c` ExitLevel, `0x00785050` ExitLevelVar, `0x00785054` StartingCashVarPc, **`0x00785058` SmallHappinessChange, `0x0078505c` MediumHappinessChange, `0x00785060` BigHappinessChange**, then PerfectRide, GoodRide, OKRide from `0x00785064` - though the file lists RideVomitDivisor straight after BigHappinessChange, so fitting file order to addresses goes wrong from there. `FUN_004fe980` confirms the three: its level 0, 1 and 2 return the bytes at `0x00785058`, `0x0078505c` and `0x00785060`. Every reader loads them as a byte. Lost Kingdom offline takes 5, 15 and 25 from `data/levels/Standard.sam`; no jungle file overrides them (online is 3, 10, 25).
+
+A line may name several fields, each taking the next value (up to sixteen; OpenTPW reads these, `BalanceFieldTests`). Two more parser behaviours, measured and not yet compared with OpenTPW's reader: **the first bad line ends the file** - an unknown key, a bounded value out of range, or a negative in a type-5 field returns nought and no later line is read; and **an array's count is the highest index the files wrote, plus one**, not the table's size - so Lost Kingdom's guest type is `rand % 8`.
 
 ---
 
@@ -1305,18 +1313,58 @@ cleared if it is this one; and `FUN_0050b980`, which leaves the anchor cell's li
 
 #### Selling and the people on it
 
-**The type-10 message evicts everyone at once.** Each subscriber answers it before the refund: a guest
-(`FUN_004fb360`) whose `MajorDest` (`+0x1dc`) is the sold thing is taken off it if riding (state `0x10`:
-the sprite brought back, memory event `0xd`), or out of its queue if queueing (`FUN_005012f0`, which docks
-happiness too, so a queuer loses twice), loses happiness, has `MajorDest` and any `mPreviousRides` entry
-naming it cleared, and goes to Deciding (state 6). A mechanic or handyman with a job on it drops the job.
-**Every kind of staff member whose rest area (`+0x208`) it is answers through `FUN_00504c70`**: one resting
-there (state 3) is put out by `FUN_00506d10`, which decrements the rest area's script variable 0 - so the
-script must still be alive, which it is: the teardown comes later - clears `+0x208`, goes to state 0 and
-heads for the nearest other rest area `FUN_00506910` can reach; one on the way there (state 2) has the
-claim cleared and goes to state 0. The only tick-side check is `FUN_00500900`'s defensive kind-3 test.
-**OpenTPW does not build it** (`SOLD_THING_EVICTION`): a rider or queuer of a sold thing stays as it was,
-and in OpenTPW only guards and researchers rest.
+Decoded 2026-09-23 (`docs/QUEUE.md` Q36), every claim put to two refuters, one reading disassembly and one taking a
+second route. **The object destructor's type-10 message puts everyone off at once.** `FUN_004dd0a0` is its only
+sender: it builds `{vtable 0x006fd7e0, +8 = the thing's id}` and hands it to the bus `FUN_0040fb10` at `0x004dd150`,
+after the chain unlink (`0x004dd0eb`) and before the refund and the script teardown (`0x004dd2c9`). The bus keeps
+one `std::set<u16>` of thing ids per message type and calls `FUN_0050b550` on each subscriber in ascending id, which
+switches on the thing's kind byte `+2`. The walker base constructor `FUN_004f8940` subscribes every guest (kind 1),
+every member of staff (4 mechanic, 5 handyman, 6 entertainer, 7 guard, 8 researcher) and the kind-18 things
+(`0x004f8a58`); the kind-17 relay built by `FUN_0050c9b0` subscribes too. Kinds 17 and 18 answer with an empty
+`RET`. Delete and the move pickup both reach it, so **a move puts everyone off as a sale does**.
+
+**A guest (`FUN_004fb360`) answers only when `MajorDest` (`+0x1dc`) is the thing** (`0x004fb383`), in any state:
+
+- **Riding, state `0x10` exactly** (`0x004fb38d`): the sprite is brought back, `+0x28` (the ride holds the sprite)
+  is cleared, event `0xd` goes into the guest's event ring, and the kids' effect `0x80` plays at the sprite
+  (`FUN_004faa00` at `0x004fb3f5`). No settle-up, no charge, **no move**: the guest stays where their record has
+  been since admission, the stand point before the entry. Admission tests the thing's flag bit `0x20`
+  (`0x0050212b`): set, it keeps the sprite and sets `+0x28`; clear, it destroys the sprite (`0x00502147`), and the
+  eviction makes a new one (`FUN_004d4140(3, ...)` at `0x004fb3cd`) whose position is still nought when the sound
+  reads it, so **that sound plays at the world's origin**. Every visitable thing in Lost Kingdom's save carries
+  `0x20` (the Belly Bounce's flags are `0x012c`).
+- **Queueing** - `FUN_00502430`: state 11 to 14, or state 8 with the saved state 11 to 14 - runs `FUN_005012f0`:
+  event 6; the kids' `0x80` only when the guest's own id `& 7` is nought (`0x0050133d`); happiness down by
+  `MediumHappinessChange`; `mQPrev`, `mQNext`, `mBeenAdmitted` (`+0x1f8`), `MajorDest` and `mQueuePos` zeroed;
+  state 6. **It never tells the thing.** The six other callers of `FUN_005012f0` unlink the guest first
+  (`FUN_004ddd20`); the sale does not, so the object keeps its head, and every queuer clears only their own links.
+- **Then everyone chosen**: happiness down by `SmallHappinessChange` (`FUN_004fe980(0)`, clamped by `FUN_004fb4f0`),
+  `MajorDest` zeroed (`0x004fb444`), state 6 (`0x004fb4a1`), which queues the stand. A queuer loses 20 in all in
+  Lost Kingdom, everyone else 5. A guest walking to it, leaving it, or still naming it from a ride they left is
+  stopped the same way.
+- **Every guest, chosen or not**, clears a saved second destination (`+0x1de`) naming the thing, and each
+  `mPreviousRides` entry naming it with its `mPreviousTemporaryRides` pair (`0x004fb4a6`..).
+
+The event ring (32 entries at guest `+0x30`) is read only by a debug dump that prints through a logger which is a
+bare `RET` in this build (`FUN_005da3c0`), so its entries change nothing a player sees.
+
+**Staff** answer through their kind's handler, and every kind ends in `FUN_00504c70`. A mechanic whose ride job
+(`+0x218`) or a handyman whose toilet job (`+0x21a`) is the thing drops it and goes idle, in any state. Then, when
+the rest area (`+0x208`) is the thing: **one resting (state 3)** is put out by `FUN_00506d10`, which sends message
+15 to the resting-staff list, takes one off the rest area's script variable 0 (`VAR_STAFFIN`, while the script is
+still alive), clears `+0x208`, rebuilds the sprite and sets state 0. Then `FUN_00506910` finds the nearest other
+object with flag bit `0x02` by squared cell distance along the live chain, **testing no reachability**, and
+`FUN_004fa530` routes to its `mEntryPos`; on a route `+0x208` is set to it, **but the state stays 0**
+(`0x00504d8f`), so the claim waits for the next time they are sent to rest. **One on the way there (state 2)** has
+`+0x208` cleared and goes to state 0. Other states keep the claim.
+
+**What OpenTPW builds** (`PeepBehaviour.ThingRemoved`, `StaffBehaviour.ThingRemoved`, called through
+`ParkPeople.ThingRemoved` from the demolisher): all of the guest's answer but the event ring, `+0x1de` and
+`mPreviousRides`, none of which it keeps; the sound, at the seat node, where the rider stands, or the origin by flag
+`0x20`, which a thing bought this session does not carry yet (`BOUGHT_OBJECT_FLAG_BITS`); and the staff rest-area
+arms. Nothing here holds a job on a thing, and the `VAR_STAFFIN` count and message 15 are unbuilt at both ends -
+arriving to rest (`FUN_00505fe0`) is where they start - so the eviction counts `REST_AREA_OCCUPANCY`. A tired
+member of staff's search walks the live chain too, so a sold rest area is never offered.
 
 #### Moving a thing
 

@@ -1339,6 +1339,92 @@ public sealed class PeepBehaviour
 		peep.SetState( PeepState.Deciding, tick, _random );
 	}
 
+	/// <summary>Which arm of <see cref="ThingRemoved"/> a guest took.</summary>
+	internal enum PutOff
+	{
+		/// <summary>Their destination is something else, so the message changes nothing.</summary>
+		No,
+
+		/// <summary>They were riding it (state 16 exactly, <c>0x004fb38d</c>).</summary>
+		Riding,
+
+		/// <summary>They were queueing for it - <see cref="ParkRideOperation.IsQueueing"/>, <c>FUN_00502430</c>.</summary>
+		Queueing,
+
+		/// <summary>They were walking to it, walking away from it, or still naming it.</summary>
+		Heading
+	}
+
+	/// <summary>
+	/// A guest's answer to the object destructor's type-10 message, which every guest is sent when a thing
+	/// is sold or picked up to be moved - <c>FUN_004fb360</c>. See <c>docs/exe/park-engine.md</c>, "Selling
+	/// and the people on it".
+	/// </summary>
+	/// <remarks>
+	/// <b>Only <see cref="Peep.MajorDest"/> chooses who answers</b> (<c>0x004fb383</c>), whatever their state.
+	/// A queuer is first put out of the queue (<see cref="DismissFromTheQueue"/>); then everyone chosen loses
+	/// <see cref="ParkAdmission.SmallHappinessChange"/>, lets the thing go and goes to
+	/// <see cref="PeepState.Deciding"/>. <b>Nobody is moved.</b> A rider stays on the entry cell they boarded
+	/// from, which is where their record has been all ride. The rider's arm also plays a sound, which the
+	/// caller plays, since only it knows where the rider is drawn.
+	/// <para>
+	/// <b>Three things the original does here have nothing to act on.</b> Each arm writes an entry into the
+	/// guest's event ring (0xd for a rider, 6 for a queuer), whose only reader is a debug dump. Every guest,
+	/// chosen or not, also clears a saved second destination (<c>+0x1de</c>) and any <c>mPreviousRides</c>
+	/// entry naming the thing. This project keeps none of the three.
+	/// </para>
+	/// </remarks>
+	internal PutOff ThingRemoved( Peep peep, int thingId, int tick )
+	{
+		ArgumentNullException.ThrowIfNull( peep );
+
+		if ( thingId == 0 || peep.MajorDest != thingId )
+			return PutOff.No;
+
+		var how = PutOff.Heading;
+
+		if ( peep.State == PeepState.Riding )
+		{
+			how = PutOff.Riding;
+		}
+		else if ( ParkRideOperation.IsQueueing( peep ) )
+		{
+			how = PutOff.Queueing;
+			DismissFromTheQueue( peep, tick );
+		}
+
+		if ( Admission is { } mood )
+			peep.Happiness = Peep.Change( peep.Happiness, -mood.SmallHappinessChange );
+
+		peep.MajorDest = 0;
+		peep.SetState( PeepState.Deciding, tick, _random );
+
+		return how;
+	}
+
+	/// <summary>
+	/// Put out of a queue - <c>FUN_005012f0</c>: happiness down by
+	/// <see cref="ParkAdmission.MediumHappinessChange"/>, both of the guest's own queue links, the
+	/// invitation, the destination and the place in the queue cleared, and back to deciding.
+	/// </summary>
+	/// <remarks>
+	/// The original has seven callers, and the other six unlink the guest from the thing's queue first
+	/// (<c>FUN_004ddd20</c>). A sale does not, so the thing is not told: see
+	/// <see cref="ParkState.ForgetQueueLinks"/>. The sale is the only caller built here.
+	/// </remarks>
+	private void DismissFromTheQueue( Peep peep, int tick )
+	{
+		if ( Admission is { } mood )
+			peep.Happiness = Peep.Change( peep.Happiness, -mood.MediumHappinessChange );
+
+		State.ForgetQueueLinks( peep.ThingId );
+
+		peep.BeenAdmitted = false;
+		peep.MajorDest = 0;
+		peep.QueuePos = 0;
+		peep.SetState( PeepState.Deciding, tick, _random );
+	}
+
 	/// <summary>
 	/// Whether the ride is too far from what this guest likes - see <see cref="ExcitementRefusal"/>.
 	/// </summary>

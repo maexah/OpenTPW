@@ -627,6 +627,21 @@ public sealed class ParkGuestSprites : ModelEntity
 			: new Vector3( x, y, ground + spriteHeight );
 
 	/// <summary>
+	/// Where a person stands in the world: their position on the ground under it, or null with no ground
+	/// loaded. It is what the original reads off a walking person's sprite (<c>FUN_004754e0</c>).
+	/// </summary>
+	internal static Vector3? Feet( FixedVector at )
+	{
+		if ( ParkGround.Current?.Heightfield is not { } field )
+			return null;
+
+		var x = (at.X / (float)FixedVector.One) * field.CellSizeX;
+		var y = (at.Y / (float)FixedVector.One) * field.CellSizeY;
+
+		return new Vector3( x, y, field.HeightAtWorld( x, y ) );
+	}
+
+	/// <summary>
 	/// Where a ride is carrying this person, or null when none is.
 	///
 	/// <para>

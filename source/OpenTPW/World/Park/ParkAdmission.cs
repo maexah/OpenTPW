@@ -66,6 +66,7 @@ public sealed class ParkAdmission
 		CheapMultiplier = balance.Float( "PeepInfo.CheapPriceMultiplier", 0.75f );
 		AverageMultiplier = balance.Float( "PeepInfo.AveragePriceMultiplier", 1.25f );
 		ExpensiveMultiplier = balance.Float( "PeepInfo.ExpensivePriceMultiplier", 2f );
+		SmallHappinessChange = balance.Int( "PeepInfo.SmallHappinessChange", 5 );
 		MediumHappinessChange = balance.Int( "PeepInfo.MediumHappinessChange", 15 );
 		BigHappinessChange = balance.Int( "PeepInfo.BigHappinessChange", 25 );
 
@@ -102,6 +103,12 @@ public sealed class ParkAdmission
 	public float ExpensiveMultiplier { get; }
 
 	/// <summary>
+	/// The smallest of the three mood changes - <c>PeepInfo.SmallHappinessChange</c>, 5, the global at
+	/// <c>0x00785058</c>. Every guest whose thing is sold from under them loses it (<c>FUN_004fb360</c>).
+	/// </summary>
+	public int SmallHappinessChange { get; }
+
+	/// <summary>
 	/// How much happiness a guest gains or loses over the price - <c>PeepInfo.MediumHappinessChange</c>, 15.
 	///
 	/// <para>
@@ -117,14 +124,12 @@ public sealed class ParkAdmission
 	/// happens to a guest whose park shuts while they are deciding what to do (<c>FUN_004fec90</c> passes 2).
 	/// </summary>
 	/// <remarks>
-	/// <b>Two of the three now live here, and it is worth saying why they still do.</b> When only one was in
-	/// use, gathering all three into a holder of their own would have been a type invented for a single
-	/// reader. Two is not obviously better, but it is not worse either - and the third
-	/// (<c>SmallHappinessChange</c>, 5) is passed by the ride-choosing arm. <b>That arm IS built now</b> -
-	/// this said it was deliberately not - but the constant itself still has no reader, so the move this
-	/// paragraph asks for is now owed rather than blocked: <b>all three belong somewhere that is about a
-	/// guest's mood rather than about the price of coming in.</b> Until something reads the third,
-	/// splitting them across two homes would still be worse than keeping them together in an awkward one.
+	/// <b>All three live here, and this is an awkward home for them.</b> They are about a guest's mood, not
+	/// about the price of coming in, and each is read by something that is not the gate: the settle-up, the
+	/// sold-thing eviction, a park shutting. The balance loader places them side by side in its
+	/// <c>PeepInfo</c> block (<c>0x00785058</c>, <c>0x0078505c</c>, <c>0x00785060</c>; see
+	/// <c>docs/exe/park-engine.md</c>, "Selling and the people on it"). Moving all three into a holder of
+	/// their own is owed. Splitting them across two homes would be worse than this.
 	/// </remarks>
 	public int BigHappinessChange { get; }
 

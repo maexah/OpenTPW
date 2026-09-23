@@ -42,11 +42,11 @@ public sealed class StaffBehaviour
 	private readonly Random _random;
 
 	/// <summary>
-	/// The park's own save, for the one question this needs of it: which objects are rest areas, and where
-	/// each one wants to be approached from. Null leaves a staff member unable to find one, which is the
-	/// original's own "couldn't find a rest area" path rather than a failure.
+	/// The park as it is being played, for the one question this needs of it: which objects standing now
+	/// are rest areas, and where each one wants to be approached from. Null leaves a staff member unable to
+	/// find one, which is the original's own "couldn't find a rest area" path rather than a failure.
 	/// </summary>
-	private readonly ParkWorld? _park;
+	private readonly ParkState? _state;
 
 	private readonly int[] _idleDuration = new int[ParkWorld.StaffState.PayGrades];
 	private readonly float[] _recuperation = new float[ParkWorld.StaffState.PayGrades];
@@ -57,14 +57,14 @@ public sealed class StaffBehaviour
 	/// place - the global file's own values - so that a test can drive this without mounting a game.
 	/// </param>
 	/// <param name="random">The rolls this makes. Taken so a test can seed them; the game does not.</param>
-	/// <param name="park">
+	/// <param name="state">
 	/// The park these staff are in, for finding a rest area. Null leaves them unable to find one - see the
 	/// field's own remarks.
 	/// </param>
-	public StaffBehaviour( ParkBalance? balance = null, Random? random = null, ParkWorld? park = null )
+	public StaffBehaviour( ParkBalance? balance = null, Random? random = null, ParkState? state = null )
 	{
 		_random = random ?? new Random();
-		_park = park;
+		_state = state;
 
 		// The fallbacks are the shipped global file's own numbers rather than zeros: a missing key should
 		// leave the simulation running, and a zero idle duration would have every staff member decide
@@ -481,16 +481,14 @@ public sealed class StaffBehaviour
 	/// claims somewhere they cannot get to.
 	/// </para>
 	/// <para>
-	/// Nearest is by squared distance between cells, as the original measures it. <b>One departure, and it
-	/// cannot bite in this park:</b> the original follows the object list by <c>mNext</c> from
-	/// <c>mFirstObject</c> and this walks the reader's list, which holds the same objects in file order.
-	/// The two can only disagree over which of two <i>equally distant</i> rest areas is chosen, and the
-	/// shipped park has exactly one.
+	/// Nearest is by squared distance between cells, the first of two equally near in chain order, as the
+	/// original measures it: it follows <c>mNext</c> from <c>mFirstObject</c>, the park's live objects. So a
+	/// thing sold is never offered, since the destructor has taken it off the chain.
 	/// </para>
 	/// </summary>
 	private bool GoAndRest( Staff staff, PeepWalk walk )
 	{
-		if ( _park == null )
+		if ( _state == null )
 			return false;
 
 		var (x, y) = walk.Position.Cell;
@@ -498,7 +496,7 @@ public sealed class StaffBehaviour
 		ParkWorld.CatalogueObject? nearest = null;
 		var nearestDistance = int.MaxValue;
 
-		foreach ( var candidate in _park.Objects )
+		foreach ( var candidate in _state.ObjectsInChainOrder() )
 		{
 			if ( !candidate.IsRestArea || !candidate.IsPlaced )
 				continue;
@@ -527,6 +525,62 @@ public sealed class StaffBehaviour
 		staff.RestArea = restArea.ThingId;
 
 		return true;
+	}
+
+	/// <summary>
+	/// A staff member's answer to the object destructor's type-10 message, sent when a thing is sold or
+	/// picked up to be moved - the rest-area arm <c>FUN_00504c70</c>, which every kind of staff ends in.
+	/// See <c>docs/exe/park-engine.md</c>, "Selling and the people on it".
+	/// </summary>
+	/// <remarks>
+	/// Only a staff member whose <see cref="Staff.RestArea"/> is the thing answers, and only while resting
+	/// or on the way to rest. <b>One resting there is put out</b> (<c>FUN_00506d10</c>) and stands up
+	/// <see cref="StaffActivity.Idle"/>, then is pointed at the nearest other rest area and claims it if a
+	/// route exists. They stay Idle either way (<c>0x00504d8f</c>), so the claim goes unused until they are
+	/// next sent to rest. <b>One on the way there</b> gives the claim up and stands Idle.
+	/// <para>
+	/// <b>Not built, and each has nothing here to act on.</b> A mechanic's ride job (<c>+0x218</c>) and a
+	/// handyman's toilet job (<c>+0x21a</c>) are dropped by their own arms first; no staff member holds a
+	/// job on a thing in this build. <c>FUN_00506d10</c> also takes one off the rest area's
+	/// <c>VAR_STAFFIN</c> and tells the resting-staff list (message 15); arriving to rest adds the one and
+	/// tells the list (<c>FUN_00505fe0</c>), and neither half is built, so this counts it.
+	/// </para>
+	/// </remarks>
+	internal void ThingRemoved( Staff staff, PeepWalk? walk, int thingId, int tick )
+	{
+		ArgumentNullException.ThrowIfNull( staff );
+
+		if ( thingId == 0 || staff.RestArea != thingId )
+			return;
+
+		switch ( staff.Activity )
+		{
+			case StaffActivity.Resting:
+				Unimplemented.Report( "REST_AREA_OCCUPANCY" );
+
+				staff.RestArea = 0;
+				staff.SetActivity( StaffActivity.Idle, tick );
+
+				// The claim, and the route that makes it; the state is left alone.
+				if ( walk != null )
+					GoAndRest( staff, walk );
+
+				Log.Info( $"Staff: {staff.ThingId} put out of rest area {thingId}, now {staff.Activity} "
+					+ $"claiming {staff.RestArea}" );
+
+				break;
+
+			case StaffActivity.GoingToRest:
+				staff.RestArea = 0;
+				staff.SetActivity( StaffActivity.Idle, tick );
+
+				Log.Info( $"Staff: {staff.ThingId} gave up going to rest area {thingId}, now {staff.Activity}" );
+
+				break;
+
+			default:
+				break;
+		}
 	}
 
 	/// <summary>The near edge of a cell plus a clamped roll - see <see cref="PeepBehaviour"/>.</summary>

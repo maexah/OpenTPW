@@ -228,7 +228,7 @@ public static class ParkBuilding
 			|| level.Park is not { } park )
 			return "sell: a park has to be loaded";
 
-		return Sell( state, park, catalogue, objects, ParkRides.Current, thingId );
+		return Sell( state, park, catalogue, objects, ParkRides.Current, thingId, ParkPeople.Current );
 	}
 
 	/// <summary>
@@ -236,8 +236,8 @@ public static class ParkBuilding
 	/// without a running <see cref="Level"/>, the way <see cref="Stamp"/> and <see cref="ReleaseEnds"/> are.
 	/// </summary>
 	internal static string Sell( ParkState state, ParkWorld park, ParkItemCatalogue catalogue, ParkObjects? objects,
-		ParkRides? rides, int thingId )
-		=> Demolish( state, park, catalogue, objects, rides, thingId ).Answer;
+		ParkRides? rides, int thingId, ParkPeople? people = null )
+		=> Demolish( state, park, catalogue, objects, rides, thingId, people ).Answer;
 
 	/// <summary>What one sale did: the line to show, and whether the thing is gone.</summary>
 	private readonly record struct Sold( string Answer, bool Done = false );
@@ -251,7 +251,7 @@ public static class ParkBuilding
 	/// footprint's clear falls against the unlink changes nothing.
 	/// </remarks>
 	private static Sold Demolish( ParkState state, ParkWorld park, ParkItemCatalogue catalogue, ParkObjects? objects,
-		ParkRides? rides, int thingId )
+		ParkRides? rides, int thingId, ParkPeople? people )
 	{
 		if ( !state.TryObject( thingId, out var placed ) )
 			return new( $"sell: nothing in the park is thing {thingId}" );
@@ -287,10 +287,10 @@ public static class ParkBuilding
 
 		Unstamp( state, footprint, placed.CellX, placed.CellY, thingId );
 
-		// The destructor's "object removed" message (0x004dd0f0), which every guest and staff member whose
-		// destination is this thing answers by giving it up - a rider is let off, a queuer leaves the queue,
-		// staff resting in it or heading there to rest go elsewhere. Not built: they stay as they are.
-		Unimplemented.Report( "SOLD_THING_EVICTION" );
+		// The destructor's "object removed" message (0x004dd150): a rider is put off where they are, a
+		// queuer is put out of the queue, and staff resting in it or heading there to rest give it up. It
+		// goes after the unlink and before the refund and the script teardown, as the original's does.
+		people?.ThingRemoved( placed );
 
 		state.Refund( refund );
 
@@ -404,19 +404,19 @@ public static class ParkBuilding
 			|| level.Park is not { } park )
 			return "pick up: a park has to be loaded";
 
-		return PickUp( state, park, catalogue, objects, ParkRides.Current, thingId ).Answer;
+		return PickUp( state, park, catalogue, objects, ParkRides.Current, thingId, ParkPeople.Current ).Answer;
 	}
 
 	/// <summary>What one pickup did: the line to show, and whether the item is in the hand.</summary>
 	private readonly record struct Taken( string Answer, bool Holding = false );
 
 	private static Taken PickUp( ParkState state, ParkWorld park, ParkItemCatalogue catalogue, ParkObjects? objects,
-		ParkRides? rides, int thingId )
+		ParkRides? rides, int thingId, ParkPeople? people )
 	{
 		if ( !state.TryObject( thingId, out var placed ) )
 			return new( $"pick up: nothing in the park is thing {thingId}" );
 
-		var sold = Demolish( state, park, catalogue, objects, rides, thingId );
+		var sold = Demolish( state, park, catalogue, objects, rides, thingId, people );
 
 		if ( !sold.Done )
 			return new( $"pick up: {sold.Answer}" );
@@ -438,16 +438,17 @@ public static class ParkBuilding
 			|| level.Park is not { } park )
 			return "move: a park has to be loaded";
 
-		return Move( state, park, catalogue, objects, ParkRides.Current, thingId, cellX, cellY, angle );
+		return Move( state, park, catalogue, objects, ParkRides.Current, thingId, cellX, cellY, angle,
+			ParkPeople.Current );
 	}
 
 	/// <summary>
 	/// The whole of <see cref="Move(int, int, int, int?)"/> once the park is in hand, for a test.
 	/// </summary>
 	internal static string Move( ParkState state, ParkWorld park, ParkItemCatalogue catalogue, ParkObjects? objects,
-		ParkRides? rides, int thingId, int cellX, int cellY, int? angle = null )
+		ParkRides? rides, int thingId, int cellX, int cellY, int? angle = null, ParkPeople? people = null )
 	{
-		var taken = PickUp( state, park, catalogue, objects, rides, thingId );
+		var taken = PickUp( state, park, catalogue, objects, rides, thingId, people );
 
 		if ( !taken.Holding )
 			return $"move: {taken.Answer}";

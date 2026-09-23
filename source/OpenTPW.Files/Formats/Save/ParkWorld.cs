@@ -136,6 +136,13 @@ public sealed class ParkWorld
 		public const int QueuePathFlag = 0x8;
 
 		/// <summary>
+		/// The bit that keeps a rider's sprite while they ride: admission tests it (<c>0x0050212b</c>) and,
+		/// without it, destroys the sprite (<c>0x00502147</c>). Every visitable object in Lost Kingdom's save
+		/// carries it.
+		/// </summary>
+		public const int KeepsRidersSpriteFlag = 0x20;
+
+		/// <summary>
 		/// Whether tired guests can use this object - one bit, and the thing a handyman's toilet arm
 		/// looks for.
 		/// </summary>

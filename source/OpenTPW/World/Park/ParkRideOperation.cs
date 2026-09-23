@@ -464,13 +464,13 @@ public sealed class ParkRideOperation
 	/// win"</b>: the sideshow's win is computed inside the effects, after this has already been tested.
 	/// </para>
 	/// <para>
-	/// <b>What is NOT built, and why, rather than a number invented for it.</b> The roll that writes the
-	/// byte needs <c>mChanceOfWinning</c>, which nothing here parses - the balance file states the
-	/// category default as <c>UsageInfo.InitChanceOfLoosing</c> (the game's spelling), 70, and only on
-	/// <c>SideShow.sam</c>. And the two penalty magnitudes are balance globals whose keys are
-	/// unidentified: <c>DAT_0078505c</c> for the "lost" arm's happiness drop, <c>DAT_00785058</c> for the
-	/// two penalties a still-unmet need draws. So the losing arm is left alone rather than docking a
-	/// guest by a figure nobody measured.
+	/// <b>What is NOT built, and why.</b> The roll that writes the byte needs <c>mChanceOfWinning</c>,
+	/// which nothing here parses - the balance file states the category default as
+	/// <c>UsageInfo.InitChanceOfLoosing</c> (the game's spelling), 70, and only on <c>SideShow.sam</c>. The
+	/// "lost" arm docks <c>PeepInfo.MediumHappinessChange</c> (<c>DAT_0078505c</c>), which is built below.
+	/// The two penalties a still-unmet need draws in <c>FUN_004fe1e0</c> (<c>0x004fe453</c>,
+	/// <c>0x004fe4a5</c>) dock <c>PeepInfo.SmallHappinessChange</c> (<c>DAT_00785058</c>) behind a gate on
+	/// descriptor fields not yet named, and are not built.
 	/// </para>
 	/// <para>
 	/// <b>Also absent, and each with a consumer that does not exist yet:</b> the guest's recent-things

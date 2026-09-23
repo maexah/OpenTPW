@@ -16,7 +16,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
   that flight**, and a lobby that ends mid-flight forgets it.
 - Park: ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (5 of 6).
 - Building and staffing: purchase menu and hire screen, both reachable from Buy. Things bought, sold,
-  moved, carried; staff hired, fired, picked up, put down. **A staff drop the park refuses keeps the
+  moved, carried; staff hired, fired, picked up, put down. **Selling or moving a thing puts its riders and queuers
+  off where they stand**, and staff resting there get up. **A staff drop the park refuses keeps the
   candidate on the cursor and in the pool.** **Leaving a park lets go of whatever is in the hand.** **A sold thing's script goes with it**, and
   its ground is left bare. **A moved thing stays in the hand until a cell takes it**, facing the way it stood. Clicking a placed ride **anywhere on its
   footprint** opens its window - the save's own and ones bought this session alike.
@@ -41,7 +42,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 - No finances, litter, saving a park back, video, networking. Research is inert and has nothing behind it.
 - Eight of the nine per-object windows are unbuilt. Patrol areas are dead, deferred by Alexah.
-- Selling a thing lets nobody go: its riders stay aboard and its queuers stay put (`docs/QUEUE.md` Q36).
+- A guest put off on ground no neighbour connects to only leaves by going home: every failed wander restamps
+  the thinking gap (Q53). Leaving a queue any way but a sale costs no happiness (Q50).
 - Any right press empties the hand, which for a moved thing is a sale; Escape opens the menu over it (Q39).
 - Nothing shows a carried candidate, and any cell on the map takes one; the original's rule is decoded (Q40).
 - Escape during the park-entry fly-in opens the game menu over it; the original's cancels the fly-in (Q41).
@@ -56,8 +58,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q12, and Q35, are ticked.** Next is **Q36**: selling a thing lets nobody go.
-Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, and Q12 Q47-Q49.
+`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35 and Q36 are ticked.** Next is **Q39**: the hand's ways out.
+Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q54.
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -69,6 +71,7 @@ and is still untracked, so it exists on this machine only; Q13 moves it into `do
 - `SpriteScript.ScheduleFrom` and `DropUnreadyNominee`: unwiring either leaves the suite green.
 - Nothing puts a staff member in a cell's occupancy list *as they walk*.
 - The critical-section cap trips only in a test: nothing the game ships can reach it (Q11).
+- The staff half of a sale: nobody in Lost Kingdom rests in the first minutes, so it is tested, not seen (Q36).
 
 ## Numbers
 
@@ -77,33 +80,24 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **979**, 0 fail, 0 skip with the game | 2026-09-23, after Q12 |
-| Tests without the game | **447** ran, **532** skipped, of 979 | 2026-09-23, after Q12 |
-| Build warnings | 123 | 2026-09-23, after Q12 |
+| Tests | **993**, 0 fail, 0 skip with the game | 2026-09-23, after Q36 |
+| Tests without the game | **447** ran, **546** skipped, of 993 | 2026-09-23, after Q36 |
+| Build warnings | 123 | 2026-09-23, after Q36 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-23 - four hollow tests.** Branch `alexah/126-four-hollow-tests`, `docs/QUEUE.md` Q12. The texture cache,
-camcorder walk, lobby fly-in and park-pause tests each stayed green with their fix reverted; each now fails, and so
-does every smaller piece of those fixes that a 28-agent review's mutation hunters found surviving: 46 mutations, each
-predicted red and red. The tests reach the wiring through stand-ins made without a constructor (a cached texture, a
-level holding Lost Kingdom), `Audio.Ready` set for a test, and the lobby sequence stepped at two frame rates - one
-rate cannot tell `* Time.Delta` from `/ 60` (VERIFYING rule 120). No behaviour changed; the item asked for no game
-run, and the game confirmed it all the same, every reading predicted and photographed: the sea adopted with its Wrap
-sampler, the fly-in's stepped readings, the camcorder stopped at the Belly Bounce, and a new `voices` census holding
-the placed thunder behind the menu. Filed Q47 (two more hollow tests), Q48 (three holes in the camcorder's sweep), Q49.
+**2026-09-23 - selling a thing lets the people go.** Branch `alexah/128-selling-lets-the-people-go`, `docs/QUEUE.md`
+Q36. Decoded first: the two happiness keys are `PeepInfo.SmallHappinessChange` and `MediumHappinessChange`, by the
+balance table's slot order. The destructor's type-10 message now reaches the park's people: a rider or anyone bound
+for the thing loses 5 and decides again where they stand, a queuer loses 20 and their queue links, staff resting
+there get up, and a rider's `0x80` plays at the seat. A tired staff member's search walks the live chain. Confirmed
+against a control on `main`, every sale reading predicted and photographed; the miss was two queuers left stranded
+on cleared cells (Q53). Filed Q50 to Q54.
 
-**2026-09-23 - the small fixes.** Branch `alexah/125-small-fixes`, `docs/QUEUE.md` Q11, eight commits: the six
-patches from `~/Downloads/opentpw/`, each checked against the executable or the compiler and corrected where it
-overstated; six doc comments moved to their members; and a cap on a critical section. The original's turn loop has
-no bound (`docs/exe/park.md`), so a `CRIT_LOCK` that loops hangs it; `RideScript.CriticalStepCap` ends that turn
-instead. None of the 150 shipped sections loops; the longest runs 23 instructions. Confirmed against a control on `main`: the
-park frame at load is pixel-identical and the sound banks log the same; after 60 s `rides` read `critical longest
-5 cap 10000 reached 0`, as predicted. Photographed. Filed Q45 (the VM charges `CRIT_LOCK`) and Q46.
-
-**Earlier items, kept now only in the git log.** `alexah/124` let the camcorder forget a left park's save (Q10,
-filing Q44); `123` gave each ride's screams their own clock (Q9, filing
+**Earlier items, kept now only in the git log.** `alexah/126` made four hollow tests fail with their fixes reverted
+(Q12, filing Q47-Q49); `125` landed the small fixes and capped a looping critical section (Q11, filing Q45-Q46);
+`124` let the camcorder forget a left park's save (Q10, filing Q44); `123` gave each ride's screams their own clock (Q9, filing
 Q43); `122` made the island keys wait for the fly-in (Q8, filing Q41-Q42); `121` emptied the hand as a park is left (Q7);
 `120` kept a refused staff drop's candidate on the cursor (Q6, filing Q40); `119` kept a moved thing in the
 hand until a cell takes it (Q5, filing Q39); `118` made a sold thing take its script down and leave bare
