@@ -297,4 +297,272 @@ public class ParkPathBuildingTests
 		Assert.AreEqual( 0, ParkPathBuilding.OwnerOf( state, cell with { ParentId = 0 } ),
 			"a cell with no owner recorded names nobody" );
 	}
+
+	/// <summary>A ride standing at (19,11) with its entrance at (20,11), the shape of the shipped Belly Bounce one row up.</summary>
+	private static ParkWorld.CatalogueObject Ride( ParkState state )
+	{
+		var ride = new ParkWorld.CatalogueObject( ThingId: 77, CatalogueId: 1100, RawX: 19 << 8, RawY: 11 << 8, Angle: 0,
+			EntryPos: (ushort)MapStep.CellId( 20, 11 ), ExitPos: (ushort)MapStep.CellId( 20, 14 ) );
+
+		state.AddObject( ride );
+
+		return ride;
+	}
+
+	private static void LayPath( ParkState state, ParkWorld park, int x, int y )
+		=> state.SetRecord( x, y, ParkState.CellFor( park, x, y ) with
+		{
+			Type = CellEdge.Path,
+			TileSet = ParkPaths.PathTileSet,
+			Neighbours = 0,
+			Direction = 0
+		} );
+
+	/// <summary>
+	/// <b>The shipped Belly Bounce's queue, laid again on bare ground the way a player lays it</b>: the
+	/// placer's cell before the entrance, then one run west from it to a path. Every mask, flow byte and
+	/// owner is the shipped park's own - (52,22) <c>0x50</c> flowing <c>0x10</c>, three cells of
+	/// <c>0x44</c> flowing <c>0x04</c>, and the path the run ends on joined back and owned by the ride -
+	/// and the queue measures four cells ending where the run turned into the path.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutation:</b> writing only the new cell's half of each link leaves the stub at <c>0x10</c> and
+	/// each cell one bit short, and fails the first assertion on each.
+	/// </remarks>
+	[TestMethod]
+	public void AQueueLaidFromThePlacersCellMatchesTheShippedOne()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = Ride( state );
+		var owner = MapStep.CellId( 19, 11 );
+
+		for ( var x = 16; x <= 20; ++x )
+			Assert.AreEqual( 0, ParkState.CellFor( park, x, 10 ).Type, $"({x},10) starts as bare ground" );
+
+		LayPath( state, park, 16, 10 );
+
+		var node = ParkBuilding.MarkWaysInAndOut( state, park, 20, 11, 20, 14, 0x10, 0x10, 0, hasQueue: true, owner );
+
+		Assert.AreEqual( (20, 10), node, "the placer's queue cell is the anchor" );
+
+		ParkPathBuilding.StampQueueCell( state, park, 19, 10, 20, 10, ride, firstOfRun: false );
+		ParkPathBuilding.StampQueueCell( state, park, 18, 10, 19, 10, ride, firstOfRun: false );
+		ParkPathBuilding.StampQueueCell( state, park, 17, 10, 18, 10, ride, firstOfRun: false );
+		ParkPathBuilding.JoinQueueToPath( state, park, 17, 10, 16, 10, ride );
+
+		Assert.AreEqual( 0x50, ParkState.CellFor( park, 20, 10 ).Neighbours, "the placer's cell, as (52,22)" );
+		Assert.AreEqual( 0x10, ParkState.CellFor( park, 20, 10 ).Direction );
+
+		for ( var x = 17; x <= 19; ++x )
+		{
+			Assert.AreEqual( 0x44, ParkState.CellFor( park, x, 10 ).Neighbours, $"({x},10) joined both ways, as (49..51,22)" );
+			Assert.AreEqual( 0x04, ParkState.CellFor( park, x, 10 ).Direction, $"({x},10) flows back toward the ride" );
+			Assert.AreEqual( owner, ParkState.CellFor( park, x, 10 ).ParentId, $"({x},10) is the ride's" );
+		}
+
+		var path = ParkState.CellFor( park, 16, 10 );
+
+		Assert.AreEqual( CellEdge.Path, path.Type, "the cell the run ended on stays a path" );
+		Assert.AreEqual( 0x04, path.Neighbours & 0x04, "joined back to the queue" );
+		Assert.AreEqual( owner, path.ParentId, "and owned by the ride, as (48,22) is the one owned path in the park" );
+
+		Assert.AreEqual( (MapStep.CellId( 17, 10 ), 4), ParkRideChoice.QueueCellsFor( park, ride ),
+			"four cells, ending where the queue meets the path - the shipped (4, 2866) in shape" );
+	}
+
+	/// <summary>
+	/// <b>A queue never joins a path it runs beside</b> - the queue arm links back along the run and to the
+	/// entrance, and to nothing by type - so a queue laid alongside a walkway stays a single file.
+	/// </summary>
+	[TestMethod]
+	public void AQueueDoesNotJoinAPathItRunsBeside()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = Ride( state );
+
+		LayPath( state, park, 6, 9 );
+		state.SetRecord( 7, 10, ParkState.CellFor( park, 7, 10 ) with
+		{
+			Type = ParkRideChoice.QueueCellType, TileSet = ParkQueues.QueueTileSet, Neighbours = 0x04, Direction = 0x04,
+			ParentId = (ushort)MapStep.CellId( 19, 11 )
+		} );
+
+		ParkPathBuilding.StampQueueCell( state, park, 6, 10, 7, 10, ride, firstOfRun: false );
+
+		Assert.AreEqual( 0x04, ParkState.CellFor( park, 6, 10 ).Neighbours, "joined to the cell before it and nothing else" );
+		Assert.AreEqual( 0x44, ParkState.CellFor( park, 7, 10 ).Neighbours, "which is joined back" );
+		Assert.AreEqual( 0, ParkState.CellFor( park, 6, 9 ).Neighbours, "the path beside it gains nothing" );
+	}
+
+	/// <summary>
+	/// The two gates on joining back: <b>a cell already joined two ways is left alone</b>, and so is a
+	/// queue that belongs to another ride - which is what stops a run forking a queue or stealing one.
+	/// </summary>
+	[TestMethod]
+	public void AQueueCellInTheMiddleOfAFileOrAnotherRidesIsNotJoined()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = Ride( state );
+
+		state.SetRecord( 8, 10, ParkState.CellFor( park, 8, 10 ) with
+		{
+			Type = ParkRideChoice.QueueCellType, Neighbours = 0x44, Direction = 0x04, ParentId = (ushort)MapStep.CellId( 19, 11 )
+		} );
+
+		ParkPathBuilding.StampQueueCell( state, park, 8, 9, 8, 10, ride, firstOfRun: false );
+
+		Assert.AreEqual( 0, ParkState.CellFor( park, 8, 9 ).Neighbours, "a two-way cell is not joined a third way" );
+		Assert.AreEqual( 0x44, ParkState.CellFor( park, 8, 10 ).Neighbours );
+
+		state.SetRecord( 11, 10, ParkState.CellFor( park, 11, 10 ) with
+		{
+			Type = ParkRideChoice.QueueCellType, Neighbours = 0x04, Direction = 0x04, ParentId = (ushort)MapStep.CellId( 3, 3 )
+		} );
+
+		ParkPathBuilding.StampQueueCell( state, park, 10, 10, 11, 10, ride, firstOfRun: false );
+
+		Assert.AreEqual( 0, ParkState.CellFor( park, 10, 10 ).Neighbours, "another ride's queue is not joined" );
+	}
+
+	/// <summary>
+	/// The first cell of a run bonds to the ride's entrance, and <b>only when the entrance's direction
+	/// byte points straight at it</b> - an equality on the whole byte, as the original tests it.
+	/// </summary>
+	[TestMethod]
+	public void TheFirstCellOfARunBondsToTheEntranceItFaces()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = Ride( state );
+
+		state.SetRecord( 20, 11, ParkState.CellFor( park, 20, 11 ) with { Type = CellEdge.RideEnd, Direction = 0x04 } );
+
+		ParkPathBuilding.StampQueueCell( state, park, 20, 10, 20, 11, ride, firstOfRun: true );
+
+		Assert.AreEqual( 0, ParkState.CellFor( park, 20, 10 ).Neighbours & 0x10, "an entrance facing east does not bond north" );
+
+		state.SetRecord( 20, 11, ParkState.CellFor( park, 20, 11 ) with { Direction = 0x01 } );
+
+		ParkPathBuilding.StampQueueCell( state, park, 20, 10, 20, 11, ride, firstOfRun: true );
+
+		Assert.AreNotEqual( 0, ParkState.CellFor( park, 20, 10 ).Neighbours & 0x10, "one facing it does" );
+		Assert.AreNotEqual( 0, ParkState.CellFor( park, 20, 11 ).Neighbours & 0x01, "both ways" );
+	}
+
+	/// <summary>
+	/// <b>A queue run across a path clears the path out of its way first</b> - the stamp's force-clear -
+	/// so the crossing cell carries only the queue's own links and the paths either side stop naming it.
+	/// Kept, the path's links would give the crossing cell three bits and the next cell of the run could
+	/// not join it.
+	/// </summary>
+	[TestMethod]
+	public void AQueueRunAcrossAPathClearsThePathFirst()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = Ride( state );
+
+		// A north-south path through (13,9)..(13,11), joined both ways, and a queue arriving from the east.
+		foreach ( var y in new[] { 9, 10, 11 } )
+			LayPath( state, park, 13, y );
+
+		state.SetRecord( 13, 9, ParkState.CellFor( park, 13, 9 ) with { Neighbours = 0x10 } );
+		state.SetRecord( 13, 10, ParkState.CellFor( park, 13, 10 ) with { Neighbours = 0x11, Direction = 0x10 } );
+		state.SetRecord( 13, 11, ParkState.CellFor( park, 13, 11 ) with { Neighbours = 0x01 } );
+		state.SetRecord( 14, 10, ParkState.CellFor( park, 14, 10 ) with
+		{
+			Type = ParkRideChoice.QueueCellType, Neighbours = 0x04, Direction = 0x04,
+			ParentId = (ushort)MapStep.CellId( 19, 11 )
+		} );
+
+		ParkPathBuilding.StampQueueCell( state, park, 13, 10, 14, 10, ride, firstOfRun: false );
+		ParkPathBuilding.StampQueueCell( state, park, 12, 10, 13, 10, ride, firstOfRun: false );
+
+		Assert.AreEqual( 0x44, ParkState.CellFor( park, 13, 10 ).Neighbours, "the crossing cell is joined along the queue only" );
+		Assert.AreEqual( 0x04, ParkState.CellFor( park, 13, 10 ).Direction, "and flows back along it, not the path's way" );
+		Assert.AreEqual( 0, ParkState.CellFor( park, 13, 9 ).Neighbours & 0x10, "the path north no longer names it" );
+		Assert.AreEqual( 0, ParkState.CellFor( park, 13, 11 ).Neighbours & 0x01, "nor the path south" );
+		Assert.AreEqual( 0x04, ParkState.CellFor( park, 12, 10 ).Neighbours & 0x04, "and the run carries on past it" );
+	}
+
+	/// <summary>
+	/// <b>What the placer's test pass refuses about a thing's ends</b>: a queued entrance facing anything
+	/// but bare ground or an ordinary path, and an end facing off the map. The entrance of a thing with no
+	/// queue may face a NOMODIFY path.
+	/// </summary>
+	[TestMethod]
+	public void APlacementIsRefusedWhereItsEndsCannotBeBuilt()
+	{
+		var park = World();
+		var state = new ParkState( park );
+
+		// A one-cell entrance picture: the entrance is the anchor, facing 0x10, so it faces the cell north.
+		var queued = new ParkItemCatalogue.Item( 1, "queued", "", "", 1, 1, null, HasQueue: true, HasEntrance: true,
+			EntryDirection: 0x10, ExitDirection: 0x10 );
+		var shop = queued with { HasQueue = false };
+
+		Assert.IsNull( ParkBuilding.EndRefusal( state, queued, 5, 10, 0 ), "bare ground north of it" );
+
+		LayPath( state, park, 5, 9 );
+		Assert.IsNull( ParkBuilding.EndRefusal( state, queued, 5, 10, 0 ), "an ordinary path" );
+
+		state.SetRecord( 5, 9, ParkState.CellFor( park, 5, 9 ) with { Flags = ParkPathBuilding.NoModify } );
+		Assert.IsNotNull( ParkBuilding.EndRefusal( state, queued, 5, 10, 0 ), "a NOMODIFY path refuses a queued entrance" );
+		Assert.IsNull( ParkBuilding.EndRefusal( state, shop, 5, 10, 0 ), "but not a shop's" );
+
+		state.SetRecord( 5, 9, ParkState.CellFor( park, 5, 9 ) with { Type = ParkRideChoice.QueueCellType, Flags = 0 } );
+		Assert.IsNotNull( ParkBuilding.EndRefusal( state, queued, 5, 10, 0 ), "another queue refuses it" );
+
+		Assert.IsNotNull( ParkBuilding.EndRefusal( state, queued, 5, 0, 0 ), "facing off the map refuses it" );
+	}
+
+	/// <summary>
+	/// <b>Selling a queued ride drains its queue, the placer's node included, and hands back what the
+	/// placer laid before its exit as an ordinary path</b> - the demolisher's own work outside the
+	/// footprint. Four queue cells return three cells' worth: each refunds, and one is taken back for the
+	/// node the placer laid for nothing.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutation:</b> leaving the node standing - clearing only from the second cell - keeps (20,10) a
+	/// NOMODIFY queue cell, which is what left a moved ride unable to go back where it was.
+	/// </remarks>
+	[TestMethod]
+	public void SellingARideDrainsItsQueueAndFreesItsExitPath()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = Ride( state );
+		var owner = MapStep.CellId( 19, 11 );
+
+		LayPath( state, park, 16, 10 );
+		ParkBuilding.MarkWaysInAndOut( state, park, 20, 11, 20, 14, 0x10, 0x10, 0, hasQueue: true, owner );
+		ParkPathBuilding.StampQueueCell( state, park, 19, 10, 20, 10, ride, firstOfRun: false );
+		ParkPathBuilding.StampQueueCell( state, park, 18, 10, 19, 10, ride, firstOfRun: false );
+		ParkPathBuilding.StampQueueCell( state, park, 17, 10, 18, 10, ride, firstOfRun: false );
+		ParkPathBuilding.JoinQueueToPath( state, park, 17, 10, 16, 10, ride );
+
+		Assert.AreEqual( ParkPathBuilding.NoModify, ParkState.CellFor( park, 20, 15 ).Flags, "the exit's path starts NOMODIFY" );
+
+		var balance = state.Balance;
+		var returned = ParkPathBuilding.DrainQueue( state, park, ride );
+
+		Assert.AreEqual( 3 * 75, returned, "four cells, one taken back" );
+		Assert.AreEqual( balance + (3 * 75), state.Balance, "and the park has it" );
+
+		for ( var x = 17; x <= 20; ++x )
+			Assert.AreEqual( CellEdge.Nothing, ParkState.CellFor( park, x, 10 ).Type, $"({x},10) is bare ground again" );
+
+		Assert.AreEqual( 0, ParkState.CellFor( park, 20, 10 ).Flags, "the node's NOMODIFY went with it" );
+		Assert.AreEqual( CellEdge.Path, ParkState.CellFor( park, 16, 10 ).Type, "the path it joined stays" );
+		Assert.AreEqual( 0, ParkState.CellFor( park, 16, 10 ).Neighbours & 0x04, "and is let go of" );
+
+		ParkBuilding.ReleaseEnds( state, park, ride );
+
+		Assert.AreEqual( 0, ParkState.CellFor( park, 20, 15 ).Flags, "the exit's path is ordinary path again" );
+		Assert.AreEqual( CellEdge.Path, ParkState.CellFor( park, 20, 15 ).Type );
+		Assert.AreEqual( 0, ParkState.CellFor( park, 20, 15 ).Neighbours & 0x01, "and no longer names the exit" );
+	}
 }

@@ -73,7 +73,13 @@ public sealed class ParkItemCatalogue
 		// the item's own unrotated footprint picture - see ItemDescriptionFile.EntryDeltaX. Without
 		// these a thing the player builds has no entry cell, and nothing can queue for it.
 		int EntryDeltaX = 0, int EntryDeltaY = 0,
-		int ExitDeltaX = 0, int ExitDeltaY = 0, bool HasEntrance = false );
+		int ExitDeltaX = 0, int ExitDeltaY = 0, bool HasEntrance = false,
+
+		// The compass bit each end's character carries, unrotated - ItemDescriptionFile.EntryDirection.
+		int EntryDirection = 0x01, int ExitDirection = 0x10,
+
+		// Every cell kind the picture uses - ItemDescriptionFile.CellKinds.
+		IReadOnlyList<int>? CellKinds = null );
 
 	private readonly Dictionary<int, Item> _items = [];
 
@@ -184,7 +190,8 @@ public sealed class ParkItemCatalogue
 					description.DurationUnit,
 					description.RedLineSpeed, description.RedLineCapacity,
 					description.EntryDeltaX, description.EntryDeltaY,
-					description.ExitDeltaX, description.ExitDeltaY, description.HasEntrance );
+					description.ExitDeltaX, description.ExitDeltaY, description.HasEntrance,
+					description.EntryDirection, description.ExitDirection, description.CellKinds );
 
 			return true;
 		}

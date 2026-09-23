@@ -110,8 +110,8 @@ public static class ParkPathBuilding
 		if ( !MayBecome( cell.Type, PathType ) )
 			return $"path: ({cellX},{cellY}) is type {cell.Type}, which path may not be laid over";
 
-		// NOMODIFY marks a cell the level owns. It covers 18 of Lost Kingdom's 78 path cells, NOT all
-		// of them - see the remarks on NoModify, which record why the two differ.
+		// NOMODIFY marks a cell the player may not change - the level's avenue, and the cells the placer
+		// lays before a thing's ends. See NoModify.
 		if ( (cell.Flags & NoModify) != 0 )
 			return $"path: ({cellX},{cellY}) is marked NOMODIFY - the level owns that cell";
 
@@ -174,20 +174,15 @@ public static class ParkPathBuilding
 	}
 
 	/// <summary>
-	/// The flag that marks a cell the level itself owns - bit <c>0x20</c>, named NOMODIFY by the
+	/// The flag that marks a cell the player may not change - bit <c>0x20</c>, named NOMODIFY by the
 	/// game's own debug string.
 	///
 	/// <para>
-	/// <b>It covers 18 of Lost Kingdom's 78 path cells, not all of them, and that was measured after
-	/// two guesses went the other way.</b> The executable's loader rebuilds cells from the level's
-	/// design map and sets this flag on the path cells it makes there; OpenTPW reads the <b>save's
-	/// stored</b> flags, and the two do not agree. So the refusal below is real but partial here,
-	/// where in the original's runtime it covers every cell the level laid.
-	/// </para>
-	/// <para>
-	/// <b>A hypothesis, and left as one:</b> the 18 are plausibly the author's own fixed paths and the
-	/// other 60 were laid while the scenario was authored - which is what a shipped scenario save
-	/// would look like. Checking the 18 against <c>base.map</c>'s design bits would settle it.
+	/// <b>Two things set it, and the shipped park's nineteen flagged cells are exactly theirs.</b> The
+	/// loader sets it on each path cell it rebuilds from the level's design map (<c>FUN_00536490</c>) -
+	/// the ten-cell avenue at x 47..48, y 17..21 in Lost Kingdom - and the placer assigns it to the one
+	/// cell it lays before a thing's entrance or exit (<c>FUN_0053a510( 0x20 )</c>): eight path cells and
+	/// the Belly Bounce's queue cell (52,22). The park's other sixty path cells were laid as ordinary path.
 	/// </para>
 	/// </summary>
 	public const int NoModify = 0x20;
@@ -217,8 +212,18 @@ public static class ParkPathBuilding
 	/// still nought, so laying over an existing queue cell does not turn it round.
 	/// </para>
 	/// </summary>
+	/// <param name="rebuild">
+	/// Whether to lay the park's surfaces again afterwards. A run lays many cells and rebuilds once at
+	/// the end - see <see cref="ParkSurfaces.Rebuild"/>, which re-reads the ground model each time.
+	/// </param>
+	/// <param name="firstOfRun">
+	/// Whether this is the first cell of a run, which is the only cell that may bond to the ride's
+	/// entrance and the one cell that is not joined back to <paramref name="fromX"/>,
+	/// <paramref name="fromY"/> - a run's first cell has nothing before it, so that pair only says which
+	/// way the run is heading.
+	/// </param>
 	public static string LayQueue( int cellX, int cellY, int servesThingId, int fromX, int fromY,
-		bool lastOfRun = true )
+		bool lastOfRun = true, bool rebuild = true, bool firstOfRun = false )
 	{
 		if ( Level.Current is not { } level || level.ParkState is not { } state || level.Park is not { } park )
 			return "queue: a park has to be loaded";
@@ -231,8 +236,22 @@ public static class ParkPathBuilding
 
 		var cell = ParkState.CellFor( park, cellX, cellY );
 
+		// Already queue: the stamp only counts it again and charges nothing, but the rest of the run's
+		// ops still reach it - the link pass, and the owner - which is how a run's first cell renews its
+		// bond to the entrance.
 		if ( cell.Type == ParkRideChoice.QueueCellType )
+		{
+			if ( OwnerOf( state, cell ) is var holder && holder != 0 && holder != servesThingId )
+				return $"queue: ({cellX},{cellY}) is thing {holder}'s queue";
+
+			var ownerCell = MapStep.CellId( serves.CellX, serves.CellY );
+
+			LinkQueueCell( state, park, cellX, cellY, fromX, fromY, ownerCell, serves, firstOfRun );
+			state.SetRecord( cellX, cellY, ParkState.CellFor( park, cellX, cellY ) with { ParentId = (ushort)ownerCell } );
+			RetileAround( state, park, cellX, cellY );
+
 			return $"queue: ({cellX},{cellY}) is already queue - nothing charged";
+		}
 
 		if ( !MayBecome( cell.Type, ParkRideChoice.QueueCellType, lastOfRun ) )
 			return $"queue: ({cellX},{cellY}) is type {cell.Type}, which queue may not be laid over"
@@ -246,30 +265,7 @@ public static class ParkPathBuilding
 		if ( state.Balance < price )
 			return $"queue: a cell costs {price} and the park has {state.Balance}";
 
-		var flow = FlowFrom( fromX, fromY, cellX, cellY );
-
-		// The flow byte is the original's +0x0d, written as the OPPOSITE of the step the run took into
-		// this cell and only while it is still nought - first writer wins, which is why a cell the placer
-		// has already pointed at its ride keeps that heading rather than being turned round by the run.
-		//
-		// THE MASK BIT IS THE ONE PART STILL NOT DECODED, and it is one bit rather than the pair it was.
-		// The way in is authored by the placer now (ParkBuilding.Mark), so a cell laid against a ride
-		// already adjoins it; what has no decoded writer is this cell's own bit back toward the cell the
-		// run came from - op 0x82 writes the flow byte and nothing else, and FUN_005348d0's cardinal rule
-		// says a type-3 neighbour never forms a link. Without some bit here CellEdge.Blocked refuses the
-		// step in from every direction, so it is set to match the shipped park's own queue cells and
-		// counted. FlowFrom is already in the sense Blocked tests: it answers 0x01 for a step in +y, and
-		// CellEdge.BitFor( South ) is 0x01 for that same step.
-		Unimplemented.Report( "QUEUE_CELL_NEIGHBOUR_AUTHORING" );
-
-		state.SetRecord( cellX, cellY, cell with
-		{
-			Type = ParkRideChoice.QueueCellType,
-			TileSet = ParkQueues.QueueTileSet,
-			Direction = cell.Direction != 0 ? cell.Direction : (byte)flow,
-			Neighbours = (byte)(cell.Neighbours | flow),
-			ParentId = (ushort)MapStep.CellId( serves.CellX, serves.CellY )
-		} );
+		var flow = StampQueueCell( state, park, cellX, cellY, fromX, fromY, serves, firstOfRun );
 
 		state.Spend( price );
 
@@ -279,10 +275,573 @@ public static class ParkPathBuilding
 
 		RetileAround( state, park, cellX, cellY );
 
-		ParkSurfaces.Rebuild();
+		if ( rebuild )
+			ParkSurfaces.Rebuild();
 
 		return $"queue: laid at ({cellX},{cellY}) for thing {serves.ThingId}, flow 0x{flow:x2}, "
 			+ $"cost {price}, balance {state.Balance}";
+	}
+
+	/// <summary>
+	/// One click of the armed queue tool: a straight run from the anchor to the clicked cell, snapped to
+	/// its longer axis - the original's mode-3 arm of the apply dispatcher (<c>0x00527222</c>..
+	/// <c>0x005275f2</c>).
+	/// </summary>
+	/// <remarks>
+	/// <b>The tool puts itself away</b> in the original's four cases (each through
+	/// <c>FUN_0052f200( 0, 0 )</c>):
+	/// <list type="bullet">
+	/// <item>the run <b>ends on a path</b>, which is left a path and joined to the queue - the finished
+	/// queue, with sound <c>0x8b</c>; or ends on this ride's own queue, with advisor message <c>0x151</c>;</item>
+	/// <item>the click is <b>the anchor itself</b>;</item>
+	/// <item><b>any cell of the run would be refused</b> - the preview flags it red, the click lays
+	/// nothing at all and the tool ends with sound <c>0xaf</c>;</item>
+	/// <item>a quick right click with the Options switch "RMB cancel" on - <see cref="Level"/>'s.</item>
+	/// </list>
+	/// Otherwise the run is laid and the anchor moves to its far end, so an L is laid a click at a time.
+	/// <para>
+	/// <b>The refusal is the preview's</b>: the click lays nothing when <see cref="QueueStrip"/> - the
+	/// squares the player is looking at - has a red one in it, which is the original's own gate
+	/// (<c>DAT_00816d48</c>, <c>0x00524a63</c>..<c>0x00524acd</c>).
+	/// </para>
+	/// </remarks>
+	public static string RunQueue( int clickX, int clickY )
+	{
+		if ( Level.Current is not { } level || level.ParkState is not { } state || level.Park is not { } park )
+			return "queue: a park has to be loaded";
+
+		var serves = ParkBuildMode.Serves;
+		var (fromX, fromY) = ParkBuildMode.Anchor;
+		var (toX, toY) = ParkBuildMode.SnapToAxis( clickX, clickY );
+
+		// Clicking the anchor lays the one cell there - already queue, so only its links are renewed - and
+		// puts the tool away, with the advisor's message for a queue left unjoined.
+		if ( toX == fromX && toY == fromY )
+		{
+			LayQueue( fromX, fromY, serves, fromX, fromY, lastOfRun: false, firstOfRun: true );
+			ParkBuildMode.Disarm();
+			Unimplemented.Report( "QUEUE_MODE_ADVISOR_MESSAGE_0x151" );
+
+			return $"queue: clicked the anchor ({fromX},{fromY}) - the queue tool is put away";
+		}
+
+		// What the preview showed is what the click does: any red square and nothing is laid.
+		var strip = QueueStrip( clickX, clickY );
+
+		if ( strip.FirstOrDefault( square => square.Marker == MarkerRed ) is { Why: { } why } refused )
+		{
+			ParkBuildMode.Disarm();
+			Unimplemented.Report( "QUEUE_TOOL_REFUSED_SOUND_0xAF" );
+
+			return $"queue: nothing laid - ({refused.X},{refused.Y}) {why}, so the queue tool is put away";
+		}
+
+		var (acrossBy, downBy) = (Math.Sign( toX - fromX ), Math.Sign( toY - fromY ));
+		var laid = 0;
+		var (atX, atY) = (fromX, fromY);
+
+		for ( var step = 0; step < strip.Count; ++step )
+		{
+			var (x, y, marker, _, _) = strip[step];
+
+			if ( marker == MarkerLink && state.TryObject( serves, out var ride ) )
+			{
+				JoinQueueToPath( state, park, atX, atY, x, y, ride );
+				state.InvalidateQueue( serves );
+				ParkSurfaces.Rebuild();
+				ParkBuildMode.Disarm();
+				Unimplemented.Report( "QUEUE_TOOL_LINK_SOUND_0x8B" );
+
+				return $"queue: laid {laid} from ({fromX},{fromY}) and joined the path at ({x},{y}) - done";
+			}
+
+			if ( marker == MarkerEnd && step == strip.Count - 1 && state.TryObject( serves, out var own ) )
+			{
+				LinkQueueCell( state, park, x, y, atX, atY, MapStep.CellId( own.CellX, own.CellY ), own, firstOfRun: false );
+				RetileAround( state, park, x, y );
+				state.InvalidateQueue( serves );
+				ParkSurfaces.Rebuild();
+				ParkBuildMode.Disarm();
+				Unimplemented.Report( "QUEUE_MODE_ADVISOR_MESSAGE_0x151" );
+
+				return $"queue: laid {laid} from ({fromX},{fromY}) and ended on its own queue at ({x},{y})";
+			}
+
+			// The first cell is the anchor, and has nothing before it: the pair handed over only says which
+			// way the run heads, so that a cell laid fresh there takes its flow from the line.
+			var (fromCellX, fromCellY) = step == 0 ? (x - acrossBy, y - downBy) : (atX, atY);
+
+			if ( LayQueue( x, y, serves, fromCellX, fromCellY, lastOfRun: false, rebuild: false, firstOfRun: step == 0 )
+				.Contains( "laid at" ) )
+				++laid;
+
+			(atX, atY) = (x, y);
+		}
+
+		ParkSurfaces.Rebuild();
+		ParkBuildMode.AnchorAt( toX, toY );
+
+		return $"queue: laid {laid} from ({fromX},{fromY}) to ({toX},{toY}) - click again to carry on";
+	}
+
+	/// <summary>
+	/// One square of the queue tool's preview: where it is, the marker it wears, why it is red, and
+	/// whether it is red because the run cannot be paid for - which the original shows with its own
+	/// cursor, <c>c_cash</c> (<c>DAT_00816d5c</c>, <c>FUN_0052f950</c>).
+	/// </summary>
+	public readonly record struct QueueSquare( int X, int Y, int Marker, string? Why = null, bool Unaffordable = false );
+
+	/// <summary>A square of the queue tool's preview - an index into the original's twenty-entry marker table at <c>0x00763b38</c>.</summary>
+	public const int MarkerBlue = 0;
+
+	/// <inheritdoc cref="MarkerBlue"/>
+	public const int MarkerRed = 1;
+
+	/// <summary>The run ends on a path and will join it - <c>m_link</c>.</summary>
+	public const int MarkerLink = 8;
+
+	/// <summary>The run ends on this ride's own queue - <c>m_end</c>.</summary>
+	public const int MarkerEnd = 11;
+
+	/// <summary>
+	/// The squares the armed queue tool shows from its anchor to a cell, snapped to the longer axis -
+	/// the original's hover pass, <c>FUN_00536100( 0x103, anchor, target )</c> with the per-cell verdict
+	/// <c>FUN_00535670( 3 )</c> - and so also what a click there would do. Empty when the queue tool is
+	/// not armed and anchored.
+	/// </summary>
+	/// <remarks>
+	/// <b>After the first red square every later square is red</b>, as the original latches it.
+	/// </remarks>
+	public static List<QueueSquare> QueueStrip( int toX, int toY )
+	{
+		var strip = new List<QueueSquare>();
+
+		if ( ParkBuildMode.Current != ParkBuildMode.Queue || !ParkBuildMode.Anchored
+			|| Level.Current is not { } level || level.ParkState is not { } state || level.Park is not { } park )
+			return strip;
+
+		var serves = ParkBuildMode.Serves;
+		var (fromX, fromY) = ParkBuildMode.Anchor;
+		var (endX, endY) = ParkBuildMode.SnapToAxis( toX, toY );
+
+		var steps = Math.Max( Math.Abs( endX - fromX ), Math.Abs( endY - fromY ) );
+		var (acrossBy, downBy) = (Math.Sign( endX - fromX ), Math.Sign( endY - fromY ));
+		var price = QueueCost( level );
+		var owed = 0;
+		string? refused = null;
+
+		for ( var step = 0; step <= steps; ++step )
+		{
+			var (x, y) = (fromX + (acrossBy * step), fromY + (downBy * step));
+
+			if ( refused != null )
+			{
+				strip.Add( new( x, y, MarkerRed, refused ) );
+				continue;
+			}
+
+			var (marker, why) = Verdict( state, park, x, y, serves, step == steps, price, ref owed );
+
+			if ( marker == MarkerRed )
+				refused = why;
+
+			strip.Add( new( x, y, marker, why, Unaffordable: marker == MarkerRed && owed > state.Balance ) );
+		}
+
+		return strip;
+	}
+
+	/// <summary>
+	/// One square of the queue tool's preview - the queue arm of <c>FUN_00535670</c>, as far as it is
+	/// decoded. It answers only blue, red, <c>m_link</c> and <c>m_end</c>.
+	/// </summary>
+	private static (int Marker, string? Why) Verdict( ParkState state, ParkWorld park, int x, int y, int serves,
+		bool last, int price, ref int owed )
+	{
+		if ( !ParkState.OnMap( x, y ) )
+			return (MarkerRed, "is off the map");
+
+		var cell = ParkState.CellFor( park, x, y );
+
+		// Any path may end a run, NOMODIFY or not: that is the join, and the path stays a path.
+		if ( last && cell.Type == PathType )
+			return (MarkerLink, null);
+
+		// This ride's own queue: a cell NOT joined exactly two ways - its end, or its node - may close a
+		// run or be carried through; one joined exactly two ways is the middle of the file and may not
+		// (FUN_00522790's count against 2, as the original tests it).
+		if ( cell.Type == ParkRideChoice.QueueCellType )
+		{
+			if ( OwnerOf( state, cell ) != serves )
+				return (MarkerRed, "is another ride's queue");
+
+			var twoLinked = System.Numerics.BitOperations.PopCount( cell.Neighbours ) == 2;
+
+			if ( last )
+				return twoLinked ? (MarkerRed, "is the middle of this ride's queue") : (MarkerEnd, null);
+
+			return twoLinked ? (MarkerRed, "is the middle of this ride's queue") : (MarkerBlue, null);
+		}
+
+		// A thing's own cells are red unless its item's overwrite priority is below the queue tool's 3,
+		// in which case the original bulldozes it (op 0x87 into FUN_00527ee0). Every jungle ride's is 5;
+		// nothing here demolishes, so it is red either way.
+		if ( cell.Type is CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd )
+		{
+			Unimplemented.Report( "QUEUE_RUN_OVER_A_LOW_PRIORITY_THING" );
+
+			return (MarkerRed, "has something built on it");
+		}
+
+		if ( !MayBecome( cell.Type, ParkRideChoice.QueueCellType, lastOfRun: false ) )
+			return (MarkerRed, $"is type {cell.Type}, which queue may not be laid over");
+
+		if ( (cell.Flags & NoModify) != 0 )
+			return (MarkerRed, "is marked NOMODIFY");
+
+		// The original also refuses bare ground and path where two corner tests fire (FUN_0053ae00 and
+		// FUN_0053ae90), which are not decoded.
+		Unimplemented.Report( "QUEUE_VERDICT_CORNER_RULE" );
+
+		// The preview's cash test leaves a path out of the total (0x005358e9..0x005358f1), though
+		// laying queue over it is charged like any other cell.
+		if ( cell.Type != PathType )
+			owed += price;
+
+		if ( state.Balance < owed )
+			return (MarkerRed, $"would bring the run to {owed} against a balance of {state.Balance}");
+
+		return (MarkerBlue, null);
+	}
+
+	/// <summary>
+	/// Makes one cell queue for a ride and joins it up - the stamp, then ops <c>0x80</c>, <c>0x82</c> and
+	/// <c>0x83</c> as a queue run applies them. Answers the flow byte it gave the cell. No checks and no
+	/// money: <see cref="LayQueue"/> makes both first.
+	/// </summary>
+	/// <remarks>
+	/// <b>The flow byte is the original's <c>+0x0d</c></b>, written as the OPPOSITE of the step the run took
+	/// into this cell and only while it is still nought - first writer wins, which is why a cell the placer
+	/// has already pointed at its ride keeps that heading rather than being turned round by the run.
+	/// Internal so that a test can lay a run on real ground without a loaded level.
+	/// </remarks>
+	internal static int StampQueueCell( ParkState state, ParkWorld park, int x, int y, int fromX, int fromY,
+		ParkWorld.CatalogueObject serves, bool firstOfRun )
+	{
+		var flow = FlowFrom( fromX, fromY, x, y );
+		var owner = MapStep.CellId( serves.CellX, serves.CellY );
+
+		// Queue over path force-clears the path first (the stamp's FUN_005367a0( 0, 0 ) with
+		// DAT_0081d7a8 set, 0x0053473c..0x0053475d), so the queue does not inherit its links.
+		ForceClearPath( state, park, x, y );
+
+		var cell = ParkState.CellFor( park, x, y );
+
+		state.SetRecord( x, y, cell with
+		{
+			Type = ParkRideChoice.QueueCellType,
+			TileSet = ParkQueues.QueueTileSet,
+			Direction = cell.Direction != 0 ? cell.Direction : (byte)flow,
+			ParentId = (ushort)owner
+		} );
+
+		LinkQueueCell( state, park, x, y, fromX, fromY, owner, serves, firstOfRun );
+
+		return flow;
+	}
+
+	/// <summary>
+	/// Clears a path cell out of the way of a queue stamped over it - the path arm of
+	/// <c>FUN_005367a0</c> under force: the neighbours lose their bits toward it, then its mask, flow
+	/// byte, flags and owner go, whatever NOMODIFY said. No refund. Does nothing to any other cell.
+	/// </summary>
+	internal static void ForceClearPath( ParkState state, ParkWorld park, int x, int y )
+	{
+		if ( !ParkState.OnMap( x, y ) || ParkState.CellFor( park, x, y ).Type != PathType )
+			return;
+
+		Unlink( state, park, x, y );
+
+		state.SetRecord( x, y, ParkState.CellFor( park, x, y ) with
+		{
+			Neighbours = 0,
+			Direction = 0,
+			Flags = 0,
+			ParentId = 0
+		} );
+	}
+
+	/// <summary>
+	/// Joins a cell a queue run has just reached to what is around it - the queue arm of
+	/// <c>FUN_005348d0</c>, which op <c>0x80</c> runs on every cell of a queue run with the laid type 3
+	/// (<c>0x0053522d</c>..<c>0x00535597</c>). It makes <b>two links at most, and none by type</b>.
+	/// </summary>
+	/// <remarks>
+	/// <list type="bullet">
+	/// <item><b>Back to the cell the run came from</b>, both bits, only when that cell is queue, has
+	/// fewer than two of its eight bits set, and is owned by this ride or by nobody - which is what keeps a
+	/// queue a single file. Where the cell being joined is a PATH, its two diagonals either side of the
+	/// link are cleared, whether or not the link was made.</item>
+	/// <item><b>To the ride's entrance</b>, on the first cell of a run only, when the entrance is next to
+	/// it and the entrance's direction byte EQUALS the bit pointing back here - an equality, not a mask.</item>
+	/// </list>
+	/// Nothing else: a queue cell never links to a path, an exit or another ride's cells beside it, so a
+	/// queue laid along a path does not leak into it.
+	/// </remarks>
+	private static void LinkQueueCell( ParkState state, ParkWorld park, int x, int y, int fromX, int fromY,
+		int owner, ParkWorld.CatalogueObject serves, bool firstOfRun )
+	{
+		if ( firstOfRun )
+		{
+			BondToEntrance( state, park, x, y, serves );
+			return;
+		}
+
+		var back = FlowFrom( fromX, fromY, x, y );
+
+		if ( back == 0 || !ParkState.OnMap( fromX, fromY ) )
+			return;
+
+		var previous = ParkState.CellFor( park, fromX, fromY );
+
+		if ( previous.Type != ParkRideChoice.QueueCellType )
+			return;
+
+		if ( ParkState.CellFor( park, x, y ).Type == PathType )
+		{
+			var path = ParkState.CellFor( park, x, y );
+
+			state.SetRecord( x, y, path with { Neighbours = (byte)(path.Neighbours & ~FlankingDiagonals( back )) } );
+		}
+
+		if ( System.Numerics.BitOperations.PopCount( previous.Neighbours ) >= 2 || (previous.ParentId != owner && previous.ParentId != 0) )
+			return;
+
+		var cell = ParkState.CellFor( park, x, y );
+
+		state.SetRecord( x, y, cell with { Neighbours = (byte)(cell.Neighbours | back) } );
+		state.SetRecord( fromX, fromY, previous with { Neighbours = (byte)(previous.Neighbours | CellEdge.Opposite( back )) } );
+	}
+
+	/// <summary>The two diagonals either side of a cardinal link, which a path joined by a queue loses.</summary>
+	private static int FlankingDiagonals( int cardinal ) => cardinal switch
+	{
+		0x01 => 0x02 | 0x80,
+		0x04 => 0x02 | 0x08,
+		0x10 => 0x08 | 0x20,
+		0x40 => 0x80 | 0x20,
+		_ => 0
+	};
+
+	/// <summary>
+	/// The first cell of a queue run bonds to the ride's own entrance when it is beside it and the
+	/// entrance's direction byte points straight at it (<c>0x0053525a</c>..<c>0x00535323</c>).
+	/// </summary>
+	private static void BondToEntrance( ParkState state, ParkWorld park, int x, int y, ParkWorld.CatalogueObject serves )
+	{
+		if ( serves.EntryPos == 0 )
+			return;
+
+		var (entryX, entryY) = (serves.EntryCellX, serves.EntryCellY);
+
+		foreach ( var (bit, acrossBy, downBy) in Sides )
+		{
+			if ( bit is not (0x01 or 0x04 or 0x10 or 0x40) || (x + acrossBy, y + downBy) != (entryX, entryY) )
+				continue;
+
+			var entrance = ParkState.CellFor( park, entryX, entryY );
+
+			if ( entrance.Direction != CellEdge.Opposite( bit ) )
+				return;
+
+			var cell = ParkState.CellFor( park, x, y );
+
+			state.SetRecord( x, y, cell with { Neighbours = (byte)(cell.Neighbours | bit) } );
+			state.SetRecord( entryX, entryY, entrance with { Neighbours = (byte)(entrance.Neighbours | CellEdge.Opposite( bit )) } );
+			return;
+		}
+	}
+
+	/// <summary>
+	/// The path a queue run ends on: <b>left a path</b> - the stamp refuses queue over path on a run's
+	/// last cell - but joined to the queue, given the ride as its owner and a flow byte if it had none,
+	/// and redrawn. The original runs op <c>0x80</c>, <c>0x82</c> and <c>0x83</c> on it like any other
+	/// cell of the line, and its <c>0x81</c> then reports the run finished.
+	/// </summary>
+	/// <remarks>
+	/// <b>The shipped park carries the owner as a fingerprint</b>: of Lost Kingdom's 78 path cells, only
+	/// (48,22) - where the Belly Bounce's queue meets the path - names an owner, the ride's own 2996.
+	/// </remarks>
+	internal static void JoinQueueToPath( ParkState state, ParkWorld park, int queueX, int queueY, int pathX, int pathY,
+		ParkWorld.CatalogueObject serves )
+	{
+		var owner = MapStep.CellId( serves.CellX, serves.CellY );
+
+		LinkQueueCell( state, park, pathX, pathY, queueX, queueY, owner, serves, firstOfRun: false );
+
+		var path = ParkState.CellFor( park, pathX, pathY );
+
+		state.SetRecord( pathX, pathY, path with
+		{
+			Direction = path.Direction != 0 ? path.Direction : (byte)FlowFrom( queueX, queueY, pathX, pathY ),
+			ParentId = (ushort)owner
+		} );
+
+		RetileAround( state, park, pathX, pathY );
+		RetileAround( state, park, queueX, queueY );
+	}
+
+	/// <summary>
+	/// Hands the player the queue tool for a ride's existing queue, anchored on its far end - the
+	/// original's mode <c>0x14</c>, "edit this ride's queue", which both clicking a queue cell and the ride
+	/// window's queue button install (<c>FUN_004af200( 0 )</c> is that button's handler).
+	/// </summary>
+	/// <remarks>
+	/// <c>FUN_00530120</c> walks the queue out from the entrance to its last cell, <b>lets that cell go of
+	/// the path it joined</b> - both bits cleared, both cells retiled - and anchors there; then the queue
+	/// is rewalked and mode 3 is entered with the anchor kept (<c>0x005260f5</c>..<c>0x00526120</c>). So the
+	/// next click carries the queue on from its end, and the run that finishes it joins it up again.
+	/// </remarks>
+	public static string EditQueue( int thingId )
+	{
+		if ( Level.Current is not { } level || level.ParkState is not { } state || level.Park is not { } park )
+			return "queue: a park has to be loaded";
+
+		if ( !state.TryObject( thingId, out var placed ) )
+			return $"queue: nothing in the park is thing {thingId}";
+
+		if ( placed.EntryPos == 0 || !ParkState.OnMap( placed.EntryCellX, placed.EntryCellY ) )
+		{
+			Unimplemented.Report( "EDIT_QUEUE_WITH_NO_ENTRANCE" );
+
+			return ParkBuildMode.Arm( ParkBuildMode.Queue, thingId );
+		}
+
+		// The walk starts where the entrance's link points; with no link at all, at the cell its direction
+		// byte faces - which for a queued thing is the cell the placer laid its node on.
+		var start = ParkRideChoice.StartOfQueue( park, placed );
+
+		if ( start == 0 )
+		{
+			var facing = ParkState.CellFor( park, placed.EntryCellX, placed.EntryCellY ).Direction;
+			var (acrossBy, downBy) = Sides.FirstOrDefault( side => side.Bit == facing ) is var side && side.Bit != 0
+				? (side.AcrossBy, side.DownBy)
+				: (0, 0);
+
+			start = MapStep.CellId( placed.EntryCellX + acrossBy, placed.EntryCellY + downBy );
+		}
+
+		var (startX, startY) = MapStep.CellAt( start );
+
+		// No queue: the tool is anchored on that faced cell, and the next click lays from it.
+		if ( !ParkState.OnMap( startX, startY ) || ParkState.CellFor( park, startX, startY ).Type != ParkRideChoice.QueueCellType )
+		{
+			state.InvalidateQueue( thingId );
+
+			return ParkBuildMode.ArmAt( ParkBuildMode.Queue, thingId, startX, startY );
+		}
+
+		// Bounded as the original bounds every queue walk - see ParkState.LongestQueue.
+		var back = start;
+
+		for ( int cell = start, cells = 0; cell != 0 && cells < ParkState.LongestQueue;
+			cell = ParkRideChoice.StepToNextQueueCell( park, cell ), ++cells )
+			back = cell;
+
+		var (backX, backY) = MapStep.CellAt( back );
+
+		DetachFromPath( state, park, backX, backY );
+		state.InvalidateQueue( thingId );
+		ParkSurfaces.Rebuild();
+
+		return ParkBuildMode.ArmAt( ParkBuildMode.Queue, thingId, backX, backY );
+	}
+
+	/// <summary>Clears the mutual link between a queue's last cell and any path beside it, and redraws both.</summary>
+	internal static void DetachFromPath( ParkState state, ParkWorld park, int x, int y )
+	{
+		foreach ( var (bit, acrossBy, downBy) in Sides )
+		{
+			if ( bit is not (0x01 or 0x04 or 0x10 or 0x40) || !ParkState.OnMap( x + acrossBy, y + downBy ) )
+				continue;
+
+			var cell = ParkState.CellFor( park, x, y );
+			var nb = ParkState.CellFor( park, x + acrossBy, y + downBy );
+
+			if ( (cell.Neighbours & bit) == 0 || nb.Type != PathType || (nb.Neighbours & CellEdge.Opposite( bit )) == 0 )
+				continue;
+
+			state.SetRecord( x, y, cell with { Neighbours = (byte)(cell.Neighbours & ~bit) } );
+			state.SetRecord( x + acrossBy, y + downBy,
+				nb with { Neighbours = (byte)(nb.Neighbours & ~CellEdge.Opposite( bit )) } );
+
+			Retile( state, park, x, y );
+			Retile( state, park, x + acrossBy, y + downBy );
+		}
+	}
+
+	/// <summary>
+	/// Clears a demolished thing's whole queue, the placer's NOMODIFY node included, and answers what it
+	/// gave back - the queue half of <c>FUN_00527ee0</c>.
+	/// </summary>
+	/// <remarks>
+	/// <b>The queue's end is let go of its path first</b> (<c>FUN_00530120</c>, the walk mode <c>0x14</c>
+	/// uses), then every cell is cleared under force - NOMODIFY or not, and with no unlink of the cells
+	/// beside it (<c>FUN_0052fe50</c> driving op <c>0x32</c> into <c>FUN_005367a0</c>). <b>Each cell refunds
+	/// its price, and then one cell's worth is taken back</b> (<c>FUN_004d01f0</c> after the drain), which
+	/// is exactly the node the placer laid for nothing. A queue of four returns three cells' worth. With no
+	/// queue cells there is neither drain nor debit.
+	/// </remarks>
+	internal static int DrainQueue( ParkState state, ParkWorld park, ParkWorld.CatalogueObject placed )
+	{
+		var start = ParkRideChoice.StartOfQueue( park, placed );
+		var cells = new List<int>();
+
+		for ( var cell = start; cell != 0 && cells.Count < ParkState.LongestQueue;
+			cell = ParkRideChoice.StepToNextQueueCell( park, cell ) )
+		{
+			var (x, y) = MapStep.CellAt( cell );
+
+			if ( ParkState.CellFor( park, x, y ).Type != ParkRideChoice.QueueCellType )
+				break;
+
+			cells.Add( cell );
+		}
+
+		if ( cells.Count == 0 )
+			return 0;
+
+		var (backX, backY) = MapStep.CellAt( cells[^1] );
+
+		DetachFromPath( state, park, backX, backY );
+
+		// The percentage the original scales a refund by is per-age, which nothing here keeps; see
+		// LiftQueue, which gives a cell back in full for the same reason.
+		var price = QueueCost( Level.Current );
+
+		foreach ( var cell in cells )
+		{
+			var (x, y) = MapStep.CellAt( cell );
+
+			state.SetRecord( x, y, ParkState.CellFor( park, x, y ) with
+			{
+				Type = NothingType,
+				Neighbours = 0,
+				Direction = 0,
+				Flags = 0,
+				ParentId = 0,
+				TileSet = 0,
+				TileIndex = 0,
+				TileAngle = 0
+			} );
+
+			state.Refund( price );
+		}
+
+		state.Spend( price );
+		state.InvalidateQueue( placed.ThingId );
+
+		return (cells.Count - 1) * price;
 	}
 
 	/// <summary>
@@ -392,7 +951,7 @@ public static class ParkPathBuilding
 	/// <summary>
 	/// Clears this cell's bit from every neighbour it was joined to, and retiles each of them.
 	/// </summary>
-	private static void Unlink( ParkState state, ParkWorld park, int x, int y )
+	internal static void Unlink( ParkState state, ParkWorld park, int x, int y )
 	{
 		var cell = ParkState.CellFor( park, x, y );
 

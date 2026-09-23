@@ -59,6 +59,9 @@ public sealed class ParkStaffPool
 
 			Carrying = candidateId;
 
+			// Hiring is a placement verb with its own mode, which puts any build tool away.
+			ParkBuildMode.Disarm();
+
 			return $"carrying {person.Name}, a grade {person.Grade} " +
 				$"{NameOfKind( person.Kind ).ToLowerInvariant()} at {person.Wage} a month - " +
 				"click the park to put them down";

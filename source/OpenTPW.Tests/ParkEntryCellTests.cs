@@ -5,19 +5,17 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// Where a guest walks up to a thing the player has built - the entrance and exit marks in the item's own
-/// <c>Info.Shape</c> picture, turned by the angle it is built at.
+/// <c>Info.Shape</c> picture, turned by the angle it is built at - and what the placer builds in front of
+/// them.
 ///
 /// <para>
-/// <b>Four of these need no game files</b>, because the description reader takes text directly, and the
-/// branch that matters is the one no shipped park can reach: nothing in a saved park was ever built during
-/// play, so every object in it already carries the entry cell the original wrote when it was placed.
+/// <b>The picture tests need no game files</b>, because the description reader takes text directly.
 /// </para>
 /// <para>
-/// <b>What names the marks is two records meeting, not one.</b> <c>FUN_00413410</c> stores the cell holding
-/// the value <b>9</b> as the entrance and <b>10</b> as the exit; <c>bouncy.sam</c> puts its <c>S</c> at
-/// column 1 row 0 and its <c>2</c> at column 1 row 3; and the shipped save gives that same Belly Bounce,
-/// anchored at (51,23), <c>mEntryPos</c> 2997 = (52,23) and <c>mExitPos</c> 3381 = (52,26). Neither the
-/// picture nor the save alone would name a letter.
+/// <b>The characters are the executable's own alphabet</b>, the nineteen-row table at <c>0x007396c8</c>:
+/// <c>2</c> is an entrance facing <c>0x10</c> and <c>S</c> an exit facing the same, and the reader turns the
+/// rows upside down (<c>0x00402938</c>..<c>0x004029ab</c>). The shipped save's eleven placed objects all
+/// fall out of that reading - see <see cref="EveryPlacedThingsEntryAndExitCellFallOutOfItsPicture"/>.
 /// </para>
 /// </summary>
 [TestClass]
@@ -34,52 +32,78 @@ public class ParkEntryCellTests
 
 		Assert.IsTrue( item.HasEntrance, "the picture marks an entrance" );
 		Assert.AreEqual( 1, item.EntryDeltaX, "entrance column" );
-		Assert.AreEqual( 0, item.EntryDeltaY, "entrance row" );
+		Assert.AreEqual( 0, item.EntryDeltaY, "the 2 is on the LAST row drawn, which the reader turns into row 0" );
+		Assert.AreEqual( 0x10, item.EntryDirection, "a 2 faces 0x10" );
 		Assert.AreEqual( 1, item.ExitDeltaX, "exit column" );
-		Assert.AreEqual( 3, item.ExitDeltaY, "exit row" );
+		Assert.AreEqual( 3, item.ExitDeltaY, "and the S, drawn first, ends up last" );
+		Assert.AreEqual( 0x10, item.ExitDirection, "an S faces 0x10 as well" );
 	}
 
 	/// <summary>
-	/// The Drinks Shop's own picture. <b>93 of the corpus's 137 items carrying an exit mark carry no
-	/// entrance</b>, and the engine leaves both cells on the anchor for every one of them - so this is the
-	/// common case rather than a malformed file.
+	/// The two shipped pictures that tell the upside-down reading apart from the right-way-up one: the
+	/// Staff Room and the Jungle Spray each draw their <c>2</c> on the last row, and the save puts their
+	/// entrances on the anchor's own row.
 	/// </summary>
+	/// <remarks>
+	/// <b>Mutation:</b> leaving the rows the way they are drawn puts both entrances on the far row, and
+	/// fails both pairs of assertions.
+	/// </remarks>
 	[TestMethod]
-	public void AnItemWithNoEntranceMarkFallsBackToItsAnchorCell()
+	public void ThePictureIsReadUpsideDown()
 	{
-		var item = Described( "**\n2*\n" );
+		var staffRoom = Described( "**\n*2\n" );
 
-		Assert.IsFalse( item.HasEntrance, "there is no S in this picture" );
-		Assert.AreEqual( 0, item.EntryDeltaX );
-		Assert.AreEqual( 0, item.EntryDeltaY );
-		Assert.AreEqual( 0, item.ExitDeltaX, "the exit mark is ignored without an entrance, as the engine does" );
-		Assert.AreEqual( 0, item.ExitDeltaY );
+		Assert.AreEqual( (1, 0), (staffRoom.EntryDeltaX, staffRoom.EntryDeltaY), "the Staff Room enters on row 0" );
+
+		var spray = Described( "***\n***\n*2*\n" );
+
+		Assert.AreEqual( (1, 0), (spray.EntryDeltaX, spray.EntryDeltaY), "and so does the Jungle Spray" );
 	}
 
 	/// <summary>
-	/// An entrance with no exit puts the exit on the entrance - which is what makes <c>mExitPos</c> equal
-	/// <c>mEntryPos</c> on ten of the shipped park's eleven placed objects.
+	/// The Drinks Shop's own picture: a <c>2</c> and no exit, so the exit falls on the entrance and
+	/// carries its bit - which is what makes <c>mExitPos</c> equal <c>mEntryPos</c> on ten of the shipped
+	/// park's eleven placed objects.
 	/// </summary>
 	[TestMethod]
 	public void AnEntranceWithNoExitPutsTheExitOnTheEntrance()
 	{
-		var item = Described( "*S*\n***\n" );
+		var item = Described( "**\n2*\n" );
 
-		Assert.IsTrue( item.HasEntrance );
-		Assert.AreEqual( 1, item.EntryDeltaX );
-		Assert.AreEqual( 0, item.EntryDeltaY );
-		Assert.AreEqual( item.EntryDeltaX, item.ExitDeltaX, "the exit falls onto the entrance" );
-		Assert.AreEqual( item.EntryDeltaY, item.ExitDeltaY );
+		Assert.IsTrue( item.HasEntrance, "a 2 is an entrance" );
+		Assert.AreEqual( (0, 0), (item.EntryDeltaX, item.EntryDeltaY) );
+		Assert.AreEqual( (item.EntryDeltaX, item.EntryDeltaY), (item.ExitDeltaX, item.ExitDeltaY),
+			"the exit falls onto the entrance" );
+		Assert.AreEqual( item.EntryDirection, item.ExitDirection, "and takes the entrance's bit with it" );
 	}
 
-	/// <summary>Blank rows inside the fence are layout, so a mark below one must not slide down a cell.</summary>
+	/// <summary>A picture with no entrance at all leaves both ends on the anchor, with FUN_00413410's two defaults.</summary>
 	[TestMethod]
-	public void ABlankRowInsideTheFenceDoesNotMoveTheMarksDown()
+	public void AnItemWithNoEntranceMarkFallsBackToItsAnchorCell()
 	{
-		var item = Described( "*S*\n\n*2*\n" );
+		var item = Described( "***\n*S*\n" );
 
-		Assert.AreEqual( 0, item.EntryDeltaY, "the entrance is on the first kept row" );
-		Assert.AreEqual( 1, item.ExitDeltaY, "and the exit on the second, not the third" );
+		Assert.IsFalse( item.HasEntrance, "an S alone is an exit, not an entrance" );
+		Assert.AreEqual( (0, 0, 0, 0), (item.EntryDeltaX, item.EntryDeltaY, item.ExitDeltaX, item.ExitDeltaY),
+			"the exit is ignored without an entrance, as the engine does" );
+		Assert.AreEqual( 0x01, item.EntryDirection );
+		Assert.AreEqual( 0x10, item.ExitDirection );
+	}
+
+	/// <summary>
+	/// The reader's two quieter rules, which no shipped picture exercises: a space is not a cell, and a
+	/// blank line is still a row.
+	/// </summary>
+	[TestMethod]
+	public void ASpaceIsNotACellAndABlankLineIsARow()
+	{
+		var item = Described( "* N *\n\n*2*\n" );
+
+		Assert.AreEqual( 3, item.FootprintWidth, "the spaces take no column" );
+		Assert.AreEqual( 3, item.FootprintDepth, "and the blank line is a row" );
+		Assert.AreEqual( (1, 0), (item.EntryDeltaX, item.EntryDeltaY) );
+		Assert.AreEqual( (1, 2), (item.ExitDeltaX, item.ExitDeltaY) );
+		Assert.AreEqual( 0x01, item.ExitDirection, "an N faces 0x01" );
 	}
 
 	/// <summary>
@@ -123,14 +147,15 @@ public class ParkEntryCellTests
 	}
 
 	/// <summary>
-	/// The corpus behind the two fallback rules above, read from the shipped files rather than asserted
-	/// from one of them. Needs the game.
+	/// The corpus, read from the shipped files rather than asserted from one of them: <b>every entrance in
+	/// the game is a <c>2</c>, and every ride - every item with a queue - has one and an exit of its
+	/// own.</b> Needs the game.
 	/// </summary>
 	[TestMethod]
-	public void EveryItemCarryingAnEntranceAlsoCarriesAnExit()
+	public void EveryQueuedItemHasAnEntranceAndAnExitOfItsOwn()
 	{
 		var data = GameData.Required();
-		int items = 0, withEntrance = 0;
+		int items = 0, queued = 0, withEntrance = 0;
 
 		foreach ( var theme in new[] { "jungle", "fantasy", "hallow", "space" } )
 		{
@@ -140,21 +165,62 @@ public class ParkEntryCellTests
 			{
 				++items;
 
-				if ( !item.HasEntrance )
+				if ( item.HasEntrance )
+				{
+					++withEntrance;
+					Assert.AreEqual( 0x10, item.EntryDirection, $"{theme} '{item.Name}' enters by something other than a 2" );
+				}
+
+				if ( !item.HasQueue )
 					continue;
 
-				++withEntrance;
+				++queued;
 
-				// The engine only ever leaves the exit ON the entrance; it never leaves it unset while an
-				// entrance exists, which is the rule ParkBuilding leans on to place a guest leaving.
-				Assert.IsTrue( item.ExitDeltaX != 0 || item.ExitDeltaY != 0
-					|| (item.EntryDeltaX == 0 && item.EntryDeltaY == 0),
-					$"{theme} item {item.Id} '{item.Name}' has an entrance and an unset exit" );
+				Assert.IsTrue( item.HasEntrance, $"{theme} '{item.Name}' has a queue and no entrance" );
+				Assert.AreNotEqual( (item.EntryDeltaX, item.EntryDeltaY), (item.ExitDeltaX, item.ExitDeltaY),
+					$"{theme} '{item.Name}' has a queue and no exit of its own" );
 			}
 		}
 
 		Assert.IsTrue( items > 200, $"only {items} items were catalogued across four themes" );
-		Assert.IsTrue( withEntrance > 0, "no item anywhere declared an entrance" );
+		Assert.IsTrue( queued > 0 && withEntrance >= queued, $"{queued} queued, {withEntrance} with an entrance" );
+	}
+
+	/// <summary>
+	/// <b>Every placed thing in the shipped park</b>, its <c>mEntryPos</c> and <c>mExitPos</c> derived from
+	/// its own picture, turned by its own angle, and compared with what the original wrote when it was
+	/// placed. Needs the game.
+	/// </summary>
+	/// <remarks>
+	/// <b>All eleven match.</b> Read the other way - <c>S</c> as the way in, rows as drawn - two do not: the
+	/// Staff Room at 90 degrees and the Jungle Spray. The save's other three objects are the fixed bus,
+	/// gates and lights, which stand at (0,0) and are not in the buy catalogue.
+	/// </remarks>
+	[TestMethod]
+	public void EveryPlacedThingsEntryAndExitCellFallOutOfItsPicture()
+	{
+		var data = GameData.Required();
+		var park = World( data );
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+		var compared = 0;
+
+		foreach ( var placed in park.Objects )
+		{
+			if ( !placed.IsPlaced || !catalogue.TryGet( placed.CatalogueId, out var item ) )
+				continue;
+
+			var (entryX, entryY) = ParkBuilding.RotateDelta( item.EntryDeltaX, item.EntryDeltaY, placed.Angle );
+			var (exitX, exitY) = ParkBuilding.RotateDelta( item.ExitDeltaX, item.ExitDeltaY, placed.Angle );
+
+			Assert.AreEqual( placed.EntryPos, MapStep.CellId( placed.CellX + entryX, placed.CellY + entryY ),
+				$"thing {placed.ThingId} '{item.Name}' at ({placed.CellX},{placed.CellY}) turned {placed.Angle}: entry" );
+			Assert.AreEqual( placed.ExitPos, MapStep.CellId( placed.CellX + exitX, placed.CellY + exitY ),
+				$"thing {placed.ThingId} '{item.Name}': exit" );
+
+			++compared;
+		}
+
+		Assert.AreEqual( 11, compared, "placed things the jungle catalogue describes" );
 	}
 
 	/// <summary>
@@ -216,70 +282,93 @@ public class ParkEntryCellTests
 	}
 
 	/// <summary>
-	/// The pair the placer writes when a thing goes up: <b>the way in takes the bit pointing at the cell
-	/// it faces, and that cell takes the opposite bit back</b>, so the two adjoin and whatever is laid
-	/// there afterwards can be stepped into.
+	/// <b>A queued thing lays one queue cell before its entrance</b> - the node the player lays the rest
+	/// of the queue from - and one path cell before its exit. Both are the shipped park's own: the Belly
+	/// Bounce's entrance (52,23) faces its queue cell (52,22), which is type 3, NOMODIFY, owned by the
+	/// ride and flowing <c>0x10</c> back at it; its exit (52,26) faces (52,27), a NOMODIFY path with the
+	/// bit back at the exit and direction nought.
 	/// </summary>
 	/// <remarks>
-	/// <b>Both halves are measured off the shipped park.</b> The Belly Bounce's entrance at (52,23)
-	/// carries <c>neighbours 0x01 direction 0x01</c> and its queue cell at (52,22) carries <c>0x50</c>,
-	/// which holds the opposite bit <c>0x10</c>; its exit at (52,26) carries <c>0x10</c> and the cell it
-	/// faces, (52,27), carries <c>0x39</c>, which holds <c>0x01</c>. The placer writes both itself after
-	/// its footprint sweep - see <c>docs/exe/park-engine.md</c>, "What authors an entrance's
-	/// <c>mNeighbours</c>" - because the neighbour rule cannot earn either end.
-	/// <para>
-	/// <b>The faced cell is given NO direction byte, and that half the shipped park refutes.</b> The
-	/// decode reads the placer as writing both fields on both cells; (52,27) carries the bit and
-	/// <c>direction 0x00</c>. Asserting the nought here is what stops the other half being put back from
-	/// the decode alone.
-	/// </para>
-	/// <para>
-	/// <b>Mutation:</b> dropping the faced-cell write inside <c>JoinToWhateverIsThere</c> fails the two
-	/// "names it back" assertions and nothing else in the suite, because nothing else places anything.
-	/// </para>
+	/// <b>Mutation:</b> leaving out the stub leaves (14,9) bare ground and fails everything from the
+	/// "queue cell" assertion on, and the placer's return with it, which is what arms the queue tool.
 	/// </remarks>
 	[TestMethod]
-	public void AWayInAndTheCellItFacesAreGivenEachOthersBits()
+	public void AQueuedThingLaysAQueueCellBeforeItsEntranceAndAPathBeforeItsExit()
+	{
+		var park = World( GameData.Required() );
+		var state = new ParkState( park );
+		var owner = MapStep.CellId( 13, 10 );
+
+		// Well clear of the park's own paths, which run x 39..57, y 15..29.
+		Assert.AreEqual( CellEdge.Nothing, ParkState.CellFor( park, 14, 9 ).Type, "(14,9) starts as bare ground" );
+		Assert.AreEqual( CellEdge.Nothing, ParkState.CellFor( park, 14, 14 ).Type, "and so does (14,14)" );
+
+		var node = ParkBuilding.MarkWaysInAndOut( state, park, 14, 10, 14, 13, 0x10, 0x10, 0, hasQueue: true, owner );
+
+		Assert.AreEqual( (14, 9), node, "the placer answers the queue cell it laid" );
+
+		var entrance = ParkState.CellFor( park, 14, 10 );
+
+		Assert.AreEqual( CellEdge.RideEnd, entrance.Type, "the way in is typed 9" );
+		Assert.AreEqual( 0x01, entrance.Direction, "and carries Opposite(H), as (52,23) does" );
+		Assert.AreNotEqual( 0, entrance.Neighbours & 0x01, "and names the queue cell it faces" );
+
+		var stub = ParkState.CellFor( park, 14, 9 );
+
+		Assert.AreEqual( ParkRideChoice.QueueCellType, stub.Type, "the cell before the entrance is a queue cell" );
+		Assert.AreEqual( ParkQueues.QueueTileSet, stub.TileSet, "drawn by the queue renderer" );
+		Assert.AreEqual( 1, stub.TileIndex, "as quedead, the one-link piece" );
+		Assert.AreEqual( 0x10, stub.Direction, "flowing back at the entrance" );
+		Assert.AreEqual( 0x10, stub.Neighbours, "and naming it, and nothing else" );
+		Assert.AreEqual( ParkPathBuilding.NoModify, stub.Flags, "NOMODIFY, assigned" );
+		Assert.AreEqual( owner, stub.ParentId, "owned by the thing" );
+
+		var exit = ParkState.CellFor( park, 14, 13 );
+
+		Assert.AreEqual( CellEdge.RideFarEnd, exit.Type, "the way out is typed 10" );
+		Assert.AreEqual( 0x10, exit.Direction );
+
+		var exitStub = ParkState.CellFor( park, 14, 14 );
+
+		Assert.AreEqual( CellEdge.Path, exitStub.Type, "the cell before the exit is a path" );
+		Assert.AreEqual( ParkPathBuilding.NoModify, exitStub.Flags, "NOMODIFY" );
+		Assert.AreEqual( 0, exitStub.Direction, "with no direction byte, which is what (52,27) measures" );
+		Assert.AreNotEqual( 0, exitStub.Neighbours & 0x01, "joined to the way out" );
+		Assert.AreNotEqual( 0, ParkState.CellFor( park, 14, 13 ).Neighbours & 0x10, "which is joined back" );
+	}
+
+	/// <summary>
+	/// A thing with no queue lays a PATH before its entrance, and its entrance keeps its own bit rather
+	/// than the one pointing at the cell it faces - the shipped park's seven shop and toilet entrances,
+	/// each with a NOMODIFY path one step the other way.
+	/// </summary>
+	[TestMethod]
+	public void AThingWithNoQueueLaysAPathBeforeItsEntrance()
 	{
 		var park = World( GameData.Required() );
 		var state = new ParkState( park );
 
-		// Well clear of the park's own paths, which run x 39..57, y 15..29. The guard is on the BITS
-		// rather than on the ground: what must not already be true is the link this writes.
-		Assert.AreNotEqual( CellEdge.Path, ParkState.CellFor( park, 14, 9 ).Type,
-			"(14,9) must not be path, or the re-link would contribute bits of its own" );
-		Assert.AreEqual( 0, ParkState.CellFor( park, 14, 9 ).Neighbours & 0x10,
-			"(14,9) starts without the bit pointing back at the way in" );
-		Assert.AreEqual( 0, ParkState.CellFor( park, 14, 10 ).Neighbours & 0x01,
-			"and (14,10) starts without its way-in bit" );
+		var node = ParkBuilding.MarkWaysInAndOut( state, park, 20, 10, 20, 10, 0x10, 0x10, 0, hasQueue: false,
+			MapStep.CellId( 20, 10 ) );
 
-		ParkBuilding.MarkWaysInAndOut( state, park, 14, 10, 14, 13, 0 );
+		Assert.IsNull( node, "no queue cell, so nothing to arm the queue tool on" );
+		Assert.AreEqual( 0x10, ParkState.CellFor( park, 20, 10 ).Direction, "the entrance keeps H" );
 
-		Assert.AreEqual( CellEdge.RideEnd, ParkState.CellFor( park, 14, 10 ).Type, "the way in is typed 9" );
-		Assert.AreEqual( 0x01, ParkState.CellFor( park, 14, 10 ).Direction,
-			"and carries the heading the shipped park's own entrance carries" );
-		Assert.AreNotEqual( 0, ParkState.CellFor( park, 14, 10 ).Neighbours & 0x01,
-			"the way in names the cell it faces" );
+		var stub = ParkState.CellFor( park, 20, 9 );
 
-		Assert.AreNotEqual( 0, ParkState.CellFor( park, 14, 9 ).Neighbours & 0x10,
-			"and the cell it faces names it back - without this a queue laid there is unenterable" );
-		Assert.AreEqual( 0, ParkState.CellFor( park, 14, 9 ).Direction,
-			"the faced cell is given no direction byte, which is what (52,27) measures" );
-
-		Assert.AreEqual( CellEdge.RideFarEnd, ParkState.CellFor( park, 14, 13 ).Type, "the way out is typed 10" );
-		Assert.AreEqual( 0x10, ParkState.CellFor( park, 14, 13 ).Direction );
-		Assert.AreNotEqual( 0, ParkState.CellFor( park, 14, 14 ).Neighbours & 0x01,
-			"and the way out's own faced cell gains the opposite bit too" );
+		Assert.AreEqual( CellEdge.Path, stub.Type, "the cell before the entrance is a path" );
+		Assert.AreEqual( ParkPathBuilding.NoModify, stub.Flags );
+		Assert.AreNotEqual( 0, stub.Neighbours & 0x10, "joined to the entrance through the type-9 test" );
+		Assert.AreNotEqual( 0, ParkState.CellFor( park, 20, 10 ).Neighbours & 0x01, "which is joined back" );
+		Assert.AreEqual( CellEdge.Nothing, ParkState.CellFor( park, 20, 11 ).Type, "and nothing is laid behind it" );
 	}
 
 	/// <summary>
 	/// A thing built at a quarter turn faces the way its entry cell moved.
 	///
 	/// <para>
-	/// <b>This is the case the rotate defect needed and nothing built.</b> A bit and a delta turn the
-	/// same way at 0 and at 180 whichever direction the bit is rotated, so only a quarter or three
-	/// quarters can tell the two senses apart - and no test in this suite had ever driven an angle
-	/// through the placement path.
+	/// <b>Only a quarter or three quarters can tell the two rotate senses apart</b>: a bit and a delta turn
+	/// the same way at 0 and at 180 whichever direction the bit is rotated.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -293,33 +382,23 @@ public class ParkEntryCellTests
 
 		Assert.AreEqual( (0, -1), (entryX, entryY), "the entry delta turns to -y" );
 
-		Assert.AreEqual( 0, ParkState.CellFor( park, 17, 10 ).Neighbours & 0x04,
-			"(17,10) starts without the bit pointing back at the way in" );
-
-		ParkBuilding.MarkWaysInAndOut( state, park, 18 + entryX, 11 + entryY, 18, 14, 90 );
+		var node = ParkBuilding.MarkWaysInAndOut( state, park, 18 + entryX, 11 + entryY, 18, 14, 0x10, 0x10, 90,
+			hasQueue: true, MapStep.CellId( 18, 11 ) );
 
 		Assert.AreEqual( 0x40, ParkState.CellFor( park, 18, 10 ).Direction,
 			"a quarter turn takes the way in from north to west" );
-		Assert.AreNotEqual( 0, ParkState.CellFor( park, 17, 10 ).Neighbours & 0x04,
-			"so the cell it faces is the one to the WEST - turned the other way it faced east, back across the thing" );
+		Assert.AreEqual( (17, 10), node,
+			"so its queue cell is to the WEST - turned the other way it went east, back across the thing" );
 	}
 
 	/// <summary>
-	/// A way out placed against an existing path <b>retiles that path</b>, so the join is visible and
-	/// not merely recorded.
-	///
-	/// <para>
-	/// <b>This is the case Alexah reported and the one nothing in this suite reached.</b> Both tests
-	/// above stand their ends on bare ground, so the arm that runs when the faced cell IS a path - the
-	/// link pass, and the retile after it - had no cover at all. The link was being made correctly the
-	/// whole time; what was missing was the art, because <see cref="ParkPaths"/> redraws each cell from
-	/// its STORED tile index and nothing asked the joined cell to work out a new one.
-	/// </para>
+	/// A way out placed against an existing path <b>joins and retiles that path</b>, so the join is
+	/// visible and not merely recorded - and the path becomes the exit's own NOMODIFY cell.
 	/// </summary>
 	/// <remarks>
-	/// <b>Mutation:</b> removing the <c>RetileAround</c> call from <c>JoinToWhateverIsThere</c> leaves
-	/// the path drawing tile 0 and fails the last two assertions, while the mask assertions still pass -
-	/// which is exactly the shape of the fault as it was reported.
+	/// <b>Mutation:</b> the path is retiled twice - by the sweep's relink and again by the exit's own path
+	/// cell - so removing BOTH retiles leaves it drawing tile 0 and fails the last two assertions, while
+	/// the mask assertion still passes. Removing either one alone survives, because the other redraws it.
 	/// </remarks>
 	[TestMethod]
 	public void AWayOutPlacedAgainstAPathRetilesThatPath()
@@ -339,18 +418,17 @@ public class ParkEntryCellTests
 		} );
 
 		Assert.AreEqual( 0, ParkState.CellFor( park, 16, 11 ).TileIndex, "a lone path cell draws tile 0" );
-		Assert.AreEqual( 0, ParkState.CellFor( park, 16, 11 ).Neighbours & 0x01,
-			"and starts with no link northward, which is the one this places" );
 
 		// The way out at (16,10) faces +y onto that path; the way in is put well clear of it.
-		ParkBuilding.MarkWaysInAndOut( state, park, 16, 7, 16, 10, 0 );
+		ParkBuilding.MarkWaysInAndOut( state, park, 16, 7, 16, 10, 0x10, 0x10, 0, hasQueue: true, MapStep.CellId( 15, 7 ) );
 
 		Assert.AreEqual( CellEdge.RideFarEnd, ParkState.CellFor( park, 16, 10 ).Type, "the way out is typed 10" );
 		Assert.AreNotEqual( 0, ParkState.CellFor( park, 16, 11 ).Neighbours & 0x01,
 			"the path gains the link back toward the way out" );
+		Assert.AreEqual( ParkPathBuilding.NoModify, ParkState.CellFor( park, 16, 11 ).Flags,
+			"and becomes the exit's NOMODIFY cell, as the placer's exit half makes it" );
 
-		// And the art follows the mask, which is the half that was missing: mask 0x01 is the table's
-		// own single-ended piece, index 1 at 180 degrees.
+		// And the art follows the mask: mask 0x01 is the table's own single-ended piece, index 1 at 180.
 		Assert.AreEqual( 1, ParkState.CellFor( park, 16, 11 ).TileIndex,
 			"the joined path redraws as a single-ended piece instead of the lone tile it was" );
 		Assert.AreEqual( 180, ParkState.CellFor( park, 16, 11 ).TileAngle,
@@ -358,23 +436,12 @@ public class ParkEntryCellTests
 	}
 
 	/// <summary>
-	/// How many of the jungle's rides declare an entrance at all - <b>and six of them do not</b>, which
-	/// is why they get no way in, no way out and nothing a queue can attach to.
+	/// <b>Every one of the jungle's seventeen rides declares an entrance</b>, a <c>2</c> in every case.
+	/// Six of them - the three coasters, the go-karts, the water ride and the TV simulator - carry no
+	/// <c>S</c> at all, so a reading that took <c>S</c> for the way in would find none on them.
 	/// </summary>
-	/// <remarks>
-	/// <b>Measured from the shipped item descriptions, not chosen.</b> An item whose picture carries no
-	/// <c>S</c> has all four of its deltas zeroed by <see cref="ItemDescriptionFile"/> - the <c>2</c> it
-	/// may carry is discarded with them - so entry and exit would both fall on the anchor. The six are
-	/// the three coasters, the go-karts, the water ride and the TV simulator.
-	/// <para>
-	/// <b>The original may well mark the way out of those six anyway</b>, since its placer walks the
-	/// shape grid with independent <c>case 9</c> and <c>case 10</c> arms rather than using the
-	/// derivation that takes the no-9 fallback. That is not decoded, so
-	/// <see cref="ParkBuilding"/> marks neither end and counts it.
-	/// </para>
-	/// </remarks>
 	[TestMethod]
-	public void SixOfTheJunglesRidesDeclareNoEntranceAtAll()
+	public void EveryOneOfTheJunglesRidesDeclaresAnEntrance()
 	{
 		var catalogue = new ParkItemCatalogue( "jungle", GameData.Required() );
 
@@ -393,8 +460,6 @@ public class ParkEntryCellTests
 		}
 
 		Assert.AreEqual( 17, rides, "UI type 0 items in the jungle catalogue" );
-		Assert.AreEqual( 11, withEntrance, $"of {rides} jungle rides, this many mark an entrance" );
-		Assert.AreEqual( 6, rides - withEntrance,
-			"the rest declare none, so nothing can be queued for them until the shape grid is decoded" );
+		Assert.AreEqual( 17, withEntrance, "every one of them marks an entrance" );
 	}
 }

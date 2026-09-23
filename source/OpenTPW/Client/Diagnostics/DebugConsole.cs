@@ -649,6 +649,10 @@ public static class DebugConsole
 				if ( parts.Length > 3 )
 					ParkOrbitCameraMode.Zoom = Argument( 3 );
 
+				// A yaw in degrees, so a photograph can be taken from the far side of something.
+				if ( parts.Length > 4 )
+					ParkOrbitCameraMode.Yaw = Argument( 4 ) * MathF.PI / 180f;
+
 				Reply( ParkOrbitCameraMode.State() );
 				break;
 
@@ -895,6 +899,13 @@ public static class DebugConsole
 					?? "drop: nothing is being carried" );
 				break;
 
+			// A quick right click, as far as a build tool is concerned - the same body the button reaches.
+			case "rightclick":
+				Reply( Level.Current?.QuickRightClick()
+					?? $"rightclick: nothing to put away (tool mode {ParkBuildMode.Current}, RMB cancel " +
+						$"{(GameOptions.Current.RmbCancel ? "on" : "off")})" );
+				break;
+
 			// `put`, not `place` - the lobby already has a `place`, which auditions an ambient sample
 			// at a position. Two cases with one label does not compile, which is how this was caught,
 			// but the quieter version of the same mistake is a command that works in one scene and
@@ -1046,6 +1057,43 @@ public static class DebugConsole
 						parts.Length > 2 ? (int)Argument( 2 ) : 0 ),
 					_ => ParkBuildMode.Arm( ParkBuildMode.None )
 				} );
+				break;
+
+			// Holds the pointer's CELL over a cell of the map, so what follows the pointer - the queue tool's
+			// squares and its cursor - can be driven and photographed. `hover off` hands it back to the mouse.
+			case "hover":
+				if ( parts.Length > 2 && !ParkState.OnMap( (int)Argument( 1 ), (int)Argument( 2 ) ) )
+				{
+					Reply( "hover: that cell is off the map" );
+					break;
+				}
+
+				// Only the CELL is held: the thing under the pointer and the world point still follow the
+				// mouse, so a real click while a cell is held pairs this cell with whatever is under it.
+				if ( parts.Length > 2 )
+				{
+					ParkPicking.Pinned = ((int)Argument( 1 ), (int)Argument( 2 ));
+					Reply( $"hover: the pointer's cell is held at ({ParkPicking.Pinned.Value.X},{ParkPicking.Pinned.Value.Y})" );
+				}
+				else
+				{
+					ParkPicking.Pinned = null;
+					Reply( "hover: following the mouse again" );
+				}
+
+				break;
+
+			// The queue tool's preview as the SIMULATION computes it for a cell, beside what the marker mesh
+			// last drew for the pointer - the two halves, in one reply, for the reason `drawn` gives.
+			case "strip":
+				if ( parts.Length < 3 )
+				{
+					Reply( $"strip <cellX> <cellY> - drawn for the pointer: {ParkBuildMarkers.Current?.Census() ?? "<no markers>"}" );
+					break;
+				}
+
+				Reply( "strip: " + string.Join( " ", ParkPathBuilding.QueueStrip( (int)Argument( 1 ), (int)Argument( 2 ) )
+					.Select( square => $"({square.X},{square.Y}):{square.Marker}" + (square.Why is { } why ? $"[{why}]" : "") ) ) );
 				break;
 
 			// WHY a guest is not going anywhere, which `peeps` cannot answer and four driven runs were

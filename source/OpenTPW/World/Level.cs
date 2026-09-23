@@ -316,6 +316,9 @@ public class Level
 		_ = new ParkQueues( ThemeName, park );
 		load.Mark( "queues" );
 
+		// The queue tool's squares, drawn over whichever of those three is under them.
+		_ = new ParkBuildMarkers();
+
 		_ = new ParkTerrain( ThemeName );
 		load.Mark( "terrain" );
 
@@ -462,7 +465,7 @@ public class Level
 		// Over the interface it decorates and under the pointer, which is the order SetupHud uses.
 		Hud.AddChild( new ScreenParticles() );
 
-		Hud.AddChild( new Cursor() );
+		_cursor = Hud.AddChild( new Cursor() );
 	}
 
 	private void SetupHud()
@@ -556,11 +559,102 @@ public class Level
 		// from the park's own window proc (FUN_004879d0), which acts only while the current interaction
 		// mode is idle and hands the click to the mode otherwise.
 		if ( Kind == Scene.Park )
+		{
 			WorldClick();
+			ShowToolCursor();
+		}
 	}
 
 	private bool _worldMouseWasDown;
 	private bool _worldRightWasDown;
+
+	/// <summary>The park's own pointer, so an armed tool can show its cursor.</summary>
+	private Cursor? _cursor;
+
+	/// <summary>
+	/// The cursor an armed build tool shows - <c>c_path</c> for path and <c>c_queue</c> for queue, the ids
+	/// <c>FUN_00489720</c> registers as 3 and 4 - and the ordinary pointer otherwise. Set only when it
+	/// changes, because setting it reloads the picture.
+	/// </summary>
+	private void ShowToolCursor()
+	{
+		if ( _cursor is not { } cursor )
+			return;
+
+		var wanted = ParkBuildMode.Current switch
+		{
+			ParkBuildMode.Queue => QueueCursor(),
+			ParkBuildMode.Path => PathCursor(),
+			_ => Input.CursorTypes.Normal
+		};
+
+		if ( cursor.CursorType != wanted )
+			cursor.CursorType = wanted;
+	}
+
+	/// <summary>
+	/// The queue tool's cursor follows its preview (<c>FUN_0052f950</c>): <c>c_link</c> when the run
+	/// would join a path, <c>c_end</c> when it would close on the ride's own queue, <c>c_noplace</c> when
+	/// any square is red, <c>c_cash</c> when that is because the run cannot be paid for, and
+	/// <c>c_queue</c> otherwise. Of the loose cursor pictures <c>Clin.tga</c> is
+	/// the link cursor, which <see cref="Input.CursorTypes"/> names <c>Line</c>, and <c>Cnog.tga</c> the
+	/// refusal.
+	/// </summary>
+	private static Input.CursorTypes QueueCursor()
+	{
+		if ( !ParkPicking.TryCell( out var x, out var y ) )
+			return Input.CursorTypes.Queue;
+
+		var strip = ParkPathBuilding.QueueStrip( x, y );
+
+		if ( strip.Any( square => square.Unaffordable ) )
+			return Input.CursorTypes.Cash;
+
+		if ( strip.Any( square => square.Marker == ParkPathBuilding.MarkerRed ) )
+			return Input.CursorTypes.NoGo;
+
+		return strip.Count > 0 ? strip[^1].Marker switch
+		{
+			ParkPathBuilding.MarkerLink => Input.CursorTypes.Line,
+			ParkPathBuilding.MarkerEnd => Input.CursorTypes.End,
+			_ => Input.CursorTypes.Queue
+		} : Input.CursorTypes.Queue;
+	}
+
+	/// <summary>
+	/// What a quick right click does to an armed build tool: puts it away, when the Options switch "RMB
+	/// cancel" is on, and nothing otherwise. Null when there was nothing to do.
+	/// </summary>
+	/// <remarks>
+	/// <b>One body, shared with the console's <c>rightclick</c></b>, for the reason
+	/// <see cref="CancelCarried"/> is shared with <c>drop</c>: the button cannot be pressed by a harness,
+	/// so the console reaches this rather than a copy of it.
+	/// </remarks>
+	internal string? QuickRightClick()
+	{
+		if ( ParkBuildMode.Current == ParkBuildMode.None || !GameOptions.Current.RmbCancel )
+			return null;
+
+		ParkBuildMode.Disarm();
+
+		return "world click: right click - the build tool is put away";
+	}
+
+	/// <summary>
+	/// The path tool's cursor. The original switches it to <c>c_link</c> and <c>c_end</c> from the path
+	/// tool's own preview (<c>FUN_0052f950</c>'s mode-1 arm), and that preview is not built.
+	/// </summary>
+	private static Input.CursorTypes PathCursor()
+	{
+		Unimplemented.Report( "PATH_TOOL_PREVIEW" );
+
+		return Input.CursorTypes.Path;
+	}
+
+	/// <summary>When and where the right button last went down, for telling a quick click from a hold.</summary>
+	private (float At, Vector2 Where) _rightWentDown;
+
+	private bool _rightWasDownForTool;
 
 	/// <summary>
 	/// A press on the park itself. Clicking a placed thing opens its management window -
@@ -585,6 +679,23 @@ public class Level
 		if ( rightPressed && CancelCarried() is { } cancelled )
 		{
 			Log.Info( cancelled );
+			return;
+		}
+
+		if ( rightPressed )
+			_rightWentDown = (Time.Now, Input.Mouse.Position);
+
+		// A QUICK RIGHT CLICK PUTS AN ARMED BUILD TOOL AWAY, and only with the Options switch "RMB cancel"
+		// on - the build tool's own right-button slots are bare RET 8. The park's mouse proc makes the
+		// test on release: under 200 ms held and under 8 pixels moved (0x0048842b..0x00488434).
+		var rightReleased = !rightDown && _rightWasDownForTool;
+		_rightWasDownForTool = rightDown;
+
+		if ( rightReleased && Time.Now - _rightWentDown.At < 0.2f
+			&& Vector2.DistanceBetween( Input.Mouse.Position, _rightWentDown.Where ) < 8f
+			&& QuickRightClick() is { } putAway )
+		{
+			Log.Info( putAway );
 			return;
 		}
 
@@ -652,22 +763,15 @@ public class Level
 		if ( ParkBuildMode.Current != ParkBuildMode.None )
 			return $"world click: {RunBuildMode( cellX, cellY )}";
 
-		// CLICKING A QUEUE CELL RE-ARMS THE QUEUE TOOL for the thing that queue serves - the original's
-		// mode 0x14, "edit this ride's queue", which refills its pending list from the object, rewalks
-		// the queue and then drops into the queue mode. It has to be tested BEFORE the thing under the
-		// cursor, because a queue cell names its ride through the owner a queue carries, so the click
-		// would otherwise resolve to that ride and open its window instead.
+		// CLICKING A QUEUE CELL HANDS BACK THE QUEUE TOOL for the thing that queue serves, anchored on the
+		// queue's far end - the original's mode 0x14, "edit this ride's queue". It has to be tested BEFORE
+		// the thing under the cursor, because a queue cell names its ride through the owner a queue
+		// carries, so the click would otherwise resolve to that ride and open its window instead.
 		if ( ParkState is { } state && Park is { } park
 			&& ParkState.CellFor( park, cellX, cellY ).Type == ParkRideChoice.QueueCellType
 			&& ParkPathBuilding.OwnerOf( state, ParkState.CellFor( park, cellX, cellY ) ) is var owner
 			&& owner != 0 )
-		{
-			// The rewalk is the half of 0x14 that is decoded: the saved pair is thrown away so the next
-			// question measures the cells as they are now rather than as the file recorded them.
-			state.InvalidateQueue( owner );
-
-			return $"world click: {ParkBuildMode.Arm( ParkBuildMode.Queue, owner )}";
-		}
+			return $"world click: {ParkPathBuilding.EditQueue( owner )}";
 
 		if ( thingUnderCursor != 0 )
 		{
@@ -683,13 +787,18 @@ public class Level
 	/// One click of an armed build mode: the first anchors, the second lays the run between.
 	/// </summary>
 	/// <remarks>
-	/// <b>The run aborts entirely on the first cell that refuses</b>, which is the original's own
-	/// behaviour - its line walker stops and reports failure rather than skipping the bad cell and
-	/// carrying on. A refused run leaves the anchor where it was, so the player can try a different
-	/// second click without starting again.
+	/// <b>The path tool's run stops at the first cell that refuses</b>, keeping what it laid and the anchor
+	/// where it was. The original refuses a red run before laying anything, from the path tool's own
+	/// preview, which is not built (<c>PATH_TOOL_PREVIEW</c>) - so this is the path tool's deviation; the
+	/// queue tool has its preview and follows it (<see cref="ParkPathBuilding.RunQueue"/>).
 	/// </remarks>
 	private static string RunBuildMode( int cellX, int cellY )
 	{
+		// The queue tool has rules of its own for where a run may go and when the tool is finished - see
+		// ParkPathBuilding.RunQueue. The path tool keeps the plain loop below.
+		if ( ParkBuildMode.Current == ParkBuildMode.Queue && ParkBuildMode.Anchored )
+			return ParkPathBuilding.RunQueue( cellX, cellY );
+
 		if ( !ParkBuildMode.Anchored )
 		{
 			ParkBuildMode.AnchorAt( cellX, cellY );
@@ -900,6 +1009,7 @@ public class Level
 		// something says otherwise - and a park entered after one left mid-run would otherwise open with
 		// a path tool armed and an anchor pointing at a cell in a different park.
 		ParkBuildMode.Forget();
+		ParkPicking.Pinned = null;
 
 		Audio.StopAll( StopAllSeconds );
 		ParticleSystem.Current?.Shutdown();

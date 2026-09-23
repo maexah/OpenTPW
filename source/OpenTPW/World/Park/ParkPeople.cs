@@ -563,6 +563,9 @@ public sealed class ParkPeople : Entity
 		member.SetActivity( StaffActivity.Held, (int)GameClock.Ticks );
 		_carriedStaff = thingId;
 
+		// Carrying somebody is a mode of its own, which puts any build tool away.
+		ParkBuildMode.Disarm();
+
 		Log.Info( $"People: picked up thing {thingId}" );
 
 		return true;

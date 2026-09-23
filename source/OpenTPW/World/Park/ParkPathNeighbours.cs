@@ -72,11 +72,12 @@ public static class ParkPathNeighbours
 			return;
 
 		// A path laid over a queue cell DEMOTES it before any neighbour work - the original does this
-		// at the top of the same function, so it happens in the linker as well as in the stamp.
+		// at the top of the same function (0x00534906..0x00534913), so it happens in the linker as well as
+		// in the stamp. It writes the type and nothing else: the direction, the flags and the owner stay.
 		var self = ParkState.CellFor( park, x, y );
 
 		if ( self.Type == QueueType )
-			state.SetRecord( x, y, self with { Type = PathType, Direction = 0 } );
+			state.SetRecord( x, y, self with { Type = PathType } );
 
 		foreach ( var (bit, acrossBy, downBy) in Ring )
 		{

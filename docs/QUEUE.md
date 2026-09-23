@@ -187,10 +187,66 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   **One instrument defect found and recorded as `VERIFYING.md` 116:** a mutation harness restores the
   SOURCE and leaves the last mutation's BINARY on disk, and the game run minutes later drove it - which
   reported the queue-cell click as broken when it was not.
+  **>>> THE NODE, and what it took: 2026-09-22, `alexah/115-a-placed-ride-lays-its-queue-node`. <<<**
+  Alexah, twice: *"The node never shows up to begin building a queue."* **Decoded first, two workflows
+  with a refuter per claim, and built from the decode.** The node is not a marker and not an arrow: when
+  a ride with a queue goes down, **the placer stamps a one-cell NOMODIFY queue cell before its entrance**
+  (drawn as `quedead`), a NOMODIFY path before its exit, and **the commit hands the player the queue tool
+  anchored on that cell** - `FUN_0052a050` then `FUN_0052f580(3,0)`. So the next click lays the queue.
+  The shipped park carries every stub: its nineteen NOMODIFY cells are the ten-cell avenue and these nine.
+  **Four more defects came out of the decode, one of them large.**
+  **(1) The shape alphabet was wrong.** `Info.Shape` is looked up in the executable's own table at
+  `0x007396c8` - a keypad, `8 6 2 4` the entrances and `N E S W` the exits - so **`2` is the entrance and
+  `S` an exit**, and the reader turns the rows upside down. The old reading agreed with the Belly Bounce
+  by symmetry and nothing else: six jungle rides had no entrance at all and six more had it on the wrong
+  cell. All eleven placed catalogue objects now land where the save has them.
+  **(2) A queue run on bare ground never joined its neighbours both ways, nor the path it ended on.** The
+  writer the old `QUEUE_CELL_NEIGHBOUR_AUTHORING` count could not find is the queue arm of
+  `FUN_005348d0`: a gated link back to the previous cell, a bond to the entrance on a run's first cell,
+  and nothing by type. The run's last cell may be a path - it stays a path, is joined, takes the ride as
+  owner, and the tool puts itself away. Replaying it reproduces the shipped queue field for field.
+  **(3) The tool never put itself away** (`Disarm` had no caller). It now ends on a path or its own
+  queue, on a click at its anchor, on a red preview, and on a quick right click with RMB cancel on.
+  **(4) The ride window's queue button is decoded**, `FUN_004af200(0)`: it installs mode `0x14`, the same
+  "edit this queue" a click on a queue cell installs, which re-anchors on the queue's far end. The
+  declared deviation and its count are gone.
+  **The squares are built too** - the queue tool's strip from its anchor to the pointer, blue, red,
+  `m_link`, `m_end`, from `data/generic/dynamic/textures` - and the cursor follows them. Ripple, red blink,
+  icon turn and blend are counted. **`garrow.MD2` / `rarrow.MD2` are not the node**: an older model
+  version the only `.md2` reader refuses, never named in the image - shipped data nothing reaches.
+  **Confirmed through the PLAYER's route, every value predicted first:** `carry 1100` and a world click
+  at (42,24) answered `queue node at (43,23)` with the tool armed there; the cell read `type 3 neighbours
+  0x10 direction 0x10 flags 0x0020 tile set 2 index 1 parent (42,24)`; the strip to (39,23) read blue x4
+  then `m_link`; one click laid three cells and joined the path (`0x50`, `0x44` x3, the path gaining
+  `0x04` and the ride as owner). The queue button, a queue-cell click, a red run, the anchor click and
+  `rightclick` each did what was predicted. **Aztec Mayhem, one of the six the old reading gave no
+  entrance, placed at (57,23) with its node at (58,22), its `N` exit at (59,23) and that exit's path at
+  (59,22), joined to the loop in one click.** After `load 40`, guests chose the new Belly Bounce, one stood
+  `InQueue` in the queue the player laid and one went `BeingAdmitted` to `Riding`, screaming.
+  Photographed: the node with its square, the strip, the joined queue, the exit joined from the far side,
+  Aztec Mayhem. `save/` unchanged within the second run; the first run's `opentpw.cfg` rewrite was the
+  loading bar relearning jungle's step count after the park started loading four more textures.
+  **One prediction was wrong and says so:** the corpus test expected fourteen placed objects and compared
+  eleven - the decoder's fourteen counted the bus, gates and lights, which the buy catalogue does not
+  carry. All eleven matched. `VERIFYING.md` 117.
+  **A review workflow then found six real defects, each fixed and decoded where it needed to be:** a queue
+  run across a path kept the path's links (the stamp force-clears it first); nothing put the queue tool
+  away when the player picked up something else (one mode, not a tool and a hand); **selling or moving a
+  ride left its NOMODIFY node standing for good, so a moved ride could not go back on its own spot** -
+  decoded from `FUN_00527ee0`: selling drains the whole queue, node included, refunds N-1 cells, and
+  hands the paths before its ends back as ordinary path; placement refusal now follows the placer's own
+  test pass; the preview's cash test skips path cells and shows `c_cash`; and the Ctrl-to-place-another
+  and track-ride branches are built or counted. Confirmed in a third run: `sell` answered `its queue for
+  225`, all four cells went, and the same ride went straight back onto (42,24) with its node.
 - [ ] **Q4. Sell leaves the ride's script bound and scheduled.** `ParkBuilding.Sell`
   (`ParkBuilding.cs:115-160`) removes the model and the state object; `ParkRides` has no unbind. Add
   it, and drop queue cells keyed to the sold thing. Confirm: sell a running ride, `rides` census no
   longer lists it, no errors in the log, screenshot.
+  **The queue half landed with Q3's node** (`alexah/115`): `Sell` drains the queue and releases the ends'
+  paths, because the node made its absence a regression. The script unbind is still the whole of this.
+  **Also found, not measured:** `Unstamp` clears a footprint with `ClearRecord`, which falls back to the
+  SAVE's record - so selling a thing the save placed would leave its cells typed 4, 9 and 10 in the
+  running park. Read from the code only; check it when this item is taken.
 - [ ] **Q5. Console Move is Sell then Buy.** `ParkBuilding.cs:163-177`. A refused cell loses the
   object and banks the refund. Do Sell then Carry, as `ParkObjectWindow.Move` does. Return a result
   value, not a string the caller parses (`:171`). Confirm: move to a cell that refuses, screenshot the

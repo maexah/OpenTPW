@@ -49,7 +49,7 @@ Jungle: **96x85 cells, 97x86 vertices, 8342 heights, 8160 cell records.** Valida
 
 | Flag bit | What it is | Confidence |
 |---|---|---|
-| `0x0001` | **Buildability, NOT visibility.** Do not cull on it | Confirmed |
+| `0x0001` | **Hides the cell from the terrain pass.** `FUN_0056f670` skips any cell carrying it (`TEST byte [EAX],0x1` at `0x0056f9ce`). Set in `base.MD2` on exactly the 1,159 jungle-grid cells of mType 2, 30 and 7, and at run time on every cell the tile rule answers (0,8) — footprint, entrance, exit and queue cells (`FUN_0046df50`, `OR 0x101` at `0x0046e012`). A second, optional pass (`FUN_00570d90`, gated on `DAT_008bcbc8 & 0x10000`) has no such test | Confirmed 2026-09-22 |
 | `0x0002` | Preserved by the footprint stamper; meaning not recorded | — |
 | `0x0004` | Selects the triangle diagonal when `0x0800` is set | Stated by the RE pass, **still UNVERIFIED** |
 | `0x0008` / `0x0010` / `0x0020` | Rotation, one field of exactly four states (`flags & 0x38`) | Confirmed |
@@ -743,7 +743,7 @@ Decompiled 2026-09-22. The per-cell op worker switches on its op byte:
 | `0x81` | calls `FUN_005365d0` — the **tile** rule, i.e. retile |
 | `0x82` | calls `FUN_005227e0` — sets the cell's **direction** byte |
 | `0x83` | `cell[+0x10] = DAT_00818698` — the **owning object** |
-| `0x84` | `cell[+0x20] = DAT_008186bc++` — the **crossing counter** |
+| `0x84` | `cell[+0x40] = DAT_008186bc++` (`0x005340fa`..`0x005340ff`). The `+0x20` word is instead the **re-stamp counter**, which the stamp bumps when a cell is stamped with the type it already is |
 | `0x85`, `0x86` | track bookkeeping and the thing notification |
 | `0x87` | the teardown arm, into `FUN_005367a0` / `FUN_00527ee0` |
 | `0x32` | `ClearCell` plus a direction-driven relink of what is left |
@@ -772,7 +772,7 @@ cardinal step it fetches the neighbour and branches on the neighbour's type:
 | 1 (path) | links unconditionally — sets the step's bit on this cell and the opposite on the neighbour |
 | 9 (entrance) | links **only when `neighbour.Direction & (the bit of the step taken toward it)`** |
 | 10 (exit) | the same test, on the **opposite** bit |
-| 3 (queue) | forms no link at all; it only retiles, and plays effect `0x8b` |
+| 3 (queue) | forms no link at all; it retiles it and plays effect `0x8b` — only when the queue cell already carries the bit pointing back, the retile flag is set, and (for the sound) `DAT_00785a2c` is nought (`0x00534a76`..`0x00534ad2`) |
 
 The four blocks make the bit explicit: stepping north (`DAT_007cdba0` = (0,−1)) tests `& 0x01`,
 south (`…ba8`) `& 0x10`, east (`…bc8`) `& 0x04`, west (`…bd0`) `& 0x40`. **So the tested bit is the
@@ -838,25 +838,14 @@ So the bit a queue needs is authored at placement time, on both cells together, 
 neighbour rule — which is exactly why no replay of `FUN_005348d0` and no predicate over the finished
 map can reproduce it.
 
-**The `mDirection` half of the FACED-CELL write and the shipped park CONTRADICT each other, and the
-contradiction is not resolved.** The pair above has the faced cell taking `mDirection = H` as well as
-the bit, and the disassembly supports it: `FUN_005227e0` is an unconditional `MOV` into `+0x0d`, with
-no guard between it and the `FUN_00522700` beside it. Against that, the Belly Bounce's **exit** at
-(52,26) carries `direction 0x10`, whose exit-table step sends `0x10` to (x, y+1) = **(52,27)** — and
-that cell reads `neighbours 0x39 direction 0x00` in a running park: the bit, and no direction byte.
-The entrance side cannot arbitrate, because its faced cell (52,22) is a queue cell whose `0x10` the
-queue tool's own flow byte would write anyway.
+**The faced cell does not merely gain a bit: it is stamped a QUEUE cell there and then**, and that cell
+is what a player sees as the node to lay a queue from - see "What the placer builds in front of a thing"
+below. The exit's faced cell is a different arm altogether, a path stamp with no direction write, so the
+shipped (52,27)'s `direction 0x00` is what the exit arm writes and says nothing against the entrance pair.
 
-So there are two readings and neither is disposed of: either the placer's second write is reached
-conditionally, or something that later laid (52,27)'s path cleared the byte. **OpenTPW writes the bit
-on both cells and the direction on the end cell only** (`ParkBuilding.Mark`,
-`JoinToWhateverIsThere`) — the state the shipped park is actually in, since a queue cell's direction
-is supplied by the flow byte regardless. An earlier version of this page called the decode "refuted",
-which was stronger than the evidence: one shipped cell contradicts it, and the instruction does not.
-
-The arm is reached only when the build flag (`param_5`) is set, the test flag (`param_6`) is clear, and
-`FUN_0052fab0()` is non-zero — that gate is `DAT_008187f8 != 0 ? 0 : DAT_0081b0cc`. The exit half
-repeats the whole thing for `iStack_44`/`iStack_48` behind a second `FUN_0052fab0()` test.
+The pair is reached only when the build flag (`param_5`) is set, the test flag (`param_6`) is clear, and
+`FUN_0052fab0()` is non-zero — that gate is `DAT_008187f8 != 0 ? 0 : DAT_0081b0cc`, i.e. not an add-on
+and the item has a queue.
 
 | Address | What it is |
 |---|---|
@@ -894,6 +883,131 @@ inverted sense — with a test asserting the inverted value, and `RotateDelta` b
 this was read: a thing built at a quarter turn had its way in pointing 180 degrees from its own entry
 cell, back across its own footprint, where nothing could ever be joined to it.
 
+### What the placer builds in front of a thing
+
+Decoded 2026-09-22 and checked cell by cell against the shipped park. **After its sweep, and only when
+building, `FUN_00528a70` lays one cell in front of each end of a thing**, and for a thing with a queue
+that cell is the player's starting point for the rest of it.
+
+**A thing with a queue** (`FUN_0052fab0() != 0`: not an add-on, and the descriptor's `+0x40` —
+`Info.HasQueue` by key order — set when the build tool was installed, `FUN_0046d5a0`):
+
+- the entrance takes `mNeighbours |= Opposite(H)` and `mDirection = Opposite(H)` (`0x005297f0`,
+  `0x005297f8`), where `H` is the entrance character's bit turned by the angle (`DAT_00818c30`);
+- **the cell it faces is stamped a queue cell** (`0x00529808`..`0x00529890`, every call `ECX = ESI`): op
+  `0x87`, **op 3** through the stamp `FUN_005346d0`, `mNeighbours |= H`, `mDirection = H`, the
+  entrance's owner copied into `+0x10` (`FUN_00539210`), **`mFlags = 0x20` assigned** (`FUN_0053a510` is
+  a `MOV` into `+0x0e`), then ops `0x81` (retile — one link, so `quedead`), `0x85`, `0x86`, and the
+  queue is rewalked (`FUN_004de1f0`);
+- **the cell the exit faces is stamped a PATH** (`0x005299cb`..`0x00529b18`): op `0x87` unless it is
+  already path, op 1, the neighbour rule, ops `0x81`/`0x85`/`0x86`, `mFlags = 0x20` — and **no direction
+  write**. That is (52,27)'s `direction 0x00`.
+
+**A path already on that cell is destroyed**, with no refund: the queue stamp runs with the last-cell
+flag clear, so the gate allows queue over path, and the stamp force-clears it (`DAT_0081d7a8`, which
+bypasses NOMODIFY) whatever op `0x87` did. Its neighbours lose their bits toward it — the entrance
+among them, until the commit's `FUN_0052a050` puts that bit back.
+
+**The placer's test pass refuses the whole placement** (every marker red) in three cases. An end
+facing off the map makes it return null (`0x00529744`..`0x00529757` for the entrance,
+`0x005299e2`..`0x005299f5` for the exit). A queued entrance's faced cell is tested as op 4
+(`FUN_00532fc0( 0x204, 3, … )`), whose verdict passes only bare ground or a path without NOMODIFY — so
+another queue, another thing's placer cell, water or rock all refuse. Every other end — a queued exit,
+or the entrance of a thing with no queue — is tested as op 1 (`0x201`), which accepts a NOMODIFY path and
+refuses another thing's cells, red unless that thing's `+0x54` (`Info.OverwritePriority`, 5 on every
+shipped category) is below the placed item's.
+
+**A thing without one** gets a single path cell in front of its entrance (`0x005298d5`..`0x005299aa`),
+the same path stamp, and then relinks the paths round it; its entrance keeps `H` as its direction, where
+a queued thing's takes `Opposite(H)`. No exit cell.
+
+**All of it is free.** The commit raises `DAT_008186d4` before the placer runs (`0x00524b4a`) and the
+stamp debits nothing while it is set. The affordability test still runs as `cash - 0 >= 0`, so with the
+balance below nought the queue stamp is refused — and the placer ignores the refusal and writes the
+rest anyway.
+
+**The shipped park carries every one.** Its nineteen NOMODIFY cells are the ten-cell avenue the loader
+rebuilds from the design map (x 47..48, y 17..21) and these nine: the Belly Bounce's queue cell (52,22)
+— type 3, `neighbours 0x50 direction 0x10 flags 0x0020 owner 2996`, the only one of the park's four
+queue cells so flagged — its exit's path (52,27), and a path before each of the seven other entrances,
+(56,15) (57,15) (56,16) (56,17) (44,28) (43,29) (52,29).
+
+### The commit hands the player the queue tool
+
+**Placing a queued thing drops the player straight into mode 3, anchored on that queue cell.** In
+`FUN_00524960`'s mode-4 arm, after the placer returns `&DAT_00818c20` (the entrance's x, y and, at
+`+0x10`, `H`):
+
+    0x00525264  FUN_0052a050( &DAT_00818c20, &DAT_0081ede4, &DAT_0081ede8 )
+                  entrance |= Opposite(H); anchor = the entrance stepped by H's table
+                  (0x01 -> y+1, 0x04 -> x-1, 0x10 -> y-1, 0x40 -> x+1); faced.mDirection = H
+    0x00525296  FUN_0052fbd0()            the pending list emptied, then the anchor pushed
+    0x0052529e  FUN_0052f580( 3, 0 )      mode 3 - the setter that KEEPS the anchor
+
+`FUN_0052f580(3)` withdraws ten advisor ids, posts advisor message **`0xcb`** and sets cursor **4**,
+`c_queue.ani` (`FUN_00489720` registers it). Ops `0x85`, `0x86`, `0x83` and `0x81` then run on the
+anchor as a one-cell line, the queue is rewalked, and `DAT_00763ac0`/`ac4` get the `0x80` sentinel so
+the first click links nothing back. If the anchor reads as a path at that point, `FUN_0052f200(0,0)`
+ends the tool — unreachable in practice, because the placer has already stamped it a queue.
+
+A thing without a queue goes idle through `FUN_0052f580(0,0)` instead — **unless Ctrl alone is held**
+(the modifier word `0x0c`, from `GetAsyncKeyState` in `FUN_00486aa0`), which keeps mode 4 for another
+of the same. Karts and the water ride (`WhichTrackType` 1 and 2) lay their first track cells and then
+fall into the same seeding; coasters (3) skip the track step. An add-on (`DAT_008187f8`) seeds nothing.
+**Moving** a thing (verb `0x3b`) runs the same sequence at `0x005258a7`/`0x005258e1`.
+
+### A queue run, and how the tool puts itself away
+
+**The ops are applied op-major**: `FUN_00524960` calls `FUN_00536100` once per op over the whole line —
+`0x87`, the stamp, `0x80`, `0x82`, `0x85`, `0x86`, `0x83`, `0x81` (`0x005273fe`..`0x00527517`) — and uses
+only the last pass's answer. `DAT_00820aa4` marks the first cell of each pass, `DAT_00820ab8` the last.
+
+**Op `0x80` is `FUN_005348d0` with the laid type**, and for type 3 it takes its queue arm
+(`0x0053522d`..`0x00535597`), which makes **two links at most and none by neighbour type**:
+
+- **back to the previous cell of the line** — both bits — only when that cell's type equals the laid
+  type, fewer than two of its eight bits are set, and its owner is `DAT_00818698` or nought. On a pass's
+  first cell the step is the previous call's, saved in `DAT_00763ac0`/`ac4`. When the cell being linked
+  is a path, its two diagonals flanking the link are cleared (N `0x02|0x80`, E `0x02|0x08`, S
+  `0x08|0x20`, W `0x80|0x20`), gated on the type test alone;
+- **to the ride's entrance**, on the first cell only: the neighbour must BE the object's `mEntryPos` cell
+  and its direction byte must EQUAL the bit pointing back (N `0x10`, E `0x40`, S `0x01`, W `0x04`).
+
+No link to a path, an exit or another queue beside the run is ever made, so a queue laid alongside a path
+stays apart from it. The path arm (laid type 1) is the only one that demotes a queue cell to path, and
+it writes the type alone — not the direction.
+
+**The run's last cell may be a path, and that is how a queue is finished.** The stamp refuses queue over
+path on the last cell (`FUN_00535600` with `DAT_00820ab8` set) and raises `DAT_00820abc`, so the cell stays
+a path; `DAT_00816d64` still holds 3, so op `0x80`'s queue arm joins it to the last queue cell; op `0x82`
+gives it a flow byte if it had none; **op `0x83` gives it the ride as owner**; and op `0x81` answers
+nought, which ends the tool through `FUN_0052f200(0,0)` — sound `0x8b` if the preview called the end a
+link (`DAT_00816d60`), advisor message `0x151` if not. (48,22), where the Belly Bounce's queue meets the
+path, is the only one of the park's 78 path cells with an owner, 2996. **Replaying placement and one
+click from (52,22) to (48,22) reproduces all five cells of the shipped queue field for field.**
+
+The tool also ends when the click lands **on the anchor itself** (the pending cell is laid first), when
+**the preview had flagged a red cell** (`DAT_00816d48`: nothing is laid, sound `0xaf`,
+`0x00524a63`..`0x00524acd`), and on **a right click under 200 ms and 8 pixels** — but only with the Options
+switch "RMB cancel" on (`DAT_0078d911`, control `0x1d4c5`, UITEXT 331; `0x0048842b`..`0x00488434`). The
+build tool's own right-button slots are bare `RET 8`. No keyboard exit was traced. Otherwise the anchor
+moves to the snapped target, so an L is laid a click at a time.
+
+### Editing a queue: mode `0x14`, and the ride window's queue button
+
+**The ride window's queue button is `FUN_004af200( 0 )`** — `FUN_004af600`, the ride window's handler,
+sends control `0x3e34` there, and `0x3e2a` to `FUN_004af200( 1 )`, the track twin. It selects the
+window's thing, installs the build shell with verb `0x14` (`FUN_0046c580( 0x14 )`) and runs the apply
+dispatcher at once (`FUN_00524960( 0, 0, 0, 0 )`). **Clicking an existing queue cell installs the same
+`0x14`.**
+
+The dispatcher's `0x14` arm (`0x005260f5`..`0x00526120`) calls `FUN_00530120( object )`, which empties
+the pending list, walks from `mEntryPos` along the entrance's link and then the queue, pushing each corner
+(two perpendicular cardinal links, `FUN_0053ae00`), **unlinks the queue's last cell from the path it
+reaches** — both bits cleared, both cells retiled — and anchors on that last cell (the faced cell when
+there is no queue). The arm then rewalks and enters mode 3 with `FUN_0052f580(3,0)`. So editing a queue always carries on from its end,
+and finishing the run joins it up again.
+
 ### Where a built thing's entry and exit cells come from
 
 The same constructor derives all three cell handles, at `0x004db2da`..`0x004db36b`, each as a delta
@@ -911,20 +1025,37 @@ the decompiler prints only two of its three arguments and calls it `void` while 
 result, which is the trap this page already warns of for `CellEdge`.
 
 **The deltas come from the item's shape picture, and `FUN_00413410` is what reads them.** It walks the
-grid at descriptor `+0x18`, stores the column and row of the cell holding **9** into `+0x494`/`+0x498`
-as the entrance, then looks for **10** and stores that into `+0x4a0`/`+0x4a4` as the exit. Two
-fallbacks matter and both are reproduced rather than tidied: **no 10 leaves the exit on the entrance**,
-which is why `mExitPos == mEntryPos` on ten of Lost Kingdom's eleven placed objects; and **no 9 leaves
-both at nought**, the anchor cell itself. `+0x4b0`/`+0x4b4` is copied straight from `+0x30`/`+0x34`.
+grid at descriptor `+0x18` **column by column**, each column from row 0, and stores the first cell of
+kind **9** into `+0x494`/`+0x498` as the entrance, with that cell's compass bit at `+0x49c`; then the
+first kind **10** into `+0x4a0`/`+0x4a4` as the exit, bit at `+0x4a8`. Two fallbacks matter and both are
+reproduced rather than tidied: **no 10 leaves the exit on the entrance**, bit and all, which is why
+`mExitPos == mEntryPos` on ten of Lost Kingdom's eleven placed objects; and **no 9 leaves both at
+nought**, the anchor cell itself, with bits `1` and `0x10`. `+0x4b0`/`+0x4b4` is copied straight from
+`+0x30`/`+0x34`.
 
-**Which characters those are was measured, not assumed.** `bouncy.sam` draws `*S*` / `***` / `***` /
-`*2*`, putting its `S` at column 1 row 0 and its `2` at column 1 row 3 — and the shipped save gives
-that Belly Bounce, anchored at (51,23), `mEntryPos` **2997** = (52,23) and `mExitPos` **3381** =
-(52,26), which are exactly anchor + (1,0) and anchor + (1,3). Neither the picture nor the save alone
-names a letter; the two meeting on one cell does. Across all four themes **263** items carry a shape
-block, **44** an `S` and **137** a `2`, and **every one of the 44 has both** — so 93 items declare an
-exit with no entrance and take the second fallback. The rest of the alphabet (`.`, `N`, `<`, `>`, `E`)
-is **not** decoded and must not be guessed at.
+**The characters are the executable's own alphabet, and `S` is NOT the entrance.** The shape reader
+`FUN_00402720` looks each character up in a nineteen-row `{ character, kind, bit }` table at
+**`0x007396c8`** (twelve bytes a row, passed at `0x00401a46`):
+
+    .  0        *  4        Q  3        @  1        +  0x0b      #  0x10
+    8  9/0x01   6  9/0x04   2  9/0x10   4  9/0x40   O  9/0x01
+    N 10/0x01   E 10/0x04   S 10/0x10   W 10/0x40   X 10/0x01
+    D  0x17     >  0x17/0x04            <  0x17/0x40
+
+— a numeric keypad: `8 6 2 4` are the entrances and `N E S W` the exits. **And the reader turns the
+rows upside down** once it reaches the closing fence (`0x00402938`..`0x004029ab`, row `i` swapped with
+row `rows-1-i`), so row 0 of the grid is the last row drawn. It skips a space without making a cell,
+counts a blank line as a row, and refuses the whole picture on a character outside the table
+("Illegal map character").
+
+**The obvious reading — `S` the entrance, rows as drawn — agrees with this one on the Belly Bounce**,
+whose `S` and `2` are mirror images of each other. They part on the Staff Room (`**` / `*2` at 90
+degrees from (58,16)) and the Jungle Spray (`***` / `***` / `*2*` at (51,30)): the executable's reading
+predicts `mEntryPos` and `mExitPos` for **all fourteen** object records in the shipped save - the eleven
+placed things and the fixed bus, gates and lights at (0,0) - and the other reading gets twelve. Measured over all **274** shipped shape blocks: every
+entrance is a `2` (137, one per item at most), the 72 exits are 44 `S`, 26 `N` and 2 `E` (one per item
+at most, always beside an entrance), and no picture uses a space, a blank line or an unknown character.
+Every one of the 72 items with `Info.HasQueue` has both.
 
 **Rotation is never changed by a user input on any traced path.** It is reset to 0 on commit,
 auto-oriented from the cell's direction bits when re-placing an existing thing, and inherited from the
@@ -938,6 +1069,46 @@ The per-cell verdict `FUN_00535670` returns a **marker texture index** into a 20
 13 `m_erase`. **`m_cross` and `m_nocash` have no producer** - no path passes either index. And
 `m_nopath.tga` ships in `data/generic/dynamic/textures` but its name appears **nowhere** in the
 executable.
+
+**The markers are flat squares in a procedural mesh, not models.** `FUN_0053bfe0` builds three
+"dynamic faces" meshes through `FUN_0053d790` — `BlueprintMesh` (these markers), `WaterMesh` and
+`FlagsMesh` — each with the twenty textures named at `0x00763b38` (`blue, red, orange, m_enter, m_exit,
+m_direct, m_front, m_inout, m_link, m_break, m_cross, m_end, m_nocash, m_erase, red, gby_sur1-3,
+gte_lgo1` twice), searched in `Data\Generic\Dynamic\Textures` (or `STexture` when `FUN_0054dcc0()`) and
+then the level's own `Dynamic` folder, where each theme's `dynamic.wad` supplies only `orange.wct`.
+`FUN_0053c8d0` appends one square to the face list at `0x00820b00` (`0xa0` bytes a record, count
+`DAT_00871ee0`, cap `0x806`, shared with the polygon faces of `FUN_0053c9c0`).
+
+A square covers one cell, 10 by 10 — face 0 of the face builder `FUN_0053df30`, which also picks the UV
+base (5 for textures 8..14) and turns the corners by the square's orientation byte. **Each corner sits
+at the terrain height there + a lift + 1.5 + a sine term** indexed by `DAT_00874fc0 + x + z`, which `FUN_0053c3f0` raises by 0.1 a call, so the
+squares ripple; the sine table's amplitude is not established. The lift is `ceil10(FUN_00452ae0)` over
+mType 4, 9, 10, 7 and `0x1e` cells and the track kinds, else nought; side faces are added toward a
+lower neighbour. **Red blinks**: `FUN_0053c8d0` drops texture 1 while `DAT_00763c98` is nought, which
+toggles on a counter (on past 1, off past 6) of an unestablished unit. Textures 8 to 14 take UVs turned by
+the camera's yaw (`DAT_00790a38`), so `m_link` and `m_end` stay upright on screen. The blend state is
+not established.
+
+**In mode 3 the queue tool draws a strip every UI tick** (`0x1e` → `FUN_0046c2a0` → `FUN_0046c660` →
+`FUN_005234d0`): the list is cleared, the hovered cell is snapped to the anchor's longer axis, and
+`FUN_00536100( 0x103, anchor, target )` appends one square a cell with the verdict `FUN_00535670( 3 )`,
+which answers only **0 blue, 1 red, 8 `m_link`** (the last cell is a path — cursor `c_link`) or
+**11 `m_end`** (the last cell is this ride's own queue end — cursor `c_end`). A foreign queue cell is
+red; a ride, entrance or exit cell is blue only when its item's `+0x54` is below 3, and every jungle
+ride's is 5; after a refusal every later cell is red, and any red switches the cursor to
+`c_noplace.cur` (`FUN_0052f950`). **The anchor is always the first square**, so the cell before a new
+ride's entrance is marked the moment it is placed.
+
+**While a thing is carried** (mode 4) the placer runs twice a tick, a test pass that turns everything red
+on any failure, and a draw pass: footprint row 0 shows `m_front`, other footprint cells the verdict, the
+cell before the entrance `m_enter` (turned to face it; `m_inout` for a thing with no queue), the cell
+before the exit `m_exit`, and `m_direct` goes on the cell a kind-`0x17` cell points to. These squares
+glide, following a smoothed cursor.
+
+**`data/generic/dynamic/garrow.MD2` and `rarrow.MD2` are not markers and are never drawn.** They are a
+model version (`0x18`/`0x17`) the one `.md2` reader `FUN_0046d6d0` refuses — it frees and returns null
+below `0xdd` unless flag bit 0 is set, and neither of its two call sites (`0x0046282b`, `0x0046dd06`)
+sets it — and no `qickload.txt` read and no string in the image names them.
 
 ### The object window's stats panel
 
@@ -1030,6 +1201,26 @@ flag gates the staff dismissal box, UITEXT 397.
 **Every caller of `FUN_004de1f0` is in the cell-editing family**, as this project suspected: five
 functions, eight call sites, all of them the map-click apply, the cell-type setter, the run-step apply
 and the footprint stamp.
+
+#### Demolishing a queued thing
+
+Decoded 2026-09-22, every claim re-derived by a refuter. **Selling a thing with a queue clears the whole
+queue, the placer's NOMODIFY node included**, before its footprint goes (`FUN_00527ee0`, when the item's
+`+0x40` is set and the queue has cells): `FUN_00530120` lets the queue's end go of its path, the force
+flag `DAT_0081d7a8` is raised, and `FUN_0052fe50` drives op `0x32` — `ClearCell` under force, which
+bypasses NOMODIFY, unlinks no neighbour, and zeroes the cell's mask, direction, owner and flags. **Each
+cell refunds `Costs.QueueCell * pct / 100`, and then one cell's worth is debited** (`FUN_004d01f0`), so a
+queue of N cells returns N−1 — the node the placer laid for nothing. The Belly Bounce's four return 225.
+
+**The paths before its ends go back to ordinary path.** A first footprint pass looks past each end — the
+entrance along the opposite of its direction byte, the exit along it, which for a queued entrance leads
+into its own footprint and so finds nothing — and a NOMODIFY path found there loses the flag
+(`FUN_0053a530( 0x20 )` is `AND NOT` on `+0x0e`), unless it still serves two or more ends or is
+design-map path (bit 8 of its `+0x26` seed, which in the jungle marks exactly the ten-cell avenue). The
+second pass clears the footprint, unlinking the entrance from its four cardinals and the exit from all
+eight, so each such path also loses its bit toward the end. The path the queue joined keeps the ride as
+its owner, pointing at an empty cell. **Move is the same call with the same flag**, after one extra walk
+that saves the corner list.
 
 ### Hiring is a placement verb, and there is no hire fee
 
@@ -1426,20 +1617,17 @@ demolition calls that same function over each footprint cell.
 - **Deleting a path refunds nothing; deleting a queue cell refunds** `perCellQueueCost * pct / 100`
   credited through `FUN_004d0190`. The asymmetry is in the code, not in the evidence. **Two
   preconditions the refund carries**: a cell of mType 9 never refunds, and neither does a queue cell
-  whose owner cell has mType nought. *(An earlier reading that object demolition DEBITS rather than
-  credits is withdrawn — the queue cells drained during demolition each run this refund path, so the
-  net is not a plain subtraction.)*
+  whose owner cell has mType nought. Demolition drains a queue through this same refund and then
+  takes one cell's worth back — see "Demolishing a queued thing" under "Sell, move and the scrap value".
 - The one hard refusal is **NOMODIFY, `mFlags & 0x20`**, which `FUN_00536490` sets on each path cell
   it rebuilds from the level's design map. The single escape is a path cell with no neighbours, which
   logs *"Removing path cell with no neighbours but NOMODIFY set"* and clears its own flag.
 
-  **That is the RUNTIME flag, and the shipped save does not match it — measured.** Of Lost Kingdom's
-  78 path cells, **only 18 carry `0x20` in the save** (19 cells park-wide, the extra one being a
-  queue cell). So "the player cannot delete the level's own paths" holds of the original's
-  reconstructed state, and a reader that takes its flags from the save — as OpenTPW does — protects
-  18 cells, not 78. *A hypothesis, left as one: the 18 are plausibly the author's own fixed paths and
-  the other 60 were laid while the scenario was authored. Checking those 18 against `base.map`'s
-  design bits would settle it.*
+  **The shipped save's nineteen flagged cells are exactly two sets, measured cell by cell:** the ten-cell
+  avenue at x 47..48, y 17..21, which is design-map path, and the nine cells the placer laid before
+  things' ends (see "What the placer builds in front of a thing") - eight paths and the Belly Bounce's
+  queue node. Lost Kingdom's other sixty path cells carry no flag and may be lifted. Whether
+  `FUN_00536490` rebuilds any design-map path beyond the avenue at load is not established.
 - **mType 30 is outside the jump table** and is silently untouched.
 
 **The four per-cell costs are zero in the image and come from game data** — which closes here rather
@@ -1513,25 +1701,27 @@ retile did **not** report failure; a failed run leaves the anchor where it was. 
 record per click carrying a single cell (`AR - %d (%d, %d)`), where a real drag would have to record
 every intermediate cell or a start/end pair.
 
-**Per cell, in order:** `0x87` clear, `<mode id>` stamp, `0x80` join neighbours, `0x82` flow
-direction, `0x85`/`0x86` fix-ups, `0x83` owner, `0x81` retile. `FUN_00536100` walks the line and
-**aborts the whole run** the moment one cell refuses.
+**Per line, one op at a time:** `0x87` clear, `<mode id>` stamp, `0x80` join neighbours, `0x82` flow
+direction, `0x85`/`0x86` fix-ups, `0x83` owner, `0x81` retile — each a whole pass of `FUN_00536100` over
+the line, and a refusal stops only that pass. See "A queue run, and how the tool puts itself away".
 
 **`FUN_005346d0` is the stamp**, and its order matters: stamping a cell that is *already* that type
 just bumps the re-stamp counter at `+0x20` and returns success **having charged nothing**; queue over
 path **force-clears the path with no refund**; the affordability test is `cash - price >= 0` and
-refuses the cell, and therefore the run; the debit happens **after** the type write; and a path
+refuses the cell - which stops only the stamp's own pass, the preview having already turned an
+unaffordable run red; the debit happens **after** the type write; and a path
 stamped over a queue cell **invalidates the owning object's queue**.
 
 **Refusals are shown as a CURSOR, not as text** (`FUN_0052f950` → `FUN_004a2aa0`): `0x14` is
 cannot-afford, `8` is blocked. Off-map is `FUN_004d8300`, `0 <= x,y < 0x80`.
 
-**You do not pick "queue" as a tool.** Mode 3 is never installed from the UI at all — it is reached
-only from inside the commit handler, the demolish path, or mode `0x14` ("edit this ride's queue"),
-which refills the pending list from the object, rewalks the queue and *then* drops into mode 3.
-What the UI does install: clicking a path cell or bare ground gives mode 1, clicking a queue cell
-gives `0x14`, and the **buy window** gives mode 4 for a real item and **`0x39` / `0x3a` for the
-pseudo-item ids −1 and −2** — which are exactly the Buy Land and Clear Land rows.
+**You do not pick "queue" as a tool.** Mode 3 is never installed directly — it is reached from inside
+the commit handler (placing or moving a queued thing), the demolish path, or mode `0x14` ("edit this
+ride's queue"), which the ride window's queue button and a click on a queue cell both install. See "The
+commit hands the player the queue tool" and "Editing a queue" above. What the UI also installs:
+clicking a path cell or bare ground gives mode 1, and the **buy window** gives mode 4 for a real item
+and **`0x39` / `0x3a` for the pseudo-item ids −1 and −2** — which are exactly the Buy Land and Clear
+Land rows.
 
 ### What the adversarial pass overturned, and it is not cosmetic
 
@@ -1576,18 +1766,12 @@ the **0x28** record. Both cannot be right about the same byte, and no third witn
 **Do not cite either as settled.** Nothing in OpenTPW depends on it — cells are modelled as records
 rather than as raw memory — which is exactly why it is safe to leave open rather than guessed.
 
-**Still genuinely open:** who calls `FUN_0052fe50` — one dimension has it as the general pending-cell
-drain, the other finds its callers only inside `FUN_00527ee0`.
-
-**And the drain step is not the simple pop it looks like.** Each call commits **up to two cells**, so
-interior cells are committed **twice**; the bottom element is never committed and the count is left at
-**1**, not nought — `while (step())` therefore terminates with one element still in the list. There is
-also an **off-by-one in the shipped guard**: the push rejects only when the count exceeds `0x400`, so
-element `0x400` is writable and lands exactly on `DAT_0081d740`, the map-width global. Reproduce the
-behaviour, not the overrun.
-
-**Who calls `FUN_0052fe50`.** One dimension has it as the general pending-cell drain step; the other
-finds its only callers inside `FUN_00527ee0` (demolition). Unresolved.
+**`FUN_0052fe50` is called only by the demolisher `FUN_00527ee0`**, and each call clears a whole
+straight run: it pops the top element, anchors there in the delete-line mode `0x34`, and runs op `0x32`
+along the line to the next element. The bottom element is cleared as the far end of the last run (unless
+it is a path), and the count is left at **1** when the list empties. There is also an **off-by-one in the
+shipped guard**: the push rejects only when the count exceeds `0x400`, so element `0x400` is writable and
+lands exactly on `DAT_0081d740`, the map-width global. Reproduce the behaviour, not the overrun.
 
 ### Still open
 

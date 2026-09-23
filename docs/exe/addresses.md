@@ -11,6 +11,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 
 | Address | What it is | Cited in |
 |---|---|---|
+| `0x00402938` | Shape reader `FUN_00402720`: start of the row swap that turns a picture upside down | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
+| `0x004029ab` | Shape reader: end of the row swap | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
 | `0x00402d70` | | OpenTPW/VM/RideScript.cs OpenTPW/Global/GameCalendar.cs  |
 | `0x00402d90` | | OpenTPW/World/Advisor/Advisor.cs OpenTPW/Global/GameClock.cs  |
 | `0x00402db0` | | OpenTPW/Global/GameClock.cs  |
@@ -92,6 +94,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00485a70` | | OpenTPW/UI/UiFonts.cs  |
 | `0x00485d20` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x00486bce` | | OpenTPW/Global/GameClock.cs  |
+| `0x0048842b` | Park mouse proc: a quick right click installs the idle mode (RMB cancel) | OpenTPW/World/Level.cs  |
+| `0x00488434` | Park mouse proc: and ends the build tool, `FUN_0052f200(0,1)` | OpenTPW/World/Level.cs  |
 | `0x00488a00` | | OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x00489ca0` | | OpenTPW/UI/WindowStack.cs  |
 | `0x00489de1` | | OpenTPW/Client/Renderer.cs  |
@@ -187,6 +191,44 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00521e60` | | OpenTPW/World/Particles/ParticleSystem.cs OpenTPW.Files/Formats/Particle/ParticleLibraryFile.cs  |
 | `0x00522360` | | OpenTPW/World/Particles/ParticleSystem.cs OpenTPW.Files/Formats/Particle/ParticleLibraryFile.cs  |
 | `0x005224f0` | | OpenTPW/World/Particles/ParticleSystem.cs  |
+| `0x00524a63` | Build commit: a red preview (`DAT_00816d48`) lays nothing, sound `0xaf` | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00524acd` | Build commit: end of the red-preview refusal | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00524db7` | Place commit: karts and the water ride lay their first track cells | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x00524e49` | Place commit: end of the track-cell seeding | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x00525264` | Place commit: `FUN_0052a050` anchors the queue tool on the cell before the entrance | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x0052526e` | Place commit: dereferences that cell with no null test | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x0052529e` | Place commit: `FUN_0052f580(3,0)`, mode 3 keeping the anchor | OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkBuildMode.cs  |
+| `0x005253c4` | Place commit: a thing with no queue goes idle, `FUN_0052f580(0,0)` | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x005260f5` | Mode `0x14`: `FUN_00530120` anchors on the queue's end | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00526120` | Mode `0x14`: then `FUN_0052f580(3,0)` | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00527222` | Mode-3 commit: start of the queue run arm | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x005275f2` | Mode-3 commit: the tool ends through `FUN_0052f200(0,0)` | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x005292b2` | Placer sweep: the exit takes its turned bit as its direction | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x005293c3` | Placer sweep: the entrance takes its turned bit as its direction | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x00529744` | Placer: returns null when the entrance faces off the map | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x00529757` | Placer: end of that test | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x005297e7` | Placer: start of the queued arm (entrance pair and the queue cell before it) | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x00529808` | Placer: op `0x87` on the cell before the entrance, then the queue stamp | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x00529885` | Placer: last op on that queue cell | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x00529890` | Placer: the queue rewalked, `FUN_004de1f0` | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x005298d5` | Placer: a thing with no queue gets a path before its entrance | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x00529951` | Placer: start of the four-cardinal relink round an entrance path | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x005299aa` | Placer: end of that relink | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x005299cb` | Placer: the exit half, gated on `FUN_0052fab0` | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x005299e2` | Placer: returns null when the exit faces off the map | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x005299f5` | Placer: end of that test | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x00529abf` | Placer: start of the relink round the exit path | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x00529b18` | Placer: end of the exit half | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x0053473c` | Stamp: queue over path force-clears the path, `FUN_005367a0(0,0)` | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x0053475d` | Stamp: end of the force-clear | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00534906` | `FUN_005348d0` path arm: a queue cell becomes path, type only | OpenTPW/World/Park/ParkPathNeighbours.cs  |
+| `0x00534913` | Path arm: the type write | OpenTPW/World/Park/ParkPathNeighbours.cs  |
+| `0x0053522d` | `FUN_005348d0`: the queue arm, laid type 0 or 3 | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x0053525a` | Queue arm: first of the four entrance-bond probes | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00535323` | Queue arm: last entrance-bond probe | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00535597` | Queue arm: end | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x005358e9` | Queue verdict: the cash total skips queue over path | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x005358f1` | Queue verdict: end of that guard | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00540d90` | | OpenTPW.Files/Formats/Sprite/SpriteBankFile.cs  |
 | `0x005423a0` | | OpenTPW/UI/ScreenParticles.cs OpenTPW.Files/Formats/Sprite/SpriteBankFile.cs  |
 | `0x0054e682` | | OpenTPW/World/Level.cs OpenTPW/World/Advisor/Advisor.cs OpenTPW/Global/GameClock.cs  |
@@ -369,6 +411,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00702c8c` | | OpenTPW/World/Weather/Lightning.cs  |
 | `0x00702c94` | | OpenTPW/World/Weather/Lightning.cs  |
 | `0x00702ca4` | | OpenTPW/World/LobbyCameraMode.cs  |
+| `0x007396c8` | The `Info.Shape` alphabet, 19 rows of `{char, kind, bit}` | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
 | `0x00741c8c` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00741d40` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00742178` | | OpenTPW/World/Park/ParkWeather.cs  |
@@ -390,6 +433,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0075d0f8` | | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x0075d178` | | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x007622b0` | | OpenTPW/World/Park/CellLine.cs OpenTPW/World/Park/MapStep.cs  |
+| `0x00763b38` | The 20-entry marker texture table (`blue`, `red`, ... `m_link`, `m_end`) | OpenTPW/World/Park/ParkBuildMarkers.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00768ab4` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x00768fb8` | | OpenTPW/UI/FrontEnd/FrontEndLines.cs OpenTPW/UI/Park/ParkLines.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x0076dc18` | | OpenTPW/UI/FrontEnd/FrontEndLines.cs OpenTPW/World/Advisor/Advisor.cs  |

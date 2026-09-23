@@ -20,9 +20,8 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>What is deliberately not built yet, and is counted rather than guessed:</b> the per-cell
-/// placement markers (the <c>m_*</c> textures), rotation while carrying, and the age-based scrap
-/// curve - see <see cref="Sell"/>.
+/// <b>What is deliberately not built yet, and is counted rather than guessed:</b> the markers drawn while
+/// carrying (<c>CARRY_PREVIEW_MARKERS</c>) and the age-based scrap curve - see <see cref="Sell"/>.
 /// </para>
 /// </summary>
 public static class ParkBuilding
@@ -37,30 +36,45 @@ public static class ParkBuilding
 	/// Buys one item and stands it with its anchor on a cell. Answers a line saying what happened,
 	/// because every caller so far is something a person is reading.
 	/// </summary>
+	/// <remarks>
+	/// <b>This builds and nothing more.</b> What a player's own placement goes on to do - hand them the
+	/// queue tool on the cell before the entrance - is <see cref="PlaceCarried"/>'s, because that is the
+	/// commit handler's work in the original rather than the placer's.
+	/// </remarks>
 	public static string Buy( int catalogueId, int cellX, int cellY, int angle = 0 )
+		=> Build( catalogueId, cellX, cellY, angle ).Answer;
+
+	/// <summary>What one build did: the line to show, the thing it made, and the queue cell laid before it.</summary>
+	private readonly record struct Built( string Answer, int ThingId = 0, (int X, int Y)? QueueNode = null,
+		bool HasQueue = false, int TrackType = 0 );
+
+	private static Built Build( int catalogueId, int cellX, int cellY, int angle )
 	{
 		if ( Level.Current is not { } level || level.ParkState is not { } state
 			|| level.Catalogue is not { } catalogue || ParkObjects.Current is not { } objects
 			|| level.Park is not { } park )
-			return "buy: a park has to be loaded";
+			return new( "buy: a park has to be loaded" );
 
 		if ( !catalogue.TryGet( catalogueId, out var item ) )
-			return $"buy: this theme has no item {catalogueId}";
+			return new( $"buy: this theme has no item {catalogueId}" );
 
 		// The four the buy list itself refuses - see docs/exe/hud.md. WhichUIType 4 is the game's own
 		// "not shown in the UI", which is what the vehicles, the gates and the land tools carry.
 		if ( item.UiType is < 0 or > ItemDescriptionFile.Feature )
-			return $"buy: '{item.Name}' is UI type {item.UiType}, which no buy tab lists";
+			return new( $"buy: '{item.Name}' is UI type {item.UiType}, which no buy tab lists" );
 
 		var footprint = ParkObjects.FootprintAt( item, cellX, cellY, angle );
 
 		if ( Refusal( state, footprint ) is { } why )
-			return $"buy: '{item.Name}' will not fit at ({cellX},{cellY}) - {why}";
+			return new( $"buy: '{item.Name}' will not fit at ({cellX},{cellY}) - {why}" );
 
 		// The affordability test the original makes when a buy row is clicked, before it ever builds
 		// the placement mode.
 		if ( state.Balance < item.BuildPrice )
-			return $"buy: '{item.Name}' costs {item.BuildPrice} and the park has {state.Balance}";
+			return new( $"buy: '{item.Name}' costs {item.BuildPrice} and the park has {state.Balance}" );
+
+		if ( EndRefusal( state, item, cellX, cellY, angle ) is { } blocked )
+			return new( $"buy: '{item.Name}' will not fit at ({cellX},{cellY}) - {blocked}" );
 
 		var thingId = state.NextThingId();
 
@@ -94,9 +108,9 @@ public static class ParkBuilding
 		// Where a guest walks up to it, and where one is put down leaving it. The original derives both in
 		// the same constructor, from the item's own footprint picture turned by the angle it is being
 		// built at: mEntryPos is the anchor cell plus MapDelta::Rotate( entrance delta, angle ), and
-		// mExitPos the same with the exit's. Left at the record's default of nought, CanBeOffered refuses
-		// the thing before the queue is ever walked - so a queue laid and joined to a path still measures
-		// no cells at all, which reads exactly like a queue fault and is not one.
+		// mExitPos the same with the exit's. An item whose picture marks no entrance has both deltas at
+		// nought, so both land on the anchor cell itself - which is what the shipped park stores for each
+		// of its placed things that has none.
 		//
 		// mTopLeft is NOT set. The original writes it from a third descriptor pair this project has not
 		// named, and nothing in this tree reads the field, so setting it would be a guess with no
@@ -104,28 +118,23 @@ public static class ParkBuilding
 		var (entryX, entryY) = RotateDelta( item.EntryDeltaX, item.EntryDeltaY, angle );
 		var (exitX, exitY) = RotateDelta( item.ExitDeltaX, item.ExitDeltaY, angle );
 
-		// AN ITEM WHOSE PICTURE MARKS NO ENTRANCE GETS NEITHER END, rather than both of them on its own
-		// anchor. ItemDescriptionFile zeroes all four deltas when there is no S - even where the picture
-		// carries a 2 - so marking them anyway types a CORNER of the footprint as a ride entrance and
-		// joins that corner to whatever happens to lie north of it. Six of the jungle's seventeen rides
-		// are in this case, the three coasters among them.
-		//
-		// THE ORIGINAL IS NOT SIMPLY DOING THIS, and the difference is not decoded. Its placer walks the
-		// shape grid itself with independent case 9 and case 10 arms, so it plausibly marks the way out
-		// of an item carrying a 2 and no S, where the DERIVATION it shares with this (FUN_00413410)
-		// takes the no-9 fallback and zeroes both. Which governs is unread, so the ends are left unmarked
-		// and counted: a ride nobody can queue for is visible and correctable, where a footprint corner
-		// silently acting as an entrance is neither.
-		if ( !item.HasEntrance )
-			Unimplemented.Report( "PLACED_ITEM_WITH_NO_ENTRANCE_MARK" );
-
-		var entryPos = item.HasEntrance && ParkState.OnMap( cellX + entryX, cellY + entryY )
+		var entryPos = ParkState.OnMap( cellX + entryX, cellY + entryY )
 			? MapStep.CellId( cellX + entryX, cellY + entryY )
 			: 0;
 
-		var exitPos = item.HasEntrance && ParkState.OnMap( cellX + exitX, cellY + exitY )
+		var exitPos = ParkState.OnMap( cellX + exitX, cellY + exitY )
 			? MapStep.CellId( cellX + exitX, cellY + exitY )
 			: 0;
+
+		// The placer stamps each picture cell by its own kind, mapping the track kinds 0x0b, 0x10 and 0x17
+		// to the body's 4 - so those three and the body are what Stamp's single type reproduces. The empty
+		// cell '.' is stamped as body here too, and a 0x17 cell's neighbour is given type 0x15 in the
+		// original; neither is built.
+		foreach ( var kind in item.CellKinds ?? [] )
+		{
+			if ( kind is not (0x04 or 0x0b or 0x10 or ItemDescriptionFile.EntranceKind or ItemDescriptionFile.ExitKind) )
+				Unimplemented.Report( $"SHAPE_KIND_{kind}_PLACEMENT" );
+		}
 
 		var placed = new ParkWorld.CatalogueObject(
 			ThingId: thingId, CatalogueId: catalogueId,
@@ -139,7 +148,7 @@ public static class ParkBuilding
 			OperatingDuration: item.InitDuration );
 
 		if ( !objects.PlaceNow( placed, catalogue ) )
-			return $"buy: '{item.Name}' would not load, so nothing was built and nothing was charged";
+			return new( $"buy: '{item.Name}' would not load, so nothing was built and nothing was charged" );
 
 		state.AddObject( placed );
 		Stamp( state, footprint, cellX, cellY );
@@ -152,9 +161,16 @@ public static class ParkBuilding
 		state.EnterCell( cellX, cellY, thingId );
 
 		// After the footprint, never before: Stamp types every cell it covers, and the way in and the way
-		// out are two of those cells wearing a different type.
-		MarkWaysInAndOut( state, park, cellX + entryX, cellY + entryY,
-			cellX + exitX, cellY + exitY, angle );
+		// out are two of those cells wearing a different type. A picture with no entrance has neither.
+		var node = item.HasEntrance
+			? MarkWaysInAndOut( state, park, cellX + entryX, cellY + entryY, cellX + exitX, cellY + exitY,
+				item.EntryDirection, item.ExitDirection, angle, item.HasQueue, MapStep.CellId( cellX, cellY ) )
+			: null;
+
+		// The placer rewalks the queue once its stub is down (FUN_004de1f0 at 0x00529890), so the ride
+		// measures the one cell it already has.
+		if ( node != null )
+			state.InvalidateQueue( thingId );
 
 		state.Spend( item.BuildPrice );
 
@@ -169,8 +185,9 @@ public static class ParkBuilding
 			$"({cellX},{cellY}) turned {angle}, covering ({footprint.Left},{footprint.Top}).." +
 			$"({footprint.Right},{footprint.Bottom}) - the park has {state.Balance} left" );
 
-		return $"buy: '{item.Name}' built as thing {thingId} at ({cellX},{cellY}) for {item.BuildPrice}, " +
-			$"balance {state.Balance}";
+		return new( $"buy: '{item.Name}' built as thing {thingId} at ({cellX},{cellY}) for {item.BuildPrice}, " +
+			$"balance {state.Balance}" + (node is { } at ? $", queue node at ({at.X},{at.Y})" : ""), thingId, node,
+			item.HasQueue, item.TrackType );
 	}
 
 	/// <summary>
@@ -192,7 +209,8 @@ public static class ParkBuilding
 	public static string Sell( int thingId )
 	{
 		if ( Level.Current is not { } level || level.ParkState is not { } state
-			|| level.Catalogue is not { } catalogue || ParkObjects.Current is not { } objects )
+			|| level.Catalogue is not { } catalogue || ParkObjects.Current is not { } objects
+			|| level.Park is not { } park )
 			return "sell: a park has to be loaded";
 
 		if ( !state.TryObject( thingId, out var placed ) )
@@ -208,6 +226,12 @@ public static class ParkBuilding
 		var refund = item.BuildPrice;
 		var footprint = ParkObjects.FootprintAt( item, placed.CellX, placed.CellY, placed.Angle );
 
+		// Before the footprint goes, what the demolisher does outside it (FUN_00527ee0): a queued thing's
+		// queue is drained, node and all, and the paths laid before its ends go back to being ordinary path.
+		var queueRefund = item.HasQueue ? ParkPathBuilding.DrainQueue( state, park, placed ) : 0;
+
+		ReleaseEnds( state, park, placed );
+
 		objects.Remove( thingId );
 		state.RemoveObject( thingId );
 
@@ -219,8 +243,80 @@ public static class ParkBuilding
 
 		Log.Info( $"Building: sold '{item.Name}' (thing {thingId}) for {refund} - the park has {state.Balance}" );
 
-		return $"sell: '{item.Name}' thing {thingId} sold for {refund}, balance {state.Balance}";
+		return $"sell: '{item.Name}' thing {thingId} sold for {refund}" +
+			(queueRefund != 0 ? $", its queue for {queueRefund}" : "") + $", balance {state.Balance}";
 	}
+
+	/// <summary>
+	/// Lets go of what stands before a demolished thing's ends - the demolisher's two footprint passes
+	/// (<c>FUN_00527ee0</c>), run before its own cells are cleared.
+	/// </summary>
+	/// <remarks>
+	/// <b>The NOMODIFY path before an end loses the flag</b> and stays an ordinary path: the one before the
+	/// exit, and the one before the entrance of a thing with no queue - the entrance is looked past along
+	/// the opposite of its direction byte, the exit along it, which for a queued entrance leads into its
+	/// own footprint and so finds nothing. It keeps the flag while it still serves two or more ends, and
+	/// on design-map path, which the original tests with bit 8 of the cell's <c>+0x26</c> seed. That seed
+	/// is read here from <c>base.map</c>, where bit 8 marks exactly the ten-cell avenue - inferred to be
+	/// the seed's source, not traced.
+	/// <para>
+	/// <b>Then each end is unlinked from what it adjoined</b>, which is what clearing it does: the paths
+	/// before it lose their bit toward it.
+	/// </para>
+	/// </remarks>
+	internal static void ReleaseEnds( ParkState state, ParkWorld park, ParkWorld.CatalogueObject placed )
+	{
+		if ( placed.EntryPos == 0 )
+			return;
+
+		var ends = new[] { (placed.EntryCellX, placed.EntryCellY), (placed.ExitCellX, placed.ExitCellY) }.Distinct().ToArray();
+
+		foreach ( var (x, y) in ends )
+		{
+			if ( !ParkState.OnMap( x, y ) )
+				continue;
+
+			var end = state.Record( x, y );
+			var looking = end.Type switch
+			{
+				CellEdge.RideEnd => CellEdge.Opposite( end.Direction ),
+				CellEdge.RideFarEnd => end.Direction,
+				_ => 0
+			};
+
+			var (pathX, pathY) = Step( x, y, looking );
+
+			if ( looking == 0 || !ParkState.OnMap( pathX, pathY ) )
+				continue;
+
+			var path = state.Record( pathX, pathY );
+
+			if ( path.Type != CellEdge.Path || (path.Flags & ParkPathBuilding.NoModify) == 0 )
+				continue;
+
+			var servedEnds = new[] { 0x01, 0x04, 0x10, 0x40 }.Count( bit =>
+			{
+				var (nextX, nextY) = Step( pathX, pathY, bit );
+
+				return (path.Neighbours & bit) != 0 && ParkState.OnMap( nextX, nextY )
+					&& state.Record( nextX, nextY ).Type is CellEdge.RideEnd or CellEdge.RideFarEnd;
+			} );
+
+			var designMap = ((ParkGround.Current?.Attributes?.At( pathX, pathY ) ?? 0) & DesignMapPath) != 0;
+
+			if ( servedEnds < 2 && !designMap )
+				state.SetRecord( pathX, pathY, path with { Flags = (ushort)(path.Flags & ~ParkPathBuilding.NoModify) } );
+		}
+
+		foreach ( var (x, y) in ends )
+		{
+			if ( ParkState.OnMap( x, y ) )
+				ParkPathBuilding.Unlink( state, park, x, y );
+		}
+	}
+
+	/// <summary>The seed bit a design-map path carries - <c>FUN_00536490</c> makes such a cell a NOMODIFY path.</summary>
+	private const int DesignMapPath = 0x08;
 
 	/// <summary>
 	/// Moves something already standing to another cell. <b>The original does this as demolish then
@@ -292,6 +388,70 @@ public static class ParkBuilding
 	}
 
 	/// <summary>
+	/// Why the cells a thing's ends face refuse it, or null when they do not - the placer's own test
+	/// pass (<c>FUN_00528a70</c> with the test flag), which turns every marker red and so refuses the
+	/// whole placement.
+	/// </summary>
+	/// <remarks>
+	/// <b>An end facing off the map</b> makes the placer return null (<c>0x00529744</c>..<c>0x00529757</c>
+	/// for the entrance, <c>0x005299e2</c>..<c>0x005299f5</c> for the exit). <b>A queued thing's entrance</b>
+	/// is tested as op 4, whose verdict passes only bare ground or a path that is not NOMODIFY - so another
+	/// queue, another thing's placer cell, water or rock all refuse. <b>Any other end</b> - a queued thing's
+	/// exit, or the entrance of a thing with no queue - is tested as op 1, which refuses another thing's
+	/// cells (every shipped item's overwrite priority is 5, and the verdict wants the other's lower) and
+	/// accepts a NOMODIFY path.
+	/// </remarks>
+	internal static string? EndRefusal( ParkState state, ParkItemCatalogue.Item item, int cellX, int cellY, int angle )
+	{
+		if ( !item.HasEntrance )
+			return null;
+
+		var (entryX, entryY) = RotateDelta( item.EntryDeltaX, item.EntryDeltaY, angle );
+		var (exitX, exitY) = RotateDelta( item.ExitDeltaX, item.ExitDeltaY, angle );
+		var heading = RotateBit( item.EntryDirection, angle );
+		var exitHeading = RotateBit( item.ExitDirection, angle );
+
+		var faced = Step( cellX + entryX, cellY + entryY, CellEdge.Opposite( heading ) );
+
+		if ( (item.HasQueue ? QueueEndBlocked( state, faced ) : EndBlocked( state, faced )) is { } why )
+			return $"its entrance would face ({faced.X},{faced.Y}), which {why}";
+
+		if ( !item.HasQueue || (entryX == exitX && entryY == exitY) )
+			return null;
+
+		var exitFaced = Step( cellX + exitX, cellY + exitY, exitHeading );
+
+		return EndBlocked( state, exitFaced ) is { } exitWhy
+			? $"its exit would face ({exitFaced.X},{exitFaced.Y}), which {exitWhy}"
+			: null;
+	}
+
+	/// <summary>The op-4 verdict on the cell before a queued entrance: bare ground, or a path that is not NOMODIFY.</summary>
+	private static string? QueueEndBlocked( ParkState state, (int X, int Y) cell )
+	{
+		if ( !ParkState.OnMap( cell.X, cell.Y ) )
+			return "is off the map";
+
+		var record = state.Record( cell.X, cell.Y );
+
+		if ( record.Type == CellEdge.Nothing || (record.Type == CellEdge.Path && (record.Flags & ParkPathBuilding.NoModify) == 0) )
+			return null;
+
+		return ParkObjects.CoversGround( record ) ? "has something built on it"
+			: record.Type == CellEdge.Path ? "is marked NOMODIFY"
+			: $"is type {record.Type}, which a queue may not start on";
+	}
+
+	/// <summary>The op-1 verdict on the cell before any other end: anything but another thing's cells.</summary>
+	private static string? EndBlocked( ParkState state, (int X, int Y) cell )
+	{
+		if ( !ParkState.OnMap( cell.X, cell.Y ) )
+			return "is off the map";
+
+		return ParkObjects.CoversGround( state.Record( cell.X, cell.Y ) ) ? "has something built on it" : null;
+	}
+
+	/// <summary>
 	/// Turns a cell delta by the angle a thing is built at - the original's <c>MapDelta::Rotate</c>,
 	/// <c>FUN_004d9cc0</c>, which names itself in its own assert string.
 	/// </summary>
@@ -320,40 +480,21 @@ public static class ParkBuilding
 		};
 
 	/// <summary>
-	/// The direction byte the shipped park puts on a ride's way in and way out, at no turn. <b>Both are
-	/// measured off the game rather than derived</b>, because the two compasses in this tree disagree by
-	/// name: <see cref="CellEdge.BitFor"/> calls <c>0x10</c> north while the save's own compass
-	/// (<c>docs/exe/park.md</c>) calls <c>0x01</c> north at −y. Reasoning from either would have had even
-	/// odds of storing the byte inverted, which reads exactly like the cell not being marked at all.
-	/// </summary>
-	/// <remarks>
-	/// Read out of the running game at the Belly Bounce, thing 13, anchored (51,23) at angle 0:
-	/// its entrance (52,23) is <c>type 9 direction 0x01</c> and its exit (52,26) <c>type 10 direction
-	/// 0x10</c> — the two ends of its middle column, each pointing out of the footprint — while every
-	/// other cell of the box is <c>type 4 direction 0x00</c>.
-	/// </remarks>
-	private const int WayIn = 0x01;
-
-	/// <inheritdoc cref="WayIn"/>
-	private const int WayOut = 0x10;
-
-	/// <summary>
 	/// Turns one compass bit by a quarter for each quarter the thing is turned. The compass is a ring of
 	/// eight - <c>0x01 N, 0x02 NE, 0x04 E, …</c> - and a quarter turn is two places <b>backwards</b> round
 	/// it, which is the way <see cref="RotateDelta"/> turns a cell delta.
 	/// </summary>
 	/// <remarks>
-	/// <b>The sense is read off <c>FUN_004d8c20</c>, and this turned the other way until it was.</b> That
-	/// function left-rotates the byte by <c>log2</c> of the angle's base bit, and the placer pairs the
-	/// bases <c>1</c>, <c>0x40</c>, <c>0x10</c>, <c>4</c> with the angles 0, 90, 180 and 270
-	/// (<c>0x00528f62</c>..<c>0x00528f8b</c>) - so a quarter is a left-rotate of six, which is a
-	/// right-rotate of two: east <c>0x04</c> becomes north <c>0x01</c>. <c>MapDelta::Rotate</c> sends the
-	/// east delta <c>(1,0)</c> to <c>(0,-1)</c> at that same angle, so the two agree at all four.
+	/// <b>The sense is read off <c>FUN_004d8c20</c>.</b> That function left-rotates the byte by
+	/// <c>log2</c> of the angle's base bit, and the placer pairs the bases <c>1</c>, <c>0x40</c>,
+	/// <c>0x10</c>, <c>4</c> with the angles 0, 90, 180 and 270 (<c>0x00528f62</c>..<c>0x00528f8b</c>) - so
+	/// a quarter is a left-rotate of six, which is a right-rotate of two: east <c>0x04</c> becomes north
+	/// <c>0x01</c>. <c>MapDelta::Rotate</c> sends the east delta <c>(1,0)</c> to <c>(0,-1)</c> at that same
+	/// angle, so the two agree at all four.
 	/// <para>
-	/// <b>Turned the other way, a thing built at a quarter or three quarters put its way in 180 degrees
-	/// from where <see cref="RotateDelta"/> had just put its entry cell</b> - pointing back into its own
-	/// footprint - so nothing could ever be joined to it. The two agree at 0 and 180 whichever way this
-	/// turns, which is why every test and every run stayed green over it.
+	/// <b>Turned the other way, a thing built at a quarter or three quarters puts its way in 180 degrees
+	/// from where <see cref="RotateDelta"/> has just put its entry cell</b> - pointing back into its own
+	/// footprint - and the two agree at 0 and 180 whichever way this turns.
 	/// </para>
 	/// </remarks>
 	internal static int RotateBit( int bit, int angle )
@@ -364,123 +505,238 @@ public static class ParkBuilding
 	}
 
 	/// <summary>
-	/// Types the cell a guest goes in by and the one they come out of, so that something can be joined to
-	/// them. <b>Without this a bought thing is type 4 all over</b>, and
-	/// <see cref="ParkPathNeighbours"/>'s cardinal rule links a neighbour of type 1, 9 or 10 and nothing
-	/// else - so no path and therefore no queue could ever attach to it, and
-	/// <see cref="ParkRideChoice.StartOfQueue"/> would read an empty neighbour mask for ever.
+	/// Types a thing's way in and way out, and builds what the placer builds in front of them: <b>a
+	/// one-cell queue before the entrance of anything that has a queue</b>, which is the node a player
+	/// lays the rest of the queue from, and a one-cell path before its exit - or, for a thing with no
+	/// queue, a one-cell path before its entrance. Answers the queue cell, or null when none was laid.
 	/// </summary>
-	internal static void MarkWaysInAndOut( ParkState state, ParkWorld park, int entryCellX, int entryCellY,
-		int exitCellX, int exitCellY, int angle )
+	/// <remarks>
+	/// <b>This is <c>FUN_00528a70</c>'s own order.</b> Its footprint sweep types each end and turns the
+	/// end character's bit by the angle - <c>H</c>, kept in <c>DAT_00818c30</c> - and re-links the cell
+	/// the end faces where that is already a path. Then, after the sweep and only when building
+	/// (<c>0x005297e7</c>..<c>0x00529890</c> for a queued thing, <c>0x005298d5</c>..<c>0x005299aa</c> for
+	/// one without, <c>0x005299cb</c>..<c>0x00529b18</c> for the exit half), it lays the stubs. The shipped
+	/// park carries every one of them: the Belly Bounce's queue cell (52,22) and path cell (52,27), and a
+	/// path cell before each of its seven other entrances, all flagged NOMODIFY. See
+	/// <c>docs/exe/park-engine.md</c>, "What the placer builds in front of a thing".
+	/// <para>
+	/// <b>The entrance faces the way opposite to its character's bit.</b> Every shipped entrance is a
+	/// <c>2</c>, whose bit is <c>0x10</c>, and the cell it faces is one step toward <c>Opposite(H)</c> -
+	/// (52,22) for the Belly Bounce's entrance at (52,23). A queued thing's entrance then takes
+	/// <c>Opposite(H)</c> as its own direction byte; anything else keeps <c>H</c>. The exit faces its own
+	/// bit.
+	/// </para>
+	/// </remarks>
+	/// <param name="ownerCell">The packed cell of the thing's anchor, which a queue cell names as its owner.</param>
+	internal static (int X, int Y)? MarkWaysInAndOut( ParkState state, ParkWorld park,
+		int entryCellX, int entryCellY, int exitCellX, int exitCellY,
+		int entryDirection, int exitDirection, int angle, bool hasQueue, int ownerCell )
 	{
-		var wayIn = RotateBit( WayIn, angle );
+		var heading = RotateBit( entryDirection, angle );
+		var exitHeading = RotateBit( exitDirection, angle );
 
-		Mark( state, entryCellX, entryCellY, CellEdge.RideEnd, wayIn );
-		JoinToWhateverIsThere( state, park, entryCellX, entryCellY, wayIn );
+		// An item whose picture marks no exit leaves it on the entrance, and writing type 10 over the 9
+		// would lose the way in.
+		var separateExit = exitCellX != entryCellX || exitCellY != entryCellY;
 
-		// The far end only where the item declares one. An item whose picture marks no exit leaves it on
-		// the entrance, and writing type 10 over the 9 would lose the way in.
-		if ( exitCellX == entryCellX && exitCellY == entryCellY )
-			return;
+		var (exitFacedX, exitFacedY) = Step( exitCellX, exitCellY, exitHeading );
+		var (facedX, facedY) = Step( entryCellX, entryCellY, CellEdge.Opposite( heading ) );
 
-		var wayOut = RotateBit( WayOut, angle );
+		// The sweep's case 10 and case 9 arms: the type, the turned bit, and a re-link of the faced cell
+		// where it is already a path, which is what joins a thing built against an existing path.
+		if ( separateExit )
+		{
+			Mark( state, exitCellX, exitCellY, CellEdge.RideFarEnd, exitHeading );
+			RelinkIfPath( state, park, exitFacedX, exitFacedY );
+		}
 
-		Mark( state, exitCellX, exitCellY, CellEdge.RideFarEnd, wayOut );
-		JoinToWhateverIsThere( state, park, exitCellX, exitCellY, wayOut );
+		Mark( state, entryCellX, entryCellY, CellEdge.RideEnd, heading );
+		RelinkIfPath( state, park, facedX, facedY );
+
+		if ( !hasQueue )
+		{
+			LayPathStub( state, park, facedX, facedY );
+
+			return null;
+		}
+
+		// The queue arm writes the entrance's half of the pair itself, pointing at the cell it faces.
+		if ( ParkState.OnMap( entryCellX, entryCellY ) )
+		{
+			var inward = CellEdge.Opposite( heading );
+			var entrance = state.Record( entryCellX, entryCellY );
+
+			state.SetRecord( entryCellX, entryCellY, entrance with
+			{
+				Neighbours = (byte)(entrance.Neighbours | inward),
+				Direction = (byte)inward
+			} );
+		}
+
+		var stub = LayQueueStub( state, park, facedX, facedY, heading, ownerCell );
+
+		if ( separateExit )
+			LayPathStub( state, park, exitFacedX, exitFacedY );
+
+		return stub;
 	}
 
 	/// <summary>
-	/// Runs the neighbour rule over whatever the way in or out points at, <b>and only where that is
-	/// already a path</b> - the original's <c>FUN_00528a70</c>, whose <c>case 9</c> and <c>case 10</c>
-	/// arms each turn the cell's heading by the placement angle, step to the cell it names, and call
-	/// <c>FUN_005348d0</c> there when that cell's type is 1.
+	/// The queue cell the placer lays before a queued thing's entrance - the node the queue tool is
+	/// anchored on once the thing is down.
 	/// </summary>
 	/// <remarks>
-	/// <b>So the join is earned at PLACEMENT, against what is already standing.</b> Building beside a
-	/// path links the two; laying a path beside a thing already built is the other arm, and belongs to
-	/// the path tool rather than here.
-	/// <para>
-	/// <b>The bit pointing back is written whatever is standing there, and only the re-link is
-	/// conditional.</b> The placer writes its pair into the two cells outright, before it looks at what
-	/// the faced cell is - which is what gives a ride built on bare ground somewhere for a queue to
-	/// attach, rather than only one built against an existing path.
-	/// </para>
+	/// <b>Everything here is written outright, in the placer's order</b> (<c>0x00529808</c>..
+	/// <c>0x00529885</c>): the queue stamp, the bit pointing back at the entrance and the same bit as
+	/// its flow byte, the thing that owns it, NOMODIFY assigned rather than OR'd, then the retile - which
+	/// finds a single link and stands <c>quedead</c> on it. <b>It is free</b>: the commit raises
+	/// <c>DAT_008186d4</c> before the placer runs, and the stamp debits nothing while that is set.
 	/// </remarks>
-	private static void JoinToWhateverIsThere( ParkState state, ParkWorld park, int x, int y, int heading )
+	private static (int X, int Y)? LayQueueStub( ParkState state, ParkWorld park, int x, int y,
+		int heading, int ownerCell )
 	{
-		var (acrossBy, downBy) = StepFor( heading );
-		var (nextX, nextY) = (x + acrossBy, y + downBy);
+		// EndRefusal has already refused a placement whose entrance faces off the map.
+		if ( !ParkState.OnMap( x, y ) )
+			return null;
 
-		if ( (acrossBy == 0 && downBy == 0) || !ParkState.OnMap( nextX, nextY ) )
-			return;
+		var cell = state.Record( x, y );
 
-		// The other half of the placer's pair: the cell the way in or out faces gains the bit pointing
-		// back at it, so the two adjoin. Without it the end cell names a neighbour that does not name it
-		// back, and CellEdge.Blocked refuses the step in from every direction.
-		var faced = ParkState.CellFor( park, nextX, nextY );
-
-		state.SetRecord( nextX, nextY, faced with
+		// EndRefusal has already refused anything but bare ground or an ordinary path here; this holds
+		// for a caller that builds without asking it first.
+		if ( !ParkPathBuilding.MayBecome( cell.Type, ParkRideChoice.QueueCellType, lastOfRun: false )
+			|| cell.Type == ParkRideChoice.QueueCellType || (cell.Flags & ParkPathBuilding.NoModify) != 0 )
 		{
-			Neighbours = (byte)(faced.Neighbours | CellEdge.Opposite( heading ))
+			Unimplemented.Report( "QUEUE_STUB_OVER_SOMETHING" );
+
+			return null;
+		}
+
+		// A path under the stub is cleared first, which unlinks it from the paths around it.
+		ParkPathBuilding.ForceClearPath( state, park, x, y );
+		cell = state.Record( x, y );
+
+		state.SetRecord( x, y, cell with
+		{
+			Type = ParkRideChoice.QueueCellType,
+			TileSet = ParkQueues.QueueTileSet,
+			Neighbours = (byte)(cell.Neighbours | heading),
+			Direction = (byte)heading,
+			ParentId = (ushort)ownerCell,
+			Flags = ParkPathBuilding.NoModify
 		} );
 
-		if ( faced.Type != CellEdge.Path )
-			return;
+		ParkPathBuilding.RetileAround( state, park, x, y );
 
-		ParkPathNeighbours.LinkPath( state, park, nextX, nextY );
-
-		// AND THE ART, which is the half that was missing and the reason a ride stood against a path
-		// looked unconnected. LinkPath rewrites this cell's mask and its neighbours' masks, while
-		// ParkPaths redraws each cell from its STORED tile index - so without this the masks say joined
-		// and the path goes on drawing the piece it drew before the ride arrived. It is the same defect
-		// ParkPathBuilding.RetileAround already records for the path tool, on the placement path.
-		ParkPathBuilding.RetileAround( state, park, nextX, nextY );
+		return (x, y);
 	}
 
 	/// <summary>
-	/// The step one compass bit stands for. The ring is the executable's own, confirmed from the static
-	/// initialisers and <c>FUN_004d97e0</c>'s jump table rather than from save statistics: <c>0x01</c> is
-	/// (0,−1) and <c>0x10</c> is (0,+1). <b>This is the outward sense</b>, the mirror of
-	/// <see cref="CellEdge.BitFor"/>, and mixing the two inverts every answer.
+	/// The path cell the placer lays before a queued thing's exit, or before the entrance of a thing
+	/// with no queue - stamped, joined to what is around it, retiled, and flagged NOMODIFY, with <b>no
+	/// direction byte</b>. The shipped park's (52,27) carries exactly that: the bit, and direction 0.
 	/// </summary>
-	private static (int X, int Y) StepFor( int bit ) => bit switch
-	{
-		0x01 => (0, -1),
-		0x04 => (1, 0),
-		0x10 => (0, 1),
-		0x40 => (-1, 0),
-		_ => (0, 0)
-	};
-
-	/// <summary>
-	/// One cell of a footprint given the type, the heading, and the link that lets a queue be found from
-	/// it.
-	/// </summary>
-	/// <remarks>
-	/// <b>The bit is the placer's own, written where the placer writes it.</b> <c>FUN_00528a70</c> sets
-	/// the pair itself after its footprint sweep (<c>0x005297f0</c>..<c>0x00529837</c>) - this cell takes
-	/// the bit pointing at the cell it faces, and that cell takes the opposite bit back. Neither end is
-	/// earned by the neighbour rule: <c>FUN_005348d0</c>'s type-9 arm tests
-	/// <c>neighbour.Direction &amp; bit</c>, and a cell on the entrance's own queue side steps toward it
-	/// with the opposite bit, so <b>the shipped park's own entrance could not have earned its bit
-	/// either</b>. See <c>docs/exe/park-engine.md</c>, "What authors an entrance's <c>mNeighbours</c>".
-	/// <para>
-	/// <b>The bit is OR'd rather than written over</b>, which is the original's <c>mNeighbours |=</c> and
-	/// matters for an end cell that already adjoins something.
-	/// </para>
-	/// </remarks>
-	private static void Mark( ParkState state, int x, int y, int type, int direction )
+	private static void LayPathStub( ParkState state, ParkWorld park, int x, int y )
 	{
 		if ( !ParkState.OnMap( x, y ) )
 			return;
 
 		var cell = state.Record( x, y );
 
-		state.SetRecord( x, y, cell with
+		if ( !ParkPathBuilding.MayBecome( cell.Type, CellEdge.Path )
+			|| (cell.Type != CellEdge.Path && (cell.Flags & ParkPathBuilding.NoModify) != 0) )
+		{
+			Unimplemented.Report( "PATH_STUB_OVER_SOMETHING" );
+
+			return;
+		}
+
+		// A queue cell here is turned to path and the queue it belonged to measured again.
+		var queueOwner = cell.Type == ParkRideChoice.QueueCellType ? ParkPathBuilding.OwnerOf( state, cell ) : 0;
+
+		if ( cell.Type != CellEdge.Path )
+			state.SetRecord( x, y, cell with { Type = CellEdge.Path, TileSet = ParkPaths.PathTileSet } );
+
+		ParkPathNeighbours.LinkPath( state, park, x, y );
+		ParkPathBuilding.RetileAround( state, park, x, y );
+
+		state.SetRecord( x, y, state.Record( x, y ) with { Flags = ParkPathBuilding.NoModify } );
+
+		if ( queueOwner != 0 )
+			state.InvalidateQueue( queueOwner );
+
+		// Then each path it is now joined to on a cardinal side is joined again, from its own side
+		// (0x00529951..0x005299aa for the entrance's stub, 0x00529abf..0x00529b18 for the exit's).
+		foreach ( var bit in new[] { 0x01, 0x04, 0x10, 0x40 } )
+		{
+			var (nextX, nextY) = Step( x, y, bit );
+
+			if ( (state.Record( x, y ).Neighbours & bit) == 0 || !ParkState.OnMap( nextX, nextY )
+				|| state.Record( nextX, nextY ).Type != CellEdge.Path )
+				continue;
+
+			ParkPathNeighbours.LinkPath( state, park, nextX, nextY );
+			ParkPathBuilding.RetileAround( state, park, nextX, nextY );
+		}
+	}
+
+	/// <summary>
+	/// Runs the neighbour rule over the cell an end faces <b>where that is already a path</b>, and redraws
+	/// it - so a thing built against a path joins it, and the path shows that it has.
+	/// </summary>
+	/// <remarks>
+	/// <b>The retile matters as much as the link.</b> <see cref="ParkPaths"/> redraws each cell from its
+	/// STORED tile index, so without it the masks say joined and the path goes on drawing the piece it drew
+	/// before the thing arrived.
+	/// </remarks>
+	private static void RelinkIfPath( ParkState state, ParkWorld park, int x, int y )
+	{
+		if ( !ParkState.OnMap( x, y ) || state.Record( x, y ).Type != CellEdge.Path )
+			return;
+
+		ParkPathNeighbours.LinkPath( state, park, x, y );
+		ParkPathBuilding.RetileAround( state, park, x, y );
+	}
+
+	/// <summary>
+	/// One step along a compass bit. The ring is the executable's own, confirmed from the static
+	/// initialisers and <c>FUN_004d97e0</c>'s jump table rather than from save statistics: <c>0x01</c> is
+	/// (0,−1) and <c>0x10</c> is (0,+1). <b>This is the outward sense</b>, the mirror of
+	/// <see cref="CellEdge.BitFor"/>, and mixing the two inverts every answer.
+	/// </summary>
+	private static (int X, int Y) Step( int x, int y, int bit ) => bit switch
+	{
+		0x01 => (x, y - 1),
+		0x04 => (x + 1, y),
+		0x10 => (x, y + 1),
+		0x40 => (x - 1, y),
+		_ => (x, y)
+	};
+
+	/// <summary>The compass bit for the one cardinal step from a cell to its neighbour, or nought.</summary>
+	private static int BitToward( int x, int y, int toX, int toY ) => (toX - x, toY - y) switch
+	{
+		(0, -1) => 0x01,
+		(1, 0) => 0x04,
+		(0, 1) => 0x10,
+		(-1, 0) => 0x40,
+		_ => 0
+	};
+
+	/// <summary>
+	/// Types one end of a thing and gives it its turned bit as its direction byte - the sweep's
+	/// <c>FUN_005227e0</c> at <c>0x005292b2</c> for the exit and <c>0x005293c3</c> for the entrance.
+	/// <b>It writes no neighbour bit</b>; the original's only <c>FUN_00522700</c> calls in the placer are
+	/// the queue arm's pair, and an end's other links come from the stub laid before it.
+	/// </summary>
+	private static void Mark( ParkState state, int x, int y, int type, int direction )
+	{
+		if ( !ParkState.OnMap( x, y ) )
+			return;
+
+		state.SetRecord( x, y, state.Record( x, y ) with
 		{
 			Type = type,
-			Direction = (byte)direction,
-			Neighbours = (byte)(cell.Neighbours | direction)
+			Direction = (byte)direction
 		} );
 	}
 
@@ -585,6 +841,15 @@ public static class ParkBuilding
 
 		Carrying = catalogueId;
 
+		// Taking something into the hand installs the place mode over whatever tool was armed - there
+		// is one mode in the original, not a tool and a hand side by side.
+		ParkBuildMode.Disarm();
+
+		// While carrying, the original draws the footprint in coloured squares every tick - m_front along
+		// its front row, m_enter on the cell before the entrance, m_exit before the exit - out of the same
+		// marker vocabulary the queue tool uses. Only the queue tool's strip is built.
+		Unimplemented.Report( "CARRY_PREVIEW_MARKERS" );
+
 		return $"carry: holding '{item.Name}' ({catalogueId}) at {item.BuildPrice}";
 	}
 
@@ -607,17 +872,63 @@ public static class ParkBuilding
 	/// Builds what is in the hand at a cell. The hand is emptied only if it actually went up, so a
 	/// refused placement leaves the item held rather than losing it.
 	/// </summary>
+	/// <remarks>
+	/// <b>A thing with a queue hands the player the queue tool the moment it is down</b>, anchored on the
+	/// queue cell the placer has just laid before its entrance - the original's commit handler, which
+	/// writes that cell into the anchor with <c>FUN_0052a050</c> and switches to mode 3 with the setter
+	/// that keeps it (<c>0x00525264</c>..<c>0x0052529e</c>). So the player's next click lays the queue
+	/// from the ride to wherever they point; nobody has to find the entrance first.
+	/// <para>
+	/// The same commit posts advisor message <c>0xcb</c> and sets the <c>c_queue</c> cursor. The cursor is
+	/// <see cref="Level"/>'s, read from the armed mode each frame; the message's words are not decoded.
+	/// </para>
+	/// </remarks>
 	public static string PlaceCarried( int cellX, int cellY, int angle = 0 )
 	{
 		if ( Carrying == 0 )
 			return "put: the hand is empty - `carry <item>` first, or click a row on the buy screen";
 
-		var answer = Buy( Carrying, cellX, cellY, angle );
+		var built = Build( Carrying, cellX, cellY, angle );
 
-		if ( answer.StartsWith( "buy: '" ) && answer.Contains( "built as thing" ) )
+		if ( built.ThingId == 0 )
+			return built.Answer;
+
+		// Karts and the water ride lay their first track cells here, before the queue is seeded
+		// (0x00524db7..0x00524e49). There is no track layer to lay them in.
+		if ( built.TrackType is 1 or 2 )
+			Unimplemented.Report( "PLACED_TRACK_RIDE_FIRST_TRACK_CELLS" );
+
+		if ( built.QueueNode is not { } node )
+		{
+			// A thing with no queue sends the tool back to idle (FUN_0052f580( 0, 0 ) at 0x005253c4) -
+			// unless Ctrl alone is held, which keeps it in the hand to place another of the same.
+			ParkBuildMode.Disarm();
+
+			if ( !built.HasQueue && Input.ControlAlone )
+				return $"{built.Answer} - Ctrl is held, so another is still in the hand";
+
 			Carrying = 0;
 
-		return answer;
+			return built.Answer;
+		}
+
+		Carrying = 0;
+
+		// FUN_0052a050 ORs the entrance's bit toward the node back in before it anchors there, which
+		// matters when the node was laid over a path: clearing that path unlinked the entrance from it.
+		if ( Level.Current?.ParkState is { } state && state.TryObject( built.ThingId, out var placed )
+			&& ParkState.OnMap( placed.EntryCellX, placed.EntryCellY ) )
+		{
+			var towardNode = BitToward( placed.EntryCellX, placed.EntryCellY, node.X, node.Y );
+			var entrance = state.Record( placed.EntryCellX, placed.EntryCellY );
+
+			state.SetRecord( placed.EntryCellX, placed.EntryCellY,
+				entrance with { Neighbours = (byte)(entrance.Neighbours | towardNode) } );
+		}
+
+		Unimplemented.Report( "QUEUE_MODE_ADVISOR_MESSAGE_0xCB" );
+
+		return $"{built.Answer} - {ParkBuildMode.ArmAt( ParkBuildMode.Queue, built.ThingId, node.X, node.Y )}";
 	}
 
 	/// <summary>What is in the hand, for the debug console.</summary>

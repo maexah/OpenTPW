@@ -92,10 +92,19 @@ public static class ParkPicking
 	{
 		var answer = Resolve( Input.Mouse.Position );
 
+		// A cell pinned from the debug console stands in for the pointer's, for the reason `worldclick`
+		// exists: synthetic motion reaches the window system and never SDL, so without it nothing that
+		// follows the pointer - the queue tool's squares and cursor - could be driven or photographed.
+		if ( Pinned is { } pinned )
+			answer = answer with { Cell = MapStep.CellId( pinned.X, pinned.Y ) };
+
 		Cell = answer.Cell;
 		WorldPoint = answer.World;
 		ThingUnderCursor = answer.Thing;
 	}
+
+	/// <summary>A cell the debug console's <c>hover</c> holds the pointer over, or null to follow the mouse.</summary>
+	public static (int X, int Y)? Pinned { get; set; }
 
 	/// <summary>What the ray through one point of the window meets.</summary>
 	private readonly record struct Answer( int Cell, Vector3 World, int Thing );

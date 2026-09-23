@@ -20,6 +20,9 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Information and money: Info and Money open all-staff, all-items, all-visitors and entry-price screens.
 - Building by POINTING - click to anchor, click to commit, no drag, because both of the original's drag
   slots are bare `RET` stubs. Laying and lifting PATH (20 a cell) and QUEUE (75, which refunds).
+- **Placing a ride lays its queue's first cell before the entrance and hands the player the queue tool
+  there**, with the original's coloured squares showing where a click will lay it; one click onto a path
+  lays and joins the queue. Guests queue in it and ride.
 - Spending: guests choose, queue for and buy from the Drinks Shop and the Jungle Spray.
 - People: guests and staff read from the save, drawn, walking, paying, queueing, boarding. A walking peep
   is interpolated between the simulation's 248 ms steps rather than jumping four times a second.
@@ -36,8 +39,6 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - **The PATH tool is still console-only.** The queue tool is reachable now - the ride window's queue
   button arms it, and clicking a queue cell re-arms it - but nothing in the UI arms path laying.
 - The `meter.wct` mapping behind the happiness gauge is wrong - the last fault Alexah found by playing.
-- A queue laid on **bare ground** joins only the way the run walked into it: the mutual bits are earned
-  while the cells are still path, so the original's gesture is lay path, then queue over it.
 
 ## Next
 
@@ -51,10 +52,6 @@ and is still untracked, so it exists on this machine only; Q13 moves it into `do
 
 - **The RIDER on a ride bought this session.** Measured five times over; not photographed, because the
   rider sits at z 10.3 against a 5.0 camcorder eye at pitch 0 and the console has no pitch argument.
-- **A ride's EXIT joining a path.** Measured twice - (36,27) goes `neighbours 0x00 index 0` to `0x01
-  index 1 angle 180` on the purchase alone - but **not photographed**: an unhatched egg covers the exit
-  and a cyan band traces the cell edges. `CoversGround` takes types 4, 9 and 10 while the paths draw
-  set 1 and the queues set 2, so **a ride-end cell is drawn by nobody**. The next thing to look at.
 - `SpriteScript.ScheduleFrom` and `DropUnreadyNominee`: unwiring either leaves the suite green.
 - Nothing puts a staff member in a cell's occupancy list *as they walk*.
 
@@ -65,31 +62,28 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **901**, 0 fail, 0 skip with the game | 2026-09-22, five of them for the queue Q3 built |
+| Tests | **914**, 0 fail, 0 skip with the game | 2026-09-22, after Q3's node |
 | Tests without the game | **not remeasured** - last read 426 ran / 470 skipped of 896 | the game was present for every run this session; take it fresh |
 | Build warnings | 125 | 2026-09-22 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
+**2026-09-22 - a placed ride lays its queue's first cell, and the player lays the rest from it.** Branch
+`alexah/115-a-placed-ride-lays-its-queue-node`, `docs/QUEUE.md` Q3, which Alexah reopened twice: *"the node
+never shows up"*. Decoded before building, with a refuter per claim: the placer stamps a NOMODIFY queue
+cell before a queued ride's entrance and a path before its exit, and the commit arms the queue tool on
+that cell. **The `Info.Shape` alphabet was wrong** - `2` is the entrance, `S` an exit, rows read upside
+down - so twelve of the jungle's seventeen rides had no entrance or the wrong one. The queue run's link
+pass, the join onto a path, the tool putting itself away, mode `0x14` behind the ride window's queue
+button, and the marker squares are all built from the decode. A ride-end cell drawing nothing is the
+original's own behaviour. Selling a queued ride drains its queue, node included, as the demolisher
+does. Confirmed through the player's route; a guest queued for and rode it.
+
 **2026-09-22 - a player can build a queue, and it joins the paths around it.** Branch
-`alexah/114-a-laid-queue-joins-up`, `docs/QUEUE.md` Q3. **Six defects; the item named one, and Alexah
-found two more by playing after the first five were called done.** The placer's link is a PAIR and only
-one end existed, so the entrance named a neighbour that never named it back. `Retile` returned for
-anything not a path, so a laid queue cell kept the ground's tile index - **55, not piece 0 as the item
-said** - and drew nothing. `RotateBit` turned a compass bit the wrong way, with a test pinning the
-inverted value. Two mutual path links bumped the tile index past the game's eight models, and the sky
-showed through the hole - found by LOOKING, not by any number.
-**Then the two Alexah reported.** *No player could start a queue at all*: `ParkBuildMode.Arm` had two
-call sites and both were the debug console, so the whole of the first confirm ran through a route the
-game does not have. The ride window's queue button now arms the tool, and clicking a queue cell re-arms
-it for that cell's owner - the original's mode `0x14`. *An exit did not join a path*: the link was being
-made correctly all along and **nothing retiled the path**, so the mask said joined and the art did not.
-Measured: (36,27) went `neighbours 0x00 index 0` to `0x01 index 1 angle 180` on the purchase alone.
-Also: a ride whose picture marks no entrance - six of the jungle's seventeen - no longer has a footprint
-corner typed as its way in. Mutations **2,2,3,1,1** then **1**, with three named survivors that say the
-UI route rests on the game run. `park-engine.md` carries the rotate's sense and the `mDirection` half,
-where the disassembly and the shipped park CONTRADICT each other and neither is disposed of.
+`alexah/114-a-laid-queue-joins-up`, the first half of Q3: the placer's link is a pair, a laid queue cell
+is retiled, `RotateBit` turned the wrong way, the ride window's queue button arms the tool, and an exit
+retiles the path it joins. Six defects; `docs/QUEUE.md` Q3 and the git log carry them.
 
 **2026-09-22 - what authors an entrance's queue link is decoded.** Branch `alexah/112`, no code
 changed; the decode the entry above builds on, written up in `docs/exe/park-engine.md`.

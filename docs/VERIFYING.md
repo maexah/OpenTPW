@@ -683,6 +683,19 @@ The ones that have bitten more than once.
   the harness**, and have it print the md5 of the built assembly as well as of the sources; better, make
   the game harness refuse to start unless the build is newer than every source file it cares about. A
   restored working tree is not a restored program.
+- **117** — **A count quoted from someone else's measurement names THEIR population, not your test's.**
+  A decode reported that its reading predicted "all fourteen" of the shipped save's placed objects, and
+  a test was written predicting fourteen. It compared eleven: the decoder had walked every object record,
+  and the test walked the ones the buy catalogue describes, which leaves out the bus, the gates and the
+  lights. Every compared object matched, so the reading was right and the prediction was not. **Before
+  writing a number you did not measure into an assertion, say what was counted and check your loop
+  counts the same thing** - and when the two disagree, find the difference before changing either.
+- **118** — **A change to what a scene LOADS shows up as a within-run `save/` change the first time,
+  and that is the loading bar, not damage.** The bar learns each situation's step count into
+  `save/opentpw.cfg`; a park that starts loading four more textures takes more steps, so the first run
+  after the change rewrites that file as the park loads - inside the run, which is the one place a
+  checksum difference is supposed to mean something. **Name the file that changed before calling it
+  either way**, and re-run: the second run of the same build must be unchanged, and it was.
 
 ---
 

@@ -371,31 +371,26 @@ public sealed class ItemDescriptionFile
 	private int? _entryDeltaY;
 	private int? _exitDeltaX;
 	private int? _exitDeltaY;
+	private int? _entryDirection;
+	private int? _exitDirection;
 	private int? _hasEntrance;
+	private int[]? _cellKinds;
 
 	/// <summary>
-	/// How far from the anchor cell a guest is sent to reach this - the <c>S</c> in <c>Info.Shape</c>,
-	/// as a column and a row of the unrotated footprint picture.
+	/// How far from the anchor cell a guest is sent to reach this - the cell of kind <b>9</b> in
+	/// <c>Info.Shape</c>, as a column and a row of the unrotated footprint picture.
 	/// </summary>
 	/// <remarks>
-	/// <b>The picture's letters are cell kinds, and the engine reads two of them by number.</b> The object
-	/// constructor's helper <c>FUN_00413410</c> walks the item's shape grid looking for the value
-	/// <b>9</b> and stores that cell's column and row as the entrance, then looks for <b>10</b> and stores
-	/// that as the exit; finding no 10 leaves the exit equal to the entrance, and finding no 9 leaves both
-	/// at nought, which is the anchor cell itself.
+	/// <b>The picture's characters are cell kinds, looked up in the executable's own alphabet</b> - see
+	/// <see cref="Alphabet"/> - and <b>its rows are turned upside down as it is read</b>. The object
+	/// constructor's helper <c>FUN_00413410</c> then walks that grid <b>column by column</b> for the first
+	/// kind 9, which is the entrance, and the first kind 10, which is the exit. Finding no 10 leaves the exit
+	/// on the entrance; finding no 9 leaves both at nought, which is the anchor cell itself.
 	/// <para>
-	/// <b>Which letter is which was measured rather than assumed.</b> <c>bouncy.sam</c> draws
-	/// <c>*S*</c> / <c>***</c> / <c>***</c> / <c>*2*</c>, so its <c>S</c> is at column 1 row 0 and its
-	/// <c>2</c> at column 1 row 3 - and the shipped save records that Belly Bounce, anchored at (51,23),
-	/// with <c>mEntryPos</c> 2997 = <b>(52,23)</b> and <c>mExitPos</c> 3381 = <b>(52,26)</b>. Those are
-	/// exactly anchor + (1,0) and anchor + (1,3). Two independent records meeting on one cell is what
-	/// names the letters; neither alone would.
-	/// </para>
-	/// <para>
-	/// <b>Measured across the corpus, not from one file.</b> Of the <b>263</b> items carrying a shape
-	/// block across all four themes, <b>44</b> have an <c>S</c> and <b>137</b> a <c>2</c>, and every one
-	/// of the 44 has both - so 93 items declare an exit and no entrance and fall to the anchor, which is
-	/// the branch the engine's own fallthrough takes.
+	/// <b>The shipped save predicts all fourteen of its placed objects' <c>mEntryPos</c> this way</b>,
+	/// including the two a reading without the flip gets wrong: the Staff Room, <c>**</c> / <c>*2</c> at 90
+	/// degrees from (58,16), enters at (58,15), and the Jungle Spray, <c>***</c> / <c>***</c> / <c>*2*</c>
+	/// at (51,30), enters at (52,30).
 	/// </para>
 	/// </remarks>
 	public int EntryDeltaX => _entryDeltaX ?? _category?.EntryDeltaX ?? 0;
@@ -403,11 +398,25 @@ public sealed class ItemDescriptionFile
 	/// <inheritdoc cref="EntryDeltaX"/>
 	public int EntryDeltaY => _entryDeltaY ?? _category?.EntryDeltaY ?? 0;
 
-	/// <summary>Where a guest is put down on leaving - the <c>2</c>, and the entrance where there is none.</summary>
+	/// <summary>Where a guest is put down on leaving - the cell of kind 10, and the entrance where there is none.</summary>
 	public int ExitDeltaX => _exitDeltaX ?? _category?.ExitDeltaX ?? 0;
 
 	/// <inheritdoc cref="ExitDeltaX"/>
 	public int ExitDeltaY => _exitDeltaY ?? _category?.ExitDeltaY ?? 0;
+
+	/// <summary>
+	/// The compass bit the entrance character carries, unrotated - <c>2</c> is <c>0x10</c>. The descriptor's
+	/// <c>+0x49c</c>, and <b>0x01</b> where the picture marks no entrance, which is what
+	/// <c>FUN_00413410</c> writes in that case.
+	/// </summary>
+	public int EntryDirection => _entryDirection ?? _category?.EntryDirection ?? NoEntranceDirection;
+
+	/// <summary>
+	/// The compass bit the exit character carries, unrotated - <c>S</c> is <c>0x10</c>, <c>N</c>
+	/// <c>0x01</c>. The descriptor's <c>+0x4a8</c>: the entrance's own bit where there is no exit, and
+	/// <b>0x10</b> where there is no entrance either.
+	/// </summary>
+	public int ExitDirection => _exitDirection ?? _category?.ExitDirection ?? NoExitDirection;
 
 	/// <summary>
 	/// Whether the picture marks an entrance at all. Without one the engine leaves both cells at the
@@ -415,6 +424,12 @@ public sealed class ItemDescriptionFile
 	/// nought, row nought".
 	/// </summary>
 	public bool HasEntrance => (_hasEntrance ?? _category?._hasEntrance ?? 0) != 0;
+
+	/// <summary>
+	/// Every cell kind the picture uses, once each - <b>4</b> for the body, <b>9</b> and <b>10</b> for the
+	/// two ends, and whatever else the alphabet names. Empty where the item draws no picture.
+	/// </summary>
+	public IReadOnlyList<int> CellKinds => _cellKinds ?? _category?.CellKinds ?? [];
 
 	private void Read( string text )
 	{
@@ -597,10 +612,16 @@ public sealed class ItemDescriptionFile
 	}
 
 	/// <summary>
-	/// The footprint picture: the lines between the two rows of dashes that follow the key. Width is the
-	/// longest row and depth the number of rows, both of the box the picture is drawn in rather than of
-	/// the marks inside it.
+	/// The footprint picture: the lines between the two rows of dashes that follow the key, read the way
+	/// <c>FUN_00402720</c> reads them. Width is the longest row and depth the number of rows, both of the
+	/// box the picture is drawn in rather than of the marks inside it.
 	/// </summary>
+	/// <remarks>
+	/// <b>The rows are turned upside down</b> once the closing fence is reached
+	/// (<c>0x00402938</c>..<c>0x004029ab</c>), which changes where the Staff Room and the Jungle Spray are
+	/// entered. Two more of the reader's rules are kept although none of the 274 shipped shape blocks
+	/// exercises them: a space is skipped rather than being a cell, and a blank line is still a row.
+	/// </remarks>
 	private void ReadShape( string[] lines, int keyLine, out int width, out int depth )
 	{
 		width = 0;
@@ -608,62 +629,114 @@ public sealed class ItemDescriptionFile
 
 		var at = keyLine + 1;
 
-		while ( at < lines.Length && lines[at].Trim() != Fence )
+		while ( at < lines.Length && !lines[at].StartsWith( Fence ) )
 			++at;
 
-		int? entryX = null, entryY = null, exitX = null, exitY = null;
+		var rows = new List<List<(int Kind, int Direction)>>();
 
-		for ( ++at; at < lines.Length && lines[at].Trim() != Fence; ++at )
+		for ( ++at; at < lines.Length && !lines[at].StartsWith( Fence ); ++at )
 		{
-			var row = lines[at].TrimEnd( '\r', '\n', ' ', '\t' );
+			var row = new List<(int Kind, int Direction)>();
 
-			// Blank rows inside the fence are layout, not footprint - counting them would make an item
-			// deeper than it is.
-			if ( row.Length == 0 )
-				continue;
-
-			// The row index is the one that counts rows kept, so a blank line inside the fence does not
-			// push every marker below it one cell down.
-			for ( var column = 0; column < row.Length; ++column )
+			foreach ( var character in lines[at].TrimEnd( '\r' ) )
 			{
-				if ( row[column] == Entrance && entryX == null )
+				if ( character == ' ' )
+					continue;
+
+				// The original refuses the whole picture here ("Illegal map character"). No shipped picture
+				// carries one, so the character is dropped and counted rather than the item being lost.
+				if ( !Alphabet.TryGetValue( character, out var cell ) )
 				{
-					entryX = column;
-					entryY = depth;
+					Unimplemented.Report( "SHAPE_CHARACTER_NOT_IN_ALPHABET" );
+					continue;
 				}
-				else if ( row[column] == Exit && exitX == null )
-				{
-					exitX = column;
-					exitY = depth;
-				}
+
+				row.Add( cell );
 			}
 
-			width = Math.Max( width, row.Length );
-			++depth;
+			rows.Add( row );
+			width = Math.Max( width, row.Count );
 		}
 
-		// The engine's own order, from FUN_00413410: no entrance leaves BOTH cells at the anchor, and an
-		// entrance with no exit leaves the exit on the entrance. Reproduced rather than tidied, because
-		// the second case is what makes mExitPos equal mEntryPos on ten of the shipped park's eleven.
-		if ( entryX == null )
+		rows.Reverse();
+		depth = rows.Count;
+
+		_cellKinds = rows.SelectMany( row => row ).Select( cell => cell.Kind ).Distinct().Order().ToArray();
+
+		// FUN_00413410 walks COLUMN by column, each column top to bottom, and takes the first of each kind.
+		// No shipped picture has two of either, so the order is kept for its own sake.
+		var entrance = FirstOfKind( rows, width, EntranceKind );
+		var exit = FirstOfKind( rows, width, ExitKind );
+
+		// No entrance leaves BOTH cells on the anchor, and an entrance with no exit leaves the exit on the
+		// entrance, carrying the entrance's own bit - which is what makes mExitPos equal mEntryPos on ten of
+		// the shipped park's eleven placed objects.
+		if ( entrance is not { } way )
 		{
 			_hasEntrance = 0;
 			_entryDeltaX = _entryDeltaY = _exitDeltaX = _exitDeltaY = 0;
+			_entryDirection = NoEntranceDirection;
+			_exitDirection = NoExitDirection;
 			return;
 		}
 
+		var (exitX, exitY, exitDirection) = exit ?? way;
+
 		_hasEntrance = 1;
-		_entryDeltaX = entryX;
-		_entryDeltaY = entryY;
-		_exitDeltaX = exitX ?? entryX;
-		_exitDeltaY = exitY ?? entryY;
+		_entryDeltaX = way.X;
+		_entryDeltaY = way.Y;
+		_entryDirection = way.Direction;
+		_exitDeltaX = exitX;
+		_exitDeltaY = exitY;
+		_exitDirection = exitDirection;
 	}
 
-	/// <summary>The shape picture's entrance and exit marks - see <see cref="EntryDeltaX"/>.</summary>
-	private const char Entrance = 'S';
+	private static (int X, int Y, int Direction)? FirstOfKind( List<List<(int Kind, int Direction)>> rows,
+		int width, int kind )
+	{
+		for ( var x = 0; x < width; ++x )
+		{
+			for ( var y = 0; y < rows.Count; ++y )
+			{
+				if ( x < rows[y].Count && rows[y][x].Kind == kind )
+					return (x, y, rows[y][x].Direction);
+			}
+		}
 
-	/// <inheritdoc cref="Entrance"/>
-	private const char Exit = '2';
+		return null;
+	}
+
+	/// <summary>The cell kind the engine takes as a way in - <c>mType</c> 9 once it is built.</summary>
+	public const int EntranceKind = 9;
+
+	/// <summary>The cell kind the engine takes as a way out - <c>mType</c> 10 once it is built.</summary>
+	public const int ExitKind = 10;
+
+	/// <summary>The bits <c>FUN_00413410</c> leaves on a picture that marks no entrance.</summary>
+	private const int NoEntranceDirection = 0x01;
+
+	/// <inheritdoc cref="NoEntranceDirection"/>
+	private const int NoExitDirection = 0x10;
+
+	/// <summary>
+	/// What each character of <c>Info.Shape</c> means - the executable's own nineteen-entry table at
+	/// <c>0x007396c8</c>, <c>{ character, kind, compass bit }</c>, twelve bytes a row.
+	/// </summary>
+	/// <remarks>
+	/// <b>The four ways in and four ways out are laid out like a numeric keypad</b>: <c>8 6 2 4</c> are
+	/// entrances facing <c>0x01 0x04 0x10 0x40</c>, and <c>N E S W</c> the exits facing the same. So
+	/// <b><c>2</c> is an entrance and <c>S</c> an exit.</b> Every shipped entrance is a <c>2</c>; the 72
+	/// shipped exits are 44 <c>S</c>, 26 <c>N</c> and 2 <c>E</c>.
+	/// </remarks>
+	private static readonly Dictionary<char, (int Kind, int Direction)> Alphabet = new()
+	{
+		['.'] = (0, 0), ['*'] = (4, 0), ['Q'] = (3, 0), ['@'] = (1, 0), ['+'] = (0x0b, 0), ['#'] = (0x10, 0),
+		['8'] = (EntranceKind, 0x01), ['6'] = (EntranceKind, 0x04),
+		['2'] = (EntranceKind, 0x10), ['4'] = (EntranceKind, 0x40),
+		['N'] = (ExitKind, 0x01), ['E'] = (ExitKind, 0x04), ['S'] = (ExitKind, 0x10), ['W'] = (ExitKind, 0x40),
+		['D'] = (0x17, 0), ['>'] = (0x17, 0x04), ['<'] = (0x17, 0x40),
+		['O'] = (EntranceKind, 0x01), ['X'] = (ExitKind, 0x01)
+	};
 
 	/// <summary>
 	/// The line's value as a whole number, or null where it has none. Null rather than nought matters:

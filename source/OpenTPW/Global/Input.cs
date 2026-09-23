@@ -148,6 +148,12 @@ public static partial class Input
 		_ => Modifiers.None,
 	};
 
+	/// <summary>
+	/// Whether Ctrl is held and neither Shift nor Alt is - the original's own test for "Ctrl alone",
+	/// a <c>GetAsyncKeyState</c> mask that must equal <c>0x0c</c> exactly (<c>FUN_00486aa0</c>).
+	/// </summary>
+	public static bool ControlAlone => HeldIn( Keyboard.KeysDown ) == Modifiers.Control;
+
 	private static Modifiers HeldIn( IReadOnlyCollection<Key> keysDown )
 	{
 		var held = Modifiers.None;

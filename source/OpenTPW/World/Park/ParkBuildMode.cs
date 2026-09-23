@@ -70,7 +70,24 @@ public static class ParkBuildMode
 		};
 	}
 
-	/// <summary>Puts the mode away entirely, which is what a completed run does.</summary>
+	/// <summary>
+	/// Arms a mode with a run already anchored - the original's light setter <c>FUN_0052f580</c>, called
+	/// after something else has written the anchor. It is how a player is handed the queue tool: placing a
+	/// queued thing anchors it on the cell the placer laid before the entrance (<c>FUN_0052a050</c>, then
+	/// <c>FUN_0052f580( 3, 0 )</c> at <c>0x0052529e</c>), and editing a queue anchors it on the queue's
+	/// far end (<c>FUN_00530120</c>, then the same setter).
+	/// </summary>
+	public static string ArmAt( int mode, int serves, int x, int y )
+	{
+		Arm( mode, serves );
+		Anchor = (x, y);
+
+		return mode == Queue
+			? $"tool: laying queue for thing {serves} from ({x},{y}) - click where it should run to"
+			: $"tool: mode {mode} anchored at ({x},{y})";
+	}
+
+	/// <summary>Puts the mode away entirely - the original's <c>FUN_0052f200( 0, 0 )</c>.</summary>
 	public static void Disarm() => Arm( None );
 
 	/// <summary>Remembers where a run starts.</summary>
