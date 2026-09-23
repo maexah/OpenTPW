@@ -62,8 +62,8 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **914**, 0 fail, 0 skip with the game | 2026-09-22, after Q3's node |
-| Tests without the game | **427** ran, **487** skipped, of 914 | 2026-09-22, in a clean worktree of the Q3 commit |
+| Tests | **915**, 0 fail, 0 skip with the game | 2026-09-22, after the queue squares' wave |
+| Tests without the game | **428** ran, **487** skipped, of 915 | 2026-09-22, in a clean worktree of the wave commit |
 | Build warnings | 125 | 2026-09-22 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
@@ -78,7 +78,8 @@ down - so twelve of the jungle's seventeen rides had no entrance or the wrong on
 pass, the join onto a path, the tool putting itself away, mode `0x14` behind the ride window's queue
 button, and the marker squares are all built from the decode. A ride-end cell drawing nothing is the
 original's own behaviour. Selling a queued ride drains its queue, node included, as the demolisher
-does. Confirmed through the player's route; a guest queued for and rode it.
+does. Confirmed through the player's route; a guest queued for and rode it. The squares then took
+the original's wave (`alexah/116`), decoded once Alexah confirmed they were see-through and waving.
 
 **2026-09-22 - a player can build a queue, and it joins the paths around it.** Branch
 `alexah/114-a-laid-queue-joins-up`, the first half of Q3: the placer's link is a pair, a laid queue cell

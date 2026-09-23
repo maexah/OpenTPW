@@ -229,6 +229,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00535597` | Queue arm: end | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005358e9` | Queue verdict: the cash total skips queue over path | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005358f1` | Queue verdict: end of that guard | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x0053c755` | `FUN_0053c3f0`: the marker wave's phase gains 0.1 a frame unless paused | OpenTPW/World/Park/ParkBuildMarkers.cs  |
+| `0x0053c773` | `FUN_0053c3f0`: the phase store | OpenTPW/World/Park/ParkBuildMarkers.cs  |
 | `0x00540d90` | | OpenTPW.Files/Formats/Sprite/SpriteBankFile.cs  |
 | `0x005423a0` | | OpenTPW/UI/ScreenParticles.cs OpenTPW.Files/Formats/Sprite/SpriteBankFile.cs  |
 | `0x0054e682` | | OpenTPW/World/Level.cs OpenTPW/World/Advisor/Advisor.cs OpenTPW/Global/GameClock.cs  |

@@ -13,12 +13,18 @@ namespace OpenTPW;
 /// click itself obeys.
 /// </para>
 /// <para>
-/// <b>One square a cell, flat, 10 by 10, at the ground's own corner heights plus 1.5</b> - the
-/// original's <c>FUN_0053df30</c> face 0. Four things it does are counted rather than guessed, because
-/// their numbers are not decoded: the ripple (a sine term whose amplitude table was not read), the
-/// blink of a red square (a counter of unestablished unit), the turning of <c>m_link</c> and
-/// <c>m_end</c> to face the camera, and the extra lift over a cell of type 4, 9, 10, 7 or <c>0x1e</c>
-/// (<c>ceil10( FUN_00452ae0 )</c>, whose answer is not decoded).
+/// <b>One square a cell, 10 by 10, at the ground's own corner heights plus 1.5, see-through, and
+/// waving</b> - the original's <c>FUN_0053df30</c> face 0, whose corners <c>FUN_0053ddd0</c> lifts by
+/// <c>sin( phase + x + z )</c> from a 4,096-entry table (<c>FUN_004708d0</c>), the phase gaining 0.1 a
+/// frame while the game is not paused. Alexah, who played the original: "they were translucent. They
+/// waved like a flag/water."
+/// <para>
+/// Four things are counted rather than guessed: the brightening and dimming that goes with the wave (the
+/// same sine scales the vertex's up vector, which this shader normalises away), the blink of a red square
+/// (a counter of unestablished unit), the turning of <c>m_link</c> and <c>m_end</c> to face the camera,
+/// and the extra lift over a cell of type 4, 9, 10, 7 or <c>0x1e</c> (<c>ceil10( FUN_00452ae0 )</c>, whose
+/// answer is not decoded).
+/// </para>
 /// </para>
 /// </summary>
 public sealed class ParkBuildMarkers : ModelEntity
@@ -54,6 +60,25 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// <summary>The strip last built, so the mesh is laid again only when it changes.</summary>
 	private string _built = string.Empty;
 
+	/// <summary>The squares the mesh holds now, and its vertices, so the wave can move them every frame.</summary>
+	private List<ParkPathBuilding.QueueSquare> _strip = [];
+
+	private Vertex[] _vertices = [];
+
+	/// <summary>
+	/// Where the wave is, in radians - <c>DAT_00874fc0</c>, which <c>FUN_0053c3f0</c> raises by 0.1 each
+	/// rendered frame unless the clock is paused (<c>0x0053c755</c>..<c>0x0053c773</c>).
+	/// </summary>
+	private float _phase;
+
+	/// <summary>
+	/// How fast the wave moves. <b>The original steps 0.1 per rendered frame</b>, so its speed followed its
+	/// frame rate; this takes 30 frames a second, the rate the project already assumes for the
+	/// original's other per-frame steps (the menu colour ramp, <c>docs/exe/ui.md</c>), and runs off
+	/// <see cref="Time.Delta"/> so it is the same speed at any frame rate here.
+	/// </summary>
+	private const float WavePerSecond = 0.1f * 30f;
+
 	public ParkBuildMarkers()
 	{
 		Name = "build markers";
@@ -79,17 +104,26 @@ public sealed class ParkBuildMarkers : ModelEntity
 
 	protected override void OnUpdate()
 	{
+		if ( !GameClock.Paused )
+			_phase = (_phase + (WavePerSecond * Time.Delta)) % (MathF.PI * 2f);
+
 		var strip = ParkPicking.TryCell( out var x, out var y )
 			? ParkPathBuilding.QueueStrip( x, y )
 			: [];
 
 		var built = string.Join( ";", strip.Select( square => $"{square.X},{square.Y},{square.Marker}" ) );
 
-		if ( built == _built )
-			return;
+		if ( built != _built )
+		{
+			_built = built;
+			Build( strip );
 
-		_built = built;
-		Build( strip );
+			return;
+		}
+
+		// The same squares: only the wave has moved, so the heights are laid again in place.
+		if ( TranslucentModel is { } model && ParkGround.Current?.Heightfield is { } field && Fill( field ) > 0 )
+			model.UpdateVertices( _vertices );
 	}
 
 	/// <summary>The squares the pointer is over now, for the debug console - the same list the mesh is built from.</summary>
@@ -103,7 +137,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 		if ( strip.Count == 0 || ParkGround.Current?.Heightfield is not { } field )
 			return;
 
-		Unimplemented.Report( "MARKER_RIPPLE_AMPLITUDE" );
+		Unimplemented.Report( "MARKER_RIPPLE_SHADING" );
 
 		if ( strip.Any( square => square.Marker is ParkPathBuilding.MarkerLink or ParkPathBuilding.MarkerEnd ) )
 			Unimplemented.Report( "MARKER_ICON_TURNS_WITH_CAMERA" );
@@ -116,24 +150,17 @@ public sealed class ParkBuildMarkers : ModelEntity
 				or CellEdge.RideFarEnd or 7 or 0x1e ) )
 			Unimplemented.Report( "MARKER_LIFT_OVER_BUILT_CELL" );
 
-		var vertices = new Vertex[strip.Count * 4];
-		var elements = new uint[strip.Count * 6];
-		var vertex = 0;
+		_strip = strip.Where( square => square.X >= 0 && square.Y >= 0 && square.X < field.CellsX && square.Y < field.CellsY ).ToList();
+		_vertices = new Vertex[_strip.Count * 4];
+
+		if ( Fill( field ) == 0 )
+			return;
+
+		var elements = new uint[_strip.Count * 6];
 		var element = 0;
 
-		foreach ( var (x, y, marker, _, _) in strip )
+		for ( var corner = 0u; corner < _vertices.Length; corner += 4 )
 		{
-			if ( x < 0 || y < 0 || x >= field.CellsX || y >= field.CellsY )
-				continue;
-
-			var slot = Math.Max( 0, Array.IndexOf( Drawn, marker ) );
-			var corner = (uint)vertex;
-
-			vertices[vertex++] = Corner( field, x, y, new Vector2( 0f, 0f ), slot );
-			vertices[vertex++] = Corner( field, x + 1, y, new Vector2( 1f, 0f ), slot );
-			vertices[vertex++] = Corner( field, x + 1, y + 1, new Vector2( 1f, 1f ), slot );
-			vertices[vertex++] = Corner( field, x, y + 1, new Vector2( 0f, 1f ), slot );
-
 			elements[element++] = corner;
 			elements[element++] = corner + 1;
 			elements[element++] = corner + 2;
@@ -143,24 +170,50 @@ public sealed class ParkBuildMarkers : ModelEntity
 			elements[element++] = corner + 3;
 		}
 
-		if ( element == 0 )
-			return;
-
 		var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader", MaterialFlags.DisableCulling );
 		material.Set( "Color", _textures );
 
-		TranslucentModel = new Model( vertices[..vertex], elements[..element], material );
+		TranslucentModel = new Model( _vertices, elements, material );
+		TranslucentModel.EnableFrequentUpdates( _vertices );
 	}
 
-	private static Vertex Corner( HeightfieldFile field, int x, int y, Vector2 uv, int slot )
-		=> new()
+	/// <summary>Lays the four corners of every square at the wave's current height; answers how many were laid.</summary>
+	private int Fill( HeightfieldFile field )
+	{
+		var vertex = 0;
+
+		foreach ( var (x, y, marker, _, _) in _strip )
 		{
-			Position = new Vector3( x * field.CellSizeX, y * field.CellSizeY, field.HeightAt( x, y ) + Lift ),
+			var slot = Math.Max( 0, Array.IndexOf( Drawn, marker ) );
+
+			_vertices[vertex++] = Corner( field, x, y, new Vector2( 0f, 0f ), slot );
+			_vertices[vertex++] = Corner( field, x + 1, y, new Vector2( 1f, 0f ), slot );
+			_vertices[vertex++] = Corner( field, x + 1, y + 1, new Vector2( 1f, 1f ), slot );
+			_vertices[vertex++] = Corner( field, x, y + 1, new Vector2( 0f, 1f ), slot );
+		}
+
+		return vertex;
+	}
+
+	private Vertex Corner( HeightfieldFile field, int x, int y, Vector2 uv, int slot )
+	{
+		var (worldX, worldY) = (x * field.CellSizeX, y * field.CellSizeY);
+
+		return new()
+		{
+			Position = new Vector3( worldX, worldY, field.HeightAt( x, y ) + Lift + Wave( _phase, worldX, worldY ) ),
 			Normal = ParkGround.NormalAt( field, x, y ),
 			TexCoords = uv,
 			TexIndex = slot,
 			MatFlags = Translucent
 		};
+	}
+
+	/// <summary>
+	/// How far the wave lifts a corner - <c>sin( phase + x + z )</c> in the original's own axes, its
+	/// ground-plane x and z being this project's x and y. One world unit either way, a tenth of a cell.
+	/// </summary>
+	internal static float Wave( float phase, float worldX, float worldY ) => MathF.Sin( phase + worldX + worldY );
 
 	protected override void OnDelete()
 	{

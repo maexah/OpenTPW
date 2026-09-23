@@ -40,8 +40,8 @@ Machine-specific paths live in `CLAUDE.local.md` (not committed). Long-form know
 
 ```sh
 dotnet build source/OpenTPW.sln --no-incremental    # 0 errors expected; ~125 warnings are known, leave them
-dotnet test  source/OpenTPW.sln --no-build          # ~1 s. Without the game: 427 pass, 487 skip
-OPENTPW_GAME_PATH="<game folder>" dotnet test source/OpenTPW.sln --no-build   # all 914
+dotnet test  source/OpenTPW.sln --no-build          # ~1 s. Without the game: 428 pass, 487 skip
+OPENTPW_GAME_PATH="<game folder>" dotnet test source/OpenTPW.sln --no-build   # all 915
 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game "<game folder>"
 OPENTPW_DEBUG_CONSOLE=1 ...                          # commands on stdin; `unimplemented` prints the gap census
 ```

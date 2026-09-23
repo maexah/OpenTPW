@@ -989,8 +989,9 @@ click from (52,22) to (48,22) reproduces all five cells of the shipped queue fie
 The tool also ends when the click lands **on the anchor itself** (the pending cell is laid first), when
 **the preview had flagged a red cell** (`DAT_00816d48`: nothing is laid, sound `0xaf`,
 `0x00524a63`..`0x00524acd`), and on **a right click under 200 ms and 8 pixels** — but only with the Options
-switch "RMB cancel" on (`DAT_0078d911`, control `0x1d4c5`, UITEXT 331; `0x0048842b`..`0x00488434`). The
-build tool's own right-button slots are bare `RET 8`. No keyboard exit was traced. Otherwise the anchor
+switch "RMB cancel" on (`DAT_0078d911`, control `0x1d4c5`, UITEXT 331; `0x0048842b`..`0x00488434`) - which is on by
+default, and Alexah confirms from playing that a right click puts the tool away. The build tool's own
+right-button slots are bare `RET 8`. No keyboard exit was traced. Otherwise the anchor
 moves to the snapped target, so an L is laid a click at a time.
 
 ### Editing a queue: mode `0x14`, and the ride window's queue button
@@ -1081,13 +1082,19 @@ then the level's own `Dynamic` folder, where each theme's `dynamic.wad` supplies
 
 A square covers one cell, 10 by 10 — face 0 of the face builder `FUN_0053df30`, which also picks the UV
 base (5 for textures 8..14) and turns the corners by the square's orientation byte. **Each corner sits
-at the terrain height there + a lift + 1.5 + a sine term** indexed by `DAT_00874fc0 + x + z`, which `FUN_0053c3f0` raises by 0.1 a call, so the
-squares ripple; the sine table's amplitude is not established. The lift is `ceil10(FUN_00452ae0)` over
+at the terrain height there + a lift + 1.5 + `sin( phase + x + z )`**, x and z being the corner's own
+world coordinates. `FUN_0053ddd0` reads it from a 4,096-entry table `FUN_004708d0` fills with
+`sin( 2π·i/4096 )` (index scale `4096 / 2π` at `0x007b095c`, mask 4095 at `0x007b0960`), so the amplitude
+is one world unit, a tenth of a cell. The phase `DAT_00874fc0` gains 0.1 each rendered frame unless the
+clock is paused (`FUN_0053c3f0`, `0x0053c755`..`0x0053c773`, gated on `FUN_004030c0`, IsPaused). The same
+sine scales the corner's up vector by `(sin + 1) / 2` (`0x00700e28` is −1.0, `0x00700de4` 0.5), so the
+squares also brighten and dim as they wave. Alexah, who played the original: *"they were translucent.
+They waved like a flag/water."* The lift is `ceil10(FUN_00452ae0)` over
 mType 4, 9, 10, 7 and `0x1e` cells and the track kinds, else nought; side faces are added toward a
 lower neighbour. **Red blinks**: `FUN_0053c8d0` drops texture 1 while `DAT_00763c98` is nought, which
 toggles on a counter (on past 1, off past 6) of an unestablished unit. Textures 8 to 14 take UVs turned by
-the camera's yaw (`DAT_00790a38`), so `m_link` and `m_end` stay upright on screen. The blend state is
-not established.
+the camera's yaw (`DAT_00790a38`), so `m_link` and `m_end` stay upright on screen. The squares are
+see-through, by Alexah's own memory of the original; the blend state itself was not traced.
 
 **In mode 3 the queue tool draws a strip every UI tick** (`0x1e` → `FUN_0046c2a0` → `FUN_0046c660` →
 `FUN_005234d0`): the list is cleared, the hovered cell is snapped to the anchor's longer axis, and

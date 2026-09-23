@@ -238,6 +238,11 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   test pass; the preview's cash test skips path cells and shows `c_cash`; and the Ctrl-to-place-another
   and track-ride branches are built or counted. Confirmed in a third run: `sell` answered `its queue for
   225`, all four cells went, and the same ride went straight back onto (42,24) with its node.
+  **Then Alexah answered from memory of the original:** the squares were see-through, "waved like a
+  flag/water", and a right click put the tool away. The wave is decoded and built (`alexah/116`): each
+  corner rises by `sin( phase + x + z )`, one world unit, from `FUN_004708d0`'s 4,096-entry table, the
+  phase gaining 0.1 a frame unless paused. Confirmed by two frame pairs: under `pause` identical, running
+  the strip's band moving. The brightness half of the wave is counted (`MARKER_RIPPLE_SHADING`).
 - [ ] **Q4. Sell leaves the ride's script bound and scheduled.** `ParkBuilding.Sell`
   (`ParkBuilding.cs:115-160`) removes the model and the state object; `ParkRides` has no unbind. Add
   it, and drop queue cells keyed to the sold thing. Confirm: sell a running ride, `rides` census no
@@ -375,6 +380,13 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   side-by-side screenshots of the same view.
 - [ ] **Q30. Waving flags at the bus stop.** Nothing found in code or docs. Decode what the original
   draws at `BusStopA/B` (`park.md:54, 98`), then build.
+- [ ] **Q35. The path tool from the interface, and Backspace.** Path laying is still console-only: nothing
+  in the UI arms mode 1 (`park-engine.md` has "clicking a path cell or bare ground gives mode 1" without
+  the control that does it). Alexah, 2026-09-22, from playing the original: *"Backspace deletes the last
+  section of path that was placed, but only in path building mode."* Decode both - which control arms
+  mode 1, and the Backspace handler (Backspace reaches the key tables as `0x08`, `park-engine.md`
+  "Keyboard bindings") - then build: the path tool's own preview squares and cursor states
+  (`PATH_TOOL_PREVIEW`) come with it.
 
 ## E. Large
 
