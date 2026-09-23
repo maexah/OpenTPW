@@ -274,10 +274,20 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   object and banks the refund. Do Sell then Carry, as `ParkObjectWindow.Move` does. Return a result
   value, not a string the caller parses (`:171`). Confirm: move to a cell that refuses, screenshot the
   object still in the hand.
-- [ ] **Q6. Placing a carried staff member destroys the candidate before the hire can fail.**
-  `ParkStaffPool.PlaceCarried` (`ParkStaffPool.cs:95-100`): Take, then Carrying = 0, then Hire, which
-  can return 0. Use the console's own safe order. Confirm: put down on an off-map cell, candidate still
-  in the list, screenshot.
+- [x] **Q6. Placing a carried staff member destroys the candidate before the hire can fail.** Done 2026-09-23,
+  `alexah/120-a-refused-drop-keeps-the-candidate`; decode in `docs/exe/park-engine.md` "Putting a candidate
+  down: the type-5 mode", every claim put to a refuter. The original's place-staff click answers a refused
+  cell with an inert log line and nothing else - mode, preview and candidate stay, and the next click tries
+  again - and the pool loses a candidate only in the mode's uninstall, once a click was accepted.
+  `ParkStaffPool.Hire` is the one body for the click and the console's `hire`: the worker goes up first, the
+  pool loses them second, and a refusal leaves them on the cursor and in the pool. **The original has no
+  off-map refusal** (its picker clamps to an edge cell), so this park's three refusals are its own, said at
+  the site. Confirmed in the game, every number predicted: on `main` a refused drop printed `hired Duke Mighten
+  as thing 0`, candidates 22 to 21, staff 5, his row gone from the hire screen; with the fix `cannot be put
+  down`, 22 and 5, the row unchanged, and the next click hired him as thing 43 at (49,25), 21 and 6,
+  photographed standing. Filed Q40. The item as written: `ParkStaffPool.PlaceCarried`
+  (`ParkStaffPool.cs:95-100`): Take, then Carrying = 0, then Hire, which can return 0. Use the console's own
+  safe order. Confirm: put down on an off-map cell, candidate still in the list, screenshot.
 - [ ] **Q7. Leaving a park does not empty the hand.** `Level.Unload` (`Level.cs:862-890`) forgets the
   cameras and the build mode but not `ParkBuilding.Carrying` or `ParkStaffPool.Carrying`. Confirm:
   leave mid-carry, enter another theme, click, nothing placed, log line.
@@ -327,8 +337,8 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   Escape over a full hand opens the menu, where the original's Escape puts the carry away (`0x0040c368`).
   And `ParkBuilding.Hold` and `ParkStaffPool.Carry` each leave the other's hand full, though `Level.cs`
   says "never both at once". **For a moved thing a wrong drop is a sale**, since it was sold at pickup. Decode in
-  `docs/exe/park-engine.md` "Moving a thing"; what the type-5 staff mode's uninstall does with its candidate
-  is not decoded. Confirm: RMB cancel off, Move a ride from its window, right press, still in the hand;
+  `docs/exe/park-engine.md` "Moving a thing", and for a carried candidate "Putting a candidate down: the
+  type-5 mode", where every way out but a drop returns them to the pool. Confirm: RMB cancel off, Move a ride from its window, right press, still in the hand;
   Escape, hand empty, menu not opened.
 
 ## B. Docs and comments
@@ -430,6 +440,14 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   build side - `Info.CreateParticleEffect` and the `+0xd4` sound zone the script loader makes when an
   item has one (`park.md`, "What selling a thing does to its script"). Needs a world particle pass,
   which nothing here has; the screen pass draws only `OnScreen` templates.
+- [ ] **Q40. The place-staff mode's cell rule and its carry preview.** Found by Q6's decode (`park-engine.md`,
+  "Putting a candidate down: the type-5 mode"), so this is a build. The original takes a worker only on a
+  cell of `mType` 0, 1, 3 or 9, not flagged `0x40`, whose track record after the 12/17 parent redirect is
+  not track type 11, 13, 16, 18 or 25; here any cell on the map takes one (`STAFF_PLACEMENT_CELL_RULE`).
+  While a candidate is carried the original shows cursor 9 (`c_carry.ani`), hangs a sprite of their kind
+  in their costume under the pointer and puts a red square on a cell the click would refuse; here the
+  pointer is plain (`STAFF_CARRY_PREVIEW`). Confirm: carry a candidate over a cell the rule refuses, click,
+  still in the hand and the red square photographed; then a path cell, hired.
 - [x] **Q35. The path tool from the interface, and Backspace.** Done 2026-09-22,
   `alexah/117-the-path-tool-from-the-interface`; `docs/exe/park-engine.md` "The path tool" has the decode.
   No button arms it: a click on grass or path does, and anchors in the same click. Backspace pops the run

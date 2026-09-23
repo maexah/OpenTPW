@@ -64,6 +64,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00467d00` | | OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x00467d60` | | OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x0046b600` | | OpenTPW.Common/Client/Window.cs  |
+| `0x0046c480` | Place-staff mode (type 5, vtable `0x006fea40`) MOVE: carries the candidate's sprite under the pointer and draws a red square over a cell the click would refuse | OpenTPW/World/Park/ParkStaffPool.cs  |
+| `0x0046c730` | Place-staff mode OnInstall: carry cursor 9, and a sprite of the candidate's kind in their costume | OpenTPW/World/Park/ParkStaffPool.cs  |
 | `0x00470e90` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x004711d0` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x00471860` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
@@ -238,6 +240,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00535323` | Queue arm: last entrance-bond probe | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00535597` | Queue arm: end | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005357c7` | Verdict `FUN_00535670`: the `0x40` outside-the-park test, first for every tool | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00535811` | Verdict `FUN_00535670`: the parent redirect for track types 12 and 17, made inline after `FUN_004d0af0` fetches the cell's own track record | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005358e9` | Queue verdict: the cash total skips queue over path | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005358f1` | Queue verdict: end of that guard | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00535d63` | Verdict: end of the path arm | OpenTPW/World/Park/ParkPathBuilding.cs  |

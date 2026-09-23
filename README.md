@@ -185,7 +185,7 @@ dotnet test source/OpenTPW.sln
 
 It does not matter what directory you start the game from; the shaders and the loading screen's font are copied next to the binary and found there.
 
-Five hundred and twelve of the nine hundred and forty-three unit tests read real game files and skip when no installation is found - so a green run on a machine that has never had the game means **431 ran and 512 did not**. Set `OPENTPW_GAME_PATH` to run all of them. (Take these fresh; they move most sessions.)
+Five hundred and fifteen of the nine hundred and forty-six unit tests read real game files and skip when no installation is found - so a green run on a machine that has never had the game means **431 ran and 515 did not**. Set `OPENTPW_GAME_PATH` to run all of them. (Take these fresh; they move most sessions.)
 
 `OPENTPW_DEBUG_CONSOLE=1` reads commands from standard input, for driving a run reproducibly.
 

@@ -805,9 +805,10 @@ public static class DebugConsole
 					: "buy <catalogueId> <cellX> <cellY> [angle]" );
 				break;
 
-			// Hiring, firing, and carrying somebody from one place to another. The hire screen is not
-			// built yet, so these drive the verbs directly - the same reason `arrive` existed before
-			// the arrival manager.
+			// Hiring, firing, and carrying somebody from one place to another, each in one step. `hire`
+			// runs the place-staff click's body, ParkStaffPool.Hire, without the hire screen or the hand;
+			// `hirescreen`, `click` and `worldclick` drive the real path. The staff window that would fire
+			// and carry is not built.
 			case "hire":
 				if ( parts.Length < 4 )
 				{
@@ -822,25 +823,22 @@ public static class DebugConsole
 				}
 
 				var wanted = (int)Argument( 1 );
-				var candidate = hiring.Candidates.FirstOrDefault( person => person.Id == wanted );
 
-				if ( candidate.Id != wanted )
+				if ( hiring.Find( wanted ) is not { } candidate )
 				{
 					Reply( $"hire: nobody in the pool is candidate #{wanted}" );
 					break;
 				}
 
-				// Taken out of the pool only once they are actually standing in the park - a failed
-				// hire must not quietly destroy the candidate.
-				var hired = staffing.Hire( candidate, (int)Argument( 2 ), (int)Argument( 3 ) );
+				// The place-staff click's own body, which takes them out of the pool only once they are
+				// standing in the park.
+				var hired = hiring.Hire( staffing, candidate, (int)Argument( 2 ), (int)Argument( 3 ) );
 
 				if ( hired == 0 )
 				{
 					Reply( $"hire: '{candidate.Name}' could not be put there, and is still waiting" );
 					break;
 				}
-
-				hiring.Take( wanted, out _ );
 
 				Reply( $"hire: '{candidate.Name}' is thing {hired}, {candidate.Wage} a month" );
 				break;

@@ -302,14 +302,15 @@ internal sealed class ParkHireScreen : UiWindow
 	}
 
 	/// <summary>
-	/// A candidate was chosen. The original takes them out of the pool and carries them on the cursor
-	/// - a "place staff" mode - and the worker is constructed on the next click at a cell.
+	/// A candidate was chosen. The original marks them taken and carries them on the cursor in its
+	/// place-staff mode; they stay in the pool, and on this list, until a click at a cell is accepted
+	/// (docs/exe/park-engine.md, "Putting a candidate down: the type-5 mode").
 	/// </summary>
 	/// <remarks>
 	/// <b>They are not hired here.</b> The candidate goes onto the cursor and the worker is built by
-	/// the next click at a cell, in <c>Level.WorldClick</c> - which is the original's order, and the
+	/// the next click at a cell, in <c>Level.ClickWorldAt</c> - which is the original's order, and the
 	/// reason a cancelled hire costs nothing and takes nobody out of the pool. <c>hire</c> from the
-	/// console still does the whole thing in one step, for a test that cannot move the pointer.
+	/// console does the whole thing in one step.
 	/// </remarks>
 	private void Chose( int candidateId )
 	{

@@ -62,6 +62,11 @@ public sealed class ParkStaffPool
 			// Hiring is a placement verb with its own mode, which puts any build tool away.
 			ParkBuildMode.Disarm();
 
+			// The mode's install sets the carry cursor and hangs a sprite of the candidate under the
+			// pointer, which marks a cell it would refuse in red (0x0046c730, 0x0046c480). Nothing
+			// here shows a carried candidate.
+			Unimplemented.Report( "STAFF_CARRY_PREVIEW" );
+
 			return $"carrying {person.Name}, a grade {person.Grade} " +
 				$"{NameOfKind( person.Kind ).ToLowerInvariant()} at {person.Wage} a month - " +
 				"click the park to put them down";
@@ -84,9 +89,17 @@ public sealed class ParkStaffPool
 	}
 
 	/// <summary>
-	/// Hires whoever is on the cursor onto a cell. <b>The pool loses them only now</b>, which is the
-	/// order the original takes: the worker is constructed by the place-staff mode's own click.
+	/// Hires whoever is on the cursor onto a cell, through <see cref="Hire"/>. <b>A refused cell leaves
+	/// them on the cursor and in the pool</b>, so the next click tries again: the original's place-staff
+	/// click (<c>FUN_0046c8e0</c>) answers a refusal with an inert log line and nothing else, and returns
+	/// with its mode, its preview and its candidate as they were.
 	/// </summary>
+	/// <remarks>
+	/// <b>The refusals here are not the original's.</b> It refuses only by the cell rule, which is not
+	/// built (see <see cref="Hire"/>), and its picker never hands the mode a cell off the map. This park
+	/// refuses a cell off the map, a kind it packs no picture for, and any hire while it has nobody,
+	/// staff or guest, to copy a walk from - and treats each as the original treats a refused cell.
+	/// </remarks>
 	public static string PlaceCarried( int cellX, int cellY )
 	{
 		if ( Carrying == 0 )
@@ -95,14 +108,52 @@ public sealed class ParkStaffPool
 		if ( Current is not { } pool || ParkPeople.Current is not { } people )
 			return "put: a park has to be loaded";
 
-		if ( !pool.Take( Carrying, out var taken ) )
+		if ( pool.Find( Carrying ) is not { } candidate )
 			return $"put: candidate {Carrying} is no longer in the pool";
+
+		var thingId = pool.Hire( people, candidate, cellX, cellY );
+
+		if ( thingId == 0 )
+			return $"put: {candidate.Name} cannot be put down at ({cellX},{cellY}) - still on the cursor, still in the pool";
 
 		Carrying = 0;
 
-		var thingId = people.Hire( taken, cellX, cellY );
+		return $"put: hired {candidate.Name} as thing {thingId} at ({cellX},{cellY})";
+	}
 
-		return $"put: hired {taken.Name} as thing {thingId} at ({cellX},{cellY})";
+	/// <summary>
+	/// Puts one candidate into the park at a cell, and only then takes them out of the pool. Answers
+	/// their thing id, or nought where the park refused them, in which case they are still waiting.
+	/// </summary>
+	/// <remarks>
+	/// <b>One body for the place-staff click and the console's <c>hire</c></b>, so the two cannot drift
+	/// apart in the order that matters: the worker goes up first and the pool loses them second.
+	/// </remarks>
+	internal int Hire( ParkPeople people, Candidate candidate, int cellX, int cellY )
+	{
+		// The original takes a worker only on a cell of kind 0, 1, 3 or 9 that is not flagged 0x40 and
+		// whose track record passes two tests (FUN_0046c8e0; docs/exe/park-engine.md, "Putting a candidate
+		// down"). Here any cell on the map takes one.
+		Unimplemented.Report( "STAFF_PLACEMENT_CELL_RULE" );
+
+		var thingId = people.Hire( candidate, cellX, cellY );
+
+		if ( thingId != 0 )
+			Take( candidate.Id, out _ );
+
+		return thingId;
+	}
+
+	/// <summary>The waiting candidate with this id, or null.</summary>
+	public Candidate? Find( int candidateId )
+	{
+		foreach ( var person in _candidates )
+		{
+			if ( person.Id == candidateId )
+				return person;
+		}
+
+		return null;
 	}
 
 	/// <summary>How many candidates the pool can hold at once - the original's fixed array.</summary>

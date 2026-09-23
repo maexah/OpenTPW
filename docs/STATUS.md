@@ -15,7 +15,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
   the camera onto the gate and flies into the island before the loading screen.
 - Park: ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (5 of 6).
 - Building and staffing: purchase menu and hire screen, both reachable from Buy. Things bought, sold,
-  moved, carried; staff hired, fired, picked up, put down. **A sold thing's script goes with it**, and
+  moved, carried; staff hired, fired, picked up, put down. **A staff drop the park refuses keeps the
+  candidate on the cursor and in the pool.** **A sold thing's script goes with it**, and
   its ground is left bare. **A moved thing stays in the hand until a cell takes it**, facing the way it stood. Clicking a placed ride **anywhere on its
   footprint** opens its window - the save's own and ones bought this session alike.
 - Information and money: Info and Money open all-staff, all-items, all-visitors and entry-price screens.
@@ -40,12 +41,13 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Eight of the nine per-object windows are unbuilt. Patrol areas are dead, deferred by Alexah.
 - Selling a thing lets nobody go: its riders stay aboard and its queuers stay put (`docs/QUEUE.md` Q36).
 - Any right press empties the hand, which for a moved thing is a sale; Escape opens the menu over it (Q39).
+- Nothing shows a carried candidate, and any cell on the map takes one; the original's rule is decoded (Q40).
 - The `meter.wct` mapping behind the happiness gauge is wrong - the last fault Alexah found by playing.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q5, and Q35, are ticked.** Next is **Q6**: placing a carried staff
-member takes the candidate before the hire can fail. Q4 filed Q36-Q38 (eviction, terrain rule, effects).
+`docs/QUEUE.md`, from the top. **Q1 to Q6, and Q35, are ticked.** Next is **Q7**: leaving a park does not
+empty the hand. Q4 filed Q36-Q38 (eviction, terrain rule, effects); Q6 filed Q40 (the staff cell rule).
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -64,12 +66,21 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **943**, 0 fail, 0 skip with the game | 2026-09-23, after Q5 |
-| Tests without the game | **431** ran, **512** skipped, of 943 | 2026-09-23, after Q5 |
-| Build warnings | 125 | 2026-09-23, after Q5 |
+| Tests | **946**, 0 fail, 0 skip with the game | 2026-09-23, after Q6 |
+| Tests without the game | **431** ran, **515** skipped, of 946 | 2026-09-23, after Q6 |
+| Build warnings | 125 | 2026-09-23, after Q6 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-09-23 - a refused staff drop keeps the candidate.** Branch `alexah/120-a-refused-drop-keeps-the-candidate`,
+`docs/QUEUE.md` Q6. Decoded first, every claim put to a refuter: the original's place-staff click answers a
+refused cell with an inert log line and nothing else, and the pool loses a carried candidate only on an
+accepted click. `ParkStaffPool.Hire` is now the one body for the click and the console's `hire`, hire first
+and take second. Confirmed in the game, every number predicted: on `main` a drop off the map printed `hired Duke Mighten
+as thing 0` and his row left the hire screen, 22 candidates to 21 with 5 staff; with the fix he stayed, 22
+and 5, and the next click hired him as thing 43, 21 and 6, photographed. The cell rule and the carry preview
+are counted and filed as Q40.
 
 **2026-09-23 - a move keeps the thing in the hand until a cell takes it.** Branch
 `alexah/119-move-keeps-the-thing-in-the-hand`, `docs/QUEUE.md` Q5. Decoded first, every claim put to two
@@ -91,20 +102,10 @@ prints `scripts N bound M`. **Its unmeasured finding was real**: a sold save-pla
 hole in its footprint and refused a rebuild; `Unstamp` writes the original's cleared cell now. Confirmed
 through the ride window's Delete: scripts 16 to 15, back on its own spot, then 15, 14, 13 and still 13.
 
-**2026-09-22 - a placed ride lays its queue's first cell, and the player lays the rest from it.** Branch
-`alexah/115-a-placed-ride-lays-its-queue-node`, `docs/QUEUE.md` Q3, which Alexah reopened twice: *"the node
-never shows up"*. Decoded before building, with a refuter per claim: the placer stamps a NOMODIFY queue
-cell before a queued ride's entrance and a path before its exit, and the commit arms the queue tool on
-that cell. **The `Info.Shape` alphabet was wrong** - `2` is the entrance, `S` an exit, rows read upside
-down - so twelve of the jungle's seventeen rides had no entrance or the wrong one. The queue run's link
-pass, the join onto a path, the tool putting itself away, mode `0x14` behind the ride window's queue
-button, and the marker squares are all built from the decode. A ride-end cell drawing nothing is the
-original's own behaviour. Selling a queued ride drains its queue, node included, as the demolisher
-does. Confirmed through the player's route; a guest queued for and rode it. The squares then took
-the original's wave (`alexah/116`), decoded once Alexah confirmed they were see-through and waving.
-
-**2026-09-22 - nine earlier items, kept now only in the git log.** `alexah/117` made the path tool picked
-up from the park, with Backspace taking a run back up (Q35); `alexah/114` let a player build a queue that
+**2026-09-22 - eleven earlier items, kept now only in the git log.** `alexah/115` made a placed ride lay its
+queue's first cell and hand the player the queue tool there, fixing the `Info.Shape` alphabet on the way
+(Q3), and `116` made its squares wave; `alexah/117` made the path tool picked up from the park, with
+Backspace taking a run back up (Q35); `alexah/114` let a player build a queue that
 joins the paths around it (the first half of Q3); `alexah/110` made a thing the save
 placed clickable anywhere on its footprint (`ParkPicking.ThingOn`, `VERIFYING.md` 113-114); `109` made a
 thing bought this session join the park (Q1, Q1b - the rider is still not photographed); `112` decoded

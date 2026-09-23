@@ -650,8 +650,8 @@ public static class ParkPathBuilding
 	}
 
 	/// <summary>
-	/// The track record a cell answers by: its own, or for a track cell of type 12 or 17, its parent's
-	/// (<c>FUN_004d0af0</c>).
+	/// The track record a cell answers by: its own (<c>FUN_004d0af0</c>), or for a track cell of type 12
+	/// or 17, its parent's - a redirect each caller makes inline after that fetch (<c>0x00535811</c>).
 	/// </summary>
 	private static ParkWorld.MapCell TrackRecord( ParkWorld park, ParkWorld.MapCell cell )
 	{

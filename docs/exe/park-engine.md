@@ -1385,6 +1385,82 @@ fills only 80% of its meter**. Names come from five per-kind tables of 35 entrie
 entertainer 6, guard 7, researcher 8) and the sprite bank (entertainers 4, handymen 5, mechanics 6,
 guards 7, researchers 8).
 
+#### Putting a candidate down: the type-5 mode
+
+Decoded for `docs/QUEUE.md` Q6; every claim below was put to a refuter.
+
+**The pick.** The hire list's handler `FUN_0049b650` calls `FUN_00507bf0( slot )`, which builds the mode
+with `FUN_0046c6d0` (vtable `0x006fea40`: `+0xc` thing type 4..8, `+0x10` grade, `+0x11` costume, `+0x14`
+name index, `+0x8` the preview, `+0x18` a placed flag, zeroed), installs it through `FUN_0046c350`, and only
+then marks the record taken (`+0xb`, `0x00507f90`). The screen then closes itself and posts advisor message
+`0x135`. `FUN_00507bf0` refuses only a slot of 32 or more and an unoccupied record: not a kind at its
+staff cap, not money, not a candidate already carried.
+
+**The slots.** `+0x04` LEFT down `FUN_0046c8e0`, `+0x18` MOVE `0x0046c480`, `+0x24` `0x0040f2d0`
+(returns 5), `+0x28` OnInstall `0x0046c730`, `+0x2c` OnUninstall `0x0046c890`. Every other mouse slot is
+`0x006b70d0`, a bare `RET 8`. OnInstall sets cursor 9 (`c_carry.ani`) and builds a world sprite of the
+candidate's kind in their costume (banks 6, 5, 4, 7, 8 for types 4..8), which MOVE carries under the
+pointer.
+
+**The click reads the hovered cell, `DAT_007b05cc`**, never the coordinates the dispatcher passes, and
+tests it (`0x0046c928`..`0x0046c974`). **It refuses** when:
+
+1. the cell's track record, after the redirect to the parent for track types 12 and 17, is track type
+   11, 13, 16, 18 or 25 (`FUN_005363f0`: `FUN_004d0af0` fetches the cell's own record in the parallel
+   `0x28`-byte track layer at `world + 0x1102d8`, `FUN_0053ad90` tests 12/17, `FUN_0053ad30` the five);
+2. `mFlags & 0x40` (`FUN_00535db0( 0x40 )`);
+3. the redirected track type is 25 (`FUN_00536450`, which has no zero-parent guard; redundant but for a
+   12/17 record whose parent is 0);
+4. `mType` is not 0, 1, 3 or 9 (`FUN_00536390`, `FUN_00536310`, `FUN_00536320`).
+
+The meaning of those four kinds is `park.md`'s (1 path, 3 queue, 9 seen on shop and bin footprints),
+not proven again here; `+0x08` is the save's `mType` (see "The runtime cell is not the save cell").
+
+**A refused click does nothing at all.** `0x0046cb76` hands "Cannot place staff member here - the cell
+is of type %d" to the inert logger and returns (`RET 8`, `0x0046cb9b`): no sound, no advisor line, no mode
+change, `+0x18` still 0, the pool untouched. The candidate stays on the cursor, still taken, and the next
+click tries again. The only feedback comes before the click: over a refused cell MOVE draws one red
+marker square (texture 1) under the preview.
+
+**An accepted click** constructs the worker on the cell (type 4 `FUN_004d9eb0`, 5 `FUN_004d6b60`, 6
+`FUN_004d4340`, 7 `FUN_004d5d40`, 8 `FUN_00502600`), sets `+0x18` to 1, even when the allocation fails,
+and installs the idle mode (`0x006fea10`) through the setter. No money moves.
+
+**OnUninstall runs on every ending**, because the setter calls the outgoing mode's `+0x2c` before its
+destructor. It frees the preview, calls `FUN_005083b0( placed ? 0 : 1 )` on the park, and withdraws
+advisor message `0x135`. `FUN_005083b0` takes no key: it walks all 32 records and, for each one marked
+taken, clears `+0xb` and, when placed, also clears `+0xa` (occupied) and deletes the candidate's hire-list
+row (`FUN_00481550` → `FUN_0049c970`). **So a carried candidate leaves the pool only on an accepted
+click**, even one whose allocation failed; every other ending returns them. While carried they never
+expire (`FUN_005084f0` skips a taken record), and a hire list built then still shows them
+(`FUN_0049b5b0` never reads `+0xb`).
+
+**Every way out without a drop returns the candidate**: a quick right click with RMB cancel on, which is
+the default (`0x0048842b` installs the idle mode whatever the current one is); Escape (`0x0040c180`),
+unless a panel is on the gadget arm, which it takes off instead, and the menu does not open; the extended
+Delete key, which installs Clear Land (`FUN_0040c5e0`); picking another candidate, if the hire screen can
+be reopened while carrying (see Open), the old one returning first, after which every untaken candidate of a kind at its staff cap is purged (`0x00507f9b`..
+`0x00507fcd`); and leaving the park (`FUN_00515dd0` tears the mode down while the park still exists). A
+held or dragged right press, or any right press with the option off, leaves the candidate in the hand.
+
+**The picker never hands the mode a cell off the map.** `FUN_0045d560` clamps the pick to an edge cell,
+and a ray that hits nothing leaves the last hovered cell standing, so any nonzero id it writes is a map
+cell. It writes 0 only if a runtime limit (`DAT_007a0314`, `DAT_007a0374`) is 0 or less, or a grid
+dimension and its limit are both above 128; those limits are filled at run time and were not read, so
+"never 0" is likely, not proven. The click does not test for 0.
+
+**Open.** What advisor message `0x135` says (it resolves through a table filled at runtime); what puts
+the cursor back after a drop or a cancel; whether the staff constructors' later calls make a sound;
+whether a single click on a hire row picks, since a double click always does; whether the hire screen
+can be reopened while a candidate is carried (no static path from its opener `FUN_0049bdd0` tears the
+mode down, but `FUN_00485b40`'s message 5 to an open panel is not covered).
+
+**OpenTPW** (`ParkStaffPool.PlaceCarried`, and `ParkStaffPool.Hire`, which the console's `hire` shares):
+the worker goes up first and the pool loses them second, and a refusal leaves the candidate on the cursor
+and in the pool. **Its refusals are its own**: a cell off the map, a kind the park packs no picture
+for, and any hire while the park has nobody, staff or guest, to copy a walk from. The cell rule is counted, not built (`STAFF_PLACEMENT_CELL_RULE`), and so are the carry cursor, the
+preview and its red square (`STAFF_CARRY_PREVIEW`); both are `docs/QUEUE.md` Q40.
+
 ### The per-object management screen is nine screens
 
 There is no single one. Nine window classes share one base whose opener is `FUN_0048cea0`. Clicking a
@@ -1892,7 +1968,7 @@ verdict `FUN_00535670(1,0)`, in its own order (`0x005357c7`..`0x00535d63`):
 | 1 | `mFlags & 0x40` — land outside the park | red, **no latch** |
 | 2 | mType 4, 9 or 10 | red and latch, unless the item's `+0x54` is below 2 (rides and shops are 5) |
 | 3 | an earlier latch | red |
-| 4 | track type `0x19`, after the parent redirect for 12 and 17 (`FUN_004d0af0`) | red, latch |
+| 4 | track type `0x19`, after the parent redirect for 12 and 17 (made inline after `FUN_004d0af0`, which fetches the cell's own record) | red, latch |
 | 5 | cost: mType 0 or 3 adds `Costs.PathCell` to the run; cash below the total | red, latch, `c_cash` |
 | 6 | mType 1 as the last cell | `m_end` (11) |
 | 7 | mType `0x15` | red, latch |
