@@ -929,7 +929,7 @@ public static class DebugConsole
 			case "put":
 				Reply( parts.Length > 2
 					? ParkBuilding.PlaceCarried( (int)Argument( 1 ), (int)Argument( 2 ),
-						parts.Length > 3 ? (int)Argument( 3 ) : 0 )
+						parts.Length > 3 ? (int)Argument( 3 ) : null )
 					: "put <cellX> <cellY> [angle]" );
 				break;
 
@@ -939,10 +939,11 @@ public static class DebugConsole
 					: "sell <thingId>" );
 				break;
 
+			// The window's move, then one click at the cell. A cell that refuses leaves the thing in the hand.
 			case "move":
 				Reply( parts.Length > 3
 					? ParkBuilding.Move( (int)Argument( 1 ), (int)Argument( 2 ), (int)Argument( 3 ),
-						parts.Length > 4 ? (int)Argument( 4 ) : 0 )
+						parts.Length > 4 ? (int)Argument( 4 ) : null )
 					: "move <thingId> <cellX> <cellY> [angle]" );
 				break;
 

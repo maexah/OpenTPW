@@ -1189,7 +1189,8 @@ offset table at all; the nearest established pair is `+0x124`/`+0x128` = `UsageI
 
 **MOVE (verb 0x3b) is demolish-then-buy-again**, literally: the object is destroyed and refunded at
 pickup, the footprint fully released, and the full price re-charged at put-down by the same constructor
-a fresh purchase uses. Nothing in the construction path distinguishes a move from a purchase.
+a fresh purchase uses. Nothing in the construction path distinguishes a move from a purchase, and the
+one thing the old object passes on is its facing - see "Moving a thing".
 
 **DEMOLISH (verb 0x33) refunds `price * percent / 100`**, where percent is `FUN_004e2290` - a per-item,
 per-build-state, **per-age-bucket** field selected from a four-year scrap table at
@@ -1228,7 +1229,7 @@ design-map path (bit 8 of its `+0x26` seed, which in the jungle marks exactly th
 second pass clears the footprint, unlinking the entrance from its four cardinals and the exit from all
 eight, so each such path also loses its bit toward the end. The path the queue joined keeps the ride as
 its owner, pointing at an empty cell. **Move is the same call with the same flag**, after one extra walk
-that saves the corner list.
+of the queue whose saved corner list nothing reads - see "Moving a thing".
 
 #### The demolisher's order, and the cells it leaves
 
@@ -1294,6 +1295,70 @@ heads for the nearest other rest area `FUN_00506910` can reach; one on the way t
 claim cleared and goes to state 0. The only tick-side check is `FUN_00500900`'s defensive kind-3 test.
 **OpenTPW does not build it** (`SOLD_THING_EVICTION`): a rider or queuer of a sold thing stays as it was,
 and in OpenTPW only guards and researchers rest.
+
+#### Moving a thing
+
+Decoded 2026-09-23 (`docs/QUEUE.md` Q5), every claim put to two refuters and their corrections folded in.
+**The object window's `b_move`, `FUN_0048cfa0`, is Delete's demolish followed by the move tool, and the
+put-down is a purchase that keeps the old thing's facing.**
+
+- **The pickup.** It latches the window's thing (`FUN_0048c940` into `DAT_007c2654`) and selects it
+  (`FUN_005276d0( 1 )`). For an item whose `+0x40` is set it walks the queue once (`FUN_00530120`, then
+  `FUN_0052fc30` copies the corner list to `0x00818d98`); **nothing in the image reads what it saves**
+  (`DAT_0081b14c`, `0x00818d98`, `DAT_00820a90`/`a94`), though the walk rewrites the queue cells' `+0x20`
+  counters and unlinks the queue's end. Then the demolish, `FUN_0052f200( 0x33, 1 )` and
+  `FUN_00524960( x, y, 0, 0 )` at the thing's own cell - with the latch and the select before them, the
+  same four calls Delete makes - **but with no confirm box**: the demolisher refunds
+  `price * FUN_004e2290 / 100` there and then, before the move tool exists. **The pickup never tests the
+  balance** - its five branches are the item's `+0x40` and four null checks - and **never asks whether the
+  demolish happened**, which it does not when the red latch `DAT_00816d48` is set or the cell is not typed
+  4, 9 or 10.
+- **The object is not freed yet.** `FUN_0050b780` marks it dead (`+2 = 2`, `+3 = 1`) and queues its id on
+  `0x00801f38`, which the per-tick `FUN_00516380` drains. So the reads that follow are sound: `+0xe` is the
+  item id (a key `FUN_00412e90` searches for, not an index) and `+0x10` the angle in degrees.
+- **Then the move tool.** `FUN_0046c5a0( 0x3b, itemId )` builds a type-3 shell
+  `{0x006fe9e0, 1, 0x3b, carrying 1, itemId}` and `FUN_0046c350` installs it; its OnInstall `FUN_0046d5a0`
+  sets tool `0x3b` and the item. Then `DAT_0081b3ac = thing` (**written once, read nowhere**),
+  `FUN_0052f200( 0x3b, 1 )` again, `FUN_0052f880( &itemId, 0 )` - the item in hand `DAT_008186e0`, with the
+  add-on flag `DAT_008187f8` forced to 0 - and **`FUN_0052f1b0( [thing + 0x10], 1 )`, which makes the
+  carried rotation `DAT_0081d7a4` the thing's own angle**. The demolish had zeroed it (the `0x33` arm's
+  `FUN_0052f1b0( 0, 0 )` at `0x00525e6c`). Last it zeroes the window's thing `DAT_007c2658` and closes the
+  window through vtable `+0x2c`, the close `b_okay` runs - **except that with the thing cleared, the close
+  skips the slot that commits the window's buffered sliders** (`+0x3c`, guarded at `0x0048d24a`).
+- **The put-down.** The `0x3b` arm of `FUN_00524960` (`0x005253e7`..`0x00525a1b`) calls the placer as a
+  purchase does, `FUN_00528a70( x, y, 4, DAT_0081d7a4, 1, 0 )`, which constructs a **new** object through
+  `FUN_004db090` and debits the item's full `+0x1b8`. Nothing reads the old object, so **a moved thing
+  faces the way it stood and everything else - upgrades, build date and so scrap value, ticket price,
+  speed, duration, name - starts afresh**, as a rebuy does. After it, mode 4's sequence: a queued thing
+  hands over the queue tool on its new entrance, anything else goes idle unless Ctrl alone is held, which
+  keeps the tool and the rotation to build another at full price. The arm differs from mode 4's in running
+  op `0x82` at both track steps where mode 4, at the first, writes the cell's direction from the angle; in
+  having no add-on branch; and in never clearing `DAT_008186c0`, which mode 4 zeroes after anchoring the
+  queue (`0x005252de`).
+- **A refused cell keeps the item in the hand.** The commit's only refusal is the preview's red latch
+  (`0x00524a63`): sound `0xaf`, then the plain exit `0x0052765b`, which touches neither the tool, the item
+  nor the rotation, so the next click tries again. **Money turns a move's cell red**: the `0x3b` preview
+  (`0x00523940`) sets the pending cost to the item's `+0x1b8` (`0x0052398b`) and the per-cell verdict
+  `FUN_00535670` reddens a cell whose cost is above the balance (`0x005358fc`); equal passes. Unlike mode 4
+  there is no up-front cash test and no golden-ticket (`+0xc4`) exception in the move's preview.
+- **Abandoned, a move is a sale.** Nothing puts the thing back or pays the difference, whatever the way
+  out; the shell's uninstall is a bare `RET`. A quick right click with the option on (`0x00488434`) and
+  Escape (`0x0040c368`, unless it first closes an open locator) install the idle mode and call
+  `FUN_0052f200( 0, 1 )`, which zeroes the rotation. **With the option off a right click leaves the move in
+  the hand** - the shell's right-button slots are `RET 8` - and so does a held or dragged one with it on.
+  Another tool is installed straight over it (`FUN_0046c350`), which leaves the rotation as it was; whether
+  a purchase then inherits it is open. Leaving the park drops the shell through `FUN_0046c350( 0 )`.
+- **Open.** Whether the preview's path snap near `0x005237f7` can turn a carried move (the two refuters
+  disagree); what a purchase's facing starts at; the add-on and `+0xc4` cases; whether a moved thing gets
+  its old thing id back.
+
+**OpenTPW** (`ParkBuilding.PickUp`, one body for the window and the console): the sale, then the item into
+the hand at the thing's angle, with no affordability test; `Move` is that and one put-down, which a
+refused cell leaves in the hand. **A deviation, declared at the site**: the hand stays empty unless the
+sale went through, where the original would carry a thing that still stands. **Counted, not built**: the
+refusal's sound `0xaf` (`PLACEMENT_REFUSED_SOUND_0xAF`) and the markers drawn while carrying. **Not yet the
+original's, and queued as Q39**: any right press empties the hand whatever the option says, Escape opens the
+menu over a full hand, and a candidate on the staff cursor can be held at the same time.
 
 ### Hiring is a placement verb, and there is no hire fee
 

@@ -16,7 +16,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Park: ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (5 of 6).
 - Building and staffing: purchase menu and hire screen, both reachable from Buy. Things bought, sold,
   moved, carried; staff hired, fired, picked up, put down. **A sold thing's script goes with it**, and
-  its ground is left bare. Clicking a placed ride **anywhere on its
+  its ground is left bare. **A moved thing stays in the hand until a cell takes it**, facing the way it stood. Clicking a placed ride **anywhere on its
   footprint** opens its window - the save's own and ones bought this session alike.
 - Information and money: Info and Money open all-staff, all-items, all-visitors and entry-price screens.
 - Building by POINTING - click to anchor, click to commit, no drag, because both of the original's drag
@@ -39,12 +39,13 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - No finances, litter, saving a park back, video, networking. Research is inert and has nothing behind it.
 - Eight of the nine per-object windows are unbuilt. Patrol areas are dead, deferred by Alexah.
 - Selling a thing lets nobody go: its riders stay aboard and its queuers stay put (`docs/QUEUE.md` Q36).
+- Any right press empties the hand, which for a moved thing is a sale; Escape opens the menu over it (Q39).
 - The `meter.wct` mapping behind the happiness gauge is wrong - the last fault Alexah found by playing.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q4, and Q35, are ticked.** Next is **Q5**: console Move is Sell then
-Buy, so a refused cell loses the object and banks the refund. Q4 filed Q36-Q38 (eviction, terrain rule, effects).
+`docs/QUEUE.md`, from the top. **Q1 to Q5, and Q35, are ticked.** Next is **Q6**: placing a carried staff
+member takes the candidate before the hire can fail. Q4 filed Q36-Q38 (eviction, terrain rule, effects).
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -63,12 +64,22 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **939**, 0 fail, 0 skip with the game | 2026-09-23, after Q4 |
-| Tests without the game | **431** ran, **508** skipped, of 939 | 2026-09-23, after Q4 |
-| Build warnings | 125 | 2026-09-23 |
+| Tests | **943**, 0 fail, 0 skip with the game | 2026-09-23, after Q5 |
+| Tests without the game | **431** ran, **512** skipped, of 943 | 2026-09-23, after Q5 |
+| Build warnings | 125 | 2026-09-23, after Q5 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-09-23 - a move keeps the thing in the hand until a cell takes it.** Branch
+`alexah/119-move-keeps-the-thing-in-the-hand`, `docs/QUEUE.md` Q5. Decoded first, every claim put to two
+refuters: the original's move is Delete's demolish, refund banked, then the move tool holding the item **and
+the thing's own angle**; a red cell keeps it in the hand, and money reddens a cell only at put-down.
+`ParkBuilding.PickUp` is the one body for the window's Move and the console's `move`, which is that and one
+click; the sale answers a value the pickup reads, where Move parsed a string. Confirmed in the game, every
+number predicted: a refused `move` left the Belly Bounce in the hand (`carry` says so; nothing draws a carried
+thing), scripts 16 to 15, balance 87987 to 88712; the next click stood it back up, through the window too after
+a refused click; the Staff Room came back turned 90, frame identical. Its review filed Q39, the hand's ways out.
 
 **2026-09-23 - a sold thing takes its script down, and leaves bare ground.** Branch
 `alexah/118-a-sold-thing-takes-its-script-down`, `docs/QUEUE.md` Q4. Decoded first, every claim put to a refuter:
@@ -79,14 +90,6 @@ the particle, the demolish sound and the eviction of riders and queuers it does 
 prints `scripts N bound M`. **Its unmeasured finding was real**: a sold save-placed ride left a sky-blue
 hole in its footprint and refused a rebuild; `Unstamp` writes the original's cleared cell now. Confirmed
 through the ride window's Delete: scripts 16 to 15, back on its own spot, then 15, 14, 13 and still 13.
-
-**2026-09-22 - the path tool is picked up from the park, and Backspace takes a run back up.** Branch
-`alexah/117-the-path-tool-from-the-interface`, `docs/QUEUE.md` Q35. There is no button: a click on grass
-or path arms the tool and anchors it in one go, and the pointer says so beforehand (UIHELPTEXT 441/442).
-The preview follows the original's verdict, which first refuses land flagged `0x40`, outside the park.
-`mOverlapCounter` counts a cell built over, so Backspace takes up what a run laid and keeps the corner it
-crossed; Escape puts the tool away without opening the menu; idle Backspace deletes the path under the
-pointer, as the executable does. Confirmed through the player's route, with the real keys.
 
 **2026-09-22 - a placed ride lays its queue's first cell, and the player lays the rest from it.** Branch
 `alexah/115-a-placed-ride-lays-its-queue-node`, `docs/QUEUE.md` Q3, which Alexah reopened twice: *"the node
@@ -100,12 +103,9 @@ original's own behaviour. Selling a queued ride drains its queue, node included,
 does. Confirmed through the player's route; a guest queued for and rode it. The squares then took
 the original's wave (`alexah/116`), decoded once Alexah confirmed they were see-through and waving.
 
-**2026-09-22 - a player can build a queue, and it joins the paths around it.** Branch
-`alexah/114-a-laid-queue-joins-up`, the first half of Q3: the placer's link is a pair, a laid queue cell
-is retiled, `RotateBit` turned the wrong way, the ride window's queue button arms the tool, and an exit
-retiles the path it joins. Six defects; `docs/QUEUE.md` Q3 and the git log carry them.
-
-**2026-09-22 - seven earlier items, kept now only in the git log.** `alexah/110` made a thing the save
+**2026-09-22 - nine earlier items, kept now only in the git log.** `alexah/117` made the path tool picked
+up from the park, with Backspace taking a run back up (Q35); `alexah/114` let a player build a queue that
+joins the paths around it (the first half of Q3); `alexah/110` made a thing the save
 placed clickable anywhere on its footprint (`ParkPicking.ThingOn`, `VERIFYING.md` 113-114); `109` made a
 thing bought this session join the park (Q1, Q1b - the rider is still not photographed); `112` decoded
 what authors an entrance's queue link; `108` photographed two owed Confirm clauses; `107` flew the camera

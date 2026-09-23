@@ -259,7 +259,18 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   `ParkRides` has no unbind. Add it, and drop queue cells keyed to the sold thing. Confirm: sell a running
   ride, `rides` census no longer lists it, no errors in the log, screenshot. Also check `Unstamp`'s
   `ClearRecord`, which falls back to the SAVE's record.
-- [ ] **Q5. Console Move is Sell then Buy.** `ParkBuilding.cs:163-177`. A refused cell loses the
+- [x] **Q5. Console Move is Sell then Buy.** Done 2026-09-23, `alexah/119-move-keeps-the-thing-in-the-hand`;
+  decode in `docs/exe/park-engine.md` "Moving a thing". `ParkBuilding.PickUp` is the one body for the window's
+  Move and the console's: the sale, then the item into the hand **at the thing's own angle** (the original's
+  `FUN_0052f1b0( [thing + 0x10], 1 )`) and with no affordability test, which the original has only at put-down.
+  Console `move` is that and one put-down; a refused cell leaves the thing in the hand. The sale answers a
+  value (`Demolish`) that the pickup reads, where Move parsed `Sell`'s string. Confirmed in the game, every
+  number predicted: `move 13 58 16` refused, `carry` answering `hand: holding 'Belly Bounce'`, scripts 16 to
+  15, balance 87987 to 88712. **Nothing draws a carried thing** (`CARRY_PREVIEW_MARKERS`), so the screenshot
+  shows the ride gone from the park while the hand holds it, and the next click stood it back up for 500 -
+  through the window as well, after a refused click. The Staff Room moved and put back turned 90, its frame
+  identical to before. The review filed Q39 (the hand's ways out). The item as written:
+  `ParkBuilding.cs:163-177`. A refused cell loses the
   object and banks the refund. Do Sell then Carry, as `ParkObjectWindow.Move` does. Return a result
   value, not a string the caller parses (`:171`). Confirm: move to a cell that refuses, screenshot the
   object still in the hand.
@@ -309,6 +320,16 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   Counted as `SOLD_THING_EVICTION`. The two happiness docks' keys (`DAT_00785058`, `DAT_0078505c`) are
   unsettled - trace the loader first. Confirm: a guest riding and one queueing at the moment of a sale
   both go to Deciding, `peeps` before and after.
+- [ ] **Q39. The hand's ways out are not the original's.** Found by Q5's review. `Level.WorldClick` empties
+  the hand on any right-button press, before `RmbCancel` or the quick-click timing is consulted, where the
+  original cancels only on a quick release with the option on and otherwise leaves the hand alone (the
+  type-3 shell's right-button slots are `RET 8`). `ParkFrontEnd.MenuKey` tests only `ParkBuildMode`, so
+  Escape over a full hand opens the menu, where the original's Escape puts the carry away (`0x0040c368`).
+  And `ParkBuilding.Hold` and `ParkStaffPool.Carry` each leave the other's hand full, though `Level.cs`
+  says "never both at once". **For a moved thing a wrong drop is a sale**, since it was sold at pickup. Decode in
+  `docs/exe/park-engine.md` "Moving a thing"; what the type-5 staff mode's uninstall does with its candidate
+  is not decoded. Confirm: RMB cancel off, Move a ride from its window, right press, still in the hand;
+  Escape, hand empty, menu not opened.
 
 ## B. Docs and comments
 

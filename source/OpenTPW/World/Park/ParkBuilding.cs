@@ -44,9 +44,12 @@ public static class ParkBuilding
 	public static string Buy( int catalogueId, int cellX, int cellY, int angle = 0 )
 		=> Build( catalogueId, cellX, cellY, angle ).Answer;
 
-	/// <summary>What one build did: the line to show, the thing it made, and the queue cell laid before it.</summary>
+	/// <summary>
+	/// What one build did: the line to show, the thing it made, the queue cell laid before it, and whether the
+	/// cell refused it the way the original's preview reddens one.
+	/// </summary>
 	private readonly record struct Built( string Answer, int ThingId = 0, (int X, int Y)? QueueNode = null,
-		bool HasQueue = false, int TrackType = 0 );
+		bool HasQueue = false, int TrackType = 0, bool Refused = false );
 
 	private static Built Build( int catalogueId, int cellX, int cellY, int angle )
 	{
@@ -55,6 +58,17 @@ public static class ParkBuilding
 			|| level.Park is not { } park )
 			return new( "buy: a park has to be loaded" );
 
+		return Build( state, park, catalogue, objects, ParkRides.Current, catalogueId, cellX, cellY, angle );
+	}
+
+	/// <summary>
+	/// The whole of a build once the park is in hand, so a test can reach every refusal without a running
+	/// <see cref="Level"/>. With no <paramref name="objects"/> nothing can be stood, so a placement that passes
+	/// every test answers that it would not load.
+	/// </summary>
+	private static Built Build( ParkState state, ParkWorld park, ParkItemCatalogue catalogue, ParkObjects? objects,
+		ParkRides? rides, int catalogueId, int cellX, int cellY, int angle )
+	{
 		if ( !catalogue.TryGet( catalogueId, out var item ) )
 			return new( $"buy: this theme has no item {catalogueId}" );
 
@@ -66,15 +80,16 @@ public static class ParkBuilding
 		var footprint = ParkObjects.FootprintAt( item, cellX, cellY, angle );
 
 		if ( Refusal( state, footprint ) is { } why )
-			return new( $"buy: '{item.Name}' will not fit at ({cellX},{cellY}) - {why}" );
+			return new( $"buy: '{item.Name}' will not fit at ({cellX},{cellY}) - {why}", Refused: true );
 
 		// The affordability test the original makes when a buy row is clicked, before it ever builds
-		// the placement mode.
+		// the placement mode - and, for a move, which has no such click, in the put-down's own preview,
+		// where a price above the balance turns the cell red (FUN_00535670).
 		if ( state.Balance < item.BuildPrice )
-			return new( $"buy: '{item.Name}' costs {item.BuildPrice} and the park has {state.Balance}" );
+			return new( $"buy: '{item.Name}' costs {item.BuildPrice} and the park has {state.Balance}", Refused: true );
 
 		if ( EndRefusal( state, item, cellX, cellY, angle ) is { } blocked )
-			return new( $"buy: '{item.Name}' will not fit at ({cellX},{cellY}) - {blocked}" );
+			return new( $"buy: '{item.Name}' will not fit at ({cellX},{cellY}) - {blocked}", Refused: true );
 
 		var thingId = state.NextThingId();
 
@@ -147,7 +162,7 @@ public static class ParkBuilding
 			OperatingCapacity: item.InitCapacity,
 			OperatingDuration: item.InitDuration );
 
-		if ( !objects.PlaceNow( placed, catalogue ) )
+		if ( objects?.PlaceNow( placed, catalogue ) != true )
 			return new( $"buy: '{item.Name}' would not load, so nothing was built and nothing was charged" );
 
 		state.AddObject( placed );
@@ -179,7 +194,7 @@ public static class ParkBuilding
 		// because the three divide the map by cell and one rebuilt alone leaves a hole. See ParkSurfaces.
 		ParkSurfaces.Rebuild();
 
-		ParkRides.Current?.BindNew( placed, item );
+		rides?.BindNew( placed, item );
 
 		Log.Info( $"Building: bought '{item.Name}' for {item.BuildPrice} as thing {thingId} at " +
 			$"({cellX},{cellY}) turned {angle}, covering ({footprint.Left},{footprint.Top}).." +
@@ -220,6 +235,14 @@ public static class ParkBuilding
 	/// The whole of <see cref="Sell(int)"/> once the park is in hand - internal so a test can sell something
 	/// without a running <see cref="Level"/>, the way <see cref="Stamp"/> and <see cref="ReleaseEnds"/> are.
 	/// </summary>
+	internal static string Sell( ParkState state, ParkWorld park, ParkItemCatalogue catalogue, ParkObjects? objects,
+		ParkRides? rides, int thingId )
+		=> Demolish( state, park, catalogue, objects, rides, thingId ).Answer;
+
+	/// <summary>What one sale did: the line to show, and whether the thing is gone.</summary>
+	private readonly record struct Sold( string Answer, bool Done = false );
+
+	/// <summary>Sells one thing, and answers whether it went.</summary>
 	/// <remarks>
 	/// <b>The order is the original's</b> where anything can see it: the demolisher (<c>FUN_00527ee0</c>)
 	/// drains the queue, lets the ends go and clears the footprint, and then the object destructor unlinks the
@@ -227,21 +250,21 @@ public static class ParkBuilding
 	/// "The demolisher's order, and the cells it leaves". Nothing runs inside this call, so where the
 	/// footprint's clear falls against the unlink changes nothing.
 	/// </remarks>
-	internal static string Sell( ParkState state, ParkWorld park, ParkItemCatalogue catalogue, ParkObjects? objects,
+	private static Sold Demolish( ParkState state, ParkWorld park, ParkItemCatalogue catalogue, ParkObjects? objects,
 		ParkRides? rides, int thingId )
 	{
 		if ( !state.TryObject( thingId, out var placed ) )
-			return $"sell: nothing in the park is thing {thingId}";
+			return new( $"sell: nothing in the park is thing {thingId}" );
 
 		if ( !catalogue.TryGet( placed.CatalogueId, out var item ) )
-			return $"sell: thing {thingId} is catalogue item {placed.CatalogueId}, which this theme has none of";
+			return new( $"sell: thing {thingId} is catalogue item {placed.CatalogueId}, which this theme has none of" );
 
 		// The test Buy makes. The demolisher finds a thing only through a cell typed 4, 9 or 10
 		// (FUN_00527d60), and the gates, the lights and the vehicles stand on no such cell, so nothing
 		// in the original can sell one - inferred from that, not traced. Selling the gate would take its
 		// script down with it, and with no gate no guest is ever let in again.
 		if ( item.UiType is < 0 or > ItemDescriptionFile.Feature )
-			return $"sell: thing {thingId} ('{item.Name}') is UI type {item.UiType}, which nothing can demolish";
+			return new( $"sell: thing {thingId} ('{item.Name}') is UI type {item.UiType}, which nothing can demolish" );
 
 		// The age-based scrap percentage, which nothing here can compute - see the remarks. Reported
 		// once and counted, rather than a number invented to fill the gap.
@@ -278,8 +301,8 @@ public static class ParkBuilding
 
 		Log.Info( $"Building: sold '{item.Name}' (thing {thingId}) for {refund} - the park has {state.Balance}" );
 
-		return $"sell: '{item.Name}' thing {thingId} sold for {refund}" +
-			(queueRefund != 0 ? $", its queue for {queueRefund}" : "") + $", balance {state.Balance}";
+		return new( $"sell: '{item.Name}' thing {thingId} sold for {refund}" +
+			(queueRefund != 0 ? $", its queue for {queueRefund}" : "") + $", balance {state.Balance}", Done: true );
 	}
 
 	/// <summary>
@@ -354,25 +377,82 @@ public static class ParkBuilding
 	private const int DesignMapPath = 0x08;
 
 	/// <summary>
-	/// Moves something already standing to another cell. <b>The original does this as demolish then
-	/// buy again</b> - the object is genuinely destroyed at pickup and the full price re-charged at
-	/// put-down, with the footprint released in between - so this is those two in order rather than a
-	/// third mechanism.
+	/// Picks something standing up to move it: sells it, then takes the same item into the hand, facing the
+	/// way it stood. The object window's move verb, and the first half of the console's.
 	/// </summary>
-	public static string Move( int thingId, int cellX, int cellY, int angle = 0 )
+	/// <remarks>
+	/// <b>This is the original's move</b>, <c>FUN_0048cfa0</c> - <c>docs/exe/park-engine.md</c>, "Moving a
+	/// thing". It runs the demolish Delete runs, without Delete's confirm box, so the refund is banked there
+	/// and then; then it installs the move tool, <c>0x3b</c>, holding the item and the thing's own angle.
+	/// Putting it down builds it afresh at full price through the purchase's own placer, so a move given up
+	/// is a sale.
+	/// <para>
+	/// <b>Nothing is refused for money here</b>, where <see cref="Carry"/> refuses what the park cannot
+	/// afford: the pickup makes no such test, and the put-down refuses an unaffordable cell as it refuses a
+	/// taken one.
+	/// </para>
+	/// <para>
+	/// <b>A deviation:</b> the original takes the item into the hand whether or not its demolish found the
+	/// thing, because <c>FUN_00524960</c> answers nothing. Here the hand stays empty unless the sale went
+	/// through, so nothing is ever carried while it still stands.
+	/// </para>
+	/// </remarks>
+	public static string PickUp( int thingId )
 	{
-		if ( Level.Current?.ParkState is not { } state || !state.TryObject( thingId, out var placed ) )
-			return $"move: nothing in the park is thing {thingId}";
+		if ( Level.Current is not { } level || level.ParkState is not { } state
+			|| level.Catalogue is not { } catalogue || ParkObjects.Current is not { } objects
+			|| level.Park is not { } park )
+			return "pick up: a park has to be loaded";
 
-		var was = $"({placed.CellX},{placed.CellY})";
-		var sold = Sell( thingId );
+		return PickUp( state, park, catalogue, objects, ParkRides.Current, thingId ).Answer;
+	}
 
-		if ( !sold.StartsWith( "sell: '" ) )
-			return $"move: {sold}";
+	/// <summary>What one pickup did: the line to show, and whether the item is in the hand.</summary>
+	private readonly record struct Taken( string Answer, bool Holding = false );
 
-		var bought = Buy( placed.CatalogueId, cellX, cellY, angle );
+	private static Taken PickUp( ParkState state, ParkWorld park, ParkItemCatalogue catalogue, ParkObjects? objects,
+		ParkRides? rides, int thingId )
+	{
+		if ( !state.TryObject( thingId, out var placed ) )
+			return new( $"pick up: nothing in the park is thing {thingId}" );
 
-		return $"move: from {was} - {bought}";
+		var sold = Demolish( state, park, catalogue, objects, rides, thingId );
+
+		if ( !sold.Done )
+			return new( $"pick up: {sold.Answer}" );
+
+		Hold( placed.CatalogueId, placed.Angle );
+
+		return new( $"pick up: {sold.Answer} - {HandState()}", Holding: true );
+	}
+
+	/// <summary>
+	/// Moves something standing to another cell, for the debug console: <see cref="PickUp(int)"/>, then one
+	/// click at the cell. A cell that refuses leaves the item in the hand, as a click on a red cell does in
+	/// the original, for a later <c>put</c> or click to take it from there.
+	/// </summary>
+	public static string Move( int thingId, int cellX, int cellY, int? angle = null )
+	{
+		if ( Level.Current is not { } level || level.ParkState is not { } state
+			|| level.Catalogue is not { } catalogue || ParkObjects.Current is not { } objects
+			|| level.Park is not { } park )
+			return "move: a park has to be loaded";
+
+		return Move( state, park, catalogue, objects, ParkRides.Current, thingId, cellX, cellY, angle );
+	}
+
+	/// <summary>
+	/// The whole of <see cref="Move(int, int, int, int?)"/> once the park is in hand, for a test.
+	/// </summary>
+	internal static string Move( ParkState state, ParkWorld park, ParkItemCatalogue catalogue, ParkObjects? objects,
+		ParkRides? rides, int thingId, int cellX, int cellY, int? angle = null )
+	{
+		var taken = PickUp( state, park, catalogue, objects, rides, thingId );
+
+		if ( !taken.Holding )
+			return $"move: {taken.Answer}";
+
+		return $"move: {taken.Answer} - {PlaceCarried( state, park, catalogue, objects, rides, cellX, cellY, angle )}";
 	}
 
 	/// <summary>
@@ -901,10 +981,17 @@ public static class ParkBuilding
 	/// Clicking a buy row compares the price against the balance and builds a mode holding the item's
 	/// id - <c>FUN_0046c5a0( 4, itemId )</c> - but the money is not taken until the thing is actually
 	/// put down, inside the object constructor. Which is why cancelling needs no refund: nothing was
-	/// ever taken.
+	/// ever taken. A moved thing is in the hand already sold, so letting it go leaves it sold.
 	/// </para>
 	/// </summary>
 	public static int Carrying { get; private set; }
+
+	/// <summary>
+	/// The way what is in the hand faces when it goes down, in degrees: a moved thing's own, and nought for a
+	/// purchase, whose facing in the original is not decoded. The original keeps it in <c>DAT_0081d7a4</c>,
+	/// set through <c>FUN_0052f1b0</c>. Nothing here turns it while it is carried.
+	/// </summary>
+	public static int CarryingAngle { get; private set; }
 
 	/// <summary>
 	/// Takes an item into the hand, refusing the ones no buy list offers and the ones the park cannot
@@ -925,22 +1012,30 @@ public static class ParkBuilding
 		if ( state.Balance < item.BuildPrice )
 			return $"carry: '{item.Name}' costs {item.BuildPrice} and the park has {state.Balance}";
 
+		Hold( catalogueId, 0 );
+
+		return $"carry: holding '{item.Name}' ({catalogueId}) at {item.BuildPrice}";
+	}
+
+	/// <summary>Puts an item in the hand, facing a way.</summary>
+	private static void Hold( int catalogueId, int angle )
+	{
 		Carrying = catalogueId;
+		CarryingAngle = angle;
 
 		// Taking something into the hand installs the place mode over whatever tool was armed - there
-		// is one mode in the original, not a tool and a hand side by side.
+		// is one mode in the original, not a tool and a hand side by side. A candidate on the staff
+		// cursor is not let go of here (docs/QUEUE.md Q39).
 		ParkBuildMode.Disarm();
 
 		// While carrying, the original draws the footprint in coloured squares every tick - m_front along
 		// its front row, m_enter on the cell before the entrance, m_exit before the exit - out of the same
 		// marker vocabulary the queue tool uses. Only the queue tool's strip is built.
 		Unimplemented.Report( "CARRY_PREVIEW_MARKERS" );
-
-		return $"carry: holding '{item.Name}' ({catalogueId}) at {item.BuildPrice}";
 	}
 
 	/// <summary>
-	/// Puts down whatever is in the hand. <b>No refund, because nothing was charged</b> - see
+	/// Empties the hand and builds nothing. <b>No refund, because holding costs nothing</b> - see
 	/// <see cref="Carrying"/>.
 	/// </summary>
 	public static string Drop()
@@ -951,7 +1046,7 @@ public static class ParkBuilding
 		var was = Carrying;
 		Carrying = 0;
 
-		return $"drop: put item {was} back - nothing was charged for holding it";
+		return $"drop: let go of item {was} - nothing is built, and holding it cost nothing";
 	}
 
 	/// <summary>
@@ -969,12 +1064,32 @@ public static class ParkBuilding
 	/// <see cref="Level"/>'s, read from the armed mode each frame; the message's words are not decoded.
 	/// </para>
 	/// </remarks>
-	public static string PlaceCarried( int cellX, int cellY, int angle = 0 )
+	public static string PlaceCarried( int cellX, int cellY, int? angle = null )
+	{
+		if ( Level.Current is not { } level || level.ParkState is not { } state
+			|| level.Catalogue is not { } catalogue || ParkObjects.Current is not { } objects
+			|| level.Park is not { } park )
+			return "put: a park has to be loaded";
+
+		return PlaceCarried( state, park, catalogue, objects, ParkRides.Current, cellX, cellY, angle );
+	}
+
+	/// <summary>
+	/// The whole of <see cref="PlaceCarried(int, int, int?)"/> once the park is in hand. With no
+	/// <paramref name="angle"/> the thing faces the way the hand holds it.
+	/// </summary>
+	private static string PlaceCarried( ParkState state, ParkWorld park, ParkItemCatalogue catalogue,
+		ParkObjects? objects, ParkRides? rides, int cellX, int cellY, int? angle )
 	{
 		if ( Carrying == 0 )
 			return "put: the hand is empty - `carry <item>` first, or click a row on the buy screen";
 
-		var built = Build( Carrying, cellX, cellY, angle );
+		var built = Build( state, park, catalogue, objects, rides, Carrying, cellX, cellY, angle ?? CarryingAngle );
+
+		// A click on a red cell plays sound 0xaf (0x00524aae) and leaves the hand as it is, so the next click
+		// tries again.
+		if ( built.Refused )
+			Unimplemented.Report( "PLACEMENT_REFUSED_SOUND_0xAF" );
 
 		if ( built.ThingId == 0 )
 			return built.Answer;
@@ -1002,7 +1117,7 @@ public static class ParkBuilding
 
 		// FUN_0052a050 ORs the entrance's bit toward the node back in before it anchors there, which
 		// matters when the node was laid over a path: clearing that path unlinked the entrance from it.
-		if ( Level.Current?.ParkState is { } state && state.TryObject( built.ThingId, out var placed )
+		if ( state.TryObject( built.ThingId, out var placed )
 			&& ParkState.OnMap( placed.EntryCellX, placed.EntryCellY ) )
 		{
 			var towardNode = BitToward( placed.EntryCellX, placed.EntryCellY, node.X, node.Y );
@@ -1027,7 +1142,7 @@ public static class ParkBuilding
 			? $"'{item.Name}' ({Carrying}) at {item.BuildPrice}"
 			: $"item {Carrying}";
 
-		return $"hand: holding {name}";
+		return $"hand: holding {name}, turned {CarryingAngle}";
 	}
 
 	/// <summary>Every object standing in the park now, for the debug console.</summary>

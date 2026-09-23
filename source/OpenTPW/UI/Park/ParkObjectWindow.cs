@@ -1229,11 +1229,12 @@ internal sealed class ParkObjectWindow : UiWindow
 				Stack.Close( this );
 				return;
 
-			// FUN_0048cfa0: demolish, then take the same item into the hand - the original's move IS
-			// those two, which is why nothing is charged in between and why putting it down charges
-			// again. Putting it down needs the pointer, which is the already-counted gap.
+			// FUN_0048cfa0: demolish, then take the same item into the hand facing the way it stood, and
+			// close - the window gets out of the way so the park can be clicked, and Level.WorldClick puts
+			// whatever is in the hand down on the cell under the pointer.
 			case 0x3e2c:
-				Move();
+				Log.Info( $"Ride window: {ParkBuilding.PickUp( ThingId )}" );
+				Stack.Close( this );
 				return;
 
 			// FUN_004af200( 0 ): select this thing, install mode 0x14 - "edit this ride's queue", the same
@@ -1249,20 +1250,5 @@ internal sealed class ParkObjectWindow : UiWindow
 				Log.Info( $"Ride window: '{what}' is not built yet" );
 				return;
 		}
-	}
-
-	private void Move()
-	{
-		if ( Level.Current?.ParkState is not { } state || !state.TryObject( ThingId, out var placed ) )
-			return;
-
-		var item = placed.CatalogueId;
-
-		Log.Info( $"Ride window: {ParkBuilding.Sell( ThingId )}" );
-		Log.Info( $"Ride window: {ParkBuilding.Carry( item )}" );
-
-		// The window gets out of the way so the park can be clicked - Level.WorldClick puts whatever
-		// is in the hand down on the cell under the pointer.
-		Stack.Close( this );
 	}
 }
