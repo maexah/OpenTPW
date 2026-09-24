@@ -598,25 +598,21 @@ public sealed class ParkState
 	/// <summary>
 	/// Credits an object with what a guest has just paid it - the object half of <c>FUN_004e16b0</c>,
 	/// which adds the price to <c>mTotalTakings</c> at <c>+0x180</c>.
-	///
-	/// <para>
-	/// <b>It deliberately does NOT move <see cref="Balance"/>, and that is the original's arrangement
-	/// rather than an omission.</b> An admission fee goes through <c>FUN_004d0600</c>, which adds it
-	/// straight onto <c>mBalance</c> - that is what <see cref="Take"/> reproduces. A charge for a ride or a
-	/// shop goes through <c>FUN_004e16b0</c> instead, which credits the object and one of two GLOBAL income
-	/// pools chosen by the item descriptor's <c>+0x4ac</c> (<c>+0x20130</c> for rides, <c>+0x20380</c> for
-	/// shops) and never touches the balance at all. Moving the park's money here so that the interface
-	/// reacted would be inventing behaviour the original does not have.
-	/// </para>
-	/// <para>
-	/// <b>Those two global pools are NOT reproduced</b>, and nothing here keeps them: they are counters on
-	/// the world that no screen this project draws has ever read.
-	/// </para>
 	/// </summary>
+	/// <remarks>
+	/// <b>The bank's half is not built, and is counted.</b> <c>FUN_004e16b0</c> first deposits the price in the
+	/// park's bank through <c>FUN_004d0190</c> (<c>0x004e16c6</c>) - the balance, the world's income counter and
+	/// the bank's <c>+0x124</c>, the adds the gate fee's <c>FUN_004d0600</c> makes - so a charge moves the
+	/// balance there and does not move <see cref="Balance"/> here (<c>docs/QUEUE.md</c> Q96). Nor is the global
+	/// pool the descriptor's <c>+0x4ac</c> chooses kept (<c>+0x20130</c> for a shop, <c>+0x20380</c> for a
+	/// sideshow, none for a ride): no screen here reads it.
+	/// </remarks>
 	public void TakeAt( int objectId, int amount )
 	{
 		if ( objectId == 0 || amount == 0 )
 			return;
+
+		Unimplemented.Report( "CHARGE_BANK_DEPOSIT" );
 
 		_takings[objectId] = TakingsFor( objectId ) + amount;
 	}

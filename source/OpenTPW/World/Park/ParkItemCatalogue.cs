@@ -82,7 +82,11 @@ public sealed class ParkItemCatalogue
 		IReadOnlyList<int>? CellKinds = null,
 
 		// The particle effect selling one gives off - ItemDescriptionFile.DestroyParticleEffect.
-		int DestroyParticleEffect = 0 );
+		int DestroyParticleEffect = 0,
+
+		// What the price opinion at the door reads beside the effects - ItemDescriptionFile.RipOffOK and the
+		// two keys that decide which price samples it pushes. See PeepPriceOpinion.
+		int RipOffOK = 0, int SpecialIngredient = 0, int AppearanceEffect = 0 );
 
 	private readonly Dictionary<int, Item> _items = [];
 
@@ -195,7 +199,8 @@ public sealed class ParkItemCatalogue
 					description.EntryDeltaX, description.EntryDeltaY,
 					description.ExitDeltaX, description.ExitDeltaY, description.HasEntrance,
 					description.EntryDirection, description.ExitDirection, description.CellKinds,
-					description.DestroyParticleEffect );
+					description.DestroyParticleEffect,
+					description.RipOffOK, description.SpecialIngredient, description.AppearanceEffect );
 
 			return true;
 		}

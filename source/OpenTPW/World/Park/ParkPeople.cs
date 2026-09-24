@@ -198,7 +198,16 @@ public sealed class ParkPeople : Entity
 			// script lookup can do. A script that declares no such variable takes the write nowhere, which
 			// is the right answer for the shop - Coconut.RSE declares VAR_PARAM and never reads it.
 			( ride, outcome ) =>
-				_scriptFor?.Invoke( ride.ThingId )?.Set( ParkRideOperation.OutcomeVariable, outcome ) );
+				_scriptFor?.Invoke( ride.ThingId )?.Set( ParkRideOperation.OutcomeVariable, outcome ),
+			// And the fourth: the ride's side of a guest walking away from its door, too expensive - it
+			// forgets them (FUN_004e0ac0) and they leave its queue (FUN_004ddd20), both through its script.
+			( ride, personId ) =>
+			{
+				var script = _scriptFor?.Invoke( ride.ThingId );
+
+				new ParkRideOperation( State, Guests ).Forget( script, ride.ThingId, personId );
+				ParkRideOperation.LeaveQueue( State, script, ride.ThingId, personId );
+			} );
 
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
 		// none of what a guest needs - the fee, the gate - means anything to them.
@@ -791,6 +800,22 @@ public sealed class ParkPeople : Entity
 			peep.Happiness = Math.Clamp( level, Peep.Least, Peep.Most );
 
 		Log.Info( $"People: {_peeps.Count} guests are now happiness {level}" );
+
+		return _peeps.Count;
+	}
+
+	/// <summary>
+	/// Sets every guest's cash, for the debug console's <c>cash</c>. An INSTRUMENT, as <see cref="SetHappiness"/>
+	/// is: a guest arrives with <c>StartingCash</c>, 300, so none in Lost Kingdom comes to a door short of its
+	/// price, and that is the one test there of <see cref="PeepPriceOpinion"/> that can refuse. It sets a meter
+	/// the game itself moves, and nothing else.
+	/// </summary>
+	internal int SetCash( int amount )
+	{
+		foreach ( var peep in _peeps )
+			peep.Cash = amount;
+
+		Log.Info( $"People: {_peeps.Count} guests now carry cash {amount}" );
 
 		return _peeps.Count;
 	}
@@ -1448,7 +1473,7 @@ public sealed class ParkPeople : Entity
 	/// The kids' sound for a guest put out of a queue, at their feet, when their id divides by eight - see
 	/// <see cref="SoundFor"/>.
 	/// </summary>
-	private static void PutOffAtTheirFeet( Peep peep, ParkWorld.CatalogueObject thing )
+	internal static void PutOffAtTheirFeet( Peep peep, ParkWorld.CatalogueObject thing )
 	{
 		if ( SoundFor( PeepBehaviour.PutOff.Queueing, peep.ThingId, thing.Flags, seated: false ) == PutOffSound.Feet
 			&& ParkGuestSprites.Feet( peep.Navigator.Position ) is { } feet )

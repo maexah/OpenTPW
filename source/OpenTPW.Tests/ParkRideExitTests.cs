@@ -395,10 +395,11 @@ public class ParkRideExitTests
 	}
 
 	/// <summary>
-	/// <b>The park's own balance does NOT move, and that is the original's arrangement.</b> An admission fee
-	/// goes through <c>FUN_004d0600</c> and lands on <c>mBalance</c>; a charge for a ride goes through
-	/// <c>FUN_004e16b0</c>, which credits the object and a global pool and never touches the balance.
-	/// <b>Do not "fix" this</b> - making the park's money move here would be inventing behaviour.
+	/// <b>The park's own balance does not move here, and that is a gap, not the original.</b> The original's
+	/// charge deposits the price in the bank first (<c>FUN_004e16b0</c> calls <c>FUN_004d0190</c> at
+	/// <c>0x004e16c6</c>), as the gate fee does through <c>FUN_004d0600</c>; <see cref="ParkState.TakeAt"/> counts
+	/// the deposit rather than making it. This pins what the code does now; <c>docs/QUEUE.md</c> Q96 turns it
+	/// round, and the gate's running total must still stay untouched.
 	/// </summary>
 	[TestMethod]
 	public void PayingForARideLeavesTheParksBalanceAlone()

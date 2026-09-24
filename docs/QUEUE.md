@@ -785,13 +785,41 @@ artifacts are listed in `docs/history/README.md`.
   - **Not confirmed on screen:** a reopen by an edit of the queue, a head forced on, the guard's refusals and a bought
     ride's bit - tested only. **Found:** Q89-Q94, among them that the console's `path` lays what the path tool
     refuses, which Q50's own run relied on (Q94).
-- [ ] **Q50c. The door's price opinion.** Split from Q50 ("At the door"). `FUN_004fde50` is asked at the door
-  (`0x00500715`) and turns the guest out as too expensive for 15 twice (`0x00500778`, `0x005007b4`) with thought 6,
-  event 10 and a walk-away on the object. Every input is here but `UsageInfo.RipOffOK` (descriptor `+0x16c`;
-  `Shops.sam` 100, `SideShow.sam` 250), which `ItemDescriptionFile` does not read. Count thought 6, `mNumWalkAways`
-  and the analyser sample. In Lost Kingdom only the cash test can fire (worth 42..128 against 30, 241..482 against 20),
-  and it is unsigned. Replaces `DOOR_PRICE_OPINION`. Confirm: a guest with less cash than the price at the Drinks
-  Shop's door, `peeps` before and after (−30).
+- [x] **Q50c. The door's price opinion.** Done 2026-09-24, `alexah/140-the-doors-price-opinion`. Split from Q50 ("At
+  the door"). The decode was put to three read-only Ghidra checks, each to a skeptic, and all held
+  (`ride-operation.md`, "At the door"): `FUN_004fde50` is the guest's, with the object pushed; three divisions of a
+  running product are unsigned, the rest signed; the compiled `.sam` schema puts `RipOffOK` at `+0x16c`, anchored at
+  both ends; the control record holding its copy is saved raw (`mObjectControls`), and all 50 in Lost Kingdom's save
+  equal their items'. **`+0x4ac` is a copy of `Info.WhichUIType`** (`0x004134f5`), so its 1 is a shop: four doc rows
+  said ride, corrected.
+  - **Built:** `PeepPriceOpinion` (the worth and the verdict, truncation for truncation); the walk-away in the
+    `BeingAdmitted` arm (`PeepBehaviour.WalkAwayFromTheDoor`: −15, the ride's side through a new `walkAway` delegate,
+    `ParkRideOperation.Forget` = `FUN_004e0ac0` then `LeaveQueue`, then `DismissFromTheQueue` −15, the kids' sound);
+    `ItemDescriptionFile` reads `RipOffOK`, `SpecialIngredient`, `AppearanceEffect`; the admission's own log line.
+    Counted: thought 6, `FUN_004e1670`'s two counters, the analyser samples. Replaces `DOOR_PRICE_OPINION`. Console:
+    `cash <n>`, and `thirst [n]` takes a level.
+  - **Proof:** 12 new tests (`PeepPriceOpinionTests`); five mutations (no opinion, `RipOffOK` dropped, the ride not
+    told, cash compared signed, `ParkPeople`'s own `walkAway` emptied), each turned a named test red. The last was
+    green at first: an open shop's own turn drops a nominee not boarding and a head not queueing a moment later, so
+    the test now puts the shop in state 3, whose turn does nothing. A read-only review (three lenses, each finding put
+    to a skeptic) upheld nine, all fixed: a miscount of the signed divisions, the stale not-read list, `SetCash`'s
+    "less the gate fee" (nothing takes it), the `thirst` reply, that test, a test summary, `LeaveQueue`'s remark, and
+    **the charge's comments calling a
+    missing bank deposit the original's** (Q96, counted as `CHARGE_BANK_DEPOSIT`), and **the object's saved prize and
+    chance** read from the item unsaid (Q97; two doc rows said `+0x190` is not saved). 1095 tests with the game, none
+    skipped; 475 ran and 620 skipped without; 123 warnings.
+  - **Confirmed in the game** (`q50cconfirm.py`, silent, jungle): every guest thirsty and carrying 10, the Drinks
+    Shop's price 30; once one queued, happiness 50 and thirst 90. Guests 35, 29 and 31 each logged "Object 16 is too
+    expensive" at the door and read Deciding, dest 0, happiness 20, cash 10; each counter +3. The control, the same
+    tree with the opinion taken out: 31 and 42 admitted at 50 and 10, then out charged to −20 at 55. `save/` unchanged
+    in all three runs. The frame at the door is alike in both (a guest standing there); the census tells them apart,
+    and afterwards the fix's guests walk off down the path.
+  - **Missed first, mine.** The first run predicted 20 and read 0: `thirst` at 100 drains a point of happiness a
+    turn (`Peep.Tick`), so both guests reached the door at 5 and 3, and each dock clamps at nought. The rerun set
+    thirst to 90 once they queued.
+  - **Not confirmed on screen:** a refusal on worth (none can happen at Lost Kingdom's prices), negative cash passing
+    (tested), and the kids' sound at the door (no guest turned away had an id divisible by eight; untested too).
+    **Found:** Q95-Q97.
 - [ ] **Q50d. The `InQueue` turn's own ways out.** Split from Q50 ("The `InQueue` turn"). Nine arms of `FUN_004ffff0`
   end at `0x005004b3`, and none is built (`QUEUE_TURN_DISMISSALS`). The unhappy arm (below 10) and the toilet arm
   (20..80 with `mToilet` above 80, not at a toilet) need only what is here plus a thought, counted; build them first.
@@ -929,6 +957,19 @@ artifacts are listed in `docs/history/README.md`.
   again"). Q50's game run cut the queue that way, a cut the player cannot make in one click. Route the console
   through the verdict and re-stage Q50's confirmation with a cut the player can make, or say which. Confirm: `path 51 22`
   refused with the verdict's reason.
+- [ ] **Q96. A charge is never deposited in the park's bank.** Found by Q50c's review. `FUN_004e16b0` first calls
+  `FUN_004d0190( price )` on the bank thing (`0x004e16bf`..`0x004e16c6`): the balance `+0xc`, the world's `+0x1fc90`
+  and the bank's `+0x124`, the adds the gate fee's `FUN_004d0600` makes (`ride-operation.md`, "Spending").
+  `ParkState.TakeAt` credits the object alone and counts the rest (`CHARGE_BANK_DEPOSIT`); the comments said this was
+  the original's. `ParkRideExitTests.PayingForARideLeavesTheParksBalanceAlone` pins the gap and turns round with it.
+  Decide what `+0x1fc90` and `+0x124` are before keeping either. Confirm: a drink sold at the Drinks Shop, the HUD's
+  money before and after (+30), and `money`.
+- [ ] **Q97. The object's own cost of goods and chance of winning.** Found by Q50c's review. The object keeps both at
+  `+0x188` and `+0x190`, built from the item at placement but saved and loaded with it (`FUN_004db7d0`,
+  `0x004dcd01`..; file 1042 and 1050) and set per object from its window (`FUN_004e1a20`, `FUN_004e21c0`). OpenTPW
+  reads the item's in the price opinion, the win roll (`FUN_004e2670`, `ParkRideOperation`) and the prize;
+  Lost Kingdom's save holds the items' own, so nothing differs yet. Read both from the save record, a bought thing's
+  from its item, and say it at each site. The window's setters wait on Q31. No game run beyond a census of the two.
 
 ## B. Docs and comments
 
@@ -941,6 +982,11 @@ artifacts are listed in `docs/history/README.md`.
   where a guest is actually sent" with no word that the original aims at the back of the queue (Q50e);
   `DropStaleQueueHeads` is dead by CODE (only tests call it) and `HeldByAThing` misses a state-8 queuer (dead by
   CONTENT): label both (`CLAUDE.md` rule 3). No game run.
+- [ ] **Q95. Two descriptor offsets the compiled `.sam` schema names otherwise.** Found by Q50c's schema simulation
+  (`FUN_00401030` over the table at `0x00744b30`), not yet checked against each page's own evidence: `hud.md` calls
+  item `+0xC4` `Research.Group`, which the schema puts at `+0x178`, making `+0xC4` `UsageInfo.GoldenTicketCost`; and
+  `park-engine.md` divides a capacity by `+0x1a0`, which the schema makes `Upgrades[0].InitDuration` (`+0x198` is
+  `InitCapacity`). Settle each against the code that reads it, and correct the page that is wrong. No game run.
 - [ ] **Q46. Seven more stacked doc comments.** Found by Q11's scan of every source file (the six in Q11 were
   the first). Each sits on another member's summary, so it documents the wrong member. By member, since line numbers
   go stale: in `ParkGuestSprites`, `Standing`'s block lands on `StandingFrom` (Standing's own `<inheritdoc>` must go);

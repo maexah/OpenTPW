@@ -630,6 +630,19 @@ public static class DebugConsole
 
 				break;
 
+			// Sets every guest's cash - an instrument as `happy` is, so that a guest can come to a door short of
+			// its price: see ParkPeople.SetCash.
+			case "cash":
+				if ( ParkPeople.Current is not { } purses )
+				{
+					Reply( "cash: none - a park has to be loaded" );
+					break;
+				}
+
+				Reply( $"cash: {purses.SetCash( (int)Argument( 1, 10 ) )} guests now carry {(int)Argument( 1, 10 )}" );
+
+				break;
+
 			// Makes every guest thirsty. An INSTRUMENT rather than a behaviour, and it is here for the
 			// reason `load` is: a park left alone almost never holds a guest who is thirsty AND still
 			// deciding, which is the one condition a drinks shop is chosen under. Only a quarter of
@@ -642,8 +655,11 @@ public static class DebugConsole
 					break;
 				}
 
-				Reply( $"thirst: {drinkers.MakeThirsty( Peep.Most )} guests are now as thirsty "
-					+ "as the meter allows" );
+				// A level below the top holds off the maxed-need drain on happiness (Peep.Tick) until the thirst
+				// drifts back up, so a dock of it can be read exactly: `thirst 90`.
+				var level = Math.Clamp( Argument( 1, Peep.Most ), Peep.Least, Peep.Most );
+
+				Reply( $"thirst: {drinkers.MakeThirsty( level )} guests are now thirst {level}" );
 
 				break;
 

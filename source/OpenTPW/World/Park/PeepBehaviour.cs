@@ -83,11 +83,13 @@ public sealed class PeepBehaviour
 		ParkItemCatalogue? catalogue = null,
 		Func<ParkWorld.CatalogueObject, int, bool>? admit = null,
 		Func<ParkWorld.CatalogueObject, int, bool>? finishAdmission = null,
-		Action<ParkWorld.CatalogueObject, int>? tellTheScript = null )
+		Action<ParkWorld.CatalogueObject, int>? tellTheScript = null,
+		Action<ParkWorld.CatalogueObject, int>? walkAway = null )
 	{
 		_admit = admit;
 		_finishAdmission = finishAdmission;
 		_tellTheScript = tellTheScript;
+		_walkAway = walkAway;
 
 		// Zero is open, which is the way round the name is not - see ParkWorld.ParkClosed. ParkState
 		// applies that rule itself, so it is not repeated here.
@@ -166,6 +168,13 @@ public sealed class PeepBehaviour
 	/// one: the write needs the thing's SCRIPT, which this type has no way to reach.
 	/// </summary>
 	private readonly Action<ParkWorld.CatalogueObject, int>? _tellTheScript;
+
+	/// <summary>
+	/// The ride's side of a guest walking away from its door - <c>FUN_004e0ac0</c>, then <c>FUN_004ddd20</c>:
+	/// the nominee let go of and the queue left, <c>VAR_LETMEON</c> emptied wherever it names them. A delegate
+	/// for the reason <see cref="_admit"/> is one. Null leaves the ride holding them, which only a test does.
+	/// </summary>
+	private readonly Action<ParkWorld.CatalogueObject, int>? _walkAway;
 
 	/// <summary>
 	/// What a guest deciding what to do picks from - <c>FUN_004fcb10</c>. Always present, because a
@@ -523,21 +532,29 @@ public sealed class PeepBehaviour
 			// %d: Got stuck in middle o[f]..." and then carries on into the same test rather than treating
 			// it as a failure.
 			//
-			// <b>Two arms of the original are counted rather than built.</b> Before admitting it asks
-			// FUN_004fde50 whether a priced thing is worth its price to this guest (0x00500715), and if not
-			// turns them out of the queue, docking MediumHappinessChange twice (0x00500778, 0x005007b4) -
-			// the opinion reads UsageInfo.RipOffOK, which nothing here reads yet; ParkAdmission judges the
-			// GATE fee, a different question. And when the admission is refused it walks back to the front
-			// of the queue (FUN_00501160, 0x00500826), and is put out if it cannot get there (0x00500857);
-			// the walk to a place in a queue is unbuilt. A refused guest here waits and asks again.
+			// First the guest asks whether the thing is worth its price to them (FUN_004fde50, 0x00500715;
+			// see PeepPriceOpinion), and walks away from the door if it is not - WalkAwayFromTheDoor.
+			// ParkAdmission judges the GATE fee, a different question.
+			//
+			// <b>One arm of the original is counted rather than built.</b> When the admission is refused it
+			// walks back to the front of the queue (FUN_00501160, 0x00500826), and is put out if it cannot
+			// get there (0x00500857); the walk to a place in a queue is unbuilt. A refused guest here waits
+			// and asks again.
 			case PeepState.BeingAdmitted:
 				if ( Walked( peep, walk, playing ) != WalkVerdict.Walking && Chosen( peep ) is { } arriving )
 				{
-					if ( arriving.PricePerUse != 0 )
-						Unimplemented.Report( "DOOR_PRICE_OPINION" );
+					if ( ThinksTooExpensive( peep, arriving ) )
+					{
+						WalkAwayFromTheDoor( peep, arriving, tick );
+
+						break;
+					}
 
 					if ( _admit?.Invoke( arriving, peep.ThingId ) == true )
 					{
+						Log.Info( $"Person {peep.ThingId} been AdmitPerson'd to ride {arriving.ThingId}, "
+							+ "now waiting for script to admit me" );
+
 						peep.SetState( PeepState.EnteringRide, tick, _random );
 
 						RollForTheVisit( peep, arriving );
@@ -1421,6 +1438,45 @@ public sealed class PeepBehaviour
 	}
 
 	/// <summary>
+	/// Whether this guest, at the door, thinks the thing too expensive - see <see cref="PeepPriceOpinion"/>.
+	/// With no catalogue, or an item it does not know, nothing can say what the thing is worth, and the
+	/// price is left unjudged.
+	/// </summary>
+	private bool ThinksTooExpensive( Peep peep, ParkWorld.CatalogueObject thing )
+		=> _catalogue != null && _catalogue.TryGet( thing.CatalogueId, out var item )
+			&& PeepPriceOpinion.TooExpensive( peep, thing.PricePerUse, item );
+
+	/// <summary>
+	/// Walking away from a thing too expensive to board - <c>FUN_005006b0</c>'s first arm, <i>"Person %d:
+	/// Object %d is too expensive, I'm leaving the queue"</i>: <see cref="ParkAdmission.MediumHappinessChange"/>
+	/// off (<c>0x00500778</c>), the ride told to forget them and the queue left (<see cref="_walkAway"/>),
+	/// then put out of the queue (<see cref="DismissFromTheQueue"/>, <c>0x005007b4</c>), which takes the same
+	/// again. Thirty in this park.
+	/// </summary>
+	/// <remarks>
+	/// Thought 6 and the object's walk-away count (<c>FUN_004e1670</c>: <c>mNumWalkAways</c> and the dword at
+	/// <c>+0x230</c>) are counted; nothing here draws a thought or keeps either counter. The event-ring entry
+	/// (event 10) is not kept, as for every other way out of a queue.
+	/// </remarks>
+	private void WalkAwayFromTheDoor( Peep peep, ParkWorld.CatalogueObject thing, int tick )
+	{
+		Log.Info( $"Person {peep.ThingId}: Object {thing.ThingId} is too expensive, I'm leaving the queue "
+			+ $"(price {thing.PricePerUse}, cash {peep.Cash})" );
+
+		Unimplemented.Report( "DOOR_PRICE_THOUGHT_6" );
+
+		if ( Admission is { } mood )
+			peep.Happiness = Peep.Change( peep.Happiness, -mood.MediumHappinessChange );
+
+		Unimplemented.Report( "DOOR_WALK_AWAY_COUNT" );
+
+		_walkAway?.Invoke( thing, peep.ThingId );
+		DismissFromTheQueue( peep, tick );
+
+		ParkPeople.PutOffAtTheirFeet( peep, thing );
+	}
+
+	/// <summary>
 	/// Put out of a queue - <c>FUN_005012f0</c>: happiness down by
 	/// <see cref="ParkAdmission.MediumHappinessChange"/>, both of the guest's own queue links, the
 	/// invitation, the destination and the place in the queue cleared, and back to deciding.
@@ -1429,10 +1485,11 @@ public sealed class PeepBehaviour
 	/// The original has seven callers, and the other six unlink the guest from the thing's queue first
 	/// (<c>FUN_004ddd20</c>). A sale does not, so the thing is not told: see
 	/// <see cref="ParkState.ForgetQueueLinks"/>, which undoes the links of a guest who is still in them and
-	/// does nothing to one who was unlinked already. Three callers are built here: the sale, a queue
-	/// measured shorter (<see cref="QueueShortened"/>), and a closing ride's completion
-	/// (<c>ParkPeople.CompleteOrTurnAway</c>); <c>docs/exe/ride-operation.md</c>, "Every way out of a queue",
-	/// lists the other four and what each waits on.
+	/// does nothing to one who was unlinked already. Four callers are built here: the sale, a queue
+	/// measured shorter (<see cref="QueueShortened"/>), a closing ride's completion
+	/// (<c>ParkPeople.CompleteOrTurnAway</c>) and a price too high at the door
+	/// (<see cref="WalkAwayFromTheDoor"/>); <c>docs/exe/ride-operation.md</c>, "Every way out of a queue",
+	/// lists the other three and what each waits on.
 	/// </remarks>
 	internal void DismissFromTheQueue( Peep peep, int tick )
 	{

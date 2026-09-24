@@ -254,6 +254,31 @@ public sealed class ItemDescriptionFile
 	public int CostOfGoods => _costOfGoods ?? _category?.CostOfGoods ?? 0;
 
 	/// <summary>
+	/// How far over what a thing is worth a guest will still pay, in per cent - <c>UsageInfo.RipOffOK</c>,
+	/// descriptor <c>+0x16c</c>, which the level's control record keeps at <c>+0xc</c> and the price opinion
+	/// <c>FUN_004fde50</c> reads.
+	///
+	/// <para>
+	/// <b>Only the category files set it</b>: <c>Shops.sam</c> 100 and <c>SideShow.sam</c> 250 in all four
+	/// themes, the second annotated "%premium peeps willing to pay above 'average win'". No item's own file
+	/// overrides it, and <c>Rides.sam</c> and <c>Features.sam</c> do not declare it, so a ride reads nought.
+	/// </para>
+	/// </summary>
+	public int RipOffOK => _ripOffOK ?? _category?.RipOffOK ?? 0;
+
+	/// <summary>
+	/// What a shop's goods are made of - <c>UsageInfo.SpecialIngredient</c>, descriptor <c>+0x158</c>, whose
+	/// category comment reads "0 = none, 1 = Fat, 2 = Salt, 3 = Ice, 4 = Sugar". The Drinks Shop sets 3.
+	/// </summary>
+	public int SpecialIngredient => _specialIngredient ?? _category?.SpecialIngredient ?? 0;
+
+	/// <summary>
+	/// What a shop changes about a guest's looks - <c>UsageInfo.AppearanceEffect</c>, descriptor <c>+0x15c</c>,
+	/// "1 = Balloon, 2 = Costume".
+	/// </summary>
+	public int AppearanceEffect => _appearanceEffect ?? _category?.AppearanceEffect ?? 0;
+
+	/// <summary>
 	/// What it costs to buy and build one - <c>Upgrades[0].CostOfUpgrade</c>, whose own comment in every
 	/// category file reads "cash cost when buying this item".
 	///
@@ -363,6 +388,9 @@ public sealed class ItemDescriptionFile
 	private int? _numSimultAnims;
 	private int? _chanceOfLosing;
 	private int? _costOfGoods;
+	private int? _ripOffOK;
+	private int? _specialIngredient;
+	private int? _appearanceEffect;
 
 	private int? _minSpeed;
 	private int? _maxSpeed;
@@ -554,6 +582,18 @@ public sealed class ItemDescriptionFile
 
 				case "UsageInfo.InitCostOfGoods":
 					_costOfGoods = Number( line );
+					break;
+
+				case "UsageInfo.RipOffOK":
+					_ripOffOK = Number( line );
+					break;
+
+				case "UsageInfo.SpecialIngredient":
+					_specialIngredient = Number( line );
+					break;
+
+				case "UsageInfo.AppearanceEffect":
+					_appearanceEffect = Number( line );
 					break;
 
 				// Slot nought only - the later two are upgrade tiers, not the purchase. See BuildPrice.

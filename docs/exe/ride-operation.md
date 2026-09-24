@@ -292,7 +292,7 @@ the kids' `0x80` when the guest's id `& 7` is nought (`0x0050133d`), takes `Medi
 | `0x004e0554` | `FUN_004e0450`, the object's completion | the head, when `VAR_LETMEON` still names them or they are not in state 14 | `FUN_004ddd20` | −15 | built, `ParkPeople.CompleteOrTurnAway` |
 | `0x004ffdf4` | `FUN_004ffbc0`, arriving at the queue | joined, and `FUN_00501160` finds no route to their place | `FUN_004ddd20` | −15 | counted, `QUEUE_PLACE_WALK` |
 | `0x005004b3` | `FUN_004ffff0`, the `InQueue` turn | nine arms, below | `FUN_004ddd20`, a thought on most arms | −15 | counted, `QUEUE_TURN_DISMISSALS` |
-| `0x005007b4` | `FUN_005006b0`, at the door | `FUN_004fde50` says too expensive | thought 6, event 10, **a first −15** (`0x00500778`), `mNumWalkAways` +1 (`FUN_004e1670`), `FUN_004e0ac0`, `FUN_004ddd20` | −30 | counted, `DOOR_PRICE_OPINION` |
+| `0x005007b4` | `FUN_005006b0`, at the door | `FUN_004fde50` says too expensive | thought 6, event 10, **a first −15** (`0x00500778`), `mNumWalkAways` +1 (`FUN_004e1670`), `FUN_004e0ac0`, `FUN_004ddd20` | −30 | built, `PeepBehaviour.WalkAwayFromTheDoor` |
 | `0x00500857` | `FUN_005006b0`, at the door | `AdmitPerson` refuses and `FUN_00501160` fails: `"Couldn't rejoin FOQ even!"` | `FUN_004ddd20` | −15 | counted, `QUEUE_PLACE_WALK` |
 
 **`FUN_004ddd20` is the whole of leaving**: it empties script variable 0 (`VAR_LETMEON`) when it names the leaver
@@ -471,9 +471,43 @@ integer (`FIDIV`), and a speed of nought makes the ratio 1.
 sideshow (`+0x4ac` == 2) and nought otherwise, `win` the byte at `+0x190`, and `r` the control record's `+0xc`,
 copied at level start from descriptor `+0x16c` (`0x004d3e7b`) - **`UsageInfo.RipOffOK`** by the compiled schema's
 order (`0x007460c0`; `Shops.sam` 100, `SideShow.sam` 250). Too expensive is `price > worth` or `cash < price`, both
-unsigned (`0x004fe15f`, `0x004fe167`). At the shipped prices the Drinks Shop's worth runs 42..128 against 30 and the
-Jungle Spray's 241..482 against 20, so in Lost Kingdom only the cash test can fire. It also pushes a price sample
-to the analyser (`FUN_004c74b0`). OpenTPW reads no `RipOffOK`; without it the Drinks Shop's worth can fall to 21.
+unsigned (`0x004fe15f`, `0x004fe167`), so a guest whose cash has gone below nought passes the cash test. At the shipped
+prices the Drinks Shop's worth runs 42..128 against 30 and the Jungle Spray's 241..482 against 20, so in Lost Kingdom
+only the cash test can fire.
+
+**The arithmetic, exactly.** Each meter is `__ftol` (`0x0067a830`) then `AND 0xff`; each of the four meter products
+is divided by 100 on its own and **signed** (`IMUL`, `SAR 5`, the sign bit added back), as are `d140 × 115 / 100` and
+`prize × win / 100` - six in all. The three divisions of a running product are **unsigned** (`MUL`, `SHR 5` at
+`0x004fdf6d`, `0x004fdfe7`, `0x004fe005`), and every product wraps at 32 bits (`IMUL`, or `LEA`/`SHL` for the 115).
+`d140` is `UsageInfo.InitCostOfGoods`.
+
+**The offsets are pinned by the compiled `.sam` schema**, a table of 0x3c-byte entries (a type dword, then the
+name): UsageInfo runs `InitCostOfGoods`, `ThirstEffect`, `HungerEffect`, `VomitEffect`, `HappinessEffect`,
+`LitterEffect`, `SpecialIngredient`, `AppearanceEffect`, `InitPrizeValue`, `ShopType`, `ExciteFactor`, `RipOffOK`,
+`NumSimultAnims` (`0x00745e2c`..`0x007460fc`), four bytes each from `+0x140`, so `RipOffOK` is `+0x16c` - and the two
+ends are anchored independently: `+0x144` is the thirst `FUN_004fe1e0` takes away, `+0x170` the channel count
+`FUN_00413c10` hands the model loader. The control record is built once per item (`FUN_004d3e00`: `+4` from
+`+0x1b8`, `+8` from `+0xe8`, `+0xc` from `+0x16c`), nothing else stores to its `+0xc`, and it is saved and loaded
+raw as `mObjectControls[150]` (`FUN_004d3aa0`). In Lost Kingdom's save all 50 records' `+0xc` equal their items'
+`RipOffOK` (100 for the six shops, 250 for the four sideshows, 0 for the rest), so reading the item gives the
+number the loaded park holds.
+
+**Before the verdict it pushes price samples** to the park analyser (`FUN_00519510`, then `FUN_004c74b0`, a byte
+ring per kind), each `(worth + 5) × 10 − price × 10` kept when below 100 unsigned and 100 otherwise
+(`0x004fe037`), so a price more than five over the worth records 100 as well: for a sideshow (`+0x4ac` 2) one, kind 9; for `+0x4ac` 1 one for
+`SpecialIngredient` 1..4 (kind 1..4, through the jump table at `0x004fe184`) and one for `AppearanceEffect` 1 or 2
+(kind 6 or 7). The Drinks Shop's ingredient is 3, so its door pushes one.
+
+**The walk-away itself** (`0x00500722`..`0x005007c6`): thought 6 (`FUN_0050be80`, which also spawns a thought-bubble
+sprite), event 10, `FUN_004fea70(1)` (`MediumHappinessChange`, clamped 0..100), `FUN_004e1670` (object `+0x1a4`
+`mNumWalkAways` and `+0x230`, a history record's accumulator, each +1), `FUN_004e0ac0` (the nominee `+0x6c` zeroed
+unconditionally and `VAR_LETMEON` emptied if it names the guest; its only assert is that the guest was the nominee),
+`FUN_004ddd20`, `FUN_005012f0`, then `MajorDest` 0 and state 6 a second time. Each dock clamps on its own, so the loss
+is 30 only from happiness 30 up.
+
+OpenTPW builds it: `PeepPriceOpinion` is the opinion, `PeepBehaviour.WalkAwayFromTheDoor` the walk-away and
+`ParkRideOperation.Forget` is `FUN_004e0ac0`. Thought 6, `FUN_004e1670`'s two counters and the samples are counted
+(`DOOR_PRICE_THOUGHT_6`, `DOOR_WALK_AWAY_COUNT`, `DOOR_PRICE_ANALYSER_SAMPLE`); the event ring is not kept.
 
 **`AdmitPerson` refuses** on `mState` 1 or 4 or `mCanLoad` nought, or on `VAR_LETMEON` full after it has zeroed the
 nominee (`0x004e09b0`); a wrong person is only logged. Since `Invite` calls forward only while the slot is empty and
@@ -485,17 +519,19 @@ nothing on the way refills it, the realistic refusal is a ride that closed or br
 |---|---|---|---|
 | `FUN_004fd970` | — | The settle-up for leaving **any** visitable thing (not just a sideshow). Shifts the guest's recent-things history (`+0x1e0`..`+0x1e6`), bumps one of three counters by the descriptor's `+0x4ac`, charges, relieves a need by the descriptor's `+0xe8`, then splits on `+0x1f1`: nought logs `"Person lost this sideshow…"` and docks happiness at `+0x19c`; otherwise it runs `FUN_004fe1e0` and moves happiness by `(a-b)*3`. | Its own strings |
 | `FUN_004fe1a0` | — | **The charge.** `price = object[+0x194]`; when non-zero it credits the ride, plays a sound, and does `person[+0x1a0] -= price`. **The only `SUB [reg+0x1A0], reg` in the image.** | Byte search |
-| `FUN_004e16b0` | — | **The economy feed**: `ride[+0x180] += price`, `ride[+0x70] += price`, then on the descriptor's `+0x4ac` — **1 credits `global[+0x20130]` (rides), 2 credits `global[+0x20380]` (shops)**. A second switch on `+0x164` buckets the visit by ride kind and passes **1, not the money** — a tally, not a second payment. | Disassembly |
+| `FUN_004e16b0` | — | **The economy feed**: first the bank's deposit, `FUN_004d0190( price )` (the balance, `0x004e16c6`), then `ride[+0x180] += price`, `ride[+0x70] += price`, then on the descriptor's `+0x4ac` — **1, a shop, credits `global[+0x20130]`; 2, a sideshow, credits `global[+0x20380]`**; a ride (0) credits no pool. Inside the shop arm a second switch on `+0x164` (`ShopType`, then `+0x158` `SpecialIngredient` for types 2 and 4) buckets the visit and passes **1, not the money** — a tally, not a second payment. | Disassembly |
 | `FUN_004d0600` | — | The park-balance path. **The ride charge does not go through it.** | Disassembly |
 | `+0x194` | `mPricePerUse` | File **1054**. | Save record |
 | `+0x180` | `mTotalTakings` | File **1090**. | Save record |
 | `+0x1a0` | `mCash` | **Runtime** offset on the guest. The file's `mCash` is at **414** — do not conflate. | `FUN_004fe1a0` subtracts from it, `FUN_004fde50` compares against it |
 | `+0x1e0` | `mPreviousRides[4]` | The recent-things history, shifted by three (four entries, not three). | Save reader |
 | `+0xe8` | — | Descriptor field: the need relieved on leaving. | Disassembly |
-| `+0x4ac` | — | Descriptor field: object kind. **1 = ride, 2 = sideshow.** | Disassembly |
-| `+0x164` | — | Descriptor field: ride kind, for the visit tally. | Disassembly |
+| `+0x4ac` | — | Descriptor field: object kind, **a copy of `+0x4c`, `Info.WhichUIType`** (`0x004134f1`..`0x004134f5`, in `FUN_00413410`, its only store): 0 rides, 1 shops, 2 sideshows, 3 features. `FUN_004fde50`'s and `FUN_004e16b0`'s arm 1 read `SpecialIngredient`, `AppearanceEffect` and `ShopType`. | Disassembly |
+| `+0x164` | — | Descriptor field: `UsageInfo.ShopType`, for the shops' visit tally in `FUN_004e16b0` (the schema's order puts it there). | Disassembly |
 
 **`person[+0x1a0]` is the guest's cash — confirmed by USE, not by adjacency.** The field a price is SUBTRACTED from in `FUN_004fe1a0` is the field a price is COMPARED against in `FUN_004fde50`, by two unrelated functions. `+0x19c` is happiness and `+0x1a0` adjoins it, but adjacency was never the evidence.
+
+**A charge is deposited in the park's bank.** `FUN_004e16b0` first calls `FUN_004d0190` on the bank thing with the price (`0x004e16bf`..`0x004e16c6`): the balance at `+0xc`, the world's `+0x1fc90` and the bank's `+0x124`, the same three adds the gate fee's `FUN_004d0600` makes. Then it credits the object's `+0x180` and `+0x70` and a global pool chosen by the descriptor's `+0x4ac` (`+0x20130` shops, `+0x20380` sideshows; a ride none). OpenTPW does not make the deposit: `ParkState.TakeAt` counts it (`CHARGE_BANK_DEPOSIT`, `docs/QUEUE.md` Q96).
 
 ### Measured prices and takings in Lost Kingdom
 
@@ -505,7 +541,7 @@ Drinks Shop **30**, Jungle Spray sideshow **20**, **Belly Bounce zero**; `mTotal
 
 Named by its own strings: `"Litter gone up by %d, is now %d"`, `"Customer bought a balloon, Aaah!"`, `"Trying to give a balloon to a pe…"`, `"Customer returning a costume."`, `"Balance file error: Shop has unk…"`, `"Sideshow won - happiness up %d p…"`. What it does, in order:
 
-1. **A sideshow (`+0x4ac` == 2) PAYS OUT:** `FUN_004e1a10` — the **cost of goods**, not the chance of winning — feeds `FUN_004e1920`, and then **`person[+0x1a0] += FUN_004e1a10()`** — a prize ADDED to the guest's cash. A ride (`+0x4ac` == 1) takes the `FUN_004e1b40` path instead. **In Lost Kingdom that prize is 50 against a price of 20**, so winning the Jungle Spray leaves a guest 30 up.
+1. **A sideshow (`+0x4ac` == 2) PAYS OUT:** `FUN_004e1a10` — the **cost of goods**, not the chance of winning — feeds `FUN_004e1920`, and then **`person[+0x1a0] += FUN_004e1a10()`** — a prize ADDED to the guest's cash. A shop (`+0x4ac` == 1) takes the `FUN_004e1b40` path instead. **In Lost Kingdom that prize is 50 against a price of 20**, so winning the Jungle Spray leaves a guest 30 up.
 2. **The item's own effects**, each added to a guest meter and clamped 0..100: the descriptor's `+0x144` and `+0x148` (with a sound of `0x83` or `0x84` depending which is larger), `+0x14c` → `+0x1b0`, `+0x150` → happiness `+0x19c`, `+0x154` → litter `+0x1b4`. Three more happiness changes follow, each reading the object's byte `+0x198`, which is not decoded: for the hunger effect `+0x148` and then the thirst effect `+0x144`, whichever is non-zero, `(rand & 7) + byte [+0x198] + that effect` under 30 docks `PeepInfo.SmallHappinessChange` (`0x004fe453`, `0x004fe4a5`); then happiness gains `byte [+0x198] * desc[+0x150] / 100` (`0x004fe4cf`..`0x004fe525`).
 3. **Shop arms on the descriptor's `+0x15c`:** 1 gives a BALLOON (asserting the guest has none, building a sprite, and clamping a value between `DAT_0075d0f0` and `DAT_0075d0f4`); 2 hands out or takes back a COSTUME via the guest's `+0x24`/`+0x20`; anything else is a balance-file error.
 4. **A toilet (`mFlags & 1`)** zeroes `+0x1ac`, may zero `+0x1b0` above 90, and stamps `+0xc2`.
@@ -540,7 +576,7 @@ In `rides`, **twelve of thirteen** `Easy_*.sam` files carry real content — `Ea
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
 | `FUN_004e2670` | — | Reached from `FUN_00501db0` case `0xe` (entering `EnteringRide`). Asserts `"Non sideshow object number %d ha[s]…"` (descriptor `+0x4ac` == 2), reads a chance-of-winning byte at **`+0x190`** (decimal 400), computes **`rand() % 100 <= chance`**, writes the result into script variable **11 (`VAR_PARAM`)**, and returns it. | Its own assert |
-| `+0x190` | `mChanceOfWinning` | **SETTLED 2026-09-20: it is the OBJECT's, and it is not read from the save at all.** `FUN_004db090` derives it as `100 - descriptor[+0xec]` at `004db38f`..`004db3a1` — `MOV EDX,[EDI+0xec]` / `MOV ECX,0x64` / `SUB ECX,EDX` / `MOV [ESI+0x190],ECX` — where `+0xec` is `UsageInfo.InitChanceOfLoosing`. That `FUN_004e2670` takes both the catalogue id (`+0xe`) and the script handle (`+0x24`) off the same pointer is what fixes it as the object rather than the person. The "file offset 1050" claim is withdrawn: nothing reads it out of the record. | Disassembly |
+| `+0x190` | `mChanceOfWinning` | **It is the OBJECT's, and it is saved and loaded with the object** (`FUN_004db7d0`, beside `mCostOfGoods` at `+0x188`, `0x004dcd01`..; file 1050); two setters (`FUN_004e1a20`, `FUN_004e21c0`) are reached from the object window. Placing one, `FUN_004db090` derives it as `100 - descriptor[+0xec]` at `004db38f`..`004db3a1` — `MOV EDX,[EDI+0xec]` / `MOV ECX,0x64` / `SUB ECX,EDX` / `MOV [ESI+0x190],ECX` — where `+0xec` is `UsageInfo.InitChanceOfLoosing`. That `FUN_004e2670` takes both the catalogue id (`+0xe`) and the script handle (`+0x24`) off the same pointer is what fixes it as the object rather than the person. The "file offset 1050" claim is withdrawn: nothing reads it out of the record. | Disassembly |
 | `FUN_004e1a10` | `mCostOfGoods` | **Not the chance-of-winning accessor.** It is two instructions, `MOV EAX,[ECX+0x188]; RET`, on the OBJECT. `FUN_004db090` builds `+0x188` from the descriptor's `+0x140`, which is `UsageInfo.InitCostOfGoods`. It is the sideshow's **prize** and the numerator of what winning is worth. The chance of winning is `+0x190`, reached by `FUN_004e21b0`. | Disassembly, 2026-09-20 |
 | `FUN_004e1a00` | `mPricePerUse` | `MOV EAX,[ECX+0x194]`. The divisor in the happiness sum below. | Disassembly |
 | `FUN_004e21b0` | — | `MOV AL,[ECX+0x190]` — the real chance-of-winning accessor. | Disassembly |
@@ -600,7 +636,7 @@ The save reader names the byte `mQueuePos`; the state setter writes the sideshow
 | `+0x6c` | `mPersonBeingLoaded` | |
 | `+0x70` | takings accumulator credited alongside `+0x180` | |
 | `+0x180` | `mTotalTakings` | File 1090 |
-| `+0x190` | `mChanceOfWinning` | Not in the save: derived at build as `100 - descriptor[+0xec]` (see "The sideshow win roll"). **This is an OBJECT offset.** Do not confuse it with the **person** `+0x190` (`mPreviousX`) in "Where a WALKING peep is drawn" below — different records, same number |
+| `+0x190` | `mChanceOfWinning` | Saved with the object (file 1050); derived at placement as `100 - descriptor[+0xec]` (see "The sideshow win roll"). **This is an OBJECT offset.** Do not confuse it with the **person** `+0x190` (`mPreviousX`) in "Where a WALKING peep is drawn" below — different records, same number |
 | `+0x194` | `mPricePerUse` | File 1054 |
 | `+0x19c` | `mState` | |
 
@@ -993,7 +1029,6 @@ role 0 is the one animation it is meant to play.
 
 Behaviour that reads like a bug and is the original:
 
-- **The park's displayed balance does not move on a ride charge.** `FUN_004e16b0` credits the object's `+0x180` and a global income pool chosen by the descriptor's `+0x4ac` (`+0x20130` rides, `+0x20380` shops) — **not** the park balance the HUD reads, and not `FUN_004d0600`. A charge can debit a guest and leave the displayed money unchanged.
 - **A guest short of the price is left short, not refused, when the charge is taken.** `FUN_004fe1a0` subtracts the price, unclamped, when it is non-zero; the only test of a price is `FUN_004fde50` at the door before boarding (`0x00500715`), and it is not asked again at the charge.
 - **A healthy ride's turn never completes an admission.** `FUN_004e0450` is reached only while closing, or from `Invite`'s `mCanLoad == 0` bail. The guest's own state-14 turn does the completion.
 - **A shop is offered and paid like a ride.** The queue-room test reads the object's `+0x40`, which is **not** `mQueueSizeInCells` as loaded: `FUN_004de130` (`GetBackOfQueue`) *overwrites* it by walking the map whenever `mBackOfQueue` is nought, and `FUN_004dd920` calls that **before** it reads the count. The shop's entry cell connects to a path, so the walk answers one cell and `0 < 4` passes. All six objects carrying the choosable bit really can be offered — the three toilets are in the identical position, and no toilet in any park could ever be visited under the old reading. **And a shop does NOT take its money through LIMBO**: `Coconut.RSE` declares zero limbo slots and zero walk slots and uses neither family, running the same `VAR_LETMEON` → `WAIT 1000` → `VAR_LETMEOFF` handshake a ride runs. The engine never reads a script's limbo slots either: swept over all 43 functions that resolve a script frame, with the opcode handlers' own accesses as the positive control. It is paid by the ordinary dismiss path, `FUN_004e1410` → `FUN_005014e0` → `FUN_004fd970` → `FUN_004fe1a0`. Limbo is real, but it is how `steak`, `giftshop`, `balloon`, `Cost_shp` and `arc2x3` hold a guest — never `coconut`, and it is script-private bookkeeping the engine never reads.
@@ -1033,7 +1068,7 @@ The Jungle Spray is queued for and invited in **about one run in five** at that 
 - **`FUN_005019f0` case `0x11`**, the walk of the `mFirstGuard` chain through `+0x210` / `+0x212`.
 - **Whether a shop's duration of nought is correct** (it may simply not read it) where `FUN_004df8f0` would take a clamped value from the descriptor's `+0x1a0`.
 - **Refuted, so do not repeat:** "only `UNBOUNCE` writes `VAR_LETMEOFF`" — there are six writers, and the claim is false for 21 of the park theme's 22 ride scripts. "The shops' `mOperatingCapacity` might be nought, leaving them permanently full" — every visitable object has a non-zero capacity.
-- Descriptor keys present in the `.sam` files that OpenTPW does not read yet: `SpecialIngredient`, `ShopType`, `RideHandlesSprite` (the flag byte's `0x20`, Q52), `RequiresTeleport`, `GoldenTicketCost`, `AppearanceEffect`, `InitPricePerUse`.
+- Descriptor keys present in the `.sam` files that OpenTPW does not read yet: `ShopType`, `RideHandlesSprite` (the flag byte's `0x20`, Q52), `RequiresTeleport`, `GoldenTicketCost`, `InitPricePerUse`.
 
 ## Measuring the corpus without inventing findings
 

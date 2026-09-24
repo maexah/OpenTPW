@@ -33,7 +33,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - **Placing a ride lays its queue's first cell before the entrance and hands the player the queue tool
   there**, with the original's coloured squares showing where a click will lay it; one click onto a path
   lays and joins the queue. Guests queue in it and ride.
-- Spending: guests choose, queue for and buy from the Drinks Shop and the Jungle Spray.
+- Spending: guests choose, queue for and buy from the Drinks Shop and the Jungle Spray; short of the price, they walk.
 - People: guests and staff read from the save, drawn, walking, paying, queueing, boarding. A walking peep
   is interpolated between the simulation's 248 ms steps rather than jumping four times a second.
 - Rides: every placed thing runs its script; 74 of 106 opcodes built, the rest counted. A ride screams
@@ -45,13 +45,13 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 ## Does not
 
-- No finances, litter, day ending, saving a park back, video, networking. Research is inert and has nothing behind
-  it. In a park the advisor says the gadget's opening line and nothing after it (`docs/PLAYER-GAPS.md` gap 4).
+- No finances (a charge never reaches the bank, Q96), litter, day ending, saving a park back, video, networking.
+  Research is inert. In a park the advisor says the gadget's opening line and no more (`docs/PLAYER-GAPS.md` gap 4).
 - Eight of the nine per-object windows are unbuilt. Setting a staff member's patrol area is not built, deferred by
   Alexah; staff keep to the areas the save gives them. A walking member of staff is not entered in the cells they
   cross; only hiring and putting down place one.
 - A guest put off on cleared ground no neighbour connects to leaves only by going home (Q53, decode first). Of the
-  seven ways out of a queue, four are counted, not built (Q50c-f). An arriving guest's happiness is 0 and stays (Q85).
+  seven ways out of a queue, three are counted, not built (Q50d-f). An arriving guest's happiness is 0 and stays (Q85).
 - The park's door moves neither the gate (Q89) nor the advisor (Q90), nor a shut ride's model (Q91); the ride window's
   door shows a shut ride but is not a button (Q92), and a bought queued thing starts open (Q93).
 - A right press over a panel still cancels (Q56), and the park's Escape acts on the press, not the release (Q57).
@@ -69,11 +69,11 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50 and Q50b are
-ticked.** Next is **Q50c**: the door's price opinion. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11
-Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f
-and Q85-Q88, Q50b Q89-Q94, and the 2026-09-24 staleness audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12
-review, section G from the lobby plan).
+`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50, Q50b and Q50c are
+ticked.** Next is **Q50d**: the queue turn's own ways out. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10
+Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50
+Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, and the 2026-09-24 staleness audit and its review Q68-Q82 (Q70-Q75
+from the 2026-09-12 review, section G from the lobby plan).
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -90,6 +90,7 @@ and is still untracked, so it exists on this machine only; Q13 moves it into `do
 - The camcorder's tie and four of Q48b's put-backs move the viewer under 0.2 units: the census's, not a photograph's.
 - Q50's slot let go, its nominee and `EnteringRide` kept, and a queue walk giving up at a stale link: tested only.
 - Q50b's reopen by an edit of the queue, a head forced on, the guard's refusals and a bought ride's bit: tested only.
+  Q50c's refusal on worth (none at these prices) and negative cash passing: tested; its kids' sound: neither.
 - A lock taken on the last unit running its section whole: tested only. Nothing the stock park runs arrives there; the
   one route is the Hot Pot with its capacity cut mid-ride, and it rests on `BUMP` being unbuilt (Q45).
 
@@ -100,20 +101,19 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1083**, 0 fail, 0 skip with the game | 2026-09-24, after Q50b |
-| Tests without the game | **475** ran, **608** skipped, of 1083 | 2026-09-24, after Q50b |
-| Build warnings | 123 | 2026-09-24, after Q50b |
+| Tests | **1095**, 0 fail, 0 skip with the game | 2026-09-24, after Q50c |
+| Tests without the game | **475** ran, **620** skipped, of 1095 | 2026-09-24, after Q50c |
+| Build warnings | 123 | 2026-09-24, after Q50c |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-24 - a closed ride turns its queue away (Q50b).** Branch `alexah/139-a-closed-ride-turns-its-queue-away`.
-The park's door takes an OPEN flag, so down is shut and ours was drawn the wrong way round. Pressing it in the game shut
-all six rides and put out the Belly Bounce's seven queuers one a sweep, 50 to 35; all held but one guest's.
+**2026-09-24 - the door's price opinion (Q50c).** Branch `alexah/140-the-doors-price-opinion`. In the game three guests
+carrying 10 walked away from the Drinks Shop's door, 50 to 20; the control let them in and charged them to -20.
 
-**Earlier items.** Each ticked item's whole account is its entry in `docs/QUEUE.md`: `alexah/138` (Q50), `137` (Q48b),
-`136` (Q48), `135` (Q47), `134` (Q45), `133` (the staleness audit), `132` (Q44), `131` (Q42), `130` (Q41), `129` (Q39),
-`128` (Q36), `126` (Q12) to `118` (Q4), `115`-`116` (Q3), `117` (Q35), `109` (Q1, Q1b - the rider is not photographed).
-Before them, `114` built a queue that joins the paths, `110` a click anywhere on a footprint, `112` the queue link.
+**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`: `alexah/139` (Q50b), `138` (Q50), `137` (Q48b),
+`136` (Q48), `135` (Q47), `134` (Q45), `133` (the audit), `132` (Q44), `131` (Q42), `130` (Q41), `129` (Q39), `128`
+(Q36), `126` (Q12) to `118` (Q4), `115`-`116` (Q3), `117` (Q35), `109` (Q1, Q1b - the rider is not photographed). Before
+them, `114` built a queue that joins the paths, `110` a click anywhere on a footprint, `112` the queue link.
 
 Everything older is the git log.

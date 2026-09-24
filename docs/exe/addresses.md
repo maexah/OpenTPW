@@ -44,6 +44,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0040c368` | Escape handler `0x0040c180`: after the idle install, `FUN_0052f200(0,1)` zeroes the tool and the rotation, and the handler answers 1 so the menu does not open | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x0040c4d0` | | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/WindowStack.cs  |
 | `0x0040c5d0` | The system table's Ctrl+H handler, Popup Help, run on the key's release by the window procedure | OpenTPW/UI/HelpBar.cs  |
+| `0x004134f5` | Item loader `FUN_00413410`: descriptor `+0x4ac` stored as a copy of `+0x4c`, `Info.WhichUIType` | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x00415270` | the whole-game restore chain: seventeen modules in order, each checked against a four-character tag that follows it | OpenTPW.Files/Formats/Save/ParkScriptStates.cs  |
 | `0x00419710` | | OpenTPW/UI/UiFonts.cs  |
 | `0x00423690` | | OpenTPW/Client/GameOptions.cs OpenTPW/World/Level.cs  |
@@ -212,6 +213,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004df3ea` | `FUN_004df390` logs "Opening non-openable ride!" five times when its guard refuses, and opens anyway | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004e0554` | `FUN_004e0450` puts the queue's head out (`FUN_005012f0`) | OpenTPW.Tests/ParkClosedRideTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004e13fc` | `Invite`'s `mCanLoad` bail: `FUN_004e0450` and return, skipping the watchdog | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004e16c6` | The charge's economy feed `FUN_004e16b0`: the price deposited in the park's bank (`FUN_004d0190`) | OpenTPW.Tests/ParkRideExitTests.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004f7ea9` | | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f8321` | | OpenTPW.Tests/GameCalendarTests.cs OpenTPW/Global/GameCalendar.cs  |
 | `0x004f8792` | | OpenTPW/Global/GameCalendar.cs  |
@@ -227,6 +229,12 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fb3f5` | `FUN_004fb360` plays the kids' effect `0x80` at the rider's sprite | OpenTPW.Tests/ParkPutOffSoundTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb4a1` | `FUN_004fb360` puts the guest into state 6, deciding | OpenTPW.Tests/ParkEvictionTests.cs  |
 | `0x004fcb21` | The guest's chooser `FUN_004fcb10` clears `mMajorDest` before it chooses, chosen or not | OpenTPW.Tests/ParkEvictionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fde6a` | Price opinion `FUN_004fde50`: a price of nought answers nought, and no sample is pushed | OpenTPW/World/Park/PeepPriceOpinion.cs  |
+| `0x004fdf6d` | Price opinion: the first unsigned division by 100 (`MUL`, `SHR 5`), mood times the goods | OpenTPW/World/Park/PeepPriceOpinion.cs  |
+| `0x004fdfe7` | Price opinion: the second unsigned division, after `RipOffOK` | OpenTPW/World/Park/PeepPriceOpinion.cs  |
+| `0x004fe005` | Price opinion: the third unsigned division, after happiness - the worth | OpenTPW/World/Park/PeepPriceOpinion.cs  |
+| `0x004fe15f` | Price opinion: price above worth, unsigned (`JA`) | OpenTPW/World/Park/PeepPriceOpinion.cs  |
+| `0x004fe167` | Price opinion: cash below price, unsigned (`JC`) | OpenTPW/World/Park/PeepPriceOpinion.cs  |
 | `0x004fe453` | `FUN_004fe1e0` docks `SmallHappinessChange` behind a gate on descriptor `+0x148` | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe4a5` | `FUN_004fe1e0` docks `SmallHappinessChange` behind a gate on descriptor `+0x144` | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe4cf` | `FUN_004fe1e0`: happiness gains the object's byte `+0x198` times the happiness effect over a hundred (to `0x004fe525`) | OpenTPW/World/Park/ParkRideOperation.cs  |
@@ -238,9 +246,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0050049e` | The `InQueue` turn's shared way out (from here) | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x005004b3` | The `InQueue` turn puts the guest out (`FUN_005012f0`) | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00500532` | The `InQueue` turn re-takes the place (`FUN_00501160`) | OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x00500715` | At the door: the price opinion `FUN_004fde50` | OpenTPW.Tests/ParkRideExitTests.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x00500778` | At the door, too expensive: the first `MediumHappinessChange` | OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x005007b4` | At the door, too expensive: put out (`FUN_005012f0`) | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00500715` | At the door: the price opinion `FUN_004fde50` | OpenTPW.Tests/ParkRideExitTests.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/PeepBehaviour.cs OpenTPW/World/Park/PeepPriceOpinion.cs  |
+| `0x00500778` | At the door, too expensive: the first `MediumHappinessChange` | OpenTPW.Tests/PeepPriceOpinionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x005007b4` | At the door, too expensive: put out (`FUN_005012f0`) | OpenTPW.Tests/PeepPriceOpinionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00500826` | At the door, refused: re-take the front of the queue | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00500857` | At the door: "Couldn't rejoin FOQ even!", put out | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x0050133d` | `FUN_005012f0` plays the kids' effect `0x80` only when the guest's id `& 7` is nought | OpenTPW.Tests/ParkPutOffSoundTests.cs OpenTPW/World/Park/ParkAudio.cs OpenTPW/World/Park/ParkPeople.cs  |

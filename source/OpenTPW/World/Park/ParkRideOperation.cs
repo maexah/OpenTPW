@@ -162,7 +162,8 @@ public sealed class ParkRideOperation
 	/// <remarks>
 	/// The original splices with the leaver's own links and tests no membership (<c>0x004ddde9</c>), where
 	/// <see cref="ParkState.LeaveQueue"/> refuses a guest who is not in the queue. Every caller here hands it
-	/// a guest it reached by walking that queue's links, so the refusal is never taken.
+	/// a guest it reached by walking that queue's links, or the head walking away from its door, so the refusal
+	/// is never taken.
 	/// </remarks>
 	/// <returns>Whether they were in that queue to begin with.</returns>
 	internal static bool LeaveQueue( ParkState state, RideScript? script, int objectId, int guestId )
@@ -546,10 +547,8 @@ public sealed class ParkRideOperation
 	/// 2=sideshows, 3=features".
 	/// </summary>
 	/// <remarks>
-	/// <b>Only the sideshow value is used, and that is deliberate.</b> The original splits on the
-	/// descriptor's <c>+0x4ac</c> and every reading of this project's agrees that <b>2</b> is a sideshow,
-	/// while what <b>1</b> means is recorded as unsettled - the field table says "ride" and the economy feed
-	/// says "shops". Nothing here needs to know, so nothing here decides it.
+	/// The original splits on the descriptor's <c>+0x4ac</c>, a copy of <c>Info.WhichUIType</c> made at
+	/// <c>0x004134f5</c>, so its 2 is this.
 	/// </remarks>
 	public const int SideshowUiType = 2;
 
@@ -631,8 +630,8 @@ public sealed class ParkRideOperation
 	/// <para>
 	/// <b>There is no affordability test and no clamp, and both are the original's.</b> It subtracts
 	/// whatever the price is, so a guest can be left short; what stops that in practice is
-	/// <c>FUN_004fde50</c>, which the guest asks at the door before boarding (<c>0x00500715</c>, counted as
-	/// <c>DOOR_PRICE_OPINION</c>) - a gate on boarding, never on paying. Adding a check here would be
+	/// <c>FUN_004fde50</c>, which the guest asks at the door before boarding (<c>0x00500715</c>,
+	/// <see cref="PeepPriceOpinion"/>) - a gate on boarding, never on paying. Adding a check here would be
 	/// inventing a refusal the engine does not make.
 	/// </para>
 	/// </summary>
@@ -751,6 +750,25 @@ public sealed class ParkRideOperation
 		_state.NominateForLoading( ride.ThingId, head );
 
 		return head;
+	}
+
+	/// <summary>
+	/// Forgets a guest who is leaving - <c>FUN_004e0ac0</c>, "Object %d: person %d left after I'd admitted
+	/// him": the nominee at <c>+0x6c</c> let go of, whoever it is, and <see cref="AdmitVariable"/> emptied
+	/// when it names the leaver. The original asserts the leaver is the nominee and clears it either way.
+	/// </summary>
+	public void Forget( RideScript? script, int rideId, int personId )
+	{
+		Log.Info( $"Object {rideId}: person {personId} left after I'd admitted him "
+			+ $"(person being loaded was {_state.PersonBeingLoaded( rideId )})" );
+
+		_state.NominateForLoading( rideId, 0 );
+
+		if ( script != null && personId != 0 && script[AdmitVariable] == personId )
+		{
+			Log.Info( $"Object {rideId}: person {personId} is in LETMEON but wants to leave.  Zeroing LETMEON" );
+			script.Set( AdmitVariable, 0 );
+		}
 	}
 
 	/// <summary>
