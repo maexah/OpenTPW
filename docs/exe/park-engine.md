@@ -637,7 +637,8 @@ put back every change of cell nobody asked about - and the entry below never put
 **The sweep, pass by pass** (`0x0042bdd8`..`0x0042c5df`; put to five refuters and three judges for
 `docs/QUEUE.md` Q48, then re-read by hand). The step is `dt * velocity` for each axis, `dt` being the frame's time
 step (one above 200 is taken as 100, and one of 0 or less as 1: `0x0042b2c3`..`0x0042b2ed`). Each axis is first zeroed if it lies within ±1e-4, and if both are then nought
-nothing moves. **Ten world units to a cell**, `_DAT_006fdd58` = 0.1. Each pass:
+nothing moves. X's lower edge is tested on `dt * velX` still on the x87 stack (`FST` then `FCOMP`,
+`0x0042bdf2`..`0x0042bdf6`), every other edge on the stored float. **Ten world units to a cell**, `_DAT_006fdd58` = 0.1. Each pass:
 
 1. **The cell** stood in is `__ftol( position * 0.1f )` for each axis (`0x0042be86`..`0x0042beba`; `0x0067a830`
    truncates), taken afresh every pass and never clamped to the map.
@@ -648,8 +649,9 @@ nothing moves. **Ten world units to a cell**, `_DAT_006fdd58` = 0.1. Each pass:
    the division stay on the x87 stack and round at whatever precision is in force (below).
 3. **A tie is broken toward Y.** If the two stored reaches are equal and both axes move, the X step is divided by
    `0x0074c9c8` = **1.01** and its reach multiplied by it, and both are kept (`0x0042bff8`..`0x0042c043`). Below a
-   reach of 1 this makes Y the side asked, with X stopping about 1% short of its own boundary. The shorter X step
-   lasts the rest of the frame, and shrinks again at another tie.
+   reach of 1 this makes Y the side asked, with X stopping about 1% short of its own boundary. The tie is broken
+   before the whole step is weighed (4), so a tie at 1 or more takes the whole step with the shorter X. The shorter
+   X step lasts the rest of the frame, and shrinks again at another tie.
 4. **The side asked** is X's when its reach is strictly the smaller, else Y's. If that reach is 1 or more, the
    **whole step** is taken instead and nothing is asked (`0x0042c460`).
 5. **Asked and shut** (`FUN_004d8750` non-zero): that axis is parked in the cell being left - at `cell * 10`
@@ -755,26 +757,35 @@ park. A save never resumes in first person: loading zeroes `gui_CameraFlags` (`0
 
 ### Where OpenTPW's camcorder differs
 
-`ParkCamcorderCameraMode.Slide` has steps 1, 2, 4, 5 and 8 of the sweep in outline, and not 3, 6 or 7; `Enter`,
-`Leave` and `Step` differ too. Each of the first three was reproduced in the running game, with no change made
-(`docs/QUEUE.md` Q48; the Belly Bounce's footprint is columns 51-53, rows 23-26, and (51,22) is its queue):
-- **The unasked axis is not put back (step 6), and a tie is not broken (step 3).** A pass that asks one side can
-  carry the other axis onto its own boundary - by rounding as often as by an exact tie - and `floor` puts the
-  viewer in a cell whose side nobody asked about. From (505, 225) at 7π/4, 11 frames: only (50,22) east was asked,
-  and the viewer ended in **(51,23), type 4**, the footprint.
-- **The whole step is not checked (step 7).** A reach of 1 or more whose sum rounds onto the boundary lands in the
-  next cell unasked. From (515, 229.33333) facing +y, one frame lands in **(51,23), type 4**, through the shut
-  south side of the queue cell, and 30 more frames walk on to (51,25) inside the ride. From (515, 225) the same
-  side stops the viewer at 229.999 in (51,22).
-- **Entry and the edge.** `Enter` stands the viewer at the orbit's point of interest, wherever it is; the original
-  needs a click on a cell of type 0, 1, 3, 9 or 30 inside the heightfield. `Step` clamps to 1..1280, where the
-  original's bound is the soft one at 960 by 850, and `Slide` refuses every side of a cell off the map. Entered at
-  (1300, 245), the viewer is clamped to 1280, cell 128, and held there. Entered at (1100, 245) - type 7, solid, which in
-  Lost Kingdom is every one of the 8,224 cells beyond the 96 by 85 park - it cannot move at all.
-- Not yet seen to matter, and different all the same: a refusal going negative parks at `cell * 10 + 0.001`, not
-  `cell * 10`; the reach is `(edge - position) / step` in float, not from `modf` of `position * 0.1f`; `Slide`
-  stops after 8 passes; and `Leave` hands the orbit camera the walked position and yaw, where the original restores
-  its own.
+`ParkCamcorderCameraMode.Slide` runs the sweep above pass for pass, steps 1 to 8, with the original's constants and
+its stores: `double` between them for the x87 at 53 bits, a `float` at each store (`docs/QUEUE.md` Q48b). It differs
+in these places, none reached by a walk in the park:
+- **Off the map every side is shut.** `CellEdge` holds no cell there; the original's test reads its neighbours'
+  records instead (step 1's cell is never clamped). Only an entry off the park gets there (below).
+- **The passes are capped at 1024**, where the original loops until the step is spent. Every pass spends part of a
+  step, zeroes one or ends the sweep, so only a step that is not a number reaches the cap.
+- **The rest of X's step after an X pass is the stored float.** The original keeps it unrounded on the x87 stack
+  (`FST` at `0x0042c12e`) for the nudge's direction (`0x0042c14d`) and the loop's test (`0x0042c24c`); the two
+  differ only if it underflows.
+- `FUN_0042a340`'s branch is not built (above; `docs/QUEUE.md` Q69).
+- **At the margins**, read by a review of the port (`docs/QUEUE.md` Q48b). `Slide` is handed the stored float step,
+  so a step that rounds to exactly -1e-4 is zeroed where the original may keep it (the dead band above). Every test
+  of a step against nought reads C3, which an unordered compare also sets, and every "smaller" reads C0, likewise:
+  a NaN step is kept by the dead band, has a reach of 2 and ends the loop, where C#'s compares read it as nothing
+  and only the cap ends it. The put-back loads its cell with `FILD` over a zero high word (`0x0042c0b0` and the
+  others), so a cell below 0 reads as unsigned and lands past 4e10; and `__ftol` keeps the low word of a
+  position past 2e10, where C# saturates. None of it is reached on the map with a finite step.
+
+Which precision is live is open (above). At 24 bits two of `ParkCamcorderWalkTests`' cases come out otherwise: a
+step of 5 from 245 is taken whole and put back at 249.999 instead of crossing onto 250, and the tie from (45, 45)
+leaves X at 54.9020 instead of 54.9010.
+
+**Entry and the edge are Q25's.** `Enter` stands the viewer at the orbit's point of interest, wherever it is; the
+original needs a click on a cell of type 0, 1, 3, 9 or 30 inside the heightfield. `Step` clamps to 1..1280, which
+is ours: the original's bound is the soft one at 960 by 850. Entered at (1300, 245), the viewer is clamped to 1280,
+cell 128, and held there. Entered at (1100, 245) - type 7, solid, which in Lost Kingdom is every one of the 8,224
+cells beyond the 96 by 85 park - it cannot move at all. `Leave` hands the orbit camera the walked position and yaw,
+where the original restores its own.
 
 ---
 

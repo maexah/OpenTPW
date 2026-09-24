@@ -59,8 +59,15 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00429ba0` | | OpenTPW/World/Advisor/AdvisorModel.cs  |
 | `0x00429d60` | | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x0042a190` | | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
+| `0x0042bdd8` | `FUN_0042b1c0`: the first-person sweep begins, the camcorder's step taken cell by cell | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
+| `0x0042bef5` | The sweep: X's reach, from `modf` of `position * 0.1f` | OpenTPW/World/Park/ParkCamcorderCameraMode.cs OpenTPW.Tests/ParkCamcorderWalkTests.cs  |
+| `0x0042bff8` | The sweep's tie-break: an exact tie divides the X step by 1.01 so that Y is asked | OpenTPW/World/Park/ParkCamcorderCameraMode.cs OpenTPW.Tests/ParkCamcorderWalkTests.cs  |
 | `0x0042c093` | `FUN_0042b1c0`: the X-axis call of `FUN_004d8750`, pushing a literal 2 | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
+| `0x0042c0b0` | The sweep: X refused going negative is parked at `cell * 10` | OpenTPW.Tests/ParkCamcorderWalkTests.cs  |
+| `0x0042c14d` | The sweep: the nudge after an open crossing that left the cell unchanged | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
+| `0x0042c197` | The sweep: the axis not asked goes the same fraction, and is put back if its cell changed | OpenTPW/World/Park/ParkCamcorderCameraMode.cs OpenTPW.Tests/ParkCamcorderWalkTests.cs  |
 | `0x0042c290` | `FUN_0042b1c0`: the Y-axis call of `FUN_004d8750`, pushing a literal 2 | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
+| `0x0042c460` | The sweep: the whole step, with either axis put back if its cell changed | OpenTPW/World/Park/ParkCamcorderCameraMode.cs OpenTPW.Tests/ParkCamcorderWalkTests.cs  |
 | `0x0042d130` | | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x0044b220` | | OpenTPW.Files/Formats/Model/ModelFile.cs  |
 | `0x0044b2e0` | | OpenTPW/World/Advisor/AdvisorModel.cs  |
@@ -543,8 +550,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00741c8c` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00741d40` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00742178` | | OpenTPW/World/Park/ParkWeather.cs  |
-| `0x0074c9c4` | Float 9.999: the camcorder's far cell edge, already carrying the nudge | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
-| `0x0074c9d0` | Float 0.001: the camcorder's nudge inside a refused cell | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
+| `0x0074c9c4` | Float 9.999: where the camcorder sweep parks or puts back an axis going positive, `cell * 10 + 9.999` | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
+| `0x0074c9c8` | Float 1.01: the camcorder sweep's tie-break | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
+| `0x0074c9d0` | Float 0.001: the camcorder sweep's nudge after an open crossing that left the cell unchanged | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0074cf58` | | OpenTPW.Tests/LobbyModelAnimationTests.cs  |
 | `0x0074f920` | | OpenTPW/UI/Screens/MessageBox.cs  |
 | `0x0074fa98` | | OpenTPW/UI/Park/ParkGadget.cs OpenTPW/UI/Park/ParkViewfinder.cs  |

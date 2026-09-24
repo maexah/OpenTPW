@@ -369,46 +369,49 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// </summary>
 	private const int WalkingMode = 2;
 
-	/// <summary>How many world units a cell is across. The original multiplies by <c>_DAT_006fdd58</c>, 0.1.</summary>
+	/// <summary>How many world units a cell is across: <c>_DAT_006fdd7c</c>, 10, which turns a cell back into a position.</summary>
 	private const float CellSize = 10f;
 
-	/// <summary>
-	/// How far inside a cell the viewer is parked when a side refuses them, so that the next frame's
-	/// floor division cannot round them into the cell they were just refused. <c>0x0074c9d0</c>, and
-	/// its partner <c>0x0074c9c4</c> is <c>9.999</c> - the far edge already carrying this same nudge.
-	/// </summary>
-	private const float BoundaryEpsilon = 0.001f;
+	/// <summary>Cells to a world unit: <c>_DAT_006fdd58</c>, 0.1, which the sweep multiplies a position by.</summary>
+	private const float Tenth = 0.1f;
 
 	/// <summary>
-	/// A step smaller than this counts as no step at all - <c>_DAT_006fde00</c> and
+	/// Where in a cell a viewer going positive is parked, or put back: <c>cell * 10 + 9.999</c>
+	/// (<c>0x0074c9c4</c>). Going negative it is <c>cell * 10</c>, which is still that cell.
+	/// </summary>
+	private const float FarSide = 9.999f;
+
+	/// <summary>
+	/// How far a position that landed on a boundary without leaving its cell is pushed on, the way the rest
+	/// of the step goes: <c>0x0074c9d0</c>.
+	/// </summary>
+	private const float Nudge = 0.001f;
+
+	/// <summary>
+	/// What an exact tie divides the X step by, and multiplies X's reach by, so that Y is asked:
+	/// <c>0x0074c9c8</c>, 1.01.
+	/// </summary>
+	private const float TieBreak = 1.01f;
+
+	/// <summary>
+	/// A step inside this band counts as no step at all - <c>_DAT_006fde00</c> and
 	/// <c>_DAT_006fde04</c>, which the original compares each axis against before it sweeps anything.
 	/// </summary>
 	private const float StillnessBand = 1e-4f;
 
-	/// <summary>
-	/// A ceiling on how many cell boundaries one step may cross. <b>Ours, not the original's</b>, which
-	/// loops until the step is spent. At <see cref="WalkSpeed"/> a frame moves well under one cell, so
-	/// this is unreachable in play; it is here because a viewer standing exactly on a boundary makes the
-	/// fraction to that boundary nought, and a loop that consumes nothing would otherwise not end.
-	/// </summary>
-	private const int MaxCrossings = 8;
+	/// <summary>The reach of an axis that is not moving: past the 1 that means "the whole step".</summary>
+	private const float NoReach = 2f;
 
 	/// <summary>
-	/// Walks the viewer about, facing-relative, and keeps them on the map, clamped to the same
-	/// <c>1..MapExtent</c> a lightning bolt is.
-	///
-	/// <para>
-	/// The clamp is about staying on the park, not about the heightfield: <see cref="HeightfieldFile"/>
-	/// answers outside the map too, by holding the nearest edge height, so walking off it would give a
-	/// flat plain rather than a crash. An earlier note here claimed otherwise. Note also that a park is
-	/// not necessarily square with the extent - the clamp keeps the viewer in the world, not
-	/// necessarily on drawn ground.
-	/// </para>
-	/// <para>
-	/// <b>The step is swept against the cell edges rather than taken whole</b> - see <see cref="Slide"/>.
-	/// Without that the viewer walked through rides, shops and walls, which is what this camera did until
-	/// 2026-09-22.
-	/// </para>
+	/// A ceiling on the passes of one sweep. <b>Ours</b>: the original loops until the step is spent. Every
+	/// pass spends part of a step, zeroes one or ends the sweep, so a frame's walk takes a handful. A NaN is
+	/// never spent here: the x87's compares read one as nought, which ends the original's sweep, and C#'s
+	/// read it as nothing at all, so this cap is what ends it.
+	/// </summary>
+	private const int MaxPasses = 1024;
+
+	/// <summary>
+	/// Walks the viewer about, facing-relative, swept against the cell edges by <see cref="Slide"/>.
 	/// </summary>
 	private void Walk()
 	{
@@ -439,6 +442,10 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		// the sweep is written so that the answer without one is the plain step it always was.
 		var walked = Slide( Stand, dx, dy, EdgeTest( Level.Current?.ParkState?.Park ) );
 
+		// The clamp is ours. The original clamps nothing: its bound is soft, on the velocity, at the 96 by 85
+		// heightfield, and it stands the viewer only on a walkable cell inside that, so its sweep never comes
+		// near the map's edge (docs/exe/park-engine.md, "Entering and leaving first person"). Enter stands the
+		// viewer wherever the orbit looks (docs/QUEUE.md Q25), and this holds them on the map.
 		Stand = new Vector3( walked.X.Clamp( 1f, extent ), walked.Y.Clamp( 1f, extent ), 0f );
 	}
 
@@ -478,22 +485,28 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	private static Func<int, int, StepDirection, bool>? _blocked;
 
 	/// <summary>
-	/// One frame's movement, swept across the cell grid and stopped at any side that is shut.
+	/// One frame's movement, swept across the cell grid and stopped at any side that is shut: the first-person
+	/// branch of the original's camera update, pass for pass (<c>0x0042bdd8</c>; <c>docs/exe/park-engine.md</c>,
+	/// "Walking on the ground is swept against the cell edges").
 	///
 	/// <para>
-	/// <b>This is what the original does, and it does it with the very test the guests use.</b>
-	/// <c>FUN_0042b1c0</c>'s first-person branch - the one taken when <c>gui_CameraFlags &amp; 0x16</c> is
-	/// set and <c>&amp; 0x3c</c> is clear - does not integrate the velocity in one go the way the orbit
-	/// branch above it does. It works out, for each axis, what fraction of this step reaches the next cell
-	/// boundary; takes whichever boundary is nearer; and asks
-	/// <c>FUN_004d8750( x, y, direction, 2 )</c> - <see cref="CellEdge"/>'s own function - whether that
-	/// side is shut. If it is, that axis stops dead at the boundary while the other carries on, which is
-	/// what makes a viewer slide along a wall instead of sticking to it.
+	/// Each pass works out, for each axis, what fraction of what is left of its step meets the next cell
+	/// boundary, and asks about the side met first - <c>FUN_004d8750( x, y, direction, 2 )</c>, which is
+	/// <see cref="CellEdge"/>'s own function and the test every guest walks on. A shut side stops that axis in
+	/// the cell being left while the other carries on, which is what makes a viewer slide along a wall.
+	/// <b>Only the axis asked may leave its cell</b>: the other is put back if it crossed, and so is either axis
+	/// of a step that meets no boundary, so every change of cell is one the edge test allowed.
 	/// </para>
 	/// <para>
 	/// The direction comes from the sign of that axis's movement, and the numbering is the original's:
 	/// it pushes <b>3</b> for a negative X step and <b>1</b> for a positive one, <b>0</b> for negative Y
 	/// and <b>2</b> for positive - which is exactly <see cref="StepDirection"/>.
+	/// </para>
+	/// <para>
+	/// <b>The arithmetic is the original's at 53 bits.</b> Between its stores it works on the x87 stack at the
+	/// precision the runtime starts it in, which is what <see cref="double"/> is here, and each <c>(float)</c>
+	/// is one of its stores. After a failed frame it would run at 24 bits instead; which one is live is open,
+	/// and it moves only the margin (park-engine.md, "Which rounding is live is not settled").
 	/// </para>
 	/// <para>
 	/// <b>One branch of the original's loop is deliberately not reproduced.</b> Having moved, it calls
@@ -511,7 +524,9 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		Func<int, int, StepDirection, bool>? blocked )
 	{
 		// The original zeroes each axis against its own dead band before sweeping anything, so a step too
-		// small to leave the cell cannot spend a crossing on a rounding error.
+		// small to leave the cell cannot spend a pass on a rounding error. It tests X's lower edge on
+		// dt * velocity before that is stored (0x0042bdf6), and this has only the float, so a step that rounds
+		// to exactly -1e-4 is zeroed here where the original may keep it.
 		if ( MathF.Abs( dx ) <= StillnessBand )
 			dx = 0f;
 
@@ -524,115 +539,122 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		if ( blocked == null )
 			return new Vector3( x + dx, y + dy, 0f );
 
-		for ( var crossing = 0; crossing < MaxCrossings; ++crossing )
+		for ( var pass = 0; (dx != 0f || dy != 0f) && pass < MaxPasses; ++pass )
 		{
-			if ( dx == 0f && dy == 0f )
-				break;
+			var cellX = CellOf( x );
+			var cellY = CellOf( y );
 
-			var cellX = (int)MathF.Floor( x / CellSize );
-			var cellY = (int)MathF.Floor( y / CellSize );
+			var reachX = Reach( x, dx );
+			var reachY = Reach( y, dy );
 
-			var reachX = Reach( x, dx, cellX );
-			var reachY = Reach( y, dy, cellY );
-
-			// Neither boundary is inside this step, so the rest of it is free.
-			if ( reachX >= 1f && reachY >= 1f )
+			// An exact tie is broken toward Y: X's step is cut, for the rest of the frame, so that X stops short
+			// of its own boundary rather than landing on it (0x0042bff8).
+			if ( reachX == reachY && dx != 0f && dy != 0f )
 			{
-				x += dx;
-				y += dy;
+				dx = (float)(dx / (double)TieBreak);
+				reachX = (float)(reachX * (double)TieBreak);
+			}
+
+			var askingX = reachX < reachY;
+
+			// No boundary is met inside the step, so it is taken whole and the sweep ends - but an axis whose
+			// cell still changed, by rounding onto its boundary, is put back unasked (0x0042c460).
+			if ( (askingX ? reachX : reachY) >= 1f )
+			{
+				var wholeX = (float)((double)x + dx);
+				var wholeY = (float)((double)y + dy);
+
+				x = CellOf( wholeX ) == cellX ? wholeX : PutBack( cellX, dx );
+				y = CellOf( wholeY ) == cellY ? wholeY : PutBack( cellY, dy );
 				break;
 			}
 
-			// Whichever side is met first decides, and both axes advance by that same fraction.
-			// Whichever side is met first decides, and both axes advance by that same fraction.
-			var takingY = reachY <= reachX;
-			var fraction = takingY ? reachY : reachX;
+			var direction = askingX
+				? (dx < 0f ? StepDirection.West : StepDirection.East)
+				: (dy < 0f ? StepDirection.North : StepDirection.South);
 
-			// The original's own numbering, read off the two call sites: it pushes 3 for a negative X
-			// step and 1 for a positive one, 0 for a negative Y step and 2 for a positive - which is
-			// StepDirection's West/East and North/South, North being -y.
-			var direction = takingY
-				? (dy < 0f ? StepDirection.North : StepDirection.South)
-				: (dx < 0f ? StepDirection.West : StepDirection.East);
-
+			// Off the map every side is shut. Ours: CellEdge holds no cell there, where the original's test reads
+			// its neighbours' records and its put-back reads a cell below 0 as unsigned. Nothing the original does
+			// brings a viewer there (see Step).
 			var shut = !ParkState.OnMap( cellX, cellY ) || blocked( cellX, cellY, direction );
 
-			x += dx * fraction;
-			y += dy * fraction;
-
-			// Both axes spend the fraction that reached the boundary; only the refused one stops.
-			dx -= dx * fraction;
-			dy -= dy * fraction;
-
-			if ( takingY )
-			{
-				if ( shut )
-				{
-					// Stop just inside the cell being left, so the next frame starts in it rather than on
-					// its edge.
-					y = dy < 0f || fraction == 0f
-						? (cellY * CellSize) + BoundaryEpsilon
-						: ((cellY + 1) * CellSize) - BoundaryEpsilon;
-
-					dy = 0f;
-				}
-				else
-				{
-					y = Past( y, dy, cellY );
-				}
-			}
+			if ( askingX )
+				Pass( ref x, ref dx, cellX, ref y, ref dy, cellY, reachX, shut );
 			else
-			{
-				if ( shut )
-				{
-					x = dx < 0f || fraction == 0f
-						? (cellX * CellSize) + BoundaryEpsilon
-						: ((cellX + 1) * CellSize) - BoundaryEpsilon;
-
-					dx = 0f;
-				}
-				else
-				{
-					x = Past( x, dx, cellX );
-				}
-			}
+				Pass( ref y, ref dy, cellY, ref x, ref dx, cellX, reachY, shut );
 		}
 
 		return new Vector3( x, y, 0f );
 	}
 
 	/// <summary>
-	/// What fraction of this axis's step reaches the next cell boundary, or <b>2</b> where the axis is not
-	/// moving - the original's own "never" value, being past the 1 that means "the whole step".
+	/// One pass of <see cref="Slide"/> that asked about the side of the <paramref name="asked"/> axis,
+	/// <paramref name="reach"/> being the fraction of what is left of its step that meets it.
 	/// </summary>
-	private static float Reach( float position, float delta, int cell )
+	private static void Pass( ref float asked, ref float askedStep, int askedCell,
+		ref float other, ref float otherStep, int otherCell, float reach, bool shut )
 	{
-		if ( delta == 0f )
-			return 2f;
+		if ( shut )
+		{
+			asked = PutBack( askedCell, askedStep );
+			askedStep = 0f;
+		}
+		else
+		{
+			var moved = (double)reach * askedStep;
 
-		var edge = delta > 0f ? (cell + 1) * CellSize : cell * CellSize;
+			asked = (float)(asked + moved);
+			askedStep = (float)(askedStep - moved);
 
-		return MathF.Max( 0f, (edge - position) / delta );
+			// A landing on the boundary itself that left the cell unchanged is pushed on the way the step goes:
+			// a step going negative lands on cell * 10, which is still the cell, and would measure nought to the
+			// same side on every pass after (0x0042c14d). When X is asked the original reads the rest of the step
+			// unrounded, here and in its loop's test; the two differ only if it underflows.
+			if ( CellOf( asked ) == askedCell )
+				asked = (float)(askedStep < 0f ? asked - (double)Nudge : asked + (double)Nudge);
+		}
+
+		// The other axis goes the same fraction of its own step and may not change cell. If it did, by rounding,
+		// it is put back, with its step left for a later pass to ask about (0x0042c197).
+		var carried = (double)reach * otherStep;
+		var carriedTo = (float)(other + carried);
+
+		otherStep = (float)(otherStep - carried);
+		other = CellOf( carriedTo ) == otherCell ? carriedTo : PutBack( otherCell, otherStep );
 	}
 
 	/// <summary>
-	/// Nudges a position that landed exactly on a boundary into the cell it was headed for.
-	///
-	/// <para>
-	/// <b>Without this the sweep stalls, and the original has the very same guard.</b> Having advanced to
-	/// a boundary it re-derives the cell and, <i>only where that cell has not changed</i>, adds or
-	/// subtracts <c>0x0074c9d0</c> (0.001) according to the sign of the remaining step. A step going
-	/// negative lands on the boundary at <c>cell * 10</c>, whose floor is still the cell being left - so
-	/// the next pass would measure nought distance to the same side, consume nothing, and never arrive.
-	/// </para>
+	/// The cell a position is in: <c>__ftol( position * 0.1f )</c>, truncated, taken afresh every pass and never
+	/// clamped.
 	/// </summary>
-	private static float Past( float position, float delta, int cell )
-	{
-		if ( (int)MathF.Floor( position / CellSize ) != cell )
-			return position;
+	private static int CellOf( float position ) => (int)((double)position * Tenth);
 
-		return delta < 0f ? position - BoundaryEpsilon : position + BoundaryEpsilon;
+	/// <summary>
+	/// What fraction of what is left of an axis's step meets its next cell boundary, or <see cref="NoReach"/>
+	/// where it is not moving. It is the fractional part of <c>position * 0.1f</c> by <c>modf</c>, or what is
+	/// left of the cell going positive, over the step in cells (<c>0x0042bef5</c>).
+	/// </summary>
+	private static float Reach( float position, float step )
+	{
+		if ( step == 0f )
+			return NoReach;
+
+		var cells = (double)position * Tenth;
+		var fraction = cells - Math.Truncate( cells );
+		var stepCells = step * Tenth;
+
+		// Going positive the fraction is stored as a float before it is taken from 1.
+		return step < 0f
+			? (float)Math.Abs( fraction / stepCells )
+			: (float)Math.Abs( (1.0 - (float)fraction) / stepCells );
 	}
+
+	/// <summary>
+	/// Where an axis is parked, or put back, in <paramref name="cell"/>: on the cell's near boundary going
+	/// negative, which is still the cell, and <see cref="FarSide"/> into it going positive.
+	/// </summary>
+	private static float PutBack( int cell, float step )
+		=> step < 0f ? (float)((double)cell * CellSize) : (float)(FarSide + ((double)cell * CellSize));
 
 	/// <summary>The ground under the viewer right now, without touching the easing.</summary>
 	/// <remarks>
@@ -688,7 +710,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 			? ParkState.CellFor( park, cellX, cellY ).Type.ToString()
 			: "-";
 
-		return $"stand=({Stand.X:F0},{Stand.Y:F0}) " +
+		return $"stand=({Stand.X:F3},{Stand.Y:F3}) " +
 			$"cell=({Stand.X / 10f:F1},{Stand.Y / 10f:F1}) " +
 			$"at=({cellX},{cellY}) type={type} " +
 			$"yaw={Yaw:F2} pitch={Pitch:F1} " +

@@ -676,15 +676,46 @@ artifacts are listed in `docs/history/README.md`.
     into its own entrance), so it proved nothing; it was redone against a shut side.
   - **No test was added**: nothing was built, so there was no fix to put back. Q48b's tests are the build's.
   - **Found:** Q48b.
-- [ ] **Q48b. Three holes in the camcorder's sweep: the build.** From Q48's decode (`park-engine.md`, "Where OpenTPW's
-  camcorder differs"). In `ParkCamcorderCameraMode.Slide`: put back the axis not asked when its cell changes (step 6),
-  break an exact tie with the 1.01 (step 3), and put back an axis whose cell changes in the whole step (step 7). The
-  smaller differences there (a refusal going negative parks at `cell * 10`, not `+ 0.001`; the reach comes from `modf`
-  of `position * 0.1f`) are for the same session if a probe shows they matter. Hole (3) is the entry, which is Q25:
-  once the viewer is stood only on a cell the original accepts, `Step`'s 1..1280 clamp and the off-map refusal are
-  never reached, and the clamp is then ours alone, to be said at the site. Confirm: `q48repro.py`, `q48repro2.py` and
-  `q48repro3.py` again, each photographed, with the census: (1) slides along the footprint and never enters it,
-  (2) stays in (51,22), and the controls read as before. Put each rule back and re-run its test.
+- [x] **Q48b. Three holes in the camcorder's sweep: the build.** Done 2026-09-24, `alexah/137-the-sweep-puts-back`.
+  `ParkCamcorderCameraMode.Slide` now runs the original's pass whole (`park-engine.md`, "Walking on the ground is swept
+  against the cell edges"): the tie broken by 1.01 (step 3), the axis not asked put back (6), the whole step put back
+  (7), and with them the two smaller differences, the reach from `modf` of `position * 0.1f` and a refusal going
+  negative parked at `cell * 10`. The arithmetic is 53-bit, `double` between the original's stores and `float` at
+  each. `Step`'s clamp and the off-map refusal are said as ours at the site; the entry stays Q25. The `camcorder`
+  census's `stand=` now prints three decimals, which is what shows a tie.
+  - **Why the smaller two as well.** A probe (`q48bprobe.py`: 4,000 two-second walks on the jungle's real edge test)
+    put 4 of 480,000 frames in a different cell under the old reach and parking with the three rules added than
+    under the original's pass, each a boundary crossed a frame early or late. And with the original's reach, Q48's
+    first hole does not reach step 6 at all, so each rule needed new walks of the original's own arithmetic to be
+    seen: `q48bsearch.py` found p6, which goes into the Belly Bounce only without step 6, and p7, which goes into the
+    ride at (58,16) before this build and without step 7.
+  - **Proof by model.** A copy of the original's pass (`q48bslide.py`) equals `Slide` bit for bit on 200,000 inputs
+    (random, aimed at corners, ending on boundaries, exact ties; three edge tests). The same inputs differ in 45,900
+    at 24 bits, 16,352 without the tie-break, 11,955 without step 6 and 1,026 without step 7.
+  - **Tests.** Seven new in `ParkCamcorderWalkTests`, each red with its rule put back: the tie (also red with the
+    tie only below a reach of 1), step 6, step 7, the park at `cell * 10`, the `modf` reach, the pass cap (a NaN
+    step), and the nudge (red in two existing tests); the four jungle walks, red without step 6 or 7. `main`'s old
+    `Slide` fails six of the seven. Equivalent, named: the cell by `floor( x / 10 )`, the same on the map; the far
+    park in float, under an ulp. 1064 tests.
+  - **Confirmed in the game** (`q48bconfirm.py`, silent, jungle): 18 walks, each photographed before and after, on
+    three builds, all predicted first. The old sweep, 18 of 18 as the old model said. This build, 18 of 18 to the
+    thousandth. This build with the three rules out, 9 of 9 on the walks that need them (p6 into (51,23), p7 into
+    (58,16), Q48's second into (51,25), the tie at 585.667). Q48's repros: (1) 11 frames from (505,225) now read
+    `stand=(510.185,229.999) at=(51,22) type=3`, and 60 end in the entrance (52,23), type 9, where the old went on to
+    (53,25); (2) one frame from (515,229.33333) reads 229.999 in (51,22), and 30 more stay there, where the old walked
+    on to (51,25); the controls as before; entered off the park, held at 1280 and at (1100,245) as before (Q25). p7
+    stops in its entrance (58,15) at 159.999; the tie from (585,585) reads `stand=(585.660,585.667)`. **On screen**
+    the 60-frame hole 1, the 31-frame hole 2 and p7's 40 frames differ: before, the viewer stands inside a ride (the
+    Belly Bounce's pink mesh cut open at (51,25)); after, at its queue or entrance. The rest move under 0.2 units and
+    are the census's alone. `save/` unchanged in all four runs.
+  - **Read-only review** (a workflow of 25 agents: five lenses - the X pass, the Y pass, reach with tie and whole
+    step, the loop, rounding - each claim put to two skeptics). Every lens read the port equal to the disassembly
+    instruction for instruction on the map with a finite step. Upheld, all at the margins and all said at the site
+    and in `park-engine.md`: X's lower dead-band edge is tested on `dt * velX` before it is stored; the x87 reads a
+    NaN as nought, so the original ends on one (I had written that it never would); a put-back reads a cell below 0
+    as unsigned; `__ftol` keeps the low word past 2e10.
+  - **Missed first, mine.** The harness looked for `stand=` and `at=` as one string, and the census puts `cell=`
+    between them: the first run of this build read NO on 18 lines that all matched. Fixed and re-run.
 - [ ] **Q50. Every other way out of a queue costs `MediumHappinessChange` too.** Found by Q36's decode.
   `FUN_005012f0` docks it unconditionally (`0x00501359`) and has seven callers; Q36 built only the sale's. The other
   six unlink the guest first (`FUN_004ddd20`): the queue edited or shortened under them (`FUN_00501390`), a ride
