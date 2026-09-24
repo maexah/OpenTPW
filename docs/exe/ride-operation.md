@@ -157,7 +157,7 @@ A guest in `BeingAdmitted` runs the walk tick; on arriving (and `"got stuck in m
 
 1. **Affordability** — `FUN_004fde50`, the price-opinion function. Non-zero means too expensive: it logs `"Person %d: Object %d is too expe[nsive]…"`, raises thought 6 and event 10, docks `MediumHappinessChange` (`0x00500778`), counts a walk-away on the object (`FUN_004e1670`, `mNumWalkAways`), tells the object to forget them (`FUN_004e0ac0`), **leaves the queue** (`FUN_004ddd20`) and runs `FUN_005012f0` (`0x005007b4`), which docks it a second time, clears `mMajorDest` and goes to `Deciding`. See "Every way out of a queue".
 2. **`FUN_004e0900` = `AdmitPerson`.** If it answers non-zero: log `"Person %d been AdmitPerson'd to r[ide]…"` and **`SetState(0xe)` — `EnteringRide`.**
-3. Otherwise **try to rejoin the front of the queue** (`FUN_00501160`, `0x00500826`); if that fails too, `"Couldn't rejoin FOQ even!"`, leave the queue and `FUN_005012f0` (`0x00500857`).
+3. Otherwise **try to rejoin the front of the queue** (`FUN_00501160`, `0x00500826`): still linked at the head, the guest walks back to place 0's point in state 12. If that fails too, `"Couldn't rejoin FOQ even!"`, leave the queue and `FUN_005012f0` (`0x00500857`).
 
 ### State 14 (`EnteringRide`) — `FUN_005019f0` case `0xe`
 
@@ -171,11 +171,12 @@ Entering state 14 also writes the guest's `+0x1f1` from the sideshow win roll �
 
 | State | Name | Handler |
 |---|---|---|
-| 0xb (11) | `InQueue` | `FUN_005019f0` case `0xb`; also reads `+0x1f1` and derives `+0x1f4` from it, beside the `mTimeStartedIdling` write |
-| 12 | `SteppingUpQueue` | Inline in `FUN_005019f0` case `0xc`: run the walk tick, and on arriving **or** on getting stuck alike, `SetState(0xb)` back to `InQueue`. It renumbers nobody. |
+| 10 | `GoingToRide` | `FUN_004ffbc0` (`FUN_005019f0` case 10, `0x00501b0d`): the walk to a chosen thing, the arrival test on the back of its queue, the gates, the join. See "Walking to a new place in the queue". |
+| 0xb (11) | `InQueue` | `FUN_005019f0` case `0xb` = `FUN_004ffff0`. Entering it, SetState's case `0xb` (`0x00501e91`) sets `+0x10` = 3, stamps `mTimeStartedIdling` and derives `+0x1f4` = `trunc( +0x1f1 × 1.2f )` |
+| 12 | `SteppingUpQueue` | Inline in `FUN_005019f0` case `0xc`: run the walk tick, and on arriving **or** on getting stuck alike, `SetState(0xb)` back to `InQueue`. It renumbers nobody and routes nowhere new. Entering it writes only `+0xc2` = 0 and `+0x10` = 1. |
 | 13 | `BeingAdmitted` | `FUN_005006b0` |
 | 0xe (14) | `EnteringRide` | `FUN_005019f0` case `0xe` = `FUN_00500870` inlined |
-| 0xf (15) | Set on **leaving** — `FUN_005014e0` ends `FUN_00501db0(0xf)` | |
+| 0xf (15) | Set on **leaving** — `FUN_005014e0` ends `FUN_00501db0(0xf)` | `FUN_00500900`: on arriving with a saved `+0x1de`, back to that thing's queue (state 10) |
 | 0x10 (16) | Set on **admission** | |
 | 18 | `HeadingForExit` | `FUN_00500a50` |
 
@@ -198,19 +199,19 @@ Entering state 14 also writes the guest's `+0x1f1` from the sideshow win roll �
 - **The destination is the cell BEYOND the exit**, not the exit. Direction = the exit cell's own direction byte (`+0xd`, via `FUN_00522850`), **flipped to the opposite (`FUN_004d8c00`, a four-bit rotate) when `mExitPos == mEntryPos`** — which is **ten of the eleven objects** in Lost Kingdom. `FUN_004d97e0` steps to the neighbour. It must not be a queue cell (`FUN_00536320`).
 - **`FUN_004dedf0` yields a FIXED-POINT position:** high byte the cell (`(mExitPos - 1) & 0x7f`, `>> 7`), low byte a sub-cell offset taken from the ITEM's own `.sam` — descriptor `+0xdc`/`+0xe0` for the exit, `+0xd4`/`+0xd8` for the stand point — validated with `"Dodgy X exit point in SAM file"`. Non-zero `which` selects the exit (`+0x38`), nought the stand point (`+0x36`); both are PACKED.
 - **The failure arm closes the ride.** If the aim will not route, the original refuses the dismissal and calls **`FUN_004df150`**: clears `mCanLoad` (`+0x68`) and `mPersonBeingLoaded` (`+0x6c`), logs `"Object %d: Closing…"`, sets script var 6 (`VAR_RIDECLOSED`). Same body as `FUN_004e0e60`. **This is observable in the original**: a ride whose exit is not connected still teleports the guest onto it and leaves them there with a `?` overhead — the stranded thought bubble, `FUN_004f9490`'s `"Peep %d: stranded at time %d"`.
-- `FUN_004fa530` is SetDest and **answers whether a route exists**; ExitRide charges and changes state ONLY when it does.
+- `FUN_004fa530` is SetDest and **answers whether a route exists**; ExitRide charges and changes state ONLY when it does. It aims at the cell's centre, writes the destination before it routes, and can answer 0 without routing on `mStrandedTime` (see "Walking to a new place in the queue").
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
 | `FUN_005014e0` | ExitRide | `"Person %d: ExitRide, leaving rid…"`. Teleport, aim, settle up, `SetState(0xf)`. | Its own string |
 | `FUN_004dedf0` | — | Exit / stand point, fixed point, `"Dodgy X exit point in SAM file"`. | Its own string |
 | `FUN_004fa930` | — | Place a person: sets position, zero velocity. **Five callers, not one of them a rider**: `FUN_005014e0` ExitRide, `FUN_004feb50` (a generic put-down-and-aim, `"<Humph>"`), `FUN_004f7e20` (a three-line wrapper), `FUN_004d7580` (the handyman's litter arm), `FUN_00505ea0` (dropping a staff member). | Xref sweep |
-| `FUN_004fa530` | SetDest | Sets a destination and answers whether a route exists. | Disassembly |
+| `FUN_004fa530` | SetDest | Sets a destination, the cell's centre (`0x80, 0x80`), and answers whether a route exists; `FUN_004fa5f0` is the same to any 8.8 point. | Disassembly |
 | `FUN_004df150` | — | Close the object: `"Object %d: Closing…"`. | Its own string |
 | `FUN_004d8c00` | — | Four-bit rotate — flips a direction to its opposite. | Disassembly |
 | `FUN_004d97e0` | — | Step to the neighbouring cell. | Disassembly |
 | `FUN_00522850` | — | The cell direction accessor (`+0xd`). | Disassembly |
-| `FUN_00536320` | — | "Is this a queue cell" predicate. | Disassembly |
+| `FUN_00536320` | — | "Is this a queue cell" predicate: mType 3 **or 9** (an entrance). | Disassembly |
 | `FUN_004f9490` | — | `"Peep %d: stranded at time %d"`; also the source of the four direction bits 1 / 4 / 0x10 / 0x40. | Its own string |
 | `+0x38` | `mExitPos` | File **218**, PACKED. | Save record |
 | `+0x36` | `mEntryPos` | File **206**. | Save record |
@@ -227,54 +228,223 @@ The queue is **exactly a doubly-linked list**: the head on the object (`mFirstIn
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
 | `FUN_004ddf50` | GetPositionInQueue | Walks `mFirstInQ` along `mQNext` counting from nought; `-1` if absent. Its comparison is the middle arm of `FUN_004ffff0`. | Disassembly |
-| `FUN_004ddb90` | — | Join: walks `mFirstInQ` down `mQNext` to the tail and appends, writing `mQPrev` and `mQNext` only. **Writes no position.** | Disassembly |
+| `FUN_004ddb90` | — | Join: for an empty queue writes `mFirstInQ` = the joiner (`0x004ddbd1`); otherwise walks raw `mQNext` to the tail, asking nobody `FUN_00502430`, and writes its `mQNext`; then the joiner's `mQPrev` (the old tail or 0) and `mQNext` (0). No membership test. **Writes no position.** | Disassembly |
 | `FUN_004ddd20` | — | Leave: patches the neighbours' links, zeroes the leaver's, asserts both nought (`"Person not successfully removed f…"`). **Also clears `VAR_LETMEON` when it names the leaver.** | Disassembly |
 | `FUN_00501290` | — | Literally `state == 0xb && person[0x1f1] == 0` — the head-at-nought test `Invite` calls forward on. | Disassembly |
-| `FUN_00501160` | — | Re-take the place at the front of the queue. Writes `+0x1f1`. | Disassembly |
+| `FUN_00501160` | FindQueueDestination | Takes the guest's CURRENT place (`FUN_004ddf50`) into `+0x1f1`, then routes them to its point and sets state 12. See "Walking to a new place in the queue". | Its own log |
 | `FUN_005012f0` | — | Dismissed from the queue: event 6, the kids' effect `0x80` when the guest's id `& 7` is nought, happiness down by `MediumHappinessChange` (`0x00501359`, every time), `mQPrev` `+0x22a`, `mQNext` `+0x228`, `mBeenAdmitted` `+0x1f8`, `mMajorDest` and `+0x1f1` zeroed, state 6. Seven callers; six unlink the guest from the object first (`FUN_004ddd20`), the sale (`FUN_004fb360`) does not. See `park-engine.md`, "Selling and the people on it". | Disassembly |
 | `FUN_004faec0` | — | Guest construction; writes `+0x1f1` twice. | `search_bytes` |
-| `+0x1f1` | `mQueuePos` | **Runtime byte**, file offset **494**. Only FOUR instructions in the binary write it: `FUN_004faec0` (×2), `FUN_00501160`, `FUN_005012f0` — plus `FUN_00501db0` case `0xe`. | `search_bytes` for `88 ?? f1 01 00 00` |
-| `+0x1f4` | `mQueueMoveDelay` | 4 bytes, file **490**; `mQPrev` is file **488**. Re-take at once if it is nought **or** the drift exceeds 2; otherwise spend one. **The drift is an unsigned compare** of the zero-extended byte minus the place (`0x005002c2`..`0x005002e5`), so a place that moved BACKWARD wraps and re-takes immediately. | Disassembly |
+| `+0x1f1` | `mQueuePos` | **Runtime byte**, file offset **494**. Five byte stores write it on a guest: the constructor `FUN_004faec0` twice (`0x004faf63`, `0x004fb17b`), `FUN_00501160` (`0x005011cb`), `FUN_005012f0` (`0x0050137f`) and `FUN_00501db0` case `0xe` (`0x00501f41`); the serialiser loads it (`0x004fbdbc`). The dword stores at `+0x1f0` are on staff records. | `search_bytes` for `88 ?? f1 01 00 00` |
+| `+0x1f4` | `mQueueMoveDelay` | 4 bytes, file **490**; `mQPrev` is file **488**. Re-take at once if it is nought **or** the drift exceeds 2; otherwise spend one. **The drift is an unsigned compare** of the zero-extended byte minus the place (`0x005002c2`..`0x005002e5`), so a place that moved BACKWARD wraps and re-takes immediately. Written by the constructor (0, `0x004faf69`), that spend (`0x005002ec`), SetState's case `0xb` (`0x00501ec8`) and the serialiser. | Disassembly |
 | `+0x3c` | `mFirstInQ` | Queue head on the object. | Disassembly |
 | `+0x3a` | `mBackOfQueue` | File **212**. | Save record |
 
-### Walking to a new place in the queue
+### Walking to a new place in the queue - `FUN_00501160`, FindQueueDestination
 
-`FUN_00501160` turns the place into a cell through `FUN_004de7e0`, a four-line dispatcher on a flag:
+Decoded 2026-09-24 (`docs/QUEUE.md` Q50e): four decoders - the place to a point, the re-take and its route, its three
+callers, the aim - each report put to a skeptic reading the disassembly; where a skeptic amended a claim, the amended
+reading is what stands here. The function names itself in its own failure log (`0x0075df6c`).
 
-```
-if ( thing[+0x32] & 8 )  FUN_004de840(...);   // a real run of queue cells
-else { assert( n < 4, "Virtual queue problem" ); FUN_004dec30(...); }   // the virtual queue
-```
+**FindQueueDestination**, `ECX` the guest, in order: the object from `MajorDest` through the thing table; `place =
+FUN_004ddf50( object, own id )`. **-1 answers 0** (`0x005011be`) with nothing written, no log of its own and no random
+draw. Otherwise the byte `+0x1f1` = the place's low byte (`0x005011cb`), before anything that can fail; then
+`FUN_004de7e0( place, &cell, &subX, &subY )` with the whole dword place; then the two 8.8 words `X = ((cell - 1) & 0x7f)
+<< 8 | subX` and `Y = (((cell - 1) >> 7) & 0xff) << 8 | subY`; then `FUN_004fa5f0( X, Y )` (`0x0050124c`). A route:
+SetState(12), answers 1. None: `"QQQ - FindQueueDestination SetDest failed, so I'm standing in queue"`, answers 0, the
+state unchanged - **and every caller then puts the guest out**, whatever the string says. It draws the engine's
+generator (`FUN_00516330`) exactly once on every call past the -1 exit, inside the arm, route or no route.
 
-Bit `0x8` of `+0x32` is the object's **queue-path flag**. In Lost Kingdom the Jungle Spray has one queue cell and NO bit; the Belly Bounce has four cells and the bit.
+**The place becomes a point.** `FUN_004de7e0` branches on the queue-path bit (`+0x32 & 8`, `0x004de7e3`) and returns
+nothing anyone reads; every other `+0x32 & 8` test in these helpers (`FUN_004de110`, `FUN_004de130`, `FUN_004de840`,
+`FUN_004dec30`) has identical arms. Its `"Virtual queue problem!"` (place below 4, unsigned) is the bare `RET`. Both
+arms take the same two numbers:
 
-Both arms compute a SUB-CELL position and differ only in which cell:
+- **along** = `(u8)__ftol( (u64)n × 0.25f × 255.0f )` (the floats at `0x0070055c` and `0x00700560`; `__ftol` chops),
+  which is `((n × 255) >> 2) & 0xff`: **0, 63, 127, 191** for n 0..3, then 255, 62, 126, 190, 254 ...;
+- **J** = `FUN_00516330() % 28 + 114`, an unsigned `DIV`, 114..141 - the jitter across the queue, drawn once and
+  unconditionally, used or not.
 
-- One axis is the guest's place in the queue (`pos`, or mirrored as `-1 - pos`); the other is a jitter of **`(rand % 28) + 114`** — about ±14 around a cell centre of 128.
-- Which axis, and which sign, comes from a direction bit of **1, 4, 0x10 or 0x40**. A value outside them asserts `"Dodgy cell direction"`.
-- **`FUN_004de840` walks back one queue CELL per FOUR guests** (`for ( n = pos; n > 3; n -= 4 )`). Running off the end inspects the cell's connection bits (packed `0x40100401`) for an attached path and complains **`"No path attached to end of queue"`**.
-- **`FUN_004dec30` handles a VIRTUAL queue of at most four places** for an object with no path bit — which in Lost Kingdom is the Jungle Spray.
+**With the bit, `FUN_004de840`** walks from the FRONT: the cell `FUN_004de040` names (the one the entrance's
+`mNeighbours` points at), then `while ( n >= 4 && cell ) { n -= 4; cell = FUN_004de670( cell ); }` - one queue cell per
+four places, both tests unsigned - and writes the cell (`0x004de8a6`) before anything else. For along 128 or less
+(unsigned, `0x004de8db`) the switch reads **this cell's** `mDirection`. For along above 128 - only the fourth place of
+a cell - it reads **the next queue cell's** `mDirection`; at the back cell, where there is none, it takes the side
+**opposite** the first of N, E, S, W (bytes `01 04 10 40`, `0x004dea15`) that this cell's `mNeighbours` holds (asked
+twice) and whose neighbour is plain path (`+0x8 == 1`, `FUN_00536310`); with none of those, this cell's own
+(`"*** No path attached to end of queue! ***"`, the bare `RET`).
 
-**When the original cannot route a guest to their new place it makes them abandon the queue.** Faking a destination would be less faithful than leaving the walk out.
+**Without the bit, `FUN_004dec30`** does no walk: the cell is `GetBackOfQueue` (`FUN_004de130`, `0x004dec9f`) and the
+switch reads **the entry cell's** `mDirection` (`mEntryPos`, `0x004decd1`), with n the whole place, so a fifth guest
+wraps to along 255 on the same cell. It calls `FUN_004de130` a second time into a dead slot; the cache makes it a no-op.
 
-The supporting helpers, decoded far enough to establish the shape:
+| Direction | First switch: along 128 or less, and every `FUN_004dec30` place | Second switch: along above 128 |
+|---|---|---|
+| `0x01` | (J, along) | (J, along) |
+| `0x10` | (J, 255 − along) | (J, 255 − along) |
+| `0x04` | (255 − along, J) | **((along + 128) & 0xff, J)** - `ADD AL,0x80` at `0x004deb26`, so 191 gives 63, not 64 |
+| `0x40` | (along, J) | (along, J) |
+
+The pairs are (subX, subY), each 0..255 of a cell. Any other direction writes **neither** sub byte (the first switch
+and `FUN_004dec30`'s log `"Dodgy cell direction"`, the second nothing), and FindQueueDestination routes with whatever
+its stack held. A queue cell's `mDirection` points at the front - `FUN_004de670` accepts a neighbour only when its
+direction points back at the cell it comes from - so **place 0 stands on the front edge of the front cell, and each
+place after it 63/256 of a cell further back**; the fourth in a cell turns to the next cell's axis, and at a bend
+stands on the side toward it.
+
+**A place past the queue's cells.** When `FUN_004de670` runs out (or `FUN_004de040` finds nothing), the arm writes
+**cell 0** with the remainder. Cell 0 reads world fields as a cell (`base − 0x44` = world `+0x294`; its `mNeighbours`
+and `mDirection` at world `+0x2a0`, zeroed by `FUN_004f7e80`, `0x004f7e95`), so no sub byte is written, and
+FindQueueDestination packs cell 0 as x 127, y 255, which the byte-wise pathfinder cannot reach (every step off the map
+edge is refused): the route fails and the guest is put out. On an unchanged map `place < 4 × +0x40` keeps this away;
+the arm re-walks from the start each call, while `GetBackOfQueue` answers its cached `+0x3a`.
+
+**The route - `FUN_004fa5f0`** is `FUN_004fa530` (SetDest to a cell, which aims at `0x80, 0x80`, **the centre**)
+taking any 8.8 point, in order: (1) the route counter `[0x007cdb98]` goes up (`FUN_004d8c50`; a route found puts it up
+again, stamping walker `+0x48`); (2) `mStrandedTime` (`+0x198`, named by the serialiser at `0x004f8eac`) is zeroed if
+the counter is below it; (3) if `mStrandedTime` is still non-zero and `FUN_004fa770` answers 1 - no 16×16 region stamp
+in the 3×3 cells around one base cell (the far end of the guest's queue run when they stand on a queue cell, else
+their own) is at least `mStrandedTime` - it answers 0 **having written nothing**; (4) otherwise `+0x1a` = Y, `+0x198`
+= 0, `+0x18` = X, then `FUN_00510100( MOVSX( X ) << 8, MOVSX( Y ) << 8 )` on the walker (guest `+0xd4`) - a 16.16
+target, the sub byte s landing at s/256 of the cell - and it answers the route's 1 or 0. A failed route keeps the
+target, zeroes the waypoints, and sets walker `+0x60` = 1 and `+0xb8` (guest `+0x18c`) = 1, so the next walk tick
+answers 2 - unless, in that tick's own step, the path follower's map-change re-plan (a 16×16 block stamp newer than
+the walker's `path_timestamp`, `+0x48`, which a failure never writes) routes to the stored target after all
+(`0x0050ed79`). **`mStrandedTime` is set only on `FUN_004f9490`'s stranded path** (`0x004f9e09`, reached from states 6
+and 7 for a thing whose type byte is not 4..8) and **every walk tick zeroes it** (`0x004fa30b`), so on the three queue
+paths it is nought unless a save loaded it.
+
+The pathfinder (`FUN_0050f8e0` → `FUN_00511420` → `FUN_00511470`, a line stepper with wall-following, 60000 iterations
+and at most 250 cells, then `FUN_005108a0`'s up to nine splices, which cannot rescue a failed first search) takes the
+start and target cells as bytes; the walker keeps a window of five cell-centre waypoints and plans again from where it
+stands when the window is used up, which can fail mid-walk too. Every step asks the edge test
+`FUN_004d8750` - OpenTPW's `CellEdge.Blocked`, line for line. A queue (mType 3) or entrance (9) cell is entered only
+from path or another 3/9 cell, and only when **the entered cell's** `mNeighbours` holds the side it is entered from;
+mType 3 is left only onto linked path or an approach cell; the edge test never reads a queue cell's `mDirection`. So
+**the edges let a guest be routed forward or back along a queue whose links are mutual**, and a route may end inside
+one - along the Belly Bounce's `0x50, 0x44, 0x44, 0x44` every step is open both ways - though the line stepper must
+still find the way. Waypoints are cell centres, passed at 0.4 of a cell; on the last one the walker steers at the exact
+target, and **arriving is a radius, not a snap**: `FUN_0050ed10` flags it once the octagonal distance
+(`|d|max + |d|min / 2`) is below `radius × 0x19999 >> 16` = `0x51eb`, about 0.32 of a cell (walker `+4`, the serialised
+`radius`: `0x3333` as constructed, the saved value for a loaded guest). It is tested on the position before that
+step's move, so the guest ends the tick near the point, not on it; nothing snaps them there.
+
+**State 12.** SetState(0xc) writes the state, `+0xc2` = 0 (the first word of the speed table at `0x0075c7f0`, one of
+three percentage terms `FUN_004fa870` sums) and `+0x10` = 1, and nothing else: no idle stamp, no delay. Its turn
+(`FUN_005019f0` case 0xc) runs the walk tick and on arrival, **or on 2** (the route failed, a failed re-plan
+included), sets 11; SetState(0xb) stamps `mTimeStartedIdling` and `+0x1f4 = trunc( mQueuePos × 1.2f )` from the byte
+written when the place was taken. Nothing in state 12 reads the place again: the walker only re-plans toward the same
+stored target (`"The ground changed under this peep..."`, or 6 of the last 15 steps stuck). A guest whose walk fails
+part-way stands in state 11 where it stopped, with `mQueuePos` equal to their place, so the InQueue turn's equality
+arm holds and nothing routes them again until their place moves; its other arms still apply.
+
+**The three callers, and each failure.**
+
+1. **Joining, `FUN_004ffbc0`** - the state-10 handler (`FUN_005019f0` case 10, `0x00501b0d`), in order. The walk tick
+   (which zeroes `+0x198` first). **2, stuck:** `"The person has become stuck on their way to the ride they were
+   interested in"`, event 3, `FUN_004fea70(2)` (`BigHappinessChange`, 25 in Lost Kingdom), `MajorDest` 0, state 6.
+   **1, walking:** the park closed (`+0x1da710`): `"The park has closed underneath me!"`, −25, `MajorDest` 0, state 6;
+   open: the byte `+0x2c` goes up, and above 11 it is zeroed and the minor decision `FUN_004fd570` runs - every 12th
+   walking turn, counted across walks (nothing resets it). **0, arrived:** `MajorDest` nought, state 6. Then **the
+   arrival test** (`0x004ffc3d`): the guest's cell, `y × 128 + x + 1` from bytes `+7` and `+5`, against
+   `GetBackOfQueue` as a word. Not equal: `"The back of the queue has moved while I was walking here"`,
+   `FUN_004fa530( GetBackOfQueue )` again, and a route keeps state 10; no cell or no route: event `0x16`, state 6,
+   **`MajorDest` kept**. Equal: the gates. **Room** (`FUN_004dda20`): refused, event `0x15`, state 6, `MajorDest` kept,
+   no dock. **Excitement**: `FUN_004fd4e0` always computed, asked only when the descriptor's `+0x13c`
+   (`UsageInfo.ExcitementLevel`) has a non-zero low byte, refused at a difference of 45 or more (signed, `0x004ffc7a`):
+   `"ride is not exciting enough!"`, event 5, thought `0xc`; or `"ride is too exciting!"`, event 4, thought `0xf`; both
+   then `FUN_004fdc60` (the id onto `mPreviousTemporaryRides`, `+0x1e8`), `MajorDest` 0, `+0x1fc` 0, state 6, no dock.
+   The difference is `FUN_004fd4e0`: the guest type's preference byte (`0x7850e4 + 12 × +0x1f0`) against
+   `FUN_004e0860( object, 0 )`, **the object's computed excitement** (`FUN_004e0560`), clamped to ±50 and negated.
+   **Too long** (`FUN_004ddb60`: `FUN_004ddf50( 0 ) >= FUN_004dda40()`, unsigned): `"queue is too long!"`, event
+   `0x15`, `FUN_004fdc60`, thought `0x10`, `MajorDest` 0, state 6. Then the join: `+0x20c` = happiness (the snapshot
+   `FUN_004fd970` compares after the visit), `FUN_004ddb90`, and FindQueueDestination (`0x004ffdad`): state 12 and
+   return. Failing - a -1 included, when somebody in front has stopped queueing - `"Person %d: Couldn't get to my
+   place in the queue, leaving!"`, `FUN_004ddd20`, `FUN_005012f0` (−15), state 6 again (`0x004ffdf4`). Nothing on
+   the arrival reads the ride's `mCanLoad` or `mState`; only the park's door, and only while walking.
+2. **The InQueue re-take** (`0x00500532`, arm 6 of "The `InQueue` turn"). The turn's own `FUN_004ddf50` has already
+   answered, so the -1 exit cannot happen: it always writes the byte and draws once, and fails only on the route:
+   `"Couldn't get to my intended queue position"`, `FUN_004ddd20`, `FUN_005012f0`, state 6 (`0x005004b3`). After a
+   re-take the mood still runs on the same turn, in state 12, and can change it: a spot animation saves 12 and later
+   returns through SetState(0xc), which does not route again - the walker keeps its target.
+3. **The refused door** (`FUN_005006b0`, `0x00500826`). `AdmitPerson` refused a guest still linked at the head with
+   `mBeenAdmitted` nought, so the place is 0: they walk back to place 0's point in state 12, then wait in state 11
+   with delay 0 for a new call forward. Failing: `"Couldn't rejoin FOQ even!"`, `FUN_004ddd20`, `FUN_005012f0`,
+   state 6 (`0x00500857`) - no `FUN_004e0ac0`, no thought.
+
+**Where a guest is aimed.** The chooser `FUN_004fcb10` walks the object chain and, for each: `+0x32 & 4`;
+`GetBackOfQueue` non-zero; the score (`FUN_004fcc30`); at least 10, unsigned; above the best, signed, or equal to it
+on an odd `mGameTick`; the offer gate `FUN_004dd920`; then **`FUN_004fa530( GetBackOfQueue )` - the centre of the back
+cell** (`0x004fcbc4`) - and on a route the best and `MajorDest`. Its one caller, the state-6 turn `FUN_004fec90`,
+draws the generator once at its top (`0x004fecb4`) and runs the chooser only on `rand % 3 == 0` and past the 30-turn
+thinking gap. The routing happens inside the chooser's walk, so **a better candidate that passes the gate but cannot
+be routed still rewrites the walker** with its failed route, while `MajorDest` names the earlier winner; the caller
+then sets state 10 (event 2), and the first state-10 turn answers 2 and takes the stuck arm, −25 - or, if the ground
+near the guest changed since their last good route, the re-plan revives the loser's route and they walk to the loser's
+back cell under the winner's name, to be re-aimed there. With nothing chosen the caller pushes event 1, plays spot
+animation 4, runs `FUN_004fea70(0)` and restamps `+0x1fc`. The other aims: the minor decision `FUN_004fd570` looks in
+a 4×4 window for a thing that passes the offer gate and outscores the others (no threshold of 10), switches to it only
+when the raw line search (`FUN_004d8b40`, no splices, the first leg uncounted) from the current thing's entry to the
+guest is longer than to the new thing's entry, and aims at **its entry cell** (`+0x36`), switching `MajorDest` first
+(the old kept at `+0x1de`) and ignoring the route's answer; the InQueue turn's board arm aims at the stand point with
+`FUN_004fa5f0` (state 13); state 15's `FUN_00500900`, on arriving with a saved `+0x1de`, restores it and aims at
+**that thing's back of queue** (state 10); `FUN_00500dc0` aims at the entry of a `+0x32 & 0x40` thing (state 9).
+
+**Lost Kingdom**, read in the running game with `cell` (`docs/QUEUE.md` Q50e). Only the Belly Bounce (thing 13) has
+the bit. Its queue, front to back: (52,22) `mDirection 0x10`,
+then (51,22), (50,22), (49,22) `mDirection 0x04`; `mNeighbours` `0x50, 0x44, 0x44, 0x44`; the path beyond the back is
+(48,22), so the back cell's fourth place turns to the side opposite W, `0x04`. The original stands its sixteen places
+at, in cells:
+
+| Places | Cell | Places 0-2 of the cell (x, y) | Place 3 of the cell (x, y) |
+|---|---|---|---|
+| 0-3 | (52,22), `0x10` | (52 + J, 22 + 255/256), (52 + J, 22.750), (52 + J, 22.500) | next cell `0x04`: (52 + 63/256, 22 + J) |
+| 4-7 | (51,22), `0x04` | (51 + 255/256, 22 + J), (51.750, 22 + J), (51.500, 22 + J) | next cell `0x04`: (51 + 63/256, 22 + J) |
+| 8-11 | (50,22), `0x04` | the same on (50,22) | next cell `0x04`: (50 + 63/256, 22 + J) |
+| 12-15 | (49,22), `0x04` | the same on (49,22) | path to the W, so `0x04`: (49 + 63/256, 22 + J) |
+
+J is 114/256..141/256 (0.445..0.551) of the cell. The other five queueable things have no bit and take `FUN_004dec30`.
+The Jungle Spray's entrance (52,30) and the Drinks Shop's (43,30) read `mNeighbours 0x01` and `mDirection 0x10`, their
+back of queue the path cell north of each, (52,29) and (43,29): places 0 to 3 stand at y + 255, 192, 128 and 64
+(/256) of it, J across. Each toilet's entrance, (55,15), (55,16) and (55,17), reads `mNeighbours 0x04` and
+`mDirection 0x40`, its back of queue the path cell east of it, (56,y): places 0 to 3 at x + 0, 63, 127 and 191. In
+all five the head stands on the entrance's edge, and a fifth guest wraps to along 255 on the same cell. The entrance's
+`mDirection` is not one rule: the Belly Bounce's (52,23) reads `0x01`, toward its queue.
+
+**Where OpenTPW differs**, for the build (`docs/QUEUE.md` Q50g; state 10's own arms, the gates' side effects and the
+chooser's in-walk routing are Q102 to Q104). `ChooseSomewhereToGo` aims at the ENTRY cell's centre; `GoingToRide`
+arrives by the walk's radius; `JoinTheQueue` then sends the guest to the back cell's centre in state 12, with no
+arrival test, no re-aim and no place; the InQueue re-take writes the number only; the refused door counts and asks
+again every turn. So every queuer stands on the back cell. `PeepBehaviour`
+draws from `System.Random`; `RideScript.NextDraw` reproduces `FUN_00516330` exactly (bar `Math.Abs` of `int.MinValue`,
+which throws where the engine answers `0x80000000`), but per script and seeded 1, and the engine's own seed is not
+established, so the jitter's sequence cannot be matched - only its range and its one draw per call. An 8.8 sub byte
+becomes a navigator coordinate as `s × FixedVector.One / 256`. The arrival radius is the same (`DefaultRadius = One /
+5`), but `PeepJourney` reports a guest standing on the centre of their target's own cell as arrived at once
+(`TotalDistance` 0), which a sub-cell target in the guest's own cell would meet.
+
+The supporting helpers:
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
-| `FUN_004de7e0` | — | The two-arm dispatcher above. | Disassembly |
-| `FUN_004de840` | — | Real queue-path walk; one cell per four guests. | Disassembly |
-| `FUN_004dec30` | — | Virtual queue, at most four places. | Disassembly |
-| `FUN_004de670` | — | "Step to the next queue cell": a four-way neighbour probe. Tries the four sides in a fixed order — neighbour tables `DAT_007cdba0`, `…ba8`, `…bc8`, `…bd0`, expecting directions `0x10`, `0x01`, `0x40`, `0x04` respectively — and takes the first neighbour that exists, passes two predicates (`FUN_00536320` non-zero, `FUN_00536340` zero) and whose own direction reads as the expected opposite side; otherwise nought. | Disassembly |
+| `FUN_004de7e0` | — | The dispatcher on `+0x32 & 8`: thiscall on the object, `( place, &cell, &subX, &subY )`, `RET 0x10`, forwarding all four; its answer, always 0, is ignored. | Disassembly |
+| `FUN_004de840` | — | The queue-path arm: the walk from the front, one cell per four places, the two switches. Writes the cell first, draws once. | Disassembly |
+| `FUN_004dec30` | — | The virtual-queue arm: `GetBackOfQueue`'s cell, the entry cell's direction, no walk, no bound on the place. | Disassembly |
+| `FUN_004de670` | — | The next queue cell, `cdecl ( &out, cell )`: probes N, S, E, W through `FUN_004d96f0` (NULL off the map, each checked) and takes the first neighbour of mType **exactly 3** (`FUN_00536320` 3 or 9, `FUN_00536340` not 9) whose `mDirection` points back (`0x10`, `0x01`, `0x40`, `0x04`); its own `mNeighbours` is never read. Writes the neighbour's id word, or 0. | Disassembly |
 | `DAT_007cdba0`..`…bdc` | — | **EIGHT step vectors, not four, and the "not evenly spaced" warning is now explained rather than just noted.** They are `(dx, dy)` pairs written by per-object static initialisers (so the image reads zeros — do not conclude they are unset), laid out in link order rather than compass order. Measured from the jump table in `FUN_004d97e0`: `0x01`→`ba0/ba4` (0,−1); `0x02`→`bd8/bdc` (+1,−1); `0x04`→`bc8/bcc` (+1,0); `0x08`→`bb8/bbc` (+1,+1); `0x10`→`ba8/bac` (0,+1); `0x20`→`bb0/bb4` (−1,+1); `0x40`→`bd0/bd4` (−1,0); `0x80`→`bc0/bc4` (−1,−1). **This independently confirms the compass in `park.md` from the executable rather than from save statistics.** | Static-initialiser immediates + jump table |
 | `FUN_004d97e0` | `CMapCell::GetNeighbouringCell( Direction )` | Named by its own assert, `"Incorrect use of function CMapCell::GetNeighbouringCell( Direction )"` at `0x0075b054`. Exactly eight of its 128 map entries are legal — a **single** compass bit — and every other value reaches that assert. | Its own assert |
-| `FUN_004de040` | — | **Start of queue, and it reads `mNeighbours`, NOT `mDirection`.** It calls `FUN_00522770` with the object's own entry cell (`LEA ECX,[EDX + ECX*0x4 + -0x44]` off `mEntryPos`), takes the **first set bit** in the fixed order `0x01`, `0x10`, `0x40`, `0x04`, and returns `mEntryPos + dy*128 + dx`. Its whole body holds **one** call, so it checks nothing — not the cell's type, not the map edge. All the checking is `FUN_004de670`'s. | Disassembly |
-| `FUN_004d99c0` / `FUN_004d96f0` | — | The neighbour lookup pair. | Disassembly |
-| `FUN_00536340` | — | The second cell predicate (must read zero). | Disassembly |
-| `FUN_004de040` / `FUN_004de130` | — | Start-of-queue and back-of-queue cells. | Disassembly |
-| `FUN_00522770` | `CMapCell::GetNeighbours` | Nine instructions: returns the cell's byte at **`+0xc`**, which the game's own cell serialiser `FUN_004d0b30` names **`mNeighbours`** (`LEA EAX,[ESI+0xc]` paired with the string `"mNeighbours"` at `0x0075a064`). It returns `+0x22` (`mHoardingNeighbours`) instead only while `DAT_0081b4cc` is set **and** the cell's `+0x2` is 2 — an overlay path whose trigger is **not established**. `+0xd` is `mDirection` and is a different field, read by `FUN_00522850`; conflating the two inverts every queue walk. | Disassembly + the serialiser's own strings |
-| `FUN_004dda20` | — | The queue-room test, `length < mQueueSizeInCells * 4`. (`FUN_004dd920` is cited for the same rule from a separate reading; the constant 4 agrees with `FUN_004de840`'s one-cell-per-four independently.) | Two independent decodes |
-| `FUN_004dda40` | — | Divides operating speed by `+0x1a8`. The role of `+0x1a8` as a capacity re-check divisor is **unestablished**, but this is its named reader. | Disassembly |
+| `FUN_004de040` | — | **Start of queue, and it reads `mNeighbours`, NOT `mDirection`.** It calls `FUN_00522770` with the object's own entry cell (`LEA ECX,[EDX + ECX*0x4 + -0x44]` off `mEntryPos`), takes the **first set bit** in the fixed order `0x01`, `0x10`, `0x40`, `0x04`, and returns `mEntryPos + dy*128 + dx` (a 16-bit add), or 0 with none of the four (`0x004de0f9`). Its whole body holds **one** call, so it checks nothing — not the cell's type, not the map edge, not `+0x32`. All the checking is `FUN_004de670`'s. | Disassembly |
+| `FUN_004d99c0` / `FUN_004d96f0` | — | The neighbour lookup pair. `FUN_004d96f0` works from the cell's own id word and answers NULL off the 0..127 map (`FUN_004d8300`, signed). | Disassembly |
+| `FUN_00536310` / `FUN_00536320` / `FUN_00536340` | — | Cell predicates on the type dword `+0x8`: 1 (path); 3 or 9 (queue or entrance); 9. | Disassembly |
+| `FUN_004de130` | GetBackOfQueue | Named by its own `"*** GetBackOfQueue() crashed! ***"` (`0x0075b864`). Answers the cached `+0x3a` when non-zero, walking nothing. Otherwise `+0x40` = 0, `+0x3a` = the start, and up to 1000 steps of `FUN_004de670`, each writing `+0x3a` and adding 1 to `+0x40`: the last cell and the count, the start included. A start of 0 answers 0 silently and re-walks every call; a chain of 1000 or more logs, answers 0 once and leaves `+0x3a` set, so the next call answers that. `FUN_004de110` is the same call. | Disassembly |
+| `FUN_00522770` | `CMapCell::GetNeighbours` | Nine instructions: returns the cell's byte at **`+0xc`**, which the game's own cell serialiser `FUN_004d0b30` names **`mNeighbours`** (`LEA EAX,[ESI+0xc]` paired with the string `"mNeighbours"` at `0x0075a064`). It returns `+0x22` (`mHoardingNeighbours`) instead only while `DAT_0081b4cc` is set **and** the cell's `+0x2` is 2 — an overlay path whose trigger is **not established**; it reaches the start of queue, the attached-path loop and every edge test. `+0xd` is `mDirection` and is a different field, read by `FUN_00522850`; conflating the two inverts every queue walk. | Disassembly + the serialiser's own strings |
+| `FUN_004dda20` | — | The queue-room test, `FUN_004ddf50( 0 ) < +0x40 × 4`, unsigned. Asked with id 0, `FUN_004ddf50` never answers -1: it counts from `mFirstInQ` up to **and including** the first guest who has stopped queueing, and no further. | Disassembly |
+| `FUN_004dda40` | — | The longest queue a guest will join (`FUN_004ddb60`, the arrival's third gate) or stay in (the InQueue turn's 5a): 100 for a thing without the queue-path bit (`0x004dda4c`); with it, the capacity sum in "The `InQueue` turn", whose descriptor field pairing is unproven. | Its two callers |
+| `FUN_004fa5f0` / `FUN_004fa530` | SetDest | To an 8.8 point / to a cell's centre. The stranded refusal, then `+0x18`, `+0x1a`, `+0x198` written before the route. | Disassembly |
+| `FUN_004fa770` | — | The stranded refusal: 1 when no region stamp near the guest (or the far end of their queue run) reaches `mStrandedTime`. `FUN_004de1f0` stamps the back of a queue it measures again, so a queue edit frees its guests. | Disassembly |
+| `+0x198` | `mStrandedTime` | Saved (`FUN_004f8b10`, `0x004f8eac`). Set only at `0x004f9e09`; zeroed by every walk tick and SetDest. | Serialiser string |
+| `FUN_004d8750` | — | The edge test every route step asks: `( x, y, dir 0 N / 1 E / 2 S / 3 W, mode )`, non-zero blocked. A guest walks in mode 0 (walker `+0xb4`, guest `+0x188`; guests write only 0 or 1). | Disassembly |
+| `FUN_0050fd40` / `FUN_0050ed10` | — | The walk tick's progress (`0x10000` = arrived) and the path follower that flags arrival within 0.32 of a cell of the exact target. | Disassembly |
+| `FUN_00516330` | — | The engine's generator: `state = ROR32( state × 0x19660d + 0x3c6ef35f, 13 )`, kept at world `+0x1da708`, answered as its absolute value (`0x80000000` unchanged). One sequence for the queue arms and the scripts' `RAND`. | Disassembly |
 
 ### Every way out of a queue
 
@@ -290,10 +460,10 @@ the kids' `0x80` when the guest's id `& 7` is nought (`0x0050133d`), takes `Medi
 | `0x004fb409` | `FUN_004fb360`, the sale's type-10 answer | queueing for a thing sold or picked up | no unlink; then the sale's own `SmallHappinessChange` | −15 −5 | built, `PeepBehaviour.ThingRemoved` |
 | `0x005014b4` | `FUN_00501390`, told by `FUN_004de1f0` | place `>=` cells × 4, unsigned, and not state 14 | thought `0xd` when id % 3 is nought; `FUN_004ddd20` | −15 | built, `ParkPeople.QueueRemeasured` |
 | `0x004e0554` | `FUN_004e0450`, the object's completion | the head, when `VAR_LETMEON` still names them or they are not in state 14 | `FUN_004ddd20` | −15 | built, `ParkPeople.CompleteOrTurnAway` |
-| `0x004ffdf4` | `FUN_004ffbc0`, arriving at the queue | joined, and `FUN_00501160` finds no route to their place | `FUN_004ddd20` | −15 | counted, `QUEUE_PLACE_WALK` |
+| `0x004ffdf4` | `FUN_004ffbc0`, arriving at the queue | joined, and `FUN_00501160` finds no route to their place, or answers -1 because somebody in front has stopped queueing | `FUN_004ddd20` | −15 | counted, `QUEUE_PLACE_WALK` |
 | `0x005004b3` | `FUN_004ffff0`, the `InQueue` turn | nine arms, below | `FUN_004ddd20`, a thought on most arms | −15 | the lost place, the toilet and halves of 5a and 5b built, `PeepBehaviour.QueueTurn`; the rest counted |
 | `0x005007b4` | `FUN_005006b0`, at the door | `FUN_004fde50` says too expensive | thought 6, event 10, **a first −15** (`0x00500778`), `mNumWalkAways` +1 (`FUN_004e1670`), `FUN_004e0ac0`, `FUN_004ddd20` | −30 | built, `PeepBehaviour.WalkAwayFromTheDoor` |
-| `0x00500857` | `FUN_005006b0`, at the door | `AdmitPerson` refuses and `FUN_00501160` fails: `"Couldn't rejoin FOQ even!"` | `FUN_004ddd20` | −15 | counted, `QUEUE_PLACE_WALK` |
+| `0x00500857` | `FUN_005006b0`, at the door | `AdmitPerson` refuses and `FUN_00501160` fails: `"Couldn't rejoin FOQ even!"`; no `FUN_004e0ac0`, no thought | `FUN_004ddd20` | −15 | counted, `QUEUE_PLACE_WALK` |
 
 **`FUN_004ddd20` is the whole of leaving**: it empties script variable 0 (`VAR_LETMEON`) when it names the leaver
 (`0x004ddd4e`..`0x004ddd7d`), then splices with the leaver's own links and tests no membership - with no `mQPrev`
@@ -492,8 +662,8 @@ strings that print them (`0x004fda74`, `0x004fd10e`) and by the needs tick, not 
 5b for a car track, the broken ride's skipped re-take, and the toilet. `ParkState.LeaveQueue` splices by the leaver's own links, so a leaver with nobody in front
 writes their own next as the head (`0x004ddde9`): an unlinked one empties it and the rest of that queue is lost to the
 walk in turn. **Counted:** the no-route board (`QUEUE_BOARD_NO_ROUTE`: ours routes to the entry cell's centre, the original to
-the stand point on the same cell, and `FUN_004fa5f0` also fails without routing on a retry stamp at `+0x198`,
-`0x004fa62a`, that nothing here keeps), the dirt gate (`QUEUE_TOILET_DIRT_GATE`), the capacity on a queue path (`QUEUE_CAPACITY_RECHECK`), the
+the stand point on the same cell, and `FUN_004fa5f0` also fails without routing on `mStrandedTime` at `+0x198`,
+`0x004fa62a`, that nothing here keeps: nought on the queue paths but from a save), the dirt gate (`QUEUE_TOILET_DIRT_GATE`), the capacity on a queue path (`QUEUE_CAPACITY_RECHECK`), the
 coaster's record (`QUEUE_TURN_COASTER_TRACK_RECORD`, let through), the failed re-take (`QUEUE_PLACE_WALK`, Q50e), the
 thoughts, the spot animations (`QUEUE_SPOT_ANIMATION`), the heading (`QUEUE_TURN_HEADING`) and boredom
 (`QUEUE_TURN_BOREDOM`). **The unhappy arm is held** (`QUEUE_TURN_UNHAPPY`) until Q85: an arriving guest here starts at

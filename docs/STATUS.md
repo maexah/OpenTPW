@@ -50,8 +50,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Eight of the nine per-object windows are unbuilt. Setting a staff member's patrol area is not built, deferred by
   Alexah; staff keep to the areas the save gives them. A walking member of staff is not entered in the cells they
   cross; only hiring and putting down place one.
-- A guest put off on cleared ground leaves only by going home (Q53). Q50e-f and five queue-turn arms are counted, not
-  built; the unhappy arm waits for Q85, as an arrival's happiness is 0 and stays. No spot animation plays (Q98).
+- A put-off queuer on cleared ground leaves only by going home (Q53); every queuer stands on its queue's back cell
+  (Q50g). Q50f, Q102-Q104 and five queue-turn arms are unbuilt, the unhappy one held for Q85. No spot animation (Q98).
 - The park's door moves neither the gate (Q89) nor the advisor (Q90), nor a shut ride's model (Q91); the ride window's
   door shows a shut ride but is not a button (Q92), and a bought queued thing starts open (Q93).
 - A right press over a panel still cancels (Q56), and the park's Escape acts on the press, not the release (Q57).
@@ -69,11 +69,11 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b and Q50 to Q50d are
-ticked.** Next is **Q50e**: the walk to a place in a queue, decode first. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8
+`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b and Q50 to Q50e are
+ticked.** Next is **Q50g**: the walk to a place in a queue, the build. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8
 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45
-Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, and the 2026-09-24 staleness
-audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review, section G from the lobby plan).
+Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104,
+and the staleness audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review, section G from the lobby plan).
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -102,17 +102,17 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1109**, 0 fail, 0 skip with the game | 2026-09-24, after Q50d |
-| Tests without the game | **476** ran, **633** skipped, of 1109 | 2026-09-24, after Q50d |
-| Build warnings | 123 | 2026-09-24, after Q50d |
+| Tests | **1109**, 0 fail, 0 skip with the game | 2026-09-24, after Q50e |
+| Tests without the game | **476** ran, **633** skipped, of 1109 | 2026-09-24, after Q50e |
+| Build warnings | 123 | 2026-09-24, after Q50e |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-24 - the queue turn's own ways out (Q50d).** Branch `alexah/141-the-queue-turns-ways-out`. In the game,
-queuers whose toilet drifted past 80 left the Belly Bounce's queue on the predicted sweep, 50 to 35; the control stayed.
+**2026-09-24 - the walk to a place in a queue, decoded (Q50e).** Branch `alexah/142-decode-the-walk-to-a-queue-place`,
+docs only. In the game every InQueue queuer of the Belly Bounce stood on one point of its back cell, 7 of 7.
 
-**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/140` (Q50c)
+**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/141` (Q50d)
 back to `118` (Q4), `115`-`116` (Q3), `117` (Q35) and `109` (Q1, Q1b - the rider is not photographed). Before them,
 `114` built a queue that joins the paths, `110` a click anywhere on a footprint, `112` the queue link.
 

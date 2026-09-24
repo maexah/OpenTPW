@@ -1334,9 +1334,9 @@ crowd term is `3a + b + 2c` from `FUN_00545310`, clamped 0..40, and is reached o
 ratios divide by the descriptor's `+0x1a8` and `+0x1a0`, and `park.md` already records that **which
 `.sam` key feeds either of those is unproven and must not be guessed** — the constructor reads its
 record through an `undefined2 *`, and that reading disagrees with where `FUN_004db7d0` parses
-`mOperatingSpeed` and `mOperatingDuration`. `+0x13c`, which supplies the base above, appears in no
-offset table at all; the nearest established pair is `+0x124`/`+0x128` = `UsageInfo.MinCapacity` /
-`MaxCapacity` (`ride-operation.md`). Having the arithmetic does not supply its inputs, so
+`mOperatingSpeed` and `mOperatingDuration`. `+0x13c`, which supplies the base above, is
+`UsageInfo.ExcitementLevel`: the compiled `.sam` schema puts it one slot before `InitCostOfGoods` (`+0x140`), in a
+UsageInfo group anchored at `+0xd4` through `+0x170` (`ride-operation.md`, "At the door"). Having the arithmetic does not supply its inputs, so
 `RIDE_EXCITEMENT_BAR` and `RIDE_RELIABILITY_BAR` stay counted rather than fitted.
 
 ### Sell, move and the scrap value

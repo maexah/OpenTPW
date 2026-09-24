@@ -862,13 +862,51 @@ artifacts are listed in `docs/history/README.md`.
   - **Not confirmed on screen:** the lost place, the invited guest who is not the nominee, the broken ride and the
     car track - tested only. The frames cannot tell one queuer from another (every `InQueue` guest stands on the
     queue's back cell, Q50e); the census and the log do. **Found:** Q98-Q101.
-- [ ] **Q50e. The walk to a place in a queue. Decode first.** Split from Q50. `FUN_00501160` turns a place into a cell
-  (`FUN_004de7e0`: `FUN_004de840` for a queue path, decodable; `FUN_004dec30` for the virtual queue, not decoded) and
-  routes there; it runs on joining, on a re-take and at a refused door, and each failure puts the guest out
-  (`0x004ffdf4`, `0x005004b3`, `0x00500857`; `QUEUE_PLACE_WALK`). The chooser should aim at the back of the queue
-  (`FUN_004fcb10`, `0x004fcbc4`) and the arrival test that the guest stands on it (`0x004ffc3d`); ours aims at the
-  entry cell with no note at the site. Seen in Q50's game run: queuers left inside the four stand on the cut-off
-  cells, where the original's re-take walks them to their place.
+- [x] **Q50e. The walk to a place in a queue: the decode.** Done 2026-09-24,
+  `alexah/142-decode-the-walk-to-a-queue-place`. Decode only; the build is Q50g. `ride-operation.md`, "Walking to a
+  new place in the queue", rewritten whole: four decoders (the place to a point, the re-take and its route, the three
+  callers, the aim), each report put to a skeptic reading the disassembly - 144 claims and doc corrections, 103
+  upheld, 41 amended, none refuted.
+  - **Found.** `FUN_00501160` is FindQueueDestination (its own log): the guest's CURRENT place, not the front, into
+    `+0x1f1` before routing; one draw of the engine's generator; `FUN_004fa5f0` to an 8.8 point; state 12, or 0 and
+    every caller puts the guest out. With the queue-path bit `FUN_004de840` walks from the FRONT, four places a cell
+    at 0, 63, 127 and 191/256 back from the front edge (`__ftol( n × 0.25f × 255 )`), across at `rand % 28 + 114`,
+    the fourth turned to the next cell's axis (`ADD AL,0x80`, so 63, not 64); without it `FUN_004dec30` uses the
+    back of queue and the ENTRY cell's direction, no bound on the place. `+0x198` is `mStrandedTime`, nought on the
+    queue paths but from a save. State 12 never reads the place again. The chooser aims at the back cell's centre
+    and runs only on `rand % 3 == 0`; state 10 re-aims when the back has moved.
+  - **Corrected:** the `FUN_00501160` row ("the front"), the along axis ("pos, or -1 - pos"), "`FUN_004dec30`... not
+    decoded", the four writers of `+0x1f1` (five), `FUN_004ddb90` (it writes `mFirstInQ`), `FUN_004dda40`'s role (its
+    callers establish it), the state map (10, 11, 12 and 15), `FUN_00536320` (3 or 9), and `park-engine.md`'s
+    "`+0x13c`... appears in no offset table" (`UsageInfo.ExcitementLevel`).
+  - **Measured in the game** (`q50econfirm.py`, silent, jungle, this tree's build, twice): `cell` read the Belly
+    Bounce's queue as the decode needs it, as predicted - `mNeighbours 0x50 0x44 0x44 0x44`, `mDirection 0x10 0x04
+    0x04 0x04`, (48,22) path - and `why` aimed every chooser of it at the entry (52,23), where the original aims at
+    (49,22). Paused at seven InQueue queuers, places 0 to 6 all stood at (49.626, 22.507), 7 of 7 on the back cell
+    both times as predicted, where the decode stands them in a line from (52.5, 22.996) back to (51.5, 22.5); four
+    seconds on, 10 of 10 and 6 of 6; `QUEUE_PLACE_WALK` 11 times. Photographed close: the seven draw as one figure on
+    the back cell, while thing 73, `GoingToRide` at (50.339, 22.404), walks the queue's length to the entrance, to be
+    sent back to the back cell - a guest the original never walks up its queue. The five without the bit, read with
+    `cell`: the Jungle Spray's and the Drinks Shop's entrances `mDirection 0x10`, the toilets' `0x40` (the table in
+    the page). `save/` unchanged in both runs.
+  - **Missed first, mine.** I predicted the Jungle Spray's and Drinks Shop's entrances face `0x01`, as the Belly
+    Bounce's does; both read `0x10`, so their heads stand on the entrance's edge (the toilets' `0x40`, predicted from
+    those two, held). The harness reused the X display's name as a loop variable and lost the first run's second
+    photograph; fixed, and run again closer.
+  - **Not confirmed on screen:** anything of the original's own - its guests are not run here; the decode is the
+    executable's, and the run measures only ours and the park's data. Nothing is built, so there is no test and no
+    mutation. **Found:** Q50g, Q102-Q104.
+- [ ] **Q50g. The walk to a place in a queue: the build.** Split from Q50e, whose decode it builds
+  (`ride-operation.md`, "Walking to a new place in the queue"). FindQueueDestination: the place from `PositionInQueue`
+  into `QueuePos`, `FUN_004de840`'s point for a thing with the queue-path bit and `FUN_004dec30`'s for one without,
+  the route to that sub-cell point (`s × One / 256`) and state 12; its three callers and their put-outs - the join
+  (`0x004ffdad`, `0x004ffdf4`), the InQueue re-take (`0x00500532`, `0x005004b3`) and the refused door (`0x00500826`,
+  `0x00500857`) - retiring `QUEUE_PLACE_WALK`; the chooser's aim at the back cell's centre (`0x004fcbc4`); state 10's
+  arrival test on that cell and its re-aim (`0x004ffc3d`, `0x004ffe16`); and the two remarks it makes false
+  (`ParkWorld`'s on `FUN_004dec30`, and `ParkRideChooser`'s, Q88's third). Say at the site that the jitter draws from
+  our generator, not the engine's unseeded sequence. Confirm: `q50econfirm.py`'s place-by-place points against
+  `peeps`, and a photograph of the Belly Bounce's queue standing in a line along its four cells, where Q50e's shows
+  them bunched on (49,22).
 - [ ] **Q50f. What the sale's drain does to its queuers. Decode first.** Split from Q50. The demolisher drains the
   queue before the destructor's message, and each pop re-walks it (`0x0052ffec`); a guest it puts out would lose 15
   rather than 20. Trace `FUN_0052fe50`'s pops in mode `0x34`, whether the stack's bottom entry is ever cleared
@@ -1021,12 +1059,37 @@ artifacts are listed in `docs/history/README.md`.
   forward and puts them out when `FUN_004fa5f0` fails (`0x0050010a`); `QueueTurn` counts it (`QUEUE_BOARD_NO_ROUTE`)
   and walks them on. The stand point is on the entry cell (`FUN_004dedf0(0)`, `ride-operation.md`, "Leaving a
   ride"), but `FUN_004fa5f0` also fails without routing when its retry stamp at `+0x198` says so (`0x004fa62a`,
-  `FUN_004fa770`), which nothing here keeps. Decode that stamp first, then build the arm. Confirm: `unimplemented`
-  over a long run (the counter's rate), then a boarding guest cut off by a path edit.
+  `FUN_004fa770`), which nothing here keeps. The stamp is decoded (Q50e): `mStrandedTime`, set only on
+  `FUN_004f9490`'s stranded path and zeroed by every walk tick, so on the board arm it is nought unless a save loaded
+  it - build the arm and say so at the site. Confirm: `unimplemented` over a long run (the counter's rate), then a
+  boarding guest cut off by a path edit.
 - [ ] **Q100. A toilet's `+0x44`, which the queue turn's dirt gate reads. Decode first.** Found by Q50d.
   `FUN_004e0390` puts out a queuer for a toilet (`+0x32 & 1`) whose `+0x44` truncates below 25.0 (`0x00700550`);
   nothing here keeps the field (`QUEUE_TOILET_DIRT_GATE`). Decode what writes it (the handyman's cleaning, use) and
   whether it is saved, then build the gate. Confirm: a queue at Lost Kingdom's toilet, `peeps` before and after.
+- [ ] **Q102. The walk to a chosen thing's own arms.** Found by Q50e's decode (`ride-operation.md`, "Walking to a new
+  place in the queue", the first caller). The original's state 10 (`FUN_004ffbc0`) takes `BigHappinessChange` (25)
+  and pushes event 3 when the walk is stuck, where `GoingToRide` only goes back to deciding; takes 25 and clears
+  `MajorDest` while walking with the park shut (`"The park has closed underneath me!"`), which nothing here does; and
+  every 12th walking turn, counted across walks by the saved byte `+0x2c`, runs the minor decision `FUN_004fd570`,
+  which may switch to a nearer thing and aim at its entry. Build the first two; the minor decision needs
+  `FUN_004d8b40`'s raw line-search length. Confirm: `peeps` over a guest walking to a ride when the door shuts, and
+  over one cut off by a path edit.
+- [ ] **Q103. The gates at the back of a queue.** Found by Q50e's decode. On arriving, the original refuses on room
+  with event `0x15` and KEEPS `MajorDest` (`GiveUpOnIt` clears it); asks excitement only when the item's `+0x13c`
+  (`UsageInfo.ExcitementLevel`) has a non-zero low byte, of the OBJECT's computed excitement (`FUN_004e0860( object,
+  0 )`, `FUN_004e0560`) where `TurnsAwayFrom` reads the catalogue level, with an event and thought per arm, then
+  pushes the thing onto `mPreviousTemporaryRides` and zeroes `+0x1fc`; and refuses a queue too long (`FUN_004ddb60`
+  against `FUN_004dda40`, which is 100 for a thing without the queue-path bit, so Lost Kingdom's five need no
+  unproven field). The computed excitement is blocked on the divisors `park-engine.md` will not guess: say at
+  `TurnsAwayFrom` that the catalogue level stands in for it. Confirm: `peeps` for a guest refused at a full queue,
+  dest kept.
+- [ ] **Q104. The chooser routes as it walks the objects.** Found by Q50e's decode. `FUN_004fcb10` routes every
+  candidate that beats the best in turn, so a better one that cannot be routed still leaves the walker failed while
+  `MajorDest` names the earlier winner, and the first state-10 turn takes the stuck arm (−25) - unless a ground change
+  revives the loser's route and walks the guest to the loser's queue. `ChooseSomewhereToGo` routes once, to the final
+  best. Build it with the walker's failed state, and say it at the site. Confirm: a guest choosing between a
+  reachable shop and a better ride cut off by a path edit, `peeps` and the log.
 
 ## B. Docs and comments
 
