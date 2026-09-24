@@ -602,16 +602,27 @@ artifacts are listed in `docs/history/README.md`.
   in `Level.ForgetPark`, or on the entity's delete, and check every reader of either for a null in the lobby.
   Confirm: `parks` in the lobby after a park reads `#1 jungle collected`.
 
-- [ ] **Q45. The VM charges `CRIT_LOCK` against the budget; the original does not.** Found by Q11's decode.
-  `FUN_005516b0` reads the critical flag after the instruction has run (`0x00551724`), so `CRIT_LOCK` is free and a
-  lock reached with one unit of budget left still runs its whole section in that turn. `RideScript.Step` charges
-  before `Execute`, by the flag as it stood: there the turn ends locked, `Turn` clears the flag, and the section runs
-  next turn unlocked and budgeted. Reachable, by static walk, at 68 of the 150 locks, 18 of them in Lost Kingdom;
-  not yet seen in a run. `RideScriptSchedulerTests.ACriticalSectionDoesNotOutliveItsTurn` pins 3 where the engine
-  gives 4. In the same loop, a time slice of nought or less skips the turn in the original, where `Turn` floors it to
-  1 without saying so; every shipped file says 50, so that is dead by CONTENT and wants only a comment. Confirm: the
-  test at 4, and in the jungle a section at one of those sites run whole in one turn, by the `rides` figure against
-  its path length.
+- [x] **Q45. The VM charges `CRIT_LOCK` against the budget; the original does not.** Done 2026-09-24,
+  `alexah/134-crit-lock-is-free`. `RideScript.Step` now charges after `Execute`, by the critical flag as it then stands
+  (`FUN_005516b0`, `0x00551724`-`0x00551730`, re-read with both lock handlers): the lock is free, and a lock taken on
+  the last unit runs its section in that turn. `critical N` counts as before, so the Q11 figures and tests stand. The
+  slice floored to 1 now says so at the site. `rides` gains `lastunit K ran M` per thing and a `lastunit` total.
+  - **Tests:** `ACriticalSectionDoesNotOutliveItsTurn` at 4; new `ALockTakenOnTheLastUnitRunsItsSectionInThatTurn`
+    (slice 2: position 5, `lastunit 1 ran 3`; slice 3 counts no last unit). 1052 with the game. `q45mutate.py`: the
+    charge put back fails both, `== 1` as `>= 1` and the unmarked turn fail the new one, no flag reset fails the old.
+  - **The walk, rebuilt** (not kept by Q11): 68 of 150, 18 of 36 in Lost Kingdom, three walkers agreeing lock by
+    lock. But the world is frozen inside a turn, and then 15 of the 18 cannot happen; none of the Easymode park's six
+    is in the 68 at all (`docs/exe/park.md`, "Corpus shape").
+  - **Confirmed in the game, a control with the charge put back beside it:** the jungle paused on load, an Aztec
+    Mayhem bought at (57,23) (tvsim @32, one of the 18), then 60 s. Both read `critical longest 5 cap 10000 reached 0
+    lastunit 0`, every thing `lastunit 0 ran 0`, the Simulator `critical 3`, as predicted; photographed running.
+    Missed: at the load pause I predicted `critical longest 0` (Q11's reading) and read 3, the pause landing after the
+    first locks; and 18 scripts, not 17 (the Simulator spawns `torches.rse`). `save/` unchanged in both.
+  - **NOT met: a section run whole on the last unit in the jungle.** Nothing the stock park runs can arrive there. The
+    one route in this interpreter is the Hot Pot (`bumper` @92, research-gated): 8 riders with its capacity cut to 4
+    during the one-second ride, or 7 cut to 1, and it exists only because `BUMP` is unbuilt. Not driven.
+  - **Found:** Q83 (the VM's stack errors and `HUSH`'s result register) and Q84 (a stale `Wait` summary), from the
+    handler sweep; `park.md`'s script counts for three animation opcodes corrected (250, 114, 75, measured twice).
 - [ ] **Q47. Two more hollow tests.** The other two of `docs/REVIEW-2026-09-22.md` section 5, re-measured by Q12's
   review at its tip. `ParkGuestPlacementTests.AGuestWhoHasStoppedIsDrawnInOnePlace` stamps by hand, so deleting
   `peep.Navigator.StampPrevious()` from `ParkPeople.OnUpdate`'s peep loop, or moving it into `PeepWalk.Step`, leaves
@@ -696,6 +707,14 @@ artifacts are listed in `docs/history/README.md`.
   `Sets[0].Length` and then indexes `Sets[SetIndex]`. Each reads as protective and is not. Fix each with a test that
   fails first. No game run.
 
+- [ ] **Q83. The VM's stack errors, and `HUSH`'s result register, are not the engine's. Decode first.** Found by Q45's
+  handler sweep, not yet measured as reached. The engine's `RETURN` with no frame parks the script (`0x00553a63`);
+  `RideScript.Return` carries on. Its `JSR` on a full stack logs, parks, then jumps anyway with no return address
+  (`0x00553a24`), and with a non-label operand pushes and does nothing; `Call` stops the script for both. `PUSH` and
+  `POP` errors park (0 uses). **Engine `HUSH` also writes the result register with the value it pushed** (`0x00553d95`,
+  `MOV [EBP+0x48],EDX`, read first-hand), and `PUSH` too (`0x00553c89`); `PushValue` does not, and `HUSH` has 39 uses:
+  find whether any shipped branch reads the register after one.
+
 ## B. Docs and comments
 
 - [ ] **Q13. Move `docs/CLEANUP-PLAN.md` into `docs/history/`.** Every item in it is closed. It is still untracked in
@@ -715,6 +734,10 @@ artifacts are listed in `docs/history/README.md`.
   textures are built by the byte[] constructor, with no path. (Q12's review also doubted `TryAdoptCached`'s "nothing
   the game ships asks for one path under two sets of flags"; ddfd089 measured it, texture=542 distinct=535 with and
   without the guard, and Q12's run found the sea adopted on the way back from a park.) No game run.
+- [ ] **Q84. `RideScript.Wait`'s summary says no opcode writes the speed word, "so it is 50 for every script".** Found by
+  Q45's handler sweep. True of the opcodes, false of the script: the object constructor pushes the item's operating
+  speed in through `FUN_0055a300` (`0x004db54a`; `docs/exe/park.md`, "The clock, the speed word, and WAIT"), so it is
+  50 only for a script nothing binds. Rewrite the summary; the divisor is still counted as `RIDE_SPEED_SCALES_WAITS`.
 - [ ] **Q14. Comment sweep of the cleanup commits.** Replace history-voice comments with what the code does now,
   found by member because line numbers go stale: `LobbyCameraMode`'s attract-box remarks (the two `>>>` banners and
   "Alexah judged ... on 2026-09-22"); `ParkCamcorderCameraMode.Walk`'s "An earlier note here" and "until

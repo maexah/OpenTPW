@@ -179,10 +179,11 @@ public class RideScriptSchedulerTests
 	/// moment the turn ends.
 	///
 	/// <para>
-	/// The script below locks, ends its slice while still locked, and then has two <c>NOP</c>s and an
-	/// <c>END</c>. With the reset it takes one instruction per turn and is at word 3 after three turns,
-	/// still running. Without it the budget is never decremented again, so the third turn runs both
-	/// <c>NOP</c>s and the <c>END</c> in one go and the script is stopped at word 5. Seven shipped
+	/// The script below, with a time slice of one, locks, ends its slice while still locked, and then has two
+	/// <c>NOP</c>s and an <c>END</c>. <c>CRIT_LOCK</c> costs nothing, so the first turn runs it and the
+	/// <c>ENDSLICE</c>; with the reset each later turn runs one instruction, and the script is at word 4 after
+	/// three turns, still running. Without it the budget is never decremented again, so the second turn runs
+	/// both <c>NOP</c>s and the <c>END</c> in one go and the script is stopped at word 5. Seven shipped
 	/// sections do yield while locked (docs/exe/park.md, "Corpus shape").
 	/// </para>
 	/// </summary>
@@ -200,7 +201,7 @@ public class RideScriptSchedulerTests
 			script.Turn( 0f );
 
 		Assert.IsTrue( script.Running, "the script ran past its budget and hit END inside three turns" );
-		Assert.AreEqual( 3, script.Position, "the critical section outlived the turn that took it" );
+		Assert.AreEqual( 4, script.Position, "the critical section outlived the turn that took it" );
 	}
 
 	/// <summary>Removing by id takes a script out whether or not it has stopped.</summary>

@@ -810,6 +810,20 @@ public sealed class RideScript
 	/// <summary>Whether this script has run into <see cref="CriticalStepCap"/>, which it says once.</summary>
 	public bool ReachedCriticalCap { get; private set; }
 
+	private bool _lockedOnTheLastUnit;
+
+	/// <summary>
+	/// How many times this script has taken a <c>CRIT_LOCK</c> with one unit of its budget left, for the
+	/// console's <c>rides</c>: the one arrival where charging the lock would end the turn inside the section.
+	/// </summary>
+	public int LastUnitLocks { get; private set; }
+
+	/// <summary>
+	/// The most instructions a section taken on the last unit has run in that same turn, counted as
+	/// <see cref="LongestCritical"/> counts, for the console's <c>rides</c>.
+	/// </summary>
+	public int LongestLastUnitSection { get; private set; }
+
 	/// <summary>
 	/// Gives the script one turn, running until it spends its instruction budget, yields, or stops.
 	/// <paramref name="now"/> is whatever clock the caller keeps; <c>WAIT</c> durations are added to
@@ -826,6 +840,11 @@ public sealed class RideScript
 		// This does not end a section that loops without yielding; CriticalStepCap does.
 		_critical = false;
 		_criticalSteps = 0;
+		_lockedOnTheLastUnit = false;
+
+		// The engine skips the whole loop for a time slice of nought or less and leaves the script alive
+		// (FUN_005516b0, 0x00551715); this floors it to one instead, a deviation nothing shipped reaches:
+		// every file says 50.
 		_budget = _file.TimeSlice > 0 ? _file.TimeSlice : 1;
 
 		// Nothing brings a channel up to date here, and that is deliberate. The engine sweeps its animation
@@ -912,16 +931,29 @@ public sealed class RideScript
 
 		Position += 1 + instruction.Operands.Count;
 
-		// A critical section stops instructions costing anything, so everything up to CRIT_UNLOCK runs
-		// in one go however long it is - up to CriticalStepCap, where the original would hang.
 		var locked = _critical;
 
-		if ( !locked )
-			--_budget;
-		else
+		if ( locked )
+		{
 			LongestCritical = Math.Max( LongestCritical, ++_criticalSteps );
 
+			if ( _lockedOnTheLastUnit )
+				LongestLastUnitSection = Math.Max( LongestLastUnitSection, _criticalSteps );
+		}
+		else if ( instruction.Opcode == Opcode.CRIT_LOCK && _budget == 1 )
+		{
+			++LastUnitLocks;
+			_lockedOnTheLastUnit = true;
+		}
+
 		Execute( instruction, now );
+
+		// The engine charges after the instruction has run, by the critical flag as it then stands
+		// (FUN_005516b0, 0x00551724): CRIT_LOCK is free, so a lock taken on the last unit still runs its whole
+		// section this turn, and everything up to CRIT_UNLOCK runs in one go however long it is - up to
+		// CriticalStepCap, where the original would hang.
+		if ( !_critical )
+			--_budget;
 
 		// Only a section still open, in a turn still going: one the instruction ended anyway is not capped.
 		if ( locked && _critical && _budget > 0 && Running && _criticalSteps > CriticalStepCap )

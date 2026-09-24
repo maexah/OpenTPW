@@ -609,7 +609,8 @@ public static class DebugConsole
 					+ $"{ParkAudio.Current?.ScreamSamplesHeard ?? 0} scripts {ParkRides.Current?.Scheduler.Count ?? 0} "
 					+ $"bound {ParkRides.Current?.Bound ?? 0} "
 					+ $"critical longest {scripts.Select( script => script.LongestCritical ).DefaultIfEmpty().Max()} "
-					+ $"cap {RideScript.CriticalStepCap} reached {scripts.Count( script => script.ReachedCriticalCap )}" );
+					+ $"cap {RideScript.CriticalStepCap} reached {scripts.Count( script => script.ReachedCriticalCap )} "
+					+ $"lastunit {scripts.Sum( script => script.LastUnitLocks )}" );
 
 				foreach ( var ride in running )
 					Reply( "  " + ride );

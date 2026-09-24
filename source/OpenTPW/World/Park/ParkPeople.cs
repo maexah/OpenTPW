@@ -1708,6 +1708,9 @@ public sealed class ParkPeople : Entity
 				// The longest critical section this script has run in one turn, against the cap that ends
 				// one where the original would hang.
 				+ $"critical {script.LongestCritical} "
+				// How often it took a lock on the last unit of its budget, and the longest section it then ran in
+				// that same turn: the arrival the budget's charging decides.
+				+ $"lastunit {script.LastUnitLocks} ran {script.LongestLastUnitSection} "
 				// WHICH scream, not just whether: a ride that replays a fresh sample every pass and one
 				// that loops a single clip for ever both read "screaming True". The sample name and the pass
 				// count tell them apart.

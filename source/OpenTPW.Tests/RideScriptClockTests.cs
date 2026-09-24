@@ -360,6 +360,43 @@ public class RideScriptClockTests
 	}
 
 	/// <summary>
+	/// A lock taken on the last unit of the budget still runs its whole section in that turn: the engine
+	/// charges an instruction after it has run, by the critical flag as it then stands, and <c>CRIT_LOCK</c>
+	/// has just set it. With two units left the section runs the same way and is not counted as a last-unit
+	/// lock.
+	/// </summary>
+	[TestMethod]
+	public void ALockTakenOnTheLastUnitRunsItsSectionInThatTurn()
+	{
+		int[] body =
+		[
+			Word( Opcode.NOP ),
+			Word( Opcode.CRIT_LOCK ),
+			Word( Opcode.NOP ),
+			Word( Opcode.NOP ),
+			Word( Opcode.CRIT_UNLOCK ),
+			Word( Opcode.NOP ),
+			Word( Opcode.BRANCH ), Loc( 0 ),
+		];
+
+		var lastUnit = new RideScript( Build( 0, 2, body ) );
+
+		lastUnit.Turn( 0f );
+
+		Assert.AreEqual( 5, lastUnit.Position, "the section ran to its unlock in the turn that took the lock" );
+		Assert.AreEqual( 1, lastUnit.LastUnitLocks, "and the lock was taken on the last unit" );
+		Assert.AreEqual( 3, lastUnit.LongestLastUnitSection, "both NOPs and the unlock ran in that turn" );
+
+		var twoLeft = new RideScript( Build( 0, 3, body ) );
+
+		twoLeft.Turn( 0f );
+
+		Assert.AreEqual( 5, twoLeft.Position, "with two units left the section runs whole too" );
+		Assert.AreEqual( 0, twoLeft.LastUnitLocks, "but that lock was not taken on the last unit" );
+		Assert.AreEqual( 0, twoLeft.LongestLastUnitSection );
+	}
+
+	/// <summary>
 	/// Runs a two-word loop - draw, then branch back - once per turn, and collects what each draw left
 	/// behind. A time slice of two is what makes a turn exactly one draw.
 	/// </summary>

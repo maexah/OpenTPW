@@ -62,17 +62,15 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
 - Guests may arrive eight times as often as the original's, and staff may idle for an eighth of its time: its timers
   read the thing sweep, ours the 31 ms tick (Q68, Q82, decode first).
-- The VM charges `CRIT_LOCK` against a script's budget, so a section reached with one unit left runs over two turns,
-  unlocked; the original runs it whole (Q45).
 - By a probe, not yet the game: the camcorder slips through a shut side at exactly 45 degrees, and is trapped at the
   east edge of the map (Q48).
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42 and Q44 are ticked.** Next is **Q45**: the VM
-charges `CRIT_LOCK` against a script's budget. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11
-Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, and the 2026-09-24 staleness
-audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review, section G from the lobby plan).
+`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44 and Q45 are ticked.** Next is **Q47**: two
+more hollow tests. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36
+Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, and the 2026-09-24 staleness audit and its
+review Q68-Q82 (Q70-Q75 from the 2026-09-12 review, section G from the lobby plan).
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -87,6 +85,8 @@ and is still untracked, so it exists on this machine only; Q13 moves it into `do
 - The Delete key's let-go and a sale's let-go of a candidate: tested, not run in the game (Q39).
 - Escape while the camera is still swinging round, before the gate opens: tested, not run in the game (Q41).
 - The name box's order of two releases in one frame, and a park whose global.sam will not load: tested only (Q42).
+- A lock taken on the last unit running its section whole: tested only. Nothing the stock park runs arrives there; the
+  one route is the Hot Pot with its capacity cut mid-ride, and it rests on `BUMP` being unbuilt (Q45).
 
 ## Numbers
 
@@ -95,23 +95,22 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1051**, 0 fail, 0 skip with the game | 2026-09-24, after Q44 |
-| Tests without the game | **468** ran, **583** skipped, of 1051 | 2026-09-24, after Q44 |
-| Build warnings | 123 | 2026-09-24, after Q44 |
+| Tests | **1052**, 0 fail, 0 skip with the game | 2026-09-24, after Q45 |
+| Tests without the game | **469** ran, **583** skipped, of 1052 | 2026-09-24, after Q45 |
+| Build warnings | 123 | 2026-09-24, after Q45 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-24 - The docs and memory audited for staleness.** Branch `alexah/133-audit-docs-and-memory`. Thirty-two agents
-read every memory file, both CLAUDE files and every page under `docs/` against the code, and each finding was put to a
-verifier. The memory folder went from eighteen files to eight, each under 300 lines; its open work became queue items
-and its decisions `docs/DECISIONS.md`. `VERIFYING.md` rule 91 was re-measured in the game and rewritten: a paused game
-still presents.
+**2026-09-24 - `CRIT_LOCK` is free (Q45).** Branch `alexah/134-crit-lock-is-free`. The VM charges an instruction after
+it runs, by the critical flag as it then stands, so a lock taken on the last unit runs its section in that turn; `rides`
+counts those as `lastunit`. Q11's walk rebuilt: 68 of 150 locks by every arm, 18 in Lost Kingdom, but 15 of those 18
+cannot happen with the world frozen inside a turn. In the jungle, fix and control both read `lastunit 0`, as predicted.
 
-**Earlier items.** Each ticked item's whole account is its entry in `docs/QUEUE.md`: `alexah/132` (Q44, a left park
-let go of), `131` (Q42), `130` (Q41), `129` (Q39), `128` (Q36), `126` (Q12), `125` (Q11), `124` (Q10), `123` (Q9), `122`
-(Q8), `121` (Q7), `120` (Q6), `119` (Q5), `118` (Q4), `115`-`116` (Q3), `117` (Q35), `109` (Q1, Q1b - the rider is
-still not photographed).
+**Earlier items.** Each ticked item's whole account is its entry in `docs/QUEUE.md`: `alexah/133` (the staleness
+audit, which read every doc and memory file against the code), `132` (Q44), `131` (Q42), `130` (Q41), `129` (Q39),
+`128` (Q36), `126` (Q12), `125` (Q11), `124` (Q10), `123` (Q9), `122` (Q8), `121` (Q7), `120` (Q6), `119` (Q5), `118`
+(Q4), `115`-`116` (Q3), `117` (Q35), `109` (Q1, Q1b - the rider is still not photographed).
 Before them, `114` let a player build a queue that joins the paths around it, `110` made a thing the save placed
 clickable anywhere on its footprint, and `112` decoded what authors an entrance's queue link.
 
