@@ -254,47 +254,46 @@ clips it loops carry **zero tracks**, so nothing on screen can move. That is why
 suffix-matching loop was only ever visible on the gate. **Do not read the silent crossing as a
 posing bug.**
 
-### The lobby island gate — driven by park entry
+### The lobby island gate — driven by the park-entry flight
 
-The gate idles shut and plays its opening clip **once**, when the player enters that park
-(`LobbyGate.Open`, called from the front end's `EnterPark`). It used to loop open/shut as a
-diagnostic, because nothing raised a park entry; that trigger now exists, so the loop is gone.
+The gate idles shut, opens **once** as the park-entry flight's camera finishes swinging round onto it, and
+shuts again if Escape cancels the flight after that. Both are the original's: the island's gate is a model
+instance of its own (`island+8`), and the camera's state 1 plays its M1 on arrival (`0x005e06e4`) while the
+cancel plays its M2 (`0x005e18ab`). See "Escape cancels the fly-in, and the gate is the flight's" below.
 
-**The original does not animate this gate at all**, and that is measured. Its whole entry beat is
-`IslandLobby_LeaveForPark` (`0x005e1e30`): set the lobby leaving, `IslandPanel_KeyPuffAndEnterSound`,
-then `FUN_004b8ec0`, which hands UI message **6**, with 0, to the island panel's own tree (`DAT_007cc4b4`) —
-a message `IslandPanel_Callback` does not handle, so it falls through to the default control procedure
-(`0x0065f6d1`), which makes it `UI_SetVisible( 0 )`: the panel is **hidden**, not destroyed, and message 6
-with 1 (`0x004b8ea0`) shows it again. The state-3 teardown behind it (`FUN_005d5cf0`, "choice 2 means play a park") only
-tears down. So the swing is **ours**, under `CLAUDE.md` rule 11, and is marked as a deviation at the
-call site.
+An earlier reading here said the original never animates this gate, from `IslandLobby_LeaveForPark` alone:
+its three steps - set the camera leaving, `IslandPanel_KeyPuffAndEnterSound`, and message **6** with 0 to the
+panel tree (`0x004b8ec0`), which hides the panel rather than destroying it - touch no gate. The clip is played
+later, by the camera, when the homing arrives.
 
 **Not every gate is a rotation animation.** Measured across all four, not inferred from the jungle's
-hinged pair — the model that cannot catch the mistake:
+hinged pair, which cannot show that a gate may open without turning:
 
-| gate | M1 carries | frames | movement ends | how it opens |
-|---|---|---|---|---|
-| `Jun_gate` | rotation 2 | 0–60 | 57 | two doors on hinges |
-| `Hal_gate` | rotation 2 (3 clips) | 0–600 | 60 | two rails; the clip runs 10× past the movement |
-| `Spa_gate` | rotation 1 | 0–100 | 60 | the hatch |
-| `Fan_gate` | **morph 2, rotation 0** | 0–100 | — | the worm; it gets no `MeshRotator` at all |
+| gate | M1 carries | keys cover | declares | movement ends | how it opens |
+|---|---|---|---|---|---|
+| `Jun_gate` | rotation 2 | 0–60 | 0–60 | 57 | two doors on hinges |
+| `Hal_gate` | rotation 2 (3 clips) | 0–600 | 0–60 | 60 | two rails; the keys run 10× past the span |
+| `Spa_gate` | rotation 1 | 0–100 | 0–100 | 60 | the hatch |
+| `Fan_gate` | **morph 2, rotation 0** | 0–100 | 0–100 | — | the worm; it gets no `MeshRotator` at all |
 
-So a gate is played for as long as it **moves**: the rotation movement's end where it has one, and
-the clip's own span otherwise. Taking the length from the rotator alone leaves fantasy with nought
-and its park loads with no animation; playing to `LastFrame` instead would hold a player entering
-Halloween World in the lobby for twenty seconds.
+Every gate's M2 is its M1 played backwards. The engine plays the span a clip **declares**, so each gate clip
+lasts two seconds for the jungle and hallow and 3.33 for fantasy and space, and the hallow keys past frame 60
+are never reached.
 
-The same "looped because nothing sequences it yet" stand-in still applies to the rest of the lobby:
-the Dino and the butterflies.
+The rest of the lobby's clips are still a stand-in: the Dino's and the butterflies' play on a loop
+because nothing sequences them yet (the original's isle clips are picked by the camera update's tail
+loop; see "Not sound").
 
-## The lobby camera has two modes, and only one of them is built
+## The lobby camera has two modes, and both are built
 
 `FUN_005e0470` is the whole lobby camera update. It branches at the top on whether anybody is
 playing: **no islands, or no player selected** (`FUN_0048bcd0()` → `+0x60 == -1`), **or no current
 island** (`[3] == 0`) takes the **attract** path; otherwise the **globe** state machine runs on `[5]`.
 
-OpenTPW builds neither. It orbits whichever island is on show and eases between them, which is
-`FUN_005e1210` — the shared tail both modes call — without either mode in front of it.
+OpenTPW builds both, branching on the same condition in `LobbyCameraMode.Update`: attract is `Attract`, and
+the island state machine is the orbit (state 0), `LeaveForPark` and `StepLeaving` (states 1 and 2, with the
+gate's M1 on arrival) and `CancelLeave` (`0x005e1890`), all in front of the shared `FUN_005e1210` ease. Not
+built: state 2's darkening of the screen (`LOBBY_FLY_IN_FADE`, `docs/QUEUE.md` Q61).
 
 ### The object
 
@@ -367,8 +366,8 @@ per-frame step. There is no swing and no jerk to find.
 | State `[5]` | What it does |
 |---|---|
 | 0 | Orbit advance, `angle += delta × SPINSPEED`, wrapped against 2π (`0x00702c18` = π) |
-| 1 | Homes the angle onto the island's own heading `island[+0x14] + π`, shortest way round, at `0.05 × delta`; on arrival calls `FUN_005d83f0(0,0)` and goes to 2 |
-| 2 | Locks that heading, then decays radius `[8]` at **0.07** and vertical `[9]` at **0.6** per delta — the `GLOBERADIUSOUT`→`GLOBERADIUSIN` pull-in — and when the radius falls below **8.0** calls vtable `+0x48` |
+| 1 | Homes the angle onto the island's own heading `island[+0x14] + π`, shortest way round, at `0.05 × delta`; on arrival plays the gate's M1 once (`FUN_005d83f0(0,0)` on `island+8`, `0x005e06e4`) and goes to 2 |
+| 2 | Locks that heading, then decays radius `[8]` at **0.07** and vertical `[9]` at **0.6** per delta — the `GLOBERADIUSOUT`→`GLOBERADIUSIN` pull-in — and when the radius falls below **8.0** calls vtable `+0x48`. It also darkens the screen as the radius closes (see "Escape cancels the fly-in") |
 
 `+0x48` is `__amsg_exit(0x19)` — MSVC's **pure virtual** stub — in this vtable, so the running object
 is a derived class that overrides it.
@@ -402,9 +401,9 @@ and the whole sequence above is what happens next. The park is asked for when th
 
 From SPINRADIUS 70 at 0.7 a second that is `ln(70/8) / 0.7` ≈ **3.1 s** of flying in, with the vertical
 offset collapsing about ten times faster. **So the original is not blank between Enter and the loading
-screen** — it swings the camera round onto the gate side and flies it into the island. `FUN_005d83f0`,
-called on the state transitions, is *not* a gate animation: it is `__thiscall` on the island and plays
-the ISLE model's clip 0 or 1, the same pair the update's tail loop picks between.
+screen** — it swings the camera round onto the gate side, opens the gate, and flies it into the island.
+`FUN_005d83f0`, called on the 1 → 2 transition, is `__thiscall` on the island's **gate** instance (`island+8`)
+and plays its M1 once; the tail loop's random pair is the isle's, `island+4`.
 
 ### The island keys wait for the fly-in, and the fly-in dies with the lobby
 
@@ -431,15 +430,8 @@ writes `[3]` only in the attract branch, which runs only with no islands, no pla
 game menu — which Escape cannot open during a leave (below) — and from `FrontEnd_Init` (`0x005d5bec`) when
 nobody is playing. Whether Enter can start a leave while those first slots are up is not decoded.
 
-**Escape during a leave cancels it.** `IslandLobby_OnKey` asks every active child's `+0x18` first and
-opens the game menu (`GameMenu_Open( 1 )`, `0x0048c830`) only if none answers. The island camera's `+0x18`,
-`0x005e1890`, answers whenever `+0x14` is 1 or 2: it puts the state to **0** (`0x005e18b0`) — from state 2
-it first replays the island's clip 1 (`0x005d83f0( 1, 0 )`) — shows the panel again (`0x004b8ea0`,
-`0x004b90f0`) and returns 1. States 0 and 1 reassign the radius and height from the settings every update,
-so the orbit's wanted point jumps straight back out, and the camera body eases out to it through
-`FUN_005e1210` as it always does. Once `+0x48` has run, the scene's choice is 2 and Escape cannot stop the
-park. **OpenTPW does not do this yet: its Escape opens the game menu over the
-flight (`docs/QUEUE.md` Q41).**
+**Escape during a leave cancels it**, and so the game menu cannot open over a flight. The route and the
+cancel are the next section's.
 
 **The leave state lives and dies with the camera.** The island camera is a heap object (0xe8 bytes, built
 by `g_FrontEnd`'s `+4`, `0x005e3dc0`, in `FrontEnd_Init`, which state 1 calls on every entry to the lobby)
@@ -459,10 +451,97 @@ level entry by that name (`0x00409480` on `0x786b68`), and sets the scene's choi
 camera: staying on island N`) and while held to one island, and the panel's arrows, its cursor keys and
 the bracket keys all ask through it. `ForgetIsland`, part of the lobby's unload, clears the whole leave.
 Confirmed in the game with a real `]` mid-flight. Which park is fixed at Enter in a closure, where the
-original reads it at arrival; the island keys cannot tell the two apart, but `SelectFirst` still can, reached
-mid-flight through the game menu that the original's Escape would have cancelled (`docs/QUEUE.md` Q41). The
-cursor keys act on the press where the original's act on the release, and Enter does not enter the park
-(Q42).
+original reads it at arrival; nothing a player can reach moves the island in flight, so the two cannot be
+told apart. The cursor keys act on the press where the original's act on the release, and Enter does not
+enter the park (Q42).
+
+### Escape cancels the fly-in, and the gate is the flight's
+
+Decoded 2026-09-23 for `docs/QUEUE.md` Q41: four decoders, each put to a refuter, every claim re-read in disassembly.
+
+**The route.** The lobby acts on Escape's **release** (`0x1000b`, key `0x1b`), never its press. The UI gives a key to one
+control only (`0x006698e6`): the focus if it is visible, else the last control a left press reached - never an
+accelerator, whose one table (`0x0077c4b8`) is End, Home, Up and Down. So with the game menu open the key is the
+menu's (`0x0048bd40` closes it; `MenuList_Show` took the focus, `0x00493197`), and with a message box open it is the
+box's (`UI_LoadModalTree` takes the focus, `0x0047ee67`), and neither reaches the lobby. Otherwise the lobby root's
+callback forwards it to `IslandLobby_OnKey` (`0x005e41c0`, g_FrontEnd's `+0x14`), which asks **every** active child's
+`+0x18` - no early exit, the answers ORed (`0x005e41d8`-`0x005e4201`) - and opens the game menu (`GameMenu_Open( 1 )`)
+only if none answered. In the island lobby the active children are the island camera and the advisor queue
+(`FrontEnd_Init`, `0x005d5b81`-`0x005d5c12`), and the queue's `+0x18` answers 0, so the camera decides.
+
+**The cancel, `0x005e1890`.** In state 1 or 2 it puts `+0x14` to 0 and returns 1; from state 2 it first plays clip 1 on
+`[[camera+0xc]+8]` (`0x005d83f0( 1, 0 )`, `0x005e18ab`). In every state, 0 included, it then shows the island panel
+(`0x004b8ea0`: message 6 with 1 to the panel tree, then the mail badge rule `0x004bbbd0`) and refreshes the panel's
+price and name for the island on show (`0x004b90f0`). In state 0 the panel is already visible, `UI_SetVisible` returns
+at once (`0x0065da13`) and it returns 0, so a plain Escape changes nothing and the menu opens.
+
+**What the show does.** The panel was hidden, so `UI_SetVisible( 1 )` sends `0x11` with 1 to `IslandPanel_Callback`,
+which runs `IslandPanel_Refresh` (`0x004b9340`): the key count is looked at again and the key sparkle (effect 97)
+started if the park is affordable - the leave's hide sent `0x11` with 0, which killed it (`0x004b8fa5`). `0x004b90f0`
+then spawns the sparkle only if none is running, so there is one.
+
+**What the cancel leaves alone, and why nothing more is needed.**
+- The orbit angle is **one field**, `+0x18`: state 0 advances it, state 1 homes that same field onto `island[+0x14] + pi`
+  (`0x005e06be`, `0x005e06cf`), and state 2 writes it every update (`0x005e04d5`). Nothing saves an angle at Enter, so
+  the orbit carries on from wherever the leave had turned it - the gate side, from state 2.
+- States 0 and 1 copy SPINSPEED, SPINRADIUS and VERTICALOFFSET into `+0x1c`, `+0x20` and `+0x24` every update
+  (`0x005e06fd`-`0x005e0724`), so the wanted point jumps straight back out and the body eases out to it at `0.1 x delta`
+  (`FUN_005e1210`); the aim was never moved.
+- Entering spends nothing: `IslandLobby_LeaveForPark` writes only `+0x14`, and `IslandLobby_EnterPark` only compares
+  `PlayerProgress_CountKeys` (`floor( T / 3 ) + [+0x20]`, `0x005af680`, which writes nothing) against the cost. The cue
+  (`Sound_PlayEffect( 0, [0x00803a48], 4, ... )`) and the puff (effect 98) keep no handle, and nothing stops them.
+- So Enter this park works again at once (`0x005e1ce0` tests `+0x14 == 0` first).
+
+**The gate is the flight's, and the original does animate it.** An island (`FUN_005dfa60`, 0x74 bytes, one per
+`ISLAND(` line of each park's lobby script) holds two model instances built by `0x005d8870`: its **isle** at `+4` and its
+**gate** at `+8` - the line's third and fourth names. Both are built with flags `0xc0` and differ only in how many
+animation channels they get, two for the isle and one for the gate: that argument reaches the role loader
+`FUN_00461f10` as its fifth, which sizes the model record as `0xfc + n x 0x38` (`0x00462520`), `0x38` being a channel.
+Every instance has an animation handle (`0x00463060`, `0x005d898c`), so both play. `0x005d83f0( entry, flags )` plays role-M entry `entry` (M1, M2, ...)
+on an instance through `0x004732a0( model, 5, entry, flags, 1.0, channel 0 )`; flags 0 plays it once, 1 loops it, and
+1.0 is the speed. It has exactly seven callers:
+
+| Caller | On | Plays |
+|---|---|---|
+| `0x005e06e4`, state 1's arrival | the gate, `+8` | M1 once - **the gate opens as the camera faces it** |
+| `0x005e18ab`, the island camera's cancel | the gate | M2 once - **it shuts again** |
+| `0x005e11f7`, the update's tail loop | the isle, `+4` | M1 or M2 at random, once, whenever it is idle |
+| `0x005e136a`, `0x005e237a`, `0x005e2683` | the gate | M2 once - the same cancel in the base camera and in a sibling class (`0x00702dd0`, not identified) |
+| `0x005d986b` | a flyer, probably | M1 looped |
+
+Measured in `lobby.wad`, every gate's M2 is its M1 backwards. A clip asked for while channel 0 is part-way through one is
+**queued** (one deferred clip, `0x0047334a`) and starts when that one ends; it starts at once when the channel is idle,
+finished or held at its end (`0x00473315`-`0x00473326`). The engine plays the span a clip **declares**, not the one its
+keys cover: 60 frames for the jungle's and hallow's gate clips (hallow's keys run to 600), 100 for fantasy's and space's,
+at 30 a second. So an Escape less than two seconds into the fly-in finds the jungle's gate still opening, and it opens
+fully before it shuts.
+
+**And the fly-in darkens the screen.** State 2 writes a target to the render camera's `+0x60` (`0x00f83778`, built in
+`FrontEnd_Init`): `clamp( (1 - (r - 8) / (SPINRADIUS - 8)) x 65536, 0, 65535 )` each update while the radius is 8 or more
+(`0x005e052f`-`0x005e05b4`), and `0x10000` just before `+0x48`. States 0 and 1 and the attract flight write 0. The render
+camera's update (`0x005d8cb0`) eases `+0x5c` toward it by an eighth of the gap per lobby pass (`SAR 3`, not scaled by
+the delta), and while it is above 0 sets bit `0x80000` of `0x008bcbc8` and writes a black colour with alpha
+`min( +0x5c >> 8, 255 )` to `0x008bd4e4`, which `FUN_00576a00` hands to the renderer's `+0x28` with the screen's size -
+a black rectangle over the view. The cancel does not touch it; the next state-0 update sets the target to 0 and it lifts
+over about 42 passes. **Not built** (`LOBBY_FLY_IN_FADE`, `docs/QUEUE.md` Q61).
+
+**Unsettled.**
+- Whether the engine's idle default replays a lobby gate's M1 by itself. `FUN_0044e410( 3 )` in the lobby loop calls
+  `FUN_00473c70( model, 0, 8 )` on every model with `[+0x14] != 0` and `!(+4 & 0x3000)`, which replays role 5 entry 0
+  when channel 0 has finished, unless `(model+4 & 0x8004) != 0`. The lobby instances' `+4` was not established
+  (`docs/QUEUE.md` Q63).
+- Whether a lobby channel holds a once-clip's last frame (the end-of-clip rule reads `model+4 & 0x18`).
+- Which lobby mode the sibling camera class `0x00702dd0` serves. It runs the same state machine (`0x005e22d0` calls
+  `0x005e0470` first) and its Enter opens a confirm dialog first (`0x005e26a0`, island `+0x70`).
+- Nothing here was observed in the running original.
+
+**OpenTPW.** `FrontEnd.MenuKey` leaves Escape to the game menu and to a modal window as the focus does, then asks
+`LobbyCameraMode.CancelLeave`, and opens the menu only if it did not answer; a cancel opens the island panel again,
+whose `Shown` looks at the keys. `CancelLeave` shuts the gate from state 2, carries the orbit on from the leave's angle,
+and clears the leave. The gate's M1 is played from `StepLeaving`'s arrival, not at Enter, and `LobbyGate` plays each clip
+once over its declared span, holds its last frame, and keeps one clip queued; the holding, and idling shut
+between the two calls, are our reading while the Unsettled points above are open. `IslandPanel.EnterPark` tests the camera's
+state, as `0x005e1ce0` does. Escape acts on the press, not the release (`docs/QUEUE.md` Q42).
 
 ### Island sound is one island at a time, and the previous one is stopped
 
@@ -511,8 +590,8 @@ proves the capture is the game's own mix. See `LobbyAudio.KeepPlaying`.
 
 They call `FUN_004732a0` / `FUN_00473f50` over the handle table at `DAT_007a4610` — the **animation**
 player, not audio. The tail loop of `FUN_005e0470` walks every island and, where its animation is not
-playing, starts a random one of two clips. That is the ISLE's clips 0/1, and it is the only place the
-lobby sequences an island's animation.
+playing, starts a random one of two clips. That is the isle's M1 or M2 (`island+4`). The gate (`island+8`) is
+played only by the park-entry flight and its cancel - see "Escape cancels the fly-in".
 
 ## Park names and the locale tables
 

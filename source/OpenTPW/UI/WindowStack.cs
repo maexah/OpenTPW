@@ -15,7 +15,8 @@ namespace OpenTPW.UI;
 /// The game menu (0x0048c830), the message box (0x0047f020) and the options screen (0x004a3a30) are the
 /// same functions in the lobby and in a park, and keys reach a window the same way in both - through the
 /// box it is typing into, or the control last clicked (0x006698e6). Only Escape with nothing to type into
-/// is the scene's: the lobby opens its game menu on it (0x005e41c0), and a park hands it to its key
+/// is the scene's: the lobby asks its island camera first, which cancels a flight into a park, and opens
+/// its game menu only if nothing answered (0x005e41c0; see FrontEnd.MenuKey), and a park hands it to its key
 /// bindings (0x0040c4d0) - see <see cref="EscapeWithoutFocus"/>. Here a stack is made with each scene's
 /// HUD, and what should outlive a scene - the meshes, fonts and sounds its windows use - is cached apart
 /// from it.

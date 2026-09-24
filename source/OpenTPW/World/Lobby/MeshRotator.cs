@@ -90,16 +90,13 @@ public class MeshRotator
 
 	/// <summary>
 	/// How long clip <paramref name="clip"/> takes to finish moving, in seconds - the span
-	/// <see cref="Update"/> gives it before moving on to the next, and what a caller playing one clip
-	/// itself should play it over. Nought for a clip this rotator does not carry.
-	///
-	/// <para>
-	/// <b>This is the movement's length, not the clip's.</b> See <see cref="MotionEnd"/>: hallow's gate
-	/// keeps going for another nine seconds after its doors have finished swinging, so playing it to
-	/// <see cref="AnimationFile.LastFrame"/> would hold a park entry open on a gate that had stopped
-	/// moving - and end on a pose its own closing clip never starts from.
-	/// </para>
+	/// <see cref="Update"/> gives it before looping on to the next (see <see cref="MotionEnd"/>), not the clip's own
+	/// length. Nought for a clip this rotator does not carry.
 	/// </summary>
+	/// <remarks>
+	/// Dead by CODE: nothing calls it. A caller that plays one clip itself plays the span the clip declares, as the
+	/// engine does - see <see cref="LobbyGate.PlaySeconds"/>.
+	/// </remarks>
 	public float ClipSeconds( int clip )
 		=> clip >= 0 && clip < _animations.Length ? Duration( clip ) : 0f;
 

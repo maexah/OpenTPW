@@ -98,9 +98,9 @@ public sealed class LobbyModel
 	///
 	/// <para>
 	/// Kept so that a caller can sequence them itself through <see cref="Pose"/>, rather than looping
-	/// through them with <see cref="Update"/>. <see cref="LobbyGate"/> is the one that does: a gate idles
-	/// on clip 0's first frame and swings through that one clip when a park is entered, where playing
-	/// them on a loop opens and shuts it for ever.
+	/// through them with <see cref="Update"/>. <see cref="LobbyGate"/> is the one that does: its gate idles
+	/// shut, plays M1 as the park-entry flight homes onto it, and plays M2 when Escape cancels the flight,
+	/// queued behind M1 if that is still playing.
 	/// </para>
 	/// </summary>
 	public IReadOnlyList<AnimationFile> Clips { get; } = Array.Empty<AnimationFile>();

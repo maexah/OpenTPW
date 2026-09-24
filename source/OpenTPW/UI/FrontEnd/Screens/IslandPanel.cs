@@ -54,7 +54,9 @@ namespace OpenTPW.UI;
 /// sfx and a burst of particles at the key, and sets the lobby leaving for the park. All four happen
 /// here, in that order, and the park is then built between frames rather than during one - see
 /// <see cref="Game.RequestParkLoad"/>. The cue is silent, because effect 4 ships with no samples at
-/// all; that is the shipped data and not a gap here.
+/// all; that is the shipped data and not a gap here. Escape while the camera is still on its way cancels
+/// the leave and brings this panel back (0x005e1890), and nothing was spent, so the park can be entered
+/// again at once.
 /// </para>
 /// <para>
 /// <b>View the online world</b> (0x005e1bd0) does nothing unless the game is online, and it never is
@@ -287,13 +289,10 @@ internal sealed class IslandPanel : UiWindow
 		if ( !_instantAction && _keysShown < island.KeysToEnter )
 			return;
 
-		// Pressed twice before the frame ends, the second press would tear the lobby down underneath
-		// the first one's park. The original guards this too: its handler sets the lobby leaving and
-		// everything after that is the state machine's.
-		if ( _leaving )
+		// The original tests the camera's state first (0x005e1ce0): nothing is entered while it is already on its
+		// way, and once Escape has cancelled that the panel is back and a press enters afresh.
+		if ( LobbyCameraMode.IsLeaving )
 			return;
-
-		_leaving = true;
 
 		Stack.Close( this );
 
@@ -318,28 +317,11 @@ internal sealed class IslandPanel : UiWindow
 
 		Log.Info( $"Front end: entering '{island.ParkName}'" );
 
-		// The gate swings open, the camera swings round onto it and flies in, and the park is asked for
-		// when the CAMERA arrives - not when the gate finishes and not when this panel closes.
-		//
-		// >>> AN EARLIER NOTE HERE SAID THE ORIGINAL DOES NOTHING AT ALL ON THIS PATH. IT WAS WRONG,
-		// AND IT WAS WRONG BY STOPPING AT THE FIRST OF FIVE STEPS. <<< 0x005e1e30 really is three calls -
-		// set the lobby leaving, IslandPanel_KeyPuffAndEnterSound, and a UI message 6 to this panel's own
-		// tree (0x007cc4b4) which IslandPanel_Callback does not handle, so the default procedure hides it. But
-		// the field it sets, +0x14, is param_1[5] in the camera update: the lobby camera's own STATE
-		// MACHINE, and 1 means "swing onto the island's heading". The camera then flies in, and below a
-		// radius of 8 it calls vtable +0x48, which sets the scene's choice to 2 - the very "choice 2 means
-		// play a park" the state-3 teardown returns. So closing the panel STARTS the beat. See
-		// LobbyCameraMode.LeaveForPark, which reproduces both states and their measured rates.
-		//
-		// The gate's swing is still ours under CLAUDE.md rule 11 - the original's gate never moves - but
-		// it now plays over the camera move the original does have, rather than standing in for nothing.
-		island.Gate.Open();
-
+		// 0x005e1e30 is three calls: set the camera leaving, the cue and the puff above, and message 6 to this panel's
+		// tree, which hides it. The camera then swings round onto the gate, opens it, flies in, and asks for the park
+		// when it arrives - see LobbyCameraMode.LeaveForPark. Escape before then cancels it and shows this panel again.
 		LobbyCameraMode.LeaveForPark( () => Game.RequestParkLoad( island.ThemeName ) );
 	}
-
-	/// <summary>Whether the lobby is already on its way to a park - see <see cref="EnterPark"/>.</summary>
-	private bool _leaving;
 
 	private static void ViewOnlineWorld() { }
 }

@@ -77,6 +77,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00471d32` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x00472f60` | | OpenTPW/World/Lobby/LobbyScript.cs OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x00472fdd` | | OpenTPW/World/Ride/AnimTimeControl.cs  |
+| `0x004732a0` | The animation trigger: plays entry N of role R on a model channel, once or looped, queued behind a clip still part-way through unless the flags carry `0x2` (`park.md`); the lobby's gate and isle reach it through `0x005d83f0` with role 5, M (`lobby.md`, "Escape cancels the fly-in") | OpenTPW/World/Lobby/LobbyGate.cs  |
 | `0x004732c2` | | OpenTPW/World/Ride/AnimTimeControl.cs  |
 | `0x0047337b` | | OpenTPW/World/Ride/AnimTimeControl.cs OpenTPW.Tests/RideScriptModelTests.cs  |
 | `0x004733b1` | | OpenTPW/World/Ride/RideAnimations.cs OpenTPW.Files/Formats/Model/AnimationFile.cs  |
@@ -154,6 +155,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004a6e40` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/NewPlayerDialog.cs OpenTPW/UI/FrontEnd/FrontEndLines.cs  |
 | `0x004b8b70` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x004b8ca0` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
+| `0x004b8ea0` | Shows the island panel again: message 6 with 1 to its tree, then the mail badge rule `0x004bbbd0` | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x004b8ee0` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x004b9340` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs OpenTPW/UI/FrontEnd/FrontEndLines.cs  |
 | `0x004b9840` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
@@ -379,11 +381,16 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005dd034` | | OpenTPW/World/LobbyCameraMode.cs  |
 | `0x005dfd2d` | Lobby camera constructor: the leave state `+0x14` set to 0 | OpenTPW/World/LobbyCameraMode.cs  |
 | `0x005e0470` | | OpenTPW/World/Lobby/LobbyWeather.cs OpenTPW/World/Weather/Lightning.cs  |
+| `0x005e052f` | Lobby camera state 2: writes the render camera's darkening target `+0x60` as the radius closes | OpenTPW/World/LobbyCameraMode.cs  |
+| `0x005e06e4` | Lobby camera state 1's arrival: plays the gate's M1 once (`0x005d83f0( 0, 0 )` on `island+8`) | OpenTPW/World/LobbyCameraMode.cs OpenTPW/World/Lobby/LobbyGate.cs  |
 | `0x005e1100` | | OpenTPW/World/Lobby/LobbyWeather.cs OpenTPW/World/Weather/Lightning.cs  |
 | `0x005e13fb` | | OpenTPW/World/LobbyCameraMode.cs  |
+| `0x005e1890` | The island camera's `+0x18`, Escape: cancels a leave (state 1 or 2 to 0) and shows the panel; answers 1 only when it cancelled | OpenTPW/World/LobbyCameraMode.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs OpenTPW.Tests/LobbyEscapeTests.cs  |
+| `0x005e18ab` | The cancel's gate clip: M2 once on `island+8`, from state 2 only | OpenTPW/World/Lobby/LobbyGate.cs  |
 | `0x005e1a44` | | OpenTPW/World/Lobby/LobbyAudio.cs  |
 | `0x005e1bd0` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x005e1cc0` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
+| `0x005e1ce0` | `IslandLobby_EnterPark`'s first test: the camera state `+0x14` is nought | OpenTPW/World/LobbyCameraMode.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x005e1e30` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs OpenTPW/World/Lobby/LobbyAudio.cs  |
 | `0x005e1e50` | The fly-in's arrival (`+0x48`): takes the park from the current island, sets the scene's choice to 2 | OpenTPW/World/LobbyCameraMode.cs  |
 | `0x005e1ee0` | Island arrow handler, **next** (`+0x38`): refuses while the camera is leaving (`+0x14`), then in Instant Action; `lobby.md` "The island keys wait for the fly-in" | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs OpenTPW/World/LobbyCameraMode.cs  |
@@ -392,7 +399,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005e1fa0` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/World/LobbyCameraMode.cs  |
 | `0x005e3210` | | OpenTPW/World/Lobby/LobbyAudio.cs  |
 | `0x005e4140` | | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
-| `0x005e41c0` | | OpenTPW/UI/WindowStack.cs OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
+| `0x005e41c0` | `IslandLobby_OnKey`: on Escape's release asks every active child's `+0x18`, and opens the game menu only if none answered | OpenTPW/UI/WindowStack.cs OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x005e4207` | | OpenTPW/UI/UiWindow.cs OpenTPW/World/Level.cs OpenTPW/Global/GameClock.cs  |
 | `0x005e791b` | | OpenTPW.Files/Formats/Sign/SignFile.cs  |
 | `0x005ec3d2` | | OpenTPW.Files/Formats/Sign/SignFile.cs  |
@@ -419,7 +426,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0066781a` | | OpenTPW/UI/UiControl.cs  |
 | `0x00667833` | | OpenTPW/UI/UiControl.cs  |
 | `0x00668820` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
-| `0x006698e6` | | OpenTPW/UI/WindowStack.cs  |
+| `0x006698e6` | The UI queue pop: hands each key message to one control only - the focus if visible, else the last pressed | OpenTPW/UI/WindowStack.cs OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x0066a1b0` | | OpenTPW/UI/UiControl.cs  |
 | `0x0066a1e8` | | OpenTPW/UI/UiControl.cs  |
 | `0x0066a295` | | OpenTPW/UI/UiControl.cs  |

@@ -104,8 +104,8 @@ public sealed class LobbyIsland : Entity
 			textureOverrides: sign );
 
 		// An island brings its gate with it, the way a park's script names both models on one
-		// line. Kept rather than dropped because entering this park swings it open - see
-		// <see cref="LobbyGate.Open"/> and the front end's EnterPark.
+		// line. Kept rather than dropped because the park-entry flight opens it, and Escape shuts it
+		// again - see <see cref="LobbyGate"/>.
 		Gate = new LobbyGate( Position, themeName, sign );
 
 		// ...and whatever its script says flies around it: ten of each butterfly for the jungle,

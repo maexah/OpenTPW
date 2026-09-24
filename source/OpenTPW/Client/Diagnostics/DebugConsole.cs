@@ -383,6 +383,36 @@ public static class DebugConsole
 				Reply( State() );
 				break;
 
+			// Where a control of an open window is on screen, in window pixels, by its id in hex - so that a harness
+			// can `click` the middle of a button rather than work out the virtual screen's anchoring for itself. A pure
+			// getter.
+			case "control":
+				if ( parts.Length < 2 || !int.TryParse( parts[1].Replace( "0x", "" ), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var controlId ) )
+				{
+					Reply( "control: control <id in hex>" );
+					break;
+				}
+
+				if ( Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault()?.Windows
+					.Select( window => FindControl( window.Root, controlId ) ).FirstOrDefault( found => found != null ) is not { } control )
+				{
+					Reply( $"control: no open window holds 0x{controlId:x}" );
+					break;
+				}
+
+				var at = control.Pixels;
+				Reply( $"control 0x{controlId:x} at ({at.X:F0},{at.Y:F0}) size ({at.Width:F0},{at.Height:F0}) "
+					+ $"middle ({at.X + (at.Width / 2f):F0},{at.Y + (at.Height / 2f):F0})" );
+				break;
+
+			// The windows open in the interface, back to front - the front one last. A pure getter, and the lobby's
+			// only way to say whether the island panel or the game menu is up.
+			case "windows":
+				Reply( Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault() is { } shown
+					? $"windows: {(shown.Windows.Count == 0 ? "none" : string.Join( ", ", shown.Windows.Select( window => window.GetType().Name ) ))}"
+					: "windows: no window stack" );
+				break;
+
 			case "volume":
 				if ( parts.Length > 1 )
 					Audio.MasterVolume = Argument( 1, Audio.MasterVolume );
@@ -474,10 +504,9 @@ public static class DebugConsole
 				Reply( $"entering {(parts.Length > 1 ? parts[1].ToLowerInvariant() : "jungle")}" );
 				break;
 
-			// The front end's own park entry, which `park` above deliberately skips: the island on
-			// show has its gate swung open, and the park is asked for once the doors have finished.
-			// The same two calls IslandPanel.EnterPark makes, so that the swing can be watched
-			// without having to drive the interface.
+			// The front end's own park entry, which `park` above deliberately skips: the camera leaves for the
+			// island on show and the park is asked for when it arrives, so that the flight can be watched
+			// without having to drive the interface. The panel's Enter this park is the player's route.
 			case "enter":
 				if ( LobbyCameraMode.CurrentIsland is not { } entering )
 				{
@@ -485,15 +514,11 @@ public static class DebugConsole
 					break;
 				}
 
-				// Replied before the gate is opened, because a gate with no clip to play hands the
-				// park load straight on and the scene is gone by the next line.
-				Reply( $"opening {entering.ParkName}'s gate" );
+				Reply( $"leaving for {entering.ParkName}: the camera swings onto its gate, opens it and flies in" );
 
-				// The same two calls IslandPanel.EnterPark makes, in the same order: the gate swings
-					// (ours) while the camera swings onto it and flies in (the original's), and the park
-					// is asked for when the CAMERA arrives, not when the gate finishes.
-					entering.Gate.Open();
-					LobbyCameraMode.LeaveForPark( () => Game.RequestParkLoad( entering.ThemeName ) );
+				// The call IslandPanel.EnterPark ends with, without the panel: the camera swings onto the gate,
+				// opens it, flies in, and asks for the park when it arrives. Escape cancels it as it cancels theirs.
+				LobbyCameraMode.LeaveForPark( () => Game.RequestParkLoad( entering.ThemeName ) );
 				break;
 
 			case "lobby":
@@ -1533,7 +1558,7 @@ public static class DebugConsole
 			// How far through swinging onto the gate and flying into it the camera is. A pure getter,
 			// and the only way to see the park-entry move at all: it finishes by loading the park, so
 			// by the time anything else could be asked the lobby is gone.
-			+ $"{LobbyCameraMode.LeaveDescription()} "
+			+ $"{LobbyCameraMode.LeaveDescription()} gate={island?.Gate.Describe()} "
 			+ $"clock={(Time.Paused ? "paused" : "running")} stepping={Time.StepFrames} "
 			+ $"game={(GameClock.Paused ? "paused" : "running")} ticks={GameClock.Ticks} "
 			+ $"day={GameCalendar.Days} season={GameCalendar.Season} date={GameCalendar.Now:yyyy-MM-dd} "
@@ -1549,6 +1574,24 @@ public static class DebugConsole
 			+ $"cam={Camera.Position.X:F0},{Camera.Position.Y:F0},{Camera.Position.Z:F0} "
 			+ $"rainy={script?.Rainy} lightning={script?.Lightning} "
 			+ $"strikes/s={script?.StrikesPerSecond:F3} flyers={script?.FlyingMeshes.Count}";
+	}
+
+	/// <summary>The control with <paramref name="id"/> in the tree under <paramref name="control"/>, or null - for `control`.</summary>
+	private static UI.UiControl? FindControl( UI.UiControl? control, int id )
+	{
+		if ( control == null )
+			return null;
+
+		if ( control.Id == id )
+			return control;
+
+		foreach ( var child in control.Children )
+		{
+			if ( FindControl( child, id ) is { } found )
+				return found;
+		}
+
+		return null;
 	}
 
 	private static void Reply( string message )

@@ -409,8 +409,7 @@ public class LobbyCameraMode : CameraMode
 	/// <paramref name="whenArrived"/> - which is how a park entry waits for the camera.
 	///
 	/// <para>
-	/// <b>This is the original's, and an earlier reading that said the original does nothing here was
-	/// wrong because it stopped at the first of five steps.</b> <c>IslandLobby_EnterPark</c>
+	/// <b>This is the original's.</b> <c>IslandLobby_EnterPark</c>
 	/// (<c>0x005e1cc0</c>, vtable <c>+0x40</c>) checks the keys and calls <c>+0x44</c>,
 	/// <c>IslandLobby_LeaveForPark</c> (<c>0x005e1e30</c>) - which sets the lobby's <c>+0x14</c> to
 	/// <b>1</b>, plays the key puff and hides the panel. That field is <c>param_1[5]</c> in the camera
@@ -418,7 +417,8 @@ public class LobbyCameraMode : CameraMode
 	/// not the end of the beat, it is the start of it:
 	/// </para>
 	/// <list type="number">
-	/// <item>state 1 turns the orbit onto the island's heading at <see cref="HomingRate"/>, then sets 2;</item>
+	/// <item>state 1 turns the orbit onto the island's heading at <see cref="HomingRate"/>, then plays the gate's
+	/// opening clip and sets 2;</item>
 	/// <item>state 2 locks that heading and decays the radius and the vertical offset
 	/// (<see cref="RadiusDecay"/>, <see cref="VerticalDecay"/>) - the camera flies in;</item>
 	/// <item>below <see cref="ArrivedRadius"/> it calls vtable <c>+0x48</c>, which the island lobby
@@ -427,15 +427,15 @@ public class LobbyCameraMode : CameraMode
 	/// teardown - <i>returns</i> that field, which is the documented "choice 2 means play a park".</item>
 	/// </list>
 	/// <para>
-	/// So the park loads when the camera arrives, not when the panel goes. The gate swinging open
-	/// alongside it is still ours - see <see cref="LobbyGate"/>.
+	/// So the park loads when the camera arrives, not when the panel goes. Escape before then cancels
+	/// the whole of it - see <see cref="CancelLeave"/>.
 	/// </para>
 	/// <para>
 	/// <b>Which park</b> is the caller's, fixed here in <paramref name="whenArrived"/>, where the original reads
-	/// its current island at arrival (<c>0x005e1e50</c>). The island keys cannot move the island in flight - see
-	/// <see cref="Step"/> - and a lobby that ends mid-flight forgets the closure (<see cref="ForgetIsland"/>). The
-	/// one mover left is <see cref="SelectFirst"/>, which a player reaches mid-flight only through the game menu
-	/// Escape opens over it; the original's Escape cancels the flight instead (<c>docs/QUEUE.md</c> Q41).
+	/// its current island at arrival (<c>0x005e1e50</c>). Nothing moves the island in flight: the island keys are
+	/// refused (<see cref="Step"/>), Escape cancels the flight rather than opening the game menu whose Select New
+	/// Player would reach <see cref="SelectFirst"/>, and a lobby that ends mid-flight forgets the closure
+	/// (<see cref="ForgetIsland"/>).
 	/// </para>
 	/// </summary>
 	internal static void LeaveForPark( Action whenArrived )
@@ -465,10 +465,17 @@ public class LobbyCameraMode : CameraMode
 				_leaveRadius = settings.SpinRadius;
 				_leaveVertical = settings.VerticalOffset;
 				_leaving = Leaving.FlyingIn;
+
+				// The gate's M1, once, as the camera faces it (0x005e06e4).
+				CurrentIsland?.Gate.Open();
 			}
 
 			return _leaveAngle;
 		}
+
+		// State 2 also darkens the screen as the radius closes on 8 (the render camera's +0x60, 0x005e052f), which
+		// nothing here draws yet.
+		Unimplemented.Report( "LOBBY_FLY_IN_FADE" );
 
 		_leaveRadius = Decayed( _leaveRadius, RadiusDecay, Time.Delta );
 		_leaveVertical = Decayed( _leaveVertical, VerticalDecay, Time.Delta );
@@ -486,6 +493,48 @@ public class LobbyCameraMode : CameraMode
 		}
 
 		return GateHeading;
+	}
+
+	/// <summary>
+	/// Whether the camera is on its way to a park - the original's state <c>+0x14</c> not being nought, which Enter
+	/// this park tests first (<c>0x005e1ce0</c>).
+	/// </summary>
+	internal static bool IsLeaving => _leaving != Leaving.No;
+
+	/// <summary>
+	/// Escape while the camera is leaving for a park: the island camera's <c>+0x18</c> (<c>0x005e1890</c>), which the
+	/// lobby's key handler asks before it will open the game menu.
+	///
+	/// <para>
+	/// While leaving it puts the camera back in orbit and answers true, which keeps the menu shut; the front end then
+	/// shows the island panel again. From state 2, flying in, it first plays the gate's shutting clip, since state 1's
+	/// arrival has opened it; from state 1 no clip has played. Nothing else the leave did is undone, because nothing
+	/// else needs it: the orbit carries on from the angle the leave turned it to - the original's orbit and its
+	/// homing are one field, <c>+0x18</c> - and the radius and height go back to the settings on the next frame, so
+	/// the camera eases back out as it eases anywhere. In orbit it answers false and the menu opens.
+	/// </para>
+	/// </summary>
+	/// <returns>Whether there was a leave to cancel.</returns>
+	internal static bool CancelLeave()
+	{
+		if ( _leaving == Leaving.No )
+			return false;
+
+		if ( _leaving == Leaving.FlyingIn )
+			CurrentIsland?.Gate.Shut();
+
+		Log.Info( $"Lobby camera: Escape cancelled the leave for a park while {_leaving}, at angle {_leaveAngle:F3} - "
+			+ $"back to orbiting island {IslandIndex}" );
+
+		_orbitTime = _leaveAngle / SpinSpeed;
+
+		_leaving = Leaving.No;
+		_whenArrived = null;
+		_leaveAngle = 0f;
+		_leaveRadius = 0f;
+		_leaveVertical = 0f;
+
+		return true;
 	}
 
 	/// <summary>

@@ -7,7 +7,8 @@ namespace OpenTPW.UI;
 /// <para>
 /// The original builds the same widgets twice. GameMenu_Open (0x0048c830) branches to GameMenu_BuildLobby
 /// (0x0048c600) or GameMenu_BuildPark (0x0048c150) on one menu list, and Escape reaches it by a different
-/// road in each scene: the lobby's key handler opens it outright (0x005e41c0), while a park hands the key
+/// road in each scene: the lobby's key handler opens it unless its island camera cancels a flight into a
+/// park instead (0x005e41c0), while a park hands the key
 /// to the binding tables built in FUN_0040cb80 - game action 0 first closes the staff locator or installs
 /// the idle mode over whatever is held, and only failing that does the shortcut action 0 "menu"
 /// (0x0040c4d0) open it. Here both roads are <see cref="WindowStack.EscapeWithoutFocus"/>.

@@ -145,9 +145,8 @@ public class LobbyModelAnimationTests
 			$"visibility {clip.VisibilityTracks.Count}, frames {clip.FirstFrame}-{clip.LastFrame}";
 
 	/// <summary>
-	/// <b>Every one of the four gates ships an opening clip that moves something</b> - which is what lets
-	/// <see cref="LobbyGate"/> idle on clip 0 and play through it as a park is entered, rather than
-	/// looping the pair for ever.
+	/// <b>Every one of the four gates ships an opening clip that moves something</b> - which is what
+	/// <see cref="LobbyGate"/> plays when the park-entry flight homes onto the gate.
 	///
 	/// <para>
 	/// <b>Across all four, and that is the point rather than thoroughness for its own sake.</b> The
@@ -185,80 +184,42 @@ public class LobbyModelAnimationTests
 	}
 
 	/// <summary>
-	/// <b>A gate is played for as long as it actually moves, and the two are not the same number.</b>
-	/// A park entry waits for its gate, so the wait has to come from the movement and not from the file:
-	/// hallow's M1 shuts the gate again and swings it open the other way over another nine seconds, and
-	/// playing to <see cref="AnimationFile.LastFrame"/> would hold the player in the lobby watching a
-	/// gate that had already stopped.
+	/// <b>The four gates' opening clips, measured</b>: how many tracks turn and morph, the frame their keys end on,
+	/// the frame their movement ends on - and the span each <i>declares</i>, which is what the engine plays and so
+	/// what <see cref="LobbyGate"/> plays (<see cref="LobbyGate.PlaySeconds"/>).
 	///
 	/// <para>
-	/// This goes through <c>LobbyGate.SwingSeconds</c>, which is what the gate itself takes its length
-	/// from, rather than asserting the files - the same reason the tests above go through
-	/// <c>LoadAnimations</c>. The rotation bound is asserted only for the gates that rotate, because
-	/// <c>MeshRotator.MotionEnd</c> walks rotation tracks and answers <c>LastFrame</c> where there are
-	/// none, which is a measurement of nothing.
+	/// Hallow is the one the declared span matters for: its keys run to 600 but the clip declares 60, so a gate timed
+	/// by its keys would play ten times too long. <c>MeshRotator.MotionEnd</c> answers <c>LastFrame</c> where there is
+	/// no rotation track, which is why fantasy's movement reads 100 - a measurement of nothing, kept only so the table
+	/// says what the rotator sees.
 	/// </para>
 	/// </summary>
 	[TestMethod]
-	public void EveryGateIsPlayedForAsLongAsItMoves()
+	public void EveryGatesOpeningClipIsPlayedOverTheSpanItDeclares()
 	{
-		// Measured off the shipped archives, gate by gate: rotation tracks, morph tracks, the frame the
-		// clip ends on, and the frame its MOVEMENT ends on.
-		(string Gate, int Rotation, int Morph, int LastFrame, int MotionEnd)[] measured =
+		(string Gate, int Rotation, int Morph, int LastFrame, int MotionEnd, int Declared)[] measured =
 		[
-			("Jun", 2, 0,  60,  57),
-			("Hal", 2, 0, 600,  60),
-			("Spa", 1, 0, 100,  60),
-			("Fan", 0, 2, 100, 100)
+			("Jun", 2, 0,  60,  57,  60),
+			("Hal", 2, 0, 600,  60,  60),
+			("Spa", 1, 0, 100,  60, 100),
+			("Fan", 0, 2, 100, 100, 100)
 		];
 
-		foreach ( var (gate, rotation, morph, lastFrame, motionEnd) in measured )
+		foreach ( var (gate, rotation, morph, lastFrame, motionEnd, declared) in measured )
 		{
 			var opening = LobbyModel.LoadAnimations( $"lobby/terrain/{gate}_gate.md2" )[0];
 
 			Assert.AreEqual( rotation, opening.RotationTracks.Count, $"{gate}_gateM1 - {Shape( opening )}" );
 			Assert.AreEqual( morph, opening.MorphTracks.Count, $"{gate}_gateM1 - {Shape( opening )}" );
 			Assert.AreEqual( lastFrame, opening.LastFrame, $"{gate}_gateM1 - {Shape( opening )}" );
-
-			// Hallow is the one that matters: its clip runs ten times past the point its rails stop,
-			// so a gate played to LastFrame would hold the player in the lobby for twenty seconds.
-			// Fantasy's 100 is MotionEnd answering LastFrame because it walks rotation tracks and
-			// there are none - a measurement of nothing, which is why the rule below does not use it.
 			Assert.AreEqual( motionEnd, MeshRotator.MotionEnd( opening, opening ),
 				$"{gate}_gateM1's movement ends here, in a clip running to {opening.LastFrame}" );
+
+			Assert.AreEqual( 0, opening.DeclaredFirstFrame, $"{gate}_gateM1 declares a start of nought" );
+			Assert.AreEqual( declared, opening.DeclaredLastFrame, $"{gate}_gateM1 declares this end" );
+			Assert.AreEqual( declared / AnimationFile.FramesPerSecond, LobbyGate.PlaySeconds( opening ), 0.001f,
+				$"{gate}_gateM1 is played over the span it declares" );
 		}
-	}
-
-	/// <summary>
-	/// <b>The rule <see cref="LobbyGate"/> takes its opening length from</b>, which is the part the
-	/// measurements above only justify. A turning gate is played for as long as it turns; one that
-	/// turns nothing but morphs - fantasy's worm - is played over its clip's own span; and a clip that
-	/// moves nothing this model can play is no opening at all, so the park stays reachable.
-	///
-	/// <para>
-	/// <b>Written because the shape tests are hollow against the fix.</b> Taking the length from the
-	/// rotator alone left fantasy's gate with nought and let its park load with no animation, and every
-	/// assertion about the files stays green through that mistake. This one does not.
-	/// </para>
-	/// </summary>
-	[TestMethod]
-	public void AGateThatTurnsNothingIsStillPlayedForAsLongAsItMorphs()
-	{
-		var fantasy = LobbyModel.LoadAnimations( "lobby/terrain/Fan_gate.md2" )[0];
-		var jungle = LobbyModel.LoadAnimations( "lobby/terrain/Jun_gate.md2" )[0];
-
-		Assert.AreEqual( 100f / AnimationFile.FramesPerSecond,
-			LobbyGate.SwingSeconds( null, morphs: true, fantasy ), 0.001f,
-			"fantasy turns nothing, so its worm is played over the span its clip declares" );
-
-		Assert.AreEqual( 57f / AnimationFile.FramesPerSecond,
-			LobbyGate.SwingSeconds( 57f / AnimationFile.FramesPerSecond, morphs: false, jungle ), 0.001f,
-			"a turning gate is played for as long as it turns" );
-
-		Assert.AreEqual( 0f, LobbyGate.SwingSeconds( null, morphs: false, jungle ), 0.001f,
-			"a clip that moves nothing is no opening, and must not hold the park up" );
-
-		Assert.AreEqual( 0f, LobbyGate.SwingSeconds( null, morphs: true, null ), 0.001f,
-			"and neither is no clip at all" );
 	}
 }

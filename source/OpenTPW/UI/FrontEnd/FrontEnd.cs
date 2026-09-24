@@ -14,8 +14,9 @@ namespace OpenTPW.UI;
 /// </para>
 /// <para>
 /// Escape brings up the <see cref="GameMenu"/> over whichever of those is showing, and takes it away
-/// again. Its Options opens the <see cref="OptionsScreen"/>, which puts the front end's window away
-/// until it closes, and its Select New Player brings the player slots back.
+/// again - except while the camera is flying into a park, when it cancels the flight instead and brings
+/// the island panel back. The menu's Options opens the <see cref="OptionsScreen"/>, which puts the front
+/// end's window away until it closes, and its Select New Player brings the player slots back.
 /// </para>
 /// <para>
 /// Its windows open in the interface's <see cref="WindowStack"/>, which deals with the pointer and the
@@ -219,6 +220,8 @@ internal sealed class FrontEnd : Panel
 	/// </summary>
 	private void KeyHandedOver()
 	{
+		Log.Info( "Front end: the advisor hands over the golden key" );
+
 		UiSounds.GoldKeyHandedOver();
 		ParticleSystem.Current?.Spawn( (int)ParLib.P_EFFECT_Key, 90000, 0, 7000, owner: _islandPanel );
 		_islandPanel.ShowKeys();
@@ -259,10 +262,21 @@ internal sealed class FrontEnd : Panel
 	protected override void OnDelete() => Advisor.Current?.Hush();
 
 	/// <summary>
-	/// Escape, with no box to type into, as the stack hands it over. The lobby's key handler (0x005e41c0)
-	/// opens the game menu on it (GameMenu_Open with 1) unless it is already open, and the menu's handler
-	/// (0x0048bd40) closes it on the same key. Whether the original opens it over a message box or the
-	/// options screen was not established; here a modal window in front keeps Escape from it.
+	/// Escape, with no box to type into, as the stack hands it over.
+	///
+	/// <para>
+	/// With the game menu open the key is the menu's, whose handler (0x0048bd40) closes it, and with a message box
+	/// open it is the box's: the original gives a key to the control holding the focus alone (0x006698e6), and both
+	/// take the focus as they open. Whether the original's Escape reaches the lobby over the options screen was not
+	/// established; here any modal window in front keeps Escape from it. Otherwise the lobby's key handler (0x005e41c0) asks the island camera first -
+	/// which cancels a flight into a park and answers, see <see cref="LobbyCameraMode.CancelLeave"/> - and opens the
+	/// game menu (GameMenu_Open with 1) only if it did not. A cancel shows the island panel again (0x004b8ea0), which
+	/// looks at the player's keys as it comes into view.
+	/// </para>
+	/// <para>
+	/// The original acts on the key's release (message 0x1000b); this acts on the press, as the stack hands it over
+	/// (<c>docs/QUEUE.md</c> Q42).
+	/// </para>
 	/// </summary>
 	private void MenuKey( UiWindow? front )
 	{
@@ -274,6 +288,16 @@ internal sealed class FrontEnd : Panel
 
 		if ( front is { Modal: true } )
 			return;
+
+		if ( LobbyCameraMode.CancelLeave() )
+		{
+			// Only a player can have entered a park, so only a player's lobby has the panel to give back. The debug
+			// console can fly the camera in with nobody playing, and their lobby shows the player slots instead.
+			if ( Players.Roster.Current != null )
+				_stack.Open( _islandPanel );
+
+			return;
+		}
 
 		// GameMenu_BuildLobby starts its first choice five units down, where a park's starts at ten.
 		_stack.Open( new GameMenu( _stack, LobbyMenuChoices(), firstTop: 5 ) );

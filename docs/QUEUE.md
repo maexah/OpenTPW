@@ -494,21 +494,43 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
     and predicted them standing at the centre; they had already walked on. Read again paused, it held.
   - **Not confirmed on screen:** the Delete key and a sale's let-go (tested only); a right press over a panel, which
     here still arms the click (Q56). **Found:** Q56 to Q60.
-- [ ] **Q41. Escape during the park-entry fly-in opens the menu instead of cancelling the fly-in.** Found by
-  Q8's decode (`docs/exe/lobby.md`, "The island keys wait for the fly-in"). In the original, Escape while the
-  camera is leaving goes first to the island camera's `+0x18` (`0x005e1890`). That puts it back to orbit (from
-  state 2 it first replays the island's clip 1), shows the island panel again and swallows the key, so the
-  game menu does not open. Once `+0x48` has run, nothing stops the park. Read from the code, not yet run:
-  here `FrontEnd.MenuKey` opens the game menu over the flight, and the flight runs on under it and loads
-  the park; Select New Player in those seconds, then a slot, runs `SelectFirst`, which turns the camera to
-  Lost Kingdom while the park chosen at Enter loads - or the flight lands with nobody playing. Do not gate
-  `SelectFirst` (the original's `0x005e1fa0` has no gate); the cancel is what closes that route. Confirm:
-  Escape mid-flight; `state` reads `leave=No`, the panel is back, no menu, no park load; screenshot.
+- [x] **Q41. Escape during the park-entry fly-in cancels it.** Done 2026-09-23, `alexah/130-escape-cancels-the-fly-in`.
+  Decoded first (four decoders, each put to a refuter; `docs/exe/lobby.md`, "Escape cancels the fly-in, and the gate
+  is the flight's"). The lobby acts on Escape's release; a menu or message box in front takes the key; otherwise
+  `IslandLobby_OnKey` asks every active child's `+0x18` and opens the menu only if none answered. The island camera's
+  `0x005e1890` puts a leave back to orbit and shows the panel, from state 2 first playing clip 1 on `island+8` - which
+  is the **gate**, not the isle: state 1's arrival plays the gate's M1 (`0x005e06e4`), and `lobby.md` had the original
+  never animating it. Also found: the fly-in darkens the screen, and a cancel lifts it (Q61).
+  - Built: `LobbyCameraMode.CancelLeave`, the orbit carrying on from the leave's angle and the gate shut from state 2;
+    `FrontEnd.MenuKey` asks it after the menu and modal checks and gives the island panel back to a player;
+    `IslandPanel.EnterPark` tests the camera's state (`0x005e1ce0`) rather than a flag of its own. The gate opens at the
+    homing's arrival, not at Enter, and `LobbyGate` plays each clip once over its declared span with one clip queued.
+    Console `windows`, `control <id>` and `state`'s `gate=`; `LOBBY_FLY_IN_FADE` counted.
+  - **Proof:** 9 tests in `LobbyEscapeTests` and a declared-span test replacing two; 22 mutations, each predicted: 20
+    red and two green by prediction (the fade's counted report; Enter's camera test, unreachable mid-flight). **One
+    miss:** the bug back turned E8 red as well as E7 - its prediction was written before E8 existed. An 8-agent decode
+    and a 27-agent review, 18 of 23 findings real, all fixed. 1036 tests with the game, 462 ran and 574 skipped
+    without, 123 warnings.
+  - **Confirmed in the game**, `~/.cache/tpw-harnesses/q41confirm.py`: a throwaway player made at the slots, Enter this
+    park by the interface's own click, a real Escape through XTEST at radius 52.82, on `main` (`q41-control/`) and the
+    fix (`q41-fix/`). On `main` the menu opened over the flight (windows 0 to 1, frame mean 104.9 to 54.0), the flight
+    ran on to 26.12 and the jungle loaded under the menu. On the fix every prediction held: `Lobby camera: Escape
+    cancelled the leave for a park while FlyingIn, at angle 3.142`, `leave=No ... waiting=False`, `orbit=3.142`,
+    `gate=M1,playing,0.40/2.00,then=M2`, `windows: IslandPanel`, photographed with the price and the sparkle back; 180
+    frames on `cam=373,337,32` as simulated and the gate on M2; 600 more with no park asked for; the next Escape opened
+    the menu and the next closed it; Enter again loaded the jungle. One near miss: M2 read 1.38 against 1.40, the
+    single-precision frame the test also meets. `save/` unchanged in both runs; the run's player was deleted.
+  - **Not confirmed on screen:** Escape while the camera is still swinging round (tested only). **Found:** Q61 to Q63.
+  The item as written: `FrontEnd.MenuKey` opened the game menu over the flight, which ran on under it and loaded the
+  park; Select New Player in those seconds reached `SelectFirst`. Confirm: Escape mid-flight; `state` reads
+  `leave=No`, the panel is back, no menu, no park load; screenshot.
 - [ ] **Q42. The lobby's keys act on the press, and Enter does not enter the park.** Found by Q8's decode
   (`docs/exe/lobby.md`, "The island keys wait for the fly-in"). The original's lobby takes its keys on
   release (UI message `0x1000b`): the island camera's `0x005e2310` maps cursor Left and Right to previous and
   next, and Enter to Enter this park (`+0x40`, with its key test). Here `IslandPanel.Update` moves on the
-  press (`Input.KeysPressed`, a held key's repeats included) and nothing takes Enter. Open in the decode:
+  press (`Input.KeysPressed`, a held key's repeats included) and nothing takes Enter. Escape too: the lobby
+  cancels a fly-in or opens its menu on the release (`0x005e41c7`), and `FrontEnd.MenuKey` does both on the press,
+  said at the site (Q41). Open in the decode:
   whether a left button press on the lobby view (`0x10005`, also mapped to `+0x40`) reaches the camera,
   which depends on the root control's hit test. Confirm: hold Right, one island per release; Enter on an
   affordable island starts the fly-in; log lines and a screenshot.
@@ -645,10 +667,12 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   `Smoke = 2`, `SmallSmoke = 13`; `park.md:594-629` decodes the node and the per-tick push. Join the two
   halves. Confirm: screenshot the drinks shop with bubbles and the staff room with a staff member inside
   and smoke rising; log lines for both spawns.
-- [ ] **Q21. Entering a park: hide the front end, pace the gate.** `IslandPanel.EnterPark` (`:280-336`)
-  closes only the island panel and swings the gate at once. Hide the rest of the front end for the
-  fly-in; open the gate as the camera arrives. Confirm: screenshot burst from the click to the loading
-  screen.
+- [ ] **Q21. Entering a park: hide the front end for the fly-in.** `IslandPanel.EnterPark` closes only the
+  island panel, and the rest of the front end stays up while the camera flies in. Hide it for the flight, and
+  say what Escape's cancel (`FrontEnd.MenuKey`, `LobbyCameraMode.CancelLeave`) brings back - today only the
+  island panel. The gate half landed with Q41: the flight plays M1 as the homing ends and M2 on a cancel
+  (`docs/exe/lobby.md`, "Escape cancels the fly-in"), so do not re-pace it. Confirm: screenshot burst from the
+  click to the loading screen.
 
 ## D. Alexah's list: decode first, then build (two sessions each)
 
@@ -767,6 +791,26 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   job search runs there and then (`FUN_004da5b0`); here a mechanic goes idle like the rest, counted as
   `MECHANIC_PUT_DOWN_JOB_SEARCH`. Decode whether idle here reaches the same search a tick later, and what differs.
   Confirm: pick up a mechanic, put them down, `staff` on the next few ticks.
+- [ ] **Q61. The park-entry fly-in darkens the screen, and nothing here draws it.** Found by Q41's decode
+  (`docs/exe/lobby.md`, "Escape cancels the fly-in"). State 2 sets the render camera's `+0x60` to
+  `clamp( (1 - (r - 8) / (SPINRADIUS - 8)) x 65536, 0, 65535 )` (`0x005e052f`), states 0 and 1 set it to 0, and
+  `0x005d8cb0` eases `+0x5c` toward it by an eighth of the gap per lobby pass and draws a black rectangle over the
+  view with alpha `min( +0x5c >> 8, 255 )` (`0x008bd4e4`, drawn at `0x00576e54`). So the flight fades to black as it
+  closes on the gate, and a cancel lifts it. Counted as `LOBBY_FLY_IN_FADE`. The ease is per pass, not per second:
+  convert it through `Time.SmoothingFactor` and say so (rule 10). Confirm: `step` into the flight, screenshots at
+  three radii with mean brightness falling, then Escape and the brightness back within a second.
+- [ ] **Q62. What View the online world does offline. Decode first.** Found by Q41's decode. `IslandPanel_Callback`'s
+  case for button `0x1e0e9` (`0x004b8c18`-`0x004b8c2f`) calls the island camera's `+0x20`, its deactivate
+  (`0x005e1bd0`, which Ghidra names `IslandLobby_ViewOnlineWorld`), and then the online-world child's `+0x1c`, with no
+  online test read yet; `IslandPanel.ViewOnlineWorld` does nothing, saying the original does nothing offline. Decode
+  whether a test sits in front, and what the online child shows with no connection. Confirm: the button pressed,
+  `windows` and a screenshot.
+- [ ] **Q63. Does the engine's idle default play a lobby gate by itself? Decode first.** Found by Q41's decode. The
+  lobby loop's `FUN_0044e410( 3 )` calls `FUN_00473c70( model, 0, 8 )` on every model with `[+0x14] != 0` and
+  `!(+4 & 0x3000)`, and that replays role M entry 0 whenever channel 0 has finished, unless `(model+4 & 0x8004) != 0`.
+  If the lobby's gate instances pass, the original's gates open by themselves - at the start, and again after a
+  cancel's M2 - which would change what `LobbyGate` idles on. Decode the lobby instances' `+4` and `+0x14` (they are
+  built through `0x005d8870` with flags `0xc0`). Confirm: a test on the flags, and the gate's `state` over 30 s idle.
 
 ## E. Large
 
