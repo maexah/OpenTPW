@@ -71,6 +71,7 @@ public sealed class ParkRides : Entity
 	/// The scripts of the park currently loaded, or null outside one - the arrangement
 	/// <see cref="ParkObjects.Current"/> already uses, and needed for the same reason: something bought
 	/// after the park has loaded has to be given a script, and whoever builds it is not holding this.
+	/// Cleared as the park ends - see <see cref="OnDelete"/>.
 	/// </summary>
 	public static ParkRides? Current { get; private set; }
 
@@ -441,6 +442,18 @@ public sealed class ParkRides : Entity
 			$"; {Resumed} resumed where the save left them" +
 			(NotResumed > 0 ? $" and {NotResumed} did not" : "") +
 			$"; {ChannelsRestored} animation channels put back" );
+	}
+
+	/// <summary>
+	/// Lets go of <see cref="Current"/>, which reaches the whole of the level it was made in through
+	/// <see cref="Entity.Level"/> - its save, its running state and its interface - and would otherwise keep a left
+	/// park in memory through the lobby. An entity, so this runs in the entity pass of <see cref="Level.Unload"/>,
+	/// after an open ride window has written its settings through <see cref="Current"/> as the interface closed.
+	/// </summary>
+	protected override void OnDelete()
+	{
+		if ( Current == this )
+			Current = null;
 	}
 
 	/// <summary>The gate's command variable, by the name its own script declares it under.</summary>

@@ -71,10 +71,11 @@ public static class DebugConsole
 	}
 
 	/// <summary>
-	/// Every park save seen up, in the order they came, held WEAKLY so that watching one cannot be what
-	/// keeps it alive - see <see cref="Parks"/>.
+	/// Every park save seen up, in the order they came, with the hiring pool its level built, each held WEAKLY so
+	/// that watching one cannot be what keeps it alive - see <see cref="Parks"/>.
 	/// </summary>
-	private static readonly List<(int Number, string Theme, WeakReference<ParkWorld> Save)> _parks = [];
+	private static readonly List<(int Number, string Theme, WeakReference<ParkWorld> Save,
+		WeakReference<ParkStaffPool>? Pool)> _parks = [];
 
 	private static void Notice( Level? level )
 	{
@@ -87,7 +88,8 @@ public static class DebugConsole
 				return;
 		}
 
-		_parks.Add( (_parks.Count + 1, level.ThemeName, new WeakReference<ParkWorld>( save )) );
+		_parks.Add( (_parks.Count + 1, level.ThemeName, new WeakReference<ParkWorld>( save ),
+			level.StaffPool is { } pool ? new WeakReference<ParkStaffPool>( pool ) : null) );
 	}
 
 	/// <summary>
@@ -108,8 +110,11 @@ public static class DebugConsole
 	/// Each park save seen, alive or collected after a full blocking collection, and for one still alive
 	/// the static roots known to reach it: the level on show, <see cref="ParkState.Current"/>,
 	/// <see cref="ParkRides.Current"/> through the level its entity was made in, and the camcorder's edge
-	/// test. The collector's answer is the measurement; the named roots only say why, and one alive with
-	/// none of them named is held by something this does not know about.
+	/// test. Then the same of the hiring pool that park's level built, which reaches no save and so is asked
+	/// after separately: held by the level on show, by <see cref="ParkRides.Current"/> through the level its
+	/// entity was made in, or by <see cref="ParkStaffPool.Current"/>, "pool". The collector's answer is the
+	/// measurement; the named roots only say why, and one alive with none of them named is held by something
+	/// this does not know about.
 	/// </summary>
 	private static string Parks()
 	{
@@ -121,11 +126,11 @@ public static class DebugConsole
 		var alive = 0;
 		var each = new List<string>();
 
-		foreach ( var (number, theme, weak) in _parks )
+		foreach ( var (number, theme, weak, weakPool) in _parks )
 		{
 			if ( !weak.TryGetTarget( out var save ) )
 			{
-				each.Add( $"#{number} {theme} collected" );
+				each.Add( $"#{number} {theme} collected" + PoolOf( weakPool ) );
 				continue;
 			}
 
@@ -145,11 +150,35 @@ public static class DebugConsole
 			if ( ReferenceEquals( ParkCamcorderCameraMode.EdgeTestPark, save ) )
 				by.Add( "camcorder" );
 
-			each.Add( $"#{number} {theme} alive, held by {(by.Count > 0 ? string.Join( " ", by ) : "nothing named")}" );
+			each.Add( $"#{number} {theme} alive, held by {(by.Count > 0 ? string.Join( " ", by ) : "nothing named")}"
+				+ PoolOf( weakPool ) );
 		}
 
 		return $"parks seen {_parks.Count} alive {alive} heap={heap:F1}MB"
 			+ string.Concat( each.Select( line => $" | {line}" ) );
+	}
+
+	/// <summary>The hiring pool's half of a <see cref="Parks"/> line, after the collection that call has made.</summary>
+	private static string PoolOf( WeakReference<ParkStaffPool>? weak )
+	{
+		if ( weak == null )
+			return "";
+
+		if ( !weak.TryGetTarget( out var pool ) )
+			return "; its staff pool collected";
+
+		var by = new List<string>();
+
+		if ( ReferenceEquals( Level.Current?.StaffPool, pool ) )
+			by.Add( "level" );
+
+		if ( ReferenceEquals( ParkRides.Current?.Level?.StaffPool, pool ) )
+			by.Add( "rides" );
+
+		if ( ReferenceEquals( ParkStaffPool.Current, pool ) )
+			by.Add( "pool" );
+
+		return $"; its staff pool alive, held by {(by.Count > 0 ? string.Join( " ", by ) : "nothing named")}";
 	}
 
 	private static void Start()

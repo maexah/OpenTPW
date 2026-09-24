@@ -1085,7 +1085,8 @@ public class Level
 	/// Ends the level, in the order the original leaves its lobby (state 3). The interface goes first - the windows
 	/// close, and the front end empties the advisor's queue through his crying stop. Then every entity, in the
 	/// order they were made, which ends the lobby's sound and weather before the advisor himself. Then the camera
-	/// lets go of its island, every voice still sounding fades, and the particle system shuts down.
+	/// lets go of its island, every voice still sounding fades, the particle system shuts down, and a park's
+	/// running state goes last - see <see cref="ForgetRunningPark"/>.
 	///
 	/// Only between frames: nothing may update or draw a level while it ends, or be half way through a walk over
 	/// its entities.
@@ -1107,6 +1108,21 @@ public class Level
 
 		Audio.StopAll( StopAllSeconds );
 		ParticleSystem.Current?.Shutdown();
+
+		ForgetRunningPark();
+	}
+
+	/// <summary>
+	/// Lets go of the running park itself - its state and its hiring pool - which would otherwise hold a left park
+	/// in memory through the lobby. The last of <see cref="Unload"/>, after everything standing in the park has been
+	/// deleted, as the original destroys every thing before it frees the world the pool is part of and zeroes its
+	/// pointer (<c>0x004091b8</c>). See docs/exe/park-engine.md, "Leaving a park with something in the hand".
+	/// Apart from <see cref="Unload"/> only so a test can reach it.
+	/// </summary>
+	internal static void ForgetRunningPark()
+	{
+		ParkState.ForgetCurrent();
+		ParkStaffPool.ForgetCurrent();
 	}
 
 	/// <summary>

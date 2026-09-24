@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-09-23.
+Last updated: 2026-09-24.
 
 **This header names no branch and no sha, deliberately.** A line written inside the commit that moves
 the tip cannot name it, so every attempt went stale the instant it was written. Read the current state
@@ -17,6 +17,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
   orbiting from the gate side, the gate shuts, and the island panel comes back. **Every lobby key acts on its
   release** - the island keys, Enter this park and Escape - and **a left press on the lobby's view enters the park**.
 - Park: ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (5 of 6).
+  Leaving one lets go of all of it: nothing of a left park is held in the lobby.
 - Building and staffing: purchase menu and hire screen, both reachable from Buy. Things bought, sold,
   moved, carried; staff hired, fired, picked up, put down. **Selling or moving a thing puts its riders and queuers
   off where they stand**, and staff resting there get up. **A staff drop the park refuses keeps the
@@ -54,7 +55,6 @@ from the repository, which cannot lag: `git log --oneline -1`.
   on its press and F8 is not built (Q65); a disabled button still takes the pointer (Q66).
 - The `meter.wct` mapping behind the happiness gauge is wrong - the last fault Alexah found by playing.
 - Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
-- A left park stays in memory through the lobby, held by `ParkState.Current` and `ParkRides.Current` (Q44).
 - The VM charges `CRIT_LOCK` against a script's budget, so a section reached with one unit left runs over two turns,
   unlocked; the original runs it whole (Q45).
 - By a probe, not yet the game: the camcorder slips through a shut side at exactly 45 degrees, and is trapped at the
@@ -62,9 +62,9 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41 and Q42 are ticked.** Next is **Q44**: a left park
-stays in memory through the lobby. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46,
-Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66.
+`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42 and Q44 are ticked.** Next is **Q45**: the VM
+charges `CRIT_LOCK` against a script's budget. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11
+Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67.
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -88,20 +88,21 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1048**, 0 fail, 0 skip with the game | 2026-09-23, after Q42 |
-| Tests without the game | **465** ran, **583** skipped, of 1048 | 2026-09-23, after Q42 |
-| Build warnings | 123 | 2026-09-23, after Q42 |
+| Tests | **1051**, 0 fail, 0 skip with the game | 2026-09-24, after Q44 |
+| Tests without the game | **468** ran, **583** skipped, of 1051 | 2026-09-24, after Q44 |
+| Build warnings | 123 | 2026-09-24, after Q44 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-23 - The lobby's keys act on the release.** Branch `alexah/131-lobby-keys-on-the-release`, `docs/QUEUE.md`
-Q42. Decoded first: nothing in the original's lobby acts on a press; its root control hands every key-up to the island
-camera, and a left press on the bare view is Enter this park, on the press. Confirmed with real keys and a real button
-against a control on `main`, where a 1.55 s hold of Right made 25 moves; on the fix, one move at the release, and
-every prediction held. A miss on focus loss led to dropping any frame the focus left in. Filed Q64-Q66.
+**2026-09-24 - A left park is let go of.** Branch `alexah/132-a-left-park-is-let-go`, `docs/QUEUE.md` Q44. The
+rides let go of `ParkRides.Current` as they are deleted, and the running state and the hiring pool go last of
+`Unload`, in the original's order: every thing, then the world with the pool in it. Confirmed against a control with
+the three clears out: in the lobby after the jungle, `parks` read `#1 jungle collected; its staff pool collected`,
+where the control read it held by `state rides`. Filed Q67.
 
-**Earlier items, kept now only in the git log.** `alexah/130` let Escape cancel the fly-in (Q41, filing Q61-Q63);
+**Earlier items, kept now only in the git log.** `alexah/131` made the lobby's keys act on the release, and Enter
+enter the park (Q42, filing Q64-Q66); `130` let Escape cancel the fly-in (Q41, filing Q61-Q63);
 `129` let the hand go the original's ways (Q39, filing Q56-Q60); `128` let a sold thing's riders, queuers and resting
 staff go (Q36, filing Q50-Q55); `126` made four hollow tests fail with their fixes reverted (Q12, filing Q47-Q49);
 `125` landed the small fixes and capped a looping critical section (Q11, filing Q45-Q46); `124` let the camcorder

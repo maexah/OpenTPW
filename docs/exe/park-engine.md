@@ -664,15 +664,18 @@ On every call it reaches the world afresh, by three routes:
 Its only other data read is the thing array at `0x007cfb90`.
 
 The world is made at park load: `FUN_00407d80` in state 9 allocates `0x1da748` bytes and stores them at
-`0x00407dc8`. `FUN_00515660` (`0x00407de0`) then copies the world into `0x0080239c`, and world + `0x2d8` into
-`0x008023a0`. The world is destroyed on leaving: `FUN_00409180`, called at `0x0054ff91`, runs the teardown, frees
-it (`0x004091b0`) and zeroes `0x007cf83c` (`0x004091b8`). So the world a left park ran on does not outlive the lobby.
-The two copies each have that one writer and are never zeroed. They dangle through the lobby, keeping nothing
-alive, and are rewritten at the next load before anything can step.
+`0x00407dc8`. `FUN_00515660` (`0x00407de0`) then copies the world into `0x0080239c`, world + `0x2d8` into
+`0x008023a0`, and the pair {world, `0x1da748`} into `0x007cdb30` (`FUN_004d0a70` at `0x0051568b`, which stores its
+second and third arguments at `this` + first `* 8`; its fourth, the label "World Struture", is not stored). The
+world is destroyed on leaving: `FUN_00409180`, called at `0x0054ff91`, runs the teardown, frees it (`0x004091b0`)
+and zeroes `0x007cf83c` (`0x004091b8`) - the order is under "Leaving a park with something in the hand". So the
+world a left park ran on does not outlive the lobby. The three copies each have that one writer and are never
+zeroed. They dangle through the lobby, keeping nothing alive, and are rewritten at the next load before anything
+can step.
 
 **OpenTPW** builds the edge test once per park (`ParkCamcorderCameraMode.EdgeTest`), which the original does not
-do. `Forget`, part of `Level.Unload`, lets it go. `ParkState.Current` and `ParkRides.Current` still hold a left
-park until the next one is built (Q44).
+do. `Forget`, part of `Level.Unload`, lets it go. What else a left park lets go of is under "Leaving a park with
+something in the hand".
 
 ---
 
@@ -1631,8 +1634,8 @@ before the park does, by one of two routes:
   installs it through the setter (`0x00516d13`) before it writes anything. So the park on disk already has a moved
   thing sold and a carried candidate back in the pool, which lives in the world object.
 - **Then `FUN_00409180` (`0x0054ff91`) runs `FUN_00515dd0` on the world before destroying it**, and that opens by
-  installing no mode (`FUN_0046c350( 0 )` at `0x00515def`), freeing the holder `DAT_007b05e8` and zeroing it.
-  Online, where nothing was saved, this is what drops the hand.
+  installing no mode (`FUN_0046c350( 0 )` at `0x00515def`), freeing the holder `DAT_007b05e8` (`0x00515df5`) and
+  zeroing it (`0x00515e02`). Online, where nothing was saved, this is what drops the hand.
 
 The setter runs the outgoing mode's `+0x2c` OnUninstall and then its deleting destructor, so leaving is answered as
 every other way out is. The carry shell's uninstall is a bare `RET`: nothing is built and nothing refunded, and a
@@ -1642,6 +1645,20 @@ moved them (see "The hand's ways out", Open). The next park's entry (state 9, `F
 reaches `FUN_0052f200( 0, 1 )`) installs the idle mode again and zeroes the tool and the rotation. The item global
 `DAT_008186e0` is never reset, but every read of it is gated on tool 4 or `0x3b`.
 
+**Every thing goes before the world, and the hiring pool goes with the world.** Read as disassembly for Q44. After
+the mode, `FUN_00515dd0` walks all 128 x 128 cells (`FUN_004d8330` on world + `0x2d8`, two calls of `FUN_00536780`
+each, not traced), then the used-thing list (first id at `[0x007cf56c]` + 4, next through `FUN_0050b350`). It skips
+a thing already marked dead (`+3`, `0x00515e71`) and hands the rest to the per-kind destructor `FUN_0050b780`
+(`0x00515e97`), which marks each dead (`0x0050b8e9`) and queues its id (`FUN_00516310`). `FUN_00518ea0`
+(`0x00515efc`) then drains that queue, unlinking each thing from the used list, freeing it (`0x00518f6d`) and
+zeroing its slot (`0x00518f72`). The world state goes back to 1 (`0x00515f06`; the 2 it ran under is in
+`park.md`, "What selling a thing does to its script"), and `FUN_0050f240` and `FUN_00544450` follow, not traced
+here. Only then does `FUN_00409180` destruct the world (`0x004091aa`, a thunk to `FUN_00507840`), free it
+(`0x004091b0`) and zero `0x007cf83c` (`0x004091b8`). **The pool is the world's first member**: the world's
+constructor `FUN_00515540` opens by building it (`FUN_00507800` at `0x00515560`, 32 records of `0x14` at world +
+0), `FUN_00507840` destroys the same 32, and the place-staff uninstall reaches it only through the world pointer
+(`0x0046c8b7`, handing `[0x007cf83c]` to `FUN_005083b0`).
+
 **In-park loads keep the hand**, a static finding not observed. Restart Park (0xa, 0xd, 0xe and back to 0xa), the
 load screen and the Alt+L quick load all load into the running world, none of them through state 0xb or a mode
 teardown. Escape, the menu's usual way in, drops the hand first, so the Alt+L quick load is the one route found that
@@ -1650,7 +1667,10 @@ traced.
 
 **OpenTPW** (`Level.ForgetPark`, part of `Level.Unload`): each hand lets go through its own `Drop`, logged as
 `Leaving the park:`. Nothing is saved, and Restart Park reloads through the same `Unload`, so the hand leaves empty
-either way. It is `ParkHand.LetGo`, so a picked-up worker is put back down in their cell as well.
+either way. It is `ParkHand.LetGo`, so a picked-up worker is put back down in their cell as well. The rest keeps the
+original's order: every entity is deleted, `ParkRides` letting go of `ParkRides.Current` as it goes, and last of
+all `Level.ForgetRunningPark` lets go of `ParkState.Current` and `ParkStaffPool.Current`. The console's `parks`
+reads a left park and its pool `collected` in the lobby (Q44).
 
 ### The per-object management screen is nine screens
 

@@ -48,9 +48,16 @@ public sealed class ParkState
 	/// <summary>
 	/// The park being played, or null outside one - the arrangement <see cref="ParkObjects.Current"/>
 	/// and <see cref="ParkPeople.Current"/> already use, and this was the layer without it. The ground
-	/// needs it to draw cells a player has changed, which it cannot ask the save for.
+	/// needs it to draw cells a player has changed, which it cannot ask the save for. Cleared as the park
+	/// ends - see <see cref="ForgetCurrent"/>.
 	/// </summary>
 	public static ParkState? Current { get; private set; }
+
+	/// <summary>
+	/// Lets go of <see cref="Current"/>, which holds the park's save and would otherwise keep a left park in memory
+	/// through the lobby. The last of <see cref="Level.Unload"/>, through <see cref="Level.ForgetRunningPark"/>.
+	/// </summary>
+	internal static void ForgetCurrent() => Current = null;
 
 	/// <summary>The file this was seeded from, for the cells nothing has changed - see <see cref="Record"/>.</summary>
 	private readonly ParkWorld? _park;
@@ -94,9 +101,9 @@ public sealed class ParkState
 	/// </summary>
 	/// <remarks>
 	/// <b>It consults <see cref="Current"/> only when that overlay describes THIS park, and the guard is
-	/// load-bearing rather than defensive.</b> <see cref="Current"/> is a static that nothing clears, so
-	/// an overlay built for another park - or the two-fact overlay a test constructs, whose
-	/// <see cref="Park"/> is null - would otherwise answer for this one. Its <see cref="Record"/> falls
+	/// load-bearing rather than defensive.</b> <see cref="Current"/> is whichever overlay was built last
+	/// until a park ends, so an overlay built for another park - or the two-fact overlay a test constructs,
+	/// whose <see cref="Park"/> is null - would otherwise answer for this one. Its <see cref="Record"/> falls
 	/// back to <c>default</c> when it has no save, and a default cell is <b>type 0</b>: every cell in the
 	/// park would read as bare ground, which silently rewrites every route, every queue walk and every
 	/// edge test rather than failing. Tying the overlay to the park it was seeded from makes a mismatch

@@ -31,8 +31,14 @@ namespace OpenTPW;
 /// </summary>
 public sealed class ParkStaffPool
 {
-	/// <summary>The pool of the park currently loaded, or null outside one.</summary>
+	/// <summary>The pool of the park currently loaded, or null outside one - see <see cref="ForgetCurrent"/>.</summary>
 	public static ParkStaffPool? Current { get; private set; }
+
+	/// <summary>
+	/// Lets go of <see cref="Current"/> as the park ends, with the running park, as the original's pool goes with the
+	/// world it is the first member of (<c>0x004091aa</c>) - see <see cref="Level.ForgetRunningPark"/>.
+	/// </summary>
+	internal static void ForgetCurrent() => Current = null;
 
 	/// <summary>
 	/// The candidate on the cursor, or nought.

@@ -561,7 +561,30 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   `FrontEnd.MenuKey` took Escape on the press. Confirm: hold Right, one island per release; Enter on an affordable
   island starts the fly-in; log lines and a screenshot.
 
-- [ ] **Q44. A left park stays in memory through the lobby.** Found by Q10's sweep (8 agents: four
+- [x] **Q44. A left park stays in memory through the lobby.** Done 2026-09-24, `alexah/132-a-left-park-is-let-go`.
+  `ParkRides` lets go of `Current` as it is deleted, and `Level.ForgetRunningPark`, the last of `Unload`, lets go of
+  `ParkState.Current` and `ParkStaffPool.Current`. That is the original's order: its park teardown destroys every
+  thing before it frees the world, whose first member is the hiring pool (`docs/exe/park-engine.md`, "Leaving a
+  park with something in the hand", read as disassembly).
+  - **The sweep** (10 agents: five investigations, each put to a refuter) found every reader of the three null-safe
+    and no other root. `ParkRides.Current` cannot go in `ForgetPark`: an open ride window commits its sliders
+    through it as the interface closes, which is after `ForgetPark` and before the entities.
+  - **The instrument**: `parks` now asks after each park's hiring pool too, `; its staff pool collected` or
+    `alive, held by` the level, the rides' level or `ParkStaffPool.Current`.
+  - **Confirmed in the game**, jungle with a worker in the hand, lobby, jungle, lobby. In the lobby after the first:
+    - control (the three clears taken out): `parks seen 1 alive 1 | #1 jungle alive, held by state rides; its staff
+      pool alive, held by rides pool`;
+    - fix: `parks seen 1 alive 0 | #1 jungle collected; its staff pool collected`, and after the second park both
+      collected.
+
+    The worker was put back on leaving, the second park ran the first's 15 rides and 16 scripts, every prediction
+    held in every run, the last on the committed build, and `save/` was unchanged. Photographed: both parks and the
+    lobby after each.
+  - **The tests** are `ParkForgetTests`, weak references after a forced collection. Taking out the rides' clear, its
+    guard, either of the other two, or all three, turns red exactly the tests predicted; the call from `Unload` is
+    reached only by the game, as `ForgetPark`'s is.
+
+  The item as written: found by Q10's sweep (8 agents: four
   investigations, each put to a refuter) and measured with the console's `parks`. In the lobby after the jungle,
   `#1 jungle alive, held by state rides`:
   - `ParkState.Current` holds the save directly. Its setter is private and nothing clears it; `ParkState.cs`
@@ -632,6 +655,10 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   viewfinder layer's handler answers a right double click by leaving first person as Escape does (`0x00488aa1`..
   `0x00488ad6`). Nothing here reads a right click in first person. Confirm: camcorder, a double right click, `camera`
   back to orbit, photographed.
+- [ ] **Q67. `RootPanel.Instance` is dead by code.** Found by Q44's sweep. `RootPanel`'s constructor sets it to the
+  first panel ever built (`Instance ??= this`, `RootPanel.cs`) and nothing in any project reads it, so it pins the
+  first lobby's emptied interface for the life of the process. It holds nothing of a park. Label it or take it out,
+  as rule 3 says for dead by CODE. Confirm: a grep for readers, and the build.
 
 ## B. Docs and comments
 

@@ -709,6 +709,14 @@ The ones that have bitten more than once.
   and `HomingRate * Time.Delta` rewritten as `HomingRate / 60f` still passed: at that one rate the two are
   the same number. **Step it at a second rate** with its own predicted counts - 30 a second was enough, and
   the mutation then failed that row only. The same holds for any `Time.SmoothingFactor` ease a test drives.
+- **121** — **To prove a build is fresh, look at the file the test will load, not at the test assembly.** Q44's
+  mutation harness refused every result as stale, rightly by its own rule and wrongly in fact: it watched
+  `OpenTPW.Tests.dll`, and in an incremental build (`dotnet build` without `--no-incremental`, as a mutation
+  harness runs it) a change to a method body in `OpenTPW` rebuilds only `OpenTPW`, whose copy beside the tests
+  (`OpenTPW.Tests/bin/.../OpenTPW.dll`) is what moves - the test assembly is not recompiled, because the reference
+  assembly it compiles against did not change. `--no-incremental` rebuilds every project, so there the test
+  assembly moves too and proves nothing. Watch the copy under either build. The guard failed safe, which is the
+  point of having one; a guard watching the wrong file the other way round would have passed stale results.
 
 ---
 

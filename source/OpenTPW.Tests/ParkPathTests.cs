@@ -260,8 +260,8 @@ public class ParkPathTests
 	/// <para>
 	/// <b>This pins a guard whose removal would otherwise leave the whole suite green, which is why it is
 	/// written as a mutation test rather than as a happy path.</b> <see cref="ParkState.Current"/> is a
-	/// static that nothing clears, and sixteen test classes build an edge test over the shipped park
-	/// through <see cref="CellEdge.For"/>. Let a park-less overlay answer and
+	/// static that holds whichever overlay a test built last, and sixteen test classes build an edge test
+	/// over the shipped park through <see cref="CellEdge.For"/>. Let a park-less overlay answer and
 	/// <see cref="ParkState.Record"/> returns <c>default</c> for every cell - and a default cell is
 	/// <b>type 0</b>, bare ground - so every route, every queue walk and every edge test in the park
 	/// would quietly change its answer instead of failing.
