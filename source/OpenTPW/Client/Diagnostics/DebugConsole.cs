@@ -663,6 +663,21 @@ public static class DebugConsole
 
 				break;
 
+			// Sets every guest's toilet need - an instrument as `thirst` is, so that a queuer can pass 80 and leave
+			// for a toilet: see ParkPeople.SetToilet.
+			case "toilet":
+				if ( ParkPeople.Current is not { } bladders )
+				{
+					Reply( "toilet: none - a park has to be loaded" );
+					break;
+				}
+
+				var need = Math.Clamp( Argument( 1, Peep.HurryAboveToilet ), Peep.Least, Peep.Most );
+
+				Reply( $"toilet: {bladders.SetToilet( need )} guests are now toilet {need}" );
+
+				break;
+
 			// What every thing a guest may be sent to has taken, and whether it can be offered at all. The
 			// two censuses either side of this one cannot answer that: `rides` says what a script is doing
 			// and `peeps` says what a guest carries, while whether a shop is REACHABLE turns on a walk over

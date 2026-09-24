@@ -160,12 +160,11 @@ public sealed class ParkRideOperation
 	/// <see cref="ParkState.LeaveQueue"/> joins up whoever stood either side of them.
 	/// </summary>
 	/// <remarks>
-	/// The original splices with the leaver's own links and tests no membership (<c>0x004ddde9</c>), where
-	/// <see cref="ParkState.LeaveQueue"/> refuses a guest who is not in the queue. Every caller here hands it
-	/// a guest it reached by walking that queue's links, or the head walking away from its door, so the refusal
-	/// is never taken.
+	/// It splices with the leaver's own links and tests no membership (<c>0x004ddde9</c>), so a leaver the queue
+	/// walk could not reach is still spliced out, and one with nobody in front moves the head: see
+	/// <see cref="ParkState.LeaveQueue"/>.
 	/// </remarks>
-	/// <returns>Whether they were in that queue to begin with.</returns>
+	/// <returns>Whether they were at its head or linked to anybody when they left.</returns>
 	internal static bool LeaveQueue( ParkState state, RideScript? script, int objectId, int guestId )
 	{
 		ArgumentNullException.ThrowIfNull( state );

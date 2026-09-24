@@ -190,6 +190,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004b9340` | | OpenTPW/UI/FrontEnd/FrontEndLines.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x004b9840` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x004d49a0` | | OpenTPW/World/Park/FixedVector.cs  |
+| `0x004d6545` | `FUN_004d6410`: a staff member's idle stamp tested against `mGameTick` | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004db3f3` | Object constructor: the flags word built from the item's description (from here) | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db420` | Object constructor: the queue-path bit `0x08` from descriptor `+0x40`, `Info.HasQueue` | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db425` | Object constructor: `OR [ESI+0x32],0x8` | OpenTPW/World/Park/ParkBuilding.cs  |
@@ -201,7 +202,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004dd2c9` | The object destructor `FUN_004dd0a0` calls the script teardown `FUN_00559060` with mode 0, 4 or 7 | OpenTPW.Tests/ParkSellTests.cs OpenTPW/World/Park/ParkRides.cs  |
 | `0x004ddd4e` | `FUN_004ddd20` (leave a queue) empties `VAR_LETMEON` when it names the leaver (from here) | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004ddd7d` | `FUN_004ddd20`: the `VAR_LETMEON` clear (to here) | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkRideOperation.cs  |
-| `0x004ddde9` | `FUN_004ddd20`: with no `mQPrev` the leaver's `mQNext` becomes `mFirstInQ` | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004ddde9` | `FUN_004ddd20`: with no `mQPrev` the leaver's `mQNext` becomes `mFirstInQ` | OpenTPW.Tests/ParkQueueJoinTests.cs OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004ddfa9` | `FUN_004ddf50` (GetPositionInQueue) gives up at a guest no longer queueing | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004de2b9` | `FUN_004de1f0`'s queue walk skips the object's nominee | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004de2bd` | `FUN_004de1f0`'s queue walk reads each `mQNext` before the call | OpenTPW/World/Park/ParkPeople.cs  |
@@ -221,8 +222,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004f9f89` | `FUN_004f9f00`: first half of `prev + (cur - prev) * t` | OpenTPW.Tests/ParkGuestPlacementTests.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x004f9fb6` | `FUN_004f9f00`: second half of the interpolation | OpenTPW.Tests/ParkGuestPlacementTests.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x004fa015` | `FUN_004f9f00` copies the octant straight off the thing: the heading is not blended | OpenTPW.Tests/ParkGuestPlacementTests.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
+| `0x004fa62a` | `FUN_004fa5f0`: returns nought without routing on the retry stamp at `+0x198` | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fa95d` | The place-a-peep routine re-stamps previous := current | OpenTPW.Tests/ParkTickTests.cs OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/PeepNavigator.cs  |
 | `0x004fae10` | | OpenTPW.Files/Formats/Save/RecordStream.cs  |
+| `0x004fb075` | Guest constructor `FUN_004faec0`: happiness set to 50.0 | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb383` | The guest's type-10 answer `FUN_004fb360` chooses a guest by `mMajorDest` alone | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb38d` | `FUN_004fb360`'s rider arm: state `0x10` exactly | OpenTPW.Tests/ParkEvictionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb3cd` | `FUN_004fb360` makes a rider a new sprite when admission destroyed theirs; its position is still nought | OpenTPW/World/Park/ParkPeople.cs  |
@@ -241,11 +244,22 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fe525` | `FUN_004fe1e0`: the end of that gain | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004ffdad` | Joining a queue re-takes the place (`FUN_00501160`) | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffdf4` | Arriving at a queue with no route to the place: put out | OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x005002c2` | The `InQueue` turn's drift, an unsigned compare (from here) | OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x005002e5` | The `InQueue` turn's drift (to here) | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x0050010a` | `InQueue` turn: the board arm's no route, "the player has removed the path", out | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x005001d8` | `InQueue` turn: invited but not the nominee, the whole turn is nothing | OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00500270` | `InQueue` turn: the lost place, "Problem with a queue", out | OpenTPW.Tests/ParkQueueTurnTests.cs  |
+| `0x00500308` | `InQueue` turn: the mood is read once `mGameTick - mTimeOfLastSpotAnim` exceeds 30 | OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x0050031c` | `InQueue` turn: happiness above `0x50` plays spot animation 5 | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x0050031e` | `InQueue` turn: the branch for happiness above `0x50` | OpenTPW.Tests/ParkQueueTurnTests.cs  |
+| `0x00500330` | `InQueue` turn: happiness from `0x14` asks about the toilet | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00500334` | `InQueue` turn: happiness below `0xa` gives up unhappy | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00500336` | `InQueue` turn: happiness 10..19 plays spot animation 4 | OpenTPW.Tests/ParkQueueTurnTests.cs  |
+| `0x005003a2` | `InQueue` turn: a toilet need above `0x50` leaves for a toilet | OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x005003b6` | `InQueue` turn: a queuer for a toilet stays in its queue | OpenTPW.Tests/ParkQueueTurnTests.cs  |
+| `0x00500415` | `InQueue` turn: boredom after `mTimeStartedIdling` + 100 | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x0050049e` | The `InQueue` turn's shared way out (from here) | OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x005004b3` | The `InQueue` turn puts the guest out (`FUN_005012f0`) | OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x00500532` | The `InQueue` turn re-takes the place (`FUN_00501160`) | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00500523` | `InQueue` turn: a ride broken down (state 1) re-takes no place | OpenTPW.Tests/ParkQueueTurnTests.cs  |
+| `0x00500631` | `InQueue` turn: the track gate's item track type 1 | OpenTPW.Tests/ParkQueueTurnTests.cs  |
+| `0x00500643` | `InQueue` turn: the track gate's `mIsTrackRideValid` nought | OpenTPW.Tests/ParkQueueTurnTests.cs  |
 | `0x00500715` | At the door: the price opinion `FUN_004fde50` | OpenTPW.Tests/ParkRideExitTests.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/PeepBehaviour.cs OpenTPW/World/Park/PeepPriceOpinion.cs  |
 | `0x00500778` | At the door, too expensive: the first `MediumHappinessChange` | OpenTPW.Tests/PeepPriceOpinionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x005007b4` | At the door, too expensive: put out (`FUN_005012f0`) | OpenTPW.Tests/PeepPriceOpinionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
@@ -269,8 +283,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0051295c` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00512a5e` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00512b4c` | | OpenTPW/World/Weather/Lightning.cs  |
-| `0x00515865` | | OpenTPW/Global/GameCalendar.cs OpenTPW/World/Level.cs  |
+| `0x00515865` | | OpenTPW/Global/GameCalendar.cs OpenTPW/World/Level.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00516394` | Thing sweep `FUN_00516380`: `mGameTick` up by one | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00516d13` | World save `FUN_00516c80`: installs the idle mode before anything is written, so leaving a park lets go of the hand | OpenTPW/World/Level.cs  |
+| `0x00517bec` | World load: `mGameTick` read from the save | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00519f40` | `FUN_00519ef0`'s second-argument path writes the gate's `VAR_COMMAND` = 2 | OpenTPW/World/Park/ParkRides.cs  |
 | `0x00519f76` | `FUN_00519ef0`'s open arm (first argument non-zero), only when the park is closed | OpenTPW.Tests/ParkClosedRideTests.cs OpenTPW/UI/Park/ParkEntryPriceScreen.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x0051a013` | The park's door, opening: the open guard `FUN_004df290` on each visitable object | OpenTPW.Tests/ParkClosedRideTests.cs OpenTPW/World/Park/ParkPeople.cs  |

@@ -84,12 +84,16 @@ public sealed class PeepBehaviour
 		Func<ParkWorld.CatalogueObject, int, bool>? admit = null,
 		Func<ParkWorld.CatalogueObject, int, bool>? finishAdmission = null,
 		Action<ParkWorld.CatalogueObject, int>? tellTheScript = null,
-		Action<ParkWorld.CatalogueObject, int>? walkAway = null )
+		Action<ParkWorld.CatalogueObject, int>? walkAway = null,
+		Action<ParkWorld.CatalogueObject, int>? leaveQueue = null,
+		Func<int, bool>? stillQueueing = null )
 	{
 		_admit = admit;
 		_finishAdmission = finishAdmission;
 		_tellTheScript = tellTheScript;
 		_walkAway = walkAway;
+		_leaveQueue = leaveQueue;
+		_stillQueueing = stillQueueing;
 
 		// Zero is open, which is the way round the name is not - see ParkWorld.ParkClosed. ParkState
 		// applies that rule itself, so it is not repeated here.
@@ -175,6 +179,21 @@ public sealed class PeepBehaviour
 	/// for the reason <see cref="_admit"/> is one. Null leaves the ride holding them, which only a test does.
 	/// </summary>
 	private readonly Action<ParkWorld.CatalogueObject, int>? _walkAway;
+
+	/// <summary>
+	/// The ride's side of a guest its queue turn puts out - <c>FUN_004ddd20</c> alone: <c>VAR_LETMEON</c> emptied
+	/// if it names them, and the queue spliced by their own links (<see cref="ParkRideOperation.LeaveQueue"/>).
+	/// A delegate for the reason <see cref="_admit"/> is one. Null leaves the queue holding them, which only a
+	/// test does.
+	/// </summary>
+	private readonly Action<ParkWorld.CatalogueObject, int>? _leaveQueue;
+
+	/// <summary>
+	/// Whether a guest, by thing id, is still in a queue's states - <see cref="ParkRideOperation.IsQueueing"/>,
+	/// which the queue walk asks of everybody it steps past (<see cref="ParkState.PositionInQueue"/>). This type
+	/// keeps no guest by id, so it is handed the test. Null follows every link.
+	/// </summary>
+	private readonly Func<int, bool>? _stillQueueing;
 
 	/// <summary>
 	/// What a guest deciding what to do picks from - <c>FUN_004fcb10</c>. Always present, because a
@@ -346,12 +365,11 @@ public sealed class PeepBehaviour
 	/// </para>
 	/// </summary>
 	/// <param name="tick">
-	/// The thing tick, the same counter <see cref="Peep.Tick"/> is spread across. <b>The original stamps
-	/// its own clock here instead</b> - the states that record a time compare it against the world's
-	/// <c>mGameTick</c> - and which of the two those comparisons want is not established. It matters to
-	/// <see cref="PeepState.PlayingSpotAnimation"/>, which is not built, and
-	/// <see cref="PeepState.InQueue"/>, <b>which is</b> - so for the queue the question is live rather
-	/// than hypothetical. This said neither was built.
+	/// The thing tick, the same counter <see cref="Peep.Tick"/> is spread across, and the clock the states that
+	/// record a time compare against: the original's <c>mGameTick</c> goes up by one per thing sweep
+	/// (<c>0x00516394</c>). It is <see cref="GameClock.Ticks"/> over eight, which runs from the program's start
+	/// and is not reset on entering a park, so a park's first sweep carries the lobby's; the original zeroes
+	/// <c>mGameTick</c> at level start (<c>0x00515865</c>) and loads the save's (<c>0x00517bec</c>).
 	/// </param>
 	/// <summary>
 	/// Whether a thing has hold of this guest - a queue they are in, or a ride that has them. The
@@ -480,43 +498,9 @@ public sealed class PeepBehaviour
 
 				break;
 
-			// Standing in a queue - the one arm of FUN_004ffff0 that can be built honestly: a guest at the
-			// FRONT who has been invited aboard, and whom the ride really has nominated, goes to board.
-			//
-			// <b>Three things must all hold, and each is the original's own test.</b> QueuePos nought is
-			// "at the front"; mBeenAdmitted is the invitation; and FUN_004e0aa0 - which is nothing but
-			// person == object's mPersonBeingLoaded - is the ride confirming it means THIS guest. The flag
-			// is cleared on the way past, which is what stops one invitation boarding them twice.
-			//
-			// The rest of that handler is absent, and every other arm of it ends in the one way out at
-			// 0x005004b3 - a failed walk to the ride, the dirt gate, a place the walk cannot find, the
-			// capacity re-check, the track gate, unhappiness, the toilet, boredom, and a failed re-take -
-			// so each turn here reaches all of them and is counted (docs/exe/ride-operation.md, "Every way
-			// out of a queue", says what each waits on). <b>Boredom never fires in the original's own
-			// play</b>: it sits inside the branch taken only while `gameTick - mTimeOfLastSpotAnim` is at
-			// most 30, and a guest back in state 11 has mTimeStartedIdling at least 11 past that stamp, so
-			// `gameTick > mTimeStartedIdling + 100` cannot hold inside it. Building it would make guests
-			// give up where the original never does.
-			//
-			// A guest who does not pass the three tests simply keeps queueing, which is what the original
-			// does on every turn they are not being called forward.
-			// <b>And the step-up below is what was missing, found by playing the park rather than by any
-			// test.</b> The boarding arm comes first because that is the original's order.
+			// Standing in a queue - FUN_004ffff0, its arms in its own order: see QueueTurn.
 			case PeepState.InQueue:
-				Unimplemented.Report( "QUEUE_TURN_DISMISSALS" );
-
-				if ( peep.QueuePos == 0 && peep.BeenAdmitted && Chosen( peep ) is { } boarding
-					&& State.PersonBeingLoaded( boarding.ThingId ) == peep.ThingId )
-				{
-					peep.BeenAdmitted = false;
-
-					SendTo( peep, walk, (boarding.EntryCellX, boarding.EntryCellY) );
-					peep.SetState( PeepState.BeingAdmitted, tick, _random );
-
-					break;
-				}
-
-				StepUpTheQueue( peep );
+				QueueTurn( peep, walk, tick );
 
 				break;
 
@@ -1057,9 +1041,9 @@ public sealed class PeepBehaviour
 	/// a cell away from where the pathfinder would ever put them.
 	/// </para>
 	/// <para>
-	/// Whether a route was found is deliberately not answered here: <see cref="Walked"/> asks again on the
-	/// guest's next turn and reports a guest who cannot get through as having given up, so a failure has
-	/// one place it is noticed rather than two.
+	/// It answers whether a route was found, and every caller but the boarding arm of <see cref="QueueTurn"/>
+	/// leaves the failure to <see cref="Walked"/>, which reports a guest who cannot get through as having given
+	/// up on their next turn.
 	/// </para>
 	/// </summary>
 	/// <remarks>
@@ -1068,12 +1052,12 @@ public sealed class PeepBehaviour
 	/// that through the same pair of steps this does - a destination, then a route. Widening one method is
 	/// cheaper than a second way of moving a peep, which is how the two would drift apart.
 	/// </remarks>
-	internal static void SendTo( Peep peep, PeepWalk walk, (int X, int Y) cell )
+	internal static bool SendTo( Peep peep, PeepWalk walk, (int X, int Y) cell )
 	{
 		peep.Navigator.Target = new FixedVector(
 			PeepNavigator.WaypointCentre( cell.X ), PeepNavigator.WaypointCentre( cell.Y ) );
 
-		walk.PlanRoute();
+		return walk.PlanRoute();
 	}
 
 	/// <summary>
@@ -1291,66 +1275,219 @@ public sealed class PeepBehaviour
 	public const int QueueDriftAllowed = 2;
 
 	/// <summary>
-	/// Keeps a queueing guest's recorded place in step with the place the queue actually gives them -
-	/// the middle arm of <c>FUN_004ffff0</c>, and <b>the fix for a park that died after one rider</b>.
-	///
-	/// <para>
-	/// <b>Nothing renumbers a queue when somebody leaves it, in the original or here.</b>
-	/// <see cref="ParkState.LeaveQueue"/> unlinks and fixes the head, exactly as <c>FUN_004ddd20</c>
-	/// does, and neither touches anybody's <c>mQueuePos</c>. The original copes by recomputing it from
-	/// the links every turn - <see cref="ParkState.PositionInQueue"/> - and this was the one arm of
-	/// <see cref="PeepState.InQueue"/> that was left out. The cost was total:
-	/// <see cref="ParkRideOperation.Invite"/> only calls forward a head whose place is nought, so once
-	/// the first rider boarded, the guest who became head still held the 1 they had joined with and no
-	/// further guest was ever invited. Three guests stood on one cell for two minutes of a measured run.
-	/// </para>
-	/// <para>
-	/// <b>The drift is compared unsigned, and that is not a wart to tidy.</b> The original's field is a
-	/// byte, zero-extended and then tested as <c>2 &lt; mQueuePos - truePos</c> in 32 bits
-	/// (<c>0x005002c2</c>..<c>0x005002e5</c>), so a guest whose true place is FURTHER BACK than their recorded
-	/// one wraps to a large number and re-takes it immediately instead of waiting; signed arithmetic would
-	/// have them sit out the delay instead.
-	/// </para>
-	/// <para>
-	/// <b>What is deliberately not here is the walk.</b> Having recomputed the place, the original hands
-	/// it to <c>FUN_00501160</c>, which turns it into a cell through <c>FUN_004de7e0</c> and sends the
-	/// guest there as <see cref="PeepState.SteppingUpQueue"/>. That needs the queue-path walk - one cell
-	/// per FOUR guests (<c>FUN_004de840</c>), or a virtual queue of at most four places for an object
-	/// with no queue-path flag (<c>FUN_004dec30</c>) - together with the sub-cell placement its own
-	/// direction byte decides. None of that is built, and <b>faking a destination would be worse than
-	/// leaving it</b>: when the original cannot route a guest to their new place it makes them abandon
-	/// the queue altogether. So the place is corrected and the guest stands still, which keeps the ride
-	/// loading while the shuffle stays honestly unbuilt.
-	/// </para>
+	/// How many thing sweeps after a spot animation began a queuer only stands - <c>0x00500308</c>. Past it, their
+	/// mood is read.
 	/// </summary>
-	private void StepUpTheQueue( Peep peep )
+	public const int QueueMoodGap = 30;
+
+	/// <summary>How long a queuer stands before boredom would take them - <c>0x00500415</c>. It never does: see <see cref="QueueTurn"/>.</summary>
+	public const int QueueBoredAfter = 100;
+
+	/// <summary>Happiness above which a queuer plays spot animation 5 - <c>CMP AL,0x50</c> at <c>0x0050031c</c>.</summary>
+	public const int QueueHappyAbove = 80;
+
+	/// <summary>Happiness from which a queuer's toilet is asked about - <c>CMP AL,0x14</c> at <c>0x00500330</c>.</summary>
+	public const int QueueToiletFrom = 20;
+
+	/// <summary>Happiness below which a queuer gives up unhappy - <c>CMP AL,0xa</c> at <c>0x00500334</c>.</summary>
+	public const int QueueUnhappyBelow = 10;
+
+	/// <summary>A toilet need above which a queuer leaves for a toilet - <c>CMP AL,0x50</c> at <c>0x005003a2</c>.</summary>
+	public const int QueueToiletAbove = 80;
+
+	/// <summary>
+	/// How many places a thing with no queue path holds before a queuer is too far back -
+	/// <c>FUN_004dda40</c>'s answer for a thing without <see cref="ParkWorld.CatalogueObject.QueuePathFlag"/>.
+	/// </summary>
+	public const int NoQueuePathCapacity = 100;
+
+	/// <summary>
+	/// One turn of a guest standing in a queue - <c>FUN_004ffff0</c>, its arms in its own order. Every arm that
+	/// gives up ends the same way, <see cref="PutOutOfTheQueue"/>. See <c>docs/exe/ride-operation.md</c>, "The
+	/// <c>InQueue</c> turn".
+	/// </summary>
+	/// <remarks>
+	/// <list type="number">
+	/// <item><b>Board.</b> At the front (<see cref="Peep.QueuePos"/>, a byte, nought), invited
+	/// (<see cref="Peep.BeenAdmitted"/>) and the ride's nominee (<c>FUN_004e0aa0</c>): the invitation is cleared
+	/// and they walk to the ride: the entry cell's centre, where the original aims at the stand point on the same
+	/// cell (<c>FUN_004dedf0(0)</c>, the item's sub-cell offset turned by the facing). The original forgets them
+	/// and puts them out when <c>FUN_004fa5f0</c> fails (<c>0x0050010a</c>), and that also fails without routing on a
+	/// retry stamp at <c>+0x198</c> (<c>0x004fa62a</c>) nothing here keeps, so a failed route is counted and they go
+	/// on.</item>
+	/// <item><b>Wait.</b> At the front and invited but not the nominee: the whole turn is nothing (<c>0x005001d8</c>).</item>
+	/// <item><b>The dirt gate</b> puts out a queuer for a toilet whose <c>+0x44</c> truncates below 25
+	/// (<c>FUN_004e0390</c>). Nothing here keeps that field, whose meaning is not decoded, so it is counted.</item>
+	/// <item><b>The lost place.</b> The queue walk cannot reach them - they are unlinked, or somebody in front has
+	/// stopped queueing: put out. The original's log says it closes and reopens the ride; nothing does.</item>
+	/// <item><b>In place</b>: too far back for the capacity (<c>FUN_004dda40</c>, counted for a queue path, whose
+	/// descriptor pairing is not established), or a car track that is not valid, is put out; a coaster's track
+	/// record is counted and let through, as the choice lets it through.</item>
+	/// <item><b>Out of place</b>: more than <see cref="QueueDriftAllowed"/> out, or no delay left, re-takes the place
+	/// - unless the ride is broken down (<c>FUN_004e0370</c>, state 1), when nothing is re-taken. The walk to a
+	/// place is unbuilt (Q50e), so the place is corrected and they stand; otherwise a delay is spent.</item>
+	/// <item><b>The mood</b>, read once <see cref="QueueMoodGap"/> sweeps have passed since a spot animation: above
+	/// <see cref="QueueHappyAbove"/> and from <see cref="QueueUnhappyBelow"/> to 19 a spot animation (counted);
+	/// from <see cref="QueueToiletFrom"/> to 80 with a toilet need above <see cref="QueueToiletAbove"/>, thought 4
+	/// (counted), and out unless the thing is a toilet; below <see cref="QueueUnhappyBelow"/>, out - <b>held
+	/// until Q85</b>, see below.</item>
+	/// <item><b>Within the gap</b>, one turn in ten turns the heading (counted); boredom would put them out once
+	/// <see cref="QueueBoredAfter"/> sweeps have passed since they began to stand, and <b>never fires</b>:
+	/// <c>mTimeStartedIdling</c> is stamped on every return to the queue at least eleven sweeps after the spot
+	/// animation that began the gap, so it cannot be a hundred past within thirty. It is counted, not built.</item>
+	/// </list>
+	/// <para>
+	/// <b>The unhappy arm is counted, not built, and that is a deviation.</b> The original's new guest starts at
+	/// happiness 50 (<c>FUN_004faec0</c>, <c>0x004fb075</c>); one arriving here starts at nought (Q85), so the arm
+	/// would put every arrival out of every queue it joins. Alexah held it for Q85.
+	/// </para>
+	/// <para>
+	/// <b>Spot animations are not built</b>, so <see cref="Peep.TimeOfLastSpotAnim"/> stays at nought, which the
+	/// thing tick has passed by more than thirty once the lobby has run about seven seconds: a queuer's mood is read
+	/// on every turn and the window is not reached, where the original's happy guest stands out an animation and the
+	/// gap after it between readings.
+	/// </para>
+	/// </remarks>
+	private void QueueTurn( Peep peep, PeepWalk walk, int tick )
 	{
 		if ( Chosen( peep ) is not { } queueing )
 			return;
 
-		var place = State.PositionInQueue( queueing.ThingId, peep.ThingId );
-
-		// Not in the queue at all is the original's "Problem with a queue - shouldn't..." arm, which
-		// puts them out (0x0050049e) and is counted with the rest of the turn's ways out; a guest already
-		// in the right place has nothing to do.
 		var recorded = peep.QueuePos & 0xff;
 
-		if ( place < 0 || recorded == place )
-			return;
-
-		if ( peep.QueueMoveDelay != 0 && (uint)(recorded - place) <= QueueDriftAllowed )
+		if ( recorded == 0 && peep.BeenAdmitted )
 		{
-			--peep.QueueMoveDelay;
+			if ( State.PersonBeingLoaded( queueing.ThingId ) != peep.ThingId )
+				return;
+
+			peep.BeenAdmitted = false;
+
+			if ( !SendTo( peep, walk, (queueing.EntryCellX, queueing.EntryCellY) ) )
+				Unimplemented.Report( "QUEUE_BOARD_NO_ROUTE" );
+
+			peep.SetState( PeepState.BeingAdmitted, tick, _random );
 
 			return;
 		}
 
-		// The original's re-take walks them to the new place (FUN_00501160, 0x00500532) and puts them out
-		// if it cannot; the place is corrected and they stand still, as the summary says.
-		Unimplemented.Report( "QUEUE_PLACE_WALK" );
+		if ( queueing.IsToilet )
+			Unimplemented.Report( "QUEUE_TOILET_DIRT_GATE" );
 
-		peep.QueuePos = place;
+		var place = State.PositionInQueue( queueing.ThingId, peep.ThingId, _stillQueueing );
+
+		if ( place < 0 )
+		{
+			Log.Info( $"Person {peep.ThingId}: Problem with a queue - shouldn't be fatal" );
+			PutOutOfTheQueue( peep, queueing, tick );
+
+			return;
+		}
+
+		if ( recorded == place )
+		{
+			if ( queueing.HasQueuePath )
+			{
+				Unimplemented.Report( "QUEUE_CAPACITY_RECHECK" );
+			}
+			else if ( recorded > NoQueuePathCapacity )
+			{
+				Unimplemented.Report( "QUEUE_TURN_THOUGHT_0x10" );
+				PutOutOfTheQueue( peep, queueing, tick );
+
+				return;
+			}
+
+			var track = TrackTypeOf( queueing );
+
+			if ( track == ItemDescriptionFile.CoasterTrack )
+			{
+				Unimplemented.Report( "QUEUE_TURN_COASTER_TRACK_RECORD" );
+			}
+			else if ( track == ItemDescriptionFile.CarTrack && queueing.IsTrackRideValid == 0 )
+			{
+				Unimplemented.Report( "QUEUE_TURN_THOUGHT_0xD" );
+				PutOutOfTheQueue( peep, queueing, tick );
+
+				return;
+			}
+		}
+		else if ( peep.QueueMoveDelay == 0 || (uint)(recorded - place) > QueueDriftAllowed )
+		{
+			if ( queueing.State != ParkRideChoice.StateRefusedOne )
+			{
+				Unimplemented.Report( "QUEUE_PLACE_WALK" );
+
+				peep.QueuePos = place;
+			}
+		}
+		else
+		{
+			--peep.QueueMoveDelay;
+		}
+
+		if ( (uint)(tick - peep.TimeOfLastSpotAnim) <= QueueMoodGap )
+		{
+			Unimplemented.Report( (uint)tick <= (uint)(peep.TimeStartedIdling + QueueBoredAfter)
+				? "QUEUE_TURN_HEADING"
+				: "QUEUE_TURN_BOREDOM" );
+
+			return;
+		}
+
+		var happiness = (int)peep.Happiness & 0xff;
+
+		if ( happiness > QueueHappyAbove )
+		{
+			Unimplemented.Report( "QUEUE_SPOT_ANIMATION" );
+
+			return;
+		}
+
+		if ( happiness >= QueueToiletFrom )
+		{
+			if ( ((int)peep.Toilet & 0xff) <= QueueToiletAbove )
+				return;
+
+			Log.Info( $"Person {peep.ThingId}: needs the toilet, in the queue for {queueing.ThingId} "
+				+ $"(happiness {peep.Happiness:0}, toilet {peep.Toilet:0})" );
+
+			Unimplemented.Report( "QUEUE_TURN_THOUGHT_4" );
+
+			if ( !queueing.IsToilet )
+				PutOutOfTheQueue( peep, queueing, tick );
+
+			return;
+		}
+
+		if ( happiness >= QueueUnhappyBelow )
+		{
+			Unimplemented.Report( "QUEUE_SPOT_ANIMATION" );
+
+			return;
+		}
+
+		Unimplemented.Report( "QUEUE_TURN_UNHAPPY" );
 	}
+
+	/// <summary>
+	/// Where every arm of <see cref="QueueTurn"/> that gives up ends - <c>0x0050049e</c>: the ride lets them go
+	/// (<see cref="_leaveQueue"/>, <c>FUN_004ddd20</c>), they are put out (<see cref="DismissFromTheQueue"/>,
+	/// <c>FUN_005012f0</c>), and the kids' sound plays at their feet for an id divisible by eight.
+	/// </summary>
+	private void PutOutOfTheQueue( Peep peep, ParkWorld.CatalogueObject queueing, int tick )
+	{
+		_leaveQueue?.Invoke( queueing, peep.ThingId );
+		DismissFromTheQueue( peep, tick );
+
+		Log.Info( $"People: guest {peep.ThingId} put out of thing {queueing.ThingId}'s queue by their own turn, "
+			+ $"now {peep.State} with happiness {peep.Happiness:0}" );
+
+		ParkPeople.PutOffAtTheirFeet( peep, queueing );
+	}
+
+	/// <summary>What kind of track a thing runs on, from its item, or nought for one the catalogue does not know.</summary>
+	private int TrackTypeOf( ParkWorld.CatalogueObject thing )
+		=> _catalogue != null && _catalogue.TryGet( thing.CatalogueId, out var item ) ? item.TrackType : 0;
 
 	/// <summary>The object this guest set off for, or null if the park no longer has it.</summary>
 	/// <remarks>
@@ -1485,11 +1622,11 @@ public sealed class PeepBehaviour
 	/// The original has seven callers, and the other six unlink the guest from the thing's queue first
 	/// (<c>FUN_004ddd20</c>). A sale does not, so the thing is not told: see
 	/// <see cref="ParkState.ForgetQueueLinks"/>, which undoes the links of a guest who is still in them and
-	/// does nothing to one who was unlinked already. Four callers are built here: the sale, a queue
+	/// does nothing to one who was unlinked already. Five callers are built here: the sale, a queue
 	/// measured shorter (<see cref="QueueShortened"/>), a closing ride's completion
-	/// (<c>ParkPeople.CompleteOrTurnAway</c>) and a price too high at the door
-	/// (<see cref="WalkAwayFromTheDoor"/>); <c>docs/exe/ride-operation.md</c>, "Every way out of a queue",
-	/// lists the other three and what each waits on.
+	/// (<c>ParkPeople.CompleteOrTurnAway</c>), a price too high at the door (<see cref="WalkAwayFromTheDoor"/>)
+	/// and the queuer's own turn (<see cref="PutOutOfTheQueue"/>); <c>docs/exe/ride-operation.md</c>, "Every
+	/// way out of a queue", lists the other two and what each waits on.
 	/// </remarks>
 	internal void DismissFromTheQueue( Peep peep, int tick )
 	{

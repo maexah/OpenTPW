@@ -207,7 +207,12 @@ public sealed class ParkPeople : Entity
 
 				new ParkRideOperation( State, Guests ).Forget( script, ride.ThingId, personId );
 				ParkRideOperation.LeaveQueue( State, script, ride.ThingId, personId );
-			} );
+			},
+			// And the fifth and sixth, for a queuer's own turn: the ride lets go of one it puts out
+			// (FUN_004ddd20, through its script), and the queue walk asks whether each guest it passes still queues.
+			( ride, personId ) =>
+				ParkRideOperation.LeaveQueue( State, _scriptFor?.Invoke( ride.ThingId ), ride.ThingId, personId ),
+			StillQueueing );
 
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
 		// none of what a guest needs - the fee, the gate - means anything to them.
@@ -805,6 +810,24 @@ public sealed class ParkPeople : Entity
 	}
 
 	/// <summary>
+	/// Sets every guest's toilet need, for the debug console's <c>toilet</c>. An INSTRUMENT, as
+	/// <see cref="MakeThirsty"/> is: a queuer leaves for a toilet once the need is above 80 (<see cref="PeepBehaviour"/>'s
+	/// queue turn), and only a quarter of guests grow the need on their own, one point every sixteen sweeps. At 80
+	/// a guest whose id divides by four passes 80 at their next drift and no other does. It sets a meter the game
+	/// itself moves, and nothing else.
+	/// </summary>
+	/// <returns>How many guests were set.</returns>
+	internal int SetToilet( float level )
+	{
+		foreach ( var peep in _peeps )
+			peep.Toilet = Math.Clamp( level, Peep.Least, Peep.Most );
+
+		Log.Info( $"People: {_peeps.Count} guests are now toilet {level}" );
+
+		return _peeps.Count;
+	}
+
+	/// <summary>
 	/// Sets every guest's cash, for the debug console's <c>cash</c>. An INSTRUMENT, as <see cref="SetHappiness"/>
 	/// is: a guest arrives with <c>StartingCash</c>, 300, so none in Lost Kingdom comes to a door short of its
 	/// price, and that is the one test there of <see cref="PeepPriceOpinion"/> that can refuse. It sets a meter
@@ -1270,17 +1293,11 @@ public sealed class ParkPeople : Entity
 
 				var playing = _sprites.GetValueOrDefault( member.ThingId );
 
-				// <b>The GAME tick, not the thing tick, and the difference is a factor of eight.</b> A
-				// guest's behaviours take the thing tick because nothing in them compares against a clock;
-				// a staff member's idle countdown does, and what it reads is named: FUN_004d6410 tests
-				// against [DAT_0080239c + 0x1da70c], which the executable's own field table pairs with
-				// mGameTick. Handing over the thing tick would have made every staff member idle eight
-				// times as long as the balance file asks.
-				//
-				// <b>What is still not established</b> is whether mGameTick advances once per 31ms step or
-				// once per turn of the thing engine - the same open question PeepBehaviour.Step records for
-				// a guest. It decides how long staff pause between decisions and nothing else, so it is
-				// named here rather than guessed at.
+				// <b>The 31 ms game tick, where the original reads mGameTick: a deviation, queued as Q82.</b>
+				// FUN_004d6410 tests a staff member's idle stamp against [DAT_0080239c + 0x1da70c]
+				// (0x004d6545), mGameTick, which goes up by one per thing sweep (0x00516394) - the clock a
+				// guest's behaviours are handed. So a staff member here idles an eighth of the balance file's
+				// time; Q82 checks the other per-kind handlers before the tick is changed.
 				if ( _staffWalks.TryGetValue( member.ThingId, out var walk ) )
 					_staffBehaviour.Step( member, walk, playing, tick );
 

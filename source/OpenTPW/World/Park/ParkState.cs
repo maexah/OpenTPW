@@ -913,14 +913,16 @@ public sealed class ParkState
 	/// Takes a guest out of a queue, joining up whoever stood either side of them - <c>FUN_004ddd20</c>,
 	/// which the original follows with two assertions that both of the leaver's links are nought.
 	/// </summary>
-	/// <returns>Whether they were in that queue to begin with.</returns>
+	/// <remarks>
+	/// <b>It splices by the leaver's own links and asks nothing of the queue</b> (<c>0x004ddde9</c>): a leaver
+	/// with nobody in front makes whoever is behind them the head, whoever the head was. So a leaver with no
+	/// links at all empties the head, and the rest of that queue walks as nought long.
+	/// </remarks>
+	/// <returns>Whether they were at its head or linked to anybody when they left.</returns>
 	public bool LeaveQueue( int objectId, int guestId )
 	{
 		var wasQueueing = FirstInQueue( objectId ) == guestId
 			|| _queueNext.ContainsKey( guestId ) || _queuePrev.ContainsKey( guestId );
-
-		if ( !wasQueueing )
-			return false;
 
 		var previous = PreviousInQueue( guestId );
 		var next = NextInQueue( guestId );
@@ -952,7 +954,7 @@ public sealed class ParkState
 		_queueNext.Remove( guestId );
 		_queuePrev.Remove( guestId );
 
-		return true;
+		return wasQueueing;
 	}
 
 	/// <summary>

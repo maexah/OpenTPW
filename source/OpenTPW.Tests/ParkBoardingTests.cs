@@ -6,7 +6,7 @@ using System.Linq;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// A guest being called forward from the front of a queue - the buildable arm of <c>FUN_004ffff0</c>,
+/// A guest being called forward from the front of a queue - the boarding arm of <c>FUN_004ffff0</c>,
 /// and the <c>mBeenAdmitted</c> flag it turns on.
 ///
 /// <para>
@@ -51,11 +51,20 @@ public class ParkBoardingTests
 		PathCount: 0, PathTotalCount: 0, PathBufferCount: 0,
 		BufferedDistance: 0, TailDistance: 0, TotalDistance: 0, StuckBits: 0 );
 
-	/// <summary>Steps one guest once, against a real park, and hands back what they ended up doing.</summary>
+	/// <summary>
+	/// Steps one guest once, against a real park, and hands back what they ended up doing. They stand at their
+	/// recorded place in the ride's queue, behind as many others, so the queue walk finds them where they think
+	/// they are.
+	/// </summary>
 	private PeepState StepOne( Peep peep, bool nominated )
 	{
 		var world = Park();
 		var state = new ParkState( world );
+
+		for ( var ahead = 0; ahead < peep.QueuePos; ++ahead )
+			state.JoinQueue( Ride, 100 + ahead );
+
+		Assert.AreEqual( peep.QueuePos, state.JoinQueue( Ride, peep.ThingId ), "they stand where they think they do" );
 
 		if ( nominated )
 			state.NominateForLoading( Ride, peep.ThingId );

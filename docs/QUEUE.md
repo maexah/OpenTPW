@@ -820,13 +820,48 @@ artifacts are listed in `docs/history/README.md`.
   - **Not confirmed on screen:** a refusal on worth (none can happen at Lost Kingdom's prices), negative cash passing
     (tested), and the kids' sound at the door (no guest turned away had an id divisible by eight; untested too).
     **Found:** Q95-Q97.
-- [ ] **Q50d. The `InQueue` turn's own ways out.** Split from Q50 ("The `InQueue` turn"). Nine arms of `FUN_004ffff0`
-  end at `0x005004b3`, and none is built (`QUEUE_TURN_DISMISSALS`). The unhappy arm (below 10) and the toilet arm
-  (20..80 with `mToilet` above 80, not at a toilet) need only what is here plus a thought, counted; build them first.
-  Then the lost place (arm 4), which needs `StepUpTheQueue` to walk with the stop `PositionInQueue` now takes and
-  `LeaveQueue` to match `FUN_004ddd20` for an unlinked leaver; the rest wait on inputs named in the doc. Also arm 2
-  (invited but not the nominee: return) and the broken ride's skipped re-take. **Boredom never fires; do not build
-  it.** Confirm: a queuer whose toilet passes 80, `peeps` before and after.
+- [x] **Q50d. The `InQueue` turn's own ways out.** Done 2026-09-24, `alexah/141-the-queue-turns-ways-out`. Split from
+  Q50 ("The `InQueue` turn"). The decode was put to a read-only workflow first (five claim groups, each to a skeptic;
+  all held; `ride-operation.md`, "The `InQueue` turn"): every log on the way is the bare `RET`; an invited guest who is
+  not the nominee does nothing that turn; the lost place's "closing and reopening" string closes nothing;
+  `FUN_004ddd20` splices by the leaver's own links; `mGameTick` is +1 per thing sweep; the guest constructor gives
+  happiness 50.0 (`0x004fb075`).
+  - **Built:** `PeepBehaviour.QueueTurn`, the arms in the original's order, each put-out through `PutOutOfTheQueue`
+    (the ride's `FUN_004ddd20` through its script, `DismissFromTheQueue`, the kids' sound): the toilet (happiness
+    20..80 as a byte, toilet above 80, not a toilet's queue), the lost place (the walk now stops where
+    `FUN_004ddf50` stops), the invited guest who is not the nominee, the broken ride's skipped re-take, 5a for a thing
+    with no queue path (100) and 5b for a car track. `ParkState.LeaveQueue` splices a leaver it cannot find, so an
+    unlinked one empties the head. Console: `toilet [n]`. Counted by name: the no-route board, the dirt gate, 5a on
+    a queue path, the coaster's record, the failed re-take, the thoughts, the spot animations, the window's heading
+    and boredom; `QUEUE_TURN_DISMISSALS` is gone. **Held by Alexah:** the unhappy arm (`QUEUE_TURN_UNHAPPY`), until
+    Q85 - an arrival starts at 0 here and it would put every arrival out; both game runs counted it 134 and 353
+    times before staging.
+  - **Proof:** 13 new tests (`ParkQueueTurnTests`), two in `ParkQueueJoinTests` (one replacing the test that pinned
+    the refusal), and `ParkBoardingTests`' helper now stands its guest in the queue it names. 16 mutations, each
+    predicted, all red as named: the whole bug back turns 10 red. A read-only review (21 agents, three lenses, each
+    finding put to a skeptic) upheld ten distinct findings, all in comments and docs, all fixed (below). 1109 tests
+    with the game, none skipped; 476 ran and 633 skipped without; 123 warnings.
+  - **Confirmed in the game** (`q50dconfirm.py`, silent, jungle): 15 guests queueing for the Belly Bounce, paused,
+    `happy 50`, `thirst 50`, `toilet 80`; the drift sweep predicted from the clock (game tick 2816), where only an id
+    divisible by four drifts. Guests 64 and 72, `InQueue`, logged "needs the toilet" and "put out of thing 13's queue
+    by their own turn" on that sweep: Deciding, dest 0, 50 to 35, toilet 81, `bootout.mp2` for both; the queue closed
+    up behind them; the other twelve stayed at 80 and 50; `QUEUE_TURN_THOUGHT_4` +2. Guest 68, stepping up at the
+    drift, went out on its first queue turn after: 14 of 15 predicted (68 missed, below). A second run, 8 of 8: guest
+    72 at the queue's head went out on the predicted sweep (2944), 66 became head and was called forward within 12
+    s, and 72 walked off the back cell to (47.4,24.1); photographed at 0, 4, 8 and 12 s, the last with the queuers
+    walking the path below the queue. The control, the same tree with the toilet's put-out taken out: guest 44
+    passed 80 on the predicted sweep (3328) and stayed, 8 of 8. `save/` unchanged in all three runs.
+  - **Missed first, mine.** The park-driven walk test was hollow: it ran until the guest left, and the guest who
+    stopped queueing chose the ride again and cut the chain anyway; it now reads one sweep. In the game I predicted
+    toilet 80 for guest 68 because it was stepping up; the drift does not ask the state. For the control I predicted
+    no thought and no log line; only the put-out was taken out. The review's ten: the thing tick was said to start
+    at nought per park (`GameClock.Ticks` is not reset); the stand point was said to be undecoded (it is on the entry
+    cell; the no-route board is counted for `FUN_004fa5f0`'s retry stamp instead); "no item runs on a car track"
+    (Dino Karts does, so the gate is now tested); the drift note had the wrap backwards; a stale `LeaveQueue`
+    sentence, the staff clock's note, the toilet log's wording, a test summary, and `addresses.md`.
+  - **Not confirmed on screen:** the lost place, the invited guest who is not the nominee, the broken ride and the
+    car track - tested only. The frames cannot tell one queuer from another (every `InQueue` guest stands on the
+    queue's back cell, Q50e); the census and the log do. **Found:** Q98-Q101.
 - [ ] **Q50e. The walk to a place in a queue. Decode first.** Split from Q50. `FUN_00501160` turns a place into a cell
   (`FUN_004de7e0`: `FUN_004de840` for a queue path, decodable; `FUN_004dec30` for the virtual queue, not decoded) and
   routes there; it runs on joining, on a re-take and at a refused door, and each failure puts the guest out
@@ -875,8 +910,9 @@ artifacts are listed in `docs/history/README.md`.
   2026-09-24 staleness audit. `ParkPeople`'s staff loop hands `StaffBehaviour.Step` the 31 ms tick, but `FUN_004d6410`
   compares its idle stamp against `mGameTick` (`0x004d6545`), which counts thing sweeps (`park-engine.md`, "What the
   31 ms tick drives") - the same question as Q68. Check the other per-kind staff handlers the same way, then pass the
-  thing tick, and replace the "not established" notes in `ParkPeople`'s staff loop and `PeepBehaviour.Step`'s `tick`
-  parameter. Confirm: the `staff` census over a timed run, the idle gap predicted first.
+  thing tick, and turn round the note in `ParkPeople`'s staff loop, which names the deviation. `StaffBehaviour.Step`'s
+  stale-stamp note says "our clock starts again at nought": `GameClock.Ticks` is not reset on entering a park, so
+  correct it too. Confirm: the `staff` census over a timed run, the idle gap predicted first.
 - [ ] **Q69. Seven unbuilt paths are not counted.** Found by the 2026-09-24 staleness audit.
   `CLAUDE.md` rule 4 asks every unbuilt path the program reaches to call `Unimplemented.Report`, and these have no
   counter (two are queued for building, Q76 and Q77): the lobby's 90-second advisor repeat of response `0x18a`/`0x18b` (`0x005e184c`,
@@ -912,7 +948,10 @@ artifacts are listed in `docs/history/README.md`.
   clamps and shows nothing. `ParkPeople`'s new-guest record writes `Happiness: 0f` (and nought thirst, hunger,
   toilet, vomit, litter) with no note. Decode what the guest constructor `FUN_004faec0` and the arrival give a new
   guest, and whether a ride's settle-up should raise it, then build it. Confirm: `load 30`, `peeps` over a few
-  minutes.
+  minutes. **Then build the `InQueue` turn's unhappy arm** (`QUEUE_TURN_UNHAPPY` in `PeepBehaviour.QueueTurn`): below
+  happiness 10, thought `0xb`, out. Alexah held it at Q50d (2026-09-24) until arrivals start at the original's 50
+  (`FUN_004faec0`, `0x004fb075`), since at nought it would put every arrival out of every queue it joins;
+  `ParkQueueTurnTests.AnUnhappyQueuerStaysUntilArrivalsHaveTheOriginalsHappiness` pins the hold and turns round with it.
 - [ ] **Q86. Clearing a path joined to an entrance puts its whole queue out.** Found by Q50's decode. `ClearCell`'s
   path arm re-walks the entrance owner's queue (`0x0053694b`) after unlinking both sides, so the queue measures 0 and
   all but the nominee and state 14 go. `ParkPathBuilding.ClearPathCell` re-walks nothing. First check it is reachable
@@ -971,6 +1010,24 @@ artifacts are listed in `docs/history/README.md`.
   Lost Kingdom's save holds the items' own, so nothing differs yet. Read both from the save record, a bought thing's
   from its item, and say it at each site. The window's setters wait on Q31. No game run beyond a census of the two.
 
+- [ ] **Q98. Spot animations are never played. Decode first.** Found by Q50d. `FUN_004fc800(n)` plays animation `n`,
+  stamps `mTimeOfLastSpotAnim` (`+0x208`), saves the state in `+0x224` and enters state 8, whose return
+  (`FUN_004fc890`) is built; for `n` 4 it also plays sound `0x7e` for an id whose low nibble is nought. The queue turn
+  reaches it for happiness above 80 and from 10 to 19 (`QUEUE_SPOT_ANIMATION`). While it is unbuilt a queuer's mood is
+  read on every turn, and the window after an animation - the heading turned one turn in ten (`QUEUE_TURN_HEADING`) -
+  is never reached. Decode its other callers and what animations 4 and 5 are, then build both. Confirm: `peeps` over
+  a queue at happiness 90, the guests animating on screen.
+- [ ] **Q99. The board arm's put-out when no route is found.** Found by Q50d. The original forgets a guest called
+  forward and puts them out when `FUN_004fa5f0` fails (`0x0050010a`); `QueueTurn` counts it (`QUEUE_BOARD_NO_ROUTE`)
+  and walks them on. The stand point is on the entry cell (`FUN_004dedf0(0)`, `ride-operation.md`, "Leaving a
+  ride"), but `FUN_004fa5f0` also fails without routing when its retry stamp at `+0x198` says so (`0x004fa62a`,
+  `FUN_004fa770`), which nothing here keeps. Decode that stamp first, then build the arm. Confirm: `unimplemented`
+  over a long run (the counter's rate), then a boarding guest cut off by a path edit.
+- [ ] **Q100. A toilet's `+0x44`, which the queue turn's dirt gate reads. Decode first.** Found by Q50d.
+  `FUN_004e0390` puts out a queuer for a toilet (`+0x32 & 1`) whose `+0x44` truncates below 25.0 (`0x00700550`);
+  nothing here keeps the field (`QUEUE_TOILET_DIRT_GATE`). Decode what writes it (the handyman's cleaning, use) and
+  whether it is saved, then build the gate. Confirm: a queue at Lost Kingdom's toilet, `peeps` before and after.
+
 ## B. Docs and comments
 
 - [ ] **Q13. Move `docs/CLEANUP-PLAN.md` into `docs/history/`.** Every item in it is closed. It is still untracked in
@@ -987,6 +1044,11 @@ artifacts are listed in `docs/history/README.md`.
   item `+0xC4` `Research.Group`, which the schema puts at `+0x178`, making `+0xC4` `UsageInfo.GoldenTicketCost`; and
   `park-engine.md` divides a capacity by `+0x1a0`, which the schema makes `Upgrades[0].InitDuration` (`+0x198` is
   `InitCapacity`). Settle each against the code that reads it, and correct the page that is wrong. No game run.
+- [ ] **Q101. `ParkWorld`'s person-block walk names two fields the game does not.** Found by Q50d's decode. The
+  comment beside `ParkWorld.ReadGuest` lists `mHappiness 422` and `mToilet 525` among the serialiser's own names;
+  `FUN_004fb530` tags every need float `pv` (`0x0075b444`), and no string `mHappiness` or `mToilet` is in the binary.
+  The order and offsets stand (happiness `+0x19c` and toilet `+0x1ac` are named by the debug strings at `0x004fda74`
+  and `0x004fd10e`); say the two names are this project's.
 - [ ] **Q46. Seven more stacked doc comments.** Found by Q11's scan of every source file (the six in Q11 were
   the first). Each sits on another member's summary, so it documents the wrong member. By member, since line numbers
   go stale: in `ParkGuestSprites`, `Standing`'s block lands on `StandingFrom` (Standing's own `<inheritdoc>` must go);

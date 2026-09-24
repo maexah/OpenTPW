@@ -291,14 +291,15 @@ the kids' `0x80` when the guest's id `& 7` is nought (`0x0050133d`), takes `Medi
 | `0x005014b4` | `FUN_00501390`, told by `FUN_004de1f0` | place `>=` cells × 4, unsigned, and not state 14 | thought `0xd` when id % 3 is nought; `FUN_004ddd20` | −15 | built, `ParkPeople.QueueRemeasured` |
 | `0x004e0554` | `FUN_004e0450`, the object's completion | the head, when `VAR_LETMEON` still names them or they are not in state 14 | `FUN_004ddd20` | −15 | built, `ParkPeople.CompleteOrTurnAway` |
 | `0x004ffdf4` | `FUN_004ffbc0`, arriving at the queue | joined, and `FUN_00501160` finds no route to their place | `FUN_004ddd20` | −15 | counted, `QUEUE_PLACE_WALK` |
-| `0x005004b3` | `FUN_004ffff0`, the `InQueue` turn | nine arms, below | `FUN_004ddd20`, a thought on most arms | −15 | counted, `QUEUE_TURN_DISMISSALS` |
+| `0x005004b3` | `FUN_004ffff0`, the `InQueue` turn | nine arms, below | `FUN_004ddd20`, a thought on most arms | −15 | the lost place, the toilet and halves of 5a and 5b built, `PeepBehaviour.QueueTurn`; the rest counted |
 | `0x005007b4` | `FUN_005006b0`, at the door | `FUN_004fde50` says too expensive | thought 6, event 10, **a first −15** (`0x00500778`), `mNumWalkAways` +1 (`FUN_004e1670`), `FUN_004e0ac0`, `FUN_004ddd20` | −30 | built, `PeepBehaviour.WalkAwayFromTheDoor` |
 | `0x00500857` | `FUN_005006b0`, at the door | `AdmitPerson` refuses and `FUN_00501160` fails: `"Couldn't rejoin FOQ even!"` | `FUN_004ddd20` | −15 | counted, `QUEUE_PLACE_WALK` |
 
 **`FUN_004ddd20` is the whole of leaving**: it empties script variable 0 (`VAR_LETMEON`) when it names the leaver
 (`0x004ddd4e`..`0x004ddd7d`), then splices with the leaver's own links and tests no membership - with no `mQPrev`
 it writes `mFirstInQ` = the leaver's `mQNext` (`0x004ddde9`), so an unlinked leaver clears the head. OpenTPW's is
-`ParkRideOperation.LeaveQueue`, over `ParkState.LeaveQueue`, which refuses a guest not in the queue.
+`ParkRideOperation.LeaveQueue`, over `ParkState.LeaveQueue`, which splices the same way and reports only whether the
+leaver was at the head or linked.
 
 **`FUN_004ddf50` (GetPositionInQueue) gives up at a guest who has stopped queueing.** Walking from `mFirstInQ`, it
 asks `FUN_00502430` of every guest it steps past, the head included, and answers -1 at the first who fails
@@ -434,33 +435,74 @@ and track-editor closes, the advisor scores, and the second completion on a brea
 
 #### The `InQueue` turn - `FUN_004ffff0`
 
-Every arm reloads the object and jumps to one tail (`0x0050049e` / `0x005004aa`): `FUN_004ddd20`, `FUN_005012f0`,
-state 6 again. In code order:
+Verified 2026-09-24 (`docs/QUEUE.md` Q50d): five claim groups, each read from the disassembly and put to a skeptic;
+all held. `ESI` is the guest and `EDI` the object, reloaded from the thing table by `MajorDest` before every jump to
+the one tail (`0x0050049e` / `0x005004aa`): `FUN_004ddd20`, then `FUN_005012f0` (which sets state 6 itself,
+`0x00501385`), then state 6 again. Every log and assert on the way is the bare `RET` `FUN_005da3c0`. In code order:
 
-1. **Board** (`mQueuePos` 0, `mBeenAdmitted`, the nominee): route to the stand point, state 13. **1b**, no route:
-   `"the player has removed the path from under me"` (`0x0050010a`), `FUN_004e0ac0`, out.
-2. At the front and invited but not the nominee: return (`0x005001d8`).
-3. **Dirt gate**: a toilet (`+0x32 & 1`) whose `+0x44` truncates below 25.0: thought `0xe`, out.
-4. **Lost place**: `FUN_004ddf50` answers -1, `"Problem with a queue - shouldn't be fatal"` (`0x00500270`), out.
-5. Place equal to `mQueuePos`: **5a capacity** - `mQueuePos > FUN_004dda40`: thought `0x10`, event `0x15`, out; **5b
-   track gate** - track type 3 with `FUN_00441970` nought, or type 1 with `+0x2c` nought: thought `0xd`, out.
-6. **Drift**: delay non-zero and `mQueuePos - place` at most 2 (a 32-bit unsigned compare of the zero-extended byte,
-   `0x005002c2`..`0x005002e5`): spend one. Otherwise, unless the ride is broken (`mState` 1, `0x00500521`), re-take
-   through `FUN_00501160` (`0x00500532`); if that fails, `"Couldn't get to my intended queue position"`, out.
-7. **Mood**, when `mGameTick - mTimeOfLastSpotAnim` (`+0x208`) exceeds 30: happiness above 80 or 10..19 plays spot
-   animation 5 or 4 (`FUN_004fc800`) and returns; below 10, thought `0xb`, out; 20..80 with `mToilet` above 80,
-   thought 4, out unless the thing is a toilet.
-8. **Window** (30 or less): `mGameTick > mTimeStartedIdling + 100` is **boredom** (`0x00500432`, event 7, thought
-   `0xc`, out); otherwise one turn in ten turns the heading.
+1. **Board**: `mQueuePos` (a byte) nought, `mBeenAdmitted` non-zero and `FUN_004e0aa0` (the object's word `+0x6c` is
+   this guest): `mBeenAdmitted` cleared, route to the stand point (`FUN_004dedf0(0)`, then `FUN_004fa5f0`), state 13.
+   **1b**, no route: `"the player has removed the path from under me"` (`0x0050010a`), `FUN_004e0ac0`, out.
+2. **Wait**: the same two with the object naming somebody else: the whole turn is nothing (`0x005001d8`). The
+   invitation is kept, and nothing below runs, not even the mood.
+3. **Dirt gate**: `FUN_004e0390`, a toilet (`+0x32 & 1`) whose `+0x44` (its meaning not decoded) truncates to a
+   byte below 25.0 (`0x00700550`): thought `0xe`, out.
+4. **Lost place**: `FUN_004ddf50` answers -1 (the guest is unlinked, or somebody in front is no longer in states
+   11..14): out. Its string, `"Problem with a queue - shouldn't be fatal, closing and reopening the ride with the
+   problem!"` (`0x0075dbac`), promises a close and reopen that nothing does.
+5. Place equal to `mQueuePos` (`0x0050059d`): **5a capacity** - `FUN_004dda40` below `mQueuePos`, unsigned: thought
+   `0x10`, event `0x15`, out; **5b track gate** - item track type 3 with `FUN_00441970` nought, or track type 1 with
+   `mIsTrackRideValid` (`+0x2c`) nought: thought `0xd`, out. Otherwise the mood below.
+6. **Drift**: delay (`+0x1f4`) non-zero and `mQueuePos - place` at most 2 (a 32-bit unsigned compare of the
+   zero-extended byte, `0x005002c2`..`0x005002e5`, so a guest ahead of their true place, `mQueuePos` below it, always
+   re-takes): spend one.
+   Otherwise, unless the object is broken down (`FUN_004e0370`, its `mState` `+0x19c` is 1; 2 and 4 re-take),
+   re-take through `FUN_00501160` (`0x00500532`), which writes `+0x1f1` before routing and sets state 12; if it
+   fails, `"Couldn't get to my intended queue position"`, out. After a re-take, a spent delay or arm 5, the mood below
+   runs on the same turn, whatever the state.
+7. **Mood**, when `mGameTick - mTimeOfLastSpotAnim` (`+0x208`) exceeds 30 unsigned (`0x00500308`). Happiness
+   (`+0x19c`) is truncated to a byte: 81 and up plays spot animation 5 (`FUN_004fc800`) and returns; 20..80 reads the
+   toilet need (`+0x1ac`, the same byte truncation), and above 80 thinks thought 4 and goes out unless the thing is a
+   toilet (`+0x32 & 1`), at or below 80 returns; 10..19 plays spot animation 4; below 10 thinks thought `0xb`, out.
+8. **Window** (30 or less): `mGameTick` at most `mTimeStartedIdling` (`+0x1fc`) + 100 turns the heading (`+0x1c`)
+   one turn in ten by `rand % 800 - 400`, wrapped into 0..`0x7ff`; beyond it, **boredom** (`0x00500432`, event 7,
+   thought `0xc`, out).
 
-**Boredom never fires in the original's own play.** `+0x208` is written only at a spot animation's start
-(`0x004fc871`, `0x0050237b`) and by the constructor; state 8 returns only after `mGameTick > +0x208 + 10`, and
-returning to 11 stamps `mTimeStartedIdling` (`0x00501eb7`), so in state 11 it is at least 11 past `+0x208`. The window
-wants `mGameTick <= +0x208 + 30` and boredom `mGameTick > +0x208 + 111`. Only a save holding a state-11 guest with the
+**Boredom never fires in the original's own play.** `+0x208` is written only by the constructor (0) and at a spot
+animation's start (`0x004fc871`, `0x0050237b`); state 8 returns only after `mGameTick > +0x208 + 10`, and returning
+to 11 stamps `mTimeStartedIdling` (`0x00501eb7`), so in state 11 it is at least 11 past `+0x208`. The window wants
+`mGameTick <= +0x208 + 30` and boredom `mGameTick > +0x208 + 111`. Only a save holding a state-11 guest with the
 two stamps 70 apart could reach it. `FUN_004dda40` returns 100 for a thing without a queue path (`+0x32 & 8`), else
-`max(4, trunc(+0x5d × desc[+0x1b4 + lvl × 0x40] × (+0x58 / desc[+0x1a8 + lvl × 0x40]) / +0x5c))` with `lvl` = `+0x50`;
-the `+0x1b4` float is the one its assert calls `"No queue constant entered in SAM file"`, the `+0x1a8` divisor is an
-integer (`FIDIV`), and a speed of nought makes the ratio 1.
+`trunc(max(+0x5d × desc[+0x1b4 + lvl × 0x40] × R / +0x5c, 4.0))` with `lvl` = `+0x50` and `R` =
+`+0x58 / desc[+0x1a8 + lvl × 0x40]`, or 1 for a speed of nought; `R` is stored through a float global (`0x007cdc54`),
+the `+0x1b4` float is the one its assert calls `"No queue constant entered in SAM file"`, and the `+0x1a8` divisor is
+an integer (`FIDIV`).
+
+**The clock and the stamps.** `mGameTick` (`[0x0080239c] + 0x1da70c`, named by the world serialiser) goes up by one
+at the start of each thing sweep (`0x00516394`), which runs on game ticks whose low three bits are nought and at most
+three times a rendered frame; it is zeroed at level start (`0x00515865`) and loaded from a save (`0x00517bec`).
+`FUN_004fc800(n)` plays animation `n`, for `n` 4 plays sound `0x7e` for a guest whose id's low nibble is nought,
+stamps `+0x208`, copies the state into `mSavedState` (`+0x224`) and enters state 8, which `FUN_00502430` looks
+through. The guest constructor `FUN_004faec0` zeroes `+0x208` and `+0x1fc` and sets happiness to **50.0**
+(`0x004fb075`). The serialiser tags every need float `pv` (`0x0075b444`); happiness and toilet are known by the debug
+strings that print them (`0x004fda74`, `0x004fd10e`) and by the needs tick, not by a name in the game.
+
+**OpenTPW builds** the turn as `PeepBehaviour.QueueTurn`, with `ParkRideOperation.LeaveQueue` as the tail's
+`FUN_004ddd20` and `DismissFromTheQueue` as `FUN_005012f0`: arms 1, 2 and 4, 5a for a thing without a queue path,
+5b for a car track, the broken ride's skipped re-take, and the toilet. `ParkState.LeaveQueue` splices by the leaver's own links, so a leaver with nobody in front
+writes their own next as the head (`0x004ddde9`): an unlinked one empties it and the rest of that queue is lost to the
+walk in turn. **Counted:** the no-route board (`QUEUE_BOARD_NO_ROUTE`: ours routes to the entry cell's centre, the original to
+the stand point on the same cell, and `FUN_004fa5f0` also fails without routing on a retry stamp at `+0x198`,
+`0x004fa62a`, that nothing here keeps), the dirt gate (`QUEUE_TOILET_DIRT_GATE`), the capacity on a queue path (`QUEUE_CAPACITY_RECHECK`), the
+coaster's record (`QUEUE_TURN_COASTER_TRACK_RECORD`, let through), the failed re-take (`QUEUE_PLACE_WALK`, Q50e), the
+thoughts, the spot animations (`QUEUE_SPOT_ANIMATION`), the heading (`QUEUE_TURN_HEADING`) and boredom
+(`QUEUE_TURN_BOREDOM`). **The unhappy arm is held** (`QUEUE_TURN_UNHAPPY`) until Q85: an arriving guest here starts at
+happiness nought, not the constructor's 50, and the arm would put every arrival out of every queue. 5b's built half is
+dead by content: the shipped park places nothing tracked, nothing here sets `mIsTrackRideValid`, and the choice
+sends nobody to a car track without it, so only a save holding a queue for an invalid Dino Karts (item 1150, the
+jungle's one car track) reaches it. With spot animations unbuilt `TimeOfLastSpotAnim` stays at nought, and the thing
+tick is `GameClock.Ticks` over eight, which is not reset on entering a park: a queuer's mood is read on every turn and
+the window is not reached once the lobby has run about seven seconds.
 
 #### At the door - `FUN_005006b0` and `FUN_004fde50`
 

@@ -119,17 +119,50 @@ public class ParkQueueJoinTests
 		Assert.AreEqual( 0, park.JoinQueue( Ride, 9 ), "the next to arrive is at the front again" );
 	}
 
-	/// <summary>Somebody who was never in it is reported as such, and nothing is disturbed.</summary>
+	/// <summary>
+	/// Somebody who was never in it is reported as such, <b>and the head is still written</b>: the original
+	/// splices by the leaver's own links (<c>FUN_004ddd20</c>, <c>0x004ddde9</c>), so a leaver with nobody in
+	/// front and nobody behind leaves the head nought, and the guest who was at the front is linked to nobody's
+	/// queue.
+	/// </summary>
 	[TestMethod]
-	public void SomebodyWhoWasNeverInItIsNotRemoved()
+	public void SomebodyWhoWasNeverInItEmptiesTheHead()
 	{
 		var park = Park();
 
 		park.JoinQueue( Ride, 7 );
+		park.JoinQueue( Ride, 8 );
 
 		Assert.IsFalse( park.LeaveQueue( Ride, 99 ), "they were never queueing" );
-		Assert.AreEqual( 1, park.QueueLength( Ride ), "and the queue is untouched" );
-		Assert.AreEqual( 7, park.FirstInQueue( Ride ) );
+		Assert.AreEqual( 0, park.FirstInQueue( Ride ), "the head is their own next, which is nobody" );
+		Assert.AreEqual( 0, park.QueueLength( Ride ), "so the queue walks as nought long" );
+		Assert.AreEqual( 8, park.NextInQueue( 7 ), "while the two who were in it keep their links" );
+		Assert.AreEqual( 7, park.PreviousInQueue( 8 ) );
+	}
+
+	/// <summary>
+	/// A leaver cut off from the head - nobody in front, somebody behind - makes whoever is behind them the head,
+	/// in place of the guest who was there (<c>0x004ddde9</c>).
+	/// </summary>
+	[TestMethod]
+	public void ALeaverWithNobodyInFrontMakesTheNextTheHead()
+	{
+		var park = Park();
+
+		park.JoinQueue( Ride, 7 );
+		park.JoinQueue( Ride, 8 );
+		park.JoinQueue( Ride, 9 );
+
+		// 7 stops queueing and the ride drops them (FUN_004e0b90), leaving 8 with a link back to 7.
+		park.ClearQueueHead( Ride );
+		park.JoinQueue( Ride, 5 );
+
+		Assert.AreEqual( 5, park.FirstInQueue( Ride ), "a guest joining an empty head becomes it" );
+
+		// 7 leaves by their own links: nobody in front, 8 behind.
+		Assert.IsTrue( park.LeaveQueue( Ride, 7 ) );
+		Assert.AreEqual( 8, park.FirstInQueue( Ride ), "8 is the head now, and 5 is cut off" );
+		Assert.AreEqual( 2, park.QueueLength( Ride ), "8 and 9" );
 	}
 
 	/// <summary>
