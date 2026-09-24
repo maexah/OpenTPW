@@ -299,6 +299,20 @@ public partial class Renderer
 		Time.Update( deltaTime );
 		Input.UpdateFrom( inputSnapshot );
 
+		// The original's interface posts no input while its window is inactive (0x0077c488, cleared on WM_ACTIVATEAPP),
+		// and Windows sends no key-up to a window without the focus. SDL lets go of every held key as the focus leaves,
+		// and the lobby acts on a key's release, so without this Enter held through a switch of window would enter a park.
+		// A frame the focus left in is dropped whole, even if it came back within it.
+		var focusLeft = Window.TakeFocusLeft();
+
+		if ( focusLeft || !Window.SdlWindow.Focused )
+		{
+			if ( Input.KeysPressed.Count + Input.KeysReleased.Count > 0 )
+				Log.Info( $"Input: the focus left this frame or is away - {Input.KeysPressed.Count} key presses and {Input.KeysReleased.Count} releases dropped" );
+
+			Input.ForgetHeldKeys();
+		}
+
 		PreRender();
 		PreUpdate?.Invoke();
 

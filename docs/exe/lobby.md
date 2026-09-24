@@ -24,7 +24,7 @@ a file under `data/`.
 | `0x757f60` | — | Tree: island panel | Dumped call site |
 | `0x7581a0` | — | Tree: the **online globe's hover readout** — two labels, a name and "Parks: N" (UITEXT 462), both blanked on null, created at lobby start beside the globe panel | Dumped call site; the labels' own text ids |
 | `0x7596b0` | — | Tree: online globe panel, 14 controls. Loaded on the lobby path, unbuilt | Dumped call site |
-| `0x774c18` | — | Tree: mail badge, mesh `i_mail`. Loaded on the lobby path, unbuilt | Dumped call site |
+| `0x774c18` | — | Tree: the lobby's **root control** `0xbf431`, full screen, callback `0x005d58b0`, given the focus by `FrontEnd_Init` - every key and press the lobby takes goes through it ("The lobby's keys act on the release"). Its one child is the mail badge `0xbf432`, mesh `i_mail`, unbuilt | Dumped call site; stream re-read |
 | `0x1e0ec` / `0x1e0ed` / `0x1e0ee` | — | The player's golden-key count, part of the **island panel** | Control ids in the island panel's stream |
 | `h = (c ^ h) * 47` | — | Mesh-name hash, over the node name of the model's **first** mesh — e.g. `wdialogw`, `islandlob` | Reproduced against every ui.wad mesh name |
 
@@ -100,7 +100,7 @@ screenshots centre the name. It is centred.
 |---|---|---|---|
 | `0x00803a2c` | cat_ui | The UI sound category: effect 31 `BUTTON01`, 189 `Select3` on button clicks; 198 `goldkey` at the tour cue | Sound map |
 | `0x00485780` | — | UI_Init's click hook, which plays the above | Disassembly |
-| `0x005e1e30` | — | Enter park, affordable: panel hidden, globallobbysfx effect 4, particle 98. Locked plays nothing at all | Disassembly |
+| `0x005e1e30` | — | Enter park, affordable: panel hidden, globallobbysfx effect 4, particle 98 - neither for an Instant Action player (`0x004b8fd0` returns on game type 2, `0x004b9020`). Locked, Enter this park plays nothing itself; a click on its button still plays the UI click through the hook | Disassembly |
 | `0x005e1bd0` | — | Online world. Does nothing offline — a permanent dead end | Disassembly |
 
 Measured lobby mix: the goldkey click read back a gain of 0.090 = 0.484 x master 0.5 x duck 0.38.
@@ -428,7 +428,8 @@ the lobby's code, and no key-binding table has an island row. OpenTPW's `[` and 
 writes `[3]` only in the attract branch, which runs only with no islands, no player or no current island.
 `0x005e1fa0` writes it ungated, but its one caller is `FrontEnd_ClosePlayerSlots`, whose slots open from the
 game menu — which Escape cannot open during a leave (below) — and from `FrontEnd_Init` (`0x005d5bec`) when
-nobody is playing. Whether Enter can start a leave while those first slots are up is not decoded.
+nobody is playing. Enter cannot start a leave while those first slots are up: they hide the lobby's root and take the
+focus, and their callback drops every key ("The lobby's keys act on the release", below).
 
 **Escape during a leave cancels it**, and so the game menu cannot open over a flight. The route and the
 cancel are the next section's.
@@ -452,15 +453,15 @@ camera: staying on island N`) and while held to one island, and the panel's arro
 the bracket keys all ask through it. `ForgetIsland`, part of the lobby's unload, clears the whole leave.
 Confirmed in the game with a real `]` mid-flight. Which park is fixed at Enter in a closure, where the
 original reads it at arrival; nothing a player can reach moves the island in flight, so the two cannot be
-told apart. The cursor keys act on the press where the original's act on the release, and Enter does not
-enter the park (Q42).
+told apart. The cursor keys act on their release, as the original's do ("The lobby's keys act on the release",
+below); the bracket keys, OpenTPW's own, on the press.
 
 ### Escape cancels the fly-in, and the gate is the flight's
 
 Decoded 2026-09-23 for `docs/QUEUE.md` Q41: four decoders, each put to a refuter, every claim re-read in disassembly.
 
 **The route.** The lobby acts on Escape's **release** (`0x1000b`, key `0x1b`), never its press. The UI gives a key to one
-control only (`0x006698e6`): the focus if it is visible, else the last control a left press reached - never an
+control only (`0x006698e6`): the focus if it is visible, else the last control any press reached - never an
 accelerator, whose one table (`0x0077c4b8`) is End, Home, Up and Down. So with the game menu open the key is the
 menu's (`0x0048bd40` closes it; `MenuList_Show` took the focus, `0x00493197`), and with a message box open it is the
 box's (`UI_LoadModalTree` takes the focus, `0x0047ee67`), and neither reaches the lobby. Otherwise the lobby root's
@@ -541,7 +542,116 @@ whose `Shown` looks at the keys. `CancelLeave` shuts the gate from state 2, carr
 and clears the leave. The gate's M1 is played from `StepLeaving`'s arrival, not at Enter, and `LobbyGate` plays each clip
 once over its declared span, holds its last frame, and keeps one clip queued; the holding, and idling shut
 between the two calls, are our reading while the Unsettled points above are open. `IslandPanel.EnterPark` tests the camera's
-state, as `0x005e1ce0` does. Escape acts on the press, not the release (`docs/QUEUE.md` Q42).
+state, as `0x005e1ce0` does. Escape acts on its release, as every key the lobby takes does (next section).
+
+### The lobby's keys act on the release, and a press on the view enters the park
+
+Decoded 2026-09-23 for `docs/QUEUE.md` Q42: four decoders, each put to a refuter; the press route, the root's stream and
+the polygon test re-read by hand.
+
+**Every key the island lobby takes acts on its release, and none on its press.** The window procedure `FUN_0046b600`
+posts every WM_KEYDOWN and WM_SYSKEYDOWN, auto-repeats included, as UI message `0x1000a` (`FUN_00658c38`), and every
+WM_KEYUP and WM_SYSKEYUP as `0x1000b` (`UI_PostKey`, `0x00658c67`) - one per release. The executable holds one `PUSH` of
+each and synthesises neither. None of the lobby's readers reads `0x1000a`: the island camera's `0x005e2310`,
+`IslandLobby_OnKey` (`0x005e41c0`), the root's `0x005d5dd0`, `IslandPanel_Callback`, the slots' and the dialog's callbacks
+and the advisor queue (`RET 0xc`). So a held key does nothing until it is let go, and then once.
+
+**The key code** is built the same way at both edges. The keypad's `+ - * / .` give `vk << 8`. Any other key gives
+`MapVirtualKeyA( vk, 2 )` when that is non-zero, else the vk, and an extended key (lParam bit 24) becomes
+`(code & 0xff) << 8`. So the main Enter is `0x0d` and the keypad's `0x0d00`; the cursor keys are `0x2700` and `0x2500`,
+the keypad's arrows `0x27` and `0x25` with NumLock off. Only the main Enter and the cursor keys match the camera. The
+modifiers ride in the flags word, and nothing in the lobby looks at them.
+
+**The route is the lobby's root control.** `FrontEnd_Init` loads stream `0x774c18` with callback `0x005d58b0` and gives it
+the focus (`0x005d59b7`). The stream is one full-screen type-1 control, id `0xbf431`, rect (0,0,2048,1536), flags 1, with
+the mail badge `0xbf432` its only child. The UI pop `0x006698e6` hands a key to one control: an accelerator's target (the
+one table, `0x0077c4b8`, is a list's End, Home, Up and Down), else the focus if it is visible, else the last control any
+press reached, if visible. A control that does not handle a key drops it; the base proc `0x0065f6d1` passes nothing to a
+parent. The root's callback hands every message to `0x005d5dd0`, which hands it to each registered object's `+0x14`. Only
+g_FrontEnd's, `IslandLobby_OnKey`, does anything: after its Escape (the previous section) it hands the message to each
+active child's `+0x14`, and the island camera's `0x005e2310` takes three keys. Enter (`0x0d`) is Enter this park
+(`+0x40`), `0x2700` the next island (`+0x38`) and `0x2500` the previous (`+0x3c`).
+
+**Who has the keys.**
+
+| While | The keys go to | So |
+|---|---|---|
+| a player is in the lobby, the panel up | the root, which holds the focus. A click on a panel button makes the button the last pressed but leaves the focus alone | Enter, Left, Right and Escape act |
+| the fly-in | the root. The panel is hidden (`0x004b8ec0`, message 6) | Escape cancels; Enter and the arrows reach the camera, which refuses on `+0x14` |
+| the game menu | the menu (`MenuList_Show`, `0x00493197`). Escape's release closes it (`0x0048c095`), as does entry 0 of the shortcuts table, which is Escape too; other keys are dropped | on closing, `0x004862a0` gives the root the focus back |
+| a message box | the box's root (`UI_LoadModalTree`, `0x0047ee67`), whose callback drops every key | only its buttons close it |
+| the options screen | nothing: the root keeps the focus but is hidden (message 6, `0x004a3ae0`), so the pop skips it, and the last-pressed control drops the key | |
+| the player slots, nobody playing | the slots: `FrontEnd_ShowPlayerSlots` hides the root (`0x004a65a8`) and gives the slots' root the focus (`0x004a65d6`), and its callback `0x004a5fc0` drops keys | **no key acts, and Escape opens no menu** |
+| the new player dialog | its name box (`0x004a6f8e`), which edits on the press and takes Enter (the main one) and Escape on the release (`0x00667fee`), sending `0x802` or `0x804` to the dialog synchronously | the tick's whole close runs inside that one key-up's delivery, so its release never reaches the root |
+
+**A left press on the lobby's view enters the park, on the press.** WM_LBUTTONDOWN posts `0x10005`, with the button (0
+left, 1 right, 2 middle) as its first argument, to the control the pointer is over (`FUN_00658af1`, the hover
+`[0x00faa5e0]`). There is no hit test at the press: the hover is worked out on a move and on `UI_SetVisible`. Off every
+window it is the root `0xbf431`, whose callback hands the press on the same way, and `0x005e2310` answers button 0 with
+Enter this park (`0x005e234f`); the right and middle buttons it ignores. The window class has no `CS_DBLCLKS` (style 0,
+`RegisterClassA` at `0x0044e0de`), so a double click is two presses, and the second is refused because the first set
+`+0x14`. The panel's button acts on the release of a click instead: the button class (`0x00668f9c`) posts `0x100` to the
+panel on the left release, and only if the press was its own (`0x006690d6`), and `IslandPanel_Callback` calls the same
+`+0x40` (`0x004b8bf8`).
+
+**The island panel's outline.** A hit test walks down from the UI root, children first; a control flagged `0x2`
+is skipped with everything under it, and a control answers for itself when its region holds the point - its rect, or a
+polygon (stream op 4, sub-op 4). The island panel's root `0x1e0e7` has a 23-point polygon, the green L. A press inside it
+and off the buttons is the panel's, and its callback hands it nowhere. A press in the corner of the panel's rect that the
+L leaves bare, or on the price, the key count or the park's name (flags 3), reaches the root and enters the park. The
+test is `0x0066c5a4`, the crossings count from Graphics Gems in whole virtual units: starting from the last vertex, a
+vertex is "above" when its y is at least the point's, and each edge whose two ends differ flips the answer when
+`(y1 - y) * (x0 - x1) >= (x1 - x) * (y0 - y1)` agrees with its new vertex's flag.
+
+**Enter this park, `0x005e1cc0`,** tests in this order, each a silent return:
+1. the camera already leaving (`+0x14`, `0x005e1ce2`);
+2. no island (`[3]`, `0x005e1ced`);
+3. an Instant Action player (`[0x00fb3b7c] == 2`) goes straight to `+0x44`;
+4. the theme's record not loading;
+5. `PlayerProgress_CountKeys` (`0x005af680`) - the keys the player holds now, not the count the panel last showed - less
+   than `Keys.CostToEnter` (`0x005e1df0`).
+
+Nothing is played or said for a park the player cannot afford, and an Instant Action player's leave plays neither the
+puff nor the cue (`0x004b8fd0` returns on game type 2, `0x004b9020`). CountKeys loads each theme's `global.sam` on
+demand (`0x005b11c0`) and writes nothing else.
+
+**The system table's keys, in either scene.** The window procedure also matches the binding table at `[0x0078718c]` on
+every key itself - `FUN_0040c900` on the press, which only latches, and `FUN_0040c990` on the release, which runs the
+row's handler - and no other table; the game, camera, shortcuts, cheat and coaster tables are run only by a park's
+controls. Its live rows are `P` (pause, `0x0040bf70`, which does nothing in the lobby), Ctrl+H (Popup Help,
+`0x0040c5d0`), F8 (a screenshot, `0x0040c470`) and Ctrl+Shift+Alt+F8 (`0x0040c480`); boot rewrites the first two rows'
+keys from text strings 0x14 and 0xf. `FrontEnd_ShowPlayerSlots` switches every table off (`0x0040cfa0`) and
+`FrontEnd_ClosePlayerSlots` back on (`0x0040cf60`). A message box closed over the slots can switch them on early:
+`MessageBox_Open` saves and restores the byte flag `[0x007c24d0]` (`0x0047f218`), which the slots never set.
+
+**While the game's window is inactive the UI posts nothing at all**, keys or presses: `[0x0077c488]` is set as the window
+comes active (WM_ACTIVATEAPP, `0x00659333` from `0x0046b6fc`) and cleared as it goes (`0x006593c5` from `0x0046b72e`), and
+the posters test it first. Windows sends no key-up to a window that has lost the focus besides, so a key held through a
+switch of window is never let go, as far as the lobby knows.
+
+**Unsettled.**
+- A press made after a window opens or closes, before the pointer moves, goes to the old hover: a tree becomes the hover
+  only at the next move or `UI_SetVisible` (`0x0065bff4` runs before the control is linked). Not built.
+- Whether the game menu takes the pointer's capture, and so whether a press outside it could still reach the lobby's
+  root. Here the menu is modal and takes every press.
+- Whether the mail badge `0xbf432` can show offline. `0x004bbbd0` hides it while `g_Players+0xc4`, a count, is 0; if it can
+  show, a press on it is the badge's and does not enter the park.
+- What a key or a press does in the online modes' children (`+0xc`, `+0x10`, and the sibling camera `0x00702dd0`, whose
+  Enter opens a confirm dialog); theirs read the arrows on the press. Offline none is started.
+- Nothing here was observed in the running original.
+
+**OpenTPW.** `Input.KeysReleased` holds the keys let go in a frame. SDL lets go of every held key as the focus leaves, so a
+frame in which the focus left is dropped whole, even if the focus came back within it, and so is every frame without it
+(`Renderer.Update`, `Window.TakeFocusLeft`): a key-up is acted on only where the original's window would have had one. The stack hands the keys to the scene only when no box has the focus
+(`WindowStack.KeysWithoutFocus`), so a key the name box took never reaches the lobby, and the box takes the first of
+Enter (the main one) and Escape to come up. `FrontEnd.LobbyKeys` is the root: Escape goes to `MenuKey`, and Enter, Right
+and Left to the camera while someone is playing and nothing but the island panel is in front. A left press the window
+system sent (`Input.MouseInfo.LeftWentDown`) that no window takes goes to `WindowStack.ViewPressed`, which is
+`FrontEnd.ViewPressed`: Enter this park while someone is playing. `UiControl.Outline` is the polygon region, with
+`0x0066c5a4`'s test, and the island panel's root has the L. `IslandPanel.EnterPark` makes the original's five tests in its
+order, `LobbyIsland.GlobalLoaded` standing for the record, and counts the keys held. Three differences are said at their
+sites: Escape over the player slots opens the game menu here (`docs/QUEUE.md` Q64), Ctrl+H acts on its press and F8 is not
+built (Q65), and a disabled button still takes the pointer (Q66).
 
 ### Island sound is one island at a time, and the previous one is stopped
 

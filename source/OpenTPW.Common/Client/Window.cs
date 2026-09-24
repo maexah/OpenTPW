@@ -63,6 +63,29 @@ public class Window
 
 		SdlWindow.Resized += SdlWindow_Resized;
 		Screen.UpdateFrom( Size );
+
+		// Whether the window has the keyboard decides whether its keys are heard at all - see Renderer.Update.
+		SdlWindow.FocusLost += () =>
+		{
+			_focusLeft = true;
+			Log.Info( "Window: the focus left" );
+		};
+
+		SdlWindow.FocusGained += () => Log.Info( "Window: the focus came back" );
+	}
+
+	private bool _focusLeft;
+
+	/// <summary>
+	/// Whether the focus has left since this was last asked, even if it has come back already - and forgets it. SDL lets
+	/// go of every held key as the focus leaves, and when the focus goes and comes straight back those key-ups arrive in
+	/// the same batch of events as its return, so the window reads as focused by the time anyone looks.
+	/// </summary>
+	public bool TakeFocusLeft()
+	{
+		var left = _focusLeft;
+		_focusLeft = false;
+		return left;
 	}
 
 	/// <summary>

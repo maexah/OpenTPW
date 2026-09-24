@@ -194,7 +194,7 @@ The constants in the code are only seeds for a first-ever run. **Do not re-measu
 
 It is built in code, not from a layout tree: a LOLIGHT full-screen control plus `MenuList_AddItem` items, font 0 with the purple skin, centred, first item at y = 5 and each next at y + h + 5, where `h = (line height + 5) * 0x600 / screen height`.
 
-Go Online is a dead end — it only closes. Escape over a message box goes to the box: `UI_LoadModalTree` gives it the focus (`0x0047ee67`) and a key goes to the focus alone (`0x006698e6`), so it never reaches `IslandLobby_OnKey` (`lobby.md`, "Escape cancels the fly-in"). Escape over the options screen does nothing here — **unproven**.
+Go Online is a dead end — it only closes. Escape over a message box goes to the box: `UI_LoadModalTree` gives it the focus (`0x0047ee67`) and a key goes to the focus alone (`0x006698e6`), so it never reaches `IslandLobby_OnKey` (`lobby.md`, "Escape cancels the fly-in"). Over the options screen no key reaches the lobby: the screen hides the lobby's root (`0x004a3ae0`), which keeps the focus, so a key goes to the last control pressed, which drops it (`lobby.md`, "The lobby's keys act on the release").
 
 The scratch `sdt.py`/`levels.py` tools are broken (`sdt.py` was overwritten), which is why the click level was measured by capture rather than from the file.
 
@@ -244,7 +244,6 @@ Verified with a silent XTEST harness at 1280x720 (the options screen's virtual x
 - the percent-to-loudness curve, and the volume mapping generally — percent / default as a linear multiply is an assumption;
 - anything against the original actually running: no reference screenshots of either screen exist locally;
 - the menu's hover tick rate taken as 30/s;
-- Escape over the options screen;
 - the 60 passed by `Sound_StopFading` taken as milliseconds;
 - the `0.09 s` voice fade inferred from the 90 at `0x0051bcb0`;
 - `Game_StateMachine` `0x0055035a` and the postcard caller `0x004a9380` as quiet-stop callers, neither checked against OpenTPW;

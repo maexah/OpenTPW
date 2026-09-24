@@ -36,6 +36,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0040c35f` | Escape handler `0x0040c180`: installs the idle mode through the setter over any mode but 0 or 1, which runs the outgoing mode's uninstall | OpenTPW.Tests/ParkHandTests.cs  |
 | `0x0040c368` | Escape handler `0x0040c180`: after the idle install, `FUN_0052f200(0,1)` zeroes the tool and the rotation, and the handler answers 1 so the menu does not open | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW.Tests/ParkHandTests.cs  |
 | `0x0040c4d0` | | OpenTPW/UI/WindowStack.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
+| `0x0040c5d0` | The system table's Ctrl+H handler, Popup Help, run on the key's release by the window procedure | OpenTPW/UI/HelpBar.cs  |
 | `0x00415270` | the whole-game restore chain: seventeen modules in order, each checked against a four-character tag that follows it | OpenTPW.Files/Formats/Save/ParkScriptStates.cs  |
 | `0x00419710` | | OpenTPW/UI/UiFonts.cs  |
 | `0x00423690` | | OpenTPW/World/Level.cs OpenTPW/Client/GameOptions.cs  |
@@ -141,6 +142,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004a3960` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x004a3a30` | | OpenTPW/UI/WindowStack.cs OpenTPW/UI/UiWindow.cs OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x004a3a4f` | | OpenTPW/World/Level.cs  |
+| `0x004a3ae0` | `OptionsScreen_Open` hides the lobby's root control (message 6) | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x004a43b0` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x004a4490` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x004a6000` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs OpenTPW/Client/Locale/UIStrings.cs  |
@@ -149,7 +151,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004a6290` | | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x004a62b0` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
 | `0x004a6580` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs OpenTPW/UI/FrontEnd/FrontEndLines.cs  |
+| `0x004a65a8` | `FrontEnd_ShowPlayerSlots` hides the lobby's root control | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x004a6a50` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/FrontEndLines.cs  |
+| `0x004a6a83` | `FrontEnd_ClosePlayerSlots` shows the lobby's root control again | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x004a6b80` | | OpenTPW/UI/FrontEnd/Screens/NewPlayerDialog.cs  |
 | `0x004a6d00` | | OpenTPW/UI/WindowStack.cs OpenTPW/UI/FrontEnd/Screens/NewPlayerDialog.cs  |
 | `0x004a6e40` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/NewPlayerDialog.cs OpenTPW/UI/FrontEnd/FrontEndLines.cs  |
@@ -344,7 +348,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005accf0` | | OpenTPW/Client/Players.cs  |
 | `0x005aef50` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
 | `0x005af530` | | OpenTPW/Client/Players.cs OpenTPW/Client/SaveFolder.cs OpenTPW.Files/Formats/Save/PlayerFile.cs  |
-| `0x005af680` | | OpenTPW/Client/Players.cs OpenTPW.Files/Formats/Save/PlayerFile.cs  |
+| `0x005af680` | | OpenTPW/Client/Players.cs OpenTPW.Files/Formats/Save/PlayerFile.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x005af740` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
 | `0x005af810` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
 | `0x005af940` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
@@ -353,11 +357,11 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005afc60` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
 | `0x005afd70` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
 | `0x005aff50` | | OpenTPW.Files/Formats/Save/RecordStream.cs OpenTPW.Files/Formats/Save/PlayerFile.cs  |
-| `0x005b09c0` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
+| `0x005b09c0` | A park's record: found or made, and answered only while its global.sam loads (`0x005b11c0`) | OpenTPW.Files/Formats/Save/PlayerFile.cs OpenTPW/World/Lobby/LobbyIsland.cs  |
 | `0x005b0cc0` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
 | `0x005b0d70` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
 | `0x005b11a0` | | OpenTPW/World/Lobby/LobbyIsland.cs  |
-| `0x005b11c0` | | OpenTPW/World/Lobby/LobbyIsland.cs  |
+| `0x005b11c0` | Loads a park's `data\levels\%s\global.sam`; 0 when it will not load | OpenTPW/World/Lobby/LobbyIsland.cs  |
 | `0x005b5cc0` | | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x005c5250` | | OpenTPW/Client/SaveFolder.cs  |
 | `0x005c7590` | | OpenTPW/Client/Players.cs OpenTPW/Client/SaveFolder.cs  |
@@ -369,6 +373,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005c83b0` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs OpenTPW/Client/Players.cs OpenTPW/Client/GameOptions.cs  |
 | `0x005c8650` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/Client/Players.cs OpenTPW.Files/Formats/Save/ConfigFile.cs  |
 | `0x005c8a10` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/Client/Players.cs  |
+| `0x005d58b0` | The lobby's root control's callback: hands every message on to `0x005d5dd0`, and so to `IslandLobby_OnKey` | OpenTPW/UI/WindowStack.cs OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x005d5970` | | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x005d5db0` | | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x005d5f80` | | OpenTPW/World/Advisor/Advisor.cs  |
@@ -389,14 +394,17 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005e18ab` | The cancel's gate clip: M2 once on `island+8`, from state 2 only | OpenTPW/World/Lobby/LobbyGate.cs  |
 | `0x005e1a44` | | OpenTPW/World/Lobby/LobbyAudio.cs  |
 | `0x005e1bd0` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
-| `0x005e1cc0` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
+| `0x005e1cc0` | `IslandLobby_EnterPark`, the island camera's `+0x40`: leaving, no island, Instant Action straight in, then the keys held against the cost | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x005e1ce0` | `IslandLobby_EnterPark`'s first test: the camera state `+0x14` is nought | OpenTPW/World/LobbyCameraMode.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
+| `0x005e1da3` | `IslandLobby_EnterPark` returns for a park with no record - its global.sam would not load | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs OpenTPW/World/Lobby/LobbyIsland.cs  |
 | `0x005e1e30` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs OpenTPW/World/Lobby/LobbyAudio.cs  |
 | `0x005e1e50` | The fly-in's arrival (`+0x48`): takes the park from the current island, sets the scene's choice to 2 | OpenTPW/World/LobbyCameraMode.cs  |
 | `0x005e1ee0` | Island arrow handler, **next** (`+0x38`): refuses while the camera is leaving (`+0x14`), then in Instant Action; `lobby.md` "The island keys wait for the fly-in" | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs OpenTPW/World/LobbyCameraMode.cs  |
 | `0x005e1ee3` | Next-island handler's first test: `[this+0x14]` non-zero returns | OpenTPW/World/LobbyCameraMode.cs OpenTPW.Tests/LobbyIslandKeysTests.cs  |
 | `0x005e1f40` | Island arrow handler, **previous** (`+0x3c`): the same two refusals | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs OpenTPW/World/LobbyCameraMode.cs  |
 | `0x005e1fa0` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/World/LobbyCameraMode.cs  |
+| `0x005e2310` | The island camera's `+0x14`: on a key's release Enter is Enter this park, `0x2700`/`0x2500` the next/previous island; a left press is Enter this park | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
+| `0x005e234f` | `0x005e2310`'s press arm: button 0 calls Enter this park (`+0x40`) | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x005e3210` | | OpenTPW/World/Lobby/LobbyAudio.cs  |
 | `0x005e4140` | | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x005e41c0` | `IslandLobby_OnKey`: on Escape's release asks every active child's `+0x18`, and opens the game menu only if none answered | OpenTPW/UI/WindowStack.cs OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
@@ -425,8 +433,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x006677ae` | | OpenTPW/UI/UiControl.cs  |
 | `0x0066781a` | | OpenTPW/UI/UiControl.cs  |
 | `0x00667833` | | OpenTPW/UI/UiControl.cs  |
+| `0x00667fee` | The edit box's key-up handler: Enter (`0x0d`) sends `0x802`, Escape `0x804`, Tab `0x803` | OpenTPW/UI/WindowStack.cs  |
 | `0x00668820` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
-| `0x006698e6` | The UI queue pop: hands each key message to one control only - the focus if visible, else the last pressed | OpenTPW/UI/WindowStack.cs OpenTPW/UI/FrontEnd/FrontEnd.cs  |
+| `0x006698e6` | The UI queue pop: hands each key message to one control only - an accelerator's target, else the focus if visible, else the last control any press reached, if visible | OpenTPW/UI/WindowStack.cs OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x0066a1b0` | | OpenTPW/UI/UiControl.cs  |
 | `0x0066a1e8` | | OpenTPW/UI/UiControl.cs  |
 | `0x0066a295` | | OpenTPW/UI/UiControl.cs  |
@@ -437,6 +446,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0066b8aa` | | OpenTPW/UI/UiControl.cs  |
 | `0x0066ba22` | | OpenTPW/UI/UiControl.cs  |
 | `0x0066bb9b` | | OpenTPW/UI/UiControl.cs  |
+| `0x0066c5a4` | A polygon region's contains test: the crossings count, in whole virtual units | OpenTPW/UI/UiControl.cs  |
 | `0x0067a830` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x006b0680` | | OpenTPW/UI/BitmapFont.cs  |
 | `0x006b15f0` | | OpenTPW/UI/BitmapFont.cs  |
@@ -501,7 +511,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00753f50` | | OpenTPW/UI/FrontEnd/Screens/NewPlayerDialog.cs  |
 | `0x007540c0` | | OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
 | `0x007540cc` | | OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
-| `0x00757f60` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
+| `0x00757f60` | Stream: the island panel, its root's 23-point outline included | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x0075d0f8` | | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x0075d178` | | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x007622b0` | | OpenTPW/World/Park/CellLine.cs OpenTPW/World/Park/MapStep.cs  |
@@ -512,6 +522,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0076e300` | | OpenTPW/UI/Park/ParkLines.cs  |
 | `0x00774ce0` | | OpenTPW/World/Lobby/LobbyScript.cs  |
 | `0x00774da0` | | OpenTPW/UI/Park/ParkMapScreen.cs  |
+| `0x0077c488` | Whether the interface posts input: set as the window comes active, cleared as it goes (WM_ACTIVATEAPP) | OpenTPW/Client/Renderer.cs  |
 | `0x00785058` | `PeepInfo.SmallHappinessChange`, 5 in Lost Kingdom, read as a byte | OpenTPW.Tests/ParkMoodChangeTests.cs OpenTPW/World/Park/ParkAdmission.cs  |
 | `0x0078505c` | `PeepInfo.MediumHappinessChange`, 15 in Lost Kingdom, read as a byte | OpenTPW.Tests/ParkMoodChangeTests.cs OpenTPW/World/Park/ParkAdmission.cs  |
 | `0x00785060` | `PeepInfo.BigHappinessChange`, 25 in Lost Kingdom, read as a byte | OpenTPW.Tests/ParkMoodChangeTests.cs OpenTPW/World/Park/ParkAdmission.cs  |

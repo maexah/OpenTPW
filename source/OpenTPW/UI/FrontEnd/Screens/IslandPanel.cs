@@ -49,9 +49,12 @@ namespace OpenTPW.UI;
 /// straight in, because 0x005e1cc0 never counts their keys.
 /// </para>
 /// <para>
-/// <b>Enter this park</b> (0x005e1cc0) does nothing at all for a park the player cannot afford. For one
-/// they can, it hands over to 0x005e1e30, which closes this panel, plays effect 4 of the global lobby
-/// sfx and a burst of particles at the key, and sets the lobby leaving for the park. All four happen
+/// <b>Enter this park</b> (0x005e1cc0) does nothing at all for a park the player cannot afford, judged by
+/// the keys they hold rather than the count shown here. The button acts on the release of a click; the
+/// Enter key on its release, and a left press on the lobby's view on the press, reach the same function
+/// (see <see cref="FrontEnd"/>). For a park they can afford, it hands over to 0x005e1e30, which closes
+/// this panel, plays effect 4 of the global lobby sfx and a burst of particles at the key, and sets the
+/// lobby leaving for the park. All four happen
 /// here, in that order, and the park is then built between frames rather than during one - see
 /// <see cref="Game.RequestParkLoad"/>. The cue is silent, because effect 4 ships with no samples at
 /// all; that is the shipped data and not a gap here. Escape while the camera is still on its way cancels
@@ -64,7 +67,13 @@ namespace OpenTPW.UI;
 /// as it would in the original offline.
 /// </para>
 /// <para>
-/// The advisor's tour says the cursor keys move between islands as well as the arrows, and they do.
+/// The advisor's tour says the cursor keys move between islands as well as the arrows, and they do, one
+/// island each time the key is let go. They are the lobby's, not this panel's - see <see cref="FrontEnd"/>.
+/// </para>
+/// <para>
+/// <b>The pointer.</b> The panel takes a press anywhere inside its outline, the green L, whether or not it
+/// lands on a button, and nothing behind it hears that press. The price, the key count and the park's name
+/// take none: a press on them reaches the lobby's view.
 /// </para>
 /// <para>
 /// <b>Engine and content.</b> The lobby's content: a screen copied from the original's layout stream, over
@@ -77,6 +86,19 @@ internal sealed class IslandPanel : UiWindow
 	private const int KeyCountFont = 2;
 
 	private static readonly UiColour ParkNameColour = new( 252, 232, 7 );
+
+	/// <summary>
+	/// The panel's outline, the green L: the stream's op 4 sub-op 4 on the panel's root (0x00757f60). A press inside it
+	/// and off the buttons is the panel's and goes no further; one in the corner of its rectangle that the L leaves bare
+	/// reaches the lobby's view behind it.
+	/// </summary>
+	private static readonly UiPoint[] PanelOutline =
+	[
+		new( 29, 1003 ), new( 29, 1364 ), new( 45, 1432 ), new( 87, 1486 ), new( 153, 1513 ), new( 254, 1521 ),
+		new( 353, 1513 ), new( 419, 1485 ), new( 461, 1433 ), new( 476, 1376 ), new( 459, 1316 ), new( 417, 1268 ),
+		new( 356, 1242 ), new( 265, 1236 ), new( 263, 961 ), new( 245, 906 ), new( 203, 869 ), new( 157, 855 ),
+		new( 110, 860 ), new( 87, 867 ), new( 66, 882 ), new( 46, 907 ), new( 33, 944 )
+	];
 
 	private readonly UiControl _price;
 	private readonly UiControl _priceNumber;
@@ -101,7 +123,8 @@ internal sealed class IslandPanel : UiWindow
 		{
 			Id = 0x1e0e7,
 			Rect = new UiRect( 28, 855, 476, 1521 ),
-			Mesh = UiMesh.Get( "islandlobby" )
+			Mesh = UiMesh.Get( "islandlobby" ),
+			Outline = PanelOutline
 		};
 
 		Root.Add( new UiButton
@@ -223,17 +246,6 @@ internal sealed class IslandPanel : UiWindow
 
 	protected internal override void Update()
 	{
-		// The cursor keys move on the press. The original's move on the key's release, and its Enter enters the
-		// park; neither is built yet (docs/QUEUE.md Q42).
-		if ( Stack.IsFront( this ) && !Input.TextCaptured && !_instantAction )
-		{
-			if ( Input.KeysPressed.Contains( Key.Left ) )
-				LobbyCameraMode.Step( -1 );
-
-			if ( Input.KeysPressed.Contains( Key.Right ) )
-				LobbyCameraMode.Step( 1 );
-		}
-
 		var island = LobbyCameraMode.CurrentIsland;
 
 		_parkName.Text = island?.ParkName ?? "Park Name";
@@ -277,29 +289,45 @@ internal sealed class IslandPanel : UiWindow
 	}
 
 	/// <summary>
-	/// Enter this park (0x005e1cc0). A key is only ever asked for in a Full Simulation game - the
-	/// original's handler goes straight to the park for an Instant Action player, without counting
-	/// their keys at all.
+	/// Enter this park (0x005e1cc0), which is the island camera's: the button here, the Enter key and a left press on the
+	/// lobby's view all come to it (<see cref="FrontEnd"/>). Its tests, in its order, each a silent return: the camera
+	/// already on its way, no island on show, then - for a Full Simulation player only - a park whose global.sam would
+	/// not load (0x005e1da3), and fewer keys than the park costs. The keys are counted as they stand (0x005af680), not as
+	/// this panel last showed them, so a new player can go in before the advisor has handed their first key over. An
+	/// Instant Action player is let straight in, their keys never counted.
 	/// </summary>
-	private void EnterPark()
+	internal void EnterPark()
 	{
+		// Nothing is entered while the camera is already on its way (0x005e1ce0); once Escape has cancelled that, the
+		// panel is back and a press enters afresh.
+		if ( LobbyCameraMode.IsLeaving )
+			return;
+
 		if ( LobbyCameraMode.CurrentIsland is not { } island )
 			return;
 
-		if ( !_instantAction && _keysShown < island.KeysToEnter )
-			return;
+		var player = Players.Roster.Current;
+		var instantAction = player is { InstantAction: true };
+		var keys = player?.Keys ?? 0;
 
-		// The original tests the camera's state first (0x005e1ce0): nothing is entered while it is already on its
-		// way, and once Escape has cancelled that the panel is back and a press enters afresh.
-		if ( LobbyCameraMode.IsLeaving )
+		if ( !instantAction && !island.GlobalLoaded )
+		{
+			Log.Info( $"Front end: not entering '{island.ParkName}' - its global.sam would not load" );
 			return;
+		}
+
+		if ( !instantAction && keys < island.KeysToEnter )
+		{
+			Log.Info( $"Front end: not entering '{island.ParkName}' - {keys} keys, and it costs {island.KeysToEnter}" );
+			return;
+		}
 
 		Stack.Close( this );
 
 		// The cue and the puff are a Full Simulation player's, because both are about the key that was
 		// spent: an Instant Action player has no keys, is shown none, and is let straight in. Skipping
 		// them is what the original does by never reaching that code for game type 2.
-		if ( !_instantAction )
+		if ( !instantAction )
 		{
 			LobbyAudio.Current?.ParkEntry();
 

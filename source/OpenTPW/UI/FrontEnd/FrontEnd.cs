@@ -1,3 +1,5 @@
+using NeoVeldrid;
+
 namespace OpenTPW.UI;
 
 /// <summary>
@@ -17,6 +19,11 @@ namespace OpenTPW.UI;
 /// again - except while the camera is flying into a park, when it cancels the flight instead and brings
 /// the island panel back. The menu's Options opens the <see cref="OptionsScreen"/>, which puts the front
 /// end's window away until it closes, and its Select New Player brings the player slots back.
+/// </para>
+/// <para>
+/// Every key it takes acts when it is let go, as the original's lobby's do: Escape, Enter this park, and the
+/// next and previous island. A left press on the lobby's view, off every window, enters the park on the
+/// press - see <see cref="LobbyKeys"/> and <see cref="ViewPressed"/>.
 /// </para>
 /// <para>
 /// Its windows open in the interface's <see cref="WindowStack"/>, which deals with the pointer and the
@@ -49,7 +56,8 @@ internal sealed class FrontEnd : Panel
 	public FrontEnd( WindowStack stack )
 	{
 		_stack = stack;
-		_stack.EscapeWithoutFocus = MenuKey;
+		_stack.KeysWithoutFocus = LobbyKeys;
+		_stack.ViewPressed = ViewPressed;
 
 		foreach ( var mesh in Meshes )
 			UiMesh.Get( mesh );
@@ -262,20 +270,93 @@ internal sealed class FrontEnd : Panel
 	protected override void OnDelete() => Advisor.Current?.Hush();
 
 	/// <summary>
-	/// Escape, with no box to type into, as the stack hands it over.
+	/// The lobby's keys, with no box to type into, as the stack hands them over: every one on its release (message
+	/// 0x1000b), in the order they came up. Nothing in the original's lobby acts on a key's press, so a held key does
+	/// nothing until it is let go, and then once.
+	///
+	/// <para>
+	/// Escape is <see cref="MenuKey"/>'s. The rest go to the lobby's root control, the full-screen control
+	/// FrontEnd_Init loads (0x774c18, callback 0x005d58b0), and through the lobby's key handler (0x005e41c0) to the
+	/// island camera, whose 0x005e2310 takes three: the main Enter is Enter this park, and the cursor keys Right and Left
+	/// are the next and previous island. The keypad's Enter and arrows reach it as other codes (0x0d00, 0x27 and 0x25)
+	/// and do nothing, and the modifiers are not looked at. The root has the keys only while it is shown and nothing in
+	/// front has taken the focus: the player slots hide it, and the game menu, a message box, a dialog and the options
+	/// screen each take the focus or hide it. The island panel takes neither.
+	/// </para>
+	/// </summary>
+	private void LobbyKeys()
+	{
+		foreach ( var key in Input.KeysReleased )
+		{
+			var front = _stack.Windows.Count > 0 ? _stack.Windows[^1] : null;
+
+			if ( key == Key.Escape )
+			{
+				MenuKey( front );
+				continue;
+			}
+
+			if ( !RootShown || (front != null && front != _islandPanel) )
+				continue;
+
+			switch ( key )
+			{
+				case Key.Enter:
+					Log.Info( "Front end: Enter let go - Enter this park" );
+					_islandPanel.EnterPark();
+					break;
+
+				case Key.Right:
+					Log.Info( "Front end: Right let go - the next island" );
+					LobbyCameraMode.Step( 1 );
+					break;
+
+				case Key.Left:
+					Log.Info( "Front end: Left let go - the previous island" );
+					LobbyCameraMode.Step( -1 );
+					break;
+			}
+		}
+	}
+
+	/// <summary>
+	/// A left press on the lobby's view, away from every window: the lobby's root control takes it, and the island
+	/// camera answers a left press (message 0x10005, button 0) with Enter this park (0x005e234f) - on the press, where
+	/// the panel's button waits for the release of a click. The right and middle buttons it does not answer. Answers
+	/// whether the root took the press: with nobody playing it is hidden, and the press reaches nothing.
+	/// </summary>
+	private bool ViewPressed()
+	{
+		if ( !RootShown )
+			return false;
+
+		Log.Info( "Front end: a left press on the lobby's view - Enter this park" );
+		_islandPanel.EnterPark();
+		return true;
+	}
+
+	/// <summary>
+	/// Whether the lobby's root control is shown, which it is while someone is playing: FrontEnd_ShowPlayerSlots hides it
+	/// (0x004a65a8) and FrontEnd_ClosePlayerSlots shows it again (0x004a6a83).
+	/// </summary>
+	private static bool RootShown => Players.Roster.Current != null;
+
+	/// <summary>
+	/// Escape, on its release, as <see cref="LobbyKeys"/> hands it over.
 	///
 	/// <para>
 	/// With the game menu open the key is the menu's, whose handler (0x0048bd40) closes it, and with a message box
 	/// open it is the box's: the original gives a key to the control holding the focus alone (0x006698e6), and both
-	/// take the focus as they open. Whether the original's Escape reaches the lobby over the options screen was not
-	/// established; here any modal window in front keeps Escape from it. Otherwise the lobby's key handler (0x005e41c0) asks the island camera first -
+	/// take the focus as they open. Over the options screen it reaches nothing either: the screen hides the lobby's root
+	/// (0x004a3ae0), which keeps the focus, so the key goes to the last control pressed, which drops it. Here any modal
+	/// window in front keeps Escape from the lobby. Otherwise the lobby's key handler (0x005e41c0) asks the island camera first -
 	/// which cancels a flight into a park and answers, see <see cref="LobbyCameraMode.CancelLeave"/> - and opens the
 	/// game menu (GameMenu_Open with 1) only if it did not. A cancel shows the island panel again (0x004b8ea0), which
 	/// looks at the player's keys as it comes into view.
 	/// </para>
 	/// <para>
-	/// The original acts on the key's release (message 0x1000b); this acts on the press, as the stack hands it over
-	/// (<c>docs/QUEUE.md</c> Q42).
+	/// Over the player slots this opens the game menu. The original's does nothing there: the slots hide the lobby's root
+	/// and take the focus, and they drop keys (<c>docs/QUEUE.md</c> Q64).
 	/// </para>
 	/// </summary>
 	private void MenuKey( UiWindow? front )

@@ -136,6 +136,9 @@ internal readonly record struct UiRect( int Left, int Top, int Right, int Bottom
 		=> other.Left >= Left && other.Top >= Top && other.Right <= Right && other.Bottom <= Bottom;
 }
 
+/// <summary>A point on the <see cref="VirtualScreen"/>, as the original's layout data gives one.</summary>
+internal readonly record struct UiPoint( int X, int Y );
+
 /// <summary>A rectangle on the window, in pixels from its top-left corner.</summary>
 internal readonly record struct PixelRect( float X, float Y, float Width, float Height )
 {

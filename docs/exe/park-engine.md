@@ -485,8 +485,8 @@ The table object itself is `0x18` bytes: `+0x00` rows, `+0x04` u16 count, `+0x06
 
 | Address | What it is |
 |---|---|
-| `FUN_0040cfa0` | Walks **five of the six** tables at stride `0x14` zeroing `+0x06` of each row — system, game, camera, cheat and shortcuts. **`coaster` (`DAT_00787294`) is touched by neither it nor `FUN_0040cf60`**, so coaster bindings survive a "take the keys away" |
-| `FUN_0040cf60` | Sets `+0x06` of each *table object* back to 1 |
+| `FUN_0040cfa0` | Switches **five of the six** tables off: zeroes each table object's `+0x06` enable (`0x0040cfb0`, `0x0040cfd7`, `0x0040cffe`, ...) and walks its rows at stride `0x14` zeroing each row's latch — system, game, camera, cheat and shortcuts. **`coaster` (`DAT_00787294`) is touched by neither it nor `FUN_0040cf60`**, so coaster bindings survive a "take the keys away". `FrontEnd_ShowPlayerSlots` calls it (`0x004a6599`) |
+| `FUN_0040cf60` | Sets `+0x06` of each *table object* back to 1. `FrontEnd_ClosePlayerSlots` calls it (`0x004a6a98`) |
 | `FUN_00486b60` | The "give the keys back" path: `FUN_0040cf60(); DAT_007c24d0 = 0;`. Its siblings are `FrontEnd_ClosePlayerSlots` and four unnamed sites near `0x0048a8xx` |
 
 **OpenTPW has no equivalent of the enable gate**, which matters before blaming a binding that does not fire.
@@ -519,10 +519,14 @@ Two bits per modifier, **both always set as a pair**, read from the COMBINED vir
 
 **`+0x10` is null in all 83 rows of all six tables.** `FUN_0040c900` reads `+0x10` and so never invokes anything — its only effect is setting the `+0x06` latch to 1. `FUN_0040c990` reads `+0x0c`, which is where **every** handler in the game lives, and clears the latch to 0. The two-edge design is real in the code and unused in the data.
 
-Both posters are called from the one window proc `FUN_0046b600`:
+Both posters are called from the one window proc `FUN_0046b600`, which then matches the **system** table
+(`[0x0078718c]`) itself and no other (`0x0046ba89`, `0x0046bb7f`); the other tables are run by a park's controls:
 
     WM_KEYDOWN 0x100 / WM_SYSKEYDOWN 0x104  ->  FUN_00658c38 (0x1000a)  ->  FUN_0040c900  (+0x10, latch 1)
     WM_KEYUP   0x101 / WM_SYSKEYUP   0x105  ->  UI_PostKey   (0x1000b)  ->  FUN_0040c990  (+0x0c, latch 0)
+
+So the system table's four live rows - `P`, Ctrl+H, F8 and Ctrl+Shift+Alt+F8 - act on the release in either scene
+(`lobby.md`, "The lobby's keys act on the release").
 
 Since `+0x10` is null in every row, the down path invokes nothing and only latches; **every handler in the game hangs off `+0x0c`, which only the key-UP path calls.** The Alt chords work because Windows sends them as SYSKEY messages, which route to the same two paths. Keys reach the table as **ASCII, via `MapVirtualKeyA(vk, 2)`** (so `'C'` is `0x43`, Escape `0x1b`, Backspace `0x08`), and extended keys are stored shifted: `(vk & 0xff) << 8`, which is what the `0x2600`/`0x2800`/`0x6d00` entries in `camera` and `game` are.
 

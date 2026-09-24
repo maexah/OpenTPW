@@ -104,8 +104,15 @@ internal class UiControl
 	/// <summary>Which part of the mesh is added to <see cref="Frame"/> for the state it is in.</summary>
 	internal virtual int State => 0;
 
+	/// <summary>
+	/// The outline it takes the pointer inside, on the virtual screen, when its layout data gives one in place of its
+	/// rectangle (op 4, sub-op 4) - or null. A control with an outline stops the pointer inside it whether or not it does
+	/// anything with it, as the original's hit test answers with any control whose region holds the point.
+	/// </summary>
+	public UiPoint[]? Outline { get; init; }
+
 	/// <summary>Whether the pointer stops at it, rather than passing through to whatever is under it.</summary>
-	internal virtual bool TakesMouse => Clicked != null || Entered != null || HelpText >= 0;
+	internal virtual bool TakesMouse => Clicked != null || Entered != null || HelpText >= 0 || Outline != null;
 
 	/// <summary>Where on the window it takes the pointer, when it does - all of it, unless its layout data says otherwise.</summary>
 	internal virtual PixelRect HitArea => Pixels;
@@ -152,7 +159,49 @@ internal class UiControl
 				return hit;
 		}
 
-		return TakesMouse && HitArea.Contains( x, y ) ? this : null;
+		return TakesMouse && Holds( x, y ) ? this : null;
+	}
+
+	/// <summary>Whether a point on the window is inside its <see cref="Outline"/>, or its hit area when it has none.</summary>
+	private bool Holds( float x, float y )
+	{
+		if ( Outline is not { } outline )
+			return HitArea.Contains( x, y );
+
+		var virtualX = (int)MathF.Floor( VirtualScreen.ToVirtualX( x, Anchor ) );
+		var virtualY = (int)MathF.Floor( VirtualScreen.ToVirtualY( y, VerticalAnchor ) );
+
+		return Encloses( outline, virtualX, virtualY );
+	}
+
+	/// <summary>
+	/// Whether a point on the virtual screen is inside an outline: the original's test (0x0066c5a4), which counts the
+	/// edges that a line from the point crosses, and so answers for an outline without holes whichever way it winds.
+	/// </summary>
+	internal static bool Encloses( UiPoint[] outline, int x, int y )
+	{
+		if ( outline.Length == 0 )
+			return false;
+
+		var inside = false;
+		var previous = outline[^1];
+		var previousAbove = previous.Y >= y;
+
+		foreach ( var point in outline )
+		{
+			var above = point.Y >= y;
+
+			if ( above != previousAbove
+				&& ((point.Y - y) * (previous.X - point.X) >= (point.X - x) * (previous.Y - point.Y)) == above )
+			{
+				inside = !inside;
+			}
+
+			previous = point;
+			previousAbove = above;
+		}
+
+		return inside;
 	}
 
 	/// <summary>The pointer went down on it, at (<paramref name="x"/>, <paramref name="y"/>) on the window.</summary>
@@ -216,6 +265,10 @@ internal class UiButton : UiControl
 	/// <summary>Whether a click on it tells its parent, and so plays a click - see <see cref="UiSliderThumb"/> for one that does not.</summary>
 	internal virtual bool Clicks => true;
 
+	/// <summary>
+	/// Enabled or not. The original's hit test skips a disabled button (flag 0x2) and everything under it, so the pointer
+	/// passes over it to whatever is behind - no hover, no help row, no glint (<c>docs/QUEUE.md</c> Q66).
+	/// </summary>
 	internal override bool TakesMouse => true;
 
 	internal override int State => !Enabled ? Disabled
@@ -410,8 +463,9 @@ internal sealed class UiSlider : UiControl
 
 	/// <summary>
 	/// Whether it can be moved at all. A slider that is switched off shows its thumb in the disabled
-	/// part of its mesh and lets the pointer through, the way a disabled button does: the options
-	/// screen's resolution only means anything in full screen, so elsewhere it is shown but dead.
+	/// part of its mesh and lets the pointer through, the way the original's disabled button does (a
+	/// button here still takes it, <c>docs/QUEUE.md</c> Q66): the options screen's resolution only means
+	/// anything in full screen, so elsewhere it is shown but dead.
 	/// </summary>
 	public bool Enabled
 	{

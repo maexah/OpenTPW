@@ -905,7 +905,9 @@ public static class DebugConsole
 				// takes, where Level.WorldClick runs after Hud.Update.
 				if ( Level.Current is not { Kind: Level.Scene.Park } clickPark )
 				{
-					Reply( $"click: nothing took ({Argument( 1 ):F0},{Argument( 2 ):F0})" );
+					Reply( clickStack.ViewTook
+						? $"click: the view took ({Argument( 1 ):F0},{Argument( 2 ):F0})"
+						: $"click: nothing took ({Argument( 1 ):F0},{Argument( 2 ):F0})" );
 					break;
 				}
 
@@ -1047,10 +1049,19 @@ public static class DebugConsole
 				break;
 
 			// What the pointer shows over the park: the cursor, and the help row the world gives it.
+			// In a park, the cursor and its help row; anywhere, where the pointer is and the control under it, so a
+			// real press can be predicted before it is made.
 			case "pointer":
-				Reply( Level.Current is { Kind: Level.Scene.Park } pointed
-					? $"pointer: cursor {pointed.ParkCursor}, help row {UI.WindowStack.WorldHelpText}"
-					: "pointer: only in a park" );
+				if ( Level.Current is { Kind: Level.Scene.Park } pointed )
+				{
+					Reply( $"pointer: cursor {pointed.ParkCursor}, help row {UI.WindowStack.WorldHelpText}" );
+					break;
+				}
+
+				var pointerStack = Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault();
+				Reply( $"pointer: at ({Input.Mouse.Position.X:F0},{Input.Mouse.Position.Y:F0}), over "
+					+ (pointerStack?.Hovered is { } over ? $"control 0x{over.Id:x}"
+						: pointerStack?.ModalUp == true ? "no control, and a modal window takes the press" : "the view") );
 				break;
 
 			// Backspace, as the key reaches it - the same body. It acts on the pointer's cell, so pair it

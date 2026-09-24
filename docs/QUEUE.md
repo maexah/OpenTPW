@@ -524,16 +524,42 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   The item as written: `FrontEnd.MenuKey` opened the game menu over the flight, which ran on under it and loaded the
   park; Select New Player in those seconds reached `SelectFirst`. Confirm: Escape mid-flight; `state` reads
   `leave=No`, the panel is back, no menu, no park load; screenshot.
-- [ ] **Q42. The lobby's keys act on the press, and Enter does not enter the park.** Found by Q8's decode
-  (`docs/exe/lobby.md`, "The island keys wait for the fly-in"). The original's lobby takes its keys on
-  release (UI message `0x1000b`): the island camera's `0x005e2310` maps cursor Left and Right to previous and
-  next, and Enter to Enter this park (`+0x40`, with its key test). Here `IslandPanel.Update` moves on the
-  press (`Input.KeysPressed`, a held key's repeats included) and nothing takes Enter. Escape too: the lobby
-  cancels a fly-in or opens its menu on the release (`0x005e41c7`), and `FrontEnd.MenuKey` does both on the press,
-  said at the site (Q41). Open in the decode:
-  whether a left button press on the lobby view (`0x10005`, also mapped to `+0x40`) reaches the camera,
-  which depends on the root control's hit test. Confirm: hold Right, one island per release; Enter on an
-  affordable island starts the fly-in; log lines and a screenshot.
+- [x] **Q42. The lobby's keys act on the press, and Enter does not enter the park.** Done 2026-09-23,
+  `alexah/131-lobby-keys-on-the-release`. Decoded first (four decoders, each put to a refuter: 124 of 130 claims held, the
+  six refuted all side details; `docs/exe/lobby.md`, "The lobby's keys act on the release, and a press on the view enters
+  the park"). Nothing in the original's lobby acts on a key's press. Every key reaches the island camera through the
+  lobby's full-screen root control `0xbf431` on its release: the main Enter only (`0x0d`; the keypad's is `0x0d00`), and
+  the cursor keys only (the keypad's arrows are other codes). A left press on the bare view is Enter this park, on the
+  press; the panel's root takes a press inside its 23-point outline.
+  - Built: `Input.KeysReleased` and `MouseInfo.LeftWentDown`; the stack's `KeysWithoutFocus` and `ViewPressed`; the name
+    box takes the first of Enter (main) and Escape to come up; `FrontEnd.LobbyKeys` and `ViewPressed`; `UiControl.Outline`,
+    the original's crossings test `0x0066c5a4`, with the panel's L. `IslandPanel.EnterPark` makes the original's five
+    tests in order, counting the keys held (`LobbyIsland.GlobalLoaded` for the record). A frame the focus left in is
+    dropped whole, since SDL lets go of held keys as the focus leaves. Console `pointer` in the lobby; `click` says
+    whether the view took the press.
+  - **Proof:** 12 tests in `LobbyKeysOnReleaseTests`. 29 mutations, each predicted, the last of four passes 28 of 29 as
+    predicted: 25 red, and 4 green by prediction - three reached only by a running game, which the game runs show, and
+    one equivalent. Two passes found my tests at fault (a static island index leaking
+    between tests; a hollow check that a cost refused first), both fixed. **One miss:** the record tested before
+    Instant Action also turned Q41's `EscapeDuringTheFlightGivesThePanelBackAndOpensNoMenu` red. A 22-agent review
+    found 12 real faults, all fixed or filed. 1048 tests with the game, 465 ran and 583 skipped without, 123 warnings.
+  - **Confirmed in the game**, `~/.cache/tpw-harnesses/q42confirm.py`, a real player made at the slots, real keys and
+    a real left button through XTEST, a control on `main` (`q42-control/`) and the fix (`q42-fix2/`). On `main`,
+    Right held 1.55 s made **25** moves while held (predicted 23 to 35 from the hold) and none at the release; Enter did
+    nothing; Escape opened the menu on the press; the view press did nothing. On the fix every prediction held:
+    Right held, no move, then one at the release to Wonder Land, photographed both ways; Enter held did nothing, let go
+    entered Lost Kingdom; Escape held cancelled nothing, let go cancelled; the view's press entered on the press, and
+    one inside the L did nothing; the tick's own Enter entered nothing; Enter before the advisor's cue entered on the
+    live key; the keypad's Enter did nothing; Wonder Land refused, `1 keys, and it costs 3`; the park loaded. The
+    first fix run missed at Z (a key held through a loss of focus): two let-go lines where I predicted none. The
+    instrument (`q42z.py`, logged focus changes) showed SDL's key-up for the lost focus arriving with the focus's return
+    in one frame, so a frame the focus left in is now dropped whole. Then 4 of 4 held, fix and control. `save/`
+    unchanged in every run.
+  - **Not confirmed on screen:** the name box's order of two releases in one frame, and the record test (tested only).
+    **Found:** Q64 (Escape over the player slots), Q65 (the system table's release keys), Q66 (disabled buttons).
+  The item as written: `IslandPanel.Update` moved on the press, a held key's repeats included, and nothing took Enter;
+  `FrontEnd.MenuKey` took Escape on the press. Confirm: hold Right, one island per release; Enter on an affordable
+  island starts the fly-in; log lines and a screenshot.
 
 - [ ] **Q44. A left park stays in memory through the lobby.** Found by Q10's sweep (8 agents: four
   investigations, each put to a refuter) and measured with the console's `parks`. In the lobby after the jungle,
@@ -811,6 +837,29 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   If the lobby's gate instances pass, the original's gates open by themselves - at the start, and again after a
   cancel's M2 - which would change what `LobbyGate` idles on. Decode the lobby instances' `+4` and `+0x14` (they are
   built through `0x005d8870` with flags `0xc0`). Confirm: a test on the flags, and the gate's `state` over 30 s idle.
+- [ ] **Q64. Escape over the player slots opens the game menu.** Found by Q42's decode (`docs/exe/lobby.md`, "The
+  lobby's keys act on the release"). `FrontEnd_ShowPlayerSlots` hides the lobby's root control (`0x004a65a8`) and gives
+  the slots the focus (`0x004a65d6`), and their callback `0x004a5fc0` drops every key, so with the slots up no key acts
+  at all: Escape opens no menu, and the slots' own Quit is the way out. A message box closed over the slots moves the
+  focus to the hidden root (`0x004862a0`), where keys still reach nothing. Here `FrontEnd.MenuKey` opens the lobby's
+  menu over the slots, said at the site. Confirm: nobody playing, Escape let go, `windows` still `PlayerSlots`; a
+  screenshot.
+- [ ] **Q65. The system table's keys: Ctrl+H on the release, and F8.** Found by Q42's decode (`lobby.md`, "The
+  system table's keys, in either scene"; `park-engine.md`, "The original fires its shortcuts on key RELEASE"). The
+  window procedure matches the system table `[0x0078718c]` itself on every key, in both scenes, and runs its handlers
+  on the release: `P` (pause, `0x0040bf70`), Ctrl+H (Popup Help, `0x0040c5d0`), F8 (a `Scr%05ld.tga` screenshot,
+  `0x0040c470` and `0x00550460`) and Ctrl+Shift+Alt+F8 (`0x0040c480`, a flag read only at `0x0054f455` and
+  `0x0054fb93`). The player slots switch the tables off (`0x0040cfa0`) and their close back on (`0x0040cf60`). Here
+  Ctrl+H toggles on its press (`HelpBar.Update`, said at the site), F8 is not built, and nothing switches the keys off
+  under the slots. Decode what the F8 chord's flag does, and where a screenshot may be written without touching the
+  game's folder, before building either. Confirm: Ctrl+H held, the help bar unchanged until it is let go; a screenshot.
+- [ ] **Q66. A disabled button takes the pointer.** Found by Q42's review. The original's hit test (`0x0065db25`) skips a
+  control flagged `0x2` - a disabled button, `0x0065da8d` - with everything under it, so the pointer passes over it to
+  whatever is behind: no hover, no help row, no glint. Here `UiButton.TakesMouse` is true whatever `Enabled` is, said at
+  the site; the island panel's greyed arrows for an Instant Action player are the case in the lobby, and a press there
+  still ends at the panel's outline, so nothing but the hover differs. Before changing the hit test, check every park
+  window whose root takes no pointer: a press on a greyed button there would fall through to the world. Confirm: an
+  Instant Action player's pointer on a grey arrow, no help row; a screenshot.
 
 ## E. Large
 

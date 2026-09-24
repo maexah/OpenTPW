@@ -64,6 +64,13 @@ public sealed class LobbyIsland : Entity
 	public int KeysToEnter { get; }
 
 	/// <summary>
+	/// Whether the park's global.sam loaded. The original keeps a record per park that stands only while it does
+	/// (0x005b09c0 through 0x005b11c0), and Enter this park refuses a park without one (0x005e1da3). The original looks
+	/// again each time; this is read once, with the price.
+	/// </summary>
+	public bool GlobalLoaded { get; }
+
+	/// <summary>
 	/// This island's gate, which is the way into its park and swings open as the player goes through.
 	/// </summary>
 	public LobbyGate Gate { get; }
@@ -82,7 +89,7 @@ public sealed class LobbyIsland : Entity
 		Position = _position;
 
 		ThemeName = themeName;
-		KeysToEnter = ReadKeysToEnter( themeName );
+		(KeysToEnter, GlobalLoaded) = ReadKeysToEnter( themeName );
 
 		var modelPrefix = themeName[0..3];
 		Script = LobbyScript.Read( themeName );
@@ -162,22 +169,25 @@ public sealed class LobbyIsland : Entity
 		return null;
 	}
 
-	private static int ReadKeysToEnter( string themeName )
+	private static (int Keys, bool Loaded) ReadKeysToEnter( string themeName )
 	{
+		SettingsFile global;
+
 		try
 		{
-			var global = new SettingsFile( $"/levels/{themeName.ToLowerInvariant()}/global.sam" );
-
-			if ( int.TryParse( global["Keys.CostToEnter"], NumberStyles.Integer, CultureInfo.InvariantCulture, out var keys ) )
-				return keys;
+			global = new SettingsFile( $"/levels/{themeName.ToLowerInvariant()}/global.sam" );
 		}
 		catch ( Exception e )
 		{
-			Log.Warning( $"{themeName}: global.sam would not load - {e.Message}" );
+			Log.Warning( $"{themeName}: global.sam would not load - {e.Message}; Enter this park will refuse it" );
+			return (0, false);
 		}
 
+		if ( int.TryParse( global["Keys.CostToEnter"], NumberStyles.Integer, CultureInfo.InvariantCulture, out var keys ) )
+			return (keys, true);
+
 		Log.Warning( $"{themeName}: no Keys.CostToEnter - the park costs nothing to enter" );
-		return 0;
+		return (0, true);
 	}
 
 	/// <summary>

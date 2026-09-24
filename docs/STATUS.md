@@ -14,7 +14,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
   attract camera flying itself around all four islands with all four heard at once. Clicking Enter swings
   the camera onto the gate, opens it and flies into the island before the loading screen; **the island keys wait
   for that flight**, a lobby that ends mid-flight forgets it, and **Escape cancels it**: the camera goes back to
-  orbiting from the gate side, the gate shuts, and the island panel comes back.
+  orbiting from the gate side, the gate shuts, and the island panel comes back. **Every lobby key acts on its
+  release** - the island keys, Enter this park and Escape - and **a left press on the lobby's view enters the park**.
 - Park: ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (5 of 6).
 - Building and staffing: purchase menu and hire screen, both reachable from Buy. Things bought, sold,
   moved, carried; staff hired, fired, picked up, put down. **Selling or moving a thing puts its riders and queuers
@@ -49,8 +50,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
   strands them too is not decoded (Q53). Leaving a queue any way but a sale costs no happiness (Q50).
 - A right press over a panel still cancels (Q56), and the park's Escape acts on the press, not the release (Q57).
 - Nothing shows a carried candidate, and any cell on the map takes one; the original's rule is decoded (Q40).
-- The lobby's keys, Escape among them, act on the press, not the release, and Enter does not enter a park (Q42).
-  The fly-in's fade to black is not drawn (Q61).
+- The fly-in's fade to black is not drawn (Q61). Escape over the player slots opens the game menu (Q64); Ctrl+H acts
+  on its press and F8 is not built (Q65); a disabled button still takes the pointer (Q66).
 - The `meter.wct` mapping behind the happiness gauge is wrong - the last fault Alexah found by playing.
 - Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
 - A left park stays in memory through the lobby, held by `ParkState.Current` and `ParkRides.Current` (Q44).
@@ -61,9 +62,9 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39 and Q41 are ticked.** Next is **Q42**: the lobby's keys
-on the release, and Enter. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49,
-Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63.
+`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41 and Q42 are ticked.** Next is **Q44**: a left park
+stays in memory through the lobby. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46,
+Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66.
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -78,6 +79,7 @@ and is still untracked, so it exists on this machine only; Q13 moves it into `do
 - The staff half of a sale: nobody in Lost Kingdom rests in the first minutes, so it is tested, not seen (Q36).
 - The Delete key's let-go and a sale's let-go of a candidate: tested, not run in the game (Q39).
 - Escape while the camera is still swinging round, before the gate opens: tested, not run in the game (Q41).
+- The name box's order of two releases in one frame, and a park whose global.sam will not load: tested only (Q42).
 
 ## Numbers
 
@@ -86,33 +88,31 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1036**, 0 fail, 0 skip with the game | 2026-09-23, after Q41 |
-| Tests without the game | **462** ran, **574** skipped, of 1036 | 2026-09-23, after Q41 |
-| Build warnings | 123 | 2026-09-23, after Q41 |
+| Tests | **1048**, 0 fail, 0 skip with the game | 2026-09-23, after Q42 |
+| Tests without the game | **465** ran, **583** skipped, of 1048 | 2026-09-23, after Q42 |
+| Build warnings | 123 | 2026-09-23, after Q42 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-23 - Escape cancels the fly-in.** Branch `alexah/130-escape-cancels-the-fly-in`, `docs/QUEUE.md` Q41.
-Decoded first: the lobby asks the island camera before it opens the menu, and the camera's `0x005e1890` puts a leave
-back to orbit and shows the panel. The decode also found the gate is the flight's: state 1's arrival plays the gate's
-M1 and the cancel its M2, where `lobby.md` had the original never animating it. Built both, the gate played over each
-clip's declared span. Confirmed with a real Escape at radius 52.82 against a control on `main`, where the menu opened
-over the flight and the park loaded under it; on the fix every prediction held, the camera to the unit. Filed Q61-Q63.
+**2026-09-23 - The lobby's keys act on the release.** Branch `alexah/131-lobby-keys-on-the-release`, `docs/QUEUE.md`
+Q42. Decoded first: nothing in the original's lobby acts on a press; its root control hands every key-up to the island
+camera, and a left press on the bare view is Enter this park, on the press. Confirmed with real keys and a real button
+against a control on `main`, where a 1.55 s hold of Right made 25 moves; on the fix, one move at the release, and
+every prediction held. A miss on focus loss led to dropping any frame the focus left in. Filed Q64-Q66.
 
-**Earlier items, kept now only in the git log.** `alexah/129` let the hand go the original's ways (Q39, filing
-Q56-Q60); `128` let a sold thing's riders, queuers and resting staff go (Q36, filing Q50-Q55); `126` made four hollow tests fail with their fixes reverted
-(Q12, filing Q47-Q49); `125` landed the small fixes and capped a looping critical section (Q11, filing Q45-Q46);
-`124` let the camcorder forget a left park's save (Q10, filing Q44); `123` gave each ride's screams their own clock (Q9, filing
-Q43); `122` made the island keys wait for the fly-in (Q8, filing Q41-Q42); `121` emptied the hand as a park is left (Q7);
-`120` kept a refused staff drop's candidate on the cursor (Q6, filing Q40); `119` kept a moved thing in the
-hand until a cell takes it (Q5, filing Q39); `118` made a sold thing take its script down and leave bare
-ground (Q4, filing Q36-Q38); `115` made a placed ride lay its queue's first cell and hand the player the queue
-tool there, fixing the `Info.Shape` alphabet (Q3), and `116` made its squares wave; `117` picked up the path
-tool from the park, with Backspace (Q35); `114` let a player build a queue that joins the paths around it;
-`110` made a thing the save placed clickable anywhere on its footprint; `109` made a thing bought this session
-join the park (Q1, Q1b - the rider is still not photographed); `112` decoded what authors an entrance's queue
-link; `108` photographed two owed Confirm clauses; `107` flew the camera into the island; `106` refuted all
-three of its item's claims; `105` stopped the camcorder at a ride.
+**Earlier items, kept now only in the git log.** `alexah/130` let Escape cancel the fly-in (Q41, filing Q61-Q63);
+`129` let the hand go the original's ways (Q39, filing Q56-Q60); `128` let a sold thing's riders, queuers and resting
+staff go (Q36, filing Q50-Q55); `126` made four hollow tests fail with their fixes reverted (Q12, filing Q47-Q49);
+`125` landed the small fixes and capped a looping critical section (Q11, filing Q45-Q46); `124` let the camcorder
+forget a left park's save (Q10, filing Q44); `123` gave each ride's screams their own clock (Q9, filing Q43); `122`
+made the island keys wait for the fly-in (Q8, filing Q41-Q42); `121` emptied the hand as a park is left (Q7); `120`
+kept a refused staff drop's candidate on the cursor (Q6, filing Q40); `119` kept a moved thing in the hand until a
+cell takes it (Q5, filing Q39); `118` made a sold thing take its script down and leave bare ground (Q4, filing
+Q36-Q38); `115` made a placed ride lay its queue's first cell and hand the player the queue tool there, fixing the
+`Info.Shape` alphabet (Q3), and `116` made its squares wave; `117` picked up the path tool from the park, with
+Backspace (Q35); `114` let a player build a queue that joins the paths around it; `110` made a thing the save placed
+clickable anywhere on its footprint; `109` made a thing bought this session join the park (Q1, Q1b - the rider is
+still not photographed); `112` decoded what authors an entrance's queue link.
 
 Everything older is the git log.

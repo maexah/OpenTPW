@@ -14,9 +14,9 @@ namespace OpenTPW.UI;
 /// the root every window hangs off (0x006584df) and the hook that clicks for every button (DAT_00faa5fc).
 /// The game menu (0x0048c830), the message box (0x0047f020) and the options screen (0x004a3a30) are the
 /// same functions in the lobby and in a park, and keys reach a window the same way in both - through the
-/// box it is typing into, or the control last clicked (0x006698e6). Only Escape with nothing to type into
-/// is the scene's: the lobby asks its island camera first, which cancels a flight into a park, and opens
-/// its game menu only if nothing answered (0x005e41c0; see FrontEnd.MenuKey), and a park hands it to its key
+/// box it is typing into, or the control last clicked (0x006698e6). With nothing to type into, the keys are
+/// the scene's: the lobby's go to its own root control, which hands them to the island camera on their release
+/// (0x005e41c0; see FrontEnd.LobbyKeys and <see cref="KeysWithoutFocus"/>), and a park hands Escape to its key
 /// bindings (0x0040c4d0) - see <see cref="EscapeWithoutFocus"/>. Here a stack is made with each scene's
 /// HUD, and what should outlive a scene - the meshes, fonts and sounds its windows use - is cached apart
 /// from it.
@@ -91,9 +91,34 @@ internal sealed class WindowStack : Panel
 
 	/// <summary>
 	/// What Escape does when the front window has no box to type into, or no window is open - handed the
-	/// front window, if there is one. Only on the key going down.
+	/// front window, if there is one. Only on the key going down. A park's; the lobby takes its keys on the release,
+	/// through <see cref="KeysWithoutFocus"/>.
 	/// </summary>
 	public Action<UiWindow?>? EscapeWithoutFocus { get; set; }
+
+	/// <summary>
+	/// The scene's keys: run every frame the front window has no box to type into, or no window is open, to read this
+	/// frame's keys itself. The original gives a key to one control only (0x006698e6), so a key a box took never reaches
+	/// this as well.
+	/// </summary>
+	public Action? KeysWithoutFocus { get; set; }
+
+	/// <summary>
+	/// What a left press does when it lands on no window at all - on the scene's own view, which the original's lobby
+	/// covers with a control of its own that takes it (0x005d58b0) - answering whether the view took it. Only a press the
+	/// window system sent reaches it (<see cref="Input.MouseInfo.LeftWentDown"/>), never a button that was already down
+	/// when the stack next looked. The park reads its clicks itself.
+	/// </summary>
+	public Func<bool>? ViewPressed { get; set; }
+
+	/// <summary>Whether the view took the press of the last <see cref="ClickAt"/>, for the debug console's reply.</summary>
+	internal bool ViewTook { get; private set; }
+
+	/// <summary>The control the pointer is over, if any, for the debug console.</summary>
+	internal UiControl? Hovered => _hovered;
+
+	/// <summary>Whether a modal window is up, which takes every press that misses its controls - see <see cref="PointerTaken"/>.</summary>
+	internal bool ModalUp => _windows.Exists( window => window.Modal && !window.Hidden && !window.PutAway );
 
 	/// <summary>The open windows, back to front.</summary>
 	public IReadOnlyList<UiWindow> Windows => _windows;
@@ -204,10 +229,12 @@ internal sealed class WindowStack : Panel
 
 		if ( mouseDown && !_mouseWasDown )
 		{
-			PointerTaken = hit != null
-				|| _windows.Exists( window => window.Modal && !window.Hidden && !window.PutAway );
+			PointerTaken = hit != null || ModalUp;
 
 			Press( hit, mouse.X, mouse.Y );
+
+			if ( !PointerTaken && Input.Mouse.LeftWentDown )
+				ViewPressed?.Invoke();
 		}
 		else if ( mouseDown && _pressed != null )
 			_pressed.PointerDragged( mouse.X, mouse.Y );
@@ -235,8 +262,7 @@ internal sealed class WindowStack : Panel
 		Keyboard();
 
 		// The world's row only where a click would reach the world: over no control, and no modal up.
-		var modal = _windows.Exists( window => window.Modal && !window.Hidden && !window.PutAway );
-		_helpBar.Update( _hovered?.HelpText ?? (modal ? -1 : WorldHelpText) );
+		_helpBar.Update( _hovered?.HelpText ?? (ModalUp ? -1 : WorldHelpText) );
 	}
 
 	protected override void OnRender()
@@ -263,7 +289,8 @@ internal sealed class WindowStack : Panel
 	/// it reaches the window system and never reaches SDL - measured twice against this game - so a
 	/// test that could only click where the cursor already sits would be measuring X rather than this
 	/// interface. <c>ParkPicking.PickAt</c> was given coordinates for the same reason and says so.
-	/// Only SDL is skipped: the hit test, the row arithmetic and both handlers are the real ones.
+	/// Only SDL is skipped: the hit test, the row arithmetic and both handlers are the real ones, and a press that lands
+	/// on no window goes to <see cref="ViewPressed"/> as a real one does.
 	/// </remarks>
 	/// <returns>
 	/// Whether the interface took it, on the same reading as <see cref="PointerTaken"/> - so a caller
@@ -272,12 +299,13 @@ internal sealed class WindowStack : Panel
 	internal bool ClickAt( float x, float y )
 	{
 		var hit = HitTest( x, y );
+		var taken = hit != null || ModalUp;
 
 		Press( hit, x, y );
+		ViewTook = !taken && ViewPressed?.Invoke() == true;
 		Release( hit );
 
-		return hit != null
-			|| _windows.Exists( window => window.Modal && !window.Hidden && !window.PutAway );
+		return taken;
 	}
 
 	private UiControl? HitTest( float x, float y )
@@ -341,9 +369,12 @@ internal sealed class WindowStack : Panel
 
 	/// <summary>
 	/// Typing goes to the front window's box, and so do Enter and Escape: a box sends them on to its
-	/// window (0x802 and 0x804), and no window hears them otherwise. The new player dialog takes Enter
+	/// window (0x802 and 0x804), and no window hears them otherwise. The box edits on a key's press and
+	/// takes Enter and Escape on the release (its key-up handler, 0x00667fee), and only the main Enter:
+	/// the keypad's reaches it as 0x0d00, which it does not answer. The new player dialog takes Enter
 	/// as its tick by sending itself the same message the tick sends (0x004a6d00), so it clicks as
-	/// the tick does. With no box to type into, Escape is the scene's - see <see cref="EscapeWithoutFocus"/>.
+	/// the tick does. With no box to type into, the keys are the scene's - see <see cref="KeysWithoutFocus"/>
+	/// and <see cref="EscapeWithoutFocus"/>.
 	/// </summary>
 	private void Keyboard()
 	{
@@ -365,6 +396,7 @@ internal sealed class WindowStack : Panel
 			if ( Input.Pressed( InputButton.Menu ) && Input.KeysPressed.Contains( Key.Escape ) )
 				EscapeWithoutFocus?.Invoke( front );
 
+			KeysWithoutFocus?.Invoke();
 			return;
 		}
 
@@ -373,14 +405,22 @@ internal sealed class WindowStack : Panel
 		if ( Input.KeysPressed.Contains( Key.BackSpace ) )
 			focus.Backspace();
 
-		if ( Input.KeysPressed.Contains( Key.Enter ) || Input.KeysPressed.Contains( Key.KeypadEnter ) )
+		// In the order they came up, and only the first: either closes the box's window, and a key let go after it in the
+		// same frame is not handed on to whatever has the keys next, where the original's queue would hand it on.
+		foreach ( var key in Input.KeysReleased )
 		{
-			UiSounds.Click( toggle: false );
-			front.Accept();
-		}
-		else if ( Input.KeysPressed.Contains( Key.Escape ) )
-		{
-			front.Cancel();
+			if ( key == Key.Enter )
+			{
+				UiSounds.Click( toggle: false );
+				front.Accept();
+				break;
+			}
+
+			if ( key == Key.Escape )
+			{
+				front.Cancel();
+				break;
+			}
 		}
 	}
 }

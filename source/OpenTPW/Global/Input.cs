@@ -34,6 +34,12 @@ public static partial class Input
 	public static IReadOnlyList<Key> KeysPressed { get; private set; } = [];
 
 	/// <summary>
+	/// The keys that came up this frame, in the order they came up - once for each time a key is let go, however long it
+	/// was held. The original's key-up message (0x1000b, UI_PostKey) is the one most of its keys act on.
+	/// </summary>
+	public static IReadOnlyList<Key> KeysReleased { get; internal set; } = [];
+
+	/// <summary>
 	/// Set while a text box has the keyboard, so typing into it does not also press what its keys are
 	/// bound to - an X in a player's name would otherwise freeze the lobby camera.
 	/// </summary>
@@ -88,7 +94,7 @@ public static partial class Input
 
 	/// <summary>
 	/// Forgets every key currently held, for the windows where the game pumps the desktop's events
-	/// and throws them away: a loading screen, and a minimised window.
+	/// and throws them away: a loading screen, a minimised window, and a window without the focus.
 	/// </summary>
 	/// <remarks>
 	/// A key released during one of those never arrives as a key-up, and the held set is only ever
@@ -103,6 +109,7 @@ public static partial class Input
 		KeysDown.Clear();
 		LastKeysDown.Clear();
 		KeysPressed = [];
+		KeysReleased = [];
 	}
 
 	public struct KeyboardInfo
@@ -246,6 +253,7 @@ public static partial class Input
 			Position = mousePos,
 			Left = inputSnapshot.IsMouseDown( MouseButton.Left ),
 			Right = inputSnapshot.IsMouseDown( MouseButton.Right ),
+			LeftWentDown = inputSnapshot.MouseEvents.Any( e => e.MouseButton == MouseButton.Left && e.Down ),
 			Wheel = inputSnapshot.WheelDelta
 		};
 
@@ -266,6 +274,7 @@ public static partial class Input
 
 		TypedText = new string( [.. inputSnapshot.KeyCharPresses] );
 		KeysPressed = [.. newKeysDown];
+		KeysReleased = [.. newKeysUp];
 
 		bool IsKeyPressed( Key k ) => Keyboard.KeysDown.Contains( k );
 

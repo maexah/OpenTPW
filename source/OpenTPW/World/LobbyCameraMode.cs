@@ -751,7 +751,7 @@ public class LobbyCameraMode : CameraMode
 
 	/// <summary>
 	/// Moves <paramref name="step"/> islands along, wrapping at either end - what the lobby panel's
-	/// arrow buttons and the cursor keys do (see IslandPanel), and the bracket keys too.
+	/// arrow buttons and the cursor keys do (see IslandPanel and FrontEnd.LobbyKeys), and the bracket keys too.
 	///
 	/// <para>
 	/// Like the original's next and previous handlers it refuses while the camera is leaving for a park - their

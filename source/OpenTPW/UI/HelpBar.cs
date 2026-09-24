@@ -42,6 +42,8 @@ internal sealed class HelpBar
 	/// <summary>Shows row <paramref name="helpText"/>, or nothing for -1.</summary>
 	public void Update( int helpText )
 	{
+		// On the press. The original toggles it on the release, through the system table its window procedure matches
+		// on every key (0x0040c5d0; docs/QUEUE.md Q65).
 		if ( Input.Pressed( InputButton.ToggleHelpBar ) )
 			GameOptions.Current.PopupHelp = !GameOptions.Current.PopupHelp;
 
