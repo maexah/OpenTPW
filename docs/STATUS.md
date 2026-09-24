@@ -21,8 +21,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
   Leaving one lets go of all of it: nothing of a left park is held in the lobby.
 - Building and staffing: purchase menu and hire screen, both reachable from Buy. Things bought, sold,
   moved, carried; staff hired, fired, picked up, put down. **Selling or moving a thing puts its riders and queuers
-  off where they stand**, and staff resting there get up. **A staff drop the park refuses keeps the
-  candidate on the cursor and in the pool.** **The hand holds one thing, and lets go of it the original's ways**: a
+  off where they stand**, and staff resting there get up. **Cutting a queue puts out whoever stands past its new
+  end.** **A staff drop the park refuses keeps the candidate on the cursor and in the pool.** **The hand holds one thing, and lets go of it the original's ways**: a
   quick right click with RMB cancel on, Escape, Delete, the camcorder, a new pickup, leaving the park; a held or
   dragged right press, or any with the option off, keeps it. **A sold thing's script goes with it**, and
   its ground is left bare. **A moved thing stays in the hand until a cell takes it**, facing the way it stood. Clicking a placed ride **anywhere on its
@@ -51,8 +51,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Eight of the nine per-object windows are unbuilt. Setting a staff member's patrol area is not built, deferred by
   Alexah; staff keep to the areas the save gives them. A walking member of staff is not entered in the cells they
   cross; only hiring and putting down place one.
-- A guest put off on cleared ground no neighbour connects to leaves only by going home; whether the original
-  strands them too is not decoded (Q53). Leaving a queue any way but a sale costs no happiness (Q50).
+- A guest put off on cleared ground no neighbour connects to leaves only by going home (Q53, decode first). Of the
+  seven ways out of a queue, five are counted, not built (Q50b-f). An arriving guest's happiness is 0 and stays (Q85).
 - A right press over a panel still cancels (Q56), and the park's Escape acts on the press, not the release (Q57).
 - Nothing shows what the hand holds, a thing (`CARRY_PREVIEW_MARKERS`) or a candidate (`STAFF_CARRY_PREVIEW`), and
   any cell on the map takes a candidate; the original's rule is decoded (Q40).
@@ -68,10 +68,10 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48 and Q48b are ticked.** Next
-is **Q50**: every other way out of a queue docks happiness too. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36
-Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, and the 2026-09-24 staleness audit and its
-review Q68-Q82 (Q70-Q75 from the 2026-09-12 review, section G from the lobby plan).
+`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b and Q50 are ticked.**
+Next is **Q50b**: a closed ride turns its queue away. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36
+Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and Q85-Q88, and the
+2026-09-24 staleness audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review, section G from the lobby plan).
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -87,6 +87,7 @@ and is still untracked, so it exists on this machine only; Q13 moves it into `do
 - Escape while the camera is still swinging round, before the gate opens: tested, not run in the game (Q41).
 - The name box's order of two releases in one frame, and a park whose global.sam will not load: tested only (Q42).
 - The camcorder's tie and four of Q48b's put-backs move the viewer under 0.2 units: the census's, not a photograph's.
+- Q50's slot let go, its nominee and `EnteringRide` kept, and a queue walk giving up at a stale link: tested only.
 - A lock taken on the last unit running its section whole: tested only. Nothing the stock park runs arrives there; the
   one route is the Hot Pot with its capacity cut mid-ride, and it rests on `BUMP` being unbuilt (Q45).
 
@@ -97,19 +98,18 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1064**, 0 fail, 0 skip with the game | 2026-09-24, after Q48b |
-| Tests without the game | **475** ran, **589** skipped, of 1064 | 2026-09-24, after Q48b |
-| Build warnings | 123 | 2026-09-24, after Q48b |
+| Tests | **1071**, 0 fail, 0 skip with the game | 2026-09-24, after Q50 |
+| Tests without the game | **475** ran, **596** skipped, of 1071 | 2026-09-24, after Q50 |
+| Build warnings | 123 | 2026-09-24, after Q50 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-24 - the camcorder's sweep, built (Q48b).** Branch `alexah/137-the-sweep-puts-back`. `Slide` runs the
-original's pass whole at 53 bits: the tie, both put-backs, the `modf` reach, the park at `cell * 10`. Bit for bit with
-a model of it on 200,000 inputs; 18 walks in the jungle to the thousandth, photographed on the old build, this one and
-one with the rules out. The entry is still Q25.
+**2026-09-24 - the ways out of a queue (Q50).** Branch `alexah/138-a-shortened-queue-puts-them-out`. Of the seven
+callers of `FUN_005012f0`, built the one that can be seen: path over the Belly Bounce's queue put out the ten guests
+past the four, 50 to 35, all 14 predictions held. The other five are counted and split out (Q50b-f).
 
-**Earlier items.** Each ticked item's whole account is its entry in `docs/QUEUE.md`: `alexah/136` (Q48), `135` (Q47), `134` (Q45), `133` (the
+**Earlier items.** Each ticked item's whole account is its entry in `docs/QUEUE.md`: `alexah/137` (Q48b), `136` (Q48), `135` (Q47), `134` (Q45), `133` (the
 staleness audit, which read every doc and memory file against the code), `132` (Q44), `131` (Q42), `130` (Q41), `129` (Q39),
 `128` (Q36), `126` (Q12), `125` (Q11), `124` (Q10), `123` (Q9), `122` (Q8), `121` (Q7), `120` (Q6), `119` (Q5), `118`
 (Q4), `115`-`116` (Q3), `117` (Q35), `109` (Q1, Q1b - the rider is still not photographed).

@@ -479,24 +479,23 @@ public sealed class PeepBehaviour
 			// person == object's mPersonBeingLoaded - is the ride confirming it means THIS guest. The flag
 			// is cleared on the way past, which is what stops one invitation boarding them twice.
 			//
-			// The rest of that handler is deliberately absent, and the boredom countdown is absent for a
-			// SHARPER reason than the others, which is worth stating because it looks easy.
-			//
-			// Re-taking a place in a queue that moved needs the queue-path walk (FUN_004de7e0); the
-			// capacity re-check divides by the per-upgrade descriptor field at +0x1a8, whose pairing
-			// ParkRideScore refuses to guess; the dirt gate wants per-object dirt. Those are missing
-			// inputs. <b>Boredom is not.</b> Its test is only `gameTick > mTimeStartedIdling + 100` - but
-			// it sits INSIDE the branch the original takes only while `gameTick - mTimeOfLastSpotAnim` is
-			// under 31, so it fires solely in the window after a spot animation. Nothing here plays one,
-			// so mTimeOfLastSpotAnim stays nought and that branch stops being taken after tick 31.
-			// Reproducing the countdown alone would therefore make guests give up in circumstances the
-			// original never gives up in - a divergence wearing the clothes of a faithful subset.
+			// The rest of that handler is absent, and every other arm of it ends in the one way out at
+			// 0x005004b3 - a failed walk to the ride, the dirt gate, a place the walk cannot find, the
+			// capacity re-check, the track gate, unhappiness, the toilet, boredom, and a failed re-take -
+			// so each turn here reaches all of them and is counted (docs/exe/ride-operation.md, "Every way
+			// out of a queue", says what each waits on). <b>Boredom never fires in the original's own
+			// play</b>: it sits inside the branch taken only while `gameTick - mTimeOfLastSpotAnim` is at
+			// most 30, and a guest back in state 11 has mTimeStartedIdling at least 11 past that stamp, so
+			// `gameTick > mTimeStartedIdling + 100` cannot hold inside it. Building it would make guests
+			// give up where the original never does.
 			//
 			// A guest who does not pass the three tests simply keeps queueing, which is what the original
 			// does on every turn they are not being called forward.
 			// <b>And the step-up below is what was missing, found by playing the park rather than by any
 			// test.</b> The boarding arm comes first because that is the original's order.
 			case PeepState.InQueue:
+				Unimplemented.Report( "QUEUE_TURN_DISMISSALS" );
+
 				if ( peep.QueuePos == 0 && peep.BeenAdmitted && Chosen( peep ) is { } boarding
 					&& State.PersonBeingLoaded( boarding.ThingId ) == peep.ThingId )
 				{
@@ -524,22 +523,29 @@ public sealed class PeepBehaviour
 			// %d: Got stuck in middle o[f]..." and then carries on into the same test rather than treating
 			// it as a failure.
 			//
-			// <b>Two arms of the original are named rather than invented.</b> Before admitting, it asks
-			// whether the thing is too expensive (FUN_004fde50, which weighs a price against what a guest
-			// thinks the thing is worth) and sends them back to Deciding if it is - nothing here models
-			// that opinion, and ParkAdmission judges the GATE fee, which is a different question. And when
-			// the admission is refused it tries to rejoin the front of the queue (FUN_00501160, unread)
-			// before giving up. A guest here simply waits and asks again next turn, which is right for the
-			// common refusal: AdmitPerson says no while the script still holds the last rider, and the
-			// script clears that on its own next turn.
+			// <b>Two arms of the original are counted rather than built.</b> Before admitting it asks
+			// FUN_004fde50 whether a priced thing is worth its price to this guest (0x00500715), and if not
+			// turns them out of the queue, docking MediumHappinessChange twice (0x00500778, 0x005007b4) -
+			// the opinion reads UsageInfo.RipOffOK, which nothing here reads yet; ParkAdmission judges the
+			// GATE fee, a different question. And when the admission is refused it walks back to the front
+			// of the queue (FUN_00501160, 0x00500826), and is put out if it cannot get there (0x00500857);
+			// the walk to a place in a queue is unbuilt. A refused guest here waits and asks again.
 			case PeepState.BeingAdmitted:
-				if ( Walked( peep, walk, playing ) != WalkVerdict.Walking
-					&& Chosen( peep ) is { } arriving
-					&& _admit?.Invoke( arriving, peep.ThingId ) == true )
+				if ( Walked( peep, walk, playing ) != WalkVerdict.Walking && Chosen( peep ) is { } arriving )
 				{
-					peep.SetState( PeepState.EnteringRide, tick, _random );
+					if ( arriving.PricePerUse != 0 )
+						Unimplemented.Report( "DOOR_PRICE_OPINION" );
 
-					RollForTheVisit( peep, arriving );
+					if ( _admit?.Invoke( arriving, peep.ThingId ) == true )
+					{
+						peep.SetState( PeepState.EnteringRide, tick, _random );
+
+						RollForTheVisit( peep, arriving );
+					}
+					else
+					{
+						Unimplemented.Report( "QUEUE_PLACE_WALK" );
+					}
 				}
 
 				break;
@@ -1202,6 +1208,11 @@ public sealed class PeepBehaviour
 
 		peep.QueuePos = State.JoinQueue( chosen.ThingId, peep.ThingId );
 
+		// The original then walks them to their own place (FUN_00501160, 0x004ffdad) and, if it cannot,
+		// takes them straight back out, "Couldn't get to my place in the queue, leaving!" (0x004ffdf4).
+		// This walks them to the queue's end instead, as the summary says.
+		Unimplemented.Report( "QUEUE_PLACE_WALK" );
+
 		// The back of the queue is a packed cell - decode by subtracting one FIRST, the same packing
 		// mEntryPos and the patrol corners use. An object with none leaves them where they stand.
 		//
@@ -1276,10 +1287,11 @@ public sealed class PeepBehaviour
 	/// further guest was ever invited. Three guests stood on one cell for two minutes of a measured run.
 	/// </para>
 	/// <para>
-	/// <b>The drift is compared in unsigned BYTE arithmetic, and that is not a wart to tidy.</b> The
-	/// original's field is a byte and it tests <c>2 &lt; mQueuePos - truePos</c> on it, so a guest whose
-	/// true place is FURTHER BACK than their recorded one wraps to a large number and re-takes it
-	/// immediately instead of waiting; signed arithmetic would have them sit out the delay instead.
+	/// <b>The drift is compared unsigned, and that is not a wart to tidy.</b> The original's field is a
+	/// byte, zero-extended and then tested as <c>2 &lt; mQueuePos - truePos</c> in 32 bits
+	/// (<c>0x005002c2</c>..<c>0x005002e5</c>), so a guest whose true place is FURTHER BACK than their recorded
+	/// one wraps to a large number and re-takes it immediately instead of waiting; signed arithmetic would
+	/// have them sit out the delay instead.
 	/// </para>
 	/// <para>
 	/// <b>What is deliberately not here is the walk.</b> Having recomputed the place, the original hands
@@ -1301,18 +1313,23 @@ public sealed class PeepBehaviour
 		var place = State.PositionInQueue( queueing.ThingId, peep.ThingId );
 
 		// Not in the queue at all is the original's "Problem with a queue - shouldn't..." arm, which
-		// gives up on it; a guest already in the right place has nothing to do.
-		if ( place < 0 || peep.QueuePos == place )
+		// puts them out (0x0050049e) and is counted with the rest of the turn's ways out; a guest already
+		// in the right place has nothing to do.
+		var recorded = peep.QueuePos & 0xff;
+
+		if ( place < 0 || recorded == place )
 			return;
 
-		var drift = (peep.QueuePos - place) & 0xff;
-
-		if ( peep.QueueMoveDelay != 0 && drift <= QueueDriftAllowed )
+		if ( peep.QueueMoveDelay != 0 && (uint)(recorded - place) <= QueueDriftAllowed )
 		{
 			--peep.QueueMoveDelay;
 
 			return;
 		}
+
+		// The original's re-take walks them to the new place (FUN_00501160, 0x00500532) and puts them out
+		// if it cannot; the place is corrected and they stand still, as the summary says.
+		Unimplemented.Report( "QUEUE_PLACE_WALK" );
 
 		peep.QueuePos = place;
 	}
@@ -1410,7 +1427,10 @@ public sealed class PeepBehaviour
 	/// <remarks>
 	/// The original has seven callers, and the other six unlink the guest from the thing's queue first
 	/// (<c>FUN_004ddd20</c>). A sale does not, so the thing is not told: see
-	/// <see cref="ParkState.ForgetQueueLinks"/>. The sale is the only caller built here.
+	/// <see cref="ParkState.ForgetQueueLinks"/>, which undoes the links of a guest who is still in them and
+	/// does nothing to one who was unlinked already. Two callers are built here, the sale and a queue
+	/// measured shorter (<see cref="QueueShortened"/>); <c>docs/exe/ride-operation.md</c>, "Every way out
+	/// of a queue", lists the other five and what each waits on.
 	/// </remarks>
 	private void DismissFromTheQueue( Peep peep, int tick )
 	{
@@ -1423,6 +1443,43 @@ public sealed class PeepBehaviour
 		peep.MajorDest = 0;
 		peep.QueuePos = 0;
 		peep.SetState( PeepState.Deciding, tick, _random );
+	}
+
+	/// <summary>
+	/// A queuer's answer to their queue being measured again - <c>FUN_00501390</c>, <i>"The queue was
+	/// shortened and there's no room for me any more"</i>. See <see cref="ParkPeople.QueueRemeasured"/>,
+	/// which asks everybody in the queue but the ride's nominee.
+	/// </summary>
+	/// <remarks>
+	/// <b>A guest whose place is at or past four to a cell is put out</b> (<c>0x00501413</c>..<c>0x0050141c</c>),
+	/// unless they are already <see cref="PeepState.EnteringRide"/> (<c>0x00501422</c>). The comparison is
+	/// unsigned, so a place of -1 - a guest the walk could not reach, see
+	/// <see cref="ParkState.PositionInQueue"/> - is past the end too. Going out is <c>FUN_004ddd20</c> and then
+	/// <see cref="DismissFromTheQueue"/>: <see cref="ParkAdmission.MediumHappinessChange"/> and nothing else.
+	/// The kids' sound is the caller's, which knows where the guest is drawn.
+	/// <para>
+	/// <b>One guest in three also thinks something</b> (thought <c>0xd</c> when the id divides by three,
+	/// <c>0x0050148a</c>), and nothing here draws a thought, so it is counted.
+	/// </para>
+	/// </remarks>
+	/// <param name="place">Where the queue walk found them, or -1.</param>
+	/// <param name="room">How many the queue now holds: its cells, times four.</param>
+	/// <param name="script">The ride's script, whose admission slot is emptied if it names them.</param>
+	/// <returns>Whether they were put out.</returns>
+	internal bool QueueShortened( Peep peep, int place, int room, RideScript? script, int tick )
+	{
+		ArgumentNullException.ThrowIfNull( peep );
+
+		if ( peep.MajorDest == 0 || (uint)place < (uint)room || peep.State == PeepState.EnteringRide )
+			return false;
+
+		if ( peep.ThingId % 3 == 0 )
+			Unimplemented.Report( "QUEUE_SHORTENED_THOUGHT_0xD" );
+
+		ParkRideOperation.LeaveQueue( State, script, peep.MajorDest, peep.ThingId );
+		DismissFromTheQueue( peep, tick );
+
+		return true;
 	}
 
 	/// <summary>

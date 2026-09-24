@@ -205,6 +205,9 @@ public sealed class ParkPeople : Entity
 		_staff = StaffIn( park );
 		_staffBehaviour = new StaffBehaviour( balance, random: null, State );
 
+		// A cell edit that measures a queue again tells the people in it - see QueueRemeasured.
+		State.QueueRemeasured = QueueRemeasured;
+
 		Current = this;
 
 		if ( park != null )
@@ -770,6 +773,24 @@ public sealed class ParkPeople : Entity
 		Log.Info( $"People: {touched} guests are now thirst {level}" );
 
 		return touched;
+	}
+
+	/// <summary>
+	/// Sets every guest's happiness, for the debug console's <c>happy</c>. An INSTRUMENT, as
+	/// <see cref="MakeThirsty"/> is: a guest who arrives starts at happiness nought and stays there (Q85), and the
+	/// save's own guests, most carrying 50, have gone home within about four minutes, so a dock of happiness - a
+	/// guest put out of a queue - clamps at nought and shows nothing. It sets a meter the game itself moves,
+	/// and nothing else.
+	/// </summary>
+	/// <returns>How many guests were set.</returns>
+	internal int SetHappiness( float level )
+	{
+		foreach ( var peep in _peeps )
+			peep.Happiness = Math.Clamp( level, Peep.Least, Peep.Most );
+
+		Log.Info( $"People: {_peeps.Count} guests are now happiness {level}" );
+
+		return _peeps.Count;
 	}
 
 	/// <summary>
@@ -1361,11 +1382,17 @@ public sealed class ParkPeople : Entity
 					break;
 
 				// Broken down (1), waiting for an upgrade (2) or condemned (4): finish whoever was
-				// mid-admission, then let them off.
+				// mid-admission, then let them off. Where the completion does not take the head, the
+				// original puts them out of the queue instead (FUN_004e0450, 0x004e0554), one a turn. Nothing
+				// here moves a ride into these states - the breakdown request and the upgrade are unbuilt - so
+				// the chain breaks before this.
 				case ParkRideChoice.StateRefusedOne:
 				case 2:
 				case ParkRideChoice.StateRefusedFour:
-					operation.CompleteAdmission( script, thing.ThingId, thingTick, _rideRandom );
+					if ( !operation.CompleteAdmission( script, thing.ThingId, thingTick, _rideRandom )
+						&& _behaviour.State.FirstInQueue( thing.ThingId ) != 0 )
+						Unimplemented.Report( "CLOSED_RIDE_DISMISSES_ITS_HEAD" );
+
 					operation.Dismiss( script, thing, thingTick, _rideRandom, WalkFor, _behaviour.Park,
 						_behaviour.Catalogue );
 					break;
@@ -1496,6 +1523,58 @@ public sealed class ParkPeople : Entity
 				tick );
 	}
 
+	/// <summary>
+	/// Tells everybody in a queue it has been measured again - the walk <c>FUN_004de1f0</c> ends with,
+	/// <i>"Telling people in queue to reevaluate"</i>, reached through <see cref="ParkState.RemeasureQueue"/>.
+	/// Each guest answers through <see cref="PeepBehaviour.QueueShortened"/>, and whoever now stands past the
+	/// end is put out.
+	/// </summary>
+	/// <remarks>
+	/// <b>Everybody but the ride's nominee is asked</b> (<c>0x004de2b9</c>), head first, and each guest's next
+	/// link is read before they answer (<c>0x004de2bd</c>), so the walk carries on past a guest who has just
+	/// been let out. A guest's place is found as <c>FUN_004ddf50</c> finds it, giving up at anybody no longer
+	/// queueing. One put out makes the kids' sound where a queuer put off by a sale does, when their id
+	/// divides by eight (<c>0x0050133d</c>) - see <see cref="SoundFor"/>.
+	/// </remarks>
+	internal void QueueRemeasured( int objectId )
+	{
+		if ( !State.TryObject( objectId, out var thing ) )
+			return;
+
+		var (_, cells) = ParkRideChoice.QueueCellsFor( _behaviour.Park, thing );
+		var room = cells * ParkRideChoice.QueueRoomPerCell;
+		var nominee = State.PersonBeingLoaded( objectId );
+		var script = _scriptFor?.Invoke( objectId );
+		var thingTick = GameClock.Ticks / ThingTickEvery;
+		var steps = 0;
+
+		for ( var id = State.FirstInQueue( objectId ); id != 0 && steps < ParkState.LongestQueue; ++steps )
+		{
+			var next = State.NextInQueue( id );
+
+			if ( id != nominee && _byId.TryGetValue( id, out var peep ) )
+			{
+				var place = State.PositionInQueue( objectId, id, StillQueueing );
+
+				if ( _behaviour.QueueShortened( peep, place, room, script, thingTick ) )
+				{
+					Log.Info( $"People: guest {peep.ThingId} put out of thing {objectId}'s queue at place {place} "
+						+ $"of {room}, now {peep.State} with happiness {peep.Happiness:0}" );
+
+					if ( SoundFor( PeepBehaviour.PutOff.Queueing, peep.ThingId, thing.Flags, seated: false )
+						== PutOffSound.Feet && ParkGuestSprites.Feet( peep.Navigator.Position ) is { } feet )
+						ParkAudio.Current?.PutOff( feet );
+				}
+			}
+
+			id = next;
+		}
+	}
+
+	/// <summary>Whether a guest is still in a queue's states - <c>FUN_00502430</c>, for the queue walk.</summary>
+	private bool StillQueueing( int guestId )
+		=> _byId.TryGetValue( guestId, out var peep ) && ParkRideOperation.IsQueueing( peep );
+
 	/// <summary>Where the put-off sound plays for one guest - see <see cref="SoundFor"/>.</summary>
 	internal enum PutOffSound
 	{
@@ -1506,9 +1585,9 @@ public sealed class ParkPeople : Entity
 	}
 
 	/// <summary>
-	/// Whether a guest's answer to a sale makes the put-off sound, and where: always for a rider
-	/// (<c>0x004fb3f5</c>), for a queuer only when their thing id is a multiple of eight
-	/// (<c>0x0050133d</c>), and for nobody else.
+	/// Whether a guest put off a sold thing or out of its queue makes the put-off sound, and where: always
+	/// for a rider (<c>0x004fb3f5</c>), for a queuer only when their thing id is a multiple of eight
+	/// (<c>0x0050133d</c>, in <c>FUN_005012f0</c>, which every way out of a queue runs), and for nobody else.
 	/// </summary>
 	/// <remarks>
 	/// <b>A rider's sprite decides the place.</b> On a thing with
@@ -1851,6 +1930,9 @@ public sealed class ParkPeople : Entity
 	{
 		if ( Current == this )
 			Current = null;
+
+		if ( State.QueueRemeasured == QueueRemeasured )
+			State.QueueRemeasured = null;
 	}
 
 	/// <summary>
@@ -1877,8 +1959,14 @@ public sealed class ParkPeople : Entity
 			// nobody ever chooses the shop reads exactly like a park where everybody chooses it and
 			// something downstream refuses them - and those want opposite fixes. MajorDest is the thing
 			// they picked, nought for a guest who has picked nothing.
+			// And where they stand in its queue, as the original's walk finds it - which decides who a queue
+			// measured shorter puts out (QueueRemeasured).
+			var place = ParkRideOperation.IsQueueing( peep )
+				? State.PositionInQueue( peep.MajorDest, peep.ThingId, StillQueueing ).ToString()
+				: "-";
+
 			yield return $"thing {peep.ThingId,2} kind {peep.PersonType} state {peep.State} "
-				+ $"dest {peep.MajorDest,2} "
+				+ $"dest {peep.MajorDest,2} place {place,2} "
 				+ $"(saved {peep.SavedState}) cash {peep.Cash,4} exit {peep.ExitLevel,4} "
 				+ $"happy {peep.Happiness,3:0} thirst {peep.Thirst,3:0} hunger {peep.Hunger,3:0} "
 				+ $"toilet {peep.Toilet,3:0} vomit {peep.Vomit,3:0} litter {peep.Litter,3:0} "

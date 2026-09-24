@@ -523,8 +523,19 @@ public sealed class ParkState
 	/// state a waiting guest is put in, and whether the happiness gauge reads at all - so a park shut
 	/// here stops admitting immediately, with no other wiring. That is also why it is worth having: the
 	/// switch was the only missing half of a mechanism that was otherwise complete.
+	/// <para>
+	/// <b>Closing does not close the rides, and the original's does</b>: its close arm runs
+	/// <c>FUN_004df300</c> on every choosable object (<c>0x0051a1ae</c>), which is what turns a closed park's
+	/// queues away one head a turn (<c>docs/exe/ride-operation.md</c>, "The closed ride"). That is counted.
+	/// </para>
 	/// </remarks>
-	public void SetParkClosed( bool closed ) => ParkIsClosed = closed;
+	public void SetParkClosed( bool closed )
+	{
+		if ( closed && !ParkIsClosed )
+			Unimplemented.Report( "PARK_CLOSE_CLOSES_NO_RIDE" );
+
+		ParkIsClosed = closed;
+	}
 
 	/// <summary>
 	/// Takes an admission fee: onto the balance and onto the running total alike, which is the one place
@@ -829,8 +840,14 @@ public sealed class ParkState
 	/// in a running park: one guest rode, and the three behind them stood on the same cell for the whole
 	/// of the rest of the run.
 	/// </para>
+	/// <para>
+	/// <b>With <paramref name="stillQueueing"/> it gives up where the original does</b>: at the first guest
+	/// it steps past who is no longer queueing (<c>FUN_00502430</c> at <c>0x004ddfa9</c>), answering -1 for
+	/// everybody behind them. The guest sought is never asked. This class keeps no guest's state, so the
+	/// caller supplies the test; without one every link is followed.
+	/// </para>
 	/// </summary>
-	public int PositionInQueue( int objectId, int guestId )
+	public int PositionInQueue( int objectId, int guestId, Func<int, bool>? stillQueueing = null )
 	{
 		var place = 0;
 
@@ -838,6 +855,9 @@ public sealed class ParkState
 		{
 			if ( id == guestId )
 				return place;
+
+			if ( stillQueueing != null && !stillQueueing( id ) )
+				return -1;
 
 			id = NextInQueue( id );
 		}
@@ -983,6 +1003,37 @@ public sealed class ParkState
 
 	/// <summary>Whether this object's saved queue pair has been thrown away - see <see cref="InvalidateQueue"/>.</summary>
 	public bool QueueWasInvalidated( int objectId ) => _queuesInvalidated.Contains( objectId );
+
+	/// <summary>
+	/// <c>FUN_004de1f0</c> up to the end of its walk: the queue is measured again
+	/// (<see cref="InvalidateQueue"/>) and then everybody in it is told (<i>"Telling people in queue to
+	/// reevaluate"</i>), so whoever now stands past its end is put out - see
+	/// <see cref="ParkPeople.QueueRemeasured"/>. Every cell edit that can change a queue calls this at the end
+	/// of its transaction; the sale's drain calls <see cref="InvalidateQueue"/> alone.
+	/// </summary>
+	/// <remarks>
+	/// <b>The function's tail is not built.</b> After the walk the original opens a closed ride again
+	/// (<c>mCanLoad</c> nought) whose back of queue is connected and which passes the open guard
+	/// (<c>0x004de2f7</c>..<c>0x004de487</c>), and it zeroes <c>+0x5e</c> (<c>0x004de48c</c>). Nothing here
+	/// closes a ride yet, so the reopen is counted where it would run.
+	/// </remarks>
+	public void RemeasureQueue( int objectId )
+	{
+		if ( objectId == 0 )
+			return;
+
+		InvalidateQueue( objectId );
+		QueueRemeasured?.Invoke( objectId );
+
+		if ( TryObject( objectId, out var thing ) && thing.CanLoad == 0 )
+			Unimplemented.Report( "QUEUE_REMEASURE_REOPENS_THE_RIDE" );
+	}
+
+	/// <summary>
+	/// Who is told a queue was measured again - the park's people, which set it when they are made. With
+	/// nobody set, <see cref="RemeasureQueue"/> is <see cref="InvalidateQueue"/> alone.
+	/// </summary>
+	internal Action<int>? QueueRemeasured { get; set; }
 
 	// Who a ride has picked out to load next - the object's own mPersonBeingLoaded at +0x6c. It is
 	// per-object runtime state, which this class deliberately had none of; the remarks at the top said so

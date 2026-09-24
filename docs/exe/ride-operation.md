@@ -106,7 +106,7 @@ SetState's own jump table (`0x004e11d0`): 0 and 3 store and do nothing else. 1, 
 
 The offer gate `FUN_004dd920` refuses 1 and 4 by number, 2 through `mCanLoad`, and 3 through bit `0x04`, which it tests first. **Not settled:** whether an "open" path can ever move a state-3 object to 0. The guard `FUN_004df290` tests neither 3 nor bit `0x04`, and the repair, `FUN_004e0050(0)` and three of `FUN_004df390`'s callers have no refusing guard at all: they log `"Opening non-openable ride!"` five times and open anyway.
 
-`Invite` itself completes a pending admission on one arm: `FUN_004e0450` has five callers, and one is **`FUN_004e1220` at `004e13fc`** — the `mCanLoad == 0` bail, which does `FUN_004e0450(); return;` rather than simply returning. The other four are three `FUN_004e0e60` (SetState) paths and the states-1/2/4 arm, all catch-ups while closing. That bail cannot fire in Lost Kingdom, where `mCanLoad` is 1 on all fourteen objects.
+`Invite` itself completes a pending admission on one arm: `FUN_004e0450` has five callers, and one is **`FUN_004e1220` at `004e13fc`** — the `mCanLoad == 0` bail, which does `FUN_004e0450(); return;` rather than simply returning. The other four are three `FUN_004e0e60` (SetState) paths and the states-1/2/4 arm, all catch-ups while closing. `mCanLoad` is 1 on all fourteen objects when Lost Kingdom loads, but every close clears it and leaves `mState` 0 - the ride window's door, the park's door, a blocked exit - so this bail is how a closed ride's queue is turned away, one head a turn: see "Every way out of a queue", "The closed ride".
 
 **`Invite`'s fullness test is skipped for a WATER (2) or COASTER (3) track**: the original tests the item descriptor's track type against **3**, then **2**. Track-type constants are car **1**, water **2**, coaster **3**. (A track ride refused as "not valid" elsewhere tests 1 and 2 for an entirely different reason; the two tests must not be carried across.)
 
@@ -155,9 +155,9 @@ A ride script never writes its own capacity: `Bouncy.RSE` declares `VAR_CAPACITY
 
 A guest in `BeingAdmitted` runs the walk tick; on arriving (and `"got stuck in middle o[f]…"` is treated as arriving), it does three things in order:
 
-1. **Affordability** — `FUN_004fde50`, the price-opinion function. Non-zero means too expensive: it logs `"Person %d: Object %d is too expe[nsive]…"`, raises a message, docks `MediumHappinessChange` (`0x00500778`), tells the object to forget them (`FUN_004e0ac0`), **leaves the queue** (`FUN_004ddd20`) and runs `FUN_005012f0` (`0x005007b4`), which docks it a second time, clears `mMajorDest` and goes to `Deciding`.
+1. **Affordability** — `FUN_004fde50`, the price-opinion function. Non-zero means too expensive: it logs `"Person %d: Object %d is too expe[nsive]…"`, raises thought 6 and event 10, docks `MediumHappinessChange` (`0x00500778`), counts a walk-away on the object (`FUN_004e1670`, `mNumWalkAways`), tells the object to forget them (`FUN_004e0ac0`), **leaves the queue** (`FUN_004ddd20`) and runs `FUN_005012f0` (`0x005007b4`), which docks it a second time, clears `mMajorDest` and goes to `Deciding`. See "Every way out of a queue".
 2. **`FUN_004e0900` = `AdmitPerson`.** If it answers non-zero: log `"Person %d been AdmitPerson'd to r[ide]…"` and **`SetState(0xe)` — `EnteringRide`.**
-3. Otherwise **try to rejoin the front of the queue** (`FUN_00501160`); if that fails too, leave the queue and go back to `Deciding`.
+3. Otherwise **try to rejoin the front of the queue** (`FUN_00501160`, `0x00500826`); if that fails too, `"Couldn't rejoin FOQ even!"`, leave the queue and `FUN_005012f0` (`0x00500857`).
 
 ### State 14 (`EnteringRide`) — `FUN_005019f0` case `0xe`
 
@@ -187,9 +187,9 @@ Entering state 14 also writes the guest's `+0x1f1` from the sideshow win roll �
 | `FUN_005019f0` | — | The guest's per-state turn dispatch. | Disassembly |
 | `FUN_00501db0` | SetState | The guest state setter this project reproduces as `Peep.SetState`. Case `0xe` writes `person[+0x1f1] = FUN_004e2670( object )`. | `search_bytes` for `88 ?? f1 01 00 00` |
 | `FUN_00500a50` | — | The state-18 (`HeadingForExit`) handler. | State → handler map |
-| `FUN_004fde50` | — | The price-opinion function. Ends `if ((price <= worth) && (price <= person[+0x1a0])) return 0;`. Computes what a guest thinks a thing is WORTH from balance-file weights at the balance block's `+0x140`..`+0x150` plus the object's chance of winning (`FUN_004e21b0`, `+0x190`) and, **for a sideshow only** (`+0x4ac` == 2), `FUN_004e1a10`; then raises the price statistics. | Disassembly |
+| `FUN_004fde50` | — | The price-opinion function. Ends `if ((price <= worth) && (price <= person[+0x1a0])) return 0;`. Computes what a guest thinks a thing is WORTH from the item descriptor's `+0x140`..`+0x150` (through `FUN_004dd4e0`), `UsageInfo.RipOffOK`, and the object's chance of winning (`FUN_004e21b0`, `+0x190`) and, **for a sideshow only** (`+0x4ac` == 2), prize (`FUN_004e1a10`); then pushes a price sample. See "At the door" below. | Disassembly |
 
-**`FUN_004fde50` is the gate on CHOOSING, never on paying.** Too expensive means turning away before boarding; it is not consulted when the charge is taken.
+**`FUN_004fde50` is the gate at the DOOR, never on paying.** Its one caller is the state-13 handler (`0x00500715`): too expensive means turning away before boarding, after the walk; the chooser never asks it, and it is not consulted when the charge is taken.
 
 ## Leaving a ride
 
@@ -234,7 +234,7 @@ The queue is **exactly a doubly-linked list**: the head on the object (`mFirstIn
 | `FUN_005012f0` | — | Dismissed from the queue: event 6, the kids' effect `0x80` when the guest's id `& 7` is nought, happiness down by `MediumHappinessChange` (`0x00501359`, every time), `mQPrev` `+0x22a`, `mQNext` `+0x228`, `mBeenAdmitted` `+0x1f8`, `mMajorDest` and `+0x1f1` zeroed, state 6. Seven callers; six unlink the guest from the object first (`FUN_004ddd20`), the sale (`FUN_004fb360`) does not. See `park-engine.md`, "Selling and the people on it". | Disassembly |
 | `FUN_004faec0` | — | Guest construction; writes `+0x1f1` twice. | `search_bytes` |
 | `+0x1f1` | `mQueuePos` | **Runtime byte**, file offset **494**. Only FOUR instructions in the binary write it: `FUN_004faec0` (×2), `FUN_00501160`, `FUN_005012f0` — plus `FUN_00501db0` case `0xe`. | `search_bytes` for `88 ?? f1 01 00 00` |
-| `+0x1f4` | `mQueueMoveDelay` | 4 bytes, file **490**; `mQPrev` is file **488**. Re-take at once if it is nought **or** the drift exceeds 2; otherwise spend one. **The drift is UNSIGNED BYTE arithmetic**, so a place that moved BACKWARD wraps and re-takes immediately. | Disassembly |
+| `+0x1f4` | `mQueueMoveDelay` | 4 bytes, file **490**; `mQPrev` is file **488**. Re-take at once if it is nought **or** the drift exceeds 2; otherwise spend one. **The drift is an unsigned compare** of the zero-extended byte minus the place (`0x005002c2`..`0x005002e5`), so a place that moved BACKWARD wraps and re-takes immediately. | Disassembly |
 | `+0x3c` | `mFirstInQ` | Queue head on the object. | Disassembly |
 | `+0x3a` | `mBackOfQueue` | File **212**. | Save record |
 
@@ -275,6 +275,136 @@ The supporting helpers, decoded far enough to establish the shape:
 | `FUN_00522770` | `CMapCell::GetNeighbours` | Nine instructions: returns the cell's byte at **`+0xc`**, which the game's own cell serialiser `FUN_004d0b30` names **`mNeighbours`** (`LEA EAX,[ESI+0xc]` paired with the string `"mNeighbours"` at `0x0075a064`). It returns `+0x22` (`mHoardingNeighbours`) instead only while `DAT_0081b4cc` is set **and** the cell's `+0x2` is 2 — an overlay path whose trigger is **not established**. `+0xd` is `mDirection` and is a different field, read by `FUN_00522850`; conflating the two inverts every queue walk. | Disassembly + the serialiser's own strings |
 | `FUN_004dda20` | — | The queue-room test, `length < mQueueSizeInCells * 4`. (`FUN_004dd920` is cited for the same rule from a separate reading; the constant 4 agrees with `FUN_004de840`'s one-cell-per-four independently.) | Two independent decodes |
 | `FUN_004dda40` | — | Divides operating speed by `+0x1a8`. The role of `+0x1a8` as a capacity re-check divisor is **unestablished**, but this is its named reader. | Disassembly |
+
+### Every way out of a queue
+
+Decoded 2026-09-24 (`docs/QUEUE.md` Q50): five decoders, one per caller, each report put to a refuter reading the
+disassembly. **`FUN_005012f0` is the one way out of a queue, and it has seven callers** (`get_xrefs_to` and a byte
+scan of `testme.exe` agree). It logs `"Person %d: dismissed from queue on ride %d"`, puts event 6 in the ring, plays
+the kids' `0x80` when the guest's id `& 7` is nought (`0x0050133d`), takes `MediumHappinessChange` off
+(`FUN_004fea70(1)`, `0x00501359`, clamped 0..100), zeroes `mQPrev`, `mQNext`, `mBeenAdmitted`, `MajorDest` and
+`mQueuePos`, and sets state 6. **It never unlinks**: six callers run `FUN_004ddd20` first, the sale does not.
+
+| Site | Caller | When | Also on the path | Happiness | OpenTPW |
+|---|---|---|---|---|---|
+| `0x004fb409` | `FUN_004fb360`, the sale's type-10 answer | queueing for a thing sold or picked up | no unlink; then the sale's own `SmallHappinessChange` | −15 −5 | built, `PeepBehaviour.ThingRemoved` |
+| `0x005014b4` | `FUN_00501390`, told by `FUN_004de1f0` | place `>=` cells × 4, unsigned, and not state 14 | thought `0xd` when id % 3 is nought; `FUN_004ddd20` | −15 | built, `ParkPeople.QueueRemeasured` |
+| `0x004e0554` | `FUN_004e0450`, the object's completion | the head, when `VAR_LETMEON` still names them or they are not in state 14 | `FUN_004ddd20` | −15 | counted, `CLOSED_RIDE_DISMISSES_ITS_HEAD` |
+| `0x004ffdf4` | `FUN_004ffbc0`, arriving at the queue | joined, and `FUN_00501160` finds no route to their place | `FUN_004ddd20` | −15 | counted, `QUEUE_PLACE_WALK` |
+| `0x005004b3` | `FUN_004ffff0`, the `InQueue` turn | nine arms, below | `FUN_004ddd20`, a thought on most arms | −15 | counted, `QUEUE_TURN_DISMISSALS` |
+| `0x005007b4` | `FUN_005006b0`, at the door | `FUN_004fde50` says too expensive | thought 6, event 10, **a first −15** (`0x00500778`), `mNumWalkAways` +1 (`FUN_004e1670`), `FUN_004e0ac0`, `FUN_004ddd20` | −30 | counted, `DOOR_PRICE_OPINION` |
+| `0x00500857` | `FUN_005006b0`, at the door | `AdmitPerson` refuses and `FUN_00501160` fails: `"Couldn't rejoin FOQ even!"` | `FUN_004ddd20` | −15 | counted, `QUEUE_PLACE_WALK` |
+
+**`FUN_004ddd20` is the whole of leaving**: it empties script variable 0 (`VAR_LETMEON`) when it names the leaver
+(`0x004ddd4e`..`0x004ddd7d`), then splices with the leaver's own links and tests no membership - with no `mQPrev`
+it writes `mFirstInQ` = the leaver's `mQNext` (`0x004ddde9`), so an unlinked leaver clears the head. OpenTPW's is
+`ParkRideOperation.LeaveQueue`, over `ParkState.LeaveQueue`, which refuses a guest not in the queue.
+
+**`FUN_004ddf50` (GetPositionInQueue) gives up at a guest who has stopped queueing.** Walking from `mFirstInQ`, it
+asks `FUN_00502430` of every guest it steps past, the head included, and answers -1 at the first who fails
+(`0x004ddfa9`, `0x004ddfbf`). The guest sought is never asked. So a stale link puts everybody behind it at -1.
+
+#### The queue measured again - `FUN_004de1f0` and `FUN_00501390`
+
+`FUN_004de1f0` zeroes `mBackOfQueue` (`+0x3a`), re-walks the cells (`FUN_004de130`, which rewrites the count at
+`+0x40`), logs `"Object's queue is now %d cells long"` and `"Telling people in queue to reevaluate"`, and walks the
+queue head first, reading each `mQNext` before the call (`0x004de2bd`) and **skipping the object's nominee**
+`+0x6c` (`0x004de2b9`). Each guest runs `FUN_00501390`: the object from their own `MajorDest`, the place from
+`FUN_004ddf50`, and `place >= cells * 4` compared unsigned (`0x00501413`..`0x0050141c`, so -1 is past the end);
+**state 14 is never put out** (`0x00501422`). Then `"The queue was shortened and there's no room for me any more"`,
+thought `0xd` when the id divides by three (`0x0050148a`), `FUN_004ddd20`, `FUN_005012f0`, and `MajorDest` = 0 and
+state 6 again. **Then its tail** (`0x004de2d5`..`0x004de48c`): it logs `"Back of queue is %sconnected"`
+(`FUN_004de4a0`) and, when the ride is closed (`mCanLoad` nought), not in state 1, 2 or 4, `+0x64` nought, the back
+of the queue connected and the open guard passed (`+0x2c` for a track ride; `FUN_00441970` for type 3), opens it
+again as `FUN_004df390` does: `mCanLoad` = 1, a sound, `VAR_RIDECLOSED` = 0, SetState(0) (`0x004de487`). It always
+zeroes `+0x5e` (`0x004de48c`, not decoded). OpenTPW builds the walk (`ParkState.RemeasureQueue`) and counts the reopen
+(`QUEUE_REMEASURE_REOPENS_THE_RIDE`). Its eight call sites, each with the object in `ECX`:
+
+| Site | Transaction | Shortens? | OpenTPW |
+|---|---|---|---|
+| `0x0052537a`, `0x005259ae`, `0x00529890` | a thing bought, moved or placed: its own new, empty queue | no | `ParkBuilding` buy |
+| `0x00526118` | the queue-edit arm (`0x14`), after `FUN_00530120` detaches the back | no | `ParkPathBuilding.EditQueue` |
+| `0x00527541` | a queue run laid (mode 3) | no | `LayQueue`, `RunQueue` |
+| `0x00534858` | the stamp: path laid over a queue cell | **yes** | `LayPathRun`, `ParkBuilding.LayPathStub` |
+| `0x0053694b` | `ClearCell`'s path arm, a path joined to an entrance cleared: the link goes first, so the queue measures **0** and all but the nominee and state 14 go | **yes** | not built: `ClearPathCell` re-walks no entrance |
+| `0x0052ffec` | `FUN_0052fe50`, the backtrack: Backspace with the queue tool (`FUN_0052fe50(0,1)` at `0x0040beb3`, gated on a vtable answer of 3), and the demolisher's drain before the destructor | **yes** | Backspace counted (`BACKSPACE_UNDO_QUEUE_RUN`); the drain, below |
+
+The console's `delqueue` (`LiftQueue`) re-measures too. In Lost Kingdom the one queue that can be cut is the Belly
+Bounce's: cells (52,22), (51,22), (50,22), (49,22), of which (52,22) is NOMODIFY, so path over (51,22) leaves one
+cell and room for four.
+
+**Whether the sale's drain puts anybody out is not decoded.** The demolisher (`FUN_00527ee0`) drains the queue
+through `FUN_0052fe50` before the destructor's type-10 message; each pop that applies re-walks, and a guest it put
+out has `MajorDest` nought by the time the message arrives, so would lose 15 rather than 20. What the pops leave -
+`FUN_0052fe50` never applies the stack's bottom entry (`0x0052fec9`..`0x0052fed9`), and the forced clear leaves the
+entrance's link - is not traced. OpenTPW's `DrainQueue` only throws the measurement away, leaves every queuer to the
+sale, and counts `SALE_DRAIN_QUEUE_REMEASURE`.
+
+#### The closed ride - `FUN_004e0450`
+
+The condition is `mFirstInQ != 0` and (`VAR_LETMEON == mFirstInQ` or the head's state is not 14); otherwise - the slot
+not naming the head, empty or naming anyone else, and the head in 14 - it forces them on (`"script admitted person %d
+but he doesn't know yet"`, `FUN_00500870`). **One head per call, no loop.** Its five callers are SetState 1, 2 and 4, the states-1/2/4 turn,
+and `Invite`'s `mCanLoad == 0` bail at `0x004e13fc` - **and the bail is the common one**: every close clears
+`mCanLoad` and leaves `mState` 0, so each later state-0 turn puts one head out. The closes: the ride window's door
+(`FUN_004af600` case `0x3e38` → `FUN_0048ccf0` → `FUN_004df300`, which writes `+0x68` = 0, `+0x6c` = 0 and
+`VAR_RIDECLOSED` = 1), the park's door (`FUN_00519ef0`'s close arm calls `FUN_004df300` at `0x0051a1ae` on every
+object with `+0x32 & 4`), the track editor opened on a ride (`FUN_0052f200` tools `0x15`/`0x16` → `FUN_004474d0` →
+`FUN_00447520`, which closes it at `0x0044755c` when no track is being edited and opens it again on leaving,
+`0x00447748`), a blocked exit (`FUN_004df150` at `0x0050163b`) and the repair (`0x004dfd1e`). **A closed ride is
+opened again by the next edit of its queue** (the tail of `FUN_004de1f0`, above), whatever the park's own flag says,
+so the heads go one a turn only until then. **Not settled:** which way `FUN_00519ef0`'s first argument runs - a
+reviewer read it non-zero on the OPEN arm (`0x00519f76`..`0x00519f8c`), where `docs/exe/hud.md` calls it the closed
+flag. Here the park's door sets `ParkIsClosed` alone (`PARK_CLOSE_CLOSES_NO_RIDE`), nothing else clears `mCanLoad`,
+and nothing moves a ride to 1, 2 or 4 - the breakdown request and the upgrade are unbuilt - so the chain breaks
+before either counted site: a gap, not content.
+
+#### The `InQueue` turn - `FUN_004ffff0`
+
+Every arm reloads the object and jumps to one tail (`0x0050049e` / `0x005004aa`): `FUN_004ddd20`, `FUN_005012f0`,
+state 6 again. In code order:
+
+1. **Board** (`mQueuePos` 0, `mBeenAdmitted`, the nominee): route to the stand point, state 13. **1b**, no route:
+   `"the player has removed the path from under me"` (`0x0050010a`), `FUN_004e0ac0`, out.
+2. At the front and invited but not the nominee: return (`0x005001d8`).
+3. **Dirt gate**: a toilet (`+0x32 & 1`) whose `+0x44` truncates below 25.0: thought `0xe`, out.
+4. **Lost place**: `FUN_004ddf50` answers -1, `"Problem with a queue - shouldn't be fatal"` (`0x00500270`), out.
+5. Place equal to `mQueuePos`: **5a capacity** - `mQueuePos > FUN_004dda40`: thought `0x10`, event `0x15`, out; **5b
+   track gate** - track type 3 with `FUN_00441970` nought, or type 1 with `+0x2c` nought: thought `0xd`, out.
+6. **Drift**: delay non-zero and `mQueuePos - place` at most 2 (a 32-bit unsigned compare of the zero-extended byte,
+   `0x005002c2`..`0x005002e5`): spend one. Otherwise, unless the ride is broken (`mState` 1, `0x00500521`), re-take
+   through `FUN_00501160` (`0x00500532`); if that fails, `"Couldn't get to my intended queue position"`, out.
+7. **Mood**, when `mGameTick - mTimeOfLastSpotAnim` (`+0x208`) exceeds 30: happiness above 80 or 10..19 plays spot
+   animation 5 or 4 (`FUN_004fc800`) and returns; below 10, thought `0xb`, out; 20..80 with `mToilet` above 80,
+   thought 4, out unless the thing is a toilet.
+8. **Window** (30 or less): `mGameTick > mTimeStartedIdling + 100` is **boredom** (`0x00500432`, event 7, thought
+   `0xc`, out); otherwise one turn in ten turns the heading.
+
+**Boredom never fires in the original's own play.** `+0x208` is written only at a spot animation's start
+(`0x004fc871`, `0x0050237b`) and by the constructor; state 8 returns only after `mGameTick > +0x208 + 10`, and
+returning to 11 stamps `mTimeStartedIdling` (`0x00501eb7`), so in state 11 it is at least 11 past `+0x208`. The window
+wants `mGameTick <= +0x208 + 30` and boredom `mGameTick > +0x208 + 111`. Only a save holding a state-11 guest with the
+two stamps 70 apart could reach it. `FUN_004dda40` returns 100 for a thing without a queue path (`+0x32 & 8`), else
+`max(4, trunc(+0x5d × desc[+0x1b4 + lvl × 0x40] × (+0x58 / desc[+0x1a8 + lvl × 0x40]) / +0x5c))` with `lvl` = `+0x50`;
+the `+0x1b4` float is the one its assert calls `"No queue constant entered in SAM file"`, the `+0x1a8` divisor is an
+integer (`FIDIV`), and a speed of nought makes the ratio 1.
+
+#### At the door - `FUN_005006b0` and `FUN_004fde50`
+
+**`FUN_004fde50` is asked only here** (`0x00500715`, its one caller), of a thing with a price (nought answers nought,
+`0x004fde6a`). With the guest's meters truncated to bytes: `mood = 100 + d150 × (100 − happy)/100 + d144 × thirst/100
++ d148 × hunger/100 − d14c × illness/100`; `w1 = mood × (d140 × 115/100) / 100`; `worth = ((prize × win/100 + w1) ×
+(r + 100)/100) × (happy + 100)/100`, where `d` is the item descriptor, `prize` is the object's `+0x188` for a
+sideshow (`+0x4ac` == 2) and nought otherwise, `win` the byte at `+0x190`, and `r` the control record's `+0xc`,
+copied at level start from descriptor `+0x16c` (`0x004d3e7b`) - **`UsageInfo.RipOffOK`** by the compiled schema's
+order (`0x007460c0`; `Shops.sam` 100, `SideShow.sam` 250). Too expensive is `price > worth` or `cash < price`, both
+unsigned (`0x004fe15f`, `0x004fe167`). At the shipped prices the Drinks Shop's worth runs 42..128 against 30 and the
+Jungle Spray's 241..482 against 20, so in Lost Kingdom only the cash test can fire. It also pushes a price sample
+to the analyser (`FUN_004c74b0`). OpenTPW reads no `RipOffOK`; without it the Drinks Shop's worth can fall to 21.
+
+**`AdmitPerson` refuses** on `mState` 1 or 4 or `mCanLoad` nought, or on `VAR_LETMEON` full after it has zeroed the
+nominee (`0x004e09b0`); a wrong person is only logged. Since `Invite` calls forward only while the slot is empty and
+nothing on the way refills it, the realistic refusal is a ride that closed or broke while the guest walked.
 
 ## Spending — a guest pays on LEAVING
 
@@ -347,7 +477,7 @@ In `rides`, **twelve of thirteen** `Easy_*.sam` files carry real content — `Ea
 
 The save reader names the byte `mQueuePos`; the state setter writes the sideshow win roll into the same byte; and `FUN_004fd970` branches on it between `"Person lost this sideshow…"` and the full effects path. **It is overloaded, and the meaning at settle-up time should be treated as UNKNOWN** — "Person lost this sideshow" reads at least as much like *did they get their go / were they served* as *did they win*. For a sideshow with `VAR_LANE1..3` the position plausibly says which lane the guest got, nought meaning none.
 
-**The original's writer of `mQueuePos` in the ordinary queue flow has not been found.** Four natural homes are decoded and ruled out: join (`FUN_004ddb90`), leave (`FUN_004ddd20`), the guest-side completion (`FUN_00500870`) and the state-12 shuffle. **None of them writes a position.** So what value a dismissed guest carries is unknown.
+**The ordinary queue flow writes `mQueuePos` in `FUN_00501160`** (`0x005011cb`), which runs on joining (`0x004ffdad`), on every re-take from the `InQueue` turn (`0x00500532`) and at a refused door (`0x00500826`). Join (`FUN_004ddb90`), leave (`FUN_004ddd20`), the guest-side completion (`FUN_00500870`) and the state-12 shuffle write none; `FUN_005012f0` zeroes it on the way out.
 
 ### The guest record, as named by the game's own save reader
 
@@ -791,7 +921,7 @@ role 0 is the one animation it is meant to play.
 Behaviour that reads like a bug and is the original:
 
 - **The park's displayed balance does not move on a ride charge.** `FUN_004e16b0` credits the object's `+0x180` and a global income pool chosen by the descriptor's `+0x4ac` (`+0x20130` rides, `+0x20380` shops) — **not** the park balance the HUD reads, and not `FUN_004d0600`. A charge can debit a guest and leave the displayed money unchanged.
-- **A guest short of the price is left short, not refused.** `FUN_004fde50` gates CHOOSING, never paying; `FUN_004fe1a0` subtracts the price when it is non-zero.
+- **A guest short of the price is left short, not refused, when the charge is taken.** `FUN_004fe1a0` subtracts the price, unclamped, when it is non-zero; the only test of a price is `FUN_004fde50` at the door before boarding (`0x00500715`), and it is not asked again at the charge.
 - **A healthy ride's turn never completes an admission.** `FUN_004e0450` is reached only while closing, or from `Invite`'s `mCanLoad == 0` bail. The guest's own state-14 turn does the completion.
 - **A shop is offered and paid like a ride.** The queue-room test reads the object's `+0x40`, which is **not** `mQueueSizeInCells` as loaded: `FUN_004de130` (`GetBackOfQueue`) *overwrites* it by walking the map whenever `mBackOfQueue` is nought, and `FUN_004dd920` calls that **before** it reads the count. The shop's entry cell connects to a path, so the walk answers one cell and `0 < 4` passes. All six objects carrying the choosable bit really can be offered — the three toilets are in the identical position, and no toilet in any park could ever be visited under the old reading. **And a shop does NOT take its money through LIMBO**: `Coconut.RSE` declares zero limbo slots and zero walk slots and uses neither family, running the same `VAR_LETMEON` → `WAIT 1000` → `VAR_LETMEOFF` handshake a ride runs. The engine never reads a script's limbo slots either: swept over all 43 functions that resolve a script frame, with the opcode handlers' own accesses as the positive control. It is paid by the ordinary dismiss path, `FUN_004e1410` → `FUN_005014e0` → `FUN_004fd970` → `FUN_004fe1a0`. Limbo is real, but it is how `steak`, `giftshop`, `balloon`, `Cost_shp` and `arc2x3` hold a guest — never `coconut`, and it is script-private bookkeeping the engine never reads.
 - **`SINGLESCREAM`'s negative branch skips effect `0x6b`.** The gap is in the original's switch and is matched by the shipped category listing.
@@ -824,9 +954,8 @@ The Jungle Spray is queued for and invited in **about one run in five** at that 
 
 ## Open and unverified
 
-- **The original's writer of `mQueuePos` in the ordinary queue flow.** Join, leave, the guest-side completion and the state-12 shuffle are all decoded and write nothing.
 - **What `+0x1f1` means at settle-up time.** The byte is overloaded between a queue position and a sideshow roll.
-- **`+0x1a8` as a capacity re-check divisor.** Unestablished; `FUN_004dda40` is its named reader.
+- **`+0x1a8` as a capacity re-check divisor.** `FUN_004dda40` reads it as an integer beside the `+0x1b4` queue constant (see "Every way out of a queue", the `InQueue` turn); which `.sam` key fills it is not established.
 - **The balloon and costume SPRITE path** out of `FUN_004fe1e0`.
 - **`FUN_005019f0` case `0x11`**, the walk of the `mFirstGuard` chain through `+0x210` / `+0x212`.
 - **Whether a shop's duration of nought is correct** (it may simply not read it) where `FUN_004df8f0` would take a clamped value from the descriptor's `+0x1a0`.

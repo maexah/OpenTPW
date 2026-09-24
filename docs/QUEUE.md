@@ -716,15 +716,75 @@ artifacts are listed in `docs/history/README.md`.
     as unsigned; `__ftol` keeps the low word past 2e10.
   - **Missed first, mine.** The harness looked for `stand=` and `at=` as one string, and the census puts `cell=`
     between them: the first run of this build read NO on 18 lines that all matched. Fixed and re-run.
-- [ ] **Q50. Every other way out of a queue costs `MediumHappinessChange` too.** Found by Q36's decode.
-  `FUN_005012f0` docks it unconditionally (`0x00501359`) and has seven callers; Q36 built only the sale's. The other
-  six unlink the guest first (`FUN_004ddd20`): the queue edited or shortened under them (`FUN_00501390`), a ride
-  closing mid-admission (`FUN_004e0450`), "Couldn't get to my place in the queue" (`FUN_004ffbc0`), bored and leaving
-  (`FUN_004ffff0`), and two in state 13 (`FUN_005006b0`: too expensive, which docks twice, and "Couldn't rejoin FOQ").
-  It also writes event 6 and plays the kids' `0x80` when the guest's id is a multiple of eight (`0x0050133d`); today
-  only the sale plays it, from `ParkPeople.ThingRemoved`, so build it with the dock. Check which of those OpenTPW
-  builds and whether each docks. Confirm: a guest who leaves a queue that way, `peeps` happiness before and after, and
-  the `put off` log line for an id that is a multiple of eight.
+- [x] **Q50. Every other way out of a queue costs `MediumHappinessChange` too: decoded, and a queue measured shorter
+  puts out whoever stands past its end.** Done 2026-09-24, `alexah/138-a-shortened-queue-puts-them-out`. Decoded
+  first (five decoders, each report put to a refuter; `ride-operation.md`, "Every way out of a queue"): OpenTPW built
+  none of the six other callers of `FUN_005012f0` and counted none. One could be built and seen now, `FUN_00501390`;
+  the other five are split out as Q50b-Q50f and each is counted where the program reaches it.
+  - **Built:** `ParkState.RemeasureQueue`, `FUN_004de1f0` to the end of its walk, at every cell edit that measures a
+    queue again - path over a queue cell, `delqueue`, the queue tool's runs and edits, the placer - but not the sale's
+    drain (Q50f). `ParkPeople.QueueRemeasured` walks the queue head first, skipping the nominee; a guest at or past
+    cells × 4 (unsigned, so -1 too) and not `EnteringRide` goes through `FUN_004ddd20`, now whole
+    (`ParkRideOperation.LeaveQueue` lets go of the `VAR_LETMEON` slot), and `FUN_005012f0`: −15, Deciding, the kids'
+    `0x80` for an id divisible by eight. `PositionInQueue` gives up at a guest no longer queueing, as `FUN_004ddf50`
+    does. Counted: thought `0xd`, `FUN_004de1f0`'s reopen of a closed ride, the park door's per-ride close, and the
+    five other ways out. `StepUpTheQueue`'s drift is the original's 32-bit unsigned compare. `peeps` prints each
+    queuer's `place`; `happy <n>` sets every guest's happiness, an instrument as `thirst` is.
+  - **Proof:** seven new tests (`ParkQueueRemeasureTests`, and one in `ParkRideExitTests`); 13 mutations, each
+    predicted and each red, the whole bug back turning five red. A read-only review (21 agents, three lenses, each
+    finding put to a skeptic) upheld ten of eighteen, six faults, all fixed: the reopen tail was claimed as built; the closed
+    ride's count at `Invite`'s bail ignored `FUN_004e0450`'s forcing arm; two "dead by content" labels were gaps; the
+    track editor's close was missing; two "gate on choosing" sentences were stale; the drift. 1071 tests
+    with the game; 475 ran and 596 skipped without; 123 warnings.
+  - **Confirmed in the game** (`q50confirm.py`, silent, jungle): `load 30`, paused at 14 queuers for the Belly Bounce,
+    every guest set to happiness 50, then `path 51 22`. All 14 predictions held: places 0-3 unchanged at 50; the ten at
+    4-13 Deciding, dest 0, 35, not moved; ten `put out` lines; `put off` (`bootout.mp2`) for 64 and 72 at their feet;
+    the thought counted for 66 and 72. Photographed before, just after and eight seconds on, as they walk off, six to
+    the Jungle Spray. The control on `main`, staged the same way at six queuers (no `happy` there, so all at 0): the same
+    cut left all six queueing eight seconds on, 6 of 6 predicted, with no `put out` line, sound or count. `save/`
+    unchanged in every run.
+  - **Missed first, mine.** The first run's queuers were all arrivals at happiness 0 (Q85), so its 11 of 11 showed
+    the dock only as 0 to 0; the second waited 25 minutes for one with happiness to lose and found none. I read that
+    first as everyone draining to 0 in two minutes; the census says the save's own guests kept theirs and went home.
+  - **Not confirmed on screen:** the slot let go (nothing in this park names a guest past the four), the nominee's
+    and `EnteringRide`'s exemptions, and the walk giving up at a stale link - tested only. The four left queued stand
+    on the cut-off cells, since the walk to a place is unbuilt (Q50e). **Found:** Q50b-Q50f, Q85-Q88.
+- [ ] **Q50b. A closed ride turns its queue away, one head a turn. Settle the park door first.** Split from Q50
+  (`ride-operation.md`, "Every way out of a queue", "The closed ride"). Every close clears `mCanLoad` and leaves
+  `mState` 0 - the ride window's door (`0x3e38` → `FUN_004df300`), the park's door (`FUN_00519ef0`'s loop,
+  `0x0051a1ae`), the track editor (`FUN_00447520`), a blocked exit (`FUN_004df150`) - and then `Invite`'s bail runs
+  `FUN_004e0450`, which puts the head out (`0x004e0554`, −15) each turn, or forces an `EnteringRide` head on; the
+  next edit of the queue opens the ride again (`FUN_004de1f0`'s tail). Nothing here closes a ride: `SetParkClosed`
+  sets a flag only (`PARK_CLOSE_CLOSES_NO_RIDE`), and `Invite`'s bail returns (`CLOSED_RIDE_DISMISSES_ITS_HEAD`,
+  `CLOSED_RIDE_FORCES_ITS_HEAD_ON`, and in the states-1/2/4 arm; `QUEUE_REMEASURE_REOPENS_THE_RIDE`). First settle
+  which way `FUN_00519ef0`'s first argument runs (a reviewer read it non-zero on the OPEN arm, `0x00519f76`;
+  `hud.md` calls it the closed flag). Confirm: close the park at the entry-price door with a Belly Bounce queue;
+  `peeps` shows one head a turn go to Deciding for 15, `put off` for an id divisible by eight.
+- [ ] **Q50c. The door's price opinion.** Split from Q50 ("At the door"). `FUN_004fde50` is asked at the door
+  (`0x00500715`) and turns the guest out as too expensive for 15 twice (`0x00500778`, `0x005007b4`) with thought 6,
+  event 10 and a walk-away on the object. Every input is here but `UsageInfo.RipOffOK` (descriptor `+0x16c`;
+  `Shops.sam` 100, `SideShow.sam` 250), which `ItemDescriptionFile` does not read. Count thought 6, `mNumWalkAways`
+  and the analyser sample. In Lost Kingdom only the cash test can fire (worth 42..128 against 30, 241..482 against 20),
+  and it is unsigned. Replaces `DOOR_PRICE_OPINION`. Confirm: a guest with less cash than the price at the Drinks
+  Shop's door, `peeps` before and after (−30).
+- [ ] **Q50d. The `InQueue` turn's own ways out.** Split from Q50 ("The `InQueue` turn"). Nine arms of `FUN_004ffff0`
+  end at `0x005004b3`, and none is built (`QUEUE_TURN_DISMISSALS`). The unhappy arm (below 10) and the toilet arm
+  (20..80 with `mToilet` above 80, not at a toilet) need only what is here plus a thought, counted; build them first.
+  Then the lost place (arm 4), which needs `StepUpTheQueue` to walk with the stop `PositionInQueue` now takes and
+  `LeaveQueue` to match `FUN_004ddd20` for an unlinked leaver; the rest wait on inputs named in the doc. Also arm 2
+  (invited but not the nominee: return) and the broken ride's skipped re-take. **Boredom never fires; do not build
+  it.** Confirm: a queuer whose toilet passes 80, `peeps` before and after.
+- [ ] **Q50e. The walk to a place in a queue. Decode first.** Split from Q50. `FUN_00501160` turns a place into a cell
+  (`FUN_004de7e0`: `FUN_004de840` for a queue path, decodable; `FUN_004dec30` for the virtual queue, not decoded) and
+  routes there; it runs on joining, on a re-take and at a refused door, and each failure puts the guest out
+  (`0x004ffdf4`, `0x005004b3`, `0x00500857`; `QUEUE_PLACE_WALK`). The chooser should aim at the back of the queue
+  (`FUN_004fcb10`, `0x004fcbc4`) and the arrival test that the guest stands on it (`0x004ffc3d`); ours aims at the
+  entry cell with no note at the site. Seen in Q50's game run: queuers left inside the four stand on the cut-off
+  cells, where the original's re-take walks them to their place.
+- [ ] **Q50f. What the sale's drain does to its queuers. Decode first.** Split from Q50. The demolisher drains the
+  queue before the destructor's message, and each pop re-walks it (`0x0052ffec`); a guest it puts out would lose 15
+  rather than 20. Trace `FUN_0052fe50`'s pops in mode `0x34`, whether the stack's bottom entry is ever cleared
+  (`0x0052fec9`), and what the queue measures after. `SALE_DRAIN_QUEUE_REMEASURE` counts it.
 - [ ] **Q53. A put-off queuer on cleared ground can leave only by going home. Decode first.** Found by Q36's game
   run: two queuers put off the sold Belly Bounce stood in Deciding for twelve seconds on cells the sale cleared, where
   no neighbour connects and `SetRandomDest` has no candidate; a probe's queuer left only as its day ran out. Every
@@ -793,11 +853,34 @@ artifacts are listed in `docs/history/README.md`.
   `MOV [EBP+0x48],EDX`, read first-hand), and `PUSH` too (`0x00553c89`); `PushValue` does not, and `HUSH` has 39 uses:
   find whether any shipped branch reads the register after one.
 
+- [ ] **Q85. A guest who arrives starts with happiness nought, and stays there. Decode first.** Found by Q50's game
+  runs: every one of the 33 guests who arrived (30 by `load 30`) read `happy 0` in `peeps`, none above it in nine minutes,
+  while the save's 13 kept theirs (most at 50) until they went home, all by about four minutes, so a dock on anyone left
+  clamps and shows nothing. `ParkPeople`'s new-guest record writes `Happiness: 0f` (and nought thirst, hunger,
+  toilet, vomit, litter) with no note. Decode what the guest constructor `FUN_004faec0` and the arrival give a new
+  guest, and whether a ride's settle-up should raise it, then build it. Confirm: `load 30`, `peeps` over a few
+  minutes.
+- [ ] **Q86. Clearing a path joined to an entrance puts its whole queue out.** Found by Q50's decode. `ClearCell`'s
+  path arm re-walks the entrance owner's queue (`0x0053694b`) after unlinking both sides, so the queue measures 0 and
+  all but the nominee and state 14 go. `ParkPathBuilding.ClearPathCell` re-walks nothing. First check it is reachable
+  in Lost Kingdom, where every path before an entrance is NOMODIFY, and from the queue stamp's forced clear
+  (`0x00534741`).
+- [ ] **Q87. `AdmitPerson` refuses where the original does not.** Found by Q50's decode. The original only logs a
+  wrong person (`0x004e092c`..`0x004e0982`) and lets go of the nominee before it tests `VAR_LETMEON`
+  (`0x004e09b0`); `ParkRideOperation.AdmitPerson` refuses the first and keeps the nominee on the second. Build the
+  original's order. Confirm: `rides` and `peeps` through one admission.
+
 ## B. Docs and comments
 
 - [ ] **Q13. Move `docs/CLEANUP-PLAN.md` into `docs/history/`.** Every item in it is closed. It is still untracked in
   `docs/`, so it exists on this machine only. Commit it under `docs/history/` and list it in `docs/history/README.md`.
   (The STATUS diet landed in `c445844`; `QUEUE.md` and both reviews were committed in `c2ddaf6`.) No game run.
+- [ ] **Q88. Three stale comments and two labels from Q50's decode.** `PeepBehaviour.ParkIsClosed` says nothing can
+  close a park (the entry-price door does, `ParkEntryPriceScreen` → `SetParkClosed`); `ParkRideOperation`'s settle-up
+  calls the Jungle Spray's cost of goods five (`Junspray.sam` says 50); `ParkRideChooser` says the entry cell "is
+  where a guest is actually sent" with no word that the original aims at the back of the queue (Q50e);
+  `DropStaleQueueHeads` is dead by CODE (only tests call it) and `HeldByAThing` misses a state-8 queuer (dead by
+  CONTENT): label both (`CLAUDE.md` rule 3). No game run.
 - [ ] **Q46. Seven more stacked doc comments.** Found by Q11's scan of every source file (the six in Q11 were
   the first). Each sits on another member's summary, so it documents the wrong member. By member, since line numbers
   go stale: in `ParkGuestSprites`, `Standing`'s block lands on `StandingFrom` (Standing's own `<inheritdoc>` must go);

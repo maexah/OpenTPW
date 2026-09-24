@@ -154,6 +154,27 @@ public sealed class ParkRideOperation
 		return dropped;
 	}
 
+	/// <summary>
+	/// Takes a guest out of a queue the whole way the original does - <c>FUN_004ddd20</c>: the ride's
+	/// admission slot is emptied when it names them (<c>0x004ddd4e</c>..<c>0x004ddd7d</c>), and then
+	/// <see cref="ParkState.LeaveQueue"/> joins up whoever stood either side of them.
+	/// </summary>
+	/// <remarks>
+	/// The original splices with the leaver's own links and tests no membership (<c>0x004ddde9</c>), where
+	/// <see cref="ParkState.LeaveQueue"/> refuses a guest who is not in the queue. Every caller here hands it
+	/// a guest it reached by walking that queue's links, so the refusal is never taken.
+	/// </remarks>
+	/// <returns>Whether they were in that queue to begin with.</returns>
+	internal static bool LeaveQueue( ParkState state, RideScript? script, int objectId, int guestId )
+	{
+		ArgumentNullException.ThrowIfNull( state );
+
+		if ( script != null && guestId != 0 && script[AdmitVariable] == guestId )
+			script.Set( AdmitVariable, 0 );
+
+		return state.LeaveQueue( objectId, guestId );
+	}
+
 	/// <summary>The script variable a ride is handed its next rider in - <b>by name, never by index</b>.</summary>
 	/// <remarks>
 	/// The name matters rather than the number: a script numbers its variables in the order it declares
@@ -609,9 +630,9 @@ public sealed class ParkRideOperation
 	/// <para>
 	/// <b>There is no affordability test and no clamp, and both are the original's.</b> It subtracts
 	/// whatever the price is, so a guest can be left short; what stops that in practice is
-	/// <c>FUN_004fde50</c>, which decides whether a thing is worth its price BEFORE a guest is sent to it -
-	/// a gate on choosing, never on paying. Adding a check here would be inventing a refusal the engine
-	/// does not make.
+	/// <c>FUN_004fde50</c>, which the guest asks at the door before boarding (<c>0x00500715</c>, counted as
+	/// <c>DOOR_PRICE_OPINION</c>) - a gate on boarding, never on paying. Adding a check here would be
+	/// inventing a refusal the engine does not make.
 	/// </para>
 	/// </summary>
 	private void Charge( Peep peep, ParkWorld.CatalogueObject ride )
@@ -699,12 +720,24 @@ public sealed class ParkRideOperation
 		// AdmitPerson's and as ParkRideChoice's: non-zero, not a particular value.
 		//
 		// NOT reproduced, and named rather than quietly dropped: on this bail the original does not simply
-		// leave - it calls FUN_004e0450, the completion, on its way out. CompleteAdmission needs a tick and
-		// a Random that this method is not given, so it belongs with whatever drives a ride's turn (where
-		// both exist) rather than with an invented signature here. It cannot fire in the shipped park,
-		// where mCanLoad is 1 on all fourteen objects.
+		// leave - it calls FUN_004e0450, the completion, on its way out, which forces a head in
+		// EnteringRide on when the slot no longer names them and otherwise puts the head out of the queue
+		// (0x004e0554), one turn at a time. CompleteAdmission needs a tick and a Random that this method is
+		// not given, so it belongs with whatever drives a ride's turn (where both exist) rather than with an
+		// invented signature here; each arm is counted. Nothing here clears mCanLoad yet - the park's door
+		// sets a flag alone (PARK_CLOSE_CLOSES_NO_RIDE) - so the chain breaks before this.
 		if ( ride.CanLoad == 0 )
+		{
+			var first = _state.FirstInQueue( ride.ThingId );
+
+			if ( first != 0 )
+				Unimplemented.Report( script[AdmitVariable] != first
+					&& _guests.TryGetValue( first, out var entering ) && entering.State == PeepState.EnteringRide
+						? "CLOSED_RIDE_FORCES_ITS_HEAD_ON"
+						: "CLOSED_RIDE_DISMISSES_ITS_HEAD" );
+
 			return 0;
+		}
 
 		// The script has not taken the last rider yet.
 		if ( script[AdmitVariable] != 0 )

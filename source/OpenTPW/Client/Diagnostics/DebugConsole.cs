@@ -617,6 +617,19 @@ public static class DebugConsole
 
 				break;
 
+			// Sets every guest's happiness - an instrument as `thirst` is, so that a dock of happiness can be
+			// seen: see ParkPeople.SetHappiness.
+			case "happy":
+				if ( ParkPeople.Current is not { } moods )
+				{
+					Reply( "happy: none - a park has to be loaded" );
+					break;
+				}
+
+				Reply( $"happy: {moods.SetHappiness( Argument( 1, 50 ) )} guests are now happiness {Argument( 1, 50 )}" );
+
+				break;
+
 			// Makes every guest thirsty. An INSTRUMENT rather than a behaviour, and it is here for the
 			// reason `load` is: a park left alone almost never holds a guest who is thirsty AND still
 			// deciding, which is the one condition a drinks shop is chosen under. Only a quarter of

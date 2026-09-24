@@ -185,7 +185,7 @@ public static class ParkBuilding
 		// The placer rewalks the queue once its stub is down (FUN_004de1f0 at 0x00529890), so the ride
 		// measures the one cell it already has.
 		if ( node != null )
-			state.InvalidateQueue( thingId );
+			state.RemeasureQueue( thingId );
 
 		state.Spend( item.BuildPrice );
 
@@ -785,7 +785,7 @@ public static class ParkBuilding
 		state.SetRecord( x, y, state.Record( x, y ) with { Flags = ParkPathBuilding.NoModify } );
 
 		if ( queueOwner != 0 )
-			state.InvalidateQueue( queueOwner );
+			state.RemeasureQueue( queueOwner );
 
 		// Then each path it is now joined to on a cardinal side is joined again, from its own side
 		// (0x00529951..0x005299aa for the entrance's stub, 0x00529abf..0x00529b18 for the exit's).

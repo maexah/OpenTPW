@@ -1004,8 +1004,10 @@ and the item has a queue.
 
 **`FUN_00522700` has a second arm that does not touch `mNeighbours` at all.** When `DAT_0081b4cc` is
 non-zero *and* the cell's `+2` byte is `2`, the bit is OR'd into a shadow mask at `+0x22` instead. That
-flag is raised only inside `FUN_005323f0`, which sets it on entry and clears it on exit around a prefab
-build, so it is 0 for anything a player places — but a reimplementation that mirrors this setter must
+flag is raised only inside editing functions, each setting it and clearing it around its own work -
+`FUN_005323f0` around a prefab build (`0x00532408`/`0x00532622`), `FUN_005327e0` (`0x00532814`/`0x005328cb`) and
+`FUN_0053af00` (`0x0053af51`/`0x0053af60`), with one more clear at `0x0052f06d` (whether every exit of the last two
+clears it is not traced) - so it is 0 for anything a player places — but a reimplementation that mirrors this setter must
 not mirror that arm blindly. The same flag is read by the whole setter family
 (`FUN_00522730`, `…770`, `…790`, `…810`).
 
@@ -1463,7 +1465,9 @@ every member of staff (4 mechanic, 5 handyman, 6 entertainer, 7 guard, 8 researc
   (`FUN_004ddd20`); the sale does not, so the object keeps its head, and every queuer clears only their own links.
 - **Then everyone chosen**: happiness down by `SmallHappinessChange` (`FUN_004fe980(0)`, clamped by `FUN_004fb4f0`),
   `MajorDest` zeroed (`0x004fb444`), state 6 (`0x004fb4a1`), which queues the stand. A queuer loses 20 in all in
-  Lost Kingdom, everyone else 5. A guest walking to it, leaving it, or still naming it from a ride they left is
+  Lost Kingdom, everyone else 5 - unless the demolisher's queue drain, which runs first and re-walks the queue,
+  has already put them out for 15 alone; whether it does is not decoded (`ride-operation.md`, "Every way out of a
+  queue"). A guest walking to it, leaving it, or still naming it from a ride they left is
   stopped the same way.
 - **Every guest, chosen or not**, clears a saved second destination (`+0x1de`) naming the thing, and each
   `mPreviousRides` entry naming it with its `mPreviousTemporaryRides` pair (`0x004fb4a6`..).
@@ -2179,8 +2183,9 @@ but **not** those two.
 
 ### A queue is a re-derivable walk, not a stored link
 
-An object caches only `mBackOfQueue` (`+0x3a`) and a cell count (`+0x40`); `FUN_004de1f0` exists
-solely to throw both away and rewalk. Two cell fields make the walk possible: **`+0x0d`, a flow
+An object caches only `mBackOfQueue` (`+0x3a`) and a cell count (`+0x40`); `FUN_004de1f0` throws both
+away and rewalks, tells the people in the queue, and opens a closed ride whose queue is connected again
+(`ride-operation.md`, "Every way out of a queue"). Two cell fields make the walk possible: **`+0x0d`, a flow
 direction written as the OPPOSITE of the step the run took into that cell, and only if still nought** (first writer wins), and
 **`+0x10`, the owning object's packed cell**. The bond to a ride entrance is made only when a queue
 cell is orthogonally adjacent to `mEntryPos` and the entrance's own flow byte points at it.
@@ -2191,7 +2196,8 @@ cell is orthogonally adjacent to `mEntryPos` and the entrance's own flow byte po
 
 **Deleting a queue cell orphans the remainder, and that is correct** — there is no trimming loop
 anywhere. Peeps past the new end leave (`position >= count * 4`, state not `0xe`); the rest are told
-to re-evaluate, all but the one named by `obj+0x6c`. Deleting the path a queue hangs off leaves the
+to re-evaluate, all but the one named by `obj+0x6c`. The eight sites and what each guest does are in
+`ride-operation.md`, "Every way out of a queue". Deleting the path a queue hangs off leaves the
 queue cells untouched and merely reports the back of queue as not connected, so the ride is not
 reopened.
 

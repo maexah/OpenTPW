@@ -533,8 +533,9 @@ public sealed class ParkAudio : Entity
 	/// <summary>
 	/// The kids' effect <c>0x80</c>, which the original plays for a guest put off a ride by a sale
 	/// (<c>FUN_004fb360</c>), for one put out of a queue by any of its seven routes when their thing id is a
-	/// multiple of eight (<c>FUN_005012f0</c>, <c>0x0050133d</c>; only the sale's route is built), and for one
-	/// it throws out of the park (<c>FUN_004feb50</c>). What the sample says has not been checked by listening.
+	/// multiple of eight (<c>FUN_005012f0</c>, <c>0x0050133d</c>; the sale's route and a shortened queue's are
+	/// built), and for one it throws out of the park (<c>FUN_004feb50</c>). What the sample says has not been
+	/// checked by listening.
 	/// </summary>
 	/// <remarks>
 	/// The engine sets no level for it (<c>Sound_PlayEffect</c> with no handle, no <c>FUN_0051bc40</c>), as

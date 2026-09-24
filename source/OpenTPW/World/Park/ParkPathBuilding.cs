@@ -253,7 +253,7 @@ public static class ParkPathBuilding
 
 		// The END of the transaction, which is where every one of the original's eight invalidation
 		// sites fires - after the cells are written, never once per cell as they are written.
-		state.InvalidateQueue( servesThingId );
+		state.RemeasureQueue( servesThingId );
 
 		RetileAround( state, park, cellX, cellY );
 
@@ -329,7 +329,7 @@ public static class ParkPathBuilding
 			if ( marker == MarkerLink && state.TryObject( serves, out var ride ) )
 			{
 				JoinQueueToPath( state, park, atX, atY, x, y, ride );
-				state.InvalidateQueue( serves );
+				state.RemeasureQueue( serves );
 				ParkSurfaces.Rebuild();
 				ParkBuildMode.Disarm();
 				Unimplemented.Report( "QUEUE_TOOL_LINK_SOUND_0x8B" );
@@ -341,7 +341,7 @@ public static class ParkPathBuilding
 			{
 				LinkQueueCell( state, park, x, y, atX, atY, MapStep.CellId( own.CellX, own.CellY ), own, firstOfRun: false );
 				RetileAround( state, park, x, y );
-				state.InvalidateQueue( serves );
+				state.RemeasureQueue( serves );
 				ParkSurfaces.Rebuild();
 				ParkBuildMode.Disarm();
 				Unimplemented.Report( "QUEUE_MODE_ADVISOR_MESSAGE_0x151" );
@@ -778,6 +778,7 @@ public static class ParkPathBuilding
 
 		var laid = 0;
 		var ended = false;
+		var queuesCut = new List<int>();
 
 		// The stamp: bare ground and queue are paid for; a path stamped again only counts once more.
 		foreach ( var (x, y) in cells )
@@ -797,8 +798,9 @@ public static class ParkPathBuilding
 				continue;
 			}
 
-			if ( cell.Type == ParkRideChoice.QueueCellType && OwnerOf( state, cell ) is var owner && owner != 0 )
-				state.InvalidateQueue( owner );
+			if ( cell.Type == ParkRideChoice.QueueCellType && OwnerOf( state, cell ) is var owner && owner != 0
+				&& !queuesCut.Contains( owner ) )
+				queuesCut.Add( owner );
 
 			state.SetRecord( x, y, cell with { Type = PathType, TileSet = ParkPaths.PathTileSet } );
 			state.Spend( price );
@@ -823,6 +825,11 @@ public static class ParkPathBuilding
 
 		foreach ( var (x, y) in cells )
 			RetileAround( state, park, x, y );
+
+		// The end of the transaction: each queue the run cut is measured again, and whoever now stands
+		// past its end is put out (the stamp's FUN_004de1f0, 0x00534858).
+		foreach ( var owner in queuesCut )
+			state.RemeasureQueue( owner );
 
 		ParkSurfaces.Rebuild();
 
@@ -1180,7 +1187,7 @@ public static class ParkPathBuilding
 		// No queue: the tool is anchored on that faced cell, and the next click lays from it.
 		if ( !ParkState.OnMap( startX, startY ) || ParkState.CellFor( park, startX, startY ).Type != ParkRideChoice.QueueCellType )
 		{
-			state.InvalidateQueue( thingId );
+			state.RemeasureQueue( thingId );
 
 			return ParkBuildMode.ArmAt( ParkBuildMode.Queue, thingId, startX, startY );
 		}
@@ -1195,7 +1202,7 @@ public static class ParkPathBuilding
 		var (backX, backY) = MapStep.CellAt( back );
 
 		DetachFromPath( state, park, backX, backY );
-		state.InvalidateQueue( thingId );
+		state.RemeasureQueue( thingId );
 		ParkSurfaces.Rebuild();
 
 		return ParkBuildMode.ArmAt( ParkBuildMode.Queue, thingId, backX, backY );
@@ -1275,7 +1282,15 @@ public static class ParkPathBuilding
 		}
 
 		state.Spend( price );
+
+		// The drain re-walks the queue as every cell edit does (FUN_0052fe50 at 0x0052ffec), and whether
+		// that puts anybody out before the sale's own message reaches them is not decoded: it turns on
+		// what the drain's pops leave behind (docs/exe/park-engine.md, "Selling and the people on it"). So
+		// the measurement is only thrown away, the sale puts everybody off, and the question is counted.
 		state.InvalidateQueue( placed.ThingId );
+
+		if ( state.FirstInQueue( placed.ThingId ) != 0 )
+			Unimplemented.Report( "SALE_DRAIN_QUEUE_REMEASURE" );
 
 		return (cells.Count - 1) * price;
 	}
@@ -1320,8 +1335,9 @@ public static class ParkPathBuilding
 
 		state.Refund( refund );
 
+		// Whoever now stands past the break is put out; see ParkPeople.QueueRemeasured.
 		if ( owner != 0 )
-			state.InvalidateQueue( owner );
+			state.RemeasureQueue( owner );
 
 		ParkSurfaces.Rebuild();
 
