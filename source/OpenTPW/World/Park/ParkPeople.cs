@@ -205,8 +205,10 @@ public sealed class ParkPeople : Entity
 		_staff = StaffIn( park );
 		_staffBehaviour = new StaffBehaviour( balance, random: null, State );
 
-		// A cell edit that measures a queue again tells the people in it - see QueueRemeasured.
+		// A cell edit that measures a queue again tells the people in it - see QueueRemeasured - and the
+		// park's door closes and opens the rides through their scripts - see DoorMoved.
 		State.QueueRemeasured = QueueRemeasured;
+		State.DoorMoved = DoorMoved;
 
 		Current = this;
 
@@ -1366,7 +1368,12 @@ public sealed class ParkPeople : Entity
 					// invite - so no test reaches it. Exercising it wants a STALE nominee, which the
 					// shipped park never produces: over 50 samples the longest hold was 2. It stands on
 					// fidelity to FUN_004e1220's tail and on that measurement, not on coverage.
-					if ( operation.Invite( script, thing, TrackTypeOf( thing ) ) == 0 )
+					//
+					// A closed ride (mCanLoad nought) runs FUN_004e0450 in Invite's place and invites nobody,
+					// and the watchdog is skipped with it (0x004e13fc).
+					if ( thing.CanLoad == 0 )
+						CompleteOrTurnAway( operation, script, thing, thingTick );
+					else if ( operation.Invite( script, thing, TrackTypeOf( thing ) ) == 0 )
 						operation.DropUnreadyNominee( thing );
 
 					if ( script != null && script[ParkRideOperation.BrokenVariable] == 0 )
@@ -1382,21 +1389,93 @@ public sealed class ParkPeople : Entity
 					break;
 
 				// Broken down (1), waiting for an upgrade (2) or condemned (4): finish whoever was
-				// mid-admission, then let them off. Where the completion does not take the head, the
-				// original puts them out of the queue instead (FUN_004e0450, 0x004e0554), one a turn. Nothing
-				// here moves a ride into these states - the breakdown request and the upgrade are unbuilt - so
-				// the chain breaks before this.
+				// mid-admission or put the head out (FUN_004e0450), then let them off. Nothing here moves a
+				// ride into these states - the breakdown request and the upgrade are unbuilt.
 				case ParkRideChoice.StateRefusedOne:
 				case 2:
 				case ParkRideChoice.StateRefusedFour:
-					if ( !operation.CompleteAdmission( script, thing.ThingId, thingTick, _rideRandom )
-						&& _behaviour.State.FirstInQueue( thing.ThingId ) != 0 )
-						Unimplemented.Report( "CLOSED_RIDE_DISMISSES_ITS_HEAD" );
+					CompleteOrTurnAway( operation, script, thing, thingTick );
 
 					operation.Dismiss( script, thing, thingTick, _rideRandom, WalkFor, _behaviour.Park,
 						_behaviour.Catalogue );
 					break;
 			}
+		}
+	}
+
+	/// <summary>
+	/// A closing ride's completion - <c>FUN_004e0450</c>, one head per call: a head in
+	/// <see cref="PeepState.EnteringRide"/> whom the script's admit slot no longer names is forced on
+	/// (<see cref="ParkRideOperation.CompleteAdmission"/>), and any other head is put out of the queue
+	/// (<c>0x004e0554</c>).
+	/// </summary>
+	/// <remarks>
+	/// <b>Putting out is <c>FUN_004ddd20</c> and then <c>FUN_005012f0</c></b>: off the queue, the admit slot
+	/// emptied if it names them, <see cref="ParkAdmission.MediumHappinessChange"/> off, back to deciding,
+	/// and the kids' sound at their feet when their id divides by eight (<c>0x0050133d</c>). The head is the
+	/// ride's own, so they leave its queue whatever they name. It runs on every turn of a closed ride and on
+	/// every turn of one broken down, waiting for an upgrade or condemned.
+	/// </remarks>
+	internal void CompleteOrTurnAway( ParkRideOperation operation, RideScript? script,
+		ParkWorld.CatalogueObject thing, int thingTick )
+	{
+		var head = State.FirstInQueue( thing.ThingId );
+
+		if ( operation.CompleteAdmission( script, thing.ThingId, thingTick, _rideRandom ) )
+		{
+			Log.Info( $"Object {thing.ThingId}: script admitted person {head} but he doesn't know yet, "
+				+ "forcing him onto ride" );
+			return;
+		}
+
+		if ( head == 0 )
+			return;
+
+		ParkRideOperation.LeaveQueue( State, script, thing.ThingId, head );
+
+		if ( !_byId.TryGetValue( head, out var peep ) )
+			return;
+
+		_behaviour.DismissFromTheQueue( peep, thingTick );
+
+		Log.Info( $"People: guest {peep.ThingId} turned away by closed thing {thing.ThingId}, "
+			+ $"now {peep.State} with happiness {peep.Happiness:0}" );
+
+		PutOffAtTheirFeet( peep, thing );
+	}
+
+	/// <summary>
+	/// The kids' sound for a guest put out of a queue, at their feet, when their id divides by eight - see
+	/// <see cref="SoundFor"/>.
+	/// </summary>
+	private static void PutOffAtTheirFeet( Peep peep, ParkWorld.CatalogueObject thing )
+	{
+		if ( SoundFor( PeepBehaviour.PutOff.Queueing, peep.ThingId, thing.Flags, seated: false ) == PutOffSound.Feet
+			&& ParkGuestSprites.Feet( peep.Navigator.Position ) is { } feet )
+			ParkAudio.Current?.PutOff( feet );
+	}
+
+	/// <summary>
+	/// The rides' half of the park's door - <c>FUN_00519ef0</c>'s walk along the object chain, over every
+	/// object a guest may be offered (<c>+0x32 &amp; 4</c>). Closing closes each (<c>0x0051a1ae</c>); opening
+	/// opens each that <see cref="ParkRideOperation.MayOpen"/> allows (<c>0x0051a013</c>..<c>0x0051a01e</c>).
+	/// See <see cref="ParkState.SetParkClosed"/>.
+	/// </summary>
+	internal void DoorMoved( bool closed )
+	{
+		var operation = new ParkRideOperation( State, Guests );
+
+		foreach ( var thing in State.ObjectsInChainOrder().ToArray() )
+		{
+			if ( !thing.IsVisitable )
+				continue;
+
+			var script = _scriptFor?.Invoke( thing.ThingId );
+
+			if ( closed )
+				operation.Close( script, thing.ThingId );
+			else if ( ParkRideOperation.MayOpen( _behaviour.Park, thing, TrackTypeOf( thing ) ) )
+				operation.Open( script, thing.ThingId );
 		}
 	}
 
@@ -1527,7 +1606,7 @@ public sealed class ParkPeople : Entity
 	/// Tells everybody in a queue it has been measured again - the walk <c>FUN_004de1f0</c> ends with,
 	/// <i>"Telling people in queue to reevaluate"</i>, reached through <see cref="ParkState.RemeasureQueue"/>.
 	/// Each guest answers through <see cref="PeepBehaviour.QueueShortened"/>, and whoever now stands past the
-	/// end is put out.
+	/// end is put out. Then the function's tail: <see cref="ParkRideOperation.ReopenAfterRemeasure"/>.
 	/// </summary>
 	/// <remarks>
 	/// <b>Everybody but the ride's nominee is asked</b> (<c>0x004de2b9</c>), head first, and each guest's next
@@ -1561,14 +1640,15 @@ public sealed class ParkPeople : Entity
 					Log.Info( $"People: guest {peep.ThingId} put out of thing {objectId}'s queue at place {place} "
 						+ $"of {room}, now {peep.State} with happiness {peep.Happiness:0}" );
 
-					if ( SoundFor( PeepBehaviour.PutOff.Queueing, peep.ThingId, thing.Flags, seated: false )
-						== PutOffSound.Feet && ParkGuestSprites.Feet( peep.Navigator.Position ) is { } feet )
-						ParkAudio.Current?.PutOff( feet );
+					PutOffAtTheirFeet( peep, thing );
 				}
 			}
 
 			id = next;
 		}
+
+		new ParkRideOperation( State, Guests )
+			.ReopenAfterRemeasure( script, objectId, _behaviour.Park, TrackTypeOf( thing ) );
 	}
 
 	/// <summary>Whether a guest is still in a queue's states - <c>FUN_00502430</c>, for the queue walk.</summary>
@@ -1933,6 +2013,9 @@ public sealed class ParkPeople : Entity
 
 		if ( State.QueueRemeasured == QueueRemeasured )
 			State.QueueRemeasured = null;
+
+		if ( State.DoorMoved == DoorMoved )
+			State.DoorMoved = null;
 	}
 
 	/// <summary>

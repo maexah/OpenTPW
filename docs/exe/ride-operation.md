@@ -104,9 +104,9 @@ In order:
 
 SetState's own jump table (`0x004e11d0`): 0 and 3 store and do nothing else. 1, 2 and 4 each run `FUN_004e0450` (complete admission), log `"Object %d: Closing..."`, set `mCanLoad` (`+0x68`) and `+0x6c` to nought, write `VAR_RIDECLOSED` (var 6) = 1, call `FUN_00454550( slot, 1 )` and post an event; 4 also logs `"Ride has become CONDEMNED!!!"`. A value above 4 logs `"Unknown state in CObject::SetState"` and is stored anyway.
 
-The offer gate `FUN_004dd920` refuses 1 and 4 by number, 2 through `mCanLoad`, and 3 through bit `0x04`, which it tests first. **Not settled:** whether an "open" path can ever move a state-3 object to 0. The guard `FUN_004df290` tests neither 3 nor bit `0x04`, and the repair, `FUN_004e0050(0)` and three of `FUN_004df390`'s callers have no refusing guard at all: they log `"Opening non-openable ride!"` five times and open anyway.
+The offer gate `FUN_004dd920` refuses 1 and 4 by number, 2 through `mCanLoad`, and 3 through bit `0x04`, which it tests first. **An "open" path can move a state-3 object to 0**: the guard `FUN_004df290` tests neither 3 nor bit `0x04`, the constructor closes a queued item it has just put in state 3 (`0x004db4fb`, then `0x004db712`), and the tail of `FUN_004de1f0` opens it again with SetState(0). The repair, `FUN_004e0050(0)` and three of `FUN_004df390`'s callers have no refusing guard at all: `FUN_004df390` logs `"Opening non-openable ride!"` five times and opens anyway.
 
-`Invite` itself completes a pending admission on one arm: `FUN_004e0450` has five callers, and one is **`FUN_004e1220` at `004e13fc`** — the `mCanLoad == 0` bail, which does `FUN_004e0450(); return;` rather than simply returning. The other four are three `FUN_004e0e60` (SetState) paths and the states-1/2/4 arm, all catch-ups while closing. `mCanLoad` is 1 on all fourteen objects when Lost Kingdom loads, but every close clears it and leaves `mState` 0 - the ride window's door, the park's door, a blocked exit - so this bail is how a closed ride's queue is turned away, one head a turn: see "Every way out of a queue", "The closed ride".
+`Invite` itself completes a pending admission on one arm: `FUN_004e0450` has five callers, and one is **`FUN_004e1220` at `004e13fc`** — the `mCanLoad == 0` bail, which does `FUN_004e0450(); return;` rather than simply returning. The other four are three `FUN_004e0e60` (SetState) paths and the states-1/2/4 arm, all catch-ups while closing. `mCanLoad` is 1 on all fourteen objects when Lost Kingdom loads, but every close clears it and leaves `mState` as it was - the park's door, the ride window's door, a blocked exit - so this bail is how a closed ride's queue is turned away, one head a turn: see "Every way out of a queue", "The closed ride".
 
 **`Invite`'s fullness test is skipped for a WATER (2) or COASTER (3) track**: the original tests the item descriptor's track type against **3**, then **2**. Track-type constants are car **1**, water **2**, coaster **3**. (A track ride refused as "not valid" elsewhere tests 1 and 2 for an entirely different reason; the two tests must not be carried across.)
 
@@ -120,7 +120,7 @@ The offer gate `FUN_004dd920` refuses 1 and 4 by number, 2 through `mCanLoad`, a
 | `FUN_004e0e60` | SetState | Writes `mState` and runs the side effects. | Disassembly |
 | `FUN_004e0a70` | — | Four lines: `script[VAR_LETMEON] != mFirstInQ`, the gate in front of completion. | Disassembly |
 | `FUN_004e0ac0` | — | Tells the object to forget a person. | Disassembly |
-| `FUN_00454550` | — | Called only from `FUN_004e14e0`, with the model slot from `+0x20` and 2 (broken) or 4 (condemned). | Xref sweep |
+| `FUN_00454550` | — | A change to the object's model, `DAT_007a4610[ +0x20 ]`: acts only when model `+0xb0` is set, stores one of four texture offsets (1, 2, 4, 8) through `[[model+0xb4]+8]+0x2c`, sets `+0xbc` = 0.2f and flag bits at `+4`. **Eleven callers**: `FUN_004e14e0` with 2 (broken, `0x004e1542`) or 4 (condemned, `0x004e1584`); every close with 1 - SetState 1, 2 and 4 (`0x004e0f20`, `0x004e101f`, `0x004e1123`), `FUN_004df300` (`0x004df37e`), `FUN_004df150` (`0x004df265`), `FUN_004dfe30` (`0x004dfeed`), the repair `FUN_004df8f0` (`0x004dfd65`), the constructor (`0x004db78e`); `FUN_004e0050` with 8 (`0x004e0098`). `FUN_004547c0` is its counterpart on every open (`+0xbc` = -0.3f, seven callers: `0x004de462`, `0x004df413`, `0x004dfc11`, `0x004dfc95`, `0x004e0017`, `0x004e010b`, `0x004e0191`). Not a sound; the model loader around it names `Hoardings`, so probably the hoarding, not seen. | E8 scan, disassembly |
 | `+0x19c` | `mState` | The object's state byte. | Disassembly |
 | `+0x33` bit 0 | RunsContinuously | Descriptor `+0x48`, set by `FUN_004db090`. It lets a ride invite while running. | Disassembly |
 
@@ -139,7 +139,7 @@ A ride script never writes its own capacity: `Bouncy.RSE` declares `VAR_CAPACITY
 | `+0x68` | `mCanLoad` | File **214**, 4 bytes. | Save record |
 | `+0x124` / `+0x128` | `UsageInfo.MinCapacity` / `MaxCapacity` | The clamp in `FUN_004dd7f0`. Declared by 20 items each. | `.sam` sweep |
 
-**The "open a ride" idiom appears in at least three functions** (`FUN_004df8f0`, `FUN_004dfe30`, `FUN_004e0050`) and is always the same tail: **`+0x68` (`mCanLoad`) = 1**, write `VAR_RIDECLOSED` (var 6) = 0, then `FUN_004e0e60(0)` = SetState(**0**).
+**The "open a ride" idiom appears in at least five functions** (`FUN_004df390`, `FUN_004df8f0`, `FUN_004dfe30`, `FUN_004e0050`, the tail of `FUN_004de1f0`) and is always the same tail: **`+0x68` (`mCanLoad`) = 1**, `FUN_004547c0( model )`, write `VAR_RIDECLOSED` (var 6) = 0, then `FUN_004e0e60(0)` = SetState(**0**). See "The closed ride".
 
 `FUN_004dd7f0`'s clamp is between two descriptor fields, so a value already stored in a save has been clamped once; applying the rule a second time would clamp twice.
 
@@ -183,7 +183,7 @@ Entering state 14 also writes the guest's `+0x1f1` from the sideshow win roll �
 |---|---|---|---|
 | `FUN_005006b0` | — | The state-13 handler; the three steps above. | Disassembly |
 | `FUN_004e0900` | AdmitPerson | Called **by the guest**, not by the ride. | Disassembly of `FUN_005006b0` |
-| `FUN_00500870` | — | Guest-side admission completion: unlink, assert, `SetState(0x10)`. | Disassembly |
+| `FUN_00500870` | — | Forcing the head on: the object from the guest's own `MajorDest`, the gate `FUN_004e0a70`, unlink, assert, `SetState(0x10)`. Its one caller is the object's `FUN_004e0450` (`0x004e0500`); the guest's own case `0xe` is a separate inlined copy that boards the calling guest. | Disassembly |
 | `FUN_005019f0` | — | The guest's per-state turn dispatch. | Disassembly |
 | `FUN_00501db0` | SetState | The guest state setter this project reproduces as `Peep.SetState`. Case `0xe` writes `person[+0x1f1] = FUN_004e2670( object )`. | `search_bytes` for `88 ?? f1 01 00 00` |
 | `FUN_00500a50` | — | The state-18 (`HeadingForExit`) handler. | State → handler map |
@@ -289,7 +289,7 @@ the kids' `0x80` when the guest's id `& 7` is nought (`0x0050133d`), takes `Medi
 |---|---|---|---|---|---|
 | `0x004fb409` | `FUN_004fb360`, the sale's type-10 answer | queueing for a thing sold or picked up | no unlink; then the sale's own `SmallHappinessChange` | −15 −5 | built, `PeepBehaviour.ThingRemoved` |
 | `0x005014b4` | `FUN_00501390`, told by `FUN_004de1f0` | place `>=` cells × 4, unsigned, and not state 14 | thought `0xd` when id % 3 is nought; `FUN_004ddd20` | −15 | built, `ParkPeople.QueueRemeasured` |
-| `0x004e0554` | `FUN_004e0450`, the object's completion | the head, when `VAR_LETMEON` still names them or they are not in state 14 | `FUN_004ddd20` | −15 | counted, `CLOSED_RIDE_DISMISSES_ITS_HEAD` |
+| `0x004e0554` | `FUN_004e0450`, the object's completion | the head, when `VAR_LETMEON` still names them or they are not in state 14 | `FUN_004ddd20` | −15 | built, `ParkPeople.CompleteOrTurnAway` |
 | `0x004ffdf4` | `FUN_004ffbc0`, arriving at the queue | joined, and `FUN_00501160` finds no route to their place | `FUN_004ddd20` | −15 | counted, `QUEUE_PLACE_WALK` |
 | `0x005004b3` | `FUN_004ffff0`, the `InQueue` turn | nine arms, below | `FUN_004ddd20`, a thought on most arms | −15 | counted, `QUEUE_TURN_DISMISSALS` |
 | `0x005007b4` | `FUN_005006b0`, at the door | `FUN_004fde50` says too expensive | thought 6, event 10, **a first −15** (`0x00500778`), `mNumWalkAways` +1 (`FUN_004e1670`), `FUN_004e0ac0`, `FUN_004ddd20` | −30 | counted, `DOOR_PRICE_OPINION` |
@@ -314,11 +314,15 @@ queue head first, reading each `mQNext` before the call (`0x004de2bd`) and **ski
 **state 14 is never put out** (`0x00501422`). Then `"The queue was shortened and there's no room for me any more"`,
 thought `0xd` when the id divides by three (`0x0050148a`), `FUN_004ddd20`, `FUN_005012f0`, and `MajorDest` = 0 and
 state 6 again. **Then its tail** (`0x004de2d5`..`0x004de48c`): it logs `"Back of queue is %sconnected"`
-(`FUN_004de4a0`) and, when the ride is closed (`mCanLoad` nought), not in state 1, 2 or 4, `+0x64` nought, the back
-of the queue connected and the open guard passed (`+0x2c` for a track ride; `FUN_00441970` for type 3), opens it
-again as `FUN_004df390` does: `mCanLoad` = 1, a sound, `VAR_RIDECLOSED` = 0, SetState(0) (`0x004de487`). It always
-zeroes `+0x5e` (`0x004de48c`, not decoded). OpenTPW builds the walk (`ParkState.RemeasureQueue`) and counts the reopen
-(`QUEUE_REMEASURE_REOPENS_THE_RIDE`). Its eight call sites, each with the object in `ECX`:
+(`FUN_004de4a0`) and, when the ride is closed (`mCanLoad` nought, `0x004de2f7`), passes the open guard `FUN_004df290`
+(not in state 1, 4 or 2, `mRequestedService` `+0x64` nought, the back of the queue connected, and for type 3
+`FUN_00441970`) and, for track types 1 to 3, has `mIsTrackRideValid` (`+0x2c`, `0x004de3da`), opens it again with an
+inlined copy of `FUN_004df390`: `mCanLoad` = 1, `FUN_004547c0( model )` (not a sound; see `FUN_00454550`),
+`VAR_RIDECLOSED` = 0, SetState(0) (`0x004de487`). **It always zeroes `mAssignedStaffMember`** (`+0x5e`, `0x004de48c`),
+so every queue measured again makes the ride forget who was servicing it; `+0x60` and `+0x64` stand. Nothing in the
+tail reads the park's door: a closed ride whose queue is edited opens whatever the door says. OpenTPW builds all of it:
+the walk and the tail are `ParkPeople.QueueRemeasured`, the tail `ParkRideOperation.ReopenAfterRemeasure`. Its eight
+call sites, each with the object in `ECX`:
 
 | Site | Transaction | Shortens? | OpenTPW |
 |---|---|---|---|
@@ -329,9 +333,13 @@ zeroes `+0x5e` (`0x004de48c`, not decoded). OpenTPW builds the walk (`ParkState.
 | `0x0053694b` | `ClearCell`'s path arm, a path joined to an entrance cleared: the link goes first, so the queue measures **0** and all but the nominee and state 14 go | **yes** | not built: `ClearPathCell` re-walks no entrance |
 | `0x0052ffec` | `FUN_0052fe50`, the backtrack: Backspace with the queue tool (`FUN_0052fe50(0,1)` at `0x0040beb3`, gated on a vtable answer of 3), and the demolisher's drain before the destructor | **yes** | Backspace counted (`BACKSPACE_UNDO_QUEUE_RUN`); the drain, below |
 
-The console's `delqueue` (`LiftQueue`) re-measures too. In Lost Kingdom the one queue that can be cut is the Belly
-Bounce's: cells (52,22), (51,22), (50,22), (49,22), of which (52,22) is NOMODIFY, so path over (51,22) leaves one
-cell and room for four.
+The console's `delqueue` (`LiftQueue`) re-measures too. In Lost Kingdom the one queue that could be cut is the Belly
+Bounce's: cells (52,22), (51,22), (50,22), (49,22), of which (52,22) is NOMODIFY, and path over (51,22) would leave
+one cell and room for four. **The path tool refuses that click in the shipped map.** Its verdict `FUN_00535670`
+lets path over a queue cell only when the cell's `mNeighbours` has exactly one bit (`FUN_00522790`,
+`0x00535ce0`..`0x00535ce9`) and the cell that way is a queue cell (`0x00535ced`..`0x00535cfe`); otherwise it answers
+red (`0x00535d12`). All four cells carry two bits (0x50, 0x44, 0x44, 0x44). The console's `path`, which Q50's game
+run used, calls `LayPathRun` without the verdict.
 
 **Whether the sale's drain puts anybody out is not decoded.** The demolisher (`FUN_00527ee0`) drains the queue
 through `FUN_0052fe50` before the destructor's type-10 message; each pop that applies re-walks, and a guest it put
@@ -342,22 +350,87 @@ sale, and counts `SALE_DRAIN_QUEUE_REMEASURE`.
 
 #### The closed ride - `FUN_004e0450`
 
-The condition is `mFirstInQ != 0` and (`VAR_LETMEON == mFirstInQ` or the head's state is not 14); otherwise - the slot
-not naming the head, empty or naming anyone else, and the head in 14 - it forces them on (`"script admitted person %d
-but he doesn't know yet"`, `FUN_00500870`). **One head per call, no loop.** Its five callers are SetState 1, 2 and 4, the states-1/2/4 turn,
-and `Invite`'s `mCanLoad == 0` bail at `0x004e13fc` - **and the bail is the common one**: every close clears
-`mCanLoad` and leaves `mState` 0, so each later state-0 turn puts one head out. The closes: the ride window's door
-(`FUN_004af600` case `0x3e38` → `FUN_0048ccf0` → `FUN_004df300`, which writes `+0x68` = 0, `+0x6c` = 0 and
-`VAR_RIDECLOSED` = 1), the park's door (`FUN_00519ef0`'s close arm calls `FUN_004df300` at `0x0051a1ae` on every
-object with `+0x32 & 4`), the track editor opened on a ride (`FUN_0052f200` tools `0x15`/`0x16` → `FUN_004474d0` →
-`FUN_00447520`, which closes it at `0x0044755c` when no track is being edited and opens it again on leaving,
-`0x00447748`), a blocked exit (`FUN_004df150` at `0x0050163b`) and the repair (`0x004dfd1e`). **A closed ride is
-opened again by the next edit of its queue** (the tail of `FUN_004de1f0`, above), whatever the park's own flag says,
-so the heads go one a turn only until then. **Not settled:** which way `FUN_00519ef0`'s first argument runs - a
-reviewer read it non-zero on the OPEN arm (`0x00519f76`..`0x00519f8c`), where `docs/exe/hud.md` calls it the closed
-flag. Here the park's door sets `ParkIsClosed` alone (`PARK_CLOSE_CLOSES_NO_RIDE`), nothing else clears `mCanLoad`,
-and nothing moves a ride to 1, 2 or 4 - the breakdown request and the upgrade are unbuilt - so the chain breaks
-before either counted site: a gap, not content.
+Decoded 2026-09-24 (`docs/QUEUE.md` Q50b): five decoders, each report put to a refuter reading the disassembly.
+
+**The completion.** The script's `VAR_LETMEON` is read; if it differs from `mFirstInQ` and the head's raw state at
+`+0x220` is 14 (no look-through to `+0x224`, `0x004e04b5`), it logs `"Object %d: script admitted person %d but he
+doesn't know yet, forcing him onto ride"` and calls `FUN_00500870` on the head, which boards them. Otherwise, if
+`mFirstInQ` is not nought, it puts the head out: `FUN_004ddd20` on the calling object, then `FUN_005012f0`
+(`0x004e0554`), −15. **One head per call, no loop**, and no nominee or script write but `FUN_004ddd20`'s. Its five
+callers are SetState 1, 2 and 4 (`0x004e0ea3`, `0x004e0fa2`, `0x004e10a6`), the states-1/2/4 turn (`0x004e0e20`) and
+`Invite`'s `mCanLoad == 0` bail (`0x004e13fc`), which runs it and returns, so the watchdog at `0x004e1382` is not
+reached. **The bail is the common one**: a close leaves `mState` alone, so each later state-0 turn puts one head out.
+On the turn a closed ride's `VAR_BROKEN` goes non-zero, SetState(1 or 4) runs it again, and that turn puts out two.
+OpenTPW: `ParkPeople.CompleteOrTurnAway`, from the bail and from the states-1/2/4 turn.
+
+**What closes a ride.** Every close clears `mCanLoad` (`+0x68`) and the nominee (`+0x6c`, a word), writes
+`VAR_RIDECLOSED` (script variable 6) = 1, calls `FUN_00454550( model, 1 )`, and leaves `mState` alone. SetState 1,
+2 and 4 close the same way and do set the state ("Where an object's state comes from").
+
+| Close | Reached from | Guard | Besides |
+|---|---|---|---|
+| `FUN_004df300` | the park's door (`0x0051a1ae`); the ride window's door (`FUN_004af600` case `0x3e38` → `FUN_0048ccf0(1)`); the track editor (`FUN_00447520`, `0x0044755c`) | none | logs `"Object %d: Closing..."` and the nominee it lets go of |
+| `FUN_004df150` | a blocked exit (`0x0050163b`) | only an open ride | posts a type-`0x14` message first |
+| inline, the constructor `FUN_004db090` | every object with the queue-path bit, which it sets from `Info.HasQueue` (descriptor `+0x40`, `0x004db420`) (`0x004db712`..`0x004db793`) | none | so a bought queued thing starts closed, until a queue measure finds its back connected |
+| inline, `FUN_004dfe30(1)` | a mechanic called (the ride window's `b_callmech`) | `+0x64` nought | sets `mRequestedService` (`+0x64`) = 1 first |
+| inline, the repair `FUN_004df8f0` | after opening, a type-3 track whose `FUN_00441970` answers nought (`0x004dfd1e`) | none | never a non-track ride |
+
+**What opens one.** `FUN_004df390`: `mCanLoad` = 1, `FUN_004547c0( model )`, `VAR_RIDECLOSED` = 0, SetState(0),
+which for 0 is the store alone; the nominee is left. It asks the guard first and opens whatever the answer, logging
+`"Opening non-openable ride!"` five times when it refuses (`0x004df3ea`). **The guard `FUN_004df290`** refuses state
+1, state 4, `mRequestedService` non-zero, state 2, the back of the queue not connected, and a type-3 track whose
+`FUN_00441970` answers nought, in that order. Its callers that ask it first: the park's door (`0x0051a013`) and the
+four in the build dispatcher `FUN_00524960`; those that do not: the ride window's door (`FUN_0048ccf0(0)`, `0x0048cd06`),
+the track editor on leaving (`0x00447748`) and `FUN_004d73c0`. The ride window greys its door for a closed ride the
+guard refuses (`FUN_004ad4e0`, `0x004ad5c6`..`0x004ad5e2`), and sets its position from `mCanLoad`.
+
+**`FUN_004de4a0`, the back of the queue connected.** With the queue-path bit (`+0x32 & 8`) it takes the back cell
+from `FUN_004de130` (`mBackOfQueue` as it stands, walked only when nought); nought is not connected, and otherwise it
+answers `mNeighbours != mDirection` for that cell (`0x004de4da`..`0x004de4f1`), so a back cell linked on to anything
+beyond the cell ahead. Without the bit it steps from the entry cell: the angle names a side (0 as `0x10`, 90 as
+`0x04`, 180 as `0x01`, 270 as `0x40`, `0x004de510`..`0x004de53f`; any other angle reads an unset byte), and the cell
+one step the opposite way must be path (`FUN_00536310`) whose `mNeighbours` has that side, with the entry cell's
+`mNeighbours` holding the opposite. In the shipped park all six visitable objects answer connected.
+
+**The park's door - `FUN_00519ef0( open, 0 )`.** The first argument is the OPEN flag. A non-zero second argument
+takes a third path that only writes the gate's `VAR_COMMAND` = 2 and returns (`0x00519f17`..`0x00519f66`); its one
+caller is the end-of-park routine `FUN_005168f0` (`0x00516ada`).
+
+| Arm | Runs when | In order |
+|---|---|---|
+| open, first argument non-zero (`0x00519f76`) | the park is closed | `mParkClosed` = 0; the gate's `VAR_COMMAND` = 1; along `mFirstObject`, every object with `+0x32 & 4` that `FUN_004df290` allows is opened (`FUN_004df390`) |
+| close, first argument nought (`0x0051a091`) | the park is open | `mParkClosed` = 1; if `FUN_004c9130` counts nobody (things of kind 1 on cells of type 0, 1, 3, 9 or 10) and the gate's `VAR_STATUS` reads 1, the gate's `VAR_COMMAND` = 0 (`0x0051a0e8`..`0x0051a161`); along `mFirstObject`, every object with `+0x32 & 4` is closed (`FUN_004df300`) |
+
+Both arms then post a type-`0x13` message, 3 on open and 4 on close (`0x0051a031`, `0x0051a1c1`), whether or not
+anything changed; `CAdvisor::ReceiveMessage` (`FUN_0059b060`, `0x0059b1f8`) answers it with its own message `0x80`
+on open and `0x81` on close (`FUN_0059ae20`). The log `"*** You have just %s your park ***"` is a `RET` stub. The
+entry-price screen's `b_door` calls it as `FUN_00519ef0( down != 1, 0 )` (`0x00498d33`), where the fourth handler
+argument is the switch's down byte after the click (`FUN_00668abd`, posted at `0x006691e1`); the screen's builder
+sets the switch down for a closed park (`Button_SetDown`, `0x00498fd9`). **Down is closed.** `FUN_00516700`, the
+other opening caller (`0x00516724`), is the online-chat park-creation path.
+
+**What a closed ride changes.** The offer gate `FUN_004dd920` refuses it, so no guest chooses it, the minor decision
+`FUN_004fd570` does not switch to it, and it drops out of `FUN_004c8240`'s sum behind the arrival headcount and the
+park's excitement against its ticket price. `AdmitPerson` refuses. The breakdown request is skipped. The windows show
+status code 1, `CLOSED` (UITEXT 365, grey), or `0x17`, `CLOSED: QUEUE NOT CONNECTED` (`FUN_00485f60`), and the
+allitems list colours its row; five advisor scores count closed objects (`RidesClosed` .. `StaffroomClosed`); the 2D
+map draws its cells differently. A guest already walking to it still joins its queue (`FUN_004ffbc0` does not ask).
+**The engine never reads `VAR_RIDECLOSED` back; the scripts do**: 28 of Lost Kingdom's 73 read it. `Bouncy.RSE`
+stops admitting (`FLUSHANIM`, `VAR_RUNNING` = 0, `TRIGANIM 2,0,0`) and loops `FORCEUNBOUNCE` into `VAR_LETMEOFF`
+until it reads nought; `Coconut.RSE` runs `TRIGANIM 5,0,0` and `KILLOBJ 1`; `Junspray.RSE` and `Toilet.RSE` never
+touch it.
+
+**OpenTPW builds** the door's two arms (`ParkState.SetParkClosed` → `ParkPeople.DoorMoved`), the close, the open,
+the guard and `FUN_004de4a0` (`ParkRideOperation.Close`, `Open`, `MayOpen`, `BackOfQueueConnected`), the completion,
+the reopen, the queue-path bit on a bought thing (`ParkBuilding.FlagsFor`) and the ride window's door switch following
+`mCanLoad`. **Counted:** the gate's command (`PARK_DOOR_COMMANDS_THE_GATE`), the `0x13` message
+(`PARK_CLOSED_ADVISOR_MESSAGE`, `PARK_OPENED_ADVISOR_MESSAGE`), the model changes (`CLOSED_RIDE_MODEL_CHANGE`,
+`OPENED_RIDE_MODEL_CHANGE`), the coaster's track record, which the guard lets through as the choice does
+(`OPEN_GUARD_COASTER_TRACK_RECORD`), the constructor's close (`BOUGHT_QUEUED_THING_STARTS_CLOSED`), the ride window's
+status box and greyed door (`RIDE_WINDOW_CLOSED_STATUS`, `RIDE_WINDOW_DOOR_GREYED`) and the all-items row colour
+(`ALL_ITEMS_CLOSED_ROW_COLOUR`). **Not built:** the ride window's door as a button
+(`RIDE_WINDOW_OPEN_OR_CLOSE_THE_RIDE`), the blocked exit (deliberately, `ParkRideOperation.Dismiss`), the maintenance
+and track-editor closes, the advisor scores, and the second completion on a breakdown turn.
 
 #### The `InQueue` turn - `FUN_004ffff0`
 

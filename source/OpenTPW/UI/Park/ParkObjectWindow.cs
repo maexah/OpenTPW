@@ -153,6 +153,12 @@ internal sealed class ParkObjectWindow : UiWindow
 	/// </summary>
 	private readonly UiControl _broken;
 
+	/// <summary>The ride's door, <c>b_door</c> (<c>0x3e38</c>): down while the ride is closed.</summary>
+	private readonly UiButton? _door;
+
+	/// <summary>The thing and whether it was closed when the window last looked, so a change is counted once.</summary>
+	private (int Thing, bool Closed) _shown;
+
 	/// <summary>
 	/// How far the preview looks down at the ride, in degrees. <b>A choice, and marked as one.</b> The
 	/// park's own camera runs 45 pulled in to 65 pushed out (<see cref="ParkOrbitCameraMode.Pitch"/>),
@@ -275,7 +281,7 @@ internal sealed class ParkObjectWindow : UiWindow
 		{
 			var (id, help, mesh, what) = Verbs[i];
 
-			Root.Add( new UiButton
+			var verb = Root.Add( new UiButton
 			{
 				Id = id,
 				Rect = VerbRects[i],
@@ -287,6 +293,9 @@ internal sealed class ParkObjectWindow : UiWindow
 				Mesh = mesh is null ? null : UiMesh.Get( mesh ),
 				Clicked = () => Verb( id, what )
 			} );
+
+			if ( id == 0x3e38 )
+				_door = verb;
 		}
 
 		Root.Add( new UiButton
@@ -1200,7 +1209,49 @@ internal sealed class ParkObjectWindow : UiWindow
 	/// Read every frame because a ride can break while its window is open - the window does not pause
 	/// the game, which is the whole reason its cycle arrows are worth having.
 	/// </remarks>
-	protected internal override void Update() => _broken.Visible = IsBroken();
+	protected internal override void Update()
+	{
+		_broken.Visible = IsBroken();
+
+		ShowTheDoor();
+	}
+
+	/// <summary>
+	/// The door switch follows the ride's <c>mCanLoad</c>: <c>FUN_004ad4e0</c> sets it down for a closed ride
+	/// (<c>Button_SetDown</c>, <c>0x004ad606</c>..<c>0x004ad622</c>) whenever the ride's status changes.
+	/// </summary>
+	/// <remarks>
+	/// Two more parts of that function are counted, once each time a ride is seen closed: the status box's
+	/// <c>CLOSED</c> or <c>CLOSED: QUEUE NOT CONNECTED</c> (<c>FUN_00485f60</c>, codes 1 and <c>0x17</c>), and the
+	/// door greyed while <see cref="ParkRideOperation.MayOpen"/> refuses (<c>0x004ad5c6</c>..<c>0x004ad5e2</c>).
+	/// </remarks>
+	private void ShowTheDoor()
+	{
+		if ( _door == null || Level.Current is not { ParkState: { } state } level
+			|| !state.TryObject( ThingId, out var placed ) )
+			return;
+
+		var closed = placed.CanLoad == 0;
+
+		_door.IsDown = closed;
+
+		if ( _shown == (ThingId, closed) )
+			return;
+
+		_shown = (ThingId, closed);
+
+		if ( !closed )
+			return;
+
+		Unimplemented.Report( "RIDE_WINDOW_CLOSED_STATUS" );
+
+		var trackType = level.Catalogue is { } catalogue && catalogue.TryGet( placed.CatalogueId, out var item )
+			? item.TrackType
+			: 0;
+
+		if ( !ParkRideOperation.MayOpen( level.Park, placed, trackType ) )
+			Unimplemented.Report( "RIDE_WINDOW_DOOR_GREYED" );
+	}
 
 	/// <summary>Whether the ride being shown has broken down - <c>VAR_BROKEN</c> on its own script.</summary>
 	private bool IsBroken()

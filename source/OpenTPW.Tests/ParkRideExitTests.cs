@@ -320,46 +320,6 @@ public class ParkRideExitTests
 			.AdmitPerson( Script(), ride, 7 ), "and with its real value it admits" );
 	}
 
-	/// <summary>
-	/// On the <c>mCanLoad</c> bail the original runs <c>FUN_004e0450</c>, which forces a head in
-	/// <see cref="PeepState.EnteringRide"/> on when the slot no longer names them and otherwise puts the head
-	/// out of the queue (<c>0x004e0554</c>). Neither is built on the bail, and each is counted under its own
-	/// name, so the census says which way the head would have gone.
-	/// </summary>
-	[TestMethod]
-	public void AClosedRideCountsWhichWayItsHeadWouldGo()
-	{
-		var ride = Park().Objects.Single( o => o.ThingId == Ride ) with { CanLoad = 0 };
-
-		var park = new ParkState( parkIsClosed: false, visitorsToDate: 0 );
-		park.JoinQueue( Ride, 7 );
-
-		var head = Guest( 7, PeepState.EnteringRide );
-		var operation = new ParkRideOperation( park, new Dictionary<int, Peep> { [7] = head } );
-		var forced = Times( "CLOSED_RIDE_FORCES_ITS_HEAD_ON" );
-		var putOut = Times( "CLOSED_RIDE_DISMISSES_ITS_HEAD" );
-
-		operation.Invite( Script(), ride );
-
-		Assert.AreEqual( forced + 1, Times( "CLOSED_RIDE_FORCES_ITS_HEAD_ON" ), "entering, the slot empty: forced on" );
-		Assert.AreEqual( putOut, Times( "CLOSED_RIDE_DISMISSES_ITS_HEAD" ), "and not put out" );
-
-		var naming = Script();
-		naming.Set( ParkRideOperation.AdmitVariable, 7 );
-		operation.Invite( naming, ride );
-
-		Assert.AreEqual( putOut + 1, Times( "CLOSED_RIDE_DISMISSES_ITS_HEAD" ), "the slot still names them: put out" );
-
-		head.SetState( PeepState.InQueue, tick: 1, new Random( 1 ) );
-		operation.Invite( Script(), ride );
-
-		Assert.AreEqual( putOut + 2, Times( "CLOSED_RIDE_DISMISSES_ITS_HEAD" ), "not entering: put out" );
-		Assert.AreEqual( forced + 1, Times( "CLOSED_RIDE_FORCES_ITS_HEAD_ON" ), "and never forced on" );
-	}
-
-	private static int Times( string what )
-		=> Unimplemented.Summary.FirstOrDefault( entry => entry.What == what ).Times;
-
 	/// <summary>And it stops the invite that would have called somebody forward.</summary>
 	[TestMethod]
 	public void ARideThatCannotLoadInvitesNobody()
@@ -390,8 +350,9 @@ public class ParkRideExitTests
 	}
 
 	/// <summary>
-	/// <c>mCanLoad</c> is 1 on every object in this park, so the two refusals above cannot fire in it.
-	/// Pinned deliberately: a reader should know the arm is faithful rather than exercised.
+	/// The shipped save has <c>mCanLoad</c> 1 on all fourteen objects, so nothing refuses to load until
+	/// something closes it. The park's door does (<see cref="ParkRideOperation.Close"/>); see
+	/// <c>ParkClosedRideTests</c> for the refusals it causes.
 	/// </summary>
 	[TestMethod]
 	public void NothingInThisParkIsUnableToLoad()

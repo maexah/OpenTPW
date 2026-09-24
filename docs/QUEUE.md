@@ -749,17 +749,42 @@ artifacts are listed in `docs/history/README.md`.
   - **Not confirmed on screen:** the slot let go (nothing in this park names a guest past the four), the nominee's
     and `EnteringRide`'s exemptions, and the walk giving up at a stale link - tested only. The four left queued stand
     on the cut-off cells, since the walk to a place is unbuilt (Q50e). **Found:** Q50b-Q50f, Q85-Q88.
-- [ ] **Q50b. A closed ride turns its queue away, one head a turn. Settle the park door first.** Split from Q50
-  (`ride-operation.md`, "Every way out of a queue", "The closed ride"). Every close clears `mCanLoad` and leaves
-  `mState` 0 - the ride window's door (`0x3e38` → `FUN_004df300`), the park's door (`FUN_00519ef0`'s loop,
-  `0x0051a1ae`), the track editor (`FUN_00447520`), a blocked exit (`FUN_004df150`) - and then `Invite`'s bail runs
-  `FUN_004e0450`, which puts the head out (`0x004e0554`, −15) each turn, or forces an `EnteringRide` head on; the
-  next edit of the queue opens the ride again (`FUN_004de1f0`'s tail). Nothing here closes a ride: `SetParkClosed`
-  sets a flag only (`PARK_CLOSE_CLOSES_NO_RIDE`), and `Invite`'s bail returns (`CLOSED_RIDE_DISMISSES_ITS_HEAD`,
-  `CLOSED_RIDE_FORCES_ITS_HEAD_ON`, and in the states-1/2/4 arm; `QUEUE_REMEASURE_REOPENS_THE_RIDE`). First settle
-  which way `FUN_00519ef0`'s first argument runs (a reviewer read it non-zero on the OPEN arm, `0x00519f76`;
-  `hud.md` calls it the closed flag). Confirm: close the park at the entry-price door with a Belly Bounce queue;
-  `peeps` shows one head a turn go to Deciding for 15, `put off` for an id divisible by eight.
+- [x] **Q50b. A closed ride turns its queue away, one head a turn; the park's door settled.** Done 2026-09-24,
+  `alexah/139-a-closed-ride-turns-its-queue-away`. Split from Q50. Decoded first (five decoders, each report put to a
+  refuter; `ride-operation.md`, "The closed ride"): `FUN_00519ef0`'s first argument is the OPEN flag - non-zero opens
+  (`0x00519f76`), nought closes (`0x0051a091`), and `b_door` passes `down != 1` - so **down is shut**, and OpenTPW
+  drew and read the switch the wrong way round. Its close arm runs `FUN_004df300` on every object a guest may be
+  offered; its open arm `FUN_004df390` behind the guard `FUN_004df290`.
+  - **Built:** the door's sense (`ParkEntryPriceScreen`); both arms (`ParkState.SetParkClosed` → `ParkPeople.DoorMoved`),
+    each only on a change; `ParkRideOperation.Close`, `Open`, `MayOpen` and `BackOfQueueConnected` (`FUN_004de4a0`,
+    both arms); a closed ride's turn runs `FUN_004e0450` in `Invite`'s place (`ParkPeople.CompleteOrTurnAway`): an
+    `EnteringRide` head the slot no longer names is forced on, any other head put out, −15, the kids' sound for an id
+    divisible by eight; the same from the states-1/2/4 turn; the tail of `FUN_004de1f0` (`ReopenAfterRemeasure`:
+    reopen, `mAssignedStaffMember` forgotten); `mRequestedService` read at file 1078; `Info.HasQueue` pinned as
+    descriptor `+0x40` from the compiled schema (`0x00744e3c`) and set on a bought thing (`ParkBuilding.FlagsFor`);
+    the ride window's door follows `mCanLoad`; `objects` prints `state` and `canload`. Counted: the gate's command,
+    the advisor's `0x80`/`0x81`, the model changes, the coaster's track record, the constructor's close, the ride
+    window's status and greying, the all-items row colour (Q89-Q93).
+  - **Proof:** 13 new tests (`ParkClosedRideTests`); 19 mutations, each predicted: 16 exact, M4 turned 5 red of the 9
+    I named (four of them do not go through the door), M16 two more than named, M17 (the tail's `mCanLoad` test)
+    unobservable by construction. A read-only review (15 agents, three lenses, each finding put to a skeptic) upheld
+    twelve, all fixed: **a bought or moved queued ride could never open again after the door** (no queue-path bit, so
+    the guard took the entrance arm onto its own queue cell) - pinned and set, M19 red; the ride window's shut state
+    uncounted; five false comments (the gate's "2 shuts", the bail "cannot fire"); two doc rows. 1083 tests with the
+    game; 475 ran and 608 skipped without; 123 warnings.
+  - **Confirmed in the game** (`q50bconfirm.py`, silent, jungle): six queuers for the Belly Bounce, `happy 50`, the
+    entry-price screen's real `b_door` pressed. The switch showed the green lamp up for the open park and the red lamp
+    down once pressed; six `Closing...` lines, the six visitable objects `canload 0`, gate shut; then one head out a
+    sweep for seven sweeps, 40, 71, 72, 70, 69, 63, and 60 who walked up after the close, each Deciding at 35;
+    `put off` (`bootout.mp2`) for 40 and 72; the Belly Bounce's window showed its door down. Pressed again: six
+    `opened`, all `canload 1`, gate open, the green lamp. The control on `main`: the red lamp for the open park and
+    the green once shut, no ride closed, the queue of eight standing four sweeps on. `save/` unchanged in both.
+  - **Missed first, mine.** Every prediction in the game held but one guest's: 40, one of the save's own, went home
+    at 35 where I said 10, read so at six sweeps; its `exit` read -27, so its day had run out while the queue held it,
+    and the day's end is asked before `Decide`. The unit test's first final check made the same mistake the other way.
+  - **Not confirmed on screen:** a reopen by an edit of the queue, a head forced on, the guard's refusals and a bought
+    ride's bit - tested only. **Found:** Q89-Q94, among them that the console's `path` lays what the path tool
+    refuses, which Q50's own run relied on (Q94).
 - [ ] **Q50c. The door's price opinion.** Split from Q50 ("At the door"). `FUN_004fde50` is asked at the door
   (`0x00500715`) and turns the guest out as too expensive for 15 twice (`0x00500778`, `0x005007b4`) with thought 6,
   event 10 and a walk-away on the object. Every input is here but `UsageInfo.RipOffOK` (descriptor `+0x16c`;
@@ -869,6 +894,41 @@ artifacts are listed in `docs/history/README.md`.
   wrong person (`0x004e092c`..`0x004e0982`) and lets go of the nominee before it tests `VAR_LETMEON`
   (`0x004e09b0`); `ParkRideOperation.AdmitPerson` refuses the first and keeps the nominee on the second. Build the
   original's order. Confirm: `rides` and `peeps` through one admission.
+- [ ] **Q89. The park's door does not command the gate. Decode first.** Found by Q50b's decode (`ride-operation.md`,
+  "The closed ride"; `lobby.md`, "The park gate"). Opening the park writes the gate's `VAR_COMMAND` 1; closing writes 0,
+  and only when `FUN_004c9130` counts nobody in the park and `VAR_STATUS` reads 1; 2 is the end-of-park routine's
+  alone (`FUN_005168f0`). Counted `PARK_DOOR_COMMANDS_THE_GATE`. Decode what `Gates.RSE` does with 0 against 2 and which
+  cells `FUN_004c9130` counts, then build it; `ParkRides.CommandTheGate` writes 2 for a park saved closed and
+  `ParkFixedItems` and its tests say "2 shuts". Confirm: close an empty park at the door, photograph the gate.
+- [ ] **Q90. The advisor says nothing when the park opens or closes. Decode first.** Found by Q50b's decode. The door
+  posts a type-`0x13` message, 3 or 4, whether or not anything changed, and `CAdvisor::ReceiveMessage`
+  (`FUN_0059b060`) answers with its own message `0x80` or `0x81` (`FUN_0059ae20`); `advisor-park.md` lists neither.
+  Counted `PARK_OPENED_ADVISOR_MESSAGE`, `PARK_CLOSED_ADVISOR_MESSAGE`. Decode what the two say and when, then build.
+  Confirm: press the door, the advisor's line in the log and on screen.
+- [ ] **Q91. A ride's model does not change as it closes and opens. Decode first.** Found by Q50b's decode. Every
+  close calls `FUN_00454550( model, 1 )` and every open `FUN_004547c0( model )` (`ride-operation.md`, the
+  `FUN_00454550` row); the model loader around them names `Hoardings`, and `RideInfo.Hoarding` is parsed and never read.
+  Counted `CLOSED_RIDE_MODEL_CHANGE`, `OPENED_RIDE_MODEL_CHANGE`. Decode what the four texture offsets and `+0xbc` draw,
+  then build. Confirm: photograph the Belly Bounce before and after the door.
+- [ ] **Q92. The ride window's door is not built.** Found by Q50b's decode. `FUN_004af600` case `0x3e38` →
+  `FUN_0048ccf0` closes with `FUN_004df300` or opens with `FUN_004df390`, unguarded; `FUN_004ad4e0` sets the switch
+  from `mCanLoad`, greys it for a closed ride the guard refuses, and the window's box (`0x3e25`) shows status code 1,
+  `CLOSED` (UITEXT 365), or `0x17`, `CLOSED: QUEUE NOT CONNECTED` (`FUN_00485f60`). `ParkRideOperation.Close` and
+  `Open` exist now, and the switch already follows `mCanLoad`. Counted `RIDE_WINDOW_OPEN_OR_CLOSE_THE_RIDE`,
+  `RIDE_WINDOW_CLOSED_STATUS`, `RIDE_WINDOW_DOOR_GREYED`, and the all-items row colour `ALL_ITEMS_CLOSED_ROW_COLOUR`.
+  Confirm: close the Belly Bounce from its window, `objects` and `peeps`, photographed.
+- [ ] **Q93. A bought thing with a queue starts open, where the original's starts closed.** Found by Q50b's decode.
+  The constructor closes every object with the queue-path bit (`0x004db712`..`0x004db793`), and the first queue
+  measure that finds its back connected opens it. `ParkBuilding` sets the bit (`Info.HasQueue`, descriptor `+0x40`,
+  pinned by Q50b) but not the close, counted `BOUGHT_QUEUED_THING_STARTS_CLOSED`. Build the close after the script is
+  bound, and re-confirm Q1's flow on top of it. Confirm: buy a Belly Bounce, `objects` canload 0 until its queue joins
+  a path, then a guest boarding.
+- [ ] **Q94. The console's `path` lays what the path tool refuses.** Found by Q50b's decode. `ParkPathBuilding.Lay`
+  checks the cell's type and NOMODIFY but not the verdict `FUN_00535670`, which refuses path over a queue cell whose
+  `mNeighbours` has more than one bit - every Belly Bounce queue cell (`ride-operation.md`, "The queue measured
+  again"). Q50's game run cut the queue that way, a cut the player cannot make in one click. Route the console
+  through the verdict and re-stage Q50's confirmation with a cut the player can make, or say which. Confirm: `path 51 22`
+  refused with the verdict's reason.
 
 ## B. Docs and comments
 

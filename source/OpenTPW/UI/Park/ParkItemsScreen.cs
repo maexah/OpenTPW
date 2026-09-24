@@ -307,6 +307,11 @@ internal sealed class ParkItemsScreen : UiWindow
 				: new string[tab.Columns - 1];
 
 			chosen.Add( new UiList.Row( placed.ThingId, item.Name, 0, Values: values ) );
+
+			// The original colours a row by the thing's status (FUN_00485f60, table 0x0074fb50): grey for
+			// closed.
+			if ( placed.CanLoad == 0 )
+				Unimplemented.Report( "ALL_ITEMS_CLOSED_ROW_COLOUR" );
 		}
 
 		// Named rather than left quietly blank: the monthly ring buffers behind "last month" and

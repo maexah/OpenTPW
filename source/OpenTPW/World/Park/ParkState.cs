@@ -514,28 +514,39 @@ public sealed class ParkState
 	}
 
 	/// <summary>
-	/// Opens the park to visitors or shuts it - the <c>b_door</c> switch on the entry-price screen,
-	/// which is the original's <c>FUN_00519ef0( closed, 0 )</c>.
+	/// Opens the park to visitors or shuts it - the <c>b_door</c> switch on the entry-price screen, which is
+	/// the original's <c>FUN_00519ef0( open, 0 )</c>.
 	/// </summary>
 	/// <remarks>
-	/// <b>Everything downstream already reads this; nothing could write it until now.</b>
-	/// <see cref="PeepBehaviour"/> turns on it in three places - whether the gate admits anyone, which
-	/// state a waiting guest is put in, and whether the happiness gauge reads at all - so a park shut
-	/// here stops admitting immediately, with no other wiring. That is also why it is worth having: the
-	/// switch was the only missing half of a mechanism that was otherwise complete.
+	/// <b>Each arm acts only on a change</b> (<c>0x00519f76</c>, <c>0x0051a09e</c>). It sets
+	/// <see cref="ParkIsClosed"/>, which <see cref="PeepBehaviour"/> reads at the gate, and hands the rides to
+	/// <see cref="DoorMoved"/>: closing closes every object a guest may be offered (<c>0x0051a1ae</c>), opening
+	/// opens each that <see cref="ParkRideOperation.MayOpen"/> allows (<c>0x0051a01e</c>).
 	/// <para>
-	/// <b>Closing does not close the rides, and the original's does</b>: its close arm runs
-	/// <c>FUN_004df300</c> on every choosable object (<c>0x0051a1ae</c>), which is what turns a closed park's
-	/// queues away one head a turn (<c>docs/exe/ride-operation.md</c>, "The closed ride"). That is counted.
+	/// <b>Two parts are counted.</b> Each arm commands the gate's script - opening writes 1, closing writes 0
+	/// only when nobody is in the park and the gate reads open (<c>0x0051a0e8</c>..<c>0x0051a161</c>) - and
+	/// each posts a type-<c>0x13</c> message, 3 open or 4 closed, which the advisor answers with its own
+	/// message <c>0x80</c> or <c>0x81</c>; the message is posted whether or not anything changed.
 	/// </para>
 	/// </remarks>
 	public void SetParkClosed( bool closed )
 	{
-		if ( closed && !ParkIsClosed )
-			Unimplemented.Report( "PARK_CLOSE_CLOSES_NO_RIDE" );
+		if ( closed != ParkIsClosed )
+		{
+			ParkIsClosed = closed;
 
-		ParkIsClosed = closed;
+			Unimplemented.Report( "PARK_DOOR_COMMANDS_THE_GATE" );
+			DoorMoved?.Invoke( closed );
+		}
+
+		Unimplemented.Report( closed ? "PARK_CLOSED_ADVISOR_MESSAGE" : "PARK_OPENED_ADVISOR_MESSAGE" );
 	}
+
+	/// <summary>
+	/// Who closes and opens the rides when the park's door moves - the park's people, which set it when they
+	/// are made (<c>ParkPeople.DoorMoved</c>). With nobody set, <see cref="SetParkClosed"/> moves the flag alone.
+	/// </summary>
+	internal Action<bool>? DoorMoved { get; set; }
 
 	/// <summary>
 	/// Takes an admission fee: onto the balance and onto the running total alike, which is the one place
@@ -1005,18 +1016,12 @@ public sealed class ParkState
 	public bool QueueWasInvalidated( int objectId ) => _queuesInvalidated.Contains( objectId );
 
 	/// <summary>
-	/// <c>FUN_004de1f0</c> up to the end of its walk: the queue is measured again
-	/// (<see cref="InvalidateQueue"/>) and then everybody in it is told (<i>"Telling people in queue to
-	/// reevaluate"</i>), so whoever now stands past its end is put out - see
-	/// <see cref="ParkPeople.QueueRemeasured"/>. Every cell edit that can change a queue calls this at the end
-	/// of its transaction; the sale's drain calls <see cref="InvalidateQueue"/> alone.
+	/// <c>FUN_004de1f0</c>: the queue is measured again (<see cref="InvalidateQueue"/>) and then everybody in it
+	/// is told (<i>"Telling people in queue to reevaluate"</i>), so whoever now stands past its end is put out,
+	/// and a closed ride whose queue now joins something is opened again - see
+	/// <see cref="ParkPeople.QueueRemeasured"/>, which does both. Every cell edit that can change a queue calls
+	/// this at the end of its transaction; the sale's drain calls <see cref="InvalidateQueue"/> alone.
 	/// </summary>
-	/// <remarks>
-	/// <b>The function's tail is not built.</b> After the walk the original opens a closed ride again
-	/// (<c>mCanLoad</c> nought) whose back of queue is connected and which passes the open guard
-	/// (<c>0x004de2f7</c>..<c>0x004de487</c>), and it zeroes <c>+0x5e</c> (<c>0x004de48c</c>). Nothing here
-	/// closes a ride yet, so the reopen is counted where it would run.
-	/// </remarks>
 	public void RemeasureQueue( int objectId )
 	{
 		if ( objectId == 0 )
@@ -1024,9 +1029,6 @@ public sealed class ParkState
 
 		InvalidateQueue( objectId );
 		QueueRemeasured?.Invoke( objectId );
-
-		if ( TryObject( objectId, out var thing ) && thing.CanLoad == 0 )
-			Unimplemented.Report( "QUEUE_REMEASURE_REOPENS_THE_RIDE" );
 	}
 
 	/// <summary>

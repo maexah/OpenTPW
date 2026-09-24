@@ -433,7 +433,8 @@ public class ParkFixedItemsTests
 	/// nothing, which on screen is indistinguishable from a gate nobody commanded.
 	/// </para>
 	/// <para>
-	/// One is open and <b>two</b> is shut, which is the value a decompile-only reading gets wrong.
+	/// One is open. <b>Two</b> is what the end-of-park path writes and what a park saved closed is given here;
+	/// the door's own close writes nought (<c>docs/exe/lobby.md</c>).
 	/// </para>
 	/// </summary>
 	[TestMethod]

@@ -129,11 +129,10 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 		Root.Add( CrossLink( 0x4f3ac, new UiRect( 1568, 411, 1670, 513 ), 196, "b_loans", 8 ) );
 		Root.Add( CrossLink( 0x4f3ab, new UiRect( 1568, 518, 1670, 620 ), 197, "b_finance", 7 ) );
 
-		// The door: whether the park is open to visitors at all.
-		//
-		// DOWN IS OPEN, AND THAT IS DERIVED RATHER THAN ASSUMED. The handler calls
-		// FUN_00519ef0( param_4 != 1, 0 ) where param_4 is the switch's new down-state, and that first
-		// argument is the CLOSED flag - so closed is "not down", and down is open.
+		// The door: whether the park is open to visitors at all. DOWN IS CLOSED. The handler calls
+		// FUN_00519ef0( down != 1, 0 ) with the switch's new down-state (0x00498d33), and a non-zero first
+		// argument is the arm that opens (0x00519f76); the builder shows the switch down for a closed park
+		// (0x00498fc3..0x00498fd9).
 		_door = Root.Add( new UiButton
 		{
 			Id = 0x4f3b1,
@@ -141,7 +140,7 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 			HelpText = 194,
 			Mesh = UiMesh.Get( "b_door" ),
 			Toggles = true,
-			Clicked = () => Level.Current?.ParkState?.SetParkClosed( !_door!.IsDown )
+			Clicked = () => Level.Current?.ParkState?.SetParkClosed( _door!.IsDown )
 		} );
 
 		// b_okay, id -1, help row 1 - an accept rather than a cancel, which is why the fee is written as
@@ -204,7 +203,7 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 		}
 
 		_fee.Text = $"{state.AdmissionFee}";
-		_door.IsDown = !state.ParkIsClosed;
+		_door.IsDown = state.ParkIsClosed;
 	}
 
 	protected internal override void Update() => Show();

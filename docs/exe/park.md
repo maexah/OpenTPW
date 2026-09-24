@@ -896,8 +896,9 @@ feeds it is unproven (two routes failed, 2026-09-20).
 **Two things here are still open.** Nothing in the executable writes `DAT_00785310`, `DAT_00785314` or
 `DAT_00785320` — all three are zero-valued and read-only, so they are filled by something that leaves
 no direct reference, and the arrival period is therefore not known. And `+0x1da720`, the ushort thing
-id `FUN_00519510` reads to reach the analyser's counters, is not pinned to a name; it is one of the
-header's ushort thing-id fields, of which `mParkAnalyser` is the obvious candidate.
+id `FUN_00519510` reads to reach the analyser's counters, is `mParkAnalyser`: the header's writer
+`FUN_00516c80` pushes the string `mParkAnalyser` at `0x00516f8c` and pairs it with `LEA ECX,[EDI+0x1da720]`
+at `0x00516fa0`.
 
 ### What the balance file supplies, and the one score that is not decoded
 

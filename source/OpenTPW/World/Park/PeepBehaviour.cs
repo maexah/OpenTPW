@@ -554,11 +554,12 @@ public sealed class PeepBehaviour
 			// FUN_005019f0's case 0xe, which is FUN_00500870 inlined.
 			//
 			// <b>THE COMPLETION IS THE GUEST'S TOO, and that is why nothing finished one.</b>
-			// ParkPeople's ride turn calls CompleteAdmission only for a ride that is closing or broken
-			// (states 1, 2 and 4), which is faithful - the original does not call it from a healthy
-			// ride's turn either. Its only other callers there are SetState and Invite's mCanLoad bail,
-			// and that bail cannot fire in this park. So a guest reached EnteringRide and stayed in it:
-			// measured, not inferred - a full run saw EnteringRide and never once saw Riding.
+			// ParkPeople's ride turn calls CompleteAdmission only for a ride that is closed (mCanLoad
+			// nought, in Invite's place, 0x004e13fc) or broken, waiting for an upgrade or condemned (states
+			// 1, 2 and 4), through CompleteOrTurnAway - which is faithful: the original does not call it
+			// from an open, healthy ride's turn either, and its only other caller there is SetState. So in
+			// an open park a guest reached EnteringRide and stayed in it: measured, not inferred - a full
+			// run saw EnteringRide and never once saw Riding.
 			//
 			// The gate is FUN_004e0a70, four lines: script[VAR_LETMEON] != mFirstInQ. That is exactly
 			// what CompleteAdmission already tests, so nothing new is decided here - this arm only calls
@@ -1428,11 +1429,12 @@ public sealed class PeepBehaviour
 	/// The original has seven callers, and the other six unlink the guest from the thing's queue first
 	/// (<c>FUN_004ddd20</c>). A sale does not, so the thing is not told: see
 	/// <see cref="ParkState.ForgetQueueLinks"/>, which undoes the links of a guest who is still in them and
-	/// does nothing to one who was unlinked already. Two callers are built here, the sale and a queue
-	/// measured shorter (<see cref="QueueShortened"/>); <c>docs/exe/ride-operation.md</c>, "Every way out
-	/// of a queue", lists the other five and what each waits on.
+	/// does nothing to one who was unlinked already. Three callers are built here: the sale, a queue
+	/// measured shorter (<see cref="QueueShortened"/>), and a closing ride's completion
+	/// (<c>ParkPeople.CompleteOrTurnAway</c>); <c>docs/exe/ride-operation.md</c>, "Every way out of a queue",
+	/// lists the other four and what each waits on.
 	/// </remarks>
-	private void DismissFromTheQueue( Peep peep, int tick )
+	internal void DismissFromTheQueue( Peep peep, int tick )
 	{
 		if ( Admission is { } mood )
 			peep.Happiness = Peep.Change( peep.Happiness, -mood.MediumHappinessChange );

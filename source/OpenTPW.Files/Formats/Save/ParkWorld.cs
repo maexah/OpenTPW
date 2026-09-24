@@ -75,7 +75,7 @@ public sealed class ParkWorld
 		ushort ExitPos = 0, ushort FirstInQueue = 0, int IsTrackRideValid = 0,
 		int OperatingCapacity = 0, int OperatingDuration = 0, int OperatingSpeed = 0, int PricePerUse = 0,
 		int QueueSizeInCells = 0, int TotalTakings = 0,
-		float StateOfRepair = 0f, float RemainingLife = 0f, BuiltWhen Built = default )
+		float StateOfRepair = 0f, float RemainingLife = 0f, BuiltWhen Built = default, int RequestedService = 0 )
 	{
 		/// <summary>
 		/// The bit that makes an object somewhere a guest can be <i>offered</i> - <c>FUN_004fcb10</c>, the
@@ -1558,6 +1558,10 @@ public sealed class ParkWorld
 			// name invented for it would be indistinguishable from a measured one later.
 			RemainingLife: ReadSingleAt( start + 1070 ),     // +0x48
 			StateOfRepair: ReadSingleAt( start + 1074 ),     // +0x44
+
+			// mRequestedService, +0x64: a mechanic has been called (FUN_004dfe30), and while it is set nothing
+			// opens the ride (FUN_004df290). Placed by the chain above: the dword after the third float.
+			RequestedService: ReadInt32At( start + 1078 ),   // mRequestedService
 
 			TotalTakings: ReadInt32At( start + 1090 ),       // mTotalTakings
 

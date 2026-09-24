@@ -462,7 +462,11 @@ public sealed class ParkRides : Entity
 	/// <summary>Open the gate. <c>FUN_00519ef0</c> writes this when a park is opened.</summary>
 	private const int OpenTheGate = 1;
 
-	/// <summary>Shut it - and it is <b>2</b>, not 0, which only the disassembly says.</summary>
+	/// <summary>
+	/// What a park saved closed commands: <b>2</b>, the value only the end-of-park path writes
+	/// (<c>0x00519f40</c>). The door's own close writes 0, and only with nobody in the park - see the
+	/// remarks below.
+	/// </summary>
 	private const int ShutTheGate = 2;
 
 	/// <summary>
@@ -477,10 +481,12 @@ public sealed class ParkRides : Entity
 	/// own <c>mParkGates</c> handle and writes variable 0.
 	/// </para>
 	/// <para>
-	/// <b>The values are read off the disassembly rather than the decompile, and one of them is not what it
-	/// looks like.</b> The call sites push an extra argument that survives one call and is consumed by the
-	/// next, so Ghidra renders the argument lists wrongly; read as instructions, opening writes <b>1</b> and
-	/// shutting writes <b>2</b>. A decompile-only reading gives "1 opens, 0 shuts", which is wrong.
+	/// <b>The values are read off the disassembly rather than the decompile.</b> The call sites push an extra
+	/// argument that survives one call and is consumed by the next, so Ghidra hangs each value on the wrong
+	/// call. Read as instructions, opening the park writes <b>1</b>; closing it writes <b>0</b>, and only when
+	/// nobody is in the park and the gate reads open (<c>0x0051a0e8</c>..<c>0x0051a161</c>); <b>2</b> is written
+	/// only by the end-of-park path (<c>0x00519f40</c>). Commanding 2 for a park saved closed is a stand-in for
+	/// the door's close, whose 0 is not decoded on the script's side (<c>docs/exe/lobby.md</c>).
 	/// </para>
 	/// <para>
 	/// <b>Commanding it as the park loads is a reproduction of the end state, not of a call anybody has
@@ -525,7 +531,7 @@ public sealed class ParkRides : Entity
 	/// <c>FUN_0055a070</c>, whose <c>ADD ESP,0x4</c> cleans only its own argument - so the <c>1</c>
 	/// survives and is consumed as the second argument of <c>FUN_0055a390</c>, cleaned by the later
 	/// <c>ADD ESP,0x8</c>. Ghidra renders that as a one-argument call and hides the index completely. It
-	/// is the same trap that gave the gate command a wrong "0 shuts".
+	/// is the same trap that hangs the gate command's values on the wrong call.
 	/// </para>
 	/// <para>
 	/// <b>The variable is reached by the name the script itself declares</b>, not by the number: all four

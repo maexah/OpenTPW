@@ -104,21 +104,15 @@ public static class ParkBuilding
 		// single script variable, and ParkRideChoice.CanBeOffered refuses anything without the visitable
 		// bit - so the thing stands and animates and is never used.
 		//
-		// ONLY the two bits whose descriptor key is established are set. Info.IsChoosable is the save's
-		// visitable bit and the two agree on all six flagged objects in the shipped park;
-		// UsageInfo.ProvidesRelief is the toilet bit, which exactly the three Small Toilets carry. Each
-		// remaining bit comes from a different descriptor field, none of them pinned - the queue-path bit
-		// in particular reads from a field this project has not named, and agreeing with Info.HasQueue on
-		// the two objects this park can compare is not establishing it. They are left clear and counted.
-		var flags = 0;
-
-		if ( item.IsChoosable )
-			flags |= ParkWorld.CatalogueObject.VisitableFlag;
-
-		if ( item.ProvidesRelief )
-			flags |= ParkWorld.CatalogueObject.ToiletFlag;
+		// The bits come from FlagsFor. The constructor then CLOSES a thing carrying the queue-path bit
+		// (0x004db712..0x004db793, as ParkRideOperation.Close does), and the first queue measure that finds its
+		// back connected opens it; not built, so a bought queued thing starts open.
+		var flags = FlagsFor( item );
 
 		Unimplemented.Report( "BOUGHT_OBJECT_FLAG_BITS" );
+
+		if ( item.HasQueue )
+			Unimplemented.Report( "BOUGHT_QUEUED_THING_STARTS_CLOSED" );
 
 		// Where a guest walks up to it, and where one is put down leaving it. The original derives both in
 		// the same constructor, from the item's own footprint picture turned by the angle it is being
@@ -203,6 +197,33 @@ public static class ParkBuilding
 		return new( $"buy: '{item.Name}' built as thing {thingId} at ({cellX},{cellY}) for {item.BuildPrice}, " +
 			$"balance {state.Balance}" + (node is { } at ? $", queue node at ({at.X},{at.Y})" : ""), thingId, node,
 			item.HasQueue, item.TrackType );
+	}
+
+	/// <summary>
+	/// The flags word the object constructor <c>FUN_004db090</c> builds bit by bit out of an item's own
+	/// description (<c>0x004db3f3</c>..<c>0x004db425</c>), as far as its keys are established.
+	/// </summary>
+	/// <remarks>
+	/// <b>Three bits are set.</b> <c>Info.IsChoosable</c> (<c>+0x3c</c>) is the visitable bit and
+	/// <c>UsageInfo.ProvidesRelief</c> the toilet bit; <c>Info.HasQueue</c> is the queue-path bit, read from
+	/// <c>+0x40</c> (<c>0x004db420</c>), the entry after <c>IsChoosable</c> in the compiled schema
+	/// (<c>0x00744e3c</c>), two before <c>RunsContinuously</c> at <c>+0x48</c>. The other bits come from
+	/// descriptor fields not pinned, and are left clear and counted (<c>BOUGHT_OBJECT_FLAG_BITS</c>).
+	/// </remarks>
+	internal static int FlagsFor( ParkItemCatalogue.Item item )
+	{
+		var flags = 0;
+
+		if ( item.IsChoosable )
+			flags |= ParkWorld.CatalogueObject.VisitableFlag;
+
+		if ( item.ProvidesRelief )
+			flags |= ParkWorld.CatalogueObject.ToiletFlag;
+
+		if ( item.HasQueue )
+			flags |= ParkWorld.CatalogueObject.QueuePathFlag;
+
+		return flags;
 	}
 
 	/// <summary>
@@ -826,7 +847,7 @@ public static class ParkBuilding
 	/// (0,−1) and <c>0x10</c> is (0,+1). <b>This is the outward sense</b>, the mirror of
 	/// <see cref="CellEdge.BitFor"/>, and mixing the two inverts every answer.
 	/// </summary>
-	private static (int X, int Y) Step( int x, int y, int bit ) => bit switch
+	internal static (int X, int Y) Step( int x, int y, int bit ) => bit switch
 	{
 		0x01 => (x, y - 1),
 		0x04 => (x + 1, y),
@@ -1176,10 +1197,11 @@ public static class ParkBuilding
 
 			// The UI TYPE is here because it is what decides which of the nine object windows a click
 			// opens, and a test that wants a ride should not have to probe the park one thing at a time
-			// to find one - doing that stopped at the first ride and left two things unclassified.
+			// to find one - doing that stopped at the first ride and left two things unclassified. The state
+			// and mCanLoad say whether it is operating and whether it is closed (ParkRideOperation.Close).
 			yield return $"thing {placed.ThingId,3} '{name}' item {placed.CatalogueId} type {type} " +
 				$"at ({placed.CellX},{placed.CellY}) turned {placed.Angle}" +
-				$"{(placed.IsPlaced ? "" : " (not placed)")}";
+				$"{(placed.IsPlaced ? "" : " (not placed)")} state {placed.State} canload {placed.CanLoad}";
 		}
 	}
 }

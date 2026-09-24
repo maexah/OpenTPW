@@ -299,8 +299,9 @@ spinner: they resolve to `b_staffcost`, `b_loans` and `b_finance`, and `FUN_0049
 is `0x4f3ae`, control **type 12**, whose `op 0x0f` child is `b_minus` (left) and `op 0x0e` child is
 `b_plus` (right); `FUN_0066a5c4(&0,&10000)` gives it a range of **0–10000** and `FUN_0066a68d(&1)` a
 step of **1**. `0x4f3b0` is the black "Ticket Price" label (UITEXT 160), and `0x4f3b1` is `b_door`,
-the park open/closed switch — `FUN_00519ef0( closed, 0 )`, where the argument is the CLOSED flag, so
-**down is open**. The fee is held in a global as the spinner moves (message `0x800`) and written on
+the park open/closed switch — `FUN_00519ef0( down != 1, 0 )` (`0x00498d33`), whose first argument is the OPEN
+flag, so **down is closed**; the builder sets the switch down for a closed park (`Button_SetDown`, `0x00498fd9`),
+once, when the screen is built. What the door does to the rides: `ride-operation.md`, "The closed ride". The fee is held in a global as the spinner moves (message `0x800`) and written on
 dismissal (message `0x14`).
 
 **allstaff's kind → happiness-label switch is deliberately out of order**: case 0→`0x6b`, 1→`0x6c`,

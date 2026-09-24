@@ -222,9 +222,8 @@ public sealed class ParkRideOperation
 	/// <see cref="ParkRideChoice"/> already names.
 	/// </para>
 	/// <para>
-	/// <b>It cannot fire in the shipped park</b>, where <c>mCanLoad</c> is 1 on all fourteen objects. It is
-	/// here because the identical test already guards the choice, so leaving it out of the admit would mean
-	/// the same field deciding a guest's destination and then being ignored at the door.
+	/// <b>A ride closed while its nominee walked up refuses them here</b> - <see cref="Close"/> lets the
+	/// nominee go and clears <c>mCanLoad</c> - and the ride's own turn then puts them out of the queue.
 	/// </para>
 	/// </summary>
 	/// <returns>Whether the guest was handed over.</returns>
@@ -256,8 +255,9 @@ public sealed class ParkRideOperation
 	}
 
 	/// <summary>
-	/// Finishes an admission the script has taken up - <c>FUN_004e0450</c> and the <c>FUN_00500870</c> it
-	/// calls.
+	/// Finishes an admission the script has taken up - the first arm of <c>FUN_004e0450</c> and the
+	/// <c>FUN_00500870</c> it calls. Its other arm, which puts the head out, is the caller's:
+	/// <c>ParkPeople.CompleteOrTurnAway</c>.
 	///
 	/// <para>
 	/// <b>The trigger is the slot being EMPTY while somebody is still at the head of the queue</b>, which
@@ -336,11 +336,12 @@ public sealed class ParkRideOperation
 	/// <para>
 	/// <b>The failure arm is deliberately NOT reproduced, and it is drastic rather than quiet.</b> When the
 	/// destination will not route the original refuses the dismissal and calls <c>FUN_004df150</c>, which
-	/// <i>closes the ride</i>: it clears <c>mCanLoad</c> and <c>mPersonBeingLoaded</c>, logs "Object %d:
-	/// Closing..." and sets the script's <c>VAR_RIDECLOSED</c>. Nothing here writes either field, so building
-	/// half of that would leave a ride that shut itself over a routing failure and never reopened - a
-	/// worse fault than the one this fixes. A guest whose neighbour will not route is dismissed anyway and
-	/// drops to <see cref="PeepState.Deciding"/> standing on the exit, which is where they are.
+	/// <i>closes the ride</i> as <see cref="Close"/> does, after posting a type-<c>0x14</c> message, and only
+	/// when it is open. The player's way to open that one ride again, the ride window's door, is unbuilt, so a
+	/// ride shut over a routing failure would open only when its queue was next measured
+	/// (<see cref="ReopenAfterRemeasure"/>) or the park's door was shut and opened again. A guest whose
+	/// neighbour will not route is dismissed anyway and drops to <see cref="PeepState.Deciding"/> standing on
+	/// the exit, which is where they are.
 	/// </para>
 	/// </summary>
 	/// <param name="walkFor">
@@ -717,27 +718,11 @@ public sealed class ParkRideOperation
 			return 0;
 
 		// mCanLoad, and the original bails on it before it reads a single script variable. Same reading as
-		// AdmitPerson's and as ParkRideChoice's: non-zero, not a particular value.
-		//
-		// NOT reproduced, and named rather than quietly dropped: on this bail the original does not simply
-		// leave - it calls FUN_004e0450, the completion, on its way out, which forces a head in
-		// EnteringRide on when the slot no longer names them and otherwise puts the head out of the queue
-		// (0x004e0554), one turn at a time. CompleteAdmission needs a tick and a Random that this method is
-		// not given, so it belongs with whatever drives a ride's turn (where both exist) rather than with an
-		// invented signature here; each arm is counted. Nothing here clears mCanLoad yet - the park's door
-		// sets a flag alone (PARK_CLOSE_CLOSES_NO_RIDE) - so the chain breaks before this.
+		// AdmitPerson's and as ParkRideChoice's: non-zero, not a particular value. On this bail the original
+		// runs FUN_004e0450 and returns (0x004e13fc), skipping the watchdog; the ride's turn does both, in
+		// ParkPeople.CompleteOrTurnAway, where the tick and the guest's side are.
 		if ( ride.CanLoad == 0 )
-		{
-			var first = _state.FirstInQueue( ride.ThingId );
-
-			if ( first != 0 )
-				Unimplemented.Report( script[AdmitVariable] != first
-					&& _guests.TryGetValue( first, out var entering ) && entering.State == PeepState.EnteringRide
-						? "CLOSED_RIDE_FORCES_ITS_HEAD_ON"
-						: "CLOSED_RIDE_DISMISSES_ITS_HEAD" );
-
 			return 0;
-		}
 
 		// The script has not taken the last rider yet.
 		if ( script[AdmitVariable] != 0 )
@@ -792,5 +777,164 @@ public sealed class ParkRideOperation
 		_state.NominateForLoading( ride.ThingId, 0 );
 
 		return true;
+	}
+
+	/// <summary>
+	/// The script's closed flag - <c>VAR_RIDECLOSED</c>, which every close writes 1 and every open 0. The
+	/// engine never reads it back; a ride's own script does, and the Belly Bounce's stops admitting and lets
+	/// its riders off while it is set.
+	/// </summary>
+	public const string ClosedVariable = "VAR_RIDECLOSED";
+
+	/// <summary>
+	/// Closes a ride - <c>FUN_004df300</c>, "Object %d: Closing...": <c>mCanLoad</c> nought, the nominee at
+	/// <c>+0x6c</c> let go of, and <see cref="ClosedVariable"/> set. It has no guard, leaves <c>mState</c> as it
+	/// was and runs no completion; the ride's own turn turns the queue away afterwards, one head at a time
+	/// (<c>docs/exe/ride-operation.md</c>, "The closed ride").
+	/// </summary>
+	/// <remarks>
+	/// Its last call, <c>FUN_00454550( model, 1 )</c>, changes the ride's model, and nothing here draws it.
+	/// </remarks>
+	public void Close( RideScript? script, int rideId )
+	{
+		if ( !_state.TryObject( rideId, out var ride ) )
+			return;
+
+		Log.Info( $"Object {rideId}: Closing... (person being loaded was {_state.PersonBeingLoaded( rideId )})" );
+
+		_state.ReplaceObject( ride with { CanLoad = 0 } );
+		_state.NominateForLoading( rideId, 0 );
+		script?.Set( ClosedVariable, 1 );
+
+		Unimplemented.Report( "CLOSED_RIDE_MODEL_CHANGE" );
+	}
+
+	/// <summary>
+	/// Opens a ride - <c>FUN_004df390</c>: <c>mCanLoad</c> 1, <see cref="ClosedVariable"/> nought, and
+	/// SetState(0), which for state 0 is the store alone. It leaves the nominee alone.
+	/// </summary>
+	/// <remarks>
+	/// <b>The original asks <see cref="MayOpen"/> again first and opens whatever it answers</b>, logging
+	/// "Opening non-openable ride!" five times when it refuses (<c>0x004df3ea</c>). Every caller here has just
+	/// asked it, so the second asking is left out. <c>FUN_004547c0( model )</c>, the model's side of opening,
+	/// is not drawn.
+	/// </remarks>
+	public void Open( RideScript? script, int rideId )
+	{
+		if ( !_state.TryObject( rideId, out var ride ) )
+			return;
+
+		Log.Info( $"Object {rideId}: opened" );
+
+		_state.ReplaceObject( ride with { CanLoad = 1 } );
+		Unimplemented.Report( "OPENED_RIDE_MODEL_CHANGE" );
+		script?.Set( ClosedVariable, 0 );
+
+		if ( _state.TryObject( rideId, out var opened ) )
+			_state.ReplaceObject( opened with { State = 0 } );
+	}
+
+	/// <summary>
+	/// Whether a closed ride may be opened - <c>FUN_004df290</c>, which the park's door asks of every object
+	/// before opening it: not broken down (1), condemned (4) or waiting for an upgrade (2), no mechanic called
+	/// (<c>mRequestedService</c>), and the back of its queue connected (<see cref="BackOfQueueConnected"/>).
+	/// </summary>
+	/// <remarks>
+	/// <b>A coaster is let through, as <see cref="ParkRideChoice"/> lets one through the choice.</b> For track
+	/// type 3 the original also asks <c>FUN_00441970</c> of the ride's track record, which nothing here has; it
+	/// is counted. The shipped park holds no coaster.
+	/// </remarks>
+	public static bool MayOpen( ParkWorld? park, ParkWorld.CatalogueObject ride, int trackType )
+	{
+		// 2 is an upgrade waiting to be done; the original asks 1, 4, the service, then 2.
+		if ( ride.State is ParkRideChoice.StateRefusedOne or ParkRideChoice.StateRefusedFour
+			|| ride.RequestedService != 0 || ride.State == 2 )
+			return false;
+
+		if ( !BackOfQueueConnected( park, ride ) )
+			return false;
+
+		if ( trackType == ItemDescriptionFile.CoasterTrack )
+			Unimplemented.Report( "OPEN_GUARD_COASTER_TRACK_RECORD" );
+
+		return true;
+	}
+
+	/// <summary>
+	/// Whether the back of a ride's queue joins anything - <c>FUN_004de4a0</c>, "Back of queue is
+	/// %sconnected".
+	/// </summary>
+	/// <remarks>
+	/// <b>A thing with a queue path</b> (<see cref="ParkWorld.CatalogueObject.HasQueuePath"/>) asks its back
+	/// cell (<see cref="ParkRideChoice.QueueCellsFor"/>, <c>FUN_004de130</c>): connected when that cell's
+	/// <c>mNeighbours</c> differs from its <c>mDirection</c>, so it links somewhere other than the one cell
+	/// ahead of it. No back cell is not connected.
+	/// <para>
+	/// <b>Any other thing asks its entrance.</b> The angle names the side it faces - 0 as <c>0x10</c>, 90 as
+	/// <c>0x04</c>, 180 as <c>0x01</c>, 270 as <c>0x40</c> - and the cell one step the other way from the entry
+	/// cell must be path linked back to it, with the entry cell linked to it. The original reads an unset byte
+	/// for any other angle (<c>0x004de510</c>..<c>0x004de53f</c>); here that is not connected.
+	/// </para>
+	/// </remarks>
+	public static bool BackOfQueueConnected( ParkWorld? park, ParkWorld.CatalogueObject ride )
+	{
+		if ( park == null )
+			return false;
+
+		if ( ride.HasQueuePath )
+		{
+			var (back, _) = ParkRideChoice.QueueCellsFor( park, ride );
+
+			if ( back == 0 )
+				return false;
+
+			var (backX, backY) = MapStep.CellAt( back );
+			var cell = ParkState.CellFor( park, backX, backY );
+
+			return cell.Neighbours != cell.Direction;
+		}
+
+		var facing = ride.Angle switch { 0 => 0x10, 90 => 0x04, 180 => 0x01, 270 => 0x40, _ => 0 };
+
+		if ( facing == 0 )
+			return false;
+
+		var away = CellEdge.Opposite( facing );
+		var (entryX, entryY) = MapStep.CellAt( ride.EntryPos );
+		var (beyondX, beyondY) = ParkBuilding.Step( entryX, entryY, away );
+
+		if ( !ParkState.OnMap( beyondX, beyondY ) )
+			return false;
+
+		var entrance = ParkState.CellFor( park, entryX, entryY );
+		var beyond = ParkState.CellFor( park, beyondX, beyondY );
+
+		return beyond.Type == CellEdge.Path && (beyond.Neighbours & facing) != 0 && (entrance.Neighbours & away) != 0;
+	}
+
+	/// <summary>
+	/// The tail of <c>FUN_004de1f0</c>, after a queue measured again has told its people: a closed ride
+	/// whose queue now joins something is opened again, whatever the park's own door says, and the ride
+	/// forgets which member of staff was servicing it.
+	/// </summary>
+	/// <remarks>
+	/// The reopen asks <c>mCanLoad</c> nought, <see cref="MayOpen"/>, and for a track ride (types 1 to 3)
+	/// <c>mIsTrackRideValid</c> as well (<c>0x004de2f7</c>..<c>0x004de3df</c>), then opens as
+	/// <see cref="Open"/> does. <c>mAssignedStaffMember</c> is zeroed whatever was decided (<c>0x004de48c</c>).
+	/// </remarks>
+	public void ReopenAfterRemeasure( RideScript? script, int rideId, ParkWorld? park, int trackType )
+	{
+		if ( !_state.TryObject( rideId, out var ride ) )
+			return;
+
+		Log.Info( $"Object {rideId}: back of queue is {(BackOfQueueConnected( park, ride ) ? "" : "not ")}connected" );
+
+		if ( ride.CanLoad == 0 && MayOpen( park, ride, trackType )
+			&& (trackType is not (ItemDescriptionFile.CarTrack or ItemDescriptionFile.WaterTrack
+				or ItemDescriptionFile.CoasterTrack) || ride.IsTrackRideValid != 0) )
+			Open( script, rideId );
+
+		if ( _state.TryObject( rideId, out var now ) )
+			_state.ReplaceObject( now with { AssignedStaff = 0 } );
 	}
 }

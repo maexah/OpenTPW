@@ -66,7 +66,8 @@ namespace OpenTPW;
 /// <para>
 /// <b>The gate moves when it is commanded, and the lights never do.</b> <c>Gates.RSE</c> idles on
 /// <c>VAR_COMMAND</c>, which <see cref="ParkRides"/> writes from the save's <c>mParkClosed</c> as the park
-/// loads (1 opens, 2 shuts), as the original's <c>FUN_00519ef0</c> does when a park opens or closes. <c>lights.RSE</c> is the opposite, starting an
+/// loads: 1 for an open park, as the original's <c>FUN_00519ef0</c> writes on opening one, and 2 for a closed one,
+/// the end-of-park value standing in for the door's close (<c>docs/exe/lobby.md</c>). <c>lights.RSE</c> is the opposite, starting an
 /// unconditional <c>LOOPANIM</c> as its second instruction - but <b>both of the clips it loops declare ten
 /// frames and carry not one track</b>, so a correctly wired crossing spins a channel for ever while nothing
 /// on screen can move. Whatever changes the lamps is not in those clips. That is measured, and it is also
