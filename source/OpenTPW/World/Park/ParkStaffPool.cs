@@ -57,10 +57,12 @@ public sealed class ParkStaffPool
 			if ( person.Id != candidateId )
 				continue;
 
-			Carrying = candidateId;
+			// Hiring is a placement verb with its own mode, installed over whatever was current: a tool is
+			// put away and anything in the hand let go of first, a candidate already carried among them.
+			if ( ParkHand.LetGo() is { } letGo )
+				Log.Info( $"Hand: {letGo}" );
 
-			// Hiring is a placement verb with its own mode, which puts any build tool away.
-			ParkBuildMode.Disarm();
+			Carrying = candidateId;
 
 			// The mode's install sets the carry cursor and hangs a sprite of the candidate under the
 			// pointer, which marks a cell it would refuse in red (0x0046c730, 0x0046c480). Nothing

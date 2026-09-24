@@ -183,6 +183,11 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// </summary>
 	public static void Enter()
 	{
+		// The camcorder is an interaction mode of its own, installed through the setter over whatever was
+		// held (FUN_00481a10), so the hand is let go of first.
+		if ( ParkHand.LetGo() is { } letGo )
+			Log.Info( $"Hand: {letGo}" );
+
 		Stand = ParkOrbitCameraMode.PointOfInterest;
 		Yaw = ParkOrbitCameraMode.Yaw;
 		Pitch = 0f;
@@ -418,7 +423,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// keys, and the one the debug console drives.
 	/// </summary>
 	/// <remarks>
-	/// Shared rather than copied, for the reason <c>Level.CancelCarried</c> is: a harness cannot press a
+	/// Shared rather than copied, for the reason <c>ParkHand.LetGo</c> is: a harness cannot press a
 	/// key, so if the console had its own copy of this the thing measured would be the copy. Only the
 	/// reading of <see cref="Input"/> is skipped; the trig, the sweep, the edge test and the clamp are all
 	/// the ones a player gets.

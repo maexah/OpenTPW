@@ -18,7 +18,9 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Building and staffing: purchase menu and hire screen, both reachable from Buy. Things bought, sold,
   moved, carried; staff hired, fired, picked up, put down. **Selling or moving a thing puts its riders and queuers
   off where they stand**, and staff resting there get up. **A staff drop the park refuses keeps the
-  candidate on the cursor and in the pool.** **Leaving a park lets go of whatever is in the hand.** **A sold thing's script goes with it**, and
+  candidate on the cursor and in the pool.** **The hand holds one thing, and lets go of it the original's ways**: a
+  quick right click with RMB cancel on, Escape, Delete, the camcorder, a new pickup, leaving the park; a held or
+  dragged right press, or any with the option off, keeps it. **A sold thing's script goes with it**, and
   its ground is left bare. **A moved thing stays in the hand until a cell takes it**, facing the way it stood. Clicking a placed ride **anywhere on its
   footprint** opens its window - the save's own and ones bought this session alike.
 - Information and money: Info and Money open all-staff, all-items, all-visitors and entry-price screens.
@@ -44,7 +46,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Eight of the nine per-object windows are unbuilt. Patrol areas are dead, deferred by Alexah.
 - A guest put off on cleared ground no neighbour connects to leaves only by going home; whether the original
   strands them too is not decoded (Q53). Leaving a queue any way but a sale costs no happiness (Q50).
-- Any right press empties the hand, which for a moved thing is a sale; Escape opens the menu over it (Q39).
+- A right press over a panel still cancels (Q56), and the park's Escape acts on the press, not the release (Q57).
 - Nothing shows a carried candidate, and any cell on the map takes one; the original's rule is decoded (Q40).
 - Escape during the park-entry fly-in opens the game menu over it; the original's cancels the fly-in (Q41).
   The lobby's keys act on the press, not the release, and Enter does not enter a park (Q42).
@@ -58,8 +60,9 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35 and Q36 are ticked.** Next is **Q39**: the hand's ways out.
-Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55.
+`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36 and Q39 are ticked.** Next is **Q41**: Escape during the
+park-entry fly-in. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49,
+Q36 Q50-Q55, Q39 Q56-Q60.
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -72,6 +75,7 @@ and is still untracked, so it exists on this machine only; Q13 moves it into `do
 - Nothing puts a staff member in a cell's occupancy list *as they walk*.
 - The critical-section cap trips only in a test: nothing the game ships can reach it (Q11).
 - The staff half of a sale: nobody in Lost Kingdom rests in the first minutes, so it is tested, not seen (Q36).
+- The Delete key's let-go and a sale's let-go of a candidate: tested, not run in the game (Q39).
 
 ## Numbers
 
@@ -80,23 +84,23 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1012**, 0 fail, 0 skip with the game | 2026-09-23, after Q36 |
-| Tests without the game | **459** ran, **553** skipped, of 1012 | 2026-09-23, after Q36 |
-| Build warnings | 123 | 2026-09-23, after Q36 |
+| Tests | **1028**, 0 fail, 0 skip with the game | 2026-09-23, after Q39 |
+| Tests without the game | **459** ran, **569** skipped, of 1028 | 2026-09-23, after Q39 |
+| Build warnings | 123 | 2026-09-23, after Q39 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-23 - selling a thing lets the people go.** Branch `alexah/128-selling-lets-the-people-go`, `docs/QUEUE.md`
-Q36. Decoded first: the two happiness keys are `PeepInfo.SmallHappinessChange` and `MediumHappinessChange`, by the
-balance table's slot order. The destructor's type-10 message now reaches the park's people: a rider or anyone bound
-for the thing loses 5 and decides again where they stand, a queuer loses 20 and their queue links, staff resting
-there get up, and a rider's `0x80` plays at the seat. A tired staff member's search walks the live chain, and the
-chooser lets `MajorDest` go before it chooses, as the original does. Confirmed against a control on `main`, every sale
-reading predicted and photographed; the miss was two queuers left standing on cleared cells (Q53). 19 mutations and a
-19-agent review, all 13 of its faults fixed or said. Filed Q50 to Q55.
+**2026-09-23 - the hand's ways out.** Branch `alexah/129-the-hands-ways-out`, `docs/QUEUE.md` Q39. Decoded first:
+there is one hand, and every install runs the outgoing mode's uninstall. `ParkHand.LetGo` is that uninstall for the
+item, the candidate, the worker and the build tool. A quick right click lets go only with RMB cancel on, armed on the
+press and let go of after 200 ms or 8 interface units; Escape, Delete, the camcorder and every pickup let go of what
+was held; a worker is put back in their cell; leaving lets go before the park is deleted. Confirmed with a real right
+button and Escape against a control on `main`, every fault shown there and every prediction held on the fix but one
+worker reading taken with the clock running. A 37-agent review: 22 real, all fixed or said. Filed Q56 to Q60.
 
-**Earlier items, kept now only in the git log.** `alexah/126` made four hollow tests fail with their fixes reverted
+**Earlier items, kept now only in the git log.** `alexah/128` let a sold thing's riders, queuers and resting staff
+go (Q36, filing Q50-Q55); `126` made four hollow tests fail with their fixes reverted
 (Q12, filing Q47-Q49); `125` landed the small fixes and capped a looping critical section (Q11, filing Q45-Q46);
 `124` let the camcorder forget a left park's save (Q10, filing Q44); `123` gave each ride's screams their own clock (Q9, filing
 Q43); `122` made the island keys wait for the fly-in (Q8, filing Q41-Q42); `121` emptied the hand as a park is left (Q7);

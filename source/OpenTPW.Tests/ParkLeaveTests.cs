@@ -7,7 +7,7 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// Leaving a park with something in the hand: <see cref="Level.ForgetPark"/>, the part of
-/// <see cref="Level.Unload"/> that empties both hands, among the other park state it lets go of. These read
+/// <see cref="Level.Unload"/> that empties the hand, among the other park state it lets go of. These read
 /// the shipped Lost Kingdom and are skipped where there is no installation - see <see cref="GameData"/>.
 ///
 /// <para>
@@ -49,8 +49,8 @@ public class ParkLeaveTests
 	/// runs the move tool's uninstall, which builds nothing and refunds nothing.
 	/// </summary>
 	/// <remarks>
-	/// <b>Mutations:</b> leaving the item hand out of <see cref="Level.ForgetPark"/> leaves the Belly Bounce in
-	/// it, to go down at the next park's first click.
+	/// <b>Mutations:</b> a <see cref="Level.ForgetPark"/> that lets go of nothing, or a let-go that forgets items,
+	/// leaves the Belly Bounce in the hand, to go down at the next park's first click.
 	/// </remarks>
 	[TestMethod]
 	public void LeavingTheParkLetsGoOfAMovedThing()
@@ -68,29 +68,27 @@ public class ParkLeaveTests
 	}
 
 	/// <summary>
-	/// <b>Both hands are emptied when both are full</b>, which this park allows (<c>docs/QUEUE.md</c> Q39): a
-	/// candidate taken off the hire screen stays on the cursor while the buy screen fills the other hand.
+	/// <b>A worker in the hand is put back down where they stood as the park goes</b>, as the original's park end
+	/// runs the place-worker mode's uninstall (<c>0x0046cdc0</c>) - so the hand is empty for the next park.
 	/// </summary>
 	/// <remarks>
-	/// <b>Mutations:</b> letting go of the second hand only when the first was empty, or stopping after the first
-	/// drop, carries the candidate into the next park.
+	/// <b>Mutations:</b> a let-go that answers only items and candidates carries the worker's id into the next
+	/// park, where the first click would try to put down somebody who is not there.
 	/// </remarks>
 	[TestMethod]
-	public void LeavingTheParkWithBothHandsFullEmptiesBoth()
+	public void LeavingTheParkPutsAHeldWorkerBack()
 	{
-		var pool = new ParkStaffPool( new ParkBalance( Theme, easyMode: true ) );
-		var candidate = pool.Candidates[0];
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var people = new ParkPeople( world, new ParkBalance( Theme, easyMode: true ), null, new ParkState( world ) );
+		var member = people.Staff[0];
 
-		MoveTheBellyBounceIntoTheHand();
-		ParkStaffPool.Carry( candidate.Id );
-
-		Assert.AreNotEqual( 0, ParkBuilding.Carrying, "an item in one hand" );
-		Assert.AreEqual( candidate.Id, ParkStaffPool.Carrying, "and a candidate in the other" );
+		Assert.IsTrue( people.PickUp( member.ThingId ) );
 
 		Level.ForgetPark();
 
-		Assert.AreEqual( 0, ParkBuilding.Carrying, "the item hand is empty" );
-		Assert.AreEqual( 0, ParkStaffPool.Carrying, "and so is the staff hand" );
+		Assert.AreEqual( 0, people.CarriedStaff, "nobody is in the hand" );
+		Assert.AreEqual( StaffActivity.Idle, member.Activity, "and the worker is back at work" );
 	}
 
 	/// <summary>
@@ -121,7 +119,8 @@ public class ParkLeaveTests
 	/// uninstall returns one that was never put down.
 	/// </summary>
 	/// <remarks>
-	/// <b>Mutations:</b> leaving the staff hand out of <see cref="Level.ForgetPark"/> leaves the candidate on the
+	/// <b>Mutations:</b> a <see cref="Level.ForgetPark"/> that lets go of nothing, or a let-go that forgets
+	/// candidates, leaves the candidate on the
 	/// cursor, to be hired at the next park's first click; the next park's pool is rolled from the same seed, so
 	/// the same id names the same person there.
 	/// </remarks>

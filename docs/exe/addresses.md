@@ -33,7 +33,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0040bda0` | Backspace handler, game-table row 5 and the coaster table's `backtrack` (undefined bytes in Ghidra) | OpenTPW/World/Level.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0040bdde` | Backspace handler: start of the idle branch - one press of the clear on the hovered path | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0040be9c` | Backspace handler: end of the idle branch | OpenTPW/World/Park/ParkPathBuilding.cs  |
-| `0x0040c368` | Escape handler `0x0040c180`: puts an armed build tool away, `FUN_0052f200(0,1)`, and consumes the key | OpenTPW/UI/Park/ParkFrontEnd.cs  |
+| `0x0040c35f` | Escape handler `0x0040c180`: installs the idle mode through the setter over any mode but 0 or 1, which runs the outgoing mode's uninstall | OpenTPW.Tests/ParkHandTests.cs  |
+| `0x0040c368` | Escape handler `0x0040c180`: after the idle install, `FUN_0052f200(0,1)` zeroes the tool and the rotation, and the handler answers 1 so the menu does not open | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW.Tests/ParkHandTests.cs  |
 | `0x0040c4d0` | | OpenTPW/UI/WindowStack.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x00415270` | the whole-game restore chain: seventeen modules in order, each checked against a four-character tag that follows it | OpenTPW.Files/Formats/Save/ParkScriptStates.cs  |
 | `0x00419710` | | OpenTPW/UI/UiFonts.cs  |
@@ -67,6 +68,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0046b600` | | OpenTPW.Common/Client/Window.cs  |
 | `0x0046c480` | Place-staff mode (type 5, vtable `0x006fea40`) MOVE: carries the candidate's sprite under the pointer and draws a red square over a cell the click would refuse | OpenTPW/World/Park/ParkStaffPool.cs  |
 | `0x0046c730` | Place-staff mode OnInstall: carry cursor 9, and a sprite of the candidate's kind in their costume | OpenTPW/World/Park/ParkStaffPool.cs  |
+| `0x0046cdc0` | Place-worker mode (type 6) OnUninstall: when the hand still names a worker, puts them down on their own current cell with the drop's body | OpenTPW/World/Park/ParkPeople.cs OpenTPW.Tests/ParkHandTests.cs OpenTPW.Tests/ParkLeaveTests.cs  |
 | `0x00470e90` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x004711d0` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x00471860` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
@@ -97,13 +99,13 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0047f020` | | OpenTPW/UI/WindowStack.cs OpenTPW/UI/UiWindow.cs OpenTPW/UI/Screens/MessageBox.cs  |
 | `0x0047f251` | | OpenTPW/World/Level.cs  |
 | `0x004813c0` | | OpenTPW/UI/WindowStack.cs  |
+| `0x00481ad0` | Camcorder button `FUN_00481a10`: installs the camcorder mode through the setter, letting go of the hand | OpenTPW.Tests/ParkHandTests.cs  |
 | `0x00485780` | | OpenTPW/UI/WindowStack.cs OpenTPW/UI/ButtonGlint.cs OpenTPW/UI/UiSounds.cs  |
 | `0x00485a70` | | OpenTPW/UI/UiFonts.cs  |
 | `0x00485d20` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x00486bce` | | OpenTPW/Global/GameClock.cs  |
 | `0x004873b3` | Hover category: a type-12 track cell under a type-25 parent gets no category | OpenTPW/World/Level.cs  |
-| `0x0048842b` | Park mouse proc: a quick right click installs the idle mode (RMB cancel) | OpenTPW/World/Level.cs  |
-| `0x00488434` | Park mouse proc: and ends the build tool, `FUN_0052f200(0,1)` | OpenTPW/World/Level.cs  |
+| `0x0048842b` | Park mouse proc: a quick right click with RMB cancel on installs the idle mode over whatever mode is current | OpenTPW/World/Level.cs OpenTPW.Tests/ParkHandTests.cs  |
 | `0x00488a00` | | OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x00489ca0` | | OpenTPW/UI/WindowStack.cs  |
 | `0x00489de1` | | OpenTPW/Client/Renderer.cs  |
@@ -232,6 +234,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00527222` | Mode-3 commit: start of the queue run arm | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005275f2` | Mode-3 commit: the tool ends through `FUN_0052f200(0,0)` | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00527655` | Apply dispatcher: end of the path/queue arm | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x0052818d` | The demolisher puts back the tool it was called under, `FUN_0052f200( prevTool, 0 )`; tool 0 installs the idle mode | OpenTPW/World/Park/ParkBuilding.cs OpenTPW.Tests/ParkHandTests.cs  |
 | `0x0052842b` | The demolisher's second footprint pass: `FUN_005367a0( 0, 0 )` on every cell of the shape but its `.` ones | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x005292b2` | Placer sweep: the exit takes its turned bit as its direction | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x005293c3` | Placer sweep: the entrance takes its turned bit as its direction | OpenTPW/World/Park/ParkBuilding.cs  |

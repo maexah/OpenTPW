@@ -295,6 +295,12 @@ public static class ParkBuilding
 
 		state.Refund( refund );
 
+		// The demolisher puts back the tool it was called under (0x0052818d). With no tool that is the idle mode,
+		// installed through the setter, so a candidate or a worker in the hand is let go of; an item in the hand
+		// or an armed build tool is a tool, and stays.
+		if ( Carrying == 0 && ParkBuildMode.Current == ParkBuildMode.None && ParkHand.LetGo() is { } letGo )
+			Log.Info( $"Hand: {letGo}" );
+
 		rides?.Unbind( thingId, item );
 		objects?.Remove( thingId );
 
@@ -990,9 +996,13 @@ public static class ParkBuilding
 
 	/// <summary>
 	/// The way what is in the hand faces when it goes down, in degrees: a moved thing's own, and nought for a
-	/// purchase, whose facing in the original is not decoded. The original keeps it in <c>DAT_0081d7a4</c>,
-	/// set through <c>FUN_0052f1b0</c>. Nothing here turns it while it is carried.
+	/// purchase. Nothing here turns it while it is carried.
 	/// </summary>
+	/// <remarks>
+	/// <b>A deviation:</b> the original keeps one rotation, <c>DAT_0081d7a4</c>, which a purchase does not set,
+	/// so an item bought over a carried move faces the moved thing's way (<c>docs/exe/park-engine.md</c>, "The
+	/// hand's ways out"). Here a purchase always starts at nought.
+	/// </remarks>
 	public static int CarryingAngle { get; private set; }
 
 	/// <summary>
@@ -1022,13 +1032,13 @@ public static class ParkBuilding
 	/// <summary>Puts an item in the hand, facing a way.</summary>
 	private static void Hold( int catalogueId, int angle )
 	{
+		// Taking something into the hand installs the place mode over whatever was current - there is one
+		// mode in the original - so a tool is put away and anything else in the hand let go of first.
+		if ( ParkHand.LetGo() is { } letGo )
+			Log.Info( $"Hand: {letGo}" );
+
 		Carrying = catalogueId;
 		CarryingAngle = angle;
-
-		// Taking something into the hand installs the place mode over whatever tool was armed - there
-		// is one mode in the original, not a tool and a hand side by side. A candidate on the staff
-		// cursor is not let go of here (docs/QUEUE.md Q39).
-		ParkBuildMode.Disarm();
 
 		// While carrying, the original draws the footprint in coloured squares every tick - m_front along
 		// its front row, m_enter on the cell before the entrance, m_exit before the exit - out of the same

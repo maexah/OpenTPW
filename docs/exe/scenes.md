@@ -46,7 +46,7 @@ Keys are offered to the accelerator table, then to the focused gadget, then to t
 | `0x0040c4d0` | — | Shortcuts action 0, "menu" | Binding table entry |
 | `0x004816d0` | — | Called by the shortcut, calls `GameMenu_Open(0)`. **Undisassembled bytes, so xrefs do not find it** | Read by hand at the address |
 
-The chain, in order: the focused world control `0x007cb2ac` takes the key, looks it up in the binding tables built by `FUN_0040cb80`; game action 0 closes an open HUD panel or leaves a camera mode if either is active; otherwise shortcuts action 0 "menu" (`0x0040c4d0`) runs, which calls `0x004816d0`, which calls `GameMenu_Open(0)`.
+The chain, in order, on the key's release: the focused world control `0x007cb2ac` takes the key and runs the camera, game and shortcuts tables built by `FUN_0040cb80`, stopping at the first handler that answers non-zero. Game action 0 (`0x0040c180`) closes the staff/visitor locator if it is open (`FUN_004816b0`, `DAT_007cc2f0`); otherwise, over any interaction mode but idle, it installs the idle mode and answers 1 - see `park-engine.md`, "The hand's ways out". Only with the mode idle already does shortcuts action 0 "menu" (`0x0040c4d0`) run, which calls `0x004816d0`, which calls `GameMenu_Open(0)`. In first person the key goes to layer 1's `FUN_00488a00` instead, which runs camera-table handlers only, so the menu cannot open from there.
 
 ## The advisor
 

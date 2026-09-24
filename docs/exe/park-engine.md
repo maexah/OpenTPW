@@ -692,7 +692,7 @@ A mode reports its type from **vtable `+0x24`**, which is a one-instruction `MOV
 | `0x006fea40` | 5 | `FUN_0046c6d0` | Place staff: a candidate off the hire screen |
 | `0x006fea70` | 6 | `FUN_0046cbc0` | An employed worker picked up |
 | `0x006fe980` | 7 | — | What `FUN_0046c350` substitutes for a type-1 mode, online only |
-| `0x006feaa0` | 8 | `FUN_0046cfc0` | The build tools |
+| `0x006feaa0` | 8 | `FUN_0046cfc0` | The coaster builder: its one constructor call is in the coaster bar's `FUN_00497bc0` (`0x00497c84`) |
 | `0x006fead0` | 9 | `FUN_0046cff0` | **CAMCORDER** |
 
 **Camcorder is mode 9**, which explains the staff/visitor locator's `if (iVar1 == 9)` on the current mode's type: it is checking for camcorder and leaving first person before it points at anyone. The coaster builder bar's `FUN_00497bc0` does the same for type 8.
@@ -1423,19 +1423,18 @@ put-down is a purchase that keeps the old thing's facing.**
   Escape (`0x0040c368`, unless it first closes an open locator) install the idle mode and call
   `FUN_0052f200( 0, 1 )`, which zeroes the rotation. **With the option off a right click leaves the move in
   the hand** - the shell's right-button slots are `RET 8` - and so does a held or dragged one with it on.
-  Another tool is installed straight over it (`FUN_0046c350`), which leaves the rotation as it was; whether
-  a purchase then inherits it is open. Leaving the park drops the shell too; see "Leaving a park with something in the hand".
-- **Open.** Whether the preview's path snap near `0x005237f7` can turn a carried move (the two refuters
-  disagree); what a purchase's facing starts at; the add-on and `+0xc4` cases; whether a moved thing gets
-  its old thing id back.
+  Another tool is installed straight over it (`FUN_0046c350`), which leaves the rotation as it was, and a
+  purchase then inherits it (see "The hand's ways out"). Leaving the park drops the shell too; see "Leaving a
+  park with something in the hand".
+- **Open.** What a successful put-down leaves in the rotation, and so what the next purchase faces; the
+  add-on and `+0xc4` cases; whether a moved thing gets its old thing id back.
 
 **OpenTPW** (`ParkBuilding.PickUp`, one body for the window and the console): the sale, then the item into
 the hand at the thing's angle, with no affordability test; `Move` is that and one put-down, which a
 refused cell leaves in the hand. **A deviation, declared at the site**: the hand stays empty unless the
 sale went through, where the original would carry a thing that still stands. **Counted, not built**: the
-refusal's sound `0xaf` (`PLACEMENT_REFUSED_SOUND_0xAF`) and the markers drawn while carrying. **Not yet the
-original's, and queued as Q39**: any right press empties the hand whatever the option says, Escape opens the
-menu over a full hand, and a candidate on the staff cursor can be held at the same time.
+refusal's sound `0xaf` (`PLACEMENT_REFUSED_SOUND_0xAF`) and the markers drawn while carrying. Letting a move
+go is `ParkHand.LetGo`, the same for every way out; see "The hand's ways out".
 
 ### Hiring is a placement verb, and there is no hire fee
 
@@ -1449,8 +1448,11 @@ money is a monthly wage, `PerGradeStaffConsts[grade].BaseWage * PerTypeStaffCons
 debited per staff thing on the new-month event - and dismissal charges exactly one further month.
 
 **Type 5 and type 6 are different modes and the difference matters**: type 5 (a fresh hire)
-**constructs** a new thing; type 6 (an existing worker picked up) **teleports** the existing thing to
-the cell centre and sets it idle. Pick-up always proceeds whatever the worker was doing.
+**constructs** a new thing; type 6 (an existing worker picked up) **moves** the existing thing to the
+drop cell's centre, and every kind then goes idle but the mechanic, whose job search runs at once (see "The
+hand's ways out"). The pickup `FUN_00505c50` never refuses, but the staff window's PICK UP button is enabled
+only when `FUN_00505bd0` passes: not in states 4, 5, 7, `0xd` or `0x12`, and not when the worker's cell fails
+`FUN_004fa990` (kinds 0, 1, 3, 9 and 10 pass).
 
 The candidate pool is 32 records of 20 bytes:
 `{int kind; int nameIndex; byte grade; byte costume; byte occupied; byte takenForPlacement; int createdTick; int lifetime}`.
@@ -1514,7 +1516,7 @@ expire (`FUN_005084f0` skips a taken record), and a hire list built then still s
 
 **Every way out without a drop returns the candidate**: a quick right click with RMB cancel on, which is
 the default (`0x0048842b` installs the idle mode whatever the current one is); Escape (`0x0040c180`),
-unless a panel is on the gadget arm, which it takes off instead, and the menu does not open; the extended
+unless the staff/visitor locator is open (`DAT_007cc2f0`), which it closes instead, and the menu does not open; the extended
 Delete key, which installs Clear Land (`FUN_0040c5e0`); picking another candidate, if the hire screen can
 be reopened while carrying (see Open), the old one returning first, after which every untaken candidate of a kind at its staff cap is purged (`0x00507f9b`..
 `0x00507fcd`); and leaving the park (see "Leaving a park with something in the hand"). A
@@ -1538,6 +1540,80 @@ and in the pool. **Its refusals are its own**: a cell off the map, a kind the pa
 for, and any hire while the park has nobody, staff or guest, to copy a walk from. The cell rule is counted, not built (`STAFF_PLACEMENT_CELL_RULE`), and so are the carry cursor, the
 preview and its red square (`STAFF_CARRY_PREVIEW`); both are `docs/QUEUE.md` Q40.
 
+### The hand's ways out
+
+Decoded for `docs/QUEUE.md` Q39 (four decoders, each put to a refuter; the corrections folded in).
+
+**There is one hand.** Carrying an item or a moved thing (type 3), a candidate (type 5) and a worker (type 6) are
+all the one current mode `DAT_007b05d8`, and the setter `FUN_0046c350` runs the outgoing mode's `+0x2c` and its
+destructor before it installs the next, with no test of either type (`0x0046c378`, `0x0046c388`). Every pickup
+installs through it and none refuses over what is already held: the buy row (`FUN_004ac270`), the hire row
+(`FUN_00507bf0`), the ride window's Move (`FUN_0048cfa0`, `0x0048d0fb`), its queue button (`FUN_004af200( 0 )`,
+a type-3 shell for mode `0x14`), the staff window's PICK UP (`FUN_00505c50`, the only way to make a type 6, which
+first installs the idle mode if a worker is already carried, `0x00505d6a`), the camcorder (`FUN_00481a10`,
+`0x00481ad0`) and the Delete key's Clear Land (`FUN_0040c5e0`).
+So two things are never held together, and whatever was held goes the way its uninstall says: a carry shell's
+is a bare `RET` (`0x005d1750`), so a bought item is dropped and a moved thing stays sold; a candidate goes back to
+the pool (`0x0046c890`, `FUN_005083b0( 1 )`); a worker is put back down. Statically the buy and hire screens open
+with a full hand: nothing on their way reads the mode.
+
+**The right button** (`Park_MouseMessageProc`, `0x004881a0`) reads RMB cancel, `DAT_0078d911`, before anything
+else (`0x004881ae`). With it off a right press only takes and gives back the mouse capture and goes to the camera.
+With it on, the press arms a click (`DAT_007c2500 = 1`, `0x0048833a`), stamps the time in milliseconds
+(`DAT_007c2504`) and the point in the interface's 2048x1536 units (`DAT_007b5344`, `DAT_007b9774`), and holds the
+press back from the camera. A move of **more than 8 units across or down** (`0x00488265`, `0x0048827f`) or a tick
+**more than 200 ms** after the press (`0x0048823f`, `0x00488282`) disarms it and hands the camera the press late,
+as a right drag; a move back does not re-arm it. **A release while it is still armed** installs the idle mode
+whatever the current mode is - there is no type test - then calls `FUN_0052f200( 0, 1 )` and `FUN_004989d0`,
+which closes the coaster bar if it is up (`0x0048842b`..`0x0048843c`). Every mode's right-button slots are
+`RET 8`, so nothing else a right press does reaches the hand. A press lands on the hovered window
+(`FUN_00658af1`), so one over a panel arms nothing; the park window gets its own release wherever the pointer
+has gone. With a management screen open the click still arms and still cancels.
+
+**Escape** is the game table's row 0, `0x0040c180`, run on the key's **release**. If the staff/visitor locator
+is open (`DAT_007cc2f0`) it retracts the arm and answers 1 (`FUN_004816b0`). Otherwise, over any mode but 0 or 1,
+it installs the idle mode (`0x0040c35f`), calls `FUN_0052f200( 0, 1 )` (`0x0040c368`) and answers 1, which stops
+the chain before shortcuts row 0 can open the menu. Over the idle mode it answers 0 and the menu opens. So with a
+full hand the first Escape empties it and the second opens the menu. In first person the key goes to layer 1
+instead, and in the coaster bar to the coaster table's `abortcoaster`.
+
+**`FUN_0052f200( 0, 1 )`** records tool 0, withdraws the tool's advisor lines if the tool changed, zeroes the
+tool `DAT_0081ae2c`, sets the anchor to -1, copies the rotation `DAT_0081d7a4` to `DAT_0081b134` and **zeroes it**,
+installs the idle mode a second time unless the old tool was `0x15` or `0x16`, and clears the red latch. A
+candidate's or a worker's pickup (types 5 and 6) calls none of it, so the tool, item and rotation globals stay under
+the new mode; a carry shell's OnInstall (`FUN_0046d5a0`) sets the tool with `FUN_0052f200( verb, 1 )` and, when it
+carries something, the item with `FUN_0052f880`. **Neither sets the rotation**: `FUN_0052f200` writes
+`DAT_0081d7a4` only for verb 0 (`0x0052f3b6`), so a thing bought over a carried move faces the moved thing's way -
+unless it is an add-on hovered over one of the five track types, which the tool-4 preview snaps (`FUN_0052f1b0` at
+`0x005237f7`, inside the preview's add-on branch; the `0x3b` arm has no snap, so nothing turns a carried move).
+What a successful put-down leaves in the rotation is not decoded.
+
+**The worker (type 6)**, vtable `0x006fea70`. The mode stores only the worker's sprite bank and costume; the
+worker's id is kept in the world's hand thing (`+0x60`, through `FUN_00509ae0` and `FUN_00509af0`). The pickup
+frees the worker's sprite and sets state 7, which every staff machine answers with a bare return, and saves no
+position. The drop (`0x0046cc40`) reads the hovered cell and refuses with the type-5 rules ("Can't put staff
+here", nothing else). The uninstall (`0x0046cdc0`), when the hand still names a worker, logs "Dropping staff where
+he was before he was picked up" and puts them down on **their own current cell** with the drop's body
+`FUN_00505ea0`: the centre of the cell, the walk reset, the cell lists relinked, the sprite rebuilt. Every kind
+then goes to state 0 **except the mechanic, whose job search runs at once** (`FUN_004da5b0`). The right-button
+slots are `RET 8`.
+
+**Open.** What the world's hand thing at `+0x1da718` is; whether anything moves a carried worker (a carried
+mechanic or handyman whose ride or toilet is deleted leaves state 7 by message 10 and can then walk; whether
+anything deletes one while a worker is carried without first changing the mode is not traced); what sends the park
+window message `0x15`, which also disarms the click.
+
+**OpenTPW** (`ParkHand`): the item, the candidate, the worker and the build tool are four pieces of state, and
+`ParkHand.LetGo` is the idle mode installed over them. Every pickup - `ParkBuilding.Carry` and `PickUp`,
+`ParkStaffPool.Carry`, `ParkPeople.PickUp`, `ParkPathBuilding.EditQueue`, `ParkCamcorderCameraMode.Enter` and the
+Delete key (`Level.ClearKey`) - lets go first; a quick right click (`Level.RightButton`), Escape
+(`ParkFrontEnd.MenuKey`) and leaving the park (`Level.ForgetPark`, before anything in the park is deleted) let go
+and nothing more; and a sale lets go when no item is held and no build tool armed, as the demolisher's restore of
+tool 0 does (`0x0052818d`).
+`ParkPeople.PutBack` puts a worker down in their own cell through the drop. **Not the original's**: a right press
+over a panel arms the click here; Escape acts on the press, not the release; the rotation is not the one global,
+so a purchase always starts at nought; and a mechanic put down goes idle (`MECHANIC_PUT_DOWN_JOB_SEARCH`).
+
 ### Leaving a park with something in the hand
 
 Decoded for `docs/QUEUE.md` Q7; every claim was put to three refuters.
@@ -1557,7 +1633,8 @@ before the park does, by one of two routes:
 The setter runs the outgoing mode's `+0x2c` OnUninstall and then its deleting destructor, so leaving is answered as
 every other way out is. The carry shell's uninstall is a bare `RET`: nothing is built and nothing refunded, and a
 moved thing stays sold. The place-staff mode returns an unplaced candidate (`FUN_005083b0( 1 )`). A picked-up worker's
-mode (`0x0046cdc0`) puts them down where they were picked up. The next park's entry (state 9, `FUN_0052f050`, which
+mode (`0x0046cdc0`) puts them down on their own current cell, which is where they were picked up unless something
+moved them (see "The hand's ways out", Open). The next park's entry (state 9, `FUN_0052f050`, which
 reaches `FUN_0052f200( 0, 1 )`) installs the idle mode again and zeroes the tool and the rotation. The item global
 `DAT_008186e0` is never reset, but every read of it is gated on tool 4 or `0x3b`.
 
@@ -1569,7 +1646,7 @@ traced.
 
 **OpenTPW** (`Level.ForgetPark`, part of `Level.Unload`): each hand lets go through its own `Drop`, logged as
 `Leaving the park:`. Nothing is saved, and Restart Park reloads through the same `Unload`, so the hand leaves empty
-either way. A picked-up worker belongs to the park's own `ParkPeople` and goes with it.
+either way. It is `ParkHand.LetGo`, so a picked-up worker is put back down in their cell as well.
 
 ### The per-object management screen is nine screens
 
@@ -1755,7 +1832,7 @@ The nine buttons (`0x101` = clicked; `param_4 == 1` is press, anything else is r
     0x20  FUN_00497d20     -       2                           0x126, or 0x127 if bit 0x200 is set
     0x21  FUN_00497bc0     0xa     0x40                        0x124
 
-"mode" is `FUN_004a2aa0(n)`, which is just `FUN_0065f11d(n); _DAT_007cb2d8 = (short)n` — a UI page index. **Message `0x1001d8` cancels the tool** and withdraws all five advisor lines with `FUN_00486b40( 0x125 / 0x127 / 0x126 / 0x121 / 0x124 )`.
+"mode" is `FUN_004a2aa0(n)`, which is just `FUN_0065f11d(n); _DAT_007cb2d8 = (short)n` — the cursor layer 0 shows (`FUN_0065f11d` stores it at the control's `+0x50`; see `hud.md`). **Message `0x1001d8` cancels the tool** and withdraws all five advisor lines with `FUN_00486b40( 0x125 / 0x127 / 0x126 / 0x121 / 0x124 )`.
 
 **`FUN_00446fa0( mask, state )` is the tool state machine.** `state & 1` enters a tool, `state & 2` leaves the one whose bit is in `mask`, `state & 4` leaves everything. `DAT_0079c638` is the set of active tool bits and `DAT_0079c658 & 0x3f` the one being torn down. Entering maps the button's mask to an internal tool id through `FUN_00444360`:
 

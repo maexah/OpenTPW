@@ -465,16 +465,35 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
     30-sweep gap - which the original's does too (Q53). A probe run's put-off queuer left by going home.
   - **Not confirmed on screen:** the staff arms - nobody rests in this park in the first minute (`staff` now prints
     `rest`). **Found:** Q50 to Q55.
-- [ ] **Q39. The hand's ways out are not the original's.** Found by Q5's review. `Level.WorldClick` empties
-  the hand on any right-button press, before `RmbCancel` or the quick-click timing is consulted, where the
-  original cancels only on a quick release with the option on and otherwise leaves the hand alone (the
-  type-3 shell's right-button slots are `RET 8`). `ParkFrontEnd.MenuKey` tests only `ParkBuildMode`, so
-  Escape over a full hand opens the menu, where the original's Escape puts the carry away (`0x0040c368`).
-  And `ParkBuilding.Hold` and `ParkStaffPool.Carry` each leave the other's hand full, though `Level.cs`
-  says "never both at once". **For a moved thing a wrong drop is a sale**, since it was sold at pickup. Decode in
-  `docs/exe/park-engine.md` "Moving a thing", and for a carried candidate "Putting a candidate down: the
-  type-5 mode", where every way out but a drop returns them to the pool. Confirm: RMB cancel off, Move a ride from its window, right press, still in the hand;
-  Escape, hand empty, menu not opened.
+- [x] **Q39. The hand's ways out are not the original's.** Done 2026-09-23, `alexah/129-the-hands-ways-out`. Decoded
+  first (four decoders, each put to a refuter; `park-engine.md`, "The hand's ways out"): there is one hand, the current
+  mode, and the setter runs the outgoing mode's uninstall before every install, whatever either type is.
+  - Built: `ParkHand.LetGo` is the idle mode installed over the item, the candidate, the worker and the build tool.
+    A quick right click lets go only with RMB cancel on, armed on the press and let go of after 200 ms or a move of
+    more than 8 interface units either way (`Level.RightButton`); Escape lets go and opens no menu; the Delete key,
+    the camcorder, the queue button, a buy, a hire, a move and a worker's pickup all let go of what was held; a sale
+    lets a candidate or worker go when no item is held (`0x0052818d`); leaving the park lets go before anything in
+    it is deleted. A worker let go of is put down in their own cell (`ParkPeople.PutBack`, `0x0046cdc0`). Console
+    `hand` and `rmbcancel`.
+  - **Proof:** 16 tests in `ParkHandTests`, one in `ParkLeaveTests`; 31 mutations, each predicted and each as
+    predicted: 28 red, and three green by prediction - the second RMB option test (`QuickRightClick` makes it too),
+    Escape's order against first person (a full hand there needs the console), and leaving's order in `Unload` (no
+    test builds a level; the game run is its proof). The whole bug back turns 16 test methods red. An 8-agent decode
+    and a 37-agent review: 22 of its 32 findings real, all fixed or said at the site. 1028 tests with the game, 459
+    ran and 569 skipped without, 123 warnings.
+  - **Confirmed in the game**, `~/.cache/tpw-harnesses/q39confirm.py` and `q39confirm2.py`, a real right button and a
+    real Escape through XTEST, on `main` (`q39-control/`, `q39-control3/`) and the fix (`q39-fix/`, `q39-fix3/`). On
+    `main` every fault showed: the press alone dropped the moved Belly Bounce; Escape over an item opened the menu
+    (`windows=3`) with the item still held; a held press dropped the candidate; a candidate and an item were held
+    together; the camcorder kept the item; a worker stayed Held after a quick click; `lobby` left with them held. On
+    the fix every prediction held: with RMB cancel off a quick click kept the Belly Bounce; Escape let it go with
+    `windows=2`, photographed, and the second Escape opened the menu; a 0.5 s press kept candidate 1 and a quick click
+    put them back; `carry`, the buy row's own body, let the candidate go; `camcorder` let the item go; a quick click
+    put worker 30 back at (47,19), Idle at (47.500,19.500); `lobby` logged `Leaving the park: put thing 30 back down
+    at (47,19)`. `save/` unchanged in every run. **One miss:** I first read the worker's census with the clock running
+    and predicted them standing at the centre; they had already walked on. Read again paused, it held.
+  - **Not confirmed on screen:** the Delete key and a sale's let-go (tested only); a right press over a panel, which
+    here still arms the click (Q56). **Found:** Q56 to Q60.
 - [ ] **Q41. Escape during the park-entry fly-in opens the menu instead of cancelling the fly-in.** Found by
   Q8's decode (`docs/exe/lobby.md`, "The island keys wait for the fly-in"). In the original, Escape while the
   camera is leaving goes first to the island camera's `+0x18` (`0x005e1890`). That puts it back to orbit (from
@@ -552,6 +571,19 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   (`0x004ff3d6` returns first), and the original docks `SmallHappinessChange` when the chooser finds nothing
   (`0x004ff492`). Decode whether the original strands these guests as well - `FUN_004f9490`'s other arms, the stranded
   stamp and its "?" - then build what differs. Confirm: the Q36 staging, `peeps` for the put-off queuers.
+- [ ] **Q56. A right press over a panel arms the quick click.** Found by Q39's decode. The original posts a press to
+  the hovered window (`FUN_00658af1`), so only a press on the park view reaches `Park_MouseMessageProc` and arms the
+  click; the park still gets its own release wherever the pointer has gone. Here `Level.RightButton` arms on a press
+  anywhere, said at the site, because `WindowStack.PointerTaken` is worked out for the left button only. Confirm:
+  something in the hand, a quick right click over the gadget, `hand` still full; one over the park, empty.
+- [ ] **Q57. The park's Escape acts on the press.** Found by Q39's decode. The original runs every game-table key on
+  the release (message `0x1000b`; the key-down runs nothing, `FUN_0040c900`), and so lets go of the hand, closes the
+  locator and opens the menu on the release. `WindowStack` hands Escape to `ParkFrontEnd.MenuKey` on the press, said
+  at the site. The lobby's half is Q42. Confirm: hold Escape with something in the hand - nothing until the release.
+- [ ] **Q59. A right double click in first person does not leave it.** Found by Q39's decode. With RMB cancel on, the
+  viewfinder layer's handler answers a right double click by leaving first person as Escape does (`0x00488aa1`..
+  `0x00488ad6`). Nothing here reads a right click in first person. Confirm: camcorder, a double right click, `camera`
+  back to orbit, photographed.
 
 ## B. Docs and comments
 
@@ -724,6 +756,17 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   range, or a negative in a non-negative field - and an array's count is the highest index written plus one, so
   Lost Kingdom's guest type is `rand % 8`. Compare `ParkBalance` with both. Confirm: a test per behaviour against the
   shipped files, and the guest types a loaded park draws from.
+- [ ] **Q58. A purchase faces whatever the hand last held. Decode first.** Found by Q39's decode. The original keeps
+  one rotation, `DAT_0081d7a4`, and `FUN_0052f200` writes it only for tool 0 (`0x0052f3b6`), so an item bought over a
+  carried move faces the moved thing's way; a candidate's or worker's pickup leaves it too. Here a purchase always
+  starts at nought, said at `ParkBuilding.CarryingAngle`. Decode what a successful put-down leaves in it (the light
+  setter `FUN_0052f580( 0, 0 )`) before building one rotation. Confirm: move a ride turned 90, buy over it, put the
+  purchase down, `objects` showing its angle.
+- [ ] **Q60. A mechanic put down should look for work at once. Decode first.** Found by Q39's decode. The type-6
+  put-down (`FUN_00505ea0`) sets every kind idle but the mechanic, whose claims are cleared (`FUN_004dad20`) and whose
+  job search runs there and then (`FUN_004da5b0`); here a mechanic goes idle like the rest, counted as
+  `MECHANIC_PUT_DOWN_JOB_SEARCH`. Decode whether idle here reaches the same search a tick later, and what differs.
+  Confirm: pick up a mechanic, put them down, `staff` on the next few ticks.
 
 ## E. Large
 

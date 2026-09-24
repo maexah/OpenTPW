@@ -1149,6 +1149,11 @@ public static class ParkPathBuilding
 		if ( !state.TryObject( thingId, out var placed ) )
 			return $"queue: nothing in the park is thing {thingId}";
 
+		// Mode 0x14 is a type-3 shell installed through the setter (FUN_004af200), so whatever is in the hand is
+		// let go of first.
+		if ( ParkHand.LetGo() is { } letGo )
+			Log.Info( $"Hand: {letGo}" );
+
 		if ( placed.EntryPos == 0 || !ParkState.OnMap( placed.EntryCellX, placed.EntryCellY ) )
 		{
 			Unimplemented.Report( "EDIT_QUEUE_WITH_NO_ENTRANCE" );

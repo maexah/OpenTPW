@@ -631,22 +631,20 @@ public class Level
 	}
 
 	/// <summary>
-	/// What a quick right click does to an armed build tool: puts it away, when the Options switch "RMB
-	/// cancel" is on, and nothing otherwise. Null when there was nothing to do.
+	/// What a quick right click does: with the Options switch "RMB cancel" on it installs the idle mode over
+	/// whatever is current (<c>0x0048842b</c>), letting go of the hand and putting any build tool away - see
+	/// <see cref="ParkHand.LetGo"/>. With the option off it does nothing. Null when there was nothing to do.
 	/// </summary>
 	/// <remarks>
-	/// <b>One body, shared with the console's <c>rightclick</c></b>, for the reason
-	/// <see cref="CancelCarried"/> is shared with <c>drop</c>: the button cannot be pressed by a harness,
-	/// so the console reaches this rather than a copy of it.
+	/// <b>One body, shared with the console's <c>rightclick</c></b>, so the console reaches this rather than a
+	/// copy of it.
 	/// </remarks>
-	internal string? QuickRightClick()
+	internal static string? QuickRightClick()
 	{
-		if ( ParkBuildMode.Current == ParkBuildMode.None || !GameOptions.Current.RmbCancel )
+		if ( !GameOptions.Current.RmbCancel || ParkHand.LetGo() is not { } letGo )
 			return null;
 
-		ParkBuildMode.Disarm();
-
-		return "world click: right click - the build tool is put away";
+		return $"world click: right click - {letGo}";
 	}
 
 	/// <summary>
@@ -681,11 +679,8 @@ public class Level
 	/// installing the path tool. See <see cref="ArmsThePathTool"/>.
 	/// </summary>
 	private bool IdleOverPath()
-		=> ParkBuildMode.Current == ParkBuildMode.None && HandEmpty()
+		=> ParkBuildMode.Current == ParkBuildMode.None && ParkHand.Empty
 			&& ParkPicking.TryCell( out var x, out var y ) && ArmsThePathTool( x, y, ParkPicking.ThingUnderCursor );
-
-	private static bool HandEmpty()
-		=> ParkBuilding.Carrying == 0 && ParkStaffPool.Carrying == 0 && ParkPeople.Current is not { CarriedStaff: not 0 };
 
 	/// <summary>
 	/// The help row for the cell under the pointer, idle: UIHELPTEXT 441 "Left-click to build path" over
@@ -774,7 +769,7 @@ public class Level
 				Unimplemented.Report( "BACKSPACE_UNDO_QUEUE_RUN" );
 				return "backspace: undoing a queue run is not built";
 
-			case ParkBuildMode.None when HandEmpty():
+			case ParkBuildMode.None when ParkHand.Empty:
 				if ( !ParkPicking.TryCell( out var x, out var y ) )
 					return "backspace: the pointer is not on the park";
 
@@ -786,21 +781,23 @@ public class Level
 	}
 
 	/// <summary>
-	/// Delete - the game table's row 3, <c>FUN_0040c5e0</c>, which swaps whatever tool is armed for Clear
-	/// Land (mode <c>0x3a</c>). Clear Land is not built, so this only puts the tool away.
+	/// Delete - the game table's row 3, <c>FUN_0040c5e0</c>, which installs Clear Land (mode <c>0x3a</c>) through
+	/// the setter over whatever was current, so the hand is let go of and any tool put away. Clear Land is not
+	/// built, so the letting go is all this does.
 	/// </summary>
 	internal static string ClearKey()
 	{
-		ParkBuildMode.Disarm();
+		var letGo = ParkHand.LetGo();
 		Unimplemented.Report( "CLEAR_LAND_TOOL" );
 
-		return "delete: the clear-land tool is not built - the build tool is put away";
+		return $"delete: the clear-land tool is not built - {letGo ?? "nothing was held"}";
 	}
 
-	/// <summary>When and where the right button last went down, for telling a quick click from a hold.</summary>
-	private (float At, Vector2 Where) _rightWentDown;
-
-	private bool _rightWasDownForTool;
+	/// <summary>
+	/// Whether the right button's press is still a quick click (the original's <c>DAT_007c2500</c>), and when
+	/// and where it went down.
+	/// </summary>
+	private (bool Armed, float At, Vector2 Where) _rightClick;
 
 	/// <summary>
 	/// A press on the park itself. Clicking a placed thing opens its management window -
@@ -814,32 +811,7 @@ public class Level
 
 		_worldMouseWasDown = down;
 
-		// THE RIGHT BUTTON CANCELS whatever is being carried, which is the original's own way out of a
-		// place mode. Nothing was charged for picking it up - the money is taken when the thing goes
-		// up - so cancelling gives nothing back and takes nobody out of the pool.
-		var rightDown = Input.Mouse.Right;
-		var rightPressed = rightDown && !_worldRightWasDown;
-
-		_worldRightWasDown = rightDown;
-
-		if ( rightPressed && CancelCarried() is { } cancelled )
-		{
-			Log.Info( cancelled );
-			return;
-		}
-
-		if ( rightPressed )
-			_rightWentDown = (Time.Now, Input.Mouse.Position);
-
-		// A QUICK RIGHT CLICK PUTS AN ARMED BUILD TOOL AWAY, and only with the Options switch "RMB cancel"
-		// on - the build tool's own right-button slots are bare RET 8. The park's mouse proc makes the
-		// test on release: under 200 ms held and under 8 pixels moved (0x0048842b..0x00488434).
-		var rightReleased = !rightDown && _rightWasDownForTool;
-		_rightWasDownForTool = rightDown;
-
-		if ( rightReleased && Time.Now - _rightWentDown.At < 0.2f
-			&& Vector2.DistanceBetween( Input.Mouse.Position, _rightWentDown.Where ) < 8f
-			&& QuickRightClick() is { } putAway )
+		if ( RightButton( Input.Mouse.Right, Input.Mouse.Position / UI.VirtualScreen.Scale ) is { } putAway )
 		{
 			Log.Info( putAway );
 			return;
@@ -853,24 +825,46 @@ public class Level
 	}
 
 	/// <summary>
-	/// Puts back whatever is on the cursor - an item, or a candidate taken off the hire screen - or
-	/// null when nothing is being carried.
+	/// The right button over the park, this frame: down or up, and where the pointer is in the interface's
+	/// 2048x1536 units (<see cref="UI.VirtualScreen"/>). Answers what a quick click let go of, or null.
 	/// </summary>
 	/// <remarks>
-	/// <b>One body, shared with the console's <c>drop</c>.</b> The right button's edge cannot be driven
-	/// by a harness any more than the left's can, so the console reaches the same method rather than a
-	/// copy of it; two copies would be free to drift, and only one of them would ever be tested.
+	/// <b>Only a quick click does anything</b>, and only with the Options switch "RMB cancel" on - see
+	/// <see cref="QuickRightClick"/>. With it on the park's mouse proc arms a click on the press, and lets it
+	/// go once the button has been held more than 200 ms or the pointer has moved more than 8 units across or
+	/// down from where it went down; a release while it is still armed is the click (<c>0x0048842b</c>;
+	/// <c>docs/exe/park-engine.md</c>, "The hand's ways out"). A press, a held or dragged click, or any click
+	/// with the option off leaves the hand as it is, because the right-button slots of every mode are bare
+	/// <c>RET 8</c>.
+	/// <para>
+	/// <b>A deviation:</b> the original arms the click only for a press on the park view, since a press over a
+	/// panel goes to the panel. Here a press anywhere arms it.
+	/// </para>
 	/// </remarks>
-	internal string? CancelCarried()
+	internal string? RightButton( bool down, Vector2 at )
 	{
-		// Never both at once: each screen closes as it fills its own hand, and neither fills the other's.
-		if ( ParkStaffPool.Carrying != 0 )
-			return $"world click: {ParkStaffPool.Drop()}";
+		var pressed = down && !_worldRightWasDown;
+		var released = !down && _worldRightWasDown;
 
-		if ( ParkBuilding.Carrying != 0 )
-			return $"world click: {ParkBuilding.Drop()}";
+		_worldRightWasDown = down;
 
-		return null;
+		// With the option off none of this runs, and the press is the camera's alone.
+		if ( !GameOptions.Current.RmbCancel )
+			return null;
+
+		if ( pressed )
+			_rightClick = (true, Time.Now, at);
+
+		if ( _rightClick.Armed && (Time.Now - _rightClick.At > 0.2f
+			|| MathF.Abs( at.X - _rightClick.Where.X ) > 8f || MathF.Abs( at.Y - _rightClick.Where.Y ) > 8f) )
+			_rightClick.Armed = false;
+
+		if ( !released || !_rightClick.Armed )
+			return null;
+
+		_rightClick.Armed = false;
+
+		return QuickRightClick();
 	}
 
 	/// <summary>
@@ -1098,6 +1092,9 @@ public class Level
 	/// </summary>
 	public void Unload()
 	{
+		// First, while the park still stands: letting go of a worker puts them down in the park's own people.
+		ForgetPark();
+
 		foreach ( var panel in Hud.Children.ToArray() )
 			panel.Delete();
 
@@ -1107,7 +1104,6 @@ public class Level
 		Entity.ApplyDeletions();
 
 		LobbyCameraMode.ForgetIsland();
-		ForgetPark();
 
 		Audio.StopAll( StopAllSeconds );
 		ParticleSystem.Current?.Shutdown();
@@ -1115,8 +1111,8 @@ public class Level
 
 	/// <summary>
 	/// Lets go of the park's static state that would otherwise carry into the next park: where both park cameras
-	/// were, the armed build tool, the pinned pick, and whatever is in either hand. Part of <see cref="Unload"/>,
-	/// and apart from it only so a test can reach it.
+	/// were, the armed build tool, the pinned pick, and whatever is in the hand. The first part of
+	/// <see cref="Unload"/>, before anything in the park is deleted, and apart from it only so a test can reach it.
 	/// </summary>
 	internal static void ForgetPark()
 	{
@@ -1136,15 +1132,12 @@ public class Level
 
 		// And whatever is in the hand, which would otherwise go down at the next park's first click. The
 		// original's park end takes its interaction mode down while the park still stands - the save it makes on
-		// leaving installs the idle mode over it (0x00516d13), and online, where nothing is saved, the teardown
-		// installs none - and either way that runs the same uninstall as every other way out: a candidate goes
-		// back to the pool, and an item is let go of with nothing built and nothing refunded, so a moved thing
-		// stays sold. See docs/exe/park-engine.md, "Leaving a park with something in the hand".
-		if ( ParkBuilding.Carrying != 0 )
-			Log.Info( $"Leaving the park: {ParkBuilding.Drop()}" );
-
-		if ( ParkStaffPool.Carrying != 0 )
-			Log.Info( $"Leaving the park: {ParkStaffPool.Drop()}" );
+		// leaving installs the idle mode over it (0x00516d13) - which runs the same uninstall as every other way
+		// out: a candidate goes back to the pool, a worker is put down in their cell, and an item is let go of with
+		// nothing built and nothing refunded, so a moved thing stays sold. See docs/exe/park-engine.md, "Leaving a
+		// park with something in the hand".
+		if ( ParkHand.LetGo() is { } letGo )
+			Log.Info( $"Leaving the park: {letGo}" );
 	}
 
 	public void Render()

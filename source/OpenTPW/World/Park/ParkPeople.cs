@@ -544,6 +544,9 @@ public sealed class ParkPeople : Entity
 	/// <summary>The staff member in the player's hand, or nought - the save's <c>mStaffMemberPickedUp</c>.</summary>
 	private int _carriedStaff;
 
+	/// <summary>A mechanic's thing model - see <see cref="Staff.Model"/>.</summary>
+	private const int MechanicModel = 4;
+
 	/// <summary>Who is being carried, for the debug console.</summary>
 	internal int CarriedStaff => _carriedStaff;
 
@@ -564,15 +567,41 @@ public sealed class ParkPeople : Entity
 		if ( member == null )
 			return false;
 
+		// Carrying somebody is a mode of its own, installed over whatever was current: a tool is put away and
+		// anything in the hand let go of first, a worker already carried among them.
+		if ( ParkHand.LetGo() is { } letGo )
+			Log.Info( $"Hand: {letGo}" );
+
 		member.SetActivity( StaffActivity.Held, (int)GameClock.Ticks );
 		_carriedStaff = thingId;
-
-		// Carrying somebody is a mode of its own, which puts any build tool away.
-		ParkBuildMode.Disarm();
 
 		Log.Info( $"People: picked up thing {thingId}" );
 
 		return true;
+	}
+
+	/// <summary>
+	/// Puts a carried member of staff back down in the cell they stand in, because they were let go of rather
+	/// than dropped - the place-worker mode's uninstall (<c>0x0046cdc0</c>), which every way out but a drop runs.
+	/// Nothing moves a carried worker, so that is the cell they were picked up from; the original reads it off
+	/// the worker too, and puts them down with the drop's own body. Answers what it did.
+	/// </summary>
+	internal string PutBack()
+	{
+		var was = _carriedStaff;
+
+		if ( _staff.Find( person => person.ThingId == was ) is not { } member )
+		{
+			_carriedStaff = 0;
+
+			return $"let go of thing {was}, who is not on the staff";
+		}
+
+		var (cellX, cellY) = member.Navigator.Position.Cell;
+
+		return DropStaff( cellX, cellY )
+			? $"put thing {was} back down at ({cellX},{cellY}), where they were picked up"
+			: $"thing {was} could not be put back down at ({cellX},{cellY}) and is still carried";
 	}
 
 	/// <summary>
@@ -582,8 +611,12 @@ public sealed class ParkPeople : Entity
 	/// <b>It TELEPORTS them, and that is the difference between the two carry modes rather than a
 	/// shortcut.</b> A fresh hire is carried by mode type 5, which CONSTRUCTS a worker where it is
 	/// clicked; an existing one picked up is carried by type 6, which moves the thing that already
-	/// exists to the centre of the cell and sets it idle. Their destination is not set and no patrol
+	/// exists to the centre of the cell (<c>FUN_00505ea0</c>). Their destination is not set and no patrol
 	/// anchor is written.
+	/// <para>
+	/// <b>Every kind is set idle here, where the original sets idle all but the mechanic</b>, whom it sends
+	/// straight into their job search (<c>FUN_004da5b0</c>) - counted, not built.
+	/// </para>
 	/// </remarks>
 	internal bool DropStaff( int cellX, int cellY )
 	{
@@ -609,6 +642,9 @@ public sealed class ParkPeople : Entity
 		// placement makes at 0x004fa95d.
 		member.Navigator.StampPrevious();
 		member.SetActivity( StaffActivity.Idle, (int)GameClock.Ticks );
+
+		if ( member.Model == MechanicModel )
+			Unimplemented.Report( "MECHANIC_PUT_DOWN_JOB_SEARCH" );
 
 		_behaviour.State.StandOn( member.ThingId, cellX, cellY );
 

@@ -177,8 +177,8 @@ public sealed class ParkQueues : Entity
 	/// <para>
 	/// <b>One statement of it, shared by <see cref="Rebuild"/> and <see cref="OnDelete"/>.</b> Written
 	/// twice these would be free to drift, and only the rebuild path is ever exercised by a test - the
-	/// same argument that has the debug console's <c>drop</c> reach <c>Level.CancelCarried</c> rather
-	/// than a copy of it.
+	/// same argument that has the debug console's <c>drop</c> reach <c>ParkHand.LetGo</c> rather than a
+	/// copy of it.
 	/// </para>
 	/// <para>
 	/// Deleting the same entity twice is harmless - <see cref="Entity.Delete"/> returns at once when it

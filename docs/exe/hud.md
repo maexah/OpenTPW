@@ -123,8 +123,8 @@ It is the assembly point. In order:
 2. Creates **two full-screen layers**, `FUN_0065dd7b( 1, 0, id, 0, 0, 0x7ff, 0x5ff )` — **2047 x 1535, the
    same 2048x1536 virtual screen the lobby uses**. Layer id 0 gets handler `LAB_004881a0` and is made
    visible; layer id 1 gets handler **`FUN_00488a00`**.
-3. On layer 1: `FUN_0065f11d( 0x15 )` (a UI **page index**) then `UI_LoadTree( 0x0074fa98, 0 )` — the
-   camcorder viewfinder, parked on its own page.
+3. On layer 1: `FUN_0065f11d( 0x15 )` - the layer's **cursor**, `c_crosshair.ani` (`FUN_00489720` registers
+   it as `0x15` at `0x004899a8`) - then `UI_LoadTree( 0x0074fa98, 0 )`, the camcorder viewfinder.
 4. Then the six panels, each `UI_LoadTree` + `UI_SetVisible(0)` — **all built hidden**.
 
 | Address | What it builds |
@@ -136,10 +136,12 @@ It is the assembly point. In order:
 | `FUN_0048d8b0` | message bar |
 | `FUN_00498790` | coaster builder |
 
-**`FUN_00488a00` is where a park's keys enter the binding matchers**: message `0x1000a` ->
-`FUN_0040c900( key, mods )`, `0x1000b` -> `FUN_0040c990`, and it special-cases action **0xf = postcard**
-(`FUN_004a9380`) and action 0x10 / key 0x1b. So keys flow through the *layer*, and the coaster bar's
-`FUN_004982a0` does the same — two routes, not one.
+**`FUN_00488a00` is layer 1's handler**, and layer 1 has the focus only in first person (`FUN_004862a0`). Its key
+messages run camera-table handlers only: `0x1000a` -> `FUN_0040c900( key, mods )` and `0x1000b` -> `FUN_0040c990`.
+On a key-up it looks up two shortcuts actions without running them: 0x10 (camcorder) takes the same exit as key
+0x1b, and **0xf = postcard** calls `FUN_004a9380`. The camera, game, shortcuts and cheat handler chain is layer 0's,
+`Park_MouseMessageProc` - see `scenes.md`. The coaster bar's `FUN_004982a0` is a third route, through the camera and
+coaster tables.
 
 ## The management gadget — stream `0x00752940`
 
@@ -403,8 +405,10 @@ a whole screen.**
 ### Three ways out of camcorder mode: Escape, the C key, and the eject button
 
 `FUN_00488a00`'s key-up case treats `key == 0x1b` (VK_ESCAPE) and `action == 0x10` (camcorder, shortcut
-16) the same way, falling through to `FUN_0065f11d(1)` — **a switch back to UI page 1**. That is the page
-mechanism absent from `FUN_00481a10`: the page changes on the way OUT, not on the way in.
+16) the same way: it sets layer 1's cursor to 1 (`c_busy.ani`, `0x00489750`), leaves first person
+(`FUN_0042ae70` or `FUN_0042a190`), and sets the cursor back to `0x15`. **`FUN_0065f11d` is a cursor setter, not a
+page switch**: it stores the id at the control's `+0x50` and applies it at once if the pointer is over the
+control (`FUN_006590f7`).
 
 ## The other park streams
 

@@ -992,19 +992,33 @@ public static class DebugConsole
 					: ParkBuilding.HandState() );
 				break;
 
-			// Whichever hand is full - an item, or a candidate taken off the hire screen. THE SAME BODY
-			// THE RIGHT MOUSE BUTTON RUNS, rather than a copy: the button's edge cannot be driven from
-			// here, so this reaches Level.CancelCarried and the tested path is the real one.
+			// The idle mode installed over whatever is current - the body a quick right click, Escape and leaving
+			// the park all reach, whatever the RMB cancel switch says.
 			case "drop":
-				Reply( Level.Current?.CancelCarried()
-					?? "drop: nothing is being carried" );
+				Reply( ParkHand.LetGo() is { } letGo
+					? $"drop: {letGo}"
+					: "drop: nothing is being carried" );
 				break;
 
-			// A quick right click, as far as a build tool is concerned - the same body the button reaches.
+			// Everything the hand holds, and the build tool - see ParkHand.
+			case "hand":
+				Reply( ParkHand.Census() );
+				break;
+
+			// A quick right click - the same body the button reaches, which the RMB cancel switch gates.
 			case "rightclick":
-				Reply( Level.Current?.QuickRightClick()
+				Reply( Level.QuickRightClick()
 					?? $"rightclick: nothing to put away (tool mode {ParkBuildMode.Current}, RMB cancel " +
 						$"{(GameOptions.Current.RmbCancel ? "on" : "off")})" );
+				break;
+
+			// The Options switch "RMB cancel", in memory only. The options screen's tick would also write
+			// Config.tcf and opentpw.cfg, which a harness must not touch.
+			case "rmbcancel":
+				if ( parts.Length > 1 )
+					GameOptions.Current.RmbCancel = parts[1] == "on";
+
+				Reply( $"rmbcancel: {(GameOptions.Current.RmbCancel ? "on" : "off")}" );
 				break;
 
 			// What the pointer shows over the park: the cursor, and the help row the world gives it.
