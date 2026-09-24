@@ -13,7 +13,7 @@ The original executable builds a small number of systems once at boot and keeps 
 | `FUN_00659064` | — | Empties the UI message queues; this is all a scene's UI setup does to the shared root | Scene setup call sites |
 | `0x0045aa5a` | — | Point in `WinMain` where `g_Players` is built; the list is freed in state `0xc`. "Exit To Lobby" keeps the current player | State-machine trace |
 | `FUN_005c8650` | — | Save the current player and deselect. Called from exactly three sites: `0x0045acfc`, `0x0055024a`, `0x0048bc58` | Complete xref set |
-| `0x0051eae0` | — | Loads the six global sound categories at boot | Boot trace |
+| `0x0051eae0` | `Sound_RegisterGlobalCategories` | Loads the six global sound categories at boot | Boot trace |
 | `0x785970` | — | The game clock. Both the lobby loop and the park loop tick it at 31 ms; only a park ever pauses it | Both loops traced; pause call sites are park-only |
 | `0x00520130` | `Particles_Tick` | The clock tick itself. It is the whole of the lobby's tick loop, and the first call in a park's | Loop bodies compared |
 
@@ -28,13 +28,13 @@ The help bar is also built in `UI_Init`, but through a virtual slot, so its once
 | `0x0047f020` | `MessageBox_Open` | The modal message box, 27 callers across both scenes. Pauses the game only when `g_ParkRunning == 1` and `DAT_00f82884 == 0` | Xrefs; branch condition read from the disassembly |
 | `0x004a3a30` | `OptionsScreen_Open` | Game Options, shared. Hides the park world (`DAT_007cb2ac`) or the lobby window depending on the caller, and calls `Advisor_StopQuietly(1)` | Called from the lobby menu at `0x0048bf28` and from park menu case 5 at `0x0048b977` |
 | `0x0048c830` | `GameMenu_Open` | Dispatches to the lobby or park build | Branch on the running scene |
-| `0x0048c600` | `BuildLobby` | Lobby game menu; its handler is `0x0048bd40` | Menu construction trace |
-| `0x0048c150` | `BuildPark` | Park game menu; its handler is `0x0048b6a0` | Menu construction trace |
+| `0x0048c600` | `GameMenu_BuildLobby` | Lobby game menu; its handler is `0x0048bd40` | Menu construction trace |
+| `0x0048c150` | `GameMenu_BuildPark` | Park game menu; its handler is `0x0048b6a0` | Menu construction trace |
 | `0x0048b6a0` | — | Park menu handler. Actions: Resume 0, Load 1, Save 2, Restart 3, Publish 4, Options 5, Exit To Lobby 6, Go Offline 7, Quit 8 | Switch table |
 | `0x0047ed80` | `UI_LoadModalTree` | Loads a modal dialog: adds a full-screen backdrop as the **last** child, which swallows the pointer, and gives focus to the dialog's root | Child order and hit test read from the disassembly |
-| `FUN_006698e6` | — | Holds the last-clicked gadget, the third key target | Key routing trace |
+| `FUN_006698e6` | — | The UI's key pop: hands a key to one control - an accelerator's target, else the focus if it is visible, else the last control any press reached, if visible | Key routing trace; `lobby.md`, "The lobby's keys act on the release" |
 
-Keys are offered to the accelerator table, then to the focused gadget, then to the last-clicked gadget (`FUN_006698e6`). They never go through the hit test.
+A key goes to one control only: an accelerator's target (the one table, `0x0077c4b8`, is a list's End, Home, Up and Down), else the focused gadget if it is visible, else the last-pressed one (`FUN_006698e6`). A control that does not handle it drops it. Keys never go through the hit test.
 
 ## The park Escape route
 
@@ -46,7 +46,7 @@ Keys are offered to the accelerator table, then to the focused gadget, then to t
 | `0x0040c4d0` | — | Shortcuts action 0, "menu" | Binding table entry |
 | `0x004816d0` | — | Called by the shortcut, calls `GameMenu_Open(0)`. **Undisassembled bytes, so xrefs do not find it** | Read by hand at the address |
 
-The chain, in order, on the key's release: the focused world control `0x007cb2ac` takes the key and runs the camera, game and shortcuts tables built by `FUN_0040cb80`, stopping at the first handler that answers non-zero. Game action 0 (`0x0040c180`) closes the staff/visitor locator if it is open (`FUN_004816b0`, `DAT_007cc2f0`); otherwise, over any interaction mode but idle, it installs the idle mode and answers 1 - see `park-engine.md`, "The hand's ways out". Only with the mode idle already does shortcuts action 0 "menu" (`0x0040c4d0`) run, which calls `0x004816d0`, which calls `GameMenu_Open(0)`. In first person the key goes to layer 1's `FUN_00488a00` instead, which runs camera-table handlers only, so the menu cannot open from there.
+The chain, in order, on the key's release: the focused world control `0x007cb2ac` takes the key, and its handler `Park_MouseMessageProc` (`0x004881a0`) runs the camera, game and shortcuts tables built by `FUN_0040cb80`, then the cheat table behind a guard, stopping at the first handler that answers non-zero. Game action 0 (`0x0040c180`) closes the staff/visitor locator if it is open (`FUN_004816b0`, `DAT_007cc2f0`); otherwise, over any interaction mode but idle, it installs the idle mode and answers 1 - see `park-engine.md`, "The hand's ways out". Only with the mode idle already does shortcuts action 0 "menu" (`0x0040c4d0`) run, which calls `0x004816d0`, which calls `GameMenu_Open(0)`. In first person the key goes to layer 1's `FUN_00488a00` instead, which runs camera-table handlers only, so the menu cannot open from there.
 
 ## The advisor
 
@@ -60,7 +60,7 @@ There is one speaker, driven from two states, and each scene feeds it a differen
 | `FUN_0059a550` | `CAdvisor` | The park's feed, run every 8th tick. Calls `Advisor_SayResponse` directly — say-if-free, **no queue** | Tick modulus and call read from the disassembly |
 | `0x004a6580` | `FrontEnd_ShowPlayerSlots` | The only site that pushes the lobby greeting | Complete set of greeting pushes |
 | `0x004a61b0` | — | The delete tick; calls `FillPlayerSlots` and does **not** greet | Call path checked |
-| `0x004a62b0` | `FillPlayerSlots` | Refills the slot gadgets without greeting | As above |
+| `0x004a62b0` | `FrontEnd_FillPlayerSlots` | Refills the slot gadgets without greeting | As above |
 | `FUN_005989c0` | — | Per-scene advisor reset | Scene setup |
 | `FUN_00598ad0` | — | Per-scene advisor stop; models are freed and `Sound_SetSpeechDuck(0)` runs at the end of states 1 and 9 | Scene teardown |
 
@@ -68,20 +68,7 @@ Lobby lines are pushed at front-end call sites, through the queue. Park lines by
 
 ### Response table `0x00768fb8`
 
-610 rows of 8 dwords:
-
-| Dword | Meaning |
-|---|---|
-| 0 | id |
-| 1 | sample |
-| 2 | lip |
-| 3 | gesture: `-1` means pick at random, otherwise a row in the gesture table at `row + 0x10` |
-| 4 | model slot in the low half, bank in the high half (`slot | bank << 16`) |
-| 5 | face node A |
-| 6 | face node B |
-| 7 | unused |
-
-Slot 1 is the island model (137 rows). Bank 5 is park speech.
+Laid out in `advisor-park.md`, "`AdvisorResponseTable` at `0x00768fb8`".
 
 ### Gesture table `0x0076dc18`
 
@@ -145,7 +132,7 @@ Lobby sounds are flat, emitted at `(0, 0, 0)` with a fixed listener at `(0, 0, -
 
 Both share the orientation globals `0x007909b0`/`b4`/`b8` and `0x007909a0`/`a4`/`a8`. The camera block is written by `FUN_0042a990` and `FUN_0042b1c0`, which sets the orientation globals from a matrix's rows (`0x0042cb63`, `0x0042cb70`) and writes `0x00790ab8` at `0x0042c6ac`, right beside its own `TEST CL,0x16` on the same mask.
 
-All three sites call **`FUN_0051c1d0`**, which is the per-frame listener update — see `audio.md`, where this answers a question that page had recorded as "not found, and the search was stopped".
+All three sites call **`FUN_0051c1d0`**, which is the per-frame listener update — see `audio.md`, "The listener, and what a pause does to it".
 
 ### Park parameters
 

@@ -93,7 +93,7 @@ not a clamped one. `w_dialog_wave.MD2`'s first node is `wdialog w` -> `wdialogw`
 happened when the artist named the node, so **do not clamp it yourself**.
 
 Hashing the 1,202 `ui.wad` **member names** instead gives **zero** hits across five inits and four
-transforms — the wrong name source. Node names come from `wadcat --anim <wad>`; the `--meshes` mode is
+transforms — the wrong name source. Node names come from `wadcat --anim <wad>` (the C# tool in `CLAUDE.local.md`, not the `wadcat.py` harness below); its `--meshes` mode is
 **still broken**.
 
 ### Node name versus file name
@@ -121,7 +121,7 @@ It is the assembly point. In order:
 1. Installs the **interaction mode** if `DAT_007b05e8` is null — the default type-1 mode `FUN_0046c6a0`
    through the setter `FUN_0046c350`.
 2. Creates **two full-screen layers**, `FUN_0065dd7b( 1, 0, id, 0, 0, 0x7ff, 0x5ff )` — **2047 x 1535, the
-   same 2048x1536 virtual screen the lobby uses**. Layer id 0 gets handler `LAB_004881a0` and is made
+   same 2048x1536 virtual screen the lobby uses**. Layer id 0 gets handler `Park_MouseMessageProc` (`0x004881a0`) and is made
    visible; layer id 1 gets handler **`FUN_00488a00`**.
 3. On layer 1: `FUN_0065f11d( 0x15 )` - the layer's **cursor**, `c_crosshair.ani` (`FUN_00489720` registers
    it as `0x15` at `0x004899a8`) - then `UI_LoadTree( 0x0074fa98, 0 )`, the camcorder viewfinder.
@@ -140,7 +140,8 @@ It is the assembly point. In order:
 messages run camera-table handlers only: `0x1000a` -> `FUN_0040c900( key, mods )` and `0x1000b` -> `FUN_0040c990`.
 On a key-up it looks up two shortcuts actions without running them: 0x10 (camcorder) takes the same exit as key
 0x1b, and **0xf = postcard** calls `FUN_004a9380`. The camera, game, shortcuts and cheat handler chain is layer 0's,
-`Park_MouseMessageProc` - see `scenes.md`. The coaster bar's `FUN_004982a0` is a third route, through the camera and
+`Park_MouseMessageProc` (`0x004881a0`) - see `park-engine.md`, "How a key is matched" and "The hand's ways out", and
+`scenes.md`, "The park Escape route". The coaster bar's `FUN_004982a0` is a third route, through the camera and
 coaster tables.
 
 ## The management gadget — stream `0x00752940`
@@ -213,7 +214,8 @@ was last left on*, from three globals seeded 1 / 3 / 10 in `FUN_004a1d70`:
     n=3  DAT_007cb290  7 -> financeinfo  8 -> loans  9 -> staffcosts  10 -> entryprice
 
 It does nothing at all when `FUN_0048c8d0()` returns 1, which needs **both** `DAT_007c2534` non-zero
-**and** `FUN_006ad810()` non-zero — a two-part gate, **identified but not yet named**. This is why the 17
+**and** `FUN_006ad810()` non-zero - that is, while the game menu exists and is on screen (see "The gate that looks
+like a bug, and is not"). This is why the 17
 shortcut actions and the gadget's button count never reconciled — they are not meant to.
 
 ### The nine screens behind Info, Money and Research — censused 2026-09-21
@@ -324,7 +326,7 @@ Resolved this way: `list_allstaff`, `list_kids` (allpeeps), `list_all` (the alli
 `b_finance`, `b_loans`, `b_staffcost`, `b_door`, `b_plus`, `b_minus`, `b_parkinfo`, `b_kids`,
 `b_allstaff`, `b_allthings`, `b_sguard`, `b_sresrhcer`.
 
-**The screen ROOT FRAMES resolve too, and this paragraph first said they did not.** Hashing file
+**The screen ROOT FRAMES resolve too.** Hashing file
 stems leaves them unmatched, and scanning the models' raw bytes finds nothing either — every one of
 ui.wad's 278 `.md2` members is **refpack-compressed**, so a byte scan reads compressed noise. Decompress
 them (the tree's own `WadArchive` + `ModelFile` do it) and read the node names, and all three fall out:
@@ -348,15 +350,15 @@ behaviour.
 - **research** — six effort sliders, plus *"You need to hire some scientists before you can carry out
   any research!"* and *"Research is automatic in Instant Action mode."*
 
-**Four are cheap and five are blocked on simulation this project does not have.** Buildable today
-because the data already exists: **entryprice** (one number, one setter), **allpeeps** and
-**allstaff** (walk the thing array), **allitems** (four lists of placed objects). Blocked: **loans**
-(the `mLoans[]` records), **financeinfo** (the money-in/out split and the graph history),
-**staffcosts** (training budgets, other costs, loan payments), **research** (`mResearchDone`,
-`mResearchGroup`, `mFirstResearcher`, and per-group research points), and **parkstatus** (Top 3
-Thoughts, arrival rate, park rating, multi-year history).
+**Four are built and five are blocked on simulation this project does not have.** Built: **entryprice**,
+**allpeeps**, **allstaff** and **allitems**. Blocked: **loans** (the `mLoans[]` records), **financeinfo** (the
+money-in/out split and the graph history), **staffcosts** (training budgets, other costs, loan payments) and
+**parkstatus** (Top 3 Thoughts, arrival rate, park rating, multi-year history), each counted when opened
+(`LOANS_SCREEN`, `FINANCE_SCREEN`, `STAFF_COSTS_SCREEN`, `PARK_STATUS_SCREEN`), and **research** (`mResearchDone`,
+`mResearchGroup`, `mFirstResearcher`, and per-group research points), whose gadget button only logs
+(`ParkGadget.NotYet`, no counter yet - `docs/QUEUE.md` Q69).
 
-So the three buttons are not one job: **Info is 3 of 4 buildable, Money is 1 of 4, and Research is
+So the three buttons are not one job: **Info has 3 of 4 built, Money 1 of 4, and Research is
 none.**
 
 ### A caution: `0x10`/`0x11`/`0x12` are column headers, not buttons
@@ -475,8 +477,8 @@ matches `FUN_004a0840`'s dispatch button for button, and names both readouts:
     468  Left-click to exit camcorder mode (C)                      b_eject
     479/480  camcorder (C) / send a postcard (Ctrl-P)
 
-`UIHELPTEXT.str` has **589 rows**. Dump them with `~/.cache/tpw-harnesses/strdump`
-(`strdump <data dir> <file.str> <lo-hi|n>...`), which mounts the file system first.
+`UIHELPTEXT.str` has **589 rows**. Dump them with the local `strdump` harness (`dotnet run --project <strdump> -- <data dir> <file.str> <lo-hi|n>...`;
+its path is in `CLAUDE.local.md`), which mounts the file system first.
 
 ### Help ids are UIHELPTEXT.str, not UITEXT
 
@@ -485,12 +487,11 @@ Op 0x11's value is a row of **`Language/English/UIHELPTEXT.str`**, read through 
 `b_buy` vs `UIStrings.ParkClosed = 469`" is **not** a contradiction — that flag is **withdrawn**; the two
 tables simply share index space.
 
-**Reading a `.str` outside the game needs the file system mounted FIRST.** `BFSTReader` has a **static**
-field `new BFMUReader( "Language/English/MBToUni.dat" )`, so the type initialiser runs through
-`FileSystem.OpenRead` the first time the type is touched — a `StringFile( Stream )` constructor does
-**not** avoid it. Assign `FileSystem = new BaseFileSystem( <data dir> )` before constructing anything.
-Getting this wrong aborts with a `TypeInitializationException` (exit 134), which looks like "the rows are
-empty" if stderr is filtered away.
+**Reading a `.str` outside the game needs the file system mounted FIRST.** `BFSTReader`'s lookup table is a
+static `Lazy<BFMUReader>` over `Language/English/MBToUni.dat`, opened through `FileSystem.OpenRead` on the first
+string decoded. A `StringFile( Stream )` constructor does **not** avoid it, because it decodes as it constructs.
+Assign `FileSystem = new BaseFileSystem( <data dir> )` before constructing anything. Otherwise the first read
+throws, and with stderr filtered that looks like "the rows are empty".
 
 ## The park map — `FUN_005f0b40`, stream `0x00774da0`
 
@@ -663,9 +664,11 @@ cell size. **Only the arithmetic one could not have been talked into.**
 
 - **A HUD panel must leave `Pauses` false** or it stops `GameClock`, and with it the calendar, particles
   and every model animation. The map screen is the exception: the original genuinely pauses there.
-- **Nothing consumes the mouse for the world.** The park camera reads the mouse wheel with no window guard
-  (`Input.Mouse.Wheel`, read directly), so the wheel over a HUD slider will also zoom the park. Only the
-  camcorder key guards, via `Level.Current?.PausedByWindow() != true`. A HUD needs that generalised.
+- **The interface takes the mouse before the world does.** `WindowStack.WheelTaken` keeps a wheel a window used
+  from also zooming the park (`ParkOrbitCameraMode`), and `WindowStack.PointerTaken` keeps a left press on a
+  window, or any left press under a modal one, from reaching the world (`Level.WorldClick`). A right press is not
+  guarded yet (`docs/QUEUE.md` Q56). The camcorder key is guarded by `Level.Current?.PausedByWindow() != true`. A
+  new HUD control that uses the wheel or a press must go through these.
 - **HUD work is verifiable by eye and capture, not by test** — it needs someone to look at the running
   game.
 
@@ -677,11 +680,11 @@ Decoded 2026-09-20 by an eight-dimension pass, every claim then re-derived by a 
 told to refute it. **The refutations are part of the record**: several load-bearing claims did not
 survive, and where a correction is noted below it is the corrected reading that is written down.
 
-### The scrolling list is UI control **type 7**, and nothing in OpenTPW has one
+### The scrolling list is UI control **type 7** - `UiList` here
 
 Both screens are a single multi-column scrolling list class — ctor `FUN_00662562`, 0x178 bytes, vtable
-`0x007059f0`, type getter returns **7**. This is the one widget that must be built from scratch;
-everything else on these screens already has an analogue.
+`0x007059f0`, type getter returns **7**. OpenTPW's is `UiList` (`source/OpenTPW/UI/UiList.cs`); everything else on
+these screens already had an analogue.
 
 | Function | What it is |
 |---|---|
@@ -723,8 +726,8 @@ are dead by CONTENT, not by CODE.
 
 **With flag `0x80` set — buy is `0x91`, hire `0x291`, both have it — `0x400` fires twice per click**,
 once on press and once on release. The buy handler's first one closes the screen, so the second finds
-the tree gone and is a no-op. **A re-implementation that fires once on release behaves correctly; one
-that copies the press path without the close-then-guard sequence purchases twice.** This is INFERRED,
+the tree gone and is a no-op. **A re-implementation that fires once, on the press, behaves as the original
+does (`UiList.PointerPressed`); one that copies the press path without the close-then-guard sequence purchases twice.** This is INFERRED,
 and is worth confirming in the running game by holding a click on a buy row and predicting one carried
 item before looking.
 
@@ -807,13 +810,8 @@ SLOT INDEX (0 to 0x1f), which is what `FUN_00507bd0` takes back.
 **The walk is corroborated three ways**: the tab help rows, the resolved mesh names, and each screen's
 own tab-index switch all give the same ordering, and it matches UITEXT 119–122 and 139–143.
 
-**The root frame mesh `0xf76e4200` is `w_big.MD2`, node `window4` — RESOLVED 2026-09-21, and this
-paragraph claimed the opposite for months.** It said the hash matched "no name in the executable or any
-shipped file, after a search of all 2,488 files and every MD2 stem in `ui.wad`", and then noted in its
-own last sentence that the hash is over a NODE name which need not appear as a filename — which is
-exactly why searching stems could never have found it. The search was never widened. Both screens, and
-the three Information lists built later, drew with no backdrop because of it. See the resolution table
-above for the method.
+**The root frame mesh `0xf76e4200` is `w_big.MD2`, node `window4`.** The hash is over a node name, which is why
+searching file stems never finds it; see the resolution table above for the method.
 
 ### The node name is not the file name — measured, after seven meshes failed to load
 
@@ -837,14 +835,13 @@ the node and the file happen to agree — which is exactly what made the failure
 the archive was listed. **`b_up` and `b_down` remain unconfirmed**: both load, but `b_up` had three
 preimages in the shipped data.
 
-Read the archive with `~/.cache/tpw-harnesses/wadcat.py <wad> list` — a port of this tree's own
+Read the archive with the `wadcat.py` harness (`<wad> list`; the harness folder is in `CLAUDE.local.md`) — a port of this tree's own
 `WadArchive` and `Refpack`, validated against two values the codebase documents independently.
 
 ### The gate that looks like a bug, and is not — **now named**
 
-`docs/exe/hud.md` has recorded for a while that `FUN_004a0940` does nothing when `FUN_0048c8d0()`
-returns 1, needing both `DAT_007c2534` and `FUN_006ad810()` non-zero, "identified but not yet named".
-**Both halves are named now, and the second one was being read wrongly.**
+`FUN_004a0940` does nothing when `FUN_0048c8d0()` returns 1, which needs both `DAT_007c2534` and
+`FUN_006ad810()` non-zero. Both halves are named:
 
 - `DAT_007c2534` is the in-game **Escape menu object** — a 0x14-byte MenuList built by
   `GameMenu_BuildPark` / `GameMenu_BuildLobby`. Non-zero means the menu exists.

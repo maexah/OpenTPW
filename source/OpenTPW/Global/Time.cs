@@ -45,7 +45,8 @@ public class Time
 	/// <summary>
 	/// Holds the world clock still: <see cref="Delta"/> reads zero and <see cref="Now"/> stops
 	/// advancing, so every animation, the ocean's scroll, the drifting sky and the camera's ease
-	/// all stop where they are and the next frame draws exactly the same pixels as this one.
+	/// all stop where they are, so the next frame is the same picture as this one (repeatable to a fraction of a
+	/// grey level - docs/VERIFYING.md rule 91 - though the HUD still answers its keys).
 	///
 	/// Only <see cref="DebugConsole"/>'s `pause` sets this, and that is itself off unless the
 	/// environment asks for it, so the shipping game never touches it. It exists because

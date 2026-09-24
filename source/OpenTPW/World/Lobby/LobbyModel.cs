@@ -848,8 +848,8 @@ public sealed class LobbyModel
 			// texture classifier can produce sets bit 0x800, which is the only ZWRITEENABLE
 			// control in the engine (FUN_00567620). The one thing that does turn depth writes off
 			// is bit 0x2 of a MESH record's first dword, and across all 839 static models that is
-			// set on five mesh records in the entire game, every one of them a 'heightfield' in a
-			// base.md2 - none of which is drawn through here.
+			// set on five mesh records in the entire game, every one of them an empty 'heightfield' record
+			// in a base.md2, so nothing drawn here has it.
 			//
 			// A caller that fades its model still asks for DisableDepthWrite itself and keeps it:
 			// a part-transparent surface that writes depth punches a hole through whatever comes

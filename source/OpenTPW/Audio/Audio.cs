@@ -307,8 +307,8 @@ public static class Audio
 	/// original's 10,000-unit lift actually turned a sound down is <i>undetermined</i>: QMixer's
 	/// distance model is not in the executable, SetDistanceMapping has one call site (0x006c581b)
 	/// gated on a request bit with no writer anywhere in the image, and the parameters live in
-	/// QMixer.dll. This holds to silence instead. <b>Do not write "attenuates to nothing"</b> - that
-	/// is the claim three documents assert without evidence, and this is not it.
+	/// QMixer.dll. This holds to silence instead. <b>Do not write "attenuates to nothing"</b>: nothing
+	/// measured supports it, and this is not it.
 	/// </para>
 	/// <para>
 	/// Rain and the music sound straight through, which is not a decision but what the mechanism

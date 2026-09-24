@@ -242,8 +242,8 @@ public sealed class ParkPeople : Entity
 					// Nought is the clock at load, which is the only moment either of these is built.
 					//
 					// <b>NOT pinned by the suite, and that is measured.</b> Taking this away again left
-					// the whole suite green when that was measured - 777 tests then, 848 now, and it
-					// has not been re-measured since: SpriteScriptTests seeds Due itself in eight
+					// the whole suite green when that was measured (777 tests), and it has not been
+					// re-measured since: SpriteScriptTests seeds Due itself in eight
 					// places, and no test drives the park-load path. The tests modelled the original
 					// while production did not, and a green suite could not tell the difference in
 					// either direction.
@@ -1709,8 +1709,8 @@ public sealed class ParkPeople : Entity
 				// one where the original would hang.
 				+ $"critical {script.LongestCritical} "
 				// WHICH scream, not just whether: a ride that replays a fresh sample every pass and one
-				// that loops a single clip for ever both read "screaming True", which is exactly the
-				// fault cleanup item 5 was about. The sample name and the pass count tell them apart.
+				// that loops a single clip for ever both read "screaming True". The sample name and the pass
+				// count tell them apart.
 				+ $"scream [{ParkAudio.Current?.ScreamState( script.Id ) ?? "no park audio"}] "
 				+ $"letmeon {Read( ParkRideOperation.AdmitVariable )} "
 				+ $"letmeoff {Read( ParkRideOperation.DismissVariable )} "

@@ -33,7 +33,7 @@ from `QueryInterface`, so there is no `d3dim` import to find. The device vtable 
 | `0x400` | `ALPHATESTENABLE` | `FUN_00567620` |
 | `0x800` | `ZWRITEENABLE = NOT this bit` — the only depth-write control in the engine | `FUN_00567620` |
 | `0x8000` | `ZENABLE = NOT this bit` | `FUN_00567620` |
-| `0x1000` / `0x2000` | Not render states: together the `0x3000` "exempt from sorting" mask | `FUN_00565490` reads the mask |
+| `0x1000` / `0x2000` | Not render states: together the `0x3000` "exempt from sorting" mask | `FUN_00565590` tests the mask |
 | `0x80000` | `SPECULARENABLE` | `FUN_00567620` |
 | `0x100000` | `FOGENABLE` | `FUN_00567620` |
 | `0x800000` | Overrides the per-batch depth key with 0 | `FUN_00565590` |
@@ -88,8 +88,9 @@ that dword as "initial mesh data".
 
 Swept across 839 static models / 4924 mesh records: only four distinct flag words exist —
 `0x1` (x4585), `0x401` (x331), `0x2` (x5), `0x81` (x3). Bit `0x2` is set on exactly five records, every
-one of them a mesh named `heightfield` in a `base.md2`: the four park terrains and the lobby. None is
-drawn through `LobbyModel`.
+one of them a mesh named `heightfield` in a `base.md2`: the four park terrains and the lobby. Every one of those five
+records is empty (no vertices, no faces), so nothing that reaches the screen has depth writes off: `ParkTerrain` passes
+the park `base.md2` through `LobbyModel`, and the ground itself is drawn by `ParkGround` from the file's heightfield block.
 
 **Trap when sweeping `.md2`:** an animation file has `meshPtr` (`+0x70`) `== 0` and must be skipped, or
 its matrices are read as flag words and come out as float bit patterns.
@@ -130,10 +131,11 @@ at three levels, all back-to-front.
 | Address / value | Original name | What it is | Evidence |
 |---|---|---|---|
 | `FUN_00565590` | — | 1. Per-batch depth key = mean vertex Z. State bit `0x800000` overrides it with 0. | Disassembly |
-| `FUN_00565490` | — | 2. Per-triangle sort: quicksort descending on `z0+z1+z2`, **only when the state word misses the `0x3000` mask** — i.e. only for the graded (`0x556`) and additive (`0x200552`) words. The opaque and cut-out words carry `0x1000`/`0x2000` and skip it. | Disassembly |
+| `FUN_00565590` → `FUN_00565490` | — | 2. Per-triangle sort: `FUN_00565590` sums each triangle's `z0+z1+z2` and, **only when the state word misses the `0x3000` mask**, sorts them descending with the quicksort `FUN_00565490` — i.e. only for the graded (`0x556`) and additive (`0x200552`) words. The opaque and cut-out words carry `0x1000`/`0x2000` and skip it. | Disassembly |
 | `FUN_00582ad0` → `FUN_005829e0` | — | 3. Per-batch sort, descending on the key at `+0x30` | Disassembly |
 
 **OpenTPW does none of this sorting.** It does not need it for the lobby: the only graded surfaces
 there are the shoreline ripples and the Space dish's cone, each a single layer that does not overlap
-another. Parks will be different — this is the thread to pull when they load. **Whether the missing
-sorts show on screen has never been measured.**
+another. OpenTPW draws every see-through surface after every solid one (`Level`'s translucent pass), unsorted within
+that pass. Parks now load and have not been checked for it. **Whether the missing sorts show on screen, in either
+scene, has never been measured.**

@@ -311,7 +311,7 @@ public class ParkGuestPlacementTests
 	/// <b>This test carries that claim alone, and the mutation check says so</b>
 	/// (<c>docs/VERIFYING.md</c> rule 48). Deleting the stamp from <c>ParkPeople.OnUpdate</c>'s peep loop
 	/// - the wiring that puts it ahead of the state dispatch for everybody rather than only for walkers
-	/// - <b>passes all 848 tests</b>, because nothing in the suite drives a guest who has STOPPED through
+	/// - <b>passed the whole suite when it was measured</b>, because nothing in the suite drives a guest who has STOPPED through
 	/// a running park: the park-level test watches thing 42, who is walking throughout. So the placement
 	/// of the stamp rests on this arithmetic plus the decode of <c>FUN_004fa870</c>, and the oscillation
 	/// it prevents would have to be seen in a running park to be caught from the outside.

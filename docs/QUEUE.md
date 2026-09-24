@@ -1,6 +1,8 @@
 # Work queue
 
-Written 2026-09-22 against `main` at `9b0ebab`. Line numbers are from that commit.
+Begun 2026-09-22 against `main` at `9b0ebab`; items from Q35 on were filed against later tips. File and doc line
+numbers in Q13-Q34 are from `9b0ebab` and have drifted (`park-engine.md` by up to ~800 lines): find the member or
+the heading, never the line.
 
 **How to use this file.** One item per session. Take the first unticked item and do only that one.
 Tick it in the commit that lands it, with the number that proves it. If an item turns out to be two,
@@ -22,7 +24,8 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
 - End with four lines: what is ready, what was confirmed on screen, what was not, what the next item is.
 
 **Where the detail is.** `docs/REVIEW-2026-09-21.md` section 5 for Q1 and Q3 to Q7.
-`docs/REVIEW-2026-09-22.md` for Q2 and Q8 to Q12. The patch files are in `~/Downloads/opentpw/`.
+`docs/REVIEW-2026-09-22.md` for Q2 and Q8 to Q12. Q70-Q75 come from the 2026-09-12 review, whose three
+artifacts are listed in `docs/history/README.md`.
 
 ---
 
@@ -111,7 +114,7 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   `Stamp` keyed on the corner **1 red**, `Unstamp` leaving the corner **1 red**, both as predicted.
   **Four mutation results before those were fiction and were thrown away**: the build was failing on a
   brace, `dotnet test --no-build` ran the previous assembly, and the harness swallowed the compile error,
-  so four runs reported an identical clean 894 and read exactly like four survivals. See `VERIFYING.md`.
+  so four runs reported an identical clean 894 and read exactly like four survivals. See `VERIFYING.md` rule 113.
 - [x] **Q3. A laid queue cell has no neighbours and no tile piece.** Done 2026-09-22,
   `alexah/114-a-laid-queue-joins-up`, the build half behind `alexah/112`'s decode. **Both halves of the
   title were real, and this entry's account of each was wrong in a different way.**
@@ -659,14 +662,45 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   first panel ever built (`Instance ??= this`, `RootPanel.cs`) and nothing in any project reads it, so it pins the
   first lobby's emptied interface for the life of the process. It holds nothing of a park. Label it or take it out,
   as rule 3 says for dead by CODE. Confirm: a grep for readers, and the build.
+- [ ] **Q68. Guests may arrive eight times as often as the original's. Decode first.** Found by the 2026-09-24
+  staleness audit. `docs/exe/park.md` ("Arrivals") reads the arrival timer as `(mGameTick >> 2) - (mark >> 2)`
+  against `Arrival.TimeBetweenArrivals`, and `mGameTick` counts thing sweeps, one every eighth 31 ms tick
+  (`park-engine.md`, "What the 31 ms tick drives"): 150 is then about 149 s. `ParkPeople.StepArrivals` counts
+  `GameClock.Ticks` instead, 31 ms each, and arrives every 18.6 s - the figure OpenTPW was measured at, which
+  confirms only its own arithmetic. Decode which clock `FUN_004cf3e0` reads at its call site and how often it runs,
+  then build what it says. Confirm: the `guests` census over a timed run, the gap predicted first.
+- [ ] **Q82. Staff may idle for an eighth of the original's time. Decode first.** Found by the review of the
+  2026-09-24 staleness audit. `ParkPeople`'s staff loop hands `StaffBehaviour.Step` the 31 ms tick, but `FUN_004d6410`
+  compares its idle stamp against `mGameTick` (`0x004d6545`), which counts thing sweeps (`park-engine.md`, "What the
+  31 ms tick drives") - the same question as Q68. Check the other per-kind staff handlers the same way, then pass the
+  thing tick, and replace the "not established" notes in `ParkPeople`'s staff loop and `PeepBehaviour.Step`'s `tick`
+  parameter. Confirm: the `staff` census over a timed run, the idle gap predicted first.
+- [ ] **Q69. Seven unbuilt paths are not counted.** Found by the 2026-09-24 staleness audit.
+  `CLAUDE.md` rule 4 asks every unbuilt path the program reaches to call `Unimplemented.Report`, and these have no
+  counter (two are queued for building, Q76 and Q77): the lobby's 90-second advisor repeat of response `0x18a`/`0x18b` (`0x005e184c`,
+  `docs/exe/ui.md`); the advisor clip glints (`lobby.md`, "World sprites"); the isle's random M1/M2 clips, which
+  loop here instead (`lobby.md`, "Not sound"); the press that goes to a stale hover after a window opens or closes
+  (`lobby.md`, its "Unsettled" list); the splash, legal screen, movies and `welcome_<lang>` overlay (`ui.md`); the
+  park gadget's research button, which only logs (`ParkGadget.NotYet`); and the camcorder walk's `FUN_0042a340`
+  branch, left out of `ParkCamcorderCameraMode` (`park-engine.md`, "Walking on the ground is swept against the cell
+  edges", its paragraph "One branch is decoded but not built here").
+  Name a counter at the point each is reached - check it is reached first - and say so in the docs. Confirm: the
+  `unimplemented` census after a lobby session names each one reached. Building the idle nag and the isle's clips is
+  Q77 and Q76.
+- [ ] **Q70. `BFSTReader` parses every string table twice.** From the 2026-09-12 review (Phase A, the one step of
+  it not landed). `BFSTReader.ReadFromStream` calls `ReadFile()` and throws the result away (`BFSTReader.cs`) before
+  `StringFile`'s constructor calls it again - delete the first. `World/Entity/Entity.cs`'s `using System.Reflection`,
+  from the same step, is now unused. No game run; a test that one read happens.
+- [ ] **Q71. Two guards that do not guard.** From the 2026-09-12 review. `Rotation.From( pitch, yaw, roll )` turns
+  degrees into radians and then clamps them to -180..180, degree limits; `UiFonts.Get` checks `slot` against
+  `Sets[0].Length` and then indexes `Sets[SetIndex]`. Each reads as protective and is not. Fix each with a test that
+  fails first. No game run.
 
 ## B. Docs and comments
 
-- [ ] **Q13. STATUS diet, and track the loose files.** `docs/STATUS.md` is 1,163 lines; "Recent" alone is
-  over 1,000. Cut to under 120: "Recent" is five entries of ten lines, everything older is the git log.
-  Commit this `QUEUE.md` under `docs/`. Move `docs/CLEANUP-PLAN.md` (every item closed) into
-  `docs/history/` and commit it there. Commit `docs/REVIEW-2026-09-21.md` and
-  `docs/REVIEW-2026-09-22.md`. No game run.
+- [ ] **Q13. Move `docs/CLEANUP-PLAN.md` into `docs/history/`.** Every item in it is closed. It is still untracked in
+  `docs/`, so it exists on this machine only. Commit it under `docs/history/` and list it in `docs/history/README.md`.
+  (The STATUS diet landed in `c445844`; `QUEUE.md` and both reviews were committed in `c2ddaf6`.) No game run.
 - [ ] **Q46. Seven more stacked doc comments.** Found by Q11's scan of every source file (the six in Q11 were
   the first). Each sits on another member's summary, so it documents the wrong member. By member, since line numbers
   go stale: in `ParkGuestSprites`, `Standing`'s block lands on `StandingFrom` (Standing's own `<inheritdoc>` must go);
@@ -681,13 +715,40 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   textures are built by the byte[] constructor, with no path. (Q12's review also doubted `TryAdoptCached`'s "nothing
   the game ships asks for one path under two sets of flags"; ddfd089 measured it, texture=542 distinct=535 with and
   without the guard, and Q12's run found the sea adopted on the way back from a park.) No game run.
-- [ ] **Q14. Comment sweep of the 24 cleanup commits.** Replace history-voice comments with what the
-  code does now: `IslandPanel.cs:319-320`, `LobbyGate.cs:46-47`, `LobbyCameraMode.cs:88, 96, 103`,
-  `ParkCamcorderCameraMode.cs:396, 526-527`, `ParkThingStates.cs:54-55`, `ParkScriptStates.cs:33-34`,
-  `AudioListener.cs:67-83` (also a `<para>` inside a `<para>`), `GameClock.cs:44-45`,
-  `Texture.Cache.cs:29, 50-51`, `ParkPeople.cs:244` (a test count in a code comment), `RideScript.cs:1310`.
-  Tab fix at `DebugConsole.cs:396-399`. `WalkSpeed / 60f` at `ParkCamcorderCameraMode.cs:439` uses
-  `Time.Delta`. No game run.
+- [ ] **Q14. Comment sweep of the cleanup commits.** Replace history-voice comments with what the code does now,
+  found by member because line numbers go stale: `LobbyCameraMode`'s attract-box remarks (the two `>>>` banners and
+  "Alexah judged ... on 2026-09-22"); `ParkCamcorderCameraMode.Walk`'s "An earlier note here" and "until
+  2026-09-22", `Steer`'s "An earlier note here claimed the exe corroborates the sign", and the doubled "Whichever
+  side is met first decides" line in `Slide`; `ParkThingStates` ("this said eleven and three"); `ParkScriptStates`
+  ("got wrong twice"); `AudioListener.AttenuationTo` ("This used to name", plus its `<para>` inside a `<para>`);
+  `GameClock`'s pause-gate remark ("which this comment did, in both directions at different times"); `Texture.Cache` ("It used to be", "The paragraph this replaces");
+  `ParkPeople`'s sprite-seeding note (a test count in a code comment); and `RideScript`'s default-opcode note ("Then
+  it said"). Also found by the 2026-09-24 audit: `Entity.All`'s "This used to be seeded from reflection",
+  `Texture`'s "This used to build another every time it was read" and "(This used to say", `Texture.Cache`'s opening,
+  `RideVM`'s handler-count note, `Game`'s two loading-step seed summaries ("It was 3,214 until", "That last number
+  was 876 until"), `ParkFrontEnd.OnUpdate` ("this comment used to miss it", "used to claim"), `LoadStepCounts`' class
+  summary ("That number used to be a constant"), `ParkGadget` (three), `ParkPeople.PeepsIn`'s summary and
+  `ParkPeople.WalkFor` ("This said ..."), `ParkRideOperation` (two), `ParkCamcorderCameraMode`'s class summary ("This
+  said the gadget did not exist yet") and `ParkFixedItems`' remarks ("This paragraph once said"). `WalkSpeed / 60f` in `ParkCamcorderCameraMode.DebugWalk` uses `Time.Delta`. (The IslandPanel and
+  LobbyGate sites and the DebugConsole tab were done by Q41, `325f102`.) No game run.
+- [ ] **Q81. The FileFormats docs still disagree with themselves and with the game.** From the clone's 2026-09-18
+  audit, as the 2026-09-24 staleness audit found it (`docs/history/fileformats-docs-ledger.md`). Most of it is fixed,
+  on disjoint branches, which is the other half: `rsse.md`, `vm/instructions.md`, `sounds.md` and `saves.md` (whose
+  World block is written three times) exist in divergent versions, and the `.md2` format has three pages
+  (`models.md`, `md2.md`, `model.md`). `vm/info.md`'s per-script variable ids are fixed on `docs/rsse-instruction-set` (and
+  `docs/save-module-chain`) only. Still wrong: `saves.md`'s `mFlags` `0x8` bit, its "version 85" (hex), and "the sixth
+  person model is the visitor"; and `wad.md`'s name length, which includes the NUL. Open on both sides: what `0x14E`
+  means (`SpriteBankFile`'s note). The Bumper enum is not a page error: the page's 1-17 is probably right, and it is
+  `ScriptDefs.cs`, a labelled leftover left as it is, that looks corrupt. Settle each page's one
+  version on the branch that owns it (`docs/README.md`, "The FileFormats docs clone"), then fix. No game run; the
+  site builds.
+- [ ] **Q75. The 2026-09-12 review's Phase F, what is left.** Opportunistic, never alone. Done: `LangVersion` 14.0
+  (`4f6da17`), `Terrain.cs` (`2f38ce3`), `ReadInt16` (`f31862e`). Left: `SixLabors.ImageSharp` 3.1.6 in
+  `OpenTPW.ModKit.csproj`; `content/textures/test.png`; `.editorconfig`'s `end_of_line = crlf` with no
+  `.gitattributes`; and, to LABEL as dead by CODE rather than delete (rule 3), `Public/ModelFile.cs` and
+  `Public/MapFile.cs` (both unreferenced), `Render/Primitives/Cube.cs` and `ReadUIntN`. `Singleton.cs` is used by
+  `UI/Cursor.cs`, though nothing reads its `Instance`. Left to Alexah's call, not to be started: `.gitignore` for `.claude/`,
+  `.vscode/` and `.mcp.json`, ModKit as a whole, and the nullable warnings except in passing.
 
 ## C. Alexah's list: cause known, one session each
 
@@ -704,7 +765,7 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   mix with the camera on the ride and far from it; show the level difference; screenshot both camera
   positions.
 - [ ] **Q17. Camcorder mode can strafe.** `ParkCamcorderCameraMode.Walk` (`:399-404`) passes
-  `Input.Right` into `Step`. `park-engine.md:598-620` decodes the sweep by two velocities but not the
+  `Input.Right` into `Step`. `park-engine.md`, "Walking on the ground is swept against the cell edges", decodes the sweep by two velocities but not the
   keys. Remove the strafe. Confirm: press the strafe key, the stand position in the `camcorder` census
   does not move sideways, screenshot.
 - [ ] **Q18. The advisor draws in front of the dimmed screen.** `Level.cs:915-944` draws the HUD, then
@@ -714,12 +775,14 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
   carries each mode's refresh rate. Add an Options row: VSync mode, and a frame limit from 30 up to
   Unlimited, default the monitor's refresh rate on first launch. Confirm: screenshot the options row;
   log the measured frame time at two settings.
-- [ ] **Q20. No bubbles on the drinks shop, no chimney smoke on the staff room.** The scripts ask for the
-  effects and `RideEffects.cs:136-181` records the request; nothing consumes the records.
-  `ParticleSystem.Spawn` exists (`ParticleSystem.cs:127`); `ParLib.cs` names `Bubbles = 58`,
-  `Smoke = 2`, `SmallSmoke = 13`; `park.md:594-629` decodes the node and the per-tick push. Join the two
-  halves. Confirm: screenshot the drinks shop with bubbles and the staff room with a staff member inside
-  and smoke rising; log lines for both spawns.
+- [ ] **Q20a. A world particle pass.** Nothing draws a particle effect in the world (`ParticleSystem`'s summary, "Not
+  built: drawing effects in the world"; `ScreenParticles` draws only `OnScreen` templates). Build it once, for Q20b and
+  Q38. Confirm: one known effect drawn in the park, screenshot.
+- [ ] **Q20b. No bubbles on the drinks shop, no chimney smoke on the staff room.** The scripts ask for the effects and
+  `RideEffects` records the request; nothing consumes the records. Join them to `ParticleSystem.Spawn` through Q20a's
+  pass (`ParLib.cs` names `Bubbles = 58`, `Smoke = 2`, `SmallSmoke = 13`; `park.md` decodes the node and the per-tick
+  push). Confirm: screenshot the drinks shop with bubbles and the staff room with a staff member inside and smoke
+  rising; log lines for both spawns.
 - [ ] **Q21. Entering a park: hide the front end for the fly-in.** `IslandPanel.EnterPark` closes only the
   island panel, and the rest of the front end stays up while the camera flies in. Hide it for the flight, and
   say what Escape's cancel (`FrontEnd.MenuKey`, `LobbyCameraMode.CancelLeave`) brings back - today only the
@@ -734,24 +797,29 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
 - [ ] **Q22. Riders sit still on the Belly Bounce.** Seat positions are read once from the model's rest
   pose (`LobbyModel.cs:297`) and never from the animated pose. A riding peep's sprite is `None`
   (`Peep.cs:490-492`). Decode: which frame a rider shows, and how the original re-resolves the seat
-  node each frame (`ride-operation.md:466-470, 524-533`). Then build both.
+  node each frame (`ride-operation.md`, "Where a rider is drawn", and `FUN_005580a0` under "The WALK family").
+  Then build both.
 - [ ] **Q23. Camera rotation snaps by 45 degrees.** `ParkOrbitCameraMode.cs:196-200`. The 90-degree
   option exists (`GameOptions.NinetyDegreeRotation`) and is read by nothing. Decode the original's step
-  and its easing (`park-engine.md:254` has the saved and required rotation, not the rate). Build what
+  and its easing (`park-engine.md`, "The park camera", has the saved and required rotation, not the rate). Build what
   the decode says, driven by `Time.SmoothingFactor`. Alexah: match the original, do not invent.
-- [ ] **Q24. Nothing highlights under the mouse.** No hover code exists. Decode what the original
-  highlights when the cursor is over a thing, and whether it picks by cell or by mesh. Then build.
+- [ ] **Q24. Nothing highlights a thing under the mouse.** The idle pointer already follows the hover category over
+  ground and path (`Level.IdleOverPath`). Picking is decoded (`park-engine.md`, "Picking is a real ray cast, not a
+  grid lookup"): the hit point comes from a ray against the terrain and then object meshes, and the hovered THING is
+  taken from the cell, not by hitting its model (`ParkPicking.ThingUnderCursor`). Decode what the hover updater
+  `FUN_00486d90` highlights when the hovered thing is an object or a person, then build it.
 - [ ] **Q25. The camcorder button should give a crosshair and place the camera where you click.**
   `ParkGadget.cs:233-240` enters the mode at once. The original installs a mouse-interaction mode
-  (`FUN_00481a10`, `park-engine.md:570-590`); its click handler is not decoded. Decode it, then build.
+  (`FUN_00481a10`, `park-engine.md`, "Camcorder mode — the first-person view"); its click handler is not decoded. Decode it, then build.
 - [ ] **Q26. Ferry, seaplane and bus are always there.** `ParkFixedItems.cs:154-173` stands all three
-  permanently. `ParkPeople.VehicleFor` (`:635`) floors the headcount at 1, so only the bus is ever
-  called. The original creates the vehicle on demand (`FUN_0051a2f0`, `park.md:800-835`); the
+  permanently. `ParkPeople.StepArrivals` sizes every load at `Arrival.MinPeople` (1), and `VehicleFor` gives one
+  person the bus, so only the bus is ever called. The original creates the vehicle on demand (`FUN_0051a2f0`,
+  `park.md`, "Arrivals: who comes, on what, and how often"); the
   headcount score (`FUN_004c8240`) is not decoded. Decode the score and the pause between visits, then
   build create-on-demand, the pauses and the bus / ferry / plane ordering.
 - [ ] **Q27. Pushing the mouse at the screen edge does not scroll.** The "push scroll" option exists and
   is read by nothing. `ParkOrbitCameraMode.cs:214-228` scrolls from keys only. Decode the camera
-  binding table at `0x00748158` (`park-engine.md:236-257`), then build.
+  binding table at `0x00748158` (`park-engine.md`, "The park camera"), then build.
 - [ ] **Q28. Renaming parks and rides.** The save carries a name per park (`saves.md:91`). No rename
   control exists; signs read fixed names (`ParkFixedItems.cs:452-470`, `ParkObjects.cs:436-448`,
   `LobbyIsland.cs:90-97`). Decode where the original edits the name and what it writes, then build the
@@ -872,7 +940,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   menu over the slots, said at the site. Confirm: nobody playing, Escape let go, `windows` still `PlayerSlots`; a
   screenshot.
 - [ ] **Q65. The system table's keys: Ctrl+H on the release, and F8.** Found by Q42's decode (`lobby.md`, "The
-  system table's keys, in either scene"; `park-engine.md`, "The original fires its shortcuts on key RELEASE"). The
+  lobby's keys act on the release", its paragraph "The system table's keys, in either scene"; `park-engine.md`, "The original fires its shortcuts on key RELEASE"). The
   window procedure matches the system table `[0x0078718c]` itself on every key, in both scenes, and runs its handlers
   on the release: `P` (pause, `0x0040bf70`), Ctrl+H (Popup Help, `0x0040c5d0`), F8 (a `Scr%05ld.tga` screenshot,
   `0x0040c470` and `0x00550460`) and Ctrl+Shift+Alt+F8 (`0x0040c480`, a flag read only at `0x0054f455` and
@@ -890,19 +958,65 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
 
 ## E. Large
 
-- [ ] **Q31. The other eight object windows.** Only rides (`UiType 0`) open a window; shops, sideshows
-  and features stop at `SHOP_WINDOW`, `SIDESHOW_WINDOW`, `FEATURE_WINDOW` (`Level.cs:745-757`).
-  `park-engine.md:866-880` lists the nine classes. One window per session, shop first.
-- [ ] **Q32. Graphics tiers.** Nothing reads `high.sam`. The detail-file loader is `0x00423bc0`
-  (`OptionsScreen.cs:52`). Decode it, then build low / medium / high.
+- [ ] **Q31. The other eight object windows.** `Level.OpenObjectWindow` opens only a ride's (`UiType 0`). Shops,
+  sideshows and the rest stop at `SHOP_WINDOW`, `SIDESHOW_WINDOW` and `FEATURE_WINDOW`, and a staff member at
+  `STAFF_WINDOW` (`Level.ClickWorldAt`); a clicked visitor reaches nothing counted. `park-engine.md`, "The
+  per-object management screen is nine screens", lists the nine. One window per session, shop first.
+- [ ] **Q32. Graphics tiers.** Only `Level.SetupParticles` reads the detail files (`low.sam`, `med.sam`, `high.sam`),
+  and only `GameOptions.PARTICLEDENSITY` from them; nothing reads their `GraphicalOptions.*` keys (texture quality and
+  filtering, sky, shadows, fog, mipmaps, view distance). The detail-file loader is `0x00423bc0` (`OptionsScreen`'s
+  restart note). Decode what it does with each key - the lobby plan's item 11 names three: the `stexture` set,
+  `SKYQUALITY` and the particle low-detail byte - then build low / medium / high.
 - [ ] **Q33. UI scale.** The UI has one fixed virtual size (`UiControl.cs:59`). Add Auto / small / medium
   / large in the dead Video Card row (`OptionsScreen.cs:71-72`).
 - [ ] **Q34. README rewrite, then pictures.** Newcomer first: what it is, what runs, how to build, how to
   run. Technical detail moves to `docs/`. Line 117 is already stale. Animated pictures need a capture
   tool; none exists in the repo, so that is its own item afterwards.
+- [ ] **Q72. Values from data, not constants (the 2026-09-12 review's Phase B).** The lobby's four island names
+  from `THEMENAMES.str` through the reader the gate already uses (`ParkFixedItems.ParkDisplayName`) in place of
+  `LobbyIsland.DisplayNames`; the `ISLAND()` directory and model names in place of `themeName[0..3]` (`LobbyIsland`,
+  `LobbyGate`); and `DUCKINGLEVEL` from `sound.sam` for the advisor's 0.38 duck - but that mapping to `0x00785914` is
+  inferred, not proven (`Advisor`'s note), so decode the global's writer first. For the names and the `ISLAND()`
+  fields the data equals the constant, so "nothing looks different" is the regression check (`docs/exe/lobby.md`,
+  "Park names and the locale tables"). Confirm: a lobby screenshot before and after, identical.
+- [ ] **Q73. Cache pipelines and assets by key (the rest of the review's Phase D).** One pipeline per material
+  (`Material`) where one per (shader, flags, output) would do, and texture and shader caches that scan `Asset.All`
+  linearly (`Texture.Cache`, `Shader.Cache`). The shared blank texture landed (`bb897f8`); measure the load before
+  and after, as that step did, and do not re-take its measurement.
+- [ ] **Q74. Lift the lobby out of `Level`, or record it as dropped (the review's Phase E). Alexah's call.** Park
+  entry shipped without it: `Level` builds the lobby (`SetupEntities`, islands hard-coded, an unread `Global`) beside
+  the park (`SetupParkEntities`). Ask Alexah before starting.
 
 ## F. Then
 
 Back to `docs/PLAYER-GAPS.md`: gap 5 (happiness gauge), gap 4 (advisor in a park), gap 7 (saving a
 park, decode first). Also litter and the day ending, whose deferral reasons expired
 (`docs/REVIEW-2026-09-21.md` section 6).
+
+## G. The lobby plan's open items
+
+From the lobby plan Alexah agreed on 2026-09-12, "Finishing the Lobby" (its artifacts are listed in
+`docs/history/README.md`). Alexah asked that its report be kept in use: when an item here lands or the order changes,
+update it with the Artifact tool's `url` (https://claude.ai/code/artifact/48cf6fc2-0874-404c-b7bf-a05fe4b16470), never
+a second copy. Items 1-4,
+6-8 and the gate half of 5 landed; item 11 is Q32. Cut from the lobby that day and still cut: the intro movies and
+splash, the three online UI trees, cones, reverb and Doppler, the message box's third button, and the original's full
+state machine.
+
+- [ ] **Q76. The isle's clips loop; the original picks one at random when idle (plan item 5).** The camera update's
+  tail loop (`0x005e11f7`) starts the isle's M1 or M2 at random whenever it is idle (`docs/exe/lobby.md`, "Not
+  sound"); here the isle's clips loop. The gate half landed (`3eed966`, `9b0ebab`, Q41); whether the gate also idles
+  by itself is Q63. Confirm: `sound`/`state` over a minute of lobby, and a capture of the isle between clips.
+- [ ] **Q77. The advisor's 90-second idle nag in the lobby (plan item 10).** Responses 394/395 (`0x18a`/`0x18b`,
+  armed at `0x005e184c`, `docs/exe/ui.md`); sample 470 is never heard today. When it arms and re-arms wants one
+  sitting with the original first. Confirm: the line heard after 90 idle seconds, by capture.
+- [ ] **Q78. The lobby's sea from `lobby/Terrain/base.md2` (plan item 9). Decode first.** The lobby has a sea: a
+  `Water` entity (`Level`) that `Sky` seals the horizon against. The item is re-sourcing it from `base.md2` through the
+  park terrain loader - but `Sky`'s own note says the original's lobby has no sea below its islands, which contradicts
+  the premise. Settle whether the original draws `base.md2`'s sea before building anything.
+- [ ] **Q79. Robustness (plan item 12, the rest).** Atomic save writes exist (`BaseFileSystem.WriteAllBytes`) and
+  input is dropped while unfocused (Q42). Open: top-level error containment (`Program.Main`/`Game.Run` catch nothing),
+  and easing the render rate and music while the window is unfocused.
+- [ ] **Q80. Two tests the lobby audit asked for (plan item 13, the rest).** A save round trip against a real
+  game-written file (it wants a sitting with the original to make one), and `LobbyScript` over the four shipped island
+  scripts. Sound categories are covered by `SoundCategoryTests`.

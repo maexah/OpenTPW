@@ -39,7 +39,7 @@ namespace OpenTPW;
 /// idles shut, and a clip that has ended is held on its last frame. The original's lobby loop may replay a model's M1
 /// by itself whenever its channel has finished (<c>FUN_00473c70</c>, unless the instance's <c>+4</c> carries
 /// <c>0x8004</c>), and whether a lobby channel holds a finished clip reads <c>+4 &amp; 0x18</c>; the lobby instances'
-/// <c>+4</c> is not decoded (<c>docs/QUEUE.md</c> Q63, and the Unsettled list in <c>docs/exe/lobby.md</c>).
+/// <c>+4</c> is not decoded (<c>docs/QUEUE.md</c> Q63, and the Unsettled list under "Escape cancels the fly-in" in <c>docs/exe/lobby.md</c>).
 /// </para>
 ///
 /// <para>

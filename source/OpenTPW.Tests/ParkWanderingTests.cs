@@ -76,7 +76,7 @@ public class ParkWanderingTests
 	/// <para>
 	/// <b>What this catches, measured rather than hoped for.</b> With the mask test disabled the guest
 	/// reaches <b>(47,16)</b> on tick 523 - the cell immediately outside the gate at (47,17), and the
-	/// first of the road cells - and this is the only one of the suite's 760 tests that notices. So it
+	/// first of the road cells - and this was the only test in the suite that noticed when it was measured. So it
 	/// discriminates the fix rather than decorating it.
 	/// </para>
 	/// </summary>

@@ -115,11 +115,11 @@ public sealed class ParkWeather : Entity
 	/// original keeping one particle and bolt object for the whole game.
 	///
 	/// <para>
-	/// <b>They are built with the lobby's own numbers, which are very likely wrong for a park and are
-	/// deliberately not guessed at.</b> The lobby's drops live in a box forty-four units across,
-	/// centred twenty-six ahead of a camera orbiting islands about seventy units wide; a park is twelve
-	/// hundred units across. Rather than invent a park's figures, this wires the pair up as they stand
-	/// so they can be looked at, and whatever proves wrong becomes a constructor parameter then.
+	/// <b>They are built with the lobby's own numbers, deliberately not re-tuned for a park.</b> The lobby's
+	/// drops live in a box eighty-eight units across (half-extents 44 × 44 × 34, opened out past 4:3), centred
+	/// twenty-six ahead of a camera orbiting islands about seventy units wide; a park is 1,280 units across. In a
+	/// park they read correctly (docs/exe/weather.md); whether the density is right is a judgement call, and
+	/// whatever proves wrong becomes a constructor parameter then.
 	/// </para>
 	/// </summary>
 	private readonly Rain _rain = new();

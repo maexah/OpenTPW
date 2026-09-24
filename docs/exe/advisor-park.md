@@ -6,7 +6,7 @@ The park advisor is a THING like the weather, ticking on the same beat, but it d
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
-| `FUN_0050b360` | — | THING dispatcher; advisor is type `0x0b`, weather is `0x0f` | Same dispatcher, same construction pattern as `ParkWeather` (see `weather.md`) |
+| `FUN_0050b360` | — | THING dispatcher; advisor is type `0x0b`, weather is `0x0f` | Same dispatcher, same construction pattern as the weather thing (`weather.md`, "Weather is a thing (model 15)") |
 | `DAT_00fb3b7c` | game type | Global the advisor's case is gated on (`!= 1`) | Read by `Game_StateMachine`, `IslandPanel_Refresh`, `GameMenu_BuildPark` |
 | `FUN_0059b060` | `CAdvisor::ReceiveMessage` | Maps an incoming park message to a response and raises a topic | The error string inside names the method |
 | `FUN_0059b590` | — | Builds the 0x18-byte message/topic record | Writes its argument to byte offset `0x0c` |
@@ -111,8 +111,11 @@ The disassembly computes `advisor + id*0x10 + 0xe0` outright (`LEA EAX,[EDI + 0x
 | `+0x00` | — | Response id | Matched linearly by `Advisor_SayResponse` |
 | `+0x04` | — | **Sample id** — what `Sound_PlayEffect` is handed | |
 | `+0x08` | — | Lip file number → `\Speech\lips\sp_%03d.lip` | Format string in the exe |
-| `+0x0c` | — | Gesture / anim sequence, `-1` for none | |
-| `+0x1c` | — | A message index — **see the refuted section below** | |
+| `+0x0c` | — | Gesture: `-1` builds a random animation sequence (`FUN_00598b20`); any other value is a row of the gesture table `0x0076dc18` at value `- 0x10` (`FUN_00598bf0`) | `0x005990e3`, `0x00599383` |
+| `+0x10` | — | Model slot in the low half, bank in the high half (`slot \| bank << 16`). Slot 1 is the island model (137 rows). Bank 0 plays through the global speech category (`DAT_00803a34`), any other value through the park's (`DAT_00803a40`); five rows carry bank 1 (ids 1 and 399-402) | `0x005990dd`, `0x00599317` |
+| `+0x14` | — | Face node A | `0x005990fa` |
+| `+0x18` | — | Face node B | `0x00599106` |
+| `+0x1c` | — | Grouping values — **see the refuted section below**; no instruction reads it through this table's base | xrefs |
 
 ### Response metadata at `0x0076e300` — runtime-filled
 

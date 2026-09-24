@@ -4,7 +4,7 @@ namespace OpenTPW;
 
 /// <summary>
 /// A park's fixed items: the gate standing over the entrance, the traffic lights at the two
-/// pedestrian crossings, and the bus at its spawn off the map. They are "fixed" in the original's own
+/// pedestrian crossings, and the three arrival vehicles (bus, ferry, seaplane) at their spawns off the map. They are "fixed" in the original's own
 /// sense - every park has them, in the same place, and the player can neither build nor remove them.
 ///
 /// <para>
@@ -26,24 +26,12 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>Three of the six fixed items are here; ferry, seaplane and end are not, yet.</b> None of the
-/// four is scenery: the bus sits at cell (29.7,-11.5) and the ferry at (90.0,-17.6), both off the map
-/// on negative depth, the seaplane off it on negative x, and end.wad is three aircraft 59 units in the
-/// air. They are vehicles parked at their spawns, driven by the <c>.RSE</c> scripts - whose runtime
-/// <b>is</b> built, in <c>RideScript</c>. This paragraph once said that runtime was not built and
-/// pointed at <c>World/Ride.cs</c>, which is itself dead code.
-/// </para>
-///
-/// <para>
-/// <b>The bus is here so that its script is BOUND, and it still does not move.</b> That is the whole of
-/// what this step buys, and it is deliberately small: <c>bus.RSE</c> is 46 instructions over 16 distinct
-/// opcodes and every one of those sixteen has a case in <see cref="RideScript"/>, so the interpreter
-/// should run it without reaching the counted default - which had never actually been tested against a
-/// vehicle. What it cannot do yet is travel. Not one of the nine vehicle clips carries a position
-/// track (<c>Endm1/2/3</c> do, which is the control), because a vehicle's route is not in its clips at
-/// all: it is a Bezier path authored in the model file, and neither <see cref="ModelFile"/> nor the
-/// animation player reads it yet. So the bus stands at its spawn, off the map and out of sight, running
-/// its script - and is confirmed by the <c>rides</c> census rather than by eye.
+/// <b>Five of the six fixed items are here; end is not.</b> None of the vehicles is scenery: the bus spawns at
+/// cell (29.7,-11.5) and the ferry at (90.0,-17.6), both off the map on negative depth, and the seaplane off it on
+/// negative x; end.wad is three aircraft 59 units in the air. Each vehicle runs its own <c>.RSE</c> in
+/// <see cref="RideScript"/> and travels the Bezier route authored in its model file (<see cref="ModelFile.Paths"/>,
+/// which <see cref="LobbyModel"/> takes up): not one of the nine vehicle clips carries a position track
+/// (<c>Endm1/2/3</c> do, which is the control). <c>ParkPeople.StepVehicle</c> releases them round their circuits.
 /// </para>
 ///
 /// <para>
@@ -60,7 +48,7 @@ namespace OpenTPW;
 /// things in the original - the archives ship <c>Gates.RSE</c> and <c>lights.RSE</c> beside the models -
 /// so what they do belongs to an animation player a script triggers, exactly as a placed thing's does;
 /// see <see cref="ParkObjects.Sweep"/>. What happened instead was that <see cref="LobbyModel"/> picked up
-/// the companions with an M1, M2... suffix - the archive holds <c>gatesm1</c>, <c>gatesm2</c> and
+/// the companions with an M1, M2... suffix - the jungle archive holds <c>gatesm1</c>, <c>gatesm2</c> and
 /// <c>gatesm3</c>, matched case-insensitively - and looped them on a clock of its own, so the gate swung
 /// open and shut for ever with nothing having asked for it. That is the opposite of the terrain's own
 /// <c>basem.MD2</c>, whose bare <c>m</c> nothing picks up.
@@ -76,10 +64,9 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>Neither of them moves yet, and each is still for its own reason.</b> <c>Gates.RSE</c> idles: with its
-/// variables at nought it cycles five instructions round its dispatch loop, reaching no animation until
-/// something writes <c>VAR_COMMAND</c> - and in the original the only thing that ever does is opening or
-/// closing the park, which this program has no concept of. <c>lights.RSE</c> is the opposite, starting an
+/// <b>The gate moves when it is commanded, and the lights never do.</b> <c>Gates.RSE</c> idles on
+/// <c>VAR_COMMAND</c>, which <see cref="ParkRides"/> writes from the save's <c>mParkClosed</c> as the park
+/// loads (1 opens, 2 shuts), as the original's <c>FUN_00519ef0</c> does when a park opens or closes. <c>lights.RSE</c> is the opposite, starting an
 /// unconditional <c>LOOPANIM</c> as its second instruction - but <b>both of the clips it loops declare ten
 /// frames and carry not one track</b>, so a correctly wired crossing spins a channel for ever while nothing
 /// on screen can move. Whatever changes the lamps is not in those clips. That is measured, and it is also
@@ -156,17 +143,10 @@ public sealed class ParkFixedItems : Entity
 		("gates", true, world => world.ParkGates),
 		("lights", false, world => world.TrafficLights),
 
-		// The three vehicles, which are not scenery - see the remarks on this class.
-		//
-		// ONLY THE BUS MOVES, and that is the shipped park's doing rather than a gap here: Lost Kingdom
-		// names things for catalogue 1600, 1601 and 1603 and for nothing else, so ThingByCatalogue
-		// answers nought for the ferry and the seaplane, no script is bound to them, and they stand at
-		// their spawns. Measured, not assumed: across two polls of a live park the bus went
-		// (647.4, -67.8) -> (510.5, 65.5) while the ferry held at (899.5, -176.0, -10.0) and the
-		// seaplane at (-2.2, 174.5, 88.8), both exactly their rest pose.
-		//
-		// They are loaded anyway because their routes and their progress scalars read correctly, so
-		// whatever ends up driving them needs no more of this class - see docs/PLAYER-GAPS.md.
+		// The three vehicles, which are not scenery - see the remarks on this class. Lost Kingdom's save
+		// names only the bus; the ferry and the seaplane are given ids below and stood anyway, so all three
+		// run their own scripts. The original makes a vehicle only when a crowd first needs it -
+		// docs/QUEUE.md Q26.
 		("bus", false, world => ThingByCatalogue( world, BusCatalogueId )),
 		("ferry", false, world => ThingByCatalogue( world, FerryCatalogueId )),
 		("seaplane", false, world => ThingByCatalogue( world, SeaplaneCatalogueId ))

@@ -22,9 +22,9 @@ The terrain `.MAP` files live **inside `terrain.wad`**. A filesystem search for 
 
 | Entry | Uncompressed | What |
 |---|---|---|
-| `base.MD2` | 1,377,696 | terrain mesh (or scenery — unconfirmed at the time of measuring; see below, it is the park's fixed scenery) |
+| `base.MD2` | 1,377,696 | the park's fixed scenery mesh, plus the heightfield block the ground is built from (`park-engine.md`, "The heightfield lives inside base.MD2") |
 | `basem.MD2` | 9,416 | second, much smaller mesh — the animation half |
-| `base.lnd` | 2,417,116 | **LND = the landscape** |
+| `base.lnd` | 2,417,116 | procedural-texture source data, optional — not the landscape (see `.LND` below) |
 | `base.map` | 16,464 | 16384 + 80 -> 128x128 grid + 80-byte header (hypothesis; the real header is 72 bytes, see `.MAP` below) |
 | `terrain.map` | 16,464 | same size, same shape |
 | `Jungle.tct` | 615 | per-theme texture table |
@@ -83,11 +83,11 @@ Mesh names are the park itself: `road_center`, `road_lhs`, `road_rhs`, `arrival_
 
 `basem.MD2` reports `IsAnimation: True` with 0 meshes, exactly as `ModelFile` documents. It is `readable True` with **11 UV tracks over frames 0..100** — UV scroll is how this game moves water, as `Jun_isleM1` laps the lobby island's shoreline; the river and the falls are the likely candidates. **Only jungle ships a `basem.MD2`**; fantasy, hallow and space ship `base.MD2` alone.
 
-**A first park render needs no new file format**: `base.MD2` through the existing `ModelFile`, its textures through the existing WCT/WAD path, and a camera. `.LND`/`.MAP`/`.TCT` are needed for gameplay (attributes, editing, path tiles), not for the first picture.
+**A first park render needs no new file format**: `base.MD2` through the existing `ModelFile`, its textures through the existing WCT/WAD path, and a camera. `.MAP`/`.TCT` are needed for gameplay (attributes, editing, path tiles), not for the first picture; `base.lnd` is not needed at all.
 
-## `.LND` — the one format still open
+## `.LND` — procedural-texture source, not the landscape
 
-Header: byte 0 = 3 (version?), 10 bytes of per-park values, then uint32 384, uint32 344, uint32 4 at offsets 11/15/19 — **the same 384/344/4 in all four parks** — then 4-byte quads. There is a section of 384 x 344 x 4 bytes = 528,384 somewhere in the middle, and ~1.8 MB beyond it. Sizes are park-specific (jungle 2,417,116; fantasy 2,196,802; hallow 2,447,361; space 2,241,690). The heights are **not** in `.MAP` (it says "Attribute Map" on the tin), so they are expected here. **Being reverse-engineered from the exe — do not guess this one.**
+Header: byte 0 = 3 (version?), 10 bytes of per-park values, then uint32 384, uint32 344, uint32 4 at offsets 11/15/19 — **the same 384/344/4 in all four parks** — then 4-byte quads. There is a section of 384 x 344 x 4 bytes = 528,384 somewhere in the middle, and ~1.8 MB beyond it. Sizes are park-specific (jungle 2,417,116; fantasy 2,196,802; hallow 2,447,361; space 2,241,690). The heights are not here: they are a block inside `base.MD2`, read by `HeightfieldFile` — see `park-engine.md`, "The heightfield lives inside base.MD2". The engine loads `base.lnd` only when `DAT_007a1a8c & 0x2000` is set (`park-engine.md`, "base.lnd is not the heightfield").
 
 ## `Standard.sam` — the park's specification, and the simulation's balance file
 
@@ -127,7 +127,7 @@ Alpha is 0 on the fog values and 255 on the light values; every channel reads se
 
 ## `Easymode.TPWI` — the Instant Action park
 
-Container: dword = **400 (a character count, not bytes)**, then 400 UTF-16LE chars of copyright notice, then zero padding, then **a single zlib stream at file offset 0x629** which inflates 38,479 -> **1,608,309 bytes** with no trailing data. Only `jungle` ships one, which is why Lost Kingdom is the Instant Action park. Same container family as `.TPWS` (player park saves), where OpenTPW already reads the container but decodes nothing inside.
+Container: the preamble laid out in `park-engine.md`, "The save container" (a u32 version, 400 here and 500 in a player save; a pad byte; 824 bytes of UTF-16LE copyright notice; the file-info and `BILZ` headers), then **a single zlib stream at file offset 0x629** which inflates 38,479 -> **1,608,309 bytes** with no trailing data. Only `jungle` ships one, which is why Lost Kingdom is the Instant Action park. Same container family as `.TPWS` (player park saves). OpenTPW inflates the `.TPWI` with `SaveReader` and walks its payload with `ParkWorld`; nothing in OpenTPW opens a `.TPWS` yet.
 
 The inflated payload names the park's features by path — `data\levels\jungle\Features\gates\`, `\Features\bus\`, `\Features\toilet\`, `\Shops\coconut\`, `\Rides\bouncy\` and more — so the gate is a save-placed object, not part of the terrain model.
 
@@ -149,11 +149,13 @@ The model is authored with its **footprint's corner at its own origin** — a 1x
 
 **Every item's model opens with a flat floor plate as wide as its whole footprint** — `J_WC`, `wf_floor`, `js_base`, `cn_floor01`, `jb_floor`, `jc_base` — and all 44 footprint cells carry a real ground index, so the ground must skip them or the two fight for the same depth.
 
-## `.sgn` — a ride's sign is a second variant that `SignFile` cannot read
+## `.sgn` — one layout, walked in order
 
-`SignFile` reads the layout the park gates and the lobby islands use, whose header runs to `0x43DD` (17,373 bytes) before the image begins. **Every ride's `.sgn` is 17,337 bytes — 36 short** — so it is refused as too small and says so in the log. It is a variant rather than a broken file: the flags at offsets 4 and 8 read `0,1` on a gate and `1,0` on a ride. 36 is not a whole number of any record the header is made of, so this wants the original's own loader read rather than a guess. The `.sgn` is always named after the item's own folder — **78 of 78 across all four themes**.
-
-**A cautionary count:** the `.sgn` reader was once built on "every ride sign is 17,337 bytes", which came from a handful of samples and turned out to be an extraction artefact — only walking all 84 exposed it.
+`SignFile` reads all 84 signs by walking the header in the engine's own order (`FUN_005ec3a0`): 61 leave the
+artwork byte at `0x08` clear, and three (jelly, zob, C_SCAT) omit both ink blocks, which is what made the header
+look like it had two fixed sizes. The layout is in the FileFormats clone, `formats/sgn.md`, on its
+`docs/sign-format-corrections` branch (not yet on master). The `.sgn` is always named after the
+item's own folder — **78 of 78 across all four themes**.
 
 ## `.RSE` — the ride-script container
 
@@ -222,7 +224,7 @@ So **a player-laid path cell is ordinary drawn ground**. Index 0 means "somethin
 
 They are holes with the fog clear colour showing through, and they appeared the moment index-0 cells stopped being drawn. They sit **exactly where the park's entrance gate stands** (identified from screenshots of the original). `base.MD2` carries only **`undergates`**, a 14-vertex strip of ground laid *under* the gateway at x 450..510, z 180..190, textured `jgr_bas1`/`jgr_bas6`; it covers the arch and not the cells either side of it.
 
-So the rule "skipping index-0 cells uncovers the park rather than holing it" is right about the river and the roads, which have scenery under them, and **overstated as a universal**: some index-0 cells have nothing beneath. The holes are **unimplemented feature placement showing through**, and the right fix is to load and place features, not to touch the ground. **Do not "fix" this by drawing index 0 again** — that is what paved the river in road tarmac.
+So the rule "skipping index-0 cells uncovers the park rather than holing it" is right about the river and the roads, which have scenery under them, and **overstated as a universal**: some index-0 cells have nothing beneath. The holes are where the park's gate stands; `ParkFixedItems` now stands the gate there, and whether its model covers them has not been recorded. **Do not "fix" this by drawing index 0 again** — that is what paved the river in road tarmac.
 
 ## Item animation: the twelve roles
 
@@ -633,7 +635,7 @@ Opcode numbers: 15 FLUSHANIM, 16 TRIGANIM (3 operands), 17 WAITANIM, 18 LOOPANIM
 
 `DIPMUSIC` at `0x005564c0` resolves its operand, stores the low byte at frame **`+0xb9`**, and calls `FUN_0051e710`, which is only `DAT_00803ac8 = 1; DAT_00803ad0 = value`. **The frame byte is its lifetime**: `FUN_00558500` tests `+0xb9` and calls `FUN_0051e710(0)`, so a script's death un-dips the music. All 8 shipped uses pass a literal 1.
 
-### `REPAIREFFECT` (93) at `0x005562a6` — why it cannot be built until models exist
+### `REPAIREFFECT` (93) at `0x005562a6` — unbuilt; it falls to the counted dispatch default
 
 One operand, shipped **70x value 1 and 70x value 0**. It does **not** block — no rewind, no `+0x98`, and its only unusual exit is the `NOP` handler — so this is a different failure from `TRIGWAITANIM`: **it would take an access violation rather than park.**
 
@@ -646,7 +648,7 @@ One operand, shipped **70x value 1 and 70x value 0**. It does **not** block — 
     then value==0 (0x55635f)     needs +0x8c > 5, reads VARIABLE 5, then UNGATED as above ->
                                  FUN_00551320, which picks a sample from 0x4b..0x5a by variable 5.
 
-**`+0xcc` is the repair particle's handle** — a frame field, one slot, and `FUN_00558500` clears it on death. The killer is `FUN_00556a80`: it does `*(*(*(arg + 8) + 4) + 0x78)` with **no guard**, and its argument is `thingTable[frame+0xc8]` at `0x7a4610` — a table filled at runtime, indexed by a model handle that is nought for every script here. The sound side is safe (`FUN_0051bfc0` is `Sound_PlayEffect`, guarded on `DAT_00802bc8`/`DAT_00802bd4`), but that does not rescue it.
+**`+0xcc` is the repair particle's handle** — a frame field, one slot, and `FUN_00558500` clears it on death. The killer is `FUN_00556a80`: it does `*(*(*(arg + 8) + 4) + 0x78)` with **no guard**, and its argument is `thingTable[frame+0xc8]` at `0x7a4610` — a table filled at runtime, indexed by the script's model handle with no guard. The sound side is safe (`FUN_0051bfc0` is `Sound_PlayEffect`, guarded on `DAT_00802bc8`/`DAT_00802bd4`), but that does not rescue it.
 
 ### The limbo subsystem — and it needs no world
 
@@ -718,7 +720,7 @@ Decoded 2026-09-23 as disassembly, every claim re-derived by a refuter.
 `REMOVECHILD` (`0x55526a`) and the tick loop's negative-PC path (`0x551ac6`) pass **0**. The RSSE shutdown `FUN_005584b0` and the save-state reader `FUN_005597a0` call the flat destructor directly with 0.
 
 **The mode is a bitmask, and only two bits are read.** It is passed unchanged to all four `FUN_00558500` calls.
-- **`0x2`** (`TEST BL,2` at `0x00559102`), for the script named in the call only, and only when its thing word `+0xac` is set: the item's `Info.DestroyParticleEffect` (descriptor `+0x64`) is spawned by `Particles_Spawn` (`FUN_00521e60`) at the centre of the model's box at its base height (`FUN_00466b70`, the footprint cells ×10), and its emitter's area is set to the box by `FUN_00520030` — emitter `+0x44/+0x48/+0x4c`, which is the template's `Area`. With no model it spawns at the origin (`0x00559170`). The value is the item's own where it declares one and its category's otherwise (FileFormats `sam.md`, "The particle effects an item gives off"); 0 spawns nothing (`0x005590f7`), and every value the jungle's items use, 75 to 78, is a world effect (`OnScreen` 0 in `Tp2.plb`).
+- **`0x2`** (`TEST BL,2` at `0x00559102`), for the script named in the call only, and only when its thing word `+0xac` is set: the item's `Info.DestroyParticleEffect` (descriptor `+0x64`) is spawned by `Particles_Spawn` (`FUN_00521e60`) at the centre of the model's box at its base height (`FUN_00466b70`, the footprint cells ×10), and its emitter's area is set to the box by `FUN_00520030` — emitter `+0x44/+0x48/+0x4c`, which is the template's `Area`. With no model it spawns at the origin (`0x00559170`). The value is the item's own where it declares one and its category's otherwise (FileFormats `sam.md`, "The particle effects an item gives off" - on the clone's `docs/item-footprints` branch until it merges); 0 spawns nothing (`0x005590f7`), and every value the jungle's items use, 75 to 78, is a world effect (`OnScreen` 0 in `Tp2.plb`).
 - **`0x4`** (`0x00558582`, `0x005585f8`, inside `FUN_00558500`): the heads `ADDHEAD` hung on the model are taken off it (`FUN_0044b220` → `FUN_0044b4c0`, which frees the head's render object), and so are those of walk slots in action 4, state 2. The peep is untouched.
 - Bit `0x1`, and anything above `0x4`, is read nowhere.
 
@@ -847,8 +849,7 @@ flag, and sends the vehicle away.
 
 **The timer is in quarter-ticks of the game clock**, not seconds: `FUN_0041a990` is
 `(mGameTick >> 2) - (mark >> 2)` where `mGameTick` is the world block's own `+0x1da70c`, and
-`FUN_0041a960` sets the mark to the current tick. Turning the threshold into seconds needs the tick
-rate and **is not established here**.
+`FUN_0041a960` sets the mark to the current tick.
 
 **Which vehicle comes is decided by how many people are coming, not at random.** `FUN_004cf3e0`
 computes `1` for a headcount under `0x24` (36), otherwise `(0x3c < count) + 2` — so `2` for 36 to 60
@@ -882,7 +883,11 @@ population `FUN_004c7fa0` reports: **500 in the online mode** (`DAT_00fb3b7c == 
 stride is 256 and which is the same neighbour arithmetic `PeepBehaviour` uses as `{c, c+1, c-0x100,
 c-0xff}`; this is the id's own stride and says nothing about the two map indexings above. It then
 allocates `0x22c` bytes and constructs the person there. **So the vehicles are mechanism rather than
-transport**: nobody is ever inside one.
+transport**: nobody is ever inside one. The cell comes from `DAT_007855ac`, which `FUN_004d8650` reads and nothing
+names in code: the balance loader fills it through its table, so `get_xrefs_to` shows only the reader. The compiled
+schema does name `BusStopA/BPos{X,Y}` and `CrossingBSSideA/BPos{X,Y}` (60-byte descriptors from `0x00742808`), but no
+descriptor carries a pointer in the image, so the name does not lead to the global either. Which `Standard.sam` key
+feeds it is unproven (two routes failed, 2026-09-20).
 
 **Two things here are still open.** Nothing in the executable writes `DAT_00785310`, `DAT_00785314` or
 `DAT_00785320` — all three are zero-valued and read-only, so they are filled by something that leaves
@@ -907,8 +912,10 @@ cannot be traced, because nothing in the executable writes them: `DAT_00785310` 
 `NewParkBonus` and which is undetermined. Read them with `ParkBalance.Int( "Arrival.X", fallback )` —
 the `SAMParser` quirk applies only to multi-value lines, and these five are ordinary single-value keys.
 
-`TimeBetweenArrivals` is in **quarter-ticks**, so 150 is 600 game ticks — **about 18.6s at 31ms**, a
-figure since confirmed against measured arrivals at 18.9 and 18.8.
+`TimeBetweenArrivals` is in quarters of `mGameTick`, and `mGameTick` counts thing sweeps (`park-engine.md`, "What
+the 31 ms tick drives"), so 150 is 600 sweeps — **about 149 s** at 248 ms a sweep. OpenTPW's timer counts
+`GameClock`'s 31 ms ticks instead (`ParkPeople.StepArrivals`), which is the 18.6 s it was measured at (18.9 and
+18.8, in OpenTPW) — eight times this decode's rate. Which one the original runs at is open (`docs/QUEUE.md` Q68).
 
 **The `<computed value>` in the headcount is `FUN_004c8240`, and it is NOT decoded.** It sums a
 park-attractiveness score over the rides — per ride a capacity, a duration divided down, and a
@@ -949,11 +956,11 @@ Jungle: **16,134 cells are status 3 and 250 are status 7**. The first cell's sta
 - **mType 1 is a PATH** — its 78 cells draw a loop from x39..56, y21..28 with a double-wide avenue at x47,48 running down to the entrance.
 - **mType 4 is a built object's footprint**: its cells sit exactly on the Belly Bounce's 3x4 at (51,23) and on the east cluster.
 - **mType 30** = 66 cells, **exactly** the count of `base.map` cells carrying 0x80, so it is the fixed approach.
-- **mType 3** (4 cells, at the ride's entrance) is **probably a queue — inferred, not confirmed**.
+- **mType 3** (4 cells, at the ride's entrance) is a **queue cell** — see `park-engine.md`, "A queue is a re-derivable walk, not a stored link".
 
-**mType 4, 9 and 10 are one family: a built thing's footprint.** Together they are **44 cells = exactly the eleven placed objects' footprints**, in seven connected groups whose boxes are the items' own sizes: (57,15) 3x5 = staff 2x2 at (58,15) + fountain 3x3 at (57,17); (51,23) 3x4 belly bounce; (51,30) 3x3 jungle spray; (43,29) 2x3 = litter bin + drinks shop; (55,15) 1x3 = the three toilets; and the two cameras. **9 sits where a thing is USED, 10 once on the ride's far end — both inferred from position**; that all three belong to a footprint is measured.
+**mType 4, 9 and 10 are one family: a built thing's footprint.** Together they are **44 cells = exactly the eleven placed objects' footprints**, in seven connected groups whose boxes are the items' own sizes: (57,15) 3x5 = staff 2x2 at (58,15) + fountain 3x3 at (57,17); (51,23) 3x4 belly bounce; (51,30) 3x3 jungle spray; (43,29) 2x3 = litter bin + drinks shop; (55,15) 1x3 = the three toilets; and the two cameras. **9 is a thing's entrance and 10 its exit** — `FUN_00413410` tests the item's shape grid for the literals 9 and 10 (`park-engine.md`, "Where a built thing's entry and exit cells come from"); that all three belong to a footprint is measured.
 
-**Around a ride, the types make an arrangement worth knowing.** The Belly Bounce's 3x4 box at (51,23) is mType 4 on ten of twelve cells, with **mType 9 at (52,23)** and **mType 10 at (52,26)** — the two ends of its middle column — and the **four mType-3 queue cells in the row beyond the 9**, at x49..52, y22. That reads as a way in and a way out, **but 9 is not simply "ride entrance"**: it has 8 cells park-wide and some land on the drinks shop and the litter bin. **Recorded as observed, not named.**
+**Around a ride, the types make an arrangement worth knowing.** The Belly Bounce's 3x4 box at (51,23) is mType 4 on ten of twelve cells, with **mType 9 at (52,23)** and **mType 10 at (52,26)** — the two ends of its middle column — and the **four mType-3 queue cells in the row beyond the 9**, at x49..52, y22. That reads as a way in and a way out, **and 9 marks the entrance of any thing, not only a ride**: it has 8 cells park-wide and some land on the drinks shop and the litter bin.
 
 ### `mNeighbours`, `mDirection` and the compass
 
@@ -967,7 +974,7 @@ The compass is `0x01 N, 0x02 NE, 0x04 E, 0x08 SE, 0x10 S, 0x20 SW, 0x40 W, 0x80 
 
 - the cardinal test is **type-dependent**: mType 1 links unconditionally, mType 10 only when `nb.mDirection & Opposite(D)`, mType 9 only when `nb.mDirection & D`, and mType 3 **never forms a new link at all**;
 - diagonals are set by **two non-equivalent tests**, one strict and symmetric on the cell being placed, one weak and **one-sided** on its neighbour — so `mNeighbours` is legitimately asymmetric;
-- a final **prune loop clears the two diagonals flanking any cardinal that points at an mType 3 or 9 cell**, which is exactly the "withholds four diagonals" this line used to record as unexplained.
+- a final **prune loop clears the two diagonals flanking any cardinal that points at an mType 3 or 9 cell**, which is why four diagonals are withheld.
 
 So the 11 dissenters were never dissenters: 9 of their differing bits point at mType 9, 3 and 10 cells (the type-dependent cardinal rule) and all 4 of the others are diagonals (the prune loop). **Validate any implementation by replaying creation order, never by evaluating a predicate over the finished map.**
 
@@ -1012,8 +1019,6 @@ Lost Kingdom's queue is a run of four at y22, x49..52:
 
 So 5,2,2,3 = **end, straight, straight, bend** — exactly what those cells' stored masks make, 4 out of 4. `QueueTex` is real but is the ART those models are skinned with (and `queue.wad` ships six `jpa_que` textures where the `.tct` names four).
 
-**The earlier guess that the index numbers topology on `PathTex`'s scale is WITHDRAWN** — it fitted four cells and was wrong about the mechanism.
-
 The queue models animate nothing: `quebin1m`, `quebin2m` and `queendm` are `readable False` with **zero tracks of any kind**, frames 0..0.
 
 ### Which way a saved angle turns, and about what
@@ -1043,15 +1048,17 @@ Verified end to end through the real `BaseFileSystem` (game mounted at the real 
     levels/jungle/terrain/Jungle.tct    levels/jungle/terrain/textures/grd_ctr1.wct
     levels/jungle/Standard.sam          levels/jungle/Easymode.TPWI
 
-Note that `ModelFile.ReadFromFile(path)` goes through the global `FileSystem` and throws outside the game; `ModelFile(Stream)` is the harness-friendly entry point.
+Note that `new ModelFile( path )` goes through the global `FileSystem` and throws outside the game; `new ModelFile( stream )` is the harness-friendly entry point.
 
 ## `LobbyModel` is reusable for park terrain as-is
 
     LobbyModel( string modelPath, string textureDirectory, Vector3 origin, float scale = 1f,
                 IReadOnlyDictionary<string,Texture>? textureOverrides = null,
-                MaterialFlags materialFlags = MaterialFlags.None )
+                MaterialFlags materialFlags = MaterialFlags.None,
+                string? sharedTextureDirectory = null,
+                IReadOnlyList<AnimationFile>? clips = null )
 
-It makes one `ModelEntity` per mesh, resolves each material as `{textureDirectory}/{Name}.wct`, splits solid from see-through per triangle, sets `DisableCulling`, and handles cut-out alpha. Its name is lobby-specific but the class is not.
+It makes one `ModelEntity` per mesh, resolves each material as `{textureDirectory}/{Name}.wct` (falling back to `{sharedTextureDirectory}/{Name}.wct`), splits solid from see-through per triangle, sets `DisableCulling`, and handles cut-out alpha. Its name is lobby-specific but the class is not.
 
 **Axis swap:** `LobbyModel` builds vertices as `new Vector3( pos.X, pos.Z, pos.Y )` — the `.MD2` files are Y-up and the engine is Z-up. `Offsets` swaps the same way (`M41, M43, M42`). So `base.MD2`'s raw Y range (-11..99) is engine **Z** (height), and its raw Z becomes engine Y.
 
@@ -1067,7 +1074,7 @@ Related: `vAmbient = g_flAmbient > 0.0 ? g_flAmbient : 0.4` — world draws leav
 
 ## The inherited `VM/` code, and what the binary invalidates in it
 
-`Opcode.cs` (now under `source/OpenTPW.Files/Formats/Script/`) holds **exactly 106 names** that match the binary's table, plus `Instruction`, `Operand`, `Branch`, `RideVariables` and **27 implemented handlers**. Those are worth keeping. But the inherited runtime does not run and must not be treated as a foundation: nothing constructs a `Ride`, and if anything did, `RideVM`'s constructor would throw, because it writes `Variables[VAR_RIDECLOSED]` (index 6) into a `List<int>` it has just created empty.
+`source/OpenTPW.Files/Formats/Script/Opcode.cs` holds **exactly 106 names** that match the binary's table. `source/OpenTPW/VM/` holds `Instruction`, `Operand`, `Branch`, `RideVariables` and, in `Handlers/`, **27 implemented handlers**. Those are worth keeping. But the inherited runtime does not run and must not be treated as a foundation: nothing constructs a `Ride`, and if anything did, `RideVM`'s constructor would throw, because it writes `Variables[VAR_RIDECLOSED]` (index 6) into a `List<int>` it has just created empty.
 
 What the binary invalidates:
 
@@ -1076,27 +1083,26 @@ What the binary invalidates:
 - `Math.Sub( valueA, valueB, dest )` follows the docs' operand order and is therefore wrong: the destination is operand 0.
 - `Logic.JumpSubRoutine`/`Return` use a **`Queue<int>`** (FIFO); the engine is LIFO.
 - **`RideVM.BranchTo`'s `value * 4 + firstOffset` conversion is simply wrong**, and its "HACK" comment describes a problem that does not exist.
-- The "Implemented X / 210" log understates the real figure, which is 27 of 106.
 
 `Ride.cs`'s path shape joins with a **backslash** and accounts for only one of the two scripts an archive can hold.
 
 ## Animation loading in OpenTPW versus the engine
 
-`LobbyModel.LoadAnimations` reads role `M` only — one role in twelve — taking the bare `{stem}M.md2` as well as the numbered run, **under the engine's own condition: the bare file only where the numbered run came back empty.** The other eleven roles reach a park thing through `RideAnimations`, which is handed to it rather than probed. `ParkObjects.PoseAsBuilt` loads `{stem}c.md2` and calls it the construction clip, and that is **animation id 0**. Two of the twelve roles are read today; what is missing is the other ten and the id-to-role indirection.
+`LobbyModel.LoadAnimations` reads role `M` only — one role in twelve — taking the bare `{stem}M.md2` as well as the numbered run, **under the engine's own condition: the bare file only where the numbered run came back empty.** The other eleven roles reach a park thing through `RideAnimations`, which is handed to it rather than probed. `ParkObjects.PoseAsBuilt` loads `{stem}c.md2` and calls it the construction clip, and that is **animation id 0**. All twelve roles are read for a park thing, by `RideAnimations.Load`, and a channel names its clip by role and entry (`RideAnimations.Clip`).
 
 **Bare-only-M models outside `levels/`: zero**, so the bare-file probe cannot touch the lobby. But **91 models ship more than one numbered M clip**, and **8 of them are lobby models** — `*_gate` with 3 and `*_isle` with 2, in all four themes — plus the advisor with 15. `MeshAnimator` cycles every clip in turn; `MeshRotator` caps at `ClipsUsed = 2` and reads M1/M2 as a gate's open and shut, which is deliberate, screenshot-verified lobby behaviour. **So a channel must be something a park model opts into, leaving lobby playback exactly as it is.**
 
-Known divergences still open: `MeshAnimator` and `MeshRotator` must lose their private clocks together (one channel poses **every** track of one clip, and today the morph half and rotation half can play different clips at once); `LobbyModel` must load roles through `RideAnimations` or entry indices will not match the script's; the engine plays **0 -> declared span** where our animators play `FirstFrame..LastFrame`, which disagree on 159 clips; and the per-clip hide list is what `PoseAsBuilt` hand-rolls.
+Known divergences still open, both in lobby playback, which a park thing does not use: `MeshAnimator` and `MeshRotator` keep private clocks, and play `FirstFrame..LastFrame` where the engine plays **0 -> declared span** (159 clips disagree). For a park thing the per-clip hide list is still unread, and `PoseAsBuilt` hand-rolls its effect after the build.
 
 `AnimationFile.VisibilityTrack` already matches the engine's visibility rule exactly. `AnimationFile.RotationTrack.Ease` now obeys the easing table. The per-clip hide list is **still unread by us**.
 
-**A documented class-comment defect, still open:** `ParkFixedItems.cs` says the gates archive holds `gatesm1`, `gatesm2` and `gatesm3` — **false for fantasy, which ships none, and short for space, which ships four** (`gatesm1..m4`). Jungle and hallow are the only two it describes. Fantasy ships `gatese/gatesi/gatesm/gatess.MD2` and no numbered clip; `gatesm.MD2` is real at morph 2, frames 0..50.
+**The gate's numbered clips differ by theme:** jungle and hallow ship `gatesm1`, `gatesm2` and `gatesm3`; **fantasy ships none, and space four** (`gatesm1..m4`). Fantasy ships `gatese/gatesi/gatesm/gatess.MD2` and no numbered clip; `gatesm.MD2` is real at morph 2, frames 0..50.
 
 ---
 
 # Instruments and preserved artifacts
 
-**Do not re-run the agents or the probes to get this back.** The scratchpad these were produced in is tmpfs and does not survive — that is how the `.RSE` corpus was lost once already. Copied to `~/.cache/tpw-harnesses/`:
+**Do not re-run the agents or the probes to get this back.** The scratchpad these were produced in is tmpfs and does not survive — that is how the `.RSE` corpus was lost once already. Copied to the harness folder (its path is in `CLAUDE.local.md`):
 
 | File | What it holds |
 |---|---|
@@ -1110,7 +1116,7 @@ Known divergences still open: `MeshAnimator` and `MeshRotator` must lose their p
 | `rolecensus.py` | applies the engine's own probe rule (numbered from 1, bare only if that run found nothing) to every archive's own name table — no decompression needed. Pass `--by-archive` to reproduce the older, narrower per-archive number |
 | `rsewalk.py` | carries the `.RSE` format, the 106-entry table and every check above. **Re-run it rather than writing another.** It extracts with a per-wad subdirectory — keying output by the wad's own folder loses the theme (every script sits in a `rides`/`shops`/`features` folder) and silently collapses 262 wads into 203, overwriting scripts |
 
-**`wadcat` is not on PATH**: its location is in `CLAUDE.local.md`, and it is **the DEBUG build, which matters.** A stale `bin/Release` copy is still on disk and its own usage line offers only `--list|--id|--bounds|--meshes|--anim|--cat`: **no `--dump`, no `--field`, no `--heights`**. Reaching for the Release path and finding `--dump` missing **looks exactly like a broken tool and is not one** — it is an out-of-date build. `--cat` prints a member to stdout; **`--dump` is the one that EXTRACTS files** — `--cat` writes nothing to disk and looks like a silent failure if you expect files. `wadcat --anim <wad>` prints each clip's readability and its rot/morph/uv/pos/vis counts, which is how "what does this clip actually drive" is answered. Note `wadcat` is built against **our own `AnimationFile`**, so its `frames a..b` is the KEY-derived span and its `readable` is our `IsValid`; **it cannot independently check a declared span.**
+**`wadcat` is not on PATH**: its location is in `CLAUDE.local.md`, and it is **the DEBUG build, which matters.** A stale `bin/Release` copy is still on disk and its own usage line offers only `--list|--id|--bounds|--meshes|--anim|--cat`: **no `--dump`, no `--field`, no `--heights`**. Reaching for the Release path and finding `--dump` missing **looks exactly like a broken tool and is not one** — it is an out-of-date build. Its interface is `wadcat --list|--id|--bounds|--meshes|--anim|--field|--heights <wad>…` or `wadcat --cat|--dump <SUFFIX> <wad>…` - **the suffix comes first**, there is no `--out`, and **`--dump` is the one that EXTRACTS files**, into the working directory. Invoked wrongly it does nothing quietly, so "no scripts were dumped" reads exactly like "these archives carry no scripts". `--cat` writes nothing to disk: it prints every matching member to stdout behind banners, and has produced a false finding. `wadcat --anim <wad>` prints each clip's readability and its rot/morph/uv/pos/vis counts, which is how "what does this clip actually drive" is answered. Note `wadcat` is built against **our own `AnimationFile`**, so its `frames a..b` is the KEY-derived span and its `readable` is our `IsValid`; **it cannot independently check a declared span.**
 
 A third read method — `memory.getBytes` into a Jython bytearray — **silently returned zeros and was discarded as a dead instrument** rather than believed. Two agents hit that same bug; no conclusion here rests on it.
 

@@ -56,8 +56,8 @@ public class ParkPathNeighbourTests
 	///
 	/// <para>
 	/// This is the whole mechanism end to end: the link pass produces the mask, and the tile table
-	/// turns that mask into art. <c>docs/exe/park.md</c> states the check from the other side - "a cell
-	/// whose neighbour mask is E and W must draw a walkway running east to west" - so a turn the wrong
+	/// turns that mask into art. <c>docs/exe/park.md</c>, "`mNeighbours`, `mDirection` and the
+	/// compass", states the check from the other side - "`0x44` (E+W) is a horizontal straight at angle 90" - so a turn the wrong
 	/// way would show as paths crossing their own junctions.
 	/// </para>
 	/// </summary>

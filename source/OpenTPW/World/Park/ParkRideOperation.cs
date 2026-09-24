@@ -316,7 +316,7 @@ public sealed class ParkRideOperation
 	/// <b>The failure arm is deliberately NOT reproduced, and it is drastic rather than quiet.</b> When the
 	/// destination will not route the original refuses the dismissal and calls <c>FUN_004df150</c>, which
 	/// <i>closes the ride</i>: it clears <c>mCanLoad</c> and <c>mPersonBeingLoaded</c>, logs "Object %d:
-	/// Closing..." and sets the script's <c>VAR_CLOSED</c>. Nothing here writes either field, so building
+	/// Closing..." and sets the script's <c>VAR_RIDECLOSED</c>. Nothing here writes either field, so building
 	/// half of that would leave a ride that shut itself over a routing failure and never reopened - a
 	/// worse fault than the one this fixes. A guest whose neighbour will not route is dismissed anyway and
 	/// drops to <see cref="PeepState.Deciding"/> standing on the exit, which is where they are.

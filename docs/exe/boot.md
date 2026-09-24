@@ -35,7 +35,7 @@ How the original game boots: `WinMain` takes a single-instance lock, builds the 
 3. **Log and random seed:** logs "Compiled Mar 24 2000 at 15:14:05" and seeds the random number generator from `GetTickCount`.
 4. **Sound:** 0x0051b660 initialises it, volumes coming from the settings. It then plays effect 0xd2 (210) from category `DAT_00803a2c` — that may be a boot jingle, but **nobody has listened to it**. Then `Sound_ApplyGroupVolumes`.
 5. **Loading screen and UI:** `LoadingScreen_Begin` (500 steps) shows the Bullfrog `splash_<lang>.tga` for at least 2.5 s, then `welcome.tga` with the `legal_<lang>.tga` copyright strip and no bar. Behind it, `UI_Init` 0x00489ca0 hides the cursor, loads the UI meshes ("Loaded %d UI meshes"), sets up the UI and calls `Dialup::Initialise`. `LoadingScreen_End` holds the screen until 3 s after it appeared.
-6. **Finish:** 0x005989c0 (**unidentified**). The first state is 4 if flag 0x200 is set, else 9.
+6. **Finish:** 0x005989c0 (the advisor reset). The first state is 4 if flag 0x200 is set, else 9.
 
 ## Main state machine — `Game_StateMachine` 0x0054e360
 
@@ -54,7 +54,7 @@ The state is `DAT_0087906c`. The machine runs once `DAT_00879068` is set, at the
 | 9 | **Park load**, behind a new loading screen whose Begin resets the bar. An online-park branch comes first, keyed on `DAT_00f7d88c` +0x3f0 (0x005b50b0's object, ONLINE NEWS). Then: RSSE scripts init (0x00551600), particles, the player (a "debug" slot when there is no front end), weather textures, advisor paths (0x00457a90), 0x00407d80, the QuickSave load (0x00407e00), 0x00457c30. Any failure returns 2, which quits. Game type 1 runs the online chat init, with a 5-minute timeout. `LoadingScreen_End`, then 0xf. |
 | 0xf | 0x00550b30 when not online, then 10. |
 | 10 | **In-park loop.** Fixed 31 ms ticks with at most 2000 ms of catch-up; see [Tick rates](#tick-rates) for what runs at which frequency. Ticks run only while the app is active or windowed. Also each pass: listener, `Advisor_Update`, render, present, `Scr%05ld.tga` screenshots and the "E W R P S" timings line. `DAT_00879088` == 1 goes to 0xd; 2 or 3 goes to 0xb. |
-| 0xd | Goes to 0xe, which calls 0x005996d0(1) to stop the advisor and 0x005ac5f0, then goes back to 10. |
+| 0xd | Goes to 0xe, which calls `Advisor_StopQuietly(1)` (0x005996d0) to stop the advisor and 0x005ac5f0, then goes back to 10. |
 | 0xb | **Leave the park:** teardown. Then 0xc (quit) if `DAT_00879088` == 3 or there is no front end; otherwise 9 if another park is pending (+0x3f0), else 1, back to the lobby. |
 | 0xc | Final teardown of the players and online objects; sets the quit bit. |
 
@@ -78,19 +78,19 @@ Two identifications behind that table:
 - **0x00546c80 is the track-ride tick**, not something generic: magic `DAT_00877b58` = 0x4a454647 = "GFEJ", read across 0x00542000–0x0054b000, whose 0x00543560 is the save's **TRAK** module loader.
 - **0x0055abf0 is the flying cars**, not the peep simulation.
 
-**0x00516380 is mode-gated AND frequency-gated — both, not either.** An earlier claim of "every 8th: online 0x00516380 and 0x0055a470" was wrong about *online* and right about *every 8th*; a later correction killed the online half and over-corrected on the other. What the listing shows:
+**0x00516380 is mode-gated AND frequency-gated — both, not either.** It is not online-only, and it does not run every tick. What the listing shows:
 
-- **Mode gating, which stands as previously written.** `DAT_00fb3b7c` is read at 0054f6c3–0054f754: mode 0 (normal park) and mode 2 (Instant Action) both jump to it, and mode 1, the ONLINE one, is the single branch that does **not** call it, taking 0x005166b0 at `0054f760` instead. So it is not online-only — if anything the reverse.
-- **Frequency gating, which was missed.** `0054f668` is `TEST byte ptr [0x00877d34],0x7` / `JNZ 0x0054f82d`, and it sits **above** that mode dispatch, so taking the jump clears the whole of it along with `CALL 0x00516380` at `0054f7bb`. It falls through only when the counter is a multiple of eight.
-- **`DAT_00877d34` is a tick counter, and this page already proved it**: the Every-2nd row above verifies `0054f5c0` reloading it for `TEST AL,0x1`. Its own increment is at `0054f4cd` — `MOV ECX,[0x00877d34]` / `INC ECX` / `MOV [0x00877d34],ECX` — and it is reset to zero on state entry at `0054edb0` and `0054f443`.
+- **Mode gating.** `DAT_00fb3b7c` is read at 0054f6c3–0054f754: mode 0 (normal park) and mode 2 (Instant Action) both jump to it, and mode 1, the ONLINE one, is the single branch that does **not** call it, taking 0x005166b0 at `0054f760` instead. So it is not online-only — if anything the reverse.
+- **Frequency gating.** `0054f668` is `TEST byte ptr [0x00877d34],0x7` / `JNZ 0x0054f82d`, and it sits **above** that mode dispatch, so taking the jump clears the whole of it along with `CALL 0x00516380` at `0054f7bb`. It falls through only when the counter is a multiple of eight.
+- **`DAT_00877d34` is a tick counter**: the Every-2nd row above has `0054f5c0` reloading it for `TEST AL,0x1`. Its own increment is at `0054f4cd` — `MOV ECX,[0x00877d34]` / `INC ECX` / `MOV [0x00877d34],ECX` — and it is reset to zero on state entry at `0054edb0` and `0054f443`.
 
 So in a normal park it is the thing-list sweep that reaches the peeps — it calls 0x0050b360 per thing — **once every eight ticks**, not every tick.
 
-The refutation of the *init guards* stands and was never the same thing: 0054f691 / 0054f6d8 / 0054f719 test `[0x00fb34a8] & 1` and fire once, and they are **not** a divider. They are simply a different test on a different global, a few instructions below the real one.
+The init guards at 0054f691 / 0054f6d8 / 0054f719 are **not** a divider: they test `[0x00fb34a8] & 1` and fire once. They are simply a different test on a different global, a few instructions below the real one.
 
-**This does not yet give an arrival period.** Turning eight ticks into seconds needs the tick units pinned, which is a separate question from the gate — see the note on `Time.TicksPerSecond` below.
+**So the sweep runs every 248 ms**: the tick is a derived 31 ms (`park-engine.md`, "The beat is 31 ms and it is derived, not rounded"), and one sweep in eight ticks is 8 × 31 ms.
 
-On OpenTPW's side: there is no `Time.TicksPerSecond`. The 25 belongs to `Sky.TicksPerSecond`, a private const of the sky's own drift, and the lobby's own rate is `LobbyScript.TicksPerSecond` = 10; **both are still only inferred**. The one rate that is measured rather than inferred is the 31 ms game tick itself, `GameClock.TickSeconds`.
+On OpenTPW's side: there is no `Time.TicksPerSecond`, and no single rate to give it. The sky's 25 is `Sky.TicksPerSecond`, read from FUN_00585f10's 25.0 at 0x00701f7c. The lobby's 10 is `LobbyScript.TicksPerSecond`, read from FUN_005d5c50's 0.01 at 0x007029cc. The game tick is `GameClock.TickSeconds`, 31 ms; the game menu keeps a private 30 of its own.
 
 ## Addresses
 
@@ -119,9 +119,9 @@ Evidence is a Ghidra trace of `/testme.exe` throughout; the column names what in
 | 0x0040f000 | | Parses options, probably the command line: `version quickload nodebug noload SAVEDEBUG flmouse bwcursor`. Failure aborts the game. | Option strings |
 | 0x0040cb80 | | Reads settings sections `system camera cheat coaster shortcuts`. | Section strings |
 | 0x0051b660 | | Initialises sound; volumes come from the settings. | Decompile |
-| `DAT_00803a2c` | | Sound category used for boot effect 0xd2 (210). | Call argument |
+| `DAT_00803a2c` | `cat_ui` | The UI sound category (see `lobby.md`); boot plays its effect 0xd2 (210). | Call argument |
 | 0x00489ca0 | `UI_Init` | Hides the cursor, loads the UI meshes, sets up the UI, calls `Dialup::Initialise`. | "Loaded %d UI meshes" |
-| 0x005989c0 | | **Unidentified.** Last call of boot init, before the first state is chosen. | Call order only |
+| 0x005989c0 | | The per-scene advisor reset (`scenes.md`, "The advisor"). Last call of boot init, before the first state is chosen. | Call order; `scenes.md` |
 | `DAT_0087906c` | | The current state. | State machine |
 | `DAT_00879068` | | Gate: the state machine runs once this is set, at the end of boot init. | State machine |
 | 0x0054df20 | `Intro_PlayBullfrogMovie` | Plays `Data\Movies\bf.tgq`. | Filename string |
@@ -150,7 +150,7 @@ Evidence is a Ghidra trace of `/testme.exe` throughout; the column names what in
 | `DAT_00877b58` | | That magic word, read across 0x00542000–0x0054b000. | Read sites |
 | 0x00543560 | | The save's **TRAK** module loader, inside that range. | Module tag |
 | 0x005516b0 | | The RSSE tick, every tick. | State 10 |
-| 0x00516380 | | The thing-list sweep that reaches the peeps. **Every 8th tick**, not every tick — it is mode-gated AND frequency-gated, as the prose below this table says. | 0054f6c3–0054f754, gate 0054f668 |
+| 0x00516380 | | The thing-list sweep that reaches the peeps. **Every 8th tick**, not every tick — it is mode-gated AND frequency-gated, as "Tick rates" above says. | 0054f6c3–0054f754, gate 0054f668 |
 | 0x0050b360 | | Called per thing by that sweep. | Loop body |
 | `DAT_00fb3b7c` | | Game mode: 0 normal park, 1 online, 2 Instant Action. | 0054f6c3–0054f754 |
 | 0x005166b0 | | Taken instead of 0x00516380 in mode 1, the online one. | Same branch |
@@ -158,7 +158,7 @@ Evidence is a Ghidra trace of `/testme.exe` throughout; the column names what in
 | 0x0055abf0 | | The flying cars, every 2nd tick — **not** the peep simulation. | 0054f5c0 |
 | 0x00475360 | | The sprite step, every 2nd tick, so 62 ms — exactly its own default interval. | 0054f5c0 |
 | `DAT_00877d34` | | The tick counter whose low bit gates the every-2nd pair. | `TEST AL,0x1` at 0054f5c0 |
-| 0x0055a470 | | Called from inside the every-8th gate (cleared by its `JNZ` at `0054f828`). The **"online"** half of the old "every 8th, online" claim is refuted; the **every-8th** half is verified — see the prose below, which keeps them apart. | 0054f828 |
+| 0x0055a470 | | Called from inside the every-8th gate (cleared by its `JNZ` at `0054f828`), so every 8th tick; not online-only. See "Tick rates" above. | 0054f828 |
 | `DAT_00879088` | | Leave-the-park reason: 1 → 0xd, 2 or 3 → 0xb, 3 quits. | State 10 |
-| 0x005996d0 | | Called (1) to stop the advisor. | State 0xe |
+| 0x005996d0 | `Advisor_StopQuietly` | Called (1) to stop the advisor with a fade; see `ui.md`. | State 0xe |
 | 0x005ac5f0 | | Runs with it in state 0xe. | State 0xe |

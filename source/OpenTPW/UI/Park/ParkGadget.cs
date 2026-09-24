@@ -492,8 +492,8 @@ internal sealed class ParkGadget : UiWindow
 		};
 
 	/// <summary>
-	/// One of the five buttons whose screen does not exist. It draws and lights and clicks like the
-	/// others and then says why nothing happened, which is what <see cref="ParkFrontEnd"/>'s menu does
+	/// A button whose screen does not exist - today only research's. It draws and lights and clicks like the
+	/// others and then says why nothing happened (not yet counted: docs/QUEUE.md Q69), which is what <see cref="ParkFrontEnd"/>'s menu does
 	/// for the choices it cannot answer. Leaving them out would misreport the gadget's shape, and
 	/// letting them look as though they had worked would be worse than either.
 	/// </summary>

@@ -9,8 +9,8 @@ namespace OpenTPW;
 /// number used to be a constant per scene, which was wrong in two ways at once. It had to be re-measured
 /// by hand after any change to what a scene loads, and - worse - <b>there are more situations than there
 /// were constants</b>. A scene built a second time in the same run costs far less than the first, because
-/// the caches already hold most of what it asks for: the lobby costs 829 cold and 404 again, a park 918
-/// and 758. Two constants cannot be right about four numbers, so two of them were always wrong.
+/// the caches already hold most of what it asks for - a rebuild costs roughly half a cold load. Two
+/// constants cannot be right about twice as many situations, so half of them were always wrong.
 /// </para>
 /// <para>
 /// So each situation keeps its own count here, and each is <b>whatever it measured last time</b>. A key
@@ -50,9 +50,9 @@ internal static class LoadStepCounts
 	/// first time in this run or again.
 	///
 	/// <para>
-	/// The two differ by more than half - a rebuilt lobby is 404 steps against a cold 829 - because
-	/// nothing releases what a scene loaded, so the second build of a scene finds most of its textures,
-	/// models and materials already in the caches and registers only what is genuinely new. Both routes
+	/// The two differ by more than half because shaders and textures are cached by path across scenes, so
+	/// the second build of a scene finds most of them already loaded and registers only its models, its
+	/// materials and what is genuinely new. Both routes
 	/// out of a park reach the second case: Exit To Lobby rebuilds the lobby, Restart Park rebuilds the
 	/// park.
 	/// </para>

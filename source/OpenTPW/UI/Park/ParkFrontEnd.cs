@@ -387,11 +387,10 @@ internal sealed class ParkFrontEnd : Panel
 	/// same call the lobby's front end makes as it stops, see <see cref="FrontEnd.OnDelete"/>.
 	///
 	/// <para>
-	/// <b>This is the crying stop, not the quiet one, and this comment said "quietly" until a review
-	/// caught it.</b> <see cref="Advisor.Hush"/> goes through Advisor_StopSpeaking (0x005994e0), which
+	/// <b>This is the crying stop, not the quiet one.</b> <see cref="Advisor.Hush"/> goes through Advisor_StopSpeaking (0x005994e0), which
 	/// cries out - one of samples 639 to 641 - whenever his voice was actually sounding. "Quietly" is a
-	/// term of art here for <see cref="Advisor.StopQuietly"/>, a different path, and the only thing that
-	/// takes it is the options screen. The cry is right rather than unfortunate: the original's own cry
+	/// term of art here for <see cref="Advisor.StopQuietly"/>, a different path, which the options screen and
+	/// the park map take. The cry is right rather than unfortunate: the original's own cry
 	/// at the end of a scene comes from its front end emptying the queue, which is this.
 	/// </para>
 	/// </summary>

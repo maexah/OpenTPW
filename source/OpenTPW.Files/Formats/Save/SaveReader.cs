@@ -55,10 +55,11 @@ public class SaveReader : BaseFormat
 			
 		File info
 			4 bytes: File type (00 01 22 19)
-			1 byte: File version (85)
+			1 byte: File version (0x85 = 133)
 			1 byte: Online flag (00 = offline save, 01 = upload.LAYS)
-			2 bytes: Padding
+			2 bytes: Padding (0x060A-0x060B)
 			If online flag set: 	Unknown data - 0x060C to 0x0846
+			1 byte: Padding (0x060C) - so BILZ is at 0x060D
 			
 		Data	
 			## ZLIB Header ##
@@ -70,7 +71,7 @@ public class SaveReader : BaseFormat
 			(the 28-byte header counts the tag, so it is 4 + 24, not 4 + 28)
 		*/
 
-		// Not a magic number, though this once called it one - it is a version, and the shipped
+		// Not a magic number - it is a version, and the shipped
 		// parks are not the version that was hard-coded here. data/levels/jungle/Easymode.TPWI
 		// carries 400; 500 is what a saved park is expected to carry, so both are allowed and
 		// anything else says what it actually found rather than printing bytes.
@@ -110,8 +111,8 @@ public class SaveReader : BaseFormat
 			throw new Exception( $"Magic number did not match: {dataMagicNumber}" );
 
 		// The two dwords after the tag are the size the payload INFLATES to and the size of this
-		// whole block including its 28-byte header - neither of them a compressed length, which is
-		// what one of them used to be called. On the shipped jungle park they read 1608309 and
+		// whole block including its 28-byte header - neither of them a compressed length. On the shipped
+		// jungle park they read 1608309 and
 		// 36930, and 1549 + 36930 is exactly the file's length.
 		var uncompressedSize = memoryStream.ReadInt32();
 		var blockSize = memoryStream.ReadInt32();

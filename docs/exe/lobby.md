@@ -15,9 +15,9 @@ a file under `data/`.
 
 | Address / value | Original name | What it is | Evidence |
 |---|---|---|---|
-| `0x0065fd58` | — | Walks a layout stream. Op `0` = control type/flags/id/rect, `1` = mesh by hash, `3` = text rect, `0x11` = UIHELPTEXT row, `5` = end | Ghidra `run_python` dumper over every call site |
-| `0x0065fd0e` | — | Loads a tree | Call sites of the stream walker |
-| `0x0047ed80` | — | Loads a tree as **modal**; adds a LOLIGHT dimmer | As above |
+| `0x0065fd58` | `UI_ParseTreeStream` | Walks a layout stream. Op `0` = control type/flags/id/rect, `1` = mesh by hash, `3` = text rect, `0x11` = UIHELPTEXT row, `5` = end | Ghidra `run_python` dumper over every call site |
+| `0x0065fd0e` | `UI_LoadTree` | Loads a tree | Call sites of the stream walker |
+| `0x0047ed80` | `UI_LoadModalTree` | Loads a tree as **modal**; adds a LOLIGHT dimmer | As above |
 | `0x753c68` | — | Tree: player slots | Dumped call site |
 | `0x753f50` | — | Tree: new player dialog | Dumped call site |
 | `0x74f920` | — | Tree: message box | Dumped call site |
@@ -29,8 +29,9 @@ a file under `data/`.
 | `h = (c ^ h) * 47` | — | Mesh-name hash, over the node name of the model's **first** mesh — e.g. `wdialogw`, `islandlob` | Reproduced against every ui.wad mesh name |
 
 `0x7581a0` is **not** a key count, and no second key counter should be built from it. The lobby has
-**at least seven trees, not five**; all three unbuilt ones belong to the online world, which is a
-permanent dead end.
+**at least seven trees, not five**. The two unbuilt ones, the globe's readout and panel, belong to the online world,
+which is a permanent dead end here; so may the root's unbuilt mail badge (see the Unsettled list under "The lobby's
+keys act on the release").
 
 ## Meshes and fonts
 
@@ -50,14 +51,14 @@ The mode is one global, and it is the reason this project loads only one park fi
 | `0x005c83b0` -> `0x00550d80` | SetGameType | Sets the mode. Its assert string "Invalid GameType in SetGameType" names it | Assert string in the binary |
 | `DAT_00fb3b7c` | — | The mode object's first dword — what every reader tests | Every call site reads this dword |
 | `0x004a6a50` | FrontEnd_ClosePlayerSlots | Closing the player slots. In Full Simulation a new player gets **1 golden key** here, by calling `PlayerProgress_AddKey`; in Instant Action it skips that call and queues response 394 in place of the advisor tour | Disassembly; Ghidra body `004a6a50-004a6b76` |
-| `0x005afc30` | PlayerProgress_AddKey | Adds the golden key. A four-byte body, so a thunk or stub onto the real routine. Called by `FrontEnd_ClosePlayerSlots`, and only in Full Simulation | Ghidra body `005afc30-005afc33`. **These two were recorded as one routine with "both entry points"; they are separate functions in a caller/callee relationship** |
+| `0x005afc30` | PlayerProgress_AddKey | Adds the golden key. A four-byte body, so a thunk or stub onto the real routine. Called by `FrontEnd_ClosePlayerSlots`, and only in Full Simulation | Ghidra body `005afc30-005afc33`. A separate function from `FrontEnd_ClosePlayerSlots`, which calls it |
 | `0x004b9340` | IslandPanel_Refresh | Refreshes the island panel | Disassembly |
 | `0x004b9840` | — | Hides the price (`0x1e0ea`) and the held key count (`0x1e0ec`) and **disables** both island arrows (`0x1e0f0`, `0x1e0f1`) — all four together, while the mode is 2 | Disassembly |
 | `0x0065da8d` | — | The enable/disable setter: puts flag **`0x2`** on the control at `+0x48` | Disassembly |
 | `0x00668820` | — | Part picker: draws **part 1**, the disabled part, for a control carrying `0x2` | Disassembly |
 | `0x0065d9dd` | UI_SetVisible | The hide. **Never a vtable entry** — so a virtual call at slot `+0x14` is always the enable, never the hide. That is how the two operations tell apart in a decompile | Vtable scan |
 | `0x005e1ee0`, `0x005e1f40` | — | The handlers behind the island arrows, **next** and **previous**. Both return having done nothing while the camera is leaving for a park (`[this+0x14]` non-zero, their first test), and unless the type is something other than 2 — see "The island keys wait for the fly-in" | Disassembly |
-| `0x005e1cc0` | — | Enter this park. In Instant Action it goes straight in without counting keys | Disassembly |
+| `0x005e1cc0` | `IslandLobby_EnterPark` | Enter this park. In Instant Action it goes straight in without counting keys | Disassembly |
 | `0x005e1fa0` | — | Puts the lobby back on an island. Called with `1` it selects the **first** island and forgets the remembered park; called with `0` it walks the list matching a name | Call sites |
 | — | global.sam | `Keys.CostToEnter` per park: jungle 1, hallow 1, fantasy 3, space 5 | Shipped `global.sam` |
 
@@ -99,9 +100,9 @@ screenshots centre the name. It is centred.
 | Address / value | Original name | What it is | Evidence |
 |---|---|---|---|
 | `0x00803a2c` | cat_ui | The UI sound category: effect 31 `BUTTON01`, 189 `Select3` on button clicks; 198 `goldkey` at the tour cue | Sound map |
-| `0x00485780` | — | UI_Init's click hook, which plays the above | Disassembly |
-| `0x005e1e30` | — | Enter park, affordable: panel hidden, globallobbysfx effect 4, particle 98 - neither for an Instant Action player (`0x004b8fd0` returns on game type 2, `0x004b9020`). Locked, Enter this park plays nothing itself; a click on its button still plays the UI click through the hook | Disassembly |
-| `0x005e1bd0` | — | Online world. Does nothing offline — a permanent dead end | Disassembly |
+| `0x00485780` | `UI_MessageHook_ClickSound` | UI_Init's click hook, which plays the above | Disassembly |
+| `0x005e1e30` | `IslandLobby_LeaveForPark` | Enter park, affordable: panel hidden, globallobbysfx effect 4, particle 98 - neither for an Instant Action player (`0x004b8fd0` returns on game type 2, `0x004b9020`). Locked, Enter this park plays nothing itself; a click on its button still plays the UI click through the hook | Disassembly |
+| `0x005e1bd0` | `IslandLobby_ViewOnlineWorld` | The island camera's `+0x20` deactivate, which the panel's View button (`0x1e0e9`) calls before the online-world child's `+0x1c`. Whether a connection test stands in front, and what the child shows offline, is not decoded (`docs/QUEUE.md` Q62) | Disassembly |
 
 Measured lobby mix: the goldkey click read back a gain of 0.090 = 0.484 x master 0.5 x duck 0.38.
 
@@ -113,17 +114,17 @@ BGRA palette).
 
 | Address / value | Original name | What it is | Evidence |
 |---|---|---|---|
-| `0x0051f370` | — | Loads `Tp2.plb`; its `PTCL:` strings name it | Strings + disassembly |
-| `FUN_00521e60` | — | Spawns a particle effect (not a sound call, as it was once read) | Disassembly |
+| `0x0051f370` | `Particles_LoadPlb` | Loads `Tp2.plb`; its `PTCL:` strings name it | Strings + disassembly |
+| `FUN_00521e60` | — | Spawns a particle effect | Disassembly |
 | `0x0051ef30` | Particles_Render | Draws the screen particles. **The only caller of Sprites_LookUp** | `get_xrefs_to` |
 | `0x0057c620` | SpriteBatch_DrawParticles | The batch draw, where the screen mapping is applied | Disassembly |
 | `0x005423a0` | Sprites_LookUp | Sprite set lookup, keyed `bank<<4 \| set` | Disassembly |
 | `0x00540d90` | SpriteBank_Load | Picks between a `.TPC` and the `.FPC` beside it from the ESP byte at `0x10C`. The selecting constants **read back EMPTY in Ghidra and are NOT identified** | Disassembly; attempted constant read |
 | `0x00582170` | — | Sprites are flushed here, after all UI models, at depth 0, LESSEQUAL, with no depth write | Disassembly |
-| `+0x14` | — | A particle's position within its record (an earlier note said `+0x10`; it is `+0x14`) | Field read in the step routine |
+| `+0x14` | — | A particle's position within its record | Field read in the step routine |
 | `0x0078d90e` | — | The glint gate byte = **Popup Help** (options case `0x1d4c3`, label UIStrings 327) | Options screen wiring |
-| `0x005ed920` | — | Spawns the button hover glints (effect 35) when that option is on | Disassembly |
-| `0x007858c8` | — | Particle density global. **Only ever read** — which detail preset the original starts on was not found | `get_xrefs_to`; `med.sam` has `GameOptions.PARTICLEDENSITY 1000` |
+| `0x005ed920` | `UIParticles_ButtonGlintStart` | Spawns the button hover glints (effect 35) when that option is on | Disassembly |
+| `0x007858c8` | — | Particle density global. **Only ever read**; the options start on medium (`0x00423690` writes quality 1 at `0x0042369f`), and how PARTICLEDENSITY from that preset's `.sam` reaches this global is not traced | `get_xrefs_to`; `med.sam` has `GameOptions.PARTICLEDENSITY 1000` |
 
 **Screen mapping** (from Particles_Render and SpriteBatch_DrawParticles): across
 `((x - 3125) * 16) / 49`, down `(z * 16 - 37500) / 37`, both `/1024` into -1..1; `size >> 6 / 2048`
@@ -155,12 +156,13 @@ linked, end and death spawns, and each window's effects are drawn right after th
 
 ### Decisions taken without proof
 
-Say so if asked: particle density comes from `med.sam`, since the original's starting detail preset
-was not found. On wide windows, effects pin like a control at their spawn x, spawned-by-effect
+Say so if asked: particle density comes from the detail file for the options' graphics quality (`low.sam`,
+`med.sam` or `high.sam`, read as a level loads), and that quality starts at medium, as `GameOptions_Construct`
+(`0x00423690`) sets it. On wide windows, effects pin like a control at their spawn x, spawned-by-effect
 inherit the pin, and glints take the button's anchor. Handles are never 0 (the original's first
 handle can be 0). Keys look near-white because the art is additive gold over a light sky.
 
-### World sprites (decoded, not built)
+### World sprites (decoded; the park's people are drawn, the rest is not built)
 
 Drawing effects **in the world** is a whole subsystem, not a variant of the screen path — nothing in
 it reaches `Sprites_LookUp`, whose only caller is `Particles_Render`.
@@ -171,13 +173,17 @@ it reaches `Sprites_LookUp`, whose only caller is `Particles_Render`.
 | `FUN_00475a10` | — | Allocates an instance | Disassembly |
 | `FUN_00475360` | — | Steps an instance | Disassembly |
 | `FUN_00475010` | — | Runs the instance's program: fetches `*(code **)(base + pc * 4)` and calls it — opcode **function pointers**, which is why a person record carries `mSpriteScript` | Disassembly |
-| `+0x88` / `+0x8c` / `+0x90` | — | World position, three floats, ten world units to a cell. `+0x8c` is an **offset above the ground**, not a height. (A thing's own `mX`/`mY` agrees to within a third of a unit and is still the better source, being what the park saved) | Field read; an earlier "no position" finding came from a scan that swept only cell-shaped values |
+| `+0x88` / `+0x8c` / `+0x90` | — | World position, three floats, ten world units to a cell. `+0x8c` is an **offset above the ground**, not a height. (A thing's own `mX`/`mY` agrees to within a third of a unit and is still the better source, being what the park saved) | Field read |
 | `+0xac` / `+0xb0` | — | Sprite kind and bank | Field reads |
 | `+0xb4` | — | **Not** a variant: a packed bank offset (high bits) and set (low four bits) | Field read |
 | `TPCS` | — | The save block world sprites persist in | Save reader |
 | `0x40` | — | Visibility byte on the world path | Disassembly |
 
-Also still unbuilt: advisor clip glints (channel 0, effects 49 and 44, flags `0x40000` / `0x20000`).
+OpenTPW draws the park's people this way (`ParkGuestSprites`, reading the save's `TPCS` table) and runs the four
+sprite-script ops their scripts use (`SpriteScript`). Litter, balloons, thought bubbles and the other fourteen ops
+are not built.
+
+Also still unbuilt, and not yet counted (`docs/QUEUE.md` Q69): advisor clip glints (channel 0, effects 49 and 44, flags `0x40000` / `0x20000`).
 `.TPC` and `.FPC` are **not** open questions — all 46 `.TPC` and all 29 `.FPC` files in
 `esprites.wad` are version 3 (second word 3); an `.FPC` and the `.TPC` beside it share a picture
 count and differ only in size.
@@ -233,17 +239,15 @@ before answering anything about "the gate cycling".
 
 ### The park gate — driven, not looped
 
-`ParkFixedItems` once loaded `gates` and `lights` as plain models and drove them with a model
-update, so the gate swung open and shut for ever with nothing having asked it to. Both are
-**scripted things in the original** — the archives ship `Gates.RSE` and `lights.RSE` beside the
+The gate and the lights are **scripted things in the original** — the archives ship `Gates.RSE` and `lights.RSE` beside the
 models — so their movement belongs to an animation player that a script triggers.
 
 | Address / value | Original name | What it is | Evidence |
 |---|---|---|---|
-| thing ids 11, 12 | `mParkGates`, `mTrafficLights` | The fixed items **do** carry thing ids, named by the save header itself (an earlier claim that they carry none was wrong) | Save header field names |
+| thing ids 11, 12 | `mParkGates`, `mTrafficLights` | The fixed items **do** carry thing ids, named by the save header itself | Save header field names |
 | `FUN_005156a0` | — | Finds the two **by name** among the item descriptions and builds each through the ordinary object constructor — the engine's own arrangement | Disassembly |
 | `FUN_00519ef0` | — | Opening or closing the park. **The only thing that ever writes `VAR_COMMAND`**, which `Gates.RSE` idles on | `get_xrefs_to` on the variable write |
-| `mParkClosed` 1 / 2 / 0 | — | **1 opens, 2 shuts, 0 clears.** Read off the **disassembly**: the decompiler renders those call sites with the wrong argument lists and yields a plausible, wrong "1 opens, 0 shuts" | Disassembly, against the decompile |
+| `VAR_COMMAND` 1 / 2 / 0 | — | What `FUN_00519ef0` writes to the gate's script: **1 opens, 2 shuts, 0 clears** (`mParkClosed` itself is 0 for an open park). Read off the **disassembly**: the decompiler renders those call sites with the wrong argument lists and yields a plausible, wrong "1 opens, 0 shuts" | Disassembly, against the decompile |
 
 The command variable is resolved **by the name the script itself declares**, and a write that lands
 nowhere is **reported as a miss** — because a command that goes nowhere looks exactly like a gate
@@ -261,9 +265,9 @@ shuts again if Escape cancels the flight after that. Both are the original's: th
 instance of its own (`island+8`), and the camera's state 1 plays its M1 on arrival (`0x005e06e4`) while the
 cancel plays its M2 (`0x005e18ab`). See "Escape cancels the fly-in, and the gate is the flight's" below.
 
-An earlier reading here said the original never animates this gate, from `IslandLobby_LeaveForPark` alone:
-its three steps - set the camera leaving, `IslandPanel_KeyPuffAndEnterSound`, and message **6** with 0 to the
-panel tree (`0x004b8ec0`), which hides the panel rather than destroying it - touch no gate. The clip is played
+`IslandLobby_LeaveForPark` itself touches no gate: its three steps are to set the camera leaving,
+`IslandPanel_KeyPuffAndEnterSound`, and message **6** with 0 to the panel tree (`0x004b8ec0`), which hides the panel
+rather than destroying it. The clip is played
 later, by the camera, when the homing arrives.
 
 **Not every gate is a rotation animation.** Measured across all four, not inferred from the jungle's
@@ -282,7 +286,7 @@ are never reached.
 
 The rest of the lobby's clips are still a stand-in: the Dino's and the butterflies' play on a loop
 because nothing sequences them yet (the original's isle clips are picked by the camera update's tail
-loop; see "Not sound").
+loop; see "Not sound"). That loop is not counted yet (`docs/QUEUE.md` Q69).
 
 ## The lobby camera has two modes, and both are built
 
@@ -315,7 +319,7 @@ The box is the lobby's own geometry: the four islands stand at 400 and 600 in X 
 
 ### Attract: fly the box, aim at the nearest island
 
-Per frame, with the lobby's delta (`0.01 × ms`, ten units a second — see `TicksPerSecond`):
+Per frame, with the lobby's delta (`0.01 × ms`, ten units a second — see `LobbyScript.TicksPerSecond`):
 
 1. Take `target − position`, normalise it (a zero vector becomes `(1,0,0)`), ease the **stored
    direction** toward it at `0.1 × delta`, and re-normalise.
@@ -374,7 +378,7 @@ is a derived class that overrides it.
 
 ### The derived vtable, found 2026-09-22 — and it is the park-entry animation
 
-**That derived vtable was previously recorded as "not found". It is at `0x00702ec0`**, and it was
+**The derived vtable is at `0x00702ec0`**, and it was
 located by searching for the pointer bytes of `IslandLobby_EnterPark` rather than by scanning for the
 base's update. Its slots:
 
@@ -461,8 +465,8 @@ below); the bracket keys, OpenTPW's own, on the press.
 Decoded 2026-09-23 for `docs/QUEUE.md` Q41: four decoders, each put to a refuter, every claim re-read in disassembly.
 
 **The route.** The lobby acts on Escape's **release** (`0x1000b`, key `0x1b`), never its press. The UI gives a key to one
-control only (`0x006698e6`): the focus if it is visible, else the last control any press reached - never an
-accelerator, whose one table (`0x0077c4b8`) is End, Home, Up and Down. So with the game menu open the key is the
+control only (`0x006698e6`): an accelerator's target, else the focus if it is visible, else the last control any
+press reached. Escape is never an accelerator, since the one table (`0x0077c4b8`) holds only End, Home, Up and Down. So with the game menu open the key is the
 menu's (`0x0048bd40` closes it; `MenuList_Show` took the focus, `0x00493197`), and with a message box open it is the
 box's (`UI_LoadModalTree` takes the focus, `0x0047ee67`), and neither reaches the lobby. Otherwise the lobby root's
 callback forwards it to `IslandLobby_OnKey` (`0x005e41c0`, g_FrontEnd's `+0x14`), which asks **every** active child's
@@ -620,7 +624,8 @@ every key itself - `FUN_0040c900` on the press, which only latches, and `FUN_004
 row's handler - and no other table; the game, camera, shortcuts, cheat and coaster tables are run only by a park's
 controls. Its live rows are `P` (pause, `0x0040bf70`, which does nothing in the lobby), Ctrl+H (Popup Help,
 `0x0040c5d0`), F8 (a screenshot, `0x0040c470`) and Ctrl+Shift+Alt+F8 (`0x0040c480`); boot rewrites the first two rows'
-keys from text strings 0x14 and 0xf. `FrontEnd_ShowPlayerSlots` switches every table off (`0x0040cfa0`) and
+keys from text strings 0x14 and 0xf. `FrontEnd_ShowPlayerSlots` switches five of the six tables off, all but `coaster` (`0x0040cfa0`; `park-engine.md`,
+"Keyboard bindings and the shortcut tables") and
 `FrontEnd_ClosePlayerSlots` back on (`0x0040cf60`). A message box closed over the slots can switch them on early:
 `MessageBox_Open` saves and restores the byte flag `[0x007c24d0]` (`0x0047f218`), which the slots never set.
 
@@ -631,7 +636,8 @@ switch of window is never let go, as far as the lobby knows.
 
 **Unsettled.**
 - A press made after a window opens or closes, before the pointer moves, goes to the old hover: a tree becomes the hover
-  only at the next move or `UI_SetVisible` (`0x0065bff4` runs before the control is linked). Not built.
+  only at the next move or `UI_SetVisible` (`0x0065bff4` runs before the control is linked). Not built, and not yet
+  counted (`docs/QUEUE.md` Q69).
 - Whether the game menu takes the pointer's capture, and so whether a press outside it could still reach the lobby's
   root. Here the menu is modal and takes every press.
 - Whether the mail badge `0xbf432` can show offline. `0x004bbbd0` hides it while `g_Players+0xc4`, a count, is 0; if it can
@@ -688,7 +694,7 @@ The engine end of that is the original's own: `Sound_PlayEffect( handle, categor
 really is positional, and the game delay-loads QMixer (QSound) for it. What the original never did was
 spend any of it in the **lobby**, which is why this is an improvement rather than a restoration.
 
-Measured by disk capture over 60 s of flying (`~/.cache/tpw-harnesses/lobbyaudio.py`), on the build
+Measured by disk capture over 60 s of flying (the `lobbyaudio.py` harness), on the build
 that shipped: **`sounding=4` on 17 of 20 readings** — the three dips to 3 are a voice inside its
 effect's repeat delay, visible as `bed=-` or `theme=-` in the same line — with **peak 0.2499
 (−12.0 dBFS)** and **rms 0.0280 (−31.0 dBFS)**, and **zero `placed=flat` while flying**. Four parks
@@ -716,11 +722,8 @@ The four park display names **are** in the shipped data, measured with OpenTPW's
 | `English/MBToUni.dat` | — | 506 bytes, count byte `0xf9` = **249** characters | Byte read |
 | `american/MBToUni.dat` | — | 504 bytes, count byte `0xf8` = **248**. They differ at byte 7, the count field read after `Seek(6)` — one fewer character shifts every index past it | Byte read |
 
-A code comment in the tree claims the displayed names are not in the shipped data at all, having
-searched all 312 WADs, the loose language files and the executable for them. **That comment is
-wrong**, for the index-not-text reason above; when touching the lobby island names, the front end's
-park name, or anything localisation-shaped, read `THEMENAMES.str` and delete or correct the comment,
-because left standing it will convince the next reader not to look.
+`LobbyIsland.DisplayNames` still holds the four displayed names by hand. `ParkFixedItems.ParkDisplayName` already
+reads them from `THEMENAMES.str` for the gate's sign; the lobby's table should read them the same way.
 
 **`BFSTReader` can only decode English.** Its lookup table is a **static** field initialised to
 `Language/English/MBToUni.dat` — fixed for the life of the process and hardcoded to English.
@@ -732,13 +735,13 @@ Two languages ship (English, american), **21 `.str` files each**. The localisati
 hardcodes `Language/English/UITEXT.str` and `UIHELPTEXT.str`. Making the lookup table per-language
 and non-static is the other half of the fix.
 
-**How to redo the measurement** (the harness was scratchpad-only and is gone; the technique is the
-durable part): make a throwaway console project referencing `OpenTPW.Files.dll` and
+**How to redo the measurement:** the local `strdump` harness does it (`CLAUDE.local.md`; it mounts the file system
+first, and `dotnet run` rebuilds it against the current tree). By hand: make a throwaway console project referencing `OpenTPW.Files.dll` and
 `OpenTPW.Common.dll` out of the build output, add an `AssemblyResolve` handler pointing at that same
 folder, then set the two statics the readers need before touching them —
 `OpenTPW.Common.GlobalNamespace.Log = new Logger()` and
 `.FileSystem = new BaseFileSystem( "<install>/data" )` — and construct
 `new StringFile( "Language/English/THEMENAMES.str" )`, reading `.Entries`. **The file system must be
-mounted first even if `StringFile` is handed a raw `Stream`**, because the reader resolves its lookup
-table in a *static* field initialiser; without it the probe dies in a type initialiser and looks
-like "the file is unreadable".
+mounted first even if `StringFile` is handed a raw `Stream`**, because the reader opens its lookup table
+(a static `Lazy<BFMUReader>`) through the global file system on the first string it decodes. Without it that first
+decode throws, which looks like "the file is unreadable".

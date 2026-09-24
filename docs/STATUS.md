@@ -41,20 +41,27 @@ from the repository, which cannot lag: `git log --oneline -1`.
   clock**, so a second ride in the same band is neither held up by it nor set off by its stop.
 - **A thing bought this session is a member of the running park**: it takes its turn, appears in every
   census, joins the object chain the original keeps live, and carries the entry and exit cells derived
-  from its own shape picture. See the top entry under Recent.
+  from its own shape picture. See `docs/QUEUE.md` Q1 and Q1b.
 
 ## Does not
 
-- No finances, litter, saving a park back, video, networking. Research is inert and has nothing behind it.
-- Eight of the nine per-object windows are unbuilt. Patrol areas are dead, deferred by Alexah.
+- No finances, litter, day ending, saving a park back, video, networking. Research is inert and has nothing behind
+  it. In a park the advisor says the gadget's opening line and nothing after it (`docs/PLAYER-GAPS.md` gap 4).
+- Eight of the nine per-object windows are unbuilt. Setting a staff member's patrol area is not built, deferred by
+  Alexah; staff keep to the areas the save gives them. A walking member of staff is not entered in the cells they
+  cross; only hiring and putting down place one.
 - A guest put off on cleared ground no neighbour connects to leaves only by going home; whether the original
   strands them too is not decoded (Q53). Leaving a queue any way but a sale costs no happiness (Q50).
 - A right press over a panel still cancels (Q56), and the park's Escape acts on the press, not the release (Q57).
-- Nothing shows a carried candidate, and any cell on the map takes one; the original's rule is decoded (Q40).
+- Nothing shows what the hand holds, a thing (`CARRY_PREVIEW_MARKERS`) or a candidate (`STAFF_CARRY_PREVIEW`), and
+  any cell on the map takes a candidate; the original's rule is decoded (Q40).
 - The fly-in's fade to black is not drawn (Q61). Escape over the player slots opens the game menu (Q64); Ctrl+H acts
   on its press and F8 is not built (Q65); a disabled button still takes the pointer (Q66).
-- The `meter.wct` mapping behind the happiness gauge is wrong - the last fault Alexah found by playing.
+- The happiness gauge draws wrong: two copies of the bar, split down the middle (`docs/PLAYER-GAPS.md` gap 5;
+  cause not yet measured).
 - Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
+- Guests may arrive eight times as often as the original's, and staff may idle for an eighth of its time: its timers
+  read the thing sweep, ours the 31 ms tick (Q68, Q82, decode first).
 - The VM charges `CRIT_LOCK` against a script's budget, so a section reached with one unit left runs over two turns,
   unlocked; the original runs it whole (Q45).
 - By a probe, not yet the game: the camcorder slips through a shut side at exactly 45 degrees, and is trapped at the
@@ -64,7 +71,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 `docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42 and Q44 are ticked.** Next is **Q45**: the VM
 charges `CRIT_LOCK` against a script's budget. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11
-Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67.
+Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, and the 2026-09-24 staleness
+audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review, section G from the lobby plan).
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -74,7 +82,6 @@ and is still untracked, so it exists on this machine only; Q13 moves it into `do
 - **The RIDER on a ride bought this session.** Measured five times over; not photographed, because the
   rider sits at z 10.3 against a 5.0 camcorder eye at pitch 0 and the console has no pitch argument.
 - `SpriteScript.ScheduleFrom` and `DropUnreadyNominee`: unwiring either leaves the suite green.
-- Nothing puts a staff member in a cell's occupancy list *as they walk*.
 - The critical-section cap trips only in a test: nothing the game ships can reach it (Q11).
 - The staff half of a sale: nobody in Lost Kingdom rests in the first minutes, so it is tested, not seen (Q36).
 - The Delete key's let-go and a sale's let-go of a candidate: tested, not run in the game (Q39).
@@ -95,25 +102,17 @@ Take counts fresh; these go stale within a day.
 
 ## Recent
 
-**2026-09-24 - A left park is let go of.** Branch `alexah/132-a-left-park-is-let-go`, `docs/QUEUE.md` Q44. The
-rides let go of `ParkRides.Current` as they are deleted, and the running state and the hiring pool go last of
-`Unload`, in the original's order: every thing, then the world with the pool in it. Confirmed against a control with
-the three clears out: in the lobby after the jungle, `parks` read `#1 jungle collected; its staff pool collected`,
-where the control read it held by `state rides`. Filed Q67.
+**2026-09-24 - The docs and memory audited for staleness.** Branch `alexah/133-audit-docs-and-memory`. Thirty-two agents
+read every memory file, both CLAUDE files and every page under `docs/` against the code, and each finding was put to a
+verifier. The memory folder went from eighteen files to eight, each under 300 lines; its open work became queue items
+and its decisions `docs/DECISIONS.md`. `VERIFYING.md` rule 91 was re-measured in the game and rewritten: a paused game
+still presents.
 
-**Earlier items, kept now only in the git log.** `alexah/131` made the lobby's keys act on the release, and Enter
-enter the park (Q42, filing Q64-Q66); `130` let Escape cancel the fly-in (Q41, filing Q61-Q63);
-`129` let the hand go the original's ways (Q39, filing Q56-Q60); `128` let a sold thing's riders, queuers and resting
-staff go (Q36, filing Q50-Q55); `126` made four hollow tests fail with their fixes reverted (Q12, filing Q47-Q49);
-`125` landed the small fixes and capped a looping critical section (Q11, filing Q45-Q46); `124` let the camcorder
-forget a left park's save (Q10, filing Q44); `123` gave each ride's screams their own clock (Q9, filing Q43); `122`
-made the island keys wait for the fly-in (Q8, filing Q41-Q42); `121` emptied the hand as a park is left (Q7); `120`
-kept a refused staff drop's candidate on the cursor (Q6, filing Q40); `119` kept a moved thing in the hand until a
-cell takes it (Q5, filing Q39); `118` made a sold thing take its script down and leave bare ground (Q4, filing
-Q36-Q38); `115` made a placed ride lay its queue's first cell and hand the player the queue tool there, fixing the
-`Info.Shape` alphabet (Q3), and `116` made its squares wave; `117` picked up the path tool from the park, with
-Backspace (Q35); `114` let a player build a queue that joins the paths around it; `110` made a thing the save placed
-clickable anywhere on its footprint; `109` made a thing bought this session join the park (Q1, Q1b - the rider is
-still not photographed); `112` decoded what authors an entrance's queue link.
+**Earlier items.** Each ticked item's whole account is its entry in `docs/QUEUE.md`: `alexah/132` (Q44, a left park
+let go of), `131` (Q42), `130` (Q41), `129` (Q39), `128` (Q36), `126` (Q12), `125` (Q11), `124` (Q10), `123` (Q9), `122`
+(Q8), `121` (Q7), `120` (Q6), `119` (Q5), `118` (Q4), `115`-`116` (Q3), `117` (Q35), `109` (Q1, Q1b - the rider is
+still not photographed).
+Before them, `114` let a player build a queue that joins the paths around it, `110` made a thing the save placed
+clickable anywhere on its footprint, and `112` decoded what authors an entrance's queue link.
 
 Everything older is the git log.

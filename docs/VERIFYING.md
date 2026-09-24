@@ -7,8 +7,8 @@ cite them by number ("see rule 75"). Read the group that matches your symptom, n
 
 **What this file records about itself.** At least four of these lessons were written down and then
 broken anyway — twice by the person who had just written them. Rule 5 recurred the same day it was
-recorded; rule 10's swallowed exit code was repeated inside rule 38 with the note "which is already on
-this list and I did it anyway"; rule 81's counting shortcut was taken again with rule 81 already on the
+recorded; rule 10's swallowed exit code was repeated in the incident that produced rule 38, with the note "which is
+already on this list and I did it anyway"; rule 81's counting shortcut was taken again with rule 81 already on the
 page; rule 75 recurred as rule 84, four more times, two of them the same afternoon. **Prose did not stop
 any of them.** The lessons that stopped recurring became mechanisms — a test that fails the suite, a
 `default` case that records the unhandled value, a runtime report that says so on the console. If you
@@ -25,6 +25,10 @@ The ones that have bitten more than once.
 - **75** — coverage is decided by fixtures as much as by assertions.
 - **81** — a check whose alphabet is also the content's syntax will invent defects.
 - **84** — a test that a state was reached says nothing about whether anything happens in it.
+- **88** — a debug command that looks like a query can be a setter; read the handler before polling.
+- **99** — a region's statistics can survive a plainly wrong picture; pair them with a number the game reports.
+- **103** — never segment a statistic by the quantity under test; the verdict inverts.
+- **113** — a test step that can run without a build tests the previous build; check the build's exit code.
 
 ## Before you trust a measurement
 
@@ -97,6 +101,106 @@ The ones that have bitten more than once.
   explicitly instead of letting a settle land where it likes. A difference that rises and then falls, or
   that sits no higher than a control taken elsewhere in the frame, is usually the scene and not the
   subject.
+- **90** — **Measure the CONTROL FLOOR before quoting any pixel percentage.** Two frames of a running park
+  with *nothing done between them* differ by **2.54–2.60%**: guests walk, flags move, water animates. A
+  whole-frame percentage below that floor is not weak evidence, it is *no* evidence — and a session was
+  spent treating 1.42%, 1.04% and 0.15% as results when all three were smaller than doing nothing at all.
+  Shoot a before/before pair first, then a before/after pair, and report both. Above the floor, a scalar
+  still cannot say *what* changed: build a DIFFERENCE IMAGE and look at the SHAPE. Ten path cells are a
+  connected block; a guest is a scattered blob. Shape discriminates where a number cannot.
+- **93** — **Check a threshold against the region's REACHABLE maximum before believing a failure.** A
+  control that is transparent by design can only ever change the fraction of its rectangle its drawn
+  parts cover. The entry-price spinner is 424x173 and its frame mesh resolved to nothing, so only two
+  60x61 buttons and a short number ever painted: 17,633 of 73,352 square units, a **ceiling of 24.0%**.
+  It was judged against a 20% threshold — a bar just under its own ceiling — and "failed" twice at
+  12.2% while the buttons inside it were changing **92.0%** and **93.6%** against a 0.0% floor. Compute
+  what the region *can* do before deciding what it *did*, and judge a mostly-empty control BY ITS PARTS.
+- **95** — **Every numeric check can pass while the display is wrong. Look at the picture, every
+  time.** Four defects in one session cleared every region check, every gap counter and a green suite:
+  a column heading 160px clear of its column; a tab strip that vanished with the list it hung off,
+  stranding the screen; a kind-to-label table transposed, drawing guards under "Entertainers'
+  Happiness"; and a list rebuilt every frame. The measurements were all real and all beside the point —
+  each was caught by opening the screenshot. A region check proves *something changed there*; only the
+  image proves it is the right thing. Budget for looking, not just for measuring.
+- **99** — **A region's mean and variance can be identical while the texture on it is plainly
+  wrong.** The lobby sea drawn with mirrored addressing instead of wrapping is a **diamond lattice**
+  where it should be parallel ripples — unmistakable at a glance, across half the screen — and the
+  crop's statistics barely moved: mean 55.69 → 55.62, variance 221.83 → 222.79, under half a
+  percent. Mirroring rearranges *where* the same texels land without changing *which* texels they
+  are, so every summary statistic survives it intact. This is rule 90's "shape, not scalar" in its
+  purest form: a verdict resting on those percentages would have reported "no change" for the
+  defect it was built to find. **Pair the picture with a number the game reports about itself** —
+  here `water: path '…' requested Wrap sampler AnisotropicRepeat`, which does discriminate, where nothing
+  computed from the pixels did.
+- **100** — **A threshold taken from each run's own distribution cannot compare two runs.** Comparing a
+  looped scream against a replayed one, the harness cut at "this window's 35th percentile plus 6 dB" —
+  a sensible floor for *one* recording and worthless across two. It landed at **−29.95 dBFS** for the
+  control and **−69.17 dBFS** for the subject, 39 dB apart, so the duty cycles, burst counts and gap
+  medians computed from them were three confident numbers measuring two different things: it reported
+  "155 onsets against 47" and "median gap 0.30 s against 1.30 s", which reads exactly like a result.
+  The same two captures against **fixed** thresholds answered cleanly — sounding above −60 dBFS, 93.3%
+  against 52.4%, and a 10th percentile of −55.1 dBFS against −180.0, the latter being true digital
+  silence. **An adaptive threshold is an instrument that re-calibrates itself to whatever it is shown**,
+  which is the one thing a control exists to prevent. This is rule 5's saturating measure wearing a
+  percentile. Note also what the census did instead: `plays 1` against `plays 8` needed no threshold.
+- **103** — **A derived statistic must not be segmented by the very quantity under test, or the verdict
+  inverts.** Measuring whether a guest's drawn position slides between simulation steps, I split the run
+  into thing ticks by watching the interpolation fraction wrap from high to low. That works perfectly on
+  the interpolating build and is meaningless on the control, whose fraction never moves: the wrap never
+  fires, the whole run collapses into **one** segment, and "distinct positions within one tick" comes
+  back as the whole-run figure — about seventy — against the good build's thirty-one. **The broken build
+  would have scored twenty times better than the fixed one**, from a harness that was correct on the
+  build I happened to write it against. Segment by something the change cannot touch: here the tick's own
+  248 ms period, taken off the timestamps, which needs nothing the subject prints. The tell to look for is
+  a control whose score is *higher* than the treatment's on a metric that should floor it.
+- **106** — **A before/after on the thing you CHANGED cannot see something else going missing.** A park's
+  things were replaying the clip that builds them. The fix was verified by watching one ride across a
+  load — "role 0 never appears" — before and after, with the number predicted first and then confirmed.
+  It was also a net regression: **ten of the fourteen placed things stopped animating at all, for good**,
+  and the single ride that was watched happened to be among the four that survived. The instrument was
+  sound, the control was real, and the prediction was right. **The population was wrong.** The tell was
+  there to be read in the change's own justification: the mechanism being altered — how every script
+  resumes — applied to every script, while the measurement named one ride, so the scope of the claim and
+  the scope of the evidence never matched and only the narrower one was checked. **Before believing a
+  before/after, ask what else runs through the code being changed and measure THAT set.** Where the game
+  can census a whole population as cheaply as one member — every thing, not the thing in question —
+  census all of it; the run costs the same either way. This is rule 85's "a census that showed only the
+  survivors" one level up: there the instrument did the filtering, here the author did. And the other
+  half of it: the regression was found by an adversarial review rather than by the verification, because
+  a check the author designs inherits the author's blind spot about where to point it.
+- **109** — **Sampling faster than the thing you measure turns frame pacing into a rate, and storing
+  only your derived statistic means you cannot go back.** Measuring how fast a camera turns, a harness
+  polled a pure getter as fast as it could — about 144 Hz — and differenced each reply against the one
+  before. Consecutive polls either land in the same frame, giving an angle of nought that drags every
+  median down, or straddle one, in which case a whole frame's turning is divided by a 7 ms gap. Its
+  headline, "max 143.12 degrees a second", is exactly **1.0 degree in one 7 ms sample**: an artefact of
+  the sampling interval wearing the units of the subject. **Difference over a fixed window** (100 ms
+  here) so the denominator is yours and not the scheduler's, and deduplicate repeated readings before
+  any statistic. The second half cost a whole extra run: the harness wrote only the rate it had
+  computed, so when the computation proved aliased there was nothing to re-analyse. **Write the raw
+  samples to a file as well as the summary** — they are small, and the question you will want to ask of
+  them is not the one you built the harness for.
+- **110** — **The start of a run is not an event, and counting it as one can invert the verdict.** Asked
+  whether a camera swings when it changes which island it looks at, a harness bucketed every sample by
+  whether it fell within 1.5 s of a change. The **first** sample necessarily "changes" island — there
+  was no previous value — so the run's own settling landed squarely in the treatment bucket, and **20
+  of 20** of the fastest turns were inside the first 5 s. It reported near-a-change 13.48 against
+  away 10.18 and a maximum of 143 against 48: a swing, confidently. Discarding a warm-up reversed it —
+  6.66 against 8.99, with the treatment now *quieter* than the control. **Discard a warm-up before
+  anything is measured, and ignore transitions inside it**, because the first observation of any state
+  is a transition from nothing. This is rule 103's shape again: the segmentation, not the subject,
+  produced the result.
+- **119** — **Whether something is still in memory is the collector's to say, and a root list read from the
+  code misses links through a base class.** Q10 asked which statics keep a left park's save alive. Of four
+  readings of the code, two said `ParkRides.Current` reached no save, since it has no `ParkWorld` field. The
+  other two found that it does: every `Entity` keeps the `Level` it was made in, so any never-cleared static
+  of an entity type holds a whole level. **Measure it first:** hold the object in a `WeakReference`, force a full
+  blocking collection, ask whether it is alive, and only then name the roots as the explanation. Print
+  "nothing named" when it is alive and no root you know of holds it. In a test, make the object in a
+  non-inlined helper, because a debug build keeps a method's locals alive until the method returns.
+- **123** — **A warning diff keyed on file, line and code reads a line shift as defects.** Inserting 12 lines into
+  `Texture.cs` gave five "new" and five "gone" warnings that were the same five at +4 lines. Compare the per-code
+  multiset (the count of each `warning CSxxxx`) as well, which a shift cannot fool, and never the total (rule 45).
 
 ## Before you believe an absence
 
@@ -135,16 +239,16 @@ The ones that have bitten more than once.
   and for anything load-bearing, read it out of the file the program came from**, which needs no analysis
   tool and so cannot share a bug with one. A negative from a single reader is rule 33's "statement about the
   instrument's reach" even when the reader phrases it as a fact about the data.
-- **103** — **A derived statistic must not be segmented by the very quantity under test, or the verdict
-  inverts.** Measuring whether a guest's drawn position slides between simulation steps, I split the run
-  into thing ticks by watching the interpolation fraction wrap from high to low. That works perfectly on
-  the interpolating build and is meaningless on the control, whose fraction never moves: the wrap never
-  fires, the whole run collapses into **one** segment, and "distinct positions within one tick" comes
-  back as the whole-run figure — about seventy — against the good build's thirty-one. **The broken build
-  would have scored twenty times better than the fixed one**, from a harness that was correct on the
-  build I happened to write it against. Segment by something the change cannot touch: here the tick's own
-  248 ms period, taken off the timestamps, which needs nothing the subject prints. The tell to look for is
-  a control whose score is *higher* than the treatment's on a metric that should floor it.
+- **105** — **A four-character tag compared as a dword is stored BACKWARDS, so searching for it the right
+  way round finds nothing and reads as proof the thing is absent.** Looking for the seventeen module tags
+  in a park save's inflated payload, a search for `WRLD`, `GSYS`, `RSYS` and the rest returned **not found
+  for sixteen of seventeen**, with the one hit being unrelated. The natural reading — "this file is not
+  written by that code path at all" — was wrong and would have redirected the whole task. The executable
+  compares a 4-byte read against a constant like `0x57524c44`, so the bytes on disk spell `DLRW`; searched
+  reversed, **all seventeen** appeared, in the exact order the code reads them. This is rule 17's "say what
+  you measured, not what it means" applied to endianness: a dword constant in a decompiler listing is not
+  a byte string, and one of the two orders is a fact about the file while the other is a fact about how the
+  constant was printed. Check both orders before recording an absence.
 
 ## Controls and mutations
 
@@ -160,7 +264,6 @@ The ones that have bitten more than once.
   > This is worse than a weak test — it did not fail to find a bug, it *manufactured* one, and a zero
   > difference reads as a confident negative. Read the console's reply; work the crop out the way the
   > interface **anchors**; make the fixed probe report INCONCLUSIVE when the thing that must change did not.
-
 - **9** — Pinning a variable only helps if it is the variable that moved: when a control fails twice,
   suspect the predicate, not the threshold, and grep your own source for the confound — it is often already
   written down in a comment you read that session. An unexplained extreme (0.00 or 100.00) must be
@@ -186,6 +289,67 @@ The ones that have bitten more than once.
 - **77** — To classify an unknown, put it beside one case that certainly DOES and one that certainly does
   NOT, and read all three together. Pick the controls BEFORE looking at the unknown, so they cannot be
   chosen to fit the answer you want; a single listing invites you to read your hypothesis into it.
+- **92** — **Aim at the built park, and photograph something already there first.** Ten new cells out on
+  empty terrain at zoom 80 are a few pixels near the horizon, which is what several "nothing rendered"
+  captures were actually showing. Before concluding a feature does not draw, take a CONTROL SHOT of
+  something known to exist — the shipped avenue at cell (47,21) renders the gate, the rides, the guests and
+  the river. If the control is missing, the harness is at fault; if the control is there and the new thing
+  is not, only then is it the feature. Nine explanations were offered before that one-frame control was
+  tried, and every one of them was wrong.
+- **97** — **A control window can land inside a genuine silence of the subject, and that is a reading,
+  not a broken instrument.** A park's music is *replayed, not looped* — about 8.5 s of arrangement then
+  a ten-second wait — so a park's mix is digitally silent for more than half of every cycle. A 3 s
+  music-only floor fell in a gap and read −999 dBFS, which is indistinguishable from an audio device
+  that never opened. Span the subject's own duty cycle before calling a window representative, and ask
+  what the subject does *between* its events, not only during them. **And when the floor cannot be
+  measured, the comparison is INCONCLUSIVE — never a direction.** With `floor = None` a harness of mine
+  fell through to "the mix DROPPED" on +0.70 dB, manufacturing a result from a missing control; the
+  same run's real answer was "no change". Make the no-floor branch say so explicitly, because the
+  default branch will otherwise say something confident.
+- **104** — **A control can fire because its EXPECTED value is wrong, and "the control failed" is then the
+  wrong conclusion to draw from it.** Reading a saved script struct, the alignment was checked against the
+  speed word, which every shipped `.RSE` carries as 50. Thirteen of the fourteen records read 50 and one
+  read **60**, and the honest-looking conclusion — "the control fails, so the alignment is wrong, so the
+  program counter I just read is noise" — would have thrown away a correct decode. The 60 was real: 50 is
+  what the *loader* writes, and the engine pushes an object's own operating speed over it
+  (`FUN_0055a300`), and that object's `mOperatingSpeed` was independently measured at 60. **Before
+  believing a control, ask what WRITES the field it reads** — a field with more than one writer cannot
+  have one expected value. What actually settled the alignment was a second control with only one
+  possible answer: the struct's length field equalled the body block's own word count for all fourteen.
+  The lesson is rule 12's, one turn further on: a control that fires is a reason to check the control,
+  and checking it means checking its expectation, not just its arithmetic.
+- **114** — **A mutation is only tested by a test that calls the mutated code.** Keying a footprint's
+  owner on the wrong corner survived the whole suite twice. The diagnosis was right the first time - no
+  test built a *turned* thing, where anchor and corner differ - but the fix was to add a turned case to a
+  file whose own helper *rebuilt* the stamping logic instead of calling `ParkBuilding.Stamp`, so the
+  mutation stayed invisible and survived a second time. **Before adding a test to kill a mutation, name
+  the function the mutation edits and check the test reaches it**; a fixture that re-derives the subject
+  proves the fixture. Making the real function internal, the way `ParkPicking.ThingOn` already is, is
+  what closed it - and it immediately exposed a second defect in the same shape, in the sell path.
+- **116** — **A mutation harness that restores the SOURCE leaves the last mutation's BINARY on disk,
+  and the next run of the game silently tests it.** Rule 113 says check the build's exit code before
+  believing a number below it; this is its other half, and it bit on the very next task. A harness put
+  four mutations through build-test-restore, ending with one that disabled a new click handler, and its
+  `finally` copied the file back without rebuilding. The game harness run minutes later drove a binary
+  in which that handler did not exist, so the feature reported as not working - and every other part of
+  the same run was valid, which is what made it convincing. **Rebuild after the final restore, inside
+  the harness**, and have it print the md5 of the built assembly as well as of the sources; better, make
+  the game harness refuse to start unless the build is newer than every source file it cares about. A
+  restored working tree is not a restored program.
+- **118** — **A change to what a scene LOADS shows up as a within-run `save/` change the first time,
+  and that is the loading bar, not damage.** The bar learns each situation's step count into
+  `save/opentpw.cfg`; a park that starts loading four more textures takes more steps, so the first run
+  after the change rewrites that file as the park loads - inside the run, which is the one place a
+  checksum difference is supposed to mean something. **Name the file that changed before calling it
+  either way**, and re-run: the second run of the same build must be unchanged, and it was.
+- **121** — **To prove a build is fresh, look at the file the test will load, not at the test assembly.** Q44's
+  mutation harness refused every result as stale, rightly by its own rule and wrongly in fact: it watched
+  `OpenTPW.Tests.dll`, and in an incremental build (`dotnet build` without `--no-incremental`, as a mutation
+  harness runs it) a change to a method body in `OpenTPW` rebuilds only `OpenTPW`, whose copy beside the tests
+  (`OpenTPW.Tests/bin/.../OpenTPW.dll`) is what moves - the test assembly is not recompiled, because the reference
+  assembly it compiles against did not change. `--no-incremental` rebuilds every project, so there the test
+  assembly moves too and proves nothing. Watch the copy under either build. The guard failed safe, which is the
+  point of having one; a guard watching the wrong file the other way round would have passed stale results.
 
 ## Predictions
 
@@ -244,18 +408,22 @@ The ones that have bitten more than once.
   offset is not a search key — constrain the shape (array, stride, region, instruction class) and always
   plant a known-answer control in the same query.
 
-  > The memory files mark live claims with `>>>` and `<<<`, and the documented check is to **walk** the
+  > The memory files then marked live claims with `>>>` and `<<<` (CLAUDE.md has since retired the markers), and the documented check was to **walk** the
   > markers and pair them. Counting them per file instead flagged a file as unbalanced: the "stray" was
   > `List<Func<string, IEnumerable<string>>>` — three closing angle brackets of nested C# generics. The file
   > was fine and had not been touched. Taking the same shortcut again later flagged three files, of which
   > walking cleared two — one's "stray" being the paragraph that **quotes** the markers. The pairing walk is
   > ten lines of Python and one call; the counting version cannot tell a marker from `IEnumerable<string>>>`
   > and never will. When a health check flags a file you did not touch, suspect the instrument.
-
 - **83** — A folder is not a corpus. Name the enumeration's boundary inside the claim itself ("of the
   scripts in `rides/`"), because a scoped claim later read as universal is indistinguishable from a wrong
   one — and when a corpus is small enough to sweep whole, sweep it whole. Two themes may ship the same
   filename with different contents.
+- **122** — **An exclusion filter must not run over prose.** Checking that `OPENTPW_SYSTEM_SDL` was named the same
+  in code and docs, a pipeline ended `| grep -v "/obj/" | grep -v "/bin/"`, and the README line documenting the
+  variable reads `dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll`: the build-artefact filter dropped a real
+  match for *mentioning* a build path, and the README looked half-written when it was complete. Filter by path
+  (`--exclude-dir`), never by a substring of the matched line. Rule 63's other face.
 
 ## Decoding a struct, an offset or a format
 
@@ -360,15 +528,14 @@ The ones that have bitten more than once.
 
   > A ride arm shipped green and did not work at all: the behaviour switch had **no case** for the new
   > state, so a guest who chose a ride stood where they decided, playing a walk animation, for ever. It was
-  > invisible for a precise reason — every behaviour test in the tree builds the behaviour through its
-  > two-fact constructor, which constructs the chooser with a **null park**. With no park the chooser can
+  > invisible for a precise reason — every behaviour test in the tree then built the behaviour through its
+  > two-fact constructor, which constructed the chooser with a **null park**. With no park the chooser can
   > never return a candidate, so the ride arm never fired in a single test. The arm was unreachable from the
   > entire suite, so its absence could not fail anything, and a stale comment in the same file said the ride
   > "cannot be taken yet" — true only because of that same blindness. **Coverage is decided by fixtures as
   > much as by assertions.** Before trusting green, name the exact construction path that reaches the new
   > code and confirm one test takes it; have that test assert the state is **LEFT**, not merely entered. Where
   > the existing fixtures cannot reach it, build the real thing rather than widening an old assertion.
-
 - **84** — After ANY new state, arm or enum branch, diff what is SET against what is HANDLED.
 
   > A behaviour switch declared more states than it handled, and the unhandled ones froze a guest where they
@@ -380,6 +547,27 @@ The ones that have bitten more than once.
   > TEST, so the next one fails the suite instead of waiting for someone to play. When a switch has no
   > top-level `default`, an unhandled value is silent by construction — no log, no throw, nothing to notice —
   > which is why it survives a green suite indefinitely.
+- **113** — **A test step that can run without a build will happily test the previous build.**
+  `dotnet test --no-build` runs the assembly already on disk, so a compile error does not fail the run -
+  it hands back the last good build's numbers. A mutation harness that built with `capture_output=True`
+  and never read the exit code reported an identical clean **894 passed** four times over, against a
+  binary that predated every edit in the turn, and each one read exactly like a mutation surviving. The
+  only thing that caught it was the build line printed above the results. **Check the build's exit code
+  before believing any number below it, and make the harness refuse to return a verdict when the build
+  failed** - a fabricated survival is worse than no measurement, because it gets written down as
+  evidence that a fix rests on nothing.
+- **117** — **A count quoted from someone else's measurement names THEIR population, not your test's.**
+  A decode reported that its reading predicted "all fourteen" of the shipped save's placed objects, and
+  a test was written predicting fourteen. It compared eleven: the decoder had walked every object record,
+  and the test walked the ones the buy catalogue describes, which leaves out the bus, the gates and the
+  lights. Every compared object matched, so the reading was right and the prediction was not. **Before
+  writing a number you did not measure into an assertion, say what was counted and check your loop
+  counts the same thing** - and when the two disagree, find the difference before changing either.
+- **120** — **A test stepped at one frame rate cannot tell a rate taken per second from one taken per
+  frame.** Q12 stepped the lobby's leave sequence with `Time.Delta` at 1/60 and pinned every count exactly,
+  and `HomingRate * Time.Delta` rewritten as `HomingRate / 60f` still passed: at that one rate the two are
+  the same number. **Step it at a second rate** with its own predicted counts - 30 a second was enough, and
+  the mutation then failed that row only. The same holds for any `Time.SmoothingFactor` ease a test drives.
 
 ## Shell and harness traps
 
@@ -394,6 +582,12 @@ The ones that have bitten more than once.
   `set -e` to enforce a precondition. `git add` is all-or-nothing across its pathspecs, so one stale path
   stages **none** of them — exactly what a rename produces. Make the label and the predicate the same thing,
   and when a check fires, suspect the check before the file.
+- **88** — **An instrument that writes as well as reads measures your own interference.** A debug command
+  that looks like a query can be a setter: OpenTPW's `island` runs `DebugSelect( (int)Argument( 1 ) )` and
+  that argument falls back to **0**, so polling a bare `island` every couple of seconds to see which island
+  was current would have *selected* island 0 each time and then reported what it had just set. Read the
+  handler before polling anything in a loop; prefer a line the subject logs for itself, which cannot
+  perturb it; and where a getter and a setter share a name, assume the setter.
 - **89** — **A behaviour change can delete the instrument you verify with, and the loss looks like the
   feature being dead.** The lobby's `Lobby audio:` line was the passive observable the attract camera was
   proved with — 2 island changes in 60s, 7 in 180s. Making all four parks sound at once moved that log
@@ -402,12 +596,86 @@ The ones that have bitten more than once.
   changing code, ask what you last verified it with and whether this edit silences it. Prefer an
   observable the subject cannot switch off — a pure getter on the console, a counter in a state reply —
   over a log line emitted from the branch you are editing.
-- **88** — **An instrument that writes as well as reads measures your own interference.** A debug command
-  that looks like a query can be a setter: OpenTPW's `island` runs `DebugSelect( (int)Argument( 1 ) )` and
-  that argument falls back to **0**, so polling a bare `island` every couple of seconds to see which island
-  was current would have *selected* island 0 each time and then reported what it had just set. Read the
-  handler before polling anything in a loop; prefer a line the subject logs for itself, which cannot
-  perturb it; and where a getter and a setter share a name, assume the setter.
+- **91** — **Under `pause` nothing eased on `Time.Delta` moves, so a paused grab can show the picture from
+  before the work.** The console reports the new state at once and the frame is plausible, not black, which
+  is what makes it dangerous; a "wait until two consecutive grabs agree" check passes instantly on it,
+  because a paused frame is repeatable. The game does keep presenting: measured 2026-09-24
+  (the `pausepresent.py` harness), two paused frames differ by a mean of 0.07 of 255, and F2 hides
+  the HUD in the next paused grab, before and after a spent `step 5`. So `pause` is right for a repeatable
+  frame of a state that is already there; step or resume before grabbing a camera move, a walk or an
+  animation.
+- **94** — **Drain the reply queue before reading a reply.** A harness that pumps output into a queue
+  and then searches it for the next matching line will happily hand back a reply to an EARLIER command.
+  This reported `click: the interface took (727,113)` for a click sent to `(100,609)` — coordinates
+  never sent, from a tab click five steps earlier — which reads exactly like a button being missed. The
+  button had worked. Flush, then send, then wait.
+- **96** — **`pkill -f PATTERN` kills the shell running it** whenever the pattern appears in that
+  shell's own command line. `pkill -f "OpenTPW.dll"` inside a script that mentions `OpenTPW.dll`
+  matched itself and died at its first line, taking the mutation check with it — and an earlier
+  `pgrep -af "OpenTPW.dll"` had reported "game still alive" about *itself*, which is the same trap
+  reading as evidence. Match on the executable instead (`pgrep -x dotnet`), so the pattern cannot
+  describe the shell. Generally: **any process query whose pattern is also in your own command line
+  is self-referential**, and it fails in the direction of looking like a result.
+- **98** — **A debug selector can be read by a branch the subject never takes, and its reply will
+  still say it worked.** With nobody playing, `LobbyCameraMode.Update` returns early into
+  `Attract()` — a wander seeded from `RandomPointInBox`, and reseeded on *every* lobby build because
+  `ForgetIsland` clears `_wandering`. `island`, `orbit` and `settle` are read only by the orbit
+  branch that early return never reaches. So a harness that carefully pinned the camera photographed
+  two quite different viewpoints, and the console answered `island 0 'Lost Kingdom'` **both times** —
+  the reply echoes the selection, not where the camera is, which is rule 88's shape again. Two
+  lobbies in one run cannot be compared at all until the orbit branch is forced. **Assert the state
+  the subject actually uses, not the one you set**: `state` reports `cam=`, and an identical
+  `cam=452,353,32` in both shots is what finally made the frames comparable. Note also that a
+  recipe can go stale without anyone touching it — `lobbyshot.py`'s `pause → island → settle` dates
+  from before the attract camera existed and silently stopped pinning anything.
+- **101** — **A `trap … EXIT` restore with a relative path dies if the script has changed directory,
+  and it still prints as though it ran.** A control substitution wrapped its restore in a trap —
+  correct, per rule 50 — then `cd`'d elsewhere to launch the harness. On exit the trap fired, `cp`
+  failed with "No such file or directory", `md5sum` printed nothing, and the line read `restored:`
+  with an empty value: a restore that reported success by saying nothing. The mutation stayed on disk
+  and the next build compiled it. **Use absolute paths in anything that runs at exit**, and make the
+  restore *assert* — print the md5 and compare it against the one taken before, so a silent failure
+  cannot pass for a quiet success. Rule 50 already says to verify the md5 after every control; this is
+  why it says "after **every**" rather than "at the end".
+- **107** — **A view steered by where the pointer IS drifts for as long as the clock runs, and one of its
+  two axes cannot be set from a console at all.** The camcorder's `Steer` reads the pointer's *position*,
+  not its movement, and the two axes are not alike: yaw **accumulates**
+  (`Yaw -= Beyond(x) * YawRate * Time.Delta`) so it winds on every frame the pointer sits outside the
+  dead zone — which is wherever X last left it — while pitch is **assigned**
+  (`Pitch = Beyond(y) * PitchScale`) so anything a console writes to it is gone by the next frame. Both
+  bit in one session. A four-sided walk test came back with "east" having moved the viewer three cells
+  **north**, because the heading had spun between the approaches and every one of them resolved against
+  a different one; and a screenshot meant to show a ride came back as 41.3 degrees of empty sky. The
+  fixes are different for each: freeze the drift with `pause` (which zeroes `Time.Delta`; rule 91 says what a
+  paused grab can and cannot show), and for the picture put the
+  pointer itself inside the dead zone with **XTEST motion**, not a warp, since a warp with no motion
+  behind it reaches X and never reaches SDL. **Then read the heading back and assert it**, per rule 98:
+  had the reply not carried `yaw=`, all four readings would have looked perfectly well-formed and been
+  measurements of nothing.
+- **108** — **A facing-relative command means a different world direction at every heading, so aiming the
+  camera silently re-aims the controls.** `walk <forward> <right>` resolves as
+  `dx = forward * -sin(Yaw) + right * cos(Yaw)`. At yaw 0 `right` is exactly `+x`, which is why a census
+  harness could walk east with `walk 0 1` and be right. The moment a second harness set the heading to
+  face that same ride — yaw `-pi/2` — `right` became `-y`, the identical command walked the viewer away
+  along a different axis, and the census it printed was internally consistent the whole way. Nothing was
+  wrong with the game, the command or the reply. **When a harness sets an orientation, recompute what
+  its own movement arguments mean in that orientation**, and prefer a command whose arguments are in the
+  frame you are reasoning in — or assert the destination, not merely that something moved.
+- **111** — **Read the units off the call site before aiming a capture, and check the reply agrees.**
+  `camcorder x y [yaw]` takes **world units and radians** — its own site says "an optional heading, in
+  radians" — and four frames were lost passing cells and degrees. The game said so both times and was
+  not read: `camcorder 44 25` replied `stand=(44,25) cell=(4.4,2.5) at=(4,2)`, the camera parked in the
+  far corner of the map, and every shot came back empty terrain at **mean 110–111**, indistinguishable
+  from the shots it was meant to differ from. A heading of `180` was twenty-eight turns. **The reply
+  carries `stand=`, `cell=`, `at=` and `yaw=` precisely so a misaimed capture can be caught before it is
+  believed** — and brightness cannot catch it, which is rule 99 again.
+- **112** — **Establish a facing from something you can recognise in the frame, never from the formula
+  alone.** Rule 108's `dx = forward * -sin(Yaw) + right * cos(Yaw)` gives the x component, and reading
+  forward off it as `-y` at yaw 0 was backwards: a camera at cell (42,28) on yaw 0 photographed the
+  Drinks Shop at (43,30), which is **+y**. Four more frames were spent on the inverted pair before a
+  landmark settled it. **Photograph a thing whose cell you already know, name it in the frame, and only
+  then aim at the subject.** The side headings `±π/2` were right throughout; only the pair I had
+  reasoned about was wrong.
 
 ## Delegates and commissioned work
 
@@ -449,219 +717,6 @@ The ones that have bitten more than once.
   absence can use (`not built`, `nothing drives`, `no consumer`, `does not exist yet`, `until .* exists`),
   but note the worst cases use none of them: a stale COUNT reads as precision, not as a claim. Write
   comments that cannot rot by dating the negative and naming the *reason* rather than the *state*.
-- **90** — **Measure the CONTROL FLOOR before quoting any pixel percentage.** Two frames of a running park
-  with *nothing done between them* differ by **2.54–2.60%**: guests walk, flags move, water animates. A
-  whole-frame percentage below that floor is not weak evidence, it is *no* evidence — and a session was
-  spent treating 1.42%, 1.04% and 0.15% as results when all three were smaller than doing nothing at all.
-  Shoot a before/before pair first, then a before/after pair, and report both. Above the floor, a scalar
-  still cannot say *what* changed: build a DIFFERENCE IMAGE and look at the SHAPE. Ten path cells are a
-  connected block; a guest is a scattered blob. Shape discriminates where a number cannot.
-- **91** — **Never grab a frame while the game is paused.** `pause` plus `step <n>` gives the renderer a
-  frame budget, and once it is spent the game stops presenting entirely — so a grab returns the picture
-  from *before* the work while the console cheerfully reports the new state. It is not black and it is not
-  obviously wrong; it is plausible, which is what makes it dangerous. Worse, a "wait until two consecutive
-  grabs agree" check *passes instantly and perfectly* on a frozen renderer: it cannot tell "settled" from
-  "not drawing", so that check is worse than none. Determinism and screenshots are mutually exclusive here.
-- **92** — **Aim at the built park, and photograph something already there first.** Ten new cells out on
-  empty terrain at zoom 80 are a few pixels near the horizon, which is what several "nothing rendered"
-  captures were actually showing. Before concluding a feature does not draw, take a CONTROL SHOT of
-  something known to exist — the shipped avenue at cell (47,21) renders the gate, the rides, the guests and
-  the river. If the control is missing, the harness is at fault; if the control is there and the new thing
-  is not, only then is it the feature. Nine explanations were offered before that one-frame control was
-  tried, and every one of them was wrong.
-- **93** — **Check a threshold against the region's REACHABLE maximum before believing a failure.** A
-  control that is transparent by design can only ever change the fraction of its rectangle its drawn
-  parts cover. The entry-price spinner is 424x173 and its frame mesh resolved to nothing, so only two
-  60x61 buttons and a short number ever painted: 17,633 of 73,352 square units, a **ceiling of 24.0%**.
-  It was judged against a 20% threshold — a bar just under its own ceiling — and "failed" twice at
-  12.2% while the buttons inside it were changing **92.0%** and **93.6%** against a 0.0% floor. Compute
-  what the region *can* do before deciding what it *did*, and judge a mostly-empty control BY ITS PARTS.
-- **94** — **Drain the reply queue before reading a reply.** A harness that pumps output into a queue
-  and then searches it for the next matching line will happily hand back a reply to an EARLIER command.
-  This reported `click: the interface took (727,113)` for a click sent to `(100,609)` — coordinates
-  never sent, from a tab click five steps earlier — which reads exactly like a button being missed. The
-  button had worked. Flush, then send, then wait.
-- **95** — **Every numeric check can pass while the display is wrong. Look at the picture, every
-  time.** Four defects in one session cleared every region check, every gap counter and a green suite:
-  a column heading 160px clear of its column; a tab strip that vanished with the list it hung off,
-  stranding the screen; a kind-to-label table transposed, drawing guards under "Entertainers'
-  Happiness"; and a list rebuilt every frame. The measurements were all real and all beside the point —
-  each was caught by opening the screenshot. A region check proves *something changed there*; only the
-  image proves it is the right thing. Budget for looking, not just for measuring.
-- **96** — **`pkill -f PATTERN` kills the shell running it** whenever the pattern appears in that
-  shell's own command line. `pkill -f "OpenTPW.dll"` inside a script that mentions `OpenTPW.dll`
-  matched itself and died at its first line, taking the mutation check with it — and an earlier
-  `pgrep -af "OpenTPW.dll"` had reported "game still alive" about *itself*, which is the same trap
-  reading as evidence. Match on the executable instead (`pgrep -x dotnet`), so the pattern cannot
-  describe the shell. Generally: **any process query whose pattern is also in your own command line
-  is self-referential**, and it fails in the direction of looking like a result.
-- **97** — **A control window can land inside a genuine silence of the subject, and that is a reading,
-  not a broken instrument.** A park's music is *replayed, not looped* — about 8.5 s of arrangement then
-  a ten-second wait — so a park's mix is digitally silent for more than half of every cycle. A 3 s
-  music-only floor fell in a gap and read −999 dBFS, which is indistinguishable from an audio device
-  that never opened. Span the subject's own duty cycle before calling a window representative, and ask
-  what the subject does *between* its events, not only during them. **And when the floor cannot be
-  measured, the comparison is INCONCLUSIVE — never a direction.** With `floor = None` a harness of mine
-  fell through to "the mix DROPPED" on +0.70 dB, manufacturing a result from a missing control; the
-  same run's real answer was "no change". Make the no-floor branch say so explicitly, because the
-  default branch will otherwise say something confident.
-- **98** — **A debug selector can be read by a branch the subject never takes, and its reply will
-  still say it worked.** With nobody playing, `LobbyCameraMode.Update` returns early into
-  `Attract()` — a wander seeded from `RandomPointInBox`, and reseeded on *every* lobby build because
-  `ForgetIsland` clears `_wandering`. `island`, `orbit` and `settle` are read only by the orbit
-  branch that early return never reaches. So a harness that carefully pinned the camera photographed
-  two quite different viewpoints, and the console answered `island 0 'Lost Kingdom'` **both times** —
-  the reply echoes the selection, not where the camera is, which is rule 88's shape again. Two
-  lobbies in one run cannot be compared at all until the orbit branch is forced. **Assert the state
-  the subject actually uses, not the one you set**: `state` reports `cam=`, and an identical
-  `cam=452,353,32` in both shots is what finally made the frames comparable. Note also that a
-  recipe can go stale without anyone touching it — `lobbyshot.py`'s `pause → island → settle` dates
-  from before the attract camera existed and silently stopped pinning anything.
-- **99** — **A region's mean and variance can be identical while the texture on it is plainly
-  wrong.** The lobby sea drawn with mirrored addressing instead of wrapping is a **diamond lattice**
-  where it should be parallel ripples — unmistakable at a glance, across half the screen — and the
-  crop's statistics barely moved: mean 55.69 → 55.62, variance 221.83 → 222.79, under half a
-  percent. Mirroring rearranges *where* the same texels land without changing *which* texels they
-  are, so every summary statistic survives it intact. This is rule 90's "shape, not scalar" in its
-  purest form: a verdict resting on those percentages would have reported "no change" for the
-  defect it was built to find. **Pair the picture with a number the game reports about itself** —
-  here `water: requested Wrap sampler AnisotropicRepeat`, which does discriminate, where nothing
-  computed from the pixels did.
-- **100** — **A threshold taken from each run's own distribution cannot compare two runs.** Comparing a
-  looped scream against a replayed one, the harness cut at "this window's 35th percentile plus 6 dB" —
-  a sensible floor for *one* recording and worthless across two. It landed at **−29.95 dBFS** for the
-  control and **−69.17 dBFS** for the subject, 39 dB apart, so the duty cycles, burst counts and gap
-  medians computed from them were three confident numbers measuring two different things: it reported
-  "155 onsets against 47" and "median gap 0.30 s against 1.30 s", which reads exactly like a result.
-  The same two captures against **fixed** thresholds answered cleanly — sounding above −60 dBFS, 93.3%
-  against 52.4%, and a 10th percentile of −55.1 dBFS against −180.0, the latter being true digital
-  silence. **An adaptive threshold is an instrument that re-calibrates itself to whatever it is shown**,
-  which is the one thing a control exists to prevent. This is rule 5's saturating measure wearing a
-  percentile. Note also what the census did instead: `plays 1` against `plays 8` needed no threshold.
-- **101** — **A `trap … EXIT` restore with a relative path dies if the script has changed directory,
-  and it still prints as though it ran.** A control substitution wrapped its restore in a trap —
-  correct, per rule 50 — then `cd`'d elsewhere to launch the harness. On exit the trap fired, `cp`
-  failed with "No such file or directory", `md5sum` printed nothing, and the line read `restored:`
-  with an empty value: a restore that reported success by saying nothing. The mutation stayed on disk
-  and the next build compiled it. **Use absolute paths in anything that runs at exit**, and make the
-  restore *assert* — print the md5 and compare it against the one taken before, so a silent failure
-  cannot pass for a quiet success. Rule 50 already says to verify the md5 after every control; this is
-  why it says "after **every**" rather than "at the end".
-- **104** — **A control can fire because its EXPECTED value is wrong, and "the control failed" is then the
-  wrong conclusion to draw from it.** Reading a saved script struct, the alignment was checked against the
-  speed word, which every shipped `.RSE` carries as 50. Thirteen of the fourteen records read 50 and one
-  read **60**, and the honest-looking conclusion — "the control fails, so the alignment is wrong, so the
-  program counter I just read is noise" — would have thrown away a correct decode. The 60 was real: 50 is
-  what the *loader* writes, and the engine pushes an object's own operating speed over it
-  (`FUN_0055a300`), and that object's `mOperatingSpeed` was independently measured at 60. **Before
-  believing a control, ask what WRITES the field it reads** — a field with more than one writer cannot
-  have one expected value. What actually settled the alignment was a second control with only one
-  possible answer: the struct's length field equalled the body block's own word count for all fourteen.
-  The lesson is rule 12's, one turn further on: a control that fires is a reason to check the control,
-  and checking it means checking its expectation, not just its arithmetic.
-- **105** — **A four-character tag compared as a dword is stored BACKWARDS, so searching for it the right
-  way round finds nothing and reads as proof the thing is absent.** Looking for the seventeen module tags
-  in a park save's inflated payload, a search for `WRLD`, `GSYS`, `RSYS` and the rest returned **not found
-  for sixteen of seventeen**, with the one hit being unrelated. The natural reading — "this file is not
-  written by that code path at all" — was wrong and would have redirected the whole task. The executable
-  compares a 4-byte read against a constant like `0x57524c44`, so the bytes on disk spell `DLRW`; searched
-  reversed, **all seventeen** appeared, in the exact order the code reads them. This is rule 17's "say what
-  you measured, not what it means" applied to endianness: a dword constant in a decompiler listing is not
-  a byte string, and one of the two orders is a fact about the file while the other is a fact about how the
-  constant was printed. Check both orders before recording an absence.
-- **106** — **A before/after on the thing you CHANGED cannot see something else going missing.** A park's
-  things were replaying the clip that builds them. The fix was verified by watching one ride across a
-  load — "role 0 never appears" — before and after, with the number predicted first and then confirmed.
-  It was also a net regression: **ten of the fourteen placed things stopped animating at all, for good**,
-  and the single ride that was watched happened to be among the four that survived. The instrument was
-  sound, the control was real, and the prediction was right. **The population was wrong.** The tell was
-  there to be read in the change's own justification: the mechanism being altered — how every script
-  resumes — applied to every script, while the measurement named one ride, so the scope of the claim and
-  the scope of the evidence never matched and only the narrower one was checked. **Before believing a
-  before/after, ask what else runs through the code being changed and measure THAT set.** Where the game
-  can census a whole population as cheaply as one member — every thing, not the thing in question —
-  census all of it; the run costs the same either way. This is rule 85's "a census that showed only the
-  survivors" one level up: there the instrument did the filtering, here the author did. And the other
-  half of it: the regression was found by an adversarial review rather than by the verification, because
-  a check the author designs inherits the author's blind spot about where to point it.
-- **107** — **A view steered by where the pointer IS drifts for as long as the clock runs, and one of its
-  two axes cannot be set from a console at all.** The camcorder's `Steer` reads the pointer's *position*,
-  not its movement, and the two axes are not alike: yaw **accumulates**
-  (`Yaw -= Beyond(x) * YawRate * Time.Delta`) so it winds on every frame the pointer sits outside the
-  dead zone — which is wherever X last left it — while pitch is **assigned**
-  (`Pitch = Beyond(y) * PitchScale`) so anything a console writes to it is gone by the next frame. Both
-  bit in one session. A four-sided walk test came back with "east" having moved the viewer three cells
-  **north**, because the heading had spun between the approaches and every one of them resolved against
-  a different one; and a screenshot meant to show a ride came back as 41.3 degrees of empty sky. The
-  fixes are different for each: freeze the drift with `pause` (which zeroes `Time.Delta`, and is *not*
-  rule 91 — that forbids **grabbing a frame** while held, not measuring), and for the picture put the
-  pointer itself inside the dead zone with **XTEST motion**, not a warp, since a warp with no motion
-  behind it reaches X and never reaches SDL. **Then read the heading back and assert it**, per rule 98:
-  had the reply not carried `yaw=`, all four readings would have looked perfectly well-formed and been
-  measurements of nothing.
-- **108** — **A facing-relative command means a different world direction at every heading, so aiming the
-  camera silently re-aims the controls.** `walk <forward> <right>` resolves as
-  `dx = forward * -sin(Yaw) + right * cos(Yaw)`. At yaw 0 `right` is exactly `+x`, which is why a census
-  harness could walk east with `walk 0 1` and be right. The moment a second harness set the heading to
-  face that same ride — yaw `-pi/2` — `right` became `-y`, the identical command walked the viewer away
-  along a different axis, and the census it printed was internally consistent the whole way. Nothing was
-  wrong with the game, the command or the reply. **When a harness sets an orientation, recompute what
-  its own movement arguments mean in that orientation**, and prefer a command whose arguments are in the
-  frame you are reasoning in — or assert the destination, not merely that something moved.
-- **109** — **Sampling faster than the thing you measure turns frame pacing into a rate, and storing
-  only your derived statistic means you cannot go back.** Measuring how fast a camera turns, a harness
-  polled a pure getter as fast as it could — about 144 Hz — and differenced each reply against the one
-  before. Consecutive polls either land in the same frame, giving an angle of nought that drags every
-  median down, or straddle one, in which case a whole frame's turning is divided by a 7 ms gap. Its
-  headline, "max 143.12 degrees a second", is exactly **1.0 degree in one 7 ms sample**: an artefact of
-  the sampling interval wearing the units of the subject. **Difference over a fixed window** (100 ms
-  here) so the denominator is yours and not the scheduler's, and deduplicate repeated readings before
-  any statistic. The second half cost a whole extra run: the harness wrote only the rate it had
-  computed, so when the computation proved aliased there was nothing to re-analyse. **Write the raw
-  samples to a file as well as the summary** — they are small, and the question you will want to ask of
-  them is not the one you built the harness for.
-- **110** — **The start of a run is not an event, and counting it as one can invert the verdict.** Asked
-  whether a camera swings when it changes which island it looks at, a harness bucketed every sample by
-  whether it fell within 1.5 s of a change. The **first** sample necessarily "changes" island — there
-  was no previous value — so the run's own settling landed squarely in the treatment bucket, and **20
-  of 20** of the fastest turns were inside the first 5 s. It reported near-a-change 13.48 against
-  away 10.18 and a maximum of 143 against 48: a swing, confidently. Discarding a warm-up reversed it —
-  6.66 against 8.99, with the treatment now *quieter* than the control. **Discard a warm-up before
-  anything is measured, and ignore transitions inside it**, because the first observation of any state
-  is a transition from nothing. This is rule 103's shape again: the segmentation, not the subject,
-  produced the result.
-- **111** — **Read the units off the call site before aiming a capture, and check the reply agrees.**
-  `camcorder x y [yaw]` takes **world units and radians** — its own site says "an optional heading, in
-  radians" — and four frames were lost passing cells and degrees. The game said so both times and was
-  not read: `camcorder 44 25` replied `stand=(44,25) cell=(4.4,2.5) at=(4,2)`, the camera parked in the
-  far corner of the map, and every shot came back empty terrain at **mean 110–111**, indistinguishable
-  from the shots it was meant to differ from. A heading of `180` was twenty-eight turns. **The reply
-  carries `stand=`, `cell=`, `at=` and `yaw=` precisely so a misaimed capture can be caught before it is
-  believed** — and brightness cannot catch it, which is rule 99 again.
-- **112** — **Establish a facing from something you can recognise in the frame, never from the formula
-  alone.** Rule 108's `dx = forward * -sin(Yaw) + right * cos(Yaw)` gives the x component, and reading
-  forward off it as `-y` at yaw 0 was backwards: a camera at cell (42,28) on yaw 0 photographed the
-  Drinks Shop at (43,30), which is **+y**. Four more frames were spent on the inverted pair before a
-  landmark settled it. **Photograph a thing whose cell you already know, name it in the frame, and only
-  then aim at the subject.** The side headings `±π/2` were right throughout; only the pair I had
-  reasoned about was wrong.
-- **113** — **A test step that can run without a build will happily test the previous build.**
-  `dotnet test --no-build` runs the assembly already on disk, so a compile error does not fail the run -
-  it hands back the last good build's numbers. A mutation harness that built with `capture_output=True`
-  and never read the exit code reported an identical clean **894 passed** four times over, against a
-  binary that predated every edit in the turn, and each one read exactly like a mutation surviving. The
-  only thing that caught it was the build line printed above the results. **Check the build's exit code
-  before believing any number below it, and make the harness refuse to return a verdict when the build
-  failed** - a fabricated survival is worse than no measurement, because it gets written down as
-  evidence that a fix rests on nothing.
-- **114** — **A mutation is only tested by a test that calls the mutated code.** Keying a footprint's
-  owner on the wrong corner survived the whole suite twice. The diagnosis was right the first time - no
-  test built a *turned* thing, where anchor and corner differ - but the fix was to add a turned case to a
-  file whose own helper *rebuilt* the stamping logic instead of calling `ParkBuilding.Stamp`, so the
-  mutation stayed invisible and survived a second time. **Before adding a test to kill a mutation, name
-  the function the mutation edits and check the test reaches it**; a fixture that re-derives the subject
-  proves the fixture. Making the real function internal, the way `ParkPicking.ThingOn` already is, is
-  what closed it - and it immediately exposed a second defect in the same shape, in the sell path.
 - **115** — **Editing a structured document by matching a fragment silently destroys structure.** Twice
   in two sessions an edit to `docs/QUEUE.md` replaced text that ran *into the middle of an item*: once a
   heading was written over the fragment "not a path.", severing Q3's body so its tile-piece half and its
@@ -673,52 +728,10 @@ The ones that have bitten more than once.
   once.** For a block with awkward characters, replace it by line range with an assertion on the first
   and last line rather than by string match - an off-by-one there fired the assert and wrote nothing,
   where a fuzzy string match would have eaten the next item's heading.
-- **116** — **A mutation harness that restores the SOURCE leaves the last mutation's BINARY on disk,
-  and the next run of the game silently tests it.** Rule 113 says check the build's exit code before
-  believing a number below it; this is its other half, and it bit on the very next task. A harness put
-  four mutations through build-test-restore, ending with one that disabled a new click handler, and its
-  `finally` copied the file back without rebuilding. The game harness run minutes later drove a binary
-  in which that handler did not exist, so the feature reported as not working - and every other part of
-  the same run was valid, which is what made it convincing. **Rebuild after the final restore, inside
-  the harness**, and have it print the md5 of the built assembly as well as of the sources; better, make
-  the game harness refuse to start unless the build is newer than every source file it cares about. A
-  restored working tree is not a restored program.
-- **117** — **A count quoted from someone else's measurement names THEIR population, not your test's.**
-  A decode reported that its reading predicted "all fourteen" of the shipped save's placed objects, and
-  a test was written predicting fourteen. It compared eleven: the decoder had walked every object record,
-  and the test walked the ones the buy catalogue describes, which leaves out the bus, the gates and the
-  lights. Every compared object matched, so the reading was right and the prediction was not. **Before
-  writing a number you did not measure into an assertion, say what was counted and check your loop
-  counts the same thing** - and when the two disagree, find the difference before changing either.
-- **118** — **A change to what a scene LOADS shows up as a within-run `save/` change the first time,
-  and that is the loading bar, not damage.** The bar learns each situation's step count into
-  `save/opentpw.cfg`; a park that starts loading four more textures takes more steps, so the first run
-  after the change rewrites that file as the park loads - inside the run, which is the one place a
-  checksum difference is supposed to mean something. **Name the file that changed before calling it
-  either way**, and re-run: the second run of the same build must be unchanged, and it was.
-- **119** — **Whether something is still in memory is the collector's to say, and a root list read from the
-  code misses links through a base class.** Q10 asked which statics keep a left park's save alive. Of four
-  readings of the code, two said `ParkRides.Current` reached no save, since it has no `ParkWorld` field. The
-  other two found that it does: every `Entity` keeps the `Level` it was made in, so any never-cleared static
-  of an entity type holds a whole level. **Measure it first:** hold the object in a `WeakReference`, force a full
-  blocking collection, ask whether it is alive, and only then name the roots as the explanation. Print
-  "nothing named" when it is alive and no root you know of holds it. In a test, make the object in a
-  non-inlined helper, because a debug build keeps a method's locals alive until the method returns.
-- **120** — **A test stepped at one frame rate cannot tell a rate taken per second from one taken per
-  frame.** Q12 stepped the lobby's leave sequence with `Time.Delta` at 1/60 and pinned every count exactly,
-  and `HomingRate * Time.Delta` rewritten as `HomingRate / 60f` still passed: at that one rate the two are
-  the same number. **Step it at a second rate** with its own predicted counts - 30 a second was enough, and
-  the mutation then failed that row only. The same holds for any `Time.SmoothingFactor` ease a test drives.
-- **121** — **To prove a build is fresh, look at the file the test will load, not at the test assembly.** Q44's
-  mutation harness refused every result as stale, rightly by its own rule and wrongly in fact: it watched
-  `OpenTPW.Tests.dll`, and in an incremental build (`dotnet build` without `--no-incremental`, as a mutation
-  harness runs it) a change to a method body in `OpenTPW` rebuilds only `OpenTPW`, whose copy beside the tests
-  (`OpenTPW.Tests/bin/.../OpenTPW.dll`) is what moves - the test assembly is not recompiled, because the reference
-  assembly it compiles against did not change. `--no-incremental` rebuilds every project, so there the test
-  assembly moves too and proves nothing. Watch the copy under either build. The guard failed safe, which is the
-  point of having one; a guard watching the wrong file the other way round would have passed stale results.
 
 ---
 
-When appending to this file, anchor on the last **content** and add after it — never on a trailing block
-you intend to keep, because a replacement silently drops whatever the anchor matched.
+When adding a rule, give it the next free number and put it at the end of the group whose symptom it
+matches. Anchor on that group's last rule and add after it - never on a trailing block you intend to keep,
+because a replacement silently drops whatever the anchor matched. Then check that the numbers still run
+1..N with no gaps or duplicates, and add it to "Start here" only once it has bitten twice.

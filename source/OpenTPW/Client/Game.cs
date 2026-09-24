@@ -23,16 +23,8 @@ internal static class Game
 	/// material slot, so both this number and the rebuild count fell by exactly that much: a first
 	/// load registers 829 where it registered 3,214, and a rebuild 404 where it registered 2,789.
 	/// The gap between the two is 425 either way, because a rebuild re-registers only what the
-	/// caches do not already hold - which is the loading bar's remaining inaccuracy and is not
-	/// addressed here.
-	/// </para>
-	/// <para>
-	/// <b>That inaccuracy is now something a player sees.</b> A rebuild used to be reachable only from the
-	/// debug console, but a park's Exit To Lobby comes back this way - see
-	/// <see cref="RequestLobbyReload"/> - so the bar fills at about half way and waits there every time.
-	/// The honest fix is for the count to know whether a scene is being built cold or again, since a step
-	/// means one <c>Asset.Register</c> and calling <c>Step</c> for work that registers nothing would make
-	/// the bar's rate a lie instead of its length. It is left measured and wrong rather than faked.
+	/// caches do not already hold - which is why a rebuild keeps a count of its own in
+	/// <see cref="LoadStepCounts"/>.
 	/// </para>
 	/// </summary>
 	private const int LobbyLoadSteps = 829;
@@ -240,17 +232,12 @@ internal static class Game
 	/// </para>
 	/// <para>
 	/// This is the count for a park built <i>cold</i> - entered from the lobby, with nothing of its own
-	/// in the caches. That paragraph used to end "re-measure when that path exists", meaning the path by
-	/// which a park is built twice in one run; <b>Restart Park is now that path, and a rebuilt park costs
-	/// 758</b> against this 918, for the same reason a rebuilt lobby costs 404 against its 829 - the caches
-	/// already hold whatever the last scene put there.
+	/// in the caches. Restart Park builds a park a second time in one run, and that rebuild costs roughly
+	/// half as much, for the same reason a rebuilt lobby does; <see cref="LoadStepCounts"/> learns both.
 	/// </para>
 	/// <para>
-	/// <b>The constant stays at the cold number.</b> The bar is a count, so setting it to a reload's would
-	/// make every first load stop short instead; the honest consequence is that a park's bar, like the
-	/// lobby's, now fills to about four fifths and waits there whenever it is not the first build of that
-	/// scene. Left measured and wrong rather than faked, exactly as <see cref="LobbyLoadSteps"/> is, and
-	/// for the same reason - a step means one <c>Asset.Register</c> and nothing else.
+	/// <b>The constant stays at the cold number</b>: it seeds only a first-ever run, and each situation's
+	/// real count, cold or rebuilt, is learned by <see cref="LoadStepCounts"/>.
 	/// </para>
 	/// </summary>
 	private const int ParkLoadSteps = 918;

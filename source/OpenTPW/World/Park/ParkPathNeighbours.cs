@@ -6,10 +6,10 @@ namespace OpenTPW;
 ///
 /// <para>
 /// <b>It is INCREMENTAL and ORDER-DEPENDENT, which is why no rule read off a finished map could ever
-/// reproduce it.</b> <c>docs/exe/park.md</c> recorded the mask as "still open" after a sweep of member
-/// sets against diagonal rules topped out at <b>67/78</b> on the shipped park; splitting the member
-/// set so cardinals admit <c>{1,9,10}</c> and diagonals only <c>{1}</c> reaches <b>73/78</b> and stops
-/// there. Neither can reach 78, because this is not a function of the map at all - it is a pass run
+/// reproduce it.</b> A sweep of member sets against diagonal rules tops out at <b>67/78</b> on the shipped
+/// park; splitting the member set so cardinals admit <c>{1,9,10}</c> and diagonals only <c>{1}</c> reaches
+/// <b>73/78</b> and stops there (<c>docs/exe/park-engine.md</c>, "Why no sweep could ever reproduce
+/// `mNeighbours`"). Neither can reach 78, because this is not a function of the map at all - it is a pass run
 /// over one cell at the moment that cell is created, and the result depends on what already existed.
 /// <b>Validate it by replaying creation order, never by evaluating a predicate over a finished park.</b>
 /// </para>

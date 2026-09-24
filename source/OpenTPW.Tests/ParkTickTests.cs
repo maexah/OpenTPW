@@ -428,7 +428,7 @@ public class ParkTickTests
 
 	/// <summary>
 	/// <b>The drawing moves between thing ticks; the simulation does not.</b> That pair is the whole of
-	/// cleanup item 3: the walk turns once every eight game ticks, about four times a second, and the
+	/// it: the walk turns once every eight game ticks, about four times a second, and the
 	/// original slides the picture between the two positions over the frames in between rather than
 	/// holding it still and jumping (<c>FUN_004f9f00</c>, per frame from <c>FUN_00518f90</c>).
 	///
@@ -441,10 +441,9 @@ public class ParkTickTests
 	/// <para>
 	/// <b>What this does NOT pin, said here rather than assumed away</b> (<c>docs/VERIFYING.md</c> rule
 	/// 48). Making <c>ParkGuestSprites.OnRenderTranslucent</c> pass a literal <c>1f</c> instead of the
-	/// live fraction <b>passes all 848 tests</b>: this test reaches <c>Standing</c> directly, and the
+	/// live fraction <b>passed the whole suite when it was measured</b>: this test reaches <c>Standing</c> directly, and the
 	/// render path it would break needs a graphics device a test run has none of. So the drawing's own
-	/// wiring rests on the capture and not on the suite - the same division items 4, 5 and 6 of the
-	/// cleanup plan each recorded. What IS pinned here is the fraction: hard-wiring
+	/// wiring rests on the capture and not on the suite. What IS pinned here is the fraction: hard-wiring
 	/// <see cref="ParkPeople.ThingTickFraction"/> to one fails this test and nothing else.
 	/// </para>
 	/// </summary>

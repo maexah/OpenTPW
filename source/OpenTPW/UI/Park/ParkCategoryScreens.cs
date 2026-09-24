@@ -93,8 +93,9 @@ internal static class ParkCategoryScreens
 		var (name, waiting) = screen switch
 		{
 			3 => ("PARK_STATUS_SCREEN", "the top three thoughts, the arrival rate, a park rating and a multi-year history"),
-			4 => ("ALL_STAFF_SCREEN", "nothing - it is next"),
-			6 => ("ALL_VISITORS_SCREEN", "nothing - it is next"),
+			// Dead by CODE: screens 4 and 6 are opened above and return before this switch.
+			4 => ("ALL_STAFF_SCREEN", "nothing - it is built and opened above"),
+			6 => ("ALL_VISITORS_SCREEN", "nothing - it is built and opened above"),
 			7 => ("FINANCE_SCREEN", "the monthly cash-in and cost ring buffers, and the year graph"),
 			8 => ("LOANS_SCREEN", "the mLoans[] records, which ParkWorld does not read"),
 			9 => ("STAFF_COSTS_SCREEN", "training budgets, other costs and loan repayments"),

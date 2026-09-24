@@ -1,6 +1,6 @@
 # The park engine, from the executable
 
-What `testme.exe` says about park loading, terrain, the camera, the clock, the save container and the park's interaction modes. The body of it comes from a six-agent Ghidra pass over `/testme.exe` on 2026-09-13 (7/7 agents, 0 errors, ~1.42M tokens, 627 tool calls) plus an adversarial cross-check agent, extended by targeted traces on 2026-09-14 and 2026-09-16. Confidence labels are the agents' own with the cross-check's corrections applied; where something is unverified or refuted, it says so, and **that is part of the fact**. Read this beside the park data-layout page (`docs/exe/park.md`), which holds what was measured off the game's own files — this page holds what the executable says.
+What `testme.exe` says about park loading, terrain, the camera, the clock, the save container and the park's interaction modes. The body of it comes from a six-agent Ghidra pass over `/testme.exe` on 2026-09-13 (7/7 agents, 0 errors, ~1.42M tokens, 627 tool calls) plus an adversarial cross-check agent, extended by targeted traces from 2026-09-14 to 2026-09-24; most later sections name their own date or `docs/QUEUE.md` item. Confidence labels are the agents' own with the cross-check's corrections applied; where something is unverified or refuted, it says so, and **that is part of the fact**. Read this beside the park data-layout page (`docs/exe/park.md`), which holds what was measured off the game's own files — this page holds what the executable says.
 
 ---
 
@@ -307,9 +307,9 @@ The two 800x600 ones are at exactly the 4:3 the game was designed at, which is w
 3. Geometric (angular) vanishing-point fit + seeded grouping → recovered *vertical 90* correctly at 97% bootstrap, **but only from a clean 3-line seed**. A 2-line seed, or a seed with one line from the wrong family, returned *anamorphic* at **100% bootstrap**. **Bootstrap confidence is not a reliability measure here**; it only says a wrong answer was stable.
 4. Seedless joint search over grouping and hypothesis together → honest, and **undecided**: the three candidates are separated by 1-5% of explained edge length on the control, on Halloween and on the Sun God, and the control's own answer flips with the tolerance.
 
-The reason is structural: separating a vertical 90 from a horizontal one means locating vanishing points one to seven thousand pixels *outside* an 800x600 frame, from edges whose directions differ by one or two degrees, in JPEG. The tooling is kept in the session scratchpad (`lines.py` detector — proven good, 0.87 deg mean miss against truth; `fit.py`, `group.py`, `joint.py`, `truth.py`, `view.py`, and `capture_control.py` for the control frame).
+The reason is structural: separating a vertical 90 from a horizontal one means locating vanishing points one to seven thousand pixels *outside* an 800x600 frame, from edges whose directions differ by one or two degrees, in JPEG. The tooling (`lines.py` detector — proven good, 0.87 deg mean miss against truth; `fit.py`, `group.py`, `joint.py`, `truth.py`, `view.py`, and `capture_control.py` for the control frame) lived in that session's scratchpad and is gone; rebuild it from this description if the question is reopened.
 
-**The qualitative signal is withdrawn.** "The original shows no sky and OpenTPW does" is explained by **content, not lens**: the original parks are full of rides, shops and trees that stop the eye at the horizon, and OpenTPW's park is bare ground plus `base.MD2` scenery. It is not evidence about the FOV.
+**The qualitative signal is withdrawn.** "The original shows no sky and OpenTPW does" is explained by **content, not lens**: the original parks are full of rides, shops and trees that stop the eye at the horizon, and OpenTPW's park, when this was measured (2026-09-13), was bare ground plus `base.MD2` scenery. It is not evidence about the FOV.
 
 Two cautions from how this went. An earlier check listed the two reference folder *names* and concluded from them that there were no park shots; that was luck rather than judgement — **open the files**. And a control with a known answer is what caught all four failures above — **build the control first**.
 
@@ -323,7 +323,7 @@ Container: a fixed **1549-byte preamble**, then a **`'BILZ'`-tagged zlib block**
 
 | Offset | What it is | Confidence |
 |---|---|---|
-| `0x000` | u32 **version** = **400**. It is a version, not a "magic number - F4 01 00 00"; `OpenTPW.FileFormats`' `saves.md` repeats that mistake. Requiring 500 rejects the shipped file | Measured |
+| `0x000` | u32 **version** = **400**. It is a version, not a "magic number - F4 01 00 00"; `OpenTPW.FileFormats`' `saves.md` repeats that mistake on `master`; the correction waits on its `docs/item-footprints` branch. Requiring 500 rejects the shipped file | Measured |
 | `0x004` | A zero pad byte before the copyright | Measured |
 | `0x005` | The copyright text, **UTF-16LE**: `54 00 48 00 45 00 ...` = "THE SAVE GAME DATA" wide. `ReadChars(824)` treats those as 8-bit and yields 824 half-characters interleaved with nulls — **824 is a byte count, not a character count** | Measured |
 | `0x604` | The type, `00 01 22 19` | Measured |
@@ -339,7 +339,7 @@ Container: a fixed **1549-byte preamble**, then a **`'BILZ'`-tagged zlib block**
 
 Bytes `0x600..0x60C` are `00 00 00 00 00 | 01 22 19 85 | 00 00 00 00`.
 
-**One recorded defect is withdrawn.** The claim that a reader "reads the copyright and type fields one byte early — they start at 5 and 0x605, not 4 and 0x604" is **wrong about the type**: the type is at `0x604` and the version byte at `0x608`, exactly where `SaveReader` already reads them. **Only the copyright is shifted, by the pad byte at 4.** The container walk — `"BILZ"` at `0x60D`, then dword, dword, 16 bytes, landing at `0x629` — is therefore correct.
+**One recorded defect is withdrawn.** The claim that a reader "reads the copyright and type fields one byte early — they start at 5 and 0x605, not 4 and 0x604" is **wrong about the type**: the type is at `0x604` and the version byte at `0x608`, exactly where `SaveReader` already reads them. **Only the copyright read was off, by the pad byte at 4, and `SaveReader` now steps over the notice instead of reading it.** The container walk — `"BILZ"` at `0x60D`, then dword, dword, 16 bytes, landing at `0x629` — is therefore correct.
 
 **No height array is stored in a save.**
 
@@ -348,7 +348,7 @@ Bytes `0x600..0x60C` are `00 00 00 00 00 | 01 22 19 85 | 00 00 00 00`.
     mType | mDirection | mFlags | mMeshInstance | mNeighbours | mOverlapCounter | mParentID |
     mTileData | mHoardingNeighbours | mLitterScript | mLitter | save_status_byte
 
-so `mTileData` is one named field per tile. **Whether it carries per-corner deformation is still open**, but the tracer reports the exact byte offset every field is read from.
+so `mTileData` is one named field per tile. **It is three dwords - tile set, tile index, rotation in degrees - and carries no deformation** (`park.md`, "`mTileData` is three dwords"); the tracer reports the exact byte offset every field is read from.
 
 ---
 
@@ -431,7 +431,6 @@ Stopwatch fields: `+0x30` = paused, `+0x28` = the time captured at the pause, `+
 
 Pause object fields: **`+0x1c` = paused, `+0x20` = quiet flag, `+0x3c` = park running.**
 
-**>>> CORRECTED 2026-09-21: "every call site" was wrong, and so was the sentence built on it. <<<**
 **Every SCREEN-DRIVEN call site passes `PUSH 0x0; PUSH 0x0`** — six of them (`0x0047f26c`, `0x0049f29f`, `0x004a93d7`, `0x0048c87e`, `0x0049efba`, `0x004a3a6c`) — so for a menu, a message box or the options screen the quiet flag is 0 and the sound half of a pause is `Advisor_PauseVoice()` + `FUN_0051c1c0(1)` (which only writes `DAT_00803ad2`). **So a park's music keeps playing under the menu**, which is the part that stands.
 
 **But the window procedure passes `(1, 1)`.** `FUN_0046b600`'s `WM_ACTIVATEAPP` branch calls `Game_Pause(1,1)` at `0x0046b74c`, and arg2 non-zero takes the **voice-pausing** path `FUN_0051bcf0` and never touches the listener. So that path **is** taken offline — on **alt-tab** — and this page's "never taken offline" is refuted. (One site, `0x005f0b7f`, pushes `EBP` twice and its value was not established.)
@@ -455,7 +454,7 @@ The park's loop runs from `0x0054f4bf` onward, with the tick counter at `[0x0087
 
 The real peep module is `0x004f9000`-`0x00512000`, **281 functions / 95,152 bytes**, plus a queue module at `0x004dd000`-`0x004e2000` (89 functions / 19,684 bytes).
 
-**>>> ANSWERED 2026-09-21: WHICH TICK DRIVES THE PEEPS. <<<** This said it was "NOT yet established — do not assume it is any of the above", and it is now decoded in both halves. The peeps are **simulated** off the every-8th-tick thing sweep — `FUN_00516380` → `FUN_0050b360` behind the gate at `0054f668` — and they are **placed for drawing once per FRAME** by `FUN_00518f90`, called from `0x0054fa85`, which lies past the 31 ms catch-up loop's back edge at `0x0054f8da`. So neither answer alone is right: the position is stepped on the 248 ms beat and interpolated to the frame. Full decode in `ride-operation.md`, "Where a WALKING peep is drawn". **`mGameTick` (`[0x0080239c] + 0x1da70c`) counts those sweeps**: `FUN_00516380` increments it (`0x00516394`) and is called at `0x0054f7bb`, inside the block the every-8th gate skips (checked 2026-09-23, Q36). So every peep comparison against it - a guest's 30-sweep thinking gap in `FUN_004fec90` among them - is in thing sweeps.
+**Which tick drives the peeps, in both halves.** The peeps are **simulated** off the every-8th-tick thing sweep — `FUN_00516380` → `FUN_0050b360` behind the gate at `0054f668` — and they are **placed for drawing once per FRAME** by `FUN_00518f90`, called from `0x0054fa85`, which lies past the 31 ms catch-up loop's back edge at `0x0054f8da`. So neither answer alone is right: the position is stepped on the 248 ms beat and interpolated to the frame. Full decode in `ride-operation.md`, "Where a WALKING peep is drawn". **`mGameTick` (`[0x0080239c] + 0x1da70c`) counts those sweeps**: `FUN_00516380` increments it (`0x00516394`) and is called at `0x0054f7bb`, inside the block the every-8th gate skips (checked 2026-09-23, Q36). So every peep comparison against it - a guest's 30-sweep thinking gap in `FUN_004fec90` among them - is in thing sweeps.
 
 **Entering a park re-bases the baselines**: `0x0054ed7c` reads the clock three times into `[0x00878c74]`, `[0x0087879c]` and **`[0x00878a1c]`**, so the seconds spent loading are not owed as ticks. *(This third one read `[0x008786bc]` and was wrong by one dword: `0054eda4` is `a3 1c 8a 87 00` = `MOV [0x00878a1c],EAX`. `0x008786bc` is the per-frame clock SAMPLE all three alphas are measured against, not a baseline, and `0x008786c0` — one along — is written at `0054edb6`. The three baselines pair with the three rates 1/31, 1/62 and 1/248.)*
 
@@ -650,7 +649,8 @@ arrives.
 **One branch is decoded but not built here.** Having moved, the loop calls `FUN_0042a340( x, y )`, which
 indexes the per-cell thing list at `+0x2a4` by the packed cell id `y * 0x80 + 1 + x` and returns the first
 thing whose kind byte at `+2` is **3** and whose `FUN_004dd4e0()+0x118` is nought; on finding one it runs
-`FUN_00412e90` and `FUN_004e15b0`. What that does to the viewer is not traced.
+`FUN_00412e90` and `FUN_004e15b0`. What that does to the viewer is not traced, and it is not yet counted
+(`docs/QUEUE.md` Q69).
 
 **Nothing of the edge test is kept, and the world it reads dies with the park.** Read for `docs/QUEUE.md` Q10 and
 put to a refuter, then re-read by hand. `FUN_004d8750` writes no global, and neither do the functions it calls.
@@ -821,7 +821,7 @@ matches it exactly — its sense is right.
 A path laid on the `-y` side of an entrance steps south, so it tests `& 0x10`; the shipped Belly
 Bounce's entrance at (52,23) carries `direction 0x01` with its queue on that same `-y` side. Under
 this rule that link could never have been earned — **so the shipped entrance's `mNeighbours` bit is
-authored, not computed**, which is what `park.md:940`'s "replay creation order" warning is about.
+authored, not computed**, which is what `park.md`'s "replay creation order" warning (under "`mNeighbours`, `mDirection` and the compass") is about.
 What authors it is the next section.
 
 ### What authors an entrance's `mNeighbours` — the placer's post-sweep pair
@@ -979,6 +979,7 @@ queue cells so flagged — its exit's path (52,27), and a path before each of th
     0x00525264  FUN_0052a050( &DAT_00818c20, &DAT_0081ede4, &DAT_0081ede8 )
                   entrance |= Opposite(H); anchor = the entrance stepped by H's table
                   (0x01 -> y+1, 0x04 -> x-1, 0x10 -> y-1, 0x40 -> x+1); faced.mDirection = H
+    0x0052526e  MOV DX,[EAX]              the returned cell is read at once, with no null test
     0x00525296  FUN_0052fbd0()            the pending list emptied, then the anchor pushed
     0x0052529e  FUN_0052f580( 3, 0 )      mode 3 - the setter that KEEPS the anchor
 
@@ -1029,7 +1030,8 @@ The tool also ends when the click lands **on the anchor itself** (the pending ce
 `0x00524a63`..`0x00524acd`), and on **a right click under 200 ms and 8 pixels** — but only with the Options
 switch "RMB cancel" on (`DAT_0078d911`, control `0x1d4c5`, UITEXT 331; `0x0048842b`..`0x00488434`) - which is on by
 default, and Alexah confirms from playing that a right click puts the tool away. The build tool's own
-right-button slots are bare `RET 8`. No keyboard exit was traced. Otherwise the anchor
+right-button slots are bare `RET 8`. Escape (`0x0040c180`, which calls `FUN_0052f200( 0, 1 )` at `0x0040c368`) and
+Delete (`FUN_0040c5e0`, Clear Land) put it away too - see "The hand's ways out". Otherwise the anchor
 moves to the snapped target, so an L is laid a click at a time.
 
 ### Editing a queue: mode `0x14`, and the ride window's queue button
@@ -1061,7 +1063,8 @@ illegal angle"* — and is a four-arm table on `angle % 0x168`: 0 → `(x, y)`, 
 0xb4 → `(-x, -y)`, 0x10e → `(-y, x)`, with the negative angles folding onto the same three forms.
 Anything else asserts, so quarter turns are the whole of it. **Read the call sites as disassembly**:
 the decompiler prints only two of its three arguments and calls it `void` while the code reads a
-result, which is the trap this page already warns of for `CellEdge`.
+result, which is the trap `CellEdge.cs` warns of for `FUN_004d8750` and this page for `FUN_00522700` ("What authors an
+entrance's `mNeighbours`").
 
 **The deltas come from the item's shape picture, and `FUN_00413410` is what reads them.** It walks the
 grid at descriptor `+0x18` **column by column**, each column from row 0, and stores the first cell of
@@ -1096,9 +1099,11 @@ entrance is a `2` (137, one per item at most), the 72 exits are 44 `S`, 26 `N` a
 at most, always beside an entrance), and no picture uses a space, a blank line or an unknown character.
 Every one of the 72 items with `Info.HasQueue` has both.
 
-**Rotation is never changed by a user input on any traced path.** It is reset to 0 on commit,
-auto-oriented from the cell's direction bits when re-placing an existing thing, and inherited from the
-source on move or clone. Whether the original has a manual rotate is an open question.
+**Rotation is never changed by a user input on any traced path.** It is zeroed when the tool ends
+(`FUN_0052f200( 0, … )`, `0x0052f3b6`), snapped for an add-on hovered over a track type by the tool-4 preview
+(`FUN_0052f1b0` at `0x005237f7`), and set to the thing's own angle when a move picks it up
+(`FUN_0052f1b0( [thing + 0x10], 1 )`, "Moving a thing"). What a successful put-down leaves in it is open ("The
+hand's ways out"; `docs/QUEUE.md` Q58). Whether the original has a manual rotate is an open question.
 
 ### Placement feedback: the `m_*` textures are the game's own vocabulary
 
@@ -1236,7 +1241,8 @@ half. The same expression is packaged as `FUN_004e2400` and shown on the object'
 player sells, which is UITEXT 23 **"Scrap value"**.
 
 **Delete does NOT go through the interaction-mode system** - `FUN_0048cd10` calls `FUN_0052f200(0x33,1)`
-and then the map-click apply directly. Only MOVE builds a mode.
+and then the map-click apply directly. Of the window's sell and move, only MOVE builds a mode (the ride window's
+queue button builds one too; see "Editing a queue").
 
 **Nothing refuses to sell a ride with guests queueing or riding, and it lets them all go at once** -
 see "Selling and the people on it" below.
@@ -1302,12 +1308,12 @@ verdict `FUN_00535670` refuses `0x40` land (`0x005357c7`). That is what the cell
 there, and that path does not come back. Whether every placement route reaches that verdict is open -
 `FUN_00532fc0` consults it only for ops carrying `0x100` or `0x200` (QUEUE Q37).
 
-**OpenTPW writes that reset** (`ParkPathBuilding.Cleared`) from `Unstamp`, the queue drain and the path
-clear. `Unstamp` clears only the cells the thing owns, which for a thing the save placed leaves out its
+**OpenTPW writes that reset** (`ParkPathBuilding.Cleared`) from `Unstamp`, the queue drain (`DrainQueue`), the path
+clear (`ClearPathCell`) and the queue-cell lift (`LiftQueue`). `Unstamp` clears only the cells the thing owns, which for a thing the save placed leaves out its
 `.` cells as the original does, and it differs twice, both because its placement verdict is unbuilt
 (`PLACEMENT_TERRAIN_RULE`) and a thing can stand where the original's cannot: it keeps the `0x40` flag, and
 a cell the save records as terrain the original never builds on goes back to the save's own record.
-The path and queue verdicts refuse `0x40` land, so the other two writers clear the whole word as the
+The path and queue verdicts refuse `0x40` land, so the other three writers clear the whole word as the
 original does. The demolish sound is counted (`DEMOLISH_SOUND`).
 
 **The object destructor `FUN_004dd0a0`** (one caller, `FUN_0050b780` at `0x0050b866`), in order: the
@@ -1665,8 +1671,9 @@ teardown. Escape, the menu's usual way in, drops the hand first, so the Alt+L qu
 carries a hand into a reloaded park. Two other callers of `GameMenu_Open` (`0x004be537`, `0x004a2942`) were not
 traced.
 
-**OpenTPW** (`Level.ForgetPark`, part of `Level.Unload`): each hand lets go through its own `Drop`, logged as
-`Leaving the park:`. Nothing is saved, and Restart Park reloads through the same `Unload`, so the hand leaves empty
+**OpenTPW** (`Level.ForgetPark`, part of `Level.Unload`): `ParkBuildMode.Forget` puts the build tool away, then
+`ParkHand.LetGo` lets go of the hand - the item and the candidate through their `Drop`, a worker through
+`ParkPeople.PutBack` - logged as `Leaving the park:`. Nothing is saved, and Restart Park reloads through the same `Unload`, so the hand leaves empty
 either way. It is `ParkHand.LetGo`, so a picked-up worker is put back down in their cell as well. The rest keeps the
 original's order: every entity is deleted, `ParkRides` letting go of `ParkRides.Current` as it goes, and last of
 all `Level.ForgetRunningPark` lets go of `ParkState.Current` and `ParkStaffPool.Current`. The console's `parks`
@@ -1764,8 +1771,8 @@ ui.wad and lobby.wad, and every outstanding hash falls out at once.
 The same scan is what left the buy and hire screens' root frame `0xf76e4200` recorded as a named gap;
 it is `window4` inside `w_big.MD2`, one of a family - `window1` `w_small`, `window2` `w_med`,
 `window3` `w_park`, `window4` `w_big`. Five screens wore no backdrop because of it. See
-`docs/exe/hud.md`. Resolver: `~/.cache/tpw-harnesses/nodenames/`, which decompresses and reads node
-names; the older `meshhash.py`, which hashes stems and raw tokens, cannot see any of this.
+`docs/exe/hud.md`. Resolver: a local harness that decompresses each member with `WadArchive` and reads
+`ModelFile.Nodes[].Name` (its path is in `CLAUDE.local.md`); a hash of stems and raw tokens cannot see any of this.
 
 **A trap for any re-implementation that anchors controls:** `0x3e25`'s rect (300..828) is **wider than
 its parent's** (348..762), so a rule that only inherits a parent's edge when the child sits inside it
@@ -1895,8 +1902,6 @@ Mixing them up is exactly the trap the cross-check warned about.
 5. `base.map`'s per-bit semantics beyond `0x08`.
 6. The procedural compositor.
 7. The park camera's terrain-following sampler — probably real, identity disputed between agents.
-8. Which tick drives the peeps.
-9. Whether `mTileData` carries per-corner deformation.
 
 ---
 
@@ -1999,8 +2004,9 @@ so an index of 8 or more names nothing at all. A straight with two mutual path l
 `2 + 3 + 3 = 8`; a corner takes its `+1` first and reaches `3 + 1 + 3 + 3 = 10`. **Lost Kingdom cannot
 arbitrate** — its one end piece at (49,22) has a single path link, so no cell in it ever gets past 5 —
 and whether the track-cell flags gate is what keeps the original inside the table is therefore **not
-established**. Measured in OpenTPW with that gate unreproduced: such a cell drew nothing, and because
-the ground leaves any tile-set-2 cell to the queue renderer, the **sky showed through the hole**.
+established**. Measured in OpenTPW before that was guarded: such a cell drew nothing, and because
+the ground leaves any tile-set-2 cell to the queue renderer, the **sky showed through the hole**. OpenTPW now
+drops path links until the index is in the table (`ParkPathBuilding.Retile`, counted `QUEUE_TILE_INDEX_OUTSIDE_TABLE`).
 
 **Queue cells need a filler ground tile as well as a model.** When the set is 2, `FUN_005365d0` frees
 any existing mesh, instantiates a per-cell model through `FUN_005229e0`, stores the handle in
@@ -2233,7 +2239,8 @@ returns untouched; one without gives up the flag; then the counter at `+0x20` is
 refunded. So Backspace takes up exactly what a run laid fresh and leaves what it crossed.
 
 **`+0x20` is `mOverlapCounter`.** The serialiser `FUN_004d0b30` pairs the string at `0x0075a054` with
-`LEA ECX,[ESI+0x20]`; in the save it is record offset `+8` (see the FileFormats `saves.md`). The shipped
+`LEA ECX,[ESI+0x20]`; in the save it is record offset `+8` (the FileFormats `saves.md` on its `docs/item-footprints` branch, not yet
+merged). The shipped
 Lost Kingdom has 14 non-zero path cells, all corners and junctions — eleven at 1, (47,21), (48,21) and
 (48,28) at 2 — and the queue node (52,22) at 1.
 

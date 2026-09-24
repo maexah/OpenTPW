@@ -26,9 +26,8 @@ namespace OpenTPW;
 /// The game asks for a sprite by a number whose top part is the bank and whose low four bits are the
 /// set (0x005423a0). <b>Banks are numbered in the order they are LOADED, which is not always the order
 /// their folder lists them</b> - the four avatar banks come first for the guest kinds that have them.
-/// This said "the order a folder's files are found", which <c>ParkGuestSprites.BanksIn</c> contradicts
-/// and <c>ParkGuestArtTests</c> pins: a sweep of the kids folder gives one order and the load gives
-/// another.
+/// <c>ParkGuestSprites.BanksIn</c> follows the load order and <c>ParkGuestArtTests</c> pins it; a sweep of
+/// the kids folder gives a different order.
 /// </para>
 /// </summary>
 public sealed class SpriteBankFile : BaseFormat

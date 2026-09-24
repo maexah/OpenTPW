@@ -27,7 +27,7 @@ namespace OpenTPW;
 /// comes out zero by itself.
 /// </para>
 /// <para>
-/// <b>That is true of the LOOPS, and it is not true of everything - this used to say so and was wrong.</b>
+/// <b>That is true of the LOOPS, and it is not true of everything.</b>
 /// The original does keep a paused flag, Game+0x1c at 0x00786b84, written by the pause helper at
 /// 0x004092ad. Exactly one thing in the whole executable reads it: FUN_00486b90 at 0x00486bce, which
 /// refuses to spawn a particle burst behind an open screen. So the honest claim is that no loop needs
@@ -41,9 +41,9 @@ namespace OpenTPW;
 /// own call site passes a (0,1,0) top vector, which is what says so. <see cref="Audio.HoldPlaced"/> is
 /// where that is reproduced, and it carries the account of what is restored and what is ours.
 /// <b>How far that lift actually turned a sound down is UNDETERMINED</b> - QMixer's distance model is
-/// not in the executable - so this comment no longer says "every placed sound attenuates to nothing",
-/// which is what it used to say and what nothing measured supports. What the lift decides is WHICH
-/// sounds, not how much: a listener cannot reach one that was never placed against it.
+/// not in the executable, and nothing measured supports "every placed sound attenuates to nothing". What
+/// the lift decides is WHICH sounds, not how much: a listener cannot reach one that was never placed
+/// against it.
 /// One caller in the game also freezes the interface's own timers, but none of the three screens
 /// modelled here is that caller: they all pass (0,0), which takes the other branch.
 /// </para>

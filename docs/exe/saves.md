@@ -1,5 +1,9 @@
 # Saves: `Config.tcf`, `gms.dat`, `.TPWS`
 
+The byte layouts on this page are duplicated in the FileFormats clone (`formats/options-and-players.md` on its
+`docs/save-files` branch, `formats/saves.md` on `docs/sam-and-saves-corrections`), which is the authority for bytes.
+This page is for what the executable does with them.
+
 Where the original writes what the player changes. Three kinds of file: `save\Config.tcf` holds machine options
 that belong to the installation, `save\users\<N><name>\gms.dat` holds a player profile — progress, tickets, keys and
 the options that belong to a person — and `<playerdir>\<theme>\*.TPWS` holds a park. Every one is
@@ -132,10 +136,9 @@ Alongside them: `restart.INTS`, `Refresh.INTS` (written around a sound-quality c
 ### Version is 400 **or** 500
 
 The container opens with a dword version. **The shipped park reads 400; a saved park reads 500.** It is a version, not
-a magic number — reading it as four bytes of "F4 01 00 00 magic" is what hid the distinction, and upstream's docs and
-`SaveReader.cs` both once did so. `SaveReader` hard-coded 500 and therefore **rejected the only file of this shape the
-game ships**. Both values are now accepted and anything else reports the number it actually found. This is a known bug
-with a regression test standing against it: `ParkSaveTests.TheShippedParkIsVersion400`.
+a magic number — reading it as four bytes of "F4 01 00 00 magic" is what hid the distinction, and the FileFormats
+`saves.md` still reads it that way on `master` (corrected on its `docs/sam-and-saves-corrections` branch). `SaveReader`
+accepts both and reports any other number it finds; `ParkSaveTests.TheShippedParkIsVersion400` pins that.
 
 ### Preamble
 
@@ -151,7 +154,7 @@ precedes the compressed block.
 | `0x0604` | 4 | file type | `00 01 22 19` |
 | `0x0608` | 1 | file version | 133 (`0x85`) |
 | `0x0609` | 1 | online flag | 0 = offline save, 1 = `upload.LAYS` |
-| `0x060A` | 2 | padding | |
+| `0x060A` | 3 | padding | zero in the shipped park (`0x060A`–`0x060C`); where the online block's start sits against it is not settled |
 | — | var | online block | `0x060C`–`0x0846`, **only** when the online flag is set; contents unknown |
 | `0x060D` | 4 | tag | `BILZ` |
 | `0x0611` | 4 | inflated size | what the payload expands to |
@@ -182,9 +185,11 @@ The compression routine `FUN_005f8050` has not been identified.
 | One dual-direction record routine per structure, as the original has | `OpenTPW.Files/Formats/Save/RecordStream.cs` |
 | `Config.tcf` | `OpenTPW.Files/Formats/Save/ConfigFile.cs` |
 | `gms.dat`, plus `ParkRecord` and `PlayerOptions` | `OpenTPW.Files/Formats/Save/PlayerFile.cs` |
-| Paths, case-insensitive finds, atomic writes, scan / create / save / delete | `OpenTPW/Client/SaveFolder.cs` |
+| Paths, case-insensitive finds, scan / create / save / delete | `OpenTPW/Client/SaveFolder.cs` |
+| Atomic writes (write a `.tmp`, then move it over) | `OpenTPW.Common/Files/BaseFileSystem.cs`, `WriteAllBytes` |
 | Player slots, persisted | `OpenTPW/Client/Players.cs` |
 | `.TPWS` / `.TPWI` container | `OpenTPW.Files/Formats/Save/SaveReader.cs` |
+| The inflated body: the World block, and what each thing and script was doing | `OpenTPW.Files/Formats/Save/ParkWorld.cs`, `ParkThingStates.cs`, `ParkScriptStates.cs` |
 
 Themes are taken to be the `data/levels` folders containing a `global.sam`. This is **inferred** — the original's own
 theme list names could not be read out of the executable.
@@ -195,7 +200,8 @@ back screen with key 1 and per-player options restored; delete works; an Instant
 
 **Not verified against files written by the real game** — no such files exist locally.
 
-Caution: test runs write into the real installation's `save/`. Empty it afterwards.
+Caution: a run of the game writes into the real installation's `save/` (`Config.tcf`, `opentpw.cfg`, player folders).
+Never empty it: delete only what that run created (`CLAUDE.md` rule 12).
 
 ## Unresolved
 

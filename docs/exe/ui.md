@@ -67,7 +67,7 @@ The lobby greeting is only samples **465** and **466**; **471** is the welcome-b
 | Address / value | Original name | What it is | Evidence |
 |---|---|---|---|
 | `0x005994e0` | `Advisor_StopSpeaking` | Does nothing unless he is busy. Stops his voice, lifts the speech duck, kills UI particle channel 0, hides the model, frees the lip data, then maybe cries | Ghidra |
-| `0x005d6070` | `AdvisorQueue_Clear` | One of the two reachers of StopSpeaking; the other is `AdvisorQueue_Add` with flush. `FrontEnd_ClosePlayerSlots` calls Clear whoever is picked | Ghidra |
+| `0x005d6060` | `AdvisorQueue_Clear` | One of the two reachers of StopSpeaking; the other is `AdvisorQueue_Add` with flush. `FrontEnd_ClosePlayerSlots` calls Clear whoever is picked | Ghidra |
 | `0x0051c2c0` | `Sound_Stop` | A plain stop — no fade — for his voice | Ghidra |
 | `0x00429d60` | `Advisor_KillModel` | Hides the model ("Kill advisor") | Ghidra |
 | `0x00f79680` | — | The sound handle. **The cry plays only when this is non-zero** | Ghidra |
@@ -85,7 +85,7 @@ The handle is zero through the **800 ms lead-in**, because `Advisor_Update` star
 | `0x004a3a30` | `OptionsScreen_Open` | Caller, with argument 1. The Game Options screen quietens him | Ghidra |
 | `0x0055035a` | `Game_StateMachine` | Caller. **Not checked against OpenTPW** | Ghidra |
 | `0x004a9380` | — | Caller (the postcard screen); also plays UI sound `0x95` and calls `ButtonGlintStop`. **Not checked against OpenTPW** | Ghidra |
-| `0x005f0b40` | — | Caller: the park map screen, which loads UI tree `0x774da0`. OpenTPW's park map screen and park front end both route through the quiet stop | Ghidra |
+| `0x005f0b40` | — | Caller: the park map screen, which loads UI tree `0x774da0`. OpenTPW's park map screen takes the quiet stop (`ParkMapScreen`), as its options screen does; a park's front end ending takes the crying one (`ParkFrontEnd.OnDelete` -> `Advisor.Hush`) | Ghidra |
 
 So: **options and the park map take the quiet stop; a flush, a queue clear and leaving the front end take the crying one.**
 
@@ -113,7 +113,7 @@ Verified by disk capture at both cuts: the logged cry matched at 0.997 and uniqu
 | `0x00402db0` | `GameClock_Resume` | — | Ghidra |
 | `0x00598960` / `0x00598990` | `Advisor_PauseVoice` / `Advisor_ResumeVoice` | Use flag `0x00f797c4`. A stop resumes first | Ghidra |
 | `0x0051c1c0` | — | Moves the 3D listener away while paused | Ghidra |
-| `0x005e184c` | — | The lobby arms a 90-second repeat of response `0x18a`/`0x18b`. **Not built in OpenTPW** | Ghidra |
+| `0x005e184c` | — | The lobby arms a 90-second repeat of response `0x18a`/`0x18b`. **Not built in OpenTPW, and not yet counted (`docs/QUEUE.md` Q69)** | Ghidra |
 
 His clips, lead-in and cue all use the game clock, so a pause carries them on without a jump. In a park, `GameMenu_Open`, `MessageBox_Open` and `OptionsScreen_Open` all call the pause. **In the lobby the original pauses nothing**: he talks on over the Escape menu, and the options screen only quietens the current line while the queue keeps ticking.
 
@@ -144,7 +144,7 @@ Across all **31 shipped categories** the stream runs **26-83 ms longer than the 
 | `0x0054e360` | main state machine | States 1, 3 and 9 are the other `Begin` call sites | Ghidra |
 | `0x005879c0` | `LoadingScreen_End` | Holds the first screen until 3 s after it appeared | Ghidra |
 | `0x00587c80` | `LoadingScreen_Step` | Runs only while the screen is up | Ghidra |
-| `0x00587db0` | texture-set loader | Calls `Step` | Ghidra |
+| `0x00587db0` | `SpritePack_Load` | Texture-set loader; calls `Step` | Ghidra |
 | `0x00579e00` | mesh loader | Calls `Step` | Ghidra |
 | `0x00587a70` | bar draw | Geometry at 640x480: x 14, y 446, height 11, length 318. Clamps at 100% | Ghidra |
 | `0x800000` | — | Dark red. Bands: dark red for the top fifth, bright red to four fifths, dark red to the bottom | Ghidra |
@@ -159,7 +159,7 @@ Across all **31 shipped categories** the stream runs **26-83 ms longer than the 
 
 **OpenTPW** shows only the later, bar kind. It keeps the picture 4:3 and pillarboxed, choosing the narrowest folder at least as wide as it is drawn, and writes the last log line under the bar. Loading is synchronous, so frames are drawn from steps and log lines, at most 30 a second, plus one forced frame on close. The percentage is worked out in **integers**: the original's float `steps * (100f / expected)` comes out a hair under 100 for some counts, so its bar never quite filled.
 
-**Not implemented:** the splash, the legal screen, the movies, the `welcome_<lang>` overlay.
+**Not implemented, and not yet counted (`docs/QUEUE.md` Q69):** the splash, the legal screen, the movies, the `welcome_<lang>` overlay.
 
 ### A step is exactly one Asset.Register
 
@@ -171,7 +171,7 @@ A step is one `Asset.Register` — Texture, Shader, Material, Model. Nothing els
 
 The bar **learns**: each situation — the scene, plus whether it has been built before in this run — keeps the count it last measured, in `save\opentpw.cfg`. That file is the truth.
 
-The constants in the code are only seeds for a first-ever run. **Do not re-measure them, and do not "fix" them in a commit.** This reverses an earlier standing instruction, and other notes may still invite the old chore; they are stale. Any step figure written in prose anywhere should be read as dead.
+The constants in the code are only seeds for a first-ever run. **Do not re-measure them, and do not "fix" them in a commit.** A new call site constructs `LoadingScreen( what, seedSteps )` with a rough seed and lets `LoadStepCounts` learn the real count; it never passes a hand-measured one. Any step figure written in prose anywhere should be read as dead.
 
 ### Measured costs
 
@@ -184,11 +184,11 @@ The constants in the code are only seeds for a first-ever run. **Do not re-measu
 | Address / value | Original name | What it is | Evidence |
 |---|---|---|---|
 | `0x0048c830` | `GameMenu_Open` | Opens the menu | Ghidra |
-| `0x0048c600` | — | The lobby's menu build | Ghidra |
+| `0x0048c600` | `GameMenu_BuildLobby` | The lobby's menu build | Ghidra |
 | `0x005e41c0` | `IslandLobby_OnKey` | On Escape's release asks each active child's `+0x18`, and opens the menu only if none answered - the island camera's cancel is `lobby.md`, "Escape cancels the fly-in" | Ghidra |
 | `0x0048bd40` | — | The menu's own key handler; closes on Escape | Ghidra |
 | msg `0x11` | — | Show. Sets the resting colour (0, 175, 190) | Ghidra |
-| — | `MenuChoice_TickColour` | Hover ramp: grey 33, +32 per tick, up to white. The tick is per frame in the original; **taken as 30/s here — unproven** | Ghidra |
+| `0x0048b220` | `MenuChoice_TickColour` | Hover ramp: grey 33, +32 per tick, up to white. The tick is per frame in the original; **taken as 30/s here — unproven** | Ghidra |
 | vtable `+0x24` | — | The front end's "is someone playing", which gates showing Select New Player. The reading is an interpretation | Ghidra |
 | cat_ui effect 193 | — | The click. Source measures -12.4 dBFS RMS / -0.2 peak by disk capture — much louder than BUTTON01 — so gain 0.132 puts it at -30 like the other clicks | Disk capture |
 
@@ -196,7 +196,7 @@ It is built in code, not from a layout tree: a LOLIGHT full-screen control plus 
 
 Go Online is a dead end — it only closes. Escape over a message box goes to the box: `UI_LoadModalTree` gives it the focus (`0x0047ee67`) and a key goes to the focus alone (`0x006698e6`), so it never reaches `IslandLobby_OnKey` (`lobby.md`, "Escape cancels the fly-in"). Over the options screen no key reaches the lobby: the screen hides the lobby's root (`0x004a3ae0`), which keeps the focus, so a key goes to the last control pressed, which drops it (`lobby.md`, "The lobby's keys act on the release").
 
-The scratch `sdt.py`/`levels.py` tools are broken (`sdt.py` was overwritten), which is why the click level was measured by capture rather than from the file.
+The click's level was measured by disk capture rather than read from the `.sdt`.
 
 ## Game Options
 
@@ -209,6 +209,8 @@ The scratch `sdt.py`/`levels.py` tools are broken (`sdt.py` was overwritten), wh
 | `-2` / `b_exit` | — | Cancel | Layout stream |
 | `0x0078d8d8` | GameOptions object | The live options object | Ghidra |
 | `0x00423690` | `GameOptions_Construct` | Where the defaults come from | Ghidra |
+| `0x00423740` | `GameOptions_CheckChanges` | Compares each option with its value when the screen opened: a new graphics quality reloads the detail file, and other changes raise a restart level at `+0x94` | Decompile |
+| `0x004237f0` | `GameOptions_Accept` | The tick: calls `CheckChanges` (`0x00423814`), reads `+0x94`, and shows RESTART GAME (UITEXT 403, pushed at `0x0042387d`) instead of closing when a restart is due. OpenTPW's `OptionsScreen` skips that check; its display and resolution apply live | Disassembly |
 | — | `Sound_ApplyGroupVolumes` | Speech volume 0 disables the duck — **proven** here | Ghidra |
 | `0x1d4c8` | — | The rendering row's control | Layout stream |
 | `0x1d4d2` | — | That row's `b_on2` arrow | Layout stream |
@@ -216,18 +218,18 @@ The scratch `sdt.py`/`levels.py` tools are broken (`sdt.py` was overwritten), wh
 
 **Meshes are found by node-name hash:** `b_on` (switch, down = off), `b_on2` (arrows), `f_optpanel`/`f_optpanel2`/`f_optpanel3` (rows), `b_scroller` (thumb), `f_screen` (backdrop), `!f_plain` (frame).
 
-Volume and quality defaults come from `sound.sam` `DefaultVolume.*` and `SoundInfo.*`, by name. Everything applies live; cancel restores the snapshot. Options persist as the original's do: machine options in `save\Config.tcf` on the tick, player options in the player's `gms.dat` when the player is saved (an early guess of `dialog.tcf` was wrong) — see `saves.md`.
+Volume and quality defaults come from `sound.sam` `DefaultVolume.*` and `SoundInfo.*`, by name. Everything applies live; cancel restores the snapshot. Options persist as the original's do: machine options in `save\Config.tcf` on the tick, player options in the player's `gms.dat` when the player is saved — see `saves.md`.
 
 Deliberate differences: cancel re-applies volumes (the original does not); OK's RESTART GAME and audio-quality checks are skipped.
 
 **Two rows are no longer the original's**, at Alexah's word:
 
 - the **rendering row** is now "Display: Windowed / Full screen / Borderless full screen". The original has no such row and no UITEXT for one, so its three words are OpenTPW's own. Taking over an existing row rather than adding one keeps the layout the compiled stream's. **GPU vs Software is no longer reachable**, though `CardRendering` is still read, written back, and still caps graphics quality.
-- the **resolution slider** steps the display's real modes — its `Maximum` is the mode count, not 100 — and only decides anything in exclusive full screen. It is switched off in the other two, where it reports what is in use. A switched-off slider had to refuse the wheel as well as the hit test, because the thumb takes the pointer like any button.
+- the **resolution slider** steps the display's real modes — its `Maximum` is one less than the mode count, one step per mode, not 100 — and only decides anything in exclusive full screen. It is switched off in the other two, where it reports what is in use. A switched-off slider had to refuse the wheel as well as the hit test, because the thumb takes the pointer like any button.
 
 Both apply on the tick and only when they actually changed, so no RESTART GAME box is needed. What OpenTPW is really set to lives in `save\opentpw.cfg`; `Config.tcf` keeps the nearest of the original's three, so it stays a file the original can read.
 
-Earlier rulings that still stand: the settings screen is 1:1 for now, and video card is dead. GPU/software and resolution were dead by the same ruling but have since become real, as above.
+Earlier rulings that still stand: the settings screen is 1:1 for now, video card is dead, and GPU/software is dead and unreachable (its row carries the display mode). Resolution was dead by the same ruling and has since become real, as above. Give the dead rows a meaning only with Alexah's word; `docs/QUEUE.md` Q33 proposes UI scale for the video card row.
 
 ### Uniform blocks must be per draw
 

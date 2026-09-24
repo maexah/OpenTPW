@@ -499,8 +499,8 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// <b>One branch of the original's loop is deliberately not reproduced.</b> Having moved, it calls
 	/// <c>FUN_0042a340</c>, which walks the cell's own thing list for a thing whose kind byte is 3, and on
 	/// finding one runs <c>FUN_004e15b0</c>. What that does to the viewer is not traced, and guessing at it
-	/// would be inventing behaviour rather than copying it - so it is left out and said here rather than
-	/// quietly skipped.
+	/// would be inventing behaviour rather than copying it - so it is left out and said here, and not yet
+	/// counted (docs/QUEUE.md Q69).
 	/// </para>
 	/// </summary>
 	/// <param name="blocked">
@@ -680,7 +680,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		// The cell actually stood in, as an index rather than the fractional `cell=` beside it, with what
 		// the map says is built on it. A pure getter, and the one the collision is read off: "the viewer
 		// is not inside the ride" is `type` never reading CellEdge.Footprint, which is a number the game
-		// says about itself rather than something inferred from a photograph (docs/VERIFYING.md rule 89).
+		// says about itself rather than something inferred from a photograph (docs/VERIFYING.md rule 99).
 		var cellX = (int)MathF.Floor( Stand.X / 10f );
 		var cellY = (int)MathF.Floor( Stand.Y / 10f );
 

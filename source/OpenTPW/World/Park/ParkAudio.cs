@@ -206,7 +206,7 @@ public sealed class ParkAudio : Entity
 	/// <summary>
 	/// Every distinct sample any scream in this park has played, which is what makes "the screams vary"
 	/// a number the game reports about itself rather than something inferred from a recording -
-	/// <c>docs/VERIFYING.md</c> rule 89.
+	/// <c>docs/VERIFYING.md</c> rules 99 and 100.
 	/// </summary>
 	private readonly HashSet<string> _screamSamples = [];
 

@@ -10,19 +10,18 @@ namespace OpenTPW;
 ///
 /// Disabled unless OPENTPW_DEBUG_CONSOLE=1 is set, and costs one boolean test per frame when off.
 /// To remove entirely: delete this file, the one call site in Level.Update(), Time.Paused and Time.StepFrames, and
-/// the members marked as being for it - LobbyCameraMode's DebugOrbit, DebugSelect, DebugSettle and DebugHoldOrbit; LobbyWeather's
-/// Current, DebugRain, DebugBolt and DebugStrike; LobbyAudio's Muted, State and DebugPlaceSound; LobbyFlyer's DebugClosestApproach
-/// and DebugClosestSolid; Lightning's DebugAxisDistance and DebugOpacity; the advisor's Say and State;
-/// Game's RequestLobbyReload; Water's Sea; ParkGuestSprites' Current, DebugFacing, Census and WriteGroundDash
-/// (with the white square Load appends to the atlas for it, and the second quad a person Build reserves);
-/// ParkFrontEnd's DebugOpenMenu; ParkCamcorderCameraMode's EdgeTestPark; and ParkPeople's Current and Census.
+/// every member whose summary says it exists for the debug console alone (grep "debug console", "DebugConsole" and
+/// "from the console"), plus Advisor.Say, and ParkGuestSprites' debug dash: the white square Load adds to the atlas
+/// and the second quad a person Build reserves. ParkPeople.Current, LobbyAudio.Current and Game.RequestLobbyReload
+/// are shared with the game and stay.
 ///
 /// Engine and content: neither. It drives and reads both, and nothing else depends on it.
 ///
 /// Usage:
 ///
 ///     mkfifo /tmp/tpw.in
-///     OPENTPW_DEBUG_CONSOLE=1 dotnet OpenTPW.dll &lt; /tmp/tpw.in
+///     ( sleep 99999 &gt; /tmp/tpw.in ) &amp;     # hold the write end open, or the first echo ends the reader
+///     OPENTPW_DEBUG_CONSOLE=1 dotnet OpenTPW.dll --game &lt;folder&gt; &lt; /tmp/tpw.in
 ///     echo "island 2" &gt; /tmp/tpw.in
 ///
 /// Every command answers on stdout with a line beginning "[dbg]", so a caller can wait for the
@@ -244,8 +243,9 @@ public static class DebugConsole
 				break;
 
 			// Runs the world on for a counted number of fixed-size frames and stops again, so a
-			// caller can put the lobby at exactly the same point every run: pause, pick an island,
-			// step, shoot. Poll `state` for stepping=0 to know it has finished.
+			// caller can put the lobby at exactly the same point every run: pause, `attract off`, pick an
+			// island, step, shoot (with nobody playing, `island` pins nothing until the attract camera is off -
+			// docs/VERIFYING.md rule 98). Poll `state` for stepping=0 to know it has finished.
 			case "step":
 				Time.Paused = true;
 				Time.StepFrames = parts.Length > 1 ? (int)Argument( 1 ) : 1;
@@ -480,7 +480,8 @@ public static class DebugConsole
 			case "speech":
 				// Auditions one of the 641 global speech samples, ducking the rest of the mix
 				// exactly as a real line would. This is how Advisor's first-launch sample
-				// gets confirmed - there is no way to read it out of the executable.
+				// gets confirmed: the response table (0x00768fb8, docs/exe/advisor-park.md) says which sample a
+				// response plays, and listening says what the sample says.
 				if ( Advisor.Current == null )
 					Reply( "no advisor" );
 				else if ( parts.Length > 1 )
@@ -689,9 +690,8 @@ public static class DebugConsole
 				break;
 
 			// Puts one new guest at the bus stop, which is what an arrival does - the original makes one
-			// per thing tick while a vehicle unloads. Driven by hand here because nothing yet runs the
-			// timer, and because the question worth answering first is whether a guest who was never in
-			// the save can walk and be seen at all.
+			// per thing tick while a vehicle unloads. Driven by hand here so an arrival can be made on demand,
+			// at any cell.
 			case "arrive":
 				if ( ParkPeople.Current is not { } arrivals )
 				{
@@ -771,7 +771,7 @@ public static class DebugConsole
 
 				break;
 
-			// The staff, who are a separate list from the guests and so appear in neither census above.
+			// The staff as the simulation holds them: `peeps` is guests only, and `guests` shows staff only as sprites.
 			case "staff":
 				if ( ParkPeople.Current is not { } employer )
 				{
@@ -840,9 +840,7 @@ public static class DebugConsole
 					// An optional heading, in radians, because a capture cannot otherwise be AIMED.
 					// Steer() turns the view from where the POINTER is - not from how far it moved - and
 					// a harness cannot move the pointer, so without this a screenshot faces wherever the
-					// mouse was last left and then drifts for as long as the clock runs. Same reason item
-					// 4 of the cleanup plan added `attract off`: the shot the work had to be confirmed by
-					// could not be framed with what already existed.
+					// mouse was last left and then drifts for as long as the clock runs.
 					if ( parts.Length > 3 )
 						ParkCamcorderCameraMode.Yaw = Argument( 3 );
 				}
@@ -861,8 +859,7 @@ public static class DebugConsole
 				break;
 
 			// Walking on the ground, driven by hand, because `camcorder x y` TELEPORTS - it calls
-			// StandAt - and so crosses no cell edge at all. The whole of cleanup item 2 is about what
-			// happens BETWEEN two cells, so nothing that already existed could show it.
+			// StandAt - and so crosses no cell edge at all, and what happens BETWEEN two cells is the question.
 			//
 			// It reaches ParkCamcorderCameraMode.Step, the same body Walk() runs with the real keys, so
 			// only the reading of Input is skipped. Frames rather than seconds, because the step is
@@ -1513,9 +1510,7 @@ public static class DebugConsole
 				break;
 
 			default:
-				// Kept in the order the cases appear, so a command added without a line here shows
-				// up as an obvious gap. weather, bolt and camcorder were missing from this list
-				// before assets was added to it.
+				// Only the lobby-era commands; the `case` labels above are the full list.
 				Reply( $"unknown command '{command}' - island/orbit/freeze/unfreeze/pause/resume/step/settle/strike/rain/weather/bolt/near/stats/assets/state/volume/mute/sound/place/speech/advisor/greet/duck/reload/size/park/lobby/camera/camcorder/quit" );
 				break;
 		}

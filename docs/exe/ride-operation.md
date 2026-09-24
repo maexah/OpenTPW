@@ -2,7 +2,7 @@
 
 How a placed catalogue object — a ride, a shop, a sideshow, a toilet — operates in the original game: the turn it takes on the park's thing sweep, the boarding handshake it shares with a guest, how a rider leaves and pays, how the queue renumbers itself, and the script instructions the engine and the ride use to talk to each other. The short version of the turn is: **the park sweeps every thing once in eight game ticks; a healthy object drops a stale queue head, maybe requests a breakdown, invites the guest at the front, then dismisses anyone who has finished.** The admission itself is driven from the *guest's* side, not the ride's — the ride invites, the guest accepts. Everything below is read off the disassembly, the shipped `.RSE` scripts and the shipped `.sam` balance files; where a fact is a measurement, its provenance is named in the row.
 
-Two kinds of offset appear on this page and they are **not** interchangeable. A `+0x..` is a **runtime** offset into the live struct. A bare decimal ("file 214") is an offset into the **saved record** that `SaveReader` walks. `mCash` is runtime `+0x1a0` and file 414; conflating the two has already gone wrong twice with `thing + 0x32` / `+0x36`.
+Two kinds of offset appear on this page and they are **not** interchangeable. A `+0x..` is a **runtime** offset into the live struct. A bare decimal ("file 214") is an offset into the **saved record** that `ParkWorld` walks. `mCash` is runtime `+0x1a0` and file 414; conflating the two has already gone wrong twice with `thing + 0x32` / `+0x36`.
 
 ## Where a ride's turn comes from
 
@@ -187,8 +187,7 @@ Entering state 14 also writes the guest's `+0x1f1` from the sideshow win roll �
 | `FUN_005019f0` | — | The guest's per-state turn dispatch. | Disassembly |
 | `FUN_00501db0` | SetState | The guest state setter this project reproduces as `Peep.SetState`. Case `0xe` writes `person[+0x1f1] = FUN_004e2670( object )`. | `search_bytes` for `88 ?? f1 01 00 00` |
 | `FUN_00500a50` | — | The state-18 (`HeadingForExit`) handler. | State → handler map |
-| `FUN_004fde50` | — | The price-opinion function. Ends `if ((price <= worth) && (price <= person[+0x1a0])) return 0;`. Computes what a guest thinks a thing is WORTH from balance-file weights at the balance block's `+0x140`..`+0x150` plus the item's excitement (`FUN_004e21b0`) and, **for a sideshow only** (`+0x4ac` == 2), `FUN_004e1a10`; then raises the price statistics. | Disassembly |
-| `FUN_004e21b0` | — | The item's excitement, fed into the worth calculation. | Disassembly |
+| `FUN_004fde50` | — | The price-opinion function. Ends `if ((price <= worth) && (price <= person[+0x1a0])) return 0;`. Computes what a guest thinks a thing is WORTH from balance-file weights at the balance block's `+0x140`..`+0x150` plus the object's chance of winning (`FUN_004e21b0`, `+0x190`) and, **for a sideshow only** (`+0x4ac` == 2), `FUN_004e1a10`; then raises the price statistics. | Disassembly |
 
 **`FUN_004fde50` is the gate on CHOOSING, never on paying.** Too expensive means turning away before boarding; it is not consulted when the charge is taken.
 
@@ -198,7 +197,7 @@ Entering state 14 also writes the guest's `+0x1f1` from the sideshow win roll �
 
 - **The destination is the cell BEYOND the exit**, not the exit. Direction = the exit cell's own direction byte (`+0xd`, via `FUN_00522850`), **flipped to the opposite (`FUN_004d8c00`, a four-bit rotate) when `mExitPos == mEntryPos`** — which is **ten of the eleven objects** in Lost Kingdom. `FUN_004d97e0` steps to the neighbour. It must not be a queue cell (`FUN_00536320`).
 - **`FUN_004dedf0` yields a FIXED-POINT position:** high byte the cell (`(mExitPos - 1) & 0x7f`, `>> 7`), low byte a sub-cell offset taken from the ITEM's own `.sam` — descriptor `+0xdc`/`+0xe0` for the exit, `+0xd4`/`+0xd8` for the stand point — validated with `"Dodgy X exit point in SAM file"`. Non-zero `which` selects the exit (`+0x38`), nought the stand point (`+0x36`); both are PACKED.
-- **The failure arm closes the ride.** If the aim will not route, the original refuses the dismissal and calls **`FUN_004df150`**: clears `mCanLoad` (`+0x68`) and `mPersonBeingLoaded` (`+0x6c`), logs `"Object %d: Closing…"`, sets script var 6 (`VAR_CLOSED`). Same body as `FUN_004e0e60`. **This is observable in the original**: a ride whose exit is not connected still teleports the guest onto it and leaves them there with a `?` overhead — the stranded thought bubble, `FUN_004f9490`'s `"Peep %d: stranded at time %d"`.
+- **The failure arm closes the ride.** If the aim will not route, the original refuses the dismissal and calls **`FUN_004df150`**: clears `mCanLoad` (`+0x68`) and `mPersonBeingLoaded` (`+0x6c`), logs `"Object %d: Closing…"`, sets script var 6 (`VAR_RIDECLOSED`). Same body as `FUN_004e0e60`. **This is observable in the original**: a ride whose exit is not connected still teleports the guest onto it and leaves them there with a `?` overhead — the stranded thought bubble, `FUN_004f9490`'s `"Peep %d: stranded at time %d"`.
 - `FUN_004fa530` is SetDest and **answers whether a route exists**; ExitRide charges and changes state ONLY when it does.
 
 | Address / offset | Original name | What it is | Evidence |
@@ -323,11 +322,11 @@ Each row is pinned by **the meter it writes**, not by key order, so the mapping 
 | `+0x150` | `UsageInfo.HappinessEffect` | `+0x19c` happiness | 5, "to add" |
 | `+0x154` | `UsageInfo.LitterEffect` | `+0x1b4` litter | 50, "to add" |
 
-**Exactly eight items declare the block, and all eight are shops**, by `Info.Id`: Balloon 1209, Burger 1207, Coconut 1203 (the Drinks Shop), Cost_shp 1202, Fries 1212, GiftShop 1211, IceCream 1206, Steak 1208. The two offerable objects in Lost Kingdom — Belly Bounce 1100 and Jungle Spray 1303 — declare none, and neither do the rides or the other sideshows. `Junspray.sam`'s `UsageInfo` runs price, cost, chance-of-losing, excitement, stand/appear positions, sprite handling and anim count, and stops.
+**Exactly eight items declare the block, and all eight are shops**, by `Info.Id`: Balloon 1209, Burger 1207, Coconut 1203 (the Drinks Shop), Cost_shp 1202, Fries 1212, GiftShop 1211, IceCream 1206, Steak 1208. Of the six objects Lost Kingdom offers, only the Drinks Shop (Coconut 1203) declares it; the Belly Bounce 1100, the Jungle Spray 1303 and the toilets declare none, and neither do the rides or the other sideshows. `Junspray.sam`'s `UsageInfo` runs price, cost, chance-of-losing, excitement, stand/appear positions, sprite handling and anim count, and stops.
 
 **Where the numbers live, because this has caused a false reading:** `shops/Shops.sam` declares all five keys at **5** and is the CATEGORY DEFAULT; each item's override lives in the `.sam` **inside its own `.wad`**, invisible to any grep of the installed game folder. So a shop carries the block twice over, inherited and overridden. `Rides.sam` and `SideShow.sam` declare none, so a ride reading **0** for an effect is a real fallback rather than a coincidence.
 
-**The effects arm has no payoff in Lost Kingdom whatever**: the two objects a guest can be offered declare nothing, and the eight that declare something are shops with `mQueueSizeInCells` 0, which `length < cells * 4` makes unreachable. Corroborated from the other side by a 180-game-second run: nothing reachable relieves a need, so needs ratchet and stay — 515 samples carried a NEGATIVE exit level and the worst guest sat `InQueue` at `exit -109 happy 0 thirst 100 hunger 100`. (Thirst 100 itself reached only 2 distinct guests, so the breadth is narrow.)
+**In Lost Kingdom the effects arm pays out at the Drinks Shop alone**: it is the one offerable object that declares the block, and it is offered because its queue room comes from the map walk, not its saved `mQueueSizeInCells` of 0 (see "Faithful, not defects").
 
 ### Easy-mode overrides
 
@@ -339,10 +338,10 @@ In `rides`, **twelve of thirteen** `Easy_*.sam` files carry real content — `Ea
 |---|---|---|---|
 | `FUN_004e2670` | — | Reached from `FUN_00501db0` case `0xe` (entering `EnteringRide`). Asserts `"Non sideshow object number %d ha[s]…"` (descriptor `+0x4ac` == 2), reads a chance-of-winning byte at **`+0x190`** (decimal 400), computes **`rand() % 100 <= chance`**, writes the result into script variable **11 (`VAR_PARAM`)**, and returns it. | Its own assert |
 | `+0x190` | `mChanceOfWinning` | **SETTLED 2026-09-20: it is the OBJECT's, and it is not read from the save at all.** `FUN_004db090` derives it as `100 - descriptor[+0xec]` at `004db38f`..`004db3a1` — `MOV EDX,[EDI+0xec]` / `MOV ECX,0x64` / `SUB ECX,EDX` / `MOV [ESI+0x190],ECX` — where `+0xec` is `UsageInfo.InitChanceOfLoosing`. That `FUN_004e2670` takes both the catalogue id (`+0xe`) and the script handle (`+0x24`) off the same pointer is what fixes it as the object rather than the person. The "file offset 1050" claim is withdrawn: nothing reads it out of the record. | Disassembly |
-| `FUN_004e1a10` | `mCostOfGoods` | **NOT the chance-of-winning accessor — this page said so twice and was wrong.** It is two instructions, `MOV EAX,[ECX+0x188]; RET`, on the OBJECT. `FUN_004db090` builds `+0x188` from the descriptor's `+0x140`, which is `UsageInfo.InitCostOfGoods`. It is the sideshow's **prize** and the numerator of what winning is worth. The chance of winning is `+0x190`, reached by `FUN_004e21b0`. | Disassembly, 2026-09-20 |
+| `FUN_004e1a10` | `mCostOfGoods` | **Not the chance-of-winning accessor.** It is two instructions, `MOV EAX,[ECX+0x188]; RET`, on the OBJECT. `FUN_004db090` builds `+0x188` from the descriptor's `+0x140`, which is `UsageInfo.InitCostOfGoods`. It is the sideshow's **prize** and the numerator of what winning is worth. The chance of winning is `+0x190`, reached by `FUN_004e21b0`. | Disassembly, 2026-09-20 |
 | `FUN_004e1a00` | `mPricePerUse` | `MOV EAX,[ECX+0x194]`. The divisor in the happiness sum below. | Disassembly |
 | `FUN_004e21b0` | — | `MOV AL,[ECX+0x190]` — the real chance-of-winning accessor. | Disassembly |
-| `UsageInfo.InitChanceOfLoosing` | — | **VERIFIED as the source behind `mChanceOfWinning`, and the "no per-item override" half was wrong.** `sideshow/SideShow.sam` declares **70** as the category default and **`Junspray.sam`, inside `junspray.wad`, overrides it to 75** — so the Jungle Spray's chance of winning is **25**. A grep of the installed folder cannot see that, because an item's overrides live in the `.sam` inside its own `.wad`. **Nothing in `shops` or `rides` declares the key at all, so their chance of winning is 100 and their roll never fails** — which is the whole reason a shop always serves, and why `FUN_004e2670`'s assert reads "sideshow **or** this value is `'d'`" (decimal 100). (`Loosing` is the game's own spelling.) | `.sam` sweep + `FUN_004db090` |
+| `UsageInfo.InitChanceOfLoosing` | — | **VERIFIED as the source behind `mChanceOfWinning`, with a per-item override:** `sideshow/SideShow.sam` declares **70** as the category default and **`Junspray.sam`, inside `junspray.wad`, overrides it to 75** — so the Jungle Spray's chance of winning is **25**. A grep of the installed folder cannot see that, because an item's overrides live in the `.sam` inside its own `.wad`. **Nothing in `shops` or `rides` declares the key at all, so their chance of winning is 100 and their roll never fails** — which is the whole reason a shop always serves, and why `FUN_004e2670`'s assert reads "sideshow **or** this value is `'d'`" (decimal 100). (`Loosing` is the game's own spelling.) | `.sam` sweep + `FUN_004db090` |
 
 ### What `+0x1f1` means is not settled
 
@@ -375,7 +374,7 @@ The save reader names the byte `mQueuePos`; the state setter writes the sideshow
 | `+0x20` / `+0x24` | costume in / out |
 | `+0xc2` | stamped by the toilet arm |
 
-**UNCERTAIN, recorded rather than resolved:** `FUN_005019f0` case `0x11` walks a list from a world head (`DAT_0080239c + 0x1da744`) through `+0x210` / `+0x212`, and the guest field table calls `+0x210` `mBalloonScript`. That is either a second use of the field, a union, or — most likely — a DIFFERENT struct entirely, since the walk starts from a world list rather than from a person. Do not treat it as evidence against the field table without establishing what that list holds.
+`FUN_005019f0` case `0x11` walks the guard chain from `mFirstGuard` (`+0x1da744`, see the header's list heads above) through `+0x210` / `+0x212`, so those two are read off a staff record and are not evidence against the guest table's `mBalloonScript`. The case itself is undecoded.
 
 ## Object fields
 
@@ -398,7 +397,7 @@ The save reader names the byte `mQueuePos`; the state setter writes the sideshow
 | `+0x6c` | `mPersonBeingLoaded` | |
 | `+0x70` | takings accumulator credited alongside `+0x180` | |
 | `+0x180` | `mTotalTakings` | File 1090 |
-| `+0x190` | `mChanceOfWinning` | File 1050 claimed, **unverified**. **This is an OBJECT offset.** Do not confuse it with the **person** `+0x190` (`mPreviousX`) in "Where a WALKING peep is drawn" below — different records, same number |
+| `+0x190` | `mChanceOfWinning` | Not in the save: derived at build as `100 - descriptor[+0xec]` (see "The sideshow win roll"). **This is an OBJECT offset.** Do not confuse it with the **person** `+0x190` (`mPreviousX`) in "Where a WALKING peep is drawn" below — different records, same number |
 | `+0x194` | `mPricePerUse` | File 1054 |
 | `+0x19c` | `mState` | |
 
@@ -415,13 +414,14 @@ Object records are also read at file offsets 1035 and 1062.
 | 2 | `VAR_CAPACITY` | Engine → script, pushed by `FUN_004dd7f0` |
 | 3 | `VAR_DURATION` | Engine → script, pushed by `FUN_004df8f0` |
 | 4 | `VAR_BREAKSTAT` | Breakdown, engine → script |
-| 6 | `VAR_RIDECLOSED` / `VAR_CLOSED` | Closed |
+| 5 | `VAR_ONRIDE` | |
+| 6 | `VAR_RIDECLOSED` | Closed |
 | 7 | `VAR_BROKEN` | Broken |
 | 8 | `VAR_WORN` | Worn |
-| 9 | running | |
+| 9 | `VAR_RUNNING` | |
+| 10 | `VAR_PAD` | |
 | 11 | `VAR_PARAM` | The sideshow win roll, written by `FUN_004e2670` |
 
-Indices 5 and 10, and the index of `VAR_ONRIDE`, are not recorded here.
 
 The inbox/outbox asymmetry is why the polarity looks inverted; it was settled by disassembling a known writer and a known reader beside each other.
 
@@ -438,7 +438,7 @@ The inbox/outbox asymmetry is why the polarity looks inverted; it was settled by
 
 ### How every jungle script dismisses — swept whole, 73 scripts, all five folders
 
-An earlier survey used `rides/` alone (22 scripts) and got the priorities backwards. The walk-slot count is the header word at `0x1c`, and it is non-zero for **exactly** the `WALKGET` users.
+The walk-slot count is the header word at `0x1c`, and it is non-zero for **exactly** the `WALKGET` users.
 
     WALKGET (10)   balloon 10, giftshop 10, Hyenas 3, incagod 40, Junspray 3, Lookout 20,
                    Squark 1, steak 10, Totem 20, tvsim 20        <- slots at 0x1c
@@ -448,18 +448,18 @@ An earlier survey used `rides/` alone (22 scripts) and got the priorities backwa
     UNBOUNCE (1)   Bouncy
     TOUR (1)       TourRide
 
-The one-to-one rule — declares walk slots ⟺ uses the walk family — holds park-wide in both directions, and `Bouncy` alone declares bounce slots (10) and no walk ones. (A 70-script sweep first recorded eleven walk consumers; the full five-folder sweep lists the ten above.)
+The one-to-one rule — declares walk slots ⟺ uses the walk family — holds park-wide in both directions, and `Bouncy` alone declares bounce slots (10) and no walk ones.
 
 `LIMBO` is used by **5** scripts: arc2x3, balloon, Cost_shp, giftshop, steak. `Cost_shp` is LIMBO 1, LIMBOSPACE 1, UNLIMBO 1, FORCEUNLIMBO 1, INLIMBO 0; `Bouncy` is STARTSCREAM 1, STOPSCREAM 2, COAST 0.
 
 ### The opcode dispatch
 
-**It is a plain opcode → handler pointer table at `005567d8`.** There is no switch and no jump table anywhere in the binary — the largest indexed `JMP` in the whole image is 36 entries — which is why four separate scans for one found nothing. Entry N is the handler for opcode N; all 107 entries are code pointers. **To find any opcode's handler, read `[0x005567d8 + opcode*4]`.**
+**It is a plain opcode → handler pointer table at `005567d8`.** The dispatch is a bounds check and one indirect jump - `CMP ECX,0x69` / `JA 0x0055679c` (the default) / `JMP [ECX*4 + 0x5567d8]` at `0x00551d3d` - which scans for a switch statement's own table did not find. Entry N is the handler for opcode N; all 106 entries are code pointers. **To find any opcode's handler, read `[0x005567d8 + opcode*4]`.**
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
 | `0x005567d8` | — | The opcode → handler pointer table. Verified with a control: entries 70..75 land exactly on six functions named earlier by decoding their bodies. | Table read + control |
-| `0x00765280` | — | A table of `{name, operand-count-as-a-STRING}`, **107 entries from `NOP`**. Confirms operand counts (WALKON 7, BOUNCE 2, WALKST_FLOAT 3, WALKFLOATSTOP 0). **Its ORDER matches the handler table's**, which is what confirms the numbering. | Table read |
+| `0x00765280` | — | A table of `{name, operand-count-as-a-STRING}`, **106 entries, `NOP` to `SPARK`** (record 106 is not one). Confirms operand counts (WALKON 7, BOUNCE 2, WALKST_FLOAT 3, WALKFLOATSTOP 0). **Its ORDER matches the handler table's**, which is what confirms the numbering. | Table read |
 | `FUN_00551600` | `RSSE_Initialise` | `"Tried to Initialise twice"`. Its only use of the opcode name table is to SUM ITS CHARACTERS into a checksum at `DAT_00879190`. Not a dispatch. | Its own string |
 | `FUN_005597a0` | `RSSE_Load` | `RSSE` magic `0x45535352`, per-script mallocs, then the `OBJ ` list `0x204a424f`. Allocates walk slots as `count << 5`. | Disassembly |
 | `FUN_0055abf0` | — | The per-tick driver, 5,712 bytes, the largest in the region; walks the TOUR ride records at `[0x8791f8]` (slots 1..99, `0x122c` bytes each, twenty cars at stride `0xe4`, made by `FUN_0055a620`). Contains **no CMP/SUB against 73..78 at all**, so it is not the decoder. | Disassembly |
@@ -621,7 +621,7 @@ live at person `+0x218`/`+0x21c` (save 430 / 434), and their only live reader is
 one frame of deliberate lag for something trailing its owner. **What that something is remains unsettled** —
 one reading is a held balloon (`+0x210` is named `mBalloonScript` by the guest serialiser, and the height
 term shortens as the owner moves), another a ground effect — and `+0x210`'s name is already flagged as
-uncertain in the object-fields table above. It does not bear on the walking case either way.
+uncertain under "The guest record, as named by the game's own save reader" above. It does not bear on the walking case either way.
 
 ### What these constants cost to confirm, because the first reading of them was wrong
 
@@ -649,7 +649,7 @@ The family's dispatch-table handlers sit at **`0x00555e5e`** (86), **`0x00555ef7
 | `FUN_00466b70` | — | The sound position: indexes `DAT_007a4610` by the script's model handle and fills SIX floats — two points with heights from the model's `+0x1c`/`+0x28`. **It is the RIDE's position, never a rider's.** | Disassembly |
 | `+0xc8` | — | The script's model handle, which is where the position comes from. | Disassembly |
 
-**Parameter 6 is `(operand + the script's SPEED) / 2`, clamped 0..100.** `+0xc0` is not a scream field. It is the script's speed word, a short the loader sets to 50, the same one `WAIT` divides by. All three instructions READ it and none writes it. So `Bouncy`'s `STARTSCREAM VAR_TEMP, 20` at default speed gives `(20+50)/2 = 35`, which the zones of all four scream effects send to **variation 2**. The first child of a chain always plays variation 1. This page used to call the value the scream's volume. The only reader found is the variation pick, and OpenTPW's use of it as a gain is a choice, Q43. `SCREAMLEVEL` does not write the speed field.
+**Parameter 6 is `(operand + the script's SPEED) / 2`, clamped 0..100.** `+0xc0` is not a scream field. It is the script's speed word, a short the loader sets to 50, the same one `WAIT` divides by. All three instructions READ it and none writes it. So `Bouncy`'s `STARTSCREAM VAR_TEMP, 20` at default speed gives `(20+50)/2 = 35`, which the zones of all four scream effects send to **variation 2**. The first child of a chain always plays variation 1. The only reader found is the variation pick, and OpenTPW's use of it as a gain is a choice, Q43. `SCREAMLEVEL` does not write the speed field.
 
 `Bouncy` passes `SINGLESCREAM VAR_ONRIDE, 65535`, and 65535 as a SHORT is **-1**, so it takes the negative branch. The handler chooses between the two at `0x00555f6b` (`CMP ESI,EDI` against a zeroed EDI, then `JGE`), so the test is on the **second** operand and `>= 0` takes the grid.
 
@@ -664,7 +664,7 @@ The family's dispatch-table handlers sit at **`0x00555e5e`** (86), **`0x00555ef7
 | `SINGLESCREAM` | 46 | 44 |
 | `SCREAMLEVEL` | **81** | **36** |
 
-**>>> THIS CORRECTS THE FOUR NUMBERS THAT STOOD HERE (7, 7, 9 and 6), AND THE WAY THEY WERE WRONG IS WORTH MORE THAN THE FIGURES. <<<** They were **jungle-only** — the sentence read as a whole-corpus claim and named seven jungle scripts — and even as a jungle count they were short by one, because **`Monkey.rse` has a lower-case extension** and a case-sensitive `.RSE` match drops it silently. Jungle alone is **8** `STARTSCREAM` scripts: Bouncy, incagod, Lookout, **Monkey**, Mumbo, PorkPie, Spider, Volcano. `SCREAMLEVEL` being twelve times commoner than "6 scripts" suggested is the headline: it is the third-most-used member of the family.
+**Match the extension case-insensitively:** `Monkey.rse` is lower-case, and a case-sensitive `.RSE` match drops it silently. Jungle alone is **8** `STARTSCREAM` scripts: Bouncy, incagod, Lookout, **Monkey**, Mumbo, PorkPie, Spider, Volcano. `SCREAMLEVEL` has the most uses of the family, 81, in the fewest scripts, 36.
 
 Only **Bouncy** is placed in Lost Kingdom, and **Bouncy never calls `SCREAMLEVEL`** — so that opcode is dead by CONTENT there while being unavoidable corpus-wide.
 
@@ -690,12 +690,7 @@ So **the band operand is the rider count**, and the scream is torn down and rest
 
 **`Sound_PlayEffect( handle, category, effect, x, y, z )` has no loop parameter**, and QMixer is never asked to loop: its one `QSWaveMixPlayEx` call passes `nLoops` 0 (`0x006d2463`, `0x006d2470`). What makes `STARTSCREAM`'s handle go on screaming is the **effect's flags word**. Effects 71-74 carry `0x0404`, which builds a voice that plays nothing itself and keeps a chain of one-shot children. Each child gets a fresh variation, a fresh sample and a fresh wait, until the handle is stopped. `SINGLESCREAM`'s effects carry no bit `0x4`, so each is a one-shot that dies after its sample. The whole mechanism is in `audio.md`, "How the engine plays an effect: priority, not a repeat delay".
 
-**This section used to say otherwise, three ways:**
-- that the play path below `Sound_PlayEffect` could not be reached;
-- that the decision lay in `QMixer.dll`;
-- that `FUN_006bf330` opened the map files and the effect parser was elsewhere.
-
-The first two were wrong. `DAT_00802bcc` is a forwarder, written through a pointer, which is why it shows only reads, and the play is the manager's `+0x10`, `0x006b87d0`. `FUN_006bf330` does open both map files, but it is the whole category load, reached only from registration and never from a play. Its conclusion, replay and not a loop, was right.
+`DAT_00802bcc` is a forwarder, written through a pointer, which is why it shows only reads; the play is the manager's `+0x10`, `0x006b87d0`. `FUN_006bf330` opens both map files, but it is the whole category load, reached only from registration and never from a play.
 
 **What the shipped data says, now that the headers are decoded.** From `data/global/sound/cat_kidsSFX.map`:
 
@@ -706,7 +701,7 @@ The first two were wrong. `DAT_00802bcc` is a forwarder, written through a point
 | 73 (`0x49`) | 4 | **60** | 100-1000 ms | 2700 | 310-3378 ms, mean 847 |
 | 74 (`0x4a`) | 4 | **59** | 0-500 ms | 2700 | 284-4400 ms, mean 888 |
 
-The wait is drawn per child and counted from that child's start, so a busy ride screams more often and can overlap itself. A chain belongs to one handle, and nothing is kept per effect. **Two rides in one band each scream on their own clock, and one stopping leaves the other exactly as it was.** OpenTPW had one "available at" time per effect, and a stop reset it. That was `docs/QUEUE.md` Q9.
+The wait is drawn per child and counted from that child's start, so a busy ride screams more often and can overlap itself. A chain belongs to one handle, and nothing is kept per effect. **Two rides in one band each scream on their own clock, and one stopping leaves the other exactly as it was.** OpenTPW keeps one chain per ride (`ParkScreams`, Q9).
 
 **The record's fifth int is not a loop flag, and now it is decoded.** It looks like one in `cat_kids` alone, where it is 0 for every one-shot and `0x00060404` for all four scream bands. It is `{u16 flags, u8 parameter id, u8 0}`:
 - The flags pick the voice class (`0x006b6774`). The `0x0404` of 71-74 is the chaining class.
@@ -731,8 +726,7 @@ Of the opcodes that appear in the scripts of things actually **placed** in Lost 
 A ride's script starts by playing the clip that builds the ride. `Bouncy.RSE`'s **second** instruction,
 body word 4, is `WAITANIM 0 0` — role 0 entry 0, the construction clip — and `WAITANIM` starts the
 animation as well as waiting on it. (The **first** is `NAME`, at word 0, in all fourteen of the shipped
-park's scripts; calling the `WAITANIM` the first instruction would contradict that, and it was written
-that way here until the decode was checked.) So anything that starts these scripts from word 0 watches every
+park's scripts.) So anything that starts these scripts from word 0 watches every
 placed thing build itself again. **Nothing in the engine guards against that**: what prevents it is
 that a loaded park never starts its scripts from the beginning at all.
 
@@ -780,13 +774,13 @@ same for a freeze at frame nought. In the shipped park **eleven of the fifteen**
 of them and restarts the clip — including the Litter Bin, which is saved on role 0.
 
 **What OpenTPW does with this.** It restores **both halves**: from `RSSE` the script's counter, its
-variables and its declared name, and from `RSYS` each thing's animation channels — the role, the entry
-and the flag word, with the two bits that mean the same thing carried across and the held and frozen
+variables and its declared name, and from `RSYS` each thing's animation channels — the role, the entry,
+the speed and the flag word, with the two bits that mean the same thing carried across and the held and frozen
 states re-entered through the pseudo-roles exactly as above. Restoring only the script is a net loss, and measurably so: a thing whose
 steady-state loop holds no animation instruction never reaches the `LOOPANIM` in its prologue again, and
 ten of Lost Kingdom's fourteen placed things stood frozen for the whole session when the counter alone
-was put back. The rest is counted rather than guessed — the wait deadlines, the call stack and the
-limbo, bounce and walk tables are stepped over by length so the walk still has to add up. The name is **not** in the
+was put back. The rest is stepped over by length, neither restored nor counted in the `unimplemented` census — the
+wait deadlines, the call stack and the limbo, bounce and walk tables — so the walk still has to add up. The name is **not** in the
 saved struct and is taken off the script's own opening `NAME` instead, which matters because resuming
 skips that instruction and `FINDSCRIPTRAND` looks a script up by name. `ParkRides.BindNew` — the path a
 player takes by building something — deliberately restores nothing, because a new thing has no past and
@@ -799,7 +793,7 @@ Behaviour that reads like a bug and is the original:
 - **The park's displayed balance does not move on a ride charge.** `FUN_004e16b0` credits the object's `+0x180` and a global income pool chosen by the descriptor's `+0x4ac` (`+0x20130` rides, `+0x20380` shops) — **not** the park balance the HUD reads, and not `FUN_004d0600`. A charge can debit a guest and leave the displayed money unchanged.
 - **A guest short of the price is left short, not refused.** `FUN_004fde50` gates CHOOSING, never paying; `FUN_004fe1a0` subtracts the price when it is non-zero.
 - **A healthy ride's turn never completes an admission.** `FUN_004e0450` is reached only while closing, or from `Invite`'s `mCanLoad == 0` bail. The guest's own state-14 turn does the completion.
-- **~~The Drinks Shop is never offered to a guest.~~ REFUTED 2026-09-20 — both halves of this were wrong, and it belongs here only as a warning.** The queue-room test reads the object's `+0x40`, which is **not** `mQueueSizeInCells` as loaded: `FUN_004de130` (`GetBackOfQueue`) *overwrites* it by walking the map whenever `mBackOfQueue` is nought, and `FUN_004dd920` calls that **before** it reads the count. The shop's entry cell connects to a path, so the walk answers one cell and `0 < 4` passes. All six objects carrying the choosable bit really can be offered — the three toilets are in the identical position, and no toilet in any park could ever be visited under the old reading. **And a shop does NOT take its money through LIMBO**: `Coconut.RSE` declares zero limbo slots and zero walk slots and uses neither family, running the same `VAR_LETMEON` → `WAIT 1000` → `VAR_LETMEOFF` handshake a ride runs. It is paid by the ordinary dismiss path, `FUN_004e1410` → `FUN_005014e0` → `FUN_004fd970` → `FUN_004fe1a0`. Limbo is real, but it is how `steak`, `giftshop`, `balloon`, `Cost_shp` and `arc2x3` hold a guest — never `coconut`, and it is script-private bookkeeping the engine never reads.
+- **A shop is offered and paid like a ride.** The queue-room test reads the object's `+0x40`, which is **not** `mQueueSizeInCells` as loaded: `FUN_004de130` (`GetBackOfQueue`) *overwrites* it by walking the map whenever `mBackOfQueue` is nought, and `FUN_004dd920` calls that **before** it reads the count. The shop's entry cell connects to a path, so the walk answers one cell and `0 < 4` passes. All six objects carrying the choosable bit really can be offered — the three toilets are in the identical position, and no toilet in any park could ever be visited under the old reading. **And a shop does NOT take its money through LIMBO**: `Coconut.RSE` declares zero limbo slots and zero walk slots and uses neither family, running the same `VAR_LETMEON` → `WAIT 1000` → `VAR_LETMEOFF` handshake a ride runs. The engine never reads a script's limbo slots either: swept over all 43 functions that resolve a script frame, with the opcode handlers' own accesses as the positive control. It is paid by the ordinary dismiss path, `FUN_004e1410` → `FUN_005014e0` → `FUN_004fd970` → `FUN_004fe1a0`. Limbo is real, but it is how `steak`, `giftshop`, `balloon`, `Cost_shp` and `arc2x3` hold a guest — never `coconut`, and it is script-private bookkeeping the engine never reads.
 - **`SINGLESCREAM`'s negative branch skips effect `0x6b`.** The gap is in the original's switch and is matched by the shipped category listing.
 - **`BOUNCESETBASE` writes a field the bounce family never reads**, so `Bouncy`'s rider nodes stay at 0..9.
 - **A guest the ride cannot route away is teleported onto the exit and left there** with a `?` bubble, and the ride closes itself.
@@ -817,7 +811,7 @@ Behaviour that reads like a bug and is the original:
 | Toilets (cat 1402), three of them | capacity **1** | Save read |
 | Duration anywhere but the Belly Bounce | **0** | Save read |
 | `mTotalTakings` | nought on every object | Save read |
-| Things that can be queued for | **all six that carry the choosable bit** — 13, 14, 16 and the three toilets 21/22/23. This row read "13 and 14 only" until 2026-09-20, off the save's `mQueueSizeInCells`; the engine walks the map instead | Save read + map walk |
+| Things that can be queued for | **all six that carry the choosable bit** — 13, 14, 16 and the three toilets 21/22/23. Decided by the engine's map walk (`FUN_004de130`), not by the save's `mQueueSizeInCells` | Save read + map walk |
 | Things ever seen calling somebody forward, over 2,688 thing ticks | **[13] — the ride alone** | Driven run |
 | Park entry fee | **25** against a floor of 20 | Balance file |
 | Bus stops | **(42,5)** and **(53,5)** | Save read |
@@ -830,22 +824,18 @@ The Jungle Spray is queued for and invited in **about one run in five** at that 
 
 ## Open and unverified
 
-- ~~**`+0x33` bit 0** on the object — lets a ride invite while running. Unestablished.~~ **CLOSED 2026-09-23: it is RunsContinuously** (descriptor `+0x48`) - see `park-engine.md`, "Still open".
-- ~~**The `0x80` flag bit** tested at the top of `FUN_004e0b90`. Unexplained.~~ **CLOSED 2026-09-23: it is IsFireworks** (descriptor `+0x110`); no jungle item sets it.
 - **The original's writer of `mQueuePos` in the ordinary queue flow.** Join, leave, the guest-side completion and the state-12 shuffle are all decoded and write nothing.
 - **What `+0x1f1` means at settle-up time.** The byte is overloaded between a queue position and a sideshow roll.
-- ~~**`mChanceOfWinning`'s file offset (1050).**~~ **CLOSED 2026-09-20: there is no file offset.** The field is derived at build from the descriptor, `100 - UsageInfo.InitChanceOfLoosing`, and nothing reads it out of the record — which is why no decoded read lands at 1050.
 - **`+0x1a8` as a capacity re-check divisor.** Unestablished; `FUN_004dda40` is its named reader.
 - **The balloon and costume SPRITE path** out of `FUN_004fe1e0`.
-- **`FUN_005019f0` case `0x11`** and the world list at `DAT_0080239c + 0x1da744` walked through `+0x210` / `+0x212`.
+- **`FUN_005019f0` case `0x11`**, the walk of the `mFirstGuard` chain through `+0x210` / `+0x212`.
 - **Whether a shop's duration of nought is correct** (it may simply not read it) where `FUN_004df8f0` would take a clamped value from the descriptor's `+0x1a0`.
-- ~~**The shop's LIMBO money path.**~~ **CLOSED 2026-09-20: there is no such path.** A shop is paid through the ordinary dismiss chain like anything else, and the engine never reads a script's limbo slots — swept over all 43 functions that resolve a script frame, with the opcode handlers' own accesses as the positive control.
 - **Refuted, so do not repeat:** "only `UNBOUNCE` writes `VAR_LETMEOFF`" — there are six writers, and the claim is false for 21 of the park theme's 22 ride scripts. "The shops' `mOperatingCapacity` might be nought, leaving them permanently full" — every visitable object has a non-zero capacity.
-- Descriptor keys present in the `.sam` files and not yet used: `SpecialIngredient`, `ShopType`, `RideHandlesSprite`, `RequiresTeleport`, `NumSimultAnims`, `GoldenTicketCost`, `AppearanceEffect`, `InitPricePerUse`, `InitCostOfGoods`.
+- Descriptor keys present in the `.sam` files that OpenTPW does not read yet: `SpecialIngredient`, `ShopType`, `RideHandlesSprite` (the flag byte's `0x20`, Q52), `RequiresTeleport`, `GoldenTicketCost`, `AppearanceEffect`, `InitPricePerUse`.
 
 ## Measuring the corpus without inventing findings
 
 - **Match a script listing FIELD-EXACTLY** (`awk '{for(i=1;i<=NF;i++) if($i==op) c++}'`) — no anchors, no substrings — and state the expected count for a known script before running it. A `^\s*[0-9]+\s+OP` anchor silently skips every script whose listing sits on the current instruction (marked `>>`), which made `LIMBO` read as 0 scripts when it is 5. A substring match gave `BUMP` 3 for the wrong reason, then 0 after the anchor "fix"; it is 3.
-- **`wadcat`'s interface**: `wadcat --list|--id|--bounds|--meshes|--anim|--field|--heights <wad>…` **or** `wadcat --cat|--dump <SUFFIX> <wad>…` — **the suffix comes first**, there is no `--out`, and `--dump` writes into the working directory. Invoked wrongly it does nothing quietly, and "no scripts were dumped" then reads exactly like "these archives carry no scripts". Avoid `--cat`: it concatenates several members behind banners and has produced a false finding.
+- **`wadcat`**: see `park.md`, "Instruments and preserved artifacts".
 - **A census that recomputes is not an observation.** A census that calls the position function itself rather than reading what the renderer used will report the queue cell while riders are being drawn on the ride — indistinguishable from a build where nothing happens.
 - **Collect every state; do not enumerate the ones you expect.** A disjunction across a step boundary ("`BeingAdmitted` or `EnteringRide`") passes on its first half while the chain stalls at exactly that boundary, and cannot detect the missing step.

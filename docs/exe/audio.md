@@ -19,7 +19,7 @@ The delay-load IAT *can* be found, but not by searching for a string or a VA: th
 | `006fd2a4` | — | `SetDistanceMapping`'s IAT slot; called exactly once | `get_xrefs_to` on the slot |
 | `006d2963` | — | The one call site of that slot | xref from `006fd2a4` |
 | `006d2930` | — | Thin wrapper around it: builds a 16-byte struct `{cbSize=0x10, a, b, c}` and copies the three values straight from its caller, so the real parameters live one level further up | Decompiled |
-| `00711980` | — | The only place the wrapper's address appears — a vtable, so the caller is virtual-dispatched | Address search |
+| `00711980` | — | The only place the wrapper's address appears: slot `+0x60` of the QMixer wrapper vtable at `0x00711920` (see below), so the caller is virtual-dispatched | Address search |
 | `007655d8` | — | Ride-script keyword table; holds `SETREVERB` alongside `SPARK`, `SCREAMLEVEL`, `SETLIGHT`, `WALKON` | Read from the exe |
 
 `SndReverb.map` is 820 bytes with first dword `2000`. **Record shape NOT decoded** — 48 and 68 both divide the remainder, 52 is wrong.
@@ -30,7 +30,7 @@ The delay-load IAT *can* be found, but not by searching for a string or a VA: th
 
 The three ints become floats in a stack record `{vtable 00700b90, category, effect, x, y, z}`, virtual-called through `DAT_00802bcc`'s vtable+8. `DAT_00802bcc` is not the manager: it is an 8-byte forwarder (vptr `0x0070a288`, the manager at `+4`) whose `+8` (`0x006b5b40`) calls the manager's `+0x10`, `0x006b87d0`, which is the real play. See "How the engine plays an effect" below.
 
-**A 2D sound is just one played at (0,0,0).** `UI_PlaySound` is literally `Sound_PlayEffect(0, uiCat, id, 0, 0, 0)`. Copy that shape — one call, optional position — rather than adding a parallel positional path.
+**`Sound_PlayEffect` has no 2D form: a caller that wants a flat sound passes (0,0,0).** `UI_PlaySound` is literally `Sound_PlayEffect(0, uiCat, id, 0, 0, 0)`. Whether the engine then plays such a voice listener-independent is not established (see "The listener, and what a pause does to it"). OpenTPW copies the shape: one call, optional position (`Audio.Play`, null for flat).
 
 | Address | Original name | What it is | Evidence |
 |---|---|---|---|
@@ -41,7 +41,7 @@ The three ints become floats in a stack record `{vtable 00700b90, category, effe
 
 ## How the engine plays an effect: priority, not a repeat delay
 
-Decoded 2026-09-23 for `docs/QUEUE.md` Q9. Five decoders each had their claims checked by two refuters (workflow `wf_99a15f42-84d`). `0x006bc2d0`, `0x006c3e00` and `0x006c0676` were then re-read by hand, and the layout was re-measured over all 31 shipped `cat_*SFX.map`. The file layout itself is on the FileFormats site (`formats/sound-categories.md`).
+Decoded 2026-09-23 for `docs/QUEUE.md` Q9. Five decoders each had their claims checked by two refuters (workflow `wf_99a15f42-84d`). `0x006bc2d0`, `0x006c3e00` and `0x006c0676` were then re-read by hand, and the layout was re-measured over all 31 shipped `cat_*SFX.map`. The file layout itself is in the FileFormats docs clone, `formats/sound-categories.md`, on branch `docs/sound-formats` (not yet on master).
 
 **The engine keeps no time per effect.** No part of the path from `Sound_PlayEffect` down to a voice reads a clock or writes one into an effect record or a category:
 - the play entry `0x006b87d0` does not;
@@ -54,7 +54,7 @@ A second caller of the same category and effect is always let through and gets a
 - **Voice creation.** It is copied into the voice (`0x006bb9f9 MOV DX,[EAX+0xc]`, `0x006bb9fd MOV [ECX+0x22],DX`) as the high word of the sort key at `voice+0x20`. The low word is closeness to the listener (`0x006bba6c`).
 - **The play entry.** When the caller passes in a live handle, the new effect replaces that handle's voice only if its priority is strictly higher (`0x006b88d3`..`0x006b88da`). STARTSCREAM and SINGLESCREAM pass handle 0 (`0x00551165`), so this never applies to them.
 
-Every use of that int as a delay in OpenTPW is OpenTPW's own: `SoundCategory.Play`'s throttle, and the lobby's and the park music's replays, which the throttle times. These are filed as Q43.
+Every use of that int as a delay in OpenTPW is OpenTPW's own: `SoundCategory.Play`'s throttle, and every replay it times (the lobby's beds and one-shots, the park's music and weather, and SINGLESCREAM). These are filed as Q43.
 
 **The voice class comes from the record's flags word**, the `u16` at `+0x10` (`0x006b6774`..`0x006b67f2`):
 
@@ -98,7 +98,7 @@ Every use of that int as a delay in OpenTPW is OpenTPW's own: `SoundCategory.Pla
 - two parents, two handles, each chain starting at once and going on its own random clock;
 - one ride's STOPSCREAM cuts that ride's newest child and changes nothing about the other.
 
-OpenTPW's `ParkScreams` builds exactly this: `ParkAudio.StopScream` no longer releases anything, and `SoundCategory.PickFrom` picks a child's sample with no gate.
+OpenTPW's `ParkScreams` builds exactly this: `ParkAudio.StopScream` releases nothing, and `SoundCategory.PickFrom` picks a child's sample with no gate.
 
 | Address | Original name | What it is | Evidence |
 |---|---|---|---|
@@ -149,7 +149,7 @@ The flag words in the shipped model data agree with those masks bit-for-bit — 
 | `0x111` | — | id-table flag word marking a **particle emitter** | 136 uses, all on emitter-named nodes |
 | `0x1031` | — | id-table flag word of the `1stperson` camera node | Shipped models |
 
-OpenTPW already parses this table (`ModelFile.ReadNodeIds`, `Node.Id`, `Node.IdFlags`). An earlier note that "its flag words vary widely" is explained by the above: they are capability bits.
+OpenTPW already parses this table (`ModelFile.ReadNodeIds`, `Node.Id`, `Node.IdFlags`). Its flag words are the capability bits above.
 
 ### Trap: two different meanings for `0x200`
 
@@ -177,7 +177,7 @@ The lobby island `Spa_isle.MD2` has nodes 26 `ant_emitternew` and 27 `ant_emitte
 
 ## The listener, and what a pause does to it
 
-**`FUN_0051c1d0` is the per-frame listener update.** This page used to record that as not found and the search as stopped; it was found on 2026-09-21 from the other end, by following what a pause writes.
+**`FUN_0051c1d0` is the per-frame listener update.** It was found by following what a pause writes.
 
 It takes **nine dwords — three vectors**. The first is the listener **position**; the other two are orientation (forward and top). It hands them to `FUN_006b5ba0` → `FUN_006b8b60`, which compares the incoming position and both orientation vectors against the stored copies at `obj+0x28` and `obj+4`/`obj+0x10` and acts **only when something changed** — so the pause's write sticks without needing to be repeated.
 
@@ -239,9 +239,8 @@ At **`0x00711920`** — not `0x00711980`, which appears nowhere in the image. Th
 
 ## Unknowns
 
-- ~~Not found, and the search was stopped: where the original sets the listener each frame.~~ **FOUND, 2026-09-21 — it is `FUN_0051c1d0`.** See "The listener, and what a pause does to it" above, which also carries the three call sites and the pause substitution.
-- **`FUN_0051c700` is NOT the distance-mapping feed**, which this page guessed it "possibly" was. It is the sound-detail ladder that interpolates the three `RadiusInfo[n].MINRADIUS` values (100.0 / 0.5 / 0 at SWITCH 25 / 50 / 75) from `data\sound.sam` and posts them to `0x006b5890` → `FUN_006b99c0` → `FUN_006b8180`, which latches `{on/off, radius}` and walks the voice array setting a per-voice LEVEL. That level comes from `FUN_006c4c80`, a **segment-versus-circle occlusion test that uses only the X and Z components** and ignores height entirely — so the pause's Y-lift cannot touch it either way. It never reaches `SetDistanceMapping`.
+- **`FUN_0051c700` is NOT the distance-mapping feed.** It is the sound-detail ladder that interpolates the three `RadiusInfo[n].MINRADIUS` values (100.0 / 0.5 / 0 at SWITCH 25 / 50 / 75) from `data\sound.sam` and posts them to `0x006b5890` → `FUN_006b99c0` → `FUN_006b8180`, which latches `{on/off, radius}` and walks the voice array setting a per-voice LEVEL. That level comes from `FUN_006c4c80`, a **segment-versus-circle occlusion test that uses only the X and Z components** and ignores height entirely — so the pause's Y-lift cannot touch it either way. It never reaches `SetDistanceMapping`.
 - `SndReverb.map`'s record shape is **not decoded**.
 - The actual parameters passed to `SetDistanceMapping` are still **unknown**, but where they live is now known precisely. `QSWaveMixSetDistanceMapping` has **exactly one call site in the image**, `0x006c581b` in `FUN_006c5690`, reached as `if ( params->flags_at_0x14 & 0x200 ) vtbl[0x60]( out, channel, params + 0x38 )` — so the three values are the dwords at `params+0x38..+0x40`. **No writer of that `0x200` request bit exists anywhere in the image** (404 MOV-imm32 and 2 OR-imm32 candidates examined, none carrying it); the record is built by a virtual-dispatched builder that was not reached statically. So **QMixer's own DEFAULT mapping probably governs**, and that is in `QMixer.dll` (307,200 bytes, 27 Jan 2000, exporting `QSWaveMixGetDistanceMapping`), not in `testme.exe`. The Ghidra project holds only `testme.exe` and `TP.ICD`; importing the DLL is the one step that would settle it.
 - **`params+0x14` is a request mask, not a flag pair.** `FUN_006c5690` tests at least nine bits of it, each gating one setter: `0x1` the position path (`FUN_006b7fa0`), `0x2` volume, `0x20` frequency, `0x40`, `0x100` source cone, `0x200` distance mapping, `0x400`, `0x20000`, `0x80000`.
-- **Consequently, "a pause attenuates every placed sound to nothing" is NOT established** — in either direction. It is asserted by `docs/CLEANUP-PLAN.md` item 6 and was asserted by `GameClock.cs` and `weather.md`; none of them had evidence, and the curve is undetermined. OpenTPW holds placed voices to **silence** instead, which is a choice standing in for a curve nobody has measured — said at the site, in `Audio.HoldPlaced`.
+- **Consequently, "a pause attenuates every placed sound to nothing" is NOT established**, in either direction, and nothing measured supports it. OpenTPW holds placed voices to **silence** instead. That is a choice standing in for a curve nobody has measured, and it is said at the site, in `Audio.HoldPlaced`.

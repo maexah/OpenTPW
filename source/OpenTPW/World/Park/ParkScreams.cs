@@ -10,7 +10,8 @@ namespace OpenTPW;
 /// with a fresh variation, a fresh sample and a fresh wait (<c>0x006bdb50</c>, <c>0x006c3a80</c>). The
 /// wait belongs to that handle alone and nothing is kept per effect, so two rides holding the same
 /// scream each go on their own clock, and a stop takes down its own chain and touches no other
-/// (<c>0x006bd9b0</c>). <c>docs/exe/audio.md</c>, "A held voice is a chain".
+/// (<c>0x006bd9b0</c>). <c>docs/exe/audio.md</c>, "How the engine plays an effect: priority, not a repeat delay" (its
+/// paragraph "A held voice is a chain").
 /// </para>
 ///
 /// <para>

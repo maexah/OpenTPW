@@ -94,7 +94,7 @@ FUN_00516380 is called every 8th 31 ms tick = 248 ms = ~4/s, hence the /4
 
 At that rate: a month ≈ 2.9 min, a year ≈ 35 min, and **a weather change (7 days) ≈ 40 real seconds**.
 
-- **Day length is per-park DATA, not a constant** — it lives in the clock's save block — but nothing in the shipped game ever changes it. There are exactly two writers (the 15000 default and the save loader), no script opcode, no `.sam` key, and the clock pointer never escapes into a variable. Jungle's `Easymode.TPWI`, inflated and read, holds `98 3a 00 00` = 15000 at decompressed offset `0x1a3f`.
+- **Day length is per-park DATA, not a constant** — it lives in the clock's save block — but nothing in the shipped game ever changes it. There are exactly two writers (the 15000 default and the save loader), no script opcode, no `.sam` key, and the clock pointer never escapes into a variable. Jungle's `Easymode.TPWI`, inflated and read, holds `98 3a 00 00` = 15000 at decompressed offset `0x1a57`, the last field of the clock block that starts at `0x1a3f`.
 - The VM's `YEAR` / `MONTH` / `DAY` / `HOUR` / `MIN` / `SEC` (opcodes 97–102) read the **real system clock**, not this one.
 
 ### Seasons, and December's out-of-range read
@@ -212,8 +212,7 @@ There is a snow branch in `FUN_00512f00` (particle mode 2), a dedicated renderer
 | `FUN_00580320` | — | Draws a bolt; **argument 7 is a LIFETIME IN MILLISECONDS**, stored at record `+0x24` and decremented by the frame's elapsed ms | Decompile |
 
 - Ground point: y = 0, x/z random across the whole map then clamped to `[1, cells*10]`. Sky point: y = **300**, leaning `rand*100 - 50` in x and z. **`FUN_00512c50`'s third argument is pushed and never read.**
-- An earlier naming of the two endpoints had them the other way round (**REFUTED** as to order, though its values were right).
-- Lifetime: park 2000 = `LightningTime`; lobby 500 = half a second. **The lobby's OTHER 500 is a different argument — the sky point's y.** The lobby bolt is 500 units tall *and* lasts 500 ms; both readings were right about different arguments.
+- Lifetime: park 2000 = `LightningTime`; lobby 500 = half a second. **The lobby's OTHER 500 is a different argument — the sky point's y.** The lobby bolt is 500 units tall *and* lasts 500 ms.
 - Argument 8 is a **seed/branching flag**: non-zero stores an rdtsc-derived odd value making the jagged path stable across frames, enabling up to 4 levels of branching and a flicker colour; zero reseeds the path every frame, draws pure white and forbids branching.
 - Bolt records are `0x30` bytes, **max 16**; extra bolts in a frame are silently dropped while the function still returns 1.
 
@@ -309,7 +308,7 @@ Pause is nothing but a frozen clock, confirmed four separate ways. While paused,
 | `0x0054f4d4` | — | `[0x007a1a14] & 8` — window deactivation skips the entire simulation body on alt-tab, **after** `0x00877d34` has been incremented, so the tick counter advances while nothing simulates | Disassembly |
 | `0x007a1a14` | — | The window-activation word | Test above |
 
-**The two globals are one hex digit apart and were once conflated: `0x00786ba4` is the pause-permission gate, `0x00786b84` is the paused flag.** Keep both.
+**The two globals are one hex digit apart and easy to conflate: `0x00786ba4` is the pause-permission gate, `0x00786b84` is the paused flag.** Keep both.
 
 > **"1 means a park is running" is flatly FALSE.** It is 1 from boot (`0x00407bd9`); an online-requested park loads with it 0 (`0x0054e96d`); and it is **never cleared when a park ends** — the clear lives in case 1, the *lobby load*, not case `0xb`.
 
@@ -334,7 +333,7 @@ Then: the gate is 0 all through the lobby anyway, and `Game_Pause` refuses regar
 
 `thunk_FUN_0048a6e0` runs only when **arg1 == 1**, and `Advisor_PauseVoice` + `FUN_0051c1c0(1)` are the **ELSE branch of arg2**. Every screen-driven site passes **(0,0)**, so for them the thunk never fires and the advisor path always does. **A pause also moves the 3D listener**: `DAT_00803ad2` is set, and `FUN_0051c1d0` then replaces the listener's second coordinate with **10000.0**. That second coordinate is **height** — the original is Y-up, which its own lobby listener call site settles by passing a `(0,1,0)` top vector. Full decode in `audio.md`, "The listener, and what a pause does to it".
 
-**Two cautions added 2026-09-21.** The window procedure's `WM_ACTIVATEAPP` branch passes **`(1,1)`** at `0x0046b74c`, so "every call site passes (0,0)" — asserted by `park-engine.md` and corrected there — is false, and on **alt-tab** the *voice-pausing* path runs instead of the listener one. And **how far that 10,000-unit lift actually turns a sound down is undetermined**: QMixer's distance model is not in the executable. Do not read this row as "every placed sound attenuates to nothing".
+**Two cautions.** The window procedure's `WM_ACTIVATEAPP` branch passes **`(1,1)`** at `0x0046b74c`, so not every call site passes (0,0), and on **alt-tab** the *voice-pausing* path runs instead of the listener one. And **how far that 10,000-unit lift actually turns a sound down is undetermined**: QMixer's distance model is not in the executable. Do not read this row as "every placed sound attenuates to nothing".
 
 > Ghidra's xref index hides live code: `0x0040bf72` above is undisassembled, as were `FUN_0048b6a0` and the camcorder thunks. **An audit resting on Ghidra's xrefs silently undercounts.**
 
@@ -345,4 +344,5 @@ Then: the gate is 0 all through the lobby anyway, and `Game_Pause` refuses regar
 - Whether the forecast warning is ever player-visible is **not established**.
 - Whether the second (un-modulated) rain voice is **audible** is **not established**; the deciding measurement has not been made.
 - `FUN_00512c50`'s third argument is pushed and never read.
-- Rain in a park uses the lobby's constants unchanged (box 44 units, look-ahead 26, fall 62), tuned for islands ~70 units wide where a park is 1280. They read correctly; whether the density is right is a judgement call, not arithmetic.
+- Rain in a park uses the same `Rain` constants as the lobby (half-extents 44 × 44 × 34, widened past 4:3 by the view's
+  spread; look-ahead 26; fall 62), tuned for islands ~70 units wide where a park is 1280. They read correctly; whether the density is right is a judgement call, not arithmetic.

@@ -37,10 +37,10 @@ public sealed class LobbyIsland : Entity
 	///
 	/// A park's ISLAND() line does carry a name, but for three of the four it is the backend one
 	/// - "Fantasy", "Halloween", "Space" - and only the jungle's happens to be what the player is
-	/// shown. The displayed names are not in the shipped data at all: decompressing all 312 WADs
-	/// and searching those, the loose language files and the executable turns up "Lost Kingdom"
-	/// and no trace of the other three. So this table is ours rather than the game's, and a park
-	/// outside these four falls back to whatever its script says.
+	/// shown. The displayed names are rows of <c>THEMENAMES.str</c>, looked up by index rather than
+	/// by text (docs/exe/lobby.md, "Park names and the locale tables"), which
+	/// <c>ParkFixedItems.ParkDisplayName</c> already reads for the gate's sign. This table still holds
+	/// them by hand, and a park outside these four falls back to whatever its script says.
 	///
 	/// All four are two words, which is what puts one on each of the sign's two panels.
 	/// </summary>
