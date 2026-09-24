@@ -29,7 +29,7 @@ public class ParkTickTests
 	private BaseFileSystem data = null!;
 
 	[TestInitialize]
-	public void MountTheGame() => data = GameData.Required();
+	public void MountTheGame() => FileSystem = data = GameData.Required();
 
 	private const string ShippedPark = "levels/jungle/Easymode.TPWI";
 
@@ -502,6 +502,198 @@ public class ParkTickTests
 		{
 			people.Delete();
 			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
+	/// <b>Every sweep stamps everybody where they stood as it began</b>, guests and staff, walking or not, and
+	/// nothing stamps anybody between sweeps. So somebody who stops is drawn in one place, and a guest put down
+	/// at a ride's exit is drawn there rather than slid across from where they boarded.
+	///
+	/// <para>
+	/// The original stamps previous := current in <c>FUN_004fa870</c>, the first call of every person kind's
+	/// tick handler (<c>0x00501658</c> for a guest, <c>0x00505495</c> for staff), whatever state they are in,
+	/// and a put-down stamps again at <c>0x004fa95d</c>. <c>ParkGuestPlacementTests.AGuestWhoHasStoppedIsDrawnInOnePlace</c>
+	/// pins what the drawing makes of a stamp; this pins that the park makes it.
+	/// </para>
+	/// <para>
+	/// The run is the shipped park with its rides' scripts wired and its balance files read. Every 2,000th frame
+	/// is a hitch that carries two or three sweeps, and once, straight after a sweep that moved them, one guest
+	/// and one member of staff are left with no route, as a plan that fails leaves somebody. The behaviours
+	/// draw from unseeded generators, so the counts differ run to run: each guard asks only that its case
+	/// happened. Stops happen hundreds of times a run, stamps inside a hitch nearly two hundred, and put-downs
+	/// about twenty; the test prints them. <b>Mutations:</b> deleting the
+	/// stamp from either loop of <see cref="ParkPeople"/>'s update; moving either into <see cref="PeepWalk.Step"/>,
+	/// after the turn, to every game tick, to every frame, or to the first sweep of a frame; stamping only
+	/// those with a route; deleting the put-down's stamp; and moving <see cref="ParkPeople.ThingTickFraction"/>
+	/// off the sweep, each fails an assertion here.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EverySweepStampsEverybodyWhereTheyStoodAsItBegan()
+	{
+		var world = World();
+		var state = new ParkState( world );
+		var catalogue = new ParkItemCatalogue( Theme, data );
+		var rides = new ParkRides( Theme, world, catalogue, data );
+
+		var people = new ParkPeople( world, new ParkBalance( Theme, easyMode: true ),
+			() => ParkRides.GateIsOpen, state, catalogue,
+			thingId => rides.Scheduler.Find( rides.ScriptFor( thingId ) ) );
+
+		// Long enough for 17 or 18 ticks, so the frame carries two or three sweeps.
+		const float Hitch = 0.55f;
+
+		// The middle of the map's corner cell, which no path reaches.
+		var nowhere = new FixedVector( PeepNavigator.WaypointCentre( 0 ), PeepNavigator.WaypointCentre( 0 ) );
+
+		try
+		{
+			EnterPark();
+
+			int sweeps = 0, moved = 0, guestsStopped = 0, staffStopped = 0, putDown = 0, restampedInAHitch = 0;
+			string? guestLost = null, staffLost = null;
+			var movedLastSweep = new HashSet<PeepNavigator>();
+
+			// What each person's previous position must now be: set by each sweep, held between them.
+			var stamped = new Dictionary<PeepNavigator, FixedVector>();
+
+			for ( var frame = 0; frame < 40000; ++frame )
+			{
+				Frame( frame % 2000 == 1999 ? Hitch : AFrame );
+				rides.Update();
+
+				// Where everybody stands as this frame's first sweep, if it has one, begins.
+				var stood = people.Peeps
+					.Select( peep => (peep.Navigator, At: peep.Navigator.Position, Riding: peep.State == PeepState.Riding,
+						Guest: (Peep?)peep, Id: peep.ThingId, Who: $"guest {peep.ThingId}") )
+					.Concat( people.Staff.Select( member => (member.Navigator, At: member.Navigator.Position,
+						Riding: false, Guest: (Peep?)null, Id: member.ThingId, Who: $"staff {member.ThingId}") ) )
+					.ToList();
+
+				var ticks = GameClock.TicksDue;
+
+				people.Update();
+
+				var sweptTimes = Enumerable.Range( 0, ticks )
+					.Count( i => ((GameClock.Ticks - ticks + 1 + i) & (ParkPeople.ThingTickEvery - 1)) == 0 );
+
+				if ( sweptTimes > 0 )
+					++sweeps;
+
+				// The drawing's fraction starts again on the tick that stamps, so a frame whose one tick swept is
+				// less than a tick into it.
+				if ( ticks == 1 && sweptTimes == 1 )
+				{
+					Assert.IsTrue( ParkPeople.ThingTickFraction < 1f / ParkPeople.ThingTickEvery,
+						$"frame {frame} swept, and the drawing is {ParkPeople.ThingTickFraction:0.000} of the way through" );
+				}
+
+				var here = people.Peeps.Select( peep => peep.Navigator )
+					.Concat( people.Staff.Select( member => member.Navigator ) )
+					.ToHashSet();
+
+				foreach ( var (navigator, at, riding, guest, id, who) in stood )
+				{
+					if ( !here.Contains( navigator ) )
+						continue;
+
+					if ( !stamped.TryGetValue( navigator, out var previous ) )
+					{
+						// First seen: arrived since the last frame, stamped however they arrived.
+						stamped[navigator] = navigator.Previous;
+						continue;
+					}
+
+					var walked = navigator.Position != at;
+
+					if ( sweptTimes == 0 )
+					{
+						Assert.AreEqual( previous, navigator.Previous, $"{who} on frame {frame}, between sweeps, was stamped" );
+						continue;
+					}
+
+					if ( sweptTimes > 1 )
+					{
+						// Stamped where the frame's last sweep found them, which is not seen from here; somebody who
+						// moved in an earlier sweep of the frame is stamped somewhere between the two.
+						if ( navigator.Previous != at && navigator.Previous != navigator.Position )
+							++restampedInAHitch;
+
+						stamped[navigator] = navigator.Previous;
+						movedLastSweep.Remove( navigator );
+						continue;
+					}
+
+					if ( riding && walked && guest!.State == PeepState.LeavingRide )
+					{
+						Assert.AreEqual( navigator.Position, navigator.Previous,
+							$"{who} was put down at the exit on frame {frame}, so is drawn from where they were put" );
+
+						++putDown;
+					}
+					else
+					{
+						Assert.AreEqual( at, navigator.Previous,
+							$"{who} on frame {frame}: the stamp is where they stood as the sweep began" );
+					}
+
+					stamped[navigator] = navigator.Previous;
+
+					if ( walked )
+					{
+						++moved;
+						movedLastSweep.Add( navigator );
+
+						// Once each, after the first second: a person who moved this sweep loses their route, so the next
+						// sweep stamps somebody who has none.
+						if ( frame > 60 && guest is { } lost && guestLost == null && Peep.IsAWalkingState( lost.State ) )
+							guestLost = LoseTheRoute( people.WalkFor( id ), navigator, who );
+						else if ( frame > 60 && guest == null && staffLost == null )
+							staffLost = LoseTheRoute( people.StaffWalkFor( id ), navigator, who );
+					}
+					else if ( movedLastSweep.Remove( navigator ) )
+					{
+						if ( guest != null )
+							++guestsStopped;
+						else
+							++staffStopped;
+					}
+				}
+			}
+
+			var counts = $"{sweeps} sweeps, {moved} moves, {guestsStopped} guest stops, {staffStopped} staff stops, "
+				+ $"{putDown} put-downs, {restampedInAHitch} stamped mid-hitch, lost routes: {guestLost}, {staffLost}";
+
+			System.Console.WriteLine( $"stamps: {counts}" );
+
+			Assert.IsTrue( moved > 0, $"nobody moved, so no stamp was asked for: {counts}" );
+			Assert.IsTrue( guestsStopped > 0, $"no guest stopped after moving: {counts}" );
+			Assert.IsTrue( staffStopped > 0, $"no member of staff stopped after moving: {counts}" );
+			Assert.IsTrue( putDown > 0, $"nobody was put down at a ride's exit: {counts}" );
+			Assert.IsTrue( restampedInAHitch > 0, $"no hitch stamped anybody between its sweeps: {counts}" );
+			Assert.IsNotNull( guestLost, $"no guest was left without a route: {counts}" );
+			Assert.IsNotNull( staffLost, $"no member of staff was left without a route: {counts}" );
+		}
+		finally
+		{
+			people.Delete();
+			rides.Delete();
+			Entity.ApplyDeletions();
+			ParkState.ForgetCurrent();
+		}
+
+		// Sends them somewhere no path reaches: the plan fails and leaves them standing with no route.
+		string LoseTheRoute( PeepWalk? walk, PeepNavigator navigator, string who )
+		{
+			Assert.IsNotNull( walk, $"{who} walks" );
+
+			navigator.Target = nowhere;
+
+			Assert.IsFalse( walk!.PlanRoute(), $"{who} found a route to the map's corner" );
+			Assert.IsFalse( walk.HasRoute, $"{who} kept a route after a failed plan" );
+
+			return who;
 		}
 	}
 

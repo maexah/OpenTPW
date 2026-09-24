@@ -603,6 +603,9 @@ public sealed class ParkAudio : Entity
 				+ (scream.Voice is { Playing: true } ? "" : " (between)")
 			: "none";
 
+	/// <summary>The scream a script is holding, or null. The tests read its clock from here.</summary>
+	internal ParkScreams.Chain? HeldScream( int scriptId ) => _screams.Find( scriptId );
+
 	/// <summary>How many distinct scream samples this park has played, across every ride.</summary>
 	internal int ScreamSamplesHeard => _screamSamples.Count;
 

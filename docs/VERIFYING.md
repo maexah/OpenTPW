@@ -350,6 +350,11 @@ The ones that have bitten more than once.
   assembly it compiles against did not change. `--no-incremental` rebuilds every project, so there the test
   assembly moves too and proves nothing. Watch the copy under either build. The guard failed safe, which is the
   point of having one; a guard watching the wrong file the other way round would have passed stale results.
+- **125** — **A mutation is red when the test named for it fails on the assertion named for it; an exit code is not
+  that.** Q47's matrix printed the first 40 result lines of each run, and with 43 tests in the filter the one that
+  failed was cut off: fourteen mutations read "exit 1" with no failure shown. Re-run against the one test, each failed
+  where predicted. **Record the failing test and its message for every mutation**, and filter the run to the test
+  the mutation is aimed at when the output is long.
 
 ## Predictions
 
@@ -568,6 +573,13 @@ The ones that have bitten more than once.
   and `HomingRate * Time.Delta` rewritten as `HomingRate / 60f` still passed: at that one rate the two are
   the same number. **Step it at a second rate** with its own predicted counts - 30 a second was enough, and
   the mutation then failed that row only. The same holds for any `Time.SmoothingFactor` ease a test drives.
+- **124** — **An invariant that must hold between events is only pinned if it is checked between them, and a rare case
+  only if it is forced.** Q47's stamp test asserted a person's previous position on the frames that swept and skipped
+  the rest, and stamping on every tick or every frame - which ends the glide one frame after it starts - passed it and
+  the suite. Checking every frame (unchanged between sweeps) killed both. The same review found the stamp could be
+  gated on having a route and pass, because in 22,037 guest moves nobody lost a route straight after moving; the
+  test now takes one guest's and one worker's route away itself. **Check the rule on the frames where nothing is
+  supposed to happen, and make the case the rule exists for happen rather than waiting for it.**
 
 ## Shell and harness traps
 
@@ -676,6 +688,12 @@ The ones that have bitten more than once.
   landmark settled it. **Photograph a thing whose cell you already know, name it in the frame, and only
   then aim at the subject.** The side headings `±π/2` were right throughout; only the pair I had
   reasoned about was wrong.
+- **126** — **A census of what is sounding, read on a timer, lands between the pulses of anything that plays in
+  pulses.** A held scream's children are one-shots about a second long with one to three seconds between them, and
+  a `voices` read nine seconds into a scream listed none, so the prediction "every child is a placed one-shot"
+  missed on an empty list. The same harness also named the children from a list built before the child it then
+  read was made. **Read the census on the event's own log line, and match it against what exists at the moment of
+  the read** - both done, four children out of four read `Effects placed`, none `looped`.
 
 ## Delegates and commissioned work
 

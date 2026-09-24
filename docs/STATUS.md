@@ -67,8 +67,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44 and Q45 are ticked.** Next is **Q47**: two
-more hollow tests. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36
+`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45 and Q47 are ticked.** Next is **Q48**:
+three holes in the camcorder's sweep, decode first. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36
 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, and the 2026-09-24 staleness audit and its
 review Q68-Q82 (Q70-Q75 from the 2026-09-12 review, section G from the lobby plan).
 
@@ -95,20 +95,20 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1052**, 0 fail, 0 skip with the game | 2026-09-24, after Q45 |
-| Tests without the game | **469** ran, **583** skipped, of 1052 | 2026-09-24, after Q45 |
-| Build warnings | 123 | 2026-09-24, after Q45 |
+| Tests | **1057**, 0 fail, 0 skip with the game | 2026-09-24, after Q47 |
+| Tests without the game | **469** ran, **588** skipped, of 1057 | 2026-09-24, after Q47 |
+| Build warnings | 123 | 2026-09-24, after Q47 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-24 - `CRIT_LOCK` is free (Q45).** Branch `alexah/134-crit-lock-is-free`. The VM charges an instruction after
-it runs, by the critical flag as it then stands, so a lock taken on the last unit runs its section in that turn; `rides`
-counts those as `lastunit`. Q11's walk rebuilt: 68 of 150 locks by every arm, 18 in Lost Kingdom, but 15 of those 18
-cannot happen with the world frozen inside a turn. In the jungle, fix and control both read `lastunit 0`, as predicted.
+**2026-09-24 - two more hollow tests (Q47).** Branch `alexah/135-two-more-hollow-tests`. Nothing the game does changed:
+the per-sweep stamp and the scream pump are now pinned through a running park, 43 mutations red, among them what a
+six-agent review found surviving. In the jungle, paused and stepped: 0 of 10,170 drawn positions off, 45 stops each
+drawn in one place; the Bouncy Dino's children came on their own clock within 7 ms, none behind the menu, one as it shut.
 
-**Earlier items.** Each ticked item's whole account is its entry in `docs/QUEUE.md`: `alexah/133` (the staleness
-audit, which read every doc and memory file against the code), `132` (Q44), `131` (Q42), `130` (Q41), `129` (Q39),
+**Earlier items.** Each ticked item's whole account is its entry in `docs/QUEUE.md`: `alexah/134` (Q45), `133` (the
+staleness audit, which read every doc and memory file against the code), `132` (Q44), `131` (Q42), `130` (Q41), `129` (Q39),
 `128` (Q36), `126` (Q12), `125` (Q11), `124` (Q10), `123` (Q9), `122` (Q8), `121` (Q7), `120` (Q6), `119` (Q5), `118`
 (Q4), `115`-`116` (Q3), `117` (Q35), `109` (Q1, Q1b - the rider is still not photographed).
 Before them, `114` let a player build a queue that joins the paths around it, `110` made a thing the save placed

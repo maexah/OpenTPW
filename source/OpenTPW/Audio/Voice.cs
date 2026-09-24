@@ -71,6 +71,12 @@ public sealed class Voice
 	/// </summary>
 	internal bool IsPlaced => _position is not null;
 
+	/// <summary>Where in the world it sounds from, or null for a flat sound.</summary>
+	internal Vector3? Place => _position;
+
+	/// <summary>Whether it has been told to end: stopped, or fading out to stop.</summary>
+	internal bool Ending => _stopped || _stopWhenFaded;
+
 	/// <summary>Whether it is being held - between <see cref="Pause"/> and <see cref="Resume"/>.</summary>
 	internal bool IsHeld => _paused;
 

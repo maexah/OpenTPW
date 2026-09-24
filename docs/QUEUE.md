@@ -623,12 +623,32 @@ artifacts are listed in `docs/history/README.md`.
     during the one-second ride, or 7 cut to 1, and it exists only because `BUMP` is unbuilt. Not driven.
   - **Found:** Q83 (the VM's stack errors and `HUSH`'s result register) and Q84 (a stale `Wait` summary), from the
     handler sweep; `park.md`'s script counts for three animation opcodes corrected (250, 114, 75, measured twice).
-- [ ] **Q47. Two more hollow tests.** The other two of `docs/REVIEW-2026-09-22.md` section 5, re-measured by Q12's
-  review at its tip. `ParkGuestPlacementTests.AGuestWhoHasStoppedIsDrawnInOnePlace` stamps by hand, so deleting
-  `peep.Navigator.StampPrevious()` from `ParkPeople.OnUpdate`'s peep loop, or moving it into `PeepWalk.Step`, leaves
-  every test green. `ParkScreamChainTests` now pins the chain itself (a chain that never replays fails three), but
-  deleting `_screams.Pump( Time.Now )` from `ParkAudio.OnUpdate`, or looping each child, leaves every test green.
-  Q12's two patterns reach both: a stand-in level with a real `ParkState`, and `Audio.Ready` set for a test. No game run.
+- [x] **Q47. Two more hollow tests.** Done 2026-09-24, `alexah/135-two-more-hollow-tests`. Both now reach the wiring
+  through the park, and a six-agent review (three worktree hunters, each put to a refuter) found what else survived;
+  of the survivors it found that are not equivalent, all but four (named under Proof) are now red:
+  - `ParkTickTests.EverySweepStampsEverybodyWhereTheyStoodAsItBegan`: the shipped park, scripts wired, balance read,
+    40,000 frames with a 0.55 s hitch every 2,000th. Every frame, every guest's and member of staff's previous position
+    is where they stood as the sweep began, and unchanged between sweeps; a put-down at an exit is stamped where it
+    put them; one guest and one worker have their route taken away once. Unseeded, so counts vary: 2,706 sweeps,
+    660-734 guest stops, 218-236 staff stops, 19-21 put-downs, 175-187 stamps inside a hitch. `ParkTickTests` now
+    mounts the global file system, without which `TickingTheParkLetsARideCallSomebodyAboard` failed 8 runs in 10 alone.
+  - `ParkScreamChainTests`: `AParkMakesEachChildWhenItsTimeHasPassedAndNoneWhileHeld` (jungle, and a theme with no
+    music) drives `ParkAudio` with `Audio.Ready` stood in, two rides' chains, each child on the first frame past its
+    due time, none while held, each first wait from the call. `EachChildIsAPlacedOneShotOfItsVariationAtTheChainsLevel`:
+    place, level 90 then 20, the variation's own samples, the child before not ending, stop, park end, band nought, a
+    second start, the census. `AChildIsDueOnlyOnceItsTimeHasPassed` pins the strict `>`. Read by them: `ParkAudio.HeldScream`,
+    `Voice.Place`, `Voice.Ending`. Also `ParkHandTests` pins the hand's put-down stamp and `ParkGuestPlacementTests`
+    the y blend.
+  - **Proof:** 43 mutations, each predicted and each red on its named assertion (`docs/VERIFYING.md` rules 124-126,
+    new). Nine more are equivalent and named in the commit. Still unpinned, said at each site: the render path's
+    fraction, a child's first balance, the console's pause, and the pump's order against the hold. 1057 tests.
+  - **Confirmed in the game** (`q47confirm.py`, silent, the jungle paused and stepped): 0 of 10,170 drawn positions off
+    `prev + (cur - prev) * alpha` from where each person stood as the sweep began, across 41 sweeps; 45 stops, each
+    drawn in one place (predicted at least 2). Photographed inside one sweep, alpha 0.01 and 0.81: the guest standing in
+    the gate's mouth is unchanged while the crowd behind moves. The Bouncy Dino's scream: children logged 1354, 2048,
+    2008, 2439 ms apart against 1353, 2048, 2008, 2434 predicted; with the menu open 5.28 s none, the child held; one
+    3 ms after closing. Missed first: a `voices` read between children listed none (rule 126); re-run, four of four
+    read `Effects placed`, none `looped` (the census now says `looped`). `save/` unchanged in both runs.
 - [ ] **Q48. Three holes in the camcorder's sweep. Decode first.** Found by Q12's mutation hunt, with a probe, not
   yet in the game. (1) At exactly 45 degrees - reachable, since the rotate keys keep the orbit's yaw at multiples of
   pi/4 and entering the camcorder copies it - the fraction that reaches the nearer boundary carries the other axis

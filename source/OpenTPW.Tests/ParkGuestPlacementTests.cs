@@ -290,6 +290,11 @@ public class ParkGuestPlacementTests
 		// The position moved across all three - so the angle holding still is a result, not a vacuum.
 		Assert.AreNotEqual( started.X, arrived.X, "the position should differ across the tick" );
 
+		// Both axes are blended: a walk along y glides as a walk along x does.
+		Assert.AreEqual( 20 * Cell, started.Y, 0.0001f );
+		Assert.AreEqual( 20.5f * Cell, halfway.Y, 0.0001f );
+		Assert.AreEqual( 21 * Cell, arrived.Y, 0.0001f );
+
 		Assert.AreEqual( 512, started.Angle );
 		Assert.AreEqual( 512, halfway.Angle );
 		Assert.AreEqual( 512, arrived.Angle );
@@ -299,22 +304,17 @@ public class ParkGuestPlacementTests
 	/// <b>Somebody standing still is drawn standing still, whatever the frame.</b>
 	///
 	/// <para>
-	/// This is the test for the trap that decides <i>where</i> the stamp lives. The original stamps
-	/// previous := current in <c>FUN_004fa870</c>, the first call of <b>every</b> person's tick handler
-	/// and ahead of the guest handler's own <c>(id &amp; 3)</c> stagger, so it happens whatever state
-	/// they are in. Stamping it inside the walk instead - which is the obvious place and the wrong one -
-	/// would leave a guest who had stopped holding two different positions for ever, and the drawing
-	/// would swing them between the two on every frame, about a quarter of a cell, for as long as they
-	/// stood there.
+	/// Where the stamp is made is a trap. The original stamps previous := current in <c>FUN_004fa870</c>,
+	/// the first call of <b>every</b> person's tick handler and ahead of the guest handler's own
+	/// <c>(id &amp; 3)</c> stagger, so it happens whatever state they are in. Stamping it inside the walk
+	/// instead - which is the obvious place and the wrong one - would leave a guest who had stopped holding
+	/// two different positions for ever, and the drawing would swing them between the two on every frame,
+	/// about a quarter of a cell, for as long as they stood there.
 	/// </para>
 	/// <para>
-	/// <b>This test carries that claim alone, and the mutation check says so</b>
-	/// (<c>docs/VERIFYING.md</c> rule 48). Deleting the stamp from <c>ParkPeople.OnUpdate</c>'s peep loop
-	/// - the wiring that puts it ahead of the state dispatch for everybody rather than only for walkers
-	/// - <b>passed the whole suite when it was measured</b>, because nothing in the suite drives a guest who has STOPPED through
-	/// a running park: the park-level test watches thing 42, who is walking throughout. So the placement
-	/// of the stamp rests on this arithmetic plus the decode of <c>FUN_004fa870</c>, and the oscillation
-	/// it prevents would have to be seen in a running park to be caught from the outside.
+	/// This test stamps by hand, so it pins what the drawing makes of a stamp and not where the park makes
+	/// it. <c>ParkTickTests.EverySweepStampsEverybodyWhereTheyStoodAsItBegan</c> pins that, by running the
+	/// shipped park.
 	/// </para>
 	/// </summary>
 	[TestMethod]

@@ -11,9 +11,9 @@ namespace OpenTPW.Tests;
 /// These read the shipped maps and are skipped where there is no installation - see <see cref="GameData"/>.
 ///
 /// <para>
-/// The chain is driven here with no sound device: <see cref="ParkScreams"/> is handed a player that only
-/// writes down what it was asked for, so what is pinned is WHEN and WHICH, and the sound itself rests on
-/// the game run.
+/// Most of these drive the chain with no sound device: <see cref="ParkScreams"/> is handed a player that only
+/// writes down what it was asked for, so what is pinned is WHEN and WHICH. The last drives it through a park,
+/// with a device stood in, and pins the park's update pumping it and the voices each child becomes.
 /// </para>
 /// </summary>
 [TestClass]
@@ -284,5 +284,294 @@ public class ParkScreamChainTests
 			Assert.IsNotNull( kids.PickFrom( 0x47, variation ), $"variation {variation + 1}, straight after a play" );
 
 		Assert.IsNull( kids.PickFrom( 0x47, 4 ), "there is no fifth" );
+	}
+	/// <summary>
+	/// A child is due only once the clock has passed its time, not when it reaches it - the original's
+	/// <c>now &gt; +0x1c</c> (<c>0x006bdb88</c>).
+	/// </summary>
+	[TestMethod]
+	public void AChildIsDueOnlyOnceItsTimeHasPassed()
+	{
+		var (screams, played) = Driver();
+		var chain = screams.Start( 13, 0x47, 1, 20, Here, now: 100f );
+
+		screams.Pump( chain.NextAt );
+
+		Assert.AreEqual( 1, chain.Plays, "at its time exactly, not yet" );
+
+		screams.Pump( chain.NextAt + 0.001f );
+
+		Assert.AreEqual( 2, chain.Plays, "just past it, the next child" );
+		Assert.AreEqual( 2, played.Count );
+	}
+
+	/// <summary>
+	/// Runs <paramref name="run"/> against a park's audio as if there were a device, then takes back every voice the
+	/// park played and leaves the clock as a scene change leaves it.
+	/// </summary>
+	/// <remarks>
+	/// A device is stood in by setting <see cref="Audio.Ready"/>, as <see cref="VoicePlacementTests"/> does, and the
+	/// park's audio is built after it, so it loads the kids' category.
+	/// </remarks>
+	private static void InAPark( string theme, Action<ParkAudio> run )
+	{
+		var ready = typeof( Audio ).GetProperty( nameof( Audio.Ready ) )!;
+
+		Assert.IsFalse( Audio.Ready, "a test run has no audio device, so nothing here should find one" );
+
+		List<Voice> before;
+
+		lock ( Audio.Lock )
+			before = [.. Audio.Voices];
+
+		ready.SetValue( null, true );
+
+		ParkAudio? park = null;
+
+		try
+		{
+			park = new ParkAudio( theme );
+
+			Time.Paused = false;
+			Time.StepFrames = 0;
+			GameClock.Rebase();
+			Frame( held: false, seconds: 0f );
+
+			run( park );
+		}
+		finally
+		{
+			park?.Delete();
+			Entity.ApplyDeletions();
+
+			lock ( Audio.Lock )
+				Audio.Voices.RemoveAll( voice => !before.Contains( voice ) );
+
+			Audio.HoldPlaced( false );
+			ready.SetValue( null, false );
+			GameClock.Rebase();
+		}
+	}
+
+	/// <summary>One frame through both clocks, held or not, as a level runs one.</summary>
+	private static void Frame( bool held, float seconds = 1f / 60f )
+	{
+		Time.Update( seconds );
+		GameClock.Update( paused: held, GameClock.ParkCatchUp );
+	}
+
+	/// <summary>The names of each variation's samples of kids' effect <paramref name="effect"/>, as its category lists them.</summary>
+	private static List<HashSet<string>> SamplesOf( int effect )
+	{
+		var file = new SoundCategoryFile( "global/sound", "kids" );
+		var banks = file.Banks.Select( bank => SoundBank.Load( "global", bank ) ).ToList();
+		var lists = file.ReadSamples( banks.Select( bank => (IReadOnlyList<TimeSpan>)(bank?.Durations ?? []) ).ToList() );
+
+		return lists[file.IndexOf( effect )]
+			.Select( variation => variation.Select( sample => banks[sample.Bank]![sample.Index]!.Name ).ToHashSet() )
+			.ToList();
+	}
+
+	/// <summary>
+	/// <b>A park makes each child of a held scream on the first frame its time has passed, and none while the
+	/// world is held</b>: <see cref="ParkAudio"/>'s update pumps the chains the tests above pump by hand. Two rides
+	/// scream, the second starting later, and each keeps its own clock; each first wait counts from the call.
+	/// </summary>
+	/// <remarks>
+	/// The second row is a theme with no music to load, whose update returns early and must pump first. The park's
+	/// chains draw their waits from an unseeded generator, so each due time is read off its chain rather than
+	/// predicted. The hold lasts 200 frames, longer than effect 71's longest wait of 3 s, so a due time always
+	/// passes inside it. <b>Mutations:</b> taking the pump out of the update, pumping behind the music's guard,
+	/// pumping while the world is held or on another clock, stepping only the first chain or stopping at the first
+	/// not due, and starting a chain's clock anywhere but now, each fail an assertion here. Not pinned: whether the
+	/// pump comes before or after the hold in the update, which no listener could tell apart, and the debug
+	/// console's own pause, which the update ignores on purpose.
+	/// </remarks>
+	[TestMethod]
+	[DataRow( "jungle" )]
+	[DataRow( "nomusic" )]
+	public void AParkMakesEachChildWhenItsTimeHasPassedAndNoneWhileHeld( string theme )
+	{
+		const int SecondFrom = 40, HoldFrom = 300, HoldTo = 500, Frames = 900;
+
+		InAPark( theme, park =>
+		{
+			var chains = new List<(int Script, ParkScreams.Chain Chain)>();
+			var passedWhileHeld = new HashSet<int>();
+
+			void Start( int script, Vector3 at )
+			{
+				Assert.IsTrue( park.Scream( script, 1, 20, at ), $"script {script}: band 1 screams, and the kids' category loaded" );
+
+				var chain = park.HeldScream( script );
+
+				Assert.IsNotNull( chain, $"script {script} holds the scream it started" );
+				Assert.AreEqual( 1, chain!.Plays, "its first child at once" );
+				Assert.AreEqual( Time.Now + (chain.Gap / 1000f), chain.NextAt, 0.0001f, "and its first wait counted from now" );
+
+				chains.Add( (script, chain) );
+			}
+
+			Start( 13, Here );
+
+			for ( var frame = 0; frame < Frames; ++frame )
+			{
+				if ( frame == SecondFrom )
+					Start( 43, Here + new Vector3( 40f, 0f, 0f ) );
+
+				var held = frame is >= HoldFrom and < HoldTo;
+				var before = chains.Select( entry => (entry.Chain.NextAt, entry.Chain.Plays) ).ToList();
+
+				Frame( held );
+				park.Update();
+
+				for ( var i = 0; i < chains.Count; ++i )
+				{
+					var (script, chain) = chains[i];
+					var (due, plays) = before[i];
+
+					if ( chain.Plays == plays )
+					{
+						Assert.IsTrue( held || Time.Now <= due,
+							$"script {script}, frame {frame} at {Time.Now:0.000} s is past the child due at {due:0.000} s, and made none" );
+
+						if ( held && Time.Now > due )
+							passedWhileHeld.Add( script );
+
+						continue;
+					}
+
+					Assert.IsFalse( held, $"script {script}, frame {frame} made a child while the world was held" );
+					Assert.IsTrue( Time.Now > due, $"script {script}, frame {frame} at {Time.Now:0.000} s made a child due at {due:0.000} s" );
+					Assert.AreEqual( plays + 1, chain.Plays, "one child at a time" );
+				}
+			}
+
+			foreach ( var (script, chain) in chains )
+			{
+				Assert.IsTrue( passedWhileHeld.Contains( script ), $"script {script}: a child fell due inside the hold, or the hold proves nothing" );
+				Assert.IsTrue( chain.Plays >= 5, $"script {script}: fifteen seconds with waits of one to three made {chain.Plays}" );
+			}
+		} );
+	}
+
+	/// <summary>
+	/// <b>Each child of a held scream is a new one-shot voice, placed at the ride, at the chain's level, playing a
+	/// sample of the variation the chain chose</b>, and a newer child leaves the one before it to play out. A level
+	/// moved mid-scream carries to every later child. A stop cuts the newest child and makes no more, and so does
+	/// the park's end.
+	/// </summary>
+	/// <remarks>
+	/// Level 90 is volume 70 and sends every child after the first to variation 3; level 20 is volume 35 and
+	/// variation 2. The variations' sample lists are read from the category and must not overlap, or naming the
+	/// variation by its sample would prove nothing. <b>Mutations:</b> a looped child, a child placed anywhere but the
+	/// ride, at another level or at the one-shot's fixed level, from another variation or the effect's own pick, a
+	/// child that stops or fades the one before, a level that does not carry, a stop that leaves the chain or the
+	/// newest child running, a park that ends without cutting it, a band that screams at nought, a second start over
+	/// a held scream, and a census that does not count the children, each fail an assertion here. Not pinned: the
+	/// balance between the ears a child starts at, which only the mixer reads.
+	/// </remarks>
+	[TestMethod]
+	public void EachChildIsAPlacedOneShotOfItsVariationAtTheChainsLevel()
+	{
+		var samples = SamplesOf( 0x47 );
+
+		Assert.AreEqual( 4, samples.Count, "effect 71 has four variations" );
+
+		for ( var a = 0; a < samples.Count; ++a )
+			for ( var b = a + 1; b < samples.Count; ++b )
+				Assert.IsFalse( samples[a].Overlaps( samples[b] ), $"variations {a + 1} and {b + 1} share a sample" );
+
+		InAPark( "jungle", park =>
+		{
+			Assert.IsFalse( park.Scream( 14, 0, 20, Here ), "band nought screams not at all" );
+			Assert.IsNull( park.HeldScream( 14 ), "and holds nothing" );
+
+			Assert.IsTrue( park.Scream( 13, 1, 90, Here ) );
+
+			var chain = park.HeldScream( 13 )!;
+			var children = new List<Voice>();
+			var level = 90;
+
+			void IsTheNewestChild()
+			{
+				var child = chain.Voice;
+
+				Assert.IsNotNull( child, "every child sounds" );
+				Assert.IsFalse( children.Contains( child! ), "a child is a new voice" );
+				Assert.IsFalse( child!.Loop, "a child is a one-shot, which is what makes the next one a new sample" );
+				Assert.AreEqual( AudioBus.Effects, child.Bus );
+				Assert.AreEqual( Here, child.Place, "placed at the ride" );
+				Assert.AreEqual( ParkAudio.ScreamVolume( level ) / 100f, child.Volume, 0.0001f, $"at level {level}'s volume" );
+				Assert.IsTrue( samples[chain.Variation].Contains( child.Name ),
+					$"'{child.Name}' is not a sample of variation {chain.Variation + 1}" );
+
+				if ( children.Count > 0 )
+					Assert.IsTrue( children[^1].Playing && !children[^1].Ending, "the child before is left to play out" );
+
+				children.Add( child );
+			}
+
+			IsTheNewestChild();
+
+			Assert.AreEqual( 0, chain.Variation, "the first child takes the first variation" );
+			Assert.IsFalse( park.Scream( 13, 1, 20, Here ), "a script holding a scream cannot start another" );
+			Assert.AreSame( chain, park.HeldScream( 13 ), "and keeps the one it holds" );
+
+			for ( var frame = 0; frame < 900; ++frame )
+			{
+				if ( frame == 450 )
+				{
+					level = 20;
+
+					Assert.IsTrue( park.ScreamLevel( 13, level ) );
+				}
+
+				var plays = chain.Plays;
+
+				Frame( held: false );
+				park.Update();
+
+				if ( chain.Plays != plays )
+					IsTheNewestChild();
+			}
+
+			Assert.IsTrue( children.Count >= 6, $"fifteen seconds with waits of one to three made {children.Count}" );
+			Assert.AreEqual( 20, chain.Level, "the moved level is the chain's" );
+			Assert.AreEqual( 1, chain.Variation, "and a child after it takes level 20's variation" );
+			Assert.AreEqual( children.Select( child => child.Name ).Distinct().Count(), park.ScreamSamplesHeard,
+				"the census counts every sample the children played" );
+
+			var newest = children[^1];
+			var before = children[^2];
+
+			Assert.IsTrue( park.StopScream( 13 ), "the script was holding a scream" );
+			Assert.IsNull( park.HeldScream( 13 ), "and holds none now" );
+			Assert.IsFalse( newest.Playing, "a stop cuts the newest child" );
+			Assert.IsTrue( before.Playing && !before.Ending, "and leaves the one before it to play out" );
+
+			int voices;
+
+			lock ( Audio.Lock )
+				voices = Audio.Voices.Count;
+
+			for ( var frame = 0; frame < 300; ++frame )
+			{
+				Frame( held: false );
+				park.Update();
+			}
+
+			lock ( Audio.Lock )
+				Assert.AreEqual( voices, Audio.Voices.Count, "a stopped scream makes no more children" );
+
+			Assert.IsTrue( park.Scream( 13, 1, 90, Here ), "and the script may start again" );
+
+			var last = park.HeldScream( 13 )!.Voice!;
+
+			park.Delete();
+			Entity.ApplyDeletions();
+
+			Assert.IsFalse( last.Playing, "the park's end cuts the newest child of every scream" );
+		} );
 	}
 }

@@ -92,8 +92,8 @@ public static class DebugConsole
 	}
 
 	/// <summary>
-	/// The voices the mixer holds, in the order they were started: name, bus, placed or flat, and whether each is
-	/// held or has been told to stop.
+	/// The voices the mixer holds, in the order they were started: name, bus, placed or flat, and whether each
+	/// loops, is held, or has been told to stop.
 	/// </summary>
 	private static string Voices()
 	{
@@ -101,7 +101,7 @@ public static class DebugConsole
 		{
 			return $"voices {Audio.Voices.Count}: " + string.Join( ", ", Audio.Voices.Select( voice =>
 				$"{voice.Name} {voice.Bus} {(voice.IsPlaced ? "placed" : "flat")}" +
-				(voice.IsHeld ? " held" : "") + (voice.Playing ? "" : " stopped") ) );
+				(voice.Loop ? " looped" : "") + (voice.IsHeld ? " held" : "") + (voice.Playing ? "" : " stopped") ) );
 		}
 	}
 

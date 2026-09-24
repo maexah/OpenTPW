@@ -334,7 +334,8 @@ public class ParkHandTests
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> a way out that lets go only of items and candidates leaves the worker
-	/// held; putting them back without clearing the hand leaves them carried.
+	/// held; putting them back without clearing the hand leaves them carried; putting them back without the
+	/// put-down's stamp, or stamping before the move, leaves them drawn sliding from where they were picked up.
 	/// </remarks>
 	[TestMethod]
 	public void AWorkerLetGoOfIsPutBackWhereTheyStood()
@@ -359,6 +360,8 @@ public class ParkHandTests
 			Assert.AreEqual( (cellX, cellY), member.Navigator.Position.Cell, $"{wayOut.Name} leaves them in their cell" );
 			Assert.AreEqual( new FixedVector( PeepNavigator.WaypointCentre( cellX ), PeepNavigator.WaypointCentre( cellY ) ),
 				member.Navigator.Position, $"{wayOut.Name} puts them in its centre" );
+			Assert.AreEqual( member.Navigator.Position, member.Navigator.Previous,
+				$"{wayOut.Name} stamps them where they were put, so they are not drawn sliding there" );
 		}
 	}
 
