@@ -649,15 +649,42 @@ artifacts are listed in `docs/history/README.md`.
     2008, 2439 ms apart against 1353, 2048, 2008, 2434 predicted; with the menu open 5.28 s none, the child held; one
     3 ms after closing. Missed first: a `voices` read between children listed none (rule 126); re-run, four of four
     read `Effects placed`, none `looped` (the census now says `looped`). `save/` unchanged in both runs.
-- [ ] **Q48. Three holes in the camcorder's sweep. Decode first.** Found by Q12's mutation hunt, with a probe, not
-  yet in the game. (1) At exactly 45 degrees - reachable, since the rotate keys keep the orbit's yaw at multiples of
-  pi/4 and entering the camcorder copies it - the fraction that reaches the nearer boundary carries the other axis
-  onto its own, `floor` puts the viewer in the next cell, and that side is never asked: 16,034 leaking frames in
-  5,684 of 254,016 probe walks, e.g. from (249.999, 30.001) at 5pi/4 through the east side of (24,3). (2) A step
-  whose reach is exactly 1 is taken whole without asking, and a positive-going one lands in the refused cell.
-  (3) `Step` clamps to 1..1280, and 1280 is cell 128, off the map, where every crossing is refused: entering the
-  camcorder past the east edge traps the viewer there. Decode what `FUN_0042b1c0` does in each case first - the
-  original may share (1) and (2) - then build. Confirm: each case walked in the game, photographed, with `camcorder`.
+- [x] **Q48. Three holes in the camcorder's sweep: the decode.** Done 2026-09-24,
+  `alexah/136-decode-the-camcorder-sweep`. Decode only; the build is Q48b. `park-engine.md`, "Walking on the ground is
+  swept against the cell edges", "Entering and leaving first person" and "Where OpenTPW's camcorder differs": read by
+  hand, then put to five refuters and three judges.
+  - **The original has none of the three.** (1) After an asked pass, the axis not asked is put back into its old cell
+    if its cell changed (`0x0042c197`, `0x0042c389`), and an exact tie divides the X step by 1.01 so Y is asked first
+    (`0x0042bff8`). (2) The whole step puts back any axis whose cell changed, open or shut (`0x0042c460`). (3) Nothing
+    clamps the position and no cell is refused for lying off the map (`FUN_004d8750` takes bytes and guards only 0 and
+    127, by equality), but the viewer never gets there: 'C' only installs mode 9, and a left click stands the viewer
+    on the picked ground point, on a cell of type 0, 1, 3, 9 or 30 inside the 96 by 85 heightfield (`FUN_0046d0d0`,
+    `FUN_0042ae70`). The bound on walking is soft, on the velocity, at 960 by 850. Leaving puts the saved point of
+    interest and yaw back.
+  - **Corrected:** the page said 0.001 is how far inside a refused side the viewer is parked. It parks at `cell * 10`
+    going negative; 0.001 is the nudge after an open crossing. **Open:** which x87 precision the sweep runs at (53-bit
+    from the CRT, 24-bit after one failed frame). It moves only the margin.
+  - **Reproduced in the game with nothing changed** (`q48repro.py`, `q48repro2.py`, `q48repro3.py`; silent, jungle),
+    each predicted from a float32 copy of `Slide` and photographed. (1) From (505,225) at 7pi/4, 11 frames:
+    `at=(51,23) type=4`, the Belly Bounce's footprint, with only (50,22) east asked. (2) From (515,229.33333) facing
+    +y, one frame: `at=(51,23) type=4`, through the shut south side of the queue cell (51,22); 30 more frames reach
+    (51,25), inside the ride's mesh on screen. From (515,225), 60 frames stop in (51,22). (3) Entered through `Enter`
+    at (1300,245): held at (1280,245), cell 128, for 60 frames. At (1100,245), type 7: held. A census of the save: all
+    8,224 cells beyond 96 by 85 are type 7, which is solid. `save/` unchanged in all three runs.
+  - **Two misses, both mine.** A control at (1270,245) did not move where I predicted a free walk: type 7 is solid, and
+    my model knew only the footprint. A first hole-(2) case walked through (52,22)'s south side, which is open (a queue
+    into its own entrance), so it proved nothing; it was redone against a shut side.
+  - **No test was added**: nothing was built, so there was no fix to put back. Q48b's tests are the build's.
+  - **Found:** Q48b.
+- [ ] **Q48b. Three holes in the camcorder's sweep: the build.** From Q48's decode (`park-engine.md`, "Where OpenTPW's
+  camcorder differs"). In `ParkCamcorderCameraMode.Slide`: put back the axis not asked when its cell changes (step 6),
+  break an exact tie with the 1.01 (step 3), and put back an axis whose cell changes in the whole step (step 7). The
+  smaller differences there (a refusal going negative parks at `cell * 10`, not `+ 0.001`; the reach comes from `modf`
+  of `position * 0.1f`) are for the same session if a probe shows they matter. Hole (3) is the entry, which is Q25:
+  once the viewer is stood only on a cell the original accepts, `Step`'s 1..1280 clamp and the off-map refusal are
+  never reached, and the clamp is then ours alone, to be said at the site. Confirm: `q48repro.py`, `q48repro2.py` and
+  `q48repro3.py` again, each photographed, with the census: (1) slides along the footprint and never enters it,
+  (2) stays in (51,22), and the controls read as before. Put each rule back and re-run its test.
 - [ ] **Q50. Every other way out of a queue costs `MediumHappinessChange` too.** Found by Q36's decode.
   `FUN_005012f0` docks it unconditionally (`0x00501359`) and has seven callers; Q36 built only the sale's. The other
   six unlink the guest first (`FUN_004ddd20`): the queue edited or shortened under them (`FUN_00501390`), a ride
@@ -853,7 +880,10 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   `FUN_00486d90` highlights when the hovered thing is an object or a person, then build it.
 - [ ] **Q25. The camcorder button should give a crosshair and place the camera where you click.**
   `ParkGadget.cs:233-240` enters the mode at once. The original installs a mouse-interaction mode
-  (`FUN_00481a10`, `park-engine.md`, "Camcorder mode — the first-person view"); its click handler is not decoded. Decode it, then build.
+  (`FUN_00481a10`, `park-engine.md`, "Camcorder mode — the first-person view"). Its click handler was decoded by Q48
+  (`park-engine.md`, "Entering and leaving first person"): cursor `0x13`, a left click on a cell of type 0, 1, 3, 9 or
+  30 stands the viewer at the picked point, and leaving puts the saved point of interest and yaw back, where ours keeps
+  the walk. It is also Q48's hole (3). Left to decode: the click's own cell tests and its thing branch. Then build.
 - [ ] **Q26. Ferry, seaplane and bus are always there.** `ParkFixedItems.cs:154-173` stands all three
   permanently. `ParkPeople.StepArrivals` sizes every load at `Arrival.MinPeople` (1), and `VehicleFor` gives one
   person the bus, so only the bus is ever called. The original creates the vehicle on demand (`FUN_0051a2f0`,

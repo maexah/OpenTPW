@@ -625,32 +625,84 @@ and at each boundary asks **`FUN_004d8750`**, which is the same edge test every 
 **Both push mode 2**, the strict mode, not the 0 a guest walks on. The direction numbering matches the
 boundary guards already recorded for that function: 0 is `-y`, 1 `+x`, 2 `+y`, 3 `-x`.
 
-Per pass it computes, for each axis, the fraction of the remaining step that reaches the next cell
-boundary — `(1 - frac)/(v * 0.1)` going positive and `frac/(v * 0.1)` going negative, where `frac` is the
-fractional part of `position * 0.1`. **Ten world units to a cell**, `_DAT_006fdd58` = 0.1. It takes
-whichever boundary is nearer, tests that side, and then either advances through it or **zeroes that one
-axis while the other carries on** — which is what makes a viewer slide along a wall rather than stick to
-it. Both axes always advance by the fraction that was consumed.
+**The edge test takes its cell as bytes, and guards the map's edge by equality.** `FUN_004d8750( x, y, dir,
+mode )` uses the low bytes of x, y and dir. Its only map-edge guards are x 0 going west, y 0 north, x 127 east
+and y 127 south, each answering 1, shut (`0x004d875c`..`0x004d878e`, `0x004d8af6`). The id it reads is
+`(y & 0xff) * 128 + (x & 0xff) + 1` in 16 bits, and the far cell's is that −128, +1, +128 or −1 for directions 0
+to 3. So a cell off the map is not refused as such: x 128 reads the record of (0, y + 1) as the cell left and
+(127, y) as the one west of it, and answers from what they hold (for y 127 the record read lies past the last
+cell's). The sweep never carries a viewer there - the x 127 guard shuts the east side, and steps 6 and 7 below
+put back every change of cell nobody asked about - and the entry below never puts one there.
+
+**The sweep, pass by pass** (`0x0042bdd8`..`0x0042c5df`; put to five refuters and three judges for
+`docs/QUEUE.md` Q48, then re-read by hand). The step is `dt * velocity` for each axis, `dt` being the frame's time
+step (one above 200 is taken as 100, and one of 0 or less as 1: `0x0042b2c3`..`0x0042b2ed`). Each axis is first zeroed if it lies within ±1e-4, and if both are then nought
+nothing moves. **Ten world units to a cell**, `_DAT_006fdd58` = 0.1. Each pass:
+
+1. **The cell** stood in is `__ftol( position * 0.1f )` for each axis (`0x0042be86`..`0x0042beba`; `0x0067a830`
+   truncates), taken afresh every pass and never clamped to the map.
+2. **The reach** of each axis - the fraction of what is left of its step that meets the next boundary - comes
+   from `frac`, the fractional part of `position * 0.1f` by `modf` (`0x0067b280`): `|frac / (s * 0.1f)|` going
+   negative, `|(1 - frac) / (s * 0.1f)|` going positive, **2.0** for an axis not moving. `s * 0.1f`, the
+   positive branch's `frac` and each reach are stored as floats. The product `position * 0.1f`, `1 - frac` and
+   the division stay on the x87 stack and round at whatever precision is in force (below).
+3. **A tie is broken toward Y.** If the two stored reaches are equal and both axes move, the X step is divided by
+   `0x0074c9c8` = **1.01** and its reach multiplied by it, and both are kept (`0x0042bff8`..`0x0042c043`). Below a
+   reach of 1 this makes Y the side asked, with X stopping about 1% short of its own boundary. The shorter X step
+   lasts the rest of the frame, and shrinks again at another tie.
+4. **The side asked** is X's when its reach is strictly the smaller, else Y's. If that reach is 1 or more, the
+   **whole step** is taken instead and nothing is asked (`0x0042c460`).
+5. **Asked and shut** (`FUN_004d8750` non-zero): that axis is parked in the cell being left - at `cell * 10`
+   going negative, `cell * 10 + 9.999` going positive - and its step zeroed. There is no epsilon on the negative
+   side, since `cell * 10` is still the cell by the truncation in 1. **This is what makes a viewer slide along a
+   wall** rather than stick to it: the other axis carries on.
+   **Asked and open:** that axis advances by its reach. If that left the cell unchanged - a landing on the
+   boundary itself - it is nudged by `0x0074c9d0` = 0.001 the way the rest of the step goes. Without the nudge a
+   step going negative, which lands on `cell * 10`, would measure nought to the same side on the next pass and
+   never arrive.
+6. **The other axis advances by the same fraction and may not change cell.** If its cell changed, it is put back
+   at the `cell * 10` or `cell * 10 + 9.999` of the cell it was in. Its side is not asked and its step is not
+   zeroed, so a later pass asks it (`0x0042c197`..`0x0042c24c` after X, `0x0042c389`..`0x0042c42d` after Y).
+7. **The whole step keeps the same rule** on both axes: an axis whose cell changed is put back, whether or not that
+   side is open, and the loop ends (`0x0042c460`..`0x0042c543`).
+8. **The position** is written back (`0x007908f0`, `0x007908f8`; the height `0x007908f4` is zeroed), and the loop
+   goes round while either step remains. There is no cap on the passes.
+
+**So every change of cell in the sweep is one the edge test was asked about and allowed**: in any pass only the
+asked axis may leave its cell.
 
 | Constant | Value | What it is |
 |---|---|---|
 | `_DAT_006fdd58` | 0.1 | World units to cells |
 | `_DAT_006fdd7c` / `_DAT_006fdd5c` | 10.0 / −10.0 | Cells back to world units |
-| `0x0074c9c4` | **9.999** | The far edge of a cell, already carrying the epsilon below |
-| `0x0074c9d0` | **0.001** | Parked this far inside the cell a side refused |
-| `_DAT_006fde00` / `_DAT_006fde04` | ∓1e-4 | A step smaller than this is zeroed before anything is swept |
+| `0x0074c9c4` | **9.999** | A positive-going axis is parked, or put back, at `cell * 10 + 9.999` |
+| `0x0074c9c8` | **1.01** | The tie-break: the X step divided by it, its reach multiplied |
+| `0x0074c9d0` | **0.001** | The nudge after an open crossing that left the cell unchanged |
+| `_DAT_006fde00` / `_DAT_006fde04` | ∓1e-4 | A step inside this band is zeroed before anything is swept |
 
-**One guard is worth naming because leaving it out stalls the sweep.** Having advanced to a boundary it
-re-derives the cell and, *only where that cell has not changed*, nudges by `0x0074c9d0` in the direction
-of travel. A step going negative lands exactly on `cell * 10`, whose floor is still the cell being left —
-so without the nudge the next pass measures nought distance to the same side, consumes nothing, and never
-arrives.
+**Which rounding is live is not settled.** The CRT starts the FPU at 53-bit precision (`0x006804da`). The frame
+renderer `FUN_00576ec0` switches to 24-bit at `0x00576fa7` and restores the saved word on success (`0x00577310`),
+but its failure exit (`0x00577433`) restores nothing, so one failed frame leaves 24-bit in force for the rest of
+the run. DirectDraw is set up with `DDSCL_FPUSETUP` (`0x00563914`, `0x00563b92`), whose effect belongs to the
+runtime, not the executable. It matters only at the margin: at 53 bits a positive step landing exactly on a
+boundary, `245 + 5`, has reach 0.99999928 and is asked; at 24 bits its reach is 1.0, it is taken whole, and step 7
+puts it back. The cell in step 1 is the same either way. Logging the control word at `FUN_0042b1c0`'s entry would
+settle it.
+
+**Nothing clamps the position; the bound on walking is soft, and it is the heightfield's.** Every writer of
+`0x007908f0`/`0x007908f8` was read and none clamps it; the cell clamps (`FUN_0042cd40`, and the one in
+`FUN_0042ae70`) are for lookups. The bound is on the velocity (`0x0042b674`..`0x0042b6fb`,
+`0x0042bca0`..`0x0042bd5f`): when the position at the start of the frame is below 0 or past the extent and the new
+velocity points further out, that component becomes the previous one divided by `1 + 0.01 * dt`. It keeps its sign
+and decays, so the drift past the line totals `100 * |v|`, about 2 units for a walker at the default zoom. The
+extent is `[[0x007a0854] + 0x6c]`, the heightfield block of `Terrain\base.md2`: `+0x18 * +0x10` across and
+`+0x1c * +0x14` down, **960 by 850** in all four parks (96 by 85 cells), not the 128-cell map.
 
 **One branch is decoded but not built here.** Having moved, the loop calls `FUN_0042a340( x, y )`, which
 indexes the per-cell thing list at `+0x2a4` by the packed cell id `y * 0x80 + 1 + x` and returns the first
 thing whose kind byte at `+2` is **3** and whose `FUN_004dd4e0()+0x118` is nought; on finding one it runs
-`FUN_00412e90` and `FUN_004e15b0`. What that does to the viewer is not traced, and it is not yet counted
-(`docs/QUEUE.md` Q69).
+`FUN_00412e90` and `FUN_004e15b0`, and the loop ends. What that does to the viewer is not traced, and it is not
+yet counted (`docs/QUEUE.md` Q69).
 
 **Nothing of the edge test is kept, and the world it reads dies with the park.** Read for `docs/QUEUE.md` Q10 and
 put to a refuter, then re-read by hand. `FUN_004d8750` writes no global, and neither do the functions it calls.
@@ -676,6 +728,53 @@ can step.
 **OpenTPW** builds the edge test once per park (`ParkCamcorderCameraMode.EdgeTest`), which the original does not
 do. `Forget`, part of `Level.Unload`, lets it go. What else a left park lets go of is under "Leaving a park with
 something in the hand".
+
+### Entering and leaving first person: a click on the ground
+
+**'C' puts the viewer nowhere.** `FUN_00481a10` only installs mode 9, whose `OnInstall` (`0x0046d590`) sets cursor
+`0x13`. The viewer is placed by a **left click** in that mode: slot `+0x04`, `FUN_0046d0d0`, tests the hovered cell
+(`DAT_007b05cc`), calls `FUN_0042ae70` at `0x0046d381`, and then installs the idle mode. A refused click sets
+cursor 8. Its cell tests (`FUN_00535db0( 0x40 )`, `FUN_00535db0( 0x80 )` with `FUN_005363a0`, then
+`FUN_004d0af0`, `FUN_0053ad90` and `FUN_0053ad60`) are not named, nor is its other branch: a thing on the cell
+whose `+0x4ac` is nought gets `FUN_004e15b0( 0 )` instead.
+
+`FUN_0042ae70` is the first-person toggle:
+- **Entering** (`gui_CameraFlags & 0x16` clear): it takes the cell of the pick point (`0x007a1c70`, `0x007a1c78`),
+  clamped to the map, and goes on only if that cell's type (record `+0x8`) is **0, 1, 3, 9 or 30** - nothing,
+  path, queue, a ride's end, the approach (`0x0042aeec`..`0x0042af14`). Then `FUN_0042ab20( 2, 1, 0, 0, 0, 0 )`
+  sets flag `0x02` and clears `0x04`..`0x20` and `0x80`; the point of interest is saved to `0x00790ad0` and the yaw
+  `0x00790a38` to `0x00790a9c`; and the viewer is **stood at the pick point**, height 0
+  (`0x0042af37`..`0x0042af80`). The yaw stays as the orbit had it.
+- **Leaving** puts the saved point of interest and yaw back (`0x0042af8c`..`0x0042afb4`). **The walk is thrown
+  away**: the orbit camera returns to where it was before first person.
+
+The pick point is written only by `FUN_0045bf90` (called at `0x0054e2d5`, and only while `& 0x16` is clear). It is
+a terrain hit inside its own cell's rectangle, with the cells clamped to the 96 by 85 heightfield, or a point on a
+thing it hit; with no hit the old point stays. So the original's viewer always starts on a walkable cell inside the
+park. A save never resumes in first person: loading zeroes `gui_CameraFlags` (`0x0042d04c`).
+
+### Where OpenTPW's camcorder differs
+
+`ParkCamcorderCameraMode.Slide` has steps 1, 2, 4, 5 and 8 of the sweep in outline, and not 3, 6 or 7; `Enter`,
+`Leave` and `Step` differ too. Each of the first three was reproduced in the running game, with no change made
+(`docs/QUEUE.md` Q48; the Belly Bounce's footprint is columns 51-53, rows 23-26, and (51,22) is its queue):
+- **The unasked axis is not put back (step 6), and a tie is not broken (step 3).** A pass that asks one side can
+  carry the other axis onto its own boundary - by rounding as often as by an exact tie - and `floor` puts the
+  viewer in a cell whose side nobody asked about. From (505, 225) at 7π/4, 11 frames: only (50,22) east was asked,
+  and the viewer ended in **(51,23), type 4**, the footprint.
+- **The whole step is not checked (step 7).** A reach of 1 or more whose sum rounds onto the boundary lands in the
+  next cell unasked. From (515, 229.33333) facing +y, one frame lands in **(51,23), type 4**, through the shut
+  south side of the queue cell, and 30 more frames walk on to (51,25) inside the ride. From (515, 225) the same
+  side stops the viewer at 229.999 in (51,22).
+- **Entry and the edge.** `Enter` stands the viewer at the orbit's point of interest, wherever it is; the original
+  needs a click on a cell of type 0, 1, 3, 9 or 30 inside the heightfield. `Step` clamps to 1..1280, where the
+  original's bound is the soft one at 960 by 850, and `Slide` refuses every side of a cell off the map. Entered at
+  (1300, 245), the viewer is clamped to 1280, cell 128, and held there. Entered at (1100, 245) - type 7, solid, which in
+  Lost Kingdom is every one of the 8,224 cells beyond the 96 by 85 park - it cannot move at all.
+- Not yet seen to matter, and different all the same: a refusal going negative parks at `cell * 10 + 0.001`, not
+  `cell * 10`; the reach is `(edge - position) / step` in float, not from `modf` of `position * 0.1f`; `Slide`
+  stops after 8 passes; and `Leave` hands the orbit camera the walked position and yaw, where the original restores
+  its own.
 
 ---
 

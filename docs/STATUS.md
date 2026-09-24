@@ -62,14 +62,15 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
 - Guests may arrive eight times as often as the original's, and staff may idle for an eighth of its time: its timers
   read the thing sweep, ours the 31 ms tick (Q68, Q82, decode first).
-- By a probe, not yet the game: the camcorder slips through a shut side at exactly 45 degrees, and is trapped at the
-  east edge of the map (Q48).
+- The camcorder can step into a shut cell past a corner or at the end of a whole step, and entered off the park it
+  cannot move; seen in the game, decoded, not built (Q48b). It is entered where the orbit looks, not by a click on the
+  ground, and leaving keeps the walk where the original's throws it away (Q25).
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45 and Q47 are ticked.** Next is **Q48**:
-three holes in the camcorder's sweep, decode first. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36
-Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, and the 2026-09-24 staleness audit and its
+`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47 and Q48 are ticked.** Next is
+**Q48b**: the build behind Q48's decode of the camcorder's sweep. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36
+Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, and the 2026-09-24 staleness audit and its
 review Q68-Q82 (Q70-Q75 from the 2026-09-12 review, section G from the lobby plan).
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
@@ -95,19 +96,19 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1057**, 0 fail, 0 skip with the game | 2026-09-24, after Q47 |
-| Tests without the game | **469** ran, **588** skipped, of 1057 | 2026-09-24, after Q47 |
-| Build warnings | 123 | 2026-09-24, after Q47 |
+| Tests | **1057**, 0 fail, 0 skip with the game | 2026-09-24, after Q48 |
+| Tests without the game | **469** ran, **588** skipped, of 1057 | 2026-09-24, after Q48 |
+| Build warnings | 123 | 2026-09-24, after Q48 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-24 - two more hollow tests (Q47).** Branch `alexah/135-two-more-hollow-tests`. Nothing the game does changed:
-the per-sweep stamp and the scream pump are now pinned through a running park, 43 mutations red, among them what a
-six-agent review found surviving. In the jungle, paused and stepped: 0 of 10,170 drawn positions off, 45 stops each
-drawn in one place; the Bouncy Dino's children came on their own clock within 7 ms, none behind the menu, one as it shut.
+**2026-09-24 - the camcorder's sweep, decoded (Q48).** Branch `alexah/136-decode-the-camcorder-sweep`. No code changed.
+The original has none of the three holes: it puts back an axis nobody asked about, breaks a tie by 1.01, checks the
+whole step, and stands the viewer only on a clicked walkable cell inside the 96 by 85 park. All three reproduced in the
+jungle first, predicted and photographed: into the Belly Bounce at (51,23) twice, held at (1280,245) and (1100,245).
 
-**Earlier items.** Each ticked item's whole account is its entry in `docs/QUEUE.md`: `alexah/134` (Q45), `133` (the
+**Earlier items.** Each ticked item's whole account is its entry in `docs/QUEUE.md`: `alexah/135` (Q47), `134` (Q45), `133` (the
 staleness audit, which read every doc and memory file against the code), `132` (Q44), `131` (Q42), `130` (Q41), `129` (Q39),
 `128` (Q36), `126` (Q12), `125` (Q11), `124` (Q10), `123` (Q9), `122` (Q8), `121` (Q7), `120` (Q6), `119` (Q5), `118`
 (Q4), `115`-`116` (Q3), `117` (Q35), `109` (Q1, Q1b - the rider is still not photographed).
