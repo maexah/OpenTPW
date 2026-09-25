@@ -967,16 +967,41 @@ artifacts are listed in `docs/history/README.md`.
   - **Not confirmed on screen:** anything of the original's own - its guests are not run here; the decode is the
     executable's, and the run measures only ours and the park's data. Nothing is built, so there is no test and no
     mutation. **Found:** Q50h.
-- [ ] **Q50h. The sale's drain puts out whoever stands past its first cell: the build.** Split from Q50f, whose
-  decode it builds (`ride-operation.md`, "The sale's drain"). `ParkPathBuilding.DrainQueue` clears the whole queue in
-  one pass, throws the measurement away and counts `SALE_DRAIN_QUEUE_REMEASURE`, so every Belly Bounce queuer loses
-  20 at a sale. Build `FUN_00530120`'s list (the faced cell, the corners from the entry cell, the cut at the path),
-  the gate on the cached queue length, and the pops: each clears T..P under force with no unlink, then runs
-  `ParkState.RemeasureQueue`, which already counts the faced cell untyped - so the Belly Bounce measures one cell and
-  places 4 on go at −15 before the sale's message - and whose tail can reopen a closed ride between two pops of a
-  queue with a corner. Then the debit. Count what stays unbuilt: the bank's `+0x114` gate on the debit, the advisor
-  `0xcb` post each call makes, `FUN_004d8c60`'s stamp of the back cell. Confirm with `q50fmeasure.py`: places 4 to 7
-  at 35, places 0 to 3 and the nominee at 30.
+- [x] **Q50h. The sale's drain puts out whoever stands past its first cell: the build.** Done 2026-09-25,
+  `alexah/145-build-the-sale-drain`. Split from Q50f, whose decode it builds (`ride-operation.md`, "The sale's drain");
+  the demolisher's order, `FUN_00530120` and its helpers were read again first, and it held.
+  - **Built:** `ParkPathBuilding.QueueEnds` is `FUN_00530120`: the faced cell (alone when another owner's), the walk
+    from the entry cell turning at corners and setting each queue or entrance cell's counter, its stops (one link, a
+    path, anything else), the cut at a path stepping back unless onto the entrance, and the angle arm. `DrainQueue`
+    takes the list before the gate on the cached queue length, then pops: `ClearQueueLine` clears each run under force
+    (a queue cell refunds while its owner's cell is typed; a bare one is left; a run ending on a path clears nothing),
+    then `ParkState.RemeasureQueue`; then the debit. `SALE_DRAIN_QUEUE_REMEASURE` is gone. Counted:
+    `QUEUE_DRAIN_ADVISOR_0xCB`, `QUEUE_DRAIN_DEBIT_BANK_GATE`, `QUEUE_DRAIN_DEBIT_DEPRECIATION`,
+    `QUEUE_REMEASURE_BACK_CELL_STAMP` (every measure), `QUEUE_DRAIN_CLEARS_ANOTHER_KIND`, `QUEUE_END_WALK_UNBOUNDED`,
+    and `QUEUE_REFUND_DEPRECIATION` in the drain as well.
+  - **Proof:** 7 new tests; `ASaleLeavesEveryQueuerToTheSale`, which pinned the bug, replaced; the old drain test now
+    stamps its ride's footprint, as the placer does, without which the owner rule refunds nothing. 15 mutations, all
+    red; the bug back (the measurement thrown away) turns 2 red. A read-only review (9 agents: three reviewers, each
+    finding put to a skeptic) upheld 6 findings, refuted none, all fixed: the advisor posts are four, not two (the
+    demolisher's mode 3 before the gate, and the last call's re-arm at `0x005300a6`, which the decode had left out); a
+    tie in `FUN_00536100` runs along Y (`0x00536140`); the debit's comment claimed a scaling the code does not do; and
+    the list test's counter asserts were hollow, the save holding the same values. 1134 tests with the game, none
+    skipped; 476 ran and 658 skipped without; 123 warnings.
+  - **Corrected:** `ride-operation.md`'s pops (the call that empties the list re-arms too; four `0xcb` posts; the tie)
+    and `park-engine.md`'s `FUN_0052fe50` paragraph.
+  - **Confirmed in the game** (`q50hmeasure.py`, silent, jungle, `load 60`, the final build in a throwaway worktree):
+    staged at 88 s, nine queueing for the Belly Bounce, a rider and eight walking to it, paused, `happy 50`, no
+    nominee. Predicted and read, 18 of 18: places 4 to 8 (guests 99, 100, 97, 96, 94) 50 to 35, five "put out of thing
+    13's queue at place 4 of 4" lines; places 0 to 3 50 to 30 and the nine others 50 to 45, 13 "put off" lines;
+    `QUEUE_DRAIN_ADVISOR_0xCB` 4, `QUEUE_REMEASURE_BACK_CELL_STAMP` 2, both debit counts 1, the old count absent; "sold
+    for 500, its queue for 225"; the four cells type 0. Photographed before (nine on the bridge), just after (bare
+    grass, everyone where they stood, the balance up 725) and eight steps on (the first four, a walker and guest 94
+    gone for the Jungle Spray, four of the drained still on the cleared cells: Q53). `save/` unchanged. An earlier run
+    on the pre-review build
+    matched 14 of 14.
+  - **Not confirmed on screen:** a queue with a corner past its node, whose measure between runs can reopen a closed
+    ride, and the other arms (another owner's queue faced, a path faced, no link, an owner's cell bare): tested only,
+    nothing in Lost Kingdom reaches them. A tie in a run: built, reached by no list. **Found:** Q106.
 - [ ] **Q53. A put-off queuer on cleared ground can leave only by going home. Decode first.** Found by Q36's game
   run: two queuers put off the sold Belly Bounce stood in Deciding for twelve seconds on cells the sale cleared, where
   no neighbour connects and `SetRandomDest` has no candidate; a probe's queuer left only as its day ran out. Every
@@ -1162,6 +1187,12 @@ artifacts are listed in `docs/history/README.md`.
   `ParkRideChooser.ScoreOf` reads all three at the entry cell, which for the Belly Bounce is four cells from its back.
   Build it and retire the remark at `ScoreOf`. Confirm: `why` over a guest nearer the Belly Bounce's entrance than its
   back of queue, the chosen thing before and after.
+- [ ] **Q106. `APathCellCostsWhatTheBalanceFileSays` fails when its class runs alone.** Found by Q50h, on `main` as well.
+  `ParkPathBuildingTests`' `[TestInitialize]` keeps `GameData.Required()` in a field and never mounts it as the global
+  `FileSystem`, so run by itself (`--filter FullyQualifiedName~ParkPathBuildingTests`) `levels/Standard.sam` does not
+  load and the price answers -1; the whole suite passes only because an earlier class mounted it. Mount it as
+  `ParkQueueRemeasureTests` does, and sweep the other test classes for the same order dependence. Confirm: each class
+  alone, green. No game run.
 
 ## B. Docs and comments
 

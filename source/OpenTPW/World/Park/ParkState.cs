@@ -1018,7 +1018,7 @@ public sealed class ParkState
 	/// is told (<i>"Telling people in queue to reevaluate"</i>), so whoever now stands past its end is put out,
 	/// and a closed ride whose queue now joins something is opened again - see
 	/// <see cref="ParkPeople.QueueRemeasured"/>, which does both. Every cell edit that can change a queue calls
-	/// this at the end of its transaction; the sale's drain calls <see cref="InvalidateQueue"/> alone.
+	/// this at the end of its transaction, and the sale's drain once for each run it clears.
 	/// </summary>
 	public void RemeasureQueue( int objectId )
 	{
@@ -1026,6 +1026,11 @@ public sealed class ParkState
 			return;
 
 		InvalidateQueue( objectId );
+
+		// Between the measure and the people, FUN_004d8c60 (0x004de266) writes a value into a coarse grid
+		// kept beside the map, at the block the back of the queue lies in; what either is, is not decoded.
+		Unimplemented.Report( "QUEUE_REMEASURE_BACK_CELL_STAMP" );
+
 		QueueRemeasured?.Invoke( objectId );
 	}
 

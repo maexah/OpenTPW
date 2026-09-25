@@ -2418,7 +2418,9 @@ undefined bytes in Ghidra, so a cross-reference search misses it. Each call clea
 top element, anchors there in the delete-line mode `0x34`, and runs op `0x32` along the line to the next element.
 The bottom element is never popped, but is cleared as the far end of the last run - unless the mode was 3 and it is
 a path (`0x0052ff9a`) - and the count is left at **1** when the list empties. The line runs along its longer axis
-from the popped element, holding that element's other coordinate (`FUN_00536100`). What the drain's pops do to a
+from the popped element, a tie along Y (`0x00536140`), holding that element's other coordinate (`FUN_00536100`).
+Every call re-arms the mode it found (`FUN_0052f580( mode, 1 )`), the one that empties the list too (`0x005300a6`),
+and mode 3's arm posts advisor `0xcb`. What the drain's pops do to a
 queue's people is `ride-operation.md`, "The sale's drain". There is also an **off-by-one in the shipped guard**: the
 push rejects only when the count exceeds `0x400`, so element `0x400` is writable and lands exactly on
 `DAT_0081d740`, the map-width global. Reproduce the behaviour, not the overrun.

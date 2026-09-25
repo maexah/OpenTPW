@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
+using System.Linq;
 
 namespace OpenTPW.Tests;
 
@@ -309,6 +310,13 @@ public class ParkPathBuildingTests
 		return ride;
 	}
 
+	/// <summary>
+	/// Stands <see cref="Ride"/> on its cells, as the placer does before it marks the ends
+	/// (<see cref="ParkBuilding.Stamp"/>): each names the anchor as its owner, the entrance included, and the
+	/// anchor is typed, which a queue cell's refund asks.
+	/// </summary>
+	private static void StandOnItsFootprint( ParkState state ) => ParkBuilding.Stamp( state, (19, 11, 20, 14), 19, 11 );
+
 	private static void LayPath( ParkState state, ParkWorld park, int x, int y )
 		=> state.SetRecord( x, y, ParkState.CellFor( park, x, y ) with
 		{
@@ -538,6 +546,7 @@ public class ParkPathBuildingTests
 		var owner = MapStep.CellId( 19, 11 );
 
 		LayPath( state, park, 16, 10 );
+		StandOnItsFootprint( state );
 		ParkBuilding.MarkWaysInAndOut( state, park, 20, 11, 20, 14, 0x10, 0x10, 0, hasQueue: true, owner );
 		ParkPathBuilding.StampQueueCell( state, park, 19, 10, 20, 10, ride, firstOfRun: false );
 		ParkPathBuilding.StampQueueCell( state, park, 18, 10, 19, 10, ride, firstOfRun: false );
@@ -565,4 +574,206 @@ public class ParkPathBuildingTests
 		Assert.AreEqual( CellEdge.Path, ParkState.CellFor( park, 20, 15 ).Type );
 		Assert.AreEqual( 0, ParkState.CellFor( park, 20, 15 ).Neighbours & 0x01, "and no longer names the exit" );
 	}
+
+	/// <summary>
+	/// <b>A queue with a corner is drained a run at a time, and measured after each</b> -
+	/// <c>FUN_0052fe50</c> once a run (<c>docs/exe/ride-operation.md</c>, "The sale's drain"). Laid from the
+	/// placer's cell west to (17,10) and north to (17,8), where it joins the path at (17,7), its list is the
+	/// node twice, the corner and the end. The first run clears (17,8) to (17,10) and leaves three cells whose
+	/// back still has both its links - connected, which is what could open a closed ride again; the second
+	/// clears the rest and leaves the one bare cell the entrance links to, not connected; the third clears
+	/// nothing. Six cells refund, and one is taken back.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutation:</b> stopping each run short of its far end leaves the corner standing, and the first measure
+	/// finds four cells.
+	/// </remarks>
+	[TestMethod]
+	public void ADrainedQueueIsMeasuredAfterEachRun()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = Ride( state ) with { Flags = ParkWorld.CatalogueObject.QueuePathFlag };
+		var owner = MapStep.CellId( 19, 11 );
+
+		state.ReplaceObject( ride );
+
+		LayPath( state, park, 17, 7 );
+		StandOnItsFootprint( state );
+		ParkBuilding.MarkWaysInAndOut( state, park, 20, 11, 20, 14, 0x10, 0x10, 0, hasQueue: true, owner );
+		ParkPathBuilding.StampQueueCell( state, park, 19, 10, 20, 10, ride, firstOfRun: false );
+		ParkPathBuilding.StampQueueCell( state, park, 18, 10, 19, 10, ride, firstOfRun: false );
+		ParkPathBuilding.StampQueueCell( state, park, 17, 10, 18, 10, ride, firstOfRun: false );
+		ParkPathBuilding.StampQueueCell( state, park, 17, 9, 17, 10, ride, firstOfRun: false );
+		ParkPathBuilding.StampQueueCell( state, park, 17, 8, 17, 9, ride, firstOfRun: false );
+		ParkPathBuilding.JoinQueueToPath( state, park, 17, 8, 17, 7, ride );
+
+		Assert.AreEqual( 6, ParkRideChoice.QueueCellsFor( park, ride ).Cells, "six cells, one corner" );
+
+		var measured = new System.Collections.Generic.List<(int Cells, bool Connected)>();
+
+		state.QueueRemeasured = thing => measured.Add( (ParkRideChoice.QueueCellsFor( park, ride ).Cells,
+			ParkRideOperation.BackOfQueueConnected( park, ride )) );
+
+		var balance = state.Balance;
+		var returned = ParkPathBuilding.DrainQueue( state, park, ride );
+
+		CollectionAssert.AreEqual( new[] { (3, true), (1, false), (1, false) }, measured.ToArray(),
+			"three cells still linked to the corner's place, then the bare node, twice" );
+		Assert.AreEqual( 5 * 75, returned, "six cells, one taken back" );
+		Assert.AreEqual( balance + (5 * 75), state.Balance );
+
+		foreach ( var (x, y) in new[] { (20, 10), (19, 10), (18, 10), (17, 10), (17, 9), (17, 8) } )
+			Assert.AreEqual( CellEdge.Nothing, ParkState.CellFor( park, x, y ).Type, $"({x},{y}) is bare ground again" );
+
+		Assert.AreEqual( 0, ParkState.CellFor( park, 17, 7 ).Neighbours & 0x10, "the path is let go of" );
+		Assert.AreEqual( 0x01, ParkState.CellFor( park, 20, 11 ).Neighbours, "the entrance keeps its link" );
+	}
+
+	/// <summary>
+	/// <b>An entrance that faces a path is let go of by the path, and nothing is drained</b>: the walk reaches
+	/// the path from the entrance and does not step back onto it (<c>0x0053036d</c>), so the path is pushed as
+	/// the end as well as the faced cell, and a run whose far end is a path clears nothing (<c>0x0052ff9a</c>).
+	/// The queue still measures the one cell the entrance links to, so the gate passes and one cell's worth is
+	/// taken all the same.
+	/// </summary>
+	[TestMethod]
+	public void AnEntranceFacingAPathDrainsNothing()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = Ride( state );
+
+		StandOnItsFootprint( state );
+		state.SetRecord( 20, 11, state.Record( 20, 11 ) with { Type = CellEdge.RideEnd, Neighbours = 0x01, Direction = 0x01 } );
+		LayPath( state, park, 20, 10 );
+		LayPath( state, park, 19, 10 );
+		state.SetRecord( 20, 10, state.Record( 20, 10 ) with { Neighbours = 0x10 | 0x40 } );
+		state.SetRecord( 19, 10, state.Record( 19, 10 ) with { Neighbours = 0x04 } );
+
+		CollectionAssert.AreEqual( new[] { (20, 10), (20, 10) }, ParkPathBuilding.QueueEnds( state, park, ride ).ToArray(),
+			"the path is the faced cell and the end" );
+		Assert.AreEqual( 0x40, ParkState.CellFor( park, 20, 10 ).Neighbours, "the path lets the entrance go" );
+		Assert.AreEqual( 0x01, ParkState.CellFor( park, 20, 11 ).Neighbours, "the entrance keeps its bit" );
+
+		var balance = state.Balance;
+		var otherKinds = Times( "QUEUE_DRAIN_CLEARS_ANOTHER_KIND" );
+
+		Assert.AreEqual( -75, ParkPathBuilding.DrainQueue( state, park, ride ), "nothing refunds, one cell is taken" );
+		Assert.AreEqual( balance - 75, state.Balance );
+		Assert.AreEqual( CellEdge.Path, ParkState.CellFor( park, 20, 10 ).Type, "the path stays" );
+		Assert.AreEqual( otherKinds, Times( "QUEUE_DRAIN_CLEARS_ANOTHER_KIND" ), "a run ending on a path is not cleared at all" );
+	}
+
+	/// <summary>
+	/// <b>A ride bought and sold at once drains its lone node for nothing</b>: the node is the faced cell, and
+	/// the walk stops on it, a queue cell with one link (<c>0x005302f7</c>), so it is the end too. The one run
+	/// clears it and refunds it, and the debit takes it back.
+	/// </summary>
+	[TestMethod]
+	public void ALoneNodeIsItsQueuesEnd()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = Ride( state );
+
+		StandOnItsFootprint( state );
+		ParkBuilding.MarkWaysInAndOut( state, park, 20, 11, 20, 14, 0x10, 0x10, 0, hasQueue: true, MapStep.CellId( 19, 11 ) );
+
+		Assert.AreEqual( 0x10, ParkState.CellFor( park, 20, 10 ).Neighbours, "the node links the entrance alone" );
+		CollectionAssert.AreEqual( new[] { (20, 10), (20, 10) }, ParkPathBuilding.QueueEnds( state, park, ride ).ToArray(),
+			"the node is the faced cell and the end" );
+
+		var balance = state.Balance;
+
+		Assert.AreEqual( 0, ParkPathBuilding.DrainQueue( state, park, ride ), "one refunded, one taken" );
+		Assert.AreEqual( balance, state.Balance );
+		Assert.AreEqual( CellEdge.Nothing, ParkState.CellFor( park, 20, 10 ).Type, "the node goes" );
+	}
+
+	/// <summary>
+	/// <b>A queue that measures nothing is not drained, and nothing is taken</b>: the gate reads the queue's
+	/// length (<c>0x00527fb4</c>), and an entrance with no link has none, so the list is thrown away.
+	/// </summary>
+	[TestMethod]
+	public void AQueueThatMeasuresNothingIsNotDrained()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = Ride( state );
+
+		StandOnItsFootprint( state );
+		state.SetRecord( 20, 11, state.Record( 20, 11 ) with { Type = CellEdge.RideEnd, Neighbours = 0, Direction = 0x01 } );
+
+		Assert.AreEqual( 0, ParkRideChoice.QueueCellsFor( park, ride ).Cells, "no link, no queue" );
+
+		var balance = state.Balance;
+		var posts = Times( "QUEUE_DRAIN_ADVISOR_0xCB" );
+
+		Assert.AreEqual( 0, ParkPathBuilding.DrainQueue( state, park, ride ), "nothing drained" );
+		Assert.AreEqual( balance, state.Balance, "and nothing taken" );
+		Assert.AreEqual( posts + 1, Times( "QUEUE_DRAIN_ADVISOR_0xCB" ), "mode 3 is armed before the gate" );
+	}
+
+	/// <summary>
+	/// <b>An entrance that faces another thing's queue drains nothing of it</b>: a faced queue or entrance cell
+	/// whose owner is not the entrance's is pushed alone (<c>0x005301ea</c>), a list of one is never popped,
+	/// and one cell's worth is taken all the same.
+	/// </summary>
+	[TestMethod]
+	public void AnEntranceFacingAnotherThingsQueueDrainsNothing()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = Ride( state );
+
+		StandOnItsFootprint( state );
+		state.SetRecord( 20, 11, state.Record( 20, 11 ) with { Type = CellEdge.RideEnd, Neighbours = 0x01, Direction = 0x01 } );
+		state.SetRecord( 20, 10, state.Record( 20, 10 ) with
+		{
+			Type = ParkRideChoice.QueueCellType,
+			Neighbours = 0x10 | 0x40,
+			Direction = 0x10,
+			ParentId = (ushort)MapStep.CellId( 5, 5 )
+		} );
+
+		CollectionAssert.AreEqual( new[] { (20, 10) }, ParkPathBuilding.QueueEnds( state, park, ride ).ToArray(),
+			"pushed alone, and no walk" );
+
+		var balance = state.Balance;
+		var posts = Times( "QUEUE_DRAIN_ADVISOR_0xCB" );
+
+		Assert.AreEqual( -75, ParkPathBuilding.DrainQueue( state, park, ride ), "nothing refunds, one cell is taken" );
+		Assert.AreEqual( balance - 75, state.Balance );
+		Assert.AreEqual( ParkRideChoice.QueueCellType, ParkState.CellFor( park, 20, 10 ).Type, "the other queue stays" );
+		Assert.AreEqual( posts + 2, Times( "QUEUE_DRAIN_ADVISOR_0xCB" ), "mode 3, and the one call's re-arm" );
+	}
+
+	/// <summary>
+	/// <b>A queue cell refunds only while the cell its owner stands on is typed</b> (<c>0x00536a37</c>). The drain
+	/// comes before the footprint passes, so in the game it always is; with the anchor bare, the cells still go
+	/// and nothing comes back but the debit.
+	/// </summary>
+	[TestMethod]
+	public void AQueueCellWhoseOwnerIsGoneRefundsNothing()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = Ride( state );
+
+		StandOnItsFootprint( state );
+		ParkBuilding.MarkWaysInAndOut( state, park, 20, 11, 20, 14, 0x10, 0x10, 0, hasQueue: true, MapStep.CellId( 19, 11 ) );
+		ParkPathBuilding.StampQueueCell( state, park, 19, 10, 20, 10, ride, firstOfRun: false );
+		state.SetRecord( 19, 11, state.Record( 19, 11 ) with { Type = CellEdge.Nothing } );
+
+		var balance = state.Balance;
+
+		Assert.AreEqual( -75, ParkPathBuilding.DrainQueue( state, park, ride ), "two cleared, none refunded" );
+		Assert.AreEqual( balance - 75, state.Balance );
+		Assert.AreEqual( CellEdge.Nothing, ParkState.CellFor( park, 19, 10 ).Type, "the cells go all the same" );
+		Assert.AreEqual( CellEdge.Nothing, ParkState.CellFor( park, 20, 10 ).Type );
+	}
+
+	private static int Times( string what )
+		=> Unimplemented.Summary.FirstOrDefault( entry => entry.What == what ).Times;
 }

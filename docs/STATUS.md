@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-09-24.
+Last updated: 2026-09-25.
 
 **This header names no branch and no sha, deliberately.** A line written inside the commit that moves
 the tip cannot name it, so every attempt went stale the instant it was written. Read the current state
@@ -50,8 +50,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Eight of the nine per-object windows are unbuilt. Setting a staff member's patrol area is not built, deferred by
   Alexah; staff keep to the areas the save gives them. A walking member of staff is not entered in the cells they
   cross; only hiring and putting down place one.
-- A put-off queuer on cleared ground leaves only by going home (Q53), and a sale's drain puts nobody out (Q50h).
-  Q102-Q105 and five queue-turn arms are unbuilt, the unhappy one held for Q85. No spot animation (Q98).
+- A put-off queuer on cleared ground leaves only by going home (Q53). Q102-Q105 and five queue-turn arms are unbuilt,
+  the unhappy one held for Q85. No spot animation (Q98).
 - The park's door moves neither the gate (Q89) nor the advisor (Q90), nor a shut ride's model (Q91); the ride window's
   door shows a shut ride but is not a button (Q92), and a bought queued thing starts open (Q93).
 - A right press over a panel still cancels (Q56), and the park's Escape acts on the press, not the release (Q57).
@@ -69,11 +69,11 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b and Q50 to Q50g are
-ticked.** Next is **Q50h**, the sale's drain, the build. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10
-Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50
-Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h, and
-the staleness audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review, section G from the lobby plan).
+`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b and Q50 to Q50h are
+ticked.** Next is **Q53**, decode first. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12
+Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and Q85-Q88,
+Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h, Q50h Q106, and the staleness
+audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review, section G from the lobby plan).
 
 `docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
 and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
@@ -93,6 +93,7 @@ and is still untracked, so it exists on this machine only; Q13 moves it into `do
   Q50c's refusal on worth (none at these prices) and negative cash passing: tested; its kids' sound: neither. Q50d's
   lost place, invited guest who is not the nominee, broken ride and car track: tested only. Q50g's re-aim at a moved
   back of queue, its three failed walks, the refused door's walk, a dodgy direction and a place past the cells: tested.
+  Q50h's queue with a corner, which a measure between runs can reopen, and its other arms: tested only.
 - A lock taken on the last unit running its section whole: tested only. Nothing the stock park runs arrives there; the
   one route is the Hot Pot with its capacity cut mid-ride, and it rests on `BUMP` being unbuilt (Q45).
 
@@ -103,17 +104,16 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1127**, 0 fail, 0 skip with the game | 2026-09-24, after Q50f |
-| Tests without the game | **476** ran, **651** skipped, of 1127 | 2026-09-24, after Q50f |
-| Build warnings | 123 | 2026-09-24, after Q50f |
+| Tests | **1134**, 0 fail, 0 skip with the game | 2026-09-25, after Q50h |
+| Tests without the game | **476** ran, **658** skipped, of 1134 | 2026-09-25, after Q50h |
+| Build warnings | 123 | 2026-09-25, after Q50h |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-24 - the sale's queue drain, decoded (Q50f).** Branch `alexah/144-decode-the-sale-drain`. Its measure
-answers one cell, so the original puts out places 4 on for 15 before the sale; in the game ours took 20 from all 8.
+**2026-09-25 - the sale's queue drain, built (Q50h).** `alexah/145-build-the-sale-drain`: 18 of 18 guests as predicted.
 
-**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/143` (Q50g)
+**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/144` (Q50f)
 back to `118` (Q4), `115`-`116` (Q3), `117` (Q35) and `109` (Q1, Q1b); before them, `114`, `110` and `112`.
 
 Everything older is the git log.

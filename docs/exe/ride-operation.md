@@ -511,7 +511,7 @@ object in `ECX`:
 | `0x00527541` | a queue run laid (mode 3) | no | `LayQueue`, `RunQueue` |
 | `0x00534858` | the stamp: path laid over a queue cell | **yes** | `LayPathRun`, `ParkBuilding.LayPathStub` |
 | `0x0053694b` | `ClearCell`'s path arm, a path joined to an entrance cleared: the link goes first, so the queue measures **0** and all but the nominee and state 14 go | **yes** | not built: `ClearPathCell` re-walks no entrance |
-| `0x0052ffec` | `FUN_0052fe50`, the backtrack: Backspace with the queue tool (`FUN_0052fe50(0,1)` at `0x0040beb3`, gated on a vtable answer of 3), and the demolisher's drain before the destructor | **yes** | Backspace counted (`BACKSPACE_UNDO_QUEUE_RUN`); the drain, below |
+| `0x0052ffec` | `FUN_0052fe50`, the backtrack: Backspace with the queue tool (`FUN_0052fe50(0,1)` at `0x0040beb3`, gated on a vtable answer of 3), and the demolisher's drain before the destructor | **yes** | Backspace counted (`BACKSPACE_UNDO_QUEUE_RUN`); the drain, `ParkPathBuilding.DrainQueue` |
 
 The console's `delqueue` (`LiftQueue`) re-measures too. In Lost Kingdom the one queue that could be cut is the Belly
 Bounce's: cells (52,22), (51,22), (50,22), (49,22), of which (52,22) is NOMODIFY, and path over (51,22) would leave
@@ -549,13 +549,16 @@ list is (52,22), (52,22), (49,22)**, and (49,22) is cut from (48,22) before any 
 
 **The pops.** Under mode 3 (`FUN_0052f200( 3, 0 )`) and the force flag, the demolisher calls `FUN_0052fe50( object,
 1 )` until it answers nought. Each call pops the top as T (`0x0052fea9`); if that leaves the count at nought it writes
-1 back and answers nought (`0x0052fecf`), so **the bottom entry is never T**. Otherwise it arms mode `0x34`, whose
-apply at T only anchors (`0x00525f37`), and applies at the new top P (`0x0052ff4b`): op `0x32` then op `0x86` over the
-straight line from T to P, P included and last (`FUN_00536100`, which walks the longer axis holding T's other
-coordinate) - unless the mode was 3 and P is a path (`0x0052ff9a`), when nothing is cleared. **So the bottom entry is
-cleared as the far end of the last pop.** Then it re-arms mode 3 (`FUN_0052f580( 3, 1 )`, which posts advisor `0xcb`
-and sets cursor 4), measures the queue again with the object in `ECX` (`FUN_004de1f0`, `0x0052ffec`), and answers 1.
-A list of N entries gives N calls, N-1 clears and N-1 measures, and leaves the count at 1. The forced clear refunds a
+1 back, re-arms mode 3 (`0x005300a6`) and answers nought (`0x0052fecf`), so **the bottom entry is never T**. Otherwise it
+arms mode `0x34`, whose apply at T only anchors (`0x00525f37`), and applies at the new top P (`0x0052ff4b`): op `0x32`
+then op `0x86` over the straight line from T to P, P included and last (`FUN_00536100`, which walks the longer axis
+holding T's other coordinate, a tie along Y: `JLE` at `0x00536140`) - unless the mode was 3 and P is a path
+(`0x0052ff9a`), when nothing is cleared. **So the bottom entry is cleared as the far end of the last pop.** Then it
+re-arms mode 3 (`FUN_0052f580( 3, 1 )` at `0x0052ffcb`, which posts advisor `0xcb` and sets cursor 4), measures the
+queue again with the object in `ECX` (`FUN_004de1f0`, `0x0052ffec`), and answers 1. A list of N entries gives N calls,
+N re-arms, N-1 clears and N-1 measures, and leaves the count at 1. The demolisher's own `FUN_0052f200( 3, 0 )`
+(`0x00527fa5`) posts `0xcb` as well, before the gate, so **the Belly Bounce's sale posts `0xcb` four times**, and a
+thing that fails the gate once. The forced clear refunds a
 queue cell when its owner cell is typed (`0x00536a37`), resets it whole and **unlinks no neighbour** (`0x00536a0e` to
 `0x00536bc9`, past the loop at `0x00536b60`); a cell already bare is left alone (`0x005367ed`).
 
@@ -575,7 +578,7 @@ nought, state 6. The Belly Bounce's drain:
 |---|---|---|---|---|
 | 1 | (49,22) to (52,22) | all four cells, four refunds, no unlink; the node loses NOMODIFY | 1 cell, back (52,22), not connected | every queuer from place 4 back but the nominee and raw state 14 |
 | 2 | (52,22) to (52,22) | nothing, already bare | 1 cell | nobody |
-| 3 | - | nothing; the count written back to 1 | - | - |
+| 3 | - | nothing; the count written back to 1, mode 3 re-armed | - | - |
 
 Then one cell's worth is debited (`FUN_004d01f0`), which subtracts only while the bank's `+0x114` is non-zero
 (`0x004d01f3`), and the force flag drops. Nothing after the drain measures the queue again: the second footprint pass
@@ -586,10 +589,17 @@ out has `MajorDest` nought and loses nothing more, 15 in all.** A move walks the
 (`0x0048d006`), which cuts the same end, and the demolisher's own walk then gives the same list; it reaches the
 demolisher only while the red-cell latch `DAT_00816d48` is clear.
 
-**OpenTPW** clears the cells in one pass (`ParkPathBuilding.DrainQueue`), throws the measurement away, leaves every
-queuer to the sale at −20, and counts `SALE_DRAIN_QUEUE_REMEASURE`. **Open:** what the bank's `+0x114` is;
-`FUN_004e2290`, the per-age percentage the refund and the debit both scale by; whether the three advisor `0xcb` posts
-are heard; what `FUN_004d8c60` does with the back cell each measure stamps.
+**OpenTPW builds it** (`docs/QUEUE.md` Q50h): `ParkPathBuilding.QueueEnds` is the list, `DrainQueue` the gate, the
+pops and the debit, and `ClearQueueLine` one run under force; each pop measures the queue through
+`ParkState.RemeasureQueue`. Counted, not built: the advisor `0xcb` posts, one from the demolisher's mode 3 and one
+from each call's re-arm (`QUEUE_DRAIN_ADVISOR_0xCB`); the bank's `+0x114` gate on the debit
+(`QUEUE_DRAIN_DEBIT_BANK_GATE`); `FUN_004d8c60`'s write in every measure (`QUEUE_REMEASURE_BACK_CELL_STAMP`); the
+per-age percentage, on the refunds (`QUEUE_REFUND_DEPRECIATION`) and on the debit (`QUEUE_DRAIN_DEBIT_DEPRECIATION`,
+`0x00527fe8`); a run over anything but queue or bare ground
+(`QUEUE_DRAIN_CLEARS_ANOTHER_KIND`); and a walk past a thousand cells, which the original's never gives up
+(`QUEUE_END_WALK_UNBOUNDED`). **Open:** what the bank's `+0x114` is; `FUN_004e2290`, the per-age percentage the refund
+and the debit both scale by; whether the advisor's `0xcb` posts are heard; what `FUN_004d8c60` writes, into a coarse
+grid beside the map at the block of the back cell (`0x004de266`).
 
 #### The closed ride - `FUN_004e0450`
 

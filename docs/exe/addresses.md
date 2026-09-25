@@ -189,6 +189,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004b8ee0` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x004b9340` | | OpenTPW/UI/FrontEnd/FrontEndLines.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x004b9840` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
+| `0x004d01f3` | `FUN_004d01f0`, the drain's debit: subtracts only while the bank's `+0x114` is non-zero | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x004d49a0` | | OpenTPW/World/Park/FixedVector.cs  |
 | `0x004d6545` | `FUN_004d6410`: a staff member's idle stamp tested against `mGameTick` | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004db3f3` | Object constructor: the flags word built from the item's description (from here) | OpenTPW/World/Park/ParkBuilding.cs  |
@@ -204,6 +205,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004ddd7d` | `FUN_004ddd20`: the `VAR_LETMEON` clear (to here) | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004ddde9` | `FUN_004ddd20`: with no `mQPrev` the leaver's `mQNext` becomes `mFirstInQ` | OpenTPW.Tests/ParkQueueJoinTests.cs OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004ddfa9` | `FUN_004ddf50` (GetPositionInQueue) gives up at a guest no longer queueing | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkState.cs  |
+| `0x004de266` | `FUN_004de1f0` calls `FUN_004d8c60`, a write into a coarse grid at the back cell's block | OpenTPW/World/Park/ParkState.cs  |
 | `0x004de2b9` | `FUN_004de1f0`'s queue walk skips the object's nominee | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004de2bd` | `FUN_004de1f0`'s queue walk reads each `mQNext` before the call | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004de2f7` | `FUN_004de1f0`'s tail: the reopen asks `mCanLoad` nought first | OpenTPW/World/Park/ParkRideOperation.cs  |
@@ -353,6 +355,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00527541` | `FUN_004de1f0` after a queue run is laid (mode 3) | OpenTPW.Tests/ParkQueueRemeasureTests.cs  |
 | `0x005275f2` | Mode-3 commit: the tool ends through `FUN_0052f200(0,0)` | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00527655` | Apply dispatcher: end of the path/queue arm | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00527f9a` | The demolisher builds the queue's list, `FUN_00530120`, before the gate | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00527fa5` | The demolisher arms mode 3, `FUN_0052f200( 3, 0 )`, which posts advisor `0xcb` | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00527fb4` | The demolisher's gate: the object's cached queue length `+0x40` above nought | OpenTPW.Tests/ParkPathBuildingTests.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00527fe8` | The drain's debit scaled by the per-age percentage, `FUN_004e2290` | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0052818d` | The demolisher puts back the tool it was called under, `FUN_0052f200( prevTool, 0 )`; tool 0 installs the idle mode | OpenTPW.Tests/ParkHandTests.cs OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x0052842b` | The demolisher's second footprint pass: `FUN_005367a0( 0, 0 )` on every cell of the shape but its `.` ones | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00528f62` | Placer: start of the pairing of footprint bases 1, 0x40, 0x10, 4 with angles 0, 90, 180, 270 | OpenTPW/World/Park/ParkBuilding.cs  |
@@ -373,7 +379,17 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005299f5` | Placer: end of that test | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00529abf` | Placer: start of the relink round the exit path | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00529b18` | Placer: end of the exit half | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x0052ff9a` | `FUN_0052fe50` clears nothing when the mode is 3 and P is a path | OpenTPW.Tests/ParkPathBuildingTests.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0052ffec` | `FUN_004de1f0` from the backtrack `FUN_0052fe50` | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x005300a6` | `FUN_0052fe50`'s last call re-arms the mode before it answers nought | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x0053019a` | `FUN_00530120` switches on the entry cell's whole mask, a single cardinal bit only | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x005301ea` | `FUN_00530120`: a faced queue or entrance cell of another owner is pushed alone | OpenTPW.Tests/ParkPathBuildingTests.cs  |
+| `0x0053024a` | `FUN_00530120`'s walk starts on the entry cell itself | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x005302ea` | `FUN_00530120`: an entrance cell never stops the walk | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x005302f7` | `FUN_00530120`: the walk stops on a cell with one link of the eight | OpenTPW.Tests/ParkPathBuildingTests.cs  |
+| `0x0053036d` | `FUN_00530120` at a path: steps back unless the cell before is an entrance | OpenTPW.Tests/ParkPathBuildingTests.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x005303f1` | `FUN_00530120`: an entry cell with no link pushes the cell its angle names | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00530487` | `FUN_00530120`'s angle arm ends; the final push follows | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0053473c` | Stamp: queue over path force-clears the path, `FUN_005367a0(0,0)` | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0053475d` | Stamp: end of the force-clear | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00534858` | `FUN_004de1f0` from the stamp: path laid over a queue cell | OpenTPW/World/Park/ParkPathBuilding.cs  |
@@ -388,7 +404,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005358e9` | Queue verdict: the cash total skips queue over path | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005358f1` | Queue verdict: end of that guard | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00535d63` | Verdict: end of the path arm | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00536140` | `FUN_00536100` chooses its axis: a tie runs along Y | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x005367ed` | `FUN_005367a0` leaves a bare cell alone | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00536a07` | The clear's queue arm zeroes the overlap counter under force | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00536a37` | `FUN_005367a0`'s forced queue arm refunds only while the owner's cell is typed | OpenTPW.Tests/ParkPathBuildingTests.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00536abf` | The clear's queue arm zeroes the overlap counter before its reset | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00536bc9` | The clear's reset, which type 4 and the queue arm jump to and the path arm repeats: bare, unlinked, unflagged, unowned, tile 55 | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0053c755` | `FUN_0053c3f0`: the marker wave's phase gains 0.1 a frame unless paused | OpenTPW/World/Park/ParkBuildMarkers.cs  |

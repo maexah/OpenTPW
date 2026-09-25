@@ -284,26 +284,90 @@ public class ParkQueueRemeasureTests
 	}
 
 	/// <summary>
-	/// <b>A sale's drain throws the measurement away and puts nobody out</b>: whether the original's drain
-	/// does is not decoded, so every queuer is left to the sale, which puts each off for 15 and 5, and the
-	/// question is counted.
+	/// <b>A sale's drain puts out everybody from the fifth place back before the sale reaches them</b>
+	/// (<c>docs/exe/ride-operation.md</c>, "The sale's drain"). Its first run clears all four cells and measures
+	/// the one the entrance still links to, room for four: the guests at places 4 and on go for 15 and name the
+	/// ride no longer, so the sale passes them by. The first four, the ride's nominee and a guest already
+	/// boarding are left to the sale, which puts each off for 15 and 5.
 	/// </summary>
+	/// <remarks>
+	/// <b>Mutation:</b> throwing the measurement away instead (<see cref="ParkState.InvalidateQueue"/>, the build
+	/// before this one) leaves all eight to the sale, at 30.
+	/// </remarks>
 	[TestMethod]
-	public void ASaleLeavesEveryQueuerToTheSale()
+	public void ASaleDrainPutsOutEveryQueuerFromTheFifthPlaceBack()
 	{
 		var park = Open();
 
 		try
 		{
-			var queued = Queue( park, 6 );
-			var counted = Times( "SALE_DRAIN_QUEUE_REMEASURE" );
+			var queued = Queue( park, 8 );
 
-			ParkBuilding.Sell( park.State, park.World, park.Catalogue, null, null, BellyBounce, park.People );
+			park.State.NominateForLoading( BellyBounce, queued[5].ThingId );
+			queued[6].SetState( PeepState.EnteringRide, tick: 1, new Random( 1 ) );
+
+			var calls = Times( "QUEUE_DRAIN_ADVISOR_0xCB" );
+			var measures = Times( "QUEUE_REMEASURE_BACK_CELL_STAMP" );
+			var answer = ParkBuilding.Sell( park.State, park.World, park.Catalogue, null, null, BellyBounce, park.People );
+
+			for ( var place = 0; place < 4; ++place )
+				Assert.AreEqual( SoldFrom, queued[place].Happiness, 0.001f, $"place {place} is left to the sale" );
+
+			Assert.AreEqual( PutOut, queued[4].Happiness, 0.001f, "place 4 is past one cell's room" );
+			Assert.AreEqual( SoldFrom, queued[5].Happiness, 0.001f, "the nominee is never asked" );
+			Assert.AreEqual( SoldFrom, queued[6].Happiness, 0.001f, "a guest boarding is never put out" );
+			Assert.AreEqual( PutOut, queued[7].Happiness, 0.001f, "the last goes too" );
 
 			foreach ( var peep in queued )
-				Assert.AreEqual( SoldFrom, peep.Happiness, 0.001f, $"guest {peep.ThingId} loses 15 and then 5" );
+				Assert.AreEqual( 0, peep.MajorDest, $"guest {peep.ThingId} names the sold ride no longer" );
 
-			Assert.AreEqual( counted + 1, Times( "SALE_DRAIN_QUEUE_REMEASURE" ), "the drain's question is counted" );
+			Assert.AreEqual( calls + 4, Times( "QUEUE_DRAIN_ADVISOR_0xCB" ), "mode 3, then a re-arm on each of three calls" );
+			Assert.AreEqual( measures + 2, Times( "QUEUE_REMEASURE_BACK_CELL_STAMP" ), "and measured after each" );
+			StringAssert.Contains( answer, "its queue for 225", "four cells refunded, one taken back" );
+		}
+		finally
+		{
+			Close( park );
+		}
+	}
+
+	/// <summary>
+	/// <b>The Belly Bounce's queue ends are its node twice and its last cell</b> - <c>FUN_00530120</c>: the cell
+	/// its entrance faces, (52,22); again as the corner the walk from the entrance turns west at; and (49,22),
+	/// where the walk reaches the path at (48,22) and lets go of it, each losing its bit toward the other.
+	/// The node's counter is set to 1, and the straight cells' and the entrance's to nought - which the save
+	/// already holds, so the test sets them otherwise first.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutation:</b> pushing the faced cell only as the walk's corner leaves the list two long, and the drain
+	/// one measure short; dropping the counter write leaves the counters as the test set them.
+	/// </remarks>
+	[TestMethod]
+	public void TheBellyBouncesQueueEndsAreItsNodeTwiceAndItsLastCell()
+	{
+		var park = Open();
+
+		try
+		{
+			var bellyBounce = park.State.Objects.Single( o => o.ThingId == BellyBounce );
+
+			foreach ( var (x, y, counter) in new[] { (52, 22, 0), (51, 22, 3), (50, 22, 3), (49, 22, 3), (52, 23, 3) } )
+				park.State.SetRecord( x, y, park.State.Record( x, y ) with { OverlapCounter = (short)counter } );
+
+			var ends = ParkPathBuilding.QueueEnds( park.State, park.World, bellyBounce );
+
+			CollectionAssert.AreEqual( new[] { (52, 22), (52, 22), (49, 22) }, ends.ToArray(), "the node twice, then the end" );
+
+			Assert.AreEqual( 0x04, ParkState.CellFor( park.World, 49, 22 ).Neighbours, "the end lets the path go" );
+			Assert.AreEqual( 0, ParkState.CellFor( park.World, 48, 22 ).Neighbours & 0x04, "and the path lets it go" );
+			Assert.AreEqual( ParkRideChoice.QueueCellType, ParkState.CellFor( park.World, 49, 22 ).Type, "nothing is cleared" );
+
+			Assert.AreEqual( 1, ParkState.CellFor( park.World, 52, 22 ).OverlapCounter, "the corner's counter" );
+
+			for ( var x = 49; x <= 51; ++x )
+				Assert.AreEqual( 0, ParkState.CellFor( park.World, x, 22 ).OverlapCounter, $"({x},22) is straight" );
+
+			Assert.AreEqual( 0, ParkState.CellFor( park.World, 52, 23 ).OverlapCounter, "the entrance is walked too" );
 		}
 		finally
 		{

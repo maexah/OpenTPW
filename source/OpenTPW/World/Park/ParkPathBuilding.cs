@@ -1232,67 +1232,269 @@ public static class ParkPathBuilding
 	}
 
 	/// <summary>
-	/// Clears a demolished thing's whole queue, the placer's NOMODIFY node included, and answers what it
-	/// gave back - the queue half of <c>FUN_00527ee0</c>.
+	/// Clears a demolished thing's queue, the placer's NOMODIFY node included, and answers what it gave back -
+	/// the queue half of <c>FUN_00527ee0</c>. <b>Each run cleared measures the queue again</b>, so whoever then
+	/// stands past its end is put out before the sale reaches them.
 	/// </summary>
 	/// <remarks>
-	/// <b>The queue's end is let go of its path first</b> (<c>FUN_00530120</c>, the walk mode <c>0x14</c>
-	/// uses), then every cell is cleared under force - NOMODIFY or not, and with no unlink of the cells
-	/// beside it (<c>FUN_0052fe50</c> driving op <c>0x32</c> into <c>FUN_005367a0</c>). <b>Each cell refunds
-	/// its price, and then one cell's worth is taken back</b> (<c>FUN_004d01f0</c> after the drain), which
-	/// is exactly the node the placer laid for nothing. A queue of four returns three cells' worth. With no
-	/// queue cells there is neither drain nor debit.
+	/// <b>The list comes first</b> (<see cref="QueueEnds"/>, <c>0x00527f9a</c>), cutting the queue from its path
+	/// whatever follows; then the gate, the object's cached queue length above nought (<c>0x00527fb4</c>), or the
+	/// list is thrown away (<c>FUN_0052fbd0</c>). <see cref="ParkRideChoice.QueueCellsFor"/> stands for that cache:
+	/// it is the saved count until an edit throws it away, and a fresh walk after, as the original's is.
+	/// <para>
+	/// <b>Then <c>FUN_0052fe50( object, 1 )</c> until it answers nought.</b> Each call pops the top as T and
+	/// clears the line from T to the new top P (<see cref="ClearQueueLine"/>) - nothing when P is a path
+	/// (<c>0x0052ff9a</c>) - and measures the queue again (<c>0x0052ffec</c>); the bottom entry is never T, so
+	/// it goes as the far end of the last run. The Belly Bounce's list, (52,22), (52,22), (49,22), clears all
+	/// four cells in its first call, which then measures the one cell the entrance still links to, room for
+	/// four; its second clears nothing and puts nobody out. <c>docs/exe/ride-operation.md</c>, "The sale's
+	/// drain".
+	/// </para>
+	/// <para>
+	/// <b>Then one cell's worth is taken back</b> (<c>FUN_004d01f0</c>), the node the placer laid for nothing,
+	/// so the Belly Bounce's four return three.
+	/// </para>
 	/// </remarks>
 	internal static int DrainQueue( ParkState state, ParkWorld park, ParkWorld.CatalogueObject placed )
 	{
-		var start = ParkRideChoice.StartOfQueue( park, placed );
-		var cells = new List<int>();
+		var (_, cached) = ParkRideChoice.QueueCellsFor( park, placed );
+		var pending = QueueEnds( state, park, placed );
 
-		for ( var cell = start; cell != 0 && cells.Count < ParkState.LongestQueue;
-			cell = ParkRideChoice.StepToNextQueueCell( park, cell ) )
-		{
-			var (x, y) = MapStep.CellAt( cell );
+		// Mode 3, armed before the gate (FUN_0052f200( 3, 0 ), 0x00527fa5), posts advisor message 0xcb, whose words
+		// are not decoded, and so does every call below as it re-arms mode 3 (FUN_0052f580( 3, 1 )): four posts for
+		// the Belly Bounce. The cursor mode 3 sets is the demolisher's to put back.
+		Unimplemented.Report( "QUEUE_DRAIN_ADVISOR_0xCB" );
 
-			if ( ParkState.CellFor( park, x, y ).Type != ParkRideChoice.QueueCellType )
-				break;
-
-			cells.Add( cell );
-		}
-
-		if ( cells.Count == 0 )
+		if ( cached <= 0 )
 			return 0;
 
-		var (backX, backY) = MapStep.CellAt( cells[^1] );
-
-		DetachFromPath( state, park, backX, backY );
-
-		// The percentage the original scales a refund by is per-age, which nothing here keeps; see
-		// LiftQueue, which gives a cell back in full for the same reason.
 		var price = QueueCost( Level.Current );
+		var refunded = 0;
 
-		foreach ( var cell in cells )
+		while ( pending.Count > 1 )
 		{
-			var (x, y) = MapStep.CellAt( cell );
+			var (fromX, fromY) = pending[^1];
 
-			// The queue arm zeroes the counter under force (0x00536a07), so the node the placer laid at one
-			// is left at nought.
-			state.SetRecord( x, y, Cleared( ParkState.CellFor( park, x, y ) ) with { OverlapCounter = 0 } );
+			pending.RemoveAt( pending.Count - 1 );
 
-			state.Refund( price );
+			var (toX, toY) = pending[^1];
+
+			if ( !ParkState.OnMap( toX, toY ) || ParkState.CellFor( park, toX, toY ).Type != PathType )
+				refunded += ClearQueueLine( state, park, fromX, fromY, toX, toY, price );
+
+			Unimplemented.Report( "QUEUE_DRAIN_ADVISOR_0xCB" );
+
+			state.RemeasureQueue( placed.ThingId );
 		}
+
+		// The call that finds one entry left writes the count back to 1 and re-arms mode 3 too (0x005300a6), and
+		// measures nothing.
+		Unimplemented.Report( "QUEUE_DRAIN_ADVISOR_0xCB" );
+
+		// The debit subtracts only while the bank's +0x114 is non-zero (0x004d01f3), and what that field is is not
+		// decoded; here it always subtracts. The original also scales it by the object's per-age percentage
+		// (FUN_004e2290, 0x00527fe8), which nothing here keeps, so this takes the full price.
+		Unimplemented.Report( "QUEUE_DRAIN_DEBIT_BANK_GATE" );
+		Unimplemented.Report( "QUEUE_DRAIN_DEBIT_DEPRECIATION" );
 
 		state.Spend( price );
 
-		// The drain re-walks the queue as every cell edit does (FUN_0052fe50 at 0x0052ffec), and whether
-		// that puts anybody out before the sale's own message reaches them is not decoded: it turns on
-		// what the drain's pops leave behind (docs/exe/park-engine.md, "Selling and the people on it"). So
-		// the measurement is only thrown away, the sale puts everybody off, and the question is counted.
-		state.InvalidateQueue( placed.ThingId );
+		return refunded - price;
+	}
 
-		if ( state.FirstInQueue( placed.ThingId ) != 0 )
-			Unimplemented.Report( "SALE_DRAIN_QUEUE_REMEASURE" );
+	/// <summary>
+	/// The ends of a thing's queue, bottom first - <c>FUN_00530120( object )</c>: the cell the entrance's one
+	/// link faces, each corner met walking out from the entrance, and the cell the walk stops on. <b>Where
+	/// the walk reaches a path it lets the queue go of it</b>: the last queue cell loses its bit toward the
+	/// path and the path its bit back, and both are retiled.
+	/// </summary>
+	/// <remarks>
+	/// <b>The walk starts on the entrance itself</b> (<c>0x0053024a</c>) and goes straight on the way the
+	/// entrance links, turning only at a corner - a queue or entrance cell whose two cardinal links are one
+	/// each way (<c>FUN_0053ae00</c>) - which is pushed, so a faced cell that is a corner is pushed twice. Every
+	/// queue or entrance cell it crosses has its counter set, 1 on a corner and nought elsewhere. It stops on a
+	/// queue cell with one link of the eight, on a path, and on anything that is neither queue nor entrance; an
+	/// entrance never stops it (<c>0x005302ea</c>). At a path it steps back to the cell it came from unless that
+	/// is an entrance (<c>0x0053036d</c>), so an entrance that faces a path keeps its bit and the path is pushed.
+	/// When the faced cell is queue or entrance of another owner it is pushed alone; with no link, the one
+	/// cell the thing's angle names. <c>docs/exe/ride-operation.md</c>, "The sale's drain".
+	/// <para>
+	/// The original's walk has no bound, and its list holds 0x401 entries; this one gives up after
+	/// <see cref="ParkState.LongestQueue"/> cells, which keeps the list inside that.
+	/// </para>
+	/// </remarks>
+	internal static List<(int X, int Y)> QueueEnds( ParkState state, ParkWorld park, ParkWorld.CatalogueObject placed )
+	{
+		var ends = new List<(int X, int Y)>();
+		var (x, y) = (placed.EntryCellX, placed.EntryCellY);
+		var entry = ParkState.CellFor( park, x, y );
+		int heading = entry.Neighbours;
 
-		return (cells.Count - 1) * price;
+		// The switch on the entrance's whole mask has an arm for a single cardinal bit only (0x0053019a).
+		if ( heading is 0x01 or 0x04 or 0x10 or 0x40 && ParkBuilding.Step( x, y, heading ) is var (facedX, facedY)
+			&& ParkState.OnMap( facedX, facedY ) )
+		{
+			var faced = ParkState.CellFor( park, facedX, facedY );
+
+			ends.Add( (facedX, facedY) );
+
+			if ( faced.Type is ParkRideChoice.QueueCellType or CellEdge.RideEnd && faced.ParentId != entry.ParentId )
+				return ends;
+		}
+
+		if ( heading == 0 || !ParkState.OnMap( x, y ) )
+		{
+			ends.Add( ParkBuilding.Step( x, y, AngleSide( placed.Angle, entry.Direction ) ) );
+
+			return ends;
+		}
+
+		for ( var cells = 0; ; ++cells )
+		{
+			if ( cells == ParkState.LongestQueue )
+			{
+				Unimplemented.Report( "QUEUE_END_WALK_UNBOUNDED" );
+				break;
+			}
+
+			var cell = ParkState.OnMap( x, y ) ? ParkState.CellFor( park, x, y ) : default;
+			var stop = false;
+
+			if ( cell.Type is ParkRideChoice.QueueCellType or CellEdge.RideEnd )
+			{
+				var corner = IsCorner( cell.Neighbours );
+
+				if ( corner )
+				{
+					heading = cell.Neighbours ^ CellEdge.Opposite( heading );
+					ends.Add( (x, y) );
+				}
+
+				state.SetRecord( x, y, cell with { OverlapCounter = (short)(corner ? 1 : 0) } );
+			}
+			else
+			{
+				stop = true;
+			}
+
+			if ( cell.Type != CellEdge.RideEnd )
+			{
+				if ( System.Numerics.BitOperations.PopCount( (uint)cell.Neighbours ) == 1 )
+					stop = true;
+
+				if ( cell.Type == PathType )
+				{
+					var (backX, backY) = ParkBuilding.Step( x, y, CellEdge.Opposite( heading ) );
+					var back = ParkState.OnMap( backX, backY ) ? ParkState.CellFor( park, backX, backY ) : default;
+
+					if ( back.Type != CellEdge.RideEnd )
+					{
+						state.SetRecord( backX, backY, back with { Neighbours = (byte)(back.Neighbours & ~heading) } );
+						Retile( state, park, backX, backY );
+					}
+
+					var path = ParkState.CellFor( park, x, y );
+
+					state.SetRecord( x, y, path with { Neighbours = (byte)(path.Neighbours & ~CellEdge.Opposite( heading )) } );
+					Retile( state, park, x, y );
+
+					if ( back.Type != CellEdge.RideEnd )
+						(x, y) = (backX, backY);
+
+					stop = true;
+				}
+			}
+
+			if ( stop )
+				break;
+
+			(x, y) = ParkBuilding.Step( x, y, heading );
+		}
+
+		ends.Add( (x, y) );
+
+		return ends;
+	}
+
+	/// <summary>
+	/// Whether a cell is a queue's corner - <c>FUN_0053ae00</c>: two cardinal links, one north or south and one
+	/// east or west.
+	/// </summary>
+	private static bool IsCorner( int neighbours )
+		=> System.Numerics.BitOperations.PopCount( (uint)(neighbours & 0x55) ) == 2
+			&& (neighbours & 0x11) != 0 && (neighbours & 0x44) != 0;
+
+	/// <summary>
+	/// The side an entrance with no link looks to (<c>0x005303f1</c>..<c>0x00530487</c>): the thing's angle as a
+	/// side - 0 north, 90 east, 180 south, 270 west - turned by the entrance's direction byte
+	/// (<c>FUN_004d8c20</c>, a rotate by that byte's highest bit).
+	/// </summary>
+	private static int AngleSide( int angle, int direction )
+	{
+		var side = angle switch { 0 => 0x01, 90 => 0x04, 180 => 0x10, 270 => 0x40, _ => 0 };
+		var turn = direction < 2 ? 0 : System.Numerics.BitOperations.Log2( (uint)direction );
+		var turned = side << turn;
+
+		return turned < 0x81 ? turned & 0xff : turned >> 8;
+	}
+
+	/// <summary>
+	/// Clears one run of a drained queue - ops <c>0x32</c> and <c>0x86</c> over the line from
+	/// <paramref name="fromX"/>, <paramref name="fromY"/> to the other end, which it reaches last
+	/// (<c>FUN_00536100</c>: along the longer axis, a tie along Y (<c>0x00536140</c>), holding the first end's other
+	/// coordinate).
+	/// Answers what it refunded.
+	/// </summary>
+	/// <remarks>
+	/// <b>Op <c>0x32</c> is <c>FUN_005367a0</c> under force</b>: a queue cell, NOMODIFY or not, refunds its price
+	/// while the cell its owner stands on is typed (<c>0x00536a37</c>) and is reset whole, its counter zeroed
+	/// (<c>0x00536a07</c>), with no unlink of the cells beside it; a bare cell is left alone (<c>0x005367ed</c>). Op <c>0x86</c> answers
+	/// only track types a queue never carries.
+	/// </remarks>
+	private static int ClearQueueLine( ParkState state, ParkWorld park, int fromX, int fromY, int toX, int toY, int price )
+	{
+		var alongX = Math.Abs( toX - fromX ) > Math.Abs( toY - fromY );
+		var steps = alongX ? Math.Abs( toX - fromX ) : Math.Abs( toY - fromY );
+		var by = alongX ? Math.Sign( toX - fromX ) : Math.Sign( toY - fromY );
+		var refunded = 0;
+
+		for ( var step = 0; step <= steps; ++step )
+		{
+			var (x, y) = alongX ? (fromX + (by * step), fromY) : (fromX, fromY + (by * step));
+
+			if ( !ParkState.OnMap( x, y ) )
+				continue;
+
+			var cell = ParkState.CellFor( park, x, y );
+
+			if ( cell.Type == NothingType )
+				continue;
+
+			// A run of a queue lies on queue cells; the walk stops on anything else, which is pushed, so a run
+			// can end on one. What the forced clear does to it is not decoded, and it is left standing.
+			if ( cell.Type != ParkRideChoice.QueueCellType )
+			{
+				Unimplemented.Report( "QUEUE_DRAIN_CLEARS_ANOTHER_KIND" );
+				continue;
+			}
+
+			var (ownerX, ownerY) = MapStep.CellAt( cell.ParentId );
+			var ownerTyped = cell.ParentId != 0 && ParkState.OnMap( ownerX, ownerY )
+				&& ParkState.CellFor( park, ownerX, ownerY ).Type != NothingType;
+
+			state.SetRecord( x, y, Cleared( cell ) with { OverlapCounter = 0 } );
+
+			if ( !ownerTyped )
+				continue;
+
+			// The refund is scaled by a per-age percentage, FUN_004e2290, which nothing here keeps.
+			Unimplemented.Report( "QUEUE_REFUND_DEPRECIATION" );
+
+			state.Refund( price );
+			refunded += price;
+		}
+
+		return refunded;
 	}
 
 	/// <summary>
