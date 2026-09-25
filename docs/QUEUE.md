@@ -1035,14 +1035,35 @@ artifacts are listed in `docs/history/README.md`.
   - **Not confirmed on screen:** anything of the original's own - its guests are not run here, so the decode is the
     executable's and the run measures ours. Nothing is built, so there is no test and no mutation. **Found:** Q53b,
     Q107 to Q111.
-- [ ] **Q53b. A guest on a cell with no links wanders to the nearest path: the build.** Split from Q53, whose decode it
-  builds (`ride-operation.md`, "SetRandomDest - `FUN_004f9490`", the no-links arm). The count of the own cell's
-  cardinal links (`FUN_00522810`); at nought, the 8 × 4 probe table with its quirks (the own cell at every k 0 and all
-  of d 0, no due-south ray, x wrapping through the packed id), a path hit routed to its centre and a failed route
-  moving on; then five random on-map cells within 5, of any type, an off-map draw using a try. Correct
-  `SetRandomDest`'s staff-only summary. Confirm: `q53measure.py` - predict every put-off guest on a cleared cell
-  leaves as Wandering toward (x + 1, 21) within a few sweeps, none HeadingForExit first; photographed. Put the bug
-  back and re-run the new test.
+- [x] **Q53b. A guest on a cell with no links wanders to the nearest path: the build.** Done 2026-09-25,
+  `alexah/147-wander-from-a-cell-with-no-links`. Split from Q53, whose decode it builds (`ride-operation.md`,
+  "SetRandomDest - `FUN_004f9490`", the no-links arm), checked against the disassembly first.
+  - **Built.** `CellEdge.Links` (`FUN_00522810`). `PeepBehaviour.SetRandomDest` takes the call's r % 5 + 1 draw,
+    counts the own cell's links and at none calls `WanderFromNowhere`: `NoLinksProbes` (the `0x004f9e40` table, the own
+    cell at every k 0, no (0, +k) ray, x wrapping through the sixteen-bit id), a path hit routed to its centre, a
+    failed route moving on; then five tries within 5, x drawn before y, any type, an off-map draw using a try. A park
+    never loaded is taken as linked. Its summary no longer calls the tries staff-only. Staff reach the count too,
+    inside their area or outside it once the patrol roll fails: counted `STAFF_NO_LINKS_WANDER`, filed as Q112.
+  - **Tests.** `ParkNoLinksWanderTests`, 15, on a real sale of the Belly Bounce. Twelve mutations each turn at least
+    one red; the bug put back (the arm removed) turns ten.
+  - **Reviewed.** A read-only workflow (four lenses, each finding put to a skeptic) found the staff reach outside the
+    area, Q112's dead end and handyman, the missing per-call draw, four hollow or missing tests and two over-claiming
+    comments. All fixed before the game runs.
+  - **Confirmed in the game** (`q53b2measure.py`, silent, jungle, `load 60`, `Q50F_STAGE=3`, the commit's build in a
+    throwaway worktree, `pause` then `step 15` a sweep at a time). Predicted and read: 5 of 5 put-off guests on cleared
+    cells left Deciding within 4 sweeps. 35 and 65 went as Wandering aimed at exactly (53.5, 21.5), one line each
+    ("Peep 35: no links at (52,22); probe 14 aims at path (53,21)"), and stood on (53,21) at sweeps 6 and 14. 42, 60
+    and 92 went as GoingToRide for the Jungle Spray with no such line. None went home, and no line named another cell.
+    Photographed before, just after (the five on bare grass) and eight seconds on (two on row 21, three at the Spray).
+    `save/` unchanged in both runs.
+  - **Missed, mine.** The first run (`q53bmeasure.py`) predicted all eight would wander. Three did, exactly as
+    predicted (42 from the entrance by probe 15 to (54,21), 76 and 101), and five took the chooser first. I had read
+    Q53's run as the chooser seldom succeeding, when it seldom ran: every failed wander restamped its gate, and a sale
+    leaves that gate open. The original races the same two arms. I also predicted `STAFF_NO_LINKS_WANDER` at 0 before
+    the sale: the first run read 23 and the second 0, with no guard or researcher sampled on a cell with no links.
+    Where it is reached is not measured (Q112).
+  - **Not confirmed on screen:** the five tries, a lone path cell, a failed probe route and the wrap. They are tested
+    only, because from a sold Belly Bounce the probes always find row 21.
 - [ ] **Q56. A right press over a panel arms the quick click.** Found by Q39's decode. The original posts a press to
   the hovered window (`FUN_00658af1`), so only a press on the park view reaches `Park_MouseMessageProc` and arms the
   click; the park still gets its own release wherever the pointer has gone. Here `Level.RightButton` arms on a press
@@ -1253,6 +1274,15 @@ artifacts are listed in `docs/history/README.md`.
   Bin at (44,29)), (e) facing an entertainer, (f) pranks: each is reached in Lost Kingdom and none calls
   `Unimplemented.Report` (`CLAUDE.md` rule 4); (e)'s fireworks half is dead by content. Count each where the original
   tests it, with its one draw, and put its build in the queue.
+- [ ] **Q112. Staff on a cell with no links do not look for path.** Found by Q53b. The no-links arm reads no person
+  type (`ride-operation.md`, "SetRandomDest"): a member of staff reaches the count inside their patrol area, or outside
+  it once `FUN_00506f30` fails (`0x004f95af` falls through, where ours answers false for either arm), after the
+  call's r % 5 + 1 draw, which ours does not take. `StaffBehaviour.SetRandomDest` counts both reaches
+  (`STAFF_NO_LINKS_WANDER`). Wire `PeepBehaviour.WanderFromNowhere` into it: five failed tries answer 0 for staff too,
+  with no stamp and no `FUN_00506f30`, which is the linked walk's dead end alone. Only a guard or a researcher reaches
+  the staff wander (`StaffBehaviour.Decide`). Measure first where the count is reached: one of Q53b's two runs counted
+  23 before any sale, the other none. Confirm: the guard put down on grass inside their area walks to the nearest
+  path, `staff` and `unimplemented` read before and after, photographed.
 
 ## B. Docs and comments
 

@@ -226,6 +226,13 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004f8321` | | OpenTPW.Tests/GameCalendarTests.cs OpenTPW/Global/GameCalendar.cs  |
 | `0x004f8792` | | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f87e7` | | OpenTPW.Tests/GameCalendarTests.cs OpenTPW/Global/GameCalendar.cs  |
+| `0x004f9534` | SetRandomDest: the call's one draw, r % 5 + 1, the linked walk's pass count, taken before the links count | OpenTPW.Tests/ParkNoLinksWanderTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004f95b9` | SetRandomDest `FUN_004f9490`: the count of the person's own cell's links (`FUN_00522810`); nought takes the no-links arm | OpenTPW/World/Park/PeepBehaviour.cs OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x004f9a05` | SetRandomDest: start of the no-links arm (path on seven rays, then five random cells) | OpenTPW.Tests/ParkNoLinksWanderTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004f9b98` | SetRandomDest's no-links arm: a probe's failed route moves on to the next probe | OpenTPW.Tests/ParkNoLinksWanderTests.cs  |
+| `0x004f9d19` | SetRandomDest's no-links arm: the five random tries' count, an off-map draw included | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004f9d5f` | SetRandomDest: end of the no-links arm | OpenTPW.Tests/ParkNoLinksWanderTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004f9e40` | SetRandomDest's no-links arm: the eight-way direction table of its probes | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004f9f89` | `FUN_004f9f00`: first half of `prev + (cur - prev) * t` | OpenTPW.Tests/ParkGuestPlacementTests.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x004f9fb6` | `FUN_004f9f00`: second half of the interpolation | OpenTPW.Tests/ParkGuestPlacementTests.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x004fa015` | `FUN_004f9f00` copies the octant straight off the thing: the heading is not blended | OpenTPW.Tests/ParkGuestPlacementTests.cs OpenTPW/World/Park/ParkGuestSprites.cs  |

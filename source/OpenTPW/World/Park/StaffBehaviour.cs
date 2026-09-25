@@ -381,8 +381,24 @@ public sealed class StaffBehaviour
 	{
 		var (x, y) = walk.Position.Cell;
 
+		// The original counts this cell's links once the patrol check is past - inside the area, or outside it
+		// when the patrol roll fails (0x004f95b9) - and at none takes the no-links arm whoever is asking,
+		// PeepBehaviour.WanderFromNowhere. Not built for staff (Q112): counted, and what follows runs instead.
+		var noLinks = _state?.Park is { } park && CellEdge.Links( ParkState.CellFor( park, x, y ).Neighbours ) == 0;
+
 		if ( !staff.Patrols( x, y ) )
-			return PatrolRoll( staff, walk );
+		{
+			if ( PatrolRoll( staff, walk ) )
+				return true;
+
+			if ( noLinks )
+				Unimplemented.Report( "STAFF_NO_LINKS_WANDER" );
+
+			return false;
+		}
+
+		if ( noLinks )
+			Unimplemented.Report( "STAFF_NO_LINKS_WANDER" );
 
 		var candidates = new (int X, int Y)?[SlotOrder.Length];
 		var found = 0;

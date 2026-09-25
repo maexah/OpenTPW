@@ -1859,27 +1859,40 @@ public sealed class PeepBehaviour
 	}
 
 	/// <summary>
-	/// Sends a guest to a random reachable cell next to the one they are standing on - the guest half of
-	/// <c>FUN_004f9490</c>, whose own log line is "Peep can't SetRandomDest anywhere".
+	/// Sends a guest somewhere to wander to - <c>FUN_004f9490</c>, whose own log line is "Peep can't
+	/// SetRandomDest anywhere" (<c>docs/exe/ride-operation.md</c>, "SetRandomDest").
 	///
 	/// <para>
-	/// <b>The destination is a random point INSIDE the cell rather than its centre</b>, and that is the
-	/// original's arithmetic rather than a choice: it masks a roll to <c>0x7f</c> and clamps it to 5..123
-	/// of the 256 sub-cell units, so a wandering guest always aims at the near half of the target cell. A
-	/// centre would have been tidier and would not be what the engine does.
+	/// <b>It first counts the links of the cell the guest stands on</b> (<c>0x004f95b9</c>). None - a cell
+	/// a sale has cleared, a lone path cell - takes <see cref="WanderFromNowhere"/>, the nearest path on
+	/// seven rays and then five random cells near by. The original takes that arm for any person; this is
+	/// the guest's half, and the staff's is <see cref="StaffBehaviour"/>'s.
 	/// </para>
 	/// <para>
-	/// <b>What is deliberately left out.</b> The staff arms - patrol areas, and the fallback that tries
-	/// five random cells within five of the guest before giving up - belong to the five person-kinds nothing
-	/// here simulates. The stranded bookkeeping is also absent: the original stamps a "do not try again
-	/// until" time and raises a thought bubble, and neither the stamp nor the thought system exists here, so
-	/// a guest who can reach nowhere simply stays where they are and is asked again.
+	/// <b>A linked cell sends them to one of its four neighbours</b>, a random point INSIDE it rather than
+	/// its centre: the original masks a roll to <c>0x7f</c> and clamps it to 5..123 of the 256 sub-cell
+	/// units. Its linked arm walks one to five cells from the mask of the cell being left, with three
+	/// filters; this steps one cell from the entered cell's mask (Q108).
+	/// </para>
+	/// <para>
+	/// <b>The stranded bookkeeping is absent</b> (Q110): the original refuses a guest whose stamp says
+	/// nothing near them has changed, stamps one who reaches a dead end and raises a thought bubble, and
+	/// neither the stamp nor the thought system exists here, so a guest who can reach nowhere stays where
+	/// they are and is asked again.
 	/// </para>
 	/// </summary>
 	/// <returns>Whether somewhere was found and a route to it planned.</returns>
-	private bool SetRandomDest( Peep peep, PeepWalk walk )
+	internal bool SetRandomDest( Peep peep, PeepWalk walk )
 	{
 		var (x, y) = walk.Position.Cell;
+
+		// The original's pass count, r % 5 + 1, drawn on every call before the count (0x004f9534). Only its linked
+		// walk reads it, and ours steps one cell (Q108), so it is drawn and not used.
+		_ = (_random.Next() % 5) + 1;
+
+		// A park that was never loaded has no cells to count, and is taken as linked - the answer Connects gives.
+		if ( _park != null && CellEdge.Links( ParkState.CellFor( _park, x, y ).Neighbours ) == 0 )
+			return WanderFromNowhere( peep, walk, x, y );
 
 		// The four candidates, in the original's slot order, empty where that side is closed.
 		var candidates = new (int X, int Y)?[SlotOrder.Length];
@@ -1919,6 +1932,100 @@ public sealed class PeepBehaviour
 		}
 
 		return false;
+	}
+
+	/// <summary>
+	/// SetRandomDest's arm for a cell with no links, <c>0x004f9a05</c>..<c>0x004f9d5f</c>
+	/// (<c>docs/exe/ride-operation.md</c>, "SetRandomDest", the no-links arm).
+	///
+	/// <para>
+	/// <b>First the nearest path</b>: each of <see cref="NoLinksProbes"/> that is path (type 1,
+	/// <c>FUN_00536310</c>) is aimed at its centre and routed, and a route that fails moves on to the next
+	/// probe. <b>Then five random cells</b> within five of the guest, x drawn before y, of any type; a draw
+	/// off the map uses a try. Five failures answer nought, and the original stamps, thinks and logs nothing.
+	/// </para>
+	/// </summary>
+	private bool WanderFromNowhere( Peep peep, PeepWalk walk, int x, int y )
+	{
+		var probe = 0;
+
+		foreach ( var (atX, atY) in NoLinksProbes( x, y ) )
+		{
+			++probe;
+
+			if ( ParkState.CellFor( _park, atX, atY ).Type != CellEdge.Path )
+				continue;
+
+			if ( SendTo( peep, walk, (atX, atY) ) )
+			{
+				Log.Info( $"Peep {peep.ThingId}: no links at ({x},{y}); probe {probe} aims at path ({atX},{atY})" );
+
+				return true;
+			}
+		}
+
+		for ( var attempt = 1; attempt <= NowhereTries; ++attempt )
+		{
+			var toX = x + (_random.Next() % 11) - 5;
+			var toY = y + (_random.Next() % 11) - 5;
+
+			if ( !ParkState.OnMap( toX, toY ) )
+				continue;
+
+			if ( SendTo( peep, walk, (toX, toY) ) )
+			{
+				Log.Info( $"Peep {peep.ThingId}: no links at ({x},{y}) and no path on the rays; try {attempt} aims at "
+					+ $"({toX},{toY}), type {ParkState.CellFor( _park, toX, toY ).Type}" );
+
+				return true;
+			}
+		}
+
+		Log.Info( $"Peep {peep.ThingId}: no links at ({x},{y}), no path on the rays and {NowhereTries} tries failed" );
+
+		return false;
+	}
+
+	/// <summary>How many random cells the no-links arm tries once its probes find no path - <c>0x004f9d19</c>.</summary>
+	public const int NowhereTries = 5;
+
+	/// <summary>
+	/// The cells the no-links arm probes for path, in its order, those off the map left out: direction d 0..7
+	/// outside, distance k 0..3 inside, through the table at <c>0x004f9e40</c>.
+	///
+	/// <para>
+	/// <b>The table's quirks are the original's.</b> Direction 0 leaves both offsets nought, as does every
+	/// k 0, so the guest's own cell is probed eleven times; the other seven rays are (k, k), (k, 0), (k, −k),
+	/// (0, −k), (−k, −k), (−k, 0) and (−k, k), so <b>nothing is probed at (0, +k)</b>. The probe is the own
+	/// cell id plus dy × 128 + dx in sixteen bits, so an x past column 0 or 127 wraps into the next row.
+	/// </para>
+	/// </summary>
+	internal static IEnumerable<(int X, int Y)> NoLinksProbes( int x, int y )
+	{
+		var own = MapStep.CellId( x, y );
+
+		for ( var direction = 0; direction < 8; ++direction )
+		{
+			for ( var k = 0; k < 4; ++k )
+			{
+				var (dx, dy) = direction switch
+				{
+					1 => (k, k),
+					2 => (k, 0),
+					3 => (k, -k),
+					4 => (0, -k),
+					5 => (-k, -k),
+					6 => (-k, 0),
+					7 => (-k, k),
+					_ => (0, 0)
+				};
+
+				var (atX, atY) = MapStep.CellAt( own + (dy * MapStep.MapSize) + dx );
+
+				if ( ParkState.OnMap( atX, atY ) )
+					yield return (atX, atY);
+			}
+		}
 	}
 
 	/// <summary>

@@ -150,13 +150,14 @@ public class ParkDecidingTests
 	}
 
 	/// <summary>
-	/// A wandering guest aims at a random point <b>inside</b> the target cell, not its centre - the
-	/// original's own arithmetic, and the opposite of what the pathfinder does for every other destination.
+	/// A guest wandering from a linked cell aims at a random point <b>inside</b> the target cell, not its
+	/// centre - the original's own arithmetic. The no-links arm aims at a centre
+	/// (<see cref="ParkNoLinksWanderTests"/>); this file's park-less behaviour takes every cell as linked.
 	///
 	/// <para>
-	/// <b>This is the discriminating check on <c>SetRandomDest</c>.</b> Every destination set anywhere else
-	/// in this file is a cell centre, so an implementation that reached for the tidy answer would be
-	/// indistinguishable by state and position alone. The roll is masked to <c>0x7f</c> and clamped to
+	/// <b>This is the discriminating check on <c>SetRandomDest</c>'s linked arm.</b> Every destination set
+	/// anywhere else in this file is a cell centre, so an implementation that reached for the tidy answer would
+	/// be indistinguishable by state and position alone. The roll is masked to <c>0x7f</c> and clamped to
 	/// 5..123 of 256 sub-cell units, so a wander target's offset within its cell must land in that band -
 	/// and must not be the 128 that a centre would give.
 	/// </para>

@@ -813,8 +813,8 @@ nothing on the way refills it, the realistic refusal is a ride that closed or br
 Decoded 2026-09-25 (`docs/QUEUE.md` Q53): five decoders (the no-links arm, the linked arm, the stranded bookkeeping, the
 state-6 turn, the ground after a sale), each report put to a skeptic reading the disassembly, then a critic over all
 five - 173 claims, 144 upheld, 28 amended, 1 refuted (about a run's output file, not the executable). **A guest put off
-onto cells a sale cleared is not stranded in the original**: SetRandomDest has an arm for a cell with no links, which
-OpenTPW lacks, and it sends them to the nearest path.
+onto cells a sale cleared is not stranded in the original**: SetRandomDest has an arm for a cell with no links, and it
+sends them to the nearest path. OpenTPW builds it for guests (Q53b).
 
 ### The state-6 turn, in order
 
@@ -945,18 +945,19 @@ record shuts it, then grass to path, open before any other test (`0x004d8806`). 
 is one N step. **Either way the guest leaves as Wandering, in about three sweeps**, with nothing stamped; the W ray to
 (48,22) is never reached. From (52,23) the first hit is d 3 k 2, (54,21), unless (55,26), unread, is path.
 
-**OpenTPW strands them** (measured 2026-09-25 on `main`'s build, Q53): four put-off guests stood Deciding on cleared
-cells no side of which its wander could take - `PeepBehaviour.SetRandomDest` offers only the four adjacent cells whose
-ENTERED mask links back, and the path's `0x44` does not. Every failed wander restamps the thinking gap, as the
-original's would, so the chooser seldom runs for them: one left for the Jungle Spray at 6 s, the other three only when
-`Step`'s `ExitLevel <= 0` arm sent them home, at 61 and 73 s, their happiness unchanged.
+**OpenTPW takes the arm** for a guest (Q53b): `PeepBehaviour.SetRandomDest` takes the call's r % 5 + 1 draw, counts the
+own cell's links with `CellEdge.Links` and at none calls `WanderFromNowhere`, which walks `NoLinksProbes` (the table,
+its quirks and the sixteen-bit wrap) and then the five tries. OpenTPW's route planner answers where the line stepper
+does here. A park never loaded is taken as linked. Measured over two runs (Q53b): of 13 put-off guests on cleared cells,
+the 5 whose first roll was the wander were aimed at exactly the predicted cell, (x + 1, 21) or (54,21); the other 8
+rolled the chooser first and went to the Jungle Spray, its gate open because nothing restamps it between choosing a ride
+and its sale.
 
 ### Where OpenTPW differs
 
 | What | The original | OpenTPW | Reached in Lost Kingdom |
 |---|---|---|---|
-| A cell with no links | the no-links arm: path within 3 on seven rays, then five random cells | the four adjacent cells only; fails | a sold queue's cells and entrance (Q53b) |
-| The five random cells | any person | `SetRandomDest`'s summary calls them staff-only | the comment hid the arm |
+| A cell with no links, staff | the no-links arm, whoever asks: inside the patrol area, or outside it once `FUN_00506f30` fails (`0x004f95af`) | inside, the neighbour pick; outside, false; both counted `STAFF_NO_LINKS_WANDER` (Q112) | a guard or researcher put down off a path |
 | A linked wander | 1 to 5 linked cells, aimed at the last | one adjacent cell | every wander (Q108) |
 | Its candidates | the LEFT cell's mask, along each bit | the ENTERED cell's mask back, and the edge test | only on a one-way link or a shut track edge |
 | Its filters | from path, no queue or entrance; a queue cell's `mDirection` slot; no exit | none | (48,22) onto the Belly Bounce's back cell; the toilets', Spray's and Drinks Shop's entrances |

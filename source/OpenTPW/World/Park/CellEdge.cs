@@ -128,6 +128,15 @@ public sealed class CellEdge
 	};
 
 	/// <summary>
+	/// How many of the four side bits a cell's <c>mNeighbours</c> carries - <c>FUN_00522810</c>, which
+	/// SetRandomDest asks of the cell a person stands on. The original reads the hoarding overlay's
+	/// <c>+0x22</c> instead while edit code raises it; nothing here raises it.
+	/// </summary>
+	public static int Links( byte neighbours )
+		=> ((neighbours & 0x01) != 0 ? 1 : 0) + ((neighbours & 0x04) != 0 ? 1 : 0)
+			+ ((neighbours & 0x10) != 0 ? 1 : 0) + ((neighbours & 0x40) != 0 ? 1 : 0);
+
+	/// <summary>
 	/// Which side a bit stands for - the inverse of <see cref="BitFor"/>, and <b>null</b> for anything
 	/// that is not one of the four.
 	/// </summary>

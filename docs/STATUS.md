@@ -36,6 +36,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Spending: guests choose, queue for and buy from the Drinks Shop and the Jungle Spray; short of the price, they walk.
 - People: guests and staff read from the save, drawn, walking, paying, queueing, boarding, interpolated between the
   248 ms steps. **Queuers walk to their own places, in a line**; one needing the toilet, or lost to the walk, is out.
+  **A guest on a cell with no links, such as a sold thing's cleared ground, wanders to the nearest path.**
 - Rides: every placed thing runs its script; 74 of 106 opcodes built, the rest counted. A ride screams
   at the band its rider count asks for, as the original's chain: a fresh sample every 1-3 s on **its own
   clock**, so a second ride in the same band is neither held up by it nor set off by its stop.
@@ -50,8 +51,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Eight of the nine per-object windows are unbuilt. Setting a staff member's patrol area is not built, deferred by
   Alexah; staff keep to the areas the save gives them. A walking member of staff is not entered in the cells they
   cross; only hiring and putting down place one.
-- A put-off queuer on cleared ground waits for their day to end; the original's wander finds the nearest path (Q53b).
-  Q102-Q105 and five queue-turn arms are unbuilt, the unhappy one held for Q85. No spot animation (Q98).
+- Q102-Q105 and five queue-turn arms are unbuilt, the unhappy one held for Q85. No spot animation (Q98). A guard or
+  researcher on a cell with no links does not look for path (Q112).
 - The park's door moves neither the gate (Q89) nor the advisor (Q90), nor a shut ride's model (Q91); the ride window's
   door shows a shut ride but is not a button (Q92), and a bought queued thing starts open (Q93).
 - A right press over a panel still cancels (Q56), and the park's Escape acts on the press, not the release (Q57).
@@ -59,8 +60,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
   any cell on the map takes a candidate; the original's rule is decoded (Q40).
 - The fly-in's fade to black is not drawn (Q61). Escape over the player slots opens the game menu (Q64); Ctrl+H acts
   on its press and F8 is not built (Q65); a disabled button still takes the pointer (Q66).
-- The happiness gauge draws wrong: two copies of the bar, split down the middle (`docs/PLAYER-GAPS.md` gap 5;
-  cause not yet measured).
+- The happiness gauge draws two copies of its bar, split down the middle (`docs/PLAYER-GAPS.md` gap 5; unmeasured).
 - Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
 - Guests may arrive eight times as often as the original's, and staff may idle for an eighth of its time: its timers
   read the thing sweep, ours the 31 ms tick (Q68, Q82, decode first).
@@ -69,14 +69,13 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50 to Q50h and Q53 are
-ticked.** Next is **Q53b**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36
-Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and Q85-Q88, Q50b Q89-Q94,
-Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h, Q50h Q106, Q53 Q53b and Q107-Q111, and the
-staleness audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review, section G from the lobby plan).
+`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50 to Q50h, Q53 and Q53b
+are ticked.** Next is **Q56**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49,
+Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and Q85-Q88, Q50b
+Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h, Q50h Q106, Q53 Q53b and Q107-Q111,
+Q53b Q112, the staleness audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review), the lobby plan section G.
 
-`docs/PLAYER-GAPS.md` still holds gaps **4, 5 and 7**. `docs/CLEANUP-PLAN.md` has all nine items closed
-and is still untracked, so it exists on this machine only; Q13 moves it into `docs/history/`.
+`docs/PLAYER-GAPS.md` holds gaps **4, 5 and 7**. The untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
 
 ## Not verified on screen
 
@@ -93,7 +92,8 @@ and is still untracked, so it exists on this machine only; Q13 moves it into `do
   Q50c's refusal on worth (none at these prices) and negative cash passing: tested; its kids' sound: neither. Q50d's
   lost place, invited guest who is not the nominee, broken ride and car track: tested only. Q50g's re-aim at a moved
   back of queue, its three failed walks, the refused door's walk, a dodgy direction and a place past the cells: tested.
-  Q50h's queue with a corner, which a measure between runs can reopen, and its other arms: tested only.
+  Q50h's queue with a corner, which a measure between runs can reopen, and its other arms: tested only. Q53b's five
+  tries, a lone path cell, a failed probe route and the wrap: tested only; the probes from a sold ride find row 21.
 - A lock taken on the last unit running its section whole: tested only. Nothing the stock park runs arrives there; the
   one route is the Hot Pot with its capacity cut mid-ride, and it rests on `BUMP` being unbuilt (Q45).
 
@@ -104,16 +104,16 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1134**, 0 fail, 0 skip with the game | 2026-09-25, after Q53 |
-| Tests without the game | **476** ran, **658** skipped, of 1134 | 2026-09-25, after Q53 |
-| Build warnings | 123 | 2026-09-25, after Q53 |
+| Tests | **1149**, 0 fail, 0 skip with the game | 2026-09-25, after Q53b |
+| Tests without the game | **480** ran, **669** skipped, of 1149 | 2026-09-25, after Q53b |
+| Build warnings | 123 | 2026-09-25, after Q53b |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-25 - where a put-off queuer goes, decoded (Q53).** `alexah/146-decode-the-stranded-guest`: 4 of 4 stranded.
+**2026-09-25 - the no-links wander (Q53b).** `alexah/147-wander-from-a-cell-with-no-links`: 5 of 5 put off moved on.
 
-**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/145` (Q50h)
+**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/146` (Q53)
 back to `118` (Q4), `115`-`116` (Q3), `117` (Q35) and `109` (Q1, Q1b); before them, `114`, `110` and `112`.
 
 Everything older is the git log.
