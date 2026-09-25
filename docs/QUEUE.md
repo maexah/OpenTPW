@@ -1265,14 +1265,61 @@ artifacts are listed in `docs/history/README.md`.
   `StepArrivals`' summary, which calls the period the original's. Q82 wants the same counter for the staff. Confirm:
   predict the first load on sweep 509 (126.2 s of game time) and the next 602 to 605 sweeps after each last drop; the
   log, `peeps`, and the bus photographed at the stop.
-- [ ] **Q82. Staff may idle for an eighth of the original's time. Decode first.** Found by the review of the
-  2026-09-24 staleness audit. `ParkPeople`'s staff loop hands `StaffBehaviour.Step` the 31 ms tick, but `FUN_004d6410`
-  compares its idle stamp against `mGameTick` (`0x004d6545`), which counts thing sweeps (`park-engine.md`, "What the
-  31 ms tick drives") - the same question as Q68. Check the other per-kind staff handlers the same way, then pass
-  `ParkState.GameTick`, the park's `mGameTick` (Q68b), and turn round the note in `ParkPeople`'s staff loop, which
-  names the deviation. `StaffBehaviour.Step`'s stale-stamp note says "our clock starts again at nought":
-  `GameClock.Ticks` is not reset on entering a park, so correct it too. Q68's decode settles the clock: the saved
-  `mGameTick`, which Q68b gives the park. Confirm: the `staff` census over a timed run, the idle gap predicted first.
+- [x] **Q82. Staff may idle for an eighth of the original's time: the decode.** Done 2026-09-25,
+  `alexah/154-decode-the-staff-idle-clock`. Decode only; the build is Q82b. `ride-operation.md`, "The staff turn": the
+  guard's handler read by hand, then a read-only workflow of 12 agents (six decoders - the other four kinds, the shared
+  `CStaff` code, and the caller with the save and the balance slots - each put to a skeptic reading the disassembly):
+  116 claims, 97 upheld, 19 amended, none refuted; the load-bearing ones re-read by hand.
+  - **Every clock a member of staff reads is `mGameTick`**, in all five kinds. Each idle arm (the guard's `0x004d6545`,
+    the researcher's `0x00502b90`, the mechanic's `0x004da54d`, the handyman's `0x004d7524`, the entertainer's
+    `0x004d4957`) waits until mGameTick > stamp + `IdleDuration`, unsigned: IdleDuration + 1 sweeps, 11 for Lost
+    Kingdom's grade-3 guard. Each handler runs once a sweep, unstaggered (`FUN_00516380`, `FUN_0050b360`). The jobs'
+    timers, a claim's expiry, research points and state 6's timeout count sweeps too; nothing reads the 31 ms counter.
+  - **The guard's walk-or-stay is `mGameTick & 3`, not a roll** (`0x004d655d`, `0x004d64e9`, `0x004d63e1` after a
+    rest, `0x004d5e76` at hire), and so is the entertainer's (`0x004d46fe`). The researcher's is the world random
+    (`0x00502ba9`), and on a nought it researches: it never idles of its own accord. The mechanic and the handyman have
+    no choice to make: with no work they take a random walk every time.
+  - **Nothing zeroes a stamp that reads ahead of the clock.** `StaffBehaviour.Step`'s rule cites `FUN_004f9490`'s
+    opening, which zeroes `+0x198`, `mStrandedTime`, against the route-call serial: another stamp on another counter.
+    The saved stamps are readings of the saved `mGameTick` (one pass writes both, `0x00516f06`, `0x00517723`), so Lost
+    Kingdom's guard, idle since 752 against 755, leaves idle on 763, the eighth sweep, and 763 & 3 is 3.
+  - **Reproduced in the game with nothing changed** (`q82measure.py`, silent, jungle), predicted first. Every guard
+    spell after a walk held its stamp exactly 2 sweeps (25 of 25; the original's 11) and every researcher spell 3 (25
+    of 25; the original researches instead). The guard's 752 was gone on the first sweep and the guard walked on 758,
+    where the original walks on 763. The handyman and the mechanic stood from sweep 761 to the end, 620 sweeps (610
+    read, ten missed while photographing), and the entertainer from 768. The stamps are 31 ms ticks (312 on mGameTick
+    794): `GameClock.Ticks` is not reset in a park (5 at the park on show, the lobby's carried in), so `Step`'s
+    "starts again at nought" is wrong as the item says. Photographed, held by `pause` with the census read: the guard
+    standing on the path on 794 and walking on at 798. One prediction fell short: that a researcher's spell goes on at
+    stamp 0 after its 3 (8 of 25) was written in only after the first run, which crashed on a guest going home under
+    the `facing` overlay (Q137). `save/` unchanged in both.
+  - **No test was added**: nothing was built, so there was no fix to put back. Q82b's tests are the build's.
+  - **Reviewed** by a read-only workflow of 20 agents (four reviewers, a skeptic on each finding): 17 upheld, 1
+    refused, and the 20 minor ones checked by hand; all acted on in the page and the items below.
+  - **Found:** Q82b and Q133-Q138, and notes on Q110 (the staff's thoughts), Q112 (every kind wanders) and Q132 (the
+    guests' needs gate).
+
+  The item as written: Found by the review of the 2026-09-24 staleness audit. `ParkPeople`'s staff loop hands
+  `StaffBehaviour.Step` the 31 ms tick, but `FUN_004d6410` compares its idle stamp against `mGameTick` (`0x004d6545`),
+  which counts thing sweeps (`park-engine.md`, "What the 31 ms tick drives") - the same question as Q68. Check the
+  other per-kind staff handlers the same way, then pass `ParkState.GameTick`, the park's `mGameTick` (Q68b), and turn
+  round the note in `ParkPeople`'s staff loop, which names the deviation. `StaffBehaviour.Step`'s stale-stamp note
+  says "our clock starts again at nought": `GameClock.Ticks` is not reset on entering a park, so correct it too. Q68's
+  decode settles the clock: the saved `mGameTick`, which Q68b gives the park. Confirm: the `staff` census over a timed
+  run, the idle gap predicted first.
+- [ ] **Q82b. The staff take their turns on the park's clock: the build.** Found by Q82 (`ride-operation.md`, "The
+  staff turn"). Hand `StaffBehaviour.Step` and `ThingRemoved`, and `ParkPeople`'s pickup and put-down,
+  `ParkState.GameTick`, the park's `mGameTick`, where they take `GameClock.Ticks`. Take the guard's walk-or-stay from
+  `mGameTick & 3` (nought stays; the researcher keeps its draw). Take out `Step`'s zeroing of a stamp ahead of the
+  clock, which has no counterpart. Turn round what names the deviation: the note in `ParkPeople`'s staff loop, `Step`'s
+  tick parameter and stale-stamp note, the class remarks' "roll three times in four", `StayPutShare`'s summary and
+  `Decide`'s "Three turns in four" (only the researcher's is a draw), and `StaffActivity.Waiting`'s "The original enters
+  it from one place only" (nothing enters state 6; only a saved `mState` can). Confirm, predicted first: the guard,
+  saved idle since 752, walks on mGameTick 763 if a destination is found; every guard spell after a walk holds the
+  walk's stamp 11 sweeps and begins on a multiple of four unless no destination was found, so it ends in a walk unless
+  none is found; every researcher spell after a walk holds its stamp 21 sweeps, about one in four then going on at
+  stamp 0 (its own draw, until Q134). The `staff` and `arrivals` census over a timed run, and the guard photographed
+  standing and walking.
 - [ ] **Q69. Seven unbuilt paths are not counted.** Found by the 2026-09-24 staleness audit.
   `CLAUDE.md` rule 4 asks every unbuilt path the program reaches to call `Unimplemented.Report`, and these have no
   counter (two are queued for building, Q76 and Q77): the lobby's 90-second advisor repeat of response `0x18a`/`0x18b` (`0x005e184c`,
@@ -1447,6 +1494,8 @@ artifacts are listed in `docs/history/README.md`.
   refusals in SetRandomDest, `FUN_004fa530` and `FUN_004fa5f0`, the dead-end stamp, and SetThought's bubble
   (`FUN_0050be80`: sprite script `0x0074f2f8` of kind 9, gone 13 to 16 sweeps on). None is kept or counted. Count them
   first; measure whether a Lost Kingdom guest ever reaches `0x004f9e09`; decode which picture thought `0x11` is.
+  Q82 found the staff's own thoughts through the same `FUN_0050be80`: `0x14` tired, `0x13` unhappy, `0x12` very happy,
+  `0x15` the strike walk, `0x16` a failed patrol roll (`ride-operation.md`, "Drawn on the way").
 - [ ] **Q111. The state-6 turn's arms before its split are unbuilt and uncounted.** Found by Q53 (`ride-operation.md`,
   "The state-6 turn, in order"). (a) spot animation 5 above happiness 80, (b) vomit, (c) litter to a bin (the Litter
   Bin at (44,29)), (e) facing an entertainer, (f) pranks: each is reached in Lost Kingdom and none calls
@@ -1461,6 +1510,8 @@ artifacts are listed in `docs/history/README.md`.
   the staff wander (`StaffBehaviour.Decide`). Measure first where the count is reached: one of Q53b's two runs counted
   23 before any sale, the other none. Confirm: the guard put down on grass inside their area walks to the nearest
   path, `staff` and `unimplemented` read before and after, photographed.
+  Q82 found every kind reaching the wander in the original, not only the guard and the researcher: the mechanic and the
+  handyman with no work, and the entertainer (Q133).
 - [ ] **Q113. The gadget's body, aerial and arm take no press.** Found by Q56. The original's body `0x1d` answers
   inside its 23-point outline (stream `0x00752940`, sub-op 4 at `0x00752ac2`), the arm `0x21` and its end over their
   rects, the handle `0x23` inside a 16-point outline, and the aerial `0x2d`/`0x2e` over theirs (`0x2e` answers a right
@@ -1591,6 +1642,60 @@ artifacts are listed in `docs/history/README.md`.
   tie on `mGameTick & 1` (`ParkRideChooser.Beats`) turn on it. Decode which of them read `mGameTick`, then pass the
   park's clock, as Q82 does for the staff. Confirm: a saved guest's stamp read against 755, in the `peeps` census,
   predicted first.
+  Q82 found the guests' needs gate reads `mGameTick & 3` (`FUN_00501650`, `0x00501669`), so `ParkPeople`'s "reads a
+  separate counter for it" is wrong.
+- [ ] **Q133. The mechanic, the handyman and the entertainer stand once their saved walk ends, where the original's
+  walk about.** Found by Q82 (`ride-operation.md`, "Leaving idle, or a walk: the choice by kind"). With no work the
+  mechanic's `FUN_004da5b0` and the handyman's `FUN_004d7100` take a random walk every time (`0x004da6fa`,
+  `0x004d712d`), and SetState(0) only when none is found; the entertainer's `FUN_004d46d0`, after a draw mod 3 and no
+  guest within `ActivationDistance`, takes the guard's `mGameTick & 3`. `StaffBehaviour.Decide` stands all three, and
+  none of their searches is counted (`CLAUDE.md` rule 4): a broken ride, litter, a loo, guests to perform to. Q82b
+  first. Build the no-work walk and count each search where the original makes it. Turn round what calls the standing
+  the original's: `Decide`'s summary ("the original's shape rather than a limit of this build"), the class remarks'
+  "finish the walk the save left them on and then stand, which is honest rather than invented", and
+  `StaffActivity.Idle`'s "the guard and the researcher also check whether they are too fed up": every kind's decide
+  calls `FUN_00506a40` first (`0x004da5b8`, `0x004d7108`, `0x004d46d5`). Confirm: all five staff walking in a timed
+  run, the `staff` census and `unimplemented`, photographed.
+- [ ] **Q134. The researcher researches, where ours stands. Alexah's call first.** Found by Q82. On a nought from its
+  draw, or no destination, the researcher takes state `0xf` (animation 10, `+0x214` = mGameTick) for
+  `ResearcherConstsPerGrade.WorkDuration` + 1 sweeps (31 at grade 2), then walks or researches again; it never idles of
+  its own accord, and every 20 sweeps it adds `ResearchAbility` to the lab (`0x00502984`). OpenTPW has no state `0xf`,
+  so the fourth decide stands. Research is deferred by Alexah (`docs/PLAYER-GAPS.md`), but the state and its timer need
+  no lab: ask whether to build that half now, and count the points meanwhile.
+- [ ] **Q135. The staff's sounds are neither played nor counted.** Found by Q82. Every idle and walking turn draws
+  the world random and on one in sixteen plays a cat_staff effect at the member's position (`FUN_004faa00`): idle
+  `0xa1`, `0xa3`, `0xa5`, `0xa7`, `0xa9` and walking `0xa0`, `0xa2`, `0xa4`, `0xa6`, `0xa8` (handyman, mechanic,
+  entertainer, guard, researcher), `0x8a` a researching turn; and with no draw `0x87` a performance's end, the guard's
+  `0x88` (`Oi.mp2`) as a chase starts and `0x89` on a catch, both waiting on the chase, itself unbuilt. Count them first
+  (`CLAUDE.md` rule 4); then decode each effect's samples and build. What a sample says is known only by listening.
+  Confirm: `voices` and `unimplemented` over a timed run.
+- [ ] **Q136. Five small differences in the staff's decide.** Found by Q82 (`ride-operation.md`, "Drawn on the way").
+  (a) Tired is `(u8)trunc( rest ) <= RestLevel`, signed and inclusive (`0x00506b41`); `StaffBehaviour.Decide` tests
+  the float `< RestLevel` and misses [1, 2). (b) The patrol roll `FUN_00506f30` takes only a path cell (`mType` 1,
+  `FUN_00536310`) before it routes; `PatrolRoll` routes to any, its remark calling the predicate unestablished. (c) Not
+  tired, `FUN_00506a40` sets the speed word `+0xc0` from the rest byte (60 to 140, `[0x0075c7f8]`), one of
+  `FUN_004fa870`'s three terms, where the walk keeps the saved `max_speed`: decode how the terms reach the walk first.
+  (d) Tired with no rest area found or reached, `FUN_00506a40` answers 0 and the kind's own choice follows (the guard's
+  at `0x004d6554`, the researcher's at `0x00502b9f`); `Decide` stands them instead, so a tired member with no reachable
+  Staff Room never walks again. (e) At the end of a rest the original runs the kind's decide in the same sweep
+  (`FUN_005061d0`, `0x00506298`); `Rest` sets Idle at stamp 0 and decides a sweep later, which after Q82b reads the
+  guard's `mGameTick & 3` a sweep late. Confirm each in the `staff` census.
+- [ ] **Q137. A guest going home under the `facing` overlay crashes the park.** Found by Q82's first run: an
+  `IndexOutOfRangeException` in `ParkGuestSprites.Collapse` in the frame guest 37 went home. `Remove` rebuilds the
+  vertex array at two quads a person, and the draw after it collapses every quad up to the last frame's `_uploaded`,
+  which with the overlay's dash was two a person of the crowd before: past the new end. Without the overlay it waits
+  for more than half the drawn crowd, staff included, to go before one draw, one going to none being the single case.
+  Confirm: `facing 1`, a guest sent home with `depart`, the park still drawing, photographed.
+- [ ] **Q138. The staff strike is neither built nor counted. Decode first.** Found by Q82's review
+  (`ride-operation.md`, "Drawn on the way", the strike). `mStaffHQ`'s month handler `FUN_00508e70` runs every month
+  the park is open: for each kind with staff it clears a set flag `[HQ + 0x28 + kind × 12]` or calls `FUN_00508f70`,
+  which returns until the date passes 24 months; past that `FUN_00509360` raises the level, and levels 1 to 4 set the
+  flag and post the warnings. Every decide opens with `FUN_00506a40`'s strike arm (the flag and the gate's
+  `VAR_STATUS`), a walk to the strike area in state 4; state 5's `FUN_00506300` ends it. OpenTPW has none of it,
+  counts none of it, and reads nothing of the save's model-9 record (`mForceStrike`, `mStrikeLevel[i]`). Decode the
+  reach first: the epoch of `FUN_004f8800`'s 24-month gate. Count the monthly consideration where `FUN_00508f70` is
+  reached (`CLAUDE.md` rule 4), and turn round `StaffBehaviour`'s remark that the strike needs a script: the flag is
+  `mStaffHQ`'s own, and the arm's one script read is the gate's status, which `ParkRides.GateStatus` answers.
 
 ## B. Docs and comments
 

@@ -61,8 +61,9 @@ from the repository, which cannot lag: `git log --oneline -1`.
   (Q120). A disabled button still takes the pointer (Q66); presses the original stops reach the park (Q113, Q115, Q116).
 - The happiness gauge draws two copies of its bar, split down the middle (`docs/PLAYER-GAPS.md` gap 5; unmeasured).
 - Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
-- Staff may idle an eighth of the original's time (Q82); guests and rides turn on the frame clock, not `mGameTick`
-  (Q132); a load brings one guest, the floor (Q26); between loads the bus waits at the stop, not out of sight (Q131).
+- Staff turn on the 31 ms tick: a guard idles 2 sweeps, the original's 11 (Q82b). With no work the mechanic, handyman
+  and entertainer stand where the original's walk about (Q133), and no member of staff makes a sound (Q135). Guests and
+  rides turn on the frame clock (Q132); a load brings one guest, the floor (Q26); the bus waits at the stop (Q131).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
   walk (Q121), and a park screen stays open over it (Q122).
@@ -70,12 +71,12 @@ from the repository, which cannot lag: `git log --oneline -1`.
 ## Next
 
 `docs/QUEUE.md`, from the top. **Q1-Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50-Q50h, Q53, Q53b, Q56,
-Q57, Q59, Q67, Q68 and Q68b are ticked.** Next is **Q82**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10
-Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50
-Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h, Q50h
-Q106, Q53 Q53b and Q107-Q111, Q53b Q112, Q56 Q113-Q117, Q57 Q118-Q120, Q59 Q121-Q123, Q67 Q124-Q125, Q68 Q68b and
-Q126-Q130, Q68b Q131-Q132, the staleness audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review), the lobby
-plan section G.
+Q57, Q59, Q67, Q68, Q68b and Q82 are ticked.** Next is **Q82b**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43,
+Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b,
+Q50 Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h,
+Q50h Q106, Q53 Q53b and Q107-Q111, Q53b Q112, Q56 Q113-Q117, Q57 Q118-Q120, Q59 Q121-Q123, Q67 Q124-Q125, Q68 Q68b and
+Q126-Q130, Q68b Q131-Q132, Q82 Q82b and Q133-Q138, the staleness audit and its review Q68-Q82 (Q70-Q75 from the
+2026-09-12 review), the lobby plan section G.
 
 `docs/PLAYER-GAPS.md` holds gaps **4, 5 and 7**. The untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
 
@@ -105,15 +106,14 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1184**, 0 fail, 0 skip with the game | 2026-09-25, after Q68b |
-| Tests without the game | **482** ran, **702** skipped, of 1184 | 2026-09-25, after Q68b |
-| Build warnings | 123 | 2026-09-25, after Q68b |
+| Tests | **1184**, 0 fail, 0 skip with the game | 2026-09-25, after Q82 |
+| Tests without the game | **482** ran, **702** skipped, of 1184 | 2026-09-25, after Q82 |
+| Build warnings | 123 | 2026-09-25, after Q82 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-25 - guests arrive on the original's clock (Q68b).** `alexah/153-arrivals-on-the-original-clock`.
-**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/152` (Q68)
+**2026-09-25 - the staff's clock decoded (Q82).** `alexah/154-decode-the-staff-idle-clock`.
+**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/153` (Q68b)
 back to `118` (Q4), `115`-`116` (Q3), `117` (Q35) and `109` (Q1, Q1b); before them, `114`, `110` and `112`.
-
 Everything older is the git log.

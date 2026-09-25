@@ -970,6 +970,193 @@ and its sale.
 | Leaving | state 6 only: happiness byte 0, `mExitLevel` exactly 0, or shut; −25 every turn it holds; (47,9)/(48,9); state `0x12` only on a route | `Step`: `ExitLevel <= 0` in any state a thing does not hold, no dock; `Decide`: shut only, −25; the bus stops; `HeadingForExit` whatever the route | yes: the measured run's three left this way (Q109) |
 | `mSetDestSuccessfully` | SetState(7) routes again to the stored target | absent | every wander, invisibly |
 
+## The staff turn - `CStaff`, every clock `mGameTick`
+
+Decoded 2026-09-25 (`docs/QUEUE.md` Q82): the guard's handler read by hand, then six decoders (the researcher, the
+mechanic, the handyman, the entertainer, the shared `CStaff` code, and the caller with the save and the balance slots),
+each report put to a skeptic reading the disassembly - 116 claims, 97 upheld, 19 amended, none refuted - the
+load-bearing ones re-read by hand, and this page put to a read-only review (four reviewers, a skeptic on each finding).
+**Every clock a member of staff reads is `mGameTick`**, one count a thing sweep (248 ms; `park-engine.md`, "What the
+31 ms tick drives"). No staff function, nor any of the 191 within three calls of the five handlers and their
+pre-steps, reads the 31 ms counter `[0x00877d34]`. The game's millisecond clock (`0x00785970`, read by
+`FUN_00402d70`) is reached only four calls down, in the world-sprite initialiser `FUN_004758f0` (`0x004759ce`, through
+`FUN_00475a10`), for how long a sprite lives: a thought balloon's (`FUN_0050be80`, `0x0050c062`), and the upgrade
+effect when a mechanic finishes a ride in state 2 (`FUN_004df8f0`, `0x004dfa54`).
+
+### How a turn is reached
+
+`FUN_00516380` increments `mGameTick` (`0x00516394`) and then calls `FUN_0050b360` for every live thing
+(`0x005163fb`), which switches on the model byte (`0x0050b366`, table `0x0050b500`) and gives each kind of staff a
+pre-step and its handler back to back. They are the only callers, so **each handler runs once per `mGameTick`**, sees
+it already incremented, and has no stagger. In world state 4 the whole thing loop is skipped (`0x0051639e`) while
+`mGameTick` still counts.
+
+| Model | Kind | Pre-step | Handler | Its own SetState | Its decide |
+|---|---|---|---|---|---|
+| 4 | mechanic | `FUN_004da5a0` (a thunk) | `FUN_004da490` | `FUN_004da370` | `FUN_004da5b0` |
+| 5 | handyman | `FUN_004d7060` | `FUN_004d73c0` | `FUN_004d7330` | `FUN_004d7100` |
+| 6 | entertainer | `FUN_004d4660` | `FUN_004d4810` | none: `FUN_005054d0` direct, `0xe` written inline | `FUN_004d46d0` |
+| 7 | guard | `FUN_004d6360` | `FUN_004d6410` | `FUN_004d65d0` | inline; `FUN_004d63d0` after a rest |
+| 8 | researcher | `FUN_00502960` | `FUN_005029f0` | `FUN_00502c20` | inline; `FUN_00502c70` after a rest |
+
+Every pre-step reaches the shared staff tick `FUN_00505490`: `FUN_004fa870` every sweep, and `FUN_0050be40` (a thought
+balloon's expiry, mGameTick > its stamp + 12) only when `(mGameTick & 3) == (id & 3)` (`0x005054a6`). The handyman's
+pre-step calls `FUN_0050be40` again, ungated, every sweep (`0x004d70f1`). Each handler switches on `mState`
+(`+0x19c`): 0 and 1 are its own arms, 2 is `FUN_00505fe0` (going to a rest area), 3 is `FUN_005061d0` (resting), 4 to
+7 are `CStaff::ModelState` `FUN_005056e0`, and the kind's own states are the mechanic's `0xc` (to a ride) and `0xd`
+(repairing), the handyman's 8 and 9 (to litter, sweeping) and `0xa` and `0xb` (to a loo, cleaning), the
+entertainer's `0xe` (performing), the guard's `0x10` (a chase), `0x12` and `0x13` (to the exit and back), and the
+researcher's `0xf` (researching). Another kind's number reaching `FUN_005056e0` takes its default, which does nothing
+(its log call, `FUN_005da3c0`, is a bare `RET`). At the end of a rest `FUN_005061d0` runs the kind's decide in the same
+sweep (`0x00506298`), after `FUN_00506d10` has set state 0 with stamp 0.
+
+### The idle wait, and the stamp it counts from
+
+- **The same test in all five idle arms** - guard `0x004d6545`, researcher `0x00502b90`, mechanic `0x004da54d`,
+  handyman `0x004d752c`, entertainer `0x004d4957`: mGameTick against `[0x00785330 + grade * 0x10] + [+0x200]`, and
+  `JBE` stays. So a wait ends on the first sweep where mGameTick > stamp + IdleDuration, unsigned: **IdleDuration + 1
+  sweeps**. `0x00785330` is `PerGradeStaffConsts[grade].IdleDuration` (stride 16, after `BaseWage`; the `PeepInfo`
+  slot table replayed as `park.md`, "Arrivals", did, closing on `0x00785828` and landing `Arrival.MinPeople` on
+  `0x00785310` as its control). `data/levels/Standard.sam` gives 40, 30, 20, 10, 5, which no jungle file overrides:
+  41, 31, 21, 11 and 6 sweeps, 10.17, 7.69, 5.21, 2.73 and 1.49 s.
+- **Only a walk stamps it.** `CStaff::SetState` `FUN_005054d0` case 0 writes `+0x200` = mGameTick while `+0x19c` still
+  reads 1 (`0x00505534`) and 0 otherwise (`0x00505542`), so an idle entered from a rest, a job, a strike or another
+  idle is over on the next sweep. Case 6 always stamps (`0x005055b1`).
+- **State 6** (OpenTPW's `Waiting`; no string names it; `STAFFSTATES.str` holds Idle, Patrolling, Working, Resting, On
+  strike, Picked up): `FUN_005056e0` leaves it for 0 once mGameTick − `+0x200` > 3 × IdleDuration, unsigned
+  (`0x00505745`). Nothing in the executable enters state 6; only a saved `mState` can.
+- **Nothing zeroes a stamp that reads ahead of the clock.** What `FUN_004f9490` zeroes at its opening is `+0x198`,
+  `mStrandedTime`, against the route-call serial `[0x007cdb98]` (`FUN_004d8c50`) - a different stamp on a different
+  counter - and a member of staff gets a non-zero `+0x198` only from a save: its one live writer, `0x004f9e09`, is past
+  the type test that sends kinds 4 to 8 to the patrol roll.
+- **The save keeps the stamps on the save's clock.** The `CStaff` serialiser `FUN_00504de0` reads `mTimeStartedIdling`
+  into `+0x200` raw (`0x0050540a`); the World block's writer `FUN_00516c80` writes `mGameTick` (`0x00516f06`) and the
+  five staff serialisers (`0x00517723`..`0x0051779b`) in one pass, the loader reads `mGameTick` before any thing
+  (`0x00517bec`), and nothing rebases either. Each kind's `+0x214` is saved too (FileFormats `saves.md`).
+- **So Lost Kingdom's guard**, saved idle at grade 3 with 752 against the save's 755, **leaves idle on mGameTick 763**,
+  the eighth sweep, 1.98 s in. `FUN_00506a40` answers 0 there. Its strike arm is skipped (`JZ` at `0x00506a63`): the
+  guards' flag, `mStaffHQ` `+0x28 + 3 × 12` (`0x00506a5c`), is 0, because the save's strike-system record (model 9,
+  read by `FUN_00508bb0`) holds 0 for all five kinds with `mForceStrike` 0, and only `FUN_00508f70` sets one, not
+  before the park's 24th month. The guard's rest byte 79 is over `RestLevel` 1, and a happiness of 91 only spares the
+  mood draw. 763 & 3 is 3: the guard walks if a destination is found.
+
+### Leaving idle, or a walk: the choice by kind
+
+Every decide in this table calls `FUN_00506a40` first (strike, tired, mood; it answers 1 only after setting state 4 or
+2); the end of research does not (the jobs table). Then:
+
+| Kind | The choice | On staying, or on no destination | Where |
+|---|---|---|---|
+| guard | **`mGameTick & 3`, not a roll**: 0 stays, else `FUN_004f9490` | `FUN_004d65d0( 0 )` | `0x004d655d` idle, `0x004d64e9` walking, `0x004d63e1` after a rest, `0x004d5e76` at hire |
+| entertainer | unless too tired (`FUN_00506680`), a world draw mod 3 (`0x004d4756`): 0 looks for a guest in the square of `ActivationDistance` (3, 3, 4, 4, 5) around them, and one found draws once more (`0x004d47b5`, unused) and performs; otherwise **`mGameTick & 3`**, as the guard's | staying: SetState(0); no destination: the state is left as it was | `0x004d46fe` |
+| researcher | **the world random** `FUN_00516330` & 3: 0 does not walk | **research**: state `0xf`, `+0x214` = mGameTick, animation 10 - unless `FUN_00506680` says too tired, which leaves the state; its decide never picks 0 | `0x00502ba9` idle, `0x00502ad2` walking, `0x00502c82` after a rest, `0x005026cb` at hire |
+| mechanic | none: a ride to fix (`FUN_004daa90`), else **a random walk every time** | `FUN_004f9490` failing: SetState(0) | `0x004da6fa` |
+| handyman | none: litter (`FUN_004c8ed0`), else a loo (`FUN_004d7880`), else **a random walk every time** | as the mechanic | `0x004d712d` |
+
+**So every kind walks about when it has no work**: the mechanic and the handyman without a pause, the guard and the
+entertainer three sweeps in four by the clock's bits, the researcher three in four by a draw, researching on the
+fourth. **A tired member of staff with no rest area found or reached walks on too**: that arm of `FUN_00506a40`
+answers 0 (`0x00506c04`..`0x00506cf9`) and the kind's own choice follows. A guard's wait after a walk begins either on
+a multiple of four or on a sweep where the next destination was not found. No shipped IdleDuration + 1 is a multiple
+of four, so the first kind ends on a sweep that tries a walk, taken if `FUN_00506a40` answers 0 and a destination is
+found; the second, stamped on a remainder of 1 to 3, can end on a multiple of four and stay, which stamps 0 and decides
+again on the next sweep. The entertainer discards one more draw after staying and after a walk found (`0x004d4734`,
+`0x004d4718`), none when no destination is found.
+
+### The jobs, on the same clock
+
+| Kind, state | `+0x214` | Ends | Balance key (Lost Kingdom, grades 0-4) |
+|---|---|---|---|
+| entertainer `0xe` | `mTimeStartedEntertaining` = mGameTick (`0x004d47f4`) | mGameTick > it + WorkDuration (`0x004d4858`), then cat_staff effect `0x87` | `EntertainerConstsPerGrade.WorkDuration`, `0x00785398`: 10, 20, 30, 50, 75 |
+| handyman 9, `0xb` | `mTimeStartedCleaning` = mGameTick (`0x004d7371`) | the same test (`0x004d76c9`, `0x004d7462`) | `HandymanConstsPerGrade.WorkDuration`, `0x007853ec`: 40, 30, 20, 10, 5 |
+| researcher `0xf` | `mTimeStartedResearching` = mGameTick (`0x00502c45` and inline) | the same test (`0x00502a36`), then `FUN_004f9490` at once (`0x00502a40`), with no `FUN_00506a40` and no draw: a destination walks, none restamps and researches again. A tired researcher rests only after that walk's own decide | `ResearcherConstsPerGrade.WorkDuration`, `0x00785458`: 10, 20, 30, 40, 50 |
+| mechanic `0xd` | `mDurationOfRepair`, a count down one a turn: WorkDuration × (100 − the ride's `+0x44`) / 100 for a repair, × the item's figure for an upgrade | at 0 (`0x004da86d`..`0x004da8d6`), and on a broken ride only once `VAR_BROKEN` reads 0 | `MechanicConstsPerGrade.WorkDuration`, `0x0078542c`: 80, 60, 40, 30, 20 |
+| guard `0x10` | `mProsecutionTimestamp`, **a count down despite its name** | at 0 the chase is abandoned (`0x004d6605` loads it) | `GuardConstsPerGrade.WorkDuration`, `0x00785498`: 10, 20, 30, 50, 75 |
+
+A ride's or a loo's claim is stamped `+0x60` = mGameTick (`FUN_004e01f0`, `0x004e01ff`) and let go by `FUN_004e0220`
+once mGameTick > it + 100 if the claimant has moved on. A researcher adds `ResearchAbility[grade]` to the lab on every
+sweep where mGameTick % 20 is nought (`0x00502984`), in any state but 2 to 5 and 7. An idle handyman's pre-step looks
+for litter on sweeps where mGameTick % IdleDuration is nought (`0x004d7087`). The guard's `mGameTick & 1` picks ticket
+booth or entrance A or B in states `0x10`, `0x12` and `0x13`. `mTimeHired` is mGameTick scaled to the calendar
+(`FUN_004f8690`, `0x00504bb8`).
+
+### Drawn on the way: sounds, thoughts, the random and the strike
+
+- **Every idle and walking turn of every kind draws the world random once**, and at `(r & 0xf) == 0` plays a
+  cat_staff effect at the member's position through `FUN_004faa00` (a thiscall: `FUN_004754e0` for the position, then
+  `Sound_PlayEffect`): idle `0xa1` handyman, `0xa3` mechanic, `0xa5` entertainer, `0xa7` guard, `0xa9` researcher;
+  walking `0xa0`, `0xa2`, `0xa4`, `0xa6`, `0xa8`; `0x8a` a researching turn. The draw is taken whether or not anything
+  plays. Three more play every time, with no draw: `0x87` (`TADA.mp2`) at a performance's end, the guard's `0x88`
+  (`Oi.mp2`) as a chase starts (`FUN_004d6260`, `0x004d62a1`, reached only from `mStaffHQ`'s `FUN_00508a30`) and
+  `0x89` on a catch (`FUN_004d6790`, `0x004d692e`). The guard's `0xa6` is `blank44.mp2` 60% and `gd_wk01`..`gd_wk05`,
+  `0xa7` `blank44.mp2` about 79% and `gd_st01`, `gd_st02`; `0x89` and `0x8a` hold only the 9 ms `blank44.mp2`.
+- **Thoughts** go through `FUN_0050be80` on the member's `+0x30`, with a second argument of 0 at every staff call.
+  Past two early outs whose meaning is open (`[0x00790ab0] & 0x16`; `[0x00fb3b7c]` = 1), it first frees whatever
+  balloon `+0x84` holds (`0x0050bee3`), then shows the new one only when mGameTick >= `+0x8c` + 20 × class, unsigned
+  (`0x0050c04b`). `+0x8c` is stamped on any showing (`0x0050c05c`), so one stamp serves every thought, and a gated call
+  leaves no balloon. Classes: `0x12` 3 (60 sweeps), `0x13` 2 (40), `0x14`, `0x15` and `0x16` 0, shown on every call.
+  `0x14` tired, `0x13` happiness at 10 or under, `0x12` over 97 on a 1-in-16, `0x15` each strike-walk turn, `0x16` a
+  patrol roll that fails thirty times.
+- **A handyman who finds litter reseeds the world random with the litter cell's id** (`FUN_004d7100`, `0x004d71ca`,
+  `FUN_00516370`, which writes `[world+0x1da708]`), then draws twice for the point in the cell (`0x004d71d5`,
+  `0x004d71e5`), each `& 0x7f` clamped to 1..9 and times 13, x then y. The point depends on the cell alone, almost
+  always 117 (P(9) = 119/128), and every later world draw in the park goes on from that seed.
+- **Tired is `(u8)trunc( rest ) <= RestLevel`**, signed and inclusive (`0x00506b41`); "too tired to work",
+  `FUN_00506680`, is strict. Not tired, `FUN_00506a40` sets the speed word `+0xc0` from the rest byte: 60, 80, 100,
+  120, 140 by fifths (`[0x0075c7f8]`).
+- **The patrol roll `FUN_00506f30`** takes a cell only when it is on the map and path, `mType` 1 (`FUN_00536310`),
+  before it routes. A member of staff whose corners are both 0 is outside every cell (`FUN_00506ed0` has no case for
+  it); every Lost Kingdom member carries an area.
+- **The strike.** `mStaffHQ`'s month handler `FUN_00508e70` runs every month the park is open (its park-closed gate is
+  `0x00508e7e`..`0x00508ec1`): for each kind with staff it clears a set flag `[HQ + 0x28 + kind × 12]`, or calls
+  `FUN_00508f70`, which returns until the date passes 24 months; past that, `FUN_00509360` raises the kind's level and
+  levels 1 to 4 set the flag. Every decide opens with `FUN_00506a40`'s strike arm (`0x00506a4d`..`0x00506a77`: the flag,
+  and `FUN_0051a290`, the gate's `VAR_STATUS`, reading 1), which aims at the strike area with four draws and takes
+  state 4; state 5's `FUN_00506300` ends it. The epoch of the 24-month gate (`FUN_004f8800`) is not traced.
+
+### Measured in the game, nothing changed
+
+`q82measure.py`, silent, jungle, two runs, predicted before the park loaded; `save/` unchanged in both. The instruments
+are `arrivals` (`ParkState.GameTick`, the park's `mGameTick`), `state` (`GameClock`'s `ticks=`) and `staff`, read
+together in one frame, sweep by sweep. Each run missed ten sweeps while it took the on-show photographs (756 to 765 in
+the first, 781 to 790 in the second). The first run crashed after mGameTick 1006, when a guest went home under the
+`facing` overlay (Q137); the second ran from 755 to 1380, 625 sweeps, 616 of them read.
+
+- **The stamps are the 31 ms counter, not the park's clock**: each is the 31 ms tick of its spell's first sweep, a
+  multiple of eight (312 at mGameTick 794), which the census's `ticks=` reads on that sweep or one later.
+  `GameClock.Ticks` is not reset on entering the park: `GameClock.Update` is its only writer and `Rebase` leaves it,
+  and it read 5 at the park on show, before any sweep - the lobby's 162 ms carried in.
+- **The guard's 752 is gone on the first sweep** (idleSince 0 at tick 8); the guard stood through 757 and walked on 758,
+  where the original walks on 763.
+- **Every guard spell after a walk held the walk's stamp exactly 2 sweeps** (25 of 25, predicted 2; the original's
+  11): tick > stamp + 10 first holds at stamp + 16. Nineteen ended there; six went on one or two sweeps at stamp 0,
+  the random stay-put or no destination. They began on sweeps of every remainder mod 4 (5, 4, 12, 4).
+- **Every researcher spell after a walk held its stamp exactly 3 sweeps** (25 of 25; the one the photographs cut is
+  left out), 17 ending there. That the rest go on at stamp 0 was predicted only after the first run showed it.
+- **The handyman and the mechanic stood from their saved walk's end** (mGameTick 761, stamp 48 for 2 sweeps, then 0)
+  **to the end of the run, 620 sweeps (610 of them read)**, the entertainer from 768 (104, then 0); none walked again.
+- Photographed, held by `pause` with `staff` read while paused: the guard standing on the path at (43.14, 28.34) on
+  mGameTick 794, idle since tick 312, a paused control identical but for the advisor's mouth, and walking on from
+  there on 798.
+
+### Where OpenTPW differs
+
+| What | The original | OpenTPW | Reached in Lost Kingdom |
+|---|---|---|---|
+| The staff's clock | `mGameTick`, one a sweep, the save's | `GameClock.Ticks`, eight a sweep, not the save's | every staff turn (Q82b) |
+| A stamp ahead of the clock | left alone | zeroed by `StaffBehaviour.Step` when it is over `GameClock.Ticks` | the guard's 752 and the entertainer's 712 on the first sweep, when the park is entered within about 22 s of the counter starting (712 ticks), as in both runs; later, the saved stamps are compared raw against the 31 ms counter (Q82b) |
+| The guard's choice | `mGameTick & 3` | a random `& 3` | every guard decide (Q82b) |
+| The mechanic, the handyman and the entertainer with no work | walk about | stand, uncounted | from their saved walks' ends (Q133) |
+| The researcher's fourth decide | researches, state `0xf` | stands | every fourth researcher decide (Q134) |
+| Staff sounds | fourteen cat_staff effects | none, uncounted | every idle and walking turn; a performance's end; a guard's chase and catch (Q135) |
+| Tired | the byte `<=` 1 | the float `<` 1 | a rest in [1, 2) (Q136) |
+| Tired with no rest area found or reached | `FUN_00506a40` answers 0 and the kind's choice follows | the guard and the researcher stand and ask again after the idle wait | once the Staff Room at (58,16) is sold or cannot be routed to (Q136) |
+| The end of a rest | the kind's decide in the same sweep | Idle at stamp 0, decided on the next sweep | every rest (Q136) |
+| The patrol roll | path cells only | any cell | every roll (Q136) |
+| Speed by rest | `+0xc0`, 60 to 140, one of `FUN_004fa870`'s three terms | none: the walk keeps the saved `max_speed` | every decide (Q136) |
+| Thoughts `0x12` to `0x16` | shown | none, uncounted | tired, unhappy, very happy staff (Q110) |
+| Strikes | `mStaffHQ`'s monthly flag, the strike walk, state 5's end | none, uncounted, the model-9 record unread | the monthly consideration every month the park is open; a strike only past the 24-month gate (Q138) |
+
 ## Spending — a guest pays on LEAVING
 
 | Address / offset | Original name | What it is | Evidence |
