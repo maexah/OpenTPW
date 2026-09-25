@@ -1154,12 +1154,12 @@ window's thing, installs the build shell with verb `0x14` (`FUN_0046c580( 0x14 )
 dispatcher at once (`FUN_00524960( 0, 0, 0, 0 )`). **Clicking an existing queue cell installs the same
 `0x14`.**
 
-The dispatcher's `0x14` arm (`0x005260f5`..`0x00526120`) calls `FUN_00530120( object )`, which empties
-the pending list, walks from `mEntryPos` along the entrance's link and then the queue, pushing each corner
-(two perpendicular cardinal links, `FUN_0053ae00`), **unlinks the queue's last cell from the path it
-reaches** — both bits cleared, both cells retiled — and anchors on that last cell (the faced cell when
-there is no queue). The arm then rewalks and enters mode 3 with `FUN_0052f580(3,0)`. So editing a queue always carries on from its end,
-and finishing the run joins it up again.
+The dispatcher's `0x14` arm (`0x005260f5`..`0x00526120`) calls `FUN_00530120( object )`, which empties the pending
+list, pushes the cell the entrance's one link faces, walks from the entrance along the queue pushing each corner
+(two perpendicular cardinal links, `FUN_0053ae00`), **unlinks the queue's last cell from the path it reaches** —
+both bits cleared, both cells retiled — and anchors on that last cell. The walk in full, with its other ends, is
+`ride-operation.md`, "The sale's drain". The arm then rewalks and enters mode 3 with `FUN_0052f580(3,0)`. So editing
+a queue always carries on from its end, and finishing the run joins it up again.
 
 ### Where a built thing's entry and exit cells come from
 
@@ -1368,13 +1368,16 @@ and the footprint stamp.
 
 #### Demolishing a queued thing
 
-Decoded 2026-09-22, every claim re-derived by a refuter. **Selling a thing with a queue clears the whole
-queue, the placer's NOMODIFY node included**, before its footprint goes (`FUN_00527ee0`, when the item's
-`+0x40` is set and the queue has cells): `FUN_00530120` lets the queue's end go of its path, the force
-flag `DAT_0081d7a8` is raised, and `FUN_0052fe50` drives op `0x32` — `ClearCell` under force, which
-bypasses NOMODIFY, unlinks no neighbour, and zeroes the cell's mask, direction, owner and flags. **Each
-cell refunds `Costs.QueueCell * pct / 100`, and then one cell's worth is debited** (`FUN_004d01f0`), so a
-queue of N cells returns N−1 — the node the placer laid for nothing. The Belly Bounce's four return 225.
+Decoded 2026-09-22, every claim re-derived by a refuter. **Selling a thing with a queue clears the whole queue, the
+placer's NOMODIFY node included**, before its footprint goes (`FUN_00527ee0`, when the item's `+0x40` is set and the
+object's cached queue length `+0x40` is above nought): `FUN_00530120` lets the queue's end go of its path, the force
+flag `DAT_0081d7a8` is raised, and `FUN_0052fe50` drives op `0x32` — `ClearCell` under force, which bypasses
+NOMODIFY, unlinks no neighbour, and zeroes the cell's mask, direction, owner and flags. **Each cell refunds
+`Costs.QueueCell * pct / 100`, and then one cell's worth is debited** (`FUN_004d01f0`), so a queue of N cells
+returns N−1 — the node the placer laid for nothing. The Belly Bounce's four return 225, while the bank's `+0x114`,
+which gates the debit (`0x004d01f3`), is non-zero. A cell refunds only while its owner cell is typed (`0x00536a37`),
+which the drain, coming before the footprint passes, always finds. Each pop measures the queue again and puts out
+whoever stands past its end: `ride-operation.md`, "The sale's drain".
 
 **The paths before its ends go back to ordinary path.** A first footprint pass looks past each end — the
 entrance along the opposite of its direction byte, the exit along it, which for a queued entrance leads
@@ -1445,8 +1448,9 @@ after the chain unlink (`0x004dd0eb`) and before the refund and the script teard
 one `std::set<u16>` of thing ids per message type and calls `FUN_0050b550` on each subscriber in ascending id, which
 switches on the thing's kind byte `+2`. The walker base constructor `FUN_004f8940` subscribes every guest (kind 1),
 every member of staff (4 mechanic, 5 handyman, 6 entertainer, 7 guard, 8 researcher) and the kind-18 things
-(`0x004f8a58`); the kind-17 relay built by `FUN_0050c9b0` subscribes too. Kinds 17 and 18 answer with an empty
-`RET`. Delete and the move pickup both reach it, so **a move puts everyone off as a sale does**.
+(`0x004f8a58`); the kind-17 relay built by `FUN_0050c9b0` subscribes too. Kinds 17 and 18 answer it with an empty
+`RET` (the kind-17 relay answers message `0x1b` through `FUN_004818c0`, which acts only on a guest). Delete and the
+move pickup both reach it, so **a move puts everyone off as a sale does**.
 
 **A guest (`FUN_004fb360`) answers only when `MajorDest` (`+0x1dc`) is the thing** (`0x004fb383`), in any state:
 
@@ -1465,10 +1469,10 @@ every member of staff (4 mechanic, 5 handyman, 6 entertainer, 7 guard, 8 researc
   (`FUN_004ddd20`); the sale does not, so the object keeps its head, and every queuer clears only their own links.
 - **Then everyone chosen**: happiness down by `SmallHappinessChange` (`FUN_004fe980(0)`, clamped by `FUN_004fb4f0`),
   `MajorDest` zeroed (`0x004fb444`), state 6 (`0x004fb4a1`), which queues the stand. A queuer loses 20 in all in
-  Lost Kingdom, everyone else 5 - unless the demolisher's queue drain, which runs first and re-walks the queue,
-  has already put them out for 15 alone; whether it does is not decoded (`ride-operation.md`, "Every way out of a
-  queue"). A guest walking to it, leaving it, or still naming it from a ride they left is
-  stopped the same way.
+  Lost Kingdom, everyone else 5 - unless the demolisher's queue drain, which runs first and re-walks the queue, has
+  already put them out for 15 alone - which it does to every queuer from the fifth place back but the nominee and a
+  guest in raw state 14 (`ride-operation.md`, "The sale's drain"). A guest walking to it, leaving it, or still
+  naming it from a ride they left is stopped the same way.
 - **Every guest, chosen or not**, clears a saved second destination (`+0x1de`) naming the thing, and each
   `mPreviousRides` entry naming it with its `mPreviousTemporaryRides` pair (`0x004fb4a6`..).
 
@@ -2341,18 +2345,19 @@ handler `0x0040c180`, which closes a locator first and otherwise, with a type-3 
 `FUN_0040c5e0`, which swaps whatever is armed for Clear Land (`0x3a`).
 
 **Backspace** is game-table row 5 (key `0x08`), and the coaster table's row 1 `backtrack`, both handler
-`0x0040bda0`, fired on key-up. With a type-3 tool armed it calls `FUN_0052fe50(0,1)`: pop the top of
-the pending list `0x0081b740` (count `DAT_00820a8c`) as T, take the new top as P, arm `0x34` and apply
-at T then P — op `0x32` then `0x86` over the line T..P — then anchor at P and re-arm with
-`FUN_0052f580(1,1)`. The tool stays armed; no sound; one run per press, back to the first click, whose
-cell is never popped. Idle with an empty hand and the pointer on a path (`0x0040bdde`..`0x0040be9c`):
-sound `0x5f`, `FUN_0052f200(0x32,1)`, one apply at the cell with step (0,+1), `FUN_0052f200(0,1)`. The
-game's tutorial (sample 464) mentions only the armed branch.
+`0x0040bda0`, fired on key-up. With a type-3 tool armed it calls `FUN_0052fe50(0,1)`: pop the top of the pending
+list `0x0081b740` (count `DAT_00820a8c`) as T, take the new top as P, arm `0x34` and apply at T then P — op `0x32`
+then `0x86` over the line T..P — then anchor at P and re-arm the mode it found (`FUN_0052f580( mode, 1 )`,
+`0x0052ffcd`; for the queue tool, advisor `0xcb` and cursor 4), skipping the apply at P in mode 3 when P is a path
+(`0x0052ff9a`). The tool stays armed; no sound; one run per press, back to the first click, whose cell is never
+popped but is the far end of the last press's run. Idle with an empty hand and the pointer on a path
+(`0x0040bdde`..`0x0040be9c`): sound `0x5f`, `FUN_0052f200(0x32,1)`, one apply at the cell with step (0,+1),
+`FUN_0052f200(0,1)`. The game's tutorial (sample 464) mentions only the armed branch.
 
-**The clear's path arm, `FUN_005367a0`** (`0x005367b1`..`0x0053682c`): a NOMODIFY cell with links
-returns untouched; one without gives up the flag; then the counter at `+0x20` is set to −1 for a step of
-(0,0) or decremented for any other, and **the cell is removed only once it is below nought**. Nothing is
-refunded. So Backspace takes up exactly what a run laid fresh and leaves what it crossed.
+**The clear's path arm, `FUN_005367a0`** (`0x005367b1`..`0x0053682c`): a NOMODIFY cell with links returns untouched
+unless the force flag is up (`0x005367d9`); one without gives up the flag; then the counter at `+0x20` is set to −1
+for a step of (0,0) or decremented for any other, and **the cell is removed only once it is below nought**. Nothing
+is refunded. So Backspace takes up exactly what a run laid fresh and leaves what it crossed.
 
 **`+0x20` is `mOverlapCounter`.** The serialiser `FUN_004d0b30` pairs the string at `0x0075a054` with
 `LEA ECX,[ESI+0x20]`; in the save it is record offset `+8` (the FileFormats `saves.md` on its `docs/item-footprints` branch, not yet
@@ -2408,13 +2413,15 @@ the **0x28** record. Both cannot be right about the same byte, and no third witn
 **Do not cite either as settled.** Nothing in OpenTPW depends on it — cells are modelled as records
 rather than as raw memory — which is exactly why it is safe to leave open rather than guessed.
 
-**`FUN_0052fe50` is called by the demolisher `FUN_00527ee0` and by the Backspace handler
-`0x0040bda0`** — which is undefined bytes in Ghidra, so a cross-reference search misses it. Each call
-clears a whole straight run: it pops the top element, anchors there in the delete-line mode `0x34`, and runs op `0x32`
-along the line to the next element. The bottom element is cleared as the far end of the last run (unless
-it is a path), and the count is left at **1** when the list empties. There is also an **off-by-one in the
-shipped guard**: the push rejects only when the count exceeds `0x400`, so element `0x400` is writable and
-lands exactly on `DAT_0081d740`, the map-width global. Reproduce the behaviour, not the overrun.
+**`FUN_0052fe50` is called by the demolisher `FUN_00527ee0` and by the Backspace handler `0x0040bda0`** — which is
+undefined bytes in Ghidra, so a cross-reference search misses it. Each call clears a whole straight run: it pops the
+top element, anchors there in the delete-line mode `0x34`, and runs op `0x32` along the line to the next element.
+The bottom element is never popped, but is cleared as the far end of the last run - unless the mode was 3 and it is
+a path (`0x0052ff9a`) - and the count is left at **1** when the list empties. The line runs along its longer axis
+from the popped element, holding that element's other coordinate (`FUN_00536100`). What the drain's pops do to a
+queue's people is `ride-operation.md`, "The sale's drain". There is also an **off-by-one in the shipped guard**: the
+push rejects only when the count exceeds `0x400`, so element `0x400` is writable and lands exactly on
+`DAT_0081d740`, the map-width global. Reproduce the behaviour, not the overrun.
 
 ### Still open
 

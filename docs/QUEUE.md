@@ -935,10 +935,48 @@ artifacts are listed in `docs/history/README.md`.
   - **Not confirmed on screen:** the arrival's re-aim (no back moved in either run), the three failed walks, the
     refused door's walk, a dodgy direction, a place past the cells - tested only. The virtual arm is the census's
     one sample, not photographed. **Found:** Q105.
-- [ ] **Q50f. What the sale's drain does to its queuers. Decode first.** Split from Q50. The demolisher drains the
-  queue before the destructor's message, and each pop re-walks it (`0x0052ffec`); a guest it puts out would lose 15
-  rather than 20. Trace `FUN_0052fe50`'s pops in mode `0x34`, whether the stack's bottom entry is ever cleared
-  (`0x0052fec9`), and what the queue measures after. `SALE_DRAIN_QUEUE_REMEASURE` counts it.
+- [x] **Q50f. What the sale's drain does to its queuers: the decode.** Done 2026-09-24,
+  `alexah/144-decode-the-sale-drain`. Decode only; the build is Q50h. `ride-operation.md`, "The sale's drain", new:
+  four decoders (the list, the pop, the measure, the sale end to end), each report put to a skeptic reading the
+  disassembly, then a critic over all four - 108 claims, 85 upheld, 23 amended, none refuted.
+  - **Found.** `FUN_00530120` pushes the cell the entry cell's one link faces, then walks from the entry cell itself,
+    pushing each corner, and cuts the last queue cell from its path: the Belly Bounce's list is (52,22), (52,22),
+    (49,22). `FUN_0052fe50` never pops the bottom entry but clears it as the far end of the last run (unless, in mode
+    3, it is a path); a list of N gives N calls, N-1 clears and N-1 measures. The Belly Bounce's first pop clears all
+    four cells under force, unlinking nothing, so the entry cell keeps `0x01`; `FUN_004de040` takes the faced cell
+    with no type test and `FUN_004de130` counts it, so **every measure answers one cell, room for four**, never
+    nought. The first puts out every queuer from place 4 back but the nominee and raw state 14 (−15, `MajorDest`
+    nought); the second changes nothing. At the type-10 message the first four, the nominee and raw state 14 lose 20;
+    the rest have lost 15. Only a thing with `HasQueue` drains - in Lost Kingdom the Belly Bounce alone - and a move
+    drains as a sale does.
+  - **Corrected:** `ride-operation.md`'s "never applies the stack's bottom entry" (it is the last pop's far end),
+    "state 14 is never put out" (the raw state: state 8 over a saved 14 goes) and "passes the open guard" (an inlined
+    copy). `park-engine.md`: the queue-edit walk (the faced cell first, the walk from the entry), the drain's gate
+    (the object's cached `+0x40`) and its debit (gated on the bank's `+0x114`), the Backspace re-arm
+    (`FUN_0052f580( mode, 1 )`, not `(1,1)`), the path arm's NOMODIFY return (not under force), the bottom entry's
+    path exception (mode 3 only), and the kind-17 relay's answer to `0x1b`.
+  - **Measured in the game** (`q50fmeasure.py`, silent, jungle, `main`'s build in a throwaway worktree): `load 60`,
+    staged at 91 s with eight queueing for the Belly Bounce and six walking to it, paused, `happy 50`. `cell` read
+    the decode's inputs: the entry (52,23) `neighbours 0x01` parent 2996 and the node (52,22) `0x50` parent 2996, so
+    the owners match and the list is three entries. The nominee was 46, at place 0. `sell 13`: 14 of 14 predicted
+    for this build - the eight queuers 50 to 30, the six walkers 50 to 45, 14 `put off thing 13` lines,
+    `SALE_DRAIN_QUEUE_REMEASURE` counted once, "sold for 500, its queue for 225", the four cells type 0 after. The
+    decode differs on 4 of the 14: places 4 to 7 (guests 100, 93, 98 and 91) would lose 15, not 20. Photographed
+    before (the eight on the Belly Bounce's bridge), just after (bare grass, everyone where they stood) and eight
+    steps on (three gone to the Jungle Spray). `save/` unchanged.
+  - **Not confirmed on screen:** anything of the original's own - its guests are not run here; the decode is the
+    executable's, and the run measures only ours and the park's data. Nothing is built, so there is no test and no
+    mutation. **Found:** Q50h.
+- [ ] **Q50h. The sale's drain puts out whoever stands past its first cell: the build.** Split from Q50f, whose
+  decode it builds (`ride-operation.md`, "The sale's drain"). `ParkPathBuilding.DrainQueue` clears the whole queue in
+  one pass, throws the measurement away and counts `SALE_DRAIN_QUEUE_REMEASURE`, so every Belly Bounce queuer loses
+  20 at a sale. Build `FUN_00530120`'s list (the faced cell, the corners from the entry cell, the cut at the path),
+  the gate on the cached queue length, and the pops: each clears T..P under force with no unlink, then runs
+  `ParkState.RemeasureQueue`, which already counts the faced cell untyped - so the Belly Bounce measures one cell and
+  places 4 on go at −15 before the sale's message - and whose tail can reopen a closed ride between two pops of a
+  queue with a corner. Then the debit. Count what stays unbuilt: the bank's `+0x114` gate on the debit, the advisor
+  `0xcb` post each call makes, `FUN_004d8c60`'s stamp of the back cell. Confirm with `q50fmeasure.py`: places 4 to 7
+  at 35, places 0 to 3 and the nominee at 30.
 - [ ] **Q53. A put-off queuer on cleared ground can leave only by going home. Decode first.** Found by Q36's game
   run: two queuers put off the sold Belly Bounce stood in Deciding for twelve seconds on cells the sale cleared, where
   no neighbour connects and `SetRandomDest` has no candidate; a probe's queuer left only as its day ran out. Every

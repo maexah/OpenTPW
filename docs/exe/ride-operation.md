@@ -487,21 +487,22 @@ asks `FUN_00502430` of every guest it steps past, the head included, and answers
 
 `FUN_004de1f0` zeroes `mBackOfQueue` (`+0x3a`), re-walks the cells (`FUN_004de130`, which rewrites the count at
 `+0x40`), logs `"Object's queue is now %d cells long"` and `"Telling people in queue to reevaluate"`, and walks the
-queue head first, reading each `mQNext` before the call (`0x004de2bd`) and **skipping the object's nominee**
-`+0x6c` (`0x004de2b9`). Each guest runs `FUN_00501390`: the object from their own `MajorDest`, the place from
-`FUN_004ddf50`, and `place >= cells * 4` compared unsigned (`0x00501413`..`0x0050141c`, so -1 is past the end);
-**state 14 is never put out** (`0x00501422`). Then `"The queue was shortened and there's no room for me any more"`,
-thought `0xd` when the id divides by three (`0x0050148a`), `FUN_004ddd20`, `FUN_005012f0`, and `MajorDest` = 0 and
-state 6 again. **Then its tail** (`0x004de2d5`..`0x004de48c`): it logs `"Back of queue is %sconnected"`
-(`FUN_004de4a0`) and, when the ride is closed (`mCanLoad` nought, `0x004de2f7`), passes the open guard `FUN_004df290`
-(not in state 1, 4 or 2, `mRequestedService` `+0x64` nought, the back of the queue connected, and for type 3
-`FUN_00441970`) and, for track types 1 to 3, has `mIsTrackRideValid` (`+0x2c`, `0x004de3da`), opens it again with an
-inlined copy of `FUN_004df390`: `mCanLoad` = 1, `FUN_004547c0( model )` (not a sound; see `FUN_00454550`),
-`VAR_RIDECLOSED` = 0, SetState(0) (`0x004de487`). **It always zeroes `mAssignedStaffMember`** (`+0x5e`, `0x004de48c`),
-so every queue measured again makes the ride forget who was servicing it; `+0x60` and `+0x64` stand. Nothing in the
-tail reads the park's door: a closed ride whose queue is edited opens whatever the door says. OpenTPW builds all of it:
-the walk and the tail are `ParkPeople.QueueRemeasured`, the tail `ParkRideOperation.ReopenAfterRemeasure`. Its eight
-call sites, each with the object in `ECX`:
+queue head first, reading each `mQNext` before the call (`0x004de2bd`) and **skipping the object's nominee** `+0x6c`
+(`0x004de2b9`). Each guest runs `FUN_00501390`: the object from their own `MajorDest`, the place from `FUN_004ddf50`,
+and `place >= cells * 4` compared unsigned (`0x00501413`..`0x0050141c`, so -1 is past the end); **state 14 is never
+put out** (`0x00501422`) - the raw `+0x220`, so a guest in state 8 whose saved state is 14 is. Then `"The queue was
+shortened and there's no room for me any more"`, thought `0xd` when the id divides by three (`0x0050148a`),
+`FUN_004ddd20`, `FUN_005012f0`, and `MajorDest` = 0 and state 6 again. **Then its tail** (`0x004de2d5`..`0x004de48c`):
+it logs `"Back of queue is %sconnected"` (`FUN_004de4a0`) and, when the ride is closed (`mCanLoad` nought,
+`0x004de2f7`), passes an inlined copy of the open guard `FUN_004df290` (not in state 1, 4 or 2, `mRequestedService`
+`+0x64` nought, the back of the queue connected, and for type 3 `FUN_00441970`) and, for track types 1 to 3, has
+`mIsTrackRideValid` (`+0x2c`, `0x004de3da`), opens it again with an inlined copy of `FUN_004df390`: `mCanLoad` = 1,
+`FUN_004547c0( model )` (not a sound; see `FUN_00454550`), `VAR_RIDECLOSED` = 0, SetState(0) (`0x004de487`). **It
+always zeroes `mAssignedStaffMember`** (`+0x5e`, `0x004de48c`), so every queue measured again makes the ride forget
+who was servicing it; `+0x60` and `+0x64` stand. Nothing in the tail reads the park's door: a closed ride whose queue
+is edited opens whatever the door says. OpenTPW builds all of it: the walk and the tail are
+`ParkPeople.QueueRemeasured`, the tail `ParkRideOperation.ReopenAfterRemeasure`. Its eight call sites, each with the
+object in `ECX`:
 
 | Site | Transaction | Shortens? | OpenTPW |
 |---|---|---|---|
@@ -520,12 +521,75 @@ lets path over a queue cell only when the cell's `mNeighbours` has exactly one b
 red (`0x00535d12`). All four cells carry two bits (0x50, 0x44, 0x44, 0x44). The console's `path`, which Q50's game
 run used, calls `LayPathRun` without the verdict.
 
-**Whether the sale's drain puts anybody out is not decoded.** The demolisher (`FUN_00527ee0`) drains the queue
-through `FUN_0052fe50` before the destructor's type-10 message; each pop that applies re-walks, and a guest it put
-out has `MajorDest` nought by the time the message arrives, so would lose 15 rather than 20. What the pops leave -
-`FUN_0052fe50` never applies the stack's bottom entry (`0x0052fec9`..`0x0052fed9`), and the forced clear leaves the
-entrance's link - is not traced. OpenTPW's `DrainQueue` only throws the measurement away, leaves every queuer to the
-sale, and counts `SALE_DRAIN_QUEUE_REMEASURE`.
+#### The sale's drain - `FUN_00530120` and `FUN_0052fe50`
+
+Decoded 2026-09-24 (`docs/QUEUE.md` Q50f): four decoders (the list, the pop, the measure, the sale end to end), each
+report put to a skeptic reading the disassembly, then a critic over all four - 108 claims, 85 upheld, 23 amended, none
+refuted. **The drain puts out every queuer from the fifth place back, but the nominee and raw state 14, and leaves the
+first four to the sale.** It runs in the demolisher (`FUN_00527ee0`, `0x00527f99`..`0x00528013`) before the footprint
+passes and the destructor, for a sale and for a move alike.
+
+**The gate.** Only a thing whose descriptor has `HasQueue` (`+0x40`, `0x00527f93`) drains, and only while its CACHED
+queue length `+0x40` is above nought (`0x00527fb4`); otherwise `FUN_0052fbd0` throws the list away. In Lost Kingdom
+that is the Belly Bounce alone: the class files give the Jungle Spray, the Drinks Shop and the toilets
+`Info.HasQueue 0`, so their queuers meet only the sale's message.
+
+**The list, `FUN_00530120( object )`.** It empties the pending list (`0x00530150`) and switches on the entry cell's
+whole `mNeighbours`, with an arm for a single cardinal bit only (`0x0053019a`). It pushes the cell that bit faces as
+element 0 (`0x005301ff`) - or, when that is a queue or entrance cell of another owner (`+0x10`, `0x005301ea`), pushes
+it alone and returns. Then it walks **from the entry cell itself** (`0x0053024a`): a type-3 or 9 cell that is a corner
+(`FUN_0053ae00`: two cardinal links, one each way) gets `+0x20` = 1, is pushed and turns the walk
+(`mNeighbours ^ Opposite( dir )`, `0x005302aa`); any other gets `+0x20` = 0. The walk stops at a type-3 cell with one
+link of the eight (`0x005302f7`); at a path, which it cuts - the last queue cell loses its bit toward the path and the
+path its bit back, both retiled (`0x00530380`, `0x0053039c`), and when the entry cell faced the path directly only the
+path's bit goes; or at anything else. The cell it stopped on is pushed and anchored (`0x00530494`). An entry cell with
+no link pushes the one cell its angle names (`0x005303f1`). A multi-bit entry cell has no arm and the walk never
+leaves it. Nothing is written on the object. A faced cell that is a corner is pushed twice, so **the Belly Bounce's
+list is (52,22), (52,22), (49,22)**, and (49,22) is cut from (48,22) before any clear.
+
+**The pops.** Under mode 3 (`FUN_0052f200( 3, 0 )`) and the force flag, the demolisher calls `FUN_0052fe50( object,
+1 )` until it answers nought. Each call pops the top as T (`0x0052fea9`); if that leaves the count at nought it writes
+1 back and answers nought (`0x0052fecf`), so **the bottom entry is never T**. Otherwise it arms mode `0x34`, whose
+apply at T only anchors (`0x00525f37`), and applies at the new top P (`0x0052ff4b`): op `0x32` then op `0x86` over the
+straight line from T to P, P included and last (`FUN_00536100`, which walks the longer axis holding T's other
+coordinate) - unless the mode was 3 and P is a path (`0x0052ff9a`), when nothing is cleared. **So the bottom entry is
+cleared as the far end of the last pop.** Then it re-arms mode 3 (`FUN_0052f580( 3, 1 )`, which posts advisor `0xcb`
+and sets cursor 4), measures the queue again with the object in `ECX` (`FUN_004de1f0`, `0x0052ffec`), and answers 1.
+A list of N entries gives N calls, N-1 clears and N-1 measures, and leaves the count at 1. The forced clear refunds a
+queue cell when its owner cell is typed (`0x00536a37`), resets it whole and **unlinks no neighbour** (`0x00536a0e` to
+`0x00536bc9`, past the loop at `0x00536b60`); a cell already bare is left alone (`0x005367ed`).
+
+**What the queue measures.** `FUN_004de040` takes the entry cell's first linked side without asking what lies there,
+and `FUN_004de130` counts that cell before it asks for the next (`0x004de1ae`). The drain leaves the entry cell's link,
+so **every measure answers at least one cell**: the faced cell, bare or not, and the queue cells still standing behind
+it. The runs go from the back toward the entrance and the last pop always reaches the faced cell, so **every drain ends
+measuring one cell, room for four.** That back is bare, so `FUN_004de4a0` answers not connected and nothing reopens. A
+measure between two pops, which only a queue with a corner has, finds a back with both its links, reads connected, and
+would reopen a closed ride that passes the inlined guard.
+
+**Who goes.** Each measure puts out, head first, every queuer at a place `>=` four times the cells (unsigned, so -1
+too), except the nominee (`0x004de2b9`) and a guest in raw state 14 (`0x00501422`): `FUN_00501390`, −15, `MajorDest`
+nought, state 6. The Belly Bounce's drain:
+
+| Call | T to P | Cleared | Measured | Put out |
+|---|---|---|---|---|
+| 1 | (49,22) to (52,22) | all four cells, four refunds, no unlink; the node loses NOMODIFY | 1 cell, back (52,22), not connected | every queuer from place 4 back but the nominee and raw state 14 |
+| 2 | (52,22) to (52,22) | nothing, already bare | 1 cell | nobody |
+| 3 | - | nothing; the count written back to 1 | - | - |
+
+Then one cell's worth is debited (`FUN_004d01f0`), which subtracts only while the bank's `+0x114` is non-zero
+(`0x004d01f3`), and the force flag drops. Nothing after the drain measures the queue again: the second footprint pass
+unlinks the entry cell through the unforced queue arm, which never re-measures, and message `0x1b`, sent before the
+destructor (`FUN_0050b780`), has no guest among its subscribers. **So at the type-10 message the first four places,
+the nominee and a queuer in raw state 14 still name the thing, and lose 15 and 5, 20 in all; everyone the drain put
+out has `MajorDest` nought and loses nothing more, 15 in all.** A move walks the queue once more at the pickup
+(`0x0048d006`), which cuts the same end, and the demolisher's own walk then gives the same list; it reaches the
+demolisher only while the red-cell latch `DAT_00816d48` is clear.
+
+**OpenTPW** clears the cells in one pass (`ParkPathBuilding.DrainQueue`), throws the measurement away, leaves every
+queuer to the sale at −20, and counts `SALE_DRAIN_QUEUE_REMEASURE`. **Open:** what the bank's `+0x114` is;
+`FUN_004e2290`, the per-age percentage the refund and the debit both scale by; whether the three advisor `0xcb` posts
+are heard; what `FUN_004d8c60` does with the back cell each measure stamps.
 
 #### The closed ride - `FUN_004e0450`
 
