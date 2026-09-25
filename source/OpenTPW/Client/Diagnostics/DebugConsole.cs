@@ -76,8 +76,16 @@ public static class DebugConsole
 	private static readonly List<(int Number, string Theme, WeakReference<ParkWorld> Save,
 		WeakReference<ParkStaffPool>? Pool)> _parks = [];
 
+	/// <summary>
+	/// Every interface seen on show, in the order they came, with the scene it was built for, each held WEAKLY for
+	/// the reason <see cref="_parks"/> is - see <see cref="Huds"/>.
+	/// </summary>
+	private static readonly List<(int Number, string Scene, WeakReference<UI.RootPanel> Hud)> _huds = [];
+
 	private static void Notice( Level? level )
 	{
+		NoticeHud( level );
+
 		if ( level?.Park is not { } save )
 			return;
 
@@ -89,6 +97,19 @@ public static class DebugConsole
 
 		_parks.Add( (_parks.Count + 1, level.ThemeName, new WeakReference<ParkWorld>( save ),
 			level.StaffPool is { } pool ? new WeakReference<ParkStaffPool>( pool ) : null) );
+	}
+
+	/// <summary>Notes the level's interface, once; every level builds its own, so only the last one noted can be it.</summary>
+	private static void NoticeHud( Level? level )
+	{
+		if ( level?.Hud is not { } hud )
+			return;
+
+		if ( _huds.Count > 0 && _huds[^1].Hud.TryGetTarget( out var last ) && ReferenceEquals( last, hud ) )
+			return;
+
+		_huds.Add( (_huds.Count + 1, level.Kind == Level.Scene.Lobby ? "lobby" : level.ThemeName,
+			new WeakReference<UI.RootPanel>( hud )) );
 	}
 
 	/// <summary>
@@ -155,6 +176,38 @@ public static class DebugConsole
 
 		return $"parks seen {_parks.Count} alive {alive} heap={heap:F1}MB"
 			+ string.Concat( each.Select( line => $" | {line}" ) );
+	}
+
+	/// <summary>
+	/// Each interface seen on show, alive or collected after a full blocking collection, and for one still alive
+	/// whether it is the level on show's, "level", and how many panels it has left. A level is the one holder of its
+	/// interface (<see cref="Level.Hud"/>) and empties it as it ends (<see cref="Level.Unload"/>), so one alive and
+	/// not the level's is held by something this does not know about, with nothing in it.
+	/// </summary>
+	private static string Huds()
+	{
+		GC.Collect();
+		GC.WaitForPendingFinalizers();
+		GC.Collect();
+
+		var alive = 0;
+		var each = new List<string>();
+
+		foreach ( var (number, scene, weak) in _huds )
+		{
+			if ( !weak.TryGetTarget( out var hud ) )
+			{
+				each.Add( $"#{number} {scene} collected" );
+				continue;
+			}
+
+			++alive;
+
+			var by = ReferenceEquals( Level.Current?.Hud, hud ) ? "level" : "nothing named";
+			each.Add( $"#{number} {scene} alive, held by {by}, {hud.Children.Count} panels" );
+		}
+
+		return $"huds seen {_huds.Count} alive {alive}" + string.Concat( each.Select( line => $" | {line}" ) );
 	}
 
 	/// <summary>The hiring pool's half of a <see cref="Parks"/> line, after the collection that call has made.</summary>
@@ -382,6 +435,12 @@ public static class DebugConsole
 			// rather than inferred from which statics look as if they hold it. See Parks.
 			case "parks":
 				Reply( Parks() );
+				break;
+
+			// Every interface the game has had on show, and whether it is still in memory after a full collection -
+			// the same question of a level's HUD, which nothing but its level should hold. See Huds.
+			case "huds":
+				Reply( Huds() );
 				break;
 
 			// The sea's texture, and the sampler it is ACTUALLY drawn with. Water asks for

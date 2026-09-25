@@ -29,6 +29,7 @@ The ones that have bitten more than once.
 - **99** — a region's statistics can survive a plainly wrong picture; pair them with a number the game reports.
 - **103** — never segment a statistic by the quantity under test; the verdict inverts.
 - **113** — a test step that can run without a build tests the previous build; check the build's exit code.
+- **116** — a restored source is not a restored binary; rebuild after the final restore, and print the assembly's hash.
 
 ## Before you trust a measurement
 

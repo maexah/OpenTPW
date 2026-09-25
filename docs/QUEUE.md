@@ -1165,7 +1165,30 @@ artifacts are listed in `docs/history/README.md`.
   viewfinder layer's handler answers a right double click by leaving first person as Escape does (`0x00488aa1`..
   `0x00488ad6`). Nothing here reads a right click in first person. Confirm: camcorder, a double right click, `camera`
   back to orbit, photographed.
-- [ ] **Q67. `RootPanel.Instance` is dead by code.** Found by Q44's sweep. `RootPanel`'s constructor sets it to the
+- [x] **Q67. `RootPanel.Instance` is taken out.** Done 2026-09-25, `alexah/151-root-panel-instance-out`. Nothing read it,
+  and its constructor kept the first interface ever built, the first lobby's, for the life of the process. Taken out
+  rather than labelled: the item offered either, and a label would have kept the pin it names.
+  - **The sweep** (8 agents: four read-only investigations, each put to a refuter, all upheld) found no reader in any
+    project by name, reflection or string, two construction sites (`Level.SetupHud`, `SetupParkHud`), and no other
+    holder of a left level's interface once the next level's first frame runs. Every HUD has four panels, and none
+    once `Level.Unload` has run. It found two more statics of the same shape, filed as Q124 and Q125.
+  - **The instrument**: the console's `huds`, every interface seen on show held weakly, each `collected` or `alive,
+    held by` the level on show or `nothing named`, with its panel count.
+  - **Confirmed in the game**, lobby, jungle, lobby, jungle, `huds` at each, every reading predicted first:
+    - control (`Instance ??= this` put back): `#1 lobby alive, held by nothing named, 0 panels` in the park and at
+      every step after it;
+    - fix: `huds seen 2 alive 1 | #1 lobby collected | #2 jungle alive, held by level, 4 panels` in the park, and
+      `huds seen 4 alive 1` at the end, the park on show the one alive. `parks` in the lobby after the park still
+      reads Q44's `#1 jungle collected`. Photographed: both lobbies and both parks, their interfaces whole. `save/`
+      unchanged in every run.
+    - **Missed first:** the first fix run read every HUD alive, emptied, held by nothing named. It ran the last
+      mutation's binary, a static list of every interface: the source restored and not rebuilt (`VERIFYING.md` rule
+      116, now in "Start here"). That mutation built on its own reproduces the reading line for line.
+  - **The tests** are `HudForgetTests`: weak references after a forced collection, and every static field of the
+    game's declared `RootPanel`. Keeping the first interface, or the last, in such a field fails both; keeping every
+    one in a list fails the first only, as its remarks say.
+
+  The item as written: Found by Q44's sweep. `RootPanel`'s constructor sets it to the
   first panel ever built (`Instance ??= this`, `RootPanel.cs`) and nothing in any project reads it, so it pins the
   first lobby's emptied interface for the life of the process. It holds nothing of a park. Label it or take it out,
   as rule 3 says for dead by CODE. Confirm: a grep for readers, and the build.
@@ -1437,6 +1460,20 @@ artifacts are listed in `docs/history/README.md`.
   `Level.RightButton`'s 200 ms read `Time.Now`, whose frames are clamped to 0.1 s and which the console's `pause` holds;
   the original times both in milliseconds of wall time (`FUN_0065968e`, `hud.md`, "A click and a double click"). Below
   10 fps a held press can pass as a click. Said at `RightClick`. Keep the tests able to set the time.
+- [ ] **Q124. `Material.Default` compiles a shader nothing draws with.** Found by Q67's sweep. `Material.UI.cs` builds
+  it from `content/shaders/3d.shader` the first time `Material` is touched and keeps it for the life of the process.
+  Its one reader is the guard in `Material.Delete`, which can fire only if something holds it, and nothing does. Two
+  comments say the terrain draws with it (`Model`'s summary and `Material.Delete`'s): the park's ground, the lobby's
+  models and the paths build their own `test.shader` materials, and the sea its `water.shader`. Dead by CODE: label it
+  or take it out (rule 3, as Q67 did), and correct both comments; Q29 cites `3d.shader` for how the renderer lights,
+  so check that against the shaders drawn. Confirm: a grep for readers, and `assets list` in the lobby and a park,
+  before and after.
+- [ ] **Q125. `CacheFileSystem` is set, and nothing in the game reads it.** Found by Q67's sweep. `Game.Run` creates
+  `OpenTPW/cache` under the local application data folder on every launch and mounts it as `CacheFileSystem`
+  (`Game.cs`, "mainly for editor-related stuff"). Its one reader is ModKit's thumbnail cache (`Editor.cs`), a separate
+  program that never sets it and would read null. Dead by CODE in the game, and making the folder is all it does.
+  Label the game's side or take it out (rule 3); the property stays, since ModKit, which is Alexah's call, reads it.
+  Confirm: a grep for readers, and a launch, listing the folder before and after.
 
 ## B. Docs and comments
 

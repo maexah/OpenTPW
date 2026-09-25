@@ -17,12 +17,6 @@ namespace OpenTPW.UI;
 public class RootPanel
 {
 	public List<Panel> Children { get; set; } = new();
-	public static RootPanel? Instance { get; set; }
-
-	public RootPanel()
-	{
-		Instance ??= this;
-	}
 
 	/// <summary>
 	/// Hides the whole HUD, so a screenshot shows the scene with nothing in front of it.
