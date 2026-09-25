@@ -60,6 +60,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00429ba0` | | OpenTPW/World/Advisor/AdvisorModel.cs  |
 | `0x00429d60` | | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x0042a190` | | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
+| `0x0042b935` | First-person camera update: a held right press (DAT_00790aac & 4) adds the Up arrow's 0.1 to the forward term | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042bdd8` | `FUN_0042b1c0`: the first-person sweep begins, the camcorder's step taken cell by cell | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042bdf6` | | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042bef5` | The sweep: X's reach, from `modf` of `position * 0.1f` | OpenTPW.Tests/ParkCamcorderWalkTests.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
@@ -127,10 +128,13 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00485d20` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x00486bce` | | OpenTPW/Global/GameClock.cs  |
 | `0x004873b3` | Hover category: a type-12 track cell under a type-25 parent gets no category | OpenTPW/World/Level.cs  |
+| `0x004882ba` | Park mouse proc: a right press with RMB cancel on takes the mouse capture | OpenTPW/UI/WindowStack.cs  |
 | `0x0048833a` | Park mouse proc: a right press with RMB cancel on arms the quick click (DAT_007c2500 = 1) | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/WindowStack.cs  |
 | `0x0048842b` | Park mouse proc: a quick right click with RMB cancel on installs the idle mode over whatever mode is current | OpenTPW.Tests/ParkHandTests.cs OpenTPW/World/Level.cs  |
 | `0x00488921` | `Park_MouseMessageProc` key-up case (`0x1000b`): the binding tables through `FUN_0040c990` - `scenes.md`, "The park Escape route" | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/WindowStack.cs  |
 | `0x00488a00` | | OpenTPW.Tests/ParkEscapeOnReleaseTests.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
+| `0x00488aa1` | Layer 1 (first person) handler FUN_00488a00: its 0x10006 click case, right button and RMB cancel, leaves first person | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs OpenTPW/UI/Park/ParkViewfinder.cs  |
+| `0x00488aa8` | FUN_00488a00: the 0x10006 case's RMB cancel test | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x00488bc6` | `FUN_00488ba0`, the park screens' key handler: a plain Escape let go closes the screen (message 4) | OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x00489ca0` | | OpenTPW/UI/WindowStack.cs  |
 | `0x00489de1` | | OpenTPW/Client/Renderer.cs  |
@@ -171,7 +175,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004a0f05` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a2387` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a2529` | | OpenTPW/UI/Park/ParkGadget.cs  |
-| `0x004a2ac0` | FUN_004a2ac0( a ): message 6 with a to the park's layer 0 and 1 - a to layer 1; first person's entry passes 0 | OpenTPW.Tests/ParkHandTests.cs OpenTPW/World/Level.cs  |
+| `0x004a2ac0` | FUN_004a2ac0( a ): message 6 with a to the park's layer 0 and 1 - a to layer 1; first person's entry passes 0 | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/Park/ParkGadget.cs OpenTPW/World/Level.cs  |
 | `0x004a2bf0` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x004a2e90` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x004a3480` | | OpenTPW/UI/Screens/OptionsScreen.cs OpenTPW/UI/UiControl.cs  |
@@ -605,10 +609,19 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005f5fa0` | The sound clock: wall-time milliseconds | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x005f8ae0` | | OpenTPW/Client/GameDir.cs  |
 | `0x006584df` | | OpenTPW/UI/WindowStack.cs  |
+| `0x00658b5b` | UI: posts a release (0x10004) to the control that took the press | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x00658f97` | | OpenTPW/UI/Screens/GameMenu.cs  |
 | `0x00659a58` | | OpenTPW/UI/UiMesh.cs  |
 | `0x0065d3a3` | | OpenTPW/UI/UiControl.cs  |
 | `0x0065da8d` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
+| `0x0065f8c7` | Base control proc: a press within 500 ms of the button's stamp is a double click's second (0x10007) | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
+| `0x0065f8d3` | Base control proc: the double click's compare, strictly less than 500 ms | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
+| `0x0065f969` | Base control proc: a release under 500 ms after its press posts the click 0x10006 | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
+| `0x0065f9af` | Base control proc: an unspoiled release stamps the button with its time | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
+| `0x0065f9bd` | Base control proc: any other release clears the button's stamp | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
+| `0x0065fa33` | Base control proc: a move spoils a press that strayed more than 6 units | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
+| `0x0065fab7` | Base control proc: the stray compare across, more than 6 | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs OpenTPW/UI/WindowStack.cs  |
+| `0x0065fadb` | Base control proc: the stray compare down, more than 6 | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x0065fd0e` | | OpenTPW/UI/UiWindow.cs  |
 | `0x0065fd58` | | OpenTPW/UI/UiControl.cs  |
 | `0x0065fe75` | | OpenTPW/UI/Park/ParkGadget.cs  |
@@ -732,6 +745,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00774c18` | The lobby's full-screen root control that `FrontEnd_Init` loads (callback `0x005d58b0`) | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x00774ce0` | | OpenTPW/World/Lobby/LobbyScript.cs  |
 | `0x00774da0` | | OpenTPW/UI/Park/ParkMapScreen.cs  |
+| `0x0077c480` | UI click limit, 500 ms | OpenTPW/UI/WindowStack.cs  |
 | `0x0077c488` | Whether the interface posts input: set as the window comes active, cleared as it goes (WM_ACTIVATEAPP) | OpenTPW/Client/Renderer.cs  |
 | `0x00785058` | `PeepInfo.SmallHappinessChange`, 5 in Lost Kingdom, read as a byte | OpenTPW.Tests/ParkMoodChangeTests.cs OpenTPW/World/Park/ParkAdmission.cs  |
 | `0x0078505c` | `PeepInfo.MediumHappinessChange`, 15 in Lost Kingdom, read as a byte | OpenTPW.Tests/ParkMoodChangeTests.cs OpenTPW/World/Park/ParkAdmission.cs  |
@@ -761,4 +775,5 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00878a1c` | The peep beat's baseline, re-stamped at `0x0054f683` | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x008bcbcc` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x00f82884` | The lobby's front-end object pointer; the message box's pause test wants it gone | OpenTPW/Global/GameClock.cs OpenTPW/World/Level.cs  |
+| `0x00faa5ac` | UI: the right button's time stamp (0x00faa5a0 + 1 * 0xc) | OpenTPW/UI/WindowStack.cs  |
 | `0x00fb1f20` | The sound engine's one random seed | OpenTPW/World/Park/ParkScreams.cs  |

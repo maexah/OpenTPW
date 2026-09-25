@@ -17,6 +17,9 @@ public static partial class Input
 		/// </summary>
 		public bool LeftWentDown;
 
+		/// <summary>Whether the right button went down this frame, as <see cref="LeftWentDown"/> is for the left.</summary>
+		public bool RightWentDown;
+
 		public float Wheel;
 
 		public override string ToString()

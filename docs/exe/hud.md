@@ -408,13 +408,84 @@ is 1967, past 2048*2/3, so it is bottom-**RIGHT**. Cropping it with the gadget's
 whole 320px of horizontal slack at 1280x720 and returned a picture of grass. **Never assume one anchor for
 a whole screen.**
 
-### Three ways out of camcorder mode: Escape, the C key, and the eject button
+### Four ways out of camcorder mode: Escape, the C key, the eject button, and a right click
 
 `FUN_00488a00`'s key-up case treats `key == 0x1b` (VK_ESCAPE) and `action == 0x10` (camcorder, shortcut
 16) the same way: it sets layer 1's cursor to 1 (`c_busy.ani`, `0x00489750`), leaves first person
 (`FUN_0042ae70` or `FUN_0042a190`), and sets the cursor back to `0x15`. **`FUN_0065f11d` is a cursor setter, not a
 page switch**: it stores the id at the control's `+0x50` and applies it at once if the pointer is over the
 control (`FUN_006590f7`).
+
+The same calls, from a copy at `0x00488ab7`..`0x00488adb` that joins Escape's code at `0x00488b5a` (at `0x00488b55` in a
+ride view), are reached two more ways (decoded for `docs/QUEUE.md` Q59: three decoders, each put to a refuter, then a
+critic; static only):
+
+- **The eject button's left click**, message `0x100`, with no RMB cancel test and no button test (`0x00488a37`): the
+  button class posts `0x100` with its id to its parent (`+0x60`) at the end of a left click (`0x006691d6`), and
+  `b_eject`'s parent is layer 1.
+- **A right click on the layer, with RMB cancel on**: the `0x10006` case (`0x00488aa1`..`0x00488adb`) reads
+  `[0x0078d911]`, then the button (`1`: the user's secondary button, since the DirectInput library swaps the two when
+  Windows has them swapped, `0x006342b9`), then `gui_CameraFlags & 0x16`. `0x10006` is the UI library's
+  **single** click, not a double click - see "A click and a double click" below. A double click leaves on its first
+  click, and its second press (`0x10007`) falls to the handler's tail.
+
+**Where a right click leaves.** The viewfinder panel `0x89db52` is built with flags **3**, visible and disabled
+(stream `0x0074fa98`: op 0, type 1, flags 3), and the hit test `FUN_0065db25` skips a control flagged `0x2` with all it
+holds, so a press on the frame is layer 1's. `b_eject` (flags 1) takes a press on its own rect, and the button class
+hands a right press or release (`param_3 != 0`) to the base proc on itself (`0x00669003`, `0x006690d6`), whose click
+goes nowhere. So in 2048x1536 units a right click leaves anywhere on `0 <= x < 2047, 0 <= y < 1535` but
+`1916 <= x < 2018, 1404 <= y < 1506`. With RMB cancel off, nowhere. Nothing passes a message to a parent: the queue
+pump hands each entry to its own control's `+0x114` (`0x00669a84`, `FUN_0065f697`). The management screens are built
+onto layer 0, which first person hides, and the help bar is disabled, so nothing else is under the pointer.
+
+**What else a right press does in first person.** `FUN_00488a00` hands every message, before the base proc, to
+`FUN_0042a760`, which sets `DAT_00790aac |= 4` on a right press and clears it on the release (`0x0042a8bd`,
+`0x0042a8fb`). While it is set and the camera is walking (`(flags & 0x3c) == 0`), `FUN_0042b1c0` adds 0.1 to the forward
+term, the Up arrow's amount (`0x0042b935`, `[0x006fddac] = -0.1`), whatever RMB cancel is: **a held right button walks
+forward**. The press and release also reach the camera table as key `0xfff1` (`button - 0x10`, `0x00488a74`), which no
+row binds. The walk of a quick click is thrown away with the rest when leaving puts the saved point back.
+
+**In a ride view** (`gui_CameraFlags` 4, "Ride it!", `FUN_004e15b0` → `FUN_0042a560`) the same exits run `FUN_0042a190`,
+which goes back to walking first person when the ride was entered from it (`0x400`, `0x0042ac0b`) and to the orbit
+otherwise. Flag `0x10` is tested and never set (dead by CODE). The ride views that `FUN_0048ac40` and `FUN_0048ae70` build
+(world `+0x1da738 == 4`, where `FUN_004a2ac0` switches no layer) take the click in their own handlers, `0x0048a740` and
+`0x0048a970`, and only 2000 ms after they open.
+
+**OpenTPW.** `WindowStack.RightClick` is the base proc's click for the right button; a press on the view asks
+`ViewRightClick` what answers its click, and the park answers `ParkViewfinder.RightClicked` in first person, which leaves
+it with RMB cancel on. The limit runs on the frame clock (`docs/QUEUE.md` Q123), and a park screen left open over first
+person takes a right press on its body, where the original's entry closes it (`FUN_00485b40`, Q122). The eject button is `ParkViewfinder`'s, `Clicked = ParkCamcorderCameraMode.Leave`. The held right button's walk is not
+built (`FIRST_PERSON_RIGHT_BUTTON_WALK`, `docs/QUEUE.md` Q121), and there is no ride view.
+
+### A click and a double click: the UI library's `0x10006` and `0x10007`
+
+The base control proc `FUN_0065f6d1` makes both, from the press (`0x10005`, case `0x0065f820`), the move (`0x10003`,
+`0x0065fa33`) and the release (`0x10004`, `0x0065f913`). It keeps **one record per button, not per control**, at
+`0x00faa598 + b * 0xc` (b = 0 left, 1 right, 2 middle): a state word (0 idle, 1 pressed and still a click, 2 spoiled),
+the press point (`+2`, `+4`) and one time stamp (`+8`); and a mask at the control's `+0x11c` of the buttons pressed on
+it. The clock is milliseconds (`FUN_0065968e` → `FUN_005f5f10`, QPC with `timeGetTime` as the fallback), the limit
+`[0x0077c480] = 500`, and the points the interface's 2048x1536 units.
+
+- **The press**, only from state 0: sets the mask bit, keeps the point, state 1. If the control's flags `+0x48` lack
+  `0x8` and the press is less than 500 ms after the stamp, it posts **`0x10007`**, the double click, and sets state 2
+  (`0x0065f8dd`). Then it stamps the press's time (`0x0065f908`).
+- **A move** delivered to the control while its mask is set spoils (state 2) any button in state 1 whose press point is
+  **more than 6** away across or down (`0x0065fab7`, `0x0065fadb`), for good. A move is posted to the capture if there is
+  one, else to the control under the pointer, and a move onto another control is `0x10002`/`0x10001`, not a move: so
+  without a capture only moves over the pressed control are judged.
+- **The release**, delivered to the control that took the press wherever the pointer is: in state 1 with the mask bit, it
+  posts **`0x10006`**, the click, with the press point, if less than 500 ms passed since the press (`0x0065f969`), and
+  stamps the release's time either way (`0x0065f9af`); otherwise it clears the stamp (`0x0065f9bd`). Mask bit and state
+  are cleared.
+
+So a click is one press and its release under 500 ms, never having strayed more than 6. A press within 500 ms of the
+last clean release, **on any control**, since the stamp is the button's, is a double click's second, and its release
+makes no click and clears the stamp, so a third press clicks again. Both messages are queued (`FUN_00658ccc` →
+`FUN_006697e3`) to the control whose proc posted them and delivered in the same drain as the release. The window class
+has no `CS_DBLCLKS` (style 0, `0x0044e0de`), and by default the buttons do not come from the window procedure at all:
+the DirectInput cursor library is on (`FUN_0047e7d0` sets `DAT_007b4b88`, `0x0047e951`, unless `-bwcursor`), and its
+callback `0x00486c70` posts the presses and releases in the same units. Its own double click bit (`0x0063446a`) never
+reaches the UI, and `FUN_00658ab4`, which would post `0x10007` to the hover, has no caller (dead by CODE).
 
 ## The other park streams
 

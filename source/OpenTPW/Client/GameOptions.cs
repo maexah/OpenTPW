@@ -110,7 +110,10 @@ internal sealed class GameOptions
 	/// <summary>+0x38: Right button scroll rather than Pushscroll. Nothing reads it yet.</summary>
 	public bool RightButtonScroll { get; set; }
 
-	/// <summary>+0x39: whether a quick right click puts away whatever is in the hand - see <c>Level.QuickRightClick</c>.</summary>
+	/// <summary>
+	/// +0x39: whether a quick right click puts away whatever is in the hand - see <c>Level.QuickRightClick</c> - and whether
+	/// a right click on the view leaves first person (<c>ParkViewfinder.RightClicked</c>).
+	/// </summary>
 	public bool RmbCancel { get; set; } = true;
 
 	/// <summary>+0x3a: rotating the park 90 degrees at a time rather than smoothly. Nothing reads it yet.</summary>

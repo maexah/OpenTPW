@@ -1134,7 +1134,34 @@ artifacts are listed in `docs/history/README.md`.
   `0x1000b`; the key-down runs nothing, `FUN_0040c900`), and so lets go of the hand, closes the locator and opens the
   menu on the release. `WindowStack` handed Escape to `ParkFrontEnd.MenuKey` on the press, said at the site. The lobby's
   half is Q42. Confirm: hold Escape with something in the hand - nothing until the release.
-- [ ] **Q59. A right double click in first person does not leave it.** Found by Q39's decode. With RMB cancel on, the
+- [x] **Q59. A right click in first person leaves it.** Done 2026-09-25, `alexah/150-right-click-leaves-first-person`.
+  Decoded first to settle it (three decoders, each put to a refuter, then a critic; `hud.md`, "Four ways out of camcorder
+  mode" and "A click and a double click"): the layer's `0x10006` is the UI library's **single** click, a press let go of
+  under 500 ms that never strayed more than 6 units; a press within 500 ms of the button's last clean release, on any
+  control, is a double click's second and makes none, so a double click leaves on its first click. It leaves anywhere
+  but the eject button, which drops a right click; the frame is disabled and takes no pointer. Also found: a held right
+  button walks in the original's first person (Q121, counted).
+  - **Built.** `WindowStack.RightClick`, the base proc's click for the right button with the button's one stamp; a press
+    on the view asks `ViewRightClick` what answers it, and the park answers `ParkViewfinder.RightClicked` in first person,
+    which leaves with RMB cancel on. Only a press the window system sent clicks (`Input.MouseInfo.RightWentDown`).
+  - **Tests.** `ParkFirstPersonRightClickTests`, 14: real frames through a real stack over the real park front end.
+    Twenty-one mutations (`q59mutate.py`, `q59-mutations-2.txt`), each predicted: 20 as predicted; the miss was mine,
+    taking the click on the press also turns the interface-units test red. `main`'s source turns 11 of the 14 red.
+  - **Reviewed.** A read-only workflow (four lenses, each finding put to a refuter): 29 findings, 27 real. It found the
+    answer settled at the release (a press made in orbit left first person once C put it up), a held button taken as a
+    press after F2, five untested rules and fourteen doc slips; all fixed before the last game run. Filed: Q122 (entering
+    first person leaves a park screen open) and Q123 (the click limits on the frame clock).
+  - **Confirmed in the game** (`q59confirm.py`, silent, jungle, 1280x720, a real XTEST pointer and right button; `main` at
+    `29f71a8` as the control, `q59/control`, and the fix, `q59/fix2`). Orbit cam z 49, first person 5. A quick right
+    click in the middle: the fix logged `Right click: out of first person` 0.01 s after the release, z 49, the orbit and
+    gadget photographed; `main` stayed at 5 with the viewfinder photographed. On the eject button, with RMB cancel off,
+    dragged 40 px, and held 0.8 s: z 5, no line, both. The double click: out after the first release. A click 0.2 s after
+    a press held 0.7 s: z 5, photographed; the next 0.8 s later: out. A right press in orbit, C, the release: z 5, no line.
+    `FIRST_PERSON_RIGHT_BUTTON_WALK` read 152 where I predicted 40-60 (about 146 fps, and the earlier holds count); the
+    second run predicted about 150 and read 151. `save/` unchanged in every run.
+  - **Not confirmed on screen:** a stray over the eject button, the 490/500 ms edges, 6 units against 7, a button held
+    through F2 (tested only).
+  The item as written: Found by Q39's decode. With RMB cancel on, the
   viewfinder layer's handler answers a right double click by leaving first person as Escape does (`0x00488aa1`..
   `0x00488ad6`). Nothing here reads a right click in first person. Confirm: camcorder, a double right click, `camera`
   back to orbit, photographed.
@@ -1371,7 +1398,7 @@ artifacts are listed in `docs/history/README.md`.
 - [ ] **Q117. A right click on a list row or an object window's preview.** Found by Q56. The all-staff, visitors and
   all-items lists answer a right click on a row (`0x402`) by moving the camera to that thing and closing the screen
   (`FUN_004867b0`: `0x0049602f`, `0x004934c5`, `0x00495584`); an object window's preview answers any click the same way
-  (`LAB_0048d1a0`). The click is a press and release on the control within 500 ms (`[0x0077c480]`). Counted on the
+  (`LAB_0048d1a0`). The click is the UI library's (`hud.md`, "A click and a double click"; `WindowStack.RightClick`). Counted on the
   press as `LIST_ROW_RIGHT_CLICK`; the preview takes no pointer here (Q115), so its click is not counted. Confirm: a right
   click on a guest's row, the camera on that guest and the screen shut; a screenshot.
 - [ ] **Q118. The camcorder key acts on its press, both ways.** Found by Q57. The original's C is shortcuts row 16
@@ -1394,6 +1421,22 @@ artifacts are listed in `docs/history/README.md`.
   empties the hand or opens the menu. Carry each event's modifiers (SDL's, Shift, Ctrl and Alt only) or replay the
   frame's events in order. Said at `NoModifierHeld`. Confirm: Shift+Escape with the tool armed, Escape up then Shift up
   in one frame through XTEST - `tool` still Path.
+- [ ] **Q121. A held right button in first person does not walk.** Found by Q59's decode (`hud.md`, "Four ways out of
+  camcorder mode"). The viewfinder layer's handler hands every message to `FUN_0042a760`, which sets 4 in `DAT_00790aac`
+  while the right button is down (`0x0042a8bd`), and the walking camera adds the Up arrow's 0.1 to its forward term for
+  as long as it is set (`0x0042b935`), whatever RMB cancel is. Here only the keys walk. Counted per frame held,
+  `FIRST_PERSON_RIGHT_BUTTON_WALK` (`ParkCamcorderCameraMode.Walk`), a hold on the eject button included; the walk
+  built must not take one, since the button's press never reaches the layer. Confirm: in first person hold the right
+  button 2 s on the view, `state`'s camera moved forward; a screenshot either side.
+- [ ] **Q122. Entering first person leaves a park screen open.** Found by Q59's review. `FUN_00481a10`, which C and
+  `b_1person` both reach, first closes the open screen (`FUN_00485b40`, message 5 to `DAT_007c24c8`), and entering hides
+  layer 0 with anything else on it. Here an object window or a management screen stays up over first person, and a right
+  press on its body is the screen's, so it does not leave (said at `ParkViewfinder.RightClickAnswer`). Add the call to
+  `park-engine.md`'s decode of `FUN_00481a10`. Confirm: a ride's window open, C, the window gone; a screenshot.
+- [ ] **Q123. The click limits run on the frame clock.** Found by Q59's review. `WindowStack.RightClick`'s 500 ms and
+  `Level.RightButton`'s 200 ms read `Time.Now`, whose frames are clamped to 0.1 s and which the console's `pause` holds;
+  the original times both in milliseconds of wall time (`FUN_0065968e`, `hud.md`, "A click and a double click"). Below
+  10 fps a held press can pass as a click. Said at `RightClick`. Keep the tests able to set the time.
 
 ## B. Docs and comments
 

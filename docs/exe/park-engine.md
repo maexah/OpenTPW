@@ -1713,7 +1713,7 @@ pause, a modal flag or an open screen (`0x004881a0`..`0x0048833a`). What keeps a
 | the game menu (both scenes) | a full-screen panel `MenuList_Create` makes (`0x00492ef0`) and `MenuList_Show` attaches last to the UI root | never |
 | a message box | the full-screen control `UI_LoadModalTree` loads it into (`0x0047eda3`) | never |
 | the options or the map screen | anything but the layer, which each hides with message 6 (`0x004a3ad9`, `0x005f0bd6`) | never |
-| first person | the viewfinder's full-screen layer 1, whose handler `FUN_00488a00` gives it to the camera table alone: entering (`FUN_0042ab20( 2, 1, ... )`, `0x0042ac7f`) calls `FUN_004a2ac0( 0 )`, which hides layer 0 and shows layer 1 | never |
+| first person | the viewfinder's full-screen layer 1, whose handler `FUN_00488a00` gives it to the camera table, where no row binds a mouse key, and answers its click with RMB cancel on by leaving first person (`hud.md`, "Four ways out of camcorder mode"): entering (`FUN_0042ab20( 2, 1, ... )`, `0x0042ac7f`) calls `FUN_004a2ac0( 0 )`, which hides layer 0 and shows layer 1 | never |
 | a management screen (buy, hire, all staff, visitors, all items, entry price) or any of the nine object windows | built onto the layer by `UI_LoadTree` (`0x004acd62`, `0x0049bf34`, `0x00496643`, `0x0049353e`, `0x00495abe`, `0x00498db5`, `0x0048ceca`), not modal, and none hides the layer. Each root is one plain rectangle - big (186,30)-(2018,1007), medium (248,30)-(1800,1007), small (328,130)-(1720,901) - so the window takes a press anywhere on it | beside the window, and the window stays open; on it, never |
 
 The one test of an open screen on a press's path, `0x00488741`, keeps it from the mode's button slots, after the arm. A right

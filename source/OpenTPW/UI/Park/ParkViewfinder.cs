@@ -63,10 +63,38 @@ internal sealed class ParkViewfinder : UiWindow
 	}
 
 	/// <summary>
-	/// Up only in first person. The mode is asked every frame rather than told, because all three ways
-	/// out of it - this button, the C key and Escape - go through
+	/// Up only in first person. The mode is asked every frame rather than told, because all four ways
+	/// out of it - this button, the C key, Escape and a right click (<see cref="RightClicked"/>) - go through
 	/// <see cref="ParkCamcorderCameraMode"/> itself, and a second record of whether it is running could
 	/// only ever disagree with the first.
 	/// </summary>
 	protected internal override void Update() => Hidden = !ParkCamcorderCameraMode.Active;
+
+	/// <summary>
+	/// What answers a right click whose press lands on the view, as the stack asks at the press
+	/// (<see cref="WindowStack.ViewRightClick"/>): in first person the view is this window's own full-screen
+	/// layer, under the frame, which takes no pointer, and beside the eject button, which drops a right
+	/// click; outside it the view is the park's own layer, which answers no click.
+	/// </summary>
+	/// <remarks>
+	/// <b>Not the original's while a park screen is open over first person.</b> Entering first person
+	/// closes the one open (<c>FUN_00485b40</c>) and hides the park's layer; here the screen stays and
+	/// takes a right press on its body (<c>docs/QUEUE.md</c> Q122).
+	/// </remarks>
+	internal static Action? RightClickAnswer() => ParkCamcorderCameraMode.Active ? RightClicked : null;
+
+	/// <summary>
+	/// The layer's answer to a right click: with the Options switch "RMB cancel" on, leave first person,
+	/// the way out Escape takes (<c>0x00488aa1</c>; <c>docs/exe/hud.md</c>, "Four ways out of camcorder
+	/// mode"). First person is asked again at the click, as the original reads its camera flags again
+	/// there.
+	/// </summary>
+	internal static void RightClicked()
+	{
+		if ( !ParkCamcorderCameraMode.Active || !GameOptions.Current.RmbCancel )
+			return;
+
+		ParkCamcorderCameraMode.Leave();
+		Log.Info( "Right click: out of first person" );
+	}
 }

@@ -71,7 +71,8 @@ namespace OpenTPW.UI;
 /// <b>Still dead, by choice:</b> the video card does nothing, and with one card counted it never
 /// leaves Primary, as on a machine with one (0x004a3480). Audio quality, Tutorial, Confirmations,
 /// Rotation and Scroll are kept, but nothing reads them yet - they belong to the sound library's set-up
-/// and to parks. RMB cancel is read by the park's quick right click (<c>Level.QuickRightClick</c>).
+/// and to parks. RMB cancel is read by the park's quick right click (<c>Level.QuickRightClick</c>) and by first person's
+/// right click (<c>ParkViewfinder.RightClicked</c>).
 /// </para>
 /// </para>
 /// <para>

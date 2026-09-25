@@ -415,6 +415,12 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// </summary>
 	private void Walk()
 	{
+		// The original also walks forward while a right press on the viewfinder's layer is held, as far as the Up arrow
+		// takes it, whatever RMB cancel is set to (0x0042b935). Not built (docs/QUEUE.md Q121). Counted every frame the
+		// button is down, a press held on the eject button included, where the original does not walk.
+		if ( Input.Mouse.Right )
+			Unimplemented.Report( "FIRST_PERSON_RIGHT_BUTTON_WALK" );
+
 		if ( Input.Forward == 0f && Input.Right == 0f )
 			return;
 

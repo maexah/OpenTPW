@@ -44,6 +44,32 @@ internal sealed class WindowStack : Panel
 	private bool _rightWasDown;
 
 	/// <summary>
+	/// How long a press may be held and still make a click, in seconds: 500 ms (<c>[0x0077c480]</c>), timed from the
+	/// press to the release.
+	/// </summary>
+	internal const float ClickLimit = 0.5f;
+
+	/// <summary>
+	/// How far the pointer may stray from where the press went down, across or down, in the interface's 2048x1536
+	/// units, and the press still make a click: 6, and 7 is a drag (<c>0x0065fab7</c>).
+	/// </summary>
+	internal const float ClickStray = 6f;
+
+	/// <summary>
+	/// The right button's press, as the base control proc keeps it for button 1: whether it is unspoiled (state 1,
+	/// neither a double click's second nor strayed), where it went down in interface units, the control it landed on,
+	/// and what answers its click, which the scene says at the press (<see cref="ViewRightClick"/>).
+	/// </summary>
+	private (bool Unspoiled, Vector2 Where, UiControl? On, Action? Answer) _rightPress;
+
+	/// <summary>
+	/// The right button's one time stamp, which the base proc keeps for the button and not for a control
+	/// (<c>0x00faa5ac</c>): the press's time while it is held, the release's once an unspoiled press is let go of, and
+	/// none after any other release. A press within <see cref="ClickLimit"/> of it is a double click's second and spoiled.
+	/// </summary>
+	private float _rightStamp = float.NegativeInfinity;
+
+	/// <summary>
 	/// Whether the interface used this frame's wheel, so that the world does not use it as well.
 	///
 	/// <para>
@@ -112,6 +138,14 @@ internal sealed class WindowStack : Panel
 	/// when the stack next looked. The park reads its clicks itself.
 	/// </summary>
 	public Func<bool>? ViewPressed { get; set; }
+
+	/// <summary>
+	/// What answers a right click whose press lands on the scene's own view - on no control, no park screen's body and
+	/// no modal window (<see cref="TakesRightPress"/>) - asked at the press, since the click goes to whatever took the
+	/// press however things stand at the release; null when nothing does. Only a park's first person answers one - see
+	/// <see cref="ParkViewfinder"/>. The click is <see cref="RightClick"/>'s.
+	/// </summary>
+	public Func<Action?>? ViewRightClick { get; set; }
 
 	/// <summary>Whether the view took the press of the last <see cref="ClickAt"/>, for the debug console's reply.</summary>
 	internal bool ViewTook { get; private set; }
@@ -255,6 +289,8 @@ internal sealed class WindowStack : Panel
 			hit?.RightPressed?.Invoke();
 		}
 
+		RightClick( rightDown, hit, mouse / VirtualScreen.Scale );
+
 		_rightWasDown = rightDown;
 
 		// The wheel goes to the slider under the pointer, or the slider whose thumb it is.
@@ -338,6 +374,57 @@ internal sealed class WindowStack : Panel
 		=> _windows.Exists( window => !window.Hidden && !window.PutAway
 			&& (window.Root.HitTest( x, y ) != null
 				|| (window.ParkScreen ? window.Root.Visible && window.Root.Holds( x, y ) : window.Modal)) );
+
+	/// <summary>
+	/// The right button's click, this frame, as the base control proc makes one for button 1 (<c>docs/exe/hud.md</c>, "A
+	/// click and a double click"): the button down or up, the control under the pointer, and where the pointer is in the
+	/// interface's units. A click whose press landed on the view goes to what <see cref="ViewRightClick"/> named at the
+	/// press; one on a control goes nowhere, since no control here answers a right click, but it still stamps the time a
+	/// second press is judged by. Only a press the window system sent can click, never a button already down when the
+	/// stack next looked (F2 stops it).
+	/// </summary>
+	/// <remarks>
+	/// <b>Not the original's in two ways.</b> The limit is timed on the frame clock, whose frames are clamped to 0.1 s,
+	/// where the original's is milliseconds of wall time (<c>docs/QUEUE.md</c> Q123). And a stray is judged only while the
+	/// pointer is over what the press landed on, which is the original's rule for a control without the mouse capture;
+	/// the park's own layer takes the capture on a right press (<c>0x004882ba</c>), so the original judges a press on the
+	/// park in orbit wherever the pointer goes. That can change only the stamp.
+	/// </remarks>
+	private void RightClick( bool down, UiControl? hit, Vector2 at )
+	{
+		if ( down && !_rightWasDown )
+		{
+			var answer = RightPointerTaken ? null : ViewRightClick?.Invoke();
+
+			_rightPress = (Input.Mouse.RightWentDown && Time.Now - _rightStamp >= ClickLimit, at, hit, answer);
+			_rightStamp = Time.Now;
+			return;
+		}
+
+		if ( down )
+		{
+			if ( _rightPress.Unspoiled && hit == _rightPress.On
+				&& (MathF.Abs( at.X - _rightPress.Where.X ) > ClickStray || MathF.Abs( at.Y - _rightPress.Where.Y ) > ClickStray) )
+				_rightPress.Unspoiled = false;
+
+			return;
+		}
+
+		if ( !_rightWasDown )
+			return;
+
+		if ( !_rightPress.Unspoiled )
+		{
+			_rightStamp = float.NegativeInfinity;
+			return;
+		}
+
+		var clicked = Time.Now - _rightStamp < ClickLimit;
+		_rightStamp = Time.Now;
+
+		if ( clicked )
+			_rightPress.Answer?.Invoke();
+	}
 
 	private UiControl? HitTest( float x, float y )
 	{

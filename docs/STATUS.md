@@ -16,8 +16,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
   again, the gate shuts, the panel comes back). **Every lobby key acts on its release**, and **a left press on the
   lobby's view enters the park**.
 - Park: ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (5 of 6). The
-  camcorder walks the original's sweep pass for pass: it slides along what is shut and never goes into a ride.
-  Leaving one lets go of all of it: nothing of a left park is held in the lobby.
+  camcorder walks the original's sweep pass for pass, and **a quick right click leaves it** (RMB cancel on). Leaving
+  one lets go of all of it: nothing of a left park is held in the lobby.
 - Building and staffing: purchase menu and hire screen, both reachable from Buy. Things bought, sold, moved, carried;
   staff hired, fired, picked up, put down. **Selling or moving a thing puts its riders and queuers off where they
   stand**, staff resting there get up, and its script goes with it. **Cutting a queue puts out whoever stands past its
@@ -65,16 +65,17 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Guests may arrive eight times as often as the original's, and staff may idle for an eighth of its time: its timers
   read the thing sweep, ours the 31 ms tick (Q68, Q82, decode first).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
-  cannot move, and leaving keeps the walk where the original's throws it away (Q25).
+  cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
+  walk (Q121), and a park screen stays open over it (Q122).
 
 ## Next
 
 `docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50 to Q50h, Q53, Q53b
-Q56 and Q57 are ticked.** Next is **Q59**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46,
-Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and
-Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h, Q50h Q106, Q53 Q53b
-and Q107-Q111, Q53b Q112, Q56 Q113-Q117, Q57 Q118-Q120, the staleness audit and its review Q68-Q82 (Q70-Q75 from the
-2026-09-12 review), the lobby plan section G.
+Q56, Q57 and Q59 are ticked.** Next is **Q67**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11
+Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50
+Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h, Q50h
+Q106, Q53 Q53b and Q107-Q111, Q53b Q112, Q56 Q113-Q117, Q57 Q118-Q120, Q59 Q121-Q123, the staleness audit and its
+review Q68-Q82 (Q70-Q75 from the 2026-09-12 review), the lobby plan section G.
 
 `docs/PLAYER-GAPS.md` holds gaps **4, 5 and 7**. The untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
 
@@ -104,16 +105,15 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1164**, 0 fail, 0 skip with the game | 2026-09-25, after Q57 |
-| Tests without the game | **480** ran, **684** skipped, of 1164 | 2026-09-25, after Q57 |
-| Build warnings | 123 | 2026-09-25, after Q57 |
+| Tests | **1178**, 0 fail, 0 skip with the game | 2026-09-25, after Q59 |
+| Tests without the game | **480** ran, **698** skipped, of 1178 | 2026-09-25, after Q59 |
+| Build warnings | 123 | 2026-09-25, after Q59 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-25 - the park's Escape on the release (Q57).** `alexah/149-park-escape-on-the-release`: 7 stages as predicted.
-
-**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/148` (Q56)
+**2026-09-25 - a right click leaves first person (Q59).** `alexah/150-right-click-leaves-first-person`: a single click.
+**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/149` (Q57)
 back to `118` (Q4), `115`-`116` (Q3), `117` (Q35) and `109` (Q1, Q1b); before them, `114`, `110` and `112`.
 
 Everything older is the git log.

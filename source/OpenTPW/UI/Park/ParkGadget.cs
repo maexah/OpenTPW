@@ -564,12 +564,11 @@ internal sealed class ParkGadget : UiWindow
 		// quarter turn during a two-second reach - and leaving the mode hands that yaw to the orbit
 		// camera, so the park would come back facing somewhere nobody chose.
 		//
-		// The original does not solve this by suppressing the steering: entering camcorder mode
-		// (FUN_00481a10) neither hides the interface nor changes its page. It puts a VIEWFINDER over
-		// the screen instead - its own layout stream at 0x0074fa98, a full-frame surround with an
-		// eject button in the far corner - which is the first-person interface in place of this one.
-		// That is not built yet, so this hides and the C key remains the way out. Hidden rather than
-		// closed, which is the stack's own word for a window that is neither drawn nor pointed at.
+		// The original does not solve this by suppressing the steering: its entry to first person hides
+		// layer 0, which holds the gadget, and shows the viewfinder's layer 1 (0x004a2ac0) - its own layout
+		// stream at 0x0074fa98, a full-frame surround with an eject button in the far corner. Here that
+		// layer is ParkViewfinder, and this hides: hidden rather than closed, which is the stack's own word
+		// for a window that is neither drawn nor pointed at.
 		//
 		// It also goes away while the map is up, for the same reason in a different form: the original
 		// does not leave the two on top of each other. FUN_005f0b40 sends message 6 - put away - to the

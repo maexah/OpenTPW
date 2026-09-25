@@ -19,8 +19,8 @@ namespace OpenTPW.UI;
 /// <para>
 /// <b>Leaving first person is part of that.</b> In first person the key goes to the viewfinder's own layer,
 /// whose handler (0x00488a00) answers a key-up on VK_ESCAPE and one whose bound action is camcorder (16)
-/// identically, by leaving first person - so Escape and C are one road out, and the original's third is the
-/// viewfinder's eject button, which is not built here. <see cref="MenuKey"/> takes that road first.
+/// identically, by leaving first person - so Escape and C are one road out. The viewfinder's eject button and a right
+/// click on its layer are the others (<see cref="ParkViewfinder"/>). <see cref="MenuKey"/> takes the Escape road first.
 /// </para>
 /// <para>
 /// <b>The choices are the park's own, and they are not the lobby's.</b> GameMenu_BuildPark adds them in
@@ -186,6 +186,7 @@ internal sealed class ParkFrontEnd : Panel
 		// other's moment comes.
 		_viewfinder = new ParkViewfinder( stack );
 		_stack.Open( _viewfinder );
+		_stack.ViewRightClick = ParkViewfinder.RightClickAnswer;
 	}
 
 	/// <summary>
@@ -230,8 +231,7 @@ internal sealed class ParkFrontEnd : Panel
 
 		// In first person the key is the viewfinder layer's, which leaves first person on a key-up whose key is
 		// VK_ESCAPE, whatever modifier is held, or whose action is camcorder (16), found by key and modifier alike
-		// (0x00488a00). So the two roads out of camcorder mode are Escape and the C key, and in the original also the
-		// viewfinder's eject button, not built here.
+		// (0x00488a00). The layer's other ways out are its eject button and a right click - see ParkViewfinder.
 		if ( ParkCamcorderCameraMode.Active )
 		{
 			ParkCamcorderCameraMode.Leave();
