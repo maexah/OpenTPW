@@ -27,6 +27,18 @@ internal abstract class UiWindow
 	public bool Modal { get; protected init; }
 
 	/// <summary>
+	/// Whether it is one of the park's screens, which the original builds onto the park's own layer rather than over it
+	/// (the buy screen's, <c>0x004acd62</c>): its root takes a press anywhere in its rectangle, and a press beside it is
+	/// still the park's, modal or not. Only the right press reads it - see <see cref="WindowStack.TakesRightPress"/>.
+	/// <para>
+	/// <b>A deviation:</b> the six management screens are also <see cref="Modal"/> here, so beside one neither a left
+	/// press nor the gadget is reached; the original's are not modal, its gadget answers beside a screen, and its park
+	/// proc only keeps a left press from the hand (<c>docs/QUEUE.md</c> Q115).
+	/// </para>
+	/// </summary>
+	public bool ParkScreen { get; protected init; }
+
+	/// <summary>
 	/// Whether the game is paused while it is open. The original's message box (0x0047f020) and options
 	/// screen (OptionsScreen_Open, 0x004a3a30) ask for a pause as they open, through 0x004092a0; the new
 	/// player dialog does not.

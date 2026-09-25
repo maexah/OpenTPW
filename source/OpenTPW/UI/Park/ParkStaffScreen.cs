@@ -87,6 +87,9 @@ internal sealed class ParkStaffScreen : UiWindow
 	{
 		Modal = true;
 
+		// Built onto the park's own layer (0x00496643), so a right press beside it is the park's.
+		ParkScreen = true;
+
 		// w_big, the node "window4" inside w_big.MD2 - the frame five screens share, and which the
 		// tree recorded as unresolvable until the models' node names were read rather than their file
 		// names. Without it this screen is a list floating over the park. See docs/exe/hud.md.
@@ -113,6 +116,10 @@ internal sealed class ParkStaffScreen : UiWindow
 			HelpText = 124,
 			Mesh = UiMesh.Get( "list_allstaff" ),
 			RowArea = new UiRect( 294, 418, 1734, 777 ),
+
+			// A right click on a row moves the camera to that member of staff and closes the screen
+			// (0x0049602f; docs/QUEUE.md Q117). Not built: counted on the press.
+			RightPressed = () => Unimplemented.Report( "LIST_ROW_RIGHT_CLICK" ),
 
 			// The stream's own op 0xb record. The builder right-aligns columns 2, 3 and 4 and leaves
 			// nought and one reading from the left - FUN_006636b2( n, rightAligned ) - which is what

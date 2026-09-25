@@ -596,7 +596,9 @@ Enter this park (`0x005e234f`); the right and middle buttons it ignores. The win
 `RegisterClassA` at `0x0044e0de`), so a double click is two presses, and the second is refused because the first set
 `+0x14`. The panel's button acts on the release of a click instead: the button class (`0x00668f9c`) posts `0x100` to the
 panel on the left release, and only if the press was its own (`0x006690d6`), and `IslandPanel_Callback` calls the same
-`+0x40` (`0x004b8bf8`).
+`+0x40` (`0x004b8bf8`). **With the game menu up no press reaches the root**: both scenes build the menu as a full-screen
+panel (`MenuList_Create`, `0x00492ef0`; the lobby's call is `0x0048c655`) that `MenuList_Show` attaches last to the UI
+root, so a press off its items lands on the panel (`park-engine.md`, "Whose a right press is").
 
 **The island panel's outline.** A hit test walks down from the UI root, children first; a control flagged `0x2`
 is skipped with everything under it, and a control answers for itself when its region holds the point - its rect, or a
@@ -635,11 +637,11 @@ the posters test it first. Windows sends no key-up to a window that has lost the
 switch of window is never let go, as far as the lobby knows.
 
 **Unsettled.**
-- A press made after a window opens or closes, before the pointer moves, goes to the old hover: a tree becomes the hover
-  only at the next move or `UI_SetVisible` (`0x0065bff4` runs before the control is linked). Not built, and not yet
-  counted (`docs/QUEUE.md` Q69).
-- Whether the game menu takes the pointer's capture, and so whether a press outside it could still reach the lobby's
-  root. Here the menu is modal and takes every press.
+- A press made after a window opens or closes, before the pointer moves, can go to the old hover: a tree becomes the hover
+  at the next move or `UI_SetVisible`, or as a visible control is built under a parent already linked (`0x0065bff4`,
+  which for a tree's root runs before it is linked). `UI_LoadTree` links a tree's root before building its children, so
+  a tree with a visible child takes the hover as it opens (Q56's refuters). Not built, and not yet counted
+  (`docs/QUEUE.md` Q69).
 - Whether the mail badge `0xbf432` can show offline. `0x004bbbd0` hides it while `g_Players+0xc4`, a count, is 0; if it can
   show, a press on it is the badge's and does not enter the park.
 - What a key or a press does in the online modes' children (`+0xc`, `+0x10`, and the sibling camera `0x00702dd0`, whose

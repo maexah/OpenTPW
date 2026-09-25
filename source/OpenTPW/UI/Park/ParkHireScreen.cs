@@ -75,6 +75,9 @@ internal sealed class ParkHireScreen : UiWindow
 		// for a pause, unlike the map screen, which plainly does.
 		Modal = true;
 
+		// Built onto the park's own layer (0x0049bf34), so a right press beside it is the park's.
+		ParkScreen = true;
+
 		// w_big, the node "window4" - the same frame the buy screen and the three Information lists
 		// wear. See ParkBuyScreen, where the correction is written out.
 		Root = new UiControl

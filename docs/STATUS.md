@@ -55,7 +55,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
   researcher on a cell with no links does not look for path (Q112).
 - The park's door moves neither the gate (Q89) nor the advisor (Q90), nor a shut ride's model (Q91); the ride window's
   door shows a shut ride but is not a button (Q92), and a bought queued thing starts open (Q93).
-- A right press over a panel still cancels (Q56), and the park's Escape acts on the press, not the release (Q57).
+- The park's Escape acts on the press (Q57); some presses the original stops still reach the park (Q113, Q115, Q116).
 - Nothing shows what the hand holds, a thing (`CARRY_PREVIEW_MARKERS`) or a candidate (`STAFF_CARRY_PREVIEW`), and
   any cell on the map takes a candidate; the original's rule is decoded (Q40).
 - The fly-in's fade to black is not drawn (Q61). Escape over the player slots opens the game menu (Q64); Ctrl+H acts
@@ -69,18 +69,18 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50 to Q50h, Q53 and Q53b
-are ticked.** Next is **Q56**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49,
-Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and Q85-Q88, Q50b
-Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h, Q50h Q106, Q53 Q53b and Q107-Q111,
-Q53b Q112, the staleness audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review), the lobby plan section G.
+`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50 to Q50h, Q53, Q53b
+and Q56 are ticked.** Next is **Q57**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12
+Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and Q85-Q88,
+Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h, Q50h Q106, Q53 Q53b and
+Q107-Q111, Q53b Q112, Q56 Q113-Q117, the staleness audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review),
+the lobby plan section G.
 
 `docs/PLAYER-GAPS.md` holds gaps **4, 5 and 7**. The untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
 
 ## Not verified on screen
 
-- **The RIDER on a ride bought this session.** Measured five times over; not photographed, because the
-  rider sits at z 10.3 against a 5.0 camcorder eye at pitch 0 and the console has no pitch argument.
+- **The RIDER on a ride bought this session**: measured five times, not photographed (the console has no pitch).
 - `SpriteScript.ScheduleFrom` and `DropUnreadyNominee`: unwiring either leaves the suite green.
 - The critical-section cap trips only in a test: nothing the game ships can reach it (Q11).
 - The staff half of a sale: nobody in Lost Kingdom rests in the first minutes, so it is tested, not seen (Q36).
@@ -104,16 +104,16 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1149**, 0 fail, 0 skip with the game | 2026-09-25, after Q53b |
-| Tests without the game | **480** ran, **669** skipped, of 1149 | 2026-09-25, after Q53b |
-| Build warnings | 123 | 2026-09-25, after Q53b |
+| Tests | **1156**, 0 fail, 0 skip with the game | 2026-09-25, after Q56 |
+| Tests without the game | **480** ran, **676** skipped, of 1156 | 2026-09-25, after Q56 |
+| Build warnings | 123 | 2026-09-25, after Q56 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-25 - the no-links wander (Q53b).** `alexah/147-wander-from-a-cell-with-no-links`: 5 of 5 put off moved on.
+**2026-09-25 - the right press over a panel (Q56).** `alexah/148-right-press-over-a-panel`: 9 stages, all as predicted.
 
-**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/146` (Q53)
+**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/147` (Q53b)
 back to `118` (Q4), `115`-`116` (Q3), `117` (Q35) and `109` (Q1, Q1b); before them, `114`, `110` and `112`.
 
 Everything older is the git log.

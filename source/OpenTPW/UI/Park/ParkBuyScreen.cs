@@ -82,8 +82,12 @@ internal sealed class ParkBuyScreen : UiWindow
 
 	public ParkBuyScreen( WindowStack stack ) : base( stack )
 	{
-		// Modal so the park behind cannot be clicked through, but NOT pausing - see the class remarks.
+		// Modal so a left press cannot reach the park behind, but NOT pausing - see the class remarks. That it
+		// shuts out the gadget as well is a deviation - see UiWindow.ParkScreen.
 		Modal = true;
+
+		// Built onto the park's own layer (0x004acd62), so a right press beside it is the park's.
+		ParkScreen = true;
 
 		Root = new UiControl
 		{

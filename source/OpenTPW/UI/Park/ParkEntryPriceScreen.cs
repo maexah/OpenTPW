@@ -56,6 +56,9 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 		// ask for no pause where the map screen's plainly does.
 		Modal = true;
 
+		// Built onto the park's own layer (0x00498db5), so a right press beside it is the park's.
+		ParkScreen = true;
+
 		// w_small, and it took reading the MODELS to find it. The stream asks for this frame as hash
 		// 0xf76e42eb, which matches no file stem in ui.wad - which is why this screen, and the buy and
 		// hire screens before it, drew as text floating over the park. The hash is over a model's first

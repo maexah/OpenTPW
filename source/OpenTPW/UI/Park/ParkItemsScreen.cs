@@ -100,6 +100,9 @@ internal sealed class ParkItemsScreen : UiWindow
 	{
 		Modal = true;
 
+		// Built onto the park's own layer (0x00495abe), so a right press beside it is the park's.
+		ParkScreen = true;
+
 		// w_big, the node "window4" inside w_big.MD2 - the frame five screens share, and which the
 		// tree recorded as unresolvable until the models' node names were read rather than their file
 		// names. Without it this screen is a list floating over the park. See docs/exe/hud.md.
@@ -200,7 +203,11 @@ internal sealed class ParkItemsScreen : UiWindow
 			Id = 400,
 			Rect = rect,
 			RowArea = rows,
-			Columns = edges
+			Columns = edges,
+
+			// A right click on a row moves the camera to that thing and closes the screen
+			// (0x00495584; docs/QUEUE.md Q117). Not built: counted on the press.
+			RightPressed = () => Unimplemented.Report( "LIST_ROW_RIGHT_CLICK" )
 		} );
 
 		for ( var column = 0; column < headings.Length; ++column )

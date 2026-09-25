@@ -10,9 +10,9 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// The hand's ways out, and that it holds one thing at a time: <see cref="ParkHand"/>, the right button
-/// (<see cref="Level.RightButton"/>), Escape (<c>ParkFrontEnd.MenuKey</c>) and what taking something into
-/// the hand does to what was there. These read the shipped Lost Kingdom and are skipped where there is no
-/// installation - see <see cref="GameData"/>.
+/// (<see cref="Level.RightButton"/>, and whose a press is, <see cref="UI.WindowStack.TakesRightPress"/>), Escape
+/// (<c>ParkFrontEnd.MenuKey</c>) and what taking something into the hand does to what was there. These read the
+/// shipped Lost Kingdom and are skipped where there is no installation - see <see cref="GameData"/>.
 ///
 /// <para>
 /// <b>Each drives the code a player's press reaches.</b> The right button is <see cref="Level.RightButton"/>
@@ -31,10 +31,17 @@ public class ParkHandTests
 
 	private bool rmbCancelBefore;
 	private float nowBefore;
+	private Point2 screenBefore;
 
 	[TestInitialize]
 	public void MountTheGame()
 	{
+		// The interface's own 2048x1536, so a point in the window is the same point on its layouts. Before the game is
+		// required, so that a skip leaves the cleanup the real size to put back.
+		screenBefore = Screen.Size;
+		Screen.Size = new Point2( 2048, 1536 );
+
+		Log ??= new();
 		FileSystem = data = GameData.Required();
 		rmbCancelBefore = GameOptions.Current.RmbCancel;
 		nowBefore = Time.Now;
@@ -47,6 +54,9 @@ public class ParkHandTests
 		ParkBuildMode.Forget();
 		GameOptions.Current.RmbCancel = rmbCancelBefore;
 		Time.Now = nowBefore;
+		Screen.Size = screenBefore;
+		Input.Mouse = new();
+		InFirstPerson( false );
 
 		foreach ( var entity in made )
 			entity.Delete();
@@ -217,6 +227,183 @@ public class ParkHandTests
 		Time.Now = 90.19f;
 		Assert.IsNotNull( level.RightButton( false, Pointer ), "190 ms is a click" );
 		Assert.AreEqual( 0, ParkBuilding.Carrying, "which lets go" );
+	}
+
+	/// <summary>
+	/// <b>A right press the interface took arms nothing</b>, so its quick release leaves the hand full, and the next quick
+	/// click, on the park, lets go. The original posts a press to the control under the pointer, and only one on the
+	/// park's own layer reaches the quick click (<c>0x0048833a</c>).
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> arming a press whatever the interface took empties the hand on the first click.
+	/// </remarks>
+	[TestMethod]
+	public void ARightPressTheInterfaceTookArmsNothing()
+	{
+		var (_, item) = MoveTheBellyBounceIntoTheHand();
+		var level = ALevel();
+
+		GameOptions.Current.RmbCancel = true;
+
+		Time.Now = 100f;
+		level.RightButton( true, Pointer, taken: true );
+		Time.Now = 100.05f;
+
+		Assert.IsNull( level.RightButton( false, Pointer ), "a quick click over the interface" );
+		Assert.AreEqual( item, ParkBuilding.Carrying, "leaves the hand full" );
+
+		Assert.IsNotNull( QuickRightClick( level ), "a quick click on the park" );
+		Assert.AreEqual( 0, ParkBuilding.Carrying, "empties it" );
+	}
+
+	/// <summary>
+	/// <b>A right press over the gadget is the gadget's</b>, on its gauge or its date as on a button, and one on the park
+	/// is the park's.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> leaving the controls under the pointer out of the right press's reading gives the gadget's to
+	/// the park; reading a hidden window's controls gives the park's corner to the viewfinder.
+	/// </remarks>
+	[TestMethod]
+	public void ARightPressOverTheGadgetIsTheGadgets()
+	{
+		var stack = AStack();
+
+		stack.Open( new UI.ParkGadget( stack ) );
+		stack.Open( new UI.ParkViewfinder( stack ) );
+
+		Assert.IsTrue( stack.TakesRightPress( 115, 1200 ), "the gauge, 0x1e" );
+		Assert.IsTrue( stack.TakesRightPress( 280, 1080 ), "the date, 0x20" );
+		Assert.IsFalse( stack.TakesRightPress( 1024, 600 ), "the park" );
+		Assert.IsFalse( stack.TakesRightPress( 1960, 1450 ), "the eject button of a viewfinder hidden outside first person" );
+	}
+
+	/// <summary>
+	/// <b>A park screen takes a right press on its body, and leaves one beside it to the park</b>, modal though it is
+	/// here: the original builds the buy screen onto the park's own layer (<c>0x004acd62</c>) with a root that answers for
+	/// its whole rectangle (186,30)-(2018,1007). The gadget beside it still takes its own.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the buy screen not a park screen, so its modality takes the press beside it; or a park screen's
+	/// root not taking its bare frame, which then goes to the park.
+	/// </remarks>
+	[TestMethod]
+	public void AParkScreenTakesItsBodyAndLeavesThePressBesideIt()
+	{
+		var stack = AStack();
+		var buy = new UI.ParkBuyScreen( stack );
+
+		stack.Open( new UI.ParkGadget( stack ) );
+		stack.Open( buy );
+
+		Assert.IsNull( buy.Root.HitTest( 200, 500 ), "no control of the buy screen's takes the pointer at its left edge" );
+		Assert.IsTrue( stack.TakesRightPress( 200, 500 ), "but its root does" );
+		Assert.IsFalse( stack.TakesRightPress( 1024, 1200 ), "the park below it" );
+		Assert.IsTrue( stack.TakesRightPress( 115, 1200 ), "the gadget's gauge below it" );
+	}
+
+	/// <summary>
+	/// <b>Every park screen is one</b>: the six management screens and the object window take a right press on their
+	/// bare frames and leave one below them to the park. Their roots are the original's three sizes, big (186,30)-(2018,1007),
+	/// medium (248,30)-(1800,1007) and small (328,130)-(1720,901).
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> any of the seven not a park screen, so its modality takes the press below it or, for the object
+	/// window, its frame's press goes to the park.
+	/// </remarks>
+	[TestMethod]
+	public void EveryParkScreenTakesItsBodyAndLeavesThePressBelowIt()
+	{
+		var screens = new (string Name, Func<UI.WindowStack, UI.UiWindow> Make, float X, float Y)[]
+		{
+			("buy", stack => new UI.ParkBuyScreen( stack ), 200, 500),
+			("hire", stack => new UI.ParkHireScreen( stack ), 200, 500),
+			("all staff", stack => new UI.ParkStaffScreen( stack ), 200, 500),
+			("visitors", stack => new UI.ParkVisitorsScreen( stack ), 200, 500),
+			("all items", stack => new UI.ParkItemsScreen( stack ), 200, 500),
+			("entry price", stack => new UI.ParkEntryPriceScreen( stack ), 340, 500),
+			("object window", stack => new UI.ParkObjectWindow( stack, BellyBounceThing ), 260, 500),
+		};
+
+		foreach ( var (name, make, x, y) in screens )
+		{
+			var stack = AStack();
+			var screen = make( stack );
+
+			stack.Open( screen );
+
+			Assert.IsTrue( screen.ParkScreen, $"the {name} screen is a park screen" );
+			Assert.IsNull( screen.Root.HitTest( x, y ), $"no control of the {name} screen's takes the pointer at ({x},{y})" );
+			Assert.IsTrue( stack.TakesRightPress( x, y ), $"but the {name} screen's root does" );
+			Assert.IsFalse( stack.TakesRightPress( 1024, 1200 ), $"the park below the {name} screen" );
+		}
+	}
+
+	/// <summary>
+	/// <b>A frame joins the two halves</b>: the stack reads the right button going down over the gadget's gauge as the
+	/// interface's, and the level's own frame then arms nothing on it, so the quick release leaves the hand full. The same
+	/// click on the park lets go.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the level's frame handing <see cref="Level.RightButton"/> no answer (the bug put back at its call),
+	/// or the stack not recording the press, each empty the hand over the gauge.
+	/// </remarks>
+	[TestMethod]
+	public void AFrameOverTheGadgetKeepsTheHandAndOneOnTheParkLetsGo()
+	{
+		var (_, item) = MoveTheBellyBounceIntoTheHand();
+		var level = ALevel();
+		var stack = new UI.WindowStack();
+
+		stack.Open( new UI.ParkGadget( stack ) );
+		GameOptions.Current.RmbCancel = true;
+
+		QuickRightClickAFrame( stack, level, new Vector2( 115, 1200 ), 110f );
+		Assert.AreEqual( item, ParkBuilding.Carrying, "a quick click over the gauge leaves the hand full" );
+
+		QuickRightClickAFrame( stack, level, new Vector2( 1024, 600 ), 120f );
+		Assert.AreEqual( 0, ParkBuilding.Carrying, "one on the park lets go" );
+	}
+
+	/// <summary>
+	/// <b>In first person no right press is the park's</b>: entering it hides the park's own layer and shows the
+	/// viewfinder's over it (<c>0x004a2ac0</c>), whose handler never arms the quick click.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> first person left out of <see cref="Level.RightPressTaken"/> lets go.
+	/// </remarks>
+	[TestMethod]
+	public void InFirstPersonAQuickRightClickLetsNothingGo()
+	{
+		var (_, item) = MoveTheBellyBounceIntoTheHand();
+		var level = ALevel();
+		var stack = new UI.WindowStack();
+
+		GameOptions.Current.RmbCancel = true;
+		InFirstPerson( true );
+
+		QuickRightClickAFrame( stack, level, new Vector2( 1024, 600 ), 130f );
+		Assert.AreEqual( item, ParkBuilding.Carrying, "the hand is still full" );
+	}
+
+	/// <summary>
+	/// <b>A message box takes every right press</b>, off its controls as on them: the original's covers the park's layer
+	/// with a control the size of the screen (<c>0x0047eda3</c>), as the game menu does, and the options and map screens
+	/// hide that layer.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> a modal window that is not a park screen taking only its controls gives the press to the park.
+	/// </remarks>
+	[TestMethod]
+	public void AMessageBoxTakesEveryRightPress()
+	{
+		var stack = AStack();
+
+		stack.Open( new UI.ParkGadget( stack ) );
+		stack.Open( new UI.MessageBox( stack, "Test", () => { } ) );
+
+		Assert.IsTrue( stack.TakesRightPress( 1024, 1200 ), "the park behind it" );
+		Assert.IsTrue( stack.TakesRightPress( 5, 5 ), "a corner" );
 	}
 
 	/// <summary>
@@ -566,6 +753,38 @@ public class ParkHandTests
 
 	/// <summary>A level made without its constructor - the right button needs nothing a scene builds.</summary>
 	private static Level ALevel() => (Level)RuntimeHelpers.GetUninitializedObject( typeof( Level ) );
+
+	/// <summary>
+	/// A quick right click at a point as frames make one: the stack's update, then the level's own reading of the park's
+	/// buttons, for the press and again 50 ms on for the release.
+	/// </summary>
+	private static void QuickRightClickAFrame( UI.WindowStack stack, Level level, Vector2 at, float now )
+	{
+		var worldClick = typeof( Level ).GetMethod( "WorldClick", BindingFlags.Instance | BindingFlags.NonPublic )!;
+
+		foreach ( var (down, time) in new[] { (true, now), (false, now + 0.05f) } )
+		{
+			Time.Now = time;
+			Input.Mouse = new() { Right = down, Position = at };
+			stack.Update();
+			worldClick.Invoke( level, [] );
+		}
+	}
+
+	/// <summary>Puts first person up or down, as entering and leaving it do, without a camera to move.</summary>
+	private static void InFirstPerson( bool active )
+		=> typeof( ParkCamcorderCameraMode ).GetProperty( nameof( ParkCamcorderCameraMode.Active ) )!.SetValue( null, active );
+
+	/// <summary>A window stack with no windows, made without its constructor - the right press's reading needs no HUD.</summary>
+	private static UI.WindowStack AStack()
+	{
+		var stack = (UI.WindowStack)RuntimeHelpers.GetUninitializedObject( typeof( UI.WindowStack ) );
+
+		typeof( UI.WindowStack ).GetField( "_windows", BindingFlags.Instance | BindingFlags.NonPublic )!
+			.SetValue( stack, new List<UI.UiWindow>() );
+
+		return stack;
+	}
 
 	/// <summary>Escape with no box to type into and no window in front, through the park front end's own handler.</summary>
 	private static void Escape()

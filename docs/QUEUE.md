@@ -1064,11 +1064,43 @@ artifacts are listed in `docs/history/README.md`.
     Where it is reached is not measured (Q112).
   - **Not confirmed on screen:** the five tries, a lone path cell, a failed probe route and the wrap. They are tested
     only, because from a sold Belly Bounce the probes always find row 21.
-- [ ] **Q56. A right press over a panel arms the quick click.** Found by Q39's decode. The original posts a press to
-  the hovered window (`FUN_00658af1`), so only a press on the park view reaches `Park_MouseMessageProc` and arms the
-  click; the park still gets its own release wherever the pointer has gone. Here `Level.RightButton` arms on a press
-  anywhere, said at the site, because `WindowStack.PointerTaken` is worked out for the left button only. Confirm:
-  something in the hand, a quick right click over the gadget, `hand` still full; one over the park, empty.
+- [x] **Q56. A right press over a panel arms the quick click.** Done 2026-09-25, `alexah/148-right-press-over-a-panel`.
+  Decoded first to settle it (three decoders, each put to a refuter; `park-engine.md`, "Whose a right press is"): a
+  right press goes to the control under the pointer and on to no parent, so only one landing on the park's layer 0 arms.
+  The game menu and the message box cover the layer, the options and map screens hide it, and so does first person
+  (`FUN_004a2ac0( 0 )`). The six management screens and the nine object windows are **not modal** in the original: they
+  are built onto the layer, so a right press beside one arms and cancels with the window left open, and one on it does
+  not. Also settled: the lobby's game menu is the same full-screen panel (`lobby.md`).
+  - **Built.** `WindowStack.TakesRightPress`: a control under the pointer, a modal window, or the root of a park screen
+    (`UiWindow.ParkScreen`, on the six screens and the object window) takes it. `WindowStack.RightPointerTaken` records
+    it on the press, and `Level.RightPressTaken` adds first person and gives the park every press while F2 hides the HUD.
+    `Level.RightButton` arms only a press nobody took. `UiControl.RightPressed` counts a right press on the all-staff,
+    visitors and all-items lists (`LIST_ROW_RIGHT_CLICK`). The console's `pointer` names the control under the pointer
+    and whose a right press there is.
+  - **Tests.** Seven in `ParkHandTests` (23 there): the level's arm, the gadget with a hidden viewfinder, the buy screen,
+    all seven park screens, a message box, and two real frames through a `WindowStack` and the level's own `WorldClick`
+    (over the gauge and the park, and first person). Eleven mutations, each predicted and each as predicted, all red
+    (`q56mutate.py`): the bug put back in `RightButton` turns three, and put back at its call in `WorldClick` two.
+  - **Reviewed.** A read-only workflow (four lenses, each finding put to a skeptic): 28 findings, all real. The review
+    found first person, the untested wiring (the bug put back at its call left the first four tests green), the untested
+    hidden-window guard and six screens, F2, a cleanup order, the uncounted list click, and the doc slips. All
+    fixed before the last game runs; the rest filed as Q113-Q117.
+  - **Confirmed in the game** (`q56confirm.py`, silent, jungle, a real XTEST pointer move and right button, 1280x720;
+    main at `4478e1a` as the control, `q56/control3`, and the fix, `q56/fix3`). Predicted and read with the Belly Bounce
+    in the hand (`hand: item 1100`): over the gadget's gauge the fix's `pointer` said `over control 0x1e; a right press
+    here is the interface's` and `hand` kept 1100, where main let go; on the park both let go
+    (`world click: right click - drop: let go of item 1100`); on the buy screen's bare left frame the fix kept it and
+    main let go; below the buy screen both let go and `windows` still listed `ParkBuyScreen`; with the game menu up, on
+    an item and off every item, the fix kept it and main let go; in first person the same; on the all-staff list
+    (`over control 0x321`) the fix kept it and `unimplemented` read `1x LIST_ROW_RIGHT_CLICK`, and main
+    let go with no such row. Photographed at each: the help bar reading the gauge's line, the cursor on the buy frame,
+    below it, off the dimmed menu's items, in the viewfinder, on the staff row. `save/` unchanged in every run.
+  - **Missed, mine.** My first control run's menu stage opened no menu: a modal screen in front keeps Escape, and the
+    console's `menu` is Escape's body. Redone with the buy screen shut by its own button. Both censuses read
+    `unimplemented 5` though the fix's holds the new row: `STAFF_NO_LINKS_WANDER` (Q112) came 6 on main and 0 on the
+    fix, a random wander, and `CARRY_PREVIEW_MARKERS` counts carries, which main made more of.
+  - **Not confirmed on screen:** the F2 case and the message box, the other five management screens and the object
+    window (tested only).
 - [ ] **Q57. The park's Escape acts on the press.** Found by Q39's decode. The original runs every game-table key on
   the release (message `0x1000b`; the key-down runs nothing, `FUN_0040c900`), and so lets go of the hand, closes the
   locator and opens the menu on the release. `WindowStack` hands Escape to `ParkFrontEnd.MenuKey` on the press, said
@@ -1283,6 +1315,36 @@ artifacts are listed in `docs/history/README.md`.
   the staff wander (`StaffBehaviour.Decide`). Measure first where the count is reached: one of Q53b's two runs counted
   23 before any sale, the other none. Confirm: the guard put down on grass inside their area walks to the nearest
   path, `staff` and `unimplemented` read before and after, photographed.
+- [ ] **Q113. The gadget's body, aerial and arm take no press.** Found by Q56. The original's body `0x1d` answers
+  inside its 23-point outline (stream `0x00752940`, sub-op 4 at `0x00752ac2`), the arm `0x21` and its end over their
+  rects, the handle `0x23` inside a 16-point outline, and the aerial `0x2d`/`0x2e` over theirs (`0x2e` answers a right
+  click itself, `0x004a11a2`); here none takes the pointer, so a left or a quick right click on them reaches the park.
+  Read the outlines into `UiControl.Outline`, build the aerial, and see Q66 before changing the hit test. Confirm: an item
+  in the hand, a quick right click on the body's bare metal keeps it; a screenshot.
+- [ ] **Q114. The park's full-screen toggle `FUN_004a29d0`. Decode first.** Found by Q56. It hides layer 0 under a
+  full-screen control whose handler `0x004a2840` gives a right press to the camera and arms nothing. Only handler
+  `0x0048a740` turns it on (`0x0048a7f3`, `0x0048a8d8`), installed by the screens `FUN_0048ac40` and `FUN_0048adb0`
+  build; `FUN_004815d0`, `FUN_0048ac40`, `FUN_0048adb0`, `FUN_0048ae70` and `FUN_004a9180` turn it off. Decode what a
+  player reaches it from, and whether F2 here is it, before building anything.
+- [ ] **Q115. The park screens are modal here and are not in the original.** Found by Q56's review. The original builds
+  the six management screens and the nine object windows onto layer 0 (`park-engine.md`, "Whose a right press is"): its
+  gadget answers beside a screen (`FUN_004a0940` tests only the game menu), a left press on the park beside one is kept
+  from the hand (`0x00488741`) but reaches the layer, a screen's root takes a press anywhere on it, and opening one
+  closes the one open (`FUN_00485b40`, `DAT_007c24c8`). Here the six are `Modal`, which shuts out the gadget; the object
+  window's bare frame lets a left press through to `ClickWorldAt`, and a left press beside it acts on the park; and the
+  buy screen opens over an object window and leaves it. One hit reading for both buttons. Confirm: with a ride's window
+  open, a left click on its frame over a path does nothing; the gadget's Info beside the buy screen switches screens.
+- [ ] **Q116. In first person a left press still reaches the park.** Found by Q56's review. Entering first person hides
+  layer 0 (`FUN_004a2ac0( 0 )`, `park-engine.md`, "Whose a right press is"), so no press reaches `Park_MouseMessageProc`;
+  layer 1's `FUN_00488a00` hands a press to the camera table alone. Here `Level.WorldClick` runs in first person: a left
+  click on a path arms the path tool, one on a ride opens its window. With Q59. Confirm: in first person, a left click
+  on a path, `tool` still None; a screenshot.
+- [ ] **Q117. A right click on a list row or an object window's preview.** Found by Q56. The all-staff, visitors and
+  all-items lists answer a right click on a row (`0x402`) by moving the camera to that thing and closing the screen
+  (`FUN_004867b0`: `0x0049602f`, `0x004934c5`, `0x00495584`); an object window's preview answers any click the same way
+  (`LAB_0048d1a0`). The click is a press and release on the control within 500 ms (`[0x0077c480]`). Counted on the
+  press as `LIST_ROW_RIGHT_CLICK`; the preview takes no pointer here (Q115), so its click is not counted. Confirm: a right
+  click on a guest's row, the camera on that guest and the screen shut; a screenshot.
 
 ## B. Docs and comments
 

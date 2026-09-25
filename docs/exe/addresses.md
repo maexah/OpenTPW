@@ -115,6 +115,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00476f10` | | OpenTPW/UI/UiMesh.cs  |
 | `0x00477310` | | OpenTPW/UI/UiMesh.cs  |
 | `0x0047ed80` | | OpenTPW/UI/UiWindow.cs  |
+| `0x0047eda3` | UI_LoadModalTree: the full-screen control a modal window is loaded into, over the park's layer | OpenTPW.Tests/ParkHandTests.cs  |
 | `0x0047eed0` | | OpenTPW/UI/Screens/MessageBox.cs  |
 | `0x0047f020` | | OpenTPW/UI/Screens/MessageBox.cs OpenTPW/UI/UiWindow.cs OpenTPW/UI/WindowStack.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x0047f251` | | OpenTPW/World/Level.cs  |
@@ -125,6 +126,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00485d20` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x00486bce` | | OpenTPW/Global/GameClock.cs  |
 | `0x004873b3` | Hover category: a type-12 track cell under a type-25 parent gets no category | OpenTPW/World/Level.cs  |
+| `0x0048833a` | Park mouse proc: a right press with RMB cancel on arms the quick click (DAT_007c2500 = 1) | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/WindowStack.cs  |
 | `0x0048842b` | Park mouse proc: a quick right click with RMB cancel on installs the idle mode over whatever mode is current | OpenTPW.Tests/ParkHandTests.cs OpenTPW/World/Level.cs  |
 | `0x00488a00` | | OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x00489ca0` | | OpenTPW/UI/WindowStack.cs  |
@@ -143,6 +145,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0048c83a` | | OpenTPW/Global/GameClock.cs OpenTPW/UI/UiWindow.cs OpenTPW/World/Level.cs  |
 | `0x0048c868` | | OpenTPW/Global/GameClock.cs OpenTPW/World/Level.cs  |
 | `0x0048cd10` | | OpenTPW/Client/GameOptions.cs  |
+| `0x0048ceca` | Object window base FUN_0048cea0: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x0048f4a6` | | OpenTPW/UI/VirtualScreen.cs  |
 | `0x0048f830` | | OpenTPW/UI/UiText.cs  |
 | `0x00491ab0` | | OpenTPW/UI/UiText.cs  |
@@ -150,12 +153,21 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00492d80` | | OpenTPW/UI/Screens/GameMenu.cs OpenTPW/UI/UiSounds.cs  |
 | `0x00492e80` | | OpenTPW/UI/Screens/GameMenu.cs  |
 | `0x00492f60` | | OpenTPW/UI/Screens/GameMenu.cs  |
+| `0x004934c5` | Visitors handler: a right-clicked row (0x402) moves the camera to that guest (FUN_004867b0) | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
+| `0x0049353e` | Visitors screen FUN_00493530: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
+| `0x00495584` | All-items handler: a right-clicked row (0x402) moves the camera to that thing (FUN_004867b0) | OpenTPW/UI/Park/ParkItemsScreen.cs  |
+| `0x00495abe` | All-items screen FUN_00495aa0: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkItemsScreen.cs  |
+| `0x0049602f` | All-staff handler: a right-clicked row (0x402) moves the camera to that member of staff (FUN_004867b0) | OpenTPW/UI/Park/ParkStaffScreen.cs  |
+| `0x00496643` | All-staff screen FUN_00496620: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkStaffScreen.cs  |
 | `0x00498d33` | The entry-price screen's `b_door`: `FUN_00519ef0( down != 1, 0 )`, so down closes the park | OpenTPW/UI/Park/ParkEntryPriceScreen.cs  |
+| `0x00498db5` | Entry-price screen FUN_00498d80: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkEntryPriceScreen.cs  |
 | `0x00498fc3` | The entry-price builder reads `mParkClosed` (`FUN_0051a280`) for the door switch | OpenTPW/UI/Park/ParkEntryPriceScreen.cs  |
 | `0x00498fd9` | The entry-price builder sets `b_door` down for a closed park (`Button_SetDown`) | OpenTPW/UI/Park/ParkEntryPriceScreen.cs  |
+| `0x0049bf34` | Hire screen FUN_0049bdd0: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkHireScreen.cs  |
 | `0x004a0f05` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a2387` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a2529` | | OpenTPW/UI/Park/ParkGadget.cs  |
+| `0x004a2ac0` | FUN_004a2ac0( a ): message 6 with a to the park's layer 0 and 1 - a to layer 1; first person's entry passes 0 | OpenTPW.Tests/ParkHandTests.cs OpenTPW/World/Level.cs  |
 | `0x004a2bf0` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x004a2e90` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x004a3480` | | OpenTPW/UI/Screens/OptionsScreen.cs OpenTPW/UI/UiControl.cs  |
@@ -177,6 +189,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004a6b80` | | OpenTPW/UI/FrontEnd/Screens/NewPlayerDialog.cs  |
 | `0x004a6d00` | | OpenTPW/UI/FrontEnd/Screens/NewPlayerDialog.cs OpenTPW/UI/WindowStack.cs  |
 | `0x004a6e40` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/FrontEndLines.cs OpenTPW/UI/FrontEnd/Screens/NewPlayerDialog.cs  |
+| `0x004acd62` | Buy screen FUN_004acc70: UI_LoadTree onto the park's layer 0, not modal | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/Park/ParkBuyScreen.cs OpenTPW/UI/UiWindow.cs  |
 | `0x004ad5c6` | The ride window greys its door for a closed ride the open guard refuses (from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad5e2` | The ride window's door greying (to here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad606` | The ride window sets its door down while `mCanLoad` is nought (`Button_SetDown`, from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |

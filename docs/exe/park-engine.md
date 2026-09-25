@@ -1697,9 +1697,39 @@ press back from the camera. A move of **more than 8 units across or down** (`0x0
 as a right drag; a move back does not re-arm it. **A release while it is still armed** installs the idle mode
 whatever the current mode is - there is no type test - then calls `FUN_0052f200( 0, 1 )` and `FUN_004989d0`,
 which closes the coaster bar if it is up (`0x0048842b`..`0x0048843c`). Every mode's right-button slots are
-`RET 8`, so nothing else a right press does reaches the hand. A press lands on the hovered window
-(`FUN_00658af1`), so one over a panel arms nothing; the park window gets its own release wherever the pointer
-has gone. With a management screen open the click still arms and still cancels.
+`RET 8`, so nothing else a right press does reaches the hand.
+
+**Whose a right press is** (decoded for `docs/QUEUE.md` Q56: three decoders, each put to a refuter; static only).
+The window procedure posts a right press as it does a left one (`0x0046b6a5`, button 1) to the control under the
+pointer (`FUN_00658af1`), with no hit test at the press, and the release to that same control wherever the pointer
+has gone (`0x00658b88`). Nothing passes a press to a parent: the base proc's `0x10005` case (`0x0065f820`) posts the
+press on (`0x11005`, `0x10007`) only to itself, its one other message the focus change's `0x1b` to the old focus. `Park_MouseMessageProc` is installed on the park's layer 0 alone (`DAT_007cb2ac`, built at `0x0048a0bc`),
+so **a right press arms the click only when it lands on that layer**, and nothing on its way to the arm reads a
+pause, a modal flag or an open screen (`0x004881a0`..`0x0048833a`). What keeps a press off the layer:
+
+| Up | Where a right press goes | Arms |
+|---|---|---|
+| nothing | the layer, or a gadget control: the gadget's roots are the layer's children (`0x004a1da4`). The body `0x1d` answers inside its 23-point outline, its children over their rects, the aerial `0x2d`/`0x2e` too; the money counter `0x2f` and the key block `0x33` are disabled at build (`0x004a22e1`, `0x004a1e02`) and take nothing | on the layer only |
+| the game menu (both scenes) | a full-screen panel `MenuList_Create` makes (`0x00492ef0`) and `MenuList_Show` attaches last to the UI root | never |
+| a message box | the full-screen control `UI_LoadModalTree` loads it into (`0x0047eda3`) | never |
+| the options or the map screen | anything but the layer, which each hides with message 6 (`0x004a3ad9`, `0x005f0bd6`) | never |
+| first person | the viewfinder's full-screen layer 1, whose handler `FUN_00488a00` gives it to the camera table alone: entering (`FUN_0042ab20( 2, 1, ... )`, `0x0042ac7f`) calls `FUN_004a2ac0( 0 )`, which hides layer 0 and shows layer 1 | never |
+| a management screen (buy, hire, all staff, visitors, all items, entry price) or any of the nine object windows | built onto the layer by `UI_LoadTree` (`0x004acd62`, `0x0049bf34`, `0x00496643`, `0x0049353e`, `0x00495abe`, `0x00498db5`, `0x0048ceca`), not modal, and none hides the layer. Each root is one plain rectangle - big (186,30)-(2018,1007), medium (248,30)-(1800,1007), small (328,130)-(1720,901) - so the window takes a press anywhere on it | beside the window, and the window stays open; on it, never |
+
+The one test of an open screen on a press's path, `0x00488741`, keeps it from the mode's button slots, after the arm. A right
+click on a row of the all-staff, visitors or all-items list, or on an object window's preview, moves the camera and
+closes the window (the 500 ms click limit `[0x0077c480]`), never touching the hand. **Unsettled:** the toggle
+`FUN_004a29d0` hides the layer under a full-screen control whose handler `0x004a2840` gives a right press to the camera
+and arms nothing; which key or screen drives it is not established (`docs/QUEUE.md` Q114). A press made before a window
+opens keeps the capture on the layer (`0x004882ba`), so its release can still let go.
+
+**OpenTPW.** `WindowStack.TakesRightPress`: a control under the pointer, a modal window, or a park screen's root
+(`UiWindow.ParkScreen`) takes it, and `Level.RightPressTaken` adds first person (and gives the park every press while
+F2 hides the HUD). The screens are modal here for the left press, which the original's `0x00488741` keeps from the
+hand, but that also shuts out the gadget beside them, and the object window's frame lets a left press through (Q115);
+`ParkScreen` gives the right press beside them back to the park. The gadget's body outline, its aerial and its arm take
+no press here, so a press on them is the park's (Q113). A right press on a list row is counted,
+`LIST_ROW_RIGHT_CLICK` (Q117).
 
 **Escape** is the game table's row 0, `0x0040c180`, run on the key's **release**. If the staff/visitor locator
 is open (`DAT_007cc2f0`) it retracts the arm and answers 1 (`FUN_004816b0`). Otherwise, over any mode but 0 or 1,
@@ -1741,8 +1771,9 @@ Delete key (`Level.ClearKey`) - lets go first; a quick right click (`Level.Right
 (`ParkFrontEnd.MenuKey`) and leaving the park (`Level.ForgetPark`, before anything in the park is deleted) let go
 and nothing more; and a sale lets go when no item is held and no build tool armed, as the demolisher's restore of
 tool 0 does (`0x0052818d`).
-`ParkPeople.PutBack` puts a worker down in their own cell through the drop. **Not the original's**: a right press
-over a panel arms the click here; Escape acts on the press, not the release; the rotation is not the one global,
+`ParkPeople.PutBack` puts a worker down in their own cell through the drop. **Not the original's**: a right press on
+the gadget's body outside its controls, its arm or its aerial arms the click here (Q113); Escape acts on the press, not
+the release; the rotation is not the one global,
 so a purchase always starts at nought; and a mechanic put down goes idle (`MECHANIC_PUT_DOWN_JOB_SEARCH`).
 
 ### Leaving a park with something in the hand

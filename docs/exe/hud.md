@@ -125,7 +125,9 @@ It is the assembly point. In order:
    visible; layer id 1 gets handler **`FUN_00488a00`**.
 3. On layer 1: `FUN_0065f11d( 0x15 )` - the layer's **cursor**, `c_crosshair.ani` (`FUN_00489720` registers
    it as `0x15` at `0x004899a8`) - then `UI_LoadTree( 0x0074fa98, 0 )`, the camcorder viewfinder.
-4. Then the six panels, each `UI_LoadTree` + `UI_SetVisible(0)` — **all built hidden**.
+4. Then the six panels, each `UI_LoadTree` + `UI_SetVisible(0)` — **built hidden, except the gadget**:
+   `FUN_004a1d70` loads its stream onto layer 0 (`0x004a1da4`) and hides only `0x30` (`0x004a22ba`), and `0x34` in
+   Instant Action (`0x004a1fa8`). The other five load onto the UI root.
 
 | Address | What it builds |
 |---|---|
@@ -146,7 +148,8 @@ coaster tables.
 
 ## The management gadget — stream `0x00752940`
 
-Built by `FUN_004a1d70`, handler `FUN_004a0a20`. Four root controls:
+Built by `FUN_004a1d70` onto the park's layer 0, with no handler for the stream (`UI_LoadTree` is passed 0,
+`0x004a1daa`); `FUN_004a0a20` is installed on the body `0x1d` alone (`0x004a231d`). Four root controls:
 
     0x1d  panel  ( 37, 984)-( 439,1507)   the bottom-left gadget body      mesh base
       0x1e  panel  help 477                                                 (gauge housing)
@@ -667,9 +670,11 @@ cell size. **Only the arithmetic one could not have been talked into.**
   and every model animation. The map screen is the exception: the original genuinely pauses there.
 - **The interface takes the mouse before the world does.** `WindowStack.WheelTaken` keeps a wheel a window used
   from also zooming the park (`ParkOrbitCameraMode`), and `WindowStack.PointerTaken` keeps a left press on a
-  window, or any left press under a modal one, from reaching the world (`Level.WorldClick`). A right press is not
-  guarded yet (`docs/QUEUE.md` Q56). The camcorder key is guarded by `Level.Current?.PausedByWindow() != true`. A
-  new HUD control that uses the wheel or a press must go through these.
+  window, or any left press under a modal one, from reaching the world (`Level.WorldClick`).
+  `WindowStack.RightPointerTaken` keeps a right press there from arming the quick click, except beside a park screen
+  (`UiWindow.ParkScreen`), which the original builds onto the park's layer (`park-engine.md`, "Whose a right press
+  is"). The camcorder key is guarded by `Level.Current?.PausedByWindow() != true`. A new HUD control that uses the
+  wheel or a press must go through these, and a new park screen built onto layer 0 sets `ParkScreen`.
 - **HUD work is verifiable by eye and capture, not by test** — it needs someone to look at the running
   game.
 
@@ -723,7 +728,9 @@ the list is sorted, which is what `FUN_00664c71` is for.
 
 Three further messages are implemented by the class and handled by **neither** screen: `0x402`
 right-click a row, `0x404` column hit, `0x405` visible range changed. By this project's own rule they
-are dead by CONTENT, not by CODE.
+are dead by CONTENT, not by CODE. The all-staff, visitors and all-items screens do answer `0x402`: the camera goes to
+the row's thing and the screen closes (`FUN_004867b0`, the all-staff screen's call at `0x0049602f`), which is a GAP here,
+counted as `LIST_ROW_RIGHT_CLICK` (`docs/QUEUE.md` Q117).
 
 **With flag `0x80` set — buy is `0x91`, hire `0x291`, both have it — `0x400` fires twice per click**,
 once on press and once on release. The buy handler's first one closes the screen, so the second finds

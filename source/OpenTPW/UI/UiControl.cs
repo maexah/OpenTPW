@@ -85,6 +85,12 @@ internal class UiControl
 
 	public Action? Entered { get; set; }
 
+	/// <summary>
+	/// What a right press on it does, if anything. Only <see cref="WindowStack"/> calls it, on the press; every other
+	/// reading of the right button is whose the press is (<see cref="WindowStack.TakesRightPress"/>).
+	/// </summary>
+	public Action? RightPressed { get; set; }
+
 	public Action? Exited { get; set; }
 
 	internal bool Hovered { get; set; }
@@ -163,7 +169,7 @@ internal class UiControl
 	}
 
 	/// <summary>Whether a point on the window is inside its <see cref="Outline"/>, or its hit area when it has none.</summary>
-	private bool Holds( float x, float y )
+	internal bool Holds( float x, float y )
 	{
 		if ( Outline is not { } outline )
 			return HitArea.Contains( x, y );

@@ -811,7 +811,7 @@ public class Level
 
 		_worldMouseWasDown = down;
 
-		if ( RightButton( Input.Mouse.Right, Input.Mouse.Position / UI.VirtualScreen.Scale ) is { } putAway )
+		if ( RightButton( Input.Mouse.Right, Input.Mouse.Position / UI.VirtualScreen.Scale, RightPressTaken( UI.WindowStack.RightPointerTaken ) ) is { } putAway )
 		{
 			Log.Info( putAway );
 			return;
@@ -825,8 +825,17 @@ public class Level
 	}
 
 	/// <summary>
-	/// The right button over the park, this frame: down or up, and where the pointer is in the interface's
-	/// 2048x1536 units (<see cref="UI.VirtualScreen"/>). Answers what a quick click let go of, or null.
+	/// Whether a right press is the interface's rather than the park's, given whether a window took it
+	/// (<see cref="UI.WindowStack.TakesRightPress"/>): in first person always, since entering it hides the park's own
+	/// layer (<c>0x004a2ac0</c>), and with the HUD hidden by F2 never, since the stack is not updated then.
+	/// </summary>
+	internal static bool RightPressTaken( bool byAWindow )
+		=> ParkCamcorderCameraMode.Active || (!UI.RootPanel.Hidden && byAWindow);
+
+	/// <summary>
+	/// The right button over the park, this frame: down or up, where the pointer is in the interface's 2048x1536
+	/// units (<see cref="UI.VirtualScreen"/>), and whether the interface took the press (<see cref="RightPressTaken"/>).
+	/// Answers what a quick click let go of, or null.
 	/// </summary>
 	/// <remarks>
 	/// <b>Only a quick click does anything</b>, and only with the Options switch "RMB cancel" on - see
@@ -837,11 +846,11 @@ public class Level
 	/// with the option off leaves the hand as it is, because the right-button slots of every mode are bare
 	/// <c>RET 8</c>.
 	/// <para>
-	/// <b>A deviation:</b> the original arms the click only for a press on the park view, since a press over a
-	/// panel goes to the panel. Here a press anywhere arms it.
+	/// <b>Only a press the interface did not take arms it</b> - see <see cref="RightPressTaken"/>. The release is the
+	/// park's wherever the pointer has gone.
 	/// </para>
 	/// </remarks>
-	internal string? RightButton( bool down, Vector2 at )
+	internal string? RightButton( bool down, Vector2 at, bool taken = false )
 	{
 		var pressed = down && !_worldRightWasDown;
 		var released = !down && _worldRightWasDown;
@@ -853,7 +862,7 @@ public class Level
 			return null;
 
 		if ( pressed )
-			_rightClick = (true, Time.Now, at);
+			_rightClick = (!taken, Time.Now, at);
 
 		if ( _rightClick.Armed && (Time.Now - _rightClick.At > 0.2f
 			|| MathF.Abs( at.X - _rightClick.Where.X ) > 8f || MathF.Abs( at.Y - _rightClick.Where.Y ) > 8f) )

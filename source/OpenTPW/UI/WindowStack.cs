@@ -40,6 +40,7 @@ internal sealed class WindowStack : Panel
 	private UiControl? _hovered;
 	private UiControl? _pressed;
 	private bool _mouseWasDown;
+	private bool _rightWasDown;
 
 	/// <summary>
 	/// Whether the interface used this frame's wheel, so that the world does not use it as well.
@@ -74,6 +75,13 @@ internal sealed class WindowStack : Panel
 	/// </para>
 	/// </summary>
 	internal static bool PointerTaken { get; private set; }
+
+	/// <summary>
+	/// Whether the interface took this frame's RIGHT press, so the park does not arm its quick click on it
+	/// (<c>Level.RightButton</c>) - see <see cref="TakesRightPress"/>. Written and read in the same frame, as
+	/// <see cref="PointerTaken"/> is.
+	/// </summary>
+	internal static bool RightPointerTaken { get; private set; }
 
 	/// <summary>
 	/// The help row for what the pointer is over in the world, shown when it is over no control - or -1.
@@ -183,6 +191,7 @@ internal sealed class WindowStack : Panel
 		_hovered = null;
 		_pressed = null;
 		_mouseWasDown = false;
+		_rightWasDown = false;
 		_helpBar.ReleaseText();
 		Input.TextCaptured = false;
 	}
@@ -193,6 +202,7 @@ internal sealed class WindowStack : Panel
 		// later in the same frame, so clearing it after would put the answer a frame behind.
 		WheelTaken = false;
 		PointerTaken = false;
+		RightPointerTaken = false;
 
 		foreach ( var window in _windows.ToArray() )
 			window.Update();
@@ -242,6 +252,16 @@ internal sealed class WindowStack : Panel
 			Release( hit );
 
 		_mouseWasDown = mouseDown;
+
+		var rightDown = Input.Mouse.Right;
+
+		if ( rightDown && !_rightWasDown )
+		{
+			RightPointerTaken = TakesRightPress( mouse.X, mouse.Y );
+			hit?.RightPressed?.Invoke();
+		}
+
+		_rightWasDown = rightDown;
 
 		// The wheel goes to the slider under the pointer, or the slider whose thumb it is.
 		if ( Input.Mouse.Wheel != 0f && (_hovered as UiSlider ?? (_hovered as UiSliderThumb)?.Slider) is { } slider )
@@ -307,6 +327,23 @@ internal sealed class WindowStack : Panel
 
 		return taken;
 	}
+
+	/// <summary>
+	/// Whether a right press at a point is the interface's rather than the park's: over a control that takes the
+	/// pointer, over a park screen's body, or anywhere while a modal window other than a park screen is up.
+	/// </summary>
+	/// <remarks>
+	/// The original's press goes to the control under the pointer and on to no parent, so only one that lands on the
+	/// park's own layer arms the quick click (<c>0x0048833a</c>). The game menu and the message box cover that layer and
+	/// the options and map screens hide it; a <see cref="UiWindow.ParkScreen"/> does neither, so a right press beside
+	/// one still arms. See <c>docs/exe/park-engine.md</c>, "Whose a right press is". <b>A deviation:</b> the gadget's
+	/// body outside its controls, its arm and its aerial take no press here, where the original's do, so a right press
+	/// on them is the park's (<c>docs/QUEUE.md</c> Q113).
+	/// </remarks>
+	internal bool TakesRightPress( float x, float y )
+		=> _windows.Exists( window => !window.Hidden && !window.PutAway
+			&& (window.Root.HitTest( x, y ) != null
+				|| (window.ParkScreen ? window.Root.Visible && window.Root.Holds( x, y ) : window.Modal)) );
 
 	private UiControl? HitTest( float x, float y )
 	{

@@ -1119,17 +1119,21 @@ public static class DebugConsole
 				Reply( $"rmbcancel: {(GameOptions.Current.RmbCancel ? "on" : "off")}" );
 				break;
 
-			// What the pointer shows over the park: the cursor, and the help row the world gives it.
-			// In a park, the cursor and its help row; anywhere, where the pointer is and the control under it, so a
-			// real press can be predicted before it is made.
+			// Where the pointer is and the control under it, so a real press can be predicted before it is made. In a park,
+			// also the cursor, the help row the world gives it, and whose a right press there would be: the interface's, or
+			// the park's, which arms the quick click.
 			case "pointer":
+				var pointerStack = Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault();
+
 				if ( Level.Current is { Kind: Level.Scene.Park } pointed )
 				{
-					Reply( $"pointer: cursor {pointed.ParkCursor}, help row {UI.WindowStack.WorldHelpText}" );
+					Reply( $"pointer: cursor {pointed.ParkCursor}, help row {UI.WindowStack.WorldHelpText}, at "
+						+ $"({Input.Mouse.Position.X:F0},{Input.Mouse.Position.Y:F0}) over "
+						+ (pointerStack?.Hovered is { } under ? $"control 0x{under.Id:x}" : "no control")
+						+ $"; a right press here is {(Level.RightPressTaken( pointerStack?.TakesRightPress( Input.Mouse.Position.X, Input.Mouse.Position.Y ) == true ) ? "the interface's" : "the park's")}" );
 					break;
 				}
 
-				var pointerStack = Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault();
 				Reply( $"pointer: at ({Input.Mouse.Position.X:F0},{Input.Mouse.Position.Y:F0}), over "
 					+ (pointerStack?.Hovered is { } over ? $"control 0x{over.Id:x}"
 						: pointerStack?.ModalUp == true ? "no control, and a modal window takes the press" : "the view") );
