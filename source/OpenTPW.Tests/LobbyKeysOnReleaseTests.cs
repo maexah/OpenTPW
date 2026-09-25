@@ -176,7 +176,7 @@ public class LobbyKeysOnReleaseTests
 	/// <b>Escape acts on its release</b>: held during a flight it cancels nothing, and let go it cancels the flight and
 	/// gives the panel back. In orbit, let go, it opens the game menu, and let go again it closes it.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the lobby's Escape back on the press - <c>EscapeWithoutFocus</c> - cancels on the press.</remarks>
+	/// <remarks><b>Mutations:</b> the lobby's Escape back on the press - <c>LobbyKeys</c> reading <see cref="Input.KeysPressed"/> - cancels on the press.</remarks>
 	[TestMethod]
 	public void EscapeActsOnTheRelease()
 	{

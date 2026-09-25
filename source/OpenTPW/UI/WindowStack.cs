@@ -15,9 +15,10 @@ namespace OpenTPW.UI;
 /// The game menu (0x0048c830), the message box (0x0047f020) and the options screen (0x004a3a30) are the
 /// same functions in the lobby and in a park, and keys reach a window the same way in both - through the
 /// box it is typing into, or the control last clicked (0x006698e6). With nothing to type into, the keys are
-/// the scene's: the lobby's go to its own root control, which hands them to the island camera on their release
-/// (0x005e41c0; see FrontEnd.LobbyKeys and <see cref="KeysWithoutFocus"/>), and a park hands Escape to its key
-/// bindings (0x0040c4d0) - see <see cref="EscapeWithoutFocus"/>. Here a stack is made with each scene's
+/// the scene's, and both act on a key's release: the lobby's go to its own root control, which hands them to the
+/// island camera (0x005e41c0; see FrontEnd.LobbyKeys), and a park's to its binding tables (0x00488921; see
+/// ParkFrontEnd.ParkKeys) unless a park screen in front has taken the focus - both through
+/// <see cref="KeysWithoutFocus"/>. Here a stack is made with each scene's
 /// HUD, and what should outlive a scene - the meshes, fonts and sounds its windows use - is cached apart
 /// from it.
 /// </para>
@@ -96,13 +97,6 @@ internal sealed class WindowStack : Panel
 
 		_helpBar = new HelpBar();
 	}
-
-	/// <summary>
-	/// What Escape does when the front window has no box to type into, or no window is open - handed the
-	/// front window, if there is one. Only on the key going down. A park's; the lobby takes its keys on the release,
-	/// through <see cref="KeysWithoutFocus"/>.
-	/// </summary>
-	public Action<UiWindow?>? EscapeWithoutFocus { get; set; }
 
 	/// <summary>
 	/// The scene's keys: run every frame the front window has no box to type into, or no window is open, to read this
@@ -410,8 +404,7 @@ internal sealed class WindowStack : Panel
 	/// takes Enter and Escape on the release (its key-up handler, 0x00667fee), and only the main Enter:
 	/// the keypad's reaches it as 0x0d00, which it does not answer. The new player dialog takes Enter
 	/// as its tick by sending itself the same message the tick sends (0x004a6d00), so it clicks as
-	/// the tick does. With no box to type into, the keys are the scene's - see <see cref="KeysWithoutFocus"/>
-	/// and <see cref="EscapeWithoutFocus"/>.
+	/// the tick does. With no box to type into, the keys are the scene's - see <see cref="KeysWithoutFocus"/>.
 	/// </summary>
 	private void Keyboard()
 	{
@@ -428,11 +421,6 @@ internal sealed class WindowStack : Panel
 
 		if ( front == null || focus == null )
 		{
-			// Only on the key going down. A held Escape - one that has just closed a dialog, or is
-			// repeating - is still pressed without having gone down this frame.
-			if ( Input.Pressed( InputButton.Menu ) && Input.KeysPressed.Contains( Key.Escape ) )
-				EscapeWithoutFocus?.Invoke( front );
-
 			KeysWithoutFocus?.Invoke();
 			return;
 		}

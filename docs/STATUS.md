@@ -55,11 +55,11 @@ from the repository, which cannot lag: `git log --oneline -1`.
   researcher on a cell with no links does not look for path (Q112).
 - The park's door moves neither the gate (Q89) nor the advisor (Q90), nor a shut ride's model (Q91); the ride window's
   door shows a shut ride but is not a button (Q92), and a bought queued thing starts open (Q93).
-- The park's Escape acts on the press (Q57); some presses the original stops still reach the park (Q113, Q115, Q116).
 - Nothing shows what the hand holds, a thing (`CARRY_PREVIEW_MARKERS`) or a candidate (`STAFF_CARRY_PREVIEW`), and
   any cell on the map takes a candidate; the original's rule is decoded (Q40).
-- The fly-in's fade to black is not drawn (Q61). Escape over the player slots opens the game menu (Q64); Ctrl+H acts
-  on its press and F8 is not built (Q65); a disabled button still takes the pointer (Q66).
+- The fly-in's fade to black is not drawn (Q61). Keys: Escape over the player slots opens the game menu (Q64) and closes
+  no park screen (Q119); C (Q118) and Ctrl+H act on the press, F8 is not built (Q65); modifiers count as the frame ends
+  (Q120). A disabled button still takes the pointer (Q66); presses the original stops reach the park (Q113, Q115, Q116).
 - The happiness gauge draws two copies of its bar, split down the middle (`docs/PLAYER-GAPS.md` gap 5; unmeasured).
 - Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
 - Guests may arrive eight times as often as the original's, and staff may idle for an eighth of its time: its timers
@@ -70,11 +70,11 @@ from the repository, which cannot lag: `git log --oneline -1`.
 ## Next
 
 `docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50 to Q50h, Q53, Q53b
-and Q56 are ticked.** Next is **Q57**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12
-Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and Q85-Q88,
-Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h, Q50h Q106, Q53 Q53b and
-Q107-Q111, Q53b Q112, Q56 Q113-Q117, the staleness audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review),
-the lobby plan section G.
+Q56 and Q57 are ticked.** Next is **Q59**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46,
+Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and
+Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h, Q50h Q106, Q53 Q53b
+and Q107-Q111, Q53b Q112, Q56 Q113-Q117, Q57 Q118-Q120, the staleness audit and its review Q68-Q82 (Q70-Q75 from the
+2026-09-12 review), the lobby plan section G.
 
 `docs/PLAYER-GAPS.md` holds gaps **4, 5 and 7**. The untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
 
@@ -104,16 +104,16 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1156**, 0 fail, 0 skip with the game | 2026-09-25, after Q56 |
-| Tests without the game | **480** ran, **676** skipped, of 1156 | 2026-09-25, after Q56 |
-| Build warnings | 123 | 2026-09-25, after Q56 |
+| Tests | **1164**, 0 fail, 0 skip with the game | 2026-09-25, after Q57 |
+| Tests without the game | **480** ran, **684** skipped, of 1164 | 2026-09-25, after Q57 |
+| Build warnings | 123 | 2026-09-25, after Q57 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-25 - the right press over a panel (Q56).** `alexah/148-right-press-over-a-panel`: 9 stages, all as predicted.
+**2026-09-25 - the park's Escape on the release (Q57).** `alexah/149-park-escape-on-the-release`: 7 stages as predicted.
 
-**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/147` (Q53b)
+**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/148` (Q56)
 back to `118` (Q4), `115`-`116` (Q3), `117` (Q35) and `109` (Q1, Q1b); before them, `114`, `110` and `112`.
 
 Everything older is the git log.

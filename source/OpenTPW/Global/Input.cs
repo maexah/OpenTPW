@@ -60,7 +60,7 @@ public static partial class Input
 	/// (FUN_0040c900), while this rebuilds every binding from what is held each frame - so without
 	/// it, letting go of Ctrl while C is still down makes the plain-C binding match for the first
 	/// time and reads as a fresh press of camcorder mode, and holding C and then pressing Ctrl reads
-	/// as a fresh press of Ctrl+C. WindowStack already guards Escape this way by hand.
+	/// as a fresh press of Ctrl+C.
 	/// A binding that is nothing but modifiers has no key to go down, so Clone is never "pressed" -
 	/// it is a held state, and <see cref="Down"/> is the question to ask of it.
 	/// </remarks>
@@ -163,6 +163,13 @@ public static partial class Input
 
 	/// <summary>Whether either Shift is held, whatever else is.</summary>
 	public static bool ShiftHeld => (HeldIn( Keyboard.KeysDown ) & Modifiers.Shift) != 0;
+
+	/// <summary>Whether no modifier is held - what a binding that names none asks for, as the original's Escape rows do.</summary>
+	/// <remarks>
+	/// As the frame ends, as every binding here is judged. The original reads the modifiers at each key-up (GetKeyState,
+	/// 0x0046bb0b), so a modifier let go or pressed in the same frame as the key counts differently (<c>docs/QUEUE.md</c> Q120).
+	/// </remarks>
+	public static bool NoModifierHeld => HeldIn( Keyboard.KeysDown ) == Modifiers.None;
 
 	private static Modifiers HeldIn( IReadOnlyCollection<Key> keysDown )
 	{

@@ -1101,10 +1101,39 @@ artifacts are listed in `docs/history/README.md`.
     fix, a random wander, and `CARRY_PREVIEW_MARKERS` counts carries, which main made more of.
   - **Not confirmed on screen:** the F2 case and the message box, the other five management screens and the object
     window (tested only).
-- [ ] **Q57. The park's Escape acts on the press.** Found by Q39's decode. The original runs every game-table key on
-  the release (message `0x1000b`; the key-down runs nothing, `FUN_0040c900`), and so lets go of the hand, closes the
-  locator and opens the menu on the release. `WindowStack` hands Escape to `ParkFrontEnd.MenuKey` on the press, said
-  at the site. The lobby's half is Q42. Confirm: hold Escape with something in the hand - nothing until the release.
+- [x] **Q57. The park's Escape acts on the press.** Done 2026-09-25, `alexah/149-park-escape-on-the-release`. The decode
+  read again in Ghidra (`scenes.md`, "The park Escape route"): `Park_MouseMessageProc` runs its tables on the key-up
+  (`0x00488921`, `FUN_0040c990`) and only latches on the key-down; the menu's handler closes on an Escape let go
+  whatever the modifiers (`0x0048bb36`), and so does first person (`FUN_00488a00`); the game and shortcuts Escape rows
+  name no modifier, and neither is rebound. Also found: the coaster table's row 0 is Escape too, run only by the
+  coaster bar; a park screen in front takes the key and closes on it (Q119); the modifiers are read at each key-up (Q120).
+  - **Built.** `WindowStack.EscapeWithoutFocus` is gone: the park, like the lobby, reads its keys through
+    `KeysWithoutFocus`, and `ParkFrontEnd.ParkKeys` hands `MenuKey` each Escape release, the front window read again for
+    each. `MenuKey` closes the menu and leaves first person whatever the modifiers, then empties the hand or opens the
+    menu only with none held (`Input.NoModifierHeld`). `InputButton.Menu` is read by nothing and says so.
+  - **Tests.** `ParkEscapeOnReleaseTests`, 8 with its data rows: real key events through `Input.UpdateFrom` and the
+    stack, over the real park front end. Thirteen mutations, each predicted and each as predicted (`q57mutate.py`,
+    `q57-mutations.txt`): `main`'s own source turns all 8 red; reading the presses, 2.
+  - **Reviewed.** A read-only workflow (four lenses, each finding put to a refuter): 15 real, 6 refuted. It found the
+    screens' own Escape (Q119), the frame-end modifiers (Q120), a modifier test only Shift and Ctrl covered, the
+    untested modal guard, leaked orbit statics, and six stale sentences. All fixed or filed, before the last game run.
+  - **Confirmed in the game** (`q57confirm.py`, silent, jungle, 1280x720, real keys through XTEST, Escape held 2.4 s
+    with its repeats; `main` at `b178d5e` as the control, `q57/control`, and the fix, `q57/fix`). With the path tool
+    in the hand (`hand: ... tool 1`): on `main` the line `Escape: the build tool is put away` came 0.01 s after the
+    PRESS and `hand` read tool 0 mid-hold; on the fix, 0 lines while held, tool 1 mid-hold and the tool's square on
+    screen, then the one line 0.00 s after the release, tool 0 and the idle cursor. Empty-handed: `main` opened the menu
+    mid-hold (photographed, mean 70.1 against 131.7); the fix opened none while held and the menu at the release. Over
+    the menu: `main` closed it mid-hold, the fix at the release. Shift+Escape with the tool: nothing, both. Shift+Escape
+    over the menu: the fix closed it at the release, `main` never. First person (`state` cam z 5, orbit 49): `main` was
+    in orbit mid-hold; the fix held z 5 with the viewfinder on screen and was at z 49 after the release. `save/`
+    unchanged in both runs, `unimplemented 3` in both. The committed build (`q57/fix-committed`) held every stage
+    again; its census read 4, the fourth `2x STAFF_NO_LINKS_WANDER`, Q112's random wander, which I had not predicted.
+  - **Not confirmed on screen:** the message box over the menu, two releases in one frame, and Ctrl, Alt and the right
+    Shift (tested only).
+  The item as written: found by Q39's decode. The original runs every game-table key on the release (message
+  `0x1000b`; the key-down runs nothing, `FUN_0040c900`), and so lets go of the hand, closes the locator and opens the
+  menu on the release. `WindowStack` handed Escape to `ParkFrontEnd.MenuKey` on the press, said at the site. The lobby's
+  half is Q42. Confirm: hold Escape with something in the hand - nothing until the release.
 - [ ] **Q59. A right double click in first person does not leave it.** Found by Q39's decode. With RMB cancel on, the
   viewfinder layer's handler answers a right double click by leaving first person as Escape does (`0x00488aa1`..
   `0x00488ad6`). Nothing here reads a right click in first person. Confirm: camcorder, a double right click, `camera`
@@ -1345,6 +1374,26 @@ artifacts are listed in `docs/history/README.md`.
   (`LAB_0048d1a0`). The click is a press and release on the control within 500 ms (`[0x0077c480]`). Counted on the
   press as `LIST_ROW_RIGHT_CLICK`; the preview takes no pointer here (Q115), so its click is not counted. Confirm: a right
   click on a guest's row, the camera on that guest and the screen shut; a screenshot.
+- [ ] **Q118. The camcorder key acts on its press, both ways.** Found by Q57. The original's C is shortcuts row 16
+  (`0x0040c5c0`), run on the key's release as every row is (`FUN_0040c990`), and first person is left on a key-up whose
+  action is camcorder (`FUN_00488a00`, the same exit as Escape's; `scenes.md`, "The park Escape route").
+  `ParkOrbitCameraMode.Update` enters and `ParkCamcorderCameraMode.Update` leaves on `Input.Pressed( InputButton.CamcorderMode )`,
+  and neither says so at the site. Confirm: hold C in orbit, then in first person - nothing until each release; `state`'s
+  camera height and a screenshot.
+- [ ] **Q119. A plain Escape does not close the park screen in front.** Found by Q57's review. In the original the six
+  management screens, an object window and the map take the focus as they open (`FUN_00485b70`, `FUN_004862a0`), and
+  their key handler answers a plain Escape let go by closing the screen, and nothing more (`FUN_00488ba0`, `0x00488bc6`;
+  the map at `0x005f17ef`; `scenes.md`, "The park Escape route"). Here those screens are modal and keep Escape
+  (`ParkFrontEnd.MenuKey`), and an object window, which is not modal, lets it through to the hand and the menu. Said at
+  the site. Confirm: the buy screen, then an object window with the path tool armed - Escape let go closes each, `tool`
+  still Path and `windows` without GameMenu; a screenshot.
+- [ ] **Q120. The modifiers are judged as the frame ends, not at each key.** Found by Q57's review. The original reads
+  Shift, Ctrl and Alt with `GetKeyState` at each key-up (`0x0046bb0b`, `scenes.md`, "The park Escape route"), so a
+  modifier let go in the same frame as Escape but after it still counts. `Input.BindingMatches` and
+  `Input.NoModifierHeld` read the held set as the frame ends, so Shift+Escape let go with Escape first, inside one frame,
+  empties the hand or opens the menu. Carry each event's modifiers (SDL's, Shift, Ctrl and Alt only) or replay the
+  frame's events in order. Said at `NoModifierHeld`. Confirm: Shift+Escape with the tool armed, Escape up then Shift up
+  in one frame through XTEST - `tool` still Path.
 
 ## B. Docs and comments
 

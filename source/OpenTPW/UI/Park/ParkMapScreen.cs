@@ -180,10 +180,11 @@ internal sealed class ParkMapScreen : UiWindow
 	private void Close() => Stack.Close( this );
 
 	// THERE IS DELIBERATELY NO Cancel() HERE, and there was one until it was found to be dead. Escape
-	// cannot reach this window: WindowStack.Keyboard sends it to EscapeWithoutFocus whenever no box has
+	// cannot reach this window: WindowStack.Keyboard hands it to ParkFrontEnd.ParkKeys whenever no box has
 	// focus, and ParkFrontEnd.MenuKey returns at once on a modal front window - so an override would
 	// never once be called while reading as though it worked. The way out is b_okay, which is what the
-	// game's own help row 1 says of it: "Left-click to close this screen".
+	// game's own help row 1 says of it: "Left-click to close this screen". The original's map also closes on a
+	// plain Escape let go (0x005f17ef; docs/QUEUE.md Q119).
 
 	/// <summary>
 	/// The map's own picture goes when the screen does. It is built from a stream rather than a path, so

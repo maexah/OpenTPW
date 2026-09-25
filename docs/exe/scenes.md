@@ -45,8 +45,37 @@ A key goes to one control only: an accelerator's target (the one table, `0x0077c
 | `FUN_0040caa0` | — | Rebinds an entry in those tables | Call-site trace |
 | `0x0040c4d0` | — | Shortcuts action 0, "menu" | Binding table entry |
 | `0x004816d0` | — | Called by the shortcut, calls `GameMenu_Open(0)`. **Undisassembled bytes, so xrefs do not find it** | Read by hand at the address |
+| `0x00488921` | — | `Park_MouseMessageProc`'s key-up case (`0x1000b`): the chain below through `FUN_0040c990`, which runs a row's `+0x0c` handler. Its key-down case (`0x00488886`, `0x1000a`) walks the same chain through `FUN_0040c900`, which only latches the row | Disassembly |
+| `0x0048bb36` | — | The park menu handler's (`FUN_0048b6a0`) key-up case: closes the menu and lets the park run again when the key is `0x1b`, **whatever the modifiers**, or when key and modifiers find shortcuts row 0 (`FUN_0040c870`). It answers no key-down | Disassembly |
+| `0x00748028`, `0x00748378` | — | The game table's rows and the shortcuts table's rows. Row 0 of each is key `0x1b` with modifier 0: game action 0 (`0x0040c180`) and "menu" (`0x0040c4d0`). No other row of the four tables on the chain is `0x1b` (camera `0x00748158`, cheat `0x007484d0`), nor of the system table (`0x00747f38`). The coaster table's row 0 (`0x00748350`) is: `abortcoaster`, `0x0040c3a0`, run only by the coaster bar's `FUN_004982a0` | `read_memory`, 20-byte rows |
 
 The chain, in order, on the key's release: the focused world control `0x007cb2ac` takes the key, and its handler `Park_MouseMessageProc` (`0x004881a0`) runs the camera, game and shortcuts tables built by `FUN_0040cb80`, then the cheat table behind a guard, stopping at the first handler that answers non-zero. Game action 0 (`0x0040c180`) closes the staff/visitor locator if it is open (`FUN_004816b0`, `DAT_007cc2f0`); otherwise, over any interaction mode but idle, it installs the idle mode and answers 1 - see `park-engine.md`, "The hand's ways out". Only with the mode idle already does shortcuts action 0 "menu" (`0x0040c4d0`) run, which calls `0x004816d0`, which calls `GameMenu_Open(0)`. In first person the key goes to layer 1's `FUN_00488a00` instead, which runs camera-table handlers only, so the menu cannot open from there.
+
+**Every arm acts on the release, and only the chain asks for no modifier.** The menu's handler and the viewfinder's
+(`FUN_00488a00`, whose key-up case tests `0x1b` before any action) compare the key alone, so Shift+Escape closes the
+menu or leaves first person. Game row 0 and shortcuts row 0 name modifier 0, which a row must match exactly
+(`park-engine.md`, "How a key is matched"), and no other row on the chain is Escape, so with a modifier held Escape empties
+no hand and opens no menu. `FUN_0040cb80` rebinds rows from a key resource (`DAT_0078ba84`, not read) through
+`FUN_0040caa0` (`0x0040ce64`..`0x0040cf54`, read with `ECX`) and inline for shortcuts actions 1-4: shortcuts actions
+1-11 and 13-16, game actions 1, 2, 9 and 10, system actions 0 and 1. Neither Escape row is among them.
+
+**A park screen in front has the key instead.** The six management screens, an object window and the map are each
+handed to `FUN_00485b70`, which records the screen (`DAT_007c24c8`, `0x00485d02`) and calls `FUN_004862a0`; while
+layer 0 is shown, that gives the screen the focus (`0x00486384`..`0x00486390`), and the map takes it itself. Their
+handlers pass a key-up to `FUN_00488ba0`, which answers a plain Escape - key `0x1b` and no modifier byte
+(`0x00488bc6`) - by sending the screen message 4, which closes it, and hands any other key to the shortcuts table alone
+(`0x00488c13`). The map's handler does the same (`0x005f17ef`). So over a screen, Escape closes it and nothing more.
+The message box's root drops keys, and the options screen hides the layer.
+
+**The modifiers are read at each key-up.** The window procedure `FUN_0046b600` asks `GetKeyState` (`[0x006fd324]`) for
+Shift, Ctrl and Alt at `0x0046bb0b`..`0x0046bb39`, just before `UI_PostKey` (`0x0046bb4f`), so each release carries
+the modifiers as they stood when it came up.
+
+**OpenTPW** (`ParkFrontEnd.ParkKeys`, `MenuKey`): Escape is read from the frame's releases, once for each, with the
+front window read again for each; the menu and first person take it whatever the modifiers, and the hand and the menu
+only with none held. The lobby's is `FrontEnd.LobbyKeys` (`lobby.md`, "The lobby's keys act on the release").
+**Not the original's:** the park screens are modal here and keep Escape, and an object window lets it through to the
+hand and the menu (Q119); the modifiers are judged as the frame ends, as every binding here is (Q120).
 
 ## The advisor
 

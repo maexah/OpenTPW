@@ -1,3 +1,5 @@
+using NeoVeldrid;
+
 namespace OpenTPW.UI;
 
 /// <summary>
@@ -11,7 +13,8 @@ namespace OpenTPW.UI;
 /// park instead (0x005e41c0), while a park hands the key
 /// to the binding tables built in FUN_0040cb80 - game action 0 first closes the staff locator or installs
 /// the idle mode over whatever is held, and only failing that does the shortcut action 0 "menu"
-/// (0x0040c4d0) open it. Here both roads are <see cref="WindowStack.EscapeWithoutFocus"/>.
+/// (0x0040c4d0) open it. Both roads run on the key's release, and here both are
+/// <see cref="WindowStack.KeysWithoutFocus"/>: the park's is <see cref="ParkKeys"/>.
 /// </para>
 /// <para>
 /// <b>Leaving first person is part of that.</b> In first person the key goes to the viewfinder's own layer,
@@ -168,7 +171,7 @@ internal sealed class ParkFrontEnd : Panel
 	{
 		_stack = stack;
 		_themeName = themeName;
-		_stack.EscapeWithoutFocus = MenuKey;
+		_stack.KeysWithoutFocus = ParkKeys;
 
 		foreach ( var mesh in Meshes )
 			UiMesh.Get( mesh );
@@ -186,12 +189,36 @@ internal sealed class ParkFrontEnd : Panel
 	}
 
 	/// <summary>
-	/// Escape, with no box to type into, as the stack hands it over. The park's own handler closes the menu
+	/// The park's keys, with no box to type into, as the stack hands them over: Escape, on its release, once for each
+	/// time it is let go. The park's world control runs its binding tables on a key's release (message 0x1000b,
+	/// 0x00488921) and only latches a row on its press, so a held Escape, its repeats included, does nothing until it
+	/// comes up (<c>docs/exe/scenes.md</c>, "The park Escape route"). The menu and the viewfinder take the key on its
+	/// release too. The build keys are read in <see cref="Level"/>, and the camcorder key by the camera modes.
+	/// </summary>
+	private void ParkKeys()
+	{
+		foreach ( var key in Input.KeysReleased )
+		{
+			if ( key == Key.Escape )
+				MenuKey( _stack.Windows.Count > 0 ? _stack.Windows[^1] : null );
+		}
+	}
+
+	/// <summary>
+	/// Escape, on its release, as <see cref="ParkKeys"/> hands it over. The park's own handler closes the menu
 	/// on the same key: its message 0x1000b case answers VK_ESCAPE (0x1b) by hiding and destroying the menu
 	/// and letting the park run again. A modal window in front keeps Escape from it, as in the lobby.
+	///
+	/// <para>
+	/// <b>Not the original's over a park screen.</b> The six management screens, an object window and the map take the
+	/// focus as they open, and their key handler closes the screen on a plain Escape let go (0x00488bc6).
+	/// Here those screens are modal and keep the key, and an object window, which is not, lets it through to the hand and
+	/// the menu (<c>docs/QUEUE.md</c> Q119).
+	/// </para>
 	/// </summary>
 	private void MenuKey( UiWindow? front )
 	{
+		// The menu's handler compares the key alone (0x0048bb36), so an Escape let go with a modifier held closes it.
 		if ( front is GameMenu menu )
 		{
 			_stack.Close( menu );
@@ -201,19 +228,24 @@ internal sealed class ParkFrontEnd : Panel
 		if ( front is { Modal: true } )
 			return;
 
-		// In first person the key is the viewfinder layer's, which leaves first person on a key-up whose key
-		// is VK_ESCAPE or whose action is camcorder (16) alike (0x00488a00). So the two roads out of camcorder
-		// mode are Escape and the C key, and in the original also the viewfinder's eject button, not built here.
+		// In first person the key is the viewfinder layer's, which leaves first person on a key-up whose key is
+		// VK_ESCAPE, whatever modifier is held, or whose action is camcorder (16), found by key and modifier alike
+		// (0x00488a00). So the two roads out of camcorder mode are Escape and the C key, and in the original also the
+		// viewfinder's eject button, not built here.
 		if ( ParkCamcorderCameraMode.Active )
 		{
 			ParkCamcorderCameraMode.Leave();
 			return;
 		}
 
+		// The rest is the park's binding tables, whose Escape rows - the game table's row 0 and the shortcuts' row 0 -
+		// name no modifier, which a row must match exactly (FUN_0040c990).
+		if ( !Input.NoModifierHeld )
+			return;
+
 		// Escape over anything but the idle mode installs the idle mode and is spent doing it (0x0040c368; see
 		// docs/exe/park-engine.md, "The hand's ways out"): whatever is in the hand is let go of and a build tool put
-		// away. The next opens the menu. A deviation: the original does all of this on the key's release, and the
-		// stack hands Escape over on the press.
+		// away. The next opens the menu.
 		if ( ParkHand.LetGo() is { } letGo )
 		{
 			Log.Info( $"Escape: {letGo}" );

@@ -6,16 +6,16 @@ namespace OpenTPW;
 /// Every key the game binds, with the default each one ships on.
 ///
 /// <para>
-/// <b>Nine of these forty-one have a production listener; the other thirty-two are declared, bound,
-/// rebindable in the options screen and consumed by nothing.</b> Counted 2026-09-17 rather than estimated,
-/// and recorded here once so that it is not rediscovered a screen at a time. The nine that work are
-/// <see cref="HideUI"/>, <see cref="Menu"/>, <see cref="ToggleHelpBar"/>, <see cref="FreezeCamera"/>,
+/// <b>Ten of these forty-one have a production listener; the other thirty-one are declared, bound and
+/// consumed by nothing.</b> Recorded here once so that it is not rediscovered a screen at a time. The ten
+/// that work are <see cref="HideUI"/>, <see cref="ToggleHelpBar"/>, <see cref="FreezeCamera"/>,
 /// <see cref="NextIsland"/>, <see cref="PreviousIsland"/>, <see cref="RotateLeft"/>,
-/// <see cref="RotateRight"/> and <see cref="CamcorderMode"/>.
+/// <see cref="RotateRight"/>, <see cref="CamcorderMode"/>, <see cref="Delete"/> and <see cref="Clear"/>.
+/// <see cref="Menu"/> is not one of them: both scenes read Escape from its release instead.
 /// </para>
 /// <para>
-/// <b>This is not a defect list.</b> Most of the thirty-two wait on features that do not exist yet - there
-/// is no building, no research and no time control to speed up - and they are declared ahead of those on
+/// <b>This is not a defect list.</b> Most of the thirty-one wait on features that do not exist yet - there
+/// is no research and no time control to speed up - and they are declared ahead of those on
 /// purpose, because the binding is what the options screen offers and the original ships all of them. The
 /// ones worth noticing are the pairs whose feature <i>does</i> now exist:
 /// <see cref="OpenPark"/> and <see cref="ClosePark"/>, which have had something to talk to since the gate
@@ -57,6 +57,11 @@ public enum InputButton
 	/// Menu (Esc)
 	/// Accesses the menu or cancels the current action.
 	/// </summary>
+	/// <remarks>
+	/// Read by nothing. Both scenes act on each time Escape is let go, and a binding's release edge also comes when a
+	/// modifier goes down under the held key, so they take the key from <see cref="Input.KeysReleased"/>
+	/// (<c>FrontEnd.LobbyKeys</c>, <c>ParkFrontEnd.ParkKeys</c>).
+	/// </remarks>
 	[DefaultKey( Key.Escape )]
 	Menu,
 

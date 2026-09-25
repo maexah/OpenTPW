@@ -42,7 +42,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0040be9c` | Backspace handler: end of the idle branch | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0040c35f` | Escape handler `0x0040c180`: installs the idle mode through the setter over any mode but 0 or 1, which runs the outgoing mode's uninstall | OpenTPW.Tests/ParkHandTests.cs  |
 | `0x0040c368` | Escape handler `0x0040c180`: after the idle install, `FUN_0052f200(0,1)` zeroes the tool and the rotation, and the handler answers 1 so the menu does not open | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
-| `0x0040c4d0` | | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/WindowStack.cs  |
+| `0x0040c4d0` | | OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x0040c5d0` | The system table's Ctrl+H handler, Popup Help, run on the key's release by the window procedure | OpenTPW/UI/HelpBar.cs  |
 | `0x004134f5` | Item loader `FUN_00413410`: descriptor `+0x4ac` stored as a copy of `+0x4c`, `Info.WhichUIType` | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x00415270` | the whole-game restore chain: seventeen modules in order, each checked against a four-character tag that follows it | OpenTPW.Files/Formats/Save/ParkScriptStates.cs  |
@@ -85,6 +85,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00467d00` | | OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x00467d60` | | OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x0046b600` | | OpenTPW.Common/Client/Window.cs  |
+| `0x0046bb0b` | Window procedure `FUN_0046b600`: `GetKeyState` for Shift, Ctrl and Alt at each key, before `UI_PostKey` | OpenTPW/Global/Input.cs  |
 | `0x0046c480` | Place-staff mode (type 5, vtable `0x006fea40`) MOVE: carries the candidate's sprite under the pointer and draws a red square over a cell the click would refuse | OpenTPW/World/Park/ParkStaffPool.cs  |
 | `0x0046c730` | Place-staff mode OnInstall: carry cursor 9, and a sprite of the candidate's kind in their costume | OpenTPW/World/Park/ParkStaffPool.cs  |
 | `0x0046cdc0` | Place-worker mode (type 6) OnUninstall: when the hand still names a worker, puts them down on their own current cell with the drop's body | OpenTPW.Tests/ParkHandTests.cs OpenTPW.Tests/ParkLeaveTests.cs OpenTPW/World/Park/ParkPeople.cs  |
@@ -128,13 +129,16 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004873b3` | Hover category: a type-12 track cell under a type-25 parent gets no category | OpenTPW/World/Level.cs  |
 | `0x0048833a` | Park mouse proc: a right press with RMB cancel on arms the quick click (DAT_007c2500 = 1) | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/WindowStack.cs  |
 | `0x0048842b` | Park mouse proc: a quick right click with RMB cancel on installs the idle mode over whatever mode is current | OpenTPW.Tests/ParkHandTests.cs OpenTPW/World/Level.cs  |
-| `0x00488a00` | | OpenTPW/UI/Park/ParkFrontEnd.cs  |
+| `0x00488921` | `Park_MouseMessageProc` key-up case (`0x1000b`): the binding tables through `FUN_0040c990` - `scenes.md`, "The park Escape route" | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/WindowStack.cs  |
+| `0x00488a00` | | OpenTPW.Tests/ParkEscapeOnReleaseTests.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
+| `0x00488bc6` | `FUN_00488ba0`, the park screens' key handler: a plain Escape let go closes the screen (message 4) | OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x00489ca0` | | OpenTPW/UI/WindowStack.cs  |
 | `0x00489de1` | | OpenTPW/Client/Renderer.cs  |
 | `0x0048b220` | | OpenTPW/UI/Screens/GameMenu.cs  |
 | `0x0048b2a0` | | OpenTPW/UI/Screens/GameMenu.cs  |
 | `0x0048b6a0` | | OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x0048b977` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
+| `0x0048bb36` | Park menu handler `FUN_0048b6a0`, key-up case: closes the menu on key `0x1b` whatever the modifiers, or on shortcuts row 0 | OpenTPW.Tests/ParkEscapeOnReleaseTests.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x0048bc30` | | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x0048bc50` | | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x0048bd40` | | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
@@ -597,6 +601,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005ed920` | | OpenTPW/UI/ButtonGlint.cs  |
 | `0x005edac0` | | OpenTPW/UI/ButtonGlint.cs  |
 | `0x005f0ad0` | | OpenTPW/UI/Park/ParkMapScreen.cs  |
+| `0x005f17ef` | The map's handler `FUN_005f1130`, key-up case: a plain Escape let go closes the map | OpenTPW/UI/Park/ParkMapScreen.cs  |
 | `0x005f5fa0` | The sound clock: wall-time milliseconds | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x005f8ae0` | | OpenTPW/Client/GameDir.cs  |
 | `0x006584df` | | OpenTPW/UI/WindowStack.cs  |

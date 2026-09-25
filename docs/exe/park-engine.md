@@ -1768,13 +1768,12 @@ window message `0x15`, which also disarms the click.
 `ParkHand.LetGo` is the idle mode installed over them. Every pickup - `ParkBuilding.Carry` and `PickUp`,
 `ParkStaffPool.Carry`, `ParkPeople.PickUp`, `ParkPathBuilding.EditQueue`, `ParkCamcorderCameraMode.Enter` and the
 Delete key (`Level.ClearKey`) - lets go first; a quick right click (`Level.RightButton`), Escape
-(`ParkFrontEnd.MenuKey`) and leaving the park (`Level.ForgetPark`, before anything in the park is deleted) let go
+on its release (`ParkFrontEnd.MenuKey`) and leaving the park (`Level.ForgetPark`, before anything in the park is deleted) let go
 and nothing more; and a sale lets go when no item is held and no build tool armed, as the demolisher's restore of
 tool 0 does (`0x0052818d`).
 `ParkPeople.PutBack` puts a worker down in their own cell through the drop. **Not the original's**: a right press on
-the gadget's body outside its controls, its arm or its aerial arms the click here (Q113); Escape acts on the press, not
-the release; the rotation is not the one global,
-so a purchase always starts at nought; and a mechanic put down goes idle (`MECHANIC_PUT_DOWN_JOB_SEARCH`).
+the gadget's body outside its controls, its arm or its aerial arms the click here (Q113); the rotation is not the one
+global, so a purchase always starts at nought; and a mechanic put down goes idle (`MECHANIC_PUT_DOWN_JOB_SEARCH`).
 
 ### Leaving a park with something in the hand
 
