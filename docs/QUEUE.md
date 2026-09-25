@@ -1192,20 +1192,56 @@ artifacts are listed in `docs/history/README.md`.
   first panel ever built (`Instance ??= this`, `RootPanel.cs`) and nothing in any project reads it, so it pins the
   first lobby's emptied interface for the life of the process. It holds nothing of a park. Label it or take it out,
   as rule 3 says for dead by CODE. Confirm: a grep for readers, and the build.
-- [ ] **Q68. Guests may arrive eight times as often as the original's. Decode first.** Found by the 2026-09-24
-  staleness audit. `docs/exe/park.md` ("Arrivals") reads the arrival timer as `(mGameTick >> 2) - (mark >> 2)`
-  against `Arrival.TimeBetweenArrivals`, and `mGameTick` counts thing sweeps, one every eighth 31 ms tick
-  (`park-engine.md`, "What the 31 ms tick drives"): 150 is then about 149 s. `ParkPeople.StepArrivals` counts
-  `GameClock.Ticks` instead, 31 ms each, and arrives every 18.6 s - the figure OpenTPW was measured at, which
-  confirms only its own arithmetic. Decode which clock `FUN_004cf3e0` reads at its call site and how often it runs,
-  then build what it says. Confirm: the `guests` census over a timed run, the gap predicted first.
+- [x] **Q68. Guests arrive eight times as often as the original's: the decode.** Done 2026-09-25,
+  `alexah/152-decode-the-arrival-clock`. Decode only; the build is Q68b. `park.md`, "Arrivals", and `park-engine.md`,
+  "What the 31 ms tick drives": read by hand, then put to a read-only review (a workflow of 16 agents: four groups of
+  claims each given to a skeptic, two open questions, and a second skeptic on each claim not upheld whole). Every
+  correction it made was re-read before use.
+  - **The original's clock is `mGameTick`, one count a thing sweep.** `FUN_00516380` increments it (`0x00516394`) and
+    calls the manager on every path (`0x00516695`, `FUN_004d7b20`, `0x004d7b29`), so the timer and the drip both run
+    once a sweep, every 248 ms, at most three a frame. The compare is unsigned and strict (`0x004cf3f6`), and the mark
+    is reset a sweep after the last guest gets off at the soonest (`0x004cf56b`): the next load is called 602 to 605
+    sweeps after that, 149.3 to 150.0 s. The mark is `mTimeSig`, saved with the park (`FUN_004cf050`, the last 18
+    bytes of the World block's 76-byte tail); entering loads it and `mGameTick` over `FUN_005156a0`'s zero
+    (`FUN_005accf0` at `0x0054f12b`), so Lost Kingdom's 661 and 755 put its first load on sweep 509, 126.2 s in.
+  - **Proven on the way: the period is `Arrival.TimeBetweenArrivals`**, which the page had by role only, and the stop
+    `FUN_004d8650` reads is `FixedItemInfo.BusStopA/B`. The balance loader hands out four-byte slots from a descriptor
+    table (`FUN_00401030`, `0x00402ae0`); replayed over all 283 descriptors from the file on disk, it puts
+    `MinPeople`, `TimeBetweenArrivals` and `PointsPerVisitor` on the floor, the period and the divisor, and
+    `BusStopAPosX` on `0x007855ac`, three anchors ten arrays apart. Two reviewers derived the same, one closing the
+    whole table on the next object (`0x00785828`). `FixedRate` has no reader.
+  - **Reproduced in the game with nothing changed** (`q68measure.py`, silent, jungle), predicted first: 600 ticks
+    from a drop to the next call, 597 to 607 from the park on show to the first, one guest a load. Read: 600 and 600
+    (18.594 s and 18.602 s wall), 604, and three calls with three drops. Photographed: the bus at the stop at the
+    first two drops, the new guest by the pointer. `save/` unchanged.
+  - **Corrected on the way**, each found by the review and re-read: `boot.md` said mode 1 does not sweep (it does,
+    through `FUN_005166b0`, `0x005166f2`); `weather.md`'s skip at `0x0054f4d4` needs full screen as well as an inactive
+    window; `park-engine.md` had the map straight after a 27-field header (26, then 5,522 bytes); `park.md` had the
+    drip once a tick, the random vehicle on the dismiss path, the stop pair unproven, the packed id's stride 256
+    (`FUN_004d8650` packs `y * 128`), and a headcount without `NewParkBonus` and its factor of 1.2 or 0.8, which makes
+    a load 3 or 4 even at a score of nought (Q26 now says so); `PLAYER-GAPS.md` repeated three of those.
+  - **No test was added**: nothing was built, so there was no fix to put back. Q68b's tests are the build's.
+  - **Found:** Q68b and Q126-Q130.
+
+  The item as written: Found by the 2026-09-24 staleness audit. `ParkPeople.StepArrivals` counts `GameClock.Ticks`,
+  31 ms each, where `park.md` read the timer as quarters of `mGameTick`. Decode which clock `FUN_004cf3e0` reads at its
+  call site and how often it runs, then build what it says. Confirm: the `guests` census over a timed run.
+- [ ] **Q68b. Guests arrive on the original's clock: the build.** Found by Q68 (`park.md`, "Arrivals"). Give the park
+  the original's `mGameTick`: the save's (`ParkWorld.GameTick`, 755 in Lost Kingdom), one up at the start of each
+  thing sweep before anything in it runs. Read the arrival block (the last 18 of the 76 bytes `ParkWorld` skips;
+  FileFormats `saves.md`) and start the mark from its `mTimeSig` (661). Call a load when `(tick >> 2) - (mark >> 2)`,
+  unsigned, is more than `Arrival.TimeBetweenArrivals`, and reset the mark on the first sweep after the last drop that
+  finds the vehicle still unloading. Turn round `StepArrivals`' summary, which calls the period the original's. Q82
+  wants the same counter for the staff. Confirm: predict the first load on sweep 509 (126.2 s of game time) and the
+  next 602 to 605 sweeps after each last drop; the log, `peeps`, and the bus photographed at the stop.
 - [ ] **Q82. Staff may idle for an eighth of the original's time. Decode first.** Found by the review of the
   2026-09-24 staleness audit. `ParkPeople`'s staff loop hands `StaffBehaviour.Step` the 31 ms tick, but `FUN_004d6410`
   compares its idle stamp against `mGameTick` (`0x004d6545`), which counts thing sweeps (`park-engine.md`, "What the
   31 ms tick drives") - the same question as Q68. Check the other per-kind staff handlers the same way, then pass the
   thing tick, and turn round the note in `ParkPeople`'s staff loop, which names the deviation. `StaffBehaviour.Step`'s
   stale-stamp note says "our clock starts again at nought": `GameClock.Ticks` is not reset on entering a park, so
-  correct it too. Confirm: the `staff` census over a timed run, the idle gap predicted first.
+  correct it too. Q68's decode settles the clock: the saved `mGameTick`, which Q68b gives the park. Confirm: the
+  `staff` census over a timed run, the idle gap predicted first.
 - [ ] **Q69. Seven unbuilt paths are not counted.** Found by the 2026-09-24 staleness audit.
   `CLAUDE.md` rule 4 asks every unbuilt path the program reaches to call `Unimplemented.Report`, and these have no
   counter (two are queued for building, Q76 and Q77): the lobby's 90-second advisor repeat of response `0x18a`/`0x18b` (`0x005e184c`,
@@ -1474,6 +1510,38 @@ artifacts are listed in `docs/history/README.md`.
   program that never sets it and would read null. Dead by CODE in the game, and making the folder is all it does.
   Label the game's side or take it out (rule 3); the property stays, since ModKit, which is Alexah's call, reads it.
   Confirm: a grep for readers, and a launch, listing the folder before and after.
+- [ ] **Q126. A long frame runs every thing sweep it owes, where the original runs three.** Found by Q68's review.
+  The park loop counts a frame's sweeps (`[0x00879064]`, `0x0054f680`) and drops any past the third: the step and its
+  counter move on, `mGameTick` does not, and nothing makes it up (`park-engine.md`, "What the 31 ms tick drives").
+  `ParkPeople` runs one sweep for every eight ticks `GameClock` owes, up to its 2 s cap, so eight after a stall.
+  Reachable only in a frame longer than about 0.74 s. Build the cap where the sweeps are counted, said at the site.
+  Confirm: a long frame forced, and the sweeps it ran counted in the log.
+- [ ] **Q127. A new guest is made at each stop in turn, where the original makes every one at stop B.** Found by
+  Q68's decode (`park.md`, "Arrivals"). `FUN_004cf720` always asks `FUN_004d8650` for `BusStopB` (`0x004cf745`) and,
+  while `FUN_0051aad0` reports a vehicle standing, takes two rows off the packed id (`0x004cf75c`): (53,3) in Lost
+  Kingdom. `ParkPeople.StepArrivals` alternates `BusStopA` and `BusStopB` by the tick's parity, which nothing cites.
+  Decode `FUN_0051aad0` first, then build it. Confirm: the `arrived at` log lines of a timed run, and a screenshot.
+- [ ] **Q128. A guest going home stops at the park's edge: the stop's cells are now proven.** Found by Q68's decode.
+  `PickingACellOutside` (19) and `AtTheBusStop` (21) walk to cells from `FUN_004d8650`, and `PeepBehaviour` leaves
+  both unbuilt because the balance pair was unproven; `ParkPeople` treats 19 as the end of the walk. The slot table
+  proves the pair is `FixedItemInfo.BusStopA/B` (`park.md`, "Arrivals"), so `PeepBehaviour`'s argument that its four
+  candidates rule the stops out is wrong somewhere; find where. Check the two states' decode is whole, then build them
+  and turn round the notes in `PeepBehaviour` and `ParkPeople`. Confirm: a guest who has decided to leave walks to the
+  stop and is removed there; `peeps` and a screenshot.
+- [ ] **Q129. The crowd sets the music's level every frame, where the original sets it once a second.** Found by Q68's
+  review. The park loop reaches `FUN_0051e790` only on every 32nd tick (`TEST [0x00877d34],0x1f`, `0x0054f82d`) and
+  clamps the crowd count to 89 before it (`0x0054f84e`), which binds from 178 guests; the park holds 1,500.
+  `ParkAudio` asks every frame, and its comments say "every pass", that the clamp "never binds", and "Nobody spawns
+  or leaves yet". Build the cadence and the clamp and correct the comments (`scenes.md` is corrected). Confirm: the
+  level's changes counted over a timed run, and guests added with `load` past 178.
+- [ ] **Q130. The staff pool never refreshes, and nothing counts it. Decode first.** Found by Q68's review. Every
+  sweep the original runs `FUN_005084f0` (`0x004d7b30`), which drops a candidate left in the pool longer than
+  `StaffTimeoutTime` plus up to half again, and every `TimeBetweenStaffUpdates` tops the pool up by at most
+  `MaxNumberOfStaffPerUpdate`, both keys counted in fours of sweeps, as the arrival timer's is (`FUN_0041a970`
+  against the key times four, `0x0050850f`, `0x00508549`; the lifetime drawn at `0x005077b9`).
+  `ParkStaffPool` fills the opening pool only and reads none of the three keys, and no `Unimplemented.Report` says so
+  (`CLAUDE.md` rule 4). Count it now; decode the refresh (`FUN_005084f0`, `FUN_00507600`), then build it on Q68b's
+  counter. Confirm: the hire screen's candidates over a timed run, a screenshot before and after a refresh.
 
 ## B. Docs and comments
 
@@ -1617,8 +1685,10 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   permanently. `ParkPeople.StepArrivals` sizes every load at `Arrival.MinPeople` (1), and `VehicleFor` gives one
   person the bus, so only the bus is ever called. The original creates the vehicle on demand (`FUN_0051a2f0`,
   `park.md`, "Arrivals: who comes, on what, and how often"); the
-  headcount score (`FUN_004c8240`) is not decoded. Decode the score and the pause between visits, then
-  build create-on-demand, the pauses and the bus / ferry / plane ordering.
+  headcount score (`FUN_004c8240`) is not decoded. Q68 found the rest of the headcount: `NewParkBonus` is added to
+  the score on every call and the sum scaled by 1.2 or 0.8, so even a score of nought brings 3 or 4 to Lost Kingdom.
+  Decode the score and the pause between visits, then build create-on-demand, the pauses and the bus / ferry / plane
+  ordering.
 - [ ] **Q27. Pushing the mouse at the screen edge does not scroll.** The "push scroll" option exists and
   is read by nothing. `ParkOrbitCameraMode.cs:214-228` scrolls from keys only. Decode the camera
   binding table at `0x00748158` (`park-engine.md`, "The park camera"), then build.

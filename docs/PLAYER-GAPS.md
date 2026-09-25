@@ -302,25 +302,25 @@ nothing to put behind the button. It only logs, with that reason named at the si
   walking in. (Thing 42 is a guest too. Compute a free id, never take one from here.)
 - **Not blocked:** the gate-admission path it would feed is built and measured — guests pay at the gate.
 - **Gate:** `park jungle`, then the `guests` census over time. **Predict the count before reading it.**
-- **What remained for the loop — all of it done, 2026-09-20:** an arrival manager (its timer counts quarters of
-  the 31 ms tick, so arrivals come every 18.6 s, measured in OpenTPW at 18.9 and 18.8; the decode reads the original's
-  timer as quarters of the one-in-eight thing sweep, about 149 s, and which is right is `docs/QUEUE.md` Q68); guests created and walked in
-  from the stop; guests walked out and removed; and the ferry and seaplane **driving** alongside the bus.
+- **What remained for the loop — all of it done, 2026-09-20:** an arrival manager (its timer counts fours of the
+  31 ms tick, so arrivals come every 18.6 s; the original's counts fours of the one-in-eight thing sweep, about
+  149 s, decoded by Q68 and built by Q68b); guests created and walked in from the stop; guests walked out and
+  removed; and the ferry and seaplane **driving** alongside the bus.
 - **The whole mechanism is decoded — see `docs/exe/park.md`, "Arrivals".** It is no longer
   a design question, and the shape to build is not the one this list assumed:
   - `FUN_004cf3e0` waits out a timer, asks `FUN_004cf5b0` for a headcount, summons a vehicle, and then
-    makes **one guest per tick** through `FUN_004cf720` until the load is spent.
+    makes **one guest per thing sweep** through `FUN_004cf720` until the load is spent.
   - **The vehicle is chosen by crowd size** — under 36 the bus, up to 60 the seaplane, beyond that the
-    ferry. Not at random, except on the dismiss path.
+    ferry. At random only when none is current and the manager's tail summons one.
   - **The vehicle thing is created on demand** (`FUN_0051a2f0`), which is why this park places a bus
     and neither of the others: its `mArrivalVehicle_Size1` slot holds the bus (thing 15, measured) and
     the other two slots are nought because no crowd that big has ever arrived.
   - **Nobody rides in anything.** The guest is constructed at a cell near the stop, so the vehicles are
     mechanism rather than transport — and state 21 deletes one when it reads 4.
-- **The rate** is `Arrival.TimeBetweenArrivals` 150. OpenTPW counts it in quarters of the 31 ms tick, 18.6 s
-  (measured 18.9 and 18.8); the decode reads it in quarters of `mGameTick`, which counts thing sweeps, about 149 s
-  (`docs/exe/park.md`, "Arrivals"). Which the original runs at is `docs/QUEUE.md` Q68. Nothing in the executable writes the globals, so the key-to-global mapping
-  is by arithmetic **role and is not proven** — recorded with that caveat in `docs/exe/park.md`.
+- **The rate** is `Arrival.TimeBetweenArrivals` 150, proven by the balance loader's slot table. OpenTPW counts it in
+  fours of the 31 ms tick, 18.60 s after each load (measured, Q68); the original counts `mGameTick >> 2`, fours of
+  thing sweeps, about 149 s, and carries its wait over from the save (`docs/exe/park.md`, "Arrivals").
+  Building the original's is `docs/QUEUE.md` Q68b.
   **In play the rate is now the timer OR the vehicle's circuit, whichever is slower**: gaps measured
   18.9, then 32.0, 38.7, 38.7, which is what gating arrivals on the vehicle must mean.
 

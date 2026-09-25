@@ -62,8 +62,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
   (Q120). A disabled button still takes the pointer (Q66); presses the original stops reach the park (Q113, Q115, Q116).
 - The happiness gauge draws two copies of its bar, split down the middle (`docs/PLAYER-GAPS.md` gap 5; unmeasured).
 - Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
-- Guests may arrive eight times as often as the original's, and staff may idle for an eighth of its time: its timers
-  read the thing sweep, ours the 31 ms tick (Q68, Q82, decode first).
+- Guests arrive eight times as often as the original's, and staff may idle for an eighth of its time: its timers
+  read the thing sweep, ours the 31 ms tick (arrivals decoded, Q68b builds them; Q82, decode first).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
   walk (Q121), and a park screen stays open over it (Q122).
@@ -71,11 +71,11 @@ from the repository, which cannot lag: `git log --oneline -1`.
 ## Next
 
 `docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50 to Q50h, Q53, Q53b
-Q56, Q57, Q59 and Q67 are ticked.** Next is **Q68**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11
-Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50
+Q56, Q57, Q59, Q67 and Q68 are ticked.** Next is **Q68b**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10
+Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50
 Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h, Q50h
-Q106, Q53 Q53b and Q107-Q111, Q53b Q112, Q56 Q113-Q117, Q57 Q118-Q120, Q59 Q121-Q123, Q67 Q124-Q125, the staleness
-audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review), the lobby plan section G.
+Q106, Q53 Q53b and Q107-Q111, Q53b Q112, Q56 Q113-Q117, Q57 Q118-Q120, Q59 Q121-Q123, Q67 Q124-Q125, Q68 Q68b and
+Q126-Q130, the staleness audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review), the lobby plan section G.
 
 `docs/PLAYER-GAPS.md` holds gaps **4, 5 and 7**. The untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
 
@@ -105,15 +105,15 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1180**, 0 fail, 0 skip with the game | 2026-09-25, after Q67 |
-| Tests without the game | **482** ran, **698** skipped, of 1180 | 2026-09-25, after Q67 |
-| Build warnings | 123 | 2026-09-25, after Q67 |
+| Tests | **1180**, 0 fail, 0 skip with the game | 2026-09-25, after Q68 |
+| Tests without the game | **482** ran, **698** skipped, of 1180 | 2026-09-25, after Q68 |
+| Build warnings | 123 | 2026-09-25, after Q68 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-25 - a left scene's interface is let go (Q67).** `alexah/151-root-panel-instance-out`: `Instance` out.
-**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/150` (Q59)
+**2026-09-25 - the arrival clock decoded (Q68).** `alexah/152-decode-the-arrival-clock`: decode only; Q68b builds it.
+**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/151` (Q67)
 back to `118` (Q4), `115`-`116` (Q3), `117` (Q35) and `109` (Q1, Q1b); before them, `114`, `110` and `112`.
 
 Everything older is the git log.

@@ -142,7 +142,7 @@ Leaving a park (state `0xb`) has the same shape, and additionally frees the leve
 | `0x0051bd70` | `Sound_ApplyGroupVolumes` | Re-applies the group volumes on park entry; called at `0x0054ec9a` | State 9 body |
 | `FUN_0051e730` | — | Called at `0x0054ec9f`; plays `cat_music` effect 2, the only effect that category declares | State 9 body; category contents |
 | `FUN_0051bc40` | — | `FUN_0051bc40(voice, 4, 0)` immediately sets that voice's level to 0; op 4 is "set level" | Called straight after the play |
-| `FUN_0051e790` | — | Called at `0x0054f870` every pass of the park loop; drives the music level | Park loop body |
+| `FUN_0051e790` | — | Called at `0x0054f870` on every 32nd pass of the park loop (`TEST [0x00877d34],0x1f`, `0x0054f82d`), about once a second; drives the music level, the crowd count clamped to 89 first (`0x0054f84e`) | Park loop body |
 | `FUN_004c81e0` → `FUN_004c7fa0` → `FUN_004fa990` | — | The counting chain behind that level: things that pass one of five type tests | Call chain traced |
 | `FUN_00550e00` | — | Reads placed emitters from the level's `scape.omp`: an `OBJ_` chunk of record count, record size, then a dispatch on field[0]; type 1 is a placed sound | Chunk layout read from the loader |
 

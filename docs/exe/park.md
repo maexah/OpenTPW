@@ -836,31 +836,66 @@ being dropped off" and `+0x0c` is how many people are left to drop.
 
 | | |
 |---|---|
-| `FUN_004cf3e0` | the manager |
+| `FUN_004cf3e0` | the manager, its block at world `+0x2c4` |
+| `FUN_004d7b20` | its one caller, once a thing sweep (`0x004d7b29`, through the thunk `0x004cf3d0`) |
 | `FUN_004cf5b0` | how many people this load carries |
 | `FUN_0051a2f0` | picks, and if necessary **creates**, the vehicle |
 | `FUN_004cf720` | makes **one** guest |
 | `FUN_0041a990` / `FUN_0041a960` | reads and resets the arrival timer |
+| `FUN_004cf030` / `FUN_004cf050` | builds the block / reads and writes it in a save |
 | `FUN_004c7fa0` | the cached count of guests already in the park |
 
 **The cycle.** While no load is in progress it compares `FUN_0041a990()` against `DAT_00785314`. When
 that passes it asks `FUN_004cf5b0` for a headcount, logs `"Bus about to arrive with %d people"`, sets
 the offloading flag, and pushes the count into a ring buffer on the analyser thing (`+0x216dc`, cursor
 `+0x216f0`, capacity `+0x216f4`, wrapped flag `+0x216f8`). While the vehicle reports state **2** it
-logs `"Bus: dropping off kids"` and calls `FUN_004cf720` **once per tick**, decrementing the count and
-bumping a running total at `+0x20cc0`. When the count reaches nought it resets the timer, clears the
-flag, and sends the vehicle away.
+logs `"Bus: dropping off kids"` and calls `FUN_004cf720` **once per call**, a thing sweep, decrementing the count
+and bumping a running total at `+0x20cc0`. The first call that finds the count at nought or below resets the timer,
+clears the flag, and sends the vehicle away. The logging call is a bare `RET` (`0x005da3c0`), so none of these lines
+is ever printed. The state-6 arm (`0x004cf475`) is dead by CODE: `FUN_0051a690` never returns 6.
 
-**The timer is in quarter-ticks of the game clock**, not seconds: `FUN_0041a990` is
-`(mGameTick >> 2) - (mark >> 2)` where `mGameTick` is the world block's own `+0x1da70c`, and
-`FUN_0041a960` sets the mark to the current tick.
+**The clock is `mGameTick`, one count per thing sweep, so a load is called about every 149 s.** The manager has
+one caller, and it runs once a sweep: `FUN_00516380` increments `mGameTick` (`0x00516394`) and then, on every path
+through it, calls `FUN_004d7b20` (`0x00516695`), which calls the manager's thunk with the block at world `+0x2c4`
+(`0x004d7b29`). The sweep runs on the 31 ms steps whose counter has its low three bits nought (`0x0054f668`), every
+248 ms (`park-engine.md`, "What the 31 ms tick drives"). `FUN_0041a990` is `(mGameTick >> 2) - (mark >> 2)`, the mark
+at block `+4` (`0x004cf3ee`), and it reads `mGameTick` through `[0x0080239c]`, which `FUN_00515660` points at the
+world `FUN_00407d80` allocates and stores at `[0x007cf83c]`, the counter the sweep increments. **The compare is
+unsigned and strict** (`CMP EAX,[0x00785314]` / `JBE`, `0x004cf3f6`): a load is called on the first sweep whose
+elapsed count is more than the period, 151 for 150, which is `604 - (mark mod 4)` sweeps after the mark, 601 to
+604, 149.0 to 149.8 s. One count of `mGameTick >> 2`, four sweeps or 0.99 s, is the second the designers wrote in:
+the advisor's per-message gate runs on the same helper (`FUN_0059abc0`, `0x0059ac64`), and `Advisor.sam` comments its
+`MinTimeSameMessage` 1800 as "Half an hour", which is 29.8 minutes counted in fours of sweeps and 3.7 counted in fours
+of 31 ms ticks. The mark is reset (`FUN_0041a960`, `0x004cf59c`) by the first call that finds the vehicle at
+state 2 with nobody left (`+0xc <= 0`, signed, `0x004cf56b`). The call that drops the last guest goes to the tail
+instead (`0x004cf594`), so the reset comes a sweep after that drop at the soonest, and **the next load is called 602
+to 605 sweeps after the last guest got off, 149.3 to 150.0 s**. The vehicle's run in and the drip come on top. A mark
+ahead of the clock makes the difference wrap, and a load is called at once.
+
+A sweep the loop cannot run is dropped, not owed (`park-engine.md`, "What the 31 ms tick drives"), and this timer
+falls behind the wall clock with it.
+
+**The mark is saved, so a park entered from its save carries on the wait it was saved in.** Each park entered gets
+a new world (`FUN_00407d80`, `0x0054eccb`), whose constructor builds this block with `FUN_004cf030`: mark 0, `+8` 5,
+`+0x11` 1. `FUN_004cf050` reads and writes it as `mArrivalRate` (`+0`), `mTimeSig` (`+4`, through `FUN_0041a860`,
+`0x004cf296` in the read arm), `mTargetVehicleCapacity` (`+8`), `mPeopleOnBus` (`+0xc`), `mOffloading` (`+0x10`) and
+`mGatesOpen` (`+0x11`): the last 18 bytes of the World block's 76 bytes of arrival and clock fields (FileFormats,
+`saves.md`). Entering a park zeroes `mGameTick` (`FUN_005156a0`, `0x00515865`, from `FUN_00407e00` at `0x0054ed3f`).
+Later in the same pass of state 9, `FUN_005accf0` (`0x0054f12b`) loads the newest `*.TPW*` in the player's folder for
+the theme over it, through `FUN_00414d40( path, 0, 2 )` (`0x005ad054`), `FUN_00415270` and `FUN_005179c0`, which reads
+`mGameTick` at `0x00517bec` and this block at `0x00518202`. Nothing writes either between that load and the first
+sweep. On an Instant Action player's first entry the file is the copied `Easymode.TPWI`, which holds `mGameTick` 755
+and `mTimeSig` 661, so **Lost Kingdom's first load is called on the 509th sweep after entering, 126.2 s in** (1264 is
+the first count with `(n >> 2) - 165 > 150`).
 
 **Which vehicle comes is decided by how many people are coming, not at random.** `FUN_004cf3e0`
 computes `1` for a headcount under `0x24` (36), otherwise `(0x3c < count) + 2` — so `2` for 36 to 60
 and `3` beyond. That value is `FUN_0051a2f0`'s third argument, where **1, 2 and 3 force the bus, the
 seaplane and the ferry** and **0 means choose at random**. The random arm is an LCG —
 `x = x * 0x19660d + 0x3c6ef35f`, rotated right thirteen, made positive, `% 3` — run over
-**`mRandomSeed`** (`+0x1da708`), the save's own seed. Only the dismiss path passes 0.
+**`mRandomSeed`** (`+0x1da708`), the save's own seed. The spent load and the tail pass 0 (`0x004cf4f2`, `0x004cf50c`,
+`0x004cf526`, `0x004cf54a`), but a current vehicle is reused whatever the argument, so the random arm is reached only
+from the tail's call when no vehicle is current (`0x004cf526`).
 
 The save agrees from the other side: its header fields are named `mArrivalVehicle_Size1`, `_Size2`,
 `_Size3` and `mCurrentArrivalVehicle` (`FUN_00516c80`), and `FUN_0051a2f0` caches the three at
@@ -876,33 +911,38 @@ placeholder is the shipped string.
 **This is why Lost Kingdom places a bus and neither a ferry nor a seaplane.** Its `_Size1` slot holds
 the bus and the other two are nought, which says the park has only ever had small crowds arrive.
 
-**How many come.** `FUN_004cf5b0` returns **0 outright when `mWorldState` (`+0x1da738`) is 4**.
-Otherwise the count is `max(DAT_00785310, <a computed value> / DAT_00785320)`, then capped against the
-population `FUN_004c7fa0` reports: **500 in the online mode** (`DAT_00fb3b7c == 1`) and **1500
-(`0x5dc`) otherwise**, each logging `"Capping the number of people in o..."`. It then logs
-`"Number of people is %d"`.
+**How many come.** `FUN_004cf5b0` returns **0 outright when `mWorldState` (`+0x1da738`) is 4**. Otherwise the count is
+`max( MinPeople, ftol( (NewParkBonus + score) * k ) / max( PointsPerVisitor, 1 ) )` (`0x004cf5dd`-`0x004cf648`), the
+score `FUN_004c8240` and `k` 0.8 when `[FUN_00519590() + 0x30]` is above nought, 1.2 otherwise (`0x00700368`,
+`0x00700364`). `NewParkBonus` is added on every call; nothing here asks whether the park is new. It is then capped
+against the population `FUN_004c7fa0` reports: **500 in the online mode** (`DAT_00fb3b7c == 1`) and **1500 (`0x5dc`)
+otherwise**, each logging `"Capping the number of people in o..."`. It then logs `"Number of people is %d"`.
 
-**A guest is made at a cell, not carried in the vehicle.** `FUN_004cf720` picks a cell through
-`FUN_004d8650`, optionally shifted by `-0x100` — one row of the **runtime packed cell id**, whose
-stride is 256 and which is the same neighbour arithmetic `PeepBehaviour` uses as `{c, c+1, c-0x100,
-c-0xff}`; this is the id's own stride and says nothing about the two map indexings above. It then
-allocates `0x22c` bytes and constructs the person there. **So the vehicles are mechanism rather than
-transport**: nobody is ever inside one. The cell comes from `DAT_007855ac`, which `FUN_004d8650` reads and nothing
-names in code: the balance loader fills it through its table, so `get_xrefs_to` shows only the reader. The compiled
-schema does name `BusStopA/BPos{X,Y}` and `CrossingBSSideA/BPos{X,Y}` (60-byte descriptors from `0x00742808`), but no
-descriptor carries a pointer in the image, so the name does not lead to the global either. Which `Standard.sam` key
-feeds it is unproven (two routes failed, 2026-09-20).
+**A guest is made at a cell, not carried in the vehicle.** `FUN_004cf720` asks `FUN_004d8650` for the second bus
+stop (argument 1, pushed at `0x004cf745` before either arm) and, when `FUN_0051aad0` reports a vehicle standing,
+subtracts `0x100` from the packed id (`0x004cf75c`). `FUN_004d8650` packs `y * 128 + x + 1` (`SHL EAX,0x7`,
+`0x004d8663`), so that is two rows: Lost Kingdom's (53,5) becomes (53,3). It then allocates `0x22c` bytes and
+constructs the person there. **So the vehicles are mechanism rather than transport**: nobody is ever inside one.
 
-**Two things here are still open.** Nothing in the executable writes `DAT_00785310`, `DAT_00785314` or
-`DAT_00785320` — all three are zero-valued and read-only, so they are filled by something that leaves
-no direct reference, and the arrival period is therefore not known. And `+0x1da720`, the ushort thing
-id `FUN_00519510` reads to reach the analyser's counters, is `mParkAnalyser`: the header's writer
-`FUN_00516c80` pushes the string `mParkAnalyser` at `0x00516f8c` and pairs it with `LEA ECX,[EDI+0x1da720]`
-at `0x00516fa0`.
+**Which balance keys these globals are, proven.** Nothing writes them by name: the balance loader stores each
+value at a slot its descriptor's place in the table gives it (`park-engine.md`, "How a key finds its global"; the
+`PeepInfo` object at `0x00785040`). Walked over all 283 descriptors from the file on disk, the table closes exactly on
+the next object (`0x00785828`), and `Arrival.MinPeople` (descriptor 93) lands on `0x00785310`, the floor;
+`TimeBetweenArrivals` on `0x00785314`, the period; `FixedRate` on `0x00785318`, which nothing reads (no reference, no
+bytes `18 53 78 00`); `NewParkBonus` on `0x0078531c`; and `PointsPerVisitor` on `0x00785320`, the divisor. And
+`FixedItemInfo.BusStopAPosX`/`Y` land on `0x007855ac`/`0x007855b0` and `BusStopBPosX`/`Y` on `0x007855b4`/`0x007855b8`,
+which is what `FUN_004d8650` reads for arguments 0 and 1; `FUN_004d8690` reads `EntranceA`/`B` the same way. Three were
+known by their readers before the walk (the floor, the divisor, and the stop ten arrays further on), and all three land
+where they should.
+
+`+0x1da720`, the ushort thing id `FUN_00519510` reads to reach the analyser's counters, is `mParkAnalyser`: the
+header's writer `FUN_00516c80` pushes the string `mParkAnalyser` at `0x00516f8c` and pairs it with
+`LEA ECX,[EDI+0x1da720]` at `0x00516fa0`.
 
 ### What the balance file supplies, and the one score that is not decoded
 
-Jungle's `Standard.sam` (the theme overrides none of these):
+The global `Standard.sam`; jungle's own `Standard.sam` overrides none of these, and its `Easy_Standard.sam`, read
+over both for an Instant Action park, sets `PointsPerVisitor` to 5:
 
     Arrival.MinPeople            1
     Arrival.TimeBetweenArrivals  150
@@ -910,25 +950,24 @@ Jungle's `Standard.sam` (the theme overrides none of these):
     Arrival.NewParkBonus         20
     Arrival.PointsPerVisitor     6
 
-**The mapping from those keys to the globals above is by arithmetic ROLE and is NOT proven**, and it
-cannot be traced, because nothing in the executable writes them: `DAT_00785310` is the floor in the
-`max(...)` so it is `MinPeople`; `DAT_00785314` is the period so it is `TimeBetweenArrivals`;
-`DAT_00785320` is the divisor so it is `PointsPerVisitor`; `DAT_0078531c` is `FixedRate` or
-`NewParkBonus` and which is undetermined. Read them with `ParkBalance.Int( "Arrival.X", fallback )` —
-the `SAMParser` quirk applies only to multi-value lines, and these five are ordinary single-value keys.
+Each fills the global named above (proven by the slot table). Read them with `ParkBalance.Int( "Arrival.X",
+fallback )`: the `SAMParser` quirk applies only to multi-value lines, and these five are ordinary single-value keys.
 
-`TimeBetweenArrivals` is in quarters of `mGameTick`, and `mGameTick` counts thing sweeps (`park-engine.md`, "What
-the 31 ms tick drives"), so 150 is 600 sweeps — **about 149 s** at 248 ms a sweep. OpenTPW's timer counts
-`GameClock`'s 31 ms ticks instead (`ParkPeople.StepArrivals`), which is the 18.6 s it was measured at (18.9 and
-18.8, in OpenTPW) — eight times this decode's rate. Which one the original runs at is open (`docs/QUEUE.md` Q68).
+**OpenTPW counts `GameClock`'s 31 ms ticks instead** (`ParkPeople.StepArrivals`), and takes its mark from the clock
+when the park is built rather than from the save. Measured in the running game (`q68measure.py`, jungle, silent): the
+next load is called **600 ticks, 18.60 s**, after the drop that ended the last, both times, and the first **604
+ticks, 18.7 s**, after the park came on show: eight times the original's rate, and a first load about seven times
+sooner. It also calls a load when the elapsed count **equals** the period, resets the mark on the drop's own sweep,
+and makes each guest at stop A and stop B in turn, not at stop B less two rows. Building the original's is Q68b; the
+stops are Q127.
 
-**The `<computed value>` in the headcount is `FUN_004c8240`, and it is NOT decoded.** It sums a
+**The score in the headcount is `FUN_004c8240`, and it is NOT decoded**, nor is `FUN_00519590`'s `+0x30`. It sums a
 park-attractiveness score over the rides — per ride a capacity, a duration divided down, and a
-three-entry table at `+0x268` — and the result is divided by `Arrival.PointsPerVisitor` and floored at
-`Arrival.MinPeople`. It reads four ride fields this project has not named. **OpenTPW reproduces the
-floor alone**, which is a declared deviation with a visible consequence: `MinPeople` is 1 in every
-theme the game ships, and the vehicle is chosen by crowd size, so a park left to itself **never**
-selects the seaplane or the ferry. Deciding the real headcount is what would change that.
+three-entry table at `+0x268`. It reads four ride fields this project has not named. **OpenTPW reproduces the
+floor alone**, which is a declared deviation with a visible consequence: `MinPeople` is 1 in every theme the game
+ships, where even a score of nought brings `ftol( 20 * 1.2 ) / 5` = 4 to an Instant Action Lost Kingdom (3 at 0.8), and
+the vehicle is chosen by crowd size, so a park left to itself **never** selects the seaplane or the ferry. Deciding
+the real headcount is what would change that (`docs/QUEUE.md` Q26).
 
 **What a new guest's fields come from**, so nothing here is invented: `Cash` is
 `PeepTypes[x].StartingCash` varied by `PeepInfo.StartingCashVarPc` (15, per cent); `ExitLevel` is

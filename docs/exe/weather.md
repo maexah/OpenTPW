@@ -305,7 +305,7 @@ Pause is nothing but a frozen clock, confirmed four separate ways. While paused,
 | `0x0040936d` | `Game_TogglePause` | Reads its own paused state | Disassembly |
 | `0x0040bf72` | — | **Undisassembled** command-table entry: `PUSH 0x1; MOV ECX,0x786b68; CALL Game_TogglePause` — the 80th load of the game object, invisible to every reference list | Byte read |
 | `0x786b68` | — | The game object, as loaded by that command-table entry | Disassembly |
-| `0x0054f4d4` | — | `[0x007a1a14] & 8` — window deactivation skips the entire simulation body on alt-tab, **after** `0x00877d34` has been incremented, so the tick counter advances while nothing simulates | Disassembly |
+| `0x0054f4d4` | — | `[0x007a1a14] & 8` clear (the window inactive) **and** `[0x007a1a8c] & 1` set (full screen, `0x0054f4de`; `Window_Create` makes a popup window for it at `0x0044e0f7`) skips the entire simulation body, **after** `0x00877d34` has been incremented, so the tick counter advances while nothing simulates. In an ordinary park losing focus also pauses the game in either window mode (`0x0046b74c`, `park-engine.md`), so this costs only the steps still owed when focus goes | Disassembly |
 | `0x007a1a14` | — | The window-activation word | Test above |
 
 **The two globals are one hex digit apart and easy to conflate: `0x00786ba4` is the pause-permission gate, `0x00786b84` is the paused flag.** Keep both.

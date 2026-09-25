@@ -343,7 +343,7 @@ Bytes `0x600..0x60C` are `00 00 00 00 00 | 01 22 19 85 | 00 00 00 00`.
 
 **No height array is stored in a save.**
 
-`mTileData` is reachable: emulating `FUN_005179c0` against the real payload shows the World block reads a **per-tile map array** straight after its 27-field header, thousands of records of
+`mTileData` is reachable: emulating `FUN_005179c0` against the real payload shows the World block reads a **per-tile map array** after its 26-field header and the 5,522 bytes of object controls, staff pool, clock and arrival block (`0x005181e7`, `0x00518202`; the map reader is `FUN_004d7ea0` at `0x00518221`), thousands of records of
 
     mType | mDirection | mFlags | mMeshInstance | mNeighbours | mOverlapCounter | mParentID |
     mTileData | mHoardingNeighbours | mLitterScript | mLitter | save_status_byte
@@ -455,6 +455,8 @@ The park's loop runs from `0x0054f4bf` onward, with the tick counter at `[0x0087
 The real peep module is `0x004f9000`-`0x00512000`, **281 functions / 95,152 bytes**, plus a queue module at `0x004dd000`-`0x004e2000` (89 functions / 19,684 bytes).
 
 **Which tick drives the peeps, in both halves.** The peeps are **simulated** off the every-8th-tick thing sweep — `FUN_00516380` → `FUN_0050b360` behind the gate at `0054f668` — and they are **placed for drawing once per FRAME** by `FUN_00518f90`, called from `0x0054fa85`, which lies past the 31 ms catch-up loop's back edge at `0x0054f8da`. So neither answer alone is right: the position is stepped on the 248 ms beat and interpolated to the frame. Full decode in `ride-operation.md`, "Where a WALKING peep is drawn". **`mGameTick` (`[0x0080239c] + 0x1da70c`) counts those sweeps**: `FUN_00516380` increments it (`0x00516394`) and is called at `0x0054f7bb`, inside the block the every-8th gate skips (checked 2026-09-23, Q36). So every peep comparison against it - a guest's 30-sweep thinking gap in `FUN_004fec90` among them - is in thing sweeps.
+
+**A sweep that cannot run is dropped, not owed.** The step counter and the baseline are moved before anything is tested (`0x0054f4c7`, `0x0054f4d6`), so nothing makes a lost sweep up later. At most three sweeps run in a rendered frame: `[0x00879064]` counts them (`0x0054f680`, `0x0054f696`), is reset each frame (`0x0054fc2a`) and in the routine the park's load registers at `0x0054ecbc` (`0x0054e32f`), and a step past the third jumps to `0x0054f828`, which still runs `0x0055a470` and the every-32nd block. The loop keeps no more than 2 s of backlog (`0x0054f49b`). And an inactive full-screen window skips each whole step (`0x0054f4d4`-`0x0054f4e5`; `weather.md`), which in an ordinary park, paused on losing focus (`0x0046b74c`), costs only the steps still owed. The every-30th test at `0x00516453` and the every-100th at `0x004d7b4f` count sweeps too. **OpenTPW runs every sweep `GameClock` owes**, up to its 2 s cap, so eight after a long stall (Q126).
 
 **Entering a park re-bases the baselines**: `0x0054ed7c` reads the clock three times into `[0x00878c74]`, `[0x0087879c]` and **`[0x00878a1c]`**, so the seconds spent loading are not owed as ticks. *(This third one read `[0x008786bc]` and was wrong by one dword: `0054eda4` is `a3 1c 8a 87 00` = `MOV [0x00878a1c],EAX`. `0x008786bc` is the per-frame clock SAMPLE all three alphas are measured against, not a baseline, and `0x008786c0` — one along — is written at `0054edb6`. The three baselines pair with the three rates 1/31, 1/62 and 1/248.)*
 

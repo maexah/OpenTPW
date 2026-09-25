@@ -80,7 +80,7 @@ Two identifications behind that table:
 
 **0x00516380 is mode-gated AND frequency-gated — both, not either.** It is not online-only, and it does not run every tick. What the listing shows:
 
-- **Mode gating.** `DAT_00fb3b7c` is read at 0054f6c3–0054f754: mode 0 (normal park) and mode 2 (Instant Action) both jump to it, and mode 1, the ONLINE one, is the single branch that does **not** call it, taking 0x005166b0 at `0054f760` instead. So it is not online-only — if anything the reverse.
+- **Mode gating.** `DAT_00fb3b7c` is read at 0054f6c3–0054f754: mode 0 (normal park) and mode 2 (Instant Action) both jump to the call at `0054f7bb`, and mode 1, the ONLINE one, takes 0x005166b0 at `0054f760` instead, which calls it too (`0x005166f2`, when the mode is 1). So all three modes sweep; any other mode does not (`0054f754`).
 - **Frequency gating.** `0054f668` is `TEST byte ptr [0x00877d34],0x7` / `JNZ 0x0054f82d`, and it sits **above** that mode dispatch, so taking the jump clears the whole of it along with `CALL 0x00516380` at `0054f7bb`. It falls through only when the counter is a multiple of eight.
 - **`DAT_00877d34` is a tick counter**: the Every-2nd row above has `0054f5c0` reloading it for `TEST AL,0x1`. Its own increment is at `0054f4cd` — `MOV ECX,[0x00877d34]` / `INC ECX` / `MOV [0x00877d34],ECX` — and it is reset to zero on state entry at `0054edb0` and `0054f443`.
 
