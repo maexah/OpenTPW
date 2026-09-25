@@ -380,7 +380,12 @@ thinking gap. The routing happens inside the chooser's walk, so **a better candi
 be routed still rewrites the walker** with its failed route, while `MajorDest` names the earlier winner; the caller
 then sets state 10 (event 2), and the first state-10 turn answers 2 and takes the stuck arm, −25 - or, if the ground
 near the guest changed since their last good route, the re-plan revives the loser's route and they walk to the loser's
-back cell under the winner's name, to be re-aimed there. With nothing chosen the caller pushes event 1, plays spot
+back cell under the winner's name, to be re-aimed there. **The score is measured at the back cell too**:
+`FUN_004fcc30` asks `GetBackOfQueue` of the object (`FUN_004de110` with the object in `ECX` at `0x004fcc49`,
+`0x004fcc65` and `0x004fcc7d`; the guest is `EDI`) and reads the squared distance from the guest's cell (bytes `+5`
+and `+7`), the close-to-queue test (under 9) and the nearby-effects divisor (the word `+8` of what `FUN_004d8410`
+answers for that cell id; its log says "nearby fireworks") all at that cell.
+OpenTPW's `ParkRideChooser.ScoreOf` reads the three at the entry cell (Q105). With nothing chosen the caller pushes event 1, plays spot
 animation 4, runs `FUN_004fea70(0)` and restamps `+0x1fc`. The other aims: the minor decision `FUN_004fd570` looks in
 a 4×4 window for a thing that passes the offer gate and outscores the others (no threshold of 10), switches to it only
 when the raw line search (`FUN_004d8b40`, no splices, the first leg uncounted) from the current thing's entry to the
@@ -410,17 +415,20 @@ back of queue the path cell north of each, (52,29) and (43,29): places 0 to 3 st
 all five the head stands on the entrance's edge, and a fifth guest wraps to along 255 on the same cell. The entrance's
 `mDirection` is not one rule: the Belly Bounce's (52,23) reads `0x01`, toward its queue.
 
-**Where OpenTPW differs**, for the build (`docs/QUEUE.md` Q50g; state 10's own arms, the gates' side effects and the
-chooser's in-walk routing are Q102 to Q104). `ChooseSomewhereToGo` aims at the ENTRY cell's centre; `GoingToRide`
-arrives by the walk's radius; `JoinTheQueue` then sends the guest to the back cell's centre in state 12, with no
-arrival test, no re-aim and no place; the InQueue re-take writes the number only; the refused door counts and asks
-again every turn. So every queuer stands on the back cell. `PeepBehaviour`
-draws from `System.Random`; `RideScript.NextDraw` reproduces `FUN_00516330` exactly (bar `Math.Abs` of `int.MinValue`,
-which throws where the engine answers `0x80000000`), but per script and seeded 1, and the engine's own seed is not
-established, so the jitter's sequence cannot be matched - only its range and its one draw per call. An 8.8 sub byte
-becomes a navigator coordinate as `s × FixedVector.One / 256`. The arrival radius is the same (`DefaultRadius = One /
-5`), but `PeepJourney` reports a guest standing on the centre of their target's own cell as arrived at once
-(`TotalDistance` 0), which a sub-cell target in the guest's own cell would meet.
+**OpenTPW builds it** (`docs/QUEUE.md` Q50g). `ParkQueuePlace` is `FUN_004de7e0` and its two arms;
+`PeepBehaviour.FindQueueDestination` is `FUN_00501160`, and its three callers are `JoinTheQueue` (after the arrival
+test and its re-aim), `QueueTurn`'s re-take and the refused door in `Step`'s `BeingAdmitted`; `ChooseSomewhereToGo`
+aims at the back cell's centre. An 8.8 sub byte becomes a navigator coordinate as `s × FixedVector.One / 256`. The
+arrival radius is the same (`DefaultRadius = One / 5`, times 1.6), and so is a route of no length arriving at once:
+`FUN_0050fd40` answers `0x10000` when its total `+0xa0` is nought (`0x0050fda8`), as `PeepNavigator.Progress` does.
+**Where it still differs.** The jitter draws from `PeepBehaviour`'s `System.Random`: `RideScript.NextDraw` reproduces
+`FUN_00516330` exactly (bar `Math.Abs` of `int.MinValue`, which throws where the engine answers `0x80000000`), but per
+script and seeded 1, and the engine's own seed is not established, so only the range and the one draw a call are the
+original's. A direction neither switch knows stands the point at the cell's centre, counted
+`QUEUE_PLACE_DODGY_DIRECTION`, where the original routes with whatever its stack held. A place past the queue's cells
+is refused before routing, where the original routes to (127, 255) and fails. `FUN_004fa5f0`'s stranded refusal is
+absent: nothing keeps `mStrandedTime`. State 10's own arms, the gates' side effects and the chooser's in-walk routing
+are Q102 to Q104.
 
 The supporting helpers:
 
@@ -460,10 +468,10 @@ the kids' `0x80` when the guest's id `& 7` is nought (`0x0050133d`), takes `Medi
 | `0x004fb409` | `FUN_004fb360`, the sale's type-10 answer | queueing for a thing sold or picked up | no unlink; then the sale's own `SmallHappinessChange` | −15 −5 | built, `PeepBehaviour.ThingRemoved` |
 | `0x005014b4` | `FUN_00501390`, told by `FUN_004de1f0` | place `>=` cells × 4, unsigned, and not state 14 | thought `0xd` when id % 3 is nought; `FUN_004ddd20` | −15 | built, `ParkPeople.QueueRemeasured` |
 | `0x004e0554` | `FUN_004e0450`, the object's completion | the head, when `VAR_LETMEON` still names them or they are not in state 14 | `FUN_004ddd20` | −15 | built, `ParkPeople.CompleteOrTurnAway` |
-| `0x004ffdf4` | `FUN_004ffbc0`, arriving at the queue | joined, and `FUN_00501160` finds no route to their place, or answers -1 because somebody in front has stopped queueing | `FUN_004ddd20` | −15 | counted, `QUEUE_PLACE_WALK` |
-| `0x005004b3` | `FUN_004ffff0`, the `InQueue` turn | nine arms, below | `FUN_004ddd20`, a thought on most arms | −15 | the lost place, the toilet and halves of 5a and 5b built, `PeepBehaviour.QueueTurn`; the rest counted |
+| `0x004ffdf4` | `FUN_004ffbc0`, arriving at the queue | joined, and `FUN_00501160` finds no route to their place, or answers -1 because somebody in front has stopped queueing | `FUN_004ddd20` | −15 | built, `PeepBehaviour.JoinTheQueue` |
+| `0x005004b3` | `FUN_004ffff0`, the `InQueue` turn | nine arms, below | `FUN_004ddd20`, a thought on most arms | −15 | the lost place, the failed re-take, the toilet and halves of 5a and 5b built, `PeepBehaviour.QueueTurn`; the rest counted |
 | `0x005007b4` | `FUN_005006b0`, at the door | `FUN_004fde50` says too expensive | thought 6, event 10, **a first −15** (`0x00500778`), `mNumWalkAways` +1 (`FUN_004e1670`), `FUN_004e0ac0`, `FUN_004ddd20` | −30 | built, `PeepBehaviour.WalkAwayFromTheDoor` |
-| `0x00500857` | `FUN_005006b0`, at the door | `AdmitPerson` refuses and `FUN_00501160` fails: `"Couldn't rejoin FOQ even!"`; no `FUN_004e0ac0`, no thought | `FUN_004ddd20` | −15 | counted, `QUEUE_PLACE_WALK` |
+| `0x00500857` | `FUN_005006b0`, at the door | `AdmitPerson` refuses and `FUN_00501160` fails: `"Couldn't rejoin FOQ even!"`; no `FUN_004e0ac0`, no thought | `FUN_004ddd20` | −15 | built, `PeepBehaviour.Step`, `BeingAdmitted` |
 
 **`FUN_004ddd20` is the whole of leaving**: it empties script variable 0 (`VAR_LETMEON`) when it names the leaver
 (`0x004ddd4e`..`0x004ddd7d`), then splices with the leaver's own links and tests no membership - with no `mQPrev`
@@ -659,12 +667,13 @@ strings that print them (`0x004fda74`, `0x004fd10e`) and by the needs tick, not 
 
 **OpenTPW builds** the turn as `PeepBehaviour.QueueTurn`, with `ParkRideOperation.LeaveQueue` as the tail's
 `FUN_004ddd20` and `DismissFromTheQueue` as `FUN_005012f0`: arms 1, 2 and 4, 5a for a thing without a queue path,
-5b for a car track, the broken ride's skipped re-take, and the toilet. `ParkState.LeaveQueue` splices by the leaver's own links, so a leaver with nobody in front
+5b for a car track, the re-take (`FindQueueDestination`, and out when it fails), the broken ride's skipped re-take, and
+the toilet. `ParkState.LeaveQueue` splices by the leaver's own links, so a leaver with nobody in front
 writes their own next as the head (`0x004ddde9`): an unlinked one empties it and the rest of that queue is lost to the
 walk in turn. **Counted:** the no-route board (`QUEUE_BOARD_NO_ROUTE`: ours routes to the entry cell's centre, the original to
 the stand point on the same cell, and `FUN_004fa5f0` also fails without routing on `mStrandedTime` at `+0x198`,
 `0x004fa62a`, that nothing here keeps: nought on the queue paths but from a save), the dirt gate (`QUEUE_TOILET_DIRT_GATE`), the capacity on a queue path (`QUEUE_CAPACITY_RECHECK`), the
-coaster's record (`QUEUE_TURN_COASTER_TRACK_RECORD`, let through), the failed re-take (`QUEUE_PLACE_WALK`, Q50e), the
+coaster's record (`QUEUE_TURN_COASTER_TRACK_RECORD`, let through), the
 thoughts, the spot animations (`QUEUE_SPOT_ANIMATION`), the heading (`QUEUE_TURN_HEADING`) and boredom
 (`QUEUE_TURN_BOREDOM`). **The unhappy arm is held** (`QUEUE_TURN_UNHAPPY`) until Q85: an arriving guest here starts at
 happiness nought, not the constructor's 50, and the arm would put every arrival out of every queue. 5b's built half is

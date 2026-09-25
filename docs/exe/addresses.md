@@ -211,6 +211,11 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004de48c` | `FUN_004de1f0`'s tail: `mAssignedStaffMember` (`+0x5e`) zeroed on every call | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004de510` | `FUN_004de4a0`'s entrance arm: the angle names a side (from here) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004de53f` | `FUN_004de4a0`'s entrance arm: the angle's side (to here) | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004de8d8` | `FUN_004de840`: the jitter across a queue, `rand % 28 + 114` (`ADD BL,0x72`) | OpenTPW/World/Park/ParkQueuePlace.cs  |
+| `0x004dea15` | `FUN_004de840`: the back cell's side table `01 04 10 40`, a fourth place turning to the side opposite the first path | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/ParkQueuePlace.cs  |
+| `0x004dea4e` | `FUN_004de840`: `GetNeighbouringCell`'s answer read as a cell unchecked (NULL off the map) | OpenTPW/World/Park/ParkQueuePlace.cs  |
+| `0x004deb26` | `FUN_004de840`'s second switch: `ADD AL,0x80` for direction `0x04`, so 191 gives 63 | OpenTPW/World/Park/ParkQueuePlace.cs  |
+| `0x004decd1` | `FUN_004dec30` reads the ENTRY cell's `mDirection` | OpenTPW/World/Park/ParkQueuePlace.cs  |
 | `0x004df3ea` | `FUN_004df390` logs "Opening non-openable ride!" five times when its guard refuses, and opens anyway | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004e0554` | `FUN_004e0450` puts the queue's head out (`FUN_005012f0`) | OpenTPW.Tests/ParkClosedRideTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004e13fc` | `Invite`'s `mCanLoad` bail: `FUN_004e0450` and return, skipping the watchdog | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/PeepBehaviour.cs  |
@@ -232,6 +237,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fb3f5` | `FUN_004fb360` plays the kids' effect `0x80` at the rider's sprite | OpenTPW.Tests/ParkPutOffSoundTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb4a1` | `FUN_004fb360` puts the guest into state 6, deciding | OpenTPW.Tests/ParkEvictionTests.cs  |
 | `0x004fcb21` | The guest's chooser `FUN_004fcb10` clears `mMajorDest` before it chooses, chosen or not | OpenTPW.Tests/ParkEvictionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fcbc4` | The chooser `FUN_004fcb10` aims at the back-of-queue cell's centre (`FUN_004fa530`) | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fcc49` | `FUN_004fcc30` asks `GetBackOfQueue` of the object: the score's distance and nearby effects are read there | OpenTPW/World/Park/ParkRideChooser.cs  |
 | `0x004fde6a` | Price opinion `FUN_004fde50`: a price of nought answers nought, and no sample is pushed | OpenTPW/World/Park/PeepPriceOpinion.cs  |
 | `0x004fdf6d` | Price opinion: the first unsigned division by 100 (`MUL`, `SHR 5`), mood times the goods | OpenTPW/World/Park/PeepPriceOpinion.cs  |
 | `0x004fdfe7` | Price opinion: the second unsigned division, after `RipOffOK` | OpenTPW/World/Park/PeepPriceOpinion.cs  |
@@ -242,11 +249,14 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fe4a5` | `FUN_004fe1e0` docks `SmallHappinessChange` behind a gate on descriptor `+0x144` | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe4cf` | `FUN_004fe1e0`: happiness gains the object's byte `+0x198` times the happiness effect over a hundred (to `0x004fe525`) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe525` | `FUN_004fe1e0`: the end of that gain | OpenTPW/World/Park/ParkRideOperation.cs  |
-| `0x004ffdad` | Joining a queue re-takes the place (`FUN_00501160`) | OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x004ffdf4` | Arriving at a queue with no route to the place: put out | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffc3d` | State 10's arrival test: the guest's cell against `GetBackOfQueue` | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffdad` | Joining a queue re-takes the place (`FUN_00501160`) | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffdf4` | Arriving at a queue with no route to the place: put out | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffe16` | State 10: no back of queue, or no route to it - state 6 with `MajorDest` kept | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x0050010a` | `InQueue` turn: the board arm's no route, "the player has removed the path", out | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x005001d8` | `InQueue` turn: invited but not the nominee, the whole turn is nothing | OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00500270` | `InQueue` turn: the lost place, "Problem with a queue", out | OpenTPW.Tests/ParkQueueTurnTests.cs  |
+| `0x005002f2` | `FUN_004ffff0`: the mood, which a re-take falls through to | OpenTPW.Tests/ParkQueuePlaceTests.cs  |
 | `0x00500308` | `InQueue` turn: the mood is read once `mGameTick - mTimeOfLastSpotAnim` exceeds 30 | OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x0050031c` | `InQueue` turn: happiness above `0x50` plays spot animation 5 | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x0050031e` | `InQueue` turn: the branch for happiness above `0x50` | OpenTPW.Tests/ParkQueueTurnTests.cs  |
@@ -257,14 +267,16 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005003b6` | `InQueue` turn: a queuer for a toilet stays in its queue | OpenTPW.Tests/ParkQueueTurnTests.cs  |
 | `0x00500415` | `InQueue` turn: boredom after `mTimeStartedIdling` + 100 | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x0050049e` | The `InQueue` turn's shared way out (from here) | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x005004b3` | `FUN_004ffff0`'s put-out tail: `FUN_004ddd20`, then `FUN_005012f0` | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00500523` | `InQueue` turn: a ride broken down (state 1) re-takes no place | OpenTPW.Tests/ParkQueueTurnTests.cs  |
+| `0x00500532` | `FUN_004ffff0`'s re-take: `FUN_00501160`, and out if it fails | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00500631` | `InQueue` turn: the track gate's item track type 1 | OpenTPW.Tests/ParkQueueTurnTests.cs  |
 | `0x00500643` | `InQueue` turn: the track gate's `mIsTrackRideValid` nought | OpenTPW.Tests/ParkQueueTurnTests.cs  |
 | `0x00500715` | At the door: the price opinion `FUN_004fde50` | OpenTPW.Tests/ParkRideExitTests.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/PeepBehaviour.cs OpenTPW/World/Park/PeepPriceOpinion.cs  |
 | `0x00500778` | At the door, too expensive: the first `MediumHappinessChange` | OpenTPW.Tests/PeepPriceOpinionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x005007b4` | At the door, too expensive: put out (`FUN_005012f0`) | OpenTPW.Tests/PeepPriceOpinionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x00500826` | At the door, refused: re-take the front of the queue | OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x00500857` | At the door: "Couldn't rejoin FOQ even!", put out | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00500826` | At the door, refused: re-take the front of the queue | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00500857` | At the door: "Couldn't rejoin FOQ even!", put out | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x0050133d` | `FUN_005012f0` plays the kids' effect `0x80` only when the guest's id `& 7` is nought | OpenTPW.Tests/ParkPutOffSoundTests.cs OpenTPW/World/Park/ParkAudio.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x00501413` | `FUN_00501390`: place against cells times four, unsigned (from here) | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x0050141c` | `FUN_00501390`: the unsigned place test (to here) | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |

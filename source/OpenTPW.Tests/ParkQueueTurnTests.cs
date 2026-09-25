@@ -312,16 +312,19 @@ public class ParkQueueTurnTests
 
 	/// <summary>
 	/// <b>A ride broken down (state 1) re-takes nobody's place</b> (<c>FUN_004e0370</c>, <c>0x00500523</c>): a guest
-	/// left behind their true place keeps the place they had. The control, the ride in state 0, corrects it.
+	/// left behind their true place keeps the place they had, and stands. The control, the ride in state 0, re-takes
+	/// it and walks there - from the back queue cell, where a route to it starts.
 	/// </summary>
 	[TestMethod]
 	public void ABrokenRideLeavesAQueuersPlaceAsItWas()
 	{
-		foreach ( var (rideState, expected) in new[] { (1, 1), (0, 0) } )
+		foreach ( var (rideState, expected, walking) in new[] { (1, 1, PeepState.InQueue), (0, 0, PeepState.SteppingUpQueue) } )
 		{
 			var park = Open();
 			var boarded = Guest( 30 );
 			var peep = Guest( 31 );
+
+			peep.Navigator.Position = new FixedVector( PeepNavigator.WaypointCentre( 49 ), PeepNavigator.WaypointCentre( 22 ) );
 
 			Join( park, boarded, peep );
 			park.State.LeaveQueue( BellyBounce, boarded.ThingId );
@@ -333,7 +336,9 @@ public class ParkQueueTurnTests
 			Turn( park, peep );
 
 			Assert.AreEqual( expected, peep.QueuePos, $"a ride in state {rideState}" );
-			AssertQueueing( peep, $"a ride in state {rideState}" );
+			Assert.AreEqual( walking, peep.State, $"a ride in state {rideState}" );
+			Assert.AreEqual( BellyBounce, peep.MajorDest, $"still queueing for it, a ride in state {rideState}" );
+			Assert.AreEqual( Before, peep.Happiness, 0.001f, $"losing nothing, a ride in state {rideState}" );
 		}
 	}
 

@@ -208,8 +208,9 @@ public sealed class ParkPeople : Entity
 				new ParkRideOperation( State, Guests ).Forget( script, ride.ThingId, personId );
 				ParkRideOperation.LeaveQueue( State, script, ride.ThingId, personId );
 			},
-			// And the fifth and sixth, for a queuer's own turn: the ride lets go of one it puts out
-			// (FUN_004ddd20, through its script), and the queue walk asks whether each guest it passes still queues.
+			// And the fifth and sixth, for a queuer put out by their own turn or by a failed walk to their place:
+			// the ride lets go of them (FUN_004ddd20, through its script), and the queue walk asks whether each
+			// guest it passes still queues.
 			( ride, personId ) =>
 				ParkRideOperation.LeaveQueue( State, _scriptFor?.Invoke( ride.ThingId ), ride.ThingId, personId ),
 			StillQueueing );
@@ -2091,7 +2092,8 @@ public sealed class ParkPeople : Entity
 				: "-";
 
 			yield return $"thing {peep.ThingId,2} kind {peep.PersonType} state {peep.State} "
-				+ $"dest {peep.MajorDest,2} place {place,2} "
+				// The place they last took, mQueuePos, which their aim was worked out from and the walked place is not.
+				+ $"dest {peep.MajorDest,2} place {place,2} recorded {peep.QueuePos & 0xff,2} "
 				+ $"(saved {peep.SavedState}) cash {peep.Cash,4} exit {peep.ExitLevel,4} "
 				+ $"happy {peep.Happiness,3:0} thirst {peep.Thirst,3:0} hunger {peep.Hunger,3:0} "
 				+ $"toilet {peep.Toilet,3:0} vomit {peep.Vomit,3:0} litter {peep.Litter,3:0} "
@@ -2101,6 +2103,9 @@ public sealed class ParkPeople : Entity
 				// to tell those apart from here.
 				+ $"at ({nav.Position.X / (float)FixedVector.One:0.000},"
 				+ $"{nav.Position.Y / (float)FixedVector.One:0.000}) "
+				// And where they are aimed, the exact point a route's last leg closes on - a place in a queue is one.
+				+ $"aim ({nav.Target.X / (float)FixedVector.One:0.000},"
+				+ $"{nav.Target.Y / (float)FixedVector.One:0.000}) "
 				+ $"vel ({nav.Velocity.X},{nav.Velocity.Y}) "
 				+ $"wp {nav.Waypoints.Count}/{nav.TotalWaypoints} cursor {nav.Cursor} "
 				+ $"done {nav.Finished} stuck {nav.CannotReach} "

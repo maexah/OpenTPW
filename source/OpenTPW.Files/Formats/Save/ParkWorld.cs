@@ -115,10 +115,12 @@ public sealed class ParkWorld
 		/// </summary>
 		/// <remarks>
 		/// <b>It is a branch in the original rather than a label.</b> <c>FUN_004de7e0</c> turns a place in
-		/// the queue into a spot on the ground and picks its route on this bit: set, it walks the path
-		/// (<c>FUN_004de840</c>); clear, it asserts the position is under four with "Virtual queue
-		/// problem!" and puts the guest inside the back-of-queue cell instead (<c>FUN_004dec30</c>), offset
-		/// along the approach direction and jittered across it by <c>rand % 0x1c + 0x72</c>.
+		/// the queue into a spot on the ground and picks its route on this bit: set, it walks the path from
+		/// the front, a cell for every four places (<c>FUN_004de840</c>); clear, it puts every place inside
+		/// the back-of-queue cell instead (<c>FUN_004dec30</c>), offset along the ENTRY cell's direction and
+		/// jittered across it by <c>rand % 0x1c + 0x72</c>. Its assert that the place is under four
+		/// ("Virtual queue problem!") is the bare <c>RET</c>, so nothing bounds it: a fifth guest wraps to
+		/// the cell's far edge. The game's <c>ParkQueuePlace</c> builds both.
 		/// <para>
 		/// So an object without it can still be queued for - the bit decides where the queue <i>stands</i>,
 		/// not whether one exists.

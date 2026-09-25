@@ -896,17 +896,45 @@ artifacts are listed in `docs/history/README.md`.
   - **Not confirmed on screen:** anything of the original's own - its guests are not run here; the decode is the
     executable's, and the run measures only ours and the park's data. Nothing is built, so there is no test and no
     mutation. **Found:** Q50g, Q102-Q104.
-- [ ] **Q50g. The walk to a place in a queue: the build.** Split from Q50e, whose decode it builds
-  (`ride-operation.md`, "Walking to a new place in the queue"). FindQueueDestination: the place from `PositionInQueue`
-  into `QueuePos`, `FUN_004de840`'s point for a thing with the queue-path bit and `FUN_004dec30`'s for one without,
-  the route to that sub-cell point (`s × One / 256`) and state 12; its three callers and their put-outs - the join
-  (`0x004ffdad`, `0x004ffdf4`), the InQueue re-take (`0x00500532`, `0x005004b3`) and the refused door (`0x00500826`,
-  `0x00500857`) - retiring `QUEUE_PLACE_WALK`; the chooser's aim at the back cell's centre (`0x004fcbc4`); state 10's
-  arrival test on that cell and its re-aim (`0x004ffc3d`, `0x004ffe16`); and the two remarks it makes false
-  (`ParkWorld`'s on `FUN_004dec30`, and `ParkRideChooser`'s, Q88's third). Say at the site that the jitter draws from
-  our generator, not the engine's unseeded sequence. Confirm: `q50econfirm.py`'s place-by-place points against
-  `peeps`, and a photograph of the Belly Bounce's queue standing in a line along its four cells, where Q50e's shows
-  them bunched on (49,22).
+- [x] **Q50g. The walk to a place in a queue: the build.** Done 2026-09-24, `alexah/143-walk-to-a-place-in-a-queue`.
+  Split from Q50e, whose decode it builds (`ride-operation.md`, "Walking to a new place in the queue"); `FUN_00501160`,
+  `FUN_004ffbc0`, `FUN_004de840`, `FUN_004dec30`, `FUN_005006b0` and `FUN_0050fd40` were read again first, and it held.
+  - **Built:** `ParkQueuePlace` is `FUN_004de7e0` and its two arms: with the queue-path bit, from the front a cell per
+    four places, along 0, 63, 127 and 191, the fourth turning to the next cell's direction (`ADD AL,0x80`) or, at the
+    back, away from the first path it joins; without it, every place in the back cell, facing the entry cell's
+    direction, unbounded. `PeepBehaviour.FindQueueDestination` is `FUN_00501160`: the walked place (-1 answers false
+    with nothing written), its byte into `QueuePos` first, one jitter draw, a route to the exact point, state 12. Its
+    callers: the join, after state 10's new arrival test on the back cell and its re-aim (no back or no route:
+    deciding, `MajorDest` kept); the `InQueue` re-take, whose mood still runs on the same turn; and the refused door,
+    back to place 0. Each failure puts the guest out through `PutOutOfTheQueue` with the original's line.
+    `ChooseSomewhereToGo` aims at the back cell's centre. `QUEUE_PLACE_WALK` is gone; a direction neither switch knows
+    is counted, `QUEUE_PLACE_DODGY_DIRECTION`, and stands at the centre. `peeps` shows `recorded` and `aim`, `why` the
+    aim. The two remarks are corrected: `ParkWorld`'s on `FUN_004dec30`, and `ParkRideChooser`'s, which now says its
+    deviation (Q105).
+  - **Proof:** 18 new tests (`ParkQueuePlaceTests`); four re-take tests now stand their guest on the queue. 22
+    mutations, each predicted: the whole bug back turns 16 red, and 19 more went red as named. `sub-shift-7` turned
+    one more red than predicted. `no-cell-zero-guard` stays green by design: the route to cell 0's (127, -1) fails
+    anyway, as the original's to (127, 255) does. `clamp-to-back-cell`, a place past the cells stood on the back cell,
+    turns the cell-0 test red instead. A read-only review (8 agents, four lenses, each put to a skeptic) upheld 13
+    findings and amended 2, all in comments and tests, all fixed; one refuted. The worst: the one test reaching the
+    back cell's turn could not tell the path search from its fallback, since both give `0x04` at (49,22); a map edit
+    now separates them. 1127 tests with the game, none skipped; 476 ran and 651 skipped without; 123 warnings.
+  - **Confirmed in the game** (`q50gconfirm.py`, silent, jungle, `load 60`): `why` aimed a chooser of the Belly Bounce
+    at (49,22), as predicted. Staged at 101 s with 14 InQueue (predicted 13 within 600 s). 14 of 14 were aimed at the
+    decode's point for their recorded place, computed by the harness from the decode's table and the cells read, not
+    from the C#: along exact, across 114..141. 14 of 14 stood within 0.33 of it (0.089 to 0.241), on all four cells;
+    four seconds on, 15 of 15. Photographed: the queue stands in a line along its four cells, where Q50e's shot from
+    the same camera drew seven as one figure on (49,22). No "moved", "couldn't get", "rejoin" or `QQQ` line; nothing
+    counted; `save/` unchanged. A second run for the virtual arm: the Jungle Spray's guest 82 at place 0 was aimed at
+    (52.535, 29.996), the decode's (52 + J, 29 + 255/256), 1 of 1.
+  - **Missed first, mine.** The park-run test: predicted more than four Belly Bounce places from the save's 13 guests
+    in 600 turns, got 0 to 2; it now asks for more than one. The first `no-dodgy-count` mutation deleted the line an
+    `if` governed, so the next statement became its body, and six unrelated tests went red; re-run with an empty body.
+    I counted 14 new tests where there were 15. The Spray run: predicted 2 InQueue within 600 s, saw none in 900 s -
+    the sideshow admits at once, so the census caught one guest walking to his place, not standing in it.
+  - **Not confirmed on screen:** the arrival's re-aim (no back moved in either run), the three failed walks, the
+    refused door's walk, a dodgy direction, a place past the cells - tested only. The virtual arm is the census's
+    one sample, not photographed. **Found:** Q105.
 - [ ] **Q50f. What the sale's drain does to its queuers. Decode first.** Split from Q50. The demolisher drains the
   queue before the destructor's message, and each pop re-walks it (`0x0052ffec`); a guest it puts out would lose 15
   rather than 20. Trace `FUN_0052fe50`'s pops in mode `0x34`, whether the stack's bottom entry is ever cleared
@@ -1090,6 +1118,12 @@ artifacts are listed in `docs/history/README.md`.
   revives the loser's route and walks the guest to the loser's queue. `ChooseSomewhereToGo` routes once, to the final
   best. Build it with the walker's failed state, and say it at the site. Confirm: a guest choosing between a
   reachable shop and a better ride cut off by a path edit, `peeps` and the log.
+- [ ] **Q105. The chooser scores the distance at the back of the queue.** Found by Q50g (`ride-operation.md`, "Where a
+  guest is aimed"). `FUN_004fcc30` reads the squared distance, the close-to-queue test (under 9) and the nearby-effects
+  divisor at `GetBackOfQueue`'s cell (`FUN_004de110` with the object in `ECX`, `0x004fcc49`..`0x004fcc7d`);
+  `ParkRideChooser.ScoreOf` reads all three at the entry cell, which for the Belly Bounce is four cells from its back.
+  Build it and retire the remark at `ScoreOf`. Confirm: `why` over a guest nearer the Belly Bounce's entrance than its
+  back of queue, the chosen thing before and after.
 
 ## B. Docs and comments
 

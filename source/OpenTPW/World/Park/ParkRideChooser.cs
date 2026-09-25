@@ -194,9 +194,10 @@ public sealed class ParkRideChooser
 	/// One candidate's score, with the facts that live outside its own record gathered first.
 	/// </summary>
 	/// <remarks>
-	/// <b>The distance is measured to the entry cell, not to the object.</b> That is where a guest is
-	/// actually sent - the same rule <c>StaffBehaviour.GoAndRest</c> follows for a rest area - and the two
-	/// differ by the thing's own footprint, which is several cells for a ride.
+	/// <b>The distance and the nearby effects are read at the entry cell, and that is a deviation.</b> The
+	/// original's <c>FUN_004fcc30</c> reads both at the back-of-queue cell (<c>GetBackOfQueue</c>, asked of the
+	/// object at <c>0x004fcc49</c>), which is also where a chosen guest is sent
+	/// (<c>PeepBehaviour.ChooseSomewhereToGo</c>); <c>docs/QUEUE.md</c> Q105 builds it.
 	/// </remarks>
 	private int ScoreOf( ParkRideScore.Wants wants, ParkWorld.CatalogueObject candidate,
 		ParkItemCatalogue.Item? item, int queue, int fromX, int fromY,

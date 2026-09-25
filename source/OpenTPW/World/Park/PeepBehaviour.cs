@@ -74,8 +74,8 @@ public sealed class PeepBehaviour
 	/// <b>A delegate for the reason <paramref name="gateStatus"/> is one</b>, and for one more: the
 	/// admission needs the ride's SCRIPT and the park's guests by id, and this type has neither. Taking
 	/// <see cref="ParkRideOperation"/> here would tie every guest's turn to the whole of ride operation
-	/// for a single yes-or-no. Null leaves a guest standing at the ride, which is what happened before
-	/// anything called this at all.
+	/// for a single yes-or-no. Null refuses every guest at the door: they walk back to their place in the
+	/// queue (<see cref="FindQueueDestination"/>), or are put out when they cannot get there.
 	/// </para>
 	/// </param>
 	public PeepBehaviour( ParkWorld? park, Random? random = null,
@@ -181,8 +181,9 @@ public sealed class PeepBehaviour
 	private readonly Action<ParkWorld.CatalogueObject, int>? _walkAway;
 
 	/// <summary>
-	/// The ride's side of a guest its queue turn puts out - <c>FUN_004ddd20</c> alone: <c>VAR_LETMEON</c> emptied
-	/// if it names them, and the queue spliced by their own links (<see cref="ParkRideOperation.LeaveQueue"/>).
+	/// The ride's side of a guest put out of its queue by their own turn, or by a failed walk to their place after
+	/// joining or after a refused door - <c>FUN_004ddd20</c> alone: <c>VAR_LETMEON</c> emptied if it names them, and
+	/// the queue spliced by their own links (<see cref="ParkRideOperation.LeaveQueue"/>).
 	/// A delegate for the reason <see cref="_admit"/> is one. Null leaves the queue holding them, which only a
 	/// test does.
 	/// </summary>
@@ -520,10 +521,9 @@ public sealed class PeepBehaviour
 			// see PeepPriceOpinion), and walks away from the door if it is not - WalkAwayFromTheDoor.
 			// ParkAdmission judges the GATE fee, a different question.
 			//
-			// <b>One arm of the original is counted rather than built.</b> When the admission is refused it
-			// walks back to the front of the queue (FUN_00501160, 0x00500826), and is put out if it cannot
-			// get there (0x00500857); the walk to a place in a queue is unbuilt. A refused guest here waits
-			// and asks again.
+			// Refused, the guest walks back to their place - still linked at the head, so the front
+			// (FindQueueDestination, 0x00500826) - to wait in the queue for a new call forward, and is put out
+			// if they cannot get there (0x00500857), without the ride forgetting them (no FUN_004e0ac0).
 			case PeepState.BeingAdmitted:
 				if ( Walked( peep, walk, playing ) != WalkVerdict.Walking && Chosen( peep ) is { } arriving )
 				{
@@ -543,9 +543,10 @@ public sealed class PeepBehaviour
 
 						RollForTheVisit( peep, arriving );
 					}
-					else
+					else if ( !FindQueueDestination( peep, walk, arriving, tick ) )
 					{
-						Unimplemented.Report( "QUEUE_PLACE_WALK" );
+						Log.Info( $"Person {peep.ThingId}: Couldn't rejoin FOQ even!" );
+						PutOutOfTheQueue( peep, arriving, tick, "the door" );
 					}
 				}
 
@@ -1041,9 +1042,10 @@ public sealed class PeepBehaviour
 	/// a cell away from where the pathfinder would ever put them.
 	/// </para>
 	/// <para>
-	/// It answers whether a route was found, and every caller but the boarding arm of <see cref="QueueTurn"/>
-	/// leaves the failure to <see cref="Walked"/>, which reports a guest who cannot get through as having given
-	/// up on their next turn.
+	/// It answers whether a route was found. <see cref="ChooseSomewhereToGo"/>, the boarding arm of
+	/// <see cref="QueueTurn"/>, the arrival's re-aim in <see cref="JoinTheQueue"/> and
+	/// <see cref="FindQueueDestination"/> act on a failure at once; every other caller leaves it to
+	/// <see cref="Walked"/>, which reports a guest who cannot get through as having given up on their next turn.
 	/// </para>
 	/// </summary>
 	/// <remarks>
@@ -1053,9 +1055,17 @@ public sealed class PeepBehaviour
 	/// cheaper than a second way of moving a peep, which is how the two would drift apart.
 	/// </remarks>
 	internal static bool SendTo( Peep peep, PeepWalk walk, (int X, int Y) cell )
+		=> SendTo( peep, walk, new FixedVector(
+			PeepNavigator.WaypointCentre( cell.X ), PeepNavigator.WaypointCentre( cell.Y ) ) );
+
+	/// <summary>
+	/// Sends a guest to an exact point - the original's <c>FUN_004fa5f0</c>, which takes an 8.8 point where
+	/// <c>FUN_004fa530</c> takes a cell's centre. The route runs to the point's cell and its last leg closes on
+	/// the point itself (<see cref="PeepNavigator.NavigateTo"/>).
+	/// </summary>
+	private static bool SendTo( Peep peep, PeepWalk walk, FixedVector point )
 	{
-		peep.Navigator.Target = new FixedVector(
-			PeepNavigator.WaypointCentre( cell.X ), PeepNavigator.WaypointCentre( cell.Y ) );
+		peep.Navigator.Target = point;
 
 		return walk.PlanRoute();
 	}
@@ -1165,23 +1175,26 @@ public sealed class PeepBehaviour
 	public const int ExcitementRefusal = 44;
 
 	/// <summary>
-	/// What a guest does on reaching something they chose - the arrival half of <c>FUN_004ffbc0</c>.
+	/// What a guest does on reaching something they chose - the arrival half of <c>FUN_004ffbc0</c>, in its order: the
+	/// arrival test, the gates, the join, and the walk to their own place in the queue.
 	///
 	/// <para>
-	/// <b>Joining is the original's own order:</b> the gates first, then the queue itself, then the place
-	/// in it, and only then the state. A guest who fails a gate goes back to deciding with their choice
-	/// let go of, rather than standing at a ride they cannot join.
+	/// <b>The arrival test</b> (<c>0x004ffc3d</c>): the guest must stand on the back-of-queue cell
+	/// (<see cref="ParkRideChoice.QueueCellsFor"/>, <c>GetBackOfQueue</c>), which is where
+	/// <see cref="ChooseSomewhereToGo"/> aimed them. Anywhere else, "The back of the queue has moved while I was
+	/// walking here": they are aimed at its centre again and walk on in <see cref="PeepState.GoingToRide"/>, or,
+	/// with no back of queue or no route to it, go back to deciding still naming the thing (<c>0x004ffe16</c>).
 	/// </para>
 	/// <para>
-	/// <b>Two arms of the original are deliberately NOT reproduced, each for a stated reason.</b> Its
-	/// second queue gate (<c>FUN_004ddb60</c>) compares the length against a capacity from
-	/// <c>FUN_004dda40</c>, which divides the ride's operating speed by a per-upgrade descriptor field at
-	/// <c>+0x1a8</c> - the very field whose pairing <see cref="ParkRideScore"/> refuses to guess - so
-	/// reproducing it would mean building a gate on an unverified number. The free-space gate below is
-	/// the one that IS established, twice over: <c>FUN_004dda20</c> is literally
-	/// <c>length &lt; mQueueSizeInCells * 4</c>. And the destination is the queue's END rather than the
-	/// guest's own place in it, because turning a position into a cell means walking the queue path
-	/// (<c>FUN_004de7e0</c>), which nothing here does.
+	/// <b>The gates.</b> A guest who fails one goes back to deciding with their choice let go of. The free-space
+	/// gate is <c>FUN_004dda20</c>, <c>length &lt; mQueueSizeInCells * 4</c>, and the excitement gate is
+	/// <see cref="TurnsAwayFrom"/>. The original's third, <c>FUN_004ddb60</c>, compares the length against a
+	/// capacity from <c>FUN_004dda40</c> and is not built.
+	/// </para>
+	/// <para>
+	/// <b>The walk</b> is <see cref="FindQueueDestination"/> (<c>0x004ffdad</c>). A guest who cannot get to their
+	/// place - somebody in front of them has stopped queueing, or no route - leaves the queue they have just joined
+	/// (<c>0x004ffdf4</c>).
 	/// </para>
 	/// </summary>
 	private void JoinTheQueue( Peep peep, PeepWalk walk, int tick )
@@ -1193,13 +1206,22 @@ public sealed class PeepBehaviour
 			return;
 		}
 
-		// The gate that is established - and note it is asked of the park as PLAYED, so a queue that
-		// filled up while this guest was walking to it turns them away.
-		// The cell count comes off the MAP, not out of the record - the same correction ParkRideChoice
-		// makes, and it has to be made here too or a guest could be offered a shop and then turned away at
-		// the door by a gate reading a different number from the one that sent them.
+		// GetBackOfQueue's pair (QueueCellsFor: the record's cached one until the queue is edited, else walked off the
+		// map), which the chooser asks too, so the arrival test, the gate and the chooser measure one queue.
 		var (backOfQueue, queueCells) = ParkRideChoice.QueueCellsFor( _park, chosen );
+		var (x, y) = walk.Position.Cell;
 
+		if ( MapStep.CellId( x, y ) != backOfQueue )
+		{
+			Log.Info( $"Person {peep.ThingId}: The back of the queue has moved while I was walking here" );
+
+			if ( backOfQueue == 0 || !SendTo( peep, walk, MapStep.CellAt( backOfQueue ) ) )
+				peep.SetState( PeepState.Deciding, tick, _random );
+
+			return;
+		}
+
+		// Asked of the park as PLAYED, so a queue that filled up while this guest walked to it turns them away.
 		if ( !ParkRideChoice.HasQueueRoom( State.QueueLength( chosen.ThingId ), queueCells )
 			|| TurnsAwayFrom( peep, chosen ) )
 		{
@@ -1208,28 +1230,64 @@ public sealed class PeepBehaviour
 			return;
 		}
 
-		peep.QueuePos = State.JoinQueue( chosen.ThingId, peep.ThingId );
+		State.JoinQueue( chosen.ThingId, peep.ThingId );
 
-		// The original then walks them to their own place (FUN_00501160, 0x004ffdad) and, if it cannot,
-		// takes them straight back out, "Couldn't get to my place in the queue, leaving!" (0x004ffdf4).
-		// This walks them to the queue's end instead, as the summary says.
-		Unimplemented.Report( "QUEUE_PLACE_WALK" );
-
-		// The back of the queue is a packed cell - decode by subtracting one FIRST, the same packing
-		// mEntryPos and the patrol corners use. An object with none leaves them where they stand.
-		//
-		// <b>It is the WALKED cell, not the record's.</b> This read chosen.BackOfQueue, which is nought for
-		// the shop and for all three toilets - so a guest who joined one of those queues was counted into
-		// it and then never given anywhere to stand, which is a guest queueing on the spot they decided
-		// from. The room check a few lines up already uses the walked pair; using the record here as well
-		// would have let the two disagree about the same queue.
-		if ( backOfQueue != 0 )
+		if ( !FindQueueDestination( peep, walk, chosen, tick ) )
 		{
-			SendTo( peep, walk,
-				((backOfQueue - 1) % ParkWorld.MapSize, (backOfQueue - 1) / ParkWorld.MapSize) );
+			Log.Info( $"Person {peep.ThingId}: Couldn't get to my place in the queue, leaving!" );
+			PutOutOfTheQueue( peep, chosen, tick, "the join" );
+		}
+	}
+
+	/// <summary>
+	/// Walks a guest to their own place in the queue of <paramref name="queueing"/> - <c>FUN_00501160</c>,
+	/// FindQueueDestination by its own log. See <c>docs/exe/ride-operation.md</c>, "Walking to a new place in the
+	/// queue".
+	/// </summary>
+	/// <remarks>
+	/// The place is where the queue walk finds them (<see cref="ParkState.PositionInQueue"/>); a guest it cannot
+	/// reach answers false with nothing written. Otherwise the place's low byte goes into
+	/// <see cref="Peep.QueuePos"/> before anything can fail, the jitter is drawn once, <see cref="ParkQueuePlace"/>
+	/// turns the place into a point inside a cell, and a route to that exact point puts them in
+	/// <see cref="PeepState.SteppingUpQueue"/>. No route answers false in the state they were in, and every caller
+	/// then puts them out.
+	/// <para>
+	/// <b>The jitter draws from this behaviour's generator, not the engine's</b> (<c>FUN_00516330</c>, one sequence
+	/// for the whole park), whose seed is not established: its range and its one draw a call are the original's,
+	/// its sequence is not.
+	/// </para>
+	/// <para>
+	/// The route (<c>FUN_004fa5f0</c>) first refuses a guest whose <c>mStrandedTime</c> no ground change near them
+	/// has reached. Nothing here keeps that field; on these three paths it is nought unless a save loaded it.
+	/// </para>
+	/// </remarks>
+	/// <returns>Whether a route to their place was found.</returns>
+	private bool FindQueueDestination( Peep peep, PeepWalk walk, ParkWorld.CatalogueObject queueing, int tick )
+	{
+		var place = State.PositionInQueue( queueing.ThingId, peep.ThingId, _stillQueueing );
+
+		if ( place < 0 )
+			return false;
+
+		peep.QueuePos = place & 0xff;
+
+		var point = ParkQueuePlace.For( _park, queueing, place, ParkQueuePlace.Jitter( _random.Next() ) );
+
+		// The original routes with whatever its stack held; this stands them at the cell's centre.
+		if ( point.Cell != 0 && !point.Written )
+			Unimplemented.Report( "QUEUE_PLACE_DODGY_DIRECTION" );
+
+		// Cell nought, a place past the queue's cells, packs as (127, 255), which no route reaches.
+		if ( point.Cell == 0 || !SendTo( peep, walk, point.Position ) )
+		{
+			Log.Info( $"Person {peep.ThingId}: QQQ - FindQueueDestination SetDest failed, so I'm standing in queue" );
+
+			return false;
 		}
 
 		peep.SetState( PeepState.SteppingUpQueue, tick, _random );
+
+		return true;
 	}
 
 	/// <summary>
@@ -1324,8 +1382,9 @@ public sealed class PeepBehaviour
 	/// descriptor pairing is not established), or a car track that is not valid, is put out; a coaster's track
 	/// record is counted and let through, as the choice lets it through.</item>
 	/// <item><b>Out of place</b>: more than <see cref="QueueDriftAllowed"/> out, or no delay left, re-takes the place
-	/// - unless the ride is broken down (<c>FUN_004e0370</c>, state 1), when nothing is re-taken. The walk to a
-	/// place is unbuilt (Q50e), so the place is corrected and they stand; otherwise a delay is spent.</item>
+	/// - unless the ride is broken down (<c>FUN_004e0370</c>, state 1), when nothing is re-taken. Re-taking walks them
+	/// to it (<see cref="FindQueueDestination"/>, <c>0x00500532</c>) and the mood still runs on the same turn; one who
+	/// cannot get there is put out (<c>0x005004b3</c>). Otherwise a delay is spent.</item>
 	/// <item><b>The mood</b>, read once <see cref="QueueMoodGap"/> sweeps have passed since a spot animation: above
 	/// <see cref="QueueHappyAbove"/> and from <see cref="QueueUnhappyBelow"/> to 19 a spot animation (counted);
 	/// from <see cref="QueueToiletFrom"/> to 80 with a toilet need above <see cref="QueueToiletAbove"/>, thought 4
@@ -1413,11 +1472,12 @@ public sealed class PeepBehaviour
 		}
 		else if ( peep.QueueMoveDelay == 0 || (uint)(recorded - place) > QueueDriftAllowed )
 		{
-			if ( queueing.State != ParkRideChoice.StateRefusedOne )
+			if ( queueing.State != ParkRideChoice.StateRefusedOne && !FindQueueDestination( peep, walk, queueing, tick ) )
 			{
-				Unimplemented.Report( "QUEUE_PLACE_WALK" );
+				Log.Info( $"Person {peep.ThingId}: Couldn't get to my intended queue position" );
+				PutOutOfTheQueue( peep, queueing, tick );
 
-				peep.QueuePos = place;
+				return;
 			}
 		}
 		else
@@ -1470,16 +1530,19 @@ public sealed class PeepBehaviour
 	}
 
 	/// <summary>
-	/// Where every arm of <see cref="QueueTurn"/> that gives up ends - <c>0x0050049e</c>: the ride lets them go
-	/// (<see cref="_leaveQueue"/>, <c>FUN_004ddd20</c>), they are put out (<see cref="DismissFromTheQueue"/>,
-	/// <c>FUN_005012f0</c>), and the kids' sound plays at their feet for an id divisible by eight.
+	/// Where every arm of <see cref="QueueTurn"/> that gives up ends - <c>0x0050049e</c> - and the join's and the
+	/// door's failed walks to a place: the ride lets them go (<see cref="_leaveQueue"/>, <c>FUN_004ddd20</c>), they
+	/// are put out (<see cref="DismissFromTheQueue"/>, <c>FUN_005012f0</c>), and the kids' sound plays at their feet
+	/// for an id divisible by eight.
 	/// </summary>
-	private void PutOutOfTheQueue( Peep peep, ParkWorld.CatalogueObject queueing, int tick )
+	/// <param name="by">What put them out, for the log.</param>
+	private void PutOutOfTheQueue( Peep peep, ParkWorld.CatalogueObject queueing, int tick,
+		string by = "their own turn" )
 	{
 		_leaveQueue?.Invoke( queueing, peep.ThingId );
 		DismissFromTheQueue( peep, tick );
 
-		Log.Info( $"People: guest {peep.ThingId} put out of thing {queueing.ThingId}'s queue by their own turn, "
+		Log.Info( $"People: guest {peep.ThingId} put out of thing {queueing.ThingId}'s queue by {by}, "
 			+ $"now {peep.State} with happiness {peep.Happiness:0}" );
 
 		ParkPeople.PutOffAtTheirFeet( peep, queueing );
@@ -1622,11 +1685,11 @@ public sealed class PeepBehaviour
 	/// The original has seven callers, and the other six unlink the guest from the thing's queue first
 	/// (<c>FUN_004ddd20</c>). A sale does not, so the thing is not told: see
 	/// <see cref="ParkState.ForgetQueueLinks"/>, which undoes the links of a guest who is still in them and
-	/// does nothing to one who was unlinked already. Five callers are built here: the sale, a queue
-	/// measured shorter (<see cref="QueueShortened"/>), a closing ride's completion
-	/// (<c>ParkPeople.CompleteOrTurnAway</c>), a price too high at the door (<see cref="WalkAwayFromTheDoor"/>)
-	/// and the queuer's own turn (<see cref="PutOutOfTheQueue"/>); <c>docs/exe/ride-operation.md</c>, "Every
-	/// way out of a queue", lists the other two and what each waits on.
+	/// does nothing to one who was unlinked already. All seven are built here: the sale, a queue measured shorter
+	/// (<see cref="QueueShortened"/>), a closing ride's completion (<c>ParkPeople.CompleteOrTurnAway</c>), a price
+	/// too high at the door (<see cref="WalkAwayFromTheDoor"/>), and, through <see cref="PutOutOfTheQueue"/>, the
+	/// queuer's own turn and the failed walks to a place after joining and after a refused door
+	/// (<c>docs/exe/ride-operation.md</c>, "Every way out of a queue").
 	/// </remarks>
 	internal void DismissFromTheQueue( Peep peep, int tick )
 	{
@@ -1761,8 +1824,9 @@ public sealed class PeepBehaviour
 		//
 		// So this answers the half it can answer honestly. The other half is read from the guest's own
 		// state and <see cref="Peep.MajorDest"/>, which the simulation writes for itself.
-		return $"at ({x},{y}) chose thing {chosen.ThingId} entry "
-			+ $"({chosen.EntryCellX},{chosen.EntryCellY}) dest {peep.MajorDest}";
+		var (aimX, aimY) = MapStep.CellAt( ParkRideChoice.QueueCellsFor( _park, chosen ).BackOfQueue );
+
+		return $"at ({x},{y}) chose thing {chosen.ThingId} aim ({aimX},{aimY}) dest {peep.MajorDest}";
 	}
 
 	/// <returns>Whether somewhere was chosen and a route to it planned.</returns>
@@ -1782,11 +1846,11 @@ public sealed class PeepBehaviour
 			is not { } chosen )
 			return false;
 
-		peep.Navigator.Target = new FixedVector(
-			PeepNavigator.WaypointCentre( chosen.EntryCellX ),
-			PeepNavigator.WaypointCentre( chosen.EntryCellY ) );
+		// Aimed at the centre of the back-of-queue cell (0x004fcbc4), where JoinTheQueue's arrival test asks them to
+		// stand. The chooser offers nothing without one.
+		var (backOfQueue, _) = ParkRideChoice.QueueCellsFor( _park, chosen );
 
-		if ( !walk.PlanRoute() )
+		if ( backOfQueue == 0 || !SendTo( peep, walk, MapStep.CellAt( backOfQueue ) ) )
 			return false;
 
 		peep.MajorDest = chosen.ThingId;

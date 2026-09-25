@@ -162,14 +162,23 @@ public class ParkBoardingTests
 		// The head is taken onto the ride, exactly as CompleteAdmission does it.
 		Assert.IsTrue( state.LeaveQueue( Ride, 7 ), "the head comes out of the queue" );
 
+		OnTheQueue( second );
+
 		var walk = new PeepWalk( second.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
 
 		behaviour.Step( second, walk, playing: null, tick: 40 );
 
 		Assert.AreEqual( 0, second.QueuePos,
 			"the new head's place is recomputed from the links, or they are refused for ever" );
-		Assert.AreEqual( PeepState.InQueue, second.State, "and they are still queueing" );
+		Assert.AreEqual( PeepState.SteppingUpQueue, second.State, "and they walk up to it, still queueing" );
 	}
+
+	/// <summary>
+	/// Stands a guest on the centre of the ride's back queue cell, (49,22): a re-take walks them to their place, and
+	/// a route there has to start somewhere it can.
+	/// </summary>
+	private static void OnTheQueue( Peep peep )
+		=> peep.Navigator.Position = new FixedVector( PeepNavigator.WaypointCentre( 49 ), PeepNavigator.WaypointCentre( 22 ) );
 
 	/// <summary>
 	/// A guest only one place out waits out <see cref="Peep.QueueMoveDelay"/> before re-taking it -
@@ -184,6 +193,7 @@ public class ParkBoardingTests
 
 		var second = Queueing( 8, queuePos: state.JoinQueue( Ride, 8 ), admitted: false );
 		second.QueueMoveDelay = 3;
+		OnTheQueue( second );
 
 		Assert.IsTrue( state.LeaveQueue( Ride, 7 ) );
 
@@ -200,9 +210,12 @@ public class ParkBoardingTests
 
 		Assert.AreEqual( 0, second.QueueMoveDelay, "the delay is used up" );
 
+		Assert.AreEqual( PeepState.InQueue, second.State, "standing while they wait" );
+
 		behaviour.Step( second, walk, playing: null, tick: 43 );
 
 		Assert.AreEqual( 0, second.QueuePos, "and now they take their place" );
+		Assert.AreEqual( PeepState.SteppingUpQueue, second.State, "walking to it" );
 	}
 
 	/// <summary>
@@ -223,12 +236,14 @@ public class ParkBoardingTests
 		var third = Queueing( 9, queuePos: 0, admitted: false );
 		state.JoinQueue( Ride, 9 );
 		third.QueueMoveDelay = 50;
+		OnTheQueue( third );
 
 		var walk = new PeepWalk( third.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
 
 		behaviour.Step( third, walk, playing: null, tick: 40 );
 
 		Assert.AreEqual( 2, third.QueuePos, "they take their real place immediately" );
+		Assert.AreEqual( PeepState.SteppingUpQueue, third.State, "and walk back to it" );
 		Assert.AreEqual( 50, third.QueueMoveDelay, "without spending any of the delay" );
 	}
 
