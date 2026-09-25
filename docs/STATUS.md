@@ -27,22 +27,21 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Information and money: Info and Money open all-staff, all-items, all-visitors and entry-price screens. **The
   entry-price door shuts the park and every ride a guest may be offered**, drawn down when shut: a shut ride turns its
   queue away one head a sweep, for 15, and opening the door or editing its queue opens it again.
-- Building by POINTING - click to anchor, click to commit, no drag, because both of the original's drag
-  slots are bare `RET` stubs. A click on grass or path picks up the PATH tool (20 a cell) with its own
-  squares and cursors; Backspace takes the last run up, Escape puts the tool away. QUEUE is 75, refunded.
-- **Placing a ride lays its queue's first cell before the entrance and hands the player the queue tool
-  there**, with the original's coloured squares showing where a click will lay it; one click onto a path
-  lays and joins the queue. Guests queue in it and ride.
+- Building by POINTING - click to anchor, click to commit, no drag, because both of the original's drag slots are bare
+  `RET` stubs. A click on grass or path picks up the PATH tool (20 a cell) with its own squares and cursors; Backspace
+  takes the last run up, Escape puts the tool away. QUEUE is 75, refunded.
+- **Placing a ride lays its queue's first cell before the entrance and hands over the queue tool there**, with the
+  original's coloured squares where a click will lay it; a click onto a path lays and joins it. Guests queue and ride.
 - Spending: guests choose, queue for and buy from the Drinks Shop and the Jungle Spray; short of the price, they walk.
 - People: guests and staff read from the save, drawn, walking, paying, queueing, boarding, interpolated between the
   248 ms steps. **Queuers walk to their own places, in a line**; one needing the toilet, or lost to the walk, is out.
-  **A guest on a cell with no links, such as a sold thing's cleared ground, wanders to the nearest path.**
-- Rides: every placed thing runs its script; 74 of 106 opcodes built, the rest counted. A ride screams
-  at the band its rider count asks for, as the original's chain: a fresh sample every 1-3 s on **its own
-  clock**, so a second ride in the same band is neither held up by it nor set off by its stop.
-- **A thing bought this session is a member of the running park**: it takes its turn, appears in every
-  census, joins the object chain the original keeps live, and carries the entry and exit cells derived
-  from its own shape picture. See `docs/QUEUE.md` Q1 and Q1b.
+  **A guest on a cell with no links, such as a sold thing's cleared ground, wanders to the nearest path.** **Guests
+  arrive on the original's clock**, the save's `mGameTick` and mark: a load 126 s in, then about 150 s after each.
+- Rides: every placed thing runs its script; 74 of 106 opcodes built, the rest counted. A ride screams at the band its
+  rider count asks for, as the original's chain: a fresh sample every 1-3 s on **its own clock**, so a second ride in
+  the same band is neither held up by it nor set off by its stop.
+- **A thing bought this session is a member of the running park**: it takes its turn, appears in every census, joins the
+  object chain the original keeps live, and carries the entry and exit cells derived from its own shape picture (Q1b).
 
 ## Does not
 
@@ -62,20 +61,21 @@ from the repository, which cannot lag: `git log --oneline -1`.
   (Q120). A disabled button still takes the pointer (Q66); presses the original stops reach the park (Q113, Q115, Q116).
 - The happiness gauge draws two copies of its bar, split down the middle (`docs/PLAYER-GAPS.md` gap 5; unmeasured).
 - Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
-- Guests arrive eight times as often as the original's, and staff may idle for an eighth of its time: its timers
-  read the thing sweep, ours the 31 ms tick (arrivals decoded, Q68b builds them; Q82, decode first).
+- Staff may idle an eighth of the original's time (Q82); guests and rides turn on the frame clock, not `mGameTick`
+  (Q132); a load brings one guest, the floor (Q26); between loads the bus waits at the stop, not out of sight (Q131).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
   walk (Q121), and a park screen stays open over it (Q122).
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1 to Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50 to Q50h, Q53, Q53b
-Q56, Q57, Q59, Q67 and Q68 are ticked.** Next is **Q68b**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10
+`docs/QUEUE.md`, from the top. **Q1-Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50-Q50h, Q53, Q53b, Q56,
+Q57, Q59, Q67, Q68 and Q68b are ticked.** Next is **Q82**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10
 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50
 Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h, Q50h
 Q106, Q53 Q53b and Q107-Q111, Q53b Q112, Q56 Q113-Q117, Q57 Q118-Q120, Q59 Q121-Q123, Q67 Q124-Q125, Q68 Q68b and
-Q126-Q130, the staleness audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review), the lobby plan section G.
+Q126-Q130, Q68b Q131-Q132, the staleness audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review), the lobby
+plan section G.
 
 `docs/PLAYER-GAPS.md` holds gaps **4, 5 and 7**. The untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
 
@@ -83,7 +83,7 @@ Q126-Q130, the staleness audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-
 
 - **The RIDER on a ride bought this session**: measured five times, not photographed (the console has no pitch).
 - `SpriteScript.ScheduleFrom` and `DropUnreadyNominee`: unwiring either leaves the suite green.
-- The critical-section cap trips only in a test: nothing the game ships can reach it (Q11).
+- Nothing the game ships reaches the critical-section cap (Q11) or Q68b's ferry and seaplane let-go: tested only.
 - The staff half of a sale: nobody in Lost Kingdom rests in the first minutes, so it is tested, not seen (Q36).
 - Tested, not run in the game: the Delete key's and a sale's let-go of a candidate (Q39), Escape before the gate opens
   (Q41), the name box's two releases in one frame and a park whose global.sam will not load (Q42).
@@ -105,15 +105,15 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1180**, 0 fail, 0 skip with the game | 2026-09-25, after Q68 |
-| Tests without the game | **482** ran, **698** skipped, of 1180 | 2026-09-25, after Q68 |
-| Build warnings | 123 | 2026-09-25, after Q68 |
+| Tests | **1184**, 0 fail, 0 skip with the game | 2026-09-25, after Q68b |
+| Tests without the game | **482** ran, **702** skipped, of 1184 | 2026-09-25, after Q68b |
+| Build warnings | 123 | 2026-09-25, after Q68b |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-25 - the arrival clock decoded (Q68).** `alexah/152-decode-the-arrival-clock`: decode only; Q68b builds it.
-**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/151` (Q67)
+**2026-09-25 - guests arrive on the original's clock (Q68b).** `alexah/153-arrivals-on-the-original-clock`.
+**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/152` (Q68)
 back to `118` (Q4), `115`-`116` (Q3), `117` (Q35) and `109` (Q1, Q1b); before them, `114`, `110` and `112`.
 
 Everything older is the git log.

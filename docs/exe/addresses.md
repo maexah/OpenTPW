@@ -210,9 +210,15 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004b8ee0` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x004b9340` | | OpenTPW/UI/FrontEnd/FrontEndLines.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x004b9840` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
+| `0x004cf3f6` | Arrival manager `FUN_004cf3e0`: `FUN_0041a990`'s elapsed count against the period `[0x00785314]`; `JBE` skips the call, so the count must be more than the period | OpenTPW.Tests/ParkPeopleTests.cs OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004cf455` | Arrival manager: re-tests the offloading flag (`+0x10`) after a load is called, so the same call goes on to ask the vehicle | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004cf533` | Arrival manager's tail, the arm with nobody at the stop (`FUN_0051a9d0` nought): lets the vehicle go at state 4 alone | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004cf56b` | Arrival manager, vehicle at 2: `JLE` on `mPeopleOnBus`; at nought or below the load is let go (`FUN_0041a960` re-marks `mTimeSig`, the flag cleared) | OpenTPW.Tests/ParkPeopleTests.cs OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004cf594` | Arrival manager: after dropping a guest, on to the tail at `0x004cf4b6`; the load is not let go on the drop's sweep | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004d01f3` | `FUN_004d01f0`, the drain's debit: subtracts only while the bank's `+0x114` is non-zero | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x004d49a0` | | OpenTPW/World/Park/FixedVector.cs  |
 | `0x004d6545` | `FUN_004d6410`: a staff member's idle stamp tested against `mGameTick` | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004d7b29` | `FUN_004d7b20`: the arrival manager's one call, through its thunk, once a thing sweep | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004db3f3` | Object constructor: the flags word built from the item's description (from here) | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db420` | Object constructor: the queue-path bit `0x08` from descriptor `+0x40`, `Info.HasQueue` | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db425` | Object constructor: `OR [ESI+0x32],0x8` | OpenTPW/World/Park/ParkBuilding.cs  |
@@ -326,7 +332,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00512a5e` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00512b4c` | | OpenTPW/World/Weather/Lightning.cs  |
 | `0x00515865` | | OpenTPW/Global/GameCalendar.cs OpenTPW/World/Level.cs OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x00516394` | Thing sweep `FUN_00516380`: `mGameTick` up by one | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00516394` | Thing sweep `FUN_00516380`: `mGameTick` up by one | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkState.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00516d13` | World save `FUN_00516c80`: installs the idle mode before anything is written, so leaving a park lets go of the hand | OpenTPW/World/Level.cs  |
 | `0x00517bec` | World load: `mGameTick` read from the save | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00519f40` | `FUN_00519ef0`'s second-argument path writes the gate's `VAR_COMMAND` = 2 | OpenTPW/World/Park/ParkRides.cs  |

@@ -953,13 +953,23 @@ over both for an Instant Action park, sets `PointsPerVisitor` to 5:
 Each fills the global named above (proven by the slot table). Read them with `ParkBalance.Int( "Arrival.X",
 fallback )`: the `SAMParser` quirk applies only to multi-value lines, and these five are ordinary single-value keys.
 
-**OpenTPW counts `GameClock`'s 31 ms ticks instead** (`ParkPeople.StepArrivals`), and takes its mark from the clock
-when the park is built rather than from the save. Measured in the running game (`q68measure.py`, jungle, silent): the
-next load is called **600 ticks, 18.60 s**, after the drop that ended the last, both times, and the first **604
-ticks, 18.7 s**, after the park came on show: eight times the original's rate, and a first load about seven times
-sooner. It also calls a load when the elapsed count **equals** the period, resets the mark on the drop's own sweep,
-and makes each guest at stop A and stop B in turn, not at stop B less two rows. Building the original's is Q68b; the
-stops are Q127.
+**OpenTPW keeps the same clock and the same mark, and takes the manager's arms in its order** (`ParkPeople.StepArrivals`,
+Q68b). `ParkState.GameTick` is `mGameTick`: seeded from the save and one up as each thing sweep begins, before
+anything in it runs. The mark starts from the save's `mTimeSig` (`ParkWorld.Arrival`). A load is called when
+`ParkPeople.LoadIsDue` finds the fours of the clock more than the period past the mark's, unsigned. The call goes
+straight on to ask the vehicle, a guest is dropped a sweep while it answers 2, and the load is let go, the mark reset
+and the vehicle sent away on the first sweep after the last drop that still finds it at 2; `StepVehicle` does not
+release 2 while a load is held. Measured in the running game (`q68bmeasure.py`, jungle, silent), each predicted
+first: the first load called on `mGameTick` **1264**, 509 sweeps after 755 and 126.05 s after the park came on show
+(126.23 predicted); its guest dropped on 1300, the bus having driven in; the load let go on **1301**; the next called
+on **1904**, 604 sweeps after the drop and 149.54 s after the let-go; that one dropped on 1904 and let go on 1905.
+
+What it does not reproduce, each said at its site: the headcount, the floor alone (Q26); where each guest is made,
+stop A and stop B in turn (Q127); the two refusals, in world state 4 and at the cap, where the original calls a load
+of nobody or of what fits and still sends its vehicle (neither reached in Lost Kingdom); a load saved half-dropped,
+counted as `SAVED_ARRIVAL_LOAD` and not resumed; guests made with no script to ask, on the sweep that calls the load;
+and the spent vehicle, which is sent round again and waits at the stop (Q131), which is why the second load above
+dropped on the sweep that called it where the original's bus would have driven in first.
 
 **The score in the headcount is `FUN_004c8240`, and it is NOT decoded**, nor is `FUN_00519590`'s `+0x30`. It sums a
 park-attractiveness score over the rides — per ride a capacity, a duration divided down, and a

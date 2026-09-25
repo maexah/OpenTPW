@@ -264,6 +264,36 @@ public class ParkPeopleTests
 	}
 
 	/// <summary>
+	/// <b>When a load is due</b>: <c>FUN_0041a990</c> against the period at <c>0x004cf3f6</c>. The clock and the mark
+	/// are each shifted down two, unsigned, and the difference has to be MORE than the period. From Lost Kingdom's
+	/// mark of 661 that is <c>mGameTick</c> 1264 and not a tick sooner, a mark ahead of the clock is due at once, and a load
+	/// let go the sweep after a drop brings the next 602 to 605 sweeps after that drop (<c>docs/exe/park.md</c>,
+	/// "Arrivals").
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> <c>&gt;=</c> for <c>&gt;</c> makes 1260 due; a signed difference makes the mark ahead of the
+	/// clock wait.
+	/// </remarks>
+	[TestMethod]
+	public void ALoadIsDueOnceItsWaitIsPastThePeriod()
+	{
+		Assert.IsFalse( ParkPeople.LoadIsDue( 1263, 661, 150 ), "1263 >> 2 is 315, which is 150 past 165: not more" );
+		Assert.IsFalse( ParkPeople.LoadIsDue( 1260, 661, 150 ), "nor on the first tick of that count" );
+		Assert.IsTrue( ParkPeople.LoadIsDue( 1264, 661, 150 ), "316 is 151 past: due" );
+		Assert.AreEqual( 1264, ParkPeople.FirstDueTick( 661, 150 ), "the first tick it is due, worked out" );
+
+		Assert.IsTrue( ParkPeople.LoadIsDue( 100, 661, 150 ), "a mark ahead of the clock wraps, and is due at once" );
+
+		for ( var drop = 1000; drop < 1004; ++drop )
+		{
+			var next = ParkPeople.FirstDueTick( drop + 1, 150 );
+
+			Assert.IsTrue( next - drop is >= 602 and <= 605,
+				$"a last drop on {drop}, let go on {drop + 1}, brings the next on {next}" );
+		}
+	}
+
+	/// <summary>
 	/// When a vehicle is sent on - the rule out of <c>FUN_004cf3e0</c>'s arms, which decides whether the
 	/// park keeps getting visitors at all.
 	///
@@ -277,34 +307,39 @@ public class ParkPeopleTests
 	/// </para>
 	///
 	/// <para>
-	/// <b>The refusal is the assertion that matters.</b> Unloading with somebody still aboard must not be
-	/// released: the original drops one guest per tick for exactly as long as the vehicle answers 2, so a
-	/// rule that let it go early would send the bus away with its passengers still on it - and the park
-	/// would look busy while quietly losing the people it had just been given.
+	/// <b>The refusals are the assertions that matter.</b> Unloading is not released while a load is held: the
+	/// original drops one guest a sweep for exactly as long as the vehicle answers 2, so a rule that let it go
+	/// with somebody aboard would send the bus away with its passengers still on it, and one that let it go on the
+	/// sweep of the last drop would move it on before the sweep after, which is the one that lets the load go and
+	/// starts the next wait (<c>0x004cf56b</c>).
 	/// </para>
 	/// </summary>
+	/// <remarks>
+	/// <b>Mutation:</b> dropping <c>!loadHeld</c> from the rule releases the bus on the last drop's sweep, and the
+	/// second assertion fails.
+	/// </remarks>
 	[TestMethod]
 	public void AVehicleIsSentOnFromEveryStateItParksIn()
 	{
-		Assert.IsFalse( ParkPeople.ReleasesVehicle( 2, 3 ),
+		Assert.IsFalse( ParkPeople.ReleasesVehicle( 2, 3, loadHeld: true ),
 			"unloading with three still aboard: it must NOT be sent away" );
-		Assert.IsFalse( ParkPeople.ReleasesVehicle( 2, 1 ),
-			"nor with the last one still aboard" );
+		Assert.IsFalse( ParkPeople.ReleasesVehicle( 2, 0, loadHeld: true ),
+			"nor on the sweep that dropped the last one, while the load is still held" );
 
-		Assert.IsTrue( ParkPeople.ReleasesVehicle( 2, 0 ),
-			"but a spent load is what sends it away" );
+		Assert.IsTrue( ParkPeople.ReleasesVehicle( 2, 0, loadHeld: false ),
+			"but a load let go is what sends it away" );
 
-		Assert.IsTrue( ParkPeople.ReleasesVehicle( 4, 0 ), "leaving - the one the bus was stuck at" );
-		Assert.IsTrue( ParkPeople.ReleasesVehicle( 4, 2 ),
+		Assert.IsTrue( ParkPeople.ReleasesVehicle( 4, 0, loadHeld: false ), "leaving - the one the bus was stuck at" );
+		Assert.IsTrue( ParkPeople.ReleasesVehicle( 4, 2, loadHeld: true ),
 			"and it is stuck there whether or not a load is outstanding, so the count must not gate it" );
 
-		Assert.IsTrue( ParkPeople.ReleasesVehicle( 0, 0 ), "idle between runs" );
-		Assert.IsTrue( ParkPeople.ReleasesVehicle( 6, 0 ), "and finished, which also forgets it" );
+		Assert.IsTrue( ParkPeople.ReleasesVehicle( 0, 0, loadHeld: false ), "idle between runs" );
+		Assert.IsTrue( ParkPeople.ReleasesVehicle( 6, 0, loadHeld: false ), "and finished, which also forgets it" );
 
 		// The states it passes through under its own power. Nudging one of these would release a spin
 		// the script has not reached, which the next COPY VAR_TRIGGER, 0 would then swallow silently.
-		Assert.IsFalse( ParkPeople.ReleasesVehicle( 1, 0 ), "arriving" );
-		Assert.IsFalse( ParkPeople.ReleasesVehicle( 3, 0 ), "pulling away" );
-		Assert.IsFalse( ParkPeople.ReleasesVehicle( 5, 0 ), "running its last clip" );
+		Assert.IsFalse( ParkPeople.ReleasesVehicle( 1, 0, loadHeld: false ), "arriving" );
+		Assert.IsFalse( ParkPeople.ReleasesVehicle( 3, 0, loadHeld: false ), "pulling away" );
+		Assert.IsFalse( ParkPeople.ReleasesVehicle( 5, 0, loadHeld: false ), "running its last clip" );
 	}
 }

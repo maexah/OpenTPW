@@ -2,6 +2,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace OpenTPW.Tests;
 
@@ -424,6 +426,205 @@ public class ParkTickTests
 			people.Delete();
 			Entity.ApplyDeletions();
 		}
+	}
+
+	/// <summary>
+	/// <b>Guests arrive on the park's own clock, carrying on the wait the save was left in</b> (<c>docs/exe/park.md</c>,
+	/// "Arrivals"). The clock is the save's <c>mGameTick</c>, 755 in Lost Kingdom, one up a sweep, and the wait counts
+	/// from the save's <c>mTimeSig</c>, 661. So the first load is called on <c>mGameTick</c> 1264, the 509th sweep, 126.2 s
+	/// in; it is let go on the sweep after its last guest is dropped; and the next is called on the first tick whose
+	/// fours are 151 past the let-go's, 602 to 605 sweeps after that drop.
+	///
+	/// <para>
+	/// <b>No script is bound here</b>, so the manager takes OpenTPW's no-script fallback and drops on the sweep that
+	/// calls the load, where the original would summon the vehicle and wait for it to answer 2. The handshake with a
+	/// bound bus is <see cref="TheBusIsHeldAtTheStopUntilTheSweepAfterItsLastGuest"/>.
+	/// </para>
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations</b>: the mark taken from the frame clock rather than the save; the compare made <c>&gt;=</c>; the
+	/// load let go on the drop's own sweep; the mark stamped with the drop's tick though the load is let go a sweep
+	/// later (1264 and 1265 share a four, so only the mark itself tells them apart); the call returning before it asks
+	/// the vehicle; the clock not advanced by the sweep.
+	/// </remarks>
+	[TestMethod]
+	public void GuestsArriveOnTheParkClockFromTheWaitTheSaveLeft()
+	{
+		var world = World();
+		var people = new ParkPeople( world );
+
+		try
+		{
+			EnterPark();
+
+			Assert.AreEqual( 755, people.State.GameTick, "the park's clock starts from the save's" );
+			Assert.AreEqual( 661, people.ArrivalMark, "and its wait from the save's mark" );
+
+			var newest = people.Peeps.Max( peep => peep.ThingId );
+			int? call = null, drop = null, letGo = null, next = null;
+
+			for ( var frame = 0; frame < 4000 && next == null; ++frame )
+			{
+				var tickBefore = people.State.GameTick;
+				var heldBefore = people.LoadHeld;
+
+				// A tenth of a second is three or four 31 ms ticks, so no frame runs more than one sweep, and each
+				// change below is stamped with the sweep that made it.
+				Frame( 0.1f );
+				people.Update();
+
+				var tick = people.State.GameTick;
+
+				Assert.IsTrue( tick - tickBefore <= 1, $"one sweep a frame at most, not {tick - tickBefore}" );
+
+				if ( !heldBefore && people.LoadHeld )
+				{
+					if ( call == null )
+						call = tick;
+					else
+						next = tick;
+				}
+
+				if ( drop == null && people.Peeps.Max( peep => peep.ThingId ) > newest )
+				{
+					drop = tick;
+
+					Assert.IsTrue( people.LoadHeld && people.StillToDrop == 0,
+						"the last guest's sweep leaves the load held with nobody left: the flag is apart from the count" );
+				}
+
+				if ( heldBefore && !people.LoadHeld && letGo == null )
+				{
+					letGo = tick;
+
+					Assert.AreEqual( tick, people.ArrivalMark, "the next wait counts from the let-go's own tick" );
+				}
+			}
+
+			Assert.AreEqual( 1264, call, "the first load is called on the 509th sweep after 755" );
+			Assert.AreEqual( call, drop, "with no vehicle to wait for, its one guest comes on the sweep that calls it" );
+			Assert.AreEqual( drop + 1, letGo, "the load is let go on the sweep after the last drop, not on it" );
+			Assert.AreEqual( ParkPeople.FirstDueTick( letGo!.Value, 150 ), next,
+				"and the next is called on the first tick whose fours are 151 past the let-go's" );
+			Assert.IsTrue( next - drop is >= 602 and <= 605, $"{next - drop} sweeps from the drop to the next call" );
+		}
+		finally
+		{
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
+	/// <b>The bus is held at the stop until the sweep after its last guest, and only then is the load let go</b>
+	/// (<c>FUN_004cf3e0</c>; <c>docs/exe/park.md</c>, "Arrivals"). The save's own bus runs <c>bus.RSE</c>, and the
+	/// test plays that script's part by hand, by name, rather than stepping it: waiting between runs at 0, then at
+	/// the stop at 2 and spinning on <c>VAR_TRIGGER</c> (<c>bus.RSE</c> 39-45). A waiting bus is summoned on the
+	/// sweep that calls the load, its guest is dropped only once it answers 2, it is not let go on that drop's
+	/// sweep, and the load is let go, the wait restarted and the bus sent away on the first sweep after that finds
+	/// it still at 2.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> <c>StepVehicle</c> passing <c>loadHeld: false</c>, which lets the bus go on the drop's sweep;
+	/// the let-go not waiting for 2.
+	/// </remarks>
+	[TestMethod]
+	public void TheBusIsHeldAtTheStopUntilTheSweepAfterItsLastGuest()
+	{
+		var world = World();
+		var catalogue = new ParkItemCatalogue( Theme, data );
+		var rides = new ParkRides( Theme, world, catalogue, data );
+		var busThing = world.ArrivalVehicleForSmallCrowd;
+
+		// The fixed items' scripts are bound in ParkRides' second pass, which needs the stood models, so the bus's is
+		// spawned here from its own catalogue item (1600), as that pass spawns it.
+		Assert.IsTrue( catalogue.TryGet( 1600, out var busItem ), "the jungle's catalogue has the bus" );
+		var busScript = rides.Scheduler.Spawn( ParkRides.ScriptPathFor( busItem ) );
+		var bus = rides.Scheduler.Find( busScript );
+		var standingBefore = ParkFixedItems.Current;
+
+		StandVehicles( ("bus", busThing) );
+
+		var people = new ParkPeople( world, new ParkBalance( Theme, easyMode: true ),
+			() => ParkRides.GateIsOpen, new ParkState( world ), catalogue,
+			thingId => thingId == busThing ? bus : rides.Scheduler.Find( rides.ScriptFor( thingId ) ) );
+
+		try
+		{
+			Assert.IsNotNull( bus, $"the bus, thing {busThing}, should run {ParkRides.ScriptPathFor( busItem )}" );
+
+			EnterPark();
+
+			Assert.IsTrue( bus.Set( "VAR_STATUS", 0 ) && bus.Set( "VAR_TRIGGER", 0 ),
+				"bus.RSE declares both variables the handshake turns on" );
+
+			var newest = people.Peeps.Max( peep => peep.ThingId );
+
+			for ( var sweep = 0; sweep < 600 && !people.LoadHeld; ++sweep )
+				Sweep( people );
+
+			Assert.AreEqual( 1264, people.State.GameTick, "the load is called on mGameTick 1264" );
+			Assert.AreEqual( 1, bus["VAR_TRIGGER"], "and the waiting bus summoned on the same sweep" );
+			Assert.AreEqual( newest, people.Peeps.Max( peep => peep.ThingId ), "nobody is dropped before it answers 2" );
+
+			bus.Set( "VAR_TRIGGER", 0 );
+			bus.Set( "VAR_STATUS", 2 );
+			Sweep( people );
+
+			Assert.IsTrue( people.Peeps.Max( peep => peep.ThingId ) > newest, "at the stop, its one guest is dropped" );
+			Assert.IsTrue( people.LoadHeld && people.StillToDrop == 0, "and the load is held with nobody left" );
+			Assert.AreEqual( 0, bus["VAR_TRIGGER"], "so the bus is NOT let go on the last drop's sweep" );
+
+			bus.Set( "VAR_STATUS", 3 );
+			Sweep( people );
+			Sweep( people );
+
+			Assert.IsTrue( people.LoadHeld, "a vehicle not answering 2 does not let the load go" );
+			Assert.AreEqual( 661, people.ArrivalMark, "nor start the next wait" );
+
+			bus.Set( "VAR_STATUS", 2 );
+			Sweep( people );
+
+			Assert.IsFalse( people.LoadHeld, "found at 2 with nobody left, the load is let go" );
+			Assert.AreEqual( people.State.GameTick, people.ArrivalMark, "and the next wait counts from this sweep" );
+			Assert.AreEqual( 1, bus["VAR_TRIGGER"], "and the bus is sent away" );
+		}
+		finally
+		{
+			people.Delete();
+			rides.Delete();
+			Entity.ApplyDeletions();
+			typeof( ParkFixedItems ).GetProperty( nameof( ParkFixedItems.Current ) )!.SetValue( null, standingBefore );
+		}
+	}
+
+	/// <summary>One thing sweep: frames of a tenth of a second until the park's clock has gone one up.</summary>
+	private static void Sweep( ParkPeople people )
+	{
+		var from = people.State.GameTick;
+
+		for ( var frame = 0; frame < 10 && people.State.GameTick == from; ++frame )
+		{
+			Frame( 0.1f );
+			people.Update();
+		}
+
+		Assert.AreEqual( from + 1, people.State.GameTick, "one sweep" );
+	}
+
+	/// <summary>
+	/// A <see cref="ParkFixedItems"/> that answers only which thing each vehicle was stood as, made without its
+	/// constructor: <see cref="ParkPeople"/> finds a vehicle's script through <see cref="ParkFixedItems.Current"/>,
+	/// and the real one builds every fixed item's model, which no test can.
+	/// </summary>
+	private static void StandVehicles( params (string Name, int Thing)[] vehicles )
+	{
+		var items = (ParkFixedItems)RuntimeHelpers.GetUninitializedObject( typeof( ParkFixedItems ) );
+
+		typeof( ParkFixedItems ).GetField( "_thingOf", BindingFlags.NonPublic | BindingFlags.Instance )!
+			.SetValue( items, vehicles.ToDictionary( vehicle => vehicle.Name, vehicle => vehicle.Thing ) );
+
+		typeof( ParkFixedItems ).GetProperty( nameof( ParkFixedItems.Current ) )!.SetValue( null, items );
 	}
 
 	/// <summary>

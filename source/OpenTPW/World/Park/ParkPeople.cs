@@ -170,12 +170,15 @@ public sealed class ParkPeople : Entity
 
 		_nextSpriteSlot = 1 + (park?.Sprites.Count > 0 ? park.Sprites.Max( sprite => sprite.Slot ) : 0);
 
-		// <b>The arrival timer starts now, not at nought.</b> Left at nought the first load is due the
-		// instant the park is ticked, because the clock counts from the program starting rather than
-		// from this park opening - so a park would get a busload before anybody could look at it. The
-		// original resets the same mark (FUN_0041a960) every time a load finishes, and this is the same
-		// reset for the load that has not happened yet.
-		_arrivalMark = GameClock.Ticks;
+		// The arrival timer carries on the wait the park was saved in: its mark is the save's mTimeSig, counted
+		// against ParkState.GameTick, the save's mGameTick, as FUN_005179c0 loads both (park.md, "Arrivals").
+		_arrivalMark = park?.Arrival.TimeSig ?? 0;
+
+		// <b>A load saved half-dropped is not carried on.</b> The original resumes it from mPeopleOnBus with
+		// mOffloading set, on whichever vehicle mCurrentArrivalVehicle names. No save the game ships holds one,
+		// so resuming it could not be checked, and it is counted instead: the park starts with no load held.
+		if ( park?.Arrival.Offloading == true )
+			Unimplemented.Report( "SAVED_ARRIVAL_LOAD" );
 
 		// What the park charges is on its economy thing and what a guest will put up with is in the
 		// balance file, so it takes both - and neither on its own is enough to price the gate.
@@ -420,7 +423,8 @@ public sealed class ParkPeople : Entity
 		_behaviour.State.StandOn( thingId, cellX, cellY );
 		_behaviour.State.Admit();
 
-		Log.Info( $"People: guest {thingId} arrived at ({cellX},{cellY}) - {_peeps.Count} guests now" );
+		Log.Info( $"People: guest {thingId} arrived at ({cellX},{cellY}) on mGameTick {State.GameTick} - "
+			+ $"{_peeps.Count} guests now" );
 
 		return thingId;
 	}
@@ -684,11 +688,40 @@ public sealed class ParkPeople : Entity
 	/// </summary>
 	public const int MostPeopleInAPark = 0x5dc;
 
-	// How many of this load are still to be dropped, which vehicle is bringing them, and the tick the
-	// last load finished on. All nought until the first is due.
+	// How many of this load are still to be dropped, which vehicle is bringing them, whether a load is held at
+	// all, and the mGameTick the wait for the next is counted from: the original's mPeopleOnBus, the vehicle it
+	// caches, mOffloading and mTimeSig. The flag is apart from the count because the load is let go a sweep
+	// after its last guest is dropped, not on the drop (FUN_004cf3e0, 0x004cf56b).
 	private int _arrivalsRemaining;
 	private int _arrivalVehicle;
+	private bool _offloading;
 	private int _arrivalMark;
+
+	/// <summary>The <c>mGameTick</c> the next load's wait is counted from - the original's <c>mTimeSig</c>.</summary>
+	internal int ArrivalMark => _arrivalMark;
+
+	/// <summary>Whether a load is held, from the sweep that calls it to the sweep that lets it go - <c>mOffloading</c>.</summary>
+	internal bool LoadHeld => _offloading;
+
+	/// <summary>How many of the load held are still to be dropped - <c>mPeopleOnBus</c>.</summary>
+	internal int StillToDrop => _arrivalsRemaining;
+
+	/// <summary>How long a load waits after the last, in fours of sweeps - <c>Arrival.TimeBetweenArrivals</c>, 150.</summary>
+	private int ArrivalPeriod => _balance?.Int( "Arrival.TimeBetweenArrivals", 150 ) ?? 150;
+
+	/// <summary>
+	/// Whether a load is due: <c>FUN_0041a990</c> and the compare after it at <c>0x004cf3f6</c>. The clock and the
+	/// mark are each shifted down two unsigned (<c>SHR</c>), so one count is four sweeps, 0.99 s, and their
+	/// difference has to be MORE than the period, unsigned (<c>JBE</c> skips the call). So the load comes on the
+	/// first sweep whose elapsed count is 151 for a period of 150, and a mark ahead of the clock wraps the difference
+	/// and makes one due at once.
+	/// </summary>
+	internal static bool LoadIsDue( int gameTick, int mark, int period )
+		=> unchecked(((uint)gameTick >> 2) - ((uint)mark >> 2)) > (uint)period;
+
+	/// <summary>The first <c>mGameTick</c> at or after the mark on which <see cref="LoadIsDue"/> answers yes.</summary>
+	internal static int FirstDueTick( int mark, int period )
+		=> (int)((((uint)mark >> 2) + (uint)period + 1) << 2);
 
 	/// <summary>
 	/// Which of the three vehicles brings a crowd this big. <c>FUN_004cf3e0</c> takes the first for a
@@ -748,6 +781,7 @@ public sealed class ParkPeople : Entity
 	{
 		_arrivalsRemaining = Math.Max( 1, people );
 		_arrivalVehicle = VehicleFor( _arrivalsRemaining );
+		_offloading = true;
 
 		Log.Info( $"People: {_arrivalsRemaining} arriving by hand, vehicle {_arrivalVehicle} "
 			+ $"({ParkFixedItems.VehicleName( _arrivalVehicle )})" );
@@ -859,6 +893,15 @@ public sealed class ParkPeople : Entity
 	}
 
 	/// <summary>
+	/// The arrival timer, for the debug console's <c>arrivals</c>: the park's clock, the mark, and either the load
+	/// held or the <c>mGameTick</c> the next is due on. Answering the console rather than the park.
+	/// </summary>
+	internal string ArrivalCensus()
+		=> $"arrivals: mGameTick {State.GameTick} mark {_arrivalMark} " + (_offloading
+			? $"load held, vehicle {_arrivalVehicle}, {_arrivalsRemaining} still to drop"
+			: $"next load due on mGameTick {FirstDueTick( _arrivalMark, ArrivalPeriod )}");
+
+	/// <summary>
 	/// What each of the three vehicles is doing right now - the thing it was stood as, whether a script
 	/// is bound, where that script's program counter has got to, and the two variables the arrival
 	/// handshake turns on. Answering the console rather than the park.
@@ -895,17 +938,26 @@ public sealed class ParkPeople : Entity
 	}
 
 	/// <summary>
-	/// One turn of the arrival manager - <c>FUN_004cf3e0</c>. It waits out a period, decides how many
-	/// are coming and on what, and then drops <b>one guest per thing tick</b> until that load is spent.
+	/// One turn of the arrival manager, <c>FUN_004cf3e0</c>, which the original calls once a thing sweep
+	/// (<c>0x004d7b29</c>). While no load is held it waits out <c>Arrival.TimeBetweenArrivals</c> on the park's own
+	/// clock (<see cref="LoadIsDue"/>). Then it decides how many are coming and on what, drops <b>one guest a
+	/// sweep</b> for as long as the vehicle answers that it is unloading, and lets the load go on the first sweep
+	/// after the last drop that still finds it unloading. That sweep is the mark the next wait counts from, so the
+	/// next load is called 602 to 605 sweeps after the last guest got off (<c>docs/exe/park.md</c>, "Arrivals").
 	///
 	/// <para>
-	/// <b>The headcount is a deviation and this is the whole of it.</b> The original sizes a load from
-	/// a park-attractiveness score summed over the rides (<c>FUN_004c8240</c>: per ride a capacity, a
-	/// duration divided down, and a three-entry table indexed off it), divided by
-	/// <c>Arrival.PointsPerVisitor</c> and floored at <c>Arrival.MinPeople</c>. That score reads four
-	/// ride fields this project has not named, so what is reproduced here is the floor alone - the
-	/// smallest load the original would ever send. Everything else about the cycle is the original's:
-	/// the period, the world-state refusal, the cap, the one-a-tick drip and the choice of vehicle.
+	/// <b>The headcount is a deviation.</b> The original sizes a load from <c>Arrival.NewParkBonus</c> plus a
+	/// park-attractiveness score summed over the rides (<c>FUN_004c8240</c>: per ride a capacity, a duration divided
+	/// down, and a three-entry table indexed off it), times 0.8 or 1.2, divided by <c>Arrival.PointsPerVisitor</c> and
+	/// floored at <c>Arrival.MinPeople</c>. That score reads four ride fields this project has not named, so what is
+	/// reproduced here is the floor alone (Q26).
+	/// </para>
+	/// <para>
+	/// <b>So are its two refusals.</b> In world state 4, and where the crowd would pass
+	/// <see cref="MostPeopleInAPark"/>, the original still calls a load, of nobody or of what fits
+	/// (<c>FUN_004cf5b0</c>), and its vehicle still comes and restarts the wait; here neither calls a load, and world
+	/// state 4 stops a load already held. Lost Kingdom reaches neither: it is saved in world state 0 with 13 guests.
+	/// Where each guest is made is Q127's.
 	/// </para>
 	/// </summary>
 	private void StepArrivals( int thingTick )
@@ -916,20 +968,40 @@ public sealed class ParkPeople : Entity
 		if ( park.WorldState == NoArrivalsWorldState )
 			return;
 
-		if ( _arrivalsRemaining > 0 )
-		{
-			var vehicle = VehicleScript( _arrivalVehicle );
+		var tick = State.GameTick;
 
-			// <b>The vehicle says when it is ready, which is the original's own handshake.</b> Its
-			// script plays its arrival animation, sets VAR_STATUS to 2 and then spins on VAR_TRIGGER;
-			// FUN_004cf3e0 drops one guest a tick for exactly as long as FUN_0051a690 reports that.
-			//
-			// <b>Where there is no script to ask, the guests still come.</b> A vehicle that is missing,
-			// unbound, or declares no such variable must not be able to stop a park getting visitors at
-			// all - and gating on a state that will never arrive is precisely what would do that.
-			if ( vehicle != null && vehicle[VehicleState] != VehicleIsUnloading )
+		if ( !_offloading )
+		{
+			if ( !LoadIsDue( tick, _arrivalMark, ArrivalPeriod ) )
 				return;
 
+			if ( _peeps.Count >= MostPeopleInAPark )
+				return;
+
+			_arrivalsRemaining = Math.Max( 1, _balance?.Int( "Arrival.MinPeople", 1 ) ?? 1 );
+			_arrivalVehicle = VehicleFor( _arrivalsRemaining );
+			_offloading = true;
+
+			Log.Info( $"People: {_arrivalsRemaining} arriving, vehicle {_arrivalVehicle}, on mGameTick {tick} "
+				+ $"(mark {_arrivalMark})" );
+
+			// And on in the same turn to ask the vehicle, as the original does from 0x004cf455.
+		}
+
+		var vehicle = VehicleScript( _arrivalVehicle );
+
+		// <b>The vehicle says when it is ready, which is the original's own handshake.</b> Its script plays its
+		// arrival animation, sets VAR_STATUS to 2 and then spins on VAR_TRIGGER; FUN_004cf3e0 drops one guest a
+		// sweep, and lets the load go, only while FUN_0051a690 reports that.
+		//
+		// <b>Where there is no script to ask, the guests still come.</b> A vehicle that is missing or unbound must
+		// not be able to stop a park getting visitors at all - and gating on a state that will never arrive is
+		// precisely what would do that. All three vehicles' scripts declare VAR_STATUS.
+		if ( vehicle != null && vehicle[VehicleState] != VehicleIsUnloading )
+			return;
+
+		if ( _arrivalsRemaining > 0 )
+		{
 			var useA = (thingTick & 1) == 0;
 			var stopX = 42;
 			var stopY = 5;
@@ -946,38 +1018,46 @@ public sealed class ParkPeople : Entity
 			else
 				--_arrivalsRemaining;
 
-			if ( _arrivalsRemaining == 0 )
-			{
-				_arrivalMark = GameClock.Ticks;
-
-				// And send it away. The script will not leave the stop until this changes, so a load
-				// that is finished with and never released leaves the vehicle sitting there - said out
-				// loud when the script declares no such variable, because a vehicle that never departs
-				// looks exactly like one that was never told to.
-				if ( vehicle != null && !vehicle.Set( VehicleTrigger, 1 ) )
-				{
-					Log.Warning( $"People: the {ParkFixedItems.VehicleName( _arrivalVehicle )}'s script "
-						+ $"declares no {VehicleTrigger}, so it cannot be sent away" );
-				}
-			}
-
 			return;
 		}
 
-		// The engine's own timer: the game tick shifted down two, against Arrival.TimeBetweenArrivals.
-		var period = _balance?.Int( "Arrival.TimeBetweenArrivals", 150 ) ?? 150;
+		// <b>Nobody left, and the vehicle still unloading: the load is let go on this sweep, not the drop's.</b> The
+		// sweep that drops the last guest returns above, as the original's goes to its tail (0x004cf594), so this is
+		// the sweep after it at the soonest (0x004cf56b), and its tick is the next wait's mark (FUN_0041a960).
+		_arrivalMark = tick;
+		_offloading = false;
 
-		if ( (GameClock.Ticks >> 2) - (_arrivalMark >> 2) < period )
-			return;
+		Log.Info( $"People: the load is all off on mGameTick {tick}; the next is due on mGameTick "
+			+ $"{FirstDueTick( tick, ArrivalPeriod )}" );
 
-		if ( _peeps.Count >= MostPeopleInAPark )
-			return;
-
-		_arrivalsRemaining = Math.Max( 1, _balance?.Int( "Arrival.MinPeople", 1 ) ?? 1 );
-		_arrivalVehicle = VehicleFor( _arrivalsRemaining );
-
-		Log.Info( $"People: {_arrivalsRemaining} arriving, vehicle {_arrivalVehicle}" );
+		// And send it away. The script will not leave the stop until this changes, so a load that is finished
+		// with and never released leaves the vehicle sitting there - said out loud when the script declares no
+		// such variable, because a vehicle that never departs looks exactly like one that was never told to.
+		if ( vehicle != null && !vehicle.Set( VehicleTrigger, 1 ) )
+		{
+			Log.Warning( $"People: the {ParkFixedItems.VehicleName( _arrivalVehicle )}'s script "
+				+ $"declares no {VehicleTrigger}, so it cannot be sent away" );
+		}
 	}
+
+	/// <summary>
+	/// Whether a vehicle reporting <paramref name="state"/>, with <paramref name="stillToDrop"/> of its
+	/// load left, should be sent on - the rule out of <c>FUN_004cf3e0</c>'s arms, on its own so that it
+	/// can be read and tested without a park standing around it.
+	///
+	/// <para>
+	/// <b>The one that matters is the refusal.</b> Unloading is NOT released while a load is held
+	/// (<paramref name="loadHeld"/>): the original drops a guest a sweep for exactly as long as the vehicle
+	/// answers 2, so letting it go with somebody aboard sends it off with them, and it lets the load go only on
+	/// a sweep after the last drop that still finds 2 (<c>0x004cf56b</c>). The ferry and the seaplane report 3
+	/// the moment they are let go (<c>Ferry.RSE</c> 26, <c>seaplane.RSE</c> 31), so one let go on the last
+	/// drop's sweep would hold its load until it came round again; the bus stays at 2 for 1.5 s first
+	/// (<c>bus.RSE</c> 47). Every other state the original ever nudges is nudged.
+	/// </para>
+	/// </summary>
+	internal static bool ReleasesVehicle( int state, int stillToDrop, bool loadHeld )
+		=> state is VehicleIsIdle or VehicleIsLeaving or VehicleIsSpent
+			|| (state == VehicleIsUnloading && stillToDrop == 0 && !loadHeld);
 
 	/// <summary>
 	/// One turn of the vehicle itself, which the original does on <b>every</b> tick and not only while a
@@ -1001,9 +1081,9 @@ public sealed class ParkPeople : Entity
 	/// </para>
 	///
 	/// <para>
-	/// <b>State 2 is deliberately not released while a load is outstanding.</b> That is the one the drip
-	/// depends on: the original drops a guest per tick for exactly as long as the vehicle answers 2, so
-	/// nudging it early would send the vehicle off with its passengers still aboard.
+	/// <b>State 2 is deliberately not released while a load is held.</b> That is the one the drip and the
+	/// let-go depend on: the original drops a guest a sweep for exactly as long as the vehicle answers 2, and
+	/// lets the load go on the sweep after the last drop only if it still does.
 	/// </para>
 	///
 	/// <para>
@@ -1013,26 +1093,17 @@ public sealed class ParkPeople : Entity
 	/// <c>{c, c+1, c-0x100, c-0xff}</c> around <c>FUN_004d8650</c>'s first cell. <b>Which balance-file
 	/// pair that getter returns is still unproven</b> - see <see cref="PeepBehaviour"/>, where the same
 	/// open item blocks two states - so the choice between the arms is not reproduced and every state the
-	/// original ever nudges is nudged here. The difference is confined to which arm fires, never to
-	/// whether a vehicle moves, and no guest in this park reaches those cells to be counted anyway.
+	/// original ever nudges is nudged here, but for unloading while a load is held, which the arm with nobody at
+	/// the stop leaves to the manager (<c>0x004cf533</c> releases state 4 alone). The difference is confined to
+	/// which arm fires, and no guest in this park reaches those cells to be counted anyway.
 	/// </para>
-	/// </summary>
-	/// <summary>
-	/// Whether a vehicle reporting <paramref name="state"/>, with <paramref name="stillToDrop"/> of its
-	/// load left, should be sent on - the rule out of <c>FUN_004cf3e0</c>'s arms, on its own so that it
-	/// can be read and tested without a park standing around it.
 	///
 	/// <para>
-	/// <b>The one that matters is the refusal.</b> Unloading with somebody still aboard must NOT be
-	/// released: the original drops a guest per tick for exactly as long as the vehicle answers 2, so
-	/// letting it go early would send it off with its passengers still on it. Every other state the
-	/// original ever nudges is nudged.
+	/// <b>A spent vehicle is sent round again, which the original does not do.</b> <c>FUN_0051a690</c> answers
+	/// state 6 by forgetting the vehicle and nudges nothing, so it waits at its last spin until the next load
+	/// summons it; here it is released and forgotten, drives back to the stop and waits there at 2 (Q131).
 	/// </para>
 	/// </summary>
-	internal static bool ReleasesVehicle( int state, int stillToDrop )
-		=> state is VehicleIsIdle or VehicleIsLeaving or VehicleIsSpent
-			|| (state == VehicleIsUnloading && stillToDrop == 0);
-
 	private void StepVehicle()
 	{
 		// Nought is "no vehicle", and it must be refused here: VehicleName answers "bus" for anything it
@@ -1042,7 +1113,7 @@ public sealed class ParkPeople : Entity
 
 		var state = vehicle[VehicleState];
 
-		if ( !ReleasesVehicle( state, _arrivalsRemaining ) )
+		if ( !ReleasesVehicle( state, _arrivalsRemaining, _offloading ) )
 			return;
 
 		if ( !vehicle.Set( VehicleTrigger, 1 ) )
@@ -1238,8 +1309,11 @@ public sealed class ParkPeople : Entity
 			if ( (tick & (ThingTickEvery - 1)) != 0 )
 				continue;
 
+			// The park's own clock goes one up before anything in the sweep runs (FUN_00516380, 0x00516394).
+			State.AdvanceGameTick();
+
 			// <b>The number handed on is the THING tick, not the game tick, and that is not cosmetic.</b>
-			// Peep.Tick spreads guests across four slots by (id & 3) == (tick & 3); every game tick that
+			// Peep.Tick spreads guests across four slots by (id & 3) == (tick & 3); every 31 ms game tick that
 			// reaches here is a multiple of eight, and eight divides four, so passing the game tick would
 			// make that test true only for guests whose id divides four and starve the other three
 			// quarters of their needs for ever. The original has the same split and reads a separate
@@ -1296,8 +1370,8 @@ public sealed class ParkPeople : Entity
 
 				// <b>The 31 ms game tick, where the original reads mGameTick: a deviation, queued as Q82.</b>
 				// FUN_004d6410 tests a staff member's idle stamp against [DAT_0080239c + 0x1da70c]
-				// (0x004d6545), mGameTick, which goes up by one per thing sweep (0x00516394) - the clock a
-				// guest's behaviours are handed. So a staff member here idles an eighth of the balance file's
+				// (0x004d6545), mGameTick, which goes up by one per thing sweep (0x00516394) and which
+				// ParkState.GameTick carries. So a staff member here idles an eighth of the balance file's
 				// time; Q82 checks the other per-kind handlers before the tick is changed.
 				if ( _staffWalks.TryGetValue( member.ThingId, out var walk ) )
 					_staffBehaviour.Step( member, walk, playing, tick );

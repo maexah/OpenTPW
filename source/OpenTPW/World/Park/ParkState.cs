@@ -373,6 +373,7 @@ public sealed class ParkState
 		AdmissionFee = park?.Economy?.AdmissionFee ?? 0;
 		VisitorsToDate = park?.NumberOfVisitorsToDate ?? 0;
 		ParkIsClosed = park is not null && park.ParkClosed != 0;
+		GameTick = park?.GameTick ?? 0;
 
 		_cells = new RuntimeCell[ParkWorld.MapSize * ParkWorld.MapSize];
 
@@ -470,6 +471,20 @@ public sealed class ParkState
 	/// original's <c>world + 0x1da714</c>, moved in exactly one place, by a guest finishing at the gate.
 	/// </summary>
 	public int VisitorsToDate { get; private set; }
+
+	/// <summary>
+	/// The park's own clock, the original's <c>mGameTick</c> (<c>world + 0x1da70c</c>): one count a thing sweep, so
+	/// every 248 ms, and seeded from the save, so it carries on from the sweep the park was saved on (755 in Lost
+	/// Kingdom) rather than from nought. Entering a park zeroes it and then loads the save's over it
+	/// (<c>docs/exe/park.md</c>, "Arrivals"). <see cref="AdvanceGameTick"/> moves it.
+	/// </summary>
+	public int GameTick { get; private set; }
+
+	/// <summary>
+	/// A thing sweep begins: the clock goes one up before anything in the sweep runs, as <c>FUN_00516380</c> does at
+	/// <c>0x00516394</c>. <see cref="ParkPeople"/> runs the sweep and is the one caller.
+	/// </summary>
+	public int AdvanceGameTick() => ++GameTick;
 
 	/// <summary>
 	/// Whether the park is shut to visitors, seeded from the save - <b>zero is open</b> - and movable

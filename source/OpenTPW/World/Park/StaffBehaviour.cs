@@ -145,7 +145,10 @@ public sealed class StaffBehaviour
 		[StepDirection.North, StepDirection.West, StepDirection.South, StepDirection.East];
 
 	/// <summary>One turn of one staff member's behaviour.</summary>
-	/// <param name="tick">The park's own clock, which the idle stamps are readings of.</param>
+	/// <param name="tick">
+	/// The 31 ms game tick, which the idle stamps are compared against. The original compares them against
+	/// <c>mGameTick</c>, which <see cref="ParkState.GameTick"/> carries (Q82).
+	/// </param>
 	public void Step( Staff staff, PeepWalk walk, SpriteScript? playing, int tick )
 	{
 		ArgumentNullException.ThrowIfNull( staff );

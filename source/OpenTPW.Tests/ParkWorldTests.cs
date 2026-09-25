@@ -221,6 +221,27 @@ public class ParkWorldTests
 	}
 
 	/// <summary>
+	/// The arrival timer's block, the last 18 bytes before the map, pinned to every one of its six fields as the
+	/// FileFormats page measured them (<c>saves.md</c>, "The arrival block").
+	///
+	/// <para>
+	/// <b>Pinned whole because a block read from the wrong place still produces six numbers.</b> Five of the six are
+	/// what <see cref="ParkWorld.Arrival"/> holds before anything is read (a rate and a busload of nought, a capacity
+	/// of 5, not offloading, gates open), so the test would pass on a walk that never reached the block but for the
+	/// mark: 661 is what can only come from the file, and read two bytes either side it is not 661.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void TheArrivalTimerIsReadFromItsOwnBlock()
+	{
+		var world = World();
+
+		Assert.IsNull( world.Problem, "the walk should reach the end of the world block" );
+		Assert.AreEqual( new ParkWorld.ArrivalBlock( ArrivalRate: 0, TimeSig: 661, TargetVehicleCapacity: 5,
+			PeopleOnBus: 0, Offloading: false, GatesOpen: true ), world.Arrival );
+	}
+
+	/// <summary>
 	/// Everything standing in Lost Kingdom, by catalogue number and cell. The whole table is pinned rather
 	/// than a sample of it, because a walk that drifts produces a table that is still the right shape.
 	///

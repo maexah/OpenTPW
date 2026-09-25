@@ -630,16 +630,15 @@ public class PeepBehaviourTests
 			Assert.AreEqual( PeepState.WaitingForOpening, guests[33].State,
 				"thing 33 is waiting for a gate nothing here can open" );
 
-			// <b>Seven through the gate, and one who arrived while this was running.</b> The eighth is
-			// not a guest of the save's: the park now brings people in by itself, one load every
-			// Arrival.TimeBetweenArrivals - 150 quarter-ticks, so 600 of the 31ms ticks - and this loop
-			// runs 1120 of them, which fits exactly one. A second would need 1200.
+			// <b>Seven through the gate, and nobody off a bus.</b> The park brings a load once
+			// Arrival.TimeBetweenArrivals has passed, in fours of its own sweeps, from the mark the save left:
+			// the first is due on the 509th sweep (ParkTickTests), and this loop runs 140.
 			//
 			// Counted rather than filtered because the count is the point: admitting somebody at the
 			// gate and admitting somebody off a bus are the same event to the park, and ParkState.Admit
 			// is the one place either is recorded.
-			Assert.AreEqual( 8, people.Visitors,
-				"seven came through the gate, and one arrived during the run" );
+			Assert.AreEqual( 7, people.Visitors,
+				"seven came through the gate, and no load is due in 140 sweeps" );
 		}
 		finally
 		{

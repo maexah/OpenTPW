@@ -793,6 +793,12 @@ public static class DebugConsole
 
 				break;
 
+			// The arrival timer: the park's own clock, the mark its wait counts from, and the load held or the tick
+			// the next is due on. A pure getter.
+			case "arrivals":
+				Reply( ParkPeople.Current is { } timer ? timer.ArrivalCensus() : "arrivals: none - a park has to be loaded" );
+				break;
+
 			// Puts one new guest at the bus stop, which is what an arrival does - the original makes one
 			// per thing tick while a vehicle unloads. Driven by hand here so an arrival can be made on demand,
 			// at any cell.

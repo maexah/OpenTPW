@@ -1022,6 +1022,12 @@ public sealed class ParkWorld
 
 	private const int ArrivalTailSize = 76;
 
+	/// <summary>
+	/// The last 18 of those 76: the arrival timer's own block, which <c>FUN_004cf050</c> reads field by field and
+	/// <see cref="Arrival"/> holds.
+	/// </summary>
+	private const int ArrivalBlockSize = 18;
+
 	/// <summary>The map between the tables and the thing list - a 128x128 grid, whatever the park's own size is.</summary>
 	private const int MapCellCount = MapSize * MapSize;
 
@@ -1194,12 +1200,14 @@ public sealed class ParkWorld
 
 		ReadHeader();
 
-		// The fixed tables, stepped over: none of them says anything about what stands in the park.
+		// The fixed tables, stepped over: none of them says anything about what stands in the park. The last 18
+		// bytes of the arrival and clock fields are the arrival timer, which is read.
 		Skip( ObjectControls * ObjectControlSize );
 		Skip( 4 );                                  // mNumObjectControls
 		Skip( 2 );                                  // mPreviousSearchKey
 		Skip( PoolRecords * PoolRecordSize );
-		Skip( ArrivalTailSize );
+		Skip( ArrivalTailSize - ArrivalBlockSize );
+		ReadArrivalBlock();
 
 		ReadMap();
 
@@ -1245,6 +1253,39 @@ public sealed class ParkWorld
 	/// above and reuses it without choosing again for as long as it is set.
 	/// </summary>
 	public int CurrentArrivalVehicle { get; private set; }
+
+	/// <summary>
+	/// The arrival timer as it was saved: <c>FUN_004cf050</c>'s six fields, in its order (FileFormats, <c>saves.md</c>,
+	/// "The arrival block"). The game's names are <c>mArrivalRate</c>, <c>mTimeSig</c>, <c>mTargetVehicleCapacity</c>,
+	/// <c>mPeopleOnBus</c>, <c>mOffloading</c> and <c>mGatesOpen</c>.
+	/// </summary>
+	/// <param name="TimeSig">
+	/// The <see cref="GameTick"/> of the sweep that found the last load all off: the mark the next load's wait is
+	/// counted from (<c>docs/exe/park.md</c>, "Arrivals").
+	/// </param>
+	/// <param name="PeopleOnBus">How many of the load in progress are still to get off.</param>
+	/// <param name="Offloading">Whether a load is in progress.</param>
+	public sealed record ArrivalBlock( int ArrivalRate, int TimeSig, int TargetVehicleCapacity, int PeopleOnBus,
+		bool Offloading, bool GatesOpen );
+
+	/// <summary>
+	/// The arrival timer this park was saved with. Until the walk reaches it, what the block's own constructor
+	/// <c>FUN_004cf030</c>, called from the world's (<c>FUN_00515540</c>), writes before any save is read: everything
+	/// nought but a capacity of 5 and the gates open.
+	/// </summary>
+	public ArrivalBlock Arrival { get; private set; } = new( 0, 0, 5, 0, false, true );
+
+	private void ReadArrivalBlock()
+	{
+		var rate = ReadInt32();
+		var timeSig = ReadInt32();
+		var capacity = ReadInt32();
+		var onBus = ReadInt32();
+		var offloading = ReadByteAt( _at++ ) != 0;
+		var gatesOpen = ReadByteAt( _at++ ) != 0;
+
+		Arrival = new ArrivalBlock( rate, timeSig, capacity, onBus, offloading, gatesOpen );
+	}
 
 	private void ReadHeader()
 	{

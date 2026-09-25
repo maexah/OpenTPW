@@ -1226,22 +1226,53 @@ artifacts are listed in `docs/history/README.md`.
   The item as written: Found by the 2026-09-24 staleness audit. `ParkPeople.StepArrivals` counts `GameClock.Ticks`,
   31 ms each, where `park.md` read the timer as quarters of `mGameTick`. Decode which clock `FUN_004cf3e0` reads at its
   call site and how often it runs, then build what it says. Confirm: the `guests` census over a timed run.
-- [ ] **Q68b. Guests arrive on the original's clock: the build.** Found by Q68 (`park.md`, "Arrivals"). Give the park
-  the original's `mGameTick`: the save's (`ParkWorld.GameTick`, 755 in Lost Kingdom), one up at the start of each
-  thing sweep before anything in it runs. Read the arrival block (the last 18 of the 76 bytes `ParkWorld` skips;
-  FileFormats `saves.md`) and start the mark from its `mTimeSig` (661). Call a load when `(tick >> 2) - (mark >> 2)`,
-  unsigned, is more than `Arrival.TimeBetweenArrivals`, and reset the mark on the first sweep after the last drop that
-  finds the vehicle still unloading. Turn round `StepArrivals`' summary, which calls the period the original's. Q82
-  wants the same counter for the staff. Confirm: predict the first load on sweep 509 (126.2 s of game time) and the
-  next 602 to 605 sweeps after each last drop; the log, `peeps`, and the bus photographed at the stop.
+- [x] **Q68b. Guests arrive on the original's clock: the build.** Done 2026-09-25,
+  `alexah/153-arrivals-on-the-original-clock`. `ParkState.GameTick` is `mGameTick`, seeded from the save's 755 and one
+  up as each thing sweep begins; `ParkWorld.Arrival` reads the arrival block (0, 661, 5, 0, 0, 1, as FileFormats
+  `saves.md` has it); `ParkPeople.StepArrivals` takes `FUN_004cf3e0`'s arms in order, re-read in Ghidra: the unsigned
+  strict compare (`SHR`, `SHR`, `SUB`, then `JBE`), the call going straight on to ask the vehicle, an offloading flag
+  apart from the count, and the let-go on the first sweep after the last drop that still finds the vehicle at 2
+  (`0x004cf56b`). `StepVehicle` holds an unloading vehicle while a load is held.
+  - **Confirmed in the game** (`q68bmeasure.py`, silent, jungle), predicted before the park loaded: the first call on
+    `mGameTick` 1264, sweep 509, 126.05 s after the park came on show (126.23 predicted); its drop on 1300, 36 sweeps
+    on, the bus driven in and photographed at the stop; the let-go on 1301; the next call on 1904, 604 sweeps after the
+    drop and 149.54 s after the let-go, and its let-go on 1905. `peeps` 13, then 6 at the first drop and 2 at the
+    second (thirteen went home); `unimplemented` without `SAVED_ARRIVAL_LOAD`; `save/` unchanged.
+  - **Two predictions failed, both on the vehicle, not the clock.** The saved bus rests at pc 120 with `VAR_STATUS` 0,
+    not 6, so the first call does not forget it: it went round and waited at the stop at 2 (pc 45) between loads,
+    not at its leaving spin, and the second load's guest came on the call's own sweep, 1904, as a revised prediction
+    written down before that call said. That is Q131.
+  - **Put back and re-run:** twelve mutations, each failing a test: the mark from the frame clock; `>=`; a signed
+    difference; the let-go on the drop's sweep; the mark stamped with the drop's tick; the clock not advanced; the
+    clock read as `GameClock.Ticks`; the call returning before it asks the vehicle; the let-go not waiting for 2;
+    `StepVehicle` passing `loadHeld: false`; the rule without `!loadHeld`; the block read two bytes early. New tests:
+    `GuestsArriveOnTheParkClockFromTheWaitTheSaveLeft`, `TheBusIsHeldAtTheStopUntilTheSweepAfterItsLastGuest`
+    (`bus.RSE`'s variables set by hand, a `ParkFixedItems` stood by reflection), `ALoadIsDueOnceItsWaitIsPastThePeriod`
+    and `TheArrivalTimerIsReadFromItsOwnBlock`. `TickingARealParkCarriesItsGuestsThroughTheStateMachine` now expects 7
+    visitors: no load is due in its 140 sweeps.
+  - **Reviewed** by a read-only workflow (three lenses, a skeptic on each finding): eleven upheld, one refused, and the
+    nine past each lens's first four checked by hand; all acted on. Stated at the site: the headcount floor (Q26), the
+    stops (Q127), the refusals in world state 4 and at the cap (the original calls a load of nobody, or of what fits),
+    a load saved half-dropped (counted, `SAVED_ARRIVAL_LOAD`), and the spent vehicle (Q131). "Game tick" stays
+    `GameClock`'s; the park's counter is `mGameTick` in the log and in the new `arrivals` census.
+  - **Found:** Q131 and Q132.
+
+  The item as written: Found by Q68 (`park.md`, "Arrivals"). Give the park the original's `mGameTick`: the save's
+  (`ParkWorld.GameTick`, 755 in Lost Kingdom), one up at the start of each thing sweep before anything in it runs. Read
+  the arrival block (the last 18 of the 76 bytes `ParkWorld` skips; FileFormats `saves.md`) and start the mark from its
+  `mTimeSig` (661). Call a load when `(tick >> 2) - (mark >> 2)`, unsigned, is more than `Arrival.TimeBetweenArrivals`,
+  and reset the mark on the first sweep after the last drop that finds the vehicle still unloading. Turn round
+  `StepArrivals`' summary, which calls the period the original's. Q82 wants the same counter for the staff. Confirm:
+  predict the first load on sweep 509 (126.2 s of game time) and the next 602 to 605 sweeps after each last drop; the
+  log, `peeps`, and the bus photographed at the stop.
 - [ ] **Q82. Staff may idle for an eighth of the original's time. Decode first.** Found by the review of the
   2026-09-24 staleness audit. `ParkPeople`'s staff loop hands `StaffBehaviour.Step` the 31 ms tick, but `FUN_004d6410`
   compares its idle stamp against `mGameTick` (`0x004d6545`), which counts thing sweeps (`park-engine.md`, "What the
-  31 ms tick drives") - the same question as Q68. Check the other per-kind staff handlers the same way, then pass the
-  thing tick, and turn round the note in `ParkPeople`'s staff loop, which names the deviation. `StaffBehaviour.Step`'s
-  stale-stamp note says "our clock starts again at nought": `GameClock.Ticks` is not reset on entering a park, so
-  correct it too. Q68's decode settles the clock: the saved `mGameTick`, which Q68b gives the park. Confirm: the
-  `staff` census over a timed run, the idle gap predicted first.
+  31 ms tick drives") - the same question as Q68. Check the other per-kind staff handlers the same way, then pass
+  `ParkState.GameTick`, the park's `mGameTick` (Q68b), and turn round the note in `ParkPeople`'s staff loop, which
+  names the deviation. `StaffBehaviour.Step`'s stale-stamp note says "our clock starts again at nought":
+  `GameClock.Ticks` is not reset on entering a park, so correct it too. Q68's decode settles the clock: the saved
+  `mGameTick`, which Q68b gives the park. Confirm: the `staff` census over a timed run, the idle gap predicted first.
 - [ ] **Q69. Seven unbuilt paths are not counted.** Found by the 2026-09-24 staleness audit.
   `CLAUDE.md` rule 4 asks every unbuilt path the program reaches to call `Unimplemented.Report`, and these have no
   counter (two are queued for building, Q76 and Q77): the lobby's 90-second advisor repeat of response `0x18a`/`0x18b` (`0x005e184c`,
@@ -1542,6 +1573,24 @@ artifacts are listed in `docs/history/README.md`.
   `ParkStaffPool` fills the opening pool only and reads none of the three keys, and no `Unimplemented.Report` says so
   (`CLAUDE.md` rule 4). Count it now; decode the refresh (`FUN_005084f0`, `FUN_00507600`), then build it on Q68b's
   counter. Confirm: the hire screen's candidates over a timed run, a screenshot before and after a refresh.
+- [ ] **Q131. A spent vehicle is sent round again, and waits at the stop for the next load. Decode first.** Found by
+  Q68b's review. `FUN_0051a690` answers a vehicle at state 6 by writing its script's variable 1 (`FUN_0055a070`,
+  `FUN_0055a0b0`; decode what) and clearing `mCurrentArrivalVehicle`, and nudges nothing, so the vehicle waits at its
+  last spin (`bus.RSE` 117, its object killed) until the next load's `FUN_0051a2f0` summons it, and every load has the
+  drive in. Lost Kingdom's save holds its bus there, at pc 120 with `VAR_STATUS` 0. `ParkPeople.StepVehicle` releases
+  state 6 and forgets the vehicle, so the bus drives back and waits at the stop at 2: in Q68b's run it stood there
+  from its first circuit to the next call, and that load's guest came on the call's own sweep. While a load is held
+  the original's -1 arm summons the load's vehicle by size again at once (`0x004cf489`), where `StepArrivals` asks
+  vehicle 0, which `ParkFixedItems.VehicleName` answers as the bus. Confirm: the bus photographed away from the stop
+  between loads, and the log's call-to-drop run-in the same on every load.
+- [ ] **Q132. Guests and rides take their turns on the frame clock over eight, where the original hands them
+  `mGameTick`. Decode first.** Found by Q68b. `ParkPeople.OnUpdate` hands `Peep.Tick`, `PeepBehaviour.Step` and the
+  rides' turns `GameClock.Ticks / 8`, which runs from the program's start and is not reset on entering a park
+  (`PeepBehaviour.Step`'s `tick` note); the original's handlers read `mGameTick`, which `ParkState.GameTick` now
+  carries from the save's 755. The needs share `(id & 3) == (tick & 3)`, the behaviours' time stamps and the chooser's
+  tie on `mGameTick & 1` (`ParkRideChooser.Beats`) turn on it. Decode which of them read `mGameTick`, then pass the
+  park's clock, as Q82 does for the staff. Confirm: a saved guest's stamp read against 755, in the `peeps` census,
+  predicted first.
 
 ## B. Docs and comments
 
