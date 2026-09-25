@@ -198,7 +198,7 @@ Entering state 14 also writes the guest's `+0x1f1` from the sideshow win roll �
 
 - **The destination is the cell BEYOND the exit**, not the exit. Direction = the exit cell's own direction byte (`+0xd`, via `FUN_00522850`), **flipped to the opposite (`FUN_004d8c00`, a four-bit rotate) when `mExitPos == mEntryPos`** — which is **ten of the eleven objects** in Lost Kingdom. `FUN_004d97e0` steps to the neighbour. It must not be a queue cell (`FUN_00536320`).
 - **`FUN_004dedf0` yields a FIXED-POINT position:** high byte the cell (`(mExitPos - 1) & 0x7f`, `>> 7`), low byte a sub-cell offset taken from the ITEM's own `.sam` — descriptor `+0xdc`/`+0xe0` for the exit, `+0xd4`/`+0xd8` for the stand point — validated with `"Dodgy X exit point in SAM file"`. Non-zero `which` selects the exit (`+0x38`), nought the stand point (`+0x36`); both are PACKED.
-- **The failure arm closes the ride.** If the aim will not route, the original refuses the dismissal and calls **`FUN_004df150`**: clears `mCanLoad` (`+0x68`) and `mPersonBeingLoaded` (`+0x6c`), logs `"Object %d: Closing…"`, sets script var 6 (`VAR_RIDECLOSED`). Same body as `FUN_004e0e60`. **This is observable in the original**: a ride whose exit is not connected still teleports the guest onto it and leaves them there with a `?` overhead — the stranded thought bubble, `FUN_004f9490`'s `"Peep %d: stranded at time %d"`.
+- **The failure arm closes the ride.** If the aim will not route, the original refuses the dismissal and calls **`FUN_004df150`**: clears `mCanLoad` (`+0x68`) and `mPersonBeingLoaded` (`+0x6c`), logs `"Object %d: Closing…"`, sets script var 6 (`VAR_RIDECLOSED`). Same body as `FUN_004e0e60`. **This is observable in the original**: a ride whose exit is not connected still teleports the guest onto it and leaves them there with a `?` overhead. If that is thought `0x11`, the stranded bubble, it comes only from SetRandomDest's LINKED walk reaching a dead end or its refusal after one: an exit cell with no links takes the no-links arm, which raises nothing ("Deciding and wandering"). Which picture `0x11` is, and the teleported guest's cell, are not established.
 - `FUN_004fa530` is SetDest and **answers whether a route exists**; ExitRide charges and changes state ONLY when it does. It aims at the cell's centre, writes the destination before it routes, and can answer 0 without routing on `mStrandedTime` (see "Walking to a new place in the queue").
 
 | Address / offset | Original name | What it is | Evidence |
@@ -309,9 +309,9 @@ target, the sub byte s landing at s/256 of the cell - and it answers the route's
 target, zeroes the waypoints, and sets walker `+0x60` = 1 and `+0xb8` (guest `+0x18c`) = 1, so the next walk tick
 answers 2 - unless, in that tick's own step, the path follower's map-change re-plan (a 16×16 block stamp newer than
 the walker's `path_timestamp`, `+0x48`, which a failure never writes) routes to the stored target after all
-(`0x0050ed79`). **`mStrandedTime` is set only on `FUN_004f9490`'s stranded path** (`0x004f9e09`, reached from states 6
-and 7 for a thing whose type byte is not 4..8) and **every walk tick zeroes it** (`0x004fa30b`), so on the three queue
-paths it is nought unless a save loaded it.
+(`0x0050ed79`). **`mStrandedTime` is set only at the dead end of `FUN_004f9490`'s linked walk** (`0x004f9e09`, from
+states 6 and 7, for a person whose type byte is not 4..8; "Deciding and wandering") and **every walk tick zeroes it**
+(`0x004fa30b`), so on the three queue paths it is nought unless a save loaded it.
 
 The pathfinder (`FUN_0050f8e0` → `FUN_00511420` → `FUN_00511470`, a line stepper with wall-following, 60000 iterations
 and at most 250 cells, then `FUN_005108a0`'s up to nine splices, which cannot rescue a failed first search) takes the
@@ -448,8 +448,8 @@ The supporting helpers:
 | `FUN_004dda20` | — | The queue-room test, `FUN_004ddf50( 0 ) < +0x40 × 4`, unsigned. Asked with id 0, `FUN_004ddf50` never answers -1: it counts from `mFirstInQ` up to **and including** the first guest who has stopped queueing, and no further. | Disassembly |
 | `FUN_004dda40` | — | The longest queue a guest will join (`FUN_004ddb60`, the arrival's third gate) or stay in (the InQueue turn's 5a): 100 for a thing without the queue-path bit (`0x004dda4c`); with it, the capacity sum in "The `InQueue` turn", whose descriptor field pairing is unproven. | Its two callers |
 | `FUN_004fa5f0` / `FUN_004fa530` | SetDest | To an 8.8 point / to a cell's centre. The stranded refusal, then `+0x18`, `+0x1a`, `+0x198` written before the route. | Disassembly |
-| `FUN_004fa770` | — | The stranded refusal: 1 when no region stamp near the guest (or the far end of their queue run) reaches `mStrandedTime`. `FUN_004de1f0` stamps the back of a queue it measures again, so a queue edit frees its guests. | Disassembly |
-| `+0x198` | `mStrandedTime` | Saved (`FUN_004f8b10`, `0x004f8eac`). Set only at `0x004f9e09`; zeroed by every walk tick and SetDest. | Serialiser string |
+| `FUN_004fa770` | — | The stranded refusal: 1 when no 16×16 block stamp of the 3×3 cells around the guest (or the far end of their queue run) reaches `mStrandedTime` ("The stranded bookkeeping"). `FUN_004de1f0` stamps the back of a queue it measures again, so a queue edit frees its guests. | Disassembly |
+| `+0x198` | `mStrandedTime` | Saved (`FUN_004f8b10`, `0x004f8eac`). Set only at `0x004f9e09`, the dead end of SetRandomDest's linked walk; zeroed by every walk tick, SetDest, and `FUN_004fa030` when the counter is below it. | Serialiser string |
 | `FUN_004d8750` | — | The edge test every route step asks: `( x, y, dir 0 N / 1 E / 2 S / 3 W, mode )`, non-zero blocked. A guest walks in mode 0 (walker `+0xb4`, guest `+0x188`; guests write only 0 or 1). | Disassembly |
 | `FUN_0050fd40` / `FUN_0050ed10` | — | The walk tick's progress (`0x10000` = arrived) and the path follower that flags arrival within 0.32 of a cell of the exact target. | Disassembly |
 | `FUN_00516330` | — | The engine's generator: `state = ROR32( state × 0x19660d + 0x3c6ef35f, 13 )`, kept at world `+0x1da708`, answered as its absolute value (`0x80000000` unchanged). One sequence for the queue arms and the scripts' `RAND`. | Disassembly |
@@ -807,6 +807,167 @@ OpenTPW builds it: `PeepPriceOpinion` is the opinion, `PeepBehaviour.WalkAwayFro
 **`AdmitPerson` refuses** on `mState` 1 or 4 or `mCanLoad` nought, or on `VAR_LETMEON` full after it has zeroed the
 nominee (`0x004e09b0`); a wrong person is only logged. Since `Invite` calls forward only while the slot is empty and
 nothing on the way refills it, the realistic refusal is a ride that closed or broke while the guest walked.
+
+## Deciding and wandering - `FUN_004fec90` and `FUN_004f9490`
+
+Decoded 2026-09-25 (`docs/QUEUE.md` Q53): five decoders (the no-links arm, the linked arm, the stranded bookkeeping, the
+state-6 turn, the ground after a sale), each report put to a skeptic reading the disassembly, then a critic over all
+five - 173 claims, 144 upheld, 28 amended, 1 refuted (about a run's output file, not the executable). **A guest put off
+onto cells a sale cleared is not stranded in the original**: SetRandomDest has an arm for a cell with no links, which
+OpenTPW lacks, and it sends them to the nearest path.
+
+### The state-6 turn, in order
+
+`FUN_004fec90`, called only from `FUN_005019f0` case 6, once per thing sweep. One draw r at the top (`0x004fecb4`, kept
+at `[ESP+0x18]`) serves every arm. A byte below is `(u8)__ftol` of the float named.
+
+1. **(a) Happy.** More than 100 sweeps since `+0x208` and happiness (`+0x19c`) above 80: spot animation 5, return.
+   `FUN_004fc800( n )` sets `+0x10` = n, `+0x208` = mGameTick, saves the state at `+0x224` and sets state 8, whose turn
+   restores it once mGameTick > `+0x208` + 10.
+2. **(b) Vomit.** Illness (`+0x1b0`) exactly 100 and r % 3 nought: animation 7, litter type 7 on the guest's cell, event
+   `0x12`, sound `0xcc`, `+0x1b0` = 0, return.
+3. **(c) Litter.** Litter (`+0x1b4`) 90 or more: `FUN_00500dc0` aims at the nearest `HoldsLitter` thing (`+0x32 & 0x40`)
+   within squared distance under 9 that routes, at its `mEntryPos` - `MajorDest` and state 9, return; none: litter of
+   type 1 + (a fresh draw % 5), `+0x1b4` = 0, on.
+4. **(d) Leaving** (`0x004fee5b`..`0x004fee81`): the happiness byte nought, **or `mExitLevel` (`+0x1bc`) exactly
+   nought**, or the park shut (`FUN_0051a280`, world `+0x1da710`). It docks `BigHappinessChange` (25,
+   `FUN_004fea70( 2 )`) before routing, every turn the test holds; reads the gate script's variable 1 and discards it
+   (`FUN_0051a290`); then `FUN_004fa530` to `FUN_004d86d0( 0 )` and `( 1 )`, **`CrossingParkSide` A and (B's x, A's y),
+   (47,9) and (48,9) in Lost Kingdom - not the bus stops**, which are `FUN_004d8650` - in the order r's bit 0 picks,
+   each with `+0x188` as it stands, then both again with `+0x188` = 1. The first route sets state `0x12` and returns;
+   four failures write `+0x188` = 0 and fall through, still in state 6. `mExitLevel` starts at `ExitLevel` + a draw mod
+   (2 × `ExitLevelVar`) − `ExitLevelVar` (60..179, `0x004fafe1`..`0x004fb00d`) and loses one on the sweeps where
+   `(mGameTick & 3) == (id & 3)` (`0x00501676`..`0x00501697`), unclamped, so **it reads nought for four sweeps**; a
+   guest not in state 6 then never leaves for it. Only states 3 and 4 write it nought again, each just after
+   SetState(`0x12`).
+5. **(e) Watching.** The nearest `IsFireworks` thing (`+0x32 & 0x80`) within squared distance 4 whose script variable 0
+   is nought (`FUN_00501020`): face it (`+0x1c`), return - dead by content in Lost Kingdom, whose items set no
+   `IsFireworks` ("The first half of the turn"). Else an entertainer on the 3×3 around the guest (`FUN_004c8eb0`) and
+   the nearest one's staff state `0xe`: event `0xe`, face them, return. Both skip the facing when dx + dy is nought.
+6. **(f) Pranks.** Happiness below 15 and r % 101 below `mPrankeryIndex` (`+0x1c0`: 100 + id % 3 for a prankster, else
+   0): a stink bomb, litter, or another guest's balloon on the same cell; event `0xf`, a type-`0xe` bus message,
+   happiness +1. It does not return.
+7. **The split** (`0x004ff3b4`), r % 3. **0**, only when mGameTick > `+0x1fc` + 30, unsigned: the chooser
+   `FUN_004fcb10`; a route gives event 2 and state 10; none gives event 1, spot animation 4 (sound `0x7e` when id &
+   `0xf` is nought), `FUN_004fea70( 0 )` (−5, `SmallHappinessChange`) and `+0x1fc` = mGameTick
+   (`0x004ff480`..`0x004ff4a3`). **1**: SetRandomDest; non-zero sets state 7 and returns **without a restamp**
+   (`0x004ff3d6`), nought restamps `+0x1fc` (`0x004ff3f4`..`0x004ff400`). **2**: nothing.
+
+SetState(6) writes the state and `+0x10` = 3; SetState(7) first routes again to `+0x18`/`+0x1a` with `FUN_004fa5f0` when
+`mSetDestSuccessfully` (`+0xd0`) is set - every successful SetRandomDest sets it, only the constructor and a load clear
+it - then `+0x10` = 1. Neither stamps `+0x1fc`. **The state-7 turn** (`FUN_005019f0` case 7, `0x00501abd`..`0x00501afe`)
+runs the walk tick; on arriving (0) or failing (2) it draws: r & 3 non-zero, state 6; else SetRandomDest, state 7 on 1
+and 6 on 0.
+
+### SetRandomDest - `FUN_004f9490`
+
+Thiscall on the person, in order:
+
+1. **The stranded refusal** (`0x004f94e2`..`0x004f9527`): the counter goes up (`FUN_004d8c50`); `+0x198` is zeroed when
+   the counter is below it; still non-zero with `FUN_004fa770` answering 1, thought `0x11` and answer 0, with no draw.
+   Otherwise `+0x198` = 0 (`0x004f9528`).
+2. One draw, r % 5 + 1.
+3. **Staff** (type byte 4..8) outside their patrol rectangle (`FUN_00506ed0`, the cell ids at `+0x20a`/`+0x20c`):
+   `FUN_00506f30`, 30 tries at a random path cell inside it, answers 1 on a route; its failure sets a flag the linked
+   arm reads.
+4. **The count** `FUN_00522810` of the person's OWN cell: how many of the cardinal bits `0x01`, `0x04`, `0x10`, `0x40`
+   of `mNeighbours` are set (`+0x22` under the hoarding overlay, which only edit code raises). **Nought takes the
+   no-links arm** (`0x004f95c0`, `JLE 0x004f9a05`), whatever the person.
+
+**The linked arm** (`0x004f95c6`..`0x004f9a04`) walks r % 5 + 1 passes (a post-decrement at `0x004f9907`). Each pass
+stands on one cell (the person's, then the last chosen) and makes four slots from **that cell's own mask**, `& 0x55`, in
+the order `0x10` (0,+1), `0x04` (+1,0), `0x01` (0,−1), `0x40` (−1,0), each along its own bit's vector; nothing reads a
+candidate's mask before it is chosen. The filters, each lowering the count: for staff who began inside their rectangle,
+a slot outside it; **on a path cell, a queue or entrance neighbour** (`0x004f9733`..`0x004f9774`); on a type-3 cell, the
+slot its `mDirection` names, the count lowered even when that slot was already empty (`0x004f977b`..`0x004f97e3`); a
+type-10 (exit) neighbour. Then **a count below 2** takes the first non-empty slot in that order, a step back allowed;
+**two or more** start at r & 3 and take the first non-empty slot that is not the reverse of the last step (none on the
+first pass); **none left, on any pass**, is the dead end below. A last pass that would end on the person's own cell gets
+one more. So **a wander ends 1 to 5 linked cells away, never on the person's own cell**, at a point inside the last one:
+sub-bytes `r & 0x7f` clamped to 5..`0x7b`, x then y (`0x004f991c`..`0x004f997f`), through an inline SetDest; a route
+sets `+0xd0` = 1 and answers 1, a failure answers 0 and stamps nothing.
+
+**The dead end** (`0x004f9861` to `0x004f9d64`): "Peep can't SetRandomDest anywhere"; a guest (type byte not 4..8) gets
+"Serious person navigation problem", thought `0x11`, **`+0x198` = the counter** (`0x004f9e09`) and "Peep %d: stranded at
+time %d", and the answer 0, the walk so far dropped; staff take `FUN_00506f30` instead. Every log here is
+`FUN_005da3c0`, a bare `RET` in this build. `0x004f9e09` is the only live non-zero write to `mStrandedTime`:
+`FUN_004fa670` stamps with a non-zero argument, but both its callers pass 0, so that arm is dead by code.
+
+**The no-links arm** (`0x004f9a05`..`0x004f9d5f`) reads no person type. It probes direction d = 0..7 outside and
+distance k = 0..3 inside, through the table at `0x004f9e40`:
+
+| d | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+|---|---|---|---|---|---|---|---|---|
+| (dx, dy) | (0, 0) | (k, k) | (k, 0) | (k, −k) | (0, −k) | (−k, −k) | (−k, 0) | (−k, k) |
+
+so every k = 0 and all of d 0 probe the person's own cell - case 0 (`0x004f9a45`) leaves both offsets nought - and
+**nothing probes due south**, (0, +k). The id is the own id + dy × 128 + dx in 16 bits, so an x past column 0 or 127
+wraps into the next row. A probe **hits** on the map (`FUN_004d8300`) and on path (`FUN_00536310`, type 1); a hit aims
+at the cell's centre (`0x80`, `0x80`) and routes, and **a failed route moves on to the next probe** (`0x004f9b98`). A
+route sets `+0xd0` = 1 and answers 1. After 32 probes, five tries at own + (r % 11 − 5, r % 11 − 5), x first: on the
+map, **any type**, the centre; an off-map draw uses a try. Five failures answer 0, with **no stamp, no thought and no
+log**.
+
+### The stranded bookkeeping
+
+- **The counter** `[0x007cdb98]`: `FUN_004d8c50` adds one and answers it. It starts at 0 and is never reset or saved; 14
+  sites share it - every SetDest, SetRandomDest's entry and each of its routes, a route found (walker `+0x48`), every
+  map type write, the queue re-measure, and the per-frame person update `FUN_004fa030`. It is a logical clock, not a
+  count of routes.
+- **The block stamps**: a 33 × 33 dword array at world `+0x1b02d8`, one per 16 × 16 cells, `(y >> 4) × 33 + (x >> 4)`. A
+  map type write (`FUN_005346d0`, ClearCell's tail among its callers; `FUN_005348d0`; `FUN_00538fc0`) and the queue
+  re-measure's back cell (`FUN_004de1f0`) write a fresh counter value there (`FUN_004d8c60`). Zeroed at map init and
+  after a load; not saved. The path follower reads them too: a stamp newer than walker `+0x48` re-plans (`FUN_0050ed10`,
+  `0x0050ed79`).
+- **`FUN_004fa770`** answers 1, still stranded, when every stamp of the 3 × 3 cells around a base is below `+0x198`. The
+  base is the person's cell, or on a queue or entrance cell the far end of the queue run (`FUN_004de670`, unbounded).
+- **The refusals.** SetRandomDest's entry (with thought `0x11`), `FUN_004fa530` and `FUN_004fa5f0` answer 0 without
+  routing or writing a destination. So a stranded guest in state 6 can be chosen no ride, cannot leave and cannot
+  wander; state 6 never runs the walk tick, whose zeroing (`0x004fa30b`) would free them. **It ends** when a stamp at or
+  above `+0x198` lands in one of the nine cells' blocks - a path or queue cell laid or cleared in that 16 × 16 block -
+  or, after a load, when the counter is below the saved value (`FUN_004fa030` clears it then).
+- **Thought `0x11`** is `FUN_0050be80`, SetThought (its own "Not a known thought!"), on `+0x30`: the thought stored, the
+  old bubble freed, and sprite script `0x0074f2f8` (set 15, frame 0, looping) of kind 9, which the name table calls
+  "thoughts", spawned again on every call; `FUN_0050be40` takes it away 13 to 16 sweeps later. It changes no happiness.
+  While `+0x198` is non-zero `FUN_004fa030` also queues a blinking square under the person. Which picture set 15 shows
+  is not established.
+
+### A queuer put off onto cleared ground
+
+After the Belly Bounce's sale (49..52, 22) are type 0 with no links - ClearCell's tail under force,
+`FUN_00522730( 0xff )` at `0x00536bd0` and `FUN_005346d0( 0 )` at `0x00536bf7` - and so is the entrance (52,23) after
+the footprint pass. A put-off guest's `+0x198` is nought, zeroed by every walk tick. So on their first state-6 turn with
+r % 3 = 1, SetRandomDest counts no links and takes the no-links arm. Lost Kingdom, read with `cell` after a sale
+(`q53measure.py`): y 21 is path from x 46 to 55 (mask `0x44`), (47..48, 19..25) are path, and the rest of x 46..55, y
+19..25 is type 0. d 0, d 1 (x+1..x+3, 23..25) and d 2 (x+1..x+3, 22) miss; **probe 14, d 3 k 1, is (x + 1, 21)**, path.
+The line stepper steps E then N (seed 0 below |dx|, `0x005114ef`): grass to grass, open unless (x + 1, 22)'s track
+record shuts it, then grass to path, open before any other test (`0x004d8806`). If the E step is shut, d 4 k 1, (x, 21),
+is one N step. **Either way the guest leaves as Wandering, in about three sweeps**, with nothing stamped; the W ray to
+(48,22) is never reached. From (52,23) the first hit is d 3 k 2, (54,21), unless (55,26), unread, is path.
+
+**OpenTPW strands them** (measured 2026-09-25 on `main`'s build, Q53): four put-off guests stood Deciding on cleared
+cells no side of which its wander could take - `PeepBehaviour.SetRandomDest` offers only the four adjacent cells whose
+ENTERED mask links back, and the path's `0x44` does not. Every failed wander restamps the thinking gap, as the
+original's would, so the chooser seldom runs for them: one left for the Jungle Spray at 6 s, the other three only when
+`Step`'s `ExitLevel <= 0` arm sent them home, at 61 and 73 s, their happiness unchanged.
+
+### Where OpenTPW differs
+
+| What | The original | OpenTPW | Reached in Lost Kingdom |
+|---|---|---|---|
+| A cell with no links | the no-links arm: path within 3 on seven rays, then five random cells | the four adjacent cells only; fails | a sold queue's cells and entrance (Q53b) |
+| The five random cells | any person | `SetRandomDest`'s summary calls them staff-only | the comment hid the arm |
+| A linked wander | 1 to 5 linked cells, aimed at the last | one adjacent cell | every wander (Q108) |
+| Its candidates | the LEFT cell's mask, along each bit | the ENTERED cell's mask back, and the edge test | only on a one-way link or a shut track edge |
+| Its filters | from path, no queue or entrance; a queue cell's `mDirection` slot; no exit | none | (48,22) onto the Belly Bounce's back cell; the toilets', Spray's and Drinks Shop's entrances |
+| Its choice | count under 2: fixed order, back allowed; else a random start, no reverse | a random start, reverse allowed | every multi-step walk |
+| The dead end and the stamp | thought `0x11`, `+0x198` stamped, every route refused until a map edit | false, nothing kept | not measured (Q110) |
+| After a routed wander | state 7, no restamp | restamps `TimeStartedIdling` | yes (Q107) |
+| Before choosing | restamps only when nothing is chosen | restamps first | yes (Q107) |
+| Nothing chosen | event 1, spot animation 4, −5 | nothing | every failed choice (Q107) |
+| Arms (a), (b), (c), (e) entertainer, (f) | run before the split | absent and uncounted | (a) above 80; (c) the Drinks Shop's litter and the bin at (44,29); (f) pranksters (Q111) |
+| Leaving | state 6 only: happiness byte 0, `mExitLevel` exactly 0, or shut; −25 every turn it holds; (47,9)/(48,9); state `0x12` only on a route | `Step`: `ExitLevel <= 0` in any state a thing does not hold, no dock; `Decide`: shut only, −25; the bus stops; `HeadingForExit` whatever the route | yes: the measured run's three left this way (Q109) |
+| `mSetDestSuccessfully` | SetState(7) routes again to the stored target | absent | every wander, invisibly |
 
 ## Spending — a guest pays on LEAVING
 

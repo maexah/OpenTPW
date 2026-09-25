@@ -934,8 +934,9 @@ selects the seaplane or the ferry. Deciding the real headcount is what would cha
 `PeepTypes[x].StartingCash` varied by `PeepInfo.StartingCashVarPc` (15, per cent); `ExitLevel` is
 `PeepInfo.ExitLevel` (120), which the file itself calls *"starting value for the ExitLevel counter, in
 SECONDS"*, varied by `ExitLevelVar` (60). It counts down one per needs tick — `DueOn` is
-`(ThingId & 3) == (tick & 3)` on **thing** ticks, so roughly one a second — and reaching nought is what
-sends a guest home.
+`(ThingId & 3) == (tick & 3)` on **thing** ticks, so roughly one a second — with no clamp. The state-6 turn
+sends a guest home when it reads **exactly** nought, so only a guest deciding within those four sweeps leaves
+for it (`ride-operation.md`, "The state-6 turn, in order", arm (d)).
 
 ## The save's world block: map cells
 

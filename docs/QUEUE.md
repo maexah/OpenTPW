@@ -1002,15 +1002,47 @@ artifacts are listed in `docs/history/README.md`.
   - **Not confirmed on screen:** a queue with a corner past its node, whose measure between runs can reopen a closed
     ride, and the other arms (another owner's queue faced, a path faced, no link, an owner's cell bare): tested only,
     nothing in Lost Kingdom reaches them. A tie in a run: built, reached by no list. **Found:** Q106.
-- [ ] **Q53. A put-off queuer on cleared ground can leave only by going home. Decode first.** Found by Q36's game
-  run: two queuers put off the sold Belly Bounce stood in Deciding for twelve seconds on cells the sale cleared, where
-  no neighbour connects and `SetRandomDest` has no candidate; a probe's queuer left only as its day ran out. Every
-  failed wander restamps the 30-sweep thinking gap, as the original's does (`FUN_004fec90`, `0x004ff3f4`..`0x004ff400`),
-  and `mGameTick` counts thing sweeps (`0x00516394`, called inside the every-8th block), so the gap matches too. Two
-  differences are known: `Decide` also restamps after a SUCCESSFUL wander, which the original does not
-  (`0x004ff3d6` returns first), and the original docks `SmallHappinessChange` when the chooser finds nothing
-  (`0x004ff492`). Decode whether the original strands these guests as well - `FUN_004f9490`'s other arms, the stranded
-  stamp and its "?" - then build what differs. Confirm: the Q36 staging, `peeps` for the put-off queuers.
+- [x] **Q53. A put-off queuer on cleared ground can leave only by going home: the decode.** Done 2026-09-25,
+  `alexah/146-decode-the-stranded-guest`. Decode only; the build is Q53b. `ride-operation.md`, "Deciding and
+  wandering", new: five decoders (the no-links arm, the linked arm, the stranded bookkeeping, the state-6 turn, the
+  ground after a sale), each report put to a skeptic reading the disassembly, then a critic over all five - 173
+  claims, 144 upheld, 28 amended, 1 refuted (about the run's output file, not the executable).
+  - **Found.** The original does not strand them. `FUN_004f9490` counts the cardinal links of the guest's own cell,
+    and a cleared cell has none (ClearCell's tail zeroes the mask and the type), so it takes an arm OpenTPW lacks: path
+    cells on seven rays up to three away - the table's case 0 probes the guest's own cell, so no ray runs due south -
+    each routed to its centre, a failure moving on, then five random cells within 5 of any type. In Lost Kingdom the
+    first hit from every cleared cell is (x + 1, 21), and the guest leaves Wandering on their first turn with
+    r % 3 = 1. `SetRandomDest`'s summary calls that fallback staff-only; nothing in the arm reads the person type. The
+    stranded stamp (`0x004f9e09`) and thought `0x11` belong to the LINKED walk's dead end alone, and a stranded guest
+    can then be routed nowhere until a map edit stamps their block. Also found: a linked wander walks 1 to 5 cells
+    with three filters; `Decide` restamps where the original does not and never docks the chooser's −5; the leave
+    test is state 6's alone, with `mExitLevel` exactly nought (a four-sweep window), aimed at `CrossingParkSide`
+    (47,9) and (48,9), not the bus stops.
+  - **Corrected:** `ride-operation.md` (where `mStrandedTime` is set, what zeroes it, the `?` over a teleported rider)
+    and `park.md` (what sends a guest home).
+  - **Measured in the game** (`q53measure.py`, silent, jungle, `main`'s build in a throwaway worktree,
+    `Q50F_STAGE=3`; a first try asking for eight queuers never staged in 900 s): staged at 85 s with four queueing,
+    a rider and nine walking to the Belly Bounce, `happy 50`, `sell 13` paused. `cell` read x 46..55, y 19..25: the
+    four queue cells type 0 mask `00`, y 21 path along the whole window. Predicted four stranded (no side our wander can
+    take) and read four: 52 on (52,22), 100 to 102 on (50,22), all at 30. Predicted each keeps their cell and
+    happiness while Deciding and leaves only as GoingToRide or HeadingForExit: held over 15 samples in 90 s. 101 left
+    for the Jungle Spray at 6 s; 52, 100 and 102 at 61 and 73 s, when their exit level reached nought. Photographed
+    before (four on the bridge), just after (bare grass, the four where they stood) and 90 s on (the grass empty, the
+    three walking home up x 47-48). `save/` unchanged.
+  - **Missed, mine:** I predicted at least one still Deciding at 90 s; none was. The load's guests arrived together, so
+    their days ran out together (52's exit level was 57 at the sale). The harness printed "prediction breaks: 0"
+    because it never counted that prediction; the critic found it, and it now does.
+  - **Not confirmed on screen:** anything of the original's own - its guests are not run here, so the decode is the
+    executable's and the run measures ours. Nothing is built, so there is no test and no mutation. **Found:** Q53b,
+    Q107 to Q111.
+- [ ] **Q53b. A guest on a cell with no links wanders to the nearest path: the build.** Split from Q53, whose decode it
+  builds (`ride-operation.md`, "SetRandomDest - `FUN_004f9490`", the no-links arm). The count of the own cell's
+  cardinal links (`FUN_00522810`); at nought, the 8 × 4 probe table with its quirks (the own cell at every k 0 and all
+  of d 0, no due-south ray, x wrapping through the packed id), a path hit routed to its centre and a failed route
+  moving on; then five random on-map cells within 5, of any type, an off-map draw using a try. Correct
+  `SetRandomDest`'s staff-only summary. Confirm: `q53measure.py` - predict every put-off guest on a cleared cell
+  leaves as Wandering toward (x + 1, 21) within a few sweeps, none HeadingForExit first; photographed. Put the bug
+  back and re-run the new test.
 - [ ] **Q56. A right press over a panel arms the quick click.** Found by Q39's decode. The original posts a press to
   the hovered window (`FUN_00658af1`), so only a press on the park view reaches `Park_MouseMessageProc` and arms the
   click; the park still gets its own release wherever the pointer has gone. Here `Level.RightButton` arms on a press
@@ -1193,6 +1225,34 @@ artifacts are listed in `docs/history/README.md`.
   load and the price answers -1; the whole suite passes only because an earlier class mounted it. Mount it as
   `ParkQueueRemeasureTests` does, and sweep the other test classes for the same order dependence. Confirm: each class
   alone, green. No game run.
+- [ ] **Q107. `Decide`'s stamps and the chooser's empty hand.** Found by Q53 (`ride-operation.md`, "The state-6 turn,
+  in order", the split). The original restamps `+0x1fc` only when a wander fails (`0x004ff3f4`) and when the chooser
+  finds nothing (`0x004ff4a3`); `Decide` restamps after a routed wander and before choosing. With nothing chosen the
+  original pushes event 1, plays spot animation 4 (Q98) and docks `SmallHappinessChange` (`0x004ff492`); ours does none.
+  Confirm: `happy` and `peeps` over a Deciding guest the chooser fails, −5 each time it runs.
+- [ ] **Q108. `SetRandomDest`'s linked walk.** Found by Q53 (`ride-operation.md`, "SetRandomDest", the linked arm).
+  The original walks r % 5 + 1 linked cells from the mask of the cell being LEFT, never ending on the guest's own
+  cell, and aims inside the last; it drops queue and entrance neighbours from a path cell, a queue cell's
+  `mDirection` slot and exit cells; below a count of 2 it takes a fixed order, else a random start with no reverse.
+  Ours steps one adjacent cell. Add `mSetDestSuccessfully` and SetState(7)'s re-aim with it. Confirm: over a run, no
+  wanderer steps from (48,22) onto a queue or entrance cell, and wanders of up to five cells in the census.
+- [ ] **Q109. When a guest leaves. Alexah's call first.** Found by Q53 (`ride-operation.md`, arm (d)). The original
+  tests leaving in state 6 alone: the happiness byte nought, `mExitLevel` exactly nought (it counts down unclamped, so
+  a four-sweep window) or the park shut; it docks 25 every turn the test holds, aims at `CrossingParkSide` (47,9) and
+  (48,9) with a mode-1 retry, and sets state `0x12` only on a route. `Step` sends home any unheld guest at
+  `ExitLevel <= 0` from any state, docking nothing, at the bus stops, whatever the route. Retiring `Step`'s arm keeps
+  most guests in the park until unhappy or shut, which a player will see: measure first how many leave through the
+  window, then ask.
+- [ ] **Q110. The stranded bookkeeping, and thought bubbles.** Found by Q53 (`ride-operation.md`, "The stranded
+  bookkeeping"). The shared counter, the 33 × 33 block stamps its map writes leave, `FUN_004fa770`'s 3 × 3 test, the
+  refusals in SetRandomDest, `FUN_004fa530` and `FUN_004fa5f0`, the dead-end stamp, and SetThought's bubble
+  (`FUN_0050be80`: sprite script `0x0074f2f8` of kind 9, gone 13 to 16 sweeps on). None is kept or counted. Count them
+  first; measure whether a Lost Kingdom guest ever reaches `0x004f9e09`; decode which picture thought `0x11` is.
+- [ ] **Q111. The state-6 turn's arms before its split are unbuilt and uncounted.** Found by Q53 (`ride-operation.md`,
+  "The state-6 turn, in order"). (a) spot animation 5 above happiness 80, (b) vomit, (c) litter to a bin (the Litter
+  Bin at (44,29)), (e) facing an entertainer, (f) pranks: each is reached in Lost Kingdom and none calls
+  `Unimplemented.Report` (`CLAUDE.md` rule 4); (e)'s fireworks half is dead by content. Count each where the original
+  tests it, with its one draw, and put its build in the queue.
 
 ## B. Docs and comments
 
