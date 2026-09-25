@@ -1114,8 +1114,9 @@ booth or entrance A or B in states `0x10`, `0x12` and `0x13`. `mTimeHired` is mG
   and `FUN_0051a290`, the gate's `VAR_STATUS`, reading 1), which aims at the strike area with four draws and takes
   state 4; state 5's `FUN_00506300` ends it. The epoch of the 24-month gate (`FUN_004f8800`) is not traced.
 
-### Measured in the game, nothing changed
+### Measured in the game before the build, nothing changed
 
+This is OpenTPW as Q82 found it, on the 31 ms counter; the build (Q82b) is measured in the next section.
 `q82measure.py`, silent, jungle, two runs, predicted before the park loaded; `save/` unchanged in both. The instruments
 are `arrivals` (`ParkState.GameTick`, the park's `mGameTick`), `state` (`GameClock`'s `ticks=`) and `staff`, read
 together in one frame, sweep by sweep. Each run missed ten sweeps while it took the on-show photographs (756 to 765 in
@@ -1139,13 +1140,33 @@ the first, 781 to 790 in the second). The first run crashed after mGameTick 1006
   mGameTick 794, idle since tick 312, a paused control identical but for the advisor's mouth, and walking on from
   there on 798.
 
+### Measured in the game after the build
+
+`StaffBehaviour.Step`, `ThingRemoved`, a pickup and a put-down take `ParkState.GameTick`; the guard's walk-or-stay is
+its `& 3`; nothing zeroes a stamp. `q82bmeasure.py`, silent, jungle, three runs of 648 to 650 sweeps (755 to about
+1403), every sweep read (each photograph held by `pause`), predicted before the park loaded; `save/` unchanged in all
+three.
+
+- **The guard reads Idle since 752 on every sweep from 755 to 762 and Walking on 763**, in all three runs.
+- **Every guard spell after a walk is stamped with its first sweep's mGameTick and holds it exactly 11 sweeps**: 28,
+  19 and 21 spells, all 68 begun on a multiple of four and ended on stamp + 11 in a walk (no destination was ever
+  missed). The guard set off from idle 29, 20 and 22 times, every one on a sweep that is 3 mod 4. A walk goes on,
+  leg after leg, while its legs end on other remainders: the first run's first walk ran from 763 to 807 and stood on 808.
+- **Every researcher spell after a walk holds its stamp exactly 21 sweeps**: 14, 17 and 15 spells; 6, 7 and 4 of them
+  went on at stamp 0 first. The third run logged each stand's cause (`Staff: <id> stands on mGameTick <n>`): 20 of 20
+  were the draw's low bits, over all four remainders of mGameTick (8, 3, 4, 5), and none was a destination not found.
+  The guard's 22 stands in that run were all on a multiple of four.
+- **The handyman and the mechanic are stamped 761 as their saved walks end, the entertainer 768 (its 712 kept until
+  then)**, each held 11 sweeps and 0 after, standing to the run's end (Q133).
+- Photographed, held by `pause` with `staff` read while paused and the camera not moved between shots: the guard
+  standing at the corner of the path at (40.04, 28.03) on mGameTick 792, idle since 792, a paused control identical;
+  turned to set off on 803; and walking at (39.48, 28.51) on 807. The first load came on mGameTick 1264, as Q68b's.
+
 ### Where OpenTPW differs
 
 | What | The original | OpenTPW | Reached in Lost Kingdom |
 |---|---|---|---|
-| The staff's clock | `mGameTick`, one a sweep, the save's | `GameClock.Ticks`, eight a sweep, not the save's | every staff turn (Q82b) |
-| A stamp ahead of the clock | left alone | zeroed by `StaffBehaviour.Step` when it is over `GameClock.Ticks` | the guard's 752 and the entertainer's 712 on the first sweep, when the park is entered within about 22 s of the counter starting (712 ticks), as in both runs; later, the saved stamps are compared raw against the 31 ms counter (Q82b) |
-| The guard's choice | `mGameTick & 3` | a random `& 3` | every guard decide (Q82b) |
+| A hire's first decide | at once: the guard's on `mGameTick & 3` (`0x004d5e76`), the researcher's on a draw (`0x005026cb`) | Idle at stamp 0, decided on the next sweep | every guard or researcher hired (Q136) |
 | The mechanic, the handyman and the entertainer with no work | walk about | stand, uncounted | from their saved walks' ends (Q133) |
 | The researcher's fourth decide | researches, state `0xf` | stands | every fourth researcher decide (Q134) |
 | Staff sounds | fourteen cat_staff effects | none, uncounted | every idle and walking turn; a performance's end; a guard's chase and catch (Q135) |

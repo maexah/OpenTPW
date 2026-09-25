@@ -62,7 +62,7 @@ public enum StaffActivity
 
 	/// <summary>
 	/// Waiting out a spell three times as long as an ordinary idle before going back to
-	/// <see cref="Idle"/>. The original enters it from one place only.
+	/// <see cref="Idle"/>. Nothing in the original enters it; only a saved <c>mState</c> can.
 	/// </summary>
 	Waiting = 6,
 

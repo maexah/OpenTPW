@@ -1307,7 +1307,36 @@ artifacts are listed in `docs/history/README.md`.
   says "our clock starts again at nought": `GameClock.Ticks` is not reset on entering a park, so correct it too. Q68's
   decode settles the clock: the saved `mGameTick`, which Q68b gives the park. Confirm: the `staff` census over a timed
   run, the idle gap predicted first.
-- [ ] **Q82b. The staff take their turns on the park's clock: the build.** Found by Q82 (`ride-operation.md`, "The
+- [x] **Q82b. The staff take their turns on the park's clock: the build.** Done 2026-09-25,
+  `alexah/155-staff-on-the-park-clock`. `ride-operation.md`, "Measured in the game after the build".
+  - **Built:** `StaffBehaviour.Step`, `ThingRemoved`, and `ParkPeople`'s pickup and put-down take `ParkState.GameTick`;
+    the guard's walk-or-stay is `mGameTick & 3`, the researcher's still a draw; `Step`'s zeroing of a stamp ahead of the
+    clock is gone, and its idle and waiting tests compare unsigned, as `0x004d6545` and `0x00505745` do. Every note the
+    item lists is turned round. A debug line names each stand's cause (`Staff: <id> stands on mGameTick <n>, ...`).
+  - **Confirmed in the game** (`q82bmeasure.py`, silent, jungle, three runs of 648 to 650 sweeps, none missed: every
+    photograph held by `pause`), predicted first. The guard read Idle since 752 through 762 and Walking on 763, all three
+    runs. Every guard spell after a walk held its first sweep's mGameTick exactly 11 sweeps (28, 19 and 21 of them), all
+    68 begun on a multiple of four and ended in a walk: no destination was missed. The guard set off from idle 71 times,
+    every one on a sweep 3 mod 4. Every researcher spell held its stamp exactly 21 sweeps (14, 17, 15), and 6, 7 and 4
+    went on at stamp 0, against about one in four predicted; the third run's log put all 20 of its stands on the draw,
+    over all four remainders, and none on a missed destination. The handyman and mechanic were stamped 761, the
+    entertainer 768 (712 kept while walking), 11 sweeps each, then 0. The first load came on 1264, as Q68b's.
+    Photographed with the census read while paused: the guard standing at the path's corner on 792, idle since 792 (a
+    paused control identical), turned to set off on 803, and walking 0.74 of a cell up the path on 807, the camera not
+    moved. `save/` unchanged in all three.
+  - **Tests:** `TheGuardSavedIdleSince752WalksOnMGameTick763`, `AStampAheadOfTheClockIsLeftAlone`,
+    `AGuardStaysOnAMultipleOfFourWhateverTheDraws` (16 seeds, four sweeps), `AResearchersChoiceIsADrawNotTheClock`,
+    `TheWaitingStateComparesUnsigned` and `TheParksSweepHandsTheStaffItsOwnClock` (400 sweeps through `ParkPeople`: the
+    752, the 11 and 21 sweep holds, no set-off on a multiple of four), replacing
+    `AStampFromTheOldParksClockDoesNotStrandThem`; the staff runs now start on the save's clock. Each of five bugs put
+    back went red on its own test: the 31 ms tick in the sweep, the draw for the guard, the clock for the researcher, a
+    signed state 6 wait, and the zeroing, which on the park's clock never fires (752 is behind 756).
+  - **Reviewed** by a read-only workflow (four lenses, a skeptic on each): 5 upheld, 6 refused, all 5 acted on (the
+    two tests above that pin the researcher's draw and state 6, the Q134 deviation said at `Decide`, a test summary and
+    a leg list reworded, `addresses.md` regenerated).
+  - **Found:** a hire's first decide, filed as Q136 (f).
+
+  The item as written: Found by Q82 (`ride-operation.md`, "The
   staff turn"). Hand `StaffBehaviour.Step` and `ThingRemoved`, and `ParkPeople`'s pickup and put-down,
   `ParkState.GameTick`, the park's `mGameTick`, where they take `GameClock.Ticks`. Take the guard's walk-or-stay from
   `mGameTick & 3` (nought stays; the researcher keeps its draw). Take out `Step`'s zeroing of a stamp ahead of the
@@ -1669,7 +1698,7 @@ artifacts are listed in `docs/history/README.md`.
   `0x88` (`Oi.mp2`) as a chase starts and `0x89` on a catch, both waiting on the chase, itself unbuilt. Count them first
   (`CLAUDE.md` rule 4); then decode each effect's samples and build. What a sample says is known only by listening.
   Confirm: `voices` and `unimplemented` over a timed run.
-- [ ] **Q136. Five small differences in the staff's decide.** Found by Q82 (`ride-operation.md`, "Drawn on the way").
+- [ ] **Q136. Six small differences in the staff's decide.** Found by Q82 (`ride-operation.md`, "Drawn on the way").
   (a) Tired is `(u8)trunc( rest ) <= RestLevel`, signed and inclusive (`0x00506b41`); `StaffBehaviour.Decide` tests
   the float `< RestLevel` and misses [1, 2). (b) The patrol roll `FUN_00506f30` takes only a path cell (`mType` 1,
   `FUN_00536310`) before it routes; `PatrolRoll` routes to any, its remark calling the predicate unestablished. (c) Not
@@ -1679,7 +1708,9 @@ artifacts are listed in `docs/history/README.md`.
   at `0x004d6554`, the researcher's at `0x00502b9f`); `Decide` stands them instead, so a tired member with no reachable
   Staff Room never walks again. (e) At the end of a rest the original runs the kind's decide in the same sweep
   (`FUN_005061d0`, `0x00506298`); `Rest` sets Idle at stamp 0 and decides a sweep later, which after Q82b reads the
-  guard's `mGameTick & 3` a sweep late. Confirm each in the `staff` census.
+  guard's `mGameTick & 3` a sweep late. (f) Found by Q82b: at hire the guard and the researcher decide at once, after
+  `FUN_00506a40` (the guard's `0x004d5e76` on `mGameTick & 3`, the researcher's `0x005026cb` on a draw); `Hire` sets
+  Idle at stamp 0, so they decide a sweep later. Confirm each in the `staff` census.
 - [ ] **Q137. A guest going home under the `facing` overlay crashes the park.** Found by Q82's first run: an
   `IndexOutOfRangeException` in `ParkGuestSprites.Collapse` in the frame guest 37 went home. `Remove` rebuilds the
   vertex array at two quads a person, and the draw after it collapses every quad up to the last frame's `_uploaded`,

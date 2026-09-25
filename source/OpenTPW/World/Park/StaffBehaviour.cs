@@ -16,8 +16,8 @@ namespace OpenTPW;
 /// </para>
 /// <para>
 /// <b>What is built.</b> All eight shared states, and the decide arm of the two kinds whose decide arm is
-/// itself shared: a guard and a researcher roll three times in four for somewhere to walk and take it.
-/// That is what makes Lost Kingdom's guard and researcher patrol.
+/// itself shared: a guard walks on three sweeps in four by the park's clock, <c>mGameTick &amp; 3</c>, and a
+/// researcher three decides in four by a draw. That is what makes Lost Kingdom's guard and researcher patrol.
 /// </para>
 /// <para>
 /// <b>What is deliberately not built, each for a named reason.</b> A handyman, a mechanic and an
@@ -129,8 +129,10 @@ public sealed class StaffBehaviour
 	public const int PatrolTries = 30;
 
 	/// <summary>
-	/// One turn in four is the chance a guard or researcher stays put rather than walking somewhere:
-	/// the original takes the walk when <c>roll &amp; 3</c> is <b>not</b> nought.
+	/// A guard or researcher stays put when the low two bits of its choice are nought, and otherwise looks for
+	/// somewhere to walk. The guard's are <c>mGameTick</c>'s (<c>0x004d655d</c>), so it stays on one sweep in four
+	/// by the clock; the researcher's are a draw's (<c>0x00502ba9</c>), and where this one stays the original's
+	/// researches (Q134).
 	/// </summary>
 	public const int StayPutShare = 4;
 
@@ -146,32 +148,21 @@ public sealed class StaffBehaviour
 
 	/// <summary>One turn of one staff member's behaviour.</summary>
 	/// <param name="tick">
-	/// The 31 ms game tick, which the idle stamps are compared against. The original compares them against
-	/// <c>mGameTick</c>, which <see cref="ParkState.GameTick"/> carries (Q82).
+	/// The park's <c>mGameTick</c>, <see cref="ParkState.GameTick"/>, already one up for this sweep. Every stamp a
+	/// member of staff writes is a reading of it, and a saved stamp is a reading of the saved one, compared raw:
+	/// nothing zeroes or rebases it (<c>docs/exe/ride-operation.md</c>, "The staff turn").
 	/// </param>
 	public void Step( Staff staff, PeepWalk walk, SpriteScript? playing, int tick )
 	{
 		ArgumentNullException.ThrowIfNull( staff );
 		ArgumentNullException.ThrowIfNull( walk );
 
-		// <b>A stamp that reads ahead of the clock is stale, and the original says so itself.</b>
-		// FUN_004f9490 opens by zeroing mStrandedTime whenever it is greater than the current time, which
-		// is the same situation every staff stamp is in the moment a park is loaded: they were taken
-		// against the original's own mGameTick, which Lost Kingdom's save left at 755, and our clock starts
-		// again at nought.
-		//
-		// <b>Without this the whole feature is inert and looks fine.</b> The guard is saved idle with a
-		// stamp of 752, so "have I idled long enough" stayed false for the first 752 ticks of every
-		// session - he stood exactly where the file left him while every state in this class was
-		// reachable, correct and never reached. Found by the test that asserts position rather than state.
-		if ( staff.TimeStartedIdling > tick )
-			staff.TimeStartedIdling = 0;
-
 		switch ( staff.Activity )
 		{
-			// Standing about. They wait out their grade's idle duration and then look for something to do.
+			// Standing about. They wait out their grade's idle duration and then look for something to do: the
+			// first sweep past stamp + IdleDuration, so IdleDuration + 1 sweeps after a walk's stamp (0x004d6545).
 			case StaffActivity.Idle:
-				if ( tick <= staff.TimeStartedIdling + IdleDurationAt( staff.PayGrade ) )
+				if ( (uint)tick <= (uint)(staff.TimeStartedIdling + IdleDurationAt( staff.PayGrade )) )
 					break;
 
 				Decide( staff, walk, tick );
@@ -229,9 +220,11 @@ public sealed class StaffBehaviour
 
 				break;
 
-			// Waiting out a spell three times as long as an ordinary idle.
+			// Waiting out a spell three times as long as an ordinary idle, unsigned as the original's (0x00505745).
 			case StaffActivity.Waiting:
-				if ( tick - staff.TimeStartedIdling > IdleDurationAt( staff.PayGrade ) * WaitingIsIdleTimes )
+				var waited = (uint)(tick - staff.TimeStartedIdling);
+
+				if ( waited > (uint)(IdleDurationAt( staff.PayGrade ) * WaitingIsIdleTimes) )
 					staff.SetActivity( StaffActivity.Idle, tick );
 
 				break;
@@ -290,11 +283,21 @@ public sealed class StaffBehaviour
 			return;
 		}
 
-		// Three turns in four they walk somewhere; the fourth they stand and are asked again.
-		var walks = (_random.Next() & (StayPutShare - 1)) != 0;
+		// A guard walks on unless mGameTick's low two bits are nought (0x004d655d); a researcher unless its
+		// draw's are (0x00502ba9). Staying, or finding nowhere, sets idle, which stamps only from a walk.
+		// <b>A deviation (Q134):</b> there the original's researcher researches, state 0xf (0x00502be4), unless
+		// too tired; this one stands.
+		var choice = staff.Model == GuardModel ? tick : _random.Next();
+		var walks = (choice & (StayPutShare - 1)) != 0;
+		var walking = walks && SetRandomDest( staff, walk );
 
-		staff.SetActivity( walks && SetRandomDest( staff, walk ) ? StaffActivity.Walking : StaffActivity.Idle,
-			tick );
+		staff.SetActivity( walking ? StaffActivity.Walking : StaffActivity.Idle, tick );
+
+		if ( !walking )
+		{
+			Log.Info( $"Staff: {staff.ThingId} stands on mGameTick {tick}, "
+				+ (walks ? "finding nowhere to walk" : "its choice's low two bits nought") );
+		}
 	}
 
 	/// <summary>The thing models whose decide arm is answered inline by the shared switch.</summary>

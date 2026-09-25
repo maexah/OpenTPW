@@ -488,6 +488,9 @@ public sealed class ParkPeople : Entity
 
 		// Idle, with no patrol area - nought and nought is the whole map, which is what a staff member
 		// hired without one keeps. Their training starts at the grade they were hired at.
+		//
+		// <b>A deviation (Q136):</b> the original's guard and researcher decide at hire (0x004d5e76 on
+		// mGameTick & 3, 0x005026cb on a draw); idle at stamp 0, these decide on the next sweep.
 		var state = new ParkWorld.StaffState(
 			State: (int)StaffActivity.Idle, PayGrade: candidate.Grade,
 			Happiness: 100f, Tiredness: 100f, JobsDone: 0,
@@ -596,7 +599,7 @@ public sealed class ParkPeople : Entity
 		if ( ParkHand.LetGo() is { } letGo )
 			Log.Info( $"Hand: {letGo}" );
 
-		member.SetActivity( StaffActivity.Held, (int)GameClock.Ticks );
+		member.SetActivity( StaffActivity.Held, State.GameTick );
 		_carriedStaff = thingId;
 
 		Log.Info( $"People: picked up thing {thingId}" );
@@ -665,7 +668,7 @@ public sealed class ParkPeople : Entity
 		// them across the park from wherever they were picked up. Same re-stamp the original's own
 		// placement makes at 0x004fa95d.
 		member.Navigator.StampPrevious();
-		member.SetActivity( StaffActivity.Idle, (int)GameClock.Ticks );
+		member.SetActivity( StaffActivity.Idle, State.GameTick );
 
 		if ( member.Model == MechanicModel )
 			Unimplemented.Report( "MECHANIC_PUT_DOWN_JOB_SEARCH" );
@@ -1368,13 +1371,10 @@ public sealed class ParkPeople : Entity
 
 				var playing = _sprites.GetValueOrDefault( member.ThingId );
 
-				// <b>The 31 ms game tick, where the original reads mGameTick: a deviation, queued as Q82.</b>
-				// FUN_004d6410 tests a staff member's idle stamp against [DAT_0080239c + 0x1da70c]
-				// (0x004d6545), mGameTick, which goes up by one per thing sweep (0x00516394) and which
-				// ParkState.GameTick carries. So a staff member here idles an eighth of the balance file's
-				// time; Q82 checks the other per-kind handlers before the tick is changed.
+				// On the park's clock, mGameTick, as every staff handler reads it (0x004d6545 the guard's): the
+				// idle stamps are readings of it, and the guard's walk-or-stay is its low two bits.
 				if ( _staffWalks.TryGetValue( member.ThingId, out var walk ) )
-					_staffBehaviour.Step( member, walk, playing, tick );
+					_staffBehaviour.Step( member, walk, playing, State.GameTick );
 
 				if ( playing == null )
 					continue;
@@ -1684,8 +1684,7 @@ public sealed class ParkPeople : Entity
 	/// </remarks>
 	internal void ThingRemoved( ParkWorld.CatalogueObject thing )
 	{
-		var tick = GameClock.Ticks;
-		var thingTick = tick / ThingTickEvery;
+		var thingTick = GameClock.Ticks / ThingTickEvery;
 
 		foreach ( var peep in _peeps )
 		{
@@ -1716,7 +1715,7 @@ public sealed class ParkPeople : Entity
 
 		foreach ( var member in _staff )
 			_staffBehaviour.ThingRemoved( member, _staffWalks.GetValueOrDefault( member.ThingId ), thing.ThingId,
-				tick );
+				State.GameTick );
 	}
 
 	/// <summary>
