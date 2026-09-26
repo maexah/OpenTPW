@@ -50,8 +50,8 @@ lists each as `refs/pull/N/head`, and name the repository whenever you record a 
 `refs/pull/*` on `origin`, the upstream PR heads unchanged, and each origin tip the expected parent; then one named
 refspec per branch, no force.
 
-**The published site is not serving** (it answers 403, and `docs.opentpw.org` is a parking page). Do not rewrite the
-README's documentation links to guessed destinations; report them.
+**The published site is not serving** (it answers 403, and `docs.opentpw.org` is a parking page), so the README
+links the FileFormats repository instead. Do not link the site again until it answers.
 
 ## `exe/` pages
 

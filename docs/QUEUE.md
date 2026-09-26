@@ -2338,9 +2338,11 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   `SKYQUALITY` and the particle low-detail byte - then build low / medium / high.
 - [ ] **Q33. UI scale.** The UI has one fixed virtual size (`VirtualScreen`, 2048 by 1536). Add Auto / small / medium
   / large in the dead Video Card row (`OptionsScreen.cs:71-72`).
-- [ ] **Q34. README rewrite, then pictures.** Newcomer first: what it is, what runs, how to build, how to
-  run. Technical detail moves to `docs/`. Animated pictures need a capture
-  tool; none exists in the repo, so that is its own item afterwards.
+- [x] **Q34. README rewrite.** Done 2026-09-26, `alexah/161-beginner-readme`, at Alexah's request: newcomer first -
+  what it is, whether it plays yet (only Lost Kingdom's shipped park, no fresh park on any island), which release is
+  tested (Sim Theme Park only), how to build and run. The status narrative went to a link to `docs/STATUS.md`, the
+  format footnotes to a one-line note per row, and the dead `opentpw.gu3.me` links to the FileFormats repository.
+- [ ] **Q34b. Pictures for the README.** Animated pictures need a capture tool; none exists in the repo.
 - [ ] **Q72. Values from data, not constants (the 2026-09-12 review's Phase B).** The lobby's four island names
   from `THEMENAMES.str` through the reader the gate already uses (`ParkFixedItems.ParkDisplayName`) in place of
   `LobbyIsland.DisplayNames`; the `ISLAND()` directory and model names in place of `themeName[0..3]` (`LobbyIsland`,
