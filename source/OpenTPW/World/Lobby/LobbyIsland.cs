@@ -77,6 +77,9 @@ public sealed class LobbyIsland : Entity
 
 	private readonly LobbyModel _model;
 
+	/// <summary>Whether this isle's unbuilt random clip has been counted - see <see cref="OnUpdate"/>.</summary>
+	private bool _clipChoiceCounted;
+
 	/// <summary>
 	/// The two sign panels painted for this island, kept only so that they can be let go of again.
 	/// They are built from pixels rather than loaded by path, so they are in no cache and nothing
@@ -199,6 +202,16 @@ public sealed class LobbyIsland : Entity
 
 	protected override void OnUpdate()
 	{
+		// The original's camera update starts the isle's M1 or M2, drawn at random, whenever neither is playing
+		// (0x005e11f7, docs/exe/lobby.md, "Not sound"); here the model plays its clips in turn, M1 first
+		// (docs/QUEUE.md Q76). Counted once for each isle, as its first choice: the original draws again at every
+		// clip's end, and those draws are not counted.
+		if ( !_clipChoiceCounted )
+		{
+			_clipChoiceCounted = true;
+			Unimplemented.Report( "LOBBY_ISLE_RANDOM_CLIP" );
+		}
+
 		_model.Update( Time.Delta );
 	}
 }

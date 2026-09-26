@@ -89,6 +89,15 @@ internal static class Game
 		if ( GameOptions.Current.DisplayMode != DisplayMode.Windowed )
 			Display.Apply( Render.Window, GameOptions.Current.DisplayMode, GameOptions.Current.FullScreenSize );
 
+		// The original shows these once a run, before its first lobby, and none is built: the Bullfrog splash and
+		// the legal screen (LoadingScreen_Begin 0x00587380, whose files ship as Splash_American.tga and
+		// Legal_American.tga), then the Bullfrog movie and one park movie (states 5 and 7, docs/exe/boot.md). The
+		// lobby plan cut them (docs/QUEUE.md, section G); they are counted so the census names them.
+		Unimplemented.Report( "BOOT_SPLASH" );
+		Unimplemented.Report( "BOOT_LEGAL_SCREEN" );
+		Unimplemented.Report( "INTRO_MOVIE_BULLFROG" );
+		Unimplemented.Report( "INTRO_MOVIE_PARK" );
+
 		//
 		// Everything between here and the lobby's first frame happens behind the loading screen,
 		// which puts itself away for good once the level exists.

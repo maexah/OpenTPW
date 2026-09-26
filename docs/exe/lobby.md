@@ -183,7 +183,10 @@ OpenTPW draws the park's people this way (`ParkGuestSprites`, reading the save's
 sprite-script ops their scripts use (`SpriteScript`). Litter, balloons, thought bubbles and the other fourteen ops
 are not built.
 
-Also still unbuilt, and not yet counted (`docs/QUEUE.md` Q69): advisor clip glints (channel 0, effects 49 and 44, flags `0x40000` / `0x20000`).
+The advisor's clip glints are not world sprites and not the lobby's: they are UI particle channel 0 (effects 49 and 44),
+started by clip-word flags that only gesture rows 1 and 13 carry (`scenes.md`, "Gesture table"), and only the park
+advisor's golden-ticket lines use those rows. Nothing here awards a golden ticket, so nothing reaches them, and they have
+no counter.
 `.TPC` and `.FPC` are **not** open questions — all 46 `.TPC` and all 29 `.FPC` files in
 `esprites.wad` are version 3 (second word 3); an `.FPC` and the `.TPC` beside it share a picture
 count and differ only in size.
@@ -284,9 +287,9 @@ Every gate's M2 is its M1 played backwards. The engine plays the span a clip **d
 lasts two seconds for the jungle and hallow and 3.33 for fantasy and space, and the hallow keys past frame 60
 are never reached.
 
-The rest of the lobby's clips are still a stand-in: the Dino's and the butterflies' play on a loop
-because nothing sequences them yet (the original's isle clips are picked by the camera update's tail
-loop; see "Not sound"). That loop is not counted yet (`docs/QUEUE.md` Q69).
+The rest of the lobby's clips are still a stand-in: the Dino's play on a loop because nothing sequences them yet (the
+original's isle clips are picked by the camera update's tail loop; see "Not sound"). The butterflies' loop is the
+original's: each flyer ships one clip, which its constructor loops (`0x005d986b`).
 
 ## The lobby camera has two modes, and both are built
 
@@ -510,9 +513,9 @@ on an instance through `0x004732a0( model, 5, entry, flags, 1.0, channel 0 )`; f
 |---|---|---|
 | `0x005e06e4`, state 1's arrival | the gate, `+8` | M1 once - **the gate opens as the camera faces it** |
 | `0x005e18ab`, the island camera's cancel | the gate | M2 once - **it shuts again** |
-| `0x005e11f7`, the update's tail loop | the isle, `+4` | M1 or M2 at random, once, whenever it is idle |
+| `0x005e11f7`, the update's tail loop | the isle, `+4` | M1 or M2 at random, once, whenever it is idle - not built (Q76), counted `LOBBY_ISLE_RANDOM_CLIP` |
 | `0x005e136a`, `0x005e237a`, `0x005e2683` | the gate | M2 once - the same cancel in the base camera and in a sibling class (`0x00702dd0`, not identified) |
-| `0x005d986b` | a flyer, probably | M1 looped |
+| `0x005d986b` | a flyer, in its constructor `FUN_005d9830` | M1 looped |
 
 Measured in `lobby.wad`, every gate's M2 is its M1 backwards. A clip asked for while channel 0 is part-way through one is
 **queued** (one deferred clip, `0x0047334a`) and starts when that one ends; it starts at once when the channel is idle,
@@ -590,7 +593,11 @@ active child's `+0x14`, and the island camera's `0x005e2310` takes three keys. E
 
 **A left press on the lobby's view enters the park, on the press.** WM_LBUTTONDOWN posts `0x10005`, with the button (0
 left, 1 right, 2 middle) as its first argument, to the control the pointer is over (`FUN_00658af1`, the hover
-`[0x00faa5e0]`). There is no hit test at the press: the hover is worked out on a move and on `UI_SetVisible`. Off every
+`[0x00faa5e0]`). There is no hit test at the press: the hover is worked out on a move, and by `FUN_006589f9`, which
+hit-tests at the last pointer position unless a control holds the capture `[0x00faa5e8]`. Its ten callers are a control
+built visible (`0x0065bff4`), destroyed (`0x0065c267`), shown or hidden (`UI_SetVisible`, `0x0065da61`), linked
+(`0x0065f51a`) or unlinked (`0x0065f5ae`), given a new rect (`0x0065cc93`, `0x0065cd86`), its skip flag set
+(`0x0065db16`), the capture let go (`0x0065e589`) and the focus killed (`0x0065e62c`). Off every
 window it is the root `0xbf431`, whose callback hands the press on the same way, and `0x005e2310` answers button 0 with
 Enter this park (`0x005e234f`); the right and middle buttons it ignores. The window class has no `CS_DBLCLKS` (style 0,
 `RegisterClassA` at `0x0044e0de`), so a double click is two presses, and the second is refused because the first set
@@ -637,11 +644,15 @@ the posters test it first. Windows sends no key-up to a window that has lost the
 switch of window is never let go, as far as the lobby knows.
 
 **Unsettled.**
-- A press made after a window opens or closes, before the pointer moves, can go to the old hover: a tree becomes the hover
-  at the next move or `UI_SetVisible`, or as a visible control is built under a parent already linked (`0x0065bff4`,
-  which for a tree's root runs before it is linked). `UI_LoadTree` links a tree's root before building its children, so
-  a tree with a visible child takes the hover as it opens (Q56's refuters). Not built, and not yet counted
-  (`docs/QUEUE.md` Q69).
+- A press made after a window opens, before the pointer moves, can go to the old hover. Closing never leaves it stale:
+  destroying, hiding and unlinking a control all refresh it. Opening can, narrowly: the factory `FUN_0065dd7b` links a
+  control into its parent's list only after its constructor has refreshed the hover (`0x0065bff4`, for a control built
+  visible), so the last visible control a tree builds is not the hover until the next refresh or move. Which of the
+  lobby's opens end without one is not read whole: `NewPlayerDialog_Open` (`0x004a6e40`) sets the focus partway through
+  (`FUN_0065e59b`, at `0x004a6f8e`), which does not refresh it, and none of the calls after it reaches the refresh. **OpenTPW differs, and does not count it**: `WindowStack.OnUpdate`
+  hit-tests every frame, so a press here always goes to what the pointer is over (said at the site). Its code has no
+  branch where the original's stale press would be, and the nearest stand-in, a press with the pointer unmoved since a
+  window opened or closed, would count mostly presses the original also sends to the right control.
 - Whether the mail badge `0xbf432` can show offline. `0x004bbbd0` hides it while `g_Players+0xc4`, a count, is 0; if it can
   show, a press on it is the badge's and does not enter the park.
 - What a key or a press does in the online modes' children (`+0xc`, `+0x10`, and the sibling camera `0x00702dd0`, whose
@@ -709,7 +720,11 @@ proves the capture is the game's own mix. See `LobbyAudio.KeepPlaying`.
 They call `FUN_004732a0` / `FUN_00473f50` over the handle table at `DAT_007a4610` — the **animation**
 player, not audio. The tail loop of `FUN_005e0470` walks every island and, where its animation is not
 playing, starts a random one of two clips. That is the isle's M1 or M2 (`island+4`). The gate (`island+8`) is
-played only by the park-entry flight and its cancel - see "Escape cancels the fly-in".
+played only by the park-entry flight and its cancel - see "Escape cancels the fly-in". The draw is the C runtime's
+`rand() & 1` (`0x0067b5c0`), not the scene's own generator, and "not playing" is `FUN_005d8440` answering nought or
+less for the time left on channel 0. Every isle ships exactly an M1 and an M2 in `lobby.wad`. **OpenTPW** plays each
+isle's clips in turn, M1 first (`LobbyModel.Update`), and counts the unbuilt draw as `LOBBY_ISLE_RANDOM_CLIP`, once for
+each isle as its first choice (`LobbyIsland.OnUpdate`): four for each lobby built. The later draws are not counted.
 
 ## Park names and the locale tables
 

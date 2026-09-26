@@ -13,9 +13,10 @@ namespace OpenTPW.Tests;
 /// the walk that sweeps it, <see cref="ParkCamcorderCameraMode.Step"/>.
 ///
 /// <para>
-/// <b>What these can and cannot see.</b> <see cref="ParkCamcorderCameraMode.Slide"/> is pure: it takes a
-/// position, a step and an edge test, and nothing in it needs a park, a graphics device or a clock, so the
-/// arithmetic is pinned against it directly. <see cref="ParkCamcorderCameraMode.Step"/> - the body the keys
+/// <b>What these can and cannot see.</b> <see cref="ParkCamcorderCameraMode.Slide"/> takes a position, a step,
+/// an edge test and an optional ride test, and nothing in it needs a park, a graphics device or a clock, so the
+/// arithmetic is pinned against it directly. Its one side effect is the <c>FIRST_PERSON_WALK_INTO_RIDE</c>
+/// count when the ride test answers yes. <see cref="ParkCamcorderCameraMode.Step"/> - the body the keys
 /// and the console both run - reads the park on show from <c>Level.Current</c>, which is given a stand-in
 /// level holding the real park. What is left unpinned is <c>Walk</c> reading <c>Input</c> and calling
 /// <see cref="ParkCamcorderCameraMode.Step"/>, since a test cannot press a key.
@@ -574,6 +575,121 @@ public class ParkCamcorderWalkTests
 		Assert.IsTrue( differing[0] > 0, "no side of the park where mode 2 and mode 0 disagree, so this saw nothing" );
 		Assert.IsTrue( differing[1] > 0, "no side of the park where mode 2 and mode 1 disagree, so this saw nothing" );
 	}
+
+	/// <summary>
+	/// <b>A pass that ends on a cell that rides something is counted</b>, the whole-step pass as well as an asked one, as
+	/// the original asks <c>FUN_0042a340</c> after every pass (<c>0x0042c587</c>): stepping from (4,4) into (4,5) is an
+	/// asked pass that lands there and the rest of the step taken whole, two. The same step with nothing to ride counts
+	/// none, and a step that stays in its cell counts none either.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the report taken out counts none; asking once after the loop, or only after an asked pass, counts
+	/// one.
+	/// </remarks>
+	[TestMethod]
+	public void APassEndingOnARideIsCounted()
+	{
+		static bool FourFive( int x, int y ) => x == 4 && y == 5;
+
+		var before = Times( "FIRST_PERSON_WALK_INTO_RIDE" );
+
+		ParkCamcorderCameraMode.Slide( new Vector3( 45f, 45f, 0f ), 0f, 6f, NothingIsShut, ( x, y ) => false );
+		Assert.AreEqual( before, Times( "FIRST_PERSON_WALK_INTO_RIDE" ), "nothing to ride" );
+
+		ParkCamcorderCameraMode.Slide( new Vector3( 45f, 45f, 0f ), 0f, 3f, NothingIsShut, FourFive );
+		Assert.AreEqual( before, Times( "FIRST_PERSON_WALK_INTO_RIDE" ), "a step that stays in (4,4)" );
+
+		var to = ParkCamcorderCameraMode.Slide( new Vector3( 45f, 45f, 0f ), 0f, 6f, NothingIsShut, FourFive );
+		Assert.AreEqual( (4, 5), Cell( to ) );
+		Assert.AreEqual( before + 2, Times( "FIRST_PERSON_WALK_INTO_RIDE" ), "the asked pass into (4,5), then the rest whole" );
+	}
+
+	/// <summary>
+	/// Against the real park: <b>walking up the Belly Bounce's queue into its entrance (52,23) is counted, and walking into
+	/// the Staff Room's entrance is not</b>, a feature whose category sets <c>UsageInfo.CannotRide</c>. From the queue's
+	/// head facing south the viewer spends seven frames on the queue cell (52,22), which shares the entrance's owner, so
+	/// only the cell's type keeps them out; crosses in on the eighth, two passes; then moves in the cell fourteen frames,
+	/// one pass each, and parks against the footprint's shut side for the other thirty-eight, one pass each: 54. The
+	/// entrance is the only cell of Lost Kingdom that rides anything.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the report taken out counts none; the type test taken out counts the queue cell's seven frames too;
+	/// the <c>CannotRide</c> test taken out counts the Staff Room's walk and a second cell.
+	/// </remarks>
+	[TestMethod]
+	public void WalkingIntoTheBellyBouncesEntranceIsCounted()
+	{
+		var world = Jungle();
+		var catalogue = new ParkItemCatalogue( "jungle", GameData.Required() );
+
+		OnShow( world, onShow =>
+		{
+			Level.Current = onShow;
+			typeof( Level ).GetProperty( nameof( Level.Catalogue ) )!.SetValue( onShow, catalogue );
+
+			var rideAt = ParkCamcorderCameraMode.RideAt( onShow.ParkState, catalogue )!;
+			var riding = new List<(int, int)>();
+
+			for ( var y = 0; y < ParkWorld.MapSize; ++y )
+			{
+				for ( var x = 0; x < ParkWorld.MapSize; ++x )
+				{
+					if ( rideAt( x, y ) )
+						riding.Add( (x, y) );
+				}
+			}
+
+			CollectionAssert.AreEqual( new[] { (52, 23) }, riding, "the Belly Bounce's entrance, and nothing else" );
+
+			var before = Times( "FIRST_PERSON_WALK_INTO_RIDE" );
+
+			ParkCamcorderCameraMode.Stand = new Vector3( 579.82861328125f, 159.52859497070312f, 0f );
+			ParkCamcorderCameraMode.Yaw = 5.497786045074463f;
+			ParkCamcorderCameraMode.DebugWalk( 1f, 0f, 40 );
+
+			Assert.AreEqual( (58, 15), Cell( ParkCamcorderCameraMode.Stand ), "into the Staff Room's entrance" );
+			Assert.AreEqual( before, Times( "FIRST_PERSON_WALK_INTO_RIDE" ), "a feature: it cannot be ridden" );
+
+			ParkCamcorderCameraMode.Stand = new Vector3( 525f, 225f, 0f );
+			ParkCamcorderCameraMode.Yaw = 0f;
+			ParkCamcorderCameraMode.DebugWalk( 1f, 0f, 60 );
+
+			Assert.AreEqual( (52, 23), Cell( ParkCamcorderCameraMode.Stand ), "into the Belly Bounce's entrance" );
+			Assert.AreEqual( before + 54, Times( "FIRST_PERSON_WALK_INTO_RIDE" ) );
+		} );
+	}
+
+	/// <summary>
+	/// <b><c>UsageInfo.CannotRide</c> is read, and across all four themes it is nought exactly for the rides</b> of the
+	/// four folders the catalogue reads: every theme's <c>Rides.sam</c> sets 0 and its shops, sideshows and features 1,
+	/// and no item overrides it.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the key not read leaves every item rideable, the shops, sideshows and features too.</remarks>
+	[TestMethod]
+	public void OnlyRidesCanBeRidden()
+	{
+		var data = GameData.Required();
+		var (rides, others) = (0, 0);
+
+		foreach ( var theme in new[] { "jungle", "fantasy", "hallow", "space" } )
+		{
+			foreach ( var item in new ParkItemCatalogue( theme, data ).All )
+			{
+				var ride = item.Directory.Contains( "/rides/", StringComparison.OrdinalIgnoreCase );
+
+				Assert.AreEqual( !ride, item.CannotRide, $"{theme} '{item.Name}' in {item.Directory}" );
+
+				if ( ride )
+					++rides;
+				else
+					++others;
+			}
+		}
+
+		Assert.IsTrue( rides > 0 && others > 0, $"{rides} rides and {others} others" );
+	}
+
+	private static int Times( string what ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == what ).Times;
 
 	private static ParkWorld Jungle()
 	{

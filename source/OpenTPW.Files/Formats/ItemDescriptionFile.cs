@@ -103,6 +103,13 @@ public sealed class ItemDescriptionFile
 	/// <summary>Whether this is shelter from the rain - <c>UsageInfo.ISIndoors</c>, the game's own spelling.</summary>
 	public bool IsIndoors => (_isIndoors ?? _category?._isIndoors ?? 0) != 0;
 
+	/// <summary>
+	/// Whether a viewer walking in first person may not ride this from its entrance - <c>UsageInfo.CannotRide</c>,
+	/// descriptor <c>+0x118</c>, which <c>FUN_0042a340</c> reads. Its values in the shipped files are FileFormats
+	/// <c>sam.md</c>'s.
+	/// </summary>
+	public bool CannotRide => (_cannotRide ?? _category?._cannotRide ?? 0) != 0;
+
 	/// <summary>How exciting this is - <c>UsageInfo.ExcitementLevel</c>. Belly Bounce 40, Jungle Spray 35.</summary>
 	public int ExcitementLevel => _excitementLevel ?? _category?.ExcitementLevel ?? 0;
 
@@ -375,6 +382,7 @@ public sealed class ItemDescriptionFile
 	private int? _providesRelief;
 	private int? _hasQueue;
 	private int? _isIndoors;
+	private int? _cannotRide;
 	private int? _excitementLevel;
 	private int? _attractionValue;
 	private int? _newAttractionDecayTime;
@@ -529,6 +537,10 @@ public sealed class ItemDescriptionFile
 
 				case "UsageInfo.ISIndoors":
 					_isIndoors = Number( line );
+					break;
+
+				case "UsageInfo.CannotRide":
+					_cannotRide = Number( line );
 					break;
 
 				case "UsageInfo.ExcitementLevel":

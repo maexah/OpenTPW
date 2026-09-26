@@ -50,9 +50,9 @@ open something.**
 
 **ONLY RESEARCH REMAINS, AND IT IS BLOCKED BY ABSENCE, NOT BY EFFORT.** It is not a category
 (`FUN_004a0840`'s case `0x2b` goes straight to `FUN_004aa480`, as the map does) and its screen is six
-effort sliders over research groups. This game has no research, no researchers and no groups. It is
-only logs, with that reason named at the site; counting it is `docs/QUEUE.md` Q69. **Do not open it as a task until
-a research system exists.**
+effort sliders over research groups, or a message box in Instant Action or with no researcher hired. This game has no
+research and no groups; Lost Kingdom's one researcher (thing 30) walks, with nothing to research. It only logs, and
+counts each click as `RESEARCH_BUTTON`. **Do not open it as a task until a research system exists.**
 
 **Park status (screen 3) is deferred by Alexah, 2026-09-21** — *"I'm okay delaying work on the Info
 screen. It's not important at the moment."* The Information category is therefore seeded to screen **4**
@@ -137,8 +137,8 @@ Buy carries the whole purchase/hire/management half; paths, queues and building 
 laid and verified; and Info and Money now open real screens - **all four of their buildable screens
 drew in a running park and were photographed**. Research is not a category at all (`FUN_004a0840`'s
 case `0x2b` goes straight to `FUN_004aa480`, as the map does), and its one screen is six effort
-sliders over research groups: this game has **no research, no researchers and no groups**, so there is
-nothing to put behind the button. It only logs, with that reason named at the site (counting it is Q69).
+sliders over research groups: this game has **no research and no groups**, so there is nothing to put behind the
+button. It only logs, and counts each click as `RESEARCH_BUTTON`.
 
 - [x] **Buy** opens `ParkBuyScreen` (stream `0x00754cf8`), which cross-links to `ParkHireScreen`
       (stream `0x00751fa8`). Both are built on the original's control **type 7**, a scrolling
@@ -203,7 +203,7 @@ nothing to put behind the button. It only logs, with that reason named at the si
       switch is out of order (case 2 takes `0x6e`, case 3 `0x6d`), which drew guards under
       "Entertainers' Happiness"; and a visitor list rebuilt every frame, caught as **260** gap reports
       from one visit. See `docs/exe/hud.md`.
-- [ ] **RESEARCH** - logs only (not yet counted, Q69), and blocked on a system that does not exist rather than on effort. See
+- [ ] **RESEARCH** - logs and counts (`RESEARCH_BUTTON`), and blocked on a system that does not exist rather than on effort. See
       the note at the head of this item.
 - [x] **PATHS - DONE 2026-09-21, and verified in the running game.** `path 10 10` lays one for
       **20** (`Costs.PathCell`, measured from `Standard.sam` and confirmed through the game's own
@@ -264,7 +264,7 @@ nothing to put behind the button. It only logs, with that reason named at the si
 
 - [x] **Was seen:** Info, Money and Research do nothing. **Five of the six now open something**, as of
       2026-09-21 — Buy, Camcorder, Map, Info and Money. Only Research is left.
-- **Lives:** `ParkGadget.cs` — one `NotYet(...)` remains, `b_resrch`. `b_info` and `b_money` go through
+- **Lives:** `ParkGadget.cs` — `b_resrch` logs each click and counts it as `RESEARCH_BUTTON`. `b_info` and `b_money` go through
   `ParkCategoryScreens.Open`, which is the original's own remembered-tab picker.
 - **The real dispatch is decoded** in `docs/exe/hud.md`: `FUN_004a0940( n )` opens *the screen that
   category was last left on*, from three globals seeded 1 / 3 / 10. **The HUD is six category pickers,

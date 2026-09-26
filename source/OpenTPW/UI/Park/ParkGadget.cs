@@ -26,9 +26,9 @@ namespace OpenTPW.UI;
 /// <b>What is here and what is not.</b> The gadget draws, the date is live and the buttons light and
 /// click. <b>Five of the six now open something</b>: buy and hire, the map, the camcorder arm, the
 /// Information category's staff/items/visitors lists, and the Money category's entry price. <b>Only
-/// Research still does nothing</b> - it is not a category and its one screen is six effort sliders
-/// over research groups that do not exist - so it says so, the way the park menu's Load and Save
-/// already do. This paragraph said four of the six were inert until they were not. <b>The gauge is live now, and this paragraph
+/// Research still does nothing</b> - it is not a category, and neither its six effort sliders nor its two
+/// message boxes are built - so it says so, the way the park menu's Load and Save already do, and counts
+/// each click as <c>RESEARCH_BUTTON</c>. This paragraph said four of the six were inert until they were not. <b>The gauge is live now, and this paragraph
 /// said there was no such number anywhere until it was.</b> There is one on every guest, and
 /// FUN_004c7bb0 is what the original does with them - average them, and read nought while the park is
 /// shut, which is what still leaves it resting at its lowest part in a park nobody has entered.
@@ -372,12 +372,23 @@ internal sealed class ParkGadget : UiWindow
 			Clicked = () => ParkCategoryScreens.Open( Stack, ParkCategoryScreens.Finance )
 		} );
 
-		// THE LAST ONE STILL DOES NOTHING, and it is not a category: FUN_004a0840's case 0x2b goes
-		// straight to FUN_004aa480 rather than through the remembered-tab picker, exactly as the map
-		// does. Its screen is six effort sliders over research groups, and this game has no research,
-		// no researchers and no groups - so there is nothing behind it to open.
-		buttons.Add( NotYet( 0x2b, new UiRect( 274, 1254, 392, 1372 ), 472, "b_resrch",
-			"Research", "there is nothing to research and nobody to research it" ) );
+		// THE LAST ONE STILL DOES NOTHING, and it is not a category: FUN_004a0840's case 0x2b goes straight to
+		// FUN_004aa480 rather than through the remembered-tab picker, exactly as the map does. That opens a message
+		// box in Instant Action or with no researcher hired, and otherwise six effort sliders over research groups
+		// (docs/exe/hud.md, "The nine screens behind Info, Money and Research"). None of the three is built, and
+		// research itself waits on Alexah (docs/PLAYER-GAPS.md). Counted each click.
+		buttons.Add( new UiButton
+		{
+			Id = 0x2b,
+			Rect = new UiRect( 274, 1254, 392, 1372 ),
+			HelpText = 472,
+			Mesh = UiMesh.Get( "b_resrch" ),
+			Clicked = () =>
+			{
+				Unimplemented.Report( "RESEARCH_BUTTON" );
+				Log.Info( "Park gadget: Research - neither its screen nor its message boxes are built, so nothing more happens" );
+			}
+		} );
 
 		// The bank balance, in the OPPOSITE corner - the stream's 0x2f and 0x32. Root controls like the
 		// cluster below rather than children of the gadget body, so each anchors top-left on its own.
@@ -489,22 +500,6 @@ internal sealed class ParkGadget : UiWindow
 			Font = CountFont,
 			TextAcross = TextAlign.End,
 			TextWraps = true
-		};
-
-	/// <summary>
-	/// A button whose screen does not exist - today only research's. It draws and lights and clicks like the
-	/// others and then says why nothing happened (not yet counted: docs/QUEUE.md Q69), which is what <see cref="ParkFrontEnd"/>'s menu does
-	/// for the choices it cannot answer. Leaving them out would misreport the gadget's shape, and
-	/// letting them look as though they had worked would be worse than either.
-	/// </summary>
-	private static UiButton NotYet( int id, UiRect rect, int helpText, string mesh, string what, string why )
-		=> new()
-		{
-			Id = id,
-			Rect = rect,
-			HelpText = helpText,
-			Mesh = UiMesh.Get( mesh ),
-			Clicked = () => Log.Info( $"Park gadget: {what} - {why}, so nothing more happens" )
 		};
 
 	/// <summary>

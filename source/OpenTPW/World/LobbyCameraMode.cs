@@ -280,6 +280,12 @@ public class LobbyCameraMode : CameraMode
 
 	public override void Update()
 	{
+		// The original's update also arms the advisor's 90-second repeat of response 394 or 395, drawn afresh, on
+		// every pass while a player is picked (0x005e184c, docs/exe/ui.md, "The lobby's idle repeat"). Not built
+		// (docs/QUEUE.md Q77). Counted every frame a player is picked.
+		if ( Players.Roster.Current != null )
+			Unimplemented.Report( "LOBBY_ADVISOR_IDLE_REPEAT" );
+
 		var islands = Islands();
 
 		if ( Input.Pressed( InputButton.FreezeCamera ) )

@@ -71,6 +71,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0042c197` | The sweep: the axis not asked goes the same fraction, and is put back if its cell changed | OpenTPW.Tests/ParkCamcorderWalkTests.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042c290` | `FUN_0042b1c0`: the Y-axis call of `FUN_004d8750`, pushing a literal 2 | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042c460` | The sweep: the whole step, with either axis put back if its cell changed | OpenTPW.Tests/ParkCamcorderWalkTests.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
+| `0x0042c587` | The camcorder sweep, after every pass: FUN_0042a340 at the pass's cell; a ride found runs Ride it! from first person and ends the sweep | OpenTPW.Tests/ParkCamcorderWalkTests.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042d130` | | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x0044b220` | | OpenTPW.Files/Formats/Model/ModelFile.cs  |
 | `0x0044b2e0` | | OpenTPW/World/Advisor/AdvisorModel.cs  |
@@ -528,7 +529,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0057c620` | | OpenTPW/UI/ScreenParticles.cs  |
 | `0x00580320` | | OpenTPW/World/Weather/Lightning.cs  |
 | `0x00582170` | | OpenTPW/UI/ScreenParticles.cs  |
-| `0x00587380` | | OpenTPW/UI/LoadingScreen.cs  |
+| `0x00587380` | | OpenTPW/Client/Game.cs OpenTPW/UI/LoadingScreen.cs  |
 | `0x00587479` | | OpenTPW/UI/LoadingScreen.cs  |
 | `0x005879c0` | | OpenTPW/UI/LoadingScreen.cs  |
 | `0x00587a70` | | OpenTPW/UI/LoadingScreen.cs  |
@@ -588,7 +589,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005e052f` | Lobby camera state 2: writes the render camera's darkening target `+0x60` as the radius closes | OpenTPW/World/LobbyCameraMode.cs  |
 | `0x005e06e4` | Lobby camera state 1's arrival: plays the gate's M1 once (`0x005d83f0( 0, 0 )` on `island+8`) | OpenTPW/World/Lobby/LobbyGate.cs OpenTPW/World/LobbyCameraMode.cs  |
 | `0x005e1100` | | OpenTPW/World/Lobby/LobbyWeather.cs OpenTPW/World/Weather/Lightning.cs  |
+| `0x005e11f7` | The lobby camera update's tail loop: an idle isle starts its M1 or M2 at random | OpenTPW.Tests/LobbyCountedGapsTests.cs OpenTPW/World/Lobby/LobbyIsland.cs  |
 | `0x005e13fb` | | OpenTPW/World/LobbyCameraMode.cs  |
+| `0x005e184c` | The island lobby camera's update, every pass with a player picked: arms the advisor's 90-second repeat of response 394 or 395 | OpenTPW.Tests/LobbyCountedGapsTests.cs OpenTPW/World/LobbyCameraMode.cs  |
 | `0x005e1890` | The island camera's `+0x18`, Escape: cancels a leave (state 1 or 2 to 0) and shows the panel; answers 1 only when it cancelled | OpenTPW.Tests/LobbyEscapeTests.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs OpenTPW/World/LobbyCameraMode.cs  |
 | `0x005e18ab` | The cancel's gate clip: M2 once on `island+8`, from state 2 only | OpenTPW/World/Lobby/LobbyGate.cs  |
 | `0x005e1a44` | | OpenTPW/World/Lobby/LobbyAudio.cs  |

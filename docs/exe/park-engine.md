@@ -702,11 +702,20 @@ and decays, so the drift past the line totals `100 * |v|`, about 2 units for a w
 extent is `[[0x007a0854] + 0x6c]`, the heightfield block of `Terrain\base.md2`: `+0x18 * +0x10` across and
 `+0x1c * +0x14` down, **960 by 850** in all four parks (96 by 85 cells), not the 128-cell map.
 
-**One branch is decoded but not built here.** Having moved, the loop calls `FUN_0042a340( x, y )`, which
-indexes the per-cell thing list at `+0x2a4` by the packed cell id `y * 0x80 + 1 + x` and returns the first
-thing whose kind byte at `+2` is **3** and whose `FUN_004dd4e0()+0x118` is nought; on finding one it runs
-`FUN_00412e90` and `FUN_004e15b0`, and the loop ends. What that does to the viewer is not traced, and it is not
-yet counted (`docs/QUEUE.md` Q69).
+**One branch is decoded but not built here: walking onto a ride's entrance rides it.** Every pass of the sweep, the
+whole-step one included, ends at `0x0042c545`: the cell of where the pass left the viewer, `(int)(x * 0.1)` and
+`(int)(y * 0.1)` clamped to the map (`FUN_0042cd40`), is handed to `FUN_0042a340` (`0x0042c587`). That answers only for
+an **entrance**, a cell of type 9 (`FUN_00536340`, `[cell+8] == 9`): it reads the cell's `mParentID` (`+0x10`), walks
+the thing chain of that owner's cell (`+0x24`, the next at the thing's `+0xa`), and returns the first catalogue object
+(kind byte `+2` is 3) whose item's `+0x118` is nought. `+0x118` is **`UsageInfo.CannotRide`**, row 11 of the descriptor
+key table at `0x00745940` (rows of `0x3c` bytes, row 0 at `+0xec` and four bytes a row, which rows 21, 27 and 28
+confirm as `+0x140`, `+0x158` and `+0x15c`); its values in the shipped files are FileFormats `sam.md`'s. On a hit the loop runs `FUN_00412e90( 0x7890a0, item )`, whose
+answer it drops, then the thing's `FUN_004e15b0( 1 )`, the ride window's "Ride it!" (`hud.md`) entered from first
+person, and ends the sweep (`0x0042c5b6`); the position is still written back. **OpenTPW** has no ride view: `Slide`
+asks the same question after every pass (`ParkCamcorderCameraMode.RideAt`, the objects anchored on the owner's cell
+standing for the chain) and counts each yes as `FIRST_PERSON_WALK_INTO_RIDE`, twice as the viewer crosses in and then once each frame they step
+in the cell, moved or stopped by a shut side, and walks on. In Lost Kingdom the one such cell is the Belly Bounce's entrance
+(52,23).
 
 **Nothing of the edge test is kept, and the world it reads dies with the park.** Read for `docs/QUEUE.md` Q10 and
 put to a refuter, then re-read by hand. `FUN_004d8750` writes no global, and neither do the functions it calls.
@@ -769,7 +778,7 @@ in these places, none reached by a walk in the park:
 - **The rest of X's step after an X pass is the stored float.** The original keeps it unrounded on the x87 stack
   (`FST` at `0x0042c12e`) for the nudge's direction (`0x0042c14d`) and the loop's test (`0x0042c24c`); the two
   differ only if it underflows.
-- `FUN_0042a340`'s branch is not built (above; `docs/QUEUE.md` Q69).
+- `FUN_0042a340`'s branch is not built (above): walking onto a ride's entrance is counted, `FIRST_PERSON_WALK_INTO_RIDE`.
 - **At the margins**, read by a review of the port (`docs/QUEUE.md` Q48b). `Slide` is handed the stored float step,
   so a step that rounds to exactly -1e-4 is zeroed where the original may keep it (the dead band above). Every test
   of a step against nought reads C3, which an unordered compare also sets, and every "smaller" reads C0, likewise:

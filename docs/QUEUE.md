@@ -1349,7 +1349,48 @@ artifacts are listed in `docs/history/README.md`.
   none is found; every researcher spell after a walk holds its stamp 21 sweeps, about one in four then going on at
   stamp 0 (its own draw, until Q134). The `staff` and `arrivals` census over a timed run, and the guard photographed
   standing and walking.
-- [ ] **Q69. Seven unbuilt paths are not counted.** Found by the 2026-09-24 staleness audit.
+- [x] **Q69. Seven unbuilt paths are not counted: five now are, and two are not reached.** Done 2026-09-25,
+  `alexah/156-count-seven-unbuilt-paths`. Mapped by a read-only workflow (one agent a path, a skeptic over all seven),
+  and every load-bearing address re-read by hand.
+  - **Counted, where the original takes each:** `LOBBY_ADVISOR_IDLE_REPEAT` in `LobbyCameraMode.Update`, every frame a
+    player is picked (`0x005e184c` is in the island camera's own update; `ui.md`, "The lobby's idle repeat", new);
+    `LOBBY_ISLE_RANDOM_CLIP` in `LobbyIsland.OnUpdate`, once an isle as its first draw; `BOOT_SPLASH`,
+    `BOOT_LEGAL_SCREEN`, `INTRO_MOVIE_BULLFROG` and `INTRO_MOVIE_PARK` in `Game.Run`, once a run; `RESEARCH_BUTTON` on
+    each click (`ParkGadget.NotYet`, which had one caller, is gone); `FIRST_PERSON_WALK_INTO_RIDE` after every pass of
+    the camcorder's sweep that ends on an entrance whose owner's item has `UsageInfo.CannotRide` nought
+    (`FUN_0042a340`, `0x0042c587`), which needed the key read (`ItemDescriptionFile.CannotRide`; FileFormats
+    `sam.md`): every theme's rides category sets 0, its shops, sideshows and features 1, its upgrades nothing, and
+    none of the 274 items overrides it.
+  - **Not reached, so not counted, and said so:** the advisor's glints are UI particles that only the park advisor's
+    golden-ticket lines start (gesture rows 1 and 13, `scenes.md`), never the lobby, even in the original; the stale
+    hover cannot happen here, because `WindowStack.OnUpdate` hit-tests every frame, which is a deviation said at the site
+    and in `lobby.md`, where "or closes" is refuted (every close refreshes the hover; `FUN_006589f9` has ten callers);
+    and the `welcome_<lang>` overlay is dead by content (no Init folder ships one).
+  - **Confirmed in the game** (`q69confirm.py`, silent; every PREDICT line written first). Research and the camcorder
+    are the park's, so the lobby session goes on into it. Boot: 13 frames grabbed and 5 kept, the first black before
+    the first present; the other four are the bar screen, alike pixel for pixel above the bar, with no splash and no
+    legal strip. Bare lobby: `unimplemented 5` - 4x
+    `LOBBY_ISLE_RANDOM_CLIP` and the four boot names 1x, the same 10 s later. With a player made at the slots:
+    `LOBBY_ADVISOR_IDLE_REPEAT` grew 1440 in 10.01 s at 143.9 fps (1440 predicted), and froze at 1883 once the park
+    was up. Research clicked three times with the real pointer: 3x, the help row 472 lit and nothing opened
+    (photographed). Paused in first person: the Staff Room's entrance walk added none; the Belly Bounce's queue head
+    to its entrance (52,23) ended at (525.000,239.999) and counted 54, as predicted (photographed on the queue head and
+    in the entrance against its body). A first try read 92: a `step` before the walk let the view steer toward the
+    pointer, left on the gadget, to yaw 0.36. The control, main's build, the same session: no Q69 name in any census,
+    the same walk to the same point. `save/` unchanged in all three. An isle's draw and the advisor's arm have nothing
+    to photograph: those shots show the lobby each count was read in.
+  - **Tests:** `LobbyCountedGapsTests` (two), `ParkGadgetTests.EachClickOnResearchIsCounted`,
+    `ParkCamcorderWalkTests.APassEndingOnARideIsCounted`, `WalkingIntoTheBellyBouncesEntranceIsCounted` (54, and only
+    (52,23) rides) and `OnlyRidesCanBeRidden` (all four themes). Twelve bugs put back (`q69mutate.py`), each red. The
+    boot's four have no test (`Game.Run` needs a window); the control run is their put-back.
+  - **Reviewed** by a read-only workflow (four lenses, a skeptic on each): 21 findings, ten distinct ones upheld and all
+    acted on (a stale `PLAYER-GAPS.md` line, the butterflies' sentence, `NewPlayerDialog_Open`'s address, how often the
+    walk counts, the boot frames' claim, the upgrades in `sam.md`, the key's values left to FileFormats, a test summary,
+    a `STATUS.md` line, a doubled sentence); four refused.
+  - **Found:** Q139 (five more reached paths that only log, and the boot's unheard sound), Q140 (the camcorder walks
+    onto entrances the original shuts), Q141 (golden tickets, which the glints wait on).
+
+  The item as written: Found by the 2026-09-24 staleness audit.
   `CLAUDE.md` rule 4 asks every unbuilt path the program reaches to call `Unimplemented.Report`, and these have no
   counter (two are queued for building, Q76 and Q77): the lobby's 90-second advisor repeat of response `0x18a`/`0x18b` (`0x005e184c`,
   `docs/exe/ui.md`); the advisor clip glints (`lobby.md`, "World sprites"); the isle's random M1/M2 clips, which
@@ -1727,6 +1768,26 @@ artifacts are listed in `docs/history/README.md`.
   reach first: the epoch of `FUN_004f8800`'s 24-month gate. Count the monthly consideration where `FUN_00508f70` is
   reached (`CLAUDE.md` rule 4), and turn round `StaffBehaviour`'s remark that the strike needs a script: the flag is
   `mStaffHQ`'s own, and the arm's one script read is the gate's status, which `ParkRides.GateStatus` answers.
+- [ ] **Q139. Five more reached paths only log, and the boot's one sound is unheard.** Found by Q69's sweep, the same
+  shape as its seven (`CLAUDE.md` rule 4): the lobby menu's Go Online (`FrontEnd`, only logs); the park menu's Load Game,
+  Save Game and Publish Park (`ParkFrontEnd.NotYet`, only logs); and R, research's shortcut, bound and consumed by
+  nothing (`InputButton.Research`; the original's shortcuts row 11 runs `0x0040c5b0`, a thunk to `FUN_004aa480`, as
+  read by the sweep). `Boot_Init` also plays `cat_ui` effect `0xd2` after sound starts (`docs/exe/boot.md`, step 4),
+  which nobody has listened to: listen first, then count it or build it. Count each where it is reached. Confirm: the
+  `unimplemented` census after choosing each.
+- [ ] **Q140. The camcorder walks onto entrances the original shuts. Decode first.** Found by Q69's sweep. The
+  original's edge test `FUN_004d8750` in mode 2, stepping into a type-9 cell, reads the entrance's owner chain
+  (`0x004d8883`-`0x004d8b28`, as read by the sweep, not checked): it shuts the step unless the first catalogue object's
+  ride has a view (`FUN_0042a440`: a coaster handle, a script camera, or a model node flagged `0x1000`) and its
+  `UsageInfo.CannotRide` is nought, and opens it if both hold, whatever the neighbour bits say. `CellEdge.For` declines
+  this (`queueAhead` always answers nothing there), so our viewer walks onto the Staff Room's, the toilets', the Drinks
+  Shop's, the Jungle Spray's and the bin's entrances. Decode `FUN_0042a440` and the arm, then build the gate. Whether the
+  original's viewer reaches the Belly Bounce's entrance by walking rests on `FUN_0042a440` for its model.
+- [ ] **Q141. Golden tickets are never awarded. Decode first, and Alexah's call on when.** Found by Q69. What reaches
+  the advisor's glints in the original is a golden-ticket award: only gesture rows 1 and 13 carry the glint flags, and
+  only its lines use them (`docs/exe/scenes.md`, "Gesture table"). Those lines play on the park's own advisor, model slot
+  1 from the level's `advisor.wad` with clips 16 to 20, which OpenTPW does not load. The sweep also read that a row whose
+  first clip is not 14 skips the lead-in (`FUN_00598bf0`, not checked). No site reaches any of it, so nothing is counted.
 
 ## B. Docs and comments
 
@@ -2062,11 +2123,13 @@ state machine.
 
 - [ ] **Q76. The isle's clips loop; the original picks one at random when idle (plan item 5).** The camera update's
   tail loop (`0x005e11f7`) starts the isle's M1 or M2 at random whenever it is idle (`docs/exe/lobby.md`, "Not
-  sound"); here the isle's clips loop. The gate half landed (`3eed966`, `9b0ebab`, Q41); whether the gate also idles
+  sound"); here the isle's clips loop. Counted as `LOBBY_ISLE_RANDOM_CLIP`, once an isle (Q69); building it takes the counter
+  out. The gate half landed (`3eed966`, `9b0ebab`, Q41); whether the gate also idles
   by itself is Q63. Confirm: `sound`/`state` over a minute of lobby, and a capture of the isle between clips.
 - [ ] **Q77. The advisor's 90-second idle nag in the lobby (plan item 10).** Responses 394/395 (`0x18a`/`0x18b`,
-  armed at `0x005e184c`, `docs/exe/ui.md`); sample 470 is never heard today. When it arms and re-arms wants one
-  sitting with the original first. Confirm: the line heard after 90 idle seconds, by capture.
+  armed at `0x005e184c`, `docs/exe/ui.md`); sample 470 is never heard today. The arm and the queue's timer are read
+  (`ui.md`, "The lobby's idle repeat"), and the arm is counted as `LOBBY_ADVISOR_IDLE_REPEAT` (Q69); when the first nag
+  comes wants one sitting with the original first. Confirm: the line heard after 90 idle seconds, by capture.
 - [ ] **Q78. The lobby's sea from `lobby/Terrain/base.md2` (plan item 9). Decode first.** The lobby has a sea: a
   `Water` entity (`Level`) that `Sky` seals the horizon against. The item is re-sourcing it from `base.md2` through the
   park terrain loader - but `Sky`'s own note says the original's lobby has no sea below its islands, which contradicts

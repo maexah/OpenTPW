@@ -64,19 +64,20 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
 - With no work the mechanic, handyman and entertainer stand where the original's walk about (Q133); staff make no
   sound (Q135). Guests and rides turn on the frame clock (Q132); a load brings one guest (Q26); the bus waits (Q131).
+- Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), riding a ride walked into in first person.
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
-  walk (Q121), and a park screen stays open over it (Q122).
+  walk (Q121), and a park screen stays open over it (Q122). It walks onto entrances the original shuts (Q140).
 
 ## Next
 
 `docs/QUEUE.md`, from the top. **Q1-Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50-Q50h, Q53, Q53b, Q56,
-Q57, Q59, Q67, Q68, Q68b, Q82 and Q82b are ticked.** Next is **Q69**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9
-Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48
-Q48b, Q50 Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f
-Q50h, Q50h Q106, Q53 Q53b and Q107-Q111, Q53b Q112, Q56 Q113-Q117, Q57 Q118-Q120, Q59 Q121-Q123, Q67 Q124-Q125, Q68 Q68b
-and Q126-Q130, Q68b Q131-Q132, Q82 Q82b and Q133-Q138, Q82b Q136 (f), the staleness audit and its review Q68-Q82
-(Q70-Q75 from the 2026-09-12 review), the lobby plan section G.
+Q57, Q59, Q67, Q68, Q68b, Q69, Q82 and Q82b are ticked.** Next is **Q70**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8
+Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45
+Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g
+Q105, Q50f Q50h, Q50h Q106, Q53 Q53b and Q107-Q111, Q53b Q112, Q56 Q113-Q117, Q57 Q118-Q120, Q59 Q121-Q123, Q67
+Q124-Q125, Q68 Q68b and Q126-Q130, Q68b Q131-Q132, Q69 Q139-Q141, Q82 Q82b and Q133-Q138, Q82b Q136 (f), the staleness
+audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review), the lobby plan section G.
 
 `docs/PLAYER-GAPS.md` holds gaps **4, 5 and 7**. The untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
 
@@ -106,14 +107,13 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1189**, 0 fail, 0 skip with the game | 2026-09-25, after Q82b |
-| Tests without the game | **482** ran, **707** skipped, of 1189 | 2026-09-25, after Q82b |
-| Build warnings | 123 | 2026-09-25, after Q82b |
+| Tests | **1195**, 0 fail, 0 skip with the game | 2026-09-25, after Q69 |
+| Tests without the game | **485** ran, **710** skipped, of 1195 | 2026-09-25, after Q69 |
+| Build warnings | 123 | 2026-09-25, after Q69 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-25 - the staff on the park's clock (Q82b).** `alexah/155-staff-on-the-park-clock`.
-**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/154` (Q82)
-back to `118` (Q4), `115`-`116` (Q3), `117` (Q35) and `109` (Q1, Q1b); before them, `114`, `110` and `112`.
-Everything older is the git log.
+**2026-09-25 - seven unbuilt paths counted, or said unreached (Q69).** `alexah/156-count-seven-unbuilt-paths`.
+**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/155` (Q82b)
+back to `118` (Q4), `115`-`116` (Q3), `117` (Q35) and `109` (Q1, Q1b); before them, `114`, `110`, `112`. Older: git log.

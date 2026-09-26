@@ -58,6 +58,21 @@ Between queued lines he rests off screen for `CooldownSeconds` = **1.5 s**. This
 
 The lobby greeting is only samples **465** and **466**; **471** is the welcome-back line after Select New Player. Anything else heard in a session came from a test run.
 
+### The lobby's idle repeat
+
+The island lobby's camera update (`0x005e1830`, slot `+0x08` of the derived vtable `0x00702ec0`) runs the base update
+`0x005e0470` and then, **on every pass while a player is picked** (`g_Players+0x60` not -1), draws `rand() & 1`
+(`0x0067b5c0`, at `0x005e184c`) and arms the front end's advisor queue (`[0x00f85614]+0x14`) with response `0x18b` or
+`0x18a` and a period of 90,000 (`FUN_005d61a0`, which only writes `+0x18` = 1, `+0x1c` = the period and `+0x24` = the
+response). Response 394 is sample 469, 395 sample 470. `AdvisorQueue_Tick` (`0x005d5f80`) sets `+0x28` while he speaks
+(`[0x00f7966c]`, which `Advisor_SayResponse` sets and the line's end or a stop clears) and when it starts a queued line;
+on a free tick with the queue armed (`0x005d5feb`) it reads the sound clock `0x005f5fa0` (wall time in milliseconds,
+`audio.md`), and restamps `+0x20` if `+0x28` was set, clearing it, or else, once the clock passes the stamp plus the
+period (unsigned, `0x005d6016`), restamps and queues the response. So the line comes 90 s of wall time after he last fell
+silent, and again 90 s after each time it is said. Read from the disassembly, not heard in the running original.
+**OpenTPW** builds none of it (`docs/QUEUE.md` Q77) and counts the arm as `LOBBY_ADVISOR_IDLE_REPEAT`, in
+`LobbyCameraMode.Update`, every frame a player is picked.
+
 **Known gap in the animation reader.** `AnimationFile.FirstFrame/LastFrame/IsValid` ignore position and visibility keys, so clips carrying only those channels read as having no span. Measured over the shipped data: **159 clips disagree** with the declared span, of which **114 read as no span whatever**. `DeclaredFirstFrame`/`DeclaredLastFrame` are the engine-matching span and are the ones to use.
 
 ## Interrupting the advisor
@@ -113,7 +128,7 @@ Verified by disk capture at both cuts: the logged cry matched at 0.997 and uniqu
 | `0x00402db0` | `GameClock_Resume` | — | Ghidra |
 | `0x00598960` / `0x00598990` | `Advisor_PauseVoice` / `Advisor_ResumeVoice` | Use flag `0x00f797c4`. A stop resumes first | Ghidra |
 | `0x0051c1c0` | — | Moves the 3D listener away while paused | Ghidra |
-| `0x005e184c` | — | The lobby arms a 90-second repeat of response `0x18a`/`0x18b`. **Not built in OpenTPW, and not yet counted (`docs/QUEUE.md` Q69)** | Ghidra |
+| `0x005e184c` | — | The lobby arms a 90-second repeat of response `0x18a`/`0x18b` ("The lobby's idle repeat", above). **Not built in OpenTPW (`docs/QUEUE.md` Q77); counted as `LOBBY_ADVISOR_IDLE_REPEAT`** | Ghidra |
 
 His clips, lead-in and cue all use the game clock, so a pause carries them on without a jump. In a park, `GameMenu_Open`, `MessageBox_Open` and `OptionsScreen_Open` all call the pause. **In the lobby the original pauses nothing**: he talks on over the Escape menu, and the options screen only quietens the current line while the queue keeps ticking.
 
@@ -159,7 +174,12 @@ Across all **31 shipped categories** the stream runs **26-83 ms longer than the 
 
 **OpenTPW** shows only the later, bar kind. It keeps the picture 4:3 and pillarboxed, choosing the narrowest folder at least as wide as it is drawn, and writes the last log line under the bar. Loading is synchronous, so frames are drawn from steps and log lines, at most 30 a second, plus one forced frame on close. The percentage is worked out in **integers**: the original's float `steps * (100f / expected)` comes out a hair under 100 for some counts, so its bar never quite filled.
 
-**Not implemented, and not yet counted (`docs/QUEUE.md` Q69):** the splash, the legal screen, the movies, the `welcome_<lang>` overlay.
+**Not implemented:** the splash and the legal screen, counted once a run as `BOOT_SPLASH` and `BOOT_LEGAL_SCREEN` in
+`Game.Run` before the first lobby (the movies are `boot.md`'s). The original shows each only on the first call ever
+(`DAT_008c4788` and `DAT_008c478c`, which only `LoadingScreen_Begin` writes), and the splash's 2.5 s hold only when its
+file loaded. The `welcome_<lang>` overlay is **dead by content**: no Init folder ships one (`Init/400` is empty; 512,
+640, 800 and 1024 each hold `Welcome.tga`, `Splash_American.tga` and `Legal_American.tga`), and the paste skips a missing
+file (`FUN_00586f40`), so it has no counter.
 
 ### A step is exactly one Asset.Register
 
@@ -251,4 +271,4 @@ Verified with a silent XTEST harness at 1280x720 (the options screen's virtual x
 - `Game_StateMachine` `0x0055035a` and the postcard caller `0x004a9380` as quiet-stop callers, neither checked against OpenTPW;
 - the original's cue-timer behaviour after a cut (`0x00f79778`);
 - `FUN_0059aa70`, not traced further;
-- the lobby's 90-second repeat of response `0x18a`/`0x18b`, not built.
+- the lobby's 90-second repeat of response `0x18a`/`0x18b`, not built (counted, Q77).

@@ -86,7 +86,10 @@ public sealed class ParkItemCatalogue
 
 		// What the price opinion at the door reads beside the effects - ItemDescriptionFile.RipOffOK and the
 		// two keys that decide which price samples it pushes. See PeepPriceOpinion.
-		int RipOffOK = 0, int SpecialIngredient = 0, int AppearanceEffect = 0 );
+		int RipOffOK = 0, int SpecialIngredient = 0, int AppearanceEffect = 0,
+
+		// Whether a viewer walking in first person may not ride it from its entrance - ItemDescriptionFile.CannotRide.
+		bool CannotRide = false );
 
 	private readonly Dictionary<int, Item> _items = [];
 
@@ -200,7 +203,8 @@ public sealed class ParkItemCatalogue
 					description.ExitDeltaX, description.ExitDeltaY, description.HasEntrance,
 					description.EntryDirection, description.ExitDirection, description.CellKinds,
 					description.DestroyParticleEffect,
-					description.RipOffOK, description.SpecialIngredient, description.AppearanceEffect );
+					description.RipOffOK, description.SpecialIngredient, description.AppearanceEffect,
+					description.CannotRide );
 
 			return true;
 		}

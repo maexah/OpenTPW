@@ -351,16 +351,18 @@ So none of these lines is ever printed at runtime. They remain first-class evide
 and intent**, which is what this project uses them for and why they are quoted verbatim; they are
 **not** evidence that the game emits anything, and "the original logs X" is wrong as a statement of
 behaviour.
-- **research** — six effort sliders, plus *"You need to hire some scientists before you can carry out
-  any research!"* and *"Research is automatic in Instant Action mode."*
+- **research** — six effort sliders. `FUN_004aa480` opens it only with the game menu down (`FUN_0048c8d0`) and the
+  screen not already open (`DAT_007cc1d8`), and opens a message box instead in two cases: UITEXT `0x1d4` (*"Research is
+  automatic in Instant Action mode."*) when the game type `DAT_00fb3b7c` is 2, and UITEXT `0x1d3` (*"You need to hire
+  some scientists before you can carry out any research!"*) when `mFirstResearcher` (`+0x1da742`) is nought.
 
 **Four are built and five are blocked on simulation this project does not have.** Built: **entryprice**,
 **allpeeps**, **allstaff** and **allitems**. Blocked: **loans** (the `mLoans[]` records), **financeinfo** (the
 money-in/out split and the graph history), **staffcosts** (training budgets, other costs, loan payments) and
 **parkstatus** (Top 3 Thoughts, arrival rate, park rating, multi-year history), each counted when opened
 (`LOANS_SCREEN`, `FINANCE_SCREEN`, `STAFF_COSTS_SCREEN`, `PARK_STATUS_SCREEN`), and **research** (`mResearchDone`,
-`mResearchGroup`, `mFirstResearcher`, and per-group research points), whose gadget button only logs
-(`ParkGadget.NotYet`, no counter yet - `docs/QUEUE.md` Q69).
+`mResearchGroup`, `mFirstResearcher`, and per-group research points), whose gadget button only logs, and counts
+each click as `RESEARCH_BUTTON`: neither the screen nor its two message boxes is built.
 
 So the three buttons are not one job: **Info has 3 of 4 built, Money 1 of 4, and Research is
 none.**
@@ -455,7 +457,8 @@ otherwise. Flag `0x10` is tested and never set (dead by CODE). The ride views th
 `ViewRightClick` what answers its click, and the park answers `ParkViewfinder.RightClicked` in first person, which leaves
 it with RMB cancel on. The limit runs on the frame clock (`docs/QUEUE.md` Q123), and a park screen left open over first
 person takes a right press on its body, where the original's entry closes it (`FUN_00485b40`, Q122). The eject button is `ParkViewfinder`'s, `Clicked = ParkCamcorderCameraMode.Leave`. The held right button's walk is not
-built (`FIRST_PERSON_RIGHT_BUTTON_WALK`, `docs/QUEUE.md` Q121), and there is no ride view.
+built (`FIRST_PERSON_RIGHT_BUTTON_WALK`, `docs/QUEUE.md` Q121), and there is no ride view: walking onto a ride's
+entrance, which rides it in the original, is counted instead (`FIRST_PERSON_WALK_INTO_RIDE`, `park-engine.md`).
 
 ### A click and a double click: the UI library's `0x10006` and `0x10007`
 

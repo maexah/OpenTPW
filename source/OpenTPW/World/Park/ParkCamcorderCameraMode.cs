@@ -446,7 +446,8 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 
 		// No park means no cells to ask about - a scene that is not a park cannot reach this camera, but
 		// the sweep is written so that the answer without one is the plain step it always was.
-		var walked = Slide( Stand, dx, dy, EdgeTest( Level.Current?.ParkState?.Park ) );
+		var walked = Slide( Stand, dx, dy, EdgeTest( Level.Current?.ParkState?.Park ),
+			RideAt( Level.Current?.ParkState, Level.Current?.Catalogue ) );
 
 		// The clamp is ours. The original clamps nothing: its bound is soft, on the velocity, at the 96 by 85
 		// heightfield, and it stands the viewer only on a walkable cell inside that, so its sweep never comes
@@ -515,19 +516,19 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// and it moves only the margin (park-engine.md, "Which rounding is live is not settled").
 	/// </para>
 	/// <para>
-	/// <b>One branch of the original's loop is deliberately not reproduced.</b> Having moved, it calls
-	/// <c>FUN_0042a340</c>, which walks the cell's own thing list for a thing whose kind byte is 3, and on
-	/// finding one runs <c>FUN_004e15b0</c>. What that does to the viewer is not traced, and guessing at it
-	/// would be inventing behaviour rather than copying it - so it is left out and said here, and not yet
-	/// counted (docs/QUEUE.md Q69).
+	/// <b>One branch of the original's loop is not built.</b> After every pass it asks <c>FUN_0042a340</c>
+	/// whether the cell it ends in rides something (<see cref="RideAt"/>), and on finding a ride starts that
+	/// ride's view from first person - the ride window's "Ride it!", <c>FUN_004e15b0</c> - and ends the sweep.
+	/// There is no ride view here, so the walk carries on and the pass is counted instead.
 	/// </para>
 	/// </summary>
 	/// <param name="blocked">
 	/// Whether a side of a cell is shut - <c>CellEdge.For( park, 2 ).Blocked</c> for a real park.
 	/// <b>Null takes the step whole</b>, which is what this camera did before the sweep existed.
 	/// </param>
+	/// <param name="rideAt">Whether a cell rides something - <see cref="RideAt"/> for a real park; null asks nothing.</param>
 	internal static Vector3 Slide( Vector3 from, float dx, float dy,
-		Func<int, int, StepDirection, bool>? blocked )
+		Func<int, int, StepDirection, bool>? blocked, Func<int, int, bool>? rideAt = null )
 	{
 		// The original zeroes each axis against its own dead band before sweeping anything, so a step too
 		// small to leave the cell cannot spend a pass on a rounding error. It tests X's lower edge on
@@ -572,6 +573,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 
 				x = CellOf( wholeX ) == cellX ? wholeX : PutBack( cellX, dx );
 				y = CellOf( wholeY ) == cellY ? wholeY : PutBack( cellY, dy );
+				CountARide( rideAt, x, y );
 				break;
 			}
 
@@ -588,9 +590,61 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 				Pass( ref x, ref dx, cellX, ref y, ref dy, cellY, reachX, shut );
 			else
 				Pass( ref y, ref dy, cellY, ref x, ref dx, cellX, reachY, shut );
+
+			CountARide( rideAt, x, y );
 		}
 
 		return new Vector3( x, y, 0f );
+	}
+
+	/// <summary>
+	/// The end of every pass: the original asks <c>FUN_0042a340</c> about the cell the pass ended in, clamped to
+	/// the map (<c>0x0042c587</c>), and on a ride starts its view and ends the sweep (docs/exe/park-engine.md,
+	/// "Walking on the ground is swept against the cell edges"). Not built. Counted each pass that ends on such a
+	/// cell - twice as the viewer crosses in, then once each frame they step in it, moved or stopped by a shut side -
+	/// where the original takes it once and leaves the walk.
+	/// </summary>
+	private static void CountARide( Func<int, int, bool>? rideAt, float x, float y )
+	{
+		var last = ParkWorld.MapSize - 1;
+
+		if ( rideAt?.Invoke( Math.Clamp( CellOf( x ), 0, last ), Math.Clamp( CellOf( y ), 0, last ) ) == true )
+			Unimplemented.Report( "FIRST_PERSON_WALK_INTO_RIDE" );
+	}
+
+	/// <summary>
+	/// Whether the original's walk rides something from a cell - <c>FUN_0042a340</c>: the cell is an entrance
+	/// (type 9), and its owner's cell holds a thing whose item's <c>UsageInfo.CannotRide</c> is nought. Null
+	/// without a running park or its catalogue, which asks nothing.
+	/// </summary>
+	/// <remarks>
+	/// The original walks the owner cell's thing chain for the first catalogue object that passes; the placed
+	/// objects anchored on that cell are this port's copy of that chain, as they are for
+	/// <see cref="ParkPathBuilding.OwnerOf"/>.
+	/// </remarks>
+	internal static Func<int, int, bool>? RideAt( ParkState? state, ParkItemCatalogue? catalogue )
+	{
+		if ( state?.Park is not { } park || catalogue == null )
+			return null;
+
+		return ( x, y ) =>
+		{
+			var cell = ParkState.CellFor( park, x, y );
+
+			if ( cell.Type != CellEdge.RideEnd || cell.ParentId == 0 )
+				return false;
+
+			var (ownerX, ownerY) = MapStep.CellAt( cell.ParentId );
+
+			foreach ( var placed in state.Objects )
+			{
+				if ( placed.CellX == ownerX && placed.CellY == ownerY
+					&& catalogue.TryGet( placed.CatalogueId, out var item ) && !item.CannotRide )
+					return true;
+			}
+
+			return false;
+		};
 	}
 
 	/// <summary>

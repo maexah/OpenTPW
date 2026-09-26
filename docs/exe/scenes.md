@@ -105,10 +105,20 @@ Rows are `0x50` bytes.
 
 | Row | Cue | Used by |
 |---|---|---|
+| 1 | — | Responses 259–261 and 434–445 |
 | 12 | 17000 | The lobby tour, response 393 |
 | 13 | 1000 | Responses 374–378 and 446–469 |
 
 A cue counts from the end of the preceding clips, not from the start of the line.
+
+Each clip word is a clip number and flag bits. **Rows 1 and 13 are the only ones with flags**: clips 17 to 20 as
+`0x20011` four times, `0x40012`, `0x90013` and `0x110014`, row 13 with its cue before the last. At each clip's start
+`FUN_00598dc0` acts on the bits `0x3e0000` for UI particle channel 0: `0x20000` tops it up to one of effect 44,
+`0x40000` plays `cat_ui` effect 197 and tops it to two of 49, `0x80000` to three of 49, `0x100000` empties it and tops it
+to two of 44, and `0x200000`, which no row uses, empties it. Effects 44 and 49 are the golden ticket's glints (`ParLib`).
+Every response using rows 1 and 13 is a golden-ticket line on model slot 1, the park's own advisor; clips 16 to 20 ship
+only in a level's `advisor.wad`, so the lobby's advisor, slot 0, never plays them. OpenTPW awards no golden ticket, so
+nothing reaches the glints (`lobby.md`, "World sprites").
 
 ## Leaving the lobby (state 3), in order
 
