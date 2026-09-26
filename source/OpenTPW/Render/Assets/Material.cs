@@ -21,8 +21,8 @@ public enum MaterialFlags
 	Additive = 4,
 
 	/// <summary>
-	/// Draws both faces. For geometry the camera sits inside - the sky is the whole of it - where
-	/// there is no outward side to cull and getting the winding wrong makes it vanish entirely.
+	/// Draws both faces, as the original draws every face it has - a blade of grass is one quad seen
+	/// from either side, and the sky is geometry the camera sits inside, with no outward side to cull.
 	/// </summary>
 	DisableCulling = 8
 }
@@ -138,9 +138,9 @@ public partial class Material : Asset
 	/// what makes this safe.
 	/// </para>
 	/// <para>
-	/// The two shared materials refuse, the way <see cref="Texture.Missing"/> does. <see cref="Default"/>
-	/// is held by the terrain and <see cref="UI"/> by the whole interface, so freeing either would take
-	/// it from everything at once.
+	/// The two shared materials refuse, the way <see cref="Texture.Missing"/> does. <see cref="UI"/> is held
+	/// by the whole interface, and <see cref="Default"/> is a static any caller may take though none does,
+	/// so freeing either would take it from everything holding it.
 	/// </para>
 	/// </summary>
 	public void Delete()
@@ -213,13 +213,12 @@ public partial class Material : Asset
 	/// <see cref="Set{T}"/> has the one block, written straight to the device ahead of everything the
 	/// frame records, so a material drawn several times in a frame draws every time with the last value
 	/// it was given. Nothing in the world is drawn twice with one material, but the interface is: four
-	/// player buttons wear the one purple mesh, and all four landed on the last.
+	/// player buttons wear the one purple mesh, and all four would land on the last.
 	/// </para>
 	/// <para>
-	/// Writing that one block through the frame's command list, between the draws, mended the buttons
-	/// but was not reliable. With the options screen's two dozen such writes a frame, now and then a draw
-	/// came out with the value before its own - a panel landed on the row above, and that row's thumb and
-	/// text vanished under it, a different few each frame. A block for each draw leaves nothing to order.
+	/// Writing that one block through the frame's command list, between the draws, is not reliable either:
+	/// with the options screen's two dozen such writes a frame, now and then a draw comes out with the
+	/// value before its own. A block for each draw leaves nothing to order.
 	/// </para>
 	/// <para>
 	/// The blocks are kept and handed out again, in the same order, two frames later: there are two

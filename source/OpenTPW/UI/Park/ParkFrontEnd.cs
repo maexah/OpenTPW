@@ -95,12 +95,10 @@ internal sealed class ParkFrontEnd : Panel
 		// buy tabs, the five hire tabs, the scrollbar's three pieces, and the two cross-link buttons
 		// each screen carries to the other.
 		//
-		// THE NAME THE STREAM HASHES IS NOT ALWAYS THE NAME OF THE FILE, and seven of these were wrong
-		// on the first attempt because of it. The layout stream asks for a mesh by a hash of the
-		// model's first NODE name; UiMesh.Get loads ui/<name>.md2 by FILE name. Where an artist named
-		// the node differently from the file, the two diverge - and the decode that recovered these
-		// hashes matched them against substrings of FILE names, which is why it read "b_sride" for a
-		// model actually shipped as b_srides.MD2.
+		// THE NAME THE STREAM HASHES IS NOT ALWAYS THE NAME OF THE FILE. The layout stream asks for a
+		// mesh by a hash of the model's first NODE name; UiMesh.Get loads ui/<name>.md2 by FILE name.
+		// Where an artist named the node differently from the file, the two diverge - the node "b_sride"
+		// is in a model shipped as b_srides.MD2.
 		//
 		// These are the names ui.wad really holds, listed from the archive rather than inferred:
 		//     buyitem -> f_buyitem      hirestaff -> list_hirestaff    balance -> f_balance
@@ -108,7 +106,7 @@ internal sealed class ParkFrontEnd : Panel
 		//     b_sresrcher -> b_sresrhcer   <- the FILE is misspelled; its own texture is not
 		//
 		// A name that does not resolve loads nothing and warns, which is the visible failure rather
-		// than the silent one - that log is what caught all seven.
+		// than the silent one.
 		"!frame", "!slider", "f_buyitem", "list_hirestaff", "f_staffinfo", "f_staffpic", "f_balance",
 		"b_srides", "b_sshop", "b_sshow", "b_sfeature",
 		"b_shandy", "b_smech", "b_senter", "b_sguard", "b_sresrhcer",
@@ -119,31 +117,29 @@ internal sealed class ParkFrontEnd : Panel
 		// names was RESOLVED from the hash its layout stream carries, against ui.wad's own table, rather
 		// than guessed: the stream asks for a mesh as h = (c ^ h) * 47 over the model's first node name,
 		// and the arithmetic was checked against two hashes this file already knew before any of it was
-		// trusted. That is what turned the entry-price screen's three right-hand buttons from a supposed
-		// spinner into b_staffcost / b_loans / b_finance, which the handler then confirmed.
+		// trusted. The entry-price screen's three right-hand buttons resolve to b_staffcost / b_loans /
+		// b_finance, not a spinner, which the handler confirms.
 		"list_allstaff", "list_kids", "list_all",
 		"b_finance", "b_loans", "b_staffcost", "b_door", "b_plus", "b_minus",
 		"b_parkinfo", "b_kids",
 
 		// THE SCREEN FRAMES, found by hashing the models' NODE names rather than their file names.
 		// w_big is the node "window4" and w_small the node "window1"; f_varibox is the boxed number the
-		// entry-price spinner sits in. The buy screen's remarks recorded 0xf76e4200 as resolving to
-		// nothing "after a search of all 2,488 files" - that search was over file names, and every one
-		// of these five screens drew without a backdrop because of it.
+		// entry-price spinner sits in.
 		"w_big", "w_small", "f_varibox",
 
 		// The per-object management window, stream 0x00755150 - see <see cref="ParkObjectWindow"/>.
-		// NONE of these was on this list, so the window fetched all ten the first time a player clicked
-		// a ride, which is the hitch this list exists to prevent. w_med is the node "window2", the
+		// Listed so the window does not fetch all ten the first time a player clicks a ride, which is
+		// the hitch this list exists to prevent. w_med is the node "window2", the
 		// third of the same frame family as w_big and w_small; f_chev is the node "chev"; and
 		// b_rideit is the node "b_ride it!", whose space and exclamation mark are why no token scan
 		// ever matched its hash.
 		"w_med", "f_chev", "b_rideit", "b_erase", "b_move", "b_track", "b_queue",
 		"b_callmech", "b_upgrade", "b_scrollera",
 
-		// The staff list asks for the guard and scientist tabs by names the HIRE screen does not:
-		// b_sresrcher here against b_sresrhcer there. Both files ship; the misspelling is the model
-		// file's own and only one of the two screens asks for it.
+		// The staff list's tabs are the hire screen's five models: ui.wad ships one scientist tab model,
+		// b_sresrhcer.MD2, misspelled where its textures (b_sresrcher.wct) are not. This b_sguard is
+		// already in the list above.
 		"b_sguard"
 	];
 
@@ -323,8 +319,8 @@ internal sealed class ParkFrontEnd : Panel
 	/// </para>
 	/// <para>
 	/// What this does instead is load the park again from the copy that ships beside it, which is where
-	/// every park still starts. That is the closest thing that exists while there is no simulation to reset
-	/// and nothing is ever written back, and the two are indistinguishable while both are true. <b>When a
+	/// every park still starts. While nothing is ever written back that file is still where the park
+	/// began, so reading it again is the closest thing to a reset that exists here. <b>When a
 	/// park can be saved and played on, this has to start meaning "back to the beginning" rather than "read
 	/// the file again"</b>, and it should stop reloading the scene when there is a state to reset in place.
 	/// </para>
@@ -379,24 +375,21 @@ internal sealed class ParkFrontEnd : Panel
 		// A park is the scene the original really does pause. The game menu, a message box and the options
 		// screen all set Pauses as they open, so all three arrive here. For the first two that holds his
 		// sample where it has got to and stops the clock his clips and his lead-in are timed on. The
-		// options screen is the exception and this comment used to miss it: OptionsScreen.Open calls
+		// options screen is the exception: OptionsScreen.Open calls
 		// Advisor.StopQuietly first, fading his voice and throwing the line away, so by the time it pauses
 		// there is nothing left to hold. The lobby pauses him too, but there it is a choice - see
 		// Level.PausedByWindow and Advisor.Paused.
 		//
-		// A KNOWN DEPARTURE, traced and left alone deliberately: being paused also takes him OFF SCREEN,
-		// because Advisor.OnRenderOverlay draws only while !_paused. The original does not. Its pause
-		// (FUN_004092a0) calls Advisor_PauseVoice (0x00598960) and the clock stop and nothing else that
-		// touches him, and the one function that removes his model - Advisor_KillModel (0x00429d60) - has
-		// exactly three callers, Advisor_StopSpeaking twice and Advisor_StopQuietly, none of which is the
-		// pause. So the original leaves him standing behind the menu where this makes him vanish and pop
-		// back. Putting it right means changing Advisor, which the lobby shares and where the same
-		// behaviour is a documented choice, so it is Alexah's call and not a thing to change in passing.
+		// Being paused does NOT take him off screen, and neither does the original's pause: FUN_004092a0
+		// calls Advisor_PauseVoice (0x00598960) and the clock stop and nothing else that touches him, and
+		// the one function that removes his model - Advisor_KillModel (0x00429d60) - has exactly three
+		// callers, Advisor_StopSpeaking twice and Advisor_StopQuietly, none of which is the pause. So he
+		// stands behind the menu here too - see Advisor's class remarks.
 		advisor.Paused = _stack.AnyPausing;
 
 		// The line a park opens with, said from the first running frame rather than from the constructor -
-		// but NOT because the constructor would talk over the loading screen, which is what this comment
-		// used to claim and is wrong. Add only queues; nothing is ever said outside Advisor.OnUpdate, and
+		// but NOT because the constructor would talk over the loading screen. Add only queues; nothing is
+		// ever said outside Advisor.OnUpdate, and
 		// no entity updates while a level is still being built, so queueing it there would have behaved
 		// identically. It sits here because this is where the once-a-visit latch belongs, beside the pause
 		// it has to respect.
@@ -405,8 +398,7 @@ internal sealed class ParkFrontEnd : Panel
 		// options, where Advisor.Speak drops it - still spends the "once". That is the original's own
 		// behaviour, not an oversight: Advisor_SayResponse (0x00599050) returns 0 with the switch off and
 		// the tick writes mLastActionStarted and the per-message counters regardless, spending the once on
-		// the offer rather than on anything being heard. A review raised this as a defect; the binary
-		// refuted it.
+		// the offer rather than on anything being heard.
 		if ( !_explained && !advisor.Paused )
 		{
 			_explained = true;

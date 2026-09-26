@@ -165,7 +165,7 @@ public class ParkWorldTests
 	/// <para>
 	/// They are pinned because they are the check that the thing list is being read the right way round.
 	/// The record prefix holds the id of the <i>next</i> thing rather than its own, and reading it as its
-	/// own is off by one everywhere - which made the gate come out as the traffic lights and the traffic
+	/// own is off by one everywhere - which makes the gate come out as the traffic lights and the traffic
 	/// lights as a fairground ride, both entirely plausible-looking.
 	/// </para>
 	/// </summary>
@@ -184,7 +184,7 @@ public class ParkWorldTests
 	}
 
 	/// <summary>
-	/// The five header fields the reader walked over and threw away until now: what the park holds in the
+	/// Five header fields: what the park holds in the
 	/// bank, how far through its own clock it is, whether it is open, how many guests it has ever let in,
 	/// and its state word.
 	///
@@ -205,7 +205,7 @@ public class ParkWorldTests
 	/// <para>
 	/// <b><see cref="ParkWorld.BankAccount"/> is a handle, and its value is the finding.</b> Eight is no
 	/// bank balance. It is the thing that keeps the park's money, and model 16 - the economy - is what that
-	/// thing is. That a park's economy is thing 8 had stood recorded as unproven.
+	/// thing is.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -290,7 +290,7 @@ public class ParkWorldTests
 	/// The three fixed items are saved as objects like everything else and carry no position at all.
 	///
 	/// <para>
-	/// This is the thing that made them look absent for so long, and it is worth a test because the
+	/// This is what makes them look absent, and it is worth a test because the
 	/// sentinel does not read as one: both coordinates hold 128, which is half a cell, so anything
 	/// treating it as a position puts all three at the origin rather than noticing they have none. Their
 	/// real places are baked into their models - see <see cref="ParkFixedItems"/>.
@@ -567,8 +567,8 @@ public class ParkWorldTests
 	/// <para>
 	/// Ten of its twelve cells are marked as built on. The two that are not are both in the middle column
 	/// and at opposite ends of it, and the four queue cells sit in the row directly beyond one of them -
-	/// which is what a ride's way in and way out look like. The types are pinned; naming them entrance and
-	/// exit would be a guess, and this asserts the arrangement instead of the meaning.
+	/// which is what a ride's way in and way out look like: type 9 is the entrance and type 10 the exit
+	/// (<c>docs/exe/park-engine.md</c>, "Where a built thing's entry and exit cells come from").
 	/// </para>
 	/// </summary>
 	[TestMethod]

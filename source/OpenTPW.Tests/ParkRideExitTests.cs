@@ -127,9 +127,8 @@ public class ParkRideExitTests
 		Assert.IsTrue( new ParkRideOperation( park, new Dictionary<int, Peep> { [7] = peep } )
 			.Dismiss( script, ride, tick: 9, new Random( 1 ), _ => walk ), "let off" );
 
-		// <b>The POSITION, not the target, and that changed on 2026-09-18.</b> This asserted that they
-		// were AIMED at the exit, which is what a guest stranded anywhere also looks like - and it was
-		// aiming at the wrong cell besides. FUN_005014e0 PUTS a guest down on the exit (FUN_004fa930)
+		// <b>The POSITION, not the target</b>: being AIMED at the exit is what a guest stranded anywhere
+		// also looks like. FUN_005014e0 PUTS a guest down on the exit (FUN_004fa930)
 		// and then aims them one cell past it, so the exit is where they ARE.
 		var (atX, atY) = peep.Navigator.Position.Cell;
 
@@ -147,10 +146,8 @@ public class ParkRideExitTests
 	/// destination.</b>
 	///
 	/// <para>
-	/// <b>This is the assertion the rest of this file was missing.</b> Every other test here checks where
-	/// a dismissed guest is <i>aimed</i>, and being aimed somewhere is exactly what a guest stranded in an
-	/// unanswered state looks like: that is how <see cref="PeepState.LeavingRide"/> shipped with no case
-	/// at all and nothing failed. This one starts them on the ride, has the ride put them off, and
+	/// Being <i>aimed</i> somewhere is exactly what a guest stranded in an unanswered state looks like, so
+	/// this one starts them on the ride, has the ride put them off, and
 	/// requires them to be standing on a different cell at the end of it.
 	/// </para>
 	/// <para>
@@ -250,9 +247,8 @@ public class ParkRideExitTests
 		var world = Park();
 		var park = new ParkState( world );
 
-		// <b>Standing where a dismissed guest is actually put down.</b> A first draft of this test put
-		// the guest in the gateway and asked them to walk to (52,26); they gave up on the second turn,
-		// and the reason is the engine being right rather than wrong. NO ROUTE EXISTS from the park to a
+		// <b>Standing where a dismissed guest is actually put down</b>, because NO ROUTE EXISTS from the
+		// park to a
 		// ride's EXIT cell - CellEdge only opens a ride end along the way it faces - because a guest is
 		// put down at an exit and walks AWAY from it, never to it.
 		var peep = GuestAt( 7, PeepState.LeavingRide, ExitX, ExitY );
@@ -275,8 +271,7 @@ public class ParkRideExitTests
 	}
 
 	/// <summary>
-	/// Without somewhere to walk them the state still changes, which is what every caller did before a
-	/// ride's turn existed to supply a route.
+	/// Without somewhere to walk them the state still changes.
 	/// </summary>
 	[TestMethod]
 	public void WithNoWalkTheyStillComeOffTheRide()
@@ -473,9 +468,8 @@ public class ParkRideExitTests
 	/// </remarks>
 	/// <param name="admission">
 	/// The park's mood constants, or null to leave the two happiness arms of the settle-up alone.
-	/// <b>Null is what every test here passed before 2026-09-20, and it made those arms invisible</b>: with
-	/// no admission the losing arm and the sideshow's winnings both do nothing, so a test could not tell a
-	/// built one from an absent one. The tests that care now pass one.
+	/// With no admission the losing arm and the sideshow's winnings both do nothing, so a test cannot tell
+	/// a built one from an absent one; the tests that care pass one.
 	/// </param>
 	private (ParkState Park, Peep Guest) LetOffAt( int thingId, int queuePos,
 		ParkAdmission? admission = null )
@@ -528,7 +522,7 @@ public class ParkRideExitTests
 		// The sideshow declares 75, overriding its category's 70 - so it is won one time in four.
 		Assert.AreEqual( 25, junspray.ChanceOfWinning, "a hundred less the seventy-five it declares" );
 
-		// FIFTY, and this assertion was written as five and failed. The item's own file overrides its
+		// FIFTY: the item's own file overrides its
 		// category's thirty, and the sign of the happiness arm turns on the prize beating the price.
 		Assert.AreEqual( 50, junspray.CostOfGoods, "its prize is fifty, against the twenty it charges" );
 
@@ -554,7 +548,7 @@ public class ParkRideExitTests
 	}
 
 	/// <summary>
-	/// <b>The losing arm, which had never run.</b> A guest whose roll failed is charged, gets none of the
+	/// <b>The losing arm.</b> A guest whose roll failed is charged, gets none of the
 	/// item's effects, and loses <c>PeepInfo.MediumHappinessChange</c> - the original's "Person lost this
 	/// sideshow..." path.
 	/// </summary>
@@ -574,15 +568,13 @@ public class ParkRideExitTests
 	}
 
 	/// <summary>
-	/// <b>A sideshow pays a prize and then makes the winner unhappy, and both halves are the original's.</b>
+	/// <b>A sideshow pays a prize and then moves the winner's happiness, and both halves are the original's.</b>
 	/// <c>FUN_004fe1e0</c> adds the cost of goods to the guest's cash and then moves happiness by
 	/// <c>log2( costOfGoods / pricePerUse ) * MediumHappinessChange</c>.
 	///
 	/// <para>
 	/// <b>The prize is bigger than the price, so the winner gains.</b> Fifty over twenty is two and a half,
-	/// its log is about 1.32, and fifteen of those is +19. <b>This test was written asserting a LOSS of
-	/// thirty and failed</b>: the prize had been transcribed as five rather than fifty, and every comment
-	/// that had been written around it said the winner ends up unhappy. The arithmetic refused it.
+	/// its log is about 1.32, and fifteen of those is +19.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -597,7 +589,7 @@ public class ParkRideExitTests
 		Assert.AreEqual( 69f, peep.Happiness, 0.001f, "fifty, and log2(50/20) * 15 truncates to +19" );
 
 		// Anti-vacuity: the sideshow declares no effect block at all, so a build that ran the five effects
-		// here would still read eighty - the thirty must have come from the winnings arm and nowhere else.
+		// here would still read eighty - the nineteen must have come from the winnings arm and nowhere else.
 		Assert.AreEqual( 80f, peep.Thirst, 0.001f, "a sideshow quenches nothing, and its file says so" );
 	}
 
@@ -644,9 +636,8 @@ public class ParkRideExitTests
 	///
 	/// <para>
 	/// <b>This pins the branch and deliberately not a reading of it.</b> What the byte at <c>+0x1f1</c>
-	/// MEANS is not settled - it is named <c>mQueuePos</c> by the save reader and it is read here, and an
-	/// earlier gloss of it as "whether they won" was an over-read that had to be retracted. So the assertion
-	/// is that the arm is gated on it, which the disassembly shows, and nothing about why.
+	/// MEANS is not settled - it is named <c>mQueuePos</c> by the save reader and it is read here. So the
+	/// assertion is that the arm is gated on it, which the disassembly shows, and nothing about why.
 	/// </para>
 	/// </summary>
 	[TestMethod]

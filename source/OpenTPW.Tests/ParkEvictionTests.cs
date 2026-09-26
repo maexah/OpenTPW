@@ -122,8 +122,10 @@ public class ParkEvictionTests
 	}
 
 	/// <summary>
-	/// Everybody in the queue is put out of it: both happiness changes, their own links gone, the invitation
-	/// and the place in the queue cleared - <c>FUN_005012f0</c>, then the small change.
+	/// Every queuer the sale reaches is put out of the queue: both happiness changes, their own links gone, the
+	/// invitation and the place in the queue cleared - <c>FUN_005012f0</c>, then the small change. For the Belly
+	/// Bounce the drain before it has already put out every queuer from the fifth place back, but the nominee and
+	/// one in raw state 14, for the medium change alone (<c>docs/exe/ride-operation.md</c>, "The sale's drain").
 	/// </summary>
 	[TestMethod]
 	public void EveryQueuerIsPutOutOfTheQueueAndLosesBothChanges()

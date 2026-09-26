@@ -54,8 +54,8 @@ OPENTPW_DEBUG_CONSOLE=1 ...                          # commands on stdin; `unimp
 
 | Project | What it is |
 |---|---|
-| `OpenTPW.Common` | Window, display, virtual file system (Zio), vector types, `Logger`, `Unimplemented`. `GlobalNamespace.cs` holds the static `Log`, `FileSystem`, `SaveFileSystem`, `CacheFileSystem`. |
-| `OpenTPW.Files` | Binary format readers. `Formats/<kind>/`. `Public/` is the old upstream API: its `SettingsFile`, `StringFile` and `BaseFormat` are still the live entry points; `MapFile` and `Public/ModelFile.cs` are used by nothing, and `SoundFile` only by tests and ModKit. |
+| `OpenTPW.Common` | Window, display, virtual file system (`BaseFileSystem`; the `Zio` package it references is used by nothing), vector types, `Logger`, `Unimplemented`. `GlobalNamespace.cs` holds the static `Log`, `FileSystem`, `SaveFileSystem`, `CacheFileSystem`. |
+| `OpenTPW.Files` | Binary format readers. `Formats/<kind>/`. `Public/` is the old upstream API: its `SettingsFile`, `StringFile` and `BaseFormat` are still the live entry points; `MapFile` and `Public/ModelFile.cs` are used by nothing, and `SoundFile` is live only through `SdtArchive`, which reads every `.sdt` entry with it. |
 | `OpenTPW` | The game. `Program.cs` → `Client/Game.cs` (boot order lives here) → `World/Level.cs` (builds a scene). |
 | `OpenTPW.Tests` | MSTest, flat folder, named by area. `GameData.cs` is the shared fixture. |
 | `OpenTPW.ModKit` | Upstream ImGui file browser. Referenced by no project. Alexah's call; leave it. |

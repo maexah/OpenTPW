@@ -17,10 +17,8 @@ namespace OpenTPW;
 /// moves between ticks: the original draws the last tick.
 /// </para>
 /// <para>
-/// It used to keep its own accumulator and its own half-second catch-up. <b>That cap never once
-/// acted</b>, because what it accumulated was <see cref="Time.Delta"/>, which is already held to a
-/// tenth of a second - so the most arrears it could ever see was a fifth of what it claimed to allow.
-/// The clock counts from the unclamped frame instead, which is where the original's caps are real.
+/// It keeps no accumulator of its own: <see cref="GameClock"/> counts the backlog from the unclamped
+/// frame, which is where the original's caps are real.
 /// </para>
 /// <para>
 /// A tick steps every emitter, newest first: counts down its life, and either ends it or emits;

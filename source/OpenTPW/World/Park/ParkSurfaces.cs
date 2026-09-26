@@ -10,8 +10,7 @@ namespace OpenTPW;
 /// <see cref="ParkObjects.CoversGround"/> which ones to leave alone. Rebuild the ground on its own and
 /// it stops drawing grass on a cell the moment the overlay calls it a path - while the paths, built
 /// once at load, still draw nothing there. <b>The result is a hole in the park exactly where the new
-/// walkway belongs</b>, which is what happened before this existed: <c>ParkBuilding</c> rebuilt the
-/// ground alone.
+/// walkway belongs.</b>
 /// </para>
 /// <para>
 /// <b>One statement of it, for the reason <see cref="ParkPaths.IsPath"/> is shared rather than

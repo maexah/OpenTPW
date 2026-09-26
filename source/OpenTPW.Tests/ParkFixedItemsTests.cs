@@ -155,8 +155,7 @@ public class ParkFixedItemsTests
 	}
 
 	/// <summary>
-	/// The three arrival vehicles and whichever is on its way. The header has always carried these four
-	/// and this reader parsed them into its field array and threw them away.
+	/// The three arrival vehicles and whichever is on its way, the four the header carries.
 	///
 	/// <para>
 	/// <b>Lost Kingdom names one of them, and it is the bus this class already stands.</b> The engine
@@ -253,8 +252,7 @@ public class ParkFixedItemsTests
 	/// <para>
 	/// <b>Binding one channel where the item declares two is not a harmless simplification.</b> Space's gate
 	/// loops on channel 1, so a single-channel fixture starts nothing, leaves channel 0 untouched, and makes
-	/// the gate look still for a reason belonging to the test rather than to the game. That is exactly what
-	/// happened here, and it read as confirmation for two different wrong explanations before this.
+	/// the gate look still for a reason belonging to the test rather than to the game.
 	/// </para>
 	/// </summary>
 	private int ChannelsFor( string directory, string stem )
@@ -269,8 +267,8 @@ public class ParkFixedItemsTests
 	/// each one is - and both ship a script for that thing to run.
 	///
 	/// <para>
-	/// This is the whole basis for binding them. They were passed over for a long time because they carry no
-	/// position, which made them look like data the park had no use for; what they actually are is catalogue
+	/// This is the whole basis for binding them. They carry no position, which makes them look like data the
+	/// park has no use for; what they actually are is catalogue
 	/// objects whose places are baked into their models. The header handles are thing ids rather than
 	/// catalogue numbers, and the two are easy to confuse because both are small integers.
 	/// </para>
@@ -352,9 +350,9 @@ public class ParkFixedItemsTests
 
 	/// <summary>
 	/// <b>The bus's own script runs, and reaches nothing this interpreter has not built.</b> That is the
-	/// whole claim of standing the bus: not that it moves - it cannot yet, because a vehicle's route is a
-	/// path authored in its model rather than a track in its clips - but that the runtime really does
-	/// drive a vehicle script, which had never been tested against one.
+	/// whole claim of this test: not that it moves - a vehicle's route is a path authored in its model
+	/// rather than a track in its clips, and this fixture binds no model - but that the runtime really does
+	/// drive a vehicle script.
 	///
 	/// <para>
 	/// The anti-vacuity check matters as much as the assertion it guards, for the reason the gate's test
@@ -389,7 +387,7 @@ public class ParkFixedItemsTests
 	/// <c>Gates.RSE</c> opens on a dispatch loop that reads <c>VAR_COMMAND</c>, and every variable starts at
 	/// nought - so it cycles five instructions for ever and reaches neither the open branch's
 	/// <c>WAITANIM</c> nor the close branch's <c>TRIGANIM</c>. In the original the only thing that ever
-	/// writes that variable is opening or closing the park, which this program has no concept of yet.
+	/// writes that variable is opening or closing the park, and nothing in this fixture does either.
 	/// </para>
 	/// <para>
 	/// The anti-vacuity check matters more than the assertion it guards: an idle channel would also be what
@@ -422,8 +420,7 @@ public class ParkFixedItemsTests
 	}
 
 	/// <summary>
-	/// And it <b>moves</b> when it is commanded, which is the other half of the test above and the half
-	/// that was missing while a park's gates could not be opened at all.
+	/// And it <b>moves</b> when it is commanded, which is the other half of the test above.
 	///
 	/// <para>
 	/// <b>The index is asserted, not assumed.</b> <c>FUN_00519ef0</c> writes the gate's variable <b>0</b> -
@@ -527,17 +524,13 @@ public class ParkFixedItemsTests
 	/// channel 1</b> - reached before any test and on every run.
 	/// </para>
 	/// <para>
-	/// <b>This test used to assert the opposite of all that, and what it was really asserting was our own
-	/// gap.</b> It read space's gate as still "because this interpreter does not implement that opcode, so it
-	/// is counted rather than obeyed", and warned that implementing <c>LOOPANIM_CH</c> would set a gate moving
-	/// with nothing having commanded it. Both halves were wrong. The script commands it outright, so the
-	/// original's space gate does loop; and when the opcode was implemented the gate <i>still</i> did not move,
-	/// for a third reason again - <see cref="BoundIn"/> bound ONE channel where the item declares two, so
-	/// channel 1 did not exist to play on. A fixture's limit had been read as the engine's behaviour.
+	/// The script commands it outright, so the original's space gate does loop. It loops here because
+	/// <see cref="BoundIn"/> binds the two channels the item declares: bound with one, channel 1 would not
+	/// exist to play on, and the gate would look still for a reason belonging to the fixture.
 	/// </para>
 	/// <para>
 	/// So the two channels are asserted apart: channel 0 idle in all four themes, because nothing commands the
-	/// opening; channel 1 looping in space alone. Asserting only "nothing moved" is what let one wrong
+	/// opening; channel 1 looping in space alone. Asserting only "nothing moved" would let one wrong
 	/// explanation stand in for another.
 	/// </para>
 	/// </summary>

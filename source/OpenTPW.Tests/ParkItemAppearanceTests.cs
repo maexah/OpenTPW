@@ -51,8 +51,8 @@ public class ParkItemAppearanceTests
 	/// the egg is switched off at frame 94, which is the same frame the dinosaur is switched on, and
 	/// the shell it leaves goes at 131.
 	///
-	/// This is the whole of why the ride looked wrong - nothing played that clip, so the egg still
-	/// stood in the finished ride, with the dinosaur that came out of it drawn through the shell.
+	/// Played to its end, that clip is what takes the egg away: left at the model's own pose, the egg
+	/// stands in the finished ride, with the dinosaur that came out of it drawn through the shell.
 	/// </summary>
 	[TestMethod]
 	public void TheBellyBouncesBuildEndsWithItsEggGone()
@@ -90,7 +90,7 @@ public class ParkItemAppearanceTests
 	/// hang off a bench that is itself turned a quarter turn, so each head is square within the
 	/// bench while standing at a quarter turn in the model - and every clip keys them square.
 	///
-	/// Read as orientations in the model, those keys flatten the heads, which is what turned the
+	/// Read as orientations in the model, those keys flatten the heads, which turns the
 	/// Lion and the Elephant to face the wrong way. See MeshRotator.BuildRestInverses.
 	/// </summary>
 	[TestMethod]
@@ -136,9 +136,8 @@ public class ParkItemAppearanceTests
 	}
 
 	/// <summary>
-	/// Why this went unnoticed for so long: every gate in the game parents its doors straight to a
-	/// root that carries no turn of its own, and there the two orientations are the same matrix. The
-	/// lobby's gates were the models this was written against, and they cannot tell the two apart.
+	/// Why a gate cannot catch this: every gate in the game parents its doors straight to a root that
+	/// carries no turn of its own, and there the two orientations are the same matrix.
 	/// </summary>
 	[TestMethod]
 	public void AGateCannotTellTheTwoOrientationsApart()

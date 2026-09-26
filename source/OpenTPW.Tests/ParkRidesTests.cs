@@ -10,10 +10,8 @@ namespace OpenTPW.Tests;
 /// where there is no installation - see <see cref="GameData"/>.
 ///
 /// <para>
-/// Everything under test here existed separately and had never been joined: the reader, the interpreter,
-/// the scheduler and the catalogue were all built and shipping, and nothing in the tree ever handed a
-/// placed thing its script. So these are the first tests in which a script belongs to something standing
-/// in a park rather than to a harness.
+/// These join the reader, the interpreter, the scheduler and the catalogue: a script here belongs to
+/// something standing in a park rather than to a harness.
 /// </para>
 /// </summary>
 [TestClass]
@@ -126,8 +124,7 @@ public class ParkRidesTests
 		Assert.IsTrue( rides.Resumed <= rides.Bound,
 			$"{rides.Resumed} resumed of {rides.Bound} bound" );
 
-		// <b>And the other half, which nothing asserted until a review pointed out that gutting it left
-		// the suite green.</b> Resuming a script past its prologue means it never runs the LOOPANIM in
+		// <b>And the other half.</b> Resuming a script past its prologue means it never runs the LOOPANIM in
 		// that prologue again, so a thing whose channels are not also put back stands frozen for the
 		// whole session. These are named things rather than a count, because a count here would be a
 		// property of this fixture - it binds no ParkObjects, so three of the fourteen never arrive.
@@ -143,7 +140,7 @@ public class ParkRidesTests
 			return script.Animations!.Channel( channel )?.AnimID ?? -1;
 		}
 
-		// The Fountain is the case the regression was found on: its script resumes into a two-instruction
+		// The Fountain is the case that needs the restore: its script resumes into a two-instruction
 		// loop that can never reach the LOOPANIM that starts this clip, so only the restore puts it on.
 		Assert.AreEqual( 5, RoleOn( FountainThing ), "the Fountain's saved role" );
 
@@ -159,8 +156,8 @@ public class ParkRidesTests
 
 		// <b>And the channel's STATE, not just which clip it holds.</b> Every assertion above reads only
 		// AnimID, which Start sets from the role whatever the flags say - so handing the saved flag word
-		// straight in as a caller flag, or dropping the held re-entry entirely, passed all of them while
-		// eleven of the park's fifteen channels silently restarted their clip from frame nought.
+		// straight in as a caller flag, or dropping the held re-entry entirely, would pass all of them while
+		// eleven of the park's fifteen channels silently restart their clip from frame nought.
 		AnimTimeControl ChannelOn( int thing, int channel = 0 )
 		{
 			var script = rides.Scheduler.Find( rides.ScriptFor( thing ) );
@@ -187,7 +184,7 @@ public class ParkRidesTests
 		Assert.AreEqual( 0f, looping.AnimFrame, "so it starts at the beginning of its clip" );
 
 		// And the speed the save carries, which is not always one: this ride is saved at 1.1, and passing
-		// a literal 1f ran it at the wrong rate for the whole session.
+		// a literal 1f would run it at the wrong rate for the whole session.
 		Assert.AreEqual( 1.1f, ChannelOn( BellyBounceThing ).Speed, 0.001f,
 			"the Belly Bounce's saved playback speed" );
 	}
@@ -196,7 +193,7 @@ public class ParkRidesTests
 	private const int BellyBounceThing = 13;
 
 	/// <summary>
-	/// The Fountain Feature - thing 24, and the case that showed restoring the script alone is a loss.
+	/// The Fountain Feature - thing 24, and the case where restoring the script alone is a loss.
 	/// Its script resumes into a two-instruction loop that can never reach the <c>LOOPANIM</c> starting
 	/// the only clip it has, so nothing but the channel restore ever puts that clip on.
 	/// </summary>

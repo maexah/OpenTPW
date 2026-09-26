@@ -35,23 +35,18 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>Ferry and seaplane travel on <c>TRIGWAITANIM</c>, which this class is what made buildable.</b>
-/// Their scripts start every animation with it where <c>bus.RSE</c> uses plain <c>TRIGANIM</c>, so while
-/// that opcode had no case the two stood at the end of their routes with nothing ever triggered - the
-/// one visible difference between a vehicle that drives and two that do not. It compares against a raw
-/// operand and parks the script for ever when no model is bound, which is why it had to wait for the
-/// binding this class does; see <see cref="RideScript"/> for the handler and its one deviation.
+/// <b>Ferry and seaplane travel on <c>TRIGWAITANIM</c>.</b> Their scripts start every animation with it
+/// where <c>bus.RSE</c> uses plain <c>TRIGANIM</c>. It compares against a raw operand and parks the script
+/// for ever when no model is bound, so it rests on the binding this class does; see
+/// <see cref="RideScript"/> for the handler and its one deviation.
 /// </para>
 ///
 /// <para>
 /// <b>These hold still until something asks them to move, and that is the point.</b> Both are scripted
 /// things in the original - the archives ship <c>Gates.RSE</c> and <c>lights.RSE</c> beside the models -
 /// so what they do belongs to an animation player a script triggers, exactly as a placed thing's does;
-/// see <see cref="ParkObjects.Sweep"/>. What happened instead was that <see cref="LobbyModel"/> picked up
-/// the companions with an M1, M2... suffix - the jungle archive holds <c>gatesm1</c>, <c>gatesm2</c> and
-/// <c>gatesm3</c>, matched case-insensitively - and looped them on a clock of its own, so the gate swung
-/// open and shut for ever with nothing having asked for it. That is the opposite of the terrain's own
-/// <c>basem.MD2</c>, whose bare <c>m</c> nothing picks up.
+/// see <see cref="ParkObjects.Sweep"/>. The jungle archive's <c>gatesm1</c>, <c>gatesm2</c> and
+/// <c>gatesm3</c> are the gate's role 5, and they play only when its script triggers them.
 /// </para>
 ///
 /// <para>
@@ -70,17 +65,15 @@ namespace OpenTPW;
 /// the end-of-park value standing in for the door's close (<c>docs/exe/lobby.md</c>). <c>lights.RSE</c> is the opposite, starting an
 /// unconditional <c>LOOPANIM</c> as its second instruction - but <b>both of the clips it loops declare ten
 /// frames and carry not one track</b>, so a correctly wired crossing spins a channel for ever while nothing
-/// on screen can move. Whatever changes the lamps is not in those clips. That is measured, and it is also
-/// why the old suffix-matching loop was only ever visible on the gate.
+/// on screen can move. Whatever changes the lamps is not in those clips. That is measured.
 /// </para>
 ///
 /// <para>
 /// <b>The gate half of that is three themes out of four rather than a rule.</b> Every theme ships its own
 /// <c>Gates.RSE</c> and all four differ; jungle, fantasy and hallow open on <c>TEST VAR_COMMAND</c> and idle,
-/// but <b>space opens with an unconditional <c>LOOPANIM_CH</c></b> before it reaches any test at all. Its gate
-/// holds still here regardless, and for a second reason worth knowing rather than relying on:
-/// <c>LOOPANIM_CH</c> is one of the opcodes this interpreter does not implement, so it is counted rather than
-/// obeyed, and implementing it would set that gate moving. The lights are the safe generalisation instead -
+/// but <b>space opens with an unconditional <c>LOOPANIM_CH</c></b> before it reaches any test at all: role 5
+/// entry 2 looping on channel 1, so space's gate idles on a channel of its own while channel 0 waits on
+/// the command as the other three do. The lights are the safe generalisation instead -
 /// <c>lights.RSE</c> is byte-identical across all four themes. See ParkFixedItemsTests, which pins both.
 /// </para>
 /// </summary>
@@ -206,10 +199,11 @@ public sealed class ParkFixedItems : Entity
 	/// <see cref="ItemDescriptionFile.NumSimultAnims"/>, which is what the engine hands its model loader.
 	///
 	/// <para>
-	/// <b>The park gate declares two, and nothing here would notice if it were read as one</b>: the only
-	/// channel instruction <c>Gates.RSE</c> carries is a single <c>LOOPANIM_CH</c> naming channel nought.
-	/// It is read because it is the item's own number, not because a fault forced it - and a fixed item
-	/// that will not describe itself still gets the one player the engine floors a nought count to.
+	/// <b>Space's park gate declares two, and needs both</b>: its <c>Gates.RSE</c> loops role 5 on channel 1
+	/// with the one <c>LOOPANIM_CH</c> in the game, which a gate read as one player has nowhere to play. The
+	/// other three themes' <c>Gates.sam</c> declare none. It is read because it is the item's own number, not
+	/// because a fault forced it - and a fixed item that will not describe itself still gets the one player the
+	/// engine floors a nought count to.
 	/// </para>
 	/// </summary>
 	private int ChannelsFor( string directory, string stem )
@@ -228,10 +222,11 @@ public sealed class ParkFixedItems : Entity
 
 	/// <param name="world">
 	/// The park's own save, or null where the theme ships none - three of the four do not. It is asked for
-	/// one thing only: the two thing ids its header names, which are what a script is bound against.
+	/// the thing ids a script is bound against: the two its header names, and each vehicle's by its
+	/// catalogue number (<see cref="ThingByCatalogue"/>).
 	/// </param>
 	/// <param name="objects">
-	/// What is already standing in this park, so these two are swept along with it rather than keeping a
+	/// What is already standing in this park, so these are swept along with it rather than keeping a
 	/// clock of their own - see <see cref="ParkObjects.Stand"/>. Null leaves them standing and inert, which
 	/// is what a theme with no park file gets.
 	/// </param>
@@ -278,7 +273,7 @@ public sealed class ParkFixedItems : Entity
 				// records a vehicle only once a crowd of that size has arrived, because the engine makes
 				// the thing the first time it needs one (FUN_0051a2f0) rather than shipping it - so Lost
 				// Kingdom names a bus and neither a ferry nor a seaplane. Without an id nothing binds
-				// their scripts and they cannot move, which is exactly what left those two parked.
+				// their scripts and they cannot move.
 				//
 				// The id counts DOWN from the top of the ushort the save keeps thing ids in, because
 				// ParkPeople.Admit hands arriving guests ids UP from one past the highest the file used.
@@ -384,9 +379,8 @@ public sealed class ParkFixedItems : Entity
 			// than merely having a route to move along: poll it twice and compare. A route read
 			// correctly and never applied looks identical to one applied, in every other line here.
 			// Every mesh, with the three things that decide whether it is DRAWN - see the gate in
-			// ModelEntity.Render: no model, no opacity, or drawn by its owner. A right-looking
-			// position over an empty road is what sent this line here: the census was reporting
-			// where a thing was without ever saying whether there was anything to see.
+			// ModelEntity.OnRender: no model, no opacity, or drawn by its owner - since a right-looking
+			// position says nothing about whether there is anything to see.
 			for ( int mesh = 0; mesh < _models[i].Entities.Length; ++mesh )
 			{
 				var entity = _models[i].Entities[mesh];

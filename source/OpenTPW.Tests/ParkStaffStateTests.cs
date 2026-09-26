@@ -5,7 +5,7 @@ using System.Linq;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// The block the park's five staff carry, which nothing read until now.
+/// The block the park's five staff carry.
 ///
 /// <para>
 /// <b>The reconciliation these turn on.</b> A staff record is <c>8 + 390 + 105</c> = 503 bytes plus what
@@ -158,10 +158,10 @@ public class ParkStaffStateTests
 	/// What the shipped park actually holds, pinned field by field.
 	///
 	/// <para>
-	/// <b>Four of the five are saved in state 1 - walking - and the guard in state 0.</b> That is the whole
-	/// of Alexah's "the staff still aren't navigating": the file has them mid-journey, and nothing has ever
-	/// stepped them. It is also the check that the state offset is right, because 0 and 1 are the two
-	/// states a park that has never opened could plausibly have left them in.
+	/// <b>Four of the five are saved in state 1 - walking - and the guard in state 0.</b> The file has
+	/// them mid-journey, and <see cref="StaffBehaviour"/> steps them on from there. It is also the check
+	/// that the state offset is right, because 0 and 1 are the two states a park that has never opened
+	/// could plausibly have left them in.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -199,9 +199,9 @@ public class ParkStaffStateTests
 
 			// A park that has never admitted anybody cannot have had any work done in it.
 			Assert.AreEqual( 0, saved.JobsDone, $"staff {thing} has done a job in a park with no visitors" );
-			// Nobody is resting when the park is saved. THE REASON GIVEN HERE USED TO BE WRONG: it said
-			// "a rest area this park has not got", and the park has one - catalogue item 1411 at (58,16),
-			// flagged by bit 1 of its mFlags. What is nought is who is using it, not whether one exists.
+			// Nobody is resting when the park is saved. The park has a rest area - catalogue item 1411 at
+			// (58,16), flagged by bit 1 of its mFlags - so what is nought is who is using it, not whether
+			// one exists.
 			Assert.AreEqual( 0, saved.RestArea, $"staff {thing} is sitting in a rest area in a park nobody has played" );
 		}
 	}

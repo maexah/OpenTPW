@@ -8,8 +8,9 @@ namespace OpenTPW;
 /// <para>
 /// <b>Eight of these are shared by all five kinds of staff, and that is the finding that makes staff
 /// tractable.</b> The original gives each kind its own per-turn function, and all five open with the same
-/// switch answering 0 to 7 through the same three handlers (<c>FUN_00505fe0</c>, <c>FUN_005061d0</c> and
-/// <c>FUN_005056e0</c>, whose own diagnostics name them <c>CStaff::</c>). Only the numbers above these
+/// switch answering 2 to 7 through the same three handlers (<c>FUN_00505fe0</c>, <c>FUN_005061d0</c> and
+/// <c>FUN_005056e0</c>, whose own diagnostics name them <c>CStaff::</c>) and 0 and 1 in arms of their own
+/// (<c>docs/exe/ride-operation.md</c>, "The staff turn"). Only the numbers above these
 /// differ, one set per kind. So the five are one machine with five small extensions rather than five
 /// state machines, which is what "five kinds of staff" reads like until the functions are measured.
 /// </para>
@@ -24,8 +25,9 @@ public enum StaffActivity
 {
 	/// <summary>
 	/// Standing about with nothing to do. They wait out their grade's <c>IdleDuration</c> from
-	/// <c>mTimeStartedIdling</c> and then look for something; the guard and the researcher also check
-	/// whether they are too fed up to carry on.
+	/// <c>mTimeStartedIdling</c> and then look for something. Every kind asks
+	/// <c>FUN_00506a40</c> first (strike, tired, mood); here only the guard and the researcher ask, and only
+	/// whether they are too tired (Q133).
 	/// </summary>
 	Idle = 0,
 
@@ -44,13 +46,14 @@ public enum StaffActivity
 
 	/// <summary>
 	/// Sitting in a rest area recovering, by their grade's <c>RecuperationRate</c> and
-	/// <c>HappinessRecuperationRate</c>, until one of the two reaches a hundred.
+	/// <c>HappinessRecuperationRate</c>, until their rest - <see cref="Staff.Tiredness"/> - reaches a hundred.
 	/// </summary>
 	Resting = 3,
 
 	/// <summary>
 	/// Walking to the strike area - <c>FixedItemInfo.StrikeArea*</c>, a six-by-one strip at (40,9). Reached
-	/// when the staff union's own script says they are fed up: "Right, I'm fed up, I'm going on strike".
+	/// from the strike arm every decide opens with (<c>FUN_00506a40</c>), when <c>mStaffHQ</c>'s flag for
+	/// the kind is set and the gate's <c>VAR_STATUS</c> reads 1: "Right! I'm fed up, I'm going on strike!".
 	/// </summary>
 	GoingOnStrike = 4,
 

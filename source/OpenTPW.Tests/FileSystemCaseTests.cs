@@ -15,7 +15,7 @@ namespace OpenTPW.Tests;
 /// the game: a couple of empty files in a temporary folder stand in for an installation, so it runs anywhere.
 /// </para>
 /// <para>
-/// On Windows, and on a Mac's default filesystem, these pass without the fix because the filesystem folds case
+/// On Windows, and on a Mac's default filesystem, these pass without our own case folding because the filesystem folds case
 /// itself. That is fine: what they pin is the behaviour, not how it is arrived at.
 /// </para>
 /// </summary>
@@ -67,7 +67,7 @@ public class FileSystemCaseTests
 	/// <summary>
 	/// An archive stands in for a directory of the same name, so data\global\Speech\lips.WAD - the advisor's
 	/// lip sync, and the one archive in the game named in capitals - is only found if that lookup ignores case
-	/// too. Registering ".WAD" as well as ".wad" is what used to stand in for this.
+	/// too.
 	/// </summary>
 	[TestMethod]
 	public void AnArchiveIsFoundWhateverCaseItsNameIsIn()
@@ -106,9 +106,8 @@ public class FileSystemCaseTests
 	}
 
 	/// <summary>
-	/// Mapping somewhere that is not there must not answer by making it. It used to: the tests mapped
-	/// "C:\Program Files (x86)\Bullfrog\Theme Park World\Data", the constructor made a directory of that whole
-	/// name inside bin\, and six tests then read an empty one and failed.
+	/// Mapping somewhere that is not there must not answer by making it, or a test pointed at a missing
+	/// installation reads an empty folder and fails for the wrong reason.
 	/// </summary>
 	[TestMethod]
 	public void MappingAFolderThatIsNotThereDoesNotMakeOne()

@@ -33,11 +33,7 @@ namespace OpenTPW;
 /// <b>Only the opcodes whose handlers were actually read are implemented.</b> Everything else is a
 /// no-op that <see cref="NotImplemented"/> counts, because a guessed instruction is worse than an
 /// absent one: it would run, produce a plausible number and take a branch nobody can account for.
-/// The ones left out reach into a world that does not exist yet - guests, scenery, sound - so they
-/// can be filled in beside whatever provides those. That list is shorter than it was: objects and
-/// animation landed beside <see cref="RideEffects"/> and the deadline fields, limbo needed no world
-/// at all because the engine keeps it in the script's own frame, and the instructions that reach
-/// other scripts needed only the registry <see cref="RideScriptScheduler"/> already was.
+/// The ones left out include heads, lights, the date and time, bumper cars and tours.
 /// </para>
 /// </summary>
 public sealed class RideScript
@@ -145,11 +141,10 @@ public sealed class RideScript
 	/// Everyone this script is holding - the engine's <c>+0x24</c>, sized by its <c>+0x58</c>.
 	///
 	/// <para>
-	/// <b>Limbo needs no world, which is what made this family implementable now.</b> The array is part
-	/// of the script's own frame: the loader reads the count out of the file header and allocates
-	/// <c>count * 8</c> bytes for it, and the teardown frees it beside the variables and the stack. So
-	/// unlike everything else still outstanding, none of these five instructions is waiting on guests
-	/// to exist before it can be honest - see <see cref="RideScriptFile.LimboCapacity"/>.
+	/// <b>Limbo needs no world.</b> The array is part of the script's own frame: the loader reads the
+	/// count out of the file header and allocates <c>count * 8</c> bytes for it, and the teardown frees
+	/// it beside the variables and the stack. So none of these five instructions waits on anything
+	/// outside the script - see <see cref="RideScriptFile.LimboCapacity"/>.
 	/// </para>
 	/// </summary>
 	private readonly LimboSlot[] _limbo;
@@ -187,7 +182,7 @@ public sealed class RideScript
 	/// <para>
 	/// <b>Like limbo, this needs no world</b>: the array is part of the script's own frame, and every
 	/// instruction in the family answers out of it. Only one Lost Kingdom script declares any slots -
-	/// <c>Bouncy.RSE</c>, with ten - so on the other 21 every <c>BOUNCE</c> refuses and every
+	/// <c>Bouncy.RSE</c>, with ten - so on the other 80 every <c>BOUNCE</c> refuses and every
 	/// <c>UNBOUNCE</c> answers nought, which is the engine's own behaviour and not a stand-in for it.
 	/// </para>
 	/// </summary>
@@ -350,7 +345,7 @@ public sealed class RideScript
 		/// <para>
 		/// <b>Four means the destination is a HEAD node</b>, which the engine looks up in a different node
 		/// space (<c>0x80</c> rather than <c>0x800</c>) and attaches the rider to on arrival. Across Lost
-		/// Kingdom's eleven walk-on scripts it only ever takes <b>1, 4, 5 or 6</b>, and the two passing 4
+		/// Kingdom's ten walk-on scripts it only ever takes <b>1, 4, 5 or 6</b>, and the two passing 4
 		/// are <c>Totem</c> and <c>tvsim</c> - which is what confirms the operand mapping from the corpus
 		/// as well as from the push order.
 		/// </para>
@@ -366,8 +361,9 @@ public sealed class RideScript
 	/// from the header.
 	///
 	/// <para>
-	/// <b>Only the sideshow declares any in Lost Kingdom</b>, which is the same one-to-one rule that
-	/// identified the bounce table: the scripts declaring slots are exactly the scripts using the family.
+	/// <b>Ten Lost Kingdom scripts declare any</b> - four rides, three shops and three sideshows - and they
+	/// follow the same one-to-one rule that identified the bounce table: the scripts declaring slots are
+	/// exactly the scripts using the family.
 	/// On every other script <c>WALKON</c> refuses and <c>WALKGET</c> answers nought, which is the
 	/// engine's own behaviour rather than a stand-in for it.
 	/// </para>
@@ -391,7 +387,7 @@ public sealed class RideScript
 	/// operand and not a script field.
 	/// </para>
 	/// <para>
-	/// <b>Nothing here can resolve a model node's position</b> (see <see cref="StepTheWalks"/>), so the
+	/// <b>Nothing here can resolve a model node by id</b> (see <see cref="StepTheWalks"/>), so the
 	/// leg length cannot be computed and every leg lasts one tick instead. That is a divergence and it is
 	/// named rather than dressed up: inventing a plausible constant would make every walk-on ride's dwell
 	/// time fiction, which is worse than a leg that is honestly too short. The state machine, the slots
@@ -485,7 +481,10 @@ public sealed class RideScript
 	/// <summary>Instructions skipped because their destination was not a variable, as the engine skips them.</summary>
 	public int IgnoredWrites { get; private set; }
 
-	/// <summary>Instructions that reach into a world this does not have yet, counted rather than guessed.</summary>
+	/// <summary>
+	/// Instructions this does not carry out - an opcode with no case, or one with nothing to act on -
+	/// counted rather than guessed.
+	/// </summary>
 	public int NotImplemented { get; private set; }
 
 	/// <summary>True while the script is sitting on a <c>WAIT</c> or <c>WAITANIM</c> not yet come due.</summary>
@@ -611,7 +610,7 @@ public sealed class RideScript
 	/// variables the ride and sound code reads by id, which is why every use loads the same file. Nothing
 	/// here consumes <i>that block</i>; the slot is kept so that whatever does will find it already
 	/// filled. <b>The slot itself is read</b> - <c>RideScriptScheduler</c>'s teardown follows it to take
-	/// the spawned sound script down with its parent. This said nothing consumed it at all.
+	/// the spawned sound script down with its parent.
 	/// </para>
 	/// </summary>
 	public int SoundChildId { get; set; }
@@ -854,11 +853,11 @@ public sealed class RideScript
 		// inside the 31ms loop. The park's are FUN_0044e410(2), FUN_00429df0(0) and FUN_00429df0(1), all of
 		// them past the loop's back edge in Game_StateMachine. ParkObjects.Sweep is where that lives here.
 		//
-		// This used to advance per tick, which promoted a queued clip mid-catch-up: with three ticks due, a
-		// clip ending on the first had its successor running before the second tick's instructions could
-		// look at it. The engine cannot do that, because it has not swept yet. End-of-frame state is the
-		// same either way - ParkRides hands the sweep Ticks * 31, which is exactly the instant its last tick
-		// ran at - so what this changes is only what a script can see PART WAY THROUGH a long frame.
+		// Advancing per tick would promote a queued clip mid-catch-up: with three ticks due, a clip
+		// ending on the first would have its successor running before the second tick's instructions
+		// could look at it. The engine cannot do that, because it has not swept yet. End-of-frame state
+		// is the same either way - ParkRides hands the sweep Ticks * 31, which is exactly the instant its
+		// last tick ran at - so the difference is only what a script can see PART WAY THROUGH a long frame.
 		//
 		// Scripts stay correct without it because every path that reads channel state to answer one goes
 		// through RideAnimations.Trigger, and that calls MoveTo on the channel itself before deciding.
@@ -1109,12 +1108,11 @@ public sealed class RideScript
 
 			// The animation family. Every one of these handlers tests the model handle at +0xc8 before
 			// it does anything, and takes a path the engine defines completely when that handle is
-			// nought - which is every script run on its own, and no longer every script in a park: a
-			// placed thing is handed its own model when it is bound. See RideScript.Animations.
+			// nought - which is every script run on its own; a placed thing in a park is handed its own
+			// model when it is bound. See RideScript.Animations.
 			//
-			// TRIGWAITANIM is one of them now. It waited on models existing rather than on anyone's
-			// effort, and they exist: ParkFixedItems stands the vehicles and ParkRides binds each one its
-			// animations. See TriggerAndWaitForAnimation, which carries the handler and the single
+			// TRIGWAITANIM is one of them: ParkFixedItems stands the vehicles and ParkRides binds each one
+			// its animations. See TriggerAndWaitForAnimation, which carries the handler and the single
 			// declared deviation in it - the model-less path, which the engine parks for ever.
 			case Opcode.FLUSHANIM:
 				// The handler's first act is to fetch the model and leave if there is none, so with no
@@ -1205,8 +1203,7 @@ public sealed class RideScript
 			// that a later KILLOBJ can find it by tag; EVENT deliberately keeps nothing, because its
 			// handler throws the handle away and so nothing it starts is ever killable. FADEOBJ is NOT
 			// among them - 113 instructions that complete no further script, and a fade differs from a
-			// kill only in stopping a sound gently, which nothing here can yet hear. (This named
-			// SETOBJPARAM alongside it at 133; SETOBJPARAM is implemented, below.)
+			// kill only in stopping a sound gently, which nothing here can yet hear.
 			case Opcode.ADDOBJ:
 				AddObject( operands );
 				break;
@@ -1221,8 +1218,7 @@ public sealed class RideScript
 
 			// Limbo: where a shop or a toilet keeps a guest while they are inside it. All five handlers
 			// work on the script's own frame - the slots at +0x24, how many there are at +0x58, how many
-			// are taken at +0x60 - so none of them needs a world to be honest, which is what separates
-			// this family from everything else still outstanding. Only the 24 scripts whose header
+			// are taken at +0x60 - so none of them needs a world to be honest. Only the 24 scripts whose header
 			// declares slots can hold anyone; on the other 284 a LIMBO answers nought, and that is the
 			// engine's own JLE rather than a stand-in for it.
 			case Opcode.LIMBO:
@@ -1252,14 +1248,11 @@ public sealed class RideScript
 
 			// Reaching the scripts around it: this script's one child, whoever spawned it, and anything
 			// else in the registry by id or by name. None of these needs a world - every one works on
-			// another script's own frame - and the registry they go through is the scheduler that was
-			// already here.
+			// another script's own frame - and the registry they go through is the scheduler.
 			//
-			// NOT ONE OF THEM BLOCKS, which is what made this family safe to take on where TRIGWAITANIM
-			// was not: no handler among them rewinds the program counter onto itself or zeroes the
-			// instruction budget, and every store to +0x3c in their blocks belongs to the inlined operand
-			// fetch. That was checked in the bytes before any of this was written, because the instrument
-			// that ranks these opcodes measures coverage and is blind to blocking.
+			// NOT ONE OF THEM BLOCKS: no handler among them rewinds the program counter onto itself or
+			// zeroes the instruction budget, and every store to +0x3c in their blocks belongs to the
+			// inlined operand fetch.
 			case Opcode.SPAWNCHILD:
 				SpawnChild( operands[0] );
 				break;
@@ -1358,7 +1351,7 @@ public sealed class RideScript
 
 			// Walking, for the rides that carry people ON them rather than in cars - the sideshow's whole
 			// mechanism, and the other half of what a script can do with a visitor. WALKGET is the most
-			// common dismissal in the corpus: ten scripts use it where UNBOUNCE serves one.
+			// common dismissal in Lost Kingdom: ten scripts use it where UNBOUNCE serves one.
 			case Opcode.WALKON:
 				Result = WalkOn( now, Value( operands[0] ), Value( operands[1] ), Value( operands[2] ),
 					Value( operands[3] ), Value( operands[4] ), Value( operands[5] ) ) ? 1 : 0;
@@ -1377,18 +1370,13 @@ public sealed class RideScript
 				break;
 
 			default:
-				// Reaches into a world that does not exist yet. Counted, never guessed - and now said
-				// out loud, because a count nobody reads is the same silence as no count at all.
+				// An opcode with no case. Counted, never guessed, and reported, because a count nobody reads
+				// is the same silence as no count at all.
 				++NotImplemented;
 
-				// <b>Two scars here, and both are worth keeping.</b> This first read operands[0] to name
-				// the op and threw ArgumentOutOfRange on the very path that reaches this arm - turning a
-				// silent no-op into an exception that killed the script mid-Turn and took five ride tests
-				// with it. A reporter that breaks the path it reports on is worse than the silence it
-				// replaced. Then it said "COAST op not handled", which was simply WRONG: this is the
-				// opcode dispatch's own default, reached by ANY instruction with no case, not a COAST
-				// sub-op - and a console line naming the wrong thing is worse than none at all.
-				// The instruction knows what it is, and asking it cannot throw.
+				// The report names the instruction's own opcode: this is the dispatch's default, reached by ANY
+				// instruction with no case, not a COAST sub-op, and naming it reads no operand, so it cannot
+				// throw on the path it reports.
 				Unimplemented.Report( $"{Name}: {instruction.Opcode} at {instruction.Address}" );
 				break;
 		}
@@ -1464,7 +1452,7 @@ public sealed class RideScript
 
 			default:
 				// Outside 1..8 the engine logs and carries on, which is a no-op with a complaint. The
-				// complaint is the half this reproduced as a silent counter.
+				// complaint is counted and reported.
 				++NotImplemented;
 				Unimplemented.Report( $"{Name}: COAST op out of 1..8" );
 				break;
@@ -1636,14 +1624,13 @@ public sealed class RideScript
 	/// through the handler at <c>00555963</c>.
 	///
 	/// <para>
-	/// <b>It takes seven operands, the most of any instruction</b>, and only four of them can be named
-	/// honestly. The handle is the first; the <b>action</b> is the one the engine compares against
-	/// <b>4</b>, which selects the head-node space (<c>0x80</c>) rather than the walk-node one
-	/// (<c>0x800</c>) and makes the rider attach to that node when they arrive; and two more are the walk
-	/// node and the head node. <b>The remaining three are not named</b>: Lost Kingdom's only consumer is
-	/// <c>Junspray.RSE</c>, which passes <c>VAR_LETMEON, 4, n, n, 4, 6, 1</c> on all three of its lanes -
-	/// so those constants never vary in the whole corpus and nothing here can tell what they select.
-	/// Inventing names for them would be worse than leaving them unread.
+	/// <b>It takes seven operands, the most of any instruction</b>, in push order
+	/// (<c>docs/exe/ride-operation.md</c>): the handle, the walk node, the head node, the pair the walk
+	/// off runs between, the <b>action</b> - the one the engine compares against <b>4</b>, which selects
+	/// the head-node space (<c>0x80</c>) rather than the walk-node one (<c>0x800</c>) and makes the rider
+	/// attach to that node when they arrive - and a seventh, flags, which nothing here reads. Ten Lost
+	/// Kingdom scripts use it; <c>Junspray.RSE</c> passes <c>VAR_LETMEON, 4, n, n, 4, 6, 1</c> on all
+	/// three of its lanes.
 	/// </para>
 	/// <para>
 	/// A slot is free when its <b>state</b> is nought - not when its handle is, which is the trap the
@@ -1863,9 +1850,7 @@ public sealed class RideScript
 	/// </para>
 	///
 	/// <para>
-	/// <b>That copy used to be nothing at all, and this file said so.</b> While no script had a thing or a
-	/// model, every one of the five was nought on both sides and the parent id was the whole of it. Handing
-	/// a placed thing its own model is what made the sentence false - a spawned script drives the same
+	/// <b>The thing and the model are the two copies that matter.</b> A spawned script drives the same
 	/// thing its parent does, and a child that lost the model would answer the engine's floor where its
 	/// parent answers a real clip length.
 	/// </para>
@@ -1904,9 +1889,7 @@ public sealed class RideScript
 		child.ParentId = Id;
 
 		// The engine copies the thing and its model handle into the child too, so a spawned script drives
-		// the same thing its parent does rather than nothing at all. This used to be nothing to copy -
-		// both fields were nought on both sides - and it stopped being nothing the moment a placed thing
-		// was handed its own model.
+		// the same thing its parent does rather than nothing at all.
 		child.ThingId = ThingId;
 		child.Animations = Animations;
 	}
@@ -1934,8 +1917,7 @@ public sealed class RideScript
 	/// <b>The arity is checked rather than assumed.</b> The dispatcher advances by the operand count the
 	/// FILE gives and never tests it against the opcode's declared arity, so a truncated or mis-split
 	/// script can reach a handler with fewer operands than it wants - and indexing one that is not there
-	/// throws out of the middle of a turn, which is how a report on the COAST arm once took five ride
-	/// tests down with it.
+	/// throws out of the middle of a turn.
 	/// </remarks>
 	private void StartScream( IReadOnlyList<RideOperand> operands )
 	{
@@ -2021,9 +2003,9 @@ public sealed class RideScript
 	/// </summary>
 	/// <remarks>
 	/// <b>No placed script in Lost Kingdom calls this</b> - Bouncy has no <c>SCREAMLEVEL</c> at all -
-	/// so it is dead by CONTENT there. It is built rather than counted because it is the third-most
+	/// so it is dead by CONTENT there. It is built rather than counted because it is the most
 	/// used member of the family across the shipped corpus: <b>81 uses in 36 scripts</b>, measured over
-	/// all 306 wads. The eight jungle rides that do use it are all unplaced in the shipped save.
+	/// all 306 wads. The seven jungle rides that do use it are all unplaced in the shipped save.
 	/// </remarks>
 	private void ScreamLevel( IReadOnlyList<RideOperand> operands )
 	{
@@ -2480,8 +2462,7 @@ public sealed class RideScript
 	/// same instruction runs again next turn, and the turn ends.
 	///
 	/// <para>
-	/// <b>The duration is added to the caller's clock unchanged, and that is now a finding rather than
-	/// a shrug.</b> This comment used to say the unit was unestablished. It is milliseconds: the engine
+	/// <b>The duration is added to the caller's clock unchanged.</b> It is milliseconds: the engine
 	/// adds the duration to the clock object at <c>0x785970</c>, whose chain
 	/// (<c>0x00402d70</c> -> <c>0x00402f10</c> -> <c>0x004030d0</c> -> <c>0x004033a0</c>) ends at a
 	/// source that falls back to <c>timeGetTime()</c> and scales its <c>QueryPerformanceCounter</c>
@@ -2491,13 +2472,12 @@ public sealed class RideScript
 	/// </para>
 	///
 	/// <para>
-	/// <b>The engine's speed scaling is deliberately absent, because it cannot ever do anything.</b>
-	/// The dispatcher divides the duration by <c>0.5 + 0.01 * speed</c>, worked out afresh for every
-	/// instruction from the script's speed word at <c>+0xc0</c>. That word is written in exactly two
-	/// places in the whole script system - the loader setting it to 50, and the scheduler copying it
-	/// into a linked script - and <b>no opcode writes it</b>, so it is 50 for every script that ever
-	/// runs and the divisor is exactly 1. Implementing the division would add a field that could never
-	/// differ from one.
+	/// <b>The engine's speed scaling is absent.</b> The dispatcher divides the duration by
+	/// <c>0.5 + 0.01 * speed</c>, worked out afresh for every instruction from the script's speed word at
+	/// <c>+0xc0</c>. No opcode writes that word: the loader sets it to 50, where the divisor is exactly 1,
+	/// and the object constructor pushes the item's own operating speed in from outside the script system
+	/// (<c>docs/exe/park.md</c>, "The clock, the speed word, and WAIT"), so it is 50 only for a script
+	/// nothing binds. The ride window counts the missing division as <c>RIDE_SPEED_SCALES_WAITS</c>.
 	/// </para>
 	/// </summary>
 	private void Wait( float now, int duration, int length )
@@ -2507,7 +2487,7 @@ public sealed class RideScript
 			// The engine sets the deadline and leaves without looking at it, so even a wait that is
 			// already over costs the rest of the turn. Nothing shipped asks for one - every WAIT in the
 			// corpus names a positive duration - but WAITANIM, which shares this field, asks for
-			// exactly that, and the old shape here would have let it through in the same turn.
+			// exactly that.
 			_waitUntil = now + duration;
 			Position -= length;
 			_budget = 0;
@@ -2617,11 +2597,10 @@ public sealed class RideScript
 	/// <para>
 	/// <b>One deviation, and this is the whole of it: with no model this steps over rather than parking.</b>
 	/// The engine skips the channel query and compares against the RAW third operand, which nothing can
-	/// ever change, so it parks the script for ever unless operand three equals operand one. Measured
-	/// across every shipped script on 2026-09-20, <b>not one use satisfies that</b>: of 133 uses in 48
-	/// scripts, 132 differ outright and the last is a variable. Reproducing it would hang all 48 to no
-	/// end, so a model-less script counts the instruction and walks past it - which is exactly what it
-	/// did while this opcode had no case at all, and is why the test that pinned that still passes.
+	/// ever change, so it parks the script for ever unless operand three equals operand one. Across
+	/// every shipped script <b>not one use satisfies that</b>: of 133 uses in 56 scripts, 132 differ
+	/// outright and the last is a variable. Reproducing it would hang all 56 to no end, so a model-less
+	/// script counts the instruction and walks past it.
 	/// </para>
 	///
 	/// <para>
@@ -2717,7 +2696,7 @@ public sealed class RideScript
 	/// the word and pushes it (<c>0x00553435</c> to <c>0x00553470</c>). A variable operand therefore
 	/// arrives as its tagged word, which names no channel at all - the original would index that far past
 	/// its allocation, and <see cref="RideAnimations.Channel"/> refuses instead. No shipped script does it:
-	/// the single <c>LOOPANIM_CH</c> in the game names a literal nought.
+	/// the single <c>LOOPANIM_CH</c> in the game, in space's <c>Gates.RSE</c>, names a literal 1.
 	/// </para>
 	/// </summary>
 	private static int RawChannel( RideOperand operand )
@@ -2757,8 +2736,8 @@ public sealed class RideScript
 	}
 
 	/// <summary>
-	/// How long one entry of one role runs, in milliseconds - the engine's <c>FUN_004732a0</c>, reduced
-	/// to the part a machine with no animation playing can be faithful about.
+	/// Starts one entry of one role on a channel and answers how long it runs, in milliseconds - the
+	/// engine's <c>FUN_004732a0</c>.
 	///
 	/// <para>
 	/// <b>Nought means "no model", and it is not the same answer as "no such animation".</b> With no
@@ -2772,7 +2751,7 @@ public sealed class RideScript
 	/// </para>
 	///
 	/// <para>
-	/// <b>The channel is modelled now, so this starts the clip rather than asking about it.</b> The engine
+	/// <b>This starts the clip rather than asking about it.</b> The engine
 	/// takes the channel over only when it is idle, finished or frozen; otherwise the clip goes in a queue
 	/// and the answer becomes <b>the time still to run plus the new clip's length</b>, the two truncated
 	/// separately. So what a script is told stops equalling
@@ -2853,8 +2832,8 @@ public sealed class RideScript
 	/// <para>
 	/// Asking again for the animation already running is the engine's early exit and does nothing at
 	/// all - which matters because the other path <b>clears the <c>WAIT4ANIM</c> deadline</b>: a loop
-	/// never finishes, so there is nothing left to wait for. <b>That guard is now load-bearing rather than
-	/// ceremonial</b>: this really does start the clip, so without it a script sitting in a loop would
+	/// never finishes, so there is nothing left to wait for. <b>That guard is load-bearing</b>: this
+	/// really does start the clip, so without it a script sitting in a loop would
 	/// restart its animation on every single turn and hold it at the first frame for ever. The Drinks Shop
 	/// runs <c>LOOPANIM 5 0</c> twice and the Belly Bounce <c>LOOPANIM 2 0</c> twice, so it is reached by
 	/// shipped content and not only in principle.
@@ -2887,7 +2866,7 @@ public sealed class RideScript
 	/// <b>With nothing triggered it does not wait at all.</b> The handler's first test is whether the
 	/// deadline is nought and it leaves if it is, so a script reaching this without a trigger walks
 	/// past - which is what makes the instruction honest before anything animates, and what stops the
-	/// 74 scripts that use it being parked for ever.
+	/// 75 scripts that use it being parked for ever.
 	/// </para>
 	/// </summary>
 	private void WaitForAnimation( float now, int length )

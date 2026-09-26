@@ -7,42 +7,31 @@ namespace OpenTPW;
 /// runs after the needs and decides what walking comes to.
 ///
 /// <para>
-/// <b>This is the thing that was missing, and its absence was the most misleading shape in the tree.</b>
-/// <see cref="Peep.SetState"/> and <see cref="Peep.AnimationFor"/> were written, documented against the
-/// disassembly and covered by tests, and <b>nothing in the game ever called them</b>: a guest's state was
-/// written once when the park loaded and never again. So a guest walked to wherever the save had been
-/// sending them and then stood there for ever, and <see cref="Peep.IsAWalkingState"/> listed states that
-/// could not be entered.
+/// <b>This moves a guest from state to state on their own turn</b>, through <see cref="Peep.SetState"/>,
+/// which queues the animation <see cref="Peep.AnimationFor"/> answers for the state entered.
 /// </para>
 /// <para>
 /// <b>Eight of the twenty-two cases are answered in the switch's own body; the other fourteen jump to a
 /// handler.</b> The inline cases are 0, 7, 8, 12, 14, 16, 17 and 20.
 /// </para>
 /// <para>
-/// <b>This paragraph used to go on to say that no guest in Lost Kingdom is in any of the inline states,
-/// and to conclude that building them would move nobody. That was true of the park as SAVED and became
-/// false the moment the park ran.</b> The save's thirteen are in <see cref="PeepState.HeadingForGate"/>,
-/// <see cref="PeepState.Entering"/> and <see cref="PeepState.WaitingForOpening"/>, all three of which
-/// delegate - but a guest who is admitted to a ride is put into <see cref="PeepState.Riding"/>, which is
-/// inline, and one who finishes deciding is put into <see cref="PeepState.Wandering"/>, which is inline
-/// too. Reasoning about which states matter from the saved file alone is how nine of the twenty-two came
-/// to have no case at all, and Alexah found two of those by playing the game rather than by any test
-/// failing. <b>What decides whether a state matters is whether anything SETS it, not where the park
-/// starts.</b>
+/// The save's thirteen are in <see cref="PeepState.HeadingForGate"/>, <see cref="PeepState.Entering"/>
+/// and <see cref="PeepState.WaitingForOpening"/>, all three of which delegate - but a guest who is
+/// admitted to a ride is put into <see cref="PeepState.Riding"/>, which is inline, and one who finishes
+/// deciding is put into <see cref="PeepState.Wandering"/>, which is inline too. <b>What decides whether a
+/// state matters is whether anything SETS it, not where the park starts.</b>
 /// </para>
 /// <para>
 /// <b>What decides every one of those three is whether the park is open</b> - <c>FUN_0051a280</c>, which
 /// returns <c>world + 0x1da710</c>, which the executable's own field-name table pairs with
-/// <c>mParkClosed</c>. Until the save reader kept that field there was no way to ask the question, which
-/// is why it was read off the disk first and this was built second.
+/// <c>mParkClosed</c>.
 /// </para>
 /// <para>
 /// <b>The admission sequence, for whoever carries it on.</b> HeadingForGate arrives and judges the fee;
 /// a fee it accepts sets a "paid" flag and sends the guest back to wait for the gate; waiting with that
 /// flag set and standing on the right cell becomes Entering; Entering arrives, takes a visitor number and
-/// goes on to decide what to do. <b>The whole of that loop is here now</b> - judging and waiting
-/// included; this said only the two arrivals were. What is left of it is the paid arm of waiting - see
-/// <see cref="Step"/> for each remaining deferral and the reason it is deferred.
+/// goes on to decide what to do. <b>The whole of that loop is here</b>, judging, waiting and the paid
+/// arm included - see <see cref="Step"/> for each remaining deferral and the reason it is deferred.
 /// </para>
 /// </summary>
 public sealed class PeepBehaviour
@@ -112,10 +101,8 @@ public sealed class PeepBehaviour
 	/// The park these guests are in, as it is being played rather than as it was saved.
 	///
 	/// <para>
-	/// <b>This is where the two workarounds went.</b> <see cref="Takings"/> and
-	/// <see cref="VisitorsToDate"/> used to be fields here, each documented as living on the behaviours
-	/// only because <see cref="ParkWorld"/> describes a file and could not be moved. Both now read
-	/// through this, and both keep their names so that nothing which already asks has to change.
+	/// <see cref="Takings"/> and <see cref="VisitorsToDate"/> read through this, because
+	/// <see cref="ParkWorld"/> describes a file and cannot be moved.
 	/// </para>
 	/// </summary>
 	public ParkState State { get; }
@@ -124,17 +111,15 @@ public sealed class PeepBehaviour
 	/// The same, from the two facts themselves rather than from a park.
 	///
 	/// <para>
-	/// <b>This exists so that a shut park can be tested at all.</b> The only park that can be loaded is the
-	/// one the game ships, and it is saved open - so every branch that turns on the gates being closed
-	/// would otherwise be unreachable from a test, including the one that decides whether a guest arriving
-	/// at the gate judges the fee or settles down to wait. Taking the facts directly is the smallest thing
-	/// that makes both arms reachable.
+	/// <b>This lets a test start a park shut.</b> The only park that can be loaded is the one the game ships,
+	/// and it is saved open; taking the facts directly reaches both arms of every branch that turns on the
+	/// gates being closed - including the one that decides whether a guest arriving at the gate judges the
+	/// fee or settles down to wait - without a park to load.
 	/// </para>
 	/// </summary>
 	/// <param name="admission">
 	/// What the park charges and what a guest makes of it. <b>Null leaves the fee unjudged</b> rather than
-	/// guessed at: a guest who reaches the ticket booths with nothing able to price the park stands there,
-	/// which is what this program did everywhere before any of it was built.
+	/// guessed at: a guest who reaches the ticket booths with nothing able to price the park stands there.
 	/// </param>
 	/// <param name="gateStatus">
 	/// What the park's gate says it is doing - <c>ParkRides.GateStatus</c>, which reads the gate script's
@@ -236,10 +221,10 @@ public sealed class PeepBehaviour
 	/// balance the save recorded.
 	///
 	/// <para>
-	/// <b>It is kept here for the same reason <see cref="VisitorsToDate"/> is</b>: taking a fee moves
+	/// <b>It is <see cref="ParkState.Takings"/>, read through <see cref="State"/></b>: taking a fee moves
 	/// <c>mBalance</c> and <c>mProfitThisYear</c> by the same amount (<c>FUN_004d0600</c>, which adds it to
-	/// both and to two running totals on the world), and <see cref="ParkWorld"/> describes a file and is
-	/// deliberately immutable. So the park's money on screen is the save's balance plus this.
+	/// both and to two running totals on the world), and <see cref="ParkState.Take"/> moves the balance and
+	/// this together. The park's money on screen is <see cref="ParkState.Balance"/>.
 	/// </para>
 	/// </summary>
 	public int Takings => State.Takings;
@@ -249,12 +234,10 @@ public sealed class PeepBehaviour
 	/// <c>FUN_004c8240</c> makes.
 	///
 	/// <para>
-	/// <b>Nought, and by the shipped park's own saved state rather than by omission.</b> That sum counts
-	/// only things with somebody in their queue, and the save records <c>mNumberOfVisitorsToDate</c> as
-	/// nought - nobody had ever been admitted, so no queue could hold anyone <i>at load</i>. <b>That is
-	/// now the starting value rather than the standing one</b>: guests join queues and rides operate, so
-	/// a park that has been running a while answers something else. This said a ride was never operated.
-	/// It is settable so that the term is visible and testable rather than a zero nobody can see.
+	/// <b>Nought, because nothing computes it.</b> <c>FUN_004c8240</c> is not decoded (<c>docs/exe/park.md</c>,
+	/// "What the balance file supplies, and the one score that is not decoded"), so every guest judges the
+	/// fee against a park worth nothing. It is settable so that the term is visible and testable rather
+	/// than a zero nobody can see.
 	/// </para>
 	/// </summary>
 	public int ParkExcitement { get; set; }
@@ -264,7 +247,7 @@ public sealed class PeepBehaviour
 	/// <c>FUN_004ff7f0</c>, which wants <c>mParkClosed</c> nought <b>and</b> the gate reporting 1.
 	///
 	/// <para>
-	/// <b>A null <paramref name="_gateStatus"/> reads as open, and that is a choice with a precedent.</b>
+	/// <b>A null <c>gateStatus</c> reads as open, and that is a choice with a precedent.</b>
 	/// The constructor above already treats a null park as an open one, for the same reason: a park with
 	/// no script runtime bound is not a park whose gates are shut, and answering "shut" would strand every
 	/// guest at the bus stop on the strength of missing plumbing rather than of anything in the file.
@@ -274,12 +257,12 @@ public sealed class PeepBehaviour
 		=> !ParkIsClosed && (_gateStatus == null || _gateStatus() == ParkRides.GateIsOpen);
 
 	/// <summary>
-	/// Whether the park is shut to visitors, as the save left it.
+	/// Whether the park is shut to visitors - <see cref="ParkState.ParkIsClosed"/>, seeded from the save and
+	/// moved by the door on the entry-price screen (<see cref="ParkState.SetParkClosed"/>, <c>FUN_00519ef0</c>).
 	///
 	/// <para>
-	/// Read once rather than watched, because nothing in this project can open or close a park yet: the
-	/// command that does so is <c>FUN_00519ef0</c>, and the two buttons that would reach it
-	/// (<c>InputButton.OpenPark</c> and <c>ClosePark</c>) are among the bindings nothing consumes.
+	/// The two key bindings that would also reach it (<c>InputButton.OpenPark</c> and <c>ClosePark</c>) are
+	/// among the bindings nothing consumes.
 	/// </para>
 	/// </summary>
 	public bool ParkIsClosed => State.ParkIsClosed;
@@ -305,8 +288,8 @@ public sealed class PeepBehaviour
 	/// <remarks>
 	/// <b>The 50 is deliberately not reproduced and not declared as a constant.</b> Reaching it needs the
 	/// arrival vehicle's <i>script</i> state - <c>FUN_0051a690</c> looks the bus thing up and asks its
-	/// script what it is doing - and nothing here runs a script on the bus. So the branch is unreachable
-	/// rather than unwritten, and a constant nothing can use would only read as an oversight.
+	/// script what it is doing - and this turn does not ask, although the bus runs its script
+	/// (<see cref="ParkRides"/> binds it). Whether the branch is reached is not measured.
 	/// </remarks>
 	public const int GateHurryShare = 4;
 
@@ -323,10 +306,8 @@ public sealed class PeepBehaviour
 	/// <para>
 	/// <b>This exists because an unanswered state is invisible.</b> A guest in one is never walked, never
 	/// re-stated, never logged; on screen they stand still - which is also what several perfectly faithful
-	/// states do, so the two cannot be told apart by looking. Thirteen of the twenty-two were answered when
-	/// Alexah reported that guests never entered a ride and never came off one, and the two states
-	/// responsible had shipped that same day inside work that claimed the ride loop was closed. Recording
-	/// the fall-through is what lets a test tell a deliberate stillness from a hole in the machine.
+	/// states do, so the two cannot be told apart by looking. Recording the fall-through is what lets a test
+	/// tell a deliberate stillness from a hole in the machine.
 	/// </para>
 	/// <para>
 	/// <b>It is not a diagnostic switch and it is not tooling.</b> It is one field the behaviour keeps
@@ -337,26 +318,29 @@ public sealed class PeepBehaviour
 	public PeepState? UnansweredState { get; private set; }
 
 	/// <summary>
+	/// Whether a thing has hold of this guest - a queue they are in, or a ride that has them. The
+	/// original's own condition for refusing to delete somebody: <c>Leaving</c> sweeps the thing list
+	/// for one whose <c>+0x212</c> names this person and leaves them alone if it finds one. Removing
+	/// somebody a thing still names would leave the thing pointing at nobody.
+	/// </summary>
+	internal static bool HeldByAThing( PeepState state )
+		=> state is PeepState.InQueue or PeepState.SteppingUpQueue or PeepState.BeingAdmitted
+			or PeepState.EnteringRide or PeepState.Riding or PeepState.LeavingRide;
+
+	/// <summary>
 	/// One turn of one guest's behaviour.
 	///
 	/// <para>
 	/// <b>The switch comes first and the walk second, which is the original's order and not a detail.</b>
 	/// <c>FUN_005019f0</c> decides what state a guest is in and only then asks whether they got anywhere, so
-	/// a guest in a state that does not walk never reaches the walk at all. Doing it the other way round -
-	/// walking everybody who <i>can</i> walk and then asking what it meant - is what this replaces.
+	/// a guest in a state that does not walk never reaches the walk at all.
 	/// </para>
 	/// <para>
-	/// <b>This paragraph used to list three states as absent, and all three are built.</b>
 	/// <see cref="PeepState.WaitingForOpening"/> is <see cref="Wait"/>,
 	/// <see cref="PeepState.JudgingTheFee"/> is <see cref="Judge"/>, and
 	/// <see cref="PeepState.Deciding"/> - the hub a guest returns to whenever they finish anything - is
-	/// <see cref="Decide"/>, whose ride arm was the last of them to be answered.
-	/// <para>
-	/// What remains absent is narrower and sits inside those, not instead of them: the paid arm of
-	/// <see cref="Wait"/> needs a runtime map cell nothing here keeps, and two of
-	/// <see cref="Decide"/>'s own conditions read fields nothing has named. Each is recorded where it
-	/// happens rather than here.
-	/// </para>
+	/// <see cref="Decide"/>. What is absent sits inside those - Decide's leave test and the arms before its
+	/// split (Q109, Q111) - and each is recorded where it happens rather than here.
 	/// </para>
 	/// <para>
 	/// <b>And the give-up path does nothing on purpose.</b> Where the walk reports it cannot get through,
@@ -372,29 +356,16 @@ public sealed class PeepBehaviour
 	/// and is not reset on entering a park, so a park's first sweep carries the lobby's; the original zeroes
 	/// <c>mGameTick</c> at level start (<c>0x00515865</c>) and loads the save's (<c>0x00517bec</c>).
 	/// </param>
-	/// <summary>
-	/// Whether a thing has hold of this guest - a queue they are in, or a ride that has them. The
-	/// original's own condition for refusing to delete somebody: <c>Leaving</c> sweeps the thing list
-	/// for one whose <c>+0x212</c> names this person and leaves them alone if it finds one. Removing
-	/// somebody a thing still names would leave the thing pointing at nobody.
-	/// </summary>
-	internal static bool HeldByAThing( PeepState state )
-		=> state is PeepState.InQueue or PeepState.SteppingUpQueue or PeepState.BeingAdmitted
-			or PeepState.EnteringRide or PeepState.Riding or PeepState.LeavingRide;
-
 	public void Step( Peep peep, PeepWalk walk, SpriteScript? playing, int tick )
 	{
 		ArgumentNullException.ThrowIfNull( peep );
 		ArgumentNullException.ThrowIfNull( walk );
 
-		// <b>Their day running out, which nothing has ever acted on.</b> ExitLevel counts down on every
-		// needs tick - once per guest's turn in four - and no code has ever read it, so no guest has
-		// had a reason of their own to go home. The park's four existing ways out all end the same way,
-		// walking to a bus stop and then heading for the exit, so this takes that same path rather than
-		// inventing a second one.
-		//
-		// Tested before the switch, because a day ending interrupts whatever they were doing. A guest
-		// a thing is holding is left alone, for the reason Leaving is.
+		// <b>Their day running out, a deviation Q109 holds.</b> ExitLevel counts down on every needs tick -
+		// once per guest's turn in four. The original tests it for exactly nought in the Deciding turn alone
+		// and aims the guest at CrossingParkSide (docs/exe/ride-operation.md, "The state-6 turn, in order");
+		// this sends any guest a thing is not holding home from any state at nought or below, to a bus stop,
+		// docking nothing. A guest a thing is holding is left alone, for the reason Leaving is.
 		if ( peep.ExitLevel <= 0
 			&& peep.State is not (PeepState.HeadingForExit or PeepState.Leaving)
 			&& !HeldByAThing( peep.State )
@@ -433,8 +404,7 @@ public sealed class PeepBehaviour
 
 				break;
 
-			// Standing at a ticket booth making their mind up about the price - FUN_004ff9d0, and the state
-			// Alexah found five of Lost Kingdom's guests stuck in.
+			// Standing at a ticket booth making their mind up about the price - FUN_004ff9d0.
 			//
 			// The countdown comes first and nothing else happens on a turn that decrements it. It is the
 			// guest's own mParkOpeningWaitingTime, shared with waiting for the gate - see Peep.ParkOpeningWait.
@@ -459,10 +429,9 @@ public sealed class PeepBehaviour
 			// Coming through the gate - seven of the thirteen. Arriving is what makes somebody a visitor.
 			//
 			// The guard this does NOT have is the one at the top of FUN_004ffb20: a guest whose park has
-			// shut under them, or whose gate is not open, is sent back to head for the gate again. Asking
-			// the second half of that means asking the gate thing what its script is doing, which nothing
-			// here can do - so the guard is absent rather than half-answered. It changes nothing for this
-			// park, whose gates are open, and it would matter the moment a park could be shut while running.
+			// shut under them, or whose gate is not open, is sent back to head for the gate again. Both
+			// halves can be asked (GateWillAdmit), and the entry-price door shuts a running park, so the
+			// guard is a gap rather than an unreachable arm.
 			case PeepState.Entering:
 				if ( Walked( peep, walk, playing ) == WalkVerdict.Arrived )
 				{
@@ -472,13 +441,8 @@ public sealed class PeepBehaviour
 
 				break;
 
-			// Walking to something they chose - FUN_004ffbc0, and THE CASE THIS SWITCH DID NOT HAVE.
-			//
-			// <b>Its absence was a real fault rather than a gap.</b> The ride arm of Deciding puts a guest
-			// into this state, IsAWalkingState lists it, and AnimationFor gives it the walk - but with no
-			// case here the walk was never ticked, so a guest who chose a ride stood exactly where they
-			// decided, playing a walk, for ever. No test saw it: the chooser is tested on its own, and the
-			// suite never ran a guest from Deciding through to arriving.
+			// Walking to something they chose - FUN_004ffbc0. The ride arm of Deciding puts a guest into
+			// this state, IsAWalkingState lists it, and AnimationFor gives it the walk.
 			case PeepState.GoingToRide:
 				switch ( Walked( peep, walk, playing ) )
 				{
@@ -507,11 +471,8 @@ public sealed class PeepBehaviour
 
 			// Walking to the ride that called them forward, and asking it to take them - FUN_005006b0.
 			//
-			// <b>THE ADMISSION IS THE GUEST'S, NOT THE RIDE'S, and this case is what was missing.</b>
-			// Nothing in this tree ever set PeepState.EnteringRide, so CompleteAdmission - which waits on
-			// exactly that state - could never fire in a running park. The chain reached BeingAdmitted and
-			// stopped, and every test past it built the state by hand. That is the third time this project
-			// has shipped an arm no test could see.
+			// <b>THE ADMISSION IS THE GUEST'S, NOT THE RIDE'S.</b> This is what sets PeepState.EnteringRide,
+			// which CompleteAdmission waits on.
 			//
 			// Arriving and getting STUCK are one path, which is the original's own shape: it logs "Person
 			// %d: Got stuck in middle o[f]..." and then carries on into the same test rather than treating
@@ -555,13 +516,11 @@ public sealed class PeepBehaviour
 			// Waiting for the script to take them up, and coming off the queue when it has -
 			// FUN_005019f0's case 0xe, which is FUN_00500870 inlined.
 			//
-			// <b>THE COMPLETION IS THE GUEST'S TOO, and that is why nothing finished one.</b>
-			// ParkPeople's ride turn calls CompleteAdmission only for a ride that is closed (mCanLoad
-			// nought, in Invite's place, 0x004e13fc) or broken, waiting for an upgrade or condemned (states
-			// 1, 2 and 4), through CompleteOrTurnAway - which is faithful: the original does not call it
-			// from an open, healthy ride's turn either, and its only other caller there is SetState. So in
-			// an open park a guest reached EnteringRide and stayed in it: measured, not inferred - a full
-			// run saw EnteringRide and never once saw Riding.
+			// <b>THE COMPLETION IS THE GUEST'S TOO.</b> ParkPeople's ride turn calls CompleteAdmission only
+			// for a ride that is closed (mCanLoad nought, in Invite's place, 0x004e13fc) or broken, waiting
+			// for an upgrade or condemned (states 1, 2 and 4), through CompleteOrTurnAway - which is
+			// faithful: the original does not call it from an open, healthy ride's turn either, and its only
+			// other caller there is SetState. So in an open park this arm is what finishes an admission.
 			//
 			// The gate is FUN_004e0a70, four lines: script[VAR_LETMEON] != mFirstInQ. That is exactly
 			// what CompleteAdmission already tests, so nothing new is decided here - this arm only calls
@@ -609,8 +568,8 @@ public sealed class PeepBehaviour
 			// Walking about outside the park, which ends at the bus stop.
 			//
 			// The original picks one of two headings here depending on whether a bus is due, and takes the
-			// same 0x400 this does when none is. The other heading needs the arrival vehicle, so the
-			// no-bus reading is what is reproduced, and it is the one this park is in.
+			// same 0x400 this does when none is. The other heading needs the arrival vehicle's state, which
+			// this turn does not ask, so the no-bus reading is what is reproduced.
 			case PeepState.WalkingOutside:
 				if ( Walked( peep, walk, playing ) == WalkVerdict.Arrived )
 				{
@@ -625,11 +584,9 @@ public sealed class PeepBehaviour
 			// admission sequence at its head.
 			//
 			// The original gates this on FUN_0051a760, which asks the arrival vehicle's script what it is
-			// doing. This used to add that with no bus thing in the world that function returns 1 at its
-			// first test, so the gate stood open for every guest and the branch was unreachable rather
-			// than unwritten. <b>A bus now stands in the park and its script runs</b> - ParkFixedItems
-			// binds it - so that argument no longer holds and whether the branch is reachable has not
-			// been measured. The gate is still left open here, which is what the code has always done.
+			// doing, and returns 1 at its first test when no bus thing stands. A bus stands in the park and
+			// its script runs - ParkFixedItems stands it and ParkRides binds it - so whether the branch is
+			// reached is not measured. The gate is left open here.
 			case PeepState.AtGate:
 				if ( Admission is { } atTheGate )
 				{
@@ -643,11 +600,7 @@ public sealed class PeepBehaviour
 			// THE PARK'S LOOP. Arriving at the ride's exit drops them back into Deciding, which is what lets
 			// a guest who has had one go go and have another.
 			//
-			// <b>Its absence is why nobody Alexah watched ever rode twice, and it shipped inside the very
-			// commits that claimed the ride loop was closed.</b> ParkRideOperation.Dismiss sets this state
-			// from the ride's own turn; the switch had no case for it, so a guest who had been let off stood
-			// at the ride's exit for ever. No test saw it because every test of the dismissal asserted the
-			// STATE was reached, and reaching a state says nothing about what the state then does.
+			// ParkRideOperation.Dismiss sets this state from the ride's own turn.
 			//
 			// <b>The destination is cleared on the stuck arm only, and that asymmetry is the original's.</b>
 			// FUN_00500900 zeroes +0x1dc when the walk reports it cannot get through, and on arrival keeps
@@ -692,11 +645,9 @@ public sealed class PeepBehaviour
 			// Heading for the exit, having decided not to stay - FUN_00500a50. They walk to whichever bus
 			// stop the arm that sent them here chose, and on arriving go on to pick a cell outside.
 			//
-			// <b>The change-of-mind arm is absent because two of its four terms have no name.</b> The
-			// original turns a guest back to Deciding - "Make up your mind!" - when +0x1bc is positive AND a
-			// float conversion of something is non-zero AND the park is open AND FUN_004fa990 agrees.
-			// Decide already records +0x1bc as unidentified, so this is that same gap seen from the other
-			// side rather than a second one.
+			// <b>The change-of-mind arm is absent.</b> The original turns a guest back to Deciding - "Make
+			// up your mind!" - when mExitLevel (+0x1bc) is positive AND a float conversion of something is
+			// non-zero AND the park is open AND FUN_004fa990 agrees.
 			//
 			// Getting stuck prints "I'm stuck in the park, even though it's closed!!" and leaves them where
 			// they are, which is the give-up path this switch takes everywhere.
@@ -712,59 +663,46 @@ public sealed class PeepBehaviour
 			case PeepState.Leaving:
 				break;
 
-			// <b>The five states nothing in this tree SETS, grouped so that each is answered and each says
-			// what it waits on.</b> A case that breaks looks exactly like a missing case on screen - the
-			// guest stands still either way - so the difference has to be written down, and
-			// UnansweredState is what lets the program itself tell them apart.
+			// <b>Four states answered by standing still, each saying what it waits on.</b> Nothing here sets
+			// 8 or 9; HeadingForExit and WalkingOutside set 19 and 21, and ParkPeople takes a guest in 19 out
+			// of the park. A case that breaks looks exactly like a missing case on screen - the guest stands
+			// still either way - so the difference has to be written down, and UnansweredState is what lets
+			// the program itself tell them apart.
 			//
 			// PlayingSpotAnimation (8) returns to SavedState once ten ticks have passed; FUN_004fc890 is
 			// one line and both halves of it exist here. What does not exist is anything that PLAYS a spot
 			// animation, so the state is never entered.
 			//
-			// <b>GoingToMinorDestination (9) is a LITTER-BIN ERRAND, and this comment said "a shop or a
-			// toilet", which is wrong.</b> Decoded 2026-09-20: FUN_004fff20 is entered from exactly one
-			// place - FUN_004fec90 at 004fedf6, when the guest's litter (+0x1b4) reaches 90 - and it
-			// finds the nearest thing carrying flag +0x32 & 0x40 within squared distance 9, walks there,
-			// writes that thing's script variable 0 to one, ZEROES the guest's litter and returns them
-			// to Deciding. It never queues, never charges and never touches +0x1de. In Lost Kingdom
-			// there is exactly one such target: thing 17, the Litter Bin at (44,29).
+			// <b>GoingToMinorDestination (9) is a LITTER-BIN ERRAND.</b> FUN_004fec90 sets it at 004fedf6, when
+			// the guest's litter (+0x1b4) reaches 90 and FUN_00500dc0 (at 004feddd) finds the nearest thing
+			// carrying flag +0x32 & 0x40 within squared distance under 9; its turn, FUN_004fff20 (case 9 of
+			// FUN_005019f0), walks there, writes that thing's script variable 0 to one, ZEROES the guest's
+			// litter and returns them to Deciding. It never queues, never charges and never touches +0x1de. In
+			// Lost Kingdom there is exactly one such target: thing 17, the Litter Bin at (44,29).
 			//
-			// <b>It has just become reachable content, which it never was before.</b> Nothing in this
-			// tree raised litter until the Drinks Shop began serving - its LitterEffect is 50, so two
-			// drinks put a guest over the threshold. So a guest can now reach the condition and, with
-			// this state unanswered, simply carries the litter. That is a gap of its own rather than
-			// part of spending; the separate "Minor Decision" (FUN_004fd570) stays in state 10.
+			// <b>It is reachable content.</b> The Drinks Shop's LitterEffect is 50, so two drinks put a guest
+			// over the threshold, and with the errand unbuilt (Q111, arm (c)) the guest carries the litter.
+			// The separate "Minor Decision" (FUN_004fd570) stays in state 10.
 			//
-			// PickingACellOutside (19) and AtTheBusStop (21) walk to cells from FUN_004d8650, and WHICH
-			// balance-file pair that getter returns is NOT YET PROVEN. The +1 among its four candidates
-			// ({c, c+1, c-0x100, c-0xff}) rules out BusStopA/B, whose cells are (42,5) and (53,5) and are
-			// not adjacent; CrossingParkSideA/B reads right and is not established. Guessing between two
-			// readings a test cannot tell apart is what made P4's rest areas inert, so the pair stays
-			// unread until it is measured.
-			//
-			// <b>The second half of that argument has since fallen, and only the first still holds.</b>
-			// Both states also consult the BUS - FUN_0051a690 for its script state, FUN_0051aad0 for
-			// whether one is here - and this used to add that no bus thing ran a script here, under which
-			// the original's own answer for 21 was to do nothing. A bus now stands in the park and its
-			// script runs: ParkFixedItems binds it, and the rides census reports it running. So these stay
-			// unanswered on the unproven cell pair ALONE, and answering that would now be enough.
+			// PickingACellOutside (19) and AtTheBusStop (21) walk to cells from FUN_004d8650, which reads
+			// FixedItemInfo.BusStopA/B (docs/exe/park.md, "Arrivals"), and consult the bus - FUN_0051a690
+			// for its script state, FUN_0051aad0 for whether one is here. The bus runs its script
+			// (ParkFixedItems stands it, ParkRides binds it). Both stay unbuilt until their decode is checked
+			// whole (Q128).
 			case PeepState.PlayingSpotAnimation:
 			case PeepState.GoingToMinorDestination:
 			case PeepState.PickingACellOutside:
 			case PeepState.AtTheBusStop:
 				break;
 
-			// <b>And the guard this switch did not have.</b> Twenty-two states were declared, thirteen were
-			// answered, and the nine that were not fell out of the bottom in silence - so a guest put into
-			// one stood still for ever and nothing in the program could say so. Alexah found two of them by
-			// playing the game. The original needs no default because its switch answers all twenty-two;
-			// this one records rather than throws, because crashing a park is worse than a guest standing
-			// still, and because a test can read a record.
+			// <b>And a guard for a state with no case.</b> A guest put into one would stand still for ever
+			// with nothing in the program able to say so. The original needs no default because its switch
+			// answers all twenty-two; this one records rather than throws, because crashing a park is worse
+			// than a guest standing still, and because a test can read a record.
 			default:
 				UnansweredState = peep.State;
 
-				// And say so. This was recorded and never looked at by anything but a test, which is the
-				// same silence the state machine had before it recorded anything at all.
+				// And say so, so that more than a test reads it.
 				Unimplemented.Report( $"guest state {peep.State}" );
 
 				break;
@@ -775,16 +713,14 @@ public sealed class PeepBehaviour
 		// things themselves - and maintains it when a thing moves cell (FUN_0050b6a0), is created
 		// (FUN_0050afe0) or destroyed. ParkState.StandOn answers the first two together.
 		//
-		// <b>This is called every turn, unconditionally, and that matters.</b> It was written as a
-		// from/to move guarded by "did the cell change", and the one guest the shipped park leaves
-		// STANDING STILL was then never entered into any cell's list at all - so the gate could not see
-		// them, and they waited at the booth through a whole run while the five who walked there went
-		// through. StandOn decides for itself that the cell is unchanged, exactly as FUN_0050b6a0 does.
+		// <b>This is called every turn, unconditionally, and that matters:</b> a guest the shipped park
+		// leaves STANDING STILL is entered into their cell's list on their first turn, where a from/to move
+		// guarded by "did the cell change" would never enter them and the gate could not see them.
+		// StandOn decides for itself that the cell is unchanged, exactly as FUN_0050b6a0 does.
 		//
 		// <b>It lives here rather than in ParkPeople on purpose.</b> Putting it in the driver would leave
-		// it unreachable from every test that calls Step directly - which is precisely how GoingToRide
-		// came to be set with no case, and how the ride loop came to be reported closed while nothing
-		// drove it. Every caller goes through Step, so every caller keeps the list honest.
+		// it unreachable from every test that calls Step directly. Every caller goes through Step, so
+		// every caller keeps the list honest.
 		var (standingX, standingY) = walk.Position.Cell;
 
 		State.StandOn( peep.ThingId, standingX, standingY );
@@ -818,16 +754,13 @@ public sealed class PeepBehaviour
 	///
 	/// <para>
 	/// <b>Giving a guest a route here is a departure and it is still named.</b> The original sets a route on
-	/// the way <i>into</i> a walking state, through <c>FUN_00510100</c>; those entries are the parts of the
-	/// state machine that are not built, and a guest restored from a file carries a destination and no route
-	/// at all - the route being the one part of it the save deliberately does not keep. So the first turn of
-	/// walking is what asks for one.
+	/// the way <i>into</i> a walking state, through <c>FUN_00510100</c>, as <see cref="SendTo"/> does here;
+	/// but a guest restored from a file carries a destination and no route at all - the route being the one
+	/// part of it the save deliberately does not keep. So the first turn of walking is what asks for one.
 	/// </para>
 	/// <para>
-	/// <b>What has gone from here, though, is the standing animation on arrival.</b> That was the second
-	/// departure this file's absence forced, and it is retired: a guest who arrives now enters a state, and
-	/// the state queues its own animation through <see cref="Peep.AnimationFor"/> exactly as the original
-	/// does. Every arrival above lands in a state that stands.
+	/// <b>A guest who arrives enters a state</b>, and the state queues its own animation through
+	/// <see cref="Peep.AnimationFor"/>, exactly as the original does.
 	/// </para>
 	/// </summary>
 	private static WalkVerdict Walked( Peep peep, PeepWalk walk, SpriteScript? playing )
@@ -878,8 +811,9 @@ public sealed class PeepBehaviour
 	/// </para>
 	/// <para>
 	/// <b>Two fields the original touches on the leaving arms are deliberately not reproduced.</b> It
-	/// writes 1 to <c>+0x188</c> and nought to <c>+0x1bc</c>, and nothing here reads either, so inventing
-	/// names for them would be worse than leaving them out.
+	/// writes 1 to <c>+0x188</c> and nought to <c>mExitLevel</c> (<c>+0x1bc</c>, <see cref="Peep.ExitLevel"/>).
+	/// Nothing here reads <c>+0x188</c>, and a guest this sends home is past the one test here that reads
+	/// the exit level.
 	/// </para>
 	/// </summary>
 	private void Judge( Peep peep, PeepWalk walk, ParkAdmission admission, int tick )
@@ -916,8 +850,7 @@ public sealed class PeepBehaviour
 					peep.Happiness = Peep.Change( peep.Happiness, admission.MediumHappinessChange );
 
 				// FUN_004d0600 - the fee goes on the balance and on the year's profit alike, which is
-				// what ParkState.Take does: one call moving both, where this used to move a running
-				// total the park's own balance knew nothing about.
+				// what ParkState.Take does: one call moving both.
 				State.Take( admission.Fee );
 
 				peep.PaidAdmission = true;
@@ -931,19 +864,11 @@ public sealed class PeepBehaviour
 	/// Waiting outside for the gate - <c>FUN_004ff7f0</c>.
 	///
 	/// <para>
-	/// <b>The paid arm is NOT built, and the reason is a field rather than an omission.</b> A guest who has
-	/// paid waits until the cell they are standing on names <i>them</i>: the original reads a short at
-	/// <c>+0x24</c> of that cell's <b>runtime</b> record - 0x44 bytes each, against the 52 the file
-	/// carries, so the offset cannot be translated into anything the save reader sees - and compares it
-	/// against the guest's own thing id, which <c>FUN_0050b350</c> copies out of the front of the thing.
-	/// That is the gate admitting one guest at a time, and nothing here keeps a mutable map cell or knows
-	/// what writes that field. Three probes came back negative (<c>FUN_004dd0a0</c> destroys a thing,
-	/// <c>FUN_0050afe0</c> constructs one, <c>FUN_004fa990</c> is an unrelated mode check); the next lead
-	/// is <c>FUN_004d8480</c>, which the cell helpers all forward to.
-	/// </para>
-	/// <para>
-	/// So a guest who has paid <b>stands and waits</b>, which is the honest thing for them to do and is
-	/// what the original does on every turn the cell has not yet named them.
+	/// <b>A guest who has paid waits until the cell they are standing on names <i>them</i></b>: the original
+	/// reads the short at <c>+0x24</c> of that cell's runtime record - the head of the cell's thing list,
+	/// which <c>FUN_004d91f0</c> writes (<see cref="ParkState.EnterCell"/>) - and compares it against the
+	/// guest's own thing id, which <c>FUN_0050b350</c> copies out of the front of the thing. That is the gate
+	/// admitting one guest at a time; until the cell names them, a guest who has paid stands and waits.
 	/// </para>
 	/// </summary>
 	private void Wait( Peep peep, PeepWalk walk, int tick )
@@ -977,18 +902,15 @@ public sealed class PeepBehaviour
 			peep.SetState( PeepState.HeadingForGate, tick, _random );
 		}
 
-		// <b>And here is the paid arm, which this method went without until 2026-09-18.</b> A guest who has
-		// paid goes through when the cell they are standing on NAMES THEM - the original reads a short at
-		// the cell's +0x24 and compares it with the guest's own thing id.
+		// <b>And the paid arm.</b> A guest who has paid goes through when the cell they are standing on
+		// NAMES THEM - the original reads a short at the cell's +0x24 and compares it with the guest's own
+		// thing id.
 		//
-		// <b>That short is the head of the cell's thing list, not a reservation</b>, which is what took so
-		// long to see: FUN_004d91f0 ends `cell[0x24] = thing`, and FUN_004d9280 repairs it. So the test
-		// reads "am I the FIRST thing standing here?", and THAT is the gate letting one guest through at a
-		// time - as each is admitted and steps off the cell, whoever is behind them becomes the head.
-		// ParkState keeps the list; Step maintains it as guests move.
-		//
-		// <b>Alexah found this by playing: six of the park's guests stood at the ticket booths for the
-		// whole of a run</b>, having judged the fee and paid, because nothing here ever let them through.
+		// <b>That short is the head of the cell's thing list, not a reservation</b>: FUN_004d91f0 ends
+		// `cell[0x24] = thing`, and FUN_004d9280 repairs it. So the test reads "am I the FIRST thing
+		// standing here?", and THAT is the gate letting one guest through at a time - as each is admitted
+		// and steps off the cell, whoever is behind them becomes the head. ParkState keeps the list; Step
+		// maintains it as guests move.
 		else if ( StandingOnTheirOwnCell( peep, walk ) )
 		{
 			SendTo( peep, walk, EitherOf( admission.EntranceA, admission.EntranceB ) );
@@ -1043,9 +965,10 @@ public sealed class PeepBehaviour
 	/// </para>
 	/// <para>
 	/// It answers whether a route was found. <see cref="ChooseSomewhereToGo"/>, the boarding arm of
-	/// <see cref="QueueTurn"/>, the arrival's re-aim in <see cref="JoinTheQueue"/> and
-	/// <see cref="FindQueueDestination"/> act on a failure at once; every other caller leaves it to
-	/// <see cref="Walked"/>, which reports a guest who cannot get through as having given up on their next turn.
+	/// <see cref="QueueTurn"/>, the arrival's re-aim in <see cref="JoinTheQueue"/>,
+	/// <see cref="FindQueueDestination"/> and <see cref="WanderFromNowhere"/> act on a failure at once; every
+	/// other caller leaves it to <see cref="Walked"/>, which reports a guest who cannot get through as
+	/// having given up on their next turn.
 	/// </para>
 	/// </summary>
 	/// <remarks>
@@ -1098,7 +1021,7 @@ public sealed class PeepBehaviour
 	/// nothing at all and think again next turn.
 	/// </para>
 	/// <para>
-	/// <b>The ride arm IS built now, and this said it was not until the scorer existed.</b>
+	/// <b>The ride arm.</b>
 	/// <see cref="ChooseSomewhereToGo"/> asks <see cref="ParkRideChooser"/>, which walks the world's object
 	/// list, filters it with <see cref="ParkRideChoice"/> and scores the survivors with
 	/// <see cref="ParkRideScore"/> - the seven-term weighted mean of distance, queue, excitement, thirst,
@@ -1107,11 +1030,11 @@ public sealed class PeepBehaviour
 	/// still does nothing, which is the original's own answer rather than a shortfall in this one.
 	/// </para>
 	/// <para>
-	/// <b>Two of the original's own conditions are absent because they read fields nothing here has
-	/// named.</b> The leave path is reached either when the park has shut or when two unidentified fields
-	/// (<c>+0x1bc</c> and the value behind a float conversion) say so; only the shut-park half is
-	/// reproduced, because guessing at the other would be inventing behaviour. The same goes for the
-	/// need-driven arms at the top of the function, which fire on a need this project does not yet score.
+	/// <b>The leave test and the arms before the split are not all here.</b> The original leaves when the
+	/// happiness byte is nought, when <c>mExitLevel</c> (<c>+0x1bc</c>) is exactly nought, or when the park has
+	/// shut (<c>docs/exe/ride-operation.md</c>, "The state-6 turn, in order"); only the shut-park test is
+	/// here, and <see cref="Step"/> sends a guest home on the exit level from any state (Q109). The arms
+	/// before the split - a happy spot animation, vomit, litter, watching, pranks - are not built (Q111).
 	/// </para>
 	/// </summary>
 	private void Decide( Peep peep, PeepWalk walk, int tick )
@@ -1295,11 +1218,9 @@ public sealed class PeepBehaviour
 	/// <c>FUN_00501db0</c>'s case <c>0xe</c> makes, <c>person[+0x1f1] = FUN_004e2670( object )</c>.
 	///
 	/// <para>
-	/// <b>This is the gate the whole of spending hangs on, and nothing in this tree ever wrote it.</b> The
-	/// settle-up splits on that byte: nought means the guest took nothing from the visit and loses
-	/// happiness, anything else runs the item's effects. Since no guest's <see cref="Peep.QueuePos"/> was
-	/// ever non-zero at the moment they left a thing, <b>every visit in this park took the losing arm</b> -
-	/// which is why a sideshow charged twenty and did nothing else whatever.
+	/// <b>This is the gate the whole of spending hangs on.</b> The settle-up splits on that byte: nought
+	/// means the guest took nothing from the visit and loses happiness, anything else runs the item's
+	/// effects.
 	/// </para>
 	/// <para>
 	/// <b>It overwrites the guest's place in the queue, and that is the original's own overloading rather
@@ -1554,15 +1475,11 @@ public sealed class PeepBehaviour
 
 	/// <summary>The object this guest set off for, or null if the park no longer has it.</summary>
 	/// <remarks>
-	/// <b>It asks the park as PLAYED, and reading the file's list here was the last thing keeping a
-	/// bought ride unused.</b> <see cref="JoinTheQueue"/> bails into <see cref="GiveUpOnIt"/> when this
-	/// answers null, which clears <see cref="Peep.MajorDest"/> and returns the guest to
-	/// <see cref="PeepState.Deciding"/> - so a guest chose the new ride, walked the whole way to it,
-	/// arrived on its entrance cell, quietly gave up, and chose it again. Measured over eleven driven
-	/// runs before it was found: the chooser picked the bought ride in 534 of 557 samples, every one of
-	/// 30 <c>dest</c> readings stayed <see cref="PeepState.GoingToRide"/> and not one reached
-	/// <see cref="PeepState.InQueue"/>, and no guest was ever stuck or routeless. A silent loop leaves
-	/// exactly that signature: everything works except the arrival, and nothing complains.
+	/// <b>It asks the park as PLAYED</b>, so that a thing bought this session is found.
+	/// <see cref="JoinTheQueue"/> bails into <see cref="GiveUpOnIt"/> when this answers null, which clears
+	/// <see cref="Peep.MajorDest"/> and returns the guest to <see cref="PeepState.Deciding"/> - so asking the
+	/// file's list would leave a guest choosing a bought ride, walking to it and giving up on arrival, over
+	/// and over, with nothing complaining.
 	/// </remarks>
 	private ParkWorld.CatalogueObject? Chosen( Peep peep )
 		=> State.TryObject( peep.MajorDest, out var chosen ) ? chosen : null;
@@ -1761,41 +1678,18 @@ public sealed class PeepBehaviour
 	}
 
 	/// <summary>
-	/// Offers this guest the best thing in the park and sets them off for it - <c>FUN_004fcb10</c>, and
-	/// the arm this file recorded as unbuilt until the scorer existed to answer it.
-	///
-	/// <para>
-	/// <b>The walk is committed to only once a route exists</b>, which is the order the original uses and
-	/// the same one <c>StaffBehaviour.GoAndRest</c> follows: a guest never claims somewhere they cannot
-	/// get to. A candidate that scores well but cannot be reached leaves them deciding again next turn,
-	/// which is what the original does too.
-	/// </para>
-	/// <para>
-	/// <b>The chosen thing is recorded in <see cref="Peep.MajorDest"/></b> - the person's own
-	/// <c>+0x1dc</c>, which is where the original writes it and which the queueing states read back. It is
-	/// written after the route for the same reason the state is.
-	/// </para>
-	/// <para>
-	/// <b>Queue lengths ARE passed, and are measured from the park as played rather than as saved.</b> The
-	/// save leaves <c>mFirstInQ</c> at nought on every object - nobody had ever queued in it - so every
-	/// queue starts genuinely empty; but guests join them now, so the length has to be read live. This
-	/// paragraph said they were not passed, while the call below already passed them.
-	/// </para>
-	/// </summary>
-	/// <summary>
-	/// What the chooser answers for one guest, and whether they could actually get there - the two
-	/// halves <see cref="ChooseSomewhereToGo"/> collapses into a single bool.
+	/// What the chooser answers for one guest and where it would aim them - one of the two halves
+	/// <see cref="ChooseSomewhereToGo"/> collapses into a single bool. Whether they got a route is read from
+	/// their own state and <see cref="Peep.MajorDest"/>, not tested here - see the note inside.
 	/// </summary>
 	/// <remarks>
 	/// <b>It exists because no census here can tell those halves apart.</b> <see cref="Peep.MajorDest"/>
 	/// is written only after <see cref="PeepWalk.PlanRoute"/> succeeds, so a guest who chooses somewhere
 	/// and cannot route to it leaves no trace whatever - and an empty <c>dest</c> census then reads
-	/// exactly like "nothing was ever chosen". The two want opposite fixes, and four driven runs were
-	/// spent guessing between them before this was written.
+	/// exactly like "nothing was ever chosen". The two want opposite fixes.
 	/// <para>
-	/// It makes the SAME call <see cref="ChooseSomewhereToGo"/> makes and uses the guest's own blocked
-	/// predicate, rather than asking the question its own way: a census that recomputes is not an
-	/// observation.
+	/// It makes the SAME call <see cref="ChooseSomewhereToGo"/> makes, rather than asking the question its
+	/// own way: a census that recomputes is not an observation.
 	/// </para>
 	/// </remarks>
 	internal string Explain( Peep peep, PeepWalk walk, int tick )
@@ -1829,6 +1723,27 @@ public sealed class PeepBehaviour
 		return $"at ({x},{y}) chose thing {chosen.ThingId} aim ({aimX},{aimY}) dest {peep.MajorDest}";
 	}
 
+	/// <summary>
+	/// Offers this guest the best thing in the park and sets them off for it - <c>FUN_004fcb10</c>.
+	///
+	/// <para>
+	/// <b>The walk is committed to only once a route exists</b>, the order <c>StaffBehaviour.GoAndRest</c>
+	/// follows too: a guest never claims somewhere they cannot get to, and a best candidate that cannot be
+	/// reached leaves them deciding again next turn. The original routes every candidate that beats the
+	/// best as it walks them, so a better one that cannot be routed leaves the walker failed under the
+	/// earlier winner's name (Q104).
+	/// </para>
+	/// <para>
+	/// <b>The chosen thing is recorded in <see cref="Peep.MajorDest"/></b> - the person's own
+	/// <c>+0x1dc</c>, which is where the original writes it and which the queueing states read back. It is
+	/// written after the route for the same reason the state is.
+	/// </para>
+	/// <para>
+	/// <b>Queue lengths ARE passed, and are measured from the park as played rather than as saved.</b> The
+	/// save leaves <c>mFirstInQ</c> at nought on every object - nobody had ever queued in it - so every
+	/// queue starts genuinely empty; but guests join them, so the length has to be read live.
+	/// </para>
+	/// </summary>
 	/// <returns>Whether somewhere was chosen and a route to it planned.</returns>
 	private bool ChooseSomewhereToGo( Peep peep, PeepWalk walk, int tick )
 	{
@@ -2033,11 +1948,10 @@ public sealed class PeepBehaviour
 	/// <c>mNeighbours</c> mask, bit-tested, which is what the original builds its wander candidates from.
 	///
 	/// <para>
-	/// <b>Alexah found this by playing: guests walked out of the park and down the road.</b> The original
-	/// picks a wander destination in <c>FUN_004f9490</c> from the byte <c>FUN_00522770</c> hands back -
-	/// the cell's own <c>+0xc</c> - and <b>only 91 of this park's 16,384 cells carry a non-zero one</b>.
-	/// The road outside is cell type 30 and its mask is nought, so the engine can never choose it; ours
-	/// asked only whether an edge was walkable, and the road's edges are.
+	/// <b>The mask keeps a linked wander off the road outside.</b> The original picks a wander destination in
+	/// <c>FUN_004f9490</c> from the byte <c>FUN_00522770</c> hands back - the cell's own <c>+0xc</c> - and
+	/// <b>only 91 of this park's 16,384 cells carry a non-zero one</b>. The road outside is cell type 30 and
+	/// its mask is nought, so the engine can never choose it, however walkable its edges are.
 	/// </para>
 	/// <para>
 	/// <b>The mask is read from the cell being ENTERED, about the side facing the cell being left</b>, and

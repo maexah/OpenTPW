@@ -52,7 +52,8 @@ public static class ParkPathBuilding
 	/// </summary>
 	/// <remarks>
 	/// It permits only: clearing to nothing; the type it already is; building on bare ground; path
-	/// over queue; a footprint over path; and a coaster footprint over itself. <b>Notably 4-over-4 is
+	/// over queue; queue over path, save on a run's last cell; a footprint over path; and a coaster
+	/// footprint over itself. <b>Notably 4-over-4 is
 	/// refused</b>, which is a carve-out from the "same type is allowed" rule it otherwise follows.
 	/// </remarks>
 	/// <param name="lastOfRun">
@@ -486,7 +487,8 @@ public static class ParkPathBuilding
 			return (MarkerRed, "is marked NOMODIFY");
 
 		// The original also refuses bare ground and path where two corner tests fire (FUN_0053ae00 and
-		// FUN_0053ae90), which are not decoded.
+		// FUN_0053ae90, which the path tool's TrackCornerOrJunction reproduces); what the queue arm asks
+		// them of is not decoded, and this arm does not ask them.
 		Unimplemented.Report( "QUEUE_VERDICT_CORNER_RULE" );
 
 		// The preview's cash test leaves a path out of the total (0x005358e9..0x005358f1), though
@@ -502,7 +504,7 @@ public static class ParkPathBuilding
 
 	/// <summary>
 	/// The cell flag that marks land outside the park - carried by 13,878 of Lost Kingdom's 16,384 cells,
-	/// all of them water, rock or unbuilt ground, and by none of the 2,506 that hold a path, a queue or a
+	/// all of them water, rock or unbuilt ground, and by none of the 126 that hold a path, a queue or a
 	/// thing. Every tool's preview answers red on it first. What sets it is not traced; Buy Land is the
 	/// likely clearer.
 	/// </summary>
@@ -1192,7 +1194,8 @@ public static class ParkPathBuilding
 			return ParkBuildMode.ArmAt( ParkBuildMode.Queue, thingId, startX, startY );
 		}
 
-		// Bounded as the original bounds every queue walk - see ParkState.LongestQueue.
+		// Bounded by ParkState.LongestQueue, the original's GetBackOfQueue bound; FUN_00530120's own walk
+		// has none (see QueueEnds).
 		var back = start;
 
 		for ( int cell = start, cells = 0; cell != 0 && cells < ParkState.LongestQueue;
@@ -1619,16 +1622,10 @@ public static class ParkPathBuilding
 	/// Retiles a cell <b>and every cell around it</b>, because joining up changed their masks too.
 	///
 	/// <para>
-	/// <b>This was found by playing, not by a test, and the test suite could not have found it.</b>
-	/// Laying a run of three left the middle cell drawing <c>jpa_end1</c> - the tile its mask asked for
-	/// at the moment it was laid, when it still had only one neighbour - because only the cell being
-	/// laid was retiled while <see cref="ParkPathNeighbours.LinkPath"/> had also rewritten its
-	/// neighbours' masks. The masks were right the whole time; the art was a step behind.
-	/// </para>
-	/// <para>
-	/// The lifting path never had the bug, and that is what identified it: <see cref="Unlink"/> already
-	/// retiles each neighbour it detaches, so a cell read correctly after a delete and wrongly after a
-	/// build.
+	/// <see cref="ParkPathNeighbours.LinkPath"/> rewrites the neighbours' masks as well as the laid cell's,
+	/// so retiling only the laid cell would leave the middle of a run of three drawing <c>jpa_end1</c> - the
+	/// tile its mask asked for when it had one neighbour. <see cref="Unlink"/> retiles each neighbour it
+	/// detaches for the same reason.
 	/// </para>
 	/// </summary>
 	internal static void RetileAround( ParkState state, ParkWorld park, int x, int y )
@@ -1644,7 +1641,7 @@ public static class ParkPathBuilding
 
 	/// <summary>Works out what a cell should draw now and records it - the original's <c>FUN_005365d0</c>.</summary>
 	/// <remarks>
-	/// <b>A QUEUE cell is retiled too, and this answered only for paths until it was.</b>
+	/// <b>A QUEUE cell is retiled too.</b>
 	/// <c>FUN_00535dd0</c> takes <c>abs(mType)</c> and sends 3 to its own eleven-row table at
 	/// <c>DAT_007630b0</c>, exactly as it sends a path to the forty-nine at <c>DAT_00763138</c> - so a
 	/// laid queue cell has a piece like any other cell. Left out, a queue cell kept whatever tile index
@@ -1674,12 +1671,12 @@ public static class ParkPathBuilding
 
 		// A queue cell whose index lands outside the game's own table of pieces draws NOTHING, and the
 		// ground has already been told to leave a tile-set-2 cell alone - so the SKY SHOWS THROUGH a
-		// hole where the piece belongs. Photographed once: a cell with two mutual path links takes
-		// 2 + 3 + 3 = 8 against a table of eight, and the park had a flat sky-coloured square in it.
+		// hole where the piece belongs. A cell with two mutual path links takes
+		// 2 + 3 + 3 = 8 against a table of eight.
 		//
 		// The BUMP is the uncertain part here, not the table row. The original gates each link on a
-		// flags test against the TRACK cell beside this one - a separate array this project has no
-		// layer for - so it cannot say which of the two links the original would have refused. Dropping
+		// flags test against the TRACK cell beside this one, which PathLinks counts rather than asks -
+		// so this cannot say which of the two links the original would have refused. Dropping
 		// links until the index is one the table holds keeps the game's own art and the end piece the
 		// cell is asking for; the alternative is the hole. The shipped park cannot arbitrate: its one
 		// end piece at (49,22) has a single path link, so no cell in it ever reaches this.
@@ -1708,8 +1705,10 @@ public static class ParkPathBuilding
 	/// <para>
 	/// <b>Its fourth test is NOT reproduced and is counted instead.</b> The original also asks
 	/// <c>FUN_0053ad20</c> of the TRACK cell beside this one - a separate <c>0x28</c>-stride array,
-	/// re-targeted through its parent where that cell defers - and this project has no track-cell layer
-	/// to ask. So a link this vouches for might be one the original refuses.
+	/// re-targeted through its parent where that cell defers. The save's copy of that layer is read - the
+	/// <c>Track</c> fields of <see cref="ParkWorld.MapCell"/>, which <see cref="CellEdge.TrackCloses"/>
+	/// asks <c>FUN_0053ad20</c> of - but this does not ask it. So a link this vouches for might be one the
+	/// original refuses.
 	/// </para>
 	/// </remarks>
 	private static int PathLinks( ParkWorld park, int x, int y, ParkWorld.MapCell cell )

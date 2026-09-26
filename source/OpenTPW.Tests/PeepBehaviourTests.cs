@@ -6,14 +6,14 @@ using System.Linq;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// What a guest does when they get where they were going - the state machine that had been written and
-/// never called.
+/// What a guest does when they get where they were going - <see cref="PeepBehaviour"/>, the state machine
+/// <see cref="ParkPeople"/> steps every thing sweep.
 ///
 /// <para>
 /// The transitions are driven against the <b>real park</b> rather than a contrived walk, because the whole
-/// point of this work is that Lost Kingdom's thirteen guests are in three states and every one of those
+/// point is that Lost Kingdom's thirteen guests are in three states and every one of those
 /// three delegates to a handler. A test built on the states that are answered inline would pass while the
-/// park stood still, which is the mistake that once made the walk itself inert.
+/// park stood still.
 /// </para>
 /// </summary>
 [TestClass]
@@ -99,7 +99,7 @@ public class PeepBehaviourTests
 	/// The five guests heading for the gate arrive and judge the admission fee, because the park is open.
 	///
 	/// <para>
-	/// This is the transition the whole of the header work was for: <c>FUN_004ff730</c> asks
+	/// This is the transition the park's closed flag decides: <c>FUN_004ff730</c> asks
 	/// <c>mParkClosed</c> and nothing else before choosing between judging the fee and waiting outside.
 	/// </para>
 	/// </summary>
@@ -122,8 +122,8 @@ public class PeepBehaviourTests
 	/// will put up with it as they do.
 	///
 	/// <para>
-	/// <b>This is the arm the shipped park cannot reach</b>, and it is the reason the behaviour can be built
-	/// from the two facts rather than only from a saved park.
+	/// <b>The shipped park is saved open, so this arm is reached once its door is shut</b>, and it is the
+	/// reason the behaviour can be built from the two facts rather than only from a saved park.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -226,15 +226,11 @@ public class PeepBehaviourTests
 	/// <b>Every one of the twenty-two states a guest can be in is answered by some case of the switch.</b>
 	///
 	/// <para>
-	/// <b>This is the test whose absence Alexah found by playing the game.</b> <c>Step</c> declared
-	/// twenty-two states and answered thirteen; the other nine fell out of the bottom of the switch in
-	/// silence, so a guest put into one was never walked and never re-stated again. Two of the nine were
-	/// <see cref="PeepState.Riding"/> and <see cref="PeepState.LeavingRide"/>, which had shipped that same
-	/// day inside work that claimed the ride loop was closed - which is why guests entered a ride and
-	/// never came off it.
+	/// <b>A state that falls out of the bottom of the switch fails in silence</b>: a guest put into one is
+	/// never walked and never re-stated again.
 	/// </para>
 	/// <para>
-	/// <b>It asserts the property the old test was believed to assert.</b> A guest standing still proves
+	/// <b>It asserts that every state is recognised.</b> A guest standing still proves
 	/// nothing either way, because several faithful states do exactly that; what distinguishes them is
 	/// whether the switch <i>recognised</i> the state, which is what
 	/// <see cref="PeepBehaviour.UnansweredState"/> records. Adding a twenty-third state without a case
@@ -271,7 +267,7 @@ public class PeepBehaviourTests
 	/// <para>
 	/// The assertion is about the <b>destination</b> as well as the state, because a guest who changed
 	/// state without being aimed anywhere would satisfy a state check and then stand at the gate for ever -
-	/// which is the failure this whole day's work is about.
+	/// which is the failure this test is about.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -304,7 +300,7 @@ public class PeepBehaviourTests
 	/// <b>Doing nothing is the whole of the original's case 0x10</b> - one call that resolves the ride's
 	/// thing pointer and returns. <see cref="ParkRideOperation.Dismiss"/> is what takes them off, from the
 	/// ride's own turn. So this pins two things at once: that they are not moved by themselves, and that
-	/// the state is <i>answered</i> rather than unrecognised - the difference the old test could not see.
+	/// the state is <i>answered</i> rather than unrecognised.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -328,20 +324,14 @@ public class PeepBehaviourTests
 	/// missing <b>input</b>, not a missing case.
 	///
 	/// <para>
-	/// <b>This test used to say something false, and defended a bug with it.</b> It was called "a state
-	/// that is not built leaves the guest exactly as they were", and it listed
-	/// <see cref="PeepState.Riding"/> and <see cref="PeepState.AtTheBusStop"/> among the unbuilt - pinning
-	/// as correct the very freeze Alexah reported, where a guest admitted to a ride never came off it. It
-	/// was wrong about the other three it named as well: <see cref="PeepState.Deciding"/>,
-	/// <see cref="PeepState.JudgingTheFee"/> and <see cref="PeepState.InQueue"/> all had cases, and stood
-	/// still only because a behaviour built from the two facts has no <see cref="ParkAdmission"/> to ask.
-	/// It conflated "no case" with "nothing to go on", which are the two things that most need telling
-	/// apart here.
+	/// <see cref="PeepState.Deciding"/>, <see cref="PeepState.JudgingTheFee"/> and
+	/// <see cref="PeepState.AtGate"/> all have cases, and stand still here only because a behaviour built
+	/// from the two facts has no <see cref="ParkAdmission"/> to ask. "No case" and "nothing to go on" are
+	/// the two things that most need telling apart here.
 	/// </para>
 	/// <para>
-	/// What it is now is the honest half: with no admission, the states that need one do nothing. The
-	/// property it was believed to guard is guarded by
-	/// <see cref="EveryStateAGuestCanBeInIsAnsweredByTheSwitch"/>.
+	/// So with no admission, the states that need one do nothing. That every state has a case is guarded
+	/// by <see cref="EveryStateAGuestCanBeInIsAnsweredByTheSwitch"/>.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -368,11 +358,10 @@ public class PeepBehaviourTests
 	}
 
 	/// <summary>
-	/// Nobody is left striding on the spot, which is the departure this work retired.
+	/// Nobody is left striding on the spot.
 	///
 	/// <para>
-	/// Until the state machine existed, a guest who arrived was put on the standing animation by the walk
-	/// itself, because there was nothing else to do it. Now the animation comes from the state they enter,
+	/// The animation comes from the state a guest enters,
 	/// through <see cref="Peep.AnimationFor"/>, exactly as the original queues it - so this asserts that
 	/// every guest who has stopped is asking for a standing picture rather than a walking one.
 	/// </para>
@@ -393,9 +382,9 @@ public class PeepBehaviourTests
 				people.Update();
 			}
 
-			// The save's own guests, not everybody in the park. A park ticked this long now gains an
-			// arrival - 1120 ticks against a period of 600 - and this test is about the thirteen the
-			// file named, so it says so rather than counting whoever happens to be standing about.
+			// The save's own guests, not everybody in the park. No load is due in these 140 sweeps (the
+			// first is due on the 509th, ParkTickTests), but this test is about the thirteen the file
+			// named, so it says so rather than counting whoever happens to be standing about.
 			var saved = world.People.Select( person => person.ThingId ).ToHashSet();
 
 			var arrived = people.Peeps
@@ -411,19 +400,17 @@ public class PeepBehaviourTests
 
 				Assert.IsNotNull( playing, $"guest {peep.ThingId} should have a sprite" );
 
-				// <b>The SPRITE, not the table.</b> This test asserted Peep.AnimationFor( peep.State )
-				// until 2026-09-17, which is a pure lookup over an enum - it passed while every guest in
-				// the park stood at the gate playing the eight-picture walk cycle on the spot, which is
-				// what Alexah saw within seconds of opening a park. A test named for what is on screen has
-				// to read what is on screen.
+				// <b>The SPRITE, not the table.</b> Peep.AnimationFor( peep.State ) is a pure lookup over
+				// an enum, and passes while every guest in the park stands at the gate playing the
+				// eight-picture walk cycle on the spot. A test named for what is on screen has to read what
+				// is on screen.
 				Assert.IsTrue( playing!.IsOn( (int)PeepAnimation.Stand ),
 					$"guest {peep.ThingId} is in {peep.State} but their sprite is on script {playing.Script}, "
 					+ $"set {playing.Set}, frame {playing.Frame} - they are striding on the spot" );
 			}
 
 			// And the anti-vacuity guard, which is about MOVEMENT rather than about a particular picture.
-			// An earlier draft of this line asserted frame 0 - a number nobody had measured, taken from
-			// "set 0, one picture" in a doc comment. What "standing still" actually means is that the
+			// What "standing still" actually means is that the
 			// picture stops changing, and that cannot pass for a guest still walking: the walk is eight
 			// pictures and turns at least every other sprite step.
 			var before = arrived.ToDictionary( peep => peep.ThingId,
@@ -453,11 +440,10 @@ public class PeepBehaviourTests
 	/// <c>FUN_00500a50</c> arriving, then <c>FUN_00501db0(0x13)</c>.
 	///
 	/// <para>
-	/// <b>This is the state four separate arms of this file send guests into, and it had no case.</b>
-	/// Judging the fee as far too expensive, sulking down to no happiness, giving up on a shut gate and
-	/// deciding in a shut park all set <see cref="PeepState.HeadingForExit"/>; with nothing answering it,
-	/// every one of those guests stood exactly where they had decided, which is what Alexah saw at the
-	/// ticket booths.
+	/// <b>This is the state four separate arms of this file send guests into.</b> Judging the fee as far
+	/// too expensive, sulking down to no happiness, giving up on a shut gate and deciding in a shut park
+	/// all set <see cref="PeepState.HeadingForExit"/>; with nothing answering it, every one of those
+	/// guests would stand exactly where they had decided.
 	/// </para>
 	/// <para>
 	/// <b>The route is asserted before the walk begins</b>, because a bus stop that turned out to be
@@ -508,11 +494,10 @@ public class PeepBehaviourTests
 	/// names somebody else.</b>
 	///
 	/// <para>
-	/// This is the gate letting one guest through at a time, and it went unbuilt until 2026-09-18.
+	/// This is the gate letting one guest through at a time.
 	/// <c>FUN_004ff7f0</c> reads a short at the cell's <c>+0x24</c> and compares it with the guest's own
 	/// thing id; that short is the head of the cell's thing list (<c>FUN_004d91f0</c> writes it), so the
-	/// question is "am I the first thing standing here?". <b>Alexah watched six guests fail it for a whole
-	/// run</b>, having judged the fee and paid.
+	/// question is "am I the first thing standing here?".
 	/// </para>
 	/// <para>
 	/// The negative arm turns on the list being LIFO: thing 99 arrives after our guest, so 99 heads the
@@ -581,20 +566,20 @@ public class PeepBehaviourTests
 	}
 
 	/// <summary>
-	/// <b>The park's own tick carries its guests through the state machine - and none of the tests above
-	/// says so.</b>
+	/// <b>The park's own tick carries its guests through the state machine.</b>
 	///
 	/// <para>
-	/// Every other test in this file builds its own walks and its own behaviour and calls
-	/// <see cref="PeepBehaviour.Step"/> directly. That proves the transitions and proves <i>nothing</i>
-	/// about the wiring: all eight would pass just as contentedly if <see cref="ParkPeople"/> had never been
-	/// changed to call the behaviour at all. This one goes through the real object, on the real clock, for
-	/// long enough that guests actually arrive.
+	/// Every other test in this file but
+	/// <see cref="EveryGuestWhoHasStoppedIsStandingRatherThanStridingOnTheSpot"/> builds its own walks and
+	/// its own behaviour and calls <see cref="PeepBehaviour.Step"/> directly, or asks a rule outright. That
+	/// proves the transitions and proves <i>nothing</i> about the wiring: those twelve would pass just as
+	/// contentedly if <see cref="ParkPeople"/> did not call the behaviour at all. This one goes through the
+	/// real object, on the real clock, for long enough that guests actually arrive.
 	/// </para>
 	/// <para>
-	/// <b>The length is the point.</b> The park's existing tick tests run about eight thing ticks, which is
-	/// why none of them noticed this work: guests need up to a hundred and eight to finish the longest route
-	/// in the park, so eight ticks is long enough to see movement and far too short to see an arrival.
+	/// <b>The length is the point.</b> Guests need up to a hundred and eight thing ticks to finish the
+	/// longest route in the park, so a run of eight - two seconds - is long enough to see movement and far
+	/// too short to see an arrival.
 	/// </para>
 	/// </summary>
 	[TestMethod]

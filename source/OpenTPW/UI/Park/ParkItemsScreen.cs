@@ -21,8 +21,7 @@ namespace OpenTPW.UI;
 /// <para>
 /// <b>The headings are in CODE, not in the stream.</b> Each sub-builder fetches the header child by id
 /// <c>0x10 + index</c> and gives it a UITEXT row: rides <b>82-86</b>, shops <b>87-91</b>, sideshows
-/// <b>92-97</b>, miscellaneous <b>98-99</b>. Walking the stream alone leaves five unnamed boxes, which
-/// is what it did until those four functions were read.
+/// <b>92-97</b>, miscellaneous <b>98-99</b>. Walking the stream alone leaves five unnamed boxes.
 /// </para>
 ///
 /// <para>
@@ -45,14 +44,13 @@ internal sealed class ParkItemsScreen : UiWindow
 	/// <remarks>
 	/// <b>Each tab's rect is the stream's own, NOT a stride from the first one.</b> The ids are not in
 	/// screen order - the builder's switch takes case 1 to <c>0x12c4bc</c> and case 2 to
-	/// <c>0x12c4bb</c> - so laying them out as <c>1283 + index * 119</c> put shops where sideshows
-	/// belong and sideshows where shops do. The arithmetic looked right because the four x positions
-	/// it produces are the four the stream holds; it was which tab got which that was wrong.
+	/// <c>0x12c4bb</c> - so laying them out as <c>1283 + index * 119</c> would put shops where
+	/// sideshows belong and sideshows where shops do, at the same four x positions the stream holds.
 	/// </remarks>
 	private static readonly Tab[] Tabs =
 	[
-		// b_srides is asked for by its first NODE name, which is not the file's - the same divergence
-		// ParkFrontEnd corrected seven meshes for. The other three resolve to their file names.
+		// b_srides is asked for by its first NODE name, b_sride, which is not the file's - the same
+		// divergence ParkFrontEnd.Meshes lists. The other three resolve to their file names.
 		new( 0, 0x12c4ba, 101, "b_srides",   UIStrings.AllRides,     82, 5, new UiRect( 1283, 195, 1386, 297 ) ),
 		new( 1, 0x12c4bc, 102, "b_sshop",    UIStrings.AllShops,     87, 5, new UiRect( 1521, 195, 1623, 297 ) ),
 		new( 2, 0x12c4bb, 103, "b_sshow",    UIStrings.AllSideshows, 92, 6, new UiRect( 1402, 195, 1504, 297 ) ),
@@ -103,9 +101,8 @@ internal sealed class ParkItemsScreen : UiWindow
 		// Built onto the park's own layer (0x00495abe), so a right press beside it is the park's.
 		ParkScreen = true;
 
-		// w_big, the node "window4" inside w_big.MD2 - the frame five screens share, and which the
-		// tree recorded as unresolvable until the models' node names were read rather than their file
-		// names. Without it this screen is a list floating over the park. See docs/exe/hud.md.
+		// w_big, the node "window4" inside w_big.MD2 - the frame five screens share. Without it this
+		// screen is a list floating over the park. See docs/exe/hud.md.
 		Root = new UiControl
 		{
 			Id = 0x12c4b7,
@@ -140,10 +137,8 @@ internal sealed class ParkItemsScreen : UiWindow
 		// goes away with it - Show() hides every list but the chosen one, and UiControl.Draw and
 		// HitTest both stop at an invisible parent.
 		//
-		// Left on the five-column list, that stranded the screen: rides -> sideshows worked, the
-		// six-column list appeared, the strip vanished with the five-column one, and no further tab
-		// could be clicked or even seen. Photographed as three different tabs all showing sideshows.
-		// UiList.Build's own remarks record the same shape of mistake from the other direction.
+		// Left on the five-column list, the strip would vanish with it the moment another shape was
+		// shown, and no further tab could be clicked or even seen.
 		//
 		// On the root it is CONTAINED by the root, so it follows the screen's anchor with no pinning -
 		// which is also what keeps the strip over the panel on a window that is not 4:3.
@@ -167,7 +162,7 @@ internal sealed class ParkItemsScreen : UiWindow
 		}
 
 		// Never assigned over AddOption's own handler, which is what lifts the other members - see
-		// ParkBuyScreen, where doing so left a screen whose tabs all stayed down.
+		// ParkBuyScreen for what assigning over it does.
 		_tabs.SelectionChanged = () =>
 		{
 			foreach ( var tab in Tabs )

@@ -271,7 +271,7 @@ Each role entry is 8 bytes, `{source index, animation pointer}`, and the pointer
 
 ### Clip length is the span the clip declares, not what its keys cover
 
-The trigger reads the block's `+0x04` and `+0x08` as **integers** — read as floats they give denormal nonsense — and multiplies the difference by the float **33.3333 at `0x006fec08`**, which is exactly 1000/30.
+The trigger reads the block's `+0x04` and `+0x08` as **integers** — read as floats they give denormal nonsense — and multiplies the difference by the float **33.3333 at `0x006fec08`** (`0x42055555`, 33.33333206), the nearest float to 1000/30 rather than the exact value.
 
 **Measured over the 1,140 clips under `levels/` that carry a block: every one declares a start of nought and an end of at least one, and 159 disagree with what their keys span** — 129 short (114 of them reading as no span at all through our own reader, which rejects clips carrying only positions and visibility) and 30 long, where the keys run past the declared end and the engine never plays them.
 
@@ -705,7 +705,7 @@ Ten handlers, and **every one reaches another script by ID through one global re
 
 **The eleven names spawned never match their file's case** — scripts ask for `Effects.rse`, `clock.rse`, `worn.rse`, `anims.rse` where the archives hold `effects.RSE`, `Clock.RSE`, `Worn.RSE`, `Anims.RSE` — **so resolution must be case-insensitive or every spawn fails.** All four scripts that spawn inside a loop run `REMOVECHILD` first.
 
-**Corpus:** `SPAWNCHILD` 20/16, `SPAWNSOUND` 28/28, `REMOVECHILD` 4/4, `SETVARINCHILD` 7/3, `GETVARINCHILD` 9/2, `GETVARINPARENT` 10/6, `SETVARINPARENT` **0**, `GETREMOTEVAR` 2 (both in `zob.RSE`, both with a literal destination, so both are test-and-branch), `SETREMOTEVAR` 10/5, `FINDSCRIPTRAND` 5/2.
+**Corpus:** `SPAWNCHILD` 20/16, `SPAWNSOUND` 28/28, `REMOVECHILD` 4/4, `SETVARINCHILD` 7/3, `GETVARINCHILD` 9/2, `GETVARINPARENT` 10/8, `SETVARINPARENT` **0**, `GETREMOTEVAR` 2 (both in `zob.RSE`, both with a literal destination, so both are test-and-branch), `SETREMOTEVAR` 10/5, `FINDSCRIPTRAND` 5/5.
 
 ### What selling a thing does to its script
 
@@ -880,7 +880,7 @@ a new world (`FUN_00407d80`, `0x0054eccb`), whose constructor builds this block 
 `+0x11` 1. `FUN_004cf050` reads and writes it as `mArrivalRate` (`+0`), `mTimeSig` (`+4`, through `FUN_0041a860`,
 `0x004cf296` in the read arm), `mTargetVehicleCapacity` (`+8`), `mPeopleOnBus` (`+0xc`), `mOffloading` (`+0x10`) and
 `mGatesOpen` (`+0x11`): the last 18 bytes of the World block's 76 bytes of arrival and clock fields (FileFormats,
-`saves.md`). Entering a park zeroes `mGameTick` (`FUN_005156a0`, `0x00515865`, from `FUN_00407e00` at `0x0054ed3f`).
+`saves.md`, "The arrival block", on its `docs/arrival-block` branch). Entering a park zeroes `mGameTick` (`FUN_005156a0`, `0x00515865`, from `FUN_00407e00` at `0x0054ed3f`).
 Later in the same pass of state 9, `FUN_005accf0` (`0x0054f12b`) loads the newest `*.TPW*` in the player's folder for
 the theme over it, through `FUN_00414d40( path, 0, 2 )` (`0x005ad054`), `FUN_00415270` and `FUN_005179c0`, which reads
 `mGameTick` at `0x00517bec` and this block at `0x00518202`. Nothing writes either between that load and the first
@@ -951,7 +951,7 @@ over both for an Instant Action park, sets `PointsPerVisitor` to 5:
     Arrival.PointsPerVisitor     6
 
 Each fills the global named above (proven by the slot table). Read them with `ParkBalance.Int( "Arrival.X",
-fallback )`: the `SAMParser` quirk applies only to multi-value lines, and these five are ordinary single-value keys.
+fallback )`; these five are ordinary single-value keys.
 
 **OpenTPW keeps the same clock and the same mark, and takes the manager's arms in its order** (`ParkPeople.StepArrivals`,
 Q68b). `ParkState.GameTick` is `mGameTick`: seeded from the save and one up as each thing sweep begins, before
@@ -1025,7 +1025,7 @@ Jungle: **16,134 cells are status 3 and 250 are status 7**. The first cell's sta
 
 The compass is `0x01 N, 0x02 NE, 0x04 E, 0x08 SE, 0x10 S, 0x20 SW, 0x40 W, 0x80 NW` **with N at -y**, so `0x44` (E+W) is a horizontal straight at angle 90 while `0x11` (N+S) is a vertical one at angle 0. **The two edge masks are the proof of the bit order**: `0x1f` is N,NE,E,SE,S and `0xf1` is N,S,SW,W,NW — every connection on one side, which is what an edge tile is.
 
-**ANSWERED 2026-09-21 — the rule that GENERATED `mNeighbours` is `FUN_005348d0`, and the reason no sweep could ever fit it is that it is INCREMENTAL and ORDER-DEPENDENT.** Full decode in `docs/exe/park-engine.md`, "Building and deleting paths and queues". A sweep of member sets x diagonal rules tops out at **67/78**, and splitting the member set so cardinals admit `{1,9,10}` while diagonals admit only `{1}` reaches **73/78** — but no pure function of the final map can reach 78, because:
+**The rule that GENERATED `mNeighbours` is `FUN_005348d0`, and the reason no sweep could ever fit it is that it is INCREMENTAL and ORDER-DEPENDENT.** Full decode in `docs/exe/park-engine.md`, "Building and deleting paths and queues". A sweep of member sets x diagonal rules tops out at **67/78**, and splitting the member set so cardinals admit `{1,9,10}` while diagonals admit only `{1}` reaches **73/78** — but no pure function of the final map can reach 78, because:
 
 - the cardinal test is **type-dependent**: mType 1 links unconditionally, mType 10 only when `nb.mDirection & Opposite(D)`, mType 9 only when `nb.mDirection & D`, and mType 3 **never forms a new link at all**;
 - diagonals are set by **two non-equivalent tests**, one strict and symmetric on the cell being placed, one weak and **one-sided** on its neighbour — so `mNeighbours` is legitimately asymmetric;
@@ -1121,7 +1121,7 @@ It makes one `ModelEntity` per mesh, resolves each material as `{textureDirector
 
     vs_out.vWorldNormal = mat3(g_oUbo.g_mModel) * vec3(normal.x, normal.z, normal.y);
 
-So **anything that computes its own normals in engine space must hand them over with Y and Z already exchanged**, or that line turns them on their side: a flat ground's `(0,0,1)` becomes `(0,1,0)` and level land is lit as though it were a wall. This was a real bug in `ParkGround` — the ground rendered dark and muddy — and **it is invisible in a build, because nothing is wrong except the picture.**
+So **anything that computes its own normals in engine space must hand them over with Y and Z already exchanged**, or that line turns them on their side: a flat ground's `(0,0,1)` becomes `(0,1,0)` and level land is lit as though it were a wall. Ground lit that way renders dark and muddy, and **it is invisible in a build, because nothing is wrong except the picture.**
 
 Related: `vAmbient = g_flAmbient > 0.0 ? g_flAmbient : 0.4` — world draws leave `g_flAmbient` at zero and take the shader's flat 0.4, so geometry is never unlit. **If something looks black, suspect the normal, not the light.** And the shader's ambient is a single float, so `ThemeEngine.AmbientLightLevel` (a colour, 0xFF555568) cannot be applied without changing what every draw is handed.
 
@@ -1145,11 +1145,11 @@ What the binary invalidates:
 
 `LobbyModel.LoadAnimations` reads role `M` only — one role in twelve — taking the bare `{stem}M.md2` as well as the numbered run, **under the engine's own condition: the bare file only where the numbered run came back empty.** The other eleven roles reach a park thing through `RideAnimations`, which is handed to it rather than probed. `ParkObjects.PoseAsBuilt` loads `{stem}c.md2` and calls it the construction clip, and that is **animation id 0**. All twelve roles are read for a park thing, by `RideAnimations.Load`, and a channel names its clip by role and entry (`RideAnimations.Clip`).
 
-**Bare-only-M models outside `levels/`: zero**, so the bare-file probe cannot touch the lobby. But **91 models ship more than one numbered M clip**, and **8 of them are lobby models** — `*_gate` with 3 and `*_isle` with 2, in all four themes — plus the advisor with 15. `MeshAnimator` cycles every clip in turn; `MeshRotator` caps at `ClipsUsed = 2` and reads M1/M2 as a gate's open and shut, which is deliberate, screenshot-verified lobby behaviour. **So a channel must be something a park model opts into, leaving lobby playback exactly as it is.**
+**Bare-only-M models outside `levels/`: zero**, so the bare-file probe cannot touch the lobby. But **91 models ship more than one numbered M clip**, and **8 of them are lobby models** — `*_gate` with 3 and `*_isle` with 2, in all four themes — plus the advisor with 15. `MeshAnimator` cycles every clip in turn and `MeshRotator` the first two (`ClipsUsed = 2`), but neither loops a gate: `LobbyGate` poses M1 once as the park-entry flight swings onto it and M2 when Escape cancels the flight, each over the span it declares (`lobby.md`, "Escape cancels the fly-in, and the gate is the flight's"). **So a channel must be something a park model opts into, leaving lobby playback exactly as it is.**
 
 Known divergences still open, both in lobby playback, which a park thing does not use: `MeshAnimator` and `MeshRotator` keep private clocks, and play `FirstFrame..LastFrame` where the engine plays **0 -> declared span** (159 clips disagree). For a park thing the per-clip hide list is still unread, and `PoseAsBuilt` hand-rolls its effect after the build.
 
-`AnimationFile.VisibilityTrack` already matches the engine's visibility rule exactly. `AnimationFile.RotationTrack.Ease` now obeys the easing table. The per-clip hide list is **still unread by us**.
+`AnimationFile.VisibilityTrack` already matches the engine's visibility rule exactly. `AnimationFile.RotationTrack.Ease` obeys the easing table. The per-clip hide list is **still unread by us**.
 
 **The gate's numbered clips differ by theme:** jungle and hallow ship `gatesm1`, `gatesm2` and `gatesm3`; **fantasy ships none, and space four** (`gatesm1..m4`). Fantasy ships `gatese/gatesi/gatesm/gatess.MD2` and no numbered clip; `gatesm.MD2` is real at morph 2, frames 0..50.
 
@@ -1167,9 +1167,9 @@ Known divergences still open, both in lobby playback, which a park thing does no
 | `animation-validity-probe-2026-09-15.txt` | validity vs span, and the ten items whose numbered walk is truncated by a clip `TryLoad` rejects |
 | `animation-channel-verdicts-2026-09-15.json` | 11 channel claims, one skeptic each: 8 confirmed, 3 refuted (127 KB), with the journal beside it |
 | `channel-seams-2026-09-15.json` | the five-reader workflow behind the six decompiled channel functions (128 KB, 74 findings and a completeness critic) |
-| `md2dump/` | the whole corpus already extracted: **1,796 `.md2` files** (1,780 from the 306 level archives, plus the advisor's 16), one directory per archive keyed `theme__folder__name` so nothing collides. **Sweep this tree rather than rebuilding it** |
+| `md2dump/` | the whole corpus already extracted: **1,796 `.md2` files** (1,780 from the 306 level archives, plus the advisor's 16), one directory per archive keyed by its path under `data/`, `/` written `__` (`levels__jungle__features__gates`, `levels__jungle__terrain`, `global__advisor`), so nothing collides. **Sweep this tree rather than rebuilding it** |
 | `rolecensus.py` | applies the engine's own probe rule (numbered from 1, bare only if that run found nothing) to every archive's own name table — no decompression needed. Pass `--by-archive` to reproduce the older, narrower per-archive number |
-| `rsewalk.py` | carries the `.RSE` format, the 106-entry table and every check above. **Re-run it rather than writing another.** It extracts with a per-wad subdirectory — keying output by the wad's own folder loses the theme (every script sits in a `rides`/`shops`/`features` folder) and silently collapses 262 wads into 203, overwriting scripts |
+| `rsewalk.py` | carries the `.RSE` format, the 106-entry table and every check above. **Re-run it rather than writing another.** Its header's extraction recipe keeps a per-wad subdirectory — keying output by the wad's own folder loses the theme (every script sits in a `rides`/`shops`/`features` folder) and silently collapses 262 wads into 203, overwriting scripts |
 
 **`wadcat` is not on PATH**: its location is in `CLAUDE.local.md`, and it is **the DEBUG build, which matters.** A stale `bin/Release` copy is still on disk and its own usage line offers only `--list|--id|--bounds|--meshes|--anim|--cat`: **no `--dump`, no `--field`, no `--heights`**. Reaching for the Release path and finding `--dump` missing **looks exactly like a broken tool and is not one** — it is an out-of-date build. Its interface is `wadcat --list|--id|--bounds|--meshes|--anim|--field|--heights <wad>…` or `wadcat --cat|--dump <SUFFIX> <wad>…` - **the suffix comes first**, there is no `--out`, and **`--dump` is the one that EXTRACTS files**, into the working directory. Invoked wrongly it does nothing quietly, so "no scripts were dumped" reads exactly like "these archives carry no scripts". `--cat` writes nothing to disk: it prints every matching member to stdout behind banners, and has produced a false finding. `wadcat --anim <wad>` prints each clip's readability and its rot/morph/uv/pos/vis counts, which is how "what does this clip actually drive" is answered. Note `wadcat` is built against **our own `AnimationFile`**, so its `frames a..b` is the KEY-derived span and its `readable` is our `IsValid`; **it cannot independently check a declared span.**
 

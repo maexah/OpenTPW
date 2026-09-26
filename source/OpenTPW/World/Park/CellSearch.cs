@@ -33,9 +33,8 @@ namespace OpenTPW;
 /// one step in the new direction, <i>is</i> the entered cell. Its other half asks about the edge the walk
 /// has just crossed, which is open by construction or the walk would not be here. So both of its edge
 /// tests have answers that are already known. They are kept because the original makes them, and the
-/// if/else is an optimisation rather than a second opinion - an earlier draft of this comment called the
-/// two ways round "exclusive" where the straightener's are "independent", which reads as a difference in
-/// behaviour and is not one.
+/// if/else is an optimisation rather than a second opinion: asking the two ways round independently, as the
+/// straightener does, gives the same answer every time.
 /// </para>
 /// </summary>
 public sealed class CellSearch

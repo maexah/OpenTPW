@@ -44,7 +44,7 @@ internal abstract class UiWindow
 	/// player dialog does not.
 	///
 	/// <para>
-	/// <b>The game menu is more awkward than this used to say.</b> GameMenu_Open (0x0048c830) asks only on
+	/// <b>The game menu asks in one scene only.</b> GameMenu_Open (0x0048c830) asks only on
 	/// its park path: it branches on its scene argument at 0x0048c83a, and the non-zero the lobby passes
 	/// (0x005e4207) builds the lobby's menu and returns without reaching the pause at all. So the same
 	/// widget asks in one scene and not in the other.
@@ -59,8 +59,8 @@ internal abstract class UiWindow
 	public bool Pauses { get; protected init; }
 
 	/// <summary>
-	/// Whether it is put away for the time being: still open, but neither drawn nor pointed at. The
-	/// options screen puts the front end's window away like this while it is up (message 6, 0x004a3a30).
+	/// Whether it hides itself for the time being: still open, but neither drawn nor pointed at. The
+	/// window decides it itself; the options screen's message 6 sets <see cref="PutAway"/> instead.
 	/// </summary>
 	public bool Hidden { get; set; }
 
@@ -69,16 +69,14 @@ internal abstract class UiWindow
 	/// <c>OptionsScreen_Open</c> sends to the interface root before it opens over everything.
 	///
 	/// <para>
-	/// <b>Separate from <see cref="Hidden"/> because they have different owners, and sharing one flag was a
-	/// bug.</b> <see cref="Hidden"/> belongs to the window itself: <c>ParkGadget</c> and
-	/// <c>ParkViewfinder</c> both decide it afresh in their own <c>Update</c>, every frame. Putting a window
-	/// away belongs to whatever is opening over it. While the two shared a flag, the options screen would
-	/// put the park's gadget away and the gadget's very next <c>Update</c> would assign over the top of it -
-	/// a window told to go away that came back one frame later, drawn under the options screen's dimmed
-	/// backdrop.
+	/// <b>Separate from <see cref="Hidden"/> because they have different owners.</b> <see cref="Hidden"/>
+	/// belongs to the window itself: <c>ParkGadget</c> and <c>ParkViewfinder</c> both decide it afresh in
+	/// their own <c>Update</c>, every frame. Putting a window away belongs to whatever is opening over it.
+	/// With one flag for both, the gadget's next <c>Update</c> would assign over the options screen's, and
+	/// a window told to go away would come back one frame later, under the options screen's dimmed backdrop.
 	/// </para>
 	/// <para>
-	/// <b>Not fixed by leaving hidden windows un-updated, which was the shorter answer and the wrong one.</b>
+	/// <b>A hidden window is still updated.</b>
 	/// <c>ParkViewfinder</c> is constructed hidden and relies on its own <c>Update</c> to bring itself back
 	/// when camcorder mode starts, so a window that stops being updated while hidden would never return.
 	/// </para>

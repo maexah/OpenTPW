@@ -7,8 +7,7 @@ namespace OpenTPW;
 /// <para>
 /// <b>The original keeps exactly one of these for the whole game</b> - the particle object at
 /// DAT_008bcbac, drawn once a frame by FUN_0057ff60 - and the lobby and a park differ only in the
-/// values they push into it. So this belongs beside the engine rather than in either scene's folder,
-/// which is what its own remarks below already said before anything but the lobby used it.
+/// values they push into it. So this belongs beside the engine rather than in either scene's folder.
 /// </para>
 ///
 /// RAINY(n) in a park's script sets a rain level, and the original copies the currently selected
@@ -42,7 +41,7 @@ public sealed class Rain : WeatherSprites
 	/// <see cref="Camera.HorizontalTangent"/> - and a box sized for 4:3 leaves the storm stopping
 	/// short of both edges of it, badly so on an ultrawide, where the frustum is close to twice as
 	/// wide as the box. So the authored width is opened out by however much wider than 4:3 the view
-	/// has become, and never narrowed: at 4:3, and at anything taller, this is the 44 it always was.
+	/// has become, and never narrowed: at 4:3, and at anything taller, this is the authored 44.
 	/// </summary>
 	private static float HalfWidth => HalfVolume.X * Spread;
 
@@ -76,7 +75,7 @@ public sealed class Rain : WeatherSprites
 	/// Every drop shares one tint, so there is no per-drop alpha to fade - but shrinking the quad
 	/// does the same job here, because what it cancels is exactly the perspective growth that
 	/// caused the problem. A drop's apparent size stays roughly put as it closes, and then it is
-	/// gone. A hard cutoff was doing this with a pop at ten percent of the screen's height.
+	/// gone.
 	/// </summary>
 	private const float NearHidden = 6f;
 	private const float NearSolid = 14f;
@@ -87,7 +86,10 @@ public sealed class Rain : WeatherSprites
 	/// <summary>How quickly rain fades in and out when the camera changes island.</summary>
 	private const float FadeRate = 2.2f;
 
-	/// <summary>0 for dry, 1 for a park asking for RAINY(1). Set by <see cref="LobbyWeather"/>.</summary>
+	/// <summary>
+	/// 0 for dry, 1 for a park asking for RAINY(1) in the lobby or for the heaviest rain a park's balance
+	/// file allows. Set by <see cref="LobbyWeather"/> and <see cref="ParkWeather"/>.
+	/// </summary>
 	public float Level { get; set; }
 
 	private readonly Vector3[] _drops;

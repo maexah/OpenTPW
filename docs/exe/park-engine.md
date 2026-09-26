@@ -1,6 +1,6 @@
 # The park engine, from the executable
 
-What `testme.exe` says about park loading, terrain, the camera, the clock, the save container and the park's interaction modes. The body of it comes from a six-agent Ghidra pass over `/testme.exe` on 2026-09-13 (7/7 agents, 0 errors, ~1.42M tokens, 627 tool calls) plus an adversarial cross-check agent, extended by targeted traces from 2026-09-14 to 2026-09-24; most later sections name their own date or `docs/QUEUE.md` item. Confidence labels are the agents' own with the cross-check's corrections applied; where something is unverified or refuted, it says so, and **that is part of the fact**. Read this beside the park data-layout page (`docs/exe/park.md`), which holds what was measured off the game's own files — this page holds what the executable says.
+What `testme.exe` says about park loading, terrain, the camera, the clock, the save container and the park's interaction modes. The body of it comes from a six-agent Ghidra pass over `/testme.exe` on 2026-09-13 (7/7 agents, 0 errors, ~1.42M tokens, 627 tool calls) plus an adversarial cross-check agent, extended by targeted traces from 2026-09-14 to 2026-09-25; most later sections name their own date or `docs/QUEUE.md` item. Confidence labels are the agents' own with the cross-check's corrections applied; where something is unverified or refuted, it says so, and **that is part of the fact**. Read this beside the park data-layout page (`docs/exe/park.md`), which holds what was measured off the game's own files — this page holds what the executable says.
 
 ---
 
@@ -63,7 +63,7 @@ Jungle: **96x85 cells, 97x86 vertices, 8342 heights, 8160 cell records.** Valida
 
 The RE pass reported "`0x0800` set means choose the triangle diagonal from `0x0004`". The `0x0800` half is right about the bit but wrong about where it comes from (it is computed at load — see below), and **the `0x0004` half is still unverified.**
 
-Hunting the terrain renderer `FUN_0056f670` for it found 32 sites pairing `TEST ?H,0x8` with `TEST byte ptr [reg+0x1],0x4`, which looks exactly like the rule. It is not. All 32 sites were traced and every one has the same shape:
+Hunting the terrain renderer `FUN_0056f670` for it found 16 sites pairing `TEST ?H,0x8` with a test of `0x4` in the cell's high byte (`TEST byte ptr [reg+0x1],0x4`, or `TEST AH,0x4` at `0x0056fb0e` and `0x0056fd67`), which looks exactly like the rule. It is not. All 16 sites were traced and every one has the same shape:
 
     MOV  EDX, dword ptr [0x008bcbc8]   ; the RENDER-STATE global, reloaded right here
     TEST DH, 0x8                       ; so this is render-state 0x0800, never a cell
@@ -75,9 +75,9 @@ Hunting the terrain renderer `FUN_0056f670` for it found 32 sites pairing `TEST 
     SHR  EDX, 1
     AND  EDX, 0x7f7f7f                 ; halve it
 
-So the rule is **"render-state `0x0800` clear AND cell `0x0400` set → halve this corner's colour"**, and the 32 repeats are the four corners unrolled across several vertex-emission paths. The tempting second hypothesis — that `DX` might hold the cell flags, making `TEST DH,0x8` the cell's `0x0800` — is **refuted** by the reload two instructions earlier.
+So the rule is **"render-state `0x0800` clear AND cell `0x0400` set → halve this corner's colour"**, and the 16 repeats are the four corners unrolled across several vertex-emission paths. The tempting second hypothesis — that `DX` might hold the cell flags, making `TEST DH,0x8` the cell's `0x0800` — is **refuted** by the reload two instructions earlier.
 
-**So the diagonal choice has NOT been located, and the cell's `0x0800` has no consumer found anywhere yet. Do not implement it from the old note, and do not assume `0x0004` or `0x0400` is it — both have been checked and neither is.** The remaining lead is the triangle emission itself inside `FUN_0056f670` (5793 bytes, heavily unrolled), which would need a full decompile.
+**So the diagonal choice has NOT been located, and the cell's `0x0800` has no consumer found anywhere yet. Do not implement it from the RE pass's report, and do not assume `0x0004` or `0x0400` is it — both have been checked and neither is.** The remaining lead is the triangle emission itself inside `FUN_0056f670` (5793 bytes, heavily unrolled), which would need a full decompile.
 
 | Address | What it is |
 |---|---|
@@ -118,7 +118,7 @@ Counted off the shipped file:
 Three things fall out.
 
 - **`flags == 0x1` occurs exactly 1,159 times and so does `textureIndex == 0`, and they are the same cells.** Index 0 is not a ground texture at all but the holes in the ground, and those cells trace out the river and the paths — they match the blank shapes in `2dmap.tga`.
-- **Mirror (`0x40`) is set on 83% of cells**, so it is the norm rather than the exception and must be implemented, not skipped.
+- **Mirror (`0x40`) is set on 84% of cells**, so it is the norm rather than the exception and must be implemented, not skipped.
 - **40.5% of horizontally adjacent cells have different texture indices.** The ground genuinely alternates between 27 and 57, so a correct render looks like a check, not a field. **Do not "fix" that.**
 
 This distribution is itself corroboration of the `{flags, texture}` split rather than the four-byte reading.
@@ -129,7 +129,7 @@ This distribution is itself corroboration of the `{flags, texture}` split rather
 
     pbVar3 = (byte *)(cells + 1 + (y * cellsX + x) * 4);   *pbVar3 |= 8;
 
-Byte `+1` of the 4-byte record is the HIGH byte of the flags u16, so `|= 8` there is `0x0800` in the word. It means "this cell is not planar", and the renderer then picks the triangle diagonal from `0x0004`. **A loader must derive this bit itself; reading it off disk gives zero everywhere.**
+Byte `+1` of the 4-byte record is the HIGH byte of the flags u16, so `|= 8` there is `0x0800` in the word. It means "this cell is not planar"; nothing that reads it has been found (above). **A loader must derive this bit itself; reading it off disk gives zero everywhere.**
 
 | Address | What it is |
 |---|---|
@@ -150,7 +150,7 @@ Byte `+1` of the 4-byte record is the HIGH byte of the flags u16, so `|= 8` ther
     if (flags & 0x10)  swap p0/p2 and p1/p3      <- two
     if (flags & 0x20)  p = [p1, p2, p3, p0]      <- three
 
-Mirror is a **diagonal reflection** (it exchanges the two off-diagonal corners), not a flip in x or y, and it happens **before** the rotation. The rotation bits are one/two/three quarter turns of the corner list, which agrees exactly with the `0 -> 0x08 -> 0x10 -> 0x20 -> 0` cycle the footprint stamper `FUN_00463060` uses. The three bits are mutually exclusive (they are a field, `flags & 0x38`), so the tests read as if/else even though they are written as three ifs. Mirror is set on 83% of jungle's cells, so **none of this is skippable**.
+Mirror is a **diagonal reflection** (it exchanges the two off-diagonal corners), not a flip in x or y, and it happens **before** the rotation. The rotation bits are one/two/three quarter turns of the corner list, which agrees exactly with the `0 -> 0x08 -> 0x10 -> 0x20 -> 0` cycle the footprint stamper `FUN_00463060` uses. The three bits are mutually exclusive (they are a field, `flags & 0x38`), so the tests read as if/else even though they are written as three ifs. Mirror is set on 84% of jungle's cells, so **none of this is skippable**.
 
 ### How a cell's textureIndex becomes an actual texture
 
@@ -276,7 +276,7 @@ Terrain-following is probably real, but **the sampler's identity is disputed bet
 | `_DAT_007018c0` | The double 0.5 |
 | `_DAT_0074c9b8` × `_DAT_006fdd80` | `(pi/2) * (180/pi)` = **90 exactly**, computed, not a literal |
 
-With 4:3 the rays are `(+/-1.333, +/-1.0, 1)`: **vertical half-angle 45, horizontal 53.13 → vfov 90, hfov 106.26.** OpenTPW was already right about this and nothing changed.
+With 4:3 the rays are `(+/-1.333, +/-1.0, 1)`: **vertical half-angle 45, horizontal 53.13 → vfov 90, hfov 106.26.** OpenTPW's `Camera` takes a camera mode's `FieldOfView` as its vertical angle at 4:3, and both park camera modes ask for 90.
 
 **The one inferred link:** `DAT_008bcbcc` is written at runtime through a struct pointer (the only static write, at `0x00582da8`, is the defaults initialiser zeroing `[base+4]` of the render struct at `0x008bcbc8`), so its 0.75 is **inferred, not read**. Corroboration: the picking code `FUN_0045bf90` carries 0.75 as a literal **double** at `_DAT_006fe640` and takes `atan(0.75)` to build the same frustum; and `FUN_00449ec0`'s mode table is 160x120 / 320x240 / 400x300 / 512x384 / 640x480 / 800x600 / 1024x768 / 1280x1024 / 1600x1200 / 2048x1536 — **every mode 4:3 except 1280x1024**, which is what `Camera.ReferenceAspect` already says.
 
@@ -339,7 +339,7 @@ Container: a fixed **1549-byte preamble**, then a **`'BILZ'`-tagged zlib block**
 
 Bytes `0x600..0x60C` are `00 00 00 00 00 | 01 22 19 85 | 00 00 00 00`.
 
-**One recorded defect is withdrawn.** The claim that a reader "reads the copyright and type fields one byte early — they start at 5 and 0x605, not 4 and 0x604" is **wrong about the type**: the type is at `0x604` and the version byte at `0x608`, exactly where `SaveReader` already reads them. **Only the copyright read was off, by the pad byte at 4, and `SaveReader` now steps over the notice instead of reading it.** The container walk — `"BILZ"` at `0x60D`, then dword, dword, 16 bytes, landing at `0x629` — is therefore correct.
+**One recorded defect is withdrawn.** The claim that a reader "reads the copyright and type fields one byte early — they start at 5 and 0x605, not 4 and 0x604" is **wrong about the type**: the type is at `0x604` and the version byte at `0x608`, exactly where `SaveReader` already reads them. **Only the copyright read was off, by the pad byte at 4, and `SaveReader` steps over the notice.** The container walk — `"BILZ"` at `0x60D`, then dword, dword, 16 bytes, landing at `0x629` — is therefore correct.
 
 **No height array is stored in a save.**
 
@@ -431,9 +431,9 @@ Stopwatch fields: `+0x30` = paused, `+0x28` = the time captured at the pause, `+
 
 Pause object fields: **`+0x1c` = paused, `+0x20` = quiet flag, `+0x3c` = park running.**
 
-**Every SCREEN-DRIVEN call site passes `PUSH 0x0; PUSH 0x0`** — six of them (`0x0047f26c`, `0x0049f29f`, `0x004a93d7`, `0x0048c87e`, `0x0049efba`, `0x004a3a6c`) — so for a menu, a message box or the options screen the quiet flag is 0 and the sound half of a pause is `Advisor_PauseVoice()` + `FUN_0051c1c0(1)` (which only writes `DAT_00803ad2`). **So a park's music keeps playing under the menu**, which is the part that stands.
+**Every SCREEN-DRIVEN call site passes `PUSH 0x0; PUSH 0x0`** — six of them (`0x0047f26c`, `0x0049f29f`, `0x004a93d7`, `0x0048c87e`, `0x0049efba`, `0x004a3a6c`) — so for a menu, a message box or the options screen the quiet flag is 0 and the sound half of a pause is `Advisor_PauseVoice()` + `FUN_0051c1c0(1)` (which only writes `DAT_00803ad2`). **So a park's music keeps playing under the menu.**
 
-**But the window procedure passes `(1, 1)`.** `FUN_0046b600`'s `WM_ACTIVATEAPP` branch calls `Game_Pause(1,1)` at `0x0046b74c`, and arg2 non-zero takes the **voice-pausing** path `FUN_0051bcf0` and never touches the listener. So that path **is** taken offline — on **alt-tab** — and this page's "never taken offline" is refuted. (One site, `0x005f0b7f`, pushes `EBP` twice and its value was not established.)
+**But the window procedure passes `(1, 1)`.** `FUN_0046b600`'s `WM_ACTIVATEAPP` branch calls `Game_Pause(1,1)` at `0x0046b74c`, and arg2 non-zero takes the **voice-pausing** path `FUN_0051bcf0` and never touches the listener. So that path **is** taken offline, on **alt-tab**. (One site, `0x005f0b7f`, pushes `EBP` twice and its value was not established.)
 
 `FUN_0051bcf0` / `FUN_0051bd30` post commands differing only in payload address (`0x0070a268` vs `0x0070a270`), whose handlers `0x006b8e40` / `0x006b8eb0` are byte-identical but for one operand — `CALL [EDX+0x38]` against `CALL [EDX+0x3c]`, two adjacent virtual slots on the same sound object. That shape is a **suspend-all / resume-all pair**. Which matters for more than accuracy: **the original owns a primitive that holds the whole mix, spends it on losing focus, and pointedly does not use it for the park menu** — the menu takes the listener branch instead. That is the best evidence available that a park menu was never meant to silence everything.
 
@@ -458,7 +458,7 @@ The real peep module is `0x004f9000`-`0x00512000`, **281 functions / 95,152 byte
 
 **A sweep that cannot run is dropped, not owed.** The step counter and the baseline are moved before anything is tested (`0x0054f4c7`, `0x0054f4d6`), so nothing makes a lost sweep up later. At most three sweeps run in a rendered frame: `[0x00879064]` counts them (`0x0054f680`, `0x0054f696`), is reset each frame (`0x0054fc2a`) and in the routine the park's load registers at `0x0054ecbc` (`0x0054e32f`), and a step past the third jumps to `0x0054f828`, which still runs `0x0055a470` and the every-32nd block. The loop keeps no more than 2 s of backlog (`0x0054f49b`). And an inactive full-screen window skips each whole step (`0x0054f4d4`-`0x0054f4e5`; `weather.md`), which in an ordinary park, paused on losing focus (`0x0046b74c`), costs only the steps still owed. The every-30th test at `0x00516453` and the every-100th at `0x004d7b4f` count sweeps too. **OpenTPW runs every sweep `GameClock` owes**, up to its 2 s cap, so eight after a long stall (Q126).
 
-**Entering a park re-bases the baselines**: `0x0054ed7c` reads the clock three times into `[0x00878c74]`, `[0x0087879c]` and **`[0x00878a1c]`**, so the seconds spent loading are not owed as ticks. *(This third one read `[0x008786bc]` and was wrong by one dword: `0054eda4` is `a3 1c 8a 87 00` = `MOV [0x00878a1c],EAX`. `0x008786bc` is the per-frame clock SAMPLE all three alphas are measured against, not a baseline, and `0x008786c0` — one along — is written at `0054edb6`. The three baselines pair with the three rates 1/31, 1/62 and 1/248.)*
+**Entering a park re-bases the baselines**: `0x0054ed7c` reads the clock three times into `[0x00878c74]`, `[0x0087879c]` and **`[0x00878a1c]`**, so the seconds spent loading are not owed as ticks. *(`0054eda4` is `a3 1c 8a 87 00` = `MOV [0x00878a1c],EAX`. `0x008786bc` is the per-frame clock SAMPLE all three alphas are measured against, not a baseline, and `0x008786c0` — one along — is written at `0054edb6`. The three baselines pair with the three rates 1/31, 1/62 and 1/248.)*
 
 ---
 
@@ -603,7 +603,7 @@ It is **shortcuts action 16, key `'C'` (`0x43`), no modifier**, and it has two w
 
 The "operator new twice behind SEH" part is a **shared prologue**, not camcorder's own work — `FUN_00497bc0` (the coaster builder bar) has it verbatim.
 
-**The handler chain is all read-only.** Entry 16's handler `0x0040c5c0` is one of a run of 24 identical **16-byte thunks** (`MOV ECX,<object>; CALL <handler>; MOV EAX,1; RET`) living at `0x0040c3a0`..`0x0040c820`. **None of them is a function to Ghidra** — they are only ever reached through the table's pointer, so `decompile` refuses them and xrefs find nothing. Decode the bytes by hand, or create the function. Camcorder's thunk calls `FUN_00481a10`, which happens to be the one call target in that run that Ghidra *does* have as a function.
+**The handler chain is all read-only.** Entry 16's handler `0x0040c5c0` is one of 23 identical **16-byte thunks** (`MOV ECX,<object>; CALL <handler>; MOV EAX,1; RET`) among the key handlers at `0x0040c3a0`..`0x0040c820`. **None of them is a function to Ghidra** — they are only ever reached through the table's pointer, so `decompile` refuses them and xrefs find nothing. Disassemble them with `api.disassemble(addr)` (the trap above), or create the function; do not compute rel32 by hand. Camcorder's thunk calls `FUN_00481a10`, which happens to be the one call target of the 23 that Ghidra *does* have as a function.
 
 ### Walking on the ground is swept against the cell edges, by the guests' own test
 
@@ -709,7 +709,7 @@ an **entrance**, a cell of type 9 (`FUN_00536340`, `[cell+8] == 9`): it reads th
 the thing chain of that owner's cell (`+0x24`, the next at the thing's `+0xa`), and returns the first catalogue object
 (kind byte `+2` is 3) whose item's `+0x118` is nought. `+0x118` is **`UsageInfo.CannotRide`**, row 11 of the descriptor
 key table at `0x00745940` (rows of `0x3c` bytes, row 0 at `+0xec` and four bytes a row, which rows 21, 27 and 28
-confirm as `+0x140`, `+0x158` and `+0x15c`); its values in the shipped files are FileFormats `sam.md`'s. On a hit the loop runs `FUN_00412e90( 0x7890a0, item )`, whose
+confirm as `+0x140`, `+0x158` and `+0x15c`); its values in the shipped files are FileFormats `sam.md`'s, on its `docs/sam-and-saves-corrections` branch. On a hit the loop runs `FUN_00412e90( 0x7890a0, item )`, whose
 answer it drops, then the thing's `FUN_004e15b0( 1 )`, the ride window's "Ride it!" (`hud.md`) entered from first
 person, and ends the sweep (`0x0042c5b6`); the position is still written back. **OpenTPW** has no ride view: `Slide`
 asks the same question after every pass (`ParkCamcorderCameraMode.RideAt`, the objects anchored on the owner's cell
@@ -911,10 +911,10 @@ Decompiled 2026-09-22. The per-cell op worker switches on its op byte:
 the step's bit and the neighbour gains the opposite, which is the symmetric link
 `ParkPathNeighbours.Cardinal` already performs.
 
-**It is NOT the only writer, and an earlier version of this page said it was.** `FUN_00522700` is
-called from `FUN_00524960`, `FUN_00528a70`, `FUN_0052a050`, `FUN_0052fc80` and `FUN_0053b280` as well
+**It is NOT the only writer.** `FUN_00522700` is
+called from `FUN_00524960`, `FUN_00528a70`, `FUN_0052a050`, `FUN_0052fc80`, `FUN_0053b280`, `FUN_0053bc60` and `FUN_00539220` as well
 as from inside the rule. The placer's two are the ones that matter — see "What authors an entrance's
-`mNeighbours`" below — and missing them is what left Q3's central question open for a session.
+`mNeighbours`" below.
 
 **A lead recorded as refuted, because it is the obvious thing to chase next and it is wrong.** The
 placer calls ops `0x81`, `0x85` and `0x86` immediately after each `FUN_005348d0`, which invites the
@@ -938,11 +938,11 @@ south (`…ba8`) `& 0x10`, east (`…bc8`) `& 0x04`, west (`…bd0`) `& 0x40`. *
 direction FROM the cell being laid TO the neighbour**, and `ParkPathNeighbours.Cardinal` already
 matches it exactly — its sense is right.
 
-**The consequence is worth stating, because it is what blocks queueing for a thing built in play.**
+**The consequence is worth stating, because under this rule alone a thing built in play could never be queued.**
 A path laid on the `-y` side of an entrance steps south, so it tests `& 0x10`; the shipped Belly
 Bounce's entrance at (52,23) carries `direction 0x01` with its queue on that same `-y` side. Under
 this rule that link could never have been earned — **so the shipped entrance's `mNeighbours` bit is
-authored, not computed**, which is what `park.md`'s "replay creation order" warning (under "`mNeighbours`, `mDirection` and the compass") is about.
+authored, not computed**, which is what `park.md`'s "replaying creation order" warning (under "`mNeighbours`, `mDirection` and the compass") is about.
 What authors it is the next section.
 
 ### What authors an entrance's `mNeighbours` — the placer's post-sweep pair
@@ -984,8 +984,7 @@ The entrance is addressed through the globals `DAT_00818c20` (x) and `DAT_00818c
 `case 9` arm at `0x005293a1`; the cell it faces through `iStack_54`/`iStack_58`. **Read these four call
 sites as disassembly.** The decompiler drops the `this` pointer, so all four print as bare
 `FUN_00522700( uStack_5c )` / `FUN_005227e0( … )` with the two *different* cells invisible — only
-`ECX = EDI` against `ECX = ESI` separates them. Reading the decompilation alone is what produced the
-"written in exactly one place" claim corrected above.
+`ECX = EDI` against `ECX = ESI` separates them.
 
 **The shipped park confirms both cells at once.** The Belly Bounce is anchored (51,23) at angle 0, so
 the base bit is 1 and the rotate is the identity. Its entrance at (52,23) carries `direction 0x01`,
@@ -1039,10 +1038,9 @@ pairing is read from the placer's own dispatch rather than taken from the table 
 `> 0x80` fold means a MULTI-bit input would not rotate correctly — the placer only ever passes one bit.
 
 **A bit and a delta turn the same way at 0 and at 180 whichever sense is chosen**, so only a quarter or
-three quarters can tell a wrong one apart. That is how OpenTPW's `ParkBuilding.RotateBit` carried the
-inverted sense — with a test asserting the inverted value, and `RotateDelta` beside it correct — until
-this was read: a thing built at a quarter turn had its way in pointing 180 degrees from its own entry
-cell, back across its own footprint, where nothing could ever be joined to it.
+three quarters can tell a wrong one apart. OpenTPW's `ParkBuilding.RotateBit` turns this way, and its test
+pins the quarter turn: turned the other way, a thing built at a quarter turn has its way in pointing 180
+degrees from its own entry cell, back across its own footprint, where nothing can ever be joined to it.
 
 ### What the placer builds in front of a thing
 
@@ -1150,7 +1148,7 @@ click from (52,22) to (48,22) reproduces all five cells of the shipped queue fie
 
 The tool also ends when the click lands **on the anchor itself** (the pending cell is laid first), when
 **the preview had flagged a red cell** (`DAT_00816d48`: nothing is laid, sound `0xaf`,
-`0x00524a63`..`0x00524acd`), and on **a right click under 200 ms and 8 pixels** — but only with the Options
+`0x00524a63`..`0x00524acd`), and on **a right click under 200 ms and 8 interface units** — but only with the Options
 switch "RMB cancel" on (`DAT_0078d911`, control `0x1d4c5`, UITEXT 331; `0x0048842b`..`0x00488434`) - which is on by
 default, and Alexah confirms from playing that a right click puts the tool away. The build tool's own
 right-button slots are bare `RET 8`. Escape (`0x0040c180`, which calls `FUN_0052f200( 0, 1 )` at `0x0040c368`) and
@@ -1292,8 +1290,8 @@ render the labels perfectly and leave every value blank.
 | Control | Row | Kind | Filled from |
 |---|---|---|---|
 | `0x3e21` | Users last month | value | Sum of **30** (`0x1e`) entries of a ring buffer; short-cuts to `FUN_00495d40` when the park is younger than that. Asserts on `"CHistory: You asked for the sum…"` |
-| `0x3e1b` | Age | **text** | `FUN_004dd670`, formatted through `FUN_006acd60` with **UITEXT row `0x1b1` = 433** and a `VARM` placeholder; has an explicit negative-sign limb |
-| `0x3e16` | Excitement | **gauge** | `FUN_004e0560( object, speed, capacity, duration )` |
+| `0x3e1b` | Age | **text** | `FUN_004dd670`, formatted through `FUN_006acd60` with id **`0x1b1`** (433) and a `VARM` placeholder - not a UITEXT row, whose 433 is empty; has an explicit negative-sign limb |
+| `0x3e16` | Excitement | **gauge** | `FUN_004e0560( object, speed, duration, capacity )` |
 | `0x3e18` | Reliability | **gauge** | `FUN_004df640` = `100 - FUN_004df450( …, 1 )` |
 | `0x3e19` | State of repair | **gauge** | `FLD float ptr [object + 0x44]` at `004ae057` |
 | `0x3e17` | Remaining life | **gauge** | `FUN_004dd6d0`, which is only `FLD float ptr [ECX + 0x48]; JMP __ftol` |
@@ -1317,8 +1315,8 @@ order on through `mRequestedService`, `mTimeMarkedForMaintenance` and `mTotalCos
 `mOperatingSpeed` at 1036. Nothing observed says what the float at 1066 is.
 
 **Excitement and Reliability are computed from the window's own slider values**, not stored: the
-window caches speed, duration and capacity at `+0x2c`, `+0x30`, `+0x34` and passes all three to both
-functions. `FUN_004e0560` divides the speed by the item's per-upgrade `+0x1a8` and the capacity by
+window caches speed, capacity and duration at `+0x2c`, `+0x30`, `+0x34` and passes all three to both
+functions. `FUN_004e0560` divides the speed by the item's per-upgrade `+0x1a8` and the duration by
 `+0x1a0`, clamps each ratio to **0.75..1.25** (the doubles at `0x007005b8` and `0x007005c0` — as
 `f32` they read `0.0`, which is a trap) and multiplies them; a sideshow (`+0x4ac == 2`) returns
 `20 - x` instead. `FUN_004df450` compares against `+0x19c` and `+0x1ac`, the **red line** figures, and
@@ -1335,11 +1333,12 @@ The closing multiply the decompiler hides in a bare `__ftol` **is** readable in 
     ...       clamp 0..100
     004e0838: FILD dword ptr [ESP + 0x30]  ; that base, as an integer
     004e083e: FMUL float ptr [ESP + 0x2c]  ; x clamped speed ratio
-    004e0846: FMUL float ptr [ESP + 0x28]  ; x clamped capacity ratio
+    004e0846: FMUL float ptr [ESP + 0x28]  ; x clamped duration ratio
 
-So excitement is `(item[+0x13c] * 60 / 100 + crowd)` clamped 0..100, scaled by the two ratios. The
-crowd term is `3a + b + 2c` from `FUN_00545310`, clamped 0..40, and is reached only when the object's
-`mTrackRideHandle` (`+0x28`) is non-zero.
+So excitement is `item[+0x13c]` scaled by the two ratios. When the object's `mTrackRideHandle` (`+0x28`) is
+non-zero the base is `(item[+0x13c] * 60 / 100 + crowd)` clamped 0..100 instead: the test at `0x004e06ce`
+jumps past the scale, the crowd term and the clamp. The crowd term is `3a + b + 2c` from `FUN_00545310`,
+clamped 0..40.
 
 **It is still not implementable, and the blocker is a mapping this page must not paper over.** The
 ratios divide by the descriptor's `+0x1a8` and `+0x1a0`, and `park.md` already records that **which
@@ -1634,7 +1633,7 @@ tests it (`0x0046c928`..`0x0046c974`). **It refuses** when:
    12/17 record whose parent is 0);
 4. `mType` is not 0, 1, 3 or 9 (`FUN_00536390`, `FUN_00536310`, `FUN_00536320`).
 
-The meaning of those four kinds is `park.md`'s (1 path, 3 queue, 9 seen on shop and bin footprints),
+The meaning of those four kinds is `park.md`'s (1 path, 3 queue, 9 a thing's entrance),
 not proven again here; `+0x08` is the save's `mType` (see "The runtime cell is not the save cell").
 
 **A refused click does nothing at all.** `0x0046cb76` hands "Cannot place staff member here - the cell
@@ -1747,7 +1746,8 @@ is open (`DAT_007cc2f0`) it retracts the arm and answers 1 (`FUN_004816b0`). Oth
 it installs the idle mode (`0x0040c35f`), calls `FUN_0052f200( 0, 1 )` (`0x0040c368`) and answers 1, which stops
 the chain before shortcuts row 0 can open the menu. Over the idle mode it answers 0 and the menu opens. So with a
 full hand the first Escape empties it and the second opens the menu. In first person the key goes to layer 1
-instead, and in the coaster bar to the coaster table's `abortcoaster`.
+instead, over a park screen to that screen, which a plain Escape closes and nothing more
+(`scenes.md`, "The park Escape route"), and in the coaster bar to the coaster table's `abortcoaster`.
 
 **`FUN_0052f200( 0, 1 )`** records tool 0, withdraws the tool's advisor lines if the tool changed, zeroes the
 tool `DAT_0081ae2c`, sets the anchor to -1, copies the rotation `DAT_0081d7a4` to `DAT_0081b134` and **zeroes it**,
@@ -1869,7 +1869,7 @@ capacity and duration commit **byte-wide** where speed is a dword.
 **Ctrl+click on a placed object does not open its window** - it buys another copy of the same item and
 puts it in the cursor.
 
-#### The RIDE window, walked: `0x00755150`, 1536 bytes, 31 controls
+#### The RIDE window, walked: `0x00755150`, 1536 bytes, 39 controls
 
 Builder `FUN_004af980`, handler `FUN_004af600`. The walk starts on op 0 and ends on a balanced op 5
 exactly where the next stream begins at `0x00755750`.
@@ -1890,9 +1890,10 @@ exactly where the next stream begins at `0x00755750`.
       three sliders, flags 0x61: 0x3e30 help 5, 0x3e2d help 6, 0x3e2f help 7
         the control's own rect takes the pointer, op 3 is the TRACK, op 8 the thumb (b_scrollera)
         tracks slider_w, slider_w, slider_n ; each of the first two holds a type-9 0x3e2e
+      three type-1 panels, flags 0x3, one below each slider's thumb (y 711..753): 0x3e33, 0x3e31, 0x3e32
       the bottom row, left to right:
         0x3e2b b_erase help 15 | 0x3e2c b_move help 14 | 0x3e2a b_track help 10
-        0x3e34 b_queue help 9  | 0x3e37 ??? help 16    | 0x3e36 b_callmech help 8 (toggle)
+        0x3e34 b_queue help 9  | 0x3e37 b_rideit help 16    | 0x3e36 b_callmech help 8 (toggle)
         0x3e35 b_upgrade help 19 | 0x3e38 b_door help 13 + second help 12 (toggle)
 
 **Every verb is identified twice over, by two independent routes.** `FUN_0048cd10` reads the thing's
@@ -1917,19 +1918,18 @@ or either arrow is pressed, and capacity and duration commit byte-wide where spe
 
 **18 of 18 mesh hashes resolve, and three of them only by NODE name** - the root is `window2` inside
 `w_med.MD2`, `0x3e25` is `chev` inside `f_chev.MD2`, and **`0xaaee5929` (`0x3e37`, help 16, handler
-`FUN_004e15b0(0)` then close) is `b_ride it!` inside `b_rideit.MD2`** - resolved 2026-09-21.
+`FUN_004e15b0(0)` then close) is `b_ride it!` inside `b_rideit.MD2`**.
 
-**Why it read as unresolvable.** This page said it matched "no stem and no printable token inside any
-of ui.wad's 1202 members". The token scan it rested on read the members' **raw bytes**, and every one
-of ui.wad's 278 `.md2` files is **refpack-compressed**, so that scan was searching compressed noise and
-could never have matched anything. The node name also carries a **space and an exclamation mark**
+**Why a scan of stems and raw bytes cannot resolve it.** No member stem hashes to it, and a token scan of
+ui.wad's 1202 members' **raw bytes** can never match anything: every one of ui.wad's 278 `.md2` files is
+**refpack-compressed**, so such a scan searches compressed noise. The node name also carries a **space and an exclamation mark**
 (`b_ride it!`), which a token-splitting scan drops even on decompressed data. Decompress with the
 tree's own `WadArchive` + `ModelFile` and read `ModelFile.Nodes[].Name` - 1,563 node names across
 ui.wad and lobby.wad, and every outstanding hash falls out at once.
 
-The same scan is what left the buy and hire screens' root frame `0xf76e4200` recorded as a named gap;
+The buy and hire screens' root frame `0xf76e4200` resolves the same way:
 it is `window4` inside `w_big.MD2`, one of a family - `window1` `w_small`, `window2` `w_med`,
-`window3` `w_park`, `window4` `w_big`. Five screens wore no backdrop because of it. See
+`window3` `w_park`, `window4` `w_big`. See
 `docs/exe/hud.md`. Resolver: a local harness that decompresses each member with `WadArchive` and reads
 `ModelFile.Nodes[].Name` (its path is in `CLAUDE.local.md`); a hash of stems and raw tokens cannot see any of this.
 
@@ -1937,7 +1937,7 @@ it is `window4` inside `w_big.MD2`, one of a family - `window1` `w_small`, `wind
 its parent's** (348..762), so a rule that only inherits a parent's edge when the child sits inside it
 will pin this one somewhere else and draw it 160px out of place on a 1280x720 window.
 
-### A correction that reaches every string in the game
+### Every diagnostic string goes to a bare `RET`
 
 `FUN_005da3c0` is **not** an assert taking a condition - its first argument is a severity/channel and it
 is a printf-style logger. **In the retail image its entire body is a single `RET`.** So every diagnostic
@@ -1952,7 +1952,7 @@ stripped no-op that the player never sees. Re-implement them as debug logging, n
     postcard   shortcut 15 -> thunk 0040c4c0 -> CALL 00481500
                                                00481500 = JMP 004a9380   <- button id 100 calls this
 
-**The trap that nearly made this look like a mismatch: `0x00481500` is a bare `JMP rel32` thunk** (`e9 7b 7e 02 00`), undisassembled and with no function, so it *looks* like a different handler from the button's `FUN_004a9380` until the jump is resolved (`0x00481505 + 0x00027e7b = 0x004a9380`). **Resolve every thunk before concluding two routes differ** — both of these shortcuts converge on the same function as their button, which is the pattern.
+**The trap that makes this look like a mismatch: `0x00481500` is a bare `JMP rel32` thunk** (`e9 7b 7e 02 00`), undisassembled and with no function, so it *looks* like a different handler from the button's `FUN_004a9380` until the jump is resolved (`0x00481505 + 0x00027e7b = 0x004a9380`). **Resolve every thunk before concluding two routes differ** — both of these shortcuts converge on the same function as their button, which is the pattern.
 
 `FUN_004a9380` fits a postcard screen: `UI_PlaySound(0x95)`, then `Game_Pause(0,0)` and **`g_ParkRunning = 0`**, `UI_SetVisible(0)`, `UIParticles_ButtonGlintStop()`, `Advisor_StopQuietly(1)`, and it selects a screen with `DAT_007cc190 = 1; DAT_007cc150 = 3` (`FUN_004a9350` reads that selector). The feature ships real data — `data\Postcard.wad`, `postcard.jpg`, `data\postcard\legal.tga` and an HTML template *"Theme Park World (TM) Virtual Postcard"* — so it writes a picture out. **Not in scope now; Alexah flagged it as needed later for 100% parity.**
 
@@ -1962,12 +1962,12 @@ stripped no-op that the player never sees. Re-implement them as debug logging, n
 
 **`UI_LoadTree( stream, handler )` builds a screen**: `UI_ParseTreeStream( stream )` then `FUN_0065e526( handler )` to install its message callback. **The first argument is a COMPILED LAYOUT STREAM in the exe, not a filename** — reading it as a string gives nothing. (`ridestatbar.wct` and friends are a different thing, loaded by `FUN_00477ff0` — widget skins, not screens.)
 
-**54 callers = every screen in the game.** Each row is `caller -> (stream, handler)`:
+**54 calls, from 49 functions and two sites in the handler `0x0048a740`, build every screen in the game.** Each row is `caller -> (stream, handler)`, a blank handler a null one. Not in the table: `UI_LoadModalTree`, the object windows' base `FUN_0048cea0`, the gadget's `FUN_004a1d70`, the handler's two rebuilds of `0074fb20` (`0x0048a808`, `0x0048a8ed`), the all-items screen's four sub-builders `FUN_00494250`, `FUN_00494c70`, `FUN_00494ec0` and `FUN_00495110`, and `FUN_004b6110`:
 
-    FUN_00480b00   0074f9e0            FUN_00489f50   0074fa98
+    FUN_00480b00   0074f9e0 00480d10   FUN_00489f50   0074fa98
     FUN_0048a410   0074fa98            FUN_0048ac40   0074fb20
     FUN_0048adb0   0074fb20 0048a740   FUN_0048ae70   0074faf0
-    FUN_0048d370   00750090            FUN_0048d8b0   007501a0 0048e2f0
+    FUN_0048d370   00750090 0048d640   FUN_0048d8b0   007501a0 0048e2f0
     FUN_00493530   007506c8 00493230   FUN_00495aa0   007508e0 00495290  (allitems)
     FUN_00496620   00750e10 00495da0   (allstaff)
     FUN_00497b20   007514c0 00497a70
@@ -1985,19 +1985,19 @@ stripped no-op that the player never sees. Re-implement them as debug logging, n
     FUN_004aa480   00754490 004a96b0   (research)
     FUN_004acc70   00754cf8 004ac270   (buy, four tabs)
     FUN_004ae560   00755750 004ae430   FUN_004b2750   00756400 004b24b0  (staffcosts)
-    FUN_004b3cf0   00756950 / 00756ad8 004b3c10   (the staff/visitor locator, two streams)
+    FUN_004b3cf0   00756950, 00756ad8 004b3c10   (the staff/visitor locator, two streams)
     FUN_004b7b00   007579c8 004b7a70   FUN_004b8520   00757d88 004b86a0
     IslandPanel_Create        00757f60 004b8b70
-    FUN_004b9a70   007581a0            FUN_004bf460   00758cd8 / 00758e18 004bed60
-    FUN_004bff70   00758f40            FUN_004c0ae0   00759170 004c0880
-    FUN_004c2110   007593e8            FUN_004c23f0   00759548 004c23c0
+    FUN_004b9a70   007581a0 004b9950   FUN_004bf460   00758ae8 004bd4a0, 00758cd8 / 00758e18 004bed60
+    FUN_004bff70   00758f40 004bf9f0   FUN_004c0ae0   00759170 004c0880
+    FUN_004c2110   007593e8 004c1a10   FUN_004c23f0   00759548 004c23c0
     FUN_004c4fb0   007596b0 004c53f0
     FrontEnd_Init             00774c18 005d58b0
     FUN_005f0b40   00774da0 005f0b00   (map)
 
 The park management gadget is stream `0x00752940`.
 
-**How to reproduce this table, and a trap in doing so:** walk `references.getReferencesTo(UI_LoadTree)` and read back a few instructions for the `PUSH` immediates. A first attempt matched `t.startswith("PUSH 0x0")` and **silently produced an EMPTY column for all 54 rows**, because an address like `0x754cf8` prints as `PUSH 0x754cf8` with no leading zero. **An extraction that returns nothing for every row is a bug in the extractor, not an empty dataset.**
+**How to reproduce this table, and a trap in doing so:** walk `references.getReferencesTo(UI_LoadTree)` and read back a few instructions for the `PUSH` immediates. Matching `t.startswith("PUSH 0x0")` **silently produces an EMPTY column for all 54 rows**, because an address like `0x754cf8` prints as `PUSH 0x754cf8` with no leading zero. **An extraction that returns nothing for every row is a bug in the extractor, not an empty dataset.**
 
 ---
 
@@ -2007,7 +2007,7 @@ The park management gadget is stream `0x00752940`.
 
 **Every button on it is a `cb_*` mesh — coaster builder**, dumped from the stream: `cb_incline` (`0x19`), `cb_loft` (`0x1a`), `cb_move` (`0x1b`), `cb_rotate` (`0x1c`), `cb_swapdown` (`0x1d`), `cb_swapup` (`0x1e`), `cb_track` (`0x1f`), `cb_dellast` (`0x21`), with **`0x20` carrying no mesh at all**, and the bar is framed by `!f_plain`. It is the track-laying bar for a coaster, not a general build toolbar, and it sits at (859,916)-(1534,1190) on the virtual screen.
 
-**It is also where park keyboard shortcuts are dispatched.** `FUN_004982a0` handles `0x1000a` by calling `FUN_0040c900( key, mods )` and `0x1000b` by calling `FUN_0040c990` — the binding matchers — so the keys flow through this panel. Message `0x14` clears `DAT_007ca1c8` (the panel handle).
+**It also runs keys, through the camera and coaster tables.** `FUN_004982a0` handles `0x1000a` by calling `FUN_0040c900( key, mods )` and `0x1000b` by calling `FUN_0040c990` — the binding matchers — on the camera table (`[0x00787c14]`) and then the coaster table (`[0x00787294]`, rows at `0x00748350`, `abortcoaster` among them). The park's own game and shortcuts tables run from layer 0's `Park_MouseMessageProc` (`scenes.md`, "The park Escape route"). Message `0x14` clears `DAT_007ca1c8` (the panel handle).
 
 The nine buttons (`0x101` = clicked; `param_4 == 1` is press, anything else is release):
 
@@ -2048,7 +2048,7 @@ The two grids genuinely differ in packing, and both are pinned:
 
 Mixing them up is exactly the trap the cross-check warned about.
 
-**Still open:** whether a row maps to world +Z or -Z once drawn in 3D. It no longer risks a mirrored island, only a flipped camera convention.
+**Still open:** whether a row maps to world +Z or -Z once drawn in 3D. It risks only a flipped camera convention, not a mirrored island.
 
 ---
 
@@ -2148,9 +2148,9 @@ Three modifiers. `DAT_00820ac0` carries **`rand() & 1`** between calls and rewri
 and 10 to 20** for tile set 1. A queue's angle takes a base of **0 when its flow direction is `0x40`
 or `0x10` and 180 otherwise — and that base applies to a STRAIGHT, not to a corner**: the guard is a
 cardinal count of two with the pair opposite (N+S or E+W). The **`+1` bump is the corner case**, on
-the pairs `(0x40,0x50)`, `(0x10,0x14)`, `(0x01,0x41)`, `(0x04,0x05)`. *(The first reading of this
-attached the base to an L and the bump to a straight, exactly backwards. Lost Kingdom cannot tell the
-two apart — its single corner carries direction `0x10`, which gives a base of nought either way — so
+the pairs `(0x40,0x50)`, `(0x10,0x14)`, `(0x01,0x41)`, `(0x04,0x05)`. *(Lost Kingdom cannot tell this
+reading from its reverse, the base on an L and the bump on a straight: the two
+look alike — its single corner carries direction `0x10`, which gives a base of nought either way — so
 the park is not evidence here and the disassembly is what settles it.)* And tile set 2 takes **`+3`
 for each cardinal link reaching a path cell**, but only when the link is **mutual** (the neighbour's
 own mask carries the opposite bit) and a low-nibble flags test passes **on the TRACK cell** beside it
@@ -2163,8 +2163,8 @@ so an index of 8 or more names nothing at all. A straight with two mutual path l
 `2 + 3 + 3 = 8`; a corner takes its `+1` first and reaches `3 + 1 + 3 + 3 = 10`. **Lost Kingdom cannot
 arbitrate** — its one end piece at (49,22) has a single path link, so no cell in it ever gets past 5 —
 and whether the track-cell flags gate is what keeps the original inside the table is therefore **not
-established**. Measured in OpenTPW before that was guarded: such a cell drew nothing, and because
-the ground leaves any tile-set-2 cell to the queue renderer, the **sky showed through the hole**. OpenTPW now
+established**. Left unguarded, such a cell draws nothing in OpenTPW, and because
+the ground leaves any tile-set-2 cell to the queue renderer, the **sky shows through the hole**. OpenTPW now
 drops path links until the index is in the table (`ParkPathBuilding.Retile`, counted `QUEUE_TILE_INDEX_OUTSIDE_TABLE`).
 
 **Queue cells need a filler ground tile as well as a model.** When the set is 2, `FUN_005365d0` frees
@@ -2211,8 +2211,8 @@ demolition calls that same function over each footprint cell.
   whose owner cell has mType nought. Demolition drains a queue through this same refund and then
   takes one cell's worth back — see "Demolishing a queued thing" under "Sell, move and the scrap value".
 - The one hard refusal is **NOMODIFY, `mFlags & 0x20`**, which `FUN_00536490` sets on each path cell
-  it rebuilds from the level's design map. The single escape is a path cell with no neighbours, which
-  logs *"Removing path cell with no neighbours but NOMODIFY set"* and clears its own flag.
+  it rebuilds from the level's design map. The escapes are the force flag (`0x005367d9`) and a path cell with no
+  neighbours, which logs *"Removing path cell with no neighbours but NOMODIFY set"* and clears its own flag.
 
   **The shipped save's nineteen flagged cells are exactly two sets, measured cell by cell:** the ten-cell
   avenue at x 47..48, y 17..21, which is design-map path, and the nine cells the placer laid before
@@ -2237,18 +2237,19 @@ cell is orthogonally adjacent to `mEntryPos` and the entrance's own flow byte po
 
     start    first set neighbour bit of the entrance cell, in the fixed order 1, 0x10, 0x40, 4
     step     fixed probe order N, S, E, W; accept only mType 3 (never 9) whose +0x0d is the
-             opposite of the direction probed            <- that fixed order IS the fork rule
+             opposite of the direction probed            <- that fixed order breaks a tie at a fork
 
 **Deleting a queue cell orphans the remainder, and that is correct** — there is no trimming loop
-anywhere. Peeps past the new end leave (`position >= count * 4`, state not `0xe`); the rest are told
-to re-evaluate, all but the one named by `obj+0x6c`. The eight sites and what each guest does are in
-`ride-operation.md`, "Every way out of a queue". Deleting the path a queue hangs off leaves the
-queue cells untouched and merely reports the back of queue as not connected, so the ride is not
-reopened.
+anywhere. Every peep but the one named by `obj+0x6c` is told to re-evaluate, and those past the new
+end leave (`position >= count * 4`, unsigned, state not `0xe`). The eight sites and what each guest does are in
+`ride-operation.md`, "Every way out of a queue". Deleting the path a queue hangs off clears the
+back cell's bit toward it and retiles that cell, so the back of queue answers not connected
+(`FUN_004de4a0`) and the ride is not reopened.
 
-**Eight invalidation sites, and every one fires at the same moment** — immediately after cells have
-been written and retiled, with the object in ECX. So a re-implementation needs **one hook at the end
-of each cell-write transaction**, not per-cell bookkeeping.
+**Eight invalidation sites, each with the object in ECX, and two of them fire per cell.** The stamp's
+(`0x00534858`) runs inside `FUN_005346d0` as soon as one cell's type is written, before the run's join and
+retile passes, and `ClearCell`'s (`0x0053694b`) inside its unlink loop, before the cleared cell is reset.
+The queue run's (`0x00527541`) runs once the `0x81` retile pass is done.
 
 ### There is no drag: a run of path is click-to-anchor, click-to-commit
 
@@ -2397,8 +2398,8 @@ popped but is the far end of the last press's run. Idle with an empty hand and t
 
 **The clear's path arm, `FUN_005367a0`** (`0x005367b1`..`0x0053682c`): a NOMODIFY cell with links returns untouched
 unless the force flag is up (`0x005367d9`); one without gives up the flag; then the counter at `+0x20` is set to −1
-for a step of (0,0) or decremented for any other, and **the cell is removed only once it is below nought**. Nothing
-is refunded. So Backspace takes up exactly what a run laid fresh and leaves what it crossed.
+for a step of (0,0) or decremented for any other, and **the cell is removed only once it is below nought**, or at once under
+force (`0x00536825`). Nothing is refunded. So Backspace takes up exactly what a run laid fresh and leaves what it crossed.
 
 **`+0x20` is `mOverlapCounter`.** The serialiser `FUN_004d0b30` pairs the string at `0x0075a054` with
 `LEA ECX,[ESI+0x20]`; in the save it is record offset `+8` (the FileFormats `saves.md` on its `docs/item-footprints` branch, not yet

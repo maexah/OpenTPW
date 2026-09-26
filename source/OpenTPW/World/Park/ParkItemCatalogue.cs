@@ -268,7 +268,7 @@ public sealed class ParkItemCatalogue
 	/// <remarks>
 	/// <b>It is unfiltered on purpose.</b> The original's buy list does the choosing itself, keeping a row
 	/// only where the item's <c>Info.WhichUIType</c> equals the tab being shown - so the four tabs are one
-	/// walk with one test, and the <see cref="ItemDescriptionFile.Feature"/>-and-above kinds that belong
+	/// walk with one test, and the kinds above <see cref="ItemDescriptionFile.Feature"/>, which belong
 	/// to no tab (the vehicles, the gates, the lights, the land tools) fall out of that same test rather
 	/// than needing a rule of their own.
 	/// </remarks>

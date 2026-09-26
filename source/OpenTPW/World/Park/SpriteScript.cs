@@ -44,10 +44,8 @@ internal enum SpriteOp
 /// <c>testme.exe</c> that chooses a set, then shows one frame per turn, then jumps.
 ///
 /// <para>
-/// <b>This is what stops a guest sliding.</b> Before it, <see cref="ParkWorld.Sprite.Frame"/> came from the
-/// save and nothing ever moved it, so a guest walked the right path at the right pace facing the right way in
-/// a single frozen pose. The frame is not a function of anything - it is stepped by a script, and the script
-/// is the thing that was missing.
+/// <b>This is what moves a person's picture on.</b> <see cref="ParkWorld.Sprite.Frame"/> is only where the
+/// save left it. The frame is not a function of anything - it is stepped by a script.
 /// </para>
 /// <para>
 /// <b>The scripts are compiled into the executable, not stored in the game's data.</b> They are one flat array
@@ -60,8 +58,8 @@ internal enum SpriteOp
 /// <para>
 /// <b>How the copy was checked.</b> Walking the array from end to end with the operand count of each opcode
 /// either stays in step or lands on a word that is not a handler, and it stayed in step across all 1,857.
-/// That is what makes the operand counts a measurement rather than an arrangement that happens to add up -
-/// two of them were wrong on a first pass, and the walk said so at the exact word. Every person script's
+/// That is what makes the operand counts a measurement rather than an arrangement that happens to add up.
+/// Every person script's
 /// instruction addresses were then rebuilt from the compact form below and compared against the decode, and
 /// all twenty-one matched.
 /// </para>
@@ -90,7 +88,7 @@ public sealed class SpriteScript
 	/// The twenty-one scripts the person animation table names, read out of <c>DAT_0074dab8</c>.
 	///
 	/// <para>
-	/// Index 1 is the walk and index 3 the stand - the two that matter for a park today. Index 2 is the
+	/// Index 1 is the walk and index 3 the stand. Index 2 is the
 	/// hurried walk, index 9 the same eight pictures held twice each, which is a walk at half speed.
 	/// </para>
 	/// </summary>
@@ -281,8 +279,8 @@ public sealed class SpriteScript
 	/// <summary>
 	/// Set whenever a frame is shown and cleared when a script ends - the instance's <c>+0x114</c>, written by
 	/// the one-line <c>FUN_00540b90</c>. The original uses it to know a sprite needs drawing again; nothing
-	/// here needs that, because the whole pool is rewritten every frame, but it is kept so the census can show
-	/// that a sprite really did take a turn.
+	/// here needs that, because the whole pool is rewritten every frame, and nothing in the game reads it:
+	/// only <c>SpriteScriptTests</c> does, to show that a sprite really did take a turn.
 	/// </summary>
 	public bool Shown { get; private set; }
 

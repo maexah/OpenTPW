@@ -7,13 +7,11 @@ namespace OpenTPW;
 /// <para>
 /// <b>This is the filter, not the choice.</b> <c>FUN_004fcb10</c> walks the object list, asks this of each
 /// candidate, scores the survivors with <c>FUN_004fcc30</c> and takes the best. Only the asking is here;
-/// the scoring is a seven-term weighted mean, and a partial one would produce numbers the original never
-/// would. Its inputs ARE all identified now - the seven weights are named in the balance file, both
-/// lookup tables were read out of the image, the distance divisor is the effects record's short and the
-/// newness term is each thing's own build date - so what remains is building it rather than finding it.
+/// the walk is <see cref="ParkRideChooser"/> and the scoring, a seven-term weighted mean, is
+/// <see cref="ParkRideScore"/>.
 /// </para>
 /// <para>
-/// <b>The track-type arms ARE reproduced, and this said they were not until the field was found.</b> The
+/// <b>The track-type arms ARE reproduced.</b> The
 /// original refuses a candidate of type 1 or 2 - a car track or a water track - unless
 /// <c>mIsTrackRideValid</c> is set. The field is <c>Bumper.WhichTrackType</c> on the item's own
 /// description, identified across the whole catalogue rather than from one item: the jungle's
@@ -62,8 +60,8 @@ public static class ParkRideChoice
 	/// </param>
 	/// <param name="park">
 	/// The park this object stands in, so that its queue can be <b>walked on the map</b> rather than read
-	/// from the save - see <see cref="QueueCellsFor"/>, which is the whole of why the Drinks Shop and the
-	/// three toilets were wrongly excluded. <b>Null falls back to the save's own cached pair</b>, which is
+	/// from the save - see <see cref="QueueCellsFor"/>, which is what lets the Drinks Shop and the
+	/// three toilets be offered. <b>Null falls back to the save's own cached pair</b>, which is
 	/// what the original does whenever <c>mBackOfQueue</c> is already set, and is the honest answer for a
 	/// test holding an object with no world around it.
 	/// </param>
@@ -108,7 +106,7 @@ public static class ParkRideChoice
 	/// </summary>
 	/// <remarks>
 	/// <b>The count is the one <see cref="QueueCellsFor"/> produces, NOT <c>mQueueSizeInCells</c> read
-	/// straight out of the save</b>, and this method took the object until that distinction was measured.
+	/// straight out of the save</b>.
 	/// The two agree wherever the save carries a cached pair and differ on exactly the objects that do not.
 	/// </remarks>
 	public static bool HasQueueRoom( int queueLength, int cells )
@@ -253,10 +251,9 @@ public static class ParkRideChoice
 	/// <c>GetBackOfQueue</c>, named by its own <c>"*** GetBackOfQueue() crashed! ***"</c>.
 	///
 	/// <para>
-	/// <b>This is the correction that made the Drinks Shop reachable, and the belief it replaces was a
-	/// misread field rather than a missing one.</b> The offer filter compares a queue's length against the
-	/// object's <c>+0x40</c>, and this project read that as <c>mQueueSizeInCells</c> straight out of the
-	/// save - which is nought for the shop and for all three toilets, so nothing could ever pass. The save
+	/// <b>This is what makes the Drinks Shop reachable.</b> The offer filter compares a queue's length
+	/// against the object's <c>+0x40</c>, <c>mQueueSizeInCells</c>, which the save holds as nought for the
+	/// shop and for all three toilets. The save
 	/// loader does write that field (<c>FUN_004db7d0</c> names it at <c>004dcde6</c>), but
 	/// <c>FUN_004de130</c> <b>overwrites it</b> by walking the map whenever <c>mBackOfQueue</c> is nought -
 	/// and the filter calls this before it reads the count. So <c>+0x40</c> is a <b>cache</b>, and the save's
@@ -325,10 +322,8 @@ public static class ParkRideChoice
 	/// <para>
 	/// <b>Every queue in the shipped park measures nought, and that is the park rather than the walk.</b>
 	/// Its <c>mFirstInQ</c> is nought on every object because nobody has ever been admitted to it -
-	/// <c>mNumberOfVisitorsToDate</c> is nought too - so this can only start returning something once
-	/// guests join queues - <b>which they now do</b>, through <c>PeepBehaviour.JoinTheQueue</c>, so this
-	/// does return something in a running park. It was built before that, because the field it needed was
-	/// the thing blocking it rather than because the park could show it off.
+	/// <c>mNumberOfVisitorsToDate</c> is nought too. This reads the save alone; the queues a running park
+	/// fills through <c>PeepBehaviour.JoinTheQueue</c> are counted by <see cref="ParkState.QueueLength"/>.
 	/// </para>
 	/// </summary>
 	public static int QueueLength( ParkWorld? park, ParkWorld.CatalogueObject item )

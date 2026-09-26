@@ -309,7 +309,7 @@ The ones that have bitten more than once.
   default branch will otherwise say something confident.
 - **104** — **A control can fire because its EXPECTED value is wrong, and "the control failed" is then the
   wrong conclusion to draw from it.** Reading a saved script struct, the alignment was checked against the
-  speed word, which every shipped `.RSE` carries as 50. Thirteen of the fourteen records read 50 and one
+  speed word, which the loader sets to 50. Thirteen of the fourteen records read 50 and one
   read **60**, and the honest-looking conclusion — "the control fails, so the alignment is wrong, so the
   program counter I just read is noise" — would have thrown away a correct decode. The 60 was real: 50 is
   what the *loader* writes, and the engine pushes an object's own operating speed over it

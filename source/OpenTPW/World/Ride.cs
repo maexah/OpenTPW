@@ -7,12 +7,12 @@
 /// empty.
 ///
 /// <para>
-/// The reader it wants no longer has to be written: <see cref="RideScriptFile"/> reads the format, and
+/// The reader it wants exists: <see cref="RideScriptFile"/> reads the format, and
 /// <see cref="RideScript"/> runs it against a <see cref="RideState"/>. Neither is wired up here, because
 /// this class is still wrong in the ways below - it builds its path with a backslash where everything else
 /// uses forward slashes against the Zio file system, and it drives <c>RideVM</c>, whose constructor throws.
 /// A ride that loads and runs its script belongs in something built for it rather than in this - and that
-/// is now <see cref="ParkRides"/>, which gives every thing standing in a park the script its own archive
+/// is <see cref="ParkRides"/>, which gives every thing standing in a park the script its own archive
 /// holds, the way the original's object constructor does.
 /// </para>
 ///

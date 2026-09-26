@@ -5,10 +5,11 @@ using System.Runtime.InteropServices;
 namespace OpenTPW;
 
 /// <summary>
-/// The lobby's sky, built the way the original builds it.
+/// The lobby's sky and a park's, built the way the original builds them. The notes below are the lobby's;
+/// the constructor says how a park's differs.
 ///
-/// It is not a coloured dome. The original's lobby hands the hard-coded path
-/// <c>Data\Levels\fantasy</c> to its sky loader (FUN_005d8b50), so every island in the lobby sits
+/// It is not a coloured dome. The original's lobby (FUN_005d8b50) hands the hard-coded path
+/// <c>Data\Levels\fantasy</c> to its sky loader (FUN_005852b0), so every island in the lobby sits
 /// under Wonder Land's sky and nothing ever swaps it. That sky is two pieces:
 ///
 /// - A short band around the horizon textured with <c>sky_cyl.tga</c>, 720 units out and only 72
@@ -24,8 +25,8 @@ namespace OpenTPW;
 /// park's SKYCOLOUR. So SKYCOLOUR reaches exactly one of the four cloud layers; the horizon band
 /// and the other three stay as their textures paint them.
 ///
-/// Two things gate even that in the original, both left out here because this has no options
-/// screen to set them: the tint only applies when SKYQUALITY is above 1 - the Low preset sets 1,
+/// Two things gate even that in the original, both left out here, because nothing yet reads
+/// the detail file's SKYQUALITY (Q32) and there is no software renderer: the tint only applies when SKYQUALITY is above 1 - the Low preset sets 1,
 /// Medium 2, High 4 - and when the hardware path is running. On Low the ramp is flooded with the
 /// fog colour instead, and the lobby sky is flatly, literally blue.
 /// </summary>
@@ -82,7 +83,7 @@ public class Sky : Entity
 
 	/// <summary>
 	/// Half the band's height, which is where the dome meets it. It follows the sky's own height, so
-	/// a park's band stands taller than the lobby's in the same proportion its dome does.
+	/// a park's band reaches as much higher than the lobby's as its dome does.
 	/// </summary>
 	private readonly float _bandTop;
 
@@ -215,8 +216,7 @@ public class Sky : Entity
 
 		// Loaded once and shared: four cloud layers drawing the same file have no reason to hold four
 		// copies of it. This sky owns both and lets go of them in OnDelete, which is why they are kept
-		// in fields rather than passed straight through. (This used to say a Texture "is never
-		// released", which stopped being true the moment that OnDelete was written, twenty lines down.)
+		// in fields rather than passed straight through.
 		_bandTexture = LoadTexture( $"{_directory}/sky_cyl.tga", out var bandAverage );
 		_cloudTexture = LoadTexture( $"{_directory}/sky.tga", out var cloudAverage );
 
@@ -255,11 +255,11 @@ public class Sky : Entity
 		// and the reason is the sea.
 		//
 		// The original's lobby has none: its islands hang around a globe, so below the horizon is
-		// open sky and the bowl is what fills it. Ours sits on an ocean that runs out to five
+		// open sky and the bowl is what fills it. Ours sits on an ocean that runs out to ten
 		// thousand and covers everything below the horizon by itself. The dome already reaches
 		// three to six degrees below eye level - further down than the sea's own far edge - so
 		// there is no gap for the bowl to fill, and every triangle of it would be behind water.
-		// All it ever did here was show through as a second bank of cloud with a ridge of
+		// Drawn here, it would only show through as a second bank of cloud with a ridge of
 		// grid-shaped peaks along the horizon.
 
 		_pieces = [.. pieces];
@@ -272,8 +272,7 @@ public class Sky : Entity
 	/// Its pieces are entities, so their models and materials go when they do. A material leaves the
 	/// textures bound into it alone on purpose, because those are normally cached by path and shared
 	/// across scenes - but a sky's are not. Every one is built from pixels for this sky alone, so
-	/// nothing else can be holding them, and until this they stayed for the life of the process:
-	/// four 256x256, two 16x16 and three 1x1 a cycle, measured with `assets list`.
+	/// nothing else can be holding them and nothing else lets go of them.
 	/// </remarks>
 	protected override void OnDelete()
 	{
@@ -318,8 +317,7 @@ public class Sky : Entity
 	/// laying these layers over it - and it is why the horizon band is not in here. The band spans
 	/// 36 either side of the water, and the lobby camera sits between 32 and 58 above it, so at the
 	/// horizon the camera is level with the band's top or above it and a horizontal ray misses the
-	/// band entirely. Compositing over it made this too bright by up to twenty levels, most of it
-	/// on the two parks with the darkest skies.
+	/// band entirely.
 	///
 	/// This is what distance hazes toward and what the frame is cleared to behind the gaps in the
 	/// clouds, so it has to follow the park: a distant island on a storming Halloween hazes into
@@ -545,8 +543,8 @@ public class Sky : Entity
 		private static void AddBandHalf( List<Vertex> vertices, List<uint> indices, Vector3 centre,
 			float bandTop, float startAngle, float[] ringV )
 		{
-			// The rings are evenly spaced between the top and the bottom - a quarter and a half of
-			// the way down, from the constants at 0x00701f5c and 0x00701f50.
+			// The two middle rings sit a quarter and a half of the way from the top to the bottom,
+			// from the constants at 0x00701f5c and 0x00701f50.
 			var heights = new[]
 			{
 				bandTop,
@@ -605,7 +603,7 @@ public class Sky : Entity
 					heights[index] = height;
 
 					// The grid index is the texture coordinate and the shader scales and scrolls
-					// it, so all four layers share this mesh and never touch a vertex buffer.
+					// it, so all four layers build this same mesh and never touch a vertex buffer.
 					vertices[index] = new Vertex(
 						new Vector3( centre.X + x, centre.Y + y, height ),
 						new Vector2( col, row ) );

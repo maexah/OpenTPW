@@ -31,13 +31,12 @@ namespace OpenTPW.UI;
 /// </para>
 ///
 /// <para>
-/// <b>What is deliberately not filled in.</b> The stats table and the preview are built and left
-/// blank, and counted. Their contents come from the base's own vtable slots (<c>+0xc</c> fills the
-/// stats panel, <c>+0x10</c> the preview) against UITEXT rows this decode has not read, and a label
-/// invented in English would be content this project does not own. The three sliders are built because
-/// they are part of the window's shape, but the original BUFFERS them and commits only when the window
-/// closes or either arrow is pressed - capacity and duration byte-wide where speed is a dword - so
-/// moving one here changes nothing yet and says so.
+/// <b>What is filled in and what is not.</b> The stats table takes its seven labels and the figures
+/// this game can answer (<see cref="FillStats"/>), and the preview shows the ride's own model turning
+/// (<see cref="DrawPreview"/>); excitement, reliability and users last month are counted instead. The
+/// original BUFFERS the three sliders and commits them only when the window closes or either arrow is
+/// pressed - capacity and duration byte-wide where speed is a dword - and so does this
+/// (<see cref="Commit"/>), all but what the speed word does to the script's waits.
 /// </para>
 /// </summary>
 internal sealed class ParkObjectWindow : UiWindow
@@ -50,12 +49,9 @@ internal sealed class ParkObjectWindow : UiWindow
 		(0x3e2a, 10, "b_track",    "show the track"),
 		(0x3e34,  9, "b_queue",    "show the queue"),
 
-		// RESOLVED 2026-09-21: 0xaaee5929 is the node "b_ride it!" inside b_rideit.MD2, so this button
-		// had artwork all along and drew nothing. This comment said the hash matched "no member stem
-		// and no node name inside any of ui.wad's 1202 members" - the scan behind that read the
-		// members' RAW BYTES, and every one of ui.wad's 278 models is refpack-compressed, so it was
-		// searching compressed noise. The name also carries a space and an exclamation mark, which a
-		// token-splitting scan drops even once decompressed.
+		// 0xaaee5929 is the node "b_ride it!" inside b_rideit.MD2 - a name with a space and an
+		// exclamation mark, which a token-splitting scan drops, in a model that is refpack-compressed
+		// like every ui.wad model.
 		//
 		// The ARTWORK is named; the VERB still is not. Its handler is FUN_004e15b0( 0 ) followed by a
 		// close, which is not decoded, so the button draws and reports itself like the others.
@@ -183,8 +179,8 @@ internal sealed class ParkObjectWindow : UiWindow
 	/// <summary>
 	/// How much of the panel the model fills. <b>Also a choice.</b> The original fits by the model's
 	/// bounding box against the panel's width and height and takes whichever is tighter
-	/// (<c>FUN_004689f0</c>); this fits by <see cref="LobbyModel.Radius"/>, which is that box's loose
-	/// radius, so the margin below stands in for the difference.
+	/// (<c>FUN_004689f0</c>), and so does <see cref="DrawPreview"/>, by the box of the meshes it draws;
+	/// this is the share of the panel that box fills.
 	/// </summary>
 	private const float Fill = 0.8f;
 
@@ -209,8 +205,7 @@ internal sealed class ParkObjectWindow : UiWindow
 			Rect = new UiRect( 248, 30, 1800, 1007 ),
 
 			// The hash resolves to the NODE name "window2", which lives in w_med.MD2 - the loader opens
-			// files, so this is the file. Node and file diverge often enough that seven meshes failed to
-			// load on the buy and hire screens before it was measured; see docs/exe/hud.md.
+			// files, so this is the file. Node and file often diverge; see docs/exe/hud.md.
 			Mesh = UiMesh.Get( "w_med" )
 		};
 
@@ -232,8 +227,8 @@ internal sealed class ParkObjectWindow : UiWindow
 
 		// HIDDEN UNTIL THE RIDE BREAKS DOWN. This is not decoration over the preview: it is the border
 		// of a message box that appears on top of it, and the builder says so - FUN_004ad720 sets its
-		// frame and then calls UI_SetVisible(0), so it starts hidden. This decode recorded that and
-		// then drew it anyway, which left a yellow-and-black bar across a working preview.
+		// frame and then calls UI_SetVisible(0), so it starts hidden. Drawn always, it would be a
+		// yellow-and-black bar across a working preview.
 		_broken = _preview.Add( new UiControl
 		{
 			Id = 0x3e25,
@@ -261,8 +256,8 @@ internal sealed class ParkObjectWindow : UiWindow
 
 		foreach ( var (id, rect) in StatCells )
 		{
-			// The four condition rows are GAUGES and the rest are text - see UiStatBar. Setting Text
-			// on a gauge is exactly why those four rows sat blank while their labels rendered.
+			// The four condition rows are GAUGES and the rest are text - see UiStatBar. Text set on a
+			// gauge draws nothing, so those four rows would sit blank beside their labels.
 			if ( id is 0x3e16 or 0x3e17 or 0x3e18 or 0x3e19 )
 			{
 				_bars[id] = stats.Add( new UiStatBar { Id = id, Rect = rect } );
@@ -359,15 +354,6 @@ internal sealed class ParkObjectWindow : UiWindow
 		}
 
 		Show( thingId );
-
-		// Reached every time the window opens, and none of them answerable from what is decoded: the
-		// stats table and the preview are filled by the shared base's own vtable slots against UITEXT
-		// rows this has not read, and the sliders commit into the ride's script variables.
-		// RIDE_STATS_PANEL is gone: the table's seven labels and two of its figures are filled now, and
-		// what is left unanswerable is counted by name from FillStats instead.
-		// RIDE_PREVIEW_ACTOR is gone: the panel shows the ride's own model now, turning, drawn from
-		// Level.Render's overlay pass - see DrawPreview. A counter left on a path that works is a lie
-		// in the gap census in the same way a missing one is.
 	}
 
 	private UiButton Arrow( int id, int help, string mesh, UiRect rect, bool forward )
@@ -508,12 +494,12 @@ internal sealed class ParkObjectWindow : UiWindow
 	/// refresh writes the RIGHT cells of the same rows. Both orders agree, and they agree with the
 	/// rectangles the stream lays out, so the table below is read off three sources rather than one.
 	/// <para>
-	/// <b>Four of the seven figures are not answerable here and are counted rather than invented.</b>
-	/// Excitement, reliability, state of repair and remaining life are type-9 bars skinned
-	/// <c>ridestatbar.wct</c>, and the engine computes each from the ride's own condition and from the
-	/// three sliders - <c>FUN_004e0560</c> divides two slider values by per-upgrade maxima this decode
-	/// has not read. Users last month reads a thirty-month ring buffer, and this game keeps no monthly
-	/// history at all, which is the same gap the hire screen's mini-balance already records.
+	/// <b>Three of the seven figures are not answerable here and are counted rather than invented.</b>
+	/// Excitement and reliability are type-9 bars skinned <c>ridestatbar.wct</c> that the engine computes
+	/// from the three sliders - <c>FUN_004e0560</c> divides two slider values by per-upgrade maxima this
+	/// decode has not read. Users last month reads a thirty-month ring buffer, and this game keeps no
+	/// monthly history at all, which is the same gap the hire screen's mini-balance already records.
+	/// State of repair and remaining life are bars too, read straight off the thing.
 	/// </para>
 	/// </remarks>
 	private void FillStats()
@@ -545,7 +531,7 @@ internal sealed class ParkObjectWindow : UiWindow
 		// hundred-nanosecond units - so this is real elapsed time and not the park's own calendar.
 		//
 		// A shipped save therefore answers in the THOUSANDS, and that is right: its rides were built
-		// when the save was made, which is now 26 years ago, so Belly Bounce reads 9759 days. A figure
+		// when the save was made, over 26 years ago, so Belly Bounce reads more than 9,750 days. A figure
 		// that size is the save's real age showing through, not a zero epoch to go hunting for.
 		if ( _stats.TryGetValue( 0x3e1b, out var age ) )
 			age.Text = placed.Built.IsSet ? $"{DaysSince( placed.Built )}" : null;
@@ -575,8 +561,9 @@ internal sealed class ParkObjectWindow : UiWindow
 
 		// Excitement (0x3e16) and Reliability (0x3e18) are NOT left out for want of a control - the
 		// gauge above draws them the moment there is a number. They are left out because there is no
-		// number yet: FUN_004ade40 fills them from FUN_004e0560 and FUN_004df640, whose closing
-		// multiply the decompiler dropped into a bare __ftol. The shape is known - two ratios of the
+		// number yet: FUN_004ade40 fills them from FUN_004e0560 and FUN_004df640, whose inputs include
+		// per-upgrade fields no .sam key is proven to feed (docs/exe/park-engine.md, "The object
+		// window's stats panel"). The shape is known - two ratios of the
 		// speed and capacity sliders against the item's per-upgrade figures, each clamped to
 		// 0.75..1.25 - and the shape alone would only produce a plausible bar, which is worse than
 		// an empty one because it cannot be told apart from a measured one later.
@@ -664,7 +651,7 @@ internal sealed class ParkObjectWindow : UiWindow
 
 		// FIT BY THE BOX, NOT BY THE RADIUS. Radius is a distance from the model's ORIGIN, and Belly
 		// Bounce reports 100.2 across eight meshes while its bulk is a fraction of that - so sizing by
-		// it drew the ride at about eight pixels, off the panel entirely. The engine fits its own
+		// it draws the ride at about eight pixels. The engine fits its own
 		// preview from the model's box, taking (max + min) / 2 as the centre and max - min as the
 		// size (FUN_004689f0), which is what this does: the centre is subtracted in PreviewTransform
 		// and the half-extent is what the panel is divided by.
@@ -677,11 +664,11 @@ internal sealed class ParkObjectWindow : UiWindow
 		// centre is not the centre of what you can see. Turning about a point that is not the visual
 		// centre swings the model round instead of rotating it in place.
 		//
-		// IT TURNS ABOUT THE RIDE'S OWN CENTRE, which is all a preview wants - and two wrong turns got
-		// here. The model's whole box covers every mesh it ships, INCLUDING the building meshes
-		// PoseAsBuilt hides once the ride is up, so its centre sits below what can be seen and the ride
-		// rode high. Taking the drawn meshes' ORIGINS instead cured the swing and not the height,
-		// because a ride's meshes all have their origins on its base plane. What is wanted is the box
+		// IT TURNS ABOUT THE RIDE'S OWN CENTRE, which is all a preview wants. The model's whole box
+		// covers every mesh it ships, INCLUDING the building meshes PoseAsBuilt hides once the ride is
+		// up, so its centre sits below what can be seen and the ride would ride high. The drawn meshes'
+		// ORIGINS will not do either, because a ride's meshes all have their origins on its base plane.
+		// What is wanted is the box
 		// of the geometry actually DRAWN, and one centre serves both the pivot and the framing.
 		//
 		// The REST boxes are used rather than live positions deliberately: a pivot that followed the
@@ -719,11 +706,11 @@ internal sealed class ParkObjectWindow : UiWindow
 		var centre = (low + high) * 0.5f;
 		var size = high - low;
 
-		// FITTED FOR THE ANGLE IT IS SEEN AT, which the first version was not. Sizing by
+		// FITTED FOR THE ANGLE IT IS SEEN AT. Sizing by
 		// max( size.X, size.Z ) assumes the model is looked at square on; tilted down by PreviewPitch
 		// the model's DEPTH climbs into the picture as well, so it reaches
-		// depth * sin(pitch) + height * cos(pitch) up the screen. Ignoring that is what pushed the
-		// ride off the bottom of its panel and into the scissor, which cut it clean across.
+		// depth * sin(pitch) + height * cos(pitch) up the screen. Ignoring that pushes the ride off the
+		// bottom of its panel and into the scissor, which cuts it clean across.
 		//
 		// Across, the spin turns X and Y through each other, so the widest it can ever be is the
 		// diagonal of its own footprint - not either side of it.
@@ -756,7 +743,7 @@ internal sealed class ParkObjectWindow : UiWindow
 			// between this centre and the one the fit uses IS the error, in model units - the camera is
 			// orthographic and aimed at the origin, so a centred box cannot land off-centre.
 			//
-			// >>> IT ANSWERED NOUGHT, AND THE FIT IS THEREFORE NOT WHAT SITS THE RIDE LOW. <<< Belly
+			// THE FIT IS NOT WHAT SITS THE RIDE LOW. Belly
 			// Bounce reports off by (0.0, 0.0, 0.0), with every mesh's live position equal to its rest
 			// offset. A burst of frames still puts the lit-pixel centroid at 0.591 down the panel
 			// against a 0.500 middle, and that gap is WHERE THE PIXELS ARE: the ride's wide wooden base
@@ -817,9 +804,8 @@ internal sealed class ParkObjectWindow : UiWindow
 		}
 
 		// LOOKED AT FROM ABOVE AND IN FRONT, the way the park's camera sees a ride, rather than square
-		// on. The first version copied AdvisorModel.ScreenProjection, which is a flat elevation - model
-		// X across, Z up, Y squashed almost out of depth - and gave a ride with no perspective on it at
-		// all. Here the eye sits back and up by the pitch and looks at the model's own centre, so the
+		// on: AdvisorModel.ScreenProjection is a flat elevation - model X across, Z up, Y squashed almost
+		// out of depth - and gives a ride no perspective at all. Here the eye sits back and up by the pitch and looks at the model's own centre, so the
 		// centring stops being arithmetic to get right and becomes a consequence of what is aimed at.
 		var eye = new System.Numerics.Vector3( 0f, -MathF.Cos( pitch ), MathF.Sin( pitch ) ) * (half * 4f);
 
@@ -856,10 +842,9 @@ internal sealed class ParkObjectWindow : UiWindow
 		command.SetScissorRect( 0, (uint)MathF.Max( 0f, panel.X ), (uint)MathF.Max( 0f, panel.Y ),
 			(uint)MathF.Max( 0f, panel.Width ), (uint)MathF.Max( 0f, panel.Height ) );
 
-		// THE DRAWN SET AND THE BOXED SET MUST BE THE SAME SET, and they were not: the box covered the
-		// four meshes that pass the visibility test while all eight were drawn. Centring on half a ride
-		// and turning all of it is an ORBIT of the offset between the two centres - which is exactly
-		// what a burst of frames showed, the centroid tracing a clean ring about the panel's middle.
+		// THE DRAWN SET AND THE BOXED SET MUST BE THE SAME SET. Centring on half a ride and turning all
+		// of it is an ORBIT of the offset between the two centres, the centroid tracing a clean ring
+		// about the panel's middle.
 		//
 		// A hidden mesh is one PoseAsBuilt put away when the ride finished going up, and it has no more
 		// business in the preview than in the park. DrawOverlay does not consult Opacity the way
@@ -991,7 +976,7 @@ internal sealed class ParkObjectWindow : UiWindow
 	/// not a number.
 	/// </summary>
 	/// <remarks>
-	/// <b>These are gauges, and treating them as text is why they showed nothing.</b> The labels
+	/// <b>These are gauges, and treated as text they show nothing.</b> The labels
 	/// beside them are text cells and render fine; the value cells are not. <c>FUN_004ade40</c> hands
 	/// each of these four <c>((value &amp; 0xff) &lt;&lt; 10) / 100</c> - a 0..100 percentage mapped onto
 	/// 0..1024 - through the control's <c>+0x1c</c> entry, while the rows either side of them
@@ -1273,7 +1258,7 @@ internal sealed class ParkObjectWindow : UiWindow
 	}
 
 	/// <summary>
-	/// One of the bottom row's verbs. Delete and move are built; the rest are counted by name.
+	/// One of the bottom row's verbs. Delete, move and show the queue are built; the rest are counted by name.
 	/// </summary>
 	private void Verb( int id, string what )
 	{

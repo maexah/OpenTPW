@@ -24,7 +24,7 @@ public sealed class LobbyWeather : Entity
 	/// change spinning a globe from one island to the next and the snap happens out of sight;
 	/// this slides straight between islands in about a second, where a snap reads as a glitch.
 	/// Matched to the camera's own body rate - <see cref="LobbyCameraMode"/>'s PositionRate - so
-	/// the two arrive together, which is why it moved when that rate was corrected.
+	/// the two arrive together.
 	/// </summary>
 	private const float SkyRate = 1f;
 

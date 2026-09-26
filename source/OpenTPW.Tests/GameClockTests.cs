@@ -4,8 +4,8 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// The game's clock: the 31ms beat both of the original's loops run on, what a pause does to it, and
-/// the two catch-up caps. Every test drives it the way <see cref="Level.Update"/> does - a frame into
-/// <see cref="Time.Update"/>, then a frame into <see cref="GameClock.Update"/>.
+/// the two catch-up caps. Every test drives it as a frame does - <see cref="Time.Update"/>
+/// from the renderer, then <see cref="GameClock.Update"/> from <see cref="Level.Update"/>.
 /// </summary>
 [TestClass]
 public class GameClockTests
@@ -19,7 +19,7 @@ public class GameClockTests
 		Start();
 	}
 
-	/// <summary>One frame of a given length, through both clocks, as a level's update does it.</summary>
+	/// <summary>One frame of a given length, through both clocks, in the order a frame runs them.</summary>
 	private static void Frame( float seconds, bool paused = false, float catchUp = GameClock.LobbyCatchUp )
 	{
 		Time.Update( seconds );
@@ -102,8 +102,7 @@ public class GameClockTests
 	/// <summary>
 	/// A scene is not billed for the time it spent loading. The frame that spans a load is the longest
 	/// one the game ever sees - eight seconds of park - and without the re-base the first frame back
-	/// would run a whole capful of ticks at once: 64 in a park, and 16 in a lobby where the old
-	/// arrangement ran three.
+	/// would run a whole capful of ticks at once: 64 in a park, and 16 in a lobby.
 	/// </summary>
 	[TestMethod]
 	public void ASceneOwesNothingForTheTimeItSpentLoading()

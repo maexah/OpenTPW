@@ -10,11 +10,10 @@ namespace OpenTPW;
 /// </para>
 /// <para>
 /// <b>What this is and is not.</b> It carries the needs and the behaviour a guest was saved in, ticks the
-/// needs, and holds the state that <see cref="PeepBehaviour"/> moves them through - thirteen of the
+/// needs, and holds the state that <see cref="PeepBehaviour"/> moves them through - eighteen of the
 /// original's twenty-two cases, which is enough to get a guest to the gate, through it, to a ride, onto
-/// it and off again. <b>This said five, and named choosing a ride and queueing for one as deliberately
-/// not attempted</b>; both are built, and what is left of <c>FUN_005019f0</c> is going home and the
-/// states that want a world this does not simulate yet.
+/// it and off again. What is left of <c>FUN_005019f0</c> is the end of going home and the states that
+/// want a world this does not simulate yet.
 /// </para>
 /// </summary>
 public sealed class Peep
@@ -53,7 +52,7 @@ public sealed class Peep
 	/// against, and a ride raises it by the ride's excitement over <c>PeepInfo.RideVomitDivisor</c>.
 	/// </summary>
 	/// <remarks>
-	/// <b>This was called <c>Illness</c> until 2026-09-17 and the name was wrong</b> - see the note beside
+	/// <b>The save's name for it is <c>mVomit</c>, not <c>mIllness</c></b> - see the note beside
 	/// <c>ParkWorld.ReadGuest</c>. The balance file calls the same meter "illness" in
 	/// <c>RegionFX[i].Illness</c> and <c>DecisionVarIllnessWeight</c>, so both words describe it; the
 	/// field's own name in the save is the one carried here.
@@ -256,14 +255,14 @@ public sealed class Peep
 	/// <para>
 	/// <b>The tick counted here is the thing engine's, not the game's 31ms beat</b> - see
 	/// <see cref="ParkPeople.ThingTickEvery"/>, which is eight of those to one of these. The original
-	/// reads a counter of its own for this test rather than the loop tick the engine is gated on, and the
-	/// distinction is load-bearing: eight divides four, so a share taken over game ticks would be true
-	/// only for guests whose id divides four, and the other three quarters would never age at all.
+	/// reads <c>mGameTick</c>, one a sweep, for this test rather than the loop tick the engine is gated on
+	/// (this is handed <c>GameClock.Ticks</c> over eight instead, Q132), and the distinction is
+	/// load-bearing: four divides eight, so a share taken over game ticks would be true only for guests
+	/// whose id is a multiple of four, and the other three quarters would never age at all.
 	/// </para>
 	///
 	/// <para>
-	/// <b>This gates the needs and nothing else, and an earlier draft of this comment said it gated "the
-	/// whole tick".</b> It does not, and the difference is visible: a guest is ticked by
+	/// <b>This gates the needs and nothing else.</b> A guest is ticked by
 	/// <c>FUN_0050b360</c>, which switches on the thing's model byte and, for a guest, calls
 	/// <c>FUN_00501650</c> (the needs) and then <c>FUN_005019f0</c> (the twenty-two behaviours) back to
 	/// back. The test above lives <i>inside</i> the first of those - and not even around all of it, since
@@ -288,18 +287,10 @@ public sealed class Peep
 	/// handlers for a path to the walk gives states 0, 2, 5, 7, 9, 10, 12, 13, 15, 18 and 20.
 	/// </para>
 	/// <para>
-	/// <b>An earlier version of this said four, and it was wrong in a way that mattered.</b> It was read off
-	/// the body of the switch alone - stopping at the calls that function makes itself rather than following
-	/// the ones its handlers make. The cost was not academic: every guest in the shipped park is in
-	/// <see cref="PeepState.HeadingForGate"/> or <see cref="PeepState.Entering"/> or
-	/// <see cref="PeepState.WaitingForOpening"/>, and the first two are among the seven that reading missed,
-	/// so nobody in Lost Kingdom would have taken a single step.
-	/// </para>
-	/// <para>
 	/// <b>Ten of the eleven agree with a list written from the other direction.</b> <see cref="AnimationFor"/>
 	/// queues the walking animation for exactly ten states, and they are these without
-	/// <see cref="PeepState.LeavingRide"/>. That is not a contradiction: the animation list says which picture is
-	/// shown, and a guest on a ride takes its picture from the ride while still being moved.
+	/// <see cref="PeepState.LeavingRide"/>, and there the difference is this build's: the original's setter
+	/// asks for the walk on the way into it too - see <see cref="AnimationFor"/>.
 	/// </para>
 	/// </summary>
 	public static bool IsAWalkingState( PeepState state ) => state is
@@ -403,9 +394,10 @@ public sealed class Peep
 	/// <para>
 	/// That function writes the new state, queues an animation for it, and then does whatever entering
 	/// it calls for. The animation and the effects below are everything it does that depends on the
-	/// guest alone. The rest - joining a queue, being given a balloon, firing the events a ride raises,
-	/// paying at the bus stop - reaches into a ride, the sprite table or the event ring, and is left for
-	/// when those exist rather than half-written here.
+	/// guest alone. Case <c>0xe</c>'s roll is
+	/// <c>PeepBehaviour.RollForTheVisit</c>'s, made straight after this. The rest - being given a balloon,
+	/// firing the events a ride raises, paying at the bus stop - reaches into a ride, the sprite table or the
+	/// event ring, and is not built.
 	/// </para>
 	/// </summary>
 	public void SetState( PeepState next, int tick, Random random )
@@ -413,17 +405,13 @@ public sealed class Peep
 		State = next;
 		Animation = AnimationFor( next );
 
-		// <b>And QUEUE it, which is what the original does and what this used to leave out.</b>
-		// FUN_00501db0 does not merely record the animation a state wants - it calls FUN_004217f0, which
-		// decompiles to a bare `*(person + 4) = value`, the person's own mNextAnim. Recording it in
-		// Animation and nothing else left ParkPeople.Apply - which reads NextAnimation - with nothing to
-		// hand the sprite, so a guest who arrived somewhere kept playing the walk they arrived on, for
-		// ever, on screen. No test saw it: the one that should have asserted AnimationFor(State), which is
-		// a table lookup that never touches a sprite.
+		// <b>And QUEUE it, as the original does.</b> FUN_00501db0 does not merely record the animation a
+		// state wants - it calls FUN_004217f0, which decompiles to a bare `*(person + 4) = value`, the
+		// person's own mNextAnim, and that is what ParkPeople.Apply hands the sprite.
 		//
-		// The four states that queue nothing do not call FUN_004217f0 at all, and they are exactly the
-		// four AnimationFor answers None for - so the guard here is the original's own shape rather than a
-		// defensive check.
+		// Of the four AnimationFor answers None for, only PlayingSpotAnimation and Leaving never call
+		// FUN_004217f0 in the original: its case 0xf asks for the walk, and its case 0x10 for the stand on
+		// a thing flagged 0x20 - see AnimationFor.
 		if ( Animation != PeepAnimation.None )
 			NextAnimation = (int)Animation;
 
@@ -442,8 +430,6 @@ public sealed class Peep
 			// reads mQueuePos, converts it to a float, multiplies by the constant at 0x007007a4 - which
 			// is 1.2 - and truncates it back into mQueueMoveDelay. So somebody at the back of a long queue
 			// waits proportionally longer before shuffling up, and the guest at the front waits not at all.
-			// This was missing when the step-up was built, so the delay was read from the save once and
-			// never renewed.
 			case PeepState.InQueue:
 				TimeStartedIdling = tick;
 				QueueMoveDelay = (int)(QueuePos * QueueDelayPerPlace);
@@ -471,10 +457,11 @@ public sealed class Peep
 	/// they are read as "going somewhere" and "staying put".
 	/// </para>
 	/// <para>
-	/// The four that queue nothing are not an omission. <see cref="PeepState.PlayingSpotAnimation"/> is
-	/// already playing one, <see cref="PeepState.Leaving"/> queues none at all, and
-	/// <see cref="PeepState.LeavingRide"/> and <see cref="PeepState.Riding"/> choose theirs from the state of
-	/// the ride they are on - which nothing here can ask yet.
+	/// Two of the four that queue nothing are the original's: <see cref="PeepState.PlayingSpotAnimation"/> is
+	/// already playing one, and <see cref="PeepState.Leaving"/> queues none at all. The other two are this
+	/// build's. The original's setter asks for the walk for <see cref="PeepState.LeavingRide"/>, and for
+	/// <see cref="PeepState.Riding"/> the stand on a thing flagged <c>0x20</c> and no sprite on any other
+	/// (<c>FUN_00501db0</c> cases <c>0xf</c> and <c>0x10</c>; the hidden rider is Q52).
 	/// </para>
 	/// </summary>
 	public static PeepAnimation AnimationFor( PeepState state ) => state switch

@@ -17,7 +17,6 @@ namespace OpenTPW;
 /// the end. The front of the same function is partly built: <b>the stuck-bit history that decides to
 /// renavigate IS built</b> and runs from <see cref="PeepWalk"/>, which says so at its own site. What is
 /// still absent is the ground-staleness check and the speed factor, which want the terrain stamp grid.
-/// This paragraph called all three unbuilt.
 /// <see cref="Refill"/> stands in for the one call the walking half really does make.
 /// </para>
 /// <para>
@@ -30,7 +29,7 @@ public sealed class PeepJourney
 {
 	/// <summary>
 	/// How near the end counts as arriving, in radii - <c>0x19999</c>, which is 1.6. <b>The same constant
-	/// as <see cref="PeepNavigator.LastLegTolerance"/></b>, which was here first; it is named again from
+	/// as <see cref="PeepNavigator.LastLegTolerance"/></b>; it is named again from
 	/// this side because this is where the walking half reads it.
 	/// </summary>
 	public const int ArriveWithin = PeepNavigator.LastLegTolerance;
@@ -44,7 +43,7 @@ public sealed class PeepJourney
 	/// <summary>
 	/// What the remaining distance is divided by on the last leg to decide how fast to close on the end.
 	/// The original builds this constant through the floating-point unit - <c>2.0 * 65536.0</c> - purely to
-	/// get a fixed-point two, which is the only floating point anywhere in the peep simulation.
+	/// get a fixed-point two.
 	/// </summary>
 	public const int SlowingOver = 0x20000;
 

@@ -7,18 +7,18 @@ namespace OpenTPW;
 /// <para>
 /// <b>A ride is ticked like anything else in the park.</b> <c>FUN_0050b360</c> switches on a thing's
 /// model byte and hands model 3 to <c>FUN_004e0b90</c> and then <c>FUN_004e0e00</c>, exactly as it hands
-/// a guest to their needs and then their behaviours. <b>The whole of that tick is built now</b>, script
-/// and all - this said only the first half's tail could be built honestly, which was true until the
-/// script binding landed.
+/// a guest to their needs and then their behaviours. <b>Both halves run</b>, script and all, but not
+/// whole: the first half's breakdown request and worn flag, and the state-0 turn's broken and condemned
+/// transitions, are unbuilt (<c>docs/exe/ride-operation.md</c>, "The first half of the turn" and
+/// "The second half").
 /// </para>
 /// <para>
 /// <b>Ride operation is script-driven, and that is why only this much is here.</b> The object holds a
 /// script handle at <c>+0x24</c>, and the engine talks to the ride through its script's variables -
-/// <b>0</b> admit, <b>1</b> dismiss, <b>4</b> breakdown, <b>6</b> closed, <b>7</b> out of service,
-/// <b>8</b> dirty. <b>Both of the cautions this paragraph used to carry are now settled.</b>
-/// <see cref="ParkRides"/> binds a script to every placed object and pushes the save's own capacity and
-/// duration into it; and the condition once called "worse than unbound" - <c>FUN_004e0450</c> admitting
-/// when variable 0 <i>differs</i> from the head of the queue - is the <c>VAR_LETMEON</c> handshake:
+/// <b>0</b> admit, <b>1</b> dismiss, <b>4</b> breakdown, <b>6</b> closed, <b>7</b> broken,
+/// <b>8</b> worn. <see cref="ParkRides"/> binds a script to every placed object and pushes the save's own
+/// capacity and duration into it; and <c>FUN_004e0450</c> admitting when variable 0 <i>differs</i> from
+/// the head of the queue is the <c>VAR_LETMEON</c> handshake:
 /// the engine fills that slot and the script zeroes it to acknowledge, so an empty slot is the script
 /// saying it is ready. See <see cref="CompleteAdmission"/>, which reads it the right way round.
 /// </para>
@@ -55,9 +55,8 @@ public sealed class ParkRideOperation
 	///
 	/// <para>
 	/// <b>It is <c>rand() % 100 &lt;= chance</c>, and the chance lives on the OBJECT at <c>+0x190</c></b>,
-	/// built as <c>100 - UsageInfo.InitChanceOfLoosing</c> when the thing is made. This project's notes
-	/// recorded that byte as possibly the person's and left it unsettled;
-	/// <c>FUN_004e2670</c> settles it, because the same pointer it reads is the one it takes the catalogue
+	/// built as <c>100 - UsageInfo.InitChanceOfLoosing</c> when the thing is made. <c>FUN_004e2670</c> fixes
+	/// it as the object's, because the same pointer it reads is the one it takes the catalogue
 	/// id and the script handle from, and both of those are object fields.
 	/// </para>
 	/// <para>
@@ -134,8 +133,8 @@ public sealed class ParkRideOperation
 	}
 
 	/// <summary>
-	/// Runs <see cref="DropStaleQueueHead"/> for every object that has a queue, which is how the whole
-	/// park stays honest without a caller having to know which things are rides.
+	/// Runs <see cref="DropStaleQueueHead"/> for every object the save placed. <b>Dead by CODE:</b> only a
+	/// test calls it; the park's own turn (<c>ParkPeople.TakeTheRidesTurns</c>) asks each object itself.
 	/// </summary>
 	/// <returns>How many stale heads were dropped.</returns>
 	public int DropStaleQueueHeads( ParkWorld? park )
@@ -214,12 +213,9 @@ public sealed class ParkRideOperation
 	/// would drop whoever was already there, which is why the original refuses instead.
 	/// </para>
 	/// <para>
-	/// <b>Every refusal of the original's is reproduced, and this paragraph used to say one was not.</b> It
-	/// said the object's <c>+0x68</c> "has not been established" - but that field is <c>mCanLoad</c>, it is
-	/// serialised, the save reader has always parsed it under that name, and
-	/// <see cref="ParkRideChoice.CanBeOffered"/> in this same folder has always refused on it. The claim was
-	/// stale rather than the decode missing. The two ride states it refuses on are the pair
-	/// <see cref="ParkRideChoice"/> already names.
+	/// <b>Every refusal of the original's is reproduced.</b> The object's <c>+0x68</c> is <c>mCanLoad</c>,
+	/// which <see cref="ParkRideChoice.CanBeOffered"/> refuses on too, and the two ride states it refuses on
+	/// are the pair <see cref="ParkRideChoice"/> already names.
 	/// </para>
 	/// <para>
 	/// <b>A ride closed while its nominee walked up refuses them here</b> - <see cref="Close"/> lets the
@@ -306,8 +302,7 @@ public sealed class ParkRideOperation
 	/// Lost Kingdom ride scripts: <c>UNBOUNCE</c>/<c>FORCEUNBOUNCE</c> (Bouncy alone), <c>BUMP 2</c>
 	/// (bumper, GoKarts, Wateride), <c>COAST 3</c> (the three coasters), <c>WALKGET</c> (incagod, Lookout,
 	/// Totem, tvsim), <c>HOP</c> with <c>DELHEAD</c> (Mumbo, PorkPie, Spider, Volcano, Monkey), and
-	/// <c>TOUR 4</c> (TourRide). This paragraph named only the first pair until the scripts were listed,
-	/// which made a claim true of one ride read as a claim about all of them.
+	/// <c>TOUR 4</c> (TourRide).
 	/// </para>
 	/// <para>
 	/// <b>They are not blocked on the same thing, either.</b> <c>COAST 3</c> is implemented and its
@@ -324,14 +319,13 @@ public sealed class ParkRideOperation
 	/// tell that decode from a wrong one.
 	/// </para>
 	/// <para>
-	/// <b>A guest is PUT DOWN at the exit and then aimed one cell PAST it, and this used to walk them to
-	/// the exit instead - which the map refuses.</b> <c>FUN_005014e0</c> reads the exit point, calls
+	/// <b>A guest is PUT DOWN at the exit and then aimed one cell PAST it, and a walk to the exit itself is
+	/// one the map refuses.</b> <c>FUN_005014e0</c> reads the exit point, calls
 	/// <c>FUN_004fa930</c> to set the person's position outright, and only then sets a destination: the
 	/// neighbour of the exit cell in the direction that cell faces, flipped to the opposite when
 	/// <c>mExitPos</c> equals <c>mEntryPos</c> (which is true of ten of this park's eleven objects). Walking
-	/// a guest TO the exit cannot work and never did: <see cref="CellEdge"/> only opens a ride end along
-	/// the way it faces, so the route fails and the guest gives up where they stand. Alexah asked for a
-	/// test that the guest's position becomes the exit, and that test is what found it.
+	/// a guest TO the exit cannot work: <see cref="CellEdge"/> only opens a ride end along
+	/// the way it faces, so the route fails and the guest gives up where they stand.
 	/// </para>
 	/// <para>
 	/// <b>The failure arm is deliberately NOT reproduced, and it is drastic rather than quiet.</b> When the
@@ -348,8 +342,7 @@ public sealed class ParkRideOperation
 	/// How to find a guest's walk by thing id, or null where there is nowhere to move anyone.
 	/// <b>A LOOKUP rather than one walk, and that is not a stylistic choice.</b> Which guest comes off is
 	/// decided inside this method, by whoever the script has named in <c>VAR_LETMEOFF</c> - so a caller
-	/// cannot know whose walk to hand over. This took a single <c>PeepWalk</c> when it was written, which
-	/// only a test that already knew the answer could satisfy, and no ride's turn ever could.
+	/// cannot know whose walk to hand over.
 	/// </param>
 	/// <returns>Whether a guest was let off.</returns>
 	public bool Dismiss( RideScript? script, ParkWorld.CatalogueObject ride, int tick, Random random,
@@ -498,10 +491,11 @@ public sealed class ParkRideOperation
 	/// happiness effect over a hundred (<c>0x004fe4cf</c>..<c>0x004fe525</c>).
 	/// </para>
 	/// <para>
-	/// <b>Also absent, and each with a consumer that does not exist yet:</b> the guest's recent-things
-	/// history (<c>mPreviousRides</c>, four entries shifted by three at <c>+0x1e0</c>, which the ride
-	/// scorer divides a candidate down by) and the three visit counters at <c>+0x1c4</c>/<c>+0x1c8</c>/
-	/// <c>+0x1cc</c> chosen by the descriptor's <c>+0x4ac</c>. Both would be written and never read.
+	/// <b>Also absent:</b> the guest's recent-things history (<c>mPreviousRides</c>, four entries shifted
+	/// by three at <c>+0x1e0</c>), which <see cref="ParkRideScore"/> divides a candidate down by but which
+	/// nothing here writes, so the chooser is handed none; and the three visit counters at
+	/// <c>+0x1c4</c>/<c>+0x1c8</c>/<c>+0x1cc</c> chosen by the descriptor's <c>+0x4ac</c>, which nothing
+	/// here would read.
 	/// </para>
 	/// </summary>
 	private void SettleUp( Peep peep, ParkWorld.CatalogueObject ride, ParkItemCatalogue? catalogue )
@@ -535,7 +529,7 @@ public sealed class ParkRideOperation
 
 		// <b>A sideshow PAYS OUT, and it pays the cost of goods rather than the price.</b> FUN_004fe1e0
 		// adds FUN_004e1a10 - the object's +0x188, built from UsageInfo.InitCostOfGoods - straight onto the
-		// guest's cash. Five, for the Jungle Spray, against the twenty they were just charged.
+		// guest's cash. Fifty, for the Jungle Spray, against the twenty they were just charged.
 		peep.Cash += item.CostOfGoods;
 
 		peep.Happiness = Peep.Change( peep.Happiness, WinningIsWorth( item, ride ) );
@@ -556,17 +550,15 @@ public sealed class ParkRideOperation
 	/// <c>log2( costOfGoods / pricePerUse ) * MediumHappinessChange</c>, the tail of <c>FUN_004fe1e0</c>.
 	///
 	/// <para>
-	/// <b>It is a RISE for the shipped sideshow, and the first reading of it here was wrong.</b> The Jungle
+	/// <b>It is a RISE for the shipped sideshow.</b> The Jungle
 	/// Spray's own file sets a cost of goods of <b>50</b> against a price of 20 - so the ratio is two and a
 	/// half, its log is about 1.32, and fifteen of those is <b>+19</b>. A guest pays twenty, wins fifty and
 	/// cheers up, which is what makes the engine's own "Sideshow won - happiness up %d points" an honest
 	/// line rather than a perverse one.
 	/// </para>
 	/// <para>
-	/// <b>That number was predicted as 5 and measured as 50, and the test is what caught it</b> - a
-	/// mis-transcription of the item's own <c>.sam</c> that had reached three comments before the
-	/// arithmetic refused it. The sign of this whole arm turns on it: a prize SMALLER than the price would
-	/// make the log negative and the winner unhappy, which is what the wrong number implied.
+	/// <b>The sign of this whole arm turns on the prize:</b> a prize SMALLER than the price would make the
+	/// log negative and the winner unhappy.
 	/// </para>
 	/// <para>
 	/// <b>The divisor is applied as an integer while the numerator is a float</b>, which is the original's
@@ -691,22 +683,20 @@ public sealed class ParkRideOperation
 	/// <c>state == InQueue &amp;&amp; mQueuePos == 0</c>.
 	/// </para>
 	/// <para>
-	/// <b>The fullness test is skipped for a WATER or COASTER track - and this said "car or water", which
-	/// was wrong.</b> The original compares the item descriptor's track type against <b>3</b> and then
+	/// <b>The fullness test is skipped for a WATER or COASTER track.</b> The original compares the item
+	/// descriptor's track type against <b>3</b> and then
 	/// <b>2</b>, so the exempt pair is <see cref="ItemDescriptionFile.WaterTrack"/> and
 	/// <see cref="ItemDescriptionFile.CoasterTrack"/>; a <see cref="ItemDescriptionFile.CarTrack"/> is
-	/// <b>not</b> exempt and is stopped by being full like anything else. The wrong pair came of carrying
-	/// a phrase over from <see cref="ParkRideChoice.CanBeOffered"/> - which refuses types 1 and 2 for a
-	/// quite different reason, a track ride that is not valid - instead of reading this function's own
-	/// operands. It reads the type from the item rather than the object, which is why it is passed in.
+	/// <b>not</b> exempt and is stopped by being full like anything else.
+	/// <see cref="ParkRideChoice.CanBeOffered"/> refuses types 1 and 2 for a quite different reason, a
+	/// track ride that is not valid. Invite reads the type from the item rather than the object, which is
+	/// why it is passed in.
 	/// </para>
 	/// <para>
-	/// <b>This said TWO arms were unreproduced because their fields were unestablished; it is now one.</b>
-	/// The object's <c>+0x68</c> is <c>mCanLoad</c> - serialised, parsed under that name, and already
-	/// refused on by <see cref="ParkRideChoice.CanBeOffered"/> - so it is reproduced here too. What remains
-	/// genuinely unestablished is <c>+0x33</c>: the original will invite <i>while running</i> when that
-	/// byte carries bit 0, a second flags byte beside the one at <c>+0x32</c> this project reads. That one
-	/// is still not guessed at.
+	/// <b>One arm is not reproduced.</b> The object's <c>+0x68</c> is <c>mCanLoad</c>, refused on here as
+	/// <see cref="ParkRideChoice.CanBeOffered"/> refuses on it. <c>+0x33</c> bit 0 is <c>RunsContinuously</c>,
+	/// from the descriptor's <c>+0x48</c> (<c>docs/exe/ride-operation.md</c>, "Object fields"): the original
+	/// invites <i>while running</i> when it is set, and nothing here reads it.
 	/// </para>
 	/// </summary>
 	/// <returns>The guest invited, or nought if nobody was.</returns>

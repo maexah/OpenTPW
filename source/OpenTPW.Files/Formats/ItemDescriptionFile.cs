@@ -20,7 +20,7 @@ namespace OpenTPW;
 /// because the picture invites the opposite reading: <c>4x4rock</c> draws fourteen stars inside a four by
 /// four box, <c>5x5rck</c> twenty-three inside five by five, and <c>ground</c> draws none at all - yet
 /// every one of the jungle's seventy items has a <c>.hmp</c> whose length says width times height, all
-/// seventy, including the three that would otherwise disagree.
+/// seventy, including the seven whose pictures leave cells empty.
 /// </para>
 /// </summary>
 public sealed class ItemDescriptionFile
@@ -72,8 +72,9 @@ public sealed class ItemDescriptionFile
 
 	/// <summary>
 	/// Which of the four kinds this is - <b>0 rides, 1 shops, 2 sideshows, 3 features</b>, numbered by the
-	/// game's own comment beside the key. Nothing in the jungle overrides it, so in practice it is the
-	/// folder the item lives in.
+	/// game's own comment beside the key. In the jungle only the nine items no buy list
+	/// reaches set another value, <b>4</b> (see <see cref="BuildPrice"/>); every other item's is the
+	/// folder it lives in.
 	/// </summary>
 	public int WhichUIType => _whichUIType ?? _category?.WhichUIType ?? Feature;
 
@@ -142,7 +143,8 @@ public sealed class ItemDescriptionFile
 	/// original applies five consecutive descriptor fields to five guest meters when somebody finishes
 	/// using a thing: <c>+0x144</c> to thirst, <c>+0x148</c> to hunger, <c>+0x14c</c> to sickness,
 	/// <c>+0x150</c> to happiness and <c>+0x154</c> to the litter they carry. The <c>.sam</c> files carry
-	/// exactly five <c>UsageInfo.*Effect</c> keys, on the same eight items, so each key is matched to the
+	/// these five <c>UsageInfo.*Effect</c> keys, on the same eight items, beside <c>AppearanceEffect</c> and
+	/// <c>FatigueEffect</c>, so each key is matched to the
 	/// meter its offset writes rather than by assuming the file and the struct share an order.
 	/// </para>
 	/// <para>
@@ -173,8 +175,8 @@ public sealed class ItemDescriptionFile
 	/// <b>That reading is not taken from the comment but from what the code does with it</b>, across the
 	/// whole set rather than one item: a candidate of type 1 or 2 is refused unless its track ride is
 	/// valid, and a type 3 has its excitement computed from the ride's own script handle instead of from
-	/// its speed, duration and capacity. The three items carrying 3 are exactly the three that declare no
-	/// duration at all, which is what makes the second path necessary for them.
+	/// its speed, duration and capacity. The three items carrying 3 all declare no
+	/// duration at all - so does Splish Splash, a 2 - which is what makes the second path necessary for them.
 	/// </para>
 	/// </summary>
 	public int TrackType => _trackType ?? _category?.TrackType ?? 0;
@@ -195,7 +197,7 @@ public sealed class ItemDescriptionFile
 	/// <para>
 	/// <b>It is the engine's animation-channel count rather than a hint.</b> The thing loader hands this
 	/// field straight to the model loader as its channel count - <c>FUN_00413c10</c> passes
-	/// <c>thing+0x170</c> to <c>FUN_004629d0</c>, which substitutes 1 when it is nought, which is why the
+	/// the descriptor's <c>+0x170</c> to <c>FUN_004629d0</c>, which substitutes 1 when it is nought, which is why the
 	/// default here is 1 and not nought. Ride vehicles pass a literal 5 and the queue models pass nothing
 	/// at all, so this is the only route by which an item's own file decides the number.
 	/// </para>
@@ -433,7 +435,7 @@ public sealed class ItemDescriptionFile
 	/// kind 9, which is the entrance, and the first kind 10, which is the exit. Finding no 10 leaves the exit
 	/// on the entrance; finding no 9 leaves both at nought, which is the anchor cell itself.
 	/// <para>
-	/// <b>The shipped save predicts all fourteen of its placed objects' <c>mEntryPos</c> this way</b>,
+	/// <b>The shipped save predicts all eleven of its placed objects' <c>mEntryPos</c> this way</b>,
 	/// including the two a reading without the flip gets wrong: the Staff Room, <c>**</c> / <c>*2</c> at 90
 	/// degrees from (58,16), enters at (58,15), and the Jungle Spray, <c>***</c> / <c>***</c> / <c>*2*</c>
 	/// at (51,30), enters at (52,30).

@@ -215,8 +215,8 @@ public class ParkQueueJoinTests
 	/// Neither this nor the original's <c>FUN_004ddd20</c> touches anybody's <c>mQueuePos</c> - both only
 	/// unlink and fix the head. So the place a guest was handed when they joined goes stale the moment
 	/// somebody in front of them boards, and <see cref="ParkState.PositionInQueue"/> is the only thing
-	/// that knows the truth. <b>Leaving that uncompared stopped every queue in the park dead after one
-	/// rider</b>, because <see cref="ParkRideOperation.Invite"/> only calls forward a head whose place is
+	/// that knows the truth. <b>Leaving that uncompared would stop every queue in the park dead after
+	/// one rider</b>, because <see cref="ParkRideOperation.Invite"/> only calls forward a head whose place is
 	/// nought.
 	/// </para>
 	/// </summary>

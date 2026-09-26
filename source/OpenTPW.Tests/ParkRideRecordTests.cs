@@ -42,8 +42,7 @@ public class ParkRideRecordTests
 	/// The three things a guest can spend time at, named and classified by the game's own data rather
 	/// than inferred from their numbers: catalogue 1203 is <c>Drinks Shop</c> in <c>jungle/shops</c>,
 	/// 1303 is <c>Jungle Spray</c> in <c>jungle/sideshow</c>, and 1100 is <c>Belly Bounce</c> in
-	/// <c>jungle/rides</c>. <b>The middle one is a SIDESHOW, not a shop</b> - these were called "the two
-	/// shops" until the catalogue was asked.
+	/// <c>jungle/rides</c>. <b>The middle one is a SIDESHOW, not a shop.</b>
 	/// </summary>
 	private const int DrinksShop = 16;
 
@@ -119,11 +118,11 @@ public class ParkRideRecordTests
 
 	/// <summary>
 	/// The third bit of the flags byte: somewhere a guest may be <em>offered</em>. Six objects carry it -
-	/// the three toilets, the two shops and the ride - and the rest area pointedly does not.
+	/// the three toilets, the Drinks Shop, the Jungle Spray sideshow and the ride - and the rest area
+	/// pointedly does not.
 	/// </summary>
 	/// <remarks>
-	/// <b>The count is pinned because I got it wrong by eye.</b> Reading bits off a flags dump I counted
-	/// seven and named an object whose flags are nought.
+	/// <b>The count is pinned because it is easy to get wrong by eye</b> off a flags dump.
 	/// </remarks>
 	[TestMethod]
 	public void SixObjectsAreSomewhereAGuestMayBeOfferedAndTheStaffRoomIsNotOneOfThem()

@@ -5,12 +5,12 @@ namespace OpenTPW;
 ///
 /// <para>
 /// The loading bar is a count, not a clock: it fills as assets register themselves
-/// (<see cref="Asset.Register"/>), so it needs to know how many to expect before the load starts. That
-/// number used to be a constant per scene, which was wrong in two ways at once. It had to be re-measured
-/// by hand after any change to what a scene loads, and - worse - <b>there are more situations than there
-/// were constants</b>. A scene built a second time in the same run costs far less than the first, because
+/// (<see cref="Asset.Register"/>), so it needs to know how many to expect before the load starts. A
+/// constant per scene would be wrong in two ways at once. It would have to be re-measured by hand after
+/// any change to what a scene loads, and - worse - <b>there are more situations than there are
+/// scenes</b>. A scene built a second time in the same run costs far less than the first, because
 /// the caches already hold most of what it asks for - a rebuild costs roughly half a cold load. Two
-/// constants cannot be right about twice as many situations, so half of them were always wrong.
+/// constants cannot be right about twice as many situations, so half of them would always be wrong.
 /// </para>
 /// <para>
 /// So each situation keeps its own count here, and each is <b>whatever it measured last time</b>. A key

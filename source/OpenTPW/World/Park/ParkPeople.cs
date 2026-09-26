@@ -16,13 +16,14 @@ namespace OpenTPW;
 /// <b>Guests walk, and arriving somewhere now means something.</b> The needs loop is the first of the
 /// original's two per-guest calls and the twenty-two state behaviours are the second - see
 /// <see cref="PeepBehaviour"/>, which is that second call and which decides what a walk coming to an end
-/// amounts to. <b>Thirteen of the twenty-two are built</b> - this said five, and named choosing, judging
-/// the fee and waiting for the gate as the three that were not, all of which have since landed.
+/// amounts to. <b>Eighteen of the twenty-two are built</b>; the other four stand in one group at the
+/// foot of its switch, each saying what it waits on.
 /// <para>
 /// <b>They choose now.</b> A guest judges the admission fee, pays it, decides where to go, walks there,
-/// joins the queue and steps up it, is invited aboard, rides, and is let off at the exit. What stops a
-/// guest is no longer a missing handler but a missing thing to want: only two of this park's objects can
-/// be offered at all. Bringing them up one at a time is how the ride VM was done, and it is why this
+/// joins the queue and steps up it, is invited aboard, rides, and is let off at the exit. Six of this
+/// park's objects can be offered: the ride, the sideshow, the drinks shop and the three toilets
+/// (<see cref="ParkRideChoice.Offerable"/>). Bringing the states up one at a time is how the ride VM was
+/// done, and it is why this
 /// could be trusted at each step rather than all at once at the end.
 /// </para>
 /// </para>
@@ -39,7 +40,7 @@ public sealed class ParkPeople : Entity
 	private readonly List<Peep> _peeps;
 
 	/// <summary>
-	/// The same guests again, by thing id. Built once beside <see cref="_walks"/> rather than searched for,
+	/// The same guests again, by thing id. Indexed beside <see cref="_walks"/> rather than searched for,
 	/// because a ride's turn asks "who is at the head of my queue" by id and would otherwise walk the whole
 	/// list per ride per tick - see <see cref="ParkRideOperation"/>, which takes exactly this shape.
 	/// </summary>
@@ -154,7 +155,7 @@ public sealed class ParkPeople : Entity
 
 		_peeps = PeepsIn( park );
 
-		// Indexed here rather than searched for on demand. <b>This is no longer built once:</b> Admit adds
+		// Indexed here rather than searched for on demand. <b>This is not built once:</b> Admit adds
 		// a guest who was not in the save, so every structure derived from _peeps - this one, _walks and
 		// _sprites - has to be added to in the same breath. Admit is the only place that may do it.
 		foreach ( var peep in _peeps )
@@ -259,17 +260,13 @@ public sealed class ParkPeople : Entity
 						picture.Script, picture.Pc, picture.SpriteNumber, picture.Frame );
 
 					// <b>And when it first comes due, which the original's constructor does as the sprite
-					// is made.</b> Ours left Due at nought, so every sprite was due on the first turn the
-					// clock had passed - one interval early, once, at load. ScheduleFrom existed and was
-					// tested eleven times over without ever being called; the codepath audit found it.
+					// is made.</b> Left at nought, every sprite would be due on the first turn the clock
+					// had passed - one interval early, once, at load.
 					// Nought is the clock at load, which is the only moment either of these is built.
 					//
-					// <b>NOT pinned by the suite, and that is measured.</b> Taking this away again left
-					// the whole suite green when that was measured (777 tests), and it has not been
-					// re-measured since: SpriteScriptTests seeds Due itself in eight
-					// places, and no test drives the park-load path. The tests modelled the original
-					// while production did not, and a green suite could not tell the difference in
-					// either direction.
+					// <b>Whether the suite pins it is not measured on the suite as it stands.</b> The tests
+					// that build a park from the save (ParkAnimationTests among them) run this line, and
+					// SpriteScriptTests seeds its own sprites with ScheduleFrom directly.
 					sprite.ScheduleFrom( 0 );
 
 					_sprites[peep.ThingId] = sprite;
@@ -324,8 +321,7 @@ public sealed class ParkPeople : Entity
 	/// <see cref="_peeps"/> is the simulation; <see cref="_byId"/> is how a ride finds who is at its
 	/// queue head; <see cref="_walks"/> is the only reason they move; <see cref="_sprites"/> is the only
 	/// reason they are drawn; and <see cref="ParkState.StandOn"/> is what puts them in a cell's
-	/// occupancy list - without which the gate cannot see them, which is a fault this park has had
-	/// before.
+	/// occupancy list - without which the gate cannot see them.
 	/// </para>
 	/// <para>
 	/// <b>Their needs are a deviation and are declared as one.</b> The balance file states a starting
@@ -371,12 +367,12 @@ public sealed class ParkPeople : Entity
 
 		// <b>A deviation, and the reason is that the faithful path is not buildable yet.</b> The engine
 		// constructs a guest in Deciding and walks them in from outside through WalkingOutside and
-		// AtTheBusStop - both of which take their cells from FUN_004d8650, whose balance-file pair is
-		// unproven, so PeepBehaviour deliberately answers neither. Left in Deciding out here a guest
-		// stands for ever: Decide looks for somewhere inside the park, and they are outside it and
-		// unadmitted. AtGate is the head of the admission sequence the original joins them to anyway -
-		// it picks a ticket booth and sends them to be charged - so this starts them there and skips
-		// the walk in. Put it back the moment that cell pair is measured.
+		// AtTheBusStop; the second takes its cells from FUN_004d8650's bus stops (park.md, "Arrivals")
+		// and is unbuilt (Q128). Left in Deciding out here a guest stands for ever: Decide looks for
+		// somewhere inside the park, and they are outside it and unadmitted. AtGate is the head of the
+		// admission sequence the original joins them to anyway - it picks a ticket booth and sends them
+		// to be charged - so this starts them there and skips the walk in. Put it back when Q128 builds
+		// AtTheBusStop.
 		var guest = new ParkWorld.GuestState(
 			State: (int)PeepState.AtGate, SavedState: ParkWorld.GuestState.Deciding,
 			PersonType: personType, Cash: cash, ExitLevel: exitLevel,
@@ -515,8 +511,8 @@ public sealed class ParkPeople : Entity
 
 		ParkGuestSprites.Current?.Add( person, picture with { Slot = slot, X = cellX, Y = cellY, Facing = 0 } );
 
-		// Staff have never been in a cell's occupancy list - StandOn is called only from PeepBehaviour,
-		// which is guests. This is the first thing to put one there.
+		// A member of staff enters a cell's occupancy list only here and in DropStaff: PeepBehaviour's
+		// StandOn is for guests, and nothing re-stands a member of staff as they walk.
 		_behaviour.State.StandOn( thingId, cellX, cellY );
 
 		Log.Info( $"People: hired {candidate.Name}, a grade {candidate.Grade} " +
@@ -525,6 +521,9 @@ public sealed class ParkPeople : Entity
 
 		return thingId;
 	}
+
+	/// <summary>Whether a thing id is one of the park's staff.</summary>
+	internal bool IsStaff( int thingId ) => _staff.Exists( member => member.ThingId == thingId );
 
 	/// <summary>
 	/// Dismisses a member of staff, charging one further month's wage. Answers whether there was one.
@@ -535,9 +534,6 @@ public sealed class ParkPeople : Entity
 	/// state change and no walk to the gate. The severance is exactly one wage, by the same expression
 	/// the monthly charge uses.
 	/// </remarks>
-	/// <summary>Whether a thing id is one of the park's staff.</summary>
-	internal bool IsStaff( int thingId ) => _staff.Exists( member => member.ThingId == thingId );
-
 	internal bool Fire( int thingId )
 	{
 		var at = _staff.FindIndex( member => member.ThingId == thingId );
@@ -581,7 +577,7 @@ public sealed class ParkPeople : Entity
 	/// Picks a member of staff up. They stop doing whatever they were doing and wait to be put down.
 	/// </summary>
 	/// <remarks>
-	/// <b><see cref="StaffActivity.Held"/> already existed for exactly this and nothing ever set it.</b>
+	/// <b>This is what <see cref="StaffActivity.Held"/> is for.</b>
 	/// Its own doc says "a staff member being carried by the player is put here", and the shared
 	/// behaviour switch answers case 7 with an empty body - so a held worker is idle by construction
 	/// rather than by a special case. <c>FUN_00505c50</c> also proceeds whatever they were doing;
@@ -740,7 +736,7 @@ public sealed class ParkPeople : Entity
 	/// <summary>
 	/// What a vehicle's script spins on until somebody sets it. Ferry.RSE and seaplane.RSE both read
 	/// <c>TEST VAR_TRIGGER / ENDSLICE / BRANCH_Z</c> back onto themselves, so a vehicle that is never
-	/// told to go stands at the stop for ever - which is exactly how they behaved before this.
+	/// told to go stands at the stop for ever.
 	/// </summary>
 	private const string VehicleTrigger = "VAR_TRIGGER";
 
@@ -801,7 +797,7 @@ public sealed class ParkPeople : Entity
 	/// the thirst term - measured in <c>ParkRideChoiceTests</c>, where a parched guest picks it from four
 	/// cells across the park and an unthirsty one picks the ride from the same spot. But a park left alone
 	/// hardly ever holds a guest who is thirsty <i>and</i> still deciding: only a quarter of guests grow
-	/// thirsty at all (<see cref="Peep.Tick"/> shares the drift by thing id, and 16 divides 4), and by the
+	/// thirsty at all (<see cref="Peep.Tick"/> shares the drift by thing id, and 4 divides 16), and by the
 	/// time they do their exit countdown has usually run out. Measured over a 400-second run: of 148
 	/// samples carrying thirst 50 or more, <b>73 were HeadingForExit and only 11 were Deciding</b>, and 68%
 	/// had an exit countdown already past nought.
@@ -1070,8 +1066,8 @@ public sealed class ParkPeople : Entity
 	/// <b>Every vehicle script parks three times a circuit, and one release is not enough.</b> Each of
 	/// them sets a status, spins on <c>TEST VAR_TRIGGER / ENDSLICE / BRANCH_Z</c> back onto itself, and
 	/// goes no further until something writes that variable - <c>bus.RSE</c> at instructions 42, 87 and
-	/// 117, and the other two the same. Releasing only the first, which is what sending a spent load away
-	/// did, leaves the vehicle stopped at the second for ever: measured in a live park as the bus sitting
+	/// 117, and the other two the same. Releasing only the first leaves the vehicle stopped at the
+	/// second for ever: measured in a live park as the bus sitting
 	/// at pc 90 with <c>VAR_STATUS</c> 4 from 69s to 169s while the park emptied itself.
 	/// </para>
 	///
@@ -1093,9 +1089,9 @@ public sealed class ParkPeople : Entity
 	/// <b>One approximation, named rather than hidden.</b> The original chooses between two sets of states
 	/// by <c>FUN_0051a9d0</c>, which answers whether a guest is standing at the stop - a peep (model byte
 	/// 1) in state <c>0x15</c>, <see cref="PeepState.AtTheBusStop"/>, on one of the four cells
-	/// <c>{c, c+1, c-0x100, c-0xff}</c> around <c>FUN_004d8650</c>'s first cell. <b>Which balance-file
-	/// pair that getter returns is still unproven</b> - see <see cref="PeepBehaviour"/>, where the same
-	/// open item blocks two states - so the choice between the arms is not reproduced and every state the
+	/// <c>{c, c+1, c-0x100, c-0xff}</c> around <c>FUN_004d8650</c>'s first cell, one of the bus stops
+	/// (<c>park.md</c>, "Arrivals"). <see cref="PeepBehaviour"/> leaves that state unbuilt until Q128,
+	/// so the choice between the arms is not reproduced and every state the
 	/// original ever nudges is nudged here, but for unloading while a load is held, which the arm with nobody at
 	/// the stop leaves to the manager (<c>0x004cf533</c> releases state 4 alone). The difference is confined to
 	/// which arm fires, and no guest in this park reaches those cells to be counted anyway.
@@ -1134,8 +1130,8 @@ public sealed class ParkPeople : Entity
 	}
 
 	/// <summary>
-	/// Takes a guest out of the park - the other half of <see cref="Admit"/>, and the thing whose
-	/// absence kept <see cref="PeepState.Leaving"/> unanswered. Answers whether one went.
+	/// Takes a guest out of the park - the other half of <see cref="Admit"/>, and what answers
+	/// <see cref="PeepState.Leaving"/>. Answers whether one went.
 	///
 	/// <para>
 	/// <b>Every list <see cref="Admit"/> added them to has to let go, and one of them is not this
@@ -1172,9 +1168,8 @@ public sealed class ParkPeople : Entity
 
 	/// <summary>
 	/// Every guest the save named, as a running copy. Staff are left out of <i>this</i> list because they
-	/// are a different kind with a block and a behaviour of their own - both of which are now read and
-	/// run, by <c>StaffIn</c> just below and by <c>StaffBehaviour.Step</c> from the update. This said
-	/// nothing read the block and nothing ran the machines, which was the reason at the time.
+	/// are a different kind with a block and a behaviour of their own - read by <c>StaffIn</c> just below
+	/// and run by <c>StaffBehaviour.Step</c> from the update.
 	///
 	/// <para>
 	/// Static, and takes the park rather than reaching for one, so that a test can build the same list
@@ -1217,8 +1212,8 @@ public sealed class ParkPeople : Entity
 	/// How many of the game's 31ms ticks pass between turns of the thing engine.
 	///
 	/// <para>
-	/// <b>The thing engine is NOT on the 31ms beat, and believing it was made every guest in the park run
-	/// eight times too fast.</b> The park loop gates it at <c>0054f668</c> -
+	/// <b>The thing engine is NOT on the 31ms beat, and running it on that beat makes every guest in the
+	/// park run eight times too fast.</b> The park loop gates it at <c>0054f668</c> -
 	/// <c>TEST byte ptr [0x00877d34],0x7</c> then <c>JNZ</c> - so the whole block below that test, which
 	/// contains <b>both</b> routes to <c>FUN_00516380</c> (the direct call at <c>0054f7bb</c> and
 	/// <c>FUN_005166b0</c> at <c>0054f760</c>), runs only when the counter divides by eight. That counter
@@ -1230,7 +1225,7 @@ public sealed class ParkPeople : Entity
 	/// <c>factor * 13107.2</c>, and 13107.2 is <c>0.2 * 65536</c> - so a factor of one is a fifth of a cell
 	/// per <i>thing</i> tick. The shipped park's guests carry 15728, which is a factor of exactly 1.2. At
 	/// eight game ticks to a thing tick that is <b>0.96 cells a second</b>, a walking pace; at one it is
-	/// 7.7, which is what a park looked like before this existed.
+	/// 7.7.
 	/// </para>
 	/// </summary>
 	public const int ThingTickEvery = 8;
@@ -1317,10 +1312,10 @@ public sealed class ParkPeople : Entity
 
 			// <b>The number handed on is the THING tick, not the game tick, and that is not cosmetic.</b>
 			// Peep.Tick spreads guests across four slots by (id & 3) == (tick & 3); every 31 ms game tick that
-			// reaches here is a multiple of eight, and eight divides four, so passing the game tick would
-			// make that test true only for guests whose id divides four and starve the other three
-			// quarters of their needs for ever. The original has the same split and reads a separate
-			// counter for it.
+			// reaches here is a multiple of eight, and four divides eight, so passing the game tick would
+			// make that test true only for guests whose id is a multiple of four and starve the other three
+			// quarters of their needs for ever. The original's needs gate (FUN_00501650) reads mGameTick,
+			// the park's own clock, one up a sweep; handing on this count instead is Q132.
 			var thingTick = tick / ThingTickEvery;
 
 			foreach ( var peep in _peeps )
@@ -1400,11 +1395,11 @@ public sealed class ParkPeople : Entity
 			//
 			// <b>The deviation is here rather than in the transition that reaches it.</b> The original
 			// walks a leaver HeadingForExit -> PickingACellOutside (19) -> AtTheBusStop (21) and
-			// deletes them at Leaving (17); 19 and 21 both take their cells from FUN_004d8650, whose
-			// balance-file pair is unproven, so neither can be built and a guest reaching 19 would
+			// deletes them at Leaving (17); 19 and 21 both take their cells from FUN_004d8650, the bus
+			// stops (park.md, "Arrivals"), and neither is built (Q128), so a guest reaching 19 would
 			// stand there for ever. So 19 is treated as the end of the walk rather than the middle of
-			// it. Rerouting HeadingForExit itself was tried first and was worse: it changed a
-			// transition the original really makes, and three tests that pin it said so.
+			// it. Rerouting HeadingForExit itself would change a transition the original really makes,
+			// which three tests pin.
 			for ( var at = _peeps.Count - 1; at >= 0; --at )
 			{
 				if ( _peeps[at].State is PeepState.PickingACellOutside or PeepState.Leaving )
@@ -1469,18 +1464,16 @@ public sealed class ParkPeople : Entity
 				// that function does is the breakdown and condemned transitions, which nothing here models.
 				case 0:
 					// <b>The watchdog the tail of FUN_004e1220 runs on every turn that does not
-					// invite.</b> Invite bails while the ride already holds a nominee, and the only
-					// other thing that clears one is CompleteAdmission on success - so a guest who was
-					// called forward and then stopped heading for the ride would hold the nomination for
-					// ever and nobody else could be called. DropUnreadyNominee existed, was tested, and
-					// nothing had ever called it.
+					// invite.</b> Invite bails while the ride already holds a nominee, and otherwise only
+					// AdmitPerson, Forget and Close let one go - so a guest who was called forward and
+					// then stopped heading for the ride would hold the nomination for ever and nobody else
+					// could be called.
 					//
-					// <b>Measured before wiring, and it is NOT a fault anybody has seen:</b> over 50
-					// samples of a live park the Belly Bounce held a nominee in 8 of them and the longest
-					// unbroken hold was 2, so nominations clear on their own here. This closes a dead
-					// path and matches the original's order; it does not fix an observed freeze.
-					// <b>NOT PINNED BY THE SUITE, and that is measured rather than assumed.</b> Unwiring
-					// this again leaves all 774 tests green. ParkTickTests does drive the real turn, but
+					// <b>It is NOT a fault anybody has seen:</b> over 50 samples of a live park the Belly
+					// Bounce held a nominee in 8 of them and the longest unbroken hold was 2, so
+					// nominations clear on their own here. It matches the original's order; it does not
+					// fix an observed freeze.
+					// <b>NOT PINNED BY THE SUITE.</b> ParkTickTests does drive the real turn, but
 					// it asserts the handshake SUCCEEDING, and this fires only on a turn that does not
 					// invite - so no test reaches it. Exercising it wants a STALE nominee, which the
 					// shipped park never produces: over 50 samples the longest hold was 2. It stands on
@@ -1629,7 +1622,7 @@ public sealed class ParkPeople : Entity
 	/// <summary>
 	/// This guest's walk, looked up by thing id. Used in production by the ride turn, which hands it to
 	/// <c>Dismiss</c> so a guest let off can be walked to the exit, as well as by the tests and the debug
-	/// console. This said it was for the tests and the console alone.
+	/// console.
 	/// </summary>
 	internal PeepWalk? WalkFor( int thingId ) => _walks.GetValueOrDefault( thingId );
 
@@ -1658,12 +1651,10 @@ public sealed class ParkPeople : Entity
 	/// ids come from one numbering, so asking each in turn is unambiguous.
 	/// </summary>
 	/// <remarks>
-	/// <b>Alexah found this by playing: "the staff still don't walk".</b> They do. The staff census shows
-	/// the guard and the researcher taking 71 and 72 distinct positions in a single run, both with routes.
-	/// It was the DRAWING that could not see it: it asked <see cref="WalkFor"/>, which knows only
-	/// <c>_walks</c>, got null for every member of staff, and <see cref="ParkGuestSprites.Standing"/> then
-	/// fell back to the position the save left them at. They were simulated, routed, moving - and drawn
-	/// standing still for the whole run, which is indistinguishable from a behaviour that never ran.
+	/// <b>The drawing asks this rather than <see cref="WalkFor"/></b>, which knows only <c>_walks</c>: given
+	/// its null for every member of staff, <see cref="ParkGuestSprites.Standing"/> would fall back to the
+	/// position the save left them at, and staff who are simulated, routed and moving would be drawn
+	/// standing still - indistinguishable from a behaviour that never ran.
 	/// </remarks>
 	internal PeepWalk? AnyWalkFor( int thingId )
 		=> _walks.GetValueOrDefault( thingId ) ?? _staffWalks.GetValueOrDefault( thingId );
@@ -1825,13 +1816,10 @@ public sealed class ParkPeople : Entity
 	/// not on anything.
 	///
 	/// <para>
-	/// <b>Alexah found this by playing: the children never appear ON the ride, bouncing - their sprite
-	/// stays at the front of the queue until the ride is over.</b> That is half right of the original,
-	/// which is what made it confusing rather than obviously broken: nothing in the engine moves a rider
-	/// either. All five callers of its "place a person" routine are accounted for - the ride exit, a
-	/// generic put-down, a wrapper, the handyman's litter arm and dropping a staff member - and not one
-	/// of them is a rider. Their world position legitimately stays where they queued, and the DRAWING
-	/// puts them on the ride's own node. We did the first half and never the second.
+	/// <b>Nothing in the engine moves a rider.</b> All five callers of its "place a person" routine are
+	/// accounted for - the ride exit, a generic put-down, a wrapper, the handyman's litter arm and
+	/// dropping a staff member - and not one of them is a rider. Their world position legitimately stays
+	/// where they queued, and the DRAWING puts them on the ride's own node, which is what this answers.
 	/// </para>
 	/// <para>
 	/// <b>Asked of the scripts rather than of the guest.</b> <see cref="Peep.MajorDest"/> would be the
@@ -1890,12 +1878,11 @@ public sealed class ParkPeople : Entity
 	/// What each placed thing's script is doing, and who it is carrying.
 	///
 	/// <para>
-	/// <b>Written because four different faults produce one symptom.</b> Riders were drawn at the front
-	/// of the queue, and that is equally consistent with: a guest being <see cref="PeepState.Riding"/>
-	/// while holding no bounce slot; the script never reaching <c>BOUNCE</c>; the park's objects not
-	/// being reachable from the drawing; and the node lookup failing on a slot that is properly filled.
-	/// Each wants a different fix, and no census here could tell them apart - there was no ride census
-	/// at all.
+	/// <b>Four different faults produce one symptom.</b> A rider drawn at the front of the queue is
+	/// equally consistent with: a guest being <see cref="PeepState.Riding"/> while holding no bounce slot;
+	/// the script never reaching <c>BOUNCE</c>; the park's objects not being reachable from the drawing;
+	/// and the node lookup failing on a slot that is properly filled. Each wants a different fix, and
+	/// telling them apart is what this census is for.
 	/// </para>
 	/// </summary>
 	internal IEnumerable<string> RideCensus()
@@ -1974,7 +1961,7 @@ public sealed class ParkPeople : Entity
 			yield return $"thing {thing.ThingId,2} cat {thing.CatalogueId} '{script.Name}' "
 				// The nominee, because a stale one is invisible otherwise: Invite bails while somebody is
 				// nominated, and the only thing that clears a stale nomination is DropUnreadyNominee,
-				// which nothing calls. A queue stuck on that would look exactly like a quiet ride.
+				// run on a turn that does not invite. A queue stuck on that would look exactly like a quiet ride.
 				+ $"nominee {_behaviour.State.PersonBeingLoaded( thing.ThingId )} "
 				// Whether it is screaming, because the pause holds a scream's VOICE and not the script:
 				// a held park stops the VM one instruction short of STOPSCREAM, so "still screaming"
@@ -2008,7 +1995,7 @@ public sealed class ParkPeople : Entity
 	/// <b>No other census here can answer the question this one exists for.</b> <c>rides</c> reports what a
 	/// script is doing and <c>peeps</c> reports what a guest is carrying, but whether a guest can be
 	/// OFFERED a thing at all is decided by a walk over the map that neither of them makes - and that walk
-	/// is the whole of why the Drinks Shop and the three toilets were unreachable. So this prints the
+	/// is what makes the Drinks Shop and the three toilets reachable. So this prints the
 	/// computed cell count beside the record's own, which is the one line that tells a shop that is
 	/// genuinely refused apart from a shop the filter never considered.
 	/// </para>
@@ -2099,14 +2086,10 @@ public sealed class ParkPeople : Entity
 	/// it is not written out: a mask that can never bite would read as a rule rather than as a no-op.
 	/// </para>
 	/// <para>
-	/// <b>ONE TERM IS DELIBERATELY NOT REPRODUCED, AND IT IS NAMED RATHER THAN GUESSED.</b> The original
-	/// counts a guest only where <c>FUN_004fa990</c> agrees, and that is a predicate on the THING - the
-	/// call site is <c>MOV ECX,ESI</c> with ESI the guest, not a cell - testing the field at
-	/// <c>thing + 8</c> against <c>{0, 1, 3, 9, 10}</c> through five one-line helpers
-	/// (<c>FUN_00536310</c> and its neighbours). <b>What that field holds has not been established</b>, so
-	/// every guest is counted here rather than a meaning being invented for it. The shipped park's guests
-	/// are all outside or at the gate, so no screen can yet tell the two apart - which is the reason to
-	/// write the departure down rather than to lean on it.
+	/// <b>ONE TERM IS NOT REPRODUCED.</b> The original counts a guest only where <c>FUN_004fa990</c> agrees,
+	/// and that is a predicate on the CELL the guest stands on: handed the guest (<c>MOV ECX,ESI</c>), it
+	/// packs the cell from their position and passes when that cell's <c>mType</c> is 0, 1, 3, 9 or 10,
+	/// through five one-line helpers (<c>FUN_00536310</c> and its neighbours). Every guest is counted here.
 	/// </para>
 	/// </summary>
 	internal int AverageHappiness()
@@ -2147,14 +2130,14 @@ public sealed class ParkPeople : Entity
 			var playing = _sprites.GetValueOrDefault( peep.ThingId );
 			var nav = peep.Navigator;
 
-			// What they LOOK like, which is the half of a guest this census could not see until the
-			// scripts ran - a park where nobody animated read exactly like one where everybody did.
+			// What they LOOK like, without which a park where nobody animates reads exactly like one
+			// where everybody does.
 			var anim = playing == null
 				? "none"
 				: $"script {playing.Script} pc {playing.Pc} set {playing.Set} "
 					+ $"frame {playing.Frame} every {playing.Interval}ms";
 
-			// <b>Where they are HEADING, which no census here could say.</b> Without it a park where
+			// <b>Where they are HEADING.</b> Without it a park where
 			// nobody ever chooses the shop reads exactly like a park where everybody chooses it and
 			// something downstream refuses them - and those want opposite fixes. MajorDest is the thing
 			// they picked, nought for a guest who has picked nothing.
@@ -2171,9 +2154,8 @@ public sealed class ParkPeople : Entity
 				+ $"happy {peep.Happiness,3:0} thirst {peep.Thirst,3:0} hunger {peep.Hunger,3:0} "
 				+ $"toilet {peep.Toilet,3:0} vomit {peep.Vomit,3:0} litter {peep.Litter,3:0} "
 				+ $"speed {peep.PurposeSpeed} "
-				// Where they ARE, which is the half of a person this census could not see until a park
-				// was opened and nobody moved. Needs change and position did not, and there was no way
-				// to tell those apart from here.
+				// Where they ARE, without which a person whose needs change and whose position does not
+				// reads the same as one who moves.
 				+ $"at ({nav.Position.X / (float)FixedVector.One:0.000},"
 				+ $"{nav.Position.Y / (float)FixedVector.One:0.000}) "
 				// And where they are aimed, the exact point a route's last leg closes on - a place in a queue is one.
@@ -2190,8 +2172,8 @@ public sealed class ParkPeople : Entity
 
 	/// <summary>
 	/// What each member of STAFF is doing. The guest census cannot show them: <c>_peeps</c> is guests
-	/// only and staff are a separate list, so a park where no member of staff ever moved read, from
-	/// there, exactly like one where they all did.
+	/// only and staff are a separate list, so a park where no member of staff ever moves reads, from
+	/// there, exactly like one where they all do.
 	/// </summary>
 	/// <remarks>
 	/// It prints the activity, the idle stamp and whether a route exists because those are what tell the

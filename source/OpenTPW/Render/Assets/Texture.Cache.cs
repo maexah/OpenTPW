@@ -10,7 +10,7 @@ partial class Texture
 			return false;
 
 		// No ToList(): FirstOrDefault stops at the match, where materialising the whole sequence
-		// first allocated a list of every texture in the game on every lookup and then searched it.
+		// would allocate a list of every texture in the game on every lookup and then search it.
 		var existingTexture = Asset.All.OfType<Texture>().FirstOrDefault( t => t.Path == path );
 
 		if ( existingTexture != null )
@@ -26,11 +26,10 @@ partial class Texture
 	/// Takes over an already-loaded texture's GPU handles, if one of this path is loaded.
 	///
 	/// <para>
-	/// <b>This is asked BEFORE a file is read, not after it has been decoded.</b> It used to be
-	/// consulted only from <see cref="CreateTexture"/>, which runs at the END of the path
-	/// constructor - so a .wct was decompressed and put through the whole wavelet decode, and the
-	/// result was then thrown away in favour of the copy already in memory. The cache saved the GPU
-	/// upload and none of the work.
+	/// <b>This is asked BEFORE a file is read, not after it has been decoded.</b> Asked only from
+	/// <see cref="CreateTexture"/>, which runs at the END of the path constructor, a .wct would be
+	/// decompressed and put through the whole wavelet decode and the result thrown away in favour of
+	/// the copy already in memory: the cache would save the GPU upload and none of the work.
 	/// </para>
 	///
 	/// <para>
@@ -43,12 +42,10 @@ partial class Texture
 	/// <para>
 	/// <b>A hit carries across everything the loading road assigns</b>, because a texture served from
 	/// here never runs <c>CreateTexture</c> at all and would otherwise keep the field initialisers -
-	/// the default sampler instead of the one its flags asked for, and no size and no path. <b>That is
-	/// not hypothetical: it is what the lobby's sea was drawn with.</b> <c>Water.Spawn</c> asks for
-	/// <c>TextureFlags.Wrap</c>, and on the way back from a park the request was served from here and
-	/// drawn with the default <c>Mirror</c> instead, which flips every other tile and turns the sea's
-	/// wave ripples into a diamond lattice. The paragraph this replaces claimed the skipped
-	/// assignments made no difference to the result; they made that one.
+	/// the default sampler instead of the one its flags asked for, and no size and no path. <c>Water.Spawn</c>
+	/// asks for <c>TextureFlags.Wrap</c>, and on the way back from a park that request is served from
+	/// here: left at the default <c>Mirror</c>, the sea would flip every other tile and its wave ripples
+	/// would turn into a diamond lattice.
 	/// </para>
 	///
 	/// <para>

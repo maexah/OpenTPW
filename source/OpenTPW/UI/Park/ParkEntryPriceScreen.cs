@@ -13,7 +13,7 @@ namespace OpenTPW.UI;
 /// </para>
 ///
 /// <para>
-/// <b>The three buttons down the right are NOT a spinner, and reading them as one was wrong.</b> They
+/// <b>The three buttons down the right are NOT a spinner.</b> They
 /// resolve to <c>b_staffcost</c>, <c>b_loans</c> and <c>b_finance</c>, and the handler confirms it:
 /// <c>0x4f3ad</c> calls <c>FUN_004b2750</c> (staff costs), <c>0x4f3ac</c> calls <c>FUN_0049fb30</c>
 /// (loans) and <c>0x4f3ab</c> calls <c>FUN_0049ac60</c> (finances). They are this category's own
@@ -59,10 +59,9 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 		// Built onto the park's own layer (0x00498db5), so a right press beside it is the park's.
 		ParkScreen = true;
 
-		// w_small, and it took reading the MODELS to find it. The stream asks for this frame as hash
-		// 0xf76e42eb, which matches no file stem in ui.wad - which is why this screen, and the buy and
-		// hire screens before it, drew as text floating over the park. The hash is over a model's first
-		// NODE name, and the node is "window1" inside w_small.MD2. See docs/exe/hud.md.
+		// w_small. The stream asks for this frame as hash 0xf76e42eb, which matches no file stem in
+		// ui.wad: the hash is over a model's first NODE name, and the node is "window1" inside
+		// w_small.MD2. See docs/exe/hud.md.
 		Root = new UiControl
 		{
 			Id = 0x4f3aa,
@@ -115,8 +114,7 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 		// ADDED AFTER THE SPINNER, because its rect (796,551)-(1182,596) sits INSIDE the spinner's
 		// (773,446)-(1197,619) and children draw in the order they are added. The stream has the same
 		// order - 0x4f3ae closes before 0x4f3b0 opens - so this is the original's own layering, not a
-		// workaround. Added first, it was painted over the moment the spinner was given its f_varibox
-		// artwork, and the label simply vanished; before that the spinner drew nothing and hid nothing.
+		// workaround. Added first, it would be painted over by the spinner's f_varibox artwork.
 		Root.Add( new UiControl
 		{
 			Id = 0x4f3b0,

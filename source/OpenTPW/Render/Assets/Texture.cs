@@ -50,20 +50,9 @@ public partial class Texture : Asset
 	/// to everyone who asks.
 	///
 	/// <para>
-	/// This used to build another every time it was read - a GPU texture, a pixel copied into it, a device
-	/// submit, and one more step of the loading bar - and it could never be served from the cache either,
-	/// because the constructor it calls passes an empty path and <see cref="TryGetCachedTexture"/> refuses
-	/// an empty path before it looks anything up. So no two were ever the same object.
-	/// </para>
-	///
-	/// <para>
-	/// <b>Measured on the lobby before it was shared:</b> 2,386 of the load's 3,214 registered assets were
-	/// these - 74% of the bar - and building them cost 533ms of the 554ms the whole load spent making GPU
-	/// textures. Sharing one takes the lobby from 3,214 registered assets to 829, and the load from 6.73s to
-	/// 6.02s, each the mean of three runs. <c>LobbyModel</c> is what paid: it reads this inside a loop over
-	/// sixteen material slots for every mesh of every model, so a mesh naming two materials minted fourteen
-	/// blank textures. <c>Sky</c> and <c>WeatherSprites</c> want a single fallback and never paid anything;
-	/// <c>UiMesh</c> had already kept its own with <c>_blank ??= Texture.Missing</c>.
+	/// It is built once and kept because the cache cannot share it: the constructor it calls passes an empty
+	/// path, and <see cref="TryGetCachedTexture"/> refuses an empty path before it looks anything up, so a
+	/// blank built on each read would be a GPU texture, a device submit and a loading-bar step apiece.
 	/// </para>
 	///
 	/// <para>
@@ -168,7 +157,7 @@ public partial class Texture : Asset
 	/// That answer is a plain brown noise tile rather than a loud debug colour, which is why the
 	/// one material in the game that needs it goes unnoticed: hallow's lobby sign frames itself
 	/// with a "signgrab" texture that appears nowhere in the data, and brown reads as weathered
-	/// wood on a haunted sign where magenta read as a bug.
+	/// wood on a haunted sign where a loud debug colour would read as a bug.
 	/// </summary>
 	private static TextureData NotFound( string wanted )
 	{
@@ -199,9 +188,8 @@ public partial class Texture : Asset
 	/// For anything that changes colour every frame this is the only sane route: constructing a
 	/// Texture allocates a fresh GPU texture and adds it to <see cref="Asset.All"/>, and both are let
 	/// go of only when whoever owns it calls <see cref="Delete"/> - so building one per frame would
-	/// leak steadily however careful its owner is. The sky is a 1x1 texture that follows whichever
-	/// park is on show - see <see cref="Sky.Colour"/>. (This used to say neither is "ever released",
-	/// which was true of the whole engine before scene release landed and is true of nothing now.)
+	/// leak steadily however careful its owner is. The lobby sky's tint ramp is a 1x1 texture rewritten
+	/// every frame with the colour of the park on show - see <see cref="Sky.Tint"/>.
 	/// </summary>
 	public void UpdatePixels( byte[] data )
 	{
@@ -306,9 +294,8 @@ public partial class Texture : Asset
 	/// The sampler a request's flags ask for.
 	///
 	/// <para>
-	/// Pulled out of <see cref="CreateTexture"/> so the rule can be tested without a graphics device,
-	/// which a test run has none of. The precedence is the one the three assignments it replaces had,
-	/// where each overwrote the last: Repeat beats Wrap beats PointFilter, and asking for nothing
+	/// Kept apart from <see cref="CreateTexture"/> so the rule can be tested without a graphics device,
+	/// which a test run has none of. Repeat beats Wrap beats PointFilter, and asking for nothing
 	/// leaves the same <see cref="SamplerType.AnisotropicRepeat"/> the field is declared with.
 	/// </para>
 	/// </summary>
@@ -331,7 +318,7 @@ public partial class Texture : Asset
 		Requested = flags;
 
 		// Still asked here as well as in the path constructor: this is also reached from the byte[]
-		// and Stream constructors, and from SignFile, which have no path to check beforehand.
+		// and Stream constructors, which have no path to check beforehand.
 		if ( TryAdoptCached( debugName, flags ) )
 			return;
 

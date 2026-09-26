@@ -6,7 +6,7 @@ using System.Linq;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// The two records the walk already sized correctly and then stepped over: the twenty-three bytes that
+/// What the walk reads of two records: the twenty-three bytes that
 /// close a map cell, and the catalogue object's own fields past <c>mId</c>.
 ///
 /// <para>
@@ -201,9 +201,9 @@ public class ParkDecodedRecordTests
 	/// packing the staff patrol corners use - and it names the object's own cell or one beside it.
 	///
 	/// <para>
-	/// <b>This test used to decode it without the one, and it passed anyway</b>, because every object's
-	/// entry is within two cells under either reading. It was therefore never evidence for the decode it
-	/// asserted. What settles it is reachability, and that is the assertion below: the rest area's plain
+	/// <b>The distance check below passes without the one as well</b>, because every object's entry is
+	/// within two cells under either reading, so it is no evidence for the packing. What settles it is
+	/// reachability, and that is the assertion below: the rest area's plain
 	/// decode lands on a cell with <b>no connected edges</b>, which nobody could ever walk to.
 	/// </para>
 	/// </summary>

@@ -8,8 +8,8 @@ namespace OpenTPW;
 ///
 /// <para>
 /// Lost Kingdom ships with eleven of them - a drinks shop, a belly bounce, a jungle spray, three small
-/// toilets, a staff room, two security cameras, a litter bin and a round fountain. Until now the park
-/// was bare ground with a gate on it; these are the things that make it a park somebody laid out.
+/// toilets, a staff room, two security cameras, a litter bin and a round fountain - the things that
+/// make it a park somebody laid out.
 /// </para>
 ///
 /// <para>
@@ -70,8 +70,7 @@ public sealed class ParkObjects : Entity
 
 	/// <summary>
 	/// The park's objects, for the drawing of the people standing on them - the same arrangement
-	/// <see cref="ParkPeople.Current"/> and <see cref="ParkGuestSprites.Current"/> already use, and this
-	/// was the one park entity without it.
+	/// <see cref="ParkPeople.Current"/> and <see cref="ParkGuestSprites.Current"/> use.
 	/// </summary>
 	internal static ParkObjects? Current { get; private set; }
 
@@ -135,16 +134,15 @@ public sealed class ParkObjects : Entity
 	/// The cell of a footprint a thing is used from - eight in Lost Kingdom, and each one sits where it
 	/// should: the single cell of each of the three toilets, the drinks shop's counter, the litter bin,
 	/// the jungle spray's front, the staff room's door, and the end of the Belly Bounce its queue arrives
-	/// at. <b>That reading is inferred from where they sit</b>; what is measured is that they belong to a
-	/// footprint rather than to the ground.
+	/// at. It is the thing's entrance: the first kind-9 cell of its shape picture (docs/exe/park-engine.md,
+	/// "Where a built thing's entry and exit cells come from").
 	/// </summary>
 	private const int FootprintUsed = 9;
 
 	/// <summary>
 	/// The far end of a footprint, which appears exactly once in Lost Kingdom - on the end of the Belly
-	/// Bounce away from its queue. One cell is too few to name with any confidence, and it is here
-	/// because it is demonstrably part of that ride's twelve-cell footprint, not because "exit" has been
-	/// established.
+	/// Bounce away from its queue. It is the thing's exit, the first kind-10 cell of its shape picture
+	/// (docs/exe/park-engine.md, "Where a built thing's entry and exit cells come from").
 	/// </summary>
 	private const int FootprintFar = 10;
 
@@ -163,10 +161,9 @@ public sealed class ParkObjects : Entity
 	/// <para>
 	/// <b>Without this the two fight over the same depth and the grass wins.</b> A footprint cell carries a
 	/// real ground texture index in <c>base.MD2</c> - measured, all 44 of them, and not one is the
-	/// "something covers this" index 0 that the river and the fixed roads carry - so the ground built a
-	/// grass quad across it at the very heights the floor plate occupies. That is why a shop stood on bare
-	/// grass where the original gives it a floor, and it is the same fault the paths had, in a second
-	/// place.
+	/// "something covers this" index 0 that the river and the fixed roads carry - so the ground would build a
+	/// grass quad across it at the very heights the floor plate occupies, standing a shop on bare grass
+	/// where the original gives it a floor.
 	/// </para>
 	/// <para>
 	/// The three types together are exactly the eleven placed objects' footprints over Lost Kingdom - 44
@@ -218,9 +215,7 @@ public sealed class ParkObjects : Entity
 	/// Stands something the player has just bought, and answers whether it went up.
 	///
 	/// <para>
-	/// <b>Nothing could add to a park before this.</b> Every model here was built in the constructor,
-	/// walking the save's own list, so the park was whatever the file said and could never be anything
-	/// else. This is the same <see cref="Place"/> the load uses - deliberately, so a bought thing is
+	/// This is the same <see cref="Place"/> the load uses - deliberately, so a bought thing is
 	/// stood by the identical rule a saved one is, rather than by a second arrangement that could
 	/// drift from it.
 	/// </para>
@@ -330,7 +325,7 @@ public sealed class ParkObjects : Entity
 	/// and its two sign boards over the frames after that. The engine plays it when the player
 	/// builds the thing and never again - a park loaded from a save restores the state each object
 	/// settled into instead - so <b>the last frame of that clip is what a built item looks like</b>,
-	/// and playing none of it at all is what left the Belly Bounce sitting inside an unhatched egg.
+	/// and playing none of it at all would leave the Belly Bounce sitting inside an unhatched egg.
 	/// </para>
 	///
 	/// <para>
@@ -420,12 +415,9 @@ public sealed class ParkObjects : Entity
 	/// <b>Most rides ship no artwork for their board, and are meant not to.</b> 61 of the 84 signs in the
 	/// game leave the flag at offset 8 clear, and the original answers that by clearing the board to
 	/// transparent black and skipping the picture entirely (0x005ecd09, 0x005ecd18) - the name is lettered
-	/// onto nothing and floats with the ride showing through behind it. An earlier reading of this had a
-	/// ride's sign as a second file variant needing its own decoder, on the grounds that 17,337 bytes was
-	/// "36 short" of the 0x43DD header a gate has and that 36 was not a whole number of any record. It is
-	/// exactly one record: the artwork's own header, twelve bytes of width, height and type, four
-	/// dequantisation floats and the two chunk sizes. A board with a picture has it and a bare board does
-	/// not, which is the whole of the difference.
+	/// onto nothing and floats with the ride showing through behind it. A board with a picture carries the
+	/// artwork's own 36-byte header - twelve bytes of width, height and type, four dequantisation floats and
+	/// the two chunk sizes - and a bare board does not, which is the whole of the difference.
 	/// </para>
 	///
 	/// <para>
@@ -457,18 +449,17 @@ public sealed class ParkObjects : Entity
 	/// An item is authored with <b>its footprint's corner at its own origin</b>: a one-cell toilet's floor
 	/// runs from 0 to 10 in both ground axes, the three-by-three fountain's from 0 to 30, the two-by-two
 	/// staff room's from 0 to 20. That was read off the models' node transforms rather than their bounding
-	/// boxes, which are node-local and say only how big a mesh is - a distinction that has caught this
-	/// work out before.
+	/// boxes, which are node-local and say only how big a mesh is.
 	/// </para>
 	/// <para>
 	/// <b>The turn is about the middle of the item's anchor CELL, not the middle of its footprint</b>, and
 	/// that is measured rather than chosen - see <see cref="Turn"/>, which settles the direction from the
 	/// same evidence. Turning about the footprint's middle leaves the box where it is and spins the item
-	/// inside it, which is what this used to do; turning about the anchor cell sweeps the box around that
+	/// inside it; turning about the anchor cell sweeps the box around that
 	/// one cell. Only the second puts the fountain and the staff room on the cells the save marks for them.
 	/// </para>
 	/// <para>
-	/// The size of the footprint drops out of it entirely, which is why it is no longer asked for: whatever
+	/// The size of the footprint drops out of it entirely, which is why it is not asked for: whatever
 	/// an item's width and depth, its origin corner lies half a cell from its anchor's middle in each axis,
 	/// so half a cell is the whole of what has to be turned.
 	/// </para>
@@ -513,10 +504,8 @@ public sealed class ParkObjects : Entity
 	/// as "nearer" and "further", and two items a cell apart are indistinguishable by eye.
 	/// </para>
 	/// <para>
-	/// <b>It answered as a string until placing things became possible.</b> It was written to be printed
-	/// into the line below and nothing else, so the one piece of arithmetic in the tree that knows which
-	/// cells an item covers could only be read by a person. Anything that builds, moves or sells needs
-	/// the same answer as numbers - which cells to mark, and which to give back.
+	/// <b>It answers in numbers</b>, not only for the line below: anything that builds, moves or sells
+	/// needs the same answer - which cells to mark, and which to give back.
 	/// </para>
 	/// </summary>
 	public static (int Left, int Top, int Right, int Bottom) FootprintOf( ParkItemCatalogue.Item item, Vector3 origin, Quaternion turn )
@@ -560,9 +549,8 @@ public sealed class ParkObjects : Entity
 	/// <remarks>
 	/// Anything deciding whether a thing may be built somewhere has the cell and the angle and not the
 	/// origin, so composing the two here keeps the pairing of <see cref="OriginFor"/> with
-	/// <see cref="Turn"/> in one place. Getting that pairing wrong is not hypothetical: turning about the
-	/// footprint's middle instead of the anchor cell's spun items inside their own box, and it took the
-	/// save's own footprint cells to catch it.
+	/// <see cref="Turn"/> in one place: turning about the footprint's middle instead of the anchor cell's
+	/// spins an item inside its own box.
 	/// </remarks>
 	public static (int Left, int Top, int Right, int Bottom) FootprintAt( ParkItemCatalogue.Item item, int cellX, int cellY, int angle )
 		=> FootprintOf( item, OriginFor( cellX, cellY, angle ), Turn( angle ) );
@@ -572,9 +560,8 @@ public sealed class ParkObjects : Entity
 	/// is Y.
 	///
 	/// <para>
-	/// <b>The direction is settled, and two independent things settle it.</b> This said for a while that
-	/// there was nothing to check it against, which was true only while the save's map cells were being
-	/// stepped over. They are read now, and they mark the cells each built thing stands on. The staff
+	/// <b>The direction is settled by the save's own map cells</b>, which mark the cells each built thing
+	/// stands on. The staff
 	/// room's two by two is marked at (58,15)..(59,16) and the fountain's three by three at
 	/// (57,17)..(59,19), while both are anchored a row beyond that - at (58,16) and (57,19) - and both are
 	/// saved at 90 degrees. Only a negative turn puts them there. A positive one lands the fountain on
@@ -582,8 +569,8 @@ public sealed class ParkObjects : Entity
 	/// measurement: the game was made to report its own footprints and that is what it reported.
 	/// </para>
 	/// <para>
-	/// <b>An earlier version of this comment cited the executable's <c>0x168 - angle</c> as agreeing, and
-	/// that was a misreading worth recording.</b> The constant sits at the <i>queue's</i> own call site
+	/// <b>The executable's <c>0x168 - angle</c> does not bear on it.</b> The constant sits at the
+	/// <i>queue's</i> own call site
 	/// (FUN_005229e0), so what it says is that a piece of queue turns the <b>opposite</b> way to a built
 	/// thing - it is the difference between the two, not a convention they share. See
 	/// <see cref="ParkQueues"/>, which applies it. The footprint cells above are the whole of the evidence
@@ -670,9 +657,9 @@ public sealed class ParkObjects : Entity
 	/// </para>
 	///
 	/// <para>
-	/// <b>Nothing standing in a park keeps a clock of its own any more.</b> These models used to loop
-	/// whatever numbered clips sat beside them, which is neither what their scripts asked for nor anything
-	/// the engine does - so a thing whose player is idle now holds the pose its construction left it in,
+	/// <b>Nothing standing in a park keeps a clock of its own.</b> Looping whatever numbered clips sit
+	/// beside a model is neither what its script asks for nor anything the engine does - so a thing whose
+	/// player is idle holds the pose its construction left it in,
 	/// and only a script moves it. That is the engine's own behaviour on a freshly loaded park: the loader
 	/// parks every channel at the sentinel, so the idle default cannot fire until something triggers.
 	/// </para>

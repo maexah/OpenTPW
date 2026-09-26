@@ -9,11 +9,11 @@ namespace OpenTPW.Tests;
 /// front of scoring a candidate.
 ///
 /// <para>
-/// <b>The interesting result is that the answer is two, not six.</b> Six objects carry the "a guest may
-/// choose this" bit, but four of them declare no queue cells at all - and the original's own queue test is
-/// <c>length &lt; cells * 4</c>, which nought cells can never pass. So the shipped park can offer a guest
-/// exactly the sideshow and the ride. That falls out of the arithmetic rather than being put in, and it is
-/// the sort of thing worth pinning before anything is built on top of it.
+/// <b>The interesting result is that the answer is six.</b> Six objects carry the "a guest may choose
+/// this" bit and four of them declare no queue cells in their record, but the original's queue test,
+/// <c>length &lt; cells * 4</c>, counts the cells by walking the map (<c>FUN_004de130</c>) whenever
+/// <c>mBackOfQueue</c> is nought. So the shipped park can offer a guest the sideshow, the ride, the Drinks
+/// Shop and all three toilets.
 /// </para>
 /// <para>
 /// These read real game files and are skipped where there is no installation - see <see cref="GameData"/>.
@@ -45,10 +45,9 @@ public class ParkRideChoiceTests
 	/// What the shipped park can actually offer, walked from the header's own list head.
 	///
 	/// <para>
-	/// <b>This test said TWO until 2026-09-20, and the two was a misread field rather than a measurement.</b>
-	/// The filter compares a queue's length against the object's <c>+0x40</c>, and this project read that as
-	/// <c>mQueueSizeInCells</c> out of the save - nought for the shop and the three toilets, so nothing
-	/// could ever pass. <c>FUN_004de130</c> <i>overwrites</i> that field by walking the map whenever
+	/// The filter compares a queue's length against the object's <c>+0x40</c>, which the save holds as
+	/// <c>mQueueSizeInCells</c> - nought for the shop and the three toilets - but
+	/// <c>FUN_004de130</c> <i>overwrites</i> that field by walking the map whenever
 	/// <c>mBackOfQueue</c> is nought, and the filter calls it before it reads the count. So all six objects
 	/// carrying the "may be chosen" bit really can be chosen, which is what the original does.
 	/// </para>
@@ -71,7 +70,7 @@ public class ParkRideChoiceTests
 	}
 
 	/// <summary>
-	/// <b>The discriminating case, and the one that would have caught the original fault.</b> The walk needs
+	/// <b>The discriminating case.</b> The walk needs
 	/// a park; without one the save's cached pair is all there is, and the shop falls back to being refused.
 	/// So this pins the difference the park makes rather than the answer it happens to give.
 	/// </summary>
@@ -182,10 +181,9 @@ public class ParkRideChoiceTests
 	/// level the live game could not show.
 	///
 	/// <para>
-	/// <b>It was written as a one-shot diagnostic and kept, because the answer refuted both readings it
-	/// was built to separate.</b> Three runs of the game showed the shop offerable and never chosen, with
-	/// no guest ever heading for it - which left "its entry cell is unroutable" and "it is outscored from
-	/// where guests stand". Measured, neither is true: the route exists from the shop's own approach cell,
+	/// <b>It refutes both readings of a shop that is offerable and never chosen</b> - "its entry cell is
+	/// unroutable" and "it is outscored from where guests stand". Measured, neither is true: the route
+	/// exists from the shop's own approach cell,
 	/// from mid-park and from beside the ride, and a parched guest picks the shop from four of these five
 	/// cells. What the live park lacks is a thirsty guest who is still DECIDING - see
 	/// <see cref="Peep.Tick"/>, where only a quarter of guests ever grow thirsty at all.

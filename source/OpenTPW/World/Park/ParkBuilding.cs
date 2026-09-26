@@ -1,14 +1,12 @@
 namespace OpenTPW;
 
 /// <summary>
-/// Buying something and putting it up, and selling it again - the first thing in this project that
-/// changes what a park is made of.
+/// Buying something and putting it up, and selling it again - how a player changes which things a
+/// park is made of.
 ///
 /// <para>
-/// <b>Everything a park contained used to come from the file and could never be anything else.</b>
 /// <see cref="ParkWorld"/> describes a save and is immutable by rule, so the list of placed objects
-/// and the type of every cell were fixed the moment a park loaded. <see cref="ParkState"/> now carries
-/// both as running state, and this is what moves them.
+/// and the type of every cell are running state in <see cref="ParkState"/>, and this is what moves them.
 /// </para>
 ///
 /// <para>
@@ -490,10 +488,10 @@ public static class ParkBuilding
 	///
 	/// <para>
 	/// <b>It refuses only what is demonstrably owned by something else</b> - off the map, already built
-	/// on, a path, a queue. <b>The terrain rule itself is NOT reproduced</b>, and the first version of
-	/// this got it badly wrong by reaching for one that was to hand: <see cref="CellEdge.IsSolid"/>
-	/// answers "a guest may not step here", which is a different question, and type 7 alone is
-	/// <b>9,077 of Lost Kingdom's 16,384 cells</b> - so using it made more than half the park
+	/// on, a path, a queue. <b>The terrain rule itself is NOT reproduced</b>, and the rule to hand is
+	/// not it: <see cref="CellEdge.IsSolid"/> answers "a guest may not step here", which is a different
+	/// question, and type 7 alone is <b>9,077 of Lost Kingdom's 16,384 cells</b> - so using it would make
+	/// more than half the park
 	/// unbuildable. Ground a guest cannot walk across is still ground a thing can stand on.
 	/// </para>
 	/// <para>
@@ -916,8 +914,8 @@ public static class ParkBuilding
 	/// links on the first cell and arrives at the anchor with nothing left to relink, putting nought into
 	/// the head instead of promoting whoever stood behind the thing. The sweep starts at
 	/// <c>footprint.Top/Left</c>, which is NOT the anchor for a turned thing - the shipped Staff Room is
-	/// anchored (58,16) and covers (58,15)..(59,16) - so that ordering lost a guest for real, and only
-	/// for turned things, which is why every test and a whole driven run stayed green over it.
+	/// anchored (58,16) and covers (58,15)..(59,16) - so that ordering would lose a guest, and only
+	/// for turned things.
 	/// </para>
 	/// </remarks>
 	internal static void Unstamp( ParkState state, (int Left, int Top, int Right, int Bottom) footprint,
@@ -973,8 +971,7 @@ public static class ParkBuilding
 	/// <remarks>
 	/// Internal rather than private only so that it can be tested, the same reason
 	/// <see cref="ParkPicking.ThingOn"/> is. A test that re-derives the owner instead of calling this one
-	/// passes just as happily with the owner keyed on the footprint's corner - which is precisely the
-	/// mutation that survived twice, until this became reachable.
+	/// passes just as happily with the owner keyed on the footprint's corner.
 	/// </remarks>
 	internal static void Stamp( ParkState state, (int Left, int Top, int Right, int Bottom) footprint,
 		int anchorX, int anchorY )
@@ -1063,7 +1060,7 @@ public static class ParkBuilding
 
 		// While carrying, the original draws the footprint in coloured squares every tick - m_front along
 		// its front row, m_enter on the cell before the entrance, m_exit before the exit - out of the same
-		// marker vocabulary the queue tool uses. Only the queue tool's strip is built.
+		// marker vocabulary the queue tool uses. Only the path and queue tools' strips are built.
 		Unimplemented.Report( "CARRY_PREVIEW_MARKERS" );
 	}
 
@@ -1197,7 +1194,7 @@ public static class ParkBuilding
 
 			// The UI TYPE is here because it is what decides which of the nine object windows a click
 			// opens, and a test that wants a ride should not have to probe the park one thing at a time
-			// to find one - doing that stopped at the first ride and left two things unclassified. The state
+			// to find one. The state
 			// and mCanLoad say whether it is operating and whether it is closed (ParkRideOperation.Close).
 			yield return $"thing {placed.ThingId,3} '{name}' item {placed.CatalogueId} type {type} " +
 				$"at ({placed.CellX},{placed.CellY}) turned {placed.Angle}" +

@@ -25,7 +25,7 @@ namespace OpenTPW.UI;
 /// 1 is run-length coded, where a nibble other than zero stands for itself, a zero is followed by a
 /// count and a value to repeat, and a zero count ends the glyph; 2 is one bit a pixel, high bit
 /// first, a set bit being full coverage. The anti-aliased fonts use the first two, the plain ones
-/// the last. The blitter (0x006b15f0) moves what is underneath towards the text's colour by the
+/// the last for most glyphs and the first for the rest. The blitter (0x006b15f0) moves what is underneath towards the text's colour by the
 /// coverage over fifteen.
 /// </para>
 /// </summary>

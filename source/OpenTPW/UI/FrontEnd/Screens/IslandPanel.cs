@@ -191,13 +191,9 @@ internal sealed class IslandPanel : UiWindow
 			// is 1024 of 2048, the middle of the virtual screen, and screenshots of the original
 			// show the name centred under the island whatever its length.
 			//
-			// It used to be pinned left instead, so that it carried on from the panel and the two
-			// read as one strip along the bottom. That is true at 4:3, where the virtual screen
-			// fills the window and every anchor comes to the same place - but on anything wider the
-			// name was dragged towards the panel by half the width the virtual screen leaves over
-			// (240px of a 1920x1080 window), which reads as an off-centre caption rather than as a
-			// strip. Centred, the panel keeps the left edge, the advisor keeps the right, and the
-			// name sits between them.
+			// Pinned left, on anything wider than 4:3 the name would be dragged towards the panel by
+			// half the width the virtual screen leaves over (240px of a 1920x1080 window). Centred,
+			// the panel keeps the left edge, the advisor keeps the right, and the name sits between them.
 			PinAcross = Anchor.Centre,
 			PinDown = VerticalAnchor.Bottom,
 			Font = ParkNameFont,

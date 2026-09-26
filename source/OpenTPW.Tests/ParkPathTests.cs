@@ -260,7 +260,7 @@ public class ParkPathTests
 	/// <para>
 	/// <b>This pins a guard whose removal would otherwise leave the whole suite green, which is why it is
 	/// written as a mutation test rather than as a happy path.</b> <see cref="ParkState.Current"/> is a
-	/// static that holds whichever overlay a test built last, and sixteen test classes build an edge test
+	/// static that holds whichever overlay a test built last, and twenty test classes build an edge test
 	/// over the shipped park through <see cref="CellEdge.For"/>. Let a park-less overlay answer and
 	/// <see cref="ParkState.Record"/> returns <c>default</c> for every cell - and a default cell is
 	/// <b>type 0</b>, bare ground - so every route, every queue walk and every edge test in the park
@@ -271,8 +271,7 @@ public class ParkPathTests
 	/// <see cref="ParkState.CellFor"/> and SEVEN tests fail</b> - this one, and six more across the
 	/// queue walk and the offer filter, because a park-less overlay makes every cell read as type 0.
 	/// The ride's queue walk drops from four cells to nought, and the objects a guest may be offered
-	/// collapse from six to two. <i>(This said "nothing else does" until the mutation was actually
-	/// run. That was a guess, and it was wrong: the guard protects far more than one test.)</i>
+	/// collapse from six to two.
 	/// </para>
 	/// </summary>
 	[TestMethod]

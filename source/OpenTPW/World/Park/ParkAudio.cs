@@ -1,7 +1,7 @@
 namespace OpenTPW;
 
 /// <summary>
-/// A park's music - which is, for now, the whole of what a park makes a noise with.
+/// A park's sounds - its music, its weather, its rides' screams and a guest put off something.
 ///
 /// <para>
 /// The original loads four categories as a park comes up and plays one thing. Its state machine
@@ -13,19 +13,17 @@ namespace OpenTPW;
 ///
 /// <para>
 /// <b>And then it turns it down to nothing.</b> The very next line is FUN_0051bc40( voice, 4, 0 ),
-/// which sets that voice's level to zero, and the park loop drives the level every pass afterwards
+/// which sets that voice's level to zero, and the park loop drives the level every 32nd pass afterwards
 /// (FUN_0051e790 at 0x0054f870). What it drives it from is a count: FUN_004c81e0 is
 /// <c>clamp( things / 2, 0, 100 )</c>, clamped again to 89 by the caller, where the count walks the
-/// park's thing list and takes everything passing one of five type tests (FUN_004c7fa0 into
-/// FUN_004fa990) - people, in other words. <b>So in an empty park the original's music is silent</b>,
+/// park's thing list and takes every guest that passes one of five type tests (FUN_004c7fa0 into
+/// FUN_004fa990) - see <see cref="CrowdLevel"/>. <b>So in an empty park the original's music is silent</b>,
 /// and it swells as the park fills up.
 /// </para>
 ///
 /// <para>
-/// <b>It is played that way here now, and the deviation this paragraph used to describe is retired.</b>
-/// It said the fixed level was deliberate "because there are no guests yet, so the faithful reading is
-/// silence", and named the exact condition for ending it: when guests exist. They do - see
-/// <see cref="ParkPeople"/> - so the crowd drives the level, and an empty park really is silent.
+/// <b>It is played that way here</b>: the guests of <see cref="ParkPeople"/> drive the level, and an
+/// empty park really is silent.
 /// <b>The shipped park is quiet, and that is the original's design rather than a fault</b>: thirteen
 /// guests give a level of six out of a hundred, because the music is meant to swell as a park fills.
 /// </para>
@@ -44,7 +42,8 @@ public sealed class ParkAudio : Entity
 	/// <summary>
 	/// The effect the original plays, and the only one cat_music declares - in all four themes.
 	/// It picks between six arrangements in jungle, five in hallow and space, seven in fantasy; each
-	/// runs about eight and a half seconds and the effect waits ten before it may go again.
+	/// runs about eight and a half seconds, and <see cref="SoundCategory.Play"/> holds the effect ten before it
+	/// may go again - OpenTPW's own reading of the record's priority, <c>docs/QUEUE.md</c> Q43.
 	/// </summary>
 	private const int MusicEffect = 2;
 
@@ -78,7 +77,7 @@ public sealed class ParkAudio : Entity
 	/// The loudest the rain bed gets, at every drop the balance file allows.
 	///
 	/// <para>
-	/// <b>Measured, not chosen - and the first guess at 0.30 was more than twice this.</b> RAIN.mp2,
+	/// <b>Measured, not chosen.</b> RAIN.mp2,
 	/// pulled out of AmbientHD.sdt, measures <b>-16.9 dBFS RMS</b> and peaks at full scale. The three
 	/// thunder samples beside it measure -19.9, -14.7 and -16.1, a median of -16.1 - so rain and
 	/// thunder are recorded within a decibel of each other and the samples give no reason to treat one
@@ -106,12 +105,9 @@ public sealed class ParkAudio : Entity
 	/// count, so ordinary weather sits well below that.
 	/// </para>
 	/// <para>
-	/// <b>One caveat on the reasoning above, because it was half wrong.</b> Arguing from LobbyAudio's
-	/// scale predicted rain would sit <i>below</i> the music, its gain being about a quarter of the
-	/// music's; measured, the two are level. Gains do not compare across samples of different density -
-	/// RAIN.mp2 is a continuous loop peaking at full scale where music has dynamics and gaps, so the
-	/// same RMS falls out of a much lower gain. The number is right; the route to it only half was, and
-	/// the capture is what decided it.
+	/// <b>Gains do not compare across samples of different density.</b> Rain's gain is well under half
+	/// the music's, yet measured the two are level: RAIN.mp2 is a continuous loop peaking at full scale
+	/// where music has dynamics and gaps, so the same RMS falls out of a much lower gain.
 	/// </para>
 	/// </summary>
 	private const float RainVolume = 0.13f;
@@ -159,8 +155,8 @@ public sealed class ParkAudio : Entity
 	/// <b>It counts GUESTS, not people, and reading it as people would have made a park twice as loud as
 	/// the original.</b> <c>FUN_004c7fa0</c> walks the thing list and counts a thing only where
 	/// <c>*(thing + 2) == 1</c> - the model byte, and model 1 is a guest - so the five staff are not in it.
-	/// The caller clamps the result again to 89, below this hundred, which never binds at any crowd a park
-	/// this size can hold.
+	/// The caller clamps the result again to 89, below this hundred, which binds from 180 guests; that
+	/// second clamp is not applied here.
 	/// </para>
 	/// <para>
 	/// <b>One term is deliberately missing and is named rather than quietly dropped.</b> The original
@@ -331,9 +327,11 @@ public sealed class ParkAudio : Entity
 		// the maps are the Music folder beside it. The other three park categories are deliberately
 		// not loaded: cat_ambient's effects are placed emitters that come out of the level's scape.omp
 		// (the OBJ_ chunk FUN_00550e00 reads, type 1 records), cat_rides wants somewhere for a ride's
-		// sounds to GO - the ride runtime itself exists and runs, and this said it did not; what is
+		// sounds to GO - the ride runtime itself exists and runs; what is
 		// missing is the sink, since RideEffects records that nothing it starts is drawn or heard - and
-		// cat_speech wants an advisor in a park. Loading cat_rides alone would decode three hundred
+		// cat_speech is where the advisor's five bank-1 responses play from (docs/exe/advisor-park.md,
+		// the response table's +0x10), and a park here says none of them. Loading cat_rides alone would
+		// decode three hundred
 		// and six samples for nothing that can yet be heard.
 		var root = $"levels/{themeName.ToLowerInvariant()}";
 
@@ -389,10 +387,8 @@ public sealed class ParkAudio : Entity
 	/// can establish would be a guess.
 	/// </para>
 	/// <para>
-	/// <b>This rested on a better argument until it did not.</b> It was first written as "snow is
-	/// unreachable, so the distinction never arises" - and that turned out to be false: hallow's snow
-	/// band is 0..25 and it snows perfectly well. What keeps the departure defensible is narrower and
-	/// temporary: <b>hallow has no saved park file</b>, so it cannot be played at all yet. The moment a
+	/// <b>What keeps the departure defensible is narrow and temporary.</b> Snow is reachable - hallow's
+	/// snow band is 0..25 - but <b>hallow has no saved park file</b>, so it cannot be played at all yet. The moment a
 	/// park other than jungle can be entered, snow and rain will sound identical here where the
 	/// original distinguishes them, and this wants settling by capturing the mix - see
 	/// <c>ParkWeather.Snowing</c>.
@@ -533,8 +529,9 @@ public sealed class ParkAudio : Entity
 	/// <summary>
 	/// The kids' effect <c>0x80</c>, which the original plays for a guest put off a ride by a sale
 	/// (<c>FUN_004fb360</c>), for one put out of a queue by any of its seven routes when their thing id is a
-	/// multiple of eight (<c>FUN_005012f0</c>, <c>0x0050133d</c>; the sale's route and a shortened queue's are
-	/// built), and for one it throws out of the park (<c>FUN_004feb50</c>). What the sample says has not been
+	/// multiple of eight (<c>FUN_005012f0</c>, <c>0x0050133d</c>; all seven are built, the <c>InQueue</c> turn in
+	/// part - <c>docs/exe/ride-operation.md</c>, "Every way out of a queue"), and for one it throws out of the park
+	/// (<c>FUN_004feb50</c>). What the sample says has not been
 	/// checked by listening.
 	/// </summary>
 	/// <remarks>
@@ -655,7 +652,8 @@ public sealed class ParkAudio : Entity
 	/// Starts the theme again when it runs out.
 	///
 	/// It is replayed rather than looped, which is what the lobby does with its beds and for the same
-	/// reason: the effect carries its own ten-second delay and picks between several arrangements, so
+	/// reason: the category holds the effect ten seconds between plays (OpenTPW's own throttle, <c>docs/QUEUE.md</c>
+	/// Q43) and the effect picks between several arrangements, so
 	/// letting a voice end and asking the category for another is what turns that delay into
 	/// behaviour and what lets a park play a different arrangement each time round. Looping one clip
 	/// could do neither.
@@ -687,10 +685,9 @@ public sealed class ParkAudio : Entity
 		if ( !Audio.Ready || _music is not { IsValid: true } )
 			return;
 
-		// Asked every pass, as the original asks it: FUN_0051e790 runs from the park loop at 0x0054f870 and
-		// re-counts rather than being told when the crowd changes. Nobody spawns or leaves yet, so today it
-		// is the same number every time - but the shape is the original's, and it will move on its own the
-		// moment guests arrive by bus.
+		// Re-counted rather than told when the crowd changes, as the original does: FUN_0051e790 runs from
+		// the park loop at 0x0054f870 on every 32nd pass, where this asks every frame. Guests arrive by bus
+		// and leave, so the level moves with them.
 		var volume = MusicVolume * CrowdLevel( ParkPeople.Current?.Peeps.Count ?? 0 ) / (float)LoudestCrowd;
 
 		if ( _voice is not { Playing: true } )

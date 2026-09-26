@@ -11,7 +11,7 @@ namespace OpenTPW.Tests;
 /// <b>What these cannot see.</b> No test can build a lobby's islands, so a move that is not refused reaches an
 /// empty list and goes nowhere; <see cref="LobbyCameraMode.Step"/> answers whether it refused, which is what these
 /// ask. The one-line call to <see cref="LobbyCameraMode.IslandKeys"/> from <see cref="LobbyCameraMode.Update"/> is
-/// reached only by a running lobby - the game run shows it. The flight itself is stepped by
+/// checked only by a running lobby - the game run shows it. The flight itself is stepped by
 /// <see cref="LobbyLeaveForParkTests"/>.
 /// </para>
 /// </summary>
@@ -60,7 +60,7 @@ public class LobbyIslandKeysTests
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> answering either key in <see cref="LobbyCameraMode.IslandKeys"/> with a move of its own
-	/// rather than <see cref="LobbyCameraMode.Step"/> - the shape the bug had - lets it through mid-flight.
+	/// rather than <see cref="LobbyCameraMode.Step"/> lets it through mid-flight.
 	/// </remarks>
 	[TestMethod]
 	public void TheBracketKeysAreRefusedWhileTheCameraIsLeaving()

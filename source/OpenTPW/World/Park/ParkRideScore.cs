@@ -133,9 +133,9 @@ public sealed class ParkRideScore
 
 		if ( candidate.DistanceSquared < QueueMattersWithin )
 		{
-			// The original divides by the cell count outright. Nought cells would divide by nought here -
-			// but ParkRideChoice has already refused any such object, so this guard only ever fires for a
-			// candidate scored directly, as a test does.
+			// The original divides by the cell count outright. This reads the save's mQueueSizeInCells, which
+			// is nought on the shop and the three toilets that ParkRideChoice offers by their walked count
+			// (QueueCellsFor), so for those within three cells this guard divides by one cell.
 			var cells = candidate.Placed.QueueSizeInCells > 0 ? candidate.Placed.QueueSizeInCells : 1;
 
 			queueMatch = 100 - ((candidate.QueueLength * 100) / (cells * ParkRideChoice.QueueRoomPerCell));

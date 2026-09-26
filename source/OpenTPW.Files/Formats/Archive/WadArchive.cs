@@ -107,7 +107,7 @@ public sealed class WadArchive : IArchive
 		_ = memoryStream.ReadInt32();
 
 		//
-		// Whenever a filename contains a directory name (e.g. "textures/hi.wct"),
+		// Whenever a filename contains a directory name (e.g. "textures\hi.wct"),
 		// every file that comes after it will omit that directory name - but should
 		// be considered part of the subdirectory.
 		//
@@ -183,9 +183,8 @@ public sealed class WadArchive : IArchive
 				{
 					ArchiveDirectory newSubDir;
 
-					// The same comparison the tree is read back with. It used to be built with an ordinal,
-					// case-sensitive one and read with a case-insensitive one, so "Generic" and "generic"
-					// became two directories going in and one coming out.
+					// The same comparison the tree is read back with, so "Generic" and "generic" are one
+					// directory both going in and coming out.
 					newSubDir = subDirectory.Children.OfType<ArchiveDirectory>().FirstOrDefault( x => SameName( x.Name, dir ) );
 
 					if ( newSubDir == null )

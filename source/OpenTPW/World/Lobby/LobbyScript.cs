@@ -84,7 +84,7 @@ public sealed record LobbyScript
 	/// <b>It is the lobby's unit, not the game's.</b> The sky scrolls its clouds off a clock of its
 	/// own at twenty-five a second - see <see cref="Sky"/> - and the particle system runs 31ms ticks
 	/// in the lobby as in a park - see <see cref="ParticleSystem"/>. There is no one rate to share,
-	/// which is why there is no longer a game-wide one to name.
+	/// so there is no game-wide one to name.
 	/// </summary>
 	public const float TicksPerSecond = 10f;
 
@@ -146,8 +146,8 @@ public sealed record LobbyScript
 	/// machine's 31ms step (0x00520130, about thirty-two a second, which would make both rolls 29%
 	/// busier).
 	///
-	/// Kept apart from <see cref="TicksPerSecond"/> deliberately: sharing one constant is exactly
-	/// what would silently slow the storm and the ambience when the lobby's data rate was corrected.
+	/// Kept apart from <see cref="TicksPerSecond"/> deliberately: sharing one constant would tie the
+	/// storm and the ambience to the lobby's data rate, which is a different quantity.
 	/// </summary>
 	public const float AssumedFrameRate = 25f;
 

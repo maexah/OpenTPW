@@ -14,12 +14,12 @@ namespace OpenTPW;
 /// <see cref="Menu"/> is not one of them: both scenes read Escape from its release instead.
 /// </para>
 /// <para>
-/// <b>This is not a defect list.</b> Most of the thirty-one wait on features that do not exist yet - there
+/// <b>This is not a defect list.</b> Some of the thirty-one wait on features that do not exist yet - there
 /// is no research and no time control to speed up - and they are declared ahead of those on
 /// purpose, because the binding is what the options screen offers and the original ships all of them. The
-/// ones worth noticing are the pairs whose feature <i>does</i> now exist:
-/// <see cref="OpenPark"/> and <see cref="ClosePark"/>, which have had something to talk to since the gate
-/// began taking commands.
+/// ones worth noticing are those whose feature <i>does</i> exist, among them <see cref="OpenPark"/> and
+/// <see cref="ClosePark"/>, which have <see cref="ParkState.SetParkClosed"/> to call, and the screens the
+/// gadget opens, such as <see cref="BuyAttractions"/>, <see cref="MapScreen"/> and <see cref="EntryPrice"/>.
 /// </para>
 /// <para>
 /// <b>Two counting traps, both of which have caught somebody.</b> A plain search finds

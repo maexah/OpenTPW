@@ -8,19 +8,17 @@ namespace OpenTPW.Tests;
 /// Which pool a person's walk comes from when the park draws them.
 ///
 /// <para>
-/// <b>Alexah found this by playing: "the staff still don't walk".</b> They do. Driving a real park for
-/// 150 game seconds, the guard (thing 28) and the researcher (thing 30) each took over seventy distinct
-/// positions, both reporting a route. What could not see it was the DRAWING: guests and staff are drawn
-/// from one list, but their walks are kept in two pools, and the draw asked
-/// <see cref="ParkPeople.WalkFor"/> - which knows only the guests. Every member of staff came back null,
-/// and <see cref="ParkGuestSprites.Standing"/> falls back to the position the save left them at when it
-/// has no walk. They were simulated, routed and moving, and drawn standing still all run.
+/// <b>Guests and staff are drawn from one list, but their walks are kept in two pools.</b>
+/// <see cref="ParkPeople.WalkFor"/> knows only the guests, and <see cref="ParkGuestSprites.Standing"/>
+/// falls back to the position the save left a person at when it has no walk - so a drawing that asked
+/// the guests' pool would show every member of staff standing still all run while they were simulated,
+/// routed and moving.
 /// </para>
 /// <para>
-/// <b>Why this is a test about the LOOKUP rather than about movement.</b> The defect was never in
-/// <c>Standing</c>, which did exactly what it was given, nor in <see cref="StaffBehaviour"/>, which was
-/// walking them. It was the caller reaching into the wrong pool - so what has to be pinned is that the
-/// two pools disagree, and that the lookup the drawing uses spans both.
+/// <b>Why this is a test about the LOOKUP rather than about movement.</b> Neither <c>Standing</c>, which
+/// does exactly what it is given, nor <see cref="StaffBehaviour"/>, which walks them, chooses the pool:
+/// the caller does - so what has to be pinned is that the two pools disagree, and that the lookup the
+/// drawing uses spans both.
 /// </para>
 /// <para>
 /// These read real game files and are skipped where there is no installation - see <see cref="GameData"/>.
@@ -61,7 +59,7 @@ public class ParkStaffDrawingTests
 	}
 
 	/// <summary>
-	/// <b>The bug, as the two pools state it.</b> A member of staff has a walk, and the guests' pool does
+	/// <b>The two pools, as they stand.</b> A member of staff has a walk, and the guests' pool does
 	/// not know about it.
 	/// </summary>
 	[TestMethod]
@@ -72,8 +70,7 @@ public class ParkStaffDrawingTests
 
 		foreach ( var member in ParkPeople.StaffIn( world ) )
 		{
-			// This is the defect, stated plainly: the drawing used to ask exactly this and take the null
-			// for "they are not going anywhere".
+			// A drawing that asked this would take the null for "they are not going anywhere".
 			Assert.IsNull( people.WalkFor( member.ThingId ),
 				$"thing {member.ThingId} is staff, so the GUESTS' pool must not hold their walk" );
 
@@ -87,14 +84,13 @@ public class ParkStaffDrawingTests
 	}
 
 	/// <summary>
-	/// <b>The call site, which is where the bug actually was.</b> A member of staff who has moved is drawn
+	/// <b>The call site.</b> A member of staff who has moved is drawn
 	/// where they have moved to, and not at the position the save left them at.
 	/// </summary>
 	/// <remarks>
-	/// <b>Written because the three tests around it did not catch the defect.</b> Reverting the drawing to
-	/// the guests-only pool left all 763 of them green: they pin what the two pools hold, which was never
-	/// wrong, rather than which pool the drawing reaches into, which was. This one moves a staff member and
-	/// asks the drawing where they are, so it fails against the build Alexah played.
+	/// <b>The three tests around it pin what the two pools hold, not which pool the drawing reaches
+	/// into.</b> This one moves a staff member and asks the drawing where they are, so it fails against a
+	/// drawing that reaches into the guests-only pool.
 	/// <para>
 	/// The staff member is taken from <see cref="ParkPeople.Staff"/> rather than from
 	/// <c>ParkPeople.StaffIn</c>: that helper builds fresh <see cref="Staff"/> objects with navigators of

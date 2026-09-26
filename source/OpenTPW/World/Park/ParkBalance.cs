@@ -30,9 +30,7 @@ namespace OpenTPW;
 /// <see cref="ParkBalance(string, bool)"/> takes the answer instead of guessing it.
 /// </para>
 /// <para>
-/// <b>This paragraph used to say the file "overrides exactly four keys and introduces none - all four
-/// LoanInfo[n].Lendername", and that was a description of the WRONG FILE.</b> Those four Lendername
-/// keys are what <c>jungle/Standard.sam</c> overrides. Measured, <c>jungle/Easy_Standard.sam</c> names
+/// <b>It changes far more than the theme file does.</b> Measured, <c>jungle/Easy_Standard.sam</c> names
 /// 68 keys - all of which the global file already has, so it introduces none - and changes <b>33</b> of
 /// them, among which are two that decide whether anybody gets into the park:
 /// <c>PeepInfo.AveragePriceMultiplier</c> 1.25 to <b>1.5</b> and
@@ -59,8 +57,8 @@ public sealed class ParkBalance
 	/// <param name="easyMode">
 	/// Whether to read the theme's <c>Easy_Standard.sam</c> over the top, as the original does when its
 	/// mode word says Instant Action. <b>Defaulted to false so that asking for a park's balance without
-	/// an opinion gets the standard game</b>, which is what every existing caller and test means; the one
-	/// place that knows better says so.
+	/// an opinion gets the standard game</b>; a caller that means Instant Action says so, as
+	/// <see cref="Level"/> does.
 	/// </param>
 	public ParkBalance( string themeName, bool easyMode = false )
 	{

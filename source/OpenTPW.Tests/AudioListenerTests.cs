@@ -101,7 +101,7 @@ public class AudioListenerTests
 	/// <summary>
 	/// However far the camera is tipped down, the ears stay level. This is what
 	/// <see cref="AudioListener.Facing"/> exists for: the lobby camera looks down at its island from a
-	/// height, and taking the right ear off the camera's own rotation gave a vector tilted as much as
+	/// height, and taking the right ear off the camera's own rotation gives a vector tilted as much as
 	/// 0.79 out of the horizontal.
 	/// </summary>
 	[TestMethod]
@@ -136,7 +136,7 @@ public class AudioListenerTests
 	}
 
 	/// <summary>
-	/// The lobby's own geometry, at the angle that used to come out mirrored. The camera stands east
+	/// The lobby's own geometry, at the angle where <c>Rotation.Right</c> comes out mirrored. The camera stands east
 	/// of the Space island looking west at it; the antenna's emitter sits a little south of the
 	/// island's middle, which from there is on the camera's left.
 	/// </summary>

@@ -238,8 +238,8 @@ public sealed class RideAnimations
 			return UnknownLength;
 
 		// The engine advances every channel once per frame from a snapshot of the game clock, outside the
-		// fixed-step loop the scripts run in (FUN_0044e410 at 0054fa96). Nothing here poses anything yet, so
-		// the only thing the timebase decides is whether this channel counts as busy - and bringing it up to
+		// fixed-step loop the scripts run in (FUN_0044e410 at 0054fa96). The posing is ParkObjects.Sweep's, so
+		// all the timebase decides at a trigger is whether this channel counts as busy - and bringing it up to
 		// the asking moment first is what makes that question mean the same thing it means in the original.
 		channel.MoveTo( now );
 
@@ -307,12 +307,12 @@ public sealed class RideAnimations
 	/// clip - the timebase half of <c>FUN_004735d0</c>.
 	///
 	/// <para>
-	/// <b>Three of the engine's five endings are unreachable here, and that is a fact about this program
+	/// <b>Two of the engine's five endings are unreachable here, and that is a fact about this program
 	/// rather than a simplification.</b> Which ending a finished channel gets is chosen by two bits of the
 	/// model's own flag word (<c>model+4 &amp; 0x18</c>): with them clear it promotes the queue, replays a
 	/// looping clip or holds the last frame, and with them set it stalls or stops and calls out to the
-	/// group that disposes of a ride vehicle. Nothing in this program sets those bits, because nothing here
-	/// takes a thing out of a park - so the first three are the whole of what can happen, and the other two
+	/// group that disposes of a ride vehicle. Nothing in this program sets those bits, so
+	/// the first three are the whole of what can happen, and the other two
 	/// are named here rather than silently dropped.
 	/// </para>
 	/// </summary>

@@ -14,8 +14,8 @@ namespace OpenTPW.Tests;
 /// </para>
 /// <para>
 /// There are two real hazards it is guarding against, and neither is hypothetical. The weather keys are
-/// the first in the game to be <b>subscripted</b> - <c>Seasons[0].AvgWeatherQuality</c> - and the first
-/// to carry a <b>negative</b> value, <c>-1</c>. If <c>SAMParser</c> split on the bracket, or
+/// <b>subscripted</b> - <c>Seasons[0].AvgWeatherQuality</c> - and some carry a <b>negative</b> value,
+/// <c>-1</c>. If <c>SAMParser</c> split on the bracket, or
 /// <c>NumberStyles.Integer</c> turned away the sign, the park would still run, nothing would look
 /// broken, and the weather would quietly be whatever constants happened to be typed into
 /// <c>ParkWeather</c>'s constructor instead of the game's own.
@@ -39,9 +39,9 @@ public class ParkWeatherTests
 	private static ParkBalance Jungle() => new( "jungle" );
 
 	/// <summary>
-	/// The four seasons, subscripted. Jungle's own Standard.sam does not mention weather at all, so
-	/// these come from the global layer underneath it - which makes this a test of
-	/// <see cref="ParkBalance"/>'s stacking as much as of the parser.
+	/// The four seasons, subscripted, as jungle's own Standard.sam restates them over the global layer
+	/// with the global's values. The stacking is tested by <c>WeatherEffects.MaxRaindrops</c>, the one
+	/// weather key only the global layer declares.
 	/// </summary>
 	[TestMethod]
 	public void TheFourSeasonsReadThroughTheirSubscripts()
@@ -128,14 +128,12 @@ public class ParkWeatherTests
 	}
 
 	/// <summary>
-	/// <b>The weather IS per-theme, and this test exists because I assumed it was not.</b>
+	/// <b>The weather IS per-theme.</b>
 	///
 	/// <para>
-	/// It was written the other way round - asserting all four themes read the same numbers - and it
-	/// failed on hallow's rain band of 45 against the global 40. Every theme restates 26 of the 27
-	/// weather keys in its own Standard.sam, and five of them genuinely differ. Nothing in the code had
-	/// to change, because <see cref="ParkBalance"/> layers a theme's file over the global one, but the
-	/// assumption was in the documentation as fact.
+	/// Every theme restates 26 of the 27 weather keys in its own Standard.sam, and five of them genuinely
+	/// differ - hallow's rain band tops out at 45 against the global 40. <see cref="ParkBalance"/> layers a
+	/// theme's file over the global one, so each theme reads its own.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -193,7 +191,7 @@ public class ParkWeatherTests
 	}
 
 	/// <summary>
-	/// The half of the old assumption that survives: the seasons, the pacing and every storm-timing
+	/// The seasons, the pacing and every storm-timing
 	/// number are the same in all four themes. Only the five band keys differ, and MaxRaindrops is the
 	/// one key no theme declares at all.
 	/// </summary>

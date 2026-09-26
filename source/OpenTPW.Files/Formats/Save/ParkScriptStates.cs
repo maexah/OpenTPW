@@ -5,7 +5,8 @@ namespace OpenTPW;
 /// </summary>
 /// <param name="Handle">
 /// The script's own handle, which is what an object record's <c>mRideScriptHandle</c> names - see
-/// <see cref="ParkScriptStates"/> for how the two were shown to be the same number.
+/// <c>ParkScriptStateTests.EverySavedScriptIsTheScriptOfSomePlacedThing</c> for how the two were shown to be
+/// the same number.
 /// </param>
 /// <param name="Position">
 /// The saved program counter, counted in words from the start of the body exactly as
@@ -30,8 +31,7 @@ public readonly record struct SavedScript( int Handle, int Position, int BodyWor
 /// it left off. The Belly Bounce is the case that shows it: <c>Bouncy.RSE</c> body <b>word 4</b> is
 /// <c>WAITANIM 0 0</c>, which starts role 0, the construction clip, and with every script started
 /// from nought the ride hatches out of its egg again on every single load. Its saved counter is 46.
-/// (Word 0 is <c>NAME</c> and word 2 <c>BOUNCESETBASE</c>, so word 4 is its third instruction - the
-/// ordinal is given as a word index here because counting it has already been got wrong twice.)
+/// (Word 0 is <c>NAME</c> and word 2 <c>BOUNCESETBASE</c>, so word 4 is its third instruction.)
 /// </para>
 ///
 /// <para>
@@ -112,7 +112,7 @@ public sealed class ParkScriptStates
 	/// <summary>Where the program counter sits in the saved struct - <c>+0x3c</c>, so dword 15.</summary>
 	private const int PositionDword = 15;
 
-	/// <summary>Where the handle sits. Shown to be <c>mRideScriptHandle</c> - see the class remarks.</summary>
+	/// <summary>Where the handle sits. Shown to be <c>mRideScriptHandle</c> - see <c>ParkScriptStateTests.EverySavedScriptIsTheScriptOfSomePlacedThing</c>.</summary>
 	private const int HandleDword = 2;
 
 	/// <summary>Where the body length sits - <c>+0x50</c>, so dword 20.</summary>
@@ -138,7 +138,7 @@ public sealed class ParkScriptStates
 	/// <summary>
 	/// Why the read stopped, or null where it did not. A surprise here is recorded rather than thrown:
 	/// a park whose scripts will not read should still be a park, with its things merely starting from
-	/// the beginning as they did before any of this was read at all.
+	/// the beginning.
 	/// </summary>
 	public string? Problem { get; private set; }
 
@@ -281,9 +281,8 @@ public sealed class ParkScriptStates
 	{
 		// Bounded BEFORE the allocation, not by the reads that follow it. Four bytes of the file decide
 		// this size, and a corrupt length of 0x20000000 would commit half a gigabyte against a payload of
-		// about one and a half megabytes before the first read discovered it was past the end - the one
-		// place in this class that trusted the file before checking it. ParkWorld's own sprite table
-		// guards its allocation the same way.
+		// about one and a half megabytes before the first read discovered it was past the end. ParkWorld's own
+		// sprite table guards its allocation the same way.
 		if ( count < 0 || count > (_data.Length - _at) / 4 )
 			throw new InvalidDataException(
 				$"a block of {count} dwords, with {_data.Length - _at} bytes of payload left" );

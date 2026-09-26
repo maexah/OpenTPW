@@ -71,9 +71,8 @@ public sealed record RideInstruction( int Address, Opcode Opcode, IReadOnlyList<
 /// <para>
 /// <b>The variable names at the end look like trailing junk and are not.</b> The loader allocates
 /// room for the variables' values and never reads their names, because the running game has no use
-/// for them - so a reading that stops at the string blob leaves a tail it cannot explain, which is
-/// how this was first mis-parsed: 98 of the 308 files appeared to be well-formed and 210 appeared
-/// to be broken, and the 98 were exactly those declaring no variables. Parsing the names accounts
+/// for them - so a reading that stops at the string blob leaves a tail it cannot explain on exactly
+/// the 210 of the 308 files that declare variables. Parsing the names accounts
 /// for the last byte of all 308.
 /// </para>
 ///
@@ -103,8 +102,7 @@ public sealed record RideInstruction( int Address, Opcode Opcode, IReadOnlyList<
 /// <para>
 /// <b>Not to be confused with <c>Ride</c> and <c>RideVM</c>, which are a different pair and are dead.</b>
 /// <c>RideVM</c> is constructed in exactly one place - <c>Ride</c>'s own constructor - and <c>Ride</c> is
-/// constructed nowhere at all, so neither runs. This paragraph used to say "there is no ride runtime in
-/// the tree" and cite those two, which was right about them and wrong about the tree.
+/// constructed nowhere at all, so neither runs.
 /// </para>
 /// </summary>
 public sealed class RideScriptFile : BaseFormat

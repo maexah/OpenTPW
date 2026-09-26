@@ -146,7 +146,7 @@ internal static class SaveFolder
 		}
 	}
 
-	/// <summary>Writes save\opentpw.cfg - see <see cref="LoadDisplay"/>. Written with Config.tcf, by the options screen's tick.</summary>
+	/// <summary>Writes save\opentpw.cfg - see <see cref="LoadDisplay"/>. Written with Config.tcf by the options screen's tick, and alone when a loading screen has learned a new step count.</summary>
 	public static void SaveDisplay()
 	{
 		var path = Find( DisplayName ) ?? DisplayName;

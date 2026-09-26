@@ -11,16 +11,15 @@ namespace OpenTPW;
 /// folder, centred on the origin at <see cref="Sky.ParkHeight"/> and untinted - but from
 /// <see cref="ParkOrbitCameraMode"/>, looking down at forty-five degrees or more, it is only a margin
 /// around the edge of a top-down view. From the ground it fills the upper half of the frame with its
-/// cloud band legible. <b>Measured by capture, not asserted</b>: an earlier draft of this very comment
-/// said the orbit camera never shows sky at all, and the two frames plainly refute that - it shows
-/// some, just not as anything you would call a sky.
+/// cloud band legible. <b>Measured by capture, not asserted</b>: the orbit camera shows some sky, just
+/// not as anything you would call a sky.
 /// </para>
 ///
 /// <para>
 /// The original reaches it two ways, and both are already named here: the 'C' key
 /// (<see cref="InputButton.CamcorderMode"/>, shortcuts action 16) and button id 99 on the park
 /// management gadget, <b>which exists and wires this up</b> - see <c>ParkGadget</c>, where that button's
-/// click calls <see cref="Enter"/>. This said the gadget did not exist yet. Both end at the same place - the chain, the shortcuts
+/// click calls <see cref="Enter"/>. Both end at the same place - the chain, the shortcuts
 /// table and the button ids are all in the park engine notes under "Camcorder mode".
 /// </para>
 ///
@@ -33,7 +32,7 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>It is not a faithful copy, and an earlier draft of this comment wrongly said it was.</b> The exe
+/// <b>It is not a faithful copy.</b> The exe
 /// has two first-person sub-branches and they are mutually exclusive: only the one selected by
 /// <c>(flags &amp; 0x3c) == 0</c> sets an eye height, and it pairs that with the +/-0.4 bands and a
 /// scale of 2.0, while the 3.5 belongs to the +/-0.2 bands of the <i>other</i> sub-branch, which sets
@@ -128,9 +127,8 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	///
 	/// <para>
 	/// <b>2.0 goes with the 0.4 band.</b> The original carries two pairs - <c>_DAT_006fdddc</c> 3.5
-	/// with its +/-0.2 bands and <c>_DAT_006fdde8</c> 2.0 with its +/-0.4 ones - and an earlier draft
-	/// here took the 0.4 band from one pair and the 3.5 from the other, which is neither of the
-	/// original's settings.
+	/// with its +/-0.2 bands and <c>_DAT_006fdde8</c> 2.0 with its +/-0.4 ones - so the 0.4 band with
+	/// the 3.5 would be neither of the original's settings.
 	/// </para>
 	/// </summary>
 	private const float YawRate = 2.0f;
@@ -328,13 +326,10 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		// sure of it: the pointer held at the right edge takes yaw 0.000 to -1.950 to -3.030, turning
 		// toward the pointer.
 		//
-		// An earlier note here claimed the exe corroborates the sign, on the grounds that its yaw step
-		// is scaled by _DAT_006fdda8 = -0.0012. That argument was wrong twice and is withdrawn: the
-		// exe SUBTRACTS that term, so its net step is positive for a pointer on the right; and if this
-		// engine's Yaw really is the negation of the exe's, a negative step there would be a positive
-		// step here, which is the opposite of the conclusion drawn. Settling what the exe does on
-		// screen needs FUN_0046f650's matrix convention, which is not traced. The geometry above and
-		// the measurement stand on their own.
+		// The exe does not settle the sign: it SUBTRACTS its yaw step's _DAT_006fdda8 = -0.0012 term, so
+		// its net step is positive for a pointer on the right, and what that does on screen needs
+		// FUN_0046f650's matrix convention, which is not traced. The geometry above and the measurement
+		// stand on their own.
 		Yaw -= Beyond( acrossX ) * YawRate * Time.Delta;
 		// Pitch is ASSIGNED, not accumulated. The original works out where to look from where the
 		// pointer IS - no frame delta anywhere near it - and hands the result to the same argument the
@@ -432,7 +427,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// keys, and the one the debug console drives.
 	/// </summary>
 	/// <remarks>
-	/// Shared rather than copied, for the reason <c>ParkHand.LetGo</c> is: a harness cannot press a
+	/// Shared rather than copied: a harness cannot press a
 	/// key, so if the console had its own copy of this the thing measured would be the copy. Only the
 	/// reading of <see cref="Input"/> is skipped; the trig, the sweep, the edge test and the clamp are all
 	/// the ones a player gets.
@@ -524,7 +519,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// </summary>
 	/// <param name="blocked">
 	/// Whether a side of a cell is shut - <c>CellEdge.For( park, 2 ).Blocked</c> for a real park.
-	/// <b>Null takes the step whole</b>, which is what this camera did before the sweep existed.
+	/// <b>Null takes the step whole</b>, unswept.
 	/// </param>
 	/// <param name="rideAt">Whether a cell rides something - <see cref="RideAt"/> for a real park; null asks nothing.</param>
 	internal static Vector3 Slide( Vector3 from, float dx, float dy,

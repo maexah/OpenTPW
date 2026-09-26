@@ -12,7 +12,7 @@ namespace OpenTPW.Tests;
 /// <para>
 /// <b>Each calls the code its mutation changes</b> rather than re-deriving what it should have done: the
 /// selling tests call <see cref="ParkBuilding.Sell(ParkState, ParkWorld, ParkItemCatalogue, ParkObjects?,
-/// ParkRides?, int)"/>, the footprint tests <see cref="ParkBuilding.Unstamp"/>, which Sell clears the cells
+/// ParkRides?, int, ParkPeople?)"/>, the footprint tests <see cref="ParkBuilding.Unstamp"/>, which Sell clears the cells
 /// with, and the particle test the item catalogue. So putting a fault back turns one of them red.
 /// </para>
 /// </summary>

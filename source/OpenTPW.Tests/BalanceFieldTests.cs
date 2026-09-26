@@ -3,8 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// A balance key that names more than one field, which is a shape of the format nothing read until the
-/// peep constants were needed.
+/// A balance key that names more than one field, which only the peep constants use.
 ///
 /// <para>
 /// A key is a group, an optional subscript, and then <b>one or more field names separated by dots</b> -
@@ -71,9 +70,9 @@ public class BalanceFieldTests
 	}
 
 	/// <summary>
-	/// The whole dotted key names nothing of its own any more, which is what says the line was actually
-	/// taken apart rather than read twice. Without this, a parser that kept the old entry <i>and</i>
-	/// added the three new ones would pass every assertion above.
+	/// The whole dotted key names nothing of its own, which is what says the line was actually taken
+	/// apart rather than read twice. Without this, a parser that kept the whole key as an entry <i>and</i>
+	/// added the three split ones would pass every assertion above.
 	/// </summary>
 	[TestMethod]
 	public void TheJoinedUpKeyIsNotASettingOfItsOwn()
@@ -85,7 +84,7 @@ public class BalanceFieldTests
 
 	/// <summary>
 	/// The control, and the more important half of this file: a key naming a single field has to come
-	/// back exactly as it did before, subscript and all. Sixteen lines in the whole game name more than
+	/// back as that one setting, subscript and all. Sixteen lines in the whole game name more than
 	/// one field, so a change here that broke the other few hundred keys would be a poor trade.
 	/// </summary>
 	[TestMethod]

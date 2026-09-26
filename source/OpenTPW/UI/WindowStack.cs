@@ -73,10 +73,8 @@ internal sealed class WindowStack : Panel
 	/// Whether the interface used this frame's wheel, so that the world does not use it as well.
 	///
 	/// <para>
-	/// <b>Nothing consumed the mouse for the world before this.</b> The park camera reads
-	/// <c>Input.Mouse.Wheel</c> with no guard at all, so a wheel over a scrolling list would scroll the
-	/// list AND zoom the park behind it. There was nothing to guard while no list existed, which is why
-	/// it was left until one did.
+	/// <b>Without it, a wheel over a scrolling list would scroll the list AND zoom the park behind it</b>:
+	/// the park camera reads <c>Input.Mouse.Wheel</c> itself, and zooms only when this is false.
 	/// </para>
 	/// <para>
 	/// It is read by <see cref="ParkOrbitCameraMode"/> in the same frame it is written: the HUD updates

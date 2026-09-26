@@ -12,8 +12,8 @@ namespace OpenTPW.Tests;
 ///
 /// <para>
 /// Most of these drive the chain with no sound device: <see cref="ParkScreams"/> is handed a player that only
-/// writes down what it was asked for, so what is pinned is WHEN and WHICH. The last drives it through a park,
-/// with a device stood in, and pins the park's update pumping it and the voices each child becomes.
+/// writes down what it was asked for, so what is pinned is WHEN and WHICH. The last two drive it through a
+/// park, with a device stood in, and pin the park's update pumping it and the voices each child becomes.
 /// </para>
 /// </summary>
 [TestClass]

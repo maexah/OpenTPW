@@ -79,7 +79,7 @@ internal sealed class ParkHireScreen : UiWindow
 		ParkScreen = true;
 
 		// w_big, the node "window4" - the same frame the buy screen and the three Information lists
-		// wear. See ParkBuyScreen, where the correction is written out.
+		// wear. See docs/exe/hud.md.
 		Root = new UiControl
 		{
 			Id = 0x247f,
@@ -188,7 +188,7 @@ internal sealed class ParkHireScreen : UiWindow
 		}
 
 		// The group's own handler is what lifts the other members - never assign over it. See
-		// ParkBuyScreen, where doing so left a screen whose tabs all stayed down.
+		// ParkBuyScreen for what assigning over it does.
 		_tabs.SelectionChanged = () =>
 		{
 			foreach ( var tab in Tabs )

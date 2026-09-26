@@ -90,9 +90,7 @@ public sealed class ParkWorld
 		/// excludes is the telling part: the object flagged as a rest area is called <c>Staff Room</c>, and
 		/// a guest has no business in one.
 		/// <para>
-		/// <b>Six was measured; I had said seven.</b> Counting bits by eye off a flags dump put one extra
-		/// object in the set, and it took reading the number back off the record to notice. The count is
-		/// pinned by a test for that reason.
+		/// The six is pinned by a test, because a count taken by eye off a flags dump is easily one out.
 		/// </para>
 		/// </remarks>
 		public const int VisitableFlag = 0x4;
@@ -126,10 +124,9 @@ public sealed class ParkWorld
 		/// not whether one exists.
 		/// </para>
 		/// <para>
-		/// <b>It is NOT the same as declaring queue cells, and that was measured after being predicted the
-		/// other way.</b> The expectation was that it would agree with <c>QueueSizeInCells</c> being
-		/// non-zero, since that count is itself produced by walking the path (<c>FUN_004de130</c>). It does
-		/// not: the shipped park's sideshow declares <b>one</b> queue cell and does <b>not</b> carry the
+		/// <b>It is NOT the same as declaring queue cells</b>, although <c>QueueSizeInCells</c> is itself
+		/// produced by walking the path (<c>FUN_004de130</c>): the shipped park's sideshow declares
+		/// <b>one</b> queue cell and does <b>not</b> carry the
 		/// bit, while the ride declares four and does. Both have a non-zero <c>mBackOfQueue</c>. So a
 		/// single-cell queue is evidently served by the virtual path - which is a reading of one park with
 		/// one flagged object, and is recorded as such rather than as a rule.
@@ -152,8 +149,8 @@ public sealed class ParkWorld
 
 		/// <summary>
 		/// Whether a member of staff can rest here. <b>One byte unlocks rest areas for all five kinds of
-		/// staff</b>, which is why this field was worth chasing: the staff behaviours already have the
-		/// resting states built and had no way to find anywhere to do it.
+		/// staff</b>: the rest-area search (<c>FUN_00506910</c>, <c>StaffBehaviour.GoAndRest</c>) takes only
+		/// an object carrying it.
 		/// </summary>
 		public bool IsRestArea => (Flags & RestAreaFlag) != 0;
 
@@ -189,9 +186,8 @@ public sealed class ParkWorld
 		/// <c>&amp; 0x7f</c> and <c>&gt;&gt; 7</c>.
 		/// </para>
 		/// <para>
-		/// <b>This was read without the one at first, and measuring is what caught it.</b> Plausibility
-		/// could not: three of the shipped park's objects are toilets whose entry cell is walkable under
-		/// either reading, so they looked like confirmation of whichever was tried. What discriminates is
+		/// <b>Measuring settles it, and plausibility cannot:</b> three of the shipped park's objects are
+		/// toilets whose entry cell is walkable under either reading, so they confirm whichever is tried. What discriminates is
 		/// reachability. Of the eleven placed objects, five decode differently enough to matter, and all
 		/// five are walkable only under this reading - the rest area's plain decode lands on (59,15),
 		/// which has <b>no connected edges at all</b>, where the packed one lands on (58,15), which every
@@ -364,8 +360,7 @@ public sealed class ParkWorld
 		/// <para>
 		/// <b>Written once and called twice on purpose.</b> There is half an octant of rounding built into
 		/// the bias before the shift, and a second hand-rolled copy of it is exactly how two versions of the
-		/// same rule drift apart - which has already happened once on this project, to the eight-sided
-		/// distance.
+		/// same rule drift apart.
 		/// </para>
 		/// </summary>
 		public static int OctantOf( int angle ) => ((angle - 0x380) & 0x7ff) >> 8;
@@ -391,8 +386,8 @@ public sealed class ParkWorld
 	/// Illness, the same terms in the same order the scoring code multiplies them.
 	/// </para>
 	/// <para>
-	/// A seventh float sits between <see cref="Toilet"/> and the needs above it and is still deliberately
-	/// not read - but <b>it does now have a name, and this paragraph used to say nothing had named it</b>.
+	/// A seventh float sits between <see cref="Toilet"/> and the needs above it and is deliberately not
+	/// read - but <b>it has a name</b>.
 	/// The guest serialiser writes it from the struct's <c>+0x1b8</c>, which lands between
 	/// <c>mTimeStartedIdling</c> at <c>+0x1fc</c> and <c>mToilet</c> at <c>+0x1ac</c> in the alphabetical
 	/// order the block is written in, so it is <c>mTiredness</c>. It stays unread because it is zero on
@@ -439,12 +434,9 @@ public sealed class ParkWorld
 	/// last of them. <see cref="QPrev"/> is the one in front.
 	///
 	/// <para>
-	/// <b>The queue is doubly linked, and it took finding the name to find the field.</b> Four sweeps of
-	/// the executable's field names for a queue link came back empty - <c>InQ</c>, <c>mNext</c>,
-	/// <c>Queue</c>, <c>mPrev</c> - and "it is not serialised" was very nearly published as the finding.
-	/// It is serialised; it is simply called <c>mQNext</c>, which none of those four spellings reaches.
-	/// What settled it was reading the guest serialiser's <i>whole</i> field list rather than searching for
-	/// a name, and the original's own diagnostic agrees: "Person %d is in queue for object %d (next %d,
+	/// <b>The queue is doubly linked through the guests.</b> The field is called <c>mQNext</c>, which a
+	/// search for <c>InQ</c>, <c>mNext</c>, <c>Queue</c> or <c>mPrev</c> does not reach; the guest
+	/// serialiser's whole field list names it, and the original's own diagnostic agrees: "Person %d is in queue for object %d (next %d,
 	/// prev %d) but doesn't think he is".
 	/// </para>
 	/// </param>
@@ -744,24 +736,23 @@ public sealed class ParkWorld
 		/// the unnamed short that closes the record - the serialiser announces no name for it.
 		///
 		/// <para>
-		/// <b>WHAT IT IS WAS MEASURED, NOT INFERRED, AND THE FIRST GUESS WAS WRONG.</b> It was written
-		/// down here as the admission gate's per-guest reservation, because it is the one unnamed field
-		/// and a guest waiting to be let in compares the cell underfoot against their own id. The shipped
-		/// park refutes the narrow reading: <b>twenty-four cells carry a value, and eleven of them are
+		/// <b>It is occupancy in general, not a gate booking, and that is measured.</b> A guest waiting to be
+		/// let in compares the cell underfoot against their own id, but the shipped park shows the wider
+		/// reading: <b>twenty-four cells carry a value, and eleven of them are
 		/// exactly the eleven placed catalogue objects, each naming itself at its own cell</b> - (55,15)
 		/// holds 23 and object 23 stands at (55,15), and so on for all eleven. The other thirteen hold
 		/// person ids, gathered on the gateway approach at x 47-48 and at the staff's own positions, with
 		/// (0,0) holding the unplaced sentinel object. So it is occupancy in general, not a gate booking.
 		/// </para>
 		/// <para>
-		/// <b>The mechanism that prompted the wrong name still holds</b>: a guest who waits until the cell
+		/// <b>The gate's test reads this field</b>: a guest who waits until the cell
 		/// underfoot names them is waiting until they occupy it. That test is made against the cell's
 		/// RUNTIME record at <c>+0x24</c>, which is <c>0x44</c> bytes where the file carries 52, so the
 		/// runtime offset could not have been translated - only the serialiser's order places this one.
 		/// </para>
 		/// <para>
-		/// <b>Reading it does not finish that arm.</b> Nothing here has been shown to WRITE it - three
-		/// probes for the writer came back negative - so this reports what the file holds and no more.
+		/// The runtime writer is <c>FUN_004d91f0</c>, which puts a thing at the head of the cell's list
+		/// (<c>ParkState.EnterCell</c>); this reports what the file holds.
 		/// </para>
 		/// </summary>
 		public bool IsOccupied => Occupant != 0;
@@ -841,7 +832,7 @@ public sealed class ParkWorld
 	/// own and describes what the thing is for, not what this field contains.
 	///
 	/// <para>
-	/// <b>This was nearly written down as a balance, and it is not one.</b> The field is two bytes at
+	/// <b>It is not a balance.</b> The field is two bytes at
 	/// <c>world + 0x1da726</c> and the shipped park holds <c>8</c>, which is no sort of bank balance. The
 	/// executable reads it in exactly one place, <c>FUN_005195d0</c> - which is character for character the
 	/// weather thing's accessor with one offset changed: take the word, return <c>thingTable[id]</c>. So it
@@ -853,9 +844,7 @@ public sealed class ParkWorld
 	/// <b>And it names the economy.</b> Model 16 is the thing carrying <c>mAdmissionFee</c>,
 	/// <c>mBalance</c>, <c>mProfitThisYear</c> and the loan table. That accessor has at least forty callers
 	/// - the listing was capped at forty - and one of them sits inside <c>FUN_004ff9d0</c>, the state in
-	/// which a guest judges the admission fee. That a park's economy is <b>thing 8</b> had been recorded as
-	/// unproven, because the reader stores no model for manager things; the header settles it from the
-	/// other side.
+	/// which a guest judges the admission fee.
 	/// </para>
 	/// </summary>
 	public int BankAccount { get; private set; }
@@ -917,7 +906,8 @@ public sealed class ParkWorld
 	/// <para>
 	/// Models 9 and 11 to 19 are the park's singleton managers - one ride system, one advisor, one
 	/// tagging system - and these sizes are <b>measured from the one park the game ships</b>, because
-	/// their readers have not been read. Several are certainly not fixed in general: model 13 is 73,544
+	/// most of their readers have not been read - the strike system's (model 9), the weather's (15) and
+	/// the economy's (16) have. Several are certainly not fixed in general: model 13 is 73,544
 	/// bytes of what is very likely another gated grid. They are here only so the walk can reach the
 	/// trailer and prove itself; every object is read before the first of them.
 	/// </para>
@@ -1067,8 +1057,7 @@ public sealed class ParkWorld
 	/// <summary>
 	/// Where each field sits inside a cell's map record, which begins at the byte after the status. The
 	/// record opens with a twenty-nine byte tile base - the track record repeats it field for field - and
-	/// closes with twenty-three bytes of litter and pylon bookkeeping, which is read below. <b>This said
-	/// that closing block was "bookkeeping that nothing here wants" until something did.</b>
+	/// closes with twenty-three bytes of litter and pylon bookkeeping, which is read below.
 	/// </summary>
 	private const int CellDirection = 0;
 
@@ -1109,10 +1098,6 @@ public sealed class ParkWorld
 	/// shift by four and the record would close four bytes short. The two script handles are stepped over
 	/// rather than read - they are heap handles, stale in a saved file the way the sprite table's are -
 	/// but their bytes are accounted for instead of quietly dropped.
-	/// </para>
-	/// <para>
-	/// <b>This block used to be skipped outright</b>, and the comment above said it was "litter and pylon
-	/// bookkeeping that nothing here wants". Something wants it now.
 	/// </para>
 	/// </summary>
 	private const int CellLitter = 29;
@@ -1377,7 +1362,7 @@ public sealed class ParkWorld
 
 			// The MAP record carries mParentID as well, at the same offset within its own record, and
 			// for a QUEUE cell it names the object that queue serves - the original stamps it there as
-			// the cell is laid. Nothing read it until editing needed it: a queue cell being deleted has
+			// the cell is laid. Editing reads it: a queue cell being deleted has
 			// to be able to say whose queue just changed.
 			ParentId: (ushort)ReadUInt16At( at + CellParent ),
 
@@ -1390,7 +1375,7 @@ public sealed class ParkWorld
 			TimeMarkedForLitterCollection: ReadInt32At( at + CellTimeMarkedForLitterCollection ),
 			Occupant: (ushort)ReadUInt16At( at + CellOccupant ),
 
-			// The EFFECTS sub-record, which the walk has always sized and stepped over. It follows the map
+			// The EFFECTS sub-record, which the walk sizes and otherwise steps over. It follows the map
 			// record and the track record, so where it begins depends on whether this cell has a track.
 			//
 			// The field wanted is the short at its offset 8 - the last two bytes of the ten. The original
@@ -1398,7 +1383,7 @@ public sealed class ParkWorld
 			// that branch reads "dist inc nearby fireworks", which is as much as is known about what it
 			// counts. Only 250 of this park's 16,384 cells carry an effects record at all.
 			//
-			// >>> READ BUT NOT CONFIRMED, AND THE DIFFERENCE IS WORTH STATING. <<< Every cell of the one
+			// READ BUT NOT CONFIRMED. Every cell of the one
 			// park that ships reads nought here, and an all-nought field is equally what a correct read of
 			// an unused value looks like and what a wrong offset landing in padding looks like. The only
 			// thing actually established is that nothing non-zero ever appears in a cell carrying no
@@ -1417,7 +1402,7 @@ public sealed class ParkWorld
 	/// own name in the executable is <c>Used Thing Next</c>: it holds the id of the record that
 	/// <i>follows</i>, so a thing's own id is the value stored in the one before it, and the first comes
 	/// from the header's <c>Used Thing Head</c>. Reading it as the thing's own id instead is wrong in a
-	/// way that still looks plausible - it is off by one everywhere, which turned the gate into the
+	/// way that still looks plausible - it is off by one everywhere, which turns the gate into the
 	/// traffic lights.
 	/// </para>
 	/// <para>
@@ -1500,8 +1485,7 @@ public sealed class ParkWorld
 	/// that.
 	/// </para>
 	/// <para>
-	/// <b>THE REST OF THE RECORD IS NOW WALKED, AND THIS SAID "everything after mId is left alone" UNTIL
-	/// IT WAS.</b> <c>FUN_004db7d0</c> is the model-3 serialiser. It calls the map base first and then
+	/// <b>The rest of the record is walked.</b> <c>FUN_004db7d0</c> is the model-3 serialiser. It calls the map base first and then
 	/// writes, in this order: <c>mAngle</c> 4, the unnamed short that is <c>mId</c> 2, eight <c>tv_t</c>
 	/// dwords (32), <c>MeshInstanceID</c> 4, <c>mFlags</c> 2, then thirty-three pairs of
 	/// <c>mNameA[i]</c>/<c>mNameB[i]</c> (132), <c>mRideScriptHandle</c>, <c>mTrackRideHandle</c>,
@@ -1512,7 +1496,7 @@ public sealed class ParkWorld
 	/// <b>Laying that against the file is what turns struct offsets into file offsets, and the first two
 	/// fields check the arithmetic rather than assume it.</b> Eight bytes of thing head, then the map
 	/// base's four shorts, puts <c>mAngle</c> at 16 and <c>mId</c> at 20 - which are exactly the two
-	/// offsets this reader was already using, derived years earlier by a different route. So the running
+	/// offsets this reader reads them at, derived by a different route. So the running
 	/// total is trustworthy where it continues: <c>mFlags</c> at <b>58</b>, <c>mEntryPos</c> at
 	/// <b>206</b>, <c>mNext</c> at <b>208</b>, all comfortably inside the 1,099 bytes
 	/// <see cref="RecordSizes"/> gives model 3.
@@ -1538,7 +1522,7 @@ public sealed class ParkWorld
 			// The ride and queue fields. These sit before the record's ring buffers and so are at fixed
 			// offsets whatever those rings hold.
 			//
-			// >>> THE RINGS ARE NOT EMPTY, WHICH I FIRST ASSUMED AND THE ARITHMETIC REFUTED. <<< An empty
+			// THE RINGS ARE NOT EMPTY, AND THE ARITHMETIC SAYS SO. An empty
 			// ring writes 13 bytes (mCurrentEntry 4, mNumEntries 4, mWrappedAround 1, mTemp 4, then
 			// mNumEntries entries of 4). Laid out that way the whole record totals 379, against the 1,099
 			// that RecordSizes gives model 3 - a gap of exactly 720, which is 6 rings x 30 entries x 4
@@ -1647,7 +1631,7 @@ public sealed class ParkWorld
 	/// thirty-five bytes of person base that precede it - and runs 177 bytes.
 	///
 	/// <para>
-	/// <b>Its place is fixed by two anchors that were already being read before it existed</b>, one either
+	/// <b>Its place is fixed by two anchors read independently of it</b>, one either
 	/// side. <c>mX</c> and <c>mY</c> sit at <c>+8</c> and <c>+10</c>, ahead of it; <c>mSpriteAngle</c> sits
 	/// at <c>+242</c>, which is only where it is if this block is exactly 177 bytes long. So a block put in
 	/// the wrong place, or given the wrong size, breaks something already under test.
@@ -1732,12 +1716,11 @@ public sealed class ParkWorld
 			// let onto a ride by - see the field table above, which puts it at 410 and closes on 533.
 			BeenAdmitted: ReadInt32At( start + 410 ),
 			// mQueueMoveDelay - four bytes sitting exactly between mQPrev at 488 and the mQueuePos byte
-			// at 494, which is what fixes them. This reader has NAMED the field in the table above since
-			// the block was decoded and never read it; the InQueue handler pauses on it before letting a
+			// at 494, which is what fixes them. The InQueue handler pauses on it before letting a
 			// guest re-take a place in a queue that has moved.
 			QueueMoveDelay: ReadInt32At( start + 490 ) );
 
-	// <b>+529 was called mIllness by this reader until 2026-09-17, and it cannot be.</b>
+	// <b>+529 is mVomit; it cannot be mIllness.</b>
 	//
 	// The guest block carries exactly seven unnamed floats - +422, +426, +438, +509, +521, +525 and +529 -
 	// of which six are named above and +521 has never had a reader at all.
@@ -1746,8 +1729,8 @@ public sealed class ParkWorld
 	// written in STRICT alphabetical order throughout (unlike the staff block, which transposes one pair),
 	// so every unnamed float sits exactly where its own name would sort. mIllness would sort between
 	// mHunger at +426 and mLastPosX at +430 - and those two are ADJACENT, four bytes apart, with no room
-	// between them for anything. It is not in the 390-byte person base either, whose fields are all now
-	// read. So there is no slot anywhere on a person for a field of that name.
+	// between them for anything. It is not in the 390-byte person base either, whose fields are all
+	// accounted for. So there is no slot anywhere on a person for a field of that name.
 	//
 	// Three floats fall after mTimeStartedIdling, which fits mTiredness, mToilet and mVomit in that order -
 	// and the MIDDLE of the three is independently known: +525 is the only one of them that varies (3 to
@@ -1759,13 +1742,11 @@ public sealed class ParkWorld
 	// <b>What the measurement did and did not settle, because it is easy to overclaim here.</b> +521 and
 	// +529 both read nought on all thirteen guests. That is equally what an unused stat looks like in a
 	// park nobody has played and what a wrong offset looks like landing in padding, so it neither confirmed
-	// the reading nor refuted it - it simply does not discriminate. The rename rests on the ordering
+	// the reading nor refuted it - it simply does not discriminate. The name rests on the ordering
 	// argument above, not on it.
 	//
-	// <b>+521 is still NOT named, and that asymmetry is deliberate.</b> Correcting a name that is
-	// demonstrably wrong is a different act from inventing one that is merely plausible: mTiredness fits
-	// the slot, but nothing reads the field and no measurement distinguishes it, so it stays unread and
-	// written down rather than guessed at.
+	// <b>+521 is mTiredness, and it stays unread</b>: the same ordering names it, but it is nought on every
+	// guest and nothing asks for it - see GuestState.
 
 	/// <summary>
 	/// A member of staff's own block, which begins at <c>+398</c> - the same place a guest's does, after the

@@ -20,7 +20,8 @@ namespace OpenTPW.Tests;
 /// <para>
 /// <b>What these cannot see.</b> No test builds a lobby, so the island, its gate and the front end are stand-ins made
 /// without their constructors, holding the real clips out of the real archive where one is needed. The stack handing
-/// Escape to the front end, and the front end being in the lobby at all, rest on the game run.
+/// Escape to the front end is stepped by <see cref="LobbyKeysOnReleaseTests"/>; the front end being in the lobby
+/// at all rests on the game run.
 /// </para>
 /// </summary>
 [TestClass]

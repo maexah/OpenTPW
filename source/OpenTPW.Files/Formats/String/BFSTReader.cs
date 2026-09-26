@@ -100,7 +100,7 @@ internal sealed class BFSTReader : BaseFormat
 			// String Length
 			var stringLength = memoryStream.ReadByte();
 
-			//unused after string length
+			// The length's other two bytes, which this does not read - docs/QUEUE.md Q143
 			_ = memoryStream.ReadByte();
 			_ = memoryStream.ReadByte();
 

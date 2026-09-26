@@ -27,7 +27,7 @@ namespace OpenTPW;
 /// see <see cref="LobbyWeather"/>.
 ///
 /// Engine and content: the bolt - its shape, its flicker, its fade near the camera and its flash - is
-/// engine, and would draw a park's lightning the same way. When it strikes, and what that sounds like,
+/// engine, and draws a park's lightning the same way. When it strikes, and what that sounds like,
 /// is the weather's.
 /// </summary>
 public sealed class Lightning : WeatherSprites
@@ -121,7 +121,7 @@ public sealed class Lightning : WeatherSprites
 	/// <see cref="HiddenWithin"/>.
 	///
 	/// Measured sideways from the bolt's axis at the camera's own height rather than from either
-	/// end of it: the bolt is five hundred units tall and leans by at most ten, so the camera is
+	/// end of it: a bolt is three to five hundred units tall and leans by at most fifty, so the camera is
 	/// always somewhere along its length and the only distance that means anything is the
 	/// horizontal one.
 	/// </summary>

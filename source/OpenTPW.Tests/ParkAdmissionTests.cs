@@ -75,12 +75,12 @@ public class ParkAdmissionTests
 	}
 
 	/// <summary>
-	/// The three pairs of cells, which are what told the three cell-pickers apart.
+	/// The three pairs of cells the admission states walk to.
 	///
 	/// <para>
-	/// <c>FUN_004d8610</c> reads a Y of its own and two X's, <c>FUN_004d8690</c> likewise, and
-	/// <c>FUN_004d86d0</c> reads <b>one shared Y</b> with two X's. Only the bus stops have that shape -
-	/// both on row 5, 42 and 53 apart - which is how the leave path was distinguished from the other two.
+	/// Each pair lies on one row in Lost Kingdom - the booths on 13, the gateway on 17, the bus stops on 5. The
+	/// bus stops are <c>FUN_004d8650</c>'s pair; <c>FUN_004d86d0</c>, which reads <b>one shared Y</b> with two X's, is
+	/// <c>CrossingParkSide</c> (<c>docs/exe/ride-operation.md</c>, "The state-6 turn, in order").
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -102,7 +102,7 @@ public class ParkAdmissionTests
 		Assert.AreEqual( 4, admission.EntranceA.Y - admission.TicketBoothA.Y,
 			"the booths stand four cells short of the arch" );
 
-		// The shared row is the bus stops' own signature, and the other two pairs must not share it.
+		// The bus stops share one row, as the booths and the gateway each do.
 		Assert.AreEqual( admission.BusStopA.Y, admission.BusStopB.Y, "the bus stops are on one row" );
 		Assert.AreNotEqual( admission.BusStopA.X, admission.BusStopB.X, "and far apart along it" );
 	}
@@ -194,8 +194,7 @@ public class ParkAdmissionTests
 	/// <c>PeepInfo.MinimumEntryFee</c> - so the early-out catches every fee that would have been cheap and
 	/// answers <see cref="ParkAdmission.Opinion.AboutRight"/> instead. <b>The cheap band is unreachable
 	/// for a park with nothing running</b>, and nobody can feel they got a bargain until the park is worth
-	/// more than the floor. An earlier draft of this test asserted the cheap band at 20 and failed for
-	/// exactly that reason.
+	/// more than the floor.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -256,9 +255,9 @@ public class ParkAdmissionTests
 
 		// And one above the floor is judged normally, or the early-out would be swallowing everything.
 		//
-		// The control has to land in a DIFFERENT band to show anything, which an earlier draft got wrong:
-		// it used 21, and 21 against an ideal price of 20 is below the average line of 25, so it is about
-		// right for the ordinary reason and proved nothing about the early-out at all.
+		// The control has to land in a DIFFERENT band to show anything: 21 against an ideal price of 20 is
+		// below the average line of 25, so it is about right for the ordinary reason and proves nothing about
+		// the early-out at all.
 		Assert.AreEqual( ParkAdmission.Opinion.OnTheExpensiveSide, Standard( 25 ).OpinionOf( 20 ),
 			"a fee above the floor is judged rather than waved through" );
 
@@ -267,14 +266,13 @@ public class ParkAdmissionTests
 	}
 
 	/// <summary>
-	/// <b>The whole admission loop, driven on the real park - the test that reaches the new code at all.</b>
+	/// <b>The whole admission loop, driven on the real park.</b>
 	///
 	/// <para>
-	/// Every other test of the behaviour builds a <see cref="PeepBehaviour"/> without an admission, so
-	/// <see cref="PeepBehaviour.Admission"/> is null and the fee is never judged. That means the existing
-	/// suite passed unchanged when <c>JudgingTheFee</c> was built, which is not reassurance - it is the
-	/// unit-versus-wiring trap, and this is the test that closes it. Removing the admission argument below
-	/// must make this fail.
+	/// A <see cref="PeepBehaviour"/> built without an admission has a null
+	/// <see cref="PeepBehaviour.Admission"/> and never judges the fee, so a test built that way passes whether
+	/// or not <c>JudgingTheFee</c> is answered - the unit-versus-wiring trap, and this test closes it.
+	/// Removing the admission argument below must make this fail.
 	/// </para>
 	/// <para>
 	/// The five guests Alexah found standing at the ticket booths walk there, judge 25 against an ideal
@@ -283,13 +281,10 @@ public class ParkAdmissionTests
 	/// guests who were already past the booths.
 	/// </para>
 	/// <para>
-	/// <b>This paragraph ended "and settle down to wait for the gate" until 2026-09-18, and that was the
-	/// bug rather than the behaviour.</b> <c>Wait</c>'s paid arm was unbuilt, so a guest who had paid stood
-	/// at the booth for ever - Alexah watched six of them do it for a whole run. The arm is built now: a
-	/// guest goes through when the cell they are standing on names them, which is the head of that cell's
-	/// thing list (the original's <c>cell[0x24]</c>, written by <c>FUN_004d91f0</c>). So the assertion is
-	/// no longer that they wait, but that they are <b>counted in</b> - and a visitor number is something
-	/// only arriving through the gate can produce.
+	/// <b>Having paid, they do not stay at the booth.</b> <c>Wait</c>'s paid arm lets a guest through when
+	/// the cell they are standing on names them, which is the head of that cell's thing list (the original's
+	/// <c>cell[0x24]</c>, written by <c>FUN_004d91f0</c>). So the assertion is that they are <b>counted in</b> -
+	/// and a visitor number is something only arriving through the gate can produce.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -304,9 +299,7 @@ public class ParkAdmissionTests
 		{
 			Assert.IsTrue( guests[id].PaidAdmission, $"guest {id} should have paid to come in" );
 
-			// <b>This asserted they were STILL WaitingForOpening until 2026-09-18, and that was pinning a
-			// bug</b> - the third test in this suite found doing so. The paid arm of Wait was unbuilt, so a
-			// guest who had paid stood at the booth for ever, and Alexah watched six of them do it.
+			// Wait's paid arm lets a paid guest through, so nobody is left WaitingForOpening at the booth.
 			Assert.AreNotEqual( PeepState.WaitingForOpening, guests[id].State,
 				$"guest {id} paid, and should have been let through rather than left at the booth" );
 
@@ -332,11 +325,9 @@ public class ParkAdmissionTests
 	/// somewhere rather than merely relabelled.
 	/// </para>
 	/// <para>
-	/// <b>This asserted <see cref="PeepState.HeadingForExit"/> until 2026-09-18, and that was pinning a
-	/// bug.</b> Nothing answered that state, so a guest who had been aimed at a bus stop stood at the
-	/// booths for ever - and this test passed, because being AIMED somewhere was all it checked. Now that
-	/// the state is answered they walk it, arrive, and go on to
-	/// <see cref="PeepState.PickingACellOutside"/>, so the run asserts the arrival as well as the aim.
+	/// <b>They walk to the stop, arrive, and go on to <see cref="PeepState.PickingACellOutside"/></b>, so the
+	/// run asserts the arrival as well as the aim: a guest only AIMED at a bus stop can still be standing at
+	/// the booths.
 	/// </para>
 	/// </summary>
 	[TestMethod]

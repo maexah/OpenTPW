@@ -41,11 +41,9 @@ public class Panel
 	/// Draws this panel, which means letting whatever derives from it draw.
 	/// </summary>
 	/// <remarks>
-	/// <b>There used to be a matrix built here and nothing ever read it.</b> Every HUD child computed two
-	/// NDC conversions and a scale-times-translation into a <c>modelMatrix</c> field with no reader anywhere
-	/// in the tree - every frame, for every panel. The field is gone and the arithmetic with it; the two
-	/// conversions it used are kept because they are this class's answer to "where would a panel be", and a
-	/// subclass that starts positioning itself will want them.
+	/// It builds no matrix. <see cref="SizeToNDC"/> and <see cref="PositionToNDC"/> are this class's answer
+	/// to "where would a panel be", and are dead by CODE: nothing calls them, and being private, no
+	/// subclass can.
 	/// </remarks>
 	public void Draw()
 	{

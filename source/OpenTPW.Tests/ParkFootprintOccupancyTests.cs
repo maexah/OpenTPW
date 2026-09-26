@@ -4,15 +4,14 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// What a click on one cell of a placed thing resolves to - <see cref="ParkPicking.ThingOn"/>, which is
-/// what made a thing the save placed clickable anywhere but its anchor.
+/// what makes a thing the save placed clickable anywhere but its anchor.
 ///
 /// <para>
 /// <b>These need no game files.</b> The question is the cell arithmetic, which <see cref="ParkState"/>
 /// owns; standing an actual model needs the installation, and the driven run measures that half.
 /// </para>
 /// <para>
-/// <b>A placed thing is on ONE cell's occupancy list, not on every cell it covers</b>, and an earlier
-/// version of this work got that wrong in a way these tests exist to stop coming back. The occupancy
+/// <b>A placed thing is on ONE cell's occupancy list, not on every cell it covers</b>. The occupancy
 /// links are keyed per THING, so pushing one thing onto twelve cells makes the twelfth overwrite the
 /// first and the guest underneath is lost. The save does not do that: measured over the shipped park,
 /// all twelve cells of the Belly Bounce carry <c>mParentID</c> 2996 while only (51,23) carries an
@@ -65,8 +64,6 @@ public class ParkFootprintOccupancyTests
 
 	/// <summary>
 	/// The whole of Q2: a click anywhere on a thing finds it, not just on the cell it is anchored at.
-	/// Measured in the shipped park before this - 1 of 12 cells of the Belly Bounce answered, 1 of 9 of
-	/// the Jungle Spray, 1 of 4 of the Drinks Shop.
 	/// </summary>
 	[TestMethod]
 	public void EveryCellOfAFootprintFindsTheThingThatOwnsIt()
@@ -125,9 +122,8 @@ public class ParkFootprintOccupancyTests
 	/// turned thing findable nowhere at all.
 	/// </summary>
 	/// <remarks>
-	/// <b>This test exists because that mutation survived.</b> Keying the owner on <c>footprint.Left/Top</c>
-	/// instead of the anchor passed all 892 tests, since every other case here builds a square-on thing
-	/// where the two coincide. The shipped park does not: the Staff Room is anchored (58,16) and covers
+	/// <b>A square-on thing cannot tell its anchor from its footprint's corner</b>, because the two
+	/// coincide. The shipped park's turned things do not: the Staff Room is anchored (58,16) and covers
 	/// (58,15)..(59,16). Those are its real numbers.
 	/// </remarks>
 	[TestMethod]
@@ -152,9 +148,8 @@ public class ParkFootprintOccupancyTests
 	/// stood behind it.
 	/// </summary>
 	/// <remarks>
-	/// This is what <see cref="ParkBuilding"/>'s sell did, and it lost a guest only for a TURNED thing,
-	/// because every other footprint starts at its own anchor and the sweep happened to reach it first.
-	/// Sell now leaves the anchor and nothing else.
+	/// <see cref="ParkBuilding"/>'s sell leaves the anchor and nothing else: a sweep of the whole footprint
+	/// loses a guest for a TURNED thing, whose anchor is not the corner the sweep starts from.
 	/// </remarks>
 	[TestMethod]
 	public void LeavingACellTheThingIsNotOnKeepsWhoeverStandsBehindIt()
@@ -176,10 +171,10 @@ public class ParkFootprintOccupancyTests
 	}
 
 	/// <summary>
-	/// <b>The real <see cref="ParkBuilding.Stamp"/>, over a TURNED thing.</b> Every other case in this
-	/// file writes the owner itself, which is why keying it on the footprint's corner instead of the
-	/// anchor passed all 894 tests twice over - the mutation was invisible to a file that never called
-	/// the mutated code. The numbers are the shipped Staff Room's own: anchored (58,16), covering
+	/// <b>The real <see cref="ParkBuilding.Stamp"/>, over a TURNED thing.</b> Every case above this
+	/// one writes the owner itself, so a <see cref="ParkBuilding.Stamp"/> that keyed it on the footprint's
+	/// corner instead of the anchor would pass them all: they never call it (<c>docs/VERIFYING.md</c> rule
+	/// 114). The numbers are the shipped Staff Room's own: anchored (58,16), covering
 	/// (58,15)..(59,16), so the anchor is not the corner.
 	/// </summary>
 	[TestMethod]

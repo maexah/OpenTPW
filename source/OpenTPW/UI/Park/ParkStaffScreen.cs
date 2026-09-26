@@ -44,8 +44,8 @@ internal sealed class ParkStaffScreen : UiWindow
 		(2, 0x325, 116, "b_senter",    new UiRect( 1398, 191, 1500, 294 )),
 		(3, 0x327, 117, "b_sguard",    new UiRect( 1516, 191, 1619, 294 )),
 
-		// b_sresrcher, spelled correctly - the HIRE screen asks for b_sresrhcer, which is the
-		// misspelling ui.wad actually ships. Both files exist; the two screens ask for different ones.
+		// b_sresrhcer, as on the hire screen - the MODEL FILE is misspelled in ui.wad, where its
+		// textures (b_sresrcher.wct) are not, and it is the only scientist tab model the archive ships.
 		(4, 0x324, 118, "b_sresrhcer", new UiRect( 1635, 191, 1738, 294 )),
 	];
 
@@ -64,8 +64,7 @@ internal sealed class ParkStaffScreen : UiWindow
 	/// <c>0x6c</c>, case <b>2</b> takes <c>0x6e</c> and case <b>3</b> takes <c>0x6d</c>, case 4
 	/// <c>0x6f</c> - because the string file lists guards before entertainers while the kinds run
 	/// cleaners, mechanics, entertainers, guards, scientists. Written as a plain 107..111 run, the
-	/// guards tab showed a list of guards under the heading "Entertainers' Happiness", which is how
-	/// the transposition was caught: on screen, not in the decompile it had been read from.
+	/// guards tab would show a list of guards under the heading "Entertainers' Happiness".
 	/// </remarks>
 	private static readonly int[] KindHappiness = [107, 108, 110, 109, 111];
 
@@ -90,9 +89,8 @@ internal sealed class ParkStaffScreen : UiWindow
 		// Built onto the park's own layer (0x00496643), so a right press beside it is the park's.
 		ParkScreen = true;
 
-		// w_big, the node "window4" inside w_big.MD2 - the frame five screens share, and which the
-		// tree recorded as unresolvable until the models' node names were read rather than their file
-		// names. Without it this screen is a list floating over the park. See docs/exe/hud.md.
+		// w_big, the node "window4" inside w_big.MD2 - the frame five screens share. Without it this
+		// screen is a list floating over the park. See docs/exe/hud.md.
 		Root = new UiControl
 		{
 			Id = 0x320,

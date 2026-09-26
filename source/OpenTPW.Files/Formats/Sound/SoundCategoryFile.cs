@@ -21,15 +21,14 @@ namespace OpenTPW;
 /// <b>The BANK file is fully understood.</b> After the count come that many 11-byte records that
 /// hold nothing but leftover pointers - the same handful of values recur across every file, which
 /// is what a struct written straight out of memory looks like - and then the payload: one
-/// length-prefixed, NUL-terminated path per bank. All thirty that ship parse to exactly the end
+/// length-prefixed, NUL-terminated path per bank. All thirty-one that ship parse to exactly the end
 /// of the file with nothing over.
 ///
 /// <b>The SFX file is decoded to its last byte.</b> After the effect table each effect holds one
 /// 42-byte header per variation, and then, per variation, its 16-byte sample records and its 8-byte
 /// zone records - <see cref="ReadVariations"/> walks exactly that, and ends at the end of the file in
-/// all thirty-one categories the game ships. <see cref="ReadSamples"/> still finds the sample
-/// records by what they contain, which it did before the headers were decoded, and the two readers
-/// agree on every list.
+/// all thirty-one categories the game ships. <see cref="ReadSamples"/> finds the sample records by
+/// what they contain instead, and the two readers agree on every list.
 /// </summary>
 public sealed class SoundCategoryFile
 {
@@ -43,11 +42,10 @@ public sealed class SoundCategoryFile
 	/// <b>The original reads it as a voice PRIORITY and never as a time</b> - it is copied to the
 	/// voice's sort key (<c>0x006bb9f9</c>) and compared when a play would replace a handle
 	/// (<c>0x006b88d7</c>); see <c>docs/exe/audio.md</c>. Every use of it as a delay is this project's
-	/// own, <c>docs/QUEUE.md</c> Q43. A held scream no longer uses it: see <see cref="Variation"/>.
+	/// own, <c>docs/QUEUE.md</c> Q43. A held scream does not use it: see <see cref="Variation"/>.
 	/// </param>
 	/// <param name="Variations">
-	/// How many weighted lists this effect picks between - the second int of its record, which this
-	/// reader used to skip. It is what divides the run of sample records up between the effects:
+	/// How many weighted lists this effect picks between - the second int of its record. It is what divides the run of sample records up between the effects:
 	/// jungle's ambient declares 9, 5, 7, 4, 1, 0, 1, 1, 1, summing to exactly the twenty-nine lists
 	/// that follow it. A zero is real and means an effect with nothing to play; hallow's, jungle's
 	/// and space's ambient each carry one. Checked against all thirty-one categories the game ships.
@@ -218,8 +216,8 @@ public sealed class SoundCategoryFile
 	/// <summary>
 	/// The samples each effect can play, given how long each bank's samples actually are.
 	///
-	/// The lists cannot be stepped to, because the per-effect header in front of each one varies
-	/// in size and has not been decoded. So they are found by what they contain instead: a
+	/// The lists are not stepped to here - <see cref="ReadVariations"/> does that - but found by
+	/// what they contain: a
 	/// sixteen-byte record is a sample if its bank and index are both in range, its two spare
 	/// bytes are zero, its odds are inside 1..65,535, and the length it claims matches the length
 	/// of the sample it points at. Four independent fields agreeing is not something arbitrary
@@ -238,13 +236,9 @@ public sealed class SoundCategoryFile
 	/// An <b>effect</b> is over once it has taken as many lists as its own record says it picks
 	/// between - <see cref="Effect.Variations"/>, read out of the file rather than guessed at.
 	///
-	/// <b>This used to measure the gap before the next list instead, and no gap can work.</b> The
-	/// two ranges overlap: jungle's ambient runs sixty-four bytes between two lists of the SAME
-	/// effect, while the smallest gap between two DIFFERENT effects is forty-two. The lobby never
-	/// noticed because all four of its local sfx categories and all four of its music ones declare
-	/// a single variation each, so they group the same either way - but every park category did
-	/// not, and jungle's nine ambient effects came out as twenty-six, which left effects 178 to 192
-	/// each playing one of effect 177's beasts. The global lobby and UI categories were wrong too.
+	/// <b>No gap before the next list can do this.</b> The two ranges overlap: jungle's ambient runs
+	/// sixty-four bytes between two lists of the SAME effect, while the smallest gap between two
+	/// DIFFERENT effects is forty-two.
 	///
 	/// The result is one entry per effect, in the effect table's own order.
 	/// </summary>
@@ -395,10 +389,9 @@ public sealed class SoundCategoryFile
 		// equality. The sample is always the longer, and by an amount that does not grow with its
 		// length - by 26 to 83ms across every record in all thirty-one categories the game ships -
 		// which is what an encoder's delay and the padding of its last frame would add. So the
-		// allowance is a fixed amount, with 6% taking over on long samples. It used to be
-		// 60ms, which turned away effect 639's record (288ms against 366) - and a record turned away
-		// is not just lost, because the next one found then stands in for it, so every effect after
-		// it in the category played the sample of the one after.
+		// allowance is a fixed amount, with 6% taking over on long samples. A record turned
+		// away is not just lost, because the next one found then stands in for it, so every effect after
+		// it in the category plays the sample of the one after.
 		var actual = samples[index - 1].TotalMilliseconds;
 
 		if ( actual <= 0 || Math.Abs( milliseconds - actual ) > Math.Max( LengthSlackMilliseconds, actual * 0.06 ) )

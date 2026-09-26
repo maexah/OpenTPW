@@ -26,15 +26,12 @@ namespace OpenTPW;
 /// </para>
 /// <para>
 /// Engine and content: which numbers a theme's balance file gives, and what a park does with them, is
-/// content. The sprite pools and the bolt that will draw it are engine - see <c>WeatherSprites</c> -
+/// content. The sprite pools and the bolt that draw it are engine - see <c>WeatherSprites</c> -
 /// and the sounds go through <see cref="ParkAudio"/> exactly as the lobby's thunder goes through
 /// <c>LobbyAudio</c>.
 /// </para>
 /// <para>
-/// <b>It draws now</b> - see "What draws it" below. <see cref="Drops"/> and <see cref="LastStrike"/>
-/// were designed as the whole of what a renderer needs, kept correct so that sight could follow sound
-/// without this changing, and that is exactly how it went: the sprites arrived and this did not move.
-/// This paragraph said "Nothing draws yet" until the renderer landed.
+/// <b>It draws</b> - see "What draws it" below.
 /// </para>
 /// </summary>
 public sealed class ParkWeather : Entity
@@ -189,9 +186,8 @@ public sealed class ParkWeather : Entity
 	/// <para>
 	/// <b>It also holds, and that is not cosmetic.</b> Applying a quality without clearing the schedule
 	/// leaves the next forecast to land within a cycle - about forty real seconds - and quietly replace
-	/// what was forced. The first probe run measured exactly that: it asked for quality 0, and twenty
-	/// seconds later was measuring a delivered 32, which gives 120 drops and no lightning. Both of its
-	/// failures were that one race. So this re-bases the change schedule and drops any pending forecast,
+	/// what was forced (<c>docs/exe/weather.md</c>: a forced 0 comes back twenty seconds later as a delivered
+	/// 32). So this re-bases the change schedule and drops any pending forecast,
 	/// giving a forced quality a full <c>DaysBetweenChanges</c> to be observed in.
 	/// </para>
 	/// <para>
@@ -214,10 +210,9 @@ public sealed class ParkWeather : Entity
 	///
 	/// <para>
 	/// <paramref name="ground"/> aims it. Without one a bolt lands anywhere across the map, as the
-	/// original's does - and a park is twelve hundred units across while the camera sees a few hundred
-	/// of it, so most strikes are out of frame. That is faithful, and it makes checking that a bolt is
-	/// <i>drawn</i> a lottery: the first attempt landed at x 887 with nothing on screen past x 600.
-	/// Aiming turns that into one deterministic shot.
+	/// original's does - and a park is 1,280 units across while the camera sees a few hundred of it, so
+	/// most strikes are out of frame. That is faithful, and it makes checking that a bolt is
+	/// <i>drawn</i> a lottery; aiming turns that into one deterministic shot.
 	/// </para>
 	/// </summary>
 	internal void DebugStrike( Vector3? ground = null ) => PlaceBolt( ground );

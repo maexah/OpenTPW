@@ -110,7 +110,7 @@ public class ParkSpriteStateTests
 	/// the set, and never on the locals write the scripts open with.
 	///
 	/// <para>
-	/// This is the assertion that would fail if the two new fields were read from the wrong offsets and
+	/// This is the assertion that would fail if the script and counter fields were read from the wrong offsets and
 	/// happened to hold something plausible: a wrong pair would have to land on instruction boundaries
 	/// <i>and</i> on frame boundaries <i>and</i> agree with the set, eighteen times over.
 	/// </para>

@@ -34,7 +34,7 @@ public static class ParkPathTiles
 	///
 	/// <para>
 	/// <b>It is NOT sorted richest-mask-first, and believing that it is would be a reason to "tidy"
-	/// it.</b> The popcounts in table order run 5,5,5,5, then twelve 4s, then 3,3,3,3, then 2,2 - and
+	/// it.</b> The popcounts in table order run 5,5,5,5, then eight 4s, then 3,3,3,3, then 2,2 - and
 	/// then <b>8</b>, the full mask <c>0xff</c> at row 18, after two two-bit masks. So the order is
 	/// simply the order the original ships, and the only safe rule is to keep it exactly.
 	/// </para>
@@ -140,10 +140,9 @@ public static class ParkPathTiles
 
 		if ( queue )
 		{
-			// THE ANGLE BASE BELONGS TO A STRAIGHT, NOT TO A CORNER. The first reading of the original
-			// attached it to an L, and that was measured wrong: the guard is a cardinal count of two
-			// with the two being opposite (N+S or E+W), which is a straight. The L test belongs to the
-			// index bump below instead.
+			// THE ANGLE BASE BELONGS TO A STRAIGHT, NOT TO A CORNER: the guard is a cardinal count of
+			// two with the two being opposite (N+S or E+W), which is a straight. The L test belongs to
+			// the index bump below instead.
 			//
 			// Lost Kingdom cannot tell the two readings apart and it is worth saying so rather than
 			// claiming the park as evidence: its one corner carries direction 0x10, which gives a base
@@ -164,8 +163,8 @@ public static class ParkPathTiles
 			// link must be MUTUAL - the neighbour's own mask must carry the opposite bit - and the
 			// original then gates the link on a low-nibble flags test whose receiver is the TRACK cell
 			// beside this one (a separate 0x28-stride array, re-targeted through its parent where that
-			// cell defers), NOT the path cell. This project has no track-cell layer, so that gate is
-			// counted rather than guessed at and the caller passes only the links it can vouch for.
+			// cell defers), NOT the path cell. The caller does not ask the track record here, so that gate is
+			// counted (QUEUE_TILE_TRACK_FLAGS_GATE) and the caller passes only the links it can vouch for.
 			index += 3 * pathLinks;
 		}
 		else if ( variant )

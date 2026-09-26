@@ -60,16 +60,16 @@ use these columns (`addresses.md`, the index, has its own three: Address · What
 
 `Address / offset` · `Original name (if known)` · `What it is` · `Evidence`
 
-**Four columns, not six.** *Where OpenTPW uses it* was dropped because a `file:line` citation into our
+**Four columns, not six.** *Where OpenTPW uses it* is not one, because a `file:line` citation into our
 own source rots within days — the fact lives here and the code points at it, never the other way round.
-*Date* was dropped because a dated fact invites a reader to weigh its age instead of its evidence.
+*Date* is not one either, because a dated fact invites a reader to weigh its age instead of its evidence.
 
 | Page | What it covers |
 |---|---|
 | `exe/addresses.md` | Every address our source cites in `0x` form, one row each, with every file that cites it. Generated mechanically; an index, not the decode — the pages below hold that. |
-| `exe/park.md` | What a park is made of on disk, and the `.RSE` interpreter end to end. Its format half is duplicated in the FileFormats clone and says so. |
+| `exe/park.md` | What a park is made of on disk; the grid, item animation, the `.RSE` interpreter end to end, arrivals, and the save's map cells. Its format half is duplicated in the FileFormats clone and says so. |
 | `exe/park-engine.md` | Park loading, the heightfield inside `base.MD2`, the state machine, camera and FOV, the save container, the sky, the clock and tick, key bindings, the gadget and camcorder, and the interaction modes: placing, the queue and path tools, selling, moving, hiring, the hand's ways out, leaving a park, and the per-object windows. |
-| `exe/ride-operation.md` | A ride's per-tick turn, the boarding chain, the state-to-handler maps, the object and guest fields, the WALK/BOUNCE/SCREAM families — and **where a peep is drawn**, both the rider carried on a ride's node and the walking peep interpolated per frame between two simulated positions. |
+| `exe/ride-operation.md` | A ride's turn on the thing sweep, the boarding chain, the state-to-handler maps, the queue and every way out of it, deciding and wandering, the staff turn, spending and a visit's effects, the object and guest fields, the WALK/BOUNCE/SCREAM families — and **where a peep is drawn**, both the rider carried on a ride's node and the walking peep interpolated per frame between two simulated positions. |
 | `exe/hud.md` | The compiled layout-stream format, the mesh-name hash, every park panel's stream, the map's cell-to-pixel mapping. |
 | `exe/weather.md` | Weather as thing model 15, "funny time" and its structural drift, the `.sam` schema compiled into the exe. |
 | `exe/advisor-park.md` | The park advisor's eight scored message slots and its two tables. |

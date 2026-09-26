@@ -40,7 +40,7 @@ public class ParkBuildModeTests
 		Assert.AreEqual( (42, 24), ParkBuildMode.Pending[0] );
 	}
 
-	/// <summary>Arming does not touch the list - only putting the park away does.</summary>
+	/// <summary>Arming does not touch the list; putting the park away clears it.</summary>
 	[TestMethod]
 	public void ArmingKeepsTheListAndForgettingClearsIt()
 	{

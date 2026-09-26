@@ -1,8 +1,7 @@
 namespace OpenTPW.UI;
 
 /// <summary>
-/// The purchase menu - the screen behind the gadget's <c>b_buy</c> button, and the first of the four
-/// dead ones to have anything behind it.
+/// The purchase menu - the screen behind the gadget's <c>b_buy</c> button.
 ///
 /// <para>
 /// <b>Where the layout comes from.</b> <c>FUN_004acc70</c> builds it from the compiled layout stream
@@ -27,17 +26,13 @@ namespace OpenTPW.UI;
 /// </para>
 ///
 /// <para>
-/// <b>Two things are deliberately NOT built, each for a reason rather than for want of a rect.</b>
-/// <b>The root's frame mesh is <c>w_big</c>, and this paragraph said for months that it resolved to
-/// nothing.</b> It claimed <c>0xf76e4200</c> matched "no name in the executable or any shipped file,
-/// after a search of all 2,488 of them" - but that search was over FILE names, and the stream hashes
-/// a model's first NODE name. The node is <c>window4</c>, inside <c>w_big.MD2</c>. Five screens share
-/// it and all five drew without a backdrop until it was found. The stats panel <c>0x1ed</c> and its
-/// seven readouts are excitement, reliability
-/// and capacity - simulation values this game does not have, the same reason the map screen's overlays
-/// are refused. And the row's third column is a tick-box in the original, skinned with
-/// <c>i_boxtick</c> and framed from the row state; until that is drawn it shows the state in the
-/// game's own words instead of a bare number.
+/// <b>One thing is deliberately NOT built, for a reason rather than for want of a rect.</b> The stats
+/// panel <c>0x1ed</c> and its seven readouts are excitement, reliability and capacity - simulation
+/// values this game does not have, the same reason the map screen's overlays are refused. The root's
+/// frame is <c>w_big</c>: the stream hashes a model's first NODE name, <c>0xf76e4200</c> is
+/// <c>window4</c>, and that node is inside <c>w_big.MD2</c>, the frame five screens share. The row's
+/// third column is the original's tick-box, <c>i_boxtick</c> framed from the row state - see
+/// <c>UiList.StateMesh</c>.
 /// </para>
 ///
 /// <para>
@@ -52,7 +47,7 @@ internal sealed class ParkBuyScreen : UiWindow
 	private static readonly (int Index, int Id, int Help, string Mesh, UIStrings Title, UiRect Rect)[] Tabs =
 	[
 		// b_srides, plural - the stream hashes the model's first NODE name and the file is named
-		// otherwise. See ParkFrontEnd.Meshes, where all seven of these were corrected from the archive.
+		// otherwise. See ParkFrontEnd.Meshes, which lists the names ui.wad really holds.
 		(0, 0x1fb, 140, "b_srides",    UIStrings.BuyRide,      new UiRect( 1283, 195, 1386, 297 )),
 		(1, 0x1fd, 141, "b_sshop",     UIStrings.BuyShop,      new UiRect( 1521, 195, 1623, 297 )),
 		(2, 0x1fa, 142, "b_sshow",     UIStrings.BuySideshow,  new UiRect( 1402, 195, 1504, 297 )),
@@ -181,9 +176,9 @@ internal sealed class ParkBuyScreen : UiWindow
 			}
 		};
 
-		// The cross-link to the other half of this button. The gadget's b_buy opens whichever of the
-		// two was last left on, so the pair reach each other directly as well - help row 153, "Left-
-		// click to hire staff (H)".
+		// The cross-link to the other half of this button. The original's b_buy opens whichever of the
+		// two was last left on, and the pair reach each other directly as well - help row 153, "Left-
+		// click to hire staff (H)". A deviation: here b_buy always opens this screen.
 		Root.Add( new UiButton
 		{
 			Id = 0x1ff,
@@ -276,10 +271,10 @@ internal sealed class ParkBuyScreen : UiWindow
 	/// actually placed.
 	/// </summary>
 	/// <remarks>
-	/// <b>Carrying is not built yet</b>, so this reports what it would carry and counts the gap rather
-	/// than pretending. <c>ParkBuilding.Buy</c> is the verb underneath and is already proven in a
-	/// running park from the console; what is missing between them is the mode that follows the
-	/// cursor.
+	/// <b>So does this.</b> <c>ParkBuilding.Carry</c> makes the same two tests and puts the item in the
+	/// hand, and <c>Level.ClickWorldAt</c> puts it down through <c>ParkBuilding.PlaceCarried</c> where
+	/// the park is next clicked. The footprint the original draws while it is carried is counted as
+	/// <c>CARRY_PREVIEW_MARKERS</c>.
 	/// </remarks>
 	private void Chose( int rowId )
 	{

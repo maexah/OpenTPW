@@ -54,12 +54,12 @@ public class SdtArchive : IArchive
 				4 bytes: Header size
 				4 bytes: Data size
 				16 bytes: File name (usually null terminated)
-				4 bytes: Sample rate
-				4 bytes: Resolution
-				4 bytes: Sound type
-					*See enum above (also: https://github.com/ufdada/dk2-tools/blob/6b4e49b607bbb7e0aa843856e584f6dd1365e7fc/Formats/Sound/sdt_struct.bt)
+				2 bytes: Sample rate
+				1 byte: Bits per sample
+				1 byte: Sound type
+					*See MP2File.SoundTypes (also: https://github.com/ufdada/dk2-tools/blob/6b4e49b607bbb7e0aa843856e584f6dd1365e7fc/Formats/Sound/sdt_struct.bt)
 				4 bytes: Unknown
-				4 bytes: Samples
+				4 bytes: Decoded size
 				4 bytes: Unknown
 				n bytes: File data
 		*/

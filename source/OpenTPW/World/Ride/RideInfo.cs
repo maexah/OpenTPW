@@ -2,8 +2,9 @@
 
 /// <summary>
 /// The fields of a ride's <c>.sam</c> record, under the original's own names for them. <b>Nothing reads
-/// this.</b> It has no constructor and no reader anywhere in the tree, and belongs to the unbuilt ride
-/// runtime described in <see cref="Ride"/> - kept as a record of the field set, not as working code.
+/// this.</b> It has no constructor and no reader anywhere in the tree, and belongs to the dead
+/// <see cref="Ride"/>; <see cref="ItemDescriptionFile"/> is what reads a ride's <c>.sam</c>. It is kept as a
+/// record of the field set, not as working code.
 /// </summary>
 struct RideInfo
 {

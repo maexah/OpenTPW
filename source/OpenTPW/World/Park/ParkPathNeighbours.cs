@@ -2,7 +2,7 @@ namespace OpenTPW;
 
 /// <summary>
 /// Joins a cell that has just become path to the cells around it - the original's
-/// <c>FUN_005348d0</c>, and the answer to a question this project carried open for a long time.
+/// <c>FUN_005348d0</c>.
 ///
 /// <para>
 /// <b>It is INCREMENTAL and ORDER-DEPENDENT, which is why no rule read off a finished map could ever
@@ -60,10 +60,9 @@ public static class ParkPathNeighbours
 	///
 	/// <para>
 	/// <b>The eight blocks run INTERLEAVED in ring order</b> - north cardinal, north-east diagonal,
-	/// east cardinal, south-east diagonal, and so on - and only then the prune. The first reading of
-	/// this had all four cardinals and then all four diagonals, which is a different pass; it happens
-	/// to be benign in this function because the two families read different fields, but it is not
-	/// what the original does and a later change could make the difference matter.
+	/// east cardinal, south-east diagonal, and so on - and only then the prune. All four cardinals and
+	/// then all four diagonals would be a different pass: benign in this function, because the two
+	/// families read different fields, but not what the original does.
 	/// </para>
 	/// </summary>
 	public static void LinkPath( ParkState state, ParkWorld park, int x, int y )

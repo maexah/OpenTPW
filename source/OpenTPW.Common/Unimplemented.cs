@@ -8,16 +8,14 @@ namespace OpenTPW;
 /// Says so, out loud, when the program reaches something it has not built.
 ///
 /// <para>
-/// <b>Why this exists.</b> The tree was full of places that counted their own gaps and never told
-/// anybody: <c>RideScript.NotImplemented</c> and <c>IgnoredWrites</c>, <c>PeepBehaviour</c>'s
-/// <c>UnansweredState</c>, <c>RideEffects.Unknown</c>, <c>RideState.Refused</c>. Two of those carry doc
-/// comments saying the count exists so the gap is "visible rather than silently doing nothing" - and
-/// the only place any of them was ever rendered into text was a test. A counter nobody reads is itself
-/// a dead path, and it is the kind that hides other dead paths behind it.
+/// <b>Why this exists.</b> Places that count what they did not do - <c>RideScript.NotImplemented</c>
+/// and <c>IgnoredWrites</c>, <c>PeepBehaviour</c>'s <c>UnansweredState</c>, <c>RideEffects.Unknown</c>,
+/// <c>RideState.Refused</c> - tell nobody by counting alone. A counter nobody reads is itself a dead
+/// path, and it is the kind that hides other dead paths behind it.
 /// </para>
 /// <para>
-/// <b>It reports each distinct thing ONCE.</b> A ride script takes a turn eight times a second and a
-/// guest's behaviour runs every tick, so a bare log at these sites would push several hundred identical
+/// <b>It reports each distinct thing ONCE.</b> A ride script takes a turn four times a second, and a
+/// guest's behaviour as often, so a bare log at these sites would push several hundred identical
 /// lines a minute past everything else on the console - which informs nobody and is how a warning
 /// earns the right to be ignored. The first time a gap is reached it is announced; after that the
 /// repeat is counted and <see cref="Summary"/> can say how often.

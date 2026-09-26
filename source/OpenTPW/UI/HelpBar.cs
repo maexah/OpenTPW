@@ -13,7 +13,7 @@ namespace OpenTPW.UI;
 /// </para>
 /// <para>
 /// It shows only while the options screen's Popup help is on (<see cref="GameOptions.PopupHelp"/>).
-/// Ctrl+H turns that off and back on too, through the binding OpenTPW already had for the help bar
+/// Ctrl+H turns that off and back on too, through the help bar's binding
 /// (<see cref="InputButton.ToggleHelpBar"/>).
 /// </para>
 /// <para>

@@ -8,8 +8,7 @@ namespace OpenTPW.Tests;
 /// The fourth bit of a catalogue object's <c>mFlags</c> - whether its queue is laid out on the ground.
 ///
 /// <para>
-/// <b>This file exists because it was written to prove something and disproved it instead.</b> The
-/// prediction was that the bit would agree object for object with
+/// <b>The bit is weighed against</b>
 /// <see cref="ParkWorld.CatalogueObject.QueueSizeInCells"/>, since that count is itself produced by
 /// walking the queue path (<c>FUN_004de130</c>) - two readings by completely different routes, one a bit
 /// in a byte at offset 58 and the other an integer at 1062 reached through the ring arithmetic. They do
@@ -19,7 +18,8 @@ namespace OpenTPW.Tests;
 /// <b>The Jungle Spray declares ONE queue cell and does not carry the bit.</b> Only the ride does. That
 /// fits what the original does with it: <c>FUN_004de7e0</c> branches on the bit, walking the path when it
 /// is set and otherwise standing people <em>inside</em> the back-of-queue cell - a "virtual queue" it
-/// asserts is under four deep, with the line "Virtual queue problem!". Both objects have a non-zero
+/// asserts is under four deep, with the line "Virtual queue problem!" - an assert that is the bare
+/// <c>RET</c>, so nothing holds it to four. Both objects have a non-zero
 /// <c>mBackOfQueue</c>, so the bit is not "has a queue"; it marks a queue with a PATH, and a single cell
 /// is evidently not one. <b>That last step is the interpretation and it is not proven</b> - one park with
 /// one flagged object cannot separate "more than one cell" from any other rule that happens to pick the
@@ -48,7 +48,7 @@ public class ParkQueuePathTests
 	private const int JungleSpray = 14;
 
 	/// <summary>
-	/// <b>The discriminating case, and the one that refuted the prediction.</b> The sideshow has a queue
+	/// <b>The discriminating case.</b> The sideshow has a queue
 	/// cell and no path bit; the ride has both.
 	/// </summary>
 	[TestMethod]
@@ -97,9 +97,9 @@ public class ParkQueuePathTests
 		Assert.IsFalse( world.Objects.Single( o => o.ThingId == JungleSpray ).HasQueuePath,
 			"and it still has no path" );
 
-		// Six, not two - see ParkRideChoiceTests for why the four that declare no queue cells in their own
-		// record are still offered. The point this test makes is unchanged: having a PATH is a stricter
-		// thing than being offerable, and exactly one object has one.
+		// Six - see ParkRideChoiceTests for why the four that declare no queue cells in their own record
+		// are still offered. Having a PATH is a stricter thing than being offerable, and exactly one
+		// object has one.
 		Assert.AreEqual( 6, offerable.Count, "all six choosable objects can be offered" );
 		Assert.AreEqual( 1, withPath.Length, "and only one of them has a path" );
 	}

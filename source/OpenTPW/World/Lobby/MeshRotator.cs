@@ -163,23 +163,22 @@ public class MeshRotator
 	/// its own mesh carries: the hallow gate's two halves are authored at 90 and 180 degrees and
 	/// their first keyframes are 90 and 180 degrees, and the space gate's hatch is authored at
 	/// 175 degrees and opens on 175. So the authored rotation has to come back out before the
-	/// animated one goes in, or the mesh is turned twice - which laid hallow's doors flat into
-	/// the ground and left space's hatch facing backwards.
+	/// animated one goes in, or the mesh is turned twice - which lays hallow's doors flat into
+	/// the ground and leaves space's hatch facing backwards.
 	///
 	/// <para>
 	/// <b>The orientation a key replaces is the mesh's LOCAL one, not where it ends up in the
 	/// model.</b> Every gate in the game parents its doors straight to a root that carries no
-	/// rotation, where the two are the same matrix - so this class was written against the one
-	/// family of models that cannot tell them apart, and taking the world orientation out was
-	/// wrong everywhere else. It is wrong on 1,078 of the game's 2,592 rotation tracks.
+	/// rotation, where the two are the same matrix - the one family of models that cannot tell them
+	/// apart. Taking the world orientation out is wrong on 1,078 of the game's 2,592 rotation tracks.
 	/// </para>
 	///
 	/// <para>
 	/// The Jungle Spray is the case that shows it. Its three animal heads hang off a Bench which
 	/// is itself turned a quarter turn, so each head's local orientation is square while its world
 	/// orientation is that quarter turn; every clip keys them square, because square is what they
-	/// are relative to the bench. Read as world orientations those keys flattened two of the three
-	/// heads - the Lion and the Elephant, named by the two clips this class loops - and left the
+	/// are relative to the bench. Read as world orientations those keys flatten two of the three
+	/// heads - the Lion and the Elephant, named by the two clips this class loops - and leave the
 	/// Eagle alone only because the clip naming it is never reached.
 	/// </para>
 	///
@@ -197,7 +196,7 @@ public class MeshRotator
 		for ( int i = 0; i < localTransforms.Length; ++i )
 		{
 			// A sheared node has no rotation to take out - see LobbyModel.ToWorldSpace - so it
-			// keeps the identity here and behaves exactly as it did before.
+			// keeps the identity here.
 			inverses[i] = Matrix4x4.Decompose( localTransforms[i], out _, out var rotation, out _ )
 				&& Matrix4x4.Invert( Matrix4x4.CreateFromQuaternion( rotation ), out var inverse )
 					? inverse
@@ -275,7 +274,7 @@ public class MeshRotator
 	/// Every gate in the game swings by frame 50 and holds the pose at 60; jungle's and space's
 	/// clips stop there, but hallow's carry on for another nine seconds - its M1 shuts the gate
 	/// again and then swings it open the opposite way, ending on a pose M2 never starts from,
-	/// which is the lurch that made the gate look broken.
+	/// which is a lurch that makes the gate look broken.
 	///
 	/// A repeated keyframe is the animator holding a finished pose, so that is where a movement
 	/// ends. A clip that never holds ends where it is back at the pose it rests in instead, which

@@ -5,8 +5,7 @@ using System.Linq;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// <c>Bumper.WhichTrackType</c> - the field the original's "is this open for business" test keys on, and
-/// the last one the ride-choosing arm was waiting for.
+/// <c>Bumper.WhichTrackType</c> - the field the original's "is this open for business" test keys on.
 ///
 /// <para>
 /// <b>It was identified across the whole catalogue rather than from one item, which is the point.</b> A

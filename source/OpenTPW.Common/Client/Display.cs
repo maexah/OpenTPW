@@ -9,7 +9,7 @@ namespace OpenTPW;
 /// <summary>How the game fills the screen.</summary>
 public enum DisplayMode
 {
-	/// <summary>A window the desktop manages, which can be dragged to any size.</summary>
+	/// <summary>A window the desktop manages, which can be dragged to any size down to <see cref="Window.MinimumSize"/>.</summary>
 	Windowed,
 
 	/// <summary>The display set to a mode of the game's choosing, with the game owning it - see <see cref="Display"/>.</summary>
@@ -19,7 +19,7 @@ public enum DisplayMode
 	BorderlessFullScreen
 }
 
-/// <summary>One mode a display can be put into. The refresh rate is kept only to pick the best of a repeated size.</summary>
+/// <summary>One mode a display can be put into. The refresh rate picks the best of a repeated size, and full screen asks for it.</summary>
 public readonly record struct VideoMode( int Width, int Height, int RefreshRate )
 {
 	/// <summary>As the original names its own modes - UITEXT 341 is "512 x 384".</summary>
@@ -42,7 +42,7 @@ public readonly record struct VideoMode( int Width, int Height, int RefreshRate 
 /// </para>
 /// <para>
 /// The mode calls are made on the same SDL the window came out of, <see cref="Sdl2Window.SdlInstance"/>.
-/// They are bound rather than looked up by name, so there is no longer a case where the display can be
+/// They are bound rather than looked up by name, so there is no case where the display can be
 /// asked a question SDL has no function for.
 /// </para>
 /// </summary>

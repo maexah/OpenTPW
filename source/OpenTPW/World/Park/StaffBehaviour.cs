@@ -10,28 +10,28 @@ namespace OpenTPW;
 /// <b>The finding this class rests on.</b> Each kind of staff has a per-turn function of its own
 /// (<c>FUN_004da490</c> mechanic, <c>FUN_004d73c0</c> handyman, <c>FUN_004d4810</c> entertainer,
 /// <c>FUN_004d6410</c> guard, <c>FUN_005029f0</c> researcher) and all five open with the same switch on
-/// <c>mState</c>, answering states 0 to 7 through the same three handlers - whose own diagnostics call
-/// them <c>CStaff::</c>. So this is one machine with five extensions, not five machines, and the shared
-/// part moves every kind.
+/// <c>mState</c>, answering states 2 to 7 through the same three handlers - whose own diagnostics call
+/// them <c>CStaff::</c> - and 0 and 1 in arms of their own. So this is one machine with five extensions,
+/// not five machines, and the shared part moves every kind.
 /// </para>
 /// <para>
-/// <b>What is built.</b> All eight shared states, and the decide arm of the two kinds whose decide arm is
-/// itself shared: a guard walks on three sweeps in four by the park's clock, <c>mGameTick &amp; 3</c>, and a
-/// researcher three decides in four by a draw. That is what makes Lost Kingdom's guard and researcher patrol.
+/// <b>What is built.</b> Every shared state but on strike (5, Q138), and the decide arm of the two
+/// kinds whose decide arm is itself shared: a guard walks on three sweeps in four by the park's clock,
+/// <c>mGameTick &amp; 3</c>, and a researcher three decides in four by a draw. That is what makes Lost
+/// Kingdom's guard and researcher patrol.
 /// </para>
 /// <para>
 /// <b>What is deliberately not built, each for a named reason.</b> A handyman, a mechanic and an
 /// entertainer finish a walk by jumping into a work-finding function of their own
 /// (<c>FUN_004d7100</c>, <c>FUN_004da5b0</c>, <c>FUN_004d46d0</c>), and those want litter on map cells, a
-/// broken ride and guests close enough to entertain - none of which this project has. Those three
-/// therefore finish the walk the save left them on and then stand, which is honest rather than invented.
-/// The strike arms are absent for a different reason: reaching them means asking the staff union's thing
-/// what its script says, the same question <c>ParkRides.GateStatus</c> answers for the gate, and nothing
-/// binds a script to the union yet.
+/// broken ride and guests close enough to entertain - none of which this project looks for. With no work
+/// the original's three walk about; these finish the walk the save left them on and then stand (Q133).
+/// The strike arms are absent too (Q138): reaching them means asking <c>mStaffHQ</c>'s own flag for the
+/// kind, which nothing here keeps, and the gate's status, which <c>ParkRides.GateStatus</c> answers.
 /// </para>
 /// <para>
-/// <b>Rest areas ARE built now, and this said they were absent because the flag naming one was unread.</b>
-/// That flag is read - bit 1 of a catalogue object's <c>mFlags</c> - so a tired staff member does what
+/// <b>Rest areas are built.</b> The flag naming one is read - bit 1
+/// of a catalogue object's <c>mFlags</c> - so a tired staff member does what
 /// <c>FUN_00506a40</c> does: looks for the nearest object flagged as a rest area and walks to it. The
 /// "couldn't find a rest area" path is still here, because the original still takes it when there is none
 /// in reach.
@@ -206,7 +206,7 @@ public sealed class StaffBehaviour
 
 				break;
 
-			// Sitting down recovering. Both stats climb by the grade's own rates until one of them is full.
+			// Sitting down recovering. Both stats climb by the grade's own rates until Tiredness is full.
 			case StaffActivity.Resting:
 				Rest( staff, tick );
 
@@ -229,8 +229,8 @@ public sealed class StaffBehaviour
 
 				break;
 
-			// On strike and being carried both do nothing here. The strike needs the union's script state,
-			// and the original's own case 7 has an empty body.
+			// On strike and being carried both do nothing here. The original ends a strike in state 5's
+			// FUN_00506300, which is not built (Q138), and its own case 7 has an empty body.
 			default:
 				break;
 		}
@@ -240,9 +240,9 @@ public sealed class StaffBehaviour
 	/// What a staff member does when they have finished a walk or run out of idling.
 	///
 	/// <para>
-	/// <b>Only a guard and a researcher get past the first line, and that is the original's shape rather
-	/// than a limit of this build.</b> The other three kinds jump into a work-finding function of their
-	/// own here; see the class remarks for what each of those wants.
+	/// <b>Only a guard and a researcher get past the first line, and that is a limit of this build
+	/// (Q133).</b> In the original the other three kinds jump into a work-finding function of their own
+	/// here, and walk about when it finds them none; see the class remarks for what each of those wants.
 	/// </para>
 	/// </summary>
 	private void Decide( Staff staff, PeepWalk walk, int tick )
@@ -455,8 +455,8 @@ public sealed class StaffBehaviour
 	/// ordinary destination setter rather than through the tail that jitters. The two are a few lines apart
 	/// in the original and do different things, which is worth not tidying.
 	/// <para>
-	/// One predicate of the original's is left out: between the bounds check and the route it asks
-	/// something of the map cell that this project has not established. A cell that fails it would almost
+	/// One predicate of the original's is left out: between the bounds check and the route it takes
+	/// only a path cell, <c>mType</c> 1 (<c>FUN_00536310</c>; Q136). A cell that fails it would almost
 	/// certainly fail to produce a route either, which is the test that follows here.
 	/// </para>
 	/// </remarks>

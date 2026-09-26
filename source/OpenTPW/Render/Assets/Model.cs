@@ -41,8 +41,8 @@ public class Model : Asset
 	/// <para>
 	/// A model is never shared: every one is built for the entity that holds it and assigned once - the
 	/// lobby and every park item build their own per mesh, and two copies of the same ride get a model
-	/// each. Its material is its own too, with the one exception the delete itself refuses: the terrain
-	/// draws with the shared <see cref="Material.Default"/>.
+	/// each. Its material is its own too: no model draws with <see cref="Material.Default"/> or
+	/// <see cref="Material.UI"/>, the two shared ones the delete itself refuses.
 	/// </para>
 	/// <para>
 	/// Its textures and its shader are deliberately left alone. Both are cached by path and shared
@@ -102,7 +102,7 @@ public class Model : Asset
 	/// mapped, and an update is a memcpy. For any other buffer an update means fetching a staging
 	/// buffer, recording a copy into a fresh command buffer, submitting it and waiting on a
 	/// fence - per call. That measured at about 0.12ms each here, so the lobby's seventy animated
-	/// flyers were spending 16.7ms a frame, or 100fps, on nothing but telling the driver their
+	/// flyers would spend 16.7ms a frame, or 100fps, on nothing but telling the driver their
 	/// wings had moved. Marking those buffers dynamic gets all of it back.
 	///
 	/// Call this before the first update, with the data the buffer already holds - the new

@@ -10,9 +10,9 @@ namespace OpenTPW.UI;
 /// world. Staying out of <see cref="Entity.All"/> is what makes that order safe: a pass over the
 /// world cannot reach the HUD, so adding one cannot put geometry on top of it.
 ///
-/// It was an entity once, and the only thing holding it down was its place at the end of the
-/// creation order. Adding a second world pass for see-through geometry put every flyer and every
-/// palm crown on top of it. <see cref="Level"/> drives it by hand instead, after the world.
+/// As an entity, only its place at the end of the creation order would hold it down, and the second
+/// world pass for see-through geometry would put every flyer and every palm crown on top of it.
+/// <see cref="Level"/> drives it by hand instead, after the world.
 /// </summary>
 public class RootPanel
 {

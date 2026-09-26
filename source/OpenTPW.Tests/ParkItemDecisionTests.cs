@@ -6,7 +6,7 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// What an item's own description says about whether a guest may come to it - the data behind the
-/// decision the park's guests have never been able to make.
+/// decision the park's guests make (<see cref="ParkRideChooser"/>).
 ///
 /// <para>
 /// <b>An item's file is an OVERRIDE, not a whole description.</b> Each folder carries the defaults for
@@ -84,8 +84,9 @@ public class ParkItemDecisionTests
 	}
 
 	/// <summary>
-	/// The numbers the guests' decision will be made of, each from the file that states it: the ride
-	/// overrides its own excitement and attraction, the shop quenches thirst and not hunger.
+	/// The numbers an item carries, each from the file that states it: the ride overrides its own
+	/// excitement and attraction, the shop quenches thirst and not hunger. The guests' decision
+	/// (<see cref="ParkRideScore"/>) weighs the excitement, the thirst and the hunger.
 	/// </summary>
 	[TestMethod]
 	public void TheDecisionNumbersComeFromTheItemFilesThemselves()

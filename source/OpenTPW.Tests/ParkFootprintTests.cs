@@ -32,8 +32,8 @@ public class ParkFootprintTests
 	/// A footprint cell is <b>ordinary drawn ground</b> in the model - it carries a real texture index,
 	/// not the 0 that means "the scenery covers this" - while the item standing on it opens its own model
 	/// with a flat floor plate as wide as the whole footprint. Left to itself the ground builds grass
-	/// across the same cells at the same heights, and the two fight for the same depth. The grass won,
-	/// which is what left a shop standing on bare grass.
+	/// across the same cells at the same heights, and the two fight for the same depth. The grass wins,
+	/// which leaves a shop standing on bare grass.
 	/// </para>
 	/// <para>
 	/// The count is the load-bearing part: 44 cells over three types, which is exactly the eleven placed
@@ -137,11 +137,8 @@ public class ParkFootprintTests
 	/// Which cells a footprint of this size, anchored here and turned this far, ends up on.
 	///
 	/// <para>
-	/// <b>It asks the game rather than working it out, and it used to do the second.</b> This held its own
-	/// copy of the corner-carrying arithmetic, written out beside <see cref="ParkObjects"/>'s - so the
-	/// assertions below pinned the copy, and the shipped method could have broken without one of them
-	/// noticing. The real one answers cells now instead of a line of log text, so there is no longer any
-	/// reason to keep a second.
+	/// <b>It asks the game rather than working it out</b>, so the assertions below pin
+	/// <see cref="ParkObjects.FootprintAt"/> itself rather than a copy of its arithmetic.
 	/// </para>
 	/// </summary>
 	/// <remarks>
@@ -157,7 +154,7 @@ public class ParkFootprintTests
 
 	/// <summary>
 	/// A queue cell's tile index names a model, not a texture row - which is what the index of 5 on one of
-	/// these four cells was saying all along, where the theme's <c>QueueTex</c> has only rows 0 to 3.
+	/// these four cells says, where the theme's <c>QueueTex</c> has only rows 0 to 3.
 	///
 	/// <para>
 	/// The names below are the executable's own table, and the shapes they make are checked against the

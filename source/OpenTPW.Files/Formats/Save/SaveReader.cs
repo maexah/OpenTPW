@@ -71,8 +71,7 @@ public class SaveReader : BaseFormat
 			(the 28-byte header counts the tag, so it is 4 + 24, not 4 + 28)
 		*/
 
-		// Not a magic number - it is a version, and the shipped
-		// parks are not the version that was hard-coded here. data/levels/jungle/Easymode.TPWI
+		// Not a magic number - it is a version (docs/exe/saves.md). data/levels/jungle/Easymode.TPWI
 		// carries 400; 500 is what a saved park is expected to carry, so both are allowed and
 		// anything else says what it actually found rather than printing bytes.
 		var version = memoryStream.ReadUInt32();
@@ -82,7 +81,7 @@ public class SaveReader : BaseFormat
 
 		// Then one pad byte, and 824 bytes of copyright notice from 0x005 to 0x33C - which is UTF-16,
 		// not single bytes, so the 824 is a byte count and the notice is 412 characters. Reading it
-		// as characters gave every other byte as a null. Nothing wants it, so it is stepped over
+		// as characters gives every other byte as a null. Nothing wants it, so it is stepped over
 		// rather than decoded; what follows it, 0x33D to 0x603, is 711 bytes of zero.
 		memoryStream.Seek( 0x0604, SeekOrigin.Begin );
 

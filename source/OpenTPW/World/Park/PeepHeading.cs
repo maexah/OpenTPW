@@ -14,8 +14,8 @@ namespace OpenTPW;
 /// 257 entries are exactly <c>trunc( atan( i / 256 ) * 2048 / 2pi )</c> - verified against all 257 words at
 /// <c>0x006e71b4</c>, matching on every one under <i>truncation</i> and on only 135 under rounding. So the
 /// closed form is known and could have been used. It is not, for two reasons. The original performs no
-/// floating-point arctangent at all, and the rest of the peep simulation is deliberately integer
-/// throughout; and at <c>i = 256</c> the true value is exactly 256, which means a <c>Math.Atan</c> that
+/// floating-point arctangent at all, only a table lookup and an integer
+/// division; and at <c>i = 256</c> the true value is exactly 256, which means a <c>Math.Atan</c> that
 /// returns the nearest double below <c>pi/4</c> would truncate to <b>255</b> and silently put a person a
 /// step out of true at a quadrant boundary. A table cannot drift.
 /// </para>
@@ -60,7 +60,7 @@ public static class PeepHeading
 	/// <summary>
 	/// What a ratio is scaled to before indexing. <b>Not the table's length</b>: <c>Arctangent</c> runs
 	/// 0 to 256 inclusive and so has <b>257</b> entries, which is what lets a ratio of exactly 1 index it
-	/// without a bounds check. This said "how many entries the table has", which is off by one.
+	/// without a bounds check.
 	/// </summary>
 	public const int Steps = 256;
 

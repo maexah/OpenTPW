@@ -98,10 +98,10 @@ public class AnimTimeControlTests
 	/// long time cannot skip a short clip entirely - it opens it at its end instead.
 	///
 	/// <para>
-	/// <b>The tolerance here is tight on purpose, and it was not always.</b> Truncating the clamped carry
-	/// gives 599.96997 frames and rounding it gives exactly 600 - a difference of 0.03 - so the ±0.05 this
-	/// first carried would have passed under the very mutation the test exists to catch. A tolerance wider
-	/// than the effect being measured is decoration, not a test.
+	/// <b>The tolerance here is tight on purpose.</b> Truncating the clamped carry gives 599.96997 frames
+	/// and rounding it gives exactly 600 - a difference of 0.03 - so a tolerance of ±0.05 would pass under
+	/// the very mutation the test exists to catch. A tolerance wider than the effect being measured is
+	/// decoration, not a test.
 	/// </para>
 	/// </summary>
 	[TestMethod]

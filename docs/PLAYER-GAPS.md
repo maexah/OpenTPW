@@ -72,9 +72,8 @@ sideshow** — a filled park took **1110 at the Drinks Shop** (37 sales at 30) a
 Spray** (45 at 20). Both halves were confirmed in the running game by census **and** by screenshot.
 
 **This reordered the queue, and that reorder is now spent.** Items 3, 6 and 8 were halves of one loop
-and all three are ticked. **Items 2, 4, 5 and 7 remained when this was written on 2026-09-20; item 2
-has since been done, so 4, 5 and 7 remain.** Item 5 is the one worth flagging rather than choosing: it
-was found by playing, and on 2026-09-21 Alexah described it properly, which moves it from arithmetic to **rendering**: the bar draws in the wrong place and
+and all three are ticked. **Items 4, 5 and 7 remain.** Item 5 is the one worth flagging rather than choosing: it
+was found by playing, and it is a **rendering** fault, in Alexah's description of 2026-09-21: the bar draws in the wrong place and
 repeats. See the item itself; do not assume it is small until that is measured.
 
 **The order, agreed with Alexah:**
@@ -92,7 +91,7 @@ player. Both premises were wrong. The `.RSE` runtime is **already sufficient** �
 binds and runs to completion, reaching nothing unbuilt — and the movement is in neither place: it is a
 **Bézier route in the model file** (the array at `0xac`, indexed by a node's `+0x52`) driven by a
 **per-frame percentage in the animation** (channel `0x200`). Our own player applies it, in
-`LobbyModel.Pose`. So it was **a contained job**, and it is done for the bus.
+`LobbyModel.Pose`. So it was **a contained job**, and it is done for all three vehicles.
 
 Confirmed from the engine as well as the data: `FUN_00471860` indexes the table as
 `*(model + 0xac) + node[+0x52] * 0x10`, and `FUN_00474840` is the cubic Bézier over it.
@@ -102,7 +101,7 @@ Confirmed from the engine as well as the data: `FUN_00471860` indexes the table 
 | ~~1~~ | ~~The gates never open when you enter a park~~ **DONE 2026-09-20** | — |
 | ~~2~~ | ~~Four of the six gadget buttons do nothing~~ **DONE 2026-09-21** — five of six now open something | — |
 | ~~3~~ | ~~Nobody new ever arrives~~ **DONE 2026-09-20** — and on all three vehicles | — |
-| 4 | The advisor is silent unless you open a screen | — |
+| 4 | The advisor says one line in a park, and nothing after it | — |
 | 5 | The happiness gauge reads wrong | — |
 | ~~6~~ | ~~Nobody goes home and no day ever ends~~ **DONE 2026-09-20** — same loop as 3 | — |
 | 7 | A park cannot be saved | — |
@@ -243,11 +242,11 @@ button. It only logs, and counts each click as `RESEARCH_BUTTON`.
       does.
       Seen on screen since, through the player's own route: a queue laid by two clicks was photographed
       standing and joined (`docs/QUEUE.md` Q3).
-      **THE QUEUE TOOL IS NO LONGER CONSOLE-ONLY, 2026-09-22.** The ride window's own queue button
+      **THE QUEUE TOOL IS ARMED FROM THE INTERFACE TOO, 2026-09-22.** The ride window's own queue button
       arms it against that ride (`ParkObjectWindow`, verb `0x3e34`), and clicking a queue cell re-arms
       it for the thing that queue serves - the original's mode `0x14`. Both were driven through the
       real interface and the armed mode read back as `mode 3`.
-      **THE PATH TOOL IS NO LONGER CONSOLE-ONLY, 2026-09-22 (Q35).** A click on grass or path arms and
+      **THE PATH TOOL IS PICKED UP FROM THE PARK TOO, 2026-09-22 (Q35).** A click on grass or path arms and
       anchors it, Backspace takes the last run back up, and Escape puts it away - confirmed in the
       running game with the real keys.
 - [x] **Placing by pointing - DONE 2026-09-21.** Both screens put the item or the person in the hand,
@@ -279,8 +278,8 @@ button. It only logs, and counts each click as `RESEARCH_BUTTON`.
 - [x] **Was seen:** the park is permanently the save's 13 guests and 5 staff. Once they have ridden the
       one ride, nothing changes again, ever.
 - **DONE, 2026-09-20: GUESTS ARRIVE BY THEMSELVES AND GO HOME BY THEMSELVES.** A park left
-  alone runs `peeps 13 → 14 → 15 → 13 → 12 → 11` with nothing typed — seven arrivals about 18.6 s
-  apart and ten departures as the saved guests' day ran out. `ParkPeople.StepArrivals` is the manager
+  alone takes a load on the park's own clock with nothing typed — the first 126 s in, the next about
+  150 s after each — and the saved guests go home as their day runs out. `ParkPeople.StepArrivals` is the manager
   and `ParkPeople.Depart` the other half; `ExitLevel` is what sends them home, a countdown nothing had
   ever read. **And the vehicles carry them now — 2026-09-20, all three drive.** The one thing missing
   was an opcode: `Ferry.RSE` and `seaplane.RSE` start every animation with `TRIGWAITANIM` where
@@ -293,21 +292,23 @@ button. It only logs, and counts each click as `RESEARCH_BUTTON`.
   `VAR_STATUS` 4 for ever and, because arrivals are gated on the vehicle reporting 2, **the park
   drained to nought after one guest**. `ParkPeople.StepVehicle` is the tail of `FUN_004cf3e0`, which
   runs every tick and re-triggers on status -1, 0, 4 and on 2 once its load is let go. Unattended, the
-  population now moves both ways: 13 → 15 → … → 9 → 10 → 7, five in and ten home over three minutes.
+  population moves both ways: a load is called about 150 s after the last one got off, and the saved
+  guests go home as their day runs out.
   A `vehicles` console census was added to see this at all - `paths` reports where a vehicle is drawn,
   which reads identically whether its script is running or parked, and only the pc separates them.
-- **Lives:** `ParkPeople.PeepsIn` builds the save's guests; `ParkPeople.Admit` builds every arrival, from the bus
-  stop (`PeepState.AtTheBusStop`, 21, and `ParkAdmission.BusStopA/B`).
+- **Lives:** `ParkPeople.PeepsIn` builds the save's guests; `ParkPeople.Admit` builds every arrival, at a bus
+  stop cell (`ParkAdmission.BusStopA/B`), in `PeepState.AtGate`; the walk in through
+  `PeepState.AtTheBusStop` (21) is not built.
 - **Census:** ids 29, 31-41 **and 42** are the 13 guests, on the bus road at x 47-48, y 9-15, already
   walking in. (Thing 42 is a guest too. Compute a free id, never take one from here.)
-- **Not blocked:** the gate-admission path it would feed is built and measured — guests pay at the gate.
+- **The gate-admission path it feeds** is built and measured — guests pay at the gate.
 - **Gate:** `park jungle`, then the `guests` census over time. **Predict the count before reading it.**
 - **What remained for the loop — all of it done, 2026-09-20:** an arrival manager (its timer now counts fours of
   the thing sweep from the save's mark, as the original's does: the first load 126 s in and the next about 150 s
   after each, decoded by Q68 and built by Q68b); guests created and walked in from the stop; guests walked out and
   removed; and the ferry and seaplane **driving** alongside the bus.
-- **The whole mechanism is decoded — see `docs/exe/park.md`, "Arrivals".** It is no longer
-  a design question, and the shape to build is not the one this list assumed:
+- **The whole mechanism is decoded — see `docs/exe/park.md`, "Arrivals".** Its shape
+  is not the one this list assumed:
   - `FUN_004cf3e0` waits out a timer, asks `FUN_004cf5b0` for a headcount, summons a vehicle, and then
     makes **one guest per thing sweep** through `FUN_004cf720` until the load is spent.
   - **The vehicle is chosen by crowd size** — under 36 the bus, up to 60 the seaplane, beyond that the
@@ -366,7 +367,7 @@ the seaplane and ferry both loop back to the start of theirs.
 The census places the save's 13 guests on the bus road at x 47–48, y 9–15 — i.e. already walking in
 from the crossing. So the arrival path they would take is the one the shipped save shows mid-use.
 
-## 4. The advisor is silent unless you open a screen
+## 4. The advisor says one line in a park, and nothing after it
 
 - [ ] **Seen:** the advisor is a constant presence in the original and says nothing here while you play.
 - **Lives:** `docs/exe/advisor-park.md`; a park's lines are `UI/Park/ParkLines.cs`, which says one (`ExplainGadget`).
@@ -379,12 +380,11 @@ from the crossing. So the arrival path they would take is the one the shipped sa
 
 ## 5. The happiness gauge reads wrong
 
-- [ ] **Seen:** the gauge does not track how the park is actually doing.
-- **ALEXAH DESCRIBED IT PROPERLY ON 2026-09-21, AND IT IS A RENDERING FAULT:** *"The bar image
+- [ ] **Seen:** the bar draws in the wrong place, as two copies split down the middle.
+- **IT IS A RENDERING FAULT, IN ALEXAH'S WORDS OF 2026-09-21:** *"The bar image
   just appears to not be rendering within the actual location properly, it looks like two copies of the
-  bar split down the middle like it's repeating."* So the line above — which framed this as the gauge
-  not tracking the park, i.e. as arithmetic — is **the wrong description**. The artwork is in the wrong
-  place and it is repeated.
+  bar split down the middle like it's repeating."* It is not the gauge failing to track the park: the
+  artwork is in the wrong place and it is repeated.
 - **A lead, READ FROM THE CODE AND NOT MEASURED — do not report it as a finding.** `UiMeter.OnDraw`
   builds its skin as `new Texture( Skin )` with **no flags**, so `Texture.SamplerFor( None )` returns
   `AnisotropicRepeat`, which is `SamplerAddressMode.Mirror` — any UV outside 0..1 then draws a

@@ -12,7 +12,7 @@ namespace OpenTPW;
 ///
 /// <para>
 /// <b>This draws instead of the ground, never on top of it.</b> A path cell is ordinary drawn ground in
-/// <c>base.MD2</c> - measured, and worth stating because the opposite was believed for a while: all 82
+/// <c>base.MD2</c> - measured: all 82
 /// of Lost Kingdom's path and queue cells carry a real ground texture index and none is the
 /// "something covers this" index 0, which is the river and the fixed roads. So <see cref="ParkGround"/>
 /// skips the cells that land here, and the two surfaces meet edge to edge at the same heights rather
@@ -26,11 +26,10 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>Queues are drawn elsewhere, by <see cref="ParkQueues"/>, and are not paths at all.</b> This said
-/// they were "deliberately left out" because their tile index of 5 exceeded the theme's <c>QueueTex</c>
-/// rows 0 to 3 and "what a queue tile is indexed by is not yet known". It is known: a queue is built
-/// from the railed models the theme keeps in its own <c>queue.wad</c>, chosen by the exe's piece table,
-/// not from a ground tile - which is why the index never fitted the texture rows.
+/// <b>Queues are drawn elsewhere, by <see cref="ParkQueues"/>, and are not paths at all.</b> A queue is
+/// built from the railed models the theme keeps in its own <c>queue.wad</c>, chosen by the exe's piece
+/// table, not from a ground tile - which is why a queue cell's tile index, 5 where the queue meets the
+/// path, runs past the theme's <c>QueueTex</c> rows 0 to 3.
 /// </para>
 /// </summary>
 public sealed class ParkPaths : ModelEntity

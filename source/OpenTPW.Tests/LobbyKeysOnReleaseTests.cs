@@ -18,7 +18,7 @@ namespace OpenTPW.Tests;
 ///
 /// <para>
 /// <b>The frame is the stack's own order</b>: every open window's <c>Update</c>, then the stack's <c>Keyboard</c> - so a
-/// key read by a window, as the island panel read the cursor keys before, is seen as well as one handed to the scene.
+/// key read by a window is seen as well as one handed to the scene.
 /// Only the pointer half is left out, which the press tests drive through <see cref="UI.WindowStack.ClickAt"/>.
 /// </para>
 /// <para>
@@ -93,7 +93,7 @@ public class LobbyKeysOnReleaseTests
 	/// again goes round the other way. The keypad's arrows move nothing.
 	/// </summary>
 	/// <remarks>
-	/// <b>Mutations:</b> moving on the press - the island panel's old reading of <see cref="Input.KeysPressed"/>, a held
+	/// <b>Mutations:</b> moving on the press - reading <see cref="Input.KeysPressed"/>, a held
 	/// key's repeats included - moves on every frame of the hold; taking Right off the release moves nothing at all;
 	/// Right and Left swapped, or the keypad's arrows taken as the cursor keys, each move the wrong way.
 	/// </remarks>

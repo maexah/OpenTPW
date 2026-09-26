@@ -12,7 +12,8 @@ public class BaseFileSystem
 
 	/// <summary>
 	/// Extensions are matched without regard to case, because the game's own are not consistent: every archive
-	/// it ships is lower case except data\global\Speech\lips.WAD, the advisor's lip sync.
+	/// it ships has a lower-case extension except data\global\Speech\lips.WAD, the advisor's lip sync, and
+	/// the five speechHD.SDT speech banks, one in data\global\Speech and one in each theme's Speech folder.
 	/// </summary>
 	private readonly Dictionary<string, Type> archiveHandlers = new( StringComparer.OrdinalIgnoreCase );
 
@@ -42,8 +43,7 @@ public class BaseFileSystem
 	/// <para>
 	/// A missing one is not made. This maps the game's own files, and answering "there is nothing there" by
 	/// making an empty directory of that name turns one clear failure into every read failing with nothing
-	/// said about why - on Linux it made a directory named, in full, "C:\Program Files (x86)\Bullfrog\Theme
-	/// Park World\Data" beside the tests, and six of them then read it and failed. Whatever owns a directory
+	/// said about why. Whatever owns a directory
 	/// - the save folder, the cache - makes it before mapping it.
 	/// </para>
 	/// </summary>
@@ -291,7 +291,7 @@ public class BaseFileSystem
 	///
 	/// <para>
 	/// The game's data was laid out where case never mattered and it shows: the advisor's lip sync is
-	/// data\global\Speech\lips.WAD where every other archive is lower case, and the sound maps ask for
+	/// data\global\Speech\lips.WAD where every other .wad is lower case, and the sound maps ask for
 	/// "Sound\Sfx" where the folder is "sound". Windows answered all of it. Rather than lower-casing - which
 	/// would break the names that <i>are</i> spelled right - each part of the path is matched against what its
 	/// parent directory really holds. A part matching nothing is kept exactly as it was asked for, so the rest

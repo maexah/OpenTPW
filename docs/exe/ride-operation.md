@@ -2,7 +2,7 @@
 
 How a placed catalogue object — a ride, a shop, a sideshow, a toilet — operates in the original game: the turn it takes on the park's thing sweep, the boarding handshake it shares with a guest, how a rider leaves and pays, how the queue renumbers itself, and the script instructions the engine and the ride use to talk to each other. The short version of the turn is: **the park sweeps every thing once in eight game ticks; a healthy object drops a stale queue head, maybe requests a breakdown, invites the guest at the front, then dismisses anyone who has finished.** The admission itself is driven from the *guest's* side, not the ride's — the ride invites, the guest accepts. Everything below is read off the disassembly, the shipped `.RSE` scripts and the shipped `.sam` balance files; where a fact is a measurement, its provenance is named in the row.
 
-Two kinds of offset appear on this page and they are **not** interchangeable. A `+0x..` is a **runtime** offset into the live struct. A bare decimal ("file 214") is an offset into the **saved record** that `ParkWorld` walks. `mCash` is runtime `+0x1a0` and file 414; conflating the two has already gone wrong twice with `thing + 0x32` / `+0x36`.
+Two kinds of offset appear on this page and they are **not** interchangeable. A `+0x..` is a **runtime** offset into the live struct. A bare decimal ("file 214") is an offset into the **saved record** that `ParkWorld` walks. `mCash` is runtime `+0x1a0` and file 414; `mFlags` is runtime `+0x32` and file 58, and `mEntryPos` runtime `+0x36` and file 206.
 
 ## Where a ride's turn comes from
 
@@ -33,7 +33,7 @@ Reading either of these as "the object list" gets the other wrong.
 | Address | What it is | Evidence |
 |---|---|---|
 | `+0x1da746` | `mFirstObject`, the chain head | `FUN_00516c80` writes the literal string `mFirstObject` against this offset |
-| thing `+0xc` | the link — the save's `mNextObject`, file 208 | `FUN_004db090` zeroes it before linking; `FUN_004fcb10` advances by it |
+| thing `+0xc` | the link — the save's `mNext`, file 208 | `FUN_004db090` zeroes it before linking; `FUN_004fcb10` advances by it |
 | `FUN_00519d80( world, thing )` | **LINK.** `head = this; if (oldHead) this->next = oldHead` | Decompiled |
 | `FUN_00519dc0( world, thing )` | **UNLINK.** Walks from the head matching `+0xc`, patches the predecessor, or moves the head | Decompiled |
 
@@ -47,7 +47,7 @@ Reading either of these as "the object list" gets the other wrong.
 
 **`FUN_004d3d10` is not a chain.** It is `CControlManager::GetObjectControl…`, a linear scan of 32-byte per-item records with a one-entry cache, and its `+0x18` is a count of how many of that item stand in the park — incremented by the constructor, decremented by the demolish.
 
-**A correction made on the way, kept because the shape repeats.** A first reading of `FUN_004db090` and `FUN_004dd0a0` concluded that the constructor performs no insertion and the demolish no unlink, which would have justified abandoning the chain walk as unfaithful. Both delegate to a one-line helper — `FUN_00519d80` among sixty-odd field initialisations, `FUN_00519dc0` behind the refund arithmetic. A structural absence claimed from a decompilation is only as good as the calls you followed, and the tell was that the conclusion proved too much: it implied the original itself could never offer a ride the player had just built.
+**A structural absence read from a decompilation is only as good as the calls followed.** `FUN_004db090` and `FUN_004dd0a0` do not link or unlink inline: each makes one call to a helper — `FUN_00519d80` among sixty-odd field initialisations, `FUN_00519dc0` behind the refund arithmetic. A reading that misses those calls concludes that the original could never offer a ride the player had just built, which proves too much.
 
 Two consequences of that ordering, both settled by reading the straight-line region rather than by comparing addresses (address order only implies execution order *inside* one straight-line region):
 
@@ -221,7 +221,7 @@ Entering state 14 also writes the guest's `+0x1f1` from the sideshow win roll �
 
 ## The queue
 
-The queue is **exactly a doubly-linked list**: the head on the object (`mFirstInQ`, `+0x3c`), `mQNext` / `mQPrev` through the guests, and a back-of-queue pointer at `+0x3a`.
+The queue is **exactly a doubly-linked list**: the head on the object (`mFirstInQ`, `+0x3c`), `mQNext` / `mQPrev` through the guests, and no tail: `+0x3a` (`mBackOfQueue`) is the back CELL, which `GetBackOfQueue` caches.
 
 **Nothing renumbers a queue when somebody leaves** — `FUN_004ddd20` only unlinks. The original recomputes a guest's position from the links every turn instead:
 
@@ -422,8 +422,8 @@ aims at the back cell's centre. An 8.8 sub byte becomes a navigator coordinate a
 arrival radius is the same (`DefaultRadius = One / 5`, times 1.6), and so is a route of no length arriving at once:
 `FUN_0050fd40` answers `0x10000` when its total `+0xa0` is nought (`0x0050fda8`), as `PeepNavigator.Progress` does.
 **Where it still differs.** The jitter draws from `PeepBehaviour`'s `System.Random`: `RideScript.NextDraw` reproduces
-`FUN_00516330` exactly (bar `Math.Abs` of `int.MinValue`, which throws where the engine answers `0x80000000`), but per
-script and seeded 1, and the engine's own seed is not established, so only the range and the one draw a call are the
+`FUN_00516330` exactly (bar `Math.Abs` of `int.MinValue`, which throws where the engine answers `0x80000000`), then
+halves it as `RAND`'s `SHR 1` does, but per script and seeded 1, and the engine's own seed is not established, so only the range and the one draw a call are the
 original's. A direction neither switch knows stands the point at the cell's centre, counted
 `QUEUE_PLACE_DODGY_DIRECTION`, where the original routes with whatever its stack held. A place past the queue's cells
 is refused before routing, where the original routes to (127, 255) and fails. `FUN_004fa5f0`'s stranded refusal is
@@ -438,7 +438,7 @@ The supporting helpers:
 | `FUN_004de840` | — | The queue-path arm: the walk from the front, one cell per four places, the two switches. Writes the cell first, draws once. | Disassembly |
 | `FUN_004dec30` | — | The virtual-queue arm: `GetBackOfQueue`'s cell, the entry cell's direction, no walk, no bound on the place. | Disassembly |
 | `FUN_004de670` | — | The next queue cell, `cdecl ( &out, cell )`: probes N, S, E, W through `FUN_004d96f0` (NULL off the map, each checked) and takes the first neighbour of mType **exactly 3** (`FUN_00536320` 3 or 9, `FUN_00536340` not 9) whose `mDirection` points back (`0x10`, `0x01`, `0x40`, `0x04`); its own `mNeighbours` is never read. Writes the neighbour's id word, or 0. | Disassembly |
-| `DAT_007cdba0`..`…bdc` | — | **EIGHT step vectors, not four, and the "not evenly spaced" warning is now explained rather than just noted.** They are `(dx, dy)` pairs written by per-object static initialisers (so the image reads zeros — do not conclude they are unset), laid out in link order rather than compass order. Measured from the jump table in `FUN_004d97e0`: `0x01`→`ba0/ba4` (0,−1); `0x02`→`bd8/bdc` (+1,−1); `0x04`→`bc8/bcc` (+1,0); `0x08`→`bb8/bbc` (+1,+1); `0x10`→`ba8/bac` (0,+1); `0x20`→`bb0/bb4` (−1,+1); `0x40`→`bd0/bd4` (−1,0); `0x80`→`bc0/bc4` (−1,−1). **This independently confirms the compass in `park.md` from the executable rather than from save statistics.** | Static-initialiser immediates + jump table |
+| `DAT_007cdba0`..`…bdc` | — | **EIGHT step vectors, not four.** They are `(dx, dy)` pairs written by per-object static initialisers (so the image reads zeros — do not conclude they are unset), laid out in link order rather than compass order. Measured from the jump table in `FUN_004d97e0`: `0x01`→`ba0/ba4` (0,−1); `0x02`→`bd8/bdc` (+1,−1); `0x04`→`bc8/bcc` (+1,0); `0x08`→`bb8/bbc` (+1,+1); `0x10`→`ba8/bac` (0,+1); `0x20`→`bb0/bb4` (−1,+1); `0x40`→`bd0/bd4` (−1,0); `0x80`→`bc0/bc4` (−1,−1). **This independently confirms the compass in `park.md` from the executable rather than from save statistics.** | Static-initialiser immediates + jump table |
 | `FUN_004d97e0` | `CMapCell::GetNeighbouringCell( Direction )` | Named by its own assert, `"Incorrect use of function CMapCell::GetNeighbouringCell( Direction )"` at `0x0075b054`. Exactly eight of its 128 map entries are legal — a **single** compass bit — and every other value reaches that assert. | Its own assert |
 | `FUN_004de040` | — | **Start of queue, and it reads `mNeighbours`, NOT `mDirection`.** It calls `FUN_00522770` with the object's own entry cell (`LEA ECX,[EDX + ECX*0x4 + -0x44]` off `mEntryPos`), takes the **first set bit** in the fixed order `0x01`, `0x10`, `0x40`, `0x04`, and returns `mEntryPos + dy*128 + dx` (a 16-bit add), or 0 with none of the four (`0x004de0f9`). Its whole body holds **one** call, so it checks nothing — not the cell's type, not the map edge, not `+0x32`. All the checking is `FUN_004de670`'s. | Disassembly |
 | `FUN_004d99c0` / `FUN_004d96f0` | — | The neighbour lookup pair. `FUN_004d96f0` works from the cell's own id word and answers NULL off the 0..127 map (`FUN_004d8300`, signed). | Disassembly |
@@ -500,7 +500,9 @@ it logs `"Back of queue is %sconnected"` (`FUN_004de4a0`) and, when the ride is 
 `FUN_004547c0( model )` (not a sound; see `FUN_00454550`), `VAR_RIDECLOSED` = 0, SetState(0) (`0x004de487`). **It
 always zeroes `mAssignedStaffMember`** (`+0x5e`, `0x004de48c`), so every queue measured again makes the ride forget
 who was servicing it; `+0x60` and `+0x64` stand. Nothing in the tail reads the park's door: a closed ride whose queue
-is edited opens whatever the door says. OpenTPW builds all of it: the walk and the tail are
+is edited opens whatever the door says. OpenTPW builds it and counts what it leaves out: thought `0xd`
+(`QUEUE_SHORTENED_THOUGHT_0xD`), the back cell's stamp (`QUEUE_REMEASURE_BACK_CELL_STAMP`), and the guard's and the
+open's own counted parts ("The closed ride"). The walk and the tail are
 `ParkPeople.QueueRemeasured`, the tail `ParkRideOperation.ReopenAfterRemeasure`. Its eight call sites, each with the
 object in `ECX`:
 
@@ -598,8 +600,8 @@ per-age percentage, on the refunds (`QUEUE_REFUND_DEPRECIATION`) and on the debi
 `0x00527fe8`); a run over anything but queue or bare ground
 (`QUEUE_DRAIN_CLEARS_ANOTHER_KIND`); and a walk past a thousand cells, which the original's never gives up
 (`QUEUE_END_WALK_UNBOUNDED`). **Open:** what the bank's `+0x114` is; `FUN_004e2290`, the per-age percentage the refund
-and the debit both scale by; whether the advisor's `0xcb` posts are heard; what `FUN_004d8c60` writes, into a coarse
-grid beside the map at the block of the back cell (`0x004de266`).
+and the debit both scale by; whether the advisor's `0xcb` posts are heard. `FUN_004d8c60` (`0x004de266`) writes the route
+counter into the back cell's 16 × 16 block stamp ("The stranded bookkeeping").
 
 #### The closed ride - `FUN_004e0450`
 
@@ -697,7 +699,8 @@ the one tail (`0x0050049e` / `0x005004aa`): `FUN_004ddd20`, then `FUN_005012f0` 
    **1b**, no route: `"the player has removed the path from under me"` (`0x0050010a`), `FUN_004e0ac0`, out.
 2. **Wait**: the same two with the object naming somebody else: the whole turn is nothing (`0x005001d8`). The
    invitation is kept, and nothing below runs, not even the mood.
-3. **Dirt gate**: `FUN_004e0390`, a toilet (`+0x32 & 1`) whose `+0x44` (its meaning not decoded) truncates to a
+3. **Dirt gate**: `FUN_004e0390`, a toilet (`+0x32 & 1`) whose `+0x44` (its State of repair, `park-engine.md`; what lowers it
+   is not decoded) truncates to a
    byte below 25.0 (`0x00700550`): thought `0xe`, out.
 4. **Lost place**: `FUN_004ddf50` answers -1 (the guest is unlinked, or somebody in front is no longer in states
    11..14): out. Its string, `"Problem with a queue - shouldn't be fatal, closing and reopening the ride with the

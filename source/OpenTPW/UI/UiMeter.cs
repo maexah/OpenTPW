@@ -5,7 +5,7 @@ namespace OpenTPW.UI;
 /// number as a quantity rather than as lettering.
 ///
 /// <para>
-/// <b>It carries no mesh, which is why it looked empty.</b> <c>FUN_0066d750</c> builds it as the plain
+/// <b>It carries no mesh.</b> <c>FUN_0066d750</c> builds it as the plain
 /// control with three more fields, and the original hands it a <c>meter.wct</c> skin through
 /// <c>FUN_00477870</c> rather than a model - so a control drawing only <see cref="UiControl.Mesh"/> can
 /// never show one. The texture ships in ui.wad at <c>textures\meter.wct</c>, 128x128.
@@ -20,7 +20,7 @@ namespace OpenTPW.UI;
 /// <para>
 /// <b>WHICH WAY IT FILLS IS A CHOICE, AND IT IS SAID SO RATHER THAN IMPLIED.</b> The two sub-objects
 /// above are what actually paint, and their geometry has not been traced - slot <c>+0x08</c> of that
-/// vtable is a destructor, not a paint, so the obvious road was a dead end. What is known is that the
+/// vtable is a destructor, not a paint. What is known is that the
 /// housing is taller than it is wide (the gauge's meter is 59 by 224 on the virtual screen) and that the
 /// original's gauge "rests at its lowest part" when it has nothing to show. Filling upward from the
 /// bottom is the reading those two facts support; it is not a measurement, and if the artwork is ever

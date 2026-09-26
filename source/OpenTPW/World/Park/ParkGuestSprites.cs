@@ -114,8 +114,7 @@ public sealed class ParkGuestSprites : ModelEntity
 
 	/// <summary>
 	/// Enough colours to tell the <b>nine</b> sprite kinds this maps apart at a glance - see
-	/// <see cref="DebugFacing"/>. This said fourteen, which is the original's table size rather than
-	/// this array's: <c>FolderFor</c> covers 0 to 8, and an index past the end clamps.
+	/// <see cref="DebugFacing"/>. <c>FolderFor</c> covers 0 to 8, and an index past the end clamps.
 	/// </summary>
 	private static readonly uint[] DebugColours =
 	[
@@ -171,7 +170,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// sweeping it plainly makes bank 0 the BE child; the original makes bank 0 the BI child and pushes BE
 	/// out to 4. Every one of the shipped park's thirteen guests wears a kids bank, and between them they
 	/// wear banks 0, 2, 4, 5, 6 and 7 - so sweeping plainly dresses the entire park in the wrong children
-	/// while still looking perfectly plausible, which is exactly why it went unnoticed.
+	/// while still looking perfectly plausible.
 	/// </para>
 	/// </summary>
 	private static readonly string[] AvatarFirst = ["SPR_BI", "SPR_KI", "SPR_TA", "SPR_SU"];
@@ -219,7 +218,7 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		// Only the banks those sprites actually wear. Loading every person bank in the archive would be
 		// 5,316 pictures and an atlas 13,885 pixels tall, past what a good many devices will allocate at
-		// all; the shipped park wears nine banks and comes to well under two thousand.
+		// all; the shipped park wears eleven banks and comes to well under two thousand.
 		Load( themeName, park );
 
 		if ( _people.Count > 0 && _atlas != null )
@@ -228,8 +227,7 @@ public sealed class ParkGuestSprites : ModelEntity
 
 	/// <summary>
 	/// Reads each bank a sprite in this park wears, and packs their pictures into one texture. Banks are
-	/// numbered within their kind by the order the folder's files come, which is the order the archive
-	/// itself lists them.
+	/// numbered within their kind in the order <see cref="BanksIn"/> gives, which is the original's.
 	/// </summary>
 	private void Load( string themeName, ParkWorld park )
 	{
@@ -404,15 +402,10 @@ public sealed class ParkGuestSprites : ModelEntity
 	{
 		var yaw = MathF.Atan2( -forward.X, forward.Y );
 
-		// <b>Rounded to the nearest eighth, and the arithmetic that was here only looked like it was.</b>
-		// It read ((yaw - PI/8) / TAU * 8) + 0.5, in which the two corrections CANCEL exactly - PI/8 is a
-		// sixteenth of a turn, so dividing it by TAU and scaling by 8 gives precisely the 0.5 that is then
-		// added back. What was left was a plain floor of yaw in eighths. That would be harmless if the
-		// camera ever sat between two eighths, and it never does: the orbit camera turns in steps of
-		// exactly PI/4, so EVERY position it can hold lands exactly on a boundary, where the answer is
-		// decided by the last bit of a float. Looking due south, atan2 came back as 3.99999989 eighths and
-		// floored to 3. Adding the half AFTER the scaling is what makes a boundary the middle of a bucket
-		// rather than its edge.
+		// <b>Rounded to the nearest eighth, with the half added AFTER the scaling</b>, which makes a boundary
+		// the middle of a bucket rather than its edge. The rotate keys turn the orbit camera in steps of
+		// exactly PI/4, so the yaws they reach sit exactly on those boundaries, where a plain floor would be
+		// decided by the last bit of a float: looking due south, atan2 comes back as 3.99999989 eighths.
 		return (int)MathF.Floor( (yaw / MathF.Tau * Compass) + 0.5f ) & (Compass - 1);
 	}
 
@@ -422,10 +415,9 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// <para>
 	/// <b>Added, not subtracted, and that is the whole of it.</b> The two numberings run in opposite
 	/// directions - a person's clockwise, the camera's anticlockwise (see <see cref="CameraOctant"/>) - so
-	/// adding them is what cancels the camera's rotation. Subtracting them, which is what this did, applies
-	/// it twice: the drawn picture then came out wrong by exactly twice the camera's angle, which is why a
-	/// guest looked right from due north and south and exactly backwards from east and west, and appeared
-	/// to swing round to keep facing the viewer as the camera orbited.
+	/// adding them is what cancels the camera's rotation. Subtracting them would apply it twice: the drawn
+	/// picture would come out wrong by exactly twice the camera's angle - right from due north and south,
+	/// exactly backwards from east and west, and swinging round to face the viewer as the camera orbits.
 	/// </para>
 	/// <para>
 	/// Split from the camera so it can be tested without one - the same reason <see cref="Standing"/> takes
@@ -496,8 +488,8 @@ public sealed class ParkGuestSprites : ModelEntity
 				continue;
 
 			// AnyWalkFor rather than WalkFor: staff are drawn from this same list and their walks live in
-			// a separate pool, so asking only the guests' one drew every member of staff at the position
-			// the save left them at - see ParkPeople.AnyWalkFor.
+			// a separate pool, so asking only the guests' one would draw every member of staff at the
+			// position the save left them at - see ParkPeople.AnyWalkFor.
 			var (x, y, angle) = StandingFrom( people, cellX, cellY, person, sprite, alpha );
 
 			var set = loaded.Bank.Sets[setNumber & 0xf];
@@ -556,8 +548,8 @@ public sealed class ParkGuestSprites : ModelEntity
 	///
 	/// <para>
 	/// <b>Why this exists at all.</b> <see cref="_people"/> holds record structs copied out of the save when
-	/// the park opened, and nothing writes to them. Before this, a guest the simulation had walked half way
-	/// across the park was still drawn where the file left them.
+	/// the park opened, and nothing writes to them, so without this a guest the simulation has walked half
+	/// way across the park would be drawn where the file left them.
 	/// </para>
 	/// <para>
 	/// <b>The scale is the heightfield's own, and that is the whole argument for it.</b> A position in the
@@ -570,27 +562,20 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// </para>
 	/// <para>
 	/// <b>It falls back rather than guessing.</b> With no simulation, or before the ground has loaded and a
-	/// cell size is known, the saved position and heading are what get drawn - which is what this did
-	/// before, so a park without people still looks exactly as it did.
+	/// cell size is known, the saved position and heading are what get drawn.
 	/// </para>
 	/// </summary>
 	/// <remarks>
-	/// <b>It takes the walk rather than the pool of them, and a control run is why.</b> Written the other
-	/// way it needed a live <see cref="ParkPeople"/> - an entity - to exercise at all, so nothing tested it;
-	/// a mutation making this ignore the simulation entirely and draw everyone at their saved position left
-	/// the whole suite green. Handing in the one walk makes the choice and the arithmetic testable without a
-	/// graphics device or an entity, and the lookup moves to the caller, which is where it belongs anyway.
+	/// <b>It takes the walk rather than the pool of them</b>, which makes the choice and the arithmetic
+	/// testable without a graphics device or a live <see cref="ParkPeople"/>; the lookup is the caller's.
 	/// </remarks>
 	/// <summary>
 	/// Where to draw this person, finding their walk for the caller.
 	///
 	/// <para>
-	/// <b>This overload exists because the pool choice was the bug, and the pool choice was the one part
-	/// nothing could test.</b> The arithmetic below has been covered since it was written; the LOOKUP sat
-	/// in the draw loop, which wants a graphics device, so no test could reach it. Reverting it to
-	/// <see cref="ParkPeople.WalkFor"/> - the guests-only pool, which is exactly the defect Alexah saw as
-	/// "the staff still don't walk" - left all 763 tests green. Moving the choice here, and only the
-	/// choice, makes it answerable without a device while leaving the split the overload below describes.
+	/// <b>The pool choice lives here so a test can reach it</b>; in the draw loop it would want a graphics
+	/// device. It is <see cref="ParkPeople.AnyWalkFor"/> because staff are drawn from this same list and
+	/// <see cref="ParkPeople.WalkFor"/> is the guests' pool alone. The arithmetic is <see cref="Standing"/>'s.
 	/// </para>
 	/// </summary>
 	/// <remarks>
@@ -609,13 +594,9 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// under them when none is.
 	/// </summary>
 	/// <remarks>
-	/// <b>Split out because the choice was the change, and the choice was the part nothing could
-	/// test.</b> Resolving a seat needs <see cref="ParkObjects"/>, which wants a graphics device, so
-	/// neutering <see cref="Seated"/> left all 769 tests green - riders would have gone back to standing
-	/// at the front of the queue and the suite would not have said a word. That is the same shape as the
-	/// staff bug found the same day: a call site no test could reach. This much is arithmetic and needs
-	/// no device, so the preference itself is now pinned; that a seat is correctly RESOLVED still rests
-	/// on the screenshots and the ride census.
+	/// <b>Split out so the preference can be tested.</b> Resolving a seat needs <see cref="ParkObjects"/>,
+	/// which wants a graphics device; this much is arithmetic and needs none. That a seat is correctly
+	/// RESOLVED rests on the screenshots and the ride census.
 	/// <para>
 	/// The sprite's own height is an offset above whatever it stands on, so it is added either way -
 	/// a rider sits above their node exactly as a walker stands above the land.
@@ -668,7 +649,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// How far through the current thing tick this frame is - <see cref="ParkPeople.ThingTickFraction"/>.
 	/// <b>One by default, which is the position the simulation actually left them at</b>, so a caller with
 	/// no frame to place - a test, or anything asking "where is this person" rather than "where do I draw
-	/// them this frame" - gets exactly what it got before interpolation existed.
+	/// them this frame" - gets that position.
 	/// </param>
 	internal static (float X, float Y, int Angle) Standing( PeepWalk? walk, float cellX, float cellY,
 		ParkWorld.Person person, ParkWorld.Sprite sprite, float alpha = 1f )
@@ -697,9 +678,9 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// Which picture to draw: from the animation when one is playing, and from the save when it is not.
 	///
 	/// <para>
-	/// <b>This is what stops a guest sliding.</b> Both numbers used to come straight off the save record and
-	/// nothing ever moved them, so a guest crossed the park in a single frozen pose. They now come from the
-	/// little program the original runs, which chooses a set and steps a frame.
+	/// <b>This is what stops a guest sliding.</b> Both numbers come from the little program the original
+	/// runs, which chooses a set and steps a frame; the save record's pair alone would carry a guest across
+	/// the park in a single frozen pose.
 	/// </para>
 	/// <para>
 	/// <b>The bank offset comes from the same word as the set, and has to travel with it.</b> The original
@@ -793,17 +774,10 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// console only - see <see cref="DebugFacing"/>.
 	///
 	/// <para>
-	/// <b>Which way zero points IS now established, and this used to have it exactly backwards.</b> The
-	/// paragraph here said the convention was "chosen, not a measurement", and that if every dash in the
-	/// park were wrong by the same amount that would be the answer it was drawn to show. It showed it: the
-	/// first time guests actually walked, every dash pointed half a turn away from the way its owner was
-	/// going.
-	/// </para>
-	/// <para>
-	/// Zero is towards <b>lower</b> y. That is not a choice either - it falls out of
+	/// Zero is towards <b>lower</b> y. That is not a choice - it falls out of
 	/// <see cref="PeepHeading"/>, whose cardinals come from the branch structure of the original's own
 	/// <c>FUN_006e7074</c>: <c>-y</c> is 0, <c>-x</c> is <c>0x200</c>, <c>+y</c> is <c>0x400</c> and
-	/// <c>+x</c> is <c>0x600</c>. Reading the angle as a bearing from <c>+y</c>, as this did, negates both
+	/// <c>+x</c> is <c>0x600</c>. Reading the angle as a bearing from <c>+y</c> would negate both
 	/// components of every direction in the park.
 	/// </para>
 	/// </summary>
@@ -832,7 +806,7 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		// The MIDDLE of the white square, not its corner. Every region in the atlas is packed with
 		// clear pixels around it so the smaller mip levels of one picture cannot bleed into the next;
-		// sampling exactly on a region's edge blends with that padding instead, which drew these
+		// sampling exactly on a region's edge blends with that padding instead, which would draw these
 		// dashes as dark grey streaks rather than in the colour asked for.
 		var u = (plain.Left + plain.Right) * 0.5f;
 		var w = (plain.Top + plain.Bottom) * 0.5f;
@@ -923,9 +897,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	internal IEnumerable<string> Census()
 	{
 		// Exactly what OnRenderTranslucent asks, so this census reports where a person is actually
-		// DRAWN rather than where the file left them. Those were the same thing until the simulation
-		// started moving people, and this printing the saved cell is why a park where nobody moved
-		// looked, from here, identical to one where everybody did.
+		// DRAWN rather than where the file left them.
 		var field = ParkGround.Current?.Heightfield;
 		var cellX = field?.CellSizeX ?? 0f;
 		var cellY = field?.CellSizeY ?? 0f;
@@ -941,10 +913,9 @@ public sealed class ParkGuestSprites : ModelEntity
 			var playing = people?.SpriteFor( person.ThingId );
 			var (x, y, angle) = Standing( walk, cellX, cellY, person, sprite, alpha );
 
-			// <b>The same override the drawing applies, and this census lied without it.</b> It computes
-			// a position of its own rather than reading the one the renderer used, so while a rider was
-			// being drawn up on the ride this still reported the cell they queued on - and a run of it
-			// read exactly like a build where the seat did nothing at all.
+			// <b>The same override the drawing applies.</b> It computes a position of its own rather than
+			// reading the one the renderer used, so without it a rider drawn up on the ride would be
+			// reported at the cell they queued on.
 			var seated = Seated( people, person.ThingId );
 
 			if ( seated is { } seat )

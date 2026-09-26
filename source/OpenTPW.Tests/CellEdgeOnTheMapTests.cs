@@ -11,12 +11,12 @@ namespace OpenTPW.Tests;
 /// <see cref="CellEdgeTests"/> is deliberately synthetic: every cell in it is made up, so each test can
 /// name exactly which two types meet at the edge it is about. That is the right shape for the ladder of
 /// type comparisons, and it is kept. What it cannot do is say whether the thing answers sensibly about
-/// real geography, and one of its three questions - the track record - could not be answered at all until
-/// the binding existed. These read real game files and are skipped where there is no installation.
+/// real geography, and one of its three questions - the track record - has a real answer only once
+/// a park is bound. These read real game files and are skipped where there is no installation.
 /// </para>
 /// <para>
-/// <b>The numbers below were derived before they were run, not copied off a measurement.</b> The class
-/// remarks on <see cref="CellEdge"/> record 429 cells of track type 12, each naming one of 143 cells of
+/// <b>The numbers below were derived before they were run, not copied off a measurement.</b> The remarks
+/// on <see cref="CellEdge"/>'s track members record 429 cells of track type 12, each naming one of 143 cells of
 /// type 25, three apiece; that is 572 carrying a type the branch acts on. Exactly one cell carries the
 /// low nibble that reopens it, and if that cell is a type 25 parent it frees itself and its three
 /// children - which is precisely the documented 568 closed. Either that whole account holds together on
@@ -62,7 +62,7 @@ public class CellEdgeOnTheMapTests
 		Assert.AreEqual( 143, counts.Count, "cells that answer it themselves" );
 		Assert.AreEqual( 572, defers.Count + counts.Count, "cells the branch reaches at all" );
 
-		// Only one of the five types each branch knows about actually occurs here.
+		// Only one of the types each branch knows about actually occurs here.
 		Assert.IsTrue( defers.All( cell => cell.TrackType == 12 ), "every deferring cell is type 12" );
 		Assert.IsTrue( counts.All( cell => cell.TrackType == 25 ), "every answering cell is type 25" );
 
@@ -190,8 +190,7 @@ public class CellEdgeOnTheMapTests
 	/// <b>That binding a park actually changes an answer.</b> Everything above could pass with
 	/// <see cref="CellEdge.For"/> quietly not supplying the track question at all: the closure test calls
 	/// <see cref="CellEdge.TrackCloses"/> directly, which proves the rule works and says nothing about
-	/// whether the factory wires it in. This is the test that pins the wiring, and it exists because
-	/// designing a control run against the factory showed the others would not have caught it.
+	/// whether the factory wires it in. This is the test that pins the wiring.
 	///
 	/// <para>
 	/// The two edges differ in exactly one respect - one was given the park's track records and the other

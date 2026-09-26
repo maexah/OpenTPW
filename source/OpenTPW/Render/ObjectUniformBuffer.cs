@@ -25,8 +25,7 @@ struct ObjectUniformBuffer
 	public float g_flTime; // 4
 
 	/// <summary>
-	/// What distance fades to. It used to be a constant in the shaders, matching the one sky
-	/// colour the lobby ever had; parks set their own SKYCOLOUR, so the distance has to follow
+	/// What distance fades to. Parks set their own SKYCOLOUR, so the distance has to follow
 	/// or the fog band stops meeting the sky at the horizon.
 	/// </summary>
 	public Vector3 g_vFogColour; // 12
@@ -39,8 +38,8 @@ struct ObjectUniformBuffer
 	public float g_flOpacity; // 4
 
 	/// <summary>
-	/// How thick the distance fade is - the multiplier on the shaders' own <c>exp( depth * 0.01 )</c>,
-	/// which used to be hard-coded at 0.025. It is separate so a place can turn the fade off, and
+	/// How thick the distance fade is - the multiplier on the shaders' own <c>exp( depth * 0.01 )</c>.
+	/// It is separate so a place can turn the fade off, and
 	/// so its strength is not spread across two shaders.
 	/// </summary>
 	public float g_flFogDensity; // 4
@@ -54,8 +53,8 @@ struct ObjectUniformBuffer
 	/// <summary>
 	/// 1 to light with the model's normals turned by its model matrix, which is what every draw of a
 	/// model in the world asks for. The untransformed normals are in the file's Y-up space while the
-	/// world is Z-up, so a flat ground normal was lit as though it faced sideways, and any mesh the
-	/// node tree turns was lit at the orientation it was authored in. Measured over the four island
+	/// world is Z-up, so a flat ground normal would be lit as though it faced sideways, and any mesh
+	/// the node tree turns lit at the orientation it was authored in. Measured over the four island
 	/// models, the normal moves by 78 to 101 degrees on average - Jungle 92.6, Fantasy 101.1, Hallow
 	/// 77.6, Space 80.3 - with one mesh, Fantasy's Blade04, at 140.7.
 	///

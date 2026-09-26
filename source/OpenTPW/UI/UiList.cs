@@ -5,9 +5,8 @@ namespace OpenTPW.UI;
 /// buy and the hire screen are built on.
 ///
 /// <para>
-/// <b>Nothing in this interface had one.</b> The only scrolling thing in the tree is
-/// <see cref="UiSlider"/>, which is a value between two ends, and the nearest thing to a list is the
-/// game menu, which measures its items and stacks them without scrolling.
+/// <b>It is the interface's only scrolling list.</b> <see cref="UiSlider"/> scrolls a value between
+/// two ends, and the game menu measures its items and stacks them without scrolling.
 /// </para>
 ///
 /// <para>
@@ -39,11 +38,9 @@ internal sealed class UiList : UiControl
 	/// by. The id is not the position - <see cref="Rows"/> can be re-ordered under it.
 	/// </summary>
 	/// <remarks>
-	/// <b><see cref="Values"/> is what makes the remarks above true rather than aspirational.</b> This
-	/// record said a row carried "a value per column" while being fixed at one, so a screen wanting
-	/// five columns - the staff list - could not be expressed at all. <see cref="Value"/> is kept as
-	/// the first of them, because two screens already push exactly one and reading them is easier than
-	/// rewriting them.
+	/// <b><see cref="Values"/> carries a value per column</b>, which is what lets a five-column staff
+	/// list be expressed. <see cref="Value"/> fills the first of them for a row with no
+	/// <see cref="Values"/> - the shape the buy and hire screens and the items screen's counted rows push.
 	/// </remarks>
 	internal readonly record struct Row( int Id, string Name, int Value, int State = 0,
 		IReadOnlyList<string>? Values = null );
@@ -55,7 +52,7 @@ internal sealed class UiList : UiControl
 
 	/// <summary>
 	/// Where the rows are drawn, which the original carries as a rect of its own - stream op <c>0xa</c>,
-	/// distinct from the control's rect and from its text rect. On both shipped screens those happen to
+	/// distinct from the control's rect and from its text rect. On the buy and hire screens those happen to
 	/// hold the same numbers, so conflating them looks right here and breaks elsewhere.
 	/// </summary>
 	internal UiRect RowArea { get; init; }
@@ -82,11 +79,11 @@ internal sealed class UiList : UiControl
 	/// leaves the default: the name reads from the left and every number from the right.
 	/// </summary>
 	/// <remarks>
-	/// <b>The default is not a rule, and treating it as one gets one screen wrong.</b> The original
+	/// <b>The default is not a rule, and treating it as one gets two screens wrong.</b> The original
 	/// sets this per column, through <c>FUN_006636b2( column, rightAligned )</c> - and the visitor
-	/// list calls it with <b>1 for all six</b>, its name column included, where the staff and item
-	/// lists use 0 for the name and 1 for the rest. So a hardcoded "column nought reads from the
-	/// left" is right three times and wrong once.
+	/// list calls it with <b>1 for all six</b>, its name column included, where the item list uses 0
+	/// for the name and 1 for the rest and the staff list 0 for its first two columns. So a hardcoded
+	/// "column nought reads from the left" is right three times and wrong once.
 	/// </remarks>
 	internal TextAlign[] ColumnAligns { get; init; } = [];
 
@@ -97,7 +94,7 @@ internal sealed class UiList : UiControl
 	/// <para>
 	/// <b>That column is not a text column, and treating it as one collides with the one beside it.</b>
 	/// The buy list's third column is 51 virtual units wide, which is a tick-box and nothing else;
-	/// writing "owned" into it overran the price column to its left and read as "500owned" on screen.
+	/// text written into it overruns the price column to its left.
 	/// The original skins it with a sprite and picks the frame from the state, which is why it can be
 	/// that narrow.
 	/// </para>
@@ -135,9 +132,8 @@ internal sealed class UiList : UiControl
 	{
 		// ONLY the cells this built before, never every child. The original's tree makes the tab
 		// group, the column headers and the scrollbar children of the LIST, so a Build that cleared
-		// everything would delete controls its owner had given it - which is exactly what happened:
-		// the buy screen parented four tabs to the list, called Build, and the tabs vanished with no
-		// error anywhere. The screen drew perfectly and had no tabs on it.
+		// everything would delete controls its owner had given it - the buy screen's four tabs among
+		// them, with no error anywhere.
 		foreach ( var cells in _slots )
 		{
 			foreach ( var cell in cells )
@@ -213,12 +209,12 @@ internal sealed class UiList : UiControl
 			// own middle happens to land in.
 			//
 			// Three of the item screen's five headings have a top of 317 against the list's 318, so the
-			// list does not CONTAIN them, so each resolved an anchor of its own - and the last one's
-			// middle falls past the two-thirds line, so it took the window's right edge where its
-			// neighbours took the centre. On the 4:3 screen the original lays out for there is no slack
-			// and every anchor gives the same answer; on a 16:9 window it slid "Remaining Life" 160
-			// pixels clear of the column it belongs to, with the rows underneath still correct because
-			// they ARE inside the row area. Photographed before it was understood.
+			// list does not CONTAIN them, and left to itself each would resolve an anchor of its own -
+			// the last one's middle falls past the two-thirds line, so it would take the window's right
+			// edge where its neighbours take the centre. On the 4:3 screen the original lays out for
+			// there is no slack and every anchor gives the same answer; on a 16:9 window "Remaining
+			// Life" would slide 160 pixels clear of the column it belongs to, with the rows underneath
+			// still correct because they ARE inside the row area.
 			PinAcross = Anchor,
 			PinDown = VerticalAnchor
 		} );
@@ -310,7 +306,7 @@ internal sealed class UiList : UiControl
 	/// </summary>
 	/// <remarks>
 	/// <b>The original sends both messages, and a press-and-release sends the first one twice.</b>
-	/// With the list's flag <c>0x80</c> set - which both screens set - <c>0x400</c> is raised on the
+	/// With the list's flag <c>0x80</c> set - which the buy and hire screens set - <c>0x400</c> is raised on the
 	/// press and again on the release; the buy screen survives that only because its first handler
 	/// closes the screen and the second finds the tree gone. Firing once, on the press, is the
 	/// behaviour that arrangement produces and is what this does rather than reproducing a double

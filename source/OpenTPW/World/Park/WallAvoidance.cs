@@ -22,8 +22,8 @@ namespace OpenTPW;
 /// <c>2,1</c> then <c>1,2</c>, up-right <c>2,3</c> then <c>3,2</c>.
 /// </para>
 /// <para>
-/// <b>The two upward cases list their second pair in the opposite order, and that turns out not to
-/// matter</b> - said here because an earlier draft of this comment claimed it did. Both probes in that
+/// <b>The two upward cases list their second pair in the opposite order, and that does not
+/// matter.</b> Both probes in that
 /// pair are refusals, so the pair is an "and" and asking it either way round gives the same answer; the
 /// first pair is an "or", equally order-blind. What would really go wrong is getting a <i>cell</i> or a
 /// <i>side</i> wrong, which is why those are what the tests pin.
@@ -145,8 +145,7 @@ public static class WallAvoidance
 	/// times and it is easy to miss: the down-right case builds the point with two increments, and the
 	/// up-left case at <c>0050eab3</c> uses the standing cell's own coordinates with no adjustment at all.
 	/// Getting it wrong puts the corner a whole cell away and it is then quietly judged out of reach,
-	/// which is a silence rather than a wrong push - three of the four were wrong here until a test that
-	/// went the other way round caught it.
+	/// which is a silence rather than a wrong push.
 	/// </remarks>
 	private static FixedVector Corner( FixedVector position, FixedVector way, int reach, int radius,
 		Func<int, int, StepDirection, bool> blocked, int cornerX, int cornerY,

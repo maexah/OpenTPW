@@ -11,10 +11,8 @@ namespace OpenTPW;
 /// <para>
 /// It is <b>not</b> the ground. The playable surface is a 96x85 cell heightfield stored in a block
 /// inside the same file, which is a separate job - see <see cref="ParkGround"/>, which owns it and is
-/// built before this one. (This said "see ParkHeightfield when it exists"; no such type was ever
-/// written, and the job shipped under the other name.) This entity is
-/// only the scenery standing on that ground, and it is first because it needs no new file format at
-/// all: <see cref="ModelFile"/> reads it unmodified (it carries the same 0x1CD15D46 magic as every
+/// built before this one. This entity is only the scenery standing on that ground, and it needs no new
+/// file format at all: <see cref="ModelFile"/> reads it unmodified (it carries the same 0x1CD15D46 magic as every
 /// other model in the game), and all 57 of the material names it asks for resolve as
 /// <c>levels/&lt;theme&gt;/terrain/textures/&lt;name&gt;.wct</c>.
 /// </para>
@@ -23,17 +21,15 @@ namespace OpenTPW;
 /// The model already carries world positions, so it is loaded at the origin rather than placed:
 /// its vertices span roughly -555..1511 across and -621..1445 deep, which is the whole scenic island,
 /// while the park the player can build on is only the 950x840 units nearest the origin. That is why
-/// the mesh's extent must never be mistaken for the playable extent - dividing one by the other is
-/// what produced a wrong cell size early on. The cell is 10 units, and the centre of grid cell
+/// the mesh's extent must never be mistaken for the playable extent - dividing one by the other gives
+/// a wrong cell size. The cell is 10 units, and the centre of grid cell
 /// <c>(gx, gy)</c> is at <c>(gx * 10 + 5, gy * 10 + 5)</c>.
 /// </para>
 ///
 /// <para>
-/// <b>Not animated yet.</b> Each theme ships a companion animation file beside this one -
-/// <c>basem.MD2</c> for the jungle, which reports <c>IsAnimation</c> and carries the same bounding box -
-/// but <see cref="LobbyModel"/> looks for companions with an <c>M1</c>, <c>M2</c>... suffix and this one
-/// has a bare <c>m</c>, so nothing picks it up. Whatever it drives (the river and the falls are the
-/// likely candidates) stands still for now.
+/// <b>Animated by a bare companion.</b> Only the jungle ships one - <c>basem.MD2</c>, which reports
+/// <c>IsAnimation</c> and carries eleven UV tracks - and <see cref="LobbyModel.LoadAnimations"/> takes a
+/// bare <c>m</c> clip where no <c>M1</c>, <c>M2</c>... run exists, so those tracks scroll on the park's clock.
 /// </para>
 /// </summary>
 public sealed class ParkTerrain : Entity

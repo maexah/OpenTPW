@@ -14,7 +14,7 @@ namespace OpenTPW.Tests;
 /// before it - so nothing in it can be found by searching, and a map one byte out still returns a full
 /// set of plausible-looking numbers. What makes this block checkable rather than merely readable is that
 /// it carries the person's own position at a finer resolution than <c>mX</c> and <c>mY</c> do, and
-/// <c>mX</c>/<c>mY</c> were already being read, and tested, before this existed.
+/// <c>mX</c>/<c>mY</c> are read, and tested, apart from it.
 /// </para>
 /// </summary>
 [TestClass]
@@ -41,9 +41,8 @@ public class ParkNavigatorStateTests
 	///
 	/// <para>
 	/// This is worth more than any range check because the two halves know nothing about each other.
-	/// <c>mX</c> sits at <c>+8</c> and has been read and tested since the park first loaded; the
-	/// navigator's position sits at <c>+140</c> and was placed there by summing field sizes out of the
-	/// executable. Neither was used to find the other. A block a single byte out of place cannot satisfy
+	/// <c>mX</c> sits at <c>+8</c> and is read and tested on its own; the navigator's position sits at
+	/// <c>+140</c> and was placed there by summing field sizes out of the executable. Neither was used to find the other. A block a single byte out of place cannot satisfy
 	/// this for one person, let alone eighteen.
 	/// </para>
 	/// <para>

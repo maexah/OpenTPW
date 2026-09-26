@@ -6,8 +6,8 @@ using System.Linq;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// Where a tired member of staff goes - the arm of <c>FUN_00506a40</c> that was blocked until the
-/// catalogue object's flags byte was read.
+/// Where a tired member of staff goes - the arm of <c>FUN_00506a40</c> that reads the
+/// catalogue object's flags byte.
 ///
 /// <para>
 /// <b>The assertion that proves the reading is which cell they aim at.</b> The shipped park's one rest
@@ -16,9 +16,8 @@ namespace OpenTPW.Tests;
 /// build that used the object's own cell would still look like it worked, would still set the rest area,
 /// and would be walking a staff member into the furniture.
 /// <para>
-/// <b>These two tests failed first, and that is why they are worth having.</b> The entry was decoded as a
-/// plain <c>y * 128 + x</c>, which puts it at (59,15) - a cell with no connected edges at all, so no
-/// route could ever be planned to it and every tired staff member stood about instead. <c>mEntryPos</c>
+/// A plain <c>y * 128 + x</c> puts the entry at (59,15) - a cell with no connected edges at all, so no
+/// route could ever be planned to it and every tired staff member would stand about. <c>mEntryPos</c>
 /// is packed with a one added, exactly as the patrol corners are. See
 /// <see cref="ParkWorld.CatalogueObject.EntryCellX"/>.
 /// </para>
@@ -112,9 +111,9 @@ public class ParkRestAreaTests
 
 	/// <summary>
 	/// <b>The control, and it is what stops the test above being vacuous.</b> The same worn-out guard,
-	/// given a behaviour that knows of no park, cannot find a rest area - so they take the original's
-	/// other path and stand about instead. If the arm fired regardless of what the park holds, this would
-	/// fail.
+	/// given a behaviour that knows of no park, cannot find a rest area - so they stand about
+	/// instead, where the original goes on to the guard's own choice (Q136). If the arm fired regardless
+	/// of what the park holds, this would fail.
 	/// </summary>
 	[TestMethod]
 	public void WithNoParkToSearchTheyTakeTheCouldNotFindOnePath()

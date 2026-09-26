@@ -12,11 +12,10 @@ namespace OpenTPW.Tests;
 /// ticks one actually move anybody, and would the drawing then read the moved position.
 ///
 /// <para>
-/// <b>This file exists because the screen disagreed with the tests.</b> Every test written for the walk
-/// drove <see cref="PeepWalk"/> directly - plan a route, call <c>Step</c>, watch the position change - and
-/// all of them passed. Opening a real park showed nobody moving at all. So the fault was never in the walk;
-/// it was somewhere in the wiring that no test touched, between <see cref="ParkPeople"/>, the clock and the
-/// renderer. These tests drive that wiring instead of going round it.
+/// <b>A test of the walk alone cannot see the wiring.</b> Driving <see cref="PeepWalk"/> directly - plan a
+/// route, call <c>Step</c>, watch the position change - proves the walk and nothing about what lies between
+/// <see cref="ParkPeople"/>, the clock and the renderer, where a fault leaves a real park with nobody
+/// moving at all. These tests drive that wiring instead of going round it.
 /// </para>
 /// <para>
 /// <b>The clock is driven exactly as a level drives it</b>, and a scene entry is reproduced first:
@@ -61,8 +60,7 @@ public class ParkTickTests
 	private const float AFrame = 1f / 60f;
 
 	/// <summary>
-	/// <b>Ticking a park moves its guests.</b> The test that was missing, and the one the screen was right
-	/// about.
+	/// <b>Ticking a park moves its guests.</b>
 	/// </summary>
 	[TestMethod]
 	public void TickingTheParkMovesItsGuests()
@@ -134,8 +132,8 @@ public class ParkTickTests
 	/// ride reach its own script - which is the single thing under test.
 	/// </summary>
 	/// <remarks>
-	/// The budget is in FRAMES and a thing tick is sixteen of them, so this is about two and a half
-	/// thousand turns of the thing engine - comfortably past the six hundred
+	/// The budget is in FRAMES and a thing tick is about fifteen of them, so this is about 2,700 turns
+	/// of the thing engine - comfortably past the six hundred
 	/// <see cref="ParkRideJoinTests"/> needs to see a queue form at all, because reaching the FRONT of one
 	/// is further along than joining it.
 	/// </remarks>
@@ -166,10 +164,9 @@ public class ParkTickTests
 			// single boolean cannot tell them apart.
 			var queuedFor = new SortedSet<int>();
 
-			// <b>EVERY state any guest was ever seen in, rather than a hand-picked pair.</b> Twice now a
-			// disjunction has hidden a missing step - "BeingAdmitted or EnteringRide" could not see that
-			// nothing set the second, and "EnteringRide or Riding" cannot see whether the chain stalls
-			// before Riding. Collecting them all costs one set and cannot be wrong about which it omits.
+			// <b>EVERY state any guest was ever seen in, rather than a hand-picked pair.</b> A disjunction
+			// hides a missing step: "EnteringRide or Riding" cannot see whether the chain stalls before
+			// Riding. Collecting them all costs one set and cannot be wrong about which it omits.
 			var statesSeen = new SortedSet<string>();
 
 			for ( var frame = 0; frame < frames; ++frame )
@@ -185,10 +182,8 @@ public class ParkTickTests
 					statesSeen.Add( peep.State.ToString() );
 
 					invited |= peep.BeenAdmitted;
-					// <b>The far end of the chain, and NOT a disjunction - twice over, that is what hid a
-					// missing step.</b> It read "BeingAdmitted or EnteringRide" while nothing set the
-					// second, then "EnteringRide or Riding" while nothing reached the second; each passed
-					// on its first half alone. A test that spans a step boundary cannot see the boundary.
+					// <b>The far end of the chain, and NOT a disjunction</b>, which passes on its first half
+					// alone: a test that spans a step boundary cannot see the boundary.
 					// Riding is only reached by completing an admission, so this asserts that and nothing
 					// weaker. Every state actually seen is reported in the trace regardless.
 					boarding |= peep.State == PeepState.Riding;
@@ -217,12 +212,11 @@ public class ParkTickTests
 					longest = System.Math.Max( longest, length );
 				}
 
-				// <b>No early exit, and that is deliberate rather than an oversight.</b> This loop used to
-				// stop as soon as invited, nominated and boarding were all true - which sounds harmless and
-				// is not: the run ended after 430 of its ~2,688 thing ticks, because the ride reached those
-				// three first, and the set of things that had called somebody forward was therefore [13]
-				// alone. Read carelessly that says "only rides invite"; what it actually says is "I stopped
-				// looking". An early exit inside a measuring loop truncates the very thing being measured.
+				// <b>No early exit, and that is deliberate rather than an oversight.</b> Stopping as soon as
+				// invited, nominated and boarding are all true can end the run once the ride has reached
+				// those three, while the set of things that called somebody forward is still the ride alone -
+				// which reads as "only rides invite" and means "stopped looking". An early exit inside a
+				// measuring loop truncates the very thing being measured.
 				// The whole budget costs a few hundred milliseconds, which is not worth a wrong answer.
 			}
 
@@ -258,15 +252,13 @@ public class ParkTickTests
 	}
 
 	/// <summary>
-	/// <b>Ticking a park takes a RIDE's turn, and until this nothing in the suite proved it.</b>
+	/// <b>Ticking a park takes a RIDE's turn.</b>
 	///
 	/// <para>
-	/// The whole boarding chain was built and committed over several branches - invite, admit, complete,
-	/// dismiss - and every one of its tests constructed <see cref="ParkRideOperation"/> by hand. <b>Not one
-	/// of them ran it from a park</b>, and every <see cref="ParkPeople"/> in the suite was built without the
-	/// script delegate, so <c>TakeTheRidesTurns</c> returned on its first line. The wiring landed and the
-	/// test count did not move - which is exactly how <see cref="PeepState.GoingToRide"/> shipped with no
-	/// case in the behaviour and six hundred and sixty-seven green tests failed to notice.
+	/// The boarding chain's own tests - invite, admit, complete, dismiss - construct
+	/// <see cref="ParkRideOperation"/> by hand, and a <see cref="ParkPeople"/> built without the script
+	/// delegate returns from <c>TakeTheRidesTurns</c> on its first line. So the wiring is proved only by a
+	/// park built with the delegate, as this one is.
 	/// </para>
 	/// <para>
 	/// <b>The control is the half that matters.</b> The same park, the same frames, with the delegate left
@@ -309,15 +301,14 @@ public class ParkTickTests
 	}
 
 	/// <summary>
-	/// <b>Every guest ages, not just the quarter whose id divides four.</b>
+	/// <b>Every guest ages, not just the quarter whose id is a multiple of four.</b>
 	///
 	/// <para>
 	/// <see cref="Peep.Tick"/> gives each guest one turn in four by <c>(id &amp; 3) == (tick &amp; 3)</c>,
 	/// and the tick it counts must be the <b>thing</b> tick. Feed it the game tick and every value
-	/// reaching it is a multiple of eight; eight divides four, so the test is true only for guests whose
-	/// id divides four and the other three quarters never age again. There is a comment in
-	/// <see cref="ParkPeople"/> warning about exactly that - and a control proved the comment was all
-	/// there was: swapping the thing tick for the game tick broke <b>no test at all</b>.
+	/// reaching it is a multiple of eight, so its low two bits are nought: the test is true only for
+	/// guests whose id is a multiple of four, and the other three quarters never age again. Swapping the
+	/// thing tick for the game tick fails here.
 	/// </para>
 	/// <para>
 	/// <b>The first assertion is a guard, not a formality.</b> If the shipped park happened to put all
@@ -371,8 +362,7 @@ public class ParkTickTests
 	///
 	/// <para>
 	/// The park loop gates it at <c>0054f668</c> on <c>(counter &amp; 7) == 0</c>. Running it on the 31ms
-	/// beat instead made every guest in the shipped park move <b>eight times too fast</b> - they crossed
-	/// from the bus stop to the gate inside a second, which is what Alexah saw and no test did.
+	/// beat instead moves every guest in the shipped park <b>eight times too fast</b>.
 	/// </para>
 	/// <para>
 	/// <b>It measures the period rather than a distance</b>, because a distance test passes whatever the
@@ -645,7 +635,8 @@ public class ParkTickTests
 	/// live fraction <b>passed the whole suite when it was measured</b>: this test reaches <c>Standing</c> directly, and the
 	/// render path it would break needs a graphics device a test run has none of. So the drawing's own
 	/// wiring rests on the capture and not on the suite. What IS pinned here is the fraction: hard-wiring
-	/// <see cref="ParkPeople.ThingTickFraction"/> to one fails this test and nothing else.
+	/// <see cref="ParkPeople.ThingTickFraction"/> to one fails this test and
+	/// <see cref="EverySweepStampsEverybodyWhereTheyStoodAsItBegan"/>.
 	/// </para>
 	/// </summary>
 	[TestMethod]

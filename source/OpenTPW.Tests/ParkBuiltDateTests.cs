@@ -7,7 +7,7 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// When each thing in the park was built - the eight <c>tv_t</c> dwords at file offset 22 - and the
-/// effects sub-record the cell walk had always stepped over.
+/// effects sub-record a map cell carries when its status byte has bit 0x4.
 ///
 /// <para>
 /// <b>The weekday is what proves the date, and it is the only assertion here that could.</b> The
@@ -115,7 +115,7 @@ public class ParkBuiltDateTests
 	}
 
 	/// <summary>
-	/// The effects sub-record, now read rather than stepped over.
+	/// The effects sub-record, which a cell carries when its status byte has bit 0x4.
 	/// </summary>
 	/// <remarks>
 	/// <b>This is read but NOT confirmed, and the difference matters.</b> Every cell reads nought, and an

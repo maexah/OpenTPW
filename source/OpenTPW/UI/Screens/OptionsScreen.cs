@@ -63,8 +63,8 @@ namespace OpenTPW.UI;
 /// screen and no text for one - it chose between its two ways as it started and never showed the
 /// choice (see <see cref="Display"/>) - and on a modern machine "3D card rendering or software" is a
 /// choice about a renderer that will never exist here. So that row carries the display mode instead,
-/// which keeps the screen's layout exactly the original's compiled stream. Rendering itself is no
-/// longer reachable from the interface; <see cref="GameOptions.CardRendering"/> is still read from
+/// which keeps the screen's layout exactly the original's compiled stream. Rendering itself is not
+/// reachable from the interface; <see cref="GameOptions.CardRendering"/> is still read from
 /// Config.tcf and written back to it, and still caps graphics quality, so nothing about the original's
 /// file changes.
 /// <para>
@@ -173,9 +173,9 @@ internal sealed class OptionsScreen : UiWindow
 
 		// f_screen is 4:3 artwork - a green field of waves with its border painted in - so it is
 		// drawn at the interface's own shape rather than stretched over the window. That leaves the
-		// lobby showing down both sides of it on a window of any other shape, which is what every
-		// window that was not 4:3 used to do, so the screen sits on the same dimmed backdrop the
-		// game menu and the message boxes already use and covers the window between them.
+		// lobby showing down both sides of it on a window of any other shape, so the screen sits on
+		// the same dimmed backdrop the game menu and the message boxes use and covers the window
+		// between them.
 		Root = Backdrop();
 
 		_screen = Root.Add( new UiControl
@@ -263,7 +263,7 @@ internal sealed class OptionsScreen : UiWindow
 	/// </summary>
 	protected internal override void Closed()
 	{
-		// Only what this screen put away, which is the second thing the shared flag got wrong: asking for
+		// Only what this screen put away: asking for
 		// every window that is HIDDEN also picks up the ones that hid themselves - a park's viewfinder is
 		// hidden whenever first person is not running - and would show them on the way out.
 		foreach ( var window in Stack.Windows.Where( window => window.PutAway ).ToArray() )

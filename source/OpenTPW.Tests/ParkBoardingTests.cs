@@ -143,9 +143,8 @@ public class ParkBoardingTests
 	/// <para>
 	/// Nothing renumbers a queue when somebody leaves it, here or in the original, so the new head still
 	/// carries the place they joined with - and <see cref="ParkRideOperation.Invite"/> only calls forward
-	/// a head whose place is nought. Until the middle arm of <c>FUN_004ffff0</c> was built, that meant
-	/// <b>exactly one guest could ever ride</b>: measured in a running park, one rode and the three
-	/// behind them stood on the same cell for the remaining two minutes.
+	/// a head whose place is nought. Without the middle arm of <c>FUN_004ffff0</c>, which corrects it,
+	/// <b>exactly one guest can ever ride</b>.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -254,8 +253,7 @@ public class ParkBoardingTests
 	///
 	/// <para>
 	/// The guest at the front waits not at all, which is what keeps the head of a queue responsive to
-	/// being called forward. This was missing when the step-up was first built, so the delay was read
-	/// from the save once and never renewed.
+	/// being called forward.
 	/// </para>
 	/// </summary>
 	[TestMethod]

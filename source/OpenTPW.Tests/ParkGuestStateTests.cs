@@ -50,7 +50,7 @@ public class ParkGuestStateTests
 	/// <para>
 	/// The thing ids are pinned in file order as well as by value, because the record prefix holds the id
 	/// of the <i>next</i> thing rather than its own and reading it the other way round is off by one
-	/// everywhere while still looking entirely plausible - the mistake that once made the gate come out as
+	/// everywhere while still looking entirely plausible - enough to make the gate come out as
 	/// the traffic lights.
 	/// </para>
 	/// <para>
@@ -200,11 +200,10 @@ public class ParkGuestStateTests
 	/// <para>
 	/// <b>All seven guests coming through the gate are walking to the exact centre of one of its two
 	/// entrance cells.</b> That is why they stop in the gateway rather than passing under it: the cell
-	/// centre <i>is</i> their destination, and what should happen next - choosing somewhere inside the park
-	/// and setting off again - is the <c>Deciding</c> hub. <b>That hub IS built now</b>
-	/// (<see cref="PeepBehaviour"/> handles <c>PeepState.Deciding</c>, and ParkDecidingTests covers it), so a
-	/// guest who arrives no longer stands in the archway - this paragraph said they did until 2026-09-18.
-	/// What is asserted below is unaffected either way: it is about where the save was sending them, which
+	/// centre <i>is</i> their destination, and what happens next - choosing somewhere inside the park
+	/// and setting off again - is the <c>Deciding</c> hub
+	/// (<see cref="PeepBehaviour"/> handles <c>PeepState.Deciding</c>, and ParkDecidingTests covers it).
+	/// What is asserted below is about where the save was sending them, which
 	/// is a fact about the file rather than about what happens next.
 	/// </para>
 	/// <para>
@@ -328,7 +327,7 @@ public class ParkGuestStateTests
 
 	/// <summary>
 	/// Whether each guest has paid to come in, and how long they will go on waiting - the two fields the
-	/// admission states turn on, and the two the reader used to walk straight past.
+	/// admission states turn on.
 	///
 	/// <para>
 	/// <b>The correlation is the assertion; the values are only the evidence.</b> <c>mPaidAdmission</c> is
@@ -404,8 +403,8 @@ public class ParkGuestStateTests
 	/// <c>mPaidAdmission</c> has to be carried out of the file rather than started fresh.
 	///
 	/// <para>
-	/// <c>FUN_004ff7f0</c> tests that flag and nothing else to decide what a waiting guest does: unset,
-	/// they are sent back to the ticket booths; set, they wait to be let through. So thing 33 restored with
+	/// <c>FUN_004ff7f0</c> tests that flag and nothing else to decide what a waiting guest does once the
+	/// gate will admit them: unset, they are sent back to the ticket booths; set, they wait to be let through. So thing 33 restored with
 	/// the flag cleared would be sent to queue up and pay a second time.
 	/// </para>
 	/// </summary>

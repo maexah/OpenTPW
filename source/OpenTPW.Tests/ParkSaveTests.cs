@@ -10,10 +10,10 @@ namespace OpenTPW.Tests;
 /// real game files and are skipped where there is no installation - see <see cref="GameData"/>.
 ///
 /// <para>
-/// This is worth a test rather than a comment because the reader used to reject the only file it will
-/// ever be handed, and it did so for a reason that reads as deliberate: it required a version of 500,
-/// which it called a magic number, where the shipped park carries 400. A wrong constant that throws is
-/// easy to fix once and easy to reintroduce, so the shipped file's own numbers are pinned here.
+/// This is worth a test rather than a comment because a reader that insists on 500, the version a saved
+/// park carries, and calls it a magic number rejects the only file it will ever be handed: the shipped
+/// park carries 400. A wrong constant that throws is easy to reintroduce, so the shipped file's own
+/// numbers are pinned here.
 /// </para>
 /// </summary>
 [TestClass]
@@ -41,8 +41,8 @@ public class ParkSaveTests
 	}
 
 	/// <summary>
-	/// The number the reader used to insist on was 500, and it is not a magic number - it is a version,
-	/// and the shipped park's is 400. Reading it as four bytes of "magic" is what hid that.
+	/// The first four bytes are not a magic number - they are a version, and the shipped park's is 400
+	/// where a saved park's is 500.
 	/// </summary>
 	[TestMethod]
 	public void TheShippedParkIsVersion400()

@@ -22,7 +22,7 @@ namespace OpenTPW;
 /// splicing anything is the other way out. The two exits are not equivalent in the original: a scan that
 /// changes nothing falls into a further pass that breaks diagonal steps in two, and running out of rounds
 /// returns without it. <b>That diagonal pass is not built yet</b> and is named here rather than quietly
-/// skipped - see the class remarks on what it would do.
+/// skipped.
 /// </para>
 /// <para>
 /// <b>The route's own <see cref="CellRoute.Goal"/> is never read here.</b> Every search this runs is

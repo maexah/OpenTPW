@@ -156,12 +156,9 @@ public class ParkRideInviteTests
 	/// run, so capacity is not a gate for them. <b>A car track is not among them.</b>
 	///
 	/// <para>
-	/// <b>This test asserted the wrong pair and so defended a defect.</b> It exempted
-	/// <see cref="ItemDescriptionFile.CarTrack"/> and <see cref="ItemDescriptionFile.WaterTrack"/>, because
-	/// the implementation did, because that phrase was carried over from
-	/// <see cref="ParkRideChoice.CanBeOffered"/> - which refuses types 1 and 2 for an unrelated reason.
-	/// The original compares the descriptor's track type against <b>3</b> then <b>2</b>. The car track is
-	/// now the anti-vacuity case, so the pair cannot drift again without this failing.
+	/// <b>The pair is not <see cref="ParkRideChoice.CanBeOffered"/>'s</b>, which refuses types 1 and 2 for
+	/// an unrelated reason: the original compares the descriptor's track type against <b>3</b> then
+	/// <b>2</b>. The car track is the anti-vacuity case, so the pair cannot drift without this failing.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -178,7 +175,7 @@ public class ParkRideInviteTests
 			Assert.IsTrue( head.BeenAdmitted );
 		}
 
-		// The two that are NOT exempt, and the car track is the one this file used to get wrong.
+		// The two that are NOT exempt, the car track among them.
 		foreach ( var track in new[] { ItemDescriptionFile.CarTrack, 0 } )
 		{
 			var (stopped, stoppedGuests, stoppedHead) = Queued();

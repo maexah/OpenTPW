@@ -74,9 +74,8 @@ public sealed class SpriteBankFile : BaseFormat
 /// set stores its whole run once per direction, one after another.
 ///
 /// <para>
-/// <b><see cref="Directions"/> is a count, not a flag.</b> This was read as a boolean - "is this set
-/// directional" - which is true of what it means but loses what it says, and nothing in the tree
-/// consumed it, so nothing went wrong visibly. Over every set in use across all 46 banks the byte reads
+/// <b><see cref="Directions"/> is a count, not a flag.</b> A boolean - "is this set directional" - is
+/// true of what it means but loses what it says. Over every set in use across all 46 banks the byte reads
 /// 5 on 201, 7 on ten, 4 on one, and 0 on the 71 that face nowhere at all. The ten sevens are the eight
 /// <c>Kidsheads</c> banks and two <c>Costumeheads</c>; five is what a person's body stores. A count is
 /// also what the engine treats it as: it folds a heading onto <c>8 - d</c> when <c>d</c> runs past
@@ -92,6 +91,6 @@ public sealed class SpriteBankFile : BaseFormat
 /// <param name="Directions">How many ways this set stores, or 0 when it faces nowhere.</param>
 public readonly record struct SpriteSet( int First, int FramesPerDirection, int Directions )
 {
-	/// <summary>Whether this set stores a run per direction, which is the question the old flag asked.</summary>
+	/// <summary>Whether this set stores a run per direction, whatever the count.</summary>
 	public bool Directional => Directions > 0;
 }

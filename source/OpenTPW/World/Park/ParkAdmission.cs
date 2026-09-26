@@ -190,9 +190,9 @@ public sealed class ParkAdmission
 	///
 	/// <b>Nought for the shipped park, and by that park's own saved state rather than by omission:</b> the
 	/// sum counts only things whose queue holds somebody, and the save records that the park had never
-	/// admitted a visitor, so no queue could hold anyone <i>at load</i>. <b>Rides operate now and guests
-	/// join queues</b>, so that nought is the starting value rather than a permanent one - this said
-	/// nothing in the tree operated a ride. It is named and passed rather than being a zero nobody sees.
+	/// admitted a visitor, so no queue could hold anyone <i>at load</i>. <b>Nothing here computes the sum</b>
+	/// (<c>FUN_004c8240</c> is not decoded, <c>docs/QUEUE.md</c> Q26), so the caller passes nought after
+	/// queues fill too. It is named and passed rather than being a zero nobody sees.
 	/// </param>
 	public int IdealPrice( int excitement, Random random )
 	{

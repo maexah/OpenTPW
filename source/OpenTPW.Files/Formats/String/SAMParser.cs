@@ -49,15 +49,14 @@ public class SAMParser : BaseParser
 	/// the line supplies a value for each in order - so
 	/// <c>PeepTypes[0].PreferredExcitement.StartingCash.BoredomThreshold  80 300 40</c> is three
 	/// settings, and <c>PeepTypes[0].StartingCash</c> is 300. Reading it as a single key and a single
-	/// value keeps the 80, drops the rest and reports nothing, which is how the peep constants came to
-	/// look as though they were missing from a file that states them plainly.
+	/// value keeps the 80, drops the rest and reports nothing, so constants the file states plainly
+	/// look missing.
 	/// </para>
 	/// <para>
 	/// That also explains why the unmarked prose these files trail their values with is harmless: the
 	/// loop takes exactly as many values as the key named fields and never looks at the rest of the
 	/// line, so <c>PeepInfo.ExitLevel  120  starting value for the ExitLevel counter</c> reads 120 and
-	/// stops. Only the first value may be looked for beyond the end of the line, which is what this
-	/// parser has always done and is left alone.
+	/// stops. Only the first value may be looked for beyond the end of the line.
 	/// </para>
 	/// </summary>
 	protected void ParseEntry( List<SettingsPair> settings )

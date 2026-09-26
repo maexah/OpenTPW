@@ -17,7 +17,7 @@ public partial class Shader : Asset
 	///
 	/// <para>
 	/// Nullable because it genuinely is: nothing is subscribed until a material asks for this shader,
-	/// and <see cref="Recompile"/> has always invoked it as <c>OnRecompile?.Invoke()</c>. It also has
+	/// and <see cref="Recompile"/> invokes it as <c>OnRecompile?.Invoke()</c>. It also has
 	/// to be, for a material to take its own handler off again - taking the last one off leaves null
 	/// behind, and a shader outlives every material that ever drew with it.
 	/// </para>
@@ -30,7 +30,7 @@ public partial class Shader : Asset
 	{
 		// Resolved here as well as in GetOrCreate, for the one caller that builds a Shader straight from the
 		// constructor - the blit shader, in Renderer.CreateBlitPipeline. Without it the watcher below is
-		// handed a directory relative to wherever the game was started from, which is where it threw.
+		// handed a directory relative to wherever the game was started from, and throws.
 		Path = ContentDir.GetPath( path );
 		Register();
 

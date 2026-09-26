@@ -11,14 +11,11 @@ namespace OpenTPW.Tests;
 /// <c>FUN_004fec90</c> through <c>FUN_004ffbc0</c>.
 ///
 /// <para>
-/// <b>These exist because the whole arm was unreachable from every test that came before them, and a
-/// real fault hid in that gap.</b> <see cref="ParkDecidingTests"/> builds its behaviour from two facts
-/// rather than from a park, so its chooser has nothing to choose and the ride arm never fires. Under
-/// exactly that blindness, <c>PeepBehaviour.Step</c> shipped with <b>no case for
-/// <see cref="PeepState.GoingToRide"/> at all</b> - a guest who chose a ride was put into a walking state
-/// that nothing walked, and stood on the spot playing a walk animation for ever. Six hundred and
-/// sixty-seven green tests did not see it. The fix is a case; the guard against it coming back is this
-/// file, which drives the behaviour with a REAL park behind it.
+/// <b>These drive the whole arm with a REAL park behind it.</b> <see cref="ParkDecidingTests"/> builds its
+/// behaviour from two facts rather than from a park, so its chooser has nothing to choose and the ride arm
+/// never fires there: a <c>PeepBehaviour.Step</c> with no case for <see cref="PeepState.GoingToRide"/>,
+/// which leaves a guest who chose a ride on the spot playing a walk animation for ever, would pass it
+/// green (<c>docs/VERIFYING.md</c> rule 75).
 /// </para>
 /// <para>
 /// Everything is collected across the whole run rather than read off the final turn. Whether a given
@@ -96,9 +93,8 @@ public class ParkRideJoinTests
 	}
 
 	/// <summary>
-	/// <b>The regression test for the missing case.</b> Guests reach <see cref="PeepState.GoingToRide"/>
-	/// and then <em>leave</em> it - which is the half that was broken, because a state nothing walks is a
-	/// state nothing leaves.
+	/// Guests reach <see cref="PeepState.GoingToRide"/> and then <em>leave</em> it - the half a missing
+	/// case breaks, because a state nothing walks is a state nothing leaves.
 	/// </summary>
 	[TestMethod]
 	public void GuestsSentToARideDoNotStandStillInGoingToRide()
@@ -122,14 +118,14 @@ public class ParkRideJoinTests
 	private const int DrinksShop = 16;
 
 	/// <summary>
-	/// <b>The win roll is WIRED, not merely implemented - and nothing pinned that until this existed.</b>
+	/// <b>The win roll is WIRED, not merely implemented.</b>
 	///
 	/// <para>
-	/// A mutation that made <see cref="ParkRideOperation.Succeeds"/> always fail left both settle-up tests
+	/// A mutation that makes <see cref="ParkRideOperation.Succeeds"/> always fail leaves both settle-up tests
 	/// GREEN, because each sets <see cref="Peep.QueuePos"/> by hand and asks what the settle-up does with
-	/// it. Neither could see whether anything ever WRITES that byte - and before this session nothing did,
-	/// which is precisely why every visit in the park took the losing arm and a sideshow charged twenty
-	/// for nothing. This drives the real transition instead: a guest in
+	/// it. Neither can see whether anything ever WRITES that byte; with nothing writing it, every visit in
+	/// the park takes the losing arm and a sideshow charges twenty for nothing. This drives the real
+	/// transition instead: a guest in
 	/// <see cref="PeepState.BeingAdmitted"/> whose ride accepts them.
 	/// </para>
 	/// <para>
@@ -189,8 +185,8 @@ public class ParkRideJoinTests
 		Assert.IsTrue( seen.Queued.Count > 0, "no queue in the park ever held anybody" );
 		Assert.IsTrue( seen.LongestQueue > 0, $"the longest queue seen was {seen.LongestQueue}" );
 
-		// Only the two objects that clear the filter can be queued for - the shop and the three toilets
-		// declare no queue cells, so a guest reaching one of those would mean the filter was bypassed.
+		// Only the ride and the sideshow are queued for in this run. The shop and the three toilets pass
+		// the filter too (ParkRideChoiceTests), so this pins where this run's guests queue, not the filter.
 		foreach ( var id in seen.Queued )
 			Assert.IsTrue( id is 13 or 14, $"thing {id} was queued for, and only 13 and 14 can be" );
 	}

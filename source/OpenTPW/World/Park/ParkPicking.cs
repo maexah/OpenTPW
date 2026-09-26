@@ -4,9 +4,8 @@ namespace OpenTPW;
 /// What the pointer is over in the park: which cell of the map, and which thing is standing on it.
 ///
 /// <para>
-/// <b>Nothing in this project could answer that before.</b> The only mouse-to-world arithmetic in the
-/// tree was the camcorder's look direction, so every verb that starts with pointing at the ground -
-/// buying, placing, moving, selling, dropping a member of staff - had nothing to ask.
+/// <b>Every verb that starts with pointing at the ground asks this</b> - buying, placing, moving,
+/// selling, dropping a member of staff.
 /// </para>
 ///
 /// <para>
@@ -347,8 +346,7 @@ public static class ParkPicking
 	/// <b>It reports the pointer it READ, not only the answer.</b> A probe that warps the pointer and
 	/// then asks for a cell cannot tell "the ray is wrong" from "the game never saw the mouse move" -
 	/// both look like an answer that will not follow the cursor. Printing the position the picker
-	/// actually used separates them in one line, which is what the first run of this needed and did
-	/// not have.
+	/// actually used separates them in one line.
 	/// </remarks>
 	public static string State()
 	{

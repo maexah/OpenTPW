@@ -55,16 +55,15 @@ public enum PeepState
 	/// Walking away from a ride that has just let them off - <b>not</b> being on one.
 	///
 	/// <para>
-	/// <b>This was called <c>OnRide</c>, and the name was the wrong way round.</b> The original enters it
+	/// The original enters it
 	/// at the END of a go: <c>FUN_005014e0</c> ("Person %d: ExitRide, leaving rid...") asks the thing for
 	/// its exit point, sets a destination, and only then calls the state setter with <b>15</b>. Sixteen is
 	/// what a guest is put into when they are admitted, and that one really is riding.
 	/// </para>
 	/// <para>
-	/// The behaviour was never wrong - <see cref="ParkRideOperation.Dismiss"/> has always set this on
-	/// letting somebody off, and <see cref="Peep.IsAWalkingState"/> has always counted it as walking,
-	/// which is right precisely because they are walking to the exit. Only the name misled, and it misled
-	/// towards believing a guest on a ride was in it.
+	/// <see cref="ParkRideOperation.Dismiss"/> sets this on letting somebody off, and
+	/// <see cref="Peep.IsAWalkingState"/> counts it as walking, which is right precisely because they are
+	/// walking to the exit.
 	/// </para>
 	/// </summary>
 	LeavingRide = 15,

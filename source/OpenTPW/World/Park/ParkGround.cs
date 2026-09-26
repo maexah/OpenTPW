@@ -44,8 +44,8 @@ public sealed class ParkGround : ModelEntity
 
 	/// <param name="world">
 	/// The park's own save, or null where the theme ships none. It is asked one question only: which
-	/// cells the player laid a path on, so that those can be left to <see cref="ParkPaths"/> instead of
-	/// being drawn as grass underneath it.
+	/// cells something else draws - a path, a queue or a built thing's floor - so that those are left to
+	/// their owners instead of being drawn as grass underneath them.
 	/// </param>
 	/// <summary>The park this was built from, so that it can be built again when a cell changes.</summary>
 	private ParkWorld? _world;
@@ -74,7 +74,7 @@ public sealed class ParkGround : ModelEntity
 	/// <para>
 	/// <b>The old model is let go of first.</b> <see cref="ModelEntity"/> owns its model and the
 	/// material bound into it; building over the top without deleting would leave both for the life of
-	/// the process, which is the residue an earlier branch spent itself getting to zero.
+	/// the process.
 	/// </para>
 	/// </summary>
 	public void Rebuild()
@@ -109,7 +109,7 @@ public sealed class ParkGround : ModelEntity
 	/// It resolves to whatever texture happens to sit first in the model's table - <c>grd_ctr1</c> in
 	/// the jungle, <c>jho_fnt1</c> in the other three - which is the first sign that it is a null slot
 	/// rather than a choice. Drawing it settles the question: <c>grd_ctr1</c> is the road centre, black
-	/// with yellow markings, and it paved the river bed and every path with tarmac.
+	/// with yellow markings, and it paved the river bed and the approach with tarmac.
 	/// </para>
 	///
 	/// <para>
@@ -122,7 +122,7 @@ public sealed class ParkGround : ModelEntity
 	/// </para>
 	///
 	/// <para>
-	/// <b>The player's own paths are NOT among these, though an earlier note here said they were.</b>
+	/// <b>The player's own paths are NOT among these.</b>
 	/// Measured against the save: all 82 of Lost Kingdom's path and queue cells carry a real ground
 	/// index - mostly 27, <c>jgr_bas1</c> - and not one is 0, while every one of the 66 cells the save
 	/// marks as the fixed approach is 0. So a built path is ordinary drawn ground here, and the cells it
@@ -209,7 +209,7 @@ public sealed class ParkGround : ModelEntity
 		indices.Sort();
 
 		// Sixteen is what the material holds and what the shader switches over. Every park the game
-		// ships uses seven, so this has room to spare; a park that wanted more would need the ground
+		// ships uses six, so this has room to spare; a park that wanted more would need the ground
 		// splitting across several models, and this says so rather than drawing the excess wrong.
 		var textures = new Texture[16];
 		var directory = $"levels/{_themeName.ToLowerInvariant()}/terrain/textures";
@@ -226,8 +226,8 @@ public sealed class ParkGround : ModelEntity
 			string.Join( ", ", indices.Select( index => $"{index}:{TextureName( field, index )}" ) ) );
 
 		// Four corners a cell, not a shared grid. A shared vertex could only carry one texture index
-		// and one pair of texture coordinates, and a cell needs its own of both - now for the colour,
-		// and later for the rotation and mirror bits its flag word carries.
+		// and one pair of texture coordinates, and a cell needs its own of both - for the colour, and for
+		// the rotation and mirror bits its flag word carries (PermuteCorners).
 		var vertices = new Vertex[field.CellCount * 4];
 		var elements = new uint[field.CellCount * 6];
 
@@ -257,7 +257,7 @@ public sealed class ParkGround : ModelEntity
 				//
 				// All three are ordinary ground cells in the model rather than index 0, so without this
 				// two surfaces are built over each other at identical heights and fight for the same
-				// depth. The grass won, which is what left a shop standing on bare grass.
+				// depth, and the grass wins.
 				if ( world != null )
 				{
 					// The RUNNING park's answer, not the file's - a cell built on, or laid with path,
@@ -287,9 +287,9 @@ public sealed class ParkGround : ModelEntity
 				// Two triangles over those four corners, always split the same way - which is not
 				// what the original does, and this is where to fix it.
 				//
-				// The original chooses the diagonal from 0x0004, but only on cells whose flag word
-				// has 0x0800. Reading that bit off the file finds it nowhere, which is what an
-				// earlier note here concluded from - wrongly. It is never stored: the loader
+				// Which diagonal the original cuts is not located (docs/exe/park-engine.md, "The
+				// diagonal-choice bit has not been located"); the RE pass's 0x0004 is unverified. What is
+				// known is 0x0800, which is never stored: the loader
 				// computes it, building each cell's two triangle normals from its four corner
 				// heights and setting 0x0800 where they diverge by more than about 0.81 degrees,
 				// which is to say "this cell is not flat, so which way it is cut is visible". Doing
@@ -428,7 +428,7 @@ public sealed class ParkGround : ModelEntity
 	/// with <c>vec3(normal.x, normal.z, normal.y)</c>, because the positions beside them have already
 	/// been swapped by <see cref="LobbyModel"/>. A normal worked out here is in the engine's own Z-up
 	/// space and would be turned on its side by that same line - a flat (0,0,1) becoming (0,1,0), so
-	/// level ground lights as though it were a wall, which is exactly how it looked.
+	/// level ground would light as though it were a wall.
 	/// </para>
 	/// </summary>
 	internal static Vector3 NormalAt( HeightfieldFile field, int x, int y )

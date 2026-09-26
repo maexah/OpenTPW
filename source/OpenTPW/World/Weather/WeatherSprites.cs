@@ -6,7 +6,7 @@ namespace OpenTPW;
 /// <summary>
 /// A fixed pool of camera-facing quads drawn in one call, which is what both weather effects are.
 ///
-/// The engine has no particle system, no instancing and no per-vertex colour, so a swarm of
+/// The engine draws no particles in the world and has no instancing or per-vertex colour, so a swarm of
 /// sprites has to be one mesh whose vertices are rebuilt each frame - the same approach
 /// <see cref="MeshAnimator"/> already takes for the models it morphs. The pool is allocated once
 /// at its maximum size and quads that aren't wanted this frame are collapsed to nothing rather
@@ -165,8 +165,7 @@ public abstract class WeatherSprites : ModelEntity
 	/// <remarks>
 	/// A material leaves the textures bound into it alone, because those are usually cached by path
 	/// and shared between scenes. This one is not: it comes off a stream, so it is in no cache, and
-	/// every scene that made one left it behind - four a cycle, a rain pool and a lightning pool in
-	/// each of the lobby and a park. The blank <see cref="Texture.Missing"/> that LoadTexture hands
+	/// nothing else lets go of it. The lobby and a park each make two, a rain pool and a lightning pool. The blank <see cref="Texture.Missing"/> that LoadTexture hands
 	/// back when the art will not read is skipped, since Texture.Delete refuses it loudly.
 	/// </remarks>
 	protected override void OnDelete()

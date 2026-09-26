@@ -163,8 +163,8 @@ public class ParkScriptStateTests
 	/// <summary>
 	/// The variables come back too, and they are checked against a part of the file that has nothing
 	/// to do with them: slot 2 is <c>VAR_CAPACITY</c> and the object record's own
-	/// <c>mOperatingCapacity</c> says the same number. Five agreements across four different kinds of
-	/// thing is what identified this block as the variable array in the first place.
+	/// <c>mOperatingCapacity</c> says the same number. Six agreements across four different kinds of
+	/// thing is what identifies this block as the variable array.
 	/// </summary>
 	[TestMethod]
 	public void TheSavedVariablesAgreeWithTheObjectRecords()
@@ -220,8 +220,8 @@ public class ParkScriptStateTests
 	/// knowing how many animation channels the item runs, and every one of the offsets, the 11-dword
 	/// channel size and the one-byte cost of an absent slot is load-bearing: get any of them wrong and
 	/// the cursor does not land on the module's end. So asserting that it closes is asserting all of
-	/// them at once. Before this existed, mutating the channel count to a flat 1 - the reading that
-	/// lands 5,786 bytes short - left the whole suite green, because the failure degrades quietly into
+	/// them at once. Mutating the channel count to a flat 1 - the reading that lands 5,786 bytes short -
+	/// fails here, because the walk then misses the module's end; elsewhere it degrades quietly into
 	/// "restore nothing", which is the frozen-park regression this half exists to prevent.
 	/// </para>
 	/// </summary>
@@ -267,12 +267,12 @@ public class ParkScriptStateTests
 	/// The three seams the restore is built from, exercised directly rather than through a park.
 	///
 	/// <para>
-	/// <b>Without this they had no coverage of their own.</b> Binding a park asserts where the counter
+	/// <b>Each needs coverage of its own.</b> Binding a park asserts where the counter
 	/// ended up, which a working <c>ResumeAt</c> and a broken <c>SeedVariable</c> would both satisfy:
 	/// twelve of the fourteen saved variable arrays are nought except slots 2 and 3, and those two are
 	/// exactly what <c>VAR_CAPACITY</c> and <c>VAR_DURATION</c> are written with a moment earlier, so
 	/// the seeding is provably inert for them. Replacing the whole of <c>SeedVariable</c> with
-	/// <c>return true</c> left the suite green until this test existed.
+	/// <c>return true</c> fails here.
 	/// </para>
 	/// </summary>
 	[TestMethod]

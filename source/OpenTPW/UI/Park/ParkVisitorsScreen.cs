@@ -18,7 +18,7 @@ namespace OpenTPW.UI;
 /// </para>
 ///
 /// <para>
-/// <b>All six columns read from the RIGHT, the name column included</b>, and that is the one place the
+/// <b>All six columns read from the RIGHT, the name column included</b>, and that is one place the
 /// list widget's own default is wrong: <c>FUN_006636b2</c> is called with 1 for all six here where the
 /// staff and item screens pass 0 for their first. The first column is a visitor NUMBER rather than a
 /// name, which is presumably why.
@@ -48,10 +48,8 @@ internal sealed class ParkVisitorsScreen : UiWindow
 	/// uses) and refreshes on it, and the staff screen's builder arms the identical one.
 	/// </summary>
 	/// <remarks>
-	/// <b>This is here because rebuilding every frame was measurably wrong, not because it was
-	/// untidy.</b> A single visit to this screen reported its three counted columns <b>260 times</b> -
-	/// eighteen guests re-added on every frame - which is what made the per-frame rebuild visible at
-	/// all, in the gap census rather than on screen.
+	/// Rebuilt on the original's cadence rather than every frame, which would re-add every guest on
+	/// every frame.
 	/// </remarks>
 	private const float RefreshEvery = 2f;
 
@@ -66,9 +64,8 @@ internal sealed class ParkVisitorsScreen : UiWindow
 		// Built onto the park's own layer (0x0049353e), so a right press beside it is the park's.
 		ParkScreen = true;
 
-		// w_big, the node "window4" inside w_big.MD2 - the frame five screens share, and which the
-		// tree recorded as unresolvable until the models' node names were read rather than their file
-		// names. Without it this screen is a list floating over the park. See docs/exe/hud.md.
+		// w_big, the node "window4" inside w_big.MD2 - the frame five screens share. Without it this
+		// screen is a list floating over the park. See docs/exe/hud.md.
 		Root = new UiControl
 		{
 			Id = 0x1e496,

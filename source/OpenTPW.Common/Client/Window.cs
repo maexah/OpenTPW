@@ -5,8 +5,7 @@ using NeoVeldrid.StartupUtilities;
 namespace OpenTPW;
 
 /// <summary>
-/// Contains code for the instantiation and management of a window, the game editor,
-/// ImGUI, inputs, the renderer, and the world itself.
+/// The game's window: its size and the smallest it may go, its resizes, its focus and its icon.
 /// </summary>
 public class Window
 {
@@ -27,7 +26,7 @@ public class Window
 	public bool HasArea => SdlWindow.Width > 0 && SdlWindow.Height > 0;
 
 	/// <summary>
-	/// The window has been resized. An event rather than the single slot this was, so that whatever
+	/// The window has been resized. An event, so that whatever
 	/// else comes to need the news cannot quietly take the renderer's place by assigning over it.
 	/// </summary>
 	public event Action<Point2>? Resized;

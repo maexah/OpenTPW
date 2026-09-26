@@ -32,8 +32,8 @@ public sealed class CellLine
 	/// reading <c>00 ff | 01 00 | 00 01 | ff 00</c>.
 	///
 	/// <para>
-	/// This is a <b>second and independent</b> source for the direction numbering, which until now rested
-	/// on the boundary guards of the step check. The two agree exactly: 0 is <c>-y</c>, 1 is <c>+x</c>, 2
+	/// This is a <b>second and independent</b> source for the direction numbering, beside the boundary
+	/// guards of the step check. The two agree exactly: 0 is <c>-y</c>, 1 is <c>+x</c>, 2
 	/// is <c>+y</c> and 3 is <c>-x</c>.
 	/// </para>
 	/// </summary>

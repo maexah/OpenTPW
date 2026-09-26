@@ -1,9 +1,9 @@
 # Status
 
-Last updated: 2026-09-25.
+Last updated: 2026-09-26.
 
 **This header names no branch and no sha, deliberately.** A line written inside the commit that moves
-the tip cannot name it, so every attempt went stale the instant it was written. Read the current state
+the tip cannot name it, so any name there is stale the instant it is written. Read the current state
 from the repository, which cannot lag: `git log --oneline -1`.
 
 **`docs/QUEUE.md` is the work queue.** One item per session, taken from the top unless Alexah reorders.
@@ -13,8 +13,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Lobby: four islands, front end, advisor, weather, particles, options, saves, the island gate, and the attract camera
   flying around all four islands with all four heard at once. Enter swings the camera onto the gate, opens it and flies
   in before the loading screen; **the island keys wait for that flight**, and **Escape cancels it** (the camera orbits
-  again, the gate shuts, the panel comes back). **Every lobby key acts on its release**, and **a left press on the
-  lobby's view enters the park**.
+  again, the gate shuts, the panel comes back). **Enter, the arrows and Escape act on their release**, and
+  **a left press on the lobby's view enters the park**.
 - Park: ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (5 of 6). The
   camcorder walks the original's sweep pass for pass, and **a quick right click leaves it** (RMB cancel on). Leaving
   one lets go of all of it: nothing of a left park is held in the lobby, nor of any left scene's interface.
@@ -63,7 +63,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - The happiness gauge draws two copies of its bar, split down the middle (`docs/PLAYER-GAPS.md` gap 5; unmeasured).
 - Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
 - With no work the mechanic, handyman and entertainer stand where the original's walk about (Q133); staff make no
-  sound (Q135). Guests and rides turn on the frame clock (Q132); a load brings one guest (Q26); the bus waits (Q131).
+  sound (Q135). Guests and rides read `GameClock.Ticks / 8`, not `mGameTick` (Q132); a load brings one guest (Q26); the bus waits (Q131).
 - Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), riding a ride walked into in first person.
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
@@ -114,6 +114,6 @@ Take counts fresh; these go stale within a day.
 
 ## Recent
 
-**2026-09-25 - two guards that guard (Q71).** `alexah/158-two-guards-that-guard`.
-**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/157` (Q70)
+**2026-09-26 - a staleness audit, not a queue item.** `alexah/159-audit-docs-and-memory`; what it did is its commit.
+**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/158` (Q71)
 back to `118` (Q4), `115`-`116` (Q3), `117` (Q35) and `109` (Q1, Q1b); before them, `114`, `110`, `112`. Older: git log.

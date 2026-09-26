@@ -10,8 +10,8 @@ namespace OpenTPW.Tests;
 ///
 /// <para>
 /// These need no game files and no device: every cell here is made up, so each test says exactly which
-/// two types meet at the edge it is about. The types that appear are the ones Lost Kingdom actually
-/// contains.
+/// two types meet at the edge it is about. The cell types that appear are the ones Lost Kingdom actually
+/// contains, but for type 5, which it lacks.
 /// </para>
 /// <para>
 /// <b>Sidedness is what these are really for.</b> Almost every question the original asks goes to one
@@ -274,8 +274,8 @@ public class CellEdgeTests
 		}
 
 		// And only onto open ground. The cell beyond has to be one that actually reaches the facing test:
-		// the approach does not, because it is let through higher up the ladder, and using it here
-		// asserted the right thing for a reason that does not hold.
+		// the approach does not, because it is let through higher up the ladder, so using it here
+		// would assert the right thing for a reason that does not hold.
 		Assert.IsTrue(
 			Blocked( Cell( CellEdge.RideEnd, direction: CellEdge.BitFor( StepDirection.East ) ),
 				Cell( CellEdge.RideFarEnd ) ),

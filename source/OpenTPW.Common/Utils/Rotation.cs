@@ -199,10 +199,9 @@ public partial struct Rotation : IEquatable<Rotation>
 		if ( Math.Abs( dot - (-1.0f) ) < 0.000001f )
 		{
 			// A half turn about the up axis, which as a quaternion is (up, 0) - the W of a rotation by
-			// theta is cos(theta/2), and cos(pi/2) is zero. This used to pass MathF.PI for W, which is
-			// not a unit quaternion at all and came back 81 degrees out.
+			// theta is cos(theta/2), and cos(pi/2) is zero.
 			//
-			// Nothing reached it until a camera looked exactly along -Forward: the lobby and the park
+			// A camera reaches it only when it looks exactly along -Forward: the lobby and the park
 			// orbit cameras always carry a height term, so their look vector is never exactly
 			// horizontal, while a first-person camera's is whenever it is not pitched.
 			return new Rotation( upDir.X, upDir.Y, upDir.Z, 0f );

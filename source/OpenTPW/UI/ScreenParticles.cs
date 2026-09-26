@@ -124,7 +124,8 @@ internal sealed class ScreenParticles : Panel
 			Current = null;
 
 		// The layer pools are a model and a material each, built for this interface and held by
-		// nothing else, so they went with it - two of each a scene, for the life of the process.
+		// nothing else, so they go with it - left, they would stay, two of each a scene, for the life of
+		// the process.
 		_unowned.Delete();
 
 		foreach ( var layers in _windowLayers )

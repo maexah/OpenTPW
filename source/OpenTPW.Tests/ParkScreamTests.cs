@@ -7,21 +7,20 @@ namespace OpenTPW.Tests;
 /// <c>STARTSCREAM</c> (<c>FUN_00551130</c>), which is the half that needs no audio device.
 ///
 /// <para>
-/// <b>Alexah found this by playing: the children never scream on the Belly Bounce.</b> The codepath
-/// audit named why - <c>STARTSCREAM</c> and <c>STOPSCREAM</c> were executed eight times each by a
-/// placed ride and had no case in the VM at all.
+/// <b>Lost Kingdom's Belly Bounce reaches it</b>: its script stops and restarts its scream with
+/// <c>STOPSCREAM</c> then <c>STARTSCREAM</c> as its riders change, and each has its own case in the VM.
 /// </para>
 /// <para>
-/// <b>Playing it cannot be unit tested and the choosing can.</b> A voice wants a mixer and a category
-/// wants the game's data, so <see cref="ParkAudio.Scream"/> itself rests on the in-game check; the band
-/// and the volume are pure and are pinned here.
+/// <b>The choosing needs no audio device.</b> The band and the volume are pure and are pinned here;
+/// <see cref="ParkAudio.Scream"/> itself is driven with a device stood in by
+/// <see cref="ParkScreamChainTests"/>.
 /// </para>
 /// </summary>
 [TestClass]
 public class ParkScreamTests
 {
 	/// <summary>
-	/// The four looping samples and their bands, read off the engine's own comparisons: nought screams
+	/// The four held scream effects and their bands, read off the engine's own comparisons: nought screams
 	/// not at all, then 1, 2-3, 4-7, and 8 upwards.
 	/// </summary>
 	[TestMethod]

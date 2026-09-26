@@ -26,13 +26,13 @@ public enum StepDirection
 /// more than one bit, and <c>mDirection</c> takes five and never carries two.
 /// </para>
 /// <para>
-/// <b>The bit is read from the cell being ENTERED, about the side facing the cell being left.</b> This
-/// paragraph used to say something else, so it is worth saying why. The numbering is fixed absolutely by
+/// <b>The bit is read from the cell being ENTERED, about the side facing the cell being left.</b> The
+/// numbering is fixed absolutely by
 /// the original's own boundary guards - it refuses <c>x == 0</c> going 3, <c>y == 0</c> going 0,
 /// <c>x == 0x7f</c> going 1 and <c>y == 0x7f</c> going 2 - so direction 0 is <c>-y</c>, 1 is <c>+x</c>,
 /// 2 is <c>+y</c> and 3 is <c>-x</c>. Asked about direction 0 the original tests <c>0x10</c>, which is
-/// the <c>+y</c> bit; read as a question about the cell being <i>left</i> that is its far side, which is
-/// where "it consults the side opposite the way it is going" came from. It is not that: the disassembly
+/// the <c>+y</c> bit; read as a question about the cell being <i>left</i> that is its far side. It is
+/// not that: the disassembly
 /// loads the <b>destination</b> cell into <c>ECX</c> before the call, and the destination's <c>+y</c>
 /// side is precisely the side facing the source. <b>No measurement on this park can tell those two
 /// readings apart</b>, because <c>mNeighbours</c> is symmetric across all 65,024 of its adjacent pairs -
@@ -82,8 +82,8 @@ public static class MapStep
 	///
 	/// <para>
 	/// These four agree with the executable's own step table at <c>0x007622b0</c>, which
-	/// <see cref="CellLine.StepFor"/> carries - a second source for a numbering that was otherwise known
-	/// only from the boundary guards.
+	/// <see cref="CellLine.StepFor"/> carries - a second source for a numbering the boundary guards
+	/// also fix.
 	/// </para>
 	/// </summary>
 	public static (int X, int Y) Beyond( int x, int y, StepDirection direction ) => direction switch

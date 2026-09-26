@@ -32,9 +32,9 @@ namespace OpenTPW;
 /// <para>
 /// <b>What this is not.</b> It does not steer - the behaviour list that produces a force is
 /// <see cref="PeepSteering"/>, and following the route it plans is <see cref="PeepJourney"/>.
-/// <b>Both are ticked from the park now</b>, through <c>ParkPeople.OnUpdate</c> into
+/// <b>Both are ticked from the park</b>, through <c>ParkPeople.OnUpdate</c> into
 /// <see cref="PeepBehaviour"/> and <see cref="PeepWalk"/>, so a route planned here does make somebody
-/// walk - this paragraph said nothing ticked them, which was true when it was written.
+/// walk.
 /// </para>
 /// </summary>
 public sealed class PeepNavigator
@@ -240,11 +240,9 @@ public sealed class PeepNavigator
 	/// </para>
 	/// </summary>
 	/// <remarks>
-	/// <b>One implementation, here and in <see cref="FixedVector.OctagonalLength"/>.</b> This was written
-	/// twice - once here and once again later, character for character, by someone who had not read this
-	/// file - and the two are now the same code. The tests above are the better of the two sets and are
-	/// what cover it: they pin the metric against Manhattan <i>and</i> Euclidean, and against real legs
-	/// out of the shipped save.
+	/// <b>One implementation, here and in <see cref="FixedVector.OctagonalLength"/>.</b>
+	/// <c>PeepNavigatorTests</c> pins the metric against Manhattan <i>and</i> Euclidean, and against real
+	/// legs out of the shipped save.
 	/// </remarks>
 	public static int Distance( int dx, int dy ) => new FixedVector( dx, dy ).OctagonalLength;
 
@@ -319,9 +317,9 @@ public sealed class PeepNavigator
 	/// Records whether the step just taken got anywhere, which is what <see cref="BlockedTooOften"/> reads.
 	///
 	/// <para>
-	/// <b>How often the original shifts this word is not the same every step, and an earlier draft of this
-	/// comment said it was.</b> It said "twice per step". Read at <c>0050f54d</c>-<c>0050f5d6</c>: a step
-	/// the map <i>refused</i> shifts and writes a one, and then the end of the tick shifts again - twice.
+	/// <b>How often the original shifts this word is not the same every step.</b> Read at
+	/// <c>0050f54d</c>-<c>0050f5d6</c>: a step the map <i>refused</i> shifts and writes a one, and then the
+	/// end of the tick shifts again - twice.
 	/// A step that was <i>taken</i> does not shift at that first point at all, so it shifts once. Fifteen
 	/// bits therefore cover fifteen steps for someone walking freely and rather fewer for someone blocked,
 	/// which is what makes a truly stuck person trip the six-in-fifteen rule so much faster.
@@ -336,9 +334,9 @@ public sealed class PeepNavigator
 	/// <para>
 	/// On the last leg reaching it ends the route. Anywhere else it takes the leg just walked off the
 	/// buffered distance and moves to the next waypoint; running off the end of the buffer is what asks
-	/// for the rest of a streamed route. <b>Something refills it now</b>: <see cref="PeepWalk"/> hands
-	/// <c>PeepJourney.Refill</c> a renavigate, which the journey calls at exactly this point. This said
-	/// nothing could refill it yet.
+	/// for the rest of a streamed route. <b>Nothing in the game calls this</b>, only
+	/// <c>PeepNavigatorTests</c>: the walk steps its own copy in <c>PeepJourney.NextWaypoint</c>, which
+	/// calls <c>PeepJourney.Refill</c> - a renavigate from <see cref="PeepWalk"/> - at this same point.
 	/// </para>
 	/// </summary>
 	/// <returns>Whether the buffer has run out and needs refilling.</returns>

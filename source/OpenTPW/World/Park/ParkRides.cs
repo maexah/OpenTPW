@@ -1,15 +1,13 @@
 namespace OpenTPW;
 
 /// <summary>
-/// The scripts the things standing in a park run - the reference nothing has ever handed out before.
+/// The scripts the things standing in a park run.
 ///
 /// <para>
-/// <b>Everything needed for this existed and was not joined up.</b> <see cref="RideScriptFile"/> reads the
-/// format, <see cref="RideScript"/> runs it, <see cref="RideScriptScheduler"/> gives each one its turn and
-/// <see cref="ParkItemCatalogue"/> already knows where every item's files live - and yet nothing in the
-/// whole tree ever constructed a <see cref="RideScript"/> outside a test. So "199 of the 308 shipped
-/// scripts run start to finish" was measured in a harness, and in a running park the number was nought.
-/// This is the entity that makes it not nought.
+/// <b>This joins up what the scripts need.</b> <see cref="RideScriptFile"/> reads the format,
+/// <see cref="RideScript"/> runs it, <see cref="RideScriptScheduler"/> gives each one its turn and
+/// <see cref="ParkItemCatalogue"/> knows where every item's files live; this binds a
+/// <see cref="RideScript"/> to each thing standing in a running park whose item ships one.
 /// </para>
 ///
 /// <para>
@@ -36,8 +34,7 @@ namespace OpenTPW;
 /// item's own operating speed into the script's speed word (<c>FUN_0055a300</c>, field <c>+0xc0</c>) and
 /// its operating duration into variable 3, which is <see cref="RideVariables.VAR_DURATION"/>, logging
 /// "SPEED = %d" and "DUR = %d" as it does. <b>The duration IS pushed now</b> - from the save's own
-/// <c>mOperatingDuration</c>, beside the capacity, further down this file; this said neither was, which
-/// stopped being true when a ride needed a duration to carry anyone for. The speed stays out, because which key of the item's
+/// <c>mOperatingDuration</c>, beside the capacity, further down this file. The speed stays out, because which key of the item's
 /// description feeds which of them is <b>not</b> established: the constructor reads its record through a
 /// two-byte pointer, so the offsets Ghidra prints are not byte offsets, and they do not line up with
 /// where <c>FUN_004db7d0</c> parses <c>mOperatingSpeed</c> and <c>mOperatingDuration</c>. Guessing it
@@ -83,7 +80,7 @@ public sealed class ParkRides : Entity
 	/// The engine does this inside the object constructor itself (<c>FUN_004dcf90</c>, called from
 	/// <c>0x004db517</c>), so a bought thing and a loaded one are running the same code. Here they are
 	/// two call sites of the same three steps - spawn, bind the thing, hand over its own animation
-	/// player - and the capacity and duration come from the object record exactly as they do above.
+	/// player - and the capacity and duration come from the object record exactly as they do in the constructor.
 	/// </remarks>
 	public bool BindNew( ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item )
 	{
@@ -107,7 +104,7 @@ public sealed class ParkRides : Entity
 		script.Set( ParkRideOperation.CapacityVariable, placed.OperatingCapacity );
 		script.Set( ParkRideOperation.DurationVariable, placed.OperatingDuration );
 
-		// <b>Nothing is resumed here, and that asymmetry with the load above is deliberate.</b> This is the
+		// <b>Nothing is resumed here, and that asymmetry with the load in the constructor is deliberate.</b> This is the
 		// path a player takes by BUILDING the thing, which is the one moment its construction clip is meant
 		// to play: the engine's build path checks role 0 exists, triggers it, and queues role 13 behind it
 		// (FUN_00463060), which freezes the model on the clip's last frame once it has run. A save has state
@@ -278,7 +275,7 @@ public sealed class ParkRides : Entity
 			// of the item descriptions rather than from the save's placements (FUN_005156a0) - but they are
 			// catalogue objects like any other and their scripts are bound by the very same constructor. So
 			// what decides is whether this park has one standing, not whether the save gave it a cell. With
-			// nothing drawn this is exactly the old test, which is the case every test here exercises.
+			// nothing drawn only IsPlaced decides, which is the case every test here exercises.
 			if ( !placed.IsPlaced && _objects?.AnimationsFor( placed.ThingId ) is null )
 				continue;
 
@@ -316,24 +313,21 @@ public sealed class ParkRides : Entity
 				// beside the writes of VAR_DURATION and the speed.
 				//
 				// Without it every variable starts at nought, so a ride's own turn reads capacity 0
-				// against nought aboard, finds itself FULL, and refuses to invite anybody for ever. That
-				// was measured rather than reasoned: a real park ran 2,688 thing ticks with guests queuing
-				// and standing at the front of the queue, and not one was ever called aboard.
+				// against nought aboard, finds itself FULL, and refuses to invite anybody for ever.
 				//
 				// The SAVE's value is used unclamped on purpose. FUN_004dd7f0 clamps the wanted capacity
 				// between the item description's own minimum and maximum and then stores the result in
 				// mOperatingCapacity - so what the file holds is already the clamped answer, and applying
 				// the rule again (against fields nothing here reads) would be doing it twice.
 				// Through the constants rather than by spelling the names again here: two spellings of one
-				// variable are two things that can drift, which is how this file's own track-type pair
-				// went wrong earlier today.
+				// variable are two things that can drift.
 				script.Set( ParkRideOperation.CapacityVariable, placed.OperatingCapacity );
 				script.Set( ParkRideOperation.DurationVariable, placed.OperatingDuration );
 
 				// And where this script had got to when the park was saved, which is the whole of why a
-				// loaded park does not watch everything in it being built again. Before this, every script
-				// started at its own first instruction - and for the Belly Bounce that instruction is
-				// WAITANIM 0 0, the construction clip, so the ride hatched out of its egg on every load.
+				// loaded park does not watch everything in it being built again. Started from its own first
+				// instruction instead, the Belly Bounce would run WAITANIM 0 0, the construction clip, and hatch
+				// out of its egg on every load.
 				// See ParkScriptStates, and RideScript.ResumeAt for what it refuses.
 				Resume( script, placed, world );
 
@@ -354,14 +348,11 @@ public sealed class ParkRides : Entity
 			}
 		}
 
-		// And tell the gate whether this park is open. This is one of several writes of a script variable
-		// from outside a script - the capacity and duration above are two more, and ride operation writes
-		// VAR_LETMEON and VAR_LETMEOFF - though it was the only one when this line was written.
 		// <b>And the things this park stood that the save never named.</b> The loop above walks
 		// world.Objects, so it reaches only what the file placed. A vehicle this park has not used is
 		// not in that list at all - the engine makes the thing the first time a crowd of that size
-		// arrives rather than shipping one - so the ferry and the seaplane were being stood, drawn, and
-		// then left without a script, which is why they sat at their spawns while the bus drove.
+		// arrives rather than shipping one - so without this pass the ferry and the seaplane would be stood
+		// and drawn with no script, and sit at their spawns.
 		//
 		// Nothing new is needed to bind them: ParkFixedItems records which catalogue item each was
 		// stood as, and the script path comes from that item exactly as it does above. A thing already
@@ -371,9 +362,6 @@ public sealed class ParkRides : Entity
 		{
 			// What the first pass managed on its own, so that what this one adds is a measured
 			// difference rather than a number inferred from a census counting a different population.
-			// Deducing "one of the two failed" from a total whose baseline had never been taken is
-			// exactly how the wrong half of this got investigated - and the census that total came
-			// from prints a header line of its own, so it was never even counting the same things.
 			//
 			// Only the baseline is said here. What this pass then does is reported thing by thing
 			// below, which is both more use and one fewer walk of an iterator that is about to be
@@ -429,7 +417,9 @@ public sealed class ParkRides : Entity
 			}
 		}
 
-		// Last, because it needs the binding above to have run.
+		// And tell the gate whether this park is open - one of several writes of a script variable from
+		// outside a script, beside the capacity and duration above and ride operation's VAR_LETMEON and
+		// VAR_LETMEOFF. Last, because it needs the binding above to have run.
 		CommandTheGate( world );
 
 		// The restore counts go in this line because otherwise nothing anywhere reports them. A park whose
@@ -473,10 +463,9 @@ public sealed class ParkRides : Entity
 	/// Tells the park's gate whether the park is open, which is what makes it move at all.
 	///
 	/// <para>
-	/// <b>Until this existed the gate could not be opened by anything.</b> <c>Gates.RSE</c> opens on a
-	/// dispatch loop that reads <c>VAR_COMMAND</c>; every variable starts at nought, so it cycled five
-	/// instructions for ever and reached neither the open branch nor the close one, and a park saved with
-	/// its gates open drew them shut. The only thing in the original that ever writes that variable is
+	/// <b>The gate moves only when it is commanded.</b> <c>Gates.RSE</c> opens on a dispatch loop that reads
+	/// <c>VAR_COMMAND</c>; with nought there it cycles five instructions for ever and reaches neither the open
+	/// branch nor the close one. The only thing in the original that ever writes that variable is
 	/// opening or closing a park - <c>FUN_00519ef0</c>, which looks the gate's script up from the header's
 	/// own <c>mParkGates</c> handle and writes variable 0.
 	/// </para>
@@ -490,10 +479,10 @@ public sealed class ParkRides : Entity
 	/// </para>
 	/// <para>
 	/// <b>Commanding it as the park loads is a reproduction of the end state, not of a call anybody has
-	/// traced.</b> What the original does with its gate at load time - whether it re-commands, or restores
-	/// the script's variables with the rest of the save - is not established here. What is established is
-	/// that this park is saved open, so its gate belongs open; doing it this way makes the screen agree
-	/// with <c>mParkClosed</c>, and it is the first thing in the tree to read that field for anything.
+	/// traced.</b> The original restores the script's variables with the rest of the save (<c>FUN_005597a0</c>,
+	/// see <see cref="Resume"/>); whether it also re-commands at load is not established here. What is
+	/// established is that this park is saved open, so its gate belongs open; doing it this way makes the
+	/// screen agree with <c>mParkClosed</c>.
 	/// </para>
 	/// </summary>
 	private void CommandTheGate( ParkWorld world )
@@ -600,9 +589,9 @@ public sealed class ParkRides : Entity
 	/// <para>
 	/// The channel is started rather than having its timebase copied field by field: the file carries no
 	/// frame counts, and the engine recomputes <c>TotalAnimFrames</c> and <c>AnimFrame</c> on the way in.
-	/// <b>It does carry the speed, though, and that is restored.</b> Saying the file held nothing further
-	/// was wrong - the record's sixth dword lands on the channel's <c>+0xc</c>, and while fourteen of the
-	/// fifteen running channels are saved at 1, the Belly Bounce is saved at <b>1.1</b>.
+	/// <b>It does carry the speed, though, and that is restored</b>: the record's sixth dword lands on the
+	/// channel's <c>+0xc</c>, and while fourteen of the fifteen running channels are saved at 1, the Belly
+	/// Bounce is saved at <b>1.1</b>.
 	/// </para>
 	///
 	/// <para>
@@ -633,10 +622,10 @@ public sealed class ParkRides : Entity
 			// same thing to a caller.</b> 0x1 (loop) and 0x8 (do not apply the hide list) carry across
 			// unchanged; 0x2 and 0x4 do not. Internally those two say the channel was FROZEN at frame
 			// nought or HELD at its last frame, and a caller's 0x2 and 0x4 mean "start at once" and "do
-			// not lay the rest pose down" - different questions entirely. Passing the word through
-			// therefore read a held channel as a keep-pose request, and AnimTimeControl.Start clears
-			// 0x6 on the way in, so the hold was dropped and the clip restarted from frame nought as an
-			// ordinary one-shot. Eleven of this park's fifteen restored channels carry 0x4.
+			// not lay the rest pose down" - different questions entirely. Passed through, the word would
+			// read a held channel as a keep-pose request, and AnimTimeControl.Start clears 0x6 on the way
+			// in, so the hold would be dropped and the clip restart from frame nought as an ordinary
+			// one-shot. Eleven of this park's fifteen restored channels carry 0x4.
 			// A channel saved as running carries a real speed; nought only ever appears on one that was
 			// not, and those are skipped above. Floored anyway, because a nought here would stop the
 			// clip dead rather than play it slowly.

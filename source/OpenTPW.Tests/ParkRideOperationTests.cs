@@ -132,7 +132,9 @@ public class ParkRideOperationTests
 		Assert.AreEqual( 0, park.QueueLength( Ride ), "so the queue measures nought" );
 
 		// NOT tidied: the second guest is not promoted, and their links are exactly as they were. The
-		// original repairs this on the next join or leave, not here.
+		// original leaves it so: the next join makes the joiner the head, and the dropped head leaving by
+		// their own links makes the second the head - see
+		// ParkQueueJoinTests.ALeaverWithNobodyInFrontMakesTheNextTheHead.
 		Assert.AreEqual( 8, park.NextInQueue( 7 ), "the chain behind the dropped head is untouched" );
 		Assert.AreEqual( 7, park.PreviousInQueue( 8 ), "and still names the guest who left the front" );
 	}

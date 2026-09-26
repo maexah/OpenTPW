@@ -21,8 +21,8 @@ public enum WalkVerdict
 /// <b>It is a join rather than an algorithm.</b> Every piece it uses was built and tested on its own:
 /// <see cref="WallAvoidance"/> pushes off walls, <see cref="PeepJourney"/> follows the route,
 /// <see cref="PeepSteering"/> adds those up and takes the step, and <see cref="PeepNavigator"/> plans the
-/// route and measures the progress. What was missing until now was the thing that calls them in the right
-/// order with the right state, which is all this is.
+/// route and measures the progress. This is the thing that calls them in the right
+/// order with the right state, and nothing more.
 /// </para>
 /// <para>
 /// <b>The navigator is the record of truth, and the other two are views of it.</b> The original has one
@@ -109,12 +109,11 @@ public sealed class PeepWalk
 
 	/// <summary>
 	/// The route follower. <b>Nothing reads this accessor</b> - not a test, not the console, nothing -
-	/// so it is unused as it stands; the follower itself is driven through the private field. This said
-	/// it was exposed so a test could read how far along the person had got, which no test does.
+	/// so it is unused as it stands; the follower itself is driven through the private field.
 	/// </summary>
 	internal PeepJourney Journey => _journey;
 
-	/// <summary>The steering step, exposed for the same reason - its stuck record is the interesting part.</summary>
+	/// <summary>The steering step, exposed so a test can read <see cref="PeepSteering.LastProgress"/>.</summary>
 	internal PeepSteering Steering => _steering;
 
 	/// <summary>
@@ -136,9 +135,9 @@ public sealed class PeepWalk
 	/// <para>
 	/// <b>This is a departure and it is named.</b> In the original nobody plans a route from inside the walk:
 	/// the state machine does it on the way in, through <c>FUN_00510100</c>, which is reached from three
-	/// places in <c>FUN_004f9490</c> and one each in <c>FUN_004fa530</c> and <c>FUN_004fa5f0</c>. Those are
-	/// the twenty-two state behaviours. <b>Thirteen of those are built now</b> and several plan routes of
-	/// their own - this said none were - but the departure stands for the case it was written for: a guest
+	/// places in <c>FUN_004f9490</c> and one each in <c>FUN_004fa530</c> and <c>FUN_004fa5f0</c>. Those are what
+	/// the twenty-two state behaviours call. <b>Eighteen of the behaviours are built</b> and several plan
+	/// routes of their own, but the departure stands for the case it was written for: a guest
 	/// restored from a file has a destination and no route, and something has to ask for one or nobody
 	/// ever takes a step.
 	/// </para>

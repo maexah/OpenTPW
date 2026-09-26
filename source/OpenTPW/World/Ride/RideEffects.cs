@@ -10,7 +10,7 @@ namespace OpenTPW;
 /// (<c>PUSH 0x1c</c> at <c>0x551f5f</c>), laid out <c>+0x00</c> next, <c>+0x04</c> prev, <c>+0x08</c>
 /// type, <c>+0x0c</c> the handle the spawn answered, <c>+0x10</c> node, <c>+0x14</c> the node's index on
 /// the model, <c>+0x18</c> the tag. The engine also counts every live node in one global
-/// (<c>DAT_008791b4</c>), which is what <see cref="Count"/> is.
+/// (<c>DAT_008791b4</c>), across every script; <see cref="Count"/> is this one list's share of it.
 /// </para>
 ///
 /// <para>
@@ -41,9 +41,9 @@ namespace OpenTPW;
 /// guessed at either subsystem's numbering.</item>
 /// <item>There is no position. The engine resolves one through <c>FUN_00556b90</c> from the model and
 /// the node, and <b>walks this whole list every tick</b> (in <c>FUN_005516b0</c>) to move what is
-/// playing as the ride moves. With no model there is nothing to move and nothing to move it
-/// relative to.</item>
-/// <item>The list has two other writers that are not here: <c>ADDOBJ_EXT</c>, which no shipped script
+/// playing as the ride moves. With nothing started, and nothing here resolving a model node's
+/// position, there is nothing to move and nothing to move it relative to.</item>
+/// <item>Two of the list's other writers are not here: <c>ADDOBJ_EXT</c>, which no shipped script
 /// uses at all, and the save-state reader (<c>FUN_005597a0</c>), which rebuilds it from an
 /// <c>"OBJ "</c> section - a section none of the 308 shipped scripts carries, because that is written
 /// by the save file rather than by the script.</item>
@@ -80,7 +80,7 @@ public sealed class RideEffects
 
 		/// <summary>
 		/// What a <c>KILLOBJ</c> matches - the engine's field <c>+0x18</c>, taken from <c>ADDOBJ</c>'s
-		/// <b>fourth</b> operand. It is a tag and not a duration: the corpus kills 1, 10, 20, 11, 2 and 500,
+		/// <b>fourth</b> operand. It is a tag and not a duration: the corpus's commonest kills are 1, 10, 20, 11, 2 and 500,
 		/// which are the very values its <c>ADDOBJ</c>s create.
 		/// </summary>
 		public int Tag { get; init; }
@@ -112,7 +112,7 @@ public sealed class RideEffects
 	/// </summary>
 	public IReadOnlyList<Record> Records => _records;
 
-	/// <summary>How many are live, which is the engine's global at <c>DAT_008791b4</c>.</summary>
+	/// <summary>How many are live in this list - one script's share of the engine's global at <c>DAT_008791b4</c>.</summary>
 	public int Count => _records.Count;
 
 	/// <summary>Everything ever started, records and one-shot events alike.</summary>
@@ -142,9 +142,7 @@ public sealed class RideEffects
 			// twice. The visible outcome is that nothing was started and nothing is left behind.
 			++Unknown;
 
-			// And it complained, which is the half this reproduced as a silent counter. Its own doc says
-			// the count exists so a script doing this is "visible rather than silently doing nothing";
-			// nothing ever looked at it.
+			// And it complains, so this reports the gap as well as counting it.
 			Unimplemented.Report( $"effect type {type} (ADDOBJ)" );
 
 			return;

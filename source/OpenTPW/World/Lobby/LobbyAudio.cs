@@ -4,7 +4,7 @@ namespace OpenTPW;
 /// Everything the lobby makes a noise with: each park's theme, its ambience, and the thunder over
 /// Halloween World.
 ///
-/// The original's lobby plays sound in four places and nowhere else, all of them found in its
+/// The original's lobby plays sound in five places and nowhere else, all of them found in its
 /// decompile:
 ///
 ///   - <b>lobby start</b> (FUN_005dcfe0), right after it loads data\lobby\globe, starts two
@@ -22,12 +22,15 @@ namespace OpenTPW;
 ///             PlaySound( localLobbySfx[island], 3 + random() % 3 );
 ///
 ///     so a one-in-sixteen chance each frame of one of effects 3, 4 and 5, picked evenly.
+///   - <b>leaving for a park</b> (0x005e1e30) plays effect 4 of the global lobby sfx category, which
+///     ships with no samples - see <see cref="ParkEntry"/>.
 ///
 /// Every one of those calls passes (0,0,0) as the position, so none of the lobby's sound is
 /// placed in the world - it is all played flat, and only the selected island's is played at all.
-/// That is why there is no panning here.
+/// Placing it is this lobby's own deviation: Space's emitter node, and every park while the camera
+/// flies - see <see cref="KeepPlaying"/>.
 ///
-/// <b>The gates have no sound.</b> Those four calls are the whole of it: nothing in the lobby's
+/// <b>The gates have no sound.</b> Those five calls are the whole of it: nothing in the lobby's
 /// tick, its island handlers or its start plays anything when a gate animates, and the lobby
 /// categories hold no door sample to play. The game does have gate and door sounds - dooropen1
 /// and doorcls1b in the global kids bank, spacegate1 in space's ambient bank, gateslm1b in
@@ -86,13 +89,12 @@ public sealed class LobbyAudio : Entity
 	///     global ambience  -12.4
 	///
 	/// So the music is the <b>quietest</b> thing in the lobby as recorded, by five to seven
-	/// decibels, and playing every layer at roughly equal gain buries it - which is exactly what
-	/// the first cut of this did. Each constant below is therefore a correction rather than a
+	/// decibels, and playing every layer at roughly equal gain buries it.
+	/// Each constant below is therefore a correction rather than a
 	/// level: it is what puts that layer's median at the target it should sit at, which is
 	/// -26 dBFS for the theme, -34 for the bed and the one-shots, -36 for the global ambience,
 	/// and -24 for thunder. The theme therefore leads the ambience by about eight decibels and
-	/// thunder is the only thing above it, which is the shape the first cut had backwards: it
-	/// ran the one-shots nine decibels <i>over</i> the music.
+	/// thunder is the only thing above it.
 	///
 	/// Nothing here evens out the samples <i>within</i> a layer, and one case is worth knowing
 	/// about: of Lost Kingdom's three arrangements, jungle-2 is around ten decibels quieter than
@@ -108,8 +110,7 @@ public sealed class LobbyAudio : Entity
 	/// mean. Worst case here, with a theme, a bed, a one-shot, a thunder and the global ambience
 	/// all peaking on the same sample, comes to 1.18 before the master volume and 0.59 after it,
 	/// so <see cref="Audio"/>'s clamp is a backstop that never actually fires. Forty seconds of
-	/// Lost Kingdom measures -30.7 dBFS RMS peaking at -11.4, against -17.2 peaking at -0.4 - that
-	/// is, hard against the rails - before this.
+	/// Lost Kingdom measures -30.7 dBFS RMS peaking at -11.4.
 	/// </summary>
 	private const float MusicVolume = 0.50f;
 	private const float BedVolume = 0.13f;
@@ -128,9 +129,8 @@ public sealed class LobbyAudio : Entity
 	/// <para>
 	/// <b>This length applies only while somebody is playing.</b> While the camera is flying, nothing
 	/// fades at all: all four parks sound at once, each heard from its own island, and the blend
-	/// between them is distance - see <see cref="KeepPlaying"/>. Alexah asked for the cross-fade
-	/// between parks (2026-09-20) and then for it to come from positional audio, which is what
-	/// replaced the fade in that mode rather than sitting alongside it.
+	/// between them is distance - see <see cref="KeepPlaying"/>. That is a deviation, at Alexah's word:
+	/// the original plays only the island on show, flat.
 	/// </para>
 	/// </summary>
 	private const float CrossfadeSeconds = 0.9f;
@@ -235,16 +235,11 @@ public sealed class LobbyAudio : Entity
 		// 0x0051e8f0 - appending the pair to one table. Selecting an island afterwards only ever
 		// plays out of that table, by the index the island kept; it never loads anything.
 		//
-		// Loading them on arrival instead put a park's worth of MPEG decoding - about a megabyte
-		// compressed, ten times that as float - inside the update of the frame the camera got
-		// there on, and that frame ran to a tenth of a second against the seven milliseconds
-		// either side of it. Only the first arrival at each island, because the cache below keeps
-		// what it builds, which is exactly the "first time" of the report.
-		//
-		// Nothing is decoded twice and nothing is decoded that would not have been: this is the
-		// same ParkFor the arrival path calls, filling the same cache. The work only moves to
-		// where the loading screen is already up. With no audio device there is nothing to play
-		// and OnUpdate never reaches an island, so nothing is loaded at all - as before.
+		// Loading them on arrival would put a park's worth of MPEG decoding - about a megabyte compressed,
+		// ten times that as float - inside the update of the frame the camera got there on. This is the
+		// same ParkFor the arrival path calls, filling the same cache, so nothing is decoded twice; the work
+		// happens where the loading screen is already up. With no audio device there is nothing to play and
+		// nothing is loaded at all.
 		if ( !Audio.Ready )
 			return;
 
@@ -460,7 +455,7 @@ public sealed class LobbyAudio : Entity
 	{
 		if ( Attracting )
 		{
-			// >>> ALL FOUR AT ONCE, EACH HEARD FROM ITS OWN ISLAND. <<< Distance does the blending as
+			// All four at once, each heard from its own island. Distance does the blending as
 			// the camera flies, so there is no fading in or out here at all - a park is simply always
 			// sounding, and how loud it is is how near you are. That is the whole of the cross-fade in
 			// this mode.
@@ -470,8 +465,8 @@ public sealed class LobbyAudio : Entity
 			return;
 		}
 
-		// Somebody is playing: only the island on show sounds, flat or at the node it marks, exactly as
-		// it did before any of this. Whatever a flight left sounding is faded out and let go.
+		// Somebody is playing: only the island on show sounds, flat or at the node it marks. Whatever a
+		// flight left sounding is faded out and let go.
 		foreach ( var theme in _voices.Keys.ToArray() )
 		{
 			if ( !string.Equals( theme, _playing, StringComparison.OrdinalIgnoreCase ) )
@@ -484,7 +479,7 @@ public sealed class LobbyAudio : Entity
 
 	/// <summary>
 	/// Starts a park's theme or its bed again when either runs out, at the place that park is heard
-	/// from. Neither loops - see the note on <see cref="KeepPlaying"/>'s caller.
+	/// from. Neither loops - see the note on <see cref="KeepPlaying"/>.
 	/// </summary>
 	private void KeepParkPlaying( string theme, Vector3? position )
 	{
@@ -506,10 +501,8 @@ public sealed class LobbyAudio : Entity
 	///
 	/// <para>
 	/// <b>The fallback is only used while flying.</b> Three of the four islands mark no emitter - only
-	/// Space carries <c>ant_emitter</c> - so with somebody playing they go on sounding flat exactly as
-	/// they always have, and <see cref="_ambiencePosition"/> stays null for them. Giving them a place
-	/// unconditionally would have made the ordinary lobby positional as a side effect of this, which is
-	/// not what was asked for.
+	/// Space carries <c>ant_emitter</c> - so with somebody playing they sound flat, as the original's do,
+	/// and <see cref="_ambiencePosition"/> stays null for them.
 	/// </para>
 	/// </summary>
 	private static Vector3? FlyingPositionOf( LobbyIsland island )
@@ -530,9 +523,8 @@ public sealed class LobbyAudio : Entity
 		// nothing rather than doubling it up. That is the original's behaviour, and it is most of
 		// what keeps the jungle from sounding like a pet shop.
 		//
-		// The place is the island's, where it marks one. This is the one thing here the original did
-		// not do - it played every lobby sound at (0,0,0) - so it is an improvement on the lobby
-		// rather than a restoration of it; see the note at the top of this class.
+		// The place is the island's, where it marks one. The original plays every lobby sound at
+		// (0,0,0), so placing it is a deviation - see the note at the top of this class.
 		_current!.Ambience.Play( LocalOneShotFirst + _random.Next( LocalOneShotCount ), OneShotVolume,
 			position: OneShotPosition );
 	}
@@ -544,7 +536,7 @@ public sealed class LobbyAudio : Entity
 	/// While the camera is flying it comes from the island it belongs to, the same rule the themes and
 	/// beds follow - otherwise three of the four islands would go on chiming flat in the middle of a
 	/// scene where everything else is placed, because only Space marks an emitter node. With somebody
-	/// playing it is <see cref="_ambiencePosition"/> exactly as before: the node where there is one,
+	/// playing it is <see cref="_ambiencePosition"/>: the node where there is one,
 	/// and flat where there is not.
 	/// </para>
 	/// </summary>

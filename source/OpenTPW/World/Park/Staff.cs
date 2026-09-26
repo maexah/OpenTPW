@@ -92,16 +92,16 @@ public sealed class Staff
 
 	/// <summary>
 	/// How fast they mean to walk, written into the thing's <c>+0xc2</c> before the walk runs. Staff take
-	/// the unhurried speed everywhere the shared spine reaches; only a guard chasing somebody hurries, and
-	/// that arm is not built.
+	/// the unhurried speed, 0, everywhere the shared spine reaches but going on strike, which writes the
+	/// hurried 25 (<c>FUN_005054d0</c> case 4); a guard chasing somebody hurries too. Neither arm is built,
+	/// and nothing here writes or reads this.
 	/// </summary>
 	public int PurposeSpeed { get; internal set; }
 
 	/// <summary>The animation this staff member's state has asked for, or nought for none.</summary>
 	/// <remarks>
 	/// Queued rather than applied, exactly as a guest's is - <c>FUN_004217f0</c> is a bare write of the
-	/// person's own <c>mNextAnim</c>, and something else hands it to the sprite later. Recording it
-	/// anywhere else is the mistake that left every guest striding on the spot at the gate.
+	/// person's own <c>mNextAnim</c>, and something else hands it to the sprite later.
 	/// </remarks>
 	public int NextAnimation { get; set; }
 
@@ -139,7 +139,8 @@ public sealed class Staff
 
 	/// <summary>
 	/// Whether a cell is inside this staff member's patrol area - <c>FUN_00506ed0</c>. A staff member with
-	/// no area at all is at home anywhere.
+	/// no area at all is at home anywhere here; the original's test has no case for it and puts them
+	/// outside every cell, a deviation Lost Kingdom does not reach, since every member there carries one.
 	/// </summary>
 	public bool Patrols( int x, int y )
 	{
@@ -193,9 +194,9 @@ public sealed class Staff
 	/// <para>
 	/// <b>These are not a guest's numbers and are deliberately left as numbers.</b> A guest's walk is 1 and
 	/// their stand is 3; a staff member walking asks for 9, going to a rest area asks for 1, striking asks
-	/// for 0x13 and waiting for 0x14. What those sets contain is a property of each kind's own sprite
-	/// script, which nothing here reads yet, so naming them would be inventing meanings rather than
-	/// recording the calls.
+	/// for 0x13 and waiting for 0x14. Which script each one runs is <see cref="SpriteScript"/>'s table, the
+	/// one a guest's animations use too; what the pictures show is up to each kind's own bank, so naming
+	/// them would be inventing meanings rather than recording the calls.
 	/// </para>
 	/// </summary>
 	public static int AnimationFor( StaffActivity activity ) => activity switch

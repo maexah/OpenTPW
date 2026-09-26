@@ -10,16 +10,15 @@ namespace OpenTPW.Tests;
 /// guests look like, and does the drawing read the advanced picture rather than the saved one.
 ///
 /// <para>
-/// <b>This file exists for the same reason <see cref="ParkTickTests"/> does.</b> Every test written for the
-/// walk drove <see cref="PeepWalk"/> directly and passed while a real park sat motionless, because the fault
-/// was in the wiring that no test touched. The animation carries exactly the same risk:
+/// <b>This file exists for the same reason <see cref="ParkTickTests"/> does.</b> A test that drives
+/// <see cref="PeepWalk"/> directly passes while a real park sits motionless, when the fault is in the wiring
+/// no test touches. The animation carries exactly the same risk:
 /// <see cref="SpriteScriptTests"/> drives the player directly and would pass just as happily if nothing ever
 /// called it. So these drive the wiring - a real park, a real clock, the pool the renderer asks.
 /// </para>
 /// <para>
-/// <b>And two of them measure a PERIOD rather than a change</b>, which is the lesson that cost a round:
-/// asserting that a picture moved passes at any speed whatever, and a guest moving eight times too fast is
-/// precisely the fault that survived five hundred green tests until somebody looked at a park.
+/// <b>And two of them measure a PERIOD rather than a change</b>: asserting that a picture moved passes at
+/// any speed whatever, a guest moving eight times too fast included.
 /// </para>
 /// </summary>
 [TestClass]
@@ -72,9 +71,9 @@ public class ParkAnimationTests
 	/// Every guest and what they are playing, for a failure message.
 	///
 	/// <para>
-	/// It exists because a bare count sent me guessing twice about which guest was being measured and why -
-	/// once at a guest whose walk never runs, and once at the one guest in the park who is standing still and
-	/// therefore shows one picture for ever. What a failure here needs to say is who everybody is.
+	/// A bare count does not say which guest was measured - a guest whose walk never runs, or the one guest in
+	/// the park who is standing still and therefore shows one picture for ever. What a failure here needs to say
+	/// is who everybody is.
 	/// </para>
 	/// </summary>
 	private static string Everyone( ParkPeople people )
@@ -90,14 +89,13 @@ public class ParkAnimationTests
 		} ) );
 
 	/// <summary>
-	/// <b>Ticking a park advances its guests' pictures.</b> The test the whole branch exists for.
+	/// <b>Ticking a park advances its guests' pictures.</b>
 	///
 	/// <para>
-	/// <b>It watches every turn rather than comparing the two ends, and the first draft of it did not.</b>
-	/// Written as a before-and-after it reported that five of the thirteen had not moved at all - because
-	/// sixty-four game ticks is thirty-two turns of the sprite system, the walk is eight pictures long, and
-	/// thirty-two divides by eight exactly. Every guest animating steadily was back on the picture they
-	/// started on. <b>Sampling at a multiple of the cycle you are measuring shows a still park however fast
+	/// <b>It watches every turn rather than comparing the two ends.</b> A before-and-after finds guests who
+	/// seem not to have moved at all - sixty-four game ticks is thirty-two turns of the sprite system, the walk
+	/// is eight pictures long, and thirty-two divides by eight exactly, so every guest animating steadily is
+	/// back on the picture they started on. <b>Sampling at a multiple of the cycle you are measuring shows a still park however fast
 	/// it is running.</b>
 	/// </para>
 	/// <para>
@@ -169,14 +167,13 @@ public class ParkAnimationTests
 	/// a test of its own at <c>0054f5d7</c> - <c>TEST AL,0x1</c> then <c>JNZ</c> straight past it.
 	/// </para>
 	/// <para>
-	/// <b>It measures the gap, and an earlier draft measured only the parity - which would have let a gate
-	/// four times too slow straight through.</b> "The picture moves only on even ticks" sounds like it pins
-	/// the two and does not: a gate on every eighth tick fires on 8, 16, 24, every one of them even, and the
-	/// assertion passes while the park animates at a quarter speed. That was found by asking what a control
-	/// would break before writing one, which is the cheaper half of the practice.
+	/// <b>It measures the gap, not only the parity - parity alone lets a gate four times too slow straight
+	/// through.</b> "The picture moves only on even ticks" sounds like it pins the two and does not: a gate on
+	/// every eighth tick fires on 8, 16, 24, every one of them even, and that assertion passes while the park
+	/// animates at a quarter speed.
 	/// </para>
 	/// <para>
-	/// <b>It watches the whole park rather than one guest, and two failed attempts are why.</b> Picking a
+	/// <b>It watches the whole park rather than one guest.</b> Picking a
 	/// guest gets you whichever one the file happens to list first - which here is walking but taking steps
 	/// too short to ask for a rate, so it sits at the default interval and turns half as often. Picking the
 	/// one guest nobody is driving gets you the one waiting for the gate, who is on the standing script and
@@ -255,8 +252,8 @@ public class ParkAnimationTests
 
 	/// <summary>
 	/// <b>Every guest ends up on one of the three animations a guest can be on.</b> A guest who is walking is
-	/// put on the walk; one who has arrived is put on the stand, which is this project's own departure and is
-	/// named where it is made. What must never happen is a guest left on some other script entirely.
+	/// put on the walk; one who has arrived is put on the stand by the state they arrive in
+	/// (<see cref="Peep.AnimationFor"/>). What must never happen is a guest left on some other script entirely.
 	/// </summary>
 	[TestMethod]
 	public void WalkingGuestsAreOnAnAnimationAGuestCanBeOn()
@@ -345,16 +342,13 @@ public class ParkAnimationTests
 	}
 
 	/// <summary>
-	/// <b>And the drawing takes the picture the animation is on, not the one the file recorded.</b> The same
-	/// gap that let a guest be walked half way across the park and still be drawn where the save left them.
+	/// <b>And the drawing takes the picture the animation is on, not the one the file recorded.</b>
 	///
 	/// <para>
-	/// <b>It watches throughout rather than at the end, and a control is why.</b> Written as a single look
-	/// after sixty-four ticks it was aliasable in exactly the way the first draft of
-	/// <see cref="TickingTheParkAdvancesTheGuestsPictures"/> was: widening the sprite gate to every eighth
-	/// tick gives a guest eight advances in that window, eight is the length of the walk, and every drawn
-	/// picture lands back on the saved one. The test then failed for a reason that had nothing to do with
-	/// its name. Counting every tick cannot be aliased by the period of anything.
+	/// <b>It watches throughout rather than at the end.</b> A single look after sixty-four ticks is aliasable:
+	/// widening the sprite gate to every eighth tick gives a guest eight advances in that window, eight is the
+	/// length of the walk, and every drawn picture lands back on the saved one. Counting every tick cannot be
+	/// aliased by the period of anything.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -419,8 +413,7 @@ public class ParkAnimationTests
 	/// <b>Every other test in this file would still pass.</b> A guest who restarts mid-cycle still shows all
 	/// eight pictures over sixty-four ticks, still advances on every turn of the system, and is still on the
 	/// walking script. Only the ORDER gives it away - a loop steps from the last picture to the first, a
-	/// restart steps to the first from anywhere. So this asserts the sequence rather than the set, and it
-	/// exists because working out what a control would break found that nothing covered the guard at all.
+	/// restart steps to the first from anywhere. So this asserts the sequence rather than the set.
 	/// </para>
 	/// </summary>
 	[TestMethod]

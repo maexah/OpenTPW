@@ -47,7 +47,7 @@ vertex {
 
         vec4 pos = g_oUbo.g_mModel * vec4(position, 1.0);
 
-        // View space, and now named for it. The fog at the end of the fragment stage wants distance
+        // View space. The fog at the end of the fragment stage wants distance
         // from the camera, which is what this is; the lighting wants world space, and takes
         // vPosition just above instead.
         vs_out.vViewPosition = vec3(g_oUbo.g_mView * pos);

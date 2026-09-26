@@ -5,8 +5,7 @@ namespace OpenTPW;
 /// before anybody is employed.
 ///
 /// <para>
-/// <b>Nothing in this project had one.</b> The five staff a park ships with are read from the save and
-/// that was the entire population; there was no such thing as a candidate.
+/// The five staff a park ships with are read from the save; everybody else who can be hired waits here.
 /// </para>
 ///
 /// <para>

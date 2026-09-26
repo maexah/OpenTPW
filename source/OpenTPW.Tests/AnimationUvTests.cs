@@ -8,14 +8,13 @@ namespace OpenTPW.Tests;
 /// How a UV animation is written down: one entry per vertex, each with its own run of keyframes.
 ///
 /// <para>
-/// <b>These guard a reading that looked right on most of the game and was wrong on the rest.</b> A UV
-/// entry was read as a run of components sliding from a start value to an end value, which addresses
-/// exactly the same bytes as the engine's reading whenever an entry has two keys - a two-key entry packs
-/// so that its first key index is twice its entry index, so "component 2e, two components" and "key 2e,
-/// two keys" coincide. Measured over every clip under levels/: 25,332 entries have two keys and 4,391 do
-/// not, and those fall in 289 of the 670 UV tracks. On those the old reading did not merely flatten the
-/// middle keys - it read the (u,v) pairs as a block of u's followed by a block of v's, so it put v values
-/// into u.
+/// <b>These guard against a reading that looks right on most of the game and is wrong on the rest.</b>
+/// Reading a UV entry as a run of components sliding from a start value to an end value addresses exactly
+/// the same bytes as the engine's reading whenever an entry has two keys - a two-key entry packs so that its
+/// first key index is twice its entry index, so "component 2e, two components" and "key 2e, two keys"
+/// coincide. Measured over every clip under levels/: 25,332 entries have two keys and 4,391 do not, and
+/// those fall in 289 of the 670 UV tracks. On those the component reading does not merely flatten the middle
+/// keys - it reads the (u,v) pairs as a block of u's followed by a block of v's, so it puts v values into u.
 /// </para>
 ///
 /// <para>
@@ -41,7 +40,7 @@ public class AnimationUvTests
 
 	/// <summary>
 	/// An entry carries as many keys as it declares, and its frames climb. The fountain's second track is
-	/// 44 entries of five keys each - the shape the old reading could not express at all.
+	/// 44 entries of five keys each - the shape a start-to-end reading cannot express at all.
 	/// </summary>
 	[TestMethod]
 	public void AnEntryCarriesItsOwnRunOfKeys()
@@ -108,8 +107,8 @@ public class AnimationUvTests
 	}
 
 	/// <summary>
-	/// <b>u and v stay where they belong.</b> The old reading took an entry's keys as a block of u's
-	/// followed by a block of v's, so entry 0's second "component" was 1.973 - a v value sitting in u.
+	/// <b>u and v stay where they belong.</b> A component reading takes an entry's keys as a block of u's
+	/// followed by a block of v's, so entry 0's second "component" is 1.973 - a v value sitting in u.
 	/// This one scrolls only v, and u holds still at a thousandth throughout.
 	/// </summary>
 	[TestMethod]
@@ -145,7 +144,7 @@ public class AnimationUvTests
 
 	/// <summary>
 	/// <b>The ordinary case is untouched.</b> The park terrain's own clip - the jungle's river and falls -
-	/// is eleven UV tracks in which every entry has exactly two keys, which is where the old reading and
+	/// is eleven UV tracks in which every entry has exactly two keys, which is where the component reading and
 	/// the engine's agree. It is here so that a change made for the 43% cannot quietly move the 57%.
 	/// </summary>
 	[TestMethod]
@@ -161,7 +160,7 @@ public class AnimationUvTests
 				Assert.AreEqual( 2, track.KeyCount[entry], $"entry {entry}" );
 
 			// Two keys means the sample at the end is the second of them, which is exactly what a
-			// start-to-end ramp answered.
+			// start-to-end ramp answers.
 			var first = track.FirstKey[0];
 			var end = track.Sample( 0, track.Frames[first + 1] );
 

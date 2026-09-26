@@ -16,7 +16,8 @@ namespace OpenTPW.UI;
 /// <b>A gate that will look like a bug and is not.</b> <c>FUN_004a0940</c> does nothing at all while
 /// the in-game menu is on screen - <c>FUN_0048c8d0</c> tests that the menu object exists AND is
 /// shown. So a category button refusing while the pause menu is up is correct behaviour rather than
-/// an unbuilt path. <see cref="UiWindow.Pauses"/> is how this project knows the same thing.
+/// an unbuilt path. <see cref="UiWindow.Modal"/> is how this project keeps the same click away: the
+/// game menu is modal, and nothing behind a modal window can be pressed.
 /// </para>
 /// </summary>
 internal static class ParkCategoryScreens

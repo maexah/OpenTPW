@@ -30,8 +30,8 @@ public class CellLineTests
 	}
 
 	/// <summary>
-	/// The four steps are the executable's own table, which is a second source for a numbering that until
-	/// now rested entirely on the step check's boundary guards.
+	/// The four steps are the executable's own table, which is a second source for the numbering beside
+	/// the step check's boundary guards.
 	/// </summary>
 	[TestMethod]
 	public void TheStepsAreTheEnginesOwnTable()

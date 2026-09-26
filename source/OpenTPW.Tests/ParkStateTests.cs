@@ -5,8 +5,7 @@ using System.IO;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// The park as it is being played - <see cref="ParkState"/>, which is the layer four separate features
-/// were each waiting on.
+/// The park as it is being played - <see cref="ParkState"/>.
 ///
 /// <para>
 /// <b>The assertion that carries this file is the identity one.</b> A running park has exactly one of

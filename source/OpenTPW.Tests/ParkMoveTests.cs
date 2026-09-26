@@ -12,7 +12,7 @@ namespace OpenTPW.Tests;
 ///
 /// <para>
 /// <b>Each calls <see cref="ParkBuilding.Move(ParkState, ParkWorld, ParkItemCatalogue, ParkObjects?, ParkRides?,
-/// int, int, int, int?)"/></b>, the code its mutation changes. With no objects to stand a model in, a
+/// int, int, int, int?, ParkPeople?)"/></b>, the code its mutation changes. With no objects to stand a model in, a
 /// put-down that passes every test answers that it would not load, so every answer here comes from the real
 /// refusals. The hand is static, and each test empties it after itself.
 /// </para>

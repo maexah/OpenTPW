@@ -10,18 +10,16 @@ namespace OpenTPW;
 /// the <see cref="Level"/>.
 /// </para>
 /// <para>
-/// <b>It exists because four separate features were each waiting on it, not as a tidying.</b> Two
-/// workarounds in the tree said so outright: <c>PeepBehaviour.Takings</c> and
-/// <c>PeepBehaviour.VisitorsToDate</c> each carried a number that belongs to the park, each documented at
-/// its own site as living there only because the park had nowhere to keep it. Both are folded in here.
-/// The same gap blocked litter on cells and the admission gate's per-cell occupancy.
+/// <b>It holds what a running park moves and its file cannot</b> - among them the balance, the gate's
+/// takings and the visitor count, each cell's litter and occupants, the object chain, the queues, and
+/// each object's takings and nominee.
 /// </para>
 /// <para>
 /// <b>What is deliberately NOT here: per-object dirt.</b> It wants a consumer, and nothing reads it yet -
 /// a layer built for a consumer that does not exist is the speculative kind this project does not add.
-/// <b>Ride state was named here too, and no longer belongs in this list:</b> a ride does operate now, so
-/// the takings and the per-object nominee below arrived with the consumer that needed them. The cells
-/// are the same case: they are read by the handyman's litter search.
+/// A ride's operation reads the per-object nominee and the gate reads the cells' occupant lists; the
+/// cells' litter is read only by <see cref="LitteredCells"/>, because the handyman's litter search is not
+/// built (<see cref="StaffBehaviour"/>).
 /// </para>
 /// </summary>
 public sealed class ParkState
@@ -47,7 +45,7 @@ public sealed class ParkState
 
 	/// <summary>
 	/// The park being played, or null outside one - the arrangement <see cref="ParkObjects.Current"/>
-	/// and <see cref="ParkPeople.Current"/> already use, and this was the layer without it. The ground
+	/// and <see cref="ParkPeople.Current"/> use. The ground
 	/// needs it to draw cells a player has changed, which it cannot ask the save for. Cleared as the park
 	/// ends - see <see cref="ForgetCurrent"/>.
 	/// </summary>
@@ -107,7 +105,7 @@ public sealed class ParkState
 	/// back to <c>default</c> when it has no save, and a default cell is <b>type 0</b>: every cell in the
 	/// park would read as bare ground, which silently rewrites every route, every queue walk and every
 	/// edge test rather than failing. Tying the overlay to the park it was seeded from makes a mismatch
-	/// answer from the file, which is exactly what it did before any of this existed.
+	/// answer from the file.
 	/// </remarks>
 	public static ParkWorld.MapCell CellFor( ParkWorld? park, int x, int y )
 	{
@@ -202,21 +200,12 @@ public sealed class ParkState
 	}
 
 	/// <summary>
-	/// A thing id nothing is using. One past everything the park can see, which is the same rule
-	/// <see cref="ParkPeople"/> follows for a new guest - and carries the same caveat: it is not
-	/// provably free, it is past everything visible.
-	/// </summary>
-	/// <summary>
 	/// The next free thing id. <b>Objects and people share one numbering, and this is the only thing
 	/// that hands ids out of it.</b>
 	///
 	/// <para>
-	/// <b>It counts rather than rescanning, and that is the fix for a measured collision.</b> While
-	/// this rescanned the save, and <see cref="ParkPeople"/> kept a counter of its own, there were two
-	/// allocators over one space and each was blind to the other's additions: a rescan never sees a
-	/// hired staff member, and a private counter never sees a bought object. Both were seeded
-	/// correctly from the same maximum and drifted apart on the first allocation - a ride bought and a
-	/// cleaner hired in one run were both handed <b>thing 43</b>.
+	/// <b>It counts rather than rescanning</b>, so that there is one allocator over the one space: a rescan
+	/// never sees a hired staff member, and a private counter never sees a bought object.
 	/// </para>
 	/// <para>
 	/// Counting also stops an id being handed out twice after the thing holding it is sold, which a
@@ -434,8 +423,8 @@ public sealed class ParkState
 
 	/// <summary>
 	/// The two facts on their own, for a test that has no park to load - the arrangement
-	/// <see cref="PeepBehaviour"/> already has, and it exists for the same reason: the only park that can
-	/// be loaded is saved open, so every branch that turns on a shut park would otherwise be unreachable.
+	/// <see cref="PeepBehaviour"/> has, and for the same reason: the only park that can be loaded is saved
+	/// open, and this starts one shut without loading anything.
 	/// </summary>
 	public ParkState( bool parkIsClosed, int visitorsToDate, int balance = 0 )
 	{
@@ -450,10 +439,8 @@ public sealed class ParkState
 	/// What the park is worth now - the balance the save was left with, moved by everything since.
 	///
 	/// <para>
-	/// <b>This is one number where it used to be two.</b> The interface added the save's balance to a
-	/// running total held on the behaviours, because nothing could move the saved one. It can now, which
-	/// is what <see cref="Take"/> does - and that matches the original, where taking a fee adds it
-	/// straight onto <c>mBalance</c> (<c>FUN_004d0600</c>).
+	/// <b>It is one number</b>, which <see cref="Take"/>, <see cref="Spend"/> and <see cref="Refund"/> move -
+	/// as in the original, where taking a fee adds it straight onto <c>mBalance</c> (<c>FUN_004d0600</c>).
 	/// </para>
 	/// </summary>
 	public int Balance { get; private set; }
@@ -499,10 +486,8 @@ public sealed class ParkState
 	/// <para>
 	/// <b>It lives on the running state for the reason <see cref="Balance"/> does.</b>
 	/// <see cref="ParkWorld"/> describes a file and may never be written to, and
-	/// <c>ParkAdmission.Fee</c> is read-only and captured once when the gate is built - so a player
-	/// changing the ticket price had nowhere to put the new number. The entry-price screen is the
-	/// consumer that needed it; before that screen there was nothing to move it, which is why this
-	/// was not here already.
+	/// <c>ParkAdmission.Fee</c> is read-only and captured once when the gate is built - so the ticket price
+	/// the entry-price screen sets is kept here.
 	/// </para>
 	/// </summary>
 	public int AdmissionFee { get; private set; }
@@ -574,7 +559,7 @@ public sealed class ParkState
 	}
 
 	/// <summary>
-	/// Pays for something - the first thing in this project ever to take money OUT of a park.
+	/// Pays for something - the one way money leaves a park.
 	///
 	/// <para>
 	/// <b>It does not refuse, and the refusal is deliberately the caller's.</b> The original tests
@@ -649,9 +634,8 @@ public sealed class ParkState
 	public static bool OnMap( int x, int y )
 		=> x >= 0 && y >= 0 && x < ParkWorld.MapSize && y < ParkWorld.MapSize;
 
-	// The queues - once the only structure a running park changed that the save could not hold for it,
-	// and now one of three, beside the takings and the per-object nominee below:
-	// ParkWorld describes a file and is immutable, so a guest joining a queue has nowhere to write. The
+	// The queues: ParkWorld describes a file and is immutable, so a guest joining a queue has nowhere
+	// to write. The
 	// shape is the original's own - a head on the object (mFirstInQ) and a doubly-linked list through the
 	// guests themselves (mQNext, mQPrev) - kept here rather than on Peep so that the whole structure lives
 	// in one place and is seeded once.
@@ -764,10 +748,8 @@ public sealed class ParkState
 	/// <para>
 	/// <b>It also covers a thing being placed for the first time, which a from/to move cannot.</b> The
 	/// original links a thing into its cell when it is CREATED (<c>FUN_0050afe0</c>) as well as when it
-	/// moves. This method was written as a from/to move first, and the cost showed up in a running park
-	/// immediately: <b>the one guest the save leaves standing still was never in any cell's list</b>, so
-	/// the gate could not see them and they waited at the booth for ever while the five who walked there
-	/// went through. Asking "where are you now" answers both cases with one call.
+	/// moves, and asking "where are you now" answers both cases with one call: a guest the save leaves
+	/// standing still is entered into their cell's list on their first turn.
 	/// </para>
 	/// </summary>
 	public void StandOn( int thingId, int x, int y )
@@ -791,8 +773,7 @@ public sealed class ParkState
 	}
 
 	/// <summary>
-	/// Takes a thing off the map entirely - a guest who has gone home, which is the only thing that
-	/// leaves a park so far.
+	/// Takes a thing off the map entirely - a guest who has gone home, or a member of staff dismissed.
 	///
 	/// <para>
 	/// <b><see cref="LeaveCell"/> is not enough on its own.</b> It unlinks the cell's own chain but
@@ -854,13 +835,9 @@ public sealed class ParkState
 	/// queueing.
 	/// </para>
 	/// <para>
-	/// <b>Leaving that comparison unbuilt is what stopped every queue in the park dead after one rider,
-	/// and it took playing the game to see it.</b>
-	/// <see cref="ParkRideOperation.Invite"/> will only call forward a head whose <c>mQueuePos</c> is
-	/// nought; <see cref="PeepBehaviour"/> wrote the place once when a guest joined and never again, so
-	/// the guest who became head still carried the 1 they joined with and was refused for ever. Measured
-	/// in a running park: one guest rode, and the three behind them stood on the same cell for the whole
-	/// of the rest of the run.
+	/// <b>That comparison is what keeps a queue moving.</b> <see cref="ParkRideOperation.Invite"/> will
+	/// only call forward a head whose <c>mQueuePos</c> is nought, and a place written only when a guest
+	/// joined would leave the guest who became head carrying the 1 they joined with, refused for ever.
 	/// </para>
 	/// <para>
 	/// <b>With <paramref name="stillQueueing"/> it gives up where the original does</b>: at the first guest
@@ -1055,9 +1032,8 @@ public sealed class ParkState
 	/// </summary>
 	internal Action<int>? QueueRemeasured { get; set; }
 
-	// Who a ride has picked out to load next - the object's own mPersonBeingLoaded at +0x6c. It is
-	// per-object runtime state, which this class deliberately had none of; the remarks at the top said so
-	// and said why ("a layer built for a consumer that does not exist"). Admitting IS that consumer now.
+	// Who a ride has picked out to load next - the object's own mPersonBeingLoaded at +0x6c, per-object
+	// runtime state that admitting reads.
 	private readonly Dictionary<int, int> _beingLoaded = [];
 
 	/// <summary>

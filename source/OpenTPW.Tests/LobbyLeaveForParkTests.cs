@@ -19,8 +19,8 @@ namespace OpenTPW.Tests;
 /// <b>What these can and cannot see.</b> The arithmetic is pinned directly, and the sequence itself is
 /// stepped through <see cref="LobbyCameraMode.StepLeaving"/> with <see cref="Time.Delta"/> set, from the
 /// Enter to the park being asked for. <see cref="LobbyCameraMode.Update"/> placing the camera from what the
-/// sequence answers needs a lobby's islands, and the panel's Enter asking for the sequence needs its UI, so
-/// those two rest on the capture.
+/// sequence answers needs a lobby's islands, so it rests on the capture. The panel's Enter
+/// asking for the sequence is driven by <see cref="LobbyEscapeTests"/> and <see cref="LobbyKeysOnReleaseTests"/>.
 /// </para>
 /// </summary>
 [TestClass]

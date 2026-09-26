@@ -31,7 +31,8 @@ public interface IArchive : IFileFormat, IDisposable
 	/// <summary>
 	/// 
 	/// </summary>
-	/// <param name="internalPath"></param>
+	/// <param name="offset"></param>
+	/// <param name="length"></param>
 	/// <returns></returns>
 	byte[] GetData( int offset, int length );
 

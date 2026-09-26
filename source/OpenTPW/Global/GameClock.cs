@@ -7,7 +7,7 @@ namespace OpenTPW;
 /// This is not <see cref="Time"/>. That clock measures frames and never stops for a menu: the
 /// interface, the pointer, the button glints and the camera all run on it, and they have to carry on
 /// while the world is held. This one measures how much of the <i>game</i> has happened, and a park's
-/// menu, message box or options screen stops it dead.
+/// menu, message box, options screen or map stops it dead.
 /// </para>
 /// <para>
 /// <b>The original keeps one of these as a global object at 0x785970</b>, with GameClock_Pause
@@ -44,7 +44,7 @@ namespace OpenTPW;
 /// not in the executable, and nothing measured supports "every placed sound attenuates to nothing". What
 /// the lift decides is WHICH sounds, not how much: a listener cannot reach one that was never placed
 /// against it.
-/// One caller in the game also freezes the interface's own timers, but none of the three screens
+/// One caller in the game also freezes the interface's own timers, but none of the four screens
 /// modelled here is that caller: they all pass (0,0), which takes the other branch.
 /// </para>
 /// <para>
@@ -54,8 +54,7 @@ namespace OpenTPW;
 /// at 0x00409353. The state machine sets its base per scene, 0 as the lobby comes up (0x0054e682) and
 /// 1 as an ordinary park loads (0x0054ea4c); each screen that pauses then <i>borrows</i> it, zeroing
 /// it while it holds the pause and restoring 1 before resuming. So the one field means both "a park
-/// is running" and "nobody already holds the pause", and reading it as only one of those - which this
-/// comment did, in both directions at different times - is what went wrong.
+/// is running" and "nobody already holds the pause", and it has to be read as both.
 /// </para>
 /// <para>
 /// The lobby's own Escape menu never reaches that test at all. GameMenu_Open (0x0048c830) first
@@ -138,8 +137,8 @@ public static class GameClock
 	public static int TicksDue { get; private set; }
 
 	/// <summary>
-	/// Ticks run since the game started. The original keeps this too, incrementing 0x00877d34 once
-	/// per step of the park's loop. Reported by the debug console's <c>state</c>, which is how a
+	/// Ticks run since the game started, never reset. The original's own count, 0x00877d34, goes up
+	/// once per step of the park's loop and is reset to zero on state entry (<c>docs/exe/boot.md</c>). Reported by the debug console's <c>state</c>, which is how a
 	/// pause can be checked without looking at pixels.
 	/// </summary>
 	public static int Ticks { get; private set; }

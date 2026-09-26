@@ -10,8 +10,9 @@ namespace OpenTPW.Tests;
 ///
 /// <para>
 /// These read real game files and are skipped where there is no installation: see <see cref="GameData"/>.
-/// The peeps are built through the static factory rather than by constructing the entity, so nothing
-/// here needs a graphics device or leaves anything behind in the world.
+/// Nothing here needs a graphics device. The peeps are built through the static factory rather than by
+/// constructing the entity, except in the arrival test, whose <see cref="ParkPeople"/> is left in
+/// <see cref="Entity.All"/>.
 /// </para>
 /// </summary>
 [TestClass]
@@ -86,8 +87,7 @@ public class ParkPeopleTests
 		Assert.IsNotNull( people.WalkFor( id ), "the walk, without which they never move" );
 		Assert.AreEqual( visitors + 1, state.VisitorsToDate, "the park's own count of who has come" );
 
-		// Not a thing the file already named. This is the assertion that would have caught the id being
-		// taken from a documented list rather than computed - the list was a guest short.
+		// Not a thing the file already named.
 		Assert.IsFalse( world.People.Any( person => person.ThingId == id ),
 			$"id {id} already belongs to a person in the save" );
 		Assert.IsFalse( world.Objects.Any( placed => placed.ThingId == id ),
@@ -100,8 +100,9 @@ public class ParkPeopleTests
 	}
 
 	/// <summary>
-	/// Only guests are simulated. The five staff share the person base and then carry a block of their
-	/// own that nothing reads, and five state machines of their own that nothing runs, so taking them in
+	/// Only guests are in <c>PeepsIn</c>'s list. The five staff share the person base and then carry a block
+	/// of their own and five state machines of their own, which <c>StaffIn</c> and <see cref="StaffBehaviour"/>
+	/// read and run apart, so taking them in
 	/// would mean ticking guest needs over fields that are not needs.
 	/// </summary>
 	[TestMethod]
@@ -140,11 +141,10 @@ public class ParkPeopleTests
 
 	/// <summary>
 	/// <b>Every guest arrives knowing how far along a route they had got.</b> This is the join between the
-	/// navigator, which had been built and left dormant, and the guests the park actually simulates -
-	/// nothing constructed one from real data until now.
+	/// navigator and the guests the park actually simulates.
 	///
 	/// <para>
-	/// <b>This test was called "carrying the route the save gave them", and that was an overclaim.</b>
+	/// <b>What travels here is not the route itself.</b>
 	/// Nothing below is a waypoint, because the save reader deliberately does not parse
 	/// <c>subpath_buffer[]</c> - only <c>path_buffer_count - 1</c> of its entries are ever written, so the
 	/// rest hold the uninitialised fill or a stale distance from an earlier route. The waypoints are the
@@ -206,7 +206,7 @@ public class ParkPeopleTests
 	}
 
 	/// <summary>
-	/// Sixteen ticks of the real park, which is half a second of play.
+	/// Sixteen thing sweeps of the real park, which is about four seconds of play.
 	///
 	/// <para>
 	/// Two things are pinned and they guard each other. Every guest takes exactly four of those sixteen
@@ -301,9 +301,7 @@ public class ParkPeopleTests
 	/// <b>Every vehicle script parks three times a circuit</b>, each time spinning on <c>VAR_TRIGGER</c>
 	/// until something writes it. Releasing only one of the three is not a partial fix but a park that
 	/// empties: arrivals are gated on the vehicle answering 2, so a bus stopped at 4 means nobody ever
-	/// arrives again. That was measured in a live park before this rule existed - pc 90, status 4,
-	/// unmoved over a hundred seconds - so these are the states that were actually observed, not a
-	/// guessed set.
+	/// arrives again.
 	/// </para>
 	///
 	/// <para>

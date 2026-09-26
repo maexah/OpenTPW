@@ -7,8 +7,7 @@ internal static class Utility
 {
 	/// <summary>
 	/// Opens a file in ImHex, if this machine has it. Named without a path so it is taken from PATH wherever
-	/// it was installed - it used to be a hard-coded C:\Program Files path, which named the wrong place on
-	/// Windows as often as not and named nothing at all anywhere else.
+	/// it was installed.
 	/// </summary>
 	public static void LaunchImHex( string targetFile ) => Launch( "imhex", $"\"{targetFile}\"" );
 

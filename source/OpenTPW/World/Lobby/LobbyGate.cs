@@ -9,8 +9,7 @@ namespace OpenTPW;
 /// hallow's only its two rails, because the structure they hang in is part of the island model.
 /// Fantasy and space have no gateway on their island at all: their gate model is the whole
 /// thing - fantasy's worm and its leaf sign, space's hatch and its two screens - which is why
-/// those two parks had no front gate until this was built for every island rather than just the
-/// jungle.
+/// every island builds one, not just the jungle.
 ///
 /// Its doors are the clearest example of a rotation animation in the game: Jun_gateM1 swings
 /// door01 a quarter turn and door02 back the other way, and Jun_gateM2 is exactly the inverse.

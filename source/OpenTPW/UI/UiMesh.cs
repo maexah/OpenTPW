@@ -145,7 +145,7 @@ internal sealed class UiMesh
 			_authoredHeight = _top - _bottom;
 
 			// Wrapping bleeds a texture's far edge into its near one wherever a mesh maps it edge to
-			// edge, which the buttons all do - the purple button grew a pale line down its left side.
+			// edge, which the buttons all do - it draws a pale line down the purple button's left side.
 			// So a mesh whose texture coordinates stay inside the texture is clamped, and only one
 			// that reaches past it, to repeat it, wraps.
 			var withinTexture = mesh.TexCoords.All( uv => uv.X >= -0.001f && uv.X <= 1.001f && uv.Y >= -0.001f && uv.Y <= 1.001f );

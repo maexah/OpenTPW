@@ -56,8 +56,8 @@ public class ParkGuestPlacementTests
 	/// <para>
 	/// The second half is the half that matters: asserting only that the answer equals the simulation's
 	/// position would still pass if the simulation happened to sit on the saved position. So the saved
-	/// position is asserted to be a <i>different</i> answer first - which is exactly the mutation that got
-	/// through before this test existed.
+	/// position is asserted to be a <i>different</i> answer first - which is what catches the mutation that draws
+	/// everyone at the position the save left them.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -84,8 +84,8 @@ public class ParkGuestPlacementTests
 		Assert.AreNotEqual( sprite.Y, y, "nor the saved y" );
 
 		// <b>The heading is deliberately NOT a guard here, and the reason is worth more than the guard
-		// would have been.</b> This test first asserted that the angle must differ from the file's too, by
-		// symmetry with the two above - and it failed. After twenty ticks the walk works out 1067 and the
+		// would have been.</b> The angle cannot be asserted to differ from the file's, by symmetry with the
+		// two above: after twenty ticks the walk works out 1067 and the
 		// save separately records 1067. That is not a value that failed to move: it is two independent
 		// sources agreeing on an eleven-bit heading, because thing 42 walks the way the file already had
 		// them facing. The walk is told nothing about the saved angle except as a starting value, and a
@@ -95,8 +95,8 @@ public class ParkGuestPlacementTests
 	}
 
 	/// <summary>
-	/// With no simulation running this park, the saved position is what gets drawn - which is what happened
-	/// before any of this existed, so a park with nobody simulating looks exactly as it did.
+	/// With no simulation running this park, the saved position is what gets drawn, so a park with nobody
+	/// simulating looks exactly as its save left it.
 	/// </summary>
 	[TestMethod]
 	public void WithNoSimulationTheSavedPositionIsDrawn()
@@ -125,15 +125,15 @@ public class ParkGuestPlacementTests
 	/// </summary>
 	/// <remarks>
 	/// <b>Written for the same reason this whole file was.</b> Resolving a seat needs
-	/// <c>ParkObjects</c>, which wants a graphics device, so making the seat lookup answer nothing left
-	/// all 769 tests green - every rider would have gone back to standing in the queue and the suite
-	/// would not have said a word. The arithmetic below needs no device, so the CHOICE is pinned here;
+	/// <c>ParkObjects</c>, which wants a graphics device, so no test reaches the seat lookup: one that
+	/// answered nothing would put every rider back in the queue and the suite would not say a word. The
+	/// arithmetic below needs no device, so the CHOICE is pinned here;
 	/// that a seat is correctly resolved rests on the ride census and the screenshots.
 	/// </remarks>
 	[TestMethod]
 	public void AGuestARideIsCarryingIsDrawnOnTheRide()
 	{
-		// Where the walk says they are - the queue cell, which is where riders used to be drawn.
+		// Where the walk says they are - the queue cell, where a rider's walk goes on reporting them.
 		const float WalkX = 525.4f;
 		const float WalkY = 234.0f;
 		const float Ground = 0.5f;
@@ -191,10 +191,8 @@ public class ParkGuestPlacementTests
 	/// whole cell size further along, and not moved at all on the other axis.
 	///
 	/// <para>
-	/// <b>This replaced a version of itself that was vacuous, and it is worth saying why rather than
-	/// quietly swapping it.</b> The first attempt built two walks from the same person, moved neither, and
-	/// asserted they landed in the same place. Every assertion in it was true; not one of them was about
-	/// the scale its name promised. Two navigators placed a known distance apart is what actually tests it.
+	/// <b>Two navigators placed a known distance apart is what tests the scale.</b> Two walks built from
+	/// the same person and moved by neither land in the same place whatever the scale is.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -228,8 +226,8 @@ public class ParkGuestPlacementTests
 	/// <para>
 	/// <b>The default is asserted as carefully as the blend, because that is what makes the change
 	/// safe.</b> One is the default, and alpha one returns the position the simulation actually reached,
-	/// so every caller that knows nothing about frames - including the four tests above, written before
-	/// any of this existed - keeps exactly the answer it always had.
+	/// so every caller that knows nothing about frames - including four of the tests above - is answered
+	/// as if nothing were blended.
 	/// </para>
 	/// </summary>
 	[TestMethod]

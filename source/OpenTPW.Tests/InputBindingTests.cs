@@ -8,7 +8,7 @@ namespace OpenTPW.Tests;
 /// <summary>
 /// A chord should fire one shortcut. The original compares a binding's modifiers for equality and
 /// not for containment, so Ctrl+C is Close Park and nothing else, and a plain C is camcorder mode
-/// and nothing else. Eight of the cases here fail against the old rule that asked only for a
+/// and nothing else. Eight of the cases here fail against a rule that asks only for a
 /// binding's own keys: the Ctrl+C/H/S/V/P rows, EitherControlKeyStandsForControl,
 /// AModifierNobodyAskedForStopsABinding, and the last assert of CloneIsTheControlKeyBeingDown. The
 /// rest pin behaviour that has to keep working - the Ctrl+O row has no plain-O shortcut to collide
@@ -21,8 +21,8 @@ public class InputBindingTests
 	private static IReadOnlyCollection<Key> Held( params Key[] keys ) => keys;
 
 	/// <summary>
-	/// The six chords the game actually ships, each with the plain-key shortcut it used to fire as
-	/// well. Ctrl+O has no plain-O shortcut to collide with, so it stands as the control case.
+	/// The six chords the game actually ships, each with the plain-key shortcut it must not also fire.
+	/// Ctrl+O has no plain-O shortcut to collide with, so it stands as the control case.
 	/// </summary>
 	private static IEnumerable<object[]> Chords => new[]
 	{
@@ -120,7 +120,7 @@ public class InputBindingTests
 	/// <summary>
 	/// Matching a chord correctly is not enough on its own, because the binding set is rebuilt from
 	/// what is held every frame: letting go of Ctrl while C is still down makes the plain-C binding
-	/// match for the first time, and that looked exactly like a fresh press. Ctrl+C entered camcorder
+	/// match for the first time, and that looks exactly like a fresh press: Ctrl+C would enter camcorder
 	/// mode after all - on the release rather than the press.
 	/// </summary>
 	[TestMethod]

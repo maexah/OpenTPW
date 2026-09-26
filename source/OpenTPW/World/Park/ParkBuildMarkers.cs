@@ -73,8 +73,9 @@ public sealed class ParkBuildMarkers : ModelEntity
 
 	/// <summary>
 	/// How fast the wave moves. <b>The original steps 0.1 per rendered frame</b>, so its speed followed its
-	/// frame rate; this takes 30 frames a second, the rate the project already assumes for the
-	/// original's other per-frame steps (the menu colour ramp, <c>docs/exe/ui.md</c>), and runs off
+	/// frame rate; this takes 30 frames a second, the rate the menu colour ramp takes for its own
+	/// per-frame step (<c>docs/exe/ui.md</c>; the lobby's per-frame rolls take 25,
+	/// <see cref="LobbyScript.AssumedFrameRate"/>), and runs off
 	/// <see cref="Time.Delta"/> so it is the same speed at any frame rate here.
 	/// </summary>
 	private const float WavePerSecond = 0.1f * 30f;

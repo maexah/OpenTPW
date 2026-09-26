@@ -52,16 +52,13 @@ namespace OpenTPW;
 /// appear together and share the one slot.
 ///
 /// The eighth pointer at +0x34 that no flag bit owns is the EASING CURVE TABLE, and it is read
-/// here now - see RotationTrack.Ease. It is set on 1768 tracks and every one of them is a
+/// here - see RotationTrack.Ease. It is set on 1768 tracks and every one of them is a
 /// rotation track (of 3039), so it is an optional extra for rotation rather than a channel in
 /// its own right.
 ///
-/// A record is EIGHT BYTES and the ushort at a key's +0x02 indexes them. That stride is what an
-/// earlier note here was missing: read at no fixed length the records looked ragged and about a
-/// third of them non-monotonic, and the "byte ramp" it quoted (32, 66, 105, 141, 176, 208, 233,
-/// 249) turns out to be exactly curve 0 of the advisor's first clip, read at the right stride by
-/// luck. Measured at eight over the 1,166 clips whose track table validates: 1,759 of 3,022
-/// rotation tracks carry a table and 1,263 do not.
+/// A record is EIGHT BYTES and the ushort at a key's +0x02 indexes them. Measured at eight over
+/// the 1,189 clips whose track table validates: 1,768 of 3,039 rotation tracks carry a table and
+/// 1,271 do not.
 ///
 /// Bit 0x4000 is a modifier rather than a channel: it makes the +0x28 slot point at a different
 /// structure, and the engine's loader branches on it before reading any morph table. Thirty
@@ -88,10 +85,8 @@ namespace OpenTPW;
 /// ROTATION (bit 0x8)
 ///
 /// A keyframe is 20 bytes: ushort frame, ushort EASING CURVE ID, then a float quaternion x, y,
-/// z, w. That second field was recorded here as "flags (0 or 0xFFFF)", which was wrong in a way
-/// worth naming: 0xFFFF does mean "none", but 0 is not a cleared flag - it is curve number nought,
-/// the commonest id in the game, so the two values it was seen taking were a real index and a
-/// sentinel. Ids reach 100. See RotationTrack.Ease.
+/// z, w. 0xFFFF means "none", and 0 is not a cleared flag
+/// but curve number nought, the commonest id in the game. Ids reach 100. See RotationTrack.Ease.
 ///
 /// All 3039 rotation tracks in the game decode to strictly ascending frame indices and unit
 /// quaternions (within 1e-2), which is the check applied here.
@@ -161,8 +156,9 @@ namespace OpenTPW;
 /// it follows at its record's +0x52. A thing's journey can be split across clips: the bus's three run
 /// 42.4 to 56.0, 56.0 to 99.8 and 99.8 to 142.5, consecutive legs of one lap of 100.
 ///
-/// Bits 0x400 (62 tracks) and 0x800 (12) set alongside this one without owning a slot of their own and
-/// are still undecoded, like 0x4000. Neither changes how the record reads, measured across all 71.
+/// Bits 0x400 (62 tracks) and 0x800 (12) set alongside this one without owning a slot of their own.
+/// 0x400 turns the thing to face the way it is going - see PathTrack.OrientsAlongRoute - and 0x800 is
+/// undecoded, like 0x4000. Neither changes how the record reads, measured across all 71.
 ///
 /// VISIBILITY (bit 0x20000)
 ///
@@ -177,18 +173,16 @@ namespace OpenTPW;
 /// UV ANIMATION (bit 0x10000)
 ///
 /// The slot at +0x2C points at a 20-byte descriptor: uint entry count n at +0x00, uint -> index
-/// table at +0x04, uint total component count at +0x08, uint -> duration table at +0x0C, uint ->
-/// value table at +0x10. The three tables are contiguous: indices are n * 4 bytes, values are
-/// 8 * (total components), durations are n * 4.
+/// table at +0x04, uint total key count at +0x08, uint -> frame table at +0x0C, uint -> value
+/// table at +0x10. The three tables are contiguous: indices are n * 4 bytes, then values are
+/// 8 * (total keys), then frames are 2 * (total keys).
 ///
-///   - index table: per entry, ushort first component and ushort component count. UV components
-///     are two per coordinate, so an entry covering a whole UV is (2i, 2). A channel that
-///     animates every UV of its mesh is the identity (2i, 2) with n == the mesh's vertex order
-///     length; one that animates a subset names the components it wants.
-///   - value table: per component, a start float and an end float.
-///   - duration table: per entry, a ushort pair whose high half is the end frame.
+///   - index table: per entry, ushort first key and ushort key count, the runs packed end to
+///     end. An entry is one vertex of the mesh - see UvTrack.
+///   - value table: per key, a (u, v) pair of floats.
+///   - frame table: per key, a ushort frame number.
 ///
-/// All 690 UV channels in the game satisfy every one of those invariants - the component counts
+/// All 690 UV channels in the game satisfy every one of those invariants - the key counts
 /// sum to the stated total, and both table sizes fall exactly where the count says they should.
 /// Jun_isleM1 scrolls Post Ripples01's 128 UVs by (-1,-1) over 100 frames, and 104 of the
 /// Island mesh's 298 UVs by the same delta, which is the shoreline water lapping the beach.
@@ -206,10 +200,10 @@ namespace OpenTPW;
 /// FirstFrame and LastFrame still span only rotation, morph and UV keys, so a file whose tracks move
 /// nothing but positions and visibility reads as having no span.
 ///
-/// That was recorded here as 19 files, and it is wrong. Measured 2026-09-15 against the span each file
-/// declares in its own animation block, over the 1140 clips under levels/ that carry one: 159 disagree
-/// with what the keys cover - 129 where the keys fall short, of which 114 read as no span whatever, and
-/// 30 where the keys run past the declared end. Every one of the 114 declares a real length and some are
+/// Measured against the span each file
+/// declares in its own animation block, over the 1,278 clips in the game that carry one: 164 disagree
+/// with what the keys cover - 127 where the keys fall short, every one of which reads as no span, and
+/// 37 where the keys run past the declared end. Every one of the 127 declares a real length and some are
 /// long, the ferries running 600 frames. See DeclaredFirstFrame, which is the span the engine itself
 /// answers with and the one to use where a clip's length is wanted rather than its key coverage.
 /// </summary>
@@ -288,8 +282,8 @@ public class AnimationFile : BaseFormat
 		/// track's box, the first keyframe lands on the mesh's rest vertices to within one and a
 		/// half quantisation steps in 346 of them; decoded in the mesh's bounding box, in 63. It
 		/// shows most in the advisor's clip 14, whose antennae are quantised into a box nearly twice
-		/// as tall as in his other clips: read in the mesh's box, they came out at a little over half
-		/// their height for as long as he rose, then jumped back when his next clip began.
+		/// as tall as in his other clips: read in the mesh's box, they come out at a little over half
+		/// their height for as long as he rises, then jump back when his next clip begins.
 		/// </summary>
 		public Vector3 DecodePosition( uint raw )
 			=> new( (Field( raw, 0 ) * Step.X) + Centre.X, (Field( raw, 10 ) * Step.Y) + Centre.Y, (Field( raw, 20 ) * Step.Z) + Centre.Z );
@@ -393,15 +387,13 @@ public class AnimationFile : BaseFormat
 		/// runs 0 -> curve[0] -> ... -> curve[7] -> 1, and the engine picks its segment by truncating
 		/// <c>t * <see cref="Segments"/></c> and lerps across it with what is left over (0x00471c83-0x00471d32).
 		/// That implied one at the end is doing real work: the last byte is 255 in only <b>112 of the game's
-		/// 12,428 curve entries</b>, so almost every curve climbs to its finish in that ninth segment.
+		/// 12,451 curve entries</b>, so almost every curve climbs to its finish in that ninth segment.
 		/// </para>
 		///
 		/// <para>
-		/// <b>A curve need not rise all the way along, and 2,797 of those 12,428 entries do not.</b> One that
+		/// <b>A curve need not rise all the way along, and 2,800 of those 12,451 entries do not.</b> One that
 		/// dips takes the pose back the way it came for a moment, which is an author's overshoot and not a
-		/// bad read - so this reproduces it rather than sorting it. An earlier note here called a third of
-		/// these non-monotonic, which was measured before the record length was known; at the true stride of
-		/// eight it is about 22%.
+		/// bad read - so this reproduces it rather than sorting it. That is about 22% of them.
 		/// </para>
 		/// </summary>
 		public float Ease( int key, float t )
@@ -412,7 +404,7 @@ public class AnimationFile : BaseFormat
 			var id = CurveIds[key];
 
 			// A track whose table could not be read keeps every blend even, which is what an id past the
-			// end of Curves means. No file in the game is in that state - all 1,759 tracks carrying an id
+			// end of Curves means. No file in the game is in that state - all 1,768 tracks carrying an id
 			// carry a table in range - so this is a guard against bad data rather than a path the game takes.
 			if ( id == NoCurve || id >= Curves.Length )
 				return t;
@@ -484,14 +476,13 @@ public class AnimationFile : BaseFormat
 	/// </para>
 	///
 	/// <para>
-	/// <b>This was read as a two-point ramp, and that is right only when an entry has exactly two keys.</b>
+	/// <b>An entry is a two-point ramp only when it has exactly two keys.</b>
 	/// Measured over every clip under levels/ on 2026-09-15: of 29,723 entries, 25,332 have two keys and
-	/// 4,391 do not, running as high as 105 - and those fall in <b>289 of the 670 UV tracks, 43%</b>. The
-	/// two readings size their tables identically, which is why the old one passed every bounds check it
-	/// had: a two-key entry packs so that its first key index is exactly twice its entry index, so
-	/// "component 2e, two components" and "key 2e, two keys" address the same bytes. The fountains and the
-	/// advisor's fan are the visible casualties - <c>fountainm.md2</c> carries 44 entries of five keys and
-	/// <c>fountainc.md2</c> 44 of ten, every one of which was flattened to its first and last.
+	/// 4,391 do not, running as high as 106 - and those fall in <b>289 of the 670 UV tracks, 43%</b>. A
+	/// two-key entry packs so that its first key index is exactly twice its entry index, so "component 2e,
+	/// two components" and "key 2e, two keys" address the same bytes, and a two-point reading passes every
+	/// bounds check. The fountains and the advisor's fan show the difference - <c>fountainm.md2</c> carries
+	/// 44 entries of five keys and <c>fountainc.md2</c> 44 of ten.
 	/// </para>
 	/// </summary>
 	public class UvTrack
@@ -501,7 +492,7 @@ public class AnimationFile : BaseFormat
 		/// <summary>Where each entry's keys begin in <see cref="Frames"/> and <see cref="Coordinates"/>.</summary>
 		public int[] FirstKey { get; init; } = Array.Empty<int>();
 
-		/// <summary>How many keys each entry has - two for most, and up to 105.</summary>
+		/// <summary>How many keys each entry has - two for most, and up to 106.</summary>
 		public int[] KeyCount { get; init; } = Array.Empty<int>();
 
 		/// <summary>One frame number per key, ascending within an entry.</summary>
@@ -536,7 +527,7 @@ public class AnimationFile : BaseFormat
 		/// before it, falling back to the final pair with a blend of one when the frame is past them all.
 		/// It compares against the <b>truncated</b> frame while blending with the exact one, which is
 		/// reproduced here. Its search would index the key before the first if a run ever began above frame
-		/// nought; <b>none does</b> - all 29,723 entries in the game start at frame 0 - so clamping there
+		/// nought; <b>none does</b> - all 34,696 entries in the game start at frame 0 - so clamping there
 		/// is a guard against bad data rather than a departure.
 		/// </para>
 		/// </summary>
@@ -712,7 +703,11 @@ public class AnimationFile : BaseFormat
 
 	public List<RotationTrack> RotationTracks { get; } = new();
 
-	/// <summary>False when this file holds no track we can read - callers must check it.</summary>
+	/// <summary>
+	/// False when this file holds no rotation, morph or UV track this reader can read - callers must check
+	/// it. Position, visibility and path tracks are read either way, so a clip carrying only those reads
+	/// false although those lists are filled.
+	/// </summary>
 	public bool IsValid { get; private set; }
 
 	public int FirstFrame { get; private set; }
@@ -725,15 +720,16 @@ public class AnimationFile : BaseFormat
 	/// <para>
 	/// <b>This is the length the engine uses</b>, and it is not the same number as
 	/// <see cref="FirstFrame"/> to <see cref="LastFrame"/>. A ride script asking how long an animation
-	/// runs is answered with the declared span times 1000/30 (0x004733b1-0x004733db), so a machine
-	/// computing it from keys answers a different question. Across the game's levels the two disagree on
-	/// <b>159 clips</b>: 129 declare longer than their keys cover and 30 declare shorter, and of those
-	/// 129 there are <b>114 our own reader rejects outright</b> - clips carrying position and visibility
-	/// only, which nonetheless declare real and sometimes long lengths (the ferries run 600 frames).
+	/// runs is answered with the declared span times <see cref="MillisecondsPerFrame"/>, truncated
+	/// (0x004733b1-0x004733db), so a machine computing it from keys answers a different question. Across
+	/// the game the two disagree on <b>164 clips</b>: 127 declare longer than their keys cover and 37
+	/// declare shorter, and all 127 are clips <b>our own reader rejects outright</b> - 89 with no tracks
+	/// at all and 38 with no rotation, UV or readable morph track - which nonetheless declare real and
+	/// sometimes long lengths (the ferries run 600 frames).
 	/// </para>
 	/// <para>
 	/// <b>Every clip in the game declares a start of nought and an end of at least one</b> - measured over
-	/// all 1,140 clips under levels/ that carry an animation block, with no exceptions in either
+	/// all 1,278 clips in the game that carry an animation block, with no exceptions in either
 	/// direction - so there is no such thing as a zero-length clip to guard against.
 	/// </para>
 	/// <para>
@@ -840,13 +836,12 @@ public class AnimationFile : BaseFormat
 			}
 		}
 
-		// A UV channel names only the frame each entry finishes on - it always ramps from the
-		// start of the animation, so these extend the last frame without ever moving the first.
+		// Every UV entry's keys begin at frame 0 - all 34,696 in the game - so these extend the
+		// last frame without ever moving the first.
 		//
 		// Left out, an animation that scrolls UVs and does nothing else spans no frames at all
-		// and so has no duration: fantasy's and hallow's islands are exactly that, and their
-		// shoreline water sat frozen while jungle's ran, because jungle's clip happens to morph
-		// a Dino alongside the same scroll and took its length from that.
+		// and so has no duration: fantasy's and hallow's islands are exactly that, while
+		// jungle's clip also morphs a Dino alongside the same scroll, which gives it a span of its own.
 		//
 		// This can only ever raise the maximum, never lower it, so no animation that already
 		// had a duration can change length. Across the game's 1151 animation files with readable
@@ -877,7 +872,7 @@ public class AnimationFile : BaseFormat
 			return false;
 
 		// Taken here, before anything below can turn the file away: a clip carrying no track this reader
-		// understands still declares a real length, and 114 of the game's clips are exactly that. Read as
+		// understands still declares a real length, and 127 of the game's clips are exactly that. Read as
 		// integers rather than floats - the float reading of these two words gives denormal nonsense
 		// (2.1E-43 where the integer is 150), which is how the type was settled rather than assumed.
 		DeclaredFirstFrame = BitConverter.ToInt32( data, (int)blockOffset + 0x04 );
@@ -908,7 +903,7 @@ public class AnimationFile : BaseFormat
 				ReadRotationChannel( data, offset, target );
 
 			// Bit 0x4000 makes the +0x28 slot point at a different structure entirely - the
-			// engine's own loader branches on it before touching the morph tables. Only 12
+			// engine's own loader branches on it before touching the morph tables. Thirty
 			// tracks in the game set it, but reading them as morph would follow bogus offsets.
 			if ( (flags & 0x1000) != 0 && (flags & 0x4000) == 0 )
 				ReadMorphChannel( data, BitConverter.ToUInt32( data, offset + 0x28 ), target );
@@ -1079,17 +1074,17 @@ public class AnimationFile : BaseFormat
 	/// bytes each, indexed by the id rather than by the key, which is why they are read as a table.
 	///
 	/// <para>
-	/// <b>An id is not a key number, though it very often looks like one.</b> Of the game's 12,428 keys that
-	/// name a curve, 9,358 name the one whose id matches their own position and <b>3,070 do not</b> - so
-	/// deriving the curve from the key index would be right four times in five and quietly wrong the rest.
+	/// <b>An id is not a key number, though it very often looks like one.</b> Of the game's 12,451 keys that
+	/// name a curve, 9,370 name the one whose id matches their own position and <b>3,081 do not</b> - so
+	/// deriving the curve from the key index would be right three times in four and quietly wrong the rest.
 	/// Ids run as high as 100, well past any key count, and the table is sized here by the highest one the
 	/// keys actually ask for.
 	/// </para>
 	///
 	/// <para>
 	/// No table means no easing rather than a rejected track: the caller keeps the rotation either way, and
-	/// 1,263 of the game's 3,022 rotation tracks have none - every key on those carries
-	/// <see cref="RotationTrack.NoCurve"/>, all 9,051 of them, so the two facts never disagree.
+	/// 1,271 of the game's 3,039 rotation tracks have none - every key on those carries
+	/// <see cref="RotationTrack.NoCurve"/>, all 9,086 of them, so the two facts never disagree.
 	/// </para>
 	/// </summary>
 	private static byte[][] ReadCurves( byte[] data, uint tableAt, ushort[] curveIds )

@@ -12,7 +12,7 @@ public partial class TextureFile
 		/// writes the dequantization buffer over [0, size*size). Step 2 writes the row buffer up to index
 		/// size*size inclusive - in half-scale mode the last row's wavelet lands one past the row - and
 		/// step 3's alpha path reads it up to 1.5 * size*size. A 256-pixel texture needs about 650 KB
-		/// here; the cube was 134 MB per decode.
+		/// here.
 		/// </summary>
 		public ImageDecodeState( int size )
 		{

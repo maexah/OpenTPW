@@ -395,13 +395,13 @@ internal sealed class UiRadioGroup : UiControl
 	/// own middle lands in.
 	/// </summary>
 	/// <remarks>
-	/// <b>One pixel of overhang is enough to tear a tab strip apart, and it did.</b> The staff screen's
-	/// fifth tab ends at 1738 where its group ends at 1737, so the group does not CONTAIN it, so it
-	/// resolved an anchor of its own - and its middle falls past the two-thirds line, so it took the
-	/// window's right edge where its four neighbours took the centre. On the 4:3 screen the original
-	/// lays out for, every anchor gives the same answer and nothing shows; on a 16:9 window the
-	/// scientists tab sat 160 pixels clear of the strip, and a click aimed at it landed in the gap and
-	/// selected nobody. Photographed as a row of guards under a label reading "Entertainers".
+	/// <b>One pixel of overhang is enough to tear a tab strip apart.</b> The staff screen's fifth tab
+	/// ends at 1738 where its group ends at 1737, so the group does not CONTAIN it, and left to itself
+	/// it would resolve an anchor of its own - its middle falls past the two-thirds line, so it would
+	/// take the window's right edge where its four neighbours take the centre. On the 4:3 screen the
+	/// original lays out for, every anchor gives the same answer and nothing shows; on a 16:9 window the
+	/// scientists tab would sit 160 pixels clear of the strip, and a click aimed at it would land in the
+	/// gap and select nobody.
 	/// <para>
 	/// The buy and hire screens' tabs are all comfortably inside their groups, so this changes nothing
 	/// for them - it only stops the next screen out by a pixel from being wrong in a way that is

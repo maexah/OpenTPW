@@ -34,7 +34,7 @@ namespace OpenTPW;
 /// reproduces that, which is why this counts ticks.
 /// </para>
 /// <para>
-/// What it comes to: a month is about two and a half minutes, a year about half an hour, and
+/// What it comes to: a month is about three minutes, a year about thirty-five minutes, and
 /// <c>Weather.DaysBetweenChanges</c> of 7 is <b>a change of weather roughly every forty seconds</b>.
 /// That last figure is why park weather is worth building at all - see <c>ParkWeather</c>.
 /// </para>
@@ -111,7 +111,7 @@ public static class GameCalendar
 	/// Index 4 lands on 0x007854f4, which is the Seasons array's own element-count slot, and then reads
 	/// <c>DaysOfWarning</c> and <c>DaysBetweenChanges</c> as though they were a tolerance and a chance -
 	/// so December's weather comes from three numbers that are not weather at all. This clamps instead,
-	/// which puts December with September to November. See the note in the memory on why filling a
+	/// which puts December with September to November. See CLAUDE.md rule 11 on why filling a
 	/// broken spot in the game's own style beats copying the breakage.
 	/// </para>
 	/// </summary>
@@ -121,9 +121,11 @@ public static class GameCalendar
 	private static int _dayAtLastUpdate;
 
 	/// <summary>
-	/// Starts the calendar over, as entering a park does - the original zeroes its counter at park
+	/// Starts the calendar over from nought. The original zeroes its counter, <c>mGameTick</c>, at park
 	/// init (<c>MOV dword ptr [EBP + 0x1da70c],EBX</c> at 0x00515865, in the same function that loads
-	/// the balance file).
+	/// the balance file), but loading the player's save for the theme then sets it to the save's own -
+	/// 755 in the Easymode.TPWI an Instant Action player starts from (<c>docs/exe/park.md</c>, "Arrivals").
+	/// Here it counts from nought whatever the save holds.
 	/// </summary>
 	/// <param name="rate">
 	/// Funny seconds per real second, for when a park's saved clock block is read. Nothing reads it

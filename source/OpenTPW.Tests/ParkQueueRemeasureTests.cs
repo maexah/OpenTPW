@@ -291,8 +291,8 @@ public class ParkQueueRemeasureTests
 	/// boarding are left to the sale, which puts each off for 15 and 5.
 	/// </summary>
 	/// <remarks>
-	/// <b>Mutation:</b> throwing the measurement away instead (<see cref="ParkState.InvalidateQueue"/>, the build
-	/// before this one) leaves all eight to the sale, at 30.
+	/// <b>Mutation:</b> throwing the measurement away instead (<see cref="ParkState.InvalidateQueue"/>)
+	/// leaves all eight to the sale, at 30.
 	/// </remarks>
 	[TestMethod]
 	public void ASaleDrainPutsOutEveryQueuerFromTheFifthPlaceBack()

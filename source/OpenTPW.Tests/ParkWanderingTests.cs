@@ -10,11 +10,10 @@ namespace OpenTPW.Tests;
 /// Where a guest with nothing better to do may wander - the candidate half of <c>FUN_004f9490</c>.
 ///
 /// <para>
-/// <b>Alexah found this by playing: guests walked out of the park and off down the road.</b> The original
-/// builds its four candidates from the byte <c>FUN_00522770</c> hands back - the cell's own
-/// <c>mNeighbours</c> at <c>+0xc</c> - and that byte is a statement about which ways a cell <i>connects</i>,
-/// not which ways it is walled. This build asked only whether an edge could be crossed, and the road's
-/// edges can be.
+/// <b>The original builds its four candidates from the byte <c>FUN_00522770</c> hands back</b> - the
+/// cell's own <c>mNeighbours</c> at <c>+0xc</c> - and that byte is a statement about which ways a cell
+/// <i>connects</i>, not which ways it is walled. Asking only whether an edge can be crossed sends guests
+/// out of the park and off down the road, whose edges can be.
 /// </para>
 /// <para>
 /// <b>The number that makes this park able to tell right from wrong: 91.</b> Of its 16,384 cells only 91
@@ -54,8 +53,8 @@ public class ParkWanderingTests
 				TargetX: PeepNavigator.WaypointCentre( cellX ), TargetY: PeepNavigator.WaypointCentre( cellY ),
 				Mass: ParkWorld.NavigatorState.DefaultMass, Radius: ParkWorld.NavigatorState.DefaultRadius,
 
-				// <b>Measured off the shipped park rather than invented, and the nought this used to hold
-				// is why the test failed twice.</b> A guest with no maximum force and no maximum speed
+				// <b>Measured off the shipped park rather than invented.</b> A guest with no maximum force
+				// and no maximum speed
 				// cannot accelerate, so they never leave the cell they start on and the anti-vacuity guard
 				// below fires instead of the assertion the test is about. Every guest in Lost Kingdom
 				// carries mass 65,536 and radius 13,107 with a force/speed pair near 2:1; these are
@@ -69,7 +68,7 @@ public class ParkWanderingTests
 	}
 
 	/// <summary>
-	/// <b>The bug, stated as the map states it.</b> A guest left to wander from a path cell inside the park
+	/// <b>The rule, stated as the map states it.</b> A guest left to wander from a path cell inside the park
 	/// never ends a turn on a cell whose <c>mNeighbours</c> is nought - which is every cell the original
 	/// could not have chosen, the road included.
 	///
@@ -97,11 +96,10 @@ public class ParkWanderingTests
 
 		for ( var tick = 1; tick <= 600; ++tick )
 		{
-			// <b>Re-armed every turn, and the first draft of this test failed for want of it.</b> Wandering
-			// keeps itself only on a one-in-KeepWanderingShare roll and otherwise drops the guest into
-			// Deciding, so a guest left alone leaves the arm this test is about within a turn or two and
-			// then stands still - which is exactly what happened: they saw ONE cell and the anti-vacuity
-			// guard below caught it. Putting them back keeps the candidate pick being exercised.
+			// <b>Re-armed every turn.</b> Wandering keeps itself only on a one-in-KeepWanderingShare roll
+			// and otherwise drops the guest into Deciding, so a guest left alone leaves the arm this test
+			// is about within a turn or two and then stands still, seeing ONE cell. Putting them back keeps
+			// the candidate pick being exercised.
 			if ( peep.State != PeepState.Wandering )
 				peep.SetState( PeepState.Wandering, tick, rolls );
 

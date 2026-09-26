@@ -19,10 +19,8 @@ namespace OpenTPW.Tests;
 /// turned out to be built on would fail loudly instead of quietly testing nothing.
 /// </para>
 /// <para>
-/// <b>That guard has already earned its place.</b> A first version of the third test used (30,10) and
-/// (40,10), which are mType <b>7</b> rather than bare ground, and it failed on its own setup assertion
-/// instead of quietly exercising nothing. <b>Measured, so the next edit need not guess: on y = 10 the
-/// bare band runs x = 0..27</b>, and every cell these tests use sits inside it.
+/// <b>On y = 10 the bare band runs x = 0..27</b> (measured; (30,10) and (40,10) are mType <b>7</b>), and
+/// every cell these tests use sits inside it.
 /// </para>
 /// </summary>
 [TestClass]

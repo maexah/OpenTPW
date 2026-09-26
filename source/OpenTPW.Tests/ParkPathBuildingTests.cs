@@ -72,18 +72,17 @@ public class ParkPathBuildingTests
 	/// of them</b>.
 	///
 	/// <para>
-	/// <b>This number was measured after two different guesses were both wrong</b>, which is why it is
-	/// pinned here rather than left to a comment. The executable's loader reconstructs cells from the
+	/// <b>This number is measured</b>, and pinned here rather than left to a comment. The executable's
+	/// loader reconstructs cells from the
 	/// level's design map and sets the flag on the path cells it creates that way; OpenTPW reads the
 	/// <b>save's stored</b> flags instead, and the two do not agree. So "the player cannot lift the
 	/// level's own walkways" is true of the original's runtime and <b>only partly true here</b>: the
 	/// refusal in <see cref="ParkPathBuilding.Lift"/> is real, and it covers 18 cells.
 	/// </para>
 	/// <para>
-	/// <b>A hypothesis, marked as one:</b> the 18 are plausibly the level author's own fixed paths,
-	/// with the other 60 laid while the scenario was authored - which is what a shipped scenario save
-	/// would look like. Settling it means checking those 18 against <c>base.map</c>'s design bits, and
-	/// nothing here should assume it in the meantime.
+	/// <b>Which 18, measured cell by cell:</b> the ten-cell avenue at x 47..48, y 17..21, which is
+	/// design-map path, and the eight paths the placer laid before things' ends
+	/// (<c>docs/exe/park-engine.md</c>, "What the placer builds in front of a thing").
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -115,19 +114,17 @@ public class ParkPathBuildingTests
 	}
 
 	/// <summary>
-	/// A QUEUE cell is given a piece, which <see cref="ParkPathBuilding.Retile"/> answered only for paths.
+	/// A QUEUE cell is given a piece by <see cref="ParkPathBuilding.Retile"/>, as a path cell is.
 	///
 	/// <para>
 	/// <b>The failure this pins was invisible rather than wrong-looking.</b> A laid queue cell kept
 	/// whatever tile index the ground under it carried - <b>55</b> on bare ground - which is outside
 	/// <see cref="ParkQueues"/>'s table of eight, so the cell drew <b>nothing at all</b> and was counted
-	/// as naming a piece the game has no model for. Measured in a running park before the arm existed:
-	/// a queue laid at (42,22) read <c>tile set 2 index 55 angle 0</c>, and <c>drawn</c> reported the
-	/// park's four shipped pieces with five queue cells standing in it.
+	/// as naming a piece the game has no model for.
 	/// </para>
 	/// </summary>
 	/// <remarks>
-	/// <b>The expected values are the shipped park's own art, not a reading of the table.</b> Its three
+	/// <b>The expected values are the shipped park's own art, not a reading of the table.</b> Its two
 	/// straight queue cells at (50,22) and (51,22) carry <c>index 2 angle 270</c> against a table row of
 	/// <c>index 2 angle 90</c> - the 180 comes from the direction base, which applies to a straight.
 	/// <para>
@@ -267,9 +264,9 @@ public class ParkPathBuildingTests
 	/// A queue cell says which thing it serves, through the packed cell its owner stands on.
 	///
 	/// <para>
-	/// <b>This had no test, and its only caller was a path nobody drives.</b> <c>OwnerOf</c> is read by
-	/// <see cref="ParkPathBuilding.LiftQueue"/> - which no test and no run had exercised - and now by
-	/// the click that re-arms the queue tool on a queue cell, so an answer of nought here reads exactly
+	/// <c>OwnerOf</c> is read by <see cref="ParkPathBuilding.LayQueue"/>, the queue tool's verdict,
+	/// <see cref="ParkPathBuilding.LiftQueue"/>, the path run, the placer's path stub, and the click that
+	/// re-arms the queue tool on a queue cell, so an answer of nought here reads exactly
 	/// like "that cell is not a queue" and sends the click somewhere else entirely.
 	/// </para>
 	/// </summary>

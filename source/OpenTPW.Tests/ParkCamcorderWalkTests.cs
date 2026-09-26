@@ -132,7 +132,7 @@ public class ParkCamcorderWalkTests
 	}
 
 	/// <summary>
-	/// A null edge test takes the step whole, which is what this camera did before the sweep existed. It
+	/// A null edge test takes the step whole. It
 	/// is the fallback for a scene with no park, and it is pinned so that "no park" cannot quietly become
 	/// "cannot move".
 	/// </summary>
@@ -282,9 +282,8 @@ public class ParkCamcorderWalkTests
 	/// puts them - (52,23) and (58,15) are ride entrances, reached through open sides.
 	/// </summary>
 	/// <remarks>
-	/// Before the sweep put anything back, the first went in at its 11th frame, the second (through the queue's
-	/// shut south side) at its 1st and the fourth at its 1st. The third stays out on the reach alone and goes in at
-	/// its 2nd frame only without the unasked axis put back; the fourth goes in without the whole step put back.
+	/// <b>Mutations:</b> the third stays out on the reach alone and goes in at its 2nd frame only without the unasked
+	/// axis put back; the fourth goes in without the whole step put back.
 	/// </remarks>
 	[TestMethod]
 	public void TheWalksThatWentIntoARideStayOut()

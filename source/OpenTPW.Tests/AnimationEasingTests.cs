@@ -9,12 +9,10 @@ namespace OpenTPW.Tests;
 /// indexes at track descriptor +0x34.
 ///
 /// <para>
-/// <b>These guard a field that was read as a flag word for as long as it was read at all.</b> It was
-/// recorded as "flags (0 or 0xFFFF)", and both halves of that were wrong in the same way: 0xFFFF is a
-/// sentinel meaning "blend evenly", but 0 is not a cleared flag - it is curve number nought, the commonest
-/// id in the game. The pointer at +0x34 was known to exist and noted as "looks like a byte ramp, but the
-/// records are not a fixed length and a third are not monotonic - noted, not claimed". At the true stride
-/// of eight bytes the records are a fixed length; what varies is which of them a key asks for.
+/// <b>These guard a field that reads like a flag word and is not one.</b> Taken as "flags (0 or 0xFFFF)",
+/// both halves of that are wrong in the same way: 0xFFFF is a sentinel meaning "blend evenly", but 0 is
+/// not a cleared flag - it is curve number nought, the commonest id in the game. The table the pointer at
+/// +0x34 names is a run of eight-byte records; what varies is which of them a key asks for.
 /// </para>
 ///
 /// <para>
@@ -181,8 +179,7 @@ public class AnimationEasingTests
 	///
 	/// <para>
 	/// It is pinned here so that nobody later reads it as a bad decode and "fixes" it by sorting the bytes.
-	/// An older note called a third of these non-monotonic, which was measured before the record length was
-	/// known; at the true stride of eight it is about 22%, and it is still thousands of entries.
+	/// At the stride of eight the non-monotonic entries are about 22%, and still thousands of them.
 	/// </para>
 	/// </summary>
 	[TestMethod]

@@ -7,9 +7,7 @@ namespace OpenTPW.Tests;
 ///
 /// <para>
 /// The path is asked of the game itself, so there is one answer to "where is Theme Park World" and the tests
-/// cannot drift away from it again. They had: this file system was mounted on
-/// "C:\Program Files (x86)\Bullfrog\Theme Park World\Data" and the shader test read a shader out of
-/// "E:\OpenTPW" - two paths from two people's machines, neither of which exists on a third.
+/// cannot drift away from it.
 /// </para>
 /// <para>
 /// Where there is no installation the tests needing one are skipped rather than failed, so a contributor who
@@ -18,7 +16,7 @@ namespace OpenTPW.Tests;
 /// </summary>
 internal static class GameData
 {
-	/// <summary>Mounted once and kept: the six tests using it would otherwise read the archives again each time.</summary>
+	/// <summary>Mounted once and kept: every test using it would otherwise read the archives again each time.</summary>
 	private static BaseFileSystem? _data;
 
 	/// <summary>

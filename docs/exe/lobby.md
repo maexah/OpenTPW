@@ -90,8 +90,8 @@ leaves width over, so a left-pinned control sits half that slack left of where c
 **When something looks right at 4:3 and wrong elsewhere, suspect an anchor**, and compute the
 expected error from `Scale = min(w/2048, h/1536)` before measuring.
 
-The park name (rect 477..1571, own middle 1024 = screen middle) is the worked example: an explicit
-left pin welded it to the panel as one bottom strip, which only reads at 4:3, and the original's own
+The park name (rect 477..1571, own middle 1024 = screen middle) is the worked example: a left pin
+would weld it to the panel as one bottom strip, which reads only at 4:3, and the original's own
 screenshots centre the name. It is centred.
 
 ## Lobby sounds and cues
@@ -216,11 +216,11 @@ at, so it belongs to the texture *as used by that model*. **Only the low byte is
 | `0x80` | — | Never set | Whole-game count |
 | header `0x30` | — | The engine propagates both `0x40` and `0x80` into this header field | Disassembly |
 
-**Two traps, both of which caught the first pass:**
+**Two traps:**
 
 1. Compare against the `.wct` header's **alpha-channel byte (offset 1), not its bit depth (offset
-   2)**. `sen_ant1` is 32-bit and declares no alpha. Conflating the two is what made an earlier
-   count say 7 disagreements instead of 8.
+   2)**. `sen_ant1` is 32-bit and declares no alpha. Conflating the two counts 7 disagreements in
+   the lobby where there are 8.
 2. **The lobby is not representative of the rest of the game's art.** There the bit agrees 224/232
    (97%); game-wide it is 83%. Any claim measured on `lobby.wad` alone must say so.
 
@@ -255,11 +255,10 @@ models — so their movement belongs to an animation player that a script trigge
 
 The command variable is resolved **by the name the script itself declares**, and a write that lands
 nowhere is **reported as a miss** — because a command that goes nowhere looks exactly like a gate
-nobody commanded. A park saved open now draws open.
+nobody commanded. A park saved open draws open.
 
 **The traffic lights are bound and provably inert:** `lights.RSE` loops unconditionally, but both
-clips it loops carry **zero tracks**, so nothing on screen can move. That is why the old
-suffix-matching loop was only ever visible on the gate. **Do not read the silent crossing as a
+clips it loops carry **zero tracks**, so nothing on screen can move. **Do not read the silent crossing as a
 posing bug.**
 
 ### The lobby island gate — driven by the park-entry flight
@@ -356,7 +355,10 @@ width would halve the camera's distance and look like a fix:
 | `[0x1c]` / `[0x1d]` | 1.0 / 100.0 | Wander speed per tick; arrival threshold, **squared** |
 | `[0x2a]` / `[0x2b]` / `[0x2c]` | 2.0 / 2.0 / 50.0 | Look-speed cap, look speed seeded at the cap, arrival threshold **squared** |
 
-**OpenTPW matches every one of them**, and the flight was then measured in the running game to confirm
+**OpenTPW matches every one of them but two.** The look-speed ramp, which the original steps per frame, is 3.0 of
+the cap a second, as at sixty frames (`LookRampPerSecond`). And at Alexah's word the box's height band is 30–60
+rather than 50–100, a deviation said at `LobbyCameraMode.WanderCentre` that brings the median distance to 74.0.
+In the original's box the flight was measured in the running game to confirm
 it rather than only the constants: over 60 s the camera stayed inside the box on all three axes
 (z 55–79 of the 50–100 the box allows), a median of **101.5 units** from the nearest island, and
 three island changes. The per-frame movement independently re-derives the speed: 10 units a second
@@ -671,8 +673,8 @@ system sent (`Input.MouseInfo.LeftWentDown`) that no window takes goes to `Windo
 `FrontEnd.ViewPressed`: Enter this park while someone is playing. `UiControl.Outline` is the polygon region, with
 `0x0066c5a4`'s test, and the island panel's root has the L. `IslandPanel.EnterPark` makes the original's five tests in its
 order, `LobbyIsland.GlobalLoaded` standing for the record, and counts the keys held. Three differences are said at their
-sites: Escape over the player slots opens the game menu here (`docs/QUEUE.md` Q64), Ctrl+H acts on its press and F8 is not
-built (Q65), and a disabled button still takes the pointer (Q66).
+sites: Escape over the player slots opens the game menu here (`docs/QUEUE.md` Q64), Ctrl+H acts on its press (Q65),
+and a disabled button still takes the pointer (Q66). F8 is not built (Q65).
 
 ### Island sound is one island at a time, and the previous one is stopped
 
@@ -687,8 +689,8 @@ the third is neither:
 
 The two movers stop the outgoing island's two voices with `Sound_StopFading( island[+0x1c] )` and
 `Sound_StopFading( island[+0x20] )`, zero both, pick the neighbour through vtable `+0x4c`, then
-start the incoming island's **effect 1** from the sfx category (`DAT_00803a4c + 4 + idx*8`) and
-**effect 2** from the music category (`DAT_00803a4c + idx*8`), keeping the voices in those same two
+start the incoming island's **effect 1** from the music category (`DAT_00803a4c + 4 + idx*8`) and
+**effect 2** from the sfx category (`DAT_00803a4c + idx*8`), keeping the voices in those same two
 fields, and calls `Sound_ApplyGroupVolumes`. So the original plays **one island's theme and ambience
 at a time and explicitly stops the previous** — voices do not accumulate. OpenTPW's `LobbyAudio.MoveTo`
 already does the same thing, with a crossfade where the original cuts.
@@ -703,7 +705,7 @@ frame**. That, rather than any accumulation of themes, is what the attract path 
 than a fade.** While its attract camera is flying, **all four parks sound at once**, each positioned at
 its own island — the marked emitter node where there is one, the island itself where there is not — so
 the blend between parks is **distance**, not a cross-fade. With somebody playing it collapses to the
-single island on show, flat or at its node, exactly as before.
+single island on show, flat or at its node.
 
 The engine end of that is the original's own: `Sound_PlayEffect( handle, category, effect, x, y, z )`
 really is positional, and the game delay-loads QMixer (QSound) for it. What the original never did was
@@ -736,7 +738,7 @@ The four park display names **are** in the shipped data, measured with OpenTPW's
 | Address / value | Original name | What it is | Evidence |
 |---|---|---|---|
 | `data/Language/English/THEMENAMES.str` | — | 112 bytes, magic `BFST`, header declaring **4 entries**, decoding to `[0] "Lost Kingdom"`, `[1] "Halloween World"`, `[2] "Wonder Land"`, `[3] "Space Zone"` | Read through `StringFile` |
-| `01`, a three-byte `len`, `len` bytes | — | A BFST record (FileFormats `strings.md`; four UITEXT rows are over 255). **The bytes are character INDICES into `MBToUni.dat`, not text** — which is why `strings`, `grep -a` and any plain text search find nothing but the magic | Byte-level read |
+| `01`, a three-byte `len`, `len` bytes | — | A BFST record (FileFormats `strings.md`; rows 400 and 417 of UITEXT are over 255, in both languages). **The bytes are character INDICES into `MBToUni.dat`, not text** — which is why `strings`, `grep -a` and any plain text search find nothing but the magic | Byte-level read |
 | lengths 12 / 15 / 11 / 10 | — | The four name lengths, visible in the header table, matching the four names exactly, with byte `0x0c` (the space) in the right place in each | Header table |
 | `English/MBToUni.dat` | — | 506 bytes, count byte `0xf9` = **249** characters | Byte read |
 | `american/MBToUni.dat` | — | 504 bytes, count byte `0xf8` = **248**. They differ at byte 7, the count field read after `Seek(6)` — one fewer character shifts every index past it | Byte read |
@@ -757,9 +759,9 @@ and non-static is the other half of the fix.
 **How to redo the measurement:** the local `strdump` harness does it (`CLAUDE.local.md`; it mounts the file system
 first, and `dotnet run` rebuilds it against the current tree). By hand: make a throwaway console project referencing `OpenTPW.Files.dll` and
 `OpenTPW.Common.dll` out of the build output, add an `AssemblyResolve` handler pointing at that same
-folder, then set the two statics the readers need before touching them —
-`OpenTPW.Common.GlobalNamespace.Log = new Logger()` and
-`.FileSystem = new BaseFileSystem( "<install>/data" )` — and construct
+folder, then set the one static the readers need before touching them —
+`OpenTPW.Common.GlobalNamespace.FileSystem = new BaseFileSystem( "<install>/data" )` (with no `Log` set they log
+nothing) — and construct
 `new StringFile( "Language/English/THEMENAMES.str" )`, reading `.Entries`. **The file system must be
 mounted first even if `StringFile` is handed a raw `Stream`**, because the reader opens its lookup table
 (a static `Lazy<BFMUReader>`) through the global file system on the first string it decodes. Without it that first

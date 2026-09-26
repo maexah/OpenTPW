@@ -1,6 +1,6 @@
 vertex {
   //
-  // The lobby sky: unlit geometry textured, modulated by a colour ramp, and tinted per draw.
+  // The sky, lobby and park: unlit geometry textured, modulated by a colour ramp, and tinted per draw.
   //
   // This is the original's own arrangement rather than an invention. Its sky mesh is a 16x16
   // grid whose vertex colours come from a 256-entry ramp - normally a 16x16 downsample of

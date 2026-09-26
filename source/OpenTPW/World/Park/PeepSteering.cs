@@ -23,9 +23,9 @@ public readonly record struct Steer( int Weight, Func<FixedVector> Force );
 /// It is kept because the original keeps it.
 /// </para>
 /// <para>
-/// <b>The record of being stuck does not advance at the same rate every tick, and an earlier note of mine
-/// said it did.</b> A refused step shifts the history and writes a one; a taken step does not shift there
-/// at all. Then, at the end of every tick either way, it shifts again and writes a one if the person got
+/// <b>The record of being stuck does not advance at the same rate every tick.</b> A refused step shifts
+/// the history and writes a one; a taken step does not shift there at all. Then, at the end of every
+/// tick either way, it shifts again and writes a one if the person got
 /// no closer than last time. So <b>a walking person collects one bit a tick and a blocked one collects
 /// two</b> - which is why a genuinely stuck person reaches the two-fifths mark that triggers a fresh
 /// route so much faster than a merely slow one.

@@ -17,10 +17,9 @@ namespace OpenTPW.Tests;
 /// zeros.
 /// </para>
 /// <para>
-/// <b>Finding the field at all turned on its name.</b> Four sweeps of the executable's serialised field
-/// names - <c>InQ</c>, <c>mNext</c>, <c>Queue</c>, <c>mPrev</c> - found no per-guest queue link, and "it
-/// is not in the save" was nearly recorded as the answer. It is called <c>mQNext</c>, which none of those
-/// reaches; reading the guest serialiser's whole field list is what found it.
+/// <b>The field is found by its name.</b> It is called <c>mQNext</c>, which none of the spellings
+/// <c>InQ</c>, <c>mNext</c>, <c>Queue</c> or <c>mPrev</c> reaches; the guest serialiser's whole field list
+/// names it.
 /// </para>
 /// </summary>
 [TestClass]
@@ -105,8 +104,8 @@ public class ParkQueueTests
 	}
 
 	/// <summary>
-	/// Both links are read, and they sit beside fields that still read what they always did - which is
-	/// what says the two new offsets did not disturb their neighbours.
+	/// Both links are read, and they sit beside fields that read what the file holds - which is what
+	/// says the two offsets do not disturb their neighbours.
 	/// </summary>
 	[TestMethod]
 	public void BothQueueLinksAreReadAndTheirNeighboursAreUndisturbed()
@@ -122,8 +121,8 @@ public class ParkQueueTests
 			Assert.AreEqual( 0, guest.QNext, $"guest {person.ThingId} mQNext" );
 			Assert.AreEqual( 0, guest.QPrev, $"guest {person.ThingId} mQPrev" );
 
-			// mQueuePos at 494 and mSavedState at 501 bracket the new reads at 486 and 488, and both
-			// still carry what they carried before.
+			// mQueuePos at 494 and mSavedState at 501 sit just past the links at 486 and 488, and both
+			// read what the file holds.
 			Assert.AreEqual( 0, guest.QueuePos, $"guest {person.ThingId} mQueuePos" );
 			Assert.AreEqual( ParkWorld.GuestState.Deciding, guest.SavedState,
 				$"guest {person.ThingId} mSavedState" );

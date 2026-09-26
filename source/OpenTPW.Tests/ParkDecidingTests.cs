@@ -11,7 +11,7 @@ namespace OpenTPW.Tests;
 /// <para>
 /// <b>These are driven against the real park, because that is the only thing that makes them mean
 /// anything.</b> Lost Kingdom saves seven guests in the gateway, every one of them walking to the exact
-/// centre of an entrance cell; before this they arrived there and stood still for ever. The assertion that
+/// centre of an entrance cell. The assertion that
 /// matters is not that a state changed but that those seven <b>end up somewhere else on the map</b>.
 /// </para>
 /// <para>
@@ -216,20 +216,17 @@ public class ParkDecidingTests
 	/// A park that shuts while a guest is deciding sends them home, badly out of sorts.
 	///
 	/// <para>
-	/// <b>This arm is unreachable from the shipped park</b>, which is saved open and cannot be closed while
-	/// it runs - the two buttons that would do it are among the bindings nothing consumes. It is reachable
-	/// here only because <see cref="PeepBehaviour"/> can be built from the two facts rather than from a
-	/// park, which is the same reason the waiting-outside arm is testable.
+	/// <b>The shipped park is saved open</b>, and this arm is reached once the entry-price screen's door shuts
+	/// it (<see cref="ParkState.SetParkClosed"/>). It is driven here by building <see cref="PeepBehaviour"/>
+	/// from the two facts rather than from a park, which is the same reason the waiting-outside arm is testable.
 	/// </para>
 	/// <para>
 	/// Losing <c>BigHappinessChange</c> rather than the medium one is what separates this from every other
 	/// mood change in the admission states, so the amount is asserted and not just the direction.
 	/// </para>
 	/// <para>
-	/// <b>This asserted <see cref="PeepState.HeadingForExit"/> until 2026-09-18, and that was pinning a
-	/// bug.</b> Nothing answered that state, so these guests were aimed at a bus stop and then stood
-	/// where they had decided - and the test passed, because the aim was all it checked. They now walk it
-	/// and arrive, so the arrival is asserted too.
+	/// <b>They walk to the stop and arrive</b>, so the arrival is asserted as well as the aim: a guest only
+	/// aimed at a bus stop can still be standing where they decided.
 	/// </para>
 	/// </summary>
 	[TestMethod]

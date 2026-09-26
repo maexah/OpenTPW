@@ -78,7 +78,7 @@ public class Time
 	/// original bounds a long frame at the far end, by refusing to work through more than half a
 	/// second of backlog in the lobby or two in a park, rather than by shortening the frame itself.
 	/// Feeding it the clamped figure instead would leave both of those caps unreachable and so
-	/// meaningless, which is exactly what had quietly happened to the particle system's own.
+	/// meaningless.
 	/// </para>
 	/// </summary>
 	public static float RawDelta { get; internal set; }

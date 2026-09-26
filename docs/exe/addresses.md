@@ -704,9 +704,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0070200c` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x007029cc` | | OpenTPW/World/Lobby/LobbyScript.cs  |
 | `0x00702ae4` | | OpenTPW/World/Lobby/LobbyFlyer.cs  |
-| `0x00702c78` | Lobby camera: adds 0.05 of the look-speed cap per frame, with no delta | OpenTPW/World/LobbyCameraMode.cs  |
+| `0x00702c78` | Lobby camera: +0.05. Near the target the look speed takes 0.05 of the cap off itself per frame, with no delta; the homing turn steps 0.05 x delta | OpenTPW/World/LobbyCameraMode.cs  |
 | `0x00702c7c` | | OpenTPW/World/LobbyCameraMode.cs  |
-| `0x00702c84` | Lobby camera: subtracts 0.05 of the cap per frame | OpenTPW/World/LobbyCameraMode.cs  |
+| `0x00702c84` | Lobby camera: -0.05. Far from the target the look speed subtracts this times the cap per frame, which adds 0.05 of the cap, with no delta | OpenTPW/World/LobbyCameraMode.cs  |
 | `0x00702c8c` | | OpenTPW/World/Weather/Lightning.cs  |
 | `0x00702c94` | | OpenTPW/World/Weather/Lightning.cs  |
 | `0x00702ca4` | | OpenTPW/World/LobbyCameraMode.cs  |

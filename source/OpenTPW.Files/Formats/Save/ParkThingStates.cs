@@ -51,8 +51,7 @@ public readonly record struct SavedThing( int CatalogueId, int Slot, SavedChanne
 /// the Fountain on role 5, the three Toilets on role 5, the Jungle Spray on role 2 across all three of
 /// its lanes, the Traffic Lights looping role 5. <b>The four that differ</b> - the two Cameras, the
 /// Staff Room and the Bus - are things whose scripts cycle roles, so a saved snapshot is simply a
-/// different moment. (Ten and four, because the count and the list have to add to fourteen; this said
-/// eleven and three until they were made to agree.)
+/// different moment.
 /// </para>
 ///
 /// <para>

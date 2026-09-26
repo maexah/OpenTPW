@@ -180,10 +180,6 @@ public sealed class RideState
 			default:
 				// A repair value the engine's own switch has no arm for - unlike the two refusals
 				// above, which are its guarded writes working as intended. Only this one is a gap.
-				//
-				// This first said "ride op {op}" and would not compile: the switch is on `value`, and
-				// the method is SETBROKE rather than a general op dispatch. The name was as wrong as
-				// the variable, and a console line naming the wrong thing is worse than none.
 				++Refused;
 				Unimplemented.Report( $"SETBROKE value {value}" );
 				break;

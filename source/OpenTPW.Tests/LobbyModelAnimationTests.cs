@@ -10,10 +10,10 @@ namespace OpenTPW.Tests;
 /// skipped where there is no installation - see <see cref="GameData"/>.
 ///
 /// <para>
-/// <b>A model's M role is shipped one of two ways and only one of them was ever read.</b>
-/// <c>LobbyModel.LoadAnimations</c> probed <c>{stem}M1.md2</c> upwards and stopped at the first miss, so a
-/// model shipping a single unnumbered <c>{stem}M.md2</c> animated nothing at all. 197 of the game's 445
-/// base models are exactly that shape. The engine is not: <c>FUN_00461f10</c> carries both filename
+/// <b>A model's M role is shipped one of two ways, and the loader reads both.</b>
+/// <c>LobbyModel.LoadAnimations</c> probes <c>{stem}M1.md2</c> upwards and stops at the first miss, then
+/// takes a single unnumbered <c>{stem}M.md2</c> where that run found nothing. 197 of the game's 445
+/// base models are exactly that shape. The engine reads both too: <c>FUN_00461f10</c> carries both filename
 /// formats, <c>'%s%s%c%d.md2'</c> at <c>0x004623b3</c> and <c>'%s%s%c.md2'</c> at <c>0x004623df</c>.
 /// </para>
 ///
@@ -30,21 +30,21 @@ public class LobbyModelAnimationTests
 
 	/// <summary>
 	/// The global file system as well as the local one: <c>LoadAnimations</c> reaches the archives through
-	/// <see cref="AnimationFile.TryLoad"/>, which opens against the global. Four other test classes mount
+	/// <see cref="AnimationFile.TryLoad"/>, which opens against the global. Other test classes mount
 	/// it the same way.
 	/// </summary>
 	[TestInitialize]
 	public void MountTheGame() => FileSystem = data = GameData.Required();
 
 	/// <summary>
-	/// <b>Lost Kingdom's terrain ships an animation and it was never loaded.</b> <c>terrain.wad</c> holds
-	/// <c>base.md2</c> and <c>basem.md2</c> and no numbered clip at all, so the probe this class is named
-	/// for found nothing and the park's water stood still.
+	/// <b>Lost Kingdom's terrain ships its animation as the bare file.</b> <c>terrain.wad</c> holds
+	/// <c>base.md2</c> and <c>basem.md2</c> and no numbered clip at all, so the numbered probe finds
+	/// nothing and only the fallback scrolls the park's water.
 	///
 	/// <para>
 	/// The engine reaches it: <c>FUN_004504c0</c> builds <c>'%s\Terrain'</c> and asks the role loader for
 	/// the stem <b><c>"Base"</c></b> (<c>0x0074cf58</c>), falling back to <c>"TestBase"</c>. So this is a
-	/// clip the original plays and we did not.
+	/// clip the original plays.
 	/// </para>
 	///
 	/// <para>

@@ -141,7 +141,7 @@ public class CellTraceTests
 	[TestMethod]
 	public void DrawingLevelWithTheGoalRejoinsTheLine()
 	{
-		// Setting off east from (10,10) towards (12,10), with everything open.
+		// Setting off east from (10,10) towards (12,10), with only the turn south from (11,10) shut.
 		var trace = new CellTrace( 10, 10, StepDirection.East, 1, 12, 10 );
 
 		trace.Step( Shut( (11, 10, StepDirection.South) ) );

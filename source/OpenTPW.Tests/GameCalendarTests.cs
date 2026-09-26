@@ -7,9 +7,9 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// The park's calendar: how long a day is, that only ticks move it, and that a season is always one of
-/// the four rows the balance file declares. Driven exactly as <see cref="Level.Update"/> drives it - a
-/// frame into <see cref="Time.Update"/>, then <see cref="GameClock.Update"/>, then
-/// <see cref="GameCalendar.Update"/>.
+/// the four rows the balance file declares. Driven as a park's frame drives it -
+/// <see cref="Time.Update"/> from the renderer, then <see cref="GameClock.Update"/> and
+/// <see cref="GameCalendar.Update"/> from <see cref="Level.Update"/>.
 /// </summary>
 [TestClass]
 public class GameCalendarTests
@@ -84,8 +84,8 @@ public class GameCalendarTests
 	}
 
 	/// <summary>
-	/// Ten days take 231 advances rather than 240, which is the 0.8% the original runs fast showing up as
-	/// whole days: at 250ms an advance it would be 240.
+	/// Ten days take 231 advances rather than ten of the first day's 24: a day is 23.04 advances on
+	/// average, so the tenth turns on the first advance past 230.4.
 	/// </summary>
 	[TestMethod]
 	public void TheDaysKeepTheOriginalsSlightlyFastPace()

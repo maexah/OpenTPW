@@ -23,9 +23,8 @@ public class ModelTests
 	private ModelFile Read( string path ) => new( new MemoryStream( data.ReadAllBytes( path ) ) );
 
 	/// <summary>
-	/// A transform-only node carries a name like any other. They are the ones it was never read for:
-	/// the name pointer sits at +0x54 of the record, which the mesh path has always read and the node
-	/// path went past.
+	/// A transform-only node carries a name like any other: the name pointer sits at +0x54 of the
+	/// record, the same word a mesh's name is read from.
 	///
 	/// The Space island is the case that matters - its antenna carries the nodes marking where an
 	/// effect belongs - and the two named here are both transform-only (flag 0x200) and both hang off

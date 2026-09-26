@@ -130,8 +130,8 @@ public sealed class LobbyIsland : Entity
 	/// <remarks>
 	/// The models and materials go with the entities that hold them, but a material leaves the
 	/// textures bound into it alone - those are normally cached by path and shared between scenes.
-	/// These are not: they are cut from a board rasterised for this island alone, so every lobby
-	/// build left two behind.
+	/// These are not: they are cut from a board rasterised for this island alone, so nothing else
+	/// lets go of them.
 	/// </remarks>
 	protected override void OnDelete()
 	{

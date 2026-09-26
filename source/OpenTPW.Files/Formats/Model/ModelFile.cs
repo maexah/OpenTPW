@@ -11,17 +11,16 @@ namespace OpenTPW;
 /// and the same 0xDD/0xCB constants at 0x04/0x08. They are distinguished by the mesh table
 /// pointer at 0x70: a static mesh always has one, an animation file always has zero.
 ///
-/// Determined by testing all 2401 .md2 files present in the real game data (using a harness
+/// Determined by testing all 2129 .md2 files present in the real game data (using a harness
 /// that reused this project's own WadArchive/BaseFileSystem/ModelFile code), not by reading
 /// a handful of files by hand:
 ///
-///   - Static meshes (1122 files, 47%) - what the parser below implements. Real offsets at
+///   - Static meshes (850 files, 40%) - what the parser below implements. Real offsets at
 ///     0x50 (textureListOffset), 0x54 (frameListOffset) and 0x70 (meshPtr), plus embedded
 ///     ASCII texture names. All but 2 parse correctly.
 ///
-///   - Animation files (1279 files, 53%) - all three of those offsets are zero. These are
-///     NOT meshes and must not be parsed as such; doing so is what used to throw
-///     EndOfStreamException/ArgumentOutOfRangeException on half the game's .md2 files.
+///   - Animation files (1279 files, 60%) - all three of those offsets are zero. These are
+///     NOT meshes and must not be parsed as such.
 ///
 /// Evidence that the second kind is animation data for a base model rather than geometry:
 ///   - 1274 of the 1279 sit next to a static-mesh .md2 whose name is a prefix of their own
@@ -37,7 +36,7 @@ namespace OpenTPW;
 /// The animation format is decoded - see AnimationFile. In short: one channel per vertex of
 /// the mesh it drives (plus two trailing non-vertex channels), sparse keyframes per channel,
 /// and each keyframe value is a vertex position packed into three signed 10-bit fields
-/// spanning that mesh's bounding box.
+/// spanning a box the morph track carries itself, not the mesh's bounding box.
 ///
 /// Useful samples: /lobby/terrain/Jun_isleM1.MD2 and Jun_isleM2.MD2, which both animate the
 /// 169-vertex "Dino" mesh of Jun_isle.MD2.
@@ -79,8 +78,8 @@ public partial class ModelFile : BaseFormat
 		/// What the node is called - "ant_emitter", "sound node", "1stperson" - or empty when its
 		/// record names nothing.
 		///
-		/// This is the same word of the record a mesh's name has always come from (+0x54); the
-		/// transform-only nodes are simply the ones it was never read for. It is the only place the
+		/// This is the same word of the record a mesh's name comes from (+0x54), read for every node,
+		/// mesh or transform-only. It is the only place the
 		/// file says what a node is <i>for</i>: the id table gives a node a number and a capability
 		/// flag - see <see cref="ReadNodeIds"/> - but never a meaning.
 		/// </summary>
@@ -431,7 +430,7 @@ public partial class ModelFile : BaseFormat
 						continue;
 					}
 
-					// start at texIdOffset, divide by 8 to get index
+					// start at textureListOffset, divide by 8 to get index
 					uint frameId = (material.FrameOffset - textureListOffset) / 8;
 					var frame = frameData[(int)frameId];
 
@@ -571,7 +570,7 @@ public partial class ModelFile : BaseFormat
 					ushort _b = reader.ReadUInt16();
 					ushort _c = reader.ReadUInt16();
 
-					// Reverse winding order
+					// Kept in the file's own winding order
 					indices.Add( (uint)_a );
 					indices.Add( (uint)_b );
 					indices.Add( (uint)_c );
@@ -603,7 +602,7 @@ public partial class ModelFile : BaseFormat
 	/// at the model origin. Jun_isle is the clear case: its three trees hang off dummy nodes
 	/// named l_tree1 and l_tree2 plus the Island mesh itself, and two of them store their trunk
 	/// and leaves at a local (0, 0, 0) and (0, 3.66, 0) - meaningless until the parent is
-	/// applied, which is what put them under the Dino.
+	/// applied.
 	/// </summary>
 	private void ResolveHierarchy( BinaryReader reader, ushort meshCount, uint meshPtr,
 		ushort nodeCount, uint nodePtr )
@@ -751,7 +750,7 @@ public partial class ModelFile : BaseFormat
 
 		var name = new StringBuilder();
 
-		// The longest name in the game is under twenty characters. The cap is against a file whose
+		// The longest name in the game is twenty-five characters. The cap is against a file whose
 		// pointer lands somewhere with no terminator ahead of it, which would otherwise read to the
 		// end of the file.
 		while ( name.Length < 64 && stream.Position < stream.Length )

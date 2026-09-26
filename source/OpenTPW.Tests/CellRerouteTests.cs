@@ -84,9 +84,9 @@ public class CellRerouteTests
 	/// every search gives up, so no splice can land and the scan runs to the end having changed nothing.
 	///
 	/// <para>
-	/// This replaced a test that asserted the route left behind is straight. It is not: after a splice
-	/// the original straightens from four waypoints back, not from the beginning, so anything before that
-	/// point is never looked at again and a further straightening can still find work to do.
+	/// The route left behind is not necessarily straight: after a splice the original straightens from
+	/// four waypoints back, not from the beginning, so anything before that point is never looked at again
+	/// and a further straightening can still find work to do.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -163,9 +163,8 @@ public class CellRerouteTests
 	/// outright. The detour through (2,4) is gone afterwards.
 	///
 	/// <para>
-	/// <b>Why this was added late:</b> the six tests above it all pass against a version that never splices
-	/// anything at all, because straightening alone reaches the same answer in every one of them. Checked
-	/// rather than assumed.
+	/// <b>The tests above it all pass against a version that never splices anything at all</b>, because
+	/// straightening alone reaches the same answer in every one of them. Checked rather than assumed.
 	/// </para>
 	/// <para>
 	/// It also drives the guard against splicing in an answer that runs back through the waypoint being cut

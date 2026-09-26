@@ -22,7 +22,7 @@ public sealed class LobbyModel
 	///
 	/// A model's nodes are not all meshes. The ones that are not mark places rather than occupy them -
 	/// a park gate says where its sound belongs with a node called "sound node" - and those are only
-	/// reachable now that names are read. Keyed without regard to case, and trimmed, because the names
+	/// reachable by name. Keyed without regard to case, and trimmed, because the names
 	/// were authored by hand and a few carry a trailing space.
 	/// </summary>
 	private readonly Dictionary<string, Vector3> _nodeOffsets = new( StringComparer.OrdinalIgnoreCase );
@@ -223,16 +223,13 @@ public sealed class LobbyModel
 			// And the box this mesh's OWN bounds make about its place.
 			//
 			// <b>Not the isotropic +/- reach the radius uses.</b> reach is the distance to the furthest
-			// bounding CORNER, so a mesh sitting at the model's origin padded the box by fifty units in
-			// every direction: Belly Bounce - a 3x4 cell ride, thirty by forty world units - came out
-			// 147 units across, and a preview sized by that drew it at about a fifth of its panel.
+			// bounding CORNER, so a box built from it pads a mesh at the model's origin by that much in every
+			// direction, and a preview sized by it draws the thing far too small.
 			//
 			// <b>The mesh's own orientation is applied, by carrying all eight corners through the very
 			// transform its geometry is drawn with.</b> Leaving it out does not merely loosen the box,
-			// it MOVES it, and a box that is off by a constant gives a centre that is off by a constant:
-			// Belly Bounce's first mesh keeps its bulk 25 units from its own origin, so the model's
-			// centre came out about nineteen units wide of the geometry, and the ride preview - which
-			// spins about that centre - swung the ride round a ring instead of turning it in place.
+			// it MOVES it, and a box that is off by a constant gives a centre that is off by a constant -
+			// the centre a ride preview spins about.
 			//
 			// The corners go in swizzled but UNSCALED: a mesh's bounds are model space, Y-up, while this
 			// box lives in the world's Z-up, and `world` already folded the scale into the linear part.
@@ -337,8 +334,7 @@ public sealed class LobbyModel
 	/// <c>sharetex.wad</c>. A small toilet carries <c>J_wc2</c> and asks besides for <c>J_wc1</c>, a roof
 	/// and a side panel, all three of which it shares with the go-karts and half the jungle. Without a
 	/// second place to look, most of every item's surfaces draw the game's not-found texture - forty
-	/// distinct ones across the eleven objects Lost Kingdom is built with, which is what the park looked
-	/// like before this: sand-coloured boxes.
+	/// distinct ones across the eleven objects Lost Kingdom is built with.
 	/// </para>
 	///
 	/// <para>
@@ -543,8 +539,8 @@ public sealed class LobbyModel
 	/// <b>One clip, every kind of track it carries.</b> The engine poses a clip by walking its track list
 	/// once and dispatching on each track's kind (<c>FUN_004721f0</c> into <c>FUN_00471860</c>), so the
 	/// turning, the morphing, the scrolling and the switching on and off of a model all come from the same
-	/// clip at the same frame. Letting each half keep its own clock instead is what allowed a model's
-	/// rotation and its morph to play different clips at once.
+	/// clip at the same frame. One clock for both halves is what keeps a model's rotation and its morph
+	/// on the same clip.
 	/// </para>
 	///
 	/// <para>
@@ -672,7 +668,7 @@ public sealed class LobbyModel
 		// Against the node's OWN translation, not its composed one. A route's points are parent-local,
 		// so the distance travelled is how far the sampled point is from where the node rests inside
 		// its parent - and adding that to the composed offsets keeps whatever the parents contribute.
-		// Measured against Offsets instead, the bus drove the right route 480 west and 170 south of
+		// Measured against Offsets instead, the bus would drive its route 480 west and 170 south of
 		// where it belongs, because its spline root sits at (480, 0, 170).
 		var rest = target < _nodeRestLocal.Length ? _nodeRestLocal[target] : Offsets[target];
 		var shift = offset - rest;
@@ -729,8 +725,8 @@ public sealed class LobbyModel
 	/// Marked for cut-out art rather than for gradients, so the hard cut is only ever applied where
 	/// a texture has positively been classified. test.shader is shared with the interface, and
 	/// <see cref="UiMesh"/> marks every one of its own vertices see-through while having no texture
-	/// classification to offer; flagged the other way round, the whole front end fell through to the
-	/// cut-out reference and lost the soft edge off every button.
+	/// classification to offer; flagged the other way round, the whole front end would fall through to
+	/// the cut-out reference and lose the soft edge off every button.
 	/// </summary>
 	private const uint CutOutAlphaFlag = 0x10000;
 
@@ -761,10 +757,10 @@ public sealed class LobbyModel
 		// ride's board is authored solid, so without this the 61 signs that carry no artwork letter
 		// their name onto black instead of onto the ride showing through behind them.
 		//
-		// It repairs the painted boards as well. Of the 23 that carry artwork, eight are shaped
+		// It keeps the painted boards' cut-outs as well. Of the 23 that carry artwork, eight are shaped
 		// rather than rectangular - the Bumper Cars, Candy Cabin, Cat Coaster, Ferris Wheel, Tour
-		// Ride, both Coasters and the Drip - and reach alpha 0 across 5% to 43% of the board. Their
-		// cut-out was being ignored and they were drawn as opaque rectangles. The other fifteen are
+		// Ride, both Coasters and the Drip - and reach alpha 0 across 5% to 43% of the board; without
+		// the bit they draw as opaque rectangles. The other fifteen are
 		// solid art whose only partly-clear texels are the 1.6% the .wct codec rings around a hard
 		// edge, so nothing visible changes for them.
 		if ( material < substituted.Length && substituted[material] )
@@ -781,7 +777,7 @@ public sealed class LobbyModel
 	///
 	/// The split has to be by triangle rather than by mesh, because a mesh can be some of each:
 	/// the Space island's antenna is a translucent dish and cone on a solid stalk, and its island
-	/// is eight solid materials plus the shoreline ripple. The two halves now ask for the same
+	/// is eight solid materials plus the shoreline ripple. The two halves ask for the same
 	/// pipeline state, as the original's do - it draws cut-out and graded art with identical
 	/// render states and changes only the alpha reference - so what the split is still for is
 	/// draw order: a graded surface has to blend over finished solid geometry, not into it.
@@ -831,13 +827,8 @@ public sealed class LobbyModel
 		// Nothing in the game is one-sided: the original sets CULLMODE to D3DCULL_NONE once, at
 		// 0x0056695c, and never writes that state again in the whole program. Foliage is authored
 		// expecting it - a blade of grass is a single quad meant to be seen from behind as well as
-		// in front, and a canopy is a dome that showed its dark inside when its near face was cut
+		// in front, and a canopy is a dome that shows its dark inside when its near face is cut
 		// away.
-		//
-		// This, rather than the depth change beside it, is what visibly repairs the scene. Frames
-		// captured with the clock paused and compared against the branch point: the Fantasy blades
-		// change by 5.0% and the Space canopies by 5.6%, both on a noise floor of 0.00%, against
-		// 0.4% and 0.6% for the depth change measured the same way.
 		var flags = materialFlags | MaterialFlags.DisableCulling;
 
 		return [
@@ -867,7 +858,7 @@ public sealed class LobbyModel
 	/// shipped</b>, and the engine reads both. <c>FUN_00461f10</c> is the loader that probes a role, which
 	/// its own two format strings settle: <c>'%s%s%c%d.md2'</c> at <c>0x004623b3</c> for the numbered run
 	/// and <c>'%s%s%c.md2'</c> at <c>0x004623df</c> for the bare file. <b>197 of the game's 445 base models
-	/// ship only the bare one</b>, and every one of them animated nothing here until this.
+	/// ship only the bare one</b>.
 	/// </para>
 	///
 	/// <para>
@@ -961,8 +952,8 @@ public sealed class LobbyModel
 	/// Whether to look past the first clip for one that turns a mesh.
 	///
 	/// <para>
-	/// A model probing for its own run is asked about its first clip only, which is how it has always been
-	/// asked and what the lobby's gates and islands were tuned against. A model handed a thing's twelve
+	/// A model probing for its own run is asked about its first clip only, which is what the lobby's gates
+	/// and islands are tuned against. A model handed a thing's twelve
 	/// roles is asked about all of them, because there is no first: a channel names a role outright, and a
 	/// model whose turning lives in a role other than the one that happens to sort first would otherwise
 	/// get no rotator at all and stand still whatever its script did.

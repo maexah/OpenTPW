@@ -125,11 +125,10 @@ public sealed class ParkRideChooser
 	/// The park's clock, whose <b>bottom bit alone</b> is what settles a tie - see <see cref="Beats"/>.
 	/// </param>
 	/// <param name="queueLength">
-	/// How long each object's queue is. <b>Null now walks the queue for real</b> - from the object's
-	/// <c>mFirstInQ</c> along each guest's own <c>mQNext</c>, which is in the save - rather than assuming
-	/// every queue is empty, which is what this did until that field was located. It still comes to
-	/// nought in the shipped park, because nobody has ever been admitted to it, but it comes to nought by
-	/// measurement instead of by assumption.
+	/// How long each object's queue is. <b>Null walks the save's queue</b> - from the object's
+	/// <c>mFirstInQ</c> along each guest's own <c>mQNext</c> - which comes to nought in the shipped park,
+	/// because nobody has ever been admitted to it. A running park hands in
+	/// <see cref="ParkState.QueueLength"/>.
 	/// </param>
 	/// <param name="ageInDays">
 	/// How many days ago each thing was built, or null to treat everything as no longer new - see the

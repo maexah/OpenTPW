@@ -10,9 +10,9 @@ namespace OpenTPW.Tests;
 /// What the park's staff do once something steps them.
 ///
 /// <para>
-/// <b>The assertion that matters is about position, not state.</b> Alexah's report was that the staff do
-/// not navigate, and a staff member who reached a state and was handed a destination but never moved would
-/// satisfy any state check. So the payoff tests ask whether they <b>end up somewhere else on the map</b>.
+/// <b>The assertion that matters is about position, not state.</b> A staff member who reached a state and
+/// was handed a destination but never moved would satisfy any state check, so the payoff tests ask whether
+/// they <b>end up somewhere else on the map</b>.
 /// </para>
 /// <para>
 /// These read real game files and are skipped where there is no installation - see <see cref="GameData"/>.

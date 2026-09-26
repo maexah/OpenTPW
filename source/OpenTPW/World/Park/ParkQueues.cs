@@ -14,8 +14,8 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>A queue cell's tile index names one of those models.</b> That was the piece missing for a while:
-/// the four cells of Lost Kingdom's queue carry indices 5, 2, 2 and 3, and the theme's <c>.tct</c> gives
+/// <b>A queue cell's tile index names one of those models.</b> The four cells of Lost Kingdom's queue
+/// carry indices 5, 2, 2 and 3, and the theme's <c>.tct</c> gives
 /// <c>QueueTex</c> only rows 0 to 3, so the index plainly addressed something else. It addresses
 /// <see cref="Pieces"/>, a fixed table the executable keeps at 0x76338c and walks twelve bytes at a time
 /// as it loads them (FUN_00522900), indexing it by exactly this number when it places one
@@ -101,10 +101,9 @@ public sealed class ParkQueues : Entity
 	/// an item takes it puts them on the eastern one, standing them in the middle of the run.
 	/// </para>
 	/// <para>
-	/// That is exactly how the fault was reported, by looking: the torches in the middle of the queue and
-	/// the bend turning the wrong way off the ride, which are the same 180 degrees seen on the only two
-	/// pieces whose art is not symmetric. A straight looks identical either way, which is why two of the
-	/// four cells said nothing.
+	/// A wrong turn shows by looking: the torches in the middle of the queue and the bend turning the
+	/// wrong way off the ride, which are the same 180 degrees seen on the only two pieces whose art is not
+	/// symmetric. A straight looks identical either way.
 	/// </para>
 	/// </summary>
 	private static int TurnOf( ParkWorld.MapCell cell ) => (360 - cell.TileAngle) % 360;
@@ -114,9 +113,9 @@ public sealed class ParkQueues : Entity
 	/// <see cref="ParkPaths.Current"/> and <see cref="ParkGround.Current"/> already have.
 	///
 	/// <para>
-	/// <b>This class had none, and that was the whole of why a queue could not be rebuilt.</b> The
-	/// models were reachable only through <c>Entity.All</c>, so nothing outside could ask the queues to
-	/// lay themselves again after a cell changed.
+	/// <b>It is how a changed cell reaches the queues:</b> <see cref="ParkSurfaces.Rebuild"/> asks them to
+	/// lay themselves again through it, and the models are otherwise reachable only through
+	/// <c>Entity.All</c>.
 	/// </para>
 	/// </summary>
 	public static ParkQueues? Current { get; private set; }

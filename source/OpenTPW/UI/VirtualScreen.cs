@@ -38,10 +38,9 @@ internal static class VirtualScreen
 	/// <summary>
 	/// Window pixels to a virtual unit: whichever of the two sides runs out first, so the whole
 	/// 2048x1536 screen always fits inside the window with its shape kept. A window wider than 4:3
-	/// is held by its height, which is what every window was held by before any other shape was
-	/// allowed; one narrower than 4:3 - 1280x1024, or a window dragged tall - by its width. Scaling
-	/// by the height alone drew a narrow window's interface wider than the window, and the player
-	/// slots ran off both edges of it.
+	/// is held by its height; one narrower than 4:3 - 1280x1024, or a window dragged tall - by its
+	/// width, since scaling by the height alone would draw a narrow window's interface wider than the
+	/// window, and the player slots would run off both edges of it.
 	/// </summary>
 	public static float Scale => MathF.Min( Screen.Width / Width, Screen.Height / Height );
 

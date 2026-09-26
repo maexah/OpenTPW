@@ -9,13 +9,11 @@ namespace OpenTPW.Tests;
 /// Where a ride carries the people it has taken aboard.
 ///
 /// <para>
-/// <b>Alexah found this by playing: the children never appear on the ride, bouncing - their sprite stays
-/// at the front of the queue until the ride is over.</b> Half of that is the original's own behaviour,
-/// which is what made it confusing rather than plainly broken: nothing in the engine moves a rider
-/// either. All five callers of its "place a person" routine are accounted for - the ride exit, a generic
+/// <b>Nothing in the engine moves a rider.</b> All five callers of its "place a person" routine are
+/// accounted for - the ride exit, a generic
 /// put-down, a wrapper, the handyman's litter arm and dropping a staff member - and not one of them is a
 /// rider. A rider's world position legitimately stays where they queued, and the DRAWING puts them on a
-/// node of the ride's own model. This build did the first half and never the second.
+/// node of the ride's own model.
 /// </para>
 /// <para>
 /// <b>This class pins the join between the two halves</b> - the script's node NUMBER against the model's
@@ -140,7 +138,7 @@ public class ParkRiderSeatTests
 
 		foreach ( var node in model.Nodes.Where( n => wanted.Contains( n.Name.Trim() ) ) )
 		{
-			// The model's Z is its up, and LobbyModel swizzles it into the world's when it places a node.
+			// The model's Y is its up, and LobbyModel swizzles it into the world's Z when it places a node.
 			Assert.IsTrue( node.WorldTransform.M42 > 1f,
 				$"'{node.Name.Trim()}' sits at height {node.WorldTransform.M42}, which is on the floor" );
 		}

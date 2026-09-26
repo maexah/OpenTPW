@@ -6,17 +6,10 @@ namespace OpenTPW;
 /// The park's own camera, as the original flies it.
 ///
 /// <para>
-/// <b>A development flycam used to sit beside this one and was deleted on 2026-09-17.</b> It was a
-/// leftover from the test scene that predated parks, nothing ever constructed it, and the reason its own
-/// comment gave for keeping it - so that a flycam need not be written twice - stopped applying once this
-/// camera and the camcorder were built. It is named here only because older commits and notes refer to
-/// it, and anyone meeting those should know it is gone rather than go looking.
-/// </para>
-///
-/// <para>
 /// The original keeps this camera as a save module of its own ("SAD_CAMERA", chunk magic <c>KAME</c>,
-/// code 0x0042a190-0x0042d130), and its entire persisted state is four things: where it is looking, how
-/// far round it has been spun, how far out it is zoomed, and a flags word. Everything else below is
+/// code 0x0042a190-0x0042d130), and its persisted state is six globals: where it is looking, how far
+/// round it has been spun, how far out it is zoomed, a flags word, and the look-at point and spin that
+/// first person saves to put back. Everything else below is
 /// derived from those each frame, which is why this has so few fields.
 /// </para>
 ///
@@ -27,17 +20,16 @@ namespace OpenTPW;
 ///
 /// <para>
 /// The three pieces of state are static so that the debug console can drive the camera without holding
-/// the instance, the same way <see cref="LobbyCameraMode"/> exposes its own. <b>Both of the things this
-/// paragraph called deliberately unfinished are now settled at their sites</b> - the field of view's
-/// convention (vertical 90, read out of the exe) and riding the ground, which the update does.
+/// the instance, the same way <see cref="LobbyCameraMode"/> exposes its own.
 /// </para>
 /// </summary>
 public sealed class ParkOrbitCameraMode : CameraMode
 {
 	/// <summary>
 	/// What the camera looks at, on the ground. The original's default is (475, 175) in the park's own
-	/// axes, which is grid cell (47, 17) - the park entrance, and the same cell
-	/// <c>MapInfo.FixedItemOrigin</c> names. A cell is 10 units across and its centre is at
+	/// axes, which is grid cell (47, 17) - the park entrance's <c>EntranceA</c> in <c>Standard.sam</c>, one
+	/// cell west of the (48, 17) that <c>MapInfo.FixedItemOrigin</c> names. A cell is 10 units across and
+	/// its centre is at
 	/// <c>grid * 10 + 5</c>, which is exactly where those two numbers come from.
 	/// </summary>
 	public static Vector3 PointOfInterest { get; set; } = new( 475f, 175f, 0f );
@@ -145,7 +137,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	{
 		// The original's park projection is 90, near 0.1, far 1000, and the 90 is a VERTICAL angle.
 		//
-		// Both halves of that were read out of the exe on 2026-09-13. FUN_00578be0 builds the matrix
+		// Both halves of that are read out of the exe. FUN_00578be0 builds the matrix
 		// from a half-angle - _DAT_007018b8 is pi/180 and _DAT_007018c0 is 0.5 - and writes
 		// m[0] == m[5] with no aspect term, which on its own leaves the convention open. What closes
 		// it is the CULLING frustum, which has to frame the same volume the matrix draws or geometry
@@ -157,15 +149,9 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		// struct pointer, so its 0.75 comes from the picking code, which carries the same figure as a
 		// literal double and takes atan(0.75) to build the same frustum (FUN_0045bf90).
 		//
-		// The reference screenshots cannot check this, and it is worth saying why so that nobody
-		// spends the time again. Telling a vertical 90 from a horizontal one means locating vanishing
-		// points one to seven thousand pixels outside an 800x600 frame, from edges whose directions
-		// differ by a degree or two, in JPEG. Four estimators were built for it and each was gated on
-		// a frame this engine rendered at a known angle: the careful ones separate the two candidates
-		// by one to five per cent and report undecided, and the naive ones answer confidently and
-		// wrongly. The framing difference that prompted the question - the original showing no sky
-		// where this shows plenty - is content, not lens: their parks are full of rides and trees that
-		// stop the eye, and this one is bare ground.
+		// The reference screenshots cannot check this - see docs/exe/park-engine.md, "Do not try to
+		// measure the FOV from the reference screenshots". Any difference in how much sky the two show
+		// is content, not lens: the original's parks are full of rides and trees that stop the eye.
 		//
 		// The far plane stays Camera's own 10000 rather than the original's 1000. Nothing here depends
 		// on it - it costs only depth precision - so it is left alone rather than reaching into shared
@@ -199,9 +185,8 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		if ( Input.Pressed( InputButton.RotateRight ) )
 			Yaw += MathF.PI / 4f;
 
-		// Not if the interface already used it. Nothing consumed the mouse for the world before there
-		// was anything to consume it - the wheel over a scrolling list would scroll the list AND zoom
-		// the park behind it. Read in the same frame it is written: the HUD updates in Level.Update
+		// Not if the interface already used it, or the wheel over a scrolling list would scroll the list
+		// AND zoom the park behind it. Read in the same frame it is written: the HUD updates in Level.Update
 		// and this runs from Level.Render, in that order, so there is no lag.
 		//
 		// Handled here rather than centrally for the reason the camcorder key above gives: a camera
@@ -216,13 +201,8 @@ public sealed class ParkOrbitCameraMode : CameraMode
 			var scroll = ScrollSpeed * Time.Delta;
 
 			// The same basis the eye is placed from, and the same one ParkCamcorderCameraMode walks
-			// along. It used to be the mirror of it - forward (sin, cos) and right (cos, -sin), which
-			// is this rotation taken the other way - so the two agreed only at yaw 0 and pi: at a
-			// quarter turn, forward scrolled the view backwards and right scrolled it left.
-			//
-			// It was hard to meet before, because yaw only ever reached multiples of pi/4 from the
-			// rotate keys. Coming back from camcorder mode hands this camera whatever yaw the player
-			// walked to, so it became easy to meet the moment that existed.
+			// along, so forward scrolls the view forward at every yaw - including the one camcorder mode
+			// hands back, which need not be a multiple of pi/4.
 			PointOfInterest += new Vector3(
 				((Input.Forward * -MathF.Sin( Yaw )) + (Input.Right * MathF.Cos( Yaw ))) * scroll,
 				((Input.Forward * MathF.Cos( Yaw )) + (Input.Right * MathF.Sin( Yaw ))) * scroll,
@@ -239,7 +219,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	/// Called from the constructor as well as from <see cref="Update"/>, for the reason
 	/// ParkCamcorderCameraMode.Place gives: the camera is swapped and its view matrix built in the
 	/// same <see cref="Camera.Update"/>, so a mode that waited for its first update would have a
-	/// frame drawn from the world origin - which is what coming back from camcorder mode did.
+	/// frame drawn from the world origin.
 	/// </remarks>
 	private void Place( float ground )
 	{
@@ -270,7 +250,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	/// <para>
 	/// The three pieces of state here are static so they survive <see cref="Camera.SetCameraMode{T}"/>
 	/// building a fresh instance, which means they survive the scene too unless something says
-	/// otherwise. It matters more since camcorder mode: coming back from a walk writes wherever the
+	/// otherwise. It matters because coming back from camcorder mode writes wherever the
 	/// player wandered to into <see cref="PointOfInterest"/>, so without this a second park opens
 	/// looking at a spot that belonged to the first one.
 	/// </para>

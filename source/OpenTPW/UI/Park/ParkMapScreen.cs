@@ -1,8 +1,7 @@
 namespace OpenTPW.UI;
 
 /// <summary>
-/// The park map: the screen behind the gadget's map button, and the first one in this game that is
-/// real rather than a button saying why nothing happens.
+/// The park map: the screen behind the gadget's map button.
 ///
 /// <para>
 /// <b>Where it comes from.</b> FUN_005f0b40 builds it from the compiled layout stream at 0x00774da0,
@@ -34,8 +33,8 @@ namespace OpenTPW.UI;
 /// - staff overlays and the metric picker - choose what that overlay shows. <b>Every one of those is a
 /// simulation value this game does not have</b>, and the game's own help rows say so in as many words:
 /// "excitement ratings", "customer satisfaction", "ride reliability", "queue times". Built now they
-/// would be switches over an empty overlay, which is what the aerial, the bank balance and the message
-/// bar were each refused for. So this screen is the map, and the map is honest.
+/// would be switches over an empty overlay, which is what the aerial and the message bar were each
+/// refused for. So this screen is the map, and the map is honest.
 /// </para>
 /// <para>
 /// <b>The terrain colours are not invented either.</b> The original's own land codes (9 outside the
@@ -50,7 +49,7 @@ namespace OpenTPW.UI;
 /// panels are <i>bare</i>: buttpan1 and buttpan2 back the six layer switches along y 1409-1512, and
 /// those switches are refused above, so the panels carry nothing. They are kept because they are the
 /// screen's own backing art and the layout is the point - which is a different thing from drawing a
-/// control that would do nothing, and the distinction is worth stating because three things have been
+/// control that would do nothing, and the distinction is worth stating because two things have been
 /// refused nearby for looking exactly like this.
 /// </para>
 /// <para>
@@ -85,8 +84,8 @@ internal sealed class ParkMapScreen : UiWindow
 		Root = new UiControl { Id = 0x980, Rect = new UiRect( 0, 0, 2047, 1537 ) };
 
 		// The map itself, and the one control with a handler of its own in the original (LAB_005f0b20).
-		// It is added first so everything else draws over it; nothing actually overlaps it, because the
-		// panels below start at y 1387 and it stops at 1364.
+		// It is added first so everything else draws over it: the scroll arrows and the zoom buttons
+		// overlap its bottom-left corner, and the panels below start at y 1387 where it stops at 1364.
 		_view = Root.Add( new MapView
 		{
 			Id = 0x992,
@@ -121,9 +120,10 @@ internal sealed class ParkMapScreen : UiWindow
 			TextColour = new UiColour( 255, 255, 0 )
 		} );
 
-		// The four scroll arrows. Each carries a seven-point hit region in the stream, which is not
-		// reproduced - UiControl takes a rectangle, and the arrows do not overlap anything that a
-		// squarer hit area could steal a click from.
+		// The four scroll arrows. Each carries a seven-point hit region in the stream (op 4 sub-op 4,
+		// what UiControl.Outline takes), which is not reproduced: each takes its rectangle, and the
+		// rectangles overlap - up and down each share a square with left and right, where the
+		// later-added left and right arrows take the press.
 		Root.Add( Arrow( 0x98a, new UiRect( 80, 1079, 237, 1236 ), 263, "b_mapup", 0, -1 ) );
 		Root.Add( Arrow( 0x981, new UiRect( 80, 1236, 237, 1393 ), 264, "b_mapdn", 0, 1 ) );
 		Root.Add( Arrow( 0x984, new UiRect( 1, 1157, 158, 1315 ), 265, "b_mapleft", -1, 0 ) );
@@ -179,7 +179,7 @@ internal sealed class ParkMapScreen : UiWindow
 
 	private void Close() => Stack.Close( this );
 
-	// THERE IS DELIBERATELY NO Cancel() HERE, and there was one until it was found to be dead. Escape
+	// THERE IS DELIBERATELY NO Cancel() HERE. Escape
 	// cannot reach this window: WindowStack.Keyboard hands it to ParkFrontEnd.ParkKeys whenever no box has
 	// focus, and ParkFrontEnd.MenuKey returns at once on a modal front window - so an override would
 	// never once be called while reading as though it worked. The way out is b_okay, which is what the
@@ -189,7 +189,7 @@ internal sealed class ParkMapScreen : UiWindow
 	/// <summary>
 	/// The map's own picture goes when the screen does. It is built from a stream rather than a path, so
 	/// nothing caches it and nothing else shares it - left alone it would be one more pathless texture a
-	/// scene never lets go of, which is exactly the residue branch 51 spent itself getting to zero.
+	/// scene never lets go of.
 	/// </summary>
 	protected internal override void Closed() => _view.Release();
 

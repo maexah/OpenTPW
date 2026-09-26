@@ -26,14 +26,14 @@ public enum QueueVerdict
 /// <c>thiscall</c> accessors and the decompiler drops <c>ECX</c>. Disassembled, <b>two different cells are
 /// being asked</b>: <c>EBP</c> is the cell being left and <c>EDI</c> is the cell being entered, and which
 /// of the two each question goes to is most of the meaning. Reading it from the decompiled form loses that
-/// completely, and an earlier attempt at this function was committed and reverted for exactly that reason.
+/// completely.
 /// </para>
 /// <para>
 /// <b>Fourteen of the fifteen are comparisons of the cell's type</b> against a literal, and the types are
 /// already read by <see cref="ParkWorld.MapCell"/>. The fifteenth pair reach a cell's <i>track</i> record,
 /// which is a second sub-record a cell may carry in addition to its map record. That question is taken as
 /// a parameter here, the way the whole edge test is a parameter to <see cref="MapStep"/>, so that a test
-/// can name an answer without building a park - but <b>it no longer has to go unanswered</b>: the save
+/// can name an answer without building a park - and <b>it is answered</b>: the save
 /// reader parses the track record, and <see cref="For"/> binds the real one for a park that is loaded.
 /// </para>
 /// <para>
@@ -230,8 +230,8 @@ public sealed class CellEdge
 	/// outright; on 1 a path may be left for anything that is not path, queue or footprint.
 	/// </param>
 	/// <param name="trackCloses">
-	/// Whether the cell's <i>track</i> record closes it. <b>Modelled now</b> - see the class remarks, and
-	/// <c>For</c>, which binds it for every real park. This said "Not modelled".
+	/// Whether the cell's <i>track</i> record closes it - see the class remarks, and <c>For</c>, which
+	/// binds it for every real park.
 	///
 	/// <para>
 	/// <b>Measured rather than guessed at, and the measurement is why this is small.</b> Every one of Lost
@@ -243,8 +243,8 @@ public sealed class CellEdge
 	/// </para>
 	/// </param>
 	/// <param name="queueAhead">
-	/// What a thing standing on the cell ahead says. Not modelled: it needs the per-cell thing lists the
-	/// engine keeps and this project does not. Left out, it answers <see cref="QueueVerdict.NothingThere"/>.
+	/// What a thing standing on the cell ahead says. Not modelled: the arm it stands for is not yet decoded
+	/// (<c>docs/QUEUE.md</c> Q140). Left out, it answers <see cref="QueueVerdict.NothingThere"/>.
 	/// </param>
 	public CellEdge( Func<int, int, ParkWorld.MapCell> cellAt, int mode,
 		Func<ParkWorld.MapCell, bool>? trackCloses = null,
@@ -263,12 +263,12 @@ public sealed class CellEdge
 	/// <para>
 	/// Of the three questions the constructor takes, a live park can answer two. The map is
 	/// <see cref="Live"/> - the running park's cells, not the file's. The track record is parsed by the
-	/// save reader, so the branch that every caller until now had to leave saying "no" can be given its
+	/// save reader, so the branch is given its
 	/// real answer: left out it is wrong for 568 of the shipped park's cells.
 	/// </para>
 	/// <para>
-	/// <b>The third is still declined, and deliberately.</b> <c>queueAhead</c> needs the per-cell thing
-	/// lists the original's engine keeps and this project does not, so it keeps answering
+	/// <b>The third is still declined, and deliberately.</b> <c>queueAhead</c> stands for an arm of the
+	/// original's that is not yet decoded (<c>docs/QUEUE.md</c> Q140), so it keeps answering
 	/// <see cref="QueueVerdict.NothingThere"/>. Answering it by guessing which things are where would be
 	/// worse than not answering it, and it only bears on mode 2.
 	/// </para>
@@ -285,16 +285,16 @@ public sealed class CellEdge
 	/// nobody has touched.
 	///
 	/// <para>
-	/// <b>This was reading the file alone, and that was a defect rather than a simplification.</b>
+	/// <b>Reading the file alone would be a defect rather than a simplification.</b>
 	/// <c>ParkBuilding.Stamp</c> records a bought thing's footprint in <see cref="ParkState"/>, and
-	/// <see cref="ParkGround"/> reads the same overlay and stops drawing grass there - so while this
-	/// asked <see cref="ParkWorld"/>, the ground and the pathfinder disagreed about the very same cell
-	/// and <b>guests walked straight through anything the player had just bought</b>. A path a player
-	/// lays has exactly that shape, so it would have arrived unwalkable for the same reason.
+	/// <see cref="ParkGround"/> reads the same overlay and stops drawing grass there - so asking
+	/// <see cref="ParkWorld"/> would set the ground and the pathfinder at odds about the very same cell,
+	/// and <b>guests would walk straight through anything the player had just bought</b>. A path a player
+	/// lays has exactly that shape, so it would arrive unwalkable for the same reason.
 	/// </para>
 	/// <para>
 	/// The overlay falls through to the save for every cell nobody has changed, which is all of them
-	/// until somebody builds something, so a park nobody has edited answers exactly as it did before.
+	/// until somebody builds something, so a park nobody has edited answers exactly as its file does.
 	/// </para>
 	/// </summary>
 	private static Func<int, int, ParkWorld.MapCell> Live( ParkWorld park )

@@ -88,8 +88,7 @@ public partial class Editor
 		DrawMenuBar();
 
 		// The leading id is new in ImGui 1.90, which took a dockspace id in front of the viewport it had
-		// taken before. Zero asks ImGui for the id it would have derived from that viewport itself, which
-		// is the docking this had when the id was not a parameter at all.
+		// taken before. Zero asks ImGui for the id it would derive from that viewport itself.
 		ImGui.DockSpaceOverViewport( 0, ImGui.GetMainViewport(), ImGuiDockNodeFlags.PassthruCentralNode );
 
 		tabs.ForEach( tab =>

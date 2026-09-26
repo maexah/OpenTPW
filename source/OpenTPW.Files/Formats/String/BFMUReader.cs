@@ -51,7 +51,7 @@ public sealed class BFMUReader : BaseFormat
 		// Read Character Length
 		var charCount = memoryStream.ReadByte();
 		
-		//Skip 0x0 unsued byte
+		// The count's high byte, which this does not read - nought in both shipped tables
 		_ = memoryStream.ReadByte();
 
 		for ( int i = 0; i < charCount; i++ )

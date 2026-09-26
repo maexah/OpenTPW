@@ -28,8 +28,7 @@ namespace OpenTPW.UI;
 /// Information category's staff/items/visitors lists, and the Money category's entry price. <b>Only
 /// Research still does nothing</b> - it is not a category, and neither its six effort sliders nor its two
 /// message boxes are built - so it says so, the way the park menu's Load and Save already do, and counts
-/// each click as <c>RESEARCH_BUTTON</c>. This paragraph said four of the six were inert until they were not. <b>The gauge is live now, and this paragraph
-/// said there was no such number anywhere until it was.</b> There is one on every guest, and
+/// each click as <c>RESEARCH_BUTTON</c>. <b>The gauge is live.</b> There is a happiness on every guest, and
 /// FUN_004c7bb0 is what the original does with them - average them, and read nought while the park is
 /// shut, which is what still leaves it resting at its lowest part in a park nobody has entered.
 /// </para>
@@ -39,7 +38,7 @@ namespace OpenTPW.UI;
 /// number 0x36 - and both numbers already exist here, because a player's gms.dat has carried them since
 /// the lobby was built. So this one is not chrome: it shows what the player actually has, in the format
 /// the original seeds it with, "0 x". The key row goes away entirely in Instant Action, which is what
-/// FUN_004a1d70 does with it, and is why <see cref="FrontEnd.Screens.IslandPanel"/> hides its own.
+/// FUN_004a1d70 does with it, and is why <see cref="IslandPanel"/> hides its own.
 /// </para>
 /// <para>
 /// <b>The arm is a carrier, not a lid.</b> 0x21, with 0x22 and 0x23 on its far end and the retract
@@ -65,10 +64,10 @@ namespace OpenTPW.UI;
 /// delete.
 /// </para>
 /// <para>
-/// <b>The bank balance beside it IS built now, and this paragraph used to say a park keeps no balance
-/// and no price.</b> 0x2f is the lettering and 0x32 the currency icon, and the number is the save's own
-/// <c>mBalance</c> plus what the gates have taken since - see <see cref="ShowMoney"/> for why those are
-/// two numbers here and one in the original. What is still out is <b>0x30</b>, the cost of whatever is
+/// <b>The bank balance beside it IS built.</b> 0x2f is the lettering and 0x32 the currency icon, and the
+/// number is <see cref="ParkState.Balance"/>: the save's own <c>mBalance</c>, moved by every admission
+/// fee, cost and refund - one number, as in the original (see <see cref="ShowMoney"/>). What is
+/// still out is <b>0x30</b>, the cost of whatever is
 /// in your hand, which the original starts hidden and paints yellow because an empty hand has no price;
 /// and <b>0x31</b>, the trend arrow, which wants a history of the balance that nothing here keeps. Both
 /// reasons are written out where the cluster is built.
@@ -139,8 +138,7 @@ internal sealed class ParkGadget : UiWindow
 		//
 		// Higher is nearer the front, and a screenshot is what settles the direction: the six buttons sit
 		// at 10 inside a body at 8 and plainly draw over it. So the arm goes in first and the body over
-		// it. The first build of this made the arm a child of the body, and it drew a hard seam straight
-		// across the panel - which is how the ordering came to be questioned at all.
+		// it; made a child of the body, the arm draws a hard seam straight across the panel.
 		//
 		// The handle's 9 would put it in front of the body, and it is still left inside the arm: it sits
 		// out at x 976-1129 where the body stops at 439, so the two never overlap and no ordering between
@@ -152,8 +150,7 @@ internal sealed class ParkGadget : UiWindow
 		// and the retract button 0x24 beside them. It is a carrier, not a lid - FUN_004a2590 is the only
 		// way anything gets onto it, and each of its five callers hands it a panel of its own to hold.
 		//
-		// Branch 54 left it out because "an arm would fold away nothing", which was true then and is not
-		// now: the panel it carries is built below, and one of that panel's two buttons works.
+		// The panel it carries is built below, and one of that panel's two buttons works.
 		_arm = Root.Add( new UiControl
 		{
 			Id = 0x21,
@@ -174,8 +171,7 @@ internal sealed class ParkGadget : UiWindow
 			// where 0x23 is only remembered in DAT_007cb2d0 - is a jump table over messages 0xa to
 			// 0x100 working a state in the control's own +0x134, and FUN_004a25f0 reads states 3 and 4 as
 			// "still moving". Neither how far nor how long is traced, so the arm is here or it is not,
-			// rather than being given an invented travel - as the gauge's moving part was left out rather
-			// than given an invented reading.
+			// rather than being given an invented travel.
 			Visible = false
 		} );
 
@@ -207,8 +203,7 @@ internal sealed class ParkGadget : UiWindow
 		//
 		// The original keeps the whole assembly built and switches this button off instead, calling the
 		// control's vtable+0x14 with 0 exactly as it does for the readouts that are shown but never
-		// clicked. A NOTE CORRECTED HERE: branch 54 drew this button once and wrote that it "showed as a
-		// red cross - the disabled part of b_retract". It is not the disabled part. b_retract.md2's six
+		// clicked. The red cross it shows is not the disabled part of b_retract: b_retract.md2's six
 		// nodes are b_retract, disable, hilite, hidown, helddown and down - UiButton's own order - so part
 		// 0 is the NORMAL look, and a button that closes something simply looks like a cross.
 		_arm.Add( new UiButton
@@ -272,9 +267,9 @@ internal sealed class ParkGadget : UiWindow
 		// Control type 9 in the stream, which is a meter: FUN_0066d750 is the plain control with three
 		// more fields, and FUN_004a1cd0 arms a 2000ms timer - id 0x80083 - that fills it. It carries no
 		// mesh at all, because the original hands it a meter.wct skin instead (FUN_00477870, from
-		// FUN_004a1d70), which is why a control that draws only a mesh showed nothing whatever here.
+		// FUN_004a1d70), which is why a control that draws only a mesh shows nothing here.
 		//
-		// IT HAS A NUMBER NOW, AND THIS USED TO SAY THERE WAS NONE ANYWHERE. What the timer asks for is
+		// What the timer asks for is
 		// FUN_004c7bb0 - the mean happiness of the park's guests, and nought while the park is shut. See
 		// ParkPeople.AverageHappiness for the arithmetic and for the one term of it that is deliberately
 		// not reproduced, and UiMeter for how far up the skin is drawn and why that part is a choice.
@@ -309,10 +304,10 @@ internal sealed class ParkGadget : UiWindow
 		} );
 
 		// The six, in the stream's own order. Each one's help row is the game's description of it.
-		// The first of the four dead ones to have something behind it. FUN_004a0940( 1 ) opens whichever
-		// of buy and hire that category was last left on, from a remembered-tab global seeded to 1 -
-		// so buy is what a park opens on, and the hire screen is its sibling rather than a second
-		// button. See docs/exe/hud.md.
+		// In the original FUN_004a0940( 1 ) opens whichever of buy and hire that category was last left
+		// on, from a remembered-tab global seeded to 1 - so buy is what a park opens on, and the hire
+		// screen is its sibling rather than a second button. See docs/exe/hud.md. A deviation: this
+		// button always opens buy.
 		buttons.Add( new UiButton
 		{
 			Id = 0x26,
@@ -322,11 +317,10 @@ internal sealed class ParkGadget : UiWindow
 			Clicked = () => Stack.Open( new ParkBuyScreen( Stack ) )
 		} );
 
-		// The one that works - and it does not enter first person itself, which is what this used to do.
-		// FUN_004a0840's case 0x27 splits on whether the button has just gone down: down calls FUN_00498bb0,
-		// which puts the camcorder panel on the arm, and up calls FUN_00498bd0, which takes it off again.
-		// The button id 99 that actually enters the mode is on that panel, not here. So this is one more
-		// click than it was, and it is the original's click: the C key still goes straight there.
+		// It does not enter first person itself. FUN_004a0840's case 0x27 splits on whether the button
+		// has just gone down: down calls FUN_00498bb0, which puts the camcorder panel on the arm, and up
+		// calls FUN_00498bd0, which takes it off again. The button id 99 that actually enters the mode is
+		// on that panel, not here; the C key goes straight there.
 		_camcorder = buttons.Add( new UiButton
 		{
 			Id = 0x27,
@@ -346,7 +340,7 @@ internal sealed class ParkGadget : UiWindow
 			Clicked = () => ParkCategoryScreens.Open( Stack, ParkCategoryScreens.Information )
 		} );
 
-		// The one of the six with a screen behind it. FUN_004a0840's case 0x29 goes straight to
+		// The map. FUN_004a0840's case 0x29 goes straight to
 		// FUN_005f0b40 rather than through the remembered-tab picker, because the map is not a category
 		// - see <see cref="ParkMapScreen"/>, which pauses the park as the original does.
 		buttons.Add( new UiButton
@@ -393,10 +387,8 @@ internal sealed class ParkGadget : UiWindow
 		// The bank balance, in the OPPOSITE corner - the stream's 0x2f and 0x32. Root controls like the
 		// cluster below rather than children of the gadget body, so each anchors top-left on its own.
 		//
-		// A PARK KEEPS A BALANCE NOW, and this cluster was left out for as long as it did not. The save's
-		// economy thing (model 16) carries mBalance and mAdmissionFee, and what the gates have taken since
-		// the park opened is on the behaviours - see ShowMoney for why those two are added together rather
-		// than either being read on its own.
+		// The save's economy thing (model 16) carries mBalance and mAdmissionFee, and ParkState's balance
+		// starts from mBalance and moves with every admission fee, cost and refund - see ShowMoney.
 		_balance = Root.Add( new UiControl
 		{
 			Id = 0x2f,
@@ -422,8 +414,8 @@ internal sealed class ParkGadget : UiWindow
 		// TWO OF THE CLUSTER ARE DELIBERATELY NOT BUILT, each for a reason rather than for want of a rect.
 		//
 		// 0x30, the price of whatever is in your hand, (458,273)-(720,363): yellow, font 2, and started
-		// HIDDEN by FUN_004a1d70, which is exactly what an empty hand should show. Nothing here picks
-		// anything up, so it would be hidden for the whole life of a park.
+		// HIDDEN by FUN_004a1d70, which is exactly what an empty hand should show. The hand carries
+		// things (ParkBuilding.Carry), but what makes the original show 0x30 is not traced.
 		//
 		// 0x31, the trend arrow, (728,109)-(831,211) - and it is a CHILD of 0x2f rather than a root
 		// control, which only the disassembly shows: 0x004a0f05 fetches 0x2f from the interface root and
@@ -431,7 +423,7 @@ internal sealed class ParkGadget : UiWindow
 		// newest sample of two ring buffers - base, index, count and a wrapped flag - at +0x1f5a4 and
 		// +0x1fc90 on the thing FUN_00519510 fetches from the world at +0x1da720.
 		//
-		// THOSE HISTORIES ARE NOT ON THE ECONOMY, which is what this comment said first. They are on the
+		// THOSE HISTORIES ARE NOT ON THE ECONOMY. They are on the
 		// park's STATISTICS manager: FUN_004c5d70 is the serialiser carrying those exact ring offsets,
 		// and it writes mLifetimeVisitors, mMisbehavingKids, mMostPaidForTicket, mLongestStay and
 		// mParkLastOpened beside them. The offsets are what joins the two functions; the header field is
@@ -490,7 +482,7 @@ internal sealed class ParkGadget : UiWindow
 
 	/// <summary>
 	/// One of the two counts in the top right corner: white, font slot 2, and pushed up against the icon
-	/// it belongs to, which is what <see cref="FrontEnd.Screens.IslandPanel"/> does with the lobby's.
+	/// it belongs to, which is what <see cref="IslandPanel"/> does with the lobby's.
 	/// </summary>
 	private static UiControl Count( int id, UiRect rect )
 		=> new()
@@ -554,7 +546,7 @@ internal sealed class ParkGadget : UiWindow
 
 		// Put the gadget away in first person, because camcorder mode steers the view from where the
 		// pointer IS rather than from how it moves: outside a dead zone of 0.4 the view turns at up to
-		// 2 radians a second, and every one of this panel's controls is inside that band at the bottom
+		// 1.2 radians a second, and every one of this panel's controls is inside that band at the bottom
 		// left of any window. Left up, reaching for a button would sweep the view round - about a
 		// quarter turn during a two-second reach - and leaving the mode hands that yaw to the orbit
 		// camera, so the park would come back facing somewhere nobody chose.
@@ -576,9 +568,8 @@ internal sealed class ParkGadget : UiWindow
 		// and OptionsScreen all set Modal as well, and what the gadget should do underneath those is a
 		// separate question nobody has asked.
 		//
-		// Both conditions belong in ONE assignment. They were briefly written as two, one after the
-		// other, and the second silently overwrote the first - a line that compiles, measures clean and
-		// does nothing.
+		// Both conditions belong in ONE assignment: written as two, one after the other, the second
+		// silently overwrites the first - a line that compiles, measures clean and does nothing.
 		Hidden = ParkCamcorderCameraMode.Active || Stack.Windows.Any( window => window is ParkMapScreen );
 	}
 
@@ -587,17 +578,15 @@ internal sealed class ParkGadget : UiWindow
 	///
 	/// <para>
 	/// <b>The format is an approximation, and knowingly one.</b> The original fills this control in
-	/// FUN_004a0e30: it builds the text through FUN_006acca0 from a compiled resource - entry 0x1f of
-	/// the bundle at DAT_0078ba94 - handed three numbered arguments typed 0x10, 0x11 and 0x12, which
+	/// FUN_004a0e30: it builds the text through FUN_006acca0 from a compiled resource - entry 0x1c0 of
+	/// the bundle at DAT_0078ba94, into a 31-byte buffer - handed three numbered arguments typed 0x10,
+	/// 0x11 and 0x12, which
 	/// are the day, the month and the year. So the layout of the date is <b>the game's own localised
 	/// resource</b>, not the machine's setting: the executable imports no GetDateFormat at all, and
 	/// GetLocaleInfoA/W appear only inside CRT locale code.
 	/// </para>
 	/// <para>
-	/// An earlier version of this comment claimed the opposite - that the original asked the machine,
-	/// so a short date here was "the same rule rather than the same output". <b>That was wrong</b>, and
-	/// it came of searching for a printf-style format string and concluding from its absence. The
-	/// resource's own text has not been read back yet - it is not a row of any shipped .str - so what
+	/// The resource's own text has not been read back yet - it is not a row of any shipped .str - so what
 	/// it looks like is still unknown, and this shows a short date until it is. That is a stand-in, not
 	/// a match.
 	/// </para>
@@ -606,7 +595,7 @@ internal sealed class ParkGadget : UiWindow
 
 	/// <summary>
 	/// The golden keys and tickets the player has earned, read from their gms.dat the way the lobby's
-	/// island panel reads them - see <see cref="FrontEnd.Screens.IslandPanel.ShowKeys"/>.
+	/// island panel reads them - see <see cref="IslandPanel.ShowKeys"/>.
 	///
 	/// <para>
 	/// The format is the original's own: the string FUN_004a1d70 seeds both counts with, at 0x00752f24,
@@ -626,15 +615,13 @@ internal sealed class ParkGadget : UiWindow
 
 	/// <summary>
 	/// What the park is worth, in the corner the original keeps it - the balance the save was left with,
-	/// plus everything the gates have taken since it was loaded.
+	/// moved by every admission fee, cost and refund since it was loaded.
 	///
 	/// <para>
-	/// <b>It is ONE number now, and this said it had to be two until it was.</b> The balance used to be
-	/// the save's own figure plus a running total the behaviours kept, because <see cref="ParkWorld"/>
-	/// describes a file and a fee could not move it. <see cref="ParkState"/> is the park as it is played,
-	/// the level owns it, and taking a fee moves its balance directly - which is what the original does
-	/// too (<c>FUN_004d0600</c> adds a fee straight onto <c>mBalance</c> and <c>mProfitThisYear</c>). The
-	/// comment here named that as the moment to come back to this line, and this is it.
+	/// <b>It is ONE number.</b> <see cref="ParkWorld"/> describes a file and a fee cannot move it;
+	/// <see cref="ParkState"/> is the park as it is played, the level owns it, and taking a fee moves its
+	/// balance directly - which is what the original does too (<c>FUN_004d0600</c> adds a fee straight
+	/// onto <c>mBalance</c> and <c>mProfitThisYear</c>).
 	/// </para>
 	/// <para>
 	/// Plain digits, with no thousands separator, because the original sizes this field by measuring the
@@ -670,7 +657,7 @@ internal sealed class ParkGadget : UiWindow
 	/// <para>
 	/// <b>Read every frame where the original reads it every two seconds, and that is a departure.</b> Its
 	/// meter arms a 2000ms timer (<c>FUN_004a1cd0</c>, id 0x80083) because the value costs a walk over
-	/// every thing in the park; this walks a list of thirteen guests. What differs on screen is a gauge
+	/// every thing in the park; this walks the park's guests alone. What differs on screen is a gauge
 	/// that moves smoothly rather than in steps, and putting the timer back would mean keeping a clock
 	/// here in order to make the reading worse.
 	/// </para>

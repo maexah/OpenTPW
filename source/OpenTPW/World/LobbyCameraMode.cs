@@ -29,7 +29,7 @@ namespace OpenTPW;
 /// carries on turning straight through a move.
 ///
 /// Engine and content: the lobby's own camera, with its settings read from lobby.txt at the boundary;
-/// a park's camera will be a mode of its own.
+/// a park's camera is a mode of its own (ParkOrbitCameraMode).
 /// </summary>
 public class LobbyCameraMode : CameraMode
 {
@@ -45,12 +45,6 @@ public class LobbyCameraMode : CameraMode
 	/// rather than at one assumed one, and its per-frame multiply is the first-order approximation
 	/// of the curve <see cref="Time.SmoothingFactor"/> gives exactly. The 2:1 ratio is what settles
 	/// the shot on the new island while the camera is still travelling.
-	///
-	/// These used to be 1.32 and 2.79, from a derivation that was wrong twice over: it read the
-	/// delta as 25 ticks a second rather than 10, and it applied <c>-25 * ln(1 - f)</c> to a factor
-	/// the original already multiplies by a delta. It then halved the result to stop the
-	/// deceleration reading as slow - a correction the faithful rate does not need, being slower
-	/// than the tuned value it replaces.
 	/// </summary>
 	private const float PositionRate = 1f;
 	private const float LookAtRate = 2f;
@@ -63,10 +57,6 @@ public class LobbyCameraMode : CameraMode
 	/// second and comes round in a little over half a minute. The original's own advance is the same
 	/// arithmetic: its lobby tick (FUN_005e0470, in the resting state) reads SPINSPEED out of the
 	/// settings block every frame, does <c>angle += delta * SPINSPEED</c> and wraps it against 2pi.
-	///
-	/// The value is unchanged by the correction to that tick - the old comment called it tuned
-	/// rather than taken, and it was neither: it is exactly what the file asks for, arrived at by
-	/// luck while the tick rate was being read at 25 a second.
 	/// </summary>
 	private const float SpinSpeed = 0.2f;
 
@@ -77,45 +67,31 @@ public class LobbyCameraMode : CameraMode
 	/// <c>centre + rand * extent - extent / 2</c>.
 	///
 	/// <para>
-	/// <b>The middle component is the vertical.</b> The original is Y-up and this world is Z-up, so the
-	/// centre lands at (500, 500, 75) here and the extents at (400, 400, 50): the box spans 300 to 700
+	/// <b>The middle component is the vertical.</b> The original is Y-up and this world is Z-up, so in this
+	/// world's axes the original's centre is (500, 500, 75) and its extents (400, 400, 50): its box spans 300 to 700
 	/// across the lobby and 50 to 100 above it. That is the lobby's own geometry - the four islands
 	/// stand at 400 and 600 in both directions, centred on (500, 500) - which is what says the axes
 	/// have been read the right way round rather than transposed.
 	/// </para>
 	/// </summary>
 	/// <remarks>
-	/// <b>>>> A DELIBERATE DEVIATION, AND THE ORIGINAL'S OWN NUMBERS ARE KEPT BELOW. <<<</b>
-	/// The original's box is <c>centre (500, 75, 500)</c> with extents <c>(400, 50, 400)</c>, which in
-	/// this world's axes is centre <c>(500, 500, 75)</c> and extents <c>(400, 400, 50)</c> - X and Z
-	/// spanning 300 to 700, height 50 to 100. That was reproduced exactly, and then **measured in
-	/// flight**: the camera really does stay inside it, a median of **101.5 units** from the nearest
-	/// island with a maximum of 143.5.
+	/// <b>A deliberate deviation, at Alexah's word: the box's height band is lowered.</b> The original's box
+	/// is <c>centre (500, 75, 500)</c> with extents <c>(400, 50, 400)</c>, which in this world's axes is centre
+	/// <c>(500, 500, 75)</c> and extents <c>(400, 400, 50)</c> - X and Z spanning 300 to 700, height 50 to 100 -
+	/// and a flight inside it keeps a median of <b>101.5 units</b> from the nearest island, at most 143.5. The aim
+	/// mechanism, the speeds, the arrival radii and both eases are all the original's and stay that way; only
+	/// the box moves.
 	///
 	/// <para>
-	/// Alexah judged that too far away on 2026-09-22, having been shown that it is faithful, and asked
-	/// for it closer - so this is `CLAUDE.md` rule 11, a deviation taken knowingly rather than a
-	/// correction. <b>Nothing here was wrong.</b> The aim mechanism, the speeds, the arrival radii and
-	/// both eases are all still the original's and must stay that way; only the box moves.
-	/// </para>
-	///
-	/// <para>
-	/// <b>>>> AND THE OBVIOUS WAY TO DO IT MAKES IT WORSE. MEASURED, NOT REASONED. <<<</b> The first
-	/// attempt shrank the horizontal box to 360-640 "to hug the island cluster", and the median distance
-	/// to the nearest island went <b>101.5 -> 104.3</b>: very slightly <i>farther</i>. The box really did
-	/// shrink, so the change took effect - the flight was measured inside it - and the reasoning was
-	/// simply wrong. <b>The islands stand at the CORNERS of the square</b>, (400,400), (600,400),
-	/// (600,600) and (400,600), so the original's 300-700 box already centres each island in its own
-	/// quadrant, and pulling the camera in toward (500,500) moves it to the one point that is farthest
-	/// from all four - 141 units from each. A smaller box is not a closer one.
-	/// </para>
-	/// <para>
-	/// <b>The lever is the HEIGHT.</b> With a horizontal median of 82.6 and a 3-D median of 104.3, about
-	/// 64 units of that distance is vertical. So the horizontal box is put back exactly as the original
-	/// has it and only the band is lowered, from 50-100 to <b>30-60</b>. The islands' own camera targets
-	/// sit 12.5 (jungle) to 38 (hallow) above them, so that leaves roughly 20 units of height over the
-	/// thing being looked at, and brings the distance to about <see cref="NominalDistance"/> - the
-	/// <c>sqrt(SPINRADIUS^2 + VERTICALOFFSET^2)</c> the lobby was actually composed at.
+	/// <b>The lever is the HEIGHT, not the width.</b> The islands stand at the CORNERS of the square, (400,400),
+	/// (600,400), (600,600) and (400,600), so the original's 300-700 box already centres each island in its own
+	/// quadrant, and pulling the box in toward (500,500) moves the camera toward the one point farthest from all
+	/// four - 141 units from each: a box narrowed to 360-640 flies a median of 104.3, farther than 101.5. Its
+	/// horizontal median is 82.6, so about 64 units of that distance is vertical. So the horizontal box is the
+	/// original's and only the band is lowered, from 50-100 to <b>30-60</b>. The islands' own camera targets sit
+	/// 12.5 (jungle) to 38 (hallow) above them, so that leaves roughly 20 units of height over the thing being
+	/// looked at, and brings the distance to about <see cref="NominalDistance"/> - the
+	/// <c>sqrt(SPINRADIUS^2 + VERTICALOFFSET^2)</c> the lobby is composed at.
 	/// </para>
 	/// </remarks>
 	private static readonly Vector3 WanderCentre = new( 500f, 500f, 45f );
@@ -183,8 +159,8 @@ public class LobbyCameraMode : CameraMode
 	/// and fills cos(half) into m00 and m11 - so ISLANDFOV(100) is a full hundred-degree field, and
 	/// taken as the horizontal angle it comes to 83.58 vertical at 4:3.
 	///
-	/// So this camera, which is the island lobby, could take 83.58 and did briefly. Alexah looked at both
-	/// and preferred 60, which is the number that was already here by accident - it is the globe lobby's.
+	/// So this camera, which is the island lobby, would take 83.58 from the file. Alexah looked at both
+	/// and chose 60, the globe lobby's number.
 	/// The wider view is faithful to the file; the narrower one frames the island better, and that is the
 	/// call being made. Measurement cannot break the tie: projecting the island mesh against the two
 	/// reference screenshots excludes the vertical reading outright, but brackets the horizontal angle

@@ -6,7 +6,7 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// The park's money, which is a thing rather than a header field: <c>mBankAccount</c> is a handle, the
-/// thing it names is model 16, and until this was read nothing in the tree knew what a park charges.
+/// thing it names is model 16, and it holds what a park charges.
 ///
 /// <para>
 /// <b>The point of these tests is the cross-file agreement, not the numbers.</b> A record layout read out
@@ -205,10 +205,9 @@ public class ParkEconomyTests
 			"the easy file introduces no keys of its own, so the stack is the same size" );
 
 		// Read with the accessor that matches the value's own type. <b>Getting this wrong is what the two
-		// different fallbacks are for</b>: an earlier draft looked PeepInfo.CheapPriceMultiplier up with
-		// Int, which cannot parse "0.75", so BOTH stacks returned their fallbacks - and because those
-		// fallbacks differ, the assertion failed loudly instead of passing while proving nothing about
-		// that key. Matching fallbacks would have hidden it.
+		// different fallbacks are for</b>: PeepInfo.CheapPriceMultiplier looked up with Int cannot parse
+		// "0.75", so BOTH stacks return their fallbacks - and because those fallbacks differ, the assertion
+		// fails loudly instead of passing while proving nothing about that key. Matching fallbacks would hide it.
 		foreach ( var key in new[]
 		{
 			"PeepInfo.ExitLevel", "PeepInfo.ExitLevelVar", "PeepInfo.StartingCashVarPc",

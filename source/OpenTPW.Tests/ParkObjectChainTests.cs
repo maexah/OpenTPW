@@ -58,7 +58,8 @@ public class ParkObjectChainTests
 	/// <summary>
 	/// The newest thing is considered FIRST. <c>FUN_00519d80</c> links at the head, and that is observable
 	/// rather than cosmetic: a tie between two equally good candidates goes to whichever the walk reaches
-	/// later, so walk order decides which ride a guest sets off for.
+	/// later on a tick whose bottom bit is set and to the earlier otherwise, so walk order decides which
+	/// ride a guest sets off for.
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutation:</b> appending instead of prepending reverses this and fails here.

@@ -112,8 +112,7 @@ public class ParkEntryCellTests
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutation:</b> swapping the 90 and 270 arms fails here, and would put a bought ride's entrance on
-	/// the wrong side of it in a park - which no other test in this suite could catch, because nothing else
-	/// builds anything.
+	/// the wrong side of it in a park.
 	/// </remarks>
 	[TestMethod]
 	public void ACellDeltaTurnsTheWayTheEngineTurnsIt()
@@ -233,18 +232,17 @@ public class ParkEntryCellTests
 	/// <c>direction 0x01</c> on its type-9 entrance at (52,23) and <c>0x10</c> on its type-10 exit at
 	/// (52,26), read out of the running game.
 	/// <para>
-	/// <b>The turned values were asserted the wrong way round here until the rotate was read.</b>
+	/// <b>The turned values are the rotate's.</b>
 	/// <c>FUN_004d8c20</c> left-rotates the byte by <c>log2</c> of the angle's base bit and the placer
 	/// pairs base <c>0x40</c> with 90 degrees, so a quarter is a left-rotate of six - a right-rotate of
 	/// two - and <see cref="ParkBuilding.RotateDelta"/> turns a cell delta the same way at all four
-	/// angles. This asserted <c>0x04</c> at 90, which is the other way round.
+	/// angles. <c>0x04</c> at 90 would be the other way round.
 	/// </para>
 	/// <para>
 	/// <b>Mutation:</b> rotating one place a quarter instead of two puts the byte on a diagonal, which no
 	/// cell of the shipped park carries on either field, and fails here. <b>Rotating the right number of
 	/// places the wrong way fails only the 90 and 270 lines</b> - the opposite-ends loop below holds
-	/// under either sense, because a rotation commutes with a nibble swap, which is exactly why this
-	/// test sat on top of the defect instead of catching it.
+	/// under either sense, because a rotation commutes with a nibble swap.
 	/// </para>
 	/// </remarks>
 	[TestMethod]

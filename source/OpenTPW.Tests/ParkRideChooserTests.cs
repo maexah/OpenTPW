@@ -9,10 +9,9 @@ namespace OpenTPW.Tests;
 ///
 /// <para>
 /// <b>The load-bearing test here is the one about what is NOT chosen.</b> Six of the shipped park's
-/// objects carry the "a guest may choose this" bit, but four declare no queue cells and the original's own
-/// queue test - <c>length &lt; cells * 4</c> - can never be passed by nought cells. So a chooser that
-/// scored every visitable object would happily send guests to the Drinks Shop and the three toilets, and
-/// would look entirely reasonable doing it. Pinning the answer at two is what tells the two builds apart.
+/// objects carry the "a guest may choose this" bit and all six pass <see cref="ParkRideChoice"/>, but
+/// toilets 21 and 22 are never the best candidate from any of the six entry cells: 23 stands between them
+/// and scores higher on distance. Pinning the answer at four is what tells the scorer from the filter.
 /// </para>
 /// <para>
 /// These read real game files and are skipped where there is no installation - see <see cref="GameData"/>.
@@ -51,8 +50,7 @@ public class ParkRideChooserTests
 	/// What a guest is actually offered, standing at each visitable thing in turn.
 	///
 	/// <para>
-	/// <b>This said "the sideshow and the ride, and nothing else" until 2026-09-20, and the shop's absence
-	/// was a misread field rather than a rule.</b> The filter walks a queue off the map now - see
+	/// The filter walks a queue off the map - see
 	/// <see cref="ParkRideChoice.QueueCellsFor"/> - so the Drinks Shop is chosen when a guest is standing by
 	/// it. <b>Measured rather than predicted:</b> the answer is four of the six, not all six. Toilets 21 and
 	/// 22 are never the best candidate from any of these six cells, because 23 stands between them and
@@ -66,8 +64,8 @@ public class ParkRideChooserTests
 		var chooser = Chooser( park );
 		var offered = new System.Collections.Generic.HashSet<int>();
 
-		// From the entry cell of every visitable object in the park, including the four that cannot be
-		// offered - so the test stands a guest right on top of the tempting ones.
+		// From the entry cell of every visitable object in the park, including the two toilets that are
+		// never chosen - so the test stands a guest right on top of the tempting ones.
 		foreach ( var from in park.Objects.Where( o => o.IsVisitable ) )
 		{
 			if ( chooser.ChooseFor( Guest(), from.EntryCellX, from.EntryCellY, gameTick: 0 ) is { } chosen )

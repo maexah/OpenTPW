@@ -48,9 +48,9 @@ namespace OpenTPW;
 /// those the engine clears the board to transparent black and skips the artwork entirely
 /// (0x005ecd09, 0x005ecd18) - the ride's name is left floating on the model with the ride showing
 /// through behind it. That is not a broken or truncated file, and reading one has to succeed with no
-/// image rather than fail, which is what an earlier reading of this format got wrong: it demanded a
-/// 17373-byte header before ever checking whether an image was declared, and so refused every ride
-/// sign in the game that was not one of the few carrying a painted board.
+/// image rather than fail: a reader that demands an artwork sign's 17373 bytes of header before
+/// checking whether an image is declared refuses every ride sign in the game that is not one of the
+/// few carrying a painted board.
 /// </para>
 ///
 /// <para>

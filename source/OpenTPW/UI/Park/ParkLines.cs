@@ -21,14 +21,14 @@ namespace OpenTPW.UI;
 /// </para>
 /// <para>
 /// <b>Why there is only one line.</b> Nearly all of data\Advisor\Advisor.sam is about staff, visitors,
-/// rides, research or money, and a park has none of those yet. Of what is left, two roads that look
-/// open are not:
+/// rides, research or money, and nothing in a park here posts the messages those lines answer. Of what
+/// is left, two roads that look open are not:
 /// <list type="bullet">
 /// <item>
 /// <b>The original's own Welcome is a stub.</b> Its four responses - 399, 400, 401 and 402 - all carry
 /// sample 1, and sample 1 is an OpenPark line: "people want to come in but your park is closed, you
-/// should think about opening up". A park has no open or closed state here, and saying that on arrival
-/// would be worse than saying nothing, so it is not said.
+/// should think about opening up". It is a line about a shut park, not a welcome, and saying it on
+/// arrival would be worse than saying nothing, so it is not said.
 /// </item>
 /// <item>
 /// <b>The line a screen posts as it opens cannot be recovered.</b> FUN_00486b00 is handed a message id,
@@ -57,7 +57,7 @@ internal static class ParkLines
 		/// It describes what <see cref="ParkGadget"/> already is, corner for corner: the panel in the
 		/// bottom left, the row of buttons on it, and the meter down its left side. <b>And the line is
 		/// honest about the park it is describing</b> - it ends "if there are any visitors that is",
-		/// which is exactly the state the gauge rests in, having no happiness to show.
+		/// which allows for a park with nobody in it yet.
 		/// </para>
 		/// <para>
 		/// A real recording rather than one of the bank's 80 silent stubs: it decodes to 15.4 seconds,
@@ -80,8 +80,8 @@ internal static class ParkLines
 	/// <c>DiscardAfterSlaps 3</c>, so slapping him three times is how you get rid of it.
 	/// </para>
 	/// <para>
-	/// <b>That THIS line is one of them is inferred from what it says, not read from the tables, and an
-	/// earlier draft of this remark stated it as fact until a review caught it.</b> Response 404 carries
+	/// <b>That THIS line is one of them is inferred from what it says, not read from the tables.</b>
+	/// Response 404 carries
 	/// message group 383, which is the value meaning no group at all, so nothing files it anywhere that
 	/// can be read back.
 	/// </para>

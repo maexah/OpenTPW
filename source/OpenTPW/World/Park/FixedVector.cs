@@ -55,8 +55,7 @@ public readonly record struct FixedVector( int X, int Y )
 	/// <para>
 	/// The root itself takes its argument <i>unsigned</i> - <c>0x004d49a0</c> writes it into the low half
 	/// of a stack qword, zeroes the high half, and only then does <c>FILD</c>. That is reproduced; but it
-	/// is worth being straight that <b>no guarded range actually needs the thirty-second bit</b>, and an
-	/// earlier draft of this comment implied they did.
+	/// is worth being straight that <b>no guarded range actually needs the thirty-second bit</b>.
 	/// </para>
 	/// </summary>
 	public int Length

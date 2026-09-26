@@ -45,10 +45,8 @@ public class Level
 	///
 	/// <para>
 	/// <b>It describes a FILE and it is deliberately immutable</b>, which is why everything that moves has
-	/// to be held somewhere else: see <see cref="PeepBehaviour.Takings"/> and
-	/// <see cref="PeepBehaviour.VisitorsToDate"/>, each of which exists only because a park has nowhere yet
-	/// to write its own state back to. Anything that reads this for a running number must add that number
-	/// on rather than expect to find it here.
+	/// to be held somewhere else: <see cref="ParkState"/>, seeded from it once, holds the running numbers.
+	/// Anything that wants a running number reads it there rather than expecting to find it here.
 	/// </para>
 	/// </summary>
 	public ParkWorld? Park { get; private set; }
@@ -78,8 +76,7 @@ public class Level
 	///
 	/// <para>
 	/// This is the smallest form of that split: enough for a park to be built instead of the lobby,
-	/// and no more. Teardown ordering, the state machine proper and the park's own front end are still
-	/// the lobby's - see the park plan's later milestones.
+	/// and no more. Teardown ordering and the state machine proper are still the lobby's.
 	/// </para>
 	/// </summary>
 	public enum Scene
@@ -159,10 +156,7 @@ public class Level
 		// be no sun position in there to find. Alexah's call, from how the game looks: lit from the
 		// front, facing the park gates.
 		//
-		// It replaces (0, 100, 100), which was a leftover of the old test scene and meant nothing
-		// while the light was being subtracted from a view-space position - that made it a headlight
-		// that lit whatever faced the camera, wherever it was standing. Water reads this too, so the
-		// sea takes its shading from the same place.
+		// Water reads this too, so the sea takes its shading from the same place.
 		SunLight = new Sun() { Position = new( 500, -3500, 2800 ) };
 
 		// The sky first, because it never writes depth: it has to be laid down before anything
@@ -176,8 +170,7 @@ public class Level
 
 		// Positions come from lobby.wad's own lobby.txt, which lists one ISLANDCAMERAPOSITION per
 		// island index: 0 (400,400), 1 (600,400), 2 (600,600), 3 (400,600). Each park's script
-		// gives its index - jungle 0, fantasy 1, hallow 2, space 3 - and fantasy and hallow were
-		// the wrong way round here, which put them diagonally opposite where the game has them.
+		// gives its index - jungle 0, fantasy 1, hallow 2, space 3.
 		_ = new LobbyIsland( new Vector3( 600, 400, 0 ), "Fantasy" );
 		_ = new LobbyIsland( new Vector3( 600, 600, 0 ), "Hallow" );
 		_ = new LobbyIsland( new Vector3( 400, 600, 0 ), "Space" );
@@ -200,19 +193,16 @@ public class Level
 	}
 
 	/// <summary>
-	/// A park, as far as it goes today: its own sky, the ground's scenery and something to look at it
-	/// with.
+	/// A park: its own sky, the ground's scenery, the things placed on it, its rides, people and staff, its
+	/// sound, weather and advisor, and something to look at it with.
 	///
 	/// <para>
-	/// Sound, weather and the advisor are all here now - this paragraph used to say that none of them
-	/// were, and each was a job with its own evidence to gather. What it does have is the theme's own
-	/// throughout - its balance numbers, its sun and its sky - over <c>base.MD2</c> out of the park's
-	/// own terrain.wad, through the same model and texture path the lobby already uses.
+	/// It is the theme's own throughout - its balance numbers, its sun and its sky - over <c>base.MD2</c> out
+	/// of the park's own terrain.wad, through the same model and texture path the lobby already uses.
 	/// </para>
 	/// <para>
-	/// What it still has no part of is the simulation: no guests, no staff, and no ride that operates.
-	/// That is what keeps the advisor to a single line - see <see cref="UI.ParkLines"/> - rather than
-	/// the scored queue of them the original runs, which has nothing here to score.
+	/// The advisor says a single line - see <see cref="UI.ParkLines"/> - rather than the scored queue of them
+	/// the original runs.
 	/// </para>
 	/// </summary>
 	private void SetupParkEntities()
@@ -285,8 +275,8 @@ public class Level
 		load.Mark( "the save" );
 
 		// Kept on the level as well as handed round below, so that the interface can show what the file
-		// says without opening a megabyte and a half a second time - see the Park property, and note that
-		// anything running has to be added to what it holds rather than looked for inside it.
+		// says without opening a megabyte and a half a second time - see the Park property. Anything running
+		// is read from ParkState, below, rather than looked for inside it.
 		Park = park;
 
 		// And the running copy of everything in it that moves, made once here so that the guests, the
@@ -366,8 +356,7 @@ public class Level
 		// Each group of sound at the volume the options give it, and then the park's own music - which
 		// is the order the original uses too: it registers the park's categories, re-applies the group
 		// volumes (0x0054ec9a), and only then plays the music (0x0054ec9f). See ParkAudio for what it
-		// does with it afterwards, and for why this plays at a fixed level where the original swells
-		// it with the crowd.
+		// does with it afterwards: the crowd drives its level, as the original's does.
 		GameOptions.Current.ApplySound();
 		_ = new ParkAudio( ThemeName );
 		load.Mark( "audio" );
@@ -456,11 +445,9 @@ public class Level
 		Hud.AddChild( new ParkFrontEnd( windows, ThemeName ) );
 
 		// The same on-screen effects the lobby has, and for a reason rather than for symmetry: a park
-		// already MAKES button glints and could not draw a single one. SetupParticles runs for parks as
-		// well as for the lobby, the windows here start and stop glints exactly as the lobby's do - see
-		// OptionsScreen.Closed, which calls StopGlint - and WindowStack draws them through
-		// ScreenParticles.Current, which was null for the whole life of a park. So every glint a park
-		// raised was allocated, ticked and killed without ever reaching the screen.
+		// makes button glints. SetupParticles runs for parks as well as for the lobby, the windows here
+		// start and stop glints exactly as the lobby's do - see OptionsScreen.Closed, which calls
+		// StopGlint - and WindowStack draws them through ScreenParticles.Current, which this sets.
 		//
 		// Over the interface it decorates and under the pointer, which is the order SetupHud uses.
 		Hud.AddChild( new ScreenParticles() );
@@ -553,8 +540,7 @@ public class Level
 		// The help row the world shows for the cell under the pointer - see WorldHelpRow.
 		UI.WindowStack.WorldHelpText = Kind == Scene.Park ? WorldHelpRow() : -1;
 
-		// The HUD is not an entity - see RootPanel - so it is driven from here. After the world,
-		// which is where it sat when it was the last entity in the list.
+		// The HUD is not an entity - see RootPanel - so it is driven from here, after the world.
 		Hud.Update();
 
 		// And a click on the WORLD, after the interface has had this frame's - so a press that landed
@@ -1022,7 +1008,7 @@ public class Level
 	/// is running" and "nobody already holds the pause".
 	/// </para>
 	/// <para>
-	/// <b>This used to say all three screens test that global before calling, and that is wrong.</b> The
+	/// <b>Not all three screens test that global before calling.</b> The
 	/// lobby's game menu never reaches the test: GameMenu_Open (0x0048c830) branches on its scene argument
 	/// at 0x0048c83a, and non-zero - which is what the lobby passes, at 0x005e4207 - builds the lobby's
 	/// menu and returns without ever touching the pause. Only the park path reaches the gate at 0x0048c868.
@@ -1091,7 +1077,8 @@ public class Level
 	private const float StopAllSeconds = 0.09f;
 
 	/// <summary>
-	/// Ends the level, in the order the original leaves its lobby (state 3). The interface goes first - the windows
+	/// Ends the level. <see cref="ForgetPark"/> runs first, while the park still stands; then, in the order the original
+	/// leaves its lobby (state 3), the interface goes - the windows
 	/// close, and the front end empties the advisor's queue through his crying stop. Then every entity, in the
 	/// order they were made, which ends the lobby's sound and weather before the advisor himself. Then the camera
 	/// lets go of its island, every voice still sounding fades, the particle system shuts down, and a park's
@@ -1178,15 +1165,8 @@ public class Level
 		// Everything see-through comes after everything solid, so a graded surface blends over a
 		// finished picture rather than into a half-drawn one.
 		//
-		// This pass is still not sorted within itself, and no longer needs to be for the case that
-		// used to break: these surfaces write depth now, so two of them resolve by distance rather
-		// than by the order their entities happened to be created in. That order is creation
-		// order, and an island builds its own meshes before its gate, so the Hallow gate - whose
-		// every material is see-through - could draw over the tree standing in front of it.
-		//
-		// That last part is reasoned from the draw order, not measured. Hallow carries fifty bats
-		// seeded afresh every run, which put a 5% noise floor on any frame comparison there and
-		// swamp a change of this size.
+		// This pass is not sorted within itself. These surfaces write depth, so two of them resolve by
+		// distance rather than by the order their entities were created in.
 		//
 		// What a sort would still buy is blend order between two genuinely graded surfaces that
 		// overlap. The original does sort for exactly that, per triangle and back to front, and

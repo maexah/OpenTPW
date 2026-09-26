@@ -71,8 +71,7 @@ namespace OpenTPW;
 /// park pauses him (see <see cref="Paused"/>).
 /// </para>
 /// <para>
-/// <b>He is still drawn while he is held, and this paragraph used to say the opposite.</b> Being paused
-/// took him off the screen entirely, on the reasoning that it was what a park does to him. It is not:
+/// <b>He is still drawn while he is held.</b> A pause does not take him off the screen:
 /// the original's pause (0x004092a0) calls Advisor_PauseVoice (0x00598960) and the game clock's stop
 /// and nothing else that touches him, and the one call that removes his model - Advisor_KillModel
 /// (0x00429d60) - has exactly three callers, Advisor_StopSpeaking twice and Advisor_StopQuietly, none of
@@ -317,7 +316,7 @@ public sealed class Advisor : Entity
 	/// <summary>
 	/// Whether he is held where he is: his voice stops where it has got to, and nothing he is doing or
 	/// waiting to do moves on until he is let go, when all of it carries on from the same point. He is
-	/// not drawn while held. The front end holds him while the game menu, a message box or the options
+	/// still drawn while held. The front end holds him while the game menu, a message box or the options
 	/// screen is open - see the class remarks.
 	/// </summary>
 	internal bool Paused
@@ -383,7 +382,7 @@ public sealed class Advisor : Entity
 	}
 
 	/// <summary>
-	/// AdvisorQueue_Clear (0x005d6070): cuts him off, forgets what was queued, and lets the mix back
+	/// AdvisorQueue_Clear (0x005d6060): cuts him off, forgets what was queued, and lets the mix back
 	/// up - see <see cref="StopSpeaking"/>.
 	/// </summary>
 	internal void Hush()
