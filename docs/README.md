@@ -60,9 +60,11 @@ use these columns (`addresses.md`, the index, has its own three: Address · What
 
 `Address / offset` · `Original name (if known)` · `What it is` · `Evidence`
 
-**Four columns, not six.** *Where OpenTPW uses it* is not one, because a `file:line` citation into our
-own source rots within days — the fact lives here and the code points at it, never the other way round.
-*Date* is not one either, because a dated fact invites a reader to weigh its age instead of its evidence.
+Where a table has all four, that is the order; a page may drop `Original name` or `Evidence` where a row has
+neither. **Six is not one of the choices.** *Where OpenTPW uses it* is not a column, because a `file:line`
+citation into our own source rots within days — the fact lives here and the code points at it, never the
+other way round. *Date* is not one either, because a dated fact invites a reader to weigh its age instead of
+its evidence.
 
 | Page | What it covers |
 |---|---|

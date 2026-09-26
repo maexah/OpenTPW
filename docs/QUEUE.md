@@ -2101,6 +2101,15 @@ artifacts are listed in `docs/history/README.md`.
   days, `weather.md`). `ParkPathTests`' summary says "SEVEN tests fail" without the `ReferenceEquals` guard, measured
   when sixteen classes built an edge test; twenty do now: take the guard out again in a worktree and write the count
   taken, or drop it. No game run.
+- [ ] **Q162. Four addresses cited in source but not in any `docs/exe/` page.** Found by the 2026-09-26 staleness
+  audit. `n181`: `Display.cs:33-38`'s DirectDraw account of `FUN_00563460` (`SetCooperativeLevel` 0x851 and 0x808).
+  `n182`: `Window.cs`'s claim that `OptionsScreen_Open` `0x004a3a30` "takes only 0, 1 and 2", and that the window
+  procedure `0x0046b600` answers no `WM_SIZE`, `WM_SIZING` or `WM_GETMINMAXINFO`; `addresses.md:89` and `:184` have
+  an empty "What it is", and no page mentions `WM_SIZE`. `n267`: `FUN_004ff7f0` (cited in six source files),
+  `FUN_004c7bb0` (three) and `DAT_0070031c` (two) appear in no `docs/exe/*.md`. `n294`: `ParkRidesTests.cs:310-313`
+  says the original logs "Ride script not located for %s - using placeholder" and loads `Data\TestScript\test.rse`
+  (`0x004dcf90`); `addresses.md:231` has an empty "What it is". Check each in Ghidra first, then give it a home
+  (rule 14).
 
 ## C. Alexah's list: cause known, one session each
 
@@ -2177,7 +2186,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   headcount score (`FUN_004c8240`) is not decoded. Q68 found the rest of the headcount: `NewParkBonus` is added to
   the score on every call and the sum scaled by 1.2 or 0.8, so even a score of nought brings 3 or 4 to Lost Kingdom.
   Decode the score, then build create-on-demand and the bus / ferry / plane ordering; the pause between loads is
-  built (Q68b).
+  built (Q68b). Scope is the score and create-on-demand only: the vehicle's own wait at the stop is Q131.
   The same score is the park's worth every guest judges the gate's fee against (`PeepBehaviour.ParkExcitement`, nought
   until it is built; the 2026-09-26 staleness audit): build both readers.
 - [ ] **Q27. Pushing the mouse at the screen edge does not scroll.** The "push scroll" option exists and
@@ -2367,9 +2376,8 @@ park, decode first). Also litter and the day ending, whose deferral reasons expi
 ## G. The lobby plan's open items
 
 From the lobby plan Alexah agreed on 2026-09-12, "Finishing the Lobby" (its artifacts are listed in
-`docs/history/README.md`). Alexah asked that its report be kept in use: when an item here lands or the order changes,
-update it with the Artifact tool's `url` (https://claude.ai/code/artifact/48cf6fc2-0874-404c-b7bf-a05fe4b16470), never
-a second copy. Items 1-4,
+`docs/history/README.md`). Its shared report page (`https://claude.ai/code/artifact/48cf6fc2-0874-404c-b7bf-a05fe4b16470`)
+is no longer kept in sync (2026-09-26); this file is the current record instead. Items 1-4,
 6-8 and the gate half of 5 landed; item 11 is Q32. Cut from the lobby that day and still cut: the intro movies and
 splash, the three online UI trees, cones, reverb and Doppler, the message box's third button, and the original's full
 state machine.

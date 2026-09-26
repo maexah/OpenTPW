@@ -23,6 +23,7 @@ One line each. If a word is used two ways in the code, both are listed and the p
 | **GameClock** | The game's 31 ms tick. A park's menu freezes it; nothing in the lobby does. Simulation runs on it. | |
 | **GameCalendar** | In-game date, advanced by a park's ticks only. | |
 | **Tick** | One `GameClock` step: 31 ms. Counted by `GameClock.Ticks`. | |
+| **GameTick** | `ParkState.GameTick` (`mGameTick`), one per thing sweep — not a `GameClock` tick and not the thing tick's own counter. Code comments call it "the park's clock". | |
 | **Thing tick** | **Eight** game ticks — 248 ms, about four a second. The beat of the thing sweep, which gives guests, staff and each ride's operation their turns (`ParkPeople.ThingTickEvery`); the original gates it at `0054f668`. A ride script keeps its own one tick in eight, staggered by its id, or every tick after `TURBO 1` (`RideScriptScheduler.RunsOn`). | ✅ say *thing tick* when you mean the eight, not "tick" |
 | **Frame** | One pass of `Level.Update` and the render, at whatever rate the machine manages. **A peep's position is simulated on the thing tick and DRAWN every frame**, interpolated between the two by `ParkPeople.ThingTickFraction` — so frame, tick and thing tick are three different beats and are not interchangeable. | |
 | **RideScript** | The live ride-script VM (`VM/RideScript.cs`) and its scheduler. | ✅ |

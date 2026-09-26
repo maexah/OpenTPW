@@ -2466,23 +2466,18 @@ queue's people is `ride-operation.md`, "The sale's drain". There is also an **of
 push rejects only when the count exceeds `0x400`, so element `0x400` is writable and lands exactly on
 `DAT_0081d740`, the map-width global. Reproduce the behaviour, not the overrun.
 
+### The object flag word at obj+0x32
+
+The constructor `FUN_004db090` builds it from descriptor fields named by the key table at `0x00744b6c`:
+`0x01` ProvidesRelief (`+0xf4`), `0x02` ChillsYouOut (`+0xfc`), `0x04` IsChoosable (`+0x3c`), `0x08`
+HasQueue (`+0x40`), `0x10` ProvidesSecurity (`+0xf0`), `0x20` RideHandlesSprite (`+0x104`), `0x40`
+HoldsLitter (`+0xf8`), `0x80` IsFireworks (`+0x110`); and `+0x33` bit 0 is RunsContinuously (`+0x48`).
+
 ### Still open
 
-- ~~Which `ItemDescription` fields drive the object flag word at `obj+0x32`.~~ **CLOSED 2026-09-23:** the
-  constructor `FUN_004db090` builds it from descriptor fields named by the key table at `0x00744b6c`:
-  `0x01` ProvidesRelief (`+0xf4`), `0x02` ChillsYouOut (`+0xfc`), `0x04` IsChoosable (`+0x3c`), `0x08`
-  HasQueue (`+0x40`), `0x10` ProvidesSecurity (`+0xf0`), `0x20` RideHandlesSprite (`+0x104`), `0x40`
-  HoldsLitter (`+0xf8`), `0x80` IsFireworks (`+0x110`); and `+0x33` bit 0 is RunsContinuously (`+0x48`).
 - What the low nibble of `mFlags` means — it gates the queue `+3` bump and only `0x20` = NOMODIFY is
   established.
-- ~~Whether mType 9 and 10 really are entrance and exit.~~ **CLOSED 2026-09-22: they are.**
-  `FUN_00413410` walks the item's shape grid at descriptor `+0x18` testing each cell against the
-  literals **9** and **10**, and stores the matching cell's column and row as the entrance and the exit
-  — see "Where a built thing's entry and exit cells come from" above. No debug string names them and
-  none is needed: the constructor tests the numbers outright.
 - mType 2 and mType 5 are unidentified; the decode refused to guess water or rock.
-- ~~Whether tool `0x32` is ever armed as a live tool.~~ **CLOSED 2026-09-22:** Backspace's idle branch
-  arms it for one apply (`FUN_0052f200(0x32,1)` at `0x0040be7d`). See "The path tool".
 
 ## The Ghidra project was changed to get here
 

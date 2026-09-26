@@ -1122,14 +1122,11 @@ booth or entrance A or B in states `0x10`, `0x12` and `0x13`. `mTimeHired` is mG
   and `FUN_0051a290`, the gate's `VAR_STATUS`, reading 1), which aims at the strike area with four draws and takes
   state 4; state 5's `FUN_00506300` ends it. The epoch of the 24-month gate (`FUN_004f8800`) is not traced.
 
-### Measured in the game before the build, nothing changed
+### Measured before the build, on the 31 ms counter
 
-This is OpenTPW as Q82 found it, on the 31 ms counter; the build (Q82b) is measured in the next section.
-`q82measure.py`, silent, jungle, two runs, predicted before the park loaded; `save/` unchanged in both. The instruments
-are `arrivals` (`ParkState.GameTick`, the park's `mGameTick`), `state` (`GameClock`'s `ticks=`) and `staff`, read
-together in one frame, sweep by sweep. Each run missed ten sweeps while it took the on-show photographs (756 to 765 in
-the first, 781 to 790 in the second). The first run crashed after mGameTick 1006, when a guest went home under the
-`facing` overlay (Q137); the second ran from 755 to 1380, 625 sweeps, 616 of them read.
+This is OpenTPW as Q82 found it; the build (Q82b) is measured in the next section. The run-by-run account (two
+runs, what each measured, what it predicted and what fell short) is `QUEUE.md`'s Q82 entry, not repeated here -
+these are the durable facts it found.
 
 - **The stamps are the 31 ms counter, not the park's clock**: each is the 31 ms tick of its spell's first sweep, a
   multiple of eight (312 at mGameTick 794), which the census's `ticks=` reads on that sweep or one later.
@@ -1294,7 +1291,7 @@ The save reader names the byte `mQueuePos`; the state setter writes the sideshow
 |---|---|---|
 | `+0x20` | model slot | Indexed into `modelSlotTable` by `FUN_004e14e0` |
 | `+0x24` | script id | The destructor hands it to the script teardown (`0x004dd2c9`) - see `park.md`, "What selling a thing does to its script" |
-| `+0x32` | the flag byte | `FUN_004db090` builds it from the descriptor: `0x01` ProvidesRelief, `0x02` ChillsYouOut, `0x04` IsChoosable, `0x08` HasQueue, `0x10` ProvidesSecurity, `0x20` RideHandlesSprite, `0x40` HoldsLitter, `0x80` IsFireworks - see `park-engine.md`, "Still open" |
+| `+0x32` | the flag byte | `FUN_004db090` builds it from the descriptor: `0x01` ProvidesRelief, `0x02` ChillsYouOut, `0x04` IsChoosable, `0x08` HasQueue, `0x10` ProvidesSecurity, `0x20` RideHandlesSprite, `0x40` HoldsLitter, `0x80` IsFireworks - see `park-engine.md`, "The object flag word at obj+0x32" |
 | `+0x32` bit 3 (`0x8`) | queue-path flag | HasQueue. Jungle Spray: one queue cell, no bit. Belly Bounce: four cells, bit set |
 | `+0x33` bit 0 | RunsContinuously | Descriptor `+0x48`, set by `FUN_004db090`. Lets a ride invite while running |
 | `+0x36` | `mEntryPos` | File 206, packed |

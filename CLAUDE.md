@@ -68,7 +68,7 @@ Inside `source/OpenTPW/`: `Client/` (startup, `GameDir`, options, renderer, `Dia
 - **Peep** = any person in the park, guest or staff. Prefer it over Guest / Visitor / Person in new code.
 - **Thing** = anything with a `ThingId` in the save. **Object** = a placed shop, ride or scenery (`CatalogueObject`). **Item** = the catalogue definition (`ItemDescriptionFile`).
 - **ParkWorld** = the save FILE, immutable. **ParkState** = the running numbers and cells. Never write to `ParkWorld`.
-- **Time** = frame clock; no menu pauses it (only the debug console's `pause`/`step` hold it). **GameClock** = the 31 ms game tick; a park's menu pauses it, nothing in the lobby does. **GameCalendar** = the in-game date.
+- **Time** = frame clock; no menu pauses it (only the debug console's `pause`/`step` hold it). **GameClock** = the 31 ms game tick; a park's menu pauses it, nothing in the lobby does. **GameCalendar** = the in-game date. **GameTick** (`ParkState.GameTick`, `mGameTick`) = one per thing sweep, not a `GameClock` tick.
 - **RideScript** is the VM. `RideVM` (with `Instruction`, `Operand`, `Branch`, `OpcodeHandlerAttribute`), `VM/Handlers/`, `VM/Includes/ScriptDefs.cs` and `World/Ride.cs` are upstream leftovers reached only through `World/Ride.cs`, which nothing constructs, and `VM/Includes/Events.cs` is referenced by nothing: do not extend. `VM/Includes/ParLib.cs` is live and is a particle table, not VM code.
 - Reach script variables **by name**, never by index. Companion scripts declare none of the common twelve.
 - Themes: `jungle`, `fantasy`, `hallow`, `space`, lower-case once inside `Level`. The map is 128 × 128 cells; positions in the save are fixed-point (`FixedVector`); a packed cell id is `y*128 + x + 1`.

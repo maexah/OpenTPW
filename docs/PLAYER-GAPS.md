@@ -70,6 +70,9 @@ where the original seeds **3**, a declared deviation that reverts the day park s
 carried by all three vehicles, go home when their day runs out, and **buy from both the shop and the
 sideshow** — a filled park took **1110 at the Drinks Shop** (37 sales at 30) and **900 at the Jungle
 Spray** (45 at 20). Both halves were confirmed in the running game by census **and** by screenshot.
+As of the 2026-09-26 staleness audit, two gaps qualify "arrive by themselves": the original's
+create-on-demand and headcount score are not yet decoded (Q26), and a park left to itself sends the
+bus every time rather than the original's ordering (Q128).
 
 **This reordered the queue, and that reorder is now spent.** Items 3, 6 and 8 were halves of one loop
 and all three are ticked. **Items 4, 5 and 7 remain.** Item 5 is the one worth flagging rather than choosing: it

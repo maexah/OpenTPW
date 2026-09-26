@@ -726,7 +726,8 @@ The ones that have bitten more than once.
 - **72** — Before deleting a type, grep its NAME rather than calls to it: `new X` and `X(` miss every
   `<see cref>`, `<inheritdoc>` and prose mention, and a dangling cref moves the warning baseline. Fix them in
   the same commit, rewrite any sentence whose meaning depended on the thing existing, and say in a surviving
-  file that it was removed.
+  file that it was removed - a doc such as `QUEUE.md` or `STATUS.md`, never a code comment, which disappears
+  with the type it was attached to.
 - **78** — A comment and the code it describes are ONE edit: write the code first and the comment second,
   never the reverse. Before a batch of documentation edits that announce new behaviour, list the behaviours
   announced and check each against a line of code you actually wrote. Never treat "the comment says so" as

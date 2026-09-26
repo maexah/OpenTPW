@@ -142,13 +142,15 @@ The front end's end hushes him, as `g_FrontEnd`'s stop (`0x005e4140`) does throu
 
 Asked whether to keep it or make the teardown silent, Alexah said: "Let the advisor cry bleed through when leaving the lobby, that's fine." A clipped "ouch" during a park load looks exactly like a bug, which is why this is written down.
 
-### The SoundCategoryFile length-check bug
+### SoundCategoryFile's length check
 
-Found on the way to the cry, and it reaches well past the advisor: **park sound work reads the same `.map`/`.sdt` pairs.**
-
-`SoundCategoryFile.TryReadSample` checked the stream length against the map's length with a tolerance of `max(60 ms, 6%)`. Effect 639's record (map 288 ms, stream 366 ms) failed that check, so **the next record silently stood in for it**: 639 played `ouch2`, 640 played `Ouch3` and 641 played nothing at all, with no error reported anywhere.
-
-Across all **31 shipped categories** the stream runs **26-83 ms longer than the map**, so the floor is now **100 ms** (`LengthSlackMilliseconds`). The fix was validated by dumping every category from an unfixed tree and from the fixed tree and diffing: **only those three effects moved.** A silent substitution like this is invisible from code alone — dump and compare, do not reason about it.
+`SoundCategoryFile.TryReadSample` checks the stream length against the map's length with a tolerance of
+`max(100 ms, 6%)` (`LengthSlackMilliseconds`). Across all **31 shipped categories** the stream runs
+**26-83 ms longer than the map** — below 100 ms, the check fails and **the next record silently stands in
+for it** instead of an error: this cost effect 639 its own sound (`ouch2` played, then `Ouch3`, then
+nothing) before the floor moved. This applies past the advisor: **park sound work reads the same
+`.map`/`.sdt` pairs.** A silent substitution like this is invisible from code alone — dump and compare,
+do not reason about it.
 
 ## Loading screen
 
@@ -255,7 +257,11 @@ Earlier rulings that still stand: the settings screen is 1:1 for now, video card
 
 **A renderer property, not an options-screen one. Any new screen that writes many materials a frame will hit this.**
 
-`Material.SetInFrame` wrote one shared uniform buffer through the command list between draws. With the options screen's ~26 writes a frame, a draw now and then used the *previous* draw's value — a panel landed on the row above, hiding its text and thumb — on about a third of frames. `Device.WaitForIdle` did not help. The fix is a uniform block per draw (two rounds, used on alternate frames); 34 of 34 frames were stable afterwards. The player slots and the name dialog never showed the fault, because they write few materials.
+`Material.SetInFrame` writes a uniform block per draw (two rounds, used on alternate frames), not one shared
+buffer through the command list between draws: a shared buffer lets a draw pick up the *previous* draw's
+value once a screen writes enough materials in a frame — the options screen's ~26 a frame hit this, a panel
+landing on the row above and hiding its text and thumb on about a third of frames. The player slots and the
+name dialog write few materials, so they never show the fault.
 
 ### What was verified, and what was not
 
