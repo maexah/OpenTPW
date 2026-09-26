@@ -303,7 +303,7 @@ public sealed class ParkWeather : Entity
 	/// <c>lastChanged + (DaysBetweenChanges - DaysOfWarning)</c> - 0x0051295c subtracts one from the
 	/// other and clamps at zero - and the thing then applies it <c>DaysOfWarning</c> days later, so the
 	/// full cycle comes to <c>DaysBetweenChanges</c>. With the shipped 7 and 4 the weather is decided
-	/// three days ahead and arrives four days after that.
+	/// three days after the last change and arrives four days after that.
 	/// </para>
 	/// <para>
 	/// Whether the original ever showed that warning to the player - an advisor line, a forecast panel -

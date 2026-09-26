@@ -169,7 +169,7 @@ public class SpriteScriptTests
 	}
 
 	/// <summary>
-	/// <b>A one-shot animation plays once and settles into standing.</b> Five of the person scripts end by
+	/// <b>A one-shot animation plays once and settles into standing.</b> Six of the person scripts end by
 	/// jumping to word 90 rather than to themselves, which is how the original stops them repeating.
 	/// </summary>
 	[TestMethod]
@@ -324,7 +324,7 @@ public class SpriteScriptTests
 
 	/// <summary>
 	/// <b>A sprite says whether it actually took a turn.</b> The original keeps this flag to know what needs
-	/// redrawing; here it is what lets the debug console tell "the script is running" apart from "the script
+	/// redrawing; here only this test reads it, to tell "the script is running" apart from "the script
 	/// has not come due yet", which are indistinguishable from a frame number alone.
 	/// </summary>
 	[TestMethod]

@@ -33,7 +33,7 @@ namespace OpenTPW;
 /// <b>What this deliberately does not do yet: the SPEED word alone.</b> The original's binder pushes the
 /// item's own operating speed into the script's speed word (<c>FUN_0055a300</c>, field <c>+0xc0</c>) and
 /// its operating duration into variable 3, which is <see cref="RideVariables.VAR_DURATION"/>, logging
-/// "SPEED = %d" and "DUR = %d" as it does. <b>The duration IS pushed now</b> - from the save's own
+/// "SPEED = %d" and "DUR = %d" as it does. <b>The duration is pushed</b> - from the save's own
 /// <c>mOperatingDuration</c>, beside the capacity, further down this file. The speed stays out, because which key of the item's
 /// description feeds which of them is <b>not</b> established: the constructor reads its record through a
 /// two-byte pointer, so the offsets Ghidra prints are not byte offsets, and they do not line up with
@@ -80,7 +80,7 @@ public sealed class ParkRides : Entity
 	/// The engine does this inside the object constructor itself (<c>FUN_004dcf90</c>, called from
 	/// <c>0x004db517</c>), so a bought thing and a loaded one are running the same code. Here they are
 	/// two call sites of the same three steps - spawn, bind the thing, hand over its own animation
-	/// player - and the capacity and duration come from the object record exactly as they do in the constructor.
+	/// player - and the capacity and duration come from the object record exactly as they do at load.
 	/// </remarks>
 	public bool BindNew( ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item )
 	{
@@ -104,10 +104,10 @@ public sealed class ParkRides : Entity
 		script.Set( ParkRideOperation.CapacityVariable, placed.OperatingCapacity );
 		script.Set( ParkRideOperation.DurationVariable, placed.OperatingDuration );
 
-		// <b>Nothing is resumed here, and that asymmetry with the load in the constructor is deliberate.</b> This is the
+		// <b>Nothing is resumed here, and that asymmetry with the load is deliberate.</b> This is the
 		// path a player takes by BUILDING the thing, which is the one moment its construction clip is meant
-		// to play: the engine's build path checks role 0 exists, triggers it, and queues role 13 behind it
-		// (FUN_00463060), which freezes the model on the clip's last frame once it has run. A save has state
+		// to play: the engine's build path (FUN_00463060) triggers role 0 and then role 13 at once, which
+		// holds the clip at frame nought until the script, run from word 0, plays it. A save has state
 		// to restore and a new thing has none, so calling Resume here would be putting back a past it never
 		// had - and would stop the one animation a player is waiting to watch.
 		script.Animations = _objects?.AnimationsFor( placed.ThingId )
@@ -492,7 +492,7 @@ public sealed class ParkRides : Entity
 		if ( id == 0 || Scheduler.Find( id ) is not { } gate )
 			return;
 
-		// Zero is open - see ParkWorld.ParkClosed, where the name runs the other way to the value.
+		// Zero is open - see ParkWorld.ParkClosed.
 		var command = world.ParkClosed == 0 ? OpenTheGate : ShutTheGate;
 
 		// Said out loud rather than shrugged off: a script that declares no such variable takes the write
@@ -838,7 +838,7 @@ public sealed class ParkRides : Entity
 			Scheduler.Advance( MillisecondsAt( i ) );
 
 		// And then, once, whatever those ticks asked for is shown. The engine sweeps its animation players
-		// from the per-frame update (FUN_0044e410 at 0054fa96), past the back edge of this very catch-up
+		// from the scene draw (FUN_0044e410( 3 ) from 0054fb6c), past the back edge of this very catch-up
 		// loop, off one snapshot of the clock - so the sweep belongs after the loop rather than inside it,
 		// and takes the moment the last tick ran at, which is exactly GameClock.Ticks beats in.
 		_objects?.Sweep( (int)(GameClock.Ticks * MillisecondsPerTick) );

@@ -39,7 +39,7 @@ public class ParkWorldTests
 	///
 	/// <para>
 	/// The block is a megzabyte and a half of variable-length records - a header, a hundred and fifty
-	/// object controls, a pool of timers, sixteen thousand map cells each measured by the status byte it
+	/// object controls, the staff pool and two timers, sixteen thousand map cells each measured by the status byte it
 	/// opens with, then forty-two things of nine different models. The original writes a four-character
 	/// tag after each of its seventeen modules and checks it on the way back in, so ending exactly on that
 	/// tag means every single record length in between was right. Miss by one byte and this fails.
@@ -222,7 +222,7 @@ public class ParkWorldTests
 
 	/// <summary>
 	/// The arrival timer's block, the last 18 bytes before the map, pinned to every one of its six fields as the
-	/// FileFormats page measured them (<c>saves.md</c>, "The arrival block").
+	/// FileFormats page measured them (<c>saves.md</c>, "The arrival block", on its docs/arrival-block branch).
 	///
 	/// <para>
 	/// <b>Pinned whole because a block read from the wrong place still produces six numbers.</b> Five of the six are

@@ -306,8 +306,8 @@ internal sealed class UiList : UiControl
 	/// </summary>
 	/// <remarks>
 	/// <b>The original sends both messages, and a press-and-release sends the first one twice.</b>
-	/// With the list's flag <c>0x80</c> set - which the buy and hire screens set - <c>0x400</c> is raised on the
-	/// press and again on the release; the buy screen survives that only because its first handler
+	/// With the list's flag <c>0x80</c> set - which the buy and hire screens set - <c>0x400</c> is raised
+	/// on the press and again on the release; the buy screen survives that only because its first handler
 	/// closes the screen and the second finds the tree gone. Firing once, on the press, is the
 	/// behaviour that arrangement produces and is what this does rather than reproducing a double
 	/// message that only works by accident.

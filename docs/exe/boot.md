@@ -51,7 +51,7 @@ The state is `DAT_0087906c`. The machine runs once `DAT_00879068` is set, at the
 | 1 | **Front end load**, behind the loading screen with the bar. Loads weather and shadow textures (0x00550950: snow, raindrop, lightning, alphkid); the advisor model from `%s\Global\Advisor` (0x00429ba0); particles `Data\Particle\Tp2.plb`; the lobby object (0x005d5770, `DAT_00f82884`); then `FrontEnd_Init` and 0x00540900(0,1). The load is bracketed by 0x006591e3 and 0x00659201. Then `LoadingScreen_End`, `Sound_SetSpeechDuck(0)`, then 2. |
 | 2 | **Lobby loop**, while lobby object +0x14 == 1: `Advisor_Update`, sound listener, render, present, and fixed 31 ms ticks of 0x00520130 with at most 500 ms of catch-up. Otherwise 3. |
 | 3 | **Leave the lobby.** 0x005d5cf0 gives the choice (2 means play a park). Frees the lobby, begins a loading screen and loads the "levels" list. Then 9, or 0xc to quit. |
-| 9 | **Park load**, behind a new loading screen whose Begin resets the bar. An online-park branch comes first, keyed on `DAT_00f7d88c` +0x3f0 (0x005b50b0's object, ONLINE NEWS). Then: RSSE scripts init (0x00551600), particles, the player (a "debug" slot when there is no front end), weather textures, advisor paths (0x00457a90), 0x00407d80, the QuickSave load (0x00407e00), 0x00457c30. Any failure returns 2, which quits. Game type 1 runs the online chat init, with a 5-minute timeout. `LoadingScreen_End`, then 0xf. |
+| 9 | **Park load**, behind a new loading screen whose Begin resets the bar. An online-park branch comes first, keyed on `DAT_00f7d88c` +0x3f0 (0x005b50b0's object, ONLINE NEWS). Then: RSSE scripts init (0x00551600), particles, the player (a "debug" slot when there is no front end), weather textures, advisor paths (0x00457a90), 0x00407d80, the level load (0x00407e00; it loads a QuickSave first only while `DAT_00788160`, written by the options parser 0x0040f000, is set), 0x00457c30. Any failure returns 2, which quits. Offline, the park's own save then loads over the new world: the newest `*.TPW*` in the player's theme folder (`FUN_005accf0`, `0x0054f12b`; `park.md`, "Arrivals"). Game type 1 runs the online chat init, with a 5-minute timeout. `LoadingScreen_End`, then 0xf. |
 | 0xf | 0x00550b30 when not online, then 10. |
 | 10 | **In-park loop.** Fixed 31 ms ticks with at most 2000 ms of catch-up; see [Tick rates](#tick-rates) for what runs at which frequency. Ticks run only while the app is active or windowed. Also each pass: listener, `Advisor_Update`, render, present, `Scr%05ld.tga` screenshots and the "E W R P S" timings line. `DAT_00879088` == 1 goes to 0xd; 2 or 3 goes to 0xb. |
 | 0xd | Goes to 0xe, which calls `Advisor_StopQuietly(1)` (0x005996d0) to stop the advisor and 0x005ac5f0, then goes back to 10. |
@@ -143,8 +143,8 @@ Evidence is a Ghidra trace of `/testme.exe` throughout; the column names what in
 | 0x00551600 | | RSSE scripts init. | State 9 |
 | 0x00457a90 | | Loads advisor paths. | State 9 |
 | 0x00407d80 | | Part of the park load. | State 9 |
-| 0x00407e00 | | The QuickSave load. | State 9 |
-| 0x00457c30 | | Last step of the park load. | State 9 |
+| 0x00407e00 | | The park's level load: `FUN_005156a0` (which zeroes `mGameTick`), a QuickSave only while `DAT_00788160` is set, then the level (0x00407f20). | State 9, `0x0054ed3f` |
+| 0x00457c30 | | Called after the level load (`0x0054ed4e`); the park's save loads after it, later in the same pass (`0x0054f12b`). | State 9 |
 | 0x00550b30 | | Runs in state 0xf when not online. | State 0xf |
 | 0x00546c80 | | The track-ride tick, every tick. | Magic `DAT_00877b58` = 0x4a454647 "GFEJ" |
 | `DAT_00877b58` | | That magic word, read across 0x00542000–0x0054b000. | Read sites |
@@ -153,12 +153,12 @@ Evidence is a Ghidra trace of `/testme.exe` throughout; the column names what in
 | 0x00516380 | | The thing-list sweep that reaches the peeps. **Every 8th tick**, not every tick — it is mode-gated AND frequency-gated, as "Tick rates" above says. | 0054f6c3–0054f754, gate 0054f668 |
 | 0x0050b360 | | Called per thing by that sweep. | Loop body |
 | `DAT_00fb3b7c` | | Game mode: 0 normal park, 1 online, 2 Instant Action. | 0054f6c3–0054f754 |
-| 0x005166b0 | | Taken instead of 0x00516380 in mode 1, the online one. | Same branch |
+| 0x005166b0 | | Taken in mode 1, the online one, instead of the direct call at `0054f7bb`; it calls 0x00516380 itself (`0x005166f2`). | Same branch |
 | 0x00fb34a8 | | Three one-shot init guards OR bit 0 into it and fire once. | 0054f691 / 0054f6d8 / 0054f719 |
 | 0x0055abf0 | | The flying cars, every 2nd tick — **not** the peep simulation. | 0054f5c0 |
 | 0x00475360 | | The sprite step, every 2nd tick, so 62 ms — exactly its own default interval. | 0054f5c0 |
 | `DAT_00877d34` | | The tick counter whose low bit gates the every-2nd pair. | `TEST AL,0x1` at 0054f5c0 |
-| 0x0055a470 | | Called from inside the every-8th gate (cleared by its `JNZ` at `0054f828`), so every 8th tick; not online-only. See "Tick rates" above. | 0054f828 |
+| 0x0055a470 | | Called at `0054f828`, inside the every-8th gate (its `JNZ` at `0054f66f` skips it), so every 8th tick; not online-only. See "Tick rates" above. | 0054f828 |
 | `DAT_00879088` | | Leave-the-park reason: 1 → 0xd, 2 or 3 → 0xb, 3 quits. | State 10 |
 | 0x005996d0 | `Advisor_StopQuietly` | Called (1) to stop the advisor with a fade; see `ui.md`. | State 0xe |
 | 0x005ac5f0 | | Runs with it in state 0xe. | State 0xe |

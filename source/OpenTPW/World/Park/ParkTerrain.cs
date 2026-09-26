@@ -20,7 +20,7 @@ namespace OpenTPW;
 /// <para>
 /// The model already carries world positions, so it is loaded at the origin rather than placed:
 /// its vertices span roughly -555..1511 across and -621..1445 deep, which is the whole scenic island,
-/// while the park the player can build on is only the 950x840 units nearest the origin. That is why
+/// while the park the player can build on is only the 960x850 units nearest the origin. That is why
 /// the mesh's extent must never be mistaken for the playable extent - dividing one by the other gives
 /// a wrong cell size. The cell is 10 units, and the centre of grid cell
 /// <c>(gx, gy)</c> is at <c>(gx * 10 + 5, gy * 10 + 5)</c>.

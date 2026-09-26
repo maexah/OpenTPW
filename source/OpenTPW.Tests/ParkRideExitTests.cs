@@ -248,9 +248,8 @@ public class ParkRideExitTests
 		var park = new ParkState( world );
 
 		// <b>Standing where a dismissed guest is actually put down</b>, because NO ROUTE EXISTS from the
-		// park to a
-		// ride's EXIT cell - CellEdge only opens a ride end along the way it faces - because a guest is
-		// put down at an exit and walks AWAY from it, never to it.
+		// park to a ride's EXIT cell - CellEdge only opens a ride end along the way it faces - because a
+		// guest is put down at an exit and walks AWAY from it, never to it.
 		var peep = GuestAt( 7, PeepState.LeavingRide, ExitX, ExitY );
 		var walk = new PeepWalk( peep.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
 

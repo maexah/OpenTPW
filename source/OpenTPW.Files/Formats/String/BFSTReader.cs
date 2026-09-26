@@ -49,7 +49,7 @@ internal sealed class BFSTReader : BaseFormat
 		/*	
 		Header
 			4 bytes: Magic number - "BFST"
-			4 bytes: Unknown
+			4 bytes: A number from 1000 to 1020, one per table (FileFormats strings.md)
 			4 bytes: String count
 			
 		#For each string
@@ -67,7 +67,7 @@ internal sealed class BFSTReader : BaseFormat
 		if ( magicNumber != "BFST" )
 			throw new Exception( $"Magic number did not match: {magicNumber}" );
 
-		//Unknown
+		// A number from 1000 to 1020, one per table (FileFormats strings.md)
 		_ = memoryStream.ReadInt32();
 
 

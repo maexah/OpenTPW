@@ -263,8 +263,8 @@ public sealed class CellEdge
 	/// <para>
 	/// Of the three questions the constructor takes, a live park can answer two. The map is
 	/// <see cref="Live"/> - the running park's cells, not the file's. The track record is parsed by the
-	/// save reader, so the branch is given its
-	/// real answer: left out it is wrong for 568 of the shipped park's cells.
+	/// save reader, so the branch is given its real answer: left out it is wrong for 568 of the shipped
+	/// park's cells.
 	/// </para>
 	/// <para>
 	/// <b>The third is still declined, and deliberately.</b> <c>queueAhead</c> stands for an arm of the

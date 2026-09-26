@@ -51,7 +51,7 @@ Jungle: **96x85 cells, 97x86 vertices, 8342 heights, 8160 cell records.** Valida
 |---|---|---|
 | `0x0001` | **Hides the cell from the terrain pass.** `FUN_0056f670` skips any cell carrying it (`TEST byte [EAX],0x1` at `0x0056f9ce`). Set in `base.MD2` on exactly the 1,159 jungle-grid cells of mType 2, 30 and 7, and at run time on every cell the tile rule answers (0,8) — footprint, entrance, exit and queue cells (`FUN_0046df50`, `OR 0x101` at `0x0046e012`). A second, optional pass (`FUN_00570d90`, gated on `DAT_008bcbc8 & 0x10000`) has no such test | Confirmed 2026-09-22 |
 | `0x0002` | Preserved by the footprint stamper; meaning not recorded | — |
-| `0x0004` | Selects the triangle diagonal when `0x0800` is set | Stated by the RE pass, **still UNVERIFIED** |
+| `0x0004` | Preserved by the footprint stamper. The RE pass said it selects the triangle diagonal when `0x0800` is set; neither terrain pass tests it | **Not borne out** - see below |
 | `0x0008` / `0x0010` / `0x0020` | Rotation, one field of exactly four states (`flags & 0x38`) | Confirmed |
 | `0x0040` | Mirror, independent of rotation | Confirmed |
 | `0x0080` | Marks a path cell; in a footprint entry it means "this cell of the footprint is used" | Confirmed |
@@ -61,7 +61,7 @@ Jungle: **96x85 cells, 97x86 vertices, 8342 heights, 8160 cell records.** Valida
 
 ### The diagonal-choice bit has not been located
 
-The RE pass reported "`0x0800` set means choose the triangle diagonal from `0x0004`". The `0x0800` half is right about the bit but wrong about where it comes from (it is computed at load — see below), and **the `0x0004` half is still unverified.**
+The RE pass reported "`0x0800` set means choose the triangle diagonal from `0x0004`". The `0x0800` half is right about the bit but wrong about where it comes from (it is computed at load — see below), and **the `0x0004` half is not borne out: neither terrain pass (`FUN_0056f670`, `FUN_00570d90`) tests the cell's `0x0004`.**
 
 Hunting the terrain renderer `FUN_0056f670` for it found 16 sites pairing `TEST ?H,0x8` with a test of `0x4` in the cell's high byte (`TEST byte ptr [reg+0x1],0x4`, or `TEST AH,0x4` at `0x0056fb0e` and `0x0056fd67`), which looks exactly like the rule. It is not. All 16 sites were traced and every one has the same shape:
 
@@ -232,12 +232,12 @@ States: **1** lobby load, **2** lobby run, **3** lobby unload, **9** park LOAD, 
 
 The lobby is **torn down completely** at the lobby-to-park boundary (front end, lobby object, advisor, all sound, particles, all sprite banks) and state 9 rebuilds each. The **park run loop is a fixed 31 ms step with a 2000 ms catch-up clamp**. The park loading bar's budget is **500 steps**.
 
-**Caution from the cross-check: the park-load call ORDER is well evidenced but the agent's parenthetical LABELS are not, and at least two are wrong.**
+Two steps of the park load each do two things:
 
-| Address | What it actually is | What it was mislabelled as |
-|---|---|---|
-| `FUN_00457a90` | The scene init that loads terrain | "advisor" |
-| `FUN_00457c30` | Loads `base.map` | "viewport/camera" |
+| Address | What it does |
+|---|---|
+| `FUN_00457a90` | Loads the terrain model, `base.md2` under `%s\Terrain` (`FUN_004504c0`), and the advisor's models (`FUN_00429ba0` on `%s\Global\Advisor` and `%s\Advisor\%s`), then resets the advisor (`FUN_005989c0`) |
+| `FUN_00457c30` | Loads `Base.map` (`FUN_00450900`, `%s\Terrain\Base.map`) and sets the viewport and screen globals |
 
 ---
 
@@ -374,7 +374,7 @@ Every theme ships `sky/` with those three files and an `ssky/` low-detail set be
 
 **The ORBIT camera never shows the sky.** Its pitch is 45-65 degrees against a vertical FOV of 90, so the top of the frame sits at elevation `45 - pitch` — 0 at best, never above the horizon. All three reference screenshots agree: ground to every edge. **Camcorder mode does show it**; from the ground the sky fills the upper half of the frame. The argument above is about the orbit camera, and for that it holds exactly.
 
-This also sharpens the withdrawn note about OpenTPW "showing sky where the original does not": what it shows there is the **fog-cleared background past the ground's edge**, measured at exactly jungle's `ThemeEngine.FogColour` **4774136** (`0x48D8F8`) with **one unique colour and zero standard deviation** across the strip. Not sky.
+What OpenTPW's orbit camera shows past the ground's edge is the **fog-cleared background**, measured at exactly jungle's `ThemeEngine.FogColour` **4774136** (`0x48D8F8`) with **one unique colour and zero standard deviation** across the strip. Not sky.
 
 **Bit `0x80` set by `FUN_0042afd0` is NOT the first-person flag.** Its only caller is `FUN_005d8de0`, a look-at basis builder (it normalises a direction, derives right/up, stores a position) reached from the **lobby's** `FUN_005d8b50` — so `0x80` of `DAT_00790ab0` marks a **scripted lobby camera**. The camera-mode dispatcher worth reading instead is `FUN_0042b1c0`.
 
@@ -446,7 +446,7 @@ The park's loop runs from `0x0054f4bf` onward, with the tick counter at `[0x0087
 | `0x00520130` | `Particles_Tick` | The *entire* body of the lobby's tick loop, and first in the park's | Every tick |
 | `FUN_00546c80` | — | A pairwise proximity/avoidance pass over a stride-`0x2b` array, gated on `DAT_00877b58 == 0x4a454647` | Every tick |
 | `FUN_005516b0` | — | The RSSE thing/script engine (named by its own assert string) | Every tick |
-| `FUN_0051e790` | — | The crowd-driven music level, called at `0x0054f870` | Every tick |
+| `FUN_0051e790` | — | The crowd-driven music level, called at `0x0054f870` | **Every 32nd tick** (`TEST [0x00877d34],0x1f`, `0x0054f82d`) |
 | `FUN_00475360` | — | A clock-driven task scheduler: reads the clock, runs entries whose `+0x7c` is past, reschedules `+0x7c = +0x80 + now`. Its own default interval `+0x80 = 0x3e = 62`, so a default sprite steps once per call | **Every 2nd tick** |
 | `FUN_0055abf0` | — | **The flying cars** — named by its own strings, `"FLY: Failed to trigger a flying car anim (%ld)"` at `0x007660e8` and `"FLY: No headnodes on car mesh"`. It is **not** the guest/peep simulation | **Every 2nd tick** |
 
@@ -560,13 +560,12 @@ Each row's `+0x0c` is a 16-byte thunk (`MOV ECX,0x007b51f0; CALL x; MOV EAX,1; R
 | `loans` | `FUN_0049fb30` |
 | `staffcosts` | `FUN_004b2750` |
 | `entryprice` | `FUN_00498d80` |
+| `research` | `FUN_004aa480` |
 | `map` | `FUN_005f0b40` (ECX = `0x00F86DB8`) |
 | `staffloc` | `FUN_004b3f60([0x007c2658])` if `[0x007cc3c0]`, else `FUN_004b3f60(0)` |
 | `peeploc` | `FUN_004b3f60([0x007c2658])` if `[0x007cc418]`, else `JMP FUN_004b4280` |
 | `postcard` | `FUN_004a9380` |
 | `camcorder` | `FUN_00481a10` |
-
-(`research`'s screen builder is `FUN_004aa480`, from the screen-stream table below; its stub target is not among the targets recorded here.)
 
 **`-1` is a REMEMBERED TAB, not "nothing selected".** `FUN_0049bdd0` rebuilds the screen when `param_1 == -1`, then does `if (param_1 == -1) param_1 = DAT_007ca30c;` and switches five ways on that (cases 0-4) to choose both a title string (`0x8b`-`0x8f`) and a control id (`0x2490`/`0x2493`/`0x2492`/`0x2494`/`0x2491`). So hire has **five tabs** and `-1` means "open on the tab it was left on"; passing a real index when the screen already exists only re-titles and re-selects instead of rebuilding. **An earlier guess that `-1` meant "no item selected" was wrong** and is recorded here so it is not made again.
 
@@ -582,7 +581,7 @@ Each row's `+0x0c` is a 16-byte thunk (`MOV ECX,0x007b51f0; CALL x; MOV EAX,1; R
 
 ## Camcorder mode — the first-person view
 
-Camcorder mode is why a park loads a sky the orbit camera never shows.
+Camcorder mode is why a park loads a sky the orbit camera shows only as a margin.
 
 | Address | What it is | Evidence |
 |---|---|---|
@@ -770,7 +769,7 @@ park. A save never resumes in first person: loading zeroes `gui_CameraFlags` (`0
 
 `ParkCamcorderCameraMode.Slide` runs the sweep above pass for pass, steps 1 to 8, with the original's constants and
 its stores: `double` between them for the x87 at 53 bits, a `float` at each store (`docs/QUEUE.md` Q48b). It differs
-in these places, none reached by a walk in the park:
+in these places, of which a walk in the park reaches only `FUN_0042a340`'s branch:
 - **Off the map every side is shut.** `CellEdge` holds no cell there; the original's test reads its neighbours'
   records instead (step 1's cell is never clamped). Only an entry off the park gets there (below).
 - **The passes are capped at 1024**, where the original loops until the step is spent. Every pass spends part of a
@@ -823,7 +822,7 @@ A mode reports its type from **vtable `+0x24`**, which is a one-instruction `MOV
 | `0x006feaa0` | 8 | `FUN_0046cfc0` | The coaster builder: its one constructor call is in the coaster bar's `FUN_00497bc0` (`0x00497c84`) |
 | `0x006fead0` | 9 | `FUN_0046cff0` | **CAMCORDER** |
 
-**Camcorder is mode 9**, which explains the staff/visitor locator's `if (iVar1 == 9)` on the current mode's type: it is checking for camcorder and leaving first person before it points at anyone. The coaster builder bar's `FUN_00497bc0` does the same for type 8.
+**Camcorder is mode 9**, which explains the staff/visitor locator's `if (iVar1 == 9)` on the current mode's type: it puts the idle mode (`FUN_0046c6a0`, through `FUN_0046c350`) over the camcorder's pick mode before it points at anyone, and does not leave first person, which runs under the idle mode ("Entering and leaving first person"). The coaster builder bar's `FUN_00497bc0` tests type 8 the other way: when the mode is not 8 it installs its own (`FUN_0046cfc0`).
 
 **The odd row is not an unknown mode — it is the base class.** `0x006fe9b0`'s type getter is `FUN_0067b0c0`, which is nothing but `__amsg_exit(0x19)`, the CRT's "pure virtual function called" abort. So the seven concrete modes (types 1, 3, 5, 6, 7, 8, 9) derive from it and `FUN_0046ced0` is the base constructor. **The table is complete; there is no eighth mode to go looking for.**
 
@@ -911,8 +910,8 @@ Decompiled 2026-09-22. The per-cell op worker switches on its op byte:
 the step's bit and the neighbour gains the opposite, which is the symmetric link
 `ParkPathNeighbours.Cardinal` already performs.
 
-**It is NOT the only writer.** `FUN_00522700` is
-called from `FUN_00524960`, `FUN_00528a70`, `FUN_0052a050`, `FUN_0052fc80`, `FUN_0053b280`, `FUN_0053bc60` and `FUN_00539220` as well
+**It is NOT the only writer.** `FUN_00522700` is called from `FUN_00524960`, `FUN_00528a70`, `FUN_0052a050`,
+`FUN_0052fc80`, `FUN_0053b280`, `FUN_0053bc60` and `FUN_00539220` as well
 as from inside the rule. The placer's two are the ones that matter — see "What authors an entrance's
 `mNeighbours`" below.
 
@@ -1342,9 +1341,9 @@ clamped 0..40.
 
 **It is still not implementable, and the blocker is a mapping this page must not paper over.** The
 ratios divide by the descriptor's `+0x1a8` and `+0x1a0`, and `park.md` already records that **which
-`.sam` key feeds either of those is unproven and must not be guessed** — the constructor reads its
-record through an `undefined2 *`, and that reading disagrees with where `FUN_004db7d0` parses
-`mOperatingSpeed` and `mOperatingDuration`. `+0x13c`, which supplies the base above, is
+`.sam` key feeds either of those is unproven and must not be guessed** — the constructor copies them
+into the object's `mOperatingSpeed` (`+0x58`, `0x004db54c`) and `mOperatingDuration` (`+0x5c`, `0x004db64f`), the
+fields `FUN_004db7d0` reads from a save, and no `.sam` key is traced into the descriptor's two words. `+0x13c`, which supplies the base above, is
 `UsageInfo.ExcitementLevel`: the compiled `.sam` schema puts it one slot before `InitCostOfGoods` (`+0x140`), in a
 UsageInfo group anchored at `+0xd4` through `+0x170` (`ride-operation.md`, "At the door"). Having the arithmetic does not supply its inputs, so
 `RIDE_EXCITEMENT_BAR` and `RIDE_RELIABILITY_BAR` stay counted rather than fitted.
@@ -1373,8 +1372,8 @@ There IS a confirmation box, UITEXT 396, **gated on an options checkbox** (`DAT_
 flag gates the staff dismissal box, UITEXT 397.
 
 **Every caller of `FUN_004de1f0` is in the cell-editing family**, as this project suspected: five
-functions, eight call sites, all of them the map-click apply, the cell-type setter, the run-step apply
-and the footprint stamp.
+functions, eight call sites: the map-click apply `FUN_00524960` (four), the footprint applier `FUN_00528a70`,
+the stamp `FUN_005346d0`, `ClearCell` `FUN_005367a0` and the backtrack `FUN_0052fe50`.
 
 #### Demolishing a queued thing
 
@@ -1883,8 +1882,8 @@ exactly where the next stream begins at `0x00755750`.
         the RIGHT column is a type-9 bar on four rows and text on three, which is why the ids
         interleave: 0x3e20/0x3e21, 0x3e1a/0x3e1b, 0x3e1c/0x3e16, 0x3e1e/0x3e18, 0x3e1f/0x3e19,
         0x3e1d/0x3e17, 0x3e22/0x3e23
-      0x3e26 b_arup      (1662,126,1745,210) help 21   cycle NEXT
-      0x3e27 b_ardown    (1662,216,1745,299) help 20   cycle PREVIOUS
+      0x3e26 b_arup      (1662,126,1745,210) help 21   cycle PREVIOUS
+      0x3e27 b_ardown    (1662,216,1745,299) help 20   cycle NEXT
       0x3e29 b_allthings (1648,583,1750,686) help 17
       id -1  b_okay      (1671,818,1754,901) help 1    close
       three sliders, flags 0x61: 0x3e30 help 5, 0x3e2d help 6, 0x3e2f help 7
@@ -1997,7 +1996,7 @@ stripped no-op that the player never sees. Re-implement them as debug logging, n
 
 The park management gadget is stream `0x00752940`.
 
-**How to reproduce this table, and a trap in doing so:** walk `references.getReferencesTo(UI_LoadTree)` and read back a few instructions for the `PUSH` immediates. Matching `t.startswith("PUSH 0x0")` **silently produces an EMPTY column for all 54 rows**, because an address like `0x754cf8` prints as `PUSH 0x754cf8` with no leading zero. **An extraction that returns nothing for every row is a bug in the extractor, not an empty dataset.**
+**How to reproduce this table, and a trap in doing so:** walk `references.getReferencesTo(UI_LoadTree)` and read back a few instructions for the `PUSH` immediates. Matching `t.startswith("PUSH 0x0")` **silently produces an EMPTY column for every row**, because an address like `0x754cf8` prints as `PUSH 0x754cf8` with no leading zero. **An extraction that returns nothing for every row is a bug in the extractor, not an empty dataset.**
 
 ---
 
@@ -2056,7 +2055,7 @@ Mixing them up is exactly the trap the cross-check warned about.
 
 1. **Which grid size is authoritative**: 96x85 (mesh), 95x84 (`.sam` MapInfo), 95x85 (the engine's own derivation). **Nobody established whether `HeightfieldWidth` counts cells, vertices or cells-minus-one.**
 2. **The lighting model.** `LightNormal` was never traced to the shading dot product, so even travels-vs-toward is unconfirmed.
-3. **The diagonal-choice bit** — see the terrain section. The cell's `0x0800` has no consumer found anywhere, and `0x0004` is the unverified candidate.
+3. **The diagonal-choice bit** — see the terrain section. The cell's `0x0800` has no consumer found anywhere, and neither terrain pass tests `0x0004`, the RE pass's candidate.
 4. `base.MD2`'s container walking — the heightfield was found by validated signature search, **not** by walking the chunk table.
 5. `base.map`'s per-bit semantics beyond `0x08`.
 6. The procedural compositor.

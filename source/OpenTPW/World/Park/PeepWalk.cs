@@ -98,9 +98,10 @@ public sealed class PeepWalk
 	/// Whether a side of a cell is closed, which is the same test this walk steers by.
 	///
 	/// <para>
-	/// <b>Exposed because choosing a destination needs it and the walk is what already holds it.</b>
-	/// <c>FUN_004f9490</c> picks a wandering guest's next cell by testing the four sides of the one they
-	/// stand on, so the behaviour needs the edge test directly rather than only through a route. Handing it
+	/// <b>Exposed because choosing a destination uses it and the walk is what already holds it.</b>
+	/// <c>FUN_004f9490</c> picks a wandering guest's next cell from the mask of the one they stand on and
+	/// asks no edge test (<c>docs/exe/ride-operation.md</c>, "SetRandomDest"); the behaviour asks this one of
+	/// each side as well, rather than only through a route. Handing it
 	/// out here keeps the wiring local: <see cref="PeepBehaviour"/> is given the walk anyway, so nothing new
 	/// has to be threaded through <see cref="ParkPeople"/> and <c>Level</c> to reach it.
 	/// </para>

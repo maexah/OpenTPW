@@ -26,9 +26,10 @@ namespace OpenTPW;
 /// and the other three stay as their textures paint them.
 ///
 /// Two things gate even that in the original, both left out here, because nothing yet reads
-/// the detail file's SKYQUALITY (Q32) and there is no software renderer: the tint only applies when SKYQUALITY is above 1 - the Low preset sets 1,
-/// Medium 2, High 4 - and when the hardware path is running. On Low the ramp is flooded with the
-/// fog colour instead, and the lobby sky is flatly, literally blue.
+/// the detail file's SKYQUALITY (Q32) and there is no software renderer: the tint only applies
+/// when SKYQUALITY is above 1 - the Low preset sets 1, Medium 2, High 4 - and when the hardware
+/// path is running. On Low the ramp is flooded with the fog colour instead, and the lobby sky is
+/// flatly, literally blue.
 /// </summary>
 public class Sky : Entity
 {
@@ -469,7 +470,7 @@ public class Sky : Entity
 			public Vector4 g_vUv;
 			public Vector4 g_vRamp;
 
-			/// <summary>The haze colour in xyz - see content/shaders/sky.</summary>
+			/// <summary>The haze colour in xyz - see content/shaders/sky.shader.</summary>
 			public Vector4 g_vFog;
 
 			/// <summary>Eye height in x, how far above it the haze clears in y.</summary>
@@ -484,7 +485,7 @@ public class Sky : Entity
 		/// How far above eye level the sky's haze clears.
 		///
 		/// The sky is not fogged by distance the way everything else is - see the note in
-		/// content/shaders/sky. It hazes by height, fully at eye level and not at all this far above
+		/// content/shaders/sky.shader. It hazes by height, fully at eye level and not at all this far above
 		/// it, which is what seals the join with the sea: the dome comes down to eye level exactly
 		/// where the sea reaches the horizon, so both sides of that line are the fog colour whatever
 		/// colour that is and wherever the camera sits.

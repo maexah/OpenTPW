@@ -17,7 +17,7 @@ public sealed class SoundCategory
 		public TimeSpan RepeatDelay;
 		/// <summary>
 		/// The weighted lists this effect picks between. Most effects have exactly one; hallow's
-		/// bats and terrors are seven, and space's looping beds three - see
+		/// repeating ambient effects have three to ten, and space's five to fourteen - see
 		/// <see cref="SoundCategoryFile.ReadSamples"/>.
 		/// </summary>
 		public List<List<SoundCategoryFile.Sample>> Variations = new();
@@ -196,7 +196,10 @@ public sealed class SoundCategory
 	public IReadOnlyList<SoundCategoryFile.Variation> VariationsOf( int id )
 		=> _effects.FirstOrDefault( effect => effect.Id == id )?.Headers ?? [];
 
-	/// <summary>How long effect <paramref name="id"/> waits after finishing before it may replay.</summary>
+	/// <summary>
+	/// How long effect <paramref name="id"/> waits after finishing before it may replay. Dead by CODE: nothing
+	/// calls it; the play path reads the effect's own field.
+	/// </summary>
 	public TimeSpan RepeatDelay( int id )
 		=> _effects.FirstOrDefault( effect => effect.Id == id )?.RepeatDelay ?? TimeSpan.Zero;
 

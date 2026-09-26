@@ -127,8 +127,8 @@ public class LobbyCameraMode : CameraMode
 	/// to full speed and back down to nought.
 	///
 	/// <para>
-	/// <b>This is the one number here that was chosen rather than read.</b> The original adds and
-	/// subtracts 0.05 of the cap with no delta at all (<c>0x00702c78</c> and <c>0x00702c84</c>), so it
+	/// <b>This number is chosen rather than read.</b> The original adds and
+	/// subtracts 0.05 of the cap with no delta at all (<c>0x00702c84</c> and <c>0x00702c78</c>), so it
 	/// is per frame and runs at whatever rate the machine happened to draw - the same shape as the
 	/// lightning roll. Converting it is what this project already does with per-frame rolls, knowingly
 	/// and one system at a time (see <see cref="LobbyWeather"/> and <c>LobbyAudio.RollOneShot</c>), so

@@ -90,8 +90,8 @@ public class PeepNavigatorTests
 	}
 
 	/// <summary>
-	/// A route longer than the navigator's five slots is held five at a time. Every route in Lost Kingdom
-	/// is three or shorter, so the streaming case is pinned here rather than measured.
+	/// A route longer than the navigator's five slots is held five at a time. Every route Lost Kingdom's save
+	/// holds is three or shorter, so the streaming case is pinned here rather than measured.
 	/// </summary>
 	[TestMethod]
 	public void ALongRouteIsHeldFiveWaypointsAtATime()
@@ -128,8 +128,8 @@ public class PeepNavigatorTests
 	/// How close counts as having got there: wider at a corner than at the destination.
 	///
 	/// <para>
-	/// <b>The two are the opposite way round from what a reader might expect</b>, and from what this
-	/// project's own notes said until they were checked against the code. Rounding a corner is forgiven by
+	/// <b>The two are the opposite way round from what a reader might expect</b>.
+	/// Rounding a corner is forgiven by
 	/// two radii; stopping on the destination is held to 1.6 of one.
 	/// </para>
 	/// </summary>
@@ -249,8 +249,8 @@ public class PeepNavigatorTests
 	}
 
 	/// <summary>
-	/// Running off the end of the buffer is what asks for the rest of a streamed route. Nothing in the
-	/// shipped park does this, because no route there is longer than the five slots.
+	/// Running off the end of the buffer is what asks for the rest of a streamed route. No route the
+	/// shipped save holds does this, because none is longer than the five slots.
 	/// </summary>
 	[TestMethod]
 	public void RunningOffTheEndOfTheBufferAsksForMore()
@@ -296,8 +296,8 @@ public class PeepNavigatorTests
 	/// the two flags.
 	///
 	/// <para>
-	/// <b>This said "which is what lets a park resume mid-walk", and that was false.</b> A park cannot
-	/// resume mid-walk: the waypoints are the route, and the reader deliberately does not parse
+	/// <b>A park cannot resume mid-walk</b>: the waypoints are the route, and the reader deliberately
+	/// does not parse
 	/// <c>subpath_buffer[]</c>, because <c>SetDest</c> fills only <c>path_buffer_count - 1</c> of the
 	/// distances and the rest hold the uninitialised fill or a stale value from an earlier route. Every
 	/// assertion below is sound and not one of them is a waypoint. A route must be planned afresh, not
@@ -323,8 +323,8 @@ public class PeepNavigatorTests
 
 	/// <summary>
 	/// Where the person is standing, which way they are going, what they were heading for, and the two
-	/// limits the steering step clamps to - all of it parsed by the reader and, until now, dropped on the
-	/// way into the running copy. A person who cannot say where they are cannot walk.
+	/// limits the steering step clamps to - all of it parsed by the reader and
+	/// carried into the running copy. A person who cannot say where they are cannot walk.
 	///
 	/// <para>
 	/// <b><see cref="ParkWorld.NavigatorState.Mass"/> and <c>NavMode</c> are deliberately not carried</b>,

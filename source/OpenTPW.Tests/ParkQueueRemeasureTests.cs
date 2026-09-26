@@ -12,8 +12,9 @@ namespace OpenTPW.Tests;
 ///
 /// <para>
 /// Every guest here is one of Lost Kingdom's own, put into the Belly Bounce's queue by hand with happiness
-/// 50. The queue is cut the way the player's path tool cuts it, by laying path over its second cell
-/// (<see cref="ParkPathBuilding.LayPathRun"/>), which leaves it one cell long: room for four.
+/// 50. The queue is cut as the console's <c>path</c> cuts it, by laying path over its second cell
+/// (<see cref="ParkPathBuilding.LayPathRun"/>), which leaves it one cell long: room for four. The path tool
+/// refuses that cell (Q94).
 /// </para>
 /// <para>
 /// These read real game files and are skipped where there is no installation - see <see cref="GameData"/>.

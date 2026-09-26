@@ -160,8 +160,8 @@ public class WallAvoidanceTests
 	/// <summary>
 	/// <b>The same, going the other way, which no other test here covers.</b> Walking up and to the left
 	/// puts a different corner in play - the one below and left of the cell - and it is asked about
-	/// different cells and different sides entirely. The first ten tests all went down and to the right,
-	/// so a corner case reached only by going the other way was untested until this was added.
+	/// different cells and different sides entirely. Every other corner test here goes down and to the
+	/// right.
 	/// </summary>
 	[TestMethod]
 	public void TheCornerBehindYouWorksTheSameWayRound()

@@ -8,9 +8,8 @@ namespace OpenTPW.Tests;
 ///
 /// <para>
 /// <b>This is tested because a reporter that quietly stops reporting is the very fault it exists to
-/// catch.</b> The tree was full of counters that recorded their own gaps and were never read - two of
-/// them with doc comments saying the count existed so the gap would be "visible" - and the only place
-/// any of them became text was a test. A de-duplicating reporter has an obvious way to fail the same
+/// catch.</b> A counter that records its own gaps and is never read shows nobody anything, and a
+/// de-duplicating reporter has an obvious way to fail the same
 /// way: announce nothing, or announce once and then forget it ever happened.
 /// </para>
 /// </summary>
@@ -39,7 +38,7 @@ public class UnimplementedTests
 
 	/// <summary>
 	/// <b>Repeats are counted rather than dropped, and that is the whole design.</b> A ride script takes
-	/// a turn eight times a second, so the console gets one line; but "it happened 400 times" and "it
+	/// a turn about four times a second, so the console gets one line; but "it happened 400 times" and "it
 	/// happened once" want different reactions, and a reporter that forgot the difference would hide
 	/// which gap actually matters.
 	/// </summary>

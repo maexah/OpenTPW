@@ -104,11 +104,11 @@ public class PeepWalkTests
 	/// that makes the list above worth having.</b>
 	///
 	/// <para>
-	/// An earlier reading of the state switch gave four walking states - <c>Walking</c>, <c>Wandering</c>,
-	/// <c>SteppingUpQueue</c> and <c>WalkingOutside</c>. Every assertion about the eleven would have looked
-	/// fine beside it, because it is a subset. What that reading could not survive is the park's own data:
-	/// <b>no guest in Lost Kingdom is in any of those four</b>, so the count here would have been zero and
-	/// nobody would have moved. The one guest who does not walk is thing 33, waiting for the park to open.
+	/// A reading of the state switch that finds only four walking states - <c>Walking</c>, <c>Wandering</c>,
+	/// <c>SteppingUpQueue</c> and <c>WalkingOutside</c> - looks fine beside every assertion about the
+	/// eleven, because it is a subset. What it cannot survive is the park's own data: <b>no guest in Lost
+	/// Kingdom is in any of those four</b>, so the count here would be zero and nobody would move. The one
+	/// guest who does not walk is thing 33, waiting for the park to open.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -226,8 +226,8 @@ public class PeepWalkTests
 	}
 
 	/// <summary>
-	/// The longest route in the park's path network, walked end to end - <b>the only case anywhere in Lost
-	/// Kingdom that runs out of carried waypoints and has to refill</b>, which is the newest and least
+	/// The longest route in the park's path network, walked end to end - <b>one of the nine routes in Lost
+	/// Kingdom's path network that run out of carried waypoints and have to refill</b>, which is the least
 	/// exercised path through the walk.
 	/// </summary>
 	[TestMethod]
@@ -271,13 +271,13 @@ public class PeepWalkTests
 
 	/// <summary>
 	/// <b>Progress is measured to the waypoint being walked to, from where the step landed.</b> Two separate
-	/// claims, and this test exists because a control proved that neither was pinned by anything.
+	/// claims, and this test pins both.
 	///
 	/// <para>
 	/// <c>FUN_0050fd40</c> loads <c>ECX</c> with <c>[ESI + cursor*8 + 0x64]</c> - the current waypoint, not
 	/// the destination - and reads the position from <c>[ESI + 8]</c>, which <c>FUN_0050f3b0</c> has already
-	/// written the step into. Rewriting either of those was measured to break <b>no test at all</b>, which
-	/// is why this one is written against the value the steering step actually consumed rather than against
+	/// written the step into. This test is
+	/// written against the value the steering step actually consumed rather than against
 	/// a re-implementation of it.
 	/// </para>
 	/// <para>

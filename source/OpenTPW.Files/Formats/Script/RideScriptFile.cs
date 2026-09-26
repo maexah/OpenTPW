@@ -164,7 +164,7 @@ public sealed class RideScriptFile : BaseFormat
 	/// <para>
 	/// Exactly 24 of the 308 shipped scripts declare any, every one of them 10, and those 24 are exactly
 	/// the scripts that use a limbo instruction - no script declares slots it never uses, and none uses
-	/// limbo without declaring them. They are shops and toilets rather than rides.
+	/// limbo without declaring them. They are shops, toilets and sideshows rather than rides.
 	/// </para>
 	/// </summary>
 	public int LimboCapacity { get; private set; }
@@ -177,8 +177,8 @@ public sealed class RideScriptFile : BaseFormat
 	///
 	/// <para>
 	/// <b>The same one-to-one rule limbo follows holds here, and it is what identified the field.</b> Of
-	/// the 22 Lost Kingdom ride scripts exactly one declares any - <c>Bouncy.RSE</c>, which declares 10 -
-	/// and that is exactly the one script using the <c>BOUNCE</c> family. The other 21 declare nought and
+	/// the 81 Lost Kingdom scripts exactly one declares any - <c>Bouncy.RSE</c>, which declares 10 -
+	/// and that is exactly the one script using the <c>BOUNCE</c> family. The other 80 declare nought and
 	/// use none of it. A field whose non-zero values pick out precisely the scripts that need it is not a
 	/// coincidence of the corpus.
 	/// </para>

@@ -9,17 +9,17 @@ namespace OpenTPW.Tests;
 /// These read real game files and are skipped where there is no installation - see <see cref="GameData"/>.
 ///
 /// <para>
-/// This is worth pinning because the reader used to work it out by measuring the gap before each list
-/// and calling anything past thirty-two bytes a new effect. That cannot work, and the numbers say why:
+/// This is worth pinning because the obvious way to work it out - measuring the gap before each list
+/// and calling anything past thirty-two bytes a new effect - cannot work, and the numbers say why:
 /// jungle's ambient runs sixty-four bytes between two lists of the <i>same</i> effect, while the
 /// smallest gap between two <i>different</i> effects anywhere is forty-two. The ranges overlap, so no
 /// threshold separates them.
 /// </para>
 /// <para>
-/// It went unnoticed because the lobby is the one part of the game it happens to get right: all four
-/// local sfx categories and all four music ones declare a single variation each, so they group the
-/// same either way. Every park category did not - jungle's nine ambient effects came out as
-/// twenty-six, which left effects 178 through 192 each playing one of effect 177's beasts.
+/// The lobby is the one part of the game a gap rule happens to get right: all four local sfx
+/// categories and all four music ones declare a single variation each, so they group the same either
+/// way. Not every park category does - under a gap rule jungle's nine ambient effects come out as
+/// twenty-six, and effects 178 through 192 each play one of effect 177's beasts.
 /// </para>
 /// </summary>
 [TestClass]
@@ -30,16 +30,15 @@ public class SoundCategoryTests
 	{
 		// SoundCategoryFile reads through the GLOBAL file system rather than an instance, because the
 		// game has exactly one - so a test wanting the real .map files has to put one there, or it
-		// reads nothing and passes for the wrong reason. Set to the same folder GameData mounts, and
-		// nothing else in the suite uses it.
+		// reads nothing and passes for the wrong reason. Set to the same folder GameData mounts.
 		FileSystem = GameData.Required();
 	}
 
 	private const string ParkSound = "levels/jungle/Sound";
 
 	/// <summary>
-	/// The count lives in the second int of each twenty-byte effect record, which this reader used to
-	/// skip entirely. Jungle's ambient is the clearest case: nine effects declaring twenty-nine lists
+	/// The count lives in the second int of each twenty-byte effect record. Jungle's ambient is the
+	/// clearest case: nine effects declaring twenty-nine lists
 	/// between them, which is exactly the number of lists that follow.
 	/// </summary>
 	[TestMethod]
@@ -63,8 +62,8 @@ public class SoundCategoryTests
 	}
 
 	/// <summary>
-	/// A park's music is a single effect that picks between six arrangements. Under the old gap rule
-	/// those six came back as six separate effects, and the five after the first were dropped on the
+	/// A park's music is a single effect that picks between six arrangements. Under a gap rule those six
+	/// come back as six separate effects, and the five after the first are dropped on the
 	/// floor, because a category hands list <i>i</i> to effect <i>i</i> and there is only one effect.
 	/// </summary>
 	[TestMethod]
@@ -80,8 +79,8 @@ public class SoundCategoryTests
 
 	/// <summary>
 	/// A declared zero is real, and it is the sharpest test there is: jungle's effect 182 picks between
-	/// no lists at all, so it must play nothing. Before this it was handed one of effect 177's beasts,
-	/// and so were 178, 179, 180, 181, 190, 191 and 192 - every park ambient effect played a beast.
+	/// no lists at all, so it must play nothing. A gap rule hands it one of effect 177's beasts, and
+	/// 178, 179, 180, 181, 190, 191 and 192 as well - under it every park ambient effect plays a beast.
 	///
 	/// <para>
 	/// Asked through <see cref="SoundCategory.Length"/>, which is zero for an effect with no samples,
@@ -101,8 +100,8 @@ public class SoundCategoryTests
 	}
 
 	/// <summary>
-	/// And the lobby is left exactly as it was. Its categories declare one variation per effect, which
-	/// is why the old rule never gave a wrong answer there - and this says so rather than leaving it to
+	/// And the lobby's categories declare one variation per effect, which is why a gap rule gives no
+	/// wrong answer there - and this says so rather than leaving it to
 	/// be rediscovered the next time the lobby's sound changes for no apparent reason.
 	/// </summary>
 	[TestMethod]

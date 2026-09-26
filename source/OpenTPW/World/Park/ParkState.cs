@@ -153,7 +153,7 @@ public sealed class ParkState
 	private int _firstObject;
 
 	/// <summary>
-	/// Each object's link to the next, by thing id - the save's <c>mNextObject</c>, which is the engine's
+	/// Each object's link to the next, by thing id - the save's <c>mNext</c>, which is the engine's
 	/// thing <c>+0xc</c>.
 	/// </summary>
 	private readonly Dictionary<int, int> _nextObject = [];
@@ -635,10 +635,9 @@ public sealed class ParkState
 		=> x >= 0 && y >= 0 && x < ParkWorld.MapSize && y < ParkWorld.MapSize;
 
 	// The queues: ParkWorld describes a file and is immutable, so a guest joining a queue has nowhere
-	// to write. The
-	// shape is the original's own - a head on the object (mFirstInQ) and a doubly-linked list through the
-	// guests themselves (mQNext, mQPrev) - kept here rather than on Peep so that the whole structure lives
-	// in one place and is seeded once.
+	// to write. The shape is the original's own - a head on the object (mFirstInQ) and a doubly-linked
+	// list through the guests themselves (mQNext, mQPrev) - kept here rather than on Peep so that the
+	// whole structure lives in one place and is seeded once.
 	/// <summary>
 	/// What each object has taken, by thing id - the original's <c>mTotalTakings</c> at the object's
 	/// <c>+0x180</c>, which a charge moves and <see cref="ParkWorld"/> cannot because it describes a file.
@@ -1019,8 +1018,9 @@ public sealed class ParkState
 
 		InvalidateQueue( objectId );
 
-		// Between the measure and the people, FUN_004d8c60 (0x004de266) writes a value into a coarse grid
-		// kept beside the map, at the block the back of the queue lies in; what either is, is not decoded.
+		// Between the measure and the people, FUN_004d8c60 (0x004de266) writes a fresh route-counter value
+		// into the back cell's 16 x 16 block stamp, so a queue edit frees its stranded guests; no stamp is
+		// kept here (docs/exe/ride-operation.md, "The stranded bookkeeping").
 		Unimplemented.Report( "QUEUE_REMEASURE_BACK_CELL_STAMP" );
 
 		QueueRemeasured?.Invoke( objectId );

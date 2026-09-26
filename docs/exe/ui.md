@@ -15,7 +15,7 @@ He is placed in screen space in the lower right from the engine's own numbers, a
 | 30 fps | `AnimationFile.FramesPerSecond` | Every `.md2` clip plays at 30 fps. Engine-confirmed, everywhere, not just here | Ghidra |
 | `Sphere_Black2`, material flag `0x2` | — | His head and body are flat discs in a see-through material that writes no depth | Model data |
 
-**Draw order.** Because of the see-through discs, the model draws in two passes: every solid half first, then every see-through half in file order. Drawing mesh by mesh let a hand behind him show through. Any future screen-drawn model with see-through parts needs the same two passes.
+**Draw order.** Because of the see-through discs, the model draws in two passes: every solid half first, then every see-through half in file order. Drawn mesh by mesh, a hand behind him shows through. Any future screen-drawn model with see-through parts needs the same two passes.
 
 **Lighting** is tuned against Alexah's reference screenshots in `content/ReferenceScreenshots/` (untracked) by measuring glove and eye brightness in captures, never by eye. It uses the shader's per-draw ambient and world-normals uniforms.
 
@@ -29,7 +29,7 @@ He is placed in screen space in the lower right from the engine's own numbers, a
 | descriptor `+0x20` | Step of that morph track's own quantisation box | `0x00470e90` decodes with it |
 | `0x00470e90` | The engine's morph decode | Ghidra |
 
-It is **not** the mesh's bounding box. Both the code and the format docs once claimed that, generalised from a single example, and the result was antennae at half height in clip 14. `AnimationFile.MorphTrack.DecodePosition` carries the game-wide numbers. Ride and guest animation use this same format, so the mistake is still live for anyone decoding morphs elsewhere.
+It is **not** the mesh's bounding box. Read in the mesh's box instead, his antennae in clip 14 come out at a little over half their height. `AnimationFile.MorphTrack.DecodePosition` carries the game-wide numbers. Ride and guest animation use this same format, so the mistake is still live for anyone decoding morphs elsewhere.
 
 ### Animation rate: the lobby object ticks 10/s, not 25/s
 
@@ -46,9 +46,9 @@ Two different rates are in play and must stay apart. `.md2` clips play at 30 fps
 | `FUN_005e0470` state 0 | Orbit advance, `angle += delta * SPINSPEED` — a consumer of that field | Ghidra |
 | `island[0x5c]` | Lightning roll, `(island[0x5c] & rand) == 1` | Ghidra |
 
-Consequences of the 10, all read first-hand from the four consumers: butterflies are **15 u/s** and bats **25 u/s**, not 37.5 and 62.5 — flyers once ran 2.5x too fast and now carry the right figures. The camera's true continuous rates are **1.0/s** and **2.0/s**. `SpinSpeed` 0.2 rad/s is exactly SPINSPEED (0.02) x 10, faithful by luck.
+Consequences of the 10, all read first-hand from the four consumers: butterflies are **15 u/s** and bats **25 u/s**, not 37.5 and 62.5 — OpenTPW's flyers move at those rates (`LobbyScript.FlyingMesh.SpeedPerSecond`). The camera's true continuous rates are **1.0/s** and **2.0/s**. `SpinSpeed` 0.2 rad/s is exactly SPINSPEED (0.02) x 10, faithful by luck.
 
-**The trap that makes the distinction matter.** Lightning and the ambient one-shot roll are drawn once per *frame* and are **not** delta-scaled, yet both OpenTPW sites once converted themselves through a shared ticks-per-second constant. Editing that one constant would silently re-rate the storm and the ambience on reasoning that does not apply to them. Keep per-system rates per system.
+**The trap that makes the distinction matter.** Lightning and the ambient one-shot roll are drawn once per *frame* and are **not** delta-scaled, so OpenTPW converts both through `LobbyScript.AssumedFrameRate` (25), kept apart from the lobby's data rate `LobbyScript.TicksPerSecond` (10): one shared constant would silently re-rate the storm and the ambience on reasoning that does not apply to them. Keep per-system rates per system.
 
 ### Timing, lip sync and the queue
 
@@ -56,7 +56,7 @@ His clips run on a `ClipSequence` timeline, his mouth changes on `Time.NextBeat`
 
 Between queued lines he rests off screen for `CooldownSeconds` = **1.5 s**. This is a deliberate difference from the original, at Alexah's request ("at least 1-2 seconds"): `AdvisorQueue_Tick` (`0x005d5f80`) says the next line on the first free tick, so the original pops him straight back up. A flushed line skips the rest of the cooldown.
 
-The lobby greeting is only samples **465** and **466**; **471** is the welcome-back line after Select New Player. Anything else heard in a session came from a test run.
+The lobby greeting is samples **465** and **466** while no slot holds a player, and **471**, the welcome back, while one does, whether the slots open with the lobby or after Select New Player (`FrontEnd_ShowPlayerSlots`, `0x004a6580`). Any other greeting heard in a session came from a test run.
 
 ### The lobby's idle repeat
 
@@ -73,7 +73,7 @@ silent, and again 90 s after each time it is said. Read from the disassembly, no
 **OpenTPW** builds none of it (`docs/QUEUE.md` Q77) and counts the arm as `LOBBY_ADVISOR_IDLE_REPEAT`, in
 `LobbyCameraMode.Update`, every frame a player is picked.
 
-**Known gap in the animation reader.** `AnimationFile.FirstFrame/LastFrame/IsValid` ignore position and visibility keys, so clips carrying only those channels read as having no span. Measured over the shipped data: **159 clips disagree** with the declared span, of which **114 read as no span whatever**. `DeclaredFirstFrame`/`DeclaredLastFrame` are the engine-matching span and are the ones to use.
+**Known gap in the animation reader.** `AnimationFile.FirstFrame/LastFrame/IsValid` ignore position and visibility keys, so clips carrying only those channels read as having no span. Measured over the 1,278 clips in the game that carry an animation block: **164 disagree** with the declared span, and the **127** whose keys fall short all read as no span. `DeclaredFirstFrame`/`DeclaredLastFrame` are the engine-matching span and are the ones to use.
 
 ## Interrupting the advisor
 
@@ -82,7 +82,7 @@ silent, and again 90 s after each time it is said. Read from the disassembly, no
 | Address / value | Original name | What it is | Evidence |
 |---|---|---|---|
 | `0x005994e0` | `Advisor_StopSpeaking` | Does nothing unless he is busy. Stops his voice, lifts the speech duck, kills UI particle channel 0, hides the model, frees the lip data, then maybe cries | Ghidra |
-| `0x005d6060` | `AdvisorQueue_Clear` | One of the two reachers of StopSpeaking; the other is `AdvisorQueue_Add` with flush. `FrontEnd_ClosePlayerSlots` calls Clear whoever is picked | Ghidra |
+| `0x005d6060` | `AdvisorQueue_Clear` | One of the three callers of StopSpeaking; the others are `AdvisorQueue_Add` with flush and `FUN_0059aa70` (below). `FrontEnd_ClosePlayerSlots` calls Clear whoever is picked | Ghidra |
 | `0x0051c2c0` | `Sound_Stop` | A plain stop — no fade — for his voice | Ghidra |
 | `0x00429d60` | `Advisor_KillModel` | Hides the model ("Kill advisor") | Ghidra |
 | `0x00f79680` | — | The sound handle. **The cry plays only when this is non-zero** | Ghidra |
@@ -120,9 +120,9 @@ Verified by disk capture at both cuts: the logged cry matched at 0.997 and uniqu
 
 | Address | Original name | What it is | Evidence |
 |---|---|---|---|
-| `FUN_004092a0` (ECX `0x786b68`) | pause helper | Does nothing unless "park running" is 1. Stops the game clock, holds his sample, moves the 3D listener away. Rename refused by the permission classifier, so still a `FUN_` name | Ghidra |
+| `FUN_004092a0` (ECX `0x786b68`) | pause helper | Does nothing unless the pause gate `0x00786ba4` is 1. Stops the game clock, holds his sample, moves the 3D listener away. Rename refused by the permission classifier, so still a `FUN_` name | Ghidra |
 | `FUN_00409300` | resume | The matching resume. Also still a `FUN_` name for the same reason | Ghidra |
-| `0x00786ba4` | `g_ParkRunning` (was `DAT_00786ba4`) | "Park running". Lobby sets it to 0 at startup (`0x0054e682`); a park load sets it to 1 (`0x0054ea4c`) | Ghidra |
+| `0x00786ba4` | `g_ParkRunning` (Ghidra's label for `Game+0x3c`) | The pause-permission gate, not "a park is running" (`weather.md`, "Pause, and why the calendar cannot roll while paused"): 1 from boot (`0x00407bd9`), 0 on the lobby load (`0x0054e682`), 1 on an ordinary park load (`0x0054ea4c`) | Ghidra |
 | `0x00409350` | `Game_TogglePause` | — | Ghidra |
 | `0x00402d90` | `GameClock_Pause` | Stopped by the pause helper | Ghidra |
 | `0x00402db0` | `GameClock_Resume` | — | Ghidra |
@@ -132,7 +132,7 @@ Verified by disk capture at both cuts: the logged cry matched at 0.997 and uniqu
 
 His clips, lead-in and cue all use the game clock, so a pause carries them on without a jump. In a park, `GameMenu_Open`, `MessageBox_Open` and `OptionsScreen_Open` all call the pause. **In the lobby the original pauses nothing**: he talks on over the Escape menu, and the options screen only quietens the current line while the queue keeps ticking.
 
-OpenTPW deviates here at Alexah's request ("The Advisor shouldn't show in the Options/pause menus"): he is paused in the lobby exactly as a park pauses him whenever a `GameMenu`, `MessageBox` or `OptionsScreen` is open; he is hidden while paused; the quiet stop still runs on options. `Advisor.Paused` runs his own clock, and `Voice.Pause`/`Resume` fade over 10 ms and keep held time out of `Position`. Verified by disk capture: sample 465 held at 1.45 s and resumed 3.66 s later from the same point, and nothing queued started over during options.
+OpenTPW deviates here at Alexah's request ("The Advisor shouldn't show in the Options/pause menus"): he is paused in the lobby exactly as a park pauses him whenever a `GameMenu`, `MessageBox` or `OptionsScreen` is open; he is still drawn while paused, held mid-gesture, as the original's pause removes no model; the quiet stop still runs on options, and that does take him off the screen. `Advisor.Paused` runs his own clock, and `Voice.Pause`/`Resume` fade over 10 ms and keep held time out of `Position`. Verified by disk capture: sample 465 held at 1.45 s and resumed 3.66 s later from the same point, and nothing queued started over during options.
 
 ### Let the cry bleed through when leaving the lobby
 
@@ -195,9 +195,9 @@ The constants in the code are only seeds for a first-ever run. **Do not re-measu
 
 ### Measured costs
 
-- The first frame takes ~450 ms, almost all of it the UI shader compile, which used to land on the lobby's first frame instead.
+- The first frame takes ~450 ms, almost all of it the UI shader compile, which would otherwise land on the lobby's first frame.
 - After that, ~0.85 ms a frame: ~90 ms over a 6 s load.
-- Turning vsync off during the load made no difference, so it was taken back out.
+- Vsync stays on during the load: turning it off makes no difference.
 
 ## Escape game menu
 
@@ -206,13 +206,13 @@ The constants in the code are only seeds for a first-ever run. **Do not re-measu
 | `0x0048c830` | `GameMenu_Open` | Opens the menu | Ghidra |
 | `0x0048c600` | `GameMenu_BuildLobby` | The lobby's menu build | Ghidra |
 | `0x005e41c0` | `IslandLobby_OnKey` | On Escape's release asks each active child's `+0x18`, and opens the menu only if none answered - the island camera's cancel is `lobby.md`, "Escape cancels the fly-in" | Ghidra |
-| `0x0048bd40` | — | The menu's own key handler; closes on Escape | Ghidra |
+| `0x0048bd40` | — | The lobby menu's own key handler, installed by `GameMenu_BuildLobby` (the park menu's is `0x0048b6a0`, `scenes.md`); closes on Escape | Ghidra |
 | msg `0x11` | — | Show. Sets the resting colour (0, 175, 190) | Ghidra |
 | `0x0048b220` | `MenuChoice_TickColour` | Hover ramp: grey 33, +32 per tick, up to white. The tick is per frame in the original; **taken as 30/s here — unproven** | Ghidra |
 | vtable `+0x24` | — | The front end's "is someone playing", which gates showing Select New Player. The reading is an interpretation | Ghidra |
 | cat_ui effect 193 | — | The click. Source measures -12.4 dBFS RMS / -0.2 peak by disk capture — much louder than BUTTON01 — so gain 0.132 puts it at -30 like the other clicks | Disk capture |
 
-It is built in code, not from a layout tree: a LOLIGHT full-screen control plus `MenuList_AddItem` items, font 0 with the purple skin, centred, first item at y = 5 and each next at y + h + 5, where `h = (line height + 5) * 0x600 / screen height`.
+It is built in code, not from a layout tree: a LOLIGHT full-screen control plus `MenuList_AddItem` items, font 0 with the purple skin, centred, first item at y = 5 and each next at y + h + 5, where `h = (line height + 5) * 0x600 / screen height`. That is the lobby's; in a park `GameMenu_BuildPark` (`0x0048c150`) puts the first at 10, except where `FUN_005b6450()` answers non-zero, which puts it at 0 and each next at y + h.
 
 Go Online is a dead end — it only closes. Escape over a message box goes to the box: `UI_LoadModalTree` gives it the focus (`0x0047ee67`) and a key goes to the focus alone (`0x006698e6`), so it never reaches `IslandLobby_OnKey` (`lobby.md`, "Escape cancels the fly-in"). Over the options screen no key reaches the lobby: the screen hides the lobby's root (`0x004a3ae0`), which keeps the focus, so a key goes to the last control pressed, which drops it (`lobby.md`, "The lobby's keys act on the release").
 
@@ -230,7 +230,7 @@ The click's level was measured by disk capture rather than read from the `.sdt`.
 | `0x0078d8d8` | GameOptions object | The live options object | Ghidra |
 | `0x00423690` | `GameOptions_Construct` | Where the defaults come from | Ghidra |
 | `0x00423740` | `GameOptions_CheckChanges` | Compares each option with its value when the screen opened: a new graphics quality reloads the detail file, and other changes raise a restart level at `+0x94` | Decompile |
-| `0x004237f0` | `GameOptions_Accept` | The tick: calls `CheckChanges` (`0x00423814`), reads `+0x94`, and shows RESTART GAME (UITEXT 403, pushed at `0x0042387d`) instead of closing when a restart is due. OpenTPW's `OptionsScreen` skips that check; its display and resolution apply live | Disassembly |
+| `0x004237f0` | `GameOptions_Accept` | The tick: calls `CheckChanges` (`0x00423814`), reads `+0x94`, and shows RESTART GAME (UITEXT 403, pushed at `0x0042387d`) instead of closing when a restart is due. OpenTPW's `OptionsScreen` skips that check; its display and resolution take effect on the tick, with no restart | Disassembly |
 | — | `Sound_ApplyGroupVolumes` | Speech volume 0 disables the duck — **proven** here | Ghidra |
 | `0x1d4c8` | — | The rendering row's control | Layout stream |
 | `0x1d4d2` | — | That row's `b_on2` arrow | Layout stream |
@@ -238,7 +238,7 @@ The click's level was measured by disk capture rather than read from the `.sdt`.
 
 **Meshes are found by node-name hash:** `b_on` (switch, down = off), `b_on2` (arrows), `f_optpanel`/`f_optpanel2`/`f_optpanel3` (rows), `b_scroller` (thumb), `f_screen` (backdrop), `!f_plain` (frame).
 
-Volume and quality defaults come from `sound.sam` `DefaultVolume.*` and `SoundInfo.*`, by name. Everything applies live; cancel restores the snapshot. Options persist as the original's do: machine options in `save\Config.tcf` on the tick, player options in the player's `gms.dat` when the player is saved — see `saves.md`.
+Volume and quality defaults come from `sound.sam` `DefaultVolume.*` and `SoundInfo.*`, by name. Everything but the display and resolution applies live; cancel restores the snapshot. Options persist as the original's do: machine options in `save\Config.tcf` on the tick, player options in the player's `gms.dat` when the player is saved — see `saves.md`.
 
 Deliberate differences: cancel re-applies volumes (the original does not); OK's RESTART GAME and audio-quality checks are skipped.
 
@@ -249,7 +249,7 @@ Deliberate differences: cancel re-applies volumes (the original does not); OK's 
 
 Both apply on the tick and only when they actually changed, so no RESTART GAME box is needed. What OpenTPW is really set to lives in `save\opentpw.cfg`; `Config.tcf` keeps the nearest of the original's three, so it stays a file the original can read.
 
-Earlier rulings that still stand: the settings screen is 1:1 for now, video card is dead, and GPU/software is dead and unreachable (its row carries the display mode). Resolution was dead by the same ruling and has since become real, as above. Give the dead rows a meaning only with Alexah's word; `docs/QUEUE.md` Q33 proposes UI scale for the video card row.
+Earlier rulings that still stand: the settings screen is 1:1 for now, video card is dead, and GPU/software is dead and unreachable (its row carries the display mode). Resolution is the exception, and is real, as above. Give the dead rows a meaning only with Alexah's word; `docs/QUEUE.md` Q33 proposes UI scale for the video card row.
 
 ### Uniform blocks must be per draw
 

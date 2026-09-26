@@ -100,7 +100,7 @@ public sealed class ParkAudio : Entity
 	/// <para>
 	/// <b>Then confirmed out of the mixer, which is the half that settles it.</b> Capturing through
 	/// SDL's disk driver and measuring a dry window against a wet one, the rain's own contribution by
-	/// power subtraction is <b>-36.3 dBFS</b> - the same figure a park's music was confirmed at - and it
+	/// power subtraction is <b>-36.3 dBFS</b> - the same figure a park's music was confirmed at, at full gain - and it
 	/// adds 3.4 dB to the mix at the heaviest rain the game can produce. The level scales with the drop
 	/// count, so ordinary weather sits well below that.
 	/// </para>
@@ -131,7 +131,7 @@ public sealed class ParkAudio : Entity
 	/// music sits rather than at a number chosen to taste.
 	/// </para>
 	/// <para>
-	/// Confirmed by capturing the mixer's own output through SDL's disk driver: a park came out at
+	/// Confirmed by capturing the mixer's own output through SDL's disk driver: music at this full gain came out at
 	/// <b>-36.3 dBFS</b> over eighteen sounding seconds. That is the -26 above less the 6 dB of
 	/// <see cref="Audio.MasterVolume"/>, which defaults to 0.5 and sits under every one of these
 	/// targets, and the rest is which of the arrangements happened to play - they span seven decibels.
@@ -327,11 +327,10 @@ public sealed class ParkAudio : Entity
 		// the maps are the Music folder beside it. The other three park categories are deliberately
 		// not loaded: cat_ambient's effects are placed emitters that come out of the level's scape.omp
 		// (the OBJ_ chunk FUN_00550e00 reads, type 1 records), cat_rides wants somewhere for a ride's
-		// sounds to GO - the ride runtime itself exists and runs; what is
-		// missing is the sink, since RideEffects records that nothing it starts is drawn or heard - and
-		// cat_speech is where the advisor's five bank-1 responses play from (docs/exe/advisor-park.md,
-		// the response table's +0x10), and a park here says none of them. Loading cat_rides alone would
-		// decode three hundred
+		// sounds to GO - the ride runtime itself exists and runs; what is missing is the sink, since
+		// RideEffects records that nothing it starts is drawn or heard - and cat_speech is where the
+		// advisor's five bank-1 responses play from (docs/exe/advisor-park.md, the response table's
+		// +0x10), and a park here says none of them. Loading cat_rides alone would decode three hundred
 		// and six samples for nothing that can yet be heard.
 		var root = $"levels/{themeName.ToLowerInvariant()}";
 

@@ -10,7 +10,7 @@ namespace OpenTPW;
 /// </para>
 /// <para>
 /// A copy of the game without it - or with one this cannot read - leaves the window with whatever the desktop
-/// gives it, which is what happened before there was any icon at all. It is not worth stopping over.
+/// gives it. It is not worth stopping over.
 /// </para>
 /// </summary>
 internal static class GameIcon

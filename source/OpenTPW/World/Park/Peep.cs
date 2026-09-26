@@ -126,8 +126,9 @@ public sealed class Peep
 	///
 	/// <para>
 	/// <b>This is what makes waiting outside a two-way state</b>, and it is carried from the save rather
-	/// than assumed: <c>FUN_004ff7f0</c> tests it and nothing else to choose between sending a guest back
-	/// to the ticket booths and letting them through the gate, so a guest saved mid-wait must be restored
+	/// than assumed: once the gate will admit, <c>FUN_004ff7f0</c> tests it and nothing else to choose
+	/// between sending a guest back to the ticket booths and letting them through the gate, so a guest saved
+	/// mid-wait must be restored
 	/// with whichever answer the file gave.
 	/// </para>
 	/// </summary>

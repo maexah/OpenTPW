@@ -48,7 +48,8 @@ and `SixLabors.ImageSharp` 3.1.6 (moderate and high, in `OpenTPW.ModKit` only, w
 
 The original works its hover out only on a move and when its interface changes (`FUN_006589f9`), so a press made
 just after a window opens, before the pointer moves, can go to the old hover and miss the last button that window
-built (`docs/exe/lobby.md`, "Unsettled"). OpenTPW hit-tests every frame, so a press always goes to what the pointer is
+built (`docs/exe/lobby.md`, the Unsettled list under "The lobby's keys act on the release"). OpenTPW hit-tests every
+frame, so a press always goes to what the pointer is
 over. Copying the original would mean decoding each window's build order to reproduce what is almost certainly a
 glitch, so **Alexah chose to keep ours as a fix** ("Option 1", after the pros and cons were put to them, Q69). The
 deviation is said at `WindowStack.OnUpdate`.

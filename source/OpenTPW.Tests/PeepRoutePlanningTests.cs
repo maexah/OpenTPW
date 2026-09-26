@@ -48,8 +48,8 @@ public class PeepRoutePlanningTests
 	/// asking.
 	///
 	/// <para>
-	/// <b>This comment used to end "so no mode can honestly be called the mode", and that has since been
-	/// measured.</b> The field is on the navigator - <c>FUN_0050f3b0</c> reads it at <c>0050f501</c> beside
+	/// <b>Which mode that is has been measured.</b>
+	/// The field is on the navigator - <c>FUN_0050f3b0</c> reads it at <c>0050f501</c> beside
 	/// position, velocity and the force limits, and <c>avoid_walls</c> reads it twenty times over. Scanning
 	/// every one of the executable's 881,521 instructions for a write to <c>+0xb4</c> finds exactly one that
 	/// lands on a navigator: <c>0051009f</c>, in the constructor <c>FUN_0050ffe0</c>, writing zero. So zero
@@ -106,7 +106,7 @@ public class PeepRoutePlanningTests
 	/// <summary>
 	/// Every guest the save names can be given a route to the destination it was already carrying. The
 	/// destination is the one part of a route that survives a save, so routing needs no
-	/// destination-choosing behaviour - which is just as well, since that is undecoded.
+	/// destination-choosing behaviour, which is <see cref="PeepBehaviour"/>'s and is not run here.
 	///
 	/// <para>
 	/// <b>What this does not show, said plainly.</b> All thirteen come back with exactly one waypoint,

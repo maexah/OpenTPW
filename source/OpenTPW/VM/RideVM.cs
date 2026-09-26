@@ -39,9 +39,7 @@ public partial class RideVM
 		// DEBUG: Log implemented opcode counts
 		var implementedOpcodes = OpcodeHandlers.Keys.ToList();
 		var implementedCount = implementedOpcodes.Count;
-		// 106, counted from the Opcode enum's own members rather than claimed. It read 210 for a long
-		// while - a number from the docs site that the table it describes has never agreed with - which
-		// made every percentage this logs wrong by about half.
+		// 106, counted from the Opcode enum's own members.
 		var totalCount = 106; // see https://opentpw.gu3.me/formats/rsse-vm-instructions.html
 		var totalPercent = (float)implementedCount / totalCount * 100;
 

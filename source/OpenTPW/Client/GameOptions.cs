@@ -20,8 +20,8 @@ namespace OpenTPW;
 /// <para>
 /// <b>What acts on them here.</b> The three volumes set the mixer's groups (<see cref="ApplySound"/>),
 /// Popup help is the help bar and the button glints, Advisor is whether he speaks at all, and graphics
-/// quality picks the detail file particles are set up from when a level loads. Nothing yet reads the
-/// rest.
+/// quality picks the detail file particles are set up from when a level loads, and RMB cancel gates a
+/// park's quick right click and first person's right click. Nothing yet reads the rest.
 /// </para>
 /// <para>
 /// <b>Where they are kept.</b> The original splits them. Rendering, resolution, graphics quality, the video

@@ -23,8 +23,7 @@ namespace OpenTPW;
 /// joins the queue and steps up it, is invited aboard, rides, and is let off at the exit. Six of this
 /// park's objects can be offered: the ride, the sideshow, the drinks shop and the three toilets
 /// (<see cref="ParkRideChoice.Offerable"/>). Bringing the states up one at a time is how the ride VM was
-/// done, and it is why this
-/// could be trusted at each step rather than all at once at the end.
+/// done, and it is why this could be trusted at each step rather than all at once at the end.
 /// </para>
 /// </para>
 /// </summary>
@@ -328,7 +327,9 @@ public sealed class ParkPeople : Entity
 	/// cash (<c>PeepTypes[x].StartingCash</c>) and a starting exit level (<c>PeepInfo.ExitLevel</c>,
 	/// "starting value... in SECONDS") and says nothing at all about hunger, thirst, toilet, vomit,
 	/// litter or happiness. Those six begin at nought here because a number had to be chosen, not
-	/// because anything was decoded.
+	/// because anything was decoded. Cash and exit level are taken unvaried, where the original varies them
+	/// by <c>PeepInfo.StartingCashVarPc</c> and <c>ExitLevelVar</c> (<c>docs/exe/park.md</c>, "What the balance
+	/// file supplies, and the one score that is not decoded").
 	/// </para>
 	/// </summary>
 	internal int Admit( int cellX, int cellY, int personType = 0, int spriteBank = 0 )
@@ -742,7 +743,7 @@ public sealed class ParkPeople : Entity
 
 	/// <summary>
 	/// The state a vehicle reports once it has arrived and is ready to unload. The original drops one
-	/// guest a tick for exactly as long as <c>FUN_0051a690</c> answers this.
+	/// guest a thing sweep for exactly as long as <c>FUN_0051a690</c> answers this.
 	/// </summary>
 	private const int VehicleIsUnloading = 2;
 
@@ -1059,7 +1060,7 @@ public sealed class ParkPeople : Entity
 			|| (state == VehicleIsUnloading && stillToDrop == 0 && !loadHeld);
 
 	/// <summary>
-	/// One turn of the vehicle itself, which the original does on <b>every</b> tick and not only while a
+	/// One turn of the vehicle itself, which the original does on <b>every</b> sweep and not only while a
 	/// load is being dropped - the tail of <c>FUN_004cf3e0</c> at <c>LAB_004cf4b6</c>.
 	///
 	/// <para>
@@ -1408,7 +1409,7 @@ public sealed class ParkPeople : Entity
 
 			StepArrivals( thingTick );
 
-			// After the load, and on every tick rather than only while one is running - the original
+			// After the load, and on every sweep rather than only while one is running - the original
 			// reaches its own tail the same way, from every arm above. Without this the vehicle is
 			// released once and parks at the next of its three spins for ever.
 			StepVehicle();

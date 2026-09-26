@@ -8,13 +8,13 @@ namespace OpenTPW;
 ///
 /// Everything the game ships is MPEG audio - 3,739 samples across every .sdt, and not one of
 /// them is the WAV that <see cref="MP2File.SoundTypes"/> leaves room for. They divide into
-/// MPEG-2 Layer I mono at 64kbit/s (2,641 of them), Layer II mono at 48 (644) and Layer II
-/// stereo at 112 (445), all at 22,050Hz, plus five Layer I files at 44,100. So the decoder has
+/// MPEG-2 Layer I mono at 64kbit/s (2,641 of them), Layer II mono at 48 (644), Layer II stereo at
+/// 112 (445) and Layer I stereo at 64 (4), all at 22,050Hz, plus five Layer I files at 44,100. So the decoder has
 /// to cover Layers I and II but never Layer III, which is the layer that needs a bit reservoir,
 /// Huffman tables and an MDCT.
 ///
 /// Clips are decoded whole rather than streamed. The largest in the lobby is jungle's 91-second
-/// ambient bed, which comes to 8MB of float; the four parks' music is 1.5MB each. That is small
+/// ambient bed, which comes to 8MB of float; each park's lobby theme is 3 to 3.7MB. That is small
 /// enough that streaming would only buy trouble - a decoder cannot be driven from the mixer
 /// callback without a lock, and the whole point of the callback is that it never waits.
 /// </summary>

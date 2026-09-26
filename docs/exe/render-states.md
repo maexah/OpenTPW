@@ -137,5 +137,5 @@ at three levels, all back-to-front.
 **OpenTPW does none of this sorting.** It does not need it for the lobby: the only graded surfaces
 there are the shoreline ripples and the Space dish's cone, each a single layer that does not overlap
 another. OpenTPW draws every see-through surface after every solid one (`Level`'s translucent pass), unsorted within
-that pass. Parks now load and have not been checked for it. **Whether the missing sorts show on screen, in either
+that pass. Parks load and have not been checked for it. **Whether the missing sorts show on screen, in either
 scene, has never been measured.**

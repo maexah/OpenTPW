@@ -19,7 +19,7 @@ namespace OpenTPW.Tests;
 /// count when the ride test answers yes. <see cref="ParkCamcorderCameraMode.Step"/> - the body the keys
 /// and the console both run - reads the park on show from <c>Level.Current</c>, which is given a stand-in
 /// level holding the real park. What is left unpinned is <c>Walk</c> reading <c>Input</c> and calling
-/// <see cref="ParkCamcorderCameraMode.Step"/>, since a test cannot press a key.
+/// <see cref="ParkCamcorderCameraMode.Step"/>.
 /// </para>
 /// </summary>
 [TestClass]
@@ -85,8 +85,8 @@ public class ParkCamcorderWalkTests
 
 	/// <summary>
 	/// Refusing one axis leaves the other running - which is what makes a viewer slide along a wall rather
-	/// than stick to it, and is the behaviour the original's loop produces by advancing both axes by the
-	/// fraction that reached the nearer boundary.
+	/// than stick to it, and is the behaviour the original's loop produces by parking the refused axis and zeroing
+	/// its step, while the other carries on.
 	/// </summary>
 	[TestMethod]
 	public void ARefusedAxisStopsAndTheOtherCarriesOn()
@@ -321,8 +321,8 @@ public class ParkCamcorderWalkTests
 	}
 
 	/// <summary>
-	/// Against the real park: <b>a footprint cell cannot be walked into from outside it</b>, which is the
-	/// complaint this item is about - "on the ground, you can walk straight through a ride".
+	/// Against the real park: <b>a footprint cell cannot be walked into from outside it</b>, so on the
+	/// ground the camcorder cannot walk straight through a ride.
 	///
 	/// <para>
 	/// Every footprint cell of Lost Kingdom that has a non-footprint neighbour is tried, from that

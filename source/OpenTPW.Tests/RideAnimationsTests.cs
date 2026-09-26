@@ -11,7 +11,7 @@ namespace OpenTPW.Tests;
 /// archive rather than probing it in order gives the wrong entry count on exactly one item in the game.
 /// Loading clips through <see cref="AnimationFile.TryLoad"/> silently drops the longest animations there
 /// are. And taking a clip's length from the keys it happens to carry, rather than from the span it
-/// declares, disagrees with the engine on 159 clips.
+/// declares, disagrees with the engine on 164 clips.
 /// </para>
 /// </summary>
 [TestClass]
@@ -86,11 +86,11 @@ public class RideAnimationsTests
 	/// cannot pose any of the others.
 	///
 	/// <para>
-	/// The security camera is the case that shows it, and it is also the thing this branch is verified
+	/// The security camera is the case that shows it, and it is also the thing posing is verified
 	/// against: <b>every clip it ships is a bare <c>&lt;stem&gt;&lt;letter&gt;.md2</c></b> and not one of
-	/// them is numbered, so a model probing <c>cameraM1.md2</c> upwards - which is the whole of what
-	/// <see cref="LobbyModel"/> does on its own - finds nothing and binds nothing, while the thing in fact
-	/// carries four clips across four roles.
+	/// them is numbered, so a model probing <c>cameraM1.md2</c> upwards finds nothing; what
+	/// <see cref="LobbyModel"/> does on its own then falls back to the bare <c>cameram.md2</c> and reaches
+	/// role M alone, while the thing in fact carries four clips across four roles.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -140,7 +140,7 @@ public class RideAnimationsTests
 
 	/// <summary>
 	/// <b>The security camera moves by morphing a mesh, and not by turning one.</b> It runs a cycle for
-	/// ever with no peeps and no ride state, which is what makes it the thing this branch is verified
+	/// ever with no peeps and no ride state, which is what makes it the thing posing is verified
 	/// against - so what it is actually driven by had to be found out rather than assumed. Its main clip
 	/// carries one morph track and nothing else whatever: no rotation, no position, no UV, no visibility.
 	///
@@ -198,8 +198,8 @@ public class RideAnimationsTests
 	/// <c>mamfount</c> is the one archive in the whole game that separates the two readings: it ships
 	/// <c>mamfountm.md2</c> <b>and</b> <c>mamfountm1.md2</c> and <c>mamfountm2.md2</c>. A loader that
 	/// listed the archive would find three entries where the engine finds two, and every
-	/// <c>&lt;parameter&gt;</c> index into that role would be off by one from there on. 306 archives
-	/// cannot tell the two apart; this one can.
+	/// <c>&lt;parameter&gt;</c> index into that role would be off by one from there on. Of the 306
+	/// level archives, this is the only one that can tell the two apart.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -227,9 +227,10 @@ public class RideAnimationsTests
 	/// <summary>
 	/// <b>A clip carrying nothing but positions and visibility still has a length, and a long one.</b>
 	/// <see cref="AnimationFile.TryLoad"/> turns those down - it answers "is there an animation here worth
-	/// playing" - and 114 of the game's clips are exactly that shape. The ferries are the extreme case:
+	/// playing" - and it rejects 127 of the game's clips that declare a span: 89 with no tracks at all,
+	/// and 38 with no rotation, UV or readable morph track. The ferries are the extreme case:
 	/// their first clip declares 600 frames, twenty seconds, and a loader using the fussy route would
-	/// have told their script 300 milliseconds instead.
+	/// have told their script 700 milliseconds instead, the flat second a missing role answers less 300.
 	/// </summary>
 	[TestMethod]
 	public void AClipWithNoMorphOrRotationStillHasItsDeclaredLength()
@@ -314,8 +315,8 @@ public class RideAnimationsTests
 	}
 
 	/// <summary>
-	/// An item shipping nothing at all is not an error. The drinks shop is one: no clips, and a script
-	/// that names no animation either.
+	/// An item shipping nothing at all is not an error. No shipped shop is one - the Drinks Shop ships a
+	/// C and an M clip - so this builds one with <see cref="RideAnimations.None"/>.
 	/// </summary>
 	[TestMethod]
 	public void AnItemCanShipNoAnimationsAtAll()

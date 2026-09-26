@@ -42,9 +42,8 @@ public class RideScriptClockTests
 
 	/// <summary>
 	/// A whole .RSE file to the format in <see cref="RideScriptFile"/>: magic, version, the six header
-	/// counts, sixteen pad bytes, the body length in words, the body, and an empty string blob. No name
-	/// table follows, which the reader is content with - a script sizes its variables from the header
-	/// count.
+	/// counts, sixteen pad bytes, the body length in words, the body, an empty string blob, and the
+	/// variable-name tail.
 	/// </summary>
 	private static RideScriptFile Build( int variableCount, int timeSlice, params int[] body )
 	{
@@ -70,7 +69,7 @@ public class RideScriptClockTests
 		// The variable-name tail, which every real .RSE carries. Writing it is not only fidelity: a file
 		// that declares variables and names none of them sends the reader down a path that logs, and the
 		// logger exists only once some other test class has built one. A blob without this tail passes
-		// in a full run and throws when the class is run on its own, which is how these nine shipped.
+		// in a full run and throws when the class is run on its own.
 		for ( int i = 0; i < variableCount; ++i )
 		{
 			var name = Encoding.ASCII.GetBytes( $"VAR_{i}\0" );

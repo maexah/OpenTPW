@@ -18,8 +18,9 @@ namespace OpenTPW;
 /// the same vertex buffer.
 ///
 /// A model can have several animations - the jungle island's Dino has two, a small jaw movement
-/// and a much larger head sweep. Nothing in the files says how they are sequenced, so they are
-/// simply played one after another on a loop.
+/// and a much larger head sweep. The original starts an isle's M1 or M2 at random whenever
+/// neither is playing (docs/exe/lobby.md, "Not sound"); here they play one after another on a loop
+/// (docs/QUEUE.md Q76).
 /// </summary>
 public class MeshAnimator
 {

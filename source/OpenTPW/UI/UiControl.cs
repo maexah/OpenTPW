@@ -86,8 +86,9 @@ internal class UiControl
 	public Action? Entered { get; set; }
 
 	/// <summary>
-	/// What a right press on it does, if anything. Only <see cref="WindowStack"/> calls it, on the press; every other
-	/// reading of the right button is whose the press is (<see cref="WindowStack.TakesRightPress"/>).
+	/// What a right press on it does, if anything. Only <see cref="WindowStack"/> calls it, on the press; the stack's
+	/// other readings of the right button are whose the press is (<see cref="WindowStack.TakesRightPress"/>) and the
+	/// click it makes (<c>WindowStack.RightClick</c>), which no control answers.
 	/// </summary>
 	public Action? RightPressed { get; set; }
 

@@ -23,9 +23,9 @@ namespace OpenTPW;
 ///     NOT meshes and must not be parsed as such.
 ///
 /// Evidence that the second kind is animation data for a base model rather than geometry:
-///   - 1274 of the 1279 sit next to a static-mesh .md2 whose name is a prefix of their own
-///     (droid.MD2 -> droidc/droidi/droidm1/droidm2.MD2). The 5 that don't are named
-///     SCALE.MD2, ROTATE.MD2, FLY.MD2, anim.MD2 and scatM1.md2.
+///   - 1277 of the 1279 sit next to a static-mesh .md2 whose name is a prefix of their own
+///     (droid.MD2 -> droidc/droidi/droidm1/droidm2.MD2). The 2 that don't are hallow's
+///     TROUGH_SCALE.MD2 and TROUGH_ROTATE.MD2, in c_hade.wad.
 ///   - They contain no float32 array anywhere that reproduces the model bounding box stored
 ///     at 0x80, under any layout tried (AoS triples or the grouped-by-4 SoA packing the
 ///     static path uses) - i.e. they carry no vertex positions at all.
@@ -142,7 +142,7 @@ public partial class ModelFile : BaseFormat
 		public Vector3[] Points { get; set; } = Array.Empty<Vector3>();
 	}
 
-	/// <summary>The model's routes, empty for the ~2,090 models that have none.</summary>
+	/// <summary>The model's routes, empty for the 826 of the game's 850 static models that have none.</summary>
 	public List<ModelPath> Paths { get; private set; } = new();
 
 	/// <summary>
@@ -776,7 +776,8 @@ public partial class ModelFile : BaseFormat
 	/// That pairing is the engine's own: its lookup (0x0044b220) walks the table for a record whose
 	/// id matches and whose flag word shares a bit with a mask it is given, returns the record
 	/// index, and the costume code adds 0x46 to it to find the node it shows or hides. 346 of the
-	/// game's 839 models carry a table, and in all but one it fits inside the model's node count.
+	/// game's 850 static models carry a table, and every one fits inside the model's node count; jungle's
+	/// wr_tunnel.md2 runs past the end of its file, so it is not read.
 	///
 	/// The table is a general way of naming nodes rather than a costume list - its flag words vary
 	/// widely - but costume lookups ask for flag 0x400, and every record on the advisor has it.

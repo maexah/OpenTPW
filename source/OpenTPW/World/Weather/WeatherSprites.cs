@@ -165,8 +165,9 @@ public abstract class WeatherSprites : ModelEntity
 	/// <remarks>
 	/// A material leaves the textures bound into it alone, because those are usually cached by path
 	/// and shared between scenes. This one is not: it comes off a stream, so it is in no cache, and
-	/// nothing else lets go of it. The lobby and a park each make two, a rain pool and a lightning pool. The blank <see cref="Texture.Missing"/> that LoadTexture hands
-	/// back when the art will not read is skipped, since Texture.Delete refuses it loudly.
+	/// nothing else lets go of it. The lobby and a park each make two, a rain pool and a lightning
+	/// pool. The blank <see cref="Texture.Missing"/> that LoadTexture hands back when the art will
+	/// not read is skipped, since Texture.Delete refuses it loudly.
 	/// </remarks>
 	protected override void OnDelete()
 	{

@@ -18,8 +18,8 @@ namespace OpenTPW.Tests;
 /// <para>
 /// The engine reads it at 0x00471c73, immediately before its rotation sampler: it takes the id off the key
 /// its own search settled on, and where that is not 0xFFFF it bends the blend through the curve rather
-/// than passing the even fraction straight to the slerp. <b>457 of the 1,166 clips under levels/ carry at
-/// least one eased rotation key</b>, so this is not a corner of the format.
+/// than passing the even fraction straight to the slerp. <b>463 of the game's 1,189 clips whose track
+/// table validates carry at least one eased rotation key</b>, so this is not a corner of the format.
 /// </para>
 ///
 /// <para>
@@ -60,7 +60,7 @@ public class AnimationEasingTests
 
 	/// <summary>
 	/// A key names the curve it blends <i>out of</i>, and the key a track ends on names none - there is no
-	/// segment beginning there. That holds for every eased track in the game: all 1,759 of them end on
+	/// segment beginning there. That holds for every eased track in the game: all 1,768 of them end on
 	/// <see cref="AnimationFile.RotationTrack.NoCurve"/>, with no exceptions in either direction.
 	/// </summary>
 	[TestMethod]
@@ -128,7 +128,7 @@ public class AnimationEasingTests
 	///
 	/// <para>
 	/// The implied one at the end is doing real work rather than tidying an edge - the last byte is 255 in
-	/// only <b>112 of the game's 12,428 curve entries</b>, so almost every curve is still climbing when it
+	/// only <b>112 of the game's 12,451 curve entries</b>, so almost every curve is still climbing when it
 	/// reaches that ninth segment. Checked at each ninth of the way, where the eased value is the byte for
 	/// that boundary; that is what makes it nine segments and not eight.
 	/// </para>
@@ -154,8 +154,8 @@ public class AnimationEasingTests
 
 	/// <summary>
 	/// A key naming <see cref="AnimationFile.RotationTrack.NoCurve"/> is handed back the fraction it was
-	/// given, untouched. 1,263 of the game's 3,022 rotation tracks carry no table at all, and every one of
-	/// their 9,051 keys is in this state - so this is the ordinary case, not the exception.
+	/// given, untouched. 1,271 of the game's 3,039 rotation tracks carry no table at all, and every one of
+	/// their 9,086 keys is in this state - so this is the ordinary case, not the exception.
 	/// </summary>
 	[TestMethod]
 	public void AKeyThatNamesNoCurveIsLeftToBlendEvenly()
@@ -173,7 +173,7 @@ public class AnimationEasingTests
 	}
 
 	/// <summary>
-	/// <b>A curve need not climb, and this one falls away to nothing.</b> 2,797 of the game's 12,428 curve
+	/// <b>A curve need not climb, and this one falls away to nothing.</b> 2,800 of the game's 12,451 curve
 	/// entries are not monotonic, and what that means on screen is a pose that moves off and then comes back
 	/// the way it came before going on - an author's overshoot, written down.
 	///

@@ -850,8 +850,9 @@ public sealed class RideScript
 		// players once per FRAME, off a clock snapshot taken outside the fixed-step loop the scripts run in,
 		// and never from the script system: FUN_004735d0, which advances and poses, has exactly ONE caller
 		// (FUN_00473c70, at 00473d2e), and not one of that function's ten call sites is FUN_005516b0 or sits
-		// inside the 31ms loop. The park's are FUN_0044e410(2), FUN_00429df0(0) and FUN_00429df0(1), all of
-		// them past the loop's back edge in Game_StateMachine. ParkObjects.Sweep is where that lives here.
+		// inside the 31ms loop. The park's are FUN_0044e410(2), FUN_00429df0(0), FUN_00429df0(1) and the
+		// draw's FUN_0044e410(3), all of them past the loop's back edge in Game_StateMachine. ParkObjects.Sweep
+		// is where that lives here.
 		//
 		// Advancing per tick would promote a queued clip mid-catch-up: with three ticks due, a clip
 		// ending on the first would have its successor running before the second tick's instructions
@@ -1247,8 +1248,9 @@ public sealed class RideScript
 				break;
 
 			// Reaching the scripts around it: this script's one child, whoever spawned it, and anything
-			// else in the registry by id or by name. None of these needs a world - every one works on
-			// another script's own frame - and the registry they go through is the scheduler.
+			// else in the registry by id or by name. None of these but the four screams needs a world - the
+			// rest work on another script's own frame - and the registry they go through is the scheduler. The
+			// screams reach ParkObjects and ParkAudio.
 			//
 			// NOT ONE OF THEM BLOCKS: no handler among them rewinds the program counter onto itself or
 			// zeroes the instruction budget, and every store to +0x3c in their blocks belongs to the
@@ -1466,7 +1468,7 @@ public sealed class RideScript
 	/// All four operands are resolved like any other value - the handler gives each one the same tag test
 	/// - and they are, in order, the type, the node, the effect id and the tag. <b>The fourth is a tag and
 	/// not a duration</b>: it is the field <c>KILLOBJ</c> compares against, and the values the corpus
-	/// kills are exactly the values its <c>ADDOBJ</c>s create.
+	/// kills are the values its <c>ADDOBJ</c>s create, bar two tags that no <c>ADDOBJ</c> creates.
 	/// </para>
 	/// </summary>
 	private void AddObject( IReadOnlyList<RideOperand> operands )

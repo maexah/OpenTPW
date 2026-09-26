@@ -236,7 +236,7 @@ internal sealed class WindowStack : Panel
 		// Ours: the hover is hit-tested every frame, and a press goes to it, so a press always reaches what the
 		// pointer is over. The original works its hover out only on a move and when its interface changes
 		// (FUN_006589f9), so a press made after a window opens, before the pointer moves, can go to the old
-		// hover (docs/exe/lobby.md, "Unsettled"). Kept as a fix (docs/DECISIONS.md).
+		// hover (docs/exe/lobby.md, "The lobby's keys act on the release", Unsettled). Kept as a fix (docs/DECISIONS.md).
 		var mouse = Input.Mouse.Position;
 		var hit = HitTest( mouse.X, mouse.Y );
 
@@ -337,7 +337,7 @@ internal sealed class WindowStack : Panel
 	/// test and both halves of a real click.
 	/// </summary>
 	/// <remarks>
-	/// <b>This exists because a harness cannot move the pointer.</b> A warp with no real motion behind
+	/// <b>This exists because the debug console cannot move the pointer.</b> A warp with no real motion behind
 	/// it reaches the window system and never reaches SDL - measured twice against this game - so a
 	/// test that could only click where the cursor already sits would be measuring X rather than this
 	/// interface. <c>ParkPicking.PickAt</c> was given coordinates for the same reason and says so.

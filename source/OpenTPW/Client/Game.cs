@@ -11,20 +11,15 @@ internal static class Game
 	/// texture, shader, material and mesh registered while it loads.
 	///
 	/// <para>
-	/// <b>This is a seed, and it is no longer maintained.</b> Every load now records what it really cost,
+	/// <b>This is a seed, and it is not maintained.</b> Every load records what it really cost,
 	/// and the next load of that same situation expects the measurement instead - see
 	/// <see cref="LoadStepCounts"/>. So this is only what a fresh install uses before anything has been
 	/// measured: it is allowed to drift, and correcting it by hand buys nothing.
 	/// </para>
 	///
 	/// <para>
-	/// It was 3,214 until the blank texture became a single shared instance - see
-	/// <see cref="Texture.Missing"/>. 2,385 of those steps were blanks being built one per empty
-	/// material slot, so both this number and the rebuild count fell by exactly that much: a first
-	/// load registers 829 where it registered 3,214, and a rebuild 404 where it registered 2,789.
-	/// The gap between the two is 425 either way, because a rebuild re-registers only what the
-	/// caches do not already hold - which is why a rebuild keeps a count of its own in
-	/// <see cref="LoadStepCounts"/>.
+	/// A rebuild re-registers only what the caches do not already hold, which is why a rebuild keeps a
+	/// count of its own in <see cref="LoadStepCounts"/>.
 	/// </para>
 	/// </summary>
 	private const int LobbyLoadSteps = 829;
@@ -193,8 +188,8 @@ internal static class Game
 	/// </summary>
 	/// <remarks>
 	/// Lower-cased here, at the way in, rather than only in <see cref="Level"/> - the loading screen is
-	/// built from this name before a Level exists, so normalising further down left the bar captioned
-	/// "Jungle" while everything the level itself logged said "jungle".
+	/// built from this name before a Level exists, so normalising further down would leave the bar
+	/// captioned "Jungle" while everything the level itself logs says "jungle".
 	/// </remarks>
 	internal static void RequestParkLoad( string themeName ) => _parkAsked = themeName.ToLowerInvariant();
 
@@ -202,42 +197,11 @@ internal static class Game
 	/// What the loading bar expects a park to take on a <b>first-ever run</b>.
 	///
 	/// <para>
-	/// <b>A seed, no longer maintained</b>, for the same reason as <see cref="LobbyLoadSteps"/>: what each
-	/// kind of load really costs is measured and remembered now, so this is only where a fresh install
-	/// starts from - see <see cref="LoadStepCounts"/>. It began at 500, which is what the original budgets
-	/// for its own park load (LoadingScreen_Begin with 500, from state 9) - a fair guess, and a quarter
-	/// short, because the two count different things. The history below is kept even so, because it
-	/// records what each part of a park costs to load, which is worth knowing on its own.
-	/// </para>
-	/// <para>
-	/// It has moved eight times, and the direction is not always up: 500 guessed, 631 with the scenery,
-	/// 649 once the ground was built, back to 637 when the ground's sixteen placeholder colours
-	/// became seven real textures and nine shares of one blank, 671 with the park's fixed items -
-	/// the gate with its three door animations and its painted sign, and the traffic lights - and 872
-	/// once the park's own objects were read out of its save file, which is eleven shops, rides and
-	/// pieces of scenery, each bringing a model and its textures. A step is an <c>Asset.Register</c>,
-	/// so anything that loads fewer assets lowers it.
-	/// </para>
-	/// <para>
-	/// <b>885 since the park's paths are drawn</b>, a rise of thirteen. Eleven of those are the path
-	/// tiles the jungle uses - the straights, corners, T-junctions, crossroads and avenue edges named in
-	/// the theme's own <c>.tct</c>. The other two arrive with the surface they are drawn as and were not
-	/// traced separately; the number here is what the game reports, which is the only thing this constant
-	/// is allowed to be.
-	/// </para>
-	/// <para>
-	/// <b>918 now that a park's queues stand in it</b>, a rise of thirty-three. That rise is the queue's
-	/// own models and their art: its cells are not tiles laid on the ground but small models out of the
-	/// theme's <c>queue.wad</c>, each bringing railings, torches and the <c>jpa_que</c> textures they are
-	/// skinned with. Leaving the ground under a built thing to the thing itself registers nothing at all,
-	/// so it moved this by nothing - it only stops grass being drawn where a floor already is.
-	/// </para>
-	/// <para>
-	/// That last number was 876 until the items were given the theme's shared texture archive to fall
-	/// back on. Four of the textures they ask for are named by two different items - the fountain and the
-	/// belly bounce both want three grasses, the toilet and the drinks shop a side panel - and reaching
-	/// them by one shared path instead of two private ones builds four fewer textures. A fix for how the
-	/// park looks turned out to load less as well.
+	/// <b>A seed, not maintained</b>, for the same reason as <see cref="LobbyLoadSteps"/>: what each
+	/// kind of load really costs is measured and remembered, so this is only where a fresh install
+	/// starts from - see <see cref="LoadStepCounts"/>. The original budgets 500 for its own park
+	/// load (LoadingScreen_Begin with 500, from state 9); the two count different things. A step is an
+	/// <c>Asset.Register</c>, so anything that loads fewer assets lowers it.
 	/// </para>
 	/// <para>
 	/// This is the count for a park built <i>cold</i> - entered from the lobby, with nothing of its own

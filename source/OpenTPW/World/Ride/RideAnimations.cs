@@ -30,10 +30,10 @@ namespace OpenTPW;
 ///
 /// <para>
 /// <b>Clips are read directly rather than through <see cref="AnimationFile.TryLoad"/>.</b> That one turns
-/// down a clip carrying no morph, rotation or UV track - and 114 of the game's clips are exactly that,
-/// carrying position and visibility only. Every one of them declares a real length, some of them long:
+/// down a clip carrying no morph, rotation or UV track - and 127 of the game's clips are exactly that,
+/// 89 of them carrying no track at all. Every one of them declares a real length, some of them long:
 /// the ferries run 600 frames, twenty seconds. Loading them the fussy way would silently drop the longest
-/// animations in the game and tell their scripts 300ms instead.
+/// animations in the game and tell their scripts 700ms instead, a missing role's flat second less 300.
 /// </para>
 /// </summary>
 public sealed class RideAnimations
@@ -97,9 +97,10 @@ public sealed class RideAnimations
 	/// A model binds its animation players against this rather than against one role, because a channel
 	/// may name any of them and a player has to have been built for the mesh before it can be posed.
 	/// <b>It is not the numbered <c>M</c> run a lobby model probes for</b>: that is role 5 alone, read
-	/// through <see cref="AnimationFile.TryLoad"/>, which turns away the 114 clips carrying position and
-	/// visibility only. Four of the eleven things standing in Lost Kingdom - the Round Fountain, both
-	/// Security Cameras and the Drinks Shop - would bind nothing at all from that run.
+	/// through <see cref="AnimationFile.TryLoad"/>, which turns away the 127 clips carrying no rotation, UV
+	/// or readable morph track. Four of the eleven things standing in Lost Kingdom - the Round Fountain, both
+	/// Security Cameras and the Drinks Shop - would bind their bare M clip at most, the one the probe falls back
+	/// to, and never their C clip.
 	/// </para>
 	/// </summary>
 	public AnimationFile[] AllClips { get; }
@@ -238,7 +239,8 @@ public sealed class RideAnimations
 			return UnknownLength;
 
 		// The engine advances every channel once per frame from a snapshot of the game clock, outside the
-		// fixed-step loop the scripts run in (FUN_0044e410 at 0054fa96). The posing is ParkObjects.Sweep's, so
+		// fixed-step loop the scripts run in (FUN_0044e410( 3 ), from the draw at 0054fb6c). The posing is
+		// ParkObjects.Sweep's, so
 		// all the timebase decides at a trigger is whether this channel counts as busy - and bringing it up to
 		// the asking moment first is what makes that question mean the same thing it means in the original.
 		channel.MoveTo( now );
@@ -431,7 +433,7 @@ public sealed class RideAnimations
 
 	/// <summary>
 	/// One clip, or null where there is none. Read straight rather than through
-	/// <see cref="AnimationFile.TryLoad"/> - see the remarks on this class for the 114 clips that one
+	/// <see cref="AnimationFile.TryLoad"/> - see the remarks on this class for the 127 clips that one
 	/// turns away.
 	/// </summary>
 	private static AnimationFile? Read( string path, BaseFileSystem files )

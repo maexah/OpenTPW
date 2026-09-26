@@ -16,10 +16,11 @@ namespace OpenTPW;
 /// was not established.
 /// </para>
 /// <para>
-/// A bare name reaches whatever the machine already has, so the two failed in different ways and only one
-/// of them was visible. libSDL2-2.0.so quietly resolved to the system's copy - the game ran, on an SDL it
-/// did not ship - while libspirv-cross.so, which no system carries, failed outright in the first shader
-/// compiled (see <see cref="ShaderCompiler"/>) and took the game down with it before a frame was drawn.
+/// A bare name reaches whatever the machine already has, so without this the two would fail in different
+/// ways and only one of them visibly. libSDL2-2.0.so would quietly resolve to the system's copy - the game
+/// running on an SDL it did not ship - while libspirv-cross.so, which no system carries, would fail outright
+/// in the first shader compiled (see <see cref="ShaderCompiler"/>) and take the game down before a frame
+/// was drawn.
 /// </para>
 /// <para>
 /// The directories come from the host rather than being built here, and that is the whole point. A package
@@ -80,7 +81,7 @@ internal static class NativeLibraries
 	/// Nothing is offered for SDL when <see cref="SystemSdlVariable"/> asks for the machine's own, which
 	/// leaves Silk to fall through to the bare name and find whatever is installed. <b>SDL alone</b>: the
 	/// other natives this build carries - SPIRV-Cross and shaderc - are not libraries a machine generally
-	/// has, and standing aside for those is how the game failed to start before any of this existed.
+	/// has, and standing aside for those would leave the game unable to start.
 	/// </para>
 	/// </summary>
 	private static IEnumerable<string> Shipped( string name )

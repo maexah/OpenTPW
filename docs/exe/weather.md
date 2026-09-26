@@ -103,11 +103,11 @@ At that rate: a month ≈ 2.9 min, a year ≈ 35 min, and **a weather change (7 
 
 **December is an out-of-range table read, and it is a real bug in the original.** `wMonth` 12 gives index 4 against a 4-entry table. The address it reaches is `0x007854c4 + 4*0xc` = **`0x007854f4`** — **not** `0x007854f8`. So December reads Avg from the Seasons *element-count* slot, Tolerance from `DaysOfWarning` (4) and Chance from `DaysBetweenChanges` (7).
 
-> The often-quoted reading **"Avg = 4, Tolerance = 7, Chance = 20"** is **REFUTED**: it is off by one dword and wrong on all three values.
+> The often-quoted reading **"Avg = 4, Tolerance = 7, Chance = 20"** is **REFUTED**: it is off by one dword, and wrong on Tolerance and Chance; its Avg of 4 is right only because the count slot also holds 4.
 
 ## The `.sam` schema, with its key names, is compiled into the exe
 
-The key names are present in the binary as raw bytes inside descriptor records. A string search reports them absent — the same failure mode that once hid `'camcorder'` (Jython's `getValue()` does not reliably yield a string); reading the raw bytes shows the names in place.
+The key names are present in the binary as raw bytes inside descriptor records. A string search reports them absent — the string listing covers only strings Ghidra has defined, and these, like `'camcorder'` at `0x007485c0`, are not; reading the raw bytes shows the names in place.
 
 **Descriptor records, stride `0x3c`:** `+0x00` type, `+0x04` name[0x20], `+0x24` min, `+0x28` max, `+0x34` array count.
 **Types:** `2` = table start, `3` = table end (carries the table's name and element count), `1` = section name (appears AFTER its fields), `0` = separator, `5`/`6` = scalar (`6` is bounded).

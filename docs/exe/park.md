@@ -53,7 +53,7 @@ Confirmed from `WadArchive.cs` and verified by hand against the header: 4 magic 
 
 **Indexing is `index = x * 128 + y`** — X is the major axis. Proven, not assumed: all ten `FixedItemInfo` positions from `Standard.sam` land on a meaningful attribute under `x*128+y` and on 0 under `y*128+x`. TicketBooth (47,13)/(48,13) -> 148; BusStop (42,5)/(53,5), both Crossings and StrikeAreaStart (40,9) -> 144; Entrance (47,17)/(48,17) and FixedItemOrigin -> 8.
 
-Attribute values seen: 0 (empty), 1, 3, 8 (park entrance), 17 (0x11, the bus/road approach, 490 cells), 128, 144 (0x90, road/bus/crossing, 48 cells), 148 (0x94, ticket booth, 14 cells). They look like a bitfield. **Values 17, 144, 148 and 8 occupy byte-identical positions in all four parks** — the fixed infrastructure every park inherits. Only the 0/1/3 cells differ per park.
+Attribute values seen: 0 (empty), 1, 3, 8 (park entrance), 17 (0x11, the bus/road approach, 490 cells), 128, 144 (0x90, road/bus/crossing, 48 cells), 148 (0x94, ticket booth, 14 cells). They look like a bitfield. **Values 17, 144, 148 and 8 occupy byte-identical positions in all four parks** — the fixed infrastructure every park inherits. The rest differ per park: the 0/1/3 cells, jungle's four 128s (x 51..54, y 57) and one cell of 16 in fantasy (27,17).
 
 The attribute map's non-zero region is exactly x 0..95, y 0..84 — reproducing `Standard.sam`'s 95x84 from a different file entirely. Value 17 (the bus road) occupies x 28..67, y 0..16; value 3 occupies x 29..57, y 39..64.
 
@@ -81,7 +81,7 @@ Mesh names are the park itself: `road_center`, `road_lhs`, `road_rhs`, `arrival_
 
 `Mesh.Materials` (`MaterialData`) already carries `Name` (e.g. `grd_ctr1`), `Flags`, `IsTranslucent`, `StartIndex`/`EndIndex`, so material-to-texture needs no new code. **All 61 textures `base.MD2` names resolve** to `.wct` files in the park's own archives (terrain/sharetex/ssharete/miscmesh/dynamic), and **57/57 distinct material names open as `levels/jungle/terrain/textures/<name>.wct`** through the real `BaseFileSystem` — exactly the string `LobbyModel` builds.
 
-`basem.MD2` reports `IsAnimation: True` with 0 meshes, exactly as `ModelFile` documents. It is `readable True` with **11 UV tracks over frames 0..100** — UV scroll is how this game moves water, as `Jun_isleM1` laps the lobby island's shoreline; the river and the falls are the likely candidates. **Only jungle ships a `basem.MD2`**; fantasy, hallow and space ship `base.MD2` alone.
+`basem.MD2` reports `IsAnimation: True` with 0 meshes, exactly as `ModelFile` documents. It is `readable True` with **11 UV tracks over frames 0..100** — UV scroll is how this game moves water, as `Jun_isleM1` laps the lobby island's shoreline; OpenTPW's park log binds them to eleven meshes, the nine `surface*`, `Object12` and `falls02`, the waterfall (`4f307bb`). **Only jungle ships a `basem.MD2`**; fantasy, hallow and space ship `base.MD2` alone.
 
 **A first park render needs no new file format**: `base.MD2` through the existing `ModelFile`, its textures through the existing WCT/WAD path, and a camera. `.MAP`/`.TCT` are needed for gameplay (attributes, editing, path tiles), not for the first picture; `base.lnd` is not needed at all.
 
@@ -109,7 +109,7 @@ Header: byte 0 = 3 (version?), 10 bytes of per-park values, then uint32 384, uin
 
 **The base `data/levels/Standard.sam` is the simulation's balance file**, 588 lines against jungle's 144, and it is the layer the theme file overlays. Its groups: `PeepInfo` (**33 keys**), `PeepTypes[0..7]` (8 rows of `PreferredExcitement` / `StartingCash` / `BoredomThreshold`), `StaffPoolInfo`, `Arrival`, `AllStaffConstants`, `PerGradeStaffConsts[0..4]`, `PerTypeStaffConsts[0..4]`, the four `*ConstsPerGrade`, `BankAccountInfo`, `LoanInfo[0..7]`, `Research`/`ResearchTech`/`ResearchCategories`, `Costs`, `Challenges`, `GoldenTicketGlobal`, plus the `MapInfo`/`FixedItemInfo`/`ThemeEngine`/`Seasons`/`Weather` groups a theme overrides.
 
-**The peep simulation's constants live here, not in the exe.** The block at `0x00785000` that the exe's peep code reads is **all zeros statically** — it is filled by the `BalanceLoader.cpp` parser from this file at load. So the tunables were never something to reverse engineer, and `ParkBalance` (which layers base + theme) can read them: `Balance.Int( "PeepInfo.ExitLevel" )` works. The keys are self-documenting — the file carries trailing comments like *"toilet level above which peep is 'desperate'"*. **Themes barely touch it:** only `PeepInfo.ExcitementToCostDivisor` is overridden anywhere (fantasy and space, 4 -> 5); jungle and hallow override no peep key at all.
+**The peep simulation's constants live here, not in the exe.** The block at `0x00785000` that the exe's peep code reads is **all zeros statically** — it is filled by the `BalanceLoader.cpp` parser from this file at load. So the tunables were never something to reverse engineer, and `ParkBalance` (which layers base + theme) can read them: `Balance.Int( "PeepInfo.ExitLevel" )` works. The keys are self-documenting — the file carries trailing comments like *"toilet level above which peep is 'desperate'"*. **Themes barely touch it:** the theme `Standard.sam` files override only `PeepInfo.ExcitementToCostDivisor` (fantasy and space, 4 -> 5), and jungle's `Easy_Standard.sam`, read over both for Instant Action, changes two peep keys: `AveragePriceMultiplier` 1.25 -> 1.5 and `ExpensivePriceMultiplier` 2.0 -> 2.5.
 
 ### The parks really are re-skins
 
@@ -139,11 +139,11 @@ The inflated payload names the park's features by path — `data\levels\jungle\F
 
 ## Buildable items: the per-item archive
 
-An item is a `.wad` under `features/`, `shops/`, `rides/` or `sideshow/`, standing in for a directory of its own name, and everything inside is named after that stem: `<stem>.sam` (its description), `<stem>.MD2` (its model), `<stem>.hmp` (its footprint), `<stem>.sgn` (a name board — rides only), plus `textures/` and `stexture/`. Jungle holds **67** items across those four folders.
+An item is a `.wad` under `features/`, `shops/`, `rides/` or `sideshow/`, standing in for a directory of its own name, and everything inside is named after that stem: `<stem>.sam` (its description), `<stem>.MD2` (its model), `<stem>.hmp` (its footprint), `<stem>.sgn` (a name board — rides, and the `gates` and `sign1` features), plus `textures/` and `stexture/`. Jungle holds **67** items across those four folders.
 
 **An item ships only the art unique to it.** Everything else comes from the theme's shared archives — `sharetex.wad` (full size, pairs with `textures/`) and `ssharete.wad` (low detail, pairs with `stexture/`), 116 members each, and **all four themes ship both**. Without that fallback the eleven objects Lost Kingdom places were missing **40 distinct textures** and drew the not-found art on most of their surfaces. Every missing name was present in both archives.
 
-**An item's footprint is the BOX its `Info.Shape` picture is drawn in, not the cells marked inside it.** `4x4rock` draws 14 stars in a 4x4 box, `5x5rck` 23 in 5x5, and `ground`/`groundc`/`mystery` draw none at all — yet every one of the 70 jungle items' `.hmp` length says `48 + 27 * (width * height)`. **`gates` is the only jungle item carrying `Engine*Override` keys**, and it needs them: its picture is a single cell where its real footprint is the 6x3 its own `.hmp` declares.
+**An item's footprint is the BOX its `Info.Shape` picture is drawn in, not the cells marked inside it.** `4x4rock` draws 14 stars in a 4x4 box, `5x5rck` 23 in 5x5, and `ground`/`groundc`/`mystery` draw none at all — yet every one of the 70 jungle item archives (those 67 and the three in `upgrades/`) has a `.hmp` whose length says `48 + 27 * (width * height)`. **`gates` is the only jungle item carrying `Engine*Override` keys**, and it needs them: its picture is a single cell where its real footprint is the 6x3 its own `.hmp` declares.
 
 The model is authored with its **footprint's corner at its own origin** — a 1x1 toilet's floor spans 0..10, the 3x3 fountain's 0..30, the 2x2 staff room's 0..20 — read from node `WorldTransform`, never from bounds, which are node-local and say only how big a mesh is.
 
@@ -155,7 +155,7 @@ The model is authored with its **footprint's corner at its own origin** — a 1x
 artwork byte at `0x08` clear, and three (jelly, zob, C_SCAT) omit both ink blocks, which is what made the header
 look like it had two fixed sizes. The layout is in the FileFormats clone, `formats/sgn.md`, on its
 `docs/sign-format-corrections` branch (not yet on master). The `.sgn` is always named after the
-item's own folder — **78 of 78 across all four themes**.
+item's own folder — **80 of 80 across all four themes** (72 rides, and `gates` and `sign1` in each theme's `features/`).
 
 ## `.RSE` — the ride-script container
 
@@ -166,9 +166,9 @@ Magic and version are uniform across the whole shipped corpus, **checked not sam
     0x08  int32     variable count            -> loader field +0x23, allocates count*4 ints
     0x0c  int32     count                     -> +0x15   (the STACK SIZE)
     0x10  int32     50 in every shipped file  -> +0x25   (the TIME SLICE, an instruction budget)
-    0x14  int32     LIMBO slots, 8 bytes each -> +0x16, array at +0x24
-    0x18  int32     BOUNCE slots, 16 b. each  -> +0x19, array at +0x28
-    0x1c  int32     WALKON slots, 32 b. each  -> +0x1f, array at +0x2c
+    0x14  int32     LIMBO slots, 8 bytes each -> +0x16, array in field 9
+    0x18  int32     BOUNCE slots, 16 b. each  -> +0x19, array in field 0xa
+    0x1c  int32     WALKON slots, 32 b. each  -> +0x1f, array in field 0xb
     0x20  byte[16]  four dwords the loader reads and DISCARDS - always "Pad Pad Pad Pad "
     0x30  int32     script length in DWORDS   -> +0x14
     0x34  int32[]   the script body           -> +6
@@ -178,7 +178,7 @@ Magic and version are uniform across the whole shipped corpus, **checked not sam
 
 **The variable names at the end are the trap.** The loader allocates the variables' storage from the count and never reads their names, so a reading that stops at the string blob leaves a tail it cannot explain. Off that reading **98 of 308 looked well-formed and 210 looked broken — and the 98 were exactly those declaring no variables.** Parsing the names accounts for the last byte of all 308. **74 distinct names corpus-wide**, every one `VAR_*`; the twelve `RideVariables` lists are the first twelve of 129 scripts, in that order, which is why `VAR_RIDECLOSED` is index 6.
 
-**Where the scripts live:** none are loose on disk — every one is inside `data/levels/<theme>/{rides,shops,sideshow,features,upgrades}/*.wad`. `EventMap.RSE` appears **28 times** out of 308, so it is a minority of archives, not most. Four names recur across themes (`wateride`, `gokarts`, `gates`, 4 each); the rest are unique. Extensions are **305 `.RSE` to 3 `.rse`** and case is inconsistent in the data (`Coaster1.RSE`, `Monkey.rse`, `child.RSE`), so **any lookup must be case-insensitive** — mandatory here in a way it never was on the original's file system.
+**Where the scripts live:** none are loose on disk — every one is inside `data/levels/<theme>/{rides,shops,sideshow,features,upgrades}/*.wad`. `EventMap.RSE` appears **28 times** out of 308, so it is a minority of archives, not most. 38 names recur across themes (counted case-insensitively), eleven of them in all four (`EventMap`, `bus`, `ferry`, `seaplane`, `lights`, `gates`, `end`, `AnimCtrl`, `sign1`, `wateride`, `gokarts`). Extensions are **305 `.RSE` to 3 `.rse`** and case is inconsistent in the data (`Coaster1.RSE`, `Monkey.rse`, `child.RSE`), so **any lookup must be case-insensitive** — mandatory here in a way it never was on the original's file system.
 
 ---
 
@@ -237,7 +237,7 @@ The engine's loader `FUN_00461f10` probes for an item's clips with a **12-entry 
 | `0x74d2b4` | - | format string `"%s%s%c%d.md2"` | read |
 | `0x74d2a8` | - | format string `"%s%s%c.md2"` | read |
 | `FUN_004629d0` | - | loads a whole second model+animation set as `"p%s"`. A leading `P` is a **prefix**, not a suffix; **what it is for is not known** | read |
-| `FUN_00463060` | - | build path: checks role 0 exists, plays it, then queues `0xd` (not a clip — it binds nothing and only re-stamps the channel's timers) | read |
+| `FUN_00463060` | - | build path: checks role 0 exists, triggers it, then starts `0xd` at once (not a clip — it binds nothing; it sets the freeze flag `0x2` and re-stamps the channel's timers, so role 0's clip holds at frame nought) | read |
 | `FUN_004647a0` | - | save load: overwrites every animation channel with the saved state and restores the per-node flag words with it | read |
 
     id 0  C      id 3  L      id 6  E      id 9   B
@@ -250,7 +250,7 @@ Probe rule: `<prefix><stem><suffix><n>.md2` with **n from 1 upward** until a pro
 
 **Cross-validated without the binary**, against the ids used by the 72 ride scripts whose own wad ships each letter: `c` -> id 0 at **1.00 against a 0.00 base rate**; `i` -> id 2; `l` -> id 3 (0.91 vs 0.13); `s` -> id 4 (0.94 vs 0.03); `e` -> id 6 (0.93 vs 0.02); `b`/`r` -> ids 9 and 10, which co-vary because those two files travel together. Six letters land exactly where the table puts them, from data that never touched the executable. `m` shows no signal only because id 5 is used by 55 of the 72 wads, so it cannot discriminate.
 
-**REFUTED: an id is not an index into the `M<n>` clips.** Of the 72 ride wads whose script names a literal id, **all 72** have a highest id at or above the number of `M<n>` files they ship: `gokarts` ships **none at all** and triggers ids 0 and 5, `jelly` ships none and reaches 10. `M` is simply the letter of **one** role — id 5 — the one whose files carry numbers.
+**REFUTED: an id is not an index into the `M<n>` clips.** Of the 72 ride wads whose script names a literal id, **all 72** have a highest id at or above the number of `M<n>` files they ship: `gokarts` ships **none at all** and triggers ids 0 and 5, `jelly` ships none and reaches 10. `M` is simply the letter of **one** role — id 5 — and the one whose files most often carry numbers: 278 numbered `M` files, against 105 across eight other letters (`B` 40, `L` 23, `I` 11 and fewer for the rest).
 
 **Role 0 is played once, when the player builds the thing.** A park loaded from a save does not replay it, so **the last frame of the construction clip is what a built item looks like**.
 
@@ -273,7 +273,7 @@ Each role entry is 8 bytes, `{source index, animation pointer}`, and the pointer
 
 The trigger reads the block's `+0x04` and `+0x08` as **integers** — read as floats they give denormal nonsense — and multiplies the difference by the float **33.3333 at `0x006fec08`** (`0x42055555`, 33.33333206), the nearest float to 1000/30 rather than the exact value.
 
-**Measured over the 1,140 clips under `levels/` that carry a block: every one declares a start of nought and an end of at least one, and 159 disagree with what their keys span** — 129 short (114 of them reading as no span at all through our own reader, which rejects clips carrying only positions and visibility) and 30 long, where the keys run past the declared end and the engine never plays them.
+**Measured over the 1,278 clips in the game that carry a block: every one declares a start of nought and an end of at least one, and 164 disagree with what their keys span** — 127 short, every one reading as no span at all through our own reader, which rejects clips carrying no rotation, UV or readable morph track (89 of them carry no track at all), and 37 long, where the keys run past the declared end and the engine never plays them.
 
 **`FUN_00474070` is NOT this function**: it multiplies `clip[+8]` alone with no subtraction, and its one caller is in the advisor's range. **Do not cite it for ride timing.**
 
@@ -310,17 +310,17 @@ The struct has a shipped name: `FUN_00464580` is a debug dumper that prints ever
 
 ### Who advances a channel, and when
 
-`FUN_004735d0` advances one channel, called once per channel from `FUN_00473c70` (stride 0x38, correct), called from the per-frame sweep `FUN_0044e410` at `0x0054fa96` — **after the 31 ms catch-up loop's back edge at `0x0054f8da`**. It takes **no time argument**: it reads `DAT_007b496c` (or `DAT_007b4974` when channel flag `0x40` is set), a snapshot written once per frame by `FUN_00473440` at `0x0054f475` from the clock object at `0x785970`.
+`FUN_004735d0` advances one channel, called once per channel from `FUN_00473c70` (stride 0x38, correct), called from the per-frame model sweep `FUN_0044e410( 3 )`, the routine `0x0054e2b0` that the park's load hangs on the scene (`0x0054ecbc`) and the scene draw at `0x0054fb6c` runs through `FUN_00576a00` — **after the 31 ms catch-up loop's back edge at `0x0054f8da`**. The park's `FUN_0044e410( 2 )` at `0x0054fa96` advances only the model at `DAT_00790988`. It takes **no time argument**: it reads `DAT_007b496c` (or `DAT_007b4974` when channel flag `0x40` is set), a snapshot written once per frame by `FUN_00473440` at `0x0054f475` from the clock object at `0x785970`.
 
-**Animation advances once per frame off one snapshot while scripts tick at 31 ms** — several sim ticks in one frame still produce exactly one advance. Confirmed by call graph: `FUN_004735d0` has **exactly one** caller, `FUN_00473c70` at `0x00473d2e`, and **not one** of that function's ten call sites is the script system `FUN_005516b0` or sits inside the 31 ms loop; the park's are `FUN_0044e410(2)`, `FUN_00429df0(0)` and `FUN_00429df0(1)`.
+**Animation advances once per frame off one snapshot while scripts tick at 31 ms** — several sim ticks in one frame still produce exactly one advance. Confirmed by call graph: `FUN_004735d0` has **exactly one** caller, `FUN_00473c70` at `0x00473d2e`, and **not one** of that function's ten call sites is the script system `FUN_005516b0` or sits inside the 31 ms loop; the park's are `FUN_0044e410(2)`, `FUN_00429df0(0)` and `FUN_00429df0(1)` in the loop's tail, and `FUN_0044e410(3)` inside the scene draw.
 
 **Two candidates were checked and cleared, and either would have inverted this:** `FUN_00473440` runs once per frame *above* the loop, so it looks like the sweep, but only computes the frame delta into `DAT_007b497c`; and `FUN_00475360` does run inside the loop every 2nd tick, but is a periodic-task scheduler (`+0x7c` due time, `+0x80` interval) that calls none of this.
 
-The consequence for OpenTPW: the advance belongs in the frame sweep, **not in the tick**. With the advance in the tick, end-of-frame state was identical either way, but a clip ending mid-catch-up promoted its queued successor early and the next tick's instructions could see it. **Do not put it back in the tick.**
+The consequence for OpenTPW: the advance belongs in the frame sweep, **not in the tick**. An advance in the tick leaves end-of-frame state the same, but a clip ending mid-catch-up promotes its queued successor early, where the next tick's instructions can see it.
 
 **Two gates, and they invert the idle default.** `FUN_00473c70` touches nothing unless `model+0xa8` is non-zero, and the sweep will not call it unless `model+0x14` is non-zero. `FUN_00473e30` parks every channel at role 12 on load and only a START raises `+0x14`, so **nothing animates until something triggers it and the role-5 idle default cannot fire on a freshly loaded park.** Once a clip has finished the default fires every frame channel 0 reads finished, three attempts at most, with flags 8 — no rest restore, no hide list.
 
-**The idle default is role 5 entry 0 on channel 0**, restarted when channel 0 is idle or finished, gated on `(model+4 & 0x8004) == 0`. Entry 0 is a literal — **nothing in the engine ever advances to a role's next entry**, so cycling every `M` clip has no engine counterpart. `thing+0x14` gates whether a thing is ticked at all: it counts channels with role < 12, and a stopped model drops to nought and is never restarted — so an unconditional idle restart would start role 5 on every static prop in the park.
+**The idle default is role 5 entry 0 on channel 0**, restarted when channel 0 is idle or finished, gated on `(model+4 & 0x8004) == 0`. Entry 0 is a literal — **nothing in the engine ever advances to a role's next entry**, so cycling every `M` clip has no engine counterpart. `model+0x14` gates whether a model is advanced at all: it counts channels with role < 12, and a stopped model drops to nought and is never restarted — so an unconditional idle restart would start role 5 on every static prop in the park.
 
 ### End of clip is five outcomes, not three
 
@@ -380,12 +380,12 @@ At draw time (`FUN_0045d090` and three others) the node walk tests `0x10` **afte
 
 ### The per-clip hide list
 
-The list lives at clip block `+0x1a` (count) / `+0x38` (pointer). **854 of 1,166 clips carry one, 12,872 entries in total** (a later count over the same corpus says 859 clips carry one).
+The list lives at clip block `+0x1a` (count) / `+0x38` (pointer). **854 of 1,166 clips carry one, 12,872 entries in total** (859 of the 1,237 clips under `levels/` that carry a block, counted without the track-table check).
 
 - **`FUN_00472d70` HIDES the incoming clip's list at clip start.** Each entry resolves by the same `idx < meshCount ? meshTable + idx*0xa0 : nodeTable + (idx-meshCount)*0x58` rule `ModelFile` uses, then sets flag `0x10` unless the node carries `0x80000000`. **Entries are NODE INDICES.**
 - **`FUN_00472310` CLEARS `0x10` over the outgoing clip's list**, then restores `0x289` nodes from the master by copying matrix rows `+0x10/+0x20/+0x30/+0x40`, with arms for `0x1000` and `0x10000` and **no `0x20000` arm** — which is why visibility is never put back.
 - The `& 4` id-search arm is a flag on the **MODEL record**, not on the clip. The default path is index-addressed and is all shipped data needs (**only 4 entries in the whole game fall past their model's nodeCount**).
-- **`FUN_004726d0` recomposes hide state across all twelve channels** (array at `+4`, count at `+0xe`, stride 0x38), clearing then re-applying per channel.
+- **`FUN_004726d0` recomposes hide state across every channel** (array at `+0x10`, count at `+0xe`, stride 0x38), clearing then re-applying per channel.
 
 **Measure its payoff in meshes, not entries: 12,090 of the 12,872 entries name transform-only nodes** (`'destroy'`, `'smoke'`, `'position01'`, `'kid_pos03'`) that carry no geometry. **778 name a real mesh**, and every one of those 778 is hidden by nothing else — no visibility track in the same clip ever names them. 635 of the 778 (82%) are advisor costume pieces, which `AdvisorModel.Dress()` already hides; the rest sit on things no shipped save places.
 
@@ -461,7 +461,7 @@ So `CMP a, b` then `BRANCH_Z` is "branch if equal", and `TEST v` + `BRANCH_NZ` i
 
 **Two different bail targets, and the difference matters.** A branch whose condition is false falls to `0x005567b4` (NOP — harmless, carry on). A branch whose operand is **not** tagged `0x20` goes to `0x005567b1` (END — **parks the PC**, stopping the script). Same for a destination that is not a variable: NOP, not END.
 
-That silent no-op explains **the 17 shipped instructions whose operand 0 is a literal**, which look alarming: `MOD literal:0 variable:2 literal:9` **identically in three themes** (jungle/hallow TourRide, space scitour), `RAND literal:0 literal:N` four times, `SETVARINCHILD literal:0/1` seven times, two `SUB literal:0 ...` in space/orbiter. They are compiler artefacts the engine quietly ignores, not corruption and not a misaligned walk. **An interpreter must ignore them the same way rather than throwing.** (The reachability check run over them proves nothing either way, because it follows both sides of every conditional and treats every fallthrough as taken.)
+That silent no-op explains **the 17 shipped instructions whose operand 0 is a literal**, which look alarming: `MOD literal:0 variable:2 literal:9` **identically in three themes** (jungle/hallow TourRide, fantasy twetours) and with `literal:8` in space scitour, `RAND literal:0 literal:N` four times, `SETVARINCHILD literal:0/1` seven times, two `SUB literal:0 ...` in space/orbiter. They are compiler artefacts the engine quietly ignores, not corruption and not a misaligned walk. **An interpreter must ignore them the same way rather than throwing.** (The reachability check run over them proves nothing either way, because it follows both sides of every conditional and treats every fallthrough as taken.)
 
 ### The two stacks
 
@@ -535,13 +535,13 @@ The dispatcher's prologue computes `[ESP+0x14] = DAT_00700fd0 - (short)field[+0x
 |---|---|
 | `0x00558c3c` | the loader, `MOV word ptr [EBP+0xc0],0x32` — the hardcoded 50 |
 | `0x00551888` | the scheduler, copying it into the linked script named by field 3 |
-| `0x0055a30d` | `FUN_0055a300(frame, value)`, a plain setter, called from **outside the RSSE subsystem**: the object constructor `FUN_004db090` at `0x004db54a` finds the script by the id it has just stored at the thing's `+0x24` and pushes the item's own operating speed in, logging `SPEED = %d` |
+| `0x0055a30d` | `FUN_0055a300(frame, value)`, a plain setter, called from **outside the RSSE subsystem**: the object constructor `FUN_004db090` at `0x004db534` finds the script by the id it has just stored at the thing's `+0x24` and pushes the item's own operating speed in, logging `SPEED = %d` |
 
 **No opcode writes it.** A sweep of `0x00551000`-`0x0055a000` (loader, scheduler, dispatcher, every handler) finds **exactly two** writers — the first two rows above; the third sits **past the top of that window**, which is why a scan bounded by the RSSE subsystem misses it. The constructor does the same for a duration through `FUN_0055a0b0(frame, 3, value)`, which writes **variable index 3** — `VAR_DURATION` — and logs `DUR = %d`.
 
 So **"speed is 50 for every script that ever runs" is false**: it is 50 for a script nothing binds, and whatever the item says for a script bound to a placed object. The divisor `0.5 + 0.01 * speed` is neutral only in the first case.
 
-**What is not proven and must not be guessed: which `.sam` key feeds either of them.** The constructor reads its record through an `undefined2 *`, so the `+0xd4` and `+0xd0` the decompiler prints are **element** offsets — byte offsets `0x1a8` and `0x1a0`. Those do not line up with where `FUN_004db7d0` parses `mOperatingSpeed` and `mOperatingDuration`, which land at `+0x58` and `+0x5c` of whatever record *it* is filling. Two readings that disagree are not a mapping.
+**What is not proven and must not be guessed: which `.sam` key feeds either of them.** The constructor reads its record through an `undefined2 *`, so the `+0xd4` and `+0xd0` the decompiler prints are **element** offsets — byte offsets `0x1a8` and `0x1a0`. Those are the item descriptor's offsets, and they do line up: the constructor copies the descriptor's `+0x1a8` into the object's own `+0x58` (`0x004db54c`), the field `FUN_004db7d0` reads a save's `mOperatingSpeed` into, as `ride-operation.md` says of `+0x58`. What stays unproven is the `.sam` key behind the descriptor's `+0x1a8` and `+0x1a0`.
 
 **`WAIT <duration>` blocks across ticks without a thread.** First execution: resolve the duration, read the clock (`FUN_00402d70`), compute `now + duration/scale`, store it as a **deadline at `+0xa0`**, **rewind the PC by 2** so the same WAIT runs again, and zero the budget. Later executions take the other path (`+0xa0 != 0`): re-read the clock, and if `now < deadline` keep waiting, else **clear `+0xa0` and fall through** — the PC is already past the operand, so execution simply continues. **An interpreter must model WAIT exactly this way** — as a deadline plus a PC rewind — rather than as a sleep, or scripts will not resume correctly.
 
@@ -567,7 +567,7 @@ Opcode numbers: 15 FLUSHANIM, 16 TRIGANIM (3 operands), 17 WAITANIM, 18 LOOPANIM
 
 **Every one tests the model handle at `+0xc8` first** — an index into the table at `0x7a4610`, nought when the script has no model. That null path is completely defined. The trigger is `FUN_004732a0(model, animation, parameter, loopFlag, divisor, 0)` returning a length in ms, and `loopFlag` is **0 for `TRIGANIM`, `WAITANIM` and `TRIGWAITANIM`, 1 for `LOOPANIM`** — so **`WAITANIM` really does start the animation**, which the docs page already said.
 
-    FLUSHANIM(15)    00552861  model==0 -> leave; otherwise the body at 00553053 (NOT read)
+    FLUSHANIM(15)    00552861  model==0 -> leave; otherwise 00553053 calls FUN_00473270( model, 0 )
     TRIGANIM(16)     00552875  len = trigger(); len -= 300; floor 300 SIGNED (JGE); store in operand 3
                                then 00552fe5: +0xa4 = clock + len/divisor, +0xa8 = 0xffff
     WAITANIM(17)     005529bc  same trigger - but its deadline goes in +0xa0, WAIT's OWN field
@@ -582,19 +582,19 @@ Opcode numbers: 15 FLUSHANIM, 16 TRIGANIM (3 operands), 17 WAITANIM, 18 LOOPANIM
 
 `WAITANIM` does trigger the clip: `0x00552a95` tests the model handle and `0x00552ab0` calls `FUN_004732a0`; the no-model path is `XOR EAX,EAX`. **Three of Lost Kingdom's eight items run only `WAITANIM`** — Staff Room, Security Camera, Litter Bin — so a passive wait leaves them inert.
 
-**Two timing asymmetries.** Both `TRIGANIM` and `WAITANIM` divide by the speed divisor (`0x00552acd` is `FDIV float ptr [ESP+0x14]`, the same divisor, worked out afresh per instruction as `0.5 + 0.01 * speed`, exactly 1 at the 50 every script carries). The real asymmetry is the **order and the signedness**: `TRIGANIM` floors at 300 **signed** (`JGE`) and *then* divides; `WAITANIM` divides and *then* floors at 300 **unsigned** (`0x00552ad6` `CMP EAX,0x12c` / `JNC`). `LOOPANIM` is idempotence-guarded on the key at `+0xa8` (which the triggers set to `0xffff` precisely to break that guard) and discards its length.
+**Two timing asymmetries.** Both `TRIGANIM` and `WAITANIM` divide by the speed divisor (`0x00552acd` is `FDIV float ptr [ESP+0x14]`, the same divisor, worked out afresh per instruction as `0.5 + 0.01 * speed`, exactly 1 at the loader's 50, which a bound script's item speed replaces). The real asymmetry is the **order and the signedness**: `TRIGANIM` floors at 300 **signed** (`JGE`) and *then* divides; `WAITANIM` divides and *then* floors at 300 **unsigned** (`0x00552ad6` `CMP EAX,0x12c` / `JNC`). `LOOPANIM` is idempotence-guarded on the key at `+0xa8` (which the triggers set to `0xffff` precisely to break that guard) and discards its length.
 
 **`WAIT4ANIM` waits on a second deadline field** (`+0xa4`, `0x005538eb`) — **not** `WAIT`'s twin. Two differences, both load-bearing: it never arms anything itself, and **when `+0xa4` is nought it leaves at once without waiting at all**.
 
 **The word at `+0xe4` is set to `0x3e8` (1000) by all four triggering handlers and is not identified.**
 
-**`TRIGWAITANIM` (19) at `0x552c1a` — built 2026-09-20, once models existed; OpenTPW reproduces the model path and, as a declared deviation, steps over the model-less one counted rather than parking.** First visit (`+0xbc` is 0): trigger exactly as `TRIGANIM` does, then `0x553693` does `INC EDI` / `+0xbc = EDI`, so the mark is the **animation id PLUS ONE** and 0 means "not armed"; then `+0x3c -= 4` onto itself and return **without** `+0x98 = 0`, so the same turn re-enters it. Re-entry: with a model, `FUN_00473fb0` gives channel 0's entry[1] — and that function is a **plain accessor**, `*(model+0x10) + channel*0x38` returning entry[0] and writing entry[1] out, **not a "channel cursor"** — then `INC` and compare against the mark. Equal -> `0x5535f4` clears `+0xbc` and falls through; not equal -> `0x5535d6` rewinds 4 **and** sets `+0x98 = 0`. **With no model the accessor call is skipped and the comparison is made against the RAW THIRD OPERAND**, so it parks for ever unless op3 == op1 — which **none** of the 133 shipped uses satisfies (132 differ, 1 is a variable). `TRIGWAITANIM_CH` at `0x55359b` shares `+0xbc` and has the identical shape, which is independent agreement on the decode.
+**`TRIGWAITANIM` (19) at `0x552c1a` — OpenTPW reproduces the model path and, as a declared deviation, steps over the model-less one counted rather than parking.** First visit (`+0xbc` is 0): trigger exactly as `TRIGANIM` does, then `0x553693` does `INC EDI` / `+0xbc = EDI`, so the mark is the **animation id PLUS ONE** and 0 means "not armed"; then `+0x3c -= 4` onto itself and return **without** `+0x98 = 0`, so the same turn re-enters it. Re-entry: with a model, `FUN_00473fb0` gives channel 0's entry[1] — and that function is a **plain accessor**, `*(model+0x10) + channel*0x38` returning entry[0] and writing entry[1] out, **not a "channel cursor"** — then `INC` and compare against the mark. Equal -> `0x5535f4` clears `+0xbc` and falls through; not equal -> `0x5535d6` rewinds 4 **and** sets `+0x98 = 0`. **With no model the accessor call is skipped and the comparison is made against the RAW THIRD OPERAND**, so it parks for ever unless op3 == op1 — which **none** of the 133 shipped uses satisfies (132 differ, 1 is a variable). `TRIGWAITANIM_CH` (`0x553494`, its `+0xbc` test at `0x55359b`) shares `+0xbc` and the same tails: `0x553693`, `0x5535d6` and `0x5535f4` sit in its handler, and `TRIGWAITANIM` jumps into them (`0x00552daf`, `0x00552d17`, `0x00552d11`), so the two share one decode rather than agreeing independently.
 
 **`GETANIM_CH`'s operands are `(destination, channel)`**, not `(role, entry)` — **the opposite shape to every other `_CH` instruction.** Counting its first operand as a role inflates any role census. The corrected corpus figures are **627 distinct (item, role) pairs and 806 distinct (item, role, entry) references, all 806 resolving to a shipped file bar the eight known absences**, with the highest entry index any script asks for being 9.
 
 **No opcode hides a mesh of the base model**: ADDOBJ/KILLOBJ/FADEOBJ and the LIMBO family act on the script's own object table, not on model nodes. Variable names like `VAR_LETMEON` and `VAR_LANE1` appear nowhere in the exe — **they are data**. There is no "lane" in the exe; `VAR_LANE1..3` are variables inside the item's own `.RSE` script. `TRIGANIM` uses channel 0 and the `_CH` opcodes take one, so a sideshow's several clips run at once on separate channels.
 
-**Corpus:** `WAITANIM` 547 uses / 250 scripts — **the first instruction to block 183 of the 308**; `LOOPANIM` 210/114; `TRIGWAITANIM` 133/56; `WAIT4ANIM` 170/75; `TRIGANIM` 74/59; `FLUSHANIM` 15/7. The `_CH` variants are rare (`TRIGANIM_CH` 63/6, `GETANIM_CH` 15/5, `LOOPANIM_CH` 1) and `GETANIM` is unused.
+**Corpus:** `WAITANIM` 547 uses / 250 scripts; `LOOPANIM` 210/114; `TRIGWAITANIM` 133/56; `WAIT4ANIM` 170/75; `TRIGANIM` 74/59; `FLUSHANIM` 15/7. The `_CH` variants are rare (`TRIGANIM_CH` 63/6, `GETANIM_CH` 15/5, `LOOPANIM_CH` 1) and `GETANIM` is unused.
 
 ### The effect subsystem
 
@@ -823,7 +823,7 @@ Corpus counts for the control opcodes: `WAIT` 458, `ENDSLICE` 396, `CRIT_UNLOCK`
 
 **A world-less interpreter cannot reach most `WAIT`s, and that is correct.** `Coaster1.RSE` disassembles to 122 words with **exactly one `WAIT`, at word 88**, and it sits behind `TEST $VAR_BREAKSTAT` / `BRANCH_NZ` at word 63. **Nothing in the script ever writes `VAR_BREAKSTAT`** — only a running park does — so with no world it stays 0 and the script loops `18 -> 67 -> 18` forever, never reaching 88. A test asserting "it reaches a WAIT" fails against a perfectly correct machine.
 
-**And that main loop contains no `ENDSLICE`.** The only reason a turn ever ends is the `CRIT_UNLOCK` at word 62 zeroing the budget — so a machine that misses that semantic spins forever inside one turn rather than failing visibly. `Coaster1` also declares **no stack at all** (`#setstack` 0), so it exercises nothing of `JSR`/`RETURN`. **The useful shape for a test is to *find* a script that reaches a `WAIT` by running them all, not to name one.**
+**And that main loop contains no `ENDSLICE`.** The only reason a turn ever ends is the `CRIT_UNLOCK` at word 62 zeroing the budget — and a machine that misses that semantic still ends it about four laps in, once the unlocked words have spent the budget, so the miss changes how much a turn does, not whether it ends. `Coaster1` also declares **no stack at all** (`#setstack` 0), so it exercises nothing of `JSR`/`RETURN`. **The useful shape for a test is to *find* a script that reaches a `WAIT` by running them all, not to name one.**
 
 **A lock reached on the last unit of the budget**, the one arrival where charging `CRIT_LOCK` would end the turn inside its section. Walked with every branch arm possible from every turn start (the entry, after each `ENDSLICE` and `CRIT_UNLOCK`, each waiting instruction, and wherever a budget of 50 runs out, to a fixpoint), **68 of the 150 locks can be dispatched after exactly 49 costed instructions, 18 of the 36 in Lost Kingdom**; three walkers written apart agree lock by lock, and all 68 witnesses replay from word 0 on a separate machine. **None of the six locked scripts the Easymode park places is among them** (the three toilets, `Coconut`, `Bouncy`, `Junspray`: their locks come after at most 29). **But nothing else runs during a script's turn**, so a world answer (`LETMEOFF`, `RIDECLOSED`, `LIMBOSPACE`, `WALKGET`, the clock, a `WAIT4ANIM` deadline) is the same every time one turn asks it. Walked that way, 15 of the 18 cannot happen: a poll loop exits only on its first test in a later turn, and the arrival is the phase plus a fixed path, well short of 49. The three left (`bumper` @92, `GoKarts` @52, `Wateride` @77) survive only because `BUMP`'s answers are undecoded and taken as free to change within a turn. **The Hot Pot's `bumper` @92 is the only one the project's interpreter can reach**, because its `BUMP`s are no-ops there: from the turn that resumes at its `WAIT 1000` @134, the ride unloads in one run of 18 instructions a rider, removes cars at 9 each and reaches the lock after `(19 + 18n + 9d) mod 50` costed instructions of its turn, for `n` riders and `d` cars removed. 49 needs 8 riders cut to 4 cars, or 7 cut to 1: the capacity cut during the ride. Its capacity runs 1 to 8 (`MinCapacity`, `MaxCapacity`), red-lined at 4.
 
@@ -1147,7 +1147,7 @@ What the binary invalidates:
 
 **Bare-only-M models outside `levels/`: zero**, so the bare-file probe cannot touch the lobby. But **91 models ship more than one numbered M clip**, and **8 of them are lobby models** — `*_gate` with 3 and `*_isle` with 2, in all four themes — plus the advisor with 15. `MeshAnimator` cycles every clip in turn and `MeshRotator` the first two (`ClipsUsed = 2`), but neither loops a gate: `LobbyGate` poses M1 once as the park-entry flight swings onto it and M2 when Escape cancels the flight, each over the span it declares (`lobby.md`, "Escape cancels the fly-in, and the gate is the flight's"). **So a channel must be something a park model opts into, leaving lobby playback exactly as it is.**
 
-Known divergences still open, both in lobby playback, which a park thing does not use: `MeshAnimator` and `MeshRotator` keep private clocks, and play `FirstFrame..LastFrame` where the engine plays **0 -> declared span** (159 clips disagree). For a park thing the per-clip hide list is still unread, and `PoseAsBuilt` hand-rolls its effect after the build.
+Known divergences still open, both in lobby playback, which a park thing does not use: `MeshAnimator` and `MeshRotator` keep private clocks, and play `FirstFrame..LastFrame` (`MeshRotator` only as far as `MotionEnd`) where the engine plays **0 -> declared span** (164 clips disagree). For a park thing the per-clip hide list is still unread, and `PoseAsBuilt` hand-rolls its effect after the build.
 
 `AnimationFile.VisibilityTrack` already matches the engine's visibility rule exactly. `AnimationFile.RotationTrack.Ease` obeys the easing table. The per-clip hide list is **still unread by us**.
 

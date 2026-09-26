@@ -189,8 +189,8 @@ public class RideScriptModelTests
 	/// <para>
 	/// The mark it sets is the <b>role</b> plus one, and a trigger onto an idle channel makes that role
 	/// current at once - so the re-entry the first visit rewinds into matches immediately. This is the
-	/// case every vehicle takes on its first animation, and why implementing a blocking instruction did
-	/// not slow the ferry and the seaplane down: they block only behind a clip of a <i>different</i> role.
+	/// case every vehicle takes on its first animation, and why a blocking instruction does not slow the
+	/// ferry and the seaplane down: they block only behind a clip of a <i>different</i> role.
 	/// </para>
 	///
 	/// <para>
@@ -221,13 +221,13 @@ public class RideScriptModelTests
 	/// The engine clears <c>+0xbc</c> at <c>0x5535f4</c> on the equal branch, and a machine that left it
 	/// standing would sail through every later one <i>without triggering anything</i> - which on a vehicle
 	/// looks exactly like arriving once and never moving again. Both of this park's other vehicle scripts
-	/// run three of these in a loop, so a sticky mark would strand them on their second leg.
+	/// run two of these in a loop, so a sticky mark would strand them on their second leg.
 	///
 	/// <para>
 	/// <b>What this asserts is the trigger, not the fall-through, and the difference is the whole test.</b>
 	/// A mark left standing still falls through - the re-entry compare matches the role it never cleared -
-	/// so the instructions after it run either way and asserting those proves nothing. It was written that
-	/// way first and a mutation that removed the clear did not fail it. What does fail is asking whether
+	/// so the instructions after it run either way and asserting those proves nothing.
+	/// What does fail is asking whether
 	/// the second one actually started anything: the first clip is still running, so a real trigger
 	/// <b>queues</b> behind it, and a skipped one leaves the channel with nothing queued at all.
 	/// </para>
@@ -308,9 +308,9 @@ public class RideScriptModelTests
 	}
 
 	/// <summary>
-	/// <b><c>WAITANIM</c> starts the clip it waits for</b>, which is the shipped behaviour this branch
-	/// restores: the handler calls the same trigger its siblings do (<c>0x00552ab0</c>) and only then
-	/// arms its deadline. Three of the eleven things standing in Lost Kingdom - the Staff Room, both
+	/// <b><c>WAITANIM</c> starts the clip it waits for</b>, which is the shipped behaviour: the
+	/// handler calls the same trigger its siblings do (<c>0x00552ab0</c>) and only then
+	/// arms its deadline. Four of the eleven things standing in Lost Kingdom - the Staff Room, both
 	/// Security Cameras and the Litter Bin - execute no other animation instruction at all, so a
 	/// <c>WAITANIM</c> that merely waited would leave them inert for ever.
 	/// </summary>
@@ -338,7 +338,7 @@ public class RideScriptModelTests
 		// deadline field is still empty, so the clip carries on from where it had reached.
 		script.Turn( 5000f );
 
-		// A script tick no longer moves a channel - the frame sweep does, which is what ParkObjects.Sweep
+		// A script tick does not move a channel - the frame sweep does, which is what ParkObjects.Sweep
 		// runs once the turns a frame owes have been taken. Without this the channel would still be sitting
 		// on the frame its trigger left it at, because the re-entry path above never reaches a trigger.
 		script.Animations!.Advance( 5000 );
@@ -363,8 +363,8 @@ public class RideScriptModelTests
 	/// owes has been taken.
 	///
 	/// <para>
-	/// <b>Why this needs pinning rather than being obvious.</b> This class advanced its own channels once per
-	/// tick until now, which promoted the queue early: with three ticks due, a clip ending on the first had
+	/// <b>Why this needs pinning rather than being obvious.</b> Advancing the channels once per
+	/// tick would promote the queue early: with three ticks due, a clip ending on the first would have
 	/// its successor running before the second tick's instructions could look at it, and no state the engine
 	/// can reach looks like that. The mistake is invisible at a frame boundary, because the last tick and the
 	/// sweep land on the same millisecond - <c>ParkRides</c> hands the sweep <c>Ticks * 31</c>, which is
@@ -373,8 +373,8 @@ public class RideScriptModelTests
 	///
 	/// <para>
 	/// The script waits rather than ending, because <see cref="RideScript.Turn"/> leaves at its first line
-	/// once a script has stopped: the turns have to actually reach the point the old advance sat at, or this
-	/// would pass whether or not that advance came back.
+	/// once a script has stopped: the turns have to actually reach the point a per-tick advance would act
+	/// at, or this would pass whether or not a script tick moved the channel.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -392,7 +392,7 @@ public class RideScriptModelTests
 
 		// 30000 rather than anything larger, because a literal is sign-extended from its low sixteen bits:
 		// 60000 arrives as -5536, the deadline lands in the past, and the script falls through to END part
-		// way through the turns below. The Running assertion caught exactly that.
+		// way through the turns below.
 		var script = new RideScript( Build( 0, 50,
 			Word( Opcode.WAIT ), Lit( 30000 ), Word( Opcode.END ) ) )
 		{
@@ -407,7 +407,7 @@ public class RideScriptModelTests
 		Assert.IsTrue( script.Running, "the script stopped, so the turns never reached where the advance sat" );
 		Assert.IsTrue( script.Waiting, "and it should still be sitting on its WAIT" );
 
-		// This is the assertion that catches the advance coming back: it would read 631.86 rather than nought.
+		// This is the assertion that catches a per-tick advance: it would read 631.86 rather than nought.
 		Assert.AreEqual( 0f, channel.AnimFrame, 0.01f, "a script tick moved the channel" );
 		Assert.AreEqual( 0, channel.SubAnim, "a script tick promoted the queued clip" );
 		Assert.IsTrue( channel.HasQueued, "a script tick emptied the queue" );

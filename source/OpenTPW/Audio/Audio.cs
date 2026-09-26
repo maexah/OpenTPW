@@ -12,8 +12,8 @@ namespace OpenTPW;
 /// from it - so opening its audio device adds no native dependency on any platform. Opened on
 /// <see cref="Sdl2Window.SdlInstance"/>, which is the SDL the window itself came out of. That
 /// matters: SDL keeps its subsystem state inside whichever copy of the library is asked, so naming
-/// one by name instead - as this did, with [DllImport( "SDL2" )] - loaded a second copy out of
-/// whatever the machine happened to have, and left the game holding two SDLs that knew nothing of
+/// one by name instead, with [DllImport( "SDL2" )], would load a second copy out of whatever the
+/// machine happens to have, and leave the game holding two SDLs that know nothing of
 /// one another. The build ships its own in runtimes\&lt;rid&gt;\native; this uses that one.
 ///
 /// The mixing is ours rather than SDL_mixer's. It is a few voices of straight addition, which is
@@ -297,8 +297,8 @@ public static class Audio
 	/// <para>
 	/// <b>The mechanism is ours, and it has to be.</b> Moving the listener would do nothing here: a
 	/// park never sets <see cref="ReferenceDistance"/>, so <see cref="AudioListener.AttenuationTo"/>
-	/// returns 1 before it measures anything, and three of the five kinds of voice a park can have
-	/// sounding carry no position for <see cref="Voice.Locate"/> to act on. Giving a park a reference
+	/// returns 1 before it measures anything, and the rain, the music, the advisor and the interface's own
+	/// sounds carry no position for <see cref="Voice.Locate"/> to act on. Giving a park a reference
 	/// distance to make the trick work would start attenuating screams and thunder by camera distance
 	/// during ordinary play, which is a change to UNPAUSED behaviour that nothing asked for.
 	/// </para>
@@ -547,7 +547,7 @@ public static class Audio
 
 		// Everything above adds, so the sum can leave the range even when no one voice does.
 		// Clamping is the cheap answer and it is what the range is for; the alternative is a
-		// limiter, which the four or five voices the lobby runs do not need.
+		// limiter, which nothing the game plays has yet been measured to need.
 		for ( int i = 0; i < frames * 2; ++i )
 			output[i] = output[i] < -1f ? -1f : (output[i] > 1f ? 1f : output[i]);
 	}

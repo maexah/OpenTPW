@@ -8,9 +8,7 @@ namespace OpenTPW.Tests;
 /// Where a guest is drawn, and which of the two possible answers is used - <c>ParkGuestSprites.Standing</c>.
 ///
 /// <para>
-/// <b>This file exists because a control run said it had to.</b> The sprite join was written, built and
-/// green, and a mutation that made the drawing ignore the simulation entirely - putting every guest back at
-/// the position the save left them - broke <b>no test at all</b>. The render path needs a graphics device
+/// <b>The join is pinned here, not where it is drawn.</b> The render path needs a graphics device
 /// and cannot be unit tested; what can be, and what actually carries the claim, is the choice between the
 /// simulation and the save and the arithmetic that converts one to the other. That is what is pinned here.
 /// </para>

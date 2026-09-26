@@ -22,7 +22,7 @@ public class GameCalendarTests
 		Start();
 	}
 
-	/// <summary>One frame, through all three clocks, in the order a park's update runs them.</summary>
+	/// <summary>One frame, through all three clocks, in the order a park's frame runs them.</summary>
 	private static void Frame( float seconds, bool paused = false )
 	{
 		Time.Update( seconds );

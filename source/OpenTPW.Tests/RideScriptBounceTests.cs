@@ -73,8 +73,8 @@ public class RideScriptBounceTests
 
 	/// <summary>
 	/// Every ride script the game ships, found by walking rather than by naming. An archive is addressed
-	/// by whatever spelling the file system hands back, and writing those out by hand has produced a
-	/// missing file more than once - which fails as a broken test rather than as a wrong answer.
+	/// by whatever spelling the file system hands back, and writing those out by hand can name a file
+	/// that is not there - which fails as a broken test rather than as a wrong answer.
 	/// </summary>
 	private IEnumerable<(string Path, RideScriptFile File)> EveryScript()
 	{
@@ -116,8 +116,8 @@ public class RideScriptBounceTests
 	///
 	/// <para>
 	/// <b>Two themes ship a file of this name and they do not agree</b>: jungle's declares ten slots and
-	/// sets its base to 8, space's declares twelve and sets 16. Taking the first match the walk happened
-	/// to reach made a jungle-measured constant fail against a different park's file, which is a test
+	/// sets its base to 8, space's declares twelve and sets 16. Taking the first match the walk reaches
+	/// would test a jungle-measured constant against a different park's file, which is a test
 	/// measuring the corpus rather than the engine. Lost Kingdom is the scope, so Lost Kingdom is what
 	/// this asks for.
 	/// </para>
@@ -247,9 +247,8 @@ public class RideScriptBounceTests
 	}
 
 	/// <summary>
-	/// <b>Which node the ride is carrying a rider on, which is what the drawing needs.</b> Alexah found
-	/// the children never appear on the ride: their sprite stays at the front of the queue for the whole
-	/// ride. Nothing in the engine moves a rider either - a rider's position legitimately stays where
+	/// <b>Which node the ride is carrying a rider on, which is what the drawing needs.</b> Nothing in
+	/// the engine moves a rider - a rider's position legitimately stays where
 	/// they queued and the DRAWING puts them on a node of the ride's own model - so the slot the
 	/// <c>BOUNCE</c> instruction filled in is the only thing that knows where they are.
 	/// </summary>
@@ -384,10 +383,8 @@ public class RideScriptBounceTests
 	/// <c>Jelly.RSE</c>, and not in Lost Kingdom - and it passes a literal 3.
 	/// </para>
 	/// <para>
-	/// This began life asserting that <i>nothing</i> used it, which was written from Lost Kingdom's
-	/// twenty-two scripts and was false of the other three themes. The walk found Jelly immediately. The
-	/// assertion that matters was never the count anyway - it is the operand kind, because that is the
-	/// only thing the raw store can get wrong.
+	/// The assertion that matters is the operand kind, not the count, because that is the only thing the
+	/// raw store can get wrong.
 	/// </para>
 	/// </summary>
 	[TestMethod]

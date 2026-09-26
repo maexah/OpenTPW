@@ -70,8 +70,7 @@ internal readonly record struct AudioListener( Vector3 Position, Vector3 Right, 
 	/// entirely flat at (0,0,0). So there is no original lobby behaviour to restore here, and this is
 	/// a choice made to be defensible rather than a recovery.
 	/// <para>
-	/// <b>This used to name data\sound.sam's RadiusInfo[n].MINRADIUS as that model's inner radius, and
-	/// it is not.</b> MINRADIUS feeds FUN_0051c700, a sound-detail ladder whose value reaches a
+	/// <b>data\sound.sam's RadiusInfo[n].MINRADIUS is not that model's inner radius.</b> MINRADIUS feeds FUN_0051c700, a sound-detail ladder whose value reaches a
 	/// software per-voice level through FUN_006b8180 and an obstacle test (FUN_006c4c80) that uses
 	/// only two of the three axes - it never reaches SetDistanceMapping at all. The real parameters
 	/// are three dwords at a params record +0x38, passed from the single call site 0x006c581b, gated

@@ -354,7 +354,7 @@ internal sealed class ParkGadget : UiWindow
 
 		// Of this category's four screens only ENTRY PRICE is within reach, and it is the one the
 		// category is seeded to - FUN_004a0810(3,10) - so the button opens on it. Finances, loans and
-		// staff costs all rest on monthly ring buffers and a loan record this project does not read, and
+		// staff costs all rest on monthly ring buffers and on loans, which ParkWorld reads and nothing runs, and
 		// the entry-price screen carries a button to each of the three regardless, because the original's
 		// own screen does. See docs/exe/hud.md.
 		buttons.Add( new UiButton
@@ -370,7 +370,7 @@ internal sealed class ParkGadget : UiWindow
 		// FUN_004aa480 rather than through the remembered-tab picker, exactly as the map does. That opens a message
 		// box in Instant Action or with no researcher hired, and otherwise six effort sliders over research groups
 		// (docs/exe/hud.md, "The nine screens behind Info, Money and Research"). None of the three is built, and
-		// research itself waits on Alexah (docs/PLAYER-GAPS.md). Counted each click.
+		// research itself waits on a research system this game lacks (docs/PLAYER-GAPS.md). Counted each click.
 		buttons.Add( new UiButton
 		{
 			Id = 0x2b,
@@ -427,8 +427,7 @@ internal sealed class ParkGadget : UiWindow
 		// park's STATISTICS manager: FUN_004c5d70 is the serialiser carrying those exact ring offsets,
 		// and it writes mLifetimeVisitors, mMisbehavingKids, mMostPaidForTicket, mLongestStay and
 		// mParkLastOpened beside them. The offsets are what joins the two functions; the header field is
-		// very likely mParkAnalyser, but only the offsets are proven, so the thing is named by what it
-		// serialises rather than by a header slot.
+		// mParkAnalyser (docs/exe/park.md, "Arrivals"), and the thing is named here by what it serialises.
 		//
 		// Nothing in this tree keeps a history of anything, so the arrow would have no two numbers to
 		// compare and would sit on one frame for ever.

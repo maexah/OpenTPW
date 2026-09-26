@@ -291,7 +291,7 @@ button. It only logs, and counts each click as `RESEARCH_BUTTON`.
   script parks at three `TEST VAR_TRIGGER` spins; releasing only the first left the bus stopped at
   `VAR_STATUS` 4 for ever and, because arrivals are gated on the vehicle reporting 2, **the park
   drained to nought after one guest**. `ParkPeople.StepVehicle` is the tail of `FUN_004cf3e0`, which
-  runs every tick and re-triggers on status -1, 0, 4 and on 2 once its load is let go. Unattended, the
+  runs every thing sweep and re-triggers on status -1, 0, 4 and on 2 once its load is let go. Unattended, the
   population moves both ways: a load is called about 150 s after the last one got off, and the saved
   guests go home as their day runs out.
   A `vehicles` console census was added to see this at all - `paths` reports where a vehicle is drawn,
@@ -450,7 +450,7 @@ from the crossing. So the arrival path they would take is the one the shipped sa
   takes its money through the LIMBO mechanism"; **`Coconut.RSE` declares zero limbo slots and zero walk
   slots and uses neither family.** It runs the identical `VAR_LETMEON` → `WAIT 1000` → `VAR_LETMEOFF`
   handshake a ride runs, so the boarding chain already built for the Belly Bounce *is* the shop. Limbo
-  is real but belongs to `steak`, `giftshop`, `balloon`, `Cost_shp` and `arc2x3`.
+  is real but belongs to `steak`, `giftshop`, `balloon`, `Cost_shp`, `arc2x3` and `SupBog`.
 - **What made the visit do anything: the win roll.** `FUN_004e2670` rolls `rand()%100 <= chance` as a
   guest enters and writes it into `mQueuePos`, which the settle-up splits on. Nothing here ever wrote
   that byte, so **every visit in the park took the losing arm** — which is why a sideshow charged 20 and

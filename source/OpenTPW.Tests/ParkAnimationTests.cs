@@ -51,7 +51,10 @@ public class ParkAnimationTests
 		return new ParkWorld( new SaveReader( stream ).ReadFile() );
 	}
 
-	/// <summary>One frame, through both clocks, in the order <see cref="Level.Update"/> uses.</summary>
+	/// <summary>
+	/// One frame, through both clocks, in the order a frame runs them: <c>Time.Update</c> in
+	/// <c>Renderer.Update</c>, then <c>GameClock.Update</c> in <see cref="Level.Update"/>.
+	/// </summary>
 	private static void Frame( float seconds )
 	{
 		Time.Update( seconds );
@@ -95,8 +98,8 @@ public class ParkAnimationTests
 	/// <b>It watches every turn rather than comparing the two ends.</b> A before-and-after finds guests who
 	/// seem not to have moved at all - sixty-four game ticks is thirty-two turns of the sprite system, the walk
 	/// is eight pictures long, and thirty-two divides by eight exactly, so every guest animating steadily is
-	/// back on the picture they started on. <b>Sampling at a multiple of the cycle you are measuring shows a still park however fast
-	/// it is running.</b>
+	/// back on the picture they started on. <b>Sampling at a multiple of the cycle you are measuring shows a
+	/// still park however fast it is running.</b>
 	/// </para>
 	/// <para>
 	/// So it counts the distinct pictures each guest is seen on and asks for <b>all eight</b> from anyone

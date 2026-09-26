@@ -10,7 +10,7 @@ namespace OpenTPW.Tests;
 /// which name the animation player they act on instead of always taking the first.
 ///
 /// <para>
-/// <b>These were the last live gap in the ride VM.</b> Across the 308 shipped scripts the family is
+/// Across the 308 shipped scripts the family is
 /// <c>TRIGANIM_CH</c> 63 uses in 6 scripts, <c>GETANIM_CH</c> 15 in 5 and <c>LOOPANIM_CH</c> 1 - and
 /// <c>WAITANIM_CH</c>, <c>FLUSHANIM_CH</c>, <c>TRIGWAITANIM_CH</c> and plain <c>GETANIM</c> are used by
 /// nothing at all, so they stay unbuilt and keep announcing themselves.
@@ -272,7 +272,8 @@ public class RideScriptChannelTests
 	/// channel at all - the original would index that far past its allocation, and this refuses.
 	///
 	/// <para>
-	/// No shipped script does it: the single <c>LOOPANIM_CH</c> in the whole game names a literal nought.
+	/// No shipped script does it: the single <c>LOOPANIM_CH</c> in the whole game, in space's
+	/// <c>Gates.RSE</c>, names a literal 1.
 	/// The test exists because resolving it would look like tidying up an inconsistency.
 	/// </para>
 	/// </summary>
@@ -360,12 +361,10 @@ public class RideScriptChannelTests
 	}
 
 	/// <summary>
-	/// <b>The count has to survive the journey from the item's own file to the placed thing</b>, and nothing
-	/// asserted that until this test existed.
+	/// <b>The count has to survive the journey from the item's own file to the placed thing</b>.
 	///
 	/// <para>
-	/// <b>Found by mutation, not by reading.</b> Replacing <c>description.NumSimultAnims</c> with a literal 1
-	/// in <see cref="ParkItemCatalogue"/> left all 789 tests green. Every other test here reads
+	/// Every other test here reads
 	/// <see cref="ItemDescriptionFile"/> directly, and the sideshow's round trip loads
 	/// <see cref="RideAnimations"/> directly with a count of its own - so both step straight over the single
 	/// wire that carries the number into a real park. Coverage of the parts is not coverage of the join.

@@ -34,7 +34,7 @@ public class RideScriptRunTests
 
 	/// <summary>
 	/// How many shipped scripts declare limbo slots: 24, every one of them ten. They are exactly the
-	/// scripts that use a limbo instruction - shops and toilets - with none on either side of that line,
+	/// scripts that use a limbo instruction - shops, toilets and arcades - with none on either side of that line,
 	/// so the count is pinned rather than left to chance.
 	/// </summary>
 	private const int ExpectedLimboScripts = 24;
@@ -56,7 +56,7 @@ public class RideScriptRunTests
 	/// <para>
 	/// It is found through the same walk the other tests use rather than by a written-out path. An
 	/// archive is addressed by whatever spelling this file system hands back, and writing that out by
-	/// hand produced a missing file twice - which fails as a broken test rather than as a wrong
+	/// hand can name a file that is not there - which fails as a broken test rather than as a wrong
 	/// answer, and says nothing about the machine under test.
 	/// </para>
 	/// </summary>
@@ -106,8 +106,8 @@ public class RideScriptRunTests
 		Assert.IsTrue( script.Position >= MainLoopStart && script.Position <= MainLoopEnd,
 			$"the script settled at word {script.Position}, outside its main loop" );
 
-		// The loop has no ENDSLICE in it. The only reason a turn ever ends is CRIT_UNLOCK giving up
-		// the rest of the slice, so this passing at all is that semantic working.
+		// The loop has no ENDSLICE in it. What ends each turn is CRIT_UNLOCK at word 62 giving up the
+		// rest of the slice; without that the fifty-instruction budget would end it a few laps later.
 		Assert.IsTrue( script.NotImplemented > 0, "nothing was counted as unimplemented, which cannot be right" );
 	}
 
@@ -223,8 +223,8 @@ public class RideScriptRunTests
 	///
 	/// <para>
 	/// The point of the count is that it is visible. A script that spends its whole life in
-	/// unimplemented instructions is not running in any useful sense, and this says so rather than
-	/// reporting a green run.
+	/// unimplemented instructions is not running in any useful sense. What is asserted is only that the
+	/// count is not below nought and that the script names itself; the count is not checked against anything.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -240,7 +240,7 @@ public class RideScriptRunTests
 	}
 
 	/// <summary>
-	/// A real script drives a real ride: it claims it, shuts it, opens it again and sets its capacity,
+	/// A real script drives a real ride: it claims it, shuts it, sets its capacity and opens it again,
 	/// in that order, without anything here telling it to.
 	///
 	/// <para>
@@ -304,8 +304,8 @@ public class RideScriptRunTests
 	}
 
 	/// <summary>
-	/// Every shipped script still runs with a ride attached. The twelve that use <c>COAST</c> now
-	/// execute it for real rather than skipping it, and that must not send any of them somewhere else.
+	/// Every shipped script still runs with a ride attached. The twelve that use <c>COAST</c>
+	/// execute it for real, and that must not send any of them somewhere else.
 	/// </summary>
 	[TestMethod]
 	public void EveryRideScriptStillRunsWithARideAttached()
@@ -337,8 +337,8 @@ public class RideScriptRunTests
 
 	/// <summary>
 	/// Every shipped script still runs with somewhere to put its effects. 164 of the 308 use
-	/// <c>ADDOBJ</c> and 107 use <c>EVENT</c>, so this executes 1,406 instructions that were stepped over
-	/// before - and running them for real must not send any script somewhere else.
+	/// <c>ADDOBJ</c> and 107 use <c>EVENT</c> - with <c>KILLOBJ</c>, 1,406 instructions that run for real
+	/// when reached - and running them must not send any script somewhere else.
 	///
 	/// <para>
 	/// The count at the end is what stops this being a smoke test: if the operands were read in the wrong
@@ -378,12 +378,12 @@ public class RideScriptRunTests
 	}
 
 	/// <summary>
-	/// Every shipped script still runs now that limbo is real, and every script that declares slots
+	/// Every shipped script still runs with limbo built, and every script that declares slots
 	/// still has all of them at the end - because there is nobody here to be held.
 	///
 	/// <para>
 	/// The second half is what would catch a mistake. 24 scripts declare ten slots each and 101 limbo
-	/// instructions now run for real rather than being stepped over, but every <c>LIMBO</c> in the corpus
+	/// instructions run for real, but every <c>LIMBO</c> in the corpus
 	/// sits behind a test of the variable that would name a guest, and nothing here ever sets one. So a
 	/// script that came back holding somebody would mean the machine had invented them - which is
 	/// precisely the quiet kind of wrong that a "did it still run" check sails past.
@@ -434,7 +434,7 @@ public class RideScriptRunTests
 	/// spawn children, and able to find each other by name.
 	///
 	/// <para>
-	/// This is the first time the corpus is run as a <b>system</b> rather than as 308 separate scripts,
+	/// This runs the corpus as a <b>system</b> rather than as 308 separate scripts,
 	/// and that is the point: <c>SPAWNCHILD</c> loads a real sibling out of the same archives,
 	/// <c>GETVARINPARENT</c> reads a variable the parent actually set, and <c>FINDSCRIPTRAND</c> searches
 	/// names that real scripts have taken. None of those can be exercised by a script on its own.
@@ -510,14 +510,14 @@ public class RideScriptRunTests
 	}
 
 	/// <summary>
-	/// Every shipped script still runs once it can see its own thing's animations - and this is the first
-	/// time the corpus runs with clip lengths that are real rather than the engine's floor.
+	/// Every shipped script still runs once it can see its own thing's animations, with clip lengths that
+	/// are real rather than the engine's floor.
 	///
 	/// <para>
-	/// <b>It is a behaviour change at scale, not a no-op.</b> Until now every <c>WAITANIM</c> in the corpus
-	/// set a deadline already in the past and cost a single turn; with a model most of them now wait for a
-	/// real clip, some of them for twenty seconds. So scripts settle onto their waits far earlier than they
-	/// did, and what this checks is that none of them settles anywhere it should not - a wrong role or
+	/// <b>A model changes behaviour at scale.</b> Without one every <c>WAITANIM</c> in the corpus sets a
+	/// deadline already in the past and costs a single turn; with one most of them wait for a real clip,
+	/// some of them for twenty seconds. So scripts settle onto their waits far earlier than they do without
+	/// one, and what this checks is that none of them settles anywhere it should not - a wrong role or
 	/// entry index would still run, it would simply wait the wrong length or answer the wrong number.
 	/// </para>
 	///
@@ -571,7 +571,7 @@ public class RideScriptRunTests
 
 		Assert.AreEqual( RideScriptTests.ExpectedScripts, ran, "scripts run" );
 
-		// Measured against the archives themselves: every one of the 308 items ships at least one role
+		// Measured against the archives themselves: every one of the 308 scripts sits beside at least one role
 		// clip, 1,085 between them. Both are pinned rather than loosely bounded, because a table read from
 		// the wrong folder - or a numbered walk that stopped a file early - would still leave most of them
 		// non-empty and sail straight past a "more than a hundred" guard.

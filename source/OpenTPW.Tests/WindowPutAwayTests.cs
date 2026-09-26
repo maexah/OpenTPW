@@ -7,18 +7,18 @@ namespace OpenTPW.Tests;
 /// Putting a window away, and the fact that a window's own <c>Update</c> cannot undo it.
 ///
 /// <para>
-/// <b>The bug this pins was real and had never been seen on screen.</b> The front end puts windows away
-/// when the options screen opens - the original's message 6 - and it used to do that by setting
-/// <c>Hidden</c>. But <c>WindowStack</c> updates every window it holds, hidden ones included, with no
-/// guard; and two of a park's windows assign <c>Hidden</c> afresh in their own <c>Update</c> from
-/// conditions that say nothing about the options screen. So the park's management gadget was told to go
-/// away and came back one frame later, drawn under the options screen's dimmed backdrop.
+/// <b>Putting a window away cannot be done with <c>Hidden</c>.</b> The front end puts windows away
+/// when the options screen opens - the original's message 6. But <c>WindowStack</c> updates every window
+/// it holds, hidden ones included, with no guard; and two of a park's windows assign <c>Hidden</c> afresh
+/// in their own <c>Update</c> from conditions that say nothing about the options screen. So a gadget put
+/// away through <c>Hidden</c> would come back one frame later, drawn under the options screen's dimmed
+/// backdrop.
 /// </para>
 /// <para>
 /// <b>The obvious fix is wrong and is worth recording.</b> Not updating hidden windows would stop the
 /// clobber - and would permanently strand <c>ParkViewfinder</c>, which is constructed hidden and relies on
-/// its own <c>Update</c> to bring itself back when first person starts. So the two meanings were given two
-/// flags instead.
+/// its own <c>Update</c> to bring itself back when first person starts. So the two meanings are two
+/// flags.
 /// </para>
 /// </summary>
 [TestClass]

@@ -78,7 +78,7 @@ Version 12, `FUN_005aff50`. Defaults come from the progress object constructor `
 | `+0x1c` | 4 | golden tickets | tickets **spent** |
 | `+0x20` | 4 | golden keys | keys **given outright** |
 | `+0x24` | 1 | mode | 1 = Instant Action, 0 = Full Simulation |
-| `+0x25` | 1 | swear filter | default 1 — the "swears filter" reading is *unconfirmed* |
+| `+0x25` | 1 | swear filter | default 1. Set after the read, `FUN_005afd70` loads `%s\Language\%s\swears.txt` and `alloweds.txt` through `FUN_005d3140`, and clears it when they fail to load |
 | `+0x4c` | 1 | first park not started | default 1 |
 | — | 4 | N | theme count, starts 0 |
 | — | var | themes | N × (dword name length + name chars + theme record) |
@@ -208,4 +208,4 @@ Never empty it: delete only what that run created (`CLAUDE.md` rule 12).
 - The park body's compression (`FUN_005f8050`).
 - What "tcf" stands for.
 - The theme list's own names.
-- The preamble divergence above, and whether `+0x25` in `gms.dat` is really a swear filter.
+- The preamble divergence above.

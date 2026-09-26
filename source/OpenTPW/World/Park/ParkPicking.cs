@@ -26,7 +26,7 @@ namespace OpenTPW;
 ///
 /// <para>
 /// <b>The camera's own roll may NOT be used to build the ray.</b> <see cref="Camera.Rotation"/> comes
-/// from <c>Rotation.LookAt</c>, whose roll is arbitrary and documented as such - only its forward
+/// from <c>Rotation.LookAt</c>, whose roll is arbitrary (<c>AudioListener.Facing</c> says why) - only its forward
 /// vector means anything. The view matrix is built by <c>CreateLookTo</c> against the world's up, so
 /// the basis here is rebuilt the same way. Taking <c>Rotation.Right</c> instead would work only while
 /// the roll happened to be zero.
@@ -92,7 +92,7 @@ public static class ParkPicking
 		var answer = Resolve( Input.Mouse.Position );
 
 		// A cell pinned from the debug console stands in for the pointer's, for the reason `worldclick`
-		// exists: synthetic motion reaches the window system and never SDL, so without it nothing that
+		// exists: the console cannot move the pointer, so without it nothing that
 		// follows the pointer - the queue tool's squares and cursor - could be driven or photographed.
 		if ( Pinned is { } pinned )
 			answer = answer with { Cell = MapStep.CellId( pinned.X, pinned.Y ) };
@@ -196,7 +196,7 @@ public static class ParkPicking
 	/// pointer is over.
 	///
 	/// <para>
-	/// <b>It exists because the pointer is not a thing a test can move.</b> Picking is a function of
+	/// <b>It exists because the console cannot move the pointer.</b> Picking is a function of
 	/// the mouse, so asking the running game "what is under the cursor" only ever reports wherever the
 	/// cursor was left - and a harness that warps the pointer is then testing the window system as
 	/// much as the arithmetic. This separates them: hand it a position and the answer depends on
@@ -217,7 +217,7 @@ public static class ParkPicking
 	/// False where that point is not over the map at all.
 	/// </summary>
 	/// <remarks>
-	/// The same justification <see cref="PickAt"/> carries, one step further on: a harness cannot press
+	/// The same justification <see cref="PickAt"/> carries, one step further on: the console cannot press
 	/// the mouse button either, so a console-driven click has to be able to say which cell it means.
 	/// </remarks>
 	public static bool TryCellAt( float screenX, float screenY, out int cellX, out int cellY )

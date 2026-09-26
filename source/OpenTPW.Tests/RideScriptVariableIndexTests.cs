@@ -113,8 +113,8 @@ public class RideScriptVariableIndexTests
 	}
 
 	/// <summary>
-	/// The enum indexer reads the same variable the name does - which is what it is for, now that it
-	/// resolves by name rather than by its own value.
+	/// The enum indexer reads the same variable the name does - which is what it is for: it resolves by
+	/// name rather than by its own value.
 	/// </summary>
 	[TestMethod]
 	public void TheEnumIndexerAgreesWithTheNameLookup()

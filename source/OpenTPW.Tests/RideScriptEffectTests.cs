@@ -7,7 +7,7 @@ namespace OpenTPW.Tests;
 /// <summary>
 /// The instructions a ride script starts its particles and sounds with: <c>ADDOBJ</c>, <c>EVENT</c> and
 /// <c>KILLOBJ</c>. Between them they are 1,406 of the corpus's 11,913 instructions, and <c>ADDOBJ</c>
-/// alone is the first thing to block 79 of the 308 shipped scripts.
+/// alone appears in 164 of the 308 shipped scripts.
 ///
 /// <para>
 /// <b>Four of these guard against readings that would look right and be wrong.</b> A <c>KILLOBJ</c> that
@@ -238,7 +238,7 @@ public class RideScriptEffectTests
 
 	/// <summary>
 	/// The operands are resolved like every other value operand: a variable is read, a literal is
-	/// sign-extended from sixteen bits. 23 shipped <c>EVENT</c>s name a variable for their node.
+	/// sign-extended from sixteen bits. 24 shipped <c>EVENT</c>s name a variable for their node.
 	/// </summary>
 	[TestMethod]
 	public void TheOperandsAreResolvedLikeAnyOtherValue()
@@ -275,20 +275,20 @@ public class RideScriptEffectTests
 	}
 
 	/// <summary>
-	/// <b><c>FADEOBJ</c> is deliberately still counted; <c>SETOBJPARAM</c> no longer is.</b> This test
-	/// used to assert that both were, and it is kept rather than deleted because the reason they parted
-	/// company is worth pinning.
+	/// <b><c>FADEOBJ</c> is deliberately counted; <c>SETOBJPARAM</c> is built.</b> The two are pinned
+	/// side by side because the reason they differ is worth keeping.
 	///
 	/// <para>
-	/// <c>FADEOBJ</c> is 113 instructions and completes no further script - 199 of 308 either way - and
-	/// it differs from <c>KILLOBJ</c> only in stopping a sound gently, which nothing here can yet hear.
+	/// <c>FADEOBJ</c> is 113 instructions and the only unbuilt one in five scripts, the four seaplanes and
+	/// hallow's firework, and it differs from <c>KILLOBJ</c> only in stopping a sound gently, which nothing
+	/// here can yet hear.
 	/// <c>SETOBJPARAM</c> completes four, and everything it does is in reach: it matches on a tag in the
 	/// record list this already keeps, and the value it stores is the one the engine's own call answers
 	/// when the sound system is down.
 	/// </para>
 	///
 	/// <para>
-	/// <b>The script below now exercises the particle case by accident, so it asserts it on purpose.</b>
+	/// <b>The script below also exercises the particle case, so it asserts it.</b>
 	/// The record it adds is type 1 - a particle - and carries the very tag the <c>SETOBJPARAM</c> names,
 	/// and the engine's dispatch walks particles past: it is the record's type that decides, not its tag.
 	/// So nothing is reached, and a machine that matched on the tag alone would show one here.

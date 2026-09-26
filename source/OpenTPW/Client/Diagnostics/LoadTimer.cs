@@ -6,7 +6,7 @@ namespace OpenTPW;
 /// Times each phase of a level load and says what each one cost.
 ///
 /// <para>
-/// The log already carried a stamp on every line, but only to the SECOND - and with a U+202F narrow
+/// The log carries a stamp on every line, but only to the SECOND - and with a U+202F narrow
 /// no-break space before the AM/PM, which defeats a naive parse. A stamp that coarse can localise a
 /// twenty-second stall to one phase and can do nothing finer, so it cannot tell a phase that takes
 /// 900 ms from one that takes 1,400. This reports milliseconds against the phase that spent them,
@@ -18,8 +18,8 @@ namespace OpenTPW;
 /// rather than an oversight of the rule that puts performance tooling behind a switch. A profiler
 /// runs every frame for ever; this runs once per phase per level load - about twenty lines against a
 /// load measured in seconds - so it costs nothing measurable. It earns the lines twice over: the
-/// loading bar draws the last line logged underneath itself, so a slow load now says where it went
-/// <i>while it is still on the screen</i>, which is exactly what the player watching it lacked.
+/// loading bar draws the last line logged underneath itself, so a slow load says where it went
+/// <i>while it is still on the screen</i>, to the player watching it.
 /// </para>
 ///
 /// <para>

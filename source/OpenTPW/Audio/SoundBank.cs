@@ -3,8 +3,8 @@ namespace OpenTPW;
 /// <summary>
 /// A .sdt bank, with its samples decoded and ready to play.
 ///
-/// A small bank is decoded whole when it loads. The lobby's all are - the four parks' music is
-/// 1.5MB of float each and the biggest sfx bank is jungle's 8MB ambient bed - and for those,
+/// A small bank is decoded whole when it loads. The lobby's all are - each park's three lobby
+/// themes come to 9 to 11MB of float, the biggest sfx bank jungle's 8MB ambient bed - and for those,
 /// decoding a sample at the moment it is wanted would mean decoding on the frame a strike lands.
 ///
 /// A big one is not, because one bank is very big indeed: data\global\Speech holds all 641 of
@@ -12,7 +12,7 @@ namespace OpenTPW;
 /// startup for the sake of the one line he is about to say. Past
 /// <see cref="DecodeEverythingBelow"/> a bank keeps the compressed bytes instead and decodes an
 /// entry the first time it is asked for, which for a twenty-second line is a few milliseconds -
-/// and the advisor's own one-second pause before he speaks covers it. See
+/// and the advisor's own 0.8-second lead-in before he speaks covers it. See
 /// <see cref="Advisor"/>.
 /// </summary>
 public sealed class SoundBank
@@ -20,9 +20,9 @@ public sealed class SoundBank
 	/// <summary>
 	/// How much decoded audio a bank may hold before it switches to decoding on demand.
 	///
-	/// 32MB of float is about six minutes of mono at 22,050Hz, which clears every bank the lobby
-	/// touches - the largest is jungle's ambience at 8MB - and catches the speech banks, which
-	/// are the only things anywhere near it.
+	/// 32MB of float is about six minutes of mono at 22,050Hz, which clears every lobby sound bank -
+	/// the largest is hallow's lobby music at 11MB - and catches the global speech bank, each park's
+	/// music bank and the global kids bank, which are the only banks above it.
 	/// </summary>
 	private const int DecodeEverythingBelow = 32 * 1024 * 1024;
 

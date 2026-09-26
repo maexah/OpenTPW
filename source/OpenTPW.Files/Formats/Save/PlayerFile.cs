@@ -23,8 +23,8 @@ namespace OpenTPW;
 /// dword   number of rides bought with tickets, then a word for each ride id
 /// </code>
 /// <para>
-/// A brand-new player's file (0x005c7f40, 0x005aef50) is sixty-eight bytes: everything zero but the mode, the
-/// swearing filter and the first-park flag, which start on, no parks and no rides, and the options as they
+/// A brand-new player's file (0x005c7f40, 0x005aef50) is sixty-eight bytes: everything zero but the mode the
+/// dialog chose, and the swearing filter and the first-park flag, which start on, no parks and no rides, and the options as they
 /// stand at the time. A park's record is only made once the player is picked (0x005c83b0), one for each
 /// theme, and the records are written in order of their names' bytes, as the original keeps them sorted.
 /// </para>

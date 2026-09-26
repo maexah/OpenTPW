@@ -8,16 +8,16 @@ namespace OpenTPW.Tests;
 /// case.
 ///
 /// <para>
-/// <b>That special case was wrong for as long as it existed.</b> Looking straight back along
-/// <c>-Forward</c> leaves the axis of the turn undefined, so the code turns about the up axis instead -
-/// but it built the quaternion with <c>W = MathF.PI</c>, where a half turn needs <c>W = cos(pi/2) = 0</c>.
-/// The result was not a unit quaternion at all and came back about eighty degrees off.
+/// <b>That special case is easy to get wrong.</b> Looking straight back along <c>-Forward</c> leaves the
+/// axis of the turn undefined, so the code turns about the up axis instead - and a half turn needs
+/// <c>W = cos(pi/2) = 0</c>. A <c>W</c> of <c>MathF.PI</c> is not a unit quaternion at all and comes back
+/// about eighty degrees off.
 /// </para>
 /// <para>
-/// Nothing caught it because nothing had ever looked exactly that way: the lobby and park orbit cameras
-/// both place the eye above what they look at, so their direction always carries a height term and is
-/// never exactly horizontal. A first-person camera's is, whenever it is not pitched - which is how this
-/// surfaced. The near-miss case below is the one that camera actually produces, where a quarter turn
+/// A camera looks exactly that way only when its direction is horizontal: the lobby and park orbit
+/// cameras both place the eye above what they look at, so their direction always carries a height term
+/// and is never exactly horizontal. A first-person camera's is, whenever it is not pitched. The near-miss
+/// case below is the one that camera actually produces, where a quarter turn
 /// leaves a residue of about 4e-8 in Y.
 /// </para>
 /// </summary>
@@ -30,7 +30,7 @@ public class RotationTests
 		var directions = new[]
 		{
 			new Vector3( 1f, 0f, 0f ),              // straight along Forward - the identity case
-			new Vector3( -1f, 0f, 0f ),             // straight back - the special case that was wrong
+			new Vector3( -1f, 0f, 0f ),             // straight back - the special case
 			new Vector3( -1f, -0.00000004f, 0f ),   // what a first-person camera yawed a quarter turn gives
 			new Vector3( 0f, 1f, 0f ),
 			new Vector3( 0f, -1f, 0f ),

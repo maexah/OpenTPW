@@ -561,8 +561,7 @@ public sealed class ParkObjects : Entity
 	///
 	/// <para>
 	/// <b>The direction is settled by the save's own map cells</b>, which mark the cells each built thing
-	/// stands on. The staff
-	/// room's two by two is marked at (58,15)..(59,16) and the fountain's three by three at
+	/// stands on. The staff room's two by two is marked at (58,15)..(59,16) and the fountain's three by three at
 	/// (57,17)..(59,19), while both are anchored a row beyond that - at (58,16) and (57,19) - and both are
 	/// saved at 90 degrees. Only a negative turn puts them there. A positive one lands the fountain on
 	/// (55,19)..(57,21) and the staff room on (57,16)..(58,17), which is not a prediction but a
@@ -570,11 +569,10 @@ public sealed class ParkObjects : Entity
 	/// </para>
 	/// <para>
 	/// <b>The executable's <c>0x168 - angle</c> does not bear on it.</b> The constant sits at the
-	/// <i>queue's</i> own call site
-	/// (FUN_005229e0), so what it says is that a piece of queue turns the <b>opposite</b> way to a built
-	/// thing - it is the difference between the two, not a convention they share. See
-	/// <see cref="ParkQueues"/>, which applies it. The footprint cells above are the whole of the evidence
-	/// for this one, and they are enough on their own.
+	/// <i>queue's</i> own call site (FUN_005229e0), so what it says is that a piece of queue turns the
+	/// <b>opposite</b> way to a built thing - it is the difference between the two, not a convention they
+	/// share. See <see cref="ParkQueues"/>, which applies it. The footprint cells above are the whole of
+	/// the evidence for this one, and they are enough on their own.
 	/// </para>
 	/// <para>
 	/// Those two are the only rotated things in the shipped park whose footprint is bigger than one cell,
@@ -650,7 +648,7 @@ public sealed class ParkObjects : Entity
 	///
 	/// <para>
 	/// <b>Once per frame, after the script ticks, which is the order the engine uses.</b> Its channel sweep
-	/// runs from the per-frame update (<c>FUN_0044e410</c> at <c>0054fa96</c>), past the back edge of the
+	/// runs from the scene draw (<c>FUN_0044e410( 3 )</c> from <c>0054fb6c</c>), past the back edge of the
 	/// 31ms catch-up loop the scripts run inside, off a clock snapshot taken once for the whole frame.
 	/// Advancing and posing are one function there (<c>FUN_004735d0</c>), which is why they are one here
 	/// and why this is driven from <see cref="ParkRides"/> rather than from this entity's own update.

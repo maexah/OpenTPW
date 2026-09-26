@@ -199,14 +199,15 @@ public static class ParkBuilding
 
 	/// <summary>
 	/// The flags word the object constructor <c>FUN_004db090</c> builds bit by bit out of an item's own
-	/// description (<c>0x004db3f3</c>..<c>0x004db425</c>), as far as its keys are established.
+	/// description (<c>0x004db3f3</c>..<c>0x004db425</c>), as far as this project reads its keys.
 	/// </summary>
 	/// <remarks>
 	/// <b>Three bits are set.</b> <c>Info.IsChoosable</c> (<c>+0x3c</c>) is the visitable bit and
 	/// <c>UsageInfo.ProvidesRelief</c> the toilet bit; <c>Info.HasQueue</c> is the queue-path bit, read from
 	/// <c>+0x40</c> (<c>0x004db420</c>), the entry after <c>IsChoosable</c> in the compiled schema
 	/// (<c>0x00744e3c</c>), two before <c>RunsContinuously</c> at <c>+0x48</c>. The other bits come from
-	/// descriptor fields not pinned, and are left clear and counted (<c>BOUGHT_OBJECT_FLAG_BITS</c>).
+	/// descriptor fields the item reader does not read (<c>docs/exe/park-engine.md</c>, "Still open"), and are
+	/// left clear and counted (<c>BOUGHT_OBJECT_FLAG_BITS</c>).
 	/// </remarks>
 	internal static int FlagsFor( ParkItemCatalogue.Item item )
 	{
@@ -491,8 +492,8 @@ public static class ParkBuilding
 	/// on, a path, a queue. <b>The terrain rule itself is NOT reproduced</b>, and the rule to hand is
 	/// not it: <see cref="CellEdge.IsSolid"/> answers "a guest may not step here", which is a different
 	/// question, and type 7 alone is <b>9,077 of Lost Kingdom's 16,384 cells</b> - so using it would make
-	/// more than half the park
-	/// unbuildable. Ground a guest cannot walk across is still ground a thing can stand on.
+	/// more than half the park unbuildable. Ground a guest cannot walk across is still ground a thing can
+	/// stand on.
 	/// </para>
 	/// <para>
 	/// The original's per-cell verdict is <c>FUN_00535670</c>, which compares the cell type against
@@ -629,7 +630,7 @@ public static class ParkBuilding
 	/// <remarks>
 	/// <b>The sense is read off <c>FUN_004d8c20</c>.</b> That function left-rotates the byte by
 	/// <c>log2</c> of the angle's base bit, and the placer pairs the bases <c>1</c>, <c>0x40</c>,
-	/// <c>0x10</c>, <c>4</c> with the angles 0, 90, 180 and 270 (<c>0x00528f62</c>..<c>0x00528f8b</c>) - so
+	/// <c>0x10</c>, <c>4</c> with the angles 0, 90, 180 and 270 (<c>0x00528f62</c>, angle 0's at <c>0x00528f8b</c>) - so
 	/// a quarter is a left-rotate of six, which is a right-rotate of two: east <c>0x04</c> becomes north
 	/// <c>0x01</c>. <c>MapDelta::Rotate</c> sends the east delta <c>(1,0)</c> to <c>(0,-1)</c> at that same
 	/// angle, so the two agree at all four.
@@ -1194,8 +1195,8 @@ public static class ParkBuilding
 
 			// The UI TYPE is here because it is what decides which of the nine object windows a click
 			// opens, and a test that wants a ride should not have to probe the park one thing at a time
-			// to find one. The state
-			// and mCanLoad say whether it is operating and whether it is closed (ParkRideOperation.Close).
+			// to find one. The state and mCanLoad say whether it is operating and whether it is closed
+			// (ParkRideOperation.Close).
 			yield return $"thing {placed.ThingId,3} '{name}' item {placed.CatalogueId} type {type} " +
 				$"at ({placed.CellX},{placed.CellY}) turned {placed.Angle}" +
 				$"{(placed.IsPlaced ? "" : " (not placed)")} state {placed.State} canload {placed.CanLoad}";

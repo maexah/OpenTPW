@@ -84,7 +84,7 @@ public sealed class PeepBehaviour
 		_leaveQueue = leaveQueue;
 		_stillQueueing = stillQueueing;
 
-		// Zero is open, which is the way round the name is not - see ParkWorld.ParkClosed. ParkState
+		// Zero is open, one is shut - see ParkWorld.ParkClosed. ParkState
 		// applies that rule itself, so it is not repeated here.
 		State = state ?? new ParkState( park );
 		Admission = admission;
@@ -286,7 +286,7 @@ public sealed class PeepBehaviour
 	/// <see cref="Peep.HurryingSpeed"/>, and a third of <b>50</b> that is reached only when a bus is due.
 	/// </summary>
 	/// <remarks>
-	/// <b>The 50 is deliberately not reproduced and not declared as a constant.</b> Reaching it needs the
+	/// <b>The 50 is not reproduced and not declared as a constant.</b> Reaching it needs the
 	/// arrival vehicle's <i>script</i> state - <c>FUN_0051a690</c> looks the bus thing up and asks its
 	/// script what it is doing - and this turn does not ask, although the bus runs its script
 	/// (<see cref="ParkRides"/> binds it). Whether the branch is reached is not measured.
@@ -451,7 +451,7 @@ public sealed class PeepBehaviour
 						break;
 
 					// "The person has become stuck on the way to the ride" - they give up on it and think
-					// again, which is what the original does rather than leaving them standing.
+					// again, as the original does; its BigHappinessChange (25) and event 3 are not built (Q102).
 					case WalkVerdict.CannotReach:
 						peep.MajorDest = 0;
 						peep.SetState( PeepState.Deciding, tick, _random );
@@ -646,7 +646,7 @@ public sealed class PeepBehaviour
 			// stop the arm that sent them here chose, and on arriving go on to pick a cell outside.
 			//
 			// <b>The change-of-mind arm is absent.</b> The original turns a guest back to Deciding - "Make
-			// up your mind!" - when mExitLevel (+0x1bc) is positive AND a float conversion of something is
+			// up your mind!" - when mExitLevel (+0x1bc) is positive AND the happiness byte (+0x19c) is
 			// non-zero AND the park is open AND FUN_004fa990 agrees.
 			//
 			// Getting stuck prints "I'm stuck in the park, even though it's closed!!" and leaves them where
@@ -669,9 +669,9 @@ public sealed class PeepBehaviour
 			// still either way - so the difference has to be written down, and UnansweredState is what lets
 			// the program itself tell them apart.
 			//
-			// PlayingSpotAnimation (8) returns to SavedState once ten ticks have passed; FUN_004fc890 is
-			// one line and both halves of it exist here. What does not exist is anything that PLAYS a spot
-			// animation, so the state is never entered.
+			// PlayingSpotAnimation (8) returns to SavedState once ten ticks have passed in the original
+			// (FUN_004fc890). Neither that return nor anything that PLAYS a spot animation is built (Q98),
+			// so this case only stands the guest still.
 			//
 			// <b>GoingToMinorDestination (9) is a LITTER-BIN ERRAND.</b> FUN_004fec90 sets it at 004fedf6, when
 			// the guest's litter (+0x1b4) reaches 90 and FUN_00500dc0 (at 004feddd) finds the nearest thing
@@ -1027,7 +1027,8 @@ public sealed class PeepBehaviour
 	/// <see cref="ParkRideScore"/> - the seven-term weighted mean of distance, queue, excitement, thirst,
 	/// hunger, relief and illness, weighted by the seven <c>PeepInfo.DecisionVar…Weight</c> constants and
 	/// multiplied for newness and for shelter in the rain. A guest who finds nothing worth more than nine
-	/// still does nothing, which is the original's own answer rather than a shortfall in this one.
+	/// does nothing more here; the original also pushes event 1, plays spot animation 4 and docks
+	/// <c>SmallHappinessChange</c> (Q107).
 	/// </para>
 	/// <para>
 	/// <b>The leave test and the arms before the split are not all here.</b> The original leaves when the
@@ -1042,7 +1043,9 @@ public sealed class PeepBehaviour
 		if ( Admission is not { } admission )
 			return;
 
-		// A park that has shut under them: they lose heart badly and set off for a bus stop.
+		// A park that has shut under them: they lose heart badly and set off for a bus stop. A deviation
+		// Q109 holds: the original aims at CrossingParkSide, not a bus stop, and docks BigHappinessChange on
+		// every turn until a route is found (docs/exe/ride-operation.md, "The state-6 turn, in order", (d)).
 		if ( ParkIsClosed )
 		{
 			peep.Happiness = Peep.Change( peep.Happiness, -admission.BigHappinessChange );
@@ -1292,11 +1295,12 @@ public sealed class PeepBehaviour
 	/// and they walk to the ride: the entry cell's centre, where the original aims at the stand point on the same
 	/// cell (<c>FUN_004dedf0(0)</c>, the item's sub-cell offset turned by the facing). The original forgets them
 	/// and puts them out when <c>FUN_004fa5f0</c> fails (<c>0x0050010a</c>), and that also fails without routing on a
-	/// retry stamp at <c>+0x198</c> (<c>0x004fa62a</c>) nothing here keeps, so a failed route is counted and they go
+	/// guest's <c>mStrandedTime</c> (<c>+0x198</c>, <c>0x004fa62a</c>) nothing here keeps, so a failed route is counted and they go
 	/// on.</item>
 	/// <item><b>Wait.</b> At the front and invited but not the nominee: the whole turn is nothing (<c>0x005001d8</c>).</item>
 	/// <item><b>The dirt gate</b> puts out a queuer for a toilet whose <c>+0x44</c> truncates below 25
-	/// (<c>FUN_004e0390</c>). Nothing here keeps that field, whose meaning is not decoded, so it is counted.</item>
+	/// (<c>FUN_004e0390</c>): its State of repair (<see cref="ParkWorld.CatalogueObject.StateOfRepair"/>), which the
+	/// save gives and nothing here lowers. What lowers it is not decoded (Q100), so the gate is counted.</item>
 	/// <item><b>The lost place.</b> The queue walk cannot reach them - they are unlinked, or somebody in front has
 	/// stopped queueing: put out. The original's log says it closes and reopens the ride; nothing does.</item>
 	/// <item><b>In place</b>: too far back for the capacity (<c>FUN_004dda40</c>, counted for a queue path, whose
@@ -1955,8 +1959,9 @@ public sealed class PeepBehaviour
 	/// </para>
 	/// <para>
 	/// <b>The mask is read from the cell being ENTERED, about the side facing the cell being left</b>, and
-	/// the bit is set when the two connect - see <see cref="MapStep"/>, which records why that reading and
-	/// its mirror image cannot be told apart by measuring this park.
+	/// the bit is set when the two connect. The original's wander reads the cell being LEFT, each of its own
+	/// bits along that bit's step (<c>docs/exe/ride-operation.md</c>, "SetRandomDest"); on a symmetric mask,
+	/// as the shipped park's is, the two agree (Q108).
 	/// </para>
 	/// <para>
 	/// <b>This narrows rather than replaces.</b> The original uses the mask <i>instead of</i> an edge test

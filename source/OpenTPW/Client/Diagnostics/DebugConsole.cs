@@ -320,9 +320,8 @@ public static class DebugConsole
 				Reply( $"attract {(LobbyCameraMode.DebugHoldOrbit ? "off - orbiting the selected island" : "on - the camera flies itself")}" );
 				break;
 
-			// Where the flying camera is AIMING, which nothing could report. `attract` above is a SETTER
-			// and must never be polled (VERIFYING rule 88), and `state` carries cam= but nothing about
-			// the aim - so "the view swings when it changes island" was not a measurable claim at all.
+			// Where the flying camera is AIMING. `attract` above is a SETTER and must never be polled
+			// (VERIFYING rule 88), and `state` carries cam= but nothing about the aim.
 			// This is a pure getter, so polling it at frame rate cannot perturb what it measures.
 			case "aim":
 				Reply( Level.Current?.Kind == Level.Scene.Lobby
@@ -395,9 +394,8 @@ public static class DebugConsole
 				Reply( Stats() );
 				break;
 
-			// What a scene leaves behind, by name rather than by count. `stats` can say that 33
-			// assets survived a lobby-park-lobby cycle and cannot say which, which is why the
-			// residue has stayed unidentified. Bare `assets` summarises; `assets list` prints one
+			// What a scene leaves behind, by name rather than by count: `stats` can say how many
+			// assets survive a lobby-park-lobby cycle and cannot say which. Bare `assets` summarises; `assets list` prints one
 			// line each, so a harness can diff the sets between scene builds. The diff has to count
 			// duplicates, not just compare paths: total above distinct means a path was registered
 			// more than once, which is what a missed cache lookup looks like.
@@ -444,11 +442,10 @@ public static class DebugConsole
 				break;
 
 			// The sea's texture, and the sampler it is ACTUALLY drawn with. Water asks for
-			// TextureFlags.Wrap, but what comes back may have been served out of the texture cache,
-			// and a cache hit returns before the sampler is assigned - so `requested` and `sampler`
-			// disagreeing is the fault itself, said by the game rather than inferred from a
-			// photograph. `adopted` says which of the two roads the texture came down, and `size`
-			// is nought for a hit because the size is assigned on the same line the sampler is.
+			// TextureFlags.Wrap, and what comes back may have been served out of the texture cache,
+			// which carries the sampler and the size across (Texture.TryAdoptCached) - so `requested`
+			// and `sampler` disagreeing would be a fault, said by the game rather than inferred from a
+			// photograph. `adopted` says which of the two roads the texture came down.
 			case "water":
 				if ( Entity.All.OfType<Water>().FirstOrDefault() is not { } waterEntity )
 				{
@@ -738,7 +735,7 @@ public static class DebugConsole
 				break;
 
 			// What every thing a guest may be sent to has taken, and whether it can be offered at all. The
-			// two censuses either side of this one cannot answer that: `rides` says what a script is doing
+			// two censuses above this one cannot answer that: `rides` says what a script is doing
 			// and `peeps` says what a guest carries, while whether a shop is REACHABLE turns on a walk over
 			// the map that neither makes. It prints every visitable thing, refused ones included.
 			case "spend":
@@ -942,14 +939,14 @@ public static class DebugConsole
 						ParkCamcorderCameraMode.Enter();
 
 					// StandAt rather than Stand: this puts the viewer down somewhere else rather than
-					// walking them there, so the eye takes the ground as-is. Assigning Stand left it
+					// walking them there, so the eye takes the ground as-is. Assigning Stand would leave it
 					// easing up from the old height, which never finishes while the clock is stopped -
 					// and a stopped clock is how frames are captured.
 					ParkCamcorderCameraMode.StandAt( new Vector3( Argument( 1 ), Argument( 2 ), 0f ) );
 
 					// An optional heading, in radians, because a capture cannot otherwise be AIMED.
 					// Steer() turns the view from where the POINTER is - not from how far it moved - and
-					// a harness cannot move the pointer, so without this a screenshot faces wherever the
+					// the console cannot move the pointer, so without this a screenshot faces wherever the
 					// mouse was last left and then drifts for as long as the clock runs.
 					if ( parts.Length > 3 )
 						ParkCamcorderCameraMode.Yaw = Argument( 3 );
@@ -1005,7 +1002,7 @@ public static class DebugConsole
 				}
 
 				// With two arguments it asks about a point of the window instead of the pointer. That is
-				// not a convenience: the pointer is not something a harness can move reliably - a warp
+				// not a convenience: the console cannot move the pointer - a warp
 				// with no real motion behind it reaches the window system and never reaches the game -
 				// so a test that could only ask about the cursor would be measuring X as much as the
 				// arithmetic. `arrive`, `load` and `thirst` exist for the same reason.
@@ -1015,8 +1012,8 @@ public static class DebugConsole
 				break;
 
 			// A click at a point of the window, and it takes coordinates for exactly the reason `pick`
-			// does: synthetic pointer motion reaches X and never reaches SDL, so a harness cannot select
-			// a row by moving the cursor onto it. Only SDL is skipped - the hit test, the row
+			// does: a warp of the pointer reaches X and never reaches SDL, so a harness cannot select
+			// a row by warping the cursor onto it. Only SDL is skipped - the hit test, the row
 			// arithmetic and both the press and the release handlers are the real ones.
 			case "click":
 				if ( parts.Length < 3 )
@@ -1057,10 +1054,10 @@ public static class DebugConsole
 					ParkPicking.ThingAt( Argument( 1 ), Argument( 2 ) ) ) );
 				break;
 
-			// Buying, selling and moving something, driven by hand. The screens that will do this for a
-			// player do not exist yet, and these exist for the same reason `arrive` did before the
-			// arrival manager: the verb has to be provable in a running park before anything is wrapped
-			// around it.
+			// Buying, selling and moving something, driven by hand. A player buys through the buy screen
+			// and sells and moves through an object's window, buying and moving by way of the hand; these
+			// call ParkBuilding in one step each, so a verb can be proved in a running park without the
+			// screens in front of it.
 			case "buy":
 				Reply( parts.Length > 3
 					? ParkBuilding.Buy( (int)Argument( 1 ), (int)Argument( 2 ), (int)Argument( 3 ),
@@ -1211,8 +1208,7 @@ public static class DebugConsole
 				break;
 
 			// `put`, not `place` - the lobby already has a `place`, which auditions an ambient sample
-			// at a position. Two cases with one label does not compile, which is how this was caught,
-			// but the quieter version of the same mistake is a command that works in one scene and
+			// at a position. Two cases with one label does not compile, but the quieter version of the same mistake is a command that works in one scene and
 			// silently means something else in the other.
 			case "put":
 				Reply( parts.Length > 2
@@ -1239,7 +1235,7 @@ public static class DebugConsole
 			// its build mode are bare RET stubs - so a run really is a sequence of single commits, and
 			// driving them one at a time from here is the same shape the game uses rather than a
 			// shortcut around it. The pointer half is Level.WorldClick; this exists for the same reason
-			// `put` does, because a harness cannot move the mouse.
+			// `put` does, because the console cannot move the mouse.
 			case "path":
 				Reply( parts.Length > 2
 					? ParkPathBuilding.Lay( (int)Argument( 1 ), (int)Argument( 2 ) )
@@ -1269,13 +1265,12 @@ public static class DebugConsole
 					: "delqueue <cellX> <cellY>" );
 				break;
 
-			// >>> WHAT THE RENDERER ACTUALLY HOLDS, as opposed to what the simulation believes. <<<
+			// What the renderer actually holds, as opposed to what the simulation believes.
 			//
-			// This exists because a whole session was lost correlating screenshots against console
-			// replies BY HAND and getting a different answer each time - the console said the cells
-			// were laid and the money spent, the picture showed neither, and seven explanations for
-			// that were each plausible and each wrong. A capture cannot arbitrate between the two
-			// halves of the program; only the program can. So this reports the DRAW side - how many
+			// Correlating screenshots against console replies by hand gives a different answer each
+			// time: the console can say the cells are laid and the money spent while the picture shows
+			// neither. A capture cannot arbitrate between the two halves of the program; only the
+			// program can. So this reports the DRAW side - how many
 			// cells the path mesh actually contains, how many queue pieces are standing, whether the
 			// surfaces exist at all - beside the simulation side, in one reply, from one frame.
 			//
@@ -1312,10 +1307,10 @@ public static class DebugConsole
 			// THE THING UNDER THE CELL IS RESOLVED THE WAY A FRAME RESOLVES IT - ParkPicking.ThingOn,
 			// exactly as Level.WorldClick reaches it through ParkPicking.ThingUnderCursor. Only the ray
 			// is skipped, because a harness has no cursor to cast from. Reading the cell's own occupant
-			// here instead made an instrument that could not see the thing it was pointed at: a placed
+			// here instead would make an instrument that cannot see the thing it is pointed at: a placed
 			// thing sits on ONE cell's occupancy list and owns the rest of its footprint through
-			// mParentID, so this answered on the anchor alone, and a measurement taken through it read
-			// 1 of 12 cells of a ride whatever the picking code did.
+			// mParentID, so it would answer on the anchor alone, and a measurement taken through it would
+			// read 1 of 12 cells of a ride whatever the picking code did.
 			case "worldclick":
 				if ( parts.Length < 3 )
 				{
@@ -1341,9 +1336,9 @@ public static class DebugConsole
 				break;
 
 			// Arms a build mode, so that clicking the park lays a RUN rather than one cell. The mouse
-			// half is Level.WorldClick; this exists for the reason `click` and `put` do - a harness
-			// cannot press a button, and without it the anchor-and-commit path is unreachable by any
-			// test. `tool` alone reports what is armed.
+			// half is Level.WorldClick; this exists for the reason `click` and `put` do - the console
+			// cannot press a button, and without it the anchor-and-commit path is unreachable from the
+			// console. `tool` alone reports what is armed.
 			case "tool":
 				if ( parts.Length < 2 )
 				{
@@ -1402,8 +1397,7 @@ public static class DebugConsole
 					.Select( square => $"({square.X},{square.Y}):{square.Marker}" + (square.Why is { } why ? $"[{why}]" : "") ) ) );
 				break;
 
-			// WHY a guest is not going anywhere, which `peeps` cannot answer and four driven runs were
-			// wasted guessing at. MajorDest is written only after a route succeeds, so a guest who
+			// WHY a guest is not going anywhere, which `peeps` cannot answer. MajorDest is written only after a route succeeds, so a guest who
 			// chose somewhere unreachable looks identical to one who chose nothing - and those two
 			// want opposite fixes. This asks the chooser and the router separately.
 			case "why":
@@ -1443,7 +1437,7 @@ public static class DebugConsole
 				// PARENT AND OCCUPANT ARE PRINTED because nothing else prints them, and a cell's owner is
 				// what decides whose queue a cell belongs to and which thing a click on a footprint
 				// finds. Diagnosing either without them means reasoning about a field no instrument can
-				// show, which is how a queue cell that named no owner went unnoticed.
+				// show.
 				Reply( $"cell ({probeX},{probeY}) type {probed.Type} neighbours 0x{probed.Neighbours:x2} " +
 					$"direction 0x{probed.Direction:x2} flags 0x{probed.Flags:x4} " +
 					$"tile set {probed.TileSet} index {probed.TileIndex} angle {probed.TileAngle} " +
@@ -1456,8 +1450,8 @@ public static class DebugConsole
 				break;
 
 			// Opens the park's own game menu - the thing that actually HOLDS THE WORLD. A window with
-			// Pauses set is the only thing that stops GameClock, and until this was added nothing here
-			// could produce one: buyscreen, hirescreen and openthing all leave the clock running, and
+			// Pauses set is the only thing that stops GameClock, and no other command here opens one by
+			// name: buyscreen, hirescreen and openthing all leave the clock running, and
 			// ParkObjectWindow sets Pauses = false outright.
 			//
 			// `pause` is a DIFFERENT pause and must not be used for this. That one sets Time.Paused so a
@@ -1481,7 +1475,7 @@ public static class DebugConsole
 				break;
 
 			// Opens the purchase menu. A screen is verifiable by eye and capture rather than by test,
-			// and the pointer is not something a harness can move reliably - so this opens it the way
+			// and the console cannot move the pointer - so this opens it the way
 			// the gadget's own button does, leaving the capture to photograph.
 			case "buyscreen":
 				if ( Level.Current is not { Kind: Level.Scene.Park } park )
@@ -1544,8 +1538,8 @@ public static class DebugConsole
 			// What the park is worth. It exists so that a test can prove money moved by EXACTLY one
 			// amount: the clock is stopped under `pause`, so between two of these with no `step`
 			// between them no tick runs, nobody pays at the gate, and nothing but the command under
-			// test can have moved the balance. Measuring across a stepped frame instead is how a
-			// refund check came back 25 out - the park had earned it.
+			// test can have moved the balance; measured across a stepped frame, the park's own takings
+			// would be counted in.
 			// The FEE and the GATE are here beside the balance because the entry-price screen moves both,
 			// and a screenshot can show that a number changed without saying what it changed to. With
 			// them printed, "the plus button charged one more" is a measurement rather than a picture.
@@ -1718,8 +1712,7 @@ public static class DebugConsole
 			+ $"boltOpacity={ParkWeather.Current?.DebugBolt.DebugOpacity:F3} "
 			+ $"boltDist={ParkWeather.Current?.DebugBolt.DebugAxisDistance:F0} "
 			// Compact, because Vector3's own formatting carries spaces and a harness splitting the
-			// reply on whitespace gets a single bracket - which is exactly what the first bolt probe
-			// reported back.
+			// reply on whitespace gets a single bracket.
 			+ $"cam={Camera.Position.X:F0},{Camera.Position.Y:F0},{Camera.Position.Z:F0} "
 			+ $"rainy={script?.Rainy} lightning={script?.Lightning} "
 			+ $"strikes/s={script?.StrikesPerSecond:F3} flyers={script?.FlyingMeshes.Count}";

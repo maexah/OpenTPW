@@ -105,7 +105,7 @@ screenshots centre the name. It is centred.
 | `0x005e1e30` | `IslandLobby_LeaveForPark` | Enter park, affordable: panel hidden, globallobbysfx effect 4, particle 98 - neither for an Instant Action player (`0x004b8fd0` returns on game type 2, `0x004b9020`). Locked, Enter this park plays nothing itself; a click on its button still plays the UI click through the hook | Disassembly |
 | `0x005e1bd0` | `IslandLobby_ViewOnlineWorld` | The island camera's `+0x20` deactivate, which the panel's View button (`0x1e0e9`) calls before the online-world child's `+0x1c`. Whether a connection test stands in front, and what the child shows offline, is not decoded (`docs/QUEUE.md` Q62) | Disassembly |
 
-Measured lobby mix: the goldkey click read back a gain of 0.090 = 0.484 x master 0.5 x duck 0.38.
+Measured lobby mix: the goldkey click read back a gain of 0.090, against 0.484 x master 0.5 x duck 0.38 = 0.092.
 
 ## Particle system
 
@@ -738,7 +738,7 @@ The four park display names **are** in the shipped data, measured with OpenTPW's
 | Address / value | Original name | What it is | Evidence |
 |---|---|---|---|
 | `data/Language/English/THEMENAMES.str` | — | 112 bytes, magic `BFST`, header declaring **4 entries**, decoding to `[0] "Lost Kingdom"`, `[1] "Halloween World"`, `[2] "Wonder Land"`, `[3] "Space Zone"` | Read through `StringFile` |
-| `01`, a three-byte `len`, `len` bytes | — | A BFST record (FileFormats `strings.md`; rows 400 and 417 of UITEXT are over 255, in both languages). **The bytes are character INDICES into `MBToUni.dat`, not text** — which is why `strings`, `grep -a` and any plain text search find nothing but the magic | Byte-level read |
+| `01`, a three-byte `len`, `len` bytes | — | A BFST record (FileFormats `strings.md`, on its `docs/format-corrections` branch; rows 400 and 417 of UITEXT are over 255, in both languages). **The bytes are character INDICES into `MBToUni.dat`, not text** — which is why `strings`, `grep -a` and any plain text search find nothing but the magic | Byte-level read |
 | lengths 12 / 15 / 11 / 10 | — | The four name lengths, visible in the header table, matching the four names exactly, with byte `0x0c` (the space) in the right place in each | Header table |
 | `English/MBToUni.dat` | — | 506 bytes, count byte `0xf9` = **249** characters | Byte read |
 | `american/MBToUni.dat` | — | 504 bytes, count byte `0xf8` = **248**. They differ at byte 7, the count field read after `Seek(6)` — one fewer character shifts every index past it | Byte read |

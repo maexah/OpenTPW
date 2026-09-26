@@ -489,7 +489,7 @@ public class ParkFixedItemsTests
 	/// </para>
 	/// <para>
 	/// The declared span is asserted first so that "no tracks" cannot pass as "the file did not read": these
-	/// are real clips of real length, and they are the limiting case of the 114 the strict loader rejects.
+	/// are real clips of real length, and they are the limiting case of the 127 the strict loader rejects.
 	/// </para>
 	/// </summary>
 	[TestMethod]

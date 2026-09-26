@@ -7,7 +7,7 @@ namespace OpenTPW.Tests;
 /// <summary>
 /// Splitting a .shader into its vertex and fragment halves, on a real shader out of content\shaders. The
 /// project file copies that folder next to the test binary, so this reads it from beside the assembly rather
-/// than from wherever the run happened to be started - which used to be "E:\OpenTPW".
+/// than from wherever the run happened to be started.
 /// </summary>
 [TestClass]
 public class ShaderTests

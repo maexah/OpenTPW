@@ -549,7 +549,10 @@ public class PeepBehaviourTests
 			$"and they are aimed at a gateway cell, not at {first.Navigator.Target}" );
 	}
 
-	/// <summary>One frame, through both clocks, in the order <see cref="Level.Update"/> uses.</summary>
+	/// <summary>
+	/// One frame, through both clocks, in the order a frame runs them: <c>Time.Update</c> in
+	/// <c>Renderer.Update</c>, then <c>GameClock.Update</c> in <see cref="Level.Update"/>.
+	/// </summary>
 	private static void Frame( float seconds )
 	{
 		Time.Update( seconds );

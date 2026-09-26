@@ -33,7 +33,7 @@ public class Level
 
 	/// <summary>
 	/// A park's balance numbers - the theme's own Standard.sam over the global one - or null in the
-	/// lobby, which reads only <see cref="Global"/>. Settable rather than init-only because it is
+	/// lobby. Nothing reads <see cref="Global"/> (Q74). Settable rather than init-only because it is
 	/// built during scene setup rather than in the constructor's own body.
 	/// </summary>
 	public ParkBalance? Balance { get; private set; }
@@ -113,8 +113,8 @@ public class Level
 		// and the original doing the same as it enters a park (0x0054ed7c).
 		GameClock.Rebase();
 
-		// And the calendar starts over with it, as the original zeroes its world-tick counter at park
-		// init (0x00515865). Unconditional rather than park-only so a lobby cannot be left showing the
+		// And the calendar starts over with it, from nought, where the original zeroes its world-tick
+		// counter at park init (0x00515865) and then loads the save's - see GameCalendar.Rebase. Unconditional rather than park-only so a lobby cannot be left showing the
 		// date of the park before it; only a park ever advances it - see the Update below.
 		GameCalendar.Rebase();
 
@@ -720,8 +720,8 @@ public class Level
 
 	/// <summary>
 	/// The build keys, on release as the original's game table fires them: Backspace and Delete. Not
-	/// while a box has the keyboard, and not while a window holds the park - which is inferred, the
-	/// original's table-enable gate not being traced.
+	/// while a box has the keyboard, and not while a window holds the park - which is inferred: the
+	/// original's table-enable gate is decoded, but not whether a park window switches it off.
 	/// </summary>
 	/// <remarks>
 	/// The release edge here also fires when a modifier changes while the key is held, which the
@@ -867,9 +867,8 @@ public class Level
 	/// </summary>
 	/// <remarks>
 	/// <b>Split out from <see cref="WorldClick"/> so the debug console can drive the same path.</b> The
-	/// mouse button is not something a harness can press - synthetic motion reaches the window system
-	/// and never reaches SDL - so without this the whole placing-by-pointing path would be unreachable
-	/// by any test, which is the same reason <c>ParkPicking.PickAt</c> takes coordinates.
+	/// console cannot press the mouse button, so without this the whole placing-by-pointing path would be
+	/// unreachable from it, which is the same reason <c>ParkPicking.PickAt</c> takes coordinates.
 	/// </remarks>
 	internal string ClickWorldAt( int cellX, int cellY, int thingUnderCursor )
 	{
@@ -997,7 +996,7 @@ public class Level
 	}
 
 	/// <summary>
-	/// Whether a window open over this scene holds the world - the game menu, a message box or the options
+	/// Whether a window open over this scene holds the world - the game menu, a message box, the park map or the options
 	/// screen, each of which says so through <see cref="UiWindow.Pauses"/>.
 	///
 	/// <para>
@@ -1027,7 +1026,7 @@ public class Level
 	///
 	/// <para>
 	/// It exists for the debug console. A screen is verifiable by eye and capture rather than by test,
-	/// and the pointer is not something a harness can move reliably - a warp with no real motion
+	/// and the console cannot move the pointer - a warp with no real motion
 	/// behind it reaches the window system and never reaches the game - so the console needs a way in
 	/// that does not go through the gadget's button. The button opens the very same screen.
 	/// </para>

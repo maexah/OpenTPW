@@ -7,8 +7,7 @@ namespace OpenTPW.Tests;
 /// <summary>
 /// The animation instructions a ride script blocks on: <c>FLUSHANIM</c>, <c>TRIGANIM</c>,
 /// <c>WAITANIM</c>, <c>LOOPANIM</c> and <c>WAIT4ANIM</c>. Between them they are 1,016 of the corpus's
-/// 11,913 instructions, and <c>WAITANIM</c> alone is the first thing to block 183 of the 308 shipped
-/// scripts.
+/// 11,913 instructions, and <c>WAITANIM</c> alone appears in 250 of the 308 shipped scripts.
 ///
 /// <para>
 /// <b>These assert what the engine does for a script with no model</b>, which is every script here and
@@ -18,7 +17,7 @@ namespace OpenTPW.Tests;
 ///
 /// <para>
 /// Three of these guard against readings that would look right and be wrong. A <c>WAIT4ANIM</c> that
-/// waits when nothing was triggered would park 74 shipped scripts for ever. A <c>WAITANIM</c> that
+/// waits when nothing was triggered would park 75 shipped scripts for ever. A <c>WAITANIM</c> that
 /// waits the 300 its sibling answers would be wrong by a whole turn's worth of arithmetic - the two
 /// handlers differ in signedness, and only one of them floors. And a <c>LOOPANIM</c> that failed to
 /// clear the triggered deadline would leave a script waiting on an animation that is now looping and
@@ -145,7 +144,7 @@ public class RideScriptAnimationTests
 	/// <summary>
 	/// <c>WAIT4ANIM</c> with nothing triggered does not wait. The handler's first test is whether its
 	/// deadline is nought, and it leaves if it is. A machine that waited anyway would park every one of
-	/// the 74 scripts that use the instruction.
+	/// the 75 scripts that use the instruction.
 	/// </summary>
 	[TestMethod]
 	public void WaitingForAnAnimationNobodyStartedDoesNotWaitAtAll()
@@ -232,11 +231,12 @@ public class RideScriptAnimationTests
 	}
 
 	/// <summary>
-	/// <c>TRIGWAITANIM</c> is counted rather than guessed, and that is now <b>settled</b> rather than
-	/// deferred - it waits on models existing, not on anyone getting round to it.
+	/// <c>TRIGWAITANIM</c> with no model is counted and stepped over - the one declared deviation in
+	/// <c>RideScript.TriggerAndWaitForAnimation</c>. With a model it is built: see
+	/// <see cref="RideScriptModelTests"/>.
 	///
 	/// <para>
-	/// The handler was read through on 2026-09-15. It triggers exactly as <c>TRIGANIM</c> does, marks
+	/// The handler triggers exactly as <c>TRIGANIM</c> does, marks
 	/// <c>+0xbc</c> with the animation id plus one, rewinds four words onto itself and returns without
 	/// ending the slice; on re-entry it asks the model for channel 0 and goes on only when that answer
 	/// plus one matches the mark. <b>With no model the query is skipped and the comparison is made
@@ -246,10 +246,8 @@ public class RideScriptAnimationTests
 	/// </para>
 	///
 	/// <para>
-	/// So implementing it faithfully would hang <b>56</b> scripts rather than complete 11. The 11 came
-	/// from a coverage measure - "scripts whose only missing opcode is this one" - which cannot see an
-	/// instruction whose honest behaviour is to block. That is worth remembering the next time a ladder
-	/// names a leader.
+	/// So reproducing the model-less path faithfully would hang <b>56</b> scripts, which is why a script
+	/// with no model counts the instruction and walks past it.
 	/// </para>
 	/// </summary>
 	[TestMethod]

@@ -81,7 +81,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0045acfc` | | OpenTPW/Client/Game.cs  |
 | `0x004623b3` | | OpenTPW.Tests/LobbyModelAnimationTests.cs OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x004623df` | | OpenTPW.Tests/LobbyModelAnimationTests.cs OpenTPW/World/Lobby/LobbyModel.cs  |
-| `0x00463060` | the build path: checks role 0 exists, triggers it, then queues role 13 to freeze the model on its last frame. Why a newly built thing plays its construction clip and a loaded one does not | OpenTPW/World/Park/ParkRides.cs  |
+| `0x00463060` | the build path: checks role 0 exists, triggers it, then starts role 13 at once, which holds that clip at frame nought. A newly built thing's script, run from word 0, plays it; a loaded one's resumes past it and its channels come back from the save | OpenTPW/World/Park/ParkRides.cs  |
 | `0x004646a1` | | OpenTPW/World/Ride/AnimTimeControl.cs  |
 | `0x004647a0` | the `RSYS` arm of the restore chain: overwrites every animation channel from the saved record and restores the per-node flag words with it, which is what stops a loaded park's things standing frozen | OpenTPW.Files/Formats/Save/ParkThingStates.cs  |
 | `0x00467d00` | | OpenTPW/World/Lobby/LobbyModel.cs  |
@@ -266,7 +266,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004f9f89` | `FUN_004f9f00`: first half of `prev + (cur - prev) * t` | OpenTPW.Tests/ParkGuestPlacementTests.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x004f9fb6` | `FUN_004f9f00`: second half of the interpolation | OpenTPW.Tests/ParkGuestPlacementTests.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x004fa015` | `FUN_004f9f00` copies the octant straight off the thing: the heading is not blended | OpenTPW.Tests/ParkGuestPlacementTests.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
-| `0x004fa62a` | `FUN_004fa5f0`: returns nought without routing on the retry stamp at `+0x198` | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fa62a` | `FUN_004fa5f0`: returns nought without routing on `mStrandedTime` (`+0x198`) | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fa95d` | The place-a-peep routine re-stamps previous := current | OpenTPW.Tests/ParkTickTests.cs OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/PeepNavigator.cs  |
 | `0x004fae10` | | OpenTPW.Files/Formats/Save/RecordStream.cs  |
 | `0x004fb075` | Guest constructor `FUN_004faec0`: happiness set to 50.0 | OpenTPW/World/Park/PeepBehaviour.cs  |
@@ -403,7 +403,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0052818d` | The demolisher puts back the tool it was called under, `FUN_0052f200( prevTool, 0 )`; tool 0 installs the idle mode | OpenTPW.Tests/ParkHandTests.cs OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x0052842b` | The demolisher's second footprint pass: `FUN_005367a0( 0, 0 )` on every cell of the shape but its `.` ones | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00528f62` | Placer: start of the pairing of footprint bases 1, 0x40, 0x10, 4 with angles 0, 90, 180, 270 | OpenTPW/World/Park/ParkBuilding.cs  |
-| `0x00528f8b` | Placer: end of that pairing | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x00528f8b` | Placer: the angle-0 arm's base write, `1` (the pairing's other three at `0x00528fb7`, `0x00528fe7`, `0x0052900f`) | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x005292b2` | Placer sweep: the exit takes its turned bit as its direction | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x005293c3` | Placer sweep: the entrance takes its turned bit as its direction | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00529744` | Placer: returns null when the entrance faces off the map | OpenTPW/World/Park/ParkBuilding.cs  |
@@ -577,8 +577,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005d5970` | | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x005d5db0` | | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x005d5f80` | | OpenTPW/World/Advisor/Advisor.cs  |
-| `0x005d6060` | | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
-| `0x005d6070` | | OpenTPW/World/Advisor/Advisor.cs  |
+| `0x005d6060` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x005d60c0` | | OpenTPW/World/Particles/ParticleSystem.cs  |
 | `0x005d6110` | | OpenTPW/UI/FrontEnd/FrontEndLines.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x005d8bac` | | OpenTPW/World/Level.cs  |

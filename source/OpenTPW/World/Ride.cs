@@ -1,7 +1,7 @@
 ﻿namespace OpenTPW;
 
 /// <summary>
-/// <b>The ride runtime is not built, and this code does not run.</b> Nothing in the tree constructs a
+/// <b>This is not the ride runtime, and this code does not run.</b> Nothing in the tree constructs a
 /// <c>Ride</c>, and if anything did it would throw before the constructor returned: <c>RideVM</c>'s own
 /// constructor writes <c>Variables[VAR_RIDECLOSED]</c> - index 6 - into the list it has just initialised
 /// empty.
@@ -10,7 +10,7 @@
 /// The reader it wants exists: <see cref="RideScriptFile"/> reads the format, and
 /// <see cref="RideScript"/> runs it against a <see cref="RideState"/>. Neither is wired up here, because
 /// this class is still wrong in the ways below - it builds its path with a backslash where everything else
-/// uses forward slashes against the Zio file system, and it drives <c>RideVM</c>, whose constructor throws.
+/// uses forward slashes against <c>FileSystem</c>, and it drives <c>RideVM</c>, whose constructor throws.
 /// A ride that loads and runs its script belongs in something built for it rather than in this - and that
 /// is <see cref="ParkRides"/>, which gives every thing standing in a park the script its own archive
 /// holds, the way the original's object constructor does.

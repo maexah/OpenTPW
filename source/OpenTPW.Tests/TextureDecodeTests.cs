@@ -10,11 +10,9 @@ namespace OpenTPW.Tests;
 /// skipped where there is no installation - see <see cref="GameData"/>.
 ///
 /// <para>
-/// Written because the decode's two scratch buffers were resized from <c>size*size*size</c> floats to
-/// the indices the decode really reaches, and nothing anywhere pinned that. The failure mode is not a
-/// quiet one: a buffer an element short throws out of the list indexer, so decoding every texture a
-/// model names is enough to catch it. That resize is the whole of the risk the load-time work
-/// carried, and this is the only cover it has.
+/// The decode's two scratch buffers are sized to the indices the decode really reaches, and this is
+/// what pins that. The failure mode is not a quiet one: a buffer an element short throws out of the
+/// list indexer, so decoding every texture a model names is enough to catch it.
 /// </para>
 ///
 /// <para>
@@ -89,7 +87,7 @@ public class TextureDecodeTests
 	/// <para>
 	/// <c>base.MD2</c> is the right model to do this with: at 272 meshes it is the largest in the
 	/// game, it names more distinct textures than anything else, and decoding its textures once per
-	/// mesh that used them is what made a park load take twenty seconds. Nothing is asserted about
+	/// mesh that uses them would make a park load take twenty seconds. Nothing is asserted about
 	/// the PIXELS - what this pins is that every shipped texture survives the decode at all, and that
 	/// the decode agrees with the header about how big it is.
 	/// </para>

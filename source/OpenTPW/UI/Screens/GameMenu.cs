@@ -11,7 +11,8 @@ namespace OpenTPW.UI;
 /// the purple skin, centred across the screen, as wide as the text and as tall as a line of it and five
 /// pixels more, turned from the screen's pixels into the layout's units. In the lobby the first starts five
 /// units down; in a park it starts at ten, which is GameMenu_BuildPark passing <c>iVar1 * 2</c> with
-/// <c>iVar1</c> of 5. Each of the others sits five below the one before, in both.
+/// <c>iVar1</c> of 5. Each of the others sits five below the one before, in both - except in a park whose
+/// FUN_005b6450 answers non-zero, where <c>iVar1</c> is 0: the first at 0, and no gap.
 /// </para>
 /// <para>
 /// <b>The pointer.</b> A choice rests at (0, 175, 190), which it is given as it is shown (message 0x11).

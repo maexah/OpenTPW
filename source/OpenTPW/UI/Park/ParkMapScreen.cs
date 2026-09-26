@@ -37,8 +37,8 @@ namespace OpenTPW.UI;
 /// refused for. So this screen is the map, and the map is honest.
 /// </para>
 /// <para>
-/// <b>The terrain colours are not invented either.</b> The original's own land codes (9 outside the
-/// grid, 10, 11, 12) take descriptors from globals that are filled at run time, so what colour it
+/// <b>The terrain colours are not invented either.</b> The original's own land codes (10, 11, 12,
+/// and 9 for track type 25) take descriptors from globals that are filled at run time, so what colour it
 /// paints them is not readable from the image - and the shipped picture already shows the park's
 /// terrain. Painting cells over it in colours chosen here would be decoration, not fidelity. The cell
 /// to pixel mapping is worked out and recorded all the same, because it is what will place a ride on
@@ -76,8 +76,8 @@ internal sealed class ParkMapScreen : UiWindow
 	{
 		// The original pauses the park here and quietens the advisor - see the class remarks. Modal so
 		// that nothing behind it can be clicked, which is what putting the park's interface away
-		// (message 6 to DAT_007cb2ac) comes to here. No dimming backdrop: the stream's root carries no
-		// mesh at all, so there is nothing traced to dim with.
+		// (message 6 to DAT_007cb2ac) comes to here. No dimming backdrop, and the root's own mesh,
+		// map_win (w_map.MD2), is not drawn.
 		Pauses = true;
 		Modal = true;
 

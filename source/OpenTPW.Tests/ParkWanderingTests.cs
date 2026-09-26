@@ -54,11 +54,10 @@ public class ParkWanderingTests
 				Mass: ParkWorld.NavigatorState.DefaultMass, Radius: ParkWorld.NavigatorState.DefaultRadius,
 
 				// <b>Measured off the shipped park rather than invented.</b> A guest with no maximum force
-				// and no maximum speed
-				// cannot accelerate, so they never leave the cell they start on and the anti-vacuity guard
-				// below fires instead of the assertion the test is about. Every guest in Lost Kingdom
-				// carries mass 65,536 and radius 13,107 with a force/speed pair near 2:1; these are
-				// thing 41's own. The helper this was copied from can afford noughts because its guests are
+				// and no maximum speed cannot accelerate, so they never leave the cell they start on and the
+				// anti-vacuity guard below fires instead of the assertion the test is about. Every guest in
+				// Lost Kingdom carries mass 65,536 and radius 13,107 with a force/speed pair near 2:1; these
+				// are thing 41's own. The helper this was copied from can afford noughts because its guests are
 				// TELEPORTED to the exit by Dismiss and never walk a step.
 				MaxForce: 26214, MaxSpeed: 13107, NavMode: 0, CantReachDest: 0, PathFinished: false,
 				PathCount: 0, PathTotalCount: 0, PathBufferCount: 0,

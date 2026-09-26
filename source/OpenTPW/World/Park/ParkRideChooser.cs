@@ -122,7 +122,8 @@ public sealed class ParkRideChooser
 	/// The best thing this guest could set off for, or null if nothing in the park is worth it.
 	/// </summary>
 	/// <param name="gameTick">
-	/// The park's clock, whose <b>bottom bit alone</b> is what settles a tie - see <see cref="Beats"/>.
+	/// The count whose <b>bottom bit alone</b> settles a tie - see <see cref="Beats"/>: the original's <c>mGameTick</c>,
+	/// where <see cref="PeepBehaviour"/> hands in the thing tick (Q132).
 	/// </param>
 	/// <param name="queueLength">
 	/// How long each object's queue is. <b>Null walks the save's queue</b> - from the object's

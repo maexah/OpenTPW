@@ -404,8 +404,8 @@ public class ParkGuestStateTests
 	///
 	/// <para>
 	/// <c>FUN_004ff7f0</c> tests that flag and nothing else to decide what a waiting guest does once the
-	/// gate will admit them: unset, they are sent back to the ticket booths; set, they wait to be let through. So thing 33 restored with
-	/// the flag cleared would be sent to queue up and pay a second time.
+	/// gate will admit them: unset, they are sent back to the ticket booths; set, they wait to be let
+	/// through. So thing 33 restored with the flag cleared would be sent to queue up and pay a second time.
 	/// </para>
 	/// </summary>
 	[TestMethod]

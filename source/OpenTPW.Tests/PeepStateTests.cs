@@ -9,7 +9,7 @@ namespace OpenTPW.Tests;
 ///
 /// <para>
 /// These need no game files and no device: a state's animation and its entry effects depend on the
-/// guest alone, which is the whole reason that half could be built before the navigator exists.
+/// guest alone, which is why that half can be tested without a map or a route.
 /// </para>
 /// </summary>
 [TestClass]

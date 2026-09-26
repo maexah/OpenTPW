@@ -133,9 +133,9 @@ fragment {
 
         vec3 N = normalize(g_oUbo.g_flWorldNormals > 0.5 ? vs_out.vWorldNormal : vs_out.vNormal);
         // g_vLightPos is a world-space point - Level.SunLight.Position - so what it is measured
-        // against has to be world space too. This used to subtract the view-space position, which
-        // pinned the sun to the camera: it rode round with the orbit and lit whichever side of an
-        // island happened to be facing the viewer, wherever the light was actually standing.
+        // against has to be world space too. Measured from the view-space position instead, the
+        // sun would ride round with the orbit and light whichever side of an island faced the
+        // viewer, wherever the light was actually standing.
         vec3 L = normalize(g_oUbo.g_vLightPos - vs_out.vPosition);
         
         vec3 vDiffuse = max(dot(N, L), 0.0) * g_oUbo.g_vLightColor;

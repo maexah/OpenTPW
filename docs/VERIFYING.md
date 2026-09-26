@@ -232,9 +232,9 @@ The ones that have bitten more than once.
   as structural rather than as a failure.** Inside Ghidra's `run_python`, `memory.getBytes`, `api.getBytes`
   **and** `memory.getBlock` all denied `0x00700f94` existed — `getBlock` returning `None`, which is not "I
   could not read this" but "there is nothing here" — while the `read_memory` tool read it at once and the
-  executable on disk agreed byte for byte (`.rdata`, file offset `0x002ff794`). `list_segments` compounded
-  it by printing **PE section headers instead of Ghidra memory blocks**, so the address sat inside a range
-  the listing called initialized while the reader said no block existed. On the strength of that I was one
+  executable on disk agreed byte for byte (`.rdata`, file offset `0x002ff794`). `list_segments`, which
+  lists Ghidra's own memory blocks, put the address inside an initialized `.rdata` block while the reader
+  said no block existed. On the strength of that I was one
   step from recording "the delegated probes fabricated these constants" as a finding; they had not, and all
   eleven floats they reported were correct. **Before disbelieving a number, read it by a second code path —
   and for anything load-bearing, read it out of the file the program came from**, which needs no analysis

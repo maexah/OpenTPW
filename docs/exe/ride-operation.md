@@ -131,7 +131,7 @@ A ride script never writes its own capacity: `Bouncy.RSE` declares `VAR_CAPACITY
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
 | `FUN_004dd7f0` | SetCapacity | Logs `"CAPACITY = %d"`. Clamps the wanted value between the descriptor's `+0x124` and `+0x128` (only when their sum is positive), **writes script variable 2**, and stores the result to the object's `+0x5d`. | Its own string |
-| `FUN_004df8f0` | — | The OPEN/REPAIR path, `"Object %d: repairing fully"`. Passes the descriptor's per-upgrade `+0x198` to SetCapacity, sets wear to 100, writes `VAR_WORN` 0, and on the upgrade arm writes `VAR_DURATION` (var 3, `"DUR = %d"`) and the speed from `+0x1a8` (`"SPEED = %d"`). | Its own strings |
+| `FUN_004df8f0` | — | The OPEN/REPAIR path, `"Object %d: repairing fully"`. Sets the State of repair `+0x44` to 100.0f (never the wear at `+0x48`), writes `VAR_WORN` 0, and on the upgrade arm (`+0x19c` == 2) passes the descriptor's per-upgrade `+0x198` to SetCapacity and writes the speed from `+0x1a8` (`"SPEED = %d"`) and `VAR_DURATION` (var 3, `"DUR = %d"`). | Its own strings |
 | `FUN_004dfe30`, `FUN_004e0050` | — | Two more functions carrying the same "open a ride" tail. | Disassembly |
 | `+0x5d` | `mOperatingCapacity` | File **1034**. | Save record |
 | `+0x5c` | `mOperatingDuration` | Written by the upgrade arm from the descriptor's `+0x1a0`, clamped. | Disassembly |
@@ -186,7 +186,7 @@ Entering state 14 also writes the guest's `+0x1f1` from the sideshow win roll �
 | `FUN_004e0900` | AdmitPerson | Called **by the guest**, not by the ride. | Disassembly of `FUN_005006b0` |
 | `FUN_00500870` | — | Forcing the head on: the object from the guest's own `MajorDest`, the gate `FUN_004e0a70`, unlink, assert, `SetState(0x10)`. Its one caller is the object's `FUN_004e0450` (`0x004e0500`); the guest's own case `0xe` is a separate inlined copy that boards the calling guest. | Disassembly |
 | `FUN_005019f0` | — | The guest's per-state turn dispatch. | Disassembly |
-| `FUN_00501db0` | SetState | The guest state setter this project reproduces as `Peep.SetState`. Case `0xe` writes `person[+0x1f1] = FUN_004e2670( object )`. | `search_bytes` for `88 ?? f1 01 00 00` |
+| `FUN_00501db0` | SetState | The guest state setter this project reproduces as `Peep.SetState`. Case `0xe` writes `person[+0x1f1] = FUN_004e2670( object )`. Case `0xf` asks for animation 1, the walk (`0x00501f5c`; `FUN_004d4140( 1, ... )` when `+0xc` is nought); case `0x10` asks for 3, the stand, on a thing whose byte `+0x32` carries `0x20` (`0x0050212b`), and calls `FUN_004d4170` otherwise. | `search_bytes` for `88 ?? f1 01 00 00`; decompile |
 | `FUN_00500a50` | — | The state-18 (`HeadingForExit`) handler. | State → handler map |
 | `FUN_004fde50` | — | The price-opinion function. Ends `if ((price <= worth) && (price <= person[+0x1a0])) return 0;`. Computes what a guest thinks a thing is WORTH from the item descriptor's `+0x140`..`+0x150` (through `FUN_004dd4e0`), `UsageInfo.RipOffOK`, and the object's chance of winning (`FUN_004e21b0`, `+0x190`) and, **for a sideshow only** (`+0x4ac` == 2), prize (`FUN_004e1a10`); then pushes a price sample. See "At the door" below. | Disassembly |
 
@@ -423,7 +423,8 @@ arrival radius is the same (`DefaultRadius = One / 5`, times 1.6), and so is a r
 `FUN_0050fd40` answers `0x10000` when its total `+0xa0` is nought (`0x0050fda8`), as `PeepNavigator.Progress` does.
 **Where it still differs.** The jitter draws from `PeepBehaviour`'s `System.Random`: `RideScript.NextDraw` reproduces
 `FUN_00516330` exactly (bar `Math.Abs` of `int.MinValue`, which throws where the engine answers `0x80000000`), then
-halves it as `RAND`'s `SHR 1` does, but per script and seeded 1, and the engine's own seed is not established, so only the range and the one draw a call are the
+halves it as `RAND`'s `SHR 1` does, but per script and seeded 1, and the engine's own seed is not established,
+so only the range and the one draw a call are the
 original's. A direction neither switch knows stands the point at the cell's centre, counted
 `QUEUE_PLACE_DODGY_DIRECTION`, where the original routes with whatever its stack held. A place past the queue's cells
 is refused before routing, where the original routes to (127, 255) and fails. `FUN_004fa5f0`'s stranded refusal is
@@ -444,7 +445,7 @@ The supporting helpers:
 | `FUN_004d99c0` / `FUN_004d96f0` | — | The neighbour lookup pair. `FUN_004d96f0` works from the cell's own id word and answers NULL off the 0..127 map (`FUN_004d8300`, signed). | Disassembly |
 | `FUN_00536310` / `FUN_00536320` / `FUN_00536340` | — | Cell predicates on the type dword `+0x8`: 1 (path); 3 or 9 (queue or entrance); 9. | Disassembly |
 | `FUN_004de130` | GetBackOfQueue | Named by its own `"*** GetBackOfQueue() crashed! ***"` (`0x0075b864`). Answers the cached `+0x3a` when non-zero, walking nothing. Otherwise `+0x40` = 0, `+0x3a` = the start, and up to 1000 steps of `FUN_004de670`, each writing `+0x3a` and adding 1 to `+0x40`: the last cell and the count, the start included. A start of 0 answers 0 silently and re-walks every call; a chain of 1000 or more logs, answers 0 once and leaves `+0x3a` set, so the next call answers that. `FUN_004de110` is the same call. | Disassembly |
-| `FUN_00522770` | `CMapCell::GetNeighbours` | Nine instructions: returns the cell's byte at **`+0xc`**, which the game's own cell serialiser `FUN_004d0b30` names **`mNeighbours`** (`LEA EAX,[ESI+0xc]` paired with the string `"mNeighbours"` at `0x0075a064`). It returns `+0x22` (`mHoardingNeighbours`) instead only while `DAT_0081b4cc` is set **and** the cell's `+0x2` is 2 — an overlay path whose trigger is **not established**; it reaches the start of queue, the attached-path loop and every edge test. `+0xd` is `mDirection` and is a different field, read by `FUN_00522850`; conflating the two inverts every queue walk. | Disassembly + the serialiser's own strings |
+| `FUN_00522770` | `CMapCell::GetNeighbours` | Nine instructions: returns the cell's byte at **`+0xc`**, which the game's own cell serialiser `FUN_004d0b30` names **`mNeighbours`** (`LEA EAX,[ESI+0xc]` paired with the string `"mNeighbours"` at `0x0075a064`). It returns `+0x22` (`mHoardingNeighbours`) instead only while `DAT_0081b4cc` is set **and** the cell's `+0x2` is 2 — an overlay path only three editing functions raise (`park-engine.md`, "`FUN_00522700` has a second arm"); it reaches the start of queue, the attached-path loop and every edge test. `+0xd` is `mDirection` and is a different field, read by `FUN_00522850`; conflating the two inverts every queue walk. | Disassembly + the serialiser's own strings |
 | `FUN_004dda20` | — | The queue-room test, `FUN_004ddf50( 0 ) < +0x40 × 4`, unsigned. Asked with id 0, `FUN_004ddf50` never answers -1: it counts from `mFirstInQ` up to **and including** the first guest who has stopped queueing, and no further. | Disassembly |
 | `FUN_004dda40` | — | The longest queue a guest will join (`FUN_004ddb60`, the arrival's third gate) or stay in (the InQueue turn's 5a): 100 for a thing without the queue-path bit (`0x004dda4c`); with it, the capacity sum in "The `InQueue` turn", whose descriptor field pairing is unproven. | Its two callers |
 | `FUN_004fa5f0` / `FUN_004fa530` | SetDest | To an 8.8 point / to a cell's centre. The stranded refusal, then `+0x18`, `+0x1a`, `+0x198` written before the route. | Disassembly |
@@ -569,8 +570,8 @@ and `FUN_004de130` counts that cell before it asks for the next (`0x004de1ae`). 
 so **every measure answers at least one cell**: the faced cell, bare or not, and the queue cells still standing behind
 it. The runs go from the back toward the entrance and the last pop always reaches the faced cell, so **every drain ends
 measuring one cell, room for four.** That back is bare, so `FUN_004de4a0` answers not connected and nothing reopens. A
-measure between two pops, which only a queue with a corner has, finds a back with both its links, reads connected, and
-would reopen a closed ride that passes the inlined guard.
+measure between two pops that leaves queue cells standing, which only a queue with a corner past its node has, finds
+a back with both its links, reads connected, and would reopen a closed ride that passes the inlined guard.
 
 **Who goes.** Each measure puts out, head first, every queuer at a place `>=` four times the cells (unsigned, so -1
 too), except the nominee (`0x004de2b9`) and a guest in raw state 14 (`0x00501422`): `FUN_00501390`, −15, `MajorDest`
@@ -599,9 +600,9 @@ from each call's re-arm (`QUEUE_DRAIN_ADVISOR_0xCB`); the bank's `+0x114` gate o
 per-age percentage, on the refunds (`QUEUE_REFUND_DEPRECIATION`) and on the debit (`QUEUE_DRAIN_DEBIT_DEPRECIATION`,
 `0x00527fe8`); a run over anything but queue or bare ground
 (`QUEUE_DRAIN_CLEARS_ANOTHER_KIND`); and a walk past a thousand cells, which the original's never gives up
-(`QUEUE_END_WALK_UNBOUNDED`). **Open:** what the bank's `+0x114` is; `FUN_004e2290`, the per-age percentage the refund
-and the debit both scale by; whether the advisor's `0xcb` posts are heard. `FUN_004d8c60` (`0x004de266`) writes the route
-counter into the back cell's 16 × 16 block stamp ("The stranded bookkeeping").
+(`QUEUE_END_WALK_UNBOUNDED`). **Open:** what the bank's `+0x114` is; whether the advisor's `0xcb` posts are heard. `FUN_004e2290`, the per-age
+percentage the refund and the debit both scale by, is decoded in `park-engine.md`, "Sell, move and the scrap value". `FUN_004d8c60` (`0x004de266`) writes a fresh
+counter value into the back cell's 16 × 16 block stamp ("The stranded bookkeeping").
 
 #### The closed ride - `FUN_004e0450`
 
@@ -1011,7 +1012,9 @@ pre-step calls `FUN_0050be40` again, ungated, every sweep (`0x004d70f1`). Each h
 entertainer's `0xe` (performing), the guard's `0x10` (a chase), `0x12` and `0x13` (to the exit and back), and the
 researcher's `0xf` (researching). Another kind's number reaching `FUN_005056e0` takes its default, which does nothing
 (its log call, `FUN_005da3c0`, is a bare `RET`). At the end of a rest `FUN_005061d0` runs the kind's decide in the same
-sweep (`0x00506298`), after `FUN_00506d10` has set state 0 with stamp 0.
+sweep (`0x00506298`), after `FUN_00506d10` has set state 0 with stamp 0. The rest ends on `+0x1fc` alone:
+`FLD [ESI+0x1fc]`, `__ftol`, `CMP AL,0x64` (`0x00506275`..`0x00506280`), so it ends when that float truncates to 100;
+`+0x1f8`, raised beside it, is not tested.
 
 ### The idle wait, and the stamp it counts from
 
@@ -1024,7 +1027,9 @@ sweep (`0x00506298`), after `FUN_00506d10` has set state 0 with stamp 0.
   41, 31, 21, 11 and 6 sweeps, 10.17, 7.69, 5.21, 2.73 and 1.49 s.
 - **Only a walk stamps it.** `CStaff::SetState` `FUN_005054d0` case 0 writes `+0x200` = mGameTick while `+0x19c` still
   reads 1 (`0x00505534`) and 0 otherwise (`0x00505542`), so an idle entered from a rest, a job, a strike or another
-  idle is over on the next sweep. Case 6 always stamps (`0x005055b1`).
+  idle is over on the next sweep. Case 6 always stamps (`0x005055b1`). The same setter writes the purpose speed
+  `+0xc2`: nought in cases 0 and 5 (`0x00505555`, `0x00505590`) and 25 in case 4 (`0x0050556c`), the words at
+  `0x0075c7f0` and `0x0075c7f2`.
 - **State 6** (OpenTPW's `Waiting`; no string names it; `STAFFSTATES.str` holds Idle, Patrolling, Working, Resting, On
   strike, Picked up): `FUN_005056e0` leaves it for 0 once mGameTick − `+0x200` > 3 × IdleDuration, unsigned
   (`0x00505745`). Nothing in the executable enters state 6; only a saved `mState` can.
@@ -1244,7 +1249,7 @@ In `rides`, **twelve of thirteen** `Easy_*.sam` files carry real content — `Ea
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
 | `FUN_004e2670` | — | Reached from `FUN_00501db0` case `0xe` (entering `EnteringRide`). Asserts `"Non sideshow object number %d ha[s]…"` (descriptor `+0x4ac` == 2), reads a chance-of-winning byte at **`+0x190`** (decimal 400), computes **`rand() % 100 <= chance`**, writes the result into script variable **11 (`VAR_PARAM`)**, and returns it. | Its own assert |
-| `+0x190` | `mChanceOfWinning` | **It is the OBJECT's, and it is saved and loaded with the object** (`FUN_004db7d0`, beside `mCostOfGoods` at `+0x188`, `0x004dcd01`..; file 1050); two setters (`FUN_004e1a20`, `FUN_004e21c0`) are reached from the object window. Placing one, `FUN_004db090` derives it as `100 - descriptor[+0xec]` at `004db38f`..`004db3a1` — `MOV EDX,[EDI+0xec]` / `MOV ECX,0x64` / `SUB ECX,EDX` / `MOV [ESI+0x190],ECX` — where `+0xec` is `UsageInfo.InitChanceOfLoosing`. That `FUN_004e2670` takes both the catalogue id (`+0xe`) and the script handle (`+0x24`) off the same pointer is what fixes it as the object rather than the person. The "file offset 1050" claim is withdrawn: nothing reads it out of the record. | Disassembly |
+| `+0x190` | `mChanceOfWinning` | **It is the OBJECT's, and it is saved and loaded with the object** (`FUN_004db7d0`, beside `mCostOfGoods` at `+0x188`, `0x004dcd01`..; file 1050); two setters (`FUN_004e1a20`, `FUN_004e21c0`) are reached from the object window. Placing one, `FUN_004db090` derives it as `100 - descriptor[+0xec]` at `004db38f`..`004db3a1` — `MOV EDX,[EDI+0xec]` / `MOV ECX,0x64` / `SUB ECX,EDX` / `MOV [ESI+0x190],ECX` — where `+0xec` is `UsageInfo.InitChanceOfLoosing`. That `FUN_004e2670` takes both the catalogue id (`+0xe`) and the script handle (`+0x24`) off the same pointer is what fixes it as the object rather than the person. OpenTPW reads the item's figure instead (Q97). | Disassembly |
 | `FUN_004e1a10` | `mCostOfGoods` | **Not the chance-of-winning accessor.** It is two instructions, `MOV EAX,[ECX+0x188]; RET`, on the OBJECT. `FUN_004db090` builds `+0x188` from the descriptor's `+0x140`, which is `UsageInfo.InitCostOfGoods`. It is the sideshow's **prize** and the numerator of what winning is worth. The chance of winning is `+0x190`, reached by `FUN_004e21b0`. | Disassembly, 2026-09-20 |
 | `FUN_004e1a00` | `mPricePerUse` | `MOV EAX,[ECX+0x194]`. The divisor in the happiness sum below. | Disassembly |
 | `FUN_004e21b0` | — | `MOV AL,[ECX+0x190]` — the real chance-of-winning accessor. | Disassembly |
@@ -1312,7 +1317,7 @@ Object records are also read at file offsets 1035 and 1062.
 
 ## The script side: how the engine talks to a ride
 
-**The engine talks to a ride through its script's variables, BY NAME, never by index.** A ride archive's companion scripts (`child.RSE`, `effects.RSE`, `EventMap.RSE`) declare none of the common set, while every ITEM's main script declares all twelve — shops and sideshows included, not only rides. **All thirteen shop and sideshow scripts in the jungle declare the identical common twelve in the identical order**, then append their own (`VAR_PEEPID`, `VAR_TEMP`, `VAR_LANE1..3` / `VAR_LANERES1..3`, `VAR_TIMER1`, `VAR_SOUND`). `Bouncy` declares all twelve in enum order plus `VAR_TEMP` and `VAR_SCREAMING`.
+**The engine talks to a ride through its script's variables, BY NAME, never by index.** A ride archive's companion scripts (`child.RSE`, `effects.RSE`, `EventMap.RSE`) declare none of the common set, while every ride's, shop's, sideshow's and toilet's main script declares all twelve; the other features' and the upgrades' declare none of them. **All thirteen shop and sideshow scripts in the jungle declare the identical common twelve in the identical order**, then all but `Cost_shp` append their own (`VAR_PEEPID`, `VAR_TEMP`, `VAR_TEMP2`, `VAR_LANE1..3` / `VAR_LANERES1..3`, `VAR_TIMER1`, `VAR_SOUND`). `Bouncy` declares all twelve in enum order plus `VAR_TEMP` and `VAR_SCREAMING`.
 
 | Index | Name | Direction and meaning |
 |---|---|---|
@@ -1332,7 +1337,7 @@ Object records are also read at file offsets 1035 and 1062.
 
 The inbox/outbox asymmetry is why the polarity looks inverted; it was settled by disassembling a known writer and a known reader beside each other.
 
-**Which opcode writes `VAR_LETMEOFF` depends on the ride — there are SIX, so never say "`UNBOUNCE` writes it" without naming the ride.** Measured by listing all 22 Lost Kingdom ride scripts:
+**Which opcode writes `VAR_LETMEOFF` depends on the ride — there are SIX, so never say "`UNBOUNCE` writes it" without naming the ride.** Measured by listing all 30 Lost Kingdom ride scripts:
 
 | Opcode | Rides that use it to dismiss |
 |---|---|
@@ -1343,7 +1348,7 @@ The inbox/outbox asymmetry is why the polarity looks inverted; it was settled by
 | `HOP` + `DELHEAD` | Mumbo, PorkPie, Spider, Volcano, Monkey |
 | `TOUR 4` | TourRide |
 
-### How every jungle script dismisses — swept whole, 73 scripts, all five folders
+### How every jungle script dismisses — swept whole, 81 scripts, all five folders
 
 The walk-slot count is the header word at `0x1c`, and it is non-zero for **exactly** the `WALKGET` users.
 
@@ -1354,10 +1359,12 @@ The walk-slot count is the header word at `0x1c`, and it is non-zero for **exact
     COAST (3)      Coaster1, Coaster3, Minecart
     UNBOUNCE (1)   Bouncy
     TOUR (1)       TourRide
+    UNLIMBO (3)    arc2x3, Cost_shp, SupBog
+    COPY (6)       burger, Coconut, fries, icecream, Puzzle, Toilet
 
 The one-to-one rule — declares walk slots ⟺ uses the walk family — holds park-wide in both directions, and `Bouncy` alone declares bounce slots (10) and no walk ones.
 
-`LIMBO` is used by **5** scripts: arc2x3, balloon, Cost_shp, giftshop, steak. `Cost_shp` is LIMBO 1, LIMBOSPACE 1, UNLIMBO 1, FORCEUNLIMBO 1, INLIMBO 0; `Bouncy` is STARTSCREAM 1, STOPSCREAM 2, COAST 0.
+`LIMBO` is used by **6** scripts: arc2x3, balloon, Cost_shp, giftshop, steak, SupBog. `Cost_shp` is LIMBO 1, LIMBOSPACE 1, UNLIMBO 1, FORCEUNLIMBO 1, INLIMBO 0; `Bouncy` is STARTSCREAM 1, STOPSCREAM 2, COAST 0.
 
 ### The opcode dispatch
 
@@ -1413,7 +1420,7 @@ The slot array is the script's `+0x2c`, counted by `+0x7c`, **`0x20` = 32 bytes 
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
-| `0x00555963` | `RSSE_WALKON` | Handler. Was an undefined byte range Ghidra had never made into a function. | Dispatch table entry |
+| `0x00555963` | `RSSE_WALKON` | Handler. | Dispatch table entry |
 | `0x00555b0c` | `RSSE_WALKOFF` | Handler. | Dispatch table entry |
 | `0x00555b34` | `RSSE_WALKGET` | Handler; writes the result back into the operand's variable slot when the operand carries the `0x40000000` tag — the same outbox shape `UNBOUNCE` has. | Dispatch table entry |
 | `FUN_00556f40` | — | `WALKON`'s implementation. Takes the first slot whose STATE is 0, stores the handle and both nodes, sets due = now + `duration * 100` (a zero duration becomes 100), derives the facing with `fpatan` between the two node positions **masked to 3 bits (8 octants)**, and sets **state 1**. Asserts `"Walknodes need a `setwalk`…"` if no node table is declared, and `"WALK: Could not add peep t…"` when every slot is busy. | Disassembly |
@@ -1422,7 +1429,7 @@ The slot array is the script's `+0x2c`, counted by `+0x7c`, **`0x20` = 32 bytes 
 | `FUN_00557d80` | — | The **per-frame** stepper, called once per script per frame from the positioner. Progress is `(now - start) * 1000 / (due - start)`; at **≥ 1000** state 1 becomes **2** (and action 4 attaches the rider to the head node), and state 3 becomes **4**. | Disassembly |
 | `FUN_00557ab0` | — | The positioner; also the only reader of `+0x6e`. | Disassembly |
 | `FUN_005580a0` | — | Pure presentation: interpolates between two node positions and calls `FUN_004f9e60` to place the sprite. | Disassembly |
-| `FUN_00556b90` | — | Resolves a node id **in the ride's MODEL** — space `0x800` for a walk node, `0x80` for a head node — and logs `"RSSE: Invalid Node ID"` on a miss. | Its own string |
+| `FUN_00556b90` | — | Resolves a node id **in the ride's MODEL**, in the space its fifth argument names — `0x800` for a walk node and `0x80` for a head node from the walk family, `0x200` for a sound and `0x100` for particles from `FUN_005573d0` — and logs `"RSSE: Invalid Node ID"` on a miss. | Its own string |
 | `FUN_004f9e60` | — | Place a sprite. | Disassembly |
 
 **The operand mapping, measured from the push order** (cdecl, right-to-left, so operands 1..7 are `param_2`..`param_8` of `FUN_00556f40` IN ORDER): 1 handle (`+0x10`), 2 walk node (`+0x00`), 3 head node (`+0x02`), 4 off-from (`+0x04`), 5 off-to (`+0x06`), **6 ACTION (`+0x16`, the one tested against 4)**, 7 flags (`+0x1a`). Confirmed by the corpus: action takes only 1, 4, 5, 6 across the park, and the two scripts passing **4** — `Totem` and `tvsim` — are exactly the head-node case. `WALKON`'s action operand picks the node space: **4 = a HEAD node (space `0x80`)**, anything else a walk node (space `0x800`).
@@ -1497,7 +1504,7 @@ and it is the answer to why a peep would otherwise step rather than walk.
 |---|---|---|
 | person `+0x190` / `+0x194` | `mPreviousX` / `mPreviousY` — the position as it stood at the **last** thing sweep. `+0x194` is the one that pairs with the Z axis. | Named by the person-base serialiser `FUN_004f8b10` |
 | person `+0xd4`, its `+0x8` / `+0xc` | the mover sub-object's live position, 16.16 fixed point, `0x10000` = one cell (the constructor seeds `(cellX << 16) + 0x8000`, the cell centre) | Disassembly |
-| `FUN_004fa870` | Stamps `previous := current`, ending `FUN_00510160( person+0x190, person+0x194 )` — a **thiscall** on the mover, so the decompiler drops `ECX` and it reads as two args. It is **the first call of every person kind's tick handler** — `FUN_00501650` at `0x00501658` (guests), `FUN_00505490` at `0x00505495` (staff) — and in the guest handler it sits **ahead of the `(id & 3)` needs stagger**, so it is unconditional: every peep, every sweep. Straight-line, no early return. | Disassembly |
+| `FUN_004fa870` | Works out the speed first, `((+0xc0 + +0xc2 + +0xc4) / (u16)[0x0075c7fc] − +0xc8 × [0x007006f0]) × [0x007006f4]`, stores it back at `+0xc8` and passes it to `FUN_00510190`, and decays `+0xc4` to 99/100. Then it stamps `previous := current` with `FUN_00510160( person+0x190, person+0x194 )` — a **thiscall** on the mover (`person+0xd4`), so the decompiler drops `ECX` and it reads as two args — and ends with `FUN_004d4190` on `person+0xc`. It is **the first call of every person kind's tick handler** — `FUN_00501650` at `0x00501658` (guests), `FUN_00505490` at `0x00505495` (staff) — and in the guest handler it sits **ahead of the `(id & 3)` needs stagger**, so it is unconditional: every peep, every sweep. Straight-line, no early return. | Disassembly |
 | `FUN_004f9f00` | **The blend.** `0x004f9f89`–`0x004f9fd2`: `MOV EAX,[ESI+0x194]` / `SUB` / `FILD` / `FMUL [ESP+0x14]` / `FIADD`, then the identical six instructions for `[ESI+0x190]` — i.e. `prev + (cur − prev) · t` per axis. | Disassembly |
 | — | **Height is forced to nought, not interpolated**: `0x004f9ffd MOV dword ptr [EAX],0x0`. The ground under the sprite is resolved separately. | Disassembly |
 | — | **Facing is NOT interpolated**: `0x004fa015 MOV EDX,[ESI+0x1c]` goes straight to the out-param. So a peep's position glides while its octant **snaps** at sweep boundaries. | Disassembly |
@@ -1527,28 +1534,28 @@ live at person `+0x218`/`+0x21c` (save 430 / 434), and their only live reader is
 `+0x210`: it places a *secondary* sprite at the pair's old value and only then overwrites them, which is
 one frame of deliberate lag for something trailing its owner. **What that something is remains unsettled** —
 one reading is a held balloon (`+0x210` is named `mBalloonScript` by the guest serialiser, and the height
-term shortens as the owner moves), another a ground effect — and `+0x210`'s name is already flagged as
-uncertain under "The guest record, as named by the game's own save reader" above. It does not bear on the walking case either way.
+term shortens as the owner moves), another a ground effect — and the reads of `+0x210` in
+`FUN_005019f0` case `0x11` are off a staff record, so they do not question that name ("The guest record, as named by the game's own save reader" above). It does not bear on the walking case either way.
 
-### What these constants cost to confirm, because the first reading of them was wrong
+### What these constants cost to confirm
 
 `run_python`'s `memory.getBytes`, `api.getBytes` **and** `memory.getBlock` all report **no block** at
 `0x00700f94`, while the `read_memory` tool reads it immediately and the file on disk agrees byte for byte.
-`list_segments` compounds it by printing PE section headers rather than Ghidra blocks, so the address looks
-initialized while the reader denies it exists. Every constant above was therefore taken **twice** — once
+`list_segments` lists Ghidra's own memory blocks and puts the address inside an initialized `.rdata` block,
+while the reader denies it exists. Every constant above was therefore taken **twice** — once
 through `read_memory`, once out of the executable — and `docs/VERIFYING.md` rule 102 records the trap.
 
 ## The SCREAM family
 
 All of it plays from **`cat_kids`** — `DAT_00803a24`, named outright by `Sound_RegisterGlobalCategories`, whose slots are **not in address order**: `0x803a20` ambient, `0x803a28` rides, `0x803a2c` ui, **`0x803a24` kids**, `0x803a30` staff, `0x803a34` speech. Guessing the name from the address gives `cat_rides` and is wrong.
 
-The family's dispatch-table handlers sit at **`0x00555e5e`** (86), **`0x00555ef7`** (87), **`0x00555f1b`** (88) and **`0x00555fda`** (89), in the same `0x555…` region as the bounce and walk handlers. Like the walk handlers, all four were **undefined bytes** in the raw disassembly rather than recognised functions, which is why an automated scan of named functions misses them; they are reached through the pointer table like every other opcode. Read them out of the table rather than hunting them: the jump table is at **`0x005567d8`**, so opcode *n*'s handler is the dword at `0x005567d8 + n*4`.
+The family's dispatch-table handlers sit at **`0x00555e5e`** (86), **`0x00555ef7`** (87), **`0x00555f1b`** (88) and **`0x00555fda`** (89), in the same `0x555…` region as the bounce and walk handlers. Like the walk handlers, all four are reached through the pointer table like every other opcode, and Ghidra's auto-analysis leaves them undefined bytes; in the project they are functions named `RSSE_STARTSCREAM`, `RSSE_STOPSCREAM`, `RSSE_SINGLESCREAM` and `RSSE_SCREAMLEVEL`. Read them out of the table rather than hunting them: the jump table is at **`0x005567d8`**, so opcode *n*'s handler is the dword at `0x005567d8 + n*4`.
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
 | `FUN_00551130` | `STARTSCREAM` | Opcode **86**, 2 operands. **Refuses if a scream handle is already held**, logging `"RSSE: Started screaming without s…"`, and then stores the refusal's 0 over `+0xd0` (`0x00555ee6`), so the old chain screams on unstopped. Operand 2 bands the sample: 0 plays nothing, 1 → effect **0x47**, 2-3 → **0x48**, 4-7 → **0x49**, 8+ → **0x4a**. Straight after the play it sets the voice's **parameter 6** to `(operand + speed) / 2` via `FUN_0051bc40` (`0x00551261`..`0x00551265`). The handle is kept on the script at **`+0xd0`**. | Its own string |
 | — | `STOPSCREAM` | Opcode **87**, 0 operands. Calls `Sound_StopFading` on the held handle when there is one, and clears `+0xd0` (`0x00555ef7`..`0x00555f0a`). For a held scream that is a **hard cut** of its chain's newest child, fading on or off - see `audio.md`, "How the engine plays an effect". | Disassembly |
-| `FUN_00551320` | `SINGLESCREAM` | Opcode **88**, 2 operands. A **4×4 grid**: the same first-operand band crossed with `(a+b)/0x32` clamped 0..3, giving ids **0x4b..0x5a**. So 71-74 are the LOOPING screams and 75-90 the one-shots. **It applies NO volume and keeps NO handle** — every arm calls `Sound_PlayEffect` and returns it, and the handler at `0x00555f1b` throws the result away rather than storing it at `+0xd0` or `+0x48`. Fire and forget. | Disassembly |
+| `FUN_00551320` | `SINGLESCREAM` | Opcode **88**, 2 operands. A **4×4 grid**: the same first-operand band crossed with `(a+b)/0x32` clamped 0..3, giving ids **0x4b..0x5a**. So 71-74 are the held screams (chains of one-shot children, `audio.md`) and 75-90 the one-shots. **It applies NO volume and keeps NO handle** — every arm calls `Sound_PlayEffect` and returns it, and the handler at `0x00555f1b` throws the result away rather than storing it at `+0xd0` or `+0x48`. Fire and forget. | Disassembly |
 | `FUN_00551560` | — | `SINGLESCREAM`'s **negative branch**, `if ( operand2 < 0 )`: picks on band alone — 1 → **0x69**, 2-3 → **0x6a**, 4-7 → **0x6c**, 8+ → **0x6d** — and sets no volume. **0x6b is skipped; that is the original's own gap, not a transcription slip.** | Disassembly |
 | `FUN_00551290` | `SCREAMLEVEL` | Opcode **89**, 1 operand. `FUN_00551290( handle, operand, speed )`: re-sets **parameter 6** of the scream ALREADY held, by the same `(a+b)/2` clamp (`0x005512b8 PUSH 0x6`). It does nothing at all when no handle is held. | Disassembly |
 | `0x00556009` | — | **`SCREAMLEVEL` overwrites the scream handle with the PARAMETER CALL's return value** — `MOV dword ptr [EBP + 0xd0],EAX` straight after `CALL 0x00551290`, whose own return is `FUN_0051bc40`'s, which is `FUN_006b5b80`'s, which is a bare virtual call that Ghidra types `void`. **What lands in `+0xd0` is not proven from this executable.** The engine's own music and kids-91 code stores the same call's return back into its handle global (`0x0051e75f`, `0x0051e808`), the same idiom, so it is most likely the handle itself. Do not reproduce this without saying so. | Disassembly |
@@ -1591,7 +1598,7 @@ The variety is not inside the sound engine. It is `Bouncy.RSE`'s own subroutine 
 207  RETURN
 ```
 
-So **the band operand is the rider count**, and the scream is torn down and restarted whenever that count crosses one of `STARTSCREAM`'s own boundaries (1, 2-3, 4-7, 8+). `COPY VAR_SCREAMING, 65535` at instruction **17** seeds the cache with -1, a value `BOUNCING` can never return, so the first pass always starts one. This is also why `STOPSCREAM` outnumbers `STARTSCREAM` two to one across the corpus: the pair is a restart idiom, not a start/stop pair.
+So **the band operand is the rider count**, and the scream is torn down and restarted whenever that count changes, even inside one of `STARTSCREAM`'s own bands (1, 2-3, 4-7, 8+). `COPY VAR_SCREAMING, 65535` at instruction **17** seeds the cache with -1, a value `BOUNCING` can never return, so the first pass always starts one. This is also why `STOPSCREAM` outnumbers `STARTSCREAM` two to one across the corpus: the pair is a restart idiom, not a start/stop pair.
 
 ## A held scream is REPLAYED, by a chain in the executable
 
@@ -1599,7 +1606,7 @@ So **the band operand is the rider count**, and the scream is torn down and rest
 
 `DAT_00802bcc` is a forwarder, written through a pointer, which is why it shows only reads; the play is the manager's `+0x10`, `0x006b87d0`. `FUN_006bf330` opens both map files, but it is the whole category load, reached only from registration and never from a play.
 
-**What the shipped data says, now that the headers are decoded.** From `data/global/sound/cat_kidsSFX.map`:
+**What the shipped data says.** From `data/global/sound/cat_kidsSFX.map`:
 
 | effect | variations | samples | wait between children | record `+0xc` (a priority, not a delay) | sample length |
 |---|---|---|---|---|---|
@@ -1610,7 +1617,7 @@ So **the band operand is the rider count**, and the scream is torn down and rest
 
 The wait is drawn per child and counted from that child's start, so a busy ride screams more often and can overlap itself. A chain belongs to one handle, and nothing is kept per effect. **Two rides in one band each scream on their own clock, and one stopping leaves the other exactly as it was.** OpenTPW keeps one chain per ride (`ParkScreams`, Q9).
 
-**The record's fifth int is not a loop flag, and now it is decoded.** It looks like one in `cat_kids` alone, where it is 0 for every one-shot and `0x00060404` for all four scream bands. It is `{u16 flags, u8 parameter id, u8 0}`:
+**The record's fifth int is not a loop flag.** It looks like one in `cat_kids` alone, where it is 0 for every one-shot and `0x00060404` for all four scream bands. It is `{u16 flags, u8 parameter id, u8 0}`:
 - The flags pick the voice class (`0x006b6774`). The `0x0404` of 71-74 is the chaining class.
 - The byte is the parameter that drives the chain's variation (`0x006bbfae`). It is 6 for the screams, 4 for music, and 7 for kids 91.
 
@@ -1630,7 +1637,7 @@ Of the opcodes that appear in the scripts of things actually **placed** in Lost 
 
 ## Loading a park does not rebuild what is in it — and there is no guard anywhere
 
-A ride's script starts by playing the clip that builds the ride. `Bouncy.RSE`'s **second** instruction,
+A ride's script starts by playing the clip that builds the ride. `Bouncy.RSE`'s **third** instruction,
 body word 4, is `WAITANIM 0 0` — role 0 entry 0, the construction clip — and `WAITANIM` starts the
 animation as well as waiting on it. (The **first** is `NAME`, at word 0, in all fourteen of the shipped
 park's scripts.) So anything that starts these scripts from word 0 watches every
@@ -1646,7 +1653,7 @@ little-endian in the file and read backwards in a dump (`WRLD` as `DLRW`). Two o
 | `FUN_00415270` | — | the restore chain: 17 modules in order, each checked against its trailing tag. Logs `"<module> loaded %d bytes"` per arm | read |
 | `FUN_004647a0` | — | the `RSYS` arm, "Ride System". Calls the build path per object, then **overwrites every animation channel from the saved record** and restores the per-node flag words (bit `0x10` = hidden) | read |
 | `FUN_005597a0` | — | the `RSSE` arm, "RSSE scripts". Mallocs 244 bytes per script and reads **the whole struct from the file**, preserving only the two list pointers around the read — so the program counter at `+0x3c` comes back with it | read |
-| `FUN_00463060` | — | the build path. Checks role 0 exists, triggers it, then triggers `0xd` — role **13**, freeze-at-frame-0 — which queues behind role 0 and pins the model on the clip's last frame once it has run | read |
+| `FUN_00463060` | — | the build path. Checks role 0 exists, triggers it, then triggers `0xd` — role **13**, freeze-at-frame-0 — which starts at once (`FUN_004732a0` queues neither pseudo-role) and holds role 0's clip at frame nought | read |
 | `FUN_00473e30` | — | the channel reset the build path calls first. With its second argument set it writes the sentinel `0xc` into every channel's `AnimID` *and* `DeferredAnimID` | read |
 | `FUN_00473550` | — | called when the restore put **no** channel on role 0; walks the nodes and clears `0x800` off any carrying `0x100` | read |
 | `FUN_00472cb0` | — | binds a clip to a channel: writes the span and the elapsed-frame scale | read |
@@ -1654,8 +1661,8 @@ little-endian in the file and read backwards in a dump (`WRLD` as `DLRW`). Two o
 | `FUN_0055a300` | — | a two-byte setter, `*(short *)(script + 0xc0) = value`. The **third writer** of the speed word, and the one that pushes an object's operating speed over the loader's hardcoded 50 | read |
 
 So a newly built thing and a loaded one are the same code with opposite outcomes. The player building
-one reaches `FUN_00463060` and nothing overwrites it afterwards, so role 0 plays and role 13 freezes it
-on its last frame — which is exactly what a built item should look like. A **loaded** one runs the same
+one reaches `FUN_00463060`, which holds role 0 at frame nought, and nothing overwrites it afterwards, so
+its script's `WAITANIM 0 0` plays the clip through to its last frame — which is exactly what a built item should look like. A **loaded** one runs the same
 path and then has its channels and its script state written over from the file before a frame is drawn,
 so the trigger is discarded and the construction clip never appears.
 
@@ -1699,7 +1706,7 @@ Behaviour that reads like a bug and is the original:
 
 - **A guest short of the price is left short, not refused, when the charge is taken.** `FUN_004fe1a0` subtracts the price, unclamped, when it is non-zero; the only test of a price is `FUN_004fde50` at the door before boarding (`0x00500715`), and it is not asked again at the charge.
 - **A healthy ride's turn never completes an admission.** `FUN_004e0450` is reached only while closing, or from `Invite`'s `mCanLoad == 0` bail. The guest's own state-14 turn does the completion.
-- **A shop is offered and paid like a ride.** The queue-room test reads the object's `+0x40`, which is **not** `mQueueSizeInCells` as loaded: `FUN_004de130` (`GetBackOfQueue`) *overwrites* it by walking the map whenever `mBackOfQueue` is nought, and `FUN_004dd920` calls that **before** it reads the count. The shop's entry cell connects to a path, so the walk answers one cell and `0 < 4` passes. All six objects carrying the choosable bit really can be offered — the three toilets are in the identical position, and no toilet in any park could ever be visited under the old reading. **And a shop does NOT take its money through LIMBO**: `Coconut.RSE` declares zero limbo slots and zero walk slots and uses neither family, running the same `VAR_LETMEON` → `WAIT 1000` → `VAR_LETMEOFF` handshake a ride runs. The engine never reads a script's limbo slots either: swept over all 43 functions that resolve a script frame, with the opcode handlers' own accesses as the positive control. It is paid by the ordinary dismiss path, `FUN_004e1410` → `FUN_005014e0` → `FUN_004fd970` → `FUN_004fe1a0`. Limbo is real, but it is how `steak`, `giftshop`, `balloon`, `Cost_shp` and `arc2x3` hold a guest — never `coconut`, and it is script-private bookkeeping the engine never reads.
+- **A shop is offered and paid like a ride.** The queue-room test reads the object's `+0x40`, which is **not** `mQueueSizeInCells` as loaded: `FUN_004de130` (`GetBackOfQueue`) *overwrites* it by walking the map whenever `mBackOfQueue` is nought, and `FUN_004dd920` calls that **before** it reads the count. The shop's entry cell connects to a path, so the walk answers one cell and `0 < 4` passes. All six objects carrying the choosable bit really can be offered — the three toilets are in the identical position, and no toilet in any park could be visited if the count were read as loaded. **And a shop does NOT take its money through LIMBO**: `Coconut.RSE` declares zero limbo slots and zero walk slots and uses neither family, running the same `VAR_LETMEON` → `WAIT 1000` → `VAR_LETMEOFF` handshake a ride runs. The engine never reads a script's limbo slots either: swept over all 43 functions that resolve a script frame, with the opcode handlers' own accesses as the positive control. It is paid by the ordinary dismiss path, `FUN_004e1410` → `FUN_005014e0` → `FUN_004fd970` → `FUN_004fe1a0`. Limbo is real, but it is how `steak`, `giftshop`, `balloon`, `Cost_shp`, `arc2x3` and the Super Toilet's `SupBog` hold a guest — never `coconut`, and it is script-private bookkeeping the engine never reads.
 - **`SINGLESCREAM`'s negative branch skips effect `0x6b`.** The gap is in the original's switch and is matched by the shipped category listing.
 - **`BOUNCESETBASE` writes a field the bounce family never reads**, so `Bouncy`'s rider nodes stay at 0..9.
 - **A guest the ride cannot route away is teleported onto the exit and left there** with a `?` bubble, and the ride closes itself.
@@ -1735,12 +1742,12 @@ The Jungle Spray is queued for and invited in **about one run in five** at that 
 - **The balloon and costume SPRITE path** out of `FUN_004fe1e0`.
 - **`FUN_005019f0` case `0x11`**, the walk of the `mFirstGuard` chain through `+0x210` / `+0x212`.
 - **Whether a shop's duration of nought is correct** (it may simply not read it) where `FUN_004df8f0` would take a clamped value from the descriptor's `+0x1a0`.
-- **Refuted, so do not repeat:** "only `UNBOUNCE` writes `VAR_LETMEOFF`" — there are six writers, and the claim is false for 21 of the park theme's 22 ride scripts. "The shops' `mOperatingCapacity` might be nought, leaving them permanently full" — every visitable object has a non-zero capacity.
+- **Refuted, so do not repeat:** "only `UNBOUNCE` writes `VAR_LETMEOFF`" — there are six writers, and the claim is false for 16 of the park theme's 17 dismissing ride scripts. "The shops' `mOperatingCapacity` might be nought, leaving them permanently full" — every visitable object has a non-zero capacity.
 - Descriptor keys present in the `.sam` files that OpenTPW does not read yet: `ShopType`, `RideHandlesSprite` (the flag byte's `0x20`, Q52), `RequiresTeleport`, `GoldenTicketCost`, `InitPricePerUse`.
 
 ## Measuring the corpus without inventing findings
 
-- **Match a script listing FIELD-EXACTLY** (`awk '{for(i=1;i<=NF;i++) if($i==op) c++}'`) — no anchors, no substrings — and state the expected count for a known script before running it. A `^\s*[0-9]+\s+OP` anchor silently skips every script whose listing sits on the current instruction (marked `>>`), which made `LIMBO` read as 0 scripts when it is 5. A substring match gave `BUMP` 3 for the wrong reason, then 0 after the anchor "fix"; it is 3.
+- **Match a script listing FIELD-EXACTLY** (`awk '{for(i=1;i<=NF;i++) if($i==op) c++}'`) — no anchors, no substrings — and state the expected count for a known script before running it. A `^\s*[0-9]+\s+OP` anchor silently skips every script whose listing sits on the current instruction (marked `>>`), which made `LIMBO` read as 0 scripts when it is 6. A substring match gave `BUMP` 3 for the wrong reason, then 0 after the anchor "fix"; it is 3.
 - **`wadcat`**: see `park.md`, "Instruments and preserved artifacts".
 - **A census that recomputes is not an observation.** A census that calls the position function itself rather than reading what the renderer used will report the queue cell while riders are being drawn on the ride — indistinguishable from a build where nothing happens.
 - **Collect every state; do not enumerate the ones you expect.** A disjunction across a step boundary ("`BeingAdmitted` or `EnteringRide`") passes on its first half while the chain stalls at exactly that boundary, and cannot detect the missing step.

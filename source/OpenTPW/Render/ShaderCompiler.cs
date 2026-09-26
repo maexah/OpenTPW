@@ -48,8 +48,9 @@ internal static class ShaderCompiler
 		//
 		// What it calls a uniform block matters to every caller of Material.Set. A shader declares both names
 		// - "uniform ObjectUniformBuffer { ... } g_oUbo;" is a block type and a block instance - and this
-		// reflection reports the INSTANCE name, g_oUbo, which is the name every call site binds it by. A name that does not match is not caught
-		// until the first draw of that material, where Material throws with the reflection's own name.
+		// reflection reports the INSTANCE name, g_oUbo, which is the name every call site binds it by. A name
+		// that does not match is not caught until the first draw of that material, where Material throws
+		// with the reflection's own name.
 		var compilationResult = SpirvCompilation.CompileVertexFragment( vertexSourceBytes, fragmentSourceBytes, target );
 
 		// The shader objects themselves are left to NeoVeldrid, which is handed the same Vulkan GLSL the

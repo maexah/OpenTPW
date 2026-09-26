@@ -11,7 +11,7 @@ namespace OpenTPW.Tests;
 /// The <c>WALK</c> family: riding, for the rides a visitor walks onto rather than boards.
 ///
 /// <para>
-/// <b>Eleven Lost Kingdom scripts use it, not one</b> - <c>incagod</c> (40 slots), <c>Lookout</c>,
+/// <b>Ten Lost Kingdom scripts use it, not one</b> - <c>incagod</c> (40 slots), <c>Lookout</c>,
 /// <c>Totem</c> and <c>tvsim</c> (20), <c>balloon</c>, <c>giftshop</c> and <c>steak</c> (10),
 /// <c>Hyenas</c> and <c>Junspray</c> (3) and <c>Squark</c> (1) - and <c>WALKGET</c> appears in every one
 /// of them, which makes it the corpus's most common dismissal. The <c>BOUNCE</c> family, by contrast, is
@@ -61,8 +61,8 @@ public class RideScriptWalkTests
 
 	/// <summary>
 	/// Every ride script the game ships, found by walking rather than by naming - the same sweep the
-	/// bounce tests use, and for the same reason: a hand-written list has produced a missing file more
-	/// than once.
+	/// bounce tests use, and for the same reason: a hand-written list can name a file that is not
+	/// there.
 	/// </summary>
 	private IEnumerable<(string Path, RideScriptFile File)> EveryScript()
 	{
@@ -120,7 +120,7 @@ public class RideScriptWalkTests
 	/// <para>
 	/// This is what identifies the header word at <c>0x1c</c>, and it is the same argument that
 	/// identified <c>0x18</c> next door. The two fields' non-zero scripts are <b>entirely different
-	/// sets</b> - ten declare walk slots and only <c>Bouncy</c> declares bounce ones - so reading either
+	/// sets</b> - thirty-seven declare walk slots and four declare bounce ones - so reading either
 	/// offset as its neighbour would not give nonsense, it would give somebody else's answer, and this
 	/// test is what makes that fail loudly.
 	/// </para>
@@ -215,15 +215,9 @@ public class RideScriptWalkTests
 	/// This is as far as the shipped script goes <b>with no model bound</b>: <c>Junspray</c> only reaches
 	/// <c>WALKOFF</c> once <c>GETANIM_CH</c> says that lane's animation has finished, and a script with no
 	/// players has no animation to finish - so no slot here reaches the state <c>WALKGET</c> collects from.
-	/// <b>This test first asserted the whole round trip and failed for exactly that reason.</b>
-	/// <para>
-	/// <b>The limit was read as the script's and it was the interpreter's.</b> That sentence used to end
-	/// "and nothing plays one in a bare <c>Turn</c> loop", which was true only because the <c>_CH</c> family
-	/// was unbuilt and the player array held one channel where the item declares three. Hand the script its
-	/// own players and the round trip completes - see
+	/// Hand the script its own players and the round trip completes - see
 	/// <see cref="WithItsOwnPlayersTheSideshowLetsARiderBackOff"/>, which is the same shipped script and the
-	/// same loop. This one is kept as the no-model case rather than rewritten.
-	/// </para>
+	/// same loop. This one is the no-model case.
 	/// </para>
 	/// <para>
 	/// The clock has to move, because Junspray holds on <c>WAIT 500</c> and <c>WAIT 1000</c>; a test that
@@ -302,20 +296,20 @@ public class RideScriptWalkTests
 	}
 
 	/// <summary>
-	/// <b>Walked on, walked off, and collected - the half of the family the shipped script cannot reach.</b>
+	/// <b>Walked on, walked off, and collected - the half the shipped script reaches only with a model.</b>
 	///
 	/// <para>
 	/// <c>WALKGET</c> answers nought until the rider has finished walking off, then answers their handle
-	/// exactly once and frees the slot. <b>The "nought first" half is what makes this more than a round
-	/// trip</b>: a <c>WALKGET</c> that simply returned whoever was in slot one would satisfy the second
-	/// assertion and fail the first.
+	/// exactly once and frees the slot. <b>Only the "nought first" half is asserted</b>: a <c>WALKGET</c>
+	/// that simply returned whoever was in slot one would fail it. The second script is asserted only to
+	/// run with nothing unimplemented; what its <c>WALKGET</c>s answer is not checked.
 	/// </para>
 	/// </summary>
 	[TestMethod]
 	public void AWalkIsCollectedOnlyOnceItHasFinished()
 	{
-		// WALKON, then WALKGET before anyone has walked off - which must answer nought - then WALKOFF,
-		// then WALKGET again once the stepper has carried them to the end.
+		// WALKON, then WALKGET before anyone has walked off - which must answer nought. The second script
+		// below adds WALKOFF and two WALKGETs.
 		var file = Build( walkSlots: 2,
 			Word( Opcode.WALKON ), Rider, 1, 1, 1, 1, 1, 1,
 			Word( Opcode.WALKGET ), Var( 0 ),
@@ -330,7 +324,7 @@ public class RideScriptWalkTests
 		Assert.AreEqual( 0, script.NotImplemented, "an instruction in this script is unimplemented" );
 
 		// <b>The load-bearing half.</b> A WALKGET that simply handed back whoever was in the first slot
-		// would pass the collection assertion below and fail this one.
+		// would fail this one. Nothing below asserts the collection itself.
 		Assert.AreEqual( 0, script.Variables[0],
 			"WALKGET answered somebody who had not finished walking off" );
 
@@ -342,9 +336,9 @@ public class RideScriptWalkTests
 			Word( Opcode.WALKGET ), Var( 1 ),
 			Word( Opcode.END ) ) );
 
-		// Two turns: the first runs the body, the second gives the stepper a later clock to finish the
-		// leg on. The script has already ended by then, so the collection happens on the first pass and
-		// the stepper on the second - which is why the body asks twice.
+		// Two turns, but the body runs to its END on the first, and a script that has ended takes no
+		// further turn: the stepper never runs again, the rider is still walking off when both WALKGETs
+		// ask, and both answer nought. Only NotImplemented is asserted.
 		off.Turn( 0f );
 		off.Turn( 10_000f );
 
@@ -353,11 +347,10 @@ public class RideScriptWalkTests
 
 	/// <summary>
 	/// <b>The whole round trip, on the shipped script: a rider walks on, the lane's clip runs, and the ride
-	/// gives him back.</b> This is what the <c>_CH</c> family was for, and it is the first time
-	/// <c>Junspray</c> has completed a cycle here.
+	/// gives him back.</b> This is what the <c>_CH</c> family is for.
 	///
 	/// <para>
-	/// Three things had to be true together, which is why this could not pass before. The item's own
+	/// Three things have to be true together. The item's own
 	/// <c>UsageInfo.NumSimultAnims</c> has to size the player array at three, or lane one's clip and lane
 	/// three's collide on a single channel. <c>TRIGANIM_CH</c> has to put each lane's clip on its own
 	/// channel. And <c>GETANIM_CH</c> has to answer <c>-1</c> once that clip is held at its end, because the
@@ -409,9 +402,8 @@ public class RideScriptWalkTests
 		Assert.AreEqual( 0, script["VAR_ONRIDE"], "and the ride should no longer count him aboard" );
 
 		// <b>Not "the whole script is built"</b>, which is a different and larger claim. The cycle does reach
-		// gaps - the world-touching handlers report that this fixture handed them no park to act on - and an
-		// assertion of nought here passed for six turns of arithmetic that happened to match and was wrong
-		// about why. What this work claims is narrower and is what is asserted: no ANIMATION instruction went
+		// gaps - the world-touching handlers report that this fixture handed them no park to act on. What
+		// this claims is narrower and is what is asserted: no ANIMATION instruction went
 		// unbuilt, so the family the round trip depends on is complete.
 		Assert.IsFalse(
 			Unimplemented.Summary.Any( gap => gap.What.Contains( "ANIM", StringComparison.Ordinal ) ),
@@ -422,7 +414,8 @@ public class RideScriptWalkTests
 	/// <summary>
 	/// <b>The declared slots are a ceiling.</b> Offered more visitors than it has lanes, the sideshow
 	/// takes as many as it declared and refuses the rest - <c>WALKON</c> walks the array and answers
-	/// false when every slot is busy, exactly as <c>BOUNCE</c> does.
+	/// false when every slot is busy, exactly as <c>BOUNCE</c> does. What is asserted is only that at
+	/// least as many visitors were taken on as there are lanes; the refusals are not counted.
 	/// </summary>
 	[TestMethod]
 	public void MorePeopleThanLanesCannotAllBeWalkedOn()
@@ -457,8 +450,8 @@ public class RideScriptWalkTests
 	///
 	/// <para>
 	/// The mapping was measured from the push order - operands one to seven are the handler's parameters
-	/// two to eight, in order - and the corpus is what confirms it: across the whole park the sixth
-	/// operand only ever takes <b>1, 4, 5 or 6</b>, which is a plausible set of kinds, while no other
+	/// two to eight, in order - and the corpus is what confirms it: across all four themes the sixth
+	/// operand only ever takes <b>1, 2, 4, 5 or 6</b>, which is a plausible set of kinds, while no other
 	/// position is so constrained. Reading the action from any other operand would put a lane number or a
 	/// node id there.
 	/// </para>
@@ -495,9 +488,9 @@ public class RideScriptWalkTests
 
 		Assert.IsTrue( seen >= 10, $"only {seen} WALKON instructions were found, so this proved nothing" );
 
-		// <b>The scope is ALL FOUR THEMES, and saying so is the point.</b> This first asserted
-		// [1, 4, 5, 6], which is what Lost Kingdom alone uses - the sweep above walks every theme, and
-		// another one uses 2. A jungle-measured constant asserted over the whole corpus is a test about
+		// <b>The scope is ALL FOUR THEMES, and saying so is the point.</b> Lost Kingdom alone uses
+		// [1, 4, 5, 6] - the sweep above walks every theme, and hallow's Ghostshp and space's scitour
+		// use 2. A jungle-measured constant asserted over the whole corpus is a test about
 		// the corpus's boundary rather than about the engine.
 		CollectionAssert.AreEquivalent( new[] { 1, 2, 4, 5, 6 },
 			actions.Distinct().OrderBy( v => v ).ToList(),

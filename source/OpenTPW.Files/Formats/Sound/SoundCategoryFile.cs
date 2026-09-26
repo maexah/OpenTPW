@@ -15,8 +15,9 @@ namespace OpenTPW;
 /// names a Thunder2.mp2. See <see cref="OpenTPW.LobbyAudio"/> for which ids the lobby uses.
 ///
 /// Both files open with the same shape: a 16-byte GUID identifying which of the two they are
-/// ({E9612C01-31D0-11D2-B409-00A0C993F203} for a BANK, ...C00-...-00B0... for an SFX), then eight
-/// bytes of zero, then a count.
+/// ({E9612C01-31D0-11D2-B409-00A0C993F203} for a BANK, ...C00-...-00B0... for an SFX), then a word
+/// that is 1 in the global speech and the four park music categories and 0 in the rest (see
+/// <see cref="WeightsAreSharesOffset"/>), then a word nought in most files, then a count.
 ///
 /// <b>The BANK file is fully understood.</b> After the count come that many 11-byte records that
 /// hold nothing but leftover pointers - the same handful of values recur across every file, which
@@ -28,7 +29,11 @@ namespace OpenTPW;
 /// 42-byte header per variation, and then, per variation, its 16-byte sample records and its 8-byte
 /// zone records - <see cref="ReadVariations"/> walks exactly that, and ends at the end of the file in
 /// all thirty-one categories the game ships. <see cref="ReadSamples"/> finds the sample records by
-/// what they contain instead, and the two readers agree on every list.
+/// what they contain instead, and the two readers agree except in four
+/// categories. The scan turns away every record naming one of the five MPEG-1 samples, whose length
+/// <see cref="MP2File.Duration"/> reads from the MPEG-2 bitrate table (the global lobby sfx and the global
+/// rides), and it cannot see a variation with no samples (hallow's rides 98 and 103, space's rides 112), so
+/// each of those takes the next list found and the effects after it in the category are shifted along.
 /// </summary>
 public sealed class SoundCategoryFile
 {
@@ -45,10 +50,12 @@ public sealed class SoundCategoryFile
 	/// own, <c>docs/QUEUE.md</c> Q43. A held scream does not use it: see <see cref="Variation"/>.
 	/// </param>
 	/// <param name="Variations">
-	/// How many weighted lists this effect picks between - the second int of its record. It is what divides the run of sample records up between the effects:
+	/// How many weighted lists this effect picks between - the second int of its record. It is what
+	/// divides the run of sample records up between the effects:
 	/// jungle's ambient declares 9, 5, 7, 4, 1, 0, 1, 1, 1, summing to exactly the twenty-nine lists
 	/// that follow it. A zero is real and means an effect with nothing to play; hallow's, jungle's
-	/// and space's ambient each carry one. Checked against all thirty-one categories the game ships.
+	/// and space's ambient each carry one, and so does jungle's rides category (effect 218). Checked against
+	/// all thirty-one categories the game ships.
 	/// </param>
 	public readonly record struct Effect( int Id, TimeSpan RepeatDelay, int Variations );
 
@@ -116,8 +123,8 @@ public sealed class SoundCategoryFile
 
 	/// <summary>
 	/// What the cumulative odds have to reach for a list to be over. See
-	/// <see cref="ReadSamples"/>: the real figures are 65,529 to 65,535 at the end of a list and
-	/// never above 58,248 anywhere else.
+	/// <see cref="ReadSamples"/>: the real figures are 65,516 to 65,535 at the end of a list and
+	/// never above 64,260 anywhere else.
 	/// </summary>
 	private const int Saturated = 65500;
 
@@ -229,8 +236,8 @@ public sealed class SoundCategoryFile
 	///
 	/// A <b>list</b> ends when its odds saturate, because they are cumulative out of 65,535 - so
 	/// a list of six reads 10922, 21844, 32766, 43688, 54610, 65532 and the last of those is the
-	/// end of it. Rounding leaves that final figure anywhere from 65,529 to 65,535 while the
-	/// largest that is <i>not</i> the end of a list is 58,248, so <see cref="Saturated"/> sits in
+	/// end of it. Rounding leaves that final figure anywhere from 65,516 to 65,535 while the
+	/// largest that is <i>not</i> the end of a list is 64,260, so <see cref="Saturated"/> sits in
 	/// the gap between them.
 	///
 	/// An <b>effect</b> is over once it has taken as many lists as its own record says it picks

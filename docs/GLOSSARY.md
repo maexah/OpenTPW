@@ -11,7 +11,7 @@ One line each. If a word is used two ways in the code, both are listed and the p
 | **Object** | A placed thing: shop, ride, sideshow, toilet, bin, fountain... A `ParkWorld.CatalogueObject`. | |
 | **Item** | The catalogue *definition* of an object, from the theme's `ItemDescriptionFile`. An object is an item placed on cells. | |
 | **Ride** | An object whose item can be ridden or queued for. `ParkRides` owns them. `World/Ride.cs` is dead upstream code. | |
-| **Fixed item** | Gate, traffic lights: things the save never positions; `ParkFixedItems` places them. | |
+| **Fixed item** | Gate, traffic lights, bus, ferry, seaplane: things the save never positions; `ParkFixedItems` places them. The sixth, `end.wad`, is left out. | |
 | **Cell** | One square of the 128 × 128 park map. `ParkWorld.MapCell` is what the save says. `ParkState.Record( x, y )` is what the cell is now: the save's record, overlaid with any cell play has built on or cleared. `ParkState.CellAt( x, y )` returns its `RuntimeCell`: litter, litter collector, occupant. | |
 | **ParkWorld** | The save **file**, read once, immutable. Lives in `OpenTPW.Files`. | |
 | **ParkState** | The **running** park: balance, visitors, litter, queues, takings. Owned by `Level`. | |

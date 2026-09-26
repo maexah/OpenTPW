@@ -11,9 +11,9 @@ namespace OpenTPW.Tests;
 /// the same to any script by id, and <c>FINDSCRIPTRAND</c>.
 ///
 /// <para>
-/// <b>These need no world either, which is what made the family implementable now.</b> Every one works
+/// <b>These need no world either.</b> Every one works
 /// on another script's own frame, and the registry they all go through is
-/// <see cref="RideScriptScheduler"/>, which was already here. Nothing about them waits on guests or
+/// <see cref="RideScriptScheduler"/>. Nothing about them waits on guests or
 /// models.
 /// </para>
 ///
@@ -293,8 +293,7 @@ public class RideScriptRelativeTests
 	}
 
 	/// <summary>
-	/// A child reaches back into its parent. <c>GETVARINPARENT</c> is the single most valuable instruction
-	/// left in the corpus - on its own it is what lets seven more shipped scripts run start to finish.
+	/// A child reaches back into its parent with <c>GETVARINPARENT</c>.
 	/// </summary>
 	[TestMethod]
 	public void AChildReachesBackIntoItsParent()

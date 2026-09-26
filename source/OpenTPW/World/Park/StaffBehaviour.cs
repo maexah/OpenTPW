@@ -249,8 +249,8 @@ public sealed class StaffBehaviour
 	{
 		if ( staff.Model is not (GuardModel or ResearcherModel) )
 		{
-			// They have arrived somewhere and have no work to look for, so they stand. Going to Idle is
-			// what stamps the clock, which is what stops this being asked again every turn.
+			// They have arrived somewhere and have no work to look for, so they stand. Going to Idle from a
+			// walk stamps the clock; from an idle it stamps 0, so after that they are asked again every sweep.
 			staff.SetActivity( StaffActivity.Idle, tick );
 
 			return;
@@ -258,14 +258,19 @@ public sealed class StaffBehaviour
 
 		// Too tired to carry on: find the nearest rest area and set off for it - the tired branch of
 		// FUN_00506a40, which asks FUN_00506910 for the nearest object flagged as one.
+		// <b>A deviation (Q136 (a)):</b> the original tests the rest byte, truncated, <= RestLevel (0x00506b41);
+		// this tests the float <, so a rest in [1, 2) is tired there and not here.
 		//
 		// FAILING TO FIND ONE AND FAILING TO REACH IT ARE THE SAME PATH IN THE ORIGINAL, and that is worth
 		// not tidying into two: both fall through to the same "Staff member couldn't find a rest area"
 		// line and the same one-in-sixteen loss of heart. GoAndRest returning false covers both.
 		//
-		// The original also queues animation 0x14 on the way into this branch, before it knows whether it
-		// will find anything. Here the animation follows from the activity - see Staff.AnimationFor - so
-		// the queue is left to SetActivity rather than written twice.
+		// A deviation Q136 (d) holds: after that the original answers 0 and the kind's own choice follows,
+		// so the member walks on (docs/exe/ride-operation.md, "Leaving idle, or a walk: the choice by kind");
+		// here they stand idle.
+		//
+		// The original also shows thought 0x14, tired, on the way into this branch, before it knows whether it
+		// will find anything (FUN_0050be80 at 0x00506b50). Staff thoughts are not built (Q110).
 		if ( staff.Tiredness < RestLevel )
 		{
 			if ( GoAndRest( staff, walk ) )
@@ -368,8 +373,8 @@ public sealed class StaffBehaviour
 	}
 
 	/// <summary>
-	/// Sends a staff member somewhere - the staff half of <c>FUN_004f9490</c>, which is a different
-	/// function from the guest half and sits in front of it.
+	/// Sends a staff member somewhere - the staff half of <c>FUN_004f9490</c>, one function with the guest
+	/// half, whose patrol check sits in front of the link count (<c>docs/exe/ride-operation.md</c>, "SetRandomDest").
 	///
 	/// <para>
 	/// <b>Standing outside your patrol area is answered before anything else</b>: a staff member who has

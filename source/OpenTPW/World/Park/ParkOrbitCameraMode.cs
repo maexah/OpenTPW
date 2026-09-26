@@ -29,8 +29,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	/// What the camera looks at, on the ground. The original's default is (475, 175) in the park's own
 	/// axes, which is grid cell (47, 17) - the park entrance's <c>EntranceA</c> in <c>Standard.sam</c>, one
 	/// cell west of the (48, 17) that <c>MapInfo.FixedItemOrigin</c> names. A cell is 10 units across and
-	/// its centre is at
-	/// <c>grid * 10 + 5</c>, which is exactly where those two numbers come from.
+	/// its centre is at <c>grid * 10 + 5</c>, which is exactly where those two numbers come from.
 	/// </summary>
 	public static Vector3 PointOfInterest { get; set; } = new( 475f, 175f, 0f );
 

@@ -80,7 +80,7 @@ public class ParkScreamChainTests
 	}
 
 	/// <summary>
-	/// The walk steps over the sample records by the count each header gives, and the older reader
+	/// The walk steps over the sample records by the count each header gives, and the sample scan
 	/// finds them by what they contain. They have to agree list for list, or a chain's variation would
 	/// name one list while the category played another.
 	/// </summary>

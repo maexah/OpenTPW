@@ -126,8 +126,9 @@ public static class GameClock
 	///
 	/// <para>
 	/// Every system that runs on the tick reads this same count, rather than one of them draining a
-	/// queue. The original instead runs a single loop that calls each system once per tick
-	/// (0x0054f4bf onwards: the particles, the thing engine, the schedulers, the music level), which
+	/// queue. The original instead runs a single loop that calls each system on its own share of the ticks
+	/// (0x0054f4bf onwards: the particles and the thing engine every tick, the schedulers every 2nd, the music
+	/// level every 32nd), which
 	/// is the same thing while no two of them depend on the order they see each other in. <b>When
 	/// there is a simulation that does</b> - guests reacting to what rides did in the same tick -
 	/// <b>this has to become one loop calling each system per tick</b>, not a count each of them
@@ -138,8 +139,9 @@ public static class GameClock
 
 	/// <summary>
 	/// Ticks run since the game started, never reset. The original's own count, 0x00877d34, goes up
-	/// once per step of the park's loop and is reset to zero on state entry (<c>docs/exe/boot.md</c>). Reported by the debug console's <c>state</c>, which is how a
-	/// pause can be checked without looking at pixels.
+	/// once per step of the park's loop and is reset to zero on state entry (<c>docs/exe/boot.md</c>).
+	/// Reported by the debug console's <c>state</c>, which is how a pause can be checked without looking
+	/// at pixels.
 	/// </summary>
 	public static int Ticks { get; private set; }
 

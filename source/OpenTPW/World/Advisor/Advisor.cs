@@ -65,7 +65,7 @@ namespace OpenTPW;
 /// game's clock (0x00402d90) and holds his sample where it has got to (Advisor_PauseVoice, 0x00598960);
 /// his clips, his lead-in and his cue are timed on that clock, so once the game is let go the line
 /// carries on from where it stopped. In the lobby none of that happens. All three pause only while
-/// 0x00786ba4 says a park is running, and the lobby sets it to 0 as it starts (0x0054e682). So there he
+/// 0x00786ba4, the pause-permission gate, is 1, and the lobby sets it to 0 as it starts (0x0054e682). So there he
 /// talks on over the menu, and a line queued behind the one the options screen quietens starts
 /// straight away, over that screen. This departs from the lobby on purpose: he is paused there as a
 /// park pauses him (see <see cref="Paused"/>).

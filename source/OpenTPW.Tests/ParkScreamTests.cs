@@ -124,10 +124,12 @@ public class ParkScreamTests
 
 	/// <summary>
 	/// <b>The grid's first column cannot be reached at all, and that is arithmetic rather than an
-	/// oversight.</b> The step is <c>(level + speed) / 50</c> with the speed fixed at 50, so a step of
-	/// nought needs a level below nought - and a level below nought is exactly what sends the handler
+	/// oversight.</b> The step is <c>(level + speed) / 50</c> with <see cref="ParkAudio.ScriptSpeed"/> at 50, so a
+	/// step of nought needs a level below nought - and a level below nought is exactly what sends the handler
 	/// down the band-only branch instead. So <c>0x4b</c>, <c>0x4f</c>, <c>0x53</c> and <c>0x57</c> are
-	/// **dead by arithmetic** for every script, not merely unused by the shipped ones.
+	/// **dead by arithmetic** here for every script. The original's arithmetic does not close them: a placed
+	/// thing's script takes its item's operating speed when one is set (<c>docs/exe/park.md</c>, "The clock,
+	/// the speed word, and WAIT"), and a speed under 50 reaches column nought.
 	/// </summary>
 	[TestMethod]
 	public void TheGridsFirstColumnIsUnreachable()

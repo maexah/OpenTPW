@@ -2,6 +2,7 @@
 
 partial class Primitives
 {
+	/// <summary>Dead by CODE: nothing calls <see cref="GenerateModel"/>. The one primitive in use is <c>Plane</c>, for <see cref="Water"/>.</summary>
 	internal static class Cube
 	{
 		private static float[] cubeVertices = new[] {

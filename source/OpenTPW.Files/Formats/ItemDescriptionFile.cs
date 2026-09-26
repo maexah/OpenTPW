@@ -95,7 +95,7 @@ public sealed class ItemDescriptionFile
 	public bool IsChoosable => (_isChoosable ?? _category?._isChoosable ?? 0) != 0;
 
 	/// <summary>Whether using this relieves a guest who needs the toilet - <c>UsageInfo.ProvidesRelief</c>,
-	/// whose default comment says "set to 1 for toilets". The three Small Toilets set it and nothing else does.</summary>
+	/// whose default comment says "set to 1 for toilets". Every theme's two toilets set it (jungle's are <c>toilet</c> and <c>supbog</c>) and nothing else does.</summary>
 	public bool ProvidesRelief => (_providesRelief ?? _category?._providesRelief ?? 0) != 0;
 
 	/// <summary>Whether people queue for this at all - <c>Info.HasQueue</c>, set for rides and not for the rest.</summary>

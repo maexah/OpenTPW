@@ -4,7 +4,7 @@ Everything the park's interface is made of, read out of `testme.exe`: the 16-bit
 format that is compiled into the executable (there is no layout file), the mesh-name hash that binds a
 control to a model, the assembly function that builds a park's interface, each park panel's stream with
 its control ids, rects, artwork and help rows, the six management buttons' real dispatch, and the park map
-screen. Read with the park-engine page, which holds the 17 shortcut actions, the 54-row screen map and the
+screen. Read with the park-engine page, which holds the 17 shortcut actions, the screen map (54 calls, 41 rows) and the
 interaction modes.
 
 ## The layout stream opcode format
@@ -35,8 +35,9 @@ The stream argument is **16-bit opcodes compiled into the executable**, not a fi
     op 4     [short sub]    1/3 = +rect, 2 = +6 bytes, 4 = [short n] then n*4 bytes
     op 5     END of the current level - pops one recursion
     op 6,7   [rect] implicit child, type 2 flags 0x21 id 1/2, RECURSE
-    op 8     [rect] slider thumb, type 3, installs SliderThumb_Callback, RECURSE
-    op 9,10  [rect] CONDITIONAL - read only if the branch is taken
+    op 8     [rect] slider thumb, type 2 flags 1 id 3, installs SliderThumb_Callback, RECURSE
+    op 9     [rect] CONDITIONAL - a type 4 or 7 parent with no child id 1: scrollbar, type 3 flags 0x10 id 1, RECURSE
+    op 10    [rect] CONDITIONAL - read only under a type 4 or 7 parent
     op 0xb   [short n] then n pairs
     op 0xc   [short n][rect] type 2 flags 1 id n+0x10, RECURSE
     op 0xd   [short][short]
@@ -58,9 +59,9 @@ After the 2-byte opcode:
 
 **`0x10` is 10 bytes, not 4** — a walker that guesses 4 mis-walks the whole tail.
 
-**Ops 9 and 10 are runtime-conditional.** They read their rect *only* if a branch is taken, so a static
-walk must assume one path. None of the park panels uses them; a screen that does cannot be dumped
-statically without deciding the condition first.
+**Ops 9 and 10 are runtime-conditional.** They read their rect *only* under a type 4 or 7 parent (op 9 also
+only while that parent has no child id 1, `0x0066043e`), so a static walk must track the enclosing control's
+type. None of the park panels uses them; the buy and hire lists do ("Ops 9 and 10 are runtime-conditional" below).
 
 ### Which control an attribute binds to
 
@@ -70,7 +71,7 @@ statically without deciding the condition first.
 it** — and after an `op 5` that is the **parent**, not the child that just closed.
 
 **The trap:** a dumper that prints attributes without marking the closes makes a parent's mesh look like it
-belongs to the child printed just above it. That is how the `guage` mesh was first recorded on the meter
+belongs to the child printed just above it. Such a dumper puts the `guage` mesh on the meter
 `0x1f` when the bytes put it on its housing `0x1e` (`... 05 00 | 01 00 9f 57 d3 69 | 05 00` at
 `0x007529a0` — close, THEN mesh, THEN close). A static walker **must** track op 5 to attribute
 attributes, because `case 0` recurses and `case 5` returns: that is why `guage` lands on `0x1e` and `base`
@@ -79,7 +80,7 @@ stack; attributing by "the id that precedes it in the bytes" is wrong.
 
 ### The self-check that proves the decode
 
-Every stream address from the 54-row screen table begins with **op 0** and the walk **terminates on a
+Every stream address from the screen table begins with **op 0** and the walk **terminates on a
 balanced op 5**. Six streams walked, six clean. If a walk ends mid-record or hits an unknown opcode, the
 decode is wrong — do not "fix" it by skipping bytes.
 
@@ -93,8 +94,8 @@ not a clamped one. `w_dialog_wave.MD2`'s first node is `wdialog w` -> `wdialogw`
 happened when the artist named the node, so **do not clamp it yourself**.
 
 Hashing the 1,202 `ui.wad` **member names** instead gives **zero** hits across five inits and four
-transforms — the wrong name source. Node names come from `wadcat --anim <wad>` (the C# tool in `CLAUDE.local.md`, not the `wadcat.py` harness below); its `--meshes` mode is
-**still broken**.
+transforms — the wrong name source. Node names come from `wadcat --anim <wad>` (the C# tool in `CLAUDE.local.md`, not the `wadcat.py` harness below); its `--meshes` mode
+lists each model's mesh node names too, first node first.
 
 ### Node name versus file name
 
@@ -152,16 +153,16 @@ Built by `FUN_004a1d70` onto the park's layer 0, with no handler for the stream 
 `0x004a1daa`); `FUN_004a0a20` is installed on the body `0x1d` alone (`0x004a231d`). Four root controls:
 
     0x1d  panel  ( 37, 984)-( 439,1507)   the bottom-left gadget body      mesh base
-      0x1e  panel  help 477                                                 (gauge housing)
-        0x1f  t9   ( 85,1100)-( 144,1324) mesh guage   + meter.wct skin
+      0x1e  panel  help 477                                  mesh guage     (gauge housing)
+        0x1f  t9   ( 85,1100)-( 144,1324) no mesh      + meter.wct skin
       0x20  panel  help 478  + text rect  mesh date    <- THE DATE READOUT
       0x21  panel  ( 331,1069)-(1006,1495)  THE ARM   mesh pan_money  = panel.md2
         0x22  panel (1006,1069)-(1071,1382)  its end   mesh pane_money = panelend.md2
           0x23  panel ( 976,1058)-(1129,1503) handle   mesh handle     = handle.md2, 16-point region
         0x24  button ( 349,1386)-( 429,1466)  help 481  mesh b_retract  (child of 0x21)
       0x25  panel  (170,1122)-( 392,1372)  THE SIX ROUND BUTTONS
-      0x2c  panel  help 494
-    0x2d  panel ( 94, 918)-( 144, 984)    0x2e  help 476, meshes aerial + aerialtop  (77,790)-(161,918)
+        0x2c  panel  help 494  (child of 0x25)
+    0x2d  panel ( 94, 918)-( 144, 984)  mesh aerial    0x2e  help 476, mesh aerialtop  (77,790)-(161,918)
     0x2f  panel (258,  60)-( 720, 260)    0x30 (458,273)-(720,363)   0x31 (728,109)-(831,211)
                                           0x32 ( 37, 58)-(242,262) mesh i_dollar
     0x33  panel (1688, 48)-(1963, 278)    0x34 gkey (1853,165)-(1955,268)  0x35 gtick (1853,54)-(1955,156)
@@ -209,8 +210,8 @@ Handler **`FUN_004a0840`**:
 | `0x2a` | `b_money` | 471 | `FUN_004a0940(3)` |
 | `0x2b` | `b_resrch` | 472 | `FUN_004aa480` (research) |
 
-**The HUD is six category pickers, not 17 buttons.** `FUN_004a0940( n )` opens *the screen that category
-was last left on*, from three globals seeded 1 / 3 / 10 in `FUN_004a1d70`:
+**The HUD is six buttons, not 17, and three of them are category pickers.** `FUN_004a0940( n )` opens
+*the screen that category was last left on*, from three globals seeded 1 / 3 / 10 in `FUN_004a1d70`:
 
     n=1  DAT_007cb28c  1 -> buy FUN_004acc70      2 -> hire FUN_0049bdd0
     n=2  DAT_007cb2a0  3 -> parkstatus  4 -> allstaff  5 -> allitems  6 -> allpeeps
@@ -229,15 +230,15 @@ walk misses children of composite controls (a list's own column headers never ap
 
 | # | Screen | Builder | Stream | Callback | Builder bytes | Controls |
 |---|---|---|---|---|---|---|
-| 3 | parkstatus | `FUN_004a52a0` | `0x7537d0` | `0x4a4830` | 2926 | 38 |
+| 3 | parkstatus | `FUN_004a52a0` | `0x7537d0` | `0x4a4830` | 2926 | 28 |
 | 4 | allstaff | `FUN_00496620` | `0x750e10` | `0x495da0` | 1438 | 37 |
-| 5 | allitems | `FUN_00495aa0` | `0x7508e0` | `0x495290` | 342 + four sub-builders | 11 |
+| 5 | allitems | `FUN_00495aa0` | `0x7508e0` | `0x495290` | 342 + four sub-builders | 12 |
 | 6 | allpeeps | `FUN_00493530` | `0x7506c8` | `0x493230` | 677 | 5 + 6 columns |
-| 7 | financeinfo | `FUN_0049ac60` | `0x751ca8` | `0x49a0b0` | 2238 | 18 |
+| 7 | financeinfo | `FUN_0049ac60` | `0x751ca8` | `0x49a0b0` | 2238 | 19 |
 | 8 | loans | `FUN_0049fb30` | `0x7525a0` | `0x49f4e0` | 1905 | 18 |
-| 9 | staffcosts | `FUN_004b2750` | `0x756400` | `0x4b24b0` | 2990 | 16 |
-| 10 | entryprice | `FUN_00498d80` | `0x751798` | `0x498c60` | 721 | 7 |
-| — | research | `FUN_004aa480` | `0x754490` | `0x4a96b0` | 2616 | 34, six sliders |
+| 9 | staffcosts | `FUN_004b2750` | `0x756400` | `0x4b24b0` | 2990 | 30 |
+| 10 | entryprice | `FUN_00498d80` | `0x751798` | `0x498c60` | 721 | 9 |
+| — | research | `FUN_004aa480` | `0x754490` | `0x4a96b0` | 2616 | 41, six sliders |
 
 What each shows, from its own decoded labels:
 
@@ -258,7 +259,7 @@ What each shows, from its own decoded labels:
 - **entryprice** — one "Ticket Price" row. It writes the park object's `+0x118` through
   `FUN_004d05d0`, whose format string reads *"Admission fee set to %d"*.
 
-### The four screens built 2026-09-21, and what walking their streams alone could not give
+### The four built screens, and what walking their streams alone could not give
 
 **Column headings are in CODE, not in the layout stream.** Every `op 0xc` header child carries a rect
 and nothing else; each builder then fetches it by id **`0x10 + index`** and hands it a UITEXT row
@@ -357,7 +358,8 @@ behaviour.
   some scientists before you can carry out any research!"*) when `mFirstResearcher` (`+0x1da742`) is nought.
 
 **Four are built and five are blocked on simulation this project does not have.** Built: **entryprice**,
-**allpeeps**, **allstaff** and **allitems**. Blocked: **loans** (the `mLoans[]` records), **financeinfo** (the
+**allpeeps**, **allstaff** and **allitems**. Blocked: **loans** (taking and repaying a loan: `ParkWorld.EconomyState.Loans` reads the save's `mLoans[]`
+records, and nothing in the game reads them), **financeinfo** (the
 money-in/out split and the graph history), **staffcosts** (training budgets, other costs, loan payments) and
 **parkstatus** (Top 3 Thoughts, arrival rate, park rating, multi-year history), each counted when opened
 (`LOANS_SCREEN`, `FINANCE_SCREEN`, `STAFF_COSTS_SCREEN`, `PARK_STATUS_SCREEN`), and **research** (`mResearchDone`,
@@ -380,8 +382,9 @@ chosen. **Do not read them as gadget buttons** — the gadget's own six are `0x2
 
 It goes to the advisor/message system (`FUN_0059b590` → `FUN_0059bf20`), not to the help table.
 Reading its ids as UIHELPTEXT rows yields text that is plausible and wrong — the pylon button's
-`0x125` decodes there as *"Left-click to view item's details"*. **Unresolved**, and the likely table
-is `TAG_SYSTEM.str`.
+`0x125` decodes there as *"Left-click to view item's details"*. **Unresolved**: an advisor message
+id resolves through the runtime-filled table at `0x0076e300` (`advisor-park.md`, "A screen's line cannot be
+recovered statically").
 
 ### The arm is the gadget's panel carrier
 
@@ -530,7 +533,7 @@ immediately after it at `0x00750614`).
 **Advisor lines do NOT land here.** `FUN_00486b00` runs into the advisor's own message system
 (`FUN_0059b590`, `FUN_0059a940`); the bar keeps a separate list (`DAT_007cb2c8`, posted by
 `FUN_0048eb20`). They talk in one direction only: showing a bar message (`FUN_0048d9c0`) posts advisor
-line **0x11c** and calls `FUN_004a2590` to put the bar on the arm.
+message **0x11c** and calls `FUN_004a2590` to put the bar on the arm.
 
 State globals: `DAT_007ca098` the bar's tree, `DAT_007ca090` the message on show, `DAT_007ca09c` how many
 are held. Handler `LAB_0048e2f0` (not a Ghidra function): 0x10d30 and 0x10d2f go to `FUN_0048e0f0` — a
@@ -562,7 +565,7 @@ its path is in `CLAUDE.local.md`), which mounts the file system first.
 
 Op 0x11's value is a row of **`Language/English/UIHELPTEXT.str`**, read through `Localization.Help( id )`.
 **It is a different file from `UITEXT.str`**, which is what the `UIStrings` enum numbers. "help 469 on
-`b_buy` vs `UIStrings.ParkClosed = 469`" is **not** a contradiction — that flag is **withdrawn**; the two
+`b_buy` vs `UIStrings.ParkClosed = 469`" is **not** a contradiction: the two
 tables simply share index space.
 
 **Reading a `.str` outside the game needs the file system mounted FIRST.** `BFSTReader`'s lookup table is a
@@ -582,7 +585,7 @@ throws, and with stderr filtered that looks like "the rows are empty".
 | `FUN_005f1ea0` | — | Builds a path (note the `0x5c` backslash), passes `&DAT_00f86d20` to a vtable method, stores the image's width and height into `+0x48` / `+0x4c` | Disassembly |
 | `FUN_005777b0` | — | Rounds those dimensions up to 64 — `(w+0x3f)>>6` — and allocates `tilesX*tilesY` records of 0x60, each a 64x64 surface. For 512x512 that is **8x8 = 64 tiles** | Corroborates that the loaded image is the shipped TGA |
 | `+0x60` | — | A **128x128 grid of classification codes**, 8 bytes a cell, in the screen's structure; `+0x60 + 0x20000 = +0x20060` is the selection field | Disassembly |
-| `FUN_005f2050` | — | Fills the grid: **9** out of bounds, **10/11/12** terrain kinds, **1-8** things by type (`+0x4ac`) and flags (`+0x32`) | Disassembly |
+| `FUN_005f2050` | — | Fills the grid: **9** a cell of track type 25, **10/11/12** mType 1, mType 3 and `mFlags & 0x40` (below), **1-8** things by type (`+0x4ac`) and flags (`+0x32`) | Disassembly |
 | `FUN_005f2380` | — | Paints it: a 9-dword (36-byte) blit descriptor per cell, then outlines footprints by comparing each cell with its neighbour above/below (vtable+8) and left/right (vtable+0xc), then draws a selection highlight for the item at `+0x20060` | Disassembly |
 
 The base image is the park's own **`2dmap.tga`**, 512x512 24-bit, one per theme (fantasy, hallow, jungle,
@@ -595,7 +598,7 @@ blend stop1->stop2 below 50 and stop2->stop3 above, patch R/G/B into the descrip
 The stops are `DAT_00f86bd8`, `DAT_00f86bfc`, `DAT_00f86c20` (runtime-filled — beyond `.data`'s raw bytes,
 so a static read gives zeros). The value is a **per-thing metric** fetched differently per radio setting
 (`FUN_004e0860`, `FUN_004e1e30`). Those metrics are simulation values that do not exist yet, so the thing
-layers are simulation work wearing a UI. The base image plus terrain codes 9-12 is the honest first cut.
+layers are simulation work wearing a UI. The base image plus the cell codes 9-12 (below) is the honest first cut.
 
 ### Controls
 
@@ -623,7 +626,7 @@ the table layout first.**
 
 `FUN_005f0b40` calls `FUN_004092a0(0,0)`, clears `g_ParkRunning`, and calls `Advisor_StopQuietly(1)` — the
 *quiet* stop, not the crying one. So unlike the gadget this screen legitimately pauses. It posts advisor
-line **0x130** as it opens, and refuses to open at all if the game menu is up (`FUN_0048c8d0`) or if it is
+message **0x130** as it opens, and refuses to open at all if the game menu is up (`FUN_0048c8d0`) or if it is
 already open.
 
 ### The map screen's stream, `0x00774da0` — walked in full
@@ -661,9 +664,9 @@ right edge (1883,443)-(1985,987); `FUN_005f0b40` restores it from `+0x1c` as 1/2
     0x98d b_senter (1883, 740)-(1985, 842)  285/286  entertainers and queue times
     0x98c b_sguard (1883, 885)-(1985, 987)  283/284  guards, camera coverage and pranks
 
-0x996 is the METRIC picker, bottom right (1526,1409)-(1868,1512), restored from `+0x20` as 1/2/3, and it
-wears mesh **map_win (w_map.MD2)** — bound AFTER its children close, so by the op-5 rule it belongs to the
-group and not to 0x999:
+0x996 is the METRIC picker, bottom right (1526,1409)-(1868,1512), restored from `+0x20` as 1/2/3. The mesh
+**map_win (w_map.MD2)** is bound AFTER the group's own close (`0x007752da`), so by the op-5 rule it is the root
+**0x980**'s, not the group's or 0x999's:
 
     0x999 b_ssatis (1526,1409)-(1629,1512)  291/292  customer satisfaction
     0x998 b_shap   (1646,1409)-(1748,1512)  287/288  happiness
@@ -672,12 +675,15 @@ group and not to 0x999:
 The help rows confirm the heat map in the game's own words — "excitement ratings", "customer
 satisfaction", "ride reliability", "queue times" are all simulation values.
 
-### The terrain codes, by exhaustion of the cell accessors
+### The cell codes, by exhaustion of the cell accessors
 
-Each is a one-liner on a 0x44-byte runtime cell:
+Each is a one-liner on a 0x44-byte runtime cell, except the first two, which read the 0x28-byte record the cell's first
+word names (`FUN_004d0af0`), taking its parent's when it is type 12 or 17 (`FUN_0053ad90`):
 
 | Address | What it tests |
 |---|---|
+| `FUN_00536450` | the record is type 25 (`FUN_0053ad60`) |
+| `FUN_005363f0` | the record is type 11, 13, 16, 18 or 25 (`FUN_0053ad30`); false for a type 12 or 17 record with no parent |
 | `FUN_00536310` | kind == 1 |
 | `FUN_00536320` | kind == 3 or 9 |
 | `FUN_00536340` | kind == 9 |
@@ -688,14 +694,13 @@ Each is a one-liner on a 0x44-byte runtime cell:
 
 Read against `FUN_005f2050`'s nesting, kind 9 is ruled out before code 11 is reached, so:
 
-    code  9 = outside the grid    code 10 = kind 1    code 11 = kind 3    code 12 = flags & 0x40
+    code  9 = track type 25       code 10 = kind 1    code 11 = kind 3    code 12 = flags & 0x40
 
-**UNPROVEN AND MUST NOT BE ASSUMED: that the runtime kind at `+8` IS the `.MAP` attribute byte.**
-The park data-layout page records the attribute values as 0, 1, 3, 8, 17, 128, 144, 148 and says **only
-the 0/1/3 cells differ per park** — the same two numbers the map's two terrain codes use, which is
-suggestive and no more. The runtime cell is 68 bytes and the attribute is one byte. Find where `+8` is
-written before drawing terrain from a parsed `.MAP` — or verify empirically by drawing kind-1 and kind-3
-cells and checking them against the shipped `2dmap.tga`.
+**The runtime kind at `+8` is the cell's `mType`, not the `.MAP` attribute byte.** The cell serialiser
+`FUN_004d0b30` names `+0x08` `mType` (`0x004d0f19`; `park-engine.md`, "The runtime cell is not the save cell"), and
+over the shipped park `mType` takes 7, 2 and 30, which jungle's attribute byte never does (below; `park.md`,
+"`mType` over the shipped park"). So code 10 is a path (mType 1), code 11 a queue cell (mType 3) and code 12 land
+outside the park (`mFlags & 0x40`; `park-engine.md`, "The path tool").
 
 ### The empirical check, and what it does and does not establish
 
@@ -713,9 +718,8 @@ Counts (jungle `base.map`, 16384 cells): 0 x14889 (90.9%), **1 x689 (4.2%)**, 17
 **3 x240 (1.5%)**, 144 x48, 148 x14, 8 x10, 128 x4. And a structural find: **`terrain.map` holds only TWO
 values, 0 and 1** (805 cells) — a pure binary mask, not a second attribute grid.
 
-This does **not** prove the runtime kind at `+8` is the attribute byte — that is still untraced. What it
-proves is that the two values the map's terrain codes use are the two that draw the park's own features,
-which makes drawing codes 10/11 from a parsed attribute map defensible. **It does NOT license semantic
+What it proves is that the shipped `2dmap.tga` already draws the attribute map's value-1 and value-3
+cells; the map's codes 10 and 11 are paths and queue cells (above), not these. **It does NOT license semantic
 labels** — "3 is water, 1 is path" is a guess the pixels do not support, so name them by value, not by
 meaning.
 
@@ -757,8 +761,7 @@ cell size. **Only the arithmetic one could not have been talked into.**
 ## The buy and hire screens, and the list control under them
 
 Decoded 2026-09-20 by an eight-dimension pass, every claim then re-derived by a second agent that was
-told to refute it. **The refutations are part of the record**: several load-bearing claims did not
-survive, and where a correction is noted below it is the corrected reading that is written down.
+told to refute it.
 
 ### The scrolling list is UI control **type 7** - `UiList` here
 
@@ -895,10 +898,9 @@ own tab-index switch all give the same ordering, and it matches UITEXT 119–122
 **The root frame mesh `0xf76e4200` is `w_big.MD2`, node `window4`.** The hash is over a node name, which is why
 searching file stems never finds it; see the resolution table above for the method.
 
-### The node name is not the file name — measured, after seven meshes failed to load
+### The node name is not the file name — measured
 
-The decode above recovered these names by hashing and matching **substrings of file names**, and flagged
-that as inferred. It is worth more than a footnote: the stream hashes the model's first **node** name,
+The stream hashes the model's first **node** name,
 while the loader opens `ui/<file>.md2`. Where an artist named the two differently they diverge, and a
 name taken from the hash table simply does not load.
 
@@ -913,14 +915,13 @@ spelled `b_sresrcher.wct`. That one cannot be guessed at from the hash or from t
 
 The rest of the set (`b_sshop`, `b_sshow`, `b_sfeature`, `b_shandy`, `b_smech`, `b_senter`, `b_sguard`,
 `b_scroller`, `b_allstaff`, `b_allthings`, `i_boxtick`, `!frame`, `!slider`) load as-is, because there
-the node and the file happen to agree — which is exactly what made the failures look arbitrary until
-the archive was listed. **`b_up` and `b_down` remain unconfirmed**: both load, but `b_up` had three
-preimages in the shipped data.
+the node and the file happen to agree. **`b_up` and `b_down` agree too**: each is the first node of the `.MD2` of its own name, no other
+mesh node in `ui.wad` hashes the same, and the scrollbar's two buttons wear them (buy, `0x0075507a` and `0x00755056`).
 
 Read the archive with the `wadcat.py` harness (`<wad> list`; the harness folder is in `CLAUDE.local.md`) — a port of this tree's own
 `WadArchive` and `Refpack`, validated against two values the codebase documents independently.
 
-### The gate that looks like a bug, and is not — **now named**
+### The gate that looks like a bug, and is not
 
 `FUN_004a0940` does nothing when `FUN_0048c8d0()` returns 1, which needs both `DAT_007c2534` and
 `FUN_006ad810()` non-zero. Both halves are named:
@@ -935,7 +936,7 @@ So **`FUN_0048c8d0()` means "the game menu exists AND is on screen"**, and the b
 while the pause menu is up is correct behaviour rather than an unbuilt path. The same function on the
 bank Thing is what reads the balance, which is how it was mistaken for one.
 
-**A caveat that bit the first reading of the teardown**: several menu arms do NOT clear
+**A caveat about the teardown**: several menu arms do NOT clear
 `DAT_007c2534` — those that open a confirm box leave it set until that box's own callback runs, so the
 menu object outlives the menu on screen.
 
@@ -949,12 +950,12 @@ four filter fields, as **byte** offsets:
     +0x284  AddOn.UpgradesId      (must be 0 - a standalone item, not a ride's upgrade)
     desc+0x10  researched/available
 
-**Two premises were wrong and are corrected here.** `desc+0x10` is not a static "is this listed" flag —
+`desc+0x10` is not a static "is this listed" flag —
 it is the **researched** flag, set at level start for items whose `Upgrades[0].CostOfResearch` is nought
 and again the moment research completes. And `item+0xC4` is not a research countdown — it is
 `Research.Group`, a **golden-ticket tier** that placing the item literally spends.
 
-**The row state is {0,1,2} and both non-zero values are now pinned**: 1 = you already own at least one
+**The row state is {0,1,2} and both non-zero values are pinned**: 1 = you already own at least one
 (`desc+0x18`, incremented on placement and decremented on demolition), 2 = one of the three most
 recently **RESEARCHED** items in that tab — a 3-entry ring per tab fed only by the research-complete
 message, **not** by building. The game's own help row 146 says the same thing: "sort the list by items

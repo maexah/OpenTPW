@@ -58,7 +58,8 @@ public sealed class Lightning : WeatherSprites
 	/// width, which is what a bolt near the island should look like.
 	///
 	/// Only the drawn column fades. <see cref="Flash"/> does not, so a strike that comes down too
-	/// close to show still lights the scene - which is what a strike just out of frame should do.
+	/// close to show still lights the lobby - which is what a strike just out of frame should do. In a
+	/// park only the debug console reads it.
 	/// </summary>
 	private const float HiddenWithin = 25f;
 	private const float SolidBeyond = 55f;

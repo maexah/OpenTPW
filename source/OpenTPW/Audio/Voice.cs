@@ -33,8 +33,8 @@ public sealed class Voice
 	/// How much of this reaches each ear, 0 to 1, and where those are heading as of the last time the
 	/// listener moved.
 	///
-	/// Both are 1 for a sound with no position, which is every sound the game plays today, and 1 and 1
-	/// is exactly what the mixer did before there was a pan at all. They never go above 1: the levels
+	/// Both are 1 for a sound with no position, so a flat sound reaches both ears whole wherever the
+	/// listener stands. They never go above 1: the levels
 	/// every layer was set to already sum close to full scale - see <see cref="LobbyAudio"/> - so
 	/// placing a sound takes the far ear away rather than adding to the near one.
 	/// </summary>

@@ -252,8 +252,8 @@ public static class ParkPathBuilding
 
 		state.Spend( price );
 
-		// The END of the transaction, which is where every one of the original's eight invalidation
-		// sites fires - after the cells are written, never once per cell as they are written.
+		// Measured again as each cell is written. The original's queue-run site (0x00527541) measures
+		// once, after the whole run is laid and retiled.
 		state.RemeasureQueue( servesThingId );
 
 		RetileAround( state, park, cellX, cellY );
@@ -828,8 +828,9 @@ public static class ParkPathBuilding
 		foreach ( var (x, y) in cells )
 			RetileAround( state, park, x, y );
 
-		// The end of the transaction: each queue the run cut is measured again, and whoever now stands
-		// past its end is put out (the stamp's FUN_004de1f0, 0x00534858).
+		// Each queue the run cut is measured again, and whoever now stands past its end is put out. The
+		// original measures inside the stamp, cell by cell and before the join (FUN_004de1f0 at
+		// 0x00534858); this measures once, after the join and the retile.
 		foreach ( var owner in queuesCut )
 			state.RemeasureQueue( owner );
 

@@ -75,9 +75,9 @@ public class ParkPathBuildingTests
 	/// <b>This number is measured</b>, and pinned here rather than left to a comment. The executable's
 	/// loader reconstructs cells from the
 	/// level's design map and sets the flag on the path cells it creates that way; OpenTPW reads the
-	/// <b>save's stored</b> flags instead, and the two do not agree. So "the player cannot lift the
-	/// level's own walkways" is true of the original's runtime and <b>only partly true here</b>: the
-	/// refusal in <see cref="ParkPathBuilding.Lift"/> is real, and it covers 18 cells.
+	/// <b>save's stored</b> flags instead. Those cover the whole design-map avenue, and whether the loader
+	/// rebuilds any more design-map path than that is not established (<c>docs/exe/park-engine.md</c>,
+	/// "Deleting is not demolishing"). The refusal in <see cref="ParkPathBuilding.Lift"/> is real, and it covers 18 cells.
 	/// </para>
 	/// <para>
 	/// <b>Which 18, measured cell by cell:</b> the ten-cell avenue at x 47..48, y 17..21, which is

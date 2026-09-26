@@ -52,12 +52,12 @@ namespace OpenTPW.UI;
 /// <b>Enter this park</b> (0x005e1cc0) does nothing at all for a park the player cannot afford, judged by
 /// the keys they hold rather than the count shown here. The button acts on the release of a click; the
 /// Enter key on its release, and a left press on the lobby's view on the press, reach the same function
-/// (see <see cref="FrontEnd"/>). For a park they can afford, it hands over to 0x005e1e30, which closes
-/// this panel, plays effect 4 of the global lobby sfx and a burst of particles at the key, and sets the
-/// lobby leaving for the park. All four happen
-/// here, in that order, and the park is then built between frames rather than during one - see
-/// <see cref="Game.RequestParkLoad"/>. The cue is silent, because effect 4 ships with no samples at
-/// all; that is the shipped data and not a gap here. Escape while the camera is still on its way cancels
+/// (see <see cref="FrontEnd"/>). For a park they can afford, it hands over to 0x005e1e30, which sets the
+/// lobby leaving for the park, plays effect 4 of the global lobby sfx and a burst of particles at the key,
+/// and closes this panel. All four happen
+/// here, in one call, and the park is then built between frames rather than during one - see
+/// <see cref="Game.RequestParkLoad"/>. The cue is silent here, though effect 4 ships a sample,
+/// keyexplode - see <see cref="LobbyAudio.ParkEntry"/>. Escape while the camera is still on its way cancels
 /// the leave and brings this panel back (0x005e1890), and nothing was spent, so the park can be entered
 /// again at once.
 /// </para>

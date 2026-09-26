@@ -42,8 +42,9 @@ public class ParkNavigatorStateTests
 	/// <para>
 	/// This is worth more than any range check because the two halves know nothing about each other.
 	/// <c>mX</c> sits at <c>+8</c> and is read and tested on its own; the navigator's position sits at
-	/// <c>+140</c> and was placed there by summing field sizes out of the executable. Neither was used to find the other. A block a single byte out of place cannot satisfy
-	/// this for one person, let alone eighteen.
+	/// <c>+140</c> and was placed there by summing field sizes out of the executable. Neither was used to
+	/// find the other. A block a single byte out of place cannot satisfy this for one person,
+	/// let alone eighteen.
 	/// </para>
 	/// <para>
 	/// The last assertion is the anti-vacuity guard: the park's people stand in seventeen different places,
@@ -182,7 +183,7 @@ public class ParkNavigatorStateTests
 	/// <b><c>PathBufferCount</c> equalling <c>PathTotalCount</c> is a fact about this park, not a law.</b>
 	/// The navigator streams a long route through its five slots and refetches when the cursor reaches
 	/// <c>PathBufferCount</c>, so the two part company as soon as a route needs more than five waypoints.
-	/// Every route in the shipped park is three or shorter, which is why they agree here.
+	/// Every route the shipped save holds is three or shorter, which is why they agree here.
 	/// </para>
 	/// </summary>
 	[TestMethod]

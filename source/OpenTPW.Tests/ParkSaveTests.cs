@@ -11,8 +11,8 @@ namespace OpenTPW.Tests;
 ///
 /// <para>
 /// This is worth a test rather than a comment because a reader that insists on 500, the version a saved
-/// park carries, and calls it a magic number rejects the only file it will ever be handed: the shipped
-/// park carries 400. A wrong constant that throws is easy to reintroduce, so the shipped file's own
+/// park carries, and calls it a magic number rejects the one park the game ships, which carries 400. A
+/// wrong constant that throws is easy to reintroduce, so the shipped file's own
 /// numbers are pinned here.
 /// </para>
 /// </summary>

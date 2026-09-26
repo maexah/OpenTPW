@@ -9,12 +9,12 @@ namespace OpenTPW.Tests;
 /// The interface's 2048x1536 screen put onto a window of any shape. The layout is authored at 4:3,
 /// so on a 4:3 window it has to come out exactly as the original draws it, and on any other window
 /// it has to keep its shape and stay inside the window - which scaling it by the window's height
-/// alone did not: a 1280x1024 window was laid out 1365 pixels wide and ran off both edges.
+/// alone would not: a 1280x1024 window would be laid out 1365 pixels wide and run off both edges.
 /// </summary>
 [TestClass]
 public class VirtualScreenTests
 {
-	/// <summary>The original's own modes, from _Resolution.sam. All 4:3 but for 1280x1024, which is 5:4.</summary>
+	/// <summary>The original's own 4:3 modes, from _Resolution.sam. Its one 5:4 mode, 1280x1024, is under <see cref="Narrower"/>.</summary>
 	private static readonly (int Width, int Height)[] Original =
 	{
 		(512, 384), (640, 480), (800, 600), (1024, 768), (1600, 1200), (2048, 1536)
@@ -43,7 +43,7 @@ public class VirtualScreenTests
 
 	/// <summary>
 	/// Whatever shape the window is, the whole virtual screen lands inside it and keeps its 4:3
-	/// shape. This is the one that fails on the old height-only scale.
+	/// shape. This is the one that fails on a height-only scale.
 	/// </summary>
 	[TestMethod]
 	public void TheWholeScreenFitsInsideTheWindowAndKeepsItsShape()
@@ -177,7 +177,7 @@ public class VirtualScreenTests
 		Assert.AreEqual( wide.Set, UiFonts.SetIndex, "set" );
 		Assert.AreEqual( wide.Scale, UiFonts.Scale, 1e-6f, "scale" );
 
-		// And a 4:3 window is still chosen by its own height, as it always was.
+		// And a 4:3 window is chosen by its own height.
 		At( (1024, 768) );
 		Assert.AreEqual( 3, UiFonts.SetIndex, "1024x768" );
 		Assert.AreEqual( 1f, UiFonts.Scale, 1e-6f, "1024x768 scale" );

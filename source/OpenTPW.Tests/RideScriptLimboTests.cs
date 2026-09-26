@@ -11,7 +11,7 @@ namespace OpenTPW.Tests;
 /// <para>
 /// <b>These need no world, and that is the point of the family.</b> The slots are part of the script's
 /// own frame - the loader sizes them from a header field and the teardown frees them beside the
-/// variables and the stack - so unlike the guests, scenery and sound still outstanding, every one of
+/// variables and the stack - so unlike the families that reach guests, scenery or sound, every one of
 /// these five can be exercised for real rather than counted. Exactly 24 of the 308 shipped scripts
 /// declare slots, all of them ten, and they are exactly the 24 that use a limbo instruction.
 /// </para>
@@ -82,7 +82,7 @@ public class RideScriptLimboTests
 
 	/// <summary>
 	/// The header field is read at all. Nothing else in this class means anything if the count does not
-	/// come out of the file, and the reader stopped at the time slice until this family landed.
+	/// come out of the file.
 	/// </summary>
 	[TestMethod]
 	public void TheNumberOfSlotsComesOutOfTheFileHeader()

@@ -286,8 +286,8 @@ public static class GameDir
 		Log.Error( "Game files: Theme Park World was not found." );
 		Log.Error( $"Game files: a folder counts when it holds a {DataName} folder with the game's {LevelsName} in it - the folder TP.exe was installed in." );
 
-		// One line for each place looked. Distinct, because two of these can name the same folder - a build
-		// started from the directory it sits in - and saying it twice reads as two separate failures.
+		// One line for each place looked. Two of these can name the same folder - a build started from the
+		// directory it sits in - and Find tries it once, under the first, so it is not said twice.
 		foreach ( var where in tried.Select( entry => entry.Where ).Distinct() )
 		{
 			var first = tried.First( entry => entry.Where == where ).Path;

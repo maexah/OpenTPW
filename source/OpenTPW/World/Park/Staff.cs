@@ -140,7 +140,8 @@ public sealed class Staff
 	/// <summary>
 	/// Whether a cell is inside this staff member's patrol area - <c>FUN_00506ed0</c>. A staff member with
 	/// no area at all is at home anywhere here; the original's test has no case for it and puts them
-	/// outside every cell, a deviation Lost Kingdom does not reach, since every member there carries one.
+	/// outside every cell, a deviation. Every member Lost Kingdom's save holds carries one; a member hired here
+	/// carries none (<c>ParkPeople.Hire</c>), and whether the original's hire sets one is not decoded.
 	/// </summary>
 	public bool Patrols( int x, int y )
 	{
@@ -172,8 +173,8 @@ public sealed class Staff
 	public void SetActivity( StaffActivity next, int tick )
 	{
 		// <b>The stamp is taken only when they arrive at idling from a walk.</b> Coming from anywhere else
-		// it is cleared, so that the idle countdown starts from nought rather than from a stale reading -
-		// and that asymmetry is why three of the shipped park's staff carry no stamp at all.
+		// it is cleared to nought, so the idle wait is over on the next sweep (0x00505542) - and that
+		// asymmetry is why three of the shipped park's staff carry no stamp at all.
 		if ( next == StaffActivity.Idle )
 			TimeStartedIdling = Activity == StaffActivity.Walking ? tick : 0;
 

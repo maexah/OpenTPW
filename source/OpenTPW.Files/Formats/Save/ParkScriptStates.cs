@@ -35,7 +35,7 @@ public readonly record struct SavedScript( int Handle, int Position, int BodyWor
 /// </para>
 ///
 /// <para>
-/// <b>Where it sits.</b> <see cref="ParkWorld"/> reads the first of the seventeen modules; this reads
+/// <b>Where it sits.</b> <see cref="ParkWorld"/> reads the first two of the seventeen modules; this reads
 /// the eleventh. <c>FUN_00415270</c> is the restore chain that walks all of them in order, each
 /// followed by a four-character tag it checks on the way back in, and <c>FUN_005597a0</c> is the arm
 /// that reads this one - the one whose failure logs "RSSE scripts failed to load".
@@ -43,7 +43,7 @@ public readonly record struct SavedScript( int Handle, int Position, int BodyWor
 ///
 /// <para>
 /// <b>This one is FOUND rather than walked, and that is a deviation worth naming.</b> Walking to it
-/// honestly would mean reading the nine modules in between, none of which is decoded. Instead it is
+/// honestly would mean reading the nine modules in between, only two of which are decoded. Instead it is
 /// located by two anchors that have to agree: the <c>FLYR</c> tag closing the module before it -
 /// stored little-endian, so it reads <c>RYLF</c> in a dump, the same way
 /// <see cref="ParkWorld.Trailer"/> reads <c>DLRW</c> - immediately followed by this module's own
@@ -112,7 +112,10 @@ public sealed class ParkScriptStates
 	/// <summary>Where the program counter sits in the saved struct - <c>+0x3c</c>, so dword 15.</summary>
 	private const int PositionDword = 15;
 
-	/// <summary>Where the handle sits. Shown to be <c>mRideScriptHandle</c> - see <c>ParkScriptStateTests.EverySavedScriptIsTheScriptOfSomePlacedThing</c>.</summary>
+	/// <summary>
+	/// Where the handle sits. Shown to be <c>mRideScriptHandle</c> - see
+	/// <c>ParkScriptStateTests.EverySavedScriptIsTheScriptOfSomePlacedThing</c>.
+	/// </summary>
 	private const int HandleDword = 2;
 
 	/// <summary>Where the body length sits - <c>+0x50</c>, so dword 20.</summary>

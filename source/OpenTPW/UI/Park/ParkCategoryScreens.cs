@@ -5,7 +5,7 @@ namespace OpenTPW.UI;
 /// <c>FUN_004a0940( n )</c>.
 ///
 /// <para>
-/// <b>The HUD is six CATEGORY PICKERS, not seventeen buttons, and that is why the gadget's button
+/// <b>Three of the HUD's six buttons are CATEGORY PICKERS, and that is why the gadget's button
 /// count and the shortcut table never reconciled.</b> Each of the three category buttons remembers
 /// the screen it was last left on and re-opens that one, out of three globals the original seeds to
 /// <b>1, 3 and 10</b>. So the Money button opens on the <i>entry price</i> and the Information button

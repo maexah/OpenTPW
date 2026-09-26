@@ -147,7 +147,7 @@ public sealed class LobbyModel
 	/// player driving it may name any of them and a player has to exist for a mesh before that mesh can
 	/// be posed. Probing instead would bind against role 5 alone, read through the loader that turns away
 	/// every clip carrying position and visibility only - and four of the eleven things Lost Kingdom
-	/// places, three of them meant to move for ever, would bind nothing at all. See
+	/// places, three of them meant to move for ever, would bind their bare M clip at most and never their C clip. See
 	/// <see cref="RideAnimations.AllClips"/>.
 	/// </para>
 	/// </param>

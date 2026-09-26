@@ -44,14 +44,14 @@ A key goes to one control only: an accelerator's target (the one table, `0x0077c
 | `FUN_0040cb80` | — | Builds the binding tables: system, game, camera, cheat, coaster, shortcuts. Entries are `0x14` bytes | Table construction read from the disassembly |
 | `FUN_0040caa0` | — | Rebinds an entry in those tables | Call-site trace |
 | `0x0040c4d0` | — | Shortcuts action 0, "menu" | Binding table entry |
-| `0x004816d0` | — | Called by the shortcut, calls `GameMenu_Open(0)`. **Undisassembled bytes, so xrefs do not find it** | Read by hand at the address |
+| `0x004816d0` | — | Called by the shortcut, calls `GameMenu_Open(0)`. **No function is defined over it**; `disassemble` reads it, and its one xref is from `0x0040c4d5` | Read by hand at the address |
 | `0x00488921` | — | `Park_MouseMessageProc`'s key-up case (`0x1000b`): the chain below through `FUN_0040c990`, which runs a row's `+0x0c` handler. Its key-down case (`0x00488886`, `0x1000a`) walks the same chain through `FUN_0040c900`, which only latches the row | Disassembly |
 | `0x0048bb36` | — | The park menu handler's (`FUN_0048b6a0`) key-up case: closes the menu and lets the park run again when the key is `0x1b`, **whatever the modifiers**, or when key and modifiers find shortcuts row 0 (`FUN_0040c870`). It answers no key-down | Disassembly |
 | `0x00748028`, `0x00748378` | — | The game table's rows and the shortcuts table's rows. Row 0 of each is key `0x1b` with modifier 0: game action 0 (`0x0040c180`) and "menu" (`0x0040c4d0`). No other row of the four tables on the chain is `0x1b` (camera `0x00748158`, cheat `0x007484d0`), nor of the system table (`0x00747f38`). The coaster table's row 0 (`0x00748350`) is: `abortcoaster`, `0x0040c3a0`, run only by the coaster bar's `FUN_004982a0` | `read_memory`, 20-byte rows |
 
 The chain, in order, on the key's release: the focused world control `0x007cb2ac` takes the key, and its handler `Park_MouseMessageProc` (`0x004881a0`) runs the camera, game and shortcuts tables built by `FUN_0040cb80`, then the cheat table behind a guard, stopping at the first handler that answers non-zero. Game action 0 (`0x0040c180`) closes the staff/visitor locator if it is open (`FUN_004816b0`, `DAT_007cc2f0`); otherwise, over any interaction mode but idle, it installs the idle mode and answers 1 - see `park-engine.md`, "The hand's ways out". Only with the mode idle already does shortcuts action 0 "menu" (`0x0040c4d0`) run, which calls `0x004816d0`, which calls `GameMenu_Open(0)`. In first person the key goes to layer 1's `FUN_00488a00` instead, which runs camera-table handlers only, so the menu cannot open from there.
 
-**Every arm acts on the release, and only the chain asks for no modifier.** The menu's handler and the viewfinder's
+**Every arm acts on the release, and only the chain and the park screens (below) ask for no modifier.** The menu's handler and the viewfinder's
 (`FUN_00488a00`, whose key-up case tests `0x1b` before any action) compare the key alone, so Shift+Escape closes the
 menu or leaves first person. Game row 0 and shortcuts row 0 name modifier 0, which a row must match exactly
 (`park-engine.md`, "How a key is matched"), and no other row on the chain is Escape, so with a modifier held Escape empties
@@ -151,18 +151,18 @@ Leaving a park (state `0xb`) has the same shape, and additionally frees the leve
 |---|---|---|---|
 | `0x0051bd70` | `Sound_ApplyGroupVolumes` | Re-applies the group volumes on park entry; called at `0x0054ec9a` | State 9 body |
 | `FUN_0051e730` | — | Called at `0x0054ec9f`; plays `cat_music` effect 2, the only effect that category declares | State 9 body; category contents |
-| `FUN_0051bc40` | — | `FUN_0051bc40(voice, 4, 0)` immediately sets that voice's level to 0; op 4 is "set level" | Called straight after the play |
-| `FUN_0051e790` | — | Called at `0x0054f870` on every 32nd pass of the park loop (`TEST [0x00877d34],0x1f`, `0x0054f82d`), about once a second; drives the music level, the crowd count clamped to 89 first (`0x0054f84e`) | Park loop body |
+| `FUN_0051bc40` | — | `FUN_0051bc40(voice, 4, 0)` sets that voice's parameter 4 to 0. The 4 is a parameter, not an op: it is the one music 2's record names, and kids 91's call passes 7 (`0x0051e7fd`). Whether music reads it as a volume is not established (`ride-operation.md`, `FUN_0051bc40`) | Called straight after the play |
+| `FUN_0051e790` | — | Called at `0x0054f870` on every 32nd pass of the park loop (`TEST [0x00877d34],0x1f`, `0x0054f82d`), about once a second; drives the music level from half the crowd count (`FUN_004c81e0`), clamped to 89 first (`0x0054f84e`), or 0 while `mWorldState` (`+0x1da738`) is 4 (`0x0054f860`) | Park loop body |
 | `FUN_004c81e0` → `FUN_004c7fa0` → `FUN_004fa990` | — | The counting chain behind that level: things that pass one of five type tests | Call chain traced |
 | `FUN_00550e00` | — | Reads placed emitters from the level's `scape.omp`: an `OBJ_` chunk of record count, record size, then a dispatch on field[0]; type 1 is a placed sound | Chunk layout read from the loader |
 
-The level is `clamp(things / 2, 0, 100)`, further clamped to 89. So the original's park music swells with the crowd, and an empty park is silent. Everything else audible in a park — the ambience especially — is a placed emitter read by `FUN_00550e00`.
+The level is `clamp(things / 2, 0, 100)`, further clamped to 89, and it is music 2's parameter 4. In all four themes that effect's zones divide 0-90 among its five to seven variations, but its voice class, `0x0606`, is undecoded (`audio.md`, Q43), so whether the crowd picks the variation, sets the volume, or both is **not established**, and with it whether an empty park is silent. The ambience is placed emitters read by `FUN_00550e00`; the crowd and the rain are voices driven like the music ("Park parameters", below), and the rides sound through their scripts (`audio.md`, "Where positional audio actually lived").
 
 ### Positioning
 
-Lobby sounds are flat, emitted at `(0, 0, 0)` with a fixed listener at `(0, 0, -50)`. **Confirmed exactly, 2026-09-21:** the lobby's listener call at `0x0054e70e` passes nine literals — position `(0, 0, -50)` (`0xc2480000` = −50.0f) with orientation vectors `(0, 0, 1)` and `(0, 1, 0)`. That `(0,1,0)` top vector is what independently establishes the original is **Y-up**, and therefore that the coordinate a pause overwrites with 10000.0 is **height**.
+Lobby sounds are flat, emitted at `(0, 0, 0)` with a fixed listener at `(0, 0, -50)`. **Confirmed exactly:** the lobby's listener call at `0x0054e70e` passes nine literals — position `(0, 0, -50)` (`0xc2480000` = −50.0f) with orientation vectors `(0, 0, 1)` and `(0, 1, 0)`. That `(0,1,0)` top vector is what independently establishes the original is **Y-up**, and therefore that the coordinate a pause overwrites with 10000.0 is **height**.
 
-**Park sounds are positional — but "with the camera as the listener" is incomplete.** A park has **two** listener call sites, chosen by the camera-mode mask `[0x00790ab0] & 0x16`:
+**Park sounds are positional, and the listener is not always the camera.** A park has **two** listener call sites, chosen by the camera-mode mask `[0x00790ab0] & 0x16`:
 
 | Site | When | Listener position |
 |---|---|---|
@@ -175,12 +175,12 @@ All three sites call **`FUN_0051c1d0`**, which is the per-frame listener update 
 
 ### Park parameters
 
-Music, crowd and rain are driven by voice parameters. That the parameter id is the `SFX.map` effect `field4 >> 16` is **inferred, not verified**, and what a parameter actually does is **undecoded**.
+Music, crowd and rain are driven by voice parameters. The parameter an effect answers to is the byte at `+0x12` of its `SFX.map` record: 4 on music 2, 6 on the screams 71-74, 7 on kids 91 and 8 on global ambient 33, the numbers the game's own calls pass. What one does to a `0x0404` chain, picking its next variation by the zones, is in `audio.md`, "How the engine plays an effect: priority, not a repeat delay"; what it does to the `0x0606` voices of music, crowd and rain is **undecoded**.
 
 ## Particles, sky and weather
 
 The particle code and `Tp2.plb` are the same in both scenes, but init and shutdown happen per scene; a park uses the world-space branch of `Particles_Render`.
 
-The sky loader is shared. The lobby passes `levels/fantasy` and height 180 through `FUN_00585690`, which is its only caller; the object default is 300.
+The sky loader is shared. The lobby's `FUN_005d8b50` passes it `levels/fantasy`, then sets height 180 through `FUN_00585690`, whose only caller it is; the object default is 300.
 
 The weather renderer is shared, but the lobby and a park have separate drivers, and each driver plays its own thunder.

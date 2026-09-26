@@ -8,8 +8,10 @@ namespace OpenTPW.UI;
 /// button - a control of type 2 in the layout data, which is every <see cref="UiButton"/> here - and
 /// only while Popup Help is switched on (0x0078d90e, the options screen's toggle labelled with
 /// UIStrings 327, which also switches the interface's pop-up help as a whole). Here that is the same
-/// switch, <see cref="GameOptions.PopupHelp"/>, which the help bar's Ctrl+H also flips, and screenshots of the park picker show the help bar and a glint together. Going off the button ends them (0x005edac0), and so does the button being hidden
-/// (UIParticles_ButtonGlintStop), which also stops drawing them at once.
+/// switch, <see cref="GameOptions.PopupHelp"/>, which the help bar's Ctrl+H also flips, and
+/// screenshots of the park picker show the help bar and a glint together. Going off the button ends
+/// them (0x005edac0), and so does the button being hidden (UIParticles_ButtonGlintStop), which also
+/// stops drawing them at once.
 /// </para>
 /// <para>
 /// UIParticles_ButtonGlintStart (0x005ed920) runs between two and five button glints (effect 35) -

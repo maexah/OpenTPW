@@ -26,7 +26,7 @@ namespace OpenTPW.UI;
 /// demolishes and then takes the item into the hand with <b>0x3b</b>, move. The meshes agree
 /// independently: those two controls wear <c>b_erase</c> and <c>b_move</c>. The cycle pair
 /// <c>FUN_0048cbe0</c> / <c>FUN_0048caf0</c> differ only in calling <c>FUN_00483770</c> against
-/// <c>FUN_00483740</c> - next and previous of the same class - and wear <c>b_arup</c> and
+/// <c>FUN_00483740</c> - previous and next of the same class - and wear <c>b_arup</c> and
 /// <c>b_ardown</c>.
 /// </para>
 ///
@@ -53,8 +53,9 @@ internal sealed class ParkObjectWindow : UiWindow
 		// exclamation mark, which a token-splitting scan drops, in a model that is refpack-compressed
 		// like every ui.wad model.
 		//
-		// The ARTWORK is named; the VERB still is not. Its handler is FUN_004e15b0( 0 ) followed by a
-		// close, which is not decoded, so the button draws and reports itself like the others.
+		// Its handler is FUN_004e15b0( 0 ) followed by a close: the ride's view, entered from this window
+		// (docs/exe/hud.md, "Four ways out of camcorder mode"). There is none here, so the button draws and
+		// reports itself like the others.
 		(0x3e37, 16, "b_rideit",   "ride it"),
 
 		(0x3e36,  8, "b_callmech", "call a mechanic"),
@@ -564,7 +565,7 @@ internal sealed class ParkObjectWindow : UiWindow
 		// number yet: FUN_004ade40 fills them from FUN_004e0560 and FUN_004df640, whose inputs include
 		// per-upgrade fields no .sam key is proven to feed (docs/exe/park-engine.md, "The object
 		// window's stats panel"). The shape is known - two ratios of the
-		// speed and capacity sliders against the item's per-upgrade figures, each clamped to
+		// speed and duration sliders against the item's per-upgrade figures, each clamped to
 		// 0.75..1.25 - and the shape alone would only produce a plausible bar, which is worse than
 		// an empty one because it cannot be told apart from a measured one later.
 		Unimplemented.Report( "RIDE_EXCITEMENT_BAR" );
@@ -805,8 +806,9 @@ internal sealed class ParkObjectWindow : UiWindow
 
 		// LOOKED AT FROM ABOVE AND IN FRONT, the way the park's camera sees a ride, rather than square
 		// on: AdvisorModel.ScreenProjection is a flat elevation - model X across, Z up, Y squashed almost
-		// out of depth - and gives a ride no perspective at all. Here the eye sits back and up by the pitch and looks at the model's own centre, so the
-		// centring stops being arithmetic to get right and becomes a consequence of what is aimed at.
+		// out of depth - and gives a ride no perspective at all. Here the eye sits back and up by the
+		// pitch and looks at the model's own centre, so the centring stops being arithmetic to get
+		// right and becomes a consequence of what is aimed at.
 		var eye = new System.Numerics.Vector3( 0f, -MathF.Cos( pitch ), MathF.Sin( pitch ) ) * (half * 4f);
 
 		var view = System.Numerics.Matrix4x4.CreateLookAt( eye,
@@ -1177,11 +1179,11 @@ internal sealed class ParkObjectWindow : UiWindow
 			script.Set( ParkRideOperation.DurationVariable, duration );
 		}
 
-		// THE SPEED WORD IS A SEPARATE THING and deliberately not written. RideScript records that the
-		// engine divides every wait by 0.5 + 0.01 * speed, worked out afresh per instruction from the
-		// word at +0xc0, and argues the divisor can never differ from one because no opcode writes it.
-		// That argument is about the SCRIPT system and this panel is outside it: FUN_004dd6e0 writes
-		// that word from this very slider. So moving speed here would re-time every WAIT in the script,
+		// THE SPEED WORD IS A SEPARATE THING and deliberately not written. RideScript.Wait records that
+		// the engine divides every wait by 0.5 + 0.01 * speed, worked out afresh per instruction from the
+		// word at +0xc0, and leaves that division out. No opcode writes the word; the object constructor
+		// does, from outside the script system, and so does this panel: FUN_004dd6e0 writes it from this
+		// very slider. So moving speed here would re-time every WAIT in the script,
 		// which is a behaviour change too wide to make as a side effect of a slider.
 		Unimplemented.Report( "RIDE_SPEED_SCALES_WAITS" );
 

@@ -9,7 +9,7 @@ namespace OpenTPW.Tests;
 /// The two instructions that change what a ride sounds like - <c>DIPMUSIC</c> and <c>SETOBJPARAM</c>.
 ///
 /// <para>
-/// Both were chosen over the opcode that led the ladder. <c>REPAIREFFECT</c> completes twelve scripts on
+/// <c>REPAIREFFECT</c> completes sixteen scripts on
 /// paper and cannot be built: past its first call both of its paths index a runtime table by the model
 /// handle and dereference the result three levels deep with no guard, so with no world it would take an
 /// access violation rather than idle. These two need nothing that is missing.

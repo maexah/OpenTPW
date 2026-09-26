@@ -20,10 +20,9 @@ namespace OpenTPW.Tests;
 /// is set and otherwise standing people <em>inside</em> the back-of-queue cell - a "virtual queue" it
 /// asserts is under four deep, with the line "Virtual queue problem!" - an assert that is the bare
 /// <c>RET</c>, so nothing holds it to four. Both objects have a non-zero
-/// <c>mBackOfQueue</c>, so the bit is not "has a queue"; it marks a queue with a PATH, and a single cell
-/// is evidently not one. <b>That last step is the interpretation and it is not proven</b> - one park with
-/// one flagged object cannot separate "more than one cell" from any other rule that happens to pick the
-/// ride. What IS measured is below.
+/// <c>mBackOfQueue</c>, so the bit is not whether a queue ends somewhere; it marks a queue with a PATH, and
+/// the item decides it, not the cells: the object constructor sets it from <c>Info.HasQueue</c> (descriptor
+/// <c>+0x40</c>), which <c>Rides.sam</c> sets and <c>SideShow.sam</c> does not. What IS measured is below.
 /// </para>
 /// <para>
 /// These read real game files and are skipped where there is no installation - see <see cref="GameData"/>.

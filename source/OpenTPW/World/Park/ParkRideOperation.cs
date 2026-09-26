@@ -236,12 +236,13 @@ public sealed class ParkRideOperation
 		if ( ride.CanLoad == 0 )
 			return false;
 
-		// "admitting wrong person" - a ride holds one nominee, and this must be them.
+		// "admitting wrong person": the original only logs it and goes on, so refusing is a deviation (Q87).
 		if ( _state.PersonBeingLoaded( ride.ThingId ) != personId )
 			return false;
 
 		// The slot has to be empty. Asked BEFORE the nomination is let go of, so a refusal leaves the
-		// ride still holding its nominee rather than losing them.
+		// ride still holding its nominee; the original lets go first, a deviation (Q87;
+		// docs/exe/ride-operation.md, "At the door").
 		if ( script[AdmitVariable] != 0 )
 			return false;
 
@@ -408,8 +409,10 @@ public sealed class ParkRideOperation
 	/// and only the aim can fail.
 	/// </para>
 	/// <para>
-	/// <b>What cannot be shown is the ? itself.</b> It is the stranded thought bubble, the same one
-	/// <c>FUN_004f9490</c> raises with "Peep %d: stranded at time %d", and this project has no thought
+	/// <b>What cannot be shown is the ? itself.</b> If it is thought <c>0x11</c>, the stranded bubble, only
+	/// <c>FUN_004f9490</c> raises it, at its linked walk's dead end or its refusal after one, and which
+	/// picture it shows is not established (<c>docs/exe/ride-operation.md</c>, "Leaving a ride"). This
+	/// project has no thought
 	/// system at all - see <see cref="PeepBehaviour.SetRandomDest"/>, which records the same absence from
 	/// the other side. So a guest who cannot leave the exit stands there silently instead of asking.
 	/// </para>

@@ -124,29 +124,29 @@ In parks, in the ride-script engine. `FUN_005573d0` (its own error strings say `
 `FUN_00556b90` resolves the location two ways:
 
 - **Given a node id**: `FUN_0044b220` finds the node; position is the node matrix's translation row (`+0x30` / `+0x34` / `+0x38`). Optionally direction is `+0x20` / `+0x24` / `+0x28`, normalised and sign-flipped on a flag bit — that direction is the source cone.
-- **Otherwise**: the thing's own world position.
+- **Otherwise**: the middle of the thing's model box in x and z (`FUN_00466b70`), or `(0, 0, 0)` with no model (`park.md`, "The effect subsystem").
 
 | Address | Original name | What it is | Evidence |
 |---|---|---|---|
 | `FUN_005573d0` | — | Ride-script sound/particle spawn; object types 3–10 → `Sound_PlayEffect`, types 1–2 → `Particles_Spawn`, same resolved location | Its error strings are prefixed `RSSE:` |
-| `FUN_00556b90` | — | Resolves a script location: node id → node matrix, else the thing's world position | Decompiled |
+| `FUN_00556b90` | — | Resolves a script location: node id → node matrix, else the middle of the model's box in x and z, or `(0, 0, 0)` with no model | Decompiled |
 | `FUN_0044b220` | — | Node lookup by id **and** capability flag (see below) | Decompiled |
 | `+0x30` / `+0x34` / `+0x38` | — | Translation row of the node matrix = emitter position | Decompiled |
 | `+0x20` / `+0x24` / `+0x28` | — | Direction row, normalised and sign-flipped on a flag bit = source cone | Decompiled |
 
 ## Node lookup is by id AND a capability flag
 
-`FUN_0044b220` walks the `.MD2` id table for a record whose **id matches** *and* whose **flag word shares a bit** with a given mask. Not by id alone. The masks the exe passes are `0x200` sound, `0x100` particles, `0x400` costume.
+`FUN_0044b220` walks the `.MD2` id table for a record whose **id matches** *and* whose **flag word shares a bit** with a given mask. Not by id alone. The masks include `0x200` sound, `0x100` particles and `0x400` costume; walk nodes take `0x800` and heads `0x80`.
 
 The flag words in the shipped model data agree with those masks bit-for-bit — the masks were derived from the exe and the flag words from the models independently:
 
 | Value | Original name | What it is | Evidence |
 |---|---|---|---|
-| `0x200` | — | Mask passed for **sound** | Constant at the `FUN_0044b220` call in `FUN_00556b90` |
-| `0x100` | — | Mask passed for **particles** | Same call site |
-| `0x400` | — | Mask passed for **costume** | Same call site |
+| `0x200` | — | Mask passed for **sound** | Pushed by `FUN_005573d0` as `FUN_00556b90`'s fifth argument, which it hands to `FUN_0044b220` (`0x00556bc0`) |
+| `0x100` | — | Mask passed for **particles** | Pushed the same way by `FUN_005573d0`'s particle arms |
+| `0x400` | — | Mask passed for **costume** | Pushed by `FUN_00429ee0` and `FUN_00429f60`, which show and hide a node on an advisor model |
 | `0x211` | — | id-table flag word marking a **sound node** | 65 uses in shipped models, 20 of them on explicitly sound-named nodes |
-| `0x111` | — | id-table flag word marking a **particle emitter** | 136 uses, all on emitter-named nodes |
+| `0x111` | — | id-table flag word marking a **particle emitter** | 454 uses in shipped models: most on effect-named nodes (`smoke`, `steam`, `particle emitter01`), but 108 on `Dummy` nodes, 64 on `Head` nodes and 12 on the park advisors' `Rotate1`-`3` |
 | `0x1031` | — | id-table flag word of the `1stperson` camera node | Shipped models |
 
 OpenTPW already parses this table (`ModelFile.ReadNodeIds`, `Node.Id`, `Node.IdFlags`). Its flag words are the capability bits above.
@@ -155,7 +155,7 @@ OpenTPW already parses this table (`ModelFile.ReadNodeIds`, `Node.Id`, `Node.IdF
 
 `Node.Flags` (record `+0x00`) uses `0x200` for **"transform-only node"**. The mask tested by `FUN_0044b220` is `Node.IdFlags`, a **different word that reuses the value** and means **"sound node"**. Conflating the two sends you the wrong way.
 
-Related node-record facts: the node **name** is at `+0x54`, the same word the mesh path always read — the 88-byte transform-only records carry it too, it was simply never read for them. `+0x50` is **NOT** a second pointer; its low u16 is the record's own index, so do not try to read it as one.
+Related node-record facts: the node **name** is at `+0x54` in every record, the 88-byte transform-only ones included. `+0x50` is **NOT** a second pointer; its low u16 is the record's own index, so do not try to read it as one.
 
 ## Emitters in the shipped data
 

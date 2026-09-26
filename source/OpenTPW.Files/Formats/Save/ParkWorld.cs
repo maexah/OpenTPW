@@ -127,9 +127,9 @@ public sealed class ParkWorld
 		/// <b>It is NOT the same as declaring queue cells</b>, although <c>QueueSizeInCells</c> is itself
 		/// produced by walking the path (<c>FUN_004de130</c>): the shipped park's sideshow declares
 		/// <b>one</b> queue cell and does <b>not</b> carry the
-		/// bit, while the ride declares four and does. Both have a non-zero <c>mBackOfQueue</c>. So a
-		/// single-cell queue is evidently served by the virtual path - which is a reading of one park with
-		/// one flagged object, and is recorded as such rather than as a rule.
+		/// bit, while the ride declares four and does. Both have a non-zero <c>mBackOfQueue</c>. The item
+		/// decides it, not the cells: the object constructor sets it from <c>Info.HasQueue</c> (descriptor
+		/// <c>+0x40</c>), which every theme's <c>Rides.sam</c> sets and no other category file does.
 		/// </para>
 		/// </remarks>
 		public const int QueuePathFlag = 0x8;
@@ -187,8 +187,9 @@ public sealed class ParkWorld
 		/// </para>
 		/// <para>
 		/// <b>Measuring settles it, and plausibility cannot:</b> three of the shipped park's objects are
-		/// toilets whose entry cell is walkable under either reading, so they confirm whichever is tried. What discriminates is
-		/// reachability. Of the eleven placed objects, five decode differently enough to matter, and all
+		/// toilets whose entry cell is walkable under either reading, so they confirm whichever is tried.
+		/// What discriminates is reachability. Of the eleven placed objects, five decode differently
+		/// enough to matter, and all
 		/// five are walkable only under this reading - the rest area's plain decode lands on (59,15),
 		/// which has <b>no connected edges at all</b>, where the packed one lands on (58,15), which every
 		/// member of staff can route to. Three more are unwalkable either way and settle nothing.
@@ -272,7 +273,7 @@ public sealed class ParkWorld
 	/// <b>The layout closes on the record size, which is what makes it more than a reading.</b> Eight bytes
 	/// of thing head, eight of the map base every thing carries (<c>FUN_0050b090</c>, four 2-byte fields),
 	/// seven 4-byte fields and then eight loans of eight 4-byte fields - <c>16 + 28 + 256</c> = <b>300</b>,
-	/// exactly what <c>RecordSizes[16]</c> was measured at from the shipped park long before this was read.
+	/// exactly what <c>RecordSizes[16]</c> holds, measured from the shipped park by another route.
 	/// The loan array's own end corroborates it a second time: in memory it runs from <c>+0x14</c> for
 	/// <c>8 * 0x20</c> bytes and stops at <c>+0x114</c>, which is precisely where the next named field
 	/// (<c>mWithdrawalsEnabled</c>) sits.
@@ -394,7 +395,7 @@ public sealed class ParkWorld
 	/// every guest in the shipped park and nothing asks for it; the name is recorded so that the next
 	/// reader does not have to derive it twice.
 	/// <para>
-	/// <b>The whole block is now derived end to end and it closes exactly.</b> Walking the serialiser's own
+	/// <b>The whole block is derived end to end and it closes exactly.</b> Walking the serialiser's own
 	/// field sizes from +398: mArrivalDate 398, mArrivalIndex 402, mBalloonScript 406, mBeenAdmitted 410,
 	/// mCash 414, mExitLevel 418, mHappiness 422, mHunger 426, mLastPosX 430, mLastPosY 434, mLitter 438,
 	/// mMajorDest 442, mNumRides 444, mNumShops 448, mNumSideshows 452, mNumSideshowsWon 456,
@@ -412,8 +413,8 @@ public sealed class ParkWorld
 	///
 	/// <para>
 	/// <b>It is what makes waiting outside a two-way state.</b> <c>FUN_004ff7f0</c> tests this and nothing
-	/// else to decide what a guest waiting for the gate does next: unset, they are sent back to head for
-	/// the ticket booths; set, they wait to be let through and then enter. It is written in one place -
+	/// else to decide what a guest waiting for the gate does once it will admit them: unset, they are sent
+	/// back to head for the ticket booths; set, they wait to be let through and then enter. It is written in one place -
 	/// accepting a fee in <c>FUN_004ff9d0</c> - and read in two, the other being the refund a guest gets at
 	/// the bus stop.
 	/// </para>
@@ -436,8 +437,8 @@ public sealed class ParkWorld
 	/// <para>
 	/// <b>The queue is doubly linked through the guests.</b> The field is called <c>mQNext</c>, which a
 	/// search for <c>InQ</c>, <c>mNext</c>, <c>Queue</c> or <c>mPrev</c> does not reach; the guest
-	/// serialiser's whole field list names it, and the original's own diagnostic agrees: "Person %d is in queue for object %d (next %d,
-	/// prev %d) but doesn't think he is".
+	/// serialiser's whole field list names it, and the original's own diagnostic agrees: "Person %d is
+	/// in queue for object %d (next %d, prev %d) but doesn't think he is".
 	/// </para>
 	/// </param>
 	/// <param name="QPrev">
@@ -740,7 +741,7 @@ public sealed class ParkWorld
 		/// let in compares the cell underfoot against their own id, but the shipped park shows the wider
 		/// reading: <b>twenty-four cells carry a value, and eleven of them are
 		/// exactly the eleven placed catalogue objects, each naming itself at its own cell</b> - (55,15)
-		/// holds 23 and object 23 stands at (55,15), and so on for all eleven. The other thirteen hold
+		/// holds 23 and object 23 stands at (55,15), and so on for all eleven. Twelve of the other thirteen hold
 		/// person ids, gathered on the gateway approach at x 47-48 and at the staff's own positions, with
 		/// (0,0) holding the unplaced sentinel object. So it is occupancy in general, not a gate booking.
 		/// </para>
@@ -751,8 +752,9 @@ public sealed class ParkWorld
 		/// runtime offset could not have been translated - only the serialiser's order places this one.
 		/// </para>
 		/// <para>
-		/// The runtime writer is <c>FUN_004d91f0</c>, which puts a thing at the head of the cell's list
-		/// (<c>ParkState.EnterCell</c>); this reports what the file holds.
+		/// The runtime writers are <c>FUN_004d91f0</c>, which puts a thing at the head of the cell's list,
+		/// and <c>FUN_004d9280</c>, which moves the head to the next thing when the head leaves
+		/// (<c>ParkState.EnterCell</c>, <c>LeaveCell</c>); this reports what the file holds.
 		/// </para>
 		/// </summary>
 		public bool IsOccupied => Occupant != 0;
@@ -804,7 +806,7 @@ public sealed class ParkWorld
 	public int Weather { get; private set; }
 
 	/// <summary>
-	/// Whether the park is shut to visitors - <b>zero is open</b>, which is the way round the name is not.
+	/// Whether the park is shut to visitors - <b>zero is open</b>, one is shut.
 	///
 	/// <para>
 	/// The original keeps it at <c>world + 0x1da710</c> and reads it through <c>FUN_0051a280</c>. That is
@@ -1241,7 +1243,7 @@ public sealed class ParkWorld
 
 	/// <summary>
 	/// The arrival timer as it was saved: <c>FUN_004cf050</c>'s six fields, in its order (FileFormats, <c>saves.md</c>,
-	/// "The arrival block"). The game's names are <c>mArrivalRate</c>, <c>mTimeSig</c>, <c>mTargetVehicleCapacity</c>,
+	/// "The arrival block", on its docs/arrival-block branch). The game's names are <c>mArrivalRate</c>, <c>mTimeSig</c>, <c>mTargetVehicleCapacity</c>,
 	/// <c>mPeopleOnBus</c>, <c>mOffloading</c> and <c>mGatesOpen</c>.
 	/// </summary>
 	/// <param name="TimeSig">
@@ -1485,7 +1487,8 @@ public sealed class ParkWorld
 	/// that.
 	/// </para>
 	/// <para>
-	/// <b>The rest of the record is walked.</b> <c>FUN_004db7d0</c> is the model-3 serialiser. It calls the map base first and then
+	/// <b>The rest of the record is walked.</b> <c>FUN_004db7d0</c> is the model-3 serialiser.
+	/// It calls the map base first and then
 	/// writes, in this order: <c>mAngle</c> 4, the unnamed short that is <c>mId</c> 2, eight <c>tv_t</c>
 	/// dwords (32), <c>MeshInstanceID</c> 4, <c>mFlags</c> 2, then thirty-three pairs of
 	/// <c>mNameA[i]</c>/<c>mNameB[i]</c> (132), <c>mRideScriptHandle</c>, <c>mTrackRideHandle</c>,

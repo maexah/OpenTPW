@@ -50,7 +50,7 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>Both now run the script they ship, and the two turn out to want opposite things.</b> The save's own
+/// <b>Both run the script they ship, and the two want opposite things.</b> The save's own
 /// header names which thing is the gate and which is the lights, so each is registered into
 /// <see cref="ParkObjects"/> under that id and <see cref="ParkRides"/> binds its <c>.RSE</c> against it -
 /// which is what the engine does, by a route of its own: it never reads these two out of the save's

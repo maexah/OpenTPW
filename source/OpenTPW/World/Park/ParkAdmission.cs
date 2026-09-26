@@ -162,8 +162,9 @@ public sealed class ParkAdmission
 	/// Where a guest goes when they will not pay - <c>BusStopA/B</c>, (42,5) and (53,5).
 	///
 	/// <para>
-	/// <c>FUN_004d86d0</c> reads <b>one shared Y and two X's</b>, which is this pair's own shape and is how
-	/// the three pickers were told apart: the booth and entrance pickers each read a Y of their own.
+	/// <c>FUN_004d8650</c> reads them, each stop with an X and a Y of its own (<c>docs/exe/park.md</c>,
+	/// "Arrivals"). The one shared Y and two X's is <c>FUN_004d86d0</c>'s shape, which reads
+	/// <c>CrossingParkSideA/B</c> instead.
 	/// </para>
 	/// </summary>
 	public (int X, int Y) BusStopA { get; }
@@ -188,11 +189,8 @@ public sealed class ParkAdmission
 	/// <param name="excitement">
 	/// What the park's rides are worth, summed by <c>FUN_004c8240</c>.
 	///
-	/// <b>Nought for the shipped park, and by that park's own saved state rather than by omission:</b> the
-	/// sum counts only things whose queue holds somebody, and the save records that the park had never
-	/// admitted a visitor, so no queue could hold anyone <i>at load</i>. <b>Nothing here computes the sum</b>
-	/// (<c>FUN_004c8240</c> is not decoded, <c>docs/QUEUE.md</c> Q26), so the caller passes nought after
-	/// queues fill too. It is named and passed rather than being a zero nobody sees.
+	/// <b>Nothing here computes the sum</b> (<c>FUN_004c8240</c> is not decoded, <c>docs/QUEUE.md</c> Q26),
+	/// so the game passes nought. It is named and passed rather than being a zero nobody sees.
 	/// </param>
 	public int IdealPrice( int excitement, Random random )
 	{

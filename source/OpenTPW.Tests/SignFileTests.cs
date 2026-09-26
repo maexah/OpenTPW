@@ -10,12 +10,11 @@ namespace OpenTPW.Tests;
 /// Every sign the game ships, read the way the game reads them.
 ///
 /// <para>
-/// <b>These exist because the obvious test would have passed the whole time the reader was broken.</b>
-/// An earlier <see cref="SignFile"/> demanded a 17,373-byte header before it ever looked at whether the
-/// file declared artwork, so it read the four lobby boards and most of the others that ship a picture,
-/// and refused all sixty-one that do not. Testing it against a lobby sign - the natural choice, and
-/// the one the format was worked out on - would have been green throughout. Only walking all of them
-/// catches it, so that is what this does.
+/// <b>These exist because the obvious test cannot tell a broken reader from a working one.</b>
+/// A reader that demands a 17,373-byte header before it looks at whether the file declares artwork
+/// reads the four lobby boards and most of the others that ship a picture, and refuses all sixty-one
+/// that do not. Testing it against a lobby sign - the natural choice, and the one the format was worked
+/// out on - is green either way. Only walking all of them catches it, so that is what this does.
 /// </para>
 /// <para>
 /// The walk is deliberately a discovery rather than a list of names. A test naming the signs it expects
@@ -142,8 +141,7 @@ public class SignFileTests
 	/// <para>
 	/// The original clears such a board to transparent black and skips the artwork outright, leaving the
 	/// ride's name lettered onto nothing with the ride showing through behind it. So a sign is expected
-	/// to read with no image at all, and the reader must say valid-with-no-image rather than failing -
-	/// which is the distinction the old one could not make.
+	/// to read with no image at all, and the reader must say valid-with-no-image rather than failing.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -212,17 +210,17 @@ public class SignFileTests
 	/// A material whose texture was substituted is forced see-through, because that is the only way a
 	/// ride's bare board can show the ride behind it rather than filling with black - see
 	/// <c>LobbyModel.MaterialFlagsFor</c>, and the original ORs the same bit in as it swaps the
-	/// texture. That reaches the boards that <b>do</b> carry artwork too, and those were previously
-	/// drawn with their alpha ignored, since the world's shader only honours alpha on a see-through
-	/// material. So what their alpha holds decides whether that was a repair or a regression.
+	/// texture. That reaches the boards that <b>do</b> carry artwork too, which the world's shader would
+	/// otherwise draw with their alpha ignored, since it only honours alpha on a see-through material. So
+	/// what their alpha holds decides whether that is right for them.
 	/// </para>
 	/// <para>
-	/// It is a repair. Fifteen of the twenty-three are solid art carrying 1.6% partly-clear texels
+	/// It is. Fifteen of the twenty-three are solid art carrying 1.6% partly-clear texels
 	/// that never go below alpha 77 - the same figure on every one of them, unrelated artwork
 	/// included, which is the <c>.wct</c> codec's ringing around a hard edge rather than anything
 	/// authored. The other eight reach alpha <b>0</b> across 5% to 43% of the board: they are shaped
-	/// art - the Bumper Cars, Candy Cabin, Cat Coaster, Ferris Wheel and the rest - that was being
-	/// drawn as an opaque rectangle with the cut-out it was authored with ignored.
+	/// art - the Bumper Cars, Candy Cabin, Cat Coaster, Ferris Wheel and the rest - that without the bit
+	/// draws as an opaque rectangle with the cut-out it was authored with ignored.
 	/// </para>
 	/// <para>
 	/// Only the rows the board is cut from are measured. The image decodes into a 256x256 buffer

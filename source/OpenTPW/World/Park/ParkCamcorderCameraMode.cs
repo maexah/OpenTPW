@@ -9,10 +9,11 @@ namespace OpenTPW;
 /// <para>
 /// <b>It is what makes a park's sky worth having.</b> A park builds a real one - the theme's own sky
 /// folder, centred on the origin at <see cref="Sky.ParkHeight"/> and untinted - but from
-/// <see cref="ParkOrbitCameraMode"/>, looking down at forty-five degrees or more, it is only a margin
-/// around the edge of a top-down view. From the ground it fills the upper half of the frame with its
-/// cloud band legible. <b>Measured by capture, not asserted</b>: the orbit camera shows some sky, just
-/// not as anything you would call a sky.
+/// <see cref="ParkOrbitCameraMode"/>, looking down at forty-five degrees or more, it never shows: the top
+/// of the frame is at the horizon at best. From the ground it fills the upper half of the frame with
+/// its cloud band legible. <b>Measured by capture, not asserted</b>: what the orbit camera shows past
+/// the ground's edge is the fog colour, one colour with no variance, not sky (docs/exe/park-engine.md,
+/// "The ORBIT camera never shows the sky").
 /// </para>
 ///
 /// <para>
@@ -177,7 +178,8 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 
 	/// <summary>
 	/// Stands the viewer where the orbit camera was looking, facing the way it faced, and hands the
-	/// camera over. Called when the player asks for camcorder mode.
+	/// camera over. Called when the player asks for camcorder mode. <b>A deviation:</b> the original waits
+	/// for a left click on a cell of type 0, 1, 3, 9 or 30 and stands the viewer there (docs/QUEUE.md Q25).
 	/// </summary>
 	public static void Enter()
 	{
@@ -194,7 +196,10 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		Camera.SetCameraMode<ParkCamcorderCameraMode>();
 	}
 
-	/// <summary>Puts the orbit camera back, looking at wherever the viewer had walked to.</summary>
+	/// <summary>
+	/// Puts the orbit camera back, looking at wherever the viewer had walked to. <b>A deviation:</b> the
+	/// original puts back the point of interest and yaw it saved on entry (docs/QUEUE.md Q25).
+	/// </summary>
 	public static void Leave()
 	{
 		ParkOrbitCameraMode.PointOfInterest = new Vector3( Stand.X, Stand.Y, 0f );
@@ -427,7 +432,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// keys, and the one the debug console drives.
 	/// </summary>
 	/// <remarks>
-	/// Shared rather than copied: a harness cannot press a
+	/// Shared rather than copied: the console cannot press a
 	/// key, so if the console had its own copy of this the thing measured would be the copy. Only the
 	/// reading of <see cref="Input"/> is skipped; the trig, the sweep, the edge test and the clamp are all
 	/// the ones a player gets.
@@ -440,7 +445,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		var dy = ((forward * MathF.Cos( Yaw )) + (right * MathF.Sin( Yaw ))) * distance;
 
 		// No park means no cells to ask about - a scene that is not a park cannot reach this camera, but
-		// the sweep is written so that the answer without one is the plain step it always was.
+		// the sweep is written so that the answer without one is the plain step, taken whole.
 		var walked = Slide( Stand, dx, dy, EdgeTest( Level.Current?.ParkState?.Park ),
 			RideAt( Level.Current?.ParkState, Level.Current?.Catalogue ) );
 

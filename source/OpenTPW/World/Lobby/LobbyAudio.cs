@@ -22,8 +22,8 @@ namespace OpenTPW;
 ///             PlaySound( localLobbySfx[island], 3 + random() % 3 );
 ///
 ///     so a one-in-sixteen chance each frame of one of effects 3, 4 and 5, picked evenly.
-///   - <b>leaving for a park</b> (0x005e1e30) plays effect 4 of the global lobby sfx category, which
-///     ships with no samples - see <see cref="ParkEntry"/>.
+///   - <b>leaving for a park</b> (0x005e1e30) plays effect 4 of the global lobby sfx category,
+///     keyexplode, which is silent here - see <see cref="ParkEntry"/>.
 ///
 /// Every one of those calls passes (0,0,0) as the position, so none of the lobby's sound is
 /// placed in the world - it is all played flat, and only the selected island's is played at all.
@@ -147,7 +147,7 @@ public sealed class LobbyAudio : Entity
 
 	/// <summary>
 	/// What <see cref="ParkEntry"/> plays at. Full, because it is a one-shot the player asked for by
-	/// pressing the button - and academic either way while the effect ships with no samples.
+	/// pressing the button - and academic while the effect is silent here.
 	/// </summary>
 	private const float ParkEntryVolume = 1f;
 
@@ -306,11 +306,12 @@ public sealed class LobbyAudio : Entity
 	/// what the original's park-entry handler reaches for (0x005e1e30).
 	///
 	/// <para>
-	/// <b>It is silent, and that is the shipped data rather than a fault here.</b> The category loads
-	/// as "3 bank(s), 4 effect(s) [1x4, 2x2, 3x4, 4x0]" - effect 4 carries zero samples. So this is
-	/// wired faithfully and makes no sound, which is exactly what the original does with the same
-	/// files. <see cref="SoundCategory.Play"/> returns null for a sampleless effect, so nothing here
-	/// has to special-case it.
+	/// <b>It is silent here, and the shipped data is not why.</b> Effect 4 holds one sample, keyexplode,
+	/// the fifth in Sound\Sfx and one of the five MPEG-1 entries the game ships. <see cref="MP2File.Duration"/>
+	/// reads its length from the MPEG-2 bitrate table, 4,076 ms against the map's 3,041, so
+	/// <see cref="SoundCategoryFile.ReadSamples"/> turns its record away and the category loads as
+	/// "3 bank(s), 4 effect(s) [1x4, 2x2, 3x4, 4x0]". <see cref="SoundCategory.Play"/> returns null for an
+	/// effect with no samples, so nothing plays.
 	/// </para>
 	/// </summary>
 	internal void ParkEntry()

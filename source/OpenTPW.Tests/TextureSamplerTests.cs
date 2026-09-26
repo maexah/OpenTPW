@@ -21,7 +21,8 @@ public class TextureSamplerTests
 {
 	/// <summary>
 	/// The lobby's sea asks for <see cref="TextureFlags.Wrap"/>, and that has to mean the wrapping
-	/// sampler. It is the one request in the game that wants anything other than the default.
+	/// sampler. The sky's two textures ask for it too, and the loading screen's status strip asks for
+	/// <see cref="TextureFlags.PointFilter"/>; every other request gets the default.
 	/// </summary>
 	[TestMethod]
 	public void WrapAsksForTheWrappingSampler()
@@ -54,7 +55,7 @@ public class TextureSamplerTests
 			"a wrap request has to differ from asking for nothing, or nothing can go wrong visibly" );
 
 	/// <summary>
-	/// The precedence the three assignments this replaced had, where each overwrote the last: Repeat
+	/// The precedence, which is the order SamplerFor tests the flags in: Repeat
 	/// beats Wrap beats PointFilter. Nothing in the game asks for two at once; this pins the order so
 	/// that rewriting the rule cannot quietly change it.
 	/// </summary>

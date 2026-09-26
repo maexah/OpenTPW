@@ -10,11 +10,9 @@ namespace OpenTPW.Tests;
 /// Every ride script the game ships, read the way the game reads them.
 ///
 /// <para>
-/// <b>These are a walk rather than a list of names on purpose.</b> The format was worked out on two
-/// files and looked settled on both; run against all 308 it turned out that a reading which stopped
-/// at the string blob accounted for only 98 of them, and the 98 were exactly those declaring no
-/// variables. A test naming a script or two would have been green throughout that, so this one
-/// discovers them instead and states its counts afterwards.
+/// <b>These are a walk rather than a list of names on purpose.</b> A reading that stops at the string
+/// blob accounts for only the 98 scripts that declare no variables, and a test naming a script or two
+/// can be green against it, so this one discovers them instead and states its counts afterwards.
 /// </para>
 ///
 /// <para>

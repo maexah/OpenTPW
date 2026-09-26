@@ -205,7 +205,7 @@ public class PeepNeedsTests
 	}
 
 	/// <summary>
-	/// Being desperate for the toilet is what makes a guest hurry, and eighty is the line. Nothing else
+	/// Being desperate for the toilet is what makes a guest hurry, and eighty is the line. No other need
 	/// sets it: a guest starving or ill walks at their normal pace.
 	/// </summary>
 	[TestMethod]

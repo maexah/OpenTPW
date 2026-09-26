@@ -10,8 +10,9 @@ namespace OpenTPW.Tests;
 /// <para>
 /// <b>The load-bearing test here is the one about what is NOT chosen.</b> Six of the shipped park's
 /// objects carry the "a guest may choose this" bit and all six pass <see cref="ParkRideChoice"/>, but
-/// toilets 21 and 22 are never the best candidate from any of the six entry cells: 23 stands between them
-/// and scores higher on distance. Pinning the answer at four is what tells the scorer from the filter.
+/// toilets 21 and 22 are never the best candidate from any of the six entry cells: from each toilet's cell
+/// all three tie on distance, and 23, walked first, keeps the tie at game tick 0. Pinning the answer at
+/// four is what tells the scorer from the filter.
 /// </para>
 /// <para>
 /// These read real game files and are skipped where there is no installation - see <see cref="GameData"/>.
@@ -53,8 +54,9 @@ public class ParkRideChooserTests
 	/// The filter walks a queue off the map - see
 	/// <see cref="ParkRideChoice.QueueCellsFor"/> - so the Drinks Shop is chosen when a guest is standing by
 	/// it. <b>Measured rather than predicted:</b> the answer is four of the six, not all six. Toilets 21 and
-	/// 22 are never the best candidate from any of these six cells, because 23 stands between them and
-	/// scores higher on distance from the same places; that is the scorer working, not the filter.
+	/// 22 are never the best candidate from any of these six cells: the three toilets stand in a row, (55,15)
+	/// to (55,17), so from each toilet's cell all three score a full hundred on distance, and 23, walked
+	/// first, keeps the tie at game tick 0. That is the scorer working, not the filter.
 	/// </para>
 	/// </summary>
 	[TestMethod]

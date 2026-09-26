@@ -232,7 +232,7 @@ public class AnimationFile : BaseFormat
 	/// set rounding toward zero, <c>FISTP</c>, and restores it. So the product falls to the integer below.
 	/// Where the span is a multiple of three the exact arithmetic lands on a whole millisecond and this one
 	/// lands just under it - 600 frames is 19999 here and 20000 by <c>frames * 1000 / 30</c> - and that is
-	/// <b>293 of the 1,237 clips under levels/ that declare a span</b>, measured 2026-09-15.
+	/// <b>293 of the 1,237 clips under levels/ that declare a span</b>.
 	/// </para>
 	/// </summary>
 	public const double MillisecondsPerFrame = 33.33333206176758;

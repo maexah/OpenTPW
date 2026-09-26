@@ -58,12 +58,12 @@ The sample is `FUN_0059c240(response) + index`, so a response's lines are a **co
 | # | Reason | Where |
 |---|---|---|
 | 1 | A global flag `DAT_0078d90d` gating a class of messages | `FUN_0059c610` |
-| 2 | A per-message cooldown: elapsed vs a compiled threshold, tested only when `FUN_0041a980` is non-zero | `FUN_0059c390` / `FUN_0041a980` / `FUN_0041a990` |
-| 3 | When NOT forced: "say once" already said (counter `+0xe8`), and a repeat limit (counter `+0xec`) | `FUN_0059c410`, `FUN_0059c570` |
+| 2 | A per-message cooldown: elapsed vs `MessageGroups[category].MinTimeSameMessage` from `Advisor.sam`, tested only when `FUN_0041a980` is non-zero | `FUN_0059c390` / `FUN_0041a980` / `FUN_0041a990` |
+| 3 | When NOT forced: "say once" already said (counter `+0xe8`), and a cap on how often a withdraw has cut him off saying it (counter `+0xec` against the category's `DiscardAfterSlaps`) | `FUN_0059c410`, `FUN_0059c570` |
 | 4 | A cap on how many copies of one id may sit in the eight slots | `FUN_0059c320` |
 | 5 | A rotation check against counter `+0xe4`, and mode 0 running out of lines | `FUN_0059c490` / `FUN_0059c2b0` |
 
-Every test reads either a compiled per-message property or a per-message counter on the advisor. **So a screen-open line needs only the advisor, its tables and a HUD — nothing from the simulation.**
+Every test reads a per-message property, its category's `MessageGroups` settings in `Advisor.sam`, the advisor's own counters and slots, or (test 1) a flag the options screen writes. **So a screen-open line needs only the advisor, its tables and a HUD — nothing from the simulation.**
 
 ### Test 2 is a per-message cooldown, not a level check
 
@@ -86,7 +86,7 @@ The disassembly settles what `p` is:
     CMP EAX,EBX
     JNC accept              ; elapsed >= threshold accepts; less rejects
 
-`+0xe0` holds the time he last said this message, so `FUN_0041a980` non-zero means "he has said it before" and the cooldown only applies after a first airing. The `>> 2` on both sides strips **two flag bits** from a packed field; other code confirms this with `TEST byte ptr [.. + 0x1da70c], 0x3`. The running counter is `DAT_0080239c + 0x1da70c`, in the same large global structure as `FUN_005194d0`'s `+0x1da71c`. `DAT_0080239c` is zero in the image and filled at runtime.
+`+0xe0` holds the time he last said this message, so `FUN_0041a980` non-zero means "he has said it before" and the cooldown only applies after a first airing. The `>> 2` on both sides counts in fours of thing sweeps, about a second each: the running counter `DAT_0080239c + 0x1da70c` is `mGameTick`, one count a sweep, and the tick stores it at `+0xe0` when he says the message (`FUN_0041a960`, `0x0059a847`; `park.md`, "Arrivals: who comes, on what, and how often"). The counter is in the same large global structure as `FUN_005194d0`'s `+0x1da71c`. `DAT_0080239c` is zero in the image and filled at runtime.
 
 ### The per-message record: `advisor + id * 0x10`
 
@@ -94,10 +94,10 @@ The disassembly computes `advisor + id*0x10 + 0xe0` outright (`LEA EAX,[EDI + 0x
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
-| `+0xe0` | — | When he last said it (packed; `>> 2` for the time) | Receiver of `FUN_0041a980` / `FUN_0041a990` |
+| `+0xe0` | — | When he last said it: `mGameTick` then, stored by `FUN_0041a960` (`0x0059a847`) | Receiver of `FUN_0041a980` / `FUN_0041a990` |
 | `+0xe4` | — | Rotation counter (gate test 5) | `FUN_0059c2b0` |
 | `+0xe8` | — | Said-once flag (gate test 3) | `FUN_0059c410` |
-| `+0xec` | — | Times said (gate test 3) | `FUN_0059c570` |
+| `+0xec` | — | Times a withdraw has cut him off saying it (gate test 3, against `DiscardAfterSlaps`) | `FUN_0059c570`; bumped by `FUN_0059aa70` (`0x0059ab34`) |
 
 ## The two tables — do not confuse them
 
@@ -112,7 +112,7 @@ The disassembly computes `advisor + id*0x10 + 0xe0` outright (`LEA EAX,[EDI + 0x
 | `+0x04` | — | **Sample id** — what `Sound_PlayEffect` is handed | |
 | `+0x08` | — | Lip file number → `\Speech\lips\sp_%03d.lip` | Format string in the exe |
 | `+0x0c` | — | Gesture: `-1` builds a random animation sequence (`FUN_00598b20`); any other value is a row of the gesture table `0x0076dc18` at value `- 0x10` (`FUN_00598bf0`) | `0x005990e3`, `0x00599383` |
-| `+0x10` | — | Model slot in the low half, bank in the high half (`slot \| bank << 16`). Slot 1 is the island model (137 rows). Bank 0 plays through the global speech category (`DAT_00803a34`), any other value through the park's (`DAT_00803a40`); five rows carry bank 1 (ids 1 and 399-402) | `0x005990dd`, `0x00599317` |
+| `+0x10` | — | Model slot in the low half, bank in the high half (`slot \| bank << 16`). Slot 1 is the park's own advisor model (137 rows). Bank 0 plays through the global speech category (`DAT_00803a34`), any other value through the park's (`DAT_00803a40`); five rows carry bank 1 (ids 1 and 399-402) | `0x005990dd`, `0x00599317` |
 | `+0x14` | — | Face node A | `0x005990fa` |
 | `+0x18` | — | Face node B | `0x00599106` |
 | `+0x1c` | — | Grouping values — **see the refuted section below**; no instruction reads it through this table's base | xrefs |
@@ -149,19 +149,19 @@ Stride `0x38`, validated by `row+0x04 == id`, with a linear-scan fallback bounde
 
 ### The schema is compiled into the exe
 
-60-byte descriptors — kind at `+0`, name at `+4` in a 44-byte field, array count at `+48` (`MessageGroups` reads 10) — the same pattern the weather schema uses.
+60-byte descriptors — kind at `+0`, name at `+4` in a 32-byte field, bounds at `+0x24`/`+0x28`, array count at `+0x34` (`MessageGroups` reads 10) — the same pattern the weather schema uses.
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
-| `0x0072e210` | — | Table of 60-byte `.sam` schema descriptors, 205 sections, ordinals 0-204 | Walked: `GeneralAdvisor` is 0, `WaitingTimes` is 204 |
-| `0x0073964c` | — | The `WaitingTimes` descriptor, the last one; anything past here is garbage | End of the walk |
+| `0x0072e120` | — | Table of 60-byte `.sam` schema descriptors, returned by the advisor balance object's slot 0 (`0x00415e90`); 205 sections, ordinals 0-204, the first, `GeneralAdvisor`, closing at `0x0072e210` | Walked: `GeneralAdvisor` is 0, `WaitingTimes` is 204 |
+| `0x0073964c` | — | The `WaitingTimes` descriptor, the last section; the next record, kind `0xc`, ends the table | End of the walk |
 | kind `1` | — | Section | |
 | kind `3` | — | Array section | |
-| kind `4` | — | Score field | |
-| kind `5` | — | Time / int | |
-| kind `6` | — | Threshold | |
+| kind `4` | — | Int (290): every `Score` and `ScorePerPoint`, and most conditions | `park-engine.md`, "How a key finds its global" |
+| kind `5` | — | Int ≥ 0 (15): `MinTimeSameMessage`, `MinScoreForConsideration` and `DiscardAfterSlaps` among them | Same |
+| kind `6` | — | Bounded int, bounds at `+0x24`/`+0x28` (50): `ThirstierThan`, `WorseThan` and `SayOnlyOnce` among them | Same |
 
-205 descriptors matches the file's 205 distinct prefixes exactly — two independent sources agreeing.
+205 section descriptors match the file's 205 distinct prefixes exactly — two independent sources agreeing.
 
 **The file's order is NOT the exe's order.** `ClosePark` is ordinal 4 in the exe but sits at line 575 of the file, far from its neighbours at lines 47-57. Nothing is missing from either side. **Ordinals must come from the exe, never from file order.**
 

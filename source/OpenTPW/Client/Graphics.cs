@@ -60,10 +60,9 @@ internal static partial class Graphics
 		var t2 = uvs.BottomLeft;
 		var t3 = uvs.BottomRight;
 
-		// Filled in place rather than built fresh. This used to allocate two Lists and then immediately
-		// ToArray() both of them - four heap allocations for every quad, every frame, on a path that draws
-		// the whole interface. The indices are the same six numbers every time, so they are not rebuilt at
-		// all, and the four vertices go into a buffer of their own.
+		// Filled in place rather than built fresh, because this path draws the whole interface every frame
+		// and anything allocated here would be allocated for every quad. The indices are the same six numbers
+		// every time, so they are not rebuilt at all, and the four vertices go into a buffer of their own.
 		//
 		// Safe as shared state for the reason the two device buffers above it already are: this is the
 		// render thread's own path, and it is finished with the array before it returns.

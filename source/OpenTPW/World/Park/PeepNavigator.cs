@@ -315,6 +315,8 @@ public sealed class PeepNavigator
 
 	/// <summary>
 	/// Records whether the step just taken got anywhere, which is what <see cref="BlockedTooOften"/> reads.
+	/// <b>Dead by CODE:</b> only <c>PeepNavigatorTests</c> calls it, and it shifts once either way. The live
+	/// history is <see cref="PeepSteering.StuckBits"/>, which <c>PeepWalk.WriteBack</c> copies here.
 	///
 	/// <para>
 	/// <b>How often the original shifts this word is not the same every step.</b> Read at

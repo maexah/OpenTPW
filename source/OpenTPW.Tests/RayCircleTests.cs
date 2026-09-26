@@ -8,7 +8,7 @@ namespace OpenTPW.Tests;
 /// <para>
 /// The interesting test here is the one that pins an answer which is <i>geometrically wrong</i>. The
 /// original's scaling of the square root does not match the scaling of what it is added to, so a ray fired
-/// at a circle one cell across whose centre is four cells away comes back at about four rather than three.
+/// at a circle one cell in radius whose centre is four cells away comes back at about four rather than three.
 /// That is reproduced deliberately, so the test asserts the number the original produces and says plainly
 /// that it is not the textbook answer.
 /// </para>

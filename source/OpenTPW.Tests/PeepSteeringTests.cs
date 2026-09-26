@@ -78,8 +78,7 @@ public class PeepSteeringTests
 	///
 	/// <para>
 	/// The two tests either side of this one cannot distinguish them - one uses full weight and the other a
-	/// force already under the limit, and both orders agree in those cases. Found while working out what a
-	/// control mutating that order would break, and the answer was nothing.
+	/// force already under the limit, and both orders agree in those cases.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -141,7 +140,7 @@ public class PeepSteeringTests
 
 	/// <summary>
 	/// <b>A taken step writes one bit into the record of being stuck; a refused one writes two.</b> That
-	/// asymmetry is the original's, and an earlier note of mine had it as two either way.
+	/// asymmetry is the original's.
 	/// </summary>
 	[TestMethod]
 	public void ARefusedStepFillsTheStuckRecordTwiceAsFast()
