@@ -2036,14 +2036,17 @@ artifacts are listed in `docs/history/README.md`.
   `FUN_004fb530` tags every need float `pv` (`0x0075b444`), and no string `mHappiness` or `mToilet` is in the binary.
   The order and offsets stand (happiness `+0x19c` and toilet `+0x1ac` are named by the debug strings at `0x004fda74`
   and `0x004fd10e`); say the two names are this project's.
-- [ ] **Q46. Two more stacked doc comments.** Found by Q11's scan of every source file (the six in Q11 were
-  the first). Each sits on another member's summary, so it documents the wrong member. By member, since line numbers
-  go stale: in `ParkGuestSprites`, `Standing`'s block lands on `StandingFrom` (Standing's own `<inheritdoc>` must go);
-  and in `ParkGround`, the constructor's `<param name="world">` lands on the `_world` field. The rest this item named
-  is done: `a134742` parted `StepVehicle` and `ReleasesVehicle`; `e0462c9` parted `Fire` and `IsStaff`, `Step` and
-  `HeldByAThing`, and `ChooseSomewhereToGo` and `Explain`, dropped `NextThingId`'s stale upper summary, and corrected
-  `SettleUp`'s "Five", `Explain`'s "actually get there" and the exit test's remark; `SettleUp`'s summary went with
-  `d7f00bd` and `e0462c9`.
+- [x] **Q46. Two more stacked doc comments.** Done 2026-09-26, `alexah/164-q46-stacked-doc-comments`. Found by
+  Q11's scan of every source file (the six in Q11 were the first). Each sat on another member's summary, so it
+  documented the wrong member: in `ParkGuestSprites`, `Standing`'s block landed on `StandingFrom`, so `Standing`
+  read `<inheritdoc cref="StandingFrom"/>` for a doc that was actually its own; the block moved onto `Standing`
+  and the `<inheritdoc>` is gone, leaving `StandingFrom` with only the summary that was already its own. In
+  `ParkGround`, the constructor's `<param name="world">` sat above the `_world` field instead of the constructor;
+  moved onto `public ParkGround(...)`, leaving the field with only its own one-line summary. The rest this item
+  named is done: `a134742` parted `StepVehicle` and `ReleasesVehicle`; `e0462c9` parted `Fire` and `IsStaff`, `Step`
+  and `HeldByAThing`, and `ChooseSomewhereToGo` and `Explain`, dropped `NextThingId`'s stale upper summary, and
+  corrected `SettleUp`'s "Five", `Explain`'s "actually get there" and the exit test's remark; `SettleUp`'s summary
+  went with `d7f00bd` and `e0462c9`.
   No game run.
 - [x] **Q49. A stale comment in `CreateTexture`.** Done 2026-09-26 by the staleness audit,
   `alexah/159-audit-docs-and-memory`: the comment names the byte[] and Stream constructors, not `SignFile`.

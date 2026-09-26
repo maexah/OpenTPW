@@ -543,33 +543,6 @@ public sealed class ParkGuestSprites : ModelEntity
 	}
 
 	/// <summary>
-	/// Where a person is drawn and which way they are turned: from the simulation when one is running them,
-	/// and from the save when it is not.
-	///
-	/// <para>
-	/// <b>Why this exists at all.</b> <see cref="_people"/> holds record structs copied out of the save when
-	/// the park opened, and nothing writes to them, so without this a guest the simulation has walked half
-	/// way across the park would be drawn where the file left them.
-	/// </para>
-	/// <para>
-	/// <b>The scale is the heightfield's own, and that is the whole argument for it.</b> A position in the
-	/// simulation is 16.16 fixed point where one is a map cell; <see cref="ParkGround"/> lays its ground
-	/// vertices at <c>cell * CellSize</c>, so multiplying by the same <c>CellSizeX</c>/<c>CellSizeY</c> is
-	/// what keeps a person's feet on the terrain rather than merely near it. The save's own sprite
-	/// coordinates were measured against this and agree on x to about one part in ten thousand, but wander
-	/// by up to a third of a per cent on y - so they are not the thing to calibrate against, and are used
-	/// only as the fallback below.
-	/// </para>
-	/// <para>
-	/// <b>It falls back rather than guessing.</b> With no simulation, or before the ground has loaded and a
-	/// cell size is known, the saved position and heading are what get drawn.
-	/// </para>
-	/// </summary>
-	/// <remarks>
-	/// <b>It takes the walk rather than the pool of them</b>, which makes the choice and the arithmetic
-	/// testable without a graphics device or a live <see cref="ParkPeople"/>; the lookup is the caller's.
-	/// </remarks>
-	/// <summary>
 	/// Where to draw this person, finding their walk for the caller.
 	///
 	/// <para>
@@ -644,7 +617,33 @@ public sealed class ParkGuestSprites : ModelEntity
 		return objects.TryNodeOn( ride, ParkPeople.BounceNodeName( node ), out var world ) ? world : null;
 	}
 
-	/// <inheritdoc cref="StandingFrom"/>
+	/// <summary>
+	/// Where a person is drawn and which way they are turned: from the simulation when one is running them,
+	/// and from the save when it is not.
+	///
+	/// <para>
+	/// <b>Why this exists at all.</b> <see cref="_people"/> holds record structs copied out of the save when
+	/// the park opened, and nothing writes to them, so without this a guest the simulation has walked half
+	/// way across the park would be drawn where the file left them.
+	/// </para>
+	/// <para>
+	/// <b>The scale is the heightfield's own, and that is the whole argument for it.</b> A position in the
+	/// simulation is 16.16 fixed point where one is a map cell; <see cref="ParkGround"/> lays its ground
+	/// vertices at <c>cell * CellSize</c>, so multiplying by the same <c>CellSizeX</c>/<c>CellSizeY</c> is
+	/// what keeps a person's feet on the terrain rather than merely near it. The save's own sprite
+	/// coordinates were measured against this and agree on x to about one part in ten thousand, but wander
+	/// by up to a third of a per cent on y - so they are not the thing to calibrate against, and are used
+	/// only as the fallback below.
+	/// </para>
+	/// <para>
+	/// <b>It falls back rather than guessing.</b> With no simulation, or before the ground has loaded and a
+	/// cell size is known, the saved position and heading are what get drawn.
+	/// </para>
+	/// </summary>
+	/// <remarks>
+	/// <b>It takes the walk rather than the pool of them</b>, which makes the choice and the arithmetic
+	/// testable without a graphics device or a live <see cref="ParkPeople"/>; the lookup is the caller's.
+	/// </remarks>
 	/// <param name="alpha">
 	/// How far through the current thing tick this frame is - <see cref="ParkPeople.ThingTickFraction"/>.
 	/// <b>One by default, which is the position the simulation actually left them at</b>, so a caller with

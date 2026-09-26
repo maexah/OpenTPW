@@ -42,14 +42,14 @@ public sealed class ParkGround : ModelEntity
 
 	private readonly string _themeName;
 
+	/// <summary>The park this was built from, so that it can be built again when a cell changes.</summary>
+	private ParkWorld? _world;
+
 	/// <param name="world">
 	/// The park's own save, or null where the theme ships none. It is asked one question only: which
 	/// cells something else draws - a path, a queue or a built thing's floor - so that those are left to
 	/// their owners instead of being drawn as grass underneath them.
 	/// </param>
-	/// <summary>The park this was built from, so that it can be built again when a cell changes.</summary>
-	private ParkWorld? _world;
-
 	public ParkGround( string themeName, ParkWorld? world )
 	{
 		_themeName = themeName;
