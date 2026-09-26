@@ -650,7 +650,8 @@ switch of window is never let go, as far as the lobby knows.
   visible), so the last visible control a tree builds is not the hover until the next refresh or move. Which of the
   lobby's opens end without one is not read whole: `NewPlayerDialog_Open` (`0x004a6e40`) sets the focus partway through
   (`FUN_0065e59b`, at `0x004a6f8e`), which does not refresh it, and none of the calls after it reaches the refresh. **OpenTPW differs, and does not count it**: `WindowStack.OnUpdate`
-  hit-tests every frame, so a press here always goes to what the pointer is over (said at the site). Its code has no
+  hit-tests every frame, so a press here always goes to what the pointer is over, kept as a fix at Alexah's word
+  (`docs/DECISIONS.md`; said at the site). Its code has no
   branch where the original's stale press would be, and the nearest stand-in, a press with the pointer unmoved since a
   window opened or closed, would count mostly presses the original also sends to the right control.
 - Whether the mail badge `0xbf432` can show offline. `0x004bbbd0` hides it while `g_Players+0xc4`, a count, is 0; if it can

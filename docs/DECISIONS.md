@@ -43,3 +43,12 @@ The test project's `Microsoft.NET.Test.Sdk` 16.11.0 is the only source of the hi
 9.0.1 advisory, and it ships in nothing but the tests. Alexah was asked on 2026-09-13 and chose to leave it for
 now; do not raise it again. Two more advisories stand and were not put to Alexah: `Zio` 0.17.0 (low, every project)
 and `SixLabors.ImageSharp` 3.1.6 (moderate and high, in `OpenTPW.ModKit` only, which the game no longer builds in).
+
+## A press goes to what the pointer is over (2026-09-25)
+
+The original works its hover out only on a move and when its interface changes (`FUN_006589f9`), so a press made
+just after a window opens, before the pointer moves, can go to the old hover and miss the last button that window
+built (`docs/exe/lobby.md`, "Unsettled"). OpenTPW hit-tests every frame, so a press always goes to what the pointer is
+over. Copying the original would mean decoding each window's build order to reproduce what is almost certainly a
+glitch, so **Alexah chose to keep ours as a fix** ("Option 1", after the pros and cons were put to them, Q69). The
+deviation is said at `WindowStack.OnUpdate`.

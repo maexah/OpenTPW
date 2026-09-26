@@ -238,7 +238,7 @@ internal sealed class WindowStack : Panel
 		// Ours: the hover is hit-tested every frame, and a press goes to it, so a press always reaches what the
 		// pointer is over. The original works its hover out only on a move and when its interface changes
 		// (FUN_006589f9), so a press made after a window opens, before the pointer moves, can go to the old
-		// hover (docs/exe/lobby.md, "Unsettled").
+		// hover (docs/exe/lobby.md, "Unsettled"). Kept as a fix (docs/DECISIONS.md).
 		var mouse = Input.Mouse.Position;
 		var hit = HitTest( mouse.X, mouse.Y );
 
