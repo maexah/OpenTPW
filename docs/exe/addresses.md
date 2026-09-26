@@ -125,7 +125,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004813c0` | | OpenTPW/UI/WindowStack.cs  |
 | `0x00481ad0` | Camcorder button `FUN_00481a10`: installs the camcorder mode through the setter, letting go of the hand | OpenTPW.Tests/ParkHandTests.cs  |
 | `0x00485780` | | OpenTPW/UI/ButtonGlint.cs OpenTPW/UI/UiControl.cs OpenTPW/UI/UiSounds.cs OpenTPW/UI/WindowStack.cs  |
-| `0x00485a70` | | OpenTPW/UI/UiFonts.cs  |
+| `0x00485a70` | The font in a slot of the current set: none from slot 13 up, by an unsigned compare (`lobby.md`, "Meshes and fonts") | OpenTPW.Tests/UiFontsTests.cs OpenTPW/UI/UiFonts.cs  |
 | `0x00485d20` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x00486bce` | | OpenTPW/Global/GameClock.cs  |
 | `0x004873b3` | Hover category: a type-12 track cell under a type-25 parent gets no category | OpenTPW/World/Level.cs  |

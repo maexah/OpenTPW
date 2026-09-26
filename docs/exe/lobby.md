@@ -40,6 +40,7 @@ keys act on the release").
 | — | ui.wad `.md2` | UI meshes authored on the same 2048x1536 virtual screen. A part (node) is stretched to fill its control rect; frame + state picks the part (buttons: normal, disabled, hilite, hidown, helddown, down) | Mesh node names and the part picker |
 | `0x00477310` | — | 9-slice path, taken for `!`-prefixed meshes | Disassembly |
 | `0x00419710` | — | `.bf4` font loader: ids out of `Language\English\residx.dat`, 13 slots x 4 resolution sets | Disassembly; the `.bf4` format is written up in the FileFormats docs |
+| `0x00485a70` | — | The font in a slot: `CMP ECX,0xd` / `JNC` answers null for any slot from 13 up, and, the compare being unsigned, for a negative one; otherwise `0x0078b54c + (slot + set * 13) * 0x18`, the set in `0x0078b534`. One flat table, 13 slots to a set, so every set is the same length by construction | Disassembly, read first-hand |
 
 ## Instant Action vs Full Simulation
 

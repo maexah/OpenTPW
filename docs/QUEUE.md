@@ -1431,7 +1431,31 @@ artifacts are listed in `docs/history/README.md`.
   it not landed). `BFSTReader.ReadFromStream` calls `ReadFile()` and throws the result away (`BFSTReader.cs`) before
   `StringFile`'s constructor calls it again - delete the first. `World/Entity/Entity.cs`'s `using System.Reflection`,
   from the same step, is now unused. No game run; a test that one read happens.
-- [ ] **Q71. Two guards that do not guard.** From the 2026-09-12 review. `Rotation.From( pitch, yaw, roll )` turns
+- [x] **Q71. Two guards that do not guard: now both guard.** Done 2026-09-25, `alexah/158-two-guards-that-guard`.
+  - **Built:** `Rotation.From` takes any angle as it is. Its three clamps to 180, applied after the angles became
+    radians, are gone: a whole turn more or less is the same rotation, and the same clamp in degrees would make 270 a
+    half turn. Only tests call it, and nothing its `Vector3` overload, so it is labelled dead by CODE. `UiFonts.Get`
+    looks a slot up through `FileName`, bounded by the length of the set it indexes. The original's `0x00485a70`
+    bounds every set by one unsigned compare with 13, the stride of its one flat table (`lobby.md`, "Meshes and
+    fonts"), and every shipped set is 13 long, so the two agree on every slot. `Get` logs `UI: font <slot> of set
+    <set> is <file|none>` once per set and slot.
+  - **Confirmed in the game** (`q71confirm.py`, silent; every PREDICT line written first), though the item asked for no
+    run. Fix: the lobby at 1280x720 logs 1 line, font 5 of set 2 (TITLEBIG). The console's `size` takes the window to
+    1024x768, 640x480 and 512x384, and each logs its one line, font 5 of set 3, 1 and 0 (TITLEBIG, TITLEMED,
+    TITLESMALL); back at 1280x720, none. `park jungle` logs fonts 1, 2 and 3 of set 2 (CASHBIG, SESHBIG, DATEBIG, the
+    gadget's balance, count and date), and 7 (GAME9, the help bar), predicted on the `pointer` reply's help row 442.
+    `hirescreen` logs font 6 (GAME8). That is 9 lines, none answered "none". The control, the bound put back on the
+    first set: the same 9, as predicted, since every set is 13 long; the hire screen's panel and the gadget are
+    identical to the pixel. Photographed: the player slots' lettering in all four sets, and the hire screen's title,
+    rows and gadget. `save/` unchanged in both runs. Neither fix changes anything the game shows; this is the proof.
+  - **Tests:** `RotationTests.FromTakesAnyAngle` (on each axis, a quarter turn against the same with thirty turns more,
+    and 270 degrees against -90) and `UiFontsTests` (a made table whose second set is shorter). Each failed before the
+    fix, and goes red with the radian clamp put back, with a clamp in degrees, and with the bound on the first set.
+  - **Reviewed** by a read-only workflow (three lenses, a skeptic on each finding, a completeness critic): two
+    findings. Upheld and acted on: the dead-by-CODE remark said nothing calls `From`, where the new test does. Refuted:
+    that no test pins `Get`'s call to `FileName`; on the shipped table no test can tell the old line from the new.
+
+  The item as written: From the 2026-09-12 review. `Rotation.From( pitch, yaw, roll )` turns
   degrees into radians and then clamps them to -180..180, degree limits; `UiFonts.Get` checks `slot` against
   `Sets[0].Length` and then indexes `Sets[SetIndex]`. Each reads as protective and is not. Fix each with a test that
   fails first. No game run.

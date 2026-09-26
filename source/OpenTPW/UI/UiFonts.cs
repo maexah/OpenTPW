@@ -75,7 +75,25 @@ internal static class UiFonts
 
 	/// <summary>The font in <paramref name="slot"/>, or null for a slot that does not exist.</summary>
 	public static BitmapFont? Get( int slot )
-		=> slot >= 0 && slot < Sets[0].Length ? BitmapFont.Get( Sets[SetIndex][slot] ) : null;
+	{
+		var set = SetIndex;
+		var name = FileName( Sets, set, slot );
+
+		if ( Answered.Add( (set, slot) ) )
+			Log.Info( $"UI: font {slot} of set {set} is {name ?? "none"}" );
+
+		return name is null ? null : BitmapFont.Get( name );
+	}
+
+	/// <summary>Each set and slot <see cref="Get"/> has answered, so each is logged once.</summary>
+	private static readonly HashSet<(int Set, int Slot)> Answered = [];
+
+	/// <summary>
+	/// The file <paramref name="slot"/> names in set <paramref name="set"/>, or null for a slot outside that set. The
+	/// original's sets are thirteen apiece, and 0x00485a70 answers none from slot 13 on.
+	/// </summary>
+	internal static string? FileName( string[][] sets, int set, int slot )
+		=> slot >= 0 && slot < sets[set].Length ? sets[set][slot] : null;
 
 	/// <summary>Loads every font the current set holds, so the first dialog to need one does not wait.</summary>
 	public static void Preload()

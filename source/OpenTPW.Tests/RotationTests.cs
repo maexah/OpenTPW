@@ -48,4 +48,41 @@ public class RotationTests
 			Assert.AreEqual( wanted.Z, facing.Z, 0.001f, $"{direction}: Z" );
 		}
 	}
+
+	/// <summary>
+	/// <see cref="Rotation.From(float, float, float)"/> takes any angle, and a whole turn more or less is the same
+	/// rotation. Thirty whole turns carry each angle past 180 radians (about 10,313 degrees), so a clamp to 180 either
+	/// way cuts it short if it is applied after the angles become radians; 270 degrees is a quarter turn back, so the
+	/// same clamp applied before makes it a half turn.
+	/// </summary>
+	[TestMethod]
+	public void FromTakesAnyAngle()
+	{
+		const float Turns = 30 * 360f;
+
+		for ( int axis = 0; axis < 3; ++axis )
+		{
+			TurnsAlike( Angles( axis, 90f ), Angles( axis, 90f + Turns ), axis, "a quarter turn and thirty turns more" );
+			TurnsAlike( Angles( axis, -90f ), Angles( axis, 270f ), axis, "270 degrees" );
+		}
+	}
+
+	private static Vector3 Angles( int axis, float degrees )
+		=> new( axis == 0 ? degrees : 0f, axis == 1 ? degrees : 0f, axis == 2 ? degrees : 0f );
+
+	private static void TurnsAlike( Vector3 wanted, Vector3 given, int axis, string what )
+	{
+		var a = Rotation.From( wanted.X, wanted.Y, wanted.Z );
+		var b = Rotation.From( given.X, given.Y, given.Z );
+
+		foreach ( var v in new[] { Vector3.Forward, Vector3.Up, Vector3.Left } )
+		{
+			var x = a * v;
+			var y = b * v;
+
+			Assert.AreEqual( x.X, y.X, 0.001f, $"axis {axis}, {what}: {v} X" );
+			Assert.AreEqual( x.Y, y.Y, 0.001f, $"axis {axis}, {what}: {v} Y" );
+			Assert.AreEqual( x.Z, y.Z, 0.001f, $"axis {axis}, {what}: {v} Z" );
+		}
+	}
 }

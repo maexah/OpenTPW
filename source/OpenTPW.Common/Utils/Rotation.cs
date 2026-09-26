@@ -46,15 +46,18 @@ public partial struct Rotation : IEquatable<Rotation>
 
 	public static Rotation Identity => new Rotation( 0F, 0F, 0F, 1F );
 
+	/// <summary>
+	/// The rotation these three angles describe, in degrees. Any angle is taken as it is: a whole turn more or less is
+	/// the same rotation, so none needs bringing into range.
+	/// </summary>
+	/// <remarks>
+	/// Dead by CODE: only tests call it, and nothing calls its overload that takes a <see cref="Vector3"/>.
+	/// </remarks>
 	public static Rotation From( float pitch, float yaw, float roll )
 	{
 		pitch = pitch.DegreesToRadians();
 		yaw = yaw.DegreesToRadians();
 		roll = roll.DegreesToRadians();
-
-		pitch = pitch.Clamp( -180, 180 );
-		yaw = yaw.Clamp( -180, 180 );
-		roll = roll.Clamp( -180, 180 );
 
 		float sp = MathF.Sin( pitch * 0.5f );
 		float cp = MathF.Cos( pitch * 0.5f );

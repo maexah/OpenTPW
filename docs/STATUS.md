@@ -72,7 +72,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
 ## Next
 
 `docs/QUEUE.md`, from the top. **Q1-Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50-Q50h, Q53, Q53b, Q56,
-Q57, Q59, Q67, Q68, Q68b, Q69, Q70, Q82 and Q82b are ticked.** Next is **Q71**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8
+Q57, Q59, Q67, Q68, Q68b, Q69-Q71, Q82 and Q82b are ticked.** Next is **Q83**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8
 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45
 Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g
 Q105, Q50f Q50h, Q50h Q106, Q53 Q53b and Q107-Q111, Q53b Q112, Q56 Q113-Q117, Q57 Q118-Q120, Q59 Q121-Q123, Q67
@@ -88,7 +88,7 @@ Q124-Q125, Q68 Q68b and Q126-Q130, Q68b Q131-Q132, Q69 Q139-Q141, Q70 Q142-Q143,
 - Nothing the game ships reaches the critical-section cap (Q11), Q68b's ferry and seaplane let-go, or Q82b's stamp
   ahead of the clock and state 6's wait: tested only; nor, early on, a sale's staff half, as nobody rests yet (Q36).
 - Tested, not run in the game: the Delete key's and a sale's let-go of a candidate (Q39), Escape before the gate opens
-  (Q41), the name box's two releases in one frame and a park whose global.sam will not load (Q42).
+  (Q41), the name box's two releases in one frame, a park whose global.sam will not load (Q42), `Rotation.From` (Q71).
 - The camcorder's tie and four of Q48b's put-backs move the viewer under 0.2 units: the census's, not a photograph's.
 - Q50's slot let go, its nominee and `EnteringRide` kept, and a queue walk giving up at a stale link: tested only.
 - Q50b's reopen by an edit of the queue, a head forced on, the guard's refusals and a bought ride's bit: tested only.
@@ -107,13 +107,13 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1197**, 0 fail, 0 skip with the game | 2026-09-25, after Q70 |
-| Tests without the game | **486** ran, **711** skipped, of 1197 | 2026-09-25, after Q70 |
-| Build warnings | 123 | 2026-09-25, after Q70 |
+| Tests | **1199**, 0 fail, 0 skip with the game | 2026-09-25, after Q71 |
+| Tests without the game | **488** ran, **711** skipped, of 1199 | 2026-09-25, after Q71 |
+| Build warnings | 123 | 2026-09-25, after Q71 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-25 - each string table parsed once (Q70).** `alexah/157-parse-each-string-table-once`.
-**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/156` (Q69)
+**2026-09-25 - two guards that guard (Q71).** `alexah/158-two-guards-that-guard`.
+**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/157` (Q70)
 back to `118` (Q4), `115`-`116` (Q3), `117` (Q35) and `109` (Q1, Q1b); before them, `114`, `110`, `112`. Older: git log.
