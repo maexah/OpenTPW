@@ -404,7 +404,16 @@ public sealed class ParkWorld
 	/// mRemainingBalloonLife 495, mSavedMajorDest 499, mSavedState 501, mState 505, mThirst 509,
 	/// mTimeOfLastSpotAnim 513, mTimeStartedIdling 517, mTiredness 521, mToilet 525, mVomit 529 - ending
 	/// on <b>533</b>. Every offset this reader already had is reproduced by that walk, which is what makes
-	/// the ones it did not have trustworthy.
+	/// the ones it did not have trustworthy - except the block's seven need floats: <c>mHappiness</c>,
+	/// <c>mHunger</c>, <c>mLitter</c>, <c>mThirst</c>, <c>mTiredness</c>, <c>mToilet</c> and <c>mVomit</c>
+	/// (see <see cref="ReadGuest"/> for why there are exactly seven). The walk gives those seven an offset
+	/// and an order, not a name: the serialiser tags every need float <c>pv</c>, and none of the seven has a
+	/// matching string in the binary - the one place <c>mLitter</c> does appear belongs to the map-cell
+	/// record's own litter block (<c>docs/exe/park.md</c>, "The save's world block: map cells"), not this
+	/// one. Happiness and toilet are known instead by the debug strings that print them and by the needs
+	/// tick, not by a field name in the binary (<c>docs/exe/ride-operation.md</c>); hunger, thirst, litter
+	/// and toilet again by the game's own logging (above); tiredness by where it sorts (above), and vomit
+	/// the same way. All seven spellings are this project's own.
 	/// </para>
 	/// </para>
 	/// </summary>

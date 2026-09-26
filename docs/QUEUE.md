@@ -2031,11 +2031,16 @@ artifacts are listed in `docs/history/README.md`.
   item `+0xC4` `Research.Group`, which the schema puts at `+0x178`, making `+0xC4` `UsageInfo.GoldenTicketCost`; and
   `park-engine.md` divides a capacity by `+0x1a0`, which the schema makes `Upgrades[0].InitDuration` (`+0x198` is
   `InitCapacity`). Settle each against the code that reads it, and correct the page that is wrong. No game run.
-- [ ] **Q101. `ParkWorld`'s person-block walk names two fields the game does not.** Found by Q50d's decode. The
-  summary of `ParkWorld.GuestState` lists `mHappiness 422` and `mToilet 525` among the serialiser's own names;
-  `FUN_004fb530` tags every need float `pv` (`0x0075b444`), and no string `mHappiness` or `mToilet` is in the binary.
-  The order and offsets stand (happiness `+0x19c` and toilet `+0x1ac` are named by the debug strings at `0x004fda74`
-  and `0x004fd10e`); say the two names are this project's.
+- [x] **Q101. `ParkWorld`'s person-block walk names two fields the game does not.** Done 2026-09-26,
+  `alexah/165-q101-guest-state-field-names`. Found by Q50d's decode. The summary of `ParkWorld.GuestState` listed
+  `mHappiness 422` and `mToilet 525` among the serialiser's own names; `FUN_004fb530` tags every need float `pv`
+  (`0x0075b444`), and no string `mHappiness` or `mToilet` is in the binary. Widened past what the item named: none
+  of the block's seven need floats has its own string, `mLitter` included - the one `mLitter` in the binary belongs
+  to the map-cell record's own litter block (`docs/exe/park.md`, "The save's world block: map cells"), not this
+  one, confirmed with `strings` over the shipped exe. The order and offsets stand (happiness `+0x19c` and toilet `+0x1ac` are named by the debug strings at
+  `0x004fda74` and `0x004fd10e`, already recorded in `docs/exe/ride-operation.md`); the comment now says all seven
+  spellings are this project's own, not just the two named here, and says so consistently with `mTiredness`'s own
+  paragraph rather than beside it.
 - [x] **Q46. Two more stacked doc comments.** Done 2026-09-26, `alexah/164-q46-stacked-doc-comments`. Found by
   Q11's scan of every source file (the six in Q11 were the first). Each sat on another member's summary, so it
   documented the wrong member: in `ParkGuestSprites`, `Standing`'s block landed on `StandingFrom`, so `Standing`
