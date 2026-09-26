@@ -2019,9 +2019,13 @@ artifacts are listed in `docs/history/README.md`.
 - [ ] **Q13. Move `docs/CLEANUP-PLAN.md` into `docs/history/`.** Every item in it is closed. It is still untracked in
   `docs/`, so it exists on this machine only. Commit it under `docs/history/` and list it in `docs/history/README.md`.
   (The STATUS diet landed in `c445844`; `QUEUE.md` and both reviews were committed in `c2ddaf6`.) No game run.
-- [ ] **Q88. One label from Q50's decode.** `PeepBehaviour.HeldByAThing` misses a state-8 queuer (dead by CONTENT):
-  label it (`CLAUDE.md` rule 3). The rest is done: `ParkRideChooser`'s entry-cell remark (`2d5a4bd`), and the
-  comments on `ParkIsClosed` and the settle-up and `DropStaleQueueHeads`' dead-by-CODE label (`e0462c9`). No game run.
+- [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
+  `PeepBehaviour.HeldByAThing` misses a state-8 queuer (dead by CONTENT): labelled (`CLAUDE.md` rule 3) with a
+  `<remarks>` pointing at `ParkRideOperation.IsQueueing`, which already reads `SavedState` for
+  `PeepState.PlayingSpotAnimation` where `HeldByAThing` does not - dead by CONTENT because nothing sets a guest to
+  that state while playing a spot animation is unbuilt (Q98). The rest was already done: `ParkRideChooser`'s
+  entry-cell remark (`2d5a4bd`), and the comments on `ParkIsClosed` and the settle-up and `DropStaleQueueHeads`'
+  dead-by-CODE label (`e0462c9`). No game run.
 - [ ] **Q95. Two descriptor offsets the compiled `.sam` schema names otherwise.** Found by Q50c's schema simulation
   (`FUN_00401030` over the table at `0x00744b30`), not yet checked against each page's own evidence: `hud.md` calls
   item `+0xC4` `Research.Group`, which the schema puts at `+0x178`, making `+0xC4` `UsageInfo.GoldenTicketCost`; and

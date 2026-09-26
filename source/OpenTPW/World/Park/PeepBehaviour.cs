@@ -323,6 +323,13 @@ public sealed class PeepBehaviour
 	/// for one whose <c>+0x212</c> names this person and leaves them alone if it finds one. Removing
 	/// somebody a thing still names would leave the thing pointing at nobody.
 	/// </summary>
+	/// <remarks>
+	/// <b>Misses a state-8 queuer, and it is dead by CONTENT, not a defect.</b> Unlike
+	/// <see cref="ParkRideOperation.IsQueueing"/>, this does not read <c>SavedState</c> when
+	/// <paramref name="state"/> is <see cref="PeepState.PlayingSpotAnimation"/>, so a guest a thing still
+	/// names while playing one would read as not held. Nothing sets a guest to that state - playing a spot
+	/// animation is unbuilt (Q98) - so the case cannot be reached; it becomes live the day that is built.
+	/// </remarks>
 	internal static bool HeldByAThing( PeepState state )
 		=> state is PeepState.InQueue or PeepState.SteppingUpQueue or PeepState.BeingAdmitted
 			or PeepState.EnteringRide or PeepState.Riding or PeepState.LeavingRide;
