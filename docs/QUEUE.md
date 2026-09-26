@@ -2110,6 +2110,28 @@ artifacts are listed in `docs/history/README.md`.
   says the original logs "Ride script not located for %s - using placeholder" and loads `Data\TestScript\test.rse`
   (`0x004dcf90`); `addresses.md:231` has an empty "What it is". Check each in Ghidra first, then give it a home
   (rule 14).
+- [ ] **Q163. "Placed" should mean all fourteen scripted objects, not `IsPlaced`'s eleven.** Found by the
+  2026-09-26 staleness audit; Alexah's call. `ParkWorld.cs:167-171`'s `IsPlaced` excludes the three fixed items
+  that carry the sentinel, and `ParkDecodedRecordTests`/`ParkEntryCellTests` say "eleven placed objects" to
+  match. `ParkRides.cs:564` and `:576` already say "fourteen placed things", matching `docs/VERIFYING.md:160`,
+  `docs/exe/ride-operation.md:1688` and `ParkScriptStateTests.TheShippedParkSavesOneScriptPerPlacedThing`, and
+  `CLAUDE.md`'s "Words that mean one thing" defines Object as "a placed shop, ride or scenery" - no exclusion.
+  Bring the eleven-based sites (the two tests above, and anywhere else `git grep -i "eleven placed"` finds) up
+  to the fourteen-based ones; build and test in a worktree.
+- [ ] **Q164. Five FileFormats-repo corrections, on the current tip branch.** Found by the 2026-09-26 staleness
+  audit; Alexah said put fixes on the tip branch now rather than wait for a branch merge. All in
+  `/home/alex/repos/OpenTPW.FileFormats`.
+  - `models.md`'s "### UV animation (bit 0x10000)" still describes a component count and start/end floats; the
+    code reads per-entry key runs (`AnimationFile.UvTrack` `FirstKey`/`KeyCount`, `AnimationUvTests`).
+  - `models.md:451` calls channel `0x00200` "Unidentified"; it decodes as progress along a path
+    (`AnimationFile.ReadPathChannel`, already written up on `docs/format-corrections`' `model.md`).
+  - `models.md:568`'s easing-table population count ("1,166 clips under levels/") should be 1,151 for `levels/`
+    alone, 1,166 only over `levels/` plus `global/`; the rest of that table's figures (457, 1759/3022, 1263,
+    9358/12,428, 3070, 2797, 112) hold only over the outside-`lobby.wad` set.
+  - `models.md:462-468`'s "This page used to call that an observation" blockquote should come out (history
+    belongs in commit messages, not the page).
+  - `texture.md`'s LZSS pseudocode has the literal-bit sense backwards and reads the length before testing the
+    offset for 0; `LZSS.cs:9-25` takes `isDelta == 0` as the literal and checks offset-0 first.
 
 ## C. Alexah's list: cause known, one session each
 
