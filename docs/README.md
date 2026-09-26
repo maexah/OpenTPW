@@ -13,7 +13,7 @@ Where the project's memory lives. Code says what; these files say why, and what 
 | `CLEANUP-PLAN.md` | Nine things a player saw, **all closed** 2026-09-22. **Untracked by instruction** — never staged, and deliberately not in `.gitignore`, so it shows in every `git status`. It exists on one machine and is absent from a fresh clone. `QUEUE.md` Q13 moves it into `history/`. | Never (closed) |
 | `DECISIONS.md` | Choices that could have gone another way, one paragraph each, dated: what was chosen, why, and where its facts now live. | When a choice is made |
 | `MEMORY-DIET.md` | What moved out of the memory folder and where, and what is still owed. | While the diet is unfinished |
-| `WORKFLOW.md` | Branches, sessions, commits, how to verify | Rarely |
+| `WORKFLOW.md` | Branches, pushing, subagents (model by stage), sessions, commits, how to verify | Rarely |
 | `exe/` | Reverse-engineering facts as tables: addresses, offsets, field names, counts from shipped data | Whenever a fact is found |
 | FileFormats docs clone | File-format facts: the bytes in a shipped file. A separate repo, `OpenTPW.FileFormats` - see "The FileFormats docs clone" below. | Whenever a format fact is found |
 | `history/` | Superseded plans and per-branch ledgers, **verbatim**. Grep it; never read it whole, and never edit it — history is kept as it was written. | Never |

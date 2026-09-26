@@ -24,6 +24,40 @@ Four things about that gate, each of which has cost a session:
 - **`git add -p` is unavailable here.** When one file carries changes belonging to two commits, re-cut the commits so their file sets are *disjoint*; do not try to split a file.
 - **A test count in a commit message is a claim about that commit standing alone**, and a full-suite run cannot check it. Either gate the commit alone or do not quote a count.
 
+## Subagents
+
+Set by Alexah 2026-09-26, after one staleness audit spent about 40M subagent tokens and hit the weekly limit. None of
+this removes a check: the adversarial verify and the review of applied edits stay.
+
+**Model by stage.** Pass `model` per agent; omitting it runs Opus.
+
+| Stage | Model | Why |
+|---|---|---|
+| Greps, listing files, headings or `case` labels, gathering evidence for a named question, formatting JSON or text | Haiku | A script checks the result |
+| First-pass audit of a file, triaging notes, merging edits that agree, drafting queue items from verified findings, read-only sweeps | Sonnet | An Opus verifier checks every finding |
+| Adversarial verify, reviewing applied edits, anything in Ghidra, decoding, merges that disagree on a fact, code changes | Opus | A wrong answer here costs a session |
+
+A cheaper finder is safe only under an Opus verifier that also hunts misses; never Sonnet verifying Sonnet. Fable is
+billed as its own weekly bucket: trial it against Opus on one slice before using it for a stage.
+
+**Before fanning out.**
+- Script what a script can first: heading citations, Q-number status, paths, `addresses.md`'s generator, test and
+  member names cited in docs, `Unimplemented.Report` keys. A check build with the documentation file on reports every
+  unresolved `<see cref>`. Agents then judge meaning only.
+- Check `/usage`, estimate the run (an agent that reads whole files costs about 200-400k tokens), and ask Alexah before
+  one that will not fit, or batch it so it does.
+- Write a workflow's arguments to a file from the script that computed them and pass them unedited; never retype a
+  file list.
+
+**Shape.**
+- Every file has exactly one auditor. Cross-cutting slices (a commit's drift, a names census) report leads to the
+  owner, not edits, so no two agents rewrite one line.
+- Audit incrementally: the files changed since the last audit (`git diff --name-only <last audit>..main`), the docs
+  pages those commits touched, and the sites that cite what changed. A full-tree audit is a baseline, not a habit.
+- An incremental verifier hunts misses by targeted greps (numbers, Q-numbers, names, history words), not a re-read.
+- End each queue item with a light check of the docs and comments it touched, so drift stays small.
+- After an interruption, resume the run (`resumeFromRunId`) rather than relaunching it.
+
 ## Sessions
 
 - **One task per session.** Start Claude Code from the repo root. Read `CLAUDE.md` (automatic) and `docs/STATUS.md`, take the first unticked item in `docs/QUEUE.md` (unless Alexah names another), then read the one `docs/exe/` page for its area. Check the Ghidra headless server at the start of work (`CLAUDE.md` rule 7).

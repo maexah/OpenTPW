@@ -35,6 +35,7 @@ Machine-specific paths live in `CLAUDE.local.md` (not committed). Long-form know
 15. **Do not mention the Gmail, Calendar or Drive connectors.**
 16. **Write the plan down as you go** (2026-09-11). Put a multi-step task's checklist in the live plan and tick it before moving on, not at the end, so an auto-compaction loses nothing. Hand broad read-only sweeps to subagents that report a summary; keep edits, builds, commits and game launches in the main session.
 17. **Show the next five queue items before every clear** (2026-09-23). When Alexah says they are about to clear the session, show the next five unticked items in `docs/QUEUE.md`, in queue order, each with what it asks for. **Read the file and show what it says**, rather than reciting it from memory; a half-remembered list handed over at a clear is the one place a stale claim cannot be caught later.
+18. **Spend subagent tokens where they buy accuracy** (2026-09-26). Pick each agent's model by its stage, fan out only after a script has done what a script can, audit incrementally, and check `/usage` before a large run. The table and the rules are `docs/WORKFLOW.md`, "Subagents".
 
 ## Build, test, run
 
