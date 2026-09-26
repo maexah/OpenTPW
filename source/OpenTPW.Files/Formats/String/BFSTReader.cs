@@ -28,6 +28,7 @@ internal sealed class BFSTReader : BaseFormat
 		memoryStream.Dispose();
 	}
 
+	/// <summary>Takes the file's bytes. Nothing is parsed until <see cref="ReadFile"/> is called.</summary>
 	protected override void ReadFromStream( Stream stream )
 	{
 		// Set up read buffer
@@ -39,8 +40,6 @@ internal sealed class BFSTReader : BaseFormat
 		tempStreamReader.Close();
 
 		memoryStream = new ExpandedMemoryStream( buffer );
-
-		ReadFile();
 	}
 
 	public string[] ReadFile()
@@ -120,6 +119,8 @@ internal sealed class BFSTReader : BaseFormat
 			memoryStream.Seek( initialMemPos, SeekOrigin.Begin );
 
 		}
+
+		Log?.Info( $"String table: {outputList.Count} strings in {buffer.Length} bytes" );
 
 		return outputList.ToArray();
 	}

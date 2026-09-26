@@ -72,12 +72,12 @@ from the repository, which cannot lag: `git log --oneline -1`.
 ## Next
 
 `docs/QUEUE.md`, from the top. **Q1-Q12, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50-Q50h, Q53, Q53b, Q56,
-Q57, Q59, Q67, Q68, Q68b, Q69, Q82 and Q82b are ticked.** Next is **Q70**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8
+Q57, Q59, Q67, Q68, Q68b, Q69, Q70, Q82 and Q82b are ticked.** Next is **Q71**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8
 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45
 Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g
 Q105, Q50f Q50h, Q50h Q106, Q53 Q53b and Q107-Q111, Q53b Q112, Q56 Q113-Q117, Q57 Q118-Q120, Q59 Q121-Q123, Q67
-Q124-Q125, Q68 Q68b and Q126-Q130, Q68b Q131-Q132, Q69 Q139-Q141, Q82 Q82b and Q133-Q138, Q82b Q136 (f), the staleness
-audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review), the lobby plan section G.
+Q124-Q125, Q68 Q68b and Q126-Q130, Q68b Q131-Q132, Q69 Q139-Q141, Q70 Q142-Q143, Q82 Q82b and Q133-Q138, Q82b Q136
+(f), the staleness audit and its review Q68-Q82 (Q70-Q75 from the 2026-09-12 review), the lobby plan section G.
 
 `docs/PLAYER-GAPS.md` holds gaps **4, 5 and 7**. The untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
 
@@ -107,13 +107,13 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1195**, 0 fail, 0 skip with the game | 2026-09-25, after Q69 |
-| Tests without the game | **485** ran, **710** skipped, of 1195 | 2026-09-25, after Q69 |
-| Build warnings | 123 | 2026-09-25, after Q69 |
+| Tests | **1197**, 0 fail, 0 skip with the game | 2026-09-25, after Q70 |
+| Tests without the game | **486** ran, **711** skipped, of 1197 | 2026-09-25, after Q70 |
+| Build warnings | 123 | 2026-09-25, after Q70 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-25 - seven unbuilt paths counted, or said unreached (Q69).** `alexah/156-count-seven-unbuilt-paths`.
-**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/155` (Q82b)
+**2026-09-25 - each string table parsed once (Q70).** `alexah/157-parse-each-string-table-once`.
+**Earlier items.** Each one's account is its entry in `docs/QUEUE.md`, which names its branch: `alexah/156` (Q69)
 back to `118` (Q4), `115`-`116` (Q3), `117` (Q35) and `109` (Q1, Q1b); before them, `114`, `110`, `112`. Older: git log.

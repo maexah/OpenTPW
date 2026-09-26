@@ -1402,7 +1402,32 @@ artifacts are listed in `docs/history/README.md`.
   Name a counter at the point each is reached - check it is reached first - and say so in the docs. Confirm: the
   `unimplemented` census after a lobby session names each one reached. Building the idle nag and the isle's clips is
   Q77 and Q76.
-- [ ] **Q70. `BFSTReader` parses every string table twice.** From the 2026-09-12 review (Phase A, the one step of
+- [x] **Q70. `BFSTReader` parses every string table twice: now once.** Done 2026-09-25,
+  `alexah/157-parse-each-string-table-once`.
+  - **Built:** `BFSTReader.ReadFromStream` takes the bytes and parses nothing; `StringFile`'s one `ReadFile()` is the
+    parse. `ReadFile` logs `String table: <n> strings in <bytes> bytes` once a parse, which is both the test's counter
+    and the game's log line; with no logger set (the `strdump` harness) it logs nothing. `Entity.cs`'s
+    `using System.Reflection` is gone; the `Entity.All` remark beside it is Q14's.
+  - **Confirmed in the game** (`q70confirm.py`, silent; every PREDICT line written first), though the item asked for no
+    run. Fix: the boot into the lobby logs 2 lines, UITEXT (474 strings in 17,076 bytes) and UIHELPTEXT (589 in 33,032),
+    once each; `park jungle` logs 28, as predicted: a name table for each of the pool's 22 candidates (`Standard.sam`'s
+    5+5+5+5+2), STAFF_TYPES 5 times for its summary line, THEMENAMES once for the gate's sign; opening the hire screen
+    logs none. The control, the discarded `ReadFile()` put back: 4, 56 and 0, every table twice. Photographed: the
+    lobby's four "Create New Player" and "Quit Game", the gate's "Lost Kingdom" and the help bar's "Left-click to extend
+    this path", and the hire screen's five cleaners by name, the same five in the control (175 pixels of the list
+    differ, all inside the pointer's 30 by 28 box; the names' rows are identical). `save/` unchanged in both runs.
+  - **Tests:** `StringFileTests` (two): a made table of two empty strings, which opens no character table and needs no
+    game, and UITEXT.str (474 strings, row 200 "Park name"). Each reads 2 with the bug put back and 0 with the line
+    taken out.
+  - **Reviewed** by a read-only workflow (three lenses, a skeptic on each, a completeness critic): ten findings, five
+    distinct ones upheld and acted on (the logger made optional, which a `hud.md` recipe also needed; a test comment's
+    wrong attribution; the pixel count's method; Q142's confirm; the string length below, with its two stale notes).
+    The reader's copy of the layout, refused by its skeptic and raised again by the critic, is left to Q143.
+  - **Found:** the BFST header's second word is a number from 1000 to 1020, one per table and the same in both language
+    folders (all 42 shipped files; FileFormats `strings.md`, on `docs/format-corrections`). Q142, and Q143: a string's
+    length is more than its one byte.
+
+  The item as written: From the 2026-09-12 review (Phase A, the one step of
   it not landed). `BFSTReader.ReadFromStream` calls `ReadFile()` and throws the result away (`BFSTReader.cs`) before
   `StringFile`'s constructor calls it again - delete the first. `World/Entity/Entity.cs`'s `using System.Reflection`,
   from the same step, is now unused. No game run; a test that one read happens.
@@ -1788,6 +1813,19 @@ artifacts are listed in `docs/history/README.md`.
   only its lines use them (`docs/exe/scenes.md`, "Gesture table"). Those lines play on the park's own advisor, model slot
   1 from the level's `advisor.wad` with clips 16 to 20, which OpenTPW does not load. The sweep also read that a row whose
   first clip is not 14 skips the lead-in (`FUN_00598bf0`, not checked). No site reaches any of it, so nothing is counted.
+- [ ] **Q142. The staff pool reads a string table again for every name.** Found by Q70's game run. `ParkStaffPool`
+  opens and parses a name table for each candidate it rolls (`RollName`) and STAFF_TYPES for each kind's name
+  (`NameOfKind`): 27 of a park load's 28 table reads are six files read over and over, and the staff screen and the
+  `candidates` census read STAFF_TYPES once a row. Read each once, as `Localization` does. Confirm: `park jungle` logs
+  six `String table:` lines, two of them `35 strings in 904 bytes` (ENTERTAINER_NAMES and GUARD_NAMES alike), and the
+  `candidates` census and the hire screen show the same names as before.
+- [ ] **Q143. `BFSTReader` takes a string's length from one byte, and four shipped strings are longer.** Found by
+  Q70's review. A record is `01`, a three-byte little-endian length, then the characters (FileFormats `strings.md`);
+  `ReadFile` reads the length's first byte and skips the other two. Of the 4,730 records in the 42 shipped files, four
+  are over 255, all in UITEXT.str: row 400 (`UIStrings.Change`, 262 characters in English, which reads "CHANGE"; 256 in
+  american, which reads empty) and row 417 (`SoftwareCopyright`, 615 and 614, cut to 103 and 102). Nothing reads either
+  row yet, so no screen shows the cut. Read all three bytes; the reader's copy of the layout, which says "3 bytes" and
+  "Unknown", becomes a pointer to `strings.md`. A test on rows 400 and 417.
 
 ## B. Docs and comments
 

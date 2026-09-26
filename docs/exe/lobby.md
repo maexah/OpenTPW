@@ -735,7 +735,7 @@ The four park display names **are** in the shipped data, measured with OpenTPW's
 | Address / value | Original name | What it is | Evidence |
 |---|---|---|---|
 | `data/Language/English/THEMENAMES.str` | — | 112 bytes, magic `BFST`, header declaring **4 entries**, decoding to `[0] "Lost Kingdom"`, `[1] "Halloween World"`, `[2] "Wonder Land"`, `[3] "Space Zone"` | Read through `StringFile` |
-| `01 <len> 00 00` + `len` bytes | — | A BFST record. **The bytes are character INDICES into `MBToUni.dat`, not text** — which is why `strings`, `grep -a` and any plain text search find nothing but the magic | Byte-level read |
+| `01`, a three-byte `len`, `len` bytes | — | A BFST record (FileFormats `strings.md`; four UITEXT rows are over 255). **The bytes are character INDICES into `MBToUni.dat`, not text** — which is why `strings`, `grep -a` and any plain text search find nothing but the magic | Byte-level read |
 | lengths 12 / 15 / 11 / 10 | — | The four name lengths, visible in the header table, matching the four names exactly, with byte `0x0c` (the space) in the right place in each | Header table |
 | `English/MBToUni.dat` | — | 506 bytes, count byte `0xf9` = **249** characters | Byte read |
 | `american/MBToUni.dat` | — | 504 bytes, count byte `0xf8` = **248**. They differ at byte 7, the count field read after `Seek(6)` — one fewer character shifts every index past it | Byte read |
