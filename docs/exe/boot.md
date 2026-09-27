@@ -1,6 +1,6 @@
 # Boot sequence
 
-How the original game boots: `WinMain` takes a single-instance lock, builds the players, loads the flag word and `config.tcf`, then enters a message loop whose idle pass runs a four-step one-time init (language tables, one unidentified call, the window and D3D device, `Boot_Init`) followed by `Game_StateMachine` on every pass. Boot init picks texture folders, parses options and settings, seeds the random number generator, starts sound, and holds a loading screen while the UI loads. The state machine then walks the two intro movies, the front-end load, the lobby loop, the park load and the in-park loop, and back out again; a single bit of the flag word (0x200) decides whether the front end exists at all. Traced in `/testme.exe` with headless Ghidra. The named functions below (`Boot_Init`, `Game_StateMachine` and the rest) were named in the Ghidra project at the same time; every bare address is still an unidentified `FUN_<address>` there. OpenTPW does not follow this sequence yet — it goes straight to the lobby behind the bar loading screen. What it skips on the way is counted once a run in `Game.Run`, before the first lobby: `BOOT_SPLASH` and `BOOT_LEGAL_SCREEN` (`ui.md`, "Loading screen"), and `INTRO_MOVIE_BULLFROG` and `INTRO_MOVIE_PARK` (states 5 and 7). The front end's flag 0x200 is always set here, so the movies are always reached, and all nine `.tgq` ship in `Data\Movies`. The lobby plan cut these (`docs/QUEUE.md`, section G).
+How the original game boots: `WinMain` takes a single-instance lock, builds the players, loads the flag word and `config.tcf`, then enters a message loop whose idle pass runs a four-step one-time init (language tables, the disc check, the window and D3D device, `Boot_Init`) followed by `Game_StateMachine` on every pass. Boot init picks texture folders, parses options and settings, seeds the random number generator, starts sound, and holds a loading screen while the UI loads. The state machine then walks the two intro movies, the front-end load, the lobby loop, the park load and the in-park loop, and back out again; a single bit of the flag word (0x200) decides whether the front end exists at all. Traced in `/testme.exe` with headless Ghidra. The named functions below (`Boot_Init`, `Game_StateMachine` and the rest) were named in the Ghidra project at the same time; every bare address is still an unidentified `FUN_<address>` there. OpenTPW does not follow this sequence yet — it goes straight to the lobby behind the bar loading screen. What it skips on the way is counted once a run in `Game.Run`, before the first lobby: `BOOT_SPLASH` and `BOOT_LEGAL_SCREEN` (`ui.md`, "Loading screen"), and `INTRO_MOVIE_BULLFROG` and `INTRO_MOVIE_PARK` (states 5 and 7). The front end's flag 0x200 is always set here, so the movies are always reached, and all nine `.tgq` ship in `Data\Movies`. The lobby plan cut these (`docs/QUEUE.md`, section G).
 
 ## WinMain — `WinMain_Main` 0x0045a960
 
@@ -9,7 +9,7 @@ How the original game boots: `WinMain` takes a single-instance lock, builds the 
 3. Message loop. When idle and running (`DAT_007a1a14` bit 1):
    - **Once**, and every step must succeed or the game quits:
      1. 0x00419710 — language and string tables and the keyboard shortcuts, from `Data\Language\`.
-     2. 0x0045f7a0 — **unidentified**; it references no strings.
+     2. 0x0045f7a0 — **the disc check.** `FUN_005aa500` lists the CD drives (`FUN_005f87b0`, mask 8) and asks each for its volume label (`FUN_005f89f0`, `GetVolumeInformationA`); until one reads `TPWorld` it shows a Retry/Cancel box (`MessageBoxW`, type 0x15). Cancel fails the step, so the game quits.
      3. `Window_Create` 0x0044e080 — the "Theme Park World" window and the D3D device.
      4. `Boot_Init`.
    - **Every idle pass:** 0x005b5bf0, then `Game_StateMachine`. Its return value is ORed into `DAT_007a1a14`, where 2 means quit.
@@ -92,6 +92,22 @@ The init guards at 0054f691 / 0054f6d8 / 0054f719 are **not** a divider: they te
 
 On OpenTPW's side: there is no `Time.TicksPerSecond`, and no single rate to give it. The sky's 25 is `Sky.TicksPerSecond`, read from FUN_00585f10's 25.0 at 0x00701f7c. The lobby's 10 is `LobbyScript.TicksPerSecond`, read from FUN_005d5c50's 0.01 at 0x007029cc. The game tick is `GameClock.TickSeconds`, 31 ms; the game menu keeps a private 30 of its own.
 
+## Which build this is
+
+`/testme.exe` is version **2.0**, the game's last release (`docs/DECISIONS.md`, "The reference executable is 2.0"). It
+says so itself in the two places the 2.0 patch's readme promises:
+
+- **The lobby.** `FUN_0048b020`'s one caller is `FrontEnd_Init`, at `0x005d5a30`, on every entry to the lobby. It
+  formats `swprintf( buf, L"v %d.%d", 2, 0 )` and puts the text in a label whose right edge is 0x7c0 and bottom 0x5c0 of
+  the 0x800 x 0x600 virtual screen: "v 2.0", bottom right.
+- **ALT-V in a park.** The key-table row at `0x00748140` (20 bytes: id 14, key 0x56 'V', modifier word 0x30, which the
+  readme calls ALT) runs 0x0040c820, which calls 0x00481b70, a jump into undisassembled code at 0x0048f090 that formats
+  `swprintf( buf, L"Ver %d.%d", 2, 0 )`.
+
+`Boot_Init` logs the build as "Compiled Mar 24 2000 at 15:14:05" (above). The PE link time, read from the `TP.ICD` the
+exe was dumped from (the dump's own header was overwritten), is 2000-03-24 15:14:32 UTC.
+OpenTPW draws neither version string yet.
+
 ## Addresses
 
 Evidence is a Ghidra trace of `/testme.exe` throughout; the column names what in particular pins the row down.
@@ -103,7 +119,13 @@ Evidence is a Ghidra trace of `/testme.exe` throughout; the column names what in
 | 0x00449df0 | `Flags_LoadDefaults` | Sets the flag word `DAT_007a1a8c` to 0xc0e15. | Decompile |
 | 0x00424930 | | Reads `save\config.tcf`. | Filename string |
 | 0x00419710 | | Loads language and string tables and keyboard shortcuts from `Data\Language\`. | Path string |
-| 0x0045f7a0 | | **Unidentified.** Second of the four one-time init steps; references no strings. | Call order only |
+| 0x0045f7a0 | | The disc check, second of the four one-time init steps: builds the drive list, returns `FUN_005aa500`'s answer. | Decompile |
+| 0x005aa500 | | Retry/Cancel loop until a CD drive's volume label matches the string at `0x00f7a7c8`; 0 on Cancel. | Decompile |
+| 0x005f87b0 | | Lists drives by `GetLogicalDriveStringsA` and `GetDriveTypeA`; mask bit 8 keeps `DRIVE_CDROM`. | Decompile |
+| 0x005f89f0 | | `GetVolumeInformationA` for one root, the label into a 20-byte buffer. | Import call |
+| 0x005a8730 | | Static initialiser: builds the string at `0x00f7a7c8` from "TPWorld" (`0x007477e8`). | Disassembly |
+| 0x0048b020 | | The lobby's "v 2.0" label; its one caller is `FrontEnd_Init`. | Disassembly |
+| 0x0048f090 | | ALT-V in a park: formats "Ver 2.0". Undisassembled; reached from key-table row `0x00748140`. | Raw bytes |
 | 0x0044e080 | `Window_Create` | Creates the "Theme Park World" window and the D3D device. | Window title string |
 | 0x0054dcf0 | `Boot_Init` | The once-only boot init. | Decompile |
 | 0x005b5bf0 | | Runs before `Game_StateMachine` on every idle pass. | Call order |

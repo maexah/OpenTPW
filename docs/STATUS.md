@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-09-26.
+Last updated: 2026-09-27.
 
 **This header names no branch and no sha, deliberately.** A line written inside the commit that moves
 the tip cannot name it, so any name there is stale the instant it is written. Read the current state
@@ -114,6 +114,8 @@ Take counts fresh; these go stale within a day.
 
 ## Recent
 
+**2026-09-27 - the reference exe is already 2.0, so no migration.** `alexah/166-record-canonical-exe`; the account is
+`docs/DECISIONS.md`, "The reference executable is 2.0".
 **2026-09-26 - the README, rewritten for newcomers (Q34).** `alexah/161-beginner-readme`.
 **Earlier items.** Their accounts are their QUEUE.md entries, which name the branches: `alexah/158` (Q71) back to `118`
 (Q4), less `127`, `133`, `159`, `160`, told by their commits; `117` (Q35), `109` (Q1). Older: git log.

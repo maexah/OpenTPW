@@ -53,3 +53,24 @@ frame, so a press always goes to what the pointer is
 over. Copying the original would mean decoding each window's build order to reproduce what is almost certainly a
 glitch, so **Alexah chose to keep ours as a fix** ("Option 1", after the pros and cons were put to them, Q69). The
 deviation is said at `WindowStack.OnUpdate`.
+
+## The reference executable is 2.0 (2026-09-27)
+
+Alexah asked for the reverse-engineering base to move from `testme.exe`, thought to be 1.0, to a decrypted 2.0 exe
+(`tp-2_0.exe`), the game's last release. The move turned out to be unnecessary: **`testme.exe` already is 2.0 and stays
+the reference**, and Alexah chose to record that rather than migrate ("Record it", 2026-09-27). It draws "v 2.0" in the
+lobby and "Ver 2.0" on ALT-V, the two things the 2.0 patch's readme promises (`docs/exe/boot.md`, "Which build this
+is"). The official patch, `TPPatchTwoEUROAMER20000324a.exe` (InstallShield around RTPatch 5.00 deltas), was applied
+with its own engine to a copy of the disc install `~/Games/TPWorld` was copied from: it replaced only the
+SafeDisc-wrapped exe and its loader, `clokspl.exe` and `readme.txt`, and added `UNINST.dll` and two American chat word
+lists the disc already holds in other folders. Every data file it touches, jungle's `coaster1.wad` and `minecart.wad`
+included, was already the 2.0 version, a content check that one-byte negative controls proved. The disc's `TP.ICD` has the same PE link time as the patch's (2000-03-24 15:14:32
+UTC), and their encrypted sections are consistent with one plaintext under two keys, so the disc is a later pressing
+with 2.0 built in. `tp-2_0.exe` is the same program, 493 of its 3,734,528 bytes different, and it is the worse copy: a
+no-CD crack at `0x005aa5ad` (the disc check, `boot.md`), `USP10.dll` renamed `USP11.dll` in its imports, two section
+sizes enlarged over padding, and entries 5 to 7 of the intro-movie decoder's jump table (`FUN_00672e60`, at
+`0x00fbbac0`) holding garbage where `testme.exe` holds code addresses. Hashes (sha256): `testme.exe`
+`cf0ffd955077eca146d75ee46c45b8a0786fb757a8f7d204b1aed8ec5a1ee4cb`, the file Ghidra's `/testme.exe` records as its
+source; `tp-2_0.exe` `d0399acfc1bcbdcbe5836814b19e386486bfa06f057646ae7821bc25e9927ac9`. The Gold disc image holds 35
+bonus attraction wads and no exe. The evidence (the extracted patch, the apply logs and controls, three adversarial
+reviews) is on Alexah's machine, the path in `CLAUDE.local.md`.
