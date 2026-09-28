@@ -1484,8 +1484,9 @@ move pickup both reach it, so **a move puts everyone off as a sale does**.
   already put them out for 15 alone - which it does to every queuer from the fifth place back but the nominee and a
   guest in raw state 14 (`ride-operation.md`, "The sale's drain"). A guest walking to it, leaving it, or still
   naming it from a ride they left is stopped the same way.
-- **Every guest, chosen or not**, clears a saved second destination (`+0x1de`) naming the thing, and each
-  `mPreviousRides` entry naming it with its `mPreviousTemporaryRides` pair (`0x004fb4a6`..).
+- **Every guest, chosen or not**, clears the saved major (`+0x1de`, the minor decision's: `ride-operation.md`, "A second
+  toilet") naming the thing, and each `mPreviousRides` entry naming it with its `mPreviousTemporaryRides` pair
+  (`0x004fb4a6`..).
 
 The event ring (32 entries at guest `+0x30`) is read only by a debug dump that prints through a logger which is a
 bare `RET` in this build (`FUN_005da3c0`), so its entries change nothing a player sees.

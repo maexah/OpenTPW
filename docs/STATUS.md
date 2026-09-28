@@ -55,8 +55,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
   Alexah; staff keep to the areas the save gives them. A walking member of staff is not entered in the cells they
   cross; only hiring and putting down place one.
 - Q102-Q105 and five queue-turn arms are unbuilt, the unhappy one held for Q85. No spot animation (Q98). A guard or
-  researcher on a cell with no links does not look for path (Q112). After one toilet a guest may choose no other,
-  where the original's go on to the next (Q170); a bought thing charges nothing (Q171).
+  researcher on a cell with no links does not look for path (Q112). After one toilet a guest reaches no other, where
+  the original's walk does, and no toilet empties a need (Q170b); a bought thing charges nothing (Q171).
 - The park's door moves neither the gate (Q89) nor the advisor (Q90), nor a shut ride's model (Q91); the ride window's
   door shows a shut ride but is not a button (Q92), and a bought queued thing starts open (Q93).
 - Nothing shows what the hand holds, a thing (`CARRY_PREVIEW_MARKERS`) or a candidate (`STAFF_CARRY_PREVIEW`), and
@@ -77,8 +77,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
 ## Next
 
 `docs/QUEUE.md`, from the top. **Q1-Q12, Q34, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50-Q50h, Q53, Q53b,
-Q56, Q57, Q59, Q67, Q68, Q68b, Q69-Q71, Q82, Q82b, Q83, Q83b, Q165-Q165c, Q166, Q169, Q46, Q49, Q84, Q88, Q101 are
-ticked.** Next: **Q170**. Which item or audit filed each open one is its entry's "Found by" (Q169 filed Q177). Gaps
+Q56, Q57, Q59, Q67, Q68, Q68b, Q69-Q71, Q82, Q82b, Q83, Q83b, Q165-Q165c, Q166, Q169, Q170, Q46, Q49, Q84, Q88, Q101
+are ticked.** Next: **Q170b**. Each open item's "Found by" names what filed it (Q170 filed Q170b). Gaps
 **4, 5 and 7** are in `docs/PLAYER-GAPS.md`; the untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
 
 ## Not verified on screen
@@ -115,5 +115,5 @@ Take counts fresh; these go stale within a day.
 
 ## Recent
 
-**2026-09-28 (Q169).** `alexah/174-match-a-visits-excitement`. **Earlier:** each QUEUE.md entry names its branch:
-`173` (Q166) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`. Older: git log.
+**2026-09-28 (Q170, the decode).** `alexah/175-decode-the-toilet-visits`. **Earlier:** each QUEUE.md entry names
+its branch: `174` (Q169) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`; git log.

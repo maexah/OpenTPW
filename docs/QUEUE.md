@@ -1804,7 +1804,50 @@ artifacts are listed in `docs/history/README.md`.
   "three more happiness changes" only. Count it first, decode the arithmetic's types, then build it. Confirm: `peeps`
   happiness and vomit after a Totem ride by a kind 0 and by a kind 3.
 
-- [ ] **Q170. Guests reach a toilet some way other than the ride score. Decode first.** Found by Q165c, in Alexah's
+- [x] **Q170. Guests reach a second toilet through the walk, not the ride score: the decode.** Done 2026-09-28,
+  `alexah/175-decode-the-toilet-visits`. Decode only; the build is Q170b. `ride-operation.md`, "A second toilet: the
+  minor decision and the saved major", step 5 of "The effects of a visit", "Where a guest is aimed" and the guest
+  record; FileFormats `saves.md`, `mSavedMajorDest` (file 499, `docs/sam-and-saves-corrections`).
+  - **Decoded** by five read-only decoders (the history's writers, the destination's writers, what reads toilet-ness
+    and the need, the walk and the exit, the state machine and `Toilet.rse`), each put to a skeptic, and a synthesis:
+    85 claims, 71 upheld, 14 amended, none refuted. Re-read first-hand: the walking turn's counter (`0x004ffef2`),
+    `FUN_004fd570`, `FUN_00500900`, `FUN_004d8b40`'s search `FUN_00511ef0` and the toilet arm (`0x004fe78f`..).
+  - **The answer.** The same-kind nought holds for every small toilet (`+0xe` is `mId`); from Deciding only the chooser
+    aims a guest at a toilet, and on the walk the minor decision and the restore do. On the walk to a chosen thing,
+    every 12th turn (`+0x2c`, `mCount`), the minor decision scores the things in a 4×4 window nearer the major's back
+    cell, from nought, a tie winning on an odd tick, and switches to the best when the raw search puts it nearer the
+    major's entry than the guest is, saving the major in `+0x1de`; after that visit, state 15 restores the major with no
+    score. Toilet A chosen, toilet B on the way, then A: the history, newest first, reads A, B. Also a stale `+0x1de`
+    (only the restore, a removal and the constructor clear it) and a toilet taken at nought on an odd tick. And a toilet
+    visit empties the need, so in the original nobody leaves one still in need.
+  - **In Alexah's saves:** 19 (20) guests part-way through a diversion against 5 bound for a toilet with nothing saved,
+    3 of them walking (0.79), and the histories' 107 toilet-then-toilet against 136 other-then-toilet (0.79);
+    `mSavedMajorDest` non-zero on 50 (51) of 339 guests, and on none of the shipped park's 13. Illness, which the score
+    counts only for a toilet, sends more guests to one than need does.
+  - **Measured in the game** (a throwaway build shadowing the minor decision, never enacting it, an object seen only on
+    its anchor cell and scored by OpenTPW's `ScoreOf`; `q170run.py`, `q170run2.py`, `q170run4.py`, `q170analyse.py`;
+    silent, jungle, `toilet 90` every 20 s, once in run 1; predicted first; `save/` unchanged within all four runs;
+    `q170-run{1..4}/`). Run 3, 900 s: 32 toilet visits of 32 left the need where it was, 90 to 95
+    (`SETTLE_UP_TOILET_RELIEF` 32); no toilet chosen or visited after a toilet; 7 of 7 first choices after one the Belly
+    Bounce; a switch toward a toilet on 12 of the 14 walks to 23 - first to 21 from (56,19) six times, to 22 from
+    (56,18) six - none on the 24 walks to 21 or the 5 to 22 or toward anything else: 12 toilet-then-toilet visits the
+    original makes and OpenTPW cannot. Five decisions, by two guests just off a toilet, had a toilet best at nought, on
+    odd ticks as the tie rule requires; none switched. Photographed paused with `peeps` and `why`: guest 66 at (56,19)
+    bound for 23 as a switch to 21 is logged (run 3); guest 35 off toilet 21 at need 90 walking to the Belly Bounce,
+    `dest` 13 in both (run 4, 45 s).
+  - **Predictions that missed**: run 1 measured the lengths through OpenTPW's reroute stage, which `FUN_00511ef0` does
+    not run, and logged a switch at (56,17) that the raw search refuses (2 and 2, a tie); re-run as run 3. The shadow
+    logged a second switch on four walks, which I had not foreseen: it never enacts one, so a guest already turned to 21
+    goes on being asked about 22. Of 40 toilet choices west of the corridor, 36 have the parity a tie would give (21
+    odd, 23 even) and four do not; no score was logged, so none was judged a tie.
+  - **Not confirmed on screen**: the switch and the restore, which the shadow only works out (Q170b); the re-aim from a
+    switched-to entry cell to its back cell; how the saves' 107 pairs split between the three ways. And in none of the
+    four runs did OpenTPW's `LeavingRide` report arriving (0 of 32 toilet exits in run 3), which the restore needs
+    (Q170b).
+  - **No test was added**: nothing was built.
+  - **Found:** Q170b; notes under Q100 and Q177.
+
+  The item as written: Found by Q165c, in Alexah's
   played jungle saves (`mGameTick` 19,004 and 19,007; `q165cprobe`): of 772 pairs of consecutive visits in
   `mPreviousRides`, 111 are the same kind twice and 107 of those are toilets in the later save (109 and 105 in the
   other), mostly one of three adjacent toilets and then another. The score's same-kind nought (`FUN_004fcc30`, `0x004fcd3f`) forbids that choice, so something else
@@ -1814,6 +1857,24 @@ artifacts are listed in `docs/history/README.md`.
   need, `why` and the next `dest`.
   From Q169: OpenTPW's settle-up never empties the toilet need (`0x004fe7b6`, counted `SETTLE_UP_TOILET_RELIEF`, Q177),
   so a guest leaves a toilet as much in need as they went in; build that before reading guests' toilet visits.
+
+- [ ] **Q170b. The walk's minor decision, the saved major and a toilet's relief: the build.** Found by Q170's decode
+  (`ride-operation.md`, "A second toilet: the minor decision and the saved major"). In order: (1) the settle-up's toilet
+  arm, Q177's part 3: the need to nought (`0x004fe7b6`), illness to nought when its byte is above 90
+  (`0x004fe7dc`..`0x004fe7ef`), the hurry speed 25 (`0x004fe7f5`); count the dirtying `FUN_004e2440` (Q100) and events
+  `0x11` and `0x12` (Q177). (2) `Peep.SavedMajorDest` (`+0x1de`), read from the save (file 499, into
+  `ParkWorld.GuestState`), written by a switch (step 4, `0x004fd934`), cleared by the restore (step 5, `0x0050092a`) and
+  by `ThingRemoved` when it names the thing (`0x004fb4a6`..`0x004fb4b3`), and by nothing else. (3) The walking-turn
+  count (`+0x2c`, `mCount`, whose file offset in the person base is not established: start it at nought and say so at
+  the site), counted on every `GoingToRide` walking turn and never reset between walks, after the park-shut arm Q102
+  builds. (4) `FUN_004fd570` on the twelfth, in its order, sharing `ParkRideScore` and `ParkRideChoice.CanBeOffered`
+  with the chooser but not `ParkRideChooser.Beats` (a first candidate at nought wins on an odd tick), the lengths from
+  `CellSearch` alone at 60,000 with no reroute; the window's things read from the cells objects stand on (which cell a
+  larger object is linked on is not established). (5) `LeavingRide`'s arrival as `FUN_00500900` - but in Q170's four
+  runs OpenTPW's `LeavingRide` never reported arriving (0 of 32 toilet exits in run 3): find why first, or the restore
+  is not reached. Count each until it is built. Confirm: in the stock park with `toilet 90`, a guest bound for toilet 23
+  switched to 22 or 21 at (56,18) or (56,19), `peeps`' dest before and after, then sent on to 23 unscored, `peeps`'
+  visits reading 23 then 22 or 21; the toilet need nought after each toilet.
 
 - [ ] **Q171. A bought thing starts at a price of nought.** Found by Q165c. `ParkBuilding` writes no `PricePerUse`
   and the catalogue reads no `UsageInfo.InitPricePerUse` (the Drinks Shop 30, the Jungle Spray 20), which the
@@ -1885,6 +1946,9 @@ artifacts are listed in `docs/history/README.md`.
   (`FUN_004e19f0`, `0x004fdb33`) and a sideshow's thoughts 5 and 6 (`0x004fdb66`, `0x004fdc25`). Decode what reads
   `+0x340` and the event and who else writes `+0x20c` (`FUN_005179c0`, `0x0051861c`), then build what the park
   reaches; the toilet first. Confirm: `unimplemented` without them, a toilet visit's `peeps`, and the money line.
+  From Q170: part 3, the toilet, is decoded whole (`ride-operation.md`, "The effects of a visit", step 5) and is the
+  first step of Q170b. `FUN_004fe1e0` also pushes events `0xc` (`0x004fe78a`) and `0x12` (`0x004fe7ea`, the toilet's
+  illness arm), which part 2 does not list.
 
 - [ ] **Q85. A guest who arrives starts with happiness nought, and stays there. Decode first.** Found by Q50's game
   runs: every one of the 33 guests who arrived (30 by `load 30`) read `happy 0` in `peeps`, none above it in nine minutes,
@@ -1983,6 +2047,11 @@ artifacts are listed in `docs/history/README.md`.
   "The object window's stats panel"), but nothing here lowers it and the gate is counted (`QUEUE_TOILET_DIRT_GATE`).
   Decode what lowers it (the handyman's cleaning, use), then build the gate. Confirm: a queue at Lost Kingdom's
   toilet, `peeps` before and after.
+  From Q170: use lowers it. The settle-up's toilet arm calls `FUN_004e2440` with the need's byte (`0x004fe7a8`), which
+  takes 0.05 of it off `+0x44`, held to 0..100, and on falling below 25 logs "Toilet has become dirty and smelly",
+  unstamps `RegionFX` 1 around the toilet and stamps 6; in the online game (mode 1) there is no dirtying, and a toilet
+  already below 25 is cleaned instead (`ride-operation.md`, "The effects of a visit", step 5). The handyman's cleaning
+  is still to decode.
 - [ ] **Q102. The walk to a chosen thing's own arms.** Found by Q50e's decode (`ride-operation.md`, "Walking to a new
   place in the queue", the first caller). The original's state 10 (`FUN_004ffbc0`) takes `BigHappinessChange` (25)
   and pushes event 3 when the walk is stuck, where `GoingToRide` only goes back to deciding; takes 25 and clears
@@ -1991,6 +2060,9 @@ artifacts are listed in `docs/history/README.md`.
   which may switch to a nearer thing and aim at its entry. Build the first two; the minor decision needs
   `FUN_004d8b40`'s raw line-search length. Confirm: `peeps` over a guest walking to a ride when the door shuts, and
   over one cut off by a path edit.
+  From Q170: the walking-turn count and the minor decision are Q170b's steps 3 and 4, built after this item's park-shut
+  arm (`ride-operation.md`, "A second toilet: the minor decision and the saved major").
+
 - [ ] **Q103. The gates at the back of a queue.** Found by Q50e's decode. On arriving, the original refuses on room
   with event `0x15` and KEEPS `MajorDest` (`GiveUpOnIt` clears it); asks excitement only when the item's `+0x13c`
   (`UsageInfo.ExcitementLevel`) has a non-zero low byte, of the OBJECT's computed excitement (`FUN_004e0860( object,

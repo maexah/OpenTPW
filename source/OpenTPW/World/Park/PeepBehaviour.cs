@@ -625,10 +625,10 @@ public sealed class PeepBehaviour
 			// before it chooses, so the kept id lasts until then - and until then a sale of that ride still
 			// puts them off, as it does in the original.
 			//
-			// <b>The pending-second-destination arm is absent because nothing writes the field.</b> Before
-			// dropping to Deciding the original reads the person's +0x1de - somewhere they had chosen while
-			// they were on the ride - and resumes it as GoingToRide if that thing still exists. Nothing in
-			// this tree ever writes +0x1de, so the arm is unreachable, not unbuilt.
+			// <b>The saved major is not restored, and that is unbuilt (Q170b).</b> Before dropping to Deciding the
+			// original reads +0x1de - the major the minor decision (FUN_004fd570) switched the guest away from on
+			// the walk - and sends them on to it unscored (FUN_00500900; ride-operation.md, "A second toilet").
+			// Neither the minor decision nor the field is built, so nothing here has one to restore.
 			case PeepState.LeavingRide:
 				switch ( Walked( peep, walk, playing ) )
 				{
