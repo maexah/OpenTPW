@@ -49,13 +49,15 @@ public sealed class Peep
 
 	/// <summary>
 	/// How close this guest is to being sick - <c>PeepInfo.VomitCapacity</c> is the level it is measured
-	/// against, and a ride raises it by the ride's excitement over <c>PeepInfo.RideVomitDivisor</c>.
+	/// against, and a visit raises it by the thing's excitement over <c>PeepInfo.RideVomitDivisor</c> times how
+	/// little hungry they are, so a guest who has just eaten is the sickest (<see cref="ParkRideOperation"/>'s
+	/// excitement match).
 	/// </summary>
 	/// <remarks>
-	/// <b>The save's name for it is <c>mVomit</c>, not <c>mIllness</c></b> - see the note beside
-	/// <c>ParkWorld.ReadGuest</c>. The balance file calls the same meter "illness" in
-	/// <c>RegionFX[i].Illness</c> and <c>DecisionVarIllnessWeight</c>, so both words describe it; the
-	/// field's own name in the save is the one carried here.
+	/// <b><c>mVomit</c> is this project's name for it</b>, as all seven need names are (see the note beside
+	/// <c>ParkWorld.ReadGuest</c>); the save tags the need floats with the key <c>pv</c>, and the game's own
+	/// log calls this one "illness", as the balance file does in <c>RegionFX[i].Illness</c> and
+	/// <c>DecisionVarIllnessWeight</c>.
 	/// </remarks>
 	public float Vomit { get; set; }
 

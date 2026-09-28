@@ -194,6 +194,9 @@ public sealed class PeepBehaviour
 	/// </summary>
 	private readonly ParkRideChooser _chooser;
 
+	/// <summary>What each kind of guest likes, which a visit's settle-up measures the thing against.</summary>
+	public ParkRideScore Score => _chooser.Score;
+
 	/// <summary>
 	/// The park these guests are in, for the two questions joining a queue asks of it: which object they
 	/// chose, and where its queue ends. Null leaves a guest unable to join one, which is the same answer

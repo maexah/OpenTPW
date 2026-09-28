@@ -1474,10 +1474,11 @@ public sealed class ParkPeople : Entity
 		if ( _scriptFor == null )
 			return;
 
-		// The admission goes in for the SETTLE-UP alone: it carries PeepInfo.MediumHappinessChange, which is
-		// both what a guest loses when a visit gives them nothing and the multiplier on what winning is
-		// worth. Without it both arms leave happiness alone rather than moving it by an invented number.
-		var operation = new ParkRideOperation( _behaviour.State, Guests, _behaviour.Admission );
+		// The admission and the score go in for the SETTLE-UP alone: the admission carries the PeepInfo mood
+		// constants - MediumHappinessChange, both what a guest loses when a visit gives them nothing and the
+		// multiplier on what winning is worth, and the excitement match's four - and the score what each kind
+		// likes. Without them those arms leave happiness alone rather than moving it by an invented number.
+		var operation = new ParkRideOperation( _behaviour.State, Guests, _behaviour.Admission, _behaviour.Score );
 
 		// <b>The park as it stands, not as the file left it.</b> A thing bought this session lives in
 		// ParkState's list and in no other, so a sweep over the save's list hands it no turn at all - it

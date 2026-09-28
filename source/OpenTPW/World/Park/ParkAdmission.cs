@@ -69,6 +69,15 @@ public sealed class ParkAdmission
 		SmallHappinessChange = balance.Int( "PeepInfo.SmallHappinessChange", 5 );
 		MediumHappinessChange = balance.Int( "PeepInfo.MediumHappinessChange", 15 );
 		BigHappinessChange = balance.Int( "PeepInfo.BigHappinessChange", 25 );
+		// Nought when a key is absent, as the original's loader leaves it: a visit then cheers nobody, which
+		// is still a playable park.
+		PerfectRide = balance.Int( "PeepInfo.PerfectRide" );
+		GoodRide = balance.Int( "PeepInfo.GoodRide" );
+		OKRide = balance.Int( "PeepInfo.OKRide" );
+
+		// The original divides by this with no guard, so an absent key would fault on the first ride left;
+		// held at one here, a deviation.
+		RideVomitDivisor = Math.Max( 1, balance.Int( "PeepInfo.RideVomitDivisor" ) );
 
 		TicketBoothA = Cell( balance, "TicketBoothA" );
 		TicketBoothB = Cell( balance, "TicketBoothB" );
@@ -132,6 +141,25 @@ public sealed class ParkAdmission
 	/// their own is owed. Splitting them across two homes would be worse than this.
 	/// </remarks>
 	public int BigHappinessChange { get; }
+
+	/// <summary>
+	/// What a visit whose excitement is within four of the guest's liking adds to their happiness -
+	/// <c>PeepInfo.PerfectRide</c>, 25, the int at <c>0x00785064</c>. Read by
+	/// <see cref="ParkRideOperation"/>'s excitement match (<c>FUN_004fdcc0</c>).
+	/// </summary>
+	public int PerfectRide { get; }
+
+	/// <summary>Within fourteen - <c>PeepInfo.GoodRide</c>, 15 offline (10 online), <c>0x00785068</c>.</summary>
+	public int GoodRide { get; }
+
+	/// <summary>Within thirty-nine - <c>PeepInfo.OKRide</c>, 5, <c>0x0078506c</c>. Further off, nothing.</summary>
+	public int OKRide { get; }
+
+	/// <summary>
+	/// How much a visit's excitement makes a guest sick - <c>PeepInfo.RideVomitDivisor</c>, 10, the int at
+	/// <c>0x00785070</c>: the excitement over this, in whole numbers, times how little hungry the guest is.
+	/// </summary>
+	public int RideVomitDivisor { get; }
 
 	/// <summary>
 	/// The two cells in front of the gate where a guest stands to be charged - the balance file's

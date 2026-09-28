@@ -28,6 +28,7 @@ public sealed class ParkRideOperation
 	private readonly ParkState _state;
 	private readonly IReadOnlyDictionary<int, Peep> _guests;
 	private readonly ParkAdmission? _admission;
+	private readonly ParkRideScore? _score;
 
 	/// <param name="state">The park as it is being played, which owns the queues.</param>
 	/// <param name="guests">Every guest by thing id, for asking what the head of a queue is doing.</param>
@@ -37,8 +38,12 @@ public sealed class ParkRideOperation
 	/// worth. <b>One balance value with two uses, not two settings.</b> Null leaves both arms alone rather
 	/// than moving happiness by a number nobody read, which is what a test asking about the money means.
 	/// </param>
+	/// <param name="score">
+	/// What each kind of guest likes, for the settle-up's excitement match (<see cref="MatchTheExcitement"/>),
+	/// which also needs <paramref name="admission"/>. Null leaves the match alone, as a null admission does.
+	/// </param>
 	public ParkRideOperation( ParkState state, IReadOnlyDictionary<int, Peep> guests,
-		ParkAdmission? admission = null )
+		ParkAdmission? admission = null, ParkRideScore? score = null )
 	{
 		ArgumentNullException.ThrowIfNull( state );
 		ArgumentNullException.ThrowIfNull( guests );
@@ -46,6 +51,7 @@ public sealed class ParkRideOperation
 		_state = state;
 		_guests = guests;
 		_admission = admission;
+		_score = score;
 	}
 
 	/// <summary>
@@ -484,6 +490,11 @@ public sealed class ParkRideOperation
 	/// <para>
 	/// The byte is written on admission by <see cref="PeepBehaviour"/>'s roll through <see cref="Succeeds"/>,
 	/// and the "lost" arm docks <c>PeepInfo.MediumHappinessChange</c> (<c>DAT_0078505c</c>), both built.
+	/// Behind the gate come a sideshow's prize, the excitement match (<see cref="MatchTheExcitement"/>), the item's
+	/// effects and a sideshow's winning cheer, in the original's order. Counted and not kept: the cost of goods a
+	/// shop or sideshow books against the object and the park's balance (with the prize), the guest's event
+	/// history, a toilet emptying the toilet need, and after everything the happiness gained since joining, the
+	/// object's visit count and a sideshow's thoughts, win or lose.
 	/// </para>
 	/// <para>
 	/// <b>What is NOT built, and why.</b> Three more happiness changes in <c>FUN_004fe1e0</c> each read the
@@ -523,22 +534,50 @@ public sealed class ParkRideOperation
 			if ( _admission is { } lost )
 				peep.Happiness = Peep.Change( peep.Happiness, -lost.MediumHappinessChange );
 
+			// A sideshow's loser also thinks thought 6 and gains an event-history entry (0x004fdc25).
+			if ( item.UiType == SideshowUiType )
+				Unimplemented.Report( "SETTLE_UP_SIDESHOW_THOUGHT" );
+
 			return;
 		}
 
-		ApplyEffects( peep, item );
-
-		// Everything past here is a sideshow's alone. A shop stops at the effects, which is where its
-		// thirst, its litter and its five points of happiness come from.
-		if ( item.UiType != SideshowUiType )
-			return;
+		// Every visit behind the gate is entered in the guest's event history (FUN_0050c100, 0x004fe204).
+		Unimplemented.Report( "SETTLE_UP_EVENT_HISTORY" );
 
 		// <b>A sideshow PAYS OUT, and it pays the cost of goods rather than the price.</b> FUN_004fe1e0
 		// adds FUN_004e1a10 - the object's +0x188, built from UsageInfo.InitCostOfGoods - straight onto the
-		// guest's cash. Fifty, for the Jungle Spray, against the twenty they were just charged.
-		peep.Cash += item.CostOfGoods;
+		// guest's cash, first of all. Fifty, for the Jungle Spray, against the twenty they were just charged.
+		if ( item.UiType == SideshowUiType )
+			peep.Cash += item.CostOfGoods;
 
-		peep.Happiness = Peep.Change( peep.Happiness, WinningIsWorth( item, ride ) );
+		// A shop's and a sideshow's cost of goods is booked against the object and debited from the park's
+		// balance with it (FUN_004e1920).
+		if ( item.UiType is SideshowUiType or ShopUiType )
+			Unimplemented.Report( "SETTLE_UP_COST_OF_GOODS_BOOKING" );
+
+		// Before the item's own effects, so the sickness reads the guest's hunger as they came off (0x004fe259).
+		MatchTheExcitement( peep, ride, item );
+
+		ApplyEffects( peep, item );
+
+		// A toilet empties the guest's toilet need (0x004fe7b6), which nothing here does.
+		if ( ride.IsToilet )
+			Unimplemented.Report( "SETTLE_UP_TOILET_RELIEF" );
+
+		// A shop stops at the effects, which is where its thirst, its litter and its five points of happiness
+		// come from; a sideshow's winner cheers.
+		if ( item.UiType == SideshowUiType )
+			peep.Happiness = Peep.Change( peep.Happiness, WinningIsWorth( item, ride ) );
+
+		// Then the original compares happiness with what the guest had on joining (+0x20c), logs "Happiness
+		// changed by %d since using object %d", averages three times the change into the object and, for a
+		// shop or sideshow, posts it as an event; counts the visit on the object (FUN_004e19f0); and has a
+		// sideshow's winner think thought 5 - none of which is kept here.
+		Unimplemented.Report( "SETTLE_UP_HAPPINESS_SINCE_JOIN" );
+		Unimplemented.Report( "SETTLE_UP_OBJECT_VISIT_COUNT" );
+
+		if ( item.UiType == SideshowUiType )
+			Unimplemented.Report( "SETTLE_UP_SIDESHOW_THOUGHT" );
 	}
 
 	/// <summary>
@@ -550,6 +589,9 @@ public sealed class ParkRideOperation
 	/// <c>0x004134f5</c>, so its 2 is this.
 	/// </remarks>
 	public const int SideshowUiType = 2;
+
+	/// <summary>A shop's <c>Info.WhichUIType</c>, the descriptor's <c>+0x4ac</c> 1.</summary>
+	public const int ShopUiType = 1;
 
 	/// <summary>
 	/// What winning at a sideshow does to a guest's mood -
@@ -584,6 +626,60 @@ public sealed class ParkRideOperation
 			return 0;
 
 		return (int)(Math.Log2( item.CostOfGoods / (float)ride.PricePerUse ) * mood.MediumHappinessChange);
+	}
+
+	/// <summary>
+	/// How the thing's excitement suited the guest who has just had it - <c>FUN_004fdcc0</c>, which the
+	/// settle-up runs behind its <c>+0x1f1</c> gate and before the item's effects (<c>docs/exe/ride-operation.md</c>,
+	/// "The excitement match").
+	///
+	/// <para>
+	/// <b>A thing with no excitement does nothing at all</b>, neither half. Otherwise the gap between the
+	/// thing's excitement and the guest's kind's <c>PreferredExcitement</c>, both as bytes, adds
+	/// <see cref="ParkAdmission.PerfectRide"/> to happiness under 5, <see cref="ParkAdmission.GoodRide"/> under
+	/// 15 and <see cref="ParkAdmission.OKRide"/> under 40, and nothing from 40 on.
+	/// </para>
+	/// <para>
+	/// <b>Then, whatever the gap, the ride makes them sick</b> by the excitement over
+	/// <see cref="ParkAdmission.RideVomitDivisor"/> times <c>(100 - hunger) / 20</c> - every division a whole
+	/// number's, and the hunger truncated first - so the less hungry the guest, the sicker the ride makes
+	/// them: the Inca Totem's 70 is 7, five times that for a guest whose hunger is under one, four times up to
+	/// twenty, and nothing for a hungry one from 81. Both meters are held to 0..100.
+	/// </para>
+	/// <para>
+	/// The excitement is worked out once, where the original asks for it three times; the answers agree
+	/// while nothing it reads moves in between, which nothing does. And no shipped thing has both an
+	/// excitement and a hunger effect - a shop declares no excitement - so that this reads the hunger before
+	/// the item's effect is the original's order, but not one the park can show. It reads
+	/// <see cref="ParkRideScore.ExcitementOf"/>, so the departures listed there reach it too.
+	/// </para>
+	/// </summary>
+	private void MatchTheExcitement( Peep peep, ParkWorld.CatalogueObject ride, ParkItemCatalogue.Item item )
+	{
+		if ( _admission is not { } mood || _score is not { } score )
+			return;
+
+		var excitement = ParkRideScore.ExcitementOf( ride, item ) & 0xff;
+
+		if ( excitement == 0 )
+			return;
+
+		var gap = Math.Abs( (score.PreferredExcitementFor( peep.PersonType ) & 0xff) - excitement );
+		// From forty on the original skips the add; adding nought to a meter already in 0..100 is the same.
+		var cheer = gap < 5 ? mood.PerfectRide : gap < 15 ? mood.GoodRide : gap < 40 ? mood.OKRide : 0;
+		var happyWas = peep.Happiness;
+
+		peep.Happiness = Peep.Change( peep.Happiness, cheer );
+
+		var sickness = (100 - ((int)peep.Hunger & 0xff)) / 20 * (excitement / mood.RideVomitDivisor);
+		var vomitWas = peep.Vomit;
+
+		peep.Vomit = Peep.Change( peep.Vomit, sickness );
+
+		Log.Info( $"Person {peep.ThingId}: object {ride.ThingId}'s excitement {excitement} against the kind's "
+			+ $"{score.PreferredExcitementFor( peep.PersonType ) & 0xff}, gap {gap}: happiness {cheer:+0;-0;+0} "
+			+ $"({happyWas:0.#} to {peep.Happiness:0.#}), vomit +{sickness} ({vomitWas:0.#} to {peep.Vomit:0.#}) "
+			+ $"at hunger {(int)peep.Hunger}" );
 	}
 
 	/// <summary>

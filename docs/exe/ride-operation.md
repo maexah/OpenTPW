@@ -1135,8 +1135,8 @@ choice's room test and the arrival's gates read the same count; the mean is unsi
 the weather's `Drops` above nought, which `ParkPeople` hands in; then the golden-ticket or price factor
 (`ParkRideScore.Priced`, at double precision, the runtime's starting precision, which is an assumption: Eruption's 1.4
 on a score of 45 gives 62, where single or extended precision gives 63); then the two histories, the first matching visit and every matching
-refusal. `ParkRideScore.ExcitementOf` is `FUN_004e0860( object, 0 )`, which the chooser and the arrival's excitement
-refusal both read: the Jungle Spray is 30, and the Belly Bounce at its settings 40. Each guest keeps both histories
+refusal. `ParkRideScore.ExcitementOf` is `FUN_004e0860( object, 0 )`, which the chooser, the arrival's excitement
+refusal and the settle-up's excitement match all read: the Jungle Spray is 30, and the Belly Bounce at its settings 40. Each guest keeps both histories
 (`Peep`), read from the save (`ParkWorld.GuestState`), written on leaving any thing (`ParkRideOperation.SettleUp`,
 before the charge) and at both refusals, aged on the sweep and cleared by a removal as above. A bought thing is
 stamped with the park's calendar (`ParkBuilding`, `0x004db66a`); the calendar is `GameCalendar.Epoch`, 2000-01-01,
@@ -1378,7 +1378,7 @@ three.
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
-| `FUN_004fd970` | — | The settle-up for leaving **any** visitable thing (not just a sideshow). Shifts the guest's recent-things history (`+0x1e0`..`+0x1e6`), bumps one of three counters by the descriptor's `+0x4ac`, charges, relieves a need by the descriptor's `+0xe8`, then splits on `+0x1f1`: nought logs `"Person lost this sideshow…"` and docks happiness at `+0x19c`; otherwise it runs `FUN_004fe1e0` and moves happiness by `(a-b)*3`. | Its own strings |
+| `FUN_004fd970` | — | The settle-up for leaving **any** visitable thing (not just a sideshow). Shifts the guest's recent-things history (`+0x1e0`..`+0x1e6`), bumps one of three counters by the descriptor's `+0x4ac`, charges, relieves a need by the descriptor's `+0xe8`, then splits on `+0x1f1`: nought logs `"Person lost this sideshow…"` and docks happiness at `+0x19c`; otherwise it runs `FUN_004fe1e0`, then takes three times the change in happiness since the guest's snapshot at `+0x20c` (both truncated), logs it (`"Person %d: Happiness changed by %d since using object %d"`, `0x0075d6cc`), averages it into the object (`FUN_004e1e00`) and, for a shop or sideshow, posts it plus 50 as an event (`0x004fda1b`..`0x004fdb2c`); happiness itself is not moved. OpenTPW counts that tail (`SETTLE_UP_HAPPINESS_SINCE_JOIN`). | Its own strings |
 | `FUN_004fe1a0` | — | **The charge.** `price = object[+0x194]`; when non-zero it credits the ride, plays a sound, and does `person[+0x1a0] -= price`. **The only `SUB [reg+0x1A0], reg` in the image.** | Byte search |
 | `FUN_004e16b0` | — | **The economy feed**: first the bank's deposit, `FUN_004d0190( price )` (the balance, `0x004e16c6`), then `ride[+0x180] += price`, `ride[+0x70] += price`, then on the descriptor's `+0x4ac` — **1, a shop, credits `global[+0x20130]`; 2, a sideshow, credits `global[+0x20380]`**; a ride (0) credits no pool. Inside the shop arm a second switch on `+0x164` (`ShopType`, then `+0x158` `SpecialIngredient` for types 2 and 4) buckets the visit and passes **1, not the money** — a tally, not a second payment. | Disassembly |
 | `FUN_004d0600` | — | The park-balance path. **The ride charge does not go through it.** | Disassembly |
@@ -1402,13 +1402,57 @@ Drinks Shop **30**, Jungle Spray sideshow **20**, **Belly Bounce zero**; `mTotal
 
 Named by its own strings: `"Litter gone up by %d, is now %d"`, `"Customer bought a balloon, Aaah!"`, `"Trying to give a balloon to a pe…"`, `"Customer returning a costume."`, `"Balance file error: Shop has unk…"`, `"Sideshow won - happiness up %d p…"`. What it does, in order:
 
-1. **A sideshow (`+0x4ac` == 2) PAYS OUT:** `FUN_004e1a10` — the **cost of goods**, not the chance of winning — feeds `FUN_004e1920`, and then **`person[+0x1a0] += FUN_004e1a10()`** — a prize ADDED to the guest's cash. A shop (`+0x4ac` == 1) takes the `FUN_004e1b40` path instead. **In Lost Kingdom that prize is 50 against a price of 20**, so winning the Jungle Spray leaves a guest 30 up.
-2. **The item's own effects**, each added to a guest meter and clamped 0..100: the descriptor's `+0x144` and `+0x148` (with a sound of `0x83` or `0x84` depending which is larger), `+0x14c` → `+0x1b0`, `+0x150` → happiness `+0x19c`, `+0x154` → litter `+0x1b4`. Three more happiness changes follow, each reading the object's byte `+0x198`, which is not decoded: for the hunger effect `+0x148` and then the thirst effect `+0x144`, whichever is non-zero, `(rand & 7) + byte [+0x198] + that effect` under 30 docks `PeepInfo.SmallHappinessChange` (`0x004fe453`, `0x004fe4a5`); then happiness gains `byte [+0x198] * desc[+0x150] / 100` (`0x004fe4cf`..`0x004fe525`).
-3. **Shop arms on the descriptor's `+0x15c`:** 1 gives a BALLOON (asserting the guest has none, building a sprite, and clamping a value between `DAT_0075d0f0` and `DAT_0075d0f4`); 2 hands out or takes back a COSTUME via the guest's `+0x24`/`+0x20`; anything else is a balance-file error.
-4. **A toilet (`mFlags & 1`)** zeroes `+0x1ac`, may zero `+0x1b0` above 90, and stamps `+0xc2`.
-5. **Then, for a sideshow only:** `person[+0x1d0] += 1` and a happiness rise computed from **`log2( costOfGoods / pricePerUse )`** - `FUN_004e1a10` (`+0x188`, cost of goods) over `FUN_004e1a00` (`+0x194`, price), `FILD`/`FIDIV` at `0x004fe835`/`0x004fe84b`, the logarithm by `FYL2X` over `ln 2` - scaled by the byte at `DAT_0078505c` (`PeepInfo.MediumHappinessChange`), and logged as `"Sideshow won - happiness up %d points to %d"`.
+1. **A sideshow (`+0x4ac` == 2) PAYS OUT:** `FUN_004e1a10` — the **cost of goods**, not the chance of winning — feeds `FUN_004e1920` (a booking against the object that also debits the park's balance, `FUN_004d01f0` at `0x004e1952`; OpenTPW counts it as `SETTLE_UP_COST_OF_GOODS_BOOKING`, as it does the shop's), and then **`person[+0x1a0] += FUN_004e1a10()`** — a prize ADDED to the guest's cash. A shop (`+0x4ac` == 1) takes the `FUN_004e1b40` path instead. **In Lost Kingdom that prize is 50 against a price of 20**, so winning the Jungle Spray leaves a guest 30 up.
+2. **The excitement match**, `FUN_004fdcc0( object )` at `0x004fe259`: how the thing's excitement suited the guest's kind
+   moves their happiness, and the excitement makes them sick by how little hungry they are ("The excitement match",
+   below).
+3. **The item's own effects**, each added to a guest meter and clamped 0..100: the descriptor's `+0x144` and `+0x148` (with a sound of `0x83` or `0x84` depending which is larger), `+0x14c` → `+0x1b0`, `+0x150` → happiness `+0x19c`, `+0x154` → litter `+0x1b4`. Three more happiness changes follow, each reading the object's byte `+0x198`, which is not decoded: for the hunger effect `+0x148` and then the thirst effect `+0x144`, whichever is non-zero, `(rand & 7) + byte [+0x198] + that effect` under 30 docks `PeepInfo.SmallHappinessChange` (`0x004fe453`, `0x004fe4a5`); then happiness gains `byte [+0x198] * desc[+0x150] / 100` (`0x004fe4cf`..`0x004fe525`).
+4. **Shop arms on the descriptor's `+0x15c`:** 1 gives a BALLOON (asserting the guest has none, building a sprite, and clamping a value between `DAT_0075d0f0` and `DAT_0075d0f4`); 2 hands out or takes back a COSTUME via the guest's `+0x24`/`+0x20`; anything else is a balance-file error.
+5. **A toilet (`mFlags & 1`)** zeroes `+0x1ac` (`0x004fe7b6`), may zero `+0x1b0` above 90, and stamps `+0xc2`. OpenTPW does
+   none of it and counts it (`SETTLE_UP_TOILET_RELIEF`): a guest leaves a toilet as much in need as they entered.
+6. **Then, for a sideshow only:** `person[+0x1d0] += 1` and a happiness rise computed from **`log2( costOfGoods / pricePerUse )`** - `FUN_004e1a10` (`+0x188`, cost of goods) over `FUN_004e1a00` (`+0x194`, price), `FILD`/`FIDIV` at `0x004fe835`/`0x004fe84b`, the logarithm by `FYL2X` over `ln 2` - scaled by the byte at `DAT_0078505c` (`PeepInfo.MediumHappinessChange`), and logged as `"Sideshow won - happiness up %d points to %d"`.
 
 **The signs are not uniform**, and the decompile shows it: `FUN_004fe1e0` does `-(float)desc + meter` for thirst and hunger but `+(float)desc + meter` for vomit, happiness and litter. **Deduct two, add three** — which is exactly what the balance file's own comment column says.
+
+### The excitement match — `FUN_004fdcc0`
+
+Decoded first-hand and put to three refuters (Q169), every step at its address. It runs behind the settle-up's gate on
+`+0x1f1` (`FUN_004fd970`, `0x004fda05`..`0x004fda16`), so only when that byte is non-zero (what it means is not settled;
+see below), and before the item's effects, so it reads the guest's hunger as they came off.
+
+1. **No excitement, nothing.** `FUN_004e0860( 0 )` on the object, the thing's excitement (the ride score's own reading,
+   `ParkRideScore.ExcitementOf`); a low byte of nought returns at once (`0x004fdcd6`), neither half run.
+2. **Happiness by the gap.** The gap is | the kind's `PeepTypes[k].PreferredExcitement` (the byte at `0x007850e4 + 12 x
+   kind`, the kind the guest's byte `+0x1f0`) − the excitement's low byte |, as an int. Under 5 it adds
+   `PeepInfo.PerfectRide`, under 15 `GoodRide`, under 40 `OKRide`, each a whole int read by `FILD dword`
+   (`0x004fdd17`, `0x004fdd24`, `0x004fdd67`); from 40 on it adds nothing (`0x004fdd65`). Happiness (`+0x19c`) is then
+   held to 0..100: above 100.0 it is 100, below 0.0 it is 0 (the floats at `0x0070072c`, `0x00700730`).
+3. **Sickness by the stomach**, whatever the gap: `vomit += ((100 - (trunc( hunger ) & 0xff)) / 20) x ((excitement & 0xff) /
+   PeepInfo.RideVomitDivisor)`, every division a signed whole-number one (`IDIV` at `0x004fddc5`, the `/20` by the
+   `0x66666667` multiply at `0x004fddda`) and the hunger (`+0x1a8`) truncated by `__ftol` (`0x0067a830`); the illness meter
+   (`+0x1b0`, OpenTPW's `Peep.Vomit`; the game's log calls it illness) is held to 0..100 the same way. Hunger rises with
+   time and food takes it away, so a guest who is not hungry at all (under 1) counts five times, a hunger from 1 to 20
+   four, and a hungry one of 81 or more not at all: a full stomach is the sick one.
+
+**The four keys sit where the executable's table puts them, not where the file lists them.** `PeepInfo`'s table at
+`0x0073fc70` runs `...BigHappinessChange, PerfectRide, GoodRide, OKRide, RideVomitDivisor, ToiletDesparate...`, so by the
+slot rule (`park-engine.md`, "How a key finds its global") they are the type-5 ints at `0x00785064`, `0x00785068`,
+`0x0078506c` and `0x00785070`, and `FUN_004fdcc0` is their only reader. `data/levels/Standard.sam` sets 25, 15, 5 and
+10 (`Online_Standard.sam` 25, 10, 5, 10); nothing Lost Kingdom loads offline overrides them. An absent key reads nought, so
+a divisor of nought would fault the `IDIV`.
+
+**What the park shows.** The Belly Bounce is 40 and the Inca Totem 70 against kinds liking 80, 65, 50, 35, 65, 80, 45
+and 80: on the Totem a kind liking 80 is ten off (+15) and a kind 3 thirty-five (+5); on the Belly Bounce a kind 3 is five
+off (+15, not the perfect 25) and a kind liking 80 forty (nothing). The Totem's 70 over 10 is 7. The original's arrival draws its hunger
+`% 50` (`FUN_004faec0`, `0x004fb0c5`), so a ride there at that hunger adds 35, 28, 21 or 14, most often 28 or 21;
+OpenTPW's arrival comes in at hunger nought (Q85) and takes 35. In both, the quarter of guests whose id divides by four
+grow hungrier as they go (`FUN_00501650`, `Peep.Tick`) and so take less. A shop declares no excitement, so no shipped thing has both an
+excitement and a hunger effect, and the order against the effects cannot show.
+
+**OpenTPW builds it** (`ParkRideOperation.MatchTheExcitement`, the keys on `ParkAdmission`, the likings from the park's
+`ParkRideScore`), and logs each match. Its departures: an absent divisor is held at one where the engine would fault, and
+the excitement is worked out once where the engine asks three times (the same answer, since nothing it reads moves).
+And it reads `ExcitementOf`, so that function's departures in "Where OpenTPW differs" (Q97, Q171, Q172) reach it too.
 
 ### The effect block, descriptor field to guest meter
 

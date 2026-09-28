@@ -272,8 +272,8 @@ public sealed class ParkRideScore
 	}
 
 	/// <summary>
-	/// How exciting a thing is - <c>FUN_004e0860( object, 0 )</c>, its low byte, which the score and the arrival's
-	/// refusal (<c>FUN_004fd4e0</c>) both read.
+	/// How exciting a thing is - <c>FUN_004e0860( object, 0 )</c>, its low byte, which the score, the arrival's
+	/// refusal (<c>FUN_004fd4e0</c>) and the settle-up's excitement match (<c>FUN_004fdcc0</c>) read.
 	/// </summary>
 	/// <remarks>
 	/// <list type="bullet">

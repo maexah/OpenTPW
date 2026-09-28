@@ -33,9 +33,9 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - **Placing a ride lays its queue's first cell before the entrance and hands over the queue tool there**, with the
   original's coloured squares where a click will lay it; a click onto a path lays and joins it. Guests queue and ride.
 - Spending: guests choose, queue for and buy from the Drinks Shop and the Jungle Spray; short of the price, they walk.
-  **Each arrival is one of eight kinds, each choosing by its own preferred excitement**: a bought Totem is ridden.
-  **The choice is the original's whole score**: the kind a guest has just left is worth nothing to them, a thing bought
-  is new for 184 sweeps, dear and golden-ticket rides count more, shelter more in rain; the Spray works out its 30.
+  **Each arrival is one of eight kinds, each with its own liking**, and **the choice is the original's whole score**:
+  the kind just left is worth nothing, a new thing five times more for 184 sweeps, dear and golden-ticket rides more,
+  shelter in rain. **A visit's excitement moves happiness by the kind's liking, and illness by how full they are.**
 - People: guests and staff read from the save, drawn, walking, paying, queueing, boarding, interpolated between the
   248 ms steps. **Queuers walk to their own places, in a line**; one needing the toilet, or lost to the walk, is out.
   **A guest on a cell with no links, such as a sold thing's cleared ground, wanders to the nearest path.** **Guests
@@ -77,9 +77,9 @@ from the repository, which cannot lag: `git log --oneline -1`.
 ## Next
 
 `docs/QUEUE.md`, from the top. **Q1-Q12, Q34, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50-Q50h, Q53, Q53b,
-Q56, Q57, Q59, Q67, Q68, Q68b, Q69-Q71, Q82, Q82b, Q83, Q83b, Q165, Q165b, Q165c, Q166, Q46, Q49, Q84, Q88, Q101
-are ticked.** Next: **Q169**. Which item or audit filed each open one is its entry's "Found by" (Q166 filed Q174-Q176).
-`docs/PLAYER-GAPS.md` holds gaps **4, 5 and 7**. The untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
+Q56, Q57, Q59, Q67, Q68, Q68b, Q69-Q71, Q82, Q82b, Q83, Q83b, Q165-Q165c, Q166, Q169, Q46, Q49, Q84, Q88, Q101 are
+ticked.** Next: **Q170**. Which item or audit filed each open one is its entry's "Found by" (Q169 filed Q177). Gaps
+**4, 5 and 7** are in `docs/PLAYER-GAPS.md`; the untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
 
 ## Not verified on screen
 
@@ -108,12 +108,12 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1248**, 0 fail, 0 skip with the game | 2026-09-28, after Q166 |
-| Tests without the game | **512** ran, **736** skipped, of 1248 | 2026-09-28, after Q166 |
-| Build warnings | 123 | 2026-09-28, after Q166 |
+| Tests | **1262**, 0 fail, 0 skip with the game | 2026-09-28, after Q169 |
+| Tests without the game | **512** ran, **750** skipped, of 1262 | 2026-09-28, after Q169 |
+| Build warnings | 123 | 2026-09-28, after Q169 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-28 (Q166).** `alexah/173-count-the-literal-destinations`. **Earlier:** each QUEUE.md entry names its branch:
-`172` (Q165c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`. Older: git log.
+**2026-09-28 (Q169).** `alexah/174-match-a-visits-excitement`. **Earlier:** each QUEUE.md entry names its branch:
+`173` (Q166) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`. Older: git log.

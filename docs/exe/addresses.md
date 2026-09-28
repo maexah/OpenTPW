@@ -304,16 +304,20 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fd50a` | `FUN_004fd4e0`, the arrival refusal: reads `PeepTypes[kind].PreferredExcitement`, the byte at `0x7850e4` + 12 × kind | OpenTPW.Tests/ParkGuestTypeTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fd98b` | Settle-up FUN_004fd970: the thing left pushed onto mPreviousRides, from | OpenTPW.Tests/ParkVisitHistoryTests.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/Peep.cs  |
 | `0x004fd9a5` | FUN_004fd970: the push, to here | OpenTPW/World/Park/Peep.cs  |
+| `0x004fdc25` | Settle-up FUN_004fd970, the lost arm: a sideshow's loser thinks thought 6 (FUN_0050be80) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fde6a` | Price opinion `FUN_004fde50`: a price of nought answers nought, and no sample is pushed | OpenTPW/World/Park/PeepPriceOpinion.cs  |
 | `0x004fdf6d` | Price opinion: the first unsigned division by 100 (`MUL`, `SHR 5`), mood times the goods | OpenTPW/World/Park/PeepPriceOpinion.cs  |
 | `0x004fdfe7` | Price opinion: the second unsigned division, after `RipOffOK` | OpenTPW/World/Park/PeepPriceOpinion.cs  |
 | `0x004fe005` | Price opinion: the third unsigned division, after happiness - the worth | OpenTPW/World/Park/PeepPriceOpinion.cs  |
 | `0x004fe15f` | Price opinion: price above worth, unsigned (`JA`) | OpenTPW/World/Park/PeepPriceOpinion.cs  |
 | `0x004fe167` | Price opinion: cash below price, unsigned (`JC`) | OpenTPW/World/Park/PeepPriceOpinion.cs  |
+| `0x004fe204` | FUN_004fe1e0: the visit entered in the guest's event history, entry 8 (FUN_0050c100) | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe259` | FUN_004fe1e0, a visit's effects: calls the excitement match FUN_004fdcc0, before the item's own effects | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe453` | `FUN_004fe1e0` docks `SmallHappinessChange` behind a gate on descriptor `+0x148` | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe4a5` | `FUN_004fe1e0` docks `SmallHappinessChange` behind a gate on descriptor `+0x144` | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe4cf` | `FUN_004fe1e0`: happiness gains the object's byte `+0x198` times the happiness effect over a hundred (to `0x004fe525`) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe525` | `FUN_004fe1e0`: the end of that gain | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe7b6` | FUN_004fe1e0, a toilet: the guest's toilet need +0x1ac zeroed | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004ffc3d` | State 10's arrival test: the guest's cell against `GetBackOfQueue` | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffce6` | Arrival FUN_004ffbc0: the excitement refusal pushes the thing onto mPreviousTemporaryRides (FUN_004fdc60) | OpenTPW.Tests/ParkGuestTypeTests.cs OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffd74` | Arrival FUN_004ffbc0: the too-long refusal pushes the thing onto mPreviousTemporaryRides | OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
@@ -839,6 +843,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00785058` | `PeepInfo.SmallHappinessChange`, 5 in Lost Kingdom, read as a byte | OpenTPW.Tests/ParkMoodChangeTests.cs OpenTPW/World/Park/ParkAdmission.cs  |
 | `0x0078505c` | `PeepInfo.MediumHappinessChange`, 15 in Lost Kingdom, read as a byte | OpenTPW.Tests/ParkMoodChangeTests.cs OpenTPW/World/Park/ParkAdmission.cs  |
 | `0x00785060` | `PeepInfo.BigHappinessChange`, 25 in Lost Kingdom, read as a byte | OpenTPW.Tests/ParkMoodChangeTests.cs OpenTPW/World/Park/ParkAdmission.cs  |
+| `0x00785064` | PeepInfo.PerfectRide, an int: happiness for a gap under 5 (FUN_004fdcc0) | OpenTPW/World/Park/ParkAdmission.cs  |
+| `0x00785068` | PeepInfo.GoodRide, an int: happiness for a gap under 15 | OpenTPW/World/Park/ParkAdmission.cs  |
+| `0x0078506c` | PeepInfo.OKRide, an int: happiness for a gap under 40 | OpenTPW/World/Park/ParkAdmission.cs  |
+| `0x00785070` | PeepInfo.RideVomitDivisor, an int: the excitement over it, times the fullness | OpenTPW/World/Park/ParkAdmission.cs  |
 | `0x007854f4` | | OpenTPW/Global/GameCalendar.cs  |
 | `0x00785914` | | OpenTPW/World/Advisor/Advisor.cs  |
 | `0x00785970` | The game's global clock object; `GameClock_Pause`/`Resume` act on it and `Game_Pause` freezes it | OpenTPW/Global/GameCalendar.cs OpenTPW/Global/GameClock.cs OpenTPW/VM/RideScript.cs  |

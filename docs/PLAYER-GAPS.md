@@ -463,7 +463,11 @@ from the crossing. So the arrival path they would take is the one the shipped sa
   "Sideshow won - happiness up %d points" reads honestly. The test caught it.
 - **Still unbuilt, and named rather than quietly skipped:** the two global income pools
   (`+0x20130` / `+0x20380`), the `SpecialIngredient` and `AppearanceEffect` arms (balloons and
-  costumes), and `FUN_004fdcc0`'s excitement-match happiness.
+  costumes), the three happiness changes that read the object's undecoded byte `+0x198`, and the settle-up's
+  bookkeeping, counted (Q177): `FUN_004e1920`'s cost of goods booked and debited from the park's balance, the event
+  history, a toilet emptying the toilet need, the happiness gained since joining, the visit count and the sideshow's
+  thoughts. `FUN_004fdcc0`'s excitement
+  match is built (Q169).
 - **One honest limit.** A park left entirely alone still rarely buys a *drink*: only a quarter of guests
   ever grow thirsty (`Peep.Tick` shares the drift by thing id) and by then their exit countdown has
   usually run out — measured, of 148 samples at thirst 50+, **73 were HeadingForExit and only 11

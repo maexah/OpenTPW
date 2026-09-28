@@ -1752,7 +1752,50 @@ artifacts are listed in `docs/history/README.md`.
   which is no destination). The unbuilt opcodes with a literal operand 0 (`SEC`, `MIN`, `WALKFLOATSTAT` and others)
   are not yet classed. Correct the count, and check each against its handler's store.
 
-- [ ] **Q169. A visit's excitement match is unbuilt and uncounted.** Found by Q165b's review; `docs/PLAYER-GAPS.md` names
+- [x] **Q169. A visit's excitement match is unbuilt and uncounted.** Done 2026-09-28,
+  `alexah/174-match-a-visits-excitement`. `ride-operation.md`, "The excitement match" and "The effects of a visit";
+  `park-engine.md`, the `PeepInfo` addresses.
+  - **Decoded** first-hand and put to three Opus refuters (9 claims, all upheld). `FUN_004fdcc0` runs behind the
+    settle-up's `+0x1f1` gate, after a sideshow's prize and before the item's effects. Nothing when the excitement's low
+    byte is nought; otherwise | kind's liking − excitement | under 5, 15 or 40 adds `PerfectRide`, `GoodRide` or
+    `OKRide`
+    (25, 15, 5), from 40 nothing; then illness gains `((100 − trunc( hunger )) / 20) × (excitement / RideVomitDivisor)`,
+    whole-number divisions, both meters held to 0..100. Hunger rises with time, so a full stomach is the sick one. The
+    four keys are the int globals `0x00785064`..`0x00785070` by the executable's own table, which settles
+    `park-engine.md`'s doubt; `FUN_004fdcc0` is their only reader.
+  - **Built.** `ParkAdmission` reads the four (nought when absent, as the original; the divisor held at one, a
+    deviation); `ParkRideOperation.MatchTheExcitement` takes the likings from the park's `ParkRideScore` and logs each
+    match with both meters before and after; `SettleUp` runs the prize, the match, the effects and the winner's cheer
+    in the original's order, and counts the two pieces it does not keep (Q177). Deviations said at their sites.
+  - **Tests**: `ParkExcitementMatchTests`, 14 - every threshold from both sides (gaps 4/5, 14/15, 39/40, from the
+    Belly Bounce's speed), the truncated hunger (80.9, 0.9), whole-number divisions, the Jungle Spray (84), a thing with
+    no excitement, the gate, no likings. 17 put-the-bug-back mutations (`q169-mutate.py`): 14 red, two of those one test
+    off my prediction (a second test also stands at gap 5; a list I miscounted), and 3 green as predicted - the match's
+    own clamp, which the effects hold again; its order against the effects, which no shipped thing can show; and
+    `ParkPeople` handing in no score, which the game run shows. The first pass found the OK boundary tested twice over
+    (now once).
+  - **Confirmed in the game** (silent, jungle, predicted first; `save/` unchanged within runs 3 to 5, run 1's before
+    and run 2's after not kept, the value the same at every start; `q169run.py`,
+    `q169run2.py`..`q169run5.py`; runs `q169-run{1..5}/`). Runs 3 to 5 on the final build judged every match line
+    against the rule and the census before it; `q169-deltas.py` paired the lines with `peeps` either side: run 1 (the
+    build before the review) 22 of 22, run 3 9 of 9, run 4 5 of 7 (two came after the last census, both right by the
+    rule), run 5 19 of 19, the two Jungle Spray kind 3 winners reading +34, the match's 15 and the winner's 19. On a
+    bought Totem with the Belly Bounce sold, a kind 0 (guest 100) and a kind 3 (guest 102): gap 10,
+    happiness 0 to 15, and gap 35, 0 to 5; illness +7 at hunger 62 and +35 at hunger 0; `peeps` read the same.
+    Photographed paused with the census: the Totem, its queue full. The Belly Bounce's kind 3s in run 1: gap 5, +15;
+    and in run 2 (the build before the review, the same arithmetic) two guests liking 80 there, gap 40: happiness +0,
+    illness +16 and +20.
+  - **The counts, on the committed build** (`q169counts.py`, 150 s, predicted): `SETTLE_UP_EVENT_HISTORY`,
+    `_HAPPINESS_SINCE_JOIN` and `_OBJECT_VISIT_COUNT` 4 each beside 4 match lines, and one sideshow thought; no toilet
+    was visited; `save/` unchanged.
+  - **Predictions that missed**: guest 100's illness, predicted +21 from the hunger of 34 they queued with, was +7 -
+    their hunger rose to 62 while they queued; and no kind 3 rode the Totem in runs 1 to 3 (about 60 minutes): with the
+    Belly Bounce standing a kind 3 prefers it, and run 3's re-bought Totems put off the kind 3s already queueing.
+  - **Not confirmed on screen**: the perfect arm, which no shipped pairing is within four of (tested only); the rider
+    drawn on the Totem (see STATUS).
+  - **Found:** Q177; notes under Q85 and Q171.
+
+  The item as written: Found by Q165b's review; `docs/PLAYER-GAPS.md` names
   it, and nothing counts it (`CLAUDE.md` rule 4). The settle-up `FUN_004fe1e0` calls `FUN_004fdcc0` on every visit
   (`0x004fe259`). It does nothing when the thing's excitement (`FUN_004e0860`) is nought; otherwise it takes |the
   kind's `PreferredExcitement` (`0x004fdce8`) − the excitement| and adds `PerfectRide`, `GoodRide` or `OKRide`
@@ -1769,12 +1812,19 @@ artifacts are listed in `docs/history/README.md`.
   the score alone, so after one toilet a guest can now choose no other. Decode where (the needs turn `FUN_00501650`,
   the queue turn's toilet arm, `FUN_004fcb10` itself), then build it. Confirm: a guest leaving a toilet still in
   need, `why` and the next `dest`.
+  From Q169: OpenTPW's settle-up never empties the toilet need (`0x004fe7b6`, counted `SETTLE_UP_TOILET_RELIEF`, Q177),
+  so a guest leaves a toilet as much in need as they went in; build that before reading guests' toilet visits.
 
 - [ ] **Q171. A bought thing starts at a price of nought.** Found by Q165c. `ParkBuilding` writes no `PricePerUse`
   and the catalogue reads no `UsageInfo.InitPricePerUse` (the Drinks Shop 30, the Jungle Spray 20), which the
   constructor copies into the object's `+0x194` (`0x004db378`..`0x004db3ad`). A bought shop or sideshow charges
   nothing, and a bought Jungle Spray's excitement is 34 where the original's is 30. Read the key, with the category's
   showing through, and write it on a purchase. Confirm: buy a Jungle Spray, `peeps` a guest paying 20 at it, and `why`.
+  From Q169: the excitement match reads the same price, so a bought Jungle Spray's 34 moves a kind 3 (35) from the good
+  ride to the perfect one. And `ParkBuilding` writes `OperatingSpeed` and `OperatingDuration` whatever the item says,
+  the duration unclamped, where the constructor writes `+0x58` only for a starting speed above nought
+  (`0x004db51c`..`0x004db54c`) and `+0x5c` only for a starting duration above nought, held to `Min`/`MaxDuration`
+  (`0x004db565`..`0x004db64f`); no jungle ride shows it, but the excitement's ratios read both.
 
 - [ ] **Q172. A coaster's, a track ride's and an upgraded ride's excitement. Decode first.** Found by Q165c, which
   counts all three: `RIDE_EXCITEMENT_COASTER_TRACK` (track type 3: `trunc( 50 + f / 2 )` of what `FUN_0043e0b0`
@@ -1823,6 +1873,19 @@ artifacts are listed in `docs/history/README.md`.
   any shipped script starts a scream over a held one, then build both. Confirm: a test for each, and `rides` over the
   Belly Bounce through a cycle.
 
+- [ ] **Q177. The settle-up's bookkeeping, counted and not kept. Decode first.** Found by Q169's review and its check
+  of the fixes; each piece is counted now (`SETTLE_UP_*`). (1) A shop's and a sideshow's cost of goods, booked against
+  the object by `FUN_004e1920` (`0x004fe225`, `0x004fe251`; its `+0xf8`/`+0x184` and a negated ledger post) and debited
+  from the park's balance (`FUN_004d01f0` at `0x004e1952`, only while the bank's `+0x114` is non-zero), the mirror of
+  Q96's deposit. (2) The guest's event history (`FUN_0050c100`: 8 at `0x004fe204`, 0x11, 0x18, 0x19). (3) A toilet
+  emptying the toilet need (`0x004fe7b6`), which bears on Q170. (4) After `FUN_004fe1e0`, three times the change in
+  happiness since the join's snapshot at `+0x20c` (written at `0x004ffd92`; `ride-operation.md`, the join), logged
+  "Happiness changed by %d since using object %d", averaged into the object (`FUN_004e1e00`, `+0x340`) and, for a shop
+  or sideshow, posted plus 50 as an event (`0x004fda1b`..`0x004fdb2c`). (5) The object's visit count
+  (`FUN_004e19f0`, `0x004fdb33`) and a sideshow's thoughts 5 and 6 (`0x004fdb66`, `0x004fdc25`). Decode what reads
+  `+0x340` and the event and who else writes `+0x20c` (`FUN_005179c0`, `0x0051861c`), then build what the park
+  reaches; the toilet first. Confirm: `unimplemented` without them, a toilet visit's `peeps`, and the money line.
+
 - [ ] **Q85. A guest who arrives starts with happiness nought, and stays there. Decode first.** Found by Q50's game
   runs: every one of the 33 guests who arrived (30 by `load 30`) read `happy 0` in `peeps`, none above it in nine minutes,
   while the save's 13 kept theirs (most at 50) until they went home, all by about four minutes, so a dock on anyone left
@@ -1837,6 +1900,9 @@ artifacts are listed in `docs/history/README.md`.
   (`0x004faff8`), the kind (`0x004fb01f`, built), the cash's variation (`0x004fb046`), thirst and hunger `% 50` (`+0x1a4`,
   `+0x1a8`), toilet `% 30` (`+0x1ac`), one discarded (`0x004fb109`), and `+0x1c0` set to 100 when `% 100` is under
   `PrankeryLikelihood` (`0x004fb114`); two more follow when `FUN_004fa990` answers nought (`0x004fb201`, `0x004fb21c`).
+  From Q169: the excitement match reads the arrival's hunger, so an OpenTPW arrival whose id does not divide by four
+  (the three quarters whose hunger never drifts) takes 35 on every Totem ride until they eat, where the original's,
+  drawn `% 50`, take 35, 28, 21 or 14.
 - [ ] **Q86. Clearing a path joined to an entrance puts its whole queue out.** Found by Q50's decode. `ClearCell`'s
   path arm re-walks the entrance owner's queue (`0x0053694b`) after unlinking both sides, so the queue measures 0 and
   all but the nominee and state 14 go. `ParkPathBuilding.ClearPathCell` re-walks nothing. First check it is reachable
