@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-09-27.
+Last updated: 2026-09-28.
 
 **This header names no branch and no sha, deliberately.** A line written inside the commit that moves
 the tip cannot name it, so any name there is stale the instant it is written. Read the current state
@@ -72,14 +72,14 @@ from the repository, which cannot lag: `git log --oneline -1`.
 ## Next
 
 `docs/QUEUE.md`, from the top. **Q1-Q12, Q34, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50-Q50h, Q53, Q53b,
-Q56, Q57, Q59, Q67, Q68, Q68b, Q69-Q71, Q82, Q82b, Q46, Q49, Q84, Q88 and Q101 are ticked.** Next is **Q83**. Q4 filed Q36-Q38, Q5 Q39,
-Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44
-Q67, Q45 Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, Q50d Q98-Q101, Q50e Q50g and
-Q102-Q104, Q50g Q105, Q50f Q50h, Q50h Q106, Q53 Q53b and Q107-Q111, Q53b Q112, Q56 Q113-Q117, Q57 Q118-Q120, Q59
-Q121-Q123, Q67 Q124-Q125, Q68 Q68b and Q126-Q130, Q68b Q131-Q132, Q69 Q139-Q141, Q70 Q142-Q143, Q82 Q82b and Q133-Q138,
-Q82b Q136 (f), the 09-24 audit Q68-Q82 (Q70-Q75 from the 09-12 review), the 09-26 audit Q144-Q161, the lobby plan G.
-
-`docs/PLAYER-GAPS.md` holds gaps **4, 5 and 7**. The untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
+Q56, Q57, Q59, Q67, Q68, Q68b, Q69-Q71, Q82, Q82b, Q83, Q46, Q49, Q84, Q88 and Q101 are ticked.** Next is **Q83b**. Q4
+filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41
+Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, Q50d
+Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h, Q50h Q106, Q53 Q53b and Q107-Q111, Q53b Q112, Q56 Q113-Q117,
+Q57 Q118-Q120, Q59 Q121-Q123, Q67 Q124-Q125, Q68 Q68b and Q126-Q130, Q68b Q131-Q132, Q69 Q139-Q141, Q70 Q142-Q143, Q82
+Q82b and Q133-Q138, Q82b Q136 (f), Q83 Q83b and Q165, the 09-24 audit Q68-Q82 (Q70-Q75 from the 09-12 review), the 09-26
+audit Q144-Q161, the lobby plan G. `docs/PLAYER-GAPS.md` holds gaps **4, 5 and 7**. The untracked `docs/CLEANUP-PLAN.md`
+(all nine closed) is Q13's.
 
 ## Not verified on screen
 
@@ -114,8 +114,6 @@ Take counts fresh; these go stale within a day.
 
 ## Recent
 
-**2026-09-27 - the reference exe is already 2.0, so no migration.** `alexah/166-record-canonical-exe`; the account is
-`docs/DECISIONS.md`, "The reference executable is 2.0".
-**2026-09-26 - the README, rewritten for newcomers (Q34).** `alexah/161-beginner-readme`.
-**Earlier items.** Their accounts are their QUEUE.md entries, which name the branches: `alexah/158` (Q71) back to `118`
-(Q4), less `127`, `133`, `159`, `160`, told by their commits; `117` (Q35), `109` (Q1). Older: git log.
+**2026-09-28 - the VM's two stacks and its result register, decoded (Q83).** `alexah/167-decode-the-vm-stack-errors`.
+**Earlier items.** Their accounts are their QUEUE.md entries, which name the branches: `alexah/165` (Q101) back to `118`
+(Q4), less `127`, `133`, `159`, `160`, `162`, `166`, told by their commits; `117` (Q35), `109` (Q1). Older: git log.

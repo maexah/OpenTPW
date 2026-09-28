@@ -1461,13 +1461,66 @@ artifacts are listed in `docs/history/README.md`.
   `Sets[0].Length` and then indexes `Sets[SetIndex]`. Each reads as protective and is not. Fix each with a test that
   fails first. No game run.
 
-- [ ] **Q83. The VM's stack errors, and `HUSH`'s result register, are not the engine's. Decode first.** Found by Q45's
-  handler sweep, not yet measured as reached. The engine's `RETURN` with no frame parks the script (`0x00553a63`);
-  `RideScript.Return` carries on. Its `JSR` on a full stack logs, parks, then jumps anyway with no return address
+- [x] **Q83. The VM's stack errors, and `HUSH`'s result register: the decode.** Done 2026-09-28,
+  `alexah/167-decode-the-vm-stack-errors`. Decode only; the build is Q83b. `park.md`, "The two stacks" and "Arithmetic,
+  the destination rule and the result register"; FileFormats `saves.md` (the script module's block 1 and struct dwords
+  16, 17, 18 and 21, on `docs/save-module-chain`) and `instructions.md` (`JSR` to `HOP`, on `docs/rsse-instruction-set`).
+  - **The engine, read by hand.** A `JSR` with no stack or no room logs, parks and **jumps anyway** (`0x00553a24`): with
+    no stack its `RETURN` ends the script, with a full one that `RETURN` pops the enclosing frame and returns one level
+    too far. A `RETURN` with no frame ends the script. `PUSH` and `HUSH` write the result register (`0x00553c89`,
+    `0x00553d95`); a heap error changes nothing. The two stacks never check each other: `HOP`'s `+0x40 > +0x54` can
+    never be true, so it is no collision guard. The save reader restores both indices, the register and the array.
+  - **Nothing shipped reaches a stack or heap error, and no branch reads what `HUSH` or `HOP` left.** All 308 `.RSE`:
+    `PUSH`/`POP` unused; every `JSR` a label, the deepest call 1, every `HUSH`/`HOP` at depth 0; each `HUSH` rider's
+    capacity clamped to a `MaxCapacity` that fits its stack (`FUN_004dd7f0`); every path from a `HUSH` or `HOP` to a
+    branch passes a writer. The shipped save holds no open frame, no heap value, and no saved register a branch reads.
+  - **Where OpenTPW parts**, all Q83b and none of it on a shipped path: dead by CONTENT, `PushCall`, `PopCall`, the
+    error arms of `Call`, `Return` and `PopValue`, a literal-destination `COPY`; inert, `PushValue`'s extra guard;
+    reached and masked, `PushValue`'s and `WALKON`'s result register, untagged frames, and a load that restores no
+    index, array or register.
+  - **Docs corrected:** `park.md`'s "writes `+0x48` unconditionally" (`ADD`, `COPY`, `TEST`, `CMP`, `GETANIM_CH`,
+    the child/parent getters, `FORCEUNLIMBO` and a heap error do not), "`ADD` does the same inline", "a collision
+    guard", and the 17 literal destinations, ten of which are the register used on purpose, not artefacts; the
+    FileFormats `JSR` "is refused", `HUSH` "the engine checks the two do not meet", `HOP` "ignores the instruction".
+  - **Measured in the game** (a throwaway instrumented build, never committed: per script, calls and returns, the
+    deepest call, `HUSH`es and `HOP`s, the deepest heap, and a count of each divergent arm; `q83confirm.py`,
+    `q83confirm2.py`, `q83why.py`, `q83sell.py`, silent, jungle), predicted first. The shipped park: the Belly Bounce's script alone
+    has a stack (3), its calls one deep, no heap used, every count nought. Then an Inca Totem and an Aztec Mayhem bought
+    and queued to the path; no guest chose either in 10 to 15 minutes (`why`: 26 of 26, then 43 of 43, aimed at the
+    Belly Bounce; Q165), so the Belly Bounce was sold, as a player may. The Totem then took 15 riders and let off 15,
+    its heap never deeper than 6, its capacity, its 17 calls all one deep; the Aztec Mayhem took one; every divergent
+    arm counted nought in every script, a branch after a `HUSH` included. Photographed with the census read while
+    paused: the Totem with one rider aboard, the Aztec Mayhem with its rider at the door. `save/` unchanged in all six
+    runs.
+  - **No test was added**: nothing was built. Q83b's tests are the build's.
+  - **Reviewed** by read-only adversarial agents, six slices, three of which a crash cut off and a second session re-ran:
+    23 verdicts, 15 upheld, 8 amended, none refuted; B2, B4 and B7 re-derived inside other slices. The amendments and
+    the misses (the full-stack `RETURN`, `COPY`'s death, `GETANIM_CH`, `WALKON`, both directions of the collision)
+    were re-read in Ghidra and are in the page.
+  - **Found:** Q83b and Q165.
+
+  The item as written: Found by Q45's handler sweep, not yet measured as reached. The engine's `RETURN` with no frame
+  parks the script (`0x00553a63`); `RideScript.Return` carries on. Its `JSR` on a full stack logs, parks, then jumps anyway with no return address
   (`0x00553a24`), and with a non-label operand pushes and does nothing; `Call` stops the script for both. `PUSH` and
   `POP` errors park (0 uses). **Engine `HUSH` also writes the result register with the value it pushed** (`0x00553d95`,
   `MOV [EBP+0x48],EDX`, read first-hand), and `PUSH` too (`0x00553c89`); `PushValue` does not, and `HUSH` has 39 uses:
   find whether any shipped branch reads the register after one.
+- [ ] **Q83b. The VM's stacks and result register, made the engine's: the build.** From Q83's decode (`park.md`, "The
+  two stacks"). None of it changes a shipped path, so each fix gets a test that fails first, and the game run is Q83's
+  census (`q83sell.py`) reading the same. `RideScript`: `Call` jumps anyway on no stack or no room, and pushes and
+  carries on for a non-label operand; `Return` with no frame ends the script; frames are stored tagged `0x20000000` and
+  popped through the tag test; `PushCall` writes `Result` and ends the script on an error; `PopCall` ends it after its
+  writes; `PushValue` writes `Result` and loses its `_values > _calls` guard; `PopValue` on an empty heap writes
+  nothing; `Store` writes `Result` for `ADD`, `COPY`, `TEST` and `CMP` only with a variable, and a literal-destination
+  `COPY` ends the script; `WALKON` stops writing `Result`; the class summary's "does nothing at all rather than
+  failing" is wrong for `COPY`. First measure whether `GETANIM_CH` ever runs with no model (the engine then leaves
+  `Result` and copies it). `ParkRides.Resume`: restore `+0x40`, `+0x44`, `+0x48` and block 1, only the slots above the
+  call index being frames - a save with a `HUSH` ride mid-cycle, or `bugstv`/`Rocket` saved inside their `WAIT`, needs it.
+- [ ] **Q165. Every guest chooses the Belly Bounce over a bought ride. Decode first.** Found by Q83's game runs: with an
+  Inca Totem and an Aztec Mayhem bought beside the path and queued to it, `why` aimed every guest at the Belly Bounce
+  (26 of 26, then 43 of 43) and none rode either in 15 minutes; with it sold, guests chose the Totem within a minute.
+  Decode what `FUN_004fcc30`'s seven terms give each (`ParkRideScore`) and whether the original sends nobody to a new
+  ride while an old one stands. Confirm: the same `why` census.
 
 - [ ] **Q85. A guest who arrives starts with happiness nought, and stays there. Decode first.** Found by Q50's game
   runs: every one of the 33 guests who arrived (30 by `load 30`) read `happy 0` in `peeps`, none above it in nine minutes,
