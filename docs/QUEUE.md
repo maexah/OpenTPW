@@ -1695,13 +1695,62 @@ artifacts are listed in `docs/history/README.md`.
   From Q165b's review: the sideshow's computed excitement makes the Jungle Spray 30, which turns
   `ParkGuestTypeTests`' (48,25) case into an 18-18 tie for the type 3, decided by the tick's parity; pick the case again.
 
-- [ ] **Q166. `park.md` counts ten shipped instructions that store into a literal on purpose; there are at least 76.**
-  Found by Q83b. "Arithmetic, the destination rule and the result register" says 17 shipped instructions have a
-  literal operand 0, ten of them the register used on purpose (`MOD` 4, `RAND` 4, `SUB` 2). Among the opcodes
-  `RideScript` builds, 76 store into a literal operand 0 across the 308 `.RSE`: `LIMBOSPACE` 24, `GETTIMER` 21,
-  `GETANIM_CH` 15, `RAND` 4, `INLIMBO` 4, `MOD` 4, `SUB` 2, `GETREMOTEVAR` 2 (plus `SETVARINCHILD`'s 7, which is no
-  destination). The unbuilt opcodes with a literal operand 0 (`SEC`, `MIN`, `WALKFLOATSTAT` and others) are not yet
-  classed. Correct the count, and check each against its handler's store.
+- [x] **Q166. `park.md` counts ten shipped instructions that store into a literal on purpose; there are at least 76.**
+  Done 2026-09-28, `alexah/173-count-the-literal-destinations`. `park.md`, "Arithmetic, the destination rule and the result
+  register" and "`BUMP` and `TOUR`"; FileFormats `vm/info.md` and `vm/instructions.md` (`docs/rsse-instruction-set`).
+  - **Counted** over all 308 `.RSE` against every handler's own store (`q166count.py`): 351 instructions store into a
+    literal, in 16 opcodes. 95 are the register used on purpose, each read by a conditional branch on every path before
+    anything writes it again: `LIMBOSPACE` 24, `GETTIMER` 21, `GETANIM_CH` 15, `COAST 2 0` 12, `INLIMBO` 4, `MOD` 4,
+    `RAND` 4, `BUMP 11 0` 4, `GETREMOTEVAR` 2, `SUB` 2, `MIN`, `SEC`, `WALKFLOATSTAT`; 79 name operand 0. The other
+    256 are the triggers' length thrown away (`TRIGWAITANIM` 132, `TRIGANIM` 64, `TRIGANIM_CH` 60), none read.
+  - **Decoded**: all 86 opcodes with an operand that is not a label or a string, by six Opus decoders each checked by
+    an Opus refuter in Ghidra (62 upheld, 20 upheld with side notes, 4 not as written - `DIV` and `MOD` for a wrong
+    comment, `WALKOFF` for a missed difference, `WALKFLOATSTAT` for its register's nought - none on a destination):
+    which operand is a destination, and whether a literal there writes the register first (most), tests first and
+    writes nothing (`ADD`, `FORCEUNLIMBO`, `GETVARINCHILD`, `GETVARINPARENT`, `BUMP 2`, `TOUR 4` and `16`), or ends
+    the script (`COPY`). `YEAR` to `SEC` read the real clock, not the park's; `TRIGANIM_CH`'s third operand is its
+    destination, not a rate.
+  - **Checked against `RideScript`**: every built one stores the way its handler does, 344 of the 351, but for the
+    declared model-less `TRIGWAITANIM` and a `COAST` with no ride state; the seven in unbuilt opcodes (`BUMP 11 0`,
+    `MIN`, `SEC`, `WALKFLOATSTAT`) leave the register stale for their branch, none in Lost Kingdom's save.
+    Deviations now said at their sites: `StartScream` leaves the register the engine writes (no branch reads it),
+    `TRIGWAITANIM`'s model-less path writes neither and its re-entry reads the pose flag (Q174), `WAITANIM`'s first
+    visit (Q174), the walk legs (Q175), the trigger's play rate (Q155), `GetVariableIn`'s unknown id, `NextDraw`'s
+    overflow and `ParkAudio.Scream`'s second scream (Q176). Corrected: `Divide` (the original's `IDIV` faults, it
+    does not wrap), `BOUNCESETNODE`, the class summary's destination rule, `ride-operation.md`'s walk legs;
+    `addresses.md` gains nine rows.
+  - **Tests**: `RideScriptLiteralDestinationTests`, 8: seven register idioms (`LIMBOSPACE`, `INLIMBO`, `RAND`, `MOD`,
+    `SUB`, `GETREMOTEVAR`, `COAST 2 0`), each run alone for its answer and again with the branch its script takes, and
+    `TRIGANIM_CH`'s unread length; and one in `RideScriptChannelTests`, `GETANIM_CH`'s literal with the Jungle
+    Spray's model. Eight put-the-bug-back mutations (`q166-mutate.py`), each red as predicted. The first pass found
+    three survivors, because the tests primed the register through the same store the mutation broke; they now prime
+    through `TEST`, and variable nought holds a mark.
+  - **Confirmed in the game** (`q166-instrument.py`, a tally of every ignored write per script, the register after it
+    and how many branches read it; `q166run.py`, `q166run2.py`; silent, jungle; predicted first; `save/` unchanged in
+    both). A bought Steak Shop's `LIMBOSPACE` 115 times, register 10, read 115 times; an Arcade's `INLIMBO` 118, 0, 118;
+    an Aztec Mayhem's `GETTIMER` 227, 6032, 227; a Round Fountain's `TRIGANIM` once, 3033, never read; the Mammoth
+    and Lava Fountains' `TRIGWAITANIM` 8 and 7, never read; in the stock park a toilet's `TRIGANIM` and the Jungle
+    Spray's `TRIGANIM_CH`, never read, and its `GETANIM_CH` 17, read 18 times. Photographed paused with the census
+    (`q166-run{1,2}/B-*.png`): the Steak Shop, the Arcade, the Aztec Mayhem, and the Round and Mammoth Fountains
+    standing; the Lava Fountain's frame is filled by the park gate, so its reading is the census's alone.
+  - **One prediction wrong in form**: I predicted `GETANIM_CH`'s reads would equal its runs. Each is followed by
+    `BRANCH_PV` then `BRANCH_Z`, so one answering nought or below is read twice: 16 read once and the last, at -1,
+    twice. The stock park reached nothing in the first 90 s, where I had predicted the Jungle Spray and the triggers.
+  - **Not confirmed on screen**: the shapes no jungle thing reaches unaided (`RAND`, `MOD`, `SUB`, `GETREMOTEVAR`,
+    `COAST 2 0`): tested only.
+  - **Reviewed** by five read-only Opus agents (park.md, the FileFormats pages, the code and tests, this entry and
+    STATUS, and a sweep for stale copies): 69 findings, 8 wrong, 23 misleading, 11 on a rule, 27 nits, all taken but
+    the TOUR list's mixed full stops. Among them: the triggers' `<dest>` on the FileFormats page still said a branch
+    reads the length; `COAST 2 0` and a model `GETANIM_CH` were pinned by no test; `DIV` and `MOD` each run their own
+    `IDIV`; `BUMP 11` answers a word of the ride's record, not 0 or 1, three times in each water ride.
+  - **Found:** Q174, Q175, Q176; a note under Q155.
+
+  The item as written: Found by Q83b. "Arithmetic, the destination rule and the result register" says 17 shipped
+  instructions have a literal operand 0, ten of them the register used on purpose (`MOD` 4, `RAND` 4, `SUB` 2). Among
+  the opcodes `RideScript` builds, 76 store into a literal operand 0 across the 308 `.RSE`: `LIMBOSPACE` 24,
+  `GETTIMER` 21, `GETANIM_CH` 15, `RAND` 4, `INLIMBO` 4, `MOD` 4, `SUB` 2, `GETREMOTEVAR` 2 (plus `SETVARINCHILD`'s 7,
+  which is no destination). The unbuilt opcodes with a literal operand 0 (`SEC`, `MIN`, `WALKFLOATSTAT` and others)
+  are not yet classed. Correct the count, and check each against its handler's store.
 
 - [ ] **Q169. A visit's excitement match is unbuilt and uncounted.** Found by Q165b's review; `docs/PLAYER-GAPS.md` names
   it, and nothing counts it (`CLAUDE.md` rule 4). The settle-up `FUN_004fe1e0` calls `FUN_004fdcc0` on every visit
@@ -1744,6 +1793,35 @@ artifacts are listed in `docs/history/README.md`.
   re-check (`QUEUE_CAPACITY_RECHECK`), both reached by the Belly Bounce. Read the key, compute it with the float stores
   the disassembly shows (`0x004dda56`..`0x004ddb51`), and build both. Confirm: `unimplemented` without the two, and the
   Belly Bounce's capacity in a census, predicted first.
+
+- [ ] **Q174. Two animation-state differences in the triggers. Decode first.** Found by Q166's decode. (1) `TRIGWAITANIM`'s
+  re-entry compares channel 0's role raw (`FUN_00473fb0`, `0x00552cfc`..`0x00552d0f`), where
+  `RideScript.TriggerAndWaitForAnimation` asks `RoleOn`, which answers -1 for a channel holding its pose (flag `0x4`,
+  which among the script handlers only `GETANIM` and `GETANIM_CH` test, `0x00552e05`, `0x0055374e`; the trigger
+  `FUN_004732a0` reads it to count a held channel free, `0x00473326`): a clip held when the wait re-enters lets the
+  engine go on and keeps OpenTPW waiting. (2) `WAITANIM`'s first visit zeroes `+0xa4` and sets `+0xa8` to `0xffff`
+  (`0x00552b14`, `0x00552b1a`), which `WaitOutAnimation` does not, so a `WAIT4ANIM` after it waits on an older trigger's
+  deadline and a `LOOPANIM` of the key last looped is skipped. Measure whether shipped content reaches either (133
+  `TRIGWAITANIM`, 547 `WAITANIM`), then build. Confirm: `rides` over a Lost Kingdom `TRIGWAITANIM` ride through a cycle.
+
+- [ ] **Q175. A rider's walk off keeps the walk on's leg, where the original's works out its own. Decode first.** Found by
+  Q166's decode (`WALKON`) and its refuter (`WALKOFF`). `FUN_00556f40` (`WALKON`) sets the slot's due time to now +
+  trunc( the distance from the walk node to the head node ) × 100, nought becoming 100 (`0x00556fce`..`0x005570af`), and
+  `FUN_005571a0` (`WALKOFF`) a new leg, the distance from the off-from node to the off-to node, the same way
+  (`0x00557276`..`0x005572db`). `RideScript.WalkOn` gives every leg `WalkTick`, the deviation `WalkTick` declares
+  because no model node can be resolved by id, and `WalkOff` keeps that leg. Resolve the nodes first (`FUN_00556b90`
+  against the ride's model, space `0x800` for a walk node and `0x80` for a head node; Q22 needs the same), then build
+  both legs from their positions. Confirm: `rides` over a Jungle Spray lane's walk, each due time predicted from its
+  two nodes.
+
+- [ ] **Q176. Two latent differences in the VM's draw and the second scream.** Found by Q166's decode. (1) `NextDraw`
+  takes `Math.Abs` of the generator's state, which throws for `0x80000000`; `FUN_00516330` hands that back unchanged
+  (`0x0051635f`) and `RAND` and `FINDSCRIPTRAND` halve it to `0x40000000` (`ride-operation.md` already records it). (2)
+  A second `STARTSCREAM` while one is held: the engine refuses it and stores the refusal's nought over `+0xd0`
+  (`0x00555ee6`), so the first scream plays on and a later `STOPSCREAM` finds nothing to stop (`0x00555efd`);
+  `ParkAudio.Scream` keeps the chain reachable, so a later stop ends it. Both are said at their sites. Measure whether
+  any shipped script starts a scream over a held one, then build both. Confirm: a test for each, and `rides` over the
+  Belly Bounce through a cycle.
 
 - [ ] **Q85. A guest who arrives starts with happiness nought, and stays there. Decode first.** Found by Q50's game
   runs: every one of the 33 guests who arrived (30 by `load 30`) read `happy 0` in `peeps`, none above it in nine minutes,
@@ -2252,6 +2330,15 @@ artifacts are listed in `docs/history/README.md`.
   `mOperatingSpeed` reaches the script after it), measure the Belly Bounce's, then keep the word per script and read
   it in `WAIT` and in both scream readings. Confirm: `rides` showing the Belly Bounce's word, and the scream's level
   by capture.
+  From Q166: every trigger hands the divisor (`[ESP+0x14]`, 0.5 + 0.01 × speed, `0x00551cdc`) to the channel as its
+  play rate - `TRIGANIM` `0x00552952`, `WAITANIM` `0x00552a9f`, `LOOPANIM` `0x00552be4`, `TRIGWAITANIM` `0x00552d2f`,
+  `TRIGANIM_CH` `0x00553190`, `WAITANIM_CH` `0x00553325`, `LOOPANIM_CH` `0x00553465`, `TRIGWAITANIM_CH` `0x00553624` -
+  where `StartAnimation` passes 1.0 (said at the site); the deadlines of `TRIGANIM` `0x005529ac`, `WAITANIM`
+  `0x00552acd`, `TRIGWAITANIM` `0x00552d94`, `TRIGANIM_CH` `0x005531ee` and `TRIGWAITANIM_CH` `0x00553682` divide by
+  it, and none of these divisions is counted (`RIDE_SPEED_SCALES_WAITS` fires only from the ride window). The unbuilt
+  `TRIGANIMSPEED` passes its rate / 1000 × the divisor (`0x00552f6e`), and its deadline, the length × 1000 / its rate,
+  does not divide by it. The length a trigger answers does not depend on it (`FUN_00472f60`,
+  `0x0047323e`..`0x00473258`).
 - [ ] **Q156. The staff screen's two happiness meters fill upward. Decode first.** Found by the 2026-09-26 staleness
   audit. `UiMeter` fills every meter from the bottom, a choice its remarks justify by the gadget's gauge housing being
   taller than wide (59 by 224); the staff screen's two `happygrad.wct` meters are 376 by 45 (`ParkStaffScreen`,

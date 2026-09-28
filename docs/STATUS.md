@@ -77,8 +77,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
 ## Next
 
 `docs/QUEUE.md`, from the top. **Q1-Q12, Q34, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50-Q50h, Q53, Q53b,
-Q56, Q57, Q59, Q67, Q68, Q68b, Q69-Q71, Q82, Q82b, Q83, Q83b, Q165, Q165b, Q165c, Q46, Q49, Q84, Q88, Q101 are
-ticked.** Next: **Q166**. Which item or audit filed each open one is its entry's "Found by" (Q165c filed Q170-Q173).
+Q56, Q57, Q59, Q67, Q68, Q68b, Q69-Q71, Q82, Q82b, Q83, Q83b, Q165, Q165b, Q165c, Q166, Q46, Q49, Q84, Q88, Q101
+are ticked.** Next: **Q169**. Which item or audit filed each open one is its entry's "Found by" (Q166 filed Q174-Q176).
 `docs/PLAYER-GAPS.md` holds gaps **4, 5 and 7**. The untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
 
 ## Not verified on screen
@@ -97,9 +97,9 @@ ticked.** Next: **Q166**. Which item or audit filed each open one is its entry's
   back of queue, its three failed walks, the refused door's walk, a dodgy direction and a place past the cells: tested.
   Q50h's corner past a node, which a measure between runs can reopen, and its other arms: tested only. Q53b's five
   tries, a lone path cell, a failed probe route and the wrap: tested only; the probes from a sold ride find row 21.
-- Q165c's histories cleared by a sale, refusals aging, the too-long gate, histories read from a save: tested only.
-- A lock taken on the last unit running its section whole: tested only. Nothing the stock park runs arrives there; the
-  one route is the Hot Pot with its capacity cut mid-ride, and it rests on `BUMP` being unbuilt (Q45).
+- Tested only: Q165c's histories cleared by a sale, refusals aging, the too-long gate and a save's histories; Q166's
+  literal `RAND`, `MOD`, `SUB`, `GETREMOTEVAR` and `COAST 2 0`; and a lock taken on the last unit running its section
+  whole, which the stock park never reaches (the Hot Pot's capacity cut mid-ride, resting on `BUMP` unbuilt, Q45).
 
 ## Numbers
 
@@ -108,12 +108,12 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1239**, 0 fail, 0 skip with the game | 2026-09-28, after Q165c |
-| Tests without the game | **504** ran, **735** skipped, of 1239 | 2026-09-28, after Q165c |
-| Build warnings | 123 | 2026-09-28, after Q165c |
+| Tests | **1248**, 0 fail, 0 skip with the game | 2026-09-28, after Q166 |
+| Tests without the game | **512** ran, **736** skipped, of 1248 | 2026-09-28, after Q166 |
+| Build warnings | 123 | 2026-09-28, after Q166 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-28 (Q165c).** `alexah/172-the-rest-of-the-score`. **Earlier:** each QUEUE.md entry names its branch: `171`
-(Q165b) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`. Older: git log.
+**2026-09-28 (Q166).** `alexah/173-count-the-literal-destinations`. **Earlier:** each QUEUE.md entry names its branch:
+`172` (Q165c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`. Older: git log.

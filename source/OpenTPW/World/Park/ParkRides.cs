@@ -597,8 +597,9 @@ public sealed class ParkRides : Entity
 	/// <para>
 	/// <b>How long a restored speed lasts, measured rather than assumed.</b> It survives loop wraps and
 	/// holds, because <see cref="RideAnimations.Advance"/> carries the channel's own speed into both -
-	/// but the next trigger from the script replaces it, since <c>RideScript.StartAnimation</c> passes a
-	/// literal 1 exactly as the engine's handlers push <c>0x3f800000</c>. The Belly Bounce's script does
+	/// but the next trigger from the script replaces it, since <c>RideScript.StartAnimation</c> passes 1.0
+	/// where the engine's handlers push the script's speed divisor, 0.5 + 0.01 x the speed word
+	/// (<c>0x00552be4</c>) - the deviation docs/QUEUE.md Q155 names. The Belly Bounce's script does
 	/// reach its <c>LOOPANIM</c>s again about twenty seconds into a load, so for the one channel in this
 	/// park saved at anything but 1, what this fixes is that window and not the session. A thing whose
 	/// resumed loop never re-triggers keeps its saved speed indefinitely; none here is such a thing.

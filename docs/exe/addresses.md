@@ -373,6 +373,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00512a5e` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00512b4c` | | OpenTPW/World/Weather/Lightning.cs  |
 | `0x00515865` | | OpenTPW/Global/GameCalendar.cs OpenTPW/World/Level.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x0051635f` | World generator FUN_00516330: NEG leaves 0x80000000 unchanged, which RAND and FINDSCRIPTRAND then halve | OpenTPW/VM/RideScript.cs  |
 | `0x00516394` | Thing sweep `FUN_00516380`: `mGameTick` up by one | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkState.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00516d13` | World save `FUN_00516c80`: installs the idle mode before anything is written, so leaving a park lets go of the hand | OpenTPW/World/Level.cs  |
 | `0x00517bec` | World load: `mGameTick` read from the save | OpenTPW/World/Park/PeepBehaviour.cs  |
@@ -530,8 +531,11 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00551f5f` | `PUSH 0x1c`: the effect list's nodes are 28 bytes | OpenTPW/World/Ride/RideEffects.cs  |
 | `0x00552376` | `KILLOBJ`: steps to the next node before it unlinks the match, with no break | OpenTPW/World/Ride/RideEffects.cs  |
 | `0x00552950` | | OpenTPW/VM/RideScript.cs  |
+| `0x00552952` | RSSE TRIGANIM: the script speed divisor pushed as the play rate | OpenTPW/VM/RideScript.cs  |
 | `0x005529bc` | | OpenTPW/VM/RideScript.cs  |
 | `0x00552ab0` | | OpenTPW.Tests/RideScriptModelTests.cs  |
+| `0x00552b14` | RSSE WAITANIM first visit: +0xa4 cleared (and +0xa8 set to 0xffff after it) | OpenTPW/VM/RideScript.cs  |
+| `0x00552be4` | RSSE LOOPANIM: the script speed divisor pushed as the play rate | OpenTPW/World/Park/ParkRides.cs  |
 | `0x00552c1a` | `TRIGWAITANIM` handler | OpenTPW/VM/RideScript.cs  |
 | `0x00552fe5` | | OpenTPW.Tests/RideScriptChannelTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x00553158` | | OpenTPW.Tests/RideScriptChannelTests.cs OpenTPW/VM/RideScript.cs  |
@@ -561,11 +565,14 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00553daa` | RSSE HOP handler | OpenTPW/VM/RideScript.cs  |
 | `0x00553dfa` | RSSE heap error: logs "RSSE: Heap Error" and changes nothing | OpenTPW.Tests/RideScriptStackTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x00553e72` | RSSE ADD: a literal operand 0 leaves through NOP before +0x48 is written | OpenTPW.Tests/RideScriptStackTests.cs OpenTPW/VM/RideScript.cs  |
+| `0x00554052` | RSSE DIV: the IDIV, which faults on INT_MIN / -1 (MOD has its own at 0x00554120) | OpenTPW/VM/RideScript.cs  |
 | `0x00554c07` | | OpenTPW/World/Ride/RideState.cs  |
 | `0x0055512e` | `SPAWNCHILD` tests the loader's answer (`TEST EAX,EAX / JZ`) | OpenTPW/VM/RideScript.cs  |
 | `0x005555ad` | `GETVARINCHILD`/`GETVARINPARENT`: shared tail that bounds the index from above only | OpenTPW/VM/RideScript.cs  |
+| `0x005555e9` | RSSE BOUNCESETNODE: the raw operand word stored to +0x70, no tag test | OpenTPW/VM/RideScript.cs  |
 | `0x00555939` | RSSE store tail: +0x48, then the variable only for a 0x40 operand (POP, HOP and others) | OpenTPW.Tests/RideScriptStackTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x00555afe` | RSSE WALKON: after FUN_00556f40 returns, nothing writes +0x48 | OpenTPW.Tests/RideScriptStackTests.cs OpenTPW/VM/RideScript.cs  |
+| `0x00555ee6` | RSSE STARTSCREAM: the new handle, or a refusal's 0, stored over +0xd0 | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x00555f6b` | `SINGLESCREAM` picks its branch on the second operand (`CMP ESI,EDI / JGE`) | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x00556009` | `SCREAMLEVEL` writes the volume call's return over the scream handle at `+0xd0` | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x0055641b` | | OpenTPW/VM/RideScript.cs  |
@@ -575,6 +582,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005569b8` | `SETOBJPARAM`'s type dispatch: jump table | OpenTPW/World/Ride/RideEffects.cs  |
 | `0x005569c4` | `SETOBJPARAM`'s type dispatch: byte map | OpenTPW/World/Ride/RideEffects.cs  |
 | `0x00556a5c` | `COAST`'s eight-entry sub-op table | OpenTPW/World/Ride/RideState.cs  |
+| `0x00556fce` | WALKON FUN_00556f40: the leg from the distance between the walk and head nodes, x100, nought to 100 | OpenTPW/VM/RideScript.cs  |
+| `0x00557276` | WALKOFF FUN_005571a0: a new leg from the distance between the off-from and off-to nodes, x100 | OpenTPW/VM/RideScript.cs  |
 | `0x005587f0` | | OpenTPW.Files/Formats/Script/RideScriptFile.cs  |
 | `0x00558d2e` | | OpenTPW/VM/RideScript.cs  |
 | `0x00558d5b` | | OpenTPW/VM/RideScript.cs  |

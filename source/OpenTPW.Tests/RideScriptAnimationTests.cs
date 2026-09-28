@@ -124,8 +124,8 @@ public class RideScriptAnimationTests
 
 	/// <summary>
 	/// 64 of the 74 shipped <c>TRIGANIM</c>s write a literal where a destination would go, so the
-	/// length lands in the result register and the write is stepped over - the same idiom as
-	/// <c>COAST 2 0</c> and <c>GETTIMER</c>.
+	/// length lands in the result register and the write is stepped over. Unlike <c>COAST 2 0</c> and
+	/// <c>GETTIMER</c>, no shipped script then reads it there.
 	/// </summary>
 	[TestMethod]
 	public void TriggeringWithNowhereToPutTheLengthStillLeavesItInTheResult()

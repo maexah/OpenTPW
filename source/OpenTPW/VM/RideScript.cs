@@ -21,10 +21,11 @@ namespace OpenTPW;
 /// target is used as it stands.</item>
 /// <item><b>There are no condition flags.</b> Most instructions that compute something leave their
 /// value in one result register, and the conditional branches compare that against zero.</item>
-/// <item>A destination operand must be a variable. When it is not, the engine leaves through NOP's own
-/// handler without writing it - see <see cref="IgnoredWrites"/>. Most such instructions have written the
-/// result register by then. Some test the destination first and write nothing - <c>ADD</c>, <c>COPY</c>,
-/// <c>TEST</c>, <c>CMP</c>, <c>FORCEUNLIMBO</c>, <c>GETVARINCHILD</c> and <c>GETVARINPARENT</c> - and
+/// <item>A destination operand is written only when it is a variable. When it is not, the engine skips the
+/// store and carries on - see <see cref="IgnoredWrites"/> - and most such instructions have written the
+/// result register by then, which is how 95 shipped instructions test an answer they keep nowhere else.
+/// Some test the destination first and write nothing - <c>ADD</c>, <c>COPY</c>, <c>FORCEUNLIMBO</c>,
+/// <c>GETVARINCHILD</c> and <c>GETVARINPARENT</c>, as <c>TEST</c> and <c>CMP</c> test the variable they read - and
 /// <c>COPY</c>, which has not yet fetched its source, leaves the program counter on it, so the next
 /// dispatch refuses that word and the script ends.</item>
 /// <item>A script runs a fixed number of instructions per turn, and yields early by zeroing that
@@ -513,8 +514,8 @@ public sealed class RideScript
 	public IReadOnlyList<int> Variables => _variables;
 
 	/// <summary>
-	/// Instructions whose destination was not a variable, so that nothing was written to it. The engine
-	/// skips each of them except a <c>COPY</c>, which ends the script.
+	/// Instructions whose destination was not a variable, so that nothing was written to it. The engine skips
+	/// only the store - most have written the result register - except a <c>COPY</c>, which ends the script.
 	/// </summary>
 	public int IgnoredWrites { get; private set; }
 
@@ -1239,9 +1240,10 @@ public sealed class RideScript
 				break;
 
 			case Opcode.GETANIM_CH:
-				// Destination first and the channel second, the reverse of the triggers' order. GETANIM is
-				// the same handler with the channel a literal nought, and no shipped script uses it. With no
-				// model the handler skips the player and stores the register as it stands (0x0055374c).
+				// Destination first and the channel second, the reverse of the triggers' order. GETANIM is a
+				// handler of its own that does this with the channel a literal nought, and no shipped script
+				// uses it. With no model the handler skips the player and stores the register as it stands
+				// (0x0055374c).
 				Store( operands[0], Animations is null ? Result : RoleOn( Value( operands[1] ) ) );
 				break;
 
@@ -1404,7 +1406,9 @@ public sealed class RideScript
 			// with DELHEAD, and TOUR 4 - so implementing it frees exactly the scripts that use it, which
 			// in Lost Kingdom is Bouncy.RSE alone.
 			case Opcode.BOUNCESETNODE:
-				// Raw, with no tag test: the handler stores the operand word itself. See _bounceNode.
+				// Raw, with no tag test: the handler stores the operand word itself (0x005555e9), and this stores
+				// its value field without the kind byte - the same word for a literal, which the one shipped
+				// use, Jelly.RSE's 3, is. See _bounceNode.
 				_bounceNode = operands[0].Value;
 				break;
 
@@ -1715,9 +1719,9 @@ public sealed class RideScript
 	/// </para>
 	/// <para>
 	/// A slot is free when its <b>state</b> is nought - not when its handle is, which is the trap the
-	/// bounce table does not share - and the scan starts from the first slot every time. The duration is
-	/// multiplied by <see cref="WalkTick"/>, and a duration of nought becomes one tick rather than an
-	/// instant arrival, which is the engine's own substitution.
+	/// bounce table does not share - and the scan starts from the first slot every time. Every leg lasts
+	/// <see cref="WalkTick"/>, the deviation named there: no operand is a duration, and the engine's leg is
+	/// the distance between the walk node and the head node (<c>0x00556fce</c>).
 	/// </para>
 	/// </summary>
 	private void WalkOn( float now, int handle, int walkNode, int headNode, int offFrom, int offTo,
@@ -1756,7 +1760,9 @@ public sealed class RideScript
 	/// holds is the engine's "WALK: Tried to release a p..." complaint and changes nothing.
 	/// </para>
 	/// <para>
-	/// The leg is restamped from now, so walking off takes as long as walking on did. The particle spawn
+	/// The leg is restamped from now and keeps the walk on's length, where the engine works out a new one,
+	/// the distance from the off-from node to the off-to node (<c>0x00557276</c>) - a deviation with
+	/// <see cref="WalkTick"/>'s, docs/QUEUE.md Q175. The particle spawn
 	/// the engine performs for action 2, and the model-node attachment it undoes for action 4, are both
 	/// presentation and are absent for the reason given on <see cref="StepTheWalks"/>.
 	/// </para>
@@ -1990,6 +1996,13 @@ public sealed class RideScript
 	/// voice's parameter 6 (<c>0x00551265</c>); the sound belongs to the RIDE, whose position the engine
 	/// takes from the script's own model handle at <c>+0xc8</c>. See <see cref="ParkAudio.ScreamEffectFor"/>
 	/// for the bands and <see cref="ParkScreams"/> for what the parameter does.
+	/// </para>
+	///
+	/// <para>
+	/// The engine also puts the new sound's handle, or nought, in the result register; this leaves
+	/// <see cref="Result"/> alone, a deviation no shipped branch sees - every path from each of the 40 uses
+	/// reaches a <c>TEST</c> or a <c>COPY</c> first (docs/exe/park.md, "Arithmetic, the destination rule and
+	/// the result register").
 	/// </para>
 	/// </summary>
 	/// <remarks>
@@ -2225,6 +2238,11 @@ public sealed class RideScript
 	/// only, so a negative index is an out-of-bounds <i>read</i> whose value is then written into a
 	/// variable. It is refused here for the same reason the write is - see <see cref="SetVariableIn"/>.
 	/// </para>
+	///
+	/// <para>
+	/// An id naming no script is skipped here too, where the engine reads through a null pointer at the
+	/// same tail - the deviation <see cref="SetVariableIn"/> names for the writing pair.
+	/// </para>
 	/// </summary>
 	private void GetVariableIn( int id, RideOperand destination, int index )
 	{
@@ -2415,6 +2433,11 @@ public sealed class RideScript
 	/// One turn of the engine's generator (<c>FUN_00516330</c>), halved - what <c>RAND</c> and
 	/// <c>FINDSCRIPTRAND</c> both draw before they take their different remainders of it.
 	/// </summary>
+	/// <remarks>
+	/// <c>Math.Abs</c> throws for a state of <c>0x80000000</c>, where the engine's generator hands that back
+	/// unchanged and the halving makes it <c>0x40000000</c> (<c>0x0051635f</c>) - a deviation not yet
+	/// built, docs/QUEUE.md Q176.
+	/// </remarks>
 	private int NextDraw()
 	{
 		_random = (_random * 0x19660Du) + 0x3C6EF35Fu;
@@ -2439,8 +2462,9 @@ public sealed class RideScript
 
 	/// <summary>
 	/// Writes a result as the shared store tail does (<c>0x00555939</c>): the result register whatever
-	/// happens, then the variable only when the destination is one. <c>ADD</c> and <c>COPY</c> test their
-	/// destination before they reach this, and so write nothing for a literal one.
+	/// happens, then the variable only when the destination is one. <c>ADD</c>, <c>COPY</c>,
+	/// <c>FORCEUNLIMBO</c>, <c>GETVARINCHILD</c> and <c>GETVARINPARENT</c> test their destination before they
+	/// reach this, and so write nothing for a literal one.
 	/// </summary>
 	private void Store( RideOperand destination, int value )
 	{
@@ -2464,8 +2488,9 @@ public sealed class RideScript
 		if ( right == 0 )
 			return 0;
 
-		// int.MinValue / -1 overflows on the CLR where the original would simply wrap; neither case
-		// occurs in any shipped script, and answering 0 keeps a script running rather than crashing it.
+		// int.MinValue / -1, and its remainder, fault in the original's IDIV (0x00554052, and MOD's own) as
+		// they would throw here. No shipped script comes near it; answering 0 keeps a script running where
+		// the original would crash, a deviation.
 		if ( left == int.MinValue && right == -1 )
 			return 0;
 
@@ -2754,8 +2779,7 @@ public sealed class RideScript
 	///
 	/// <para>
 	/// The length goes through <see cref="Store"/>, so a literal destination - which 64 of the 74
-	/// shipped uses write - leaves it in the result register instead, the same idiom as
-	/// <c>COAST 2 0</c>.
+	/// shipped uses write - leaves it in the result register alone, where no shipped script reads it.
 	/// </para>
 	/// </summary>
 	private void TriggerAnimation( float now, int role, int entry, RideOperand destination )
@@ -2789,12 +2813,20 @@ public sealed class RideScript
 	/// </para>
 	///
 	/// <para>
-	/// <b>One deviation, and this is the whole of it: with no model this steps over rather than parking.</b>
+	/// <b>With no model this steps over rather than parking</b>, a deviation.
 	/// The engine skips the channel query and compares against the RAW third operand, which nothing can
 	/// ever change, so it parks the script for ever unless operand three equals operand one. Across
 	/// every shipped script <b>not one use satisfies that</b>: of 133 uses in 56 scripts, 132 differ
 	/// outright and the last is a variable. Reproducing it would hang all 56 to no end, so a model-less
-	/// script counts the instruction and walks past it.
+	/// script counts the instruction and walks past it - writing neither the result register nor a variable
+	/// destination, where the engine's first visit floors the length to 300 in the register and copies it
+	/// to a variable.
+	/// </para>
+	///
+	/// <para>
+	/// <b>And re-entry asks <see cref="RoleOn"/></b>, which answers -1 for a channel holding its pose, where
+	/// the engine reads channel nought's role raw: a clip already held when the wait re-enters keeps this
+	/// waiting where the engine goes on - a deviation, docs/QUEUE.md Q174.
 	/// </para>
 	///
 	/// <para>
@@ -2961,8 +2993,9 @@ public sealed class RideScript
 		if ( Animations is null )
 			return 0;
 
-		// A literal 1.0, because every triggering handler pushes 0x3f800000. The channel divides by it, so
-		// anything else here would change the length a script is told as well as the speed it plays at.
+		// 1.0, where every triggering handler pushes the script's speed divisor (0x00552952), 0.5 + 0.01 x
+		// the speed word: the same at the speed 50 every script has here, and a deviation for an item with
+		// its own (docs/QUEUE.md Q155). It is the play rate alone; the length answered does not read it.
 		return Animations.Trigger( role, entry, flags, 1f, (int)now, channel );
 	}
 
@@ -2994,6 +3027,11 @@ public sealed class RideScript
 	/// dword, so a clock under 300ms would wrap it to something enormous and park the script for about
 	/// 49 days. Nothing can reach that - a ride's scripts do not run in the first three tenths of a
 	/// second of a game - and reproducing it would only turn an unreachable case into a hang.
+	/// </para>
+	///
+	/// <para>
+	/// <b>And one not yet built:</b> the first visit also clears the <c>WAIT4ANIM</c> deadline and sets the
+	/// looping key to <c>0xffff</c> (<c>0x00552b14</c>), which this does not - docs/QUEUE.md Q174.
 	/// </para>
 	/// </summary>
 	private void WaitOutAnimation( float now, int role, int entry, int length )

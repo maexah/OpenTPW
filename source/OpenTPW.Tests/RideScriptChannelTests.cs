@@ -344,6 +344,30 @@ public class RideScriptChannelTests
 	}
 
 	/// <summary>
+	/// <b>Every shipped <c>GETANIM_CH</c> names a literal destination</b> - the Jungle Spray's
+	/// <c>GETANIM_CH 0 0</c> at word 220, then <c>BRANCH_PV</c> - so the role reaches the branch through the
+	/// result register alone. Primed to nought through <c>TEST</c>, the register must come out holding the
+	/// role the channel plays, with variable nought's mark untouched.
+	/// </summary>
+	[TestMethod]
+	public void AskingWithNowhereToPutTheRoleLeavesItInTheResult()
+	{
+		var asked = Running( Junspray(),
+			Word( Opcode.COPY ), Var( 0 ), Lit( 99 ),
+			Word( Opcode.TRIGANIM_CH ), Lit( 5 ), Lit( 0 ), Var( 1 ), Lit( 0 ),
+			Word( Opcode.COPY ), Var( 1 ), Lit( 0 ),
+			Word( Opcode.TEST ), Var( 1 ),
+			Word( Opcode.GETANIM_CH ), Lit( 0 ), Lit( 0 ),
+			Word( Opcode.END ) );
+
+		asked.Turn( 0f );
+
+		Assert.AreEqual( 5, asked.Result, "the role is in the result register" );
+		Assert.AreEqual( 99, asked["VAR_0"], "and nothing was written where the literal points" );
+		Assert.AreEqual( 1, asked.IgnoredWrites, "the write, and only it, was stepped over" );
+	}
+
+	/// <summary>
 	/// <b>With no model the answer is the result register as it stands</b>: the handler skips the player and
 	/// copies <c>+0x48</c> into a variable destination (<c>0x0055374c</c>). Every shipped one names a literal
 	/// destination, and the <c>BRANCH_PV</c> after it reads the register itself - there, the lane's rider,

@@ -421,6 +421,11 @@ public sealed class ParkAudio : Entity
 	/// "RSSE: Started screaming without s...". Reproduced rather than tidied, because a script that
 	/// does it is doing something wrong and the silence would hide it.
 	/// </para>
+	/// <para>
+	/// What follows the refusal is not reproduced: the engine then stores the refusal's nought over the
+	/// script's handle (<c>0x00555ee6</c>), so the first scream plays on with nothing left to stop it, where
+	/// this keeps it reachable by <see cref="StopScream"/> - a deviation, docs/QUEUE.md Q176.
+	/// </para>
 	/// </summary>
 	/// <param name="scriptId">Whose scream this is, so <see cref="StopScream"/> can find it again.</param>
 	/// <param name="band">The first operand: nought is silent, then 1, 2-3, 4-7, 8 and over.</param>

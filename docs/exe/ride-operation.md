@@ -1611,8 +1611,8 @@ The slot array is the script's `+0x2c`, counted by `+0x7c`, **`0x20` = 32 bytes 
 | `0x00555963` | `RSSE_WALKON` | Handler. | Dispatch table entry |
 | `0x00555b0c` | `RSSE_WALKOFF` | Handler. | Dispatch table entry |
 | `0x00555b34` | `RSSE_WALKGET` | Handler; writes the result back into the operand's variable slot when the operand carries the `0x40000000` tag — the same outbox shape `UNBOUNCE` has. | Dispatch table entry |
-| `FUN_00556f40` | — | `WALKON`'s implementation. Takes the first slot whose STATE is 0, stores the handle and both nodes, sets due = now + `duration * 100` (a zero duration becomes 100), derives the facing with `fpatan` between the two node positions **masked to 3 bits (8 octants)**, and sets **state 1**. Asserts `"Walknodes need a `setwalk`…"` if no node table is declared, and `"WALK: Could not add peep t…"` when every slot is busy. | Disassembly |
-| `FUN_005571a0` | — | `WALKOFF`: finds the slot holding that visitor, restamps the timers, recomputes the facing, spawns particles when the action is 2, sets **state 3**. | Disassembly |
+| `FUN_00556f40` | — | `WALKON`'s implementation. Takes the first slot whose STATE is 0, stores the handle and both nodes, sets due = now + trunc( the distance from the walk node to the head node ) × 100, nought becoming 100 (`0x00556fce`..`0x005570af`), derives the facing with `fpatan` between the two node positions **masked to 3 bits (8 octants)**, and sets **state 1**. Asserts `"Walknodes need a `setwalk`…"` if no node table is declared, and `"WALK: Could not add peep t…"` when every slot is busy. | Disassembly |
+| `FUN_005571a0` | — | `WALKOFF`: finds the slot holding that visitor, restamps start and due from now with a new leg, trunc( the distance from the off-from node to the off-to node ) × 100 the same way (`0x00557276`..`0x005572db`), recomputes the facing, spawns particles when the action is 2, sets **state 3**. | Disassembly |
 | `FUN_00557110` | — | `WALKGET`: scans for a slot in **state 4**, clears its state and handle, returns the handle — 0 if none. | Disassembly |
 | `FUN_00557d80` | — | The **per-frame** stepper, called once per script per frame from the positioner. Progress is `(now - start) * 1000 / (due - start)`; at **≥ 1000** state 1 becomes **2** (and action 4 attaches the rider to the head node), and state 3 becomes **4**. | Disassembly |
 | `FUN_00557ab0` | — | The positioner; also the only reader of `+0x6e`. | Disassembly |
@@ -1622,7 +1622,7 @@ The slot array is the script's `+0x2c`, counted by `+0x7c`, **`0x20` = 32 bytes 
 
 **The operand mapping, measured from the push order** (cdecl, right-to-left, so operands 1..7 are `param_2`..`param_8` of `FUN_00556f40` IN ORDER): 1 handle (`+0x10`), 2 walk node (`+0x00`), 3 head node (`+0x02`), 4 off-from (`+0x04`), 5 off-to (`+0x06`), **6 ACTION (`+0x16`, the one tested against 4)**, 7 flags (`+0x1a`). Confirmed by the corpus: action takes only 1, 4, 5, 6 across the park, and the two scripts passing **4** — `Totem` and `tvsim` — are exactly the head-node case. `WALKON`'s action operand picks the node space: **4 = a HEAD node (space `0x80`)**, anything else a walk node (space `0x800`).
 
-**The duration is NOT an operand**: `FUN_00556f40` takes it from an `__ftol()` of a float already on the x87 stack, so it comes from the script or the object, not the instruction. The engine's leg duration is the **distance between two model nodes**.
+**The duration is NOT an operand**: `FUN_00556f40` works it out from the two nodes' positions (`FSQRT`, then `__ftol`), so the engine's leg duration is the **distance between two model nodes**. OpenTPW cannot resolve a model node, so every leg lasts `RideScript.WalkTick` (Q175).
 
 **Walk-slot declarations across Lost Kingdom** (header word `0x1c`): incagod 40; Lookout, Totem, tvsim 20; balloon, giftshop, steak 10; Hyenas, Junspray 3; Squark 1. `WALKGET` appears in all of them, which makes it the corpus's dominant dismissal.
 
