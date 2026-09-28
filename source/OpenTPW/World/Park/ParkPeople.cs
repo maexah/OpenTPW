@@ -125,13 +125,13 @@ public sealed class ParkPeople : Entity
 	/// The mode every edge question in this park is asked in.
 	///
 	/// <para>
-	/// <b>Measured, not chosen.</b> The original keeps it in a field of the navigator at <c>+0xb4</c>, read
-	/// by the pathfinder at <c>0050f931</c>, by the steering step at <c>0050f501</c> and twenty times over by
-	/// <c>avoid_walls</c>. A scan of all 881,521 instructions in the executable finds exactly one
-	/// instruction that writes that field on a navigator - <c>0051009f</c>, in the constructor at
-	/// <c>FUN_0050ffe0</c>, and it writes zero. So zero is what every person in the game walks in, and this
-	/// is a reproduction rather than a default. (The other hundred writes to <c>+0xb4</c> in the image belong
-	/// to other structures entirely - particles, interface objects and stack frames.)
+	/// The original keeps it in a field of the navigator at <c>+0xb4</c>, read by the pathfinder at
+	/// <c>0050f931</c>, by the steering step at <c>0050f501</c> and twenty times over by <c>avoid_walls</c>. The
+	/// navigator's constructor writes zero (<c>0051009f</c>, <c>FUN_0050ffe0</c>). <b>A guest's is also written
+	/// through the guest</b>, whose navigator sits at <c>+0xd4</c>, as <c>+0x188</c>: 1 by the gate's states, the
+	/// put-down <c>FUN_004feb50</c> and the leaving arm's retry (Q109), 0 again by the leaving arm's failure and state
+	/// 18. <b>Every person here walks in mode 0</b>; mode 1 also lets a step leave a path for a cell that is not path,
+	/// queue or footprint, bare ground included (<c>0x004d8a37</c>, the <c>mode</c> of <see cref="CellEdge"/>).
 	/// </para>
 	/// </summary>
 	public const int WalkingMode = 0;
@@ -2185,6 +2185,8 @@ public sealed class ParkPeople : Entity
 			yield return $"thing {peep.ThingId,2} kind {peep.PersonType} state {peep.State} "
 				// The place they last took, mQueuePos, which their aim was worked out from and the walked place is not.
 				+ $"dest {peep.MajorDest,2} place {place,2} recorded {peep.QueuePos & 0xff,2} "
+				// The major a minor decision put by, and the walking turns counted toward the next decision.
+				+ $"saved-major {peep.SavedMajorDest,2} turns {peep.WalkingTurns,2} "
 				+ $"(saved {peep.SavedState}) cash {peep.Cash,4} exit {peep.ExitLevel,4} "
 				+ $"happy {peep.Happiness,3:0} thirst {peep.Thirst,3:0} hunger {peep.Hunger,3:0} "
 				+ $"toilet {peep.Toilet,3:0} vomit {peep.Vomit,3:0} litter {peep.Litter,3:0} "

@@ -342,7 +342,9 @@ public sealed class ParkRideOperation
 	/// ride shut over a routing failure would open only when its queue was next measured
 	/// (<see cref="ReopenAfterRemeasure"/>) or the park's door was shut and opened again. A guest whose
 	/// neighbour will not route is dismissed anyway and drops to <see cref="PeepState.Deciding"/> standing on
-	/// the exit, which is where they are.
+	/// the exit, which is where they are - by the walk off's give-up arm, which keeps
+	/// <see cref="Peep.SavedMajorDest"/> for their next walk off anything, where the original never enters that
+	/// walk at all.
 	/// </para>
 	/// </summary>
 	/// <param name="walkFor">
@@ -452,7 +454,10 @@ public sealed class ParkRideOperation
 		// the cell's facing round before stepping off it - FUN_004d8c00.
 		var facing = ride.ExitPos == ride.EntryPos ? CellEdge.Opposite( exit.Direction ) : exit.Direction;
 
-		if ( CellEdge.DirectionFor( facing ) is not { } towards )
+		// The bit names a side of the exit cell itself, and FUN_004d97e0 steps through it: 0x04 east, 0x10 south,
+		// 0x40 west, 0x01 north. DirectionFor answers from the side of the cell being entered, so the side is turned
+		// round first.
+		if ( CellEdge.DirectionFor( CellEdge.Opposite( facing ) ) is not { } towards )
 		{
 			walk.PlanRoute();
 
@@ -491,18 +496,21 @@ public sealed class ParkRideOperation
 	/// The byte is written on admission by <see cref="PeepBehaviour"/>'s roll through <see cref="Succeeds"/>,
 	/// and the "lost" arm docks <c>PeepInfo.MediumHappinessChange</c> (<c>DAT_0078505c</c>), both built.
 	/// Behind the gate come a sideshow's prize, the excitement match (<see cref="MatchTheExcitement"/>), the item's
-	/// effects and a sideshow's winning cheer, in the original's order. Counted and not kept: the cost of goods a
-	/// shop or sideshow books against the object and the park's balance (with the prize), the guest's event
-	/// history, a toilet emptying the toilet need, and after everything the happiness gained since joining, the
-	/// object's visit count and a sideshow's thoughts, win or lose.
+	/// effects, a toilet's relief (<see cref="UseTheToilet"/>) and a sideshow's winning cheer, in the original's
+	/// order. Counted and not kept: the cost of goods a shop or sideshow books against the object and the park's
+	/// balance (with the prize), the guest's event history, and after everything the happiness gained since
+	/// joining, the object's visit count and a sideshow's thoughts, win or lose.
 	/// </para>
 	/// <para>
-	/// <b>What is NOT built, and why.</b> Three more happiness changes in <c>FUN_004fe1e0</c> each read the
-	/// object's byte <c>+0x198</c>, which is not decoded. For the hunger effect (<c>+0x148</c>) and then the
+	/// <b>What is NOT built, and why, each counted.</b> Three more happiness changes in <c>FUN_004fe1e0</c> each
+	/// read the object's byte <c>+0x198</c>, <c>mAmountOfSpecialIngredient</c>, which <see cref="ParkWorld"/> does
+	/// not read. For the hunger effect (<c>+0x148</c>) and then the
 	/// thirst effect (<c>+0x144</c>), whichever is non-zero, the original docks
 	/// <c>PeepInfo.SmallHappinessChange</c> (<c>DAT_00785058</c>) when <c>(rand &amp; 7)</c> plus that byte
 	/// plus the effect is under 30 (<c>0x004fe453</c>, <c>0x004fe4a5</c>); then it adds the byte times the
-	/// happiness effect over a hundred (<c>0x004fe4cf</c>..<c>0x004fe525</c>).
+	/// happiness effect over a hundred (<c>0x004fe4cf</c>..<c>0x004fe525</c>). The same byte then feeds the
+	/// special-ingredient switch, whose ice gives the Drinks Shop's buyer back part of the thirst it quenched, and an
+	/// appearance effect gives a balloon or a costume (<c>docs/exe/ride-operation.md</c>, "The effects of a visit").
 	/// </para>
 	/// <para>
 	/// <b>The visit is remembered first</b> (<see cref="Peep.RememberVisit"/>, <c>0x004fd98b</c>), before the
@@ -560,9 +568,20 @@ public sealed class ParkRideOperation
 
 		ApplyEffects( peep, item );
 
-		// A toilet empties the guest's toilet need (0x004fe7b6), which nothing here does.
+		if ( item.ThirstEffect != 0 || item.HungerEffect != 0 || item.HappinessEffect != 0 )
+			Unimplemented.Report( "SETTLE_UP_INGREDIENT_HAPPINESS" );
+
+		// A switch on the item's SpecialIngredient, 1 to 4 (0x004fe527).
+		if ( item.SpecialIngredient is >= 1 and <= 4 )
+			Unimplemented.Report( "SETTLE_UP_SPECIAL_INGREDIENT" );
+
+		// Nought skips the balloon and the costume.
+		if ( item.AppearanceEffect != 0 )
+			Unimplemented.Report( "SETTLE_UP_APPEARANCE" );
+
+		// The object's flags & 1 (0x004fe78f), which is what IsToilet reads.
 		if ( ride.IsToilet )
-			Unimplemented.Report( "SETTLE_UP_TOILET_RELIEF" );
+			UseTheToilet( peep, ride );
 
 		// A shop stops at the effects, which is where its thirst, its litter and its five points of happiness
 		// come from; a sideshow's winner cheers.
@@ -579,6 +598,54 @@ public sealed class ParkRideOperation
 		if ( item.UiType == SideshowUiType )
 			Unimplemented.Report( "SETTLE_UP_SIDESHOW_THOUGHT" );
 	}
+
+	/// <summary>
+	/// What a toilet does for the guest who has used it - the toilet arm of <c>FUN_004fe1e0</c>, in its order
+	/// (<c>docs/exe/ride-operation.md</c>, "The effects of a visit", step 5): the need to nought (<c>0x004fe7b6</c>),
+	/// illness to nought when its truncated byte is above
+	/// <see cref="ToiletClearsIllnessAbove"/>, and the hurry speed to <see cref="Peep.HurryingSpeed"/> whatever
+	/// else happened.
+	/// </summary>
+	/// <remarks>
+	/// Counted and not kept: the dirtying of the toilet by the need's byte (<c>FUN_004e2440</c>, Q100), and the two
+	/// entries in the guest's event ring, <c>0x11</c> naming the toilet and <c>0x12</c> for the illness.
+	/// <para>
+	/// <b>The hurry speed lasts one walking turn fewer here.</b> The needs turn sets it back from the need, now
+	/// nought, on the guest's next due turn in four. The original reads it (<c>FUN_004fa870</c>, the guest turn's
+	/// first call) before that reset, so a guest walks one to four turns in a hurry; <see cref="Peep.Tick"/> runs
+	/// before the walk reads it here, so nought to three.
+	/// </para>
+	/// </remarks>
+	private static void UseTheToilet( Peep peep, ParkWorld.CatalogueObject toilet )
+	{
+		var (need, illness) = (peep.Toilet, peep.Vomit);
+
+		// FUN_004e2440 is handed the need's truncated byte before it is emptied (0x004fe7a8).
+		Unimplemented.Report( "SETTLE_UP_TOILET_DIRTYING" );
+
+		peep.Toilet = 0f;
+
+		Unimplemented.Report( "SETTLE_UP_TOILET_EVENT" );
+
+		// __ftol, then the low byte compared unsigned (0x004fe7dc); the event is pushed before illness is emptied.
+		if ( ((int)peep.Vomit & 0xff) > ToiletClearsIllnessAbove )
+		{
+			Unimplemented.Report( "SETTLE_UP_TOILET_ILLNESS_EVENT" );
+
+			peep.Vomit = 0f;
+		}
+
+		// The hurry-speed word, 25 (0x0075c7f2).
+		peep.PurposeSpeed = Peep.HurryingSpeed;
+
+		Log.Info( $"Person {peep.ThingId}: used toilet {toilet.ThingId}, need {need:0.0} to {peep.Toilet:0.0}, "
+			+ $"illness {illness:0.0} to {peep.Vomit:0.0}" );
+	}
+
+	/// <summary>
+	/// The illness a toilet leaves alone - <c>CMP AL,0x5a</c> / <c>JBE</c> at <c>0x004fe7dc</c>: 91 and over is emptied.
+	/// </summary>
+	public const int ToiletClearsIllnessAbove = 90;
 
 	/// <summary>
 	/// Which <c>Info.WhichUIType</c> a sideshow is - the file's own comment reads "0=rides, 1=shops,

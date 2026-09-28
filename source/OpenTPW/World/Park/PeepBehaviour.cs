@@ -469,12 +469,14 @@ public sealed class PeepBehaviour
 
 					// "The person has become stuck on the way to the ride" - they give up on it and think
 					// again, as the original does; its BigHappinessChange (25) and event 3 are not built (Q102).
+					// The saved major stays (0x004ffe9f clears +0x1dc alone).
 					case WalkVerdict.CannotReach:
 						peep.MajorDest = 0;
 						peep.SetState( PeepState.Deciding, tick, _random );
 						break;
 
-					default:
+					case WalkVerdict.Walking:
+						WalkOn( peep, walk, tick );
 						break;
 				}
 
@@ -614,8 +616,8 @@ public sealed class PeepBehaviour
 				break;
 
 			// Walking away from a ride that has just let them off - FUN_00500900, and THE STATE THAT CLOSES
-			// THE PARK'S LOOP. Arriving at the ride's exit drops them back into Deciding, which is what lets
-			// a guest who has had one go go and have another.
+			// THE PARK'S LOOP. Arriving at the cell beyond the ride's exit drops them back into Deciding, which is
+			// what lets a guest who has had one go go and have another.
 			//
 			// ParkRideOperation.Dismiss sets this state from the ride's own turn.
 			//
@@ -625,18 +627,28 @@ public sealed class PeepBehaviour
 			// before it chooses, so the kept id lasts until then - and until then a sale of that ride still
 			// puts them off, as it does in the original.
 			//
-			// <b>The saved major is not restored, and that is unbuilt (Q170b).</b> Before dropping to Deciding the
-			// original reads +0x1de - the major the minor decision (FUN_004fd570) switched the guest away from on
-			// the walk - and sends them on to it unscored (FUN_00500900; ride-operation.md, "A second toilet").
-			// Neither the minor decision nor the field is built, so nothing here has one to restore.
+			// Arriving, a guest the minor decision turned aside on their way here is sent on to what they were
+			// bound for, unscored (SentOnToTheSavedMajor). Giving up leaves that saved major for the next walk off
+			// anything (0x00500a3b clears +0x1dc alone).
 			case PeepState.LeavingRide:
 				switch ( Walked( peep, walk, playing ) )
 				{
 					case WalkVerdict.Arrived:
-						peep.SetState( PeepState.Deciding, tick, _random );
+						if ( !SentOnToTheSavedMajor( peep, walk ) )
+						{
+							Log.Info( $"Person {peep.ThingId}: successfully left ride {peep.MajorDest}, becoming idle" );
+							peep.SetState( PeepState.Deciding, tick, _random );
+						}
+						else
+						{
+							peep.SetState( PeepState.GoingToRide, tick, _random );
+						}
+
 						break;
 
 					case WalkVerdict.CannotReach:
+						Log.Info( $"Person {peep.ThingId}: couldn't walk off ride {peep.MajorDest} "
+							+ $"(saved major {peep.SavedMajorDest})" );
 						peep.MajorDest = 0;
 						peep.SetState( PeepState.Deciding, tick, _random );
 						break;
@@ -1566,10 +1578,10 @@ public sealed class PeepBehaviour
 	/// from, which is where their record has been all ride. The rider's arm also plays a sound, which the
 	/// caller plays, since only it knows where the rider is drawn.
 	/// <para>
-	/// <b>Every guest, chosen or not, forgets the thing's visits</b> (<see cref="Peep.ForgetThing"/>,
-	/// <c>0x004fb4ba</c>). Two things the original does here have nothing to act on: each arm writes an entry into
-	/// the guest's event ring (0xd for a rider, 6 for a queuer), whose only reader is a debug dump, and every
-	/// guest clears a saved second destination (<c>+0x1de</c>) naming the thing. This project keeps neither.
+	/// <b>Every guest, chosen or not, lets go of a saved major naming the thing</b> (<see cref="Peep.SavedMajorDest"/>,
+	/// <c>0x004fb4a6</c>..<c>0x004fb4b3</c>) <b>and forgets its visits</b> (<see cref="Peep.ForgetThing"/>,
+	/// <c>0x004fb4ba</c>). Each arm also writes an entry into the guest's event ring (0xd for a rider, 6 for a
+	/// queuer), whose only reader is a debug dump; this project keeps no ring.
 	/// </para>
 	/// </remarks>
 	internal PutOff ThingRemoved( Peep peep, int thingId, int tick )
@@ -1578,6 +1590,9 @@ public sealed class PeepBehaviour
 
 		if ( thingId == 0 )
 			return PutOff.No;
+
+		if ( peep.SavedMajorDest == thingId )
+			peep.SavedMajorDest = 0;
 
 		peep.ForgetThing( thingId );
 
@@ -1862,6 +1877,140 @@ public sealed class PeepBehaviour
 			return false;
 
 		peep.MajorDest = chosen.ThingId;
+
+		return true;
+	}
+
+	/// <summary>
+	/// A turn of walking to a chosen thing that has not got there yet - the walking arm of <c>FUN_004ffbc0</c>
+	/// (<c>0x004ffef2</c>..<c>0x004fff06</c>): the turn is counted on <see cref="Peep.WalkingTurns"/>, and every
+	/// twelfth runs the minor decision (<see cref="MinorDecision"/>), the count zeroed first. Nothing follows it in
+	/// the turn.
+	/// </summary>
+	/// <remarks>
+	/// <b>With the park shut the original counts nothing</b>: "The park has closed underneath me!", the thing let go
+	/// of, <c>BigHappinessChange</c> off and back to deciding. That arm is not built (Q102), so the guest walks on,
+	/// uncounted.
+	/// </remarks>
+	private void WalkOn( Peep peep, PeepWalk walk, int tick )
+	{
+		if ( ParkIsClosed )
+		{
+			Unimplemented.Report( "GOING_TO_RIDE_PARK_SHUT" );
+
+			return;
+		}
+
+		// Stored before the compare, which is unsigned (0x004ffefe), so a byte of 255 wraps to nought.
+		peep.WalkingTurns = (byte)(peep.WalkingTurns + 1);
+
+		if ( peep.WalkingTurns <= MinorDecisionAfter )
+			return;
+
+		peep.WalkingTurns = 0;
+
+		MinorDecision( peep, walk, tick );
+	}
+
+	/// <summary>
+	/// How many walking turns pass without a minor decision - <c>CMP AL,0xb</c> / <c>JBE</c> at <c>0x004ffefe</c>, so
+	/// it is made on the twelfth.
+	/// </summary>
+	public const int MinorDecisionAfter = 11;
+
+	/// <summary>
+	/// Whether a nearer thing on the way is worth turning aside for - <c>FUN_004fd570</c>, "Minor Decision" by its own
+	/// log (<c>docs/exe/ride-operation.md</c>, "A second toilet: the minor decision and the saved major").
+	/// </summary>
+	/// <remarks>
+	/// Nothing without a thing chosen that has a back of queue. The pick is
+	/// <see cref="ParkRideChooser.MinorDecisionFor"/>, from the cell the guest stands on after this turn's step. Then
+	/// the switch test: <see cref="CellSearch.RouteLength"/> from the chosen thing's entry to the guest's cell, and
+	/// from it to the nearer thing's entry, neither -1 and the second <b>shorter</b> (a tie refused,
+	/// <c>0x004fd888</c>). A switch saves the chosen thing in <see cref="Peep.SavedMajorDest"/>, whatever that held,
+	/// names the nearer one, and aims the guest at the centre of its entry cell with the answer ignored; the state
+	/// stays, and <see cref="JoinTheQueue"/>'s arrival test re-aims them from the entry to its back of queue.
+	/// <para>
+	/// <b>The lengths are measured in mode 0.</b> The original passes the guest's own <c>+0x188</c>, the navigator's
+	/// mode, which some of its arms set to 1 (<see cref="ParkPeople.WalkingMode"/>); mode 1 would also let the search
+	/// leave a path for bare ground. Whether a guest walking to a thing can hold 1 is not established. The event the
+	/// switch pushes (<c>0x17</c>) is counted: this project keeps no event ring.
+	/// </para>
+	/// </remarks>
+	private void MinorDecision( Peep peep, PeepWalk walk, int tick )
+	{
+		if ( _park == null || Chosen( peep ) is not { } major )
+			return;
+
+		var (majorBack, _) = ParkRideChoice.QueueCellsFor( _park, major );
+
+		if ( majorBack == 0 )
+			return;
+
+		var (x, y) = walk.Position.Cell;
+
+		if ( _chooser.MinorDecisionFor( WantsOf( peep ), x, y, major.ThingId, MapStep.CellAt( majorBack ), tick,
+			QueueCount, State.CalendarNow, Raining() ) is not { } nearer )
+			return;
+
+		var entry = (major.EntryCellX, major.EntryCellY);
+		var toGuest = CellSearch.RouteLength( entry, (x, y), walk.Blocked );
+		var toNearer = CellSearch.RouteLength( entry, (nearer.Thing.EntryCellX, nearer.Thing.EntryCellY), walk.Blocked );
+
+		if ( toGuest == -1 || toNearer == -1 || toNearer >= toGuest )
+		{
+			Log.Info( $"Person {peep.ThingId}: Minor Decision kept {major.ThingId} at ({x},{y}): thing "
+				+ $"{nearer.Thing.ThingId} sc={nearer.Score}, lengths {toGuest} {toNearer}, tick {tick}" );
+
+			return;
+		}
+
+		Log.Info( $"Person {peep.ThingId}: Minor Decision: OID={nearer.Thing.CatalogueId}, "
+			+ $"@=({nearer.Thing.CellX}, {nearer.Thing.CellY}), sc={nearer.Score} - thing {nearer.Thing.ThingId} "
+			+ $"for {major.ThingId} at ({x},{y}), lengths {toGuest} {toNearer}, tick {tick}" );
+
+		Unimplemented.Report( "MINOR_DECISION_EVENT" );
+
+		peep.MajorDest = nearer.Thing.ThingId;
+		peep.SavedMajorDest = major.ThingId;
+
+		SendTo( peep, walk, (nearer.Thing.EntryCellX, nearer.Thing.EntryCellY) );
+	}
+
+	/// <summary>
+	/// A guest who has walked off a thing is sent on to the one the minor decision turned them aside from, unscored -
+	/// the arrival arm of <c>FUN_00500900</c> (<c>0x00500913</c>..<c>0x005009d7</c>). False leaves them to think again.
+	/// </summary>
+	/// <remarks>
+	/// With a saved major it becomes their chosen thing and is let go of, before
+	/// anything is asked. A thing no longer in the park lets go of that too ("Deleted major dest while I was doing
+	/// minor dest!"); the original asks the thing's type byte, and a removed thing is gone here. Otherwise they are
+	/// aimed at its back of queue and walk to it again, "Left minor destination, found old major one again!"; with no
+	/// back of queue or no route they think again still naming it. <b>No score, no offer gate and no event</b>: a
+	/// shut ride, a full queue or a second toilet right after the first is still walked to.
+	/// </remarks>
+	private bool SentOnToTheSavedMajor( Peep peep, PeepWalk walk )
+	{
+		if ( peep.SavedMajorDest == 0 )
+			return false;
+
+		peep.MajorDest = peep.SavedMajorDest;
+		peep.SavedMajorDest = 0;
+
+		if ( Chosen( peep ) is not { } restored )
+		{
+			Log.Info( $"Person {peep.ThingId}: Deleted major dest while I was doing minor dest!" );
+			peep.MajorDest = 0;
+
+			return false;
+		}
+
+		var (backOfQueue, _) = ParkRideChoice.QueueCellsFor( _park, restored );
+
+		if ( backOfQueue == 0 || !SendTo( peep, walk, MapStep.CellAt( backOfQueue ) ) )
+			return false;
+
+		Log.Info( $"Person {peep.ThingId}: Left minor destination, found old major one again! ({restored.ThingId})" );
 
 		return true;
 	}

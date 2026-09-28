@@ -138,11 +138,14 @@ public sealed class CellEdge
 
 	/// <summary>
 	/// Which side a bit stands for - the inverse of <see cref="BitFor"/>, and <b>null</b> for anything
-	/// that is not one of the four.
+	/// that is not one of the four: the way of travel whose ENTERED cell carries this bit on the side facing
+	/// the cell left.
 	/// </summary>
 	/// <remarks>
-	/// The original's own table is wider than this one: <c>FUN_004d97e0</c> switches on 1, 2, 4, 8, 0x10,
-	/// 0x20, 0x40 and 0x80, so it answers four <i>diagonals</i> as well. Those are not answered here
+	/// <b>The original's neighbour table runs the other way.</b> <c>FUN_004d97e0</c> steps through a side of the
+	/// cell it is given - 0x04 east, 0x10 south, 0x40 west, 0x01 north - so a bit of the cell being LEFT is turned
+	/// round with <see cref="Opposite"/> before it is asked here. Its table is wider too: it switches on 1, 2, 4,
+	/// 8, 0x10, 0x20, 0x40 and 0x80, so it answers four <i>diagonals</i> as well. Those are not answered here
 	/// because nothing in this project steps diagonally - <see cref="MapStep"/> has four directions - and
 	/// a null says so rather than a guess quietly picking a neighbour.
 	/// </remarks>

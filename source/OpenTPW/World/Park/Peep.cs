@@ -65,6 +65,24 @@ public sealed class Peep
 
 	public int MajorDest { get; set; }
 
+	/// <summary>
+	/// The thing this guest was bound for when the walk's minor decision turned them to a nearer one -
+	/// <c>mSavedMajorDest</c>, <c>+0x1de</c>; nought for none. The switch writes it whatever it held
+	/// (<c>0x004fd934</c>), the walk off the nearer thing sends them on to it and clears it (<c>0x0050092a</c>),
+	/// and a removed thing clears it where it names that thing (<c>0x004fb4b3</c>); nothing else does, so a
+	/// diversion given up leaves it for the guest's next walk off anything (<c>docs/exe/ride-operation.md</c>,
+	/// "A second toilet").
+	/// </summary>
+	public int SavedMajorDest { get; set; }
+
+	/// <summary>
+	/// Turns of walking to a chosen thing, counted across walks and never reset between them - <c>mCount</c>,
+	/// the person base's byte <c>+0x2c</c>. <see cref="PeepBehaviour"/> adds one on every such turn with the park
+	/// open and runs the minor decision on the twelfth, zeroing it first (<c>0x004ffef2</c>..<c>0x004fff06</c>).
+	/// A byte, so it wraps as the original's does.
+	/// </summary>
+	public byte WalkingTurns { get; set; }
+
 	public int QueuePos { get; set; }
 
 	private readonly int[] _previousRides = new int[ParkWorld.GuestState.Remembered];
@@ -303,6 +321,8 @@ public sealed class Peep
 		Vomit = saved.Vomit;
 		Litter = saved.Litter;
 		MajorDest = saved.MajorDest;
+		SavedMajorDest = saved.SavedMajorDest;
+		WalkingTurns = (byte)saved.WalkingTurns;
 		QueuePos = saved.QueuePos;
 		QueueMoveDelay = saved.QueueMoveDelay;
 

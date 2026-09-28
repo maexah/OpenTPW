@@ -481,13 +481,23 @@ public sealed class ParkWorld
 	/// <c>mPreviousTemporaryRides</c> (<c>+0x1e8</c>) - the last four things this guest turned away from at the
 	/// back of the queue, newest first, aged by a nought every twenty sweeps. Null reads as none.
 	/// </param>
+	/// <param name="SavedMajorDest">
+	/// <c>mSavedMajorDest</c> (<c>+0x1de</c>) - the thing a guest was bound for when the walk's minor decision
+	/// turned them to a nearer one, sent on to unscored after that visit; nought for none. A raw word, read by the
+	/// guest reader as it reads <c>mMajorDest</c> (<c>FUN_004fb530</c>, <c>0x004fc66d</c>).
+	/// </param>
+	/// <param name="WalkingTurns">
+	/// <c>mCount</c> (<c>+0x2c</c>) - the person base's byte the walk to a chosen thing counts its turns on, and
+	/// which the minor decision runs at every twelfth of (<c>docs/exe/ride-operation.md</c>, "A second toilet").
+	/// </param>
 	public readonly record struct GuestState(
 		int State, int SavedState, int PersonType, int Cash, int ExitLevel,
 		float Happiness, float Thirst, float Hunger, float Toilet, float Vomit, float Litter,
 		int MajorDest, int QueuePos, int PrankeryIndex,
 		int PaidAdmission = 0, int ParkOpeningWait = 0,
 		int QNext = 0, int QPrev = 0, int BeenAdmitted = 0, int QueueMoveDelay = 0,
-		IReadOnlyList<int>? PreviousRides = null, IReadOnlyList<int>? PreviousTemporaryRides = null )
+		IReadOnlyList<int>? PreviousRides = null, IReadOnlyList<int>? PreviousTemporaryRides = null,
+		int SavedMajorDest = 0, int WalkingTurns = 0 )
 	{
 		/// <summary>How many things each of the two histories holds - <c>mPreviousRides[4]</c> and its twin.</summary>
 		public const int Remembered = 4;
@@ -1744,6 +1754,10 @@ public sealed class ParkWorld
 			Vomit: ReadSingleAt( start + 529 ),        // see the note below on why this is not mIllness
 			Litter: ReadSingleAt( start + 438 ),
 			MajorDest: ReadUInt16At( start + 442 ),     // mMajorDest - the thing they have chosen, or none
+			SavedMajorDest: ReadUInt16At( start + 499 ), // mSavedMajorDest - the major a minor decision put by
+			// mCount, in the person base: eight bytes of thing head, the map base's eight, the +0xc block's twelve and
+			// four shorts before it (FUN_004f8b10's write arm, 0x004f8ccc).
+			WalkingTurns: ReadByteAt( start + 36 ),
 			QueuePos: ReadByteAt( start + 494 ),        // mQueuePos
 			PrankeryIndex: ReadByteAt( start + 469 ),   // mPrankeryIndex
 			// These two sit between mNumSideshowsWon and mPersonType, which is where their names sort:

@@ -36,11 +36,12 @@ from the repository, which cannot lag: `git log --oneline -1`.
   **Each arrival is one of eight kinds, each with its own liking**, and **the choice is the original's whole score**:
   the kind just left is worth nothing, a new thing five times more for 184 sweeps, dear and golden-ticket rides more,
   shelter in rain. **A visit's excitement moves happiness by the kind's liking, and illness by how full they are.**
+  **Every twelfth walking turn a guest may turn aside for a nearer thing, then go on; a toilet empties the need.**
 - People: guests and staff read from the save, drawn, walking, paying, queueing, boarding, interpolated between the
   248 ms steps. **Queuers walk to their own places, in a line**; one needing the toilet, or lost to the walk, is out.
   **A guest on a cell with no links, such as a sold thing's cleared ground, wanders to the nearest path.** **Guests
   arrive, and staff take their turns, on the original's clock**, the save's `mGameTick`: a load 126 s in, then about
-  150 s after each; a guard idles 11 sweeps and sets off on the clock's low bits.
+  150 s after each; a guard idles 11 sweeps and sets off on the clock's low bits. Let off, they walk off past the exit.
 - Rides: every placed thing runs its script; 74 of 106 opcodes built, the rest counted. A ride screams at the band its
   rider count asks for, as the original's chain: a fresh sample every 1-3 s on **its own clock**, so a second ride in
   the same band is neither held up by it nor set off by its stop.
@@ -55,8 +56,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
   Alexah; staff keep to the areas the save gives them. A walking member of staff is not entered in the cells they
   cross; only hiring and putting down place one.
 - Q102-Q105 and five queue-turn arms are unbuilt, the unhappy one held for Q85. No spot animation (Q98). A guard or
-  researcher on a cell with no links does not look for path (Q112). After one toilet a guest reaches no other, where
-  the original's walk does, and no toilet empties a need (Q170b); a bought thing charges nothing (Q171).
+  researcher on a cell with no links does not look for path (Q112). A bought thing charges nothing (Q171).
 - The park's door moves neither the gate (Q89) nor the advisor (Q90), nor a shut ride's model (Q91); the ride window's
   door shows a shut ride but is not a button (Q92), and a bought queued thing starts open (Q93).
 - Nothing shows what the hand holds, a thing (`CARRY_PREVIEW_MARKERS`) or a candidate (`STAFF_CARRY_PREVIEW`), and
@@ -76,10 +76,9 @@ from the repository, which cannot lag: `git log --oneline -1`.
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1-Q12, Q34, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50-Q50h, Q53, Q53b,
-Q56, Q57, Q59, Q67, Q68, Q68b, Q69-Q71, Q82, Q82b, Q83, Q83b, Q165-Q165c, Q166, Q169, Q170, Q46, Q49, Q84, Q88, Q101
-are ticked.** Next: **Q170b**. Each open item's "Found by" names what filed it (Q170 filed Q170b). Gaps
-**4, 5 and 7** are in `docs/PLAYER-GAPS.md`; the untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
+`docs/QUEUE.md`, from the top. **Q1-Q12, Q34, Q35, Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71,
+Q82-Q84, Q88, Q101, Q165-Q166, Q169, Q170, Q170b are ticked.** Next: **Q171**. Each open item's "Found by" names what
+filed it. Gaps **4, 5 and 7** are in `docs/PLAYER-GAPS.md`; the untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
 
 ## Not verified on screen
 
@@ -100,6 +99,7 @@ are ticked.** Next: **Q170b**. Each open item's "Found by" names what filed it (
 - Tested only: Q165c's histories cleared by a sale, refusals aging, the too-long gate and a save's histories; Q166's
   literal `RAND`, `MOD`, `SUB`, `GETREMOTEVAR` and `COAST 2 0`; and a lock taken on the last unit running its section
   whole, which the stock park never reaches (the Hot Pot's capacity cut mid-ride, resting on `BUMP` unbuilt, Q45).
+- Tested only: Q170b's illness emptied, a second switch, a stale saved major, a sale's clear, a played save's two fields.
 
 ## Numbers
 
@@ -108,12 +108,12 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1262**, 0 fail, 0 skip with the game | 2026-09-28, after Q169 |
-| Tests without the game | **512** ran, **750** skipped, of 1262 | 2026-09-28, after Q169 |
-| Build warnings | 123 | 2026-09-28, after Q169 |
+| Tests | **1281**, 0 fail, 0 skip with the game | 2026-09-28, after Q170b |
+| Tests without the game | **512** ran, **769** skipped, of 1281 | 2026-09-28, after Q170b |
+| Build warnings | 123 | 2026-09-28, after Q170b |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-28 (Q170, the decode).** `alexah/175-decode-the-toilet-visits`. **Earlier:** each QUEUE.md entry names
-its branch: `174` (Q169) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`; git log.
+**2026-09-28 (Q170b, the build).** `alexah/176-a-second-toilet-by-the-walk`. **Earlier:** each QUEUE.md entry names
+its branch: `175` (Q170) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`; git log.

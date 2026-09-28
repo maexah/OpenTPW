@@ -1119,7 +1119,6 @@ column is the chooser before Q165b and Q165c built what the decode column shows.
 | What | The original | OpenTPW | Reached in Lost Kingdom |
 |---|---|---|---|
 | Distance, the effects divisor and the queue term's distance test | at the back-of-queue cell | at the entry cell (Q105) | every candidate |
-| A second toilet after one | the minor decision on the walk, then the saved major unscored ("A second toilet") | none: the score is OpenTPW's only way to a toilet, and its same-kind nought forbids a second (Q170b) | every guest leaving a toilet |
 | The FPU's precision | not settled (`park-engine.md`, "Which rounding is live") | double, the runtime's starting precision | Eruption's golden ticket at some scores (62 against 63 at 45) |
 | A coaster's excitement | `trunc( 50 + f / 2 )` of its track, or nought with none | its `ExcitementLevel`, counted (`RIDE_EXCITEMENT_COASTER_TRACK`) | the three coasters, bought (Q172) |
 | A track handle's excitement | 60% of the level plus the track's crowd, held 0..100 | the level, counted (`RIDE_EXCITEMENT_TRACK_CROWD`) | The Hot Pot, Dino Karts and Splish Splash, bought (Q172) |
@@ -1179,10 +1178,14 @@ guest at a toilet: the only writers of a thing into `+0x1dc` are the chooser (`0
 the `InQueue` turn, the thought picker `FUN_004fc8a0` and `Toilet.rse` aim nobody.
 
 **The minor decision**, `FUN_004fd570`, on the guest (`ECX`). The state-10 walking turn, still walking and the park
-open, adds one to the byte `+0x2c` (saved as `mCount` by the person base's reader, `0x004f8cc8`) and on passing 11
-zeroes it and calls this (`0x004ffef2`..`0x004fff06`): every 12th walking turn, counted across walks, since only the
-person base's constructor (`0x004f8988`) and its save reader (`0x004f8cc8`) otherwise write it. A thing is swept once a
-`mGameTick` and 12 is even, so all the decisions of one walk fall on one parity.
+open, adds one to the byte `+0x2c` (`mCount`, file offset 36 of the person record) and, the byte stored first and
+compared unsigned, on passing 11 zeroes it and then calls this (`0x004ffef2`..`0x004fff06`): every 12th walking turn,
+counted across walks, since only the person base's constructor (`0x004f8988`) and its loader (`0x004f91de`,
+`0x004f91e8`; `0x004f8cc8` is the save's write arm) otherwise write it - a program-wide scan of byte stores at `+0x2c`
+finds no other on a person. Nothing follows the call in the guest's turn, which the needs turn opened. The park-shut arm
+before it (`0x004ffeb9`..`0x004ffee5`) pushes no event and counts nothing. A thing is swept once a `mGameTick` and 12 is
+even, so the decisions of one walk fall on one parity while a walking turn comes every tick; in Alexah's two saves the
+byte spans exactly 0..11 on all 339 guests, and 0 on every member of staff.
 
 1. Nothing without a `MajorDest`, or when its `GetBackOfQueue` cell is nought (`0x004fd582`, `0x004fd62e`).
 2. The window: x from the guest's x − 2 to + 1 (outer), y from − 2 to + 1 (inner), on the map; only a cell whose squared
@@ -1198,16 +1201,30 @@ person base's constructor (`0x004f8988`) and its save reader (`0x004f8cc8`) othe
    own straightening at `0x00511a6c` included), with a budget of 60,000 and the guest's mode (`+0x188`), and no splices
    after it. It sums `|dx| + |dy|` between the waypoints it recorded
    (the record's `+6` on), so the leg from the start is not counted; −1 on `0x70000000`.
-5. **A switch**: event `0x17` (`0x004fd915`), `+0x1de` = the old major and `+0x1dc` = the candidate
-   (`0x004fd91f`..`0x004fd934`), and `FUN_004fa530` to the candidate's **entry cell**, its answer ignored
-   (`0x004fd93b`); still state 10. Arriving at the entry, the arrival's test (`0x004ffc3d`) should find it is not the
-   back cell and re-aim there; not measured.
+5. **A switch**: the log "Minor Decision: OID=%d, @=(%d, %d), sc=%d" (the candidate's `mId`, its cell, the score),
+   event `0x17` naming the candidate (`0x004fd915`), `+0x1dc` = the candidate and `+0x1de` = the old major, **whatever
+   `+0x1de` held** (`0x004fd91f`..`0x004fd934`; nothing here or in its caller reads `+0x1de`), and `FUN_004fa530` to
+   the centre of the candidate's **entry cell**, its answer ignored (`0x004fd93b`); still state 10. The stranded
+   refusal inside `FUN_004fa530` cannot fire here, since the same turn's walk zeroed `+0x198` (`0x004fa30b`). Arriving
+   at the entry, the arrival's test (`0x004ffc3d`) finds it is not the back cell and re-aims there
+   (`0x004ffe16`..`0x004ffe44`).
+
+An object is linked on one cell's thing list, the list at the cell record's `+0x24` (`mWho`, chained by each thing's
+`mMapChild` `+0xa` and `mMapParent` `+8`): the cell it is constructed on (`FUN_0050afe0`, `0x0050b057`), which is its
+position cell; only a person is relinked (`FUN_0050b6a0`, `0x0050b76b`). So the window finds an object on its anchor,
+never its footprint or entry, and meets it at most once. The gate `FUN_004dd920` and the score `FUN_004fcc30` are the
+chooser's own calls with the chooser's arguments, asked gate first, and the score cannot come out negative.
+
+**A second switch is possible in Lost Kingdom's corridor**: after 23 to 22 at (56,18), toilet 21 on (55,17) is in the
+next window if the guest is still on (56,18), which would save 22 and lose 23.
 
 **The restore**, `FUN_00500900`, the state-15 turn after `ExitRide`: on arriving, with `+0x1de` set, `MajorDest` = it
-and `+0x1de` = 0 (`0x00500923`, `0x0050092a`); an object with a back cell that routes gives state 10 ("Left minor
-destination, found old..."), a thing gone gives `MajorDest` 0 ("Deleted major dest while I was d..."), and anything else
-Deciding with `MajorDest` kept (`0x005009f9`). **No score and no offer gate**, so the same-kind nought is never asked. A
-failed walk off (2) zeroes `MajorDest` and leaves `+0x1de`.
+and `+0x1de` = 0 (`0x00500923`, `0x0050092a`), before anything is asked; an object whose back cell routes gives state 10
+("Left minor destination, found old major one again!", no event); a thing whose type byte is no longer 3 gives
+`MajorDest` 0 ("Deleted major dest while I was doing minor dest!"); and anything else falls to the tail, "successfully
+left ride %d, becoming idle" and Deciding with `MajorDest` as it stands (`0x005009f9`) - with nothing saved, the thing
+just left. **No score, no offer gate, no shut or room test**, so the same-kind nought is never asked. A failed walk off
+(2) zeroes `MajorDest` and leaves `+0x1de`. ExitRide enters state 15 only when its aim routed (`0x005015ef`).
 
 **Three ways to a second toilet**, then:
 
@@ -1242,7 +1259,7 @@ counts only for a toilet (step 6 above): of 46 (47) guests heading for one, 6 ha
 above 40, 4 both, and 24 (23) neither, near enough to score one 10 to 19 on distance and queue alone. How the 107 split
 between the three ways is not established: the original's log is the bare `RET` `FUN_005da3c0`.
 
-**Measured in OpenTPW's park** (a throwaway build working out the minor decision on every 12th walking turn - the
+**Measured in OpenTPW's park before the build** (a throwaway build working out the minor decision on every 12th walking turn - the
 window, the scores, the raw search's two lengths - and logging what the original would do without doing it; it finds an
 object only on its anchor cell and scores with OpenTPW's `ScoreOf`, the distance at the entry cell (Q105); `q170run.py`,
 `q170run2.py`, `q170run4.py`, judged by `q170analyse.py`; silent, jungle, `toilet 90` on every guest every 20 s (once,
@@ -1250,26 +1267,38 @@ in run 1), predicted first; `save/` unchanged within each run). Lost Kingdom's t
 the path up column 56, 21 at y 17, 22 at 16 and 23 at 15, each back cell the path beside it. In 900 s: 43 walks to a
 toilet long enough for a decision, and on 12 of the 14 walks to 23 a switch - the first on each walk to 21 from (56,19),
 lengths 4 and 3, six times, and to 22 from (56,18), 3 and 2, six times - none on the 24 walks to 21 or the 5 to 22, and
-none toward anything else. So the original would make 12 toilet-then-toilet visits there; OpenTPW makes none. (Four
+none toward anything else. So the original would make 12 toilet-then-toilet visits there; OpenTPW then made none. (Four
 walks log a second switch, to 22, which a guest already turned to 21 would not reach: the shadow never switches.) The
 `JLE` refuses a tie from (56,17) toward 22, 2 and 2, eleven times, and from (56,18) toward 21, 3 and 3, four times. The
 shadow's decisions came 12 ticks apart, 397 of 397, so OpenTPW turns a walking guest once a tick; a toilet was the best
 at nought five times, for two guests just off a toilet, on odd ticks as the tie rule requires, and none switched
 (lengths 16 to 19 against 18 or 19). Photographed paused with `peeps` and `why`: guest 66 at (56,19) bound for 23 as a
-switch to 21 is logged. As built, a toilet empties nothing: 32 visits of 32 left the need where it was, 90 to 95
+switch to 21 is logged. Before the build a toilet emptied nothing: 32 visits of 32 left the need where it was, 90 to 95
 (`SETTLE_UP_TOILET_RELIEF` 32), no guest chose or visited a toilet after one, and all 7 first choices after one were the
 Belly Bounce; in a fourth run of 45 s, guest 35 was photographed walking to it off toilet 21, need 90 in `peeps`. And in
 none of the four runs did a guest's walk off a thing report arriving (the shadow's line there, 0 of 32 toilet exits in
-the third): OpenTPW leaves `LeavingRide` by another arm, which the restore will need (Q170b).
+the third): OpenTPW then left `LeavingRide` by its give-up arm (below).
 
-**Where OpenTPW differs** (Q170b builds it):
+**Built** (Q170b): the count, read from the save's byte 36, on every `GoingToRide` walking turn with the park open
+(`PeepBehaviour.WalkOn`); the decision (`MinorDecision`, the pick `ParkRideChooser.MinorDecisionFor`, the lengths
+`CellSearch.RouteLength`); `Peep.SavedMajorDest`, read from file 499, cleared for every guest by a removal naming it;
+the restore (`SentOnToTheSavedMajor`); and the toilet arm (`ParkRideOperation.UseTheToilet`). Building it found why
+OpenTPW's walk off never arrived: `PutDownAtTheExit` stepped against the exit's facing (`CellEdge.DirectionFor` answers
+from the side of the cell entered), aiming a toilet's user at the bare ground west of it and the Belly Bounce's into
+its own footprint, so every guest let off anything gave up on the spot.
+
+**Where OpenTPW still differs:**
 
 | What | The original | OpenTPW | Reached in Lost Kingdom |
 |---|---|---|---|
-| The minor decision | every 12th walking turn, `+0x2c` | absent, and uncounted | every walk that passes a thing nearer its end |
-| The saved major `+0x1de` | written by a switch, restored unscored in state 15, cleared by a removal naming it | absent; `ParkWorld` does not read `mSavedMajorDest` (file 499), so a load drops it | 50 and 51 guests in the two played saves |
-| A toilet visit | dirties the toilet, empties the need, illness above 90, events `0x11`/`0x12`, `+0xc2` 25 | none of it, counted `SETTLE_UP_TOILET_RELIEF` | every toilet visit |
-| After one toilet | another is reached through the walk | none: the score is the only way to a toilet, and its same-kind nought forbids a second | every guest leaving one |
+| The switch test's mode | the guest's `+0x188`, which some arms set to 1 | mode 0 (`ParkPeople.WalkingMode`); mode 1 also lets a step leave a path for bare ground (`0x004d8a37`) | not established: which states a guest walking to a thing can hold 1 in |
+| The score in the window | to the candidate's back cell | to its entry cell (Q105) | every decision |
+| Within one cell | the list, newest linked first | the park's order | no: no two objects share a cell |
+| The park shut under a walk | `BigHappinessChange`, `MajorDest` 0, Deciding, uncounted | walks on, uncounted, `GOING_TO_RIDE_PARK_SHUT` (Q102) | the entry-price door |
+| The switch's event `0x17`, the toilet's `0x11` and `0x12` | the guest's event ring | counted (`MINOR_DECISION_EVENT`, `SETTLE_UP_TOILET_EVENT`, `SETTLE_UP_TOILET_ILLNESS_EVENT`) | every switch and toilet use |
+| A toilet dirtied by use | `FUN_004e2440` | counted, `SETTLE_UP_TOILET_DIRTYING` (Q100) | every toilet use |
+| The hurry speed after a toilet | read on one to four walking turns | nought to three: `Peep.Tick` resets it before the walk reads it | every toilet use |
+| An exit that will not route | ExitRide closes the ride, no state 15 | dismissed anyway, then the walk off gives up, keeping `+0x1de` | none in the stock park |
 
 ## The staff turn - `CStaff`, every clock `mGameTick`
 
@@ -1515,7 +1544,12 @@ Named by its own strings: `"Litter gone up by %d, is now %d"`, `"Customer bought
 2. **The excitement match**, `FUN_004fdcc0( object )` at `0x004fe259`: how the thing's excitement suited the guest's kind
    moves their happiness, and the excitement makes them sick by how little hungry they are ("The excitement match",
    below).
-3. **The item's own effects**, each added to a guest meter and clamped 0..100: the descriptor's `+0x144` and `+0x148` (with a sound of `0x83` or `0x84` depending which is larger), `+0x14c` → `+0x1b0`, `+0x150` → happiness `+0x19c`, `+0x154` → litter `+0x1b4`. Three more happiness changes follow, each reading the object's byte `+0x198`, which is not decoded: for the hunger effect `+0x148` and then the thirst effect `+0x144`, whichever is non-zero, `(rand & 7) + byte [+0x198] + that effect` under 30 docks `PeepInfo.SmallHappinessChange` (`0x004fe453`, `0x004fe4a5`); then happiness gains `byte [+0x198] * desc[+0x150] / 100` (`0x004fe4cf`..`0x004fe525`).
+3. **The item's own effects**, each added to a guest meter and clamped 0..100: the descriptor's `+0x144` and `+0x148` (with a sound of `0x83` or `0x84` depending which is larger), `+0x14c` → `+0x1b0`, `+0x150` → happiness `+0x19c`, `+0x154` → litter `+0x1b4`. Three more happiness changes follow, each reading the object's byte `+0x198`, `mAmountOfSpecialIngredient` by the object reader's own name (`0x004dc601`, string `0x0075b45c`; saved at file 1058): for the hunger effect `+0x148` and then the thirst effect `+0x144`, whichever is non-zero, `(rand & 7) + byte [+0x198] + that effect` under 30 docks `PeepInfo.SmallHappinessChange` (`0x004fe453`, `0x004fe4a5`); then happiness gains `byte [+0x198] * desc[+0x150] / 100` (`0x004fe4cf`..`0x004fe525`).
+3b. **The special ingredient**, a switch on the descriptor's `+0x158` (`0x004fe527`, table `0x004fe8e8`), each by the
+   same byte: 1 (fat) adds it to the toilet need `+0x1ac`, 2 (salt) to thirst, 3 (ice) adds `byte * ThirstEffect / 100`
+   to thirst, 4 (sugar) `byte * 6 / 100` to the word `+0xc4`, each held 0..100. The Drinks Shop is ice. OpenTPW counts
+   this, the `+0x198` terms above and the arm below, and builds none of them (`SETTLE_UP_SPECIAL_INGREDIENT`,
+   `SETTLE_UP_INGREDIENT_HAPPINESS`, `SETTLE_UP_APPEARANCE`; Q177).
 4. **Shop arms on the descriptor's `+0x15c`:** 1 gives a BALLOON (asserting the guest has none, building a sprite, and clamping a value between `DAT_0075d0f0` and `DAT_0075d0f4`); 2 hands out or takes back a COSTUME via the guest's `+0x24`/`+0x20`; anything else is a balance-file error.
 5. **A toilet (`mFlags & 1`)**, in order (`0x004fe78f`..`0x004fe7fb`): dirties the toilet by the need the guest brought
    (`FUN_004e2440` with the need's byte: the State of repair `+0x44` falls by 0.05 of it, held to 0..100, and on falling
@@ -1524,8 +1558,10 @@ Named by its own strings: `"Litter gone up by %d, is now %d"`, `"Customer bought
    instead: back to 100, 6 unstamped and 1 stamped, `+0x5e` and `+0x64` zeroed, `0x004e24bc`..`0x004e252a`); zeroes the
    toilet need `+0x1ac` (`0x004fe7b6`); pushes event `0x11`; zeroes illness `+0x1b0` when its byte is above 90, with
    event `0x12` (`0x004fe7dc`..`0x004fe7ef`); and sets `+0xc2`, the hurry speed, to 25 (`0x0075c7f2`, `0x004fe7f5`),
-   which the needs turn sets back from the need within four sweeps. OpenTPW does none of it and counts it
-   (`SETTLE_UP_TOILET_RELIEF`, Q170b): a guest leaves a toilet as much in need as they entered.
+   which the needs turn sets back from the need within four sweeps. Event `0x11` names the toilet; `0x12` names nothing
+   and is pushed before illness is emptied. The online branch also sets the toilet's script variable 8 to nought
+   (`0x004e2517`). OpenTPW builds the need, the illness and the speed, and counts the dirtying and both events
+   (`ParkRideOperation.UseTheToilet`, Q170b).
 6. **Then, for a sideshow only:** `person[+0x1d0] += 1` and a happiness rise computed from **`log2( costOfGoods / pricePerUse )`** - `FUN_004e1a10` (`+0x188`, cost of goods) over `FUN_004e1a00` (`+0x194`, price), `FILD`/`FIDIV` at `0x004fe835`/`0x004fe84b`, the logarithm by `FYL2X` over `ln 2` - scaled by the byte at `DAT_0078505c` (`PeepInfo.MediumHappinessChange`), and logged as `"Sideshow won - happiness up %d points to %d"`.
 
 **The signs are not uniform**, and the decompile shows it: `FUN_004fe1e0` does `-(float)desc + meter` for thirst and hunger but `+(float)desc + meter` for vomit, happiness and litter. **Deduct two, add three** — which is exactly what the balance file's own comment column says.
@@ -1635,7 +1671,7 @@ The save reader names the byte `mQueuePos`; the state setter writes the sideshow
 | `+0x224` | `mSavedState` |
 | `+0x20` / `+0x24` | costume in / out |
 | `+0xc2` | the hurry speed, from the table at `0x0075c7f0` (0, 25, 50): the needs turn writes 25 above a toilet need of 80, else nought; the toilet arm 25; the walk to the gate 50 when a bus is due and 25 for a handle whose low two bits are nought; entering state 12 nought |
-| `+0x2c` | `mCount`, the person base's byte (`0x004f8cc8`): the minor decision's walking-turn count |
+| `+0x2c` | `mCount`, the person base's byte at file 36 (loaded at `0x004f91e8`, written out at `0x004f8cc8`): the minor decision's walking-turn count |
 
 `FUN_005019f0` case `0x11` walks the guard chain from `mFirstGuard` (`+0x1da744`, see the header's list heads above) through `+0x210` / `+0x212`, so those two are read off a staff record and are not evidence against the guest table's `mBalloonScript`. The case itself is undecoded.
 

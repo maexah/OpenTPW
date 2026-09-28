@@ -223,6 +223,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004d6545` | `FUN_004d6410`: a staff member's idle stamp tested against `mGameTick` | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x004d655d` | `FUN_004d6410`: the guard's walk-or-stay, `mGameTick & 3` | OpenTPW.Tests/ParkStaffBehaviourTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x004d7b29` | `FUN_004d7b20`: the arrival manager's one call, through its thunk, once a thing sweep | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004d8a37` | Edge test FUN_004d8750: CMP ESI,1, mode 1's clause letting a step leave a path for a cell not path, queue or footprint | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004d8b8f` | FUN_004d8b40, a route's length: -1 when FUN_00511ef0 answers 0x70000000 | OpenTPW/World/Park/CellSearch.cs  |
+| `0x004d8ba0` | FUN_004d8b40: | OpenTPW/World/Park/CellSearch.cs  |
+| `0x004d8be7` | FUN_004d8b40: the sum, to here | OpenTPW/World/Park/CellSearch.cs  |
 | `0x004db3f3` | Object constructor: the flags word built from the item's description (from here) | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db420` | Object constructor: the queue-path bit `0x08` from descriptor `+0x40`, `Info.HasQueue` | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db425` | Object constructor: `OR [ESI+0x32],0x8` | OpenTPW/World/Park/ParkBuilding.cs  |
@@ -263,6 +267,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004f8321` | | OpenTPW.Tests/GameCalendarTests.cs OpenTPW/Global/GameCalendar.cs  |
 | `0x004f8792` | | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f87e7` | | OpenTPW.Tests/GameCalendarTests.cs OpenTPW/Global/GameCalendar.cs  |
+| `0x004f8ccc` | Person serialiser FUN_004f8b10, write arm: mCount (+0x2c) written as one byte, the person record's byte 36 | OpenTPW.Files/Formats/Save/ParkWorld.cs  |
 | `0x004f9534` | SetRandomDest: the call's one draw, r % 5 + 1, the linked walk's pass count, taken before the links count | OpenTPW.Tests/ParkNoLinksWanderTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004f95b9` | SetRandomDest `FUN_004f9490`: the count of the person's own cell's links (`FUN_00522810`); nought takes the no-links arm | OpenTPW/World/Park/PeepBehaviour.cs OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x004f9a05` | SetRandomDest: start of the no-links arm (path on seven rays, then five random cells) | OpenTPW.Tests/ParkNoLinksWanderTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
@@ -283,8 +288,11 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fb3cd` | `FUN_004fb360` makes a rider a new sprite when admission destroyed theirs; its position is still nought | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb3f5` | `FUN_004fb360` plays the kids' effect `0x80` at the rider's sprite | OpenTPW.Tests/ParkPutOffSoundTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb4a1` | `FUN_004fb360` puts the guest into state 6, deciding | OpenTPW.Tests/ParkEvictionTests.cs  |
+| `0x004fb4a6` | FUN_004fb360, a thing removed: +0x1de, the saved major, tested against it for every guest, from | OpenTPW.Tests/ParkSecondToiletTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fb4b3` | FUN_004fb360: the saved major cleared, to here | OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb4ba` | FUN_004fb360, a thing removed: each mPreviousRides slot naming it emptied with the refusal beside it, from | OpenTPW.Tests/ParkVisitHistoryTests.cs OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb4d9` | FUN_004fb360: the history clear, to here | OpenTPW/World/Park/Peep.cs  |
+| `0x004fc66d` | Guest reader FUN_004fb530, read arm: mSavedMajorDest (+0x1de) read as a word by FUN_004d37e0, as mMajorDest is | OpenTPW.Files/Formats/Save/ParkWorld.cs  |
 | `0x004fcb21` | The guest's chooser `FUN_004fcb10` clears `mMajorDest` before it chooses, chosen or not | OpenTPW.Tests/ParkEvictionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fcbc4` | The chooser `FUN_004fcb10` aims at the back-of-queue cell's centre (`FUN_004fa530`) | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fcc49` | `FUN_004fcc30` asks `GetBackOfQueue` of the object: the score's distance and nearby effects are read there | OpenTPW/World/Park/ParkRideChooser.cs  |
@@ -302,6 +310,16 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fd354` | FUN_004fcc30: the two histories divide the score, from | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x004fd496` | FUN_004fcc30: the two histories, to here | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x004fd50a` | `FUN_004fd4e0`, the arrival refusal: reads `PeepTypes[kind].PreferredExcitement`, the byte at `0x7850e4` + 12 × kind | OpenTPW.Tests/ParkGuestTypeTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fd660` | FUN_004fd570: the window, x from the guest's x - 2 to + 1 (outer), from | OpenTPW/World/Park/ParkRideChooser.cs  |
+| `0x004fd6ce` | FUN_004fd570: a window cell only if strictly nearer the major's back cell than the guest (JGE) | OpenTPW.Tests/ParkSecondToiletTests.cs  |
+| `0x004fd73f` | FUN_004fd570: each candidate asked the offer gate FUN_004dd920 | OpenTPW/World/Park/ParkRideChooser.cs  |
+| `0x004fd74b` | FUN_004fd570: then scored by FUN_004fcc30 | OpenTPW/World/Park/ParkRideChooser.cs  |
+| `0x004fd750` | FUN_004fd570: the best, from nought, taken on a higher score or an equal one on an odd mGameTick, from | OpenTPW.Tests/ParkSecondToiletTests.cs OpenTPW/World/Park/ParkRideChooser.cs  |
+| `0x004fd76d` | FUN_004fd570: the tie, to here | OpenTPW/World/Park/ParkRideChooser.cs  |
+| `0x004fd7a4` | FUN_004fd570: the window, to here | OpenTPW/World/Park/ParkRideChooser.cs  |
+| `0x004fd888` | FUN_004fd570, the switch test: JLE refuses a candidate no shorter from the major's entry than the guest | OpenTPW.Tests/ParkSecondToiletTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fd934` | FUN_004fd570: +0x1de = the old major, whatever it held | OpenTPW.Tests/ParkSecondToiletTests.cs OpenTPW/World/Park/Peep.cs  |
+| `0x004fd93b` | FUN_004fd570: FUN_004fa530 to the candidate's entry cell, its answer ignored | OpenTPW.Tests/ParkSecondToiletTests.cs  |
 | `0x004fd98b` | Settle-up FUN_004fd970: the thing left pushed onto mPreviousRides, from | OpenTPW.Tests/ParkVisitHistoryTests.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/Peep.cs  |
 | `0x004fd9a5` | FUN_004fd970: the push, to here | OpenTPW/World/Park/Peep.cs  |
 | `0x004fdc25` | Settle-up FUN_004fd970, the lost arm: a sideshow's loser thinks thought 6 (FUN_0050be80) | OpenTPW/World/Park/ParkRideOperation.cs  |
@@ -317,13 +335,21 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fe4a5` | `FUN_004fe1e0` docks `SmallHappinessChange` behind a gate on descriptor `+0x144` | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe4cf` | `FUN_004fe1e0`: happiness gains the object's byte `+0x198` times the happiness effect over a hundred (to `0x004fe525`) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe525` | `FUN_004fe1e0`: the end of that gain | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe527` | FUN_004fe1e0: the special-ingredient switch on the descriptor's +0x158, by the object's mAmountOfSpecialIngredient | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe78f` | FUN_004fe1e0, the toilet arm: the object's flags & 1, from | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe7a8` | FUN_004fe1e0: FUN_004e2440, the dirtying, with the need's byte | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe7b6` | FUN_004fe1e0, a toilet: the guest's toilet need +0x1ac zeroed | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe7dc` | FUN_004fe1e0: illness's truncated byte above 90, unsigned (CMP AL,0x5a / JBE) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004ffc3d` | State 10's arrival test: the guest's cell against `GetBackOfQueue` | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffce6` | Arrival FUN_004ffbc0: the excitement refusal pushes the thing onto mPreviousTemporaryRides (FUN_004fdc60) | OpenTPW.Tests/ParkGuestTypeTests.cs OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffd74` | Arrival FUN_004ffbc0: the too-long refusal pushes the thing onto mPreviousTemporaryRides | OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffdad` | Joining a queue re-takes the place (`FUN_00501160`) | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffdf4` | Arriving at a queue with no route to the place: put out | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW.Tests/ParkVisitHistoryTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffe16` | State 10: no back of queue, or no route to it - state 6 with `MajorDest` kept | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffe9f` | State 10 FUN_004ffbc0, stuck: MajorDest cleared, the saved major left | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffef2` | FUN_004ffbc0: the walking-turn count +0x2c, from | OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffefe` | FUN_004ffbc0: CMP AL,0xb / JBE, unsigned: the twelfth decides | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fff06` | FUN_004ffbc0: the count zeroed, then the minor decision FUN_004fd570 called, to here | OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x0050010a` | `InQueue` turn: the board arm's no route, "the player has removed the path", out | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x005001d8` | `InQueue` turn: invited but not the nominee, the whole turn is nothing | OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00500270` | `InQueue` turn: the lost place, "Problem with a queue", out | OpenTPW.Tests/ParkQueueTurnTests.cs  |
@@ -348,6 +374,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005007b4` | At the door, too expensive: put out (`FUN_005012f0`) | OpenTPW.Tests/PeepPriceOpinionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00500826` | At the door, refused: re-take the front of the queue | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00500857` | At the door: "Couldn't rejoin FOQ even!", put out | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00500913` | State 15 FUN_00500900, arrived: the saved major +0x1de read | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x0050092a` | FUN_00500900: the saved major cleared | OpenTPW/World/Park/Peep.cs  |
+| `0x005009d7` | FUN_00500900: "Left minor destination, found old major one again!", SetState(10) | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00500a3b` | FUN_00500900, stuck: MajorDest cleared, the saved major left | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x0050133d` | `FUN_005012f0` plays the kids' effect `0x80` only when the guest's id `& 7` is nought | OpenTPW.Tests/ParkPutOffSoundTests.cs OpenTPW/World/Park/ParkAudio.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x00501413` | `FUN_00501390`: place against cells times four, unsigned (from here) | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x0050141c` | `FUN_00501390`: the unsigned place test (to here) | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
@@ -821,6 +851,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00754cf8` | Layout stream of the buy screen | OpenTPW/UI/Park/ParkBuyScreen.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x00755150` | Layout stream of the ride object window | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x00757f60` | Stream: the island panel, its root's 23-point outline included | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
+| `0x0075c7f2` | The hurry-speed word 25, in the table at 0x0075c7f0 (0, 25, 50) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x0075d0f8` | | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x0075d178` | | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x007622b0` | | OpenTPW/World/Park/CellLine.cs OpenTPW/World/Park/MapStep.cs  |

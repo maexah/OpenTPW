@@ -65,6 +65,36 @@ public sealed class CellSearch
 	}
 
 	/// <summary>
+	/// How far apart two cells are by the waypoints this search records - <c>FUN_004d8b40</c>, which runs
+	/// <c>FUN_00511ef0</c>: this search alone, at <see cref="CellReroute.Budget"/>, with no reroute after it. The
+	/// minor decision compares two of these (<c>docs/exe/ride-operation.md</c>, "A second toilet").
+	/// </summary>
+	/// <remarks>
+	/// <b>It is not a walking distance.</b> It sums <c>|dx| + |dy|</c> between consecutive waypoints only
+	/// (<c>0x004d8ba0</c>..<c>0x004d8be7</c>), and the start is never one, so the leg from the start is not counted
+	/// and a route with no kept corner that meets nothing shut measures nought. A search that does not arrive
+	/// answers -1 (<c>0x70000000</c>, <c>0x004d8b8f</c>).
+	/// </remarks>
+	public static int RouteLength( (int X, int Y) from, (int X, int Y) to,
+		Func<int, int, StepDirection, bool> blocked )
+	{
+		var route = new CellRoute { Start = from, Goal = to };
+
+		if ( !new CellSearch( route, CellReroute.Budget, blocked ).Run( from.X, from.Y ) )
+			return -1;
+
+		var length = 0;
+
+		for ( var i = 1; i < route.Waypoints.Count; ++i )
+		{
+			length += Math.Abs( route.Waypoints[i].X - route.Waypoints[i - 1].X )
+				+ Math.Abs( route.Waypoints[i].Y - route.Waypoints[i - 1].Y );
+		}
+
+		return length;
+	}
+
+	/// <summary>
 	/// Walk from here to the route's <see cref="CellRoute.Goal"/>, filling in its waypoints, and say
 	/// whether it got there.
 	///

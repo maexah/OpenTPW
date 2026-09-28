@@ -1858,7 +1858,53 @@ artifacts are listed in `docs/history/README.md`.
   From Q169: OpenTPW's settle-up never empties the toilet need (`0x004fe7b6`, counted `SETTLE_UP_TOILET_RELIEF`, Q177),
   so a guest leaves a toilet as much in need as they went in; build that before reading guests' toilet visits.
 
-- [ ] **Q170b. The walk's minor decision, the saved major and a toilet's relief: the build.** Found by Q170's decode
+- [x] **Q170b. The walk's minor decision, the saved major and a toilet's relief: the build.** Done 2026-09-28,
+  `alexah/176-a-second-toilet-by-the-walk`. `ride-operation.md`, "A second toilet" (its "Built" paragraph and table)
+  and "The effects of a visit", steps 3b and 5; FileFormats `saves.md`, "The person base" and the map cell's `mWho`
+  (`docs/sam-and-saves-corrections`).
+  - **Built.** The toilet arm (`ParkRideOperation.UseTheToilet`): the need to nought, illness to nought above 90 (its
+    truncated byte), the hurry speed 25; the dirtying and events `0x11`/`0x12` counted, `SETTLE_UP_TOILET_RELIEF` gone.
+    `Peep.SavedMajorDest` from file 499, cleared for every guest by a removal naming it. `Peep.WalkingTurns` from the
+    person record's byte 36 (`mCount`, established this session), counted on every `GoingToRide` walking turn with the
+    park open (the shut arm counted, `GOING_TO_RIDE_PARK_SHUT`, Q102). The minor decision on the twelfth
+    (`MinorDecision`, `ParkRideChooser.MinorDecisionFor`, `CellSearch.RouteLength`); the restore off a thing
+    (`SentOnToTheSavedMajor`). Also counted, found on the way (rule 4): the special-ingredient switch, the `+0x198`
+    happiness terms and the appearance arm (`SETTLE_UP_SPECIAL_INGREDIENT`, `_INGREDIENT_HAPPINESS`, `_APPEARANCE`).
+  - **Why `LeavingRide` never arrived:** `PutDownAtTheExit` stepped against the exit's facing - `CellEdge.DirectionFor`
+    answers from the side of the cell entered, `FUN_004d97e0` from the cell's own - aiming a toilet's user at bare
+    ground (54,y) and the Belly Bounce's into its own footprint (52,25), so every guest let off anything gave up on the
+    spot. Found by reading, not by a run; now `DirectionFor( Opposite( facing ) )`, (56,y) and (52,27).
+  - **Re-verified first** (`wf_e3c34849-dbb`: four Opus readers in Ghidra, a skeptic each; nothing load-bearing
+    refuted): `0x004f8cc8` is the save's write arm, the load `0x004f91e8`; `mCount` is file byte 36; the removal
+    clears `+0x1de` for every guest; the restore posts no event; a switch overwrites `+0x1de` whatever it held, and
+    23 to 22 then 21 is possible in the corridor (lengths 2 and 1 from 22's entry); guest `+0x188` is the navigator's
+    mode, which the gate's states, the put-down and the leaving retry set to 1 (`ParkPeople.WalkingMode` said nothing
+    did; corrected).
+  - **Measured in every save** (`q170bprobe`, read-only): `mCount` 0..11 on all 745 guests of the shipped park and
+    Alexah's four played saves, never 12; `mSavedMajorDest` non-zero on 50, 51, 6 and 6, each an object in its save.
+  - **Confirmed in the game** (`q170brun.py`, `q170banalyse.py`; silent, jungle, fine weather, two buses, `toilet 90`
+    every 20 s, 720 s, predicted first; `save/` unchanged; `q170b-run1/`): 13 switches, each from (56,19) to 21 at
+    lengths 4 and 3 or from (56,18) to 22 at 3 and 2, all on walks to 23; 10 kept, each with the guest no farther (2 2,
+    3 3, and off a toilet 16..19 against 18..19); 10 restores to 23, each after the switched guest used the nearer
+    toilet (the other 3 went home first, Q109); 33 toilet uses, 33 left the need at nought; no walk off failed, 24
+    arrivals logged; the census 33 `SETTLE_UP_TOILET_EVENT`, 13 `MINOR_DECISION_EVENT`, no `SETTLE_UP_TOILET_RELIEF`.
+    Photographed paused with `peeps`: guest 42 at (56,19), dest 21, saved-major 23, turns 0; on the path beside 21,
+    dest 23, saved-major 0, visits [21,...], toilet 0; inside 23 (hidden by its roof, the census places them), visits
+    [23,21,0,0], toilet 0, speed 25.
+    Re-run on the commit's own build, 300 s (`q170b-run2/`): 4 of 4 checks, 10 switches as above, 9 of 9 restores,
+    27 of 27 uses at nought, no failed walk off, `save/` unchanged; the three settle-up counts unreached, as no drink sold.
+  - **Predictions that missed:** the need at the second toilet (90, 93, 0, 90 on the four who reached 23): the harness
+    sets every guest to 90 every 20 s. Mutant M23 turned two tests red, not one.
+  - **Not confirmed on screen:** illness emptied (none passed 90), a second switch, a stale saved major, the thing-gone
+    arm, the removal's clear (nothing sold), a played save's two fields loaded (probed only), the park-shut non-count,
+    a switch at nought on an odd tick (all 13 were on even ticks), the Belly Bounce's walk off (logged, not shot).
+  - **Tests:** `ParkSecondToiletTests` (19), and `ParkRideExitTests`' Bounce guest now walks off and arrives.
+    `q170b-mutate.py`: 32 mutants, every one red, each count as predicted (M23's on the second run).
+  - **Reviewed** (`wf_6f422e48-d65`, four Opus reviewers, a skeptic each): 16 of 19 findings real, all words or tests
+    (the walking-mode reason was false, a stale comment, rule 4's uncounted switch, five tests), each fixed.
+  - **Found:** notes under Q177, Q102, Q100 and Q109.
+
+  The item as written: Found by Q170's decode
   (`ride-operation.md`, "A second toilet: the minor decision and the saved major"). In order: (1) the settle-up's toilet
   arm, Q177's part 3: the need to nought (`0x004fe7b6`), illness to nought when its byte is above 90
   (`0x004fe7dc`..`0x004fe7ef`), the hurry speed 25 (`0x004fe7f5`); count the dirtying `FUN_004e2440` (Q100) and events
@@ -1949,6 +1995,10 @@ artifacts are listed in `docs/history/README.md`.
   From Q170: part 3, the toilet, is decoded whole (`ride-operation.md`, "The effects of a visit", step 5) and is the
   first step of Q170b. `FUN_004fe1e0` also pushes events `0xc` (`0x004fe78a`) and `0x12` (`0x004fe7ea`, the toilet's
   illness arm), which part 2 does not list.
+  From Q170b: part 3 is built (`UseTheToilet`). Also counted now and not built: the `+0x198` happiness terms, the
+  special-ingredient switch (`0x004fe527`; the Drinks Shop's ice puts 20 of its 40 thirst back at the stock amount 50)
+  and the appearance arm (`ride-operation.md`, "The effects of a visit", 3b). `+0x198` is `mAmountOfSpecialIngredient`
+  (file 1058), which `ParkWorld` does not read.
 
 - [ ] **Q85. A guest who arrives starts with happiness nought, and stays there. Decode first.** Found by Q50's game
   runs: every one of the 33 guests who arrived (30 by `load 30`) read `happy 0` in `peeps`, none above it in nine minutes,
@@ -2051,7 +2101,8 @@ artifacts are listed in `docs/history/README.md`.
   takes 0.05 of it off `+0x44`, held to 0..100, and on falling below 25 logs "Toilet has become dirty and smelly",
   unstamps `RegionFX` 1 around the toilet and stamps 6; in the online game (mode 1) there is no dirtying, and a toilet
   already below 25 is cleaned instead (`ride-operation.md`, "The effects of a visit", step 5). The handyman's cleaning
-  is still to decode.
+  is still to decode. From Q170b: the call is counted, `SETTLE_UP_TOILET_DIRTYING`, with the need taken before it is
+  emptied.
 - [ ] **Q102. The walk to a chosen thing's own arms.** Found by Q50e's decode (`ride-operation.md`, "Walking to a new
   place in the queue", the first caller). The original's state 10 (`FUN_004ffbc0`) takes `BigHappinessChange` (25)
   and pushes event 3 when the walk is stuck, where `GoingToRide` only goes back to deciding; takes 25 and clears
@@ -2062,6 +2113,8 @@ artifacts are listed in `docs/history/README.md`.
   over one cut off by a path edit.
   From Q170: the walking-turn count and the minor decision are Q170b's steps 3 and 4, built after this item's park-shut
   arm (`ride-operation.md`, "A second toilet: the minor decision and the saved major").
+  From Q170b: both are built, in `PeepBehaviour.WalkOn`; the shut arm is counted there (`GOING_TO_RIDE_PARK_SHUT`) and
+  skips the count, as the original's does.
 
 - [ ] **Q103. The gates at the back of a queue.** Found by Q50e's decode. On arriving, the original refuses on room
   with event `0x15` and KEEPS `MajorDest` (`GiveUpOnIt` clears it); asks excitement only when the item's `+0x13c`
@@ -2120,6 +2173,8 @@ artifacts are listed in `docs/history/README.md`.
   `ExitLevel <= 0` from any state, docking nothing, at the bus stops, whatever the route. Retiring `Step`'s arm keeps
   most guests in the park until unhappy or shut, which a player will see: measure first how many leave through the
   window, then ask.
+  From Q170b: that retry writes `+0x188`, the navigator's walking mode (`0x004fef04`); so do the gate's states and the
+  put-down `FUN_004feb50`. Every person here walks in mode 0 (`ParkPeople.WalkingMode`).
 - [ ] **Q110. The stranded bookkeeping, and thought bubbles.** Found by Q53 (`ride-operation.md`, "The stranded
   bookkeeping"). The shared counter, the 33 × 33 block stamps its map writes leave, `FUN_004fa770`'s 3 × 3 test, the
   refusals in SetRandomDest, `FUN_004fa530` and `FUN_004fa5f0`, the dead-end stamp, and SetThought's bubble

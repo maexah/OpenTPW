@@ -153,6 +153,79 @@ public sealed class ParkRideChooser
 	}
 
 	/// <summary>
+	/// The nearer thing the walk's minor decision takes, with its score, or null for none - the window and the pick
+	/// of <c>FUN_004fd570</c> (<c>docs/exe/ride-operation.md</c>, "A second toilet"); the switch test and the switch
+	/// are <see cref="PeepBehaviour"/>'s.
+	/// </summary>
+	/// <remarks>
+	/// The window is the guest's cell less two to plus one, x outer and y inner, on the map; a cell counts only if it
+	/// is strictly nearer the major's back cell, squared, than the guest's own (<c>0x004fd660</c>..<c>0x004fd7a4</c>).
+	/// An object is found on the cell it stands on (its <c>mWho</c> list, which it is linked on at construction and
+	/// never moved from), not on its footprint or entry. Each that is not the major passes the offer gate and is then
+	/// scored, the same two calls the chooser makes (<c>0x004fd73f</c>, <c>0x004fd74b</c>).
+	/// <para>
+	/// <b>There is no floor, and a first candidate at nought wins on an odd tick</b>: the best starts at nought with
+	/// nothing held, a higher score takes it, and an equal one takes it when the tick's bottom bit is set
+	/// (<c>0x004fd750</c>..<c>0x004fd76d</c>) - which is why this does not share <see cref="Beats"/>. So right after a
+	/// toilet, when every toilet scores nought, one is still taken on an odd tick.
+	/// </para>
+	/// <para>
+	/// <b>Two differences, each held elsewhere.</b> The score measures to the entry cell where the original measures
+	/// to the back cell (<see cref="ScoreOf"/>, Q105). And within one cell the original walks its list newest-linked
+	/// first where this takes the park's own order, which cannot differ while no two objects stand on one cell, as
+	/// none do in Lost Kingdom.
+	/// </para>
+	/// </remarks>
+	/// <param name="majorBack">The back-of-queue cell of the thing the guest is bound for.</param>
+	public (ParkWorld.CatalogueObject Thing, int Score)? MinorDecisionFor( ParkRideScore.Wants wants, int x, int y,
+		int majorId, (int X, int Y) majorBack, int gameTick, Func<ParkWorld.CatalogueObject, int>? queueLength = null,
+		DateTime? now = null, bool raining = false )
+	{
+		if ( _park == null )
+			return null;
+
+		wants = wants with { LastVisitKind = KindOf( wants.Visits is { Count: > 0 } visits ? visits[0] : 0 ) };
+
+		var guestNearness = SquaredDistance( x, y, majorBack );
+		ParkWorld.CatalogueObject? best = null;
+		var bestScore = 0;
+
+		for ( var cellX = x - 2; cellX <= x + 1; ++cellX )
+		{
+			for ( var cellY = y - 2; cellY <= y + 1; ++cellY )
+			{
+				if ( !ParkState.OnMap( cellX, cellY ) || SquaredDistance( cellX, cellY, majorBack ) >= guestNearness )
+					continue;
+
+				foreach ( var candidate in _state?.Objects ?? _park.Objects )
+				{
+					if ( candidate.CellX != cellX || candidate.CellY != cellY || candidate.ThingId == majorId )
+						continue;
+
+					var item = ItemFor( candidate );
+					var queue = queueLength?.Invoke( candidate ) ?? ParkRideChoice.QueueLength( _park, candidate );
+
+					if ( !ParkRideChoice.CanBeOffered( candidate, queue, item?.TrackType ?? 0, _park ) )
+						continue;
+
+					var score = ScoreOf( wants, candidate, item, queue, x, y, now, raining );
+
+					if ( score > bestScore || (score == bestScore && (gameTick & 1) != 0) )
+					{
+						best = candidate;
+						bestScore = score;
+					}
+				}
+			}
+		}
+
+		return best is { } taken ? (taken, bestScore) : null;
+	}
+
+	private static int SquaredDistance( int x, int y, (int X, int Y) to )
+		=> ((x - to.X) * (x - to.X)) + ((y - to.Y) * (y - to.Y));
+
+	/// <summary>
 	/// Whether this candidate takes the lead from the one already held.
 	/// </summary>
 	/// <remarks>

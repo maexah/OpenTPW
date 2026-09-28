@@ -189,6 +189,11 @@ public class ParkRideExitTests
 
 		Assert.AreEqual( PeepState.LeavingRide, peep.State, "which puts them on the way out" );
 
+		// <b>Aimed at the path south of the exit</b>: the exit faces 0x10, which FUN_004d97e0 steps south. The ride's
+		// own footprint lies north, where no route goes.
+		Assert.AreEqual( (ExitX, ExitY + 1), peep.Navigator.Target.Cell, "aimed one cell past the exit, onto the path" );
+		Assert.IsFalse( peep.Navigator.CannotReach, "and that way routes" );
+
 		var behaviour = new PeepBehaviour( world, new Random( 1 ), null, () => ParkRides.GateIsOpen,
 			park, new ParkItemCatalogue( "jungle", data ) );
 
@@ -197,17 +202,21 @@ public class ParkRideExitTests
 
 		Assert.AreEqual( PeepState.Deciding, peep.State, "and then they think again" );
 
-		Assert.AreNotEqual( (EntryX, EntryY), walk.Position.Cell,
-			"and they are anywhere but back on the ride" );
+		// The arrival arm keeps the ride named, where giving up clears it: this is how they left.
+		Assert.AreEqual( Ride, peep.MajorDest, "they arrived rather than gave up" );
+		Assert.AreEqual( (ExitX, ExitY + 1), walk.Position.Cell, "standing on the path beyond the exit" );
 	}
 
-	/// <summary>A guest standing on a named cell, rather than at (0,0) where no route can begin.</summary>
+	/// <summary>
+	/// A guest standing on a named cell, rather than at (0,0) where no route can begin, with the force and speed a
+	/// guest walks at.
+	/// </summary>
 	private static ParkWorld.NavigatorState StandingOn( int cellX, int cellY ) => new(
 		X: PeepNavigator.WaypointCentre( cellX ), Y: PeepNavigator.WaypointCentre( cellY ),
 		VelocityX: 0, VelocityY: 0,
 		TargetX: PeepNavigator.WaypointCentre( cellX ), TargetY: PeepNavigator.WaypointCentre( cellY ),
 		Mass: ParkWorld.NavigatorState.DefaultMass, Radius: ParkWorld.NavigatorState.DefaultRadius,
-		MaxForce: 0, MaxSpeed: 0, NavMode: 0, CantReachDest: 0, PathFinished: false,
+		MaxForce: 31457, MaxSpeed: 15728, NavMode: 0, CantReachDest: 0, PathFinished: false,
 		PathCount: 0, PathTotalCount: 0, PathBufferCount: 0,
 		BufferedDistance: 0, TailDistance: 0, TotalDistance: 0, StuckBits: 0 );
 
@@ -231,9 +240,9 @@ public class ParkRideExitTests
 	/// <b>The assertion that carries the test is WHICH arm ran, not that they thought again.</b>
 	/// <c>FUN_00500900</c> drops a guest into <see cref="PeepState.Deciding"/> from both of its arms - on
 	/// arriving, and on finding it cannot get through. Giving up zeroes <see cref="Peep.MajorDest"/>;
-	/// arriving keeps it for a guest with no saved destination behind it (<c>+0x1de</c>, which nothing here
-	/// writes), so a destination still naming the ride is what proves they arrived. The guest starts on the
-	/// ride's exit cell, where dismissal puts them down.
+	/// arriving keeps it for a guest with no saved major behind it (<see cref="Peep.SavedMajorDest"/>), so a
+	/// destination still naming the ride is what proves they arrived. The guest starts on the ride's exit cell,
+	/// where dismissal puts them down.
 	/// </para>
 	/// <para>
 	/// The behaviour is built with <b>no</b> <see cref="ParkAdmission"/> on purpose: deciding then returns

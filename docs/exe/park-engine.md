@@ -1506,8 +1506,9 @@ object with flag bit `0x02` by squared cell distance along the live chain, **tes
 (`0x005009f9`) until then, so a sale of the ride just left still puts them off.
 
 **What OpenTPW builds** (`PeepBehaviour.ThingRemoved`, `StaffBehaviour.ThingRemoved`, called through
-`ParkPeople.ThingRemoved` from the demolisher): all of the guest's answer but the event ring and `+0x1de`, neither
-of which it keeps - `mPreviousRides` and the refusal beside it are cleared (`Peep.ForgetThing`, `0x004fb4ba`); the sound, at the seat node, the origin by flag `0x20` (which a thing bought
+`ParkPeople.ThingRemoved` from the demolisher): all of the guest's answer but the event ring, which it does not keep -
+a saved major naming the thing is let go of by every guest (`Peep.SavedMajorDest`, `0x004fb4a6`..`0x004fb4b3`), and
+`mPreviousRides` and the refusal beside it are cleared (`Peep.ForgetThing`, `0x004fb4ba`); the sound, at the seat node, the origin by flag `0x20` (which a thing bought
 this session does not carry yet, `BOUGHT_OBJECT_FLAG_BITS`), or - a deviation - at the feet of a walk-on rider, whom
 the original's `WALK` stepper places and nothing here does; and the staff rest-area arms. Nothing here holds a job on a
 thing. The `VAR_STAFFIN` count and message 15 are unbuilt wherever the original touches them - arriving to rest

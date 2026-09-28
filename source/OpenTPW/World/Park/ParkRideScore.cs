@@ -137,9 +137,8 @@ public sealed class ParkRideScore
 		var item = candidate.Item;
 
 		// The same kind as the thing left last is worth nought, whichever one of that kind this is
-		// (0x004fcd3f..0x004fcd97). So a guest who has just left a toilet scores every toilet nought; the
-		// original's guests reach a second one on the walk, through the minor decision and the saved major, both
-		// unbuilt (Q170b).
+		// (0x004fcd3f..0x004fcd97). So a guest who has just left a toilet scores every toilet nought, and reaches a
+		// second one on the walk, through the minor decision and the saved major (PeepBehaviour.MinorDecision).
 		if ( wants.LastVisitKind != 0 && wants.LastVisitKind == candidate.Placed.CatalogueId )
 			return 0;
 
