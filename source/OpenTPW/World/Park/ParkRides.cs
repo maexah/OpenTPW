@@ -30,16 +30,14 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>What this deliberately does not do yet: the SPEED word alone.</b> The original's binder pushes the
-/// item's own operating speed into the script's speed word (<c>FUN_0055a300</c>, field <c>+0xc0</c>) and
-/// its operating duration into variable 3, which is <see cref="RideVariables.VAR_DURATION"/>, logging
-/// "SPEED = %d" and "DUR = %d" as it does. <b>The duration is pushed</b> - from the save's own
-/// <c>mOperatingDuration</c>, beside the capacity, further down this file. The speed stays out, because which key of the item's
-/// description feeds which of them is <b>not</b> established: the constructor reads its record through a
-/// two-byte pointer, so the offsets Ghidra prints are not byte offsets, and they do not line up with
-/// where <c>FUN_004db7d0</c> parses <c>mOperatingSpeed</c> and <c>mOperatingDuration</c>. Guessing it
-/// would matter rather than being harmless - the speed word is the divisor <c>WAIT</c> scales by, and it
-/// is exactly neutral only at the 50 the loader seeds.
+/// <b>What this deliberately does not do yet: the SPEED word alone.</b> The original's object constructor
+/// (<c>FUN_004db090</c>, after the binder returns) pushes the item's own operating speed into the script's speed
+/// word (<c>FUN_0055a300</c>, field <c>+0xc0</c>) and its operating duration into variable 3, which is
+/// <see cref="RideVariables.VAR_DURATION"/>, logging "SPEED = %d" and "DUR = %d" as it does. <b>The duration is
+/// pushed</b> - from the save's own <c>mOperatingDuration</c>, beside the capacity, further down this file. The
+/// speed stays out, because <see cref="RideScript"/> keeps no speed word (<c>docs/QUEUE.md</c> Q155): it is the
+/// divisor <c>WAIT</c> scales by, exactly neutral only at the 50 the loader seeds, and the constructor pushes
+/// <c>Upgrades[0].InitSpeed</c> into it when that is above nought (<c>0x004db51c</c>..<c>0x004db534</c>).
 /// </para>
 ///
 /// <para>
@@ -309,8 +307,8 @@ public sealed class ParkRides : Entity
 				// Bouncy.RSE declares VAR_CAPACITY and only ever READS it (one CMP against its rider
 				// count); it carries no COAST instruction at all. The engine writes it, in FUN_004dd7f0 -
 				// which logs "CAPACITY = %d", writes script variable 2, and stores the same number to the
-				// object's mOperatingCapacity. That call sits on the open-and-repair path (FUN_004df8f0),
-				// beside the writes of VAR_DURATION and the speed.
+				// object's mOperatingCapacity. That call sits in the object constructor (0x004db560) and on
+				// the open-and-repair path (FUN_004df8f0), beside the writes of VAR_DURATION and the speed.
 				//
 				// Without it every variable starts at nought, so a ride's own turn reads capacity 0
 				// against nought aboard, finds itself FULL, and refuses to invite anybody for ever.

@@ -92,7 +92,10 @@ public sealed class ParkItemCatalogue
 		bool CannotRide = false,
 
 		// What the ride score reads beside the excitement - ItemDescriptionFile.GoldenTicketCost and BumperType.
-		int GoldenTicketCost = 0, int BumperType = 0 );
+		int GoldenTicketCost = 0, int BumperType = 0,
+
+		// What a go costs on one just built - ItemDescriptionFile.InitPricePerUse. See ParkBuilding.
+		int InitPricePerUse = 0 );
 
 	private readonly Dictionary<int, Item> _items = [];
 
@@ -207,7 +210,8 @@ public sealed class ParkItemCatalogue
 					description.EntryDirection, description.ExitDirection, description.CellKinds,
 					description.DestroyParticleEffect,
 					description.RipOffOK, description.SpecialIngredient, description.AppearanceEffect,
-					description.CannotRide, description.GoldenTicketCost, description.BumperType );
+					description.CannotRide, description.GoldenTicketCost, description.BumperType,
+					description.InitPricePerUse );
 
 			return true;
 		}

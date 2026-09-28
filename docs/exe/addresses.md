@@ -227,10 +227,15 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004d8b8f` | FUN_004d8b40, a route's length: -1 when FUN_00511ef0 answers 0x70000000 | OpenTPW/World/Park/CellSearch.cs  |
 | `0x004d8ba0` | FUN_004d8b40: | OpenTPW/World/Park/CellSearch.cs  |
 | `0x004d8be7` | FUN_004d8b40: the sum, to here | OpenTPW/World/Park/CellSearch.cs  |
+| `0x004db3ad` | Object constructor FUN_004db090: mPricePerUse +0x194 copied unclamped from UsageInfo.InitPricePerUse (+0xe4) | OpenTPW.Files/Formats/ItemDescriptionFile.cs OpenTPW.Tests/ParkStartingSettingsTests.cs OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db3f3` | Object constructor: the flags word built from the item's description (from here) | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db420` | Object constructor: the queue-path bit `0x08` from descriptor `+0x40`, `Info.HasQueue` | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db425` | Object constructor: `OR [ESI+0x32],0x8` | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db517` | | OpenTPW/World/Park/ParkRides.cs  |
+| `0x004db51c` | Object constructor FUN_004db090: the starting speed, capacity and duration from Upgrades[0], each only above nought, from | OpenTPW.Tests/ParkStartingSettingsTests.cs OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkRides.cs  |
+| `0x004db534` | Object constructor FUN_004db090: FUN_0055a300 pushes the starting speed into the script's speed word +0xc0 | OpenTPW/World/Park/ParkRides.cs  |
+| `0x004db560` | Object constructor FUN_004db090: the starting capacity's low byte through the setter FUN_004dd7f0 (+0x5d, script variable 2) | OpenTPW/World/Park/ParkRides.cs  |
+| `0x004db64f` | Object constructor FUN_004db090: the starting duration's low byte, held to Min/MaxDuration, stored to +0x5c, to here | OpenTPW.Tests/ParkStartingSettingsTests.cs OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db66a` | Object constructor FUN_004db090: +0x18 stamped with the park calendar, FUN_004f8690 | OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004db712` | Object constructor: closes an object carrying the queue-path bit (from here) | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db793` | Object constructor: the queue-path close (to here) | OpenTPW/World/Park/ParkBuilding.cs  |

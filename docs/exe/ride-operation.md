@@ -1009,10 +1009,11 @@ at least 10. Thiscall on the **guest** (`EDI`), the argument the **object** (`ES
    clamp( FUN_00545310's crowd, 0, 40 ), 0, 100 )` - times `clamp( +0x58 / Upgrades[l].InitSpeed, 0.75, 1.25 )` times
    `clamp( +0x5c / Upgrades[l].InitDuration, 0.75, 1.25 )`, truncated, `l` the upgrade level `+0x50`. The divisors
    are descriptor `+0x1a8` and `+0x1a0` plus `0x40 × l`, which the compiled `.sam` schema (`0x744b30`) names
-   `InitSpeed` and `InitDuration`. The constructor copies tier nought's into `+0x58` (when above nought) and `+0x5c`
-   (a byte clamped to Min/MaxDuration), so a ride at its starting settings has both ratios 1, and without a track
-   handle scores its own `ExcitementLevel`. The placer gives a handle to any item whose `Bumper.BumperType` is set
-   (`FUN_00529e10`, `0x00529e4d`).
+   `InitSpeed` and `InitDuration`. The constructor copies tier nought's into `+0x58` and `+0x5c`, each only when
+   above nought, the duration's low byte held to Min/MaxDuration (`park-engine.md`, "The object window's stats
+   panel"), so a ride at its starting settings has both ratios 1 wherever its duration lies inside those bounds, as
+   every jungle ride's does, and without a track handle scores its own `ExcitementLevel`. The placer gives a handle
+   to any item whose `Bumper.BumperType` is set (`FUN_00529e10`, `0x00529e4d`).
 5. **Thirst and hunger**: the table at `0x0075d0f8`, `[need / 10 + effect / 10 × 11]`, the need the guest's float
    (`+0x1a4`, `+0x1a8`) as a byte, the effect the low byte of `UsageInfo.ThirstEffect` (`+0x144`) or `HungerEffect`
    (`+0x148`).
@@ -1124,7 +1125,6 @@ column is the chooser before Q165b and Q165c built what the decode column shows.
 | A track handle's excitement | 60% of the level plus the track's crowd, held 0..100 | the level, counted (`RIDE_EXCITEMENT_TRACK_CROWD`) | The Hot Pot, Dino Karts and Splish Splash, bought (Q172) |
 | An upgraded ride's excitement | its tier's `InitSpeed` and `InitDuration` | the level, counted (`RIDE_EXCITEMENT_UPGRADE_TIER`); the catalogue reads tier nought | nothing in Lost Kingdom's save; Alexah's played park has a tier-1 Belly Bounce (Q172) |
 | A sideshow's cost of goods and chance of winning | the object's own `+0x188` and `+0x190` | the item's (Q97) | none yet: the save holds the item's |
-| A bought thing's price | `InitPricePerUse` | nought, which a bought sideshow's excitement reads (34 for a Jungle Spray, not 30) | every purchase (Q171) |
 | The too-long gate on a queue path | `FUN_004dda40`'s capacity, over `QueueWaitTimeConstant`, which the catalogue does not read | counted and let through (`QUEUE_TOO_LONG_CAPACITY`, Q173) | the Belly Bounce, and every bought ride with a queue |
 | The calendar at load | the save's `mGameTick`, 755: 2000-02-02 18:27:30 | the score's calendar is the original's (`ParkState.CalendarNow`); the gadget's date and the weather's days count from nought (`GameCalendar.Rebase`, Q149) | every load |
 
@@ -1604,7 +1604,7 @@ excitement and a hunger effect, and the order against the effects cannot show.
 **OpenTPW builds it** (`ParkRideOperation.MatchTheExcitement`, the keys on `ParkAdmission`, the likings from the park's
 `ParkRideScore`), and logs each match. Its departures: an absent divisor is held at one where the engine would fault, and
 the excitement is worked out once where the engine asks three times (the same answer, since nothing it reads moves).
-And it reads `ExcitementOf`, so that function's departures in "Where OpenTPW differs" (Q97, Q171, Q172) reach it too.
+And it reads `ExcitementOf`, so that function's departures in "Where OpenTPW differs" (Q97, Q172) reach it too.
 
 ### The effect block, descriptor field to guest meter
 
@@ -2128,9 +2128,9 @@ The Jungle Spray is queued for and invited in **about one run in five** at that 
 - **What `+0x1f1` means at settle-up time.** The byte is overloaded between a queue position and a sideshow roll.
 - **The balloon and costume SPRITE path** out of `FUN_004fe1e0`.
 - **`FUN_005019f0` case `0x11`**, the walk of the `mFirstGuard` chain through `+0x210` / `+0x212`.
-- **Whether a shop's duration of nought is correct** (it may simply not read it) where `FUN_004df8f0` would take a clamped value from the descriptor's `+0x1a0`.
+- **Whether a shop's duration of nought is correct** (it may simply not read it) where `FUN_004df8f0` would take a clamped value from the descriptor's `+0x1a0`. A bought one's is: the constructor writes `+0x5c` only for a starting duration above nought, and every shop's is nought (Q171).
 - **Refuted, so do not repeat:** "only `UNBOUNCE` writes `VAR_LETMEOFF`" — there are six writers, and the claim is false for 16 of the park theme's 17 dismissing ride scripts. "The shops' `mOperatingCapacity` might be nought, leaving them permanently full" — every visitable object has a non-zero capacity.
-- Descriptor keys present in the `.sam` files that OpenTPW does not read yet: `ShopType`, `RideHandlesSprite` (the flag byte's `0x20`, Q52), `RequiresTeleport`, `InitPricePerUse` (Q171), `Upgrades[n].QueueWaitTimeConstant` (Q173).
+- Descriptor keys present in the `.sam` files that OpenTPW does not read yet: `ShopType`, `RideHandlesSprite` (the flag byte's `0x20`, Q52), `RequiresTeleport`, `Upgrades[n].QueueWaitTimeConstant` (Q173).
 
 ## Measuring the corpus without inventing findings
 

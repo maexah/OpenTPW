@@ -29,7 +29,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
   queue away one head a sweep, for 15, and opening the door or editing its queue opens it again.
 - Building by POINTING - click to anchor, click to commit, no drag, because both of the original's drag slots are bare
   `RET` stubs. A click on grass or path picks up the PATH tool (20 a cell) with its own squares and cursors; Backspace
-  takes the last run up, Escape puts the tool away. QUEUE is 75, refunded.
+  takes the last run up, Escape puts the tool away. QUEUE is 75, refunded. **A bought thing starts at its own price.**
 - **Placing a ride lays its queue's first cell before the entrance and hands over the queue tool there**, with the
   original's coloured squares where a click will lay it; a click onto a path lays and joins it. Guests queue and ride.
 - Spending: guests choose, queue for and buy from the Drinks Shop and the Jungle Spray; short of the price, they walk.
@@ -55,8 +55,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Eight of the nine per-object windows are unbuilt. Setting a staff member's patrol area is not built, deferred by
   Alexah; staff keep to the areas the save gives them. A walking member of staff is not entered in the cells they
   cross; only hiring and putting down place one.
-- Q102-Q105 and five queue-turn arms are unbuilt, the unhappy one held for Q85. No spot animation (Q98). A guard or
-  researcher on a cell with no links does not look for path (Q112). A bought thing charges nothing (Q171).
+- Unbuilt: Q102-Q105, five queue-turn arms (the unhappy one held for Q85), spot animation (Q98), Q112's walk to path.
 - The park's door moves neither the gate (Q89) nor the advisor (Q90), nor a shut ride's model (Q91); the ride window's
   door shows a shut ride but is not a button (Q92), and a bought queued thing starts open (Q93).
 - Nothing shows what the hand holds, a thing (`CARRY_PREVIEW_MARKERS`) or a candidate (`STAFF_CARRY_PREVIEW`), and
@@ -77,7 +76,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
 ## Next
 
 `docs/QUEUE.md`, from the top. **Q1-Q12, Q34, Q35, Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71,
-Q82-Q84, Q88, Q101, Q165-Q166, Q169, Q170, Q170b are ticked.** Next: **Q171**. Each open item's "Found by" names what
+Q82-Q84, Q88, Q101, Q165-Q166, Q169-Q171, Q170b are ticked.** Next: **Q172**. Each open item's "Found by" names what
 filed it. Gaps **4, 5 and 7** are in `docs/PLAYER-GAPS.md`; the untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
 
 ## Not verified on screen
@@ -99,7 +98,8 @@ filed it. Gaps **4, 5 and 7** are in `docs/PLAYER-GAPS.md`; the untracked `docs/
 - Tested only: Q165c's histories cleared by a sale, refusals aging, the too-long gate and a save's histories; Q166's
   literal `RAND`, `MOD`, `SUB`, `GETREMOTEVAR` and `COAST 2 0`; and a lock taken on the last unit running its section
   whole, which the stock park never reaches (the Hot Pot's capacity cut mid-ride, resting on `BUMP` unbuilt, Q45).
-- Tested only: Q170b's illness emptied, a second switch, a stale saved major, a sale's clear, a played save's two fields.
+- Tested only: Q170b's illness emptied, a second switch, a stale saved major, a sale's clear, a played save's two
+  fields; Q171's starting settings held to their bounds, which change no Lost Kingdom item's.
 
 ## Numbers
 
@@ -108,12 +108,12 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1281**, 0 fail, 0 skip with the game | 2026-09-28, after Q170b |
-| Tests without the game | **512** ran, **769** skipped, of 1281 | 2026-09-28, after Q170b |
-| Build warnings | 123 | 2026-09-28, after Q170b |
+| Tests | **1288**, 0 fail, 0 skip with the game | 2026-09-28, after Q171 |
+| Tests without the game | **515** ran, **773** skipped, of 1288 | 2026-09-28, after Q171 |
+| Build warnings | 123 | 2026-09-28, after Q171 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-28 (Q170b, the build).** `alexah/176-a-second-toilet-by-the-walk`. **Earlier:** each QUEUE.md entry names
-its branch: `175` (Q170) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`; git log.
+**2026-09-28 (Q171, the build).** `alexah/177-a-bought-thing-starts-at-its-price`. **Earlier:** each QUEUE.md entry names
+its branch: `176` (Q170b) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`; git log.

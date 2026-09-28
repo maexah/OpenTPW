@@ -277,6 +277,20 @@ public sealed class ItemDescriptionFile
 	public int CostOfGoods => _costOfGoods ?? _category?.CostOfGoods ?? 0;
 
 	/// <summary>
+	/// What a go costs a guest on a thing just built - <c>UsageInfo.InitPricePerUse</c>, descriptor <c>+0xe4</c>,
+	/// which the object constructor copies unclamped into the thing's own <c>mPricePerUse</c> (<c>+0x194</c>,
+	/// <c>0x004db3ad</c>). The player's price is the thing's from then on; this is only where it starts.
+	///
+	/// <para>
+	/// <b>Only shops and sideshows have one.</b> <c>Shops.sam</c> declares 10 in all four themes and
+	/// <c>SideShow.sam</c> 10 (Halloween World's 20), and every shop and sideshow overrides it with its own:
+	/// the Drinks Shop 30, the Jungle Spray 20. No ride or feature, nor <c>Rides.sam</c> or <c>Features.sam</c>,
+	/// declares it.
+	/// </para>
+	/// </summary>
+	public int InitPricePerUse => _initPricePerUse ?? _category?.InitPricePerUse ?? 0;
+
+	/// <summary>
 	/// How far over what a thing is worth a guest will still pay, in per cent - <c>UsageInfo.RipOffOK</c>,
 	/// descriptor <c>+0x16c</c>, which the level's control record keeps at <c>+0xc</c> and the price opinion
 	/// <c>FUN_004fde50</c> reads.
@@ -326,13 +340,15 @@ public sealed class ItemDescriptionFile
 	public int BuildPrice => _buildPrice ?? _category?.BuildPrice ?? 0;
 
 	/// <summary>
-	/// What the ride window's three sliders may be set to, and what a newly built one starts at.
+	/// What the ride window's three sliders may be set to, and what a newly built one starts from
+	/// (<c>ParkBuilding.StartingSettings</c>).
 	///
 	/// <para>
 	/// <b>These are the bounds the engine itself clamps to</b>, not a presentation detail: the setters
 	/// behind the sliders refuse anything outside them - <c>FUN_004dd7f0</c> clamps capacity to
-	/// <c>Min/MaxCapacity</c> and <c>FUN_004dd720</c> clamps duration to <c>Min/MaxDuration</c>, each
-	/// re-reading the item's own record rather than trusting its caller.
+	/// <c>Min/MaxCapacity</c> when the two sum above nought (every <c>Shops.sam</c> declares both nought) and
+	/// <c>FUN_004dd720</c> clamps duration to <c>Min/MaxDuration</c> always, each re-reading the item's own record
+	/// rather than trusting its caller.
 	/// </para>
 	/// <para>
 	/// <b>Slot nought only for the starting values</b>, the same reading <see cref="BuildPrice"/>
@@ -414,6 +430,7 @@ public sealed class ItemDescriptionFile
 	private int? _numSimultAnims;
 	private int? _chanceOfLosing;
 	private int? _costOfGoods;
+	private int? _initPricePerUse;
 	private int? _ripOffOK;
 	private int? _specialIngredient;
 	private int? _appearanceEffect;
@@ -620,6 +637,10 @@ public sealed class ItemDescriptionFile
 
 				case "UsageInfo.InitCostOfGoods":
 					_costOfGoods = Number( line );
+					break;
+
+				case "UsageInfo.InitPricePerUse":
+					_initPricePerUse = Number( line );
 					break;
 
 				case "UsageInfo.RipOffOK":

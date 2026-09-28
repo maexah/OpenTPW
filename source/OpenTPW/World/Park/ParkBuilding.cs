@@ -91,10 +91,6 @@ public static class ParkBuilding
 
 		var thingId = state.NextThingId();
 
-		// A NEWLY BUILT RIDE STARTS AT ITS ITEM'S OWN SETTINGS, not at nought. The original seeds these
-		// three from the purchase tier - Upgrades[0].InitSpeed / InitCapacity / InitDuration - and they
-		// are what the ride window's sliders open on. Left at nought a bought ride would carry nobody
-		// and last no time, and ParkRides.BindNew would push those noughts straight into its script.
 		// The flags word the original builds bit by bit out of the item's own description while it
 		// constructs the object, and mCanLoad, which the same constructor writes as 1 outright
 		// (FUN_004db090: `*(param_1 + 0x68) = 1`). A bought thing left at the record's defaults carries
@@ -102,11 +98,9 @@ public static class ParkBuilding
 		// single script variable, and ParkRideChoice.CanBeOffered refuses anything without the visitable
 		// bit - so the thing stands and animates and is never used.
 		//
-		// The bits come from FlagsFor. The constructor then CLOSES a thing carrying the queue-path bit
-		// (0x004db712..0x004db793, as ParkRideOperation.Close does), and the first queue measure that finds its
-		// back connected opens it; not built, so a bought queued thing starts open.
-		var flags = FlagsFor( item );
-
+		// The bits come from FlagsFor, which Constructed asks. The constructor then CLOSES a thing carrying the
+		// queue-path bit (0x004db712..0x004db793, as ParkRideOperation.Close does), and the first queue measure
+		// that finds its back connected opens it; not built, so a bought queued thing starts open.
 		Unimplemented.Report( "BOUGHT_OBJECT_FLAG_BITS" );
 
 		if ( item.HasQueue )
@@ -143,22 +137,10 @@ public static class ParkBuilding
 				Unimplemented.Report( $"SHAPE_KIND_{kind}_PLACEMENT" );
 		}
 
-		var placed = new ParkWorld.CatalogueObject(
-			ThingId: thingId, CatalogueId: catalogueId,
-			RawX: cellX << 8, RawY: cellY << 8, Angle: angle,
-			Flags: (ushort)flags,
-			CanLoad: 1,
-			EntryPos: (ushort)entryPos,
-			ExitPos: (ushort)exitPos,
-			OperatingSpeed: item.InitSpeed,
-			OperatingCapacity: item.InitCapacity,
-			OperatingDuration: item.InitDuration,
-
-			// Stamped now on the park's calendar, as the constructor does on a purchase and on a move's put-down
-			// (FUN_004db090, 0x004db66a): it is what makes a bought thing new to the ride score. The price is not
-			// written: the constructor copies UsageInfo.InitPricePerUse, which the catalogue does not read, so a
-			// bought thing starts at nought (Q171).
-			Built: ParkWorld.BuiltWhen.At( state.CalendarNow ) );
+		// Stamped now on the park's calendar, as the constructor does on a purchase and on a move's put-down
+		// (FUN_004db090, 0x004db66a): it is what makes a bought thing new to the ride score.
+		var placed = Constructed( item, thingId, cellX, cellY, angle, entryPos, exitPos,
+			ParkWorld.BuiltWhen.At( state.CalendarNow ) );
 
 		if ( objects?.PlaceNow( placed, catalogue ) != true )
 			return new( $"buy: '{item.Name}' would not load, so nothing was built and nothing was charged" );
@@ -196,7 +178,8 @@ public static class ParkBuilding
 
 		Log.Info( $"Building: bought '{item.Name}' for {item.BuildPrice} as thing {thingId} at " +
 			$"({cellX},{cellY}) turned {angle}, covering ({footprint.Left},{footprint.Top}).." +
-			$"({footprint.Right},{footprint.Bottom}) - the park has {state.Balance} left" );
+			$"({footprint.Right},{footprint.Bottom}) - the park has {state.Balance} left; price {placed.PricePerUse}, " +
+			$"speed {placed.OperatingSpeed}, capacity {placed.OperatingCapacity}, duration {placed.OperatingDuration}" );
 
 		return new( $"buy: '{item.Name}' built as thing {thingId} at ({cellX},{cellY}) for {item.BuildPrice}, " +
 			$"balance {state.Balance}" + (node is { } at ? $", queue node at ({at.X},{at.Y})" : ""), thingId, node,
@@ -229,6 +212,71 @@ public static class ParkBuilding
 			flags |= ParkWorld.CatalogueObject.QueuePathFlag;
 
 		return flags;
+	}
+
+	/// <summary>
+	/// The record the object constructor <c>FUN_004db090</c> fills for a thing bought or put down after a move:
+	/// where it stands and faces, its flags, its two ends, its starting settings and price, and when it was built.
+	/// </summary>
+	internal static ParkWorld.CatalogueObject Constructed( ParkItemCatalogue.Item item, int thingId, int cellX,
+		int cellY, int angle, int entryPos, int exitPos, ParkWorld.BuiltWhen built )
+	{
+		// A NEWLY BUILT RIDE STARTS AT ITS ITEM'S OWN SETTINGS, not at nought: the constructor seeds these three
+		// from the purchase tier by its own rules (StartingSettings), and they are what the ride window's
+		// sliders open on. Left at nought a bought ride would carry nobody and last no time, and
+		// ParkRides.BindNew would push those noughts straight into its script.
+		var (speed, capacity, duration) = StartingSettings( item );
+
+		return new ParkWorld.CatalogueObject(
+			ThingId: thingId, CatalogueId: item.Id,
+			RawX: cellX << 8, RawY: cellY << 8, Angle: angle,
+			Flags: (ushort)FlagsFor( item ),
+			CanLoad: 1,
+			EntryPos: (ushort)entryPos,
+			ExitPos: (ushort)exitPos,
+			OperatingSpeed: speed,
+			OperatingCapacity: capacity,
+			OperatingDuration: duration,
+
+			// The item's own starting price, copied unclamped (0x004db3ad): what the charge takes, the door's price
+			// opinion weighs and a sideshow's excitement reads. A move's put-down builds afresh, so it starts here too.
+			PricePerUse: item.InitPricePerUse,
+			Built: built );
+	}
+
+	/// <summary>
+	/// The speed, capacity and duration the object constructor <c>FUN_004db090</c> starts a bought thing at,
+	/// from its item's purchase tier (<c>0x004db51c</c>..<c>0x004db64f</c>). Each is written only when the
+	/// item's starting value is above nought, and stays nought otherwise.
+	/// </summary>
+	/// <remarks>
+	/// <b>Speed</b> is copied as it is. <b>Capacity</b> goes through the setter <c>FUN_004dd7f0</c>, which takes
+	/// the low byte and holds it to <c>Min</c>/<c>MaxCapacity</c> only when the two sum above nought: the shops
+	/// declare both nought and start at their own 1, 5 or 10. <b>Duration</b> takes the low byte and is held to
+	/// <c>Min</c>/<c>MaxDuration</c> whatever they are. These rules change no jungle item's starting settings;
+	/// elsewhere four rides' durations start raised (the Jelly Bounce's 3 at 10) and four sideshows' capacities
+	/// lowered (an Arcade's 5 at 3).
+	/// </remarks>
+	internal static (int Speed, int Capacity, int Duration) StartingSettings( ParkItemCatalogue.Item item )
+	{
+		var speed = item.InitSpeed > 0 ? item.InitSpeed : 0;
+		var capacity = 0;
+
+		if ( item.InitCapacity > 0 )
+		{
+			capacity = item.InitCapacity & 0xff;
+
+			if ( item.MinCapacity + item.MaxCapacity > 0 )
+				capacity = Held( capacity, item.MinCapacity, item.MaxCapacity );
+		}
+
+		var duration = item.InitDuration > 0 ? Held( item.InitDuration & 0xff, item.MinDuration, item.MaxDuration ) : 0;
+
+		return (speed, capacity, duration);
+
+		// Below the least, the least's low byte; else above the most, the most's.
+		static int Held( int value, int least, int most )
+			=> value < least ? least & 0xff : value > most ? most & 0xff : value;
 	}
 
 	/// <summary>

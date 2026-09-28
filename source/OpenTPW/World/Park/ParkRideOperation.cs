@@ -805,6 +805,8 @@ public sealed class ParkRideOperation
 		_state.TakeAt( ride.ThingId, price );
 
 		peep.Cash -= price;
+
+		Log.Info( $"Person {peep.ThingId}: paid {price} at object {ride.ThingId}, cash {peep.Cash}" );
 	}
 
 	/// <summary>How many the ride may hold - <c>VAR_CAPACITY</c>, which its own script keeps.</summary>

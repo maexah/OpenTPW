@@ -1922,7 +1922,43 @@ artifacts are listed in `docs/history/README.md`.
   switched to 22 or 21 at (56,18) or (56,19), `peeps`' dest before and after, then sent on to 23 unscored, `peeps`'
   visits reading 23 then 22 or 21; the toilet need nought after each toilet.
 
-- [ ] **Q171. A bought thing starts at a price of nought.** Found by Q165c. `ParkBuilding` writes no `PricePerUse`
+- [x] **Q171. A bought thing starts at a price of nought: now at its item's.** Done 2026-09-28,
+  `alexah/177-a-bought-thing-starts-at-its-price`. `park-engine.md`, "The object window's stats panel" and "How a key
+  finds its global"; FileFormats `sam.md` (`docs/sam-and-saves-corrections`).
+  - **Built.** `ItemDescriptionFile.InitPricePerUse` (the item's over its category's), carried by the catalogue's
+    `Item`. `ParkBuilding.Constructed`, the record `FUN_004db090` fills, writes it unclamped (`0x004db3ad`), and the
+    speed, capacity and duration by `ParkBuilding.StartingSettings`: each only above nought, the capacity's low byte
+    held to its bounds only when they sum above nought (`FUN_004dd7f0`), the duration's always. The capacity was not in
+    the item; it sits between the two the item names, and four sideshows elsewhere start held down by it. The charge
+    logs "paid", and a purchase its price and settings.
+  - **Verified first** (`wf_727b3f26-329`: four Opus readers in Ghidra, a skeptic each; all upheld): descriptor `+0xe4`
+    is `InitPricePerUse` by the compiled schema, an int copied unclamped; the category is parsed first and the item's
+    own over it, the later of a repeated key kept; nothing on the purchase path writes the four again; a move rebuilds
+    through the same constructor, so a moved thing's price starts afresh.
+  - **Measured in the data** (`q171probe`, read-only): every one of the 49 shops and sideshows in the four themes
+    declares its own price, from 10 to 75, and no ride or feature one. The rules change no jungle item's starting
+    settings; across the four themes they change eight.
+  - **Confirmed in the game** (`q171run.py`; silent, jungle, fine weather, the saved Jungle Spray 14 sold and one bought
+    at (51,30) through `carry 1303` and `put`, two buses, 480 s, predicted first; `save/` unchanged; `q171-after/`):
+    `spend` read the bought Spray, thing 43, at price 20, took 0; the purchase logged "price 20, speed 0, capacity 3,
+    duration 0"; 9 guests paid 20 at it and its took read 180; paused at the first, guest 29's `peeps` cash, 550,
+    matched the logged cash; both winners' excitement read 30. Photographed paused: the bought Spray spraying, guest 29
+    at its entrance. 6 of 6 checks. The control, the parent build in a worktree at `52926cd` (`q171-before/`): price 0,
+    6 winners at excitement 34, took 0, 4 of 4. Re-run on the commit's own build, 360 s (`q171-commit/`): 6 paid 20,
+    took 120, the payer's cash matched, `why` at the pause had 1 of 53 choosing it at age 9; none of the 6 won, so the
+    excitement check had nothing to read (5 of 6).
+  - **Predictions that missed:** `why` at the pause (54 s): none of 53 guests chose the bought Spray (43 the Belly
+    Bounce, 10 nothing), where the control's pause at 96 s had 5 of 47; eight more chose it and paid later, nine in
+    all. The control's age for it read 16, not 0: the park calendar runs about a sixth of a day a second.
+  - **Not confirmed on screen:** the held settings (no Lost Kingdom item needs them), a move's price starting afresh (no
+    screen sets a price yet), a category's price showing through (no shipped item leaves it).
+  - **Tests:** `ParkStartingSettingsTests` (7). `q171-mutate.py`: 18 mutants, every one red as predicted.
+  - **Reviewed** (`wf_a002938d-86c`, three Opus reviewers, a skeptic each): 15 findings real, all words, tests or the
+    address index (a rule edge each test missed, the Arcade's repeated key, "inside its bounds" false for the shops),
+    each fixed; the fixes checked (`wf_7666a068-b90`), which found four more (a rule edge, three words), fixed.
+  - **Found:** Q178; a note under Q177.
+
+  The item as written: Found by Q165c. `ParkBuilding` writes no `PricePerUse`
   and the catalogue reads no `UsageInfo.InitPricePerUse` (the Drinks Shop 30, the Jungle Spray 20), which the
   constructor copies into the object's `+0x194` (`0x004db378`..`0x004db3ad`). A bought shop or sideshow charges
   nothing, and a bought Jungle Spray's excitement is 34 where the original's is 30. Read the key, with the category's
@@ -1999,6 +2035,25 @@ artifacts are listed in `docs/history/README.md`.
   special-ingredient switch (`0x004fe527`; the Drinks Shop's ice puts 20 of its 40 thirst back at the stock amount 50)
   and the appearance arm (`ride-operation.md`, "The effects of a visit", 3b). `+0x198` is `mAmountOfSpecialIngredient`
   (file 1058), which `ParkWorld` does not read.
+  From Q171: the constructor sets a bought thing's `+0x198` and its `+0x18c` (`mQualityOfGoods`) to 50
+  (`0x004db3b3`, `0x004db389`); `ParkBuilding.Constructed` writes neither, as the record carries neither.
+
+- [ ] **Q178. Instant Action's catalogue: each item's `Easy_` file, laid last and required. Decode first.** Found by
+  Q171's verify (`wf_727b3f26-329`, a reader and a skeptic agreeing; `park-engine.md`, "How a key finds its global").
+  In game type 2 (`DAT_00fb3b7c`), `FUN_00413c10` lays `Easy_<stem>.sam` over the category and the item's own file
+  (`0x00413ffe`..`0x0041404d`), and `FUN_00413930` drops an item whose wad has none before cataloguing it
+  (`0x00413ac4`..`0x00413b3a`): in jungle the Gift Shop, the Steak Restaurant, the Arcade, Chac Atak, Gorilla Thrilla,
+  Sun God, Jurassic Tours, Eruption, nine features (`5x5rck`, `5x5rck2`, `lavspurt`, `lure`, `mamfount`,
+  `speaker2`-`4`, `statue2`) and the three upgrades. OpenTPW reads no item's `Easy_` file and catalogues all of them,
+  while `Level` builds its balance with `easyMode: true`. The rides' `Easy_` files set `Upgrades[i].WearRate`,
+  `CostOfResearch` and minecart's `Research.Group`; the rest are comments. From the same decode: a bounded key no file
+  sets reads its lower bound, not nought (`FUN_004013e0`, `0x0040153a`), so every shop and sideshow's
+  `Info.NewAttractionDecayTime` is 1, which OpenTPW reads as nought, and every item's `UsageInfo.ExciteFactor` but a
+  sideshow's (60, `SideShow.sam`) 50, a key OpenTPW does not read (nothing reads either yet); and a value the loader
+  refuses (a negative in a type-5 key, a bounded key outside `[lo, hi)`) ends the whole catalogue load (`0x00413f18`),
+  where `ItemDescriptionFile.Number` takes it. Decode whether Lost Kingdom's `Easymode.TPWI` is type 2
+  (`docs/exe/boot.md`), then build the layer and the gate. Confirm: the buy screen's shops tab without the Gift Shop
+  and the Steak Restaurant, and `unimplemented`.
 
 - [ ] **Q85. A guest who arrives starts with happiness nought, and stays there. Decode first.** Found by Q50's game
   runs: every one of the 33 guests who arrived (30 by `load 30`) read `happy 0` in `peeps`, none above it in nine minutes,

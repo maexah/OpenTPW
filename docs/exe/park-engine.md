@@ -218,6 +218,17 @@ The `PeepInfo` object is at `0x00785040` (built at `0x00402ae0`, table `0x0073fc
 
 A line may name several fields, each taking the next value (up to sixteen; OpenTPW reads these, `BalanceFieldTests`). Two more parser behaviours, measured and not yet compared with OpenTPW's reader: **the first bad line ends the file** - an unknown key, a bounded value out of range, or a negative in a type-5 field returns nought and no later line is read; and **an array's count is the highest index the files wrote, plus one**, not the table's size - so Lost Kingdom's guest type is `rand % 8`.
 
+**An item's description is read the same way, one file laid over another** (Q171's verify, `wf_727b3f26-329`).
+`FUN_00413c10` gives each item a descriptor of its own (`FUN_00412c20`, the schema at `0x00744b30`) and parses into it
+in order: its folder's category file, whose parse first zeroes every slot (`FUN_004013e0`, flag nought at
+`0x00413e02`); in game type 1 `Online_<Category>.sam`; the item's own `.sam` from its wad (`0x00413f06`); then in game
+type 1 `Online_<stem>.sam`, or in game type 2 `Easy_<stem>.sam` (`0x00413ffe`..`0x0041404d`). Every store overwrites,
+so a key declared twice keeps the later value. The zeroing gives an unbounded key nought and a bounded one its lower
+bound (`0x0040153a`), so `Info.NewAttractionDecayTime` is 1 where no file sets it and `UsageInfo.ExciteFactor` 50. In
+game type 2 an item whose wad has no `Easy_` file is never catalogued (`FUN_00413930`, `0x00413ac4`..`0x00413b3a`), and
+a parse error in any item's file ends the whole catalogue load (`0x00413f18`). OpenTPW reads the category and the
+item's own file only (Q178).
+
 ---
 
 ## The state machine
@@ -1344,10 +1355,17 @@ clamped 0..40.
 stride) puts `Upgrades[0].InitSpeed` at `+0x1a8` and `InitDuration` at `+0x1a0` (tier *l* `0x40 × l` beyond), with
 `InitCapacity` `+0x198`, `RedLineCapacity` `+0x19c` and `RedLineSpeed` `+0x1ac`; the constructor copies tier nought's
 speed, when above nought, into the object's `mOperatingSpeed` (`+0x58`, `0x004db54c`) and the low byte of its
-duration, clamped to Min/MaxDuration, into `mOperatingDuration` (`+0x5c`, `0x004db64f`), so a ride at its starting
-settings has both ratios 1 wherever its duration lies inside those bounds, as every jungle ride's does (Q165). `+0x13c`, which supplies the base above,
+duration, when above nought and clamped to Min/MaxDuration (`+0x12c`/`+0x130`) whatever those are, into
+`mOperatingDuration` (`+0x5c`, `0x004db64f`), so a ride at its starting settings has both ratios 1 wherever its
+duration lies inside those bounds, as every jungle ride's does (Q165). Between them, the low byte of `InitCapacity`,
+when above nought, goes through the setter `FUN_004dd7f0` (`0x004db560`), which clamps it to Min/MaxCapacity
+(`+0x124`/`+0x128`) only when the two sum above nought and stores `+0x5d`; the shops declare both nought. All three
+start nought (the constructor's head), and each branch also pushes its value into the script. Earlier in the same
+constructor `mPricePerUse` (`+0x194`) is copied unclamped from `UsageInfo.InitPricePerUse` (`+0xe4`, `0x004db3ad`).
+OpenTPW builds all four fields (`ParkBuilding.Constructed`, Q171) and pushes the capacity and duration
+(`ParkRides.BindNew`); the speed's push is not built, as `RideScript` keeps no speed word (Q155). `+0x13c`, which supplies the base above,
 is `UsageInfo.ExcitementLevel`: the compiled `.sam` schema puts it one slot before `InitCostOfGoods` (`+0x140`), in a
-UsageInfo group anchored at `+0xd4` through `+0x170` (`ride-operation.md`, "At the door"). `RIDE_EXCITEMENT_BAR` and
+UsageInfo group from `+0xc4` (`GoldenTicketCost`) through `+0x170` (`NumSimultAnims`) (`ride-operation.md`, "At the door"). `RIDE_EXCITEMENT_BAR` and
 `RIDE_RELIABILITY_BAR` stay counted until they are built.
 
 ### Sell, move and the scrap value
