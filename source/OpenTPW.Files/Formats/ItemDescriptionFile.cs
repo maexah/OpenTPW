@@ -114,6 +114,20 @@ public sealed class ItemDescriptionFile
 	/// <summary>How exciting this is - <c>UsageInfo.ExcitementLevel</c>. Belly Bounce 40, Jungle Spray 35.</summary>
 	public int ExcitementLevel => _excitementLevel ?? _category?.ExcitementLevel ?? 0;
 
+	/// <summary>
+	/// What a golden ticket costs to ride this - <c>UsageInfo.GoldenTicketCost</c>, descriptor <c>+0xc4</c> by the
+	/// compiled <c>.sam</c> schema. Jurassic Tours 1 and Eruption 3 in the jungle, nought for everything else; the
+	/// ride score multiplies by 1.1 + 0.1 × it (<c>FUN_004fcc30</c>, <c>0x004fd2aa</c>).
+	/// </summary>
+	public int GoldenTicketCost => _goldenTicketCost ?? _category?.GoldenTicketCost ?? 0;
+
+	/// <summary>
+	/// Which kind of bumper vehicle the ride makes - <c>Bumper.BumperType</c>, descriptor <c>+0xa0</c>. Non-zero gives
+	/// the placed thing a track handle (<c>FUN_00529e10</c>, <c>0x00529e4d</c>): the Hot Pot -1, Dino Karts -4 and
+	/// Splish Splash -5 in the jungle.
+	/// </summary>
+	public int BumperType => _bumperType ?? _category?.BumperType ?? 0;
+
 	/// <summary>What this adds to the park's draw - <c>Info.AttractionValue</c>. Belly Bounce overrides it to 25.</summary>
 	public int AttractionValue => _attractionValue ?? _category?.AttractionValue ?? 0;
 
@@ -386,6 +400,8 @@ public sealed class ItemDescriptionFile
 	private int? _isIndoors;
 	private int? _cannotRide;
 	private int? _excitementLevel;
+	private int? _goldenTicketCost;
+	private int? _bumperType;
 	private int? _attractionValue;
 	private int? _newAttractionDecayTime;
 	private int? _destroyParticleEffect;
@@ -583,6 +599,14 @@ public sealed class ItemDescriptionFile
 
 				case "Bumper.WhichTrackType":
 					_trackType = Number( line );
+					break;
+
+				case "Bumper.BumperType":
+					_bumperType = Number( line );
+					break;
+
+				case "UsageInfo.GoldenTicketCost":
+					_goldenTicketCost = Number( line );
 					break;
 
 				case "UsageInfo.NumSimultAnims":

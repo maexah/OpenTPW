@@ -89,7 +89,10 @@ public sealed class ParkItemCatalogue
 		int RipOffOK = 0, int SpecialIngredient = 0, int AppearanceEffect = 0,
 
 		// Whether a viewer walking in first person may not ride it from its entrance - ItemDescriptionFile.CannotRide.
-		bool CannotRide = false );
+		bool CannotRide = false,
+
+		// What the ride score reads beside the excitement - ItemDescriptionFile.GoldenTicketCost and BumperType.
+		int GoldenTicketCost = 0, int BumperType = 0 );
 
 	private readonly Dictionary<int, Item> _items = [];
 
@@ -204,7 +207,7 @@ public sealed class ParkItemCatalogue
 					description.EntryDirection, description.ExitDirection, description.CellKinds,
 					description.DestroyParticleEffect,
 					description.RipOffOK, description.SpecialIngredient, description.AppearanceEffect,
-					description.CannotRide );
+					description.CannotRide, description.GoldenTicketCost, description.BumperType );
 
 			return true;
 		}

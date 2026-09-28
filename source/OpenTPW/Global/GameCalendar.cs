@@ -71,9 +71,10 @@ public static class GameCalendar
 	public const int LongestCatchUp = 3;
 
 	/// <summary>
-	/// Where the clock starts. This is jungle's saved <c>mFunnyTimeStart</c>, read out of its
-	/// Easymode.TPWI clock block, <b>not</b> a proven engine default - nothing traced what the
-	/// constructor seeds it with. It only decides which month a park opens in.
+	/// Where the clock starts, <c>mFunnyTimeStart</c>: 2000-01-01 00:00, what the clock constructor seeds it with
+	/// (<c>FUN_004f7e80</c>, <c>0x004f7ea0</c>, through <c>SystemTimeToFileTime</c>) and what jungle's
+	/// Easymode.TPWI clock block holds. It decides which month a park opens in, and every thing's age is measured
+	/// from it (<see cref="ParkState.CalendarNow"/>).
 	/// </summary>
 	public static readonly DateTime Epoch = new( 2000, 1, 1 );
 

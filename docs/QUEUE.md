@@ -1633,7 +1633,56 @@ artifacts are listed in `docs/history/README.md`.
   guest's type `rand % 8` (`FUN_004faec0`, `0x004fb019`) where `ParkPeople.Admit` leaves 0; correct `ParkRideScore`'s
   remark that a null balance keeps the file's numbers. Confirm: Q165's scene, `why` and a photograph, the Totem chosen
   and ridden by guests of types 0, 1, 4, 5 and 7 while the Belly Bounce stands.
-- [ ] **Q165c. The rest of the score, the original's.** From Q165, the same table. Write `mPreviousRides` on leaving
+- [x] **Q165c. The rest of the score, the original's.** Done 2026-09-28, `alexah/172-the-rest-of-the-score`.
+  `ride-operation.md`, "What a thing is worth to a guest", "Built: the rest of the score"; FileFormats `sam.md`
+  (`GoldenTicketCost`, `BumperType`, the tiers' `InitSpeed`) and `saves.md` (470, the histories checked against played
+  saves), `docs/sam-and-saves-corrections`.
+  - **Built.** `ParkRideScore.Of` takes all twelve steps in order: the same kind as the thing left last nought; the queue
+    term over the walked cells, counted to and including the first guest no longer queueing (`ParkState.QueueCount`,
+    which the room test and the arrival's gates read too); an unsigned mean; new while `(uint)age <= 7` on the park's
+    calendar (`ParkState.CalendarNow`: 2000-01-01 plus `mGameTick` × 3750 s; `AgeInDays`; `ParkRideChooser.AgeOf`);
+    shelter × 5 while the weather's drops fall; `Priced`, the golden-ticket and price factors; the first matching visit
+    and every matching refusal. `ExcitementOf` (`FUN_004e0860`): a sideshow's from its cost, price and chance (the Jungle
+    Spray 30), a ride's level scaled by its speed and duration; the coaster, track-crowd and upgrade-tier branches
+    counted. `Peep` keeps both histories, read from the save, written on leaving any thing (before the charge) and at
+    both refusals, a nought on every sweep whose `mGameTick` divides by 20, cleared by a removal. A bought thing is
+    stamped (`0x004db66a`), the object window's Age reads the park's calendar, the arrival's too-long gate stands, and
+    the catalogue reads `GoldenTicketCost` and `BumperType` and the save `mUpgradeLevel`. Corrected: `ParkRideChooser`'s
+    real clock, `ParkRideScore`'s sideshow formula and unproven keys, `GameCalendar.Epoch` (traced to `0x004f7ea0`),
+    and the remarks in `ParkObjectWindow`, `ParkBuilding`, `park-engine.md` and `PLAYER-GAPS.md`.
+  - **Tests:** `ParkVisitHistoryTests` 13, `ParkRideScoreTests` 5 new and 2 rewritten, `ParkGuestTypeTests` 1 new.
+    Q165b's (48,25) is an 18-18 tie now, re-picked to (55,30); `ParkRideChoiceTests`' doorstep a 23-23 tie, moved to
+    (53,29). 39 put-the-bug-back mutations (`q165c-mutate.py`), each red; one needed a new test, and the review found
+    six that the first tests could not tell apart, each now red (`q165c-mutate2.out`).
+  - **Measured outside the game:** Alexah's played jungle saves, read-only (`q165cprobe`): 1,060 non-zero history
+    entries, every one a thing in the park; ages on the park calendar 50 to 824 days; one tier-1 Belly Bounce at speed
+    75; 107 of 111 consecutive same-kind visits are toilets (Q170).
+  - **Confirmed in the game** (`q165crun.py`, `q165crun2.py`, `q165crun3.py`; silent, jungle, each reading predicted
+    first; `save/` unchanged in all three). **A guest leaving the Belly Bounce chooses something else:** 20 leavers over
+    the three runs, 0 of 379 `peeps` samples naming 13 while it headed their visits and 0 of 51 `why` answers 13, where
+    the same censuses' other guests answered 13 360 times; leavers set off for the Spray and the Drinks Shop or found
+    nothing. Photographed (run 3, `L-photo-1-marked.png`): guest 43, a kind 4 who had left the Belly Bounce, riding
+    the Jungle Spray, ringed; four seconds later `peeps` gave their visits as 14, 13. **A bought ride's five-fold
+    window:** at the purchase every guest of every kind answered the Totem at age 0 (73 of 73 over the three runs);
+    inside the window 31 of 32 guests who set off chose it (runs 2 and 3), kinds 2, 3 and 6 13 of 13; 185 sweeps on,
+    its age read 8 and kinds 2, 3 and 6 answered the Belly Bounce, 27 of 27, none the Totem. Run 1 read that census
+    while the Belly Bounce was mid-cycle and offered to nobody: its kinds 3 and 6 answered the Spray, two kind 2s the
+    Totem. Photographed (run 3,
+    `N-photo-1-marked.png`, `N-photo-2-marked.png`): guest 71, a kind 3, ringed just inside the gates and two cells on,
+    aimed at the Totem 18 sweeps after it was bought. **Rain:** with drops falling every answer was indoors, 41 of 41.
+  - **Not confirmed:** most leavers go home straight off the Belly Bounce, their exit level run out in its queue (the
+    Q109 deviation), so the leaver photographed is one of few; the Totem's queue was not photographed full inside the
+    window; the too-long gate refuses only at a hundred, which no queue in the park reaches (tested only); a removal
+    clearing the histories, the refusals' aging and the purchase stamp were read in censuses and tests, not photographed.
+  - **Reviewed** by five read-only agents (the executable claims in Ghidra, the behaviour, the tests, the text, and a
+    verifier): 40 findings, 35 upheld, 3 amended, 2 refuted, no behaviour wrong that the park reaches. Taken from them:
+    the precision remark (62 at double, 63 at single or extended, and which is live not settled), an undatable stamp
+    not new, the spending census counting like the chooser, the too-long gate's inputs named (Q173), the arrival
+    refusals' thoughts counted, the Q170 and Q171 deviations said at their sites, six tests that could not tell the
+    wiring apart, and stale text in five files.
+  - **Found:** Q170, Q171, Q172, Q173; notes under Q97, Q103, Q105, Q149, Q157 and Q167.
+
+  The item as written: From Q165, the same table. Write `mPreviousRides` on leaving
   any thing and `mPreviousTemporaryRides` at the two refusals, with the nought every 20 sweeps; clear both on a
   removal and read both from a save; score the same kind as the last visit nought, and divide by the second history
   for every match. Stamp a bought or moved thing on the park calendar and multiply by `DecisionVariable2` for 184
@@ -1645,6 +1694,7 @@ artifacts are listed in `docs/history/README.md`.
   bought ride's five-fold window, each by census and photograph.
   From Q165b's review: the sideshow's computed excitement makes the Jungle Spray 30, which turns
   `ParkGuestTypeTests`' (48,25) case into an 18-18 tie for the type 3, decided by the tick's parity; pick the case again.
+
 - [ ] **Q166. `park.md` counts ten shipped instructions that store into a literal on purpose; there are at least 76.**
   Found by Q83b. "Arithmetic, the destination rule and the result register" says 17 shipped instructions have a
   literal operand 0, ten of them the register used on purpose (`MOD` 4, `RAND` 4, `SUB` 2). Among the opcodes
@@ -1661,6 +1711,39 @@ artifacts are listed in `docs/history/README.md`.
   excitement over `RideVomitDivisor` times ( 100 − hunger ) / 20 (`0x004fddab`..). `ParkRideOperation.SettleUp` names
   "three more happiness changes" only. Count it first, decode the arithmetic's types, then build it. Confirm: `peeps`
   happiness and vomit after a Totem ride by a kind 0 and by a kind 3.
+
+- [ ] **Q170. Guests reach a toilet some way other than the ride score. Decode first.** Found by Q165c, in Alexah's
+  played jungle saves (`mGameTick` 19,004 and 19,007; `q165cprobe`): of 772 pairs of consecutive visits in
+  `mPreviousRides`, 111 are the same kind twice and 107 of those are toilets in the later save (109 and 105 in the
+  other), mostly one of three adjacent toilets and then another. The score's same-kind nought (`FUN_004fcc30`, `0x004fcd3f`) forbids that choice, so something else
+  sends a guest in need to a toilet, or a toilet visit is written otherwise; OpenTPW sends guests to toilets through
+  the score alone, so after one toilet a guest can now choose no other. Decode where (the needs turn `FUN_00501650`,
+  the queue turn's toilet arm, `FUN_004fcb10` itself), then build it. Confirm: a guest leaving a toilet still in
+  need, `why` and the next `dest`.
+
+- [ ] **Q171. A bought thing starts at a price of nought.** Found by Q165c. `ParkBuilding` writes no `PricePerUse`
+  and the catalogue reads no `UsageInfo.InitPricePerUse` (the Drinks Shop 30, the Jungle Spray 20), which the
+  constructor copies into the object's `+0x194` (`0x004db378`..`0x004db3ad`). A bought shop or sideshow charges
+  nothing, and a bought Jungle Spray's excitement is 34 where the original's is 30. Read the key, with the category's
+  showing through, and write it on a purchase. Confirm: buy a Jungle Spray, `peeps` a guest paying 20 at it, and `why`.
+
+- [ ] **Q172. A coaster's, a track ride's and an upgraded ride's excitement. Decode first.** Found by Q165c, which
+  counts all three: `RIDE_EXCITEMENT_COASTER_TRACK` (track type 3: `trunc( 50 + f / 2 )` of what `FUN_0043e0b0`
+  answers for `FUN_0055a4e0`'s find, or nought with nothing found), `RIDE_EXCITEMENT_TRACK_CROWD` (a thing with a
+  track handle, a non-zero `Bumper.BumperType`: 60% of the level plus `FUN_00545310`'s crowd `3a + b + 2c`, held 0..40,
+  the sum held 0..100) and `RIDE_EXCITEMENT_UPGRADE_TIER` (the tier's `InitSpeed` and `InitDuration`, where the
+  catalogue reads tier nought: Alexah's played park has a tier-1 Belly Bounce at speed 75). Nothing Lost Kingdom's save
+  places reaches them; a bought Hot Pot, Dino Karts, Splish Splash or coaster does. Confirm: `unimplemented`, and
+  `why` beside a bought Hot Pot.
+
+- [ ] **Q173. The longest queue a guest joins or stays in, for a ride with a queue path.** Found by Q165c's review.
+  `FUN_004dda40` is `trunc( max( capacity × QueueWaitTimeConstant × speed / InitSpeed / duration, 4.0f ) )` at the
+  ride's tier (`ride-operation.md`, "The `InQueue` turn"), every input now named: `+0x1b4` is
+  `Upgrades[l].QueueWaitTimeConstant` by the compiled `.sam` schema (`Rides.sam` 30 at tier nought), which the catalogue
+  does not read. Two gates count it: the arrival's too-long gate (`QUEUE_TOO_LONG_CAPACITY`) and the `InQueue` turn's
+  re-check (`QUEUE_CAPACITY_RECHECK`), both reached by the Belly Bounce. Read the key, compute it with the float stores
+  the disassembly shows (`0x004dda56`..`0x004ddb51`), and build both. Confirm: `unimplemented` without the two, and the
+  Belly Bounce's capacity in a census, predicted first.
 
 - [ ] **Q85. A guest who arrives starts with happiness nought, and stays there. Decode first.** Found by Q50's game
   runs: every one of the 33 guests who arrived (30 by `load 30`) read `happy 0` in `peeps`, none above it in nine minutes,
@@ -1733,6 +1816,7 @@ artifacts are listed in `docs/history/README.md`.
   reads the item's in the price opinion, the win roll (`FUN_004e2670`, `ParkRideOperation`) and the prize;
   Lost Kingdom's save holds the items' own, so nothing differs yet. Read both from the save record, a bought thing's
   from its item, and say it at each site. The window's setters wait on Q31. No game run beyond a census of the two.
+  Q165c added a fourth reader: a sideshow's excitement (`ParkRideScore.ExcitementOf`) takes both from the item too.
 
 - [ ] **Q98. Spot animations are never played. Decode first.** Found by Q50d. `FUN_004fc800(n)` plays animation `n`,
   stamps `mTimeOfLastSpotAnim` (`+0x208`), saves the state in `+0x224` and enters state 8, whose return
@@ -1772,6 +1856,9 @@ artifacts are listed in `docs/history/README.md`.
   unproven field). The computed excitement is blocked on the divisors `park-engine.md` will not guess: say at
   `TurnsAwayFrom` that the catalogue level stands in for it. Confirm: `peeps` for a guest refused at a full queue,
   dest kept.
+  Q165c built three of these: `TurnsAwayFrom` reads the computed excitement, both refusals push the thing onto
+  `mPreviousTemporaryRides`, and the too-long gate stands (100 without the queue-path bit; with it, counted as
+  `QUEUE_TOO_LONG_CAPACITY`). Left: the room refusal keeping `MajorDest`, the events and thoughts, and `+0x1fc`.
 - [ ] **Q104. The chooser routes as it walks the objects.** Found by Q50e's decode. `FUN_004fcb10` routes every
   candidate that beats the best in turn, so a better one that cannot be routed still leaves the walker failed while
   `MajorDest` names the earlier winner, and the first state-10 turn takes the stuck arm (−25) - unless a ground change
@@ -1788,6 +1875,8 @@ artifacts are listed in `docs/history/README.md`.
   `mQueueSizeInCells`, nought on the Drinks Shop and the three toilets (a guard makes it one), where the original's
   `+0x40` is the count `GetBackOfQueue` walks, the call `FUN_004fcc30` makes first (`ride-operation.md`, the
   `GetBackOfQueue` row). Divide by the walked count (`ParkRideChoice.QueueCellsFor`) with it.
+  Q165c built that half, the count to the first guest no longer queueing over the walked cells; the distance, the
+  close-to-queue test and the effects divisor at the back-of-queue cell remain.
 - [ ] **Q106. `APathCellCostsWhatTheBalanceFileSays` fails when its class runs alone.** Found by Q50h, on `main` as well.
   `ParkPathBuildingTests`' `[TestInitialize]` keeps `GameData.Required()` in a field and never mounts it as the global
   `FileSystem`, so run by itself (`--filter FullyQualifiedName~ParkPathBuildingTests`) `levels/Standard.sam` does not
@@ -2113,6 +2202,8 @@ artifacts are listed in `docs/history/README.md`.
   `LongestCatchUp`'s own remark says. Check that the published calendar (`0x007ced58`) adds the counter to
   `mFunnyTimeStart` alone, then drive the calendar from `ParkState.GameTick`, so Q126's cap holds the date too.
   Confirm: the gadget's date on entering Lost Kingdom, predicted from 755 advances; a screenshot.
+  Q165c gave the ride score and the object window's Age the original's calendar (`ParkState.CalendarNow`, from the
+  save's `mGameTick`); the gadget's date and the weather's days still count from nought.
 - [ ] **Q150. Scripts and the thing sweep take a frame's ticks in two loops, where the original takes both per tick.**
   Found by the 2026-09-26 staleness audit. The original's park loop runs the scripts (`0x0054f56b`) and the thing
   sweep (`0x0054f7bb`) inside one loop over the frame's ticks. `ParkRides` and `ParkPeople` each loop over
@@ -2179,8 +2270,8 @@ artifacts are listed in `docs/history/README.md`.
   `CellEdge.Blocked`'s mode-2 entrance arm always answers nothing, whenever the camcorder walks at an entrance, which
   Q140 decodes. `Peep.Tick` leaves out the cell's `RegionFX` term (`FUN_00501650`) on every needs turn.
   `ParkRideOperation` makes no breakdown request and sets no worn flag (`ride-operation.md`, "The first half of the
-  turn"), `Invite` reads no `RunsContinuously` (`+0x33` bit 0), and nothing writes `mPreviousRides` (`+0x1e0`), so
-  `ParkRideScore`'s stale-ride division gets nothing. `ParkRideChoice.CanBeOffered`'s coaster arm (`FUN_00441970`)
+  turn"), `Invite` reads no `RunsContinuously` (`+0x33` bit 0), and nothing wrote `mPreviousRides` (`+0x1e0`) - Q165c
+  built that. `ParkRideChoice.CanBeOffered`'s coaster arm (`FUN_00441970`)
   goes uncounted where `MayOpen` counts `OPEN_GUARD_COASTER_TRACK_RECORD`. Count each where the original tests it, and
   put each build without an item in the queue. Confirm: `unimplemented` over a timed run, each name present, predicted
   first.
@@ -2574,6 +2665,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   `global.sam` edited (starting cash all 9s, one key per park); that changes the data folder, not the save's layout.
   The game crashed during the hallow park and would not load it again, so a hallow file may be damaged. Jungle first:
   load each in OpenTPW, count what reads and what does not, and put every layout fact in the FileFormats docs.
+  Q165c read the jungle `autosave.TPWS` and `New Save.TPWS` through `ParkWorld` (`q165cprobe`, read-only): no problem
+  reported, and the guests' two histories check out (FileFormats `saves.md`, 470).
 - [ ] **Q168. Run the original under Wine or Proton, as a reference to compare against.** Nothing is recorded yet.
   Wine already runs RTPatch here through `flatpak-spawn --host` (`CLAUDE.local.md`). Use a copy of the game and a
   private `WINEPREFIX`; never point it at `~/Games/TPWorld/save/`. Record what works, and what does not, in `docs/`.

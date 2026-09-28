@@ -1,3 +1,4 @@
+using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
 using System.Linq;
@@ -181,7 +182,44 @@ public class ParkRideScoreTests
 
 		Assert.AreEqual( AtAge( 8 ) * score.NewRideMultiplier, AtAge( 7 ),
 			"seven days old is still new, and new is worth five times" );
+		Assert.AreEqual( AtAge( 8 ) * score.NewRideMultiplier, AtAge( 0 ), "and so is one built today" );
 		Assert.AreEqual( AtAge( 8 ), AtAge( 100 ), "past the boundary the age stops mattering" );
+		Assert.AreEqual( AtAge( 8 ), AtAge( -1 ),
+			"a stamp a day or more ahead of the calendar is not new: the comparison is unsigned" );
+	}
+
+	/// <summary>
+	/// The park's calendar starts at 2000-01-01 and runs 3,750 seconds a sweep from the save's <c>mGameTick</c>, so a
+	/// thing stamped on one sweep is seven days old 184 sweeps later and eight at 185 - the whole of its window.
+	/// Lost Kingdom's Belly Bounce, stamped 2000-01-01 15:37:30, is 32 days old as the park loads on sweep 755.
+	/// </summary>
+	[TestMethod]
+	public void AThingIsNewForOneHundredAndEightyFourSweeps()
+	{
+		var park = Park();
+		var state = new ParkState( park );
+
+		Assert.AreEqual( 755, state.GameTick, "the save's mGameTick" );
+		Assert.AreEqual( new DateTime( 2000, 2, 2, 18, 27, 30 ), state.CalendarNow );
+		Assert.AreEqual( 32, state.AgeInDays( Ride() ), "the Belly Bounce as the park loads" );
+
+		var stamp = ParkWorld.BuiltWhen.At( state.CalendarNow );
+
+		for ( var sweep = 0; sweep < 184; ++sweep )
+			state.AdvanceGameTick();
+
+		Assert.AreEqual( 7, ParkState.AgeInDays( state.CalendarNow, stamp ), "184 sweeps on it is seven days old" );
+
+		state.AdvanceGameTick();
+
+		Assert.AreEqual( 8, ParkState.AgeInDays( state.CalendarNow, stamp ), "and at 185 it is eight" );
+		Assert.AreEqual( -1, ParkState.AgeInDays( new DateTime( 2000, 1, 1 ), ParkWorld.BuiltWhen.At(
+			new DateTime( 2000, 1, 2, 0, 0, 1 ) ) ), "a day and a second ahead is minus one" );
+		Assert.AreEqual( 0, ParkState.AgeInDays( new DateTime( 2000, 1, 1 ), ParkWorld.BuiltWhen.At(
+			new DateTime( 2000, 1, 1, 23, 0, 0 ) ) ), "and less than a day ahead is nought" );
+		Assert.AreEqual( ParkRideChooser.NotNew, ParkRideChooser.AgeOf( state.CalendarNow,
+			new ParkWorld.BuiltWhen( 2000, 13, 40, 0, 0, 0, 0, 0 ) ), "a stamp that makes no date is not new to the score" );
+		Assert.AreEqual( ParkRideChooser.NotNew, ParkRideChooser.AgeOf( null, stamp ), "nor is anything with no calendar" );
 	}
 
 	/// <summary>
@@ -218,29 +256,151 @@ public class ParkRideScoreTests
 	}
 
 	/// <summary>
-	/// Anything ridden lately is worth progressively less - a fifth, a quarter, a third, a half - and
-	/// anything not in the history is untouched.
+	/// A thing left lately is worth less - the first of the last four visits naming it divides by five, four,
+	/// three or two, and only the first - and a thing turned away from is worth less again, every refusal naming
+	/// it dividing once more. The same kind as the thing left last is worth nothing at all.
 	/// </summary>
 	[TestMethod]
-	public void SomethingRiddenLatelyIsWorthLess()
+	public void ThingsLeftAndThingsRefusedAreWorthLess()
 	{
 		var score = new ParkRideScore( Balance() );
 		var ride = Ride();
 		var item = ItemFor( ride );
+		var id = ride.ThingId;
 
 		var wants = new ParkRideScore.Wants( 0, 0f, 0f, 0f, 0f );
 		var candidate = new ParkRideScore.Candidate( ride, item, 0, 0, 0, 999, false, 80 );
 
+		int Visited( params int[] visits ) => score.Of( wants with { Visits = visits }, candidate );
+		int Refused( params int[] refusals ) => score.Of( wants with { Refusals = refusals }, candidate );
+
 		var fresh = score.Of( wants, candidate );
 
-		Assert.AreEqual( fresh / 5, score.Of( wants, candidate, [ride.ThingId] ), "just ridden" );
-		Assert.AreEqual( fresh / 4, score.Of( wants, candidate, [0, ride.ThingId] ), "one before that" );
-		Assert.AreEqual( fresh / 3, score.Of( wants, candidate, [0, 0, ride.ThingId] ), "and the one before" );
-		Assert.AreEqual( fresh / 2, score.Of( wants, candidate, [0, 0, 0, ride.ThingId] ), "and the fourth" );
+		Assert.AreEqual( 27, fresh, "distance 100, queue 100 and excitement 100 over the eleven weights" );
+		Assert.AreEqual( fresh / 5, Visited( id ), "left last" );
+		Assert.AreEqual( fresh / 4, Visited( 0, id ), "one before that" );
+		Assert.AreEqual( fresh / 3, Visited( 0, 0, id ), "and the one before" );
+		Assert.AreEqual( fresh / 2, Visited( 0, 0, 0, id ), "and the fourth" );
+		Assert.AreEqual( fresh / 4, Visited( 0, id, id, id ), "only the first visit naming it divides" );
+		Assert.AreEqual( fresh, Visited( 1, 2, 3, 4 ), "and other things do not count" );
 
-		Assert.AreEqual( fresh, score.Of( wants, candidate, [0, 0, 0, 0, ride.ThingId] ),
-			"past the fourth it is forgotten" );
-		Assert.AreEqual( fresh, score.Of( wants, candidate, [1, 2, 3, 4] ), "and other rides do not count" );
+		Assert.AreEqual( fresh / 5 / 4, Refused( id, id ), "every refusal naming it divides" );
+		Assert.AreEqual( fresh / 3 / 2, Refused( 0, 0, id, id ), "by three and two at the back" );
+		Assert.AreEqual( fresh / 4 / 5, score.Of( wants with { Visits = [0, id], Refusals = [id] }, candidate ),
+			"and the two histories each divide" );
+
+		Assert.AreEqual( 0, score.Of( wants with { LastVisitKind = ride.CatalogueId }, candidate ),
+			"the same kind as the thing left last is worth nought" );
+		Assert.AreEqual( fresh, score.Of( wants with { LastVisitKind = 1203 }, candidate ), "and another kind is not" );
+	}
+
+	/// <summary>
+	/// A golden-ticket ride is worth <c>1 + 0.1 (g + 1)</c> times as much, and a ride dearer than 3,000 is worth
+	/// <c>1 + cost / 30,000</c> times; anything else is untouched. Jurassic Tours' ticket is 1, Eruption's 3; the
+	/// Inca Totem costs 3,250, the Aztec Mayhem 2,500 and the Belly Bounce 500.
+	/// </summary>
+	[TestMethod]
+	public void AGoldenTicketRideAndADearOneAreWorthMore()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+		ParkItemCatalogue.Item Named( string stem ) => catalogue.All.Single( item => item.Stem == stem );
+
+		Assert.AreEqual( 1, Named( "tourride" ).GoldenTicketCost );
+		Assert.AreEqual( 3, Named( "volcano" ).GoldenTicketCost );
+		Assert.AreEqual( 0, Named( "totem" ).GoldenTicketCost );
+
+		Assert.AreEqual( 54, ParkRideScore.Priced( 45, Named( "tourride" ) ), "Jurassic Tours, times 1.2" );
+		Assert.AreEqual( 62, ParkRideScore.Priced( 45, Named( "volcano" ) ),
+			"Eruption, times 1.4 at double precision: 62.99999999999999" );
+		Assert.AreEqual( 83, ParkRideScore.Priced( 75, Named( "totem" ) ), "the Inca Totem, times 1.108" );
+		Assert.AreEqual( 75, ParkRideScore.Priced( 75, Named( "tvsim" ) ), "the Aztec Mayhem, at 2,500, is not dear" );
+		Assert.AreEqual( 75, ParkRideScore.Priced( 75, Named( "bouncy" ) ), "nor the Belly Bounce" );
+
+		var score = new ParkRideScore( Balance() );
+		var ride = Ride();
+		var wants = new ParkRideScore.Wants( 0, 0f, 0f, 0f, 0f );
+
+		Assert.AreEqual( 29, score.Of( wants, new ParkRideScore.Candidate( ride, Named( "totem" ), 0, 0, 0, 999, false, 80 ) ),
+			"the mean of 27, times 1.108" );
+		Assert.AreEqual( 32, score.Of( wants, new ParkRideScore.Candidate( ride, Named( "tourride" ), 0, 0, 0, 999, false, 80 ) ),
+			"and times 1.2" );
+		Assert.AreEqual( 0x39aec33e, BitConverter.SingleToInt32Bits( ParkRideScore.ThreeThousandth ), "the float at 0x00700750" );
+		Assert.AreEqual( unchecked((int)0xbdcccccd), BitConverter.SingleToInt32Bits( ParkRideScore.MinusATenth ), "0x00700754" );
+		Assert.AreEqual( unchecked((int)0xbf4ccccd), BitConverter.SingleToInt32Bits( ParkRideScore.MinusFourFifths ), "0x007005b0" );
+
+		Assert.AreEqual( -1, Named( "bumper" ).BumperType, "the Hot Pot has a track handle" );
+		Assert.AreEqual( -4, Named( "gokarts" ).BumperType, "Dino Karts" );
+		Assert.AreEqual( -5, Named( "wateride" ).BumperType, "Splish Splash" );
+		Assert.AreEqual( 0, Named( "bouncy" ).BumperType, "the Belly Bounce has none" );
+	}
+
+	/// <summary>
+	/// A sideshow's excitement is worked out from its cost of goods, its price and its chance of winning - the
+	/// Jungle Spray's 50, 20 and 25 make 30, not the 35 its file declares - and a ride's is its level times its
+	/// speed and duration against its starting ones, each held between 0.75 and 1.25.
+	/// </summary>
+	[TestMethod]
+	public void ASideshowWorksOutItsExcitementAndARideScalesItsOwn()
+	{
+		var spray = Park().Objects.Single( o => o.ThingId == 14 );
+		var sprayItem = ItemFor( spray );
+
+		Assert.AreEqual( 35, sprayItem.ExcitementLevel, "what the file declares" );
+		Assert.AreEqual( 20, spray.PricePerUse, "the saved price" );
+		Assert.AreEqual( 30, ParkRideScore.ExcitementOf( spray, sprayItem ), "20 + trunc( 0.08 × 25 × √30 )" );
+		Assert.AreEqual( 34, ParkRideScore.SideshowExcitement( 50, 0, 25 ), "free, it is 34" );
+		Assert.AreEqual( 20, ParkRideScore.SideshowExcitement( 50, 60, 25 ), "and dearer than its prize, 20" );
+
+		var ride = Ride();
+
+		Assert.AreEqual( 40, ParkRideScore.ExcitementOf( ride, ItemFor( ride ) ), "the Belly Bounce at its settings" );
+		Assert.AreEqual( 50, ParkRideScore.ExcitementOf( ride with { OperatingSpeed = 75 }, ItemFor( ride ) ),
+			"its speed a quarter over its starting 60" );
+		Assert.AreEqual( 30, ParkRideScore.ExcitementOf( ride with { OperatingDuration = 15 }, ItemFor( ride ) ),
+			"its duration half its starting 30, held at 0.75" );
+
+		int Counted( string gap ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == gap ).Times;
+
+		var upgraded = Counted( "RIDE_EXCITEMENT_UPGRADE_TIER" );
+
+		Assert.AreEqual( 40, ParkRideScore.ExcitementOf( ride with { UpgradeLevel = 1, OperatingSpeed = 75 }, ItemFor( ride ) ),
+			"upgraded, its level, counted" );
+		Assert.AreEqual( upgraded + 1, Counted( "RIDE_EXCITEMENT_UPGRADE_TIER" ) );
+
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+		var hotPot = catalogue.All.Single( item => item.Stem == "bumper" );
+		var coaster = catalogue.All.Single( item => item.Stem == "coaster1" );
+		var crowd = Counted( "RIDE_EXCITEMENT_TRACK_CROWD" );
+		var track = Counted( "RIDE_EXCITEMENT_COASTER_TRACK" );
+
+		ParkRideScore.ExcitementOf( ride with { CatalogueId = hotPot.Id }, hotPot );
+		Assert.AreEqual( crowd + 1, Counted( "RIDE_EXCITEMENT_TRACK_CROWD" ), "a track handle's crowd is counted" );
+		Assert.AreEqual( 90, ParkRideScore.ExcitementOf( ride with { CatalogueId = coaster.Id }, coaster ),
+			"a coaster scores its level" );
+		Assert.AreEqual( track + 1, Counted( "RIDE_EXCITEMENT_COASTER_TRACK" ), "and is counted" );
+		Assert.AreEqual( 50, ParkRideScore.RatioExcitement( 40, 75, 60, 30, 30 ), "a quarter faster" );
+		Assert.AreEqual( 62, ParkRideScore.RatioExcitement( 40, 90, 60, 60, 30 ), "held at 1.25 twice" );
+		Assert.AreEqual( 30, ParkRideScore.RatioExcitement( 40, 30, 60, 30, 30 ), "held at 0.75" );
+		Assert.AreEqual( 30, ParkRideScore.RatioExcitement( 40, 0, 0, 30, 30 ), "and a ratio that is no number, 0.75" );
+	}
+
+	/// <summary>
+	/// The queue term divides the queue by four to a cell of the WALKED queue, nought read as one - not by the
+	/// saved <c>mQueueSizeInCells</c>. Four in a queue of two cells is 50, of none 0.
+	/// </summary>
+	[TestMethod]
+	public void TheQueueTermIsOverTheWalkedCells()
+	{
+		var score = new ParkRideScore( Balance() );
+		var ride = Ride();
+		var item = ItemFor( ride );
+		var wants = new ParkRideScore.Wants( 0, 0f, 0f, 0f, 0f );
+
+		int Over( int cells ) => score.Of( wants, new ParkRideScore.Candidate( ride, item, 0, 4, 0, 999, false, 80, cells ) );
+
+		Assert.AreNotEqual( 2, ride.QueueSizeInCells, "the saved count is not the one used" );
+		Assert.AreEqual( 22, Over( 2 ), "( 100 + 50 + 100 ) / 11" );
+		Assert.AreEqual( 18, Over( 0 ), "( 100 + 0 + 100 ) / 11" );
 	}
 
 	/// <summary>

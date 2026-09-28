@@ -35,14 +35,14 @@ public class ParkGuestTypeTests
 	private static ParkBalance Balance() => new( "jungle", easyMode: true );
 
 	/// <summary>
-	/// <b>Two kinds of guest on one cell choose different rides, through the park's own wiring.</b> At (48,25) the
-	/// Belly Bounce's entry is 96 for distance and the Jungle Spray's 91. A type 3 prefers 35: the Spray's 35 scores
-	/// 100 for excitement and the Belly Bounce's 40 scores 90, so 19 against 18. A type 0 prefers 80: 10 against 20,
-	/// so 10 against 11. Both win outright, so neither turns on the tick's tie-break.
+	/// <b>Two kinds of guest on one cell choose different rides, through the park's own wiring.</b> At (55,30) the
+	/// Jungle Spray's entry is 98 for distance and the Belly Bounce's 88. A type 3 prefers 35: the Spray's computed 30
+	/// and the Belly Bounce's 40 both score 90 for excitement, so 18 against 17. A type 0 prefers 80: nought against
+	/// 20, so 9, which is not enough, against 10. Both win outright, so neither turns on the tick's tie-break.
 	///
 	/// <para>
 	/// With no balance behind the chooser every kind prefers 50 and scores every candidate alike, so no two kinds
-	/// on one cell can choose differently: the type 3 takes the Belly Bounce, 17 against 16.
+	/// on one cell can choose differently.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -51,8 +51,8 @@ public class ParkGuestTypeTests
 		var world = World();
 		var people = new ParkPeople( world, Balance(), null, new ParkState( world ), new ParkItemCatalogue( "jungle", data ) );
 
-		var likesItQuiet = people.Admit( 48, 25, personType: 3 );
-		var likesItWild = people.Admit( 48, 25, personType: 0 );
+		var likesItQuiet = people.Admit( 55, 30, personType: 3 );
+		var likesItWild = people.Admit( 55, 30, personType: 0 );
 
 		var why = people.WhyCensus().ToArray();
 
@@ -66,7 +66,7 @@ public class ParkGuestTypeTests
 		=> census.Single( line => line.StartsWith( $"thing {thingId,3} " ) );
 
 	/// <summary>
-	/// <b>And the choice a guest acts on is the same</b>: deciding at (48,25), a type 3 sets off for the Jungle Spray
+	/// <b>And the choice a guest acts on is the same</b>: deciding at (55,30), a type 3 sets off for the Jungle Spray
 	/// and a type 0 for the Belly Bounce, the thing each is sent to written in <see cref="Peep.MajorDest"/>. The turn
 	/// offers a ride on one roll in three (<c>FUN_004fec90</c>), so each is made afresh and stepped until it is offered.
 	/// </summary>
@@ -84,7 +84,7 @@ public class ParkGuestTypeTests
 		{
 			for ( var turn = 0; turn < 60; ++turn )
 			{
-				var peep = Standing( 30, personType, PeepState.Deciding, 48, 25, thing: 0 );
+				var peep = Standing( 30, personType, PeepState.Deciding, 55, 30, thing: 0 );
 
 				behaviour.Step( peep, new PeepWalk( peep.Navigator, blocked ), playing: null, 1000 );
 
@@ -125,9 +125,9 @@ public class ParkGuestTypeTests
 
 	/// <summary>
 	/// <b>A guest turns away from a ride too far from what their kind prefers</b> (<c>FUN_004fd4e0</c>, the byte at
-	/// <c>0x004fd50a</c>). OpenTPW scores the Jungle Spray 35: a type 0 prefers 80, 45 away, past the 44 allowed, and
-	/// gives up on it at its back cell; a type 2 prefers 50, 15 away, and joins. With no balance both prefer 50 and both
-	/// join. The original computes the Spray's 30, which turns the type 0 away as well.
+	/// <c>0x004fd50a</c>), and remembers it (<c>FUN_004fdc60</c>, <c>0x004ffce6</c>). The Jungle Spray's computed
+	/// excitement is 30: a type 0 prefers 80, 50 away, past the 44 allowed, gives up on it at its back cell and puts it
+	/// in front of their refusals; a type 2 prefers 50, 20 away, and joins, remembering nothing.
 	/// </summary>
 	[TestMethod]
 	public void AGuestTurnsAwayFromARideTooFarFromWhatTheirKindPrefers()
@@ -147,9 +147,37 @@ public class ParkGuestTypeTests
 		Assert.AreEqual( PeepState.Deciding, wild.State, "the type 0 thinks again" );
 		Assert.AreEqual( 0, wild.MajorDest, "and names nothing" );
 		Assert.AreEqual( -1, state.PositionInQueue( JungleSpray, wild.ThingId ), "and is not in the queue" );
+		CollectionAssert.AreEqual( new[] { JungleSpray, 0, 0, 0 }, wild.PreviousTemporaryRides.ToArray(),
+			"and remembers turning away from it" );
+		CollectionAssert.AreEqual( new[] { 0, 0, 0, 0 }, middling.PreviousTemporaryRides.ToArray(),
+			"where the type 2 has nothing to remember" );
 
 		Assert.AreEqual( PeepState.SteppingUpQueue, middling.State, "the type 2 walks to their place" );
 		Assert.AreEqual( 0, state.PositionInQueue( JungleSpray, middling.ThingId ), "at the head of the queue" );
+	}
+
+	/// <summary>
+	/// <b>The turn-away reads the thing's computed excitement</b>: priced at its prize of 50, the Jungle Spray's
+	/// excitement is 20, and a type 1, preferring 65, is 45 away and turns away from it - where its file's 35 would
+	/// have let them join.
+	/// </summary>
+	[TestMethod]
+	public void TheTurnAwayReadsTheComputedExcitement()
+	{
+		var world = World();
+		var state = new ParkState( world );
+		var behaviour = new PeepBehaviour( world, new Random( 1 ), null, () => ParkRides.GateIsOpen, state,
+			new ParkItemCatalogue( "jungle", data ), balance: Balance() );
+		var blocked = CellEdge.For( world, ParkPeople.WalkingMode ).Blocked;
+
+		state.ReplaceObject( state.Objects.Single( o => o.ThingId == JungleSpray ) with { PricePerUse = 50 } );
+
+		var guest = Standing( 30, personType: 1, PeepState.GoingToRide, 52, 29 );
+
+		behaviour.Step( guest, new PeepWalk( guest.Navigator, blocked ), playing: null, 40 );
+
+		Assert.AreEqual( PeepState.Deciding, guest.State, "the type 1 thinks again" );
+		Assert.AreEqual( JungleSpray, guest.PreviousTemporaryRides[0], "remembering the Spray" );
 	}
 
 	/// <summary>

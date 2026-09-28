@@ -24,25 +24,10 @@ namespace OpenTPW;
 /// real outcome rather than a failure, and is what a guest already does here when no arm fires.
 /// </para>
 /// <para>
-/// <b>Two inputs are supplied rather than computed, and both are named where they enter.</b> The
-/// excitement of a candidate is <see cref="ParkRideScore"/>'s own documented seam. The other is how old a
-/// thing is, and <b>the shipped park's own dates are why it is not worked out here</b>.
-/// <para>
-/// The original ages a thing by <c>(now - mBuiltWhen) / 864,000,000,000</c> - FILETIME units, one day
-/// apiece - against <c>DecisionVariable1</c>'s seven. The <c>now</c> in that sum is the <b>real system
-/// clock</b>, so a park authored in 2000 and played today holds nothing new at all; only something built
-/// during play could pass. Treating everything as no longer new is therefore the faithful answer for this
-/// park rather than a convenience.
-/// </para>
-/// <para>
-/// <b>And working it out from this tree's clock would be worse than approximate.</b>
-/// <see cref="GameCalendar"/> is rebased to its epoch when a level loads, and that epoch is 2000-01-01 -
-/// while eleven of Lost Kingdom's objects are stamped 2000-01-01 <b>15:37:30</b> and the bus 2000-01-27.
-/// Every one of them is dated in the <i>future</i> of the clock they would be measured against, so the
-/// subtraction goes negative, negative passes "newer than seven days" for ever, and every candidate in
-/// the park quietly scores five times what it should. That is a bug that would look exactly like working
-/// code.
-/// </para>
+/// <b>What it hands the score is the guest's and the park's, gathered here</b>: the kind of the thing the guest
+/// left last, looked up in the running park; each candidate's age on the park's calendar
+/// (<see cref="ParkState.AgeInDays"/>); its walked queue cells; and its excitement
+/// (<see cref="ParkRideScore.ExcitementOf"/>).
 /// </para>
 /// </summary>
 public sealed class ParkRideChooser
@@ -129,23 +114,23 @@ public sealed class ParkRideChooser
 	/// How long each object's queue is. <b>Null walks the save's queue</b> - from the object's
 	/// <c>mFirstInQ</c> along each guest's own <c>mQNext</c> - which comes to nought in the shipped park,
 	/// because nobody has ever been admitted to it. A running park hands in
-	/// <see cref="ParkState.QueueLength"/>.
+	/// <see cref="ParkState.QueueCount"/>, <c>FUN_004ddf50( 0 )</c>.
 	/// </param>
-	/// <param name="ageInDays">
-	/// How many days ago each thing was built, or null to treat everything as no longer new - see the
-	/// class remarks for why this is asked for rather than worked out.
+	/// <param name="now">
+	/// Now on the park's calendar, <see cref="ParkState.CalendarNow"/>, which each thing's age is measured against.
+	/// Null treats everything as no longer new.
 	/// </param>
+	/// <param name="raining">Whether drops are falling, which multiplies what is indoors.</param>
 	public ParkWorld.CatalogueObject? ChooseFor( ParkRideScore.Wants wants, int fromX, int fromY, int gameTick,
-		Func<ParkWorld.CatalogueObject, int>? queueLength = null,
-		Func<ParkWorld.CatalogueObject, int>? ageInDays = null,
-		bool raining = false,
-		IReadOnlyList<int>? recentRides = null, IReadOnlyList<int>? alsoRecent = null )
+		Func<ParkWorld.CatalogueObject, int>? queueLength = null, DateTime? now = null, bool raining = false )
 	{
 		if ( _park == null )
 			return null;
 
 		ParkWorld.CatalogueObject? best = null;
 		var bestScore = WorthGoingTo;
+
+		wants = wants with { LastVisitKind = KindOf( wants.Visits is { Count: > 0 } visits ? visits[0] : 0 ) };
 
 		foreach ( var candidate in Candidates() )
 		{
@@ -155,8 +140,7 @@ public sealed class ParkRideChooser
 			if ( !ParkRideChoice.CanBeOffered( candidate, queue, item?.TrackType ?? 0, _park ) )
 				continue;
 
-			var score = ScoreOf( wants, candidate, item, queue, fromX, fromY,
-				ageInDays, raining, recentRides, alsoRecent );
+			var score = ScoreOf( wants, candidate, item, queue, fromX, fromY, now, raining );
 
 			if ( !Beats( score, bestScore, best, gameTick ) )
 				continue;
@@ -186,6 +170,24 @@ public sealed class ParkRideChooser
 		return best != null && score == bestScore && (gameTick & 1) != 0;
 	}
 
+	/// <summary>
+	/// The catalogue id of the thing this handle names in the running park, or nought for none - the thing table
+	/// lookup <c>FUN_004fcc30</c> makes of <c>mPreviousRides[0]</c> (<c>0x004fcd79</c>).
+	/// </summary>
+	private int KindOf( int thingId )
+	{
+		if ( thingId == 0 )
+			return 0;
+
+		foreach ( var thing in _state?.Objects ?? _park!.Objects )
+		{
+			if ( thing.ThingId == thingId )
+				return thing.CatalogueId;
+		}
+
+		return 0;
+	}
+
 	/// <summary>What the catalogue says this object is, or null where nothing can say.</summary>
 	private ParkItemCatalogue.Item? ItemFor( ParkWorld.CatalogueObject placed )
 		=> _catalogue != null && _catalogue.TryGet( placed.CatalogueId, out var item ) ? item : null;
@@ -200,9 +202,7 @@ public sealed class ParkRideChooser
 	/// (<c>PeepBehaviour.ChooseSomewhereToGo</c>); <c>docs/QUEUE.md</c> Q105 builds it.
 	/// </remarks>
 	private int ScoreOf( ParkRideScore.Wants wants, ParkWorld.CatalogueObject candidate,
-		ParkItemCatalogue.Item? item, int queue, int fromX, int fromY,
-		Func<ParkWorld.CatalogueObject, int>? ageInDays, bool raining,
-		IReadOnlyList<int>? recentRides, IReadOnlyList<int>? alsoRecent )
+		ParkItemCatalogue.Item? item, int queue, int fromX, int fromY, DateTime? now, bool raining )
 	{
 		var acrossBy = candidate.EntryCellX - fromX;
 		var downBy = candidate.EntryCellY - fromY;
@@ -215,22 +215,31 @@ public sealed class ParkRideChooser
 		if ( ParkState.OnMap( candidate.EntryCellX, candidate.EntryCellY ) )
 			effects = _park!.CellAt( candidate.EntryCellX, candidate.EntryCellY ).NearbyEffects;
 
-		// Nothing to hand can date a thing against the park's clock, so the default is "no longer new"
-		// rather than a subtraction between two clocks that have nothing to do with each other.
-		var age = ageInDays?.Invoke( candidate ) ?? NotNew;
+		var age = AgeOf( now, candidate.Built );
 
 		var described = item ?? Undescribed;
+		var excitement = item is { } known ? ParkRideScore.ExcitementOf( candidate, known ) : 0;
+
+		// GetBackOfQueue's walked count, the object's +0x40 (0x004fce40).
+		var cells = ParkRideChoice.QueueCellsFor( _park, candidate ).Cells;
 
 		return Score.Of( wants,
 			new ParkRideScore.Candidate( candidate, described, distanceSquared, queue, effects,
-				age, raining, described.ExcitementLevel ),
-			recentRides, alsoRecent );
+				age, raining, excitement, cells ) );
 	}
 
 	/// <summary>
-	/// The age a thing is treated as when nothing can say - past
-	/// <see cref="ParkRideScore.NewForDays"/> by enough that no balance file could move the boundary
-	/// over it.
+	/// A thing's age for the score: <see cref="ParkState.AgeInDays"/> on the calendar handed in, or
+	/// <see cref="NotNew"/> with no calendar or no stamp that makes a date. No save or purchase the game makes holds
+	/// such a stamp; the original's loader keeps whatever <c>+0x18</c> held before when a stamp will not convert
+	/// (<c>FUN_005fc5c0</c>), which is not traced, so not new is this project's choice.
+	/// </summary>
+	public static int AgeOf( DateTime? now, ParkWorld.BuiltWhen built )
+		=> now is { } today && built.ToDateTime() is not null ? ParkState.AgeInDays( today, built ) : NotNew;
+
+	/// <summary>
+	/// The age a thing is treated as when nothing can date it - past <see cref="ParkRideScore.NewForDays"/> by
+	/// enough that no balance file could move the boundary over it.
 	/// </summary>
 	public const int NotNew = 10000;
 

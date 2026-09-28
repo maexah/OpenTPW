@@ -152,7 +152,13 @@ public static class ParkBuilding
 			ExitPos: (ushort)exitPos,
 			OperatingSpeed: item.InitSpeed,
 			OperatingCapacity: item.InitCapacity,
-			OperatingDuration: item.InitDuration );
+			OperatingDuration: item.InitDuration,
+
+			// Stamped now on the park's calendar, as the constructor does on a purchase and on a move's put-down
+			// (FUN_004db090, 0x004db66a): it is what makes a bought thing new to the ride score. The price is not
+			// written: the constructor copies UsageInfo.InitPricePerUse, which the catalogue does not read, so a
+			// bought thing starts at nought (Q171).
+			Built: ParkWorld.BuiltWhen.At( state.CalendarNow ) );
 
 		if ( objects?.PlaceNow( placed, catalogue ) != true )
 			return new( $"buy: '{item.Name}' would not load, so nothing was built and nothing was charged" );
@@ -236,9 +242,10 @@ public static class ParkBuilding
 	/// "Scrap value".
 	/// </para>
 	/// <para>
-	/// <b>The depreciation itself is NOT built</b>, and is counted rather than guessed: nothing here
-	/// keeps a thing's age in the units that table is indexed by. So anything sold refunds in full,
-	/// which is right the moment it is built and increasingly wrong afterwards.
+	/// <b>The depreciation itself is NOT built</b>, and is counted rather than guessed: the table's age buckets
+	/// (<c>FUN_004e2290</c>: years, then months, of <see cref="ParkState.CalendarNow"/> less the thing's stamp) are
+	/// not built. So anything sold refunds in full, which is right the moment it is built and increasingly wrong
+	/// afterwards.
 	/// </para>
 	/// </summary>
 	public static string Sell( int thingId )

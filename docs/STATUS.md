@@ -34,6 +34,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
   original's coloured squares where a click will lay it; a click onto a path lays and joins it. Guests queue and ride.
 - Spending: guests choose, queue for and buy from the Drinks Shop and the Jungle Spray; short of the price, they walk.
   **Each arrival is one of eight kinds, each choosing by its own preferred excitement**: a bought Totem is ridden.
+  **The choice is the original's whole score**: the kind a guest has just left is worth nothing to them, a thing bought
+  is new for 184 sweeps, dear and golden-ticket rides count more, shelter more in rain; the Spray works out its 30.
 - People: guests and staff read from the save, drawn, walking, paying, queueing, boarding, interpolated between the
   248 ms steps. **Queuers walk to their own places, in a line**; one needing the toilet, or lost to the walk, is out.
   **A guest on a cell with no links, such as a sold thing's cleared ground, wanders to the nearest path.** **Guests
@@ -53,7 +55,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
   Alexah; staff keep to the areas the save gives them. A walking member of staff is not entered in the cells they
   cross; only hiring and putting down place one.
 - Q102-Q105 and five queue-turn arms are unbuilt, the unhappy one held for Q85. No spot animation (Q98). A guard or
-  researcher on a cell with no links does not look for path (Q112). No thing is new, priced or staled to a guest (Q165c).
+  researcher on a cell with no links does not look for path (Q112). After one toilet a guest may choose no other,
+  where the original's go on to the next (Q170); a bought thing charges nothing (Q171).
 - The park's door moves neither the gate (Q89) nor the advisor (Q90), nor a shut ride's model (Q91); the ride window's
   door shows a shut ride but is not a button (Q92), and a bought queued thing starts open (Q93).
 - Nothing shows what the hand holds, a thing (`CARRY_PREVIEW_MARKERS`) or a candidate (`STAFF_CARRY_PREVIEW`), and
@@ -65,7 +68,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
 - With no work the mechanic, handyman and entertainer stand where the original's walk about (Q133); staff make no
   sound (Q135). Guests and rides read `GameClock.Ticks / 8`, not `mGameTick` (Q132); a load brings one guest (Q26); the bus waits (Q131).
-- Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), riding a ride walked into in first person.
+- Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), riding a ride walked into in first person,
+  and a coaster's, a track ride's and an upgraded ride's excitement (Q172).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
   walk (Q121), and a park screen stays open over it (Q122). It walks onto entrances the original shuts (Q140).
@@ -73,14 +77,9 @@ from the repository, which cannot lag: `git log --oneline -1`.
 ## Next
 
 `docs/QUEUE.md`, from the top. **Q1-Q12, Q34, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50-Q50h, Q53, Q53b,
-Q56, Q57, Q59, Q67, Q68, Q68b, Q69-Q71, Q82, Q82b, Q83, Q83b, Q165, Q165b, Q46, Q49, Q84, Q88, Q101 are ticked.** Next:
-**Q165c**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39
-Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c
-Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h, Q50h Q106, Q53 Q53b and Q107-Q111, Q53b Q112, Q56
-Q113-Q117, Q57 Q118-Q120, Q59 Q121-Q123, Q67 Q124-Q125, Q68 Q68b and Q126-Q130, Q68b Q131-Q132, Q69 Q139-Q141, Q70
-Q142-Q143, Q82 Q82b and Q133-Q138, Q82b Q136 (f), Q83 Q83b and Q165, Q83b Q166, Q165 Q165b-Q165c, Q165b Q169, the 09-24 audit
-Q68-Q82 (Q70-Q75 from the 09-12 review), the 09-26 audit Q144-Q161, the lobby plan G. `docs/PLAYER-GAPS.md` holds gaps
-**4, 5 and 7**. The untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
+Q56, Q57, Q59, Q67, Q68, Q68b, Q69-Q71, Q82, Q82b, Q83, Q83b, Q165, Q165b, Q165c, Q46, Q49, Q84, Q88, Q101 are
+ticked.** Next: **Q166**. Which item or audit filed each open one is its entry's "Found by" (Q165c filed Q170-Q173).
+`docs/PLAYER-GAPS.md` holds gaps **4, 5 and 7**. The untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
 
 ## Not verified on screen
 
@@ -98,6 +97,7 @@ Q68-Q82 (Q70-Q75 from the 09-12 review), the 09-26 audit Q144-Q161, the lobby pl
   back of queue, its three failed walks, the refused door's walk, a dodgy direction and a place past the cells: tested.
   Q50h's corner past a node, which a measure between runs can reopen, and its other arms: tested only. Q53b's five
   tries, a lone path cell, a failed probe route and the wrap: tested only; the probes from a sold ride find row 21.
+- Q165c's histories cleared by a sale, refusals aging, the too-long gate, histories read from a save: tested only.
 - A lock taken on the last unit running its section whole: tested only. Nothing the stock park runs arrives there; the
   one route is the Hot Pot with its capacity cut mid-ride, and it rests on `BUMP` being unbuilt (Q45).
 
@@ -108,12 +108,12 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1221**, 0 fail, 0 skip with the game | 2026-09-28, after Q165b |
-| Tests without the game | **504** ran, **717** skipped, of 1221 | 2026-09-28, after Q165b |
-| Build warnings | 123 | 2026-09-28, after Q165b |
+| Tests | **1239**, 0 fail, 0 skip with the game | 2026-09-28, after Q165c |
+| Tests without the game | **504** ran, **735** skipped, of 1239 | 2026-09-28, after Q165c |
+| Build warnings | 123 | 2026-09-28, after Q165c |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-28 (Q165b).** `alexah/171-guests-prefer-their-own-excitement`. **Earlier:** each QUEUE.md entry names its
-branch: `170` (Q165) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`. Older: git log.
+**2026-09-28 (Q165c).** `alexah/172-the-rest-of-the-score`. **Earlier:** each QUEUE.md entry names its branch: `171`
+(Q165b) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`. Older: git log.

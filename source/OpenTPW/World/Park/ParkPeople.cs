@@ -70,6 +70,13 @@ public sealed class ParkPeople : Entity
 	/// </summary>
 	private readonly PeepBehaviour _behaviour;
 
+	/// <summary>Whether drops are falling, as the guests' choice asks it - see <see cref="PeepBehaviour.Raining"/>.</summary>
+	internal Func<bool> Raining
+	{
+		get => _behaviour.Raining;
+		set => _behaviour.Raining = value;
+	}
+
 	/// <summary>
 	/// The park's five members of staff, which are a different simulation from its guests - see
 	/// <see cref="Staff"/> for why they are a separate type rather than a guest with a job.
@@ -224,7 +231,11 @@ public sealed class ParkPeople : Entity
 				ParkRideOperation.LeaveQueue( State, _scriptFor?.Invoke( ride.ThingId ), ride.ThingId, personId ),
 			StillQueueing,
 			// And the balance, for what each type of guest likes when they choose and when they arrive.
-			balance );
+			balance )
+		{
+			// The park's own weather, asked at each choice: shelter is worth more while drops fall.
+			Raining = static () => ParkWeather.Current is { Drops: > 0 }
+		};
 
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
 		// none of what a guest needs - the fee, the gate - means anything to them.
@@ -1349,6 +1360,10 @@ public sealed class ParkPeople : Entity
 
 				peep.Tick( thingTick );
 
+				// The guest tick handler's last call, after its (id & 3) needs block, so every sweep, on the park's
+				// own clock (FUN_004fdc90, 0x005019da).
+				peep.AgeRefusals( State.GameTick );
+
 				var playing = _sprites.GetValueOrDefault( peep.ThingId );
 
 				// Every thing tick, and not one in four: the share gates the needs alone, and the
@@ -2044,7 +2059,7 @@ public sealed class ParkPeople : Entity
 			ParkItemCatalogue.Item item = default;
 			var described = catalogue != null && catalogue.TryGet( thing.CatalogueId, out item );
 
-			var queue = State.QueueLength( thing.ThingId );
+			var queue = State.QueueCount( thing.ThingId, StillQueueing );
 			var (back, cells) = ParkRideChoice.QueueCellsFor( world, thing );
 			var offerable = ParkRideChoice.CanBeOffered( thing, queue, TrackTypeOf( thing ), world );
 
@@ -2172,6 +2187,8 @@ public sealed class ParkPeople : Entity
 				+ $"(saved {peep.SavedState}) cash {peep.Cash,4} exit {peep.ExitLevel,4} "
 				+ $"happy {peep.Happiness,3:0} thirst {peep.Thirst,3:0} hunger {peep.Hunger,3:0} "
 				+ $"toilet {peep.Toilet,3:0} vomit {peep.Vomit,3:0} litter {peep.Litter,3:0} "
+				// The two histories the ride score divides down by, newest first.
+				+ $"visits [{string.Join( ",", peep.PreviousRides )}] refused [{string.Join( ",", peep.PreviousTemporaryRides )}] "
 				+ $"speed {peep.PurposeSpeed} "
 				// Where they ARE, without which a person whose needs change and whose position does not
 				// reads the same as one who moves.

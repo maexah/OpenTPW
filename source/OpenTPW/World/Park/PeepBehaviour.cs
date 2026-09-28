@@ -1038,9 +1038,7 @@ public sealed class PeepBehaviour
 	/// <b>The ride arm.</b>
 	/// <see cref="ChooseSomewhereToGo"/> asks <see cref="ParkRideChooser"/>, which walks the world's object
 	/// list, filters it with <see cref="ParkRideChoice"/> and scores the survivors with
-	/// <see cref="ParkRideScore"/> - the seven-term weighted mean of distance, queue, excitement, thirst,
-	/// hunger, relief and illness, weighted by the seven <c>PeepInfo.DecisionVar…Weight</c> constants and
-	/// multiplied for newness and for shelter in the rain. A guest who finds nothing worth more than nine
+	/// <see cref="ParkRideScore"/>, whose summary lists its steps. A guest who finds nothing worth more than nine
 	/// does nothing more here; the original also pushes event 1, plays spot animation 4 and docks
 	/// <c>SmallHappinessChange</c> (Q107).
 	/// </para>
@@ -1127,9 +1125,12 @@ public sealed class PeepBehaviour
 	/// </para>
 	/// <para>
 	/// <b>The gates.</b> A guest who fails one goes back to deciding with their choice let go of. The free-space
-	/// gate is <c>FUN_004dda20</c>, <c>length &lt; mQueueSizeInCells * 4</c>, and the excitement gate is
-	/// <see cref="TurnsAwayFrom"/>. The original's third, <c>FUN_004ddb60</c>, compares the length against a
-	/// capacity from <c>FUN_004dda40</c> and is not built.
+	/// gate is <c>FUN_004dda20</c>, <c>length &lt; cells * 4</c> over the walked cells
+	/// (<see cref="ParkRideChoice.HasQueueRoom"/>), the excitement gate is <see cref="TurnsAwayFrom"/> and the third is
+	/// <see cref="QueueTooLong"/>, each with the length counted as the original counts it (<see cref="QueueCount"/>).
+	/// A guest refused by either of the last two remembers the thing (<see cref="Peep.RememberRefusal"/>); their
+	/// thoughts are counted, and the room refusal keeping <see cref="Peep.MajorDest"/>, the events and <c>+0x1fc</c>
+	/// are Q103's.
 	/// </para>
 	/// <para>
 	/// <b>The walk</b> is <see cref="FindQueueDestination"/> (<c>0x004ffdad</c>). A guest who cannot get to their
@@ -1162,9 +1163,33 @@ public sealed class PeepBehaviour
 		}
 
 		// Asked of the park as PLAYED, so a queue that filled up while this guest walked to it turns them away.
-		if ( !ParkRideChoice.HasQueueRoom( State.QueueLength( chosen.ThingId ), queueCells )
-			|| TurnsAwayFrom( peep, chosen ) )
+		var queue = QueueCount( chosen );
+
+		if ( !ParkRideChoice.HasQueueRoom( queue, queueCells ) )
 		{
+			GiveUpOnIt( peep, tick );
+
+			return;
+		}
+
+		// The two refusals push the thing onto the guest's second history (FUN_004fdc60, 0x004ffce6 and
+		// 0x004ffd74), which divides its score down until aged out.
+		if ( TurnsAwayFrom( peep, chosen ) )
+		{
+			Unimplemented.Report( "ARRIVAL_EXCITEMENT_THOUGHT" );
+
+			peep.RememberRefusal( chosen.ThingId );
+			GiveUpOnIt( peep, tick );
+
+			return;
+		}
+
+		if ( QueueTooLong( chosen, queue ) )
+		{
+			Log.Info( $"Person {peep.ThingId}: queue is too long! ({queue} for thing {chosen.ThingId})" );
+			Unimplemented.Report( "ARRIVAL_TOO_LONG_THOUGHT_0x10" );
+
+			peep.RememberRefusal( chosen.ThingId );
 			GiveUpOnIt( peep, tick );
 
 			return;
@@ -1317,8 +1342,8 @@ public sealed class PeepBehaviour
 	/// save gives and nothing here lowers. What lowers it is not decoded (Q100), so the gate is counted.</item>
 	/// <item><b>The lost place.</b> The queue walk cannot reach them - they are unlinked, or somebody in front has
 	/// stopped queueing: put out. The original's log says it closes and reopens the ride; nothing does.</item>
-	/// <item><b>In place</b>: too far back for the capacity (<c>FUN_004dda40</c>, counted for a queue path, whose
-	/// descriptor pairing is not established), or a car track that is not valid, is put out; a coaster's track
+	/// <item><b>In place</b>: too far back for the capacity (<c>FUN_004dda40</c>, counted for a queue path, Q173), or a
+	/// car track that is not valid, is put out; a coaster's track
 	/// record is counted and let through, as the choice lets it through.</item>
 	/// <item><b>Out of place</b>: more than <see cref="QueueDriftAllowed"/> out, or no delay left, re-takes the place
 	/// - unless the ride is broken down (<c>FUN_004e0370</c>, state 1), when nothing is re-taken. Re-taking walks them
@@ -1538,17 +1563,22 @@ public sealed class PeepBehaviour
 	/// from, which is where their record has been all ride. The rider's arm also plays a sound, which the
 	/// caller plays, since only it knows where the rider is drawn.
 	/// <para>
-	/// <b>Three things the original does here have nothing to act on.</b> Each arm writes an entry into the
-	/// guest's event ring (0xd for a rider, 6 for a queuer), whose only reader is a debug dump. Every guest,
-	/// chosen or not, also clears a saved second destination (<c>+0x1de</c>) and any <c>mPreviousRides</c>
-	/// entry naming the thing. This project keeps none of the three.
+	/// <b>Every guest, chosen or not, forgets the thing's visits</b> (<see cref="Peep.ForgetThing"/>,
+	/// <c>0x004fb4ba</c>). Two things the original does here have nothing to act on: each arm writes an entry into
+	/// the guest's event ring (0xd for a rider, 6 for a queuer), whose only reader is a debug dump, and every
+	/// guest clears a saved second destination (<c>+0x1de</c>) naming the thing. This project keeps neither.
 	/// </para>
 	/// </remarks>
 	internal PutOff ThingRemoved( Peep peep, int thingId, int tick )
 	{
 		ArgumentNullException.ThrowIfNull( peep );
 
-		if ( thingId == 0 || peep.MajorDest != thingId )
+		if ( thingId == 0 )
+			return PutOff.No;
+
+		peep.ForgetThing( thingId );
+
+		if ( peep.MajorDest != thingId )
 			return PutOff.No;
 
 		var how = PutOff.Heading;
@@ -1682,18 +1712,62 @@ public sealed class PeepBehaviour
 	/// <remarks>
 	/// <b>An item declaring no excitement is never refused</b>, which is the original's own gate rather
 	/// than a guard against missing data: <c>FUN_004e0860(1)</c> decides whether the comparison happens at
-	/// all, and it is the same test that drops the excitement weight out of the ride scorer.
+	/// all, and it is the same test that drops the excitement weight out of the ride scorer. The comparison is
+	/// against the thing's computed excitement, <see cref="ParkRideScore.ExcitementOf"/>, as <c>FUN_004fd4e0</c>
+	/// asks <c>FUN_004e0860( object, 0 )</c>.
 	/// </remarks>
 	private bool TurnsAwayFrom( Peep peep, ParkWorld.CatalogueObject chosen )
 	{
 		if ( _catalogue == null || !_catalogue.TryGet( chosen.CatalogueId, out var item )
-			|| item.ExcitementLevel == 0 )
+			|| (item.ExcitementLevel & 0xff) == 0 )
 			return false;
 
-		var wanted = _chooser.Score.PreferredExcitementFor( peep.PersonType );
+		var wanted = _chooser.Score.PreferredExcitementFor( peep.PersonType ) & 0xff;
 
-		return Math.Abs( wanted - item.ExcitementLevel ) > ExcitementRefusal;
+		return Math.Abs( wanted - ParkRideScore.ExcitementOf( chosen, item ) ) > ExcitementRefusal;
 	}
+
+	/// <summary>
+	/// Whether a queue is too long to join - <c>FUN_004ddb60</c>: its count at or past <c>FUN_004dda40</c>'s longest,
+	/// unsigned. That is <see cref="NoQueuePathCapacity"/> for a thing without the queue-path bit. With it,
+	/// <c>trunc( max( capacity × QueueWaitTimeConstant × speed / InitSpeed / duration, 4 ) )</c> at the ride's tier
+	/// (<c>docs/exe/ride-operation.md</c>, "The <c>InQueue</c> turn"), whose <c>Upgrades[l].QueueWaitTimeConstant</c>
+	/// the catalogue does not read: counted and let through, as <see cref="QueueTurn"/> does (Q173).
+	/// </summary>
+	internal static bool QueueTooLong( ParkWorld.CatalogueObject chosen, int queue )
+	{
+		if ( chosen.HasQueuePath )
+		{
+			Unimplemented.Report( "QUEUE_TOO_LONG_CAPACITY" );
+
+			return false;
+		}
+
+		return (uint)queue >= NoQueuePathCapacity;
+	}
+
+	/// <summary>
+	/// How many are queueing for a thing as the original counts them - <see cref="ParkState.QueueCount"/>, up to and
+	/// including the first guest no longer queueing. The choice's room test and score and the arrival's gates read it.
+	/// </summary>
+	private int QueueCount( ParkWorld.CatalogueObject thing ) => State.QueueCount( thing.ThingId, _stillQueueing );
+
+	/// <summary>
+	/// Whether drops are falling in the park - the weather thing's <c>mCurrentDrops</c> above nought
+	/// (<c>0x004fd277</c>), which the score multiplies shelter by. <see cref="ParkPeople"/> hands in the park's
+	/// weather; nothing handed in is dry.
+	/// </summary>
+	internal Func<bool> Raining { get; set; } = static () => false;
+
+	/// <summary>What the choice reads of a guest: their kind, needs and histories.</summary>
+	private static ParkRideScore.Wants WantsOf( Peep peep )
+		=> new( peep.PersonType, peep.Thirst, peep.Hunger, peep.Toilet, peep.Vomit,
+			peep.PreviousRides, peep.PreviousTemporaryRides );
+
+	/// <summary>The one call both halves of the choice make - see <see cref="Explain"/>.</summary>
+	private ParkWorld.CatalogueObject? Choose( Peep peep, int x, int y, int tick )
+		=> _chooser.ChooseFor( WantsOf( peep ), x, y, tick, queueLength: QueueCount,
+			now: State.CalendarNow, raining: Raining() );
 
 	/// <summary>
 	/// What the chooser answers for one guest and where it would aim them - one of the two halves
@@ -1707,19 +1781,17 @@ public sealed class PeepBehaviour
 	/// exactly like "nothing was ever chosen". The two want opposite fixes.
 	/// <para>
 	/// It makes the SAME call <see cref="ChooseSomewhereToGo"/> makes, rather than asking the question its
-	/// own way: a census that recomputes is not an observation.
+	/// own way: a census that recomputes is not an observation. So each candidate whose excitement is counted
+	/// (<see cref="ParkRideScore.ExcitementOf"/>) adds to the <c>unimplemented</c> census on every asking.
 	/// </para>
 	/// </remarks>
 	internal string Explain( Peep peep, PeepWalk walk, int tick )
 	{
 		var (x, y) = walk.Position.Cell;
+		var memory = $"visits [{string.Join( ",", peep.PreviousRides )}] refused [{string.Join( ",", peep.PreviousTemporaryRides )}]";
 
-		var wants = new ParkRideScore.Wants( peep.PersonType,
-			peep.Thirst, peep.Hunger, peep.Toilet, peep.Vomit );
-
-		if ( _chooser.ChooseFor( wants, x, y, tick, queueLength: o => State.QueueLength( o.ThingId ) )
-			is not { } chosen )
-			return $"at ({x},{y}) the chooser picked NOTHING";
+		if ( Choose( peep, x, y, tick ) is not { } chosen )
+			return $"at ({x},{y}) the chooser picked NOTHING {memory}";
 
 		// <b>THE ROUTE IS DELIBERATELY NOT TESTED HERE, and both ways of testing it were wrong.</b>
 		//
@@ -1738,7 +1810,11 @@ public sealed class PeepBehaviour
 		// state and <see cref="Peep.MajorDest"/>, which the simulation writes for itself.
 		var (aimX, aimY) = MapStep.CellAt( ParkRideChoice.QueueCellsFor( _park, chosen ).BackOfQueue );
 
-		return $"at ({x},{y}) chose thing {chosen.ThingId} aim ({aimX},{aimY}) dest {peep.MajorDest}";
+		// The age the score used: NotNew, printed "-", for a thing with no stamp that makes a date.
+		var age = ParkRideChooser.AgeOf( State.CalendarNow, chosen.Built );
+
+		return $"at ({x},{y}) chose thing {chosen.ThingId} aim ({aimX},{aimY}) dest {peep.MajorDest} "
+			+ $"age {(age == ParkRideChooser.NotNew ? "-" : age)} {memory}";
 	}
 
 	/// <summary>
@@ -1770,13 +1846,9 @@ public sealed class PeepBehaviour
 
 		var (x, y) = walk.Position.Cell;
 
-		var wants = new ParkRideScore.Wants( peep.PersonType,
-			peep.Thirst, peep.Hunger, peep.Toilet, peep.Vomit );
-
 		// Queues are measured from the park as it is being PLAYED, not as it was saved - a guest who joined
 		// one a moment ago has to count.
-		if ( _chooser.ChooseFor( wants, x, y, tick, queueLength: o => State.QueueLength( o.ThingId ) )
-			is not { } chosen )
+		if ( Choose( peep, x, y, tick ) is not { } chosen )
 			return false;
 
 		// Aimed at the centre of the back-of-queue cell (0x004fcbc4), where JoinTheQueue's arrival test asks them to

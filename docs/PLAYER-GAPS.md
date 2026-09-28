@@ -158,9 +158,9 @@ button. It only logs, and counts each click as `RESEARCH_BUTTON`.
       and Remaining life are now drawn, from two floats at save **1074** and **1070** that nothing was
       reading; Belly Bounce measures **repair 100, life 100**. Age and Scrap value were already there.
       **Excitement, Reliability and Users last month stay counted**, and not for want of a control:
-      the first two divide by the descriptor's `+0x1a8` and `+0x1a0`, whose `.sam` mapping `park.md`
-      records as unproven and not to be guessed, and the third needs the record's ring buffers, which
-      `ParkWorld` deliberately does not read.
+      the first two's inputs are named now (`park-engine.md`, the compiled `.sam` schema) and the guests'
+      choice computes the first (`ParkRideScore.ExcitementOf`), but neither bar is built; the third needs
+      the record's ring buffers, which `ParkWorld` deliberately does not read.
       **The preview draws the ride's own model** - the one standing in the park, so it animates as the
       ride runs - fitted by a real bounding box, filling 93px of a 194px panel.
       **It orbited until the per-mesh box was fixed.** A burst of sixteen frames showed the centroid

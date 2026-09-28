@@ -449,7 +449,7 @@ The supporting helpers:
 | `FUN_004de130` | GetBackOfQueue | Named by its own `"*** GetBackOfQueue() crashed! ***"` (`0x0075b864`). Answers the cached `+0x3a` when non-zero, walking nothing. Otherwise `+0x40` = 0, `+0x3a` = the start, and up to 1000 steps of `FUN_004de670`, each writing `+0x3a` and adding 1 to `+0x40`: the last cell and the count, the start included. A start of 0 answers 0 silently and re-walks every call; a chain of 1000 or more logs, answers 0 once and leaves `+0x3a` set, so the next call answers that. `FUN_004de110` is the same call. | Disassembly |
 | `FUN_00522770` | `CMapCell::GetNeighbours` | Nine instructions: returns the cell's byte at **`+0xc`**, which the game's own cell serialiser `FUN_004d0b30` names **`mNeighbours`** (`LEA EAX,[ESI+0xc]` paired with the string `"mNeighbours"` at `0x0075a064`). It returns `+0x22` (`mHoardingNeighbours`) instead only while `DAT_0081b4cc` is set **and** the cell's `+0x2` is 2 — an overlay path only three editing functions raise (`park-engine.md`, "`FUN_00522700` has a second arm"); it reaches the start of queue, the attached-path loop and every edge test. `+0xd` is `mDirection` and is a different field, read by `FUN_00522850`; conflating the two inverts every queue walk. | Disassembly + the serialiser's own strings |
 | `FUN_004dda20` | — | The queue-room test, `FUN_004ddf50( 0 ) < +0x40 × 4`, unsigned. Asked with id 0, `FUN_004ddf50` never answers -1: it counts from `mFirstInQ` up to **and including** the first guest who has stopped queueing, and no further. | Disassembly |
-| `FUN_004dda40` | — | The longest queue a guest will join (`FUN_004ddb60`, the arrival's third gate) or stay in (the InQueue turn's 5a): 100 for a thing without the queue-path bit (`0x004dda4c`); with it, the capacity sum in "The `InQueue` turn", whose descriptor field pairing is unproven. | Its two callers |
+| `FUN_004dda40` | — | The longest queue a guest will join (`FUN_004ddb60`, the arrival's third gate) or stay in (the InQueue turn's 5a): 100 for a thing without the queue-path bit (`0x004dda4c`); with it, the capacity in "The `InQueue` turn", over `Upgrades[l].QueueWaitTimeConstant` (`+0x1b4`), `InitSpeed` (`+0x1a8`) and the ride's settings. | Its two callers |
 | `FUN_004fa5f0` / `FUN_004fa530` | SetDest | To an 8.8 point / to a cell's centre. The stranded refusal, then `+0x18`, `+0x1a`, `+0x198` written before the route. | Disassembly |
 | `FUN_004fa770` | — | The stranded refusal: 1 when no 16×16 block stamp of the 3×3 cells around the guest (or the far end of their queue run) reaches `mStrandedTime` ("The stranded bookkeeping"). `FUN_004de1f0` stamps the back of a queue it measures again, so a queue edit frees its guests. | Disassembly |
 | `+0x198` | `mStrandedTime` | Saved (`FUN_004f8b10`, `0x004f8eac`). Set only at `0x004f9e09`, the dead end of SetRandomDest's linked walk; zeroed by every walk tick, SetDest, and `FUN_004fa030` when the counter is below it. | Serialiser string |
@@ -733,8 +733,9 @@ to 11 stamps `mTimeStartedIdling` (`0x00501eb7`), so in state 11 it is at least 
 two stamps 70 apart could reach it. `FUN_004dda40` returns 100 for a thing without a queue path (`+0x32 & 8`), else
 `trunc(max(+0x5d × desc[+0x1b4 + lvl × 0x40] × R / +0x5c, 4.0))` with `lvl` = `+0x50` and `R` =
 `+0x58 / desc[+0x1a8 + lvl × 0x40]`, or 1 for a speed of nought; `R` is stored through a float global (`0x007cdc54`),
-the `+0x1b4` float is the one its assert calls `"No queue constant entered in SAM file"`, and the `+0x1a8` divisor is
-an integer (`FIDIV`).
+the `+0x1b4` float is the one its assert calls `"No queue constant entered in SAM file"`, `Upgrades[l].QueueWaitTimeConstant`
+by the compiled `.sam` schema (the name at `0x007465ec`; `Rides.sam` gives 30 at tier nought), and the `+0x1a8` divisor,
+`InitSpeed`, is an integer (`FIDIV`).
 
 **The clock and the stamps.** `mGameTick` (`[0x0080239c] + 0x1da70c`, named by the world serialiser) goes up by one
 at the start of each thing sweep (`0x00516394`), which runs on game ticks whose low three bits are nought and at most
@@ -1048,12 +1049,20 @@ the route to it succeeds (`0x005015ef`), before the charge - so **any thing visi
 counts, a shop, a sideshow or a toilet as much as a ride. `mPreviousTemporaryRides` is pushed the same way by
 `FUN_004fdc60`: the id at the arrival's two refusals (excitement, `0x004ffce6`; queue too long, `0x004ffd74`), and **a
 nought for every guest on each sweep where `mGameTick` % 20 is nought** (`FUN_004fdc90`, the last call of the
-decision turn `FUN_00501650`, `0x005019da`, which each sweep runs before the step that holds the refusals), so a
+guest tick handler `FUN_00501650`, `0x005019da`, after its `(id & 3)` needs block, so on every sweep, and before the
+step that holds the refusals), so a
 refusal is forgotten 61 to 80 sweeps later. The constructor zeroes both; the thing-removed
 message (`FUN_004fb360`, `0x004fb4ba`..`0x004fb4d9`) zeroes each `mPreviousRides` slot naming the thing and the
 temporary slot at the same index, whatever that holds; both are saved, interleaved (FileFormats `saves.md`, 470).
 `FUN_004dd670`, the age, has other readers too: the object window's Age and the arrivals' headcount score
 (`FUN_004c8240`, `0x004c8391`).
+
+**Measured in two played saves** (Alexah's jungle park, `mGameTick` 19,004 and 19,007; `q165cprobe`, read-only): of
+772 pairs of consecutive visits in `mPreviousRides`, 111 are the same kind twice in the later save (109 in the other),
+and **107 of those are toilets** (105) -
+mostly one of three adjacent toilets and then another. The same-kind nought forbids exactly that choice, so something
+other than this score sends a guest to a toilet, or writes a toilet visit otherwise. Not decoded (Q170). The other
+four are a sideshow, the Jungle Spray, Temple Of Gloom and the Aztec Mayhem, once each.
 
 ### What it gives the three rides in Lost Kingdom
 
@@ -1100,31 +1109,46 @@ Totem's queue empty beside it. One guest's terms, a type 7 at (48,16) just after
 | Aztec Mayhem | 19, 60, 7 | 49, 80, 12, × 5 new: **60** |
 
 With the Belly Bounce sold, OpenTPW chose the Jungle Spray in all four decisions logged over 240 s, where the decode
-chose the Totem twice and the Aztec Mayhem twice. The Spray is a sideshow: OpenTPW scores its `ExcitementLevel`, 35,
-where the original computes 30 from its cost of goods 50, price 20 and chance of winning 25.
+chose the Totem twice and the Aztec Mayhem twice. The Spray is a sideshow: OpenTPW then scored its `ExcitementLevel`,
+35, where the original computes 30 from its cost of goods 50, price 20 and chance of winning 25. That run's OpenTPW
+column is the chooser before Q165b and Q165c built what the decode column shows.
 
 ### Where OpenTPW differs
 
 | What | The original | OpenTPW | Reached in Lost Kingdom |
 |---|---|---|---|
-| The same kind as the last visit | nought | scored like any other | every guest who has left a thing |
-| The two histories | the visits written on leaving; the refusals at the two refusals, aged by a nought every 20 sweeps; both cleared by a removal and saved | never written, nor read from a save; `ParkRideScore.Staled` stops at the first match in both, where the second divides for every match | every visit |
-| New | × 5 for 184 sweeps after a purchase or a move, on the park calendar, unsigned | never: no age is handed in (`ParkRideChooser.NotNew`), a bought thing has no stamp, and `ParkRideScore` compares signed | every purchase |
-| Golden ticket, or price | × 1.1 + 0.1g; or × 1 + cost / 30,000 above 3,000 | absent from `ParkRideScore`; the catalogue reads no `GoldenTicketCost` | Jurassic Tours (× 1.2), Eruption (× 1.4), and the seven items over 3,000, the Totem the least |
-| Excitement | `FUN_004e0860`: the ride's two ratios, the track-handle base, the coaster's track, the sideshow's cost, price and chance | the item's `ExcitementLevel` | the same for a ride with no track handle at its starting settings; not for the Jungle Spray (30, not 35), The Hot Pot, Dino Karts, Splish Splash, or the three coasters |
-| Distance and the queue term | at the back-of-queue cell | at the entry cell (Q105) | every candidate |
-| The queue term's count and cells | up to the first guest no longer queueing, over the walked `+0x40` | every link, over the saved `mQueueSizeInCells`, nought read as 1 - a bought ride, the Drinks Shop and the toilets | beside any of those |
-| Rain | × 5 for an indoor thing while drops fall | never handed in | every shop, sideshow and choosable feature is indoors by its category file, and the water ride |
-| The window's Age | the park calendar | the real clock (`ParkObjectWindow.DaysSince`) | every object window |
-| The calendar at load | the save's `mGameTick`, 755: 2000-02-02 18:27:30 | counts from nought (`GameCalendar.Rebase`) | every load |
+| Distance, the effects divisor and the queue term's distance test | at the back-of-queue cell | at the entry cell (Q105) | every candidate |
+| A second toilet after one | reached some other way (Q170) | scored nought, the same kind as the thing left last | every guest leaving a toilet still in need |
+| The FPU's precision | not settled (`park-engine.md`, "Which rounding is live") | double, the runtime's starting precision | Eruption's golden ticket at some scores (62 against 63 at 45) |
+| A coaster's excitement | `trunc( 50 + f / 2 )` of its track, or nought with none | its `ExcitementLevel`, counted (`RIDE_EXCITEMENT_COASTER_TRACK`) | the three coasters, bought (Q172) |
+| A track handle's excitement | 60% of the level plus the track's crowd, held 0..100 | the level, counted (`RIDE_EXCITEMENT_TRACK_CROWD`) | The Hot Pot, Dino Karts and Splish Splash, bought (Q172) |
+| An upgraded ride's excitement | its tier's `InitSpeed` and `InitDuration` | the level, counted (`RIDE_EXCITEMENT_UPGRADE_TIER`); the catalogue reads tier nought | nothing in Lost Kingdom's save; Alexah's played park has a tier-1 Belly Bounce (Q172) |
+| A sideshow's cost of goods and chance of winning | the object's own `+0x188` and `+0x190` | the item's (Q97) | none yet: the save holds the item's |
+| A bought thing's price | `InitPricePerUse` | nought, which a bought sideshow's excitement reads (34 for a Jungle Spray, not 30) | every purchase (Q171) |
+| The too-long gate on a queue path | `FUN_004dda40`'s capacity, over `QueueWaitTimeConstant`, which the catalogue does not read | counted and let through (`QUEUE_TOO_LONG_CAPACITY`, Q173) | the Belly Bounce, and every bought ride with a queue |
+| The calendar at load | the save's `mGameTick`, 755: 2000-02-02 18:27:30 | the score's calendar is the original's (`ParkState.CalendarNow`); the gadget's date and the weather's days count from nought (`GameCalendar.Rebase`, Q149) | every load |
 
-Nothing here is counted by `Unimplemented.Report`. The build is Q165c.
+**Built: the rest of the score** (`docs/QUEUE.md` Q165c). `ParkRideScore.Of` runs all twelve steps in the original's
+order: the same kind as the thing left last scores nought first; the queue term counts to the first guest no longer
+queueing (`ParkState.QueueCount`, `FUN_004ddf50( 0 )`) over the walked cells (`ParkRideChoice.QueueCellsFor`), and the
+choice's room test and the arrival's gates read the same count; the mean is unsigned; new is `(uint)age <= 7`; rain is
+the weather's `Drops` above nought, which `ParkPeople` hands in; then the golden-ticket or price factor
+(`ParkRideScore.Priced`, at double precision, the runtime's starting precision, which is an assumption: Eruption's 1.4
+on a score of 45 gives 62, where single or extended precision gives 63); then the two histories, the first matching visit and every matching
+refusal. `ParkRideScore.ExcitementOf` is `FUN_004e0860( object, 0 )`, which the chooser and the arrival's excitement
+refusal both read: the Jungle Spray is 30, and the Belly Bounce at its settings 40. Each guest keeps both histories
+(`Peep`), read from the save (`ParkWorld.GuestState`), written on leaving any thing (`ParkRideOperation.SettleUp`,
+before the charge) and at both refusals, aged on the sweep and cleared by a removal as above. A bought thing is
+stamped with the park's calendar (`ParkBuilding`, `0x004db66a`); the calendar is `GameCalendar.Epoch`, 2000-01-01,
+which the clock constructor seeds (`FUN_004f7e80`, `0x004f7ea0`), plus `mGameTick × 3750` seconds; the object window's
+Age reads the same age, signed. The arrival's third gate, too long (`FUN_004ddb60`), is built for a thing without the
+queue-path bit (100) and pushes the refusal like the excitement gate.
 
 **Built: each kind's preference and an arrival's kind** (`docs/QUEUE.md` Q165b). `PeepBehaviour` hands the park's
 `ParkBalance` to its chooser's `ParkRideScore`, so each kind prefers its own `PeepTypes[n].PreferredExcitement`, 80, 65,
 50, 35, 65, 80, 45 and 80, in the score and at the arrival's refusal, which reads the same byte (`FUN_004fd4e0`,
-`0x004fd50a`): a kind 0, 5 or 7 turns away from the Jungle Spray, 45 from its 80 where 44 is allowed (OpenTPW's 35 for
-the Spray; the original's computed 30 is 50 away, the same outcome). `ParkPeople.Admit` draws each new guest's kind.
+`0x004fd50a`): a kind 0, 5 or 7 turns away from the Jungle Spray, 50 from its 80 where 44 is allowed.
+`ParkPeople.Admit` draws each new guest's kind.
 The constructor's draw (`FUN_004faec0`, `0x004fb019`) is the world generator `FUN_00516330` modulo `[0x007851d4]`, the
 balance's `PeepTypes` row count, the slot after the table's 20 rows of 12 bytes at `0x007850e4`. `FUN_004013e0` zeroes
 it before the global file only (`FUN_004017a0`, `0x004017b6`), and each of the loader's value paths
@@ -1903,12 +1927,11 @@ The Jungle Spray is queued for and invited in **about one run in five** at that 
 ## Open and unverified
 
 - **What `+0x1f1` means at settle-up time.** The byte is overloaded between a queue position and a sideshow roll.
-- **`+0x1a8` as a capacity re-check divisor.** `FUN_004dda40` reads it as an integer beside the `+0x1b4` queue constant (see "Every way out of a queue", the `InQueue` turn); which `.sam` key fills it is not established.
 - **The balloon and costume SPRITE path** out of `FUN_004fe1e0`.
 - **`FUN_005019f0` case `0x11`**, the walk of the `mFirstGuard` chain through `+0x210` / `+0x212`.
 - **Whether a shop's duration of nought is correct** (it may simply not read it) where `FUN_004df8f0` would take a clamped value from the descriptor's `+0x1a0`.
 - **Refuted, so do not repeat:** "only `UNBOUNCE` writes `VAR_LETMEOFF`" — there are six writers, and the claim is false for 16 of the park theme's 17 dismissing ride scripts. "The shops' `mOperatingCapacity` might be nought, leaving them permanently full" — every visitable object has a non-zero capacity.
-- Descriptor keys present in the `.sam` files that OpenTPW does not read yet: `ShopType`, `RideHandlesSprite` (the flag byte's `0x20`, Q52), `RequiresTeleport`, `GoldenTicketCost`, `InitPricePerUse`.
+- Descriptor keys present in the `.sam` files that OpenTPW does not read yet: `ShopType`, `RideHandlesSprite` (the flag byte's `0x20`, Q52), `RequiresTeleport`, `InitPricePerUse` (Q171), `Upgrades[n].QueueWaitTimeConstant` (Q173).
 
 ## Measuring the corpus without inventing findings
 

@@ -528,14 +528,10 @@ internal sealed class ParkObjectWindow : UiWindow
 			|| level.Catalogue is not { } catalogue || !catalogue.TryGet( placed.CatalogueId, out var item ) )
 			return;
 
-		// How old it is, in DAYS. FUN_004dd670 divides the built stamp by 864,000,000,000 - one day in
-		// hundred-nanosecond units - so this is real elapsed time and not the park's own calendar.
-		//
-		// A shipped save therefore answers in the THOUSANDS, and that is right: its rides were built
-		// when the save was made, over 26 years ago, so Belly Bounce reads more than 9,750 days. A figure
-		// that size is the save's real age showing through, not a zero epoch to go hunting for.
+		// How old it is, in whole days on the park's calendar - FUN_004dd670, which FUN_004ade40 prints signed
+		// (0x004adf40). The Belly Bounce is 32 days old as Lost Kingdom loads.
 		if ( _stats.TryGetValue( 0x3e1b, out var age ) )
-			age.Text = placed.Built.IsSet ? $"{DaysSince( placed.Built )}" : null;
+			age.Text = placed.Built.IsSet ? $"{state.AgeInDays( placed )}" : null;
 
 		// FUN_004e2400: the age-bucket scrap percentage times the item's build price. That percentage
 		// is SCRAP_VALUE_DEPRECIATION, already counted where Sell refunds - it answers 100 for anything
@@ -561,13 +557,10 @@ internal sealed class ParkObjectWindow : UiWindow
 		Gauge( 0x3e19, placed.StateOfRepair );    // +0x44, what a repair restores
 
 		// Excitement (0x3e16) and Reliability (0x3e18) are NOT left out for want of a control - the
-		// gauge above draws them the moment there is a number. They are left out because there is no
-		// number yet: FUN_004ade40 fills them from FUN_004e0560 and FUN_004df640, whose inputs include
-		// per-upgrade fields no .sam key is proven to feed (docs/exe/park-engine.md, "The object
-		// window's stats panel"). The shape is known - two ratios of the
-		// speed and duration sliders against the item's per-upgrade figures, each clamped to
-		// 0.75..1.25 - and the shape alone would only produce a plausible bar, which is worse than
-		// an empty one because it cannot be told apart from a measured one later.
+		// gauge above draws them the moment there is a number. FUN_004ade40 fills them from FUN_004e0560 and
+		// FUN_004df640 over the window's own slider values (docs/exe/park-engine.md, "The object window's stats
+		// panel"). Their inputs are named, and ParkRideScore.ExcitementOf works out the first from the thing's own
+		// settings; the bars themselves, over the sliders, and Reliability's FUN_004df450 are not built.
 		Unimplemented.Report( "RIDE_EXCITEMENT_BAR" );
 		Unimplemented.Report( "RIDE_RELIABILITY_BAR" );
 
@@ -591,7 +584,7 @@ internal sealed class ParkObjectWindow : UiWindow
 		// input: v/100 clamped to 0..1 draws a full bar for 100, for 1e30 and for anything else past
 		// the top, so a wrong offset would look exactly like a healthy ride. The number is the check,
 		// not the picture.
-		Log.Info( $"Ride window: thing {ThingId} stats age {(placed.Built.IsSet ? DaysSince( placed.Built ) : -1)} days," +
+		Log.Info( $"Ride window: thing {ThingId} stats age {(placed.Built.IsSet ? state.AgeInDays( placed ) : -1)} days," +
 			$" scrap {item.BuildPrice}, built {placed.Built.Year}-{placed.Built.Month:D2}-{placed.Built.Day:D2}," +
 			$" repair {placed.StateOfRepair:R}, life {placed.RemainingLife:R}" );
 	}
@@ -1040,23 +1033,6 @@ internal sealed class ParkObjectWindow : UiWindow
 	private static readonly Vector3 PreviewLightColour = Vector3.One;
 
 	private const float PreviewAmbient = 0.55f;
-
-	/// <summary>Whole days between a built stamp and now, never negative.</summary>
-	private static int DaysSince( ParkWorld.BuiltWhen built )
-	{
-		try
-		{
-			var when = new DateTime( built.Year, built.Month, built.Day,
-				built.Hour, built.Minute, built.Second, DateTimeKind.Utc );
-
-			return Math.Max( 0, (int)(DateTime.UtcNow - when).TotalDays );
-		}
-		catch ( ArgumentOutOfRangeException )
-		{
-			// A stamp the save never filled in, or one this calendar cannot hold.
-			return 0;
-		}
-	}
 
 	private void Set( int which, int lowest, int highest, int value, bool hideWhenEmpty )
 	{

@@ -65,6 +65,77 @@ public sealed class Peep
 
 	public int QueuePos { get; set; }
 
+	private readonly int[] _previousRides = new int[ParkWorld.GuestState.Remembered];
+	private readonly int[] _previousTemporaryRides = new int[ParkWorld.GuestState.Remembered];
+
+	/// <summary>
+	/// The last four things this guest left, newest first, nought where there is none - <c>mPreviousRides</c>,
+	/// <c>+0x1e0</c>. <see cref="ParkRideScore"/> scores the same kind as the newest nought and divides the others
+	/// down (<c>docs/exe/ride-operation.md</c>, "What a thing is worth to a guest").
+	/// </summary>
+	public IReadOnlyList<int> PreviousRides => _previousRides;
+
+	/// <summary>
+	/// The last four things this guest turned away from at the back of their queue, newest first -
+	/// <c>mPreviousTemporaryRides</c>, <c>+0x1e8</c>, which <see cref="AgeRefusals"/> pushes noughts into.
+	/// </summary>
+	public IReadOnlyList<int> PreviousTemporaryRides => _previousTemporaryRides;
+
+	/// <summary>
+	/// How many sweeps apart a nought goes onto <see cref="PreviousTemporaryRides"/> - <c>FUN_004fdc90</c>'s
+	/// <c>mGameTick % 20</c>.
+	/// </summary>
+	public const int RefusalsAgeEvery = 20;
+
+	/// <summary>
+	/// A thing this guest has left goes in front of <see cref="PreviousRides"/> and the three older move back -
+	/// <c>FUN_004fd970</c>, <c>0x004fd98b</c>..<c>0x004fd9a5</c>, the settle-up's first act.
+	/// </summary>
+	public void RememberVisit( int thingId ) => Push( _previousRides, thingId );
+
+	/// <summary>
+	/// A thing this guest turned away from goes in front of <see cref="PreviousTemporaryRides"/> - <c>FUN_004fdc60</c>,
+	/// at the arrival's two refusals (<c>0x004ffce6</c>, <c>0x004ffd74</c>).
+	/// </summary>
+	public void RememberRefusal( int thingId ) => Push( _previousTemporaryRides, thingId );
+
+	/// <summary>
+	/// A nought onto <see cref="PreviousTemporaryRides"/> on every sweep whose <c>mGameTick</c> divides by
+	/// <see cref="RefusalsAgeEvery"/>, unsigned - <c>FUN_004fdc90</c>, the last call of the guest tick handler
+	/// <c>FUN_00501650</c> (<c>0x005019da</c>), after its <c>(id &amp; 3)</c> needs block, so every sweep. A refusal is
+	/// forgotten 61 to 80 sweeps after it is pushed.
+	/// </summary>
+	public void AgeRefusals( int gameTick )
+	{
+		if ( (uint)gameTick % RefusalsAgeEvery == 0 )
+			Push( _previousTemporaryRides, 0 );
+	}
+
+	/// <summary>
+	/// A removed thing leaves no visit behind - <c>FUN_004fb360</c>, <c>0x004fb4ba</c>..<c>0x004fb4d9</c>: each
+	/// <see cref="PreviousRides"/> slot naming it is emptied, and the <see cref="PreviousTemporaryRides"/> slot at the
+	/// same place with it, whatever that one holds. A refusal of the thing in any other slot stays.
+	/// </summary>
+	public void ForgetThing( int thingId )
+	{
+		for ( var i = 0; i < _previousRides.Length; ++i )
+		{
+			if ( _previousRides[i] != thingId )
+				continue;
+
+			_previousRides[i] = 0;
+			_previousTemporaryRides[i] = 0;
+		}
+	}
+
+	private static void Push( int[] history, int thingId )
+	{
+		for ( var i = history.Length - 1; i > 0; --i )
+			history[i] = history[i - 1];
+
+		history[0] = thingId;
+	}
+
 	/// <summary>
 	/// How much longer this guest will put up with standing out of place before they re-take their
 	/// position in a queue - <c>mQueueMoveDelay</c>, the four bytes at guest-block offset 490.
@@ -232,6 +303,9 @@ public sealed class Peep
 		MajorDest = saved.MajorDest;
 		QueuePos = saved.QueuePos;
 		QueueMoveDelay = saved.QueueMoveDelay;
+
+		saved.PreviousRides?.Take( _previousRides.Length ).ToArray().CopyTo( _previousRides, 0 );
+		saved.PreviousTemporaryRides?.Take( _previousTemporaryRides.Length ).ToArray().CopyTo( _previousTemporaryRides, 0 );
 
 		// Both of these decide what a guest partway through being admitted does next, so they are seeded
 		// rather than started fresh - the shipped park has a guest saved waiting for the gate, and whether

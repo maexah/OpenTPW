@@ -228,15 +228,17 @@ public class ParkRideChoiceTests
 		Assert.AreEqual( "yes", Routes( 48, 22 ), "and from beside the ride" );
 
 		// And chosen, which refuted the second. Four of five - the shop wins on the thirst term from
-		// everywhere except the sideshow's own doorstep, where the sideshow's distance term carries it.
+		// everywhere except beside the sideshow, where the sideshow's distance term carries it.
 		Assert.AreEqual( DrinksShop.ToString(), Picks( 43, 29 ), "standing at the shop" );
 		Assert.AreEqual( DrinksShop.ToString(), Picks( 44, 28 ), "on the loop beside it" );
 		Assert.AreEqual( DrinksShop.ToString(), Picks( 47, 25 ), "in the middle of the park" );
 		Assert.AreEqual( DrinksShop.ToString(), Picks( 48, 22 ), "even standing beside the free ride" );
 
-		// The anti-vacuity half, and it is what stops this reading as "the shop always wins": from the
-		// sideshow's approach cell the sideshow does.
-		Assert.AreEqual( JungleSpray.ToString(), Picks( 52, 29 ), "but not from the sideshow's doorstep" );
+		// The anti-vacuity half, and it is what stops this reading as "the shop always wins": a cell east of
+		// the sideshow's doorstep it is the sideshow, 23 against 22. On the doorstep itself (52,29) the two tie at
+		// 23 - the sideshow's computed excitement is 30, 20 from the 50 this balance-less chooser prefers - and the
+		// tick decides.
+		Assert.AreEqual( JungleSpray.ToString(), Picks( 53, 29 ), "but not from beside the sideshow" );
 
 		// And the control that says thirst is what is carrying it: with no thirst at all, the free ride
 		// wins from mid-park instead. A build ignoring the need terms would answer the shop both times.

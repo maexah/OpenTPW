@@ -494,15 +494,18 @@ public sealed class ParkRideOperation
 	/// happiness effect over a hundred (<c>0x004fe4cf</c>..<c>0x004fe525</c>).
 	/// </para>
 	/// <para>
-	/// <b>Also absent:</b> the guest's recent-things history (<c>mPreviousRides</c>, four entries shifted
-	/// by three at <c>+0x1e0</c>), which <see cref="ParkRideScore"/> divides a candidate down by but which
-	/// nothing here writes, so the chooser is handed none; and the three visit counters at
-	/// <c>+0x1c4</c>/<c>+0x1c8</c>/<c>+0x1cc</c> chosen by the descriptor's <c>+0x4ac</c>, which nothing
-	/// here would read.
+	/// <b>The visit is remembered first</b> (<see cref="Peep.RememberVisit"/>, <c>0x004fd98b</c>), before the
+	/// charge, whatever the thing is: a shop, a sideshow or a toilet counts as much as a ride. The original reaches it
+	/// only when the exit routes (<c>0x005015e3</c>, <c>0x005015ef</c>); a guest this dismisses anyway (see
+	/// <see cref="Dismiss"/>) is remembered and charged anyway.
+	/// <b>Absent:</b> the three visit counters at <c>+0x1c4</c>/<c>+0x1c8</c>/<c>+0x1cc</c> chosen by the
+	/// descriptor's <c>+0x4ac</c>, which nothing here would read.
 	/// </para>
 	/// </summary>
 	private void SettleUp( Peep peep, ParkWorld.CatalogueObject ride, ParkItemCatalogue? catalogue )
 	{
+		peep.RememberVisit( ride.ThingId );
+
 		Charge( peep, ride );
 
 		// No catalogue is a test asking about the money rather than about the visit, and an item the

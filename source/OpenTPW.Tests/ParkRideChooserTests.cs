@@ -160,9 +160,8 @@ public class ParkRideChooserTests
 	}
 
 	/// <summary>
-	/// The newness multiplier is reachable and is worth five times - shown through the injected age,
-	/// because the shipped park's own build dates cannot answer it (see
-	/// <see cref="ParkRideChooser"/>'s remarks).
+	/// The newness multiplier is reachable and is worth five times - shown on a candidate built directly; the
+	/// chooser's own ages, off the park's calendar, are <see cref="ParkVisitHistoryTests"/>'.
 	/// </summary>
 	[TestMethod]
 	public void SomethingBuiltThisWeekOutscoresTheSameThingBuiltLongAgo()

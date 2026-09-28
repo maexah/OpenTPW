@@ -323,7 +323,7 @@ public static class ParkRideChoice
 	/// <b>Every queue in the shipped park measures nought, and that is the park rather than the walk.</b>
 	/// Its <c>mFirstInQ</c> is nought on every object because nobody has ever been admitted to it -
 	/// <c>mNumberOfVisitorsToDate</c> is nought too. This reads the save alone; the queues a running park
-	/// fills through <c>PeepBehaviour.JoinTheQueue</c> are counted by <see cref="ParkState.QueueLength"/>.
+	/// fills through <c>PeepBehaviour.JoinTheQueue</c> are counted by <see cref="ParkState.QueueCount"/>.
 	/// </para>
 	/// </summary>
 	public static int QueueLength( ParkWorld? park, ParkWorld.CatalogueObject item )

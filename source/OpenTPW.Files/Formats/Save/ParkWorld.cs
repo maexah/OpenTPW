@@ -57,6 +57,24 @@ public sealed class ParkWorld
 	{
 		/// <summary>Whether this reads as a date at all, rather than a record nothing ever stamped.</summary>
 		public bool IsSet => Year > 0;
+
+		/// <summary>The stamp as a time, or null where its fields make no date - what <c>SystemTimeToFileTime</c> refuses.</summary>
+		public DateTime? ToDateTime()
+		{
+			try
+			{
+				return new DateTime( Year, Month, Day, Hour, Minute, Second, Millisecond );
+			}
+			catch ( ArgumentOutOfRangeException )
+			{
+				return null;
+			}
+		}
+
+		/// <summary>A time broken down the way the save writes it - <c>FileTimeToSystemTime</c>'s fields.</summary>
+		public static BuiltWhen At( DateTime when )
+			=> new( when.Year, when.Month, when.Day, (int)when.DayOfWeek,
+				when.Hour, when.Minute, when.Second, when.Millisecond );
 	}
 
 	/// <summary>
@@ -75,7 +93,8 @@ public sealed class ParkWorld
 		ushort ExitPos = 0, ushort FirstInQueue = 0, int IsTrackRideValid = 0,
 		int OperatingCapacity = 0, int OperatingDuration = 0, int OperatingSpeed = 0, int PricePerUse = 0,
 		int QueueSizeInCells = 0, int TotalTakings = 0,
-		float StateOfRepair = 0f, float RemainingLife = 0f, BuiltWhen Built = default, int RequestedService = 0 )
+		float StateOfRepair = 0f, float RemainingLife = 0f, BuiltWhen Built = default, int RequestedService = 0,
+		int UpgradeLevel = 0 )
 	{
 		/// <summary>
 		/// The bit that makes an object somewhere a guest can be <i>offered</i> - <c>FUN_004fcb10</c>, the
@@ -454,13 +473,25 @@ public sealed class ParkWorld
 	/// <c>mQPrev</c> - the guest standing in front of this one in a queue, or nought for whoever is at the
 	/// head of it. See <paramref name="QNext"/> for how the pair was found.
 	/// </param>
+	/// <param name="PreviousRides">
+	/// <c>mPreviousRides</c> (<c>+0x1e0</c>) - the last four things this guest left, newest first, as thing
+	/// handles; nought where there is none. Null is a record made without a save behind it: none.
+	/// </param>
+	/// <param name="PreviousTemporaryRides">
+	/// <c>mPreviousTemporaryRides</c> (<c>+0x1e8</c>) - the last four things this guest turned away from at the
+	/// back of the queue, newest first, aged by a nought every twenty sweeps. Null reads as none.
+	/// </param>
 	public readonly record struct GuestState(
 		int State, int SavedState, int PersonType, int Cash, int ExitLevel,
 		float Happiness, float Thirst, float Hunger, float Toilet, float Vomit, float Litter,
 		int MajorDest, int QueuePos, int PrankeryIndex,
 		int PaidAdmission = 0, int ParkOpeningWait = 0,
-		int QNext = 0, int QPrev = 0, int BeenAdmitted = 0, int QueueMoveDelay = 0 )
+		int QNext = 0, int QPrev = 0, int BeenAdmitted = 0, int QueueMoveDelay = 0,
+		IReadOnlyList<int>? PreviousRides = null, IReadOnlyList<int>? PreviousTemporaryRides = null )
 	{
+		/// <summary>How many things each of the two histories holds - <c>mPreviousRides[4]</c> and its twin.</summary>
+		public const int Remembered = 4;
+
 		/// <summary>
 		/// The behaviour a guest returns to after a one-off animation. A new guest is constructed with
 		/// this set to <see cref="Deciding"/>, which is why it reads 6 on every guest in a park that has
@@ -1604,6 +1635,10 @@ public sealed class ParkWorld
 
 			TotalTakings: ReadInt32At( start + 1090 ),       // mTotalTakings
 
+			// mUpgradeLevel, +0x50, the record's last byte: the tier FUN_004e0560 reads the item's InitSpeed and
+			// InitDuration at when it works out the excitement.
+			UpgradeLevel: _data[start + 1098],
+
 			// The eight tv_t dwords at 22 - see BuiltWhen for why the order is NOT the struct's.
 			Built: new BuiltWhen(
 				ReadInt32At( start + 22 ), ReadInt32At( start + 26 ),
@@ -1716,12 +1751,13 @@ public sealed class ParkWorld
 			// immediately after them. See the parameter docs for what each one decides.
 			PaidAdmission: ReadInt32At( start + 460 ),  // mPaidAdmission
 			ParkOpeningWait: ReadInt32At( start + 464 ), // mParkOpeningWaitingTime
-			// The queue links, two-byte thing handles written through the same serialiser mMajorDest uses.
-			// They follow the sixteen bytes of interleaved history at 470..485 - mPreviousRides[i] at
-			// 470, 474, 478, 482 and mPreviousTemporaryRides[i] at 472, 476, 480, 484, which the original
-			// writes one PAIR at a time inside a single four-turn loop rather than as two blocks. Those are
-			// the two histories the ride scorer divides a candidate down by; they are located and left
-			// unread until something consumes them.
+			// The two histories, thing handles written through the serialiser mMajorDest uses, one PAIR at a
+			// time inside a single four-turn loop rather than as two blocks: mPreviousRides[i] at 470, 474,
+			// 478, 482 and mPreviousTemporaryRides[i] at 472, 476, 480, 484. The ride scorer divides a
+			// candidate down by both (ParkRideScore).
+			PreviousRides: History( start + 470 ),
+			PreviousTemporaryRides: History( start + 472 ),
+			// The queue links, two-byte thing handles written through the same serialiser.
 			QNext: ReadUInt16At( start + 486 ),         // mQNext
 			QPrev: ReadUInt16At( start + 488 ),         // mQPrev
 			// mBeenAdmitted, fourth in the block's alphabetical order and the flag a queueing guest is
@@ -1731,6 +1767,17 @@ public sealed class ParkWorld
 			// at 494, which is what fixes them. The InQueue handler pauses on it before letting a
 			// guest re-take a place in a queue that has moved.
 			QueueMoveDelay: ReadInt32At( start + 490 ) );
+
+	/// <summary>One of the two interleaved histories: four thing handles, four bytes apart.</summary>
+	private int[] History( int first )
+	{
+		var history = new int[GuestState.Remembered];
+
+		for ( var i = 0; i < history.Length; ++i )
+			history[i] = ReadUInt16At( first + (i * 4) );
+
+		return history;
+	}
 
 	// <b>+529 is mVomit; it cannot be mIllness.</b>
 	//

@@ -474,6 +474,34 @@ public sealed class ParkState
 	public int AdvanceGameTick() => ++GameTick;
 
 	/// <summary>
+	/// Now on the park's own calendar - <c>FUN_004f8690</c>: <c>mFunnyTimeStart</c> plus <c>mGameTick ×
+	/// mFunnySecsPerRealSec / 4</c> whole seconds, the tick taken unsigned. A thing built is stamped with it
+	/// (<c>FUN_004db090</c>, <c>0x004db66a</c>) and its age is measured against it (<see cref="AgeInDays"/>).
+	/// </summary>
+	/// <remarks>
+	/// The start and the rate are <see cref="GameCalendar.Epoch"/> and <see cref="GameCalendar.Rate"/>, the clock
+	/// constructor's own: the save's clock block is not read, and Lost Kingdom's holds the same two (the rate
+	/// <c>docs/exe/weather.md</c>, the start <c>docs/exe/ride-operation.md</c>, "What it gives the three rides"). This
+	/// is not <see cref="GameCalendar.Now"/>, which counts from nought (Q149).
+	/// </remarks>
+	public DateTime CalendarNow
+		=> GameCalendar.Epoch.AddTicks( (long)(uint)GameTick * GameCalendar.Rate / GameCalendar.AdvancesPerSecond
+			* TimeSpan.TicksPerSecond );
+
+	/// <summary>
+	/// How many whole days old a thing is on the park's calendar - <c>FUN_004dd670</c>: <c>( now − built ) /
+	/// 864,000,000,000</c>, a signed 64-bit divide whose low 32 bits are the answer. A stamp in the future is
+	/// negative, and less than a day ahead is nought. The ride score compares it unsigned; the object window
+	/// prints it. A stamp that makes no date reads as nought here; the score treats it as not new
+	/// (<see cref="ParkRideChooser.AgeOf"/>).
+	/// </summary>
+	public static int AgeInDays( DateTime now, ParkWorld.BuiltWhen built )
+		=> built.ToDateTime() is { } when ? unchecked((int)((now - when).Ticks / TimeSpan.TicksPerDay)) : 0;
+
+	/// <inheritdoc cref="AgeInDays(DateTime, ParkWorld.BuiltWhen)"/>
+	public int AgeInDays( ParkWorld.CatalogueObject thing ) => AgeInDays( CalendarNow, thing.Built );
+
+	/// <summary>
 	/// Whether the park is shut to visitors, seeded from the save - <b>zero is open</b> - and movable
 	/// afterwards, because the entry-price screen carries the switch that moves it.
 	/// </summary>
@@ -819,6 +847,27 @@ public sealed class ParkState
 			id = NextInQueue( id );
 
 		return length;
+	}
+
+	/// <summary>
+	/// How many are queueing for this object as the original counts them - <c>FUN_004ddf50( 0 )</c>: from the head
+	/// up to and including the first guest who is no longer queueing (<c>FUN_00502430</c> at <c>0x004ddfa9</c>), and no further. The
+	/// ride score's queue term, the queue-room test and the arrival's too-long gate all read it. This class keeps
+	/// no guest's state, so the caller supplies the test; without one every link is counted.
+	/// </summary>
+	public int QueueCount( int objectId, Func<int, bool>? stillQueueing = null )
+	{
+		var count = 0;
+
+		for ( var id = FirstInQueue( objectId ); id != 0 && count < LongestQueue; id = NextInQueue( id ) )
+		{
+			++count;
+
+			if ( stillQueueing != null && !stillQueueing( id ) )
+				break;
+		}
+
+		return count;
 	}
 
 	/// <summary>
