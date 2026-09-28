@@ -717,7 +717,8 @@ public sealed class ParkRides : Entity
 	}
 
 	/// <summary>
-	/// Puts one script back where the park file left it - its counter, its variables and its name.
+	/// Puts one script back where the park file left it - its counter, its variables, its stack with both
+	/// its indices, its result register and its name.
 	///
 	/// <para>
 	/// <b>This is what stops a loaded park building itself all over again.</b> The original restores each
@@ -765,8 +766,8 @@ public sealed class ParkRides : Entity
 		for ( var slot = 0; slot < slots; ++slot )
 			script.SeedVariable( slot, saved.Variables[slot] );
 
-		// Last, and only if the position is real: an unknown one would stop the script dead rather than
-		// erring, so a thing that cannot be resumed is better left running from its beginning.
+		// Only if the position is real: an unknown one would stop the script dead rather than erring, so a
+		// thing that cannot be resumed is better left running from its beginning, with the loader's stacks.
 		if ( !script.ResumeAt( saved.Position ) )
 		{
 			Log.Warning( $"{ThemeName}: thing {placed.ThingId} was saved at word {saved.Position} of "
@@ -775,6 +776,17 @@ public sealed class ParkRides : Entity
 			++NotResumed;
 			return;
 		}
+
+		// With the counter, the stack and the register it was saved with: a ride saved mid-cycle has its
+		// riders' handles on the heap, and a branch it resumes before reads the register. The saved block's
+		// length is the stack's size, as the engine takes it (FUN_005597a0, 0x00559af1).
+		if ( saved.Stack.Length != script.Stack.Count )
+		{
+			Log.Info( $"{ThemeName}: thing {placed.ThingId} declares a stack of {script.Stack.Count} and the "
+				+ $"save holds {saved.Stack.Length} for script handle {saved.Handle}" );
+		}
+
+		script.RestoreStacks( saved.Stack, saved.CallIndex, saved.HeapIndex, saved.Result );
 
 		++Resumed;
 	}

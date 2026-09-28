@@ -20,7 +20,19 @@ namespace OpenTPW;
 /// <param name="Variables">
 /// The script's variables, in the order <see cref="RideScriptFile.VariableNames"/> names them.
 /// </param>
-public readonly record struct SavedScript( int Handle, int Position, int BodyWords, int[] Variables );
+/// <param name="CallIndex">
+/// The call index, <c>+0x40</c>: the slot the next <c>JSR</c> writes, counting down, so the live frames
+/// are the slots above it. -1 for a script with no stack.
+/// </param>
+/// <param name="HeapIndex">The heap index, <c>+0x44</c>: how many values <c>HUSH</c> has pushed.</param>
+/// <param name="Result">The result register, <c>+0x48</c>, which the conditional branches test.</param>
+/// <param name="Stack">
+/// The stack array, the record's first block after the body, one dword per slot. The slots above the call
+/// index are open frames, return addresses tagged <c>0x20000000</c>; the rest hold whatever was last written
+/// there, a returned call's address included, since nothing clears a slot.
+/// </param>
+public readonly record struct SavedScript( int Handle, int Position, int BodyWords, int[] Variables,
+	int CallIndex, int HeapIndex, int Result, int[] Stack );
 
 /// <summary>
 /// The <c>RSSE</c> module of a park save: every running script's program counter and variables.
@@ -78,10 +90,10 @@ public readonly record struct SavedScript( int Handle, int Position, int BodyWor
 ///
 /// <para>
 /// <b>What is deliberately not read.</b> The original restores a great deal more per script - the
-/// wait deadlines, the call stack, the limbo, bounce and walk tables, the string blob and a run of
-/// 32-byte records - and the struct's other fields with them. Only the counter, the body length and
-/// the variables are taken, because they are the three this program models; the rest are stepped over
-/// by length so that the walk still has to add up. A script's <i>name</i> is not in the struct at all
+/// wait deadlines, the limbo, bounce and walk tables, the string blob and a run of 32-byte records - and
+/// the struct's other fields with them. Only the counter, the body length, the variables, the stack with
+/// its two indices and the result register are taken, because they are what this program models; the
+/// rest are stepped over by length so that the walk still has to add up. A script's <i>name</i> is not in the struct at all
 /// and is recovered a different way - see <see cref="RideScript.TakeDeclaredName"/>.
 /// </para>
 /// </summary>
@@ -112,6 +124,15 @@ public sealed class ParkScriptStates
 	/// <summary>Where the program counter sits in the saved struct - <c>+0x3c</c>, so dword 15.</summary>
 	private const int PositionDword = 15;
 
+	/// <summary>The call index - <c>+0x40</c>, so dword 16.</summary>
+	private const int CallIndexDword = 16;
+
+	/// <summary>The heap index - <c>+0x44</c>, so dword 17.</summary>
+	private const int HeapIndexDword = 17;
+
+	/// <summary>The result register - <c>+0x48</c>, so dword 18.</summary>
+	private const int ResultDword = 18;
+
 	/// <summary>
 	/// Where the handle sits. Shown to be <c>mRideScriptHandle</c> - see
 	/// <c>ParkScriptStateTests.EverySavedScriptIsTheScriptOfSomePlacedThing</c>.
@@ -126,6 +147,9 @@ public sealed class ParkScriptStates
 	/// are the second of them.
 	/// </summary>
 	private const int BlocksAfterBody = 5;
+
+	/// <summary>Which of those blocks holds the stack, counting the body as nought.</summary>
+	private const int StackBlock = 1;
 
 	/// <summary>Which of those blocks holds the variables, counting the body as nought.</summary>
 	private const int VariableBlock = 2;
@@ -231,6 +255,9 @@ public sealed class ParkScriptStates
 		var handle = ReadInt32At( start + (HandleDword * 4) );
 		var position = ReadInt32At( start + (PositionDword * 4) );
 		var length = ReadInt32At( start + (LengthDword * 4) );
+		var callIndex = ReadInt32At( start + (CallIndexDword * 4) );
+		var heapIndex = ReadInt32At( start + (HeapIndexDword * 4) );
+		var result = ReadInt32At( start + (ResultDword * 4) );
 
 		Skip( structSize );
 
@@ -246,6 +273,7 @@ public sealed class ParkScriptStates
 		Skip( bodyBytes );
 
 		var variables = Array.Empty<int>();
+		var stack = Array.Empty<int>();
 
 		for ( var block = 1; block <= BlocksAfterBody; ++block )
 		{
@@ -253,6 +281,8 @@ public sealed class ParkScriptStates
 
 			if ( block == VariableBlock )
 				variables = ReadInts( bytes / 4 );
+			else if ( block == StackBlock )
+				stack = ReadInts( bytes / 4 );
 			else
 				Skip( bytes );
 		}
@@ -276,7 +306,7 @@ public sealed class ParkScriptStates
 
 		// A handle twice over would make For() answer whichever came first, so the second is refused
 		// rather than quietly dropped.
-		if ( !_byHandle.TryAdd( handle, new SavedScript( handle, position, length, variables ) ) )
+		if ( !_byHandle.TryAdd( handle, new SavedScript( handle, position, length, variables, callIndex, heapIndex, result, stack ) ) )
 			throw new InvalidDataException( $"two saved scripts both call themselves handle {handle}" );
 	}
 

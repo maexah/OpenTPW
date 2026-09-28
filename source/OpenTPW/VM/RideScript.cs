@@ -19,11 +19,14 @@ namespace OpenTPW;
 /// <list type="bullet">
 /// <item>The body is an array of words and the program counter indexes it directly, so a branch
 /// target is used as it stands.</item>
-/// <item><b>There are no condition flags.</b> Every instruction that computes something leaves its
+/// <item><b>There are no condition flags.</b> Most instructions that compute something leave their
 /// value in one result register, and the conditional branches compare that against zero.</item>
-/// <item>A destination operand must be a variable. When it is not, the engine returns through NOP's
-/// own handler, so the instruction does nothing at all rather than failing - see
-/// <see cref="IgnoredWrites"/>, which counts them because seventeen shipped instructions do it.</item>
+/// <item>A destination operand must be a variable. When it is not, the engine leaves through NOP's own
+/// handler without writing it - see <see cref="IgnoredWrites"/>. Most such instructions have written the
+/// result register by then. Some test the destination first and write nothing - <c>ADD</c>, <c>COPY</c>,
+/// <c>TEST</c>, <c>CMP</c>, <c>FORCEUNLIMBO</c>, <c>GETVARINCHILD</c> and <c>GETVARINPARENT</c> - and
+/// <c>COPY</c>, which has not yet fetched its source, leaves the program counter on it, so the next
+/// dispatch refuses that word and the script ends.</item>
 /// <item>A script runs a fixed number of instructions per turn, and yields early by zeroing that
 /// budget. <c>WAIT</c> yields by rewinding the program counter onto itself, so it costs one
 /// instruction per turn until its deadline passes rather than blocking anything.</item>
@@ -48,14 +51,45 @@ public sealed class RideScript
 
 	private readonly RideScriptFile _file;
 	private readonly int[] _variables;
-	private readonly int[] _stack;
+
+	/// <summary>
+	/// The one array both stacks share - the engine's <c>+0x20</c>, sized by its <c>+0x54</c>. The loader
+	/// sizes it from the header; a restore replaces it with the saved block (<see cref="RestoreStacks"/>).
+	/// </summary>
+	private int[] _stack;
 	private readonly Dictionary<int, RideInstruction> _atAddress;
 
-	/// <summary>Subroutine returns fill the stack from the top down; see <see cref="RideScriptFile.StackSize"/>.</summary>
+	/// <summary>
+	/// The call index - the engine's <c>+0x40</c>, the slot the next <c>JSR</c> or <c>PUSH</c> writes. It
+	/// starts at the top slot and counts down, so the live frames are the slots above it.
+	/// </summary>
 	private int _calls;
 
-	/// <summary>HUSH and HOP fill the same storage from the bottom up, and must not meet <see cref="_calls"/>.</summary>
+	/// <summary>
+	/// The heap index - the engine's <c>+0x44</c>, how many values <c>HUSH</c> has pushed from slot 0 up.
+	/// <b>Nothing keeps it apart from <see cref="_calls"/></b>: <c>HUSH</c> never reads the call index, nor
+	/// <c>JSR</c> or <c>PUSH</c> this one, so a <c>HUSH</c> can write over a frame and a <c>JSR</c> over a
+	/// value (<c>docs/exe/park.md</c>, "The two stacks").
+	/// </summary>
 	private int _values;
+
+	/// <summary>
+	/// The tag <c>JSR</c> ORs into a return address (<c>0x005539d8</c>) and <c>RETURN</c> tests for and
+	/// strips (<c>0x00553a66</c>) - a label operand's own tag, so a frame is stored as the engine stores it.
+	/// </summary>
+	private const int LabelTag = 0x20000000;
+
+	/// <summary>The top byte of a word, which is the whole of an operand's tag.</summary>
+	private const int TagMask = unchecked( (int)0xFF000000 );
+
+	/// <summary>The slot at the call end. Read by the tests.</summary>
+	internal int CallIndex => _calls;
+
+	/// <summary>How many values the heap end holds.</summary>
+	internal int HeapIndex => _values;
+
+	/// <summary>The array as it stands, frames and values alike.</summary>
+	internal IReadOnlyList<int> Stack => _stack;
 
 	private int _budget;
 	private bool _critical;
@@ -478,7 +512,10 @@ public sealed class RideScript
 	/// <summary>The script's own variables, in the order <see cref="RideScriptFile.VariableNames"/> names them.</summary>
 	public IReadOnlyList<int> Variables => _variables;
 
-	/// <summary>Instructions skipped because their destination was not a variable, as the engine skips them.</summary>
+	/// <summary>
+	/// Instructions whose destination was not a variable, so that nothing was written to it. The engine
+	/// skips each of them except a <c>COPY</c>, which ends the script.
+	/// </summary>
 	public int IgnoredWrites { get; private set; }
 
 	/// <summary>
@@ -762,6 +799,28 @@ public sealed class RideScript
 	}
 
 	/// <summary>
+	/// Puts back the stack array, both its indices and the result register as a save left them - what
+	/// <c>FUN_005597a0</c> restores with the rest of the struct, taking the array from the record's first
+	/// block after the body and its size from that block's length (<c>docs/exe/park.md</c>, "The two stacks").
+	///
+	/// <para>
+	/// <b>The array comes back word for word, and that is right only because <see cref="Call"/> stores a
+	/// frame the engine's way</b>, tagged <see cref="LabelTag"/>: the slots above the call index are
+	/// return addresses a <c>RETURN</c> reads as the engine wrote them. The rest hold whatever was last
+	/// written there, a returned call's address included, since nothing clears a slot. Neither index is
+	/// checked against the size, as the engine checks neither; each handler's own bounds are what an index
+	/// past them meets.
+	/// </para>
+	/// </summary>
+	internal void RestoreStacks( int[] stack, int callIndex, int heapIndex, int result )
+	{
+		_stack = [.. stack];
+		_calls = callIndex;
+		_values = heapIndex;
+		Result = result;
+	}
+
+	/// <summary>
 	/// Takes the name this script gives itself, without running any of it.
 	///
 	/// <para>
@@ -1015,10 +1074,26 @@ public sealed class RideScript
 				break;
 
 			case Opcode.COPY:
+				// The destination is tested before the source is fetched (0x00551da3), so a literal one leaves
+				// the position on operand 1, which the next dispatch refuses as no instruction, and parks.
+				if ( operands[0].Kind != RideOperandKind.Variable )
+				{
+					++IgnoredWrites;
+					Position = instruction.Address + 2;
+					break;
+				}
+
 				Store( operands[0], Value( operands[1] ) );
 				break;
 
 			case Opcode.ADD:
+				// Tested before the register is touched (0x00553e72), where SUB's tail writes it first.
+				if ( operands[0].Kind != RideOperandKind.Variable )
+				{
+					++IgnoredWrites;
+					break;
+				}
+
 				Store( operands[0], Value( operands[0] ) + Value( operands[1] ) );
 				break;
 
@@ -1096,11 +1171,13 @@ public sealed class RideScript
 				break;
 
 			case Opcode.HUSH:
-				PushValue( Value( operands[0] ) );
+				PushValue( operands[0] );
 				break;
 
 			case Opcode.HOP:
-				Store( operands[0], PopValue() );
+				// A heap error changes nothing (0x00553dfa); a pop takes POP's store tail.
+				if ( PopValue( out var hopped ) )
+					Store( operands[0], hopped );
 				break;
 
 			case Opcode.WAIT:
@@ -1163,8 +1240,9 @@ public sealed class RideScript
 
 			case Opcode.GETANIM_CH:
 				// Destination first and the channel second, the reverse of the triggers' order. GETANIM is
-				// the same handler with the channel a literal nought, and no shipped script uses it.
-				Store( operands[0], RoleOn( Value( operands[1] ) ) );
+				// the same handler with the channel a literal nought, and no shipped script uses it. With no
+				// model the handler skips the player and stores the register as it stands (0x0055374c).
+				Store( operands[0], Animations is null ? Result : RoleOn( Value( operands[1] ) ) );
 				break;
 
 			case Opcode.WAIT4ANIM:
@@ -1355,8 +1433,9 @@ public sealed class RideScript
 			// mechanism, and the other half of what a script can do with a visitor. WALKGET is the most
 			// common dismissal in Lost Kingdom: ten scripts use it where UNBOUNCE serves one.
 			case Opcode.WALKON:
-				Result = WalkOn( now, Value( operands[0] ), Value( operands[1] ), Value( operands[2] ),
-					Value( operands[3] ), Value( operands[4] ), Value( operands[5] ) ) ? 1 : 0;
+				// WALKON never writes the register: nothing after FUN_00556f40 returns writes it (0x00555afe).
+				WalkOn( now, Value( operands[0] ), Value( operands[1] ), Value( operands[2] ),
+					Value( operands[3] ), Value( operands[4] ), Value( operands[5] ) );
 				break;
 
 			case Opcode.WALKOFF:
@@ -1641,8 +1720,7 @@ public sealed class RideScript
 	/// instant arrival, which is the engine's own substitution.
 	/// </para>
 	/// </summary>
-	/// <returns>Whether a slot was free, which the engine reports through the result register.</returns>
-	private bool WalkOn( float now, int handle, int walkNode, int headNode, int offFrom, int offTo,
+	private void WalkOn( float now, int handle, int walkNode, int headNode, int offFrom, int offTo,
 		int action )
 	{
 		for ( var slot = 0; slot < _walk.Length; ++slot )
@@ -1663,11 +1741,10 @@ public sealed class RideScript
 				State = WalkState.WalkingOn,
 			};
 
-			return true;
+			return;
 		}
 
 		// "RSSE: WALK: Could not add peep t..." - the engine complains and carries on.
-		return false;
 	}
 
 	/// <summary>
@@ -2361,8 +2438,9 @@ public sealed class RideScript
 	private int Read( int index ) => index >= 0 && index < _variables.Length ? _variables[index] : 0;
 
 	/// <summary>
-	/// Writes a result. The result register is set whatever happens - the engine stores it before it
-	/// looks at the destination - and the variable only when the destination is one.
+	/// Writes a result as the shared store tail does (<c>0x00555939</c>): the result register whatever
+	/// happens, then the variable only when the destination is one. <c>ADD</c> and <c>COPY</c> test their
+	/// destination before they reach this, and so write nothing for a literal one.
 	/// </summary>
 	private void Store( RideOperand destination, int value )
 	{
@@ -2406,58 +2484,172 @@ public sealed class RideScript
 		Position = target.Value;
 	}
 
+	/// <summary>
+	/// <c>JSR</c> (<c>0x005539a9</c>): pushes the next word, tagged <see cref="LabelTag"/>, and jumps.
+	///
+	/// <para>
+	/// <b>With no stack or no room it parks the script and then jumps anyway</b>: the operand's tag is tested
+	/// after either arm, and a label un-parks the script by writing the counter. So a full stack's call
+	/// still runs its subroutine, whose <c>RETURN</c> pops the frame of the call still open and comes back
+	/// one frame too far. An operand that is not a label leaves through <c>NOP</c>: pushed, the script
+	/// carries on after the <c>JSR</c>; not, it stays parked. Neither arm writes the result register.
+	/// </para>
+	/// </summary>
 	private void Call( RideOperand target )
 	{
-		if ( _stack.Length == 0 || _calls < 0 || _calls >= _stack.Length )
+		var pushed = HasCallRoom();
+
+		if ( pushed )
+			_stack[_calls--] = Position | LabelTag;
+		else
+			StackError();
+
+		// The jump writes the counter, which is what un-parks a script the error parked.
+		if ( target.Kind == RideOperandKind.Location )
 		{
-			Running = false;
+			Running = true;
+			Position = target.Value;
+		}
+	}
+
+	/// <summary>
+	/// <c>RETURN</c> (<c>0x00553a32</c>): pops the slot above the call index and jumps to it.
+	///
+	/// <para>
+	/// <b>With no stack or nothing pushed it parks</b>, so a <c>RETURN</c> with no frame ends the script. A
+	/// popped word without the label tag is dropped through <c>NOP</c>: the pop stands and the script
+	/// carries on after the <c>RETURN</c>. The slot is not cleared, and the register is not written.
+	/// </para>
+	/// </summary>
+	private void Return()
+	{
+		var word = 0;
+
+		if ( HasAFrame() )
+			word = _stack[++_calls];
+		else
+			StackError();
+
+		if ( (word & TagMask) == LabelTag )
+			Position = word ^ LabelTag;
+	}
+
+	/// <summary>
+	/// <c>PUSH</c> (<c>0x00553c1e</c>): the call end, a value rather than an address. It writes the result
+	/// register whether or not there was room, and on none it parks.
+	/// </summary>
+	private void PushCall( int value )
+	{
+		if ( HasCallRoom() )
+			_stack[_calls--] = value;
+		else
+			StackError();
+
+		Result = value;
+	}
+
+	/// <summary>
+	/// <c>POP</c> (<c>0x00553cba</c>): the call end's top word, a return address coming back tagged. On an
+	/// empty stack it parks and answers nought, which the caller's store still writes.
+	/// </summary>
+	private int PopCall()
+	{
+		if ( HasAFrame() )
+			return _stack[++_calls];
+
+		StackError();
+
+		return 0;
+	}
+
+	/// <summary>
+	/// Whether the call end can take a word, as <c>JSR</c> and <c>PUSH</c> test it: a stack, and the index
+	/// inside it - so none once it has counted past slot 0.
+	/// </summary>
+	private bool HasCallRoom() => _stack.Length > 0 && _calls >= 0 && _calls < _stack.Length;
+
+	/// <summary>
+	/// Whether a word has been pushed at the call end, as <c>RETURN</c> and <c>POP</c> test it: the index
+	/// below the top slot, and no lower than one past slot 0.
+	/// </summary>
+	private bool HasAFrame() => _stack.Length > 0 && _calls >= -1 && _calls < _stack.Length - 1;
+
+	/// <summary>
+	/// A call-end error: <i>"RSSE: Stack Error"</i> (<c>0x765c2c</c>), and the counter parked at -10000,
+	/// which ends the script at the turn unless the instruction writes the counter again. The engine's
+	/// logger is a bare <c>RET</c>; this says it once per script.
+	/// </summary>
+	private void StackError()
+	{
+		Running = false;
+
+		if ( _saidStackError )
+			return;
+
+		_saidStackError = true;
+		Log?.Warning( $"{Name}: RSSE: Stack Error at word {Position}, call index {_calls} of {_stack.Length}" );
+	}
+
+	private bool _saidStackError;
+
+	/// <summary>
+	/// <c>HUSH</c> (<c>0x00553d25</c>): pushes a value from slot 0 up and writes it to the result register.
+	/// <b>Its bound is the stack alone</b> - it never reads the call index - so it writes over an open frame
+	/// once it reaches one. With no stack or no room it only logs.
+	/// </summary>
+	private void PushValue( RideOperand operand )
+	{
+		if ( _stack.Length == 0 || _values < 0 || _values >= _stack.Length )
+		{
+			HeapError();
 			return;
 		}
 
-		_stack[_calls--] = Position;
-		Jump( target );
-	}
-
-	private void Return()
-	{
-		if ( _stack.Length == 0 || _calls + 1 >= _stack.Length )
-			return;
-
-		Position = _stack[++_calls];
-	}
-
-	private void PushCall( int value )
-	{
-		if ( _stack.Length == 0 || _calls < 0 )
-			return;
-
-		_stack[_calls--] = value;
-	}
-
-	private int PopCall()
-	{
-		if ( _stack.Length == 0 || _calls + 1 >= _stack.Length )
-			return 0;
-
-		return _stack[++_calls];
-	}
-
-	/// <summary>HUSH fills from the bottom, and must not run into the subroutine stack coming down.</summary>
-	private void PushValue( int value )
-	{
-		if ( _values < 0 || _values >= _stack.Length || _values > _calls )
-			return;
+		var value = Value( operand );
 
 		_stack[_values++] = value;
+		Result = value;
 	}
 
-	private int PopValue()
+	/// <summary>
+	/// <c>HOP</c> (<c>0x00553daa</c>): takes the value <c>HUSH</c> pushed last. With no stack or nothing
+	/// hushed it only logs. Its other test, the call index past the stack's size, is never true of an index
+	/// the engine kept.
+	///
+	/// <para>
+	/// <b>A heap index past the stack is refused here, where the engine reads past the array.</b> No
+	/// engine writer produces one; only a save could hold it, since the save reader does not check.
+	/// </para>
+	/// </summary>
+	private bool PopValue( out int value )
 	{
-		if ( _values <= 0 || _values > _stack.Length )
-			return 0;
+		if ( _stack.Length == 0 || _values <= 0 || _calls > _stack.Length || _values > _stack.Length )
+		{
+			HeapError();
+			value = 0;
 
-		return _stack[--_values];
+			return false;
+		}
+
+		value = _stack[--_values];
+
+		return true;
 	}
+
+	/// <summary>
+	/// A heap-end error: <i>"RSSE: Heap Error"</i> (<c>0x765c18</c>), and nothing else - no park, no write,
+	/// the register untouched. Said once per script, as <see cref="StackError"/> is.
+	/// </summary>
+	private void HeapError()
+	{
+		if ( _saidHeapError )
+			return;
+
+		_saidHeapError = true;
+		Log?.Warning( $"{Name}: RSSE: Heap Error at word {Position}, heap index {_values} of {_stack.Length}" );
+	}
+
+	private bool _saidHeapError;
 
 	/// <summary>
 	/// Sits on the <c>WAIT</c> rather than blocking: the program counter is put back onto it so the
@@ -2724,9 +2916,9 @@ public sealed class RideScript
 	/// those correctly keep the rider aboard.
 	/// </para>
 	/// <para>
-	/// With no model the engine reads a stack slot it never wrote, which is genuinely undefined; nought is
-	/// answered here instead, and nought is the safe one - it is the "not finished yet" branch, so a script
-	/// running without a model holds its riders rather than flinging them off.
+	/// A script with no model never asks: <c>GETANIM_CH</c> stores the register as it stands. A channel the
+	/// model does not have answers nought here, where the engine reads past its array - see
+	/// <see cref="RideAnimations.Channel"/>, which refuses.
 	/// </para>
 	/// </summary>
 	private int RoleOn( int channel )

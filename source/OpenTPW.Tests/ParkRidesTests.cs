@@ -189,6 +189,29 @@ public class ParkRidesTests
 			"the Belly Bounce's saved playback speed" );
 	}
 
+	/// <summary>
+	/// <b>A bound script resumes with its stack, both its indices and its result register</b>, which the
+	/// save reader restores with the rest of the struct. The Fountain is saved with 3033 in its register
+	/// (the Gates, with 1, is not bound by this fixture), and the Belly Bounce is the one with a stack: saved
+	/// with nothing pushed, its top slot holding the tagged return address of a call that had returned.
+	/// </summary>
+	[TestMethod]
+	public void ABoundScriptResumesWithItsStackAndResultRegister()
+	{
+		var rides = Bind( World(), Catalogue() );
+
+		RideScript ScriptOf( int thing ) => rides.Scheduler.Find( rides.ScriptFor( thing ) )!;
+
+		Assert.AreEqual( 3033, ScriptOf( FountainThing ).Result, "the Fountain's saved register" );
+
+		var bouncy = ScriptOf( BellyBounceThing );
+
+		Assert.AreEqual( 3, bouncy.Stack.Count, "the Belly Bounce's saved stack" );
+		Assert.AreEqual( 0x20000018, bouncy.Stack[2], "its top slot, a return address with its tag" );
+		Assert.AreEqual( 2, bouncy.CallIndex, "saved with no frame open" );
+		Assert.AreEqual( 0, bouncy.HeapIndex, "and nothing hushed" );
+	}
+
 	/// <summary>The Belly Bounce - thing 13, the shipped park's only ride.</summary>
 	private const int BellyBounceThing = 13;
 

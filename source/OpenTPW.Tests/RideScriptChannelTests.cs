@@ -344,20 +344,33 @@ public class RideScriptChannelTests
 	}
 
 	/// <summary>
-	/// With no model at all the answer is nought. The engine reads a stack slot it never wrote here, which is
-	/// genuinely undefined; nought is chosen because it is the safe one - it is the "not finished" branch, so
-	/// a script running without a model holds its riders rather than flinging them off.
+	/// <b>With no model the answer is the result register as it stands</b>: the handler skips the player and
+	/// copies <c>+0x48</c> into a variable destination (<c>0x0055374c</c>). Every shipped one names a literal
+	/// destination, and the <c>BRANCH_PV</c> after it reads the register itself - there, the lane's rider,
+	/// which the <c>TEST</c> before it left, so a script with no model keeps its riders.
 	/// </summary>
 	[TestMethod]
-	public void AskingWithNoModelAnswersNought()
+	public void AskingWithNoModelAnswersTheRegisterAsItStands()
 	{
 		var script = new RideScript( Build( 2,
+			Word( Opcode.COPY ), Var( 1 ), Lit( 9 ),
 			Word( Opcode.GETANIM_CH ), Var( 0 ), Lit( 0 ),
 			Word( Opcode.END ) ) );
 
 		script.Turn( 0f );
 
-		Assert.AreEqual( 0, script["VAR_0"] );
+		Assert.IsNull( script.Animations, "the case under test is a script with no model" );
+		Assert.AreEqual( 9, script["VAR_0"], "the destination takes what the register held" );
+		Assert.AreEqual( 9, script.Result, "and the register keeps it" );
+
+		var shipped = new RideScript( Build( 2,
+			Word( Opcode.COPY ), Var( 1 ), Lit( 9 ),
+			Word( Opcode.GETANIM_CH ), Lit( 0 ), Lit( 0 ),
+			Word( Opcode.END ) ) );
+
+		shipped.Turn( 0f );
+
+		Assert.AreEqual( 9, shipped.Result, "the shipped literal-destination shape leaves the register too" );
 	}
 
 	/// <summary>

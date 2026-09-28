@@ -1688,13 +1688,14 @@ same for a freeze at frame nought. In the shipped park **eleven of the fifteen**
 of them and restarts the clip — including the Litter Bin, which is saved on role 0.
 
 **What OpenTPW does with this.** It restores **both halves**: from `RSSE` the script's counter, its
-variables and its declared name, and from `RSYS` each thing's animation channels — the role, the entry,
+variables, its stack with both its indices, its result register and its declared name (`park.md`, "The two
+stacks"), and from `RSYS` each thing's animation channels — the role, the entry,
 the speed and the flag word, with the two bits that mean the same thing carried across and the held and frozen
 states re-entered through the pseudo-roles exactly as above. Restoring only the script is a net loss, and measurably so: a thing whose
 steady-state loop holds no animation instruction never reaches the `LOOPANIM` in its prologue again, and
 ten of Lost Kingdom's fourteen placed things stood frozen for the whole session when the counter alone
 was put back. The rest is stepped over by length, neither restored nor counted in the `unimplemented` census — the
-wait deadlines, the call stack and the limbo, bounce and walk tables — so the walk still has to add up. The name is **not** in the
+wait deadlines and the limbo, bounce and walk tables — so the walk still has to add up. The name is **not** in the
 saved struct and is taken off the script's own opening `NAME` instead, which matters because resuming
 skips that instruction and `FINDSCRIPTRAND` looks a script up by name. `ParkRides.BindNew` — the path a
 player takes by building something — deliberately restores nothing, because a new thing has no past and

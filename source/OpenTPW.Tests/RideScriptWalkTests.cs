@@ -213,8 +213,9 @@ public class RideScriptWalkTests
 	///
 	/// <para>
 	/// This is as far as the shipped script goes <b>with no model bound</b>: <c>Junspray</c> only reaches
-	/// <c>WALKOFF</c> once <c>GETANIM_CH</c> says that lane's animation has finished, and a script with no
-	/// players has no animation to finish - so no slot here reaches the state <c>WALKGET</c> collects from.
+	/// <c>WALKOFF</c> once <c>GETANIM_CH</c> answers -1, and with no model it answers the register as it
+	/// stands - the lane's rider, which the <c>TEST</c> before it left - so no slot here reaches the state
+	/// <c>WALKGET</c> collects from.
 	/// Hand the script its own players and the round trip completes - see
 	/// <see cref="WithItsOwnPlayersTheSideshowLetsARiderBackOff"/>, which is the same shipped script and the
 	/// same loop. This one is the no-model case.
@@ -413,9 +414,9 @@ public class RideScriptWalkTests
 
 	/// <summary>
 	/// <b>The declared slots are a ceiling.</b> Offered more visitors than it has lanes, the sideshow
-	/// takes as many as it declared and refuses the rest - <c>WALKON</c> walks the array and answers
-	/// false when every slot is busy, exactly as <c>BOUNCE</c> does. What is asserted is only that at
-	/// least as many visitors were taken on as there are lanes; the refusals are not counted.
+	/// takes as many as it declared and refuses the rest - <c>WALKON</c> walks the array and takes nobody
+	/// when every slot is busy. What is asserted is only that at least as many visitors were taken on as
+	/// there are lanes; the refusals are not counted.
 	/// </summary>
 	[TestMethod]
 	public void MorePeopleThanLanesCannotAllBeWalkedOn()

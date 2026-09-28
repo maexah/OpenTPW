@@ -264,6 +264,43 @@ public class ParkScriptStateTests
 	}
 
 	/// <summary>
+	/// <b>The stack, its two indices and the result register read back as the FileFormats page gives
+	/// them</b> ("The ride script module"): block 1 and dwords 16, 17 and 18. Only the Belly Bounce's script
+	/// declares a stack; it was saved with nothing pushed, so its top slot holds the tagged return address
+	/// of a call that had returned and the two below it were never written.
+	/// </summary>
+	[TestMethod]
+	public void TheSavedStacksTheirIndicesAndTheResultRegistersRead()
+	{
+		var park = Park();
+		var scripts = park.ScriptStates;
+		var bouncy = scripts.For( BellyBounceHandle )!.Value;
+
+		CollectionAssert.AreEqual( new[] { unchecked( (int)0xCDCDCDCD ), unchecked( (int)0xCDCDCDCD ), 0x20000018 },
+			bouncy.Stack, "the Belly Bounce's three slots" );
+		Assert.AreEqual( 2, bouncy.CallIndex, "the top slot, so no frame is open" );
+		Assert.AreEqual( 0, bouncy.HeapIndex, "and nothing hushed" );
+
+		foreach ( var saved in scripts.ByHandle.Values.Where( s => s.Handle != BellyBounceHandle ) )
+		{
+			Assert.AreEqual( 0, saved.Stack.Length, $"handle {saved.Handle} declares no stack" );
+			Assert.AreEqual( -1, saved.CallIndex, $"handle {saved.Handle}: the loader's index for a stack of nought" );
+			Assert.AreEqual( 0, saved.HeapIndex, $"handle {saved.Handle}" );
+		}
+
+		int HandleOf( int catalogueId ) => park.Objects.Single( o => o.CatalogueId == catalogueId ).RideScript;
+
+		var fountain = HandleOf( 1403 );
+		var gates = HandleOf( 1601 );
+
+		Assert.AreEqual( 3033, scripts.For( fountain )!.Value.Result, "the fountain's register" );
+		Assert.AreEqual( 1, scripts.For( gates )!.Value.Result, "the gate's" );
+
+		Assert.IsTrue( scripts.ByHandle.Values.Where( s => s.Handle != fountain && s.Handle != gates )
+			.All( s => s.Result == 0 ), "and nought for the other twelve" );
+	}
+
+	/// <summary>
 	/// The three seams the restore is built from, exercised directly rather than through a park.
 	///
 	/// <para>

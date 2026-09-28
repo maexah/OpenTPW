@@ -329,8 +329,11 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00502be4` | `FUN_005029f0`: the researcher staying takes state `0xf`, research | OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x00504d8f` | `FUN_00504c70`: a staff member put out of a sold rest area claims another and stays in state 0 | OpenTPW.Tests/ParkEvictionTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x00505495` | `FUN_00505490` opens with `FUN_004fa870`, as the guest handler does | OpenTPW.Tests/ParkTickTests.cs OpenTPW/World/Park/ParkPeople.cs  |
+| `0x00505542` | Staff idle turn: a nought idle stamp ends the idle wait on the next sweep | OpenTPW/World/Park/Staff.cs  |
 | `0x00505745` | `FUN_005056e0`: state 6's wait against `mGameTick`, unsigned | OpenTPW.Tests/ParkStaffBehaviourTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x00506286` | `FUN_005061d0`: the normal end of a rest calls `FUN_00506d10`, which takes one off `VAR_STAFFIN` | OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x00506b41` | FUN_00506a40, the tired branch: the rest byte, truncated, tested <= the rest level | OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x00506b50` | FUN_00506a40: thought 0x14 (tired) shown through FUN_0050be80 before the rest area is looked for | OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x0050cd80` | | OpenTPW/World/Park/FixedVector.cs  |
 | `0x0050f870` | | OpenTPW/World/Park/FixedVector.cs  |
 | `0x00511fc4` | | OpenTPW/World/Park/ParkWeather.cs  |
@@ -393,7 +396,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00526120` | Mode `0x14`: then `FUN_0052f580(3,0)` | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005271b7` | Apply dispatcher `FUN_00524960`: start of the path/queue arm | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00527222` | Mode-3 commit: start of the queue run arm | OpenTPW/World/Park/ParkPathBuilding.cs  |
-| `0x00527541` | `FUN_004de1f0` after a queue run is laid (mode 3) | OpenTPW.Tests/ParkQueueRemeasureTests.cs  |
+| `0x00527541` | `FUN_004de1f0` after a queue run is laid (mode 3) | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005275f2` | Mode-3 commit: the tool ends through `FUN_0052f200(0,0)` | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00527655` | Apply dispatcher: end of the path/queue arm | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00527f9a` | The demolisher builds the queue's list, `FUN_00530120`, before the gate | OpenTPW/World/Park/ParkPathBuilding.cs  |
@@ -490,6 +493,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00551701` | `FUN_005516b0`: clears the script's critical flag as its turn begins | OpenTPW/VM/RideScript.cs  |
 | `0x00551715` | | OpenTPW/VM/RideScript.cs  |
 | `0x00551724` | | OpenTPW/VM/RideScript.cs  |
+| `0x00551da3` | RSSE COPY: operand 0 tested before operand 1 is fetched; a literal leaves the PC on operand 1 | OpenTPW.Tests/RideScriptStackTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x00551df5` | | OpenTPW.Files/Formats/Script/RideScriptFile.cs  |
 | `0x00551f5f` | `PUSH 0x1c`: the effect list's nodes are 28 bytes | OpenTPW/World/Ride/RideEffects.cs  |
 | `0x00552376` | `KILLOBJ`: steps to the next node before it unlinks the match, with no break | OpenTPW/World/Ride/RideEffects.cs  |
@@ -504,14 +508,37 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00553470` | | OpenTPW.Tests/RideScriptChannelTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x005535d6` | `TRIGWAITANIM`: the not-equal re-entry rewinds and writes `+0x98 = 0` | OpenTPW/VM/RideScript.cs  |
 | `0x005535f4` | `TRIGWAITANIM`: the equal branch clears the mark `+0xbc` and falls through | OpenTPW.Tests/RideScriptModelTests.cs OpenTPW/VM/RideScript.cs  |
+| `0x0055374c` | RSSE GETANIM_CH with no model: the flag word zeroed, so +0x48 is stored as it stands | OpenTPW.Tests/RideScriptChannelTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x0055374e` | | OpenTPW/VM/RideScript.cs  |
+| `0x005539a9` | RSSE JSR handler | OpenTPW/VM/RideScript.cs  |
+| `0x005539d8` | RSSE JSR: the return address ORed with the label tag 0x20000000 | OpenTPW/VM/RideScript.cs  |
+| `0x00553a07` | RSSE JSR: no stack or no room parks the PC (the jump follows) | OpenTPW.Tests/RideScriptStackTests.cs  |
+| `0x00553a1c` | RSSE JSR: a non-label operand leaves through NOP | OpenTPW.Tests/RideScriptStackTests.cs  |
+| `0x00553a24` | RSSE JSR: a label operand goes into the PC, after either arm | OpenTPW.Tests/RideScriptStackTests.cs  |
+| `0x00553a32` | RSSE RETURN handler | OpenTPW/VM/RideScript.cs  |
+| `0x00553a63` | RSSE RETURN: no stack or no frame parks the PC | OpenTPW.Tests/RideScriptStackTests.cs  |
+| `0x00553a66` | RSSE RETURN: the popped word's tag test and strip | OpenTPW/VM/RideScript.cs  |
+| `0x00553a74` | RSSE RETURN: a popped word without the label tag leaves through NOP | OpenTPW.Tests/RideScriptStackTests.cs  |
+| `0x00553c1e` | RSSE PUSH handler | OpenTPW/VM/RideScript.cs  |
+| `0x00553c89` | RSSE PUSH: the value written to +0x48 after a push | OpenTPW.Tests/RideScriptStackTests.cs  |
+| `0x00553cac` | RSSE PUSH: the value written to +0x48 on a stack error | OpenTPW.Tests/RideScriptStackTests.cs  |
+| `0x00553cba` | RSSE POP handler | OpenTPW/VM/RideScript.cs  |
+| `0x00553d1d` | RSSE POP: an empty stack parks the PC, then the store tail writes 0 | OpenTPW.Tests/RideScriptStackTests.cs  |
+| `0x00553d25` | RSSE HUSH handler | OpenTPW/VM/RideScript.cs  |
+| `0x00553d95` | RSSE HUSH: the value written to +0x48 | OpenTPW.Tests/RideScriptStackTests.cs  |
+| `0x00553daa` | RSSE HOP handler | OpenTPW/VM/RideScript.cs  |
+| `0x00553dfa` | RSSE heap error: logs "RSSE: Heap Error" and changes nothing | OpenTPW.Tests/RideScriptStackTests.cs OpenTPW/VM/RideScript.cs  |
+| `0x00553e72` | RSSE ADD: a literal operand 0 leaves through NOP before +0x48 is written | OpenTPW.Tests/RideScriptStackTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x00554c07` | | OpenTPW/World/Ride/RideState.cs  |
 | `0x0055512e` | `SPAWNCHILD` tests the loader's answer (`TEST EAX,EAX / JZ`) | OpenTPW/VM/RideScript.cs  |
 | `0x005555ad` | `GETVARINCHILD`/`GETVARINPARENT`: shared tail that bounds the index from above only | OpenTPW/VM/RideScript.cs  |
+| `0x00555939` | RSSE store tail: +0x48, then the variable only for a 0x40 operand (POP, HOP and others) | OpenTPW.Tests/RideScriptStackTests.cs OpenTPW/VM/RideScript.cs  |
+| `0x00555afe` | RSSE WALKON: after FUN_00556f40 returns, nothing writes +0x48 | OpenTPW.Tests/RideScriptStackTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x00555f6b` | `SINGLESCREAM` picks its branch on the second operand (`CMP ESI,EDI / JGE`) | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x00556009` | `SCREAMLEVEL` writes the volume call's return over the scream handle at `+0xd0` | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x0055641b` | | OpenTPW/VM/RideScript.cs  |
 | `0x0055646d` | | OpenTPW/VM/RideScript.cs  |
+| `0x005567a3` | RSSE dispatcher: a word without the opcode tag logs "Bad instruction" and parks | OpenTPW.Tests/RideScriptStackTests.cs  |
 | `0x005567d8` | The VM dispatcher's jump table, 106 opcodes | OpenTPW.Files/Formats/Script/Opcode.cs  |
 | `0x005569b8` | `SETOBJPARAM`'s type dispatch: jump table | OpenTPW/World/Ride/RideEffects.cs  |
 | `0x005569c4` | `SETOBJPARAM`'s type dispatch: byte map | OpenTPW/World/Ride/RideEffects.cs  |
@@ -524,6 +551,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0055928c` | Script death: the child arm | OpenTPW/VM/RideScriptScheduler.cs  |
 | `0x005592cd` | Script death: the arm that tells the parent | OpenTPW/VM/RideScriptScheduler.cs  |
 | `0x005597a0` | the `RSSE` arm of the restore chain: reads each script's whole 244-byte struct back from the file, program counter included, so a loaded park's scripts resume mid-flight | OpenTPW.Files/Formats/Save/ParkScriptStates.cs OpenTPW.Files/Formats/Save/ParkThingStates.cs OpenTPW/VM/RideScript.cs OpenTPW/World/Park/ParkRides.cs OpenTPW/World/Ride/RideEffects.cs  |
+| `0x00559af1` | FUN_005597a0: the stack size +0x54 from the saved stack block's length | OpenTPW/World/Park/ParkRides.cs  |
 | `0x0056695c` | | OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x00579e00` | | OpenTPW/Render/Assets/Asset.cs  |
 | `0x0057c620` | | OpenTPW/UI/ScreenParticles.cs  |
@@ -752,6 +780,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00763f88` | Sprite kinds table: fourteen bare kind names | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x00764030` | The four kid banks `Sprites_LoadFolder` loads before its sweep | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x00765280` | The opcode table `{name*, operandCount*}`, eight bytes a record | OpenTPW.Files/Formats/Script/Opcode.cs  |
+| `0x00765c18` | String "RSSE: Heap Error" | OpenTPW/VM/RideScript.cs  |
+| `0x00765c2c` | String "RSSE: Stack Error" | OpenTPW/VM/RideScript.cs  |
 | `0x00768ab4` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x00768fb8` | `AdvisorResponseTable` - see `advisor-park.md` | OpenTPW/Client/Diagnostics/DebugConsole.cs OpenTPW/UI/FrontEnd/FrontEndLines.cs OpenTPW/UI/Park/ParkLines.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x0076dc18` | | OpenTPW/UI/FrontEnd/FrontEndLines.cs OpenTPW/World/Advisor/Advisor.cs  |
