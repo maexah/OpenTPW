@@ -32,8 +32,10 @@ namespace OpenTPW;
 public sealed class ParkRideScore
 {
 	/// <param name="balance">
-	/// The park's balance stack, which holds every weight and multiplier. Null leaves the shipped global
-	/// file's own numbers in place, so a test can drive this without mounting a game.
+	/// The park's balance stack, which holds every weight, every multiplier and each guest type's preferred
+	/// excitement. Null takes <c>data/levels/Standard.sam</c>'s weights and multipliers, so a test can drive
+	/// this without mounting a game, but prefers 50 for every type where the file gives 80, 65, 50, 35, 65, 80,
+	/// 45 and 80: a park being played hands its balance in (<see cref="PeepBehaviour"/>).
 	/// </param>
 	public ParkRideScore( ParkBalance? balance = null )
 	{

@@ -67,6 +67,12 @@ public sealed class PeepBehaviour
 	/// queue (<see cref="FindQueueDestination"/>), or are put out when they cannot get there.
 	/// </para>
 	/// </param>
+	/// <param name="balance">
+	/// The park's balance stack, which the chooser's score reads its weights, its multipliers and each guest
+	/// type's <c>PeepTypes[n].PreferredExcitement</c> from - the same byte the arrival's excitement refusal
+	/// reads (<c>FUN_004fd4e0</c>, <c>0x004fd50a</c>). Null scores with <see cref="ParkRideScore"/>'s own
+	/// fallbacks, which prefer 50 for every type.
+	/// </param>
 	public PeepBehaviour( ParkWorld? park, Random? random = null,
 		ParkAdmission? admission = null, Func<int>? gateStatus = null, ParkState? state = null,
 		ParkItemCatalogue? catalogue = null,
@@ -75,7 +81,8 @@ public sealed class PeepBehaviour
 		Action<ParkWorld.CatalogueObject, int>? tellTheScript = null,
 		Action<ParkWorld.CatalogueObject, int>? walkAway = null,
 		Action<ParkWorld.CatalogueObject, int>? leaveQueue = null,
-		Func<int, bool>? stillQueueing = null )
+		Func<int, bool>? stillQueueing = null,
+		ParkBalance? balance = null )
 	{
 		_admit = admit;
 		_finishAdmission = finishAdmission;
@@ -92,7 +99,7 @@ public sealed class PeepBehaviour
 		_random = random ?? new Random();
 		// The state goes in so the chooser walks the RUNNING park's object chain: something bought this
 		// session is in that one and in no other, and a guest is never offered what the walk cannot reach.
-		_chooser = new ParkRideChooser( park, catalogue, state: State );
+		_chooser = new ParkRideChooser( park, catalogue, new ParkRideScore( balance ), State );
 		_park = park;
 		_catalogue = catalogue;
 	}

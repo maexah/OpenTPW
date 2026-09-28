@@ -111,6 +111,9 @@ public sealed class ParkPeople : Entity
 	/// </summary>
 	private readonly Random _rideRandom = new();
 
+	/// <summary>What an arriving guest's kind is drawn with - see <see cref="Admit"/>. A test seeds it.</summary>
+	private readonly Random _arrivalRandom;
+
 	/// <summary>
 	/// The mode every edge question in this park is asked in.
 	///
@@ -127,9 +130,10 @@ public sealed class ParkPeople : Entity
 	public const int WalkingMode = 0;
 
 	/// <param name="balance">
-	/// The park's balance stack, for the five numbers that turn an admission fee into an opinion. Null
-	/// leaves the fee unjudged and a guest standing at the booths - see
-	/// <see cref="PeepBehaviour.Admission"/>.
+	/// The park's balance stack: the five numbers that turn an admission fee into an opinion, each kind of
+	/// guest's preferred excitement and starting cash, the exit level, and the staff's constants. Null leaves
+	/// the fee unjudged and a guest standing at the booths - see <see cref="PeepBehaviour.Admission"/> - and
+	/// every kind preferring 50.
 	/// </param>
 	/// <param name="gateStatus">
 	/// What the gate's own script says it is doing, which is <c>ParkRides.GateStatus</c>. Taken as a
@@ -146,11 +150,13 @@ public sealed class ParkPeople : Entity
 	/// choosing where to go can score a thing by what it actually is rather than by where it stands -
 	/// see <see cref="ParkRideChooser"/>. Null leaves that arm scoring on distance and queue alone.
 	/// </param>
+	/// <param name="random">What an arriving guest's kind is drawn with. Null for the game; a test seeds one.</param>
 	public ParkPeople( ParkWorld? park, ParkBalance? balance = null, System.Func<int>? gateStatus = null,
 		ParkState? state = null, ParkItemCatalogue? catalogue = null,
-		System.Func<int, RideScript?>? scriptFor = null )
+		System.Func<int, RideScript?>? scriptFor = null, Random? random = null )
 	{
 		_scriptFor = scriptFor;
+		_arrivalRandom = random ?? new Random();
 
 		_peeps = PeepsIn( park );
 
@@ -216,7 +222,9 @@ public sealed class ParkPeople : Entity
 			// guest it passes still queues.
 			( ride, personId ) =>
 				ParkRideOperation.LeaveQueue( State, _scriptFor?.Invoke( ride.ThingId ), ride.ThingId, personId ),
-			StillQueueing );
+			StillQueueing,
+			// And the balance, for what each type of guest likes when they choose and when they arrive.
+			balance );
 
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
 		// none of what a guest needs - the fee, the gate - means anything to them.
@@ -332,10 +340,20 @@ public sealed class ParkPeople : Entity
 	/// file supplies, and the one score that is not decoded").
 	/// </para>
 	/// </summary>
-	internal int Admit( int cellX, int cellY, int personType = 0, int spriteBank = 0 )
+	/// <param name="personType">
+	/// Which kind of guest to make. Null draws one, as the original's constructor does for every guest it makes;
+	/// only a test names one.
+	/// </param>
+	internal int Admit( int cellX, int cellY, int? personType = null, int spriteBank = 0 )
 	{
 		if ( _blocked == null || !ParkState.OnMap( cellX, cellY ) || _peeps.Count == 0 )
 			return 0;
+
+		// FUN_004faec0 draws the kind from the world generator modulo the balance's PeepTypes row count
+		// (0x004fb019), the highest PeepTypes[n] the balance stack sets plus one. The two global files,
+		// data/levels/Standard.sam and Online_Standard.sam, each set rows 0 to 7 and no theme file sets one, so it
+		// is 8 in every shipped park, the constant here. The range is the original's; the sequence is not.
+		var type = personType ?? _arrivalRandom.Next( ParkWorld.GuestState.PersonTypes );
 
 		var one = ParkWorld.NavigatorState.One;
 		var pattern = _peeps[0].Navigator;
@@ -351,7 +369,7 @@ public sealed class ParkPeople : Entity
 		var x = (cellX * one) + (one / 2);
 		var y = (cellY * one) + (one / 2);
 
-		var cash = _balance?.Int( $"PeepTypes[{personType}].StartingCash", 300 ) ?? 300;
+		var cash = _balance?.Int( $"PeepTypes[{type}].StartingCash", 300 ) ?? 300;
 		var exitLevel = _balance?.Int( "PeepInfo.ExitLevel", 120 ) ?? 120;
 
 		// MaxSpeed is factor * 0.2 of a cell per thing tick (FUN_00510190) and the shipped park's guests
@@ -376,7 +394,7 @@ public sealed class ParkPeople : Entity
 		// AtTheBusStop.
 		var guest = new ParkWorld.GuestState(
 			State: (int)PeepState.AtGate, SavedState: ParkWorld.GuestState.Deciding,
-			PersonType: personType, Cash: cash, ExitLevel: exitLevel,
+			PersonType: type, Cash: cash, ExitLevel: exitLevel,
 			Happiness: 0f, Thirst: 0f, Hunger: 0f, Toilet: 0f, Vomit: 0f, Litter: 0f,
 			MajorDest: 0, QueuePos: 0, PrankeryIndex: 0 );
 

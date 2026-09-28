@@ -1088,9 +1088,9 @@ is computed inside OpenTPW's park, its positions and queues; it is not a run of 
 the Belly Bounce, as in Q83; all 17 decisions logged over 480 s chose it, and the decode chose the Totem in all 17.
 **75 s after the purchase, past the new window, asked of all 41 guests at once: OpenTPW's chooser picks the Belly Bounce
 for 40 and the Drinks Shop for 1; the decode picks the Totem for 35, the Aztec Mayhem for 1 and the Belly Bounce for 5**
-- every guest of types 0, 1, 5 and 7 a new ride and every guest of types 2, 3 and 6 the old one, as predicted. Thirty of the 41 are type
-0 only because OpenTPW makes every arrival type 0; the original draws `rand % 8`, so about three in eight would be
-types 2, 3 or 6. Photographed paused with that census: 13 guests in the Belly Bounce's queue of sixteen places, the
+- every guest of types 0, 1, 5 and 7 a new ride and every guest of types 2, 3 and 6 the old one, as predicted. Thirty of the 41 were type
+0 only because OpenTPW then made every arrival type 0 (Q165b draws it); the original draws one of eight, so about three
+in eight would be types 2, 3 or 6. Photographed paused with that census: 13 guests in the Belly Bounce's queue of sixteen places, the
 Totem's queue empty beside it. One guest's terms, a type 7 at (48,16) just after the purchase:
 
 | | OpenTPW: distance, excitement, score | The decode: distance, excitement, score |
@@ -1107,8 +1107,6 @@ where the original computes 30 from its cost of goods 50, price 20 and chance of
 
 | What | The original | OpenTPW | Reached in Lost Kingdom |
 |---|---|---|---|
-| The guest's preference | `PeepTypes[n].PreferredExcitement`: 80, 65, 50, 35, 65, 80, 45, 80 | **50 for every type**: `PeepBehaviour` builds the chooser with no `ParkBalance`, so `ParkRideScore` falls back; the arrival's excitement refusal reads the same | every choice |
-| An arriving guest's type | `rand % 8` (`FUN_004faec0`, `0x004fb019`) | 0: `ParkPeople.Admit`'s default, which the load's call leaves | every arrival |
 | The same kind as the last visit | nought | scored like any other | every guest who has left a thing |
 | The two histories | the visits written on leaving; the refusals at the two refusals, aged by a nought every 20 sweeps; both cleared by a removal and saved | never written, nor read from a save; `ParkRideScore.Staled` stops at the first match in both, where the second divides for every match | every visit |
 | New | × 5 for 184 sweeps after a purchase or a move, on the park calendar, unsigned | never: no age is handed in (`ParkRideChooser.NotNew`), a bought thing has no stamp, and `ParkRideScore` compares signed | every purchase |
@@ -1120,7 +1118,25 @@ where the original computes 30 from its cost of goods 50, price 20 and chance of
 | The window's Age | the park calendar | the real clock (`ParkObjectWindow.DaysSince`) | every object window |
 | The calendar at load | the save's `mGameTick`, 755: 2000-02-02 18:27:30 | counts from nought (`GameCalendar.Rebase`) | every load |
 
-Nothing here is counted by `Unimplemented.Report`. The build is Q165b.
+Nothing here is counted by `Unimplemented.Report`. The build is Q165c.
+
+**Built: each kind's preference and an arrival's kind** (`docs/QUEUE.md` Q165b). `PeepBehaviour` hands the park's
+`ParkBalance` to its chooser's `ParkRideScore`, so each kind prefers its own `PeepTypes[n].PreferredExcitement`, 80, 65,
+50, 35, 65, 80, 45 and 80, in the score and at the arrival's refusal, which reads the same byte (`FUN_004fd4e0`,
+`0x004fd50a`): a kind 0, 5 or 7 turns away from the Jungle Spray, 45 from its 80 where 44 is allowed (OpenTPW's 35 for
+the Spray; the original's computed 30 is 50 away, the same outcome). `ParkPeople.Admit` draws each new guest's kind.
+The constructor's draw (`FUN_004faec0`, `0x004fb019`) is the world generator `FUN_00516330` modulo `[0x007851d4]`, the
+balance's `PeepTypes` row count, the slot after the table's 20 rows of 12 bytes at `0x007850e4`. `FUN_004013e0` zeroes
+it before the global file only (`FUN_004017a0`, `0x004017b6`), and each of the loader's value paths
+(`0x00401aab`, `0x00401bbb`, `0x00401ccf`, `0x00401e4b`) raises it to the index set plus one, so it is the highest row
+the balance stack sets, plus one. The two global files, `data/levels/Standard.sam` and `Online_Standard.sam` (one or
+the other is loaded, `FUN_005156a0`), each set rows 0 to 7, and no theme file sets a row: 8 in every shipped park,
+which OpenTPW takes as the constant `ParkWorld.GuestState.PersonTypes`. The kind is the second of the constructor's
+eight unconditional draws, after the exit level's variation (`0x004faff8`) and before the cash's (`0x004fb046`); the
+five after it set thirst and hunger (`% 50`), toilet (`% 30`), one discarded, and the prankery byte `+0x1c0` against
+`PrankeryLikelihood`, and two more follow on one branch (Q85). OpenTPW draws the kind alone, from `System.Random`,
+and varies neither cash nor exit level (`park.md`, "What a new guest's fields come from"), so the range is the
+original's and the sequence is not.
 
 ## The staff turn - `CStaff`, every clock `mGameTick`
 

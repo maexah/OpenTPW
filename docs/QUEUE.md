@@ -1591,7 +1591,43 @@ artifacts are listed in `docs/history/README.md`.
   Decode what `FUN_004fcc30`'s seven terms give each (`ParkRideScore`) and whether the original sends nobody to a new
   ride while an old one stands. Confirm: the same `why` census. Q83b's runs add one: with the Belly Bounce sold, no
   guest made the Aztec Mayhem a destination in 343 s, 900 s, or 900 s on the old VM, while the Totem took 11 to 16.
-- [ ] **Q165b. Guests' preferences and types, the original's.** From Q165 (`ride-operation.md`, "What a thing is worth
+- [x] **Q165b. Guests' preferences and types, the original's.** Done 2026-09-28,
+  `alexah/171-guests-prefer-their-own-excitement`. `ride-operation.md`, "What a thing is worth to a guest", "Built: each
+  kind's preference and an arrival's kind".
+  - **Built.** `PeepBehaviour` takes the park's `ParkBalance` (`ParkPeople` hands in the level's) and scores with
+    `new ParkRideScore( balance )`, so each kind prefers its own `PreferredExcitement` in the chooser and at the
+    arrival's refusal, which reads the same byte (`FUN_004fd4e0`, `0x004fd50a`). `ParkPeople.Admit` draws a new guest's
+    kind over 0..7 (`FUN_004faec0`, `0x004fb019`) before reading its starting cash; a test may still name one.
+    `ParkRideScore` says a null balance prefers 50 for every kind, and `ParkPeople` what its balance feeds.
+  - **Decoded on the way:** the divisor `[0x007851d4]` is the balance's `PeepTypes` row count, the highest row the
+    stack sets plus one (four raises in `FUN_004017a0`, reset before the global file only): 8 in every shipped park,
+    from `data/levels/Standard.sam` or `Online_Standard.sam`. The kind is the second of the constructor's eight
+    unconditional draws; the others are Q85's.
+  - **Tests:** `ParkGuestTypeTests`, 4. A type 3 and a type 0 on (48,25) choose the Jungle Spray and the Belly Bounce,
+    through `ParkPeople`'s `why` and through a Deciding turn's `MajorDest`; a type 0 turns away from the Spray at its
+    back cell where a type 2 joins; 64 arrivals from a seeded draw cover the eight kinds, each with its own cash. Six
+    put-the-bug-back mutations (the behaviour or the people dropping the balance, the kind left 0, drawn over 7, the
+    cash of kind 0, the Deciding turn's wants as kind 0) were each red. The cell came from a throwaway search: with no
+    balance, no two kinds on one cell can choose differently.
+  - **Confirmed in the game** (`q165brun.py`, `q165bphoto.py`, silent, jungle; Q165's scene, a Totem at (57,23) and an
+    Aztec Mayhem at (60,30) queued to the path, then `load 30`; predicted first; `save/` unchanged in both runs). At
+    the purchase `why` split the 13 saved guests by kind, as predicted: kinds 0, 1, 5 and 7 (8) at the Totem, 2, 3 and
+    6 (5) at the Belly Bounce. 75 s on, the 30 arrivals held all eight kinds (5, 1, 3, 7, 3, 3, 3, 5); every kind 0, 1
+    and 4 aimed at the Totem, every 2 and 6 at the Belly Bounce, the 3s at it or the Spray. The three kind-5 and kind-7
+    answers at the Belly Bounce were guests walking to the Totem (`dest 43`) past its entry, where its distance and
+    queue terms win; run 2 read the same of three more. Over 480 s the Totem took 13 riders, kinds 0 ×4, 1, 4, 5 ×3
+    and 7 ×4, none of 2, 3 or 6; the Belly Bounce 11, kinds 2 ×3, 3 ×5 and 6 ×3. Photographed paused (run 2) with the
+    census read: a kind 7 counted riding the Totem (not drawn on it; see STATUS), kinds 5, 5 and 4 on its queue deck,
+    and the Belly Bounce's queue kinds 3, 3, 6 and 3 with a kind 2 aboard.
+  - **Not confirmed:** nobody aimed at the Aztec Mayhem in either run, farther than the Totem for everybody without
+    Q165c's five-fold new window; the refusal at the Spray was not seen in the game, tested only.
+  - **Reviewed** by five read-only agents (the wiring, the Ghidra claims, the tests, stale text, and a verifier): 14
+    findings, 8 upheld, 4 amended, 2 refuted, no behaviour wrong. Taken from them: the constructor's draw count (eight,
+    not three), which files set the rows, whose 35 the refusal example is, `ParkPeople`'s balance remark,
+    `addresses.md`, and the test through the Deciding turn.
+  - **Found:** Q169, and the note under Q165c.
+
+  The item as written: From Q165 (`ride-operation.md`, "What a thing is worth
   to a guest", "Where OpenTPW differs"). Hand `ParkRideScore` the park's `ParkBalance`, so each guest type prefers its
   own `PeepTypes[n].PreferredExcitement` in the score and at the arrival's excitement refusal; draw an arriving
   guest's type `rand % 8` (`FUN_004faec0`, `0x004fb019`) where `ParkPeople.Admit` leaves 0; correct `ParkRideScore`'s
@@ -1607,6 +1643,8 @@ artifacts are listed in `docs/history/README.md`.
   `GameCalendar.Epoch`'s untraced default, and `ParkObjectWindow`'s Age on the real clock. The queue term counts up
   to the first guest no longer queueing, over the walked cell count. Confirm: a guest leaving the Belly Bounce choosing something else, and a
   bought ride's five-fold window, each by census and photograph.
+  From Q165b's review: the sideshow's computed excitement makes the Jungle Spray 30, which turns
+  `ParkGuestTypeTests`' (48,25) case into an 18-18 tie for the type 3, decided by the tick's parity; pick the case again.
 - [ ] **Q166. `park.md` counts ten shipped instructions that store into a literal on purpose; there are at least 76.**
   Found by Q83b. "Arithmetic, the destination rule and the result register" says 17 shipped instructions have a
   literal operand 0, ten of them the register used on purpose (`MOD` 4, `RAND` 4, `SUB` 2). Among the opcodes
@@ -1614,6 +1652,15 @@ artifacts are listed in `docs/history/README.md`.
   `GETANIM_CH` 15, `RAND` 4, `INLIMBO` 4, `MOD` 4, `SUB` 2, `GETREMOTEVAR` 2 (plus `SETVARINCHILD`'s 7, which is no
   destination). The unbuilt opcodes with a literal operand 0 (`SEC`, `MIN`, `WALKFLOATSTAT` and others) are not yet
   classed. Correct the count, and check each against its handler's store.
+
+- [ ] **Q169. A visit's excitement match is unbuilt and uncounted.** Found by Q165b's review; `docs/PLAYER-GAPS.md` names
+  it, and nothing counts it (`CLAUDE.md` rule 4). The settle-up `FUN_004fe1e0` calls `FUN_004fdcc0` on every visit
+  (`0x004fe259`). It does nothing when the thing's excitement (`FUN_004e0860`) is nought; otherwise it takes |the
+  kind's `PreferredExcitement` (`0x004fdce8`) − the excitement| and adds `PerfectRide`, `GoodRide` or `OKRide`
+  (`0x00785064`..`0x0078506c`) to happiness below 5, 15 or 40, clamped 0..100, then raises illness `+0x1b0` by the
+  excitement over `RideVomitDivisor` times ( 100 − hunger ) / 20 (`0x004fddab`..). `ParkRideOperation.SettleUp` names
+  "three more happiness changes" only. Count it first, decode the arithmetic's types, then build it. Confirm: `peeps`
+  happiness and vomit after a Totem ride by a kind 0 and by a kind 3.
 
 - [ ] **Q85. A guest who arrives starts with happiness nought, and stays there. Decode first.** Found by Q50's game
   runs: every one of the 33 guests who arrived (30 by `load 30`) read `happy 0` in `peeps`, none above it in nine minutes,
@@ -1625,6 +1672,10 @@ artifacts are listed in `docs/history/README.md`.
   happiness 10, thought `0xb`, out. Alexah held it at Q50d (2026-09-24) until arrivals start at the original's 50
   (`FUN_004faec0`, `0x004fb075`), since at nought it would put every arrival out of every queue it joins;
   `ParkQueueTurnTests.AnUnhappyQueuerStaysUntilArrivalsHaveTheOriginalsHappiness` pins the hold and turns round with it.
+  From Q165b: the constructor's eight unconditional draws on the world generator are the exit level's variation
+  (`0x004faff8`), the kind (`0x004fb01f`, built), the cash's variation (`0x004fb046`), thirst and hunger `% 50` (`+0x1a4`,
+  `+0x1a8`), toilet `% 30` (`+0x1ac`), one discarded (`0x004fb109`), and `+0x1c0` set to 100 when `% 100` is under
+  `PrankeryLikelihood` (`0x004fb114`); two more follow when `FUN_004fa990` answers nought (`0x004fb201`, `0x004fb21c`).
 - [ ] **Q86. Clearing a path joined to an entrance puts its whole queue out.** Found by Q50's decode. `ClearCell`'s
   path arm re-walks the entrance owner's queue (`0x0053694b`) after unlinking both sides, so the queue measures 0 and
   all but the nominee and state 14 go. `ParkPathBuilding.ClearPathCell` re-walks nothing. First check it is reachable
