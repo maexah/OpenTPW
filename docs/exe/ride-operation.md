@@ -352,7 +352,8 @@ arm holds and nothing routes them again until their place moves; its other arms 
    no dock. **Excitement**: `FUN_004fd4e0` always computed, asked only when the descriptor's `+0x13c`
    (`UsageInfo.ExcitementLevel`) has a non-zero low byte, refused at a difference of 45 or more (signed, `0x004ffc7a`):
    `"ride is not exciting enough!"`, event 5, thought `0xc`; or `"ride is too exciting!"`, event 4, thought `0xf`; both
-   then `FUN_004fdc60` (the id onto `mPreviousTemporaryRides`, `+0x1e8`), `MajorDest` 0, `+0x1fc` 0, state 6, no dock.
+   then `FUN_004fdc60` (the id onto `mPreviousTemporaryRides`, `+0x1e8`, where it divides the thing's score until
+   aged out), `MajorDest` 0, `+0x1fc` 0, state 6, no dock.
    The difference is `FUN_004fd4e0`: the guest type's preference byte (`0x7850e4 + 12 × +0x1f0`) against
    `FUN_004e0860( object, 0 )`, **the object's computed excitement** (`FUN_004e0560`), clamped to ±50 and negated.
    **Too long** (`FUN_004ddb60`: `FUN_004ddf50( 0 ) >= FUN_004dda40()`, unsigned): `"queue is too long!"`, event
@@ -372,9 +373,10 @@ arm holds and nothing routes them again until their place moves; its other arms 
    state 6 (`0x00500857`) - no `FUN_004e0ac0`, no thought.
 
 **Where a guest is aimed.** The chooser `FUN_004fcb10` walks the object chain and, for each: `+0x32 & 4`;
-`GetBackOfQueue` non-zero; the score (`FUN_004fcc30`); at least 10, unsigned; above the best, signed, or equal to it
-on an odd `mGameTick`; the offer gate `FUN_004dd920`; then **`FUN_004fa530( GetBackOfQueue )` - the centre of the back
-cell** (`0x004fcbc4`) - and on a route the best and `MajorDest`. Its one caller, the state-6 turn `FUN_004fec90`,
+`GetBackOfQueue` non-zero; the score (`FUN_004fcc30`, "What a thing is worth to a guest"); at least 10, unsigned;
+above the best, signed, or equal to it on an odd `mGameTick`; the offer gate `FUN_004dd920`; then
+**`FUN_004fa530( GetBackOfQueue )` - the centre of the back cell** (`0x004fcbc4`) - and on a route the best and
+`MajorDest`. Its one caller, the state-6 turn `FUN_004fec90`,
 draws the generator once at its top (`0x004fecb4`) and runs the chooser only on `rand % 3 == 0` and past the 30-turn
 thinking gap. The routing happens inside the chooser's walk, so **a better candidate that passes the gate but cannot
 be routed still rewrites the walker** with its failed route, while `MajorDest` names the earlier winner; the caller
@@ -973,6 +975,152 @@ and its sale.
 | Arms (a), (b), (c), (e) entertainer, (f) | run before the split | absent and uncounted | (a) above 80; (c) the Drinks Shop's litter and the bin at (44,29); (f) pranksters (Q111) |
 | Leaving | state 6 only: happiness byte 0, `mExitLevel` exactly 0, or shut; −25 every turn it holds; (47,9)/(48,9); state `0x12` only on a route | `Step`: `ExitLevel <= 0` in any state a thing does not hold, no dock; `Decide`: shut only, −25; the bus stops; `HeadingForExit` whatever the route | yes: the measured run's three left this way (Q109) |
 | `mSetDestSuccessfully` | SetState(7) routes again to the stored target | absent | every wander, invisibly |
+
+## What a thing is worth to a guest - `FUN_004fcc30`
+
+Decoded 2026-09-28 (`docs/QUEUE.md` Q165): read by hand whole, then five read-only decoders (the calendar, the balance
+keys, the two histories, the item fields, and rain, excitement and the chooser), each claim at an address, and the
+load-bearing ones re-read first-hand. The chooser (`FUN_004fcb10`, "Where a guest is aimed") keeps the highest score of
+at least 10. Thiscall on the **guest** (`EDI`), the argument the **object** (`ESI`); in order:
+
+1. **The same kind as the last visit scores nought** (`0x004fcd3f`..`0x004fcd97`): when `mPreviousRides[0]` (`+0x1e0`)
+   is non-zero and the thing it names (table `0x7cfb90`, stride 20) has the candidate's item id (`+0xe`). A guest
+   leaving the Belly Bounce cannot choose it, nor any other Belly Bounce, until they have left something else or it is
+   removed. The function has already asked `GetBackOfQueue` three times by then (`0x004fcc49`..`0x004fcc7d`), which
+   re-walks the queue and rewrites `+0x3a` and `+0x40` when `+0x3a` is nought.
+2. **Distance**, at `GetBackOfQueue`'s cell (`FUN_004de110`): `d²` from the guest's cell (bytes `+5`, `+7`);
+   `100 − min( 100, d² × 100 / 450 )`, divided (unsigned) by the word `+8` of `FUN_004d8410( cell )` when that is
+   non-zero (its log: "nearby fireworks").
+3. **Queue**, only when `d² <= 8` (`JG` at `0x004fce3e`): `100 − q × 100 / ( max( +0x40, 1 ) × 4 )`, unsigned, `q` =
+   `FUN_004ddf50( 0 )`; farther away the term **and its weight** are nought.
+4. **Excitement**: `100 − 2 × min( |pref − exc|, 50 )`. `pref` is `PeepTypes[+0x1f0].PreferredExcitement`, the byte at
+   `0x7850e4 + 12 × type`; `exc` is `FUN_004e0860( object, 0 )`. The weight counts only when the low byte of
+   `UsageInfo.ExcitementLevel` (`+0x13c`, `FUN_004e0860( object, 1 )`) is non-zero (`0x004fcf06`).
+   `FUN_004e0860( object, 0 )`, of which the score takes the low byte: nought for an `ExcitementLevel` of nought; a
+   sideshow (the descriptor's `+0x4ac` == 2) is `20 + trunc( 0.08 × mChanceOfWinning × √clamp( mCostOfGoods −
+   mPricePerUse, 0, 100 ) )`, the **object's** byte `+0x190` and its `+0x188` and `+0x194`, which the constructor fills
+   from 100 − `InitChanceOfLoosing`, `InitCostOfGoods` and `InitPricePerUse` (`0x004e058a`..`0x004e05d4`,
+   `0x004db378`..`0x004db3ad`), so it follows the player's price; a coaster (track type `+0x9c` 3) is
+   `trunc( 50 + f / 2 )`, `f` a float `FUN_0043e0b0` answers for what `FUN_0055a4e0` finds from `+0x24`, or nought
+   when that finds nothing (`0x004e05f8`..`0x004e0640`);
+   anything else is `ExcitementLevel`, unclamped - or, with a track handle at `+0x28`, `clamp( E × 60 / 100 +
+   clamp( FUN_00545310's crowd, 0, 40 ), 0, 100 )` - times `clamp( +0x58 / Upgrades[l].InitSpeed, 0.75, 1.25 )` times
+   `clamp( +0x5c / Upgrades[l].InitDuration, 0.75, 1.25 )`, truncated, `l` the upgrade level `+0x50`. The divisors
+   are descriptor `+0x1a8` and `+0x1a0` plus `0x40 × l`, which the compiled `.sam` schema (`0x744b30`) names
+   `InitSpeed` and `InitDuration`. The constructor copies tier nought's into `+0x58` (when above nought) and `+0x5c`
+   (a byte clamped to Min/MaxDuration), so a ride at its starting settings has both ratios 1, and without a track
+   handle scores its own `ExcitementLevel`. The placer gives a handle to any item whose `Bumper.BumperType` is set
+   (`FUN_00529e10`, `0x00529e4d`).
+5. **Thirst and hunger**: the table at `0x0075d0f8`, `[need / 10 + effect / 10 × 11]`, the need the guest's float
+   (`+0x1a4`, `+0x1a8`) as a byte, the effect the low byte of `UsageInfo.ThirstEffect` (`+0x144`) or `HungerEffect`
+   (`+0x148`).
+6. **Toilet and illness**: nought unless the object's `+0x32` bit 0 is set (the constructor sets it from
+   `UsageInfo.ProvidesRelief`, `0x004db3c0`), then the table at `0x0075d178`, `[( need + 4 ) / 5]`, the needs `+0x1ac`
+   and `+0x1b0`. Their weights count in the mean either way.
+7. **The mean**, unsigned: the sum of term × weight over the sum of all seven weights, of which only the queue's and
+   the excitement's are ever nought (steps 3 and 4). The weights are
+   `PeepInfo.DecisionVar{Dist,Queue,Excitement,Thirst,Hunger,Toilet,Illness}Weight` at `0x007850b0`..`0x007850c8`,
+   1, 1, 1, 2, 2, 2, 2 (`data/levels/Standard.sam`; nothing in the jungle overrides them), all but the queue's read
+   as 16 bits.
+8. **New**: × `DecisionVariable2` (5) while `FUN_004dd670` is at most `DecisionVariable1` (7), **unsigned** (`JA` at
+   `0x004fd24f`). `FUN_004dd670` is `( now − object +0x18 ) / 864,000,000,000`, a signed divide, where `now` is the
+   **park calendar**, not the real clock: `FUN_004f8690` on world `+0x2a0`, `mFunnyTimeStart + mGameTick ×
+   mFunnySecsPerRealSec / 4` seconds. The constructor `FUN_004db090` stamps `+0x18` with the same `now`
+   (`0x004db66a`), on a purchase and on a move's put-down, so **a bought thing is new from its purchase sweep T through
+   T + 184** (184 × 3750 s is under eight days, 185 × 3750 is not) - about 46 s. A stamp a day or more in the future
+   reads as a huge unsigned age: not new.
+9. **Rain**: × `DecisionVariable3` (5) when the weather thing's (world `+0x1da724`) `mCurrentDrops` (`+0x30`) is above
+   nought and `UsageInfo.ISIndoors` (`+0x114`) is set.
+10. **Golden ticket, or price** (`0x004fd2aa`..`0x004fd352`): when `UsageInfo.GoldenTicketCost` (`+0xc4`) is above
+    nought, `trunc( ( 1.0 − ( g + 1 ) × −0.1 ) × s )`, × 1.1 + 0.1g; otherwise when `Upgrades[0].CostOfUpgrade`
+    (`+0x1b8`, tier nought whatever the level) × `(float)1/3000` is above 1.0, `trunc( ( 1 − x × −0.1f ) × s )`,
+    × 1 + cost / 30,000. The log calls them "GT-only ride" and "expensive ride". The truncation can hang on the FPU's
+    precision: a golden-ticket cost of 3 (× 1.4) gives 63 or 62 for a score of 45.
+11. **The last four visits** (`mPreviousRides`, `+0x1e0`..`+0x1e6`, thing ids, newest first): the FIRST slot naming the
+    candidate divides by 5, 4, 3 or 2 - though slot nought's 5 never runs, as step 1 has already returned nought.
+12. **The last four refusals** (`mPreviousTemporaryRides`, `+0x1e8`..`+0x1ee`): EVERY slot naming the candidate divides
+    again, by 5, 4, 3 and 2 in turn.
+
+**The two histories.** `mPreviousRides` has one writer, the settle-up `FUN_004fd970` (`0x004fd98b`..`0x004fd9a5`): the
+three older ids move back and the thing left goes in front. Its one caller is `ExitRide` (`FUN_005014e0`,
+`0x005015f4`), reached only when the cell off the exit is neither queue nor entrance (`FUN_00536320`, `0x005015e3`) and
+the route to it succeeds (`0x005015ef`), before the charge - so **any thing visited**
+counts, a shop, a sideshow or a toilet as much as a ride. `mPreviousTemporaryRides` is pushed the same way by
+`FUN_004fdc60`: the id at the arrival's two refusals (excitement, `0x004ffce6`; queue too long, `0x004ffd74`), and **a
+nought for every guest on each sweep where `mGameTick` % 20 is nought** (`FUN_004fdc90`, the last call of the
+decision turn `FUN_00501650`, `0x005019da`, which each sweep runs before the step that holds the refusals), so a
+refusal is forgotten 61 to 80 sweeps later. The constructor zeroes both; the thing-removed
+message (`FUN_004fb360`, `0x004fb4ba`..`0x004fb4d9`) zeroes each `mPreviousRides` slot naming the thing and the
+temporary slot at the same index, whatever that holds; both are saved, interleaved (FileFormats `saves.md`, 470).
+`FUN_004dd670`, the age, has other readers too: the object window's Age and the arrivals' headcount score
+(`FUN_004c8240`, `0x004c8391`).
+
+### What it gives the three rides in Lost Kingdom
+
+The Belly Bounce (1100) is `ExcitementLevel` 40 and costs 500; the Inca Totem (1110) 70 and 3,250; the Aztec Mayhem
+(1104) 70 and 2,500. None is indoors, a track ride, or has a golden-ticket cost (only Jurassic Tours, 1, and
+Eruption, 3, do in this theme; the Totem's 4 is its `Research.Group`, `+0x178`), and each scores its own
+`ExcitementLevel` at its starting settings. Their thirst, hunger and relief terms are nought, so far from the queue
+the mean is `( distance + excitement ) / 10`, and a ride needs the two to add up to 100.
+
+| Preferred excitement (types) | Belly Bounce's excitement term | Totem's and Aztec's |
+|---|---|---|
+| 80 (0, 5, 7) | 20 | 80 |
+| 65 (1, 4) | 50 | 90 |
+| 50 (2) | 80 | 60 |
+| 45 (6) | 90 | 50 |
+| 35 (3) | 90 | 30 |
+
+**The original does send guests to a new ride while an old one stands.** From its purchase sweep through the 184th
+after it a bought ride scores five times over; the Totem scores 1.108 times over for ever (3,250 > 3,000: `trunc( s × 133 / 120 )` for every score
+up to 5,000, at 24-, 53- or 64-bit precision); five guest types in eight prefer the two new rides' excitement; and a
+guest leaving the Belly Bounce scores it nought until they leave something else, then a quarter, a third and a half
+over their next three visits. The shipped park holds nothing new: its calendar loads at 2000-02-02 18:27:30
+(`mFunnyTimeStart` 2000-01-01, `mGameTick` 755), every choosable object is stamped 2000-01-01 15:37:30, 32 days
+before, and the bus, six days old, is not choosable.
+
+**Measured in the game** (a throwaway instrumented build, never committed, which scores every guest decision twice from
+the same inputs - OpenTPW's `ParkRideScore`, and this decode without rain, the refusal history, the track branches and
+the original's queue count, none reached here but rain, which was not recorded - and prints each candidate's terms;
+`q165run.py` and `q165run2.py`, silent, jungle, every reading predicted first; `save/` unchanged). The decode's pick
+is computed inside OpenTPW's park, its positions and queues; it is not a run of the original. Q83's scene: an Inca Totem at
+(57,23) and an Aztec Mayhem at (60,30) bought and queued to the path, then `load 30`. `why` aimed 43 of 43 guests at
+the Belly Bounce, as in Q83; all 17 decisions logged over 480 s chose it, and the decode chose the Totem in all 17.
+**75 s after the purchase, past the new window, asked of all 41 guests at once: OpenTPW's chooser picks the Belly Bounce
+for 40 and the Drinks Shop for 1; the decode picks the Totem for 35, the Aztec Mayhem for 1 and the Belly Bounce for 5**
+- every guest of types 0, 1, 5 and 7 a new ride and every guest of types 2, 3 and 6 the old one, as predicted. Thirty of the 41 are type
+0 only because OpenTPW makes every arrival type 0; the original draws `rand % 8`, so about three in eight would be
+types 2, 3 or 6. Photographed paused with that census: 13 guests in the Belly Bounce's queue of sixteen places, the
+Totem's queue empty beside it. One guest's terms, a type 7 at (48,16) just after the purchase:
+
+| | OpenTPW: distance, excitement, score | The decode: distance, excitement, score |
+|---|---|---|
+| Belly Bounce | 86 to the entry, 80 (preference 50), **16** | 92 to the back cell, 20 (preference 80), **11** |
+| Inca Totem | 67, 60, 12 | 74, 80, 15, × 5 new, × 1.108 price: **83** |
+| Aztec Mayhem | 19, 60, 7 | 49, 80, 12, × 5 new: **60** |
+
+With the Belly Bounce sold, OpenTPW chose the Jungle Spray in all four decisions logged over 240 s, where the decode
+chose the Totem twice and the Aztec Mayhem twice. The Spray is a sideshow: OpenTPW scores its `ExcitementLevel`, 35,
+where the original computes 30 from its cost of goods 50, price 20 and chance of winning 25.
+
+### Where OpenTPW differs
+
+| What | The original | OpenTPW | Reached in Lost Kingdom |
+|---|---|---|---|
+| The guest's preference | `PeepTypes[n].PreferredExcitement`: 80, 65, 50, 35, 65, 80, 45, 80 | **50 for every type**: `PeepBehaviour` builds the chooser with no `ParkBalance`, so `ParkRideScore` falls back; the arrival's excitement refusal reads the same | every choice |
+| An arriving guest's type | `rand % 8` (`FUN_004faec0`, `0x004fb019`) | 0: `ParkPeople.Admit`'s default, which the load's call leaves | every arrival |
+| The same kind as the last visit | nought | scored like any other | every guest who has left a thing |
+| The two histories | the visits written on leaving; the refusals at the two refusals, aged by a nought every 20 sweeps; both cleared by a removal and saved | never written, nor read from a save; `ParkRideScore.Staled` stops at the first match in both, where the second divides for every match | every visit |
+| New | × 5 for 184 sweeps after a purchase or a move, on the park calendar, unsigned | never: no age is handed in (`ParkRideChooser.NotNew`), a bought thing has no stamp, and `ParkRideScore` compares signed | every purchase |
+| Golden ticket, or price | × 1.1 + 0.1g; or × 1 + cost / 30,000 above 3,000 | absent from `ParkRideScore`; the catalogue reads no `GoldenTicketCost` | Jurassic Tours (× 1.2), Eruption (× 1.4), and the seven items over 3,000, the Totem the least |
+| Excitement | `FUN_004e0860`: the ride's two ratios, the track-handle base, the coaster's track, the sideshow's cost, price and chance | the item's `ExcitementLevel` | the same for a ride with no track handle at its starting settings; not for the Jungle Spray (30, not 35), The Hot Pot, Dino Karts, Splish Splash, or the three coasters |
+| Distance and the queue term | at the back-of-queue cell | at the entry cell (Q105) | every candidate |
+| The queue term's count and cells | up to the first guest no longer queueing, over the walked `+0x40` | every link, over the saved `mQueueSizeInCells`, nought read as 1 - a bought ride, the Drinks Shop and the toilets | beside any of those |
+| Rain | × 5 for an indoor thing while drops fall | never handed in | every shop, sideshow and choosable feature is indoors by its category file, and the water ride |
+| The window's Age | the park calendar | the real clock (`ParkObjectWindow.DaysSince`) | every object window |
+| The calendar at load | the save's `mGameTick`, 755: 2000-02-02 18:27:30 | counts from nought (`GameCalendar.Rebase`) | every load |
+
+Nothing here is counted by `Unimplemented.Report`. The build is Q165b.
 
 ## The staff turn - `CStaff`, every clock `mGameTick`
 

@@ -1557,12 +1557,56 @@ artifacts are listed in `docs/history/README.md`.
   `GETANIM_CH` ever runs with no model (the engine then leaves `Result` and copies it). `ParkRides.Resume`: restore
   `+0x40`, `+0x44`, `+0x48` and block 1, only the slots above the call index being frames - a save with a `HUSH` ride
   mid-cycle, or `bugstv`/`Rocket` saved inside their `WAIT`, needs it.
-- [ ] **Q165. Every guest chooses the Belly Bounce over a bought ride. Decode first.** Found by Q83's game runs: with an
+- [x] **Q165. Every guest chooses the Belly Bounce over a bought ride: the decode.** Done 2026-09-28,
+  `alexah/170-decode-the-ride-score`. Decode only; the build is Q165b and Q165c. `ride-operation.md`, "What a thing is
+  worth to a guest"; `park-engine.md` and `park.md` corrected; FileFormats `saves.md`, the build stamp at 22
+  (`docs/sam-and-saves-corrections`).
+  - **The original does send guests to a new ride.** A bought or moved thing scores five times over for 184 sweeps
+    (about 46 s) on the park calendar; the Totem 1.108 times over for costing more than 3,000; five guest types in
+    eight prefer the new rides' 70 to the Belly Bounce's 40; and a guest who has left the Belly Bounce scores it nought
+    until they leave something else.
+  - **Why OpenTPW does not.** `PeepBehaviour` builds the chooser with no `ParkBalance`, so every guest type prefers 50
+    (the file says 80, 65, 50, 35, 65, 80, 45, 80), which puts the Belly Bounce 20 excitement points ahead for
+    everybody; every arrival is type 0; and there is no visit history, no age, no price or golden-ticket factor and
+    no rain.
+  - **Measured in the game** (a throwaway build scoring every decision both ways from the same inputs; `q165run.py`,
+    `q165run2.py`, silent, predicted first, `save/` unchanged): `why` 43 of 43 at the Belly Bounce; the 17 decisions
+    logged all chose it, the decode the Totem in all 17; 75 s after the purchase, asked of all 41 guests: OpenTPW
+    picks the Belly Bounce for 40, the decode the Totem for 35, the Aztec Mayhem for 1 and the Belly Bounce for 5,
+    split by type exactly as predicted. Photographed paused with that census: 13 in the Belly Bounce's queue, the
+    Totem's empty. The decode's picks are computed inside OpenTPW's park; the original itself was not run (Q168).
+  - **Also settled:** `+0xc4` is `GoldenTicketCost`, not `Research.Group` (Q95); `+0x1a0` and `+0x1a8` are
+    `InitDuration` and `InitSpeed`; a thing's age is on the park calendar, not the real clock; the sideshow's
+    excitement; `FUN_00519590`'s `+0x30` is `mCurrentDrops`.
+  - **No test was added**: nothing was built.
+  - **Reviewed** by read-only adversarial agents, four slices against the disassembly, the data and the run logs: 73
+    verdicts, 54 upheld, 18 amended, 1 refuted (the queue was 13 of 16, not full). Taken from them: the sideshow's
+    three fields are the object's, not the descriptor's; the track-handle and coaster branches; the relief weights
+    always count; slot nought's 5 is dead; the queue term's count and cells; what the instrument leaves out.
+  - **Found:** Q165b, Q165c.
+
+  The item as written: Found by Q83's game runs: with an
   Inca Totem and an Aztec Mayhem bought beside the path and queued to it, `why` aimed every guest at the Belly Bounce
   (26 of 26, then 43 of 43) and none rode either in 15 minutes; with it sold, guests chose the Totem within a minute.
   Decode what `FUN_004fcc30`'s seven terms give each (`ParkRideScore`) and whether the original sends nobody to a new
   ride while an old one stands. Confirm: the same `why` census. Q83b's runs add one: with the Belly Bounce sold, no
   guest made the Aztec Mayhem a destination in 343 s, 900 s, or 900 s on the old VM, while the Totem took 11 to 16.
+- [ ] **Q165b. Guests' preferences and types, the original's.** From Q165 (`ride-operation.md`, "What a thing is worth
+  to a guest", "Where OpenTPW differs"). Hand `ParkRideScore` the park's `ParkBalance`, so each guest type prefers its
+  own `PeepTypes[n].PreferredExcitement` in the score and at the arrival's excitement refusal; draw an arriving
+  guest's type `rand % 8` (`FUN_004faec0`, `0x004fb019`) where `ParkPeople.Admit` leaves 0; correct `ParkRideScore`'s
+  remark that a null balance keeps the file's numbers. Confirm: Q165's scene, `why` and a photograph, the Totem chosen
+  and ridden by guests of types 0, 1, 4, 5 and 7 while the Belly Bounce stands.
+- [ ] **Q165c. The rest of the score, the original's.** From Q165, the same table. Write `mPreviousRides` on leaving
+  any thing and `mPreviousTemporaryRides` at the two refusals, with the nought every 20 sweeps; clear both on a
+  removal and read both from a save; score the same kind as the last visit nought, and divide by the second history
+  for every match. Stamp a bought or moved thing on the park calendar and multiply by `DecisionVariable2` for 184
+  sweeps, compared unsigned. Add the golden-ticket and price factors (read `GoldenTicketCost`), hand in the rain, and
+  compute the sideshow's excitement. Correct what says otherwise: `ParkRideChooser`'s real clock and negative ages,
+  `ParkRideScore`'s sideshow formula, unproven keys and "ridden lately" (any visited thing counts),
+  `GameCalendar.Epoch`'s untraced default, and `ParkObjectWindow`'s Age on the real clock. The queue term counts up
+  to the first guest no longer queueing, over the walked cell count. Confirm: a guest leaving the Belly Bounce choosing something else, and a
+  bought ride's five-fold window, each by census and photograph.
 - [ ] **Q166. `park.md` counts ten shipped instructions that store into a literal on purpose; there are at least 76.**
   Found by Q83b. "Arithmetic, the destination rule and the result register" says 17 shipped instructions have a
   literal operand 0, ten of them the register used on purpose (`MOD` 4, `RAND` 4, `SUB` 2). Among the opcodes
@@ -2133,6 +2177,8 @@ artifacts are listed in `docs/history/README.md`.
   item `+0xC4` `Research.Group`, which the schema puts at `+0x178`, making `+0xC4` `UsageInfo.GoldenTicketCost`; and
   `park-engine.md` divides a capacity by `+0x1a0`, which the schema makes `Upgrades[0].InitDuration` (`+0x198` is
   `InitCapacity`). Settle each against the code that reads it, and correct the page that is wrong. No game run.
+  Q165 settled both from the scorer (`ride-operation.md`, "What a thing is worth to a guest"): `+0xC4` is
+  `GoldenTicketCost` and `+0x1a0` `InitDuration`; `hud.md`'s `+0xC4` text is still to correct.
 - [x] **Q101. `ParkWorld`'s person-block walk names two fields the game does not.** Done 2026-09-26,
   `alexah/165-q101-guest-state-field-names`. Found by Q50d's decode. The summary of `ParkWorld.GuestState` listed
   `mHappiness 422` and `mToilet 525` among the serialiser's own names; `FUN_004fb530` tags every need float `pv`

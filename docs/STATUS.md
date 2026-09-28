@@ -52,7 +52,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
   Alexah; staff keep to the areas the save gives them. A walking member of staff is not entered in the cells they
   cross; only hiring and putting down place one.
 - Q102-Q105 and five queue-turn arms are unbuilt, the unhappy one held for Q85. No spot animation (Q98). A guard or
-  researcher on a cell with no links does not look for path (Q112).
+  researcher on a cell with no links does not look for path (Q112). A bought ride is rarely chosen (Q165b, Q165c).
 - The park's door moves neither the gate (Q89) nor the advisor (Q90), nor a shut ride's model (Q91); the ride window's
   door shows a shut ride but is not a button (Q92), and a bought queued thing starts open (Q93).
 - Nothing shows what the hand holds, a thing (`CARRY_PREVIEW_MARKERS`) or a candidate (`STAFF_CARRY_PREVIEW`), and
@@ -72,14 +72,14 @@ from the repository, which cannot lag: `git log --oneline -1`.
 ## Next
 
 `docs/QUEUE.md`, from the top. **Q1-Q12, Q34, Q35, Q36, Q39, Q41, Q42, Q44, Q45, Q47, Q48, Q48b, Q50-Q50h, Q53, Q53b,
-Q56, Q57, Q59, Q67, Q68, Q68b, Q69-Q71, Q82, Q82b, Q83, Q83b, Q46, Q49, Q84, Q88, Q101 are ticked.** Next: **Q165**. Q4
-filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39 Q56-Q60, Q41
-Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c Q95-Q97, Q50d
-Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h, Q50h Q106, Q53 Q53b and Q107-Q111, Q53b Q112, Q56 Q113-Q117,
-Q57 Q118-Q120, Q59 Q121-Q123, Q67 Q124-Q125, Q68 Q68b and Q126-Q130, Q68b Q131-Q132, Q69 Q139-Q141, Q70 Q142-Q143, Q82
-Q82b and Q133-Q138, Q82b Q136 (f), Q83 Q83b and Q165, Q83b Q166, the 09-24 audit Q68-Q82 (Q70-Q75 from the 09-12
-review), the 09-26 audit Q144-Q161, the lobby plan G. `docs/PLAYER-GAPS.md` holds gaps **4, 5 and 7**. The untracked
-`docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
+Q56, Q57, Q59, Q67, Q68, Q68b, Q69-Q71, Q82, Q82b, Q83, Q83b, Q165, Q46, Q49, Q84, Q88, Q101 are ticked.** Next:
+**Q165b**. Q4 filed Q36-Q38, Q5 Q39, Q6 Q40, Q8 Q41-Q42, Q9 Q43, Q10 Q44, Q11 Q45-Q46, Q12 Q47-Q49, Q36 Q50-Q55, Q39
+Q56-Q60, Q41 Q61-Q63, Q42 Q64-Q66, Q44 Q67, Q45 Q83-Q84, Q48 Q48b, Q50 Q50b-Q50f and Q85-Q88, Q50b Q89-Q94, Q50c
+Q95-Q97, Q50d Q98-Q101, Q50e Q50g and Q102-Q104, Q50g Q105, Q50f Q50h, Q50h Q106, Q53 Q53b and Q107-Q111, Q53b Q112, Q56
+Q113-Q117, Q57 Q118-Q120, Q59 Q121-Q123, Q67 Q124-Q125, Q68 Q68b and Q126-Q130, Q68b Q131-Q132, Q69 Q139-Q141, Q70
+Q142-Q143, Q82 Q82b and Q133-Q138, Q82b Q136 (f), Q83 Q83b and Q165, Q83b Q166, Q165 Q165b-Q165c, the 09-24 audit
+Q68-Q82 (Q70-Q75 from the 09-12 review), the 09-26 audit Q144-Q161, the lobby plan G. `docs/PLAYER-GAPS.md` holds gaps
+**4, 5 and 7**. The untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
 
 ## Not verified on screen
 
@@ -107,13 +107,13 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1217**, 0 fail, 0 skip with the game | 2026-09-28, after Q83b |
-| Tests without the game | **504** ran, **713** skipped, of 1217 | 2026-09-28, after Q83b |
-| Build warnings | 123 | 2026-09-28, after Q83b |
+| Tests | **1217**, 0 fail, 0 skip with the game | 2026-09-28, after Q165 |
+| Tests without the game | **504** ran, **713** skipped, of 1217 | 2026-09-28, after Q165 |
+| Build warnings | 123 | 2026-09-28, after Q165 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-28 - the VM's stacks and result register, the engine's (Q83b).** `alexah/168-make-the-vm-stacks-the-engines`.
-**Earlier items.** Their accounts are their QUEUE.md entries, which name the branches: `alexah/167` (Q83) back to `118`
-(Q4), less `127`, `133`, `159`, `160`, `162`, `166`, told by their commits; `117` (Q35), `109` (Q1). Older: git log.
+**2026-09-28 - what a thing is worth to a guest, the decode (Q165).** `alexah/170-decode-the-ride-score`.
+**Earlier items.** Their accounts are their QUEUE.md entries, which name the branches: `alexah/168` (Q83b) back to `118`
+(Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`, told by their commits; `117` (Q35), `109` (Q1). Older: git log.

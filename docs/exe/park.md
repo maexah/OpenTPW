@@ -567,7 +567,7 @@ The dispatcher's prologue computes `[ESP+0x14] = DAT_00700fd0 - (short)field[+0x
 
 So **"speed is 50 for every script that ever runs" is false**: it is 50 for a script nothing binds, and whatever the item says for a script bound to a placed object. The divisor `0.5 + 0.01 * speed` is neutral only in the first case.
 
-**What is not proven and must not be guessed: which `.sam` key feeds either of them.** The constructor reads its record through an `undefined2 *`, so the `+0xd4` and `+0xd0` the decompiler prints are **element** offsets — byte offsets `0x1a8` and `0x1a0`. Those are the item descriptor's offsets, and they do line up: the constructor copies the descriptor's `+0x1a8` into the object's own `+0x58` (`0x004db54c`), the field `FUN_004db7d0` reads a save's `mOperatingSpeed` into, as `ride-operation.md` says of `+0x58`. What stays unproven is the `.sam` key behind the descriptor's `+0x1a8` and `+0x1a0`.
+**Which `.sam` key feeds either of them.** The constructor reads its record through an `undefined2 *`, so the `+0xd4` and `+0xd0` the decompiler prints are **element** offsets — byte offsets `0x1a8` and `0x1a0`, the item descriptor's `Upgrades[0].InitSpeed` and `Upgrades[0].InitDuration` by the compiled `.sam` schema (`ride-operation.md`, "What a thing is worth to a guest"). The constructor copies the descriptor's `+0x1a8` into the object's own `+0x58` (`0x004db54c`), the field `FUN_004db7d0` reads a save's `mOperatingSpeed` into, as `ride-operation.md` says of `+0x58`.
 
 **`WAIT <duration>` blocks across ticks without a thread.** First execution: resolve the duration, read the clock (`FUN_00402d70`), compute `now + duration/scale`, store it as a **deadline at `+0xa0`**, **rewind the PC by 2** so the same WAIT runs again, and zero the budget. Later executions take the other path (`+0xa0 != 0`): re-read the clock, and if `now < deadline` keep waiting, else **clear `+0xa0` and fall through** — the PC is already past the operand, so execution simply continues. **An interpreter must model WAIT exactly this way** — as a deadline plus a PC rewind — rather than as a sleep, or scripts will not resume correctly.
 
@@ -997,7 +997,8 @@ counted as `SAVED_ARRIVAL_LOAD` and not resumed; guests made with no script to a
 and the spent vehicle, which is sent round again and waits at the stop (Q131), which is why the second load above
 dropped on the sweep that called it where the original's bus would have driven in first.
 
-**The score in the headcount is `FUN_004c8240`, and it is NOT decoded**, nor is `FUN_00519590`'s `+0x30`. It sums a
+**The score in the headcount is `FUN_004c8240`, and it is NOT decoded**. (`FUN_00519590`'s `+0x30` is the weather
+thing's `mCurrentDrops`; `ride-operation.md`, "What a thing is worth to a guest".) It sums a
 park-attractiveness score over the rides — per ride a capacity, a duration divided down, and a
 three-entry table at `+0x268`. It reads four ride fields this project has not named. **OpenTPW reproduces the
 floor alone**, which is a declared deviation with a visible consequence: `MinPeople` is 1 in every theme the game

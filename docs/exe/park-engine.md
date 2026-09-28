@@ -1318,7 +1318,8 @@ window caches speed, capacity and duration at `+0x2c`, `+0x30`, `+0x34` and pass
 functions. `FUN_004e0560` divides the speed by the item's per-upgrade `+0x1a8` and the duration by
 `+0x1a0`, clamps each ratio to **0.75..1.25** (the doubles at `0x007005b8` and `0x007005c0` — as
 `f32` they read `0.0`, which is a trap) and multiplies them; a sideshow (`+0x4ac == 2`) returns
-`20 - x` instead. `FUN_004df450` compares against `+0x19c` and `+0x1ac`, the **red line** figures, and
+`20 + trunc( 0.08 × mChanceOfWinning × √clamp( mCostOfGoods − mPricePerUse, 0, 100 ) )` instead, the object's own
+three (`ride-operation.md`, "What a thing is worth to a guest"). `FUN_004df450` compares against `+0x19c` and `+0x1ac`, the **red line** figures, and
 drops the result by a further factor past them — so the red line on a slider marks where reliability
 starts falling away.
 
@@ -1339,14 +1340,15 @@ non-zero the base is `(item[+0x13c] * 60 / 100 + crowd)` clamped 0..100 instead:
 jumps past the scale, the crowd term and the clamp. The crowd term is `3a + b + 2c` from `FUN_00545310`,
 clamped 0..40.
 
-**It is still not implementable, and the blocker is a mapping this page must not paper over.** The
-ratios divide by the descriptor's `+0x1a8` and `+0x1a0`, and `park.md` already records that **which
-`.sam` key feeds either of those is unproven and must not be guessed** — the constructor copies them
-into the object's `mOperatingSpeed` (`+0x58`, `0x004db54c`) and `mOperatingDuration` (`+0x5c`, `0x004db64f`), the
-fields `FUN_004db7d0` reads from a save, and no `.sam` key is traced into the descriptor's two words. `+0x13c`, which supplies the base above, is
-`UsageInfo.ExcitementLevel`: the compiled `.sam` schema puts it one slot before `InitCostOfGoods` (`+0x140`), in a
-UsageInfo group anchored at `+0xd4` through `+0x170` (`ride-operation.md`, "At the door"). Having the arithmetic does not supply its inputs, so
-`RIDE_EXCITEMENT_BAR` and `RIDE_RELIABILITY_BAR` stay counted rather than fitted.
+**The inputs are named.** The compiled `.sam` schema (`0x744b30`, sixteen dwords to an `Upgrades` tier, the `0x40`
+stride) puts `Upgrades[0].InitSpeed` at `+0x1a8` and `InitDuration` at `+0x1a0` (tier *l* `0x40 × l` beyond), with
+`InitCapacity` `+0x198`, `RedLineCapacity` `+0x19c` and `RedLineSpeed` `+0x1ac`; the constructor copies tier nought's
+speed, when above nought, into the object's `mOperatingSpeed` (`+0x58`, `0x004db54c`) and the low byte of its
+duration, clamped to Min/MaxDuration, into `mOperatingDuration` (`+0x5c`, `0x004db64f`), so a ride at its starting
+settings has both ratios 1 wherever its duration lies inside those bounds, as every jungle ride's does (Q165). `+0x13c`, which supplies the base above,
+is `UsageInfo.ExcitementLevel`: the compiled `.sam` schema puts it one slot before `InitCostOfGoods` (`+0x140`), in a
+UsageInfo group anchored at `+0xd4` through `+0x170` (`ride-operation.md`, "At the door"). `RIDE_EXCITEMENT_BAR` and
+`RIDE_RELIABILITY_BAR` stay counted until they are built.
 
 ### Sell, move and the scrap value
 
