@@ -2471,6 +2471,15 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
 - [ ] **Q74. Lift the lobby out of `Level`, or record it as dropped (the review's Phase E). Alexah's call.** Park
   entry shipped without it: `Level` builds the lobby (`SetupEntities`, islands hard-coded, an unread `Global`) beside
   the park (`SetupParkEntities`). Ask Alexah before starting.
+- [ ] **Q167. Read Alexah's Full Simulation saves.** Given 2026-09-28: a real player's saves, written by the
+  original, in `~/repos/game/saves-fullsim/save/` (read-only; `CLAUDE.local.md` has the path). Jungle has
+  `autosave.TPWS`, `New Save.TPWS` and `restart.INTS`; fantasy and hallow have theirs, space is empty. Made with
+  `global.sam` edited (starting cash all 9s, one key per park); that changes the data folder, not the save's layout.
+  The game crashed during the hallow park and would not load it again, so a hallow file may be damaged. Jungle first:
+  load each in OpenTPW, count what reads and what does not, and put every layout fact in the FileFormats docs.
+- [ ] **Q168. Run the original under Wine or Proton, as a reference to compare against.** Nothing is recorded yet.
+  Wine already runs RTPatch here through `flatpak-spawn --host` (`CLAUDE.local.md`). Use a copy of the game and a
+  private `WINEPREFIX`; never point it at `~/Games/TPWorld/save/`. Record what works, and what does not, in `docs/`.
 
 ## F. Then
 
