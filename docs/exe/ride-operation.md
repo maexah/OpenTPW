@@ -1003,17 +1003,21 @@ at least 10. Thiscall on the **guest** (`EDI`), the argument the **object** (`ES
    mPricePerUse, 0, 100 ) )`, the **object's** byte `+0x190` and its `+0x188` and `+0x194`, which the constructor fills
    from 100 − `InitChanceOfLoosing`, `InitCostOfGoods` and `InitPricePerUse` (`0x004e058a`..`0x004e05d4`,
    `0x004db378`..`0x004db3ad`), so it follows the player's price; a coaster (track type `+0x9c` 3) is
-   `trunc( 50 + f / 2 )`, `f` a float `FUN_0043e0b0` answers for what `FUN_0055a4e0` finds from `+0x24`, or nought
+   `trunc( 50 + f / 2 )`, `f` the coaster node's excitement rating `+0x104`, which `FUN_0043e0b0` answers for the handle
+   `FUN_0055a4e0` finds from `+0x24`, or nought
    when that finds nothing (`0x004e05f8`..`0x004e0640`);
    anything else is `ExcitementLevel`, unclamped - or, with a track handle at `+0x28`, `clamp( E × 60 / 100 +
-   clamp( FUN_00545310's crowd, 0, 40 ), 0, 100 )` - times `clamp( +0x58 / Upgrades[l].InitSpeed, 0.75, 1.25 )` times
-   `clamp( +0x5c / Upgrades[l].InitDuration, 0.75, 1.25 )`, truncated, `l` the upgrade level `+0x50`. The divisors
+   clamp( 3 × crossings + the longest straight + 2 × bends, 0, 40 ), 0, 100 )` (`FUN_00545310`) - times
+   `clamp( +0x58 / Upgrades[l].InitSpeed, 0.75, 1.25 )` times `clamp( +0x5c / Upgrades[l].InitDuration, 0.75,
+   1.25 )`, truncated, `l` the upgrade level `+0x50`. The divisors
    are descriptor `+0x1a8` and `+0x1a0` plus `0x40 × l`, which the compiled `.sam` schema (`0x744b30`) names
    `InitSpeed` and `InitDuration`. The constructor copies tier nought's into `+0x58` and `+0x5c`, each only when
    above nought, the duration's low byte held to Min/MaxDuration (`park-engine.md`, "The object window's stats
    panel"), so a ride at its starting settings has both ratios 1 wherever its duration lies inside those bounds, as
    every jungle ride's does, and without a track handle scores its own `ExcitementLevel`. The placer gives a handle
-   to any item whose `Bumper.BumperType` is set (`FUN_00529e10`, `0x00529e4d`).
+   to any item whose `Bumper.BumperType` is set (`FUN_00529e10`, `0x00529e4d`), its slot with the BumperType
+   above it, never nought, so a bought Hot Pot, Dino Karts or Splish Splash scores 60% of its level, 42, 48 and 45,
+   until track is laid ("A coaster's, a track ride's and an upgraded ride's excitement", below).
 5. **Thirst and hunger**: the table at `0x0075d0f8`, `[need / 10 + effect / 10 × 11]`, the need the guest's float
    (`+0x1a4`, `+0x1a8`) as a byte, the effect the low byte of `UsageInfo.ThirstEffect` (`+0x144`) or `HungerEffect`
    (`+0x148`).
@@ -1065,6 +1069,99 @@ and **107 of those are toilets** (105) -
 mostly one of three adjacent toilets and then another. The same-kind nought forbids exactly that choice: the walk makes
 it, through the minor decision and the unscored restore ("A second toilet", below; Q170). The other
 four are a sideshow, the Jungle Spray, Temple Of Gloom and the Aztec Mayhem, once each.
+
+### A coaster's, a track ride's and an upgraded ride's excitement
+
+`FUN_004e0560` after its sideshow arm (`docs/QUEUE.md` Q172). `FUN_004e0860( object, 0 )` hands it the object's
+`+0x58`, byte `+0x5c` and byte `+0x5d` (`0x004e08d9`..`0x004e08eb`); the capacity is never read, its slot overwritten
+with `E`, the descriptor's `+0x13c`, at `0x004e0680`. Besides step 4's three readers, the ride-list gauges
+(`FUN_004955e0` at `0x004956f1` and `0x00495918`, `FUN_00493cd0` at `0x00493dc9`, `0x00494158`), the map overlay
+(`FUN_005f2380`, `0x005f24eb`) and `FUN_004cc3b0` (`0x004cc44d`) read it; the object window's gauge (`0x004adfcc`) and
+control `0xa099` (`FUN_004b16c0`, `0x004b1a4c`) call `FUN_004e0560` on their sliders. The chooser scores a candidate
+(`0x004fcb8d`) before it asks the offer gate (`0x004fcbb4`), so a refused one's excitement is worked out and dropped.
+
+**A coaster** (`+0x9c` == 3, `0x004e05f8`) is `trunc( 50 + f / 2 )`. `FUN_0055a4e0( +0x24 )` finds the ride script by
+its id and answers its `+0xe0`, the coaster handle; nought gives nought (`0x004e0611`). `FUN_0043e0b0` reads the node
+`[0x790bd0 + 4h]`, and `f` is its `+0x104` (`0x004e062d`, the call's third argument), `50 − f × −0.5f` truncated
+(`0x7005a4`, `0x7005b4`, `__ftol`); the `+0x100` beside it, the sickness rating, is dropped. The arm reads no argument
+and not the tier. **The handle**: the script loader zeroes `+0xe0` (`0x00558c6b`); `COAST 8`, run once near the top of
+all 12 coaster scripts, stores `FUN_0043b050( script id )` (`0x00554a9f`), the `+0x14` of the node on the list
+`DAT_00790fe0` whose `+0x24` is that id. The node is made with the object's mesh (`FUN_004368f0`, called only from
+`FUN_00463060`, `0x00463897`; the constructor at `0x004db510`), zeroed, with a handle from 1 to 255 (`FUN_00468760`); the
+script starter then writes the id to it (`FUN_004dcf90` to `FUN_004685c0`, the mesh instance's flag `0x40000`,
+`FUN_00436f60`, `0x00436f87`). **The rating**: only `FUN_0043df90` writes `+0x104` (`0x0043e012`): `clamp( 0.5 × last
++ 1.7 × peak, 0, 100 )` of the excitement the per-sample run keeps (`FUN_0043c450` to `FUN_0043dc50`: each sample
+`max( 0, 0.1v + Σ|g| + 5|b| − ( |g0| + U ) )`, plus half the last, from `fInitialExcitement` 1.0). The weights are
+`sCoasterType` fields (`FUN_0042f390`) that no shipped `Coaster.sam` sets, so the compiled defaults (`FUN_0042fd90`)
+are live. The run is redone on the next state tick (`FUN_00435a30` from `0x0054fa8f`) for a node whose `node[0]` bit 0
+is set, as `FUN_0043c3d0` sets it whenever the speed setting changes: the cap `+0x34` = `80 × ( 1 − s / 100 ) + 130 × s
+/ 100` (`fMaxSpeedAtMinSetting`, `fMaxSpeedAtMaxSetting`). The script's speed word `+0xc0` is pushed at `COAST 8`
+(`0x00554ab4`) and on every VM turn (`0x005517d7`..`0x005517ea`), redoing the run only on a change (`0x0043b2c6`), so
+the player's speed and an upgrade's (`0x004dfabc`) reach `f` through the cap; the tier does not. A new node starts at
+setting 60, cap 110 (`FUN_004368f0`'s `FUN_0043c3d0( node, 0x3c )`). The coasters module (`SAOC`) saves neither rating
+nor `+0x24`; its loader pairs each record with its object by mesh instance and marks the node for a rerun
+(`0x004380af`), so a loaded coaster answers 50 until the first state tick.
+
+**No coaster is offered before its circuit is closed.** The offer gate asks `FUN_00441970` for type 3 (`0x004dd9b7`):
+the object's node (`+0x20`), `+0x140` nought, `+0x3c` bit 0 set and bit 1 clear, and not the one being edited
+(`DAT_00790fec`). Bit 0 is set only by the editor's finishing action (`FUN_00435570`, `0x0043557f`) and by the `SAOC`
+loader from the saved flags (`0x004380e7`). `mIsTrackRideValid` plays no part in the gate or the excitement.
+
+**A track ride** is any object whose `mTrackRideHandle` (`+0x28`) is non-zero (`0x004e06ce`): the base is `clamp( E ×
+60 / 100 + clamp( 3 × crossings + the longest straight + 2 × bends, 0, 40 ), 0, 100 )` (`0x004e06fe`..`0x004e0756`),
+then the ratio tail. `FUN_00545310( +0x28 )` walks the section list at the entry's `+0xbc`, linked through `+0x24`, by
+each section's type (`+4`, low 16 bits): 9 and 10, 12 and 13, and 11 lengthen a run, 11 also counting a crossing;
+anything else ends the run and counts a bend. The names follow the collision objects `FUN_0054b2f0` builds for each
+type: one for 9, 10, 12 and 13 (12 and 13 flagged `0x100`), two for 1 to 8, five for 11. It walks the list twice
+without a reset (`0x0054538d`), so a run can wrap from the tail into the head, and answers half the bends, the longest
+run and half the crossings. A stale handle (not `slot | entry[0] << 8`, `0x0054536d`) answers nought and writes
+nothing: 60% of `E`. The placer calls `FUN_00545890( BumperType, … )` for any item whose `Bumper.BumperType` is set
+(`0x00529e4d`): the first free of 64 entries, a copy of the template at `0x764178 − ( bt + 1 ) × 0xd0` whose first dword
+is the BumperType, so the handle is `slot | BumperType << 8`, never nought. The constructor stores it and sets
+`mIsTrackRideValid` (`0x004db0dc`, `0x004db0df`); the place commit clears that for track types 1 to 3 (`0x005251b8`).
+`FUN_00545890` adds no section; only `FUN_0054b2f0` does, called by the circuit walk `FUN_0052a970` as track is laid
+(`0x0052abda`, `0x0052ac34`, `0x0052addb`) and by the loader of the track-rides module (`KART`, `0x00544061`). An arena
+has no track cells, so the Hot Pot never has a section; a kart or water ride has none until the player lays track.
+Demolition frees the entry (`FUN_00545610`, `0x00528584`) unless its third argument keeps it (`0x00528570`).
+
+**The tier** divides every arm but the coaster's: `InitSpeed[l]` (`+0x1a8 + 0x40l`) and `InitDuration[l]` (`+0x1a0 +
+0x40l`), `l` the byte `+0x50`, unbounded (`0x004e0689`..`0x004e06c5`), both read before the track test. Only the
+constructor (nought), the save (a raw byte) and the upgrade's completion (`FUN_004df8f0`, `0x004df966`) write `l`; the
+completion then charges `CostOfUpgrade[l]` and sets the speed to `InitSpeed[l]`, the capacity to `InitCapacity[l]` and
+the duration to `InitDuration[l]`, held as the constructor holds them (`0x004dfa9b`..`0x004dfbdf`), so an upgraded ride
+starts at both ratios 1. The upgrade list offers nothing in game type 2 (`0x004ae1a2`, UITEXT 27 "Upgrades are not
+available in Instant Action mode"), and the stock Lost Kingdom park is Instant Action: nothing is upgraded there. Every
+`Rides.sam` gives `InitSpeed` 60, 75 and 90, which no item overrides; `InitDuration` is 3, or the item's own at all
+three tiers (the Belly Bounce 30, the Hot Pot 25, Jurassic Tours 40).
+
+| Case | Inputs | The original | OpenTPW |
+|---|---|---|---|
+| The Hot Pot (1140), bought | `E` 70, handle `0xffffff00`, no sections, 60/60, 25/25 | 42 | 70, counted |
+| Dino Karts (1150), bought | `E` 80, `0xfffffc00`, no sections, 60/60, 3/3 | 48, never offered (`+0x2c` nought) | 80, never read: `CanBeOffered` refuses first |
+| Splish Splash (1160), bought | `E` 75, `0xfffffb00`, no sections, 60/60, 3/3 | 45, never offered | as Dino Karts |
+| Temple Of Gloom (1180), bought | `+0xe0` nought until `COAST 8`, then the station's own run | 0, then `50 + f / 2` of a run not measured; never offered | 90, counted, and offered: `CanBeOffered` has no coaster arm |
+| Alexah's Dino Karts (thing 289) | 33 sections: 12 bends, 1 crossing, the longest run 6, at the list's head | 48 + 33 = 81 | 80, counted |
+| Alexah's Temple Of Gloom (236) | `+0xe0` 1, `SAOC` handle 1, 38 pylons, speed 80 (cap 120) | 50 to 100, not known without the run | 90, counted |
+| Alexah's tier-1 Belly Bounce (53) | `E` 40, `l` 1, 75/75, 30/30 | 40; speed 60 gives 32, 59 31, 90 48 | 40 at any speed, counted |
+
+Instant Action catalogues only items with an `Easy_` file (`0x00413ac4`): all four bought cases have one; Chac Atak
+and Gorilla Thrilla do not. The saved rows were measured read-only in Alexah's played jungle saves (`q172save`, and a
+walk of the `KART` module that lands on its tag in all nine park files); the bought rows follow from the reads above.
+
+**What OpenTPW lacks.** `ExcitementOf` takes the track arm on the item's `BumperType`, not the object's `+0x28`, which
+a bought thing never gets; nothing reads the track-rides module or ports `FUN_00545310`. The catalogue reads tier
+nought only. There is no coaster ride (the node list, `Coaster.sam`, the spline and sample run, `SAOC`) and no editor,
+and `ParkRideChoice.CanBeOffered` has no `FUN_00441970` arm. OpenTPW asks the gate before the score, which changes only
+what the `unimplemented` census counts. A bought thing starts with `mIsTrackRideValid` nought, where a bought Hot Pot's
+is 1; nothing reads it for track type 0.
+
+**Measured in the game** (`q172run.py`, silent, the stock jungle park, the build before any Q172 change, every reading
+predicted first; `save/` unchanged; runs `q172-run1/`, `q172-run2/`). All three keys read 0 at load and after a `why`
+of 13 guests. With the Belly Bounce sold and a Hot Pot bought at (57,23), its queue joined to the path at (56,22) and
+`spend` reading it offerable, paused: the purchase added nothing; one `why` added 13 to `RIDE_EXCITEMENT_TRACK_CROWD`
+for its 13 lines, all 13 choosing the Hot Pot, and a second 13 more; after 90 s running with `load 40`, one `why` added
+48 for 48 lines, 37 of them choosing it. `RIDE_EXCITEMENT_COASTER_TRACK` and `RIDE_EXCITEMENT_UPGRADE_TIER` stayed 0.
+Photographed paused beside that census: the Hot Pot with its queue, guests at the gate.
 
 ### What it gives the three rides in Lost Kingdom
 
@@ -1121,9 +1218,9 @@ column is the chooser before Q165b and Q165c built what the decode column shows.
 |---|---|---|---|
 | Distance, the effects divisor and the queue term's distance test | at the back-of-queue cell | at the entry cell (Q105) | every candidate |
 | The FPU's precision | not settled (`park-engine.md`, "Which rounding is live") | double, the runtime's starting precision | Eruption's golden ticket at some scores (62 against 63 at 45) |
-| A coaster's excitement | `trunc( 50 + f / 2 )` of its track, or nought with none | its `ExcitementLevel`, counted (`RIDE_EXCITEMENT_COASTER_TRACK`) | the three coasters, bought (Q172) |
-| A track handle's excitement | 60% of the level plus the track's crowd, held 0..100 | the level, counted (`RIDE_EXCITEMENT_TRACK_CROWD`) | The Hot Pot, Dino Karts and Splish Splash, bought (Q172) |
-| An upgraded ride's excitement | its tier's `InitSpeed` and `InitDuration` | the level, counted (`RIDE_EXCITEMENT_UPGRADE_TIER`); the catalogue reads tier nought | nothing in Lost Kingdom's save; Alexah's played park has a tier-1 Belly Bounce (Q172) |
+| A coaster's excitement | `trunc( 50 + f / 2 )` of its node's rating, or nought before `COAST 8` binds it; never offered until the editor closes its circuit (`FUN_00441970`, `0x004dd9b7`) | its `ExcitementLevel`, counted (`RIDE_EXCITEMENT_COASTER_TRACK`), and offered | Temple Of Gloom, bought (the one jungle coaster Instant Action catalogues); Alexah's saved one (Q172b) |
+| A track handle's excitement | 60% of the level plus 3 × crossings + the longest straight + 2 × bends, that term held 0..40 and the sum 0..100: 42, 48 and 45 bought | the level, counted (`RIDE_EXCITEMENT_TRACK_CROWD`), on the item's `BumperType`, not the object's `+0x28`: 70, 80 and 75 | The Hot Pot, bought; Alexah's saved Dino Karts, 81 against 80 (Q172b) |
+| An upgraded ride's excitement | its tier's `InitSpeed` and `InitDuration` | the level, counted (`RIDE_EXCITEMENT_UPGRADE_TIER`); the catalogue reads tier nought | never in the stock park, where Instant Action offers no upgrade (`0x004ae1a2`); Alexah's played park's tier-1 Belly Bounce, 40 at its settings, 32 at speed 60 (Q172b) |
 | A sideshow's cost of goods and chance of winning | the object's own `+0x188` and `+0x190` | the item's (Q97) | none yet: the save holds the item's |
 | The too-long gate on a queue path | `FUN_004dda40`'s capacity, over `QueueWaitTimeConstant`, which the catalogue does not read | counted and let through (`QUEUE_TOO_LONG_CAPACITY`, Q173) | the Belly Bounce, and every bought ride with a queue |
 | The calendar at load | the save's `mGameTick`, 755: 2000-02-02 18:27:30 | the score's calendar is the original's (`ParkState.CalendarNow`); the gadget's date and the weather's days count from nought (`GameCalendar.Rebase`, Q149) | every load |

@@ -1340,16 +1340,20 @@ The closing multiply the decompiler hides in a bare `__ftol` **is** readable in 
     004e072c: LEA ECX,[EAX + EAX*0x4]    ; *5   -> EBX*15
     004e0734: SHL ECX,0x2                ; *4   -> EBX*60
     004e0737: IMUL 0x51eb851f / SAR 5    ; /100
-    004e0743: ADD EDX,EDI                ; + the crowd term, clamped 0..0x28
+    004e0743: ADD EDX,EDI                ; + the track term, clamped 0..0x28
     ...       clamp 0..100
     004e0838: FILD dword ptr [ESP + 0x30]  ; that base, as an integer
-    004e083e: FMUL float ptr [ESP + 0x2c]  ; x clamped speed ratio
-    004e0846: FMUL float ptr [ESP + 0x28]  ; x clamped duration ratio
+    004e083c: FXCH                         ; the clamped duration ratio on top
+    004e083e: FMUL float ptr [ESP + 0x2c]  ; x the clamped speed ratio
+    004e0842: FSTP float ptr [ESP + 0x28]  ; the product, stored as a float
+    004e0846: FMUL float ptr [ESP + 0x28]  ; the base x that product, then __ftol
 
 So excitement is `item[+0x13c]` scaled by the two ratios. When the object's `mTrackRideHandle` (`+0x28`) is
-non-zero the base is `(item[+0x13c] * 60 / 100 + crowd)` clamped 0..100 instead: the test at `0x004e06ce`
-jumps past the scale, the crowd term and the clamp. The crowd term is `3a + b + 2c` from `FUN_00545310`,
-clamped 0..40.
+non-zero the base is `(item[+0x13c] * 60 / 100 + track term)` clamped 0..100 instead: the test at `0x004e06ce`
+jumps, for a handle of nought, past the scale, the track term and the clamp. The track term is `3 × crossings + the
+longest straight + 2 × bends` from `FUN_00545310`, clamped 0..40 (`ride-operation.md`, "A coaster's, a track ride's
+and an upgraded ride's excitement"), and a coaster (`+0x9c` == 3) is `trunc( 50 + f / 2 )` of its node's rating,
+whatever the sliders say.
 
 **The inputs are named.** The compiled `.sam` schema (`0x744b30`, sixteen dwords to an `Upgrades` tier, the `0x40`
 stride) puts `Upgrades[0].InitSpeed` at `+0x1a8` and `InitDuration` at `+0x1a0` (tier *l* `0x40 × l` beyond), with

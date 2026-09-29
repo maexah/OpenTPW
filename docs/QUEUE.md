@@ -1969,14 +1969,71 @@ artifacts are listed in `docs/history/README.md`.
   (`0x004db51c`..`0x004db54c`) and `+0x5c` only for a starting duration above nought, held to `Min`/`MaxDuration`
   (`0x004db565`..`0x004db64f`); no jungle ride shows it, but the excitement's ratios read both.
 
-- [ ] **Q172. A coaster's, a track ride's and an upgraded ride's excitement. Decode first.** Found by Q165c, which
-  counts all three: `RIDE_EXCITEMENT_COASTER_TRACK` (track type 3: `trunc( 50 + f / 2 )` of what `FUN_0043e0b0`
-  answers for `FUN_0055a4e0`'s find, or nought with nothing found), `RIDE_EXCITEMENT_TRACK_CROWD` (a thing with a
+- [x] **Q172. A coaster's, a track ride's and an upgraded ride's excitement: the decode.** Done 2026-09-28,
+  `alexah/178-decode-the-track-and-tier-excitement`. Decode only; the build is Q172b. `ride-operation.md`, "A coaster's,
+  a track ride's and an upgraded ride's excitement", step 4 and "Where OpenTPW differs"; `park-engine.md` corrected
+  (the closing multiply's order, and the "crowd", which counts track sections). FileFormats `saves.md`, the object
+  record's handles, `mIsTrackRideValid` and `mUpgradeLevel`, and `sam.md`, the tiers (`docs/sam-and-saves-corrections`);
+  `saves.md`, the `KART` and `SAOC` modules and the script's `+0xe0` (`docs/save-module-chain`).
+  - **Decoded** by three read-only decoders (the coaster, the track handle, the tier), each put to a skeptic, and a
+    synthesis: 117 claims, 100 upheld, 17 amended, none refuted. Re-read first-hand: the templates' first dwords (-1,
+    -4, -5, -11), `FUN_0054b2f0` the only writer of the section list, the offer gate's coaster call, the Instant Action
+    skip, the capacity slot overwritten at `0x004e0680` and the closing multiply; the `KART`, `SAOC` and `ESSR` bytes
+    measured again with my own walks (`q172/main/`), each landing on its tag in all nine park files.
+  - **The answer.** A track ride is any object with a handle (`+0x28`), which the placer gives every item with a
+    `BumperType` and never nought; its base is 60% of the level plus `3 × crossings + the longest straight + 2 ×
+    bends` (held 0..40), and only laying track adds sections, so a bought Hot Pot is **42** in the original, where
+    OpenTPW says 70 (Dino Karts 48 against 80, Splish Splash 45 against 75; Alexah's saved Dino Karts, 33 sections, 81
+    against 80). A coaster is `trunc( 50 + f / 2 )` of its node's rating `+0x104`, nought until its script's `COAST 8`
+    binds the handle, and **no coaster is offered until the editor closes its circuit** (`FUN_00441970`), where OpenTPW
+    offers a bought one at 90. The tier divides by `Upgrades[l]`'s starting speed and duration; the stock park is
+    Instant Action, which offers no upgrade, and Alexah's tier-1 Belly Bounce is 40 either way at its settings (32 at
+    speed 60 in the original).
+  - **Measured in the game** (the build before any change; `q172run.py`, silent, the stock jungle park, predicted
+    first, 7 of 7 in both runs; `save/` unchanged; `q172-run1/`, `q172-run2/`): the three keys 0 at load and after a
+    `why` of 13; a Hot Pot bought at (57,23) with its queue joined at (56,22), paused: the purchase adds nothing, one
+    `why` adds 13 to `RIDE_EXCITEMENT_TRACK_CROWD` for 13 lines (all 13 choosing it), a second 13 more; after 90 s
+    with `load 40`, one `why` adds 48 for 48 lines, 37 choosing it; the coaster and tier keys stay 0. Photographed
+    paused beside that census (`hotpot-ran-z70.png`).
+  - **Not confirmed on screen**: the original's 42, which only a build can show (Q172b); the coaster's gate and its
+    station-only rating; the tier and the saved Dino Karts, which wait for a copy of Alexah's save to load (Q167).
+    Seen, not chased: magenta pads under the bought Hot Pot's entrance.
+  - **No test was added**: nothing was built.
+  - **Found:** Q172b.
+
+  The item as written: Found by Q165c, which counts all three: `RIDE_EXCITEMENT_COASTER_TRACK` (track type 3:
+  `trunc( 50 + f / 2 )` of what `FUN_0043e0b0` answers for `FUN_0055a4e0`'s find, or nought with nothing found), `RIDE_EXCITEMENT_TRACK_CROWD` (a thing with a
   track handle, a non-zero `Bumper.BumperType`: 60% of the level plus `FUN_00545310`'s crowd `3a + b + 2c`, held 0..40,
   the sum held 0..100) and `RIDE_EXCITEMENT_UPGRADE_TIER` (the tier's `InitSpeed` and `InitDuration`, where the
   catalogue reads tier nought: Alexah's played park has a tier-1 Belly Bounce at speed 75). Nothing Lost Kingdom's save
   places reaches them; a bought Hot Pot, Dino Karts, Splish Splash or coaster does. Confirm: `unimplemented`, and
   `why` beside a bought Hot Pot.
+
+- [ ] **Q172b. A track ride's excitement from its handle, an upgraded ride's from its tier, and no coaster offered
+  without a closed circuit.** Found by Q172's decode (`ride-operation.md`, "A coaster's, a track ride's and an upgraded
+  ride's excitement"). Build:
+  (1) a reader, at the boundary, for the save's track-rides module (FileFormats `saves.md`, `KART`): each ride's handle
+  and each section's type in file order, refusing the file unless the walk lands on the tag;
+  (2) a bought item with a `BumperType` takes `TrackRide` = the first of 64 slots no loaded or bought ride holds,
+  `| BumperType << 8` (`0x00529e4d`, `FUN_00545890`), with no sections, freed on a sale (`0x00528584`); a move, which
+  may keep its entry (`0x00528570`), and a 65th ride (a null read at `0x00546225`) are counted, not chosen;
+  (3) `FUN_00545310` ported: two passes without a reset, half the bends, the longest run, half the crossings, and a
+  stale handle writing nothing;
+  (4) `ParkRideScore.ExcitementOf` takes the track arm on the object's `TrackRide` (`0x004e06ce`), not the item's
+  `BumperType`, base `clamp( E × 60 / 100 + clamp( 3 × crossings + longest + 2 × bends, 0, 40 ), 0, 100 )` into the
+  ratio tail, and `RIDE_EXCITEMENT_TRACK_CROWD` retires;
+  (5) the catalogue carries `Upgrades[0..2].InitSpeed` and `InitDuration`, each over its category's, and the tail
+  divides by tier `l` (`0x004e0691`, `0x004e06be`); `RIDE_EXCITEMENT_UPGRADE_TIER` stays only for `l` above 2;
+  (6) the offer gate's coaster arm (`FUN_00441970`, `0x004dd9b7`): a coaster placed here has no closed circuit and is
+  refused; a saved one whose `SAOC` flags pass is let through, and what cannot be read of it is counted.
+  Stays counted: `RIDE_EXCITEMENT_COASTER_TRACK`, whose rating needs the spline and sample run no save holds, and
+  laying track (`PLACED_TRACK_RIDE_FIRST_TRACK_CELLS`). Tests, predicted first, each bug put back: the saved Dino
+  Karts' 33 sections give (12, 6, 1) and 81; a bought Hot Pot 42, Dino Karts 48, Splish Splash 45; `[9, 5, 9]` a
+  longest run of 2, and 1 with one pass; a Dino Karts record with `TrackRide` 0 gives 80; the tier-1 Belly Bounce 32 at
+  speed 60 and 40 at 75 (50 on tier-nought divisors), a tier-2 40 at 90; the counter assertion after
+  `ParkRideScoreTests.cs:366` rewritten. Confirm: buy a Hot Pot and join its queue; predict every rider's match log to
+  read excitement 42 (70 before the build), and `unimplemented` without `RIDE_EXCITEMENT_TRACK_CROWD`; buy a Temple
+  Of Gloom with its queue and predict `why` never naming it. The tier and the saved Dino Karts wait for Q167.
 
 - [ ] **Q173. The longest queue a guest joins or stays in, for a ride with a queue path.** Found by Q165c's review.
   `FUN_004dda40` is `trunc( max( capacity × QueueWaitTimeConstant × speed / InitSpeed / duration, 4.0f ) )` at the

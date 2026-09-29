@@ -68,7 +68,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - With no work the mechanic, handyman and entertainer stand where the original's walk about (Q133); staff make no
   sound (Q135). Guests and rides read `GameClock.Ticks / 8`, not `mGameTick` (Q132); a load brings one guest (Q26); the bus waits (Q131).
 - Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), riding a ride walked into in first person,
-  and a coaster's, a track ride's and an upgraded ride's excitement (Q172).
+  and a track ride's, a coaster's and an upgraded ride's excitement: a bought Hot Pot is 70, the original's 42 (Q172b).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
   walk (Q121), and a park screen stays open over it (Q122). It walks onto entrances the original shuts (Q140).
@@ -76,7 +76,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
 ## Next
 
 `docs/QUEUE.md`, from the top. **Q1-Q12, Q34, Q35, Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71,
-Q82-Q84, Q88, Q101, Q165-Q166, Q169-Q171, Q170b are ticked.** Next: **Q172**. Each open item's "Found by" names what
+Q82-Q84, Q88, Q101, Q165-Q166, Q169-Q172, Q170b are ticked.** Next: **Q172b**. Each open item's "Found by" names what
 filed it. Gaps **4, 5 and 7** are in `docs/PLAYER-GAPS.md`; the untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
 
 ## Not verified on screen
@@ -115,5 +115,5 @@ Take counts fresh; these go stale within a day.
 
 ## Recent
 
-**2026-09-28 (Q171, the build).** `alexah/177-a-bought-thing-starts-at-its-price`. **Earlier:** each QUEUE.md entry names
-its branch: `176` (Q170b) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`; git log.
+**2026-09-28 (Q172, the decode).** `alexah/178-decode-the-track-and-tier-excitement`. **Earlier:** each QUEUE.md entry
+names its branch: `177` (Q171) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
