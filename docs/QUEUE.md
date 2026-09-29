@@ -2186,8 +2186,47 @@ artifacts are listed in `docs/history/README.md`.
   deadline and a `LOOPANIM` of the key last looped is skipped. Measure whether shipped content reaches either (133
   `TRIGWAITANIM`, 547 `WAITANIM`), then build. Confirm: `rides` over a Lost Kingdom `TRIGWAITANIM` ride through a cycle.
 
-- [ ] **Q174b. A `WAITANIM`'s two writes, `TRIGWAITANIM`'s raw role, and a trigger that asks the channel as the last
-  frame left it.** Found by Q174's decode (`park.md`, "Where OpenTPW's animation state parts from the engine's",
+- [x] **Q174b. A `WAITANIM`'s two writes, `TRIGWAITANIM`'s raw role, and a trigger that asks the channel as the last
+  frame left it.** Done 2026-09-29, `alexah/182-the-animation-waits-as-the-engine`. `RideScript.WaitOutAnimation`'s
+  first visit clears `_animationUntil` and sets `_looping` to `OneShot`, model or not (`0x00552b14`, `0x00552b1a`);
+  `TriggerAndWaitForAnimation`'s re-entry reads channel 0's role raw through the new `AnimationOn` (`FUN_00473fb0`,
+  `0x00552cfc`..`0x00552d11`), `GETANIM_CH` keeping `RoleOn`; `RideAnimations.Trigger` no longer brings the channel up to
+  the tick (`0x00473315`, the remainder `0x0047337b`). `ParkRides.PlayersFor` binds all three sites and logs a player
+  nothing advances; the `rides` census says ` LOOP` and ` then R/E`. `park.md`'s differences say the first three are
+  matched, keep what content reaches each, and gain a sixth (below).
+  - **Measured in the game** (silent, `save/` unchanged within each run; `q174brun.py`, each reading predicted first;
+    the stock park loaded under a lobby pause and stepped 3600 then 7200 frames, so builds meet at ticks 1939 and 5810;
+    then an Aztec Mayhem bought at (57,23), its queue laid, `load 40`, two rides). The build before (`46fee5f`,
+    `q174b-control/`): after its ride channel 0 stood on `role 6 entry 0 frame 50.0/50.0 HELD` in every census to the
+    end of the run. This one (`q174b-new/`, with a throwaway instrument logging each place it decides apart from the
+    build before): after the first ride `0:role 2 entry 0 frame 12.3/50.0 LOOP`, and after the second, held on role 6
+    while the riders walked off (words 105-147), then `LOOP` again at `LOOPANIM 2, 0`; the instrument logged one restart
+    a ride at word 20, and no `TRIGWAITANIM`, trigger or `WAIT4ANIM` decided apart anywhere. The commit's own build
+    (`q174b-commit/`, no instrument) read the same: `0:role 2 entry 0 frame 21.8/50.0 LOOP` after the first ride, loop
+    again after the second, photographed paused beside the census (`q174b-commit/C2-paused-z70.png`); and the stock
+    park's 14 things read the role, entry and hold of the build before at both ticks.
+  - **Predictions wrong**: I predicted the stock park's frames equal at tick 1939 as well, as if no guest were in it;
+    the save holds guests, whose choices are unseeded, and the Belly Bounce read frame 22.7 against 11.8. At 5810 the
+    Belly Bounce and the Jungle Spray differed in role too. The instrument's nought said none of the three changes acted
+    there, and the commit's own run, the same code less the instrument, read both as the build before: between runs.
+  - **Tests**: five new (`ATriggerAsksTheChannelAsTheLastSweepLeftIt`, `TheAztecMayhemLoopsAgainAfterItsRide`,
+    `TriggerAndWaitPassesAChannelHeldOnItsRole`, `AnAnimationWaitForgetsTheDeadlineATriggerLeft`,
+    `AnAnimationWaitLetsTheSameLoopBeAskedForAgain`), and the ferry's queue test given the sweep it leaned on the
+    `MoveTo` for. Each change put back alone turns exactly its own tests red: the deadline 1, the key 2, `RoleOn` 1, the
+    `MoveTo` 1 (`q174b-mutate.py`, `q174b/mutate.out`).
+  - **Not confirmed on screen**: the loop itself. The Aztec Mayhem's moving parts are inside its pyramid, so the
+    photograph (`q174b-new/C2-paused-z70.png`, beside the census) shows the ride and the census shows the loop, as Q174
+    found. The raw re-entry and the trigger on the last frame's state: no run reached either, tested only.
+  - **Reviewed** (`wf_0b758377-379`, three read-only lenses, each finding put to an Opus skeptic): 7 findings, 6 upheld,
+    1 refuted, all taken: `STATUS.md` still said the Aztec Mayhem does not loop; two comments still carried the
+    overshoot onto a trigger; `ParkRides`' summary said a bound
+    script has no playing channel; difference 2 had dropped the zero-frame clip; "every channel once a frame" overstated
+    the decode (a coaster's car models are also advanced from inside the loop, `0x004311f0`; checked first-hand); and a
+    triggered clip's start stamp is the tick's instant where the engine's is the frame's snapshot (`0x00472bff`), named
+    at `RideScript.StartAnimation` and as `park.md`'s difference 6.
+  - **Found:** a note under Q174c (difference 6).
+
+  The item as written: Found by Q174's decode (`park.md`, "Where OpenTPW's animation state parts from the engine's",
   differences 1 to 3). (1) `WaitOutAnimation`'s first visit, model or not, sets `_animationUntil` to null and `_looping`
   to `OneShot` after its deadline (`0x00552b14`, `0x00552b1a`); the re-entry writes neither. (2)
   `TriggerAndWaitForAnimation`'s re-entry compares channel 0's `AnimID` plus one against the mark, not `RoleOn`'s
@@ -2209,6 +2248,8 @@ artifacts are listed in `docs/history/README.md`.
   load: the cameras' `WAIT 5000` at word 14 with 2,341 and 2,329 ms left, the Belly Bounce's `WAIT 500` at word 46 with
   63, and its saved key 2 at its `LOOPANIM 2, 0` at word 43. Confirm, predicted first: the Belly Bounce's `LOOPANIM 2,
   0` no longer triggering after a load, and the cameras' first `WAITANIM` about 2.3 s after their first turn, not 5 s.
+  - **Note (Q174b's review):** a triggered clip starts at the tick's own instant, where the engine's starts at the
+    frame's clock snapshot (`park.md`, difference 6); the same timebase, reached only when a frame runs more than one tick.
 
 - [ ] **Q175. A rider's walk off keeps the walk on's leg, where the original's works out its own. Decode first.** Found by
   Q166's decode (`WALKON`) and its refuter (`WALKOFF`). `FUN_00556f40` (`WALKON`) sets the slot's due time to now +

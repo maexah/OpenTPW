@@ -26,10 +26,11 @@ namespace OpenTPW;
 /// <para>
 /// <b>Time is a stamp, never an accumulator, and that is load-bearing.</b> The engine keeps the moment the
 /// clip started and subtracts it from the moment it is asking about, so continuity across a clip change is
-/// expressed by <i>moving the start stamp backwards</i> (<c>FUN_00472bc0</c>): a clip triggered onto a
-/// channel that had already overrun begins as far into itself as the old one overshot. A player that
-/// accumulated a delta per frame could not express that at all, and would silently drop the overshoot at
-/// every transition.
+/// expressed by <i>moving the start stamp backwards</i> (<c>FUN_00472bc0</c>): a clip started over one that
+/// has run past its end - a promotion from the queue, or a loop's replay - begins as far into itself as the old
+/// one overshot. A trigger here never finds an overrun channel, since the sweep deals with each one first. A
+/// player that accumulated a delta per frame could not express that at all, and would silently drop the
+/// overshoot at every transition.
 /// </para>
 /// </summary>
 public sealed class AnimTimeControl

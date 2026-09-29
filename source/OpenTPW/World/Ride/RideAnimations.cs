@@ -242,16 +242,11 @@ public sealed class RideAnimations
 		if ( Channel( index ) is not { } channel )
 			return UnknownLength;
 
-		// The engine advances every channel once per frame, after the frame's ticks, from a snapshot of the
-		// game clock. The posing is ParkObjects.Sweep's, so all the timebase decides at a trigger is whether
-		// this channel counts as busy. Bringing it up to the tick first is a deviation: the engine asks the
-		// channel as the last frame's advance left it, so a clip that ran out since then is busy there, and
-		// the new one queues and is promoted at the next frame's advance, its start carried back to the old
-		// clip's end - so a TRIGWAITANIM passes a turn later, and the answered length and the deadline count
-		// the old clip's remainder (docs/exe/park.md, "Where OpenTPW's animation state parts from the
-		// engine's").
-		channel.MoveTo( now );
-
+		// Asked as the last frame's advance left it, not brought up to the trigger's moment (0x00473315): the
+		// engine advances a placed thing's model once a frame, after the frame's ticks, and so does
+		// ParkObjects.Sweep. A clip that ran out since that advance is still busy, so the new one queues, the
+		// answer counts the old clip's remainder as the advance left it (0x0047337b), and the next advance
+		// promotes it with its start carried back to the old clip's end.
 		var pseudo = role is AnimTimeControl.FreezeAtStart or AnimTimeControl.HoldAtEnd;
 		var free = pseudo || !channel.IsBusy || !Carries( channel.AnimID, channel.SubAnim );
 
@@ -345,8 +340,9 @@ public sealed class RideAnimations
 
 			if ( channel.HasQueued )
 			{
-				// The promotion is a full start, so the overshoot carry applies to it exactly as it would
-				// to a trigger - and it clears three of the four queue fields, leaving the flags stale.
+				// The promotion is a full start, so the clip that ran past its end hands its overshoot to this
+				// one, clamped to this clip's own length - and it clears three of the four queue fields,
+				// leaving the flags stale.
 				StartOn( channel, channel.DeferredAnimID, channel.DeferredSubAnim,
 					channel.DeferredFlags | AnimTimeControl.KeepShownFlag,
 					channel.DeferredSpeed <= 0f ? channel.Speed : channel.DeferredSpeed, now );

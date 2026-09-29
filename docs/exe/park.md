@@ -314,7 +314,7 @@ The struct has a shipped name: `FUN_00464580` is a debug dumper that prints ever
 
 `FUN_004735d0` advances one channel, called once per channel from `FUN_00473c70` (stride 0x38, correct), called by two routes. **A model on screen** is advanced and posed from its scene-node callback `0x00463030` (installed by `FUN_00463060` at `0x004638bd`) which calls `FUN_0044e380( model, 1 )` and then marks it `+4 |= 0x200000` (`0x0046304d`); **every other model** is advanced, not posed, by the per-frame model sweep `FUN_0044e410( 3 )` with `( 0, 8 )`, which skips and clears that mark (`0x0044e4a4`, `0x0044e4e0`) — the routine `0x0054e2b0` that the park's load hangs on the scene (`0x0054ecbc`) and the scene draw at `0x0054fb6c` runs through `FUN_00576a00` — **after the 31 ms catch-up loop's back edge at `0x0054f8da`**. The park's `FUN_0044e410( 2 )` at `0x0054fa96` advances only the model at `DAT_00790988`. It takes **no time argument**: it reads `DAT_007b496c` (or `DAT_007b4974` when channel flag `0x40` is set), a snapshot written once per frame by `FUN_00473440` at `0x0054f475` from the clock object at `0x785970`.
 
-**Animation advances once per frame off one snapshot while scripts tick at 31 ms** — several sim ticks in one frame still produce exactly one advance. Confirmed by call graph: `FUN_004735d0` has **exactly one** caller, `FUN_00473c70` at `0x00473d2e`, and **not one** of that function's ten call sites is the script system `FUN_005516b0` or sits inside the 31 ms loop; the park's are `FUN_0044e410(2)`, `FUN_00429df0(0)` and `FUN_00429df0(1)` in the loop's tail, and `FUN_0044e410(3)` and `FUN_0044e380` (`0x0044e3cc`, from the scene-node callback) inside the scene draw, so both routes advance once a frame, after its ticks.
+**Animation advances once per frame off one snapshot while scripts tick at 31 ms** — several sim ticks in one frame still produce exactly one advance. Confirmed by call graph: `FUN_004735d0` has **exactly one** caller, `FUN_00473c70` at `0x00473d2e`, and **not one** of that function's ten call sites is the script system `FUN_005516b0` or is called directly inside the 31 ms loop; the park's are `FUN_0044e410(2)`, `FUN_00429df0(0)` and `FUN_00429df0(1)` in the loop's tail, and `FUN_0044e410(3)` and `FUN_0044e380` (`0x0044e3cc`, from the scene-node callback) inside the scene draw, so both routes advance once a frame, after its ticks. Of the rest, `FUN_0044e510` advances one model of the state machine's own (called at `0x0054e72a`), and five advance a coaster's car models (`FUN_00430590` twice, `FUN_00430ed0`, `FUN_00432df0` twice); those the loop can reach, when a loaded save's layout is replayed (`FUN_00516380` at `0x0051669f`, down to `0x004311f0`) and when a model is built with flag `0x200` (`0x00463860`, through `FUN_004368f0`, `FUN_00436ac0`, `FUN_00434060` and `FUN_00433bd0` to `FUN_00432df0`). None is a placed thing's own model.
 
 **Two candidates were checked and cleared, and either would have inverted this:** `FUN_00473440` runs once per frame *above* the loop, so it looks like the sweep, but only computes the frame delta into `DAT_007b497c`; and `FUN_00475360` does run inside the loop every 2nd tick, but is a periodic-task scheduler (`+0x7c` due time, `+0x80` interval) that calls none of this.
 
@@ -637,7 +637,7 @@ Opcode numbers: 15 FLUSHANIM, 16 TRIGANIM (3 operands), 17 WAITANIM, 18 LOOPANIM
 
 **The word at `+0xe4` is the script's play rate, in thousandths.** After every turn of a script with a model, the scheduler writes `(0.5 + 0.01 × speed word) × +0xe4 × 0.001` into every channel's queued speed `+0x30` (`0x00551748`..`0x00551789`, `FUN_00474020` storing at `0x00474037`), which a promoted clip and a loop's replay start at. The loader writes 1000 (`0x00558c33`), and so do eight handlers: `TRIGANIM` `0x0055292e`, `WAITANIM` `0x00552a8c`, `LOOPANIM` `0x00552bd1`, `TRIGWAITANIM` `0x00552d1c` and their four `_CH` forms. `TRIGANIMSPEED` writes its rate operand instead (`0x00552f4b`), and the rate stays until the next trigger: jungle `Gates.RSE`, after its `TRIGANIMSPEED 5, 0, VAR_TEMP, 4000` (word 67), waits in an `ENDSLICE` loop with 4000 there. OpenTPW keeps no `+0xe4` (Q155).
 
-**`TRIGWAITANIM` (19) at `0x552c1a` — OpenTPW reproduces the model path but for its re-entry test, which asks `RoleOn` (-1 for a held pose) where the engine reads the role raw (Q174b, "Where OpenTPW's animation state parts from the engine's" below), and, as a declared deviation, steps over the model-less one counted rather than parking.** First visit (`+0xbc` is 0): trigger as `TRIGANIM` does, with its two writes carried inline rather than through `TRIGANIM`'s tail (`+0xa4` at `0x00552d9f`, `+0xa8 = 0xffff` at `0x00552da5`, on the model and the model-less path alike), then `0x553693` does `INC EDI` / `+0xbc = EDI`, so the mark is the **animation id PLUS ONE** and 0 means "not armed"; then `+0x3c -= 4` onto itself and return **without** `+0x98 = 0`, so the same turn re-enters it. Re-entry: with a model, `FUN_00473fb0( model, &role, NULL, 0 )` reads channel 0 — a **plain accessor**, not a "channel cursor": at `*(model+0x10) + channel*0x38` it writes `AnimID` (`+0x04`) through its second argument, `SubAnim` (`+0x08`) through its third when that is not null, and returns `Flags` (`+0x00`), with no bounds check and no refresh — then `INC` and compare the **role** against the mark. **The returned `Flags` are thrown away unread** (`MOV EAX,[EBP+0xbc]` at `0x00552d08`), so no pose-flag test lies on any `TRIGWAITANIM` path; among the handlers only `GETANIM` and `GETANIM_CH` test `0x4` (`0x00552e05`, `0x0055374e`). Equal -> `0x5535f4` clears `+0xbc` and falls through; not equal -> `0x5535d6` rewinds 4 **and** sets `+0x98 = 0`. **With no model the accessor call is skipped and the comparison is made against the RAW THIRD OPERAND**, so it parks for ever unless the raw op2 word equals op0 — which **none** of the 133 shipped uses satisfies (132 differ, 1 is a variable). `TRIGWAITANIM_CH` (`0x553494`, its `+0xbc` test at `0x55359b`) shares `+0xbc` and the same tails: `0x553693`, `0x5535d6` and `0x5535f4` sit in its handler, and `TRIGWAITANIM` jumps into them (`0x00552daf`, `0x00552d17`, `0x00552d11`), so the two share one decode rather than agreeing independently.
+**`TRIGWAITANIM` (19) at `0x552c1a` — OpenTPW reproduces the model path, its raw re-entry included (`RideScript.AnimationOn`), and, as a declared deviation, steps over the model-less one counted rather than parking.** First visit (`+0xbc` is 0): trigger as `TRIGANIM` does, with its two writes carried inline rather than through `TRIGANIM`'s tail (`+0xa4` at `0x00552d9f`, `+0xa8 = 0xffff` at `0x00552da5`, on the model and the model-less path alike), then `0x553693` does `INC EDI` / `+0xbc = EDI`, so the mark is the **animation id PLUS ONE** and 0 means "not armed"; then `+0x3c -= 4` onto itself and return **without** `+0x98 = 0`, so the same turn re-enters it. Re-entry: with a model, `FUN_00473fb0( model, &role, NULL, 0 )` reads channel 0 — a **plain accessor**, not a "channel cursor": at `*(model+0x10) + channel*0x38` it writes `AnimID` (`+0x04`) through its second argument, `SubAnim` (`+0x08`) through its third when that is not null, and returns `Flags` (`+0x00`), with no bounds check and no refresh — then `INC` and compare the **role** against the mark. **The returned `Flags` are thrown away unread** (`MOV EAX,[EBP+0xbc]` at `0x00552d08`), so no pose-flag test lies on any `TRIGWAITANIM` path; among the handlers only `GETANIM` and `GETANIM_CH` test `0x4` (`0x00552e05`, `0x0055374e`). Equal -> `0x5535f4` clears `+0xbc` and falls through; not equal -> `0x5535d6` rewinds 4 **and** sets `+0x98 = 0`. **With no model the accessor call is skipped and the comparison is made against the RAW THIRD OPERAND**, so it parks for ever unless the raw op2 word equals op0 — which **none** of the 133 shipped uses satisfies (132 differ, 1 is a variable). `TRIGWAITANIM_CH` (`0x553494`, its `+0xbc` test at `0x55359b`) shares `+0xbc` and the same tails: `0x553693`, `0x5535d6` and `0x5535f4` sit in its handler, and `TRIGWAITANIM` jumps into them (`0x00552daf`, `0x00552d17`, `0x00552d11`), so the two share one decode rather than agreeing independently.
 
 **`GETANIM_CH`'s operands are `(destination, channel)`**, not `(role, entry)` — **the opposite shape to every other `_CH` instruction.** Counting its first operand as a role inflates any role census. The corrected corpus figures are **627 distinct (item, role) pairs and 806 distinct (item, role, entry) references, all 806 resolving to a shipped file bar the eight known absences**, with the highest entry index any script asks for being 9.
 
@@ -649,43 +649,49 @@ Opcode numbers: 15 FLUSHANIM, 16 TRIGANIM (3 operands), 17 WAITANIM, 18 LOOPANIM
 
 Decoded for Q174 by two read-only decoders, each put to a skeptic in Ghidra, and measured over the corpus by two walkers
 written apart, which agree site for site: every script walked from word 0 with both arms of every branch and an exact
-return stack, carrying the engine's `+0xa4`/`+0xa8` and OpenTPW's side by side. Five differences.
+return stack, carrying the engine's `+0xa4`/`+0xa8` and OpenTPW's side by side. Five differences, and a sixth found by
+Q174b's review. **Q174b built the first three**, so OpenTPW now parts from the engine at 4, 5 and 6; what content reaches
+each of the three is kept, because it is what a change to any of them moves.
 
-**1. `WAITANIM`'s first visit leaves `+0xa8` and `+0xa4` alone in OpenTPW** (`RideScript.WaitOutAnimation`), where the
-engine writes `0xffff` and nought (`0x00552b1a`, `0x00552b14`). **The `+0xa8` half is reached: 55 `LOOPANIM`s** meet a
-key the engine last set to `0xffff` at a `WAITANIM` and OpenTPW still holds from the `LOOPANIM` before it, so the engine
-starts the loop again and OpenTPW skips it, leaving channel 0 held on the last frame of the `WAITANIM`'s clip (OpenTPW
-has no idle default, and the engine's never fires on a thing's model). Never the reverse; 20 of the 55 diverge on every
-path that reaches them; removing the write takes the 55 to nought (one walker's control, and the skeptic's own walk).
+**1. `WAITANIM`'s first visit writes `+0xa8 = 0xffff` and `+0xa4 = 0`** (`0x00552b1a`, `0x00552b14`), model or not, and
+so does `RideScript.WaitOutAnimation`; the re-entry writes neither. **The `+0xa8` half is reached: 55 `LOOPANIM`s** meet
+a key a `WAITANIM` set to `0xffff` after the `LOOPANIM` before it had set the same key, so the loop starts again; without
+the write it is skipped and channel 0 stays held on the last frame of the `WAITANIM`'s clip (OpenTPW has no idle
+default, and the engine's never fires on a thing's model). 20 of the 55 split on every path that reaches them;
+removing the write takes the 55 to nought (one walker's control, and the skeptic's own walk).
 **Seven are Lost Kingdom's**, none placed in Easymode: `tvsim` @17, the Aztec Mayhem's `LOOPANIM 2, 0` after the
 `WAITANIM 6, 0` @102 that ends every ride cycle; `Wateride` @169 with the ride open (`BUMP 5, 0` answering nought) and
 @216 after a breakdown and repair; and `incagod` @32, `Monkey` @32, `Spider` @247 and `Volcano` @193, after a close and
-reopen or a breakdown and repair. After those four, the next
-`TRIGWAITANIM` meets a held one-shot in OpenTPW where the engine is looping (`Monkey` 131, `incagod` 117 and 142, `Spider`
-73 and 101, `Volcano` 91 and 111), so it passes at once where the engine waits up to a cycle (4166, 9999, 5333 and 3333
-ms). **The `+0xa4` half is reached at one `WAIT4ANIM`**, space `hoverbot` @259 (armed @209, cleared by the `WAITANIM`
-@218), where the older deadline has passed anyway, because both clips queue on channel 0.
+reopen or a breakdown and repair. After those four, the next `TRIGWAITANIM` meets the loop (`Monkey` 131, `incagod` 117
+and 142, `Spider` 73 and 101, `Volcano` 91 and 111), so it waits up to a cycle (4166, 9999, 5333 and 3333 ms), where a
+held one-shot passes it at once. **The `+0xa4` half is reached at one `WAIT4ANIM`**, space `hoverbot` @259 (armed @209,
+cleared by the `WAITANIM` @218), where the older deadline has passed anyway, because both clips queue on channel 0.
 
-**2. `TRIGWAITANIM`'s re-entry asks `RoleOn`**, which answers -1 for a held channel, where the engine reads `AnimID` raw
-and throws the flags away. The split needs channel 0 held on the triggered role R at a re-entry: R queued behind another
-role, promoted, then run out and held before the script's next turn. The hold comes from a frame ending at most 7 ticks
+**2. `TRIGWAITANIM`'s re-entry reads `AnimID` raw and throws the flags away**, and so does `RideScript.AnimationOn`;
+`GETANIM_CH`'s `RoleOn` answers -1 for a held channel. The two part only when channel 0 is held on the triggered role R
+at a re-entry: R queued behind another role, promoted, then run out and held before the script's next turn. There the
+engine goes on, and a re-entry asking `RoleOn` waits for ever. The hold comes from a frame ending at most 7 ticks
 (217 ms) after the promoting one, and OpenTPW runs at most 64 ticks (1984 ms) in a frame, so R's clip must be under about
-2200 ms, and under about 280 ms at 30 frames a second. There the engine goes on and OpenTPW waits for ever. **No shipped
-content reaches it at a normal frame rate.** The shortest of the 133 targets is 833 ms (Hallowe'en's `Firework` 5/0).
-Lost Kingdom has 32 uses in 11 scripts: 15 never queue (channel 0 idle, held or on R already: the ferry, the seaplane,
-`Puzzle`, `Squark`, and `Monkey` 215 to 323), and of the 17 that can, only `Monkey` 202 (`monkeym2`, 1999 ms, queued
-behind role 4 with 53-300 ms left) is short enough, after one frame of 58 ticks or more. An entry past a loaded role's
-count (the engine plays past the table with `AnimID` R; OpenTPW parks the channel at 12) and a clip of no frames would
-split it too, and no `TRIGWAITANIM` names either.
+2200 ms, and under about 280 ms at 30 frames a second. **No shipped content reaches it at a normal frame rate.** The
+shortest of the 133 targets is 833 ms (Hallowe'en's `Firework` 5/0). Lost Kingdom has 32 uses in 11 scripts: 15 never
+queue (channel 0 idle, held or on R already: the ferry, the seaplane, `Puzzle`, `Squark`, and `Monkey` 215 to 323), and
+of the 17 that can, only `Monkey` 202 (`monkeym2`, 1999 ms, queued behind role 4 with 53-300 ms left) is short enough,
+after one frame of 58 ticks or more. An entry past a loaded role's count (the engine plays past the table with `AnimID`
+R) and a clip of no frames (the engine starts it with `AnimID` R at `0x004730c8`, its length answered as 1000 at
+`0x00473425`) still split it, since OpenTPW parks the channel at 12 for both (`AnimTimeControl.Start`); no
+`TRIGWAITANIM` names either, and every clip carrying a block declares an end of at least one ("Clip length is the span
+the clip declares").
 
-**3. OpenTPW's trigger brings the channel up to the tick before it decides** (`RideAnimations.Trigger`'s `MoveTo`), where
-the engine judges on the last frame's advance. A clip that ran out since that advance counts finished in OpenTPW, so R
-starts at once and the same-turn re-entry passes, where the engine queues R and passes a turn later, 248 ms on; the
-answered length and the `+0xa4` deadline also leave out the old clip's remainder. It needs the old clip's end to fall in
-the ticks since the last advance (31 ms at a normal frame rate), so it is reached in normal play at a loop's cycle end,
-about once in a hundred triggers at the Volcano's 3333 ms: `incagod` 117 and 142, `Monkey` 131, `Spider` 73, 101 and 218,
-`Volcano` 91 and 111. With a clip already queued, the engine's queue write replaces it (`0x0047334e`..`0x0047335e`)
-where OpenTPW starts R and keeps the old one queued; not measured.
+**3. The trigger judges the channel as the last frame's advance left it** (`0x00473315`), and so does
+`RideAnimations.Trigger`. A clip that ran out since that advance is busy, so R queues, the next advance promotes it with
+its start carried back to the old clip's end, and the same-turn re-entry passes a turn later, 248 ms on; the answered
+length and the `+0xa4` deadline count the old clip's remainder as that advance left it (`0x0047337b`). It needs the old
+clip's end to fall in the ticks since the last advance (31 ms at a normal frame rate), so it is reached in normal play at
+a loop's cycle end, about once in a hundred triggers at the Volcano's 3333 ms: `incagod` 117 and 142, `Monkey` 131,
+`Spider` 73, 101 and 218, `Volcano` 91 and 111. With a clip already queued, the engine's queue write replaces it
+(`0x0047334e`..`0x0047335e`), as `AnimTimeControl.Queue` does. Only `ParkObjects.Sweep` advances a player, over the models
+standing; a player `ParkRides` reads afresh for a thing whose model did not stand is never advanced, so none of its clips
+ends, and `ParkRides.PlayersFor` logs one.
 
 **4. A save carries `+0xa0`, `+0xa4`, `+0xa8` and `+0xbc`** (`FUN_005597a0` reads the whole struct at `0x00559a00`;
 FileFormats `saves.md`), and OpenTPW restores none of them (`ParkRides.Resume`), so a loaded script has `_looping` 0, no
@@ -706,11 +712,18 @@ stands on its last frame (`0x004736bd`), where `AnimTimeControl.Start` clears bo
 routes lead there: a trigger naming a role the model lacks over a held or frozen channel, and a save whose idle channel
 kept the bit. No Lost Kingdom item lacks a role, and the Easymode save's 163 channels hold 11 held or frozen, none idle.
 
+**6. A clip starts at the tick's own instant in OpenTPW** (`RideScript.StartAnimation` passes the tick's `now`,
+`ParkRides.MillisecondsAt`), where the engine stamps a fresh start with the frame's snapshot `DAT_007b496c`
+(`FUN_00472bc0`, `0x00472bff`), the one its advance reads (`0x004736b3`); its scripts' own deadlines read the live clock
+(`0x0055299d`), which barely moves through a catch-up. So a clip triggered at tick i of a frame running k ticks is
+(k-1-i) × 31 ms in at that frame's sweep here and nought there, up to 1953 ms at the 64-tick cap. Reached only when a
+frame runs more than one tick; not measured.
+
 On the same fields and unbuilt: `TRIGANIMSPEED` arms `+0xa4` and sets `+0xa8`, and OpenTPW counts it, so jungle `Gates`
 @80 passes its `WAIT4ANIM` about 0.1 to 0.3 s early and its clip at four times the speed is not played; and every
 trigger's deadline divides by the speed divisor (Q155).
 
-**Measured in the game** (the build before any change, with a throwaway instrument that keeps the engine's
+**Measured in the game before Q174b** (the build before any change, with a throwaway instrument that keeps the engine's
 `+0xa4`/`+0xa8` beside OpenTPW's, seeded from the save, and counts where the two decide apart; silent, the stock jungle
 park, each count predicted first, `save/` unchanged). A bought Aztec Mayhem, its queue joined, rode three cycles:
 after each cycle's `WAITANIM 6, 0` its `LOOPANIM 2, 0` at word 17 was skipped where the engine's starts the loop, once a
@@ -720,6 +733,17 @@ so its photograph shows the ride and the census the state. The Belly Bounce's sa
 once in the same turn), the seaplane (3, the same), a bought Mammoth Fountain (26 first visits and 60 re-entries, since
 its triggers queue) and a Lava Fountain (21 and 48); no first visit took over a channel still busy at the last advance;
 no `WAIT4ANIM` split.
+
+**Measured in the game after Q174b** (silent, the stock jungle park loaded under a pause and stepped 3600 and then 7200
+frames, so two builds meet at ticks 1939 and 5810; then an Aztec Mayhem bought, its queue laid, `load 40`; each reading
+predicted first; `save/` unchanged; a throwaway instrument logging each place the build decides apart from the one
+before it). The Aztec Mayhem's script lets its riders walk off after `WAITANIM 6, 0` @102 and then comes round to
+`LOOPANIM 2, 0` @17, so channel 0 stands held on role 6 while they leave. The build before stayed there until the next
+ride, every census to the end of the run; this one starts the loop again at @17 after each ride, one logged restart a
+ride over two rides. In the stock park the instrument logged nothing over both stretches, and the commit's own build
+read all 14 things with the same role, entry and hold as the build before at both ticks; the instrumented run differed
+at 5810 on the Belly Bounce and the Jungle Spray, both driven by guests whose choices are unseeded, so between runs, not
+builds. No `TRIGWAITANIM`, trigger or `WAIT4ANIM` decided apart in either phase.
 
 ### The effect subsystem
 

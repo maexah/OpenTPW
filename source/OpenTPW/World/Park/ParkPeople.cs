@@ -1972,8 +1972,13 @@ public sealed class ParkPeople : Entity
 					// rider off - so it is the single most useful thing this line can say.
 					var held = (channel.Flags & AnimTimeControl.KeepPoseFlag) != 0 ? " HELD" : "";
 
+					// A loop and a hold stand alike on some models, the Aztec Mayhem's among them, so the flag
+					// is said; and what is queued, which is what a trigger onto a busy channel leaves.
+					var loop = (channel.Flags & AnimTimeControl.LoopFlag) != 0 ? " LOOP" : "";
+					var next = channel.HasQueued ? $" then {channel.DeferredAnimID}/{channel.DeferredSubAnim}" : "";
+
 					return $"{index}:role {channel.AnimID} entry {channel.SubAnim} "
-						+ $"frame {channel.AnimFrame:0.0}/{channel.TotalAnimFrames:0.0}{held}";
+						+ $"frame {channel.AnimFrame:0.0}/{channel.TotalAnimFrames:0.0}{held}{loop}{next}";
 				} ) );
 			}
 

@@ -41,15 +41,12 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>What handing over the model does and does not include.</b> A bound script gets its thing and the
-/// twelve animation roles that thing's model carries, so the animation instructions answer real clip
-/// lengths instead of the engine's floor. It does <b>not</b> get a playing channel: the engine keeps a
-/// per-model array of animation players, and a trigger queues behind whatever one of them is already
-/// running, adding that remaining time to the length it answers. Nothing here plays anything, so there is
-/// never anything to queue behind - and the answer is then the new clip alone, which is exactly what the
-/// engine itself computes for an idle channel rather than a simplification of it. <c>FLUSHANIM</c> is the
-/// visible consequence: with a model the engine clears that channel's <i>queued</i> role
-/// (<c>FUN_00473270</c>) and nothing else, so with no channel it remains the no-op it always was.
+/// <b>What handing over the model includes.</b> A bound script gets its thing and that thing's animation
+/// players (see <see cref="PlayersFor"/>): the very ones <see cref="ParkObjects.Sweep"/> advances and the model
+/// is posed from, so the animation instructions answer real clip lengths instead of the engine's floor. As in
+/// the engine, a trigger onto a busy channel queues behind the running clip and adds that clip's remaining time
+/// to the length it answers, and <c>FLUSHANIM</c> clears the channel's <i>queued</i> role (<c>FUN_00473270</c>)
+/// and nothing else, so the running clip plays out.
 /// </para>
 ///
 /// <para>
@@ -108,8 +105,7 @@ public sealed class ParkRides : Entity
 		// holds the clip at frame nought until the script, run from word 0, plays it. A save has state
 		// to restore and a new thing has none, so calling Resume here would be putting back a past it never
 		// had - and would stop the one animation a player is waiting to watch.
-		script.Animations = _objects?.AnimationsFor( placed.ThingId )
-			?? RideAnimations.Load( item.Directory, item.Stem, _files, item.AnimationChannels );
+		script.Animations = PlayersFor( placed.ThingId, item );
 
 		if ( script.Animations.Loaded > 0 )
 			_animated.Add( placed.ThingId );
@@ -330,10 +326,8 @@ public sealed class ParkRides : Entity
 				Resume( script, placed, world );
 
 				// Its own thing's player where the thing is standing, so that what the script triggers and
-				// what the model is posed from are the same one. Read afresh only where nothing was drawn,
-				// which is what a test binding scripts against a park it never builds is doing.
-				script.Animations = _objects?.AnimationsFor( placed.ThingId )
-					?? RideAnimations.Load( item.Directory, item.Stem, _files, item.AnimationChannels );
+				// what the model is posed from are the same one.
+				script.Animations = PlayersFor( placed.ThingId, item );
 
 				if ( script.Animations.Loaded > 0 )
 					_animated.Add( placed.ThingId );
@@ -407,8 +401,7 @@ public sealed class ParkRides : Entity
 
 				script.ThingId = thingId;
 
-				script.Animations = stood.AnimationsFor( thingId )
-					?? RideAnimations.Load( item.Directory, item.Stem, _files, item.AnimationChannels );
+				script.Animations = PlayersFor( thingId, item );
 
 				if ( script.Animations.Loaded > 0 )
 					_animated.Add( thingId );
@@ -842,6 +835,31 @@ public sealed class ParkRides : Entity
 		var cut = path.LastIndexOf( '/' );
 
 		return cut < 0 ? string.Empty : path[..cut];
+	}
+
+	/// <summary>
+	/// The animation players a bound script triggers: its thing's own where the thing stands, so that what
+	/// the script triggers and what the model is posed from are one, or a set read afresh where nothing
+	/// stands, which is what a test binding scripts against a park it never builds is doing.
+	/// </summary>
+	/// <remarks>
+	/// <b>Nothing advances a set read afresh</b> - only <see cref="ParkObjects.Sweep"/> does, over what stands
+	/// - and a trigger asks a channel as the last advance left it, so on such a set no clip ever ends and every
+	/// trigger onto a busy channel queues for good. Said in a drawn park, where it means a thing whose model
+	/// would not stand.
+	/// </remarks>
+	private RideAnimations PlayersFor( int thingId, ParkItemCatalogue.Item item )
+	{
+		if ( _objects?.AnimationsFor( thingId ) is { } standing )
+			return standing;
+
+		if ( _objects is not null )
+		{
+			Log.Warning( $"{ThemeName}: thing {thingId} ('{item.Name}') is not standing, so nothing advances "
+				+ "its animations and no clip it triggers ever ends" );
+		}
+
+		return RideAnimations.Load( item.Directory, item.Stem, _files, item.AnimationChannels );
 	}
 
 	/// <summary>

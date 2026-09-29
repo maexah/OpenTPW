@@ -73,6 +73,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0042c460` | The sweep: the whole step, with either axis put back if its cell changed | OpenTPW.Tests/ParkCamcorderWalkTests.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042c587` | The camcorder sweep, after every pass: FUN_0042a340 at the pass's cell; a ride found runs Ride it! from first person and ends the sweep | OpenTPW.Tests/ParkCamcorderWalkTests.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042d130` | | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
+| `0x004311f0` | FUN_00430ed0, a coaster car's update: FUN_00473c70 advances the car's model; a layout replayed inside the 31 ms loop reaches it | OpenTPW/VM/RideScript.cs  |
 | `0x004380e7` | SAOC loader: node +0x3c bit 0, the circuit closed, from the saved header's flag bit 0 | OpenTPW.Files/Formats/Save/ParkCoasters.cs OpenTPW/World/Park/ParkRideChoice.cs  |
 | `0x004382b3` | SAOC loader: node +0x3c bit 1, a gap open, from the saved header's flag bit 1 | OpenTPW.Files/Formats/Save/ParkCoasters.cs  |
 | `0x0043837d` | SAOC loader: node +0x140, the clash count, restored from header +0x1c last | OpenTPW.Files/Formats/Save/ParkCoasters.cs OpenTPW/World/Park/ParkRideChoice.cs  |
@@ -101,13 +102,15 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00471c73` | | OpenTPW.Files/Formats/Model/AnimationFile.cs OpenTPW.Tests/AnimationEasingTests.cs  |
 | `0x00471c83` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x00471d32` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
+| `0x00472bff` | FUN_00472bc0, a fresh start: +0x10, +0x14 and +0x18 stamped from the frame's clock snapshot DAT_007b496c | OpenTPW/VM/RideScript.cs  |
 | `0x00472f60` | | OpenTPW.Files/Formats/Model/AnimationFile.cs OpenTPW/World/Lobby/LobbyScript.cs  |
 | `0x00472fdd` | | OpenTPW/World/Ride/AnimTimeControl.cs  |
 | `0x0047308f` | FUN_00472f60's start: an entry past a loaded role's clips read from past the table, the role standing | OpenTPW/World/Ride/RideAnimations.cs  |
 | `0x00473193` | FUN_00472f60, the hold (role 14): AnimTime set a whole clip past the start stamp | OpenTPW/World/Ride/AnimTimeControl.cs  |
 | `0x004732a0` | The animation trigger: plays entry N of role R on a model channel, once or looped, queued behind a clip still part-way through unless the flags carry `0x2` (`park.md`); the lobby's gate and isle reach it through `0x005d83f0` with role 5, M (`lobby.md`, "Escape cancels the fly-in") | OpenTPW/World/Lobby/LobbyGate.cs  |
 | `0x004732e5` | FUN_004732a0: the first of its seven take-over gates (to 0x00473344) | OpenTPW/World/Ride/AnimTimeControl.cs  |
-| `0x0047337b` | | OpenTPW.Tests/RideScriptModelTests.cs OpenTPW/World/Ride/AnimTimeControl.cs  |
+| `0x00473315` | FUN_004732a0: 'finished' judged on +0x20 as the last per-frame advance left it, no refresh | OpenTPW.Tests/RideScriptModelTests.cs OpenTPW/VM/RideScript.cs OpenTPW/World/Ride/RideAnimations.cs  |
+| `0x0047337b` | | OpenTPW.Tests/RideScriptModelTests.cs OpenTPW/World/Ride/AnimTimeControl.cs OpenTPW/World/Ride/RideAnimations.cs  |
 | `0x004733b1` | | OpenTPW.Files/Formats/Model/AnimationFile.cs OpenTPW/World/Ride/RideAnimations.cs  |
 | `0x004733cc` | | OpenTPW.Files/Formats/Model/AnimationFile.cs OpenTPW.Tests/RideScriptModelTests.cs  |
 | `0x004733d6` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
@@ -567,6 +570,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0054e682` | | OpenTPW/Global/GameClock.cs OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Level.cs  |
 | `0x0054e6a6` | | OpenTPW/Client/Game.cs  |
 | `0x0054e6df` | | OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Level.cs  |
+| `0x0054e72a` | Game_StateMachine: FUN_0044e510 advances the one model at DAT_0079fcb4, outside the 31 ms loop | OpenTPW/VM/RideScript.cs  |
 | `0x0054e768` | | OpenTPW/Global/GameClock.cs  |
 | `0x0054e770` | | OpenTPW/Global/GameClock.cs  |
 | `0x0054e780` | | OpenTPW/Global/GameClock.cs  |
@@ -607,9 +611,13 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00552952` | RSSE TRIGANIM: the script speed divisor pushed as the play rate | OpenTPW/VM/RideScript.cs  |
 | `0x005529bc` | | OpenTPW/VM/RideScript.cs  |
 | `0x00552ab0` | | OpenTPW.Tests/RideScriptModelTests.cs  |
-| `0x00552b14` | RSSE WAITANIM first visit: +0xa4 cleared (and +0xa8 set to 0xffff after it) | OpenTPW/VM/RideScript.cs  |
+| `0x00552b14` | RSSE WAITANIM first visit: +0xa4 cleared (and +0xa8 set to 0xffff after it) | OpenTPW.Tests/RideScriptAnimationTests.cs OpenTPW/VM/RideScript.cs  |
+| `0x00552b1a` | RSSE WAITANIM first visit: +0xa8, the looping key, set to 0xffff, model or not | OpenTPW.Tests/RideScriptAnimationTests.cs OpenTPW.Tests/RideScriptModelTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x00552be4` | RSSE LOOPANIM: the script speed divisor pushed as the play rate | OpenTPW/World/Park/ParkRides.cs  |
 | `0x00552c1a` | `TRIGWAITANIM` handler | OpenTPW/VM/RideScript.cs  |
+| `0x00552cfc` | RSSE TRIGWAITANIM re-entry: channel 0 role read raw through FUN_00473fb0, no pose-flag test | OpenTPW/VM/RideScript.cs  |
+| `0x00552d08` | RSSE TRIGWAITANIM re-entry: the accessor's returned flags thrown away; the mark read | OpenTPW.Tests/RideScriptModelTests.cs OpenTPW/VM/RideScript.cs  |
+| `0x00552d11` | RSSE TRIGWAITANIM re-entry: the role plus one equal to the mark jumps to the shared clear at 0x005535f4 | OpenTPW/VM/RideScript.cs  |
 | `0x00552fe5` | | OpenTPW.Tests/RideScriptChannelTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x00553158` | | OpenTPW.Tests/RideScriptChannelTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x005531f9` | | OpenTPW/VM/RideScript.cs  |

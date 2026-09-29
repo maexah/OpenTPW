@@ -212,6 +212,55 @@ public class RideScriptAnimationTests
 	}
 
 	/// <summary>
+	/// <b>A <c>WAITANIM</c>'s first visit forgets the deadline a trigger left</b>, model or not
+	/// (<c>0x00552b14</c>), so a <c>WAIT4ANIM</c> after it does not sit out an older trigger's 300ms.
+	/// </summary>
+	[TestMethod]
+	public void AnAnimationWaitForgetsTheDeadlineATriggerLeft()
+	{
+		var script = new RideScript( Build( 1, 50,
+			Word( Opcode.TRIGANIM ), Lit( 5 ), Lit( 0 ), Lit( 0 ),
+			Word( Opcode.WAITANIM ), Lit( 6 ), Lit( 0 ),
+			Word( Opcode.WAIT4ANIM ),
+			Word( Opcode.COPY ), Var( 0 ), Lit( 7 ),
+			Word( Opcode.END ) ) );
+
+		script.Turn( 0f );
+
+		Assert.IsFalse( script.WaitingForAnimation, "the WAITANIM's first visit cleared the trigger's deadline" );
+
+		script.Turn( 31f );
+
+		Assert.AreEqual( 7, script.Variables[0], "so the WAIT4ANIM passed in the WAITANIM's next turn, not at 300" );
+	}
+
+	/// <summary>
+	/// <b>A <c>WAITANIM</c>'s first visit sets the looping key to one-shot</b>, model or not
+	/// (<c>0x00552b1a</c>), so a <c>LOOPANIM</c> of the key last looped is not skipped after one. With no model
+	/// what shows it is the loop's clear of the <c>WAIT4ANIM</c> deadline: a <c>TRIGANIM_CH</c>, which leaves
+	/// the key alone, arms one, and the second <c>LOOPANIM 2, 0</c> takes it away.
+	/// </summary>
+	[TestMethod]
+	public void AnAnimationWaitLetsTheSameLoopBeAskedForAgain()
+	{
+		var script = new RideScript( Build( 2, 50,
+			Word( Opcode.LOOPANIM ), Lit( 2 ), Lit( 0 ),
+			Word( Opcode.WAITANIM ), Lit( 6 ), Lit( 0 ),
+			Word( Opcode.TRIGANIM_CH ), Lit( 1 ), Lit( 0 ), Var( 0 ), Lit( 0 ),
+			Word( Opcode.LOOPANIM ), Lit( 2 ), Lit( 0 ),
+			Word( Opcode.WAIT4ANIM ),
+			Word( Opcode.COPY ), Var( 1 ), Lit( 7 ),
+			Word( Opcode.END ) ) );
+
+		script.Turn( 0f );
+		script.Turn( 31f );
+
+		Assert.AreEqual( 300, script.Variables[0], "the TRIGANIM_CH ran and armed its 300" );
+		Assert.IsFalse( script.WaitingForAnimation, "the second LOOPANIM 2, 0 ran and took the deadline away" );
+		Assert.AreEqual( 7, script.Variables[1], "so the WAIT4ANIM passed at once" );
+	}
+
+	/// <summary>
 	/// <c>FLUSHANIM</c> fetches the model and leaves if there is none, so with no model it is a real
 	/// no-op and not an instruction this refuses - which is the difference between a script carrying on
 	/// and a script counting a gap.

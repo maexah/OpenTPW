@@ -124,18 +124,17 @@ public sealed class RideScript
 	/// <c>TRIGANIMSPEED</c> too, counted here), <c>LOOPANIM</c>, <c>LOOPANIM_CH</c> and a passed
 	/// <c>WAIT4ANIM</c> clear it, and <c>WAIT4ANIM</c> is the only instruction that reads it. Null when
 	/// nothing has been triggered, and after a load, where the engine restores the saved deadline
-	/// (docs/QUEUE.md Q174c). The engine's <c>WAITANIM</c> clears it too, which
-	/// <see cref="WaitOutAnimation"/> does not (docs/QUEUE.md Q174b).
+	/// (docs/QUEUE.md Q174c). A <c>WAITANIM</c>'s first visit clears it too (<see cref="WaitOutAnimation"/>).
 	/// </summary>
 	private float? _animationUntil;
 
 	/// <summary>
 	/// Which animation is looping - the engine's field <c>+0xa8</c>, holding the key
-	/// <c>(second &lt;&lt; 16) + first</c>, and <see cref="OneShot"/> after a one-shot trigger.
+	/// <c>(second &lt;&lt; 16) + first</c>, and <see cref="OneShot"/> after a one-shot trigger or a
+	/// <c>WAITANIM</c>'s first visit (<see cref="WaitOutAnimation"/>).
 	/// It starts at nought, where the engine's loader writes <see cref="OneShot"/> (<c>0x00558c4f</c>), a
-	/// difference no shipped <c>LOOPANIM</c> meets, as none has the key nought; a load leaves it at nought
-	/// where the engine restores the saved key (docs/QUEUE.md Q174c); and the engine's <c>WAITANIM</c> sets
-	/// it to <see cref="OneShot"/>, which <see cref="WaitOutAnimation"/> does not (docs/QUEUE.md Q174b).
+	/// difference no shipped <c>LOOPANIM</c> meets, as none has the key nought; and a load leaves it at nought
+	/// where the engine restores the saved key (docs/QUEUE.md Q174c).
 	/// </summary>
 	private int _looping;
 
@@ -922,10 +921,13 @@ public sealed class RideScript
 		// Nothing brings a channel up to date here, and that is deliberate. The engine sweeps its animation
 		// players once per FRAME, off a clock snapshot taken outside the fixed-step loop the scripts run in,
 		// and never from the script system: FUN_004735d0, which advances and poses, has exactly ONE caller
-		// (FUN_00473c70, at 00473d2e), and not one of that function's ten call sites is FUN_005516b0 or sits
-		// inside the 31ms loop. The park's are FUN_0044e410(2), FUN_00429df0(0), FUN_00429df0(1), and the
-		// draw's FUN_0044e410(3) and FUN_0044e380 (the on-screen models' route), all of them past the loop's
-		// back edge in Game_StateMachine. ParkObjects.Sweep is where that lives here.
+		// (FUN_00473c70, at 00473d2e), and not one of that function's ten call sites is FUN_005516b0 or is
+		// called directly inside the 31ms loop. The park's are FUN_0044e410(2), FUN_00429df0(0), FUN_00429df0(1),
+		// and the draw's FUN_0044e410(3) and FUN_0044e380 (the on-screen models' route), all of them past the
+		// loop's back edge in Game_StateMachine. Of the rest, FUN_0044e510 advances one model of the state
+		// machine's own (0x0054e72a), and five advance a coaster's car models (FUN_00430590, FUN_00430ed0,
+		// FUN_00432df0), which a layout replayed inside the loop reaches too (0x004311f0); none is a placed
+		// thing's own model. ParkObjects.Sweep is where that lives here.
 		//
 		// Advancing per tick would promote a queued clip mid-catch-up: with three ticks due, a clip
 		// ending on the first would have its successor running before the second tick's instructions
@@ -933,10 +935,8 @@ public sealed class RideScript
 		// is the same either way - ParkRides hands the sweep Ticks * 31, which is exactly the instant its
 		// last tick ran at - so the difference is only what a script can see PART WAY THROUGH a long frame.
 		//
-		// A script reads channel state through RideAnimations.Trigger, which calls MoveTo on the channel
-		// before deciding - a deviation, since the engine decides on the last frame's advance - and through
-		// RoleOn, which reads it as the last sweep left it, as the engine does (docs/exe/park.md, "Where
-		// OpenTPW's animation state parts from the engine's").
+		// A script reads channel state through RideAnimations.Trigger, RoleOn and AnimationOn, and all three
+		// read it as the last sweep left it, as the engine does (0x00473315).
 
 		StepTheWalks( now );
 
@@ -2839,19 +2839,16 @@ public sealed class RideScript
 	/// </para>
 	///
 	/// <para>
-	/// <b>And re-entry asks <see cref="RoleOn"/></b>, which answers -1 for a channel holding its pose, where
-	/// the engine reads channel nought's role raw: a clip already held when the wait re-enters keeps this
-	/// waiting where the engine goes on - a deviation no shipped clip is short enough to reach at a normal
-	/// frame rate, docs/QUEUE.md Q174b.
+	/// <b>The role is read raw</b> (<see cref="AnimationOn"/>): the engine throws away the flags its accessor
+	/// answers (<c>0x00552d08</c>), so a clip already held on its last frame when the wait re-enters passes
+	/// it. <c>GETANIM_CH</c> is the one that answers -1 for a held channel (<see cref="RoleOn"/>).
 	/// </para>
 	///
 	/// <para>
 	/// <b>A trigger queued behind a looping clip waits for the loop's cycle to end</b>, where the queue is
-	/// promoted before the loop replays, as in the engine. Two cases part from it: a cycle that ended since
-	/// the last frame's advance lets the trigger start at once here (see <see cref="RideAnimations.Trigger"/>),
-	/// and after a close and reopen, or a breakdown and repair, the loop was skipped (see
-	/// <see cref="WaitOutAnimation"/>), so the wait passes at once. The Volcano, the Spider, the Monkey ride
-	/// and the Inca God meet both.
+	/// promoted before the loop replays, as in the engine - and so does one landing on a cycle that ended
+	/// after the last frame's advance, because the trigger asks the channel as that advance left it (see
+	/// <see cref="RideAnimations.Trigger"/>).
 	/// </para>
 	/// </summary>
 	private void TriggerAndWaitForAnimation( float now, IReadOnlyList<RideOperand> operands, int length )
@@ -2878,7 +2875,7 @@ public sealed class RideScript
 			return;
 		}
 
-		if ( RoleOn( 0 ) + 1 == _animationMark )
+		if ( AnimationOn( 0 ) + 1 == _animationMark )
 		{
 			_animationMark = 0;
 
@@ -2980,6 +2977,16 @@ public sealed class RideScript
 	}
 
 	/// <summary>
+	/// Which role a channel is running, raw, held or not - the engine's accessor <c>FUN_00473fb0</c>, which
+	/// writes the channel's <c>AnimID</c> out and answers its flags, and which <c>TRIGWAITANIM</c>'s re-entry
+	/// calls and then compares the role alone (<c>0x00552cfc</c>..<c>0x00552d11</c>). A channel the model
+	/// does not have answers nought here, as <see cref="RoleOn"/> does; the engine reads past its array, and
+	/// <c>TRIGWAITANIM</c> names channel nought, which every model has.
+	/// </summary>
+	private int AnimationOn( int channel )
+		=> Animations?.Channel( channel )?.AnimID ?? 0;
+
+	/// <summary>
 	/// Starts one entry of one role on a channel and answers how long it runs, in milliseconds - the
 	/// engine's <c>FUN_004732a0</c>.
 	///
@@ -3015,6 +3022,11 @@ public sealed class RideScript
 		// 1.0, where every triggering handler pushes the script's speed divisor (0x00552952), 0.5 + 0.01 x
 		// the speed word: the same at the speed 50 every script has here, and a deviation for an item with
 		// its own (docs/QUEUE.md Q155). It is the play rate alone; the length answered does not read it.
+		//
+		// A clip starts at this tick's own instant, where the engine stamps a fresh start with the frame's
+		// clock snapshot (0x00472bff), the one its advance reads: so a clip triggered at tick i of a frame
+		// running k ticks is (k-1-i) x 31ms in at that frame's sweep here and nought there - a deviation
+		// reached only when a frame runs more than one tick (docs/QUEUE.md Q174c).
 		return Animations.Trigger( role, entry, flags, 1f, (int)now, channel );
 	}
 
@@ -3050,10 +3062,11 @@ public sealed class RideScript
 	/// </para>
 	///
 	/// <para>
-	/// <b>And one not yet built:</b> the first visit also clears the <c>WAIT4ANIM</c> deadline and sets the
-	/// looping key to <c>0xffff</c> (<c>0x00552b14</c>), which this does not, so a <c>LOOPANIM</c> of the key
-	/// last looped is skipped where the engine's starts the loop again - at the end of every Aztec Mayhem
-	/// ride - docs/QUEUE.md Q174b.
+	/// <b>The first visit also forgets what was triggered before it</b>, model or not: it clears the
+	/// <c>WAIT4ANIM</c> deadline and sets the looping key to <see cref="OneShot"/> (<c>0x00552b14</c>,
+	/// <c>0x00552b1a</c>), and the re-entry writes neither. So a <c>LOOPANIM</c> of the key last looped
+	/// starts the loop again after one, which is what sets the Aztec Mayhem looping again at the end of
+	/// every ride (docs/exe/park.md, "The animation opcodes").
 	/// </para>
 	/// </summary>
 	private void WaitOutAnimation( float now, int role, int entry, int length )
@@ -3078,6 +3091,9 @@ public sealed class RideScript
 			duration = AnimationSlack;
 
 		Wait( now, duration, length );
+
+		_animationUntil = null;
+		_looping = OneShot;
 	}
 
 	/// <summary>

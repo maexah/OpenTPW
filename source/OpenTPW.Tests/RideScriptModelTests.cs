@@ -267,7 +267,8 @@ public class RideScriptModelTests
 	///
 	/// <para>
 	/// Ten seconds into a twenty-second clip there are 300 frames left, which is 9999ms, and the clip being
-	/// queued is the same 19999 - so 29998 rather than the 19999 an idle channel answers.
+	/// queued is the same 19999 - so 29998 rather than the 19999 an idle channel answers. The ten seconds
+	/// are the sweep's: a trigger asks the channel as the last advance left it.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -277,10 +278,127 @@ public class RideScriptModelTests
 
 		Assert.AreEqual( 19999, roles.Trigger( 5, 0, 0, 1f, 0 ), "an idle channel starts at once" );
 
+		roles.Advance( 10000 );
+
 		Assert.AreEqual( 9999 + 19999, roles.Trigger( 5, 0, 0, 1f, 10000 ),
 			"and a busy one answers what is left plus what was queued" );
 
 		Assert.IsTrue( roles.Channel( 0 )!.HasQueued, "which is to say it really did queue it" );
+	}
+
+	/// <summary>
+	/// <b>A trigger asks the channel as the last frame's advance left it</b> (<c>0x00473315</c>), not as it
+	/// stands at the trigger's own moment. The ferry's first clip runs 19999ms: swept at 19000 it has a second
+	/// left, so a trigger at 21000, after the clip has really ended, still finds it busy and queues, and the
+	/// answer counts that second (<c>0x0047337b</c>). The next sweep promotes the new clip.
+	/// </summary>
+	[TestMethod]
+	public void ATriggerAsksTheChannelAsTheLastSweepLeftIt()
+	{
+		var roles = RideAnimations.Load( "levels/space/features/ferry", "ferry", data );
+		var channel = roles.Channel( 0 )!;
+
+		roles.Trigger( 5, 0, 0, 1f, 0 );
+		roles.Advance( 19000 );
+
+		var answer = roles.Trigger( 5, 1, 0, 1f, 21000 );
+
+		Assert.IsTrue( channel.HasQueued, "a clip that ran out after the sweep still counts busy, so the new one queued" );
+		Assert.AreEqual( 0, channel.SubAnim, "and the old clip is still the one on the channel" );
+		Assert.AreEqual( 1000.0, channel.RemainingMilliseconds(), 1.0, "a second left, as the sweep at 19000 left it" );
+		Assert.AreEqual( channel.RemainingMilliseconds() + roles.DurationMilliseconds( 5, 1 ), answer,
+			"the answer is that second plus the queued clip" );
+
+		roles.Advance( 21031 );
+
+		Assert.AreEqual( 1, channel.SubAnim, "the next sweep promoted it" );
+		Assert.IsFalse( channel.HasQueued );
+	}
+
+	/// <summary>
+	/// <b>The Aztec Mayhem loops again after every ride.</b> Its script idles on <c>LOOPANIM 2, 0</c>, plays
+	/// the ride's end with <c>WAITANIM 6, 0</c> and comes back round to the same <c>LOOPANIM 2, 0</c>; the
+	/// <c>WAITANIM</c>'s first visit set the looping key to one-shot (<c>0x00552b1a</c>), so the loop is asked
+	/// for again - queued behind role 6's last 300ms - rather than read as the loop already running, which
+	/// would leave the channel held on role 6's last frame until the next ride.
+	/// </summary>
+	[TestMethod]
+	public void TheAztecMayhemLoopsAgainAfterItsRide()
+	{
+		var script = new RideScript( Build( 0, 50,
+			Word( Opcode.LOOPANIM ), Lit( 2 ), Lit( 0 ),
+			Word( Opcode.WAITANIM ), Lit( 6 ), Lit( 0 ),
+			Word( Opcode.LOOPANIM ), Lit( 2 ), Lit( 0 ),
+			Word( Opcode.WAIT ), Lit( 30000 ),
+			Word( Opcode.END ) ) )
+		{
+			Animations = RideAnimations.Load( "levels/jungle/rides/tvsim", "tvsim", data )
+		};
+
+		var roles = script.Animations!;
+		var channel = roles.Channel( 0 )!;
+		var loop = roles.DurationMilliseconds( 2, 0 );
+		var end = roles.DurationMilliseconds( 6, 0 );
+
+		Assert.IsTrue( loop > 0 && end > 300, "the Aztec Mayhem ships its loop and its ride's end" );
+
+		script.Turn( 0f );
+
+		Assert.AreEqual( 2, channel.AnimID, "the loop is running" );
+		Assert.AreEqual( 6, channel.DeferredAnimID, "and the ride's end queued behind it" );
+
+		// The loop's cycle ends and the sweep promotes role 6; the WAITANIM passes 300ms before role 6 ends.
+		roles.Advance( loop + 31 );
+		script.Turn( loop + end - 300 );
+
+		Assert.AreEqual( 6, channel.AnimID );
+		Assert.AreEqual( 2, channel.DeferredAnimID, "the second LOOPANIM 2, 0 asked for the loop again" );
+		Assert.AreNotEqual( 0, channel.DeferredFlags & AnimTimeControl.LoopFlag, "as a loop" );
+
+		roles.Advance( loop + end + 100 );
+
+		Assert.AreEqual( 2, channel.AnimID, "role 6 ran out onto the loop" );
+		Assert.AreNotEqual( 0, channel.Flags & AnimTimeControl.LoopFlag, "which loops" );
+		Assert.AreEqual( 0, channel.Flags & AnimTimeControl.KeepPoseFlag, "rather than standing held on role 6" );
+	}
+
+	/// <summary>
+	/// <b><c>TRIGWAITANIM</c>'s re-entry reads the role raw</b>, so a channel already held on the role it
+	/// triggered passes it: the engine throws away the flags its accessor answers (<c>0x00552d08</c>). Here
+	/// role 6 queues behind a role 2 one-shot, and both run out before the script's next turn, which finds the
+	/// channel held on role 6's last frame - where <c>GETANIM_CH</c>'s -1 would have kept it waiting for good.
+	/// </summary>
+	[TestMethod]
+	public void TriggerAndWaitPassesAChannelHeldOnItsRole()
+	{
+		var script = new RideScript( Build( 1, 50,
+			Word( Opcode.TRIGWAITANIM ), Lit( 6 ), Lit( 0 ), Lit( 0 ),
+			Word( Opcode.COPY ), Var( 0 ), Lit( 7 ),
+			Word( Opcode.END ) ) )
+		{
+			Animations = RideAnimations.Load( "levels/jungle/rides/tvsim", "tvsim", data )
+		};
+
+		var roles = script.Animations!;
+		var channel = roles.Channel( 0 )!;
+		var before = roles.DurationMilliseconds( 2, 0 );
+		var clip = roles.DurationMilliseconds( 6, 0 );
+
+		roles.Trigger( 2, 0, 0, 1f, 0 );
+		script.Turn( 0f );
+
+		Assert.AreEqual( 0, script.Variables[0], "role 6 queued behind role 2, and the re-entry waits" );
+		Assert.AreEqual( 6, channel.DeferredAnimID );
+
+		roles.Advance( before + 31 );
+		roles.Advance( before + clip + 100 );
+
+		Assert.AreEqual( 6, channel.AnimID, "role 6 was promoted" );
+		Assert.AreNotEqual( 0, channel.Flags & AnimTimeControl.KeepPoseFlag, "and ran out, held on its last frame" );
+
+		script.Turn( before + clip + 100 );
+
+		Assert.AreEqual( 7, script.Variables[0], "the re-entry read role 6 on the held channel and went on" );
 	}
 
 	/// <summary>
