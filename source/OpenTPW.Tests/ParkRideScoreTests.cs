@@ -361,20 +361,10 @@ public class ParkRideScoreTests
 
 		int Counted( string gap ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == gap ).Times;
 
-		var upgraded = Counted( "RIDE_EXCITEMENT_UPGRADE_TIER" );
-
-		Assert.AreEqual( 40, ParkRideScore.ExcitementOf( ride with { UpgradeLevel = 1, OperatingSpeed = 75 }, ItemFor( ride ) ),
-			"upgraded, its level, counted" );
-		Assert.AreEqual( upgraded + 1, Counted( "RIDE_EXCITEMENT_UPGRADE_TIER" ) );
-
 		var catalogue = new ParkItemCatalogue( "jungle", data );
-		var hotPot = catalogue.All.Single( item => item.Stem == "bumper" );
 		var coaster = catalogue.All.Single( item => item.Stem == "coaster1" );
-		var crowd = Counted( "RIDE_EXCITEMENT_TRACK_CROWD" );
 		var track = Counted( "RIDE_EXCITEMENT_COASTER_TRACK" );
 
-		ParkRideScore.ExcitementOf( ride with { CatalogueId = hotPot.Id }, hotPot );
-		Assert.AreEqual( crowd + 1, Counted( "RIDE_EXCITEMENT_TRACK_CROWD" ), "a track handle's crowd is counted" );
 		Assert.AreEqual( 90, ParkRideScore.ExcitementOf( ride with { CatalogueId = coaster.Id }, coaster ),
 			"a coaster scores its level" );
 		Assert.AreEqual( track + 1, Counted( "RIDE_EXCITEMENT_COASTER_TRACK" ), "and is counted" );
@@ -382,6 +372,80 @@ public class ParkRideScoreTests
 		Assert.AreEqual( 62, ParkRideScore.RatioExcitement( 40, 90, 60, 60, 30 ), "held at 1.25 twice" );
 		Assert.AreEqual( 30, ParkRideScore.RatioExcitement( 40, 30, 60, 30, 30 ), "held at 0.75" );
 		Assert.AreEqual( 30, ParkRideScore.RatioExcitement( 40, 0, 0, 30, 30 ), "and a ratio that is no number, 0.75" );
+	}
+
+	/// <summary>
+	/// An upgraded ride divides its speed and its duration by its own tier's starting ones: the Belly Bounce's tiers
+	/// start at 60, 75 and 90, each lasting 30, so tier 1 at speed 60 is 32 where tier nought's divisors would make it
+	/// 40, and at 75 is 40 where they would make it 50. Past the third tier the original reads the fields after the
+	/// array: counted, and scored without the ratios.
+	/// </summary>
+	[TestMethod]
+	public void AnUpgradedRideIsMeasuredAgainstItsOwnTier()
+	{
+		var ride = Ride();
+		var item = ItemFor( ride );
+
+		int Counted( string gap ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == gap ).Times;
+
+		Assert.AreEqual( (60, 30), item.StartingAt( 0 ) );
+		Assert.AreEqual( (75, 30), item.StartingAt( 1 ), "Rides.sam's tier 1 speed, the item's own duration" );
+		Assert.AreEqual( (90, 30), item.StartingAt( 2 ) );
+
+		Assert.AreEqual( 32, ParkRideScore.ExcitementOf( ride with { UpgradeLevel = 1, OperatingSpeed = 60 }, item ) );
+		Assert.AreEqual( 40, ParkRideScore.ExcitementOf( ride with { UpgradeLevel = 1, OperatingSpeed = 75 }, item ) );
+		Assert.AreEqual( 50, ParkRideScore.ExcitementOf( ride with { UpgradeLevel = 0, OperatingSpeed = 75 }, item ),
+			"on tier nought's divisors" );
+		Assert.AreEqual( 40, ParkRideScore.ExcitementOf( ride with { UpgradeLevel = 2, OperatingSpeed = 90 }, item ) );
+
+		var past = Counted( "RIDE_EXCITEMENT_UPGRADE_TIER" );
+
+		Assert.AreEqual( 40, ParkRideScore.ExcitementOf( ride with { UpgradeLevel = 3, OperatingSpeed = 80 }, item ),
+			"a fourth tier, its level: tier 2's divisors would make it 35, tier 1's 42" );
+		Assert.AreEqual( past + 1, Counted( "RIDE_EXCITEMENT_UPGRADE_TIER" ), "counted" );
+	}
+
+	/// <summary>
+	/// A thing with a track handle starts from 60% of its level plus its track's term: bought, with no track laid, the
+	/// Hot Pot is 42, Dino Karts 48 and Splish Splash 45; the played Dino Karts' track adds 3 × 1 + 6 + 2 × 12, so 81.
+	/// The arm follows the object's handle, not the item: a Dino Karts record with none is its level, 80, and a stale
+	/// handle writes nothing, 48.
+	/// </summary>
+	[TestMethod]
+	public void ATrackRideStartsFromSixtyPercentAndItsTrack()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+		var tracks = new ParkTrackRideTable();
+
+		ParkItemCatalogue.Item Named( string stem ) => catalogue.All.Single( item => item.Stem == stem );
+
+		int Bought( ParkItemCatalogue.Item item )
+			=> ParkRideScore.ExcitementOf( ParkBuilding.Constructed( item, 9000, 20, 12, 0, 0, 0, default,
+				tracks.Take( item.BumperType ) ), item, tracks );
+
+		Assert.AreEqual( 42, Bought( Named( "bumper" ) ), "the Hot Pot, 70 × 60%" );
+		Assert.AreEqual( 48, Bought( Named( "gokarts" ) ), "Dino Karts, 80 × 60%" );
+		Assert.AreEqual( 45, Bought( Named( "wateride" ) ), "Splish Splash, 75 × 60%" );
+
+		var karts = Named( "gokarts" );
+		var standing = ParkBuilding.Constructed( karts, 9000, 20, 12, 0, 0, 0, default );
+
+		Assert.AreEqual( 80, ParkRideScore.ExcitementOf( standing, karts, tracks ), "no handle: its level" );
+		Assert.AreEqual( 48, ParkRideScore.ExcitementOf( standing with { TrackRide = unchecked((int)0xfffffd07) },
+			karts, tracks ), "a stale handle: 60% of it" );
+
+		var played = new ParkTrackRideTable( new ParkTrackRides(
+			TrackBytes.Kart( TrackBytes.DinoKartsHandle, TrackBytes.DinoKarts, TrackBytes.PlayedKarts ) ) );
+
+		Assert.AreEqual( 81, ParkRideScore.ExcitementOf( standing with { TrackRide = TrackBytes.DinoKartsHandle },
+			karts, played ), "48 + 33" );
+		Assert.AreEqual( 0, Unimplemented.Summary.FirstOrDefault( entry => entry.What == "RIDE_EXCITEMENT_TRACK_CROWD" ).Times,
+			"the track is built, not counted" );
+
+		Assert.AreEqual( 88, ParkRideScore.TrackBase( 80, new ParkTrackRideTable.Layout( 20, 10, 5, 50 ) ),
+			"the track's 65 held at 40" );
+		Assert.AreEqual( 100, ParkRideScore.TrackBase( 200, new ParkTrackRideTable.Layout( 20, 10, 5, 50 ) ),
+			"and 160 in all held at 100" );
 	}
 
 	/// <summary>

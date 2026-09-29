@@ -73,6 +73,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0042c460` | The sweep: the whole step, with either axis put back if its cell changed | OpenTPW.Tests/ParkCamcorderWalkTests.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042c587` | The camcorder sweep, after every pass: FUN_0042a340 at the pass's cell; a ride found runs Ride it! from first person and ends the sweep | OpenTPW.Tests/ParkCamcorderWalkTests.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042d130` | | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
+| `0x004380e7` | SAOC loader: node +0x3c bit 0, the circuit closed, from the saved header's flag bit 0 | OpenTPW.Files/Formats/Save/ParkCoasters.cs OpenTPW/World/Park/ParkRideChoice.cs  |
+| `0x004382b3` | SAOC loader: node +0x3c bit 1, a gap open, from the saved header's flag bit 1 | OpenTPW.Files/Formats/Save/ParkCoasters.cs  |
+| `0x0043837d` | SAOC loader: node +0x140, the clash count, restored from header +0x1c last | OpenTPW.Files/Formats/Save/ParkCoasters.cs OpenTPW/World/Park/ParkRideChoice.cs  |
 | `0x0044b220` | | OpenTPW.Files/Formats/Model/ModelFile.cs  |
 | `0x0044b2e0` | | OpenTPW/World/Advisor/AdvisorModel.cs  |
 | `0x0045aa5a` | | OpenTPW/Client/Players.cs  |
@@ -242,6 +245,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004dcf90` | | OpenTPW.Tests/ParkRidesTests.cs  |
 | `0x004dd150` | The object destructor `FUN_004dd0a0` sends the type-10 message on the bus: every guest and member of staff bound to the thing answers it | OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004dd2c9` | The object destructor `FUN_004dd0a0` calls the script teardown `FUN_00559060` with mode 0, 4 or 7 | OpenTPW.Tests/ParkSellTests.cs OpenTPW/World/Park/ParkRides.cs  |
+| `0x004dd9b7` | Offer gate FUN_004dd920: a coaster (track type 3) asks FUN_00441970, after the room test | OpenTPW/World/Park/ParkRideChoice.cs  |
 | `0x004ddd4e` | `FUN_004ddd20` (leave a queue) empties `VAR_LETMEON` when it names the leaver (from here) | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004ddd7d` | `FUN_004ddd20`: the `VAR_LETMEON` clear (to here) | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004ddde9` | `FUN_004ddd20`: with no `mQPrev` the leaver's `mQNext` becomes `mFirstInQ` | OpenTPW.Tests/ParkQueueJoinTests.cs OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/ParkState.cs  |
@@ -264,6 +268,14 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004e058a` | FUN_004e0560, a sideshow's excitement: 20 - trunc(chance x sqrt(clamp(cost - price, 0, 100)) x 0.1 x -0.8f), from | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x004e05d4` | FUN_004e0560, a sideshow's excitement: to here | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x004e05f8` | FUN_004e0560: track type 3, a coaster's excitement from its track | OpenTPW/World/Park/ParkRideScore.cs  |
+| `0x004e0689` | FUN_004e0560: the tier byte +0x50, unbounded, shifted to the descriptor's 0x40 stride | OpenTPW/World/Park/ParkRideScore.cs  |
+| `0x004e0691` | FUN_004e0560: Upgrades[l].InitSpeed, descriptor +0x1a8 + 0x40l, the speed ratio's divisor | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
+| `0x004e06be` | FUN_004e0560: Upgrades[l].InitDuration, descriptor +0x1a0 + 0x40l, the duration ratio's divisor | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
+| `0x004e06ce` | FUN_004e0560: the track arm on the object's handle +0x28 | OpenTPW/World/Park/ParkRideScore.cs  |
+| `0x004e06e9` | FUN_004e0560, the track arm: the four out-values zeroed before FUN_00545310, from | OpenTPW/World/Park/ParkRideScore.cs  |
+| `0x004e0706` | FUN_004e0560: the track term 3 x half the crossings + the longest + 2 x half the bends, from | OpenTPW/World/Park/ParkRideScore.cs  |
+| `0x004e0714` | FUN_004e0560: the track term held 0..40, to here | OpenTPW/World/Park/ParkRideScore.cs  |
+| `0x004e0756` | FUN_004e0560, the track arm: the base held 0..100, to here | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x004e07be` | FUN_004e0560: the level times the speed and duration ratios, each held 0.75..1.25 | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x004e13fc` | `Invite`'s `mCanLoad` bail: `FUN_004e0450` and return, skipping the watchdog | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004e16c6` | The charge's economy feed `FUN_004e16b0`: the price deposited in the park's bank (`FUN_004d0190`) | OpenTPW.Tests/ParkRideExitTests.cs OpenTPW/World/Park/ParkState.cs  |
@@ -476,6 +488,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00527fe8` | The drain's debit scaled by the per-age percentage, `FUN_004e2290` | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0052818d` | The demolisher puts back the tool it was called under, `FUN_0052f200( prevTool, 0 )`; tool 0 installs the idle mode | OpenTPW.Tests/ParkHandTests.cs OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x0052842b` | The demolisher's second footprint pass: `FUN_005367a0( 0, 0 )` on every cell of the shape but its `.` ones | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x00528584` | Demolisher FUN_00527ee0: FUN_00545610 frees the object's track ride entry, before the object goes | OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkTrackRideTable.cs  |
 | `0x00528f62` | Placer: start of the pairing of footprint bases 1, 0x40, 0x10, 4 with angles 0, 90, 180, 270 | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00528f8b` | Placer: the angle-0 arm's base write, `1` (the pairing's other three at `0x00528fb7`, `0x00528fe7`, `0x0052900f`) | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x005292b2` | Placer sweep: the exit takes its turned bit as its direction | OpenTPW/World/Park/ParkBuilding.cs  |
@@ -494,7 +507,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005299f5` | Placer: end of that test | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00529abf` | Placer: start of the relink round the exit path | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00529b18` | Placer: end of the exit half | OpenTPW/World/Park/ParkBuilding.cs  |
-| `0x00529e4d` | Placer FUN_00529e10: a track handle for an item whose Bumper.BumperType (+0xa0) is non-zero | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
+| `0x00529e4d` | Placer FUN_00529e10: a track handle for an item whose Bumper.BumperType (+0xa0) is non-zero | OpenTPW.Files/Formats/ItemDescriptionFile.cs OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkTrackRideTable.cs  |
+| `0x00529f6a` | Placer FUN_00529e10: the call to FUN_00545890 for a track ride's slot | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x0052ff9a` | `FUN_0052fe50` clears nothing when the mode is 3 and P is a path | OpenTPW.Tests/ParkPathBuildingTests.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0052ffec` | `FUN_004de1f0` from the backtrack `FUN_0052fe50` | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005300a6` | `FUN_0052fe50`'s last call re-arms the mode before it answers nought | OpenTPW/World/Park/ParkPathBuilding.cs  |
@@ -530,6 +544,16 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0053c773` | `FUN_0053c3f0`: the phase store | OpenTPW/World/Park/ParkBuildMarkers.cs  |
 | `0x00540d90` | | OpenTPW.Files/Formats/Sprite/SpriteBankFile.cs  |
 | `0x005423a0` | | OpenTPW.Files/Formats/Sprite/SpriteBankFile.cs OpenTPW/UI/ScreenParticles.cs  |
+| `0x00543725` | KART loader FUN_00543560: a saved ride through FUN_00545890 with its handle, which names the slot | OpenTPW/World/Park/ParkTrackRideTable.cs  |
+| `0x00544061` | KART loader FUN_00543560: each saved section handed to FUN_0054b2f0 | OpenTPW/World/Park/ParkTrackRideTable.cs  |
+| `0x005443d2` | Track rides' table: 64 entries of 0xd0 bytes allocated zeroed (GMEM_ZEROINIT) | OpenTPW/World/Park/ParkTrackRideTable.cs  |
+| `0x0054536d` | FUN_00545310: the stale test, the handle against slot | entry[0] << 8 | OpenTPW/World/Park/ParkTrackRideTable.cs  |
+| `0x00545375` | FUN_00545310: the walk of the entry's section list +0xbc, from | OpenTPW/World/Park/ParkTrackRideTable.cs  |
+| `0x0054538d` | FUN_00545310: the pass counter set to 2, above the back edge, so nothing is reset between passes | OpenTPW/World/Park/ParkTrackRideTable.cs  |
+| `0x005453e1` | FUN_00545310: the walk's back edge, to here | OpenTPW/World/Park/ParkTrackRideTable.cs  |
+| `0x0054566e` | FUN_00545610: the same stale test before freeing | OpenTPW/World/Park/ParkTrackRideTable.cs  |
+| `0x005458ea` | FUN_00545890, a placement: the search for an entry whose entry[0] is nought stops at 0x40 | OpenTPW/World/Park/ParkTrackRideTable.cs  |
+| `0x00546225` | FUN_00545890 with every entry taken: the read through a null entry | OpenTPW/World/Park/ParkTrackRideTable.cs  |
 | `0x0054e682` | | OpenTPW/Global/GameClock.cs OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Level.cs  |
 | `0x0054e6a6` | | OpenTPW/Client/Game.cs  |
 | `0x0054e6df` | | OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Level.cs  |
@@ -827,6 +851,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00741d40` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00742178` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00744e3c` | The compiled item schema's `HasQueue` entry, after `IsChoosable`: descriptor `+0x40` | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x0074669c` | The compiled .sam schema's Upgrades entry: three tiers of 16 leaves, 0x40 apart | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
 | `0x0074c9c4` | Float 9.999: where the camcorder sweep parks or puts back an axis going positive, `cell * 10 + 9.999` | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0074c9c8` | Float 1.01: the camcorder sweep's tie-break | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0074c9d0` | Float 0.001: the camcorder sweep's nudge after an open crossing that left the cell unchanged | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
@@ -864,6 +889,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00763b38` | The 20-entry marker texture table (`blue`, `red`, ... `m_link`, `m_end`) | OpenTPW/World/Park/ParkBuildMarkers.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00763f88` | Sprite kinds table: fourteen bare kind names | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x00764030` | The four kid banks `Sprites_LoadFolder` loads before its sweep | OpenTPW/World/Park/ParkGuestSprites.cs  |
+| `0x00764178` | The track ride templates: 14 of 0xd0 bytes, BumperType -1's first, each's first dword its BumperType | OpenTPW/World/Park/ParkTrackRideTable.cs  |
 | `0x00765280` | The opcode table `{name*, operandCount*}`, eight bytes a record | OpenTPW.Files/Formats/Script/Opcode.cs  |
 | `0x00765c18` | String "RSSE: Heap Error" | OpenTPW/VM/RideScript.cs  |
 | `0x00765c2c` | String "RSSE: Stack Error" | OpenTPW/VM/RideScript.cs  |

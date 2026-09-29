@@ -35,7 +35,8 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - Spending: guests choose, queue for and buy from the Drinks Shop and the Jungle Spray; short of the price, they walk.
   **Each arrival is one of eight kinds, each with its own liking**, and **the choice is the original's whole score**:
   the kind just left is worth nothing, a new thing five times more for 184 sweeps, dear and golden-ticket rides more,
-  shelter in rain. **A visit's excitement moves happiness by the kind's liking, and illness by how full they are.**
+  shelter in rain, a track ride 60% of its level plus its track's, an upgraded one on its own tier, no unclosed coaster.
+  **A visit's excitement moves happiness by the kind's liking, and illness by how full they are.**
   **Every twelfth walking turn a guest may turn aside for a nearer thing, then go on; a toilet empties the need.**
 - People: guests and staff read from the save, drawn, walking, paying, queueing, boarding, interpolated between the
   248 ms steps. **Queuers walk to their own places, in a line**; one needing the toilet, or lost to the walk, is out.
@@ -64,20 +65,19 @@ from the repository, which cannot lag: `git log --oneline -1`.
   no park screen (Q119); C (Q118) and Ctrl+H act on the press, F8 is not built (Q65); modifiers count as the frame ends
   (Q120). A disabled button still takes the pointer (Q66); presses the original stops reach the park (Q113, Q115, Q116).
 - The happiness gauge draws two copies of its bar, split down the middle (`docs/PLAYER-GAPS.md` gap 5; unmeasured).
-- Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
+  Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
 - With no work the mechanic, handyman and entertainer stand where the original's walk about (Q133); staff make no
   sound (Q135). Guests and rides read `GameClock.Ticks / 8`, not `mGameTick` (Q132); a load brings one guest (Q26); the bus waits (Q131).
 - Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), riding a ride walked into in first person,
-  and a track ride's, a coaster's and an upgraded ride's excitement: a bought Hot Pot is 70, the original's 42 (Q172b).
+  and a coaster's excitement, its level. **The Hot Pot lets no rider off** (Q179).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
   walk (Q121), and a park screen stays open over it (Q122). It walks onto entrances the original shuts (Q140).
 
 ## Next
 
-`docs/QUEUE.md`, from the top. **Q1-Q12, Q34, Q35, Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71,
-Q82-Q84, Q88, Q101, Q165-Q166, Q169-Q172, Q170b are ticked.** Next: **Q172b**. Each open item's "Found by" names what
-filed it. Gaps **4, 5 and 7** are in `docs/PLAYER-GAPS.md`; the untracked `docs/CLEANUP-PLAN.md` (all nine closed) is Q13's.
+`docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
+Q88, Q101, Q165, Q166, Q169-Q172b are ticked**; next **Q173**. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -98,8 +98,8 @@ filed it. Gaps **4, 5 and 7** are in `docs/PLAYER-GAPS.md`; the untracked `docs/
 - Tested only: Q165c's histories cleared by a sale, refusals aging, the too-long gate and a save's histories; Q166's
   literal `RAND`, `MOD`, `SUB`, `GETREMOTEVAR` and `COAST 2 0`; and a lock taken on the last unit running its section
   whole, which the stock park never reaches (the Hot Pot's capacity cut mid-ride, resting on `BUMP` unbuilt, Q45).
-- Tested only: Q170b's illness emptied, a second switch, a stale saved major, a sale's clear, a played save's two
-  fields; Q171's starting settings held to their bounds, which change no Lost Kingdom item's.
+- Tested only: Q170b's cleared illness, second switch, stale major, sale's clear and save's fields; Q171's bounds;
+  Q172b's saved track ride, tier and coaster (Q167) and a Hot Pot rider's 42 (Q179).
 
 ## Numbers
 
@@ -108,12 +108,12 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1288**, 0 fail, 0 skip with the game | 2026-09-28, after Q171 |
-| Tests without the game | **515** ran, **773** skipped, of 1288 | 2026-09-28, after Q171 |
-| Build warnings | 123 | 2026-09-28, after Q171 |
+| Tests | **1302**, 0 fail, 0 skip with the game | 2026-09-28, after Q172b |
+| Tests without the game | **521** ran, **781** skipped, of 1302 | 2026-09-28, after Q172b |
+| Build warnings | 123 | 2026-09-28, after Q172b |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-28 (Q172, the decode).** `alexah/178-decode-the-track-and-tier-excitement`. **Earlier:** each QUEUE.md entry
-names its branch: `177` (Q171) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-09-28 (Q172b, the build).** `alexah/179-track-and-tier-excitement`. **Earlier:** each QUEUE.md entry
+names its branch: `178` (Q172) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

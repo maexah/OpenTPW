@@ -2009,8 +2009,43 @@ artifacts are listed in `docs/history/README.md`.
   places reaches them; a bought Hot Pot, Dino Karts, Splish Splash or coaster does. Confirm: `unimplemented`, and
   `why` beside a bought Hot Pot.
 
-- [ ] **Q172b. A track ride's excitement from its handle, an upgraded ride's from its tier, and no coaster offered
-  without a closed circuit.** Found by Q172's decode (`ride-operation.md`, "A coaster's, a track ride's and an upgraded
+- [x] **Q172b. A track ride's excitement from its handle, an upgraded ride's from its tier, and no coaster offered
+  without a closed circuit.** Done 2026-09-28, `alexah/179-track-and-tier-excitement`. `ride-operation.md`, "A
+  coaster's, a track ride's and an upgraded ride's excitement", its "Built" and "Measured in the game after the build";
+  FileFormats `saves.md`, a saved coaster's header (`docs/save-module-chain`, `529867f`).
+  - **Built:** `ParkTrackRides` reads `KART` at the boundary, refused unless the walk lands on its tag;
+    `ParkTrackRideTable`, in `ParkState`, is the table of 64, seeded record by record with `FUN_0054b2f0`'s refusals
+    (stale handle, duplicate cell, the pool of `0x400`), a slot taken by the placer for a `BumperType` and freed by the
+    demolisher, and `FUN_00545310` ported; `ExcitementOf` takes the track arm on the object's handle and divides by its
+    own tier (`Item.StartingAt`, tiers 0..2 over the category's); `CanBeOffered` asks `CircuitClosed` of a coaster after
+    the room test, a saved one found by the record's `MeshInstanceID` (offset 54) in `ParkCoasters`, the `SAOC` module's
+    first header. `RIDE_EXCITEMENT_TRACK_CROWD` retired; `spend` prints each thing's excitement; the purchase log its
+    handle; a refused `KART` or `SAOC` is logged at load.
+  - **Verified first:** three Ghidra re-reads of the decode (`wf_a412f5cf-86c`) upheld it and amended it: the
+    demolisher's keep is never reached for an object, so a move frees its slot and needs no count; the constructor sets
+    `mIsTrackRideValid` for every object; a no-bend list's longest is nought; the coaster gate finds its node by the
+    object's model instance, and `+0x140` is a clash count the save restores; a tier of 3 reads past `Upgrades`. Folded
+    into `ride-operation.md`.
+  - **Reviewed** (`wf_bb55d7b7-48d`, four lenses, each finding put to a skeptic): 23 findings, 17 upheld, all fixed -
+    the loader's section refusals ported, stale comments and docs, the refused modules logged and counted, a dead
+    `SectionsOf` removed, the tier-3 test at speed 80, a test through a failed put-down.
+  - **Tests** (14 new, each predicted first): the walk (the played track's (12, 6, 1), `[9, 5, 9]` 2), the table, the
+    readers, the saved track 81, a bought Hot Pot 42, Dino Karts 48, Splish Splash 45, a Dino Karts with no handle 80,
+    the tier-1 Belly Bounce 32 and 40 (50 on tier nought), tier 2's 40, the coaster gate. **Mutations** (`q172b-mutate.py`,
+    `.out`, `mutate3.out`, `mutate3b.out`): 44 put back, all as predicted, 42 red; two predicted misses: a caller passing
+    no table (a bought ride has no track, so only a saved one would show it) and a saved BumperType past the templates.
+  - **Measured on Alexah's saves**, read-only (`q172bsave`): all nine park files' `KART` walks land; the Dino Karts 81;
+    the tier-1 Belly Bounce 40 at 75; the Temple Of Gloom's model instance 330, its header's, flags `0x101`, no clash.
+  - **Confirmed in the game** (`q172brun.py`, silent, predicted first, `save/` unchanged; `q172b-final/`, 7 of 7): the
+    Hot Pot bought with `track 0xffffff00` and `spend` excitement 42; the Temple Of Gloom not offerable and named by no
+    `why` line, paused or after 240 s with `load 40`; `RIDE_EXCITEMENT_TRACK_CROWD` 0 throughout. The control on the
+    build before it (`q172b-control/`, 7 of 7): the Temple Of Gloom offerable and chosen, the counter one a scoring.
+    Photographed paused beside the census (`ran-z70-marked.png`).
+  - **Not confirmed on screen**: a rider's match log reading 42, since the Hot Pot lets no rider off in either build
+    (Q179); the saved track ride, tier and coaster, which wait for Q167.
+  - **Found:** Q179. Seen, not chased: magenta pads under the bought Hot Pot's entrance, as in Q172.
+
+  The item as written: Found by Q172's decode (`ride-operation.md`, "A coaster's, a track ride's and an upgraded
   ride's excitement"). Build:
   (1) a reader, at the boundary, for the save's track-rides module (FileFormats `saves.md`, `KART`): each ride's handle
   and each section's type in file order, refusing the file unless the walk lands on the tag;
@@ -2111,6 +2146,14 @@ artifacts are listed in `docs/history/README.md`.
   where `ItemDescriptionFile.Number` takes it. Decode whether Lost Kingdom's `Easymode.TPWI` is type 2
   (`docs/exe/boot.md`), then build the layer and the gate. Confirm: the buy screen's shops tab without the Gift Shop
   and the Steak Restaurant, and `unimplemented`.
+
+- [ ] **Q179. The Hot Pot lets no rider off. Decode first.** Found by Q172b's game run. A Hot Pot bought at (57,23)
+  with its queue laid to the path at (56,22), then `load 40`: guests are admitted ("been AdmitPerson'd to ride 43")
+  and sit in state `Riding`, 13 in 20 minutes, 16 in the build before Q172b in 4, past its capacity of 4, and none is
+  let off, so no settle-up runs for it (no excitement match, visit history or charge). Its script reaches `BUMP`,
+  unbuilt and counted ("Bumper Car: BUMP at N was reached and does nothing"). Decode how the Hot Pot's script ends a
+  ride and lets its riders off, and what `BUMP` answers it. Confirm: riders let off the Hot Pot, each match log reading
+  excitement 42 (`q172brun.py`, `q172b-long/`).
 
 - [ ] **Q85. A guest who arrives starts with happiness nought, and stays there. Decode first.** Found by Q50's game
   runs: every one of the 33 guests who arrived (30 by `load 30`) read `happy 0` in `peeps`, none above it in nine minutes,

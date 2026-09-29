@@ -291,7 +291,7 @@ public sealed class ParkRideChooser
 		var age = AgeOf( now, candidate.Built );
 
 		var described = item ?? Undescribed;
-		var excitement = item is { } known ? ParkRideScore.ExcitementOf( candidate, known ) : 0;
+		var excitement = item is { } known ? ParkRideScore.ExcitementOf( candidate, known, _state?.TrackRides ) : 0;
 
 		// GetBackOfQueue's walked count, the object's +0x40 (0x004fce40).
 		var cells = ParkRideChoice.QueueCellsFor( _park, candidate ).Cells;

@@ -19,11 +19,10 @@ namespace OpenTPW;
 /// nought.
 /// </para>
 /// <para>
-/// <b>ONE arm is still not reproduced, and it is a different function rather than a missing field.</b> A
-/// type 3 candidate - a coaster - is additionally refused unless <c>FUN_00441970</c> passes, and that is
-/// a check on the thing's MODEL and its flags rather than on the item. Nothing here models that, so a
-/// coaster is admitted where the original might refuse it. <b>The shipped park contains no coaster</b>,
-/// so the arm cannot fire in it either way.
+/// <b>A coaster is refused unless its circuit is closed</b> - <c>FUN_00441970</c>, a check on the coaster's node
+/// rather than on the item (<see cref="CircuitClosed"/>). Only the editor's finishing action closes one, and there
+/// is no editor here, so a coaster placed this session is never offered; one loaded from a save is offered as the
+/// flags its coasters-module header carries say. <b>The shipped park contains no coaster.</b>
 /// </para>
 /// </summary>
 public static class ParkRideChoice
@@ -56,7 +55,8 @@ public static class ParkRideChoice
 	/// </param>
 	/// <param name="trackType">
 	/// The item's <c>Bumper.WhichTrackType</c>, or nought where the catalogue cannot say. A car track or a
-	/// water track needs its track ride to be valid before anyone may be sent to it.
+	/// water track needs its track ride to be valid before anyone may be sent to it, and a coaster its circuit
+	/// closed (<see cref="CircuitClosed"/>).
 	/// </param>
 	/// <param name="park">
 	/// The park this object stands in, so that its queue can be <b>walked on the map</b> rather than read
@@ -98,7 +98,39 @@ public static class ParkRideChoice
 		if ( backOfQueue == 0 )
 			return false;
 
-		return HasQueueRoom( queueLength, cells );
+		if ( !HasQueueRoom( queueLength, cells ) )
+			return false;
+
+		// A coaster last, after the room, as the original asks it (0x004dd9b7).
+		return trackType != ItemDescriptionFile.CoasterTrack || CircuitClosed( item, park );
+	}
+
+	/// <summary>
+	/// Whether a coaster may be offered - <c>FUN_00441970</c>: its node, found by the object's model instance, has no
+	/// pair of sections clashing (<c>+0x140</c>), its circuit closed (<c>+0x3c</c> bit 0) and no gap open in it (bit 1),
+	/// and is not the one the editor has open (<c>DAT_00790fec</c>), which with no editor here none is.
+	/// </summary>
+	/// <remarks>
+	/// <b>Only the editor's finishing action closes a circuit</b> (<c>FUN_00435570</c>), so a coaster placed here,
+	/// whose record carries no model instance, is refused. A loaded one's node is rebuilt from its header in the
+	/// save's coasters module, which restores the two bits and the clash count (<c>0x004380e7</c>, <c>0x0043837d</c>):
+	/// <see cref="ParkCoasters"/> reads the first coaster's. One whose header lies past the first, or in a module that
+	/// would not read, cannot be found; it is counted and let through.
+	/// </remarks>
+	public static bool CircuitClosed( ParkWorld.CatalogueObject coaster, ParkWorld? park )
+	{
+		if ( park?.Coasters.For( coaster.MeshInstance ) is { } saved )
+			return saved.CircuitClosed && saved.Clashes == 0;
+
+		if ( coaster.MeshInstance != 0 && park is { } world
+			&& (world.Coasters.Unread > 0 || world.Coasters.Problem != null) )
+		{
+			Unimplemented.Report( "SAVED_COASTER_HEADER_UNREAD" );
+
+			return true;
+		}
+
+		return false;
 	}
 
 	/// <summary>

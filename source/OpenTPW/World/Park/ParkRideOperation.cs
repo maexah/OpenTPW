@@ -726,7 +726,7 @@ public sealed class ParkRideOperation
 		if ( _admission is not { } mood || _score is not { } score )
 			return;
 
-		var excitement = ParkRideScore.ExcitementOf( ride, item ) & 0xff;
+		var excitement = ParkRideScore.ExcitementOf( ride, item, _state.TrackRides ) & 0xff;
 
 		if ( excitement == 0 )
 			return;
@@ -1018,9 +1018,9 @@ public sealed class ParkRideOperation
 	/// (<c>mRequestedService</c>), and the back of its queue connected (<see cref="BackOfQueueConnected"/>).
 	/// </summary>
 	/// <remarks>
-	/// <b>A coaster is let through, as <see cref="ParkRideChoice"/> lets one through the choice.</b> For track
-	/// type 3 the original also asks <c>FUN_00441970</c> of the ride's track record, which nothing here has; it
-	/// is counted. The shipped park holds no coaster.
+	/// <b>A coaster is let through here, and counted.</b> For track type 3 the original also asks
+	/// <c>FUN_00441970</c> whether its circuit is closed, which <see cref="ParkRideChoice.CircuitClosed"/> answers
+	/// for the choice; the door does not ask it. The shipped park holds no coaster.
 	/// </remarks>
 	public static bool MayOpen( ParkWorld? park, ParkWorld.CatalogueObject ride, int trackType )
 	{

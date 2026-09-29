@@ -366,6 +366,17 @@ public sealed class ParkState
 
 		_cells = new RuntimeCell[ParkWorld.MapSize * ParkWorld.MapSize];
 
+		// Each track ride back in its saved slot with its sections, as the track-rides module's loader puts them.
+		// Said out loud when a module will not read, because its track rides then score as stale handles and its
+		// coasters go unfound, which looks like the game's own doing.
+		TrackRides = new ParkTrackRideTable( park?.TrackRides );
+
+		if ( park?.TrackRides.Problem is { } kart )
+			Log.Warning( $"Park: the track-rides module would not read ({kart}); every saved track ride has no track" );
+
+		if ( park?.Coasters.Problem is { } saoc )
+			Log.Warning( $"Park: the coasters module would not read ({saoc}); every saved coaster is counted and offered" );
+
 		if ( park == null )
 			return;
 
@@ -433,7 +444,14 @@ public sealed class ParkState
 		VisitorsToDate = visitorsToDate;
 		Balance = balance;
 		_cells = new RuntimeCell[ParkWorld.MapSize * ParkWorld.MapSize];
+		TrackRides = new ParkTrackRideTable();
 	}
+
+	/// <summary>
+	/// The track rides' table: each ride's slot and the track laid for it - see <see cref="ParkTrackRideTable"/>.
+	/// A purchase takes a slot and a sale lets it go (<see cref="ParkBuilding"/>).
+	/// </summary>
+	public ParkTrackRideTable TrackRides { get; }
 
 	/// <summary>
 	/// What the park is worth now - the balance the save was left with, moved by everything since.

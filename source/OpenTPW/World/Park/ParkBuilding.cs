@@ -137,13 +137,22 @@ public static class ParkBuilding
 				Unimplemented.Report( $"SHAPE_KIND_{kind}_PLACEMENT" );
 		}
 
+		// The placer's track-ride slot, taken before the object is constructed.
+		var trackRide = TakeTrackRide( state, item );
+
 		// Stamped now on the park's calendar, as the constructor does on a purchase and on a move's put-down
-		// (FUN_004db090, 0x004db66a): it is what makes a bought thing new to the ride score.
+		// (FUN_004db090, 0x004db66a): it is what makes a bought thing new to the ride score. The constructor stores
+		// the track ride's handle beside it.
 		var placed = Constructed( item, thingId, cellX, cellY, angle, entryPos, exitPos,
-			ParkWorld.BuiltWhen.At( state.CalendarNow ) );
+			ParkWorld.BuiltWhen.At( state.CalendarNow ), trackRide );
 
 		if ( objects?.PlaceNow( placed, catalogue ) != true )
+		{
+			if ( trackRide != 0 )
+				state.TrackRides.Free( trackRide );
+
 			return new( $"buy: '{item.Name}' would not load, so nothing was built and nothing was charged" );
+		}
 
 		state.AddObject( placed );
 		Stamp( state, footprint, cellX, cellY );
@@ -179,7 +188,8 @@ public static class ParkBuilding
 		Log.Info( $"Building: bought '{item.Name}' for {item.BuildPrice} as thing {thingId} at " +
 			$"({cellX},{cellY}) turned {angle}, covering ({footprint.Left},{footprint.Top}).." +
 			$"({footprint.Right},{footprint.Bottom}) - the park has {state.Balance} left; price {placed.PricePerUse}, " +
-			$"speed {placed.OperatingSpeed}, capacity {placed.OperatingCapacity}, duration {placed.OperatingDuration}" );
+			$"speed {placed.OperatingSpeed}, capacity {placed.OperatingCapacity}, duration {placed.OperatingDuration}" +
+			(placed.TrackRide != 0 ? $", track 0x{placed.TrackRide:x8}" : "") );
 
 		return new( $"buy: '{item.Name}' built as thing {thingId} at ({cellX},{cellY}) for {item.BuildPrice}, " +
 			$"balance {state.Balance}" + (node is { } at ? $", queue node at ({at.X},{at.Y})" : ""), thingId, node,
@@ -215,11 +225,19 @@ public static class ParkBuilding
 	}
 
 	/// <summary>
+	/// The placer's slot in the track rides' table for an item with a <c>Bumper.BumperType</c> (<c>0x00529e4d</c>),
+	/// taken before the object is constructed (<c>FUN_00545890</c> at <c>0x00529f6a</c>): its handle, or nought.
+	/// </summary>
+	internal static int TakeTrackRide( ParkState state, ParkItemCatalogue.Item item )
+		=> item.BumperType != 0 ? state.TrackRides.Take( item.BumperType ) : 0;
+
+	/// <summary>
 	/// The record the object constructor <c>FUN_004db090</c> fills for a thing bought or put down after a move:
 	/// where it stands and faces, its flags, its two ends, its starting settings and price, and when it was built.
 	/// </summary>
+	/// <param name="trackRide">The handle <see cref="ParkTrackRideTable.Take"/> gave it, or nought.</param>
 	internal static ParkWorld.CatalogueObject Constructed( ParkItemCatalogue.Item item, int thingId, int cellX,
-		int cellY, int angle, int entryPos, int exitPos, ParkWorld.BuiltWhen built )
+		int cellY, int angle, int entryPos, int exitPos, ParkWorld.BuiltWhen built, int trackRide = 0 )
 	{
 		// A NEWLY BUILT RIDE STARTS AT ITS ITEM'S OWN SETTINGS, not at nought: the constructor seeds these three
 		// from the purchase tier by its own rules (StartingSettings), and they are what the ride window's
@@ -241,6 +259,7 @@ public static class ParkBuilding
 			// The item's own starting price, copied unclamped (0x004db3ad): what the charge takes, the door's price
 			// opinion weighs and a sideshow's excitement reads. A move's put-down builds afresh, so it starts here too.
 			PricePerUse: item.InitPricePerUse,
+			TrackRide: trackRide,
 			Built: built );
 	}
 
@@ -358,6 +377,10 @@ public static class ParkBuilding
 		var queueRefund = item.HasQueue ? ParkPathBuilding.DrainQueue( state, park, placed ) : 0;
 
 		ReleaseEnds( state, park, placed );
+
+		// Its track ride's slot is let go before the object is (FUN_00545610, 0x00528584).
+		if ( placed.TrackRide != 0 )
+			state.TrackRides.Free( placed.TrackRide );
 
 		state.RemoveObject( thingId );
 

@@ -94,7 +94,7 @@ public sealed class ParkWorld
 		int OperatingCapacity = 0, int OperatingDuration = 0, int OperatingSpeed = 0, int PricePerUse = 0,
 		int QueueSizeInCells = 0, int TotalTakings = 0,
 		float StateOfRepair = 0f, float RemainingLife = 0f, BuiltWhen Built = default, int RequestedService = 0,
-		int UpgradeLevel = 0 )
+		int UpgradeLevel = 0, int MeshInstance = 0 )
 	{
 		/// <summary>
 		/// The bit that makes an object somewhere a guest can be <i>offered</i> - <c>FUN_004fcb10</c>, the
@@ -1201,6 +1201,10 @@ public sealed class ParkWorld
 		// the only thing most of the program needs, and a script module that will not read must not cost
 		// a park its shops. See ParkScriptStates for what it is for and how it is found.
 		ScriptStates = new ParkScriptStates( _data );
+
+		// The ninth and the thirteenth, independent of the world block for the same reason.
+		TrackRides = new ParkTrackRides( _data );
+		Coasters = new ParkCoasters( _data );
 	}
 
 	/// <summary>
@@ -1208,6 +1212,18 @@ public sealed class ParkWorld
 	/// Never null; ask it for its own <see cref="ParkScriptStates.Problem"/>.
 	/// </summary>
 	public ParkScriptStates ScriptStates { get; }
+
+	/// <summary>
+	/// Every track ride this park held, with the track laid for it - see <see cref="ParkTrackRides"/>. Never null;
+	/// ask it for its own <see cref="ParkTrackRides.Problem"/>.
+	/// </summary>
+	public ParkTrackRides TrackRides { get; }
+
+	/// <summary>
+	/// How many coasters this park held, and the first one's header - see <see cref="ParkCoasters"/>. Never null;
+	/// ask it for its own <see cref="ParkCoasters.Problem"/>.
+	/// </summary>
+	public ParkCoasters Coasters { get; }
 
 	/// <summary>
 	/// What every thing's MODEL was doing when the park was saved - see <see cref="ParkThingStates"/>,
@@ -1648,6 +1664,10 @@ public sealed class ParkWorld
 			// mUpgradeLevel, +0x50, the record's last byte: the tier FUN_004e0560 reads the item's InitSpeed and
 			// InitDuration at when it works out the excitement.
 			UpgradeLevel: _data[start + 1098],
+
+			// MeshInstanceID, the dword between the tv_t block and mFlags: the model instance a coaster's node is found
+			// by (FUN_00441970), which the coasters module's header holds too - see ParkCoasters.
+			MeshInstance: ReadInt32At( start + 54 ),
 
 			// The eight tv_t dwords at 22 - see BuiltWhen for why the order is NOT the struct's.
 			Built: new BuiltWhen(

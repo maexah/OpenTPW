@@ -2073,6 +2073,8 @@ public sealed class ParkPeople : Entity
 				+ $"queue {queue}/{cells * ParkRideChoice.QueueRoomPerCell} "
 				+ $"win {(described ? item.ChanceOfWinning : -1)}% "
 				+ $"prize {(described ? item.CostOfGoods : -1)} "
+				// What the score, the arrival's refusal and the settle-up read; a coaster's is counted, so not asked here.
+				+ $"excitement {(!described ? "-" : item.TrackType == ItemDescriptionFile.CoasterTrack ? "coaster" : ParkRideScore.ExcitementOf( thing, item, State.TrackRides ))} "
 				+ $"OFFERABLE {offerable}";
 		}
 

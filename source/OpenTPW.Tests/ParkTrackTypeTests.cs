@@ -127,11 +127,54 @@ public class ParkTrackTypeTests
 		Assert.IsFalse( ParkRideChoice.CanBeOffered( ride with { IsTrackRideValid = 0 }, 0, ItemDescriptionFile.WaterTrack ),
 			"the same holds for a water track" );
 
-		// Untracked and coaster candidates do not consult the flag at all, which is what keeps this arm
-		// from quietly becoming "every object needs a valid track ride".
+		// Untracked candidates do not consult the flag at all, which is what keeps this arm from quietly
+		// becoming "every object needs a valid track ride".
 		Assert.IsTrue( ParkRideChoice.CanBeOffered( ride with { IsTrackRideValid = 0 }, 0, 0 ),
 			"an untracked ride never asks about a track" );
-		Assert.IsTrue( ParkRideChoice.CanBeOffered( ride with { IsTrackRideValid = 0 }, 0, ItemDescriptionFile.CoasterTrack ),
-			"nor does a coaster, whose own extra check is the model test this does not reproduce" );
+	}
+
+	/// <summary>
+	/// A coaster is offered only with its circuit closed - <c>FUN_00441970</c>. One placed here has no model instance
+	/// and so no saved header, and is refused. A loaded one is found by its model instance in the coasters module: the
+	/// played park's flags <c>0x101</c> and no clash let it through; the gap bit, a clash or an open circuit refuse it.
+	/// A coaster whose header lies past the first cannot be read, and is counted and let through.
+	/// </summary>
+	[TestMethod]
+	public void ACoasterIsOfferedOnlyWithItsCircuitClosed()
+	{
+		var data = GameData.Required();
+		var shipped = data.ReadAllBytes( "levels/jungle/Easymode.TPWI" );
+		var payload = new SaveReader( new MemoryStream( shipped ) ).ReadFile();
+		var ride = new ParkWorld( payload ).Objects.Single( o => o.ThingId == 13 );
+		var coaster = ride with { MeshInstance = 330 };
+
+		bool Offered( ParkWorld.CatalogueObject thing, int count, int flags, int clashes, int trackType = ItemDescriptionFile.CoasterTrack )
+			=> ParkRideChoice.CanBeOffered( thing, 0, trackType,
+				new ParkWorld( TrackBytes.WithCoasters( payload, TrackBytes.CoastersModule( count, flags, 330, clashes ) ) ) );
+
+		Assert.IsTrue( Offered( coaster, 1, 0x101, 0, trackType: 0 ), "untracked, the rest of the gate passes" );
+		Assert.IsTrue( Offered( coaster, 1, 0x101, 0 ), "the played park's coaster: closed, no gap, no clash" );
+		Assert.IsFalse( Offered( coaster, 1, 0x103, 0 ), "a gap open in it" );
+		Assert.IsFalse( Offered( coaster, 1, 0x100, 0 ), "its circuit not closed" );
+		Assert.IsFalse( Offered( coaster, 1, 0x101, 1 ), "two of its sections clashing" );
+		Assert.IsFalse( Offered( coaster with { MeshInstance = 331 }, 1, 0x101, 0 ), "no header is its" );
+		Assert.IsFalse( Offered( coaster with { MeshInstance = 0 }, 2, 0x101, 0 ), "placed here: no model instance saved" );
+		Assert.IsFalse( ParkRideChoice.CanBeOffered( coaster, 0, ItemDescriptionFile.CoasterTrack ), "and with no park, no node" );
+
+		var unread = Unimplemented.Summary.FirstOrDefault( entry => entry.What == "SAVED_COASTER_HEADER_UNREAD" ).Times;
+
+		Assert.IsTrue( Offered( coaster with { MeshInstance = 331 }, 2, 0x101, 0 ), "the second of two, not read" );
+		Assert.AreEqual( unread + 1, Unimplemented.Summary.FirstOrDefault( entry => entry.What == "SAVED_COASTER_HEADER_UNREAD" ).Times );
+
+		var refused = new ParkWorld( TrackBytes.WithCoasters( payload,
+			new[] { -1, 0, 0, 1 }.SelectMany( System.BitConverter.GetBytes ).ToArray() ) );
+
+		Assert.IsNotNull( refused.Coasters.Problem, "a module that will not read" );
+		Assert.IsTrue( ParkRideChoice.CanBeOffered( coaster, 0, ItemDescriptionFile.CoasterTrack, refused ),
+			"leaves a saved coaster unfound: let through" );
+		Assert.AreEqual( unread + 2, Unimplemented.Summary.FirstOrDefault( entry => entry.What == "SAVED_COASTER_HEADER_UNREAD" ).Times,
+			"and counted" );
+		Assert.IsFalse( ParkRideChoice.CanBeOffered( coaster with { MeshInstance = 0 }, 0, ItemDescriptionFile.CoasterTrack,
+			refused ), "and one placed here is still refused" );
 	}
 }

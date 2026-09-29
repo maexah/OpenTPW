@@ -22,9 +22,9 @@ namespace OpenTPW;
 /// </para>
 /// <para>
 /// <b>What a thing's excitement is</b> is <see cref="ExcitementOf"/>, the original's <c>FUN_004e0860</c>: a
-/// sideshow's comes from its cost of goods, its price and its chance of winning; a ride's is its item's level
-/// times its speed and its duration against its tier's starting ones. Its coaster, track-crowd and upgrade-tier
-/// branches are counted, not built.
+/// sideshow's comes from its cost of goods, its price and its chance of winning; a ride's is its item's level, or
+/// for a track ride 60% of it plus its track's bends, crossings and longest straight, times its speed and its
+/// duration against its tier's starting ones. Its coaster branch is counted, not built.
 /// </para>
 /// </summary>
 public sealed class ParkRideScore
@@ -281,16 +281,19 @@ public sealed class ParkRideScore
 	/// <item>A sideshow (<c>Info.WhichUIType</c> 2): <see cref="SideshowExcitement"/> of the thing's cost of goods,
 	/// price and chance of winning - the object's <c>+0x188</c>, <c>+0x194</c> and <c>+0x190</c>. The price is the
 	/// thing's own; the other two are its item's, as everywhere here (Q97).</item>
-	/// <item>A coaster (track type 3): <c>trunc( 50 + f / 2 )</c> of what its track answers, or nought with no
-	/// track (<c>0x004e05f8</c>..). Not built: counted, and scored as its level.</item>
-	/// <item>Anything else: the level, times its speed and its duration each against its tier's starting ones,
-	/// held between 0.75 and 1.25 (<see cref="RatioExcitement"/>). A thing with a track handle (a non-zero
-	/// <c>Bumper.BumperType</c>) first takes 60% of the level plus its track's crowd, which is counted and left out.
-	/// A thing upgraded past tier nought is counted and scored as its level: the catalogue reads tier nought only,
-	/// and Lost Kingdom's save upgrades nothing.</item>
+	/// <item>A coaster (track type 3): <c>trunc( 50 + f / 2 )</c> of its node's rating, or nought before its script
+	/// binds the node (<c>0x004e05f8</c>..). Not built: counted, and scored as its level.</item>
+	/// <item>Anything else: its base times its speed and its duration each against its tier's starting ones, held
+	/// between 0.75 and 1.25 (<see cref="RatioExcitement"/>). The base is the level, or for a thing with a track
+	/// handle (<c>+0x28</c>, <c>0x004e06ce</c>) <see cref="TrackBase"/> of its track. A tier past the three
+	/// <c>Upgrades</c> has is counted and takes neither ratio.</item>
 	/// </list>
 	/// </remarks>
-	public static int ExcitementOf( ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item )
+	/// <param name="tracks">
+	/// The park's track rides, where a handle's track is found. Null finds none, so a handle scores as a stale one.
+	/// </param>
+	public static int ExcitementOf( ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item,
+		ParkTrackRideTable? tracks = null )
 	{
 		var level = item.ExcitementLevel;
 
@@ -307,19 +310,42 @@ public sealed class ParkRideScore
 			return level & 0xff;
 		}
 
-		if ( item.BumperType != 0 )
-			Unimplemented.Report( "RIDE_EXCITEMENT_TRACK_CROWD" );
+		var excitement = placed.TrackRide != 0
+			? TrackBase( level, tracks?.LayoutOf( placed.TrackRide ) )
+			: level;
 
-		if ( placed.UpgradeLevel != 0 )
+		// The tier is an unbounded byte (0x004e0689): past the third, the divisors are read from the fields after the
+		// Upgrades array, which the catalogue does not hold.
+		if ( placed.UpgradeLevel >= ItemDescriptionFile.Tiers )
 		{
 			Unimplemented.Report( "RIDE_EXCITEMENT_UPGRADE_TIER" );
 
-			return level & 0xff;
+			return excitement & 0xff;
 		}
 
-		return RatioExcitement( level, placed.OperatingSpeed, item.InitSpeed, placed.OperatingDuration,
-			item.InitDuration ) & 0xff;
+		var (startingSpeed, startingDuration) = item.StartingAt( placed.UpgradeLevel );
+
+		return RatioExcitement( excitement, placed.OperatingSpeed, startingSpeed, placed.OperatingDuration,
+			startingDuration ) & 0xff;
 	}
+
+	/// <summary>
+	/// A track ride's base, before the ratios - <c>0x004e06e9</c>..<c>0x004e0756</c>: 60% of the level, truncated,
+	/// plus <c>3 × crossings + the longest straight + 2 × bends</c> of <see cref="ParkTrackRideTable.Walk"/>'s
+	/// halves, that term held 0..40 and the sum 0..100. A stale handle writes nothing, so its terms are the noughts
+	/// the caller set: 60% of the level.
+	/// </summary>
+	public static int TrackBase( int level, ParkTrackRideTable.Layout? layout )
+	{
+		var track = layout is { } laid
+			? Math.Clamp( (3 * laid.HalfCrossings) + laid.Longest + (2 * laid.HalfBends), 0, TrackTermMost )
+			: 0;
+
+		return Math.Clamp( (level * 60 / 100) + track, 0, 100 );
+	}
+
+	/// <summary>The most the track's own term adds (<c>0x004e0706</c>..<c>0x004e0714</c>).</summary>
+	public const int TrackTermMost = 40;
 
 	/// <summary>
 	/// A sideshow's excitement - <c>FUN_004e0560</c>'s first branch (<c>0x004e058a</c>..<c>0x004e05d4</c>): the byte

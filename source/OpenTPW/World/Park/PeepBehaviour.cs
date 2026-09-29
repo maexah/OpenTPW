@@ -1742,7 +1742,7 @@ public sealed class PeepBehaviour
 
 		var wanted = _chooser.Score.PreferredExcitementFor( peep.PersonType ) & 0xff;
 
-		return Math.Abs( wanted - ParkRideScore.ExcitementOf( chosen, item ) ) > ExcitementRefusal;
+		return Math.Abs( wanted - ParkRideScore.ExcitementOf( chosen, item, State.TrackRides ) ) > ExcitementRefusal;
 	}
 
 	/// <summary>

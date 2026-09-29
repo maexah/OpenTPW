@@ -91,11 +91,28 @@ public sealed class ParkItemCatalogue
 		// Whether a viewer walking in first person may not ride it from its entrance - ItemDescriptionFile.CannotRide.
 		bool CannotRide = false,
 
-		// What the ride score reads beside the excitement - ItemDescriptionFile.GoldenTicketCost and BumperType.
+		// What the ride score reads beside the excitement - ItemDescriptionFile.GoldenTicketCost - and what the
+		// placer takes a track ride's slot for - BumperType (ParkBuilding.TakeTrackRide).
 		int GoldenTicketCost = 0, int BumperType = 0,
 
 		// What a go costs on one just built - ItemDescriptionFile.InitPricePerUse. See ParkBuilding.
-		int InitPricePerUse = 0 );
+		int InitPricePerUse = 0,
+
+		// The two later tiers' starting speed and duration - ItemDescriptionFile.InitSpeedAt. See StartingAt.
+		int InitSpeed1 = 0, int InitSpeed2 = 0, int InitDuration1 = 0, int InitDuration2 = 0 )
+	{
+		/// <summary>
+		/// A tier's starting speed and duration, <c>Upgrades[tier]</c> - what an upgraded ride's excitement divides its
+		/// own by (<c>FUN_004e0560</c>). Tier nought is the purchase's, <see cref="InitSpeed"/> and <see cref="InitDuration"/>.
+		/// </summary>
+		public (int Speed, int Duration) StartingAt( int tier ) => tier switch
+		{
+			0 => (InitSpeed, InitDuration),
+			1 => (InitSpeed1, InitDuration1),
+			2 => (InitSpeed2, InitDuration2),
+			_ => throw new ArgumentOutOfRangeException( nameof( tier ), tier, "Upgrades has three tiers" )
+		};
+	}
 
 	private readonly Dictionary<int, Item> _items = [];
 
@@ -211,7 +228,9 @@ public sealed class ParkItemCatalogue
 					description.DestroyParticleEffect,
 					description.RipOffOK, description.SpecialIngredient, description.AppearanceEffect,
 					description.CannotRide, description.GoldenTicketCost, description.BumperType,
-					description.InitPricePerUse );
+					description.InitPricePerUse,
+					description.InitSpeedAt( 1 ), description.InitSpeedAt( 2 ),
+					description.InitDurationAt( 1 ), description.InitDurationAt( 2 ) );
 
 			return true;
 		}

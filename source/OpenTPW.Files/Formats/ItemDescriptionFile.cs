@@ -374,6 +374,24 @@ public sealed class ItemDescriptionFile
 
 	public int InitDuration => _initDuration ?? _category?.InitDuration ?? 0;
 
+	/// <summary>How many tiers <c>Upgrades</c> has: the compiled schema's count of 3 (<c>0x0074669c</c>), 0x40 bytes apart.</summary>
+	public const int Tiers = 3;
+
+	/// <summary>
+	/// A tier's starting speed - <c>Upgrades[tier].InitSpeed</c>, descriptor <c>+0x1a8 + 0x40 × tier</c>, the
+	/// category's showing through. Tier nought is <see cref="InitSpeed"/>. An upgraded ride's excitement divides its
+	/// speed by its own tier's (<c>FUN_004e0560</c>, <c>0x004e0691</c>).
+	/// </summary>
+	public int InitSpeedAt( int tier )
+		=> tier == 0 ? InitSpeed : _laterInitSpeed[tier - 1] ?? _category?.InitSpeedAt( tier ) ?? 0;
+
+	/// <summary>
+	/// A tier's starting duration - <c>Upgrades[tier].InitDuration</c>, descriptor <c>+0x1a0 + 0x40 × tier</c>
+	/// (<c>0x004e06be</c>), the category's showing through. Tier nought is <see cref="InitDuration"/>.
+	/// </summary>
+	public int InitDurationAt( int tier )
+		=> tier == 0 ? InitDuration : _laterInitDuration[tier - 1] ?? _category?.InitDurationAt( tier ) ?? 0;
+
 	/// <summary>
 	/// Which units a go on this lasts in, and <b>whether it has a duration at all</b>.
 	///
@@ -444,6 +462,8 @@ public sealed class ItemDescriptionFile
 	private int? _minDuration;
 	private int? _maxDuration;
 	private int? _initDuration;
+	private readonly int?[] _laterInitSpeed = new int?[Tiers - 1];
+	private readonly int?[] _laterInitDuration = new int?[Tiers - 1];
 	private int? _durationUnit;
 	private int? _redLineSpeed;
 	private int? _redLineCapacity;
@@ -697,6 +717,23 @@ public sealed class ItemDescriptionFile
 
 				case "Upgrades[0].InitDuration":
 					_initDuration = Number( line );
+					break;
+
+				// The later tiers' starting speed and duration, which an upgraded ride's excitement divides by.
+				case "Upgrades[1].InitSpeed":
+					_laterInitSpeed[0] = Number( line );
+					break;
+
+				case "Upgrades[2].InitSpeed":
+					_laterInitSpeed[1] = Number( line );
+					break;
+
+				case "Upgrades[1].InitDuration":
+					_laterInitDuration[0] = Number( line );
+					break;
+
+				case "Upgrades[2].InitDuration":
+					_laterInitDuration[1] = Number( line );
 					break;
 
 				// Nought means "no duration at all" - see DurationUnit.
