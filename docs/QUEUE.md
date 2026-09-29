@@ -2426,6 +2426,17 @@ artifacts are listed in `docs/history/README.md`.
   1000, 400 and 1000, Squark 500, in a census beside a photograph of a rider on a lane; and one of the three whose
   heads ride an animated ancestor (Lookout, Totem, the Aztec Mayhem) measured against the original first.
 
+- [ ] **Q184. Console commands that put a guest where a test needs one.** Asked for by Alexah 2026-09-29, after
+  Q175b's game runs waited 40 minutes for two riders to overlap on a sideshow and never saw its lanes 1 and 3.
+  `arrive <x> <y>` (`ParkPeople.Admit`) makes a guest on any cell, but starts them `AtGate`, to walk to a booth and
+  pay, and nothing sends a guest to a chosen thing: a guest reaches a ride only by its own choice (`PeepBehaviour`,
+  the original's score, `ride-operation.md`, "What a thing is worth to a guest"). Add, in `DebugConsole` only, a guest
+  made already admitted and `Deciding` on a chosen cell, of a chosen kind; and a command that sends a named guest to a
+  named thing through the same path a guest takes once it has chosen, so that only the choice is skipped. Both are
+  instruments: nothing a player reaches changes, and a run using them proves the thing's side, not the guest's
+  choice, and says so. Confirm, predicted first: three guests sent to the stock park's Jungle Spray at once, and the
+  `rides` census over its lanes 1 and 3 walking 1100 ms each way beside a photograph of the riders.
+
 - [ ] **Q176. Two latent differences in the VM's draw and the second scream.** Found by Q166's decode. (1) `NextDraw`
   takes `Math.Abs` of the generator's state, which throws for `0x80000000`; `FUN_00516330` hands that back unchanged
   (`0x0051635f`) and `RAND` and `FINDSCRIPTRAND` halve it to `0x40000000` (`ride-operation.md` already records it). (2)
