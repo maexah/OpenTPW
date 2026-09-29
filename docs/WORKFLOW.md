@@ -8,6 +8,8 @@ file does not, so where the two differ `CLAUDE.md` wins.
 - See `CLAUDE.md`, Branches. Fast-forward with `git checkout main && git merge --ff-only <branch>`; this
   sandbox refuses `git branch -f main`.
 - Name a branch for what it changes, not with a phrase.
+- The FileFormats clone runs the same way with `master` in place of `main`: a task's docs go on a branch off `master`,
+  fast-forwarded into `master` when OpenTPW's `main` is, and pushed together (Alexah, 2026-09-29).
 
 ## Pushing
 

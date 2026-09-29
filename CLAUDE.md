@@ -85,6 +85,9 @@ Inside `source/OpenTPW/`: `Client/` (startup, `GameDir`, options, renderer, `Dia
   When the task is confirmed in the game, fast-forward merge it into main.
 - upstream/main is the mirror of the upstream project. Merge it into main
   when it moves. Never rebase or force-push main.
+- The FileFormats clone follows the same rules (2026-09-29): its master is
+  the tip, one short branch per task off it, fast-forwarded into master at the
+  same time as OpenTPW's main is. PR #1's branch there still takes no push.
 
 ## How a session runs
 

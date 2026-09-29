@@ -36,13 +36,10 @@ tables, `>` warnings, links written `](/formats/texture/)` - and run `npm run bu
 markdown syntax is not proven by a clean build: check the built HTML for it. The clone's path and the node
 toolchain are in `CLAUDE.local.md`.
 
-**Branches, and why they differ from this repo's.** The clone has `master`, which stays the mirror of
-`upstream/master`; it feeds pull requests upstream, so `main`-is-tip does not apply to it. The `docs/*` branches
-are disjoint stacks off `master`, so a page's content is a branch artifact: find the branch that owns a page with
-`git log --oneline master..<branch> -- <path>` for every branch before editing it (`VERIFYING.md` rule 40), and
-check every link against the headings on the branch you commit to. New pages go on a fresh branch off
-`upstream/master`. When a page exists only on a pull request's branch, write on a new local branch stacked on it and
-say so when asking about the push; local writes are always fine.
+**Branches: the same as this repo's.** Alexah, 2026-09-29: the clone follows `CLAUDE.md`'s branch rules. Its
+`master` holds every page and is the tip; each task's docs go on one short branch off `master`, fast-forwarded into
+`master` at the same time as this repo's `main`, and pushed with it. Check every link against the headings on
+`master`. Local writes are always fine.
 
 **Pull requests and pushes.** Nothing is pushed or opened without Alexah's yes (`CLAUDE.md` rule 1). Never push onto
 a branch that carries an open pull request. Check that from here with `git ls-remote upstream 'refs/pull/*'`, which
