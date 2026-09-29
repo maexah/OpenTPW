@@ -418,30 +418,30 @@ public sealed class ParkAudio : Entity
 	///
 	/// <para>
 	/// <b>The engine refuses to start a second one over the first</b>, and says so: its own line is
-	/// "RSSE: Started screaming without s...". Reproduced rather than tidied, because a script that
-	/// does it is doing something wrong and the silence would hide it.
-	/// </para>
-	/// <para>
-	/// What follows the refusal is not reproduced: the engine then stores the refusal's nought over the
-	/// script's handle (<c>0x00555ee6</c>), so the first scream plays on with nothing left to stop it, where
-	/// this keeps it reachable by <see cref="StopScream"/> - a deviation, docs/QUEUE.md Q176.
+	/// "RSSE: Started screaming without stopping first.". The refusal's nought then goes over the script's
+	/// handle (<c>0x00555ee6</c>), so the first scream plays on held by nothing, past the script's next
+	/// <c>STOPSCREAM</c> and its teardown alike. This lets it go the same way (<see cref="ParkScreams.LetGo"/>),
+	/// to scream until the park ends. No shipped script reaches it: each of the 40 <c>STARTSCREAM</c>s in
+	/// the 308 is reached holding no scream.
 	/// </para>
 	/// </summary>
 	/// <param name="scriptId">Whose scream this is, so <see cref="StopScream"/> can find it again.</param>
 	/// <param name="band">The first operand: nought is silent, then 1, 2-3, 4-7, 8 and over.</param>
 	/// <param name="level">The second operand, averaged with the script speed - see <see cref="ScreamVolume"/>.</param>
 	/// <param name="at">Where the ride stands. The engine takes this from the script's own thing.</param>
-	/// <returns>Whether anything started.</returns>
+	/// <returns>Whether anything started, which is what the script holds afterwards.</returns>
 	internal bool Scream( int scriptId, int band, int level, Vector3 at )
 	{
-		if ( !Audio.Ready || _kids is not { IsValid: true } )
-			return false;
-
-		if ( _screams.Find( scriptId ) != null )
+		// The handle is tested before anything else (FUN_00551130), so a refusal needs no sound device.
+		if ( _screams.LetGo( scriptId ) is { } refused )
 		{
-			Log.Warning( $"Park audio: script {scriptId} started screaming without stopping first" );
+			Log.Warning( $"Park audio: script {scriptId} started screaming without stopping first; its scream "
+				+ $"of effect {refused.Effect} plays on, held by nothing" );
 			return false;
 		}
+
+		if ( !Audio.Ready || _kids is not { IsValid: true } )
+			return false;
 
 		var effect = ScreamEffectFor( band );
 
@@ -605,11 +605,17 @@ public sealed class ParkAudio : Entity
 				+ (scream.Voice is { Playing: true } ? "" : " (between)")
 			: "none";
 
-	/// <summary>The scream a script is holding, or null. The tests read its clock from here.</summary>
+	/// <summary>
+	/// The scream a script is holding, or null - what <see cref="RideScript.Screaming"/> answers from. The
+	/// tests read its clock from here.
+	/// </summary>
 	internal ParkScreams.Chain? HeldScream( int scriptId ) => _screams.Find( scriptId );
 
 	/// <summary>How many distinct scream samples this park has played, across every ride.</summary>
 	internal int ScreamSamplesHeard => _screamSamples.Count;
+
+	/// <summary>How many screams a second start has left held by nothing, still making children.</summary>
+	internal int ScreamsLetGo => _screams.LetGoCount;
 
 	/// <summary>
 	/// Stops the rain, and lets the effect go.

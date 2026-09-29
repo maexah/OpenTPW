@@ -50,8 +50,8 @@ namespace OpenTPW.UI;
 /// before cancelling is still heard until the options are next applied. Here the cross applies them.</item>
 /// <item>The tick's checks are left out. In the original, a change of rendering, resolution or video card,
 /// or a graphics quality whose detail file needs a restart (0x00423bc0), shows RESTART GAME (UITEXT 403)
-/// instead of closing. A change of audio quality across one of sound.sam's thresholds sets the sound
-/// library up again (0x0051b920).</item>
+/// instead of closing. A change of audio quality across one of sound.sam's thresholds stops every voice
+/// and sets the sound library up again (0x0051b920).</item>
 /// <item>The display and the resolution are put into effect by the tick instead, and need no restart:
 /// the window here is resized while the game runs. They are the only settings the tick acts on rather
 /// than merely keeping, and it acts only when one of them actually changed, so a tick that moved a

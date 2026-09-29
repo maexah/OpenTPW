@@ -2145,13 +2145,16 @@ public sealed class RideScript
 		child.Nodes = Nodes;
 	}
 
-	/// <summary>Whether this script has a scream going - the engine's handle at <c>+0xd0</c>.</summary>
+	/// <summary>
+	/// Whether this script holds a scream - the engine's handle at <c>+0xd0</c>. A scream a second
+	/// <c>STARTSCREAM</c> let go plays on, and this script holds it no longer (<see cref="ParkScreams.LetGo"/>).
+	/// </summary>
 	/// <remarks>
-	/// A flag rather than the handle itself: the voice belongs to <see cref="ParkAudio"/>, which keys it
-	/// by <see cref="Id"/>, and a script that held an audio object would drag the mixer into every test
-	/// that runs a ride.
+	/// Asked of <see cref="ParkAudio"/>, which keys each held scream by <see cref="Id"/>, rather than kept here
+	/// as well: a script that held an audio object would drag the mixer into every test that runs a ride, and
+	/// a copy of the answer could disagree with it.
 	/// </remarks>
-	public bool Screaming { get; private set; }
+	public bool Screaming => ParkAudio.Current?.HeldScream( Id ) != null;
 
 	/// <summary>
 	/// <c>STARTSCREAM</c>: the ride starts screaming - <c>FUN_00551130</c>, through
@@ -2198,8 +2201,9 @@ public sealed class RideScript
 			return;
 		}
 
-		if ( ParkAudio.Current?.Scream( Id, band, level, at ) == true )
-			Screaming = true;
+		// The handle, or nought, goes over +0xd0 whatever came before (0x00555ee6): a refused second start
+		// leaves the script holding nothing, and its first scream playing on.
+		ParkAudio.Current?.Scream( Id, band, level, at );
 	}
 
 	/// <summary>
@@ -2209,8 +2213,6 @@ public sealed class RideScript
 	private void StopScream()
 	{
 		ParkAudio.Current?.StopScream( Id );
-
-		Screaming = false;
 	}
 
 	/// <summary>
@@ -2219,8 +2221,9 @@ public sealed class RideScript
 	///
 	/// <para>
 	/// Nothing is remembered about it. The engine keeps no handle (its handler throws the returned one
-	/// away) and this keeps no flag, so <see cref="Screaming"/> is untouched: a one-shot is not
-	/// something <c>STOPSCREAM</c> can stop, and a ride mid-breakdown may have both going at once.
+	/// away) and <see cref="ParkAudio.SingleScream"/> holds none, so <see cref="Screaming"/> is untouched:
+	/// a one-shot is not something <c>STOPSCREAM</c> can stop, and a ride mid-breakdown may have both going
+	/// at once.
 	/// </para>
 	/// </summary>
 	/// <remarks>
@@ -2596,21 +2599,29 @@ public sealed class RideScript
 	private int Slots => Math.Max( _file.VariableCount, 0 );
 
 	/// <summary>
-	/// One turn of the engine's generator (<c>FUN_00516330</c>), halved - what <c>RAND</c> and
-	/// <c>FINDSCRIPTRAND</c> both draw before they take their different remainders of it.
+	/// One turn of the engine's generator, halved - what <c>RAND</c> and <c>FINDSCRIPTRAND</c> both draw
+	/// before they take their different remainders of it.
 	/// </summary>
 	/// <remarks>
-	/// <c>Math.Abs</c> throws for a state of <c>0x80000000</c>, where the engine's generator hands that back
-	/// unchanged and the halving makes it <c>0x40000000</c> (<c>0x0051635f</c>) - a deviation not yet
-	/// built, docs/QUEUE.md Q176.
+	/// The generator's <c>NEG</c> hands a state of <c>0x80000000</c> back unchanged (<c>0x0051635f</c>), and
+	/// both opcodes halve with an unsigned <c>SHR</c>, so that state draws <c>0x40000000</c> and every draw is
+	/// nought or more (docs/exe/park.md, "`RAND` (28)").
 	/// </remarks>
 	private int NextDraw()
 	{
 		_random = (_random * 0x19660Du) + 0x3C6EF35Fu;
 		_random = (_random >> 13) | (_random << 19);
 
-		return Math.Abs( (int)_random ) >> 1;
+		var magnitude = (int)_random < 0 ? 0u - _random : _random;
+
+		return (int)(magnitude >> 1);
 	}
+
+	/// <summary>
+	/// Sets the generator's state, as the engine's own setter (<c>FUN_00516370</c>) does. The tests reach
+	/// through it a state no run from <see cref="DefaultSeed"/> ever reaches.
+	/// </summary>
+	internal void SeedRandom( uint state ) => _random = state;
 
 	/// <summary>
 	/// An operand read as a number: a variable's value, or the low 16 bits sign-extended. The engine

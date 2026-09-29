@@ -217,6 +217,30 @@ public class RideScriptClockTests
 	}
 
 	/// <summary>
+	/// The generator's one state with no positive twin, <c>0x80000000</c>, which its <c>NEG</c> hands back as it
+	/// is (<c>0x0051635f</c>), and the opcode's unsigned <c>SHR</c> halves to <c>0x40000000</c>. Seeded one step
+	/// before it, the draw is <c>0x40000000 % 7 = 1</c>, and the script goes on drawing from the state after it.
+	/// </summary>
+	[TestMethod]
+	public void TheStateWithNoPositiveTwinDrawsAQuarterOfTheRange()
+	{
+		var script = new RideScript( Build( 1, 2,
+			Word( Opcode.RAND ), Var( 0 ), Lit( 6 ),
+			Word( Opcode.BRANCH ), Loc( 0 ) ) );
+
+		// 0x2b625fe5 × 0x19660d + 0x3c6ef35f is 0x1000, which rotated right thirteen is 0x80000000.
+		script.SeedRandom( 0x2B625FE5u );
+		script.Turn( 0f );
+
+		Assert.AreEqual( 0x40000000 % 7, script.Variables[0], "the draw is 0x40000000" );
+
+		script.Turn( 0f );
+
+		// 0x80000000 goes on to 0x9afde377, which is negative: its magnitude halved, modulo 7, is 5.
+		Assert.AreEqual( 5, script.Variables[0], "and the state after it is the generator's own" );
+	}
+
+	/// <summary>
 	/// A <c>WAIT</c> is still counted in the caller's own units with nothing done to it. The engine
 	/// divides by <c>0.5 + 0.01 * speed</c>, and the speed word is 50 for every script that ever runs,
 	/// so that divisor is exactly one - this pins the boundary rather than the arithmetic.

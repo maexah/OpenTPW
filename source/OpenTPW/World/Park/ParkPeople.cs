@@ -2041,7 +2041,7 @@ public sealed class ParkPeople : Entity
 				// nominated, and the only thing that clears a stale nomination is DropUnreadyNominee,
 				// run on a turn that does not invite. A queue stuck on that would look exactly like a quiet ride.
 				+ $"nominee {_behaviour.State.PersonBeingLoaded( thing.ThingId )} "
-				// Whether it is screaming, because the pause holds a scream's VOICE and not the script:
+				// Whether it holds a scream (+0xd0), because the pause holds a scream's VOICE and not the script:
 				// a held park stops the VM one instruction short of STOPSCREAM, so "still screaming"
 				// and "gone quiet" have to be readable apart. A pure getter, so polling cannot perturb it.
 				+ $"running {script.Running} screaming {script.Screaming} "

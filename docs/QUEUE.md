@@ -2455,7 +2455,54 @@ artifacts are listed in `docs/history/README.md`.
   choice, and says so. Confirm, predicted first: three guests sent to the stock park's Jungle Spray at once, and the
   `rides` census over its lanes 1 and 3 walking 1100 ms each way beside a photograph of the riders.
 
-- [ ] **Q176. Two latent differences in the VM's draw and the second scream.** Found by Q166's decode. (1) `NextDraw`
+- [x] **Q176. Two latent differences in the VM's draw and the second scream.** Done 2026-09-29,
+  `alexah/190-the-draw-and-the-second-scream`. `RideScript.NextDraw` hands the generator's `0x80000000` back as it is
+  and halves it unsigned, as `FUN_00516330` (`0x0051635f`) and both opcodes' `SHR 1` (`0x0055398f`, `0x005560d0`) do:
+  that state draws `0x40000000`, where `Math.Abs` threw. A second `STARTSCREAM` over a held scream is refused and the
+  held chain let go (`ParkScreams.LetGo`): it screams on held by nothing, the script's `STOPSCREAM` and its removal
+  miss it, and the park's end stops it. `RideScript.Screaming` asks `ParkAudio` what the script holds rather than
+  keeping a copy, and the `rides` header counts `screams let go`. The review moved the stop of a held scream from
+  the scheduler's teardown of relations into `Release`, the flat destructor's own work (`FUN_00558500`), so a child
+  or sound script removed flat stops its scream too.
+  - **Measured** (`q176/screamwalk.py`: every path of all 308 `.RSE` from word 0, an exact `JSR` stack, the held bit
+    per path): none of the 40 `STARTSCREAM`s is reached holding a scream; the control, a `STOPSCREAM` that keeps it,
+    finds 40 of 40. A reviewer's walker, written apart, agrees site for site. The save reader leaves `+0xd0` as saved
+    (no `+0xd0` operand among `FUN_005597a0`'s 758 instructions; its `+0xd4` write is found), and the 12 scripts
+    Alexah's Full Simulation saves hold with a handle each resume onto a path that stops first, so no load refuses
+    (`ride-operation.md`, "How a scream VARIES").
+  - **Confirmed** (`q176run.py`, run `q176-run3/` after a one-cycle `q176-run2/`, save/ unchanged each), predicted
+    first: the Belly Bounce through three cycles, guests 43-45 made by `admit 48 22 3` and sent by `send`. With each
+    rider on, `rides` read `bouncing 1` and `screaming True scream [effect 71 band 1 level 20 ...]` and the log `band 1
+    effect 71 volume 35`; with each off, `stopped screaming after 14-16 sample(s)`, `band 0 ... screams not at all`,
+    `screaming False scream [none]`; `screams let go 0` at all eight readings, 23 of 23 checks. Photographed paused:
+    `q176-run3/05-band1.png` with the rider on the ride's belly, `06-band0.png` without (`crops.png`). Again from the
+    commit's own build (`q176-commit/`, `q176-commit.out`): 23 of 23, save/ unchanged.
+  - **One prediction wrong in form**: I predicted bands 1, 2 and 3 as the three boarded together. The Belly Bounce
+    took one at a time (`Invite` reads no `RunsContinuously`, Q157), so every cycle was band 1, then 0.
+  - **The let-go in the running game** (`q176run-letgo.py`, a throwaway build whose Belly Bounce `STOPSCREAM` does
+    nothing; run `q176-letgo/`, stdout `q176-letgo.out`, save/ unchanged), predicted first: each rider's leaving had
+    its band-0 start refused with the new warning naming effect 71, and `screams let go` read one higher at the next
+    reading, 1 to 11 over the 11 riders of 15 minutes, with `screaming False` at the end; the chains let go made 3,308
+    children "held by nothing", the first at its 440th as the game quit. 59 of 60: the miss is the harness, waiting
+    for a band-0 line a refusal does not print.
+  - **Tests**: `RideScriptClockTests.TheStateWithNoPositiveTwinDrawsAQuarterOfTheRange` and
+    `RideScriptRelativeTests.TheStateWithNoPositiveTwinPicksWhatAQuarterOfTheRangePicks`, seeded by the new
+    `SeedRandom`; `ParkScreamChainTests.ASecondStartLetsTheFirstScreamGoOnHeldByNothing` and
+    `ADyingScriptStopsItsScreamAndItsChildsButNotOneLetGo`, where the chain test's old "keeps the one it holds" is
+    gone. Put back one at a time (`q176/q176-mutate.py`, `q176/mutate2.out`): `Math.Abs`, no halving, a refusal that
+    keeps, stops or replaces the first, a pump or a park's end that skips the chains let go, the stop left in the
+    teardown of relations or taken out, and a script answering from elsewhere, 10 red as predicted; a signed halving
+    stays green, as predicted, since both callers take the remainder's absolute value.
+  - **Reviewed** by four read-only Opus agents (the engine in Ghidra, the measurement, the code and tests, the record),
+    each finding put to an Opus skeptic (`wf_7887c2c1-02b`): 26 findings, 23 upheld and taken, 3 refuted. Among them:
+    the draw's state is unreachable from seed 1; the flat removal's scream; the `STARTSCREAM` row's operand and
+    string; the options' stop of every voice; FileFormats' `STOPSCREAM`, which cuts a held scream and never fades it.
+  - **Not confirmed on screen**: the draw (tested only, and unreachable in a run: every script starts at seed 1, whose
+    cycle of 248,316,293 states never meets `0x80000000`); the let-go only in the throwaway build; a child's scream
+    stopped by its removal (no shipped child screams); a restart from one held band to another, since the Belly
+    Bounce takes one rider at a time here (`Invite` reads no `RunsContinuously`, Q157).
+
+  The item as written: Found by Q166's decode. (1) `NextDraw`
   takes `Math.Abs` of the generator's state, which throws for `0x80000000`; `FUN_00516330` hands that back unchanged
   (`0x0051635f`) and `RAND` and `FINDSCRIPTRAND` halve it to `0x40000000` (`ride-operation.md` already records it). (2)
   A second `STARTSCREAM` while one is held: the engine refuses it and stores the refusal's nought over `+0xd0`

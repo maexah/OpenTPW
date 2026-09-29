@@ -467,8 +467,8 @@ public class ParkScreamChainTests
 	/// variation by its sample would prove nothing. <b>Mutations:</b> a looped child, a child placed anywhere but the
 	/// ride, at another level or at the one-shot's fixed level, from another variation or the effect's own pick, a
 	/// child that stops or fades the one before, a level that does not carry, a stop that leaves the chain or the
-	/// newest child running, a park that ends without cutting it, a band that screams at nought, a second start over
-	/// a held scream, and a census that does not count the children, each fail an assertion here. Not pinned: the
+	/// newest child running, a park that ends without cutting it, a band that screams at nought, and a census that
+	/// does not count the children, each fail an assertion here. Not pinned: the
 	/// balance between the ears a child starts at, which only the mixer reads.
 	/// </remarks>
 	[TestMethod]
@@ -515,8 +515,6 @@ public class ParkScreamChainTests
 			IsTheNewestChild();
 
 			Assert.AreEqual( 0, chain.Variation, "the first child takes the first variation" );
-			Assert.IsFalse( park.Scream( 13, 1, 20, Here ), "a script holding a scream cannot start another" );
-			Assert.AreSame( chain, park.HeldScream( 13 ), "and keeps the one it holds" );
 
 			for ( var frame = 0; frame < 900; ++frame )
 			{
@@ -572,6 +570,131 @@ public class ParkScreamChainTests
 			Entity.ApplyDeletions();
 
 			Assert.IsFalse( last.Playing, "the park's end cuts the newest child of every scream" );
+		} );
+	}
+
+	/// <summary>
+	/// <b>A second start over a held scream is refused, and the first screams on held by nothing</b>: the refusal's
+	/// nought goes over the script's handle (<c>0x00555ee6</c>). The script holds no scream after it, its stop finds
+	/// none, the chain let go goes on making children through a later start and stop, and only the park's end cuts it.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> a refusal that keeps the first scream held, one that stops it, a chain let go that the pump
+	/// skips, a park's end that leaves it running, and a script answering from anything but the audio's own hold,
+	/// each fail an assertion here.
+	/// </remarks>
+	[TestMethod]
+	public void ASecondStartLetsTheFirstScreamGoOnHeldByNothing()
+	{
+		using var rse = FileSystem.OpenRead( "levels/jungle/rides/bouncy/bouncy.RSE" );
+		var script = new RideScript( new RideScriptFile( rse ) );
+
+		new RideScriptScheduler().Add( 13, script );
+
+		InAPark( "jungle", park =>
+		{
+			void Run( int frames )
+			{
+				for ( var frame = 0; frame < frames; ++frame )
+				{
+					Frame( held: false );
+					park.Update();
+				}
+			}
+
+			Assert.IsTrue( park.Scream( 13, 1, 20, Here ) );
+
+			var first = park.HeldScream( 13 )!;
+
+			Assert.IsTrue( script.Screaming, "the script holds the scream it started" );
+			Assert.AreEqual( 0, park.ScreamsLetGo );
+
+			Assert.IsFalse( park.Scream( 13, 2, 20, Here ), "a script holding a scream cannot start another" );
+			Assert.IsNull( park.HeldScream( 13 ), "and holds none once it has tried" );
+			Assert.IsFalse( script.Screaming, "which the script answers too" );
+			Assert.AreEqual( 1, park.ScreamsLetGo, "the first is let go" );
+			Assert.IsTrue( first.Voice is { Playing: true, Ending: false }, "and its newest child plays on" );
+
+			Assert.IsFalse( park.StopScream( 13 ), "so the script's stop finds nothing" );
+			Assert.IsTrue( first.Voice is { Playing: true, Ending: false }, "and cuts nothing" );
+
+			var plays = first.Plays;
+
+			Run( 300 );
+
+			Assert.IsTrue( first.Plays > plays, $"five seconds with waits of one to three made {first.Plays - plays}" );
+
+			Assert.IsTrue( park.Scream( 13, 1, 20, Here ), "a start with nothing held holds a new scream" );
+			Assert.AreNotSame( first, park.HeldScream( 13 ) );
+			Assert.IsTrue( park.StopScream( 13 ), "which its stop reaches" );
+			Assert.AreEqual( 1, park.ScreamsLetGo, "and the one let go is not reached" );
+
+			plays = first.Plays;
+
+			Run( 300 );
+
+			Assert.IsTrue( first.Plays > plays, "it still makes children" );
+
+			var last = first.Voice!;
+
+			park.Delete();
+			Entity.ApplyDeletions();
+
+			Assert.IsFalse( last.Playing, "the park's end cuts it" );
+			Assert.AreEqual( 0, park.ScreamsLetGo, "and forgets it" );
+		} );
+	}
+
+	/// <summary>
+	/// <b>A script that dies stops the scream it holds, and so does its child removed flat with it</b>: the engine's
+	/// flat destructor stops what <c>+0xd0</c> holds (<c>FUN_00558500</c>), and the child's removal is that destructor
+	/// alone. A scream the dying script's second start let go is not reached.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the stop left in the teardown of relations, where a child removed flat never reaches it, and
+	/// a stop that also takes the chains let go, each fail an assertion here.
+	/// </remarks>
+	[TestMethod]
+	public void ADyingScriptStopsItsScreamAndItsChildsButNotOneLetGo()
+	{
+		RideScript Bouncy()
+		{
+			using var rse = FileSystem.OpenRead( "levels/jungle/rides/bouncy/bouncy.RSE" );
+
+			return new RideScript( new RideScriptFile( rse ) );
+		}
+
+		var scheduler = new RideScriptScheduler();
+		var parent = Bouncy();
+		var child = Bouncy();
+
+		scheduler.Add( 13, parent );
+		scheduler.Add( 14, child );
+		parent.ChildId = 14;
+		child.ParentId = 13;
+
+		InAPark( "jungle", park =>
+		{
+			Assert.IsTrue( park.Scream( 13, 1, 20, Here ) );
+			Assert.IsFalse( park.Scream( 13, 1, 20, Here ), "a second start lets the first go" );
+
+			var letGo = park.HeldScream( 13 );
+
+			Assert.IsNull( letGo );
+			Assert.IsTrue( park.Scream( 13, 1, 20, Here ) );
+			Assert.IsTrue( park.Scream( 14, 1, 20, Here ) );
+
+			var held = park.HeldScream( 13 )!.Voice!;
+			var childs = park.HeldScream( 14 )!.Voice!;
+
+			Assert.IsTrue( scheduler.Destroy( 13 ) );
+
+			Assert.IsFalse( parent.Screaming, "the dying script holds no scream" );
+			Assert.IsFalse( held.Playing, "and the one it held is cut" );
+			Assert.IsFalse( child.Screaming, "its child, removed flat, holds none either" );
+			Assert.IsFalse( childs.Playing, "and the child's is cut" );
+			Assert.AreEqual( 0, scheduler.Count, "both are gone" );
+			Assert.AreEqual( 1, park.ScreamsLetGo, "the scream let go is not reached" );
 		} );
 	}
 }

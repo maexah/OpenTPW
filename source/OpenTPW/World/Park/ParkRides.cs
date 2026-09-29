@@ -771,6 +771,13 @@ public sealed class ParkRides : Entity
 	/// park reaches two on every load: the security cameras are saved on <c>WAIT 5000</c> with 2,341 and 2,329 ms
 	/// left, and the Belly Bounce with its looping key 2, so its <c>LOOPANIM 2, 0</c> at word 43 does nothing.
 	/// </para>
+	///
+	/// <para>
+	/// <b>Not its scream.</b> The engine reads the saving session's handle at <c>+0xd0</c> back with the struct,
+	/// so a script saved screaming resumes holding a handle to no voice of this session; here it resumes
+	/// holding nothing. Every path from a saved state reaches a <c>STOPSCREAM</c> before a <c>STARTSCREAM</c>,
+	/// so the refusal that handle could cause is never reached (docs/exe/ride-operation.md, "How a scream VARIES").
+	/// </para>
 	/// </summary>
 	private void Resume( RideScript script, ParkWorld.CatalogueObject placed, ParkWorld world )
 	{

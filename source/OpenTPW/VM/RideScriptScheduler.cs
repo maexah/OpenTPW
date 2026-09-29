@@ -238,11 +238,17 @@ public sealed class RideScriptScheduler
 	/// What the flat destructor does for the script itself, short of its relations: a script that was
 	/// holding the music down lets it back up as it dies. <b>That is the only thing that ever un-mutes
 	/// it</b>, since no opcode clears the setting and no shipped script passes nought to <c>DIPMUSIC</c>.
+	/// And a scream it holds is stopped, a child's or a sound script's removed flat as much as its own.
 	/// </summary>
 	private void Release( RideScript script )
 	{
 		if ( script.DippedMusic )
 			MusicDip = 0;
+
+		// A held scream makes a fresh child every few seconds until something stops it. The engine's flat
+		// destructor stops what +0xd0 holds (FUN_00558500), so a scream a second start let go is not reached.
+		if ( script.Screaming )
+			ParkAudio.Current?.StopScream( script.Id );
 	}
 
 	/// <summary>
@@ -257,11 +263,6 @@ public sealed class RideScriptScheduler
 	/// </summary>
 	private void TakeDown( RideScript script )
 	{
-		// A script that dies mid-scream must not leave its scream behind: a held scream makes a fresh
-		// child every few seconds until something stops it. The engine's own teardown clears +0xd0.
-		if ( script.Screaming )
-			ParkAudio.Current?.StopScream( script.Id );
-
 		if ( script.SoundChildId != 0 )
 			RemoveFlat( script.SoundChildId );
 

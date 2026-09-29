@@ -1,7 +1,8 @@
 namespace OpenTPW;
 
 /// <summary>
-/// The screams the rides are holding, from <c>STARTSCREAM</c> to <c>STOPSCREAM</c>, each on its own clock.
+/// The screams the rides are holding, from <c>STARTSCREAM</c> to <c>STOPSCREAM</c>, each on its own clock, and
+/// the ones a refused second start let go, until the park ends (<see cref="LetGo"/>).
 ///
 /// <para>
 /// In the original a held scream is a voice that plays nothing itself and keeps a CHAIN of one-shot
@@ -50,9 +51,15 @@ internal sealed class ParkScreams
 		public Voice? Voice;
 
 		public string Sample = "";
+
+		/// <summary>Whether a second start let this chain go - see <see cref="LetGo"/>.</summary>
+		public bool HeldByNothing;
 	}
 
 	private readonly Dictionary<int, Chain> _chains = [];
+
+	/// <summary>The chains a second start let go: each still makes its children, and only the park's end stops it.</summary>
+	private readonly List<(int ScriptId, Chain Chain)> _letGo = [];
 	private readonly Func<int, IReadOnlyList<SoundCategoryFile.Variation>> _variationsOf;
 	private readonly Func<Chain, int, Voice?> _play;
 	private readonly Random _random;
@@ -73,6 +80,9 @@ internal sealed class ParkScreams
 
 	/// <summary>How many rides are holding a scream.</summary>
 	internal int Count => _chains.Count;
+
+	/// <summary>How many chains are screaming held by nothing - see <see cref="LetGo"/>.</summary>
+	internal int LetGoCount => _letGo.Count;
 
 	/// <summary>The scream a script is holding, or null.</summary>
 	internal Chain? Find( int scriptId ) => _chains.GetValueOrDefault( scriptId );
@@ -104,6 +114,13 @@ internal sealed class ParkScreams
 			if ( chain.Plays == 0 || now > chain.NextAt )
 				Step( scriptId, chain, now );
 		}
+
+		// A chain nobody holds is still in the engine's voice list, and its tick knows nothing of the handle.
+		foreach ( var (scriptId, chain) in _letGo )
+		{
+			if ( chain.Plays == 0 || now > chain.NextAt )
+				Step( scriptId, chain, now );
+		}
 	}
 
 	/// <summary>
@@ -127,13 +144,31 @@ internal sealed class ParkScreams
 		return chain;
 	}
 
-	/// <summary>Takes every chain down, as the park ends.</summary>
+	/// <summary>
+	/// Forgets a script's chain without stopping it: the engine's refused second <c>STARTSCREAM</c>, which
+	/// stores its nought over the handle (<c>0x00555ee6</c>). The chain screams on, and no stop keyed by the
+	/// script reaches it again.
+	/// </summary>
+	/// <returns>The chain let go, or null if the script held none.</returns>
+	internal Chain? LetGo( int scriptId )
+	{
+		if ( !_chains.Remove( scriptId, out var chain ) )
+			return null;
+
+		chain.HeldByNothing = true;
+		_letGo.Add( (scriptId, chain) );
+
+		return chain;
+	}
+
+	/// <summary>Takes every chain down, as the park ends, the ones held by nothing with them.</summary>
 	internal void StopAll()
 	{
-		foreach ( var chain in _chains.Values )
+		foreach ( var chain in _chains.Values.Concat( _letGo.Select( letGo => letGo.Chain ) ) )
 			chain.Voice?.Stop();
 
 		_chains.Clear();
+		_letGo.Clear();
 	}
 
 	/// <summary>
@@ -161,7 +196,8 @@ internal sealed class ParkScreams
 		chain.Sample = chain.Voice?.Name ?? "";
 
 		Log.Info( $"Park audio: script {scriptId} scream {chain.Plays}, effect {chain.Effect} "
-			+ $"variation {next + 1} sample '{chain.Sample}', the next in {gap} ms" );
+			+ $"variation {next + 1} sample '{chain.Sample}', the next in {gap} ms"
+			+ (chain.HeldByNothing ? ", held by nothing" : "") );
 	}
 
 	/// <summary>

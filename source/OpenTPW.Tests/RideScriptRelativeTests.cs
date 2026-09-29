@@ -641,4 +641,37 @@ public class RideScriptRelativeTests
 
 		Assert.IsFalse( seen.Contains( 4 ), "the script with a different name was found" );
 	}
+
+	/// <summary>
+	/// The generator's state <c>0x80000000</c> draws <c>0x40000000</c> here as it does for <c>RAND</c>, because
+	/// this opcode halves with an unsigned <c>SHR</c> too (<c>0x005560d0</c>). Among three of one name, newest
+	/// first 4, 3, 2, that is the remainder 1: the middle one.
+	/// </summary>
+	[TestMethod]
+	public void TheStateWithNoPositiveTwinPicksWhatAQuarterOfTheRangePicks()
+	{
+		var names = new[] { "Ghost Train" };
+
+		var seeker = Script( 1, names,
+			Word( Opcode.FINDSCRIPTRAND ), Str( 0 ), Var( 0 ),
+			Word( Opcode.END ) );
+
+		var scheduler = new RideScriptScheduler();
+
+		scheduler.Add( 1, seeker );
+
+		foreach ( var id in new[] { 2, 3, 4 } )
+		{
+			var named = Script( 0, names, Word( Opcode.NAME ), Str( 0 ), Word( Opcode.NOP ) );
+
+			scheduler.Add( id, named );
+			named.Turn( 0f );
+		}
+
+		// One step before 0x80000000: see RideScriptClockTests.TheStateWithNoPositiveTwinDrawsAQuarterOfTheRange.
+		seeker.SeedRandom( 0x2B625FE5u );
+		seeker.Turn( 0f );
+
+		Assert.AreEqual( new[] { 4, 3, 2 }[0x40000000 % 3], seeker.Variables[0], "the draw 0x40000000 picks among 4, 3, 2" );
+	}
 }

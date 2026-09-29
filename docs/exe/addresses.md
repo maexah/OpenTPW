@@ -452,7 +452,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00512a5e` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00512b4c` | | OpenTPW/World/Weather/Lightning.cs  |
 | `0x00515865` | | OpenTPW/Global/GameCalendar.cs OpenTPW/World/Level.cs OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x0051635f` | World generator FUN_00516330: NEG leaves 0x80000000 unchanged, which RAND and FINDSCRIPTRAND then halve | OpenTPW/VM/RideScript.cs  |
+| `0x0051635f` | World generator FUN_00516330: NEG leaves 0x80000000 unchanged, which RAND and FINDSCRIPTRAND then halve | OpenTPW.Tests/RideScriptClockTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x00516394` | Thing sweep `FUN_00516380`: `mGameTick` up by one | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkState.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00516d13` | World save `FUN_00516c80`: installs the idle mode before anything is written, so leaving a park lets go of the hand | OpenTPW/World/Level.cs  |
 | `0x00517bec` | World load: `mGameTick` read from the save | OpenTPW/World/Park/PeepBehaviour.cs  |
@@ -669,9 +669,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005555e9` | RSSE BOUNCESETNODE: the raw operand word stored to +0x70, no tag test | OpenTPW/VM/RideScript.cs  |
 | `0x00555939` | RSSE store tail: +0x48, then the variable only for a 0x40 operand (POP, HOP and others) | OpenTPW.Tests/RideScriptStackTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x00555afe` | RSSE WALKON: after FUN_00556f40 returns, nothing writes +0x48 | OpenTPW.Tests/RideScriptStackTests.cs OpenTPW/VM/RideScript.cs  |
-| `0x00555ee6` | RSSE STARTSCREAM: the new handle, or a refusal's 0, stored over +0xd0 | OpenTPW/World/Park/ParkAudio.cs  |
+| `0x00555ee6` | RSSE STARTSCREAM: the new handle, or a refusal's 0, stored over +0xd0 | OpenTPW.Tests/ParkScreamChainTests.cs OpenTPW/VM/RideScript.cs OpenTPW/World/Park/ParkAudio.cs OpenTPW/World/Park/ParkScreams.cs  |
 | `0x00555f6b` | `SINGLESCREAM` picks its branch on the second operand (`CMP ESI,EDI / JGE`) | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x00556009` | `SCREAMLEVEL` writes the volume call's return over the scream handle at `+0xd0` | OpenTPW/World/Park/ParkAudio.cs  |
+| `0x005560d0` | RSSE FINDSCRIPTRAND: SHR 1, an unsigned halving of the generator's answer, as RAND's at 0x0055398f | OpenTPW.Tests/RideScriptRelativeTests.cs  |
 | `0x0055641b` | | OpenTPW/VM/RideScript.cs  |
 | `0x0055646d` | | OpenTPW/VM/RideScript.cs  |
 | `0x005567a3` | RSSE dispatcher: a word without the opcode tag logs "Bad instruction" and parks | OpenTPW.Tests/RideScriptStackTests.cs  |

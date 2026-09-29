@@ -425,10 +425,10 @@ aims at the back cell's centre. An 8.8 sub byte becomes a navigator coordinate a
 arrival radius is the same (`DefaultRadius = One / 5`, times 1.6), and so is a route of no length arriving at once:
 `FUN_0050fd40` answers `0x10000` when its total `+0xa0` is nought (`0x0050fda8`), as `PeepNavigator.Progress` does.
 **Where it still differs.** The jitter draws from `PeepBehaviour`'s `System.Random`: `RideScript.NextDraw` reproduces
-`FUN_00516330` exactly (bar `Math.Abs` of `int.MinValue`, which throws where the engine answers `0x80000000`), then
-halves it as `RAND`'s `SHR 1` does, but per script and seeded 1, and the engine's own seed is not established,
-so only the range and the one draw a call are the
-original's. A direction neither switch knows stands the point at the cell's centre, counted
+`FUN_00516330` exactly, `0x80000000` included, then halves it as `RAND`'s unsigned `SHR 1` does, but per script and
+seeded 1, and the engine's own seed is not established, so only the range and the one draw a call are the original's.
+Seed 1's cycle, 248,316,293 states, never meets `0x80000000`, which lies on another of 1,300,914,561.
+A direction neither switch knows stands the point at the cell's centre, counted
 `QUEUE_PLACE_DODGY_DIRECTION`, where the original routes with whatever its stack held. A place past the queue's cells
 is refused before routing, where the original routes to (127, 255) and fails. `FUN_004fa5f0`'s stranded refusal is
 absent: nothing keeps `mStrandedTime`. State 10's own arms, the gates' side effects and the chooser's in-walk routing
@@ -2225,7 +2225,7 @@ The family's dispatch-table handlers sit at **`0x00555e5e`** (86), **`0x00555ef7
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
-| `FUN_00551130` | `STARTSCREAM` | Opcode **86**, 2 operands. **Refuses if a scream handle is already held**, logging `"RSSE: Started screaming without s…"`, and then stores the refusal's 0 over `+0xd0` (`0x00555ee6`), so the old chain screams on unstopped. Operand 2 bands the sample: 0 plays nothing, 1 → effect **0x47**, 2-3 → **0x48**, 4-7 → **0x49**, 8+ → **0x4a**. Straight after the play it sets the voice's **parameter 6** to `(operand + speed) / 2` via `FUN_0051bc40` (`0x00551261`..`0x00551265`). The handle is kept on the script at **`+0xd0`**. | Its own string |
+| `FUN_00551130` | `STARTSCREAM` | Opcode **86**, 2 operands. **Refuses if a scream handle is already held**, logging `"RSSE: Started screaming without stopping first."` (`0x00765a4c`), and then stores the refusal's 0 over `+0xd0` (`0x00555ee6`), so the old chain screams on unstopped. The first operand bands the sample: 0 plays nothing, 1 → effect **0x47**, 2-3 → **0x48**, 4-7 → **0x49**, 8+ → **0x4a**. Straight after the play it sets the voice's **parameter 6** to `(second operand + speed) / 2` via `FUN_0051bc40` (`0x00551261`..`0x00551265`). The handle is kept on the script at **`+0xd0`**. | Its own string |
 | — | `STOPSCREAM` | Opcode **87**, 0 operands. Calls `Sound_StopFading` on the held handle when there is one, and clears `+0xd0` (`0x00555ef7`..`0x00555f0a`). For a held scream that is a **hard cut** of its chain's newest child, fading on or off - see `audio.md`, "How the engine plays an effect". | Disassembly |
 | `FUN_00551320` | `SINGLESCREAM` | Opcode **88**, 2 operands. A **4×4 grid**: the same first-operand band crossed with `(a+b)/0x32` clamped 0..3, giving ids **0x4b..0x5a**. So 71-74 are the held screams (chains of one-shot children, `audio.md`) and 75-90 the one-shots. **It applies NO volume and keeps NO handle** — every arm calls `Sound_PlayEffect` and returns it, and the handler at `0x00555f1b` throws the result away rather than storing it at `+0xd0` or `+0x48`. Fire and forget. | Disassembly |
 | `FUN_00551560` | — | `SINGLESCREAM`'s **negative branch**, `if ( operand2 < 0 )`: picks on band alone — 1 → **0x69**, 2-3 → **0x6a**, 4-7 → **0x6c**, 8+ → **0x6d** — and sets no volume. **0x6b is skipped; that is the original's own gap, not a transcription slip.** | Disassembly |
@@ -2271,6 +2271,8 @@ The variety is not inside the sound engine. It is `Bouncy.RSE`'s own subroutine 
 ```
 
 So **the band operand is the rider count**, and the scream is torn down and restarted whenever that count changes, even inside one of `STARTSCREAM`'s own bands (1, 2-3, 4-7, 8+). `COPY VAR_SCREAMING, 65535` at instruction **17** seeds the cache with -1, a value `BOUNCING` can never return, so the first pass always starts one. This is also why `STOPSCREAM` outnumbers `STARTSCREAM` two to one across the corpus: the pair is a restart idiom, not a start/stop pair.
+
+**No shipped script starts a scream over a held one.** Walked over all 308 from word 0 (`q176/screamwalk.py`), every path with an exact `JSR` stack and both arms of every branch, the held bit carried per path: each of the 40 `STARTSCREAM`s is reached only with `+0xd0` nought, because a `STOPSCREAM` stands between it and any earlier start on every path. The control, a `STOPSCREAM` that keeps the handle, finds all 40 held. A load does not change that: the save reader reads `+0xd0` back with the struct and does not clear it (`FUN_005597a0`), so a script saved screaming resumes holding the saving session's handle, and its next `STOPSCREAM` clears it before any start. What `Sound_StopFading` does with that stale handle is not traced. Alexah's Full Simulation saves hold 12 such scripts (Spider, Inca God, Pork Pie and Bouncy in the jungle, Flowspin and Big Apple in fantasy, each in two saves), and each resumes onto a path that reaches a `STOPSCREAM` first. **A chain let go screams until something stops every voice**: the park's end, or accepting the options after an audio-quality change (`0x00423847`); nothing else reaches it, since nothing else in the script system reads or writes a script's `+0xd0`. **OpenTPW builds the refusal** (Q176): `ParkAudio.Scream` refuses a script already holding a scream, logs the engine's line, and lets the held chain go (`ParkScreams.LetGo`), so it screams on held by nothing, missed by the script's `STOPSCREAM` and by the flat destructor (`RideScriptScheduler.Release`, which stops a held one), until the park ends: OpenTPW's options restart no sound. The `rides` census counts these as `screams let go`. `RideScript.Screaming` asks `ParkAudio` what the script holds. A loaded script holds no scream here.
 
 ## A held scream is REPLAYED, by a chain in the executable
 
