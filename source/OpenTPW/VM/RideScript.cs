@@ -105,6 +105,10 @@ public sealed class RideScript
 	/// <b>past</b> - see <see cref="WaitOutAnimation"/> - and a plain float testing <c>&lt;= 0</c> would
 	/// read that back as an empty slot and arm it again every visit, so the script would never move.
 	/// </para>
+	/// <para>
+	/// A load leaves it null, where the engine restores the saved deadline, so a script saved on a
+	/// <c>WAIT</c> or a <c>WAITANIM</c> waits it out again in full (docs/QUEUE.md Q174c).
+	/// </para>
 	/// </summary>
 	private float? _waitUntil;
 
@@ -116,14 +120,22 @@ public sealed class RideScript
 
 	/// <summary>
 	/// When the animation last triggered finishes - the engine's field <c>+0xa4</c>, and <b>not</b> the
-	/// one <c>WAIT</c> uses. <c>TRIGANIM</c> arms it, <c>LOOPANIM</c> clears it, and <c>WAIT4ANIM</c> is
-	/// the only instruction that reads it. Null when nothing has been triggered.
+	/// one <c>WAIT</c> uses. <c>TRIGANIM</c>, <c>TRIGANIM_CH</c> and <c>TRIGWAITANIM</c> arm it (the engine's
+	/// <c>TRIGANIMSPEED</c> too, counted here), <c>LOOPANIM</c>, <c>LOOPANIM_CH</c> and a passed
+	/// <c>WAIT4ANIM</c> clear it, and <c>WAIT4ANIM</c> is the only instruction that reads it. Null when
+	/// nothing has been triggered, and after a load, where the engine restores the saved deadline
+	/// (docs/QUEUE.md Q174c). The engine's <c>WAITANIM</c> clears it too, which
+	/// <see cref="WaitOutAnimation"/> does not (docs/QUEUE.md Q174b).
 	/// </summary>
 	private float? _animationUntil;
 
 	/// <summary>
 	/// Which animation is looping - the engine's field <c>+0xa8</c>, holding the key
 	/// <c>(second &lt;&lt; 16) + first</c>, and <see cref="OneShot"/> after a one-shot trigger.
+	/// It starts at nought, where the engine's loader writes <see cref="OneShot"/> (<c>0x00558c4f</c>), a
+	/// difference no shipped <c>LOOPANIM</c> meets, as none has the key nought; a load leaves it at nought
+	/// where the engine restores the saved key (docs/QUEUE.md Q174c); and the engine's <c>WAITANIM</c> sets
+	/// it to <see cref="OneShot"/>, which <see cref="WaitOutAnimation"/> does not (docs/QUEUE.md Q174b).
 	/// </summary>
 	private int _looping;
 
@@ -131,14 +143,15 @@ public sealed class RideScript
 	/// What <c>TRIGWAITANIM</c> is holding out for - the engine's field <c>+0xbc</c>, holding the role it
 	/// triggered <b>plus one</b>, and nought for "not armed". The plus one is the engine's own and is not
 	/// tidiable away: nought has to mean unarmed, so role nought could not be told from it otherwise.
+	/// A load leaves it at nought, where the engine restores the saved mark; no shipped or played save
+	/// holds one armed (docs/QUEUE.md Q174c).
 	/// </summary>
 	private int _animationMark;
 
 	/// <summary>
-	/// What a one-shot <c>TRIGANIM</c> leaves in <see cref="_looping"/>. No <c>LOOPANIM</c> can name it:
-	/// its key is built from two operands the engine sign-extends from sixteen bits, so a literal
-	/// 65535 arrives as -1. That is why a trigger always leaves the next <c>LOOPANIM</c> looking like a
-	/// change.
+	/// What a one-shot <c>TRIGANIM</c> leaves in <see cref="_looping"/>. No shipped <c>LOOPANIM</c> names
+	/// it, so a trigger leaves the next one looking like a change. One could: the key is a sum of two
+	/// operands, a literal one sign-extended from sixteen bits, so role -1 with entry 1 makes it.
 	/// </summary>
 	private const int OneShot = 0xFFFF;
 
@@ -910,9 +923,9 @@ public sealed class RideScript
 		// players once per FRAME, off a clock snapshot taken outside the fixed-step loop the scripts run in,
 		// and never from the script system: FUN_004735d0, which advances and poses, has exactly ONE caller
 		// (FUN_00473c70, at 00473d2e), and not one of that function's ten call sites is FUN_005516b0 or sits
-		// inside the 31ms loop. The park's are FUN_0044e410(2), FUN_00429df0(0), FUN_00429df0(1) and the
-		// draw's FUN_0044e410(3), all of them past the loop's back edge in Game_StateMachine. ParkObjects.Sweep
-		// is where that lives here.
+		// inside the 31ms loop. The park's are FUN_0044e410(2), FUN_00429df0(0), FUN_00429df0(1), and the
+		// draw's FUN_0044e410(3) and FUN_0044e380 (the on-screen models' route), all of them past the loop's
+		// back edge in Game_StateMachine. ParkObjects.Sweep is where that lives here.
 		//
 		// Advancing per tick would promote a queued clip mid-catch-up: with three ticks due, a clip
 		// ending on the first would have its successor running before the second tick's instructions
@@ -920,8 +933,10 @@ public sealed class RideScript
 		// is the same either way - ParkRides hands the sweep Ticks * 31, which is exactly the instant its
 		// last tick ran at - so the difference is only what a script can see PART WAY THROUGH a long frame.
 		//
-		// Scripts stay correct without it because every path that reads channel state to answer one goes
-		// through RideAnimations.Trigger, and that calls MoveTo on the channel itself before deciding.
+		// A script reads channel state through RideAnimations.Trigger, which calls MoveTo on the channel
+		// before deciding - a deviation, since the engine decides on the last frame's advance - and through
+		// RoleOn, which reads it as the last sweep left it, as the engine does (docs/exe/park.md, "Where
+		// OpenTPW's animation state parts from the engine's").
 
 		StepTheWalks( now );
 
@@ -2826,14 +2841,17 @@ public sealed class RideScript
 	/// <para>
 	/// <b>And re-entry asks <see cref="RoleOn"/></b>, which answers -1 for a channel holding its pose, where
 	/// the engine reads channel nought's role raw: a clip already held when the wait re-enters keeps this
-	/// waiting where the engine goes on - a deviation, docs/QUEUE.md Q174.
+	/// waiting where the engine goes on - a deviation no shipped clip is short enough to reach at a normal
+	/// frame rate, docs/QUEUE.md Q174b.
 	/// </para>
 	///
 	/// <para>
-	/// <b>What this deliberately does not defend against</b> is a trigger queued behind a clip that LOOPS,
-	/// which never ends and so never lets the queued one start. No vehicle script does it - each triggers
-	/// onto a channel it has not set looping - and an invented timeout would be a worse answer than the
-	/// engine's own, so none is put here.
+	/// <b>A trigger queued behind a looping clip waits for the loop's cycle to end</b>, where the queue is
+	/// promoted before the loop replays, as in the engine. Two cases part from it: a cycle that ended since
+	/// the last frame's advance lets the trigger start at once here (see <see cref="RideAnimations.Trigger"/>),
+	/// and after a close and reopen, or a breakdown and repair, the loop was skipped (see
+	/// <see cref="WaitOutAnimation"/>), so the wait passes at once. The Volcano, the Spider, the Monkey ride
+	/// and the Inca God meet both.
 	/// </para>
 	/// </summary>
 	private void TriggerAndWaitForAnimation( float now, IReadOnlyList<RideOperand> operands, int length )
@@ -2978,7 +2996,8 @@ public sealed class RideScript
 	///
 	/// <para>
 	/// <b>This starts the clip rather than asking about it.</b> The engine
-	/// takes the channel over only when it is idle, finished or frozen; otherwise the clip goes in a queue
+	/// takes the channel over only when it is idle, finished, held or frozen, or in the rarer cases
+	/// <see cref="RideAnimations.Trigger"/> lists; otherwise the clip goes in a queue
 	/// and the answer becomes <b>the time still to run plus the new clip's length</b>, the two truncated
 	/// separately. So what a script is told stops equalling
 	/// <see cref="RideAnimations.DurationMilliseconds"/> as soon as two triggers land inside one clip -
@@ -3016,7 +3035,8 @@ public sealed class RideScript
 	/// matter. It stores the length-less-300 as the <b>low half of a qword whose high half is nought</b>
 	/// and does a <c>FILD qword</c>, so -300 is read as 4,294,966,996; <c>__ftol</c> converts that
 	/// exactly (it is a <c>FISTP qword</c> that hands back the low dword, so nothing overflows) and
-	/// -300 comes back out. It then compares against the 300 floor <b>unsigned</b>, which a negative
+	/// -300 comes back out - at the divisor 1, the only one this keeps; the engine divides the qword by
+	/// the script's speed divisor first, which lands elsewhere (docs/QUEUE.md Q155). It then compares against the 300 floor <b>unsigned</b>, which a negative
 	/// passes. So the deadline is <c>clock - 300</c> - already past - and the instruction rewinds and
 	/// gives up the turn anyway, because the engine sets the deadline without looking at it. The next
 	/// turn walks straight through.
@@ -3031,7 +3051,9 @@ public sealed class RideScript
 	///
 	/// <para>
 	/// <b>And one not yet built:</b> the first visit also clears the <c>WAIT4ANIM</c> deadline and sets the
-	/// looping key to <c>0xffff</c> (<c>0x00552b14</c>), which this does not - docs/QUEUE.md Q174.
+	/// looping key to <c>0xffff</c> (<c>0x00552b14</c>), which this does not, so a <c>LOOPANIM</c> of the key
+	/// last looped is skipped where the engine's starts the loop again - at the end of every Aztec Mayhem
+	/// ride - docs/QUEUE.md Q174b.
 	/// </para>
 	/// </summary>
 	private void WaitOutAnimation( float now, int role, int entry, int length )
@@ -3065,8 +3087,8 @@ public sealed class RideScript
 	/// Asking again for the animation already running is the engine's early exit and does nothing at
 	/// all - which matters because the other path <b>clears the <c>WAIT4ANIM</c> deadline</b>: a loop
 	/// never finishes, so there is nothing left to wait for. <b>That guard is load-bearing</b>: this
-	/// really does start the clip, so without it a script sitting in a loop would
-	/// restart its animation on every single turn and hold it at the first frame for ever. The Drinks Shop
+	/// really does trigger the clip, so without it a script sitting in a loop would queue the loop again
+	/// behind itself every turn and clear the <c>WAIT4ANIM</c> deadline each time. The Drinks Shop
 	/// runs <c>LOOPANIM 5 0</c> twice and the Belly Bounce <c>LOOPANIM 2 0</c> twice, so it is reached by
 	/// shipped content and not only in principle.
 	/// </para>
@@ -3078,8 +3100,8 @@ public sealed class RideScript
 	/// </summary>
 	private void Loop( float now, int role, int entry )
 	{
-		// The key the engine compares is built by addition rather than by an or, which differs only if a
-		// variable holds more than sixteen bits.
+		// The key the engine compares is built by addition rather than by an or, which differs for a
+		// negative role or a variable holding more than sixteen bits.
 		var key = (entry << 16) + role;
 
 		if ( _looping == key )

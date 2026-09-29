@@ -69,7 +69,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
 - With no work the mechanic, handyman and entertainer stand where the original's walk about (Q133); staff make no
   sound (Q135). Guests and rides read `GameClock.Ticks / 8`, not `mGameTick` (Q132); a load brings one guest (Q26); the bus waits (Q131).
 - Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), riding a ride walked into in first person,
-  and a coaster's excitement, its level. **The Hot Pot lets no rider off** (Q179).
+  and a coaster's excitement, its level. **The Hot Pot lets no rider off** (Q179); **after a ride the Aztec Mayhem does not loop** (Q174b).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
   walk (Q121), and a park screen stays open over it (Q122). It walks onto entrances the original shuts (Q140).
@@ -77,7 +77,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q101, Q165, Q166, Q169-Q173 are ticked**; next **Q174**. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q101, Q165, Q166, Q169-Q174 are ticked**; next **Q174b**. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -108,12 +108,12 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1312**, 0 fail, 0 skip with the game | 2026-09-29, after Q173 |
-| Tests without the game | **522** ran, **790** skipped, of 1312 | 2026-09-29, after Q173 |
-| Build warnings | 123 | 2026-09-29, after Q173 |
+| Tests | **1312**, 0 fail, 0 skip with the game | 2026-09-29, after Q174 |
+| Tests without the game | **522** ran, **790** skipped, of 1312 | 2026-09-29, after Q174 |
+| Build warnings | 123 | 2026-09-29, after Q174 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-29 (Q173, the build).** `alexah/180-the-longest-queue`. **Earlier:** each QUEUE.md entry
-names its branch: `179` (Q172b) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-09-29 (Q174, the decode).** `alexah/181-decode-the-animation-waits`. **Earlier:** each QUEUE.md entry
+names its branch: `180` (Q173) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

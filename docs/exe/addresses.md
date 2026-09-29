@@ -78,6 +78,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0043837d` | SAOC loader: node +0x140, the clash count, restored from header +0x1c last | OpenTPW.Files/Formats/Save/ParkCoasters.cs OpenTPW/World/Park/ParkRideChoice.cs  |
 | `0x0044b220` | | OpenTPW.Files/Formats/Model/ModelFile.cs  |
 | `0x0044b2e0` | | OpenTPW/World/Advisor/AdvisorModel.cs  |
+| `0x0044e4b7` | FUN_0044e410( 3 ), the off-screen sweep: FUN_00473c70 called with flags 8 (no rest pose, no hide list) | OpenTPW/World/Ride/AnimTimeControl.cs  |
 | `0x0045aa5a` | | OpenTPW/Client/Players.cs  |
 | `0x0045aa74` | | OpenTPW/Client/Game.cs OpenTPW/Client/Players.cs  |
 | `0x0045aab4` | | OpenTPW.Files/Formats/Save/ConfigFile.cs  |
@@ -102,15 +103,19 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00471d32` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x00472f60` | | OpenTPW.Files/Formats/Model/AnimationFile.cs OpenTPW/World/Lobby/LobbyScript.cs  |
 | `0x00472fdd` | | OpenTPW/World/Ride/AnimTimeControl.cs  |
+| `0x0047308f` | FUN_00472f60's start: an entry past a loaded role's clips read from past the table, the role standing | OpenTPW/World/Ride/RideAnimations.cs  |
+| `0x00473193` | FUN_00472f60, the hold (role 14): AnimTime set a whole clip past the start stamp | OpenTPW/World/Ride/AnimTimeControl.cs  |
 | `0x004732a0` | The animation trigger: plays entry N of role R on a model channel, once or looped, queued behind a clip still part-way through unless the flags carry `0x2` (`park.md`); the lobby's gate and isle reach it through `0x005d83f0` with role 5, M (`lobby.md`, "Escape cancels the fly-in") | OpenTPW/World/Lobby/LobbyGate.cs  |
-| `0x004732c2` | | OpenTPW/World/Ride/AnimTimeControl.cs  |
+| `0x004732e5` | FUN_004732a0: the first of its seven take-over gates (to 0x00473344) | OpenTPW/World/Ride/AnimTimeControl.cs  |
 | `0x0047337b` | | OpenTPW.Tests/RideScriptModelTests.cs OpenTPW/World/Ride/AnimTimeControl.cs  |
 | `0x004733b1` | | OpenTPW.Files/Formats/Model/AnimationFile.cs OpenTPW/World/Ride/RideAnimations.cs  |
 | `0x004733cc` | | OpenTPW.Files/Formats/Model/AnimationFile.cs OpenTPW.Tests/RideScriptModelTests.cs  |
 | `0x004733d6` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x004733db` | | OpenTPW.Files/Formats/Model/AnimationFile.cs OpenTPW/World/Ride/RideAnimations.cs  |
 | `0x004733e7` | | OpenTPW/World/Ride/RideAnimations.cs  |
+| `0x004736e7` | Channel advance FUN_004735d0: a held channel re-pinned, AnimTime a whole clip past the start | OpenTPW/World/Ride/AnimTimeControl.cs  |
 | `0x004738a3` | | OpenTPW.Tests/AnimTimeControlTests.cs OpenTPW/World/Ride/AnimTimeControl.cs  |
+| `0x00473f32` | FUN_00473e30: model+4 gains 0x10 when no role past nought has clips (the stall-and-stop ending) | OpenTPW/World/Ride/RideAnimations.cs  |
 | `0x00474070` | | OpenTPW.Files/Formats/Model/AnimationFile.cs OpenTPW/World/Lobby/LobbyScript.cs  |
 | `0x00474840` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x00474bf0` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
@@ -653,6 +658,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00556fce` | WALKON FUN_00556f40: the leg from the distance between the walk and head nodes, x100, nought to 100 | OpenTPW/VM/RideScript.cs  |
 | `0x00557276` | WALKOFF FUN_005571a0: a new leg from the distance between the off-from and off-to nodes, x100 | OpenTPW/VM/RideScript.cs  |
 | `0x005587f0` | | OpenTPW.Files/Formats/Script/RideScriptFile.cs  |
+| `0x00558c4f` | Script loader FUN_005587f0: +0xa8, the looping key, starts at 0xffff | OpenTPW/VM/RideScript.cs  |
 | `0x00558d2e` | | OpenTPW/VM/RideScript.cs  |
 | `0x00558d5b` | | OpenTPW/VM/RideScript.cs  |
 | `0x00558d68` | | OpenTPW/VM/RideScript.cs  |

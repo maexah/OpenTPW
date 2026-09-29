@@ -408,6 +408,8 @@ What OpenTPW's orbit camera shows past the ground's edge is the **fog-cleared ba
 | `FUN_00402ea0(rate)` | — | Enters the fixed-step latch: `+0x40 = 1000 / rate`, `+0x3c = elapsed + 0x44` |
 | `FUN_00402ef0` | — | Advances `+0x3c` by `+0x40` |
 | `FUN_00402ed0` | — | Leaves the latch, setting `+0x44` so time is continuous across the switch |
+| `FUN_00402e60` | — | The save's snapshot: `+0x4c` = the clock's reading (`0x00402e6b`), `+0x74` = the second stopwatch's; the `KOLC` module holds both |
+| `FUN_004031f0` | — | Makes the clock read `+0x4c`: `+0x48 = +0x4c - FUN_00402f10()` (`0x004031fd`). A load reads `+0x4c` back (`FUN_004031b0`, `0x004031c2`) and calls this through `FUN_00402e80` (`0x00415193`), unless `FUN_00414d40` runs in mode 1 (`0x004150ae`), so a saved script's deadlines (`+0xa0`, `+0xa4`) keep their meaning |
 
 Three layers of clock state:
 

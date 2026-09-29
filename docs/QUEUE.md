@@ -2125,7 +2125,58 @@ artifacts are listed in `docs/history/README.md`.
   the disassembly shows (`0x004dda56`..`0x004ddb51`), and build both. Confirm: `unimplemented` without the two, and the
   Belly Bounce's capacity in a census, predicted first.
 
-- [ ] **Q174. Two animation-state differences in the triggers. Decode first.** Found by Q166's decode. (1) `TRIGWAITANIM`'s
+- [x] **Q174. Two animation-state differences in the triggers: the decode.** Done 2026-09-29,
+  `alexah/181-decode-the-animation-waits`. Decode only; the build is Q174b. `park.md`, "The animation opcodes" (its
+  table, `LOOPANIM`'s guard, `+0xe4`, the `TRIGWAITANIM` re-entry) and its new "Where OpenTPW's animation state parts
+  from the engine's"; the channel section corrected (the held flag, the take-over gates, "finished" as the last advance
+  left it, an entry past a role's count, both advance routes, the idle default that never fires on a thing's model, a
+  new build's frozen role 0); `ride-operation.md`'s hold and its `RSYS` restore; `park-engine.md`, the clock's save and
+  restore. FileFormats `saves.md`, the script struct's `0xa0`, `0xa4`, `0xa8`, `0xbc` and `0xe4` and the saved clock
+  (`docs/save-module-chain`), and `vm/instructions.md` (`docs/rsse-instruction-set`). Comments corrected at their sites;
+  no code changed.
+  - **Decoded** (`wf_05e40d85-135`): two read-only decoders, each put to a skeptic in Ghidra (68 verdicts: 50 upheld, 18
+    amended, none refuted; 15 points the decoders missed), two corpus walkers written apart that agree site for site,
+    and a reach measure over all 133 `TRIGWAITANIM`s with each target clip's length. Re-read first-hand: the re-entry
+    at `0x00552cfc`..`0x00552d11` and `FUN_00473fb0`, `WAITANIM`'s first visit to `0x00552b1a` on both paths,
+    `TRIGWAITANIM`'s inline writes, `WAIT4ANIM`'s clear, the loader's `0xffff`, the scheduler's `+0xe4` push and its
+    three floats, the build's frozen role 0, the idle default's gate, the `0xf9` clears and `FUN_00473e30`'s `0x10`;
+    the Easymode records measured again with my own reader (`~/.cache/tpw-harnesses/q174/mysave.py`, where the
+    decode's JSON, walkers and reach scripts are kept too).
+  - **The answer.** `WAITANIM`'s writes are reached: 55 `LOOPANIM`s skip where the engine starts the loop again, 7 in
+    Lost Kingdom, and the Aztec Mayhem's at the end of every ride; its `+0xa4` half only at space `hoverbot` @259,
+    invisible. `TRIGWAITANIM`'s raw role is not reached at a normal frame rate: a held re-entry needs a target clip under
+    about 2200 ms queued and played out between two turns; in Lost Kingdom only `Monkey` 202 (1999 ms) comes near,
+    after one frame of 58 ticks or more, and across the corpus 8 uses can, the nearest Hallowe'en's `Firework` 67 after
+    one of 20 ticks or more. Found beside them (`park.md`, differences 3 to 5): the trigger's `MoveTo` passes a
+    `TRIGWAITANIM` a turn early at a loop's cycle end (8 Lost Kingdom uses); a load restores none of `+0xa0`, `+0xa4`,
+    `+0xa8` and `+0xbc` and restarts every saved channel (the Easymode cameras' waits and the Belly Bounce's key 2 on
+    every load; six scripts in Alexah's jungle `New Save.TPWS`); and a start keeps no stale held bit (no Lost Kingdom
+    path).
+  - **Measured in the game** (the build before any change; throwaway `q174-instrument.py`, which keeps the engine's
+    fields beside OpenTPW's and counts where they decide apart; `q174run.py`, silent, the stock jungle park, predicted
+    first; `save/` unchanged; `q174-run1/`): a bought Aztec Mayhem, its queue joined, rode three cycles and counted
+    `LPdivSkip` 3, one at word 17 after each `WAITANIM 6, 0`, and stood on role 6 held (`0x14`) between rides; no
+    `TRIGWAITANIM` split over the ferry (3 first visits, 3 re-entries), the seaplane (3, 3), a Mammoth Fountain (26,
+    60) and a Lava Fountain (21, 48); no early take-over and no `WAIT4ANIM` split. Photographed paused beside that
+    census (`C2-held-paused-z70-marked.png`), and the fountains (`C3-1405.png`, `C3-1421.png`).
+  - **Predictions wrong**: the load reading, where I predicted no split, already held the Belly Bounce's one
+    `LPdivStart`, because the park ran 2.5 s before the harness paused it; I had predicted that split later, in the
+    running stock park. The same check also failed on the ferry and seaplane, which it counted with the fourteen saved
+    scripts; their first `TRIGWAITANIM` had run in those 2.5 s. Two fountain checks failed in the harness, which looked
+    them up by thing id, not script id; their rows read as predicted.
+  - **Not confirmed on screen**: the skip itself, since the Aztec Mayhem's loop and its hold look alike (a frame pair's
+    difference in its box is 0.20 looping and 0.44 held, noise); the raw role's held re-entry and the early pass, which
+    nothing reached; the save's deadlines in Alexah's save, which waits to load (Q167).
+  - **No test was added**: nothing was built.
+  - **Reviewed** (`wf_aabdaf8f-b16`, five read-only lenses, each put to a skeptic): 53 findings, 30 upheld, 19 amended,
+    4 refuted, and 14 more the skeptics raised; all taken. Among them: the queue split is 15 and 17, not 16 and 16; a
+    load also loses `+0xa0` and restarts every saved channel; the save's restore had no build item; a fifth difference;
+    stale copies in `ParkRides`, `ParkObjects`, `RideAnimations`, a test's comment and the FileFormats pages.
+  - **Found:** Q174b, Q174c; a note under Q155. Seen, not chased: `ParkRides` binds a fresh `RideAnimations.Load` for a
+    placed thing `ParkObjects` did not stand, and nothing advances that player, so a clip queued on it never starts;
+    whether any live thing takes it is not measured.
+
+  The item as written: Found by Q166's decode. (1) `TRIGWAITANIM`'s
   re-entry compares channel 0's role raw (`FUN_00473fb0`, `0x00552cfc`..`0x00552d0f`), where
   `RideScript.TriggerAndWaitForAnimation` asks `RoleOn`, which answers -1 for a channel holding its pose (flag `0x4`,
   which among the script handlers only `GETANIM` and `GETANIM_CH` test, `0x00552e05`, `0x0055374e`; the trigger
@@ -2134,6 +2185,30 @@ artifacts are listed in `docs/history/README.md`.
   (`0x00552b14`, `0x00552b1a`), which `WaitOutAnimation` does not, so a `WAIT4ANIM` after it waits on an older trigger's
   deadline and a `LOOPANIM` of the key last looped is skipped. Measure whether shipped content reaches either (133
   `TRIGWAITANIM`, 547 `WAITANIM`), then build. Confirm: `rides` over a Lost Kingdom `TRIGWAITANIM` ride through a cycle.
+
+- [ ] **Q174b. A `WAITANIM`'s two writes, `TRIGWAITANIM`'s raw role, and a trigger that asks the channel as the last
+  frame left it.** Found by Q174's decode (`park.md`, "Where OpenTPW's animation state parts from the engine's",
+  differences 1 to 3). (1) `WaitOutAnimation`'s first visit, model or not, sets `_animationUntil` to null and `_looping`
+  to `OneShot` after its deadline (`0x00552b14`, `0x00552b1a`); the re-entry writes neither. (2)
+  `TriggerAndWaitForAnimation`'s re-entry compares channel 0's `AnimID` plus one against the mark, not `RoleOn`'s
+  (`0x00552d01`..`0x00552d11`); `GETANIM_CH` keeps `RoleOn`. (3) `RideAnimations.Trigger` decides free or queued on the
+  channel as the last frame's advance left it, without its `MoveTo` (`0x00473315`). Confirm, each predicted first: the
+  Aztec Mayhem through a ride cycle, `rides` showing its `channels [0:role 2 ...]` looping between rides, where
+  Q174's run read `[0:role 6 entry 0 frame 50.0/50.0 HELD]` (`q174-run1/rides-C-end.txt`), photographed beside it; the
+  stock park's `rides` channel rows unchanged in role and flags; for (2), a test with channel 0 held on the marked role
+  at a re-entry that passes it, red with the change reverted; for (3), a test triggering onto a clip that ran out
+  after the last advance and finding the new one queued, red with the `MoveTo` put back.
+
+- [ ] **Q174c. A loaded script's four saved fields and its channels' timebase.** Found by Q174's decode and review
+  (`park.md`, "Where OpenTPW's animation state parts from the engine's", difference 4; `ride-operation.md`, the `RSYS`
+  restore). The engine reads each script's whole struct back and restores its channels as saved; OpenTPW's
+  `ParkRides.Resume` restores neither `+0xa0` (a `WAIT`'s or `WAITANIM`'s deadline), `+0xa4`, `+0xa8` nor `+0xbc`, and
+  `ParkRides.Restore` restarts each channel at frame nought at the load, dropping its queue. Read the four at the
+  boundary (FileFormats `saves.md`), rebase each deadline as now plus (saved deadline less the saved clock, `KOLC`'s
+  first dword), and restore each channel's stamps and queue against that clock. The shipped park reaches it on every
+  load: the cameras' `WAIT 5000` at word 14 with 2,341 and 2,329 ms left, the Belly Bounce's `WAIT 500` at word 46 with
+  63, and its saved key 2 at its `LOOPANIM 2, 0` at word 43. Confirm, predicted first: the Belly Bounce's `LOOPANIM 2,
+  0` no longer triggering after a load, and the cameras' first `WAITANIM` about 2.3 s after their first turn, not 5 s.
 
 - [ ] **Q175. A rider's walk off keeps the walk on's leg, where the original's works out its own. Decode first.** Found by
   Q166's decode (`WALKON`) and its refuter (`WALKOFF`). `FUN_00556f40` (`WALKON`) sets the slot's due time to now +
@@ -2735,6 +2810,12 @@ artifacts are listed in `docs/history/README.md`.
   `TRIGANIMSPEED` passes its rate / 1000 × the divisor (`0x00552f6e`), and its deadline, the length × 1000 / its rate,
   does not divide by it. The length a trigger answers does not depend on it (`FUN_00472f60`,
   `0x0047323e`..`0x00473258`).
+  From Q174: `+0xe4` is the play rate in thousandths. After every turn of a script with a model the scheduler writes
+  `(0.5 + 0.01 × speed) × +0xe4 / 1000` into every channel's queued speed `+0x30` (`0x00551789`), which a promotion
+  and a loop's replay start at; OpenTPW's promotion keeps the speed the clip was queued at. `TRIGANIMSPEED` leaves its rate
+  there (jungle `Gates` 4000). The Easymode Belly Bounce was saved looping at 1.1, and OpenTPW's second trigger at its
+  word 43 (`park.md`, "Where OpenTPW's animation state parts from the engine's", difference 4) replaces it at 1.0. With a divisor other than 1, a clip under 300 ms or no model makes
+  `WAITANIM`'s qword sum wrap `+0xa0` (`park.md`, "`WAITANIM` is NOT `TRIGANIM` with a wait").
 - [ ] **Q156. The staff screen's two happiness meters fill upward. Decode first.** Found by the 2026-09-26 staleness
   audit. `UiMeter` fills every meter from the bottom, a choice its remarks justify by the gadget's gauge housing being
   taller than wide (59 by 224); the staff screen's two `happygrad.wct` meters are 376 by 45 (`ParkStaffScreen`,

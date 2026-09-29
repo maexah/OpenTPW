@@ -148,8 +148,9 @@ public sealed class RideAnimations
 
 	/// <summary>
 	/// How long one entry of one role runs in frames, as the channel measures it, or nought where that role
-	/// and entry name nothing at all - which the engine treats as an instruction to stop rather than as an
-	/// error. See <see cref="DurationMilliseconds"/> for why the span is the declared one.
+	/// and entry name nothing at all. For a role the model lacks the engine stops the channel rather than
+	/// erring; for an entry past a loaded role's count it plays on (see <see cref="Trigger"/>). See
+	/// <see cref="DurationMilliseconds"/> for why the span is the declared one.
 	/// </summary>
 	public float FramesFor( int role, int entry )
 	{
@@ -219,8 +220,8 @@ public sealed class RideAnimations
 	///
 	/// <para>
 	/// <b>A trigger does not always start anything.</b> The channel is taken over only when it is idle,
-	/// finished, frozen, running a clip its own model no longer carries, or when the caller passes
-	/// <see cref="AnimTimeControl.StartAtOnceFlag"/>. Otherwise the clip is put in the queue and the answer
+	/// finished, held or frozen, running a clip its own model no longer carries, asked for a pseudo-role,
+	/// or when the caller passes <see cref="AnimTimeControl.StartAtOnceFlag"/>. Otherwise the clip is put in the queue and the answer
 	/// is <b>the time still to run on the current clip plus the length of the new one</b>, each truncated
 	/// separately - which is why a script that triggers twice in a row is told a longer time the second
 	/// time, and why that number stops being <see cref="DurationMilliseconds"/> the moment a park is
@@ -229,8 +230,11 @@ public sealed class RideAnimations
 	///
 	/// <para>
 	/// A role or entry the model does not carry answers a flat second, and the engine reaches that answer by
-	/// two different routes: the queue path adds 1000 outright, and the start path stops the channel and
-	/// answers nothing, which <c>FUN_004732a0</c>'s tail turns into 1000.
+	/// two different routes: the queue path adds 1000 outright, and the start path stops the channel for a
+	/// role it lacks and answers nothing, which <c>FUN_004732a0</c>'s tail turns into 1000. For an entry
+	/// past a loaded role's count the engine stops nothing: it plays whatever lies past that role's clips,
+	/// with the role standing (<c>0x0047308f</c>). This stops the channel for that too, a deviation no
+	/// literal reference reaches; eleven name the entry by a variable, none in Lost Kingdom.
 	/// </para>
 	/// </summary>
 	public int Trigger( int role, int entry, int flags, float speed, int now, int index = 0 )
@@ -238,11 +242,14 @@ public sealed class RideAnimations
 		if ( Channel( index ) is not { } channel )
 			return UnknownLength;
 
-		// The engine advances every channel once per frame from a snapshot of the game clock, outside the
-		// fixed-step loop the scripts run in (FUN_0044e410( 3 ), from the draw at 0054fb6c). The posing is
-		// ParkObjects.Sweep's, so
-		// all the timebase decides at a trigger is whether this channel counts as busy - and bringing it up to
-		// the asking moment first is what makes that question mean the same thing it means in the original.
+		// The engine advances every channel once per frame, after the frame's ticks, from a snapshot of the
+		// game clock. The posing is ParkObjects.Sweep's, so all the timebase decides at a trigger is whether
+		// this channel counts as busy. Bringing it up to the tick first is a deviation: the engine asks the
+		// channel as the last frame's advance left it, so a clip that ran out since then is busy there, and
+		// the new one queues and is promoted at the next frame's advance, its start carried back to the old
+		// clip's end - so a TRIGWAITANIM passes a turn later, and the answered length and the deadline count
+		// the old clip's remainder (docs/exe/park.md, "Where OpenTPW's animation state parts from the
+		// engine's").
 		channel.MoveTo( now );
 
 		var pseudo = role is AnimTimeControl.FreezeAtStart or AnimTimeControl.HoldAtEnd;
@@ -309,13 +316,14 @@ public sealed class RideAnimations
 	/// clip - the timebase half of <c>FUN_004735d0</c>.
 	///
 	/// <para>
-	/// <b>Two of the engine's five endings are unreachable here, and that is a fact about this program
-	/// rather than a simplification.</b> Which ending a finished channel gets is chosen by two bits of the
-	/// model's own flag word (<c>model+4 &amp; 0x18</c>): with them clear it promotes the queue, replays a
-	/// looping clip or holds the last frame, and with them set it stalls or stops and calls out to the
-	/// group that disposes of a ride vehicle. Nothing in this program sets those bits, so
-	/// the first three are the whole of what can happen, and the other two
-	/// are named here rather than silently dropped.
+	/// <b>Two of the engine's five endings are not built here.</b> A finished channel promotes its queue
+	/// first, whatever the model's flag word holds. Failing that, <c>model+4 &amp; 0x18</c> chooses: clear,
+	/// it replays a looping clip or holds the last frame; set, it stalls, or stops and calls out to the
+	/// group that disposes of a ride vehicle. Nothing here sets those bits. The engine sets <c>0x10</c> on a
+	/// thing's model whose only clips are role nought's (<c>0x00473f32</c>), and there parks a finished
+	/// channel at role 12 with its pose kept, where this holds it on role nought: 22 Lost Kingdom items, each
+	/// running one <c>WAITANIM 0, 0</c> and nothing that reads the channel afterwards. What the stall's model
+	/// flags change on screen is not decoded.
 	/// </para>
 	/// </summary>
 	public void Advance( int now )

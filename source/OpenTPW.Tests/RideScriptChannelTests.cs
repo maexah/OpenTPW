@@ -211,8 +211,9 @@ public class RideScriptChannelTests
 	///
 	/// <para>
 	/// <b>The difference is observable through the next <c>LOOPANIM</c>.</b> Its key for role 0 entry 0 is
-	/// nought, which is also what the field starts at - so after a <c>_CH</c> trigger the loop reads as
-	/// "already looping" and takes the engine's early exit, queueing nothing, whereas after a plain trigger
+	/// nought, which is what the field starts at here, where the engine's loader writes <c>0xFFFF</c> - a
+	/// difference no shipped <c>LOOPANIM</c> meets. So after a <c>_CH</c> trigger the loop reads here as
+	/// "already looping" and takes the early exit, queueing nothing, whereas after a plain trigger
 	/// the field holds <c>0xFFFF</c>, the keys differ, and the loop really is asked for. Copying
 	/// <c>TriggerAnimation</c> and adding a channel would fail this and nothing else.
 	/// </para>
@@ -238,7 +239,7 @@ public class RideScriptChannelTests
 			Word( Opcode.END ) ).Turn( 0f );
 
 		Assert.IsFalse( afterChannel.Channel( 0 )!.HasQueued,
-			"a _CH trigger leaves the key alone, so the loop matches it and takes the engine's early exit" );
+			"a _CH trigger leaves the key alone, so the loop matches its starting nought and takes the early exit" );
 	}
 
 	/// <summary>

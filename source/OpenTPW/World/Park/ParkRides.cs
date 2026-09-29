@@ -585,8 +585,9 @@ public sealed class ParkRides : Entity
 	/// </para>
 	///
 	/// <para>
-	/// The channel is started rather than having its timebase copied field by field: the file carries no
-	/// frame counts, and the engine recomputes <c>TotalAnimFrames</c> and <c>AnimFrame</c> on the way in.
+	/// The channel is started here at frame nought at the moment of the load, and a saved queue is dropped,
+	/// where the engine copies the saved time stamps and queue back and works the frame out from them, so it
+	/// resumes the clip mid-way - a deviation (docs/QUEUE.md Q174c).
 	/// <b>It does carry the speed, though, and that is restored</b>: the record's sixth dword lands on the
 	/// channel's <c>+0xc</c>, and while fourteen of the fifteen running channels are saved at 1, the Belly
 	/// Bounce is saved at <b>1.1</b>.
@@ -597,9 +598,10 @@ public sealed class ParkRides : Entity
 	/// holds, because <see cref="RideAnimations.Advance"/> carries the channel's own speed into both -
 	/// but the next trigger from the script replaces it, since <c>RideScript.StartAnimation</c> passes 1.0
 	/// where the engine's handlers push the script's speed divisor, 0.5 + 0.01 x the speed word
-	/// (<c>0x00552be4</c>) - the deviation docs/QUEUE.md Q155 names. The Belly Bounce's script does
-	/// reach its <c>LOOPANIM</c>s again about twenty seconds into a load, so for the one channel in this
-	/// park saved at anything but 1, what this fixes is that window and not the session. A thing whose
+	/// (<c>0x00552be4</c>) - the deviation docs/QUEUE.md Q155 names. The Belly Bounce's script reaches its
+	/// <c>LOOPANIM 2, 0</c> at word 43 about a second into a load, where the engine skips it on the saved
+	/// key and this queues the loop again, which replaces the restored one at the end of that cycle at 1.0;
+	/// so for the one channel in this park saved at anything but 1, the saved speed lasts that first cycle. A thing whose
 	/// resumed loop never re-triggers keeps its saved speed indefinitely; none here is such a thing.
 	/// </para>
 	/// </summary>
@@ -634,13 +636,10 @@ public sealed class ParkRides : Entity
 				channel.Flags & (AnimTimeControl.LoopFlag | AnimTimeControl.KeepShownFlag),
 				speed, now, index );
 
-			// And then the state it was left in, which the engine expresses by re-entering the channel
-			// with a pseudo-role rather than by a flag: both act on the clip just loaded, and Start
-			// returns early for them having moved only the timebase - a hold backdates it a whole clip
-			// so the elapsed frame lands exactly on the total.
-			// The same speed, because a hold backdates the timebase by a whole clip and that arithmetic
-			// is done in it - handing these a different figure would put the channel somewhere its own
-			// clip never reaches.
+			// And then the state it was left in. The engine's restore copies the saved word whole and adds
+			// 0x10 to a held channel; here the held or frozen state is re-entered through its pseudo-role
+			// instead, which sets the same bits and pins the frame (docs/exe/ride-operation.md, the RSYS
+			// restore). The speed passed is not read on that path.
 			if ( (channel.Flags & HeldAtEnd) != 0 )
 				players.Trigger( AnimTimeControl.HoldAtEnd, 0, AnimTimeControl.KeepShownFlag, speed, now, index );
 			else if ( (channel.Flags & FrozenAtStart) != 0 )
@@ -738,6 +737,12 @@ public sealed class ParkRides : Entity
 	/// <c>mOperatingCapacity</c> and <c>mOperatingDuration</c> - so today this changes nothing either way.
 	/// Where a future park disagreed, what it was saved holding is the better answer for a park being
 	/// loaded, which is why this runs second rather than first.
+	/// </para>
+	///
+	/// <para>
+	/// <b>Four saved fields are not restored</b>, where the engine reads the whole struct back: the wait
+	/// deadline, the <c>WAIT4ANIM</c> deadline, the looping key and <c>TRIGWAITANIM</c>'s mark. The shipped
+	/// park reaches the first and the third on every load (docs/QUEUE.md Q174c).
 	/// </para>
 	/// </summary>
 	private void Resume( RideScript script, ParkWorld.CatalogueObject placed, ParkWorld world )
@@ -848,9 +853,9 @@ public sealed class ParkRides : Entity
 		for ( int i = 0; i < GameClock.TicksDue; ++i )
 			Scheduler.Advance( MillisecondsAt( i ) );
 
-		// And then, once, whatever those ticks asked for is shown. The engine sweeps its animation players
-		// from the scene draw (FUN_0044e410( 3 ) from 0054fb6c), past the back edge of this very catch-up
-		// loop, off one snapshot of the clock - so the sweep belongs after the loop rather than inside it,
+		// And then, once, whatever those ticks asked for is shown. The engine advances its animation players
+		// in the scene draw (on-screen models from their scene-node callback, the rest by FUN_0044e410( 3 )),
+		// past the back edge of this very catch-up loop, off one snapshot of the clock - so the sweep belongs after the loop rather than inside it,
 		// and takes the moment the last tick ran at, which is exactly GameClock.Ticks beats in.
 		_objects?.Sweep( (int)(GameClock.Ticks * MillisecondsPerTick) );
 	}

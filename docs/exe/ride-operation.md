@@ -2248,11 +2248,13 @@ object record's own `mOperatingCapacity`. The byte layout is in the FileFormats 
 two overlap and disagree. A caller's flags are `0x1` loop, `0x2` start at once, `0x4` do not lay the rest
 pose down, `0x8` do not apply the hide list. The field stored on the channel uses `0x1` and `0x8` the
 same way, but its `0x2` means **frozen at frame nought** and its `0x4` means **held on the last frame** —
-states rather than requests, and `FUN_004732a0`'s own `Start` clears `0x6` on the way in and then sets
-`0x2` or `0x14` itself for the two pseudo-roles. So the engine does not express "this channel was held"
-as a flag at all: it re-enters the channel with role **14**, which acts on the clip already loaded and
-backdates the timebase a whole clip so the elapsed frame lands exactly on the total. Role **13** is the
-same for a freeze at frame nought. In the shipped park **eleven of the fifteen** saved channels carry
+states rather than requests. A start of a loaded role's in-range entry over a channel that is not idle
+clears both (`FUN_00472f60`, `0x0047302b`, `0x0047303b`); the pseudo-roles instead OR in `0x2` (role 13)
+or `0x14` (role 14) without clearing, and role 14 sets the clip time a whole clip past the start stamp
+(`0x00473193`..`0x004731a9`), so the elapsed frame lands exactly on the total. **The engine's `RSYS`
+restore copies the saved channel back as it stands** (`FUN_004647a0`, `0x00464bcb`..`0x00464c17`): the flag
+word, with `0x10` added to a held channel (`0x00464bfb`), the role and entry, the three time stamps, the speed
+and the queue, so a clip resumes where it was, against the clock the save puts back. In the shipped park **eleven of the fifteen** saved channels carry
 `0x4`, so a restore that passes the saved word through as caller flags drops the held pose on nearly all
 of them and restarts the clip — including the Litter Bin, which is saved on role 0.
 
@@ -2260,11 +2262,15 @@ of them and restarts the clip — including the Litter Bin, which is saved on ro
 variables, its stack with both its indices, its result register and its declared name (`park.md`, "The two
 stacks"), and from `RSYS` each thing's animation channels — the role, the entry,
 the speed and the flag word, with the two bits that mean the same thing carried across and the held and frozen
-states re-entered through the pseudo-roles exactly as above. Restoring only the script is a net loss, and measurably so: a thing whose
+states re-entered through the pseudo-roles 14 and 13, where the engine copies the word: the same bits, reached
+another way. Each channel is started at frame nought at the moment of the load, where the engine resumes the clip
+mid-way from its saved stamps, and a saved queue is dropped (`park.md`, "Where OpenTPW's animation state parts from
+the engine's", difference 4). Restoring only the script is a net loss, and measurably so: a thing whose
 steady-state loop holds no animation instruction never reaches the `LOOPANIM` in its prologue again, and
 ten of Lost Kingdom's fourteen placed things stood frozen for the whole session when the counter alone
 was put back. The rest is stepped over by length, neither restored nor counted in the `unimplemented` census — the
-wait deadlines and the limbo, bounce and walk tables — so the walk still has to add up. The name is **not** in the
+wait deadlines, the looping key and `TRIGWAITANIM`'s mark (`park.md`, difference 4), and the limbo, bounce and
+walk tables — so the walk still has to add up. The name is **not** in the
 saved struct and is taken off the script's own opening `NAME` instead, which matters because resuming
 skips that instruction and `FINDSCRIPTRAND` looks a script up by name. `ParkRides.BindNew` — the path a
 player takes by building something — deliberately restores nothing, because a new thing has no past and

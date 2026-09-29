@@ -647,9 +647,10 @@ public sealed class ParkObjects : Entity
 	/// reached.
 	///
 	/// <para>
-	/// <b>Once per frame, after the script ticks, which is the order the engine uses.</b> Its channel sweep
-	/// runs from the scene draw (<c>FUN_0044e410( 3 )</c> from <c>0054fb6c</c>), past the back edge of the
-	/// 31ms catch-up loop the scripts run inside, off a clock snapshot taken once for the whole frame.
+	/// <b>Once per frame, after the script ticks, which is the order the engine uses.</b> Its channels are
+	/// advanced in the scene draw - a model on screen from its scene-node callback, advanced and posed, the
+	/// rest by the sweep <c>FUN_0044e410( 3 )</c>, advanced unposed - past the back edge of the 31ms
+	/// catch-up loop the scripts run inside, off a clock snapshot taken once for the whole frame.
 	/// Advancing and posing are one function there (<c>FUN_004735d0</c>), which is why they are one here
 	/// and why this is driven from <see cref="ParkRides"/> rather than from this entity's own update.
 	/// </para>
@@ -658,8 +659,8 @@ public sealed class ParkObjects : Entity
 	/// <b>Nothing standing in a park keeps a clock of its own.</b> Looping whatever numbered clips sit
 	/// beside a model is neither what its script asks for nor anything the engine does - so a thing whose
 	/// player is idle holds the pose its construction left it in,
-	/// and only a script moves it. That is the engine's own behaviour on a freshly loaded park: the loader
-	/// parks every channel at the sentinel, so the idle default cannot fire until something triggers.
+	/// and only a script moves it. That is the engine's own behaviour: its idle default never fires on a
+	/// placed thing's model (docs/exe/park.md, "Two gates").
 	/// </para>
 	/// </summary>
 	public void Sweep( int now )

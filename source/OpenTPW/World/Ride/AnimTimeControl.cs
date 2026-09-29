@@ -52,13 +52,16 @@ public sealed class AnimTimeControl
 
 	/// <summary>
 	/// Do not lay the rest pose down on the way in - the engine's <c>0x4</c>, tested as part of
-	/// <c>flags &amp; 0xc</c> before it calls the restore.
+	/// <c>flags &amp; 0xc</c> before it calls the restore. That is the CALLER's bit, which the channel keeps
+	/// as <c>0x20</c>; the channel's own <c>0x4</c>, which <c>RoleOn</c> tests with this constant, means
+	/// held on the last frame.
 	/// </summary>
 	public const int KeepPoseFlag = 0x4;
 
 	/// <summary>
-	/// Do not apply the clip's hide list - the engine's <c>0x8</c>. The idle default passes it, which is
-	/// how a model restarting its own <c>M</c> clip avoids putting away nodes an earlier clip revealed.
+	/// Do not apply the clip's hide list - the engine's <c>0x8</c>. The idle default passes it from the
+	/// off-screen sweep (<c>0x0044e4b7</c>), which is how a model restarting its own <c>M</c> clip there avoids
+	/// putting away nodes an earlier clip revealed.
 	/// </summary>
 	public const int KeepShownFlag = 0x8;
 
@@ -134,9 +137,9 @@ public sealed class AnimTimeControl
 	public bool IsFinished => TotalAnimFrames < AnimFrame;
 
 	/// <summary>
-	/// Whether a trigger would have to wait for this channel rather than taking it over: the engine's
-	/// six-clause test at <c>0x004732c2</c>, minus the two clauses about the incoming role, which
-	/// <see cref="RideAnimations"/> applies because they are questions about the role table.
+	/// Whether a trigger would have to wait for this channel rather than taking it over: three of the
+	/// engine's seven gates (<c>0x004732e5</c>), leaving the running clip's place in the role table, the
+	/// incoming pseudo-role and the caller's start-at-once flag to <see cref="RideAnimations"/>.
 	/// </summary>
 	public bool IsBusy => !IsIdle && !IsFinished && (Flags & 0x6) == 0;
 
@@ -152,8 +155,10 @@ public sealed class AnimTimeControl
 	///
 	/// <para>
 	/// A frozen channel (flags <c>0x2</c> or <c>0x4</c>) does not advance: the engine pins
-	/// <see cref="AnimTime"/> to the start for a freeze and backdates it so the elapsed frame lands on the
-	/// total for a hold, while letting <see cref="NoPauseAnimTime"/> follow the clock either way.
+	/// <see cref="AnimTime"/> to the start for a freeze and sets it a whole clip past the start for a hold
+	/// (<c>0x004736e7</c>), so the elapsed frame lands on the total, while letting
+	/// <see cref="NoPauseAnimTime"/> follow the clock either way. The hold here keeps it a clip before the
+	/// start instead, which nothing reads, since <see cref="AnimFrame"/> is set directly.
 	/// </para>
 	/// </summary>
 	public void MoveTo( int now )
@@ -178,8 +183,8 @@ public sealed class AnimTimeControl
 			return;
 		}
 
-		// Held on the last frame: the start stamp is pushed back by the clip's whole length, so the
-		// arithmetic above would land exactly on the total.
+		// Held on the last frame: the clip time is kept a whole clip before the start stamp, where the
+		// engine's is a clip after it; nothing reads it, since the frame is set to the total directly.
 		AnimTime = StartAnimTime - MillisecondsFor( TotalAnimFrames, Speed );
 		AnimFrame = TotalAnimFrames;
 	}
@@ -187,7 +192,8 @@ public sealed class AnimTimeControl
 	/// <summary>
 	/// Begins <paramref name="role"/> entry <paramref name="entry"/> on this channel.
 	/// <paramref name="frames"/> is the span the clip declares, and nought where there is no clip - which
-	/// is a real case, not a guard: the engine parks the channel at role 12 and answers nothing.
+	/// is a real case, not a guard: for a role the model lacks the engine parks the channel at role 12 and
+	/// answers nothing.
 	/// </summary>
 	/// <param name="carry">
 	/// How far past its end the outgoing clip had run, in frames, for the new one to start that far in. The
@@ -205,8 +211,8 @@ public sealed class AnimTimeControl
 			Flags |= role == FreezeAtStart ? 0x2 : 0x14;
 
 			// Both keep the start stamp at the moment of the freeze and move the OTHER end: a freeze puts
-			// the clip's own time there too, and a hold pushes it a whole clip into the past so that the
-			// elapsed frame works out at exactly the total.
+			// the clip's own time there too, and a hold puts it a whole clip before it, where the engine's
+			// goes a clip after (0x00473193); a hold's frame is set to the total directly in both.
 			StartAnimTime = now;
 			NoPauseAnimTime = now;
 
@@ -224,8 +230,10 @@ public sealed class AnimTimeControl
 			return;
 		}
 
-		// A clip the model does not carry stops the channel rather than leaving it running - the engine
-		// restores the rest pose and writes the sentinel, and answers nothing at all.
+		// A role the model does not carry stops the channel rather than leaving it running - the engine
+		// restores the rest pose and writes the sentinel, and answers nothing at all. An entry past a loaded
+		// role's count stops here too, where the engine plays on with the role standing (see
+		// RideAnimations.Trigger).
 		if ( frames <= 0f )
 		{
 			AnimID = RideAnimations.NoRole;
@@ -240,6 +248,10 @@ public sealed class AnimTimeControl
 			return;
 		}
 
+		// Every start clears the held and frozen bits here. The engine's clears them only over a channel
+		// that is not idle, so a start on an idle channel keeps a stale one and its clip stands on its last
+		// frame there - a deviation no Lost Kingdom path reaches (docs/exe/park.md, "Where OpenTPW's
+		// animation state parts from the engine's", difference 5).
 		Flags &= ~0x6;
 
 		SubAnim = entry;
