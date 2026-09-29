@@ -2364,7 +2364,57 @@ artifacts are listed in `docs/history/README.md`.
   both legs from their positions. Confirm: `rides` over a Jungle Spray lane's walk, each due time predicted from its
   two nodes.
 
-- [ ] **Q175b. A rider's walk leg from its two nodes: the build.** Found by Q175's decode (`ride-operation.md`, "How
+- [x] **Q175b. A rider's walk leg from its two nodes: the build.** Done 2026-09-29, `alexah/187-walk-legs-from-the-nodes`.
+  `RideScript.Leg` gives each leg trunc( the distance between its two nodes ) × 100, nought becoming 100, `WALKON` walk
+  node to head node and `WALKOFF` off-from to off-to, worked out before the slot search as the engine does; `WalkTick` is
+  gone and `WalkFloor` (100) is the floor. `ModelFile.FindNode` is `FUN_0044b220` (the first record with the id whose
+  flags share a bit with the mask; a mask sharing none with `0x3da1f83` becomes `0x3da1f82`). `RideNodes` holds the
+  thing's own model, `Info.DoHeadProcessing` (read now) and the nodes its clips move or morph, stood at the thing's cell
+  and turn: each node composed from the root down in floats in the engine's order, the root's file rows turned by the
+  engine's table at its own two indices and its translation replaced by the placement. The slot keeps the flags and its
+  node ids and action as 16 bits; `rides` prints each walk slot and, while walked, its leg; each leg is logged. Counted,
+  not built: `WALK_LEG_REST_POSE` (a head on a moving part stands at rest), `WALK_NODE_ON_A_FACE`, `WALK_NODE_MISS`,
+  `WALK_NODE_UNPOSED`, `WALK_NODE_NEGATIVE_ID`, `WALK_NODES_NO_MODEL` (the engine's stepper does not survive a walking
+  script without a model). `ride-operation.md` ("How long a leg lasts") and `audio.md` carry the facts, `TOOLING.md`
+  11-13 the instrument's; FileFormats `models.md` the roots' own transforms (`alexah/187-walk-legs-from-the-nodes`).
+  - **Measured in the original first** (the reference install under Proton, read from memory; `~/.cache/tpw-harnesses/
+    q175b/`, `simwatch.py`, `nodedump.py`, `PREDICT-original.txt`), predicted from the rest pose before each read: an
+    Aztec Mayhem bought in the stock park at (40, 22), on screen, walked on in 1400, 1300, 900, 1000 and 2000 ms by head,
+    15 times over three boardings, and off in 2000, 900, 1300, 1700 and 1500, 10 times, every one as predicted; its heads
+    were at rest at the start of each walk. Alexah's jungle save, loaded from a copy of her player folder: the pose stored
+    at the load of the 49 walk and head records of its eight walk things (turns 0, 180, 270) equals `RideNodes` in x and
+    z to six decimals, 98 values, and in y but for ground height; 31 of the Inca God's 32 heads read (0, 0, 0), as
+    `WALK_NODE_UNPOSED` says, and the one `ADDHEAD` attached a rider to held a position. The park then stalls
+    (`TOOLING.md` 13). Getting there took llvmpipe's 0.01 frames a second and a crash under an Instant Action player
+    (`TOOLING.md` 11, 12).
+  - **Measured in the game** (`q175brun.py`, silent, the stock park, a Laughing Hyenas bought at (46, 29) and a Strength
+    Bird at (49, 29), camera over the three sideshows; runs `q175b-run1/` with `load 40` and `q175b-run2/` with `load 80`,
+    the second from a build of this source but for one doc comment), predicted first, legs read from the new log line:
+    the Jungle Spray's lane 2, 700 on and 700 off, three times; the Hyenas' lane 2, 400 each way, once; the Strength
+    Bird, 500 each way, six times; 20 legs, all as predicted, none 100. Photographed paused with the census beside each:
+    `Jungle Spray Sideshow ... walking 1: 0:128 WalkingOn 4->2 leg 700` with the rider in the spray's middle lane
+    (`q175b-run2/spray-walking-marked.png`), and likewise the Hyenas' and the Strength Bird's. No `WALK_` count was
+    reached; `save/` unchanged both runs. Not seen in the game: lanes 1 and 3 of the Jungle Spray and the Hyenas (1100,
+    1000), which fill only when riders overlap - no two did in 40 minutes, as lane 2 took 59 of the original's 75 walks;
+    the shipped Jungle Spray script walks all three lanes in `EachJungleSprayLaneWalksItsOwnNodesDistanceEachWay`.
+  - **Tests**: `RideNodesTests` (the original's stored positions at three turns, the Aztec Mayhem's heads at rest, an
+    unposed record, a miss and a negative id, an id in its own space and the mask swap, the quarter-turn sines, the Fire
+    Pit's face head), four in `RideScriptWalkTests` (the Jungle Spray's three lanes each way, the Aztec Mayhem's legs as
+    the original walked them, the Totem's walk off from its own node, no model and a miss and a nought-unit walk at the
+    floor, the Rat Race's world-float leg) and `ParkRidesTests` (the bound Jungle Spray's entrance where the original held
+    it, the Drinks Shop given no nodes). Put back one at a time (`q175b-mutate.py`, `q175b/mutate2.out`): 19 of 22 red as
+    predicted; composing in floats, squaring x and z unrounded and taking the cosine a quarter on stay green, changing no
+    shipped position or leg.
+  - **Not confirmed**: the Rat Race's 1000 (worked out, hallow); a ride left off screen mid-cycle (the engine's frozen
+    pose); a turn off the quarter; y on raised ground against the original (x and z only); the Lookout and the Totem in
+    the original (worked out, 0.094 and 0.063 from rest); the build's FPU precision.
+  - **Reviewed** (`wf_1948cf78-e76`, three read-only Opus lenses - the engine in Ghidra, the code and tests, the docs -
+    each put to an Opus skeptic): all taken. Among them: the engine has no model-less walker, so the floor there is
+    OpenTPW's and counted; the action is 16 bits; the composition's order and the placement's two table indices are the
+    engine's; the census printed a false leg for a carried or finished slot; the walk counts were wrong in the doc.
+  - **Found:** nothing new filed; a note under Q93 (the original's bought ride opens itself once its line joins).
+
+  The item as written: Found by Q175's decode (`ride-operation.md`, "How
   long a leg lasts, and where its ends are"). `RideScript.WalkOn` gives every leg `WalkTick`, 100 ms, and `WalkOff`
   gives the walk off `WalkTick` too; the engine's leg is trunc( the distance between the two nodes ) × 100, nought becoming 100, each way. Look
   each node up on the thing's own model (`<stem>.md2`) as `FUN_0044b220` does: the first lookup record with that id
@@ -2469,7 +2519,7 @@ artifacts are listed in `docs/history/README.md`.
   every script in the list once a park frame, after the 31 ms catch-up loop (`0x0054fa08`), and restamps start only on
   arriving on the ride (`0x00557e79`; `0x00558018` writes the state alone). Both differences are named at their site,
   and a rider's arrival is noticed at most a turn late. Nothing in the engine reads start in state 4 but the save, which
-  copies it raw; here `WalkOff` does, for the leg it keeps, which Q175b replaces. Decide with the frame sweep (Q150,
+  copies it raw; nothing here reads it. Decide with the frame sweep (Q150,
   Q182) whether to move it. Confirm: each promotion's instant against the clock in a census, predicted first.
 
 - [ ] **Q85. A guest who arrives starts with happiness nought, and stays there. Decode first.** Found by Q50's game
@@ -2526,7 +2576,8 @@ artifacts are listed in `docs/history/README.md`.
   measure that finds its back connected opens it. `ParkBuilding` sets the bit (`Info.HasQueue`, descriptor `+0x40`,
   pinned by Q50b) but not the close, counted `BOUGHT_QUEUED_THING_STARTS_CLOSED`. Build the close after the script is
   bound, and re-confirm Q1's flow on top of it. Confirm: buy a Belly Bounce, `objects` canload 0 until its queue joins
-  a path, then a guest boarding.
+  a path, then a guest boarding. Seen in the original (Q175b): an Aztec Mayhem bought in the stock park read "CLOSED:
+  LINE NOT CONNECTED" in its window until its queue joined the path, then open, with no press of its door.
 - [ ] **Q94. The console's `path` lays what the path tool refuses.** Found by Q50b's decode. `ParkPathBuilding.Lay`
   checks the cell's type and NOMODIFY but not the verdict `FUN_00535670`, which refuses path over a queue cell whose
   `mNeighbours` has more than one bit - every Belly Bounce queue cell (`ride-operation.md`, "The queue measured
@@ -3219,7 +3270,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   Then build both. Q175 re-read the lookup by id and flag (`audio.md`, "Node lookup is by id AND a capability flag")
   and decoded where a node's position comes from (the posed matrix, refreshed on screen; `ride-operation.md`, "How
   long a leg lasts, and where its ends are"), and `FUN_005580a0`'s interpolation; which frame a rider shows is still
-  open. The engine finds a bounce rider's node by id in `0x800` ("Where a rider is drawn").
+  open. The engine finds a bounce rider's node by id in `0x800` ("Where a rider is drawn"); `ModelFile.FindNode` is
+  that lookup and `RideNodes` the stored positions at rest (Q175b), not the animated pose a rider needs.
 - [ ] **Q23. Camera rotation snaps by 45 degrees.** `ParkOrbitCameraMode.Update`, the two rotate keys. The 90-degree
   option exists (`GameOptions.NinetyDegreeRotation`) and is read by nothing. Decode the original's step
   and its easing (`park-engine.md`, "The park camera", has the saved and required rotation, not the rate). Build what

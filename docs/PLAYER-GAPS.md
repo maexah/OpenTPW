@@ -420,8 +420,8 @@ from the crossing. So the arrival path they would take is the one the shipped sa
 
 - [ ] **Seen:** Load, Save and Publish do nothing, which a player meets at the moment they try to stop.
 - **Lives:** `ParkFrontEnd`'s game menu, where Load Game, Save Game and Publish Park each call `NotYet(...)`.
-- **The real cost is not the button.** **No `.TPWS` has ever been read** — the reader must not be assumed
-  to generalise from the one file the game ships. `docs/exe/saves.md` also records an unreconciled
+- **The real cost is not the button.** **Only Alexah's own `.TPWS` saves have been read**, in harnesses — the
+  reader must not be assumed to generalise from them and the one file the game ships. `docs/exe/saves.md` also records an unreconciled
   divergence between the traced preamble byte counts and what the shipped file measures.
 
 ---

@@ -49,9 +49,11 @@ public partial class ModelFile : BaseFormat
 	/// Every node in the model - its meshes first, in the same order as <see cref="Meshes"/>, then
 	/// the transform-only nodes after them. See <see cref="ResolveHierarchy"/> for the layout.
 	///
-	/// Most models never need this: <see cref="Mesh.WorldTransform"/> already has the tree baked
+	/// Drawing mostly does without it: <see cref="Mesh.WorldTransform"/> already has the tree baked
 	/// in. It is for a model whose animations turn a node that has no geometry of its own - the
-	/// advisor's head and arms are three such nodes, with his face and hands hanging off them.
+	/// advisor's head and arms are three such nodes, with his face and hands hanging off them - and
+	/// for the nodes a ride script finds by id (<see cref="FindNode"/>), which mark places and are
+	/// never meshes.
 	/// </summary>
 	public List<Node> Nodes { get; private set; } = new();
 
@@ -774,9 +776,9 @@ public partial class ModelFile : BaseFormat
 	/// The ushort at 0x48 is a record count and the uint at 0x7C the table's offset; each record
 	/// is 20 bytes, a flag word, the id, then a word not understood and two pointers - FileFormats
 	/// models.md, "Node lookup ids" - that nothing here reads. Record r belongs to node (ushort at 0x46) + r.
-	/// That pairing is the engine's own: its lookup (0x0044b220) walks the table for a record whose
-	/// id matches and whose flag word shares a bit with a mask it is given, returns the record
-	/// index, and the costume code adds 0x46 to it to find the node it shows or hides. 346 of the
+	/// That pairing is the engine's own: its lookup (0x0044b220, <see cref="FindNode"/> here) walks the
+	/// table for a record whose id matches and whose flag word shares a bit with a mask it is given,
+	/// returns the record index, and the costume code adds 0x46 to it to find the node it shows or hides. 346 of the
 	/// game's 850 static models carry a table, and every one fits inside the model's node count; jungle's
 	/// wr_tunnel.md2 runs past the end of its file, so it is not read.
 	///
@@ -812,6 +814,40 @@ public partial class ModelFile : BaseFormat
 			Nodes[node].IdFlags = reader.ReadUInt32();
 			Nodes[node].Id = (int)reader.ReadUInt32();
 		}
+	}
+
+	/// <summary>
+	/// The mask <see cref="FindNode"/> takes in place of one that shares no bit with <see cref="KnownSpaces"/>
+	/// (<c>0x0044b22e</c>).
+	/// </summary>
+	public const uint AnySpace = 0x3da1f82;
+
+	/// <summary>Every bit the lookup accepts as a space as it stands (<c>0x0044b226</c>).</summary>
+	public const uint KnownSpaces = 0x3da1f83;
+
+	/// <summary>
+	/// The node the engine finds for <paramref name="id"/> in the space <paramref name="mask"/> names, or -1 -
+	/// <c>FUN_0044b220</c>: the first lookup record, in table order, whose id is the one asked for and whose
+	/// flag word shares a bit with the mask. A mask sharing no bit with <see cref="KnownSpaces"/> is taken as
+	/// <see cref="AnySpace"/>. A ride script asks with <c>0x800</c> for a walk node, <c>0x80</c> for a head
+	/// (FileFormats models.md, "Node lookup ids").
+	/// </summary>
+	/// <remarks>
+	/// Record r names node <c>0x46 + r</c> (<see cref="ReadNodeIds"/>), so the first matching node in index
+	/// order is the first matching record in table order.
+	/// </remarks>
+	public int FindNode( int id, uint mask )
+	{
+		if ( (mask & KnownSpaces) == 0 )
+			mask = AnySpace;
+
+		for ( var node = 0; node < Nodes.Count; ++node )
+		{
+			if ( Nodes[node].Id == id && (Nodes[node].IdFlags & mask) != 0 )
+				return node;
+		}
+
+		return -1;
 	}
 
 	/// <summary>

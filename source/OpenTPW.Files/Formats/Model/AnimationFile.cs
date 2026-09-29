@@ -44,7 +44,7 @@ namespace OpenTPW;
 ///     0x10000   UV animation descriptor at +0x2C                 690  yes
 ///     0x20000   visibility, count (ushort) at +0x16, at +0x30    2536  yes
 ///     0x00001   position record at +0x18                          1216  yes
-///     0x80|0x100 unidentified, data at +0x20                     644  no
+///     0x80|0x100 scale, count (ushort) at +0x12, at +0x20         644  not read here (FileFormats models.md, "Scale")
 ///     0x00200   path progress, data at +0x24                      71  yes
 ///
 /// Every one of those correspondences is exact - across all 1279 files, not one track sets a

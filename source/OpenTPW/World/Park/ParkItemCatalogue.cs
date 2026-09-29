@@ -102,7 +102,10 @@ public sealed class ParkItemCatalogue
 		int InitSpeed1 = 0, int InitSpeed2 = 0, int InitDuration1 = 0, int InitDuration2 = 0,
 
 		// Each tier's queue constant - ItemDescriptionFile.QueueWaitTimeConstantAt. See QueueWaitTimeConstantAt.
-		float QueueWaitTimeConstant = 0f, float QueueWaitTimeConstant1 = 0f, float QueueWaitTimeConstant2 = 0f )
+		float QueueWaitTimeConstant = 0f, float QueueWaitTimeConstant1 = 0f, float QueueWaitTimeConstant2 = 0f,
+
+		// Whether every node of its model keeps a posed position - ItemDescriptionFile.DoHeadProcessing. See RideNodes.
+		bool DoHeadProcessing = false )
 	{
 		/// <summary>
 		/// A tier's starting speed and duration, <c>Upgrades[tier]</c> - what an upgraded ride's excitement divides its
@@ -247,7 +250,8 @@ public sealed class ParkItemCatalogue
 					description.InitSpeedAt( 1 ), description.InitSpeedAt( 2 ),
 					description.InitDurationAt( 1 ), description.InitDurationAt( 2 ),
 					description.QueueWaitTimeConstantAt( 0 ), description.QueueWaitTimeConstantAt( 1 ),
-					description.QueueWaitTimeConstantAt( 2 ) );
+					description.QueueWaitTimeConstantAt( 2 ),
+					description.DoHeadProcessing );
 
 			return true;
 		}

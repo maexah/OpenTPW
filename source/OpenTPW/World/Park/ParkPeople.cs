@@ -1902,8 +1902,8 @@ public sealed class ParkPeople : Entity
 	/// <b>Why by name rather than by id.</b> The engine looks a rider's node up by id in the walk space
 	/// <c>0x800</c> (<c>FUN_00557ab0</c>, <c>0x00557b3a</c>; docs/exe/ride-operation.md, "Where a rider is
 	/// drawn"), where id 1 is only <c>body</c>; <c>air</c>, <c>camera</c> and <c>body11</c> share it under other
-	/// flags. Nothing here looks a node up by id and flag yet (docs/QUEUE.md Q22), and in this model the names
-	/// give the same nodes: node n here is id n + 1 there. The names carry no such ambiguity, and <c>body10</c> upwards belong to other groups
+	/// flags. The drawing here finds a seat by name, not by <see cref="ModelFile.FindNode"/> (docs/QUEUE.md Q22), and in
+	/// this model the names give the same nodes: node n here is id n + 1 there. The names carry no such ambiguity, and <c>body10</c> upwards belong to other groups
 	/// and are never reached because the slots stop at nine.
 	/// </para>
 	/// </remarks>
@@ -1985,6 +1985,15 @@ public sealed class ParkPeople : Entity
 
 			var aboard = script.Bouncing().ToArray();
 
+			// Every walk slot in use and, while it is walked, its leg, which is the whole of what a walk-on ride's timing
+			// is: the one WALKON or WALKOFF worked out from the two nodes.
+			var walking = script.Walking().ToArray();
+
+			var walks = walking.Length == 0
+				? "nobody"
+				: string.Join( ", ", walking.Select( slot =>
+					$"{slot.Slot}:{slot.Handle} {slot.State} {slot.From}->{slot.To} leg {slot.Leg?.ToString() ?? "-"}" ) );
+
 			var seats = aboard.Length == 0
 				? "nobody"
 				: string.Join( ", ", aboard.Select( slot =>
@@ -2025,6 +2034,7 @@ public sealed class ParkPeople : Entity
 				+ $"var_running {Read( ParkRideOperation.RunningVariable )} "
 				+ $"onride {Read( ParkRideOperation.OnRideVariable )} "
 				+ $"bouncing {aboard.Length}: {seats} "
+				+ $"walking {walking.Length}: {walks} "
 				+ $"channels [{Players()}]";
 		}
 	}

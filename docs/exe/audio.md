@@ -137,7 +137,7 @@ In parks, in the ride-script engine. `FUN_005573d0` (its own error strings say `
 
 ## Node lookup is by id AND a capability flag
 
-`FUN_0044b220` walks the `.MD2` id table for a record whose **id matches** *and* whose **flag word shares a bit** with a given mask. Not by id alone. The masks include `0x200` sound, `0x100` particles and `0x400` costume; walk nodes take `0x800` and heads `0x80`.
+`FUN_0044b220` walks the `.MD2` id table for a record whose **id matches** *and* whose **flag word shares a bit** with a given mask, and answers the first such record. Not by id alone. The masks include `0x200` sound, `0x100` particles and `0x400` costume; walk nodes take `0x800` and heads `0x80`. A mask sharing no bit with `0x3da1f83` is swapped for `0x3da1f82` first (`0x0044b226`..`0x0044b22e`); none of the masks above is.
 
 The flag words in the shipped model data agree with those masks bit-for-bit — the masks were derived from the exe and the flag words from the models independently:
 
@@ -150,7 +150,7 @@ The flag words in the shipped model data agree with those masks bit-for-bit — 
 | `0x111` | — | id-table flag word marking a **particle emitter** | 454 uses in shipped models: most on effect-named nodes (`smoke`, `steam`, `particle emitter01`), but 108 on `Dummy` nodes, 64 on `Head` nodes and 12 on the park advisors' `Rotate1`-`3` |
 | `0x1031` | — | id-table flag word of the `1stperson` camera node | Shipped models |
 
-OpenTPW already parses this table (`ModelFile.ReadNodeIds`, `Node.Id`, `Node.IdFlags`). Its flag words are the capability bits above.
+OpenTPW parses this table (`ModelFile.ReadNodeIds`, `Node.Id`, `Node.IdFlags`) and looks a node up in it as the engine does (`ModelFile.FindNode`, the walk family's through `RideNodes`). Its flag words are the capability bits above.
 
 ### Trap: two different meanings for `0x200`
 

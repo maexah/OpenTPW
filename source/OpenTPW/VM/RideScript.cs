@@ -281,6 +281,28 @@ public sealed class RideScript
 	}
 
 	/// <summary>
+	/// Every walk slot in use - the console's ride census, and what a test reads a leg from. The leg is the one being
+	/// walked, and null for a slot carried or done, whose start <see cref="StepTheWalks"/> has restamped.
+	/// </summary>
+	public IEnumerable<(int Slot, int Handle, WalkState State, int From, int To, int? Leg)> Walking()
+	{
+		for ( var slot = 0; slot < _walk.Length; ++slot )
+		{
+			var walking = _walk[slot];
+
+			if ( walking.State == WalkState.Free )
+				continue;
+
+			var off = walking.State is WalkState.WalkingOff or WalkState.Done;
+
+			var walked = walking.State is WalkState.WalkingOn or WalkState.WalkingOff;
+
+			yield return (slot, walking.Handle, walking.State, off ? walking.OffFrom : walking.WalkNode,
+				off ? walking.OffTo : walking.HeadNode, walked ? (int)(walking.Due - walking.Start) : null);
+		}
+	}
+
+	/// <summary>
 	/// How many are bouncing - the engine's <c>+0x6c</c>, and <b>sixteen bits</b>, which is why
 	/// <c>BOUNCING</c> sign-extends it (<c>MOVSX</c>) rather than simply loading it.
 	/// </summary>
@@ -333,7 +355,7 @@ public sealed class RideScript
 	/// is the engine's per-frame stepper (<c>FUN_00557d80</c>), which promotes a slot once its progress
 	/// ramp passes a thousand.
 	/// </remarks>
-	private enum WalkState
+	public enum WalkState
 	{
 		/// <summary>Nobody on it. A slot is free when its state is nought, not when its handle is.</summary>
 		Free = 0,
@@ -366,17 +388,23 @@ public sealed class RideScript
 		/// <summary>Who is on it - the engine's <c>+0x10</c>. <b>Not</b> what marks the slot free.</summary>
 		public int Handle;
 
-		/// <summary>Where they walk from, and to - <c>+0x00</c> and <c>+0x02</c>.</summary>
-		public int WalkNode;
+		/// <summary>
+		/// Where they walk from, and to - <c>+0x00</c> and <c>+0x02</c>, sixteen bits each: <c>WALKON</c> looks its
+		/// operands up whole and keeps them short.
+		/// </summary>
+		public short WalkNode;
 
 		/// <inheritdoc cref="WalkNode"/>
-		public int HeadNode;
+		public short HeadNode;
 
-		/// <summary>The pair the walk OFF runs between - <c>+0x04</c> and <c>+0x06</c>.</summary>
-		public int OffFrom;
+		/// <summary>
+		/// The pair the walk OFF runs between - <c>+0x04</c> and <c>+0x06</c>, which <c>WALKOFF</c> reads back
+		/// sign-extended (<c>FUN_005571a0</c>).
+		/// </summary>
+		public short OffFrom;
 
 		/// <inheritdoc cref="OffFrom"/>
-		public int OffTo;
+		public short OffTo;
 
 		/// <summary>When this leg began and when it is due to end - <c>+0x08</c> and <c>+0x0c</c>.</summary>
 		public float Start;
@@ -385,7 +413,7 @@ public sealed class RideScript
 		public float Due;
 
 		/// <summary>
-		/// What kind of walk this is - <c>+0x16</c>, and the sixth operand.
+		/// What kind of walk this is - <c>+0x16</c>, the sixth operand kept as 16 bits, which <c>WALKOFF</c> tests.
 		///
 		/// <para>
 		/// <b>Four means the destination is a HEAD node</b>, which the engine looks up in a different node
@@ -395,10 +423,17 @@ public sealed class RideScript
 		/// as well as from the push order.
 		/// </para>
 		/// </summary>
-		public int Action;
+		public short Action;
 
 		/// <summary>How far through the machine this slot is - <c>+0x18</c>.</summary>
 		public WalkState State;
+
+		/// <summary>
+		/// The seventh operand - <c>+0x1a</c>. Bit 0 takes a walking rider's height along the line between the two
+		/// nodes; its only reader is the sprite placement (<c>FUN_005580a0</c>), which nothing here does, and every
+		/// shipped <c>WALKON</c> passes 1.
+		/// </summary>
+		public short Flags;
 	}
 
 	/// <summary>
@@ -422,25 +457,12 @@ public sealed class RideScript
 	private const int WalkComplete = 1000;
 
 	/// <summary>
-	/// How long a leg lasts here, in milliseconds.
-	///
-	/// <para>
-	/// <b>The engine's own duration is the DISTANCE BETWEEN THE TWO NODES, and that is out of reach.</b>
-	/// <c>FUN_00556f40</c> resolves both nodes, subtracts their positions component by component, sums
-	/// the squares, takes <c>FSQRT</c>, truncates it and multiplies by a hundred - so a rider takes
-	/// 100ms per whole unit walked, and 100ms when the two nodes are less than a unit apart. It is geometry,
-	/// not an operand and not a script field (docs/exe/ride-operation.md, "How long a leg lasts, and where its
-	/// ends are").
-	/// </para>
-	/// <para>
-	/// <b>Nothing here can resolve a model node by id</b> (see <see cref="StepTheWalks"/>), so the
-	/// leg length cannot be computed and every leg lasts 100ms instead (docs/QUEUE.md Q175b). That is a
-	/// divergence and it is named rather than dressed up: inventing a plausible constant would make every
-	/// walk-on ride's dwell time fiction, which is worse than a leg that is honestly too short. The state
-	/// machine, the slots and the harvest are all faithful; only the timing waits on model nodes.
-	/// </para>
+	/// The shortest leg, in milliseconds, and what one per whole unit walked is multiplied by: a leg is the distance
+	/// between its two nodes, truncated, times this, and a leg under a unit lasts this long (<c>0x00556fce</c>;
+	/// docs/exe/ride-operation.md, "How long a leg lasts, and where its ends are"). A leg with an end nothing here can
+	/// place lasts this long too, counted (<see cref="Leg"/>).
 	/// </summary>
-	private const int WalkTick = 100;
+	private const int WalkFloor = 100;
 
 	/// <summary>What <c>BOUNCE</c>'s duration operand is measured in - milliseconds per second, as limbo's is.</summary>
 	private const int BounceSecond = 1000;
@@ -607,6 +629,17 @@ public sealed class RideScript
 	/// </para>
 	/// </summary>
 	public RideAnimations? Animations { get; set; }
+
+	/// <summary>
+	/// The nodes of the thing's model the walk family finds by id, standing where the thing does, or null where it
+	/// has no model - the other half of <c>+0xc8</c>, which <c>FUN_00556b90</c> reads (<see cref="RideNodes"/>).
+	/// Set beside <see cref="Animations"/>, for the same reason. The engine has no walking script without a model - its
+	/// stepper reads the model unguarded - so null is counted, and gives every leg <see cref="WalkFloor"/>.
+	/// </summary>
+	public RideNodes? Nodes { get; set; }
+
+	/// <summary>How many walk slots the script declares - the engine's <c>+0x7c</c>, from header word <c>0x1c</c>.</summary>
+	public int WalkSlots => _walk.Length;
 
 	/// <summary>How many the script is holding in limbo - what <c>INLIMBO</c> answers.</summary>
 	public int InLimbo => _inLimbo;
@@ -1004,11 +1037,9 @@ public sealed class RideScript
 	/// <para>
 	/// <b>What is deliberately absent is every position.</b> The engine spends most of
 	/// <c>FUN_005580a0</c> interpolating between two node positions and handing them to the sprite
-	/// placer, and it resolves those nodes through <c>FUN_00556b90</c> against the ride's own MODEL -
-	/// walk nodes in space <c>0x800</c>, and head nodes in <c>0x80</c> when the action is 4, else <c>0x800</c>.
-	/// <b>Nothing in this project resolves a model node by id</b>: <c>ModelFile.Nodes</c> is a bare list with no
-	/// lookup. So the bookkeeping is
-	/// reproduced and the placement is not, the same split <see cref="_bounceBase"/> already lives with.
+	/// placer, from the same nodes <see cref="Leg"/> finds (<see cref="Nodes"/>). Nothing here draws a walking
+	/// rider (docs/QUEUE.md Q22), so the bookkeeping is reproduced and the placement is not, the same split
+	/// <see cref="_bounceBase"/> already lives with.
 	/// </para>
 	/// </summary>
 	private void StepTheWalks( float now )
@@ -1021,8 +1052,7 @@ public sealed class RideScript
 				continue;
 
 			// The engine divides by the leg's own length, so a zero-length leg would divide by nought.
-			// It cannot produce one - WALKON floors the duration at a hundred milliseconds - and this
-			// says so rather than relying on it.
+			// It cannot produce one - every leg is at least WalkFloor - and this says so rather than relying on it.
 			var leg = walking.Due - walking.Start;
 
 			if ( leg <= 0f || (now - walking.Start) * WalkComplete / leg >= WalkComplete )
@@ -1494,7 +1524,7 @@ public sealed class RideScript
 			case Opcode.WALKON:
 				// WALKON never writes the register: nothing after FUN_00556f40 returns writes it (0x00555afe).
 				WalkOn( now, Value( operands[0] ), Value( operands[1] ), Value( operands[2] ),
-					Value( operands[3] ), Value( operands[4] ), Value( operands[5] ) );
+					Value( operands[3] ), Value( operands[4] ), Value( operands[5] ), Value( operands[6] ) );
 				break;
 
 			case Opcode.WALKOFF:
@@ -1768,20 +1798,20 @@ public sealed class RideScript
 	/// (<c>docs/exe/ride-operation.md</c>): the handle, the walk node, the head node, the pair the walk
 	/// off runs between, the <b>action</b> - the one the engine compares against <b>4</b>, which selects
 	/// the head-node space (<c>0x80</c>) rather than the walk-node one (<c>0x800</c>) and makes the rider
-	/// attach to that node when they arrive - and a seventh, flags, which nothing here reads. Ten Lost
-	/// Kingdom scripts use it; <c>Junspray.RSE</c> passes <c>VAR_LETMEON, 4, n, n, 4, 6, 1</c> on all
-	/// three of its lanes.
+	/// attach to that node when they arrive - and the flags. Ten Lost Kingdom scripts use it;
+	/// <c>Junspray.RSE</c> passes <c>VAR_LETMEON, 4, n, n, 4, 6, 1</c> on all three of its lanes.
 	/// </para>
 	/// <para>
-	/// A slot is free when its <b>state</b> is nought - not when its handle is, which is the trap the
-	/// bounce table does not share - and the scan starts from the first slot every time. Every leg lasts
-	/// <see cref="WalkTick"/>, the deviation named there: no operand is a duration, and the engine's leg is
-	/// the distance between the walk node and the head node (<c>0x00556fce</c>).
+	/// The leg runs from the walk node to the head node (<see cref="Leg"/>), worked out before a slot is looked for,
+	/// as the engine does. A slot is free when its <b>state</b> is nought - not when its handle is, which is the trap
+	/// the bounce table does not share - and the scan starts from the first slot every time.
 	/// </para>
 	/// </summary>
 	private void WalkOn( float now, int handle, int walkNode, int headNode, int offFrom, int offTo,
-		int action )
+		int action, int flags )
 	{
+		var leg = Leg( walkNode, RideNodes.WalkSpace, headNode, SpaceOf( action ) );
+
 		for ( var slot = 0; slot < _walk.Length; ++slot )
 		{
 			if ( _walk[slot].State != WalkState.Free )
@@ -1790,15 +1820,18 @@ public sealed class RideScript
 			_walk[slot] = new WalkSlot
 			{
 				Handle = handle,
-				WalkNode = walkNode,
-				HeadNode = headNode,
-				OffFrom = offFrom,
-				OffTo = offTo,
-				Action = action,
+				WalkNode = (short)walkNode,
+				HeadNode = (short)headNode,
+				OffFrom = (short)offFrom,
+				OffTo = (short)offTo,
+				Action = (short)action,
+				Flags = (short)flags,
 				Start = now,
-				Due = now + WalkTick,
+				Due = now + leg,
 				State = WalkState.WalkingOn,
 			};
+
+			Log?.Info( $"{Name}: WALKON slot {slot} handle {handle} node {walkNode} -> {headNode} leg {leg}" );
 
 			return;
 		}
@@ -1815,13 +1848,10 @@ public sealed class RideScript
 	/// holds is the engine's "WALK: Tried to release a p..." complaint and changes nothing.
 	/// </para>
 	/// <para>
-	/// The leg is restamped from now and lasts <see cref="WalkTick"/> either way: a carried rider's Start was
-	/// restamped on arrival by <see cref="StepTheWalks"/>, so Due less Start is spent and the fallback supplies
-	/// it, and one still walking on keeps the walk on's, which is WalkTick too. The engine works out a new one,
-	/// the distance from the off-from node to the off-to node (<c>0x00557276</c>) - a deviation with
-	/// <see cref="WalkTick"/>'s, docs/QUEUE.md Q175b. The particle spawn
-	/// the engine performs for action 2, and the model-node attachment it undoes for action 4, are both
-	/// presentation and are absent for the reason given on <see cref="StepTheWalks"/>.
+	/// The leg is a new one, from the off-from node to the off-to node, restamped from now (<c>0x00557276</c>); the
+	/// off-from node is a head where the action is 4. The particle spawn the engine performs for action 2, and the
+	/// model-node attachment it undoes for action 4, are both presentation and are absent for the reason given
+	/// on <see cref="StepTheWalks"/>.
 	/// </para>
 	/// </summary>
 	private void WalkOff( float now, int handle )
@@ -1833,13 +1863,91 @@ public sealed class RideScript
 			if ( walking.State == WalkState.Free || walking.Handle != handle )
 				continue;
 
-			var leg = walking.Due - walking.Start;
+			var leg = Leg( walking.OffFrom, SpaceOf( walking.Action ), walking.OffTo, RideNodes.WalkSpace );
 
 			walking.Start = now;
-			walking.Due = now + (leg > 0f ? leg : WalkTick);
+			walking.Due = now + leg;
 			walking.State = WalkState.WalkingOff;
 
+			Log?.Info( $"{Name}: WALKOFF slot {slot} handle {handle} node {walking.OffFrom} -> {walking.OffTo} leg {leg}" );
+
 			return;
+		}
+	}
+
+	/// <summary>The space a head is found in: <see cref="RideNodes.HeadSpace"/> where the action is 4, else a walk node's.</summary>
+	private static uint SpaceOf( int action )
+		=> action == 4 ? RideNodes.HeadSpace : RideNodes.WalkSpace;
+
+	/// <summary>
+	/// How long walking from one node to another takes, in milliseconds: trunc( the distance between them ) × 100,
+	/// and <see cref="WalkFloor"/> for anything under a unit (<c>0x00556fce</c>).
+	///
+	/// <para>
+	/// The distance is the engine's arithmetic: the x and z differences each rounded to a float once and multiplied
+	/// by themselves unrounded, the y difference squared whole, then the square root, truncated. It is done here in
+	/// doubles, where the build's own FPU precision is not measured; the two can part only on a leg a hair from a
+	/// whole unit.
+	/// </para>
+	/// <para>
+	/// An end the engine would take from a miss, from an unposed record or from the model's bounding box is dead by
+	/// content - every node the shipped scripts name is found and stored - and so is a walking script with no model,
+	/// which the engine does not survive; each is counted rather than built, and the leg is the floor.
+	/// </para>
+	/// </summary>
+	private int Leg( int fromId, uint fromSpace, int toId, uint toSpace )
+	{
+		if ( Nodes is not { } nodes )
+		{
+			Unimplemented.Report( "WALK_NODES_NO_MODEL" );
+			return WalkFloor;
+		}
+
+		// Both ends are looked up whatever the first gives, as the engine's are, so each is counted.
+		if ( !End( nodes, fromId, fromSpace, out var from ) | !End( nodes, toId, toSpace, out var to ) )
+			return WalkFloor;
+
+		var dx = (double)to.X - from.X;
+		var dy = (double)to.Y - from.Y;
+		var dz = (double)to.Z - from.Z;
+
+		var whole = (int)Math.Sqrt( (dx * (float)dx) + (dy * dy) + (dz * (float)dz) );
+
+		return whole == 0 ? WalkFloor : whole * 100;
+	}
+
+	/// <summary>One end of a leg, counting whatever the engine would have had to make up.</summary>
+	private static bool End( RideNodes nodes, int id, uint space, out System.Numerics.Vector3 position )
+	{
+		switch ( nodes.Find( id, space, out position ) )
+		{
+			case NodeEnd.Posed:
+				return true;
+
+			case NodeEnd.RestPose:
+				// The engine reads the pose its last drawn frame stored; every shipped walk comes where that gives the rest leg.
+				Unimplemented.Report( "WALK_LEG_REST_POSE" );
+				return true;
+
+			case NodeEnd.OnAFace:
+				// The engine takes it from a face of its morphing parent mesh; nothing here reads a face's position.
+				Unimplemented.Report( "WALK_NODE_ON_A_FACE" );
+				return true;
+
+			case NodeEnd.Missing:
+				// "RSSE: Invalid Node ID": FUN_00556b90 writes nothing, and the leg is worked from a stale buffer.
+				Unimplemented.Report( "WALK_NODE_MISS" );
+				return false;
+
+			case NodeEnd.Unposed:
+				// A record with no stored matrix, which the engine reads as (0, 0, 0).
+				Unimplemented.Report( "WALK_NODE_UNPOSED" );
+				return false;
+
+			default:
+				// A negative id, which FUN_00556b90 answers from the model's bounding box.
+				Unimplemented.Report( "WALK_NODE_NEGATIVE_ID" );
+				return false;
 		}
 	}
 
@@ -2034,6 +2142,7 @@ public sealed class RideScript
 		// the same thing its parent does rather than nothing at all.
 		child.ThingId = ThingId;
 		child.Animations = Animations;
+		child.Nodes = Nodes;
 	}
 
 	/// <summary>Whether this script has a scream going - the engine's handle at <c>+0xd0</c>.</summary>

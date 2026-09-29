@@ -80,7 +80,11 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004380e7` | SAOC loader: node +0x3c bit 0, the circuit closed, from the saved header's flag bit 0 | OpenTPW.Files/Formats/Save/ParkCoasters.cs OpenTPW/World/Park/ParkRideChoice.cs  |
 | `0x004382b3` | SAOC loader: node +0x3c bit 1, a gap open, from the saved header's flag bit 1 | OpenTPW.Files/Formats/Save/ParkCoasters.cs  |
 | `0x0043837d` | SAOC loader: node +0x140, the clash count, restored from header +0x1c last | OpenTPW.Files/Formats/Save/ParkCoasters.cs OpenTPW/World/Park/ParkRideChoice.cs  |
+| `0x0044a904` | FUN_0044a870: a lookup record gets a matrix only when its file flags carry 0x10 or 0x20 (TEST byte [rec],0x30) | OpenTPW/World/Ride/RideNodes.cs  |
+| `0x0044abf2` | Pose walk FUN_0044ab30: a record whose file flags meet 0x40040 takes its position from a face of its parent mesh while that mesh carries 0x200000 | OpenTPW/World/Ride/RideNodes.cs  |
 | `0x0044b220` | | OpenTPW.Files/Formats/Model/ModelFile.cs  |
+| `0x0044b226` | Node lookup FUN_0044b220: the mask tested against 0x3da1f83 | OpenTPW.Files/Formats/Model/ModelFile.cs  |
+| `0x0044b22e` | Node lookup FUN_0044b220: a mask sharing no bit with 0x3da1f83 replaced by 0x3da1f82 | OpenTPW.Files/Formats/Model/ModelFile.cs OpenTPW.Tests/RideNodesTests.cs  |
 | `0x0044b2e0` | | OpenTPW/World/Advisor/AdvisorModel.cs  |
 | `0x0044e4b7` | FUN_0044e410( 3 ), the off-screen sweep: FUN_00473c70 called with flags 8 (no rest pose, no hide list) | OpenTPW/World/Ride/AnimTimeControl.cs  |
 | `0x0045aa5a` | | OpenTPW/Client/Players.cs  |
@@ -89,6 +93,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0045acfc` | | OpenTPW/Client/Game.cs  |
 | `0x004623b3` | | OpenTPW.Tests/LobbyModelAnimationTests.cs OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x004623df` | | OpenTPW.Tests/LobbyModelAnimationTests.cs OpenTPW/World/Lobby/LobbyModel.cs  |
+| `0x00462d4a` | Item loader FUN_004629d0: runtime bit 8 on every lookup record of an item loaded under 0x400000 (Info.DoHeadProcessing) | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
 | `0x00463060` | the build path: checks role 0 exists, triggers it, then starts role 13 at once, which holds that clip at frame nought. A newly built thing's script, run from word 0, plays it; a loaded one's resumes past it and its channels come back from the save | OpenTPW/World/Park/ParkRides.cs  |
 | `0x004646a1` | | OpenTPW/World/Ride/AnimTimeControl.cs  |
 | `0x004647a0` | the `RSYS` arm of the restore chain: overwrites every animation channel from the saved record and restores the per-node flag words with it, which is what stops a loaded park's things standing frozen | OpenTPW.Files/Formats/Save/ParkThingStates.cs  |
@@ -96,6 +101,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00464bdb` | FUN_004647a0: the three saved stamps onto +0x10, +0x14 and +0x18, from | OpenTPW.Tests/AnimTimeControlTests.cs OpenTPW/World/Ride/AnimTimeControl.cs  |
 | `0x00464bec` | FUN_004647a0: the three stamps, to here | OpenTPW.Tests/AnimTimeControlTests.cs OpenTPW/World/Ride/AnimTimeControl.cs  |
 | `0x00464c17` | FUN_004647a0: the copy, to here (the queue +0x24..+0x30 last) | OpenTPW.Files/Formats/Save/ParkThingStates.cs OpenTPW.Tests/ParkScriptStateTests.cs OpenTPW/World/Park/ParkRides.cs  |
+| `0x0046717c` | Placement FUN_00467030: the sine table index, FISTP of the float turn times 651.89862; the cosine's is rounded apart at 0x00467194 | OpenTPW/World/Ride/RideNodes.cs  |
 | `0x00467d00` | | OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x00467d60` | | OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x0046b600` | | OpenTPW.Common/Client/Window.cs  |
@@ -103,6 +109,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0046c480` | Place-staff mode (type 5, vtable `0x006fea40`) MOVE: carries the candidate's sprite under the pointer and draws a red square over a cell the click would refuse | OpenTPW/World/Park/ParkStaffPool.cs  |
 | `0x0046c730` | Place-staff mode OnInstall: carry cursor 9, and a sprite of the candidate's kind in their costume | OpenTPW/World/Park/ParkStaffPool.cs  |
 | `0x0046cdc0` | Place-worker mode (type 6) OnUninstall: when the hand still names a worker, puts them down on their own current cell with the drop's body | OpenTPW.Tests/ParkHandTests.cs OpenTPW.Tests/ParkLeaveTests.cs OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004702ea` | FUN_004702d0, local x parent: each element the third product plus the second plus the first; the translation row adds the parent's last | OpenTPW/World/Ride/RideNodes.cs  |
 | `0x00470e90` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x004711d0` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x00471860` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |

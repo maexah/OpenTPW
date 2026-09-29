@@ -667,4 +667,30 @@ public class ParkRidesTests
 
 		Assert.AreEqual( withClips, rides.Animated, "things that can see their own animations" );
 	}
+
+	/// <summary>
+	/// <b>A bound script walks between its own thing's nodes, where the thing stands.</b> The stock park's Jungle Spray,
+	/// bound from the save, finds its <c>entrance</c> at the world x and z the original held it at live in the same
+	/// park (docs/exe/ride-operation.md, "How long a leg lasts, and where its ends are"); the Drinks Shop, whose script
+	/// walks nobody, is given no nodes.
+	/// </summary>
+	[TestMethod]
+	public void TheJungleSprayWalksBetweenItsOwnNodesWhereItStands()
+	{
+		var world = World();
+		var rides = Bind( world, Catalogue() );
+
+		var spray = rides.Scheduler.Find( rides.ScriptFor( 14 ) );
+
+		Assert.IsNotNull( spray?.Nodes, "the Jungle Spray, thing 14, should be bound with its model's nodes" );
+		Assert.AreEqual( NodeEnd.Posed, spray!.Nodes!.Find( 4, RideNodes.WalkSpace, out var entrance ) );
+		Assert.AreEqual( 525.127f, entrance.X, 0.001f, "the entrance's x, as the original held it" );
+		Assert.AreEqual( 300.844f, entrance.Z, 0.001f, "and its z" );
+
+		var shop = rides.Scheduler.Find( rides.ScriptFor( 16 ) );
+
+		Assert.IsNotNull( shop, "the Drinks Shop, thing 16, should be bound" );
+		Assert.AreEqual( 0, shop!.WalkSlots, "its script declares no walk slot" );
+		Assert.IsNull( shop.Nodes, "so it reads no model for one" );
+	}
 }

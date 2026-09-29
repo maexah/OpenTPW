@@ -106,6 +106,7 @@ public sealed class ParkRides : Entity
 		// to restore and a new thing has none, so calling Resume here would be putting back a past it never
 		// had - and would stop the one animation a player is waiting to watch.
 		script.Animations = PlayersFor( placed.ThingId, item );
+		script.Nodes = NodesFor( script, placed, item );
 
 		if ( script.Animations.Loaded > 0 )
 			_animated.Add( placed.ThingId );
@@ -341,6 +342,7 @@ public sealed class ParkRides : Entity
 				// Its own thing's player where the thing is standing, so that what the script triggers and
 				// what the model is posed from are the same one.
 				script.Animations = PlayersFor( placed.ThingId, item );
+				script.Nodes = NodesFor( script, placed, item );
 
 				if ( script.Animations.Loaded > 0 )
 					_animated.Add( placed.ThingId );
@@ -933,6 +935,48 @@ public sealed class ParkRides : Entity
 		}
 
 		return RideAnimations.Load( item.Directory, item.Stem, _files, item.AnimationChannels );
+	}
+
+	/// <summary>
+	/// The model nodes a bound script walks its riders between, standing where its thing stands - read only for a
+	/// script that declares walk slots, the one family that asks (<see cref="RideNodes"/>). Null where the model will
+	/// not read, which leaves every leg the shortest, counted.
+	/// </summary>
+	/// <remarks>
+	/// The fixed items bound from what stands rather than from the save are given none: no fixed item's script
+	/// declares a walk slot.
+	/// </remarks>
+	private RideNodes? NodesFor( RideScript script, ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item )
+	{
+		if ( script.WalkSlots == 0 )
+			return null;
+
+		RideNodes? nodes;
+
+		try
+		{
+			nodes = RideNodes.Load( item.Directory, item.Stem, _files, item.DoHeadProcessing,
+				script.Animations?.AllClips ?? [] );
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"{ThemeName}: thing {placed.ThingId} ('{item.Name}') walks riders but its model will not "
+				+ $"read, so every leg is the shortest - {e.Message}" );
+
+			return null;
+		}
+
+		if ( nodes is null )
+		{
+			Log.Warning( $"{ThemeName}: thing {placed.ThingId} ('{item.Name}') walks riders but has no model, so every "
+				+ "leg is the shortest" );
+
+			return null;
+		}
+
+		nodes.Place( ParkObjects.OriginFor( placed.CellX, placed.CellY, placed.Angle ), placed.Angle );
+
+		return nodes;
 	}
 
 	/// <summary>

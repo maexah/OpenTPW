@@ -171,8 +171,9 @@ legal text, a `0x100`-byte block, then two dwords with an optional author block.
 shipped file actually measures and disagree with that reading; which fields the trace was naming — in particular
 whether byte `0x0004` is a language byte and where an author block would sit — is not settled.
 
-**No `.TPWS` has ever been read by this project.** The only file of this shape available locally is
-`Easymode.TPWI`, a shipped Instant Action starter. Everything above is measured from that one file or traced from the
+**This preamble is measured from `Easymode.TPWI` alone**, a shipped Instant Action starter. `SaveReader`
+reads Alexah's Full Simulation `.TPWS` saves in harnesses (Q165c, Q175, Q175b), and the original loads a copy of one
+(`TOOLING.md` 12), but everything above is measured from that one file or traced from the
 executable, so the reader must **not** be assumed to generalise to a real saved park — the version difference is
 already one proven case where it does not.
 

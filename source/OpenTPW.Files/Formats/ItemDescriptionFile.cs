@@ -112,6 +112,14 @@ public sealed class ItemDescriptionFile
 	/// </summary>
 	public bool CannotRide => (_cannotRide ?? _category?._cannotRide ?? 0) != 0;
 
+	/// <summary>
+	/// Whether the engine keeps a posed position for every node of this item's model - <c>Info.DoHeadProcessing</c>,
+	/// descriptor <c>+0x84</c>, which the item loader turns into runtime bit 8 on every lookup record (<c>0x00462d4a</c>;
+	/// docs/exe/ride-operation.md, "How long a leg lasts, and where its ends are"). Six items set it, the five whose
+	/// scripts walk a rider onto a head and one that walks no one (FileFormats <c>sam.md</c>).
+	/// </summary>
+	public bool DoHeadProcessing => (_doHeadProcessing ?? _category?._doHeadProcessing ?? 0) != 0;
+
 	/// <summary>How exciting this is - <c>UsageInfo.ExcitementLevel</c>. Belly Bounce 40, Jungle Spray 35.</summary>
 	public int ExcitementLevel => _excitementLevel ?? _category?.ExcitementLevel ?? 0;
 
@@ -442,6 +450,7 @@ public sealed class ItemDescriptionFile
 	private int? _hasQueue;
 	private int? _isIndoors;
 	private int? _cannotRide;
+	private int? _doHeadProcessing;
 	private int? _excitementLevel;
 	private int? _goldenTicketCost;
 	private int? _bumperType;
@@ -606,6 +615,10 @@ public sealed class ItemDescriptionFile
 
 				case "UsageInfo.CannotRide":
 					_cannotRide = Number( line );
+					break;
+
+				case "Info.DoHeadProcessing":
+					_doHeadProcessing = Number( line );
 					break;
 
 				case "UsageInfo.ExcitementLevel":

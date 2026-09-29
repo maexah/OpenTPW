@@ -502,4 +502,206 @@ public class RideScriptWalkTests
 			"nothing passed 4, which is the value the engine tests for - so this could not tell the "
 			+ "action apart from any other operand" );
 	}
+
+	/// <summary>A thing's model nodes, stood at a cell and a turn as <see cref="ParkRides"/> stands them.</summary>
+	private RideNodes Nodes( string directory, string stem, bool doHeadProcessing, RideAnimations animations,
+		int cellX, int cellY, int angle )
+	{
+		var nodes = RideNodes.Load( directory, stem, _data, doHeadProcessing, animations.AllClips );
+
+		Assert.IsNotNull( nodes, $"{stem}'s model should read" );
+
+		nodes.Place( ParkObjects.OriginFor( cellX, cellY, angle ), angle );
+
+		return nodes;
+	}
+
+	/// <summary>
+	/// <b>Each lane of the shipped Jungle Spray walks its own two nodes' distance, each way</b>: lanes one and three
+	/// 1100 ms, lane two 700 - trunc( 11.655 ) and trunc( 7.161 ) hundreds, the legs the original walked 151 times
+	/// in its stock park (docs/exe/ride-operation.md, "How long a leg lasts, and where its ends are"). Three
+	/// visitors are handed over one at a time, which fills the lanes in order, and each leg is read while it is
+	/// being walked.
+	/// </summary>
+	[TestMethod]
+	public void EachJungleSprayLaneWalksItsOwnNodesDistanceEachWay()
+	{
+		var animations = RideAnimations.Load( "levels/jungle/sideshow/junspray", "Junspray", _data, JunsprayLanes );
+
+		var script = new RideScript( JunsprayFile() )
+		{
+			Animations = animations,
+			Nodes = Nodes( "levels/jungle/sideshow/junspray", "Junspray", false, animations, 51, 30, 0 )
+		};
+
+		var on = new Dictionary<int, int>();
+		var off = new Dictionary<int, int>();
+		var handed = 0;
+		var clock = 0f;
+
+		for ( var turn = 0; turn < 4000 && off.Count < JunsprayLanes; ++turn )
+		{
+			if ( script["VAR_LETMEON"] == 0 && handed < JunsprayLanes )
+				script.Set( "VAR_LETMEON", Rider + ++handed );
+
+			// Whoever came off is taken away, as the park does, so the next can be collected.
+			if ( script["VAR_LETMEOFF"] != 0 )
+				script.Set( "VAR_LETMEOFF", 0 );
+
+			clock += 248f;
+			animations.Advance( (int)clock );
+			script.Turn( clock );
+
+			foreach ( var walking in script.Walking() )
+			{
+				if ( walking.State == RideScript.WalkState.WalkingOn )
+					on[walking.To] = walking.Leg ?? -1;
+				else if ( walking.State == RideScript.WalkState.WalkingOff )
+					off[walking.From] = walking.Leg ?? -1;
+			}
+		}
+
+		var expected = new Dictionary<int, int> { [1] = 1100, [2] = 700, [3] = 1100 };
+
+		CollectionAssert.AreEquivalent( expected, on, $"walked on: {string.Join( ", ", on )}" );
+		CollectionAssert.AreEquivalent( expected, off, $"walked off: {string.Join( ", ", off )}" );
+	}
+
+	/// <summary>
+	/// <b>The Aztec Mayhem, as the original walked it</b>: bought in the reference install's stock park and watched in
+	/// its memory, riders one to five walked on in 1400, 1300, 900, 1000 and 2000 ms, three times, and off in 2000, 900,
+	/// 1300, 1700 and 1500, twice. Its <c>WALKON</c> passes action 4, so each head is found in the head space and the walk
+	/// off starts from it; its heads ride the seats a clip moves, so each end is counted as taken at rest.
+	/// </summary>
+	[TestMethod]
+	public void TheAztecMayhemsRidersWalkTheLegsTheOriginalWalked()
+	{
+		var item = "levels/jungle/rides/tvsim";
+		var animations = RideAnimations.Load( item, "tvsim", _data );
+		var nodes = Nodes( item, "tvsim", true, animations, 40, 22, 0 );
+
+		// WALKON handle, WALK1, head k, off from head k, off to WALK02, action 4, flags 1 - the shipped operands.
+		var onWords = Enumerable.Range( 1, 5 ).SelectMany( k =>
+			new[] { Word( Opcode.WALKON ), Rider + k, 1, k, k, 2, 4, 1 } ).ToList();
+
+		Unimplemented.Forget();
+
+		var boarding = new RideScript( Build( walkSlots: 5, [.. onWords, Word( Opcode.END )] ) ) { Nodes = nodes };
+		boarding.Turn( 0f );
+
+		CollectionAssert.AreEqual( new[] { 1400, 1300, 900, 1000, 2000 },
+			boarding.Walking().Select( walking => walking.Leg ).ToArray(), "the walk-on legs, riders one to five" );
+
+		var offWords = Enumerable.Range( 1, 5 ).SelectMany( k => new[] { Word( Opcode.WALKOFF ), Rider + k } );
+
+		var leaving = new RideScript( Build( walkSlots: 5, [.. onWords, .. offWords, Word( Opcode.END )] ) ) { Nodes = nodes };
+		leaving.Turn( 0f );
+
+		CollectionAssert.AreEqual( new[] { 2000, 900, 1300, 1700, 1500 },
+			leaving.Walking().Select( walking => walking.Leg ).ToArray(), "the walk-off legs, riders one to five" );
+
+		Assert.AreEqual( 15, Unimplemented.Summary.Single( gap => gap.What == "WALK_LEG_REST_POSE" ).Times,
+			"every head end, five walking on in each script and five walking off, is taken at rest and counted" );
+	}
+
+	/// <summary>
+	/// <b>With no model, every leg is the shortest, counted</b>: the engine has no walking script without a model - its
+	/// stepper reads the model unguarded - so this is OpenTPW's own fallback. <b>A node no record carries is counted</b>,
+	/// and its leg is the shortest too rather than whatever the engine's stale buffer held.
+	/// </summary>
+	[TestMethod]
+	public void NoModelOrAMissedNodeWalksTheShortestLeg()
+	{
+		var words = new[] { Word( Opcode.WALKON ), Rider, 1, 99, 99, 2, 4, 1, Word( Opcode.END ) };
+
+		Unimplemented.Forget();
+
+		var modelless = new RideScript( Build( walkSlots: 1, words ) );
+		modelless.Turn( 0f );
+
+		Assert.AreEqual( 100, modelless.Walking().Single().Leg, "a script with no model walks every leg in 100 ms" );
+		Assert.AreEqual( 1, Unimplemented.Summary.Single( gap => gap.What == "WALK_NODES_NO_MODEL" ).Times,
+			"and the missing model is counted" );
+
+		Unimplemented.Forget();
+
+		var animations = RideAnimations.Load( "levels/jungle/rides/tvsim", "tvsim", _data );
+
+		var missed = new RideScript( Build( walkSlots: 1, words ) )
+		{
+			Nodes = Nodes( "levels/jungle/rides/tvsim", "tvsim", true, animations, 40, 22, 0 )
+		};
+
+		missed.Turn( 0f );
+
+		Assert.AreEqual( 100, missed.Walking().Single().Leg, "a missed head leaves the shortest leg" );
+		Assert.AreEqual( 1, Unimplemented.Summary.Single( gap => gap.What == "WALK_NODE_MISS" ).Times,
+			"and the miss is counted" );
+
+		// And a leg under a unit, here from WALK1 to itself, is the shortest rather than nought.
+		var standing = new RideScript( Build( walkSlots: 1,
+			Word( Opcode.WALKON ), Rider, 1, 1, 1, 1, 1, 1, Word( Opcode.END ) ) ) { Nodes = missed.Nodes };
+
+		standing.Turn( 0f );
+
+		Assert.AreEqual( 100, standing.Walking().Single().Leg, "a walk of nought units lasts 100 ms" );
+	}
+
+	/// <summary>
+	/// <b>A leg is measured between the nodes as they stand in the world, as floats</b>, not in the model: hallow's
+	/// Rat Race walks from <c>Head16</c> to <c>Head17</c>, 9.9999995 apart in its own file - one float step short of
+	/// ten, which truncates to 900 - and 10 apart once both stand at a placement, where the stored floats round the
+	/// difference away, which gives 1000. The 1000 is the engine's arithmetic worked through at (51, 30), not a leg
+	/// measured in the original; it is the one shipped leg the two ways part on away from the map's edge.
+	/// </summary>
+	[TestMethod]
+	public void ALegIsMeasuredBetweenTheNodesAsTheyStandInTheWorld()
+	{
+		var item = "levels/hallow/rides/ratrace";
+		var animations = RideAnimations.Load( item, "ratrace", _data );
+
+		var script = new RideScript( Build( walkSlots: 1,
+			Word( Opcode.WALKON ), Rider, 1, 2, 3, 4, 1, 1, Word( Opcode.END ) ) )
+		{
+			Nodes = Nodes( item, "ratrace", false, animations, 51, 30, 0 )
+		};
+
+		script.Turn( 0f );
+
+		Assert.AreEqual( 1000, script.Walking().Single().Leg, "the Rat Race's walk on at (51, 30)" );
+	}
+
+	/// <summary>
+	/// <b>A walk off starts from its own node, not from the head</b>: the Inca Totem walks rider k on from
+	/// <c>position01</c> to head k, 12.482 to 8.152 units by head, and every rider off from <c>head13</c> to
+	/// <c>position02</c>, exactly one unit apart - so 1200, 1000 or 800 on and 100 off. Its heads ride the cart a clip
+	/// moves and are counted at rest; <c>head13</c> hangs from the ground and is not.
+	/// </summary>
+	[TestMethod]
+	public void TheTotemWalksOffFromItsOwnNodeNotTheHead()
+	{
+		var item = "levels/jungle/rides/totem";
+		var animations = RideAnimations.Load( item, "Totem", _data );
+		var nodes = Nodes( item, "Totem", true, animations, 40, 22, 0 );
+
+		// WALKON handle, position01, head k, off from head13, off to position02, action 4, flags 1 - the shipped operands.
+		var onWords = Enumerable.Range( 1, 12 ).SelectMany( k =>
+			new[] { Word( Opcode.WALKON ), Rider + k, 1, k, 13, 2, 4, 1 } ).ToList();
+		var offWords = Enumerable.Range( 1, 12 ).SelectMany( k => new[] { Word( Opcode.WALKOFF ), Rider + k } );
+
+		Unimplemented.Forget();
+
+		var boarding = new RideScript( Build( walkSlots: 12, [.. onWords, Word( Opcode.END )] ) ) { Nodes = nodes };
+		boarding.Turn( 0f );
+
+		CollectionAssert.AreEqual( new int?[] { 1200, 1200, 1200, 1200, 1000, 1000, 1000, 1000, 800, 800, 800, 800 },
+			boarding.Walking().Select( walking => walking.Leg ).ToArray(), "the walk-on legs, riders one to twelve" );
+
+		var leaving = new RideScript( Build( walkSlots: 12, [.. onWords, .. offWords, Word( Opcode.END )] ) ) { Nodes = nodes };
+		leaving.Turn( 0f );
+
+		Assert.IsTrue( leaving.Walking().All( walking => walking.Leg == 100 ), "every walk off is one unit, 100 ms" );
+		Assert.AreEqual( 24, Unimplemented.Summary.Single( gap => gap.What == "WALK_LEG_REST_POSE" ).Times,
+			"only the heads are counted at rest: twelve walks on in each script, and no walk off" );
+	}
 }

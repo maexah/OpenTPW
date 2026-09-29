@@ -41,8 +41,8 @@ namespace OpenTPW;
 /// guessed at either subsystem's numbering.</item>
 /// <item>There is no position. The engine resolves one through <c>FUN_00556b90</c> from the model and
 /// the node, and <b>walks this whole list every tick</b> (in <c>FUN_005516b0</c>) to move what is
-/// playing as the ride moves. With nothing started, and nothing here resolving a model node's
-/// position, there is nothing to move and nothing to move it relative to.</item>
+/// playing as the ride moves. With nothing started there is nothing to move; the node lookup exists
+/// (<see cref="ModelFile.FindNode"/>, <see cref="RideNodes"/>) and nothing here asks it for an effect's node.</item>
 /// <item>Two of the list's other writers are not here: <c>ADDOBJ_EXT</c>, which no shipped script
 /// uses at all, and the save-state reader (<c>FUN_005597a0</c>), which rebuilds it from an
 /// <c>"OBJ "</c> section - a section none of the 308 shipped scripts carries, because that is written

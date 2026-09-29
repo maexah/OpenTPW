@@ -76,6 +76,17 @@ fills the screen.
    (`VERIFYING.md` rule 129).
 10. **Disassembly is Ghidra's job** (`CLAUDE.md` rule 7). If the Ghidra server is down, say so rather than reaching
     for `objdump`.
+11. **A big park off screen draws at about a hundredth of a frame a second** under llvmpipe. With
+    `GALLIUM_DRIVER=zink MESA_VK_WSI_DEBUG=sw` in front of `original.sh start --offscreen` it draws on the GPU through
+    Vulkan at 30 frames a second, but its frame grabs read black: memory only.
+12. **A player's saved park** loads from a copy of that player's folder in the reference install's own `save/users/`,
+    under a slot digit no other folder there has (a folder's leading digit is its slot, and two alike show one).
+    Entering the island loads it. An Instant Action player loading a Full Simulation park crashes the load (a page
+    fault at `0x00464955`, where a rebuilt thing's model handle reads empty; the cause is inferred). Delete the copy
+    afterwards.
+13. **Alexah's Full Simulation jungle park stalls at park tick 43**, its main thread busy in the track rides' stepper
+    `FUN_0043ce20` (return addresses on its stack, sampled with `gdb -p` on the host): its stored matrices are readable,
+    its clock never runs. Seen at 6.9 days of uptime; whether a restart cures it is not tested.
 
 ### What it is not
 

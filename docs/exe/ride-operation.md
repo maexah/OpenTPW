@@ -2008,24 +2008,38 @@ The slot array is the script's `+0x2c`, counted by `+0x7c`, **`0x20` = 32 bytes 
 
 **A leg lasts trunc( the distance between its two nodes ) × 100 ms, nought becoming 100.** No operand is a duration.
 `WALKON`'s leg runs from the walk node to the head node, `WALKOFF`'s from off-from to off-to. The distance is over all
-three axes (`0x00556fce`..`0x00557013`), truncated by `__ftol` whatever the FPU's mode (`0x0067a830` forces chop), and
-times 100 (`0x0055701a`..`0x00557025`). Start and due are readings of the game clock (`0x785970`) in milliseconds, read
-live at each call rather than from the frame's snapshot, so two reads back to back can part by one clock step. **The
-facing** is `trunc( 10.5 − 4θ/π ) mod 8`, θ = atan2( Δz, Δx ) from the first node to the second, with the build's
-truncated π constants (`0x005570b2`..`0x005570fd`, `0x00700fe8`); it turns with the ride.
+three axes (`0x00556fce`..`0x00557013`): the x and z differences are each rounded to a float once and multiplied by
+themselves unrounded (`FST` at `0x00556fea` and `0x00556ffc`), the y difference squared whole, then `FSQRT`, at the
+FPU's precision, which is not measured; truncated by `__ftol` whatever the FPU's mode (`0x0067a830` forces chop), and
+times 100 (`0x0055701a`..`0x00557025`). `WALKON` looks both nodes up with its whole operands and works the leg out
+before it looks for a free slot, then keeps the ids as 16 bits; `WALKOFF` reads them back sign-extended. Start and due
+are readings of the game clock (`0x785970`) in milliseconds, read live at each call rather than from the frame's
+snapshot, so two reads back to back can part by one clock step. **The facing** is `trunc( 10.5 − 4θ/π ) mod 8`,
+θ = atan2( Δz, Δx ) from the first node to the second, with the build's truncated π constants
+(`0x005570b2`..`0x005570fd`, `0x00700fe8`); it turns with the ride.
 
 **The ends are the nodes' stored matrices, in the world.** `FUN_00556b90` reads the translation row of a matrix kept
 per node-lookup record: the script's model (`[0x7a4610 + handle × 4]`) `+8` → `+0x28` → `+4`, 20 bytes a record, the
 matrix pointer at `+4` (that `+8` object's `+4` is the file header). Only the pose walk `FUN_0044ab30` writes their
 positions (`FUN_0044b510` negates the x and z axis rows of an attached record's matrix when its node carries `0x400`,
 a half turn about y, and leaves the translation): it composes each node's local transform with its parent's
-(`FUN_004702d0`), from identity at the root that header `+0x78` names. The placement writes the ride's turn and world
-position into the root's own transform (`FUN_00467030`, `0x004671c0`..`0x004671e3`), so the positions are world
-positions and a distance is the model's own. A ride's records are stored when it is built (`0x00463851`), when the
-ride view is put on it (`FUN_0042a560`, `0x0042a6d6`) and every frame it stays there (`FUN_0044e410( 2 )`,
-`0x0054fa96`), and at every animation advance on screen (`FUN_00473c70`, `0x00473e1b`); off screen, only for a model
-whose header `+0x30` carries `0x4`. (The track rides' stepper `FUN_0043ce20` also poses some of the car models it
-moves, through `FUN_00438800`.)
+(`FUN_004702d0`, an affine local × parent, each element the third product plus the second plus the first, the
+translation row adding the parent's last, stored as a float, `0x004702ea`), from the root that header `+0x78` names.
+The placement (`FUN_00467030`) turns the root's own file rows in place, x' = x·c + z·s and z' = z·c − x·s
+(`FUN_0046f650`), and replaces its translation with the world position (`0x004671c5`..`0x004671e3`); each call turns by
+the change of angle from the rows as they stand. c and s come from `FUN_004708d0`'s table of 4096 floats
+`sin( i / 4096 × 6.2831855f )`: θ = float( angle × 0.017453292f ), the sine's index the float θ × 651.89862 rounded
+to the nearest (`0x0046717c`), and the cosine's rounded on its own from ( θ + 1.5707964f ) × 651.89862
+(`0x00467194`). A right angle's cosine is so `sin( π )` in float, −8.742278e-8, and at 270° the cosine's 4095.99976
+reaches entry 0 only by rounding to the nearest, which the stored positions at 180° and 270° show (below). So the
+positions are world positions, and a distance is the model's own but for float rounding: hallow's Rat Race walks
+9.9999995 in its file (900) and 10 between world floats at (510, 0, 300) (1000; computed, not measured), and an exact
+whole-unit leg can come out 100 short near the map's low edge. A ride's records are stored when it is built
+(`0x00463851`), when the ride view is put on it (`FUN_0042a560`, `0x0042a6d6`) and every frame it stays there
+(`FUN_0044e410( 2 )`, `0x0054fa96`), and at every animation advance on screen (`FUN_00473c70`, `0x00473e1b`); off
+screen, only for a model whose header `+0x30` carries `0x4`, which the Lookout's, the Totem's and the Aztec Mayhem's
+(`0x9`) do not. (The track rides' stepper `FUN_0043ce20` also poses some of the car models it moves, through
+`FUN_00438800`.)
 
 **Which records have a matrix, and which the walk stores.** A record gets a zero-filled 64-byte matrix only when its
 file flags carry `0x10` or `0x20` (`TEST byte [rec],0x30` at `0x0044a904`, `FUN_0044a870`; `FUN_0045b9d0` with 1 is
@@ -2047,9 +2061,10 @@ a ride's capacity. So the (0, 0, 0) end and the miss are both dead by CONTENT. T
 
 **Measured in the original** (Q175): the Jungle Spray in the reference install's Lost Kingdom park, read live under
 Proton (`docs/TOOLING.md`), and every walk slot in Alexah's Full Simulation saves (the ride-script module keeps each
-script's slots raw). The Jungle Spray's walk nodes read runtime `0x29` and world positions exactly their rest positions
-moved by (510.073, 0, 299.904): `entrance` (525.127, 0.984, 300.844), `Kid_pos04` (515.931, 0.984, 308.005),
-`kid_pos02` (525.127, 0.984, 308.005), `kid_pos03` (534.323, 0.984, 308.005). Every walked leg was the prediction:
+script's slots raw). The Jungle Spray's walk nodes read runtime `0x29` and world positions exactly their rest
+positions at the placement (510, 0, 300), its root's own file translation (−0.073, 0, 0.096) replaced by it:
+`entrance` (525.127, 0.984, 300.844), `Kid_pos04` (515.931, 0.984, 308.005), `kid_pos02` (525.127, 0.984, 308.005),
+`kid_pos03` (534.323, 0.984, 308.005). Every walked leg was the prediction:
 
 | Where | Leg (due − start) | Seen |
 |---|---|---|
@@ -2061,9 +2076,19 @@ moved by (510.073, 0, 299.904): `entrance` (525.127, 0.984, 300.844), `Kid_pos04
 | Gift Shop, Balloon Shop | 1000 (10.0) | saves |
 | Steak Shop | 600 (6.18) | saves |
 | Big Apple, SquirtEm lanes 1-3, Frushy lane 1 (Wonder Land) | 2100, 700 / 200 / 700, 800 | saves |
+| Aztec Mayhem, heads 1-5, on / off | 1400, 1300, 900, 1000, 2000 / 2000, 900, 1300, 1700, 1500 | Q175b: 15 + 10 live |
 
-All 75 arrivals seen live set start to the moment of arrival, at or after due. A finished slot keeps its last leg,
-which is why the saves show a ride's walk-off leg.
+All 90 arrivals seen live (75 in Q175, 15 in Q175b) set start to the moment of arrival, at or after due. A finished
+slot keeps its last leg, which is why the saves show a ride's walk-off leg.
+
+**Measured again for the build (Q175b)**: an Aztec Mayhem bought in the reference install's stock park at cell (40, 22)
+and watched in memory, on screen, walked the rest-pose legs over three boardings, the first two walked off before the
+watch ended. Its heads were rising (y 2.372 and 1.561 at two arrivals) and were at rest (y 1.159) at the start of every
+walk, which by the script comes while channel 0 holds the I clip (no tracks) or E's last frame. With Alexah's jungle
+save loaded (`TOOLING.md` 12), the pose stored at the load of the 49 walk and head records its eight walk things pose,
+turned 0, 180 and 270, is OpenTPW's composition in x and z to six decimals (98 values), and in y but for each thing's
+ground height. 31 of the Inca God's 32 heads read (0, 0, 0) with runtime `0x21`; `head08`, which its `ADDHEAD` had
+attached a rider to (`0x23`), held a position.
 
 **Lost Kingdom's legs**, every other one from the same rule: `incagod` 1700 on and 800 off; `balloon` and `giftshop`
 1000; `steak` 600; `Hyenas` 1000, 400 and 1000 by lane; `Junspray` 1100, 700 and 1100; `Squark` 500. `Lookout`,
@@ -2073,7 +2098,14 @@ pose at the moment: from the rest pose, `Lookout` 800 to 2500 on and 800 to 2600
 and 100 off (exactly 1.0), `tvsim` 500 to 2000. No walk, entrance, exit or off-to node moves in any clip of its own model (the roles
 `FUN_00461f10` loads), and no Lost Kingdom walk node at all outside those three.
 
-**OpenTPW** gives every leg `RideScript.WalkTick`, 100 ms, the walk off's included; Q175b builds the legs. It
+**OpenTPW** (`RideScript.Leg`, `RideNodes`) finds both ends with `ModelFile.FindNode` on the thing's own model and
+takes them where the build's pose stores them, composed in floats at the thing's cell and turn as above. A node riding a
+clip-driven ancestor stands at rest, counted `WALK_LEG_REST_POSE`: the engine's is the last drawn frame's, and every
+shipped walk comes at a pose that gives the rest-pose legs (the Aztec Mayhem's measured; the Lookout's lift 0.094 and
+the Totem's cart 0.063 from rest, worked out), but a ride left off screen mid-cycle keeps that frame's pose. A head the
+engine takes from a face of a morphing mesh is counted `WALK_NODE_ON_A_FACE` (none in Lost Kingdom). A miss, an unposed
+record, a negative id and a walking script with no model, which the engine's stepper does not survive, are counted
+(`WALK_NODE_MISS`, `WALK_NODE_UNPOSED`, `WALK_NODE_NEGATIVE_ID`, `WALK_NODES_NO_MODEL`) and walk the shortest leg. It
 also steps a script's walks inside that script's turn, where the engine steps every script's once a frame (Q183).
 
 **Walk-slot declarations across Lost Kingdom** (header word `0x1c`): incagod 40; Lookout, Totem, tvsim 20; balloon, giftshop, steak 10; Hyenas, Junspray 3; Squark 1. `WALKGET` appears in all of them, which makes it the corpus's dominant dismissal.
