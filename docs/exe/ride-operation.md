@@ -731,12 +731,49 @@ the one tail (`0x0050049e` / `0x005004aa`): `FUN_004ddd20`, then `FUN_005012f0` 
 animation's start (`0x004fc871`, `0x0050237b`); state 8 returns only after `mGameTick > +0x208 + 10`, and returning
 to 11 stamps `mTimeStartedIdling` (`0x00501eb7`), so in state 11 it is at least 11 past `+0x208`. The window wants
 `mGameTick <= +0x208 + 30` and boredom `mGameTick > +0x208 + 111`. Only a save holding a state-11 guest with the
-two stamps 70 apart could reach it. `FUN_004dda40` returns 100 for a thing without a queue path (`+0x32 & 8`), else
-`trunc(max(+0x5d × desc[+0x1b4 + lvl × 0x40] × R / +0x5c, 4.0))` with `lvl` = `+0x50` and `R` =
-`+0x58 / desc[+0x1a8 + lvl × 0x40]`, or 1 for a speed of nought; `R` is stored through a float global (`0x007cdc54`),
-the `+0x1b4` float is the one its assert calls `"No queue constant entered in SAM file"`, `Upgrades[l].QueueWaitTimeConstant`
-by the compiled `.sam` schema (the name at `0x007465ec`; `Rides.sam` gives 30 at tier nought), and the `+0x1a8` divisor,
-`InitSpeed`, is an integer (`FIDIV`).
+two stamps 70 apart could reach it.
+
+**The longest queue - `FUN_004dda40`.** Verified 2026-09-28 (`docs/QUEUE.md` Q173): three claim groups, each read from
+the disassembly and put to a skeptic; all held, three sharpened. It returns 100 for a thing without the queue-path bit
+(`+0x32 & 8`, `0x004dda4c`). With it, `trunc( max( ((cap × q) × R) / dur, 4.0 ) )`, in that order
+(`0x004ddb26`..`0x004ddb38`):
+
+- `cap` and `dur` are the bytes `+0x5d` (`mOperatingCapacity`) and `+0x5c` (`mOperatingDuration`), loaded as integers.
+- `q` is the float at descriptor `+0x1b4 + 0x40 × l` (`0x004ddac9`), `l` the byte `+0x50` (`mUpgradeLevel`), never
+  bounds-checked: `Upgrades[l].QueueWaitTimeConstant`, a float leaf (type 7) of the compiled `.sam` schema (entry
+  `0x007465e8`, name `0x007465ec`, between `WearRate` `+0x1b0` and `CostOfUpgrade` `+0x1b8`). The loader converts it
+  with `atof` and stores a float (`0x00401e22`); an item's own file overrides its category's key by key, and a key
+  neither states reads nought. The descriptor comes from `FUN_00412e90( 0x7890a0, word +0xe )`, which answers nought
+  for an unknown item; nothing checks it.
+- `R` is the dword `+0x58` (`mOperatingSpeed`) zero-extended (`FILD` qword) over the signed `InitSpeed` at
+  `+0x1a8 + 0x40 × l` (`FIDIV`), **stored as a float** at `0x007cdc54` (`0x004dda95`, read only at `0x004ddb32`), or
+  `1.0f` when the speed is nought (`0x004dda9d`).
+- The floor is `FCOM 4.0f` then `TEST AH,0x41` (`0x004ddb3c`): a value at or below 4, or not a number, becomes 4.
+- The truncation is `__ftol` (`0x0067a830`): chop, `FISTP` qword, the low dword. An infinite value, or one of 2^63 or
+  more, stores the integer indefinite, whose low dword is nought.
+
+Its two asserts, `q` above nought (`"No queue constant entered in SAM file for object num %d ..."`, `0x0075b714`) and
+the duration non-zero (`"Operating duration set to zero - shouldn't have a zero duration for a ride!"`, `0x0075b6c8`),
+go to the bare `RET` at `0x005da3c0`, so nothing is refused, and nothing checks `InitSpeed`. A tier stating no
+constant holds 4. A duration of nought, or an `InitSpeed` of nought under a speed, is infinite and holds **nought**,
+unless `cap × q` is nought: then it is not a number and holds 4. No shipped ride sets a duration or `InitSpeed` of
+nought.
+
+Exactly two callers read it (`0x004ddb75`, `0x0050059f`; no other reference, jump or pointer in the image), both
+unsigned: the arrival refuses at a count **at or past** it, the `InQueue` turn puts out a guest whose place is
+**past** it, so a queue settles at one more under the turn than the arrival lets in. `FUN_004ddf50( 0 )` never answers
+-1, so the unsigned compare matters only in principle. It runs in the thing sweep, a sibling of the frame renderer
+and never inside it, and nothing on its path writes the precision control: it sees what the renderer's last exit left
+(`park-engine.md`, "Which rounding is live"). Over every slider setting of every shipped ride with a queue (6,769,800),
+the answer at 53 bits and at 64 bits is the exact one; at 24 bits 83,454 of them (1.2%) answer one more, each with a
+speed off the tier's, where the float `R` is inexact and the value lands just under a whole number.
+
+In Lost Kingdom all 17 rides with a queue state their own three constants (FileFormats `sam.md`), so `Rides.sam`'s 30,
+35 and 40 reach none. The Belly Bounce as saved - capacity 5, duration 30, speed 60, tier nought, constant 130 - holds
+**21**; the room gate (`FUN_004dda20`, 16 over its four cells) is asked first, so at its shipped settings neither of
+its callers can refuse or put anyone out. A capacity of 3 (13) or less, a duration of 41 (15) or more, or a speed of
+44 (15) or less brings it under 16, where the arrival refuses before the room gate does; the turn's arm 5a, which needs
+a place past it after a slider has moved, fires at 14 or less (a duration of 44, a speed of 41).
 
 **The clock and the stamps.** `mGameTick` (`[0x0080239c] + 0x1da70c`, named by the world serialiser) goes up by one
 at the start of each thing sweep (`0x00516394`), which runs on game ticks whose low three bits are nought and at most
@@ -748,13 +785,13 @@ through. The guest constructor `FUN_004faec0` zeroes `+0x208` and `+0x1fc` and s
 strings that print them (`0x004fda74`, `0x004fd10e`) and by the needs tick, not by a name in the game.
 
 **OpenTPW builds** the turn as `PeepBehaviour.QueueTurn`, with `ParkRideOperation.LeaveQueue` as the tail's
-`FUN_004ddd20` and `DismissFromTheQueue` as `FUN_005012f0`: arms 1, 2 and 4, 5a for a thing without a queue path,
+`FUN_004ddd20` and `DismissFromTheQueue` as `FUN_005012f0`: arms 1, 2 and 4, 5a on `PeepBehaviour.LongestQueue`,
 5b for a car track, the re-take (`FindQueueDestination`, and out when it fails), the broken ride's skipped re-take, and
 the toilet. `ParkState.LeaveQueue` splices by the leaver's own links, so a leaver with nobody in front
 writes their own next as the head (`0x004ddde9`): an unlinked one empties it and the rest of that queue is lost to the
 walk in turn. **Counted:** the no-route board (`QUEUE_BOARD_NO_ROUTE`: ours routes to the entry cell's centre, the original to
 the stand point on the same cell, and `FUN_004fa5f0` also fails without routing on `mStrandedTime` at `+0x198`,
-`0x004fa62a`, that nothing here keeps: nought on the queue paths but from a save), the dirt gate (`QUEUE_TOILET_DIRT_GATE`), the capacity on a queue path (`QUEUE_CAPACITY_RECHECK`), the
+`0x004fa62a`, that nothing here keeps: nought on the queue paths but from a save), the dirt gate (`QUEUE_TOILET_DIRT_GATE`), the
 coaster's record (`QUEUE_TURN_COASTER_TRACK_RECORD`, let through), the
 thoughts, the spot animations (`QUEUE_SPOT_ANIMATION`), the heading (`QUEUE_TURN_HEADING`) and boredom
 (`QUEUE_TURN_BOREDOM`). **The unhappy arm is held** (`QUEUE_TURN_UNHAPPY`) until Q85: an arriving guest here starts at
@@ -1265,11 +1302,11 @@ column is the chooser before Q165b and Q165c built what the decode column shows.
 | What | The original | OpenTPW | Reached in Lost Kingdom |
 |---|---|---|---|
 | Distance, the effects divisor and the queue term's distance test | at the back-of-queue cell | at the entry cell (Q105) | every candidate |
-| The FPU's precision | not settled (`park-engine.md`, "Which rounding is live") | double, the runtime's starting precision | Eruption's golden ticket at some scores (62 against 63 at 45) |
+| The FPU's precision | not settled (`park-engine.md`, "Which rounding is live") | double, the runtime's starting precision | Eruption's golden ticket at some scores (62 against 63 at 45); the longest queue at 21,708 of Lost Kingdom's 1,690,500 slider settings (1.3%), each with the speed moved off its tier's (one more at 24 bits) |
 | A coaster's excitement | `trunc( 50 + f / 2 )` of its node's rating, or nought before `COAST 8` binds it | its `ExcitementLevel`, counted (`RIDE_EXCITEMENT_COASTER_TRACK`) | Alexah's saved Temple Of Gloom, which is offered (Q167); a bought one is refused before it is scored |
 | A tier past the third | the divisors read from the fields after `Upgrades` (`+0x260`, `+0x268`) | its base without the ratios, counted (`RIDE_EXCITEMENT_UPGRADE_TIER`) | only by a save's byte; no save read has one |
 | A sideshow's cost of goods and chance of winning | the object's own `+0x188` and `+0x190` | the item's (Q97) | none yet: the save holds the item's |
-| The too-long gate on a queue path | `FUN_004dda40`'s capacity, over `QueueWaitTimeConstant`, which the catalogue does not read | counted and let through (`QUEUE_TOO_LONG_CAPACITY`, Q173) | the Belly Bounce, and every bought ride with a queue |
+| The longest queue at a tier past the third, or for an item the catalogue lacks | the constant and speed read from past `Upgrades`, or through a null descriptor | counted, and both gates let the guest through (`QUEUE_CAPACITY_UPGRADE_TIER`, `QUEUE_CAPACITY_UNKNOWN_ITEM`) | only by a save's byte; no save read has one |
 | The calendar at load | the save's `mGameTick`, 755: 2000-02-02 18:27:30 | the score's calendar is the original's (`ParkState.CalendarNow`); the gadget's date and the weather's days count from nought (`GameCalendar.Rebase`, Q149) | every load |
 
 **Built: the rest of the score** (`docs/QUEUE.md` Q165c). `ParkRideScore.Of` runs all twelve steps in the original's
@@ -1285,8 +1322,9 @@ refusal and the settle-up's excitement match all read: the Jungle Spray is 30, a
 before the charge) and at both refusals, aged on the sweep and cleared by a removal as above. A bought thing is
 stamped with the park's calendar (`ParkBuilding`, `0x004db66a`); the calendar is `GameCalendar.Epoch`, 2000-01-01,
 which the clock constructor seeds (`FUN_004f7e80`, `0x004f7ea0`), plus `mGameTick × 3750` seconds; the object window's
-Age reads the same age, signed. The arrival's third gate, too long (`FUN_004ddb60`), is built for a thing without the
-queue-path bit (100) and pushes the refusal like the excitement gate.
+Age reads the same age, signed. The arrival's third gate, too long (`FUN_004ddb60`), is built on
+`PeepBehaviour.LongestQueue` (100 without the queue-path bit; with it, "The longest queue - `FUN_004dda40`" above) and
+pushes the refusal like the excitement gate.
 
 **Built: each kind's preference and an arrival's kind** (`docs/QUEUE.md` Q165b). `PeepBehaviour` hands the park's
 `ParkBalance` to its chooser's `ParkRideScore`, so each kind prefers its own `PeepTypes[n].PreferredExcitement`, 80, 65,
@@ -2274,7 +2312,7 @@ The Jungle Spray is queued for and invited in **about one run in five** at that 
 - **`FUN_005019f0` case `0x11`**, the walk of the `mFirstGuard` chain through `+0x210` / `+0x212`.
 - **Whether a shop's duration of nought is correct** (it may simply not read it) where `FUN_004df8f0` would take a clamped value from the descriptor's `+0x1a0`. A bought one's is: the constructor writes `+0x5c` only for a starting duration above nought, and every shop's is nought (Q171).
 - **Refuted, so do not repeat:** "only `UNBOUNCE` writes `VAR_LETMEOFF`" — there are six writers, and the claim is false for 16 of the park theme's 17 dismissing ride scripts. "The shops' `mOperatingCapacity` might be nought, leaving them permanently full" — every visitable object has a non-zero capacity.
-- Descriptor keys present in the `.sam` files that OpenTPW does not read yet: `ShopType`, `RideHandlesSprite` (the flag byte's `0x20`, Q52), `RequiresTeleport`, `Upgrades[n].QueueWaitTimeConstant` (Q173).
+- Descriptor keys present in the `.sam` files that OpenTPW does not read yet: `ShopType`, `RideHandlesSprite` (the flag byte's `0x20`, Q52), `RequiresTeleport`.
 
 ## Measuring the corpus without inventing findings
 

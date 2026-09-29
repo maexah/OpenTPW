@@ -1199,7 +1199,7 @@ public sealed class PeepBehaviour
 			return;
 		}
 
-		if ( QueueTooLong( chosen, queue ) )
+		if ( QueueTooLong( chosen, ItemOf( chosen ), queue ) )
 		{
 			Log.Info( $"Person {peep.ThingId}: queue is too long! ({queue} for thing {chosen.ThingId})" );
 			Unimplemented.Report( "ARRIVAL_TOO_LONG_THOUGHT_0x10" );
@@ -1338,6 +1338,12 @@ public sealed class PeepBehaviour
 	public const int NoQueuePathCapacity = 100;
 
 	/// <summary>
+	/// <c>FUN_004dda40</c>'s floor, the <c>4.0f</c> at <c>0x00700558</c>: a longest queue at or below it, or not a number,
+	/// is raised to it before the truncation, which still answers nought for an infinite one (<see cref="LongestQueue"/>).
+	/// </summary>
+	public const double LongestQueueFloor = 4.0;
+
+	/// <summary>
 	/// One turn of a guest standing in a queue - <c>FUN_004ffff0</c>, its arms in its own order. Every arm that
 	/// gives up ends the same way, <see cref="PutOutOfTheQueue"/>. See <c>docs/exe/ride-operation.md</c>, "The
 	/// <c>InQueue</c> turn".
@@ -1357,7 +1363,7 @@ public sealed class PeepBehaviour
 	/// save gives and nothing here lowers. What lowers it is not decoded (Q100), so the gate is counted.</item>
 	/// <item><b>The lost place.</b> The queue walk cannot reach them - they are unlinked, or somebody in front has
 	/// stopped queueing: put out. The original's log says it closes and reopens the ride; nothing does.</item>
-	/// <item><b>In place</b>: too far back for the capacity (<c>FUN_004dda40</c>, counted for a queue path, Q173), or a
+	/// <item><b>In place</b>: too far back for the thing's longest queue (<see cref="LongestQueue"/>), or a
 	/// car track that is not valid, is put out; a coaster's track
 	/// record is counted and let through, as the choice lets it through.</item>
 	/// <item><b>Out of place</b>: more than <see cref="QueueDriftAllowed"/> out, or no delay left, re-takes the place
@@ -1423,14 +1429,10 @@ public sealed class PeepBehaviour
 
 		if ( recorded == place )
 		{
-			if ( queueing.HasQueuePath )
-			{
-				Unimplemented.Report( "QUEUE_CAPACITY_RECHECK" );
-			}
-			else if ( recorded > NoQueuePathCapacity )
+			if ( LongestQueue( queueing, ItemOf( queueing ) ) is { } longest && (uint)recorded > longest )
 			{
 				Unimplemented.Report( "QUEUE_TURN_THOUGHT_0x10" );
-				PutOutOfTheQueue( peep, queueing, tick );
+				PutOutOfTheQueue( peep, queueing, tick, $"the capacity, place {recorded} past {longest}" );
 
 				return;
 			}
@@ -1530,6 +1532,10 @@ public sealed class PeepBehaviour
 	/// <summary>What kind of track a thing runs on, from its item, or nought for one the catalogue does not know.</summary>
 	private int TrackTypeOf( ParkWorld.CatalogueObject thing )
 		=> _catalogue != null && _catalogue.TryGet( thing.CatalogueId, out var item ) ? item.TrackType : 0;
+
+	/// <summary>A thing's item, or null for one the catalogue does not know.</summary>
+	private ParkItemCatalogue.Item? ItemOf( ParkWorld.CatalogueObject thing )
+		=> _catalogue != null && _catalogue.TryGet( thing.CatalogueId, out var item ) ? item : null;
 
 	/// <summary>The object this guest set off for, or null if the park no longer has it.</summary>
 	/// <remarks>
@@ -1746,22 +1752,70 @@ public sealed class PeepBehaviour
 	}
 
 	/// <summary>
-	/// Whether a queue is too long to join - <c>FUN_004ddb60</c>: its count at or past <c>FUN_004dda40</c>'s longest,
-	/// unsigned. That is <see cref="NoQueuePathCapacity"/> for a thing without the queue-path bit. With it,
-	/// <c>trunc( max( capacity × QueueWaitTimeConstant × speed / InitSpeed / duration, 4 ) )</c> at the ride's tier
-	/// (<c>docs/exe/ride-operation.md</c>, "The <c>InQueue</c> turn"), whose <c>Upgrades[l].QueueWaitTimeConstant</c>
-	/// the catalogue does not read: counted and let through, as <see cref="QueueTurn"/> does (Q173).
+	/// Whether a queue is too long to join - <c>FUN_004ddb60</c>: its count at or past <see cref="LongestQueue"/>,
+	/// unsigned.
 	/// </summary>
-	internal static bool QueueTooLong( ParkWorld.CatalogueObject chosen, int queue )
-	{
-		if ( chosen.HasQueuePath )
-		{
-			Unimplemented.Report( "QUEUE_TOO_LONG_CAPACITY" );
+	internal static bool QueueTooLong( ParkWorld.CatalogueObject chosen, ParkItemCatalogue.Item? item, int queue )
+		=> LongestQueue( chosen, item ) is { } longest && (uint)queue >= longest;
 
-			return false;
+	/// <summary>
+	/// The longest queue a guest joins (<see cref="QueueTooLong"/>) or stays in (<see cref="QueueTurn"/>'s capacity
+	/// arm) - <c>FUN_004dda40</c>, which both compare unsigned. <see cref="NoQueuePathCapacity"/> for a thing without
+	/// the queue-path bit. With it, <c>trunc( max( capacity × QueueWaitTimeConstant × R / duration, 4 ) )</c> at the
+	/// thing's tier, where R is its speed over the tier's <c>InitSpeed</c>, stored as a float, or 1 at a speed of
+	/// nought (<c>docs/exe/ride-operation.md</c>, "The longest queue - <c>FUN_004dda40</c>"). A tier stating no constant reads
+	/// nought and so holds the floor, 4. Null, and both gates let the guest through, for a tier past the third,
+	/// whose constant the original reads from past <c>Upgrades</c>, or a thing the catalogue does not know, which the
+	/// original would read through a null descriptor: each counted.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// <b>The arithmetic is taken at double precision</b>, the runtime's starting precision, as
+	/// <see cref="ParkRideScore.Priced"/> is. Which precision the original runs it at is not settled; at 24 bits a
+	/// setting whose speed is off its tier's can answer one more.
+	/// </para>
+	/// <para>
+	/// <b>The truncation is <c>__ftol</c>'s</b> (<c>0x0067a830</c>): toward nought through a 64-bit integer, keeping
+	/// the low 32 bits. An infinite value stores the integer indefinite, whose low half is nought, so a duration of
+	/// nought, or a tier's <c>InitSpeed</c> of nought under a speed, lets nobody in, unless capacity × constant is
+	/// nought: that is not a number and holds the floor. The original refuses neither: its asserts on the constant and
+	/// the duration do nothing, and it checks no <c>InitSpeed</c>.
+	/// </para>
+	/// </remarks>
+	internal static uint? LongestQueue( ParkWorld.CatalogueObject thing, ParkItemCatalogue.Item? item )
+	{
+		if ( !thing.HasQueuePath )
+			return NoQueuePathCapacity;
+
+		if ( item is not { } described )
+		{
+			Unimplemented.Report( "QUEUE_CAPACITY_UNKNOWN_ITEM" );
+
+			return null;
 		}
 
-		return (uint)queue >= NoQueuePathCapacity;
+		var tier = thing.UpgradeLevel;
+
+		if ( tier >= ItemDescriptionFile.Tiers )
+		{
+			Unimplemented.Report( "QUEUE_CAPACITY_UPGRADE_TIER" );
+
+			return null;
+		}
+
+		// R: FILD of the zero-extended speed, FIDIV the tier's signed InitSpeed, FSTP float (0x004dda87..0x004dda95).
+		var speed = (uint)thing.OperatingSpeed;
+		var ratio = speed != 0 ? (float)(speed / (double)described.StartingAt( tier ).Speed) : 1f;
+
+		var longest = (thing.OperatingCapacity & 0xff) * (double)described.QueueWaitTimeConstantAt( tier ) * ratio
+			/ (thing.OperatingDuration & 0xff);
+
+		// FCOM 4.0 then TEST AH,0x41 (0x004ddb3c): at or below the floor, or unordered, takes the floor.
+		if ( !(longest > LongestQueueFloor) )
+			longest = LongestQueueFloor;
+
+		// Past 2^63, infinity included, FISTP stores the integer indefinite.
+		return longest < 9223372036854775808.0 ? (uint)(long)longest : 0u;
 	}
 
 	/// <summary>

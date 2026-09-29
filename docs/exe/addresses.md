@@ -246,6 +246,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004dd150` | The object destructor `FUN_004dd0a0` sends the type-10 message on the bus: every guest and member of staff bound to the thing answers it | OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004dd2c9` | The object destructor `FUN_004dd0a0` calls the script teardown `FUN_00559060` with mode 0, 4 or 7 | OpenTPW.Tests/ParkSellTests.cs OpenTPW/World/Park/ParkRides.cs  |
 | `0x004dd9b7` | Offer gate FUN_004dd920: a coaster (track type 3) asks FUN_00441970, after the room test | OpenTPW/World/Park/ParkRideChoice.cs  |
+| `0x004dda87` | FUN_004dda40, the longest queue: the speed +0x58 zero-extended (FILD qword) over the tier's signed InitSpeed (FIDIV) | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004dda95` | FUN_004dda40: R stored as a float at 0x007cdc54, read back only at 0x004ddb32 | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ddac9` | FUN_004dda40: FLD Upgrades[l].QueueWaitTimeConstant, the float at descriptor +0x1b4 + 0x40 x l | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
+| `0x004ddb3c` | FUN_004dda40: FCOM 4.0f then TEST AH,0x41: at or below 4, or not a number, takes the floor | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ddd4e` | `FUN_004ddd20` (leave a queue) empties `VAR_LETMEON` when it names the leaver (from here) | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004ddd7d` | `FUN_004ddd20`: the `VAR_LETMEON` clear (to here) | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004ddde9` | `FUN_004ddd20`: with no `mQPrev` the leaver's `mQNext` becomes `mFirstInQ` | OpenTPW.Tests/ParkQueueJoinTests.cs OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/ParkState.cs  |
@@ -384,6 +388,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005004b3` | `FUN_004ffff0`'s put-out tail: `FUN_004ddd20`, then `FUN_005012f0` | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00500523` | `InQueue` turn: a ride broken down (state 1) re-takes no place | OpenTPW.Tests/ParkQueueTurnTests.cs  |
 | `0x00500532` | `FUN_004ffff0`'s re-take: `FUN_00501160`, and out if it fails | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x0050059d` | InQueue turn FUN_004ffff0, arm 5a: FUN_004dda40 against mQueuePos, unsigned; past it, thought 0x10, event 0x15, out | OpenTPW.Tests/ParkLongestQueueTests.cs  |
 | `0x00500631` | `InQueue` turn: the track gate's item track type 1 | OpenTPW.Tests/ParkQueueTurnTests.cs  |
 | `0x00500643` | `InQueue` turn: the track gate's `mIsTrackRideValid` nought | OpenTPW.Tests/ParkQueueTurnTests.cs  |
 | `0x00500715` | At the door: the price opinion `FUN_004fde50` | OpenTPW.Tests/ParkRideExitTests.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/PeepBehaviour.cs OpenTPW/World/Park/PeepPriceOpinion.cs  |
@@ -547,7 +552,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00543725` | KART loader FUN_00543560: a saved ride through FUN_00545890 with its handle, which names the slot | OpenTPW/World/Park/ParkTrackRideTable.cs  |
 | `0x00544061` | KART loader FUN_00543560: each saved section handed to FUN_0054b2f0 | OpenTPW/World/Park/ParkTrackRideTable.cs  |
 | `0x005443d2` | Track rides' table: 64 entries of 0xd0 bytes allocated zeroed (GMEM_ZEROINIT) | OpenTPW/World/Park/ParkTrackRideTable.cs  |
-| `0x0054536d` | FUN_00545310: the stale test, the handle against slot | entry[0] << 8 | OpenTPW/World/Park/ParkTrackRideTable.cs  |
+| `0x0054536d` | FUN_00545310: the stale test, the handle against slot OR entry[0] << 8 | OpenTPW/World/Park/ParkTrackRideTable.cs  |
 | `0x00545375` | FUN_00545310: the walk of the entry's section list +0xbc, from | OpenTPW/World/Park/ParkTrackRideTable.cs  |
 | `0x0054538d` | FUN_00545310: the pass counter set to 2, above the back edge, so nothing is reset between passes | OpenTPW/World/Park/ParkTrackRideTable.cs  |
 | `0x005453e1` | FUN_00545310: the walk's back edge, to here | OpenTPW/World/Park/ParkTrackRideTable.cs  |
@@ -790,7 +795,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0066ba22` | | OpenTPW/UI/UiControl.cs  |
 | `0x0066bb9b` | | OpenTPW/UI/UiControl.cs  |
 | `0x0066c5a4` | A polygon region's contains test: the crossings count, in whole virtual units | OpenTPW/UI/UiControl.cs  |
-| `0x0067a830` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
+| `0x0067a830` | __ftol: chop, FISTP qword, the low dword in EAX; the integer indefinite's low dword is nought | OpenTPW.Files/Formats/Model/AnimationFile.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x006804da` | The runtime's start-up: the FPU at 53-bit precision | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x006b0680` | | OpenTPW/UI/BitmapFont.cs  |
 | `0x006b15f0` | | OpenTPW/UI/BitmapFont.cs  |
@@ -821,6 +826,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x006fec00` | The constant 0.01 in the lobby path sampler's `percent * 0.01 * segments` | OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x006fec08` | | OpenTPW.Files/Formats/Model/AnimationFile.cs OpenTPW.Tests/RideAnimationsTests.cs OpenTPW/World/Ride/AnimTimeControl.cs OpenTPW/World/Ride/RideAnimations.cs  |
 | `0x006fecb8` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
+| `0x00700558` | Float 4.0f, the longest queue's floor (FUN_004dda40) | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x007005b0` | Float -0.8f, the sideshow excitement's factor | OpenTPW.Tests/ParkRideScoreTests.cs OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x007005b8` | | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x007005c0` | | OpenTPW/World/Park/ParkRideScore.cs  |

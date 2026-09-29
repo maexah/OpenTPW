@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 namespace OpenTPW;
@@ -393,6 +394,14 @@ public sealed class ItemDescriptionFile
 		=> tier == 0 ? InitDuration : _laterInitDuration[tier - 1] ?? _category?.InitDurationAt( tier ) ?? 0;
 
 	/// <summary>
+	/// A tier's queue constant - <c>Upgrades[tier].QueueWaitTimeConstant</c>, the float at descriptor
+	/// <c>+0x1b4 + 0x40 × tier</c>, the category's showing through, nought when neither states it. The longest queue a
+	/// guest joins or stays in is scaled by it (<c>FUN_004dda40</c>, <c>0x004ddac9</c>).
+	/// </summary>
+	public float QueueWaitTimeConstantAt( int tier )
+		=> _queueWaitTimeConstant[tier] ?? _category?.QueueWaitTimeConstantAt( tier ) ?? 0f;
+
+	/// <summary>
 	/// Which units a go on this lasts in, and <b>whether it has a duration at all</b>.
 	///
 	/// <para>
@@ -464,6 +473,7 @@ public sealed class ItemDescriptionFile
 	private int? _initDuration;
 	private readonly int?[] _laterInitSpeed = new int?[Tiers - 1];
 	private readonly int?[] _laterInitDuration = new int?[Tiers - 1];
+	private readonly float?[] _queueWaitTimeConstant = new float?[Tiers];
 	private int? _durationUnit;
 	private int? _redLineSpeed;
 	private int? _redLineCapacity;
@@ -736,6 +746,19 @@ public sealed class ItemDescriptionFile
 					_laterInitDuration[1] = Number( line );
 					break;
 
+				// Each tier's queue constant, a float, which the longest queue is scaled by.
+				case "Upgrades[0].QueueWaitTimeConstant":
+					_queueWaitTimeConstant[0] = Real( line );
+					break;
+
+				case "Upgrades[1].QueueWaitTimeConstant":
+					_queueWaitTimeConstant[1] = Real( line );
+					break;
+
+				case "Upgrades[2].QueueWaitTimeConstant":
+					_queueWaitTimeConstant[2] = Real( line );
+					break;
+
 				// Nought means "no duration at all" - see DurationUnit.
 				case "Info.DurationUnit":
 					_durationUnit = Number( line );
@@ -895,6 +918,9 @@ public sealed class ItemDescriptionFile
 	/// </summary>
 	private static int? Number( string line )
 		=> int.TryParse( ValueOf( line ), out var value ) ? value : null;
+
+	private static float? Real( string line )
+		=> float.TryParse( ValueOf( line ), NumberStyles.Float, CultureInfo.InvariantCulture, out var value ) ? value : null;
 
 	/// <summary>The row of dashes that opens and closes a block.</summary>
 	private const string Fence = "---";

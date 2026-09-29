@@ -99,7 +99,10 @@ public sealed class ParkItemCatalogue
 		int InitPricePerUse = 0,
 
 		// The two later tiers' starting speed and duration - ItemDescriptionFile.InitSpeedAt. See StartingAt.
-		int InitSpeed1 = 0, int InitSpeed2 = 0, int InitDuration1 = 0, int InitDuration2 = 0 )
+		int InitSpeed1 = 0, int InitSpeed2 = 0, int InitDuration1 = 0, int InitDuration2 = 0,
+
+		// Each tier's queue constant - ItemDescriptionFile.QueueWaitTimeConstantAt. See QueueWaitTimeConstantAt.
+		float QueueWaitTimeConstant = 0f, float QueueWaitTimeConstant1 = 0f, float QueueWaitTimeConstant2 = 0f )
 	{
 		/// <summary>
 		/// A tier's starting speed and duration, <c>Upgrades[tier]</c> - what an upgraded ride's excitement divides its
@@ -110,6 +113,18 @@ public sealed class ParkItemCatalogue
 			0 => (InitSpeed, InitDuration),
 			1 => (InitSpeed1, InitDuration1),
 			2 => (InitSpeed2, InitDuration2),
+			_ => throw new ArgumentOutOfRangeException( nameof( tier ), tier, "Upgrades has three tiers" )
+		};
+
+		/// <summary>
+		/// A tier's queue constant, <c>Upgrades[tier].QueueWaitTimeConstant</c> - what the longest queue a guest joins
+		/// or stays in is scaled by (<c>FUN_004dda40</c>, <see cref="PeepBehaviour.LongestQueue"/>).
+		/// </summary>
+		public float QueueWaitTimeConstantAt( int tier ) => tier switch
+		{
+			0 => QueueWaitTimeConstant,
+			1 => QueueWaitTimeConstant1,
+			2 => QueueWaitTimeConstant2,
 			_ => throw new ArgumentOutOfRangeException( nameof( tier ), tier, "Upgrades has three tiers" )
 		};
 	}
@@ -230,7 +245,9 @@ public sealed class ParkItemCatalogue
 					description.CannotRide, description.GoldenTicketCost, description.BumperType,
 					description.InitPricePerUse,
 					description.InitSpeedAt( 1 ), description.InitSpeedAt( 2 ),
-					description.InitDurationAt( 1 ), description.InitDurationAt( 2 ) );
+					description.InitDurationAt( 1 ), description.InitDurationAt( 2 ),
+					description.QueueWaitTimeConstantAt( 0 ), description.QueueWaitTimeConstantAt( 1 ),
+					description.QueueWaitTimeConstantAt( 2 ) );
 
 			return true;
 		}

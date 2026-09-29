@@ -385,27 +385,18 @@ public class ParkVisitHistoryTests
 
 	/// <summary>
 	/// <b>A queue too long to join</b> (<c>FUN_004ddb60</c>): for a thing without the queue-path bit, a count of a
-	/// hundred or more, unsigned; for one with it, the unread capacity is counted and the guest let through.
+	/// hundred or more, unsigned, whatever its item. One with it is <c>ParkLongestQueueTests</c>'.
 	/// </summary>
 	[TestMethod]
 	public void AQueueIsTooLongAtAHundredWithoutAQueuePath()
 	{
 		var world = World();
 		var spray = world.Objects.Single( o => o.ThingId == JungleSpray );
-		var bounce = world.Objects.Single( o => o.ThingId == BellyBounce );
 
 		Assert.IsFalse( spray.HasQueuePath, "the Spray has no queue path" );
-		Assert.IsFalse( PeepBehaviour.QueueTooLong( spray, 99 ) );
-		Assert.IsTrue( PeepBehaviour.QueueTooLong( spray, 100 ) );
-		Assert.IsTrue( PeepBehaviour.QueueTooLong( spray, -1 ), "unsigned" );
-
-		int Counted() => Unimplemented.Summary.FirstOrDefault( gap => gap.What == "QUEUE_TOO_LONG_CAPACITY" ).Times;
-
-		var before = Counted();
-
-		Assert.IsTrue( bounce.HasQueuePath, "the Belly Bounce has one" );
-		Assert.IsFalse( PeepBehaviour.QueueTooLong( bounce, 1000 ), "let through" );
-		Assert.AreEqual( before + 1, Counted(), "and counted" );
+		Assert.IsFalse( PeepBehaviour.QueueTooLong( spray, null, 99 ) );
+		Assert.IsTrue( PeepBehaviour.QueueTooLong( spray, null, 100 ) );
+		Assert.IsTrue( PeepBehaviour.QueueTooLong( spray, null, -1 ), "unsigned" );
 	}
 
 	/// <summary>

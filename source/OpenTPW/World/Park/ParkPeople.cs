@@ -2071,6 +2071,9 @@ public sealed class ParkPeople : Entity
 				// back-of-queue and differ on exactly the objects that made this work necessary.
 				+ $"cells {cells} (record {thing.QueueSizeInCells}) back {back} "
 				+ $"queue {queue}/{cells * ParkRideChoice.QueueRoomPerCell} "
+				// The longest queue a guest joins or stays in (FUN_004dda40); "-" where both gates let everyone through,
+				// which for an unknown item or a tier past the third is counted, so not asked here.
+				+ $"longest {(thing.HasQueuePath && (!described || thing.UpgradeLevel >= ItemDescriptionFile.Tiers) ? "-" : PeepBehaviour.LongestQueue( thing, described ? item : null ))} "
 				+ $"win {(described ? item.ChanceOfWinning : -1)}% "
 				+ $"prize {(described ? item.CostOfGoods : -1)} "
 				// What the score, the arrival's refusal and the settle-up read; a coaster's is counted, so not asked here.

@@ -212,7 +212,7 @@ The attribute array on disk packs the other way round — see "Axis and handedne
 
 ### How a key finds its global
 
-Decoded 2026-09-23 (`docs/QUEUE.md` Q36), put to two refuters. **The address comes from the key's place in the executable's own table, not from the file's order.** Each balance family is one static object whose vtable slot 0 returns record `i` of a table in `.rdata` (stride `0x3c`: a type dword, then the name) and whose slot 1 (`0x005b0d60`) returns `this + 8`. `FUN_00401030` gives every value record (types 4 to `0xb`) the next dword, starting at slot 1, so record `i`'s global is `this + 8 + 4*slot`. The parser `FUN_004017a0` resolves `Group.Field` through `FUN_00401280`, which searches back from the table's end for the group and then for the field, case-sensitively. Types: 0 section start, 1 section end with the group name, 2/3 an array, 4 int, 5 int ≥ 0, 6 bounded int, 7 float, 8 float ≥ 0, 9 bounded float, `0xa` string, `0xb` a multi-line block, `0xc` the end.
+Decoded 2026-09-23 (`docs/QUEUE.md` Q36), put to two refuters. **The address comes from the key's place in the executable's own table, not from the file's order.** Each balance family is one static object whose vtable slot 0 returns record `i` of a table in `.rdata` (stride `0x3c`: a type dword, then the name) and whose slot 1 (`0x005b0d60`) returns `this + 8`. `FUN_00401030` gives every value record (types 4 to `0xb`) the next dword, starting at slot 1, so record `i`'s global is `this + 8 + 4*slot`. The parser `FUN_004017a0` resolves `Group.Field` through `FUN_00401280`, which searches back from the table's end for the group and then for the field, case-sensitively. Types: 0 section start, 1 section end with the group name, 2/3 an array, 4 int, 5 int ≥ 0, 6 bounded int, 7 float, 8 float ≥ 0, 9 bounded float, `0xa` string, `0xb` a multi-line block, `0xc` the end. A float value (from `0x00401d8b`, Q173) is an optional `-`, then digits with at most one `.`, then whitespace or the line's end, under 100 characters; anything else is a bad line, and whatever follows the whitespace is ignored. It is converted with `atof` and stored as a float (`0x00401e22`).
 
 The `PeepInfo` object is at `0x00785040` (built at `0x00402ae0`, table `0x0073fc70`): `0x0078504c` ExitLevel, `0x00785050` ExitLevelVar, `0x00785054` StartingCashVarPc, **`0x00785058` SmallHappinessChange, `0x0078505c` MediumHappinessChange, `0x00785060` BigHappinessChange**, then **`0x00785064` PerfectRide, `0x00785068` GoodRide, `0x0078506c` OKRide, `0x00785070` RideVomitDivisor**, read off the table itself (record by record, Q169): the file lists RideVomitDivisor straight after BigHappinessChange, so fitting file order to addresses goes wrong from there, and the table does not. `FUN_004fdcc0`, the excitement match, is the four's only reader (`ride-operation.md`, "The excitement match"). `FUN_004fe980` confirms the three: its level 0, 1 and 2 return the bytes at `0x00785058`, `0x0078505c` and `0x00785060`. Every reader loads those three as a byte; the four ride keys are read as whole ints. Lost Kingdom offline takes 5, 15 and 25 from `data/levels/Standard.sam`; no jungle file overrides them (online is 3, 10, 25).
 
@@ -695,9 +695,13 @@ asked axis may leave its cell.
 | `_DAT_006fde00` / `_DAT_006fde04` | ∓1e-4 | A step inside this band is zeroed before anything is swept |
 
 **Which rounding is live is not settled.** The CRT starts the FPU at 53-bit precision (`0x006804da`). The frame
-renderer `FUN_00576ec0` switches to 24-bit at `0x00576fa7` and restores the saved word on success (`0x00577310`),
-but its failure exit (`0x00577433`) restores nothing, so one failed frame leaves 24-bit in force for the rest of
-the run. DirectDraw is set up with `DDSCL_FPUSETUP` (`0x00563914`, `0x00563b92`), whose effect belongs to the
+renderer `FUN_00576ec0` switches to 24-bit at `0x00576fa7` and has three exits. On success it restores the saved word
+(`0x00577310`), or, when the `0x2` bit of `[0x008bd508]` is set (`TEST AL,0x2` at `0x005772f6`), the saved word with the precision bits set,
+64-bit (`0x00577304`, `FUN_00591250` ORs `0x300`); no writer found sets that bit (it starts `0x3000141` at `0x00583555`,
+the other writers OR in other bits or put back saved words), so that arm is probably never taken, though an indirect
+write is not ruled out. Its failure exit (`0x00577433`) restores nothing, so one failed frame leaves 24-bit in force
+for the rest of the run. The thing sweep runs beside the renderer, never inside it, so what it computes sees whatever
+the last exit left (Q173). DirectDraw is set up with `DDSCL_FPUSETUP` (`0x00563914`, `0x00563b92`), whose effect belongs to the
 runtime, not the executable. It matters only at the margin: at 53 bits a positive step landing exactly on a
 boundary, `245 + 5`, has reach 0.99999928 and is asked; at 24 bits its reach is 1.0, it is taken whole, and step 7
 puts it back. The cell in step 1 is the same either way. Logging the control word at `FUN_0042b1c0`'s entry would

@@ -2070,7 +2070,53 @@ artifacts are listed in `docs/history/README.md`.
   read excitement 42 (70 before the build), and `unimplemented` without `RIDE_EXCITEMENT_TRACK_CROWD`; buy a Temple
   Of Gloom with its queue and predict `why` never naming it. The tier and the saved Dino Karts wait for Q167.
 
-- [ ] **Q173. The longest queue a guest joins or stays in, for a ride with a queue path.** Found by Q165c's review.
+- [x] **Q173. The longest queue a guest joins or stays in, for a ride with a queue path.** Done 2026-09-29,
+  `alexah/180-the-longest-queue`. `ride-operation.md`, "The longest queue - `FUN_004dda40`" and the "OpenTPW builds"
+  paragraph after the `InQueue` turn; `park-engine.md`, "Which rounding is live" (the renderer's third exit) and "How a
+  key finds its global" (a float's grammar); FileFormats `sam.md`, `Upgrades[n].QueueWaitTimeConstant`
+  (`docs/sam-and-saves-corrections`, `7a85c8d`).
+  - **Built:** the catalogue reads each tier's `QueueWaitTimeConstant` as a float over its category's
+    (`ItemDescriptionFile.QueueWaitTimeConstantAt`); `PeepBehaviour.LongestQueue` ports `FUN_004dda40` (R stored as a
+    float, the floor of 4 taking not-a-number, `__ftol`'s low dword, nought for an infinite value), and both gates read
+    it: the arrival's `QueueTooLong` and the `InQueue` turn's arm 5a, which puts a queuer out "by the capacity".
+    `QUEUE_TOO_LONG_CAPACITY` and `QUEUE_CAPACITY_RECHECK` retire; a tier past the third and an item the catalogue
+    lacks are counted (`QUEUE_CAPACITY_UPGRADE_TIER`, `QUEUE_CAPACITY_UNKNOWN_ITEM`) and let through. `spend` prints
+    each thing's `longest`.
+  - **Verified first** (`wf_82a1de67-786`, three Ghidra re-reads, each told to refute): every claim held, three
+    sharpened - the float stores' order, `__ftol` keeping the low dword, and the renderer's third exit (64-bit when
+    `[0x008bd508]`'s `0x2` bit is set), which `park-engine.md` missed; exactly two callers, both unsigned; the loader's
+    type-7 float. Measured: 217 declarations over all 312 wads and the loose files, whole numbers 3 to 250; all 17
+    jungle rides with a queue state their own (the Belly Bounce 130, 135, 145), so `Rides.sam`'s 30 reaches none. At 53
+    and 64 bits the answer is the exact one on all 6,769,800 slider settings; at 24 bits 83,454 answer one more (Lost
+    Kingdom 21,708 of 1,690,500), each with the speed off its tier's.
+  - **Reviewed** (`wf_5e6e1825-06f`, four lenses, each finding put to a skeptic): 35 findings, 30 upheld (about 15
+    distinct), 5 refuted; no behaviour wrong. Fixed: the Belly Bounce's thresholds (a duration of 41, not 44), a stale
+    sentence on the arrival's gate, the comments' claims about the asserts, the census asking a counted path, the
+    loader's grammar moved from FileFormats to `park-engine.md`, and four tests strengthened.
+  - **Tests** (10 new, each number predicted first): the key over the category at all three tiers; the catalogue's
+    constants; the saved Belly Bounce 21; capacity 2 8, 1 4, nought 4, speed nought 21, tier 1 22, tier 2 24; the float
+    R (6, not 7), the unsigned speed (1550960493) and the low 32 bits (3579141840); nought for a duration or `InitSpeed`
+    of nought, 4 for nought over nought and for no constant; a queue too long at 21 and unsigned; an arrival at 8 turned
+    away and at 7 let in; places 22 and 9 put out, 21 and 8 kept; `spend` 21 and 100. **Mutations**
+    (`q173-mutate.py`, `.out`, `mutate2.out`, `mutate3.out` on the final tree): 27 put back, all red, 24 exactly as
+    predicted and 3 with one more red than predicted.
+  - **Confirmed in the game** (`q173run.py`, silent, jungle, predicted first, `save/` unchanged in all four runs): at
+    load `spend` read the Belly Bounce's `longest 21` and the Spray's 100, and neither retired counter appeared at load
+    or after running; its capacity clicked from 5 to 2 in the ride window read `longest 8`. Run 3 (`q173-run3/`, 7 of
+    8): of the three standing past place 8 at the change, two were put out by the capacity, each at place 9, and one
+    was saved by a boarding, as predicted; the queue settled at 9, places 0 to 8; 13 arrivals were turned away as too
+    long, every one at a count of 8 or more. Photographed paused before (12 on the bridge) and after (9)
+    (`before-marked.png`, `after-marked.png`). The control on `main` (`q173-control/`, 8 of 8): the same change puts
+    nobody out and turns nobody away, the queue stays at 12, and the two counters count (6,434 re-checks).
+  - **Predictions missed:** runs 1 and 2 (`q173-run1/`, `q173-run2/`, 6 of 8 each) and run 3's settled count. Each miss
+    was my model of the cascade, not the build: arm 5a asks only a guest in their recorded place, and each departure
+    moves the rest up one, so the next drifts out a delay of 1.2 × their place before re-taking it and going; and a
+    boarding that saves one leaves the count at 9. Every guest past place 8 in runs 1 and 2 went in turn (2 of 2, 3
+    of 3), at 9, 21 and 33 s in run 2.
+  - **Not confirmed on screen:** a tier past the third, an unknown item, a duration or `InitSpeed` of nought (none in
+    shipped data), and the 24-bit margin: tested only.
+
+  The item as written: Found by Q165c's review.
   `FUN_004dda40` is `trunc( max( capacity × QueueWaitTimeConstant × speed / InitSpeed / duration, 4.0f ) )` at the
   ride's tier (`ride-operation.md`, "The `InQueue` turn"), every input now named: `+0x1b4` is
   `Upgrades[l].QueueWaitTimeConstant` by the compiled `.sam` schema (`Rides.sam` 30 at tier nought), which the catalogue
@@ -2283,6 +2329,8 @@ artifacts are listed in `docs/history/README.md`.
   Q165c built three of these: `TurnsAwayFrom` reads the computed excitement, both refusals push the thing onto
   `mPreviousTemporaryRides`, and the too-long gate stands (100 without the queue-path bit; with it, counted as
   `QUEUE_TOO_LONG_CAPACITY`). Left: the room refusal keeping `MajorDest`, the events and thoughts, and `+0x1fc`.
+  From Q173: the too-long gate is built for a thing with a queue path too (`PeepBehaviour.QueueTooLong` on
+  `PeepBehaviour.LongestQueue`), and `QUEUE_TOO_LONG_CAPACITY` is gone.
 - [ ] **Q104. The chooser routes as it walks the objects.** Found by Q50e's decode. `FUN_004fcb10` routes every
   candidate that beats the best in turn, so a better one that cannot be routed still leaves the walker failed while
   `MajorDest` names the earlier winner, and the first state-10 turn takes the stuck arm (−25) - unless a ground change

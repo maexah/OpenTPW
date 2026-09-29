@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-09-28.
+Last updated: 2026-09-29.
 
 **This header names no branch and no sha, deliberately.** A line written inside the commit that moves
 the tip cannot name it, so any name there is stale the instant it is written. Read the current state
@@ -45,7 +45,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
   150 s after each; a guard idles 11 sweeps and sets off on the clock's low bits. Let off, they walk off past the exit.
 - Rides: every placed thing runs its script; 74 of 106 opcodes built, the rest counted. A ride screams at the band its
   rider count asks for, as the original's chain: a fresh sample every 1-3 s on **its own clock**, so a second ride in
-  the same band is neither held up by it nor set off by its stop.
+  the same band is neither held up by it nor set off by its stop. **No queue grows past its ride's longest.**
 - **A thing bought this session is a member of the running park**: it takes its turn, appears in every census, joins the
   object chain the original keeps live, and carries the entry and exit cells derived from its own shape picture (Q1b).
 
@@ -77,7 +77,7 @@ from the repository, which cannot lag: `git log --oneline -1`.
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q101, Q165, Q166, Q169-Q172b are ticked**; next **Q173**. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q101, Q165, Q166, Q169-Q173 are ticked**; next **Q174**. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -95,11 +95,11 @@ Q88, Q101, Q165, Q166, Q169-Q172b are ticked**; next **Q173**. Gaps 4, 5, 7: `do
   back of queue, its three failed walks, the refused door's walk, a dodgy direction and a place past the cells: tested.
   Q50h's corner past a node, which a measure between runs can reopen, and its other arms: tested only. Q53b's five
   tries, a lone path cell, a failed probe route and the wrap: tested only; the probes from a sold ride find row 21.
-- Tested only: Q165c's histories cleared by a sale, refusals aging, the too-long gate and a save's histories; Q166's
+- Tested only: Q165c's histories cleared by a sale, refusals aging and a save's histories; Q166's
   literal `RAND`, `MOD`, `SUB`, `GETREMOTEVAR` and `COAST 2 0`; and a lock taken on the last unit running its section
   whole, which the stock park never reaches (the Hot Pot's capacity cut mid-ride, resting on `BUMP` unbuilt, Q45).
 - Tested only: Q170b's cleared illness, second switch, stale major, sale's clear and save's fields; Q171's bounds;
-  Q172b's saved track ride, tier and coaster (Q167) and a Hot Pot rider's 42 (Q179).
+  Q172b's saved track ride, tier and coaster (Q167) and a Hot Pot rider's 42 (Q179); Q173's tier 3 and zero divisors.
 
 ## Numbers
 
@@ -108,12 +108,12 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1302**, 0 fail, 0 skip with the game | 2026-09-28, after Q172b |
-| Tests without the game | **521** ran, **781** skipped, of 1302 | 2026-09-28, after Q172b |
-| Build warnings | 123 | 2026-09-28, after Q172b |
+| Tests | **1312**, 0 fail, 0 skip with the game | 2026-09-29, after Q173 |
+| Tests without the game | **522** ran, **790** skipped, of 1312 | 2026-09-29, after Q173 |
+| Build warnings | 123 | 2026-09-29, after Q173 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-28 (Q172b, the build).** `alexah/179-track-and-tier-excitement`. **Earlier:** each QUEUE.md entry
-names its branch: `178` (Q172) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-09-29 (Q173, the build).** `alexah/180-the-longest-queue`. **Earlier:** each QUEUE.md entry
+names its branch: `179` (Q172b) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
