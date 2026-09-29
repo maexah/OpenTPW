@@ -815,6 +815,59 @@ public static class DebugConsole
 
 				break;
 
+			// A guest made inside the park, already through the gate and deciding, of a chosen kind (0-7) or a
+			// drawn one - see ParkPeople.AdmitInside. An instrument, as `send` is.
+			case "admit":
+				if ( ParkPeople.Current is not { } admitting )
+				{
+					Reply( "admit: none - a park has to be loaded" );
+					break;
+				}
+
+				if ( parts.Length < 3 )
+				{
+					Reply( "admit <cellX> <cellY> [kind 0-7]" );
+					break;
+				}
+
+				int? kind = parts.Length > 3
+					? Math.Clamp( (int)Argument( 3, 0 ), 0, ParkWorld.GuestState.PersonTypes - 1 )
+					: null;
+
+				var admitted = admitting.AdmitInside( (int)Argument( 1, 0 ), (int)Argument( 2, 0 ), kind );
+
+				Reply( admitted == 0
+					? "admit: the park would not take one"
+					: $"admit: guest {admitted} kind {admitting.Peeps.First( peep => peep.ThingId == admitted ).PersonType} "
+						+ $"deciding at ({(int)Argument( 1, 0 )},{(int)Argument( 2, 0 )})" );
+
+				break;
+
+			// Sends a guest to a thing as if they had chosen it: the walk to its back of queue and everything after
+			// is the guest's own, and only the choice is skipped (PeepBehaviour.SendAsChosen). A run using it proves
+			// the thing's side, not the guest's choice.
+			case "send":
+				if ( ParkPeople.Current is not { } senders )
+				{
+					Reply( "send: none - a park has to be loaded" );
+					break;
+				}
+
+				if ( parts.Length < 3 )
+				{
+					Reply( "send <guest> <thing>" );
+					break;
+				}
+
+				var sentGuest = (int)Argument( 1, 0 );
+				var sentTo = (int)Argument( 2, 0 );
+
+				Reply( senders.SendAsChosen( sentGuest, sentTo ) is { } refused
+					? $"send: {refused}"
+					: $"send: guest {sentGuest} going to thing {sentTo}" );
+
+				break;
+
 			// Brings a whole load in, of whatever size is asked for, which is the only way to see the
 			// second and third vehicles at all: the headcount is floored at Arrival.MinPeople and a
 			// crowd of one always takes the bus. The banding is the original's own - under 36 the bus,

@@ -48,7 +48,7 @@ queue**, one item per session, taken from the top unless Alexah reorders.
   **A rider walks on and off for their two model nodes' distance**, as the original's (Q175b); a head on a moving part is counted at rest.
 - **A thing bought this session is a member of the running park**: it takes its turn, appears in every census, joins the
   object chain the original keeps live, and carries the entry and exit cells derived from its own shape picture (Q1b).
-- The original game runs under Proton as a reference instrument (Q168, `docs/TOOLING.md`).
+- The original runs under Proton as a reference (Q168, `docs/TOOLING.md`); the console's `admit`/`send` place a guest (Q184).
 
 ## Does not
 
@@ -77,7 +77,7 @@ queue**, one item per session, taken from the top unless Alexah reorders.
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q101, Q165, Q166, Q169-Q175b are ticked**; next **Q184**. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q101, Q165, Q166, Q169-Q175b, Q184 are ticked**; next **Q176**. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -107,13 +107,13 @@ Q88, Q101, Q165, Q166, Q169-Q175b are ticked**; next **Q184**. Gaps 4, 5, 7: `do
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1342**, 0 fail, 0 skip with the game | 2026-09-29, after Q175b |
-| Tests without the game | **529** ran, **813** skipped, of 1342 | 2026-09-29, after Q175b |
-| Build warnings | 123 | 2026-09-29, after Q175b |
+| Tests | **1346**, 0 fail, 0 skip with the game | 2026-09-29, after Q184 |
+| Tests without the game | **529** ran, **817** skipped, of 1346 | 2026-09-29, after Q184 |
+| Build warnings | 123 | 2026-09-29, after Q184 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-29 (Q175b, the walk legs' build).** `alexah/187-walk-legs-from-the-nodes`. **Earlier:** `186` (Q175), `185` (Q168), `184` (the
+**2026-09-29 (Q184, the guest console commands).** `alexah/189-guest-console-commands`. **Earlier:** `187` (Q175b), `186` (Q175), `185` (Q168), `184` (the
 FileFormats branch rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`,
 `159`, `160`, `162`, `166`, `169`; `117`, `109`.

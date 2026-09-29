@@ -2426,7 +2426,25 @@ artifacts are listed in `docs/history/README.md`.
   1000, 400 and 1000, Squark 500, in a census beside a photograph of a rider on a lane; and one of the three whose
   heads ride an animated ancestor (Lookout, Totem, the Aztec Mayhem) measured against the original first.
 
-- [ ] **Q184. Console commands that put a guest where a test needs one.** Asked for by Alexah 2026-09-29, after
+- [x] **Q184. Console commands that put a guest where a test needs one.** Done 2026-09-29, `alexah/189-guest-console-commands`.
+  `admit <x> <y> [kind 0-7]` makes a guest through `ParkPeople.Admit` and then does what `Entering`'s arrival does
+  (`PeepBehaviour.AdmitAsEntered`: paid, numbered a visitor, `Deciding`), so they stand on that cell deciding. `send
+  <guest> <thing>` is `PeepBehaviour.SendAsChosen`: the ride arm of `Decide` with `Choose` skipped - the route to the
+  back of queue and `MajorDest` are `SetOffFor`, the half `ChooseSomewhereToGo` now shares, then `GoingToRide`. It
+  sends only a guest in `Deciding` or `Wandering`, to a thing the park has, with a route. No player reaches either.
+  - **Confirmed** (`q184run.py`, runs `q184-run1..3/`, save/ unchanged each): predicted and read, `admit 55 30 3` x3
+    "deciding at (55,30)" and `send <id> 14` x3 "going to thing 14", `peeps` then `GoingToRide dest 14 aim
+    (52.500,29.500)`; the three board the Jungle Spray and walk 4->1 1100, 4->2 700, 4->3 1100 and back the same, 6 of 6
+    in the log, and `rides` paused on each 1100 leg shows `44 WalkingOn 4->1 leg 1100`, `45 WalkingOn 4->3 leg 1100`,
+    `44 WalkingOff 1->4 leg 1100`, `45 WalkingOff 3->4 leg 1100`, each beside a photograph of the riders on the Spray
+    (`q184-run3/spray-*-lane{1,3}.png`, `crops.png`). A run using them proves the thing's side, not the guest's choice.
+  - **Tests** `ParkConsoleGuestTests` (4). Put back one at a time: no `GoingToRide`, no route, no `AdmitAsEntered`, no
+    state guard, not paid - each red.
+  - **Not confirmed**: a still shows where a rider stands, not how long a leg lasts; the durations are the census's.
+  - **Found, not filed:** `ParkPeople.Admit` counts a visitor on arrival and `Entering` counts them again, where
+    `PeepBehaviour.VisitorsToDate`'s own note says only `Entering` counts (a test pins the arrival's count).
+
+  The item as written: Asked for by Alexah 2026-09-29, after
   Q175b's game runs waited 40 minutes for two riders to overlap on a sideshow and never saw its lanes 1 and 3.
   `arrive <x> <y>` (`ParkPeople.Admit`) makes a guest on any cell, but starts them `AtGate`, to walk to a booth and
   pay, and nothing sends a guest to a chosen thing: a guest reaches a ride only by its own choice (`PeepBehaviour`,

@@ -856,6 +856,34 @@ public sealed class ParkPeople : Entity
 	}
 
 	/// <summary>
+	/// Makes a guest on a cell who has already come through the gate, for the debug console's <c>admit</c>: an
+	/// INSTRUMENT. <see cref="Admit"/> starts them <see cref="PeepState.AtGate"/>, to pay at a booth and walk in;
+	/// this then does what <see cref="PeepState.Entering"/>'s arrival does (<see cref="PeepBehaviour.AdmitAsEntered"/>),
+	/// so they stand where they were made, deciding. No player reaches it. Answers their thing id, or nought.
+	/// </summary>
+	internal int AdmitInside( int cellX, int cellY, int? personType )
+	{
+		var thingId = Admit( cellX, cellY, personType );
+
+		if ( thingId != 0 )
+			_behaviour.AdmitAsEntered( _byId[thingId], GameClock.Ticks / ThingTickEvery );
+
+		return thingId;
+	}
+
+	/// <summary>
+	/// Sends a guest to a thing as if they had chosen it, for the debug console's <c>send</c> - see
+	/// <see cref="PeepBehaviour.SendAsChosen"/>. Answers why not, or null when they set off.
+	/// </summary>
+	internal string? SendAsChosen( int guestId, int thingId )
+	{
+		if ( !_byId.TryGetValue( guestId, out var peep ) || !_walks.TryGetValue( guestId, out var walk ) )
+			return $"no guest {guestId}";
+
+		return _behaviour.SendAsChosen( peep, walk, thingId, GameClock.Ticks / ThingTickEvery );
+	}
+
+	/// <summary>
 	/// Sets every guest's happiness, for the debug console's <c>happy</c>. An INSTRUMENT, as
 	/// <see cref="MakeThirsty"/> is: a guest who arrives starts at happiness nought and stays there (Q85), and the
 	/// save's own guests, most carrying 50, have gone home within about four minutes, so a dock of happiness - a

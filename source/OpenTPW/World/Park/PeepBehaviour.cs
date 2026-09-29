@@ -1923,6 +1923,15 @@ public sealed class PeepBehaviour
 		if ( Choose( peep, x, y, tick ) is not { } chosen )
 			return false;
 
+		return SetOffFor( peep, walk, chosen );
+	}
+
+	/// <summary>
+	/// The half of <see cref="ChooseSomewhereToGo"/> after the choice: the route to the thing's back of queue, and
+	/// then <see cref="Peep.MajorDest"/>. Answers whether a route was found.
+	/// </summary>
+	private bool SetOffFor( Peep peep, PeepWalk walk, ParkWorld.CatalogueObject chosen )
+	{
 		// Aimed at the centre of the back-of-queue cell (0x004fcbc4), where JoinTheQueue's arrival test asks them to
 		// stand. The chooser offers nothing without one.
 		var (backOfQueue, _) = ParkRideChoice.QueueCellsFor( _park, chosen );
@@ -1933,6 +1942,42 @@ public sealed class PeepBehaviour
 		peep.MajorDest = chosen.ThingId;
 
 		return true;
+	}
+
+	/// <summary>
+	/// Sends a guest to a named thing as if they had chosen it, for the debug console's <c>send</c>: the ride arm of
+	/// <see cref="Decide"/> with <see cref="Choose"/> skipped and nothing else. An INSTRUMENT: a run using it proves
+	/// the thing's side, never the guest's choice. Only a guest in <see cref="PeepState.Deciding"/> or
+	/// <see cref="PeepState.Wandering"/> is sent, so no queue or ride loses one.
+	/// </summary>
+	/// <returns>Why nothing happened, or null when they set off.</returns>
+	internal string? SendAsChosen( Peep peep, PeepWalk walk, int thingId, int tick )
+	{
+		if ( peep.State is not (PeepState.Deciding or PeepState.Wandering) )
+			return $"guest {peep.ThingId} is {peep.State}, not deciding or wandering";
+
+		if ( !State.TryObject( thingId, out var chosen ) )
+			return $"no thing {thingId}";
+
+		peep.MajorDest = 0;
+
+		if ( !SetOffFor( peep, walk, chosen ) )
+			return $"no route to thing {thingId}'s back of queue";
+
+		peep.SetState( PeepState.GoingToRide, tick, _random );
+
+		return null;
+	}
+
+	/// <summary>
+	/// What <see cref="PeepState.Entering"/>'s arrival does, for a guest the debug console makes inside the park
+	/// (<see cref="ParkPeople.AdmitInside"/>): paid, numbered a visitor, and deciding.
+	/// </summary>
+	internal void AdmitAsEntered( Peep peep, int tick )
+	{
+		peep.PaidAdmission = true;
+		peep.VisitorNumber = State.Admit();
+		peep.SetState( PeepState.Deciding, tick, _random );
 	}
 
 	/// <summary>
