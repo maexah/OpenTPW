@@ -45,7 +45,7 @@ Read the current state from the repository, which cannot lag: `git log --oneline
 - Rides: every placed thing runs its script; 74 of 106 opcodes built, the rest counted. A ride screams at the band its
   rider count asks for, as the original's chain: a fresh sample every 1-3 s on **its own clock**, so a second ride in
   the same band is neither held up by it nor set off by its stop. **No queue grows past its ride's longest.** **A ride
-  loops again after its ride's end** (the Aztec Mayhem), and a trigger asks a channel as the last frame left it.
+  loops again after its ride's end** (the Aztec Mayhem). **A load resumes each wait and clip where its save left it.**
 - **A thing bought this session is a member of the running park**: it takes its turn, appears in every census, joins the
   object chain the original keeps live, and carries the entry and exit cells derived from its own shape picture (Q1b).
 
@@ -68,7 +68,7 @@ Read the current state from the repository, which cannot lag: `git log --oneline
 - With no work the mechanic, handyman and entertainer stand where the original's walk about (Q133); staff make no
   sound (Q135). Guests and rides read `GameClock.Ticks / 8`, not `mGameTick` (Q132); a load brings one guest (Q26); the bus waits (Q131).
 - Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), riding a ride walked into in first person,
-  and a coaster's excitement, its level. **The Hot Pot lets no rider off** (Q179); a load drops a script's waits (Q174c).
+  and a coaster's excitement, its level. **The Hot Pot lets no rider off** (Q179); a load re-phases turns (Q180) and misreads kept times (Q181).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
   walk (Q121), and a park screen stays open over it (Q122). It walks onto entrances the original shuts (Q140).
@@ -76,7 +76,7 @@ Read the current state from the repository, which cannot lag: `git log --oneline
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q101, Q165, Q166, Q169-Q174b are ticked**; next **Q174c**. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q101, Q165, Q166, Q169-Q174c are ticked**; next **Q175**. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -99,7 +99,7 @@ Q88, Q101, Q165, Q166, Q169-Q174b are ticked**; next **Q174c**. Gaps 4, 5, 7: `d
   whole, which the stock park never reaches (the Hot Pot's capacity cut mid-ride, resting on `BUMP` unbuilt, Q45).
 - Tested only: Q170b's cleared illness, second switch, stale major, sale's clear and save's fields; Q171's bounds;
   Q172b's saved track ride, tier and coaster (Q167) and a Hot Pot rider's 42 (Q179); Q173's tier 3 and zero divisors.
-  Q174b's raw re-entry and last-frame trigger, reached by no run; its loop is shown by the census, not on screen.
+  Q174b's raw re-entry and last-frame trigger (no run) and loop (census only); Q174c's saved mark, timer and queue.
 
 ## Numbers
 
@@ -108,12 +108,12 @@ Take counts fresh; these go stale within a day.
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1317**, 0 fail, 0 skip with the game | 2026-09-29, after Q174b |
-| Tests without the game | **524** ran, **793** skipped, of 1317 | 2026-09-29, after Q174b |
-| Build warnings | 123 | 2026-09-29, after Q174b |
+| Tests | **1330**, 0 fail, 0 skip with the game | 2026-09-29, after Q174c |
+| Tests without the game | **529** ran, **801** skipped, of 1330 | 2026-09-29, after Q174c |
+| Build warnings | 123 | 2026-09-29, after Q174c |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-29 (Q174b, the build).** `alexah/182-the-animation-waits-as-the-engine`. **Earlier:** each QUEUE.md entry
-names its branch: `181` (Q174) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-09-29 (Q174c, the build).** `alexah/183-restore-a-scripts-waits-and-channels`. **Earlier:** each QUEUE.md entry
+names its branch: `182` (Q174b) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

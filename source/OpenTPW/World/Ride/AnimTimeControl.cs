@@ -281,6 +281,30 @@ public sealed class AnimTimeControl
 	}
 
 	/// <summary>
+	/// Puts back the three time stamps a save left on this channel, already moved onto the clock it is advanced on,
+	/// as the engine's restore copies them (<c>FUN_004647a0</c>, <c>0x00464bdb</c>..<c>0x00464bec</c>), so its next
+	/// advance works the frame out from them and a running clip goes on from where it was.
+	///
+	/// <para>
+	/// <b>The frame until that advance is the restore's own</b>: <c>FUN_00472cb0</c>, called only from the restore,
+	/// sets it to the saved span times 0.03 <b>divided</b> by the speed (<c>0x00472cf4</c>), where every advance
+	/// multiplies, so a clip saved at a speed other than 1 stands at the wrong frame until it is next advanced. A
+	/// held or frozen channel's clip time follows its start stamp as <see cref="MoveTo"/> keeps it.
+	/// </para>
+	/// </summary>
+	public void Restamp( int start, int time, int noPause )
+	{
+		StartAnimTime = start;
+		NoPauseAnimTime = noPause;
+		AnimFrame = Speed > 0f ? (uint)(time - start) * FramesPerMillisecond / Speed : 0f;
+
+		if ( (Flags & 0x6) == 0 )
+			AnimTime = time;
+		else
+			AnimTime = (Flags & 0x2) != 0 ? StartAnimTime : StartAnimTime - MillisecondsFor( TotalAnimFrames, Speed );
+	}
+
+	/// <summary>
 	/// Puts a clip behind the one playing. <b>Four fields and nothing else</b> - the engine writes the
 	/// queue without touching the running clip's role, timing or flags, so a trigger onto a busy channel
 	/// cannot disturb what it is waiting for.

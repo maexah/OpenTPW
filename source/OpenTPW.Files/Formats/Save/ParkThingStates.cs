@@ -20,7 +20,21 @@ namespace OpenTPW;
 /// ride. What a restored speed is worth is bounded and was measured: it survives loop wraps and holds,
 /// and the script's next trigger on that channel replaces it with 1 - see <c>ParkRides.Restore</c>.
 /// </param>
-public readonly record struct SavedChannel( int Role, int Entry, int Flags, float Speed );
+/// <param name="StartTime">
+/// The channel's start stamp <c>+0x10</c>, a reading of the saved clock (<see cref="ParkClock"/>): where the clip
+/// began, moved back by any carry into it.
+/// </param>
+/// <param name="Time">The clip time <c>+0x14</c>, the same clock's reading at the channel's last advance.</param>
+/// <param name="NoPauseTime">The stamp <c>+0x18</c>, on the same clock; the save holds the clip time's reading or the clock's own.</param>
+/// <param name="QueuedRole">The role queued to play next, <c>+0x24</c>, or <see cref="ParkThingStates.NoRole"/> for none.</param>
+/// <param name="QueuedEntry">Its clip, <c>+0x28</c>.</param>
+/// <param name="QueuedFlags">
+/// The flags it was queued with, <c>+0x2c</c>: a caller's flags, not the channel's own word. The engine leaves them
+/// behind when the queue empties, so a channel with nothing queued can still carry some.
+/// </param>
+/// <param name="QueuedSpeed">The speed it was queued at, <c>+0x30</c>.</param>
+public readonly record struct SavedChannel( int Role, int Entry, int Flags, float Speed,
+	uint StartTime, uint Time, uint NoPauseTime, int QueuedRole, int QueuedEntry, int QueuedFlags, float QueuedSpeed );
 
 /// <summary>
 /// One thing as a park save left its MODEL: the animation channels it was running.
@@ -76,8 +90,8 @@ public readonly record struct SavedThing( int CatalogueId, int Slot, SavedChanne
 /// The module's own records carry an item id, not a thing id, so three Small Toilets are three records
 /// that read alike. In the shipped park the records of placed things appear in ascending script-handle
 /// order, which pairs them off - and <b>within one catalogue id the pairing is unobservable</b>, because
-/// those records' channels are identical. Anything relying on telling two Toilets apart would need the
-/// thing handle decoded first; nothing here does.
+/// those records' channels differ only in their time stamps, which a held channel does not show. Anything
+/// relying on telling two Toilets apart would need the thing handle decoded first; nothing here does.
 /// </para>
 /// </summary>
 public sealed class ParkThingStates
@@ -91,7 +105,10 @@ public sealed class ParkThingStates
 	/// </summary>
 	private const string PrecedingTrailer = "SYSG";
 
-	/// <summary>A channel record, in dwords: flags, role, entry, then eight this does not read.</summary>
+	/// <summary>
+	/// A channel record, in dwords: flags, role, entry, the three time stamps, speed, and the queue's role, entry,
+	/// flags and speed - see <see cref="SavedChannel"/>.
+	/// </summary>
 	private const int ChannelDwords = 11;
 
 	/// <summary>Where a present record's own fields begin - a one-byte tag leads, so everything is unaligned.</summary>
@@ -230,14 +247,21 @@ public sealed class ParkThingStates
 		{
 			var at = _at + (index * ChannelDwords * 4);
 
-			// Dwords 0, 1, 2 and 6. The record's order is the engine's restore order, not the channel's
-			// own field order: FUN_004647a0 walks these eleven dwords onto a fourteen-dword channel, and
-			// its sixth lands on +0xc, the speed.
+			// All eleven, in the record's order, which is not the channel's own field order: FUN_004647a0
+			// copies them onto the fourteen-dword channel's +0x00, +0x04, +0x08, +0x10, +0x14, +0x18, +0x0c
+			// and +0x24 to +0x30 (0x00464bcb..0x00464c17), so the seventh is the speed.
 			channels[index] = new SavedChannel(
 				Role: ReadInt32At( at + 4 ),
 				Entry: ReadInt32At( at + 8 ),
 				Flags: ReadInt32At( at ),
-				Speed: ReadSingleAt( at + 24 ) );
+				Speed: ReadSingleAt( at + 24 ),
+				StartTime: (uint)ReadInt32At( at + 12 ),
+				Time: (uint)ReadInt32At( at + 16 ),
+				NoPauseTime: (uint)ReadInt32At( at + 20 ),
+				QueuedRole: ReadInt32At( at + 28 ),
+				QueuedEntry: ReadInt32At( at + 32 ),
+				QueuedFlags: ReadInt32At( at + 36 ),
+				QueuedSpeed: ReadSingleAt( at + 40 ) );
 		}
 
 		_at += count * ChannelDwords * 4;

@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace OpenTPW.Tests;
 
@@ -173,15 +174,19 @@ public class ParkRidesTests
 		var held = ChannelOn( ToiletThing );
 
 		Assert.IsTrue( held.TotalAnimFrames > 0f, "the toilet's clip should have a length" );
-		Assert.AreEqual( held.TotalAnimFrames, held.AnimFrame,
+		// Within a frame of it: the restore's own arithmetic works the frame out from the saved stamps, whole
+		// milliseconds apart, and the next advance puts it on the total exactly.
+		Assert.AreEqual( held.TotalAnimFrames, held.AnimFrame, 0.1f,
 			"a thing saved held belongs at the end of its clip, not at frame nought" );
 		Assert.AreNotEqual( 0, held.Flags & HeldFlag, "and must carry the engine's own held mark" );
 
-		// The Fountain is saved LOOPING, which is the other arm: it starts at the beginning and repeats.
+		// The Fountain is saved LOOPING, which is the other arm: it goes on from the frame its save had
+		// reached, 1,625 ms into its clip, and repeats.
 		var looping = ChannelOn( FountainThing );
 
 		Assert.AreNotEqual( 0, looping.Flags & LoopFlag, "the Fountain is saved looping" );
-		Assert.AreEqual( 0f, looping.AnimFrame, "so it starts at the beginning of its clip" );
+		Assert.AreEqual( 1625 * 0.03f, looping.AnimFrame, 0.01f, "so it goes on from where its save left it" );
+		Assert.AreEqual( rides.LoadedAt - 1625, looping.StartAnimTime, "its start that far before the load" );
 
 		// And the speed the save carries, which is not always one: this ride is saved at 1.1, and passing
 		// a literal 1f would run it at the wrong rate for the whole session.
@@ -211,6 +216,224 @@ public class ParkRidesTests
 		Assert.AreEqual( 2, bouncy.CallIndex, "saved with no frame open" );
 		Assert.AreEqual( 0, bouncy.HeapIndex, "and nothing hushed" );
 	}
+
+	/// <summary>
+	/// <b>A loaded script waits out what its save had left of a wait, not the whole of it again.</b> Both security
+	/// cameras are saved on their <c>WAIT 5000</c> at word 14, with 2,341 and 2,329 ms left, and after it comes
+	/// round to <c>WAITANIM 4, 0</c> at word 5, which takes channel 0 off the role 6 it is saved holding. A script
+	/// takes a turn one tick in eight (<see cref="RideScriptScheduler.RunsOn"/>), so each passes its wait on its
+	/// first turn from the 76th tick (2,356 ms) on: both are on role 6 at the 75th and on role 4 by the 83rd, where
+	/// waiting the whole 5,000 again from their first turn would keep them on role 6 to the 169th at the soonest.
+	/// </summary>
+	[TestMethod]
+	public void ALoadedCameraWaitsOutOnlyWhatItsSaveHadLeft()
+	{
+		var world = World();
+		var rides = Bind( world, Catalogue() );
+
+		var cameras = world.Objects.Where( o => o.CatalogueId == SecurityCamera )
+			.Select( o => rides.Scheduler.Find( rides.ScriptFor( o.ThingId ) )! ).ToArray();
+
+		Assert.AreEqual( 2, cameras.Length, "the shipped park's two security cameras" );
+
+		// A saved nought is the engine's empty slot and comes back as none: of every script bound, only the cameras
+		// and the Belly Bounce are saved on a wait, and only the sideshow keeps a trigger's deadline (long past).
+		var bound = rides.Scheduler.Scripts.ToArray();
+
+		Assert.AreEqual( 3, bound.Count( script => script.Waiting ), "three scripts saved on a wait, and no more" );
+		Assert.AreEqual( 1, bound.Count( script => script.WaitingForAnimation ), "one trigger deadline, and no more" );
+
+		foreach ( var camera in cameras )
+		{
+			Assert.AreEqual( 14, camera.Position, "each saved on its WAIT 5000" );
+			Assert.IsTrue( camera.Waiting, "and waiting on it" );
+		}
+
+		for ( var tick = 1; tick <= 75; ++tick )
+			rides.Scheduler.Advance( rides.LoadedAt + (tick * 31f) );
+
+		foreach ( var camera in cameras )
+			Assert.AreEqual( 6, camera.Animations!.Channel( 0 )!.AnimID, "still on the role it was saved holding at 2,325 ms" );
+
+		for ( var tick = 76; tick <= 83; ++tick )
+			rides.Scheduler.Advance( rides.LoadedAt + (tick * 31f) );
+
+		foreach ( var camera in cameras )
+			Assert.AreEqual( 4, camera.Animations!.Channel( 0 )!.AnimID, "and on to WAITANIM 4, 0 by 2,573 ms" );
+	}
+
+	/// <summary>
+	/// <b>The load's moment is the clock the park's ticks run on</b>, the last tick's instant as the load finds it,
+	/// which is where the save's own moment is put; every saved deadline keeps its distance from it. With the game
+	/// clock 64 ticks further on, the cameras' waits end 2,329 and 2,341 ms after that instant, not after nought.
+	/// </summary>
+	[TestMethod]
+	public void TheLoadsMomentIsTheClockTheParksTicksRunOn()
+	{
+		// From a clean re-base, spending the frame it throws away, so what the four frames add does not hang on
+		// what an earlier test left owed.
+		Time.Paused = false;
+		GameClock.Rebase();
+		Time.Update( 0f );
+		GameClock.Update( paused: false, GameClock.ParkCatchUp );
+
+		var before = GameClock.Ticks;
+
+		for ( var frame = 0; frame < 4; ++frame )
+		{
+			Time.Update( 0.5f );
+			GameClock.Update( paused: false, GameClock.ParkCatchUp );
+		}
+
+		var world = World();
+		var rides = Bind( world, Catalogue() );
+
+		Assert.AreEqual( 64, GameClock.Ticks - before, "four half-second frames are 64 ticks" );
+		Assert.AreEqual( GameClock.Ticks * 31, rides.LoadedAt, "the load's moment is the last tick's instant" );
+
+		var waits = world.Objects.Where( o => o.CatalogueId == SecurityCamera )
+			.Select( o => rides.Scheduler.Find( rides.ScriptFor( o.ThingId ) )!.WaitDeadline!.Value - rides.LoadedAt )
+			.OrderBy( left => left ).ToArray();
+
+		CollectionAssert.AreEqual( new[] { 2329f, 2341f }, waits, "each camera's wait that far after it" );
+	}
+
+	/// <summary>
+	/// <b>A loaded script keeps the loop its save was running.</b> The Belly Bounce is saved with its looping key 2
+	/// and channel 0 looping role 2 at 1.1, and with nobody aboard its turn comes round to <c>LOOPANIM 2, 0</c> at
+	/// word 43 on every pass. With the key restored that instruction does nothing, as the engine's does, so nothing
+	/// is queued behind the saved loop; with the key lost, the first pass would queue the loop again behind itself.
+	/// Its <c>WAIT 500</c>, saved with 63 ms left, passes on its first turn from the third tick (93 ms) on - a
+	/// turn comes one tick in eight - and runs to the <c>CRIT_UNLOCK</c> at word 99, which ends the turn; the next
+	/// turn, 8 ticks on, comes round through word 43 and arms the next <c>WAIT 500</c>.
+	/// </summary>
+	[TestMethod]
+	public void ALoadedBellyBounceKeepsTheLoopItsSaveWasRunning()
+	{
+		var rides = Bind( World(), Catalogue() );
+		var bouncy = rides.Scheduler.Find( rides.ScriptFor( BellyBounceThing ) )!;
+		var channel = bouncy.Animations!.Channel( 0 )!;
+
+		Assert.AreEqual( 2, bouncy.LoopingKey, "the key its save holds" );
+		Assert.AreEqual( rides.LoadedAt + 63f, bouncy.WaitDeadline, "and what was left of its WAIT 500" );
+
+		for ( var tick = 1; tick <= 24; ++tick )
+			rides.Scheduler.Advance( rides.LoadedAt + (tick * 31f) );
+
+		Assert.IsNotNull( bouncy.WaitDeadline, "back on its WAIT 500" );
+
+		var armed = (bouncy.WaitDeadline!.Value - rides.LoadedAt - 500f) / 31f;
+
+		Assert.IsTrue( armed >= 11f && armed <= 18f && armed == MathF.Floor( armed ),
+			$"round through word 43 to the next WAIT 500, armed on a turn from the 11th tick to the 18th, not {armed}" );
+		Assert.IsFalse( channel.HasQueued, "and the LOOPANIM 2, 0 on the way queued nothing" );
+		Assert.AreEqual( 2, channel.AnimID, "the saved loop still playing" );
+		Assert.AreEqual( 1.1f, channel.Speed, 0.001f, "at its saved speed" );
+		Assert.AreEqual( 2, bouncy.LoopingKey, "and the key unchanged" );
+	}
+
+	/// <summary>
+	/// <b>Every saved field the shipped park leaves empty comes back too</b>, from a copy of that park with the Belly
+	/// Bounce's record given a trigger deadline 5,000 ms ahead of the save, a <c>TRIGWAITANIM</c> mark for role 2 and a
+	/// timer 7,000 ms ahead, and its channel a clip queued behind the loop with flags and a speed of its own. Each
+	/// deadline lands the same distance after the load's moment, and the queued clip is queued again as it was.
+	/// </summary>
+	[TestMethod]
+	public void EverySavedWaitMarkTimerAndQueueComesBack()
+	{
+		var payload = Payload();
+		var clock = new ParkClock( payload ).Reading!.Value;
+
+		// The Belly Bounce's struct, found by its WAIT deadline (63 ms after the save) with its handle and counter
+		// beside it, and its channel by its start stamp (1,376 ms before it) with role 2 beside it.
+		var script = Single( payload, clock + 63, at => at >= 0xa0
+			&& BitConverter.ToInt32( payload, at - 0xa0 + 0x08 ) == 3 && BitConverter.ToInt32( payload, at - 0xa0 + 0x3c ) == 46 ) - 0xa0;
+		var channel = Single( payload, clock - 1376, at => at >= 12 && BitConverter.ToInt32( payload, at - 12 + 4 ) == 2 ) - 12;
+
+		BitConverter.GetBytes( clock + 5000 ).CopyTo( payload, script + 0xa4 );
+		BitConverter.GetBytes( 3 ).CopyTo( payload, script + 0xbc );
+		BitConverter.GetBytes( clock + 7000 ).CopyTo( payload, script + 0xc4 );
+		BitConverter.GetBytes( 5 ).CopyTo( payload, channel + 28 );
+		BitConverter.GetBytes( 1 ).CopyTo( payload, channel + 32 );
+		BitConverter.GetBytes( 0x9 ).CopyTo( payload, channel + 36 );
+		BitConverter.GetBytes( 0.5f ).CopyTo( payload, channel + 40 );
+
+		var rides = Bind( new ParkWorld( payload ), Catalogue() );
+		var bouncy = rides.Scheduler.Find( rides.ScriptFor( BellyBounceThing ) )!;
+		var player = bouncy.Animations!.Channel( 0 )!;
+
+		Assert.AreEqual( rides.LoadedAt + 63f, bouncy.WaitDeadline, "the wait" );
+		Assert.AreEqual( rides.LoadedAt + 5000f, bouncy.AnimationDeadline, "the trigger's deadline" );
+		Assert.AreEqual( 2, bouncy.LoopingKey, "the looping key" );
+		Assert.AreEqual( 3, bouncy.AnimationMark, "the mark" );
+		Assert.AreEqual( rides.LoadedAt + 7000f, bouncy.TimerDeadline, "the timer" );
+
+		Assert.IsTrue( player.HasQueued, "and the clip queued behind the loop" );
+		Assert.AreEqual( 5, player.DeferredAnimID, "role 5" );
+		Assert.AreEqual( 1, player.DeferredSubAnim, "entry 1" );
+		Assert.AreEqual( 0x9, player.DeferredFlags, "with the flags it was queued with" );
+		Assert.AreEqual( 0.5f, player.DeferredSpeed, "and its own speed" );
+		Assert.AreEqual( 2, player.AnimID, "behind the saved loop, still playing" );
+	}
+
+	/// <summary>
+	/// <b>A load whose model states will not read keeps its scripts' loops fresh.</b> With the channel module's
+	/// leading tag spoiled, no channel is put back, so every model starts idle; the Belly Bounce's waits still come
+	/// back, but its looping key does not, so its <c>LOOPANIM 2, 0</c> at word 43 starts the loop again rather than
+	/// doing nothing over a channel playing none.
+	/// </summary>
+	[TestMethod]
+	public void ALoadWhoseChannelsWillNotReadKeepsItsLoopsFresh()
+	{
+		var payload = Payload();
+		var tag = System.Text.Encoding.ASCII.GetBytes( "SYSG" );
+		var at = Single( payload, BitConverter.ToUInt32( tag ), _ => true );
+
+		payload[at] = (byte)'X';
+
+		var rides = Bind( new ParkWorld( payload ), Catalogue() );
+		var bouncy = rides.Scheduler.Find( rides.ScriptFor( BellyBounceThing ) )!;
+
+		Assert.AreEqual( 0, rides.ChannelsRestored, "no channel put back" );
+		Assert.AreEqual( rides.LoadedAt + 63f, bouncy.WaitDeadline, "its wait still comes back" );
+		Assert.AreEqual( 0, bouncy.LoopingKey, "but not the key of a loop its channel is not playing" );
+
+		for ( var tick = 1; tick <= 24; ++tick )
+			rides.Scheduler.Advance( rides.LoadedAt + (tick * 31f) );
+
+		Assert.AreEqual( 2, bouncy.Animations!.Channel( 0 )!.AnimID, "so the LOOPANIM 2, 0 at word 43 starts it" );
+		Assert.AreEqual( 2, bouncy.LoopingKey, "and keys it" );
+	}
+
+	private byte[] Payload()
+	{
+		using var stream = new MemoryStream( data.ReadAllBytes( ShippedPark ) );
+
+		return new SaveReader( stream ).ReadFile();
+	}
+
+	/// <summary>Where a dword occurs in the payload with its neighbours as expected, asserting exactly once.</summary>
+	private static int Single( byte[] payload, uint value, Func<int, bool> beside )
+	{
+		var bytes = BitConverter.GetBytes( value );
+		var found = -1;
+
+		for ( var at = 0; at + 4 <= payload.Length; ++at )
+		{
+			if ( !payload.AsSpan( at, 4 ).SequenceEqual( bytes ) || !beside( at ) )
+				continue;
+
+			Assert.AreEqual( -1, found, $"0x{value:x8} occurs more than once" );
+			found = at;
+		}
+
+		Assert.AreNotEqual( -1, found, $"0x{value:x8} does not occur" );
+
+		return found;
+	}
+
+	/// <summary>The Security Camera's catalogue id; the shipped park places two.</summary>
+	private const int SecurityCamera = 1413;
 
 	/// <summary>The Belly Bounce - thing 13, the shipped park's only ride.</summary>
 	private const int BellyBounceThing = 13;
@@ -378,9 +601,10 @@ public class ParkRidesTests
 	{
 		var rides = Bind( World(), Catalogue() );
 
-		// The milliseconds the interpreter counts in, at the 31ms beat a park ticks on.
-		for ( int tick = 0; tick < 64; ++tick )
-			rides.Scheduler.Advance( tick * 31f );
+		// The milliseconds the interpreter counts in, at the 31ms beat a park ticks on, from the load's own moment,
+		// which the saved waits are measured from.
+		for ( int tick = 1; tick <= 64; ++tick )
+			rides.Scheduler.Advance( rides.LoadedAt + (tick * 31f) );
 
 		Assert.IsTrue( rides.Scheduler.TurnsGiven > 0, "nobody was given a turn at all" );
 		Assert.AreEqual( 0, rides.Scheduler.Finished, "a shipped script stopped, which none of them should" );

@@ -415,4 +415,71 @@ public class RideScriptClockTests
 
 		return drawn;
 	}
+
+	/// <summary>
+	/// <b>A wait a load puts back is waited out from where it was, not armed afresh.</b> The engine reads a saved
+	/// script's <c>+0xa0</c> back with the rest of its struct, so the <c>WAIT</c> it was sitting on is a re-entry
+	/// that compares against the saved deadline; a machine that dropped it would arm the whole 5,000 again.
+	/// </summary>
+	[TestMethod]
+	public void AWaitALoadPutsBackEndsWhenItsSaveSaid()
+	{
+		var script = new RideScript( Build( 1, 50,
+			Word( Opcode.WAIT ), Lit( 5000 ),
+			Word( Opcode.COPY ), Var( 0 ), Lit( 7 ),
+			Word( Opcode.END ) ) );
+
+		script.RestoreClockState( 1000f, null, 0, 0, 0f );
+
+		script.Turn( 969f );
+
+		Assert.AreEqual( 0, script.Variables[0], "still waiting just before the saved deadline" );
+
+		script.Turn( 1000f );
+
+		Assert.AreEqual( 7, script.Variables[0], "and on at it" );
+	}
+
+	/// <summary>
+	/// A trigger's deadline a load puts back holds a <c>WAIT4ANIM</c> until it passes, where an empty one lets the
+	/// script walk straight past (<c>0x005538eb</c>).
+	/// </summary>
+	[TestMethod]
+	public void AnAnimationDeadlineALoadPutsBackIsWaitedFor()
+	{
+		var script = new RideScript( Build( 1, 50,
+			Word( Opcode.WAIT4ANIM ),
+			Word( Opcode.COPY ), Var( 0 ), Lit( 7 ),
+			Word( Opcode.END ) ) );
+
+		script.RestoreClockState( null, 500f, 0, 0, 0f );
+
+		script.Turn( 100f );
+
+		Assert.AreEqual( 0, script.Variables[0], "held by the restored deadline" );
+		Assert.IsTrue( script.WaitingForAnimation );
+
+		script.Turn( 500f );
+
+		Assert.AreEqual( 7, script.Variables[0], "and let go when it passes" );
+		Assert.IsFalse( script.WaitingForAnimation, "which clears it" );
+	}
+
+	/// <summary>
+	/// A timer a load puts back goes on counting down from where the save left it: <c>GETTIMER</c> answers the saved
+	/// deadline less the clock, as it would have before the save.
+	/// </summary>
+	[TestMethod]
+	public void ATimerALoadPutsBackCountsDownFromWhereItWas()
+	{
+		var script = new RideScript( Build( 1, 50,
+			Word( Opcode.GETTIMER ), Var( 0 ),
+			Word( Opcode.END ) ) );
+
+		script.RestoreClockState( null, null, 0, 0, 1000f );
+
+		script.Turn( 400f );
+
+		Assert.AreEqual( 600, script.Variables[0], "a thousand saved, read at four hundred" );
+	}
 }

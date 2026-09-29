@@ -31,8 +31,23 @@ namespace OpenTPW;
 /// index are open frames, return addresses tagged <c>0x20000000</c>; the rest hold whatever was last written
 /// there, a returned call's address included, since nothing clears a slot.
 /// </param>
+/// <param name="WaitDeadline">
+/// <c>+0xa0</c>: the deadline a <c>WAIT</c> or <c>WAITANIM</c> is sitting on, a reading of the saved clock
+/// (<see cref="ParkClock"/>); nought for none.
+/// </param>
+/// <param name="AnimationDeadline">
+/// <c>+0xa4</c>: the deadline the last trigger armed, which <c>WAIT4ANIM</c> waits on, a reading of the same clock;
+/// nought for none. A save can hold one long past, since passing does not clear it: only a passed <c>WAIT4ANIM</c>,
+/// a <c>WAITANIM</c>'s first visit, a <c>LOOPANIM</c> that starts a loop or a <c>LOOPANIM_CH</c> does.
+/// </param>
+/// <param name="LoopingKey">
+/// <c>+0xa8</c>: <c>(entry &lt;&lt; 16) + role</c> of the last <c>LOOPANIM</c>, or <c>0xffff</c> after a one-shot.
+/// </param>
+/// <param name="AnimationMark"><c>+0xbc</c>: <c>TRIGWAITANIM</c>'s mark, the role it waits for plus one; nought for none.</param>
+/// <param name="TimerDeadline"><c>+0xc4</c>: the deadline <c>SETTIMER</c> last set, a reading of the same clock; nought for none.</param>
 public readonly record struct SavedScript( int Handle, int Position, int BodyWords, int[] Variables,
-	int CallIndex, int HeapIndex, int Result, int[] Stack );
+	int CallIndex, int HeapIndex, int Result, int[] Stack,
+	uint WaitDeadline, uint AnimationDeadline, int LoopingKey, int AnimationMark, uint TimerDeadline );
 
 /// <summary>
 /// The <c>RSSE</c> module of a park save: every running script's program counter and variables.
@@ -90,9 +105,10 @@ public readonly record struct SavedScript( int Handle, int Position, int BodyWor
 ///
 /// <para>
 /// <b>What is deliberately not read.</b> The original restores a great deal more per script - the
-/// wait deadlines, the limbo, bounce and walk tables, the string blob and a run of 32-byte records - and
-/// the struct's other fields with them. Only the counter, the body length, the variables, the stack with
-/// its two indices and the result register are taken, because they are what this program models; the
+/// limbo, bounce and walk tables, the string blob and a run of 32-byte records - and the struct's other
+/// fields with them. Only the counter, the body length, the variables, the stack with its two indices, the
+/// result register and the five fields a clock or an animation keeps (the two wait deadlines, the looping
+/// key, <c>TRIGWAITANIM</c>'s mark and the timer) are taken, because they are what this program models; the
 /// rest are stepped over by length so that the walk still has to add up. A script's <i>name</i> is not in the struct at all
 /// and is recovered a different way - see <see cref="RideScript.TakeDeclaredName"/>.
 /// </para>
@@ -141,6 +157,21 @@ public sealed class ParkScriptStates
 
 	/// <summary>Where the body length sits - <c>+0x50</c>, so dword 20.</summary>
 	private const int LengthDword = 20;
+
+	/// <summary>The <c>WAIT</c> and <c>WAITANIM</c> deadline - <c>+0xa0</c>, so dword 40.</summary>
+	private const int WaitDeadlineDword = 40;
+
+	/// <summary>The trigger's deadline <c>WAIT4ANIM</c> reads - <c>+0xa4</c>, so dword 41.</summary>
+	private const int AnimationDeadlineDword = 41;
+
+	/// <summary>The looping key - <c>+0xa8</c>, so dword 42.</summary>
+	private const int LoopingKeyDword = 42;
+
+	/// <summary><c>TRIGWAITANIM</c>'s mark - <c>+0xbc</c>, so dword 47.</summary>
+	private const int AnimationMarkDword = 47;
+
+	/// <summary><c>SETTIMER</c>'s deadline - <c>+0xc4</c>, so dword 49.</summary>
+	private const int TimerDeadlineDword = 49;
 
 	/// <summary>
 	/// Length-prefixed blocks between a script's body and its run of 32-byte records. The variables
@@ -215,7 +246,7 @@ public sealed class ParkScriptStates
 
 		var structSize = ReadInt32();
 
-		if ( Declared < 0 || structSize < (LengthDword + 1) * 4 )
+		if ( Declared < 0 || structSize < (TimerDeadlineDword + 1) * 4 )
 			throw new InvalidDataException( $"the script module says {Declared} scripts of {structSize} bytes" );
 
 		for ( var script = 0; script < Declared; ++script )
@@ -258,6 +289,11 @@ public sealed class ParkScriptStates
 		var callIndex = ReadInt32At( start + (CallIndexDword * 4) );
 		var heapIndex = ReadInt32At( start + (HeapIndexDword * 4) );
 		var result = ReadInt32At( start + (ResultDword * 4) );
+		var waitDeadline = (uint)ReadInt32At( start + (WaitDeadlineDword * 4) );
+		var animationDeadline = (uint)ReadInt32At( start + (AnimationDeadlineDword * 4) );
+		var loopingKey = ReadInt32At( start + (LoopingKeyDword * 4) );
+		var animationMark = ReadInt32At( start + (AnimationMarkDword * 4) );
+		var timerDeadline = (uint)ReadInt32At( start + (TimerDeadlineDword * 4) );
 
 		Skip( structSize );
 
@@ -306,7 +342,10 @@ public sealed class ParkScriptStates
 
 		// A handle twice over would make For() answer whichever came first, so the second is refused
 		// rather than quietly dropped.
-		if ( !_byHandle.TryAdd( handle, new SavedScript( handle, position, length, variables, callIndex, heapIndex, result, stack ) ) )
+		var saved = new SavedScript( handle, position, length, variables, callIndex, heapIndex, result, stack,
+			waitDeadline, animationDeadline, loopingKey, animationMark, timerDeadline );
+
+		if ( !_byHandle.TryAdd( handle, saved ) )
 			throw new InvalidDataException( $"two saved scripts both call themselves handle {handle}" );
 	}
 

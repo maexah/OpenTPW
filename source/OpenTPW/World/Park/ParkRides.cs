@@ -262,6 +262,19 @@ public sealed class ParkRides : Entity
 
 		_saved = PairSavedThings( world, catalogue );
 
+		// The moment this load stands for on the clock these scripts and their channels run on. It is the save's
+		// own moment on the save's clock: the engine makes its clock read the saved reading again as the load
+		// ends (FUN_00415140, 0x00415193), so everything the save measured against that clock keeps its distance
+		// from now. See OnThisClock.
+		_loaded = (int)(GameClock.Ticks * MillisecondsPerTick);
+		_clock = world.Clock;
+
+		if ( _clock.Problem != null )
+		{
+			Log.Warning( $"{ThemeName}: the park file's clock would not read, so every saved wait, timer and clip "
+				+ $"starts afresh at the load - {_clock.Problem}" );
+		}
+
 		foreach ( var placed in world.Objects )
 		{
 			// Everything this park actually stood up, which is not the same as everything it placed. The gate
@@ -336,7 +349,7 @@ public sealed class ParkRides : Entity
 				// the script back without putting its model's channels back leaves ten of this park's
 				// fourteen things frozen for good. See Restore.
 				if ( _saved.TryGetValue( placed.ThingId, out var savedThing ) )
-					Restore( script, savedThing, 0 );
+					Restore( script, savedThing );
 			}
 		}
 
@@ -578,12 +591,12 @@ public sealed class ParkRides : Entity
 	/// </para>
 	///
 	/// <para>
-	/// The channel is started here at frame nought at the moment of the load, and a saved queue is dropped,
-	/// where the engine copies the saved time stamps and queue back and works the frame out from them, so it
-	/// resumes the clip mid-way - a deviation (docs/QUEUE.md Q174c).
-	/// <b>It does carry the speed, though, and that is restored</b>: the record's sixth dword lands on the
-	/// channel's <c>+0xc</c>, and while fourteen of the fifteen running channels are saved at 1, the Belly
-	/// Bounce is saved at <b>1.1</b>.
+	/// <b>And the clip resumes where it was</b>: the engine copies the saved time stamps and queue back
+	/// (<c>FUN_004647a0</c>, <c>0x00464bcb</c>..<c>0x00464c17</c>) against a clock the load puts back, so its
+	/// next advance works the frame out from them. Here the stamps are moved onto this park's clock by their
+	/// distance from the save's moment (<see cref="Moved"/>), and a queued clip is queued again. The speed
+	/// comes back too: fourteen of the fifteen running channels are saved at 1, and the Belly Bounce at
+	/// <b>1.1</b>.
 	/// </para>
 	///
 	/// <para>
@@ -591,14 +604,12 @@ public sealed class ParkRides : Entity
 	/// holds, because <see cref="RideAnimations.Advance"/> carries the channel's own speed into both -
 	/// but the next trigger from the script replaces it, since <c>RideScript.StartAnimation</c> passes 1.0
 	/// where the engine's handlers push the script's speed divisor, 0.5 + 0.01 x the speed word
-	/// (<c>0x00552be4</c>) - the deviation docs/QUEUE.md Q155 names. The Belly Bounce's script reaches its
-	/// <c>LOOPANIM 2, 0</c> at word 43 about a second into a load, where the engine skips it on the saved
-	/// key and this queues the loop again, which replaces the restored one at the end of that cycle at 1.0;
-	/// so for the one channel in this park saved at anything but 1, the saved speed lasts that first cycle. A thing whose
-	/// resumed loop never re-triggers keeps its saved speed indefinitely; none here is such a thing.
+	/// (<c>0x00552be4</c>) - the deviation docs/QUEUE.md Q155 names. The Belly Bounce's script meets its
+	/// <c>LOOPANIM 2, 0</c> at word 43 with the saved looping key 2, so it skips it as the engine does and the
+	/// saved loop plays on at 1.1.
 	/// </para>
 	/// </summary>
-	private void Restore( RideScript script, SavedThing saved, int now )
+	private void Restore( RideScript script, SavedThing saved )
 	{
 		if ( script.Animations is not { } players )
 			return;
@@ -607,8 +618,13 @@ public sealed class ParkRides : Entity
 		{
 			var channel = saved.Channels[index];
 
+			// What was queued behind it, which the next advance promotes when the clip ends; the engine copies the
+			// queue whatever the channel holds, and an idle one's waits for a trigger to start something first.
+			if ( channel.QueuedRole != ParkThingStates.NoRole )
+				players.Channel( index )?.Queue( channel.QueuedRole, channel.QueuedEntry, channel.QueuedFlags, channel.QueuedSpeed );
+
 			// The sentinel is the engine's own "this channel was running nothing", and it is the common
-			// case: of the 163 channels the shipped park saves, 148 hold it.
+			// case: of the 163 channels the shipped park saves, 148 hold it, and none holds a queue.
 			if ( channel.Role == ParkThingStates.NoRole )
 				continue;
 
@@ -627,16 +643,29 @@ public sealed class ParkRides : Entity
 
 			players.Trigger( channel.Role, channel.Entry,
 				channel.Flags & (AnimTimeControl.LoopFlag | AnimTimeControl.KeepShownFlag),
-				speed, now, index );
+				speed, _loaded, index );
 
 			// And then the state it was left in. The engine's restore copies the saved word whole and adds
 			// 0x10 to a held channel; here the held or frozen state is re-entered through its pseudo-role
 			// instead, which sets the same bits and pins the frame (docs/exe/ride-operation.md, the RSYS
 			// restore). The speed passed is not read on that path.
 			if ( (channel.Flags & HeldAtEnd) != 0 )
-				players.Trigger( AnimTimeControl.HoldAtEnd, 0, AnimTimeControl.KeepShownFlag, speed, now, index );
+				players.Trigger( AnimTimeControl.HoldAtEnd, 0, AnimTimeControl.KeepShownFlag, speed, _loaded, index );
 			else if ( (channel.Flags & FrozenAtStart) != 0 )
-				players.Trigger( AnimTimeControl.FreezeAtStart, 0, AnimTimeControl.KeepShownFlag, speed, now, index );
+				players.Trigger( AnimTimeControl.FreezeAtStart, 0, AnimTimeControl.KeepShownFlag, speed, _loaded, index );
+
+			if ( players.Channel( index ) is not { } player )
+				continue;
+
+			// The stamps where the save left them, so the clip goes on from the frame it had reached rather than
+			// from nought. A channel the trigger above parked (a role or clip its model lacks) keeps nothing.
+			if ( !player.IsIdle
+				&& Moved( channel.StartTime ) is { } start
+				&& Moved( channel.Time ) is { } time
+				&& Moved( channel.NoPauseTime ) is { } noPause )
+			{
+				player.Restamp( start, time, noPause );
+			}
 
 			++ChannelsRestored;
 		}
@@ -670,9 +699,9 @@ public sealed class ParkRides : Entity
 	/// hand the toilets each other's records.
 	/// </para>
 	/// <para>
-	/// <b>Within one catalogue id the pairing is unobservable</b> - those records' channels are
-	/// identical in this park - so this is an ordering that matches rather than a decoded thing handle,
-	/// and nothing here relies on telling two of a kind apart.
+	/// <b>Within one catalogue id the pairing is unobservable</b> - those records in this park differ only in
+	/// their time stamps, which a held channel does not show - so this is an ordering that matches rather than a
+	/// decoded thing handle, and nothing here relies on telling two of a kind apart.
 	/// </para>
 	/// </summary>
 	private Dictionary<int, SavedThing> PairSavedThings( ParkWorld world, ParkItemCatalogue catalogue )
@@ -687,7 +716,7 @@ public sealed class ParkRides : Entity
 		if ( states.Problem != null )
 		{
 			Log.Warning( $"{ThemeName}: the park file's model states would not read, so everything in it "
-				+ $"keeps whatever its construction left - {states.Problem}" );
+				+ $"keeps whatever its construction left, and its scripts' looping keys start afresh - {states.Problem}" );
 
 			return paired;
 		}
@@ -733,9 +762,12 @@ public sealed class ParkRides : Entity
 	/// </para>
 	///
 	/// <para>
-	/// <b>Four saved fields are not restored</b>, where the engine reads the whole struct back: the wait
-	/// deadline, the <c>WAIT4ANIM</c> deadline, the looping key and <c>TRIGWAITANIM</c>'s mark. The shipped
-	/// park reaches the first and the third on every load (docs/QUEUE.md Q174c).
+	/// <b>And its waits</b>, which the engine reads back with the rest of the struct: the <c>WAIT</c> and
+	/// <c>WAITANIM</c> deadline, the <c>WAIT4ANIM</c> deadline, the looping key, <c>TRIGWAITANIM</c>'s mark and the
+	/// <c>SETTIMER</c> deadline, each deadline moved onto this park's clock (<see cref="OnThisClock"/>), and the key
+	/// and the mark only for a thing whose channels <see cref="Restore"/> puts back. The shipped
+	/// park reaches two on every load: the security cameras are saved on <c>WAIT 5000</c> with 2,341 and 2,329 ms
+	/// left, and the Belly Bounce with its looping key 2, so its <c>LOOPANIM 2, 0</c> at word 43 does nothing.
 	/// </para>
 	/// </summary>
 	private void Resume( RideScript script, ParkWorld.CatalogueObject placed, ParkWorld world )
@@ -785,8 +817,49 @@ public sealed class ParkRides : Entity
 
 		script.RestoreStacks( saved.Stack, saved.CallIndex, saved.HeapIndex, saved.Result );
 
+		// The looping key and the mark answer for what channel 0 is playing, so they come back only with the
+		// channels. Where the save's model states would not read, or hold no record for this thing, its channels start
+		// idle, and a restored key would make its next LOOPANIM of that loop do nothing over a channel playing none -
+		// a gap of this reader's, since the engine always reads both.
+		var channels = _saved.ContainsKey( placed.ThingId );
+
+		script.RestoreClockState( OnThisClock( saved.WaitDeadline ), OnThisClock( saved.AnimationDeadline ),
+			channels ? saved.LoopingKey : script.LoopingKey, channels ? saved.AnimationMark : script.AnimationMark,
+			OnThisClock( saved.TimerDeadline ) ?? 0f );
+
 		++Resumed;
 	}
+
+	/// <summary>
+	/// A saved deadline moved onto the clock this park's scripts run on (<see cref="Moved"/>), or null for nought,
+	/// the engine's empty slot.
+	/// </summary>
+	private float? OnThisClock( uint reading ) => reading != 0 ? Moved( reading ) : null;
+
+	/// <summary>
+	/// A reading of the save's clock moved onto the clock this park's scripts and channels run on: the load's
+	/// moment here, plus how far the reading lay from the save's moment there (<see cref="ParkClock.Since"/>).
+	/// Null where the save's clock would not read.
+	///
+	/// <para>
+	/// <b>Moved, not copied, and that is a deviation.</b> The engine puts its clock back to the saved reading, so
+	/// every saved reading means what it meant; this park's clock is the tick count since the game began, and a
+	/// float, which at a saved reading's size (114,374,804 ms in the shipped park) would hold it only to 8 ms. So each
+	/// deadline and stamp keeps its distance from the save's moment instead, which is what any wait or clip compares.
+	/// Its one known consequence: a reading a script kept in a variable (<c>GETTIME</c> into <c>VAR_STARTNOW</c>) is
+	/// not moved, since nothing says which variables hold one (docs/QUEUE.md Q181).
+	/// </para>
+	/// </summary>
+	private int? Moved( uint reading ) => _clock?.Since( reading ) is { } since ? _loaded + since : null;
+
+	/// <summary>The load's moment on this park's clock - see <see cref="Moved"/>.</summary>
+	private int _loaded;
+
+	/// <summary>The load's moment on the clock this park's scripts run on, which the save's own moment maps to.</summary>
+	internal int LoadedAt => _loaded;
+
+	/// <summary>The save's clock, or null where no save was given.</summary>
+	private ParkClock? _clock;
 
 	/// <summary>
 	/// Reads one script, or answers null where there is none - which is what both the park's binding and a

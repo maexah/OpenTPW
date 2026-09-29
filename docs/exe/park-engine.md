@@ -400,24 +400,26 @@ What OpenTPW's orbit camera shows past the ground's edge is the **fog-cleared ba
 | `0x00402db0` | `GameClock_Resume` | Resumes |
 | `FUN_00402dd0` | — | Toggle |
 | `0x00402d70` | — | Read the clock: `FUN_00402f10() + this[0x48]` |
-| `FUN_00402f40` | — | Raw time source for the first stopwatch |
-| `FUN_004033a0` | — | Raw time source for the second stopwatch |
+| `FUN_004033a0` | — | Raw time source for the clock scripts and channels read: last raw reading `+0x10`, a double accumulator `+0x18`, each delta scaled by the rate double at `+0x20` (`0x004033c5`) |
+| `FUN_00402f40` | — | Raw time source for the second stopwatch, on `clock+0x50`: last raw `+0x50`, accumulator `+0x58`, unscaled |
 | `0x00403030`, `0x00402f80` | — | The two pause call sites inside `GameClock_Pause` |
 | `FUN_004030d0` | — | "Elapsed": `raw - 0x2c` running, `0x28 - 0x2c` paused — i.e. **frozen** |
 | `FUN_004030c0` | — | IsPaused |
 | `FUN_00402ea0(rate)` | — | Enters the fixed-step latch: `+0x40 = 1000 / rate`, `+0x3c = elapsed + 0x44` |
 | `FUN_00402ef0` | — | Advances `+0x3c` by `+0x40` |
 | `FUN_00402ed0` | — | Leaves the latch, setting `+0x44` so time is continuous across the switch |
-| `FUN_00402e60` | — | The save's snapshot: `+0x4c` = the clock's reading (`0x00402e6b`), `+0x74` = the second stopwatch's; the `KOLC` module holds both |
-| `FUN_004031f0` | — | Makes the clock read `+0x4c`: `+0x48 = +0x4c - FUN_00402f10()` (`0x004031fd`). A load reads `+0x4c` back (`FUN_004031b0`, `0x004031c2`) and calls this through `FUN_00402e80` (`0x00415193`), unless `FUN_00414d40` runs in mode 1 (`0x004150ae`), so a saved script's deadlines (`+0xa0`, `+0xa4`) keep their meaning |
+| `FUN_00402e60` | — | The save's snapshot: `+0x4c` = the clock's reading (`0x00402e6b`), `+0x74` = the second stopwatch's (`FUN_00403150`, `0x00402e73`); the `KOLC` module holds both |
+| `FUN_004031f0` | — | Makes the clock read `+0x4c`: `+0x48 = +0x4c - FUN_00402f10()` (`0x004031fd`). A load reads `+0x4c` and `+0x74` back (`FUN_00402e30`: `0x004031c2`, `0x00403132`) and calls this through `FUN_00402e80` (`0x00415193`), which also makes the second stopwatch read `+0x74` (`FUN_00403160`, `0x0040316d`), unless `FUN_00414d40` runs in mode 1 (`0x004150ae`), so a saved script's deadlines (`+0xa0`, `+0xa4`, `+0xc4`) and a channel's stamps keep their meaning (`park.md`, difference 4) |
+| `0x0054f40b`..`0x0054f44f` | — | The first park frame after such a load: with `[0x00879070]` set (`0x00415189`) it re-bases the tick loop's `last` to the restored clock (`0x0054f425`) and clears the flag, so the jump runs no catch-up |
+| `0x0040c3b0`, `0x0040c3c0`, `0x0040c3d0` | — | Scale the clock's rate by 0.8 or 1.25, clamped to 0.25..2.0, or set it to 1.0 (through `0x00403340`, `0x004032f0`, `0x004032d0`); reached from the "game" key table at `0x00748028`, entries 6 to 8. Whether a shipped key reaches them is not established. The rate is not saved |
 
 Three layers of clock state:
 
-    +0x10/+0x14/+0x18   a stopwatch over FUN_00402f40   } paused together by GameClock_Pause
-    +0x28/+0x2c/+0x30   a stopwatch over FUN_004033a0   }
+    +0x10/+0x18/+0x20, +0x28/+0x2c/+0x30   the clock, over FUN_004033a0    } paused together by GameClock_Pause
+    +0x50/+0x58, +0x60/+0x64/+0x68, +0x70  a second stopwatch, FUN_00402f40 }
     +0x38/+0x3c/+0x40/+0x44   the fixed-step latch
 
-Stopwatch fields: `+0x30` = paused, `+0x28` = the time captured at the pause, `+0x2c` = accumulated offset. Both stopwatches are the same code over different sources. While latched, the clock READS `+0x3c` instead of real time.
+Stopwatch fields: `+0x30` = paused, `+0x28` = the time captured at the pause, `+0x2c` = accumulated offset (`FUN_004030d0`); the second stopwatch's are `+0x68`, `+0x60` and `+0x64` (`FUN_00403010` on `clock+0x50`), with its offset `+0x70`. Both are the same code over different sources, but only the clock's source is scaled by the rate, so the two part whenever the rate is not 1. While latched, the clock READS `+0x3c` instead of real time.
 
 **The park enters the latch only while `[0x00878128]` is set** (at `0x0054f455`; otherwise `0x00402ed0`). That global is written at `Boot_Init` `0x0054defc`. Almost certainly recorded/replayed play; **nothing offline sets it**.
 

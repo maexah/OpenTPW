@@ -106,15 +106,14 @@ public sealed class RideScript
 	/// read that back as an empty slot and arm it again every visit, so the script would never move.
 	/// </para>
 	/// <para>
-	/// A load leaves it null, where the engine restores the saved deadline, so a script saved on a
-	/// <c>WAIT</c> or a <c>WAITANIM</c> waits it out again in full (docs/QUEUE.md Q174c).
+	/// A load puts the saved deadline back, moved onto this clock (<see cref="RestoreClockState"/>).
 	/// </para>
 	/// </summary>
 	private float? _waitUntil;
 
 	/// <summary>
 	/// The deadline <c>SETTIMER</c> last set, on the caller's clock - the engine's field <c>+0xc4</c>.
-	/// One per script, and zero until a <c>SETTIMER</c> has run.
+	/// One per script, and zero until a <c>SETTIMER</c> has run or a load puts a saved one back.
 	/// </summary>
 	private float _timerUntil;
 
@@ -123,8 +122,8 @@ public sealed class RideScript
 	/// one <c>WAIT</c> uses. <c>TRIGANIM</c>, <c>TRIGANIM_CH</c> and <c>TRIGWAITANIM</c> arm it (the engine's
 	/// <c>TRIGANIMSPEED</c> too, counted here), <c>LOOPANIM</c>, <c>LOOPANIM_CH</c> and a passed
 	/// <c>WAIT4ANIM</c> clear it, and <c>WAIT4ANIM</c> is the only instruction that reads it. Null when
-	/// nothing has been triggered, and after a load, where the engine restores the saved deadline
-	/// (docs/QUEUE.md Q174c). A <c>WAITANIM</c>'s first visit clears it too (<see cref="WaitOutAnimation"/>).
+	/// nothing has been triggered; a load puts a saved one back. A <c>WAITANIM</c>'s first visit clears it too
+	/// (<see cref="WaitOutAnimation"/>).
 	/// </summary>
 	private float? _animationUntil;
 
@@ -133,8 +132,7 @@ public sealed class RideScript
 	/// <c>(second &lt;&lt; 16) + first</c>, and <see cref="OneShot"/> after a one-shot trigger or a
 	/// <c>WAITANIM</c>'s first visit (<see cref="WaitOutAnimation"/>).
 	/// It starts at nought, where the engine's loader writes <see cref="OneShot"/> (<c>0x00558c4f</c>), a
-	/// difference no shipped <c>LOOPANIM</c> meets, as none has the key nought; and a load leaves it at nought
-	/// where the engine restores the saved key (docs/QUEUE.md Q174c).
+	/// difference no shipped <c>LOOPANIM</c> meets, as none has the key nought; a load puts the saved key back.
 	/// </summary>
 	private int _looping;
 
@@ -142,8 +140,7 @@ public sealed class RideScript
 	/// What <c>TRIGWAITANIM</c> is holding out for - the engine's field <c>+0xbc</c>, holding the role it
 	/// triggered <b>plus one</b>, and nought for "not armed". The plus one is the engine's own and is not
 	/// tidiable away: nought has to mean unarmed, so role nought could not be told from it otherwise.
-	/// A load leaves it at nought, where the engine restores the saved mark; no shipped or played save
-	/// holds one armed (docs/QUEUE.md Q174c).
+	/// A load puts the saved mark back; no shipped or played save holds one armed.
 	/// </summary>
 	private int _animationMark;
 
@@ -543,6 +540,21 @@ public sealed class RideScript
 	/// <summary>True while the script is sitting on a <c>WAIT4ANIM</c> that has not come due.</summary>
 	public bool WaitingForAnimation => _animationUntil is not null;
 
+	/// <summary>The <c>WAIT</c> or <c>WAITANIM</c> deadline, <c>+0xa0</c>, on the caller's clock; null for none.</summary>
+	internal float? WaitDeadline => _waitUntil;
+
+	/// <summary>The trigger's deadline <c>WAIT4ANIM</c> reads, <c>+0xa4</c>; null for none.</summary>
+	internal float? AnimationDeadline => _animationUntil;
+
+	/// <summary>The looping key, <c>+0xa8</c>.</summary>
+	internal int LoopingKey => _looping;
+
+	/// <summary><c>TRIGWAITANIM</c>'s mark, <c>+0xbc</c>: the role waited for plus one, nought for none.</summary>
+	internal int AnimationMark => _animationMark;
+
+	/// <summary><c>SETTIMER</c>'s deadline, <c>+0xc4</c>; nought for none.</summary>
+	internal float TimerDeadline => _timerUntil;
+
 	/// <summary>
 	/// The ride this script drives, or null if it has none. The original finds it by walking a list
 	/// for a node whose id matches the script's own (<c>FUN_0043b050</c>) and keeps the handle; there
@@ -831,6 +843,29 @@ public sealed class RideScript
 		_calls = callIndex;
 		_values = heapIndex;
 		Result = result;
+	}
+
+	/// <summary>
+	/// Puts back the five fields a save keeps that a clock or an animation reads: the <c>WAIT</c> and
+	/// <c>WAITANIM</c> deadline (<c>+0xa0</c>), the trigger's deadline <c>WAIT4ANIM</c> reads (<c>+0xa4</c>), the
+	/// looping key (<c>+0xa8</c>), <c>TRIGWAITANIM</c>'s mark (<c>+0xbc</c>) and <c>SETTIMER</c>'s deadline
+	/// (<c>+0xc4</c>), which <c>FUN_005597a0</c> reads back with the rest of the struct.
+	///
+	/// <para>
+	/// <b>The deadlines arrive already on this script's clock</b>: the engine's are readings of a clock the load
+	/// makes read the save's moment again, and the caller moves each by the same distance from that moment onto
+	/// the clock it drives this script with (<c>ParkRides.Resume</c>), which hands back the key and the mark this
+	/// script already holds for a thing whose channels it cannot put back. Null is the engine's nought, an empty
+	/// slot; the timer's nought is its own field's, a timer never set.
+	/// </para>
+	/// </summary>
+	internal void RestoreClockState( float? waitUntil, float? animationUntil, int looping, int mark, float timerUntil )
+	{
+		_waitUntil = waitUntil;
+		_animationUntil = animationUntil;
+		_looping = looping;
+		_animationMark = mark;
+		_timerUntil = timerUntil;
 	}
 
 	/// <summary>
@@ -3026,7 +3061,7 @@ public sealed class RideScript
 		// A clip starts at this tick's own instant, where the engine stamps a fresh start with the frame's
 		// clock snapshot (0x00472bff), the one its advance reads: so a clip triggered at tick i of a frame
 		// running k ticks is (k-1-i) x 31ms in at that frame's sweep here and nought there - a deviation
-		// reached only when a frame runs more than one tick (docs/QUEUE.md Q174c).
+		// reached only when a frame runs more than one tick (docs/QUEUE.md Q182).
 		return Animations.Trigger( role, entry, flags, 1f, (int)now, channel );
 	}
 

@@ -2238,7 +2238,58 @@ artifacts are listed in `docs/history/README.md`.
   at a re-entry that passes it, red with the change reverted; for (3), a test triggering onto a clip that ran out
   after the last advance and finding the new one queued, red with the `MoveTo` put back.
 
-- [ ] **Q174c. A loaded script's four saved fields and its channels' timebase.** Found by Q174's decode and review
+- [x] **Q174c. A loaded script's four saved fields and its channels' timebase.** Done 2026-09-29,
+  `alexah/183-restore-a-scripts-waits-and-channels`. `ParkRides.Resume` puts back a saved script's `+0xa0`, `+0xa4`,
+  `+0xa8`, `+0xbc` and `+0xc4` (`RideScript.RestoreClockState`), and `ParkRides.Restore` each channel's three stamps and
+  its queue (`AnimTimeControl.Restamp`, `AnimTimeControl.Queue`), every reading moved by its distance from the save's
+  clock (new `ParkClock`, `KOLC`'s first dword) onto the load's moment, `GameClock.Ticks` x 31 (`ParkRides.Moved`). The
+  restored frame is the restore's own, the span times 0.03 divided by the speed (`0x00472cf4`), until the next advance.
+  `SavedScript` and `SavedChannel` carry the new fields. `+0xc4` is a fifth field beside the item's four: the same
+  struct, the same clock, set in Alexah's saves. The key and the mark come back only with the thing's channels, so a
+  save whose channel module will not read leaves its loops fresh. `park.md` difference 4 says it is matched.
+  - **Decoded first** (`wf_ff945b38-6f1`: three Opus decoders in Ghidra, each put to an Opus skeptic; every answer
+    upheld, with corrections taken): the `RSYS` copy of all eleven saved dwords (`0x00464bcb`..`0x00464c17`) and
+    `FUN_00472cb0`'s divided frame; the clock restore of both `KOLC` dwords (`0x00415193`) and the first frame's re-base
+    of `last` (`0x0054f425`), so no catch-up; the five script fields read back raw, compared unsigned (`JC`), `GETTIMER`
+    signed (`JNS`); scripts' deadlines and channel stamps on one clock (`FUN_004031e0`); an offline park, Instant
+    Action's included, loaded in mode 2. Written to `park.md` (difference 4, the scheduler), `park-engine.md` (the clock
+    table, whose two sources were swapped, and the rate keys), `ride-operation.md` and `boot.md`; FileFormats
+    `saves.md` (`KOLC`, the script module's header, `+0xc4`, the channel's eleven dwords), `29385a1` on
+    `docs/save-module-chain`.
+  - **Measured in the game** (silent, `save/` unchanged within each run; `q174crun.py`, every reading predicted first,
+    7 of 7 on each build; the stock park loaded under a lobby pause, stepped in frames of 1/60 s). This build
+    (`q174c-new/`): at the load the Belly Bounce's channel 0 read `role 2 entry 0 frame 45.4/90.0 LOOP` (1,376 ms x 1.1
+    x 0.03) and the Fountain's 48.8 of 50; the Belly Bounce 55.6 at tick 10 and 41.3 at tick 84, round once at 1.1;
+    no `then` in 48 readings over ticks 10 to 60; both cameras `role 6 ... HELD` at tick 75 and `role 4` at tick 84,
+    3.7 and 4.7 frames in. The build before (`fc63e0f`, `q174c-before/`): 4.1 and 3.7 at the load, `then 2/0` from tick
+    36 to 60, the cameras held on 6 at tick 84 and on 4 only by tick 176. Photographed paused at the same step on both
+    builds (`q174c/L0-bouncy-paused-pair.png`, `q174c/C2-camera-paused-pair.png`): the Belly Bounce's pod stands open
+    wider, and the camera's box has risen on its post, where the census says each should.
+  - **Predictions wrong**: the build before's Belly Bounce, whose `WAIT 500` I said would pass near ticks 17 to 25;
+    500 ms is three of its one-in-eight turns, so it passed at 28 and queued at 36. In the tests, the pass through word 43
+    comes a turn after the wait passes, since `CRIT_UNLOCK` at word 99 ends that turn; and a restored held frame stands a
+    hair under its total (the saved stamps are whole milliseconds) until the next advance.
+  - **Tests**: thirteen new (`TheSavedClockAndEachScriptsWaitsRead`, `TheSavedChannelsTimeStampsAndQueuesRead`,
+    `ALoadedCameraWaitsOutOnlyWhatItsSaveHadLeft`, `TheLoadsMomentIsTheClockTheParksTicksRunOn`,
+    `ALoadedBellyBounceKeepsTheLoopItsSaveWasRunning`, `EverySavedWaitMarkTimerAndQueueComesBack` on a copy of the shipped
+    park with a trigger deadline, mark, timer and queue written in, `ALoadWhoseChannelsWillNotReadKeepsItsLoopsFresh` on
+    one whose channel module is spoiled, two for `Restamp`, three for `RestoreClockState` and one for a restored
+    `TRIGWAITANIM` mark); the Fountain's frame in `ABoundScriptResumesWhereTheSaveLeftIt`, and
+    `TheParksScriptsRunWhenTheyAreGivenTurns` driven from the load's moment. Each change put back alone turns its
+    tests red, 16 of 16 as predicted (`q174c-mutate.py`, `q174c/mutate2.out`); a first round before the review ran 13, 12
+    as predicted, the timer read from the wrong dword also reddening the copy-of-the-park test that reads it.
+  - **Not confirmed on screen**: the mark, the timer and a queued channel, which the shipped park does not save, and a
+    load whose channels will not read (tested only); Alexah's saves, which wait for Q167.
+  - **Reviewed** (`wf_eb68d867-c39`, three read-only Opus lenses, each finding put to an Opus skeptic): 21 findings, 19
+    upheld, 2 refuted; all 19 taken. Among them: the key and the mark restored for a thing whose channels were not, so a
+    refused channel module (Alexah's jungle saves) would leave the Belly Bounce's `LOOPANIM` doing nothing over an idle
+    channel; `TheParksScriptsRunWhenTheyAreGivenTurns` still ran from nought and no longer reached a restored wait; the
+    load-moment test's float arithmetic and order; a saved nought, the queue's flags and speed and the Bus's third stamp
+    unpinned; `+0xc4` missing from FileFormats; stale comments (`ChannelDwords`, the toilets' pairing, `+0xa4`'s
+    clearers, `Moved`'s "of representation only"); `park.md`'s "zeroes"; Q181's count.
+  - **Found:** Q180, Q181, Q182 (the note from Q174b's review, moved), a note under Q167.
+
+  The item as written: Found by Q174's decode and review
   (`park.md`, "Where OpenTPW's animation state parts from the engine's", difference 4; `ride-operation.md`, the `RSYS`
   restore). The engine reads each script's whole struct back and restores its channels as saved; OpenTPW's
   `ParkRides.Resume` restores neither `+0xa0` (a `WAIT`'s or `WAITANIM`'s deadline), `+0xa4`, `+0xa8` nor `+0xbc`, and
@@ -2248,9 +2299,6 @@ artifacts are listed in `docs/history/README.md`.
   load: the cameras' `WAIT 5000` at word 14 with 2,341 and 2,329 ms left, the Belly Bounce's `WAIT 500` at word 46 with
   63, and its saved key 2 at its `LOOPANIM 2, 0` at word 43. Confirm, predicted first: the Belly Bounce's `LOOPANIM 2,
   0` no longer triggering after a load, and the cameras' first `WAITANIM` about 2.3 s after their first turn, not 5 s.
-  - **Note (Q174b's review):** a triggered clip starts at the tick's own instant, where the engine's starts at the
-    frame's clock snapshot (`park.md`, difference 6); the same timebase, reached only when a frame runs more than one tick.
-
 - [ ] **Q175. A rider's walk off keeps the walk on's leg, where the original's works out its own. Decode first.** Found by
   Q166's decode (`WALKON`) and its refuter (`WALKOFF`). `FUN_00556f40` (`WALKON`) sets the slot's due time to now +
   trunc( the distance from the walk node to the head node ) × 100, nought becoming 100 (`0x00556fce`..`0x005570af`), and
@@ -2316,6 +2364,37 @@ artifacts are listed in `docs/history/README.md`.
   unbuilt and counted ("Bumper Car: BUMP at N was reached and does nothing"). Decode how the Hot Pot's script ends a
   ride and lets its riders off, and what `BUMP` answers it. Confirm: riders let off the Hot Pot, each match log reading
   excitement 42 (`q172brun.py`, `q172b-long/`).
+
+- [ ] **Q180. A loaded park's scripts take their turns on the save's ticks.** Found by Q174c's decode (`park.md`, "The
+  scheduler"). The `RSSE` module's header puts the scheduler's globals back (`0x005598d7`): its tick counter (6,055 in
+  the shipped park) and the next script handle (16); each script keeps its saved handle at `+0x08`, so its turn
+  (`(handle ^ tick) & 7`, `0x005516e9`) keeps its phase across the load, and each is put at the head of the list
+  (`0x005599d3`), reversing the order of turns within a tick. `RideScriptScheduler` starts at tick nought and numbers
+  the bound scripts itself (`Scheduler.Spawn`), so a loaded script takes its turns on other ticks and in another order:
+  the security cameras' saved waits end on turns at ticks 73 and 74 after the load in the engine, or 81 and 82, and in
+  ticks 76 to 83 here. Keep the saved handles, the saved tick and the next handle (mind every reader of a script's id:
+  `FINDSCRIPT`, `COAST`'s ride handle). Confirm: `rides` over the cameras through their first wait after a load, each
+  passing on the tick the engine's rule gives.
+
+- [ ] **Q181. A `GETTIME` reading kept in a script variable across a load. Decode first.** Found by Q174c's probe
+  (`q174c/clockvars.py`). `GETTIME` stores the clock raw; twelve Lost Kingdom ride scripts keep one in `VAR_STARTNOW`
+  (`bumper`, `GoKarts`, `incagod`, `Lookout`, `Monkey`, `Mumbo`, `PorkPie`, `Spider`, `Totem`, `TourRide`, `Volcano`,
+  `Wateride`), the gift shop in `VAR_TIMER1`, `end` in `VAR_ENDTIME`, and each subtracts it from the clock later. The engine's
+  clock reads the saved reading again after a load, so the difference survives; OpenTPW moves a saved deadline onto its
+  own clock (`ParkRides.Moved`) but cannot tell which variables hold readings, so a loaded `VAR_STARTNOW` is millions
+  of milliseconds off. Alexah's jungle saves hold one in eight scripts (`spider`, `mumbo`, `gokarts`, `tourride`,
+  `incagod`, `monkey`, `porkpie`, `giftshop`); the shipped park, none. Decode what each script does with the reading,
+  then choose: run the scripts on the save's own clock, as the engine does (a float clock holds 114 million ms only to
+  8 ms), or move the readings a walk of the script finds. Confirm, after Q167: a loaded ride's cycle timed from
+  `VAR_STARTNOW` ends when it would have without the load.
+
+- [ ] **Q182. A frame's ticks and clips read one clock in the engine. Decode first.** Moved from Q174c, where Q174b's
+  review left it as a note (`park.md`, difference 6). A triggered clip starts at the tick's own instant in OpenTPW
+  (`RideScript.StartAnimation`, `ParkRides.MillisecondsAt`), where the engine stamps a fresh start with the frame's
+  snapshot `DAT_007b496c` (`FUN_00472bc0`, `0x00472bff`), the one its advance reads (`0x004736b3`); its scripts' own
+  deadlines read the live clock (`0x0055299d`), which barely moves through a catch-up, where each tick here has its own
+  instant 31 ms on. Reached only when a frame runs more than one tick; not measured. Decode how far the live clock moves
+  across one frame's ticks, then build.
 
 - [ ] **Q85. A guest who arrives starts with happiness nought, and stays there. Decode first.** Found by Q50's game
   runs: every one of the 33 guests who arrived (30 by `load 30`) read `happy 0` in `peeps`, none above it in nine minutes,
@@ -3272,6 +3351,9 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   load each in OpenTPW, count what reads and what does not, and put every layout fact in the FileFormats docs.
   Q165c read the jungle `autosave.TPWS` and `New Save.TPWS` through `ParkWorld` (`q165cprobe`, read-only): no problem
   reported, and the guests' two histories check out (FileFormats `saves.md`, 470).
+  - **Note (Q174c's probe):** the `RSYS` channel module does not walk to its end in the jungle `New Save.TPWS` and
+    `autosave.TPWS` (206 channels read, the cursor off the module's end), so `ParkThingStates` refuses it and none of
+    their channels is restored; the fantasy and hallow saves and the shipped park walk closed (`q174cprobe/out.txt`).
 - [ ] **Q168. Run the original under Wine or Proton, as a reference to compare against.** Nothing is recorded yet.
   Wine already runs RTPatch here through `flatpak-spawn --host` (`CLAUDE.local.md`). Use a copy of the game and a
   private `WINEPREFIX`; never point it at `~/Games/TPWorld/save/`. Record what works, and what does not, in `docs/`.

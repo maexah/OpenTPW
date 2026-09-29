@@ -2259,18 +2259,19 @@ and the queue, so a clip resumes where it was, against the clock the save puts b
 of them and restarts the clip — including the Litter Bin, which is saved on role 0.
 
 **What OpenTPW does with this.** It restores **both halves**: from `RSSE` the script's counter, its
-variables, its stack with both its indices, its result register and its declared name (`park.md`, "The two
-stacks"), and from `RSYS` each thing's animation channels — the role, the entry,
-the speed and the flag word, with the two bits that mean the same thing carried across and the held and frozen
-states re-entered through the pseudo-roles 14 and 13, where the engine copies the word: the same bits, reached
-another way. Each channel is started at frame nought at the moment of the load, where the engine resumes the clip
-mid-way from its saved stamps, and a saved queue is dropped (`park.md`, "Where OpenTPW's animation state parts from
-the engine's", difference 4). Restoring only the script is a net loss, and measurably so: a thing whose
+variables, its stack with both its indices, its result register, its two wait deadlines, its looping key,
+`TRIGWAITANIM`'s mark, its `SETTIMER` deadline and its declared name (`park.md`, "The two stacks"), and from `RSYS`
+each thing's animation channels — the role, the entry, the speed, the three time stamps, the queue and the flag word,
+with the two bits that mean the same thing carried across and the held and frozen states re-entered through the
+pseudo-roles 14 and 13, where the engine copies the word: the same bits, reached another way. Every deadline and stamp
+is a reading of the clock the save's `KOLC` module holds, which the engine makes read the saved value again; OpenTPW
+moves each by its distance from that reading onto the load's moment on its own clock, so a wait ends and a clip goes on
+where the save left them (`park.md`, "Where OpenTPW's animation state parts from the engine's", difference 4).
+Restoring only the script is a net loss, and measurably so: a thing whose
 steady-state loop holds no animation instruction never reaches the `LOOPANIM` in its prologue again, and
 ten of Lost Kingdom's fourteen placed things stood frozen for the whole session when the counter alone
 was put back. The rest is stepped over by length, neither restored nor counted in the `unimplemented` census — the
-wait deadlines, the looping key and `TRIGWAITANIM`'s mark (`park.md`, difference 4), and the limbo, bounce and
-walk tables — so the walk still has to add up. The name is **not** in the
+limbo, bounce and walk tables — so the walk still has to add up. The name is **not** in the
 saved struct and is taken off the script's own opening `NAME` instead, which matters because resuming
 skips that instruction and `FINDSCRIPTRAND` looks a script up by name. `ParkRides.BindNew` — the path a
 player takes by building something — deliberately restores nothing, because a new thing has no past and

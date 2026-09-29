@@ -536,4 +536,39 @@ public class RideScriptModelTests
 		Assert.AreEqual( 1, channel.SubAnim, "the sweep did not promote the queued clip" );
 		Assert.IsFalse( channel.HasQueued, "the queue should be empty once it has been promoted" );
 	}
+
+	/// <summary>
+	/// <b>A <c>TRIGWAITANIM</c> a load puts back is a re-entry, not a second trigger.</b> The engine reads the mark
+	/// at <c>+0xbc</c> back with the script's struct, so the instruction it was saved on compares channel 0's role
+	/// against it and triggers nothing; with the mark lost it would trigger role 6 again, queued behind the loop.
+	/// </summary>
+	[TestMethod]
+	public void ATriggerAndWaitALoadPutsBackOnlyWaits()
+	{
+		var script = new RideScript( Build( 1, 50,
+			Word( Opcode.TRIGWAITANIM ), Lit( 6 ), Lit( 0 ), Lit( 0 ),
+			Word( Opcode.COPY ), Var( 0 ), Lit( 7 ),
+			Word( Opcode.END ) ) )
+		{
+			Animations = RideAnimations.Load( "levels/jungle/rides/tvsim", "tvsim", data )
+		};
+
+		var roles = script.Animations!;
+		var channel = roles.Channel( 0 )!;
+
+		roles.Trigger( 2, 0, AnimTimeControl.LoopFlag, 1f, 0 );
+		script.RestoreClockState( null, null, 0xFFFF, 7, 0f );
+
+		script.Turn( 31f );
+
+		Assert.AreEqual( 0, script.Variables[0], "waiting for role 6" );
+		Assert.IsFalse( channel.HasQueued, "without triggering it again" );
+		Assert.AreEqual( 7, script.AnimationMark, "the mark kept" );
+
+		roles.Trigger( 6, 0, AnimTimeControl.StartAtOnceFlag, 1f, 62 );
+		script.Turn( 62f );
+
+		Assert.AreEqual( 7, script.Variables[0], "and on once channel 0 plays role 6" );
+		Assert.AreEqual( 0, script.AnimationMark, "which clears the mark" );
+	}
 }

@@ -1205,7 +1205,16 @@ public sealed class ParkWorld
 		// The ninth and the thirteenth, independent of the world block for the same reason.
 		TrackRides = new ParkTrackRides( _data );
 		Coasters = new ParkCoasters( _data );
+
+		// And the fifth, the clock every saved deadline and time stamp is a reading of.
+		Clock = new ParkClock( _data );
 	}
+
+	/// <summary>
+	/// The clock's reading when this park was saved - see <see cref="ParkClock"/>. Never null; ask it for its own
+	/// <see cref="ParkClock.Problem"/>.
+	/// </summary>
+	public ParkClock Clock { get; }
 
 	/// <summary>
 	/// Where every script in this park had got to when it was saved - see <see cref="ParkScriptStates"/>.

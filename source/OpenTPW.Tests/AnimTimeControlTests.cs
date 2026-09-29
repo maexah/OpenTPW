@@ -205,4 +205,54 @@ public class AnimTimeControlTests
 		Assert.IsTrue( channel.IsIdle, "the channel is stopped, not left running the old clip" );
 		Assert.AreEqual( RideAnimations.NoRole, channel.AnimID );
 	}
+
+	/// <summary>
+	/// <b>A restored clip goes on from where its save left it.</b> The engine's restore copies a channel's three
+	/// time stamps back (<c>FUN_004647a0</c>, <c>0x00464bdb</c>..<c>0x00464bec</c>) and its next advance works the
+	/// frame out from them: a loop saved 1,376 ms in at 1.1 is 45.4 frames in once advanced, and a second later a
+	/// second further on. Until that advance it stands where the restore's own arithmetic put it, the span divided by
+	/// the speed rather than multiplied (<c>0x00472cf4</c>), 37.5 frames.
+	/// </summary>
+	[TestMethod]
+	public void ARestampedClipGoesOnFromTheFrameItsSaveHadReached()
+	{
+		var channel = new AnimTimeControl();
+
+		channel.Start( 2, 0, AnimTimeControl.LoopFlag, 1.1f, 10000, frames: 160f );
+		channel.Restamp( 10000 - 1376, 10000, 10000 );
+
+		Assert.AreEqual( 1376 * 0.03f / 1.1f, channel.AnimFrame, 0.01f, "the restore's own frame, divided by the speed" );
+		Assert.AreEqual( 10000 - 1376, channel.StartAnimTime, "its start where the save had it" );
+
+		channel.MoveTo( 10000 );
+
+		Assert.AreEqual( 1376 * 1.1f * 0.03f, channel.AnimFrame, 0.01f, "the frame the saved stamps give once advanced" );
+
+		channel.MoveTo( 11000 );
+
+		Assert.AreEqual( 2376 * 1.1f * 0.03f, channel.AnimFrame, 0.01f, "and a second later, a second further on" );
+	}
+
+	/// <summary>
+	/// A held channel restamped with its saved span, a whole clip, stands at that span's frame - its last, to the
+	/// whole milliseconds the stamps are kept in - with its clip time a clip before its start, as
+	/// <see cref="AnimTimeControl.MoveTo"/> keeps a hold's; and an advance puts it on its last frame and keeps it there.
+	/// </summary>
+	[TestMethod]
+	public void ARestampedHoldStaysOnItsLastFrame()
+	{
+		var channel = new AnimTimeControl();
+
+		channel.Start( 5, 2, 0, 1f, 10000, frames: 220f );
+		channel.Start( AnimTimeControl.HoldAtEnd, 0, AnimTimeControl.KeepShownFlag, 1f, 10000, 0f );
+		channel.Restamp( 10000 - 592, 10000 + 6741, 10000 );
+
+		Assert.AreEqual( 220f, channel.AnimFrame, 0.1f, "still on its last frame, to the restore's whole milliseconds" );
+		Assert.AreEqual( 10000 - 592, channel.StartAnimTime, "with the saved start" );
+		Assert.AreEqual( 10000 - 592 - 7333, channel.AnimTime, "and its clip time a clip before it" );
+
+		channel.MoveTo( 12000 );
+
+		Assert.AreEqual( 220f, channel.AnimFrame, "and held there" );
+	}
 }

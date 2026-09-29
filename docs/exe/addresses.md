@@ -21,11 +21,13 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00402d70` | | OpenTPW/Global/GameCalendar.cs OpenTPW/VM/RideScript.cs  |
 | `0x00402d90` | | OpenTPW/Global/GameClock.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x00402db0` | | OpenTPW/Global/GameClock.cs  |
+| `0x00402e6b` | FUN_00402e60, the save's clock snapshot: +0x4c = the clock's reading, the first dword of KOLC | OpenTPW.Files/Formats/Save/ParkClock.cs  |
 | `0x00402ea0` | | OpenTPW/Global/GameClock.cs  |
 | `0x00402f10` | | OpenTPW/VM/RideScript.cs  |
 | `0x00403030` | | OpenTPW/Global/GameClock.cs  |
 | `0x00403050` | | OpenTPW/Global/GameClock.cs  |
 | `0x004030d0` | | OpenTPW/VM/RideScript.cs  |
+| `0x004031fd` | FUN_004031f0: +0x48 = +0x4c - FUN_00402f10(), so the clock reads the saved reading | OpenTPW.Files/Formats/Save/ParkClock.cs  |
 | `0x004033a0` | | OpenTPW/VM/RideScript.cs  |
 | `0x00407f95` | | OpenTPW/World/Level.cs  |
 | `0x00409180` | The park teardown on leaving (called at `0x0054ff91`): frees the world and zeroes `0x007cf83c` at `0x004091b8` | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
@@ -45,6 +47,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0040c4d0` | | OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x0040c5d0` | The system table's Ctrl+H handler, Popup Help, run on the key's release by the window procedure | OpenTPW/UI/HelpBar.cs  |
 | `0x004134f5` | Item loader `FUN_00413410`: descriptor `+0x4ac` stored as a copy of `+0x4c`, `Info.WhichUIType` | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x00415193` | FUN_00415140, the post-load rebuild: FUN_00402e80 makes both clocks read their saved KOLC readings | OpenTPW.Files/Formats/Save/ParkClock.cs OpenTPW/World/Park/ParkRides.cs  |
 | `0x00415270` | the whole-game restore chain: seventeen modules in order, each checked against a four-character tag that follows it | OpenTPW.Files/Formats/Save/ParkScriptStates.cs  |
 | `0x00419710` | | OpenTPW/UI/UiFonts.cs  |
 | `0x00423690` | | OpenTPW/Client/GameOptions.cs OpenTPW/World/Level.cs  |
@@ -89,6 +92,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00463060` | the build path: checks role 0 exists, triggers it, then starts role 13 at once, which holds that clip at frame nought. A newly built thing's script, run from word 0, plays it; a loaded one's resumes past it and its channels come back from the save | OpenTPW/World/Park/ParkRides.cs  |
 | `0x004646a1` | | OpenTPW/World/Ride/AnimTimeControl.cs  |
 | `0x004647a0` | the `RSYS` arm of the restore chain: overwrites every animation channel from the saved record and restores the per-node flag words with it, which is what stops a loaded park's things standing frozen | OpenTPW.Files/Formats/Save/ParkThingStates.cs  |
+| `0x00464bcb` | FUN_004647a0, the RSYS restore: a saved channel's eleven dwords copied onto the channel, from | OpenTPW.Files/Formats/Save/ParkThingStates.cs OpenTPW.Tests/ParkScriptStateTests.cs OpenTPW/World/Park/ParkRides.cs  |
+| `0x00464bdb` | FUN_004647a0: the three saved stamps onto +0x10, +0x14 and +0x18, from | OpenTPW.Tests/AnimTimeControlTests.cs OpenTPW/World/Ride/AnimTimeControl.cs  |
+| `0x00464bec` | FUN_004647a0: the three stamps, to here | OpenTPW.Tests/AnimTimeControlTests.cs OpenTPW/World/Ride/AnimTimeControl.cs  |
+| `0x00464c17` | FUN_004647a0: the copy, to here (the queue +0x24..+0x30 last) | OpenTPW.Files/Formats/Save/ParkThingStates.cs OpenTPW.Tests/ParkScriptStateTests.cs OpenTPW/World/Park/ParkRides.cs  |
 | `0x00467d00` | | OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x00467d60` | | OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x0046b600` | | OpenTPW.Common/Client/Window.cs  |
@@ -103,6 +110,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00471c83` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x00471d32` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x00472bff` | FUN_00472bc0, a fresh start: +0x10, +0x14 and +0x18 stamped from the frame's clock snapshot DAT_007b496c | OpenTPW/VM/RideScript.cs  |
+| `0x00472cf4` | FUN_00472cb0, the restore's clip bind: +0x20 = the saved span x 0.03 DIVIDED by the speed | OpenTPW.Tests/AnimTimeControlTests.cs OpenTPW/World/Ride/AnimTimeControl.cs  |
 | `0x00472f60` | | OpenTPW.Files/Formats/Model/AnimationFile.cs OpenTPW/World/Lobby/LobbyScript.cs  |
 | `0x00472fdd` | | OpenTPW/World/Ride/AnimTimeControl.cs  |
 | `0x0047308f` | FUN_00472f60's start: an entry past a loaded role's clips read from past the table, the role standing | OpenTPW/World/Ride/RideAnimations.cs  |
@@ -627,6 +635,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005535f4` | `TRIGWAITANIM`: the equal branch clears the mark `+0xbc` and falls through | OpenTPW.Tests/RideScriptModelTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x0055374c` | RSSE GETANIM_CH with no model: the flag word zeroed, so +0x48 is stored as it stands | OpenTPW.Tests/RideScriptChannelTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x0055374e` | | OpenTPW/VM/RideScript.cs  |
+| `0x005538eb` | RSSE WAIT4ANIM handler: +0xa4 nought leaves at once; passed, it is cleared and the turn goes on | OpenTPW.Tests/RideScriptClockTests.cs  |
 | `0x005539a9` | RSSE JSR handler | OpenTPW/VM/RideScript.cs  |
 | `0x005539d8` | RSSE JSR: the return address ORed with the label tag 0x20000000 | OpenTPW/VM/RideScript.cs  |
 | `0x00553a07` | RSSE JSR: no stack or no room parks the PC (the jump follows) | OpenTPW.Tests/RideScriptStackTests.cs  |

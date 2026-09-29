@@ -377,4 +377,86 @@ public class ParkScriptStateTests
 
 		Assert.IsTrue( seen >= 10, $"only {seen} of the park's scripts were reachable to check" );
 	}
+
+	/// <summary>
+	/// <b>The save's clock and the five fields each script keeps against it</b> read back as the FileFormats page
+	/// gives them ("The ride script module", the animation fields): the clock module's first dword, and the struct's
+	/// <c>+0xa0</c>, <c>+0xa4</c>, <c>+0xa8</c>, <c>+0xbc</c> and <c>+0xc4</c>. The shipped park's security cameras
+	/// are saved on <c>WAIT 5000</c> with 2,341 and 2,329 ms left, the Belly Bounce on <c>WAIT 500</c> with 63 and
+	/// its looping key 2, and the sideshow's trigger deadline 180,933 ms past.
+	/// </summary>
+	[TestMethod]
+	public void TheSavedClockAndEachScriptsWaitsRead()
+	{
+		var park = Park();
+		var clock = park.Clock;
+
+		Assert.IsNull( clock.Problem, "the clock module should read" );
+		Assert.AreEqual( 0x06D13894u, clock.Reading, "the clock's reading at the save" );
+
+		var scripts = park.ScriptStates;
+
+		int HandleOf( int catalogueId, int ordinal = 0 )
+			=> park.Objects.Where( o => o.CatalogueId == catalogueId ).OrderBy( o => o.RideScript ).ElementAt( ordinal ).RideScript;
+
+		int? Left( uint deadline ) => deadline == 0 ? null : clock.Since( deadline );
+
+		var cameras = new[] { HandleOf( 1413, 0 ), HandleOf( 1413, 1 ) }.Select( h => scripts.For( h )!.Value ).ToArray();
+
+		CollectionAssert.AreEquivalent( new int?[] { 2329, 2341 }, cameras.Select( c => Left( c.WaitDeadline ) ).ToArray(),
+			"the two cameras' WAIT 5000, with what each had left" );
+
+		var bouncy = scripts.For( BellyBounceHandle )!.Value;
+
+		Assert.AreEqual( 63, Left( bouncy.WaitDeadline ), "the Belly Bounce's WAIT 500" );
+		Assert.AreEqual( 2, bouncy.LoopingKey, "and the loop it last started, role 2 entry 0" );
+
+		Assert.AreEqual( -180933, Left( scripts.For( HandleOf( 1303 ) )!.Value.AnimationDeadline ),
+			"the sideshow's last trigger ran out long before the save" );
+
+		Assert.AreEqual( 3, scripts.ByHandle.Values.Count( s => s.WaitDeadline != 0 ), "three scripts saved on a wait" );
+		Assert.AreEqual( 1, scripts.ByHandle.Values.Count( s => s.AnimationDeadline != 0 ), "one trigger deadline" );
+
+		CollectionAssert.AreEquivalent( new[] { 2, 5, 5, 5 },
+			scripts.ByHandle.Values.Where( s => s.LoopingKey != 0xFFFF ).Select( s => s.LoopingKey ).ToArray(),
+			"four keys of a loop - the ride's, the fountain's, the drinks kiosk's and the traffic lights' - and ten 0xffff" );
+
+		Assert.IsTrue( scripts.ByHandle.Values.All( s => s.AnimationMark == 0 ), "no script saved on a TRIGWAITANIM" );
+		Assert.IsTrue( scripts.ByHandle.Values.All( s => s.TimerDeadline == 0 ), "and none with a timer set" );
+	}
+
+	/// <summary>
+	/// <b>A saved channel's eleven dwords</b>, in the order the engine copies them back (<c>FUN_004647a0</c>,
+	/// <c>0x00464bcb</c>..<c>0x00464c17</c>): its three time stamps are readings of the save's clock and its queue
+	/// sits last. The Belly Bounce's loop began 1,376 ms before the save and was advanced at the save's own moment;
+	/// the Bus is held, its clip time a whole clip (7,333 ms) after its start; nothing in the shipped park is queued.
+	/// </summary>
+	[TestMethod]
+	public void TheSavedChannelsTimeStampsAndQueuesRead()
+	{
+		var park = Park();
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+		var clock = park.Clock;
+
+		var states = park.ThingStates( id => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1 );
+		var bouncy = states.For( 1100, 0 )!.Value.Channels[0];
+
+		Assert.AreEqual( -1376, clock.Since( bouncy.StartTime ), "the Belly Bounce's loop began this long before the save" );
+		Assert.AreEqual( 0, clock.Since( bouncy.Time ), "and was last advanced at the save's own moment" );
+		Assert.AreEqual( 0, clock.Since( bouncy.NoPauseTime ), "the third stamp on the same clock" );
+		Assert.AreEqual( 1.1f, bouncy.Speed, 0.001f, "at its saved speed" );
+
+		var bus = states.For( 1600, 0 )!.Value.Channels[0];
+
+		Assert.AreEqual( 0x4, bus.Flags, "the Bus is saved held" );
+		Assert.AreEqual( 0, clock.Since( bus.NoPauseTime ), "its third stamp the clock's own, apart from its clip time" );
+		Assert.AreEqual( 7333, clock.Since( bus.Time )!.Value - clock.Since( bus.StartTime )!.Value,
+			"its clip time a whole clip after its start, as the engine's hold sets it" );
+
+		var all = states.Things.SelectMany( t => t.Channels ).ToArray();
+
+		Assert.IsTrue( all.All( c => c.QueuedRole == ParkThingStates.NoRole ), "nothing queued anywhere in this park" );
+		Assert.AreEqual( 3, all.Count( c => c.Role != ParkThingStates.NoRole && c.QueuedFlags == 0x1 ),
+			"though three running channels keep the loop flag of a queue that has emptied, which the engine leaves behind" );
+	}
 }

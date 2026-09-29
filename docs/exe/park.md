@@ -545,6 +545,15 @@ Measured over all 308 `.RSE` files and the shipped save, and each count re-deriv
     while (budget > 0 && PC >= 0) { dispatch one instruction; if (!critical) budget--; }
     if (PC < 0) tear the script down (FUN_00559060)
 
+**A load puts the scheduler's own state back with the scripts.** `FUN_005597a0` re-initialises these globals (the
+flag and the next handle to 1, the rest to nought, `0x00559812`..`0x00559834`) and then reads the module's header
+straight over `0x008791a0` (`0x005598d7`): five dwords,
+the initialised flag, the tick counter, the next script handle (`DAT_008791a8`, which the loader gives a new script at
+`+0x08` and then increments, `0x00558c07`..`0x00558c1c`), the script count and a stale list pointer. The shipped park's
+read `1, 6055, 16, 14` and a pointer. Each script keeps its saved handle, so its one-in-eight turn phase carries across
+the load, and each is inserted at the head of the list (`0x005599d3`, `0x005599f4`), so a save and load reverses the
+order scripts take their turns within a tick. OpenTPW restarts the tick at nought and numbers its scripts itself (Q180).
+
 **A script gets a turn only every eighth tick, staggered by its id** — unless `+0xb8` is set, which makes it run every tick. **`TURBO` is what sets that byte** (`0x005542b9` writes `[EBP+0xb8]`), so TURBO means "run me every tick", not "run me faster". **`TURBO` stores the RAW low byte of its operand word**, not a resolved value — harmless because all 20 shipped uses are literals, and they are exactly **ten `1`s and ten `0`s**, a boolean confirmed by the data.
 
 The budget is decremented **only while the critical flag is clear**, and the flag is read **after** the instruction has run (`0x00551724`-`0x00551730`): `CRIT_LOCK` itself costs nothing, and a lock reached with one unit left still runs its section in that turn, up to the unlock or a yield. **The time slice is an INSTRUCTION BUDGET, not a duration.**
@@ -650,8 +659,8 @@ Opcode numbers: 15 FLUSHANIM, 16 TRIGANIM (3 operands), 17 WAITANIM, 18 LOOPANIM
 Decoded for Q174 by two read-only decoders, each put to a skeptic in Ghidra, and measured over the corpus by two walkers
 written apart, which agree site for site: every script walked from word 0 with both arms of every branch and an exact
 return stack, carrying the engine's `+0xa4`/`+0xa8` and OpenTPW's side by side. Five differences, and a sixth found by
-Q174b's review. **Q174b built the first three**, so OpenTPW now parts from the engine at 4, 5 and 6; what content reaches
-each of the three is kept, because it is what a change to any of them moves.
+Q174b's review. **Q174b built the first three and Q174c the fourth**, so OpenTPW now parts from the engine at 5 and 6;
+what content reaches each built one is kept, because it is what a change to any of them moves.
 
 **1. `WAITANIM`'s first visit writes `+0xa8 = 0xffff` and `+0xa4 = 0`** (`0x00552b1a`, `0x00552b14`), model or not, and
 so does `RideScript.WaitOutAnimation`; the re-entry writes neither. **The `+0xa8` half is reached: 55 `LOOPANIM`s** meet
@@ -693,19 +702,36 @@ a loop's cycle end, about once in a hundred triggers at the Volcano's 3333 ms: `
 standing; a player `ParkRides` reads afresh for a thing whose model did not stand is never advanced, so none of its clips
 ends, and `ParkRides.PlayersFor` logs one.
 
-**4. A save carries `+0xa0`, `+0xa4`, `+0xa8` and `+0xbc`** (`FUN_005597a0` reads the whole struct at `0x00559a00`;
-FileFormats `saves.md`), and OpenTPW restores none of them (`ParkRides.Resume`), so a loaded script has `_looping` 0, no
-`WAIT4ANIM` deadline and no mark, and re-arms a saved `WAIT` or `WAITANIM` in full; and it starts each saved channel at
-frame nought at the load's moment, dropping its queue, where the engine resumes the clip from its saved stamps
-(`ride-operation.md`, the `RSYS` restore). The Easymode park reaches it on every
-load: the security cameras' `WAIT 5000` at word 14 had 2,341 and 2,329 ms left, and the Belly Bounce's `WAIT 500` at
-word 46 had 63; and the Belly Bounce was saved with `+0xa8` = 2: at its `LOOPANIM 2, 0` @43 the engine
-skips, and OpenTPW triggers the loop again, which queues behind the loop the channel restore put back and replaces it at
-the next cycle at speed 1.0, where the saved loop ran at 1.1 (Q155's gap, shown early). In Alexah's jungle `New Save.TPWS`
-six scripts are saved before a `WAIT4ANIM` whose deadline is still ahead of the saved clock (the puzzle's 19.5 s, the
-ferry's 7.7 s, down to a toilet's 0.9 s), which OpenTPW passes at once. No shipped or played save has a script on a
-`TRIGWAITANIM` with its mark set. A new script's own start differs too (the engine's `+0xa8` is `0xffff`, OpenTPW's 0),
-and no shipped `LOOPANIM` has the key 0.
+**4. A save carries `+0xa0`, `+0xa4`, `+0xa8`, `+0xbc` and `+0xc4`** (`FUN_005597a0` reads the whole struct at
+`0x00559a00` and writes none of the five after it; FileFormats `saves.md`), **and each channel's three stamps, speed and
+queue** (`FUN_004647a0`, `0x00464bcb`..`0x00464c17`), each a reading of the clock or kept against it; the load makes the
+clock read the saved `KOLC` reading again (`FUN_00415140` at `0x00415193`, `FUN_004031f0`), and the first park frame
+re-bases the tick loop's `last` to it (`0x0054f425`, on the flag `0x00415189` sets), so the jump runs no catch-up.
+**Q174c matched it**: `ParkRides.Resume` and `ParkRides.Restore` put all of it back, each reading moved by its distance
+from the saved clock onto the load's moment on OpenTPW's own clock (`ParkRides.Moved`), and `AnimTimeControl.Restamp`
+sets the frame as the restore's `FUN_00472cb0` does, the span times 0.03 divided by the speed (`0x00472cf4`, where
+every advance multiplies), until the next advance. What content reaches: the Easymode park on every load, the security
+cameras' `WAIT 5000` at word 14 with 2,341 and 2,329 ms left, the Belly Bounce's `WAIT 500` at word 46 with 63 and its
+key 2 (so its `LOOPANIM 2, 0` @43 does nothing and the saved loop plays on at 1.1), and every running loop's phase (the
+Belly Bounce 1,376 ms in, the Fountain 1,625, the Drinks Shop 1,126, the Traffic Lights 220). Alexah's jungle saves add
+`WAIT4ANIM` deadlines ahead of the clock (the puzzle's 19.5 s, the ferry's 7.7 s), a `SETTIMER` deadline 284 ms ahead
+(the autosave's Aztec Mayhem), and a channel saved with a clip queued (the fantasy save's Caterpillar Capers; the
+jungle saves' channel module does not yet walk to its end, Q167). No shipped or played save has a `TRIGWAITANIM` mark set.
+What still differs: a new script's own start (the engine's `+0xa8` is `0xffff`, OpenTPW's 0; no shipped `LOOPANIM` has
+the key 0); a channel carrying `0x40`, which advances against a second stopwatch (`DAT_007b4974`, `KOLC`'s second dword)
+that OpenTPW does not keep, and which no saved channel carries; the real time the engine's clock runs between its
+restore and the first tick, through the rest of the load (not measured), which OpenTPW does not count; a `GETTIME`
+reading kept in a variable, which is not moved (Q181); and the scheduler's tick counter and next handle, which the
+module's header puts back (`0x005598d7`), so each script keeps its one-in-eight turn phase across a load where OpenTPW
+restarts both (Q180).
+
+**Measured in the game for Q174c** (silent, the stock jungle park loaded under a lobby pause and stepped in frames of
+1/60 s, `save/` unchanged; `q174crun.py`, every reading predicted first, 7 of 7 on each build). This build: at the load
+the Belly Bounce stood at frame 45.4 of 90 and the Fountain at 48.8 of 50, looping; the Belly Bounce read 55.6 at tick
+10 and 41.3 at tick 84, once round at 1.1, with no loop queued behind it in 48 readings over ticks 10 to 60; both cameras
+held role 6 at tick 75 and were on role 4 at tick 84, 3.7 and 4.7 frames in. The build before: 4.1 and 3.7 at the load,
+the loop queued again behind itself from tick 36, and the cameras on role 6 to tick 84 and role 4 only by tick 176.
+Paused photographs of each pair differ in pose where the census says they should (`q174c/*-pair.png`).
 
 **5. A start on an idle channel keeps a stale `0x2` or `0x4` in the engine** (the Flags row above), so its new clip
 stands on its last frame (`0x004736bd`), where `AnimTimeControl.Start` clears both on every start and plays it. Two
