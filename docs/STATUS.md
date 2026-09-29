@@ -48,6 +48,7 @@ Read the current state from the repository, which cannot lag: `git log --oneline
   loops again after its ride's end** (the Aztec Mayhem). **A load resumes each wait and clip where its save left it.**
 - **A thing bought this session is a member of the running park**: it takes its turn, appears in every census, joins the
   object chain the original keeps live, and carries the entry and exit cells derived from its own shape picture (Q1b).
+- The original game runs under Proton as a reference instrument (Q168, `docs/TOOLING.md`).
 
 ## Does not
 
@@ -115,5 +116,5 @@ Take counts fresh; these go stale within a day.
 
 ## Recent
 
-**2026-09-29 (Q174c, the build).** `alexah/183-restore-a-scripts-waits-and-channels`. **Earlier:** each QUEUE.md entry
-names its branch: `182` (Q174b) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-09-29 (Q168, the original under Proton).** `alexah/185-the-original-under-proton`. **Earlier:** each QUEUE.md
+entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

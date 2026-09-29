@@ -50,6 +50,9 @@ OPENTPW_DEBUG_CONSOLE=1 ...                          # commands on stdin; `unimp
 - `dotnet test` does not accept `--no-incremental`; build first, then test with `--no-build`.
 - Tests that need the game call `GameData.Required()` and skip when it is absent. A green run with skips is normal without the game; compare the counts with the dated ones in `docs/STATUS.md`, "Numbers", never with a figure written here.
 - Take every count fresh (tests, warnings, opcodes). Never quote one from memory; the numbers in prose go stale within a day.
+- The **original game** runs here under Proton as a reference instrument (its frames, its live memory at Ghidra
+  addresses, its timings): `docs/TOOLING.md`, "The original under Proton". Read its warnings first; its park clock is
+  wrong when the computer has been on for days.
 
 ## Where things are
 

@@ -26,6 +26,9 @@ Theme Park World (1999) is hard to run on a modern machine. OpenTPW re-implement
 
 [`docs/STATUS.md`](docs/STATUS.md) has the full, current list of what works and what does not.
 
+Want to play the original game on Linux in the meantime? [`tools/play-the-original`](tools/play-the-original/README.md)
+sets it up with Proton. You need your own disc and your own no-CD `.exe`.
+
 ### Which version of the game?
 
 OpenTPW has only been tested with the **American release, Sim Theme Park**. Theme Park World, the release sold elsewhere, uses the same engine and data and **should** work, but nobody has tried it yet. If you do, please report how it goes.

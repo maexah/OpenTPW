@@ -14,13 +14,14 @@ Where the project's memory lives. Code says what; these files say why, and what 
 | `DECISIONS.md` | Choices that could have gone another way, one paragraph each, dated: what was chosen, why, and where its facts now live. | When a choice is made |
 | `MEMORY-DIET.md` | What moved out of the memory folder and where, and what is still owed. | While the diet is unfinished |
 | `WORKFLOW.md` | Branches, pushing, subagents (model by stage), sessions, commits, how to verify | Rarely |
+| `TOOLING.md` | Recipes for the tools. So far one: the original game under Proton, as a reference instrument | When a recipe changes |
 | `exe/` | Reverse-engineering facts as tables: addresses, offsets, field names, counts from shipped data | Whenever a fact is found |
 | FileFormats docs clone | File-format facts: the bytes in a shipped file. A separate repo, `OpenTPW.FileFormats` - see "The FileFormats docs clone" below. | Whenever a format fact is found |
 | `history/` | Superseded plans and per-branch ledgers, **verbatim**. Grep it; never read it whole, and never edit it — history is kept as it was written. | Never |
 
-**Two planned files do not exist yet:** **`ARCHITECTURE.md`** (how a frame runs, how a scene is built,
-who owns the tick, init order) and **`TOOLING.md`** (the tooling recipes). `MEMORY-DIET.md` lists what is
-owed to each. Do not go looking for them.
+**One planned file does not exist yet:** **`ARCHITECTURE.md`** (how a frame runs, how a scene is built,
+who owns the tick, init order). **`TOOLING.md`** exists with one recipe; the recipe notes `MEMORY-DIET.md` lists
+are still owed to it.
 
 ## The FileFormats docs clone
 

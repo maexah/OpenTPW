@@ -46,7 +46,7 @@ repo (versioned, backed up, readable by humans and by any session) or into git h
 | `neoveldrid-migration-plan.md`, `post-neoveldrid-audit.md`, `veldrid-arm64-and-alternatives.md` | 55 KB | Done work. `docs/DECISIONS.md` gets one paragraph each. Delete the files. | Done 2026-09-24: `docs/DECISIONS.md`; two method traps became `VERIFYING.md` rules 122 and 123. |
 | `lobby-finishing-plan.md`, `dead-settings-to-revisit.md`, `keep-loading-steps-current.md` | 15 KB | Open items to `docs/STATUS.md`. Delete the files. | Done 2026-09-24, to the queue instead of STATUS: the lobby plan's open items are `QUEUE.md` section G and Q32; the dead options rows and the loading-step seeds are in `docs/exe/ui.md`. |
 | `ask-before-github.md`, `no-tooling-in-the-codebase.md`, `dead-code-and-in-game-proof.md`, `think-deeply-by-default.md`, `modular-data-driven-engine.md`, `no-framerate-dependent-motion.md`, `usability-over-empty-original-text.md`, `fix-tools-dont-work-around.md`, `no-connector-reminders.md`, `test-runs-are-audible.md`, `workflow-agents-share-the-tree.md`, `track-progress-externally.md`, `ghidra-mission-critical.md`, `opentpw-format-goal.md` | 45 KB | These are the rules. They are now `CLAUDE.md`. Delete the files once it is in place. | Done 2026-09-20 (`31071c9`). |
-| `ghidra-headless.md`, `opentpw-local-launch.md`, `opentpw-debug-console.md`, `verifying-rendering-by-capture.md`, `verifying-audio-by-capture.md`, `identifying-speech-by-transcription.md`, `audio-levels-from-measurement.md` | 65 KB | Machine and tooling recipes. `CLAUDE.local.md` (paths) and `docs/TOOLING.md` (recipes). | Half done: `opentpw-local-launch.md` is retired into `CLAUDE.local.md` (2026-09-24), and the other six were cut to current method notes; **`docs/TOOLING.md` is not written**. |
+| `ghidra-headless.md`, `opentpw-local-launch.md`, `opentpw-debug-console.md`, `verifying-rendering-by-capture.md`, `verifying-audio-by-capture.md`, `identifying-speech-by-transcription.md`, `audio-levels-from-measurement.md` | 65 KB | Machine and tooling recipes. `CLAUDE.local.md` (paths) and `docs/TOOLING.md` (recipes). | Half done: `opentpw-local-launch.md` is retired into `CLAUDE.local.md` (2026-09-24), and the other six were cut to current method notes; **`docs/TOOLING.md` is started (the original under Proton, 2026-09-29); the recipe notes are still owed to it**. |
 
 ## Rules for what stays in memory
 
@@ -66,6 +66,6 @@ repo (versioned, backed up, readable by humans and by any session) or into git h
 5. Distil `verify-every-ordering.md`. Done 2026-09-20 (`61640a9`).
 6. Write `docs/DECISIONS.md` from the three graphics notes. Done 2026-09-24.
 7. Move the open-item files' work into the queue. Done 2026-09-24.
-8. Write `docs/TOOLING.md` from the recipe notes, and `docs/ARCHITECTURE.md`. **Outstanding.**
+8. Write `docs/TOOLING.md` from the recipe notes, and `docs/ARCHITECTURE.md`. **Outstanding** (`TOOLING.md` has one section, not from the notes).
 
 Each step is one commit and one short session.

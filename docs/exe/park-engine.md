@@ -433,6 +433,34 @@ Stopwatch fields: `+0x30` = paused, `+0x28` = the time captured at the pause, `+
 
 **A pause is nothing but a frozen clock — neither loop tests a paused flag.** A clock that stops reporting new time leaves `now > last` false, so no tick runs and everything the tick drives stops together without any of it knowing why. This is the single most useful fact on this page.
 
+### The park clock loses precision with uptime
+
+The park loop's clock sample (`0x0054f47f`, stored at `0x008786bc`) comes from the game object `0x00785970` through
+`0x00402d70` → `0x004031e0` → `0x00402f10` → `0x004030d0` → `0x004033a0` (the pause layers sit in the middle).
+`0x004033a0` reads the raw clock, takes the difference from `+0x10`, stores the new raw value there, and then
+`FILD` difference, `FMUL [+0x20]`, `FADD [+0x18]`, `FSTP [+0x18]`: **an accumulator kept as a double, added to at the
+FPU's current precision.**
+
+| Address / offset | Original name | What it is | Evidence |
+|---|---|---|---|
+| `0x004033a0` | — | Game-clock step: `+0x18 += (raw - +0x10) * +0x20` in x87 | objdump of `testme.exe` (Ghidra cross-check owed) |
+| `0x00785970+0x18` (`0x00785988`) | — | The accumulator (double). Read live: 558,586,560 at 6.5 days of uptime, a multiple of 64 | `/proc/pid/mem` |
+| `0x00785970+0x20` (`0x00785990`) | — | Scale (double), 1.0 in a park | `/proc/pid/mem` |
+| `0x005f5f10` | — | Raw clock: `(QPC - start) / divisor + offset` by 64-by-32 `IDIV`; `timeGetTime()` when QPC fails | objdump |
+| `0x00fa71e0` | — | Its object: `+0x0` QPC flag, `+0x4` divisor (10000 for a 10 MHz counter), `+0x8` offset (`timeGetTime` at start-up), `+0x10` start QPC | `/proc/pid/mem` |
+
+**The consequence:** the raw clock is milliseconds since boot, and so is the accumulator. Direct3D without
+`DDSCL_FPUPRESERVE` puts the thread's x87 unit at 24-bit precision (Wine does the same), so the accumulator can only
+hold multiples of 2^(e-23), where 2^e ≤ its value: 64 ms from 6.2 to 12.4 days of uptime. A frame's time much
+shorter than that is rounded away, and a slightly shorter one is rounded up. Measured at 6.5 days of uptime, with the
+tick counter `0x00877d34` against the wall clock: uncapped, about 275 fps, 0 ticks in 30 s (the park froze); at 30 fps,
+44.5-49.6 ticks/s, the clock at 1.38-1.54 times real time; at about 4.5 fps, 32.9 ticks/s (real time). A second
+thread writes the same accumulator at full precision, so the values are not always multiples of 64, and the
+measured speeds fall short of a pure rounding model (it predicted 1.9 times at 30 fps). The 24-bit mode itself is
+inferred from the multiple-of-64 value and Wine's documented ddraw behaviour; it was not read from the FPU.
+OpenTPW's `GameClock` does not copy this, and should not (`CLAUDE.md`, "A deviation from the original is said at
+the site").
+
 ### Only a park pauses
 
 | Address | Original name | What it is |

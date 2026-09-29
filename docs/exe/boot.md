@@ -108,6 +108,27 @@ says so itself in the two places the 2.0 patch's readme promises:
 exe was dumped from (the dump's own header was overwritten), is 2000-03-24 15:14:32 UTC.
 OpenTPW draws neither version string yet.
 
+## Under Wine and Proton
+
+Observed with GE-Proton 10-34 (Wine 10); `docs/TOOLING.md` has the recipe.
+
+- **The retail `TP.exe` cannot start.** It is SafeDisc 1.41.000 (the `BoG_ *90.0&!!  Yy>` block). `drvmgt.dll`
+  registers the `Secdrv` service with `ImagePath` `system32\drivers\SECDRV.SYS` but never copies the file, so
+  `ZwLoadDriver` fails with `c0000142`, the loader faults, and it exits without a message. With the file copied into
+  place, `DriverEntry` fails with `c0000001` instead. Both failures come before any disc check.
+- **Without the installer's registry values the game quits silently**, before the disc check. With
+  `HKLM\Software\Bullfrog Productions Ltd\Theme Park World` (32-bit view) `Language` = `0x409`, `Version` = `"1.1"`,
+  `BuildTypeCode` = 0 (what the installer writes), it continues. Which of the three it reads was not isolated; a
+  `+reg` trace would settle it.
+- **The disc check** needs a drive of type `DRIVE_CDROM`: `HKLM\Software\Wine\Drives` `d:` = `cdrom` (64-bit view),
+  plus a label. Wine reads a folder drive's label from `.windows-label`; an `.iso` given as the `d::` device yields no
+  label. The check accepts the disc's own label, `TPWORLD`.
+- **`2.0_files/tp-2_0.exe`** imports `USP11.dll` (a renamed `usp10.dll`) instead of `USP10.dll`, and skips the disc
+  check.
+- **Start-up writes `enginedebug.txt` and `fallback.txt`** into the game folder: DirectDraw and Direct3D set-up,
+  surface formats, the texture cache, `Renderer: 1` (hardware) with no `Config.tcf`, and `RAM detected: -1` on a
+  32 GB machine.
+
 ## Addresses
 
 Evidence is a Ghidra trace of `/testme.exe` throughout; the column names what in particular pins the row down.

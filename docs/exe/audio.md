@@ -116,6 +116,7 @@ OpenTPW's `ParkScreams` builds exactly this: `ParkAudio.StopScream` releases not
 | `0x006bd9b0` | — | A held voice's stop: its own children only | Disassembly |
 | `0x005f5fa0` | — | The sound clock: wall-time milliseconds | Disassembly |
 | `0x00fb1f20` | — | The one random seed every draw above advances | Disassembly |
+| `0x006b7e76` | — | Faults (a read through NULL) when no audio device exists: with Wine's pulse and ALSA drivers both disabled, mmdevapi finds no driver and the game crashes right after its DirectDraw set-up | Proton log, `EXCEPTION_ACCESS_VIOLATION` at this address |
 
 ## Where positional audio actually lived
 

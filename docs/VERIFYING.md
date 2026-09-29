@@ -202,6 +202,13 @@ The ones that have bitten more than once.
 - **123** — **A warning diff keyed on file, line and code reads a line shift as defects.** Inserting 12 lines into
   `Texture.cs` gave five "new" and five "gone" warnings that were the same five at +4 lines. Compare the per-code
   multiset (the count of each `warning CSxxxx`) as well, which a shift cannot fool, and never the total (rule 45).
+- **127** — **A timing taken on the original is only as true as its park clock.** The park clock is a double of
+  milliseconds since boot, added to each frame at reduced precision, so it drifts with uptime and frame rate. At
+  6.5 days up it froze uncapped and ran 1.38-1.54x at 30 fps, while the game looked normal. Run `tpwmem.py clock`
+  first and discard anything it calls NOT TRUE (`docs/TOOLING.md`).
+- **128** — **A reference frame of the original comes from the real GPU.** Off-screen (llvmpipe), Lost Kingdom's gate
+  was drawn without its sign, and nothing else looked wrong. Also, the first grab after a scene change can repeat the
+  previous scene: take two, a few seconds apart.
 
 ## Before you believe an absence
 
@@ -695,6 +702,14 @@ The ones that have bitten more than once.
   missed on an empty list. The same harness also named the children from a list built before the child it then
   read was made. **Read the census on the event's own log line, and match it against what exists at the moment of
   the read** - both done, four children out of four read `Effects placed`, none `looped`.
+- **129** — **`pkill -f PATTERN` and `pgrep -f PATTERN` match your own shell** when PATTERN is also in the command
+  you are running; `pkill` then kills that shell (exit 144). It happened twice in one session. Kill by pid, or by a
+  helper's `stop`.
+- **130** — **A Wine registry write can land in the wrong place, or nowhere, and report nothing.** Proton's
+  `files/bin/wine reg` runs the 32-bit `reg.exe`, so a write without `/reg:64` lands in `Wow6432Node` (the game then
+  could not see its CD drive). A `reg` run while a game's fsync wineserver is up fails with "Server is running with
+  WINEFSYNC", and one run into a live prefix printed nothing and wrote nothing. Write with the game closed, state
+  `/reg:32` or `/reg:64`, and check `system.reg` afterwards.
 
 ## Delegates and commissioned work
 

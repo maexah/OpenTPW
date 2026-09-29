@@ -3354,9 +3354,11 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   - **Note (Q174c's probe):** the `RSYS` channel module does not walk to its end in the jungle `New Save.TPWS` and
     `autosave.TPWS` (206 channels read, the cursor off the module's end), so `ParkThingStates` refuses it and none of
     their channels is restored; the fantasy and hallow saves and the shipped park walk closed (`q174cprobe/out.txt`).
-- [ ] **Q168. Run the original under Wine or Proton, as a reference to compare against.** Nothing is recorded yet.
-  Wine already runs RTPatch here through `flatpak-spawn --host` (`CLAUDE.local.md`). Use a copy of the game and a
-  private `WINEPREFIX`; never point it at `~/Games/TPWorld/save/`. Record what works, and what does not, in `docs/`.
+- [x] **Q168. Run the original under Wine or Proton, as a reference to compare against.** Done 2026-09-29, GE-Proton
+  10-34, outside Steam. The reference install and harness are in `docs/TOOLING.md`, "The original under Proton"; the
+  retail `TP.exe` cannot start under Proton (`exe/boot.md`, "Under Wine and Proton"). Found on the way: the original's
+  park clock loses precision with uptime (`exe/park-engine.md`), so timings taken on it need `tpwmem.py clock` first
+  (`VERIFYING.md` rule 127).
 
 ## F. Then
 
