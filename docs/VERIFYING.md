@@ -703,8 +703,7 @@ The ones that have bitten more than once.
   read was made. **Read the census on the event's own log line, and match it against what exists at the moment of
   the read** - both done, four children out of four read `Effects placed`, none `looped`.
 - **129** — **`pkill -f PATTERN` and `pgrep -f PATTERN` match your own shell** when PATTERN is also in the command
-  you are running; `pkill` then kills that shell (exit 144). It happened twice in one session. Kill by pid, or by a
-  helper's `stop`.
+  you are running; `pkill` then kills that shell (exit 144). Kill by pid, or by a helper's `stop`.
 - **130** — **A Wine registry write can land in the wrong place, or nowhere, and report nothing.** Proton's
   `files/bin/wine reg` runs the 32-bit `reg.exe`, so a write without `/reg:64` lands in `Wow6432Node` (the game then
   could not see its CD drive). A `reg` run while a game's fsync wineserver is up fails with "Server is running with

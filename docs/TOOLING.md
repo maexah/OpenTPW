@@ -45,8 +45,9 @@ click the tick, click the island. The Lost Kingdom park loads in about 30 s.
 
 **Mouse:** the game reads relative motion (DirectInput). Run `gmove.py align` first, which sweeps corner to corner so
 the game's cursor clamps onto the pointer. Glide rather than jump, and hold the button about 0.2 s.
-**Coordinates:** the game's 4:3 picture is centred. On the 2560 × 1440 screen it is 1920 × 1440 at x = 320, so a
-game point (x, y) at height H is at screen (320 + x·1440/H, y·1440/H). Off-screen at 1024 × 768 it fills the screen.
+**Coordinates:** the game's 4:3 picture fills the screen's height and is centred. On a screen S_w × S_h, with the game
+at height H, a game point (x, y) is at screen ((S_w − S_h·4/3)/2 + x·S_h/H, y·S_h/H). Off-screen at 1024 × 768 it
+fills the screen.
 
 ### Warnings, most important first
 

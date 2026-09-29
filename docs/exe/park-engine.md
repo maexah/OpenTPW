@@ -456,7 +456,7 @@ shorter than that is rounded away, and a slightly shorter one is rounded up. Mea
 tick counter `0x00877d34` against the wall clock: uncapped, about 275 fps, 0 ticks in 30 s (the park froze); at 30 fps,
 44.5-49.6 ticks/s, the clock at 1.38-1.54 times real time; at about 4.5 fps, 32.9 ticks/s (real time). A second
 thread writes the same accumulator at full precision, so the values are not always multiples of 64, and the
-measured speeds fall short of a pure rounding model (it predicted 1.9 times at 30 fps). The 24-bit mode itself is
+measured speeds fall short of a pure rounding model. The 24-bit mode itself is
 inferred from the multiple-of-64 value and Wine's documented ddraw behaviour; it was not read from the FPU.
 OpenTPW's `GameClock` does not copy this, and should not (`CLAUDE.md`, "A deviation from the original is said at
 the site").
