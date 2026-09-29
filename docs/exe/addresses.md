@@ -674,7 +674,11 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00556a5c` | `COAST`'s eight-entry sub-op table | OpenTPW/World/Ride/RideState.cs  |
 | `0x00556fce` | WALKON FUN_00556f40: the leg from the distance between the walk and head nodes, x100, nought to 100 | OpenTPW/VM/RideScript.cs  |
 | `0x00557276` | WALKOFF FUN_005571a0: a new leg from the distance between the off-from and off-to nodes, x100 | OpenTPW/VM/RideScript.cs  |
+| `0x00557b3a` | FUN_00557ab0, a bounce rider's place: the node looked up by id in the walk space 0x800 (FUN_0044b220) | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x00557e79` | FUN_00557d80, arriving on the ride (state 1 to 2): start restamped from the clock; due left alone | OpenTPW/VM/RideScript.cs  |
+| `0x00558018` | FUN_00557d80, a walk off's end (state 3 to 4): the state written alone | OpenTPW/VM/RideScript.cs  |
 | `0x005587f0` | | OpenTPW.Files/Formats/Script/RideScriptFile.cs  |
+| `0x00558c45` | Script loader FUN_005587f0: the bounce node base +0x70 set to 1 | OpenTPW/VM/RideScript.cs  |
 | `0x00558c4f` | Script loader FUN_005587f0: +0xa8, the looping key, starts at 0xffff | OpenTPW/VM/RideScript.cs  |
 | `0x00558d2e` | | OpenTPW/VM/RideScript.cs  |
 | `0x00558d5b` | | OpenTPW/VM/RideScript.cs  |

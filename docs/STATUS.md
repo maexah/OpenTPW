@@ -3,9 +3,8 @@
 Last updated: 2026-09-29.
 
 **This header names no branch and no sha, deliberately**: a line in the commit that moves the tip cannot name it.
-Read the current state from the repository, which cannot lag: `git log --oneline -1`.
-
-**`docs/QUEUE.md` is the work queue.** One item per session, taken from the top unless Alexah reorders.
+Read the current state from the repository, which cannot lag: `git log --oneline -1`. **`docs/QUEUE.md` is the work
+queue**, one item per session, taken from the top unless Alexah reorders.
 
 ## Works
 
@@ -69,7 +68,8 @@ Read the current state from the repository, which cannot lag: `git log --oneline
 - With no work the mechanic, handyman and entertainer stand where the original's walk about (Q133); staff make no
   sound (Q135). Guests and rides read `GameClock.Ticks / 8`, not `mGameTick` (Q132); a load brings one guest (Q26); the bus waits (Q131).
 - Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), riding a ride walked into in first person,
-  and a coaster's excitement, its level. **The Hot Pot lets no rider off** (Q179); a load re-phases turns (Q180) and misreads kept times (Q181).
+  a coaster's excitement, its level. **The Hot Pot lets no rider off** (Q179); a load re-phases turns (Q180), misreads
+  kept times (Q181). **Every walk leg takes 100 ms**, the original's 100 a whole unit between its nodes, at least 100 (Q175b).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
   walk (Q121), and a park screen stays open over it (Q122). It walks onto entrances the original shuts (Q140).
@@ -77,7 +77,7 @@ Read the current state from the repository, which cannot lag: `git log --oneline
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q101, Q165, Q166, Q169-Q174c are ticked**; next **Q175**. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q101, Q165, Q166, Q169-Q175 are ticked**; next **Q175b**. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -102,19 +102,18 @@ Q88, Q101, Q165, Q166, Q169-Q174c are ticked**; next **Q175**. Gaps 4, 5, 7: `do
   Q172b's saved track ride, tier and coaster (Q167) and a Hot Pot rider's 42 (Q179); Q173's tier 3 and zero divisors.
   Q174b's raw re-entry and last-frame trigger (no run) and loop (census only); Q174c's saved mark, timer and queue.
 
-## Numbers
-
-Take counts fresh; these go stale within a day.
+## Numbers (take counts fresh; these go stale within a day)
 
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1330**, 0 fail, 0 skip with the game | 2026-09-29, after Q174c |
-| Tests without the game | **529** ran, **801** skipped, of 1330 | 2026-09-29, after Q174c |
-| Build warnings | 123 | 2026-09-29, after Q174c |
+| Tests | **1330**, 0 fail, 0 skip with the game | 2026-09-29, after Q175 |
+| Tests without the game | **529** ran, **801** skipped, of 1330 | 2026-09-29, after Q175 |
+| Build warnings | 123 | 2026-09-29, after Q175 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-29 (Q168, the original under Proton).** `alexah/185-the-original-under-proton`. **Earlier:** each QUEUE.md
-entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-09-29 (Q175, the walk legs' decode).** `alexah/186-decode-the-walk-legs`. **Earlier:** `185` (Q168), `184` (the
+FileFormats branch rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`,
+`159`, `160`, `162`, `166`, `169`; `117`, `109`.

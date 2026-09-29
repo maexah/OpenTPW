@@ -2299,7 +2299,62 @@ artifacts are listed in `docs/history/README.md`.
   load: the cameras' `WAIT 5000` at word 14 with 2,341 and 2,329 ms left, the Belly Bounce's `WAIT 500` at word 46 with
   63, and its saved key 2 at its `LOOPANIM 2, 0` at word 43. Confirm, predicted first: the Belly Bounce's `LOOPANIM 2,
   0` no longer triggering after a load, and the cameras' first `WAITANIM` about 2.3 s after their first turn, not 5 s.
-- [ ] **Q175. A rider's walk off keeps the walk on's leg, where the original's works out its own. Decode first.** Found by
+- [x] **Q175. A rider's walk leg: the decode.** Done 2026-09-29, `alexah/186-decode-the-walk-legs`. Decode only; the
+  build is Q175b. `ride-operation.md`, "The WALK family": the slot table, the function rows (`FUN_00557ab0` once a
+  frame for every script, `FUN_00557d80`'s arrival restamp, `FUN_005580a0`'s one write) and its new "How long a leg
+  lasts, and where its ends are"; "Where a rider is drawn" and "The BOUNCE family" corrected (the engine finds a
+  rider's node by id in `0x800`, and the node base starts at 1); `audio.md`, `park.md` and `park-engine.md` brought
+  into line. FileFormats (`alexah/186-decode-the-walk-legs`): `models.md`, header `0x78` the root node, the `0x0C`
+  pointer and "Which records have a position"; `sam.md`, `Info.DoHeadProcessing`; `saves.md`, the ride scripts' walk
+  slots and the ride system's per-record flags; `vm/instructions.md`, `WALKON`, `WALKOFF` and `BOUNCESETNODE`. Comments
+  corrected at their sites (`RideScript`, `ParkPeople`, `ModelFile`, `ParkThingStates`); no code changed.
+  - **Decoded** (`wf_ad8db498-b32`): three Opus decoders in Ghidra (the matrices, the clock and stepper, the model a
+    script's nodes are looked up on), each put to an Opus skeptic (61 claims: 48 upheld, 12 amended, 1 refuted, none
+    changing an answer), and two corpus walkers written apart. The Sonnet walker scaled the distance without truncating
+    it (1165 for 1100); its node positions agree with the Opus walker's, whose legs are the doc's. Re-read first-hand:
+    `FUN_00556b90`, `FUN_00556f40` to its `FSQRT` and `__ftol`, `FUN_005571a0`, `FUN_00557d80`, `FUN_0044b220`,
+    `FUN_0044a870`, `FUN_0044aa10`, `FUN_0044ab30`'s identity root, `FUN_004702d0`, the loader's `+0x84` choice.
+  - **The answer.** A leg is trunc( the distance between its two nodes ) × 100 ms, nought becoming 100, each way; the
+    positions are the nodes' posed matrices, in the world, which the pose walk stores for a childless node only under
+    runtime bit 8 (the loader's `0x580f00` mask, or every record of a `DoHeadProcessing` item), 2 or 4, else (0, 0, 0).
+    Every one of the 240 records the shipped walk instructions can name is stored; the (0, 0, 0) end and the miss
+    (which reads the stack) are dead by CONTENT. `DoHeadProcessing` is the item's `+0x84` by the compiled `.sam`
+    schema, set by six items; no category file sets it.
+  - **Measured in the original** (the reference install under Proton, off-screen, its stock Lost Kingdom park, the
+    Jungle Spray's script found in the script list; `~/.cache/tpw-harnesses/q175/`), predicted first from the model:
+    lanes 1 and 3 1100 ms each way, lane 2 700. 151 transitions over 16 minutes, every one as predicted: lane 1 13 on
+    and 13 off at 1100, lane 2 59 and 60 at 700, lane 3 3 and 3 at 1100; facings 7, 0, 1 on and 3, 4, 5 off, as the
+    decoded formula gives; all 75 arrivals restamped start. The walk nodes' runtime flags read `0x29` and their world
+    positions the rest positions moved by (510.073, 0, 299.904); the `camera` record `0x21`, at (0, 0, 0). The park
+    clock was NOT TRUE (1.55× at the clock check and 1.65× over the two watches, 6.8 days up), which moves no stored leg:
+    start and due are read back to back, so due less start is the leg to within one clock step whatever the clock's rate,
+    and every leg read was exact. Every walk
+    slot in Alexah's Full Simulation saves agrees too: the Steak Shop 600, the Inca God's walk off 800, the Hyenas 1000
+    and 400, the Gift and Balloon Shops 1000, the Jungle Spray 700 and 1100, and in Wonder Land the Big Apple 2100,
+    SquirtEm 700, 200 and 700, Frushy 800. Those saves also refuted the decoders' first reading that the Aztec
+    Mayhem's `0xb1` heads are never posed: all 39 of its records save bit 8 (`0x29`, or `0x2b` on the five heads
+    carrying a rider), which led to `DoHeadProcessing`.
+  - **Measured in the game** (the build before any change, with a throwaway instrument `q175-instrument.py` that logs
+    each leg; `q175run.py`, silent, the stock jungle park, `load 40`, camera on the Jungle Spray; `q175-run2/`), predicted
+    first: every leg 100, each way. Two riders in seven minutes, lanes 2 and 1, where the original's are 700 and 1100:
+    all four legs 100, each arrival and each walk off's end noticed at the script's next turn, 248 ms after the leg
+    began (148 ms past due). Photographed paused with the
+    lane 2 rider carried beside the census line (`carried-paused-marked.png`, `walks-carried.txt`); nothing here places
+    a walk-on rider, so they stand where the queue left them. `save/` unchanged.
+  - **Not confirmed on screen**: the original's legs were read from its memory, not photographed (its off-screen
+    picture is not trustworthy, `TOOLING.md`); lane 3 was seen live but is in no save; the Lookout, Totem and Aztec
+    Mayhem legs, whose heads ride an animated ancestor, are from the rest pose only.
+  - **No test was added**: nothing was built.
+  - **Reviewed** (`wf_6936f8f2-ff8`, three read-only Opus lenses - Ghidra, the numbers, what else goes stale - each put
+    to an Opus skeptic): 41 findings, 25 upheld, 16 amended, none refuted, and 11 more the skeptics raised; all taken.
+    Among them: the Belly Bounce's node base starts at 1, not nought (`0x00558c45`), so its riders are ids 1 to 10,
+    which the engine finds by id in `0x800`, not by name; the ride view and `FUN_0044b510` also touch the stored
+    matrices; `FUN_005580a0` writes a carried rider's facing; the walk off here takes `WalkTick` by the fallback, not
+    by keeping the walk on's leg; the Inca God's 24 slots were 12 saved twice; every shipped `WALKON` passes flags 1.
+  - **Found:** Q175b (the build), Q183 (the stepper's cadence). `tpwmem.py watch` never printed a change (a buffered
+    reader serves a repeat read from its cache): fixed in the harness, which is not in the repo.
+
+  The item as written: A rider's walk off keeps the walk on's leg, where the original's works out its own. Found by
   Q166's decode (`WALKON`) and its refuter (`WALKOFF`). `FUN_00556f40` (`WALKON`) sets the slot's due time to now +
   trunc( the distance from the walk node to the head node ) × 100, nought becoming 100 (`0x00556fce`..`0x005570af`), and
   `FUN_005571a0` (`WALKOFF`) a new leg, the distance from the off-from node to the off-to node, the same way
@@ -2308,6 +2363,18 @@ artifacts are listed in `docs/history/README.md`.
   against the ride's model, space `0x800` for a walk node and `0x80` for a head node; Q22 needs the same), then build
   both legs from their positions. Confirm: `rides` over a Jungle Spray lane's walk, each due time predicted from its
   two nodes.
+
+- [ ] **Q175b. A rider's walk leg from its two nodes: the build.** Found by Q175's decode (`ride-operation.md`, "How
+  long a leg lasts, and where its ends are"). `RideScript.WalkOn` gives every leg `WalkTick`, 100 ms, and `WalkOff`
+  gives the walk off `WalkTick` too; the engine's leg is trunc( the distance between the two nodes ) × 100, nought becoming 100, each way. Look
+  each node up on the thing's own model (`<stem>.md2`) as `FUN_0044b220` does: the first lookup record with that id
+  whose flags share a bit with `0x800` (a walk node), or `0x80` for the head and the walk off's first node when the
+  action is 4 (`ModelFile.ReadNodeIds` already keeps each node's id and flags). Take its position as the model stands
+  posed in the world, `WALKON` walk node to head node, `WALKOFF` off-from to off-to; keep the flags operand. The
+  (0, 0, 0) end and the miss are dead by content: count them (`Unimplemented.Report`), do not build them. Q22 needs
+  the same lookup. Confirm, predicted: the Jungle Spray's lanes 1 and 3 1100 ms each way and lane 2 700, the Hyenas
+  1000, 400 and 1000, Squark 500, in a census beside a photograph of a rider on a lane; and one of the three whose
+  heads ride an animated ancestor (Lookout, Totem, the Aztec Mayhem) measured against the original first.
 
 - [ ] **Q176. Two latent differences in the VM's draw and the second scream.** Found by Q166's decode. (1) `NextDraw`
   takes `Math.Abs` of the generator's state, which throws for `0x80000000`; `FUN_00516330` hands that back unchanged
@@ -2395,6 +2462,15 @@ artifacts are listed in `docs/history/README.md`.
   deadlines read the live clock (`0x0055299d`), which barely moves through a catch-up, where each tick here has its own
   instant 31 ms on. Reached only when a frame runs more than one tick; not measured. Decode how far the live clock moves
   across one frame's ticks, then build.
+
+- [ ] **Q183. A script's walks are stepped in its own turn, where the engine steps every script's once a frame.** Found
+  by Q175's decode (`ride-operation.md`, `FUN_00557ab0` and `FUN_00557d80`). `RideScript.StepTheWalks` runs at the head
+  of a running script's turn, every eighth tick, and restamps start at both arrivals; the engine's `FUN_00557ab0` steps
+  every script in the list once a park frame, after the 31 ms catch-up loop (`0x0054fa08`), and restamps start only on
+  arriving on the ride (`0x00557e79`; `0x00558018` writes the state alone). Both differences are named at their site,
+  and a rider's arrival is noticed at most a turn late. Nothing in the engine reads start in state 4 but the save, which
+  copies it raw; here `WalkOff` does, for the leg it keeps, which Q175b replaces. Decide with the frame sweep (Q150,
+  Q182) whether to move it. Confirm: each promotion's instant against the clock in a census, predicted first.
 
 - [ ] **Q85. A guest who arrives starts with happiness nought, and stays there. Decode first.** Found by Q50's game
   runs: every one of the 33 guests who arrived (30 by `load 30`) read `happy 0` in `peeps`, none above it in nine minutes,
@@ -3140,7 +3216,10 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   pose (the `LobbyModel` constructor) and never from the animated pose. A riding peep's sprite is `None`
   (`Peep.AnimationFor`). Decode: which frame a rider shows, and how the original re-resolves the seat
   node each frame (`ride-operation.md`, "Where a rider is drawn", and `FUN_005580a0` under "The WALK family").
-  Then build both.
+  Then build both. Q175 re-read the lookup by id and flag (`audio.md`, "Node lookup is by id AND a capability flag")
+  and decoded where a node's position comes from (the posed matrix, refreshed on screen; `ride-operation.md`, "How
+  long a leg lasts, and where its ends are"), and `FUN_005580a0`'s interpolation; which frame a rider shows is still
+  open. The engine finds a bounce rider's node by id in `0x800` ("Where a rider is drawn").
 - [ ] **Q23. Camera rotation snaps by 45 degrees.** `ParkOrbitCameraMode.Update`, the two rotate keys. The 90-degree
   option exists (`GameOptions.NinetyDegreeRotation`) and is read by nothing. Decode the original's step
   and its easing (`park-engine.md`, "The park camera", has the saved and required rotation, not the rate). Build what

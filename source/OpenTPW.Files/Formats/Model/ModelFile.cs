@@ -92,8 +92,9 @@ public partial class ModelFile : BaseFormat
 		public uint Flags { get; set; }
 
 		/// <summary>
-		/// The number the engine looks this node up by when dressing a character, or -1 when the
-		/// node has none. See <see cref="ReadNodeIds"/>.
+		/// The number the engine looks this node up by, together with a mask its <see cref="IdFlags"/> must
+		/// share a bit with (FileFormats models.md, "Node lookup ids"), or -1 when the node has none. See
+		/// <see cref="ReadNodeIds"/>.
 		/// </summary>
 		public int Id { get; set; } = -1;
 
@@ -767,12 +768,12 @@ public partial class ModelFile : BaseFormat
 	}
 
 	/// <summary>
-	/// Attaches each node's lookup id, from the table the engine searches when it puts a costume
-	/// on a character.
+	/// Attaches each node's lookup id and flags, from the table the engine searches by id and flag
+	/// (0x0044b220).
 	///
 	/// The ushort at 0x48 is a record count and the uint at 0x7C the table's offset; each record
-	/// is 20 bytes, a flag word, the id, then 12 bytes that are zero in most records but not in 376
-	/// of the game's 2452, and are not understood. Record r belongs to node (ushort at 0x46) + r.
+	/// is 20 bytes, a flag word, the id, then a word not understood and two pointers - FileFormats
+	/// models.md, "Node lookup ids" - that nothing here reads. Record r belongs to node (ushort at 0x46) + r.
 	/// That pairing is the engine's own: its lookup (0x0044b220) walks the table for a record whose
 	/// id matches and whose flag word shares a bit with a mask it is given, returns the record
 	/// index, and the costume code adds 0x46 to it to find the node it shows or hides. 346 of the

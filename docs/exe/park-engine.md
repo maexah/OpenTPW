@@ -2000,8 +2000,9 @@ will pin this one somewhere else and draw it 160px out of place on a 1280x720 wi
 
 ### Every diagnostic string goes to a bare `RET`
 
-`FUN_005da3c0` is **not** an assert taking a condition - its first argument is a severity/channel and it
-is a printf-style logger. **In the retail image its entire body is a single `RET`.** So every diagnostic
+`FUN_005da3c0` is where the build's log and assert calls all land (about 1,700 of them), and they do not share one
+shape: some pass a format first (`0x0041973d`), some a number and then a format (a constant 8 at `0x00558dca`), and
+some a condition and then a format (the walk node lookup's answer at `0x00556f6e`). **In the retail image its entire body is a single `RET`.** So every diagnostic
 quoted anywhere in these pages - "Can't put staff here", "Dropping staff member %d", "SPEED = %d" - is a
 stripped no-op that the player never sees. Re-implement them as debug logging, never as UI.
 

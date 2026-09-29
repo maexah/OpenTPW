@@ -316,8 +316,9 @@ public sealed class RideScript
 	/// passes a literal 3. Since every use is a literal the raw store can never differ from a resolved
 	/// one in the shipped corpus, which is what makes reproducing the missing test free rather than
 	/// risky - and it is pinned by a test, because the day that stops being true this stops being safe.
-	/// In Lost Kingdom nothing sets it at all, so the base stays nought and a rider's node there is
-	/// simply their slot index.
+	/// In Lost Kingdom nothing sets it, so the engine's stays at the 1 its loader gives every script
+	/// (<c>0x00558c45</c>) and a rider's node id is their slot index plus one. Here it starts at nought and
+	/// <see cref="ParkPeople.BounceNodeName"/> names node 0 <c>body</c>, id 1: the same node.
 	/// </para>
 	/// </summary>
 	private int _bounceNode;
@@ -427,15 +428,16 @@ public sealed class RideScript
 	/// <b>The engine's own duration is the DISTANCE BETWEEN THE TWO NODES, and that is out of reach.</b>
 	/// <c>FUN_00556f40</c> resolves both nodes, subtracts their positions component by component, sums
 	/// the squares, takes <c>FSQRT</c>, truncates it and multiplies by a hundred - so a rider takes
-	/// 100ms per unit walked, floored at one tick when the two nodes coincide. It is geometry, not an
-	/// operand and not a script field.
+	/// 100ms per whole unit walked, and 100ms when the two nodes are less than a unit apart. It is geometry,
+	/// not an operand and not a script field (docs/exe/ride-operation.md, "How long a leg lasts, and where its
+	/// ends are").
 	/// </para>
 	/// <para>
 	/// <b>Nothing here can resolve a model node by id</b> (see <see cref="StepTheWalks"/>), so the
-	/// leg length cannot be computed and every leg lasts one tick instead. That is a divergence and it is
-	/// named rather than dressed up: inventing a plausible constant would make every walk-on ride's dwell
-	/// time fiction, which is worse than a leg that is honestly too short. The state machine, the slots
-	/// and the harvest are all faithful; only the timing waits on model nodes.
+	/// leg length cannot be computed and every leg lasts 100ms instead (docs/QUEUE.md Q175b). That is a
+	/// divergence and it is named rather than dressed up: inventing a plausible constant would make every
+	/// walk-on ride's dwell time fiction, which is worse than a leg that is honestly too short. The state
+	/// machine, the slots and the harvest are all faithful; only the timing waits on model nodes.
 	/// </para>
 	/// </summary>
 	private const int WalkTick = 100;
@@ -995,14 +997,17 @@ public sealed class RideScript
 	/// script TURN, which is every eighth tick unless <c>TURBO</c> asked otherwise. Because the ramp is
 	/// computed from the clock - <c>(now - start) * 1000 / (due - start)</c> - and not accumulated, a
 	/// coarser cadence samples the same ramp rather than running it slower: a rider still finishes at the
-	/// same instant, it is simply noticed up to a turn later.
+	/// same instant, it is simply noticed up to a turn later. Start is restamped at both ends here; the engine
+	/// restamps it only on arriving on the ride (<c>0x00557e79</c>) and leaves a finished walk off's alone
+	/// (<c>0x00558018</c>), so its save keeps the walk off's leg; nothing here saves it (docs/QUEUE.md Q183).
 	/// </para>
 	/// <para>
 	/// <b>What is deliberately absent is every position.</b> The engine spends most of
 	/// <c>FUN_005580a0</c> interpolating between two node positions and handing them to the sprite
 	/// placer, and it resolves those nodes through <c>FUN_00556b90</c> against the ride's own MODEL -
-	/// walk nodes in space <c>0x800</c>, head nodes in <c>0x80</c>. <b>Nothing in this project resolves a
-	/// model node by id</b>: <c>ModelFile.Nodes</c> is a bare list with no lookup. So the bookkeeping is
+	/// walk nodes in space <c>0x800</c>, and head nodes in <c>0x80</c> when the action is 4, else <c>0x800</c>.
+	/// <b>Nothing in this project resolves a model node by id</b>: <c>ModelFile.Nodes</c> is a bare list with no
+	/// lookup. So the bookkeeping is
 	/// reproduced and the placement is not, the same split <see cref="_bounceBase"/> already lives with.
 	/// </para>
 	/// </summary>
@@ -1810,9 +1815,11 @@ public sealed class RideScript
 	/// holds is the engine's "WALK: Tried to release a p..." complaint and changes nothing.
 	/// </para>
 	/// <para>
-	/// The leg is restamped from now and keeps the walk on's length, where the engine works out a new one,
+	/// The leg is restamped from now and lasts <see cref="WalkTick"/> either way: a carried rider's Start was
+	/// restamped on arrival by <see cref="StepTheWalks"/>, so Due less Start is spent and the fallback supplies
+	/// it, and one still walking on keeps the walk on's, which is WalkTick too. The engine works out a new one,
 	/// the distance from the off-from node to the off-to node (<c>0x00557276</c>) - a deviation with
-	/// <see cref="WalkTick"/>'s, docs/QUEUE.md Q175. The particle spawn
+	/// <see cref="WalkTick"/>'s, docs/QUEUE.md Q175b. The particle spawn
 	/// the engine performs for action 2, and the model-node attachment it undoes for action 4, are both
 	/// presentation and are absent for the reason given on <see cref="StepTheWalks"/>.
 	/// </para>

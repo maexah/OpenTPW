@@ -1976,14 +1976,14 @@ The slot array is the script's `+0x2c`, counted by `+0x7c`, **`0x20` = 32 bytes 
 |---|---|
 | `+0x00` | walk node |
 | `+0x02` | head node |
-| `+0x04` / `+0x06` | the destination pair |
-| `+0x08` | start time |
-| `+0x0c` | due time |
+| `+0x04` / `+0x06` | the walk-off pair: off-from, off-to |
+| `+0x08` | start, a game-clock reading in milliseconds |
+| `+0x0c` | due, the same clock |
 | `+0x10` | visitor handle |
 | `+0x14` | facing octant |
 | `+0x16` | action |
 | `+0x18` | state |
-| `+0x1a` | flags |
+| `+0x1a` | flags: bit 0 takes the height along the line between the two nodes, and every shipped `WALKON` passes 1; without it (dead by CONTENT) the height is `FUN_004511a0`'s under the point plus header `+0xa0`, in the mode `FUN_00450ea0` sets for the ride's model: its surface meshes (with those of any lookup record flagged `0x2`), or the landscape when header `+0x30` carries `0x80` or `+0xa0` is not zero |
 
 **The machine is `0 free → 1 walking on → 2 carried → 3 walking off → 4 done`**, and the script drives only the ends of it.
 
@@ -1992,18 +1992,89 @@ The slot array is the script's `+0x2c`, counted by `+0x7c`, **`0x20` = 32 bytes 
 | `0x00555963` | `RSSE_WALKON` | Handler. | Dispatch table entry |
 | `0x00555b0c` | `RSSE_WALKOFF` | Handler. | Dispatch table entry |
 | `0x00555b34` | `RSSE_WALKGET` | Handler; writes the result back into the operand's variable slot when the operand carries the `0x40000000` tag — the same outbox shape `UNBOUNCE` has. | Dispatch table entry |
-| `FUN_00556f40` | — | `WALKON`'s implementation. Takes the first slot whose STATE is 0, stores the handle and both nodes, sets due = now + trunc( the distance from the walk node to the head node ) × 100, nought becoming 100 (`0x00556fce`..`0x005570af`), derives the facing with `fpatan` between the two node positions **masked to 3 bits (8 octants)**, and sets **state 1**. Asserts `"Walknodes need a `setwalk`…"` if no node table is declared, and `"WALK: Could not add peep t…"` when every slot is busy. | Disassembly |
-| `FUN_005571a0` | — | `WALKOFF`: finds the slot holding that visitor, restamps start and due from now with a new leg, trunc( the distance from the off-from node to the off-to node ) × 100 the same way (`0x00557276`..`0x005572db`), recomputes the facing, spawns particles when the action is 2, sets **state 3**. | Disassembly |
+| `FUN_00556f40` | — | `WALKON`'s implementation. Resolves the walk node in space `0x800`, and the head node in `0x80` when the action is 4, else `0x800`; takes the first slot whose STATE is 0; stores the handle, both node pairs, the action and the flags; start = the clock, due = the clock read again + the leg (below, `0x0055709b`..`0x005570af`); the facing (below); **state 1**. Its complaints ("Bad walknode", "Walknodes need a `setwalk`", "WALK: Could not add peep") go to `FUN_005da3c0`. | Disassembly |
+| `FUN_005571a0` | — | `WALKOFF`: the first slot in any state but 0 holding that handle, so a rider still walking on is cut short and one already done is sent round again. Resolves off-from in `0x80` when the action is 4, else `0x800`, and off-to in `0x800`; a new leg the same way (`0x00557276`..`0x00557286`); the facing; then due, then start, from the clock (`0x005572db`, `0x005572e8`); particle `0x13` at off-from for action 2; for action 4 in state 2 the rider is let go of the head node (`FUN_0044b4c0`); **state 3**. | Disassembly |
 | `FUN_00557110` | — | `WALKGET`: scans for a slot in **state 4**, clears its state and handle, returns the handle — 0 if none. | Disassembly |
-| `FUN_00557d80` | — | The **per-frame** stepper, called once per script per frame from the positioner. Progress is `(now - start) * 1000 / (due - start)`; at **≥ 1000** state 1 becomes **2** (and action 4 attaches the rider to the head node), and state 3 becomes **4**. | Disassembly |
-| `FUN_00557ab0` | — | The positioner; also the only reader of `+0x6e`. | Disassembly |
-| `FUN_005580a0` | — | Pure presentation: interpolates between two node positions and calls `FUN_004f9e60` to place the sprite. | Disassembly |
-| `FUN_00556b90` | — | Resolves a node id **in the ride's MODEL**, in the space its fifth argument names — `0x800` for a walk node and `0x80` for a head node from the walk family, `0x200` for a sound and `0x100` for particles from `FUN_005573d0` — and logs `"RSSE: Invalid Node ID"` on a miss. | Its own string |
+| `FUN_00557d80` | — | The stepper, for one script. Per slot, progress = `(now × 1000 − start × 1000) / (due − start)`, unsigned; at **≥ 1000** state 1 becomes **2** and start becomes now (`0x00557e79`; due is left as it was) — action 4 attaches the rider to the head node (`FUN_0044b410`), action 2 spawns particle `0x13` there — and state 3 becomes **4**, writing nothing else (`0x00558018`). A carried rider (state 2) never advances; for an action other than 1, 2 or 4 its facing is taken again every frame from the head node's direction row. | Disassembly |
+| `FUN_00557ab0` | — | Called once a park frame, after the 31 ms catch-up loop, by its one caller (`0x0054fa08`), for **every** script in the list: places the bounce riders (the only reader of `+0x6e`), then `FUN_00557d80`. Nothing tests whether the ride is on screen. | Disassembly |
+| `FUN_005580a0` | — | Presentation, with one write: for a carried rider (state 2) while the script's timed effect runs (`+0x80` start, `+0x84` length, set by `FUN_00557160`), it steps the slot's facing `+0x14` with the clock each frame, mod 8 (`0x005583e5`), and shakes the sprite. It interpolates between two node positions, `A + (B − A) × min(p, 1000) / 1000` (x and z; y too under flag bit 0), and calls `FUN_004f9e60` to place the sprite. | Disassembly |
+| `FUN_00556b90` | — | Resolves a node id **in the ride's MODEL**, in the space its fifth argument names — `0x800` for a walk node and `0x80` for a head node from the walk family, `0x200` for a sound and `0x100` for particles from `FUN_005573d0`. The position is the translation row (`+0x30`..`+0x38`) of the node's stored matrix (below); a record with no matrix gives (0, 0, 0). On a miss it returns 0 having written nothing (`0x00556d2c`), and its "RSSE: Invalid Node ID" goes to `FUN_005da3c0`. | Disassembly |
+| `FUN_005da3c0` | — | The bare `RET` every complaint above goes to (`park-engine.md`, "Every diagnostic string goes to a bare `RET`"): nothing prints or stops. | Disassembly |
 | `FUN_004f9e60` | — | Place a sprite. | Disassembly |
 
-**The operand mapping, measured from the push order** (cdecl, right-to-left, so operands 1..7 are `param_2`..`param_8` of `FUN_00556f40` IN ORDER): 1 handle (`+0x10`), 2 walk node (`+0x00`), 3 head node (`+0x02`), 4 off-from (`+0x04`), 5 off-to (`+0x06`), **6 ACTION (`+0x16`, the one tested against 4)**, 7 flags (`+0x1a`). Confirmed by the corpus: action takes only 1, 4, 5, 6 across the park, and the two scripts passing **4** — `Totem` and `tvsim` — are exactly the head-node case. `WALKON`'s action operand picks the node space: **4 = a HEAD node (space `0x80`)**, anything else a walk node (space `0x800`).
+**The operand mapping, measured from the push order** (cdecl, right-to-left, so operands 1..7 are `param_2`..`param_8` of `FUN_00556f40` IN ORDER): 1 handle (`+0x10`), 2 walk node (`+0x00`), 3 head node (`+0x02`), 4 off-from (`+0x04`), 5 off-to (`+0x06`), **6 ACTION (`+0x16`, the one tested against 4)**, 7 flags (`+0x1a`). Confirmed by the corpus: action takes only 1, 4, 5, 6 across Lost Kingdom (2 as well elsewhere, in `Ghostshp` and `scitour`), and the two Lost Kingdom scripts passing **4** — `Totem` and `tvsim` — are exactly the head-node case; across the four themes the five passing 4 are `firepit`, `Totem`, `tvsim`, `hoverbot` and `tv_ride`. `WALKON`'s action operand picks the node space: **4 = a HEAD node (space `0x80`)**, anything else a walk node (space `0x800`).
 
-**The duration is NOT an operand**: `FUN_00556f40` works it out from the two nodes' positions (`FSQRT`, then `__ftol`), so the engine's leg duration is the **distance between two model nodes**. OpenTPW cannot resolve a model node, so every leg lasts `RideScript.WalkTick` (Q175).
+### How long a leg lasts, and where its ends are
+
+**A leg lasts trunc( the distance between its two nodes ) × 100 ms, nought becoming 100.** No operand is a duration.
+`WALKON`'s leg runs from the walk node to the head node, `WALKOFF`'s from off-from to off-to. The distance is over all
+three axes (`0x00556fce`..`0x00557013`), truncated by `__ftol` whatever the FPU's mode (`0x0067a830` forces chop), and
+times 100 (`0x0055701a`..`0x00557025`). Start and due are readings of the game clock (`0x785970`) in milliseconds, read
+live at each call rather than from the frame's snapshot, so two reads back to back can part by one clock step. **The
+facing** is `trunc( 10.5 − 4θ/π ) mod 8`, θ = atan2( Δz, Δx ) from the first node to the second, with the build's
+truncated π constants (`0x005570b2`..`0x005570fd`, `0x00700fe8`); it turns with the ride.
+
+**The ends are the nodes' stored matrices, in the world.** `FUN_00556b90` reads the translation row of a matrix kept
+per node-lookup record: the script's model (`[0x7a4610 + handle × 4]`) `+8` → `+0x28` → `+4`, 20 bytes a record, the
+matrix pointer at `+4` (that `+8` object's `+4` is the file header). Only the pose walk `FUN_0044ab30` writes their
+positions (`FUN_0044b510` negates the x and z axis rows of an attached record's matrix when its node carries `0x400`,
+a half turn about y, and leaves the translation): it composes each node's local transform with its parent's
+(`FUN_004702d0`), from identity at the root that header `+0x78` names. The placement writes the ride's turn and world
+position into the root's own transform (`FUN_00467030`, `0x004671c0`..`0x004671e3`), so the positions are world
+positions and a distance is the model's own. A ride's records are stored when it is built (`0x00463851`), when the
+ride view is put on it (`FUN_0042a560`, `0x0042a6d6`) and every frame it stays there (`FUN_0044e410( 2 )`,
+`0x0054fa96`), and at every animation advance on screen (`FUN_00473c70`, `0x00473e1b`); off screen, only for a model
+whose header `+0x30` carries `0x4`. (The track rides' stepper `FUN_0043ce20` also poses some of the car models it
+moves, through `FUN_00438800`.)
+
+**Which records have a matrix, and which the walk stores.** A record gets a zero-filled 64-byte matrix only when its
+file flags carry `0x10` or `0x20` (`TEST byte [rec],0x30` at `0x0044a904`, `FUN_0044a870`; `FUN_0045b9d0` with 1 is
+`GMEM_ZEROINIT`). The walk stores it when the node
+has a child, or when the record carries runtime bit 2 (a rider attached, `FUN_0044b410`), 4 (the ride view,
+`FUN_0042a560`) or 8 (`0x0044abd0`..`0x0044abd9`); a childless node gets runtime bit `0x20` (`FUN_0044aa10`). The item
+loader sets bit 8 on every record whose file flags meet `0x580f00`, which takes in the walk bit `0x800` and not the
+head bit `0x80`, and on **every** record of an item that sets `Info.DoHeadProcessing` (`FUN_004629d0` at `0x00462d4a`,
+under the loader's `0x400000`, which `FUN_00413c10` takes from the item's `+0x84` at `0x00414136` and `0x0041418c`). A
+record never stored reads (0, 0, 0): the Jungle Spray's `camera` record (file flags `0x1031`, runtime `0x21`) does, live.
+
+**Every node the shipped scripts name is stored.** All 173 literal node operands of the 47 `WALKON`s in 37 scripts
+(the 53 `WALKOFF`s look the same nodes up again from the slot), across the four themes, name a childless node whose
+flags carry `0x10` or `0x20`. Those found in space `0x800` carry bit 8
+by their own flags, and every `0x80` lookup belongs to an item that sets `DoHeadProcessing`. The items that set it are
+FileFormats `sam.md`'s ("`Info.DoHeadProcessing`"): the five whose scripts pass action 4, and one that walks no one. No lookup misses within
+a ride's capacity. So the (0, 0, 0) end and the miss are both dead by CONTENT. The miss would not be harmless:
+`FUN_00556b90` returns 0 having written nothing, and the leg is worked out of whatever the stack last held there.
+
+**Measured in the original** (Q175): the Jungle Spray in the reference install's Lost Kingdom park, read live under
+Proton (`docs/TOOLING.md`), and every walk slot in Alexah's Full Simulation saves (the ride-script module keeps each
+script's slots raw). The Jungle Spray's walk nodes read runtime `0x29` and world positions exactly their rest positions
+moved by (510.073, 0, 299.904): `entrance` (525.127, 0.984, 300.844), `Kid_pos04` (515.931, 0.984, 308.005),
+`kid_pos02` (525.127, 0.984, 308.005), `kid_pos03` (534.323, 0.984, 308.005). Every walked leg was the prediction:
+
+| Where | Leg (due − start) | Seen |
+|---|---|---|
+| Jungle Spray lane 1, on and off | 1100 (11.655) | 13 + 13 live, facings 7 on, 3 off; saves |
+| Jungle Spray lane 2, on and off | 700 (7.161) | 59 + 60 live, facings 0 on, 4 off; saves |
+| Jungle Spray lane 3, on and off | 1100 (11.655) | 3 + 3 live, facings 1 on, 5 off |
+| Hyena Sideshow lanes 1 and 2, off | 1000 (10.06), 400 (4.54) | saves |
+| Inca God, off | 800 (8.02) | 12 slots, the same in both saves |
+| Gift Shop, Balloon Shop | 1000 (10.0) | saves |
+| Steak Shop | 600 (6.18) | saves |
+| Big Apple, SquirtEm lanes 1-3, Frushy lane 1 (Wonder Land) | 2100, 700 / 200 / 700, 800 | saves |
+
+All 75 arrivals seen live set start to the moment of arrival, at or after due. A finished slot keeps its last leg,
+which is why the saves show a ride's walk-off leg.
+
+**Lost Kingdom's legs**, every other one from the same rule: `incagod` 1700 on and 800 off; `balloon` and `giftshop`
+1000; `steak` 600; `Hyenas` 1000, 400 and 1000 by lane; `Junspray` 1100, 700 and 1100; `Squark` 500. `Lookout`,
+`Totem` and `tvsim` take the head node from a variable, one head a rider (`VAR_ONRIDE` plus 1 or 2), and their heads
+ride an animated ancestor (the lookout's lift, the totem's cart, the simulator's seats), so their legs depend on the
+pose at the moment: from the rest pose, `Lookout` 800 to 2500 on and 800 to 2600 off, `Totem` 1200, 1000 or 800 on
+and 100 off (exactly 1.0), `tvsim` 500 to 2000. No walk, entrance, exit or off-to node moves in any clip of its own model (the roles
+`FUN_00461f10` loads), and no Lost Kingdom walk node at all outside those three.
+
+**OpenTPW** gives every leg `RideScript.WalkTick`, 100 ms, the walk off's included; Q175b builds the legs. It
+also steps a script's walks inside that script's turn, where the engine steps every script's once a frame (Q183).
 
 **Walk-slot declarations across Lost Kingdom** (header word `0x1c`): incagod 40; Lookout, Totem, tvsim 20; balloon, giftshop, steak 10; Hyenas, Junspray 3; Squark 1. `WALKGET` appears in all of them, which makes it the corpus's dominant dismissal.
 
@@ -2051,14 +2122,14 @@ The record is **16 bytes**: handle `+0`, node `+4` = `*(EBP+0x70) + slotIndex`, 
 
 **One bouncing ride per theme, all different:** jungle `Bouncy.RSE` (10 slots, base 8), space `Bouncy.RSE` (**12**, base 16), hallow `Brainb.RSE` (12, base 6), fantasy `Jelly.RSE` (10, base 12). **Two themes share the FILENAME with different contents** — a corpus walk matching on name alone returns whichever theme it reaches first. Ask by path. **`Jelly.RSE` uses `BOUNCESETNODE`** (literal 3); every shipped use is a literal, which is what makes the raw store unobservable from the corpus.
 
-`Bouncy.RSE` calls `BOUNCESETBASE 8` and never `BOUNCESETNODE`, so the node base stays nought and its rider nodes are **0..9**.
+`Bouncy.RSE` calls `BOUNCESETBASE 8` and never `BOUNCESETNODE`, so the node base stays at the 1 the script loader gives every script (`0x00558c45`) and its riders' node ids are **1..10**, `body` to `body09`.
 
 ## Where a rider is drawn
 
 **The simulation never moves a rider; the drawing places them.** None of `FUN_004fa930`'s five callers is a rider, so a rider's world position legitimately stays on the cell they queued on, and the RENDERER draws them at a node of the ride's own model.
 
 - **`bouncy.MD2`'s rider nodes are `body`, `body01`..`body09`, ids 1..10** — ten, matching the ten declared slots, sitting 9-12 units up.
-- **Look them up by NAME, not id: an id is unique only within its capability.** In that one model id 1 is `body`, `air`, `camera` AND `body11`, and the capability word is undecoded. A bare-id lookup draws riders on the camera.
+- **The engine finds them by id in the walk space `0x800`**: `FUN_00557ab0` hands `FUN_0044b220` the bounce record's node with `0x800` (`0x00557b3a`..`0x00557b54`; the lookup is `audio.md`'s "Node lookup is by id AND a capability flag"). An id is unique only together with its flag. In that one model id 1 is `body` (`0x10000851`), `air` (`0x171`), `camera` (`0x1031`) and `body11` (`0x411`), and only `body` carries `0x800`.
 - Park objects load at the origin and are afterwards moved, so a node position must have the placed rotation and origin applied; the load origin is not the placed one.
 - `UsageInfo.RideHandlesSprite` is the flag "If the script handles the person sprite".
 - **Measured in the running game**: node 0 of thing 13 resolves to **(525.4, 252.6, 10.3)**, against the queue front at (525, 234).

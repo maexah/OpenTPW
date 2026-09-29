@@ -1899,10 +1899,11 @@ public sealed class ParkPeople : Entity
 	/// order agree, and there are exactly as many as <c>Bouncy.RSE</c> declares bounce slots. They sit
 	/// nine to twelve units up in the air above the ride, which is where a bouncing rider belongs.
 	/// <para>
-	/// <b>Why by name rather than by id.</b> A node's id is only unique within its capability: id 1
-	/// belongs to <c>body</c>, <c>air</c>, <c>camera</c> and <c>body11</c> in this one model, and what
-	/// the capability word means is not decoded. A lookup on the bare number would have drawn riders on
-	/// the camera. The names carry no such ambiguity, and <c>body10</c> upwards belong to other groups
+	/// <b>Why by name rather than by id.</b> The engine looks a rider's node up by id in the walk space
+	/// <c>0x800</c> (<c>FUN_00557ab0</c>, <c>0x00557b3a</c>; docs/exe/ride-operation.md, "Where a rider is
+	/// drawn"), where id 1 is only <c>body</c>; <c>air</c>, <c>camera</c> and <c>body11</c> share it under other
+	/// flags. Nothing here looks a node up by id and flag yet (docs/QUEUE.md Q22), and in this model the names
+	/// give the same nodes: node n here is id n + 1 there. The names carry no such ambiguity, and <c>body10</c> upwards belong to other groups
 	/// and are never reached because the slots stop at nine.
 	/// </para>
 	/// </remarks>

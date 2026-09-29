@@ -114,7 +114,8 @@ public sealed class ParkThingStates
 	/// <summary>Where a present record's own fields begin - a one-byte tag leads, so everything is unaligned.</summary>
 	private const int IdOffset = 0x01;
 
-	/// <summary>The two node counts, as shorts: the first counts the flag words, the second a block before them.</summary>
+	/// <summary>Two counts, as shorts: the model's nodes (one flag word each) and its node-lookup records (eight bytes each,
+	/// ahead of the flag words) - FileFormats saves.md, the ride system's record.</summary>
 	private const int CountsOffset = 0x2b;
 
 	/// <summary>Where the variable-length tail begins.</summary>
@@ -237,7 +238,7 @@ public sealed class ParkThingStates
 		if ( flagWords < 0 || before < 0 )
 			throw new InvalidDataException( $"slot {slot} declares {flagWords} and {before} nodes" );
 
-		// The tail is a block keyed on the second count, then one flag word per node, then the channels.
+		// The tail is each lookup record's runtime flags and attached handle, then one flag word per node, then the channels.
 		_at = record + TailOffset + (before * 2 * 4) + (flagWords * 4);
 
 		var count = Math.Max( channelsFor( catalogueId ), 1 );
