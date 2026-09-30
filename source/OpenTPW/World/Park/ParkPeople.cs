@@ -556,6 +556,20 @@ public sealed class ParkPeople : Entity
 	internal bool IsStaff( int thingId ) => _staff.Exists( member => member.ThingId == thingId );
 
 	/// <summary>
+	/// The month's change reaches the staff - message <c>0xc</c>: each member's own handler withdraws a month's wage
+	/// (<c>FUN_00504c70</c>), and the staff manager's pays each member's share of the training budget
+	/// (<c>FUN_00505a10</c>). Counted, one of each a member, not built (<c>docs/QUEUE.md</c> Q198).
+	/// </summary>
+	public void TurnTheMonth()
+	{
+		foreach ( var _ in _staff )
+		{
+			Unimplemented.Report( "STAFF_MONTHLY_WAGE" );
+			Unimplemented.Report( "STAFF_MONTHLY_TRAINING" );
+		}
+	}
+
+	/// <summary>
 	/// Dismisses a member of staff, charging one further month's wage. Answers whether there was one.
 	/// </summary>
 	/// <remarks>
@@ -584,8 +598,7 @@ public sealed class ParkPeople : Entity
 		_behaviour.State.Forget( thingId );
 		ParkGuestSprites.Current?.Remove( thingId );
 
-		if ( severance > 0 )
-			_behaviour.State.Spend( severance );
+		_behaviour.State.Spend( severance );
 
 		Log.Info( $"People: dismissed thing {thingId}, a grade {member.PayGrade} " +
 			$"{ParkStaffPool.NameOfKind( kind ).ToLowerInvariant()} - one month's wage of {severance} paid, " +
@@ -2110,7 +2123,7 @@ public sealed class ParkPeople : Entity
 
 			yield return $"thing {thing.ThingId,2} cat {thing.CatalogueId} "
 				+ $"'{(described ? item.Name : "unknown")}' "
-				+ $"price {thing.PricePerUse,3} took {State.TakingsFor( thing.ThingId ),6} "
+				+ $"price {thing.PricePerUse,3} took {State.TakingsFor( thing.ThingId ),6} costs {State.CostsFor( thing.ThingId ),6} "
 				// The record's own count beside the walked one. They agree wherever the save cached a
 				// back-of-queue and differ on exactly the objects that made this work necessary.
 				+ $"cells {cells} (record {thing.QueueSizeInCells}) back {back} "

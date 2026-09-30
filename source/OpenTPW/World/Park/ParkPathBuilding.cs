@@ -1295,10 +1295,9 @@ public static class ParkPathBuilding
 		// measures nothing.
 		Unimplemented.Report( "QUEUE_DRAIN_ADVISOR_0xCB" );
 
-		// The debit subtracts only while the bank's mWithdrawalsEnabled (+0x114, bank file 28) is non-zero
-		// (0x004d01f3), which it is in every offline park; here it always subtracts. The original also scales it by the object's per-age percentage
-		// (FUN_004e2290, 0x00527fe8), which nothing here keeps, so this takes the full price.
-		Unimplemented.Report( "QUEUE_DRAIN_DEBIT_BANK_GATE" );
+		// The debit is the bank's withdrawal (0x00528007), gated on mWithdrawalsEnabled there. The original also scales
+		// it by the object's per-age percentage (FUN_004e2290, 0x00527fe8), which nothing here keeps, so this takes the
+		// full price.
 		Unimplemented.Report( "QUEUE_DRAIN_DEBIT_DEPRECIATION" );
 
 		state.Spend( price );
@@ -1494,7 +1493,7 @@ public static class ParkPathBuilding
 			// The refund is scaled by a per-age percentage, FUN_004e2290, which nothing here keeps.
 			Unimplemented.Report( "QUEUE_REFUND_DEPRECIATION" );
 
-			state.Refund( price );
+			state.Deposit( price );
 			refunded += price;
 		}
 
@@ -1539,7 +1538,7 @@ public static class ParkPathBuilding
 		// The queue arm zeroes the counter before its reset (0x00536abf).
 		state.SetRecord( cellX, cellY, Cleared( cell ) with { OverlapCounter = 0 } );
 
-		state.Refund( refund );
+		state.Deposit( refund );
 
 		// Whoever now stands past the break is put out; see ParkPeople.QueueRemeasured.
 		if ( owner != 0 )

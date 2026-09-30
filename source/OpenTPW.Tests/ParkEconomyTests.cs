@@ -78,7 +78,8 @@ public class ParkEconomyTests
 	/// <b><see cref="ParkWorld.EconomyState.Balance"/> and
 	/// <see cref="ParkWorld.EconomyState.LastBalance"/> differ by exactly 200</b>, which is the structural
 	/// check on this pair: two adjacent fields of a misread record would be unrelated numbers, and these
-	/// are a running balance and the previous reading of it.
+	/// are a running balance and the balance the last withdrawal left, which no deposit or gate fee writes, so
+	/// the 200 is what has come in since (<c>docs/exe/ride-operation.md</c>, "The cost of goods and the park's money").
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -89,7 +90,7 @@ public class ParkEconomyTests
 		Assert.AreEqual( 25, money.AdmissionFee, "mAdmissionFee" );
 		Assert.AreEqual( 87987, money.Balance, "mBalance" );
 		Assert.AreEqual( 87787, money.LastBalance, "mLastBalance" );
-		Assert.AreEqual( 200, money.Balance - money.LastBalance, "the balance has moved by 200 since it was last read" );
+		Assert.AreEqual( 200, money.Balance - money.LastBalance, "200 has come in since the last withdrawal" );
 
 		Assert.AreEqual( 0, money.BatchBalance, "mBatchBalance - nothing is part-way through being banked" );
 		Assert.AreEqual( 1, money.WithdrawalsEnabled, "mWithdrawalsEnabled reads as a flag" );

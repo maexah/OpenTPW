@@ -12,14 +12,15 @@ namespace OpenTPW;
 /// <para>
 /// <b>It holds what a running park moves and its file cannot</b> - among them the balance, the gate's
 /// takings and the visitor count, each cell's litter and occupants, the object chain, the queues, and
-/// each object's takings and nominee.
+/// each object's takings, costs and nominee.
 /// </para>
 /// <para>
-/// <b>What is deliberately NOT here: per-object dirt.</b> It wants a consumer, and nothing reads it yet -
-/// a layer built for a consumer that does not exist is the speculative kind this project does not add.
-/// A ride's operation reads the per-object nominee and the gate reads the cells' occupant lists; the
-/// cells' litter is read only by <see cref="LitteredCells"/>, because the handyman's litter search is not
-/// built (<see cref="StaffBehaviour"/>).
+/// <b>What is deliberately NOT here: per-object dirt.</b> Nothing built writes or reads it: a toilet's dirtying
+/// and its dirt gate are both counted. What a built path writes is kept, seeded from the save, even where the
+/// original's reader is not built: each object's takings and costs and the bank's red tick are read here only by
+/// the console, and each one's remarks name the reader that is missing. A ride's operation reads the per-object
+/// nominee and the gate reads the cells' occupant lists; the cells' litter is read only by
+/// <see cref="LitteredCells"/>, because the handyman's litter search is not built (<see cref="StaffBehaviour"/>).
 /// </para>
 /// </summary>
 public sealed class ParkState
@@ -390,6 +391,12 @@ public sealed class ParkState
 
 		Balance = park?.Economy?.Balance ?? 0;
 		AdmissionFee = park?.Economy?.AdmissionFee ?? 0;
+
+		// The bank's constructor starts withdrawals on and the rest at nought (FUN_004cf7c0).
+		WithdrawalsEnabled = park?.Economy?.WithdrawalsEnabled ?? 1;
+		LastBalance = park?.Economy?.LastBalance ?? 0;
+		TurnEnteredRed = park?.Economy?.TurnEnteredRed ?? 0;
+		ProfitThisYear = park?.Economy?.ProfitThisYear ?? 0;
 		VisitorsToDate = park?.NumberOfVisitorsToDate ?? 0;
 		ParkIsClosed = park is not null && park.ParkClosed != 0;
 		GameTick = park?.GameTick ?? 0;
@@ -448,6 +455,9 @@ public sealed class ParkState
 			if ( thing.TotalTakings != 0 )
 				_takings[thing.ThingId] = thing.TotalTakings;
 
+			if ( thing.TotalCosts != 0 )
+				_costs[thing.ThingId] = thing.TotalCosts;
+
 			// Its days as the record left them. In the park that ships every finished day is nought; most entries are on
 			// 1 and wrapped, things 11 and 12 on 2, and thing 15 on 5 and not wrapped, with the heap's fill past its days.
 			if ( thing.Rings is { } rings )
@@ -478,6 +488,7 @@ public sealed class ParkState
 		ParkIsClosed = parkIsClosed;
 		VisitorsToDate = visitorsToDate;
 		Balance = balance;
+		WithdrawalsEnabled = 1;
 		_cells = new RuntimeCell[ParkWorld.MapSize * ParkWorld.MapSize];
 		TrackRides = new ParkTrackRideTable();
 	}
@@ -489,11 +500,13 @@ public sealed class ParkState
 	public ParkTrackRideTable TrackRides { get; }
 
 	/// <summary>
-	/// What the park is worth now - the balance the save was left with, moved by everything since.
+	/// What the park is worth now - the bank's <c>mBalance</c> (<c>+0xc</c>) the save was left with, moved by
+	/// everything since.
 	///
 	/// <para>
-	/// <b>It is one number</b>, which <see cref="Take"/>, <see cref="Spend"/> and <see cref="Refund"/> move -
-	/// as in the original, where taking a fee adds it straight onto <c>mBalance</c> (<c>FUN_004d0600</c>).
+	/// <b>It is one number</b>, which the bank's three ways in and out move: <see cref="Take"/> (the gate fee,
+	/// <c>FUN_004d0600</c>), <see cref="Deposit"/> (<c>FUN_004d0190</c>) and <see cref="Spend"/>
+	/// (<c>FUN_004d01f0</c>) - <c>docs/exe/ride-operation.md</c>, "The cost of goods and the park's money".
 	/// </para>
 	/// </summary>
 	public int Balance { get; private set; }
@@ -501,10 +514,43 @@ public sealed class ParkState
 	/// <summary>
 	/// What has been taken at the gate since the park opened, kept beside <see cref="Balance"/> rather
 	/// than folded into it because it answers a different question - the balance is a position and this is
-	/// a flow. The original keeps both too, adding a fee to <c>mBalance</c> and to
-	/// <c>mProfitThisYear</c> alike.
+	/// a flow. It is not a field of the original's bank: only <see cref="Take"/> moves it, where the original
+	/// adds a fee to its analyser's month gate takings (<c>+0x1fee0</c>), which nothing here keeps.
 	/// </summary>
 	public int Takings { get; private set; }
+
+	/// <summary>
+	/// The bank's <c>mWithdrawalsEnabled</c> (<c>+0x114</c>, bank file 28): while it is nought <see cref="Spend"/>
+	/// does nothing at all. The constructor sets it to 1, and only an online park's layout replay clears it, so it is
+	/// 1 in every park that can be played here; a test sets it.
+	/// </summary>
+	public int WithdrawalsEnabled { get; internal set; }
+
+	/// <summary>
+	/// The bank's <c>mLastBalance</c> (<c>+0x11c</c>): the balance the last <see cref="Spend"/> left. A deposit never
+	/// writes it, so <see cref="Balance"/> less this is what has come in since.
+	/// </summary>
+	public int LastBalance { get; private set; }
+
+	/// <summary>
+	/// The bank's <c>mTurnEnteredRed</c> (<c>+0x120</c>): the <see cref="GameTick"/> of the <see cref="Spend"/> that
+	/// took the balance below nought from a <see cref="LastBalance"/> of nought or more.
+	/// </summary>
+	/// <remarks>
+	/// Nothing reads it here. The original's readers are the bank's month turn (<c>FUN_004d0370</c>), which counts
+	/// the months in the red and ends the park at six, and advisor rows 103 to 105; neither is built
+	/// (<see cref="TurnTheMonth"/>).
+	/// </remarks>
+	public int TurnEnteredRed { get; private set; }
+
+	/// <summary>
+	/// The bank's <c>mProfitThisYear</c> (<c>+0x124</c>): every <see cref="Take"/> and <see cref="Deposit"/> adds
+	/// to it, every <see cref="Spend"/> takes from it, and the year's change zeroes it (<see cref="TurnTheYear"/>).
+	/// </summary>
+	/// <remarks>
+	/// Nothing reads it here. The original's readers, golden ticket 4 and an advisor row, are not built.
+	/// </remarks>
+	public int ProfitThisYear { get; private set; }
 
 	/// <summary>
 	/// How many guests this park has ever admitted, counting on from what the save recorded - the
@@ -630,45 +676,102 @@ public sealed class ParkState
 	internal Action<bool>? DoorMoved { get; set; }
 
 	/// <summary>
-	/// Takes an admission fee: onto the balance and onto the running total alike, which is the one place
-	/// the two move together.
+	/// Takes an admission fee - the bank's <c>FUN_004d0600</c>: onto the balance and <see cref="ProfitThisYear"/>,
+	/// the deposit's adds, and onto the gate's running total, which only this moves (<c>docs/exe/ride-operation.md</c>, "The cost of goods and the park's money").
 	/// </summary>
+	/// <remarks>
+	/// Counted, not built: the park analyser's month cash in and gate takings (<c>+0x1fc90</c>, <c>+0x1fee0</c>),
+	/// its lifetime visitors and dearest ticket, and the message that counts a new visitor toward a challenge of
+	/// type 11, which takes it only while one is on.
+	/// </remarks>
 	public void Take( int fee )
 	{
-		Balance += fee;
+		unchecked
+		{
+			Balance += fee;
+			ProfitThisYear += fee;
+		}
+
 		Takings += fee;
+
+		Log.Info( $"Bank: admission {fee}, balance {Balance}, profit {ProfitThisYear}" );
+
+		Unimplemented.Report( "BANK_ANALYSER_MONEY_IN" );
+		Unimplemented.Report( "GATE_FEE_ANALYSER_TOTALS" );
+		Unimplemented.Report( "GATE_FEE_CHALLENGE_POST" );
 	}
 
 	/// <summary>
-	/// Pays for something - the one way money leaves a park.
+	/// Pays for something - the bank's withdrawal, <c>FUN_004d01f0</c>, which every way money leaves the park goes
+	/// through: a purchase, a path or queue cell, a sale's queue drain, a dismissal and a sale's cost of goods.
 	///
 	/// <para>
 	/// <b>It does not refuse, and the refusal is deliberately the caller's.</b> The original tests
 	/// affordability at the moment a buy row is clicked - <c>FUN_004ac270</c> compares the item's price
 	/// against <c>FUN_006ad810()</c> and only then builds the placement mode - so by the time anything is
 	/// paid for the decision has already been made somewhere with a screen to complain on. A refusal here
-	/// would be a second, silent one.
+	/// would be a second, silent one. It has no floor either.
 	/// </para>
 	/// <para>
-	/// <b>It moves <see cref="Balance"/> alone</b>, where <see cref="Take"/> moves the balance and the
-	/// running total together: <see cref="Takings"/> is what the gates have taken, and spending is not
-	/// negative takings.
+	/// In its order (<c>docs/exe/ride-operation.md</c>, "The cost of goods and the park's money"): nothing at all while <see cref="WithdrawalsEnabled"/> is nought; the balance less
+	/// the cost; <see cref="TurnEnteredRed"/> stamped when that is below nought and the old <see cref="LastBalance"/>
+	/// is not; <see cref="LastBalance"/> the new balance; and <see cref="ProfitThisYear"/> less the cost. A cost of
+	/// nought still writes the last balance. Counted, not built: the park analyser's month money out
+	/// (<c>+0x1f5a0</c>).
 	/// </para>
 	/// </summary>
-	public void Spend( int cost ) => Balance -= cost;
+	public void Spend( int cost )
+	{
+		if ( WithdrawalsEnabled == 0 )
+		{
+			Log.Info( $"Bank: withdrawal {cost} not made, withdrawals are off" );
+			return;
+		}
+
+		unchecked
+		{
+			var balance = Balance - cost;
+
+			if ( balance < 0 && LastBalance >= 0 )
+				TurnEnteredRed = GameTick;
+
+			Balance = balance;
+			LastBalance = balance;
+
+			Unimplemented.Report( "BANK_ANALYSER_MONEY_OUT" );
+
+			ProfitThisYear -= cost;
+		}
+
+		Log.Info( $"Bank: withdrawal {cost}, balance {Balance}, last {LastBalance}, red {TurnEnteredRed}, "
+			+ $"profit {ProfitThisYear}" );
+	}
 
 	/// <summary>
-	/// Gives money back - what selling something does.
+	/// Puts money in the bank - the deposit, <c>FUN_004d0190</c>: what selling something gives back, what a
+	/// cleared queue cell refunds, and what a guest pays for a ride, shop or sideshow (<see cref="TakeAt"/>).
 	///
 	/// <para>
 	/// <b>It is not <see cref="Take"/>, and the difference is not cosmetic.</b> Taking a fee moves the
-	/// balance <i>and</i> <see cref="Takings"/>, which is what the gates have taken; a refund that went
-	/// through there would report money the park never earned. The original keeps them apart too - a
-	/// demolition credits through <c>FUN_004d0190</c>, which moves the balance, the park analyser's month cash in
-	/// and the bank's profit this year, while an admission fee goes through <c>FUN_004d0600</c>.
+	/// balance <i>and</i> <see cref="Takings"/>, which is what the gates have taken; a deposit that went
+	/// through there would report gate money the park never took. It moves the balance and
+	/// <see cref="ProfitThisYear"/>, has no gate and writes no <see cref="LastBalance"/>; its size check goes to a
+	/// bare <c>RET</c> and refuses nothing. Counted, not built: the park analyser's month cash in (<c>+0x1fc90</c>).
 	/// </para>
 	/// </summary>
-	public void Refund( int amount ) => Balance += amount;
+	public void Deposit( int amount )
+	{
+		unchecked
+		{
+			Balance += amount;
+
+			Unimplemented.Report( "BANK_ANALYSER_MONEY_IN" );
+
+			ProfitThisYear += amount;
+		}
+
+		Log.Info( $"Bank: deposit {amount}, balance {Balance}, profit {ProfitThisYear}" );
+	}
 
 	/// <summary>Admits one guest and hands back which visitor they are, counting from one.</summary>
 	public int Admit() => ++VisitorsToDate;
@@ -677,25 +780,76 @@ public sealed class ParkState
 	public int TakingsFor( int objectId ) => _takings.GetValueOrDefault( objectId );
 
 	/// <summary>
-	/// Credits an object with what a guest has just paid it - the object half of <c>FUN_004e16b0</c>,
-	/// which adds the price to <c>mTotalTakings</c> at <c>+0x180</c> and to today's takings at <c>+0x70</c>.
+	/// What this object has booked as its cost of goods, counting on from what the save recorded - <c>mTotalCosts</c>.
+	/// </summary>
+	public int CostsFor( int objectId ) => _costs.GetValueOrDefault( objectId );
+
+	/// <summary>
+	/// What a guest has just paid an object - <c>FUN_004e16b0</c>: the price deposited in the park's bank first
+	/// (<see cref="Deposit"/>), then added to the object's <c>mTotalTakings</c> at <c>+0x180</c> and today's takings
+	/// at <c>+0x70</c>.
 	/// </summary>
 	/// <remarks>
-	/// <b>The bank's half is not built, and is counted.</b> <c>FUN_004e16b0</c> first deposits the price in the
-	/// park's bank through <c>FUN_004d0190</c> (<c>0x004e16c6</c>) - the balance, the park analyser's month cash in
-	/// and the bank's <c>mProfitThisYear</c>, the adds the gate fee's <c>FUN_004d0600</c> makes - so a charge moves the
-	/// balance there and does not move <see cref="Balance"/> here (<c>docs/QUEUE.md</c> Q96). The park analyser's
-	/// shop and sideshow month totals and the challenge posts are counted by the charge, which knows the kind.
+	/// The park analyser's shop and sideshow month totals and the challenge posts are counted by the charge, which
+	/// knows the kind.
 	/// </remarks>
 	public void TakeAt( int objectId, int amount )
 	{
 		if ( objectId == 0 || amount == 0 )
 			return;
 
-		Unimplemented.Report( "CHARGE_BANK_DEPOSIT" );
+		Deposit( amount );
 
 		_takings[objectId] = TakingsFor( objectId ) + amount;
 		RingsFor( objectId ).Takings.Today += amount;
+	}
+
+	/// <summary>
+	/// Books an object's cost of goods - <c>FUN_004e1920</c>: onto today's costs (<c>+0xf8</c>) and
+	/// <c>mTotalCosts</c> (<c>+0x184</c>), then withdrawn from the park's bank (<see cref="Spend"/>).
+	/// </summary>
+	/// <remarks>
+	/// No test of the amount, and the object's two are booked even while withdrawals are off, the gate being inside
+	/// the withdrawal. Counted, not built: minus the amount posted as progress on a challenge of type 12 (a shop)
+	/// or 13 (a sideshow), which takes it only while one is on (<c>docs/exe/ride-operation.md</c>, "The cost of goods and the park's money").
+	/// </remarks>
+	public void BookCostOfGoods( int objectId, int amount )
+	{
+		unchecked
+		{
+			RingsFor( objectId ).Costs.Today += amount;
+			_costs[objectId] = CostsFor( objectId ) + amount;
+		}
+
+		Log.Info( $"Object {objectId}: cost of goods {amount} booked, today {RingsFor( objectId ).Costs.Today}, "
+			+ $"total {CostsFor( objectId )}" );
+
+		Spend( amount );
+
+		Unimplemented.Report( "COST_OF_GOODS_CHALLENGE_POST" );
+	}
+
+	/// <summary>
+	/// The month's change reaches the bank - message <c>0xc</c>, which its handler (<c>FUN_004d02d0</c>) hands to
+	/// the month turn <c>FUN_004d0370</c>: it banks <c>mBatchBalance</c>, pays each loan's instalment, counts the
+	/// months in the red from <see cref="TurnEnteredRed"/> and ends a park six months in. Counted, not built
+	/// (<c>docs/QUEUE.md</c> Q198).
+	/// </summary>
+	public void TurnTheMonth() => Unimplemented.Report( "BANK_MONTH_TURN" );
+
+	/// <summary>
+	/// The year's change reaches the bank - message <c>0xd</c>, whose arm of the bank's handler zeroes
+	/// <see cref="ProfitThisYear"/> and does nothing else (<c>0x004d034e</c>).
+	/// </summary>
+	/// <remarks>
+	/// The edge is <see cref="GameCalendar"/>'s, which counts from nought rather than from the save's clock, so after
+	/// a load the year turns at another moment than the original's would (<c>docs/QUEUE.md</c> Q149).
+	/// </remarks>
+	public void TurnTheYear()
+	{
+		ProfitThisYear = 0;
+
+		Log.Info( $"Bank: the year's change, profit this year {ProfitThisYear}" );
 	}
 
 	/// <summary>
@@ -724,6 +878,12 @@ public sealed class ParkState
 	/// <c>+0x180</c>, which a charge moves and <see cref="ParkWorld"/> cannot because it describes a file.
 	/// </summary>
 	private readonly Dictionary<int, int> _takings = [];
+
+	/// <summary>
+	/// What each object has booked as its cost of goods, by thing id - the original's <c>mTotalCosts</c> at the
+	/// object's <c>+0x184</c> (file 1086), which a sale moves and <see cref="ParkWorld"/> cannot.
+	/// </summary>
+	private readonly Dictionary<int, int> _costs = [];
 
 	/// <summary>Each object's day rings and counts, by thing id - see <see cref="RingsFor"/>.</summary>
 	private readonly Dictionary<int, ParkObjectRings> _rings = [];

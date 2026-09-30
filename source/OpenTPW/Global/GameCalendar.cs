@@ -100,6 +100,18 @@ public static class GameCalendar
 	public static bool DayRolled { get; private set; }
 
 	/// <summary>
+	/// True for the one update on which the calendar month changed - the calendar's second compare, made on its own
+	/// rather than inside the day's, which sends message <c>0xc</c> (FUN_004f8260, <c>0x004f83b9</c>).
+	/// </summary>
+	public static bool MonthRolled { get; private set; }
+
+	/// <summary>
+	/// True for the one update on which the calendar year changed - the third compare, message <c>0xd</c>
+	/// (FUN_004f8260, <c>0x004f84d0</c>).
+	/// </summary>
+	public static bool YearRolled { get; private set; }
+
+	/// <summary>
 	/// Which of the four <c>Seasons[]</c> rows applies, 0 to 3.
 	///
 	/// <para>
@@ -120,6 +132,8 @@ public static class GameCalendar
 
 	private static int _ticksAtStart;
 	private static int _dayAtLastUpdate;
+	private static int _monthAtLastUpdate;
+	private static int _yearAtLastUpdate;
 
 	/// <summary>
 	/// Starts the calendar over from nought. The original zeroes its counter, <c>mGameTick</c>, at park
@@ -138,10 +152,14 @@ public static class GameCalendar
 		Counter = 0;
 		Days = 0;
 		DayRolled = false;
+		MonthRolled = false;
+		YearRolled = false;
 		Now = Epoch;
 
 		_ticksAtStart = GameClock.Ticks;
 		_dayAtLastUpdate = Epoch.Day;
+		_monthAtLastUpdate = Epoch.Month;
+		_yearAtLastUpdate = Epoch.Year;
 	}
 
 	/// <summary>
@@ -165,6 +183,8 @@ public static class GameCalendar
 		if ( behind <= 0 )
 		{
 			DayRolled = false;
+			MonthRolled = false;
+			YearRolled = false;
 			return;
 		}
 
@@ -177,6 +197,11 @@ public static class GameCalendar
 		Now = Epoch.AddSeconds( seconds );
 
 		DayRolled = Now.Day != _dayAtLastUpdate;
+		MonthRolled = Now.Month != _monthAtLastUpdate;
+		YearRolled = Now.Year != _yearAtLastUpdate;
+
+		_monthAtLastUpdate = Now.Month;
+		_yearAtLastUpdate = Now.Year;
 
 		if ( !DayRolled )
 			return;

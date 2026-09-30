@@ -22,7 +22,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
   thing stays in it until a cell takes it. A placed ride's window opens from a click **anywhere on its footprint**.
 - Information and money: Info and Money open all-staff, all-items, all-visitors and entry-price screens. **The
   entry-price door shuts the park and every ride a guest may be offered**, drawn down when shut: a shut ride turns its
-  queue away one head a sweep, for 15, and opening the door or editing its queue opens it again.
+  queue away one head a sweep, for 15, and opening the door or editing its queue opens it again. **The bank moves as the original's** (Q177c, Q96): a charge is banked and a sale's cost of goods withdrawn, so a drink nets the park 10.
 - Building by POINTING - click to anchor, click to commit, no drag, because both of the original's drag slots are bare
   `RET` stubs. A click on grass or path picks up the PATH tool (20 a cell) with its own squares and cursors; Backspace
   takes the last run up, Escape puts the tool away. QUEUE is 75, refunded. **A bought thing starts at its own price.**
@@ -52,8 +52,8 @@ the tip cannot name it. Read the current state from the repository, which cannot
 
 ## Does not
 
-- No finances (a charge never reaches the bank, Q96; a sale's cost of goods never leaves it, Q177c), litter, day
-  ending, saving a park back, video, networking. Research is inert. In a park the advisor says the gadget's opening line and no more (`docs/PLAYER-GAPS.md` gap 4).
+- No month's turn in the bank, wages or training (counted, Q198), litter, day ending, saving a park back, video,
+  networking. Research is inert. In a park the advisor says the gadget's opening line and no more (`docs/PLAYER-GAPS.md` gap 4).
 - Eight of the nine per-object windows are unbuilt. Setting patrol areas is deferred by Alexah; staff keep the save's.
   A walking member of staff is not entered in the cells they cross; only hiring and putting down place one.
 - Unbuilt: Q102-Q105, five queue-turn arms (the unhappy one held for Q85), spot animation (Q98), Q112's walk to path.
@@ -77,7 +77,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q101, Q165, Q166, Q168, Q169-Q177b, Q184 are ticked**; next **Q177c**; the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177c, Q184 are ticked**; next **Q177d**; the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -101,19 +101,19 @@ Q88, Q101, Q165, Q166, Q168, Q169-Q177b, Q184 are ticked**; next **Q177c**; the 
   stale major, sale's clear and save's fields; Q171's bounds; Q172b's saved track ride, tier and coaster (Q167) and a Hot Pot
   rider's 42 (Q179); Q173's tier 3 and zero divisors. Q174b's raw re-entry and last-frame trigger (no run) and loop (census
   only); Q174c's saved mark, timer and queue; Q175b's Rat Race; Q176's `0x80000000` draw (its let-go in a throwaway build);
-  Q177b's walk-away and a played save's counts; its satisfaction, census only (nothing here shows it).
+  Q177b's walk-away and a played save's counts; its satisfaction, census only (nothing here shows it). Q177c's withdrawals off, red stamp, a sold coaster's nought, the ticket count and the year's change.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1367**, 0 fail, 0 skip with the game | 2026-09-30, after Q177b |
-| Tests without the game | **537** ran, **830** skipped, of 1367 | 2026-09-30, after Q177b |
-| Build warnings | 123 | 2026-09-30, after Q177b |
+| Tests | **1394**, 0 fail, 0 skip with the game | 2026-09-30, after Q177c |
+| Tests without the game | **549** ran, **845** skipped, of 1394 | 2026-09-30, after Q177c |
+| Build warnings | 123 | 2026-09-30, after Q177c |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-30 (the fork review, queued as Q185-Q197).** `alexah/193-queue-the-fork-review`. **Earlier:** `192` (Q177b), `191` (Q177), `190` (Q176),
-`189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-09-30 (Q177c with Q96).** `alexah/194-cost-of-goods-and-deposit`. **Earlier:** `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`,
+`188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

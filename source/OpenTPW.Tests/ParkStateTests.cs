@@ -45,8 +45,8 @@ public class ParkStateTests
 	}
 
 	/// <summary>
-	/// Taking a fee moves the balance <b>and</b> the running total, which is the one place the two move
-	/// together - the original adds a fee to <c>mBalance</c> and <c>mProfitThisYear</c> alike.
+	/// Taking a fee moves the balance <b>and</b> the gate's running total, and nothing else moves the running
+	/// total - the original adds a fee to <c>mBalance</c> and to its analyser's month gate takings (<c>FUN_004d0600</c>).
 	/// </summary>
 	[TestMethod]
 	public void TakingAFeeMovesTheBalanceAndTheTakingsTogether()

@@ -317,9 +317,9 @@ internal sealed class ParkItemsScreen : UiWindow
 				Unimplemented.Report( "ALL_ITEMS_CLOSED_ROW_COLOUR" );
 		}
 
-		// Named rather than left quietly blank: the object's day rings behind "last month" and satisfaction,
-		// mTotalCosts behind "total profit", and the descriptor field behind "excitement" that park.md records as
-		// unproven.
+		// Named rather than left quietly blank: "last month", satisfaction and "total profit", whose day rings,
+		// mTotalTakings and mTotalCosts ParkState keeps and this screen does not read yet, and the descriptor field
+		// behind "excitement" that park.md records as unproven.
 		Unimplemented.Report( "ALL_ITEMS_MONTHLY_HISTORY" );
 		Unimplemented.Report( "ALL_ITEMS_EXCITEMENT" );
 	}

@@ -66,7 +66,7 @@ namespace OpenTPW.UI;
 /// <para>
 /// <b>The bank balance beside it IS built.</b> 0x2f is the lettering and 0x32 the currency icon, and the
 /// number is <see cref="ParkState.Balance"/>: the save's own <c>mBalance</c>, moved by every admission
-/// fee, cost and refund - one number, as in the original (see <see cref="ShowMoney"/>). What is
+/// fee, charge, cost and refund - one number, as in the original (see <see cref="ShowMoney"/>). What is
 /// still out is <b>0x30</b>, the cost of whatever is
 /// in your hand, which the original starts hidden and paints yellow because an empty hand has no price;
 /// and <b>0x31</b>, the trend arrow, which wants a history of the balance that nothing here keeps. Both
@@ -388,7 +388,7 @@ internal sealed class ParkGadget : UiWindow
 		// cluster below rather than children of the gadget body, so each anchors top-left on its own.
 		//
 		// The save's economy thing (model 16) carries mBalance and mAdmissionFee, and ParkState's balance
-		// starts from mBalance and moves with every admission fee, cost and refund - see ShowMoney.
+		// starts from mBalance and moves with every admission fee, charge, cost and refund - see ShowMoney.
 		_balance = Root.Add( new UiControl
 		{
 			Id = 0x2f,
@@ -614,7 +614,7 @@ internal sealed class ParkGadget : UiWindow
 
 	/// <summary>
 	/// What the park is worth, in the corner the original keeps it - the balance the save was left with,
-	/// moved by every admission fee, cost and refund since it was loaded.
+	/// moved by every admission fee, charge, cost and refund since it was loaded.
 	///
 	/// <para>
 	/// <b>It is ONE number.</b> <see cref="ParkWorld"/> describes a file and a fee cannot move it;

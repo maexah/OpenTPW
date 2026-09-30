@@ -503,18 +503,17 @@ public sealed class ParkRideOperation
 	/// and the "lost" arm docks <c>PeepInfo.MediumHappinessChange</c> (<c>DAT_0078505c</c>), both built.
 	/// Before the gate, on both arms, the guest counts the visit by the item's kind and the object counts a
 	/// customer (<c>docs/exe/ride-operation.md</c>, "The settle-up's bookkeeping", steps 1 and 2). Behind the gate
-	/// come a sideshow's prize, the excitement match (<see cref="MatchTheExcitement"/>), the item's effects, a
-	/// toilet's relief (<see cref="UseTheToilet"/>) and a sideshow winner's count and cheer, in the original's order;
-	/// then three times the happiness gained since the guest joined the queue, averaged into the object's
-	/// satisfaction for the day, and the object's served count (steps 4, 5 and 7). Counted and not kept: the cost of
-	/// goods a shop or sideshow books against the object and the park's balance (with the prize), the guest's event
-	/// history, the park analyser's sample and a sideshow's thoughts, win or lose.
+	/// come the cost of goods a shop or sideshow books (<see cref="ParkState.BookCostOfGoods"/>) and a sideshow's
+	/// prize, the excitement match (<see cref="MatchTheExcitement"/>), the item's effects, a toilet's relief
+	/// (<see cref="UseTheToilet"/>) and a sideshow winner's count and cheer, in the original's order; then three times
+	/// the happiness gained since the guest joined the queue, averaged into the object's satisfaction for the day, and
+	/// the object's served count (steps 4, 5 and 7). Counted and not kept: the guest's event history, the park
+	/// analyser's sample and a sideshow's thoughts, win or lose.
 	/// </para>
 	/// <para>
-	/// <b>What is NOT built, and why, each counted.</b> Three more happiness changes in <c>FUN_004fe1e0</c> each
-	/// read the object's byte <c>+0x198</c>, <c>mAmountOfSpecialIngredient</c>, which <see cref="ParkWorld"/> does
-	/// not read. For the hunger effect (<c>+0x148</c>) and then, independently, the
-	/// thirst effect (<c>+0x144</c>), each when it is non-zero, the original takes one draw <c>r</c> of the park's
+	/// <b>What is NOT built, each counted (Q177d).</b> Three more happiness changes in <c>FUN_004fe1e0</c> each
+	/// read the object's byte <c>+0x198</c>, <c>mAmountOfSpecialIngredient</c>. For the hunger effect (<c>+0x148</c>)
+	/// and then, independently, the thirst effect (<c>+0x144</c>), each when it is non-zero, the original takes one draw <c>r</c> of the park's
 	/// generator (<c>FUN_00516330</c>) and docks <c>PeepInfo.SmallHappinessChange</c> (<c>DAT_00785058</c>) when
 	/// <c>(r &amp; 7)</c> plus that byte plus the effect is under 30, unsigned (<c>0x004fe453</c>, <c>0x004fe4a5</c>),
 	/// so an item with both effects draws twice and can be docked twice; then it adds the byte times the
@@ -578,16 +577,18 @@ public sealed class ParkRideOperation
 		// Every visit behind the gate is entered in the guest's event history (FUN_0050c100, 0x004fe204).
 		Unimplemented.Report( "SETTLE_UP_EVENT_HISTORY" );
 
-		// <b>A sideshow PAYS OUT, and it pays the cost of goods rather than the price.</b> FUN_004fe1e0
-		// adds FUN_004e1a10 - the object's +0x188, built from UsageInfo.InitCostOfGoods - straight onto the
-		// guest's cash, first of all. Fifty, for the Jungle Spray, against the twenty they were just charged.
+		// <b>A sideshow PAYS OUT, and it pays the cost of goods rather than the price.</b> FUN_004fe1e0 books the
+		// object's +0x188, built from UsageInfo.InitCostOfGoods, against the object and the park's bank, then adds
+		// the same to the guest's cash: fifty, for the Jungle Spray, against the twenty they were just charged. A shop
+		// books its own cost of goods and pays nobody (docs/exe/ride-operation.md, "The cost of goods and the park's
+		// money"). Both read the item's cost of goods where the original reads the object's (Q97).
 		if ( item.UiType == SideshowUiType )
+		{
+			_state.BookCostOfGoods( ride.ThingId, item.CostOfGoods );
 			peep.Cash += item.CostOfGoods;
-
-		// A shop's and a sideshow's cost of goods is booked against the object and debited from the park's
-		// balance with it (FUN_004e1920).
-		if ( item.UiType is SideshowUiType or ShopUiType )
-			Unimplemented.Report( "SETTLE_UP_COST_OF_GOODS_BOOKING" );
+		}
+		else if ( item.UiType == ShopUiType )
+			_state.BookCostOfGoods( ride.ThingId, ShopCostOfGoods( item, ride ) );
 
 		// Before the item's own effects, so the sickness reads the guest's hunger as they came off (0x004fe259).
 		MatchTheExcitement( peep, ride, item );
@@ -637,6 +638,34 @@ public sealed class ParkRideOperation
 		// A sideshow's winner thinks thought 5 and gains an event-history entry (0x004fdb38..0x004fdb7f).
 		if ( item.UiType == SideshowUiType )
 			Unimplemented.Report( "SETTLE_UP_SIDESHOW_THOUGHT" );
+	}
+
+	/// <summary>
+	/// What a shop books for one sale - <c>FUN_004e1b40</c>: its cost of goods times one plus a quality term and
+	/// plus or minus an ingredient term, truncated toward nought by <c>__ftol</c>
+	/// (<c>docs/exe/ride-operation.md</c>, "The cost of goods and the park's money").
+	/// </summary>
+	/// <remarks>
+	/// Each term is the low byte of the object's <c>mQualityOfGoods</c> or <c>mAmountOfSpecialIngredient</c>, less 50,
+	/// times 0.005, held to ±0.5; the ingredient's is taken off for fat and ice (<c>SpecialIngredient</c> 1 and 3)
+	/// and added for anything else. At 50 and 50 it is the cost itself. The two terms are stored as floats; the sum
+	/// and the product are in double, the runtime's starting precision, where which precision is live is not
+	/// settled (<c>docs/exe/park-engine.md</c>, "Which rounding is live"): only off the steps of 50 the saves hold
+	/// does it matter, and a Drinks Shop at a quality of nought and an amount of 10 books 18 here and 19 at 24 bits.
+	/// The cost is the item's where the original reads the object's <c>+0x188</c>, as unsigned (Q97).
+	/// </remarks>
+	internal static int ShopCostOfGoods( ParkItemCatalogue.Item item, ParkWorld.CatalogueObject shop )
+	{
+		var quality = Math.Clamp( ((shop.QualityOfGoods & 0xff) - 50f) * 0.005f, -0.5f, 0.5f );
+		var ingredient = Math.Clamp( ((shop.AmountOfSpecialIngredient & 0xff) - 50f) * 0.005f, -0.5f, 0.5f );
+
+		if ( item.SpecialIngredient is 1 or 3 )
+			ingredient = -ingredient;
+
+		var factor = ((double)quality + ingredient) - -1.0;
+
+		// __ftol: truncated through a 64-bit integer, its low dword kept.
+		return unchecked((int)(long)(factor * (uint)item.CostOfGoods));
 	}
 
 	/// <summary>
@@ -848,10 +877,10 @@ public sealed class ParkRideOperation
 	///
 	/// <para>
 	/// <b>A guest pays on LEAVING, not on boarding</b>: read the price from the object (<c>mPricePerUse</c>,
-	/// <c>+0x194</c>), credit the object (<c>FUN_004e16b0</c>, <see cref="ParkState.TakeAt"/>), play a sound at the
-	/// guest, and subtract the price from the guest's cash at <c>+0x1a0</c>. A price of nought skips all of it -
-	/// which is this park's one ride, priced free; the Jungle Spray charges 20 and the Drinks Shop 30. Counted, not
-	/// built: the sound, and a shop's or sideshow's month totals in the park analyser and its challenge posts.
+	/// <c>+0x194</c>), bank it and credit the object (<c>FUN_004e16b0</c>, <see cref="ParkState.TakeAt"/>), play a
+	/// sound at the guest, and subtract the price from the guest's cash at <c>+0x1a0</c>. A price of nought skips all
+	/// of it - which is this park's one ride, priced free; the Jungle Spray charges 20 and the Drinks Shop 30. Counted,
+	/// not built: the sound, and a shop's or sideshow's month totals in the park analyser and its challenge posts.
 	/// </para>
 	/// <para>
 	/// <b>There is no affordability test and no clamp, and both are the original's.</b> It subtracts

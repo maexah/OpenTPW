@@ -534,6 +534,17 @@ public class Level
 		if ( Kind == Scene.Park && GameCalendar.DayRolled )
 			ParkState?.RollTheDay();
 
+		// Then the month's change and the year's, which the calendar sends after the day's in the same tick, to the
+		// bank before the staff (thing ids ascending).
+		if ( Kind == Scene.Park && GameCalendar.MonthRolled )
+		{
+			ParkState?.TurnTheMonth();
+			ParkPeople.Current?.TurnTheMonth();
+		}
+
+		if ( Kind == Scene.Park && GameCalendar.YearRolled )
+			ParkState?.TurnTheYear();
+
 		// Whatever was deleted during that walk leaves the list now the walk is over - see Entity.Delete.
 		Entity.ApplyDeletions();
 

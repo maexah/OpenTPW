@@ -972,7 +972,9 @@ already owned or recently researched".
 **The mystery row**: when `Research.Group > 0` and the item is not yet unlocked, the name becomes
 UITEXT 137 "??? Mystery Ride! ???" and **the price column becomes the NEGATED group value**. There is
 also a second, unpriced acquisition gate on that path — such an item is bought against a golden-ticket
-count rather than against cash, and that arm is NOT TRACED.
+count rather than against cash, and that arm is NOT TRACED. The object constructor's own golden-ticket arm, on
+`GoldenTicketCost`, is traced (`ride-operation.md`, "The cost of goods and the park's money", every caller of the
+bank); that it is this gate is not established.
 
 **Buy Land is item 101 and Clear Land is 102**, both `WhichUIType` 4 — which is exactly *why*
 `FUN_004aaf70` appends them as synthetic rows **-1** and **-2** on tab 3 rather than finding them in the

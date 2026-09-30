@@ -598,8 +598,7 @@ demolisher only while the red-cell latch `DAT_00816d48` is clear.
 **OpenTPW builds it** (`docs/QUEUE.md` Q50h): `ParkPathBuilding.QueueEnds` is the list, `DrainQueue` the gate, the
 pops and the debit, and `ClearQueueLine` one run under force; each pop measures the queue through
 `ParkState.RemeasureQueue`. Counted, not built: the advisor `0xcb` posts, one from the demolisher's mode 3 and one
-from each call's re-arm (`QUEUE_DRAIN_ADVISOR_0xCB`); the bank's `+0x114` gate on the debit
-(`QUEUE_DRAIN_DEBIT_BANK_GATE`); `FUN_004d8c60`'s write in every measure (`QUEUE_REMEASURE_BACK_CELL_STAMP`); the
+from each call's re-arm (`QUEUE_DRAIN_ADVISOR_0xCB`); `FUN_004d8c60`'s write in every measure (`QUEUE_REMEASURE_BACK_CELL_STAMP`); the
 per-age percentage, on the refunds (`QUEUE_REFUND_DEPRECIATION`) and on the debit (`QUEUE_DRAIN_DEBIT_DEPRECIATION`,
 `0x00527fe8`); a run over anything but queue or bare ground
 (`QUEUE_DRAIN_CLEARS_ANOTHER_KIND`); and a walk past a thousand cells, which the original's never gives up
@@ -1305,10 +1304,10 @@ column is the chooser before Q165b and Q165c built what the decode column shows.
 | What | The original | OpenTPW | Reached in Lost Kingdom |
 |---|---|---|---|
 | Distance, the effects divisor and the queue term's distance test | at the back-of-queue cell | at the entry cell (Q105) | every candidate |
-| The FPU's precision | not settled (`park-engine.md`, "Which rounding is live") | double, the runtime's starting precision | Eruption's golden ticket at some scores (62 against 63 at 45); the longest queue at 21,708 of Lost Kingdom's 1,690,500 slider settings (1.3%), each with the speed moved off its tier's (one more at 24 bits) |
+| The FPU's precision | not settled (`park-engine.md`, "Which rounding is live") | double, the runtime's starting precision | Eruption's golden ticket at some scores (62 against 63 at 45); the longest queue at 21,708 of Lost Kingdom's 1,690,500 slider settings (1.3%), each with the speed moved off its tier's (one more at 24 bits); a shop's cost of goods at an amount of special ingredient off the steps of 50 (the Drinks Shop at quality 0 and amount 10: 18, and 19 at 24 bits), only by a save's byte until the shop window is built: no save read holds one |
 | A coaster's excitement | `trunc( 50 + f / 2 )` of its node's rating, or nought before `COAST 8` binds it | its `ExcitementLevel`, counted (`RIDE_EXCITEMENT_COASTER_TRACK`) | Alexah's saved Temple Of Gloom, which is offered (Q167); a bought one is refused before it is scored |
 | A tier past the third | the divisors read from the fields after `Upgrades` (`+0x260`, `+0x268`) | its base without the ratios, counted (`RIDE_EXCITEMENT_UPGRADE_TIER`) | only by a save's byte; no save read has one |
-| A sideshow's cost of goods and chance of winning | the object's own `+0x188` and `+0x190` | the item's (Q97) | none yet: the save holds the item's |
+| A sideshow's cost of goods and chance of winning, and a shop's cost of goods | the object's own `+0x188` and `+0x190` | the item's (Q97) | the chance, in Alexah's played parks: all seven sideshows hold 55 to 58, the Jungle Spray 58 where its item's is 25 (`~/.cache/tpw-harnesses/q177c/objmoney.py`); the cost of goods matches the item's on every jungle shop checked (`ParkBankTests`) |
 | The longest queue at a tier past the third, or for an item the catalogue lacks | the constant and speed read from past `Upgrades`, or through a null descriptor | counted, and both gates let the guest through (`QUEUE_CAPACITY_UPGRADE_TIER`, `QUEUE_CAPACITY_UNKNOWN_ITEM`) | only by a save's byte; no save read has one |
 | The calendar at load | the save's `mGameTick`, 755: 2000-02-02 18:27:30 | the score's calendar is the original's (`ParkState.CalendarNow`); the gadget's date and the weather's days count from nought (`GameCalendar.Rebase`, Q149) | every load |
 
@@ -1704,7 +1703,7 @@ three.
 | `FUN_004fd970` | — | The settle-up for leaving **any** visitable thing (not just a sideshow). Shifts the guest's recent-things history (`+0x1e0`..`+0x1e6`), bumps the guest's `mNumRides`, `mNumShops` or `mNumSideshows` by the descriptor's `+0x4ac`, charges, counts the visit on the object (`FUN_004e1690`), takes the descriptor's `+0xe8` (`FatigueEffect`) off the guest's `mTiredness` `+0x1b8` held to 0..100 (`0x004fd9e7`..`0x004fda00`; the constructor zeroes it and a load restores the saved one, file 521 (`0x004fc794`), nought on every shipped guest; nothing raises it, so it stays nought), then splits on `+0x1f1`, the win roll: nought logs `"Person lost this sideshow…"`, docks happiness at `+0x19c` and, at a sideshow, thinks thought 6 and pushes event `0x19` (`0x004fdc1c`..`0x004fdc3e`); otherwise it runs `FUN_004fe1e0`, then takes three times the change in happiness since the guest's snapshot at `+0x20c` (both truncated), logs it (`"Person %d: Happiness changed by %d since using object %d"`, `0x0075d6cc`), averages it into the object's satisfaction (`FUN_004e1e00`), posts it plus 50 to the park analyser for a shop or sideshow (`0x004fda1b`..`0x004fdb2c`) counts the object's served (`FUN_004e19f0`) and, at a sideshow, thinks thought 5 and pushes event `0x18` (`0x004fdb5d`..`0x004fdb7f`); happiness itself is not moved. Each step: "The settle-up's bookkeeping", below. | Its own strings |
 | `FUN_004fe1a0` | — | **The charge.** `price = object[+0x194]`; when non-zero it credits the ride, plays a sound, and does `person[+0x1a0] -= price`. **The only `SUB [reg+0x1A0], reg` in the image.** | Byte search |
 | `FUN_004e16b0` | — | **The economy feed**: first the bank's deposit, `FUN_004d0190( price )` (the balance, `0x004e16c6`), then `ride[+0x180] += price`, `ride[+0x70] += price`, then on the descriptor's `+0x4ac` — **1, a shop, credits the park analyser's `+0x20130`; 2, a sideshow, its `+0x20380`** (month accumulators, `FUN_00519510`, `0x004e170c`); a ride (0) credits neither and posts nothing. The shop arm then posts the price to the challenge manager as progress on challenge type 12 (shops' profit), the sideshow arm on 13 (sideshows'). Inside the shop arm a second switch on `+0x164` (`ShopType`, table `0x004e18e4`; then `+0x158` `SpecialIngredient` for types 2 and 4, table `0x004e18fc`) posts **1, not the money**, as progress on a selling challenge: ShopType 1 type 5 (gifts), 3 type 8 (meals), 5 type 7 (costumes), 6 type 6 (balloons), and by ingredient salt 1, fat 2, ice 3, sugar 4 (the Drinks Shop's "Sell 30 drinks"). A post lands only while a challenge of that type is on ("The settle-up's bookkeeping", the cost of goods). | Disassembly |
-| `FUN_004d0600` | — | The park-balance path. **The ride charge does not go through it.** | Disassembly |
+| `FUN_004d0600` | — | **The admission fee**, no argument (`RET`, `0x004d068d`): the fee is the bank's `mAdmissionFee` `+0x118` (`0x004d0609`). No gate, and no test of nought; the deposit's three adds (`+0xc`, the analyser's `+0x1fc90`, `+0x124`), then the analyser's month gate takings `+0x1fee0` (`0x004d0670`, the only add to it), then `FUN_004c7520` (`0x004d0686`): the analyser's `mLifetimeVisitors` `+0x21c08` +1, `mMostPaidForTicket` `+0x21c40` raised to the fee (signed), and a message of type `0x1a` (sent at `0x004c75d8`) whose one listener, the challenge manager, counts one toward a challenge of type 11, "Get 100 new visitors" (`FUN_004d2860`, `0x004d28bb`). One caller, the guest's opinions 2 and 3 (`0x004ffae5`). **The ride charge does not go through it.** | Disassembly |
 | `+0x194` | `mPricePerUse` | File **1054**. | Save record |
 | `+0x180` | `mTotalTakings` | File **1090**. | Save record |
 | `+0x1a0` | `mCash` | **Runtime** offset on the guest. The file's `mCash` is at **414** — do not conflate. | `FUN_004fe1a0` subtracts from it, `FUN_004fde50` compares against it |
@@ -1715,7 +1714,7 @@ three.
 
 **`person[+0x1a0]` is the guest's cash — confirmed by USE, not by adjacency.** The field a price is SUBTRACTED from in `FUN_004fe1a0` is the field a price is COMPARED against in `FUN_004fde50`, by two unrelated functions. `+0x19c` is happiness and `+0x1a0` adjoins it, but adjacency was never the evidence.
 
-**A charge is deposited in the park's bank.** `FUN_004e16b0` first calls `FUN_004d0190` on the bank thing with the price (`0x004e16bf`..`0x004e16c6`): `mBalance` at `+0xc`, the park analyser's month cash-in `+0x1fc90` and the bank's `mProfitThisYear` `+0x124`, the adds the gate fee's `FUN_004d0600` makes too; it has no gate, refuses nothing (its size check is handed to the bare `RET`) and does not write `mLastBalance`. Then it credits the object's `mTotalTakings` `+0x180` and today's takings `+0x70` and the analyser's shop or sideshow accumulator (`+0x20130`, `+0x20380`; a ride neither). OpenTPW does not make the deposit: `ParkState.TakeAt` counts it (`CHARGE_BANK_DEPOSIT`, `docs/QUEUE.md` Q96).
+**A charge is deposited in the park's bank.** `FUN_004e16b0` first calls `FUN_004d0190` on the bank thing with the price (`0x004e16bf`..`0x004e16c6`): `mBalance` at `+0xc`, the park analyser's month cash-in `+0x1fc90` and the bank's `mProfitThisYear` `+0x124`, the adds the gate fee's `FUN_004d0600` makes too; it has no gate, refuses nothing (its size check is handed to the bare `RET`) and does not write `mLastBalance`. Then it credits the object's `mTotalTakings` `+0x180` and today's takings `+0x70` and the analyser's shop or sideshow accumulator (`+0x20130`, `+0x20380`; a ride neither). OpenTPW makes the deposit: `ParkState.TakeAt` calls `ParkState.Deposit` (Q96); the analyser's totals are counted.
 
 ### Measured prices and takings in Lost Kingdom
 
@@ -1725,7 +1724,7 @@ Drinks Shop **30**, Jungle Spray sideshow **20**, **Belly Bounce zero**; `mTotal
 
 Named by its own strings: `"Litter gone up by %d, is now %d"`, `"Customer bought a balloon, Aaah!"`, `"Trying to give a balloon to a pe…"`, `"Customer returning a costume."`, `"Balance file error: Shop has unk…"`, `"Sideshow won - happiness up %d p…"`. What it does, in order:
 
-1. **A sideshow (`+0x4ac` == 2) PAYS OUT:** `FUN_004e1a10` — the **cost of goods**, not the chance of winning — feeds `FUN_004e1920` (`0x004fe225`: the cost booked against the object and debited from the park's balance, "The settle-up's bookkeeping"; OpenTPW counts it as `SETTLE_UP_COST_OF_GOODS_BOOKING`, as it does the shop's), and then **`person[+0x1a0] += FUN_004e1a10()`** — a prize ADDED to the guest's cash. A shop (`+0x4ac` == 1) books `FUN_004e1b40`, its cost of goods scaled by its quality and ingredient settings, instead (`0x004fe251`), and pays nobody. **In Lost Kingdom that prize is 50 against a price of 20**, so winning the Jungle Spray leaves a guest 30 up and the park 30 down.
+1. **A sideshow (`+0x4ac` == 2) PAYS OUT:** `FUN_004e1a10` — the **cost of goods**, not the chance of winning — feeds `FUN_004e1920` (`0x004fe225`: the cost booked against the object and debited from the park's balance, "The settle-up's bookkeeping"; OpenTPW books it, and the shop's, through `ParkState.BookCostOfGoods`), and then **`person[+0x1a0] += FUN_004e1a10()`** — a prize ADDED to the guest's cash. A shop (`+0x4ac` == 1) books `FUN_004e1b40`, its cost of goods scaled by its quality and ingredient settings, instead (`0x004fe251`), and pays nobody. **In Lost Kingdom that prize is 50 against a price of 20**, so winning the Jungle Spray leaves a guest 30 up and the park 30 down.
 2. **The excitement match**, `FUN_004fdcc0( object )` at `0x004fe259`: how the thing's excitement suited the guest's kind
    moves their happiness, and the excitement makes them sick by how little hungry they are ("The excitement match",
    below).
@@ -1924,10 +1923,11 @@ fat or ice (`SpecialIngredient` 1 or 3) and added otherwise; at 50 and 50 it is 
 `mCostOfGoods` raw, booked only for a win, beside the prize.
 
 **The withdrawal, `FUN_004d01f0`, does nothing while the bank's `mWithdrawalsEnabled` (`+0x114`, bank file 28) is
-nought** (`0x004d01f3`). Otherwise `mBalance` falls by the amount; if it goes below nought from an `mLastBalance` of
-nought or more, `mTurnEnteredRed` `+0x120` takes `mGameTick`; `mLastBalance` `+0x11c` takes the new balance; the park
-analyser's month total costs `+0x1f5a0` rise and the bank's `mProfitThisYear` `+0x124` falls by it. It refuses nothing
-and has no floor. The queue drain's debit is the same function; a loan's instalments and its paying off read the flag
+nought** (`0x004d01f3`). Otherwise `mBalance` falls by the amount (`0x004d0205`); if it goes below nought (a `JNS` on
+the result) from an OLD `mLastBalance` of nought or more (a signed test), `mTurnEnteredRed` `+0x120` takes `mGameTick`
+(`0x004d020a`..`0x004d0222`); `mLastBalance` `+0x11c` takes the new balance (`0x004d0228`); the park analyser's month
+total costs `+0x1f5a0` rise (`0x004d0246`) and the bank's `mProfitThisYear` `+0x124` falls by it. It refuses nothing
+and has no floor. The deposit's analyser add is `0x004d01d0`. The queue drain's debit is the same function; a loan's instalments and its paying off read the flag
 themselves (`FUN_004d0370`, `FUN_004d0850`), its only other readers. The constructor sets the flag to 1 and the load reads it; `FUN_00404140` clears it
 and `FUN_004041d0` sets it again around an online park's layout replay (game type 1 only), so it is 1 in Easymode and
 every offline park. The deposit, `FUN_004d0190` ("Spending", above), has no such gate.
@@ -1937,22 +1937,87 @@ lost +20. The challenge posts land only while a challenge of that type is curren
 on only in game type 0 and after the days at `0x007857c8` (`DaysUntilFirstChallenge` by key order; `FUN_004d1e90`), and Easymode's manager (thing 10) saves it
 off.
 
+**The detail, re-read for Q177c** (`wf_245f2fbd-cf9`: three Opus readers in Ghidra and a code map, each put to an
+Opus skeptic; reports in `~/.cache/tpw-harnesses/q177c/map/`):
+
+- **The shop's amount.** `FUN_004e1b40` reads the low byte of `mQualityOfGoods` `+0x18c` and of
+  `mAmountOfSpecialIngredient` `+0x198` (`0x004e1b47`, `0x004e1b4d`) and the cost `+0x188` as unsigned
+  (`0x004e1c30`). Each term is (byte − 50.0f) × 0.005f (`0x3ba3d70a`), stored as a float (`0x004e1b82`, `0x004e1b97`)
+  and held strictly to ±0.5 (`0x004e1b86`..`0x004e1bec`); the ingredient's is negated for `SpecialIngredient` 1 and 3
+  (`0x004e1c12`..`0x004e1c1e`) and added for any other value; then, on the FPU's stack, (q ± a) − (−1.0) times the
+  cost, `__ftol`'d toward nought. The shop window's
+  preview `FUN_004e1a30` is the same arithmetic. Measured against what the original booked in Alexah's Lost Kingdom
+  saves (`~/.cache/tpw-harnesses/q177c/objmoney.py`): item 1203 (ice) at quality 0 and amount 100 books 10, 1206 (sugar)
+  at 0 and 0 books 10, 1209 at 100 and 50 books 37, 1211 at 0 and 50 books 37, 1208 at 0 and 50 books 22, and every
+  saved object's `mTotalCosts` is a sum of its per-sale amount; the park that ships holds 50 and 50 on all fourteen.
+  **The FPU's precision matters only off the steps of 50 the saves hold**: the Drinks Shop at quality 0 and amount 10
+  books 18 at 53 bits and 19 at 24, which is not settled (`park-engine.md`, "Which rounding is live"; the game never
+  passes `DDSCL_FPUPRESERVE`).
+- **Where the amount leaves the steps of 50**: the shop window's amount slider (`0xc086`) runs 0 to 100 (`0x004b06d2`),
+  its quality slider (`0xc06b`) 0 to 2, times 50 (`0x004b06b7`), so only the amount does; no save read holds one off
+  the steps, and the shop window is not built here.
+- **The booking's order in `FUN_004fe1e0`**: event 8 (`0x004fe204`); a sideshow books `FUN_004e1a10` (`0x004fe225`)
+  and then pays the same to the guest (`0x004fe231`); a shop books `FUN_004e1b40` (`0x004fe251`); a ride or a feature
+  books nothing. `FUN_004e1920` tests nothing, books the object's two even while withdrawals are off, and posts to the
+  challenge manager with nought for the item and thing filters, so a challenge naming one item never receives it. A
+  zero withdrawal is not a no-op: it writes `mLastBalance` and can stamp the red.
+- **A thing just built** (`FUN_004db090`): `+0x188` the item's `InitCostOfGoods` (`0x004db383`), `+0x18c` and `+0x198`
+  50 (`0x004db389`, `0x004db3b3`), `+0x190` 100 less `InitChanceOfLoosing` (`0x004db3a1`), today's costs and
+  `mTotalCosts` nought (`0x004db14b`, `0x004db169`); the bank's constructor (`FUN_004cf7c0`) starts `mWithdrawalsEnabled`
+  at 1 and the other three at nought (`0x004cf7f0`..`0x004cf81a`).
+- **Every caller of the bank.** The withdrawal has 15 callers: the purchase (the object constructor, `0x004db4f6`),
+  a path cell and a queue cell (`0x00534879`, `0x005348ad`), the sale's queue drain and its track (`0x00528007`, `0x00528179`: the
+  demolisher's switch on `WhichTrackType` inside its queue arm, `0x0052801d`, where karts and the water ride clear
+  their cells and pay for them and any other non-zero type withdraws nought), an upgrade on completion (`0x004dfa96`), the monthly wage on message `0xc`
+  (`0x00504cb9`), a dismissal (`0x00505944`), staff training (`0x00505a45`), the cost of goods (`0x004e1952`), Buy Land
+  (`0x00525d6d`), a track cell (`0x005391de`) and the coaster editor (`0x004352ac`, `0x00441c99`, `0x00445c95`). The
+  deposit has 11: the charge (`0x004e16c6`), every object's destructor (`0x004dd19f`, the sale's refund), a cleared
+  queue cell forced and unforced (`0x00536aa8`, `0x00536b5b`), a cleared track cell (`0x0053b622`), a challenge's prize
+  and its half (`0x004d3108`, `0x004d2f33`), the coaster editor's paybacks (`0x00441c8a`, `0x00445c2a`, `0x00445c86`)
+  and the cheat that banks 10,000 (`0x0040c462`). The purchase skips its withdrawal when the item's `GoldenTicketCost`
+  (`+0xc4`) is above nought and `FUN_004d4b70` answers nought, calling `FUN_004d4ad0` instead, which spends the tickets
+  only when the player holds enough (`0x004db4a6`..`0x004db4e0`); `FUN_004d4b70` asks whether the player has bought the
+  item with tickets before, so only the first purchase goes without cash. The buy list asks the same: such a row is
+  named "??? Mystery Ride! ???" (UITEXT 137, `0x004ab02e`), and a click on it is refused when the player holds too few
+  tickets (`FUN_004d4b90`, `0x004ac5a9`). The bank's month turn
+  `FUN_004d0370` carries inlined copies: it banks `mBatchBalance` ungated and zeroes it (`0x004d0393`..`0x004d03db`),
+  withdraws each loan's instalment gated (`0x004d0402`) and adds the principal's share back onto `mProfitThisYear`; a
+  loan's drawdown (`FUN_004d0750`) deposits and takes the amount back off the profit (`0x004d07ee`); its payoff
+  (`FUN_004d0850`) refuses a balance below what is owed by an unsigned test (`0x004d089a`), so a negative balance passes.
+
+**OpenTPW** (Q177c with Q96): `ParkState.Spend` is the withdrawal at every site that pays (purchase, path, queue, drain,
+dismissal, cost of goods, a sold coaster's nought), gated on `WithdrawalsEnabled` and moving `LastBalance`,
+`TurnEnteredRed` (on `GameTick`) and `ProfitThisYear`; `ParkState.Deposit` is the deposit (a sale's refund, a cleared
+queue cell, the charge through `TakeAt`); `ParkState.Take` is the gate fee; `ParkState.BookCostOfGoods` is
+`FUN_004e1920`, and `ParkRideOperation.ShopCostOfGoods` is `FUN_004e1b40`, its terms as floats and its sum and product
+in double ("What a thing is worth to a guest", "Where OpenTPW differs", the FPU's row), with the item's cost of goods
+(Q97). The four bank fields are seeded from the save, and the year's change zeroes the profit
+(`ParkState.TurnTheYear`, on `GameCalendar.YearRolled`). Counted, not built: the analyser's money in and out
+(`BANK_ANALYSER_MONEY_IN`, `_MONEY_OUT`), the gate fee's analyser totals and challenge post
+(`GATE_FEE_ANALYSER_TOTALS`, `GATE_FEE_CHALLENGE_POST`), the booking's (`COST_OF_GOODS_CHALLENGE_POST`), the bank's
+month turn (`BANK_MONTH_TURN`, on `GameCalendar.MonthRolled`), each member of staff's wage and training share
+(`STAFF_MONTHLY_WAGE`, `STAFF_MONTHLY_TRAINING`), the purchase's golden-ticket arm (`PURCHASE_GOLDEN_TICKET_ARM`, on
+every such purchase, as no list of ticket-bought items is kept) and a kart or water ride's track at a sale
+(`SALE_TRACK_TEARDOWN`); `docs/QUEUE.md` Q198. Not counted: the buy list's mystery row and its ticket test (Q141).
+
 **Who reads what the booking moves**:
 
 - The balance, whose getter is read at 26 sites (`FUN_005195d0` then `FUN_006ad810`): the park gadget's money
   (`FUN_004a0ab0`); the buy list's affordability and row colour; the hire screen (`FUN_0049b650`, `FUN_0049bdd0`); the
   loans screen's pay-off test (`0x0049f5d4`); the path tools' price checks (`FUN_00535670` reddens a cell dearer than
   the balance, `0x00535914`; `FUN_005346d0`, `0x00534779`; `FUN_00539760`, `0x00539f82`); the analyser's month-end
-  balance sample (`FUN_004c7720`, `0x004c7730`, ring `+0x1f104`); six not yet named (`0x00487b36`, `0x004abd8d`,
-  `0x004af4a5`, `0x00523645`, `0x00532383`, `0x00539056`); and eight advisor rows in undisassembled code
+  balance sample (`FUN_004c7720`, `0x004c7730`, ring `+0x1f104`); Buy Land's pending price (`FUN_00531a50`,
+  `0x00532383`) and a track cell's (`FUN_00538fc0`, `0x00539056`); four not yet named (`0x00487b36`, `0x004abd8d`,
+  `0x004af4a5`, `0x00523645`); and eight advisor rows in undisassembled code
   (`0x0059defb`..`0x0059eafd`): three compare it with a row's threshold (`+0x274`, `+0x298`, `+0x330`), one compares
   it less `FUN_004d0a00` with `FUN_004d0970` × `+0x338`, and four fire only below nought (`0x0059e9b0` when
   `FUN_004d0810` answers non-zero, and the three red-time rows below).
 - Going red: `FUN_004d0370`, at each month change with the balance and `mLastBalance` both below nought, divides the
   time since `mTurnEnteredRed` by 30 days and at 6 or more broadcasts message `0x13` with 2 (`0x004d054c`,
   `0x004d05b2`), which the bank's handler turns into the end of the park (`FUN_004d02d0`, `FUN_005168f0`) unless the world's state
-  (`+0x1da738`) is already 4 or `FUN_00516c00` finds the word at `0x007cf4f4` set (`0x004d030d`, `0x004d031b`; what that
-  word holds is not decoded). A deposit
+  (`+0x1da738`) is already 4 or `FUN_00516c00` finds the word at `0x007cf4f4` set (`0x004d030d`, `0x004d031b`): the
+  thing id of the "End" feature, which `FUN_00516b00` builds and stores (`0x00516bad`) and `FUN_00516c10` deletes and
+  zeroes (`0x00516c6a`). A deposit
   never writes `mLastBalance`, so climbing out on deposits alone does not clear the stamp: if the next withdrawal takes
   the balance below nought again, `mTurnEnteredRed` is not stamped afresh and the count runs from the first entry. Any
   withdrawal that leaves the balance at nought or more (a shop's cost of goods, a loan's instalment) writes a
@@ -1993,7 +2058,12 @@ flag 0, and leave `mData` unwritten (the object is `_nh_malloc`'d, `0x450` bytes
 the heap did; no reader of the figures goes past the filled days (the serialiser writes all 30).
 
 **Who sends the day's change.** Only the calendar (`FUN_004f8260`): once a world tick at most, when the day of the
-month (and only it, `0x004f8321`) differs from `mDayAtLastUpdate`. It goes to the `0xb` listeners - every object built
+month (and only it, `0x004f8321`) differs from `mDayAtLastUpdate`. The same call then compares the month on its own
+(`0x004f83b9`) and sends message `0xc`, the month's change (`0x004f83c5`), and the year (`0x004f84d0`) and sends `0xd`
+(`0x004f84d8`). The bank's handler (`FUN_004d02d0`) hands `0xc` to its month turn `FUN_004d0370` (`0x004d035f`) and
+answers `0xd` by zeroing `mProfitThisYear` alone (`0x004d034e`); each member of staff's handler withdraws a month's wage
+on `0xc` (`FUN_00504c70`, `0x00504cb9`), and the staff manager pays out the training budget (`FUN_00505a10`,
+`0x00505a45`). OpenTPW's `GameCalendar` makes the three compares (`DayRolled`, `MonthRolled`, `YearRolled`). It goes to the `0xb` listeners - every object built
 by `FUN_004db090` (`0x004db23a`) and the challenge manager - in ascending thing id, synchronously, and after every
 thing's turn in that tick (`0x00516695`), so the tick's settle-ups count into the day that is closing. Persons never
 get it. A new world rolls on its first tick (the calendar's constructor sets the day to −1, `0x004f7ebd`); a load reads
@@ -2129,12 +2199,12 @@ after the lost play. Of the run's seven checks six matched; the seventh, balance
 prize, the excitement match, the five effects, the toilet's relief, the winner's cheer and the lost dock; the fatigue
 step is a no-op in both games (said at the site). Each object's six rings and two counts are `ParkObjectRings`, seeded
 from its record, fresh for a thing built, dropped with a thing sold; the charge credits today's takings and the door's
-refusal counts the walk-away. The day's change rolls every object the park holds after the frame's turns, on
+refusal counts the walk-away; the charge banks the price and a shop's or won sideshow's cost of goods is booked and
+withdrawn ("The cost of goods and the park's money", OpenTPW). The day's change rolls every object the park holds after the frame's turns, on
 `GameCalendar`'s edge; that calendar counts from nought rather than from the save's clock (`GameCalendar.Rebase`), so
 its days turn at other moments than the original's would after the same load, and it does not roll on the first tick.
 The join's snapshot is `Peep.JoinHappiness`. The ride window's Users last month (filled on show and every four
-seconds, on the frame clock) and the all-visitors list's Rides Ridden read them. Counted by name: `SETTLE_UP_EVENT_HISTORY`, `_COST_OF_GOODS_BOOKING` (so the costs ring's today stays
-nought, Q177c), `_INGREDIENT_HAPPINESS`, `_SPECIAL_INGREDIENT`, `_APPEARANCE`, `_ANALYSER_SAMPLE` (step 6),
+seconds, on the frame clock) and the all-visitors list's Rides Ridden read them. Counted by name: `SETTLE_UP_EVENT_HISTORY`, `_INGREDIENT_HAPPINESS`, `_SPECIAL_INGREDIENT`, `_APPEARANCE`, `_ANALYSER_SAMPLE` (step 6),
 `_SIDESHOW_THOUGHT` and the toilet's three. Its win roll (`PeepBehaviour`, `Succeeds`) draws from `System.Random` where
 the original draws from the park's generator, and reads the item's chance where the original reads the object's (Q97).
 

@@ -94,7 +94,8 @@ public sealed class ParkWorld
 		int OperatingCapacity = 0, int OperatingDuration = 0, int OperatingSpeed = 0, int PricePerUse = 0,
 		int QueueSizeInCells = 0, int TotalTakings = 0,
 		float StateOfRepair = 0f, float RemainingLife = 0f, BuiltWhen Built = default, int RequestedService = 0,
-		int UpgradeLevel = 0, int MeshInstance = 0, ObjectRings? Rings = null )
+		int UpgradeLevel = 0, int MeshInstance = 0, ObjectRings? Rings = null, int QualityOfGoods = 0,
+		int AmountOfSpecialIngredient = 0, int TotalCosts = 0 )
 	{
 		/// <summary>
 		/// The bit that makes an object somewhere a guest can be <i>offered</i> - <c>FUN_004fcb10</c>, the
@@ -346,9 +347,10 @@ public sealed class ParkWorld
 		public const int LoanSlots = 8;
 
 		/// <summary>
-		/// What the original refuses to bank in one go - <c>FUN_004d0600</c> asserts the fee is under a
-		/// million before it adds it, with the message "Bank account - making enormous d[eposit]". Kept
-		/// because it is the one bound the executable states outright about any of these numbers.
+		/// What the original asks about before it banks - <c>FUN_004d0600</c> and <c>FUN_004d0190</c> test the amount,
+		/// unsigned, against a million, with the message "Bank account - making enormous d[eposit]", and hand the
+		/// answer to a bare <c>RET</c>, so nothing is refused. Kept because it is the one bound the executable states
+		/// outright about any of these numbers.
 		/// </summary>
 		public const int EnormousDeposit = 1000000;
 	}
@@ -1708,6 +1710,13 @@ public sealed class ParkWorld
 			RequestedService: ReadInt32At( start + 1078 ),   // mRequestedService
 
 			TotalTakings: ReadInt32At( start + 1090 ),       // mTotalTakings
+
+			// Three more of the chain's dwords, placed by it: mQualityOfGoods after mCostOfGoods, mAmountOfSpecialIngredient
+			// after mPricePerUse, and mTotalCosts before mTotalTakings. A shop's cost of goods reads the low byte of the
+			// first two (FUN_004e1b40); a sale books into the third.
+			QualityOfGoods: ReadInt32At( start + 1046 ),     // mQualityOfGoods
+			AmountOfSpecialIngredient: ReadInt32At( start + 1058 ), // mAmountOfSpecialIngredient
+			TotalCosts: ReadInt32At( start + 1086 ),         // mTotalCosts
 
 			// mUpgradeLevel, +0x50, the record's last byte: the tier FUN_004e0560 reads the item's InitSpeed and
 			// InitDuration at when it works out the excitement.

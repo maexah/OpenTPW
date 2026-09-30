@@ -176,7 +176,7 @@ public static class ParkBuilding
 		if ( node != null )
 			state.RemeasureQueue( thingId );
 
-		state.Spend( item.BuildPrice );
+		PayFor( state, item );
 
 		// The ground draws every cell nothing else owns, so it has to be told that these are owned now
 		// or it keeps drawing grass through the new floor - and the paths and queues are rebuilt with it,
@@ -259,6 +259,11 @@ public static class ParkBuilding
 			// The item's own starting price, copied unclamped (0x004db3ad): what the charge takes, the door's price
 			// opinion weighs and a sideshow's excitement reads. A move's put-down builds afresh, so it starts here too.
 			PricePerUse: item.InitPricePerUse,
+
+			// Quality of goods and amount of special ingredient both start at 50 (0x004db389, 0x004db3b3), where a
+			// shop's cost of goods is the item's own; mTotalCosts starts at nought (0x004db169).
+			QualityOfGoods: 50,
+			AmountOfSpecialIngredient: 50,
 			TrackRide: trackRide,
 			Built: built );
 	}
@@ -333,6 +338,23 @@ public static class ParkBuilding
 		ParkRides? rides, int thingId, ParkPeople? people = null )
 		=> Demolish( state, park, catalogue, objects, rides, thingId, people ).Answer;
 
+	/// <summary>
+	/// What a purchase pays - the object constructor's withdrawal of the item's price (<c>FUN_004db090</c>). Internal
+	/// so a test can pay for something without placing it.
+	/// </summary>
+	/// <remarks>
+	/// An item with a golden-ticket cost that the player has not bought with tickets before is paid for in tickets and
+	/// not in cash (<c>docs/exe/ride-operation.md</c>, "The cost of goods and the park's money"); neither the tickets
+	/// nor that list is kept here, so it is paid in cash, and counted.
+	/// </remarks>
+	internal static void PayFor( ParkState state, ParkItemCatalogue.Item item )
+	{
+		if ( item.GoldenTicketCost > 0 )
+			Unimplemented.Report( "PURCHASE_GOLDEN_TICKET_ARM" );
+
+		state.Spend( item.BuildPrice );
+	}
+
 	/// <summary>What one sale did: the line to show, and whether the thing is gone.</summary>
 	private readonly record struct Sold( string Answer, bool Done = false );
 
@@ -373,8 +395,21 @@ public static class ParkBuilding
 		var footprint = ParkObjects.FootprintAt( item, placed.CellX, placed.CellY, placed.Angle );
 
 		// Before the footprint goes, what the demolisher does outside it (FUN_00527ee0): a queued thing's
-		// queue is drained, node and all, and the paths laid before its ends go back to being ordinary path.
-		var queueRefund = item.HasQueue ? ParkPathBuilding.DrainQueue( state, park, placed ) : 0;
+		// queue is drained, node and all, then its track torn down by its track type, and the paths laid
+		// before its ends go back to being ordinary path.
+		var queueRefund = 0;
+
+		if ( item.HasQueue )
+		{
+			queueRefund = ParkPathBuilding.DrainQueue( state, park, placed );
+
+			// Karts and the water ride clear their track cells and pay for it; any other track type withdraws
+			// nought, which still writes the bank's last balance (0x00528179).
+			if ( item.TrackType is ItemDescriptionFile.CarTrack or ItemDescriptionFile.WaterTrack )
+				Unimplemented.Report( "SALE_TRACK_TEARDOWN" );
+			else if ( item.TrackType != 0 )
+				state.Spend( 0 );
+		}
 
 		ReleaseEnds( state, park, placed );
 
@@ -391,7 +426,7 @@ public static class ParkBuilding
 		// goes after the unlink and before the refund and the script teardown, as the original's does.
 		people?.ThingRemoved( placed );
 
-		state.Refund( refund );
+		state.Deposit( refund );
 
 		// The demolisher puts back the tool it was called under (0x0052818d). With no tool that is the idle mode,
 		// installed through the setter, so a candidate or a worker in the hand is let go of; an item in the hand

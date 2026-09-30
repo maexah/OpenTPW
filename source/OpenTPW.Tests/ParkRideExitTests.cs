@@ -398,19 +398,19 @@ public class ParkRideExitTests
 	}
 
 	/// <summary>
-	/// <b>The park's own balance does not move here, and that is a gap, not the original.</b> The original's
-	/// charge deposits the price in the bank first (<c>FUN_004e16b0</c> calls <c>FUN_004d0190</c> at
-	/// <c>0x004e16c6</c>), as the gate fee does through <c>FUN_004d0600</c>; <see cref="ParkState.TakeAt"/> counts
-	/// the deposit rather than making it. This pins what the code does now; <c>docs/QUEUE.md</c> Q96 turns it
-	/// round, and the gate's running total must still stay untouched.
+	/// <b>The price is banked.</b> The charge deposits it first (<c>FUN_004e16b0</c> calls <c>FUN_004d0190</c> at
+	/// <c>0x004e16c6</c>): the balance and the year's profit rise by it, the balance the last withdrawal left does
+	/// not move, and the gate's running total, which only an admission moves, stays where it was.
 	/// </summary>
 	[TestMethod]
-	public void PayingForARideLeavesTheParksBalanceAlone()
+	public void PayingForARideBanksThePrice()
 	{
 		var (park, _) = PayFor( price: 20, balance: 500 );
 
-		Assert.AreEqual( 500, park.Balance, "the balance the park started with" );
-		Assert.AreEqual( 0, park.Takings, "and the gate's running total is untouched too" );
+		Assert.AreEqual( 520, park.Balance, "five hundred and the twenty paid" );
+		Assert.AreEqual( 20, park.ProfitThisYear, "the year's profit rises by it too" );
+		Assert.AreEqual( 0, park.LastBalance, "a deposit writes no last balance" );
+		Assert.AreEqual( 0, park.Takings, "and the gate's running total is untouched" );
 	}
 
 	/// <summary>

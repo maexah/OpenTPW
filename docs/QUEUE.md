@@ -2663,7 +2663,54 @@ artifacts are listed in `docs/history/README.md`.
   window's Users last month (`RIDE_USERS_LAST_MONTH`) is then the thirty days' customers. Confirm: the ride window's
   Users last month on the Belly Bounce after its riders, photographed, beside a census of its rings; each
   satisfaction day as `FUN_004e1e00` makes it (measured in the original: 18 and 18 to 18, 45 and 15 to 30).
-- [ ] **Q177c. A shop's and a won sideshow's cost of goods, booked and withdrawn; with Q96.** Found by Q177's decode
+- [x] **Q177c. A shop's and a won sideshow's cost of goods, booked and withdrawn; with Q96.** Done 2026-09-30,
+  `alexah/194-cost-of-goods-and-deposit`, with Q96. Every payment is now the bank's own: `ParkState.Spend` is the
+  withdrawal `FUN_004d01f0` at every site that pays (purchase, path and queue cells, the drain, a dismissal, a sale's
+  cost of goods, a sold coaster's nought), gated on `WithdrawalsEnabled` and moving `LastBalance`, `TurnEnteredRed` and
+  `ProfitThisYear`; `ParkState.Refund` is now `Deposit` (`FUN_004d0190`: the balance and the profit), which the charge
+  calls (Q96); `Take`, the gate fee, adds the profit too. `ParkState.BookCostOfGoods` is `FUN_004e1920` (today's costs,
+  `mTotalCosts`, then the withdrawal) and `ParkRideOperation.ShopCostOfGoods` is `FUN_004e1b40` (the terms as floats,
+  the sum in double, `__ftol`'s low dword); the settle-up books a won sideshow's cost before its prize and a shop's
+  amount. `ParkWorld` reads object file 1046, 1058 and 1086 and a bought thing starts at 50 and 50; the four bank
+  fields are seeded from the save; `GameCalendar` makes the month's and the year's compares, and the year's change
+  zeroes the profit (`TurnTheYear`). Console: `money` prints profit, last, red and withdrawals; `rings` and `spend` an
+  object's total costs; the bank logs every movement. Gone: `SETTLE_UP_COST_OF_GOODS_BOOKING`, `CHARGE_BANK_DEPOSIT`,
+  `QUEUE_DRAIN_DEBIT_BANK_GATE`. Newly counted: `BANK_ANALYSER_MONEY_IN`, `_MONEY_OUT`, `GATE_FEE_ANALYSER_TOTALS`,
+  `GATE_FEE_CHALLENGE_POST`, `COST_OF_GOODS_CHALLENGE_POST`, `BANK_MONTH_TURN`, `STAFF_MONTHLY_WAGE`,
+  `STAFF_MONTHLY_TRAINING`, `PURCHASE_GOLDEN_TICKET_ARM`, `SALE_TRACK_TEARDOWN` (Q198). Built and tested alone in a
+  worktree: 1394 pass, 0 skip with the game; 549 ran, 845 skipped without; 123 warnings.
+  - **Mapped** (`wf_245f2fbd-cf9`: three Opus readers in Ghidra and a Sonnet code map, each put to an Opus skeptic;
+    `~/.cache/tpw-harnesses/q177c/map/`): every `Spend` caller is the withdrawal and every `Refund` caller the deposit
+    in the original, so the gate belongs in `Spend`, not at the drain alone; the gate fee's five steps; every caller
+    of the bank; the inlined bank bodies in the month turn and the loans.
+  - **Measured across the data** (`q177c/objmoney.py`, all nine park files): the per-sale cost `FUN_004e1b40` gives
+    matches what the original booked in Alexah's saves (Drinks Shop at quality 0 and amount 100: 10 a sale, 5,240 over
+    524; 37 for 30 at quality 100; 22, 37, 10), and the shipped park holds 50 and 50 on all fourteen objects.
+  - **Confirmed in the game** (silent, the stock jungle park, `save/` unchanged; predicted first): run 1
+    (`q177crun.py`, `q177c-run1/`, 23 of 23) and run 2 on the final build (`q177crun2.py`, `q177c-run2/`, 26 of 26).
+    Two guests sent to the Drinks Shop, each held and stepped six frames at a time while inside: the HUD read
+    **88132 then 88142**, and **88142 then 88152**, across one drink each alone in its chunk (`balance-pairs.png`,
+    `run2-evidence.png`), and `money` the same, profit +10, last the new balance, takings unchanged. Over the run the
+    balance moved +165 as the logged charges, gate fees and costs predict; after five gate fees the year's profit read
+    **−11888**, the figure measured in the original's memory. At the first month's change the gadget read 2/1/2000
+    (predicted as 1/2/2000: it prints the month first) and `unimplemented` counted `BANK_MONTH_TURN` 1 and a wage and a
+    training share for each of the 5 staff.
+  - **Mutation** (`q177c/mutate.py`, `mutate.out`, `mutate3.log`): three rounds; two hollow spots found and closed (the
+    save's withdrawal flag, a shop's amount off 50 and 50); the final round, 57 mutants against the committed tree,
+    each red.
+  - **Reviewed** (`wf_5b5068ab-a8f`: four lenses - the code against Ghidra, the C# and its tests, the docs, what else
+    went stale - each finding put to an Opus skeptic; `q177c/review/findings.json`): 26 findings, 5 upheld, 21
+    amended, none refuted; all taken. Among them: `__ftol` keeps a low dword where a double-to-int cast saturates; the
+    sale's track arm (a coaster withdraws nought); the golden-ticket arm, the month turn, the wage and training
+    reached and uncounted; the year's change is message `0xd`, not the month turn; the ingredient's clamp and a ride
+    booking nothing untested; the severance guard; stale test wording.
+  - **Not confirmed on screen**: the year's change (a year is 35 minutes; tested only), withdrawals off, the red stamp,
+    a sold coaster's nought and the ticket count (tested only); a won Jungle Spray's −30 (both runs' plays were lost:
+    +20, logged).
+  - **Found:** Q198 (the month turn, the wage and training; counted); a note under Q141 (the buy list's mystery row);
+    notes under Q97 (the played parks' chances) and Q177d (its two fields are read now).
+
+  The item as written: Found by Q177's decode
   ("The cost of goods and the park's money"). `FUN_004e1920`: the object's today's costs and `mTotalCosts` (file
   1086), then `FUN_004d01f0` on the bank, gated on `mWithdrawalsEnabled` (bank file 28), which moves `mBalance`,
   `mTurnEnteredRed`, `mLastBalance`, the analyser's month costs and `mProfitThisYear`; a shop's amount from
@@ -2678,6 +2725,8 @@ artifacts are listed in `docs/history/README.md`.
   `SETTLE_UP_SPECIAL_INGREDIENT`. Each non-zero hunger or thirst effect takes a draw of the park's one generator,
   which OpenTPW does not share (each behaviour keeps its own): say so at the site. Confirm: a drink at the Drinks
   Shop, the drinker's `peeps` thirst 20 back and happiness 2 more, as the original's (measured: 36 to 20, 50 to 57).
+  From Q177c: both fields are read now (`ParkWorld.CatalogueObject.QualityOfGoods`, `AmountOfSpecialIngredient`; 50 on
+  a bought thing), and the terms read their low byte, as the shop's cost of goods does.
 - [ ] **Q177e. Balloons and costumes.** Found by Q177's decode ("The effects of a visit", 4). A Balloon Shop is
   buyable in Lost Kingdom from the start by its research cost (not measured). The arm reseeds the park's generator
   with the guest's id, draws a bank-10 sprite, keeps `mBalloonScript` and `mRemainingBalloonLife` (quality × 255 / 100,
@@ -2686,6 +2735,17 @@ artifacts are listed in `docs/history/README.md`.
   `SETTLE_UP_APPEARANCE`. Open: which picture frame 1 of the balloons bank is, and what the costume-head callers of
   `FUN_0044b410` draw. Confirm: a guest leaving a bought Balloon Shop with a balloon on screen, and its life counting
   down in `peeps`.
+- [ ] **Q198. The bank's month turn, the wage and training. Decode first.** Found by Q177c's map and review
+  (`ride-operation.md`, "The cost of goods and the park's money", every caller of the bank, and "Who sends the day's
+  change"). The calendar sends the month's change, message `0xc`, on its own compare (`0x004f83b9`). On it the bank's
+  handler runs its month turn `FUN_004d0370` (it banks `mBatchBalance`, pays each loan's instalment, counts the months
+  in the red from `mTurnEnteredRed` and ends the park at six), each member of staff withdraws a month's wage
+  (`FUN_00504c70`, `0x00504cb9`) and the staff manager pays out the training budget (`FUN_00505a10`, `0x00505a45`).
+  Counted now, not built: `BANK_MONTH_TURN`, `STAFF_MONTHLY_WAGE` and `STAFF_MONTHLY_TRAINING`, one of each a member.
+  Also counted: the purchase's golden-ticket arm (`PURCHASE_GOLDEN_TICKET_ARM`; the buy list's side is Q141's note) and
+  a kart or water ride's track at a sale (`SALE_TRACK_TEARDOWN`: its cells cleared and paid for, `0x0052801d`). Decode
+  the month turn's order and the wage's and training's amounts in the park that ships, then build them. Confirm:
+  `money` either side of a month's change with staff hired, and `unimplemented`.
 - [ ] **Q178. Instant Action's catalogue: each item's `Easy_` file, laid last and required. Decode first.** Found by
   Q171's verify (`wf_727b3f26-329`, a reader and a skeptic agreeing; `park-engine.md`, "How a key finds its global").
   In game type 2 (`DAT_00fb3b7c`), `FUN_00413c10` lays `Easy_<stem>.sam` over the category and the item's own file
@@ -3040,7 +3100,14 @@ artifacts are listed in `docs/history/README.md`.
   again"). Q50's game run cut the queue that way, a cut the player cannot make in one click. Route the console
   through the verdict and re-stage Q50's confirmation with a cut the player can make, or say which. Confirm: `path 51 22`
   refused with the verdict's reason.
-- [ ] **Q96. A charge is never deposited in the park's bank.** Found by Q50c's review. `FUN_004e16b0` first calls
+- [x] **Q96. A charge is never deposited in the park's bank.** Done 2026-09-30 with Q177c (its account), on its branch
+  `alexah/194-cost-of-goods-and-deposit`. `ParkState.TakeAt` deposits the price through `ParkState.Deposit`
+  (`FUN_004d0190`, `0x004e16c6`), which moves `Balance` and `ProfitThisYear`, writes no `LastBalance` and has no gate;
+  the analyser's month cash in is counted (`BANK_ANALYSER_MONEY_IN`). Gone: `CHARGE_BANK_DEPOSIT`. The test is now
+  `ParkRideExitTests.PayingForARideBanksThePrice`. Confirmed by Q177c's runs: the log's "Bank: deposit 30" then
+  "Bank: withdrawal 20" at each drink and the HUD's +10, since the two land together; a lost Jungle Spray play's +20.
+
+  The item as written: Found by Q50c's review. `FUN_004e16b0` first calls
   `FUN_004d0190( price )` on the bank thing (`0x004e16bf`..`0x004e16c6`): the balance `+0xc`, the world's `+0x1fc90`
   and the bank's `+0x124`, the adds the gate fee's `FUN_004d0600` makes (`ride-operation.md`, "Spending").
   `ParkState.TakeAt` credits the object alone and counts the rest (`CHARGE_BANK_DEPOSIT`).
@@ -3055,11 +3122,14 @@ artifacts are listed in `docs/history/README.md`.
   `+0x188` and `+0x190`, built from the item at placement but saved and loaded with it (`FUN_004db7d0`,
   `0x004dcd01`..; file 1042 and 1050) and set per object from its window (`FUN_004e1a20`, `FUN_004e21c0`). OpenTPW
   reads the item's in the price opinion, the win roll (`FUN_004e2670`, `ParkRideOperation`) and the prize;
-  Lost Kingdom's save holds the items' own, so nothing differs yet. Read both from the save record, a bought thing's
+  the shipped Lost Kingdom save holds the items' own; Alexah's played parks hold a chance of 55 to 58 on all seven
+  sideshows (the Jungle Spray 58, its item's 25), which the win roll, the price opinion and the excitement read. Read both from the save record, a bought thing's
   from its item, and say it at each site. The window's setters wait on Q31. No game run beyond a census of the two.
   Q165c added a fourth reader: a sideshow's excitement (`ParkRideScore.ExcitementOf`) takes both from the item too.
   From Q177: the shop's booking (`FUN_004e1b40`) reads `+0x188` too, and the win roll draws the park's generator
   (`0x004e26c6`) where `Succeeds` draws the `Random` it is handed.
+  From Q177c: the booking is built and reads the item's cost of goods for both a shop (`ShopCostOfGoods`) and a
+  sideshow (`SettleUp`, the same value as the prize, booked first); switch both with the rest.
 
 - [ ] **Q98. Spot animations are never played. Decode first.** Found by Q50d. `FUN_004fc800(n)` plays animation `n`,
   stamps `mTimeOfLastSpotAnim` (`+0x208`), saves the state in `+0x224` and enters state 8, whose return
@@ -3407,6 +3477,11 @@ artifacts are listed in `docs/history/README.md`.
     waits for a Full Simulation park (Q197). The cheat table can still award one in any type (rows
     `0x0040c6c0`..`0x0040c7e0` call `0x005af810`/`0x005af940`), behind the cheats byte the `CHTS` module loads, which
     Easymode ships set. The checker's decode is Q194's. Review items economy-8, gap3-8.
+  - **From Q177c:** the buy list and its click read the same list of ticket-bought items as the purchase, and neither is
+    built nor counted: a row whose item has a `GoldenTicketCost` not yet bought with tickets is named "??? Mystery
+    Ride! ???" with its negated ticket cost for a price (`0x004ab02e`), and a click on it is refused when the player
+    holds too few tickets (`FUN_004d4b90`, `0x004ac5a9`). The purchase's own arm is counted
+    (`PURCHASE_GOLDEN_TICKET_ARM`). Lost Kingdom's `tourride` (1) and `volcano` (3) carry a ticket cost.
 - [ ] **Q142. The staff pool reads a string table again for every name.** Found by Q70's game run. `ParkStaffPool`
   opens and parses a name table for each candidate it rolls (`RollName`) and STAFF_TYPES for each kind's name
   (`NameOfKind`): 27 of a park load's 28 table reads are six files read over and over, and the staff screen and the

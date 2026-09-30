@@ -1574,8 +1574,8 @@ public static class DebugConsole
 				Reply( $"openthing: asked for thing {(int)Argument( 1 )}" );
 				break;
 
-			// What each object keeps of its days (ParkObjectRings): its two lifetime counts, then each ring's today,
-			// entry, wrap and last finished days, newest first. `rings <thingId>` shows one; the header gives the
+			// What each object keeps of its days: its mTotalCosts (ParkState.CostsFor), then from ParkObjectRings its two
+			// lifetime counts and each ring's today, entry, wrap and last finished days, newest first. `rings <thingId>` shows one; the header gives the
 			// calendar's day count, which steps once each day's change.
 			case "rings":
 				if ( Level.Current?.ParkState is not { } days )
@@ -1586,7 +1586,8 @@ public static class DebugConsole
 
 				var ledgers = days.Objects
 					.Where( thing => parts.Length < 2 || thing.ThingId == (int)Argument( 1 ) )
-					.Select( thing => $"thing {thing.ThingId,2} {days.RingsFor( thing.ThingId ).Census()}" )
+					.Select( thing => $"thing {thing.ThingId,2} total costs {days.CostsFor( thing.ThingId )} "
+						+ days.RingsFor( thing.ThingId ).Census() )
 					.ToArray();
 
 				Reply( $"rings {ledgers.Length} day {GameCalendar.Days}" );
@@ -1619,10 +1620,14 @@ public static class DebugConsole
 			// The FEE and the GATE are here beside the balance because the entry-price screen moves both,
 			// and a screenshot can show that a number changed without saying what it changed to. With
 			// them printed, "the plus button charged one more" is a measurement rather than a picture.
+			// Then the bank's other four, which the original's memory shows beside a drink's +10: the year's profit,
+			// the balance the last withdrawal left, the tick it entered the red and whether withdrawals are on.
 			case "money":
 				Reply( Level.Current?.ParkState is { } purse
 					? $"money balance {purse.Balance} takings {purse.Takings} " +
-						$"fee {purse.AdmissionFee} gate {(purse.ParkIsClosed ? "shut" : "open")}"
+						$"fee {purse.AdmissionFee} gate {(purse.ParkIsClosed ? "shut" : "open")} " +
+						$"profit {purse.ProfitThisYear} last {purse.LastBalance} red {purse.TurnEnteredRed} " +
+						$"withdrawals {purse.WithdrawalsEnabled}"
 					: "money: a park has to be loaded" );
 				break;
 

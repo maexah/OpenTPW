@@ -258,7 +258,13 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004cf533` | Arrival manager's tail, the arm with nobody at the stop (`FUN_0051a9d0` nought): lets the vehicle go at state 4 alone | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf56b` | Arrival manager, vehicle at 2: `JLE` on `mPeopleOnBus`; at nought or below the load is let go (`FUN_0041a960` re-marks `mTimeSig`, the flag cleared) | OpenTPW.Tests/ParkPeopleTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf594` | Arrival manager: after dropping a guest, on to the tail at `0x004cf4b6`; the load is not let go on the drop's sweep | OpenTPW/World/Park/ParkPeople.cs  |
-| `0x004d01f3` | `FUN_004d01f0`, the drain's debit: subtracts only while the bank's `+0x114` is non-zero | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x004cf81a` | Bank constructor FUN_004cf7c0: mWithdrawalsEnabled +0x114 = 1; mLastBalance, mTurnEnteredRed, mProfitThisYear nought before it | OpenTPW.Tests/ParkBankTests.cs  |
+| `0x004d01f3` | `FUN_004d01f0`, the bank's withdrawal: nothing at all while `mWithdrawalsEnabled` (`+0x114`) is nought | OpenTPW.Tests/ParkBankTests.cs  |
+| `0x004d0205` | Withdrawal FUN_004d01f0: mBalance +0xc less the amount, from | OpenTPW.Tests/ParkBankTests.cs  |
+| `0x004d020a` | FUN_004d01f0: JNS on the new balance; below nought with the old mLastBalance +0x11c not below, mTurnEnteredRed +0x120 = mGameTick, from | OpenTPW.Tests/ParkBankTests.cs  |
+| `0x004d0222` | FUN_004d01f0: the red stamp, to here | OpenTPW.Tests/ParkBankTests.cs  |
+| `0x004d0251` | FUN_004d01f0: mProfitThisYear +0x124 less the amount, to here | OpenTPW.Tests/ParkBankTests.cs  |
+| `0x004d034e` | Bank message handler FUN_004d02d0, message 0xd (the year's change): mProfitThisYear +0x124 zeroed | OpenTPW.Tests/ParkBankTests.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004d49a0` | | OpenTPW/World/Park/FixedVector.cs  |
 | `0x004d5e76` | `FUN_004d5de0`: the guard's decide at hire, on `mGameTick & 3` | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004d6545` | `FUN_004d6410`: a staff member's idle stamp tested against `mGameTick` | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/StaffBehaviour.cs  |
@@ -268,7 +274,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004d8b8f` | FUN_004d8b40, a route's length: -1 when FUN_00511ef0 answers 0x70000000 | OpenTPW/World/Park/CellSearch.cs  |
 | `0x004d8ba0` | FUN_004d8b40: | OpenTPW/World/Park/CellSearch.cs  |
 | `0x004d8be7` | FUN_004d8b40: the sum, to here | OpenTPW/World/Park/CellSearch.cs  |
+| `0x004db169` | Object constructor FUN_004db090: mTotalCosts +0x184 zeroed | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x004db389` | FUN_004db090: mQualityOfGoods +0x18c = 50 | OpenTPW.Tests/ParkBankTests.cs OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db3ad` | Object constructor FUN_004db090: mPricePerUse +0x194 copied unclamped from UsageInfo.InitPricePerUse (+0xe4) | OpenTPW.Files/Formats/ItemDescriptionFile.cs OpenTPW.Tests/ParkStartingSettingsTests.cs OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x004db3b3` | FUN_004db090: mAmountOfSpecialIngredient +0x198 = 50 | OpenTPW.Tests/ParkBankTests.cs OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db3f3` | Object constructor: the flags word built from the item's description (from here) | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db420` | Object constructor: the queue-path bit `0x08` from descriptor `+0x40`, `Info.HasQueue` | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db425` | Object constructor: `OR [ESI+0x32],0x8` | OpenTPW/World/Park/ParkBuilding.cs  |
@@ -320,7 +329,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004e0756` | FUN_004e0560, the track arm: the base held 0..100, to here | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x004e07be` | FUN_004e0560: the level times the speed and duration ratios, each held 0.75..1.25 | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x004e13fc` | `Invite`'s `mCanLoad` bail: `FUN_004e0450` and return, skipping the watchdog | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x004e16c6` | The charge's economy feed `FUN_004e16b0`: the price deposited in the park's bank (`FUN_004d0190`) | OpenTPW.Tests/ParkRideExitTests.cs OpenTPW/World/Park/ParkState.cs  |
+| `0x004e16c6` | The charge's economy feed `FUN_004e16b0`: the price deposited in the park's bank (`FUN_004d0190`) | OpenTPW.Tests/ParkRideExitTests.cs  |
 | `0x004e1711` | Economy feed FUN_004e16b0, a shop: the park analyser's month total +0x20130 | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004e18a6` | FUN_004e16b0, a sideshow: the park analyser's month total +0x20380 | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004e2390` | FUN_004e2290, the scrap percentage: 100 only with mNumCustomers (+0x1a0) nought, under 30 days old | OpenTPW/World/Park/ParkBuilding.cs  |
@@ -328,6 +337,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004f7ea0` | Clock constructor FUN_004f7e80: mFunnyTimeStart seeded 2000-01-01 00:00 through SystemTimeToFileTime | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f7ea9` | | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f8321` | Calendar FUN_004f8260: the day of the month compared with mDayAtLastUpdate; a difference sends the day's change, message 0xb | OpenTPW.Tests/GameCalendarTests.cs OpenTPW/Global/GameCalendar.cs OpenTPW/World/Park/ParkState.cs  |
+| `0x004f83b9` | Calendar FUN_004f8260: the month compared on its own; a change sends message 0xc | OpenTPW/Global/GameCalendar.cs  |
+| `0x004f84d0` | FUN_004f8260: the year compared on its own; a change sends message 0xd | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f8792` | | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f87e7` | | OpenTPW.Tests/GameCalendarTests.cs OpenTPW/Global/GameCalendar.cs  |
 | `0x004f8ccc` | Person serialiser FUN_004f8b10, write arm: mCount (+0x2c) written as one byte, the person record's byte 36 | OpenTPW.Files/Formats/Save/ParkWorld.cs  |
@@ -554,6 +565,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00527fa5` | The demolisher arms mode 3, `FUN_0052f200( 3, 0 )`, which posts advisor `0xcb` | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00527fb4` | The demolisher's gate: the object's cached queue length `+0x40` above nought | OpenTPW.Tests/ParkPathBuildingTests.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00527fe8` | The drain's debit scaled by the per-age percentage, `FUN_004e2290` | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00528007` | Demolisher FUN_00527ee0: the queue drain's debit, the bank's withdrawal FUN_004d01f0 | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00528179` | FUN_00527ee0: the track arm's withdrawal; any track type but nought, karts' and water's withdraws nought | OpenTPW.Tests/ParkBankTests.cs OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x0052818d` | The demolisher puts back the tool it was called under, `FUN_0052f200( prevTool, 0 )`; tool 0 installs the idle mode | OpenTPW.Tests/ParkHandTests.cs OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x0052842b` | The demolisher's second footprint pass: `FUN_005367a0( 0, 0 )` on every cell of the shape but its `.` ones | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00528584` | Demolisher FUN_00527ee0: FUN_00545610 frees the object's track ride entry, before the object goes | OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkTrackRideTable.cs  |

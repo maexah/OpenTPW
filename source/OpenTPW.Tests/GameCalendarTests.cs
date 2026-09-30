@@ -187,4 +187,32 @@ public class GameCalendarTests
 		Assert.AreEqual( 0, GameCalendar.Days );
 		Assert.AreEqual( GameCalendar.Epoch, GameCalendar.Now );
 	}
+
+	/// <summary>
+	/// <b>The month and the year each turn on their own edge</b>, the calendar's second and third compares
+	/// (FUN_004f8260, messages <c>0xc</c> and <c>0xd</c>): the month on the update that takes the date from
+	/// 31 January to 1 February, with the day's, and the year on the one that reaches 2001, with both.
+	/// </summary>
+	[TestMethod]
+	public void TheMonthAndTheYearTurnOnTheirOwnEdges()
+	{
+		var months = 0;
+
+		Assert.IsTrue( RunUntil( () => GameCalendar.MonthRolled ), "the month never turned" );
+		Assert.AreEqual( (2000, 2, 1, true, false), (GameCalendar.Now.Year, GameCalendar.Now.Month, GameCalendar.Now.Day,
+			GameCalendar.DayRolled, GameCalendar.YearRolled) );
+
+		Frame( 1f / 60f );
+		Assert.IsFalse( GameCalendar.MonthRolled, "for one update only" );
+
+		Assert.IsTrue( RunUntil( () =>
+		{
+			months += GameCalendar.MonthRolled ? 1 : 0;
+			return GameCalendar.YearRolled;
+		}, mostFrames: 400000 ), "the year never turned" );
+
+		Assert.AreEqual( (2001, 1, 1, true, true), (GameCalendar.Now.Year, GameCalendar.Now.Month, GameCalendar.Now.Day,
+			GameCalendar.DayRolled, GameCalendar.MonthRolled) );
+		Assert.AreEqual( 11, months, "March to December, and January with the year" );
+	}
 }

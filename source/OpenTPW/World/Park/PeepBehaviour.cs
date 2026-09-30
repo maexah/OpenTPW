@@ -232,9 +232,9 @@ public sealed class PeepBehaviour
 	///
 	/// <para>
 	/// <b>It is <see cref="ParkState.Takings"/>, read through <see cref="State"/></b>: taking a fee moves
-	/// <c>mBalance</c> and <c>mProfitThisYear</c> by the same amount (<c>FUN_004d0600</c>, which adds it to
-	/// both and to two running totals on the world), and <see cref="ParkState.Take"/> moves the balance and
-	/// this together. The park's money on screen is <see cref="ParkState.Balance"/>.
+	/// <c>mBalance</c> and <c>mProfitThisYear</c> by the same amount (<c>FUN_004d0600</c>, which also adds it to
+	/// the park analyser's month cash in and gate takings), and <see cref="ParkState.Take"/> moves the balance, the
+	/// year's profit and this together. The park's money on screen is <see cref="ParkState.Balance"/>.
 	/// </para>
 	/// </summary>
 	public int Takings => State.Takings;
@@ -879,7 +879,7 @@ public sealed class PeepBehaviour
 					peep.Happiness = Peep.Change( peep.Happiness, admission.MediumHappinessChange );
 
 				// FUN_004d0600 - the fee goes on the balance and on the year's profit alike, which is
-				// what ParkState.Take does: one call moving both.
+				// what ParkState.Take does, with the gate's running total beside them.
 				State.Take( admission.Fee );
 
 				peep.PaidAdmission = true;
