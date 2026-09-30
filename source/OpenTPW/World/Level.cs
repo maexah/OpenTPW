@@ -350,7 +350,7 @@ public class Level
 		load.Mark( "staff pool" );
 
 		_ = new ParkPeople( park, Balance, () => rides.GateStatus( park ), ParkState, catalogue,
-			thingId => rides.Scheduler.Find( rides.ScriptFor( thingId ) ) );
+			thingId => rides.Scheduler.Find( rides.ScriptFor( thingId ) ), balloonSets: Balloon.SetsIn( FileSystem ) );
 		load.Mark( "people" );
 
 		// Each group of sound at the volume the options give it, and then the park's own music - which

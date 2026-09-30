@@ -2607,15 +2607,7 @@ public sealed class RideScript
 	/// both opcodes halve with an unsigned <c>SHR</c>, so that state draws <c>0x40000000</c> and every draw is
 	/// nought or more (docs/exe/park.md, "`RAND` (28)").
 	/// </remarks>
-	private int NextDraw()
-	{
-		_random = (_random * 0x19660Du) + 0x3C6EF35Fu;
-		_random = (_random >> 13) | (_random << 19);
-
-		var magnitude = (int)_random < 0 ? 0u - _random : _random;
-
-		return (int)(magnitude >> 1);
-	}
+	private int NextDraw() => (int)(ParkGenerator.Draw( ref _random ) >> 1);
 
 	/// <summary>
 	/// Sets the generator's state, as the engine's own setter (<c>FUN_00516370</c>) does. The tests reach

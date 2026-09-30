@@ -426,7 +426,8 @@ arrival radius is the same (`DefaultRadius = One / 5`, times 1.6), and so is a r
 `FUN_0050fd40` answers `0x10000` when its total `+0xa0` is nought (`0x0050fda8`), as `PeepNavigator.Progress` does.
 **Where it still differs.** The jitter draws from `PeepBehaviour`'s `System.Random`: `RideScript.NextDraw` reproduces
 `FUN_00516330` exactly, `0x80000000` included, then halves it as `RAND`'s unsigned `SHR 1` does, but per script and
-seeded 1, and the engine's own seed is not established, so only the range and the one draw a call are the original's.
+seeded 1, where the engine's is one state for the whole park, the world's `mRandomSeed`, reset to an id at eight
+points (`park.md`, "`RAND` (28)"), so only the range and the one draw a call are the original's.
 Seed 1's cycle, 248,316,293 states, never meets `0x80000000`, which lies on another of 1,300,914,561.
 A direction neither switch knows stands the point at the cell's centre, counted
 `QUEUE_PLACE_DODGY_DIRECTION`, where the original routes with whatever its stack held. A place past the queue's cells
@@ -1722,7 +1723,7 @@ Drinks Shop **30**, Jungle Spray sideshow **20**, **Belly Bounce zero**; `mTotal
 
 ## The effects of a visit — `FUN_004fe1e0`
 
-Named by its own strings: `"Litter gone up by %d, is now %d"`, `"Customer bought a balloon, Aaah!"`, `"Trying to give a balloon to a pe…"`, `"Customer returning a costume."`, `"Balance file error: Shop has unk…"`, `"Sideshow won - happiness up %d p…"`. What it does, in order:
+Named by its own strings: `"Litter gone up by %d, is now %d"`, `"Customer bought a balloon.  Aaah."`, `"Trying to give a balloon to a pe…"`, `"Customer returning a costume."`, `"Balance file error: Shop has unk…"`, `"Sideshow won - happiness up %d p…"`. What it does, in order:
 
 1. **A sideshow (`+0x4ac` == 2) PAYS OUT:** `FUN_004e1a10` — the **cost of goods**, not the chance of winning — feeds `FUN_004e1920` (`0x004fe225`: the cost booked against the object and debited from the park's balance, "The settle-up's bookkeeping"; OpenTPW books it, and the shop's, through `ParkState.BookCostOfGoods`), and then **`person[+0x1a0] += FUN_004e1a10()`** — a prize ADDED to the guest's cash. A shop (`+0x4ac` == 1) books `FUN_004e1b40`, its cost of goods scaled by its quality and ingredient settings, instead (`0x004fe251`), and pays nobody. **In Lost Kingdom that prize is 50 against a price of 20**, so winning the Jungle Spray leaves a guest 30 up and the park 30 down.
 2. **The excitement match**, `FUN_004fdcc0( object )` at `0x004fe259`: how the thing's excitement suited the guest's kind
@@ -1742,26 +1743,16 @@ Named by its own strings: `"Litter gone up by %d, is now %d"`, `"Customer bought
    gives 20 back at the stock amount (measured in the original: 36 to 20). In Lost Kingdom every arm is a jungle shop:
    fat the Burger Shop (1207), salt the Fries Shop (1212), ice the Drinks Shop (1203), sugar the Ice Cream Shop (1206);
    the Steak Restaurant's file comment says fat and its value is nought. OpenTPW builds this and the `+0x198` terms
-   above (`ParkRideOperation.TakeTheIngredient`, `Peep.Pace`; Q177d), and counts the arm below
-   (`SETTLE_UP_APPEARANCE`, Q177e).
+   above (`ParkRideOperation.TakeTheIngredient`, `Peep.Pace`; Q177d).
 4. **Shop arms on the descriptor's `+0x15c`, `AppearanceEffect`:** nought does nothing; any value but 0, 1 or 2 logs a
-   balance-file error into the bare `RET` and does nothing more. Both arms below draw the park's generator through
-   `FUN_00541f70` (`0x004fe652`, `0x004fe6aa`, `0x004fe703`) and `FUN_00541fd0` (`0x004fe716`), whose `ECX` is the world
-   by its other pointer, `[0x007cf83c]`.
-   - **1, a BALLOON** (`0x004fe6ba`..`0x004fe78a`): the assert that the guest holds none goes to the bare `RET`; the
-     park's generator is **reseeded with the guest's id** (`FUN_00516370`), so a guest's balloon depends on their id
-     alone; a variant of sprite bank 10 ("balloons") is drawn and a world sprite built (script `0x0074f480`, frame 0
-     held), its handle in `mBalloonScript` `+0x210`; `mRemainingBalloonLife` `+0x214` (file 495) = the shop's quality
-     × 255 / 100, held to 25..255 (`DAT_0075d0f0`, `DAT_0075d0f4`); event `0xc` naming the shop. The life loses one on
-     each of the guest's needs sweeps outside states 16 and 17 on cell kinds 0, 1, 3, 9 or 10 (`FUN_00501650`), and at
-     nought the balloon is let go (`FUN_004fe950`: script `0x0074f4c0`, frame 1 for 13 turns, then gone) - about 25 s,
-     2 min or 4 min at quality 0, 50 or 100. Riding frees the sprite and keeps the life (`SetState(0x10)`); leaving the
-     ride rebuilds it, reseeding again, unless the thing left is a balloon shop (`SetState(0xf)`). Leaving the park lets
-     it go, and a prankster (`mPrankeryIndex` 102) pops the first on its cell. Nothing reads it for happiness or a need.
-   - **2, a COSTUME** (`0x004fe642`..`0x004fe6b5`): a guest not in one gets `mESPSprite` `+0x24` (the sprite bank) 2 and
-     `mSpriteID` `+0x20` a draw from bank 2, and event `0xb`; one already in costume ("Customer returning a costume.")
-     goes back to bank 0, reseeded with their id, which gives their arrival picture back, and no event. The picture
-     changes when the guest's sprite is rebuilt on leaving the shop. It never wears off and changes nothing else.
+   balance-file error (`0x0075d7b8`) into the bare `RET` and does nothing more (`0x004fe615`..`0x004fe63d`). Both arms
+   draw the park's generator through `FUN_00541f70` (`0x004fe652`, `0x004fe6aa`, `0x004fe703`), and the balloon arm also
+   through `FUN_00541fd0` (`0x004fe716`), each taking its `ECX` from the world's other pointer, `[0x007cf83c]`; the
+   balloon arm and a costume's return reseed it with the guest's id first, the giving of a costume does not.
+   - **1, a BALLOON** (`0x004fe6ba`..`0x004fe78a`): a balloon in the guest's own colour and a life from the shop's
+     quality; see "A held balloon", below. OpenTPW builds it (`ParkRideOperation.GiveABalloon`, Q177e).
+   - **2, a COSTUME** (`0x004fe642`..`0x004fe6b5`): the guest's picture is changed to the theme's costume, or given back;
+     see "A costume", below. OpenTPW counts it (`SETTLE_UP_COSTUME`, Q177f).
 5. **A toilet (`mFlags & 1`)**, in order (`0x004fe78f`..`0x004fe7fb`): dirties the toilet by the need the guest brought
    (`FUN_004e2440` with the need's byte: the State of repair `+0x44` falls by 0.05 of it, held to 0..100, and on falling
    below 25 - "Toilet has become dirty and smelly" - unstamps `RegionFX` 1 around the toilet's cell and stamps 6, each
@@ -1776,6 +1767,109 @@ Named by its own strings: `"Litter gone up by %d, is now %d"`, `"Customer bought
 6. **Then, for a sideshow only:** `person[+0x1d0] += 1` and a happiness rise computed from **`log2( costOfGoods / pricePerUse )`** - `FUN_004e1a10` (`+0x188`, cost of goods) over `FUN_004e1a00` (`+0x194`, price), `FILD`/`FIDIV` at `0x004fe835`/`0x004fe84b`, the logarithm by `FYL2X` over `ln 2` - scaled by the byte at `DAT_0078505c` (`PeepInfo.MediumHappinessChange`), and logged as `"Sideshow won - happiness up %d points to %d"`.
 
 **The signs are not uniform**, and the decompile shows it: `FUN_004fe1e0` does `-(float)desc + meter` for thirst and hunger but `+(float)desc + meter` for vomit, happiness and litter. **Deduct two, add three** — which is exactly what the balance file's own comment column says.
+
+### A held balloon
+
+Decoded first-hand and put to an adversarial check (Q177e, every claim upheld or amended at its address); measured in
+Alexah's two played Lost Kingdom saves, written by the original, which hold 29 and 28 balloons.
+
+1. **The arm** (`0x004fe6ba`..`0x004fe78a`, `ESI` the guest, `EBX` the shop): a log (`"Customer bought a balloon.  Aaah."`)
+   and the assert that `mBalloonScript` is nought (`"Trying to give a balloon to a person who already has one!"`), both
+   into the bare `RET`; the park's generator reseeded with the guest's id word (`FUN_0050b350`, `FUN_00516370`,
+   `0x004fe6fc`); `FUN_00541f70( 10 )` for the bank, `(r >> 2) %` the kind's bank count, one; `FUN_00541fd0( 10, bank )`
+   for the set, `(r >> 2) %` the bank's count of sets with pictures (`+0x21e`, four); a sprite made by
+   `FUN_00475a10( 0x0074f480, 10, bank, set, 0.0, 0.0, 0.0 )`, its one-based slot in the table `DAT_007b49f0` kept in
+   `mBalloonScript` `+0x210`; `mRemainingBalloonLife` `+0x214` = the object's `mQualityOfGoods` byte (`+0x18c`) × 255 /
+   100, unsigned and truncated, held to 25..255 (`DAT_0075d0f0`, `DAT_0075d0f4`), so 127 for a bought shop; event `0xc`
+   naming the shop (`0x004fe775`). **So a balloon's colour is its guest's id and nothing else**: predicted from the id,
+   all 29 and 28 saved balloons match, balloons rebuilt after rides among them; the first draw instead matches 10 and
+   an id one higher 4, near the 7.25 of chance.
+2. **The bank.** One in the whole game, `Generic\Balloons\SPR_BL`, kind 10 ("balloons", `0x00764090`): four sets of two
+   frames and no directions, red, green, blue and yellow (sets 0 to 3), frame 0 the whole balloon and frame 1 the same
+   colour burst. Every picture's top is 73 to 79 pixels above its anchor, so a balloon floats above its guest's head
+   (FileFormats `sprites.md`).
+3. **Drawn with its guest every frame** (`FUN_004fa030`, called for a model-1 thing holding one, `0x004fa184`; from the
+   per-frame driver `FUN_00518f90` at `0x00519012`, and from two more callers: the state setter's case `0xf`
+   (`0x00501fc5`, `t` nought, when the left thing's descriptor `+0x100` is set) and the constructor (`0x004fb265`)). The
+   guest is sampled twice by `FUN_004f9f00`: at the frame's fraction of the sweep, held to 0..1, and 0.35 of a sweep
+   earlier (`0x0075c910`), held to -1..2, each `prev + (cur - prev) × t` truncated by `__ftol` and scaled by 10 over
+   65536. `FUN_004fe900` puts the sprite at the guest's `mLastPosX`/`mLastPosY` (`+0x218`, `+0x21c`, file 430 and 434),
+   last frame's trailing sample, and stores this frame's there: the balloon trails a frame and a third of a sweep. Its
+   `+0x8c`, the height above the ground under it, is `1.0 - (|dx| + |dz|) / 0.5 + 1.5 × bob`, the gap between the two
+   samples, unheld, so a walking guest's hangs lower (the saves: standing holders 1.00 to 1.30, walkers down to -1.2).
+   The bob is the middle float of twenty rows at `0x0075c810` (0 up to 0.2 in steps of 0.02 and back, the last
+   nought; the other two floats nought in every row), row `(id + P) % 20`; the phase `P` (`0x007cedd4`) steps once every
+   eleven placements of any balloon (`0x007cedd8` counts 0.1 to 1.0, `0x004fa244`..`0x004fa28b`), shared by the whole
+   park and never reset. The draw (`FUN_00475430` → `FUN_00542010`) puts it at the ground plus `+0x8c` at the alpha
+   byte `+0xa0`, once its script has shown a frame (`+0x114`).
+4. **It lives on the needs sweeps.** In `FUN_00501650`'s `(id & 3)` block (`0x005018f8`..`0x00501949`): outside states 16
+   and 17 and on a cell `FUN_004fa990` passes (the runtime cell's `mType` under the thing's own cell bytes: 0, 1, 3, 9
+   or 10), one draw of the generator, a tenth of which picks a thought (`FUN_004fc8a0`), then the life down by one,
+   unsigned, whether or not a balloon is showing, and at nought `FUN_004fe950`. At a sweep in four, about 25 s, 2 min
+   or 4 min at quality 0, 50 or 100 of qualifying time. The shipped park's guests all stand on the gateway's approach,
+   cells of type 30, which do not count.
+5. **Let go** (`FUN_004fe950`, whose callers are the countdown, the prank, the state setter's case `0x11` and the
+   person-hide `FUN_004f9ed0`): the same sprite put on the script at `0x0074f4c0` by `FUN_00475b80`, which keeps its
+   place, colour, alpha and due time, and `mBalloonScript` nought; the life is left. The script (words 1666, then
+   1654..1664): the alpha to 250, then frame 1 and the alpha down by 20 while it is still nought or more
+   (`0x004763d0`'s comparison 8, signed), then the end word `0x005da3c0`, which hides it; the next due turn frees it. So
+   **it bursts where it was, thirteen turns from alpha 250 down to 10, and neither rises nor drifts**. Until its next
+   turn it keeps showing the whole balloon, unplaced.
+6. **Boarding and leaving.** Boarding anything (state `0x10`, `0x00502156`) deletes the sprite with no burst
+   (`FUN_00475550`) and keeps the life. Leaving (state `0xf`, `0x00501fd3`..`0x0050208a`), with life left and the thing
+   left (`mMajorDest`'s descriptor) not a balloon shop, builds it again, reseeded, so in the same colour, with no event
+   and the life as it was; the assert that none is held goes to the bare `RET`. The giving (the settle-up's arm,
+   `0x005015f4`) and this rebuild (`0x005015fd`, straight after) run only on ExitRide's routable path
+   (`0x005015e1`..`0x005015ef`); boarding is admission's (`0x005008ef`, `0x00501bc7`), not ExitRide's. A rider put off by a sale (`FUN_004fb360`) goes to state 6
+   and gets none back until they next leave a thing.
+7. **Leaving the park does not burst it.** The guest keeps it through states `0x12` to `0x15` and is deleted at the bus
+   (`FUN_00500bd0` → `FUN_0050b780` → `FUN_004fb330`), which deletes the sprite outright. A guard's catch
+   (`FUN_004feb10`) deletes it too, before state `0x11`, whose own let-go then finds none.
+8. **The prankster** (`FUN_004fec90`, arm 102): a guest whose `mPrankeryIndex` is 102 (100 by the `PrankeryLikelihood`
+   roll at construction, the second of two draws, plus `id % 3`), below 15 happiness, lets go the balloon of the first
+   other guest on its cell who holds one (`0x004ff156`..`0x004ff1f7`). The life is left, so the victim gets it back on
+   leaving their next thing.
+9. **A save keeps it**: `mBalloonScript` and `mRemainingBalloonLife` are read back raw, and the table is rebuilt slot for
+   slot (`FUN_00475730`), so the slot still names the balloon. Every saved balloon is kind 10, bank 0, frame 0, alpha 255,
+   on script 1650 at 1652.
+10. **What reads it.** Case 9 of the challenge check `FUN_004d1660` counts the guests on counting cells who hold one
+    against all of them (`FUN_004c9530` over `FUN_004c9130`); case 10 counts costumes the same way. Lost Kingdom's
+    `ChallengesInThisLevel[7]` has `ChallengeType` 9; that the file's numbers are the switch's is not checked. Nothing
+    reads it for happiness or a need.
+
+**OpenTPW builds it** (`Balloon`, `ParkRideOperation.GiveABalloon` and `Dismiss`, `Peep.SetState` and `Peep.Tick`,
+`ParkPeople`, `ParkGuestSprites.DrawBalloons`), counting the event (`SETTLE_UP_BALLOON_EVENT`) and the thought picker's
+draw (`NEEDS_THOUGHT_PICKER`). Its departures: no shared generator, so the reseed's effect on the park's later draws
+is not reproduced (`ParkGenerator`); the bob's phase counts placements on the frame clock at 30 a second rather than
+per rendered frame; the two other callers of the placement are not reproduced; whether the per-frame placement runs
+while a park's menu has paused the clock is not traced; a saved balloon's first turn is one interval after the load,
+as a person's is; a park saved while a balloon bursts loses the burst at load, as no guest names it any more and its
+loop stack is not read (none of the 79 balloons in Alexah's four played saves that hold any is bursting). No prank
+and no challenge exists here to read it.
+
+### A costume
+
+Decoded and checked with the balloon (Q177e); built by Q177f.
+
+1. **Giving** (`0x004fe642`..`0x004fe672`): a guest whose `mESPSprite` `+0x24` is not exactly 2 gets 2 and `mSpriteID`
+   `+0x20` = `FUN_00541f70( 2 )`, `(r >> 2) %` the theme's costume banks, with no reseed; event `0xb` naming the shop.
+   Lost Kingdom has one costume bank, `Jungle\Costumes\SPR_TI`, so it is always 0 and the draw is taken all the same.
+2. **Returning** (`0x004fe674`..`0x004fe6b5`, "Customer returning a costume."): `mESPSprite` 0, the generator reseeded with
+   the guest's id, `mSpriteID` = `FUN_00541f70( 0 )`; no event. The arrival (`FUN_004faec0`, `0x004fb18d`..`0x004fb1bc`)
+   rolls the same way, so the return gives the arrival's child back while the count of kid banks is unchanged.
+3. **The count of kid banks is capped by the detail level**: `Sprites_LoadFolder` loads the four avatars first (`SPR_BI`,
+   `SPR_KI`, `SPR_TA`, `SPR_SU`, `0x00764030`), then the rest by name, and stops at `FUN_0041a9d0`'s cap: 2, 4, 6 or 8
+   for `GameOptions.NUMKIDS` (`DAT_007858d0`) 0, 1, 2 or more. `low.sam` sets 0 and `med.sam` and `high.sam` 2, so the
+   default game has **six** (`BI, KI, TA, SU, BE, CH`); the `.sam` files' own comment ("0->4, 1->6, 2->8") is wrong.
+   Measured: the shipped park's 13 guests fit the roll over 8, Alexah's played saves 296 of 298 and 53 of 53 over 6.
+   A load reduces `mSpriteID` and each sprite's bank modulo the count again (`0x004f93a6`, `FUN_00475f40`).
+4. **When it shows.** The picture changes at state `0xf` on leaving, which builds the sprite from `+0x24`/`+0x20` when its
+   handle `+0xc` is nought (`FUN_004d4140`); every costume shop's `RideHandlesSprite` is 0, so boarding freed it. Nothing
+   else changes: the walk's scripts are the same for any kind.
+5. **The heads.** `FUN_0044b410` puts a head on a ride's node. For five of its six callers (`ADDHEAD`, `WALKON` action
+   4, `COAST` cars, the `BUMP` arm `FUN_00549c60` reached from `BUMP` 4 and 12, `TOUR` cars) it asks `FUN_004fcac0` of
+   the rider: a costume head (kind 3) for a guest in costume, else the kid head of the same index (kind 1). The sixth,
+   the bumper family's re-show `FUN_00548e80`, passes handle 0 (`0x00548ffe`) and draws kid head 0.
 
 ### The excitement match — `FUN_004fdcc0`
 
@@ -1888,8 +1982,9 @@ nought arm was a loss by its cash and its thought ("The settle-up's bookkeeping"
 | `+0x1f4` | `mQueueMoveDelay` (file 490) |
 | `+0x208` | `mTimeOfLastSpotAnim` |
 | `+0x20c` | happiness at the queue's join, a float; not saved ("The settle-up's bookkeeping") |
-| `+0x210` | `mBalloonScript` |
+| `+0x210` | `mBalloonScript` (file 406): the balloon's one-based slot in the sprite table, nought for none ("A held balloon") |
 | `+0x214` | `mRemainingBalloonLife` (file 495) |
+| `+0x218` / `+0x21c` | `mLastPosX`, `mLastPosY` (file 430, 434): where the held balloon goes next frame, in world units |
 | `+0x220` | `mState` |
 | `+0x224` | `mSavedState` |
 | `+0x20` / `+0x24` | `mSpriteID`, the variant, and `mESPSprite`, the sprite bank (0 kids, 2 costumes) |
@@ -2205,7 +2300,8 @@ after the lost play. Of the run's seven checks six matched; the seventh, balance
 
 `ParkRideOperation.SettleUp` builds steps 0, 1, 2, 4, 5 and 7 and a sideshow winner's count beside the charge, the
 prize, the excitement match, the five effects, the ingredient's two docks, gain and fat, salt, ice and sugar
-(`TakeTheIngredient`; the sugar feeds `Peep.Pace`, Q177d), the toilet's relief, the winner's cheer and the lost dock; the fatigue
+(`TakeTheIngredient`; the sugar feeds `Peep.Pace`, Q177d), a Balloon Shop's balloon (`GiveABalloon`, Q177e; "A held
+balloon"), the toilet's relief, the winner's cheer and the lost dock; the fatigue
 step is a no-op in both games (said at the site). Each object's six rings and two counts are `ParkObjectRings`, seeded
 from its record, fresh for a thing built, dropped with a thing sold; the charge credits today's takings and the door's
 refusal counts the walk-away; the charge banks the price and a shop's or won sideshow's cost of goods is booked and
@@ -2213,7 +2309,7 @@ withdrawn ("The cost of goods and the park's money", OpenTPW). The day's change 
 `GameCalendar`'s edge; that calendar counts from nought rather than from the save's clock (`GameCalendar.Rebase`), so
 its days turn at other moments than the original's would after the same load, and it does not roll on the first tick.
 The join's snapshot is `Peep.JoinHappiness`. The ride window's Users last month (filled on show and every four
-seconds, on the frame clock) and the all-visitors list's Rides Ridden read them. Counted by name: `SETTLE_UP_EVENT_HISTORY`, `_APPEARANCE`, `_ANALYSER_SAMPLE` (step 6),
+seconds, on the frame clock) and the all-visitors list's Rides Ridden read them. Counted by name: `SETTLE_UP_EVENT_HISTORY`, `_BALLOON_EVENT`, `_COSTUME` (Q177f), `_ANALYSER_SAMPLE` (step 6),
 `_SIDESHOW_THOUGHT` and the toilet's three. Its win roll (`PeepBehaviour`, `Succeeds`) and the ingredient's docks (the
 ride turn's) draw from `System.Random` where the original draws from the park's generator, and the roll reads the
 item's chance where the original reads the object's (Q97).
@@ -2576,7 +2672,7 @@ live at person `+0x218`/`+0x21c` (save 430 / 434), and their only live reader is
 `+0x210`: it places a *secondary* sprite at the pair's old value and only then overwrites them, which is
 one frame of deliberate lag for something trailing its owner. **That something is the held balloon**:
 `+0x210` is the sprite the settle-up's balloon arm builds, and `FUN_004fa030` places it through `FUN_004fe900` each frame
-for a guest holding one (`0x004fa184`..`0x004fa196`), so it trails one frame behind ("The effects of a visit", 4); the
+for a guest holding one (`0x004fa184`..`0x004fa196`), so it trails a frame and a third of a sweep behind ("A held balloon", 3); the
 height term shortens as the owner moves. The reads of `+0x210` in
 `FUN_005019f0` case `0x11` are off a staff record, so they do not question that name ("The guest record, as named by the game's own save reader" above). It does not bear on the walking case either way.
 
@@ -2790,8 +2886,8 @@ The Jungle Spray is queued for and invited in **about one run in five** at that 
 
 ## Open and unverified
 
-- **The balloon and costume SPRITE path**: decoded ("The settle-up's bookkeeping", the item's other effects); which
-  picture frame 1 of the balloons bank is, and what the costume-head callers of `FUN_0044b410` draw, are not.
+- **A costume's return for two of Alexah's guests** (jungle ids 213 and 181, `mSpriteID` 1), which fit the arrival roll
+  at no count of kid banks ("A costume", 3). And `FUN_0041a9d0`'s custom-detail path (`FUN_0044a590` answering `0x4000`).
 - **`FUN_005019f0` case `0x11`**, the walk of the `mFirstGuard` chain through `+0x210` / `+0x212`.
 - **Whether a shop's duration of nought is correct** (it may simply not read it) where `FUN_004df8f0` would take a clamped value from the descriptor's `+0x1a0`. A bought one's is: the constructor writes `+0x5c` only for a starting duration above nought, and every shop's is nought (Q171).
 - **Refuted, so do not repeat:** "only `UNBOUNCE` writes `VAR_LETMEOFF`" — there are six writers, and the claim is false for 16 of the park theme's 17 dismissing ride scripts. "The shops' `mOperatingCapacity` might be nought, leaving them permanently full" — every visitable object has a non-zero capacity.

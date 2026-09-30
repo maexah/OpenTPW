@@ -31,8 +31,8 @@ namespace OpenTPW;
 /// the far half of the compass is drawn mirrored.
 /// </para>
 /// <para>
-/// <b>Engine and content.</b> Drawing world sprites is engine, and the same path will carry litter,
-/// balloons and thought bubbles when those arrive. Which sprites exist, and where, is the park's.
+/// <b>Engine and content.</b> Drawing world sprites is engine; it carries the people and their balloons, and
+/// will carry litter and thought bubbles when those arrive. Which sprites exist, and where, is the park's.
 /// </para>
 /// </summary>
 public sealed class ParkGuestSprites : ModelEntity
@@ -67,6 +67,9 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// <summary>How many ways round the compass a heading is folded into before a set is asked for.</summary>
 	private const int Compass = 8;
 
+	/// <summary>How many bursting balloons the quads are sized for before <see cref="Build"/> is asked for more.</summary>
+	private const int BurstingRoom = 16;
+
 	private const int AtlasWidth = 1024;
 
 	private const int Padding = 4;
@@ -94,6 +97,15 @@ public sealed class ParkGuestSprites : ModelEntity
 	private int _uploaded;
 
 	/// <summary>
+	/// The balloons' shared bob: its phase and the placements counted toward its next step - the globals
+	/// <c>0x007cedd4</c> and <c>0x007cedd8</c> (<see cref="Balloon.AdvanceBob"/>). Static, as those are: a park
+	/// loaded after another carries on from where the last left them.
+	/// </summary>
+	private static int _bobPhase;
+
+	private static float _bobCount;
+
+	/// <summary>
 	/// The pool this park is drawing with, so the debug console can read the census back. Same
 	/// arrangement as <see cref="ParkGround.Current"/>, and it exists for the console alone.
 	/// </summary>
@@ -113,8 +125,8 @@ public sealed class ParkGuestSprites : ModelEntity
 	internal static bool DebugFacing { get; set; }
 
 	/// <summary>
-	/// Enough colours to tell the <b>nine</b> sprite kinds this maps apart at a glance - see
-	/// <see cref="DebugFacing"/>. <c>FolderFor</c> covers 0 to 8, and an index past the end clamps.
+	/// Enough colours to tell the <b>nine</b> kinds of people apart at a glance - see <see cref="DebugFacing"/>.
+	/// <c>FolderFor</c> covers them, 0 to 8, and the balloons, 10, which get no dash; an index past the end clamps.
 	/// </summary>
 	private static readonly uint[] DebugColours =
 	[
@@ -155,6 +167,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		6 => "esprites/Generic/Mechanics",
 		7 => "esprites/Generic/Guards",
 		8 => "esprites/Generic/Researchers",
+		Balloon.SpriteKind => Balloon.Folder,
 		_ => null
 	};
 
@@ -162,7 +175,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// The four banks the original loads <i>before</i> it sweeps the folder, in this order, and only for
 	/// kids and kid heads. <c>Sprites_LoadFolder</c> matches this table - it is at <c>0x764030</c> in the
 	/// executable - against the folder's files first, loads what it finds, and only then sweeps up
-	/// whatever is left.
+	/// whatever is left, in name order.
 	///
 	/// <para>
 	/// It matters because a bank is numbered by the order it was loaded in, and that number is what the
@@ -182,11 +195,15 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// </summary>
 	internal static string[] BanksIn( BaseFileSystem data, string folder, int type )
 	{
+		// By name, ignoring case: the loader sorts the folder with _stricmp before it loads anything (FUN_00541210,
+		// called at 0x005419a4). _stricmp folds to lower case, so '_' sorts before the letters.
 		var files = data.GetFiles( folder )
 			.Where( file => file.EndsWith( ".esp", StringComparison.OrdinalIgnoreCase ) )
+			.OrderBy( file => Path.GetFileName( file ).ToLowerInvariant(), StringComparer.Ordinal )
 			.ToArray();
 
-		// Kinds 0 and 1 are kids and kid heads; every other folder is numbered just as it comes.
+		// Kinds 0 and 1 are kids and kid heads, whose four avatars come first; every other folder is numbered in
+		// name order.
 		if ( type is not (0 or 1) )
 			return files;
 
@@ -204,8 +221,8 @@ public sealed class ParkGuestSprites : ModelEntity
 		if ( park == null )
 			return;
 
-		// Only the people. The table can hold litter and balloons and thought bubbles too, and those
-		// have no thing of their own to take a position from yet.
+		// Only the people. The table's balloons are taken by their guests (ParkPeople, by mBalloonScript) and
+		// drawn by DrawBalloons; litter and thought bubbles have no thing of their own to take a position from yet.
 		var byPerson = park.People.ToDictionary( person => person.SpriteSlot, person => person );
 
 		foreach ( var sprite in park.Sprites )
@@ -216,7 +233,7 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		Current = this;
 
-		// Only the banks those sprites actually wear. Loading every person bank in the archive would be
+		// Only the banks those sprites actually wear, and the balloons'. Loading every person bank in the archive would be
 		// 5,316 pictures and an atlas 13,885 pixels tall, past what a good many devices will allocate at
 		// all; the shipped park wears eleven banks and comes to well under two thousand.
 		Load( themeName, park );
@@ -234,7 +251,11 @@ public sealed class ParkGuestSprites : ModelEntity
 		var pictures = new List<SpritePicture>();
 		var placed = new List<(int Type, int Bank, int First, int Count, SpriteBankFile File)>();
 
-		foreach ( var key in _people.Select( p => (p.Sprite.Type, Bank: p.Sprite.Bank + p.Sprite.BankOffset) ).Distinct() )
+		// And the balloon bank, whoever wears what: a Balloon Shop bought later hands them out.
+		var worn = _people.Select( p => (p.Sprite.Type, Bank: p.Sprite.Bank + p.Sprite.BankOffset) )
+			.Append( (Type: Balloon.SpriteKind, Bank: 0) );
+
+		foreach ( var key in worn.Distinct() )
 		{
 			var folder = FolderFor( key.Type, themeName );
 
@@ -335,13 +356,15 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// crowd has to be one mesh.
 	///
 	/// <para>
-	/// Re-run whenever the crowd changes size, not only at load - see <see cref="Add"/>.
+	/// Re-run whenever the crowd changes size, not only at load - see <see cref="Add"/> - and when more balloons
+	/// are bursting than it has room for.
 	/// </para>
 	/// </summary>
-	private void Build()
+	private void Build( int bursting = BurstingRoom )
 	{
-		// Two quads a person: the sprite, and the debug dash that is usually collapsed to nothing.
-		var quads = _people.Count * 2;
+		// Three quads a person - the sprite, the debug dash that is usually collapsed to nothing, and a balloon -
+		// and room for the balloons bursting, which outlast their guests.
+		var quads = (_people.Count * 3) + bursting;
 
 		_vertices = new Vertex[quads * 4];
 
@@ -471,6 +494,10 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		// The simulation, if this park is running one. Asked once a frame rather than once a person.
 		var people = ParkPeople.Current;
+
+		// Room for the balloons bursting, which the crowd's size does not cover, before anything is written.
+		if ( people is { Bursting.Count: > BurstingRoom } && ((_people.Count * 3) + people.Bursting.Count) * 4 > _vertices.Length )
+			Build( people.Bursting.Count + BurstingRoom );
 		var cellX = field?.CellSizeX ?? 0f;
 		var cellY = field?.CellSizeY ?? 0f;
 
@@ -516,6 +543,8 @@ public sealed class ParkGuestSprites : ModelEntity
 				WriteGroundDash( used++, centre, angle, sprite.Type, plain );
 		}
 
+		used = DrawBalloons( people, field, cellX, cellY, alpha, used );
+
 		for ( int i = used; i < _uploaded; ++i )
 			Collapse( i );
 
@@ -540,6 +569,70 @@ public sealed class ParkGuestSprites : ModelEntity
 		} );
 
 		TranslucentModel.Draw();
+	}
+
+	/// <summary>
+	/// Places every held balloon and draws it, then every one bursting where it was left - the balloon half of the
+	/// original's per-frame placement (<c>FUN_004fa030</c>, guests only), which runs whether or not the guest's own
+	/// picture is placed. Answers the next free quad.
+	/// </summary>
+	private int DrawBalloons( ParkPeople? people, HeightfieldFile? field, float cellX, float cellY, float alpha, int used )
+	{
+		if ( people == null || !_banks.TryGetValue( (Balloon.SpriteKind, 0), out var bank ) )
+			return used;
+
+		foreach ( var peep in people.Guests.Values )
+		{
+			if ( peep.Balloon is not { } held )
+				continue;
+
+			// With no walk, the balloon stays where it was.
+			if ( people.WalkFor( peep.ThingId ) is { } walk && cellX > 0f && cellY > 0f )
+			{
+				var placed = Balloon.Place( walk.Previous, walk.Position, alpha, cellX, cellY, peep.ThingId, _bobPhase,
+					peep.BalloonLastX, peep.BalloonLastY );
+
+				(held.X, held.Y, held.Height) = (placed.X, placed.Y, placed.Height);
+				(peep.BalloonLastX, peep.BalloonLastY) = (placed.LastX, placed.LastY);
+
+				// The shared phase counts every placement, on the frame clock here (Balloon.PlacementsPerSecond). Whether
+				// the original's per-frame placement runs while a park's menu has paused its clock is not traced.
+				(_bobPhase, _bobCount) = Balloon.AdvanceBob( _bobPhase, _bobCount, Balloon.PlacementsPerSecond * Time.Delta );
+			}
+
+			used = DrawBalloon( used, held, bank, field );
+		}
+
+		foreach ( var letGo in people.Bursting )
+			used = DrawBalloon( used, letGo, bank, field );
+
+		return used;
+	}
+
+	/// <summary>
+	/// One balloon's quad, at its placed position above the ground under it (<c>FUN_00542010</c>: the ground plus
+	/// <c>+0x8c</c>), at its own alpha, and only once its script has shown a frame. It faces nowhere: a balloon set has
+	/// no directions, so the frame is the picture.
+	/// </summary>
+	private int DrawBalloon( int used, Balloon balloon, Loaded bank, HeightfieldFile? field )
+	{
+		var sprite = balloon.Sprite;
+
+		if ( !sprite.Shown )
+			return used;
+
+		var set = bank.Bank.Sets[sprite.Set];
+		var index = Picture( set, sprite.Frame, 0, out _ );
+
+		if ( index < 0 || index >= bank.Pictures.Length )
+			return used;
+
+		var ground = field?.HeightAtWorld( balloon.X, balloon.Y ) ?? 0f;
+
+		WriteQuad( used, new Vector3( balloon.X, balloon.Y, ground + balloon.Height ), bank.Pictures[index], false,
+			sprite.Alpha );
+
+		return used + 1;
 	}
 
 	/// <summary>
@@ -889,7 +982,8 @@ public sealed class ParkGuestSprites : ModelEntity
 	}
 
 	/// <summary>
-	/// Every person in the park, one line each, for the debug console's <c>guests</c> command. This is
+	/// Every person in the park, one line each, for the debug console's <c>guests</c> command; the balloons are
+	/// <see cref="BalloonCensus"/>'s. This is
 	/// what a label over each head would have said, without needing a world-to-screen projection that
 	/// does not exist in this engine.
 	/// </summary>
@@ -936,4 +1030,31 @@ public sealed class ParkGuestSprites : ModelEntity
 				$"cellsize {cellX:0.##}x{cellY:0.##} walk {(walk == null ? "none" : "found")}";
 		}
 	}
+
+	/// <summary>
+	/// Every balloon, held and bursting, one line each, where it was last placed: the ground under it plus its
+	/// height. The debug console's <c>guests</c> command prints them after the people.
+	/// </summary>
+	internal IEnumerable<string> BalloonCensus()
+	{
+		var field = ParkGround.Current?.Heightfield;
+
+		if ( ParkPeople.Current is not { } people )
+			yield break;
+
+		foreach ( var peep in people.Guests.Values )
+		{
+			if ( peep.Balloon is { } held )
+				yield return BalloonLine( $"balloon held by {peep.ThingId,2}", held, field );
+		}
+
+		foreach ( var letGo in people.Bursting )
+			yield return BalloonLine( "balloon let go", letGo, field );
+	}
+
+	private static string BalloonLine( string whose, Balloon balloon, HeightfieldFile? field )
+		=> $"{whose} set {balloon.Sprite.Set} frame {balloon.Sprite.Frame} alpha {balloon.Sprite.Alpha} " +
+			$"shown {balloon.Sprite.Shown} script {balloon.Sprite.Script}@{balloon.Sprite.Pc} " +
+			$"at ({balloon.X:0.000},{balloon.Y:0.000}) height {balloon.Height:0.000} " +
+			$"ground {field?.HeightAtWorld( balloon.X, balloon.Y ) ?? 0f:0.000}";
 }

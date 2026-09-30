@@ -4,18 +4,20 @@ namespace OpenTPW;
 /// One instruction of a world-sprite script.
 ///
 /// <para>
-/// The executable has <b>eighteen</b> of these and the person scripts use exactly these four - counted, not
+/// The executable has <b>eighteen</b> of these, and the person scripts use exactly the first four - counted, not
 /// assumed: a decode of all 1,857 words of the script array agrees with a tally taken independently by value
-/// on every one of the eighteen. The other fourteen (locals arithmetic, loops, a gosub stack twenty deep and
-/// an eight-way comparison jump table at <c>0x004762b0</c>) are reached only by scripts that belong to things
-/// this project does not draw yet, so they are left out rather than written blind.
+/// on every one of the eighteen. The let-go balloon adds three more and the end word. The other eleven (the rest
+/// of the locals arithmetic, a gosub on the same twenty-deep stack and an eight-way comparison jump table at
+/// <c>0x004762b0</c>) are reached only by scripts that belong to things this project does not draw yet, so they
+/// are left out rather than written blind.
 /// </para>
 /// </summary>
 internal enum SpriteOp
 {
 	/// <summary>
 	/// Writes a value into one of the instance's own words - <c>LAB_004766d0</c>, two operands. Every person
-	/// script opens with the same one and nothing in the executable ever reads it back.
+	/// script opens with the same one, writing <c>0x1200</c> into <c>+0xc4</c>, the draw's flags word
+	/// (<c>FUN_00542010</c> reads it at <c>0x00542075</c>); the let-go balloon sets its alpha with it.
 	/// </summary>
 	SetLocal,
 
@@ -36,7 +38,34 @@ internal enum SpriteOp
 	/// running</b>, only where in the array the next instruction is read from; see
 	/// <see cref="SpriteScript.Script"/>.
 	/// </summary>
-	Jump
+	Jump,
+
+	/// <summary>
+	/// Takes a value off one of the instance's words - <c>0x004767e0</c>, two operands, an integer <c>SUB</c>
+	/// for the words past the six float locals (<c>0x0047682f</c>). The let-go balloon fades its alpha with it.
+	/// </summary>
+	SubLocal,
+
+	/// <summary>
+	/// Marks where a loop starts - <c>0x004763b0</c>, no operand. It pushes the program counter, already past
+	/// itself, onto the instance's twenty-deep stack (<c>FUN_00475230</c>) and counts it in <c>+0x78</c>.
+	/// </summary>
+	LoopStart,
+
+	/// <summary>
+	/// Loops while a word compares true - <c>0x004763d0</c>, three operands: the word, the comparison and the
+	/// value. True jumps back to the pushed start and keeps it pushed; false pops it (<c>0x00476673</c>), and
+	/// with nothing pushed it only logs. Comparison 8 is <c>word &gt;= value</c>, signed (the table at
+	/// <c>0x00476678</c>, entry 7, <c>0x004764c2</c>), the only one in any script copied here.
+	/// </summary>
+	LoopWhile,
+
+	/// <summary>
+	/// The end of a script - the word <c>0x005da3c0</c>, a bare <c>RET</c> that the VM spots rather than calls
+	/// (<c>0x0047509d</c>..<c>0x004750af</c>): the instance is hidden and stops, and <c>FUN_00475360</c> frees
+	/// it on its next due turn.
+	/// </summary>
+	End
 }
 
 /// <summary>
@@ -88,7 +117,7 @@ public sealed class SpriteScript
 	/// The twenty-one scripts the person animation table names, read out of <c>DAT_0074dab8</c>.
 	///
 	/// <para>
-	/// Index 1 is the walk and index 3 the stand. Index 2 is the
+	/// Index 1 is the walk and index 3 the stand; index 25 is also the held balloon's script (<see cref="Balloon"/>). Index 2 is the
 	/// hurried walk, index 9 the same eight pictures held twice each, which is a walk at half speed.
 	/// </para>
 	/// </summary>
@@ -150,17 +179,22 @@ public sealed class SpriteScript
 	/// <summary>Standing - set 0, one picture. Every one-shot animation ends by jumping into it.</summary>
 	public const int Standing = 3;
 
-	// Where each of the instance's words sits. The locals block begins at +0x84, so the two fields the drawing
-	// reads are simply locals 12 and 13 - which is why there is an opcode that writes a frame FROM a local.
+	// Where each of the instance's words sits. The locals block begins at +0x84, so what the drawing reads is locals -
+	// among them 7, 12 and 13 - which is why there is an opcode that writes a frame FROM a local.
+	private const int AlphaLocal = 7;           // +0xa0, the draw's alpha byte (FUN_00542010, 0x0054207d)
+
 	private const int SpriteNumberLocal = 12;   // +0xb4
 
 	private const int FrameLocal = 13;          // +0xb8
 
-	private const int PaceLocal = 16;           // +0xc4, the one every person script sets and nothing reads
+	private const int PaceLocal = 16;           // +0xc4, the draw's flags (0x00542075), which every person script sets
 
 	private const int LocalCount = 17;
 
-	/// <summary>The value every person script writes into <see cref="PaceLocal"/>, whatever it once meant.</summary>
+	/// <summary>
+	/// The value every person script writes into <see cref="PaceLocal"/>. Its <c>0x200</c> bit is one the draw tests
+	/// (<c>0x005422fb</c>); what that does on screen is not decoded, and the drawing here reads none of the word.
+	/// </summary>
 	private const int PaceValue = 0x1200;
 
 	/// <summary>
@@ -191,13 +225,39 @@ public sealed class SpriteScript
 	public const int Budget = 0x32;
 
 	/// <summary>One decoded instruction, with the operands it carries.</summary>
-	private readonly record struct ScriptStep( SpriteOp Op, int A, int B );
+	private readonly record struct ScriptStep( SpriteOp Op, int A, int B, int C = 0 );
+
+	/// <summary>How many words an instruction occupies: the opcode plus its operands.</summary>
+	private static int LengthOf( SpriteOp op ) => op switch
+	{
+		SpriteOp.SetLocal or SpriteOp.SubLocal => 3,
+		SpriteOp.LoopWhile => 4,
+		SpriteOp.LoopStart or SpriteOp.End => 1,
+		_ => 2
+	};
+
+	/// <summary><see cref="SpriteOp.LoopWhile"/>'s comparison 8, <c>word &gt;= value</c>.</summary>
+	private const int AtLeast = 8;
 
 	/// <summary>
-	/// How many words an instruction occupies: the opcode plus its operands. Only
-	/// <see cref="SpriteOp.SetLocal"/> takes two.
+	/// The let-go balloon's script, <c>0x0074f4c0</c> (word 1666), and the loop it jumps into at <c>0x0074f490</c>
+	/// (word 1654), read out of <c>DAT_0074dab8</c> word for word: the alpha set to 250, then frame 1 shown and the
+	/// alpha taken down by 20 while it is still nought or more, then the end. So the burst is shown thirteen turns,
+	/// at 250 down to 10. Word 1665, between the end and the script, is nought.
 	/// </summary>
-	private static int LengthOf( SpriteOp op ) => op == SpriteOp.SetLocal ? 3 : 2;
+	private static readonly (int At, ScriptStep Step)[] LetGoBalloon =
+	[
+		(1654, new( SpriteOp.LoopStart, 0, 0 )),
+		(1655, new( SpriteOp.Frame, 1, 0 )),
+		(1657, new( SpriteOp.SubLocal, AlphaLocal, 20 )),
+		(1660, new( SpriteOp.LoopWhile, AlphaLocal, AtLeast, 0 )),
+		(1664, new( SpriteOp.End, 0, 0 )),
+		(1666, new( SpriteOp.SetLocal, AlphaLocal, 250 )),
+		(1669, new( SpriteOp.Jump, 1654, 0 ))
+	];
+
+	/// <summary>Where the let-go balloon's script starts - <c>0x0074f4c0</c>, which <c>FUN_004fe950</c> hands the sprite.</summary>
+	public const int LetGoBalloonEntry = 1666;
 
 	/// <summary>
 	/// Every person instruction, at the address the original keeps it at. A flat map rather than a script
@@ -232,6 +292,9 @@ public sealed class SpriteScript
 			Write( new ScriptStep( SpriteOp.Jump, animation.LoopTo, 0 ) );
 		}
 
+		foreach ( var (at, step) in LetGoBalloon )
+			program[at] = step;
+
 		return program;
 	}
 
@@ -247,13 +310,17 @@ public sealed class SpriteScript
 	/// than trusted.
 	///
 	/// <para>
-	/// Only the twenty-one scripts people use are copied out of the executable, so this is false for a
-	/// position inside any of the other sixty-two - which is the honest answer, not a denial that they exist.
+	/// Only the twenty-one scripts people use and the let-go balloon's are copied out of the executable, so this is
+	/// false for a position inside any of the other sixty-one - which is the honest answer, not a denial that they
+	/// exist.
 	/// </para>
 	/// </summary>
 	public static bool HasInstructionAt( int pc ) => Program.ContainsKey( pc );
 
 	private readonly int[] _locals = new int[LocalCount];
+
+	/// <summary>The loop starts pushed and not yet popped - the instance's stack at <c>+0x20</c>, twenty deep.</summary>
+	private readonly Stack<int> _loops = new();
 
 	/// <summary>
 	/// Which script this sprite is running - the instance's <c>+0x0c</c>, and the thing the original compares
@@ -277,10 +344,10 @@ public sealed class SpriteScript
 	public int Due { get; private set; }
 
 	/// <summary>
-	/// Set whenever a frame is shown and cleared when a script ends - the instance's <c>+0x114</c>, written by
-	/// the one-line <c>FUN_00540b90</c>. The original uses it to know a sprite needs drawing again; nothing
-	/// here needs that, because the whole pool is rewritten every frame, and nothing in the game reads it:
-	/// only <c>SpriteScriptTests</c> does, to show that a sprite really did take a turn.
+	/// Whether the sprite is showing a frame - the instance's <c>+0x114</c>, set by a shown frame
+	/// (<c>FUN_00540b90</c>) and cleared by a frame of -1, by the end word and by running off the copied program.
+	/// The draw reads it (<c>FUN_00542010</c>): a balloon is drawn only once its script has shown a frame
+	/// (<see cref="ParkGuestSprites"/>); people are drawn from the save's picture whatever it says.
 	/// </summary>
 	public bool Shown { get; private set; }
 
@@ -299,6 +366,20 @@ public sealed class SpriteScript
 	/// <summary>Which picture of that set is being drawn - the instance's <c>+0xb8</c>.</summary>
 	public int Frame => _locals[FrameLocal];
 
+	/// <summary>How opaque it is drawn, nought to 255 - the instance's <c>+0xa0</c>, which the draw reads as a byte.</summary>
+	public int Alpha => _locals[AlphaLocal] & 0xff;
+
+	/// <summary>
+	/// Whether the script has reached its end word: hidden and stopped, the instance's state 4. Nothing a person
+	/// runs ends.
+	/// </summary>
+	public bool Ended { get; private set; }
+
+	/// <summary>
+	/// Whether an ended script has had the due turn that frees it (<c>FUN_00475360</c>): its owner lets it go.
+	/// </summary>
+	public bool Freed { get; private set; }
+
 	/// <summary>
 	/// A sprite picked up exactly where the save left it.
 	///
@@ -308,12 +389,16 @@ public sealed class SpriteScript
 	/// shipped park's eighteen people are on different frames of the same walk.
 	/// </para>
 	/// </summary>
-	public SpriteScript( int script, int pc, int spriteNumber, int frame )
+	/// <param name="alpha">
+	/// The instance's alpha, <c>+0xa0</c>: 255 as the constructor <c>FUN_004758f0</c> writes it, or what the save kept.
+	/// </param>
+	public SpriteScript( int script, int pc, int spriteNumber, int frame, int alpha = 0xff )
 	{
 		Script = script;
 		Pc = pc;
 		_locals[SpriteNumberLocal] = spriteNumber;
 		_locals[FrameLocal] = frame;
+		_locals[AlphaLocal] = alpha;
 	}
 
 	/// <summary>
@@ -328,10 +413,22 @@ public sealed class SpriteScript
 		if ( entry == None )
 			return false;
 
-		Script = entry;
-		Pc = entry;
+		StartAt( entry );
 
 		return true;
+	}
+
+	/// <summary>
+	/// Puts this sprite on the script at a word of the array, from the start - <c>FUN_00475b80</c> handed an
+	/// address rather than an animation number. It empties the loop stack and keeps the picture, the alpha and
+	/// when the sprite next comes due (<c>0x00475c23</c>..<c>0x00475c3e</c>).
+	/// </summary>
+	public void StartAt( int entry )
+	{
+		Script = entry;
+		Pc = entry;
+		Ended = false;
+		_loops.Clear();
 	}
 
 	/// <summary>Whether this sprite is already running the script a given animation names.</summary>
@@ -358,6 +455,12 @@ public sealed class SpriteScript
 		if ( now <= Due )
 			return false;
 
+		if ( Ended )
+		{
+			Freed = true;
+			return false;
+		}
+
 		Run();
 
 		Due = now + Interval;
@@ -367,7 +470,8 @@ public sealed class SpriteScript
 
 	/// <summary>
 	/// Runs opcodes until one yields or the budget is spent - <c>FUN_00475010</c>. Only
-	/// <see cref="SpriteOp.Frame"/> yields, so a turn is "everything up to and including the next picture".
+	/// <see cref="SpriteOp.Frame"/> yields, and the end word stops, so a turn is "everything up to and including
+	/// the next picture".
 	/// </summary>
 	private void Run()
 	{
@@ -407,17 +511,40 @@ public sealed class SpriteScript
 			case SpriteOp.Frame:
 				_locals[FrameLocal] = step.A;
 
-				// The yield and the "it changed" flag both sit inside the original's test against -1, so a
-				// frame of -1 is written and costs no turn at all. No person script uses one.
-				if ( step.A == -1 )
-					return false;
-
-				Shown = true;
+				// A frame of -1 hides the sprite (0x0047698c) and yields all the same. No copied script uses one.
+				Shown = step.A != -1;
 				return true;
 
 			case SpriteOp.Jump:
 				Pc = step.A;
 				return false;
+
+			case SpriteOp.SubLocal:
+				_locals[step.A] -= step.B;
+				return false;
+
+			case SpriteOp.LoopStart:
+				_loops.Push( Pc );
+				return false;
+
+			case SpriteOp.LoopWhile:
+				if ( _loops.Count == 0 )
+					return false;
+
+				var start = _loops.Pop();
+
+				if ( step.B == AtLeast && _locals[step.A] >= step.C )
+				{
+					_loops.Push( start );
+					Pc = start;
+				}
+
+				return false;
+
+			case SpriteOp.End:
+				Ended = true;
+				Shown = false;
+				return true;
 
 			default:
 				return true;

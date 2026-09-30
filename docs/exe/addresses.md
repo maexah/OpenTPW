@@ -138,7 +138,19 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00474840` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x00474bf0` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x00474cc0` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
+| `0x0047509d` | Sprite VM FUN_00475010: the end word 0x005da3c0 spotted rather than called; state +0x18 = 4, from | OpenTPW/World/Park/SpriteScript.cs  |
+| `0x004750af` | FUN_00475010: +0x114 zeroed at the end word, to here | OpenTPW/World/Park/SpriteScript.cs  |
+| `0x00475c23` | FUN_00475b80 handed an address: the loop stack +0x1c reset to 0x14 and +0x70/+0x74/+0x78 zeroed, from | OpenTPW/World/Park/SpriteScript.cs  |
+| `0x00475c3e` | FUN_00475b80: the reset, to here; picture, alpha and due time kept | OpenTPW/World/Park/SpriteScript.cs  |
 | `0x004762b0` | | OpenTPW/World/Park/SpriteScript.cs  |
+| `0x004763b0` | Sprite op LoopStart: pushes the pc past itself (FUN_00475230) and increments +0x78 | OpenTPW/World/Park/SpriteScript.cs  |
+| `0x004763d0` | Sprite op LoopWhile, three operands (local, comparison, value): true jumps back and keeps the start | OpenTPW/World/Park/SpriteScript.cs  |
+| `0x004764c2` | LoopWhile's comparison 8: CMP local,value / SETGE, signed | OpenTPW/World/Park/SpriteScript.cs  |
+| `0x00476673` | LoopWhile: false pops the start and decrements +0x78 | OpenTPW/World/Park/SpriteScript.cs  |
+| `0x00476678` | LoopWhile's comparison jump table, eight entries | OpenTPW/World/Park/SpriteScript.cs  |
+| `0x004767e0` | Sprite op SubLocal, two operands: local minus a value | OpenTPW/World/Park/SpriteScript.cs  |
+| `0x0047682f` | SubLocal: the integer SUB for the locals past the six floats | OpenTPW/World/Park/SpriteScript.cs  |
+| `0x0047698c` | Sprite op Frame: a frame of -1 writes +0x114 = 0, hiding the sprite, and still yields | OpenTPW/World/Park/SpriteScript.cs  |
 | `0x00476c50` | | OpenTPW/UI/UiMesh.cs  |
 | `0x00476e80` | | OpenTPW/UI/UiMesh.cs  |
 | `0x00476f10` | | OpenTPW/UI/UiMesh.cs  |
@@ -350,14 +362,21 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004f9d5f` | SetRandomDest: end of the no-links arm | OpenTPW.Tests/ParkNoLinksWanderTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004f9e40` | SetRandomDest's no-links arm: the eight-way direction table of its probes | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004f9f89` | `FUN_004f9f00`: first half of `prev + (cur - prev) * t` | OpenTPW.Tests/ParkGuestPlacementTests.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
+| `0x004f9fa9` | FUN_004f9f00, a person's sample: the across position truncated by __ftol before the scale | OpenTPW/World/Park/Balloon.cs  |
 | `0x004f9fb6` | `FUN_004f9f00`: second half of the interpolation | OpenTPW.Tests/ParkGuestPlacementTests.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
+| `0x004f9fd2` | FUN_004f9f00: the down position truncated by __ftol | OpenTPW/World/Park/Balloon.cs  |
 | `0x004fa015` | `FUN_004f9f00` copies the octant straight off the thing: the heading is not blended | OpenTPW.Tests/ParkGuestPlacementTests.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
+| `0x004fa184` | FUN_004fa030: a guest (model byte 1) holding a balloon (+0x210) has it placed each frame, from | OpenTPW/World/Park/Balloon.cs  |
+| `0x004fa244` | FUN_004fa030: the bob's phase counts the placement (0x007cedd8 by 0.1 to 1.0), from | OpenTPW/World/Park/Balloon.cs  |
+| `0x004fa28b` | FUN_004fa030: the bob's count, to here | OpenTPW/World/Park/Balloon.cs  |
 | `0x004fa62a` | `FUN_004fa5f0`: returns nought without routing on `mStrandedTime` (`+0x198`) | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fa95d` | The place-a-peep routine re-stamps previous := current | OpenTPW.Tests/ParkTickTests.cs OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/PeepNavigator.cs  |
 | `0x004fae10` | | OpenTPW.Files/Formats/Save/RecordStream.cs  |
 | `0x004fb019` | Guest constructor `FUN_004faec0`: the kind drawn as the world generator mod `[0x007851d4]`, the `PeepTypes` row count | OpenTPW.Tests/ParkGuestTypeTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb075` | Guest constructor `FUN_004faec0`: happiness set to 50.0 | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb1c9` | Guest constructor FUN_004faec0: the hurry +0xc2 set to 25, the word at 0x0075c7f2 | OpenTPW.Tests/ParkTickTests.cs  |
+| `0x004fb333` | FUN_004fb330, a guest deleted at the bus: the balloon's sprite deleted (FUN_00475550), no burst, from | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004fb346` | FUN_004fb330: the balloon deletion, to here | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb383` | The guest's type-10 answer `FUN_004fb360` chooses a guest by `mMajorDest` alone | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb38d` | `FUN_004fb360`'s rider arm: state `0x10` exactly | OpenTPW.Tests/ParkEvictionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb3cd` | `FUN_004fb360` makes a rider a new sprite when admission destroyed theirs; its position is still nought | OpenTPW/World/Park/ParkPeople.cs  |
@@ -423,12 +442,21 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fe259` | FUN_004fe1e0, a visit's effects: calls the excitement match FUN_004fdcc0, before the item's own effects | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe44e` | FUN_004fe1e0, the hunger dock: (r & 7) + the amount + the effect compared with 30, unsigned (the thirst dock's at 0x004fe4a0) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe60e` | FUN_004fe1e0, sugar: amount x 6 / 100 added to the word mAdjustorSpeed +0xc4, no clamp | OpenTPW/World/Park/Peep.cs  |
+| `0x004fe615` | FUN_004fe1e0: the appearance switch on the descriptor's +0x15c, from | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe63d` | FUN_004fe1e0: any appearance but 0, 1 or 2 logs a balance-file error into the bare RET, to here | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe6ba` | FUN_004fe1e0, a balloon: the arm, from (to 0x004fe78a) | OpenTPW.Tests/ParkBalloonTests.cs OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe6fc` | FUN_004fe1e0, a balloon: the park's generator reseeded with the guest's id (FUN_00516370) | OpenTPW/World/Park/Balloon.cs  |
+| `0x004fe737` | FUN_004fe1e0, a balloon: the life, the shop's quality byte x 255 / 100 held to 25..255, from | OpenTPW/World/Park/Balloon.cs  |
+| `0x004fe76f` | FUN_004fe1e0, a balloon: the life, to here | OpenTPW/World/Park/Balloon.cs  |
+| `0x004fe775` | FUN_004fe1e0, a balloon: event 0xc naming the shop (FUN_0050c100) | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe78a` | FUN_004fe1e0: the balloon arm and the costume arm's shared event tail, to here | OpenTPW.Tests/ParkBalloonTests.cs OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe78f` | FUN_004fe1e0, the toilet arm: the object's flags & 1, from | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe7a8` | FUN_004fe1e0: FUN_004e2440, the dirtying, with the need's byte | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe7b6` | FUN_004fe1e0, a toilet: the guest's toilet need +0x1ac zeroed | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe7dc` | FUN_004fe1e0: illness's truncated byte above 90, unsigned (CMP AL,0x5a / JBE) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe81f` | FUN_004fe1e0, a sideshow: mNumSideshowsWon +0x1d0 +1, before the winner's rise | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe8e8` | FUN_004fe1e0: the special ingredient's jump table, five entries (0 and above 4 to the switch's end) | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe96b` | Let-go FUN_004fe950: mBalloonScript +0x210 zeroed after the sprite is put on 0x0074f4c0 | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004ffc3d` | State 10's arrival test: the guest's cell against `GetBackOfQueue` | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffce6` | Arrival FUN_004ffbc0: the excitement refusal pushes the thing onto mPreviousTemporaryRides (FUN_004fdc60) | OpenTPW.Tests/ParkGuestTypeTests.cs OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffd74` | Arrival FUN_004ffbc0: the too-long refusal pushes the thing onto mPreviousTemporaryRides | OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
@@ -479,9 +507,16 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005015e3` | ExitRide FUN_005014e0: the cell off the exit must be neither queue nor entrance before the settle-up | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x005015ef` | ExitRide FUN_005014e0: the route to it must succeed before the settle-up FUN_004fd970 | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x00501658` | Guest tick handler `FUN_00501650`: its first call, `FUN_004fa870`, stamps the previous position | OpenTPW.Tests/ParkTickTests.cs OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/PeepNavigator.cs  |
+| `0x005018f8` | Needs turn FUN_00501650, its last test: states 16 and 17 and FUN_004fa990 gate a draw and the balloon's countdown, from | OpenTPW/World/Park/Peep.cs  |
+| `0x00501949` | FUN_00501650: the life at nought lets the balloon go (FUN_004fe950), to here | OpenTPW/World/Park/Peep.cs  |
 | `0x005019da` | Guest needs turn FUN_00501650, its last call: FUN_004fdc90, a nought onto the refusals when mGameTick % 20 is nought | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/Peep.cs  |
+| `0x00501fd3` | State setter FUN_00501db0 case 0xf: with life left and the thing left not a balloon shop, the balloon built again, from | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x0050208a` | FUN_00501db0 case 0xf: the rebuild, to here | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x0050212b` | Admission tests the object's flag bit `0x20`, which keeps the rider's sprite | OpenTPW.Files/Formats/Save/ParkWorld.cs  |
 | `0x00502147` | Admission destroys the rider's sprite on an object without flag bit `0x20` | OpenTPW.Files/Formats/Save/ParkWorld.cs  |
+| `0x00502156` | FUN_00501db0 case 0x10: the balloon's sprite deleted (FUN_00475550), its life kept, from | OpenTPW/World/Park/Peep.cs  |
+| `0x00502169` | FUN_00501db0 case 0x10: +0x210 zeroed, to here | OpenTPW/World/Park/Peep.cs  |
+| `0x005022ef` | FUN_00501db0 case 0x11: the balloon let go (FUN_004fe950) | OpenTPW/World/Park/Peep.cs  |
 | `0x005026cb` | `FUN_00502600`: the researcher's decide at hire, on a world draw | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x00502ba9` | `FUN_005029f0`: the researcher's walk-or-stay, a world draw `& 3` | OpenTPW.Tests/ParkStaffBehaviourTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x00502be4` | `FUN_005029f0`: the researcher staying takes state `0xf`, research | OpenTPW/World/Park/StaffBehaviour.cs  |
@@ -501,7 +536,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00512a5e` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00512b4c` | | OpenTPW/World/Weather/Lightning.cs  |
 | `0x00515865` | | OpenTPW/Global/GameCalendar.cs OpenTPW/World/Level.cs OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x0051635f` | World generator FUN_00516330: NEG leaves 0x80000000 unchanged, which RAND and FINDSCRIPTRAND then halve | OpenTPW.Tests/RideScriptClockTests.cs OpenTPW/VM/RideScript.cs  |
+| `0x0051635f` | World generator FUN_00516330: NEG leaves 0x80000000 unchanged, which RAND and FINDSCRIPTRAND then halve | OpenTPW.Tests/RideScriptClockTests.cs OpenTPW/VM/RideScript.cs OpenTPW/World/Park/ParkGenerator.cs  |
 | `0x00516394` | Thing sweep `FUN_00516380`: `mGameTick` up by one | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkState.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00516695` | World tick FUN_00516380: FUN_004d7b20 after every thing's turn, where the calendar sends the day's change | OpenTPW/World/Level.cs  |
 | `0x00516d13` | World save `FUN_00516c80`: installs the idle mode before anything is written, so leaving a park lets go of the hand | OpenTPW/World/Level.cs  |
@@ -624,6 +659,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0053c755` | `FUN_0053c3f0`: the marker wave's phase gains 0.1 a frame unless paused | OpenTPW/World/Park/ParkBuildMarkers.cs  |
 | `0x0053c773` | `FUN_0053c3f0`: the phase store | OpenTPW/World/Park/ParkBuildMarkers.cs  |
 | `0x00540d90` | | OpenTPW.Files/Formats/Sprite/SpriteBankFile.cs  |
+| `0x005419a4` | Sprites_LoadFolder: the folder's files sorted by name with _stricmp (FUN_00541210) before any loads | OpenTPW/World/Park/ParkGuestSprites.cs  |
+| `0x00542075` | World sprite draw FUN_00542010: the flags word +0xc4 read | OpenTPW/World/Park/SpriteScript.cs  |
+| `0x0054207d` | FUN_00542010: the alpha byte +0xa0 read into the draw's colour | OpenTPW/World/Park/SpriteScript.cs  |
+| `0x005422fb` | FUN_00542010: the flags word's 0x200 bit tested | OpenTPW/World/Park/SpriteScript.cs  |
 | `0x005423a0` | | OpenTPW.Files/Formats/Sprite/SpriteBankFile.cs OpenTPW/UI/ScreenParticles.cs  |
 | `0x00543725` | KART loader FUN_00543560: a saved ride through FUN_00545890 with its handle, which names the slot | OpenTPW/World/Park/ParkTrackRideTable.cs  |
 | `0x00544061` | KART loader FUN_00543560: each saved section handed to FUN_0054b2f0 | OpenTPW/World/Park/ParkTrackRideTable.cs  |
@@ -808,6 +847,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005d6110` | | OpenTPW/UI/FrontEnd/FrontEndLines.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x005d8bac` | | OpenTPW/World/Level.cs  |
 | `0x005d96fc` | | OpenTPW/World/Sky.cs  |
+| `0x005da3c0` | A bare RET: the game's log and assert sink, and the sprite scripts' end word | OpenTPW/World/Park/SpriteScript.cs  |
 | `0x005dd034` | | OpenTPW/World/LobbyCameraMode.cs  |
 | `0x005dfd2d` | Lobby camera constructor: the leave state `+0x14` set to 0 | OpenTPW/World/LobbyCameraMode.cs  |
 | `0x005e0470` | | OpenTPW/World/Lobby/LobbyWeather.cs OpenTPW/World/Weather/Lightning.cs  |
@@ -955,6 +995,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0074c9c8` | Float 1.01: the camcorder sweep's tie-break | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0074c9d0` | Float 0.001: the camcorder sweep's nudge after an open crossing that left the cell unchanged | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0074cf58` | | OpenTPW.Tests/LobbyModelAnimationTests.cs  |
+| `0x0074f480` | Sprite script, the held balloon (word 1650): frame 0, jump to itself | OpenTPW/World/Park/Balloon.cs  |
+| `0x0074f490` | Sprite script words 1654..1664: the let-go loop, frame 1 and the alpha down by 20 while it is nought or more | OpenTPW/World/Park/SpriteScript.cs  |
+| `0x0074f4c0` | Sprite script, the let-go balloon (word 1666): the alpha to 250, then into the loop at 0x0074f490 | OpenTPW.Tests/ParkBalloonTests.cs OpenTPW/World/Park/SpriteScript.cs  |
 | `0x0074f920` | | OpenTPW/UI/Screens/MessageBox.cs  |
 | `0x0074fa98` | | OpenTPW/UI/Park/ParkGadget.cs OpenTPW/UI/Park/ParkViewfinder.cs  |
 | `0x0074fb50` | Status code to colour, for the object windows and the all-items rows (`FUN_00485f60`'s codes) | OpenTPW/UI/Park/ParkItemsScreen.cs  |
@@ -983,13 +1026,20 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0075c7f2` | The hurry-speed word 25, in the table at 0x0075c7f0 (0, 25, 50) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x0075c7f8` | Words 60, 80, 100, 120, 140: the base speeds (a guest's drawn % 5, a member of staff's by rest) | OpenTPW/World/Park/Peep.cs  |
 | `0x0075c7fc` | Word 100: what FUN_004fa870 divides the three speed words' sum by | OpenTPW/World/Park/Peep.cs  |
+| `0x0075c808` | Float 1.0: a held balloon's height before the dip and the bob | OpenTPW/World/Park/Balloon.cs  |
+| `0x0075c80c` | Dword 20: the bob's rows | OpenTPW/World/Park/Balloon.cs  |
+| `0x0075c810` | The bob's table: twenty rows of three floats; only the middle, 0 to 0.2 and back, is not nought | OpenTPW/World/Park/Balloon.cs  |
+| `0x0075c904` | Float 1.5: the bob's scale | OpenTPW/World/Park/Balloon.cs  |
+| `0x0075c90c` | Float 0.5: the gap's divisor in a held balloon's dip | OpenTPW/World/Park/Balloon.cs  |
+| `0x0075c910` | Float 0.35: how far behind in the sweep a held balloon's trailing sample is | OpenTPW/World/Park/Balloon.cs  |
 | `0x0075d0f8` | | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x0075d178` | | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x007622b0` | | OpenTPW/World/Park/CellLine.cs OpenTPW/World/Park/MapStep.cs  |
 | `0x0076338c` | The queue pieces table, twelve bytes a record | OpenTPW/World/Park/ParkQueues.cs  |
 | `0x00763b38` | The 20-entry marker texture table (`blue`, `red`, ... `m_link`, `m_end`) | OpenTPW/World/Park/ParkBuildMarkers.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
-| `0x00763f88` | Sprite kinds table: fourteen bare kind names | OpenTPW/World/Park/ParkGuestSprites.cs  |
+| `0x00763f88` | Sprite kinds table: fourteen bare kind names | OpenTPW/World/Park/Balloon.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x00764030` | The four kid banks `Sprites_LoadFolder` loads before its sweep | OpenTPW/World/Park/ParkGuestSprites.cs  |
+| `0x00764090` | String "balloons", sprite kind 10's name in the table at 0x00763f88 | OpenTPW/World/Park/Balloon.cs  |
 | `0x00764178` | The track ride templates: 14 of 0xd0 bytes, BumperType -1's first, each's first dword its BumperType | OpenTPW/World/Park/ParkTrackRideTable.cs  |
 | `0x00765280` | The opcode table `{name*, operandCount*}`, eight bytes a record | OpenTPW.Files/Formats/Script/Opcode.cs  |
 | `0x00765c18` | String "RSSE: Heap Error" | OpenTPW/VM/RideScript.cs  |
@@ -1021,6 +1071,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x007cb2fc` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x007cc4b8` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x007cdba0` | The static initialisers of the eight ring-order directions | OpenTPW/World/Park/ParkPathNeighbours.cs  |
+| `0x007cedd4` | The bob's phase, a global only FUN_004fa030 writes, never reset | OpenTPW/World/Park/Balloon.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
+| `0x007cedd8` | The bob's count toward its next step, a float | OpenTPW/World/Park/Balloon.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x007cfb90` | The thing table: stride 20, a thing's pointer by its handle | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x00803a20` | Sound category slot: ambient | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x00803a24` | Sound category slot: kids | OpenTPW/World/Park/ParkAudio.cs  |

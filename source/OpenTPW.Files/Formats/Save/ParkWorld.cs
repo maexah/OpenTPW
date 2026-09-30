@@ -543,6 +543,18 @@ public sealed class ParkWorld
 	/// <see cref="NumSideshows"/> (<c>+0x1cc</c>) are purchases made and sideshows played, and
 	/// <see cref="NumSideshowsWon"/> (<c>+0x1d0</c>) sideshows won: the visitor window's four counts.
 	/// </param>
+	/// <param name="BalloonScript">
+	/// <c>mBalloonScript</c> (<c>+0x210</c>) - the slot of the guest's balloon in the sprite table at the end of the
+	/// block, one-based, or nought for none; the same join <see cref="Person.SpriteSlot"/> is.
+	/// </param>
+	/// <param name="RemainingBalloonLife">
+	/// <c>mRemainingBalloonLife</c> (<c>+0x214</c>) - the needs sweeps the balloon has left. It outlasts the sprite:
+	/// a guest on a ride keeps it with no balloon to show.
+	/// </param>
+	/// <param name="LastPosX">
+	/// <c>mLastPosX</c> (<c>+0x218</c>) - where the held balloon goes next frame, across, in world units;
+	/// <see cref="LastPosY"/> (<c>+0x21c</c>) is down. Only a placement writes them.
+	/// </param>
 	public readonly record struct GuestState(
 		int State, int SavedState, int PersonType, int Cash, int ExitLevel,
 		float Happiness, float Thirst, float Hunger, float Toilet, float Vomit, float Litter,
@@ -551,7 +563,8 @@ public sealed class ParkWorld
 		int QNext = 0, int QPrev = 0, int BeenAdmitted = 0, int QueueMoveDelay = 0,
 		IReadOnlyList<int>? PreviousRides = null, IReadOnlyList<int>? PreviousTemporaryRides = null,
 		int SavedMajorDest = 0, int WalkingTurns = 0,
-		int NumRides = 0, int NumShops = 0, int NumSideshows = 0, int NumSideshowsWon = 0 )
+		int NumRides = 0, int NumShops = 0, int NumSideshows = 0, int NumSideshowsWon = 0,
+		int BalloonScript = 0, int RemainingBalloonLife = 0, float LastPosX = 0f, float LastPosY = 0f )
 	{
 		/// <summary>How many things each of the two histories holds - <c>mPreviousRides[4]</c> and its twin.</summary>
 		public const int Remembered = 4;
@@ -1923,6 +1936,11 @@ public sealed class ParkWorld
 			NumShops: ReadInt32At( start + 448 ),        // mNumShops
 			NumSideshows: ReadInt32At( start + 452 ),    // mNumSideshows
 			NumSideshowsWon: ReadInt32At( start + 456 ), // mNumSideshowsWon
+			// The balloon (docs/exe/ride-operation.md, "A held balloon"), each where the field table above puts it.
+			BalloonScript: ReadInt32At( start + 406 ),   // mBalloonScript, a sprite slot
+			RemainingBalloonLife: ReadInt32At( start + 495 ), // mRemainingBalloonLife
+			LastPosX: ReadSingleAt( start + 430 ),       // mLastPosX
+			LastPosY: ReadSingleAt( start + 434 ),       // mLastPosY
 			// mQueueMoveDelay - four bytes sitting exactly between mQPrev at 488 and the mQueuePos byte
 			// at 494, which is what fixes them. The InQueue handler pauses on it before letting a
 			// guest re-take a place in a queue that has moved.

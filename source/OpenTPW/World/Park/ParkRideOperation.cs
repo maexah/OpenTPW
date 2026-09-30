@@ -29,6 +29,7 @@ public sealed class ParkRideOperation
 	private readonly IReadOnlyDictionary<int, Peep> _guests;
 	private readonly ParkAdmission? _admission;
 	private readonly ParkRideScore? _score;
+	private readonly int _balloonSets;
 
 	/// <param name="state">The park as it is being played, which owns the queues.</param>
 	/// <param name="guests">Every guest by thing id, for asking what the head of a queue is doing.</param>
@@ -42,8 +43,12 @@ public sealed class ParkRideOperation
 	/// What each kind of guest likes, for the settle-up's excitement match (<see cref="MatchTheExcitement"/>),
 	/// which also needs <paramref name="admission"/>. Null leaves the match alone, as a null admission does.
 	/// </param>
+	/// <param name="balloonSets">
+	/// How many colours the balloon bank has (<see cref="Balloon.SetsIn"/>), which a balloon's is drawn over. Nought
+	/// gives a guest a balloon's life and no balloon, as the original does with no sprite table.
+	/// </param>
 	public ParkRideOperation( ParkState state, IReadOnlyDictionary<int, Peep> guests,
-		ParkAdmission? admission = null, ParkRideScore? score = null )
+		ParkAdmission? admission = null, ParkRideScore? score = null, int balloonSets = 0 )
 	{
 		ArgumentNullException.ThrowIfNull( state );
 		ArgumentNullException.ThrowIfNull( guests );
@@ -52,6 +57,7 @@ public sealed class ParkRideOperation
 		_guests = guests;
 		_admission = admission;
 		_score = score;
+		_balloonSets = balloonSets;
 	}
 
 	/// <summary>
@@ -382,9 +388,15 @@ public sealed class ParkRideOperation
 		if ( ride.ExitPos != 0 && walkFor?.Invoke( leaving ) is { } walk )
 			PutDownAtTheExit( peep, walk, ride, park );
 
-		SettleUp( peep, ride, catalogue, random );
+		SettleUp( peep, ride, catalogue, random, tick );
 
 		peep.SetState( PeepState.LeavingRide, tick, random );
+
+		// Case 0xf of the state setter builds the balloon boarding took away, in the same colour, when there is life
+		// left and the thing left does not give balloons itself (0x00501fd3..0x0050208a): no event, the life as it was.
+		// The original asks it of mMajorDest, the thing being left.
+		if ( peep.BalloonLife != 0 && ItemOf( ride, catalogue )?.AppearanceEffect != Balloon.AppearanceEffect )
+			peep.Balloon = Balloon.Make( peep.ThingId, _balloonSets, SpriteClock( tick ) );
 
 		return script.Set( DismissVariable, 0 );
 	}
@@ -512,8 +524,8 @@ public sealed class ParkRideOperation
 	/// </para>
 	/// <para>
 	/// After the five effects come the object's own terms, on its amount of special ingredient
-	/// (<see cref="TakeTheIngredient"/>). <b>What is NOT built, counted (Q177e):</b> an appearance effect gives a
-	/// balloon or a costume (<c>docs/exe/ride-operation.md</c>, "The effects of a visit", 4).
+	/// (<see cref="TakeTheIngredient"/>), then the appearance effect: a balloon (<see cref="GiveABalloon"/>), or a
+	/// costume, which is <b>NOT built, counted (Q177f)</b> (<c>docs/exe/ride-operation.md</c>, "The effects of a visit", 4).
 	/// </para>
 	/// <para>
 	/// <b>The visit is remembered first</b> (<see cref="Peep.RememberVisit"/>, <c>0x004fd98b</c>), before the
@@ -522,16 +534,13 @@ public sealed class ParkRideOperation
 	/// <see cref="Dismiss"/>) is remembered and charged anyway.
 	/// </para>
 	/// </summary>
-	private void SettleUp( Peep peep, ParkWorld.CatalogueObject ride, ParkItemCatalogue? catalogue, Random random )
+	private void SettleUp( Peep peep, ParkWorld.CatalogueObject ride, ParkItemCatalogue? catalogue, Random random, int tick )
 	{
 		peep.RememberVisit( ride.ThingId );
 
 		// No catalogue is a test asking about the money rather than about the visit, and an item the
 		// catalogue does not know cannot say what it does to anybody.
-		ParkItemCatalogue.Item? known = null;
-
-		if ( catalogue != null && catalogue.TryGet( ride.CatalogueId, out var found ) )
-			known = found;
+		var known = ItemOf( ride, catalogue );
 
 		// The guest counts the visit by the item's kind, before the charge (0x004fd9ac..0x004fd9d2).
 		if ( known is { } kind )
@@ -591,9 +600,20 @@ public sealed class ParkRideOperation
 
 		TakeTheIngredient( peep, ride, item, random );
 
-		// Nought skips the balloon and the costume.
-		if ( item.AppearanceEffect != 0 )
-			Unimplemented.Report( "SETTLE_UP_APPEARANCE" );
+		// The descriptor's +0x15c: nought skips both, and anything but 1 or 2 logs a balance-file error into the bare
+		// RET and does nothing (0x004fe615..0x004fe63d).
+		switch ( item.AppearanceEffect )
+		{
+			case Balloon.AppearanceEffect:
+				GiveABalloon( peep, ride, tick );
+				break;
+
+			// A costume: mESPSprite 2 and a picture drawn from the theme's costume bank, or the arrival picture back
+			// for a guest already in one (Q177f).
+			case CostumeEffect:
+				Unimplemented.Report( "SETTLE_UP_COSTUME" );
+				break;
+		}
 
 		// The object's flags & 1 (0x004fe78f), which is what IsToilet reads.
 		if ( ride.IsToilet )
@@ -677,6 +697,37 @@ public sealed class ParkRideOperation
 				peep.NumSideshows++;
 				break;
 		}
+	}
+
+	/// <summary>The item a thing is, or null with no catalogue or one that does not know it.</summary>
+	private static ParkItemCatalogue.Item? ItemOf( ParkWorld.CatalogueObject thing, ParkItemCatalogue? catalogue )
+		=> catalogue != null && catalogue.TryGet( thing.CatalogueId, out var item ) ? item : null;
+
+	/// <summary>The item's <c>UsageInfo.AppearanceEffect</c> that gives a costume.</summary>
+	private const int CostumeEffect = 2;
+
+	/// <summary>
+	/// The sprite clock at a thing sweep, in milliseconds: the sweep's game tick, eight to a sweep, at 31 each - what
+	/// <see cref="ParkPeople"/> steps the sprites on.
+	/// </summary>
+	private static int SpriteClock( int thingTick )
+		=> thingTick * ParkPeople.ThingTickEvery * ParkPeople.MillisecondsPerTick;
+
+	/// <summary>
+	/// A Balloon Shop's arm of the settle-up - <c>FUN_004fe1e0</c>, <c>0x004fe6ba</c>..<c>0x004fe78a</c>: a balloon in
+	/// the guest's own colour, and a life from the shop's quality (<see cref="Balloon.LifeFor"/>), whatever it had
+	/// left. The original asserts the guest holds none into a bare <c>RET</c>, and boarding has put any away.
+	/// </summary>
+	private void GiveABalloon( Peep peep, ParkWorld.CatalogueObject shop, int tick )
+	{
+		peep.Balloon = Balloon.Make( peep.ThingId, _balloonSets, SpriteClock( tick ) );
+		peep.BalloonLife = Balloon.LifeFor( shop.QualityOfGoods );
+
+		// The guest's event history takes event 0xc naming the shop (FUN_0050c100, 0x004fe775).
+		Unimplemented.Report( "SETTLE_UP_BALLOON_EVENT" );
+
+		Log.Info( $"Person {peep.ThingId}: bought a balloon at object {shop.ThingId}, colour "
+			+ $"{peep.Balloon?.Sprite.Set.ToString() ?? "none"}, life {peep.BalloonLife}" );
 	}
 
 	/// <summary>

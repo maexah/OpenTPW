@@ -2771,7 +2771,59 @@ artifacts are listed in `docs/history/README.md`.
   Shop, the drinker's `peeps` thirst 20 back and happiness 2 more, as the original's (measured: 36 to 20, 50 to 57).
   From Q177c: both fields are read now (`ParkWorld.CatalogueObject.QualityOfGoods`, `AmountOfSpecialIngredient`; 50 on
   a bought thing), and the terms read their low byte, as the shop's cost of goods does.
-- [ ] **Q177e. Balloons and costumes.** Found by Q177's decode ("The effects of a visit", 4). A Balloon Shop is
+- [x] **Q177e. Balloons.** Done 2026-09-30, `alexah/196-balloons`. The item was two: the costume is Q177f, below. A
+  Balloon Shop's winner is given a balloon (`ParkRideOperation.GiveABalloon`, `FUN_004fe1e0`'s arm) in the colour the
+  guest's id gives (`Balloon.ColourFor`: the park's generator reseeded with the id; `ParkGenerator`, now shared with
+  `RideScript`'s `RAND`) and a life of the shop's quality x 255 / 100 held to 25..255, 127 for a bought shop.
+  `Peep.SetState` puts it away on boarding and lets it go on entering state 17; `Dismiss` builds it again on leaving
+  anything but a balloon shop, same colour, same life. `Peep.Tick` takes one off the life a needs sweep outside states
+  16 and 17 on a cell of type 0, 1, 3, 9 or 10 (`Peep.CountsOn`, of the cell the park links the guest into), counting
+  the thought picker's draw there (`NEEDS_THOUGHT_PICKER`); at nought the same sprite goes on the let-go script
+  (`0x0074f4c0`: frame 1, the burst, thirteen turns from alpha 250 down by 20, then gone), which `SpriteScript` now
+  runs (`SubLocal`, `LoopStart`, `LoopWhile`, the end word; and a frame of -1 hides and yields, as `0x0047698c`
+  does). A departing guest's goes with them, unburst. `ParkGuestSprites` packs the balloon bank and places each held
+  balloon every frame as `FUN_004fa030` does (trailing 0.35 of a sweep and a frame, lower by twice the trail, a shared
+  bob stepping every eleven placements, kept across parks as the original's globals are, taken at 30 a second on the
+  frame clock, said at the site) and draws the bursts; its banks are numbered in name order, as the loader sorts them. The save's `mBalloonScript`, `mRemainingBalloonLife` and `mLastPosX`/`Y` are read, and a saved balloon is the
+  kind-10 sprite its slot names. Console: `balloon <life>` (an instrument, as `thirst` is); `peeps` prints the life
+  and picture, `guests` each balloon's place after the people; a let-go is logged. Counted: the event (`SETTLE_UP_BALLOON_EVENT`), the
+  costume (`SETTLE_UP_COSTUME`).
+  - **Decoded** (`wf_19cae377-f55`: two Opus decoders in Ghidra, each put to an Opus checker, every claim upheld or
+    amended; `ride-operation.md`, "A held balloon" and "A costume"): frame 1 of a balloon set is the burst (the item's
+    open question); the costume-head callers of `FUN_0044b410` draw the rider's own head; leaving the park deletes a
+    balloon unburst, which the page had wrong; a challenge reads the balloons.
+  - **Measured:** the colour by id matches all 29 and 28 balloons in Alexah's two played jungle saves and 11 and 11 in
+    the fantasy ones, read through this build's own reader (`q177e-colour`; in the jungle the first draw instead matches
+    10, an id one higher 4, against 7.25 by chance), none of the 79 bursting; the bank, read with the repo's readers
+    (`q177e-bank`: red, green, blue, yellow; body alpha 218); all 21 sprite folders listed in name order
+    (`q177e-order`); the shipped park's guests all stand on type-30 cells, which do not count.
+  - **Tests:** `ParkBalloonTests`, 25. **Mutation** (`q177e-mut/mutate.py` on the final tree, `mutate-final.out`): 59 mutants in one run, 58 red;
+    the green one, `LoopWhile`'s `>=` as `>`, cannot differ on any copied script (the alpha never lands on nought).
+  - **Reviewed** (`wf_5e26ddcc-6fb`: three lenses - the code against Ghidra, the C# and its tests, the docs and what
+    went stale - each finding put to an Opus skeptic): 35 findings, 29 upheld or amended and each acted on, 6 refuted.
+    Among them: the bob's phase restarted with each park (now static, as the original's globals); the `guests` header
+    counted balloons as guests; a doc comment hung on the wrong method; a hollow assert; stale comments (`Shown`, the
+    draw's flags word, the sprite path); the loader sorts a folder by name; wrong words in the page (the costume draws
+    no set, boarding is admission's, the heads' callers, the seed); the address index and `PLAYER-GAPS.md`.
+  - **Confirmed in the game** (silent, the stock jungle park, a Balloon Shop bought at (42,30), `save/` unchanged;
+    predicted first; `q177erun.py`, `q177e-run1/`, `q177e-run2/`): guest 44 bought a balloon, **colour 0 (red), life
+    127**, as predicted from the id and the quality, in the log line and `peeps`; photographed over the guest on the
+    path (`q177e-run2/1-held-zoom.png`); the life fell by one on `mGameTick` 891, 895 and 899 and on none between (run
+    2: 899, 903, 907); set to 3 by `balloon`, let go at life 0, `guests` showing frame 1 at alpha 250, photographed
+    bursting (`3-burst-zoom.png`) and gone four seconds on (`4-after-zoom.png`); `SETTLE_UP_APPEARANCE` gone. Unprompted,
+    saved guest 40 chose the shop and bought one too, colour 0 as its id gives (so run 2 tallied 8 of 10: its one-let-go
+    and one-event predictions saw two). Run 3, on the final build, 10 of 10 (`q177e-run3/`). By eye the balloon floats as
+    high over its guest as one does in the original's own frame (`content/ReferenceScreenshots/Park/ParkInterior_Polish_cropped.jpg`).
+  - **Seen, not compared with the original:** over a shop's doorway a balloon sits inside the shop's model, and the
+    depth test hides it (`q177e-run1/1-held-zoom.png`).
+  - **Not confirmed on screen:** the balloon built again after a later visit, boarding's putting it away, a departure's
+    unburst deletion, a saved balloon (tested only); the bob, about two pixels, and the trail (census only); a balloon of
+    any colour but red: guests 44 and 40 both draw set 0, which rules out the first draw (44 would be 3) and an id one
+    higher (2) but not a constant red, so the colour rests on the saves and `ABalloonsColourIsItsGuestsId`.
+  - **Found:** Q177f (the costume).
+  - Built and tested alone in a worktree: 1443 pass, 0 skip with the game; 569 ran, 874 skipped without; 123 warnings.
+
+  The item as written: Found by Q177's decode ("The effects of a visit", 4). A Balloon Shop is
   buyable in Lost Kingdom from the start by its research cost (not measured). The arm reseeds the park's generator
   with the guest's id, draws a bank-10 sprite, keeps `mBalloonScript` and `mRemainingBalloonLife` (quality × 255 / 100,
   held 25..255), counts it down on the needs sweeps, frees it on a ride and rebuilds it after, and lets it go at
@@ -2780,6 +2832,17 @@ artifacts are listed in `docs/history/README.md`.
   `FUN_0044b410` draw. Confirm: a guest leaving a bought Balloon Shop with a balloon on screen, and its life counting
   down in `peeps`. From Q177d: both arms draw the park's generator through `FUN_00541f70` and `FUN_00541fd0` besides
   the reseed (`ride-operation.md`, "The effects of a visit", 4); OpenTPW has one generator per system (Q177d's site).
+- [ ] **Q177f. Costumes, after the arrival's child.** Split from Q177e; decoded there (`ride-operation.md`, "A
+  costume"). A shop whose `AppearanceEffect` is 2 (Lost Kingdom's Costume Shop, 1202: `CostOfResearch` 550, research
+  group 3, offered from the start here, which has no research) dresses a guest in the theme's costume (`mESPSprite` 2,
+  `mSpriteID` a draw over the costume banks, one in Lost Kingdom, with no reseed; event `0xb`), and undresses one
+  already in it back into the child they arrived as (kind 0, the generator reseeded with their id, `(r >> 2) %` the kid
+  banks; no event). That return needs what OpenTPW lacks: arrivals all wear kid bank 0 (`ParkPeople.Admit`), the kid
+  banks are not capped at the original's six (medium and high detail, `FUN_0041a9d0`), and a load does not reduce a
+  saved `mSpriteID` modulo them (`0x004f93a6`). So build the arrival's roll first (`FUN_004faec0`, `0x004fb18d`..
+  `0x004fb1bc`), pack the costume bank, then the costume; the picture changes as the guest leaves the shop. Counted
+  now as `SETTLE_UP_COSTUME`. Confirm: a guest leaving a bought Costume Shop in the tiger costume, `peeps` showing kind
+  2, and after a second visit the child they arrived as.
 - [ ] **Q198. The bank's month turn, the wage and training. Decode first.** Found by Q177c's map and review
   (`ride-operation.md`, "The cost of goods and the park's money", every caller of the bank, and "Who sends the day's
   change"). The calendar sends the month's change, message `0xc`, on its own compare (`0x004f83b9`). On it the bank's

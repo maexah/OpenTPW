@@ -163,7 +163,7 @@ Say so if asked: particle density comes from the detail file for the options' gr
 inherit the pin, and glints take the button's anchor. Handles are never 0 (the original's first
 handle can be 0). Keys look near-white because the art is additive gold over a light sky.
 
-### World sprites (decoded; the park's people are drawn, the rest is not built)
+### World sprites (decoded; the park's people and their balloons are drawn, the rest is not built)
 
 Drawing effects **in the world** is a whole subsystem, not a variant of the screen path — nothing in
 it reaches `Sprites_LookUp`, whose only caller is `Particles_Render`.
@@ -180,9 +180,9 @@ it reaches `Sprites_LookUp`, whose only caller is `Particles_Render`.
 | `TPCS` | — | The save block world sprites persist in | Save reader |
 | `0x40` | — | Visibility byte on the world path | Disassembly |
 
-OpenTPW draws the park's people this way (`ParkGuestSprites`, reading the save's `TPCS` table) and runs the four
-sprite-script ops their scripts use (`SpriteScript`). Litter, balloons, thought bubbles and the other fourteen ops
-are not built.
+OpenTPW draws the park's people and their balloons this way (`ParkGuestSprites`, reading the save's `TPCS` table) and
+runs the four sprite-script ops their scripts use and the three and the end word a balloon let go uses (`SpriteScript`;
+`ride-operation.md`, "A held balloon"). Litter, thought bubbles and the other eleven ops are not built.
 
 The advisor's clip glints are not world sprites and not the lobby's: they are UI particle channel 0 (effects 49 and 44),
 started by clip-word flags that only gesture rows 1 and 13 carry (`scenes.md`, "Gesture table"), and only the park

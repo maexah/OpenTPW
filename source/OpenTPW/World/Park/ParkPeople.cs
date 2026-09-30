@@ -49,6 +49,15 @@ public sealed class ParkPeople : Entity
 
 	private readonly Dictionary<int, SpriteScript> _sprites = [];
 
+	/// <summary>
+	/// Balloons let go and still bursting, each where it was last placed, until its script frees it. Kept here
+	/// rather than on their guests, who may go home first.
+	/// </summary>
+	private readonly List<Balloon> _bursting = [];
+
+	/// <summary>How many colours the balloon bank has - see <see cref="Balloon.SetsIn(BaseFileSystem)"/>.</summary>
+	private readonly int _balloonSets;
+
 	// Kept rather than rebuilt, so a guest who arrives after the load can be given a walk. It closes
 	// over the park, which never changes, so holding it costs nothing and cannot go stale.
 	private readonly Func<int, int, StepDirection, bool>? _blocked;
@@ -158,11 +167,16 @@ public sealed class ParkPeople : Entity
 	/// see <see cref="ParkRideChooser"/>. Null leaves that arm scoring on distance and queue alone.
 	/// </param>
 	/// <param name="random">What an arriving guest's kind and base speed are drawn with. Null for the game; a test seeds one.</param>
+	/// <param name="balloonSets">
+	/// How many colours the balloon bank has, which the level reads from the data (<see cref="Balloon.SetsIn(BaseFileSystem)"/>).
+	/// Nought gives a guest a balloon's life and no balloon to show.
+	/// </param>
 	public ParkPeople( ParkWorld? park, ParkBalance? balance = null, System.Func<int>? gateStatus = null,
 		ParkState? state = null, ParkItemCatalogue? catalogue = null,
-		System.Func<int, RideScript?>? scriptFor = null, Random? random = null )
+		System.Func<int, RideScript?>? scriptFor = null, Random? random = null, int balloonSets = 0 )
 	{
 		_scriptFor = scriptFor;
+		_balloonSets = balloonSets;
 		_arrivalRandom = random ?? new Random();
 
 		_peeps = PeepsIn( park );
@@ -289,6 +303,13 @@ public sealed class ParkPeople : Entity
 
 					_sprites[peep.ThingId] = sprite;
 				}
+
+				// And the balloon, by the slot the guest names: the table is saved slot for slot, the balloon's own
+				// sprite with it (FUN_00475730). A slot that is not a balloon's is not taken for one. A balloon saved
+				// bursting is not restored: no guest names it any more (0x004fe96b), and its loop stack is not read.
+				if ( person.Guest is { BalloonScript: not 0 } guest
+					&& pictures.TryGetValue( guest.BalloonScript, out var held ) && held.Type == Balloon.SpriteKind )
+					peep.Balloon = Balloon.Saved( held );
 			}
 
 			// And the staff, seeded exactly as the guests are and for the same two reasons: they are saved
@@ -876,6 +897,25 @@ public sealed class ParkPeople : Entity
 	}
 
 	/// <summary>
+	/// Sets the life of every balloon held, for the debug console's <c>balloon</c>; a guest holding none is left
+	/// alone. Answers how many.
+	/// </summary>
+	internal int SetBalloonLife( int life )
+	{
+		var touched = 0;
+
+		foreach ( var peep in _peeps.Where( peep => peep.Balloon != null ) )
+		{
+			peep.BalloonLife = life;
+			++touched;
+		}
+
+		Log.Info( $"People: {touched} balloons now have life {life}" );
+
+		return touched;
+	}
+
+	/// <summary>
 	/// Makes a guest on a cell who has already come through the gate, for the debug console's <c>admit</c>: an
 	/// INSTRUMENT. <see cref="Admit"/> starts them <see cref="PeepState.AtGate"/>, to pay at a booth and walk in;
 	/// this then does what <see cref="PeepState.Entering"/>'s arrival does (<see cref="PeepBehaviour.AdmitAsEntered"/>),
@@ -1230,6 +1270,8 @@ public sealed class ParkPeople : Entity
 		if ( PeepBehaviour.HeldByAThing( peep.State ) )
 			return false;
 
+		// A balloon they hold goes with them, deleted rather than let go, as the original's does at the bus
+		// (FUN_004fb330, 0x004fb333..0x004fb346).
 		_peeps.Remove( peep );
 		_byId.Remove( thingId );
 		_walks.Remove( thingId );
@@ -1380,6 +1422,15 @@ public sealed class ParkPeople : Entity
 			{
 				foreach ( var playing in _sprites.Values )
 					playing.Step( tick * MillisecondsPerTick );
+
+				// The balloons are instances of the same table, held and let go alike.
+				foreach ( var peep in _peeps )
+					peep.Balloon?.Sprite.Step( tick * MillisecondsPerTick );
+
+				foreach ( var bursting in _bursting )
+					bursting.Sprite.Step( tick * MillisecondsPerTick );
+
+				_bursting.RemoveAll( bursting => bursting.Sprite.Freed );
 			}
 
 			if ( (tick & (ThingTickEvery - 1)) != 0 )
@@ -1409,7 +1460,7 @@ public sealed class ParkPeople : Entity
 				// oscillate for ever.
 				peep.Navigator.StampPrevious();
 
-				peep.Tick( thingTick );
+				peep.Tick( thingTick, OnACountingCell( peep ) );
 
 				// The guest tick handler's last call, after its (id & 3) needs block, so every sweep, on the park's
 				// own clock (FUN_004fdc90, 0x005019da).
@@ -1426,6 +1477,9 @@ public sealed class ParkPeople : Entity
 				// anywhere, so a guest in a state that does not walk never reaches the walk at all.
 				if ( _walks.TryGetValue( peep.ThingId, out var walk ) )
 					_behaviour.Step( peep, walk, playing, thingTick );
+
+				// A balloon let go by the needs or by a state entered goes on bursting where it was.
+				TakeLetGo( peep );
 
 				// FUN_004d4190, whose only caller is the per-guest needs call - so what the walk asked for
 				// lands on that guest's own turn in four rather than at once. Which side of the walk it
@@ -1531,7 +1585,8 @@ public sealed class ParkPeople : Entity
 		// constants - MediumHappinessChange, both what a guest loses when a visit gives them nothing and the
 		// multiplier on what winning is worth, and the excitement match's four - and the score what each kind
 		// likes. Without them those arms leave happiness alone rather than moving it by an invented number.
-		var operation = new ParkRideOperation( _behaviour.State, Guests, _behaviour.Admission, _behaviour.Score );
+		var operation = new ParkRideOperation( _behaviour.State, Guests, _behaviour.Admission, _behaviour.Score,
+			_balloonSets );
 
 		// <b>The park as it stands, not as the file left it.</b> A thing bought this session lives in
 		// ParkState's list and in no other, so a sweep over the save's list hands it no turn at all - it
@@ -1686,6 +1741,34 @@ public sealed class ParkPeople : Entity
 		=> _behaviour.Catalogue is { } catalogue && catalogue.TryGet( thing.CatalogueId, out var item )
 			? item.TrackType
 			: 0;
+
+	/// <summary>
+	/// Whether the cell a guest stands on counts them (<see cref="Peep.CountsOn"/>): the cell the park has them
+	/// linked into, as the original reads the thing's own cell bytes, or the one under their feet before their
+	/// first turn has linked them.
+	/// </summary>
+	internal bool OnACountingCell( Peep peep )
+	{
+		var (x, y) = State.CellOf( peep.ThingId )
+			?? (peep.Navigator.Position.X >> 16, peep.Navigator.Position.Y >> 16);
+
+		return Peep.CountsOn( State.Record( x, y ).Type );
+	}
+
+	/// <summary>A balloon a guest has let go goes on bursting here, where it was.</summary>
+	private void TakeLetGo( Peep peep )
+	{
+		if ( peep.TakeLetGo() is not { } letGo )
+			return;
+
+		_bursting.Add( letGo );
+
+		Log.Info( $"Person {peep.ThingId}: let go of the balloon, colour {letGo.Sprite.Set}, at ({letGo.X:0.00},{letGo.Y:0.00}) "
+			+ $"height {letGo.Height:0.00}, life {peep.BalloonLife}" );
+	}
+
+	/// <summary>Balloons let go and still bursting, for the drawing.</summary>
+	internal IReadOnlyList<Balloon> Bursting => _bursting;
 
 	/// <summary>
 	/// Hands a guest's queued animation and interval to their sprite - <c>FUN_004d4190</c>, which tests each
@@ -2272,6 +2355,8 @@ public sealed class ParkPeople : Entity
 				// The visitor window's four counts, and the happiness the settle-up measures a visit against.
 				+ $"rides {peep.NumRides} shops {peep.NumShops} sideshows {peep.NumSideshows} won {peep.NumSideshowsWon} "
 				+ $"joined {peep.JoinHappiness:0} "
+				// The balloon's life, its colour and its picture's turn, or "-" for none held.
+				+ $"balloon {peep.BalloonLife} {(peep.Balloon is { } held ? $"set {held.Sprite.Set} frame {held.Sprite.Frame} shown {held.Sprite.Shown}" : "-")} "
 				// Where they ARE, without which a person whose needs change and whose position does not
 				// reads the same as one who moves.
 				+ $"at ({nav.Position.X / (float)FixedVector.One:0.000},"

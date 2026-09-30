@@ -64,6 +64,58 @@ public sealed class Peep
 	/// <summary><c>mNumSideshowsWon</c>, <c>+0x1d0</c>: sideshows won.</summary>
 	public int NumSideshowsWon { get; set; }
 
+	/// <summary>
+	/// The balloon this guest holds, or null - <c>mBalloonScript</c>, <c>+0x210</c>, a slot in the sprite table there.
+	/// A Balloon Shop gives it, boarding anything takes it away (<see cref="SetState"/>) and leaving brings it back
+	/// (<c>docs/exe/ride-operation.md</c>, "A held balloon").
+	/// </summary>
+	public Balloon? Balloon { get; set; }
+
+	/// <summary>
+	/// How many more needs sweeps the balloon lasts - <c>mRemainingBalloonLife</c>, <c>+0x214</c>. It outlasts the
+	/// sprite: a guest on a ride keeps it, and <see cref="Tick"/> counts it down whether or not they hold one.
+	/// </summary>
+	public int BalloonLife { get; set; }
+
+	/// <summary>
+	/// Where the held balloon goes next frame, across, in world units - <c>mLastPosX</c>, <c>+0x218</c>; see
+	/// <see cref="Balloon.Place"/>. <see cref="BalloonLastY"/> (<c>mLastPosY</c>) is down.
+	/// </summary>
+	public float BalloonLastX { get; set; }
+
+	/// <inheritdoc cref="BalloonLastX"/>
+	public float BalloonLastY { get; set; }
+
+	/// <summary>
+	/// A balloon let go since <see cref="TakeLetGo"/> was last asked, bursting where it was: the guest no longer
+	/// holds it, and whoever draws the park lets it finish.
+	/// </summary>
+	public Balloon? LetGo { get; private set; }
+
+	/// <summary>Hands over the balloon let go, if any, and forgets it.</summary>
+	public Balloon? TakeLetGo()
+	{
+		var letGo = LetGo;
+		LetGo = null;
+
+		return letGo;
+	}
+
+	/// <summary>
+	/// Lets go of the balloon held, if any - <c>FUN_004fe950</c>: its sprite is put on the let-go script and the
+	/// guest holds none; the life is left as it was.
+	/// </summary>
+	public void LetGoOfTheBalloon()
+	{
+		if ( Balloon is not { } held )
+			return;
+
+		held.LetGo();
+
+		LetGo = held;
+		Balloon = null;
+	}
+
 	public float Thirst { get; set; }
 
 	public float Hunger { get; set; }
@@ -388,6 +440,11 @@ public sealed class Peep
 		NumSideshows = saved.NumSideshows;
 		NumSideshowsWon = saved.NumSideshowsWon;
 
+		// The balloon's life and its next place; its sprite is the table's, which ParkPeople joins by the slot.
+		BalloonLife = saved.RemainingBalloonLife;
+		BalloonLastX = saved.LastPosX;
+		BalloonLastY = saved.LastPosY;
+
 		saved.PreviousRides?.Take( _previousRides.Length ).ToArray().CopyTo( _previousRides, 0 );
 		saved.PreviousTemporaryRides?.Take( _previousTemporaryRides.Length ).ToArray().CopyTo( _previousTemporaryRides, 0 );
 
@@ -579,7 +636,11 @@ public sealed class Peep
 	/// change through what happens to them. That is what the original does, so it is what this does.
 	/// </para>
 	/// </summary>
-	public void Tick( int tick )
+	/// <param name="onACountingCell">
+	/// Whether the cell they stand on passes <c>FUN_004fa990</c>, as <see cref="CountsOn"/> answers of its type. False
+	/// by default, which leaves the balloon's countdown alone for a caller asking about the needs.
+	/// </param>
+	public void Tick( int tick, bool onACountingCell = false )
 	{
 		if ( !DueOn( tick ) )
 			return;
@@ -604,7 +665,26 @@ public sealed class Peep
 		}
 
 		PurposeSpeed = Toilet > HurryAboveToilet ? HurryingSpeed : UnhurriedSpeed;
+
+		// The block's last test (0x005018f8..0x00501949): off a ride and on a counting cell, a draw of the park's
+		// generator, one in ten of which picks a thought (FUN_004fc8a0), and then the balloon's life goes down by one,
+		// unsigned, letting it go at nought. It reads the life alone, so a guest whose balloon is not showing still
+		// counts down.
+		if ( State is PeepState.Riding or PeepState.Leaving || !onACountingCell )
+			return;
+
+		Unimplemented.Report( "NEEDS_THOUGHT_PICKER" );
+
+		if ( BalloonLife != 0 && --BalloonLife == 0 )
+			LetGoOfTheBalloon();
 	}
+
+	/// <summary>
+	/// Whether a thing standing on a cell of this type is counted - <c>FUN_004fa990</c>, reading the runtime cell's
+	/// <c>mType</c> under the thing's own cell bytes: a cleared cell (0), a path (1), a queue (3), a ride's end (9)
+	/// or its far end (10) (<c>FUN_00536310</c> and its neighbours).
+	/// </summary>
+	public static bool CountsOn( int cellType ) => cellType is 0 or 1 or 3 or 9 or 10;
 
 	/// <summary>
 	/// Enters a state: the self-contained half of the original's <c>FUN_00501db0</c>.
@@ -613,9 +693,10 @@ public sealed class Peep
 	/// That function writes the new state, queues an animation for it, and then does whatever entering
 	/// it calls for. The animation and the effects below are everything it does that depends on the
 	/// guest alone. Case <c>0xe</c>'s roll is
-	/// <c>PeepBehaviour.RollForTheVisit</c>'s, made straight after this. The rest - being given a balloon,
-	/// firing the events a ride raises, paying at the bus stop - reaches into a ride, the sprite table or the
-	/// event ring, and is not built.
+	/// <c>PeepBehaviour.RollForTheVisit</c>'s, made straight after this; boarding's putting a balloon away is here,
+	/// and leaving's building it again is <see cref="ParkRideOperation.Dismiss"/>'s, which knows the thing left. The
+	/// rest - firing the events a ride raises, paying at the bus stop - reaches into a ride or the event ring, and is
+	/// not built.
 	/// </para>
 	/// </summary>
 	public void SetState( PeepState next, int tick, Random random )
@@ -658,8 +739,19 @@ public sealed class Peep
 				PurposeSpeed = UnhurriedSpeed;
 				break;
 
-			// Both of these give up on wherever they were going.
+			// Boarding anything deletes the balloon's sprite, with no burst, and keeps its life (0x00502156..
+			// 0x00502169); leaving the thing builds it again (ParkRideOperation.Dismiss).
+			case PeepState.Riding:
+				Balloon = null;
+				break;
+
+			// Both of these give up on wherever they were going, and entering the first lets go of a balloon
+			// (0x005022ef). A guard's catch, which enters it, has deleted the sprite first; nothing here enters it.
 			case PeepState.Leaving:
+				MajorDest = 0;
+				LetGoOfTheBalloon();
+				break;
+
 			case PeepState.HeadingForExit:
 				MajorDest = 0;
 				break;

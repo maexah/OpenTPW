@@ -628,6 +628,12 @@ public static class DebugConsole
 				foreach ( var person in census )
 					Reply( "  " + person );
 
+				var balloons = guests.BalloonCensus().ToArray();
+				Reply( $"balloons {balloons.Length}" );
+
+				foreach ( var balloon in balloons )
+					Reply( "  " + balloon );
+
 				break;
 
 			// What each guest wants, as opposed to what they look like - the other half of a person, and
@@ -717,6 +723,19 @@ public static class DebugConsole
 				var level = Math.Clamp( Argument( 1, Peep.Most ), Peep.Least, Peep.Most );
 
 				Reply( $"thirst: {drinkers.MakeThirsty( level )} guests are now thirst {level}" );
+
+				break;
+
+			// Sets the life of every balloon held - an instrument as `thirst` is, so that a balloon's running out
+			// can be watched without waiting its two minutes: see ParkPeople.SetBalloonLife.
+			case "balloon":
+				if ( ParkPeople.Current is not { } holders )
+				{
+					Reply( "balloon: none - a park has to be loaded" );
+					break;
+				}
+
+				Reply( $"balloon: {holders.SetBalloonLife( (int)Argument( 1, 1 ) )} balloons now have life {(int)Argument( 1, 1 )}" );
 
 				break;
 

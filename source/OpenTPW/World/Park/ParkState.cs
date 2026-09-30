@@ -1040,6 +1040,13 @@ public sealed class ParkState
 	public int NextOnCell( int thingId ) => _onCellNext.GetValueOrDefault( thingId );
 
 	/// <summary>
+	/// The cell a thing is linked into (<see cref="StandOn"/>), or null for one on none - the original's thing bytes
+	/// <c>+5</c> and <c>+7</c>, which <c>FUN_004fa990</c> reads.
+	/// </summary>
+	public (int X, int Y)? CellOf( int thingId )
+		=> _cellOf.TryGetValue( thingId, out var cell ) ? (cell % ParkWorld.MapSize, cell / ParkWorld.MapSize) : null;
+
+	/// <summary>
 	/// How far a queue walk may go before it is treated as broken. The original uses a thousand in
 	/// <c>GetBackOfQueue</c> and complains rather than spinning; this bounds the person walk the same way.
 	/// </summary>
