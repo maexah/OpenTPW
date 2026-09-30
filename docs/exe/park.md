@@ -954,11 +954,91 @@ Dispatch at `0x005546f5`: `DEC EAX` / `CMP EAX,0x10` / `JA 0x00554c25` / `JMP [E
 
 **Both prologues make the same call, and only BUMP keeps its answer.** Each reads the 16-bit field at `[EBP+0xac]` and looks an object up through the global at `0x007cf6ec` (`CALL 0x004cd300`); BUMP keeps it in `ESI` (`0x0055470b`), where COAST's operand fetch overwrites it (`0x00554a6f`). BUMP's handlers pass **`[ESI+0x28]`** into functions in `0x00544xxx`-`0x0054axxx`, except sel 5, which reads `[ESI+0x2c]`, and sel 17, which passes `ESI` itself. COAST instead uses the `+0xe0` handle INITIALISE stores, indexing `DAT_00790bd0`, with functions in `0x0043bxxx`. **Two unrelated object families** — so one "ride" serving both would be an abstraction the original does not have.
 
-Sel 5 reads `[ESI+0x2c]` directly with no call; sel 13 and 14 call the **same** function `0x00545100`, one scaling its argument by **30** (frames per second) and the other negating it; sels 3, 6, 7 and 10 each make one call and return. **EDI is zero on entry to every selector's arm**, so sel 4 passes a literal 0; sels 8 and 9 choose their call by whether the resolved value is non-zero, and sel 17 acts only when the value differs from the word at `+0xe6`, which it then stores. **Two selectors store into operand 1**: sel 2 tests the tag first (`0x00554777`), so a literal takes nobody off and writes nothing, and sel 11 writes the register first (`0x00554913`, `SUB`'s tail), so `BUMP 11 0`, once in each theme's water ride, is a test of the answer. Sels 4, 5, 12, 13, 14 and 16 write the register with no destination, and sel 1 does for a variable operand (`0x00554758`); the others write none.
+Sel 5 reads `[ESI+0x2c]` directly with no call; sel 13 and 14 call the **same** function `0x00545100`, one scaling its argument by **30** (30 track ticks of 31 ms, not frames or seconds: "How a bumper ride ends a go", below) and the other negating it; sels 3, 6, 7 and 10 each make one call and return. **EDI is zero on entry to every selector's arm**, so sel 4 passes a literal 0; sels 8 and 9 choose their call by whether the resolved value is non-zero, and sel 17 acts only when the value differs from the word at `+0xe6`, which it then stores. **Two selectors store into operand 1**: sel 2 tests the tag first (`0x00554777`), so a literal takes nobody off and writes nothing, and sel 11 writes the register first (`0x00554913`, `SUB`'s tail), so `BUMP 11 0`, once in each theme's water ride, is a test of the answer. Sels 4, 5, 12, 13, 14 and 16 write the register with no destination, and sel 1 does for a variable operand (`0x00554758`); the others write none.
 
 **COAST and BUMP share one error handler; TOUR does not.** COAST's `JA` (after `CMP EAX,0x7`) and BUMP's `JA` (after `CMP EAX,0x10`) both jump to **`0x00554c25`**, which pushes `0x765bac` = **"RSSE: Unknown bumper ride command"** — so an out-of-range COAST command is reported as a *bumper* fault, logged through `FUN_005da3c0`. TOUR has its own at **`0x005546dc`** pushing `0x765bd0` = "RSSE: Unknown tour ride command", and TOUR's own dispatch is `DEC` / `CMP EAX,0x11` / `JMP [EAX*4 + 0x5569d0]`, so **18 selectors**. **Never write an engine string from memory or by analogy** — one was invented and caught only by reading `0x765bac`.
 
 **`ScriptDefs.Bumper` is NOT a selector table — do not implement from it.** Its values are -1, 0, 7, 32, 38, 47, 54, 93, 115, 121, 134 and **18770**, and the dispatcher accepts only 1..17, so they cannot be selectors at all. `ScriptDefs.Coaster` matched COAST's table exactly, which makes the mismatch here easy to miss by analogy. Whatever those numbers are, they are not what `BUMP` switches on.
+
+### How a bumper ride ends a go, and lets its riders off
+
+Decoded for the Hot Pot (`QUEUE.md` Q179: the fork review's gap1 items, read again first-hand and by three skeptics,
+`wf_37cc14a6-a0a`, eleven claims upheld with details corrected). Aluzed's OpenTPW-decomp fork pointed at the selectors
+first (its T-007 item 22 and `FUN_0054a040`); the unload chain is found here.
+**`BUMP` works on the track-ride record, and the engine's track tick ends the go, not the script.** The object's
+`[+0x28]` is a handle `slot | BumperType << 8`; the record is `DAT_00877b60 + (h & 0xff) * 0xd0`, and every callee
+checks the `GFEJ` magic (`DAT_00877b58`) and the handle before touching it. Templates, one per BumperType in order from
+-1, are at `0x764178` (the Hot Pot's: duration 4350, car radius, mesh base 1 count 1, most cars 8).
+
+| Record | | Car (pool `DAT_00877b68`, 256 of `0xac`) | |
+|---|---|---|---|
+| `+0x00` | BumperType | `+0x00` | flags: 1 live, `0x20` unloading, `0x4000` active, `0x100000` new, `0x400000` lead |
+| `+0x04` | duration, in track ticks (`BUMP 13`, `14`) | `+0x08` | model |
+| `+0x1c` | performance 0-100, set at open (`FUN_00545180`) | `+0x24`, `+0x28` | emitter nodes (mask `0x100`) |
+| `+0x50` | state: 0 closed, 1 loading, 2 running | `+0x30` | rider list |
+| `+0x54` | 0 sound, 1 worn (`BUMP 9`), 2 broken (`BUMP 8`) | `+0x88` | timer |
+| `+0x58`, `+0x5c` | lead car; cars on the ride (`BUMP 11`) | `+0x9c` | its record |
+| `+0x60`, `+0x64` | riders seated; most cars | | |
+| `+0xc4`, `+0xc8` | boarding list; leaving list | | |
+
+A list node comes from `DAT_00877b8c`: `+0` peep, `+4` handle, `+8` seat node (-1 none), `+0xc` seat id, `+0x10` next.
+
+**What each selector calls** (arms at the table above; every one checks the handle first):
+
+| Sel | Callee | What it does |
+|---|---|---|
+| 1 | `FUN_0054aa80` | With the ride not closed and a free node, pushes the peep onto the head of the boarding list; 1 or 0 in the register (a variable operand only). |
+| 2 | `FUN_0054ab40` | Pops the head of the leaving list and answers the peep or 0, into the variable and then the register. |
+| 3 | `FUN_00544f90` | Only in state 1, and not for the water family or -2: state 2, and every car of the ride timed to `+0x04` and retargeted; a Hot Pot car still flagged `0x4000` to anim 5. "Start Bump Ride". |
+| 4 | `FUN_00549db0( h, 0 )` | Not closed, and `+0x5c` below both `+0x64` and 64: launches a car from the pool, timed to `+0x04`; it takes the whole boarding list and seats it; the car or 0 in the register. |
+| 5 | none | Answers the object's `+0x2c`, `mIsTrackRideValid`. |
+| 6 | `FUN_00544a10` | Unless closed: state 0, the boarding list onto the leaving list's tail; bumper cars timed 0 and set `0x20`. "Close ride". |
+| 7 | `FUN_00544840` | Types -1, -2, -3 and -14: state 1, whatever it was. The karts and water, only from 0 (1 or 2, and the start buoy). Then the performance. "Open ride". |
+| 8 | `FUN_00544c80` / `FUN_00544e50` | Non-zero: `+0x54` = 2, smoke at each car's emitter, Hot Pot cars anim `0xc`. Zero: `+0x54` = 0, and only from 2 "Ride Fixed", smoke killed, anim 5. |
+| 9 | `FUN_00544c00` / `FUN_00544e50` | Non-zero: `+0x54` = 1, "Ride worn out". Zero: as 8's. |
+| 10 | `FUN_00544b50` | Removes every car (their riders to the leaving list), then closes. |
+| 11 | `FUN_005452a0` | Answers `+0x5c`. |
+| 12 | `FUN_00549b80` | Not closed: the first car of the ride with no riders takes the whole boarding list, is timed and seated; 1 or 0. It does not skip a car still unloading, and retargeting it clears `0x20`. With no car empty the list stays for the next `BUMP 12` or `4`. |
+| 13 | `FUN_00545100( h, v * 30 )` | The duration; the register gets `v` unscaled. |
+| 14 | `FUN_00545100( h, -v )` | Laps, stored negative; the register gets `v`. |
+| 16 | `FUN_0054ad90( h, 1 )` | The operand is fetched and ignored. Removes the first empty car and answers 1; with none, removes the first car whatever it carries and answers **0**. |
+| 17 | `FUN_0052a490`, `FUN_0052a700` | Only when `v` differs from the script's `+0xe6`, which it stores: the ride's track pieces to anim 5 (`v` 0) or `0xc`. |
+
+**The chain, for the Hot Pot's `bumper.RSE`.** `BUMP 7` @12 opens it; `BUMP 4` @55 launches cars up to
+`VAR_CAPACITY`. Each admission is `BUMP 1 VAR_LETMEON` @102, then `BUMP 12` @108, which puts the boarding list into
+the first empty car (a `b_car` has one seat, `0x80` id 1; `FUN_00549c60` seats a rider and adds to `+0x60`). With
+the capacity filled or the wait over, `BUMP 13 VAR_DURATION` @125 sets `+0x04` = `VAR_DURATION` × 30, `WAIT 1000`,
+and `BUMP 3` @136 starts the go. From then on **the track tick `FUN_00546c80`, once per 31 ms tick, calls
+`FUN_005474b0` for each live car** (and `FUN_00547f50`, the step, if the car is still live), which counts the car's timer down while it is at least 0, the state is 2 and the
+ride is not broken (`+0x54` 2 freezes it), and at 0 sets `0x20` (the bumper family also clears `0x4000`). **A timer
+started at 0 goes to -1 and never counts again**; only `BUMP 6` unloads such a car. With `0x20` set, each tick the bumper arm calls `FUN_0054ac70( car, 1 )`:
+every rider on the car goes to the head of the leaving list (so the order reverses), `+0x60` goes down by one each ("Peep %d added to ride %d
+leaving list", particle `0x13` where a rider was seated), and it answers `+0x60`, **the ride-wide seated count**: only
+when that is 0 does the state go back to 1 and the car to anim `0xc`; a car handled while another still holds riders
+tries again next tick. Its looped sound is faded on every pass. The script's `BUMP 2 VAR_LETMEOFF` @221 then
+takes one rider a pass and loops on `TEST VAR_LETMEOFF` until the engine has dismissed them (`ride-operation.md`,
+"`VAR_LETMEOFF`"), counting `VAR_ONRIDE` down. So a Hot Pot go lasts `VAR_DURATION` × 30 ticks of play not broken after `BUMP 3` (the
+script runs after the track tick in a step, so the count starts on the next): the bought one's duration 25 gives 750
+ticks, 23.25 s. The template's 4350 is overwritten by `BUMP 13` before any car is timed.
+
+**When the tick runs.** `Game_StateMachine`'s park case calls `FUN_00546c80` at `0x0054f55f` once per step of its
+catch-up loop, each step 31 ms of the park clock, before the every-eighth-step gate and the three-a-frame cap: none
+or many in a frame, the backlog held to 2000 ms. A pause stops it by freezing the clock; an inactive full-screen
+window drops the step.
+
+**Other writers of a car's timer and `0x20`.** `BUMP 3`, `4`, `6` and `12` (above); the buoy arm's increment at
+`0x00547aae`, which needs a buoy flagged 4, and the bumper family's eight buoys (`FUN_00545890`) never are; and **the
+save loader `FUN_00543560`, chunk 5, which restores whole car records**, flags and timer included.
+
+**Three quirks to copy, not fix.** `BUMP 6` flags every bumper car to unload, so on the next tick a closed ride with
+cars reads state 1 again (the boarding list it moved was never counted in `+0x60`; a ride with no cars stays 0). `BUMP 16` answers 0 after removing an occupied car, so the script's `BUMP 16 0` /
+`BRANCH_Z @65` / `ADD VAR_CARS -1` (@45) leaves `VAR_CARS` one above `+0x5c`. And removal (`FUN_0054ae50`) that
+empties the ride sets state 1, "Ride Over - reset to loading", except for the water family.
+
+**What the bumper family's chain does not need.** The cars' motion (`FUN_0054a040` picks each car's next buoy,
+`DAT_00877b78`, or another car to chase; `FUN_00547f50` steps it) and their sounds and emitters are apart from the
+unload: nothing in the chain above reads a car's position. Go-karts and the water ride end their cars by reaching
+buoys instead (`FUN_005474b0`'s buoy arm, "GoKart Race Over"), so building them needs the steering.
 
 ### The ride object
 
@@ -1000,7 +1080,7 @@ Corpus counts for the control opcodes: `WAIT` 458, `ENDSLICE` 396, `CRIT_UNLOCK`
 
 **And that main loop contains no `ENDSLICE`.** The only reason a turn ever ends is the `CRIT_UNLOCK` at word 62 zeroing the budget — and a machine that misses that semantic still ends it about four laps in, once the unlocked words have spent the budget, so the miss changes how much a turn does, not whether it ends. `Coaster1` also declares **no stack at all** (`#setstack` 0), so it exercises nothing of `JSR`/`RETURN`. **The useful shape for a test is to *find* a script that reaches a `WAIT` by running them all, not to name one.**
 
-**A lock reached on the last unit of the budget**, the one arrival where charging `CRIT_LOCK` would end the turn inside its section. Walked with every branch arm possible from every turn start (the entry, after each `ENDSLICE` and `CRIT_UNLOCK`, each waiting instruction, and wherever a budget of 50 runs out, to a fixpoint), **68 of the 150 locks can be dispatched after exactly 49 costed instructions, 18 of the 36 in Lost Kingdom**; three walkers written apart agree lock by lock, and all 68 witnesses replay from word 0 on a separate machine. **None of the six locked scripts the Easymode park places is among them** (the three toilets, `Coconut`, `Bouncy`, `Junspray`: their locks come after at most 29). **But nothing else runs during a script's turn**, so a world answer (`LETMEOFF`, `RIDECLOSED`, `LIMBOSPACE`, `WALKGET`, the clock, a `WAIT4ANIM` deadline) is the same every time one turn asks it. Walked that way, 15 of the 18 cannot happen: a poll loop exits only on its first test in a later turn, and the arrival is the phase plus a fixed path, well short of 49. The three left (`bumper` @92, `GoKarts` @52, `Wateride` @77) survive only because `BUMP`'s answers are undecoded and taken as free to change within a turn. **The Hot Pot's `bumper` @92 is the only one the project's interpreter can reach**, because its `BUMP`s are no-ops there: from the turn that resumes at its `WAIT 1000` @134, the ride unloads in one run of 18 instructions a rider, removes cars at 9 each and reaches the lock after `(19 + 18n + 9d) mod 50` costed instructions of its turn, for `n` riders and `d` cars removed. 49 needs 8 riders cut to 4 cars, or 7 cut to 1: the capacity cut during the ride. Its capacity runs 1 to 8 (`MinCapacity`, `MaxCapacity`), red-lined at 4.
+**A lock reached on the last unit of the budget**, the one arrival where charging `CRIT_LOCK` would end the turn inside its section. Walked with every branch arm possible from every turn start (the entry, after each `ENDSLICE` and `CRIT_UNLOCK`, each waiting instruction, and wherever a budget of 50 runs out, to a fixpoint), **68 of the 150 locks can be dispatched after exactly 49 costed instructions, 18 of the 36 in Lost Kingdom**; three walkers written apart agree lock by lock, and all 68 witnesses replay from word 0 on a separate machine. **None of the six locked scripts the Easymode park places is among them** (the three toilets, `Coconut`, `Bouncy`, `Junspray`: their locks come after at most 29). **But nothing else runs during a script's turn**, so a world answer (`LETMEOFF`, `RIDECLOSED`, `LIMBOSPACE`, `WALKGET`, the clock, a `WAIT4ANIM` deadline) is the same every time one turn asks it. Walked that way, 15 of the 18 cannot happen: a poll loop exits only on its first test in a later turn, and the arrival is the phase plus a fixed path, well short of 49. The three left (`bumper` @92, `GoKarts` @52, `Wateride` @77) survive only because `BUMP`'s answers were taken as free to change within a turn (the bumper family's are decoded since, "How a bumper ride ends a go"; this walk has not been redone with them). **The Hot Pot's `bumper` @92 is the only one the project's interpreter can reach**, because its `BUMP`s are no-ops there: from the turn that resumes at its `WAIT 1000` @134, the ride unloads in one run of 18 instructions a rider, removes cars at 9 each and reaches the lock after `(19 + 18n + 9d) mod 50` costed instructions of its turn, for `n` riders and `d` cars removed. 49 needs 8 riders cut to 4 cars, or 7 cut to 1: the capacity cut during the ride. Its capacity runs 1 to 8 (`MinCapacity`, `MaxCapacity`), red-lined at 4.
 
 ---
 

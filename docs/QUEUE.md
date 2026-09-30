@@ -3172,7 +3172,28 @@ artifacts are listed in `docs/history/README.md`.
   items. Research completing is inert here (count it where the flag would be set). The mystery row needs the
   player's golden-ticket set (`gms.dat`'s ride ids): build it if the profile reader has it, count it otherwise.
   Confirm: the shops tab, photographed, lists the three (Balloon, Burger, Drinks), and the rides tab the four.
-- [ ] **Q179. The Hot Pot lets no rider off. Decode first.** Found by Q172b's game run. A Hot Pot bought at (57,23)
+- [x] **Q179. The Hot Pot lets no rider off: the decode.** Done 2026-09-30, `alexah/207-decode-the-hot-pot-unload`.
+  Decode only; the build is Q179b. `park.md`, "How a bumper ride ends a go, and lets its riders off", new (the record,
+  the car, what each selector calls, the chain, the tick, three quirks); line 957's "(frames per second)" is 31 ms
+  ticks; `park-engine.md`'s `FUN_00546c80` row is the track-ride tick. FileFormats `vm/instructions.md` gives every
+  `BUMP` command its meaning, 9, 12, 13 and 16 among them (its branch 207).
+  - **Decoded** (the fork review's gap1-1..gap1-7 and its refuter, read again first-hand, then `wf_37cc14a6-a0a`,
+    three Opus skeptics: eleven claims upheld, details corrected, and "nothing else writes the timer" refuted). The
+    track tick `FUN_00546c80` runs once per 31 ms step and `FUN_005474b0` counts each car's timer down while the
+    ride runs unbroken; at 0 the car's riders go to the leaving list (`FUN_0054ac70`), and `BUMP 2 VAR_LETMEOFF` @221
+    takes them one a pass. Corrected by the skeptics: `BUMP 3` and `7` act by type (water and -2 differ), a duration
+    of 0 still unloads on close, `BUMP 12` can seat an unloading car and cancel its unload, and the save loader
+    (`FUN_00543560`, chunk 5) restores whole car records, timer and flags.
+  - **Measured in the game** (the build before any change; `q179/q179run.py`, `q179/run2/` 6 minutes and `run3/` 4,
+    silent, stock park, Belly Bounce sold and The Hot Pot bought at (57,23); `save/` unchanged), predicted first, 5
+    of 5 both runs: built capacity 4, duration 25; no match line for it; 22 and 19 guests in state `Riding` on it;
+    `BUMP` @102, @108 and @221 each counted once per admission, equal to the riders (the stale register at @221 lets
+    `VAR_ONRIDE` count down with nobody off, so it admits past 4). Photographed and looked at (`run3/ran-z60-y180.png`,
+    `ran-z100-y90.png`): the pot stands empty, no car and no rider drawn, while 19 are counted on it.
+  - **Not confirmed:** the unit in the running original (30 ticks a unit is read from the code: a go of 25 should
+    last 750 ticks, 23.25 s); the cars' motion (`FUN_0054a040`, buoys), not needed for the unload.
+
+  The item as written: Found by Q172b's game run. A Hot Pot bought at (57,23)
   with its queue laid to the path at (56,22), then `load 40`: guests are admitted ("been AdmitPerson'd to ride 43")
   and sit in state `Riding`, 13 in 20 minutes, 16 in the build before Q172b in 4, past its capacity of 4, and none is
   let off, so no settle-up runs for it (no excitement match, visit history or charge). Its script reaches `BUMP`,
@@ -3198,6 +3219,17 @@ artifacts are listed in `docs/history/README.md`.
     `ParkTrackRides` skips (types 5 and 9). Predict the ride's length (`VAR_DURATION` × 30 × 31 ms) before the run, and
     put the bug back (never set `0x20`).
 
+- [ ] **Q179b. The Hot Pot lets its riders off: the build.** From Q179's decode (`park.md`, "How a bumper ride
+  ends a go, and lets its riders off"). Build the bumper family's record and cars beside `ParkTrackRideTable`
+  (`World/Park`): the boarding and leaving lists, a pool car with its riders and timer, and `BUMP` 1, 2, 3, 4, 6, 7,
+  8, 9, 10, 11, 12, 13 and 16 as decoded, with 16's answer of 0 and 6's reopen copied, not fixed. The track tick
+  counts the timer in `GameClock` ticks, never seconds or frames, and its unload arm moves a car's riders to the
+  leaving list and sets loading only when the ride-wide seated count is 0. Car motion, buoys, the karts' and water
+  ride's arms, sounds and emitters stay counted by name (`Unimplemented.Report`); so do the saved car chunks
+  `ParkTrackRides` skips (types 5 and 9), which the original restores whole. Confirm in the game (`q179run.py`, then
+  `q172brun.py`): predict the go's length first (`VAR_DURATION` 25 × 30 × 31 ms = 23.25 s from `BUMP 3`), riders let
+  off the Hot Pot, each match log reading excitement 42, no more than 4 on it at once, photographed; and put the bug
+  back (never set `0x20`) and see the new test go red.
 - [ ] **Q180. A loaded park's scripts take their turns on the save's ticks.** Found by Q174c's decode (`park.md`, "The
   scheduler"). The `RSSE` module's header puts the scheduler's globals back (`0x005598d7`): its tick counter (6,055 in
   the shipped park) and the next script handle (16); each script keeps its saved handle at `+0x08`, so its turn

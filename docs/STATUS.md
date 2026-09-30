@@ -68,7 +68,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 - With no work the mechanic, handyman and entertainer stand where the original's walk about (Q133); staff make no
   sound (Q135). Guests and rides read `GameClock.Ticks / 8`, not `mGameTick` (Q132); a load brings one guest (Q26); the bus waits (Q131).
 - Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), a ride walked into in first person, a coaster's
-  excitement and level, the charge's sound. **The Hot Pot lets no rider off** (Q179); a
+  excitement and level, the charge's sound. **The Hot Pot lets no rider off** (Q179b; decoded, Q179); a
   load re-phases turns (Q180), misreads kept times (Q181).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
@@ -77,7 +77,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q199, Q200, Q200b, Q201, Q201b are ticked**; next **Q179** (decode first); the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q199, Q200, Q200b, Q201, Q201b, Q179 are ticked**; next **Q179b** (the build); the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -99,7 +99,7 @@ Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q1
   `SUB`, `GETREMOTEVAR` and `COAST 2 0`; and a lock taken on the last unit running its section whole, which the stock park
   never reaches (the Hot Pot's capacity cut mid-ride, resting on `BUMP` unbuilt, Q45). Q170b's cleared illness, second switch,
   stale major, sale's clear and save's fields; Q171's bounds; Q172b's saved track ride, tier and coaster (Q167) and a Hot Pot
-  rider's 42 (Q179); Q173's tier 3 and zero divisors. Q174b's raw re-entry and last-frame trigger (no run) and loop (census
+  rider's 42 (Q179b); Q173's tier 3 and zero divisors. Q174b's raw re-entry and last-frame trigger (no run) and loop (census
   only); Q174c's saved mark, timer and queue; Q175b's Rat Race; Q176's `0x80000000` draw (its let-go in a throwaway build);
   Q177b's walk-away and a played save's counts; its satisfaction, census only (nothing here shows it). Q177c's withdrawals off, red stamp, a sold coaster's nought, the ticket count and the year's change. Q177d's docks, fat, salt, the speed's hold and floor and a hire's speed. Q177e's balloon built again after a later visit, put away on boarding, deleted on going home, and read from a save; its bob and trail (census only). Q177f's low detail (two kids, one staff bank) and a theme with more than one costume. Q198b's promotion, loans, batch and six months in the red. Q200b's selection edges and the wheel's clamp of a short list. Q201b's mystery row and a played save's research. Q178b's refused line (no shipped file has one).
 
@@ -108,11 +108,11 @@ Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q1
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1508**, 0 fail, 0 skip with the game | 2026-09-30, after Q201b |
-| Tests without the game | **609** ran, **899** skipped, of 1508 | 2026-09-30, after Q201b |
-| Build warnings | 123 | 2026-09-30, after Q201b |
+| Tests | **1508**, 0 fail, 0 skip with the game | 2026-09-30, after Q179 (the decode) |
+| Tests without the game | **609** ran, **899** skipped, of 1508 | 2026-09-30, after Q179 (the decode) |
+| Build warnings | 123 | 2026-09-30, after Q179 (the decode) |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-30 (Q201b).** `alexah/206-researched-buy-list`. **Earlier:** `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-09-30 (Q179, the decode).** `alexah/207-decode-the-hot-pot-unload`. **Earlier:** `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

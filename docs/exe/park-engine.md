@@ -525,7 +525,7 @@ The park's loop runs from `0x0054f4bf` onward, with the tick counter at `[0x0087
 | Address | Original name | What it is | Cadence |
 |---|---|---|---|
 | `0x00520130` | `Particles_Tick` | The *entire* body of the lobby's tick loop, and first in the park's | Every tick |
-| `FUN_00546c80` | — | A pairwise proximity/avoidance pass over a stride-`0x2b` array, gated on `DAT_00877b58 == 0x4a454647` | Every tick |
+| `FUN_00546c80` | — | The track-ride tick, gated on `DAT_00877b58 == 0x4a454647`: each live car's events (`FUN_005474b0`, the timer and unload: `park.md`, "How a bumper ride ends a go") and step (`FUN_00547f50`), then a pairwise avoidance pass over the stride-`0x2b` car pool | Every tick |
 | `FUN_005516b0` | — | The RSSE thing/script engine (named by its own assert string) | Every tick |
 | `FUN_0051e790` | — | The crowd-driven music level, called at `0x0054f870` | **Every 32nd tick** (`TEST [0x00877d34],0x1f`, `0x0054f82d`) |
 | `FUN_00475360` | — | A clock-driven task scheduler: reads the clock, runs entries whose `+0x7c` is past, reschedules `+0x7c = +0x80 + now`. Its own default interval `+0x80 = 0x3e = 62`, so a default sprite steps once per call | **Every 2nd tick** |
