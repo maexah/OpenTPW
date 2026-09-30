@@ -96,6 +96,25 @@ public class PeepBehaviourTests
 	}
 
 	/// <summary>
+	/// The hurry to the gate is 50 for everybody while the bus reports 3, and otherwise the guest's own 25 or nought
+	/// (<c>FUN_004ff730</c>, the words at <c>0x0075c7f0</c>): no other status, and no vehicle, is run for.
+	/// </summary>
+	[TestMethod]
+	public void EveryGuestRunsForTheBusOnlyWhileItReportsThree()
+	{
+		foreach ( var id in new[] { 4, 42 } )
+		{
+			var guest = Guest( id, 2 );
+			var own = id == 4 ? Peep.HurryingSpeed : Peep.UnhurriedSpeed;
+
+			Assert.AreEqual( 50, PeepBehaviour.GateHurry( guest, PeepBehaviour.BusIsLeaving ), $"thing {id} runs" );
+
+			foreach ( var status in new[] { -1, 0, 1, 2, 4, 5, 6 } )
+				Assert.AreEqual( own, PeepBehaviour.GateHurry( guest, status ), $"thing {id} at bus status {status}" );
+		}
+	}
+
+	/// <summary>
 	/// The five guests heading for the gate arrive and judge the admission fee, because the park is open.
 	///
 	/// <para>

@@ -291,18 +291,16 @@ public sealed class PeepBehaviour
 	public int VisitorsToDate => State.VisitorsToDate;
 
 	/// <summary>
-	/// What a guest heading for the gate does <b>not</b> hurry at. The original writes one of three speeds
-	/// into the person's <c>+0xc2</c> before it walks them: <see cref="Peep.UnhurriedSpeed"/>,
-	/// <see cref="Peep.HurryingSpeed"/>, and a third of <b>50</b> that is reached only when a bus is due.
+	/// How many guests share each hurried one on the way to the gate: <see cref="HurriesToTheGate"/> takes the
+	/// hurry for an id whose low two bits are nought, when the bus is not leaving (<see cref="GateHurry"/>).
 	/// </summary>
-	/// <remarks>
-	/// <b>The 50 is not reproduced and not declared as a constant (Q199).</b> Reaching it needs the
-	/// arrival vehicle's <i>script</i> state - <c>FUN_0051a690</c> looks the bus thing up and asks its
-	/// script what it is doing - and this turn does not ask, although the bus runs its script
-	/// (<see cref="ParkRides"/> binds it). The hurry is summed into the walking speed (<see cref="Peep.Pace"/>),
-	/// so a guest running for the bus walks at their base and 25 at most here, where the original's reach 50.
-	/// </remarks>
 	public const int GateHurryShare = 4;
+
+	/// <summary>
+	/// The bus's <c>VAR_STATUS</c> while it pulls away from the stop - <c>bus.RSE</c> sets it once it is let go
+	/// after a load (instruction 57) and holds it through its leaving clip and a second more.
+	/// </summary>
+	public const int BusIsLeaving = 3;
 
 	/// <summary>
 	/// Which way a guest ends up facing when they arrive somewhere the original turns them - an eleven-bit
@@ -412,7 +410,7 @@ public sealed class PeepBehaviour
 			// Heading for the gate - five of Lost Kingdom's thirteen. The speed is decided every turn,
 			// before the walk, and then the fee is judged if the park will let them in.
 			case PeepState.HeadingForGate:
-				peep.PurposeSpeed = HurriesToTheGate( peep ) ? Peep.HurryingSpeed : Peep.UnhurriedSpeed;
+				peep.PurposeSpeed = GateHurry( peep, BusStatus() );
 
 				if ( Walked( peep, walk, playing ) == WalkVerdict.Arrived )
 				{
@@ -754,6 +752,22 @@ public sealed class PeepBehaviour
 		var (standingX, standingY) = walk.Position.Cell;
 
 		State.StandOn( peep.ThingId, standingX, standingY );
+	}
+
+	/// <summary>
+	/// The hurry a guest heading for the gate is given this turn - <c>FUN_004ff730</c>, before it walks them: the
+	/// words at <c>0x0075c7f0</c>, <b>50</b> while the bus reports <see cref="BusIsLeaving"/> ("The bus is coming!
+	/// RUUUUUUUUUUN!!!!", <c>0x0075d914</c>), else 25 for <see cref="HurriesToTheGate"/>, else nought.
+	/// <paramref name="busStatus"/> is <see cref="BusStatus"/>: any other vehicle, or none, is never run for.
+	/// </summary>
+	public static int GateHurry( Peep peep, int busStatus )
+	{
+		ArgumentNullException.ThrowIfNull( peep );
+
+		if ( busStatus == BusIsLeaving )
+			return Peep.RunningForTheBusSpeed;
+
+		return HurriesToTheGate( peep ) ? Peep.HurryingSpeed : Peep.UnhurriedSpeed;
 	}
 
 	/// <summary>
@@ -1836,6 +1850,13 @@ public sealed class PeepBehaviour
 	/// weather; nothing handed in is dry.
 	/// </summary>
 	internal Func<bool> Raining { get; set; } = static () => false;
+
+	/// <summary>
+	/// What the arrival vehicle reports when it is the bus - <c>FUN_0051aad0</c> answering nought, then
+	/// <c>FUN_0051a690</c>, the vehicle script's <c>VAR_STATUS</c> - and -1 when no vehicle is current or it is not
+	/// the bus. <see cref="ParkPeople"/> hands in its own; nothing handed in is no vehicle.
+	/// </summary>
+	internal Func<int> BusStatus { get; set; } = static () => -1;
 
 	/// <summary>What the choice reads of a guest: their kind, needs and histories.</summary>
 	private static ParkRideScore.Wants WantsOf( Peep peep )

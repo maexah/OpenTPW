@@ -591,6 +591,110 @@ public class ParkTickTests
 		}
 	}
 
+	/// <summary>
+	/// <b>A guest heading for the gate runs for the bus while it pulls away</b> (<c>FUN_004ff730</c>; Q199): the hurry
+	/// is 50 on the sweeps the park's own bus answers 3, and the guest's 25 or nought again once it answers 4. The
+	/// test plays <c>bus.RSE</c>'s part by hand, as the test above does.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> <c>ParkPeople</c> not handing <c>BusStatus</c> in; <c>BusStatus</c> asking with no vehicle
+	/// current, or any vehicle but the bus; no count at 6.
+	/// </remarks>
+	[TestMethod]
+	public void AGuestHeadingForTheGateRunsWhileTheBusPullsAway()
+	{
+		var world = World();
+		var catalogue = new ParkItemCatalogue( Theme, data );
+		var rides = new ParkRides( Theme, world, catalogue, data );
+		var busThing = world.ArrivalVehicleForSmallCrowd;
+
+		Assert.IsTrue( catalogue.TryGet( 1600, out var busItem ), "the jungle's catalogue has the bus" );
+		var bus = rides.Scheduler.Find( rides.Scheduler.Spawn( ParkRides.ScriptPathFor( busItem ) ) );
+		var standingBefore = ParkFixedItems.Current;
+
+		// A seaplane stood beside it, answering through the bus's script, so a load big enough for it can report 3
+		// without the bus: nobody runs for any vehicle but the small crowd's (FUN_0051aad0).
+		const int seaplaneThing = 60000;
+
+		StandVehicles( ("bus", busThing), ("seaplane", seaplaneThing) );
+
+		var people = new ParkPeople( world, new ParkBalance( Theme, easyMode: true ),
+			() => ParkRides.GateIsOpen, new ParkState( world ), catalogue,
+			thingId => thingId is var id && (id == busThing || id == seaplaneThing)
+				? bus : rides.Scheduler.Find( rides.ScriptFor( thingId ) ) );
+
+		try
+		{
+			Assert.IsNotNull( bus );
+
+			EnterPark();
+
+			// No vehicle is current before the first load (the save's mCurrentArrivalVehicle is nought), so a bus
+			// answering 3 then is not asked, and the five saved guests heading for the gate keep their own hurry.
+			bus.Set( "VAR_STATUS", PeepBehaviour.BusIsLeaving );
+			Sweep( people );
+
+			var heading = people.Peeps.Where( peep => peep.State == PeepState.HeadingForGate ).ToArray();
+
+			Assert.AreEqual( 5, heading.Length, "five of Lost Kingdom's guests head for the gate" );
+			Assert.IsTrue( heading.All( peep => peep.PurposeSpeed != Peep.RunningForTheBusSpeed ),
+				"with no vehicle current, nobody runs for the bus" );
+
+			bus.Set( "VAR_STATUS", 0 );
+
+			var newest = people.Peeps.Max( peep => peep.ThingId );
+
+			for ( var sweep = 0; sweep < 600 && !people.LoadHeld; ++sweep )
+				Sweep( people );
+
+			// Dropped, then its first turn from AtGate to HeadingForGate, then its first turn heading there.
+			bus.Set( "VAR_STATUS", 2 );
+			Sweep( people );
+			Sweep( people );
+			Sweep( people );
+
+			var guest = people.Peeps.Single( peep => peep.ThingId > newest );
+			var ownHurry = PeepBehaviour.HurriesToTheGate( guest ) ? Peep.HurryingSpeed : Peep.UnhurriedSpeed;
+
+			Assert.AreEqual( PeepState.HeadingForGate, guest.State, "the dropped guest heads for the gate" );
+			Assert.AreEqual( ownHurry, guest.PurposeSpeed, "at the stop, the bus is not run for" );
+
+			bus.Set( "VAR_STATUS", PeepBehaviour.BusIsLeaving );
+			Sweep( people );
+
+			Assert.AreEqual( PeepState.HeadingForGate, guest.State );
+			Assert.AreEqual( Peep.RunningForTheBusSpeed, guest.PurposeSpeed, "pulling away, it is run for at 50" );
+
+			bus.Set( "VAR_STATUS", 4 );
+			Sweep( people );
+
+			Assert.AreEqual( ownHurry, guest.PurposeSpeed, "and gone, the guest's own hurry again" );
+
+			// Spent, the bus is let go of by the guest's asking, which is counted, and not run for.
+			Unimplemented.Forget();
+			bus.Set( "VAR_STATUS", 6 );
+			Sweep( people );
+
+			Assert.IsTrue( Unimplemented.Summary.Any( gap => gap.What == "GATE_HURRY_FORGETS_SPENT_VEHICLE" ),
+				"a guest asking a spent bus is counted" );
+			Assert.AreEqual( ownHurry, guest.PurposeSpeed );
+
+			Assert.AreEqual( 2, people.ForceArrival( 40 ), "forty come by seaplane" );
+			bus.Set( "VAR_STATUS", PeepBehaviour.BusIsLeaving );
+			Sweep( people );
+
+			Assert.AreEqual( PeepState.HeadingForGate, guest.State );
+			Assert.AreEqual( ownHurry, guest.PurposeSpeed, "the seaplane at 3 is not run for" );
+		}
+		finally
+		{
+			people.Delete();
+			rides.Delete();
+			Entity.ApplyDeletions();
+			typeof( ParkFixedItems ).GetProperty( nameof( ParkFixedItems.Current ) )!.SetValue( null, standingBefore );
+		}
+	}
+
 	/// <summary>One thing sweep: frames of a tenth of a second until the park's clock has gone one up.</summary>
 	private static void Sweep( ParkPeople people )
 	{

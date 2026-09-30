@@ -36,7 +36,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
   too** (Q177d). **A Balloon Shop gives a balloon in the guest's own colour, held until it bursts** (Q177e); **a Costume
   Shop dresses a guest, and a second visit gives back their arrival's child** (Q177f). **Every twelfth walking turn a
   guest may turn aside for a nearer thing, then go on; a toilet empties the need.** **A visit is counted as the original's** (Q177b): a guest's rides, purchases and sideshows, a thing's customers, served and satisfaction in thirty-day rings rolled daily; shown as Users last month and Rides Ridden.
-- People: guests and staff read from the save, drawn (an arrival as the child its id gives, Q177f), walking, a guest at their own speed (Q177d), paying, queueing,
+- People: guests and staff read from the save, drawn (an arrival as the child its id gives, Q177f), walking, a guest at their own speed (Q177d), running for the bus as it pulls away (Q199), paying, queueing,
   boarding, interpolated between the 248 ms steps. **Queuers walk to their own places, in a line**; one needing the
   toilet, or lost to the walk, is out. **A guest on a cell with no links wanders to the nearest path.** **Guests arrive
   and staff take turns on the original's clock**, the save's `mGameTick`: a load 126 s in, then every 150 s or so; a
@@ -69,7 +69,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
   sound (Q135). Guests and rides read `GameClock.Ticks / 8`, not `mGameTick` (Q132); a load brings one guest (Q26); the bus waits (Q131).
 - Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), a ride walked into in first person, a coaster's
   excitement and level, the charge's sound. **The Hot Pot lets no rider off** (Q179); a
-  load re-phases turns (Q180), misreads kept times (Q181). A guest running for the bus hurries at 25, not 50 (Q199).
+  load re-phases turns (Q180), misreads kept times (Q181).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
   walk (Q121), and a park screen stays open over it (Q122). It walks onto entrances the original shuts (Q140).
@@ -77,7 +77,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q198, Q198b are ticked**; next **Q199**; the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q198, Q198b, Q199 are ticked**; next **Q200**; the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -108,12 +108,12 @@ Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q198, Q198b are ticked**; ne
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1462**, 0 fail, 0 skip with the game | 2026-09-30, after Q198b |
-| Tests without the game | **573** ran, **889** skipped, of 1462 | 2026-09-30, after Q198b |
-| Build warnings | 123 | 2026-09-30, after Q198b |
+| Tests | **1464**, 0 fail, 0 skip with the game | 2026-09-30, after Q199 |
+| Tests without the game | **573** ran, **891** skipped, of 1464 | 2026-09-30, after Q199 |
+| Build warnings | 123 | 2026-09-30, after Q199 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-30 (Q198b).** `alexah/199-month-turn`. **Earlier:** `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`,
+**2026-09-30 (Q199).** `alexah/200-bus-hurry`. **Earlier:** `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`,
 `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

@@ -277,6 +277,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004d0222` | FUN_004d01f0: the red stamp, to here | OpenTPW.Tests/ParkBankTests.cs  |
 | `0x004d0251` | FUN_004d01f0: mProfitThisYear +0x124 less the amount, to here | OpenTPW.Tests/ParkBankTests.cs  |
 | `0x004d034e` | Bank message handler FUN_004d02d0, message 0xd (the year's change): mProfitThisYear +0x124 zeroed | OpenTPW.Tests/ParkBankTests.cs OpenTPW/World/Park/ParkState.cs  |
+| `0x004d0499` | The bank's month turn: a bought loan's repayment taken off the year's profit by an unsigned division | OpenTPW.Tests/ParkBankTests.cs  |
 | `0x004d49a0` | | OpenTPW/World/Park/FixedVector.cs  |
 | `0x004d5e76` | `FUN_004d5de0`: the guard's decide at hire, on `mGameTick & 3` | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004d6545` | `FUN_004d6410`: a staff member's idle stamp tested against `mGameTick` | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/StaffBehaviour.cs  |
@@ -1030,6 +1031,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00754cf8` | Layout stream of the buy screen | OpenTPW/UI/Park/ParkBuyScreen.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x00755150` | Layout stream of the ride object window | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x00757f60` | Stream: the island panel, its root's 23-point outline included | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
+| `0x0075c7f0` | The three hurry words 0, 25, 50 a person's +0xc2 is written from (FUN_004ff730 and others) | OpenTPW.Tests/PeepBehaviourTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x0075c7f2` | The hurry-speed word 25, in the table at 0x0075c7f0 (0, 25, 50) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x0075c7f8` | Words 60, 80, 100, 120, 140: the base speeds (a guest's drawn % 5, a member of staff's by rest) | OpenTPW/World/Park/Peep.cs  |
 | `0x0075c7fc` | Word 100: what FUN_004fa870 divides the three speed words' sum by | OpenTPW/World/Park/Peep.cs  |
@@ -1042,6 +1044,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0075d0f8` | | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x0075d178` | | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x0075d798` | String "Customer returning a costume." | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x0075d914` | String "The bus is coming!  RUUUUUUUUUUN!!!!", FUN_004ff730's log line when the bus reports 3 | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x007622b0` | | OpenTPW/World/Park/CellLine.cs OpenTPW/World/Park/MapStep.cs  |
 | `0x0076338c` | The queue pieces table, twelve bytes a record | OpenTPW/World/Park/ParkQueues.cs  |
 | `0x00763b38` | The 20-entry marker texture table (`blue`, `red`, ... `m_link`, `m_end`) | OpenTPW/World/Park/ParkBuildMarkers.cs OpenTPW/World/Park/ParkPathBuilding.cs  |

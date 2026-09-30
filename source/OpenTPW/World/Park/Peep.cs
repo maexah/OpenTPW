@@ -255,7 +255,7 @@ public sealed class Peep
 	public int QueueMoveDelay { get; set; }
 
 	/// <summary>
-	/// The hurry, <c>mPurposeSpeed</c> at <c>+0xc2</c> (file 236): 0 or 25, summed with <see cref="BaseSpeed"/> and
+	/// The hurry, <c>mPurposeSpeed</c> at <c>+0xc2</c> (file 236): 0, 25 or 50, summed with <see cref="BaseSpeed"/> and
 	/// <see cref="AdjustorSpeed"/> into the walking speed every sweep (<see cref="Pace"/>), and read by the walk to pick
 	/// the hurried walk animation.
 	///
@@ -548,6 +548,9 @@ public sealed class Peep
 	public const int HurryingSpeed = 25;
 
 	public const int UnhurriedSpeed = 0;
+
+	/// <summary>The hurry of a guest heading for the gate while the bus leaves (<see cref="PeepBehaviour.GateHurry"/>).</summary>
+	public const int RunningForTheBusSpeed = 50;
 
 	/// <summary>
 	/// The five base speeds, in hundredths - the words at <c>0x0075c7f8</c>. A guest is made with one of them drawn

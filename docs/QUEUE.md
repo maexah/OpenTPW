@@ -2957,7 +2957,22 @@ artifacts are listed in `docs/history/README.md`.
   wage, `ParkStaffPool.WageFor` through `ParkState.Spend`. `PURCHASE_GOLDEN_TICKET_ARM` and `SALE_TRACK_TEARDOWN` stay
   counted. Confirm: `money` either side of 2/1/2000 with a member hired, the fall the members' wages (the shipped five's
   538 and the hire's), the HUD photographed on both sides, and `unimplemented` without the month's three counts.
-- [ ] **Q199. A guest running for the bus. Count it first.** Found by Q177d's review (`wf_4e09ebe1-b64`). Heading for
+- [x] **Q199. A guest running for the bus. Count it first.** Done 2026-09-30 on `alexah/200-bus-hurry`. Counted first:
+  `GATE_HURRY_FOR_THE_BUS` in the running game (`q199-count/`) reached 39 sweeps while guest 43, the load's, headed for
+  the gate and the bus answered 3, so it was a GAP. Built: `PeepBehaviour.GateHurry` gives 50 at the bus's 3, else 25
+  or 0 by id; `ParkPeople.BusStatus` asks only the bus, only while it is the current vehicle, and counts the
+  original's let-go of a spent one (`GATE_HURRY_FORGETS_SPENT_VEHICLE`, for Q131). `park.md`, "Arrivals".
+  - Confirmed in the game (`q199run.py`, `q199-build2/`, 7 of 7, `save/` unchanged): one sweep after the bus answered
+    3, guest 43 `speed 50`, not counted; four sweeps on, eased 1.3274 against 1.3274 predicted (base 100); the bus at
+    4, `speed 0` again. The gate photographed with the bus pulling away and the guest crossing.
+  - Tests: the rule (50 only at 3, for an id that hurries and one that does not), and the park's own bus script
+    wired through `ParkPeople` (none at 3 before a load, 50 at 3, own hurry at 4, counted at 6, a seaplane at 3 not
+    run for). Each bug put back failed a test (the seam not handed in, no current-vehicle check, any vehicle asked, no
+    count at 6, the turn not asking, the rule ignoring 3). Review `wf_0a38fff7-9db`: three findings, all fixed.
+  - **Not confirmed on screen:** the spent bus's count and a larger vehicle at 3 (tested only).
+  - Built and tested alone in a worktree: 1464 pass, 0 skip with the game; 573 ran, 891 skipped without; 123 warnings.
+
+  The item as written: Found by Q177d's review (`wf_4e09ebe1-b64`). Heading for
   the gate, `FUN_004ff730` writes the hurry 50 (`0x0075c7f4`) when `FUN_0051aad0` answers 0 and `FUN_0051a690` 3: the
   current arrival vehicle is the size-1 one and its script's `VAR_STATUS` is 3 ("The bus is coming!  RUUUUUUUUUUN!!!!",
   `0x0075d914`); else 25 on `(id & 3) == 0`, else 0. OpenTPW writes 25 or 0 (`PeepBehaviour.HurriesToTheGate`), and

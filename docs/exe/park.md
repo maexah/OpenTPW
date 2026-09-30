@@ -1029,6 +1029,21 @@ and bumping a running total at `+0x20cc0`. The first call that finds the count a
 clears the flag, and sends the vehicle away. The logging call is a bare `RET` (`0x005da3c0`), so none of these lines
 is ever printed. The state-6 arm (`0x004cf475`) is dead by CODE: `FUN_0051a690` never returns 6.
 
+**A guest heading for the gate runs for the bus while it pulls away.** State 2's turn, `FUN_004ff730`, writes the
+hurry `+0xc2` before it walks the guest, from the words at `0x0075c7f0` (0, 25, 50): **50** when `FUN_0051aad0` answers
+0 (no vehicle current, or the current one is `mArrivalVehicle_Size1`'s) and `FUN_0051a690` answers 3; else 25 when the
+guest's id has its low two bits nought, else 0. `FUN_0051a690` answers -1 with no vehicle current, and otherwise the
+vehicle script's variable 1 (`FUN_0055a390( FUN_0055a070( id ), 1 )`, the script found by the thing's `+0x24`), which
+is `VAR_STATUS` in all three vehicles' scripts; a 6 it answers -1 for after it writes that variable nought
+(`FUN_0055a0b0( script, 1, 0 )`) and clears `mCurrentArrivalVehicle`, so a guest's asking can let go of a spent vehicle
+before the manager does. `bus.RSE` sets 3 at instruction 57, once it is let go after a load, and
+holds it through its leaving clip (`TRIGANIM 5, 1`) and a second more, so the guest the load dropped is the one who
+runs. The log line, `"The bus is coming!  RUUUUUUUUUUN!!!!"` (`0x0075d914`), goes to the bare `RET`. OpenTPW asks the
+same (`PeepBehaviour.GateHurry`, `ParkPeople.BusStatus`), and counts the asking's let-go of a spent vehicle
+(`GATE_HURRY_FORGETS_SPENT_VEHICLE`; its manager sends it round instead, Q131). Measured in the running game
+(`q199run.py`, jungle): the bus answered 3 from `mGameTick` 1309 or 1310 for 39 sweeps, the dropped guest 43
+walked at hurry 50 through it and its eased speed rose a quarter of the way to `(50 + base) / 100` a sweep.
+
 **The clock is `mGameTick`, one count per thing sweep, so a load is called about every 149 s.** The manager has
 one caller, and it runs once a sweep: `FUN_00516380` increments `mGameTick` (`0x00516394`) and then, on every path
 through it, calls `FUN_004d7b20` (`0x00516695`), which calls the manager's thunk with the block at world `+0x2c4`

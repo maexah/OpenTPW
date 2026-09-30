@@ -262,7 +262,9 @@ public sealed class ParkPeople : Entity
 			balance )
 		{
 			// The park's own weather, asked at each choice: shelter is worth more while drops fall.
-			Raining = static () => ParkWeather.Current is { Drops: > 0 }
+			Raining = static () => ParkWeather.Current is { Drops: > 0 },
+			// And the bus's report, which a guest heading for the gate runs for.
+			BusStatus = BusStatus
 		};
 
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
@@ -1278,6 +1280,34 @@ public sealed class ParkPeople : Entity
 			|| (state == VehicleIsUnloading && stillToDrop == 0 && !loadHeld);
 
 	/// <summary>
+	/// What the current arrival vehicle reports when it is the bus, as a guest heading for the gate asks it:
+	/// <c>FUN_0051aad0</c> answers whether a vehicle other than the small crowd's is current, and only when it is
+	/// not does <c>FUN_004ff730</c> ask <c>FUN_0051a690</c>, which reads the vehicle script's <c>VAR_STATUS</c> and
+	/// answers -1 with none current.
+	///
+	/// <para>
+	/// <b>The original's asking forgets a spent vehicle</b>: <c>FUN_0051a690</c> answers state 6 by setting the
+	/// script's <c>VAR_STATUS</c> to nought and clearing <c>mCurrentArrivalVehicle</c>, so a guest heading for the gate
+	/// then can drop the bus before the manager sees it. That is counted, not done: here <see cref="StepVehicle"/> forgets it, sending it round again (Q131).
+	/// </para>
+	/// </summary>
+	private int BusStatus()
+	{
+		if ( _arrivalVehicle != 1 || VehicleScript( _arrivalVehicle ) is not { } bus )
+			return -1;
+
+		var state = bus[VehicleState];
+
+		if ( state == VehicleIsSpent )
+		{
+			Unimplemented.Report( "GATE_HURRY_FORGETS_SPENT_VEHICLE" );
+			return -1;
+		}
+
+		return state;
+	}
+
+	/// <summary>
 	/// One turn of the vehicle itself, which the original does on <b>every</b> sweep and not only while a
 	/// load is being dropped - the tail of <c>FUN_004cf3e0</c> at <c>LAB_004cf4b6</c>.
 	///
@@ -1318,7 +1348,7 @@ public sealed class ParkPeople : Entity
 	///
 	/// <para>
 	/// <b>A spent vehicle is sent round again, which the original does not do.</b> <c>FUN_0051a690</c> answers
-	/// state 6 by forgetting the vehicle and nudges nothing, so it waits at its last spin until the next load
+	/// state 6 by setting its status to nought and forgetting it, and sets no trigger, so it waits at its last spin until the next load
 	/// summons it; here it is released and forgotten, drives back to the stop and waits there at 2 (Q131).
 	/// </para>
 	/// </summary>
