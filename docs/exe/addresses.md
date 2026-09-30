@@ -354,6 +354,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004f8792` | | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f87e7` | | OpenTPW.Tests/GameCalendarTests.cs OpenTPW/Global/GameCalendar.cs  |
 | `0x004f8ccc` | Person serialiser FUN_004f8b10, write arm: mCount (+0x2c) written as one byte, the person record's byte 36 | OpenTPW.Files/Formats/Save/ParkWorld.cs  |
+| `0x004f93a6` | Person base reader FUN_004f8b10: mSpriteID reduced modulo its kind's loaded banks (FUN_00541f60) | OpenTPW.Tests/ParkCostumeTests.cs OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkSpriteBanks.cs  |
 | `0x004f9534` | SetRandomDest: the call's one draw, r % 5 + 1, the linked walk's pass count, taken before the links count | OpenTPW.Tests/ParkNoLinksWanderTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004f95b9` | SetRandomDest `FUN_004f9490`: the count of the person's own cell's links (`FUN_00522810`); nought takes the no-links arm | OpenTPW/World/Park/PeepBehaviour.cs OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x004f9a05` | SetRandomDest: start of the no-links arm (path on seven rays, then five random cells) | OpenTPW.Tests/ParkNoLinksWanderTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
@@ -374,6 +375,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fae10` | | OpenTPW.Files/Formats/Save/RecordStream.cs  |
 | `0x004fb019` | Guest constructor `FUN_004faec0`: the kind drawn as the world generator mod `[0x007851d4]`, the `PeepTypes` row count | OpenTPW.Tests/ParkGuestTypeTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb075` | Guest constructor `FUN_004faec0`: happiness set to 50.0 | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fb18d` | Guest constructor FUN_004faec0: the child - the generator reseeded with the id, kind 0, one draw over the kid banks, from | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkSpriteBanks.cs  |
+| `0x004fb1bc` | FUN_004faec0: the child's sprite built (FUN_004d4140), to here | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb1c9` | Guest constructor FUN_004faec0: the hurry +0xc2 set to 25, the word at 0x0075c7f2 | OpenTPW.Tests/ParkTickTests.cs  |
 | `0x004fb333` | FUN_004fb330, a guest deleted at the bus: the balloon's sprite deleted (FUN_00475550), no burst, from | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb346` | FUN_004fb330: the balloon deletion, to here | OpenTPW/World/Park/ParkPeople.cs  |
@@ -444,11 +447,15 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fe60e` | FUN_004fe1e0, sugar: amount x 6 / 100 added to the word mAdjustorSpeed +0xc4, no clamp | OpenTPW/World/Park/Peep.cs  |
 | `0x004fe615` | FUN_004fe1e0: the appearance switch on the descriptor's +0x15c, from | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe63d` | FUN_004fe1e0: any appearance but 0, 1 or 2 logs a balance-file error into the bare RET, to here | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe642` | FUN_004fe1e0, a costume: the arm, from (to 0x004fe6b5) | OpenTPW.Tests/ParkCostumeTests.cs OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe64a` | FUN_004fe1e0, a costume: mESPSprite +0x24 compared with exactly 2 | OpenTPW.Tests/ParkCostumeTests.cs  |
+| `0x004fe6b5` | FUN_004fe1e0: the costume arm, to here | OpenTPW.Tests/ParkCostumeTests.cs  |
 | `0x004fe6ba` | FUN_004fe1e0, a balloon: the arm, from (to 0x004fe78a) | OpenTPW.Tests/ParkBalloonTests.cs OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe6fc` | FUN_004fe1e0, a balloon: the park's generator reseeded with the guest's id (FUN_00516370) | OpenTPW/World/Park/Balloon.cs  |
 | `0x004fe737` | FUN_004fe1e0, a balloon: the life, the shop's quality byte x 255 / 100 held to 25..255, from | OpenTPW/World/Park/Balloon.cs  |
 | `0x004fe76f` | FUN_004fe1e0, a balloon: the life, to here | OpenTPW/World/Park/Balloon.cs  |
 | `0x004fe775` | FUN_004fe1e0, a balloon: event 0xc naming the shop (FUN_0050c100) | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe787` | FUN_004fe1e0: the balloon and costume arms' shared event tail, FUN_0050c100 with the shop's id | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe78a` | FUN_004fe1e0: the balloon arm and the costume arm's shared event tail, to here | OpenTPW.Tests/ParkBalloonTests.cs OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe78f` | FUN_004fe1e0, the toilet arm: the object's flags & 1, from | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe7a8` | FUN_004fe1e0: FUN_004e2440, the dirtying, with the need's byte | OpenTPW/World/Park/ParkRideOperation.cs  |
@@ -1034,6 +1041,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0075c910` | Float 0.35: how far behind in the sweep a held balloon's trailing sample is | OpenTPW/World/Park/Balloon.cs  |
 | `0x0075d0f8` | | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x0075d178` | | OpenTPW/World/Park/ParkRideScore.cs  |
+| `0x0075d798` | String "Customer returning a costume." | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x007622b0` | | OpenTPW/World/Park/CellLine.cs OpenTPW/World/Park/MapStep.cs  |
 | `0x0076338c` | The queue pieces table, twelve bytes a record | OpenTPW/World/Park/ParkQueues.cs  |
 | `0x00763b38` | The 20-entry marker texture table (`blue`, `red`, ... `m_link`, `m_end`) | OpenTPW/World/Park/ParkBuildMarkers.cs OpenTPW/World/Park/ParkPathBuilding.cs  |

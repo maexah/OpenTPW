@@ -91,6 +91,9 @@ public sealed class ParkGuestSprites : ModelEntity
 	private readonly List<(ParkWorld.Person Person, ParkWorld.Sprite Sprite)> _people = [];
 	private readonly Dictionary<(int Type, int Bank), Loaded> _banks = [];
 
+	/// <summary>How many banks of each guest kind the park draws over, or null - see the constructor.</summary>
+	private readonly ParkSpriteBanks? _counts;
+
 	private Texture? _atlas;
 	private Region? _plain;
 	private Vertex[] _vertices = [];
@@ -156,7 +159,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// more number a Fantasy entertainer than it can a second Generic.
 	/// </para>
 	/// </summary>
-	private static string? FolderFor( int type, string theme ) => type switch
+	internal static string? FolderFor( int type, string theme ) => type switch
 	{
 		0 => "esprites/Generic/Kids",
 		1 => "esprites/Generic/Kidsheads",
@@ -216,8 +219,15 @@ public sealed class ParkGuestSprites : ModelEntity
 		return [.. first, .. files.Except( first )];
 	}
 
-	public ParkGuestSprites( string themeName, ParkWorld? park )
+	/// <param name="banks">
+	/// How many banks of each guest kind the park draws over, or null to pack only what the save's people wear. With
+	/// them every child and costume bank is packed, as an arrival or a costume may wear any, and a guest is drawn in what
+	/// they wear now (<see cref="LookOf"/>).
+	/// </param>
+	public ParkGuestSprites( string themeName, ParkWorld? park, ParkSpriteBanks? banks = null )
 	{
+		_counts = banks;
+
 		if ( park == null )
 			return;
 
@@ -233,9 +243,9 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		Current = this;
 
-		// Only the banks those sprites actually wear, and the balloons'. Loading every person bank in the archive would be
-		// 5,316 pictures and an atlas 13,885 pixels tall, past what a good many devices will allocate at
-		// all; the shipped park wears eleven banks and comes to well under two thousand.
+		// Only the banks BanksToPack names: the staff's worn, every child and costume bank the park counts, and the
+		// balloons'. Loading every person bank in the archive would be 5,316 pictures and an atlas 13,885 pixels tall, past
+		// what a good many devices will allocate at all; the shipped park packs thirteen banks, 1,973 pictures.
 		Load( themeName, park );
 
 		if ( _people.Count > 0 && _atlas != null )
@@ -251,11 +261,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		var pictures = new List<SpritePicture>();
 		var placed = new List<(int Type, int Bank, int First, int Count, SpriteBankFile File)>();
 
-		// And the balloon bank, whoever wears what: a Balloon Shop bought later hands them out.
-		var worn = _people.Select( p => (p.Sprite.Type, Bank: p.Sprite.Bank + p.Sprite.BankOffset) )
-			.Append( (Type: Balloon.SpriteKind, Bank: 0) );
-
-		foreach ( var key in worn.Distinct() )
+		foreach ( var key in BanksToPack( _people.Select( p => p.Sprite ), _counts ) )
 		{
 			var folder = FolderFor( key.Type, themeName );
 
@@ -300,15 +306,35 @@ public sealed class ParkGuestSprites : ModelEntity
 	}
 
 	/// <summary>
+	/// Which banks the atlas packs. With the counts: what the save's people wear, each brought within its kind's banks
+	/// (<see cref="ParkSpriteBanks.Reduce"/>), every child and costume bank - an arrival or a costume may wear any - and
+	/// the balloon bank. Without: what the save's people wear, and the balloon bank. Each once.
+	/// </summary>
+	internal static IEnumerable<(int Type, int Bank)> BanksToPack( IEnumerable<ParkWorld.Sprite> worn, ParkSpriteBanks? counts )
+	{
+		var banks = worn.Select( sprite => (sprite.Type, Bank: sprite.Bank + sprite.BankOffset) )
+			.Select( key => (key.Type, Bank: counts?.Reduce( key.Type, key.Bank ) ?? key.Bank) )
+			.Append( (Type: Balloon.SpriteKind, Bank: 0) );
+
+		if ( counts != null )
+		{
+			banks = banks
+				.Concat( Enumerable.Range( 0, counts.KidBanks ).Select( bank => (Type: ParkSpriteBanks.ChildKind, Bank: bank) ) )
+				.Concat( Enumerable.Range( 0, counts.CostumeBanks ).Select( bank => (Type: ParkSpriteBanks.CostumeKind, Bank: bank) ) );
+		}
+
+		return banks.Distinct();
+	}
+
+	/// <summary>
 	/// Takes somebody who was not in the save - a guest who has just arrived - so that they are drawn
 	/// alongside everyone else.
 	///
 	/// <para>
-	/// <b>Their bank has to be one this park already packs.</b> The atlas is built once, from the banks
-	/// the save's own people wear, and nothing here adds to it afterwards - so a guest wearing an
-	/// unpacked bank has no picture at all. That reads as a broken arrival rather than as a missing
-	/// texture, which is the worst kind of fault to introduce. Lost Kingdom packs six banks of type 0,
-	/// measured from a running park, and an arrival should choose from those.
+	/// <b>Their bank has to be one this park already packs.</b> The atlas is built once and nothing here adds to it
+	/// afterwards - so a guest wearing an unpacked bank has no picture at all, which reads as a broken arrival rather
+	/// than as a missing texture. With the park's counts every child bank is packed (<see cref="BanksToPack"/>), which
+	/// is what an arrival draws from.
 	/// </para>
 	/// <para>
 	/// <see cref="Build"/> is re-run because the vertex array is sized from the size of the crowd. Left
@@ -510,8 +536,9 @@ public sealed class ParkGuestSprites : ModelEntity
 		foreach ( var (person, sprite) in _people )
 		{
 			var (setNumber, frame, bankOffset) = Showing( people?.SpriteFor( person.ThingId ), sprite );
+			var (kind, bank) = LookOf( people, person, sprite );
 
-			if ( !_banks.TryGetValue( (sprite.Type, sprite.Bank + bankOffset), out var loaded ) )
+			if ( !_banks.TryGetValue( (kind, bank + bankOffset), out var loaded ) )
 				continue;
 
 			// AnyWalkFor rather than WalkFor: staff are drawn from this same list and their walks live in
@@ -540,7 +567,7 @@ public sealed class ParkGuestSprites : ModelEntity
 			WriteQuad( used++, centre, picture, mirrored, sprite.Alpha );
 
 			if ( DebugFacing && _plain is { } plain )
-				WriteGroundDash( used++, centre, angle, sprite.Type, plain );
+				WriteGroundDash( used++, centre, angle, kind, plain );
 		}
 
 		used = DrawBalloons( people, field, cellX, cellY, alpha, used );
@@ -634,6 +661,22 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		return used + 1;
 	}
+
+	/// <summary>
+	/// Which kind and bank a person is drawn in: a guest's own, <see cref="Peep.SpriteKind"/> and
+	/// <see cref="Peep.SpriteBank"/>, which a costume changes, as the original builds a guest's sprite again from
+	/// <c>+0x24</c> and <c>+0x20</c> on leaving a thing (<c>FUN_004d4140</c>); anybody else's, or anybody with no
+	/// simulation running them, the saved sprite's, brought within the banks loaded.
+	/// </summary>
+	private (int Kind, int Bank) LookOf( ParkPeople? people, ParkWorld.Person person, ParkWorld.Sprite sprite )
+		=> LookOf( people, _counts, person, sprite );
+
+	/// <inheritdoc cref="LookOf(ParkPeople?, ParkWorld.Person, ParkWorld.Sprite)"/>
+	internal static (int Kind, int Bank) LookOf( ParkPeople? people, ParkSpriteBanks? counts, ParkWorld.Person person,
+		ParkWorld.Sprite sprite )
+		=> people != null && people.Guests.TryGetValue( person.ThingId, out var peep )
+			? (peep.SpriteKind, peep.SpriteBank)
+			: (sprite.Type, counts?.Reduce( sprite.Type, sprite.Bank ) ?? sprite.Bank);
 
 	/// <summary>
 	/// Where to draw this person, finding their walk for the caller.
@@ -1014,10 +1057,11 @@ public sealed class ParkGuestSprites : ModelEntity
 			if ( seated is { } seat )
 				(x, y) = (seat.X, seat.Y);
 			var (setNumber, frame, bankOffset) = Showing( playing, sprite );
+			var (kind, bank) = LookOf( people, person, sprite );
 
 			yield return $"thing {person.ThingId,2} model {person.Model} " +
 				$"cell ({person.CellX},{person.CellY}) slot {sprite.Slot,2} " +
-				$"type {sprite.Type} bank {sprite.Bank}+{bankOffset} set {setNumber} " +
+				$"type {kind} bank {bank}+{bankOffset} (saved {sprite.Type}/{sprite.Bank}) set {setNumber} " +
 				$"frame {frame} (saved set {sprite.Set} frame {sprite.Frame}) " +
 				$"script {(playing == null ? "none" : $"{playing.Script}@{playing.Pc}")} " +
 				$"facing {ParkWorld.Person.OctantOf( angle )} (angle {angle}) " +

@@ -384,10 +384,16 @@ public sealed class ParkWorld
 	/// block the five kinds of staff carry in that same place instead. <b>Exactly one of the two is ever
 	/// set</b>, decided by <see cref="Model"/>, because the two blocks occupy the same bytes.
 	/// </para>
+	/// <para>
+	/// <see cref="SpriteKind"/> and <see cref="SpriteBank"/> are the person base's <c>mESPSprite</c> (file 37,
+	/// <c>+0x24</c>) and <c>mSpriteID</c> (file 246, <c>+0x20</c>): which kind of sprite they wear (0 a child, 2 a
+	/// costume, the staff theirs) and which bank of it, what the sprite is built again from.
+	/// </para>
 	/// </summary>
 	public readonly record struct Person(
 		int ThingId, int Model, int RawX, int RawY, int SpriteSlot, int Angle,
-		NavigatorState Navigator, GuestState? Guest, StaffState? Staff = null, PaceState? Pace = null )
+		NavigatorState Navigator, GuestState? Guest, StaffState? Staff = null, PaceState? Pace = null,
+		int SpriteKind = 0, int SpriteBank = 0 )
 	{
 		/// <inheritdoc cref="CatalogueObject.CellX"/>
 		public int CellX => RawX >> 8;
@@ -1834,7 +1840,9 @@ public sealed class ParkWorld
 				AdjustorSpeed: ReadUInt16At( start + 32 ),
 				BaseSpeed: ReadUInt16At( start + 34 ),
 				PreviousSpeed: ReadSingleAt( start + 220 ),
-				PurposeSpeed: ReadUInt16At( start + 236 ) ) );
+				PurposeSpeed: ReadUInt16At( start + 236 ) ),
+			SpriteKind: ReadInt32At( start + 37 ),       // mESPSprite
+			SpriteBank: ReadInt32At( start + 246 ) );    // mSpriteID
 
 	/// <summary>
 	/// The navigator's block, which begins at <c>+43</c> - after the eight-byte thing head and the
@@ -2080,10 +2088,10 @@ public sealed class ParkWorld
 	/// One live sprite: the picture a person is drawn as, and the state the park was saved in.
 	///
 	/// <para>
-	/// <b>The art was chosen once and written down.</b> When a person is made, the game picks a bank of
-	/// their kind at random and then a set within it at random, and stores both. Nothing recomputes them,
-	/// so a reader must read them back rather than roll again - rolling again would change every guest's
-	/// clothes on each load.
+	/// <b>The art was chosen once and written down.</b> When a person is made, the game picks a bank of their
+	/// kind - a child's by their id (<c>ParkSpriteBanks.ChildOf</c>), a costume's by a plain draw - and their
+	/// script chooses the set. A load reads them back and brings the bank within the banks it loads; rolling
+	/// again would change every guest's clothes on each load.
 	/// </para>
 	/// <para>
 	/// <b><see cref="SpriteNumber"/> is two numbers in one.</b> Its low four bits are the set and the

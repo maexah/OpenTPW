@@ -331,7 +331,10 @@ public class Level
 		// And the park's people. After the ground, because a guest stands on the land and has to ask how
 		// high it is under them; they are sprites rather than models, so they are nothing to do with the
 		// objects above and only need the save that named them.
-		_ = new ParkGuestSprites( ThemeName, park );
+		// How many banks of each kind the guests draw over, the kid banks capped by the detail file.
+		var banks = ParkSpriteBanks.Read( FileSystem, ThemeName, NumKids() );
+
+		_ = new ParkGuestSprites( ThemeName, park, banks );
 		load.Mark( "guest sprites" );
 
 		// And what those people want, which is deliberately not the same object as what they look like:
@@ -350,7 +353,7 @@ public class Level
 		load.Mark( "staff pool" );
 
 		_ = new ParkPeople( park, Balance, () => rides.GateStatus( park ), ParkState, catalogue,
-			thingId => rides.Scheduler.Find( rides.ScriptFor( thingId ) ), balloonSets: Balloon.SetsIn( FileSystem ) );
+			thingId => rides.Scheduler.Find( rides.ScriptFor( thingId ) ), banks: banks );
 		load.Mark( "people" );
 
 		// Each group of sound at the volume the options give it, and then the park's own music - which
@@ -483,12 +486,7 @@ public class Level
 	private static void SetupParticles()
 	{
 		var density = 1024;
-		var detail = GameOptions.Current.GraphicsQuality switch
-		{
-			0 => "low.sam",
-			2 => "high.sam",
-			_ => "med.sam"
-		};
+		var detail = DetailFile;
 
 		try
 		{
@@ -501,6 +499,36 @@ public class Level
 		}
 
 		_ = new ParticleSystem( "Particle/Tp2.plb", density );
+	}
+
+	/// <summary>
+	/// The detail file for the options' graphics quality - low.sam, med.sam or high.sam, going by their names - which
+	/// starts at medium (0x00423690).
+	/// </summary>
+	private static string DetailFile => GameOptions.Current.GraphicsQuality switch
+	{
+		0 => "low.sam",
+		2 => "high.sam",
+		_ => "med.sam"
+	};
+
+	/// <summary>
+	/// The detail file's <c>GameOptions.NUMKIDS</c>, which caps the kid banks (<see cref="ParkSpriteBanks.KidCap"/>):
+	/// 0 in low.sam and 2 in med.sam and high.sam. A file that will not read gives medium's 2, the quality it starts at.
+	/// </summary>
+	private static int NumKids()
+	{
+		try
+		{
+			if ( int.TryParse( new SettingsFile( $"/{DetailFile}" )["GameOptions.NUMKIDS"], out var value ) )
+				return value;
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"Guests: {DetailFile} would not load, so the kids take medium's six banks - {e.Message}" );
+		}
+
+		return 2;
 	}
 
 	public void Update()

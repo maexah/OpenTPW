@@ -25,7 +25,7 @@ public class ParkBalloonTests
 
 	private const int DrinksShop = 16;
 
-	private const int BalloonShop = 1209, CostumeShop = 1202, Drinks = 1203;
+	private const int BalloonShop = 1209, Drinks = 1203;
 
 	/// <summary>The balloon bank's colours: red, green, blue and yellow.</summary>
 	private const int Sets = 4;
@@ -72,7 +72,7 @@ public class ParkBalloonTests
 		script.Set( ParkRideOperation.DismissVariable, peep.ThingId );
 
 		Assert.IsTrue( new ParkRideOperation( new ParkState( parkIsClosed: false, visitorsToDate: 0, balance: 1000 ),
-				new Dictionary<int, Peep> { [peep.ThingId] = peep }, balloonSets: sets )
+				new Dictionary<int, Peep> { [peep.ThingId] = peep }, banks: new ParkSpriteBanks( 6, 1, sets ) )
 			.Dismiss( script, shop, tick: 9, new Random( 1 ), catalogue: Catalogue() ),
 			"the guest should have been let off" );
 
@@ -116,7 +116,6 @@ public class ParkBalloonTests
 	public void ABalloonShopGivesABalloonInTheGuestsColourAndALife()
 	{
 		var events = Times( "SETTLE_UP_BALLOON_EVENT" );
-		var costumes = Times( "SETTLE_UP_COSTUME" );
 
 		var peep = LetOff( Guest( life: 3 ), Shop( BalloonShop, quality: 60 ) );
 
@@ -127,7 +126,7 @@ public class ParkBalloonTests
 			"its first turn an interval after the sweep's sprite clock, sweep 9's game tick at 31 ms" );
 		Assert.AreEqual( 153, peep.BalloonLife, "the shop's quality of 60, whatever was left" );
 		Assert.AreEqual( events + 1, Times( "SETTLE_UP_BALLOON_EVENT" ), "the event, counted" );
-		Assert.AreEqual( costumes, Times( "SETTLE_UP_COSTUME" ), "a balloon is not a costume" );
+		Assert.AreEqual( ParkSpriteBanks.ChildKind, peep.SpriteKind, "a balloon is not a costume" );
 	}
 
 	/// <summary><b>A loser gets nothing</b>: the balloon arm is behind the win roll's gate.</summary>
@@ -193,17 +192,6 @@ public class ParkBalloonTests
 		var peep = LetOff( Guest( life: 100, queuePos: 0 ), Shop( BalloonShop ) );
 
 		Assert.AreEqual( (null, 100), (peep.Balloon, peep.BalloonLife) );
-	}
-
-	/// <summary><b>A costume is counted, not given</b> (Q177f), and gives no balloon.</summary>
-	[TestMethod]
-	public void ACostumeIsCounted()
-	{
-		var costumes = Times( "SETTLE_UP_COSTUME" );
-
-		var peep = LetOff( Guest(), Shop( CostumeShop ) );
-
-		Assert.AreEqual( (costumes + 1, null), (Times( "SETTLE_UP_COSTUME" ), peep.Balloon) );
 	}
 
 	/// <summary>
@@ -493,7 +481,7 @@ public class ParkBalloonTests
 	{
 		var world = Park();
 		var people = new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ), null, new ParkState( world ),
-			random: new Random( 1 ), balloonSets: Sets );
+			random: new Random( 1 ), banks: new ParkSpriteBanks( 6, 1, Sets ) );
 
 		EnterPark();
 

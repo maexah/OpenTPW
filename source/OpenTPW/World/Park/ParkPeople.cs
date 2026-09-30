@@ -55,8 +55,8 @@ public sealed class ParkPeople : Entity
 	/// </summary>
 	private readonly List<Balloon> _bursting = [];
 
-	/// <summary>How many colours the balloon bank has - see <see cref="Balloon.SetsIn(BaseFileSystem)"/>.</summary>
-	private readonly int _balloonSets;
+	/// <summary>How many banks of each guest kind the park draws over - see <see cref="ParkSpriteBanks"/>.</summary>
+	private readonly ParkSpriteBanks _banks;
 
 	// Kept rather than rebuilt, so a guest who arrives after the load can be given a walk. It closes
 	// over the park, which never changes, so holding it costs nothing and cannot go stale.
@@ -167,16 +167,17 @@ public sealed class ParkPeople : Entity
 	/// see <see cref="ParkRideChooser"/>. Null leaves that arm scoring on distance and queue alone.
 	/// </param>
 	/// <param name="random">What an arriving guest's kind and base speed are drawn with. Null for the game; a test seeds one.</param>
-	/// <param name="balloonSets">
-	/// How many colours the balloon bank has, which the level reads from the data (<see cref="Balloon.SetsIn(BaseFileSystem)"/>).
-	/// Nought gives a guest a balloon's life and no balloon to show.
+	/// <param name="banks">
+	/// How many banks of each guest kind the park draws over, which the level reads from the data
+	/// (<see cref="ParkSpriteBanks.Read"/>). Null counts none: every arrival a child of bank nought, a costume and a
+	/// balloon's colour drawn over nothing, and a balloon's life with no balloon to show.
 	/// </param>
 	public ParkPeople( ParkWorld? park, ParkBalance? balance = null, System.Func<int>? gateStatus = null,
 		ParkState? state = null, ParkItemCatalogue? catalogue = null,
-		System.Func<int, RideScript?>? scriptFor = null, Random? random = null, int balloonSets = 0 )
+		System.Func<int, RideScript?>? scriptFor = null, Random? random = null, ParkSpriteBanks? banks = null )
 	{
 		_scriptFor = scriptFor;
-		_balloonSets = balloonSets;
+		_banks = banks ?? new ParkSpriteBanks( 0, 0, 0 );
 		_arrivalRandom = random ?? new Random();
 
 		_peeps = PeepsIn( park );
@@ -185,7 +186,13 @@ public sealed class ParkPeople : Entity
 		// a guest who was not in the save, so every structure derived from _peeps - this one, _walks and
 		// _sprites - has to be added to in the same breath. Admit is the only place that may do it.
 		foreach ( var peep in _peeps )
+		{
 			_byId[peep.ThingId] = peep;
+
+			// What they wear, brought within the banks this park loads, as a person's load does (0x004f93a6); staff are
+			// drawn from their saved sprite, brought within theirs as it is drawn (ParkGuestSprites.LookOf).
+			peep.SpriteBank = _banks.Reduce( peep.SpriteKind, peep.SpriteBank );
+		}
 
 		_balance = balance;
 
@@ -376,7 +383,7 @@ public sealed class ParkPeople : Entity
 	/// Which kind of guest to make. Null draws one, as the original's constructor does for every guest it makes;
 	/// only a test names one.
 	/// </param>
-	internal int Admit( int cellX, int cellY, int? personType = null, int spriteBank = 0 )
+	internal int Admit( int cellX, int cellY, int? personType = null )
 	{
 		if ( _blocked == null || !ParkState.OnMap( cellX, cellY ) )
 			return 0;
@@ -437,7 +444,14 @@ public sealed class ParkPeople : Entity
 			Happiness: 0f, Thirst: 0f, Hunger: 0f, Toilet: 0f, Vomit: 0f, Litter: 0f,
 			MajorDest: 0, QueuePos: 0, PrankeryIndex: 0 );
 
-		var peep = new Peep( thingId, guest, navigator, pace );
+		// The child they arrive as, by their id alone (FUN_004faec0, 0x004fb18d..0x004fb1bc).
+		var child = _banks.ChildOf( thingId );
+
+		var peep = new Peep( thingId, guest, navigator, pace )
+		{
+			SpriteKind = ParkSpriteBanks.ChildKind,
+			SpriteBank = child
+		};
 
 		_peeps.Add( peep );
 		_byId[thingId] = peep;
@@ -449,11 +463,11 @@ public sealed class ParkPeople : Entity
 		var person = new ParkWorld.Person(
 			ThingId: thingId, Model: ParkWorld.GuestModel, RawX: x >> 8, RawY: y >> 8,
 			SpriteSlot: slot, Angle: PeepBehaviour.ArrivalHeading,
-			Navigator: navigator, Guest: guest, Pace: pace );
+			Navigator: navigator, Guest: guest, Pace: pace, SpriteKind: ParkSpriteBanks.ChildKind, SpriteBank: child );
 
-		// The bank has to be one this park already packs - see ParkGuestSprites.Add.
+		// The bank has to be one this park already packs - see ParkGuestSprites.BanksToPack, which packs every child bank.
 		var picture = new ParkWorld.Sprite(
-			Slot: slot, Type: 0, Bank: spriteBank, SpriteNumber: 0,
+			Slot: slot, Type: ParkSpriteBanks.ChildKind, Bank: child, SpriteNumber: 0,
 			X: cellX, Height: 0f, Y: cellY, Facing: person.Facing,
 			Frame: 0, Alpha: 255, State: 0, Script: SpriteScript.None, Pc: 0 );
 
@@ -1302,7 +1316,11 @@ public sealed class ParkPeople : Entity
 			? []
 			: [.. park.People
 				.Where( person => person.Guest != null )
-				.Select( person => new Peep( person.ThingId, person.Guest!.Value, person.Navigator, person.Pace ) )];
+				.Select( person => new Peep( person.ThingId, person.Guest!.Value, person.Navigator, person.Pace )
+				{
+					SpriteKind = person.SpriteKind,
+					SpriteBank = person.SpriteBank
+				} )];
 
 	/// <summary>
 	/// Every member of staff the save named, as a running copy - the five kinds of person that are not
@@ -1586,7 +1604,7 @@ public sealed class ParkPeople : Entity
 		// multiplier on what winning is worth, and the excitement match's four - and the score what each kind
 		// likes. Without them those arms leave happiness alone rather than moving it by an invented number.
 		var operation = new ParkRideOperation( _behaviour.State, Guests, _behaviour.Admission, _behaviour.Score,
-			_balloonSets );
+			_banks );
 
 		// <b>The park as it stands, not as the file left it.</b> A thing bought this session lives in
 		// ParkState's list and in no other, so a sweep over the save's list hands it no turn at all - it
@@ -2355,6 +2373,8 @@ public sealed class ParkPeople : Entity
 				// The visitor window's four counts, and the happiness the settle-up measures a visit against.
 				+ $"rides {peep.NumRides} shops {peep.NumShops} sideshows {peep.NumSideshows} won {peep.NumSideshowsWon} "
 				+ $"joined {peep.JoinHappiness:0} "
+				// What they wear, the sprite kind and bank: 0 a child, 2 a costume.
+				+ $"sprite {peep.SpriteKind}/{peep.SpriteBank} "
 				// The balloon's life, its colour and its picture's turn, or "-" for none held.
 				+ $"balloon {peep.BalloonLife} {(peep.Balloon is { } held ? $"set {held.Sprite.Set} frame {held.Sprite.Frame} shown {held.Sprite.Shown}" : "-")} "
 				// Where they ARE, without which a person whose needs change and whose position does not

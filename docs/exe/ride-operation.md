@@ -1752,7 +1752,7 @@ Named by its own strings: `"Litter gone up by %d, is now %d"`, `"Customer bought
    - **1, a BALLOON** (`0x004fe6ba`..`0x004fe78a`): a balloon in the guest's own colour and a life from the shop's
      quality; see "A held balloon", below. OpenTPW builds it (`ParkRideOperation.GiveABalloon`, Q177e).
    - **2, a COSTUME** (`0x004fe642`..`0x004fe6b5`): the guest's picture is changed to the theme's costume, or given back;
-     see "A costume", below. OpenTPW counts it (`SETTLE_UP_COSTUME`, Q177f).
+     see "A costume", below. OpenTPW builds it (`ParkRideOperation.DressOrUndress`, Q177f).
 5. **A toilet (`mFlags & 1`)**, in order (`0x004fe78f`..`0x004fe7fb`): dirties the toilet by the need the guest brought
    (`FUN_004e2440` with the need's byte: the State of repair `+0x44` falls by 0.05 of it, held to 0..100, and on falling
    below 25 - "Toilet has become dirty and smelly" - unstamps `RegionFX` 1 around the toilet's cell and stamps 6, each
@@ -1861,8 +1861,10 @@ Decoded and checked with the balloon (Q177e); built by Q177f.
    `SPR_KI`, `SPR_TA`, `SPR_SU`, `0x00764030`), then the rest by name, and stops at `FUN_0041a9d0`'s cap: 2, 4, 6 or 8
    for `GameOptions.NUMKIDS` (`DAT_007858d0`) 0, 1, 2 or more. `low.sam` sets 0 and `med.sam` and `high.sam` 2, so the
    default game has **six** (`BI, KI, TA, SU, BE, CH`); the `.sam` files' own comment ("0->4, 1->6, 2->8") is wrong.
-   Measured: the shipped park's 13 guests fit the roll over 8, Alexah's played saves 296 of 298 and 53 of 53 over 6.
-   A load reduces `mSpriteID` and each sprite's bank modulo the count again (`0x004f93a6`, `FUN_00475f40`).
+   Measured through the person base's `mSpriteID` (file 246): the shipped park's 13 children fit the roll over 8, every
+   one of Alexah's played saves' 296 and 53 over 6. A load reduces `mSpriteID` and each sprite's bank modulo the count
+   again (`0x004f93a6`, `FUN_00475f40`), so the shipped park's guests 33, 35 and 29, saved on banks 6, 7 and 7, come in
+   on 0, 1 and 1.
 4. **When it shows.** The picture changes at state `0xf` on leaving, which builds the sprite from `+0x24`/`+0x20` when its
    handle `+0xc` is nought (`FUN_004d4140`); every costume shop's `RideHandlesSprite` is 0, so boarding freed it. Nothing
    else changes: the walk's scripts are the same for any kind.
@@ -1870,6 +1872,17 @@ Decoded and checked with the balloon (Q177e); built by Q177f.
    4, `COAST` cars, the `BUMP` arm `FUN_00549c60` reached from `BUMP` 4 and 12, `TOUR` cars) it asks `FUN_004fcac0` of
    the rider: a costume head (kind 3) for a guest in costume, else the kid head of the same index (kind 1). The sixth,
    the bumper family's re-show `FUN_00548e80`, passes handle 0 (`0x00548ffe`) and draws kid head 0.
+
+**OpenTPW builds it** (Q177f): `ParkSpriteBanks` counts the kid banks under the detail file's cap, the theme's costumes and
+the balloon's colours as a park loads (`Level`, from the file the particles' density comes from); an arrival is the
+child its id gives (`ParkPeople.Admit`, `ParkSpriteBanks.ChildOf`); a load reduces a saved child; the settle-up dresses and
+undresses (`ParkRideOperation.DressOrUndress`), counting event `0xb` (`SETTLE_UP_COSTUME_EVENT`); and a guest is drawn in
+`Peep.SpriteKind` and `SpriteBank` (`ParkGuestSprites`), every child and costume bank packed. Its departures: the costume's
+draw is the ride turn's generator; the picture changes at the settle-up, which the original's case `0xf` follows straight
+after, where OpenTPW never hides a rider at all (Q52); and no head is drawn on a ride here (`ADDHEAD`, Q190), so the
+costume heads wait on it. The `0x4000` custom-detail path is not reached: OpenTPW has only the three detail files. The
+staff folders' cap from the same key (`FUN_0041aa40`: one bank at `NUMKIDS` 0, else two; only the mechanics have two) is
+built with it, and a staff member's saved bank is brought within it as they are drawn.
 
 ### The excitement match — `FUN_004fdcc0`
 
@@ -1987,7 +2000,7 @@ nought arm was a loss by its cash and its thought ("The settle-up's bookkeeping"
 | `+0x218` / `+0x21c` | `mLastPosX`, `mLastPosY` (file 430, 434): where the held balloon goes next frame, in world units |
 | `+0x220` | `mState` |
 | `+0x224` | `mSavedState` |
-| `+0x20` / `+0x24` | `mSpriteID`, the variant, and `mESPSprite`, the sprite bank (0 kids, 2 costumes) |
+| `+0x20` / `+0x24` | `mSpriteID`, the bank of that kind, and `mESPSprite`, the sprite kind (0 a child, 2 a costume) ("A costume") |
 | `+0x30` | the history block: `mLastThought`, the event ring from `+0x34`, the bubble, its cursor and stamp (file 254) |
 | `+0xc4` | `mAdjustorSpeed` (file 32), the sugar's speed |
 | `+0xc2` | the hurry speed, from the table at `0x0075c7f0` (0, 25, 50): the needs turn writes 25 above a toilet need of 80, else nought; the toilet arm 25; the walk to the gate 50 when a bus is due and 25 for a handle whose low two bits are nought; entering state 12 nought |
@@ -2301,7 +2314,8 @@ after the lost play. Of the run's seven checks six matched; the seventh, balance
 `ParkRideOperation.SettleUp` builds steps 0, 1, 2, 4, 5 and 7 and a sideshow winner's count beside the charge, the
 prize, the excitement match, the five effects, the ingredient's two docks, gain and fat, salt, ice and sugar
 (`TakeTheIngredient`; the sugar feeds `Peep.Pace`, Q177d), a Balloon Shop's balloon (`GiveABalloon`, Q177e; "A held
-balloon"), the toilet's relief, the winner's cheer and the lost dock; the fatigue
+balloon"), a Costume Shop's costume (`DressOrUndress`, Q177f; "A costume"), the toilet's relief, the winner's cheer and
+the lost dock; the fatigue
 step is a no-op in both games (said at the site). Each object's six rings and two counts are `ParkObjectRings`, seeded
 from its record, fresh for a thing built, dropped with a thing sold; the charge credits today's takings and the door's
 refusal counts the walk-away; the charge banks the price and a shop's or won sideshow's cost of goods is booked and
@@ -2309,7 +2323,7 @@ withdrawn ("The cost of goods and the park's money", OpenTPW). The day's change 
 `GameCalendar`'s edge; that calendar counts from nought rather than from the save's clock (`GameCalendar.Rebase`), so
 its days turn at other moments than the original's would after the same load, and it does not roll on the first tick.
 The join's snapshot is `Peep.JoinHappiness`. The ride window's Users last month (filled on show and every four
-seconds, on the frame clock) and the all-visitors list's Rides Ridden read them. Counted by name: `SETTLE_UP_EVENT_HISTORY`, `_BALLOON_EVENT`, `_COSTUME` (Q177f), `_ANALYSER_SAMPLE` (step 6),
+seconds, on the frame clock) and the all-visitors list's Rides Ridden read them. Counted by name: `SETTLE_UP_EVENT_HISTORY`, `_BALLOON_EVENT`, `_COSTUME_EVENT`, `_ANALYSER_SAMPLE` (step 6),
 `_SIDESHOW_THOUGHT` and the toilet's three. Its win roll (`PeepBehaviour`, `Succeeds`) and the ingredient's docks (the
 ride turn's) draw from `System.Random` where the original draws from the park's generator, and the roll reads the
 item's chance where the original reads the object's (Q97).
@@ -2886,8 +2900,7 @@ The Jungle Spray is queued for and invited in **about one run in five** at that 
 
 ## Open and unverified
 
-- **A costume's return for two of Alexah's guests** (jungle ids 213 and 181, `mSpriteID` 1), which fit the arrival roll
-  at no count of kid banks ("A costume", 3). And `FUN_0041a9d0`'s custom-detail path (`FUN_0044a590` answering `0x4000`).
+- **`FUN_0041a9d0`'s custom-detail path** (`FUN_0044a590` answering `0x4000`, "A costume", 3).
 - **`FUN_005019f0` case `0x11`**, the walk of the `mFirstGuard` chain through `+0x210` / `+0x212`.
 - **Whether a shop's duration of nought is correct** (it may simply not read it) where `FUN_004df8f0` would take a clamped value from the descriptor's `+0x1a0`. A bought one's is: the constructor writes `+0x5c` only for a starting duration above nought, and every shop's is nought (Q171).
 - **Refuted, so do not repeat:** "only `UNBOUNCE` writes `VAR_LETMEOFF`" — there are six writers, and the claim is false for 16 of the park theme's 17 dismissing ride scripts. "The shops' `mOperatingCapacity` might be nought, leaving them permanently full" — every visitable object has a non-zero capacity.

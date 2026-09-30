@@ -465,13 +465,14 @@ from the crossing. So the arrival path they would take is the one the shipped sa
   Predicted as 5, it made winning cost 30 happiness; measured at 50 it gains 19, and the engine's own
   "Sideshow won - happiness up %d points" reads honestly. The test caught it.
 - **Still unbuilt, and named rather than quietly skipped:** the park analyser's shop and sideshow month
-  accumulators (`+0x20130` / `+0x20380`), the costume arm (Q177f), and of the settle-up's bookkeeping the
+  accumulators (`+0x20130` / `+0x20380`), and of the settle-up's bookkeeping the
   event history, the analyser's sample and the sideshow's thoughts, counted. The visit counts, the object's six day
   rings, the happiness gained since joining and the served count are kept (Q177b); the charge is banked, and a shop's
   and a won sideshow's cost of goods booked and withdrawn, so a drink nets the park 10 and a won play costs it 30
   (Q177c). A shop's ingredient terms are built (Q177d): a drink gives 20 of its 40 thirst back and 2 more happiness,
   and an ice cream quickens the walk for a few sweeps. A Balloon Shop's winner is given a balloon in their own colour,
-  with a life from the shop's quality, held over them until it bursts (Q177e). `FUN_004fdcc0`'s excitement match is
+  with a life from the shop's quality, held over them until it bursts (Q177e); a Costume Shop dresses a guest in the
+  theme's costume, and a second visit gives back the child they arrived as (Q177f). `FUN_004fdcc0`'s excitement match is
   built (Q169).
 - **One honest limit.** A park left entirely alone still rarely buys a *drink*: only a quarter of guests
   ever grow thirsty (`Peep.Tick` shares the drift by thing id) and by then their exit countdown has

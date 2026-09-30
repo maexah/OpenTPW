@@ -2832,7 +2832,43 @@ artifacts are listed in `docs/history/README.md`.
   `FUN_0044b410` draw. Confirm: a guest leaving a bought Balloon Shop with a balloon on screen, and its life counting
   down in `peeps`. From Q177d: both arms draw the park's generator through `FUN_00541f70` and `FUN_00541fd0` besides
   the reseed (`ride-operation.md`, "The effects of a visit", 4); OpenTPW has one generator per system (Q177d's site).
-- [ ] **Q177f. Costumes, after the arrival's child.** Split from Q177e; decoded there (`ride-operation.md`, "A
+- [x] **Q177f. Costumes, after the arrival's child.** Done 2026-09-30, `alexah/197-costumes`. `ParkSpriteBanks` counts,
+  as a park loads, the kid banks under the detail file's `NUMKIDS` cap (`FUN_0041a9d0`: two, four, six or eight; six at
+  medium and high), the theme's costume banks and the balloon's colours (`Level`, from the detail file the particles'
+  density comes from). A person's `mESPSprite` and `mSpriteID` (file 37, 246) are read, and a guest keeps them as
+  `Peep.SpriteKind` and `SpriteBank`, a saved child reduced within the kid banks as a load does (`0x004f93a6`: the
+  shipped park's guests 33, 35 and 29 come in on 0, 1 and 1). An arrival is the child its id gives
+  (`ParkSpriteBanks.ChildOf`: reseeded with the id, one draw over the kid banks). The settle-up's costume arm
+  (`ParkRideOperation.DressOrUndress`): anything but a costume is dressed, a costume bank drawn over the theme's (the
+  ride turn's draw, said at the site), event `0xb` counted (`SETTLE_UP_COSTUME_EVENT`); a costume is given back as the
+  guest's child. `ParkGuestSprites` draws a guest in what they wear now and packs every child and costume bank, not the
+  seventh and eighth children. The staff folders' cap from the same key (`FUN_0041aa40`: one bank at `NUMKIDS` 0, else
+  two) is built too: a staff member's saved bank is brought within it as they are drawn and packed. Console: `peeps` prints `sprite kind/bank`, `guests` the drawn and saved kind and bank.
+  - **Measured** through this build's reader (`q177f-kids`): each person's two fields equal their sprite's on all 18
+    shipped people and every person with a sprite in Alexah's played parks; the roll gives all 13 shipped children over
+    eight and all 296 jungle and 53 fantasy played children over six; the jungle park's 43 costumed guests all on bank 0.
+    The two guests Q177e's decode left unexplained (213 and 181) are riders in costume.
+  - **Tests:** `ParkCostumeTests`, 15. **Mutation** (`q177f-mut/mutate.py` on the final tree, `mutate-final.out`): 30 mutants, 29
+    red; the green one showed `BanksToPack`'s filter of saved children redundant beside the reduction, so it went, and the
+    reduction's own mutant and the costume packing's re-ran red.
+  - **Reviewed** (`wf_b57c6c53-9d0`, kept small for the week's usage: one Opus reviewer over the code against the decode,
+    the C# and tests and the docs, and one Opus skeptic over every finding): 10 findings, all upheld or amended and each
+    acted on. Among them: a hollow test (a costume bank fixed at nought passed it); the staff folders' cap and a staff
+    member's reduction missing; stale comments and doc rows (the person record's row had kind and bank the wrong way
+    round); Q32, STATUS and the FileFormats wording.
+  - **Confirmed in the game** (silent, the stock jungle park, a Costume Shop bought at (42,30), `save/` unchanged;
+    predicted first; `q177frun.py`, `q177f-run4/`, 8 of 8): the shipped guests 33, 35, 29 on 0, 1, 1 and the rest as
+    saved, in `peeps`; guest 44 arrived as **child bank 5**, their id's, photographed (`0-arrived-zoom.png`); dressed at
+    the shop, **`sprite 2/0`** in `peeps` and the log, photographed in the leopard costume (`1-in-costume-zoom.png`); a
+    second visit gave back **child bank 5**, the log's "returned a costume" line and `peeps`, photographed
+    (`2-child-again-zoom.png`); one `SETTLE_UP_COSTUME_EVENT` a dressing (guests 31 and 42 chose the shop unprompted and
+    were dressed too). Runs 1 to 3 stopped on harness faults (a `send` refused while walking elsewhere, a payment queue
+    not drained, another guest's payment), none the game's. Run 5, on the final build, 8 of 8 (`q177f-run5/`).
+  - **Not confirmed on screen:** low detail's two kid banks and one staff bank (tested only); a theme with more than one
+    costume bank (none ships one; tested only); costume heads on a ride, as no head is drawn here (Q190).
+  - Built and tested alone in a worktree: 1457 pass, 0 skip with the game; 572 ran, 885 skipped without; 123 warnings.
+
+  The item as written: Split from Q177e; decoded there (`ride-operation.md`, "A
   costume"). A shop whose `AppearanceEffect` is 2 (Lost Kingdom's Costume Shop, 1202: `CostOfResearch` 550, research
   group 3, offered from the start here, which has no research) dresses a guest in the theme's costume (`mESPSprite` 2,
   `mSpriteID` a draw over the costume banks, one in Lost Kingdom, with no reseed; event `0xb`), and undresses one
@@ -4142,8 +4178,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   goods from the window's pending sliders (applied on close, on stepping to the next or by apply to all), and a
   toilet's users last month. `UIStrings` 37 to 39 are one row off: UITEXT 37 is "Scrap value", 38 "Local happiness",
   39 "Quality of goods", 40 "Sale price"; nothing uses the three members yet.
-- [ ] **Q32. Graphics tiers.** Only `Level.SetupParticles` reads the detail files (`low.sam`, `med.sam`, `high.sam`),
-  and only `GameOptions.PARTICLEDENSITY` from them; nothing reads their `GraphicalOptions.*` keys (texture quality and
+- [ ] **Q32. Graphics tiers.** Only `Level.SetupParticles` and `Level.NumKids` read the detail files (`low.sam`,
+  `med.sam`, `high.sam`), and only `GameOptions.PARTICLEDENSITY` and `NUMKIDS` (the kid and staff bank caps) from them; nothing reads their `GraphicalOptions.*` keys (texture quality and
   filtering, sky, shadows, fog, mipmaps, view distance). The detail-file loader is `0x00423bc0` (`OptionsScreen`'s
   restart note). Decode what it does with each key - the lobby plan's item 11 names three: the `stexture` set,
   `SKYQUALITY` and the particle low-detail byte - then build low / medium / high.

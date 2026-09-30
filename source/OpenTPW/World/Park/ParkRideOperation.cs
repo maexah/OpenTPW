@@ -29,7 +29,7 @@ public sealed class ParkRideOperation
 	private readonly IReadOnlyDictionary<int, Peep> _guests;
 	private readonly ParkAdmission? _admission;
 	private readonly ParkRideScore? _score;
-	private readonly int _balloonSets;
+	private readonly ParkSpriteBanks _banks;
 
 	/// <param name="state">The park as it is being played, which owns the queues.</param>
 	/// <param name="guests">Every guest by thing id, for asking what the head of a queue is doing.</param>
@@ -43,12 +43,13 @@ public sealed class ParkRideOperation
 	/// What each kind of guest likes, for the settle-up's excitement match (<see cref="MatchTheExcitement"/>),
 	/// which also needs <paramref name="admission"/>. Null leaves the match alone, as a null admission does.
 	/// </param>
-	/// <param name="balloonSets">
-	/// How many colours the balloon bank has (<see cref="Balloon.SetsIn"/>), which a balloon's is drawn over. Nought
-	/// gives a guest a balloon's life and no balloon, as the original does with no sprite table.
+	/// <param name="banks">
+	/// How many banks of each guest kind the park draws over (<see cref="ParkSpriteBanks"/>): a balloon's colour, a
+	/// costume and the child a costume gives back are drawn over them. Null counts none, which gives a guest a balloon's
+	/// life and no balloon, as the original does with no sprite table.
 	/// </param>
 	public ParkRideOperation( ParkState state, IReadOnlyDictionary<int, Peep> guests,
-		ParkAdmission? admission = null, ParkRideScore? score = null, int balloonSets = 0 )
+		ParkAdmission? admission = null, ParkRideScore? score = null, ParkSpriteBanks? banks = null )
 	{
 		ArgumentNullException.ThrowIfNull( state );
 		ArgumentNullException.ThrowIfNull( guests );
@@ -57,7 +58,7 @@ public sealed class ParkRideOperation
 		_guests = guests;
 		_admission = admission;
 		_score = score;
-		_balloonSets = balloonSets;
+		_banks = banks ?? new ParkSpriteBanks( 0, 0, 0 );
 	}
 
 	/// <summary>
@@ -396,7 +397,7 @@ public sealed class ParkRideOperation
 		// left and the thing left does not give balloons itself (0x00501fd3..0x0050208a): no event, the life as it was.
 		// The original asks it of mMajorDest, the thing being left.
 		if ( peep.BalloonLife != 0 && ItemOf( ride, catalogue )?.AppearanceEffect != Balloon.AppearanceEffect )
-			peep.Balloon = Balloon.Make( peep.ThingId, _balloonSets, SpriteClock( tick ) );
+			peep.Balloon = Balloon.Make( peep.ThingId, _banks.BalloonSets, SpriteClock( tick ) );
 
 		return script.Set( DismissVariable, 0 );
 	}
@@ -524,8 +525,8 @@ public sealed class ParkRideOperation
 	/// </para>
 	/// <para>
 	/// After the five effects come the object's own terms, on its amount of special ingredient
-	/// (<see cref="TakeTheIngredient"/>), then the appearance effect: a balloon (<see cref="GiveABalloon"/>), or a
-	/// costume, which is <b>NOT built, counted (Q177f)</b> (<c>docs/exe/ride-operation.md</c>, "The effects of a visit", 4).
+	/// (<see cref="TakeTheIngredient"/>), then the appearance effect: a balloon (<see cref="GiveABalloon"/>) or a
+	/// costume (<see cref="DressOrUndress"/>) (<c>docs/exe/ride-operation.md</c>, "The effects of a visit", 4).
 	/// </para>
 	/// <para>
 	/// <b>The visit is remembered first</b> (<see cref="Peep.RememberVisit"/>, <c>0x004fd98b</c>), before the
@@ -608,10 +609,8 @@ public sealed class ParkRideOperation
 				GiveABalloon( peep, ride, tick );
 				break;
 
-			// A costume: mESPSprite 2 and a picture drawn from the theme's costume bank, or the arrival picture back
-			// for a guest already in one (Q177f).
 			case CostumeEffect:
-				Unimplemented.Report( "SETTLE_UP_COSTUME" );
+				DressOrUndress( peep, ride, random );
 				break;
 		}
 
@@ -707,6 +706,41 @@ public sealed class ParkRideOperation
 	private const int CostumeEffect = 2;
 
 	/// <summary>
+	/// A Costume Shop's arm of the settle-up (<c>0x004fe642</c>). A guest not in
+	/// costume (<see cref="Peep.SpriteKind"/> not exactly 2) is dressed in one: the costume kind and a bank drawn over the
+	/// theme's, <c>(r &gt;&gt; 2) %</c> the count, with no reseed - one in every theme, so always nought, and the draw
+	/// taken all the same - and event <c>0xb</c> naming the shop. One already in costume goes back to the child they
+	/// arrived as (<see cref="ParkSpriteBanks.ChildOf"/>), with no event. The picture changes as they leave the shop,
+	/// which is where the original builds their sprite again, straight after this (<c>docs/exe/ride-operation.md</c>, "A
+	/// costume", 4).
+	/// </summary>
+	/// <remarks>
+	/// The costume's draw is from the ride turn's <see cref="Random"/>, where the original's is the park's one generator.
+	/// </remarks>
+	private void DressOrUndress( Peep peep, ParkWorld.CatalogueObject shop, Random random )
+	{
+		if ( peep.SpriteKind != ParkSpriteBanks.CostumeKind )
+		{
+			var draw = (uint)random.Next();
+
+			peep.SpriteKind = ParkSpriteBanks.CostumeKind;
+			peep.SpriteBank = _banks.CostumeBanks > 0 ? (int)((draw >> 2) % (uint)_banks.CostumeBanks) : 0;
+
+			// The guest's event history takes event 0xb naming the shop (FUN_0050c100, the shared tail at 0x004fe787).
+			Unimplemented.Report( "SETTLE_UP_COSTUME_EVENT" );
+
+			Log.Info( $"Person {peep.ThingId}: dressed at object {shop.ThingId}, costume bank {peep.SpriteBank}" );
+			return;
+		}
+
+		// "Customer returning a costume." (0x0075d798), into the bare RET.
+		peep.SpriteKind = ParkSpriteBanks.ChildKind;
+		peep.SpriteBank = _banks.ChildOf( peep.ThingId );
+
+		Log.Info( $"Person {peep.ThingId}: returned a costume at object {shop.ThingId}, child bank {peep.SpriteBank}" );
+	}
+
+	/// <summary>
 	/// The sprite clock at a thing sweep, in milliseconds: the sweep's game tick, eight to a sweep, at 31 each - what
 	/// <see cref="ParkPeople"/> steps the sprites on.
 	/// </summary>
@@ -720,7 +754,7 @@ public sealed class ParkRideOperation
 	/// </summary>
 	private void GiveABalloon( Peep peep, ParkWorld.CatalogueObject shop, int tick )
 	{
-		peep.Balloon = Balloon.Make( peep.ThingId, _balloonSets, SpriteClock( tick ) );
+		peep.Balloon = Balloon.Make( peep.ThingId, _banks.BalloonSets, SpriteClock( tick ) );
 		peep.BalloonLife = Balloon.LifeFor( shop.QualityOfGoods );
 
 		// The guest's event history takes event 0xc naming the shop (FUN_0050c100, 0x004fe775).

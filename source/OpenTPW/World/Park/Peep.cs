@@ -65,6 +65,16 @@ public sealed class Peep
 	public int NumSideshowsWon { get; set; }
 
 	/// <summary>
+	/// Which kind of sprite this guest wears - <c>mESPSprite</c>, <c>+0x24</c>: a child
+	/// (<see cref="ParkSpriteBanks.ChildKind"/>) or a costume (<see cref="ParkSpriteBanks.CostumeKind"/>). A Costume Shop
+	/// changes it (<see cref="ParkRideOperation"/>'s settle-up), and it is what the guest is drawn in.
+	/// </summary>
+	public int SpriteKind { get; set; }
+
+	/// <summary>Which bank of <see cref="SpriteKind"/> - <c>mSpriteID</c>, <c>+0x20</c>: which child, or which costume.</summary>
+	public int SpriteBank { get; set; }
+
+	/// <summary>
 	/// The balloon this guest holds, or null - <c>mBalloonScript</c>, <c>+0x210</c>, a slot in the sprite table there.
 	/// A Balloon Shop gives it, boarding anything takes it away (<see cref="SetState"/>) and leaving brings it back
 	/// (<c>docs/exe/ride-operation.md</c>, "A held balloon").
