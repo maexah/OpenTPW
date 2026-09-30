@@ -3219,17 +3219,31 @@ artifacts are listed in `docs/history/README.md`.
     `ParkTrackRides` skips (types 5 and 9). Predict the ride's length (`VAR_DURATION` × 30 × 31 ms) before the run, and
     put the bug back (never set `0x20`).
 
-- [ ] **Q179b. The Hot Pot lets its riders off: the build.** From Q179's decode (`park.md`, "How a bumper ride
-  ends a go, and lets its riders off"). Build the bumper family's record and cars beside `ParkTrackRideTable`
-  (`World/Park`): the boarding and leaving lists, a pool car with its riders and timer, and `BUMP` 1, 2, 3, 4, 6, 7,
-  8, 9, 10, 11, 12, 13 and 16 as decoded, with 16's answer of 0 and 6's reopen copied, not fixed. The track tick
-  counts the timer in `GameClock` ticks, never seconds or frames, and its unload arm moves a car's riders to the
-  leaving list and sets loading only when the ride-wide seated count is 0. Car motion, buoys, the karts' and water
-  ride's arms, sounds and emitters stay counted by name (`Unimplemented.Report`); so do the saved car chunks
-  `ParkTrackRides` skips (types 5 and 9), which the original restores whole. Confirm in the game (`q179run.py`, then
-  `q172brun.py`): predict the go's length first (`VAR_DURATION` 25 × 30 × 31 ms = 23.25 s from `BUMP 3`), riders let
-  off the Hot Pot, each match log reading excitement 42, no more than 4 on it at once, photographed; and put the bug
-  back (never set `0x20`) and see the new test go red.
+- [ ] **Q179b. The Hot Pot lets its riders off, from boats that float in its pot: the build.** From Q179's decode
+  (`park.md`, "How a bumper ride ends a go, and lets its riders off"), and Alexah's account of the original
+  (2026-09-30): *the Hot Pot's riders sit in bumper boats floating in the water on its top, as many boats as the
+  capacity is set to; the boats sit empty in the pot, visible and floating idle, when it is not running.* That is
+  `BUMP 4` @55 launching one car per unit of `VAR_CAPACITY` at open (anim `0xc`, idle), one rider a `b_car` seat
+  (`0x80` id 1), and `BUMP 3` turning them to anim 5 for a go. Build the bumper family's record and cars beside
+  `ParkTrackRideTable` (`World/Park`): the boarding and leaving lists, a pool car with its riders, timer and model,
+  drawn in the pot with its rider seated, and `BUMP` 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13 and 16 as decoded, with
+  16's answer of 0 and 6's reopen copied, not fixed. The track tick counts the timer in `GameClock` ticks, never
+  seconds or frames, and its unload arm moves a car's riders to the leaving list and sets loading only when the
+  ride-wide seated count is 0. The boats' motion and bumping are Q179c: until then a boat stays where it was
+  launched, and that is said at the site and counted (`Unimplemented.Report`), as are the karts' and water ride's
+  arms, sounds and emitters, and the saved car chunks `ParkTrackRides` skips (types 5 and 9), which the original
+  restores whole. Where a new boat is placed is decoded (`FUN_0054a040`: a random point in the arena circle, up to
+  100 tries clear of other boats) and belongs here. Confirm in the game (`q179run.py`, then `q172brun.py`): predict
+  the go's length first (`VAR_DURATION` 25 × 30 × 31 ms = 23.25 s from `BUMP 3`); 4 boats photographed floating
+  empty before anyone boards; riders let off, each match log reading excitement 42, no more than 4 on at once;
+  and put the bug back (never set `0x20`) and see the new test go red.
+- [ ] **Q179c. The Hot Pot's boats move and bump each other during a go. Decode first.** Alexah (2026-09-30): *they
+  have physics, and try to bump into each other during the ride's run.* Decode the bumper family's motion, which
+  Q179 left out: `FUN_0054a040` (the next target: a random buoy of the eight `FUN_00545890` lays, or with chance
+  3/16 another car of the ride when it has two or more), `FUN_00547f50` (the step: velocity, heading by atan2, and
+  the emitters, none for the Hot Pot), and `FUN_00546c80`'s pairwise pass (`FUN_005497b0`, `FUN_005494d0`,
+  `FUN_00547170`), with the fixed-point units and the arena radius (template `+0x08` 768, `+0xc0`). Measure over
+  all four bumper scripts' cars. Confirm against the original under Proton: the boats' paths in a go, photographed.
 - [ ] **Q180. A loaded park's scripts take their turns on the save's ticks.** Found by Q174c's decode (`park.md`, "The
   scheduler"). The `RSSE` module's header puts the scheduler's globals back (`0x005598d7`): its tick counter (6,055 in
   the shipped park) and the next script handle (16); each script keeps its saved handle at `+0x08`, so its turn
