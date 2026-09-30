@@ -3142,7 +3142,30 @@ artifacts are listed in `docs/history/README.md`.
   reconcile `hud.md`'s mystery row (`Research.Group` above nought and not unlocked), which the original showed none
   of although Temple of Gloom and Ice Cream carry a group. Then build the filter. Confirm: the shops tab, photographed,
   lists the three.
-- [ ] **Q201b. The buy list lists only researched items: the build.** From Q201's decode (`hud.md`, "What the buy
+- [x] **Q201b. The buy list lists only researched items: the build.** Done 2026-09-30,
+  `alexah/206-researched-buy-list`. No FileFormats change (the record's layout was already there).
+  - **Built.** `ParkWorld.ObjectControlRecords` reads the first `mNumObjectControls` records (id, `+0x10`, `+0x14`;
+    a count past 150 is held to it). `ItemDescriptionFile.ResearchCost` reads `Upgrades[0].CostOfResearch` (the other
+    research keys stay counted). `ParkResearch` keeps the save's flag and tier for each item it holds and seeds an item
+    it lacks from a nought cost; `Level.Research`. `ParkBuyScreen.Listed` lists only researched items. The mystery row
+    is built from the current player's `RideIds` (UITEXT 137, the ticket cost negated); choosing it is counted
+    `MYSTERY_RIDE_PURCHASE`. Research completing is counted `RESEARCH_COMPLETING` where a researcher would research.
+    Said at the site: the row's price is the item file's, not the record's `+0x04` (equal in all 50 shipped records).
+  - **Confirmed in the game** (`q201b/shoptab.py`, `q201b/run2/`, silent, stock park; `save/` unchanged), predicted
+    first: "Research: 26 of 50 items researched, 50 from the save's records and 0 seeded from their files"; the tabs,
+    photographed and looked at: rides 4 (Aztec Mayhem, Belly Bounce, Crazy Ape, Rocky Racers), sideshows 2 (Jungle
+    Spray, Strength Bird), shops 3 (Balloon, Burger, Drinks), as the original's `q178b/orig/`. `ITEM_RESEARCH_KEYS`
+    115 (174 before; not predicted to the unit). `RESEARCH_COMPLETING` was reached (the park has a researcher).
+  - Tests: `ParkResearchTests` (7). Each of five bugs put back failed a test: the filter off, the save's records
+    ignored, `+0x11` read for `+0x10`, the unlocks ignored, the seed ignoring the cost. Review `wf_55d38b7b-61e` (two
+    Opus): four low findings (a wrong address, a throw on a bad count, a stale `park-engine.md` line, the price's
+    source unsaid), all fixed.
+  - **Not confirmed on screen:** the mystery row (no researched Instant Action item has a ticket cost) and a played
+    save whose records differ from the files (none here). The game ran on the build before the review's fixes (comments,
+    a clamp no shipped save reaches), none of which changes what is drawn.
+  - Built and tested alone in a worktree: 1508 pass, 0 skip with the game; 609 ran, 899 skipped without; 123 warnings.
+
+  The item as written: From Q201's decode (`hud.md`, "What the buy
   list actually filters on"). `ParkWorld` reads `mObjectControls` (it skips it now, `ParkWorld.cs`) - each record's id,
   `+0x10` and `+0x14` - and the running park keeps a researched flag per item: the save's for every item it holds,
   `Upgrades[0].CostOfResearch` is nought for any catalogued item it lacks. `ParkBuyScreen.Show` lists only researched

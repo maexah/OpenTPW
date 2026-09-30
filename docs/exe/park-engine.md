@@ -261,8 +261,9 @@ the wads 70 own, 50 `Easy_`, 2 `Online_`) holds a refused line. The `Coaster.sam
 
 OpenTPW (Q178b): `Level.InstantAction` gives both the balance's `Easy_Standard.sam` and the catalogue's gate; in it
 `ParkItemCatalogue` leaves out an item whose wad has no `Easy_` file and lays the file over the item's own
-(`ItemDescriptionFile.Overlay`), 50 items. `Info.NewAttractionDecayTime` falls back to 1. The wear and research keys
-are counted (`ITEM_WEAR_RATE`, `ITEM_RESEARCH_KEYS`). **A refused line leaves out what its file describes - the item,
+(`ItemDescriptionFile.Overlay`), 50 items. `Info.NewAttractionDecayTime` falls back to 1. `Upgrades[0].CostOfResearch` is
+read (the researched seed, Q201b); the other research keys and the wear keys are counted (`ITEM_RESEARCH_KEYS`,
+`ITEM_WEAR_RATE`). **A refused line leaves out what its file describes - the item,
 or the whole folder for a category file - logged with the file's name and counted once (`ITEM_VALUE_REFUSED`), where
 the original quits** (Alexah, 2026-09-30).
 

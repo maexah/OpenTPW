@@ -66,6 +66,9 @@ public class Level
 	/// <summary>Everything this theme sells, for as long as the park is up - see <see cref="ParkBuilding"/>.</summary>
 	public ParkItemCatalogue? Catalogue { get; private set; }
 
+	/// <summary>Which of those items the park has researched, the save's word first - see <see cref="ParkResearch"/>.</summary>
+	public ParkResearch? Research { get; private set; }
+
 	/// <summary>
 	/// Whether the park is Instant Action's, the original's game type 2: the balance lays <c>Easy_Standard.sam</c> and
 	/// the catalogue each item's <c>Easy_</c> file, both on this one condition.
@@ -302,6 +305,8 @@ public class Level
 		load.Mark( "catalogue" );
 
 		var catalogue = Catalogue;
+
+		Research = park == null || catalogue == null ? null : new ParkResearch( park.ObjectControlRecords, catalogue );
 
 		_ = new ParkGround( ThemeName, park );
 		load.Mark( "ground" );

@@ -105,7 +105,10 @@ public sealed class ParkItemCatalogue
 		float QueueWaitTimeConstant = 0f, float QueueWaitTimeConstant1 = 0f, float QueueWaitTimeConstant2 = 0f,
 
 		// Whether every node of its model keeps a posed position - ItemDescriptionFile.DoHeadProcessing. See RideNodes.
-		bool DoHeadProcessing = false )
+		bool DoHeadProcessing = false,
+
+		// What researching it costs - ItemDescriptionFile.ResearchCost. Nought is researched from the start: ParkResearch.
+		int ResearchCost = 0 )
 	{
 		/// <summary>
 		/// A tier's starting speed and duration, <c>Upgrades[tier]</c> - what an upgraded ride's excitement divides its
@@ -292,7 +295,7 @@ public sealed class ParkItemCatalogue
 					description.InitDurationAt( 1 ), description.InitDurationAt( 2 ),
 					description.QueueWaitTimeConstantAt( 0 ), description.QueueWaitTimeConstantAt( 1 ),
 					description.QueueWaitTimeConstantAt( 2 ),
-					description.DoHeadProcessing );
+					description.DoHeadProcessing, description.ResearchCost );
 
 			return true;
 		}

@@ -222,12 +222,15 @@ internal sealed class ParkBuyScreen : UiWindow
 
 		_list.Clear();
 
-		if ( Level.Current?.Catalogue is { } catalogue )
+		// A deviation: the price is the item file's, where the original shows its control record's +0x04 (0x004ab086),
+		// which the record takes from the same key; the two agree in all 50 of the shipped park's records.
+		if ( Level.Current is { Catalogue: { } catalogue, Research: { } research } )
 		{
-			foreach ( var item in catalogue.All.Where( item => item.UiType == _tab )
-				.OrderBy( item => item.Name, StringComparer.OrdinalIgnoreCase ) )
+			foreach ( var item in Listed( catalogue, research, _tab ) )
 			{
-				_list.Add( new UiList.Row( item.Id, item.Name, item.BuildPrice, StateOf( item ) ) );
+				_list.Add( IsMystery( item )
+					? new UiList.Row( item.Id, Localization.Get( UIStrings.MysteryRide ), -item.GoldenTicketCost, StateOf( item ) )
+					: new UiList.Row( item.Id, item.Name, item.BuildPrice, StateOf( item ) ) );
 			}
 		}
 
@@ -240,6 +243,26 @@ internal sealed class ParkBuyScreen : UiWindow
 
 		ShowMoney();
 	}
+
+	/// <summary>
+	/// The items one tab lists: its kind, and <b>only a researched item</b> (<c>0x004ab023</c>), the park's flag - see
+	/// <see cref="ParkResearch"/>.
+	/// </summary>
+	internal static IEnumerable<ParkItemCatalogue.Item> Listed( ParkItemCatalogue catalogue, ParkResearch research, int tab )
+		=> catalogue.All.Where( item => item.UiType == tab && research.IsResearched( item.Id ) )
+			.OrderBy( item => item.Name, StringComparer.OrdinalIgnoreCase );
+
+	/// <summary>
+	/// The mystery row (<c>0x004ab023</c>..<c>0x004ab063</c>): a ride with a golden-ticket cost that the player has not
+	/// unlocked is named UITEXT 137 and priced at the ticket cost, negated. The unlocks are the player's, their
+	/// gms.dat's ride ids (<c>FUN_004d4b70</c>; <c>docs/exe/hud.md</c>, "The mystery row"); with nobody playing there
+	/// are none, so every such ride is a mystery.
+	/// </summary>
+	internal static bool IsMystery( ParkItemCatalogue.Item item, IReadOnlyCollection<ushort>? unlocked )
+		=> item.GoldenTicketCost > 0 && unlocked?.Contains( (ushort)item.Id ) != true;
+
+	/// <inheritdoc cref="IsMystery(ParkItemCatalogue.Item, IReadOnlyCollection{ushort})"/>
+	private static bool IsMystery( ParkItemCatalogue.Item item ) => IsMystery( item, Players.Roster.Current?.File.RideIds );
 
 	/// <summary>
 	/// The row's state column: <b>1 if the park already owns at least one</b>, 2 for one of the three
@@ -287,6 +310,15 @@ internal sealed class ParkBuyScreen : UiWindow
 
 		if ( Level.Current?.Catalogue is not { } catalogue || !catalogue.TryGet( rowId, out var item ) )
 			return;
+
+		// Placing a mystery ride spends golden tickets and unlocks it rather than taking money (FUN_004db090 ->
+		// FUN_004d4ad0); none of that is built, so the row is not taken.
+		if ( IsMystery( item ) )
+		{
+			Unimplemented.Report( "MYSTERY_RIDE_PURCHASE" );
+			Log.Info( $"Buy screen: {item.Name} is a mystery ride, and buying one with golden tickets is not built" );
+			return;
+		}
 
 		// Into the hand, and the screen closes behind it - which is what the original does, and why
 		// the money is not taken here: it is taken when the thing is actually put down.

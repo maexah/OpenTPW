@@ -1043,7 +1043,9 @@ file, with its `Easy_` layer, sets `Upgrades[0].CostOfResearch` 0 - the two rule
 only in a played save, where research has set more. Among them rides Belly Bounce, Crazy Ape, Rocky Racers, Aztec
 Mayhem; shops Balloon, Burger, Drinks; sideshows Jungle Spray, Strength Bird. **Photographed in the original's Lost
 Kingdom** (Instant Action, under Proton, 2026-09-30, Q178b): exactly those, and features Buy Land, Clear Land and the
-eight whose cost is nought, and no mystery row. OpenTPW lists every catalogued item (`q201/run1/`: 6 shops).
+eight whose cost is nought, and no mystery row. **OpenTPW lists the same** (Q201b, `ParkResearch`: the save's
+records, an item it lacks seeded from its cost; `q201b/run2/`: rides 4, sideshows 2, shops 3). Research completing is
+not built; `RESEARCH_COMPLETING` is counted where a researcher would research.
 
 **The row state is {0,1,2} and both non-zero values are pinned**: 1 = you already own at least one
 (`desc+0x18`, incremented on placement and decremented on demolition), 2 = one of the three most
@@ -1059,7 +1061,8 @@ the player has not unlocked (`FUN_004d4b70`, `0x004ab047`) is named UITEXT 137 "
 (`FUN_004db090` -> `FUN_004d4ad0`) when the tickets suffice, the cost added to the tickets spent; in game type 1 it
 inserts nothing. The set is the player's, saved in `gms.dat` (`FUN_005aff50`; `saves.md`, the "ride ids" rows),
 across every park and theme. No researched item in Instant Action's Lost Kingdom has a ticket cost, which is why the
-original showed no mystery row.
+original showed no mystery row. OpenTPW draws the row from the current player's `RideIds` (none with nobody playing); buying one
+with tickets is not built, counted `MYSTERY_RIDE_PURCHASE`.
 
 **Buy Land is item 101 and Clear Land is 102**, both `WhichUIType` 4 — which is exactly *why*
 `FUN_004aaf70` appends them as synthetic rows **-1** and **-2** on tab 3 rather than finding them in the

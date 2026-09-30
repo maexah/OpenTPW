@@ -1353,10 +1353,9 @@ public sealed class ParkWorld
 
 		ReadHeader();
 
-		// The fixed tables, stepped over: none of them says anything about what stands in the park. The last 18
-		// bytes of the arrival and clock fields are the arrival timer, which is read.
-		Skip( ObjectControls * ObjectControlSize );
-		Skip( 4 );                                  // mNumObjectControls
+		// The fixed tables. The object controls are read; the rest say nothing about what stands in the park,
+		// and are stepped over but for the last 18 bytes of the arrival and clock fields, the arrival timer.
+		ReadObjectControls();
 		Skip( 2 );                                  // mPreviousSearchKey
 		Skip( PoolRecords * PoolRecordSize );
 		Skip( ArrivalTailSize - ArrivalBlockSize );
@@ -1427,6 +1426,39 @@ public sealed class ParkWorld
 	/// nought but a capacity of 5 and the gates open.
 	/// </summary>
 	public ArrivalBlock Arrival { get; private set; } = new( 0, 0, 5, 0, false, true );
+
+	/// <summary>
+	/// One of <c>mObjectControls</c>' records, <c>CControlManager</c>'s per kind of item (FileFormats <c>saves.md</c>,
+	/// "The object controls"): the item's id, whether it is researched (<c>+0x10</c>) and the upgrade tier
+	/// researched (<c>+0x14</c>). What the park load keeps of them is <c>docs/exe/hud.md</c>, "What the buy list
+	/// actually filters on".
+	/// </summary>
+	public readonly record struct ObjectControl( int ItemId, bool Researched, int TierResearched );
+
+	/// <summary>The used records, the first <c>mNumObjectControls</c> of the 150, in the file's order.</summary>
+	public IReadOnlyList<ObjectControl> ObjectControlRecords { get; private set; } = [];
+
+	private void ReadObjectControls()
+	{
+		var start = _at;
+
+		Skip( ObjectControls * ObjectControlSize );
+
+		// Written after its array, so the array's length is the compiled-in 150 and this says how many are used. The
+		// original reads it unchecked (FUN_004d3aa0); a count past the array is held to it rather than costing the park
+		// the rest of its walk.
+		var used = Math.Clamp( ReadInt32(), 0, ObjectControls );
+
+		var records = new ObjectControl[used];
+
+		for ( var i = 0; i < used; ++i )
+		{
+			var at = start + i * ObjectControlSize;
+			records[i] = new ObjectControl( ReadUInt16At( at ), ReadByteAt( at + 0x10 ) != 0, ReadInt32At( at + 0x14 ) );
+		}
+
+		ObjectControlRecords = records;
+	}
 
 	private void ReadArrivalBlock()
 	{

@@ -291,7 +291,10 @@ public sealed class StaffBehaviour
 		// A guard walks on unless mGameTick's low two bits are nought (0x004d655d); a researcher unless its
 		// draw's are (0x00502ba9). Staying, or finding nowhere, sets idle, which stamps only from a walk.
 		// <b>A deviation (Q134):</b> there the original's researcher researches, state 0xf (0x00502be4), unless
-		// too tired; this one stands.
+		// too tired; this one stands, and research never completes (FUN_00504630), counted here.
+		if ( staff.Model == ResearcherModel )
+			Unimplemented.Report( "RESEARCH_COMPLETING" );
+
 		var choice = staff.Model == GuardModel ? tick : _random.Next();
 		var walks = (choice & (StayPutShare - 1)) != 0;
 		var walking = walks && SetRandomDest( staff, walk );

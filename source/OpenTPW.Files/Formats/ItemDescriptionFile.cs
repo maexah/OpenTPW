@@ -375,6 +375,14 @@ public sealed partial class ItemDescriptionFile
 	public int BuildPrice => _buildPrice ?? _category?.BuildPrice ?? 0;
 
 	/// <summary>
+	/// What researching the item costs - <c>Upgrades[0].CostOfResearch</c>, descriptor <c>+0x180</c>. <b>Nought is
+	/// what makes an item researched from the start</b>: the park load seeds the researched flag from it for every
+	/// item the save has no record of (<c>0x004d3e92</c>; <c>docs/exe/hud.md</c>, "What the buy list actually filters
+	/// on").
+	/// </summary>
+	public int ResearchCost => _researchCost ?? _category?.ResearchCost ?? 0;
+
+	/// <summary>
 	/// What the ride window's three sliders may be set to, and what a newly built one starts from
 	/// (<c>ParkBuilding.StartingSettings</c>).
 	///
@@ -469,6 +477,8 @@ public sealed partial class ItemDescriptionFile
 	public int RedLineCapacity => _redLineCapacity ?? _category?.RedLineCapacity ?? 0;
 
 	private int? _buildPrice;
+
+	private int? _researchCost;
 
 	private int? _whichUIType;
 	private int? _isChoosable;
@@ -607,8 +617,9 @@ public sealed partial class ItemDescriptionFile
 
 			switch ( key )
 			{
-				// Wear and research are unbuilt, and these are the three keys of theirs the Instant Action layer
-				// sets (Easy_<stem>.sam), counted where they are read rather than stored for nothing to use.
+				// Wear and research are unbuilt, and these are the keys of theirs the Instant Action layer sets
+				// (Easy_<stem>.sam), counted where they are read rather than stored for nothing to use. Slot
+				// nought's research cost is read: it is what seeds the researched flag. See ResearchCost.
 				case "Upgrades[0].WearRate":
 				case "Upgrades[1].WearRate":
 				case "Upgrades[2].WearRate":
@@ -616,6 +627,9 @@ public sealed partial class ItemDescriptionFile
 					break;
 
 				case "Upgrades[0].CostOfResearch":
+					_researchCost = Number( line );
+					break;
+
 				case "Upgrades[1].CostOfResearch":
 				case "Upgrades[2].CostOfResearch":
 				case "Research.Group":
