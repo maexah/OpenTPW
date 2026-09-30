@@ -104,8 +104,8 @@ public sealed class ParkStaffPool
 	/// <remarks>
 	/// <b>The refusals here are not the original's.</b> It refuses only by the cell rule, which is not
 	/// built (see <see cref="Hire"/>), and its picker never hands the mode a cell off the map. This park
-	/// refuses a cell off the map, a kind it packs no picture for, and any hire while it has nobody,
-	/// staff or guest, to copy a walk from - and treats each as the original treats a refused cell.
+	/// refuses a cell off the map and a kind it packs no picture for, and treats each as the original treats a
+	/// refused cell.
 	/// </remarks>
 	public static string PlaceCarried( int cellX, int cellY )
 	{

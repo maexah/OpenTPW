@@ -32,15 +32,15 @@ the tip cannot name it. Read the current state from the repository, which cannot
   **Each arrival is one of eight kinds, each with its own liking**, and **the choice is the original's whole score**:
   the kind just left is worth nothing, a new thing five times more for 184 sweeps, dear and golden-ticket rides more,
   shelter in rain, a track ride 60% of its level plus its track's, an upgraded one on its own tier, no unclosed coaster.
-  **A visit's excitement moves happiness by the kind's liking, and illness by how full they are.**
-  **Every twelfth walking turn a guest may turn aside for a nearer thing, then go on; a toilet empties the need.**
-  **A visit is counted as the original counts it** (Q177b): a guest's rides, purchases and sideshows, a thing's
+  **A visit's excitement moves happiness by the kind's liking, and illness by how full they are**; **a shop's ingredient
+  too** (Q177d). **Every twelfth walking turn a guest may turn aside for a nearer thing, then go on; a toilet empties
+  the need.** **A visit is counted as the original's** (Q177b): a guest's rides, purchases and sideshows, a thing's
   customers, served and satisfaction in thirty-day rings rolled daily; shown as Users last month and Rides Ridden.
-- People: guests and staff read from the save, drawn, walking, paying, queueing, boarding, interpolated between the
-  248 ms steps. **Queuers walk to their own places, in a line**; one needing the toilet, or lost to the walk, is out.
-  **A guest on a cell with no links, such as a sold thing's cleared ground, wanders to the nearest path.** **Guests
-  arrive, and staff take their turns, on the original's clock**, the save's `mGameTick`: a load 126 s in, then about
-  150 s after each; a guard idles 11 sweeps and sets off on the clock's low bits. Let off, they walk off past the exit.
+- People: guests and staff read from the save, drawn, walking, a guest at their own speed (Q177d), paying, queueing,
+  boarding, interpolated between the 248 ms steps. **Queuers walk to their own places, in a line**; one needing the
+  toilet, or lost to the walk, is out. **A guest on a cell with no links wanders to the nearest path.** **Guests arrive
+  and staff take turns on the original's clock**, the save's `mGameTick`: a load 126 s in, then every 150 s or so; a
+  guard idles 11 sweeps and sets off on the clock's low bits. Let off, they leave by the exit.
 - Rides: every placed thing runs its script; 74 of 106 opcodes built, the rest counted. A ride screams at the band its
   rider count asks for, as the original's chain: a fresh sample every 1-3 s on **its own clock**, so a second ride in
   the same band is neither held up by it nor set off by its stop. **No queue grows past its ride's longest.** **A ride
@@ -68,8 +68,8 @@ the tip cannot name it. Read the current state from the repository, which cannot
 - With no work the mechanic, handyman and entertainer stand where the original's walk about (Q133); staff make no
   sound (Q135). Guests and rides read `GameClock.Ticks / 8`, not `mGameTick` (Q132); a load brings one guest (Q26); the bus waits (Q131).
 - Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), a ride walked into in first person, a coaster's
-  excitement and level, a visit's ingredient (Q177d) and balloon (Q177e), the charge's sound. **The Hot Pot lets no
-  rider off** (Q179); a load re-phases turns (Q180), misreads kept times (Q181).
+  excitement and level, a visit's balloon (Q177e), the charge's sound. **The Hot Pot lets no rider off** (Q179); a
+  load re-phases turns (Q180), misreads kept times (Q181). A guest running for the bus hurries at 25, not 50 (Q199).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
   walk (Q121), and a park screen stays open over it (Q122). It walks onto entrances the original shuts (Q140).
@@ -77,7 +77,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177c, Q184 are ticked**; next **Q177d**; the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177d, Q184 are ticked**; next **Q177e**; the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -101,19 +101,19 @@ Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177c, Q184 are ticked**; next **Q177d**;
   stale major, sale's clear and save's fields; Q171's bounds; Q172b's saved track ride, tier and coaster (Q167) and a Hot Pot
   rider's 42 (Q179); Q173's tier 3 and zero divisors. Q174b's raw re-entry and last-frame trigger (no run) and loop (census
   only); Q174c's saved mark, timer and queue; Q175b's Rat Race; Q176's `0x80000000` draw (its let-go in a throwaway build);
-  Q177b's walk-away and a played save's counts; its satisfaction, census only (nothing here shows it). Q177c's withdrawals off, red stamp, a sold coaster's nought, the ticket count and the year's change.
+  Q177b's walk-away and a played save's counts; its satisfaction, census only (nothing here shows it). Q177c's withdrawals off, red stamp, a sold coaster's nought, the ticket count and the year's change. Q177d's docks, fat, salt, the speed's hold and floor and a hire's speed.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1394**, 0 fail, 0 skip with the game | 2026-09-30, after Q177c |
-| Tests without the game | **549** ran, **845** skipped, of 1394 | 2026-09-30, after Q177c |
-| Build warnings | 123 | 2026-09-30, after Q177c |
+| Tests | **1418**, 0 fail, 0 skip with the game | 2026-09-30, after Q177d |
+| Tests without the game | **556** ran, **862** skipped, of 1418 | 2026-09-30, after Q177d |
+| Build warnings | 123 | 2026-09-30, after Q177d |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-30 (Q177c with Q96).** `alexah/194-cost-of-goods-and-deposit`. **Earlier:** `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`,
+**2026-09-30 (Q177d).** `alexah/195-ingredient-and-walking-speed`. **Earlier:** `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`,
 `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

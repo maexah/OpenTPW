@@ -111,6 +111,22 @@ public class ParkStaffPlacementTests
 	}
 
 	/// <summary>
+	/// <b>A hire walks at the speed a rested member settles at</b>, base 140: a mover speed of 18350 and a force of 36700,
+	/// whoever else the park holds, as staff are not eased (Q136).
+	/// </summary>
+	[TestMethod]
+	public void AHireWalksAtARestedMembersSpeed()
+	{
+		var (people, pool) = Park();
+
+		Assert.AreNotEqual( 0, pool.Hire( people, pool.Candidates.Last(), OnMapX, OnMapY ) );
+
+		var hired = people.Staff[^1].Navigator;
+
+		Assert.AreEqual( (18350, 36700), (hired.MaxSpeed, hired.MaxForce) );
+	}
+
+	/// <summary>
 	/// <b>The body the place-staff click and the console's <c>hire</c> share refuses the same way</b>:
 	/// nought, and the candidate still waiting. This drives that body; the console's own case is not
 	/// driven here.

@@ -193,16 +193,41 @@ public sealed class Peep
 	public int QueueMoveDelay { get; set; }
 
 	/// <summary>
-	/// The speed term the walk reads to decide whether this guest is hurrying, which also picks a
-	/// different walk animation - the person's own <c>+0xc2</c>.
+	/// The hurry, <c>mPurposeSpeed</c> at <c>+0xc2</c> (file 236): 0 or 25, summed with <see cref="BaseSpeed"/> and
+	/// <see cref="AdjustorSpeed"/> into the walking speed every sweep (<see cref="Pace"/>), and read by the walk to pick
+	/// the hurried walk animation.
 	///
 	/// <para>
-	/// Written by the needs tick, by entering a state, and by <see cref="PeepBehaviour"/>, which is why the
-	/// setter is <c>internal</c> rather than private: <c>FUN_004ff730</c> decides afresh every turn whether
-	/// a guest hurries to the gate, before it walks them. Nothing outside the assembly can set it.
+	/// Read from the save, 25 on arrival, and written by the needs tick, by entering a state, by a toilet and by
+	/// <see cref="PeepBehaviour"/>, which is why the setter is <c>internal</c> rather than private:
+	/// <c>FUN_004ff730</c> decides afresh every turn whether a guest hurries to the gate, before it walks them.
+	/// Nothing outside the assembly can set it.
 	/// </para>
 	/// </summary>
 	public int PurposeSpeed { get; internal set; }
+
+	/// <summary>
+	/// The guest's own walking speed in hundredths, one of <see cref="BaseSpeeds"/> - <c>mBaseSpeed</c>, the word at
+	/// <c>+0xc0</c>, drawn as the person is made (<c>FUN_004f8940</c>) and never changed for a guest.
+	/// </summary>
+	public int BaseSpeed { get; internal set; }
+
+	/// <summary>
+	/// The sugar's hundredths on top of it - <c>mAdjustorSpeed</c>, the word at <c>+0xc4</c>: an Ice Cream Shop adds to
+	/// it (<c>0x004fe60e</c>) and every sweep takes it to 99 hundredths of itself (<see cref="Pace"/>).
+	/// </summary>
+	public int AdjustorSpeed { get; internal set; }
+
+	/// <summary>
+	/// The speed the walk was last eased to, in cells over five a sweep - <c>mPreviousSpeed</c>, the float at <c>+0xc8</c>.
+	/// </summary>
+	public float PreviousSpeed { get; private set; }
+
+	/// <summary>
+	/// Whether <see cref="Pace"/> eases this guest's walking speed: every guest read from a save or made on arrival.
+	/// A guest a test builds from a bare record keeps the navigator's speed as it was given.
+	/// </summary>
+	public bool Paced { get; }
 
 	/// <summary>
 	/// Which visitor this guest was, counting every admission the park has ever made, or zero for somebody
@@ -328,9 +353,19 @@ public sealed class Peep
 	/// </summary>
 	public PeepNavigator Navigator { get; }
 
-	public Peep( int thingId, ParkWorld.GuestState saved, ParkWorld.NavigatorState navigator )
+	public Peep( int thingId, ParkWorld.GuestState saved, ParkWorld.NavigatorState navigator, ParkWorld.PaceState? pace = null )
 	{
 		Navigator = new PeepNavigator( navigator );
+
+		if ( pace is { } speeds )
+		{
+			Paced = true;
+			AdjustorSpeed = speeds.AdjustorSpeed;
+			BaseSpeed = speeds.BaseSpeed;
+			PreviousSpeed = speeds.PreviousSpeed;
+			PurposeSpeed = speeds.PurposeSpeed;
+		}
+
 		ThingId = thingId;
 		PersonType = saved.PersonType;
 		State = (PeepState)saved.State;
@@ -446,6 +481,65 @@ public sealed class Peep
 	public const int HurryingSpeed = 25;
 
 	public const int UnhurriedSpeed = 0;
+
+	/// <summary>
+	/// The five base speeds, in hundredths - the words at <c>0x0075c7f8</c>. A guest is made with one of them drawn
+	/// modulo five (<c>docs/exe/ride-operation.md</c>, the person <c>+0xc0</c> row).
+	/// </summary>
+	public static readonly int[] BaseSpeeds = [60, 80, 100, 120, 140];
+
+	/// <summary>What the three speed words are summed over - the word at <c>0x0075c7fc</c>, <see cref="BaseSpeeds"/>' middle one.</summary>
+	public const int SpeedDivisor = 100;
+
+	/// <summary>The most speed the mover takes (the float at <c>0x007009a0</c>).</summary>
+	public const float MostSpeed = 2f;
+
+	/// <summary>A speed of one in the mover's <c>max_speed</c>: a fifth of a cell a sweep (the double at <c>0x007009b0</c>).</summary>
+	public const double MaxSpeedPerSpeed = 13107.2;
+
+	/// <summary>A speed of one in the mover's <c>max_force</c> (the double at <c>0x007009a8</c>).</summary>
+	public const double MaxForcePerSpeed = 26214.4;
+
+	/// <summary>The least either may be, a hundredth of a cell (<c>0x28f</c> at <c>0x005101d0</c>).</summary>
+	public const int LeastMaxSpeed = 655;
+
+	/// <summary>
+	/// Eases this guest's walking speed and hands it to the walk - the first half of <c>FUN_004fa870</c>, the first
+	/// call of the guest's turn every sweep, whatever they are doing (<c>docs/exe/ride-operation.md</c>, "Where a
+	/// WALKING peep is drawn").
+	///
+	/// <para>
+	/// The three words are summed unsigned and over <see cref="SpeedDivisor"/>, and the speed moves a quarter of the way
+	/// there: <c>(sum / 100 - previous × -3) × 0.25</c>, worked in single precision. Then the mover's own setter holds
+	/// it to <see cref="MostSpeed"/> and writes the mover's force and speed, each truncated and at least
+	/// <see cref="LeastMaxSpeed"/>; and the sugar's word falls to 99 hundredths of itself, taken as a word, which is one
+	/// a sweep below a hundred.
+	/// </para>
+	/// <para>
+	/// A member of staff is not eased here, and keeps the speed the save gave them: their base follows their rest,
+	/// which is unbuilt (Q136).
+	/// </para>
+	/// </summary>
+	public void Pace()
+	{
+		if ( !Paced )
+			return;
+
+		var sum = (PurposeSpeed & 0xffff) + (BaseSpeed & 0xffff) + (AdjustorSpeed & 0xffff);
+
+		PreviousSpeed = ((float)sum / SpeedDivisor - PreviousSpeed * -3f) * 0.25f;
+
+		var speed = PreviousSpeed > MostSpeed ? MostSpeed : PreviousSpeed;
+
+		// __ftol: truncated through a 64-bit integer, its low dword kept.
+		Navigator.MaxForce = Math.Max( LeastMaxSpeed, unchecked((int)(long)(speed * MaxForcePerSpeed)) );
+		Navigator.MaxSpeed = Math.Max( LeastMaxSpeed, unchecked((int)(long)(speed * MaxSpeedPerSpeed)) );
+
+		if ( AdjustorSpeed != 0 )
+			Log.Info( $"Person {ThingId}: pace {sum} eased to {PreviousSpeed}, speed {Navigator.MaxSpeed}, adjustor {AdjustorSpeed}" );
+
+		AdjustorSpeed = ((AdjustorSpeed * 99) & 0xffff) / 100;
+	}
 
 	/// <summary>
 	/// What each place further back in a queue costs in <see cref="QueueMoveDelay"/> - the float at

@@ -357,6 +357,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fae10` | | OpenTPW.Files/Formats/Save/RecordStream.cs  |
 | `0x004fb019` | Guest constructor `FUN_004faec0`: the kind drawn as the world generator mod `[0x007851d4]`, the `PeepTypes` row count | OpenTPW.Tests/ParkGuestTypeTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb075` | Guest constructor `FUN_004faec0`: happiness set to 50.0 | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fb1c9` | Guest constructor FUN_004faec0: the hurry +0xc2 set to 25, the word at 0x0075c7f2 | OpenTPW.Tests/ParkTickTests.cs  |
 | `0x004fb383` | The guest's type-10 answer `FUN_004fb360` chooses a guest by `mMajorDest` alone | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb38d` | `FUN_004fb360`'s rider arm: state `0x10` exactly | OpenTPW.Tests/ParkEvictionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb3cd` | `FUN_004fb360` makes a rider a new sprite when admission destroyed theirs; its position is still nought | OpenTPW/World/Park/ParkPeople.cs  |
@@ -420,16 +421,14 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fe1cb` | FUN_004fe1a0: the sound, to here | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe204` | FUN_004fe1e0: the visit entered in the guest's event history, entry 8 (FUN_0050c100) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe259` | FUN_004fe1e0, a visit's effects: calls the excitement match FUN_004fdcc0, before the item's own effects | OpenTPW/World/Park/ParkRideOperation.cs  |
-| `0x004fe453` | `FUN_004fe1e0` docks `SmallHappinessChange` behind a gate on descriptor `+0x148` | OpenTPW/World/Park/ParkRideOperation.cs  |
-| `0x004fe4a5` | `FUN_004fe1e0` docks `SmallHappinessChange` behind a gate on descriptor `+0x144` | OpenTPW/World/Park/ParkRideOperation.cs  |
-| `0x004fe4cf` | `FUN_004fe1e0`: happiness gains the object's byte `+0x198` times the happiness effect over a hundred (to `0x004fe525`) | OpenTPW/World/Park/ParkRideOperation.cs  |
-| `0x004fe525` | `FUN_004fe1e0`: the end of that gain | OpenTPW/World/Park/ParkRideOperation.cs  |
-| `0x004fe527` | FUN_004fe1e0: the special-ingredient switch on the descriptor's +0x158, by the object's mAmountOfSpecialIngredient | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe44e` | FUN_004fe1e0, the hunger dock: (r & 7) + the amount + the effect compared with 30, unsigned (the thirst dock's at 0x004fe4a0) | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe60e` | FUN_004fe1e0, sugar: amount x 6 / 100 added to the word mAdjustorSpeed +0xc4, no clamp | OpenTPW/World/Park/Peep.cs  |
 | `0x004fe78f` | FUN_004fe1e0, the toilet arm: the object's flags & 1, from | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe7a8` | FUN_004fe1e0: FUN_004e2440, the dirtying, with the need's byte | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe7b6` | FUN_004fe1e0, a toilet: the guest's toilet need +0x1ac zeroed | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe7dc` | FUN_004fe1e0: illness's truncated byte above 90, unsigned (CMP AL,0x5a / JBE) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe81f` | FUN_004fe1e0, a sideshow: mNumSideshowsWon +0x1d0 +1, before the winner's rise | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe8e8` | FUN_004fe1e0: the special ingredient's jump table, five entries (0 and above 4 to the switch's end) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004ffc3d` | State 10's arrival test: the guest's cell against `GetBackOfQueue` | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffce6` | Arrival FUN_004ffbc0: the excitement refusal pushes the thing onto mPreviousTemporaryRides (FUN_004fdc60) | OpenTPW.Tests/ParkGuestTypeTests.cs OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffd74` | Arrival FUN_004ffbc0: the too-long refusal pushes the thing onto mPreviousTemporaryRides | OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
@@ -495,6 +494,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00506b50` | FUN_00506a40: thought 0x14 (tired) shown through FUN_0050be80 before the rest area is looked for | OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x0050cd80` | | OpenTPW/World/Park/FixedVector.cs  |
 | `0x0050f870` | | OpenTPW/World/Park/FixedVector.cs  |
+| `0x005101d0` | FUN_00510190: max_force and max_speed each held at 0x28f (655) or more | OpenTPW/World/Park/Peep.cs  |
 | `0x00511fc4` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00512880` | | OpenTPW/World/Lobby/LobbyWeather.cs OpenTPW/World/Weather/Lightning.cs  |
 | `0x0051295c` | | OpenTPW/World/Park/ParkWeather.cs  |
@@ -925,6 +925,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x007007a4` | | OpenTPW.Tests/ParkBoardingTests.cs OpenTPW/World/Park/Peep.cs  |
 | `0x00700848` | Double: the rest one turn of staff walking costs, before the grade multiplier | OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x00700850` | Double: the same for mood | OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x007009a0` | Float 2.0f: the most speed FUN_00510190 hands the mover | OpenTPW/World/Park/Peep.cs  |
+| `0x007009a8` | Double 26214.4: a speed of one in the mover's max_force | OpenTPW/World/Park/Peep.cs  |
+| `0x007009b0` | Double 13107.2: a speed of one in the mover's max_speed, a fifth of a cell a sweep | OpenTPW/World/Park/Peep.cs  |
 | `0x00701720` | | OpenTPW/Render/Assets/Texture.cs  |
 | `0x00701f50` | | OpenTPW/World/Sky.cs  |
 | `0x00701f54` | | OpenTPW/World/Sky.cs  |
@@ -978,6 +981,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00755150` | Layout stream of the ride object window | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x00757f60` | Stream: the island panel, its root's 23-point outline included | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x0075c7f2` | The hurry-speed word 25, in the table at 0x0075c7f0 (0, 25, 50) | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x0075c7f8` | Words 60, 80, 100, 120, 140: the base speeds (a guest's drawn % 5, a member of staff's by rest) | OpenTPW/World/Park/Peep.cs  |
+| `0x0075c7fc` | Word 100: what FUN_004fa870 divides the three speed words' sum by | OpenTPW/World/Park/Peep.cs  |
 | `0x0075d0f8` | | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x0075d178` | | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x007622b0` | | OpenTPW/World/Park/CellLine.cs OpenTPW/World/Park/MapStep.cs  |

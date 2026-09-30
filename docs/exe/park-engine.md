@@ -736,8 +736,14 @@ for the rest of the run. The thing sweep runs beside the renderer, never inside 
 the last exit left (Q173). DirectDraw is set up with `DDSCL_FPUSETUP` (`0x00563914`, `0x00563b92`), whose effect belongs to the
 runtime, not the executable. It matters only at the margin: at 53 bits a positive step landing exactly on a
 boundary, `245 + 5`, has reach 0.99999928 and is asked; at 24 bits its reach is 1.0, it is taken whole, and step 7
-puts it back. The cell in step 1 is the same either way. Logging the control word at `FUN_0042b1c0`'s entry would
-settle it.
+puts it back. The cell in step 1 is the same either way. The walking speed's ease (`FUN_004fa870`, `ride-operation.md`,
+"Where a WALKING peep is drawn") leaves a fingerprint in the saves. In Alexah's two played Lost Kingdom saves no guest
+needs 53 or 64 bits: 93 in each sit on single-precision-only fixed points (1.200000286, 0.600000143), the 21 newest
+arrivals all fit single precision (against 15 and 13 at 53 or 64 bits), about 178 fit every precision, and 6 and 7
+hurrying guests fit no simple history at any. The shipped `Easymode.TPWI` holds both kinds: its base-140 people at
+1.399999857, a 53/64-bit fixed point only, and its mechanic and handyman at 1.200000286, single only. So the played
+saves point to single precision and the shipped file's base-140 people do not; OpenTPW eases in single precision
+(`Peep.Pace`). Logging the control word at `FUN_0042b1c0`'s entry would settle it.
 
 **Nothing clamps the position; the bound on walking is soft, and it is the heightfield's.** Every writer of
 `0x007908f0`/`0x007908f8` was read and none clamps it; the cell clamps (`FUN_0042cd40`, and the one in

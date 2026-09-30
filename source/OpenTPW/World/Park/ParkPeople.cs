@@ -112,13 +112,13 @@ public sealed class ParkPeople : Entity
 	private readonly System.Func<int, RideScript?>? _scriptFor;
 
 	/// <summary>
-	/// What a ride's turn rolls with. Only <see cref="Peep.SetState"/> reads it, and none of the states a
-	/// ride puts a guest into consults it, so the seed is immaterial - it exists because the call asks for
-	/// one.
+	/// What a ride's turn rolls with: <see cref="Peep.SetState"/>, which none of the states a ride puts a guest into
+	/// consults, and a shop's docks on its ingredient as a guest leaves (<see cref="ParkRideOperation.Dismiss"/>), which
+	/// the original draws from the park's one generator.
 	/// </summary>
 	private readonly Random _rideRandom = new();
 
-	/// <summary>What an arriving guest's kind is drawn with - see <see cref="Admit"/>. A test seeds it.</summary>
+	/// <summary>What an arriving guest's kind and base speed are drawn with - see <see cref="Admit"/>. A test seeds it.</summary>
 	private readonly Random _arrivalRandom;
 
 	/// <summary>
@@ -157,7 +157,7 @@ public sealed class ParkPeople : Entity
 	/// choosing where to go can score a thing by what it actually is rather than by where it stands -
 	/// see <see cref="ParkRideChooser"/>. Null leaves that arm scoring on distance and queue alone.
 	/// </param>
-	/// <param name="random">What an arriving guest's kind is drawn with. Null for the game; a test seeds one.</param>
+	/// <param name="random">What an arriving guest's kind and base speed are drawn with. Null for the game; a test seeds one.</param>
 	public ParkPeople( ParkWorld? park, ParkBalance? balance = null, System.Func<int>? gateStatus = null,
 		ParkState? state = null, ParkItemCatalogue? catalogue = null,
 		System.Func<int, RideScript?>? scriptFor = null, Random? random = null )
@@ -357,7 +357,7 @@ public sealed class ParkPeople : Entity
 	/// </param>
 	internal int Admit( int cellX, int cellY, int? personType = null, int spriteBank = 0 )
 	{
-		if ( _blocked == null || !ParkState.OnMap( cellX, cellY ) || _peeps.Count == 0 )
+		if ( _blocked == null || !ParkState.OnMap( cellX, cellY ) )
 			return 0;
 
 		// FUN_004faec0 draws the kind from the world generator modulo the balance's PeepTypes row count
@@ -366,8 +366,16 @@ public sealed class ParkPeople : Entity
 		// is 8 in every shipped park, the constant here. The range is the original's; the sequence is not.
 		var type = personType ?? _arrivalRandom.Next( ParkWorld.GuestState.PersonTypes );
 
+		// The person base's constructor draws the base speed modulo five before any of that (FUN_004f8940), the
+		// guest's own sets the hurry to 25, and the eased speed starts at nought, so a guest walks off slowly
+		// (ride-operation.md, the person +0xc0 row). Drawn after the kind here, from a generator of its own either way.
+		var pace = new ParkWorld.PaceState(
+			AdjustorSpeed: 0,
+			BaseSpeed: Peep.BaseSpeeds[_arrivalRandom.Next() % Peep.BaseSpeeds.Length],
+			PreviousSpeed: 0f,
+			PurposeSpeed: Peep.HurryingSpeed );
+
 		var one = ParkWorld.NavigatorState.One;
-		var pattern = _peeps[0].Navigator;
 
 		// ParkState owns the ONE numbering objects and people share - see ParkState.NextThingId, which
 		// records the collision that made this necessary. The counter here is the fallback for a
@@ -383,14 +391,13 @@ public sealed class ParkPeople : Entity
 		var cash = _balance?.Int( $"PeepTypes[{type}].StartingCash", 300 ) ?? 300;
 		var exitLevel = _balance?.Int( "PeepInfo.ExitLevel", 120 ) ?? 120;
 
-		// MaxSpeed is factor * 0.2 of a cell per thing tick (FUN_00510190) and the shipped park's guests
-		// carry 1.2 of it; MaxForce has no derivation written down, so it is taken from a guest already
-		// here rather than invented.
+		// The mover's constructor's force and speed, a speed of one (FUN_0050ffe0), which the guest's first turn
+		// eases over before they take a step (Peep.Pace).
 		var navigator = new ParkWorld.NavigatorState(
 			X: x, Y: y, VelocityX: 0, VelocityY: 0, TargetX: x, TargetY: y,
 			Mass: ParkWorld.NavigatorState.DefaultMass,
 			Radius: ParkWorld.NavigatorState.DefaultRadius,
-			MaxForce: pattern.MaxForce, MaxSpeed: pattern.MaxSpeed,
+			MaxForce: (int)Peep.MaxForcePerSpeed, MaxSpeed: (int)Peep.MaxSpeedPerSpeed,
 			NavMode: 0, CantReachDest: 0, PathFinished: true,
 			PathCount: 0, PathTotalCount: 0, PathBufferCount: 0,
 			BufferedDistance: 0, TailDistance: 0, TotalDistance: 0, StuckBits: 0 );
@@ -409,7 +416,7 @@ public sealed class ParkPeople : Entity
 			Happiness: 0f, Thirst: 0f, Hunger: 0f, Toilet: 0f, Vomit: 0f, Litter: 0f,
 			MajorDest: 0, QueuePos: 0, PrankeryIndex: 0 );
 
-		var peep = new Peep( thingId, guest, navigator );
+		var peep = new Peep( thingId, guest, navigator, pace );
 
 		_peeps.Add( peep );
 		_byId[thingId] = peep;
@@ -421,7 +428,7 @@ public sealed class ParkPeople : Entity
 		var person = new ParkWorld.Person(
 			ThingId: thingId, Model: ParkWorld.GuestModel, RawX: x >> 8, RawY: y >> 8,
 			SpriteSlot: slot, Angle: PeepBehaviour.ArrivalHeading,
-			Navigator: navigator, Guest: guest );
+			Navigator: navigator, Guest: guest, Pace: pace );
 
 		// The bank has to be one this park already packs - see ParkGuestSprites.Add.
 		var picture = new ParkWorld.Sprite(
@@ -489,10 +496,6 @@ public sealed class ParkPeople : Entity
 		}
 
 		var one = ParkWorld.NavigatorState.One;
-		var pattern = _staff.Count > 0 ? _staff[0].Navigator : _peeps.Count > 0 ? _peeps[0].Navigator : null;
-
-		if ( pattern == null )
-			return 0;
 
 		// ParkState owns the ONE numbering objects and people share - see ParkState.NextThingId, which
 		// records the collision that made this necessary. The counter here is the fallback for a
@@ -503,11 +506,15 @@ public sealed class ParkPeople : Entity
 		var x = (cellX * one) + (one / 2);
 		var y = (cellY * one) + (one / 2);
 
+		// <b>A deviation (Q136):</b> staff are not eased (Peep.Pace), so a hire walks at once at the speed a rested
+		// member settles at, base 140 (FUN_00506a40 at the hire's rest of 100), where the original eases up to it.
+		var rested = Peep.BaseSpeeds[^1] / (float)Peep.SpeedDivisor;
+
 		var navigator = new ParkWorld.NavigatorState(
 			X: x, Y: y, VelocityX: 0, VelocityY: 0, TargetX: x, TargetY: y,
 			Mass: ParkWorld.NavigatorState.DefaultMass,
 			Radius: ParkWorld.NavigatorState.DefaultRadius,
-			MaxForce: pattern.MaxForce, MaxSpeed: pattern.MaxSpeed,
+			MaxForce: (int)(rested * Peep.MaxForcePerSpeed), MaxSpeed: (int)(rested * Peep.MaxSpeedPerSpeed),
 			NavMode: 0, CantReachDest: 0, PathFinished: true,
 			PathCount: 0, PathTotalCount: 0, PathBufferCount: 0,
 			BufferedDistance: 0, TailDistance: 0, TotalDistance: 0, StuckBits: 0 );
@@ -1253,7 +1260,7 @@ public sealed class ParkPeople : Entity
 			? []
 			: [.. park.People
 				.Where( person => person.Guest != null )
-				.Select( person => new Peep( person.ThingId, person.Guest!.Value, person.Navigator ) )];
+				.Select( person => new Peep( person.ThingId, person.Guest!.Value, person.Navigator, person.Pace ) )];
 
 	/// <summary>
 	/// Every member of staff the save named, as a running copy - the five kinds of person that are not
@@ -1294,9 +1301,9 @@ public sealed class ParkPeople : Entity
 	/// <para>
 	/// <b>The arithmetic that confirms it.</b> A person's <c>MaxSpeed</c> is set by <c>FUN_00510190</c> as
 	/// <c>factor * 13107.2</c>, and 13107.2 is <c>0.2 * 65536</c> - so a factor of one is a fifth of a cell
-	/// per <i>thing</i> tick. The shipped park's guests carry 15728, which is a factor of exactly 1.2. At
-	/// eight game ticks to a thing tick that is <b>0.96 cells a second</b>, a walking pace; at one it is
-	/// 7.7.
+	/// per <i>thing</i> tick. A guest settled at a base of 120 carries 15728, a factor of 1.2 (the shipped park's
+	/// guests carry 0.6 to 1.4 by their base; <see cref="Peep.Pace"/>). At eight game ticks to a thing tick that
+	/// is <b>0.96 cells a second</b>, a walking pace; at one it is 7.7.
 	/// </para>
 	/// </summary>
 	public const int ThingTickEvery = 8;
@@ -1391,6 +1398,9 @@ public sealed class ParkPeople : Entity
 
 			foreach ( var peep in _peeps )
 			{
+				// FUN_004fa870 eases the walking speed first, then stamps the position.
+				peep.Pace();
+
 				// Where they start this tick, before anything moves them - the original's FUN_004fa870,
 				// which is the first call of the guest tick handler (0x00501658) and sits ahead of that
 				// handler's own (id & 3) stagger. So it runs for every guest on every sweep whatever
@@ -1436,7 +1446,9 @@ public sealed class ParkPeople : Entity
 			{
 				// The same stamp, for the same reason: the original gives every person kind a needs call
 				// and a behaviour call back to back off one switch, and FUN_00505490 opens with
-				// FUN_004fa870 at 0x00505495 exactly as the guest handler does.
+				// FUN_004fa870 at 0x00505495 exactly as the guest handler does. Only its stamp is run here:
+				// staff are not eased (Peep.Pace), and keep the speed they were saved or hired with, as their
+				// base follows their rest, which is unbuilt (Q136).
 				member.Navigator.StampPrevious();
 
 				var playing = _sprites.GetValueOrDefault( member.ThingId );
@@ -2254,7 +2266,9 @@ public sealed class ParkPeople : Entity
 				+ $"toilet {peep.Toilet,3:0} vomit {peep.Vomit,3:0} litter {peep.Litter,3:0} "
 				// The two histories the ride score divides down by, newest first.
 				+ $"visits [{string.Join( ",", peep.PreviousRides )}] refused [{string.Join( ",", peep.PreviousTemporaryRides )}] "
-				+ $"speed {peep.PurposeSpeed} "
+				// The three speed words, the eased speed and what it gave the walk (Peep.Pace).
+				+ $"speed {peep.PurposeSpeed} base {peep.BaseSpeed} adjustor {peep.AdjustorSpeed} "
+				+ $"eased {peep.PreviousSpeed} max {nav.MaxSpeed} "
 				// The visitor window's four counts, and the happiness the settle-up measures a visit against.
 				+ $"rides {peep.NumRides} shops {peep.NumShops} sideshows {peep.NumSideshows} won {peep.NumSideshowsWon} "
 				+ $"joined {peep.JoinHappiness:0} "

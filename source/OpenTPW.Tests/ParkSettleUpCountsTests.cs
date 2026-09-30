@@ -508,7 +508,7 @@ public class ParkSettleUpCountsTests
 		var park = EmptyPark();
 
 		LetOff( park, Riding( 50f, joined: 50.9f ), DrinksShop, won: true );
-		Assert.AreEqual( 15, park.RingsFor( DrinksShop ).Satisfaction.Today, "(55 - 50) x 3, the join's .9 cut off" );
+		Assert.AreEqual( 21, park.RingsFor( DrinksShop ).Satisfaction.Today, "(57 - 50) x 3, the join's .9 cut off" );
 
 		LetOff( park, Riding( 50f, joined: 40f ), JungleSpray, won: true );
 		Assert.AreEqual( 87, park.RingsFor( JungleSpray ).Satisfaction.Today, "(69 - 40) x 3" );

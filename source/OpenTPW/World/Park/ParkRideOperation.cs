@@ -382,7 +382,7 @@ public sealed class ParkRideOperation
 		if ( ride.ExitPos != 0 && walkFor?.Invoke( leaving ) is { } walk )
 			PutDownAtTheExit( peep, walk, ride, park );
 
-		SettleUp( peep, ride, catalogue );
+		SettleUp( peep, ride, catalogue, random );
 
 		peep.SetState( PeepState.LeavingRide, tick, random );
 
@@ -511,15 +511,9 @@ public sealed class ParkRideOperation
 	/// analyser's sample and a sideshow's thoughts, win or lose.
 	/// </para>
 	/// <para>
-	/// <b>What is NOT built, each counted (Q177d).</b> Three more happiness changes in <c>FUN_004fe1e0</c> each
-	/// read the object's byte <c>+0x198</c>, <c>mAmountOfSpecialIngredient</c>. For the hunger effect (<c>+0x148</c>)
-	/// and then, independently, the thirst effect (<c>+0x144</c>), each when it is non-zero, the original takes one draw <c>r</c> of the park's
-	/// generator (<c>FUN_00516330</c>) and docks <c>PeepInfo.SmallHappinessChange</c> (<c>DAT_00785058</c>) when
-	/// <c>(r &amp; 7)</c> plus that byte plus the effect is under 30, unsigned (<c>0x004fe453</c>, <c>0x004fe4a5</c>),
-	/// so an item with both effects draws twice and can be docked twice; then it adds the byte times the
-	/// happiness effect over a hundred (<c>0x004fe4cf</c>..<c>0x004fe525</c>). The same byte then feeds the
-	/// special-ingredient switch, whose ice gives the Drinks Shop's buyer back part of the thirst it quenched, and an
-	/// appearance effect gives a balloon or a costume (<c>docs/exe/ride-operation.md</c>, "The effects of a visit").
+	/// After the five effects come the object's own terms, on its amount of special ingredient
+	/// (<see cref="TakeTheIngredient"/>). <b>What is NOT built, counted (Q177e):</b> an appearance effect gives a
+	/// balloon or a costume (<c>docs/exe/ride-operation.md</c>, "The effects of a visit", 4).
 	/// </para>
 	/// <para>
 	/// <b>The visit is remembered first</b> (<see cref="Peep.RememberVisit"/>, <c>0x004fd98b</c>), before the
@@ -528,7 +522,7 @@ public sealed class ParkRideOperation
 	/// <see cref="Dismiss"/>) is remembered and charged anyway.
 	/// </para>
 	/// </summary>
-	private void SettleUp( Peep peep, ParkWorld.CatalogueObject ride, ParkItemCatalogue? catalogue )
+	private void SettleUp( Peep peep, ParkWorld.CatalogueObject ride, ParkItemCatalogue? catalogue, Random random )
 	{
 		peep.RememberVisit( ride.ThingId );
 
@@ -595,12 +589,7 @@ public sealed class ParkRideOperation
 
 		ApplyEffects( peep, item );
 
-		if ( item.ThirstEffect != 0 || item.HungerEffect != 0 || item.HappinessEffect != 0 )
-			Unimplemented.Report( "SETTLE_UP_INGREDIENT_HAPPINESS" );
-
-		// A switch on the item's SpecialIngredient, 1 to 4 (0x004fe527).
-		if ( item.SpecialIngredient is >= 1 and <= 4 )
-			Unimplemented.Report( "SETTLE_UP_SPECIAL_INGREDIENT" );
+		TakeTheIngredient( peep, ride, item, random );
 
 		// Nought skips the balloon and the costume.
 		if ( item.AppearanceEffect != 0 )
@@ -700,12 +689,6 @@ public sealed class ParkRideOperation
 	/// <remarks>
 	/// Counted and not kept: the dirtying of the toilet by the need's byte (<c>FUN_004e2440</c>, Q100), and the two
 	/// entries in the guest's event ring, <c>0x11</c> naming the toilet and <c>0x12</c> for the illness.
-	/// <para>
-	/// <b>The hurry speed lasts one walking turn fewer here.</b> The needs turn sets it back from the need, now
-	/// nought, on the guest's next due turn in four. The original reads it (<c>FUN_004fa870</c>, the guest turn's
-	/// first call) before that reset, so a guest walks one to four turns in a hurry; <see cref="Peep.Tick"/> runs
-	/// before the walk reads it here, so nought to three.
-	/// </para>
 	/// </remarks>
 	private static void UseTheToilet( Peep peep, ParkWorld.CatalogueObject toilet )
 	{
@@ -842,6 +825,82 @@ public sealed class ParkRideOperation
 			+ $"({happyWas:0.#} to {peep.Happiness:0.#}), vomit +{sickness} ({vomitWas:0.#} to {peep.Vomit:0.#}) "
 			+ $"at hunger {(int)peep.Hunger}" );
 	}
+
+	/// <summary>
+	/// The object's own terms of a visit, after the five effects - the rest of <c>FUN_004fe1e0</c>'s step 3 and its
+	/// step 3b (<c>docs/exe/ride-operation.md</c>, "The effects of a visit"), each reading the low byte of the
+	/// object's <c>mAmountOfSpecialIngredient</c> (50 on a bought thing).
+	///
+	/// <para>
+	/// <b>Two docks, hunger's then thirst's</b>: each effect that is not nought takes one draw <c>r</c>, whether or not
+	/// its dock can fire, and docks <c>PeepInfo.SmallHappinessChange</c>'s low byte when <c>(r &amp; 7)</c> + the amount
+	/// + the effect is under 30, unsigned. Then happiness gains the amount times the happiness effect over a hundred,
+	/// truncated toward nought; then the special ingredient: fat adds the amount to the toilet need, salt adds it to thirst, ice
+	/// adds the amount times the thirst effect over a hundred to thirst, each held to 0..100, and sugar adds the amount
+	/// times six over a hundred to the guest's <see cref="Peep.AdjustorSpeed"/>, a word with no hold, which quickens
+	/// their walk for a few sweeps (<see cref="Peep.Pace"/>). Any other ingredient does nothing.
+	/// </para>
+	/// <para>
+	/// <b>The draws are not the original's sequence.</b> It draws from the park's one generator, which every system
+	/// shares; OpenTPW keeps one per system, and this is the ride turn's. A dock needs the park's
+	/// mood constants, as the lost arm does: with none, the draws are made and nothing is docked.
+	/// </para>
+	/// </summary>
+	internal void TakeTheIngredient( Peep peep, ParkWorld.CatalogueObject thing, ParkItemCatalogue.Item item, Random random )
+	{
+		var amount = thing.AmountOfSpecialIngredient & 0xff;
+
+		var (happiness, thirst, toilet, adjustor) = (peep.Happiness, peep.Thirst, peep.Toilet, peep.AdjustorSpeed);
+		var docked = 0;
+
+		foreach ( var effect in new[] { item.HungerEffect, item.ThirstEffect } )
+		{
+			if ( effect == 0 )
+				continue;
+
+			var r = random.Next();
+
+			if ( unchecked((uint)((r & 7) + amount + effect)) >= DockUnder || _admission is not { } mood )
+				continue;
+
+			peep.Happiness = Peep.Change( peep.Happiness, -(mood.SmallHappinessChange & 0xff) );
+			docked++;
+		}
+
+		peep.Happiness = Peep.Change( peep.Happiness, amount * item.HappinessEffect / 100 );
+
+		switch ( item.SpecialIngredient )
+		{
+			case Fat:
+				peep.Toilet = Peep.Change( peep.Toilet, amount );
+				break;
+
+			case Salt:
+				peep.Thirst = Peep.Change( peep.Thirst, amount );
+				break;
+
+			case Ice:
+				peep.Thirst = Peep.Change( peep.Thirst, amount * item.ThirstEffect / 100 );
+				break;
+
+			case Sugar:
+				peep.AdjustorSpeed = (peep.AdjustorSpeed + (amount * 6 / 100)) & 0xffff;
+				break;
+		}
+
+		Log.Info( $"Person {peep.ThingId}: object {thing.ThingId}'s ingredient {item.SpecialIngredient} at {amount}: "
+			+ $"happiness {happiness:0.##} to {peep.Happiness:0.##} ({docked} docked), thirst {thirst:0.##} to {peep.Thirst:0.##}, "
+			+ $"toilet {toilet:0.##} to {peep.Toilet:0.##}, adjustor {adjustor} to {peep.AdjustorSpeed}" );
+	}
+
+	/// <summary>A dock on the amount fires under this sum (<c>CMP EAX,0x1e</c> at <c>0x004fe44e</c>).</summary>
+	private const uint DockUnder = 30;
+
+	/// <summary>
+	/// The item's <c>UsageInfo.SpecialIngredient</c>, as <c>shops/Shops.sam</c>'s own comment names them: the four the
+	/// settle-up's switch acts on (table <c>0x004fe8e8</c>).
+	/// </summary>
+	private const int Fat = 1, Salt = 2, Ice = 3, Sugar = 4;
 
 	/// <summary>
 	/// What an item does to the guest who used it - the five effects <c>FUN_004fe1e0</c> applies from the

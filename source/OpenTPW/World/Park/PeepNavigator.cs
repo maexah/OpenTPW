@@ -127,11 +127,14 @@ public sealed class PeepNavigator
 	/// </summary>
 	public FixedVector Target { get; set; }
 
-	/// <summary>The speed the steering step clamps velocity to.</summary>
-	public int MaxSpeed { get; }
+	/// <summary>
+	/// The speed the steering step clamps velocity to. The save's, until a guest's own speed is eased into it each
+	/// sweep (<see cref="Peep.Pace"/>); the walk reads it afresh every step.
+	/// </summary>
+	public int MaxSpeed { get; internal set; }
 
-	/// <summary>The force the steering step clamps the summed behaviours to before applying them.</summary>
-	public int MaxForce { get; }
+	/// <summary>The force the steering step clamps the summed behaviours to before applying them; set with <see cref="MaxSpeed"/>.</summary>
+	public int MaxForce { get; internal set; }
 
 	/// <summary>
 	/// Which waypoint of the route the person is walking towards - an index into <see cref="Waypoints"/>.

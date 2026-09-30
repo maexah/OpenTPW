@@ -624,10 +624,10 @@ public class ParkRideExitTests
 	{
 		var (park, peep) = LetOffAt( DrinksShop, queuePos: 1 );
 
-		Assert.AreEqual( 40f, peep.Thirst, 0.001f, "eighty less the forty a drink quenches" );
+		Assert.AreEqual( 60f, peep.Thirst, 0.001f, "eighty less the forty a drink quenches, and the ice's twenty back" );
 
 		Assert.AreEqual( 10f, peep.Vomit, 0.001f, "a drink adds ten to how sick they feel" );
-		Assert.AreEqual( 55f, peep.Happiness, 0.001f, "fifty, and the five it cheers them" );
+		Assert.AreEqual( 57f, peep.Happiness, 0.001f, "fifty, the five it cheers them, and the amount's two" );
 		Assert.AreEqual( 50f, peep.Litter, 0.001f, "and leaves them holding fifty of litter" );
 
 		// A meter the item declares NOUGHT is left exactly alone, which is the half that says these are read

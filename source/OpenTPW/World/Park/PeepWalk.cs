@@ -195,6 +195,13 @@ public sealed class PeepWalk
 		// the original, and a stale one here would keep asking for a walking animation rate.
 		LastStep = default;
 
+		// The speed and force as this sweep left them (Peep.Pace): the steering step and follow_path's slowing read
+		// them from the mover itself, not from a copy made when the route was planned (FUN_00510190's row in
+		// ride-operation.md, "Where a WALKING peep is drawn").
+		_journey.MaxSpeed = _navigator.MaxSpeed;
+		_steering.MaxSpeed = _navigator.MaxSpeed;
+		_steering.MaxForce = _navigator.MaxForce;
+
 		// The half of follow_path's front that can be built: six of the last fifteen steps blocked and the
 		// person asks for a new way round, keeping the cell they are standing in on the front of it.
 		if ( !_navigator.Finished && PeepNavigator.BlockedTooOften( _navigator.StuckBits ) )

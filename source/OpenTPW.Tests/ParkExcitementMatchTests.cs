@@ -240,7 +240,7 @@ public class ParkExcitementMatchTests
 	{
 		var peep = LetOff( DrinksShop, kind: 3 );
 
-		Assert.AreEqual( 55f, peep.Happiness, 0.001f, "the drink's own five and no more" );
+		Assert.AreEqual( 57f, peep.Happiness, 0.001f, "the drink's own five and its amount's two, and no more" );
 		Assert.AreEqual( 10f, peep.Vomit, 0.001f, "the drink's own ten and no more" );
 	}
 

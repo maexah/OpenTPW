@@ -701,6 +701,53 @@ public class ParkTickTests
 	}
 
 	/// <summary>
+	/// <b>An arrival is made at one of the five base speeds, drawn</b>, hurrying at 25 from a standstill (<c>FUN_004f8940</c>,
+	/// <c>0x004fb1c9</c>): sixty-four arrivals reach all five, and no other.
+	/// </summary>
+	[TestMethod]
+	public void ArrivalsAreMadeAtAllFiveBaseSpeeds()
+	{
+		var world = World();
+		var people = new ParkPeople( world, new ParkBalance( Theme, easyMode: true ), null, new ParkState( world ),
+			random: new System.Random( 1 ) );
+
+		var arrivals = Enumerable.Range( 0, 64 ).Select( _ => people.Guests[people.Admit( 55, 30 )] ).ToArray();
+
+		CollectionAssert.AreEquivalent( Peep.BaseSpeeds, arrivals.Select( guest => guest.BaseSpeed ).Distinct().ToArray() );
+		Assert.IsTrue( arrivals.All( guest => guest.PurposeSpeed == Peep.HurryingSpeed && guest.PreviousSpeed == 0f
+			&& guest.AdjustorSpeed == 0 && guest.Paced ) );
+	}
+
+	/// <summary>
+	/// <b>Every sweep eases every guest's walking speed</b>, the arrival's from a standstill: on the first sweep after
+	/// arriving the mover's speed is a quarter of the base and the hurry of 25 (<see cref="Peep.Pace"/>, the first half of
+	/// <c>FUN_004fa870</c>), not the speed of one the mover was made with; and a guest loaded settled keeps theirs.
+	/// </summary>
+	[TestMethod]
+	public void EverySweepEasesEveryGuestsWalkingSpeed()
+	{
+		var world = World();
+		var people = new ParkPeople( world, new ParkBalance( Theme, easyMode: true ), null, new ParkState( world ),
+			random: new System.Random( 1 ) );
+
+		EnterPark();
+
+		var arrival = people.Guests[people.Admit( 55, 30 )];
+		var settled = people.Peeps.First( peep => peep.ThingId == 42 );
+		var saved = settled.Navigator.MaxSpeed;
+
+		Assert.AreEqual( 13107, arrival.Navigator.MaxSpeed, "made with the mover's speed of one" );
+
+		Sweep( people );
+
+		int[] first = [2785, 3440, 4096, 4751, 5406];
+
+		Assert.AreEqual( first[System.Array.IndexOf( Peep.BaseSpeeds, arrival.BaseSpeed )], arrival.Navigator.MaxSpeed,
+			$"a quarter of ({arrival.BaseSpeed} + 25) / 100" );
+		Assert.AreEqual( saved, settled.Navigator.MaxSpeed, "thing 42 is saved settled at 1.2" );
+	}
+
+	/// <summary>
 	/// <b>Every sweep stamps everybody where they stood as it began</b>, guests and staff, walking or not, and
 	/// nothing stamps anybody between sweeps. So somebody who stops is drawn in one place, and a guest put down
 	/// at a ride's exit is drawn there rather than slid across from where they boarded.

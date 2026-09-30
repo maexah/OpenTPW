@@ -1339,12 +1339,13 @@ it before the global file only (`FUN_004017a0`, `0x004017b6`), and each of the l
 (`0x00401aab`, `0x00401bbb`, `0x00401ccf`, `0x00401e4b`) raises it to the index set plus one, so it is the highest row
 the balance stack sets, plus one. The two global files, `data/levels/Standard.sam` and `Online_Standard.sam` (one or
 the other is loaded, `FUN_005156a0`), each set rows 0 to 7, and no theme file sets a row: 8 in every shipped park,
-which OpenTPW takes as the constant `ParkWorld.GuestState.PersonTypes`. The kind is the second of the constructor's
-eight unconditional draws, after the exit level's variation (`0x004faff8`) and before the cash's (`0x004fb046`); the
-five after it set thirst and hunger (`% 50`), toilet (`% 30`), one discarded, and the prankery byte `+0x1c0` against
-`PrankeryLikelihood`, and two more follow on one branch (Q85). OpenTPW draws the kind alone, from `System.Random`,
-and varies neither cash nor exit level (`park.md`, "What a new guest's fields come from"), so the range is the
-original's and the sequence is not.
+which OpenTPW takes as the constant `ParkWorld.GuestState.PersonTypes`. The person base's constructor draws first,
+the base speed `% 5` (`FUN_004f8940`, `0x004f89e1`; "Where a WALKING peep is drawn"); then the kind is the second of
+the guest constructor's eight unconditional draws, after the exit level's variation (`0x004faff8`) and before the
+cash's (`0x004fb046`); the five after it set thirst and hunger (`% 50`), toilet (`% 30`), one discarded, and the
+prankery byte `+0x1c0` against `PrankeryLikelihood`, and two more follow on one branch (Q85). OpenTPW draws the kind
+and then the base speed, from `System.Random`, and varies neither cash nor exit level (`park.md`, "What a new guest's
+fields come from"), so the ranges are the original's and the sequence is not.
 
 ## A second toilet: the minor decision and the saved major - `FUN_004fd570` and `FUN_00500900`
 
@@ -1481,7 +1482,6 @@ its own footprint, so every guest let off anything gave up on the spot.
 | The park shut under a walk | `BigHappinessChange`, `MajorDest` 0, Deciding, uncounted | walks on, uncounted, `GOING_TO_RIDE_PARK_SHUT` (Q102) | the entry-price door |
 | The switch's event `0x17`, the toilet's `0x11` and `0x12` | the guest's event ring | counted (`MINOR_DECISION_EVENT`, `SETTLE_UP_TOILET_EVENT`, `SETTLE_UP_TOILET_ILLNESS_EVENT`) | every switch and toilet use |
 | A toilet dirtied by use | `FUN_004e2440` | counted, `SETTLE_UP_TOILET_DIRTYING` (Q100) | every toilet use |
-| The hurry speed after a toilet | read on one to four walking turns | nought to three: `Peep.Tick` resets it before the walk reads it | every toilet use |
 | An exit that will not route | ExitRide closes the ride, no state 15 | dismissed anyway, then the walk off gives up, keeping `+0x1de` | none in the stock park |
 
 ## The staff turn - `CStaff`, every clock `mGameTick`
@@ -1692,7 +1692,7 @@ three.
 | Tired with no rest area found or reached | `FUN_00506a40` answers 0 and the kind's choice follows | the guard and the researcher stand and ask again after the idle wait | once the Staff Room at (58,16) is sold or cannot be routed to (Q136) |
 | The end of a rest | the kind's decide in the same sweep | Idle at stamp 0, decided on the next sweep | every rest (Q136) |
 | The patrol roll | path cells only | any cell | every roll (Q136) |
-| Speed by rest | `+0xc0`, 60 to 140, one of `FUN_004fa870`'s three terms | none: the walk keeps the saved `max_speed` | every decide (Q136) |
+| Speed by rest | `+0xc0`, 60 to 140, one of `FUN_004fa870`'s three terms | none: staff are not eased and keep the saved `max_speed` (a guest's is, `Peep.Pace`) | every decide (Q136) |
 | Thoughts `0x12` to `0x16` | shown | none, uncounted | tired, unhappy, very happy staff (Q110) |
 | Strikes | `mStaffHQ`'s monthly flag, the strike walk, state 5's end | none, uncounted, the model-9 record unread | the monthly consideration every month the park is open; a strike only past the 24-month gate (Q138) |
 
@@ -1728,18 +1728,26 @@ Named by its own strings: `"Litter gone up by %d, is now %d"`, `"Customer bought
 2. **The excitement match**, `FUN_004fdcc0( object )` at `0x004fe259`: how the thing's excitement suited the guest's kind
    moves their happiness, and the excitement makes them sick by how little hungry they are ("The excitement match",
    below).
-3. **The item's own effects**, each clamped 0..100: the descriptor's `+0x144` taken from thirst `+0x1a4` and `+0x148` from hunger `+0x1a8` (`FCHS` at `0x004fe26d`, `0x004fe2b7`; with a sound of `0x83` or `0x84` depending which is larger), then added: `+0x14c` → `+0x1b0`, `+0x150` → happiness `+0x19c`, `+0x154` → litter `+0x1b4`. Three more happiness changes follow, each reading the object's byte `+0x198`, `mAmountOfSpecialIngredient` by the object reader's own name (`0x004dc601`, string `0x0075b45c`; saved at file 1058): for the hunger effect `+0x148` and then, independently, the thirst effect `+0x144`, each when it is non-zero, one draw `r` of the park's generator (`FUN_00516330`, even when the dock cannot fire) and `(r & 7) + byte [+0x198] + that effect` under 30, unsigned, docks `PeepInfo.SmallHappinessChange` (`0x004fe453`, `0x004fe4a5`), so a shop with both effects takes two draws and can be docked twice; then happiness gains `byte [+0x198] * desc[+0x150] / 100`, truncated toward nought and held to 0..100 (`0x004fe4cf`..`0x004fe525`). These run after all five effects and their log. At the stock amount 50 a drink cannot be docked (50 + 40) and gains 2 more happiness (measured in the original: +7 in all).
+3. **The item's own effects**, each clamped 0..100: the descriptor's `+0x144` taken from thirst `+0x1a4` and `+0x148` from hunger `+0x1a8` (`FCHS` at `0x004fe26d`, `0x004fe2b7`; with a sound of `0x83` or `0x84` depending which is larger), then added: `+0x14c` → `+0x1b0`, `+0x150` → happiness `+0x19c`, `+0x154` → litter `+0x1b4`. Three more happiness changes follow, each reading the object's byte `+0x198`, `mAmountOfSpecialIngredient` by the object reader's own name (`0x004dc601`, string `0x0075b45c`; saved at file 1058): for the hunger effect `+0x148` and then, independently, the thirst effect `+0x144`, each when it is non-zero, one draw `r` of the park's generator (`FUN_00516330`, even when the dock cannot fire) and `(r & 7) + byte [+0x198] + that effect` under 30, unsigned, docks `PeepInfo.SmallHappinessChange` (`0x004fe453`, `0x004fe4a5`), so a shop with both effects takes two draws and can be docked twice; then happiness gains `byte [+0x198] * desc[+0x150] / 100`, truncated toward nought and held to 0..100 (`0x004fe4cf`..`0x004fe525`). These run after all five effects and their log. The gain runs for every object, a ride's nought effect included, so it holds happiness to 0..100 there too. At the stock amount 50 a drink cannot be docked (50 + 40) and gains 2 more happiness (measured in the original: +7 in all). OpenTPW builds the docks and the gain (`ParkRideOperation.TakeTheIngredient`, Q177d), drawing from the ride turn's generator where the original draws the park's one.
 3b. **The special ingredient**, a switch on the descriptor's `+0x158` (`0x004fe527`, table `0x004fe8e8`), each by the
    same byte: 1 (fat) adds it to the toilet need `+0x1ac`, 2 (salt) to thirst, 3 (ice) adds `byte * ThirstEffect / 100`
    to thirst, each held 0..100, and 4 (sugar) `byte * 6 / 100` to the guest's `mAdjustorSpeed`, the word `+0xc4` (person
    file 32), with **no clamp** (`0x004fe60e`). `mAdjustorSpeed` joins the walking speed, (`mBaseSpeed` + the hurry speed +
-   it) / 100 eased a quarter of the way each sweep, and loses one a sweep (`FUN_004fa870`): a few percent for about a
-   second. A `SpecialIngredient` above 4 does nothing (`0x004fe530`). The Drinks Shop is ice: a drink takes 40 thirst, held at nought, and gives 20
-   back at the stock amount (measured in the original: 36 to 20). OpenTPW counts
-   this, the `+0x198` terms above and the arm below, and builds none of them (`SETTLE_UP_SPECIAL_INGREDIENT`,
-   `SETTLE_UP_INGREDIENT_HAPPINESS`, `SETTLE_UP_APPEARANCE`; Q177).
+   it) / 100 eased a quarter of the way each sweep, and loses one a sweep below a hundred (`FUN_004fa870`, "Where a
+   WALKING peep is drawn"): at the stock amount it is 3, gone in three sweeps, and it lifts a guest settled at base 120
+   from a mover speed of 15728 to 15826, 15867 (the peak, 0.9% up), 15865, then back over about 24 sweeps, six
+   seconds. The key's bounds are `[0, 6)` (`0x00745fb8`) and the switch skips anything above 4, unsigned (`0x004fe530`),
+   so 0 (the table's first entry goes to the switch's end, `0x004fe615`) and 5, the one legal value above 4, do
+   nothing. The Drinks Shop is ice: a drink takes 40 thirst, held at nought, and
+   gives 20 back at the stock amount (measured in the original: 36 to 20). In Lost Kingdom every arm is a jungle shop:
+   fat the Burger Shop (1207), salt the Fries Shop (1212), ice the Drinks Shop (1203), sugar the Ice Cream Shop (1206);
+   the Steak Restaurant's file comment says fat and its value is nought. OpenTPW builds this and the `+0x198` terms
+   above (`ParkRideOperation.TakeTheIngredient`, `Peep.Pace`; Q177d), and counts the arm below
+   (`SETTLE_UP_APPEARANCE`, Q177e).
 4. **Shop arms on the descriptor's `+0x15c`, `AppearanceEffect`:** nought does nothing; any value but 0, 1 or 2 logs a
-   balance-file error into the bare `RET` and does nothing more.
+   balance-file error into the bare `RET` and does nothing more. Both arms below draw the park's generator through
+   `FUN_00541f70` (`0x004fe652`, `0x004fe6aa`, `0x004fe703`) and `FUN_00541fd0` (`0x004fe716`), whose `ECX` is the world
+   by its other pointer, `[0x007cf83c]`.
    - **1, a BALLOON** (`0x004fe6ba`..`0x004fe78a`): the assert that the guest holds none goes to the bare `RET`; the
      park's generator is **reseeded with the guest's id** (`FUN_00516370`), so a guest's balloon depends on their id
      alone; a variant of sprite bank 10 ("balloons") is drawn and a world sprite built (script `0x0074f480`, frame 0
@@ -2196,7 +2204,8 @@ after the lost play. Of the run's seven checks six matched; the seventh, balance
 ### Where OpenTPW differs
 
 `ParkRideOperation.SettleUp` builds steps 0, 1, 2, 4, 5 and 7 and a sideshow winner's count beside the charge, the
-prize, the excitement match, the five effects, the toilet's relief, the winner's cheer and the lost dock; the fatigue
+prize, the excitement match, the five effects, the ingredient's two docks, gain and fat, salt, ice and sugar
+(`TakeTheIngredient`; the sugar feeds `Peep.Pace`, Q177d), the toilet's relief, the winner's cheer and the lost dock; the fatigue
 step is a no-op in both games (said at the site). Each object's six rings and two counts are `ParkObjectRings`, seeded
 from its record, fresh for a thing built, dropped with a thing sold; the charge credits today's takings and the door's
 refusal counts the walk-away; the charge banks the price and a shop's or won sideshow's cost of goods is booked and
@@ -2204,9 +2213,10 @@ withdrawn ("The cost of goods and the park's money", OpenTPW). The day's change 
 `GameCalendar`'s edge; that calendar counts from nought rather than from the save's clock (`GameCalendar.Rebase`), so
 its days turn at other moments than the original's would after the same load, and it does not roll on the first tick.
 The join's snapshot is `Peep.JoinHappiness`. The ride window's Users last month (filled on show and every four
-seconds, on the frame clock) and the all-visitors list's Rides Ridden read them. Counted by name: `SETTLE_UP_EVENT_HISTORY`, `_INGREDIENT_HAPPINESS`, `_SPECIAL_INGREDIENT`, `_APPEARANCE`, `_ANALYSER_SAMPLE` (step 6),
-`_SIDESHOW_THOUGHT` and the toilet's three. Its win roll (`PeepBehaviour`, `Succeeds`) draws from `System.Random` where
-the original draws from the park's generator, and reads the item's chance where the original reads the object's (Q97).
+seconds, on the frame clock) and the all-visitors list's Rides Ridden read them. Counted by name: `SETTLE_UP_EVENT_HISTORY`, `_APPEARANCE`, `_ANALYSER_SAMPLE` (step 6),
+`_SIDESHOW_THOUGHT` and the toilet's three. Its win roll (`PeepBehaviour`, `Succeeds`) and the ingredient's docks (the
+ride turn's) draw from `System.Random` where the original draws from the park's generator, and the roll reads the
+item's chance where the original reads the object's (Q97).
 
 ## Object fields
 
@@ -2534,7 +2544,9 @@ and it is the answer to why a peep would otherwise step rather than walk.
 |---|---|---|
 | person `+0x190` / `+0x194` | `mPreviousX` / `mPreviousY` — the position as it stood at the **last** thing sweep. `+0x194` is the one that pairs with the Z axis. | Named by the person-base serialiser `FUN_004f8b10` |
 | person `+0xd4`, its `+0x8` / `+0xc` | the mover sub-object's live position, 16.16 fixed point, `0x10000` = one cell (the constructor seeds `(cellX << 16) + 0x8000`, the cell centre) | Disassembly |
-| `FUN_004fa870` | Works out the speed first, `((+0xc0 + +0xc2 + +0xc4) / (u16)[0x0075c7fc] − +0xc8 × [0x007006f0]) × [0x007006f4]`, stores it back at `+0xc8` and passes it to `FUN_00510190`, and decays `+0xc4` to 99/100. Then it stamps `previous := current` with `FUN_00510160( person+0x190, person+0x194 )` — a **thiscall** on the mover (`person+0xd4`), so the decompiler drops `ECX` and it reads as two args — and ends with `FUN_004d4190` on `person+0xc`. It is **the first call of every person kind's tick handler** — `FUN_00501650` at `0x00501658` (guests), `FUN_00505490` at `0x00505495` (staff) — and in the guest handler it sits **ahead of the `(id & 3)` needs stagger**, so it is unconditional: every peep, every sweep. Straight-line, no early return. | Disassembly |
+| `FUN_004fa870` | Works out the speed first: the words `+0xc2`, `+0xc0` and `+0xc4`, each zero-extended, summed and divided by the word at `0x0075c7fc` (100, the middle of `{60, 80, 100, 120, 140}` at `0x0075c7f8`), then `(that − +0xc8 × −3.0) × 0.25` (`0x007006f0`, `0x007006f4`), a quarter of the way on from `+0xc8`; stored back at `+0xc8` and passed to `FUN_00510190`; then `+0xc4` becomes `((+0xc4 × 99) & 0xffff) / 100`, a 16-bit `IMUL` (`0x004fa8ea`), one less a sweep below a hundred. Then it stamps `previous := current` with `FUN_00510160( person+0x190, person+0x194 )` — a **thiscall** on the mover (`person+0xd4`), so the decompiler drops `ECX` and it reads as two args — and ends with `FUN_004d4190` on `person+0xc`. It is **the first call of every person kind's tick handler** — `FUN_00501650` at `0x00501658` (guests), `FUN_00505490` at `0x00505495` (staff) — and in the guest handler it sits **ahead of the `(id & 3)` needs stagger**, so it is unconditional: every peep, every sweep. Straight-line, no early return. A third caller, `0x004f7c63`, is the online person's (model 18). OpenTPW eases a guest's speed (`Peep.Pace`, Q177d), in single precision (`park-engine.md`, "Which rounding is live"); staff keep the saved one or, hired, a rested member's 1.4 (Q136). | Disassembly |
+| `FUN_00510190` | A thiscall on the mover with one float, held to at most 2.0 (`0x007009a0`; the argument only, `+0xc8` keeps its own), then `max_force` `+0x18` = `__ftol( s × 26214.4 )` and `max_speed` `+0x1c` = `__ftol( s × 13107.2 )` (the doubles at `0x007009a8`, `0x007009b0`), each at least 655 (`0x28f`, `0x005101d0`..`0x005101e3`); `__ftol` truncates. One caller, `0x004fa8d9`. The steering step reads both from the mover every step (`0x0050f3f8`, `0x0050f450`, `0x0050f496`), and two behaviours cap with `max_speed` (`0x0050f10b` in follow_path, `0x0050def9`), so the speed written at the top of a sweep governs that sweep's walk. The save's two fields are exactly this of `mPreviousSpeed` on all 18 people of the shipped park and all 392 of each of Alexah's two played Lost Kingdom saves. | Disassembly, `read_memory`, the saves |
+| person `+0xc0`, `+0xc2`, `+0xc4`, `+0xc8` | `mBaseSpeed`, the hurry `mPurposeSpeed`, `mAdjustorSpeed` (words) and `mPreviousSpeed` (a float): file 34, 236, 32 and 220, all four loaded (`0x004f91a6`, `0x004f931e`, `0x004f9161`, `0x004f9282`). A guest's base is drawn `% 5` from the table as the person base is made (`FUN_004f8940`, `0x004f89e1`..`0x004f89f7`; the played saves hold 74, 56, 70, 62 and 77 guests at the five), the guest's constructor sets the hurry to 25 (`0x004fb1c9`), and the speed starts at 0.0 (`0x004f89ab`), so an arrival walks off slowly. Staff get 60 or 100 at hire (`FUN_00504b90`), an entertainer 60, and a base by rest in the staff decide (`FUN_00506a40`, Q136). | Disassembly |
 | `FUN_004f9f00` | **The blend.** `0x004f9f89`–`0x004f9fd2`: `MOV EAX,[ESI+0x194]` / `SUB` / `FILD` / `FMUL [ESP+0x14]` / `FIADD`, then the identical six instructions for `[ESI+0x190]` — i.e. `prev + (cur − prev) · t` per axis. | Disassembly |
 | — | **Height is forced to nought, not interpolated**: `0x004f9ffd MOV dword ptr [EAX],0x0`. The ground under the sprite is resolved separately. | Disassembly |
 | — | **Facing is NOT interpolated**: `0x004fa015 MOV EDX,[ESI+0x1c]` goes straight to the out-param. So a peep's position glides while its octant **snaps** at sweep boundaries. | Disassembly |

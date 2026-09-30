@@ -387,7 +387,7 @@ public sealed class ParkWorld
 	/// </summary>
 	public readonly record struct Person(
 		int ThingId, int Model, int RawX, int RawY, int SpriteSlot, int Angle,
-		NavigatorState Navigator, GuestState? Guest, StaffState? Staff = null )
+		NavigatorState Navigator, GuestState? Guest, StaffState? Staff = null, PaceState? Pace = null )
 	{
 		/// <inheritdoc cref="CatalogueObject.CellX"/>
 		public int CellX => RawX >> 8;
@@ -421,6 +421,18 @@ public sealed class ParkWorld
 		/// </summary>
 		public static int OctantOf( int angle ) => ((angle - 0x380) & 0x7ff) >> 8;
 	}
+
+	/// <summary>
+	/// The person base's four speed fields, which every person carries, staff included: the three words
+	/// <c>FUN_004fa870</c> sums into a walking speed and the speed it last eased to, which the navigator's
+	/// <see cref="NavigatorState.MaxSpeed"/> and <see cref="NavigatorState.MaxForce"/> are made from
+	/// (<c>docs/exe/ride-operation.md</c>, "Where a WALKING peep is drawn").
+	/// </summary>
+	/// <param name="AdjustorSpeed"><c>mAdjustorSpeed</c>, file 32, a word: the sugar's (<c>+0xc4</c>).</param>
+	/// <param name="BaseSpeed"><c>mBaseSpeed</c>, file 34, a word: 60 to 140 (<c>+0xc0</c>).</param>
+	/// <param name="PreviousSpeed"><c>mPreviousSpeed</c>, file 220, a float: the speed last eased to (<c>+0xc8</c>).</param>
+	/// <param name="PurposeSpeed"><c>mPurposeSpeed</c>, file 236, a word: the hurry, 0, 25 or 50 (<c>+0xc2</c>).</param>
+	public readonly record struct PaceState( int AdjustorSpeed, int BaseSpeed, float PreviousSpeed, int PurposeSpeed );
 
 	/// <summary>
 	/// What a guest was doing when the park was saved: the behaviour they are in, the needs driving
@@ -1802,7 +1814,14 @@ public sealed class ParkWorld
 			Angle: ReadUInt16At( start + 0xf2 ),        // mSpriteAngle
 			Navigator: ReadNavigator( start ),          // every person has one, staff included
 			Guest: model == GuestModel ? ReadGuest( start ) : null,
-			Staff: model == GuestModel ? null : ReadStaff( start ) );
+			Staff: model == GuestModel ? null : ReadStaff( start ),
+			// The person base's read arm, alphabetical like the rest (FUN_004f8b10; ride-operation.md, the person
+			// +0xc0 row).
+			Pace: new PaceState(
+				AdjustorSpeed: ReadUInt16At( start + 32 ),
+				BaseSpeed: ReadUInt16At( start + 34 ),
+				PreviousSpeed: ReadSingleAt( start + 220 ),
+				PurposeSpeed: ReadUInt16At( start + 236 ) ) );
 
 	/// <summary>
 	/// The navigator's block, which begins at <c>+43</c> - after the eight-byte thing head and the

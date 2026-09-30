@@ -296,10 +296,11 @@ public sealed class PeepBehaviour
 	/// <see cref="Peep.HurryingSpeed"/>, and a third of <b>50</b> that is reached only when a bus is due.
 	/// </summary>
 	/// <remarks>
-	/// <b>The 50 is not reproduced and not declared as a constant.</b> Reaching it needs the
+	/// <b>The 50 is not reproduced and not declared as a constant (Q199).</b> Reaching it needs the
 	/// arrival vehicle's <i>script</i> state - <c>FUN_0051a690</c> looks the bus thing up and asks its
 	/// script what it is doing - and this turn does not ask, although the bus runs its script
-	/// (<see cref="ParkRides"/> binds it). Whether the branch is reached is not measured.
+	/// (<see cref="ParkRides"/> binds it). The hurry is summed into the walking speed (<see cref="Peep.Pace"/>),
+	/// so a guest running for the bus walks at their base and 25 at most here, where the original's reach 50.
 	/// </remarks>
 	public const int GateHurryShare = 4;
 

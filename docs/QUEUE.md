@@ -2718,7 +2718,51 @@ artifacts are listed in `docs/history/README.md`.
   counted (off in Easymode). Land it with Q96's deposit or after it: alone it takes 20 a drink off the HUD and puts
   nothing in. The queue drain's debit (`ParkState.Spend`) wants the same gate (`QUEUE_DRAIN_DEBIT_BANK_GATE`).
   Confirm: the HUD before and after a drink, +10 as the original's, photographed; `money`.
-- [ ] **Q177d. The ingredient's and the quality's terms of a visit.** Found by Q177's decode ("The effects of a
+- [x] **Q177d. The ingredient's and the quality's terms of a visit.** Done 2026-09-30,
+  `alexah/195-ingredient-and-walking-speed`. `ParkRideOperation.TakeTheIngredient` runs after the five effects: the
+  hunger dock then the thirst dock (a draw for each non-zero effect, whether or not it can fire; `(r & 7)` + the
+  amount + the effect under 30, unsigned, docks `SmallHappinessChange`'s low byte), the amount times `HappinessEffect`
+  over a hundred, and fat (toilet need), salt (thirst), ice (the amount times `ThirstEffect` over a hundred back to
+  thirst) and sugar (the amount times six over a hundred into `Peep.AdjustorSpeed`); it logs each visit's terms. The
+  draws are the ride turn's `System.Random`, where the original's are the park's one generator (said at the site).
+  Sugar made the walking speed part of the item: `Peep.Pace` is `FUN_004fa870`'s first half and `FUN_00510190` for
+  guests, every sweep before the stamp (the three words summed over 100, eased a quarter of the way in single
+  precision, held to 2.0, the mover's speed and force truncated and at least 655; the sugar's word to 99 hundredths),
+  and `PeepWalk.Step` reads the navigator's speed and force afresh every step. `ParkWorld.PaceState` reads the person
+  base's four speed words (file 32, 34, 220, 236) for everyone; an arrival is made at a base drawn `% 5` from 60..140,
+  hurrying at 25 from a standstill, and `Admit` no longer refuses a park with no guests (the guard was for the speed it
+  copied). Staff are not eased (Q136): a hire walks at a rested member's 1.4 (18350), no longer copying anyone. The
+  census prints the speed words, the eased speed and the mover's speed; `Peep.Pace` logs each sweep while sugar is in
+  the word. Gone: `SETTLE_UP_INGREDIENT_HAPPINESS`, `SETTLE_UP_SPECIAL_INGREDIENT`. Built and tested alone in a
+  worktree: 1418 pass, 0 skip with the game; 556 ran, 862 skipped without; 123 warnings.
+  - **Decoded again first-hand** (`wf_f501c35b-cc7`: two Opus decoders in Ghidra, a code map and a content sweep, each
+    put to an Opus skeptic): the docks and switch at `0x004fe41c`..`0x004fe615`, `FUN_004fa870`, `FUN_00510190`, the
+    four fields' load arm, the arrival's draw; the save's `max_speed` and `max_force` are exactly the eased speed
+    truncated on all 18 people of the shipped park and all 392 of each of Alexah's two played Lost Kingdom saves.
+    Every arm is a jungle shop (Burger fat, Fries salt, Drinks ice, Ice Cream sugar), buyable here now.
+  - **Mutation** (`q177d-mut/mutate.py`): 33 mutants, each red, among them the unsigned compare, the low three bits,
+    the draw order, 0 and 5 acting as an arm, the offsets 32, 34, 220 and 236, the sweep's call, the arrival's
+    words, the hire's speed and the walk keeping its planned speed.
+  - **Reviewed** (`wf_4e09ebe1-b64`: four lenses, each finding put to an Opus skeptic; `review.json` in the session's
+    scratchpad): 28 findings, several one fault seen by two lenses; 27 upheld or amended and each acted on (the run for
+    the bus queued, Q199), 1 refuted. Among them: the toilet's hurry deviation no
+    longer exists (the speed now reads the hurry before the needs turn resets it, as the original's does); the hire's
+    copied speed; two hollow tests; stale comments and docs; the address index.
+  - **Confirmed in the game** (silent, the stock jungle park, `save/` unchanged; predicted first): before the build
+    (`q177drun.py`, `q177d-before/`) a drinker at thirst 36 and happiness 50 left at **0 and 55**; after it
+    (`q177d-after/`, 10 of 10) at **20 and 57**, the original's measured drink, in `peeps`, in the terms' own log line
+    (`ingredient 3 at 50: happiness 55 to 57 (0 docked), thirst 0 to 20`) and on the all-visitors list, the
+    drinker's row **700 / 50** then **670 / 57** (`1-visitors-before-marked.png`, `2-visitors-after-marked.png`). The
+    Drinks Shop sold and an Ice Cream Shop bought in its place (`q177d-sugar/`, 5 of 5): an arrival at base 140 took
+    **5406** on its first sweep, as predicted; settled at 1.4 it bought an ice cream (`adjustor 0 to 3`) and the next
+    three sweeps logged speeds **18448, 18489, 18487** at 3, 2 and 1, as predicted from 1.4, then none; the shop
+    photographed serving (`3a-inside-the-ice-cream-shop-marked.png`, `3-ice-cream-shop.png`, the HUD 88112 then 88122).
+  - **Not confirmed on screen**: a dock firing (none can at the stock amount, and nothing here moves the amount; tested
+    only), fat and salt (tested only), the speed's hold at 2.0 and floor, and a hire's speed (tested only).
+  - **Found:** Q199 (the run for the bus, now a speed), Q200 (the all-visitors list jumps back to its top); notes under
+    Q136 and Q177e.
+
+  The item as written: Found by Q177's decode ("The effects of a
   visit", 3 and 3b). Read `mQualityOfGoods` and `mAmountOfSpecialIngredient` (file 1046 and 1058; 50 on a bought
   thing) and build the two independent docks, the `amount × HappinessEffect / 100` term, the four ingredient arms and
   `mAdjustorSpeed` in the walking speed (`FUN_004fa870`); counted now as `SETTLE_UP_INGREDIENT_HAPPINESS` and
@@ -2734,7 +2778,8 @@ artifacts are listed in `docs/history/README.md`.
   nought, on leaving and to a prankster; the costume sets `mESPSprite` 2 and a variant. Counted now as
   `SETTLE_UP_APPEARANCE`. Open: which picture frame 1 of the balloons bank is, and what the costume-head callers of
   `FUN_0044b410` draw. Confirm: a guest leaving a bought Balloon Shop with a balloon on screen, and its life counting
-  down in `peeps`.
+  down in `peeps`. From Q177d: both arms draw the park's generator through `FUN_00541f70` and `FUN_00541fd0` besides
+  the reseed (`ride-operation.md`, "The effects of a visit", 4); OpenTPW has one generator per system (Q177d's site).
 - [ ] **Q198. The bank's month turn, the wage and training. Decode first.** Found by Q177c's map and review
   (`ride-operation.md`, "The cost of goods and the park's money", every caller of the bank, and "Who sends the day's
   change"). The calendar sends the month's change, message `0xc`, on its own compare (`0x004f83b9`). On it the bank's
@@ -2746,6 +2791,19 @@ artifacts are listed in `docs/history/README.md`.
   a kart or water ride's track at a sale (`SALE_TRACK_TEARDOWN`: its cells cleared and paid for, `0x0052801d`). Decode
   the month turn's order and the wage's and training's amounts in the park that ships, then build them. Confirm:
   `money` either side of a month's change with staff hired, and `unimplemented`.
+- [ ] **Q199. A guest running for the bus. Count it first.** Found by Q177d's review (`wf_4e09ebe1-b64`). Heading for
+  the gate, `FUN_004ff730` writes the hurry 50 (`0x0075c7f4`) when `FUN_0051aad0` answers 0 and `FUN_0051a690` 3: the
+  current arrival vehicle is the size-1 one and its script's `VAR_STATUS` is 3 ("The bus is coming!  RUUUUUUUUUUN!!!!",
+  `0x0075d914`); else 25 on `(id & 3) == 0`, else 0. OpenTPW writes 25 or 0 (`PeepBehaviour.HurriesToTheGate`), and
+  since Q177d the hurry is summed into the walking speed, so a base-120 guest runs at 1.45 where the original's reaches
+  1.7. Count it (`Unimplemented.Report`) where the bus reports 3, then build it from `ParkPeople`'s vehicle script.
+  Confirm: `peeps` `speed 50` and the eased speed on a guest heading for the gate while a load's bus reports 3.
+- [ ] **Q200. The all-visitors list jumps back to its top every two seconds. Decode first.** Found by Q177d's game run.
+  `ParkVisitorsScreen` refills its list every two seconds (`RefreshEvery`) through `UiList.Clear`, which sets the
+  scroll to the top, so a player scrolled down to a guest past the thirteenth row is thrown back up within two
+  seconds. Decode how the original refreshes `allpeeps` (`FUN_00493530`'s list and its row adder) and whether it keeps
+  the scroll; then match it. Confirm: scroll the list in a park of more than thirteen guests and photograph it after
+  three seconds.
 - [ ] **Q178. Instant Action's catalogue: each item's `Easy_` file, laid last and required. Decode first.** Found by
   Q171's verify (`wf_727b3f26-329`, a reader and a skeptic agreeing; `park-engine.md`, "How a key finds its global").
   In game type 2 (`DAT_00fb3b7c`), `FUN_00413c10` lays `Easy_<stem>.sam` over the category and the item's own file
@@ -3425,7 +3483,10 @@ artifacts are listed in `docs/history/README.md`.
   the float `< RestLevel` and misses [1, 2). (b) The patrol roll `FUN_00506f30` takes only a path cell (`mType` 1,
   `FUN_00536310`) before it routes; `PatrolRoll` routes to any, as its remark says. (c) Not
   tired, `FUN_00506a40` sets the speed word `+0xc0` from the rest byte (60 to 140, `[0x0075c7f8]`), one of
-  `FUN_004fa870`'s three terms, where the walk keeps the saved `max_speed`: decode how the terms reach the walk first.
+  `FUN_004fa870`'s three terms. From Q177d: how the terms reach the walk is decoded (`ride-operation.md`, "Where a
+  WALKING peep is drawn") and every person's four speed words are read (`ParkWorld.PaceState`); guests are eased
+  (`Peep.Pace`), staff keep the saved speed and a hire a rested member's 1.4. The build is `Pace` for staff, with this
+  base by rest.
   (d) Tired with no rest area found or reached, `FUN_00506a40` answers 0 and the kind's own choice follows (the guard's
   at `0x004d6554`, the researcher's at `0x00502b9f`); `Decide` stands them instead, so a tired member with no reachable
   Staff Room never walks again. (e) At the end of a rest the original runs the kind's decide in the same sweep

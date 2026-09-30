@@ -191,6 +191,29 @@ public class PeepWalkTests
 	}
 
 	/// <summary>
+	/// <b>The walk reads the speed afresh every step</b>, as the steering step reads the mover's own: thing 42's four
+	/// cells, walked at 4000 after the route is planned, where their saved 7864 takes 32 ticks, take 61
+	/// (<see cref="Peep.Pace"/> writes the speed each sweep; a route is planned far less often).
+	/// </summary>
+	[TestMethod]
+	public void TheWalkReadsTheSpeedAfreshEveryStep()
+	{
+		var world = World();
+		var nav = ParkPeople.PeepsIn( world ).Single( peep => peep.ThingId == 42 ).Navigator;
+		var walk = new PeepWalk( nav, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
+
+		Assert.IsTrue( walk.PlanRoute() );
+
+		nav.MaxSpeed = 4000;
+		nav.MaxForce = 8000;
+
+		var (verdict, ticks) = WalkOut( walk );
+
+		Assert.AreEqual( WalkVerdict.Arrived, verdict );
+		Assert.AreEqual( 61, ticks, "about four cells at 4000 a tick, less the arrival's radius" );
+	}
+
+	/// <summary>
 	/// <b>Arriving is measured to the destination point, not to the cell it sits in</b>, so a guest can stop
 	/// one cell short and still be there. Thing 39 is sent to a point in <c>(47,13)</c> and settles in
 	/// <c>(47,12)</c>, because the point lies within one and three fifths of their radius of where they stop.
