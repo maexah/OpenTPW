@@ -201,6 +201,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00492d80` | | OpenTPW/UI/Screens/GameMenu.cs OpenTPW/UI/UiSounds.cs  |
 | `0x00492e80` | | OpenTPW/UI/Screens/GameMenu.cs  |
 | `0x00492f60` | | OpenTPW/UI/Screens/GameMenu.cs  |
+| `0x00493270` | All-visitors handler, the 2000 ms timer 0x80083: each existing row rewritten in place by FUN_006644ea, no clear or scroll | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
 | `0x004934c5` | Visitors handler: a right-clicked row (0x402) moves the camera to that guest (FUN_004867b0) | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
 | `0x0049353e` | Visitors screen FUN_00493530: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
 | `0x0049383e` | All-visitors row adder FUN_00493800: Time In Park, the park time since the arrival stamp over 36,000,000,000 | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |

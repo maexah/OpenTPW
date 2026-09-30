@@ -2979,12 +2979,33 @@ artifacts are listed in `docs/history/README.md`.
   since Q177d the hurry is summed into the walking speed, so a base-120 guest runs at 1.45 where the original's reaches
   1.7. Count it (`Unimplemented.Report`) where the bus reports 3, then build it from `ParkPeople`'s vehicle script.
   Confirm: `peeps` `speed 50` and the eased speed on a guest heading for the gate while a load's bus reports 3.
-- [ ] **Q200. The all-visitors list jumps back to its top every two seconds. Decode first.** Found by Q177d's game run.
+- [x] **Q200. The all-visitors list jumps back to its top every two seconds: the decode.** Done 2026-09-30,
+  `alexah/201-decode-the-visitors-refresh`. Decode only; the build is Q200b. `hud.md`'s new "How allpeeps keeps itself
+  current"; the deviation said at `ParkVisitorsScreen.RefreshEvery`; no code changed.
+  - **Decoded** (`wf_95649c5e-08a`, one Opus skeptic: C1-C3 upheld, C4-C5 amended, none refuted; the amendment that a
+    removal clamps the top row re-read first-hand, `FUN_00664ea3`). The builder adds a row per guest once and arms the
+    2000 ms timer `0x80083`; on it the handler (`0x00493270`) rewrites each existing row's six values in place
+    (`FUN_006644ea`), row 0's call redrawing from the top row `list+0x154`, and never clears, re-sorts or scrolls. A
+    guest's construction (`0x1c`) inserts their row in sort order and a thing's delete (`0x1b`, guests only) removes it;
+    the scrollbar then clamps the top row to count - visible. The skeptic's edges (count <= visible leaves the top row
+    unclamped; a removed selection reselects by slot; the selection is not shifted) are in the section.
+  - **Measured in the game** (the build before any change; `q200run.py`, `q200-run1/`, silent, stock park, twenty
+    admitted, 33 guests; `save/` unchanged), predicted first: opened at its top (first row cash 684), four rows down
+    after the wheel (306), back at its top (684) 3.1 s later, photographed (`0-opened`, `1-scrolled`, `2-after-3s`).
+  - **Not confirmed:** the original's own list under Proton (decoded, not photographed); the three edges.
+
+  The item as written: Found by Q177d's game run.
   `ParkVisitorsScreen` refills its list every two seconds (`RefreshEvery`) through `UiList.Clear`, which sets the
   scroll to the top, so a player scrolled down to a guest past the thirteenth row is thrown back up within two
   seconds. Decode how the original refreshes `allpeeps` (`FUN_00493530`'s list and its row adder) and whether it keeps
   the scroll; then match it. Confirm: scroll the list in a park of more than thirteen guests and photograph it after
   three seconds.
+- [ ] **Q200b. The all-visitors list kept current in place.** From Q200's decode (`hud.md`, "How allpeeps keeps itself
+  current"). Open the list once, sorted by the remembered `DAT_007508bc`; every two seconds rewrite each row's values
+  in place without clearing, sorting or scrolling; add an arriving guest's row in sort order and remove a leaving
+  guest's, with the top row clamped only as the original's slider clamps it. Confirm: scroll the list in a park of
+  more than thirteen guests, photograph it after three seconds (the same first row), and a log line per row added
+  and removed while it is open.
 - [ ] **Q178. Instant Action's catalogue: each item's `Easy_` file, laid last and required. Decode first.** Found by
   Q171's verify (`wf_727b3f26-329`, a reader and a skeptic agreeing; `park-engine.md`, "How a key finds its global").
   In game type 2 (`DAT_00fb3b7c`), `FUN_00413c10` lays `Easy_<stem>.sam` over the category and the item's own file

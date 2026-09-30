@@ -62,7 +62,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 - Nothing shows what the hand holds (`CARRY_PREVIEW_MARKERS`, `STAFF_CARRY_PREVIEW`); any cell takes a candidate (Q40).
 - The fly-in's fade to black is not drawn (Q61). Keys: Escape over the player slots opens the game menu (Q64) and closes
   no park screen (Q119); C (Q118) and Ctrl+H act on the press, F8 is not built (Q65); modifiers count as the frame ends
-  (Q120). A disabled button still takes the pointer (Q66); presses the original stops reach the park (Q113, Q115, Q116).
+  (Q120). A disabled button still takes the pointer (Q66); a scrolled all-visitors list jumps to its top every 2 s (Q200b); presses the original stops reach the park (Q113, Q115, Q116).
 - The happiness gauge draws two copies of its bar, split down the middle (`docs/PLAYER-GAPS.md` gap 5; unmeasured).
   Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
 - With no work the mechanic, handyman and entertainer stand where the original's walk about (Q133); staff make no
@@ -77,7 +77,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q198, Q198b, Q199 are ticked**; next **Q200**; the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q198, Q198b, Q199, Q200 are ticked**; next **Q200b**; the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -115,5 +115,5 @@ Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q198, Q198b, Q199 are ticked
 
 ## Recent
 
-**2026-09-30 (Q199).** `alexah/200-bus-hurry`. **Earlier:** `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`,
+**2026-09-30 (Q200, the decode).** `alexah/201-decode-the-visitors-refresh`. **Earlier:** `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`,
 `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

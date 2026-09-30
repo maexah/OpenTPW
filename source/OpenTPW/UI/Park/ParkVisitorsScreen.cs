@@ -49,8 +49,9 @@ internal sealed class ParkVisitorsScreen : UiWindow
 	/// uses) and refreshes on it, and the staff screen's builder arms the identical one.
 	/// </summary>
 	/// <remarks>
-	/// Rebuilt on the original's cadence rather than every frame, which would re-add every guest on
-	/// every frame.
+	/// <b>A deviation:</b> the original's timer rewrites each existing row in place and keeps the scroll
+	/// (<c>0x00493270</c>); this clears and refills the list, which throws a scrolled list back to its top.
+	/// <c>docs/exe/hud.md</c>, "How allpeeps keeps itself current"; the build is <c>docs/QUEUE.md</c> Q200b.
 	/// </remarks>
 	private const float RefreshEvery = 2f;
 

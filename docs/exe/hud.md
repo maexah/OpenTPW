@@ -380,6 +380,50 @@ where the month's wages were 538 (measured, not decoded).
 So the three buttons are not one job: **Info has 3 of 4 built, Money 1 of 4, and Research is
 none.**
 
+### How allpeeps keeps itself current: rows updated in place, never cleared (Q200)
+
+Decoded 2026-09-30 (`wf_95649c5e-08a`: one Opus skeptic, three claims upheld and two amended, none refuted; the
+amendments re-read first-hand). **The original never empties this list after it opens, so its scroll stays where the
+player put it.** Three paths change it:
+
+- **Opening.** `FUN_00493530` sets the sort from `DAT_007508bc` while the list is still empty (`FUN_006659af(v, 0)`),
+  adds one row per guest (`FUN_00481bc0( 0x40, 0x004937e0 )`, thing type byte `+2` == 1, each through the row adder
+  `FUN_00493800` → `FUN_0066403b` with no redraw), draws once (`FUN_00663324`, `0x00493632`), and, when handed a guest,
+  selects that guest's row and scrolls to it (`FUN_00665739`, the one direct writer of the top row besides the
+  constructor and the clear). Then it arms timer `0x80083` at 2000 ms (`FUN_0065ef90`, `FUN_0065f024`).
+- **The timer, every two seconds** (message `0x10` with id `0x80083`, `0x00493270`). For each existing row, from the
+  last to row 0, it fetches the row's guest (`FUN_00664c71`), works out the same six values the row adder does, and
+  writes them into that row (`FUN_006644ea( row, values, 0x3f, row == 0, -1 )`). Row 0's call redraws the visible
+  rows from the top row `list+0x154`. **Nothing is added, removed, re-sorted or scrolled**: a row keeps its place from
+  its last sort or insert even when the value it was sorted on has changed.
+- **A guest arriving or going.** The guest constructor `FUN_004faec0` broadcasts message `0x1c` (`0x004fb2fd`) and the
+  thing delete `FUN_0050b780` broadcasts `0x1b` for every thing (`0x0050b7f9`, before the free); `FUN_0050ca50` routes
+  them. `0x1c` adds that guest's row (`FUN_00493c50`: the row adder, which inserts in sort order when the list's
+  `+0x48 & 0x10` is set, then a redraw). `0x1b`, for type 1 only (`FUN_004818c0`), finds the row by its guest
+  (`FUN_00664d2a`) and removes it (`FUN_00493c10` → `FUN_006647cb`). Neither writes the top row itself. Both finish in
+  `FUN_00664495`, which sets the scrollbar's range to count − visible and puts its position back at the top row; the
+  slider clamps the position, and if that moved it the list takes it back (`0x800` → `FUN_00664ea3`, `0x00664ee9`).
+  So a removal near the bottom pulls the view up by the rows it lost, and nothing else moves it.
+
+Three edges a copy must match, found by the skeptic:
+
+- **With count ≤ visible rows the slider is disabled and never repositioned** (`0x006644d2`), so a view scrolled one
+  row down that loses a guest down to thirteen stays one row down, row 0 unseen and the last slot blank, until the
+  wheel clamps it (`0x1000d`).
+- **Removing the selected row selects by visible slot, not by index**: `FUN_006647cb` passes the absolute index (the
+  same, or one less if it was the last row) to `FUN_0066525c`, which adds the top row to it. At top 0 that is the
+  next row; scrolled down, it lands further down the list.
+- **The selection is not shifted** by an insert or removal above it, so the highlight moves onto a different guest.
+
+The sort is remembered between openings: message `0x406` stores (column + 1), negated when descending, in
+`DAT_007508bc` (`0x00493479`); its static default is 1, Visitor Number ascending.
+
+**OpenTPW rebuilds the list instead** (`ParkVisitorsScreen.Update`, every `RefreshEvery`): `UiList.Clear` sets the
+top row to 0, so a scrolled list is thrown back to its top every two seconds. Measured in the build before any change
+(`q200run.py`, `q200-run1/`, silent, the stock park with twenty guests admitted, 33 in the census; `save/` unchanged):
+predicted and seen, the list opened at its top (first row cash 684), scrolled four rows down (first row 306), and back
+at its top (684) in the shot 3.1 s later. The build is Q200b.
+
 ### A caution: `0x10`/`0x11`/`0x12` are column headers, not buttons
 
 They are children of the buy list control `0x1f8`, numbered `0x10 + column`, and the UI library sorts
