@@ -1264,8 +1264,8 @@ public static class ParkPathBuilding
 		var (_, cached) = ParkRideChoice.QueueCellsFor( park, placed );
 		var pending = QueueEnds( state, park, placed );
 
-		// Mode 3, armed before the gate (FUN_0052f200( 3, 0 ), 0x00527fa5), posts advisor message 0xcb, whose words
-		// are not decoded, and so does every call below as it re-arms mode 3 (FUN_0052f580( 3, 1 )): four posts for
+		// Mode 3, armed before the gate (FUN_0052f200( 3, 0 ), 0x00527fa5), posts advisor message 0xcb (response 422,
+		// sample 392, the queue builder's help), and so does every call below as it re-arms mode 3 (FUN_0052f580( 3, 1 )): four posts for
 		// the Belly Bounce. The cursor mode 3 sets is the demolisher's to put back.
 		Unimplemented.Report( "QUEUE_DRAIN_ADVISOR_0xCB" );
 
@@ -1295,8 +1295,8 @@ public static class ParkPathBuilding
 		// measures nothing.
 		Unimplemented.Report( "QUEUE_DRAIN_ADVISOR_0xCB" );
 
-		// The debit subtracts only while the bank's +0x114 is non-zero (0x004d01f3), and what that field is is not
-		// decoded; here it always subtracts. The original also scales it by the object's per-age percentage
+		// The debit subtracts only while the bank's mWithdrawalsEnabled (+0x114, bank file 28) is non-zero
+		// (0x004d01f3), which it is in every offline park; here it always subtracts. The original also scales it by the object's per-age percentage
 		// (FUN_004e2290, 0x00527fe8), which nothing here keeps, so this takes the full price.
 		Unimplemented.Report( "QUEUE_DRAIN_DEBIT_BANK_GATE" );
 		Unimplemented.Report( "QUEUE_DRAIN_DEBIT_DEPRECIATION" );

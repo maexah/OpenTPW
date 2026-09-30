@@ -60,10 +60,15 @@ public sealed class ParkRideOperation
 	/// <c>0xe</c>.
 	///
 	/// <para>
-	/// <b>It is <c>rand() % 100 &lt;= chance</c>, and the chance lives on the OBJECT at <c>+0x190</c></b>,
+	/// <b>It is <c>r % 100 &lt;= chance</c>, and the chance lives on the OBJECT at <c>+0x190</c></b>,
 	/// built as <c>100 - UsageInfo.InitChanceOfLoosing</c> when the thing is made. <c>FUN_004e2670</c> fixes
 	/// it as the object's, because the same pointer it reads is the one it takes the catalogue
 	/// id and the script handle from, and both of those are object fields.
+	/// </para>
+	/// <para>
+	/// <b>Two departures.</b> The original draws <c>r</c> from the park's own generator (<c>FUN_00516330</c>,
+	/// <c>0x004e26c6</c>), one draw for every admission to anything, where this draws from the
+	/// <see cref="Random"/> it is handed; and this reads the item's chance, not the object's (Q97).
 	/// </para>
 	/// <para>
 	/// <b>A shop always wins, and that is the mechanism rather than an accident.</b> Nothing in the
@@ -485,12 +490,13 @@ public sealed class ParkRideOperation
 	/// one arm rather than the whole.
 	///
 	/// <para>
-	/// <b>The effects are gated, and the gate is the roll's byte.</b> The original
+	/// <b>The effects are gated, and the gate is the win roll.</b> The original
 	/// splits on the guest's <c>+0x1f1</c>: nought logs "Person lost this sideshow..." and docks
 	/// happiness, and anything else runs the effects. That byte is <c>mQueuePos</c> by the save reader's
-	/// own naming, but <c>FUN_00501db0</c>'s case <c>0xe</c> <i>overwrites</i> it for a sideshow with
-	/// <c>FUN_004e2670</c>'s roll - so the two meanings share one field. <b>Do not gloss it as "did they
-	/// win"</b>: the sideshow's win is computed inside the effects, after this has already been tested.
+	/// own naming, but every rider has been through <c>FUN_00501db0</c>'s case <c>0xe</c>, which
+	/// overwrites it with <c>FUN_004e2670</c>'s roll for any kind of thing - and every thing but a
+	/// sideshow has a chance of a hundred, so for them it is always the effects (<c>docs/exe/ride-operation.md</c>,
+	/// "<c>+0x1f1</c> at the settle-up is the win roll").
 	/// </para>
 	/// <para>
 	/// The byte is written on admission by <see cref="PeepBehaviour"/>'s roll through <see cref="Succeeds"/>,
@@ -499,15 +505,18 @@ public sealed class ParkRideOperation
 	/// effects, a toilet's relief (<see cref="UseTheToilet"/>) and a sideshow's winning cheer, in the original's
 	/// order. Counted and not kept: the cost of goods a shop or sideshow books against the object and the park's
 	/// balance (with the prize), the guest's event history, and after everything the happiness gained since
-	/// joining, the object's visit count and a sideshow's thoughts, win or lose.
+	/// joining, the object's served count and a sideshow's thoughts, win or lose. Neither kept nor counted: the
+	/// guest's rides, purchases or sideshows played and the object's visit count (<c>FUN_004e1690</c>), which the
+	/// original keeps before the gate (<c>docs/exe/ride-operation.md</c>, "The settle-up's bookkeeping").
 	/// </para>
 	/// <para>
 	/// <b>What is NOT built, and why, each counted.</b> Three more happiness changes in <c>FUN_004fe1e0</c> each
 	/// read the object's byte <c>+0x198</c>, <c>mAmountOfSpecialIngredient</c>, which <see cref="ParkWorld"/> does
-	/// not read. For the hunger effect (<c>+0x148</c>) and then the
-	/// thirst effect (<c>+0x144</c>), whichever is non-zero, the original docks
-	/// <c>PeepInfo.SmallHappinessChange</c> (<c>DAT_00785058</c>) when <c>(rand &amp; 7)</c> plus that byte
-	/// plus the effect is under 30 (<c>0x004fe453</c>, <c>0x004fe4a5</c>); then it adds the byte times the
+	/// not read. For the hunger effect (<c>+0x148</c>) and then, independently, the
+	/// thirst effect (<c>+0x144</c>), each when it is non-zero, the original takes one draw <c>r</c> of the park's
+	/// generator (<c>FUN_00516330</c>) and docks <c>PeepInfo.SmallHappinessChange</c> (<c>DAT_00785058</c>) when
+	/// <c>(r &amp; 7)</c> plus that byte plus the effect is under 30, unsigned (<c>0x004fe453</c>, <c>0x004fe4a5</c>),
+	/// so an item with both effects draws twice and can be docked twice; then it adds the byte times the
 	/// happiness effect over a hundred (<c>0x004fe4cf</c>..<c>0x004fe525</c>). The same byte then feeds the
 	/// special-ingredient switch, whose ice gives the Drinks Shop's buyer back part of the thirst it quenched, and an
 	/// appearance effect gives a balloon or a costume (<c>docs/exe/ride-operation.md</c>, "The effects of a visit").
@@ -518,7 +527,8 @@ public sealed class ParkRideOperation
 	/// only when the exit routes (<c>0x005015e3</c>, <c>0x005015ef</c>); a guest this dismisses anyway (see
 	/// <see cref="Dismiss"/>) is remembered and charged anyway.
 	/// <b>Absent:</b> the three visit counters at <c>+0x1c4</c>/<c>+0x1c8</c>/<c>+0x1cc</c> chosen by the
-	/// descriptor's <c>+0x4ac</c>, which nothing here would read.
+	/// descriptor's <c>+0x4ac</c>. The original's visitor window shows all three, and its all-visitors list shows
+	/// <c>mNumRides</c> as Rides Ridden, which this game's visitors screen counts as <c>VISITOR_RIDES_RIDDEN</c>.
 	/// </para>
 	/// </summary>
 	private void SettleUp( Peep peep, ParkWorld.CatalogueObject ride, ParkItemCatalogue? catalogue )
@@ -590,7 +600,7 @@ public sealed class ParkRideOperation
 
 		// Then the original compares happiness with what the guest had on joining (+0x20c), logs "Happiness
 		// changed by %d since using object %d", averages three times the change into the object and, for a
-		// shop or sideshow, posts it as an event; counts the visit on the object (FUN_004e19f0); and has a
+		// shop or sideshow, posts it to the park analyser; counts the object's served (FUN_004e19f0); and has a
 		// sideshow's winner think thought 5 - none of which is kept here.
 		Unimplemented.Report( "SETTLE_UP_HAPPINESS_SINCE_JOIN" );
 		Unimplemented.Report( "SETTLE_UP_OBJECT_VISIT_COUNT" );

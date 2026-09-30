@@ -52,8 +52,8 @@ queue**, one item per session, taken from the top unless Alexah reorders.
 
 ## Does not
 
-- No finances (a charge never reaches the bank, Q96), litter, day ending, saving a park back, video, networking.
-  Research is inert. In a park the advisor says the gadget's opening line and no more (`docs/PLAYER-GAPS.md` gap 4).
+- No finances (a charge never reaches the bank, Q96; a sale's cost of goods never leaves it, Q177c), litter, day
+  ending, saving a park back, video, networking. Research is inert. In a park the advisor says the gadget's opening line and no more (`docs/PLAYER-GAPS.md` gap 4).
 - Eight of the nine per-object windows are unbuilt. Setting patrol areas is deferred by Alexah; staff keep the save's.
   A walking member of staff is not entered in the cells they cross; only hiring and putting down place one.
 - Unbuilt: Q102-Q105, five queue-turn arms (the unhappy one held for Q85), spot animation (Q98), Q112's walk to path.
@@ -68,8 +68,9 @@ queue**, one item per session, taken from the top unless Alexah reorders.
   Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43).
 - With no work the mechanic, handyman and entertainer stand where the original's walk about (Q133); staff make no
   sound (Q135). Guests and rides read `GameClock.Ticks / 8`, not `mGameTick` (Q132); a load brings one guest (Q26); the bus waits (Q131).
-- Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), riding a ride walked into in first person,
-  a coaster's excitement, its level. **The Hot Pot lets no rider off** (Q179); a load re-phases turns (Q180), misreads kept times (Q181).
+- Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), a ride walked into in first person, a coaster's
+  excitement and level, a visit's satisfaction (Q177b), ingredient (Q177d) and balloon (Q177e); **a visit's own count is
+  not even counted** (Q177b). **The Hot Pot lets no rider off** (Q179); a load re-phases turns (Q180), misreads kept times (Q181).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
   walk (Q121), and a park screen stays open over it (Q122). It walks onto entrances the original shuts (Q140).
@@ -77,7 +78,7 @@ queue**, one item per session, taken from the top unless Alexah reorders.
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q101, Q165, Q166, Q168, Q169-Q176, Q184 are ticked**; next **Q177**. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q101, Q165, Q166, Q168, Q169-Q177, Q184 are ticked**; next **Q177b**. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -107,13 +108,12 @@ Q88, Q101, Q165, Q166, Q168, Q169-Q176, Q184 are ticked**; next **Q177**. Gaps 4
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1350**, 0 fail, 0 skip with the game | 2026-09-29, after Q176 |
-| Tests without the game | **531** ran, **819** skipped, of 1350 | 2026-09-29, after Q176 |
-| Build warnings | 123 | 2026-09-29, after Q176 |
+| Tests | **1350**, 0 fail, 0 skip with the game | 2026-09-29, after Q177 |
+| Tests without the game | **531** ran, **819** skipped, of 1350 | 2026-09-29, after Q177 |
+| Build warnings | 123 | 2026-09-29, after Q177 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-29 (Q176, the draw and the second scream).** `alexah/190-the-draw-and-the-second-scream`. **Earlier:** `189`
-and `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (the FileFormats branch rules); each QUEUE.md entry
-names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-09-29 (Q177, the settle-up's bookkeeping: the decode).** `alexah/191-decode-the-settle-up`. **Earlier:** `190` (Q176),
+`189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

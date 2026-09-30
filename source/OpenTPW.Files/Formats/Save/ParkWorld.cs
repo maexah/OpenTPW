@@ -1626,12 +1626,10 @@ public sealed class ParkWorld
 			// catalogue type is 1 or 2 unless this is non-zero.
 			IsTrackRideValid: ReadInt32At( start + 222 ),  // mIsTrackRideValid
 
-			// And the fields PAST the last ring buffer. These are safe in a way the ones BETWEEN the
-			// rings are not: 720 bytes of ring content have to be distributed over six rings, and while
-			// six lots of thirty is the obvious reading, nothing here proves the split is even. Any split
-			// summing to 180 entries puts these five at exactly these offsets, because they all follow
-			// the last ring - whereas mNumCustomers and mNumWalkAways sit BETWEEN rings and would move.
-			// So those two are deliberately not read.
+			// And the fields past the last ring. FUN_004db7d0 writes six thirty-entry rings of 133 bytes from
+			// 228, with mNumCustomers at 494 and mNumWalkAways at 631 between them, so these start at 1034. The
+			// rings and the two counts are not read here (FileFormats saves.md; docs/exe/ride-operation.md,
+			// "The settle-up's bookkeeping").
 			OperatingCapacity: _data[start + 1034],          // mOperatingCapacity, one byte
 			OperatingDuration: _data[start + 1035],          // mOperatingDuration, one byte
 

@@ -382,9 +382,10 @@ chosen. **Do not read them as gadget buttons** — the gadget's own six are `0x2
 
 It goes to the advisor/message system (`FUN_0059b590` → `FUN_0059bf20`), not to the help table.
 Reading its ids as UIHELPTEXT rows yields text that is plausible and wrong — the pylon button's
-`0x125` decodes there as *"Left-click to view item's details"*. **Unresolved**: an advisor message
-id resolves through the runtime-filled table at `0x0076e300` (`advisor-park.md`, "A screen's line cannot be
-recovered statically").
+`0x125` decodes there as *"Left-click to view item's details"*. As an advisor message it
+resolves through the metadata table at `0x0076e300`, filled by the static initializer at `0x005a0a50`: response 553,
+sample 565, whose transcript is "looking this button let's you place normal pylons" (`advisor-park.md`, "A screen's line is a message id, resolved
+through the metadata table").
 
 ### The arm is the gadget's panel carrier
 
@@ -867,7 +868,9 @@ conflating them looks correct here and breaks elsewhere.
 #### The mini-balance is a MONTHLY ACCOUNT, not the park's cash
 
 From `FUN_0049bdd0`, corroborated by the `0x401` arm of `FUN_0049b650`. Three monthly ring buffers on
-the park object (`FUN_00519510`), each stored as samples / index / count / wrapped:
+the park analyser (`mParkAnalyser`, `FUN_00519510`), each stored as samples / index / count / wrapped, each fed by the
+month's running total 4 bytes before its samples (`+0x1fc90` cash in, `+0x1f7f0` staff, `+0x1f5a0` all costs, the cost
+of goods among them), pushed on the month's change (`FUN_004c7720`; `ride-operation.md`, "The settle-up's bookkeeping"):
 
 | Samples | Index | Count | Wrapped | Becomes |
 |---|---|---|---|---|

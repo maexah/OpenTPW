@@ -1,6 +1,6 @@
 # Park advisor (original executable)
 
-The park advisor is a THING like the weather, ticking on the same beat, but it does not poll the world: the park **posts a message** to it, the message is accepted or rejected by a gate, and an accepted message occupies one of **eight priority slots**. Each tick the advisor says the highest-scoring slot, picks a line within that response, and plays a sample. Two separate tables sit behind this — a static response table at `0x00768fb8` that maps a response id to a sample, lip file and gesture, and a runtime-filled metadata table at `0x0076e300` that holds the per-message score function, category and line count. The scores' coefficients live in `data/Advisor/Advisor.sam`, whose schema is compiled into the executable as 60-byte descriptors. This page is about the park advisor's message and scoring system; the on-screen advisor model and his interruption are in `ui.md`.
+The park advisor is a THING like the weather, ticking on the same beat. It hears in two ways: the park **posts a message** to it, and **each tick it polls one row** of the metadata table below, calling that row's score function (`FUN_0059a550` calls `FUN_0059c680( 1 )` on the static at `0x00fb3540`, built by `FUN_0059bea0`, whose `+0x20` is `MinScoreForConsideration` (`DAT_00fb3560`); it steps its cursor at `+0` over the 351 rows to the next whose `+0x00` is nought, 156 of them, calls that row's score function and keeps a score above nought that the accept gate `FUN_0059abc0` would take; the tick raises it when `FUN_0059bf20` answers above `MinScoreForConsideration`, 25). Either way the message is accepted or rejected by a gate, and an accepted message occupies one of **eight priority slots**. Each tick the advisor says the highest-scoring slot, picks a line within that response, and plays a sample. Two separate tables sit behind this — a static response table at `0x00768fb8` that maps a response id to a sample, lip file and gesture, and a runtime-filled metadata table at `0x0076e300` that holds the per-message score function, category and line count. The scores' coefficients live in `data/Advisor/Advisor.sam`, whose schema is compiled into the executable as 60-byte descriptors. This page is about the park advisor's message and scoring system; the on-screen advisor model and his interruption are in `ui.md`.
 
 ## The thing
 
@@ -49,7 +49,7 @@ Confirmed two ways: `FUN_0059a940` reads the response/subject as `param_2[3]` (b
 | `2` | Advance |
 | `3` | Random, `FUN_00516330() % count` |
 
-The sample is `FUN_0059c240(response) + index`, so a response's lines are a **contiguous run of sample ids**. Sample `0x266` (614) means "say nothing".
+The response is `FUN_0059c240( message ) + index` (`0x0059b798`..`0x0059b79f`), so a message's lines are a **contiguous run of response ids**; `Advisor_SayResponse` finds the response by the table's `+0x00` and plays its `+0x04`, the sample (`0x005990a7`..`0x005990cb`). Response `0x266` (614) means "say nothing" (`0x0059b7a1`).
 
 ## The accept gate
 
@@ -117,20 +117,21 @@ The disassembly computes `advisor + id*0x10 + 0xe0` outright (`LEA EAX,[EDI + 0x
 | `+0x18` | — | Face node B | `0x00599106` |
 | `+0x1c` | — | Grouping values — **see the refuted section below**; no instruction reads it through this table's base | xrefs |
 
-### Response metadata at `0x0076e300` — runtime-filled
+### Response metadata at `0x0076e300` — filled before `WinMain`
 
-Stride `0x38`, validated by `row+0x04 == id`, with a linear-scan fallback bounded at `0x772fcc` (351 rows). Ids `0x15f` and `0x160` are excluded outright. **The table reads as zeros in the image and Ghidra shows no static writer** — presumably a computed pointer. That is also where the name-to-response-id mapping must be resolved.
+Stride `0x38`, validated by `row+0x04 == id`, with a linear-scan fallback bounded at `0x772fcc` (351 rows). Ids `0x15f` and `0x160` are excluded outright. **The table reads as zeros in the image; its filler is straight-line code at `0x005a0a50`** (`MOV` and `XOR` between four `PUSH`es and `POP`s, ending in the `RET` at `0x005a86fb`; in no Ghidra function), a C++ static initializer the C runtime runs before `WinMain` through the thunk `0x005a0a40` listed at `.data` `0x0072bda8` (Q177's analyser decode; the complete emulated table is `~/.cache/tpw-harnesses/q177/skeptic-analyser/meta_full.json`, made by `emu2.py` there). Row 91, for one: polled, id `0x5b`, category 0, mode 2, score function `0x0059e730`, one instance, first response 244, two lines, selection mode 2.
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
-| `0x0076e300` | — | Metadata table, stride `0x38`, runtime-filled | Zeros in the image; no writer found |
+| `0x0076e300` | — | Metadata table, stride `0x38`, filled by the static initializer at `0x005a0a50` | Zeros in the image |
+| `+0x00` | — | Nought: the row is polled every 351-row cycle; otherwise posted only | `FUN_0059c680` |
 | `0x772fcc` | — | Upper bound of the linear-scan fallback (351 rows) | |
 | `+0x04` | — | Id (used to validate a row) | |
 | `+0x08` | — | Category | |
 | `+0x0c` | — | Game-mode filter: `2` always, `0` game type 0, `1` game type 2 | |
 | `+0x10` | — | **Function pointer** that computes the score | Called via `FUN_0059c0a0` and `FUN_0059bf20`, subject to the `+0x0c` filter |
 | `+0x20` | — | Max instances | |
-| `+0x24` | — | First sample | |
+| `+0x24` | — | First **response** id: `FUN_0059c240` returns it, the line's index is added, and `Advisor_SayResponse` matches the sum against the response table's `+0x00`, whose `+0x04` is the sample (response 244 is sample 242) | `0x0059c29f`, `0x0059b79f` |
 | `+0x28` | — | Line count | |
 | `+0x2c` | — | Selection mode (see line selection above) | |
 
@@ -194,17 +195,17 @@ The response table's `+0x1c` matches the section ordinal early and then **drifts
 
 **There is no arithmetic that recovers `+0x1c`. Do not derive a sample from a section name by counting — in either direction.** This has been got wrong twice, in both directions. Take the sample from the response table and confirm the line by its transcript.
 
-### A screen's line cannot be recovered statically
+### A screen's line is a message id, resolved through the metadata table
 
 `FUN_00486b00( id )` makes an advisor message with this id and posts it; `FUN_00486b40( id )` withdraws it. Both first call `FUN_005194d0` to fetch the advisor THING.
 
 **That id is a *message* id, not a response id.** `FUN_00486b00` does `MOV EAX,[ESP+0x30]; LEA ECX,[ESP+0x14]; PUSH EAX; CALL 0x0059b590`, and `FUN_0059b590` writes that argument to `*(undefined4 *)(param_1 + 6)` on an `undefined2 *` — byte offset `0x0c`, the subject, the very field the accept gate keys its per-message counters on. It is **not** the response id that indexes `0x00768fb8`.
 
-Checked against the data: the map screen (`FUN_005f0b40`) pushes `0x130` = 304, and response 304's sample is 338, "there's a litterbug running amok" — plainly not a map line. Message ids resolve through the metadata table at `0x0076e300`, which is filled at runtime and reads as zeros in the image, with no static writer. **So do not try to reproduce screen-posted lines; pick lines by transcript instead.** The 40 call sites' constants were extracted anyway and sit in a contiguous `0xbc`-`0xd5` / `0x11c`-`0x135` span, if that is ever useful once the loader is found.
+Checked against the data: the map screen (`FUN_005f0b40`) pushes `0x130` = 304, and response 304's sample is 338, "there's a litterbug running amok" — plainly not a map line. Message ids resolve through the metadata table at `0x0076e300`, filled by the static initializer at `0x005a0a50`: the row whose id is the message gives the first response at `+0x24`, the line's index is added, and the response table's `+0x04` is the sample. The map's `0x130` is response 564, sample 582 ("the map shows an overview of the park"); buy's `0xbc` is 407, sample 380; hire's `0xbd` is 408, sample 381; the pylon button's `0x125` is 553, sample 565. The 40 call sites' constants sit in `0xbc`-`0xd5` / `0x11c`-`0x135`, every one a posted-only row (`+0x00` 1) of one line (`+0x28` 1) (Q177's analyser skeptic, `~/.cache/tpw-harnesses/q177/skeptic-analyser/meta_full.json`; each sample checked against its transcript).
 
 ### The message-to-sample rule
 
-Refuted. There is no rule mapping a message to its sample that can be applied statically; see both sections above.
+Message → its metadata row's `+0x24` (the first response) + the line's index → the response table's `+0x04` (the sample); see both sections above.
 
 ## Every HUD screen posts a message
 
@@ -214,7 +215,7 @@ The ids seen so far: `0xbc` when buy opens, `0xbd` when hire opens, `0xc6` and `
 
 | What | State |
 |---|---|
-| The loader that fills `0x0076e300` | **Never found.** Ghidra shows no writer; presumably a computed pointer. The name-to-response-id mapping must be resolved there too |
+| The loader that fills `0x0076e300` | **Found** and emulated: the static initializer at `0x005a0a50` (above); the 40 screen-posted ids are posted-only rows of one line each |
 | The u16 at message `+0x00` | Unknown — it is written by `FUN_0059c0a0` but is not the gating id |
 | `Welcome` (section 2) | Looks like a **stub**: group 2 holds four rows, all `sample=1, anim=16`, and sample 1 is an *OpenPark* line. The park welcome probably has no audio of its own |
 | Responses 399-402 | All carry sample 1, an `OpenPark` line — the same stub shape |

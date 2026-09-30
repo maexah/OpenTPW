@@ -498,8 +498,9 @@ internal sealed class ParkObjectWindow : UiWindow
 	/// <b>Three of the seven figures are not answerable here and are counted rather than invented.</b>
 	/// Excitement and reliability are type-9 bars skinned <c>ridestatbar.wct</c> that the engine computes
 	/// from the three sliders - <c>FUN_004e0560</c> divides two slider values by per-upgrade maxima this
-	/// decode has not read. Users last month reads a thirty-month ring buffer, and this game keeps no
-	/// monthly history at all, which is the same gap the hire screen's mini-balance already records.
+	/// decode has not read. Users last month sums the object's ring of customers over the last thirty game
+	/// days (<c>+0x1a8</c>), which this game does not keep, as it keeps none of the park analyser's months
+	/// that the hire screen's mini-balance reads.
 	/// State of repair and remaining life are bars too, read straight off the thing.
 	/// </para>
 	/// </remarks>
@@ -534,8 +535,8 @@ internal sealed class ParkObjectWindow : UiWindow
 			age.Text = placed.Built.IsSet ? $"{state.AgeInDays( placed )}" : null;
 
 		// FUN_004e2400: the age-bucket scrap percentage times the item's build price. That percentage
-		// is SCRAP_VALUE_DEPRECIATION, already counted where Sell refunds - it answers 100 for anything
-		// newly built, so today this is the build price and is increasingly wrong as a ride ages.
+		// is SCRAP_VALUE_DEPRECIATION, already counted where Sell refunds - it answers 100 only for a thing under
+		// thirty days old with no customer yet, so today this is the build price and is wrong once a ride is used or ages.
 		if ( _stats.TryGetValue( 0x3e23, out var scrap ) )
 			scrap.Text = $"{item.BuildPrice}";
 
@@ -564,10 +565,8 @@ internal sealed class ParkObjectWindow : UiWindow
 		Unimplemented.Report( "RIDE_EXCITEMENT_BAR" );
 		Unimplemented.Report( "RIDE_RELIABILITY_BAR" );
 
-		// Users last month sums thirty entries of one of the object record's six ring buffers
-		// (FUN_004ade40, 0x1e entries). ParkWorld deliberately does not read the rings: 720 bytes
-		// have to be split over six of them and nothing measured says the split is even, so every
-		// field BETWEEN rings would move if the guess were wrong.
+		// Users last month sums the thirty entries of the object's customers ring, +0x1a8 (FUN_004ade40,
+		// 0x004ade7d), saved at file 498 of the record. ParkWorld does not read the rings.
 		Unimplemented.Report( "RIDE_USERS_LAST_MONTH" );
 
 		// The age is written as a bare number, and the original's wording for it is NOT known.

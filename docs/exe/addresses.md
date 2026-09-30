@@ -200,6 +200,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00498fd9` | The entry-price builder sets `b_door` down for a closed park (`Button_SetDown`) | OpenTPW/UI/Park/ParkEntryPriceScreen.cs  |
 | `0x0049bf34` | Hire screen FUN_0049bdd0: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkHireScreen.cs  |
 | `0x004a0f05` | | OpenTPW/UI/Park/ParkGadget.cs  |
+| `0x004a0f8a` | FUN_004a0e30, the gadget's trend arrow: last month's cash in (+0x1fc94) against its total costs (+0x1f5a4), frame 1 when lower | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a2387` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a2529` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a2ac0` | FUN_004a2ac0( a ): message 6 with a to the park's layer 0 and 1 - a to layer 1; first person's entry passes 0 | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/Park/ParkGadget.cs OpenTPW/World/Level.cs  |
@@ -230,6 +231,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004ad606` | The ride window sets its door down while `mCanLoad` is nought (`Button_SetDown`, from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad622` | The ride window's door position (to here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad890` | The object windows' shared base, vtable `+0xc`: fills the stats table's labels | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004ade7d` | FUN_004ade40, the ride window: Users last month sums the object's customers ring, +0x1a8, 30 entries | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004adf40` | FUN_004ade40, the object window: its Age is FUN_004dd670, printed signed | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004af440` | The object windows' shared base, vtable `+0x3c`: writes the three buffered values onto the ride | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004b8b70` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
@@ -306,6 +308,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004e07be` | FUN_004e0560: the level times the speed and duration ratios, each held 0.75..1.25 | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x004e13fc` | `Invite`'s `mCanLoad` bail: `FUN_004e0450` and return, skipping the watchdog | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004e16c6` | The charge's economy feed `FUN_004e16b0`: the price deposited in the park's bank (`FUN_004d0190`) | OpenTPW.Tests/ParkRideExitTests.cs OpenTPW/World/Park/ParkState.cs  |
+| `0x004e2390` | FUN_004e2290, the scrap percentage: 100 only with mNumCustomers (+0x1a0) nought, under 30 days old | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x004e26c6` | The win roll FUN_004e2670: r drawn from the park's generator FUN_00516330, won when the object's chance >= r % 100 | OpenTPW.Files/Formats/ItemDescriptionFile.cs OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004f7ea0` | Clock constructor FUN_004f7e80: mFunnyTimeStart seeded 2000-01-01 00:00 through SystemTimeToFileTime | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f7ea9` | | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f8321` | | OpenTPW.Tests/GameCalendarTests.cs OpenTPW/Global/GameCalendar.cs  |
@@ -717,6 +721,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005994e0` | | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x005996d0` | | OpenTPW/World/Advisor/Advisor.cs  |
 | `0x00599880` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/FrontEndLines.cs OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Advisor/ClipSequence.cs  |
+| `0x005a0a50` | The advisor metadata table's filler: a static initializer run before WinMain, filling 0x0076e300's 351 rows | OpenTPW/UI/Park/ParkLines.cs  |
 | `0x005accf0` | | OpenTPW/Client/Players.cs  |
 | `0x005aef50` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
 | `0x005af530` | | OpenTPW.Files/Formats/Save/PlayerFile.cs OpenTPW/Client/Players.cs OpenTPW/Client/SaveFolder.cs  |

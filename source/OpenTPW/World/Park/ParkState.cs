@@ -629,8 +629,8 @@ public sealed class ParkState
 	/// <b>It is not <see cref="Take"/>, and the difference is not cosmetic.</b> Taking a fee moves the
 	/// balance <i>and</i> <see cref="Takings"/>, which is what the gates have taken; a refund that went
 	/// through there would report money the park never earned. The original keeps them apart too - a
-	/// demolition credits through <c>FUN_004d0190</c>, which moves the balance and the lifetime income
-	/// counter, while an admission fee goes through <c>FUN_004d0600</c>.
+	/// demolition credits through <c>FUN_004d0190</c>, which moves the balance, the park analyser's month cash in
+	/// and the bank's profit this year, while an admission fee goes through <c>FUN_004d0600</c>.
 	/// </para>
 	/// </summary>
 	public void Refund( int amount ) => Balance += amount;
@@ -647,11 +647,11 @@ public sealed class ParkState
 	/// </summary>
 	/// <remarks>
 	/// <b>The bank's half is not built, and is counted.</b> <c>FUN_004e16b0</c> first deposits the price in the
-	/// park's bank through <c>FUN_004d0190</c> (<c>0x004e16c6</c>) - the balance, the world's income counter and
-	/// the bank's <c>+0x124</c>, the adds the gate fee's <c>FUN_004d0600</c> makes - so a charge moves the
-	/// balance there and does not move <see cref="Balance"/> here (<c>docs/QUEUE.md</c> Q96). Nor is the global
-	/// pool the descriptor's <c>+0x4ac</c> chooses kept (<c>+0x20130</c> for a shop, <c>+0x20380</c> for a
-	/// sideshow, none for a ride): no screen here reads it.
+	/// park's bank through <c>FUN_004d0190</c> (<c>0x004e16c6</c>) - the balance, the park analyser's month cash in
+	/// and the bank's <c>mProfitThisYear</c>, the adds the gate fee's <c>FUN_004d0600</c> makes - so a charge moves the
+	/// balance there and does not move <see cref="Balance"/> here (<c>docs/QUEUE.md</c> Q96). Nor are the park
+	/// analyser's shop and sideshow month accumulators kept (<c>+0x20130</c>, <c>+0x20380</c>; a ride credits
+	/// neither), which the month's change pushes into 144-month rings: no screen here reads them.
 	/// </remarks>
 	public void TakeAt( int objectId, int amount )
 	{

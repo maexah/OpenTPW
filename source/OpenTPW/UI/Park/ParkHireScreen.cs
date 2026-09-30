@@ -25,7 +25,7 @@ namespace OpenTPW.UI;
 /// <para>
 /// <b>What is deliberately NOT filled in.</b> The mini-balance block (<c>0x2485</c>, help row 163,
 /// "indicates the financial effects of hiring the selected person") is a MONTHLY ACCOUNT, and not the
-/// park's cash. <c>FUN_0049bdd0</c> reads three monthly ring buffers off the park object - cash in at
+/// park's cash. <c>FUN_0049bdd0</c> reads three monthly ring buffers off the park analyser (<c>mParkAnalyser</c>) - cash in at
 /// <c>+0x1fc94</c>, staff costs at <c>+0x1f7f4</c>, total costs at <c>+0x1f5a4</c>, each with its own
 /// index and count - and fills the rows as cash in, staff costs, total-minus-staff for other costs,
 /// and cash-in-minus-total for the balance. This game keeps no monthly history, so only the staff bill

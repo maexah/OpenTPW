@@ -1417,7 +1417,9 @@ one thing the old object passes on is its facing - see "Moving a thing".
 
 **DEMOLISH (verb 0x33) refunds `price * percent / 100`**, where percent is `FUN_004e2290` - a per-item,
 per-build-state, **per-age-bucket** field selected from a four-year scrap table at
-`Upgrades[level]+0x08..+0x14`, returning a literal **100 for a brand-new object**. It is *not* a flat
+`Upgrades[level]+0x08..+0x14`, returning a literal **100** only while the object is under 30 days old, has had no
+customer (`mNumCustomers` `+0x1a0` nought, `0x004e2390`) and its item's descriptor `+0x188` is above nought
+(`0x004e23b2`); otherwise the first year's figure. So a new object's first customer lowers it. It is *not* a flat
 half. The same expression is packaged as `FUN_004e2400` and shown on the object's own window before the
 player sells, which is UITEXT 23 **"Scrap value"**.
 
@@ -1546,8 +1548,9 @@ move pickup both reach it, so **a move puts everyone off as a sale does**.
   toilet") naming the thing, and each `mPreviousRides` entry naming it with its `mPreviousTemporaryRides` pair
   (`0x004fb4a6`..).
 
-The event ring (32 entries at guest `+0x30`) is read only by a debug dump that prints through a logger which is a
-bare `RET` in this build (`FUN_005da3c0`), so its entries change nothing a player sees.
+The event ring (32 entries from guest `+0x34`, in the history block at `+0x30`: `ride-operation.md`, "The settle-up's
+bookkeeping") is read only by a debug dump that prints through a logger which is a bare `RET` in this build
+(`FUN_005da3c0`), so its entries change nothing a player sees.
 
 **Staff** answer through their kind's handler, and every kind ends in `FUN_00504c70`. A mechanic whose ride job
 (`+0x218`) or a handyman whose toilet job (`+0x21a`) is the thing drops it and goes idle, in any state. Then, when

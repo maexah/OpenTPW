@@ -420,8 +420,8 @@ internal sealed class ParkGadget : UiWindow
 		// 0x31, the trend arrow, (728,109)-(831,211) - and it is a CHILD of 0x2f rather than a root
 		// control, which only the disassembly shows: 0x004a0f05 fetches 0x2f from the interface root and
 		// then MOV ECX,EAX fetches 0x31 from THAT. FUN_004a0e30 sets its frame to 0 or 1 by comparing the
-		// newest sample of two ring buffers - base, index, count and a wrapped flag - at +0x1f5a4 and
-		// +0x1fc90 on the thing FUN_00519510 fetches from the world at +0x1da720.
+		// newest sample of two ring buffers - base, index, count and a wrapped flag - at +0x1f5a4 (total
+		// costs) and +0x1fc94 (cash in), frame 1 when cash in is lower (0x004a0f8a), on the thing FUN_00519510 fetches from the world at +0x1da720.
 		//
 		// THOSE HISTORIES ARE NOT ON THE ECONOMY. They are on the
 		// park's STATISTICS manager: FUN_004c5d70 is the serialiser carrying those exact ring offsets,

@@ -254,8 +254,9 @@ public sealed class ItemDescriptionFile
 	///
 	/// <para>
 	/// <b>A thing that declares no chance of losing therefore always succeeds, and that is what makes a
-	/// shop work.</b> <c>FUN_004e2670</c> rolls <c>rand() % 100 &lt;= chance</c> and writes the answer into
-	/// the guest's <c>mQueuePos</c>, which the settle-up then uses to decide whether the visit did anything
+	/// shop work.</b> <c>FUN_004e2670</c> draws <c>r</c> from the park's own generator
+	/// (<c>FUN_00516330</c>, <c>0x004e26c6</c>) and wins when <c>r % 100 &lt;= chance</c>; the state setter stores the
+	/// answer in the guest's <c>mQueuePos</c>, which the settle-up then uses to decide whether the visit did anything
 	/// at all. A shop declares nothing, so its chance is <b>100</b>, the roll never fails, and the drink is
 	/// always served; the Jungle Spray declares 75, so its chance is <b>25</b>.
 	/// </para>

@@ -159,8 +159,8 @@ button. It only logs, and counts each click as `RESEARCH_BUTTON`.
       reading; Belly Bounce measures **repair 100, life 100**. Age and Scrap value were already there.
       **Excitement, Reliability and Users last month stay counted**, and not for want of a control:
       the first two's inputs are named now (`park-engine.md`, the compiled `.sam` schema) and the guests'
-      choice computes the first (`ParkRideScore.ExcitementOf`), but neither bar is built; the third needs
-      the record's ring buffers, which `ParkWorld` deliberately does not read.
+      choice computes the first (`ParkRideScore.ExcitementOf`), but neither bar is built; the third sums the
+      object's customers ring over thirty game days (file 498, `saves.md`), which `ParkWorld` does not read yet (Q177b).
       **The preview draws the ride's own model** - the one standing in the park, so it animates as the
       ride runs - fitted by a real bounding box, filling 93px of a 194px panel.
       **It orbited until the per-mesh box was fixed.** A burst of sixteen frames showed the centroid
@@ -377,6 +377,9 @@ from the crossing. So the arrival path they would take is the one the shipped sa
   `global-speech-transcripts.tsv` in the Ghidra notes (where they live is in `CLAUDE.local.md`). Grep it.
 - **Gate:** audio capture, cross-correlated against the game's own mix (the memory note `verifying-audio-by-capture.md`).
 - **NOT confirmed in a run** — this rests on code reading alone.
+- **He also polls** (Q177): each tick scores one of 156 rows of his table, so lines such as the ticket price (messages
+  91 and 92, over the gate's opinion ring, which OpenTPW does not keep) and a shop's great satisfaction come from the
+  park's own figures (`advisor-park.md`; `ride-operation.md`, "The settle-up's bookkeeping").
 
 ## 5. The happiness gauge reads wrong
 
@@ -451,8 +454,8 @@ from the crossing. So the arrival path they would take is the one the shipped sa
   slots and uses neither family.** It runs the identical `VAR_LETMEON` → `WAIT 1000` → `VAR_LETMEOFF`
   handshake a ride runs, so the boarding chain already built for the Belly Bounce *is* the shop. Limbo
   is real but belongs to `steak`, `giftshop`, `balloon`, `Cost_shp`, `arc2x3` and `SupBog`.
-- **What made the visit do anything: the win roll.** `FUN_004e2670` rolls `rand()%100 <= chance` as a
-  guest enters and writes it into `mQueuePos`, which the settle-up splits on. Nothing here ever wrote
+- **What made the visit do anything: the win roll.** `FUN_004e2670` draws `r` from the park's own generator as a
+  guest enters and wins when `r % 100 <= chance`; SetState stores it in `mQueuePos` (`0x00501f41`), which the settle-up splits on. Nothing here ever wrote
   that byte, so **every visit in the park took the losing arm** — which is why a sideshow charged 20 and
   did nothing else. Chance of winning is `100 - UsageInfo.InitChanceOfLoosing`: a shop declares none, so
   its chance is **100** and a drink is always served; the Jungle Spray declares 75, so **25**.
@@ -461,12 +464,11 @@ from the crossing. So the arrival path they would take is the one the shipped sa
 - **A number that was predicted wrong and measured right:** the Jungle Spray's prize is **50**, not 5.
   Predicted as 5, it made winning cost 30 happiness; measured at 50 it gains 19, and the engine's own
   "Sideshow won - happiness up %d points" reads honestly. The test caught it.
-- **Still unbuilt, and named rather than quietly skipped:** the two global income pools
-  (`+0x20130` / `+0x20380`), the `SpecialIngredient` and `AppearanceEffect` arms (balloons and
-  costumes), the three happiness changes that read the object's undecoded byte `+0x198`, and the settle-up's
-  bookkeeping, counted (Q177): `FUN_004e1920`'s cost of goods booked and debited from the park's balance, the event
-  history, a toilet emptying the toilet need, the happiness gained since joining, the visit count and the sideshow's
-  thoughts. `FUN_004fdcc0`'s excitement
+- **Still unbuilt, and named rather than quietly skipped:** the park analyser's shop and sideshow month
+  accumulators (`+0x20130` / `+0x20380`), the ingredient's terms and the balloon and costume arms (`+0x198`,
+  `mAmountOfSpecialIngredient`; Q177d, Q177e), and the settle-up's bookkeeping (Q177b, Q177c): the cost of goods booked
+  and withdrawn, the event history, the happiness gained since joining, the served count and the sideshow's thoughts,
+  counted; the visit count and the guest's three counters, neither kept nor counted. `FUN_004fdcc0`'s excitement
   match is built (Q169).
 - **One honest limit.** A park left entirely alone still rarely buys a *drink*: only a quarter of guests
   ever grow thirsty (`Peep.Tick` shares the drift by thing id) and by then their exit countdown has

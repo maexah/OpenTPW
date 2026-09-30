@@ -2511,7 +2511,73 @@ artifacts are listed in `docs/history/README.md`.
   any shipped script starts a scream over a held one, then build both. Confirm: a test for each, and `rides` over the
   Belly Bounce through a cycle.
 
-- [ ] **Q177. The settle-up's bookkeeping, counted and not kept. Decode first.** Found by Q169's review and its check
+- [x] **Q177. The settle-up's bookkeeping, counted and not kept: the decode.** Done 2026-09-29,
+  `alexah/191-decode-the-settle-up`. Decode only; the build is Q177b to Q177e. `ride-operation.md`'s new "The
+  settle-up's bookkeeping" (the step table, the cost of goods and the park's money, the six day rings, the join's
+  snapshot, the event history, thoughts 5 and 6, the analyser's samples, what Lost Kingdom reaches, both measurements,
+  where OpenTPW differs); "Spending" and "The effects of a visit" corrected (the challenge posts that were called a
+  tally, the analyser's accumulators that were called the world's, the two independent docks, sugar's unclamped
+  `mAdjustorSpeed`, the balloon and costume arms whole); "`+0x1f1` at the settle-up is the win roll" replaces "not
+  settled"; the win roll draws the park's generator, not `rand()`; the guest and object field tables. `advisor-park.md`:
+  the advisor also polls (one of 156 rows a tick), the metadata filler found at `0x005a0a50`, a row's `+0x24` is the
+  first response, not a sample. `hud.md` and `park-engine.md` brought into line. FileFormats `saves.md`: the object
+  record's six rings placed by the serialiser (the even split was a guess and holds), and the park analyser's twenty
+  rings. Comments corrected at their sites (`ParkRideOperation`, `ParkState`, `ParkObjectWindow`); no code changed.
+  - **Decoded** (`wf_1c25d211-f5e`): five Opus decoders in Ghidra (the money, the since-join and counts, the analyser,
+    the events and thoughts, the ingredient and appearance arms), each put to an Opus skeptic (165 verdicts: 145
+    upheld, 19 amended, 1 refuted, and 36 points the decoders missed), a Sonnet data sweep of the level's 67 items and
+    the stock save, and an Opus critic that settled the gate and found the golden ticket, the toilet window and the
+    dead advisor rows. One decoder also scanned with `objdump`; its skeptic re-checked every claim in Ghidra. Re-read
+    first-hand: `FUN_004e1920`, `FUN_004d01f0`, `FUN_004e1690`, `FUN_004e1e00`, `FUN_004e19f0`, `FUN_004e1b40` to its
+    `__ftol`, `0x004fd9d8`..`0x004fda66`, the thought gate `0x0050c039`, the win roll `0x004e26c6`, `FUN_004e16b0`'s
+    analyser and challenge posts, `Advisor_SayResponse`'s lookup.
+  - **The answer.** Every settle-up counts the visit (`FUN_004e1690`, before the gate) and the guest's rides, purchases
+    or sideshows; on the effects arm it books a shop's or a won sideshow's cost of goods against the object and
+    withdraws it from the bank (gated on `mWithdrawalsEnabled`, 1 in every offline park), averages 3 × the happiness
+    gained since the join into the object's day of satisfaction, counts it served, and posts a sample nothing reads.
+    What a player sees of it: the money (a drink nets +10, a won spray play −30), the profit and customer figures of
+    the object windows and the all-items screen, the customer satisfaction gauges, map and advisor lines, the visitor
+    window's four counts, and a sideshow player's thumbs-up or thumbs-down bubble; the event ring and the analyser's
+    settle-up samples reach nothing. `+0x1f1` is the win roll for every object; all but a sideshow always win.
+  - **Measured in the original** (the reference install under Proton, off-screen, its stock Lost Kingdom park;
+    `~/.cache/tpw-harnesses/q177/origread.py`, `orig/watch1.log`, `orig/analyse.py`, `orig/analyse1.out`): 814 changes
+    over 7 minutes, 145 settle-ups, the 47 with one guest moving checked, 254 of 257 checks as decoded; the three others
+    were the harness's (a stale thirst snapshot, one poll holding a settle-up and a day's roll). 16 drinks each +10 to
+    the balance with costs +20, takings +30, satisfaction by `FUN_004e1e00` and kind 12's `3d + 50`; 9 lost spray plays
+    +20 with thought 6 and a live bubble; 4 won plays (read from their polls) −30, costs +50, thought 5; 8 toilet visits, customers and served
+    +1, event `0x11`, no guest count; 14 Belly Bounce rides. The six watched objects' satisfaction cursors stepped together each game
+    day and wrapped at 30, today's figures going to nought (walk-aways not read). The last frame's HUD read 88070, the balance in memory (`orig/s05.png`).
+  - **Measured in the game** (the build before any change; `q177run.py`, silent, the stock jungle park, three guests
+    made inside and sent, predicted first; `save/` unchanged; `q177-run1/`): each settle-up counter's rise between two
+    censuses as the interval's log lines predict, four intervals of four (the spray play, both drinks in one, the toilet, an empty tail); 6 of the run's 7 checks matched;
+    `money` balance 88112 and takings 125 on both sides of both drinks; the drinker thirst 80 to 40, happiness 0 to 5,
+    cash 700 to 670 (the original's: thirst 60, happiness 7); the toilet user's need to 0. Photographed paused beside
+    the census: the HUD at 88112 before and after the drinks (`C-spray.png`, `A-drinks.png`).
+  - **Predictions wrong**: my check "money unchanged across the spray play" failed on five gate fees in the same
+    interval (takings +125; balance less takings 87987 throughout). The critic's "profit this year is zeroed on entering
+    a park" was refuted by the original's memory (−12013 saved, −11888 after five fees). The original's checks were
+    written from the decode after its first minute had been glanced at, before any drink or spray block was read.
+  - **Not confirmed on screen**: the original's bubbles (a live sprite handle in memory, not photographed; off-screen
+    pictures are memory-grade, `TOOLING.md`); the original's +10 as a before and after pair on its HUD; every window,
+    screen and advisor line that reads the figures (none was opened); the challenge posts (off in Easymode), the
+    park's end after 180 days in the red and golden ticket 4 (game type 0). In OpenTPW the lost spray player was
+    photographed from the Drinks Shop's camera, so the missing bubble shows only as nothing drawn anywhere.
+  - **No test was added**: nothing was built.
+  - **Reviewed** (`wf_a566e319-b6e`, four read-only lenses - the new section in Ghidra, the edits in Ghidra, every
+    number against its evidence file, what else goes stale - each put to an Opus skeptic): 28 findings, 18 upheld, 10
+    amended, none refuted, and 28 more the skeptics raised; all taken. Among them: I had counted two won spray plays
+    and fifteen rides where the log holds four and fourteen (a grep for `MATCH` also matched `MISMATCH`); the red
+    balance's stamp re-arms at any withdrawal that stays at nought or more; the advisor also counts the months in the
+    red (rows 103 to 105); row 247 scores walk-aways, not satisfaction; the scrap value's 100 needs no customer yet as
+    well as youth; the advisor's metadata table resolves every screen's message statically (the map's `0x130` to
+    sample 582); stale copies in `ParkWorld`, `ItemDescriptionFile`, `ParkItemsScreen`, `ParkLines`, `ParkGadget`,
+    `ParkHireScreen`, `ParkPathBuilding`, `ParkBuilding`, a test's summary, `PLAYER-GAPS.md` and `hud.md`; and a shipped
+    object (thing 15) whose unreached ring entries hold `0xCDCDCDCD`.
+  - **Found:** Q177b, Q177c, Q177d, Q177e; notes under Q31, Q96, Q97 and Q110. `UIStrings` 37 to 39 are one row off
+    (UITEXT 37 is "Scrap value", 38 "Local happiness", 39 "Quality of goods", 40 "Sale price"); nothing uses the three
+    members yet (Q31's note). `RIDE_USERS_LAST_MONTH` is now readable from the save (Q177b).
+
+  The item as written: Found by Q169's review and its check
   of the fixes; each piece is counted now (`SETTLE_UP_*`). (1) A shop's and a sideshow's cost of goods, booked against
   the object by `FUN_004e1920` (`0x004fe225`, `0x004fe251`; its `+0xf8`/`+0x184` and a negated ledger post) and debited
   from the park's balance (`FUN_004d01f0` at `0x004e1952`, only while the bank's `+0x114` is non-zero), the mirror of
@@ -2533,6 +2599,39 @@ artifacts are listed in `docs/history/README.md`.
   From Q171: the constructor sets a bought thing's `+0x198` and its `+0x18c` (`mQualityOfGoods`) to 50
   (`0x004db3b3`, `0x004db389`); `ParkBuilding.Constructed` writes neither, as the record carries neither.
 
+- [ ] **Q177b. The settle-up's counts: the visit, the guest's three, the object's day rings and satisfaction.** Found
+  by Q177's decode (`ride-operation.md`, "The settle-up's bookkeeping", steps 1, 2, 4, 5 and 7). OpenTPW neither
+  builds nor counts `FUN_004e1690` (the object's `mNumCustomers` and today's customers, every settle-up, before the
+  gate) nor the guest's `mNumRides`, `mNumShops` and `mNumSideshows` (`CLAUDE.md` rule 4): count them first. Then read
+  the six rings and the two counts from the object record (`saves.md`, file 228 to 1033), roll them on the day's change
+  (message `0xb`), keep `+0x20c` at the queue's join (not saved: nought after a load), and build steps 4, 5 and 7 and
+  `mNumSideshowsWon`; `SETTLE_UP_OBJECT_VISIT_COUNT` stands for step 7, the served count, and wants that name. The ride
+  window's Users last month (`RIDE_USERS_LAST_MONTH`) is then the thirty days' customers. Confirm: the ride window's
+  Users last month on the Belly Bounce after its riders, photographed, beside a census of its rings; each
+  satisfaction day as `FUN_004e1e00` makes it (measured in the original: 18 and 18 to 18, 45 and 15 to 30).
+- [ ] **Q177c. A shop's and a won sideshow's cost of goods, booked and withdrawn; with Q96.** Found by Q177's decode
+  ("The cost of goods and the park's money"). `FUN_004e1920`: the object's today's costs and `mTotalCosts` (file
+  1086), then `FUN_004d01f0` on the bank, gated on `mWithdrawalsEnabled` (bank file 28), which moves `mBalance`,
+  `mTurnEnteredRed`, `mLastBalance`, the analyser's month costs and `mProfitThisYear`; a shop's amount from
+  `FUN_004e1b40` (quality and ingredient, file 1046 and 1058), a sideshow's its `mCostOfGoods`. The challenge post stays
+  counted (off in Easymode). Land it with Q96's deposit or after it: alone it takes 20 a drink off the HUD and puts
+  nothing in. The queue drain's debit (`ParkState.Spend`) wants the same gate (`QUEUE_DRAIN_DEBIT_BANK_GATE`).
+  Confirm: the HUD before and after a drink, +10 as the original's, photographed; `money`.
+- [ ] **Q177d. The ingredient's and the quality's terms of a visit.** Found by Q177's decode ("The effects of a
+  visit", 3 and 3b). Read `mQualityOfGoods` and `mAmountOfSpecialIngredient` (file 1046 and 1058; 50 on a bought
+  thing) and build the two independent docks, the `amount × HappinessEffect / 100` term, the four ingredient arms and
+  `mAdjustorSpeed` in the walking speed (`FUN_004fa870`); counted now as `SETTLE_UP_INGREDIENT_HAPPINESS` and
+  `SETTLE_UP_SPECIAL_INGREDIENT`. Each non-zero hunger or thirst effect takes a draw of the park's one generator,
+  which OpenTPW does not share (each behaviour keeps its own): say so at the site. Confirm: a drink at the Drinks
+  Shop, the drinker's `peeps` thirst 20 back and happiness 2 more, as the original's (measured: 36 to 20, 50 to 57).
+- [ ] **Q177e. Balloons and costumes.** Found by Q177's decode ("The effects of a visit", 4). A Balloon Shop is
+  buyable in Lost Kingdom from the start by its research cost (not measured). The arm reseeds the park's generator
+  with the guest's id, draws a bank-10 sprite, keeps `mBalloonScript` and `mRemainingBalloonLife` (quality × 255 / 100,
+  held 25..255), counts it down on the needs sweeps, frees it on a ride and rebuilds it after, and lets it go at
+  nought, on leaving and to a prankster; the costume sets `mESPSprite` 2 and a variant. Counted now as
+  `SETTLE_UP_APPEARANCE`. Open: which picture frame 1 of the balloons bank is, and what the costume-head callers of
+  `FUN_0044b410` draw. Confirm: a guest leaving a bought Balloon Shop with a balloon on screen, and its life counting
+  down in `peeps`.
 - [ ] **Q178. Instant Action's catalogue: each item's `Easy_` file, laid last and required. Decode first.** Found by
   Q171's verify (`wf_727b3f26-329`, a reader and a skeptic agreeing; `park-engine.md`, "How a key finds its global").
   In game type 2 (`DAT_00fb3b7c`), `FUN_00413c10` lays `Easy_<stem>.sam` over the category and the item's own file
@@ -2667,6 +2766,10 @@ artifacts are listed in `docs/history/README.md`.
   `ParkRideExitTests.PayingForARideLeavesTheParksBalanceAlone` pins the gap and turns round with it.
   Decide what `+0x1fc90` and `+0x124` are before keeping either. Confirm: a drink sold at the Drinks Shop, the HUD's
   money before and after (+30), and `money`.
+  From Q177: its mirror, the cost of goods' withdrawal, is Q177c; the two should land together. `+0x1fc90` is the park
+  analyser's month cash in and `+0x124` the bank's `mProfitThisYear`, zeroed each year and not on entering a park
+  (measured). A deposit writes no `mLastBalance`, and a park in the red for six thirty-day spans at a month's check
+  ends (`FUN_004d0370`, message `0x13`; `ride-operation.md`, "The cost of goods and the park's money").
 - [ ] **Q97. The object's own cost of goods and chance of winning.** Found by Q50c's review. The object keeps both at
   `+0x188` and `+0x190`, built from the item at placement but saved and loaded with it (`FUN_004db7d0`,
   `0x004dcd01`..; file 1042 and 1050) and set per object from its window (`FUN_004e1a20`, `FUN_004e21c0`). OpenTPW
@@ -2674,6 +2777,8 @@ artifacts are listed in `docs/history/README.md`.
   Lost Kingdom's save holds the items' own, so nothing differs yet. Read both from the save record, a bought thing's
   from its item, and say it at each site. The window's setters wait on Q31. No game run beyond a census of the two.
   Q165c added a fourth reader: a sideshow's excitement (`ParkRideScore.ExcitementOf`) takes both from the item too.
+  From Q177: the shop's booking (`FUN_004e1b40`) reads `+0x188` too, and the win roll draws the park's generator
+  (`0x004e26c6`) where `Succeeds` draws the `Random` it is handed.
 
 - [ ] **Q98. Spot animations are never played. Decode first.** Found by Q50d. `FUN_004fc800(n)` plays animation `n`,
   stamps `mTimeOfLastSpotAnim` (`+0x208`), saves the state in `+0x224` and enters state 8, whose return
@@ -2785,6 +2890,9 @@ artifacts are listed in `docs/history/README.md`.
   `0x11` is.
   Q82 found the staff's own thoughts through the same `FUN_0050be80`: `0x14` tired, `0x13` unhappy, `0x12` very happy,
   `0x15` the strike walk, `0x16` a failed patrol roll (`ride-operation.md`, "Drawn on the way").
+  From Q177: SetThought is decoded whole (`ride-operation.md`, "Thoughts 5 and 6, and the bubble"): the class gate,
+  the pictures, the lift of 2.5, the expiry and the four readers. A Jungle Spray player's thought 5 or 6 is class 0 and
+  showed a live bubble on every play measured in the original; here it is counted as `SETTLE_UP_SIDESHOW_THOUGHT`.
 - [ ] **Q111. The state-6 turn's arms before its split are unbuilt and uncounted.** Found by Q53 (`ride-operation.md`,
   "The state-6 turn, in order"). (a) spot animation 5 above happiness 80, (b) vomit, (c) litter to a bin (the Litter
   Bin at (44,29)), (e) facing an entertainer, (f) pranks: each is reached in Lost Kingdom and none calls
@@ -3524,6 +3632,11 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   sideshows and the rest stop at `SHOP_WINDOW`, `SIDESHOW_WINDOW` and `FEATURE_WINDOW`, and a staff member at
   `STAFF_WINDOW` (`Level.ClickWorldAt`); a clicked visitor reaches nothing counted. `park-engine.md`, "The
   per-object management screen is nine screens", lists the nine. One window per session, shop first.
+  From Q177: the shop, sideshow and toilet windows' figures are decoded (`ride-operation.md`, "The settle-up's
+  bookkeeping"): customer satisfaction, profit last month, customers as "C of M", winners last month, the cost of
+  goods from the window's pending sliders (applied on close, on stepping to the next or by apply to all), and a
+  toilet's users last month. `UIStrings` 37 to 39 are one row off: UITEXT 37 is "Scrap value", 38 "Local happiness",
+  39 "Quality of goods", 40 "Sale price"; nothing uses the three members yet.
 - [ ] **Q32. Graphics tiers.** Only `Level.SetupParticles` reads the detail files (`low.sam`, `med.sam`, `high.sam`),
   and only `GameOptions.PARTICLEDENSITY` from them; nothing reads their `GraphicalOptions.*` keys (texture quality and
   filtering, sky, shadows, fog, mipmaps, view distance). The detail-file loader is `0x00423bc0` (`OptionsScreen`'s

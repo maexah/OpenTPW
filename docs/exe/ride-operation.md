@@ -165,7 +165,7 @@ A guest in `BeingAdmitted` runs the walk tick; on arriving (and `"got stuck in m
 
 **The original does not complete an admission from a healthy ride's turn.** `FUN_004e0450` is reached only from the three SetState paths, the states-1/2/4 arm and `Invite`'s `mCanLoad == 0` bail. Completion in normal play is the guest's state-14 turn. This looks like a missing call on the ride side and is not one.
 
-Entering state 14 also writes the guest's `+0x1f1` from the sideshow win roll — see [the win roll](#the-sideshow-win-roll) below.
+Entering state 14 also writes the guest's `+0x1f1` from the win roll, for every kind of thing (only a sideshow's can lose) — see [the win roll](#the-sideshow-win-roll) below.
 
 ### The state → handler map (guest side)
 
@@ -603,7 +603,9 @@ from each call's re-arm (`QUEUE_DRAIN_ADVISOR_0xCB`); the bank's `+0x114` gate o
 per-age percentage, on the refunds (`QUEUE_REFUND_DEPRECIATION`) and on the debit (`QUEUE_DRAIN_DEBIT_DEPRECIATION`,
 `0x00527fe8`); a run over anything but queue or bare ground
 (`QUEUE_DRAIN_CLEARS_ANOTHER_KIND`); and a walk past a thousand cells, which the original's never gives up
-(`QUEUE_END_WALK_UNBOUNDED`). **Open:** what the bank's `+0x114` is; whether the advisor's `0xcb` posts are heard. `FUN_004e2290`, the per-age
+(`QUEUE_END_WALK_UNBOUNDED`). **Open:** whether the advisor's `0xcb` posts are heard (message `0xcb` is response 422, sample 392, the queue
+builder's help: `advisor-park.md`). The bank's `+0x114` is `mWithdrawalsEnabled`, 1 in every offline park ("The cost
+of goods and the park's money"). `FUN_004e2290`, the per-age
 percentage the refund and the debit both scale by, is decoded in `park-engine.md`, "Sell, move and the scrap value". `FUN_004d8c60` (`0x004de266`) writes a fresh
 counter value into the back cell's 16 × 16 block stamp ("The stranded bookkeeping").
 
@@ -1698,9 +1700,9 @@ three.
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
-| `FUN_004fd970` | — | The settle-up for leaving **any** visitable thing (not just a sideshow). Shifts the guest's recent-things history (`+0x1e0`..`+0x1e6`), bumps one of three counters by the descriptor's `+0x4ac`, charges, relieves a need by the descriptor's `+0xe8`, then splits on `+0x1f1`: nought logs `"Person lost this sideshow…"` and docks happiness at `+0x19c`; otherwise it runs `FUN_004fe1e0`, then takes three times the change in happiness since the guest's snapshot at `+0x20c` (both truncated), logs it (`"Person %d: Happiness changed by %d since using object %d"`, `0x0075d6cc`), averages it into the object (`FUN_004e1e00`) and, for a shop or sideshow, posts it plus 50 as an event (`0x004fda1b`..`0x004fdb2c`); happiness itself is not moved. OpenTPW counts that tail (`SETTLE_UP_HAPPINESS_SINCE_JOIN`). | Its own strings |
+| `FUN_004fd970` | — | The settle-up for leaving **any** visitable thing (not just a sideshow). Shifts the guest's recent-things history (`+0x1e0`..`+0x1e6`), bumps the guest's `mNumRides`, `mNumShops` or `mNumSideshows` by the descriptor's `+0x4ac`, charges, counts the visit on the object (`FUN_004e1690`), relieves a need by the descriptor's `+0xe8`, then splits on `+0x1f1`, the win roll: nought logs `"Person lost this sideshow…"`, docks happiness at `+0x19c` and, at a sideshow, thinks thought 6 and pushes event `0x19` (`0x004fdc1c`..`0x004fdc3e`); otherwise it runs `FUN_004fe1e0`, then takes three times the change in happiness since the guest's snapshot at `+0x20c` (both truncated), logs it (`"Person %d: Happiness changed by %d since using object %d"`, `0x0075d6cc`), averages it into the object's satisfaction (`FUN_004e1e00`), posts it plus 50 to the park analyser for a shop or sideshow (`0x004fda1b`..`0x004fdb2c`) counts the object's served (`FUN_004e19f0`) and, at a sideshow, thinks thought 5 and pushes event `0x18` (`0x004fdb5d`..`0x004fdb7f`); happiness itself is not moved. Each step: "The settle-up's bookkeeping", below. | Its own strings |
 | `FUN_004fe1a0` | — | **The charge.** `price = object[+0x194]`; when non-zero it credits the ride, plays a sound, and does `person[+0x1a0] -= price`. **The only `SUB [reg+0x1A0], reg` in the image.** | Byte search |
-| `FUN_004e16b0` | — | **The economy feed**: first the bank's deposit, `FUN_004d0190( price )` (the balance, `0x004e16c6`), then `ride[+0x180] += price`, `ride[+0x70] += price`, then on the descriptor's `+0x4ac` — **1, a shop, credits `global[+0x20130]`; 2, a sideshow, credits `global[+0x20380]`**; a ride (0) credits no pool. Inside the shop arm a second switch on `+0x164` (`ShopType`, then `+0x158` `SpecialIngredient` for types 2 and 4) buckets the visit and passes **1, not the money** — a tally, not a second payment. | Disassembly |
+| `FUN_004e16b0` | — | **The economy feed**: first the bank's deposit, `FUN_004d0190( price )` (the balance, `0x004e16c6`), then `ride[+0x180] += price`, `ride[+0x70] += price`, then on the descriptor's `+0x4ac` — **1, a shop, credits the park analyser's `+0x20130`; 2, a sideshow, its `+0x20380`** (month accumulators, `FUN_00519510`, `0x004e170c`); a ride (0) credits neither and posts nothing. The shop arm then posts the price to the challenge manager as progress on challenge type 12 (shops' profit), the sideshow arm on 13 (sideshows'). Inside the shop arm a second switch on `+0x164` (`ShopType`, table `0x004e18e4`; then `+0x158` `SpecialIngredient` for types 2 and 4, table `0x004e18fc`) posts **1, not the money**, as progress on a selling challenge: ShopType 1 type 5 (gifts), 3 type 8 (meals), 5 type 7 (costumes), 6 type 6 (balloons), and by ingredient salt 1, fat 2, ice 3, sugar 4 (the Drinks Shop's "Sell 30 drinks"). A post lands only while a challenge of that type is on ("The settle-up's bookkeeping", the cost of goods). | Disassembly |
 | `FUN_004d0600` | — | The park-balance path. **The ride charge does not go through it.** | Disassembly |
 | `+0x194` | `mPricePerUse` | File **1054**. | Save record |
 | `+0x180` | `mTotalTakings` | File **1090**. | Save record |
@@ -1708,11 +1710,11 @@ three.
 | `+0x1e0` | `mPreviousRides[4]` | The recent-things history, shifted by three (four entries, not three). | Save reader |
 | `+0xe8` | — | Descriptor field: the need relieved on leaving. | Disassembly |
 | `+0x4ac` | — | Descriptor field: object kind, **a copy of `+0x4c`, `Info.WhichUIType`** (`0x004134f1`..`0x004134f5`, in `FUN_00413410`, its only store): 0 rides, 1 shops, 2 sideshows, 3 features. `FUN_004fde50`'s and `FUN_004e16b0`'s arm 1 read `SpecialIngredient`, `AppearanceEffect` and `ShopType`. | Disassembly |
-| `+0x164` | — | Descriptor field: `UsageInfo.ShopType`, for the shops' visit tally in `FUN_004e16b0` (the schema's order puts it there). | Disassembly |
+| `+0x164` | — | Descriptor field: `UsageInfo.ShopType`, which `FUN_004e16b0`'s shop arm switches on to post 1 as progress on a selling challenge (the `FUN_004e16b0` row above; the schema's order puts it there). | Disassembly |
 
 **`person[+0x1a0]` is the guest's cash — confirmed by USE, not by adjacency.** The field a price is SUBTRACTED from in `FUN_004fe1a0` is the field a price is COMPARED against in `FUN_004fde50`, by two unrelated functions. `+0x19c` is happiness and `+0x1a0` adjoins it, but adjacency was never the evidence.
 
-**A charge is deposited in the park's bank.** `FUN_004e16b0` first calls `FUN_004d0190` on the bank thing with the price (`0x004e16bf`..`0x004e16c6`): the balance at `+0xc`, the world's `+0x1fc90` and the bank's `+0x124`, the same three adds the gate fee's `FUN_004d0600` makes. Then it credits the object's `+0x180` and `+0x70` and a global pool chosen by the descriptor's `+0x4ac` (`+0x20130` shops, `+0x20380` sideshows; a ride none). OpenTPW does not make the deposit: `ParkState.TakeAt` counts it (`CHARGE_BANK_DEPOSIT`, `docs/QUEUE.md` Q96).
+**A charge is deposited in the park's bank.** `FUN_004e16b0` first calls `FUN_004d0190` on the bank thing with the price (`0x004e16bf`..`0x004e16c6`): `mBalance` at `+0xc`, the park analyser's month cash-in `+0x1fc90` and the bank's `mProfitThisYear` `+0x124`, the adds the gate fee's `FUN_004d0600` makes too; it has no gate, refuses nothing (its size check is handed to the bare `RET`) and does not write `mLastBalance`. Then it credits the object's `mTotalTakings` `+0x180` and today's takings `+0x70` and the analyser's shop or sideshow accumulator (`+0x20130`, `+0x20380`; a ride neither). OpenTPW does not make the deposit: `ParkState.TakeAt` counts it (`CHARGE_BANK_DEPOSIT`, `docs/QUEUE.md` Q96).
 
 ### Measured prices and takings in Lost Kingdom
 
@@ -1722,17 +1724,36 @@ Drinks Shop **30**, Jungle Spray sideshow **20**, **Belly Bounce zero**; `mTotal
 
 Named by its own strings: `"Litter gone up by %d, is now %d"`, `"Customer bought a balloon, Aaah!"`, `"Trying to give a balloon to a pe…"`, `"Customer returning a costume."`, `"Balance file error: Shop has unk…"`, `"Sideshow won - happiness up %d p…"`. What it does, in order:
 
-1. **A sideshow (`+0x4ac` == 2) PAYS OUT:** `FUN_004e1a10` — the **cost of goods**, not the chance of winning — feeds `FUN_004e1920` (a booking against the object that also debits the park's balance, `FUN_004d01f0` at `0x004e1952`; OpenTPW counts it as `SETTLE_UP_COST_OF_GOODS_BOOKING`, as it does the shop's), and then **`person[+0x1a0] += FUN_004e1a10()`** — a prize ADDED to the guest's cash. A shop (`+0x4ac` == 1) takes the `FUN_004e1b40` path instead. **In Lost Kingdom that prize is 50 against a price of 20**, so winning the Jungle Spray leaves a guest 30 up.
+1. **A sideshow (`+0x4ac` == 2) PAYS OUT:** `FUN_004e1a10` — the **cost of goods**, not the chance of winning — feeds `FUN_004e1920` (`0x004fe225`: the cost booked against the object and debited from the park's balance, "The settle-up's bookkeeping"; OpenTPW counts it as `SETTLE_UP_COST_OF_GOODS_BOOKING`, as it does the shop's), and then **`person[+0x1a0] += FUN_004e1a10()`** — a prize ADDED to the guest's cash. A shop (`+0x4ac` == 1) books `FUN_004e1b40`, its cost of goods scaled by its quality and ingredient settings, instead (`0x004fe251`), and pays nobody. **In Lost Kingdom that prize is 50 against a price of 20**, so winning the Jungle Spray leaves a guest 30 up and the park 30 down.
 2. **The excitement match**, `FUN_004fdcc0( object )` at `0x004fe259`: how the thing's excitement suited the guest's kind
    moves their happiness, and the excitement makes them sick by how little hungry they are ("The excitement match",
    below).
-3. **The item's own effects**, each added to a guest meter and clamped 0..100: the descriptor's `+0x144` and `+0x148` (with a sound of `0x83` or `0x84` depending which is larger), `+0x14c` → `+0x1b0`, `+0x150` → happiness `+0x19c`, `+0x154` → litter `+0x1b4`. Three more happiness changes follow, each reading the object's byte `+0x198`, `mAmountOfSpecialIngredient` by the object reader's own name (`0x004dc601`, string `0x0075b45c`; saved at file 1058): for the hunger effect `+0x148` and then the thirst effect `+0x144`, whichever is non-zero, `(rand & 7) + byte [+0x198] + that effect` under 30 docks `PeepInfo.SmallHappinessChange` (`0x004fe453`, `0x004fe4a5`); then happiness gains `byte [+0x198] * desc[+0x150] / 100` (`0x004fe4cf`..`0x004fe525`).
+3. **The item's own effects**, each clamped 0..100: the descriptor's `+0x144` taken from thirst `+0x1a4` and `+0x148` from hunger `+0x1a8` (`FCHS` at `0x004fe26d`, `0x004fe2b7`; with a sound of `0x83` or `0x84` depending which is larger), then added: `+0x14c` → `+0x1b0`, `+0x150` → happiness `+0x19c`, `+0x154` → litter `+0x1b4`. Three more happiness changes follow, each reading the object's byte `+0x198`, `mAmountOfSpecialIngredient` by the object reader's own name (`0x004dc601`, string `0x0075b45c`; saved at file 1058): for the hunger effect `+0x148` and then, independently, the thirst effect `+0x144`, each when it is non-zero, one draw `r` of the park's generator (`FUN_00516330`, even when the dock cannot fire) and `(r & 7) + byte [+0x198] + that effect` under 30, unsigned, docks `PeepInfo.SmallHappinessChange` (`0x004fe453`, `0x004fe4a5`), so a shop with both effects takes two draws and can be docked twice; then happiness gains `byte [+0x198] * desc[+0x150] / 100`, truncated toward nought and held to 0..100 (`0x004fe4cf`..`0x004fe525`). These run after all five effects and their log. At the stock amount 50 a drink cannot be docked (50 + 40) and gains 2 more happiness (measured in the original: +7 in all).
 3b. **The special ingredient**, a switch on the descriptor's `+0x158` (`0x004fe527`, table `0x004fe8e8`), each by the
    same byte: 1 (fat) adds it to the toilet need `+0x1ac`, 2 (salt) to thirst, 3 (ice) adds `byte * ThirstEffect / 100`
-   to thirst, 4 (sugar) `byte * 6 / 100` to the word `+0xc4`, each held 0..100. The Drinks Shop is ice. OpenTPW counts
+   to thirst, each held 0..100, and 4 (sugar) `byte * 6 / 100` to the guest's `mAdjustorSpeed`, the word `+0xc4` (person
+   file 32), with **no clamp** (`0x004fe60e`). `mAdjustorSpeed` joins the walking speed, (`mBaseSpeed` + the hurry speed +
+   it) / 100 eased a quarter of the way each sweep, and loses one a sweep (`FUN_004fa870`): a few percent for about a
+   second. A `SpecialIngredient` above 4 does nothing (`0x004fe530`). The Drinks Shop is ice: a drink takes 40 thirst, held at nought, and gives 20
+   back at the stock amount (measured in the original: 36 to 20). OpenTPW counts
    this, the `+0x198` terms above and the arm below, and builds none of them (`SETTLE_UP_SPECIAL_INGREDIENT`,
    `SETTLE_UP_INGREDIENT_HAPPINESS`, `SETTLE_UP_APPEARANCE`; Q177).
-4. **Shop arms on the descriptor's `+0x15c`:** 1 gives a BALLOON (asserting the guest has none, building a sprite, and clamping a value between `DAT_0075d0f0` and `DAT_0075d0f4`); 2 hands out or takes back a COSTUME via the guest's `+0x24`/`+0x20`; anything else is a balance-file error.
+4. **Shop arms on the descriptor's `+0x15c`, `AppearanceEffect`:** nought does nothing; any value but 0, 1 or 2 logs a
+   balance-file error into the bare `RET` and does nothing more.
+   - **1, a BALLOON** (`0x004fe6ba`..`0x004fe78a`): the assert that the guest holds none goes to the bare `RET`; the
+     park's generator is **reseeded with the guest's id** (`FUN_00516370`), so a guest's balloon depends on their id
+     alone; a variant of sprite bank 10 ("balloons") is drawn and a world sprite built (script `0x0074f480`, frame 0
+     held), its handle in `mBalloonScript` `+0x210`; `mRemainingBalloonLife` `+0x214` (file 495) = the shop's quality
+     × 255 / 100, held to 25..255 (`DAT_0075d0f0`, `DAT_0075d0f4`); event `0xc` naming the shop. The life loses one on
+     each of the guest's needs sweeps outside states 16 and 17 on cell kinds 0, 1, 3, 9 or 10 (`FUN_00501650`), and at
+     nought the balloon is let go (`FUN_004fe950`: script `0x0074f4c0`, frame 1 for 13 turns, then gone) - about 25 s,
+     2 min or 4 min at quality 0, 50 or 100. Riding frees the sprite and keeps the life (`SetState(0x10)`); leaving the
+     ride rebuilds it, reseeding again, unless the thing left is a balloon shop (`SetState(0xf)`). Leaving the park lets
+     it go, and a prankster (`mPrankeryIndex` 102) pops the first on its cell. Nothing reads it for happiness or a need.
+   - **2, a COSTUME** (`0x004fe642`..`0x004fe6b5`): a guest not in one gets `mESPSprite` `+0x24` (the sprite bank) 2 and
+     `mSpriteID` `+0x20` a draw from bank 2, and event `0xb`; one already in costume ("Customer returning a costume.")
+     goes back to bank 0, reseeded with their id, which gives their arrival picture back, and no event. The picture
+     changes when the guest's sprite is rebuilt on leaving the shop. It never wears off and changes nothing else.
 5. **A toilet (`mFlags & 1`)**, in order (`0x004fe78f`..`0x004fe7fb`): dirties the toilet by the need the guest brought
    (`FUN_004e2440` with the need's byte: the State of repair `+0x44` falls by 0.05 of it, held to 0..100, and on falling
    below 25 - "Toilet has become dirty and smelly" - unstamps `RegionFX` 1 around the toilet's cell and stamps 6, each
@@ -1751,8 +1772,7 @@ Named by its own strings: `"Litter gone up by %d, is now %d"`, `"Customer bought
 ### The excitement match — `FUN_004fdcc0`
 
 Decoded first-hand and put to three refuters (Q169), every step at its address. It runs behind the settle-up's gate on
-`+0x1f1` (`FUN_004fd970`, `0x004fda05`..`0x004fda16`), so only when that byte is non-zero (what it means is not settled;
-see below), and before the item's effects, so it reads the guest's hunger as they came off.
+`+0x1f1` (`FUN_004fd970`, `0x004fda05`..`0x004fda16`), so only when that byte, the win roll, is non-zero ("`+0x1f1` at the settle-up is the win roll", below), and before the item's effects, so it reads the guest's hunger as they came off.
 
 1. **No excitement, nothing.** `FUN_004e0860( 0 )` on the object, the thing's excitement (the ride score's own reading,
    `ParkRideScore.ExcitementOf`); a low byte of nought returns at once (`0x004fdcd6`), neither half run.
@@ -1814,16 +1834,26 @@ In `rides`, **twelve of thirteen** `Easy_*.sam` files carry real content — `Ea
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
-| `FUN_004e2670` | — | Reached from `FUN_00501db0` case `0xe` (entering `EnteringRide`). Asserts `"Non sideshow object number %d ha[s]…"` (descriptor `+0x4ac` == 2), reads a chance-of-winning byte at **`+0x190`** (decimal 400), computes **`rand() % 100 <= chance`**, writes the result into script variable **11 (`VAR_PARAM`)**, and returns it. | Its own assert |
+| `FUN_004e2670` | — | Reached from `FUN_00501db0` case `0xe` (entering `EnteringRide`). Asserts `"Non sideshow object number %d ha[s]…"` (descriptor `+0x4ac` == 2), reads a chance-of-winning byte at **`+0x190`** (decimal 400), draws **`r = FUN_00516330() % 100`** from the park's own generator (`0x004e26c6`, the world's `mRandomSeed`, not the C library's `rand()`), wins when **`chance >= r`** (`CMP`/`SBB`/`INC` at `0x004e26e2`), so a chance below 100 wins (chance + 1) times in 100, writes the result into script variable **11 (`VAR_PARAM`)**, and returns it. One draw for every admission to any object. | Its own assert |
 | `+0x190` | `mChanceOfWinning` | **It is the OBJECT's, and it is saved and loaded with the object** (`FUN_004db7d0`, beside `mCostOfGoods` at `+0x188`, `0x004dcd01`..; file 1050); two setters (`FUN_004e1a20`, `FUN_004e21c0`) are reached from the object window. Placing one, `FUN_004db090` derives it as `100 - descriptor[+0xec]` at `004db38f`..`004db3a1` — `MOV EDX,[EDI+0xec]` / `MOV ECX,0x64` / `SUB ECX,EDX` / `MOV [ESI+0x190],ECX` — where `+0xec` is `UsageInfo.InitChanceOfLoosing`. That `FUN_004e2670` takes both the catalogue id (`+0xe`) and the script handle (`+0x24`) off the same pointer is what fixes it as the object rather than the person. OpenTPW reads the item's figure instead (Q97). | Disassembly |
 | `FUN_004e1a10` | `mCostOfGoods` | **Not the chance-of-winning accessor.** It is two instructions, `MOV EAX,[ECX+0x188]; RET`, on the OBJECT. `FUN_004db090` builds `+0x188` from the descriptor's `+0x140`, which is `UsageInfo.InitCostOfGoods`. It is the sideshow's **prize** and the numerator of what winning is worth. The chance of winning is `+0x190`, reached by `FUN_004e21b0`. | Disassembly, 2026-09-20 |
 | `FUN_004e1a00` | `mPricePerUse` | `MOV EAX,[ECX+0x194]`. The divisor in the happiness sum below. | Disassembly |
 | `FUN_004e21b0` | — | `MOV AL,[ECX+0x190]` — the real chance-of-winning accessor. | Disassembly |
 | `UsageInfo.InitChanceOfLoosing` | — | **VERIFIED as the source behind `mChanceOfWinning`, with a per-item override:** `sideshow/SideShow.sam` declares **70** as the category default and **`Junspray.sam`, inside `junspray.wad`, overrides it to 75** — so the Jungle Spray's chance of winning is **25**. A grep of the installed folder cannot see that, because an item's overrides live in the `.sam` inside its own `.wad`. **Nothing in `shops` or `rides` declares the key at all, so their chance of winning is 100 and their roll never fails** — which is the whole reason a shop always serves, and why `FUN_004e2670`'s assert reads "sideshow **or** this value is `'d'`" (decimal 100). (`Loosing` is the game's own spelling.) | `.sam` sweep + `FUN_004db090` |
 
-### What `+0x1f1` means is not settled
+### `+0x1f1` at the settle-up is the win roll
 
-The save reader names the byte `mQueuePos`; the state setter writes the sideshow win roll into the same byte; and `FUN_004fd970` branches on it between `"Person lost this sideshow…"` and the full effects path. **It is overloaded, and the meaning at settle-up time should be treated as UNKNOWN** — "Person lost this sideshow" reads at least as much like *did they get their go / were they served* as *did they win*. For a sideshow with `VAR_LANE1..3` the position plausibly says which lane the guest got, nought meaning none.
+The save reader names the byte `mQueuePos`, and while a guest queues it is their place. **By the settle-up it is the
+win roll, for every kind of object** (Q177's critic, re-read): `SetState(0x10)` has two callers, the state-14 turn
+(`0x00501bc7`) and the forced boarding `FUN_00500870` (`0x005008ef`), which runs only on a head already in raw state 14
+(`0x004e04b5`), so every rider has been through `SetState(0xe)`, which stores `FUN_004e2670`'s roll (`0x00501f41`).
+The settle-up's one caller is ExitRide (`0x005015f4`), whose one caller is Dismiss (`0x004e14b5`), and the byte's other
+writers are queue-side (`FUN_00501160` at `0x004ffdad`, `0x00500532`, `0x00500826`) or send the guest to state 6
+(`FUN_005012f0`). Every object but a sideshow carries a chance of 100 (the item declares no `InitChanceOfLoosing`), so a
+ride, a shop or a toilet always takes the effects arm; a sideshow's player takes it when they won. Measured in Alexah's
+played jungle park: all 73 riders at non-sideshows hold 1, and the sideshows set to 55 to 58 served 58 winners of 98
+customers over 30 days, against about 57 expected; in the original's stock park every spray play that went down the
+nought arm was a loss by its cash and its thought ("The settle-up's bookkeeping", below).
 
 **The ordinary queue flow writes `mQueuePos` in `FUN_00501160`** (`0x005011cb`), which runs on joining (`0x004ffdad`), on every re-take from the `InQueue` turn (`0x00500532`) and at a refused door (`0x00500826`). Join (`FUN_004ddb90`), leave (`FUN_004ddd20`), the guest-side completion (`FUN_00500870`) and the state-12 shuffle write none; `FUN_005012f0` zeroes it on the way out.
 
@@ -1840,7 +1870,8 @@ The save reader names the byte `mQueuePos`; the state setter writes the sideshow
 | `+0x1ac` | zeroed by the toilet arm |
 | `+0x1b0` | illness (the balance file calls it "vomit") |
 | `+0x1b4` | litter |
-| `+0x1d0` | sideshow visit counter |
+| `+0x1c4` / `+0x1c8` / `+0x1cc` | `mNumRides`, `mNumShops`, `mNumSideshows` (file 444, 448, 452): the visitor window's "Rides ridden", "Purchases made", "Sideshows played" |
+| `+0x1d0` | `mNumSideshowsWon` (file 456): "Sideshows won" |
 | `+0x1dc` | `mMajorDest` (file 442) |
 | `+0x1de` | `mSavedMajorDest` (file 499): the major the minor decision switched away from |
 | `+0x1e0` | `mPreviousRides[4]` |
@@ -1848,14 +1879,218 @@ The save reader names the byte `mQueuePos`; the state setter writes the sideshow
 | `+0x1f1` | `mQueuePos` (file 494) |
 | `+0x1f4` | `mQueueMoveDelay` (file 490) |
 | `+0x208` | `mTimeOfLastSpotAnim` |
+| `+0x20c` | happiness at the queue's join, a float; not saved ("The settle-up's bookkeeping") |
 | `+0x210` | `mBalloonScript` |
+| `+0x214` | `mRemainingBalloonLife` (file 495) |
 | `+0x220` | `mState` |
 | `+0x224` | `mSavedState` |
-| `+0x20` / `+0x24` | costume in / out |
+| `+0x20` / `+0x24` | `mSpriteID`, the variant, and `mESPSprite`, the sprite bank (0 kids, 2 costumes) |
+| `+0x30` | the history block: `mLastThought`, the event ring from `+0x34`, the bubble, its cursor and stamp (file 254) |
+| `+0xc4` | `mAdjustorSpeed` (file 32), the sugar's speed |
 | `+0xc2` | the hurry speed, from the table at `0x0075c7f0` (0, 25, 50): the needs turn writes 25 above a toilet need of 80, else nought; the toilet arm 25; the walk to the gate 50 when a bus is due and 25 for a handle whose low two bits are nought; entering state 12 nought |
 | `+0x2c` | `mCount`, the person base's byte at file 36 (loaded at `0x004f91e8`, written out at `0x004f8cc8`): the minor decision's walking-turn count |
 
 `FUN_005019f0` case `0x11` walks the guard chain from `mFirstGuard` (`+0x1da744`, see the header's list heads above) through `+0x210` / `+0x212`, so those two are read off a staff record and are not evidence against the guest table's `mBalloonScript`. The case itself is undecoded.
+
+## The settle-up's bookkeeping - what `FUN_004fd970` keeps besides the effects
+
+Decoded for Q177 (`wf_1c25d211-f5e`: five decoders in Ghidra, each put to a skeptic, then a critic; the load-bearing
+sites re-read first-hand) and measured in the original's memory over its stock Lost Kingdom park ("Measured in the
+original", below). One settle-up, in order:
+
+| Step | Where | What it keeps | What a player sees of it |
+|---|---|---|---|
+| 0 | `0x004fd983`..`0x004fd9a5` | The guest's recent-things history: `+0x1e0`..`+0x1e6` shift by one and `+0x1e0` takes the object, on both arms | Nothing directly; it steers later choices ("What a thing is worth to a guest"). OpenTPW builds it (`Peep.RememberVisit`) |
+| 1 | `0x004fd9ac`..`0x004fd9d2` | The guest's `mNumRides` `+0x1c4`, `mNumShops` `+0x1c8` or `mNumSideshows` `+0x1cc` (person file 444, 448, 452) +1 by the descriptor's `+0x4ac` 0, 1 or 2, before the charge, on both arms; a feature (a toilet) bumps none | The visitor window's "Rides ridden", "Purchases made" and "Sideshows played" (`FUN_004b72a0`, controls `0x372e`..`0x3730`); the all-visitors list's "Rides Ridden" |
+| 2 | `FUN_004e1690`, `0x004fd9e2` | **The visit count**: the object's `mNumCustomers` `+0x1a0` (object file 494) and today's customers `+0x1a8` +1, every settle-up, before the gate | The ride and toilet windows' "Users last month" (`0x3e21`; `FUN_004973a0` for a toilet), the all-items customer columns, and the shop and sideshow windows' "C of M" (UITEXT 460: C the thirty days' customers, M those plus the thirty days'
+walk-aways, ring `+0x230`); `mNumCustomers` above nought loses the new object's full refund (`FUN_004e2290`) |
+| 3 | `FUN_004fe1e0` | The effects arm, only when `+0x1f1`, the win roll, is non-zero: event 8, the cost of goods (below), a sideshow's prize, the effects, a toilet's relief, and a sideshow winner's `mNumSideshowsWon` `+0x1d0` (file 456) +1 (`0x004fe81f`) | "Sideshows won" |
+| 4 | `0x004fda1b`..`0x004fda47` | `3d` = 3 × ((trunc happiness `& 0xff`) − (trunc snapshot `+0x20c` `& 0xff`)), logged into the bare `RET`; happiness itself is not moved | - |
+| 5 | `FUN_004e1e00` | Today's satisfaction `+0x340`: `3d` when it is nought, otherwise (it + `3d`) / 2, truncated toward nought; no count, no clamp, so a day that averages to nought is overwritten by the next visit | Customer satisfaction, below |
+| 6 | `0x004fda92`..`0x004fdb2c` | Analyser samples of `(3d + 50) & 0xff` (a byte `ADD`, so it wraps): a shop one of kind 10..13 by `SpecialIngredient` 1..4 and one of kind 15 or 16 by `AppearanceEffect` 1 or 2; a sideshow kind 18; a ride or a feature none | Nothing (below) |
+| 7 | `FUN_004e19f0`, `0x004fdb33` | Today's served count `+0x2b8` +1, for every kind of object | A sideshow's "Winners last month" (`FUN_004e1f20`: 30 days' served × 100 / 30 days' customers, `0xa096`, UITEXT 42); for any other kind nothing |
+| 8 | `0x004fdb38`..`0x004fdb7f` | A sideshow's winner: thought 5 and event `0x18` naming it | A thumbs-up bubble; the thought in the visitor window |
+| - | `0x004fdb8d`.. | The nought arm instead: "Person lost this sideshow...", happiness less `MediumHappinessChange`, and for a sideshow thought 6 and event `0x19`; none of steps 3 to 8 | A thumbs-down bubble |
+
+### The cost of goods and the park's money
+
+**`FUN_004e1920( amount )`** adds the amount to the object's today's cost `+0xf8` and `mTotalCosts` `+0x184` (object
+file 1086; `0x004e1938`, `0x004e193e`), then withdraws it from the bank (`FUN_004d01f0` on `mBankAccount`, world
+`+0x1da726`; `0x004e1952`), then posts minus the amount to the challenge manager as challenge type 12 (a shop) or 13 (a
+sideshow) (`FUN_004d27a0`, `0x004e19d9`). The shop's amount is `FUN_004e1b40`, trunc( `mCostOfGoods` × (1 + q ± a) ),
+where q = clamp( (`mQualityOfGoods` − 50) × 0.005, ±0.5 ) and a the same of `mAmountOfSpecialIngredient`, subtracted for
+fat or ice (`SpecialIngredient` 1 or 3) and added otherwise; at 50 and 50 it is the cost itself. A sideshow's is
+`mCostOfGoods` raw, booked only for a win, beside the prize.
+
+**The withdrawal, `FUN_004d01f0`, does nothing while the bank's `mWithdrawalsEnabled` (`+0x114`, bank file 28) is
+nought** (`0x004d01f3`). Otherwise `mBalance` falls by the amount; if it goes below nought from an `mLastBalance` of
+nought or more, `mTurnEnteredRed` `+0x120` takes `mGameTick`; `mLastBalance` `+0x11c` takes the new balance; the park
+analyser's month total costs `+0x1f5a0` rise and the bank's `mProfitThisYear` `+0x124` falls by it. It refuses nothing
+and has no floor. The queue drain's debit is the same function; a loan's instalments and its paying off read the flag
+themselves (`FUN_004d0370`, `FUN_004d0850`), its only other readers. The constructor sets the flag to 1 and the load reads it; `FUN_00404140` clears it
+and `FUN_004041d0` sets it again around an online park's layout replay (game type 1 only), so it is 1 in Easymode and
+every offline park. The deposit, `FUN_004d0190` ("Spending", above), has no such gate.
+
+**So a drink nets the park +10** (30 in, 20 out), a Jungle Spray play won −30 (20 in, 50 out, 50 to the guest) and one
+lost +20. The challenge posts land only while a challenge of that type is current and on; the challenge system switches
+on only in game type 0 and after the days at `0x007857c8` (`DaysUntilFirstChallenge` by key order; `FUN_004d1e90`), and Easymode's manager (thing 10) saves it
+off.
+
+**Who reads what the booking moves**:
+
+- The balance, whose getter is read at 26 sites (`FUN_005195d0` then `FUN_006ad810`): the park gadget's money
+  (`FUN_004a0ab0`); the buy list's affordability and row colour; the hire screen (`FUN_0049b650`, `FUN_0049bdd0`); the
+  loans screen's pay-off test (`0x0049f5d4`); the path tools' price checks (`FUN_00535670` reddens a cell dearer than
+  the balance, `0x00535914`; `FUN_005346d0`, `0x00534779`; `FUN_00539760`, `0x00539f82`); the analyser's month-end
+  balance sample (`FUN_004c7720`, `0x004c7730`, ring `+0x1f104`); six not yet named (`0x00487b36`, `0x004abd8d`,
+  `0x004af4a5`, `0x00523645`, `0x00532383`, `0x00539056`); and eight advisor rows in undisassembled code
+  (`0x0059defb`..`0x0059eafd`): three compare it with a row's threshold (`+0x274`, `+0x298`, `+0x330`), one compares
+  it less `FUN_004d0a00` with `FUN_004d0970` × `+0x338`, and four fire only below nought (`0x0059e9b0` when
+  `FUN_004d0810` answers non-zero, and the three red-time rows below).
+- Going red: `FUN_004d0370`, at each month change with the balance and `mLastBalance` both below nought, divides the
+  time since `mTurnEnteredRed` by 30 days and at 6 or more broadcasts message `0x13` with 2 (`0x004d054c`,
+  `0x004d05b2`), which the bank's handler turns into the end of the park (`FUN_004d02d0`, `FUN_005168f0`) unless the world's state
+  (`+0x1da738`) is already 4 or `FUN_00516c00` finds the word at `0x007cf4f4` set (`0x004d030d`, `0x004d031b`; what that
+  word holds is not decoded). A deposit
+  never writes `mLastBalance`, so climbing out on deposits alone does not clear the stamp: if the next withdrawal takes
+  the balance below nought again, `mTurnEnteredRed` is not stamped afresh and the count runs from the first entry. Any
+  withdrawal that leaves the balance at nought or more (a shop's cost of goods, a loan's instalment) writes a
+  non-negative `mLastBalance`, and the next dip stamps afresh. The advisor counts the same months: rows 103 to 105
+  (`0x0059e9f0`, `0x0059ea70`, `0x0059eaf0`) score only while the balance is below nought and `FUN_004d0810` answers
+  nought (it looks over the eight loans; what it asks is not decoded), by `FUN_004d0260`'s time since `mTurnEnteredRed`
+  over 30 days: under 3 months, 3 or 4, and exactly 5, the month before the end.
+- `mProfitThisYear`: golden ticket 4 when it passes the global at `0x007857a0` (`GoldenTicketLocal.ProfitYear` by key order; `FUN_004d4bc0`, `0x004d4d6b`) and
+  advisor row 318 near it, both in game type 0 only. It is zeroed on the year's change (`0x004d034e`), not on entering a
+  park: the original entered Easymode with −12013 and read −11888 after five gate fees.
+- The object's cost ring and total: the all-items "Profit Last Month" (`FUN_004e1c70`: up to 30 finished days of
+  takings `+0x70` less costs `+0xf8`, today's excluded) and "Total Profit" (`FUN_004e1c60`, `mTotalTakings` −
+  `mTotalCosts`), and the shop and sideshow windows' "Profit last month" (`0xc078`, `0xa092`). The shop window's "Cost of
+  goods" (`0xc076`) shows `FUN_004e1a30` of the window's pending quality and amount, which reach the shop only when the
+  window closes, steps to the next shop or applies to all (`FUN_004b0aa0`, vtable slot `+0x3c`), so a moved slider
+  shows a cost the sales do not book yet.
+- The analyser's month totals, pushed into 144-month rings at `+0x1fc94` and `+0x1f5a4` on the month's change
+  (`FUN_004c7720`): the finance graph's "Money out" once the month is finished, the hire screen's mini-balance
+  ("Other costs", "Balance": `hud.md`), the staff-costs and loans screens, and the gadget's icon beside the money
+  (`FUN_004a0e30`, control `0x31`, frame 1 when last month's cash in was below its total costs; likely the red down arrow beside the
+  money in the original's frame, though which picture each frame is was not established).
+
+### The object's six day rings, and what shows them
+
+An object keeps six rings of 30 whole numbers, each `mTemp` (today's), `mData[30]`, `mCurrentEntry` (from −1),
+`mNumEntries` 30 and `mWrappedAround`. On message `0xb`, **the day's change**, the object's handler `FUN_004dd320`
+rolls all six: the entry on, wrapping to nought and setting the flag at 30, `mData` = `mTemp`, `mTemp` = 0. In memory
+and in the object's save record, in the serialiser's order (`FUN_004db7d0`): today's costs `+0xf8` (file 228), takings
+`+0x70` (361), `mNumCustomers` (494), customers `+0x1a8` (498), `mNumWalkAways` (631), walk-aways `+0x230` (635),
+served `+0x2b8` (768), satisfaction `+0x340` (901); the record's tail follows at 1034. "Last month" is the last 30 game
+days.
+
+**Customer satisfaction is `FUN_004e1e30`**: 50 + trunc( the sum of the last n finished days / n ), n the days filled up
+to 30, and 50 with none; today's is excluded, a day with no visit counts nought and pulls it toward 50, and nothing
+holds it to 0..100. It shows in the shop and sideshow windows' gauge (`0xc079`, `0xa094`, UITEXT 36 and 46), the
+all-items Shops and Sideshows columns, and the map's satisfaction colours, which paint only ride, shop and sideshow
+cells (codes 1, 2, 3, 8 of `FUN_005f2050`), so a toilet's is shown nowhere and a ride's only on the map. The advisor
+reads it for shops and sideshows more than 30 days old: the drinks "great satisfaction" row (256, response 496) scores
+(sat − 70) × 4 and can pass the advisor's 25 from 77; the "poor" rows 243 to 246 (food, shops, restaurant, drinks) score a satisfaction
+below their line, and row 247 (sideshows, though its log says "satisfaction") the lowest thirty-day walk-away
+percentage below its line (`FUN_004cc090`), each times a positive `ScorePerPoint`, never above nought, so they never
+play with the shipped `Advisor.sam`. Nothing in a
+guest's choice reads it.
+
+### The join's snapshot, `+0x20c`
+
+A float, written with the guest's happiness at the queue's join (`0x004ffd92`), just before its only call to
+`FUN_004ddb90`; zeroed by the guest's constructor (`0x004faf8d`) and by the load's factory before the record is read
+(`FUN_005179c0`, `0x0051861c`). It is not saved, and the settle-up is its only reader. So a guest already queued or
+riding when a park is saved compares against nought after the load, 3 × their whole happiness. On staff the same
+offsets are the patrol corners (`+0x20a`, `+0x20c`).
+
+### The event history
+
+`FUN_0050c100( event, argument )` writes into the 0x90-byte history block at the person's `+0x30`: `mLastThought` at
+`+0x30`, `mEventHistory`, 32 entries of two words from `+0x34`, `mThoughtScript` `+0xb4`, the cursor `mActionHistIndex`
+`+0xb8` and `mTimeBubbleShown` `+0xbc`. A push stores at the cursor and steps it by one, wrapping at 32, and skips an
+entry equal to the newest. The block is saved (person file 254). **The ring's only reader is the destructor's dump**
+(`FUN_004faa60` through `FUN_0050c190`), which prints into the bare `RET` `FUN_005da3c0`; wider scans (every register
+made from `+0x30`, every `+0x34`/`+0x36` address) found no other. So nothing a player sees comes from it. The settle-up
+pushes 8 (the object, every effects arm), `0xb` and `0xc` (a costume given, a balloon), `0x11` (a toilet), `0x12` (the
+toilet's illness), `0x18` and `0x19` (a sideshow won or lost, naming it).
+
+### Thoughts 5 and 6, and the bubble
+
+`FUN_0050be80( thought, 0 )`, SetThought, stores the thought in `mLastThought` first, then shows nothing more in any
+first-person view (`gui_CameraFlags & 0x16`) or an online game; otherwise it frees the old bubble and, when `mGameTick`
+is at least `mTimeBubbleShown` + 20 × the thought's class, builds a world sprite of kind 9 ("thoughts") and stamps the
+time (`0x0050c039`..`0x0050c06a`). Thoughts 5 and 6 are class 0, so a sideshow player always gets one: 5 "Pleased", a
+thumbs-up; 6 "Dissatisfied", a thumbs-down (THOUGHTS.str rows 5 and 6; the pictures in `Generic\Thoughts`). Each frame
+`FUN_004fa030` puts the bubble 2.5 units above the guest; `FUN_0050be40` takes it away 13 to 16 sweeps later, or a
+later thought frees it sooner. `mLastThought` is read by the visitor window (its icon and text), Park Status's "Top 3
+Thoughts" (three icons, empty ones hidden), the all-visitors list and the locator panel. Thought 6 also comes from the
+door's price (`0x00500756`) and the park's fee (`FUN_004ff9d0`).
+
+### The analyser's samples
+
+The park analyser (`mParkAnalyser`, model 13) keeps 20 byte rings of 50, one per kind, at `+0x216fc` + kind × `0x40`
+(`mTemp`, `mData[50]`, `mCurrentEntry` from −1 at `+0x34`, `mNumEntries` at `+0x38`, `mWrappedAround` at `+0x3c`);
+`FUN_004c74b0( kind, value )` steps the entry on and stores the byte. **Only kind 0 is ever read**: the gate's ticket
+opinion (`FUN_004ff5b0`), by the advisor's messages 91 and 92 ("high ticket price", "a steal") through `0x004c9830` and
+`0x004c9920`, whose four calls all pass 0. The settle-up's kinds 10 to 13, 15, 16 and 18, and the door's 1 to 4, 6, 7
+and 9, are written, saved and loaded, and read by nothing else.
+
+### What Lost Kingdom reaches
+
+All of it. The Belly Bounce (a ride): steps 1 to 5 and 7. The Drinks Shop (`Coconut`, shop, ice, appearance nought):
+steps 1 to 7, a booking of 20, kind 12, the ingredient's +2 and thirst back. The Jungle Spray (sideshow, chance 25):
+steps 1 and 2 on every play, the rest on a win (the booking of 50, kind 18, thought 5), thought 6 on a loss. The three
+Small Toilets (features): step 2, and on the effects arm steps 3 (events 8, `0x11`, and `0x12` when illness is above 90), 4, 5 and 7, with no guest counter,
+no booking and no sample. By their items' research cost (`hud.md`'s rule, not measured) a player can place a Balloon Shop (the balloon arm) and a
+Burger Shop (fat) from the start, and a Costume Shop, Fries (salt) and Ice Cream (sugar) after research; each has an
+`Easy_` file. The shop window's
+quality and ingredient sliders reach the cost of goods, the ingredient's terms and a balloon's life.
+
+### Measured in the original
+
+The reference install under Proton, off-screen, its stock Lost Kingdom park entered by the reference player, read from
+memory at each settle-up (`~/.cache/tpw-harnesses/q177/origread.py`, `orig/watch1.log`, checked by `orig/analyse.py`):
+814 changes over 7 minutes, 145 of them settle-ups; the 47 in which one guest alone moved were checked against the
+decode, 254 checks of 257 as predicted, and the three that were not are the harness's: one thirst read against a stale
+snapshot, and two where one poll caught a ride's settle-up and the day's roll together. 16 drinks each moved the balance
++10, 9 lost spray plays +20 and 8 toilet visits nothing, and 14 Belly Bounce rides were as decoded. The four won spray
+plays (guests 33, 48, 67 and 44) each shared their poll with guests who moved no counter, and each moved the balance
+−30, costs +50, served +1, cash +30, with thought 5, a live bubble and event `0x18`; the Jungle Spray's `mTotalCosts`
+went from 0 to 200 over the run. A drink (guest 42): the balance 87724 to 87734,
+`mProfitThisYear` +10, `mLastBalance` the new balance, the analyser's month cash in +30 and costs +20, the shop's
+takings +30 and costs +20 with today's +30 and +20, customers and served +1, satisfaction 21 (3 × 7) and kind 12's
+sample 71, the guest's purchases +1, cash −30, happiness 50 to 57, thirst 36 to 20, event 8 naming thing 16. A Jungle
+Spray win (guest 33): happiness 59 to 83, satisfaction 72, kind 18's sample 122, the balance −30, costs +50, cash +30,
+thought 5 with a live bubble, event `0x18`. A loss (guests 40, 34, 31): the balance +20, no cost, nothing served,
+satisfaction unchanged, happiness −15, thought 6 with a live bubble, event `0x19`. A toilet (guest 37): customers and
+served +1, no guest counter, event `0x11`. The Belly Bounce: rides ridden +1, served +1, event 8, and today's
+satisfaction by step 5 (18 averaged with 18; 45 then 15 to 30). At each game day's change the six watched objects' satisfaction
+cursors (`+0x3bc`) stepped together, wrapping from 29 to 0, and today's costs, takings, customers, served and
+satisfaction went to nought with them (the walk-aways and the other five cursors were not read). The HUD of the last frame read 88070, the balance memory held at that tick (`orig/s05.png`), beside a red down arrow.
+The park clock ran fast (the machine had been up seven days, `TOOLING.md`); nothing here is a timing.
+
+### Measured in the game, before any change
+
+`q177run.py` (silent, the stock jungle park, three guests made inside by `admit` and sent by `send`; predicted first;
+`save/` unchanged; `~/.cache/tpw-harnesses/q177-run1/`): each counter's rise between two censuses was the one the
+interval's log lines predict: the lost spray play, the two drinks (one interval), the toilet visit, and an empty tail
+(four of four intervals); `money`
+read balance 88112 and takings 125 across both drinks, where the original's would have risen 20; the drinker's line
+read thirst 80 to 40, happiness 0 to 5, cash 700 to 670, where the original's gives thirst 60 and happiness 7. The HUD
+shows 88112 in the photographs before and after the drinks (`C-spray.png`, `A-drinks.png`), and no bubble anywhere
+after the lost play. Of the run's seven checks six matched; the seventh, balance unchanged across the spray play, failed on the harness: five gate fees
+(125) landed in the same interval, and balance less takings stayed 87987.
+
+### Where OpenTPW differs
+
+`ParkRideOperation.SettleUp` builds the charge, the prize, the excitement match, the five effects, the toilet's relief,
+the winner's cheer and the lost dock, and counts the rest by name: `SETTLE_UP_EVENT_HISTORY`, `_COST_OF_GOODS_BOOKING`,
+`_INGREDIENT_HAPPINESS`, `_SPECIAL_INGREDIENT`, `_APPEARANCE`, `_HAPPINESS_SINCE_JOIN`, `_OBJECT_VISIT_COUNT` (which
+stands for step 7, the served count), `_SIDESHOW_THOUGHT` and the toilet's three. **Steps 1 and 2 are neither built nor
+counted**, against `CLAUDE.md` rule 4. Its win roll (`PeepBehaviour`, `Succeeds`) draws from `System.Random` where the
+original draws from the park's generator, and reads the item's chance where the original reads the object's (Q97). The
+build is Q177b onward in `docs/QUEUE.md`.
 
 ## Object fields
 
@@ -1876,10 +2111,17 @@ The save reader names the byte `mQueuePos`; the state setter writes the sideshow
 | `+0x5d` | `mOperatingCapacity` | File 1034 |
 | `+0x68` | `mCanLoad` | File 214, 4 bytes |
 | `+0x6c` | `mPersonBeingLoaded` | |
-| `+0x70` | takings accumulator credited alongside `+0x180` | |
+| `+0x70` | today's takings, the `mTemp` of the day ring saved at file 361 (`mTemp` itself at 370) | Credited alongside `+0x180`; "The settle-up's bookkeeping" |
+| `+0xf8` | today's costs, the `mTemp` of the day ring saved at file 228 (`mTemp` at 237) | The cost of goods booked |
 | `+0x180` | `mTotalTakings` | File 1090 |
+| `+0x184` | `mTotalCosts` | File 1086 |
+| `+0x188` | `mCostOfGoods` | File 1042 |
+| `+0x18c` | `mQualityOfGoods` | File 1046; 50 when built, the shop window's quality |
 | `+0x190` | `mChanceOfWinning` | Saved with the object (file 1050); derived at placement as `100 - descriptor[+0xec]` (see "The sideshow win roll"). **This is an OBJECT offset.** Do not confuse it with the **person** `+0x190` (`mPreviousX`) in "Where a WALKING peep is drawn" below — different records, same number |
 | `+0x194` | `mPricePerUse` | File 1054 |
+| `+0x198` | `mAmountOfSpecialIngredient` | File 1058; 50 when built, the shop window's ingredient |
+| `+0x1a0` | `mNumCustomers` | File 494 |
+| `+0x1a8`, `+0x230`, `+0x2b8`, `+0x340` | today's customers, walk-aways, served and satisfaction, day rings' `mTemp` | Rings saved at file 498, 635, 768, 901; the `mTemp`s at 507, 644, 777, 910 |
 | `+0x19c` | `mState` | |
 
 Object records are also read at file offsets 1035 and 1062.
@@ -1901,7 +2143,7 @@ Object records are also read at file offsets 1035 and 1062.
 | 8 | `VAR_WORN` | Worn |
 | 9 | `VAR_RUNNING` | |
 | 10 | `VAR_PAD` | |
-| 11 | `VAR_PARAM` | The sideshow win roll, written by `FUN_004e2670` |
+| 11 | `VAR_PARAM` | The win roll, written by `FUN_004e2670` at every admission |
 
 
 The inbox/outbox asymmetry is why the polarity looks inverted; it was settled by disassembling a known writer and a known reader beside each other.
@@ -2204,9 +2446,10 @@ callee is the sprite-script VM `FUN_00475010`, and a sweep of all 698 instructio
 **`mLastPosX`/`mLastPosY` are NOT this pair, and reading them as a previous position is a trap.** They are
 live at person `+0x218`/`+0x21c` (save 430 / 434), and their only live reader is `FUN_004fe900`, gated on
 `+0x210`: it places a *secondary* sprite at the pair's old value and only then overwrites them, which is
-one frame of deliberate lag for something trailing its owner. **What that something is remains unsettled** —
-one reading is a held balloon (`+0x210` is named `mBalloonScript` by the guest serialiser, and the height
-term shortens as the owner moves), another a ground effect — and the reads of `+0x210` in
+one frame of deliberate lag for something trailing its owner. **That something is the held balloon**:
+`+0x210` is the sprite the settle-up's balloon arm builds, and `FUN_004fa030` places it through `FUN_004fe900` each frame
+for a guest holding one (`0x004fa184`..`0x004fa196`), so it trails one frame behind ("The effects of a visit", 4); the
+height term shortens as the owner moves. The reads of `+0x210` in
 `FUN_005019f0` case `0x11` are off a staff record, so they do not question that name ("The guest record, as named by the game's own save reader" above). It does not bear on the walking case either way.
 
 ### What these constants cost to confirm
@@ -2419,8 +2662,8 @@ The Jungle Spray is queued for and invited in **about one run in five** at that 
 
 ## Open and unverified
 
-- **What `+0x1f1` means at settle-up time.** The byte is overloaded between a queue position and a sideshow roll.
-- **The balloon and costume SPRITE path** out of `FUN_004fe1e0`.
+- **The balloon and costume SPRITE path**: decoded ("The settle-up's bookkeeping", the item's other effects); which
+  picture frame 1 of the balloons bank is, and what the costume-head callers of `FUN_0044b410` draw, are not.
 - **`FUN_005019f0` case `0x11`**, the walk of the `mFirstGuard` chain through `+0x210` / `+0x212`.
 - **Whether a shop's duration of nought is correct** (it may simply not read it) where `FUN_004df8f0` would take a clamped value from the descriptor's `+0x1a0`. A bought one's is: the constructor writes `+0x5c` only for a starting duration above nought, and every shop's is nought (Q171).
 - **Refuted, so do not repeat:** "only `UNBOUNCE` writes `VAR_LETMEOFF`" — there are six writers, and the claim is false for 16 of the park theme's 17 dismissing ride scripts. "The shops' `mOperatingCapacity` might be nought, leaving them permanently full" — every visitable object has a non-zero capacity.

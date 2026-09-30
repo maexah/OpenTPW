@@ -31,11 +31,11 @@ namespace OpenTPW.UI;
 /// arrival would be worse than saying nothing, so it is not said.
 /// </item>
 /// <item>
-/// <b>The line a screen posts as it opens cannot be recovered.</b> FUN_00486b00 is handed a message id,
-/// not a response id: the disassembly puts the caller's argument at +0x0c of the message record, which
-/// is the field the accept gate keys its per-message counters on, and message ids are resolved through
-/// the table at 0x0076e300 - filled at runtime, and all zeros in the image. So there is no static road
-/// from a screen to its line, and guessing one would be inventing speech.
+/// <b>The line a screen posts as it opens is not said here.</b> FUN_00486b00 is handed a message id, not a
+/// response id: the disassembly puts the caller's argument at +0x0c of the message record, which is the
+/// field the accept gate keys its per-message counters on. The metadata table at 0x0076e300, filled before
+/// WinMain by the static initializer at 0x005a0a50, gives its first response (+0x24) and the response table
+/// its sample (docs/exe/advisor-park.md); which of those lines this game should say, and when, is not built.
 /// </item>
 /// </list>
 /// </para>

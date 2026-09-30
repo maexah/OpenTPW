@@ -643,9 +643,9 @@ public class ParkRideExitTests
 	/// The settle-up's gate: with <c>mQueuePos</c> at nought the five effects do not run.
 	///
 	/// <para>
-	/// <b>This pins the branch and deliberately not a reading of it.</b> What the byte at <c>+0x1f1</c>
-	/// MEANS is not settled - it is named <c>mQueuePos</c> by the save reader and it is read here. So the
-	/// assertion is that the arm is gated on it, which the disassembly shows, and nothing about why.
+	/// By the settle-up the byte at <c>+0x1f1</c> is the win roll (<c>docs/exe/ride-operation.md</c>,
+	/// "<c>+0x1f1</c> at the settle-up is the win roll"). A drink's roll cannot lose, so nought is set by hand
+	/// here, and the assertion is that the arm is gated on it.
 	/// </para>
 	/// </summary>
 	[TestMethod]
