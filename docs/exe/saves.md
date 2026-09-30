@@ -84,7 +84,7 @@ Version 12, `FUN_005aff50`. Defaults come from the progress object constructor `
 | — | var | themes | N × (dword name length + name chars + theme record) |
 | — | 39 | options | per-player options, `FUN_00423e90` |
 | — | 4 | M | ride id count, starts 0 |
-| — | 2×M | ride ids | M words |
+| — | 2×M | ride ids | M words: the items unlocked with golden tickets, the set the buy list asks (`hud.md`, "The mystery row") |
 
 **Theme record** — a `0xbc` object:
 

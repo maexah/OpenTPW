@@ -3110,7 +3110,30 @@ artifacts are listed in `docs/history/README.md`.
   them yet. A bounded key no file sets reads its lower bound. A refused value is a quit in the original: decide with
   Alexah whether OpenTPW quits too (rule 11), and say it at the site. Confirm: `catalogue` lists 50 items, and the
   shops tab, photographed, shows 6 rows without the Gift Shop and the Steak Restaurant.
-- [ ] **Q201. The buy list lists only researched items. Decode first.** Found by Q178b's run of the original (Lost
+- [x] **Q201. The buy list lists only researched items: the decode.** Done 2026-09-30,
+  `alexah/205-decode-the-researched-flag`. Decode only; the build is Q201b. `hud.md`, "What the buy list actually
+  filters on" and "The mystery row", rewritten; `saves.md`'s "ride ids" row. FileFormats `saves.md` settles the
+  control record's `0x10` and `0x14` (its branch 205).
+  - **Decoded** (first-hand, then `wf_8fb3c3ca-f2c`, three Opus skeptics: 9 of 11 claims upheld, 2 corrected). The
+    researched flag is the control record's `+0x10`, and at a park load it is **the save's**: world setup
+    (`FUN_005156a0`, after the catalogue at `0x00407e26`) zeroes the array and seeds `+0x10` = `Upgrades[0].
+    CostOfResearch` is nought (`0x004d3e92`), and research setup (`FUN_005031a0`) sets the same again; the park's save
+    (mode 2) then reads `mObjectControls[150]` raw over it (`0x005181e7`), and `FUN_00415140` seeds only items the save
+    lacks. Research completing (`FUN_00504630`) sets it and `+0x14`, the tier. Corrected by the skeptics: the mystery
+    row's `item+0xC4` is `GoldenTicketCost`, not `Research.Group` (`+0x178`), and its unlock test is the player's
+    golden-ticket set in `gms.dat`; the zeroing is also a writer. No balance file sets a research cost (grep, with a
+    control).
+  - **Measured** (`q201/ctrldump`, `q201/fcost.py`): `Easymode.TPWI`'s 50 records are the 50 items with an `Easy_`
+    file; `+0x10` is 1 on 26, exactly those whose file sets the cost 0 (no mismatch), so the two rules agree in the
+    shipped park; `+0x14` is 2 on 17 of them, 0 elsewhere.
+  - **Measured in the game** (the build before any change; `q201/shoptab.py`, `q201/run1/`, silent, stock park;
+    `save/` unchanged), predicted first: "catalogued 50 items" as predicted; the shops tab, photographed and looked
+    at, shows 6 rows (Balloon, Burger, Costume, Drinks, Fries, Ice Cream) as predicted, against the original's 3
+    (`q178b/orig/s07.png`: Balloon, Burger, Drinks).
+  - **Not confirmed:** a played save whose research set more flags than its files (none here); the mystery row (no
+    researched item in Instant Action carries a ticket cost).
+
+  The item as written: Found by Q178b's run of the original (Lost
   Kingdom, Instant Action, `q178b/orig/s06`-`s09.png`): its tabs list rides Aztec Mayhem, Belly Bounce, Crazy Ape,
   Rocky Racers; shops Balloon, Burger, Drinks; sideshows Jungle Spray, Strength Bird; features Buy Land, Clear Land
   and eight more - exactly the items whose own file sets `Upgrades[0].CostOfResearch` 0, the researched flag
@@ -3119,6 +3142,13 @@ artifacts are listed in `docs/history/README.md`.
   reconcile `hud.md`'s mystery row (`Research.Group` above nought and not unlocked), which the original showed none
   of although Temple of Gloom and Ice Cream carry a group. Then build the filter. Confirm: the shops tab, photographed,
   lists the three.
+- [ ] **Q201b. The buy list lists only researched items: the build.** From Q201's decode (`hud.md`, "What the buy
+  list actually filters on"). `ParkWorld` reads `mObjectControls` (it skips it now, `ParkWorld.cs`) - each record's id,
+  `+0x10` and `+0x14` - and the running park keeps a researched flag per item: the save's for every item it holds,
+  `Upgrades[0].CostOfResearch` is nought for any catalogued item it lacks. `ParkBuyScreen.Show` lists only researched
+  items. Research completing is inert here (count it where the flag would be set). The mystery row needs the
+  player's golden-ticket set (`gms.dat`'s ride ids): build it if the profile reader has it, count it otherwise.
+  Confirm: the shops tab, photographed, lists the three (Balloon, Burger, Drinks), and the rides tab the four.
 - [ ] **Q179. The Hot Pot lets no rider off. Decode first.** Found by Q172b's game run. A Hot Pot bought at (57,23)
   with its queue laid to the path at (56,22), then `load 40`: guests are admitted ("been AdmitPerson'd to ride 43")
   and sit in state `Riding`, 13 in 20 minutes, 16 in the build before Q172b in 4, past its capacity of 4, and none is

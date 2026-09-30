@@ -1023,13 +1023,27 @@ four filter fields, as **byte** offsets:
     +0x284  AddOn.UpgradesId      (must be 0 - a standalone item, not a ride's upgrade)
     desc+0x10  researched/available
 
-`desc+0x10` is not a static "is this listed" flag —
-it is the **researched** flag, set at level start for items whose `Upgrades[0].CostOfResearch` is nought
-and again the moment research completes. **Photographed in the original's Lost Kingdom** (Instant Action, under
-Proton, 2026-09-30, Q178b): rides Aztec Mayhem, Belly Bounce, Crazy Ape, Rocky Racers; shops Balloon, Burger, Drinks;
-sideshows Jungle Spray, Strength Bird; features Buy Land, Clear Land and the eight whose cost is nought - exactly the
-items whose own file sets `Upgrades[0].CostOfResearch` 0, and no mystery row. OpenTPW lists every catalogued item (Q201). And `item+0xC4` is not a research countdown — it is
-`Research.Group`, a **golden-ticket tier** that placing the item literally spends.
+`desc+0x10` is not a static "is this listed" flag - it is the **researched** flag, and at a park load it is the
+**save's**, not the item file's (Q201). The record array is `CControlManager`'s, 150 records of 0x20 bytes looked up by
+`FUN_004d3d10`, and it is saved and loaded raw as `mObjectControls[150]` (`FUN_004d3aa0`). Its writers, in the order a
+park load meets them:
+
+1. **World setup** (`FUN_005156a0`): the array is zeroed (`FUN_004d3de0`), then `FUN_004d3e00` appends one record per
+   catalogued item with `+0x10` = `Upgrades[0].CostOfResearch` (`item+0x180`) is nought (`0x004d3e92`). The research
+   manager's setup (`FUN_00502d60` -> `FUN_005031a0`, from `0x00515d2f`) sets `+0x10` to 1 again for every standalone
+   item with `Info.WhichUIType` below 4 whose cost is nought (`0x0050320a`) and enrols the rest as research candidates.
+2. **The park's save** (mode 2, `FUN_00414d40` -> `FUN_00415270` -> `FUN_005179c0`, the read at `0x005181e7`) lays the
+   saved array over all of it. `FUN_00415140` then runs `FUN_004d3e00` again, which appends a record only for an item
+   the save has none for; an item the save holds keeps the save's byte.
+3. **Research completing** (`FUN_00504630`) sets `+0x10` to 1 (`0x005046a1`) and `+0x14` to the upgrade tier reached;
+   `FUN_00504580` steps `+0x14` past a tier whose research costs nothing, so `+0x14` is the tier researched, 0 to 2.
+
+**Measured in `Easymode.TPWI`** (`q201/ctrldump`, all 50 records): `+0x10` is 1 on 26, exactly the 26 whose item's own
+file, with its `Easy_` layer, sets `Upgrades[0].CostOfResearch` 0 - the two rules agree in the shipped park, and differ
+only in a played save, where research has set more. Among them rides Belly Bounce, Crazy Ape, Rocky Racers, Aztec
+Mayhem; shops Balloon, Burger, Drinks; sideshows Jungle Spray, Strength Bird. **Photographed in the original's Lost
+Kingdom** (Instant Action, under Proton, 2026-09-30, Q178b): exactly those, and features Buy Land, Clear Land and the
+eight whose cost is nought, and no mystery row. OpenTPW lists every catalogued item (`q201/run1/`: 6 shops).
 
 **The row state is {0,1,2} and both non-zero values are pinned**: 1 = you already own at least one
 (`desc+0x18`, incremented on placement and decremented on demolition), 2 = one of the three most
@@ -1037,12 +1051,15 @@ recently **RESEARCHED** items in that tab — a 3-entry ring per tab fed only by
 message, **not** by building. The game's own help row 146 says the same thing: "sort the list by items
 already owned or recently researched".
 
-**The mystery row**: when `Research.Group > 0` and the item is not yet unlocked, the name becomes
-UITEXT 137 "??? Mystery Ride! ???" and **the price column becomes the NEGATED group value**. There is
-also a second, unpriced acquisition gate on that path — such an item is bought against a golden-ticket
-count rather than against cash, and that arm is NOT TRACED. The object constructor's own golden-ticket arm, on
-`GoldenTicketCost`, is traced (`ride-operation.md`, "The cost of goods and the park's money", every caller of the
-bank); that it is this gate is not established.
+**The mystery row** is inside the researched test, never an unresearched item's (`0x004ab023`): a researched item
+whose `UsageInfo.GoldenTicketCost` (`item+0xC4`, a dword; `Research.Group` is `+0x178`) is above nought and whose id
+the player has not unlocked (`FUN_004d4b70`, `0x004ab047`) is named UITEXT 137 "??? Mystery Ride! ???" and priced at
+**the negated ticket cost** (`0x004ab050`..`0x004ab063`). The unlocks are `PlayerProgress`'s set of item ids
+(`DAT_00f7c58c`, built lazily by `FUN_00409410`; `FUN_005af780` finds an id), inserted only by the purchase
+(`FUN_004db090` -> `FUN_004d4ad0`) when the tickets suffice, the cost added to the tickets spent; in game type 1 it
+inserts nothing. The set is the player's, saved in `gms.dat` (`FUN_005aff50`; `saves.md`, the "ride ids" rows),
+across every park and theme. No researched item in Instant Action's Lost Kingdom has a ticket cost, which is why the
+original showed no mystery row.
 
 **Buy Land is item 101 and Clear Land is 102**, both `WhichUIType` 4 — which is exactly *why*
 `FUN_004aaf70` appends them as synthetic rows **-1** and **-2** on tab 3 rather than finding them in the
