@@ -343,13 +343,33 @@ public sealed class ParkStaffPool
 	/// against 10, 30, 15, 20, 35. So a grade-2 mechanic is 5 x 23 = 115 there and 6 x 30 = 180 by the
 	/// global file, and reading the wrong layer is not a rounding difference.
 	/// </remarks>
-	public int WageFor( int kind, int grade )
+	public int WageFor( int kind, int grade ) => WageFrom( _balance, kind, grade );
+
+	/// <inheritdoc cref="WageFor"/>
+	public static int WageFrom( ParkBalance? balance, int kind, int grade )
 	{
-		var wage = _balance?.Int( $"PerGradeStaffConsts[{grade}].BaseWage", 4 ) ?? 4;
-		var multiplier = _balance?.Int( $"PerTypeStaffConsts[{kind}].PayMultiplier", 10 ) ?? 10;
+		var wage = balance?.Int( $"PerGradeStaffConsts[{grade}].BaseWage", 4 ) ?? 4;
+		var multiplier = balance?.Int( $"PerTypeStaffConsts[{kind}].PayMultiplier", 10 ) ?? 10;
 
 		return wage * multiplier;
 	}
+
+	/// <summary>
+	/// What one training point costs a kind at a grade: <c>&lt;Kind&gt;ConstsPerGrade[grade].PoundsPerTrainingPoint</c>,
+	/// the table <c>CStaff::TrainMe</c> reads by the member's model (<c>FUN_00505a10</c>). Nought where the balance
+	/// has no such key, and at grade 4 in every shipped file.
+	/// </summary>
+	/// <remarks>
+	/// The global <c>Standard.sam</c> is the only file that sets these (5, 8, 12, 15 and nought for grades 0 to 4;
+	/// the researcher's 8, 12, 15, 18 and nought): no theme or easy file overrides them.
+	/// </remarks>
+	public static int PoundsPerTrainingPoint( ParkBalance? balance, int kind, int grade )
+		=> kind is >= 0 and < Kinds
+			? balance?.Int( $"{TrainingNames[kind]}ConstsPerGrade[{grade}].PoundsPerTrainingPoint", 0 ) ?? 0
+			: 0;
+
+	/// <summary>The per-grade tables' prefixes, by kind - the balance file names them in the singular.</summary>
+	private static readonly string[] TrainingNames = ["Handyman", "Mechanic", "Entertainer", "Guard", "Researcher"];
 
 	/// <summary>
 	/// Takes a candidate out of the pool - what hiring one does to it. Answers false where no such

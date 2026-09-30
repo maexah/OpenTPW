@@ -397,6 +397,14 @@ public sealed class ParkState
 		LastBalance = park?.Economy?.LastBalance ?? 0;
 		TurnEnteredRed = park?.Economy?.TurnEnteredRed ?? 0;
 		ProfitThisYear = park?.Economy?.ProfitThisYear ?? 0;
+		BatchBalance = park?.Economy?.BatchBalance ?? 0;
+
+		if ( park?.Economy?.Loans is { } loans )
+		{
+			for ( var i = 0; i < _loans.Length && i < loans.Count; ++i )
+				_loans[i] = loans[i];
+		}
+
 		VisitorsToDate = park?.NumberOfVisitorsToDate ?? 0;
 		ParkIsClosed = park is not null && park.ParkClosed != 0;
 		GameTick = park?.GameTick ?? 0;
@@ -537,9 +545,8 @@ public sealed class ParkState
 	/// took the balance below nought from a <see cref="LastBalance"/> of nought or more.
 	/// </summary>
 	/// <remarks>
-	/// Nothing reads it here. The original's readers are the bank's month turn (<c>FUN_004d0370</c>), which counts
-	/// the months in the red and ends the park at six, and advisor rows 103 to 105; neither is built
-	/// (<see cref="TurnTheMonth"/>).
+	/// Read by the bank's month turn (<see cref="MonthsInTheRed"/>). The original's other readers, advisor rows 103
+	/// to 105, are not built.
 	/// </remarks>
 	public int TurnEnteredRed { get; private set; }
 
@@ -830,12 +837,102 @@ public sealed class ParkState
 	}
 
 	/// <summary>
-	/// The month's change reaches the bank - message <c>0xc</c>, which its handler (<c>FUN_004d02d0</c>) hands to
-	/// the month turn <c>FUN_004d0370</c>: it banks <c>mBatchBalance</c>, pays each bought loan's instalment, counts
-	/// the months in the red from <see cref="TurnEnteredRed"/> and ends a park six months in. Counted, not built
-	/// (<c>docs/QUEUE.md</c> Q198b; <c>docs/exe/ride-operation.md</c>, "The month's change").
+	/// The bank's <c>mBatchBalance</c> (<c>+0x10</c>): money waiting to be banked at the month's change. Only a file
+	/// sets it, and it is nought in every park file.
 	/// </summary>
-	public void TurnTheMonth() => Unimplemented.Report( "BANK_MONTH_TURN" );
+	public int BatchBalance { get; internal set; }
+
+	/// <summary>The bank's eight loans, as the save left them; the month's change pays the bought ones.</summary>
+	public IReadOnlyList<ParkWorld.LoanState> Loans => _loans;
+
+	private readonly ParkWorld.LoanState[] _loans = new ParkWorld.LoanState[ParkWorld.EconomyState.LoanSlots];
+
+	/// <summary>Puts a loan in a slot - a test's, as no loans screen is built and no park file buys one.</summary>
+	internal void SetLoan( int slot, ParkWorld.LoanState loan ) => _loans[slot] = loan;
+
+	/// <summary>
+	/// Thirty funny days in the 100-nanosecond units <c>FUN_004f88b0</c> answers in - the divisor
+	/// <c>0x1792f8648000</c> the bank's red count uses.
+	/// </summary>
+	private const long ThirtyDays = 25_920_000_000_000L;
+
+	/// <summary>How many whole months in the red end a park - the bank's <c>5 &lt; months</c>.</summary>
+	public const int MonthsInTheRedToEnd = 6;
+
+	/// <summary>
+	/// The month's change reaches the park analyser (thing 5) and then the bank (thing 8) - message <c>0xc</c>
+	/// (<c>docs/exe/ride-operation.md</c>, "The month's change"). The analyser's close of the month is counted. The
+	/// bank's turn, <c>FUN_004d0370</c>: <see cref="BatchBalance"/> deposited and zeroed; each bought loan's
+	/// instalment withdrawn, its months repaid counted, <see cref="ProfitThisYear"/> given the principal's share back
+	/// by the original's unsigned division, and the loan closed at its period; then, with the balance and
+	/// <see cref="LastBalance"/> both below nought, the whole thirty-day months since <see cref="TurnEnteredRed"/> -
+	/// at six the park ends, counted.
+	/// </summary>
+	public void TurnTheMonth()
+	{
+		Unimplemented.Report( "ANALYSER_MONTH_CLOSE" );
+
+		var batch = BatchBalance;
+		BatchBalance = 0;
+		Deposit( batch );
+
+		for ( var i = 0; i < _loans.Length; ++i )
+		{
+			var loan = _loans[i];
+
+			if ( loan.Bought == 0 )
+				continue;
+
+			Spend( loan.MonthlyRepayment );
+
+			unchecked
+			{
+				var repaid = loan.MonthsRepaid + 1;
+				var period = (uint)loan.RepaymentMonths;
+
+				if ( period != 0 )
+				{
+					var monthly = (uint)loan.MonthlyRepayment;
+					ProfitThisYear += (int)(monthly - ((monthly * period) - (uint)loan.AmountAvailable) / period);
+				}
+
+				loan = repaid == loan.RepaymentMonths
+					? loan with { Bought = 0, MonthsRepaid = 0 }
+					: loan with { MonthsRepaid = repaid };
+			}
+
+			_loans[i] = loan;
+
+			Log.Info( $"Bank: loan {i} instalment {loan.MonthlyRepayment}, months repaid {loan.MonthsRepaid}, "
+				+ $"bought {loan.Bought}, profit {ProfitThisYear}" );
+		}
+
+		if ( Balance < 0 && MonthsInTheRed() >= MonthsInTheRedToEnd )
+		{
+			Log.Info( $"Bank: {MonthsInTheRed()} months in the red - the park ends" );
+			Unimplemented.Report( "BANK_PARK_ENDS_IN_THE_RED" );
+			Unimplemented.Report( "ADVISOR_PARK_ENDED_IN_THE_RED" );
+		}
+	}
+
+	/// <summary>
+	/// The bank's count of whole thirty-day months since <see cref="TurnEnteredRed"/>: the ticks since, times the
+	/// calendar's rate, over four, as funny seconds (<c>FUN_004f88b0</c>), over thirty days; nought unless
+	/// <see cref="LastBalance"/> is below nought.
+	/// </summary>
+	public int MonthsInTheRed()
+	{
+		if ( LastBalance >= 0 )
+			return 0;
+
+		unchecked
+		{
+			var ticks = (ulong)(uint)(GameTick - TurnEnteredRed);
+			var hundredNanoseconds = ticks * (uint)GameCalendar.Rate / 4 * 10_000_000UL;
+
+			return (int)((long)hundredNanoseconds / ThirtyDays);
+		}
+	}
 
 	/// <summary>
 	/// The year's change reaches the bank - message <c>0xd</c>, whose arm of the bank's handler zeroes

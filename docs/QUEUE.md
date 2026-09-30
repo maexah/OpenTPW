@@ -2929,7 +2929,25 @@ artifacts are listed in `docs/history/README.md`.
   (`SALE_TRACK_TEARDOWN`: its cells cleared and paid for, `0x0052801d`). Decode the month turn's order and the wage's
   and training's amounts in the park that ships, then build them. Confirm: `money` either side of a month's change
   with staff hired, and `unimplemented`.
-- [ ] **Q198b. The month's change: the training, the bank's turn and the wages.** Decoded by Q198 (`ride-operation.md`,
+- [x] **Q198b. The month's change: the training, the bank's turn and the wages.** Done 2026-09-30 on
+  `alexah/199-month-turn`. `Level` sends the month in the original's order: `ParkPeople.TrainTheStaff` (the save's
+  staff HQ budgets, `ParkWorld.StaffHq`), `ParkState.TurnTheMonth` (the analyser counted; batch, loans, red months),
+  `ParkPeople.PayTheWages`. `Staff.PayGrade` and `PercentageThroughGrade` now change. Counted: the strike check, the
+  analyser's training and staff totals, the park's end six months in the red and its advisor record
+  (`ride-operation.md`, "The month's change", OpenTPW).
+  - **Measured in the game** (`q198brun.py`, `q198b-run1/`, silent, stock park, a hire at 36, predicted first; `save/`
+    unchanged; 15 of 15): over 2/1/2000 six training withdrawals of 0, a deposit of 0, then wages 63, 161, 84, 105,
+    125, 36; the balance 88137 to 87563 (574 = 538 + 36), the HUD photographed on both sides; `BANK_MONTH_TURN`,
+    `STAFF_MONTHLY_WAGE`, `STAFF_MONTHLY_TRAINING` gone.
+  - Tests: the 538, the mechanic's 25 (563, 0 to 1), a promotion paid at the new grade, grade 4 refused, a loan's
+    unsigned profit and close, 4147 vs 4148 sweeps in the red. Each bug put back failed its test (signed division, no
+    hold to 100, no wage, no grade-4 refusal, an end at five).
+  - **Not confirmed on screen:** a promotion, a loan, the batch, the end six months in the red (tested only; no
+    screen sets a budget or buys a loan). Found in passing: seven older `ParkBankTests` fail when that class runs
+    alone (the static `Log` is null), on `main` too; the whole suite passes.
+  - Built and tested alone in a worktree: 1462 pass, 0 skip with the game; 573 ran, 889 skipped without; 123 warnings.
+
+  The item as written: Decoded by Q198 (`ride-operation.md`,
   "The month's change"). At `GameCalendar.MonthRolled`, in the original's order: thing 1's training (`mBudget[0..4]`
   read from the save's model-9 record at file 82, which `ParkWorld` skips; each kind's budget over its members, signed;
   `TrainMe` for every member, grade 4 refused, `ParkState.Spend( share )` even for nought, the progress and the

@@ -564,11 +564,12 @@ public class Level
 
 		// Then the month's change and the year's, which the calendar sends after the day's in the same tick. The
 		// original's month goes to thing 1's training, the analyser, the bank and then each wage, in ascending thing id
-		// (docs/exe/ride-operation.md, "The month's change"); here the bank's count comes before both of the staff's.
+		// (docs/exe/ride-operation.md, "The month's change").
 		if ( Kind == Scene.Park && GameCalendar.MonthRolled )
 		{
+			ParkPeople.Current?.TrainTheStaff();
 			ParkState?.TurnTheMonth();
-			ParkPeople.Current?.TurnTheMonth();
+			ParkPeople.Current?.PayTheWages();
 		}
 
 		if ( Kind == Scene.Park && GameCalendar.YearRolled )

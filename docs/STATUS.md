@@ -22,7 +22,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
   thing stays in it until a cell takes it. A placed ride's window opens from a click **anywhere on its footprint**.
 - Information and money: Info and Money open all-staff, all-items, all-visitors and entry-price screens. **The
   entry-price door shuts the park and every ride a guest may be offered**, drawn down when shut: a shut ride turns its
-  queue away one head a sweep, for 15, and opening the door or editing its queue opens it again. **The bank moves as the original's** (Q177c, Q96): a charge is banked and a sale's cost of goods withdrawn, so a drink nets the park 10.
+  queue away one head a sweep, for 15, and opening the door or editing its queue opens it again. **The bank moves as the original's** (Q177c, Q96): a charge is banked and a sale's cost of goods withdrawn, so a drink nets the park 10. **The month's change trains, runs the bank's turn and pays each wage** (Q198b): the shipped park's month costs 538.
 - Building by POINTING - click to anchor, click to commit, no drag, because both of the original's drag slots are bare
   `RET` stubs. A click on grass or path picks up the PATH tool (20 a cell) with its own squares and cursors; Backspace
   takes the last run up, Escape puts the tool away. QUEUE is 75, refunded. **A bought thing starts at its own price.**
@@ -52,7 +52,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 
 ## Does not
 
-- No month's turn in the bank, wages or training (decoded and counted, Q198b), litter, day ending, saving a park back, video,
+- No screen sets the training budgets or buys a loan; six months in the red is counted, not an end (Q198b). No litter, day ending, saving a park back, video,
   networking. Research is inert. In a park the advisor says the gadget's opening line and no more (`docs/PLAYER-GAPS.md` gap 4).
 - Eight of the nine per-object windows are unbuilt. Setting patrol areas is deferred by Alexah; staff keep the save's.
   A walking member of staff is not entered in the cells they cross; only hiring and putting down place one.
@@ -77,7 +77,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q198 are ticked**; next **Q198b**; the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q198, Q198b are ticked**; next **Q199**; the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -101,19 +101,19 @@ Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q198 are ticked**; next **Q1
   stale major, sale's clear and save's fields; Q171's bounds; Q172b's saved track ride, tier and coaster (Q167) and a Hot Pot
   rider's 42 (Q179); Q173's tier 3 and zero divisors. Q174b's raw re-entry and last-frame trigger (no run) and loop (census
   only); Q174c's saved mark, timer and queue; Q175b's Rat Race; Q176's `0x80000000` draw (its let-go in a throwaway build);
-  Q177b's walk-away and a played save's counts; its satisfaction, census only (nothing here shows it). Q177c's withdrawals off, red stamp, a sold coaster's nought, the ticket count and the year's change. Q177d's docks, fat, salt, the speed's hold and floor and a hire's speed. Q177e's balloon built again after a later visit, put away on boarding, deleted on going home, and read from a save; its bob and trail (census only). Q177f's low detail (two kids, one staff bank) and a theme with more than one costume.
+  Q177b's walk-away and a played save's counts; its satisfaction, census only (nothing here shows it). Q177c's withdrawals off, red stamp, a sold coaster's nought, the ticket count and the year's change. Q177d's docks, fat, salt, the speed's hold and floor and a hire's speed. Q177e's balloon built again after a later visit, put away on boarding, deleted on going home, and read from a save; its bob and trail (census only). Q177f's low detail (two kids, one staff bank) and a theme with more than one costume. Q198b's promotion, loans, batch and six months in the red.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1457**, 0 fail, 0 skip with the game | 2026-09-30, after Q198 |
-| Tests without the game | **572** ran, **885** skipped, of 1457 | 2026-09-30, after Q198 |
-| Build warnings | 123 | 2026-09-30, after Q198 |
+| Tests | **1462**, 0 fail, 0 skip with the game | 2026-09-30, after Q198b |
+| Tests without the game | **573** ran, **889** skipped, of 1462 | 2026-09-30, after Q198b |
+| Build warnings | 123 | 2026-09-30, after Q198b |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-30 (Q198, the decode).** `alexah/198-decode-the-month-turn`. **Earlier:** `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`,
+**2026-09-30 (Q198b).** `alexah/199-month-turn`. **Earlier:** `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`,
 `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

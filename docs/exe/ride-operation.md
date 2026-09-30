@@ -2113,11 +2113,9 @@ in double ("What a thing is worth to a guest", "Where OpenTPW differs", the FPU'
 (Q97). The four bank fields are seeded from the save, and the year's change zeroes the profit
 (`ParkState.TurnTheYear`, on `GameCalendar.YearRolled`). Counted, not built: the analyser's money in and out
 (`BANK_ANALYSER_MONEY_IN`, `_MONEY_OUT`), the gate fee's analyser totals and challenge post
-(`GATE_FEE_ANALYSER_TOTALS`, `GATE_FEE_CHALLENGE_POST`), the booking's (`COST_OF_GOODS_CHALLENGE_POST`), the bank's
-month turn (`BANK_MONTH_TURN`, on `GameCalendar.MonthRolled`), each member of staff's wage and training share
-(`STAFF_MONTHLY_WAGE`, `STAFF_MONTHLY_TRAINING`), the purchase's golden-ticket arm (`PURCHASE_GOLDEN_TICKET_ARM`, on
+(`GATE_FEE_ANALYSER_TOTALS`, `GATE_FEE_CHALLENGE_POST`), the booking's (`COST_OF_GOODS_CHALLENGE_POST`), the purchase's golden-ticket arm (`PURCHASE_GOLDEN_TICKET_ARM`, on
 every such purchase, as no list of ticket-bought items is kept) and a kart or water ride's track at a sale
-(`SALE_TRACK_TEARDOWN`); `docs/QUEUE.md` Q198b and "The month's change", below. Not counted: the buy list's mystery row and its ticket test (Q141).
+(`SALE_TRACK_TEARDOWN`). The month's change is built: "The month's change", below. Not counted: the buy list's mystery row and its ticket test (Q141).
 
 **Who reads what the booking moves**:
 
@@ -2265,14 +2263,25 @@ at 36 a month, predicted first; `save/` unchanged; `q198-run1/`, 8 of 8): paused
 `BANK_MONTH_TURN` 1, `STAFF_MONTHLY_WAGE` 6 and `STAFF_MONTHLY_TRAINING` 6; photographed on both sides, the HUD at
 $88137 (`0-before-month.png`, `1-after-month.png`).
 
-**OpenTPW.** `ParkState.TurnTheMonth` counts `BANK_MONTH_TURN`, and `ParkPeople.TurnTheMonth` counts
-`STAFF_MONTHLY_WAGE` and `STAFF_MONTHLY_TRAINING` once a member, the bank before the staff; no money moves. The build
-(`QUEUE.md` Q198b) needs thing 1's budgets read from the save (`ParkWorld` skips model 9), the training before the
-analyser and the bank and the wages after them, each member's wage by `ParkStaffPool.WageFor` through `ParkState.Spend`,
-`TrainMe` on a `Staff` whose grade and progress can change, `mBatchBalance` and the loans seeded from the save, the
-analyser's month counted, and the end of the park and the advisor's record counted where the red count reaches them.
-OpenTPW's calendar counts from nought (Q149), so its first month's change is 1 February, 177 s in, where the
-original's after the same load is 1 March.
+**OpenTPW** (Q198b). `Level` sends the month's change in the original's order: `ParkPeople.TrainTheStaff` (thing 1:
+the budgets read from the save's staff HQ, `ParkWorld.StaffHq`; each kind's budget over its members, signed;
+`ParkPeople.Train` is `TrainMe`), `ParkState.TurnTheMonth` (the analyser's close, counted `ANALYSER_MONTH_CLOSE`; the
+batch deposited, the bought loans paid with the unsigned division, and `MonthsInTheRed` as `FUN_004f88b0` and the
+thirty-day divisor count it), then `ParkPeople.PayTheWages` (`ParkStaffPool.WageFrom` through `ParkState.Spend`, in
+ascending thing id). Counted, not built: the strike check thing 1 makes after the training
+(`STAFF_HQ_MONTHLY_STRIKE_CHECK`), the analyser's training and staff totals (`STAFF_TRAINING_ANALYSER_TOTAL`,
+`STAFF_WAGE_ANALYSER_TOTAL`), and the end of a park six months in the red with the advisor's record `0x6a`
+(`BANK_PARK_ENDS_IN_THE_RED`, `ADVISOR_PARK_ENDED_IN_THE_RED`). A grade with no `PoundsPerTrainingPoint`, which the
+original divides by unguarded and no shipped file has below grade 4, is counted (`STAFF_TRAINING_NO_POINT_COST`) and
+buys nothing. No screen sets the budgets or buys a loan yet, so both keep what the save holds. OpenTPW's calendar
+counts from nought (Q149), so its first month's change is 1 February, 177 s in, where the original's after the same
+load is 1 March.
+
+**Measured in the game after the build** (`q198brun.py`, `q198b-run1/`, silent, the stock park, the pool's first
+candidate hired at 36; predicted first; `save/` unchanged; 15 of 15): stepped paused over 2/1/2000, six training
+withdrawals of nought, a deposit of nought, then the wages 63, 161, 84, 105, 125 and the hire's 36 last; the balance
+88137 to 87563, 574, photographed on both sides (`0-before-month.png`, `1-after-month.png`); the three Q198 counts
+gone and the four above counted once, once, six and six times.
 
 ### The object's six day rings, and what shows them
 

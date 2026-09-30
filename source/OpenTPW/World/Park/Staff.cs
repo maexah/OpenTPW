@@ -40,9 +40,10 @@ public sealed class Staff
 
 	/// <summary>
 	/// Their pay grade, 0 to 4, which indexes every per-grade constant in the balance file: how long they
-	/// idle, how fast they recover, how fast they tire and what they are paid.
+	/// idle, how fast they recover, how fast they tire and what they are paid. Only the month's training
+	/// raises it (<see cref="ParkPeople.TrainTheStaff"/>).
 	/// </summary>
-	public int PayGrade { get; }
+	public int PayGrade { get; internal set; }
 
 	/// <summary>How they feel about the job, 0 to 100.</summary>
 	public float Happiness { get; internal set; }
@@ -57,8 +58,11 @@ public sealed class Staff
 	/// <summary>How many jobs they have finished - <c>mJobsDone</c>.</summary>
 	public int JobsDone { get; internal set; }
 
-	/// <summary>How far through their grade their training is, as a percentage.</summary>
-	public int PercentageThroughGrade { get; }
+	/// <summary>
+	/// How far through their grade their training is, as a percentage - the one-byte <c>mPercentageThroughGrade</c>
+	/// (<c>+0x1e8</c>). The month's training adds to it and takes 100 off at a promotion.
+	/// </summary>
+	public int PercentageThroughGrade { get; internal set; }
 
 	/// <summary>
 	/// The thing id of the rest area they are walking to or sitting in, or nought for none. A handle rather

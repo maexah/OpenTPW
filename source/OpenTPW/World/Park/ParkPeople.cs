@@ -196,6 +196,13 @@ public sealed class ParkPeople : Entity
 
 		_balance = balance;
 
+		// Thing 1's training budgets (the save's staff HQ; FileFormats saves.md, "The staff HQ").
+		if ( park?.StaffHq is { } hq )
+		{
+			for ( var kind = 0; kind < TrainingBudgets.Length && kind < hq.Budgets.Count; ++kind )
+				TrainingBudgets[kind] = hq.Budgets[kind];
+		}
+
 		// One past the highest the file used, for anybody who arrives later. Objects and people share the
 		// one numbering, so both are counted.
 		_nextThingId = 1 + Math.Max(
@@ -598,17 +605,96 @@ public sealed class ParkPeople : Entity
 	internal bool IsStaff( int thingId ) => _staff.Exists( member => member.ThingId == thingId );
 
 	/// <summary>
-	/// The month's change reaches the staff - message <c>0xc</c>: thing 1 (<c>mStaffHQ</c>) pays each member's share
-	/// of the training budgets before the bank's turn, and each member's own handler withdraws a month's wage after it
-	/// (<c>FUN_00504c70</c>; <c>docs/exe/ride-operation.md</c>, "The month's change"). Counted, one of each a member,
-	/// not built (<c>docs/QUEUE.md</c> Q198b).
+	/// Thing 1's monthly training budgets, <c>mBudget[0..4]</c>, one a kind in <see cref="ParkStaffPool"/>'s order -
+	/// read from the save's staff HQ, and nought where it has none. Nothing here writes them: the original sets them
+	/// only on the Staff Training Budgets screen, which is not built.
 	/// </summary>
-	public void TurnTheMonth()
+	internal int[] TrainingBudgets { get; } = new int[ParkWorld.StaffHqState.Kinds];
+
+	/// <summary>
+	/// The month's change reaches thing 1, the staff HQ - message <c>0xc</c>, the first to hear it, whose training
+	/// <c>FUN_0050c800</c> divides each kind's budget among that kind's members (signed) and trains every member with
+	/// the share (<see cref="Train"/>), whether the park is open or shut (<c>docs/exe/ride-operation.md</c>, "The
+	/// month's change"). A nought budget still trains, with nought.
+	/// </summary>
+	public void TrainTheStaff()
 	{
-		foreach ( var _ in _staff )
+		var counts = new int[ParkStaffPool.Kinds];
+
+		foreach ( var member in _staff )
 		{
-			Unimplemented.Report( "STAFF_MONTHLY_WAGE" );
-			Unimplemented.Report( "STAFF_MONTHLY_TRAINING" );
+			var kind = ParkStaffPool.KindFor( member.Model );
+
+			if ( kind >= 0 )
+				++counts[kind];
+		}
+
+		foreach ( var member in _staff.OrderBy( member => member.ThingId ).ToList() )
+		{
+			var kind = ParkStaffPool.KindFor( member.Model );
+
+			if ( kind >= 0 )
+				Train( member, kind, TrainingBudgets[kind] / counts[kind] );
+		}
+
+		Unimplemented.Report( "STAFF_HQ_MONTHLY_STRIKE_CHECK" );
+	}
+
+	/// <summary>
+	/// <c>CStaff::TrainMe</c>, <c>FUN_00505a10</c>: at grade 4 nothing; otherwise the share withdrawn whole, and a
+	/// point for each <see cref="ParkStaffPool.PoundsPerTrainingPoint"/> it buys, held to 100, onto
+	/// <see cref="Staff.PercentageThroughGrade"/>; at 100 the member goes up a grade, keeps what passed 100, and is
+	/// made happy (100). What the division leaves over is spent for nothing.
+	/// </summary>
+	internal void Train( Staff member, int kind, int share )
+	{
+		if ( member.PayGrade >= ParkWorld.StaffState.PayGrades - 1 )
+			return;
+
+		_behaviour.State.Spend( share );
+		Unimplemented.Report( "STAFF_TRAINING_ANALYSER_TOTAL" );
+
+		var cost = ParkStaffPool.PoundsPerTrainingPoint( _balance, kind, member.PayGrade );
+
+		// The original divides by the table's value unguarded; every shipped file sets grades 0 to 3.
+		if ( cost == 0 )
+		{
+			Unimplemented.Report( "STAFF_TRAINING_NO_POINT_COST" );
+			return;
+		}
+
+		var points = Math.Min( share / cost, 100 );
+
+		if ( points + member.PercentageThroughGrade < 100 )
+		{
+			member.PercentageThroughGrade = (byte)(member.PercentageThroughGrade + points);
+			return;
+		}
+
+		member.PayGrade += 1;
+		member.PercentageThroughGrade = (byte)(member.PercentageThroughGrade + points - 100);
+		member.Happiness = 100;
+
+		Log.Info( $"People: thing {member.ThingId} promoted to grade {member.PayGrade}, "
+			+ $"{member.PercentageThroughGrade} through it" );
+	}
+
+	/// <summary>
+	/// The month's change reaches each member of staff, the last to hear it - message <c>0xc</c>, whose handler
+	/// withdraws a month's wage (<c>FUN_00504c70</c>, <see cref="ParkStaffPool.WageFrom"/>) in ascending thing id,
+	/// with nothing tested first: a member resting, in the hand or hired this month pays the whole month.
+	/// </summary>
+	public void PayTheWages()
+	{
+		foreach ( var member in _staff.OrderBy( member => member.ThingId ).ToList() )
+		{
+			var kind = ParkStaffPool.KindFor( member.Model );
+
+			if ( kind < 0 )
+				continue;
+
+			_behaviour.State.Spend( ParkStaffPool.WageFrom( _balance, kind, member.PayGrade ) );
+			Unimplemented.Report( "STAFF_WAGE_ANALYSER_TOTAL" );
 		}
 	}
 

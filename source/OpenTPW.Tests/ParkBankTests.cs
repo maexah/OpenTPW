@@ -523,22 +523,158 @@ public class ParkBankTests
 	}
 
 	/// <summary>
-	/// <b>The month's change counts a wage and a training share for each member of staff</b>, and the bank's turn
-	/// once.
+	/// <b>The shipped park's month costs 538</b>: its five staff's easy wages, 7 x 9, 7 x 23, 7 x 12, 7 x 15 and
+	/// 5 x 25, as measured in the original at 3.1 and 4.1.2000; its training budgets are nought, so the training
+	/// withdraws nought five times, and its bank's turn moves nothing.
 	/// </summary>
 	[TestMethod]
-	public void TheMonthsChangeCountsEachMemberOfStaff()
+	public void TheShippedParksMonthCostsItsFiveWages()
+	{
+		var (bank, people) = Month();
+
+		CollectionAssert.AreEqual( new[] { 0, 0, 0, 0, 0 }, people.TrainingBudgets, "the shipped staff HQ's budgets" );
+
+		TurnTheMonth( bank, people );
+
+		Assert.AreEqual( 87987 - 538, bank.Balance );
+		Assert.AreEqual( 87987 - 538, bank.LastBalance );
+	}
+
+	/// <summary>
+	/// <b>A training budget is withdrawn and buys the member points</b>: the mechanics' 25, the one step up the
+	/// original was measured with, took 563 at 5.1 and moved the grade-3 mechanic 0 to 1 (25 / 15).
+	/// </summary>
+	[TestMethod]
+	public void AMechanicsBudgetOf25BuysOnePoint()
+	{
+		var (bank, people) = Month();
+		var mechanic = people.Staff.Single( member => member.Model == 4 );
+
+		people.TrainingBudgets[1] = 25;
+		TurnTheMonth( bank, people );
+
+		Assert.AreEqual( (87987 - 563, 3, 1), (bank.Balance, mechanic.PayGrade, mechanic.PercentageThroughGrade) );
+	}
+
+	/// <summary>
+	/// <b>At 100 points a member goes up one grade, keeps what passed 100 and is made happy</b>, and is paid at the
+	/// new grade in the same change: 150 on the grade-3 mechanic at 95 buys 10 points, 105, so grade 4 at 5.
+	/// </summary>
+	[TestMethod]
+	public void AHundredPointsPromotesAndTheWageFollows()
+	{
+		var (bank, people) = Month();
+		var mechanic = people.Staff.Single( member => member.Model == 4 );
+
+		mechanic.PercentageThroughGrade = 95;
+		mechanic.Happiness = 10;
+		people.TrainingBudgets[1] = 150;
+		TurnTheMonth( bank, people );
+
+		Assert.AreEqual( (4, 5, 100f), (mechanic.PayGrade, mechanic.PercentageThroughGrade, mechanic.Happiness) );
+		Assert.AreEqual( 87987 - 150 - (538 - (7 * 23) + (9 * 23)), bank.Balance, "the mechanic paid at grade 4" );
+	}
+
+	/// <summary><b>The points one month buys are held to 100</b>: 10000 at 15 a point buys 100, not 666.</summary>
+	[TestMethod]
+	public void AMonthsPointsAreHeldToAHundred()
+	{
+		var (bank, people) = Month();
+		var mechanic = people.Staff.Single( member => member.Model == 4 );
+
+		people.TrainingBudgets[1] = 10000;
+		TurnTheMonth( bank, people );
+
+		Assert.AreEqual( (4, 0), (mechanic.PayGrade, mechanic.PercentageThroughGrade) );
+		Assert.AreEqual( 87987 - 10000 - (538 - (7 * 23) + (9 * 23)), bank.Balance, "the whole budget spent" );
+	}
+
+	/// <summary>
+	/// <b>A member at grade 4 takes no training, though they count in the divisor</b>: with a grade-0 mechanic hired
+	/// beside the shipped one raised to 4, a budget of 50 is 25 each, and the hire's 25 buys 5 points at 5 a point.
+	/// </summary>
+	[TestMethod]
+	public void GradeFourTakesNoTrainingButCountsInTheDivisor()
+	{
+		var (bank, people) = Month();
+		var mechanic = people.Staff.Single( member => member.Model == 4 );
+		var hire = new ParkStaffPool.Candidate( Id: 999, Kind: 1, Name: "Test", Grade: 0, Costume: 0, Wage: 3 * 23 );
+
+		mechanic.PayGrade = 4;
+		Assert.AreNotEqual( 0, people.Hire( hire, 47, 21 ) );
+		var hired = people.Staff[^1];
+
+		people.TrainingBudgets[1] = 50;
+		TurnTheMonth( bank, people );
+
+		Assert.AreEqual( (4, 0), (mechanic.PayGrade, mechanic.PercentageThroughGrade), "grade 4 untouched" );
+		Assert.AreEqual( (0, 5), (hired.PayGrade, hired.PercentageThroughGrade), "25 of the 50" );
+		Assert.AreEqual( 87987 - 25 - (538 - (7 * 23) + (9 * 23) + (3 * 23)), bank.Balance, "one share withdrawn" );
+	}
+
+	/// <summary>
+	/// <b>The bank's turn deposits the batch and pays a bought loan</b>, giving the year's profit back by the
+	/// original's unsigned division: 10000 over 36 at 277 takes 119,304,646 off it (<c>0x004d0499</c>).
+	/// </summary>
+	[TestMethod]
+	public void TheBanksTurnBanksTheBatchAndPaysALoan()
+	{
+		var bank = Bank( balance: 1000 );
+
+		bank.BatchBalance = 50;
+		bank.SetLoan( 3, new ParkWorld.LoanState( 1, 10000, 0, 36, 277, Bought: 1, MonthsRepaid: 34, 0 ) );
+		bank.TurnTheMonth();
+
+		Assert.AreEqual( (1000 + 50 - 277, 0, 35, 1), (bank.Balance, bank.BatchBalance, bank.Loans[3].MonthsRepaid, bank.Loans[3].Bought) );
+		Assert.AreEqual( 50 - 119304646, bank.ProfitThisYear );
+
+		bank.TurnTheMonth();
+
+		Assert.AreEqual( (0, 0), (bank.Loans[3].MonthsRepaid, bank.Loans[3].Bought), "repaid at its period" );
+
+		bank.TurnTheMonth();
+
+		Assert.AreEqual( 1000 + 50 - 277 - 277, bank.Balance, "and paid no more" );
+	}
+
+	/// <summary>
+	/// <b>Six thirty-day months in the red end the park</b>, counted: 4148 sweeps at the shipped rate, not 4147.
+	/// </summary>
+	[TestMethod]
+	public void SixMonthsInTheRedEndThePark()
+	{
+		GameCalendar.Rebase();
+		var bank = Bank( balance: 0 );
+		bank.Spend( 1 );
+
+		for ( var i = 0; i < 4147; ++i )
+			bank.AdvanceGameTick();
+
+		var before = Times( "BANK_PARK_ENDS_IN_THE_RED" );
+		bank.TurnTheMonth();
+
+		Assert.AreEqual( (5, before), (bank.MonthsInTheRed(), Times( "BANK_PARK_ENDS_IN_THE_RED" )) );
+
+		bank.AdvanceGameTick();
+		bank.TurnTheMonth();
+
+		Assert.AreEqual( (6, before + 1), (bank.MonthsInTheRed(), Times( "BANK_PARK_ENDS_IN_THE_RED" )) );
+	}
+
+	private (ParkState Bank, ParkPeople People) Month()
 	{
 		var world = Park();
-		var staff = ParkPeople.StaffIn( world ).Count;
-		var people = new ParkPeople( world );
-		var (wages, training) = (Times( "STAFF_MONTHLY_WAGE" ), Times( "STAFF_MONTHLY_TRAINING" ));
+		var bank = new ParkState( world );
 
-		Assert.IsTrue( staff > 0, "the shipped park has staff" );
+		return (bank, new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ), null, bank ));
+	}
 
-		people.TurnTheMonth();
-
-		Assert.AreEqual( (wages + staff, training + staff), (Times( "STAFF_MONTHLY_WAGE" ), Times( "STAFF_MONTHLY_TRAINING" )) );
+	/// <summary>The month's change in <see cref="Level"/>'s order.</summary>
+	private static void TurnTheMonth( ParkState bank, ParkPeople people )
+	{
+		people.TrainTheStaff();
+		bank.TurnTheMonth();
+		people.PayTheWages();
 	}
 
 	/// <summary>
@@ -562,18 +698,6 @@ public class ParkBankTests
 
 		Assert.AreEqual( before + 1, Times( "PURCHASE_GOLDEN_TICKET_ARM" ), $"'{ticketed.Name}' costs golden tickets" );
 		Assert.AreEqual( 100000 - bounce.BuildPrice - ticketed.BuildPrice, bank.Balance, "and is paid in cash here" );
-	}
-
-	/// <summary><b>The month's change reaches the bank once</b>, counted: its month turn is not built.</summary>
-	[TestMethod]
-	public void TheMonthsChangeCountsTheBanksTurn()
-	{
-		var bank = Bank( balance: 100 );
-		var before = Times( "BANK_MONTH_TURN" );
-
-		bank.TurnTheMonth();
-
-		Assert.AreEqual( (before + 1, 100), (Times( "BANK_MONTH_TURN" ), bank.Balance) );
 	}
 
 	private static int Times( string what ) => Unimplemented.Summary.FirstOrDefault( gap => gap.What == what ).Times;

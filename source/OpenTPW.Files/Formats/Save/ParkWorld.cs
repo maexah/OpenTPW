@@ -366,6 +366,24 @@ public sealed class ParkWorld
 	public EconomyState? Economy { get; private set; }
 
 	/// <summary>
+	/// The staff HQ - model 9, thing 1 in every park file, which the header's <c>mStaffHQ</c> names. Only its
+	/// five monthly training budgets are read (FileFormats <c>saves.md</c>, "The staff HQ"); its strike fields are
+	/// not. Null where the walk never reached one.
+	/// </summary>
+	public StaffHqState? StaffHq { get; private set; }
+
+	/// <summary>
+	/// The staff HQ's training block: <c>mBudget[0..4]</c>, what each kind's training may spend a month - the
+	/// handymen's, mechanics', entertainers', guards' and researchers' in that order, the same order as
+	/// <c>PerTypeStaffConsts</c>.
+	/// </summary>
+	public readonly record struct StaffHqState( IReadOnlyList<int> Budgets )
+	{
+		/// <summary>How many budgets the record holds, one a kind of staff.</summary>
+		public const int Kinds = 5;
+	}
+
+	/// <summary>
 	/// One of the park's people: a guest, or one of the five kinds of staff.
 	///
 	/// <para>
@@ -1590,6 +1608,8 @@ public sealed class ParkWorld
 				_people.Add( ReadPerson( id, model, start ) );
 			else if ( model == EconomyModel )
 				Economy = ReadEconomy( start );
+			else if ( model == StaffHqModel )
+				StaffHq = ReadStaffHq( start );
 
 			++ThingCount;
 
@@ -2029,6 +2049,23 @@ public sealed class ParkWorld
 			RestArea: ReadUInt16At( start + 481 ),              // mRestArea
 			PercentageThroughGrade: ReadByteAt( start + 480 ),  // mPercentageThroughGrade
 			TimeStartedIdling: ReadInt32At( start + 487 ) );    // mTimeStartedIdling
+
+	/// <summary>The model number of the staff HQ - see <see cref="StaffHqState"/>.</summary>
+	private const int StaffHqModel = 9;
+
+	/// <summary>Where <c>mBudget[0]</c> sits in the staff HQ's record, after the strike fields.</summary>
+	private const int StaffHqBudgetsAt = 82;
+
+	/// <summary>The staff HQ's five training budgets, from the record at <paramref name="start"/>.</summary>
+	private StaffHqState ReadStaffHq( int start )
+	{
+		var budgets = new int[StaffHqState.Kinds];
+
+		for ( var i = 0; i < budgets.Length; ++i )
+			budgets[i] = ReadInt32At( start + StaffHqBudgetsAt + (4 * i) );   // mBudget[i]
+
+		return new StaffHqState( budgets );
+	}
 
 	/// <summary>
 	/// The model number of the park's economy - the only manager this reader opens, because
