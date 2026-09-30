@@ -2702,6 +2702,14 @@ artifacts are listed in `docs/history/README.md`.
   where `ItemDescriptionFile.Number` takes it. Decode whether Lost Kingdom's `Easymode.TPWI` is type 2
   (`docs/exe/boot.md`), then build the layer and the gate. Confirm: the buy screen's shops tab without the Gift Shop
   and the Steak Restaurant, and `unimplemented`.
+  - **Note (fork review, 2026-09-30):** the decode question is answered. The original's `Easymode.TPWI` only ever runs in type 2:
+    `FUN_005c8190` copies it in only for an Instant Action player, `gms.dat +0x24` stores 0 or 1 and Select maps it to
+    `SetGameType` 0 or 2 (`0x005c85ae`), and no park file carries the type (`GSYS`, `FUN_005506e0`, holds nine dwords,
+    none of them `DAT_00fb3b7c`). So `easyMode: true` is right for that file: key the `Easy_` layer and the catalogue
+    gate on the same condition as the balance (the loaded park is the type-2 Easymode), not on the player alone, which
+    would pair a Full Simulation player with Easymode and the Standard catalogue, a combination the original never runs
+    (Q186). `park-engine.md`'s third `Easy_Standard.sam` pass is written as unconditional, where `FUN_005156a0` makes it
+    only in type 2; Q185 corrects it. Review items gap3-1, gap3-8.
 
 - [ ] **Q179. The Hot Pot lets no rider off. Decode first.** Found by Q172b's game run. A Hot Pot bought at (57,23)
   with its queue laid to the path at (56,22), then `load 40`: guests are admitted ("been AdmitPerson'd to ride 43")
@@ -2710,6 +2718,24 @@ artifacts are listed in `docs/history/README.md`.
   unbuilt and counted ("Bumper Car: BUMP at N was reached and does nothing"). Decode how the Hot Pot's script ends a
   ride and lets its riders off, and what `BUMP` answers it. Confirm: riders let off the Hot Pot, each match log reading
   excitement 42 (`q172brun.py`, `q172b-long/`).
+  - **Note (fork review, 2026-09-30): the decode is done; write it, then build.** Lead: Aluzed's fork (`FUN_0054a040`, T-007 item
+    22); established by the review in Ghidra and over all 199 `BUMP` uses (items gap1-1..gap1-7, re-checked by a
+    refuter). The record is `DAT_00877b60 + (h & 0xff) * 0xd0` under the `GFEJ` magic (`+4` duration, `+0x50` state,
+    `+0x54` broken or worn, `+0x5c` cars, `+0x60` riders seated, `+0x64` most cars, `+0xc4` boarding list, `+0xc8`
+    leaving list); the cars are `DAT_00877b68`, 256 of `0xac` (`+0x88` timer, `+0x30` riders, flag `0x20` unloading).
+    `BUMP 1` pushes the rider onto the boarding list, 4 and 12 move the list into a car, 13 sets the duration to the
+    value × 30, 3 starts. The track-ride tick `FUN_00546c80`, once per 31 ms tick, calls `FUN_005474b0`, which counts
+    each car down while the state is 2 and the ride is not broken, and at 0 sets `0x20`; `FUN_0054ac70` moves the car's
+    riders to the leaving list and answers the ride-wide seated count, so the state goes back to 1 only when the whole
+    ride is empty; `BUMP 2` pops one rider a pass into `VAR_LETMEOFF`. Close (6) and car removal (10, 16) feed the
+    leaving list too; after 6 a bumper ride reads loading again within a tick; `BUMP 16` ignores its operand and
+    answers 0 even after removing an occupied car. Write the chain once in `park.md`, "BUMP and TOUR" (line 957's
+    "(frames per second)" becomes 31 ms ticks), and name selectors 9, 12, 13 and 16 in FileFormats
+    `vm/instructions.md`. Count the timer in ticks, never seconds (a duration of 0 never unloads). Build the bumper
+    family only: go-karts and the water ride end their cars by steering buoys (`DAT_00877b78`, `FUN_0054a040`), so
+    their arms stay counted by name, as do steering and the cars' emitters. Count the saved car chunks
+    `ParkTrackRides` skips (types 5 and 9). Predict the ride's length (`VAR_DURATION` × 30 × 31 ms) before the run, and
+    put the bug back (never set `0x20`).
 
 - [ ] **Q180. A loaded park's scripts take their turns on the save's ticks.** Found by Q174c's decode (`park.md`, "The
   scheduler"). The `RSSE` module's header puts the scheduler's globals back (`0x005598d7`): its tick counter (6,055 in
@@ -2750,6 +2776,207 @@ artifacts are listed in `docs/history/README.md`.
   and a rider's arrival is noticed at most a turn late. Nothing in the engine reads start in state 4 but the save, which
   copies it raw; nothing here reads it. Decide with the frame sweep (Q150,
   Q182) whether to move it. Confirm: each promotion's instant against the clock in a census, predicted first.
+
+- [ ] **Q185. Correct what our own pages say wrong.** Found by the fork review of 2026-09-30 (Aluzed's
+  `github.com/aluzed/OpenTPW-decomp`; its items are named by id, and `CLAUDE.local.md` has the path), each re-checked
+  by an independent refuter. Docs only, lines as of `537428f`:
+  - FileFormats `vm/instructions.md`, `WAITABS`: the engine adds the operand to the clock unscaled (`0x005538c9`), so
+    it is a delay without the speed divisor, not a deadline; `docs/exe/park.md:605` already says so (vm-3).
+  - `docs/exe/saves.md`: the 824 + 711 preamble table and its "Divergence, unresolved" paragraph (148-172) and the
+    bullet at 212 give way to a pointer to FileFormats `saves.md`, "Header", and the loader `FUN_00416240` (its `0x500`
+    and `0x100` fields; the magic `0x01221985` at `0x00749870`). Also 139-140 (FileFormats `master` reads the version
+    right now), 174-178 (nine park files agree, not `Easymode.TPWI` alone) and 202 (the original's own `Config.tcf` and
+    `gms.dat` exist, in Alexah's Full Simulation saves) (economy-v4, refute rank 8).
+  - `docs/DECISIONS.md:71`: `FUN_00672e60` is the pQGT/MUVf codec's block decoder, which no shipped movie reaches, not
+    "the intro-movie decoder"; the conclusion stands (fmt-media-v3).
+  - `docs/exe/lobby.md:51-52`: `gms.dat +0x24` stores 0 (Full Simulation) or 1 (Instant Action); Select maps it to
+    `SetGameType` 0 or 2 (`0x005c85ae`), and type 1, the online type, never comes from `gms.dat`. `boot.md:26` and
+    `:157`: `0x00550ca0` is the mode object's lazily run constructor, which derives the type from flag bits
+    (`0x2000000` gives 2, `0x1000000` gives 1, otherwise 0); `0x00550d80` is the only setter (gap3-8, refute rank 3).
+  - `docs/exe/park-engine.md:211`: the `Easy_Standard.sam` pass runs only in game type 2 (`0x00515811`..`0x0051585c`).
+  - `docs/exe/audio.md:128`, `:133`: the ride sound's position (`FUN_00556b90`) is the centre of the thing's cell
+    rectangle ×10 in x and z, at the node's base height; it drops the box's heights. `docs/exe/ride-operation.md:2524`:
+    `FUN_00466b70` is the thing's box (x and z from `+0xc0`/`+0xc4`, max + 1, ×10; heights from the `.hmp` at `+0xcc`,
+    `+0x1c`/`+0x28`, plus the base Y), with eleven callers, not "the sound position" (gap2-9, refute rank 8).
+  - Label the unused `NAudio` reference in `OpenTPW.csproj` (only ModKit's `SoundViewer` uses NAudio; rule 3).
+  The FileFormats edit goes on a branch fast-forwarded into `master` with this one. Confirm: no game run; grep each
+  corrected claim afterwards and find no stale copy.
+
+- [ ] **Q186. A Full Simulation player is handed the Instant Action park, and nothing counts it.** Found by the fork
+  review (gap3-3, gap3-9, refute rank 2). In the original a new Full Simulation player's first park loads no file:
+  the new world (`FUN_00407d80`, `FUN_00515540`) and the level load build it fresh (Q197). OpenTPW gives every player
+  `Easymode.TPWI` and the `Easy_` balance (`Level.ReadPark`). Count `FULL_SIMULATION_NEW_PARK` where `Level` knows the
+  player, only when `Players.Roster.Current is { InstantAction: false }` (`ReadPark` is static and takes only a theme,
+  and a console `park jungle` has no player), and say the deviation at `ReadPark` and at `easyMode: true`; its comment
+  that "the two are identical" holds only for Instant Action. Add one line to `docs/STATUS.md`, "Does not", and one
+  under `docs/PLAYER-GAPS.md` gap 7. Whether a Full Simulation player keeps Easymode meanwhile or takes the empty-park
+  path, which cannot run a jungle park today (`README.md`), is Alexah's call: ask, do not switch it. Confirm with the
+  `unimplemented` census: a Full Simulation player made for the run counts it once on entering Lost Kingdom, an
+  Instant Action control does not; put the condition back to show the control count. Delete only the player folder
+  the run made.
+
+- [ ] **Q187. First person keeps the top-view sprites where the original swaps to `.FPC`.** Found by the fork review
+  (peeps-v1, peeps-v2, gap6-2, refute rank 5). Every sprite bank loads as `.TPC`. Entering first person
+  (`FUN_0042ae70` calls `FUN_00542420` at `0x0042af85`) reloads every bank whose `.ESP` byte `0x10C` is set from its
+  `.FPC`, and leaving swaps back (`FUN_00542640` at `0x0042afba`); an `.FPC` picture is the same figure seen from
+  ground level, not a level of detail. In Lost Kingdom: the eight kids, guards, handymen, both mechanics, researchers,
+  `SPR_TI`, `SPR_DI` and `SPR_NA`. The flag is 1 in 27 of the 29 banks with an `.FPC` and 0 in all 17 without one.
+  OpenTPW always loads `.TPC` (`ParkGuestSprites.cs:255`), unsaid and uncounted. First write the facts once: the role
+  and the state-9 call `0x0054ed2c` on `boot.md`'s `0x00540900` row; `FUN_00542420`, `FUN_00542640` and the ride
+  view's call at `0x0042a6ee` (conditional on the item's `+0x80`, untraced, unreached here) in `park-engine.md` beside
+  "FUN_0042ae70 is the first-person toggle"; `lobby.md:123` corrected (the four statics are built at startup;
+  `DAT_008768fc` is always 0); FileFormats `sprites.md` (`0x10C`, the counts, `SPR_EX`'s 219 and 210 pictures, and that
+  the pair differ in viewing elevation, not only size). Count `FIRST_PERSON_SPRITE_SWAP` in
+  `ParkCamcorderCameraMode.Enter`. Then build: on entering, reload the flagged banks from `.FPC`; on leaving, from
+  `.TPC`. `ParkGuestSprites` builds one atlas from every picture, so rebuild it on the swap or hold both sets, and say
+  which at the site. Confirm: a first-person screenshot of the original under Proton beside ours, the upright figures
+  predicted before looking.
+
+- [ ] **Q188. The object windows draw the park's own model where the original previews its P model.** Found by the
+  fork review (ghidra-docs-6, ghidra-docs-v2, refute rank 6; lead: Aluzed's fork, `docs/08`). For every item but the
+  six fixed ones (bus, ferry, seaplane, gates, lights, end: `Info.DontApplyOffset`), the loader also loads
+  `p<stem>` (`0x00462bd1`..`0x00462c07`) into `+0xd0`. The ride window's preview `FUN_004ad7f0` (vtable `0x006ffbe8`)
+  and the shop window's (`0x004afbdc`, in the function at `0x004afb70`) call `FUN_00486410`, then `FUN_004689f0`: a
+  fresh instance of the P model (flag `0x400` at `0x0046309b`) wearing the item's own sign textures (`FUN_00468950`),
+  fitted by the item's `.hmp` box (six floats at file `0x18`, record `+0xcc`), playing role 5 (M) entry 0 looped at
+  speed 1.0. Eleven jungle items ship one: totem, lookout, mumbo, spider, tvsim, both coasters, minecart, GOKARTS,
+  wateride, Junspray. `ParkObjectWindow.DrawPreview` draws the live park instance fitted by its meshes, so a broken or
+  closed ride previews its live pose. First: count `OBJECT_PREVIEW_P_MODEL` where the preview draws; correct
+  `ParkObjectWindow.cs`'s comments (199-201, 669-673 say "the model's bounding box"); answer `park.md:239` and FileFormats
+  `models.md:1271` ("not known"); cite `FUN_004ad7f0` and `0x004ad85c` in `park-engine.md`'s Ride window section. Then
+  build: load `P<stem>.md2` beside the item's model for the preview only; carry `sign1`/`sign2` only where both models
+  have them (`Pcoaster1` and `PJunspray` have none); fit by the `.hmp` box (the first consumer of `.hmp` builds its
+  reader, Q191); loop M. The buy screen's missing preview (Q158) takes the same path. Confirm: the Inca Totem's
+  window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
+  together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
+
+- [ ] **Q189. Light the park as the original does.** Found by the fork review (gap6-7, gap6-8, refute rank 4). The
+  model is decoded: models through `FUN_0057aa10` → `FUN_00574660` → `FUN_005741b0`, terrain through `FUN_0056f670` →
+  `FUN_0056ef10` → `FUN_00574530` → `FUN_005741b0` (terrain normals `(dh·k, 1.0, dh·k)`, not normalised). Per vertex:
+  the ambient as a colour (`ThemeEngine.AmbientLightLevel`'s R, G, B / 255: 0.333, 0.333, 0.408 in the base file and
+  all four themes' `Standard.sam`) plus the sun's colour × max(0, −d·n), where d is `LightNormal`, the direction light
+  travels, taken into the model's space; each channel clamped, ×255, and ANDed with a channel mask at
+  `[0x0087a248]+0x2c` (`0xFFFFFFFF` in play). The sun is built at `0x0054eca4`, its inputs filled by `FUN_004080e0` at
+  `0x0054ed3f` and applied by `FUN_00458590` at `0x0054ed64`, once in state 9; nothing time-driven writes them.
+  OpenTPW uses a flat 0.4 ambient and calls the sign "a CHOICE" (`Level.cs:233-251`). First write it into
+  `park-engine.md`, "The blocking unknowns", item 2, and `park.md`'s ThemeEngine section, and cite `FUN_005741b0` in
+  `Level.cs`. Then change the shader: coloured ambient and the clamped sum, per vertex, or say the per-pixel
+  difference at the site. Upward and sun-facing faces saturate to the texture's full brightness; shading shows only
+  where −d·n falls below about 0.67. Confirm: the same view in the original under Proton and in ours, where shading
+  appears predicted first. Not claimed here: that the original has no day and night; only a frame pair from the
+  original a few game days apart may say so.
+
+- [ ] **Q190. Build `ADDHEAD` and `DELHEAD`.** Found by the fork review (vm-12; lead: Aluzed's fork, T-007 item 18).
+  Six Lost Kingdom rides reach them (incagod, Monkey, Mumbo, PorkPie, Spider, Volcano); both are unbuilt and counted.
+  `ADDHEAD` (`0x00554c3e`) does nothing with no head table (`+0x30` null) or no free slot among the `+0x4c`;
+  otherwise it draws from the world generator (`FUN_00516330` on `[0x007cf83c]`; SHR 1, abs, mod `+0x4c`,
+  `0x00554caf`..`0x00554ccb`) until a slot is free, stores the visitor there, and attaches head node slot + 1 (mask
+  `0x80`, `FUN_0044b220`, `FUN_0044b410`). `DELHEAD` (`0x00554d26`) detaches and zeroes every slot holding the visitor
+  (`FUN_0044b4c0`), with no break. Neither writes the register. Each retry is one draw, so use the park's world
+  generator, never `System.Random`, or every later draw shifts. First read how these rides seat their riders today
+  (`park.md:270`, `ParkRides.cs:132`, Q22), and write the block in `park.md` beside the limbo subsystem and in
+  FileFormats `vm/instructions.md`. Confirm: a screenshot of riders on one of the six rides beside a census of its
+  head slots, predicted first.
+
+- [ ] **Q191. Read the `.hmp`, and lift the build squares over a built cell with it.** Found by the fork review
+  (gap2-1..gap2-10, refute rank 9; lead: Aluzed's fork, the header). Build the reader with its consumer (rule 9).
+  The layout, over all 435 files (jungle 110, fantasy 106, hallow 110, space 109): signature dwords `0xAB1E0003` and
+  `0x00640005`; u16 cols (x) and rows (z); three offsets; a six-float box at `0x18` (min xyz, max xyz); one
+  (5·cols) × (5·rows) height raster (byte = trunc(y × 2.55)); a per-cell maximum-height grid; a plane of `Info.Shape`
+  marks; size 48 + 27n. The loader `FUN_00451640` rebuilds a missing or mismatched file (`FUN_00451880`) and writes it
+  back; the shipped files come from an older generator (29 hold a 255 where 2.0's caps at 254), so read them, never
+  rebuild: count `HMP_REBUILD` where the original would rebuild (missing, bad signature, cols or rows unlike
+  `Info.Shape`'s box, or `Engine*Override` for the fixed items). The lift (`MARKER_LIFT_OVER_BUILT_CELL`,
+  `ParkBuildMarkers`): `FUN_00452ae0` answers grid byte / 2.55 + the thing's base Y (the root node's world Y,
+  model `+0x78` → `+0x44`), undoing its rotation (`0x00452bb0`..`0x00452c1d`), through the thing-per-cell lookup
+  (`FUN_0053bf30`, then `FUN_00527e80`), falling back to the terrain height (`FUN_004527f0`). The lift is
+  ceil10(trunc(v)), passed as lift + 1.5, and `FUN_0053ddd0`'s wave branch adds the terrain height again, which looks
+  like counting raised ground twice: check it in the original under Proton first, the height predicted. Write the
+  layout to FileFormats `hmp.md` (retitled: a height map with a shape-mark plane), `models.md`'s `0x80` row, and
+  `park.md:142`; the reader's test runs over every shipped `.hmp`. Confirm: the squares over a built cell on raised
+  ground beside the original's.
+
+- [ ] **Q192. Write down the review's verified facts: rides, the script VM, ride sounds.** Found by the fork review
+  (vm-2, vm-5, vm-14, vm-15, vm-v2..vm-v4, history-v3, rides-v3, fmt-media-v1, fmt-media-11, rides-v4, rides-v6,
+  rides-8, rides-14, rides-15, gap5-17). No code. FileFormats `vm/instructions.md`: `DBGMSG` steps over its operand
+  and does nothing (`0x00554243`); `ENABLELIGHT`, `DISABLELIGHT`, `SETLIGHT`, `COLOURLIGHT` take a light node id (mask
+  `0x20000`; levels percent × 0.01, `0x00700fe0`; setters `0x004587e0`, `0x00458890`); `EVENT_EXT` is `EVENT` with
+  `ADDOBJ_EXT`'s extra operand (`0x00552833`); `SPARK` stores two particle-node ids at `+0xdc`/`+0xde`, checks them and
+  spawns nothing (`0x005564ed`); `TOUR 1` makes the tour record at walk node 99, `TOUR 2` destroys it (`FUN_0055d3d0`);
+  `MONTH`'s INC at `0x00556622` (it answers 1-12). Add `0x20000` (light) to `models.md`'s masks. Ride sounds through
+  EventMap slots (`FUN_0051eeb0` plays a slot's value in `cat_rides`; slots 0, 1, 3 and 4 are read, 10 is a sound
+  parameter id, 2 never; two slot layouts; five shipped requests name ids their category lacks) into `audio.md` and
+  `park.md`, its five callers named first. Track-ride and coaster keys (`SupplementalMeshes`, `asCarTypes`,
+  `GTexture`, `coaster.sam`'s edge and select tables) into `park.md` and FileFormats `sam.md`. Open, and written as
+  open: `FUN_00461f10` clears header bit `0x4` unless the load keeps it (the cars `FUN_00430130` loads).
+
+- [ ] **Q193. Write down the review's verified facts: saves, particles, sprites, audio.** Found by the fork review
+  (fmt-assets-v1, fmt-assets-v2, gap5-1..gap5-4, gap3-6, world-sim-2, economy-6, economy-11, level-build-v2,
+  gap3-8, fmt-assets-1, peeps-1, gap5-6, gap5-8, fmt-media-v2, ui-render-platform-v1, ui-render-platform-v2). No code.
+  FileFormats `saves.md`: the `PART` module ('LCTP', an enabled flag; the live system, `0x9e68` bytes: a `0x2c`
+  header, 120 emitters of `0x140`, 20 effectors of `0x68`, `0x1c` of list heads; the templates, `0x8b60` bytes: 105
+  effects of `0x140` and 20 effectors of `0x68`; a particle pool the saver always writes empty), the game's name for
+  each module (the `SAD_` strings, paired by `FUN_00415270`'s compares), `GSYS` as nine dwords (`FUN_005506e0`; its
+  sixth is 2 in both types) and `CHTS` (byte 0 is the cheats flag, `+0xa`; byte 1 goes to `+0xb`; Easymode ships 01 01). `docs/exe/saves.md`:
+  `PAR_SaveStatus` `FUN_0051f680` and its reader `FUN_0051f7a0`, then `Particles_KillAllOnScreen` (`0x005200b0`).
+  FileFormats `particles.md`: an `.emt` is one 320-byte effect record, and row `0xA2` takes 0 as 1000.
+  `park-engine.md`: every `ACTION_*` id beside `ACTION_SET_MODE` (`FUN_004041d0`, strings
+  `0x007472f0`..`0x007475b8`). FileFormats `sprites.md`: the engine's row decoder (`0x00564790` through vtable
+  `0x00701168` slot `+8`; paths `0x005648c0`, `0x0056492c`) and our signed rule decoding all 75 packs exactly (10,223
+  pictures, 500,222 rows). FileFormats `sounds.md`: NLayer 3.0.0 matches ffmpeg on all 3,659 decodable entries, and the
+  80 it rejects are identical one-frame placeholders in global `speechHD.SDT`. Open, written as open: 336 entries
+  decode past full scale; whether the original's voice decode saturates or wraps (the `0x006c82c0` family).
+
+- [ ] **Q194. Write down the review's verified facts: tickets, challenges, advisor, terrain.** Found by the fork
+  review (economy-3..economy-5, economy-8, economy-9, economy-v1, economy-v2, history-11, ghidra-docs-20,
+  world-sim-v1, world-sim-v2, world-sim-v4, world-sim-1, world-sim-7, gap5-5, ui-render-platform-v3,
+  ghidra-docs-11..ghidra-docs-13, gap5-7, gap5-9, gap5-11, fmt-media-8, gap5-14, history-1). No code. Golden
+  tickets (`ride-operation.md`): six local (`FUN_004d4bc0`), four global (`FUN_004d4e50`) and one secret, each awarded
+  alone by a strict '>', type 0 only; `AtLeastThisManyHappyPeople` gates on people in the park; the advisor ids. Challenges:
+  `ChallengesInThisLevel` holds 1-based indexes into `Challenges[]`, at most 20 (`FUN_004d1ce0`); the offer order and
+  its gates (`FUN_004d2a70`); pacing 540, 270 and 270 game days; the win test `FUN_004d1660`; the manager is thing 10,
+  model 19, saved in the World module (`FUN_004d2320`); `Challenges.sam`'s own comments agree with the executable for
+  Types 1-8, 12 and 13 (FileFormats `sam.md`). Advisor (`advisor-park.md`, for gap 4): `GeneralAdvisor.MinTimeAnyMessage`
+  and `MinTimeSameMessage` have no reader, so the only pacing is a line's length + 1000 ms and each category's
+  cooldown; `FUN_00429e90` plays advisor clip N. The terrain compositor as blocking unknown 6's entry point
+  (`FUN_0055f780`, `FUN_0055e780`, `FUN_0056e7e0`, up to `FUN_004504c0`). The loose addresses to their pages: the
+  gated FPS print `FUN_0046c0d0`, the DirectDraw callers, the sprite-under-cursor lookup `FUN_00532bd0`, the file probe
+  `FUN_0044a220`, the font blitters. Measure the challenge's 937-byte record before writing any of its offsets.
+
+- [ ] **Q195. Write down the movie player, and the emulator as an instrument.** Found by the fork review (gap4-1..
+  gap4-14, fmt-media-4..fmt-media-7, ghidra-docs-v3, history-4). The movies stay cut (section G) and
+  `INTRO_MOVIE_BULLFROG` and `INTRO_MOVIE_PARK` stay counted; this writes down what the executable does, for when they
+  are taken up. `boot.md` beside `Intro_PlayBullfrogMovie`: the chain (`FUN_0051b010`, the chunk reader
+  `FUN_0066e410`, `FUN_00670c20` case 4 for pIQT), the header `FUN_00670890`, the dequant `FUN_006710c0`, the
+  macroblock decoder `FUN_006747d0`, the IDCT `FUN_0067673c`/`FUN_00676965`, the colour tables `FUN_00670350`
+  (undecoded), the audio chunks `FUN_0066ed60`/`FUN_0066e9a0` and stereo EA-ADPCM `FUN_00672210`. FileFormats
+  `video.md`: the byte layout and the census of all nine movies (all pIQT; drop "rumored UV2f"). `docs/TOOLING.md`:
+  one short section on running the executable's own leaf routines under unicorn as a bit-exact oracle, which ran the
+  dequant, the macroblock decoder and the ADPCM over all 9,412 frames, and its caveats (x87 precision, register
+  conventions, tables built at run time). Never port the fork's `TqiDecoder` (tuned, and derived from jsmpeg).
+
+- [ ] **Q196. `tpw-setup.sh` opens a raw disc image.** Found by the fork review (ui-render-platform-13). Its file
+  branch (`7z x`, then `bsdtar`) cannot open a CloneCD `.img` or a single-track BIN/CUE `.bin`: raw 2352-byte
+  sectors, which both tools refuse. Aluzed's `tools/ccd-img-to-iso.py` (OpenTPW-decomp commit `907d58f`, MIT) turned
+  a raw Mode 1 image made from our ISO back into a byte-identical ISO. In the `-f $DISC` branch, detect the 12-byte
+  sync (00, ten FF, 00) at offset 0 and copy bytes 16-2063 of every 2352-byte sector into a temporary `.iso` before
+  `7z`; refuse Mode 0 and audio sectors, as the script does. Credit it with a header line and an `Adapted-from:`
+  trailer (`docs/WORKFLOW.md`, "Commits"). Add the line to `tools/play-the-original/README.md`, "What you need".
+  Confirm: the raw image made from `content/SimThemePark.iso` installs as the ISO does; claim real dumps only after
+  one is tried.
+
+- [ ] **Q197. A Full Simulation player's fresh park.** Found by the fork review (gap3-2..gap3-11, refute rank 2);
+  queued by Alexah 2026-09-30, beyond the Easymode scope. The original builds it with no file: `FUN_00407d80`
+  allocates the world and `FUN_00515540` builds the staff pool, the calendar, the arrival block, the 16,384 map cells
+  and the other tables, the park closed. The level load `FUN_00407e00` then reads the catalogue (`FUN_00413140`, which
+  also puts the items' `.emt` into free particle slots) and `FUN_005156a0` lays the balance stack without `Easy_` and
+  makes exactly twelve things: the ten managers, the gates (11) and the traffic lights (12), both unplaced; then the
+  sky, `Scape.omp` and the lighting. Fee from `InitialAdmissionFee` (20), cash from `InitialCash`, each loan's
+  repayment = amount × (1 + APR/100)^(period/24) / period (`FUN_004cf7c0`, constants `0x00700378`..`0x00700390`).
+  Keep ids 3 and 10 for the advisor thing and the challenge manager, which a load reaches by the ids the new world
+  gave them. No `.hmp` needs generating. Write the chain into `boot.md`'s step 9 rows and beside `park-engine.md`'s
+  allocation paragraph first, then build from the empty-park path, after Q186. Confirm against jungle `restart.INTS`
+  (Q167's note): the twelve things, the fee, the APRs and the repayments; then a screenshot of the empty park.
 
 - [ ] **Q85. A guest who arrives starts with happiness nought, and stays there. Decode first.** Found by Q50's game
   runs: every one of the 33 guests who arrived (30 by `load 30`) read `happy 0` in `peeps`, none above it in nine minutes,
@@ -3111,6 +3338,11 @@ artifacts are listed in `docs/history/README.md`.
   its own accord, and every 20 sweeps it adds `ResearchAbility` to the lab (`0x00502984`). OpenTPW has no state `0xf`,
   so the fourth decide stands. Research waits on a research system this game lacks (`docs/PLAYER-GAPS.md`), but the
   state and its timer need no lab: ask whether to build that half now, and count the points meanwhile.
+  - **Note (fork review, 2026-09-30), data for the build:** the global `Standard.sam` holds Research Effort by category (100, 15, 30,
+    15, 10) and `ResearchTech`; `Easy_Standard.sam` overrides categories 3 and 4 (25 and 0). `Upgrades[n].CostOfResearch`
+    is research points; `DurationOfUpgrade`, only in the category files, is the mechanic's upgrade time. In Instant
+    Action the research screen shows UITEXT `0x1d4`, "research is automatic". Why the screen has six sliders for five
+    categories is not decoded: read how the lab spends points by category first. Review items economy-1, economy-v3.
 - [ ] **Q135. The staff's sounds are neither played nor counted.** Found by Q82. Every idle and walking turn draws
   the world random and on one in sixteen plays a cat_staff effect at the member's position (`FUN_004faa00`): idle
   `0xa1`, `0xa3`, `0xa5`, `0xa7`, `0xa9` and walking `0xa0`, `0xa2`, `0xa4`, `0xa6`, `0xa8` (handyman, mechanic,
@@ -3170,6 +3402,11 @@ artifacts are listed in `docs/history/README.md`.
   only its lines use them (`docs/exe/scenes.md`, "Gesture table"). Those lines play on the park's own advisor, model slot
   1 from the level's `advisor.wad` with clips 16 to 20, which OpenTPW does not load. The sweep also read that a row whose
   first clip is not 14 skips the lead-in (`FUN_00598bf0`, not checked). No site reaches any of it, so nothing is counted.
+  - **Note (fork review, 2026-09-30):** the automatic awards run only in game type 0 (`FUN_004d4a00`'s gate covers all eleven
+    tickets), so in Lost Kingdom's Easymode, type 2 (Q178's note), the original never awards a ticket by play; this
+    waits for a Full Simulation park (Q197). The cheat table can still award one in any type (rows
+    `0x0040c6c0`..`0x0040c7e0` call `0x005af810`/`0x005af940`), behind the cheats byte the `CHTS` module loads, which
+    Easymode ships set. The checker's decode is Q194's. Review items economy-8, gap3-8.
 - [ ] **Q142. The staff pool reads a string table again for every name.** Found by Q70's game run. `ParkStaffPool`
   opens and parses a name table for each candidate it rolls (`RollName`) and STAFF_TYPES for each kind's name
   (`NameOfKind`): 27 of a park load's 28 table reads are six files read over and over, and the staff screen and the
@@ -3327,6 +3564,8 @@ artifacts are listed in `docs/history/README.md`.
   goes uncounted where `MayOpen` counts `OPEN_GUARD_COASTER_TRACK_RECORD`. Count each where the original tests it, and
   put each build without an item in the queue. Confirm: `unimplemented` over a timed run, each name present, predicted
   first.
+  - **Note (fork review, 2026-09-30):** `EntertainerConstsPerGrade[g].HappinessEffectOnCell` (4, 8, 12, 16, 20; `Standard.sam`)
+    has no reader in our decode; find it before building the entertainer's half of the region term. Review item peeps-v3.
 - [ ] **Q158. Five park-screen readouts are stand-ins, and nothing counts them.** Found by the 2026-09-26 staleness
   audit (`CLAUDE.md` rule 4). `ParkObjectWindow`'s Age row prints a bare number: its wording, `FUN_006acd60` with
   `0x1b1`, is not decoded. Its scrap row prints the build price, where `FUN_004e2400` scales it by the age bucket's
@@ -3493,6 +3732,14 @@ artifacts are listed in `docs/history/README.md`.
   pass (`ParLib.cs` names `Bubbles = 58`, `Smoke = 2`, `SmallSmoke = 13`; `park.md` decodes the node and the per-tick
   push). Confirm: screenshot the drinks shop with bubbles and the staff room with a staff member inside and smoke
   rising; log lines for both spawns.
+  - **Note (fork review, 2026-09-30):** part of what Lost Kingdom's effects need comes from the save, not from new script
+    requests. The `PART` module (written by `FUN_0051f680`, read by `FUN_0051f7a0` at `0x00415437`) restores the live
+    emitters, and `Particles_KillAllOnScreen` (`0x005200b0`) then kills every screen-drawn one, so after loading
+    `Easymode.TPWI` two world emitters live on: WaterFall at slot 0 and Bubbles at slot 20. A saved script's `ADDOBJ`
+    handle points at them through the `RSSE` module's `OBJ ` records, which `ParkScriptStates` skips today: seed the
+    emitters only together with those records, or `Coconut.RSE`'s `KILLOBJ 1` can never stop the bubbles. The theme's
+    `.emt` files go into the first empty template slots, 101 and 102 in jungle, never past 104. Layout: Q193. Review
+    items fmt-assets-v1, gap3-6, gap5-1..gap5-4.
 - [ ] **Q21. Entering a park: hide the front end for the fly-in.** `IslandPanel.EnterPark` closes only the
   island panel, and the rest of the front end stays up while the camera flies in. Hide it for the flight, and
   say what Escape's cancel (`FrontEnd.MenuKey`, `LobbyCameraMode.CancelLeave`) brings back - today only the
@@ -3558,6 +3805,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   `0x005357c7`); whether every placement route goes through that verdict (its op-`0x104` branch) is
   still open. When it is built, `Unstamp`'s two declared deviations go: keeping `0x40` where the original
   clears the whole flag word, and giving terrain back its save's record rather than clearing it.
+  - **Note (fork review, 2026-09-30):** the `.hmp` adds nothing here: its mark plane equals `Info.Shape` in all 274 pictured items
+    (Q191).
 - [ ] **Q38. What building and selling look and sound like.** Counted, not built: the death particle
   (`DESTROY_PARTICLE_EFFECT`, `Info.DestroyParticleEffect`, 75-78, a world effect spread over the
   footprint) and the demolish sound (`DEMOLISH_SOUND`, `0x96`-`0x99` by size). Not yet counted: the
@@ -3717,6 +3966,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   (`Material`) where one per (shader, flags, output) would do, and texture and shader caches that scan `Asset.All`
   linearly (`Texture.Cache`, `Shader.Cache`). The shared blank texture landed (`bb897f8`); measure the load before
   and after, as that step did, and do not re-take its measurement.
+  - **Note (fork review, 2026-09-30):** add `Renderer.cs`'s per-frame dirty-shader scan of `Asset.All` to the list; time it with the
+    frame profiler before changing it. Review item ui-render-platform-2.
 - [ ] **Q74. Lift the lobby out of `Level`, or record it as dropped (the review's Phase E). Alexah's call.** Park
   entry shipped without it: `Level` builds the lobby (`SetupEntities`, islands hard-coded, an unread `Global`) beside
   the park (`SetupParkEntities`). Ask Alexah before starting.
@@ -3731,6 +3982,11 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   - **Note (Q174c's probe):** the `RSYS` channel module does not walk to its end in the jungle `New Save.TPWS` and
     `autosave.TPWS` (206 channels read, the cursor off the module's end), so `ParkThingStates` refuses it and none of
     their channels is restored; the fantasy and hallow saves and the shipped park walk closed (`q174cprobe/out.txt`).
+  - **Note (fork review, 2026-09-30):** `restart.INTS` is the original's own fresh park. `FUN_00550b30` writes the new world's
+    state once, on the first state-0xf frame, and Restart Park (`FUN_005ac5f0`) loads it back. Each of the three holds
+    twelve things (the ten managers, then the unplaced gates and lights, catalogue objects x601 and x603), no people
+    and no placed objects, `mGameTick` 0, the park closed, fee 20 and the shipped `Standard.sam`'s loans (APR 18-23);
+    only the cash shows the edited data folder. It is Q197's reference. Review items gap3-2..gap3-11.
 - [x] **Q168. Run the original under Wine or Proton, as a reference to compare against.** Done 2026-09-29, GE-Proton
   10-34, outside Steam. The reference install and harness are in `docs/TOOLING.md`, "The original under Proton"; the
   retail `TP.exe` cannot start under Proton (`exe/boot.md`, "Under Wine and Proton"). Found on the way: the original's

@@ -72,6 +72,7 @@ billed as its own weekly bucket: trial it against Opus on one slice before using
 - Small. One behaviour per commit.
 - The message says **why**, and what **evidence** was gathered: the test names, the debug-console run, the addresses traced, the number predicted and the number seen.
 - Executable facts go into `docs/exe/` in the same commit; file-format facts go into the FileFormats docs clone (a separate repo) in the same session. A fact only in a commit message or a memory file is a fact the next session will not find.
+- Credit outside work that led to a fact. When another project pointed at it first (Aluzed's OpenTPW-decomp fork, reviewed 2026-09-30, Q185-Q197), the message carries `Lead: Aluzed's OpenTPW-decomp fork (github.com/aluzed/OpenTPW-decomp, <ticket or commit>); established here by <the addresses traced or the data measured>`, and the docs page that records the fact says in one line that the fork pointed at it first. Code adapted from it keeps its MIT notice in a header line and carries an `Adapted-from: aluzed/OpenTPW-decomp@<commit> (Aluzed, MIT)` trailer. A fact the review found with no lead from the fork needs no fork credit.
 
 ## Verifying
 

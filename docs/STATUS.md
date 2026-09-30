@@ -77,7 +77,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q101, Q165, Q166, Q168, Q169-Q177b, Q184 are ticked**; next **Q177c**. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q101, Q165, Q166, Q168, Q169-Q177b, Q184 are ticked**; next **Q177c**; the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -115,5 +115,5 @@ Q88, Q101, Q165, Q166, Q168, Q169-Q177b, Q184 are ticked**; next **Q177c**. Gaps
 
 ## Recent
 
-**2026-09-30 (Q177b, the settle-up's counts and the day rings).** `alexah/192-the-settle-ups-counts`. **Earlier:** `191` (Q177), `190` (Q176),
+**2026-09-30 (the fork review, queued as Q185-Q197).** `alexah/193-queue-the-fork-review`. **Earlier:** `192` (Q177b), `191` (Q177), `190` (Q176),
 `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
