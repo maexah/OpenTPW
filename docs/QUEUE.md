@@ -3026,7 +3026,28 @@ artifacts are listed in `docs/history/README.md`.
   guest's, with the top row clamped only as the original's slider clamps it. Confirm: scroll the list in a park of
   more than thirteen guests, photograph it after three seconds (the same first row), and a log line per row added
   and removed while it is open.
-- [ ] **Q178. Instant Action's catalogue: each item's `Easy_` file, laid last and required. Decode first.** Found by
+- [x] **Q178. Instant Action's catalogue: each item's `Easy_` file, laid last and required: the decode.** Done
+  2026-09-30, `alexah/203-decode-the-easy-catalogue`. Decode only; the build is Q178b. `park-engine.md`, "How a key
+  finds its global", rewritten from "An item's description"; the deviation said at `ParkItemCatalogue`'s item loop.
+  FileFormats `sam.md` names the 20 WADs without one (`138d3c6`, its branch 203).
+  - **Decoded** (first-hand, then `wf_8a4195bd-544`, two Opus skeptics: G1-G5 and F1-F5 upheld, none refuted). The
+    catalogue is rebuilt at every park load (state 9, `FUN_00407e00` at `0x0054ed3f`, before the balance); in type 2
+    `FUN_00413930` keeps an item only if its own wad holds `Easy_<stem>.sam` (`FUN_0041f190`, the strings at
+    `0x00747930` and `0x00747928`, matched lowercased), and `FUN_00413c10` lays that file last. A refused value in any
+    item's file quits the game at the park load, with an error box at exit. One skeptic placed the load in state 1
+    ("data init"); read again first-hand, `FUN_00407e00` sits under `case 9:`.
+  - **Measured** (wadcat, all 70 jungle item wads): 50 hold an `Easy_` file and 20 do not (the list in the section);
+    12 rides' `Easy_` files set `Upgrades[i].WearRate` and `CostOfResearch`, `minecart`'s also `Research.Group`, and
+    the other 38 hold comments only. `Easymode.TPWI` places none of the 20.
+  - **Measured in the game** (the build before any change; `q178/shoptab.py`, `q178/run1/` and `run2/`, silent, stock
+    park; `save/` unchanged), predicted first: `catalogue` lists 67 items (predicted 65: I counted two category files
+    as wads; the original's type 2 keeps 50); the shops tab shows 8 rows with the Gift Shop and the Steak Restaurant
+    (predicted 9, the same miscount), photographed (`run2/shops-tab.png`), and the rides tab lists Chac Atak, Eruption,
+    Gorilla Thrilla and Jurassic Tours (`run1/shops-tab.png`). `objects` shows 14 placed things, none of the 20.
+  - **Not confirmed:** the original's own buy screen under Proton (decoded, not photographed); the quit on a refused
+    value (no shipped file has one).
+
+  The item as written: Found by
   Q171's verify (`wf_727b3f26-329`, a reader and a skeptic agreeing; `park-engine.md`, "How a key finds its global").
   In game type 2 (`DAT_00fb3b7c`), `FUN_00413c10` lays `Easy_<stem>.sam` over the category and the item's own file
   (`0x00413ffe`..`0x0041404d`), and `FUN_00413930` drops an item whose wad has none before cataloguing it
@@ -3051,6 +3072,14 @@ artifacts are listed in `docs/history/README.md`.
     (Q186). `park-engine.md`'s third `Easy_Standard.sam` pass is written as unconditional, where `FUN_005156a0` makes it
     only in type 2; Q185 corrects it. Review items gap3-1, gap3-8.
 
+- [ ] **Q178b. Instant Action's catalogue: the `Easy_` layer and the gate, built.** From Q178's decode
+  (`park-engine.md`, "How a key finds its global"). When the loaded park is the type-2 Easymode (the same condition
+  `Level` uses for `easyMode: true`, not the player alone, Q186), `ParkItemCatalogue` lays `Easy_<stem>.sam` from the
+  item's own wad over its own file, matched without regard to case, and leaves out an item whose wad has none. Read the
+  keys it sets (`Upgrades[i].WearRate`, `Upgrades[i].CostOfResearch`, `Research.Group`) or count them where nothing uses
+  them yet. A bounded key no file sets reads its lower bound. A refused value is a quit in the original: decide with
+  Alexah whether OpenTPW quits too (rule 11), and say it at the site. Confirm: `catalogue` lists 50 items, and the
+  shops tab, photographed, shows 6 rows without the Gift Shop and the Steak Restaurant.
 - [ ] **Q179. The Hot Pot lets no rider off. Decode first.** Found by Q172b's game run. A Hot Pot bought at (57,23)
   with its queue laid to the path at (56,22), then `load 40`: guests are admitted ("been AdmitPerson'd to ride 43")
   and sit in state `Riding`, 13 in 20 minutes, 16 in the build before Q172b in 4, past its capacity of 4, and none is

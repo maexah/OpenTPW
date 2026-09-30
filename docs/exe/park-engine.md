@@ -218,16 +218,36 @@ The `PeepInfo` object is at `0x00785040` (built at `0x00402ae0`, table `0x0073fc
 
 A line may name several fields, each taking the next value (up to sixteen; OpenTPW reads these, `BalanceFieldTests`). Two more parser behaviours, measured and not yet compared with OpenTPW's reader: **the first bad line ends the file** - an unknown key, a bounded value out of range, or a negative in a type-5 field returns nought and no later line is read; and **an array's count is the highest index the files wrote, plus one**, not the table's size - so Lost Kingdom's guest type is `rand % 8`.
 
-**An item's description is read the same way, one file laid over another** (Q171's verify, `wf_727b3f26-329`).
-`FUN_00413c10` gives each item a descriptor of its own (`FUN_00412c20`, the schema at `0x00744b30`) and parses into it
-in order: its folder's category file, whose parse first zeroes every slot (`FUN_004013e0`, flag nought at
-`0x00413e02`); in game type 1 `Online_<Category>.sam`; the item's own `.sam` from its wad (`0x00413f06`); then in game
-type 1 `Online_<stem>.sam`, or in game type 2 `Easy_<stem>.sam` (`0x00413ffe`..`0x0041404d`). Every store overwrites,
-so a key declared twice keeps the later value. The zeroing gives an unbounded key nought and a bounded one its lower
-bound (`0x0040153a`), so `Info.NewAttractionDecayTime` is 1 where no file sets it and `UsageInfo.ExciteFactor` 50. In
-game type 2 an item whose wad has no `Easy_` file is never catalogued (`FUN_00413930`, `0x00413ac4`..`0x00413b3a`), and
-a parse error in any item's file ends the whole catalogue load (`0x00413f18`). OpenTPW reads the category and the
-item's own file only (Q178).
+**An item's description is read the same way, one file laid over another** (Q171's verify, `wf_727b3f26-329`;
+Q178's decode, `wf_8a4195bd-544`, two Opus skeptics upholding every claim). The catalogue is built afresh at every
+park load: `Game_StateMachine`'s state 9 calls `FUN_00407e00` (`0x0054ed3f`), which builds it (`FUN_00413140`) before
+the balance (`FUN_005156a0`). `FUN_00413140` walks Rides, Features, Upgrades, Shops and Sideshow in that order, each
+through `FUN_00413930`, which takes every subfolder and `.wad` in the folder and gives each a descriptor
+(`FUN_0041dc80`). An item without `<stem>.sam` in its own wad is dropped in every game type (`FUN_0041f170`,
+`0x00413b44`). **In game type 2 (`DAT_00fb3b7c`) an item is catalogued only if its own wad holds
+`Easy_<stem>.sam`** (`FUN_0041f190`: `"Easy_"` from `0x00747930`, the stem, `".sam"` from `0x00747928`); otherwise
+its descriptor is deleted and never catalogued (`0x00413ac4`..`0x00413b3a`). The wad lookup lowercases both sides, so
+`Easy_fries.sam` matches `fries`. A type-2 duplicate name is neither catalogued nor freed.
+
+`FUN_00413c10` then parses into the descriptor (`FUN_00412c20`, the schema at `0x00744b30`), in order: its folder's
+category file, whose parse first zeroes every slot (`FUN_004013e0`, flag nought at `0x00413e02`); in game type 1
+`Online_<Category>.sam`; the item's own `.sam` (`0x00413f06`); then, if the wad holds it, `Online_<stem>.sam` in type 1
+or `Easy_<stem>.sam` in type 2 (`0x00413ffe`..`0x0041404d`). Every store overwrites, so a key declared twice keeps the
+later value. The zeroing gives an unbounded key nought and a bounded one its lower bound (`0x0040153a` for an int,
+`0x0040156b` for a float; the bound is `[lo, hi)`), so `Info.NewAttractionDecayTime` is 1 where no file sets it and
+`UsageInfo.ExciteFactor` 50. **A parse that fails in any item's file** (a refused value: out of its bounds, or negative
+in a type-5 or type-8 key) makes `FUN_00413c10` return nought (`0x00414061`), which ends the category's walk and
+`FUN_00413140`, and state 9 returns 2: the game quits, with an error box naming the file at exit (`FUN_00405710` code
+3, `FUN_00405750`). So does a 331st item (`0x00413cfa`, "Too many rides loaded").
+
+Lost Kingdom, measured across all its 70 item wads: 50 hold an `Easy_` file and 20 do not. The 20 are Chac Atak, Gorilla
+Thrilla, Sun God, Jurassic Tours, Eruption (`coaster1`, `coaster3`, `incagod`, `tourride`, `volcano`), the Gift Shop, the
+Steak Restaurant, the Arcade (`arc2x3`), nine features (`5x5rck`, `5x5rck2`, `lavspurt`, `lure`, `mamfount`,
+`speaker2`-`4`, `statue2`) and the three upgrades. The 12 rides' `Easy_` files set `Upgrades[0..2].WearRate` (3, 2, 1;
+1, 1, 1 for `minecart` and `wateride`) and `Upgrades[1..2].CostOfResearch` 0, and `minecart`'s `Research.Group` 2; the
+other 38 hold comments only. `Easymode.TPWI` places none of the 20. The original runs that park only in type 2 (Q178's
+note, `FUN_005c8190`). OpenTPW reads the category and the item's own file only, and catalogues all 67 it finds (the
+upgrades are not among them): 17 more than the original's 50 (Q178b).
 
 ---
 

@@ -181,6 +181,9 @@ public sealed class ParkItemCatalogue
 			// a guest may choose it, and whether it has a queue - none of which most items restate.
 			var category = TryReadCategory( path, folder );
 
+			// Every item is catalogued, from its category and its own file. The original's Instant Action park
+			// also lays Easy_<stem>.sam last and drops an item whose wad has none (FUN_00413930, 0x00413ac4;
+			// park-engine.md, "How a key finds its global"): in Lost Kingdom that is 17 of these 67 (Q178b).
 			foreach ( var directory in directories )
 			{
 				var stem = Path.GetFileName( directory );
