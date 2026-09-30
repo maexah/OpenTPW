@@ -52,7 +52,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 
 ## Does not
 
-- No month's turn in the bank, wages or training (counted, Q198), litter, day ending, saving a park back, video,
+- No month's turn in the bank, wages or training (decoded and counted, Q198b), litter, day ending, saving a park back, video,
   networking. Research is inert. In a park the advisor says the gadget's opening line and no more (`docs/PLAYER-GAPS.md` gap 4).
 - Eight of the nine per-object windows are unbuilt. Setting patrol areas is deferred by Alexah; staff keep the save's.
   A walking member of staff is not entered in the cells they cross; only hiring and putting down place one.
@@ -77,7 +77,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184 are ticked**; next **Q198**; the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q198 are ticked**; next **Q198b**; the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -108,12 +108,12 @@ Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184 are ticked**; next **Q198**; 
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1457**, 0 fail, 0 skip with the game | 2026-09-30, after Q177f |
-| Tests without the game | **572** ran, **885** skipped, of 1457 | 2026-09-30, after Q177f |
-| Build warnings | 123 | 2026-09-30, after Q177f |
+| Tests | **1457**, 0 fail, 0 skip with the game | 2026-09-30, after Q198 |
+| Tests without the game | **572** ran, **885** skipped, of 1457 | 2026-09-30, after Q198 |
+| Build warnings | 123 | 2026-09-30, after Q198 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-30 (Q177f).** `alexah/197-costumes`. **Earlier:** `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`,
+**2026-09-30 (Q198, the decode).** `alexah/198-decode-the-month-turn`. **Earlier:** `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`,
 `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

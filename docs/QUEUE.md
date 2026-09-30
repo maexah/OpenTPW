@@ -2879,17 +2879,66 @@ artifacts are listed in `docs/history/README.md`.
   `0x004fb1bc`), pack the costume bank, then the costume; the picture changes as the guest leaves the shop. Counted
   now as `SETTLE_UP_COSTUME`. Confirm: a guest leaving a bought Costume Shop in the tiger costume, `peeps` showing kind
   2, and after a second visit the child they arrived as.
-- [ ] **Q198. The bank's month turn, the wage and training. Decode first.** Found by Q177c's map and review
-  (`ride-operation.md`, "The cost of goods and the park's money", every caller of the bank, and "Who sends the day's
-  change"). The calendar sends the month's change, message `0xc`, on its own compare (`0x004f83b9`). On it the bank's
-  handler runs its month turn `FUN_004d0370` (it banks `mBatchBalance`, pays each loan's instalment, counts the months
-  in the red from `mTurnEnteredRed` and ends the park at six), each member of staff withdraws a month's wage
-  (`FUN_00504c70`, `0x00504cb9`) and the staff manager pays out the training budget (`FUN_00505a10`, `0x00505a45`).
-  Counted now, not built: `BANK_MONTH_TURN`, `STAFF_MONTHLY_WAGE` and `STAFF_MONTHLY_TRAINING`, one of each a member.
-  Also counted: the purchase's golden-ticket arm (`PURCHASE_GOLDEN_TICKET_ARM`; the buy list's side is Q141's note) and
-  a kart or water ride's track at a sale (`SALE_TRACK_TEARDOWN`: its cells cleared and paid for, `0x0052801d`). Decode
-  the month turn's order and the wage's and training's amounts in the park that ships, then build them. Confirm:
-  `money` either side of a month's change with staff hired, and `unimplemented`.
+- [x] **Q198. The bank's month turn, the wage and training: the decode.** Done 2026-09-30,
+  `alexah/198-decode-the-month-turn`. Decode only; the build is Q198b. `ride-operation.md`'s new "The month's change"
+  (who hears `0xc` and in what order, the training, the analyser's month, the bank's month turn, the wage, what Lost
+  Kingdom reaches, both measurements, what the build needs); "The cost of goods and the park's money" and "Who sends
+  the day's change" pointed at it, the training payer named (thing 1, `mStaffHQ`). `weather.md`: the calendar is not
+  the sole writer of its month and day, and the year is not saved, so a park saved in another year gets `0xd` on its
+  first sweep. `hud.md`: the staffcosts screen's five budgets. FileFormats (`alexah/198-decode-the-month-turn`):
+  `saves.md`'s new "The staff HQ (model 9)" (the training budgets at file 82) and "The message centre module" (the 29
+  listener sets; set `0xc` in all nine park files), and the batch and loans nought in all nine. Comments corrected at
+  their sites (`Level`, `ParkPeople`, `ParkState`); no code changed.
+  - **Decoded** (`wf_362d8882-a82`): three Opus decoders in Ghidra (the month's listeners and their order, the bank's
+    month turn, the wage and the training), each put to an Opus skeptic (93 verdicts: 84 upheld, 9 amended, none refuted and none changing an answer; the
+    points they found missed, a promotion paid at the new grade in the same change, the whole share withdrawn, the
+    park that ends mid-walk still paying its staff, the easy wages Instant Action's only, are in the section). Re-read first-hand:
+    `FUN_004d0370`, `FUN_00504c70`, `FUN_00505a10`, `FUN_0050c800`, `FUN_00506490`, the loan drawdown's gate and the
+    payoff's profit share; measured first-hand: the message
+    centre's sets and the bank's batch and loans in all nine park files, thing 1's record in the shipped park.
+  - **The answer.** At each month's change set `0xc` is told in ascending thing id: thing 1 pays the training, the
+    analyser closes the month, the bank runs its turn, then each member of staff pays `PayMultiplier[type]` ×
+    `BaseWage[grade]`, untested and unprorated. The training divides each kind's budget among its members (signed),
+    buys a point per `PoundsPerTrainingPoint[grade]` up to 100 a month, and promotes at 100; the budgets are nought in
+    the shipped park. The bank's turn banks `mBatchBalance` and pays bought loans (nought and none in every park
+    file) and ends a park six thirty-day months into the red. So the shipped park's month costs **538**, all wages. A
+    load sends no `0xc`: after `Easymode.TPWI` the first is at tick 1383.
+  - **Measured in the original** (the reference install under Proton, off-screen, the stock park; `q198/orig/`),
+    predicted first: 538 at 3.1 (tick 1383, as decoded; 88212 to 87674) and at 4.1 (88519 to 87981, photographed on
+    3.31 and 4.1, `turn-*-hud.png`); with the mechanics' budget raised to 25 on the Staff Training Budgets screen,
+    563 at 5.1 and the mechanic's progress 0 to 1. The analyser's month costs read 538 after each change, which put the
+    training in the closing month and the wages in the new one before the decoders had reported it. The live tables
+    held the easy wages and the global training costs. Park clock NOT TRUE (1.48×), which moves no amount.
+  - **Measured in the game** (the build before any change; `q198run.py`, `q198-run1/`, silent, the stock park, a
+    handyman hired at 36, predicted first; `save/` unchanged; 8 of 8): the balance 88137 on both sides of 2/1/2000 with
+    no Bank line between, photographed (`0-before-month.png`, `1-after-month.png`); `unimplemented` none, then
+    `BANK_MONTH_TURN` 1, `STAFF_MONTHLY_WAGE` 6, `STAFF_MONTHLY_TRAINING` 6.
+  - **Not confirmed on screen:** a promotion (1500 at a grade-3 member's 15 a point); a loan's instalment and its
+    unsigned profit (no loan is bought in any file, and our loans screen is not built); the end of the park six months
+    in the red; the year's `0xd` on loading a park saved in another year (decoded only, Q149's note).
+  - Built and tested alone in a worktree: 1457 pass, 0 skip with the game; 572 ran, 885 skipped without; 123 warnings.
+
+  The item as written: Found by Q177c's map and review (`ride-operation.md`, "The cost of goods and the park's money",
+  every caller of the bank, and "Who sends the day's change"). The calendar sends the month's change, message `0xc`, on
+  its own compare (`0x004f83b9`). On it the bank's handler runs its month turn `FUN_004d0370` (it banks
+  `mBatchBalance`, pays each loan's instalment, counts the months in the red from `mTurnEnteredRed` and ends the park
+  at six), each member of staff withdraws a month's wage (`FUN_00504c70`, `0x00504cb9`) and the staff manager pays out
+  the training budget (`FUN_00505a10`, `0x00505a45`). Counted now, not built: `BANK_MONTH_TURN`, `STAFF_MONTHLY_WAGE`
+  and `STAFF_MONTHLY_TRAINING`, one of each a member. Also counted: the purchase's golden-ticket arm
+  (`PURCHASE_GOLDEN_TICKET_ARM`; the buy list's side is Q141's note) and a kart or water ride's track at a sale
+  (`SALE_TRACK_TEARDOWN`: its cells cleared and paid for, `0x0052801d`). Decode the month turn's order and the wage's
+  and training's amounts in the park that ships, then build them. Confirm: `money` either side of a month's change
+  with staff hired, and `unimplemented`.
+- [ ] **Q198b. The month's change: the training, the bank's turn and the wages.** Decoded by Q198 (`ride-operation.md`,
+  "The month's change"). At `GameCalendar.MonthRolled`, in the original's order: thing 1's training (`mBudget[0..4]`
+  read from the save's model-9 record at file 82, which `ParkWorld` skips; each kind's budget over its members, signed;
+  `TrainMe` for every member, grade 4 refused, `ParkState.Spend( share )` even for nought, the progress and the
+  promotion, so `Staff.PayGrade` and `PercentageThroughGrade` must change); the analyser's month, counted; the bank's
+  turn (`mBatchBalance` and the eight loans seeded from the save, both dead by CONTENT in every park file; the red
+  count, and the end of the park and the advisor's record `0x6a` counted where it reaches them); then each member's
+  wage, `ParkStaffPool.WageFor` through `ParkState.Spend`. `PURCHASE_GOLDEN_TICKET_ARM` and `SALE_TRACK_TEARDOWN` stay
+  counted. Confirm: `money` either side of 2/1/2000 with a member hired, the fall the members' wages (the shipped five's
+  538 and the hire's), the HUD photographed on both sides, and `unimplemented` without the month's three counts.
 - [ ] **Q199. A guest running for the bus. Count it first.** Found by Q177d's review (`wf_4e09ebe1-b64`). Heading for
   the gate, `FUN_004ff730` writes the hurry 50 (`0x0075c7f4`) when `FUN_0051aad0` answers 0 and `FUN_0051a690` 3: the
   current arrival vehicle is the size-1 one and its script's `VAR_STATUS` is 3 ("The bus is coming!  RUUUUUUUUUUN!!!!",
@@ -3713,6 +3762,10 @@ artifacts are listed in `docs/history/README.md`.
   From Q177b: the objects' day rings roll on `GameCalendar.DayRolled` too, so their days turn about 18 world ticks
   later than the original's after Lost Kingdom's load (its first changes at ticks 761, 784, 807), and a load never
   rolls on its first tick where the file's `mDayAtLastUpdate` differs from the loaded date.
+  From Q198: the month's change comes to the bank and the staff on `GameCalendar.MonthRolled`, so here on 2/1/2000,
+  177 s in, where the original's first after the load is at tick 1383, 3.1 (measured). A load reads the month and the
+  day but not the year, which keeps the entry's seed, 2000 (`weather.md`), so a park saved in another year gets `0xd`
+  on its first sweep and zeroes `mProfitThisYear` (decoded, not measured).
 - [ ] **Q150. Scripts and the thing sweep take a frame's ticks in two loops, where the original takes both per tick.**
   Found by the 2026-09-26 staleness audit. The original's park loop runs the scripts (`0x0054f56b`) and the thing
   sweep (`0x0054f7bb`) inside one loop over the frame's ticks. `ParkRides` and `ParkPeople` each loop over

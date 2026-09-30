@@ -2098,8 +2098,11 @@ Opus skeptic; reports in `~/.cache/tpw-harnesses/q177c/map/`):
   tickets (`FUN_004d4b90`, `0x004ac5a9`). The bank's month turn
   `FUN_004d0370` carries inlined copies: it banks `mBatchBalance` ungated and zeroes it (`0x004d0393`..`0x004d03db`),
   withdraws each loan's instalment gated (`0x004d0402`) and adds the principal's share back onto `mProfitThisYear`; a
-  loan's drawdown (`FUN_004d0750`) deposits and takes the amount back off the profit (`0x004d07ee`); its payoff
-  (`FUN_004d0850`) refuses a balance below what is owed by an unsigned test (`0x004d089a`), so a negative balance passes.
+  loan's drawdown (`FUN_004d0750`) refuses only a slot already bought (`0x004d075e`), never reading `loan_available`, and
+  deposits and takes the amount back off the profit (`0x004d07ee`); its payoff (`FUN_004d0850`) refuses a balance below
+  what is owed by an unsigned test (`0x004d089a`), so a negative balance passes, and zeroes `months_repaid`
+  (`0x004d0916`) before its profit share reads it (`0x004d0945`), so the year is charged the whole loan's interest
+  again rather than the months left's.
 
 **OpenTPW** (Q177c with Q96): `ParkState.Spend` is the withdrawal at every site that pays (purchase, path, queue, drain,
 dismissal, cost of goods, a sold coaster's nought), gated on `WithdrawalsEnabled` and moving `LastBalance`,
@@ -2114,7 +2117,7 @@ in double ("What a thing is worth to a guest", "Where OpenTPW differs", the FPU'
 month turn (`BANK_MONTH_TURN`, on `GameCalendar.MonthRolled`), each member of staff's wage and training share
 (`STAFF_MONTHLY_WAGE`, `STAFF_MONTHLY_TRAINING`), the purchase's golden-ticket arm (`PURCHASE_GOLDEN_TICKET_ARM`, on
 every such purchase, as no list of ticket-bought items is kept) and a kart or water ride's track at a sale
-(`SALE_TRACK_TEARDOWN`); `docs/QUEUE.md` Q198. Not counted: the buy list's mystery row and its ticket test (Q141).
+(`SALE_TRACK_TEARDOWN`); `docs/QUEUE.md` Q198b and "The month's change", below. Not counted: the buy list's mystery row and its ticket test (Q141).
 
 **Who reads what the booking moves**:
 
@@ -2151,10 +2154,125 @@ every such purchase, as no list of ticket-bought items is kept) and a kart or wa
   window closes, steps to the next shop or applies to all (`FUN_004b0aa0`, vtable slot `+0x3c`), so a moved slider
   shows a cost the sales do not book yet.
 - The analyser's month totals, pushed into 144-month rings at `+0x1fc94` and `+0x1f5a4` on the month's change
-  (`FUN_004c7720`): the finance graph's "Money out" once the month is finished, the hire screen's mini-balance
+  (`FUN_004c7720`, with the staff, training and a dozen more, after thing 1's training and before the bank's turn and
+  the wages: "The month's change"): the finance graph's "Money out" once the month is finished, the hire screen's mini-balance
   ("Other costs", "Balance": `hud.md`), the staff-costs and loans screens, and the gadget's icon beside the money
   (`FUN_004a0e30`, control `0x31`, frame 1 when last month's cash in was below its total costs; likely the red down arrow beside the
   money in the original's frame, though which picture each frame is was not established).
+
+### The month's change: the training, the analyser, the bank and the wages
+
+Decoded for Q198 (`wf_362d8882-a82`: three Opus decoders in Ghidra, each put to an Opus skeptic; reports in
+`~/.cache/tpw-harnesses/q198/decode/`), and measured in the original and in the game (below).
+
+**Who hears it, and in what order.** The calendar sends message `0xc` at most once a sweep, after every thing's turn,
+between the day's `0xb` and the year's `0xd` (`FUN_004f8260`: built at `0x004f83c5`, sent at `0x004f8420`); it stores
+the new month, day and year only after all three sends (`0x004f8541`..`0x004f8552`). The message centre (`[0x00788d3c]`,
+29 sets of thing ids, one per message type) hands a message to the things in its set one at a time, each handler
+finishing before the next, in ascending id (`FUN_0040fb10`; the set is ordered by an unsigned compare, `0x0040fe8b`).
+Five constructors join set `0xc`: model 9's (`0x00508a08`), the tag system's, the analyser's, the bank's
+(`0x004cf8f0`) and every member of staff's (`FUN_00504b90`, `0x00504c53`); a load replaces every set with the file's
+(`FUN_0040fd60`; FileFormats `saves.md`, "The message centre module"). In all nine park files set `0xc` is things 1,
+4, 5 and 8 and then every member of staff, so a month's change runs, in this order:
+
+1. **Thing 1**, model 9, the header's `mStaffHQ`, pays the training (`FUN_00508a30` → `FUN_00508e70` → `FUN_0050c800`,
+   `0x00508e79`), whether the park is open or shut, and then looks at strikes (not decoded).
+2. **Thing 4**, the tag system, ignores it.
+3. **Thing 5**, the park analyser, closes the month (`FUN_004c7720`, its one call `0x004c739c`): it samples the
+   balance into its ring (`+0x1f104`), then pushes and zeroes the month's costs `+0x1f5a0`, staff `+0x1f7f0`, training
+   `+0x1fa40` and cash in `+0x1fc90`, each into a 144-month ring (`FUN_004ce290`), and rolls a dozen totals besides.
+4. **Thing 8**, the bank, runs its month turn (`FUN_004d02d0` → `FUN_004d0370`, `0x004d035f`).
+5. **Each member of staff** pays a month's wage (`FUN_00504c70`, `0x00504cb9`).
+
+So the training is booked into the month that closes, and the bank's turn and every wage into the new one; the
+analyser's month-end balance sample sees the training and not the wages, and the bank's red test sees the training
+but not this change's wages. Nothing else hears `0xc` (the advisor, the research lab, the weather, the UI receiver, the
+challenge manager, objects and guests subscribe to other messages). Entering a park seeds the calendar's month and
+year from tick 0 (`FUN_004f85a0`); a load then reads the month and the day but not the year (`FUN_004f7f30`,
+`0x004f81b5`, `0x004f81f7`), so loading `Easymode.TPWI` (tick 755, 2 February 2000) sends nothing, and its first
+month's change is at tick 1383, 1 March, 628 sweeps in. A park saved in a year other than 2000 would get `0xd` on its
+first sweep and lose `mProfitThisYear` (decoded, not measured; `QUEUE.md` Q149).
+
+**The training, `FUN_0050c800`.** Thing 1 keeps five monthly budgets, `mBudget[0..4]` at `+0xc` (file 82; FileFormats
+`saves.md`, "The staff HQ"), the handymen's, mechanics', entertainers', guards' and researchers' in that order, set on
+the Staff Training Budgets screen only (0 to 10000 in steps of 25, `FUN_004b2750`; `hud.md`). It walks every thing
+twice: once counting the staff of each model, then calling `CStaff::TrainMe` (`FUN_00505a10`) on every member with
+budget / count, a signed division (`0x0050c945`..`0x0050c97c`). Neither pass writes a budget, which stays set from
+month to month; what the division leaves over is never taken; and nothing tests the budget, so a nought budget still
+makes the call. `TrainMe`:
+
+- at grade 4 (`mCurrentPayGrade`, `+0x1e4`) takes nothing and returns (`0x00505a15`), though the member counted in the
+  divisor;
+- otherwise withdraws the share whole (`FUN_004d01f0`, gated; a nought share still writes `mLastBalance`) and adds it,
+  ungated, to the analyser's training total (`0x00505a62`);
+- divides the share by the grade's `PoundsPerTrainingPoint` (signed, `0x00505ae1`: `HandymanConstsPerGrade[g]`,
+  `MechanicConstsPerGrade[g]` and so on by model; the global `Standard.sam`'s in every jungle park, which no theme or
+  easy file overrides: 5, 8, 12 and 15 for grades 0 to 3, the researcher's 8, 12, 15 and 18, and nought at grade 4),
+  holds the quotient to 100 (`0x00505ae5`) and adds it to `mPercentageThroughGrade` (`+0x1e8`, one byte);
+- at 100 or more promotes: the grade one up, the progress less 100, happiness (`+0x1f8`) to 100
+  (`0x00505b2a`..`0x00505b3c`). So a member rises at most one grade a month, and is paid at the new grade in the
+  same change, as the wage comes after.
+
+What the point division leaves, and whatever buys past 100 points, is spent for nothing: 25 on a grade-3 mechanic
+buys one point and loses 10. Only the withdrawal is gated, so with withdrawals off the training advances for nothing.
+
+**The bank's month turn, `FUN_004d0370`.**
+
+- `mBatchBalance` (`+0x10`) is deposited as `FUN_004d0190` deposits (the balance, the analyser's cash in and the
+  profit, ungated) and zeroed (`0x004d0393`..`0x004d03db`). Nothing but a file makes it non-zero, and it is nought
+  in all nine park files: dead by CONTENT.
+- Each of the eight loans whose `loan_bought` is set (`0x004d03e1`) pays its `monthly_repayment` by the withdrawal,
+  inlined (`0x004d0402`..`0x004d0460`, the same as `FUN_004d01f0`); then, ungated, `months_repaid` goes up one
+  (`0x004d0466`) and `mProfitThisYear` gains m − (m × P − A) / P, the division UNSIGNED (`DIV`, `0x004d0499`), which
+  gives the principal's share back so that only the interest counts against the year. When `months_repaid` reaches the
+  period, `loan_bought` and `months_repaid` go to nought (`0x004d04c6`, `0x004d04c9`). On an easy park's loans (APR
+  nought) m × P − A is minus what A / P leaves over, near 2^32 unsigned: loan 3, 10000 over 36 months at 277, would
+  take 119,304,646 off the year's profit each month, where a signed division would take nought. No loan is bought in
+  any of the nine park files, and OpenTPW has no loans screen: dead by CONTENT.
+- The end of the park: when the balance and `mLastBalance` are both below nought after the loans, the time since
+  `mTurnEnteredRed` (`FUN_004f88b0`: the ticks × the clock's rate / 4, in seconds) is divided into thirty-day months,
+  and at 6 or more (4148 sweeps at the shipped rate, about 17 minutes of play) the bank broadcasts message `0x13` with
+  2 (`0x004d054c`..`0x004d05b2`). Its own handler then ends the park (`FUN_005168f0`) unless it is ending already, and
+  the advisor raises record `0x6a` (`0x0059aee7`). The end sends nothing further and the walk goes on, so every member
+  of staff is still paid in the ended park. A park that spends past nought and stays there reaches it.
+
+**The wage, `FUN_00504c70`**: `PerTypeStaffConsts[type].PayMultiplier` × `PerGradeStaffConsts[grade].BaseWage`
+(`0x00504ca4`; the type is 0 to 4 for the handyman, mechanic, entertainer, guard and researcher, `FUN_00506490`),
+`Easy_Standard.sam`'s numbers in Instant Action (game type 2, which Lost Kingdom's Easymode is; the full game's
+files make the shipped five 810), withdrawn gated (`0x00504cb9`) and added ungated to the analyser's
+staff total (`0x00504cf1`). Nothing is tested first: a member resting, on strike, in the hand or hired that month
+pays the whole month. A candidate in the hire pool is not a thing and is paid nothing. A dismissal pays one more
+(`FUN_00505790`, `0x00505944`), and the delete's message `0x1b` takes the member out of every set.
+
+**What Lost Kingdom reaches.** The shipped park's five staff pay 7 × 9, 7 × 23, 7 × 12, 7 × 15 and 5 × 25, **538 a
+month**. Its budgets are nought, so the training is five withdrawals of nought, and its bank's turn moves nothing.
+
+**Measured in the original** (the reference install under Proton, off-screen, the stock Lost Kingdom park loaded on
+2.8.2000; `~/.cache/tpw-harnesses/q198/orig/`: `watch.py`, `watch1.log`, `watch2.log`, `shootturn.py`, `tables.py`),
+predicted first from the decode: 538 at each change. The live tables held the easy wages (`PayMultiplier` 9, 23, 12,
+15, 25; `BaseWage` 3, 4, 5, 7, 9) and the global training costs above. At 3.1 (tick 1383, as decoded) the balance fell
+88212 to 87674, and at 4.1 88519 to 87981, both 538, `mLastBalance` taking the new balance and the profit falling by
+it; photographed on both sides of the second (`turn-0-before-hud.png`, $88519 on 3.31.2000; `turn-1-after-hud.png`,
+$87981 on 4.1.2000). The shipped budgets read nought on the Staff Training Budgets screen (`o11.png`). With the
+mechanics' budget raised one step, to 25 (`o12.png`), 5.1 took 563 and the mechanic's `mPercentageThroughGrade` went
+0 to 1 (25 / 15), both as predicted; and each change left the analyser's month costs at 538, so the 25 went into the
+month that closed and the wages into the new one. The park clock was NOT TRUE (1.48×, 7.8 days up), which moves no
+amount.
+
+**Measured in the game** (the build before any change; `q198run.py`, silent, the stock jungle park, one handyman hired
+at 36 a month, predicted first; `save/` unchanged; `q198-run1/`, 8 of 8): paused on 1/31/2000 and stepped to 2/1/2000,
+`money` read a balance of 88137 on both sides with no Bank line between, and `unimplemented` went from none to
+`BANK_MONTH_TURN` 1, `STAFF_MONTHLY_WAGE` 6 and `STAFF_MONTHLY_TRAINING` 6; photographed on both sides, the HUD at
+$88137 (`0-before-month.png`, `1-after-month.png`).
+
+**OpenTPW.** `ParkState.TurnTheMonth` counts `BANK_MONTH_TURN`, and `ParkPeople.TurnTheMonth` counts
+`STAFF_MONTHLY_WAGE` and `STAFF_MONTHLY_TRAINING` once a member, the bank before the staff; no money moves. The build
+(`QUEUE.md` Q198b) needs thing 1's budgets read from the save (`ParkWorld` skips model 9), the training before the
+analyser and the bank and the wages after them, each member's wage by `ParkStaffPool.WageFor` through `ParkState.Spend`,
+`TrainMe` on a `Staff` whose grade and progress can change, `mBatchBalance` and the loans seeded from the save, the
+analyser's month counted, and the end of the park and the advisor's record counted where the red count reaches them.
+OpenTPW's calendar counts from nought (Q149), so its first month's change is 1 February, 177 s in, where the
+original's after the same load is 1 March.
 
 ### The object's six day rings, and what shows them
 
@@ -2177,9 +2295,8 @@ the heap did; no reader of the figures goes past the filled days (the serialiser
 month (and only it, `0x004f8321`) differs from `mDayAtLastUpdate`. The same call then compares the month on its own
 (`0x004f83b9`) and sends message `0xc`, the month's change (`0x004f83c5`), and the year (`0x004f84d0`) and sends `0xd`
 (`0x004f84d8`). The bank's handler (`FUN_004d02d0`) hands `0xc` to its month turn `FUN_004d0370` (`0x004d035f`) and
-answers `0xd` by zeroing `mProfitThisYear` alone (`0x004d034e`); each member of staff's handler withdraws a month's wage
-on `0xc` (`FUN_00504c70`, `0x00504cb9`), and the staff manager pays out the training budget (`FUN_00505a10`,
-`0x00505a45`). OpenTPW's `GameCalendar` makes the three compares (`DayRolled`, `MonthRolled`, `YearRolled`). It goes to the `0xb` listeners - every object built
+answers `0xd` by zeroing `mProfitThisYear` alone (`0x004d034e`); `0xc` goes to thing 1's training, the analyser, the bank
+and each member of staff's wage, in that order ("The month's change"). OpenTPW's `GameCalendar` makes the three compares (`DayRolled`, `MonthRolled`, `YearRolled`). It goes to the `0xb` listeners - every object built
 by `FUN_004db090` (`0x004db23a`) and the challenge manager - in ascending thing id, synchronously, and after every
 thing's turn in that tick (`0x00516695`), so the tick's settle-ups count into the day that is closing. Persons never
 get it. A new world rolls on its first tick (the calendar's constructor sets the day to −1, `0x004f7ebd`); a load reads

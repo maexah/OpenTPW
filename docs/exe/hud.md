@@ -371,6 +371,12 @@ money-in/out split and the graph history), **staffcosts** (training budgets, oth
 `mResearchGroup`, `mFirstResearcher`, and per-group research points), whose gadget button only logs, and counts
 each click as `RESEARCH_BUTTON`: neither the screen nor its two message boxes is built.
 
+The original's staffcosts screen, headed "Staff Training Budgets", has one row a kind (handymen, mechanics,
+entertainers, guards, researchers), each a minus, a budget and a plus over 0 to 10000 in steps of 25
+(`FUN_004b2750`), writing thing 1's `mBudget` as the plus is pressed; the budgets are spent at each month's change
+(`ride-operation.md`, "The month's change"). Its mini-balance's Staff costs row read $0, then $25 after one press,
+where the month's wages were 538 (measured, not decoded).
+
 So the three buttons are not one job: **Info has 3 of 4 built, Money 1 of 4, and Research is
 none.**
 

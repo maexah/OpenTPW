@@ -831,9 +831,9 @@ public sealed class ParkState
 
 	/// <summary>
 	/// The month's change reaches the bank - message <c>0xc</c>, which its handler (<c>FUN_004d02d0</c>) hands to
-	/// the month turn <c>FUN_004d0370</c>: it banks <c>mBatchBalance</c>, pays each loan's instalment, counts the
-	/// months in the red from <see cref="TurnEnteredRed"/> and ends a park six months in. Counted, not built
-	/// (<c>docs/QUEUE.md</c> Q198).
+	/// the month turn <c>FUN_004d0370</c>: it banks <c>mBatchBalance</c>, pays each bought loan's instalment, counts
+	/// the months in the red from <see cref="TurnEnteredRed"/> and ends a park six months in. Counted, not built
+	/// (<c>docs/QUEUE.md</c> Q198b; <c>docs/exe/ride-operation.md</c>, "The month's change").
 	/// </summary>
 	public void TurnTheMonth() => Unimplemented.Report( "BANK_MONTH_TURN" );
 

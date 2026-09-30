@@ -598,9 +598,10 @@ public sealed class ParkPeople : Entity
 	internal bool IsStaff( int thingId ) => _staff.Exists( member => member.ThingId == thingId );
 
 	/// <summary>
-	/// The month's change reaches the staff - message <c>0xc</c>: each member's own handler withdraws a month's wage
-	/// (<c>FUN_00504c70</c>), and the staff manager's pays each member's share of the training budget
-	/// (<c>FUN_00505a10</c>). Counted, one of each a member, not built (<c>docs/QUEUE.md</c> Q198).
+	/// The month's change reaches the staff - message <c>0xc</c>: thing 1 (<c>mStaffHQ</c>) pays each member's share
+	/// of the training budgets before the bank's turn, and each member's own handler withdraws a month's wage after it
+	/// (<c>FUN_00504c70</c>; <c>docs/exe/ride-operation.md</c>, "The month's change"). Counted, one of each a member,
+	/// not built (<c>docs/QUEUE.md</c> Q198b).
 	/// </summary>
 	public void TurnTheMonth()
 	{

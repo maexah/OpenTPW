@@ -76,7 +76,7 @@ FUN_00516380 is called every 8th 31 ms tick = 248 ms = ~4/s, hence the /4
 
 | Address | Original name | What it is | Evidence |
 |---|---|---|---|
-| `FUN_004f8260` | — | The day advance; sole writer of `mDayAtLastUpdate` / `mMonthAtLastUpdate` | Decompile |
+| `FUN_004f8260` | — | The day, month and year advance: sends `0xb`, `0xc` and `0xd` on their compares, then stores the new `mMonthAtLastUpdate`, `mDayAtLastUpdate` and year (`0x004f8541`..`0x004f8552`). The constructor, the park-entry seed `FUN_004f85a0` (month and year from tick 0) and the load write them too (`ride-operation.md`, "The month's change") | Decompile |
 | `FUN_004f8770` | — | Counter → funny seconds | Decompile |
 | `0x0080239c` | — | Base of the tick counter (`+ 0x1da70c`) | Decompile |
 | `FUN_00516380` | — | Increments the counter; one call per eight ticks | Call site below |
@@ -85,7 +85,7 @@ FUN_00516380 is called every 8th 31 ms tick = 248 ms = ~4/s, hence the /4
 | `0x00877d34` | — | The 31 ms tick counter itself | Gate above |
 | `0x004f7ea9` | — | `MOV [ESI+0x1c],0x3a98` — `mFunnySecsPerRealSec` defaults to **15000** | Disassembly of `FUN_004f7e80` |
 | `FUN_004f7e80` | — | Game-clock constructor | Decompile |
-| `FUN_004f7f30` | — | Clock save block: `+0x00 mFunnyTimeStart`, `+0x08 mSessionStart`, `+0x10 mMonthAtLastUpdate`, `+0x14 mDayAtLastUpdate`, `+0x1c mFunnySecsPerRealSec`. **`+0x18` (year) is deliberately not saved** | Named save stream |
+| `FUN_004f7f30` | — | Clock save block: `+0x00 mFunnyTimeStart`, `+0x08 mSessionStart`, `+0x10 mMonthAtLastUpdate`, `+0x14 mDayAtLastUpdate`, `+0x1c mFunnySecsPerRealSec`. **`+0x18` (year) is not saved**, so after entering a park and loading it the year is the entry's seed, 2000, and a park saved in another year gets `0xd` on its first sweep (a quickload into the running park keeps the running year) | Named save stream |
 | `0x007ced58` | — | Published calendar: `+58` second, `+5c` minute, `+60` hour, `+64` day, `+68` month (0-based), `+6c` year-1900, `+70` day-of-week — written every world tick | Decompile |
 | `0x0054f680` | — | `CMP EAX,0x3` — **at most 3 world-clock advances per rendered frame**, so a stuttering machine loses time and never gains it | Disassembly |
 | `0x785970` | — | The millisecond clock, used by the VM's `SETTIMER`/`GETTIMER`/`GETTIME` — a different clock from this one | Decompile |
