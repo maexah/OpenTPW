@@ -36,6 +36,18 @@ public sealed class ParkPeople : Entity
 	/// </summary>
 	internal static ParkPeople? Current { get; private set; }
 
+	/// <summary>
+	/// A guest was made - the original's broadcast <c>0x1c</c> from the guest constructor (<c>0x004fb2fd</c>), which
+	/// the all-visitors list answers by adding their row (<c>docs/exe/hud.md</c>, "How allpeeps keeps itself current").
+	/// </summary>
+	internal event Action<Peep>? GuestArrived;
+
+	/// <summary>
+	/// A guest is going - the original's broadcast <c>0x1b</c> from the thing delete (<c>0x0050b7f9</c>, before the
+	/// free), which the all-visitors list answers by removing their row. Handed their thing id.
+	/// </summary>
+	internal event Action<int>? GuestLeaving;
+
 	private readonly List<Peep> _peeps;
 
 	/// <summary>
@@ -502,6 +514,8 @@ public sealed class ParkPeople : Entity
 
 		Log.Info( $"People: guest {thingId} arrived at ({cellX},{cellY}) on mGameTick {State.GameTick} - "
 			+ $"{_peeps.Count} guests now" );
+
+		GuestArrived?.Invoke( peep );
 
 		return thingId;
 	}
@@ -1400,6 +1414,8 @@ public sealed class ParkPeople : Entity
 
 		if ( PeepBehaviour.HeldByAThing( peep.State ) )
 			return false;
+
+		GuestLeaving?.Invoke( thingId );
 
 		// A balloon they hold goes with them, deleted rather than let go, as the original's does at the bus
 		// (FUN_004fb330, 0x004fb333..0x004fb346).

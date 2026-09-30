@@ -3000,7 +3000,27 @@ artifacts are listed in `docs/history/README.md`.
   seconds. Decode how the original refreshes `allpeeps` (`FUN_00493530`'s list and its row adder) and whether it keeps
   the scroll; then match it. Confirm: scroll the list in a park of more than thirteen guests and photograph it after
   three seconds.
-- [ ] **Q200b. The all-visitors list kept current in place.** From Q200's decode (`hud.md`, "How allpeeps keeps itself
+- [x] **Q200b. The all-visitors list kept current in place.** Done 2026-09-30 on `alexah/202-visitors-kept-in-place`.
+  `ParkVisitorsScreen` fills the list once in Visitor Number order, rewrites each row in place every two seconds, and
+  adds and removes a row on `ParkPeople.GuestArrived`/`GuestLeaving` (the original's `0x1c`/`0x1b`) until it closes.
+  `UiList` gained the sorted insert (after every row not greater, `FUN_00663edc` read first-hand), the removal, the
+  in-place rewrite, the slider's clamp only past a full window, and a selection kept as an index, reselected by slot
+  and told as `0x401`. Two branches not decoded are counted: `LIST_FIRST_ROW_SELECTED` (an add to an empty list
+  selects row 0, every list) and `LIST_RESELECT_PAST_THE_WINDOW` (`+0x48 & 0x100`). `hud.md`, the same section.
+  - Confirmed in the game (`q200brun.py`, `q200b-run1/` and `q200b-run2/` on the final build, silent, stock park,
+    twenty admitted, 33 rows; `save/` unchanged), each predicted first: four rows down, first row visitor 45, cash 450,
+    and the same three seconds on, 48 written in place unsorted; `arrive` logged "row added for guest 63 (visitor 0)
+    at 1 - 34 rows, top row 4", its `depart` "row removed ... at 1 - 33 rows, top row 4"; at the bottom (top 20) the
+    last row's going "at 32 - 32 rows, top row 19", the view pulled up a row. All six shots looked at.
+  - Tests: `UiListTests` (8) and `ParkVisitorsScreenTests` drive the real screen; `ParkPeopleTests` the events. Each
+    bug put back failed a test (settling always, inserting before equals, a rewrite scrolling, selection shifted or
+    reselected without the top row or untold, the wheel not clamping, either event unraised, the timer refilling,
+    either subscription or the unsubscription missing). Review `wf_43732b5c-f68`: three findings, all fixed.
+  - **Not confirmed on screen:** the selection edges and the wheel's clamp of a short list (tested only); the
+    original's own list under Proton.
+  - Built and tested alone in a worktree: 1474 pass, 0 skip with the game; 581 ran, 893 skipped without; 123 warnings.
+
+  The item as written: From Q200's decode (`hud.md`, "How allpeeps keeps itself
   current"). Open the list once, sorted by the remembered `DAT_007508bc`; every two seconds rewrite each row's values
   in place without clearing, sorting or scrolling; add an arriving guest's row in sort order and remove a leaving
   guest's, with the top row clamped only as the original's slider clamps it. Confirm: scroll the list in a park of

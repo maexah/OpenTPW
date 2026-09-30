@@ -418,11 +418,26 @@ Three edges a copy must match, found by the skeptic:
 The sort is remembered between openings: message `0x406` stores (column + 1), negated when descending, in
 `DAT_007508bc` (`0x00493479`); its static default is 1, Visitor Number ascending.
 
-**OpenTPW rebuilds the list instead** (`ParkVisitorsScreen.Update`, every `RefreshEvery`): `UiList.Clear` sets the
-top row to 0, so a scrolled list is thrown back to its top every two seconds. Measured in the build before any change
-(`q200run.py`, `q200-run1/`, silent, the stock park with twenty guests admitted, 33 in the census; `save/` unchanged):
-predicted and seen, the list opened at its top (first row cash 684), scrolled four rows down (first row 306), and back
-at its top (684) in the shot 3.1 s later. The build is Q200b.
+Read first-hand for the build (Q200b, 2026-09-30):
+
+- **The sorted insert goes after every row that is not greater.** `FUN_0066403b` walks from the head until
+  `FUN_00663edc( new, row )` answers 1, which for a numeric ascending column is `new < row`, strictly. So equal
+  values keep the order they came in, and an arrival not yet numbered (visitor 0) goes after the other noughts and
+  before every numbered visitor.
+- **An add that makes the count 1 selects the first row** (`FUN_0066525c( 0 )` in `FUN_0066403b`). Whether each list
+  draws a highlight for it (`list+0x174`) is not decoded; OpenTPW counts it (`LIST_FIRST_ROW_SELECTED`).
+- **`FUN_0066525c( slot )`** selects `slot + top` when `slot < visible` and `slot < count`; otherwise, with
+  `list+0x48 & 0x100` clear, it returns and the old index stands, and with it set it selects nothing. Which this list
+  has is not decoded; OpenTPW counts that branch (`LIST_RESELECT_PAST_THE_WINDOW`) and drops the selection.
+
+**OpenTPW keeps it current as the original does** (Q200b): `ParkVisitorsScreen` fills the list once, rewrites each row
+in place on the two-second timer, and adds and removes a row on `ParkPeople`'s `GuestArrived` and `GuestLeaving`;
+`UiList` keeps its selection as an index and clamps the top row only as the slider does. The sort is always Visitor
+Number ascending, the static default, because the headings do not sort yet. Confirmed in the game (`q200brun.py`,
+`q200b-run1/`, silent, stock park, twenty admitted, 33 rows; `save/` unchanged), each predicted first: four rows down
+the first row was cash 450 and still 450 three seconds on, with row values changed in place and not re-sorted; an
+arrival's row went in at 1 (visitor 0, after the one nought already there) with the top row kept at 4, its going took
+it out at 1; at the bottom (top row 20), the last row's going left 32 rows and the top row 19.
 
 ### A caution: `0x10`/`0x11`/`0x12` are column headers, not buttons
 

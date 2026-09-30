@@ -44,18 +44,18 @@ internal sealed class ParkVisitorsScreen : UiWindow
 	];
 
 	/// <summary>
-	/// How often the list is rebuilt, in seconds - <b>the original's own cadence</b>.
+	/// How often each row's values are rewritten, in seconds - <b>the original's own cadence</b>.
 	/// <c>FUN_00493530</c> arms a 2000ms timer (id <c>0x80083</c>, the same one the gadget's gauge
-	/// uses) and refreshes on it, and the staff screen's builder arms the identical one.
+	/// uses), and on it <c>0x00493270</c> rewrites every existing row in place: nothing is added, removed,
+	/// re-sorted or scrolled, so the list stays where the player scrolled it. <c>docs/exe/hud.md</c>,
+	/// "How allpeeps keeps itself current".
 	/// </summary>
-	/// <remarks>
-	/// <b>A deviation:</b> the original's timer rewrites each existing row in place and keeps the scroll
-	/// (<c>0x00493270</c>); this clears and refills the list, which throws a scrolled list back to its top.
-	/// <c>docs/exe/hud.md</c>, "How allpeeps keeps itself current"; the build is <c>docs/QUEUE.md</c> Q200b.
-	/// </remarks>
 	private const float RefreshEvery = 2f;
 
 	private readonly UiList _list;
+
+	/// <summary>The park whose guests arriving and going this list is told of, let go of as it closes.</summary>
+	private readonly ParkPeople? _people;
 
 	private float _nextRefresh;
 
@@ -122,7 +122,15 @@ internal sealed class ParkVisitorsScreen : UiWindow
 		} );
 
 		_list.Build();
+
+		_people = ParkPeople.Current;
 		Show();
+
+		if ( _people != null )
+		{
+			_people.GuestArrived += Arrived;
+			_people.GuestLeaving += Leaving;
+		}
 
 		// Counted once, as the screen opens - not once a frame. See RefreshEvery.
 		Unimplemented.Report( "VISITOR_TIME_IN_PARK" );
@@ -144,32 +152,67 @@ internal sealed class ParkVisitorsScreen : UiWindow
 		};
 
 	/// <summary>
-	/// Fills the list with the park's guests.
+	/// Fills the list with the park's guests, once, as it opens - each inserted in sort order.
 	/// </summary>
 	/// <remarks>
 	/// <see cref="ParkPeople.Peeps"/> is guests only - staff are a list of their own - so this needs no
 	/// filter, where the staff screen's walk does.
+	/// <para>
+	/// <b>The sort is always Visitor Number ascending</b>, the static default of the remembered sort
+	/// <c>DAT_007508bc</c> (1): the headings here do not sort (<see cref="UiList.AddHeading"/>), so nothing can
+	/// store another.
+	/// </para>
 	/// </remarks>
 	private void Show()
 	{
-		_list.Clear();
-
-		if ( ParkPeople.Current is not { } people )
+		if ( _people == null )
 			return;
 
-		foreach ( var guest in people.Peeps )
-		{
-			_list.Add( new UiList.Row( guest.ThingId, $"{guest.VisitorNumber}", 0, Values:
-			[
-				$"{guest.Cash}",
-				"",
-				$"{guest.NumRides}",
-				"",
-				$"{(int)guest.Happiness}"
-			] ) );
-		}
+		foreach ( var guest in _people.Peeps )
+			_list.Insert( RowOf( guest ), SortKey );
+
+		_nextRefresh = Time.Now + RefreshEvery;
 	}
 
+	/// <summary>A guest's row - the original's row adder <c>FUN_00493800</c>.</summary>
+	private static UiList.Row RowOf( Peep guest )
+		=> new( guest.ThingId, $"{guest.VisitorNumber}", guest.VisitorNumber, Values:
+		[
+			$"{guest.Cash}",
+			"",
+			$"{guest.NumRides}",
+			"",
+			$"{(int)guest.Happiness}"
+		] );
+
+	/// <summary>What the list is sorted on: the Visitor Number, which <see cref="RowOf"/> keeps as the row's value.</summary>
+	private static int SortKey( UiList.Row row ) => row.Value;
+
+	/// <summary>A guest was made while the list is open: their row goes in by sort order (<c>FUN_00493c50</c>).</summary>
+	private void Arrived( Peep guest )
+	{
+		var at = _list.Insert( RowOf( guest ), SortKey );
+
+		Log.Info( $"Visitors list: row added for guest {guest.ThingId} (visitor {guest.VisitorNumber}) at {at} - "
+			+ $"{_list.Rows.Count} rows, top row {_list.ScrollTop}" );
+	}
+
+	/// <summary>A guest is going while the list is open: their row comes out (<c>FUN_00493c10</c>).</summary>
+	private void Leaving( int thingId )
+	{
+		var at = _list.Remove( thingId );
+
+		if ( at < 0 )
+			return;
+
+		Log.Info( $"Visitors list: row removed for guest {thingId} at {at} - "
+			+ $"{_list.Rows.Count} rows, top row {_list.ScrollTop}" );
+	}
+
+	/// <summary>
+	/// Every two seconds, each row's values rewritten where it stands, from the last row to the first
+	/// (<c>0x00493270</c>).
+	/// </summary>
 	protected internal override void Update()
 	{
 		if ( Time.Now < _nextRefresh )
@@ -177,6 +220,22 @@ internal sealed class ParkVisitorsScreen : UiWindow
 
 		_nextRefresh = Time.Now + RefreshEvery;
 
-		Show();
+		if ( _people == null )
+			return;
+
+		for ( var index = _list.Rows.Count - 1; index >= 0; --index )
+		{
+			if ( _people.Guests.TryGetValue( _list.Rows[index].Id, out var guest ) )
+				_list.Replace( index, RowOf( guest ) );
+		}
+	}
+
+	protected internal override void Closed()
+	{
+		if ( _people == null )
+			return;
+
+		_people.GuestArrived -= Arrived;
+		_people.GuestLeaving -= Leaving;
 	}
 }

@@ -102,7 +102,14 @@ internal sealed class UiList : UiControl
 	internal string? StateMesh { get; init; }
 
 	/// <summary>The row the pointer last chose, by id, or -1.</summary>
-	internal int Selected { get; private set; } = -1;
+	/// <remarks>
+	/// <b>The original keeps the selection as an INDEX</b> (<c>list+0x14c</c>), so a row inserted or removed above it
+	/// moves the highlight onto a different row; <see cref="_selected"/> is that index, and this names whichever row
+	/// stands there now.
+	/// </remarks>
+	internal int Selected => _selected >= 0 && _selected < _rows.Count ? _rows[_selected].Id : -1;
+
+	private int _selected = -1;
 
 	/// <summary>A row was chosen - the original's message <c>0x400</c>. Handed the row's id.</summary>
 	internal Action<int>? Activated { get; set; }
@@ -224,7 +231,7 @@ internal sealed class UiList : UiControl
 	{
 		_rows.Clear();
 		_scrollTop = 0;
-		Selected = -1;
+		_selected = -1;
 		Refresh();
 	}
 
@@ -232,7 +239,108 @@ internal sealed class UiList : UiControl
 	internal void Add( Row row )
 	{
 		_rows.Add( row );
+		FirstRow();
+		SettleTop();
 		Refresh();
+	}
+
+	/// <summary>
+	/// Adds a row in ascending order of <paramref name="key"/>, after every row that is not greater - the
+	/// original's sorted insert (<c>FUN_0066403b</c> with <c>list+0x48 &amp; 0x10</c>, which walks until
+	/// <c>FUN_00663edc</c> finds a row the new one is strictly less than). Answers where it went. Nothing
+	/// already in the list moves, re-sorts or is scrolled to, and the selection keeps its index.
+	/// </summary>
+	internal int Insert( Row row, Func<Row, int> key )
+	{
+		var value = key( row );
+		var at = 0;
+
+		while ( at < _rows.Count && key( _rows[at] ) <= value )
+			++at;
+
+		_rows.Insert( at, row );
+		FirstRow();
+		SettleTop();
+		Refresh();
+
+		return at;
+	}
+
+	/// <summary>
+	/// Removes the row with this id - <c>FUN_006647cb</c>. Answers the index it stood at, or -1.
+	/// </summary>
+	/// <remarks>
+	/// <b>The selection is not shifted</b>, and nothing is told when a row above it moves, as the original sends nothing
+	/// then. Only when the removed row was the selected one is another chosen, and
+	/// by visible SLOT: its index, or one less if it was the last, is handed to <c>FUN_0066525c</c>, which adds the
+	/// top row to it. An index past the window takes the list's <c>+0x48 &amp; 0x100</c> branch, which is not decoded
+	/// for this list: counted, and the selection dropped. A reselection that moves the index raises
+	/// <see cref="SelectionChanged"/>, the original's <c>0x401</c>, handed -1 for none.
+	/// </remarks>
+	internal int Remove( int id )
+	{
+		var at = _rows.FindIndex( row => row.Id == id );
+
+		if ( at < 0 )
+			return -1;
+
+		_rows.RemoveAt( at );
+
+		if ( _selected == at )
+		{
+			var was = _selected;
+			var slot = _rows.Count < 1 ? -1 : _selected >= _rows.Count ? _selected - 1 : _selected;
+
+			if ( slot < 0 )
+				_selected = -1;
+			else if ( slot < VisibleRows && slot < _rows.Count )
+				_selected = slot + _scrollTop;
+			else
+			{
+				Unimplemented.Report( "LIST_RESELECT_PAST_THE_WINDOW" );
+				_selected = -1;
+			}
+
+			// FUN_0066525c sends 0x401 when the index moves, to nothing included.
+			if ( _selected != was )
+				SelectionChanged?.Invoke( Selected );
+		}
+
+		SettleTop();
+		Refresh();
+
+		return at;
+	}
+
+	/// <summary>
+	/// Rewrites the row at <paramref name="index"/> in place - <c>FUN_006644ea</c>. It keeps its place even when the
+	/// value it was sorted on has changed.
+	/// </summary>
+	internal void Replace( int index, Row row )
+	{
+		_rows[index] = row;
+		Refresh();
+	}
+
+	/// <summary>
+	/// The original's add selects the first row of an empty list (<c>FUN_0066403b</c>: <c>FUN_0066525c( 0 )</c> once
+	/// the count reaches 1). Whether that draws a highlight on each list is not decoded: counted, not built.
+	/// </summary>
+	private void FirstRow()
+	{
+		if ( _rows.Count == 1 )
+			Unimplemented.Report( "LIST_FIRST_ROW_SELECTED" );
+	}
+
+	/// <summary>
+	/// What <c>FUN_00664495</c> does after an add or a removal: the scrollbar's range becomes count less visible and
+	/// the slider clamps the top row into it. <b>With no more rows than fit, the slider is disabled and the top row
+	/// is left where it was</b> (<c>0x006644d2</c>), even past the last row; the wheel clamps it (<see cref="Scroll"/>).
+	/// </summary>
+	private void SettleTop()
+	{
+		if ( Scrolls )
+			_scrollTop = Math.Clamp( _scrollTop, 0, _rows.Count - VisibleRows );
 	}
 
 	/// <summary>
@@ -241,10 +349,6 @@ internal sealed class UiList : UiControl
 	/// </summary>
 	internal void Refresh()
 	{
-		var highest = Math.Max( 0, _rows.Count - VisibleRows );
-
-		_scrollTop = Math.Clamp( _scrollTop, 0, highest );
-
 		for ( var slot = 0; slot < _slots.Count; ++slot )
 		{
 			var index = _scrollTop + slot;
@@ -286,14 +390,21 @@ internal sealed class UiList : UiControl
 	}
 
 	/// <summary>Moves the window onto the list, by whole rows.</summary>
+	/// <remarks>
+	/// A list with no more rows than fit does not move, but is still clamped back to its top: the one way a top
+	/// row <see cref="SettleTop"/> left past the end comes back (<c>0x1000d</c>).
+	/// </remarks>
 	internal void Scroll( int rows )
 	{
-		if ( !Scrolls )
-			return;
+		if ( Scrolls )
+			_scrollTop += rows;
 
-		_scrollTop += rows;
+		_scrollTop = Math.Clamp( _scrollTop, 0, Math.Max( 0, _rows.Count - VisibleRows ) );
 		Refresh();
 	}
+
+	/// <summary>How far down the list the visible window starts: the index of the row in the first slot.</summary>
+	internal int ScrollTop => _scrollTop;
 
 	/// <summary>
 	/// The wheel turned over the list. A notch is one row, and a notch away moves down - the same
@@ -327,9 +438,9 @@ internal sealed class UiList : UiControl
 
 		var id = _rows[index].Id;
 
-		if ( id != Selected )
+		if ( index != _selected )
 		{
-			Selected = id;
+			_selected = index;
 			SelectionChanged?.Invoke( id );
 		}
 
@@ -350,7 +461,7 @@ internal sealed class UiList : UiControl
 		if ( Selected < 0 )
 			return;
 
-		var index = _rows.FindIndex( row => row.Id == Selected );
+		var index = _selected;
 
 		if ( index < _scrollTop || index >= _scrollTop + VisibleRows )
 			return;

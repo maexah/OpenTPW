@@ -201,7 +201,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00492d80` | | OpenTPW/UI/Screens/GameMenu.cs OpenTPW/UI/UiSounds.cs  |
 | `0x00492e80` | | OpenTPW/UI/Screens/GameMenu.cs  |
 | `0x00492f60` | | OpenTPW/UI/Screens/GameMenu.cs  |
-| `0x00493270` | All-visitors handler, the 2000 ms timer 0x80083: each existing row rewritten in place by FUN_006644ea, no clear or scroll | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
+| `0x00493270` | All-visitors handler, the 2000 ms timer 0x80083: each existing row rewritten in place by FUN_006644ea, no clear or scroll | OpenTPW.Tests/UiListTests.cs OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
 | `0x004934c5` | Visitors handler: a right-clicked row (0x402) moves the camera to that guest (FUN_004867b0) | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
 | `0x0049353e` | Visitors screen FUN_00493530: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
 | `0x0049383e` | All-visitors row adder FUN_00493800: Time In Park, the park time since the arrival stamp over 36,000,000,000 | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
@@ -380,6 +380,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fb18d` | Guest constructor FUN_004faec0: the child - the generator reseeded with the id, kind 0, one draw over the kid banks, from | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkSpriteBanks.cs  |
 | `0x004fb1bc` | FUN_004faec0: the child's sprite built (FUN_004d4140), to here | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb1c9` | Guest constructor FUN_004faec0: the hurry +0xc2 set to 25, the word at 0x0075c7f2 | OpenTPW.Tests/ParkTickTests.cs  |
+| `0x004fb2fd` | Guest constructor FUN_004faec0: broadcasts message 0x1c, a guest made (the all-visitors list adds their row) | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb333` | FUN_004fb330, a guest deleted at the bus: the balloon's sprite deleted (FUN_00475550), no burst, from | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb346` | FUN_004fb330: the balloon deletion, to here | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb383` | The guest's type-10 answer `FUN_004fb360` chooses a guest by `mMajorDest` alone | OpenTPW/World/Park/PeepBehaviour.cs  |
@@ -536,6 +537,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00506286` | `FUN_005061d0`: the normal end of a rest calls `FUN_00506d10`, which takes one off `VAR_STAFFIN` | OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x00506b41` | FUN_00506a40, the tired branch: the rest byte, truncated, tested <= the rest level | OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x00506b50` | FUN_00506a40: thought 0x14 (tired) shown through FUN_0050be80 before the rest area is looked for | OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x0050b7f9` | Thing delete FUN_0050b780: broadcasts message 0x1b before the free (the all-visitors list removes a guest's row) | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x0050cd80` | | OpenTPW/World/Park/FixedVector.cs  |
 | `0x0050f870` | | OpenTPW/World/Park/FixedVector.cs  |
 | `0x005101d0` | FUN_00510190: max_force and max_speed each held at 0x28f (655) or more | OpenTPW/World/Park/Peep.cs  |
@@ -915,6 +917,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0065fd0e` | | OpenTPW/UI/UiWindow.cs  |
 | `0x0065fd58` | | OpenTPW/UI/UiControl.cs  |
 | `0x0065fe75` | | OpenTPW/UI/Park/ParkGadget.cs  |
+| `0x006644d2` | FUN_00664495, after a list add or removal: with count <= visible the slider is disabled and the top row left | OpenTPW.Tests/UiListTests.cs OpenTPW/UI/UiList.cs  |
 | `0x006662b7` | | OpenTPW/UI/UiControl.cs  |
 | `0x0066656c` | | OpenTPW/UI/UiControl.cs  |
 | `0x006677ae` | | OpenTPW/UI/UiControl.cs  |

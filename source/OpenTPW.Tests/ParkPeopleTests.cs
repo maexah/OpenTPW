@@ -100,6 +100,32 @@ public class ParkPeopleTests
 	}
 
 	/// <summary>
+	/// The original's broadcasts <c>0x1c</c> (a guest made) and <c>0x1b</c> (a thing deleted), which the all-visitors
+	/// list answers by adding and removing a row while it is open (<c>docs/exe/hud.md</c>).
+	/// </summary>
+	[TestMethod]
+	public void AnArrivalAndAGoingHomeAreToldToWhoeverListens()
+	{
+		var world = World();
+		var state = new ParkState( world );
+		var people = new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ), null, state );
+
+		var arrived = new System.Collections.Generic.List<int>();
+		var leaving = new System.Collections.Generic.List<int>();
+
+		people.GuestArrived += guest => arrived.Add( guest.ThingId );
+		people.GuestLeaving += leaving.Add;
+
+		var id = people.Admit( 42, 5 );
+
+		CollectionAssert.AreEqual( new[] { id }, arrived, "told once, of the guest made" );
+		Assert.IsTrue( people.Guests.ContainsKey( id ), "and they are in the park when it is heard" );
+
+		Assert.IsTrue( people.Depart( id ) );
+		CollectionAssert.AreEqual( new[] { id }, leaving, "told once, of the guest going" );
+	}
+
+	/// <summary>
 	/// Only guests are in <c>PeepsIn</c>'s list. The five staff share the person base and then carry a block
 	/// of their own and five state machines of their own, which <c>StaffIn</c> and <see cref="StaffBehaviour"/>
 	/// read and run apart, so taking them in
