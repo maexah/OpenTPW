@@ -66,6 +66,18 @@ public class Level
 	/// <summary>Everything this theme sells, for as long as the park is up - see <see cref="ParkBuilding"/>.</summary>
 	public ParkItemCatalogue? Catalogue { get; private set; }
 
+	/// <summary>
+	/// Whether the park is Instant Action's, the original's game type 2: the balance lays <c>Easy_Standard.sam</c> and
+	/// the catalogue each item's <c>Easy_</c> file, both on this one condition.
+	/// </summary>
+	/// <remarks>
+	/// <b>True, because the only park file this loads is Easymode.TPWI</b> - see ReadPark, which names it outright
+	/// and unconditionally - and the original runs that file only in type 2 (<c>FUN_005c8190</c>; Q186). The park it
+	/// reads carries nought APR on all eight of its loans, which matches Easy_Standard.sam and the global file
+	/// nowhere. If a park that is NOT the easy one is ever loaded, this has to move with it rather than stay true.
+	/// </remarks>
+	private static bool InstantAction => true;
+
 	/// <summary>Who the park may hire - see <see cref="ParkStaffPool"/>.</summary>
 	public ParkStaffPool? StaffPool { get; private set; }
 
@@ -208,18 +220,12 @@ public class Level
 	private void SetupParkEntities()
 	{
 		// The theme's own numbers, global defaults underneath - see ParkBalance for why that stack
-		// matters more than it looks.
-		//
-		// <b>Easy mode, because the only park file this loads is Easymode.TPWI</b> - see ReadPark below,
-		// which names it outright and unconditionally. That is not a guess about what the player chose:
-		// the park it reads carries nought APR on all eight of its loans, which matches
-		// Easy_Standard.sam and matches the global file nowhere. If a park that is NOT the easy one is
-		// ever loaded, this has to move with it rather than stay true.
+		// matters more than it looks - and Instant Action's over them (see InstantAction).
 		// What each phase below costs, in milliseconds - see LoadTimer for why this is left on where
 		// the frame profiler is not.
 		var load = new LoadTimer( ThemeName );
 
-		Balance = new ParkBalance( ThemeName, easyMode: true );
+		Balance = new ParkBalance( ThemeName, easyMode: InstantAction );
 		Log.Info( $"{ThemeName}: balance stack came to {Balance.Count} keys" );
 		load.Mark( "balance" );
 
@@ -292,7 +298,7 @@ public class Level
 		// is a park to place anything in, since without one neither of them has anything to ask it.
 		// Kept on the level as well as handed round below, because buying something needs it long after
 		// the park has finished loading - see ParkBuilding.
-		Catalogue = park == null ? null : new ParkItemCatalogue( ThemeName );
+		Catalogue = park == null ? null : new ParkItemCatalogue( ThemeName, instantAction: InstantAction );
 		load.Mark( "catalogue" );
 
 		var catalogue = Catalogue;

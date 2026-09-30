@@ -3072,7 +3072,37 @@ artifacts are listed in `docs/history/README.md`.
     (Q186). `park-engine.md`'s third `Easy_Standard.sam` pass is written as unconditional, where `FUN_005156a0` makes it
     only in type 2; Q185 corrects it. Review items gap3-1, gap3-8.
 
-- [ ] **Q178b. Instant Action's catalogue: the `Easy_` layer and the gate, built.** From Q178's decode
+- [x] **Q178b. Instant Action's catalogue: the `Easy_` layer and the gate, built.** Done 2026-09-30 on
+  `alexah/204-easy-catalogue` (FileFormats: the same branch name). `Level.InstantAction` is the one condition: the
+  balance lays `Easy_Standard.sam` on it and `ParkItemCatalogue` its gate, leaving out an item whose wad has no
+  `Easy_<stem>.sam` and laying the file over the item's own (`ItemDescriptionFile.Overlay`, every key overwrites).
+  The item schema at `0x00744b30` was read record by record: only `Info.NewAttractionDecayTime` (1) and
+  `UsageInfo.ExciteFactor` (50, not read) have a lower bound above nought, so the first now falls back to 1.
+  `Upgrades[i].WearRate`, `Upgrades[i].CostOfResearch` and `Research.Group` are counted (`ITEM_WEAR_RATE`,
+  `ITEM_RESEARCH_KEYS`). **A refused line - a key the schema does not name, a malformed number, a negative in a type-5
+  key, a value outside its bounds - leaves out what its file describes (the item; a category's whole folder), logged
+  with the file's name and counted once `ITEM_VALUE_REFUSED`, where the original quits** (Alexah, 2026-09-30, rule
+  11; said at the site). `park-engine.md`, "How a key finds its global" (the item schema); FileFormats `sam.md`.
+  - Confirmed in the game on the final build (`q178b/shoptab.py`, `q178b/run2/`, silent, stock park; `save/`
+    unchanged; `run1/` the same on the first build), predicted first: "catalogued 50 items, 17 left out of Instant
+    Action"; `catalogue` 50 rows; the shops tab, photographed and looked at, 6 rows without the Gift Shop and the Steak
+    Restaurant (Q178's `run2/` showed 8); `ITEM_WEAR_RATE` 54 as predicted; `ITEM_RESEARCH_KEYS` 174 against 164
+    predicted, the 10 being the five fixed items' own files read by `ParkFixedItems` (2 each), counted before
+    accepting it; no `ITEM_VALUE_REFUSED`.
+  - **The original, under Proton** (off-screen, player `ref`, `q178b/orig/`): `DAT_00fb3b7c` reads 2; no Gift Shop and
+    no Steak Restaurant. **But its shops tab lists 3, not 6**, and its rides tab 4: it lists only items whose own
+    `Upgrades[0].CostOfResearch` is 0, all four tabs (`hud.md`, "What the buy list actually filters on"). Queued as Q201.
+  - Tests: `ParkEasyCatalogueTests` (27); the control reads all 128 of Lost Kingdom's item descriptions against the
+    whole schema, predicted 128 (its first run caught the coasters' `Coaster.sam`, a track-texture file). Each of 12
+    bugs put back failed a test: the gate off (it first stayed green, as a missing `Easy_` file threw and dropped the
+    item anyway; the overlay now reads only a file that exists), the overlay off, an item's or a category's refusal
+    kept, the lower bound nought, the bound closed, the index not stripped, an unknown key taken, a `+` taken, a
+    shape's rows read as keys, either count dropped. Review `wf_ba54a723-24e`: three findings (unknown keys and number
+    forms unrefused; a category's refusal naming the item and counted per item; the counts untested), all fixed.
+  - **Not confirmed on screen:** a refused line (no shipped file has one; tested only).
+  - Built and tested alone in a worktree: 1501 pass, 0 skip with the game; 605 ran, 896 skipped without; 123 warnings.
+
+  The item as written: From Q178's decode
   (`park-engine.md`, "How a key finds its global"). When the loaded park is the type-2 Easymode (the same condition
   `Level` uses for `easyMode: true`, not the player alone, Q186), `ParkItemCatalogue` lays `Easy_<stem>.sam` from the
   item's own wad over its own file, matched without regard to case, and leaves out an item whose wad has none. Read the
@@ -3080,6 +3110,15 @@ artifacts are listed in `docs/history/README.md`.
   them yet. A bounded key no file sets reads its lower bound. A refused value is a quit in the original: decide with
   Alexah whether OpenTPW quits too (rule 11), and say it at the site. Confirm: `catalogue` lists 50 items, and the
   shops tab, photographed, shows 6 rows without the Gift Shop and the Steak Restaurant.
+- [ ] **Q201. The buy list lists only researched items. Decode first.** Found by Q178b's run of the original (Lost
+  Kingdom, Instant Action, `q178b/orig/s06`-`s09.png`): its tabs list rides Aztec Mayhem, Belly Bounce, Crazy Ape,
+  Rocky Racers; shops Balloon, Burger, Drinks; sideshows Jungle Spray, Strength Bird; features Buy Land, Clear Land
+  and eight more - exactly the items whose own file sets `Upgrades[0].CostOfResearch` 0, the researched flag
+  `desc+0x10` (`hud.md`, "What the buy list actually filters on"). OpenTPW lists every catalogued item: 6 shops.
+  Decode where `desc+0x10` is set at level start (from the file alone, or also from the save's research state), and
+  reconcile `hud.md`'s mystery row (`Research.Group` above nought and not unlocked), which the original showed none
+  of although Temple of Gloom and Ice Cream carry a group. Then build the filter. Confirm: the shops tab, photographed,
+  lists the three.
 - [ ] **Q179. The Hot Pot lets no rider off. Decode first.** Found by Q172b's game run. A Hot Pot bought at (57,23)
   with its queue laid to the path at (56,22), then `load 40`: guests are admitted ("been AdmitPerson'd to ride 43")
   and sit in state `Riding`, 13 in 20 minutes, 16 in the build before Q172b in 4, past its capacity of 4, and none is

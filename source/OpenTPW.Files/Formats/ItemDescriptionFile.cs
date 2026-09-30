@@ -24,7 +24,7 @@ namespace OpenTPW;
 /// seventy, including the seven whose pictures leave cells empty.
 /// </para>
 /// </summary>
-public sealed class ItemDescriptionFile
+public sealed partial class ItemDescriptionFile
 {
 	/// <summary>
 	/// The catalogue number, which is what a saved park stores to say which item is standing somewhere.
@@ -70,6 +70,30 @@ public sealed class ItemDescriptionFile
 		_category = category;
 		Read( text );
 	}
+
+	/// <summary>
+	/// Reads another file over this one, as the original lays <c>Easy_&lt;stem&gt;.sam</c> over an item's own
+	/// (<c>FUN_00413c10</c>, <c>0x00413ffe</c>): every key it sets overwrites, and every key it leaves alone keeps
+	/// what came before.
+	/// </summary>
+	public void Overlay( Stream stream )
+	{
+		using var reader = new StreamReader( stream, Encoding.ASCII );
+		Read( reader.ReadToEnd() );
+	}
+
+	/// <inheritdoc cref="Overlay(Stream)"/>
+	public void Overlay( string text ) => Read( text );
+
+	/// <summary>
+	/// The first line of this file's own layers that the original's loader refuses, or null where it takes every line:
+	/// a key its schema does not hold, a number it cannot read, a negative in a key that takes nought and up, or a
+	/// value outside its key's bounds. Any of them makes <c>FUN_00413c10</c> fail and ends the whole load
+	/// (<c>0x00413f18</c>; <c>park-engine.md</c>, "How a key finds its global"). The category's is its own. No shipped file has one.
+	/// </summary>
+	public string? Refused => _refused;
+
+	private string? _refused;
 
 	/// <summary>
 	/// Which of the four kinds this is - <b>0 rides, 1 shops, 2 sideshows, 3 features</b>, numbered by the
@@ -141,7 +165,8 @@ public sealed class ItemDescriptionFile
 	public int AttractionValue => _attractionValue ?? _category?.AttractionValue ?? 0;
 
 	/// <summary>How long it stays "new" - <c>Info.NewAttractionDecayTime</c>, 60 for rides and 30 for features.</summary>
-	public int NewAttractionDecayTime => _newAttractionDecayTime ?? _category?.NewAttractionDecayTime ?? 0;
+	/// <remarks>A key no file sets reads its lower bound, 1, which is what every shop and sideshow has (<c>0x0040153a</c>).</remarks>
+	public int NewAttractionDecayTime => _newAttractionDecayTime ?? _category?.NewAttractionDecayTime ?? 1;
 
 	/// <summary>
 	/// The particle effect a demolished one gives off - <c>Info.DestroyParticleEffect</c>, the descriptor's
@@ -558,14 +583,45 @@ public sealed class ItemDescriptionFile
 
 		var width = 0;
 		var depth = 0;
+		var fencesLeft = 0;
 
 		for ( var i = 0; i < lines.Length; ++i )
 		{
 			var line = lines[i].TrimEnd( '\r' );
 			var key = KeyOf( line );
 
+			// A block's rows and fences are its value, not keys.
+			if ( fencesLeft > 0 )
+			{
+				if ( line.StartsWith( Fence ) )
+					--fencesLeft;
+
+				continue;
+			}
+
+			if ( _refused == null && IsRefused( key, line ) )
+				_refused = line.Trim();
+
+			if ( TypeOf( key ) is { Type: BlockType } )
+				fencesLeft = 2;
+
 			switch ( key )
 			{
+				// Wear and research are unbuilt, and these are the three keys of theirs the Instant Action layer
+				// sets (Easy_<stem>.sam), counted where they are read rather than stored for nothing to use.
+				case "Upgrades[0].WearRate":
+				case "Upgrades[1].WearRate":
+				case "Upgrades[2].WearRate":
+					Unimplemented.Report( "ITEM_WEAR_RATE" );
+					break;
+
+				case "Upgrades[0].CostOfResearch":
+				case "Upgrades[1].CostOfResearch":
+				case "Upgrades[2].CostOfResearch":
+				case "Research.Group":
+					Unimplemented.Report( "ITEM_RESEARCH_KEYS" );
+					break;
+
 				case "Info.Id":
 					if ( int.TryParse( ValueOf( line ), out var id ) )
 						Id = id;
@@ -935,6 +991,128 @@ public sealed class ItemDescriptionFile
 
 	private static float? Real( string line )
 		=> float.TryParse( ValueOf( line ), NumberStyles.Float, CultureInfo.InvariantCulture, out var value ) ? value : null;
+
+	/// <summary>
+	/// Whether the original's loader refuses this line (<c>FUN_004017a0</c>): a key its schema does not name
+	/// (<c>FUN_00401280</c>, case-sensitive), a whole-number key whose value is not an optional <c>-</c> and digits, a
+	/// float key's not digits with at most one <c>.</c> (<c>0x00401d8b</c>), a negative in a type-5 key, or a type-6
+	/// value outside <c>[lo, hi)</c>. An array's index is not checked.
+	/// </summary>
+	private static bool IsRefused( string key, string line )
+	{
+		if ( key.Length == 0 )
+			return false;
+
+		if ( TypeOf( key ) is not { } schema )
+			return true;
+
+		var value = ValueOf( line );
+
+		switch ( schema.Type )
+		{
+			case IntType or NoughtAndUpType or BoundedType:
+				if ( !WholeNumber().IsMatch( value ) || !int.TryParse( value, out var number ) )
+					return true;
+
+				return schema.Type == NoughtAndUpType ? number < 0
+					: schema.Type == BoundedType && (number < schema.Lo || number >= schema.Hi);
+
+			case FloatType:
+				return !FloatNumber().IsMatch( value ) || !value.Any( char.IsAsciiDigit );
+
+			default:
+				return false;
+		}
+	}
+
+	/// <summary>The schema's record for a key, its array index taken out, or null where it names none.</summary>
+	private static (int Type, int Lo, int Hi)? TypeOf( string key )
+	{
+		var open = key.IndexOf( '[' );
+		var close = key.IndexOf( ']' );
+		var field = open > 0 && close > open ? key[..open] + key[(close + 1)..] : key;
+
+		return Schema.TryGetValue( field, out var record ) ? record : null;
+	}
+
+	[System.Text.RegularExpressions.GeneratedRegex( @"^-?[0-9]+$" )]
+	private static partial System.Text.RegularExpressions.Regex WholeNumber();
+
+	[System.Text.RegularExpressions.GeneratedRegex( @"^-?[0-9]*\.?[0-9]*$" )]
+	private static partial System.Text.RegularExpressions.Regex FloatNumber();
+
+	private const int IntType = 4, NoughtAndUpType = 5, BoundedType = 6, FloatType = 7, StringType = 10, BlockType = 11;
+
+	/// <summary>The schema's type-6 keys and their bounds.</summary>
+	private static readonly Dictionary<string, (int Lo, int Hi)> Bounded = new()
+	{
+		["Info.DontApplyOffset"] = (0, 2), ["Info.IsChoosable"] = (0, 2), ["Info.HasQueue"] = (0, 2),
+		["Info.CanBreakDown"] = (0, 2), ["Info.RunsContinuously"] = (0, 2), ["Info.WhichUIType"] = (0, 5),
+		["Info.DontDeformBase"] = (0, 2), ["Info.NewAttractionDecayTime"] = (1, 1000),
+		["Info.CreateParticleEffect"] = (0, 500), ["Info.DestroyParticleEffect"] = (0, 500),
+		["Info.RepairParticleEffect"] = (0, 500), ["Info.UpgradeParticleEffect"] = (0, 500),
+		["Info.FirstPersonSprites"] = (0, 2), ["Info.DoHeadProcessing"] = (0, 2),
+		["Info.TurnOffAnimatingTextures"] = (0, 2), ["Info.TurnOffScrollingTextures"] = (0, 2),
+		["Info.DownloadedRideNumber"] = (0, 256), ["Info.IsPreviewRide"] = (0, 2),
+		["Bumper.WhichTrackType"] = (0, 4),
+		["UsageInfo.InitChanceOfLoosing"] = (0, 100), ["UsageInfo.ProvidesSecurity"] = (0, 2),
+		["UsageInfo.ProvidesRelief"] = (0, 2), ["UsageInfo.HoldsLitter"] = (0, 2), ["UsageInfo.ChillsYouOut"] = (0, 2),
+		["UsageInfo.RequiresTeleport"] = (0, 2), ["UsageInfo.RideHandlesSprite"] = (0, 2),
+		["UsageInfo.RequiresWatering"] = (0, 2), ["UsageInfo.NonWinnableSideshow"] = (0, 2),
+		["UsageInfo.IsFireworks"] = (0, 2), ["UsageInfo.ISIndoors"] = (0, 2), ["UsageInfo.CannotRide"] = (0, 2),
+		["UsageInfo.ConstrainCamera"] = (0, 2), ["UsageInfo.ExcitementLevel"] = (0, 101),
+		["UsageInfo.SpecialIngredient"] = (0, 6), ["UsageInfo.AppearanceEffect"] = (0, 3),
+		["UsageInfo.ShopType"] = (0, 7), ["UsageInfo.ExciteFactor"] = (50, 200),
+		["Research.Group"] = (0, 255), ["Research.Category"] = (0, 5),
+		["Upgrades.EstimatedPriceVariance"] = (0, 100)
+	};
+
+	/// <summary>
+	/// The executable's item schema at <c>0x00744b30</c>, read record by record: every key, its type, and a type-6
+	/// key's bounds (<c>+0x24</c>, <c>+0x28</c>). Array groups are named without their index.
+	/// </summary>
+	private static readonly Dictionary<string, (int Type, int Lo, int Hi)> Schema = Build(
+		(NoughtAndUpType, [
+			"Info.Id", "Info.EngineMapOffsetOverrideX", "Info.EngineMapOffsetOverrideY",
+			"Info.EngineFootprintWidthOverride", "Info.EngineFootprintHeightOverride", "Info.MapOffsetX", "Info.MapOffsetY",
+			"Info.OverwritePriority", "Info.AttractionValue", "Info.DurationUnit", "Info.UsesCars", "Info.PreviewAnimNum",
+			"Info.RideTypeStringIndex",
+			"UsageInfo.GoldenTicketCost", "UsageInfo.Length", "UsageInfo.Width", "UsageInfo.Height",
+			"UsageInfo.InitPricePerUse", "UsageInfo.FatigueEffect", "UsageInfo.PukeReductionLevel", "UsageInfo.MinCapacity",
+			"UsageInfo.MaxCapacity", "UsageInfo.MinDuration", "UsageInfo.MaxDuration", "UsageInfo.MinSpeed",
+			"UsageInfo.MaxSpeed", "UsageInfo.InitCostOfGoods", "UsageInfo.InitPrizeValue", "UsageInfo.RipOffOK",
+			"UsageInfo.NumSimultAnims",
+			"Research.Cost",
+			"Upgrades.CostOfResearch", "Upgrades.ScrapValueYear1", "Upgrades.ScrapValueYear2", "Upgrades.ScrapValueYear3",
+			"Upgrades.ScrapValueYear4", "Upgrades.InitCapacity", "Upgrades.RedLineCapacity", "Upgrades.InitDuration",
+			"Upgrades.RedLineDuration", "Upgrades.InitSpeed", "Upgrades.RedLineSpeed", "Upgrades.WearRate",
+			"Upgrades.CostOfUpgrade", "Upgrades.DurationOfUpgrade",
+			"Attraction.NewBonus", "AddOn.UpgradesId", "AddOn.UpgradeType"]),
+		(IntType, [
+			"Bumper.BumperType", "Bumper.NorthXAdjust", "Bumper.NorthYAdjust", "Bumper.EastXAdjust", "Bumper.EastYAdjust",
+			"Bumper.SouthXAdjust", "Bumper.SouthYAdjust", "Bumper.WestXAdjust", "Bumper.WestYAdjust",
+			"UsageInfo.ThirstEffect", "UsageInfo.HungerEffect", "UsageInfo.VomitEffect", "UsageInfo.HappinessEffect",
+			"UsageInfo.LitterEffect"]),
+		(FloatType, [
+			"UsageInfo.EntryCellStandPosX", "UsageInfo.EntryCellStandPosY", "UsageInfo.ExitCellAppearPosX",
+			"UsageInfo.ExitCellAppearPosY", "Upgrades.QueueWaitTimeConstant"]),
+		(StringType, ["Info.Name", "Info.PreviewAnimType", "SupplementalMeshes.FileName", "SignTextures.FileName"]),
+		(BlockType, ["Info.Shape", "Info.Hoarding"]) );
+
+	private static Dictionary<string, (int Type, int Lo, int Hi)> Build( params (int Type, string[] Keys)[] groups )
+	{
+		var schema = new Dictionary<string, (int Type, int Lo, int Hi)>( StringComparer.Ordinal );
+
+		foreach ( var (type, keys) in groups )
+			foreach ( var key in keys )
+				schema[key] = (type, 0, 0);
+
+		foreach ( var (key, bounds) in Bounded )
+			schema[key] = (BoundedType, bounds.Lo, bounds.Hi);
+
+		return schema;
+	}
+
 
 	/// <summary>The row of dashes that opens and closes a block.</summary>
 	private const string Fence = "---";

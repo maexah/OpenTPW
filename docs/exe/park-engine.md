@@ -246,8 +246,25 @@ Steak Restaurant, the Arcade (`arc2x3`), nine features (`5x5rck`, `5x5rck2`, `la
 `speaker2`-`4`, `statue2`) and the three upgrades. The 12 rides' `Easy_` files set `Upgrades[0..2].WearRate` (3, 2, 1;
 1, 1, 1 for `minecart` and `wateride`) and `Upgrades[1..2].CostOfResearch` 0, and `minecart`'s `Research.Group` 2; the
 other 38 hold comments only. `Easymode.TPWI` places none of the 20. The original runs that park only in type 2 (Q178's
-note, `FUN_005c8190`). OpenTPW reads the category and the item's own file only, and catalogues all 67 it finds (the
-upgrades are not among them): 17 more than the original's 50 (Q178b).
+note, `FUN_005c8190`; its `DAT_00fb3b7c` reads 2 in that park, measured under Proton, Q178b).
+
+**The item schema at `0x00744b30`**, read record by record (Q178b): 131 records to the type-`0xc` end, a record's int
+bounds at `+0x24` and `+0x28`, its float bounds at `+0x2c` and `+0x30`, an array's count at `+0x34` (`Upgrades` 3,
+`SupplementalMeshes` 8, `Attraction` 3, `SignTextures` 2). No key is type 8 or 9. Only two bounded keys have a lower
+bound above nought: `Info.NewAttractionDecayTime` `[1, 1000)` and `UsageInfo.ExciteFactor` `[50, 200)`; every other
+type-6 key's is nought. **`FUN_004017a0` refuses a line** whose key the schema does not name (`FUN_00401280`,
+case-sensitive), whose whole-number value is not an optional `-` and digits, whose float is not digits with at most one
+`.`, which is negative in a type-5 key, or which is outside a type-6 key's `[lo, hi)`; a block's rows are its value.
+None of the 128 item descriptions in Lost Kingdom's item folders (five category files and `Online_Rides.sam`, and in
+the wads 70 own, 50 `Easy_`, 2 `Online_`) holds a refused line. The `Coaster.sam` in `coaster1`, `coaster3` and
+`minecart` is not one: it names track textures (`asTextureData[i].pcTextureFilename`), keys this schema lacks.
+
+OpenTPW (Q178b): `Level.InstantAction` gives both the balance's `Easy_Standard.sam` and the catalogue's gate; in it
+`ParkItemCatalogue` leaves out an item whose wad has no `Easy_` file and lays the file over the item's own
+(`ItemDescriptionFile.Overlay`), 50 items. `Info.NewAttractionDecayTime` falls back to 1. The wear and research keys
+are counted (`ITEM_WEAR_RATE`, `ITEM_RESEARCH_KEYS`). **A refused line leaves out what its file describes - the item,
+or the whole folder for a category file - logged with the file's name and counted once (`ITEM_VALUE_REFUSED`), where
+the original quits** (Alexah, 2026-09-30).
 
 ---
 

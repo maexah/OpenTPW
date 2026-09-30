@@ -1025,7 +1025,10 @@ four filter fields, as **byte** offsets:
 
 `desc+0x10` is not a static "is this listed" flag —
 it is the **researched** flag, set at level start for items whose `Upgrades[0].CostOfResearch` is nought
-and again the moment research completes. And `item+0xC4` is not a research countdown — it is
+and again the moment research completes. **Photographed in the original's Lost Kingdom** (Instant Action, under
+Proton, 2026-09-30, Q178b): rides Aztec Mayhem, Belly Bounce, Crazy Ape, Rocky Racers; shops Balloon, Burger, Drinks;
+sideshows Jungle Spray, Strength Bird; features Buy Land, Clear Land and the eight whose cost is nought - exactly the
+items whose own file sets `Upgrades[0].CostOfResearch` 0, and no mystery row. OpenTPW lists every catalogued item (Q201). And `item+0xC4` is not a research countdown — it is
 `Research.Group`, a **golden-ticket tier** that placing the item literally spends.
 
 **The row state is {0,1,2} and both non-zero values are pinned**: 1 = you already own at least one

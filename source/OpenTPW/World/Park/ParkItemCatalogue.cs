@@ -151,12 +151,26 @@ public sealed class ParkItemCatalogue
 	/// </summary>
 	private readonly BaseFileSystem _files;
 
-	public ParkItemCatalogue( string themeName, BaseFileSystem? files = null )
+	/// <summary>
+	/// Whether this is Instant Action's catalogue: each item's <c>Easy_&lt;stem&gt;.sam</c> laid over its own file, and
+	/// an item whose wad has none left out, as the original does in game type 2 (<c>FUN_00413930</c>,
+	/// <c>0x00413ac4</c>; <c>park-engine.md</c>, "How a key finds its global"). In Lost Kingdom that leaves 50 of 67.
+	/// </summary>
+	public bool InstantAction { get; }
+
+	/// <param name="instantAction">
+	/// Whether the park is Instant Action's - the same condition <see cref="ParkBalance"/>'s <c>easyMode</c> is given,
+	/// as <see cref="Level"/> passes both. Defaulted to false, as the balance's is, so asking without an opinion gets
+	/// every item the theme has.
+	/// </param>
+	public ParkItemCatalogue( string themeName, BaseFileSystem? files = null, bool instantAction = false )
 	{
 		_files = files ?? FileSystem;
+		InstantAction = instantAction;
 
 		var theme = themeName.ToLowerInvariant();
 		var unreadable = 0;
+		var leftOut = 0;
 
 		foreach ( var folder in Folders )
 		{
@@ -181,15 +195,24 @@ public sealed class ParkItemCatalogue
 			// a guest may choose it, and whether it has a queue - none of which most items restate.
 			var category = TryReadCategory( path, folder );
 
-			// Every item is catalogued, from its category and its own file. The original's Instant Action park
-			// also lays Easy_<stem>.sam last and drops an item whose wad has none (FUN_00413930, 0x00413ac4;
-			// park-engine.md, "How a key finds its global"): in Lost Kingdom that is 17 of these 67 (Q178b).
+			// A category every item of the folder is read over: refused, it leaves out the folder.
+			if ( category != null && Refuses( $"{path}/{folder}.sam", category ) )
+				continue;
+
+			// Every item is catalogued from its category and its own file and, in Instant Action, its Easy_ file
+			// last; there an item whose wad has no Easy_ file is left out before it is read (0x00413ac4).
 			foreach ( var directory in directories )
 			{
 				var stem = Path.GetFileName( directory );
 
 				if ( string.IsNullOrEmpty( stem ) )
 					continue;
+
+				if ( InstantAction && !Exists( EasyPath( $"{path}/{stem}", stem ) ) )
+				{
+					++leftOut;
+					continue;
+				}
 
 				if ( !TryRead( $"{path}/{stem}", stem, out var item, category ) )
 				{
@@ -206,7 +229,8 @@ public sealed class ParkItemCatalogue
 			}
 		}
 
-		Log.Info( $"{themeName}: catalogued {Count} items" + (unreadable > 0 ? $", and {unreadable} would not read" : "") );
+		Log.Info( $"{themeName}: catalogued {Count} items" + (unreadable > 0 ? $", and {unreadable} would not read" : "")
+			+ (InstantAction ? $", {leftOut} left out of Instant Action" : "") );
 	}
 
 	/// <summary>
@@ -219,8 +243,22 @@ public sealed class ParkItemCatalogue
 
 		try
 		{
-			using var stream = _files.OpenRead( $"{directory}/{stem}.sam" );
+			var own = $"{directory}/{stem}.sam";
+			using var stream = _files.OpenRead( own );
 			var description = new ItemDescriptionFile( stream, category );
+
+			if ( Refuses( own, description ) )
+				return false;
+
+			// Only where the wad holds one: whether an item without it is catalogued at all is the gate's to say.
+			if ( InstantAction && Exists( EasyPath( directory, stem ) ) )
+			{
+				using var easy = _files.OpenRead( EasyPath( directory, stem ) );
+				description.Overlay( easy );
+
+				if ( Refuses( EasyPath( directory, stem ), description ) )
+					return false;
+			}
 
 			if ( description.Id <= 0 )
 				return false;
@@ -263,6 +301,28 @@ public sealed class ParkItemCatalogue
 			return false;
 		}
 	}
+
+	/// <summary>
+	/// Whether the file just read holds a line the original refuses. The original quits the game there, naming the file
+	/// (<c>0x00413f18</c>); OpenTPW leaves out what the file describes and counts it (Alexah, 2026-09-30). No shipped
+	/// file has one.
+	/// </summary>
+	private static bool Refuses( string file, ItemDescriptionFile description )
+	{
+		if ( description.Refused is not { } refused )
+			return false;
+
+		Log.Warning( $"{file}: '{refused}' is a line the original refuses, so what it describes is left out" );
+		Unimplemented.Report( "ITEM_VALUE_REFUSED" );
+
+		return true;
+	}
+
+	/// <summary>
+	/// Where an item's Instant Action layer is, in its own wad: <c>"Easy_"</c> (<c>0x00747930</c>), the stem and
+	/// <c>".sam"</c>. The file system matches it without regard to case, as the original's wad lookup does.
+	/// </summary>
+	private static string EasyPath( string directory, string stem ) => $"{directory}/Easy_{stem}.sam";
 
 	/// <summary>
 	/// The folder's own description - <c>rides/Rides.sam</c> and its three siblings - whose values every

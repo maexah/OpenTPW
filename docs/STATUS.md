@@ -27,7 +27,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
   `RET` stubs. A click on grass or path picks up the PATH tool (20 a cell) with its own squares and cursors; Backspace
   takes the last run up, Escape puts the tool away. QUEUE is 75, refunded. **A bought thing starts at its own price.**
 - **Placing a ride lays its queue's first cell before the entrance and hands over the queue tool there**, with the
-  original's coloured squares where a click will lay it; a click onto a path lays and joins it. Guests queue and ride.
+  original's coloured squares where a click will lay it; a click onto a path lays and joins it. Guests queue and ride. **The catalogue is Instant Action's**: each item's `Easy_` file laid over its own, 50 items where the theme has 67 (Q178b).
 - Spending: guests choose, queue for and buy from the Drinks Shop and the Jungle Spray; short of the price, they walk.
   **Each arrival is one of eight kinds, each with its own liking**, and **the choice is the original's whole score**:
   the kind just left is worth nothing, a new thing five times more for 184 sweeps, dear and golden-ticket rides more,
@@ -54,7 +54,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 
 - No screen sets the training budgets or buys a loan; six months in the red is counted, not an end (Q198b). No litter, day ending, saving a park back, video,
   networking. Research is inert. In a park the advisor says the gadget's opening line and no more (`docs/PLAYER-GAPS.md` gap 4).
-- The catalogue reads no item's `Easy_` file and keeps 17 items the original's Instant Action drops (Q178b).
+- The buy list lists every catalogued item; the original lists only those researched, in Lost Kingdom 3 shops of 6 (Q201).
 - Eight of the nine per-object windows are unbuilt. Setting patrol areas is deferred by Alexah; staff keep the save's.
   A walking member of staff is not entered in the cells they cross; only hiring and putting down place one.
 - Unbuilt: Q102-Q105, five queue-turn arms (the unhappy one held for Q85), spot animation (Q98), Q112's walk to path.
@@ -78,7 +78,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q198, Q198b, Q199, Q200, Q200b are ticked**; next **Q178b** (Q178's build); the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q199, Q200, Q200b are ticked**; next **Q201** (decode first); the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -102,18 +102,18 @@ Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q198, Q198b, Q199, Q20
   stale major, sale's clear and save's fields; Q171's bounds; Q172b's saved track ride, tier and coaster (Q167) and a Hot Pot
   rider's 42 (Q179); Q173's tier 3 and zero divisors. Q174b's raw re-entry and last-frame trigger (no run) and loop (census
   only); Q174c's saved mark, timer and queue; Q175b's Rat Race; Q176's `0x80000000` draw (its let-go in a throwaway build);
-  Q177b's walk-away and a played save's counts; its satisfaction, census only (nothing here shows it). Q177c's withdrawals off, red stamp, a sold coaster's nought, the ticket count and the year's change. Q177d's docks, fat, salt, the speed's hold and floor and a hire's speed. Q177e's balloon built again after a later visit, put away on boarding, deleted on going home, and read from a save; its bob and trail (census only). Q177f's low detail (two kids, one staff bank) and a theme with more than one costume. Q198b's promotion, loans, batch and six months in the red. Q200b's selection edges and the wheel's clamp of a short list.
+  Q177b's walk-away and a played save's counts; its satisfaction, census only (nothing here shows it). Q177c's withdrawals off, red stamp, a sold coaster's nought, the ticket count and the year's change. Q177d's docks, fat, salt, the speed's hold and floor and a hire's speed. Q177e's balloon built again after a later visit, put away on boarding, deleted on going home, and read from a save; its bob and trail (census only). Q177f's low detail (two kids, one staff bank) and a theme with more than one costume. Q198b's promotion, loans, batch and six months in the red. Q200b's selection edges and the wheel's clamp of a short list. Q178b's refused line (no shipped file has one).
 
 ## Numbers (take counts fresh; these go stale within a day)
 
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1474**, 0 fail, 0 skip with the game | 2026-09-30, after Q178 |
-| Tests without the game | **581** ran, **893** skipped, of 1474 | 2026-09-30, after Q178 |
-| Build warnings | 123 | 2026-09-30, after Q178 |
+| Tests | **1501**, 0 fail, 0 skip with the game | 2026-09-30, after Q178b |
+| Tests without the game | **605** ran, **896** skipped, of 1501 | 2026-09-30, after Q178b |
+| Build warnings | 123 | 2026-09-30, after Q178b |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-30 (Q178, the decode).** `alexah/203-decode-the-easy-catalogue`. **Earlier:** `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-09-30 (Q178b).** `alexah/204-easy-catalogue`. **Earlier:** `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
