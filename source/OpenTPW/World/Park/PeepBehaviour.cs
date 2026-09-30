@@ -1210,6 +1210,10 @@ public sealed class PeepBehaviour
 			return;
 		}
 
+		// Past every gate, happiness is copied for the settle-up to measure the visit against (0x004ffd92), just
+		// before the queue takes them. A re-take of a place later does not copy it again.
+		peep.JoinHappiness = peep.Happiness;
+
 		State.JoinQueue( chosen.ThingId, peep.ThingId );
 
 		if ( !FindQueueDestination( peep, walk, chosen, tick ) )
@@ -1643,9 +1647,9 @@ public sealed class PeepBehaviour
 	/// again. Thirty in this park.
 	/// </summary>
 	/// <remarks>
-	/// Thought 6 and the object's walk-away count (<c>FUN_004e1670</c>: <c>mNumWalkAways</c> and the dword at
-	/// <c>+0x230</c>) are counted; nothing here draws a thought or keeps either counter. The event-ring entry
-	/// (event 10) is not kept, as for every other way out of a queue.
+	/// The object counts the walk-away (<c>FUN_004e1670</c>, <see cref="ParkObjectRings.CountWalkAway"/>). Thought 6
+	/// and the event-ring entry (event 10, <c>0x0050076b</c>) are counted; nothing here draws a thought or keeps the
+	/// ring.
 	/// </remarks>
 	private void WalkAwayFromTheDoor( Peep peep, ParkWorld.CatalogueObject thing, int tick )
 	{
@@ -1653,11 +1657,12 @@ public sealed class PeepBehaviour
 			+ $"(price {thing.PricePerUse}, cash {peep.Cash})" );
 
 		Unimplemented.Report( "DOOR_PRICE_THOUGHT_6" );
+		Unimplemented.Report( "DOOR_EVENT_HISTORY" );
 
 		if ( Admission is { } mood )
 			peep.Happiness = Peep.Change( peep.Happiness, -mood.MediumHappinessChange );
 
-		Unimplemented.Report( "DOOR_WALK_AWAY_COUNT" );
+		State.RingsFor( thing.ThingId ).CountWalkAway();
 
 		_walkAway?.Invoke( thing, peep.ThingId );
 		DismissFromTheQueue( peep, tick );

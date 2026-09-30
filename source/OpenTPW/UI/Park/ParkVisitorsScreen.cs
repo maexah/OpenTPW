@@ -25,12 +25,13 @@ namespace OpenTPW.UI;
 /// </para>
 ///
 /// <para>
-/// <b>Three of the six columns have no data behind them and are left blank.</b> A <see cref="Peep"/>
-/// records neither how long they have been in the park nor how many rides they have been on - there is
-/// no field for either, and inventing one from the tick clock would be a number nobody measured. The
-/// fifth column is stranger: <b>UITEXT row 117 is literally <c>"?"</c> in the shipped string file</b>,
-/// so the original ships that column unnamed too. It is built, headed as the game heads it, and left
-/// empty.
+/// <b>Two of the six columns are left blank.</b> Time In Park is decoded - a quarter of the park hours since the
+/// guest's arrival stamp <c>+0x1d4</c> (<c>FUN_004fd950</c>, <c>0x0049383e</c>) - and a <see cref="Peep"/> keeps no
+/// arrival stamp yet. The fifth column is
+/// stranger: <b>UITEXT row 117 is literally <c>"?"</c> in the shipped string file</b>, so the original ships
+/// that column unnamed too; its row adder fills it from the guest's last thought (<c>0x0049385a</c>), which
+/// nothing here keeps. It is built, headed as the game heads it, and left empty. Rides Ridden is the guest's
+/// <see cref="Peep.NumRides"/> (<c>0x00493850</c>).
 /// </para>
 /// </summary>
 internal sealed class ParkVisitorsScreen : UiWindow
@@ -124,7 +125,6 @@ internal sealed class ParkVisitorsScreen : UiWindow
 
 		// Counted once, as the screen opens - not once a frame. See RefreshEvery.
 		Unimplemented.Report( "VISITOR_TIME_IN_PARK" );
-		Unimplemented.Report( "VISITOR_RIDES_RIDDEN" );
 		Unimplemented.Report( "VISITOR_COLUMN_117_UNNAMED" );
 	}
 
@@ -162,7 +162,7 @@ internal sealed class ParkVisitorsScreen : UiWindow
 			[
 				$"{guest.Cash}",
 				"",
-				"",
+				$"{guest.NumRides}",
 				"",
 				$"{(int)guest.Happiness}"
 			] ) );

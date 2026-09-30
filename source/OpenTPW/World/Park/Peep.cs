@@ -41,6 +41,29 @@ public sealed class Peep
 
 	public float Happiness { get; set; }
 
+	/// <summary>
+	/// Happiness as it was when this guest joined the queue of the thing they are visiting - <c>+0x20c</c>, copied
+	/// at the join (<c>0x004ffd92</c>) and read only by the settle-up, which averages three times the change into
+	/// the thing's satisfaction.
+	/// </summary>
+	/// <remarks>
+	/// Not saved: the original zeroes it before reading a guest's record (<c>0x0051861c</c>), so a guest loaded
+	/// already queued or riding compares against nought.
+	/// </remarks>
+	public float JoinHappiness { get; set; }
+
+	/// <summary><c>mNumRides</c>, <c>+0x1c4</c>: rides ridden, which the settle-up counts.</summary>
+	public int NumRides { get; set; }
+
+	/// <summary><c>mNumShops</c>, <c>+0x1c8</c>: purchases made.</summary>
+	public int NumShops { get; set; }
+
+	/// <summary><c>mNumSideshows</c>, <c>+0x1cc</c>: sideshows played, won or lost.</summary>
+	public int NumSideshows { get; set; }
+
+	/// <summary><c>mNumSideshowsWon</c>, <c>+0x1d0</c>: sideshows won.</summary>
+	public int NumSideshowsWon { get; set; }
+
 	public float Thirst { get; set; }
 
 	public float Hunger { get; set; }
@@ -325,6 +348,10 @@ public sealed class Peep
 		WalkingTurns = (byte)saved.WalkingTurns;
 		QueuePos = saved.QueuePos;
 		QueueMoveDelay = saved.QueueMoveDelay;
+		NumRides = saved.NumRides;
+		NumShops = saved.NumShops;
+		NumSideshows = saved.NumSideshows;
+		NumSideshowsWon = saved.NumSideshowsWon;
 
 		saved.PreviousRides?.Take( _previousRides.Length ).ToArray().CopyTo( _previousRides, 0 );
 		saved.PreviousTemporaryRides?.Take( _previousTemporaryRides.Length ).ToArray().CopyTo( _previousTemporaryRides, 0 );

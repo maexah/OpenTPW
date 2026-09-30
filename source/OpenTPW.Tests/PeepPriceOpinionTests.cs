@@ -141,6 +141,24 @@ public class PeepPriceOpinionTests
 		Assert.AreEqual( 0, state.PreviousInQueue( behind.ThingId ), "with nobody before them" );
 	}
 
+	/// <summary>
+	/// <b>The shop counts the walk-away</b> (<c>FUN_004e1670</c>, <c>0x0050077f</c>): its lifetime walk-aways and
+	/// today's, one each; a guest who can pay counts none, and neither is a customer until the settle-up.
+	/// </summary>
+	[TestMethod]
+	public void TheShopCountsAWalkAway()
+	{
+		foreach ( var (cash, walkedAway) in new[] { (10, 1), (30, 0) } )
+		{
+			var (state, _, _, _) = AtTheDoor( cash );
+			var rings = state.RingsFor( DrinksShop );
+
+			Assert.AreEqual( walkedAway, rings.NumWalkAways, $"cash {cash}: walk-aways since it was built" );
+			Assert.AreEqual( walkedAway, rings.WalkAways.Today, $"cash {cash}: and today's" );
+			Assert.AreEqual( 0, rings.NumCustomers, $"cash {cash}: no customer yet" );
+		}
+	}
+
 	/// <summary><b>The control: a guest who can pay goes in</b>, is handed to the shop, and loses nothing.</summary>
 	[TestMethod]
 	public void AGuestWhoCanPayIsAdmitted()

@@ -1335,7 +1335,7 @@ render the labels perfectly and leave every value blank.
 
 | Control | Row | Kind | Filled from |
 |---|---|---|---|
-| `0x3e21` | Users last month | value | Sum of **30** (`0x1e`) entries of a ring buffer; short-cuts to `FUN_00495d40` when the park is younger than that. Asserts on `"CHistory: You asked for the sum…"` |
+| `0x3e21` | Users last month | value | The customers ring's last min( filled, **30** ) finished days (`MOV EDI,0x1e`, `0x004ade83`; `FUN_00495d40` gives the filled count when fewer), today's excluded; printed `"%d"` by a number painter in font 6 (`FUN_0048fde0`, `0x0048ff8f`). Its `"CHistory - You asked for the sum of more elements than there is defined history for…"` (`0x004ade8a`, when `mNumEntries` is under 30) goes to the bare `RET` logger and stops nothing ("Every diagnostic string goes to a bare `RET`") |
 | `0x3e1b` | Age | **text** | `FUN_004dd670`, formatted through `FUN_006acd60` with id **`0x1b1`** (433) and a `VARM` placeholder - not a UITEXT row, whose 433 is empty; has an explicit negative-sign limb |
 | `0x3e16` | Excitement | **gauge** | `FUN_004e0560( object, speed, duration, capacity )` |
 | `0x3e18` | Reliability | **gauge** | `FUN_004df640` = `100 - FUN_004df450( …, 1 )` |

@@ -30,11 +30,13 @@ namespace OpenTPW.UI;
 /// paints a live 128x128 grid of classification codes (FUN_005f2050, FUN_005f2380): rides, shops,
 /// sideshows, tracks, visitors and staff, each cell coloured by FUN_005f09a0, which is a three-stop
 /// colour ramp over a per-thing metric from 0 to 100. Its six layer switches and its two radio groups
-/// - staff overlays and the metric picker - choose what that overlay shows. <b>Every one of those is a
-/// simulation value this game does not have</b>, and the game's own help rows say so in as many words:
-/// "excitement ratings", "customer satisfaction", "ride reliability", "queue times". Built now they
-/// would be switches over an empty overlay, which is what the aerial and the message bar were each
-/// refused for. So this screen is the map, and the map is honest.
+/// - staff overlays and the metric picker - choose what that overlay shows, and the game's own help rows name
+/// them: "excitement ratings", "customer satisfaction", "ride reliability", "queue times". <b>The overlay is not
+/// built.</b> Of its metrics excitement is worked out (<see cref="ParkRideScore.ExcitementOf"/>) and satisfaction's
+/// days are kept (<see cref="ParkObjectRings.Satisfaction"/>; the overlay averages them through FUN_004e1e30,
+/// 0x005f2565), reliability and queue times are not, and built now its switches would sit over an overlay half
+/// empty, which is what the aerial and the message bar were each refused for. So this screen is the map, and the
+/// map is honest.
 /// </para>
 /// <para>
 /// <b>The terrain colours are not invented either.</b> The original's own land codes (10, 11, 12,

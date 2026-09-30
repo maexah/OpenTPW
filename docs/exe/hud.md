@@ -250,7 +250,12 @@ What each shows, from its own decoded labels:
 - **allitems** — four tabs of placed objects, the same four categories the buy screen uses.
   **The four tabs do NOT share a list shape** — see below.
 - **allpeeps** — a six-column guest list: Visitor Number / Cash Remaining / Time In Park / Rides
-  Ridden / "?" / Happiness.
+  Ridden / "?" / Happiness. Its row adder `FUN_00493800` fills them from the guest's `+0x1d8`, cash `+0x1a0`, a
+  quarter of the park hours since the guest's arrival stamp `+0x1d4` (`mArrivalDate`, `mGameTick` at construction,
+  `0x004fafdb`; `FUN_004fd950` shifts the ticks since right by two before `FUN_004f8730` turns them into park time,
+  divided by 36,000,000,000 at `0x0049383e`),
+  `mNumRides` `+0x1c4` (`0x00493850`), the last thought `+0x30` less one or 999 for none (`0x0049385a`), and happiness
+  as a 0..1024 bar (`0x00493870`).
 - **financeinfo** — Bank balance / Park value / Money in / Gate takings / Shop takings / Sideshow
   takings / Money out / Staff costs, over the same year graph.
 - **loans** — "Available Loans": Lender Name / Amount / Interest Rate / Monthly Repayment.
@@ -598,8 +603,8 @@ space).
 blend stop1->stop2 below 50 and stop2->stop3 above, patch R/G/B into the descriptor and force alpha 0xff.
 The stops are `DAT_00f86bd8`, `DAT_00f86bfc`, `DAT_00f86c20` (runtime-filled — beyond `.data`'s raw bytes,
 so a static read gives zeros). The value is a **per-thing metric** fetched differently per radio setting
-(`FUN_004e0860`, `FUN_004e1e30`). Those metrics are simulation values that do not exist yet, so the thing
-layers are simulation work wearing a UI. The base image plus the cell codes 9-12 (below) is the honest first cut.
+(`FUN_004e0860`, `FUN_004e1e30`). The first is built (`ParkRideScore.ExcitementOf`); the second's days are kept
+(`ParkObjectRings.Satisfaction`) and its average is not; the thing layers are unbuilt. The base image plus the cell codes 9-12 (below) is the honest first cut.
 
 ### Controls
 

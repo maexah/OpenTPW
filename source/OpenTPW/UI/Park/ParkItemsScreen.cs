@@ -27,8 +27,9 @@ namespace OpenTPW.UI;
 /// <para>
 /// <b>What this can actually answer, and what stays blank.</b> Rides fill <i>Name</i>, <i>State Of
 /// Repair</i> and <i>Remaining Life</i> - the two floats the ride window already reads - and leave
-/// <i>Users Last Month</i> and <i>Excitement</i> empty, the first wanting the record's day rings (the
-/// last thirty game days, which <c>ParkWorld</c> does not read) and the second the descriptor field <c>park.md</c> records as unproven. Shops and sideshows
+/// <i>Users Last Month</i> and <i>Excitement</i> empty, the first the customers ring's last thirty finished days,
+/// which <see cref="ParkObjectRings"/> keeps and this screen does not read yet, and the second the descriptor field
+/// <c>park.md</c> records as unproven. Shops and sideshows
 /// fill only their name, for the same two reasons. <b>Miscellaneous items fill both their columns</b>,
 /// because <i>Number Owned</i> is a count of what is standing. A blank column is an honest gap; a
 /// plausible wrong one is not - putting an object's gross takings under "Total Profit" would be a
@@ -302,8 +303,8 @@ internal sealed class ParkItemsScreen : UiWindow
 				continue;
 			}
 
-			// Rides are the one tab with numbers this game can answer - the two floats the ride window
-			// already reads back. Everything else stays empty; see the class remarks.
+			// Rides fill the two floats the ride window reads back. Everything else stays empty, the customers and
+			// satisfaction columns that ParkObjectRings holds among them; see the class remarks.
 			var values = tab.Index == 0
 				? new[] { "", "", $"{(int)placed.StateOfRepair}", $"{(int)placed.RemainingLife}" }
 				: new string[tab.Columns - 1];

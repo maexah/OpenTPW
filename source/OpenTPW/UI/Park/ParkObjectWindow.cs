@@ -33,7 +33,7 @@ namespace OpenTPW.UI;
 /// <para>
 /// <b>What is filled in and what is not.</b> The stats table takes its seven labels and the figures
 /// this game can answer (<see cref="FillStats"/>), and the preview shows the ride's own model turning
-/// (<see cref="DrawPreview"/>); excitement, reliability and users last month are counted instead. The
+/// (<see cref="DrawPreview"/>); excitement and reliability are counted instead. The
 /// original BUFFERS the three sliders and commits them only when the window closes or either arrow is
 /// pressed - capacity and duration byte-wide where speed is a dword - and so does this
 /// (<see cref="Commit"/>), all but what the speed word does to the script's waits.
@@ -110,6 +110,24 @@ internal sealed class ParkObjectWindow : UiWindow
 	[
 		new( 346, 711, 725, 753 ), new( 782, 711, 1161, 753 ), new( 1216, 711, 1595, 753 ),
 	];
+
+	/// <summary>
+	/// How often the figures are filled again while the window is open, in seconds - the original's timer
+	/// <c>0x80080</c>, armed with 4000 ms as the window is made (<c>0x004af67b</c>) and answered by
+	/// <c>FUN_004ade40</c> (<c>0x004af63b</c>).
+	/// </summary>
+	/// <remarks>
+	/// On the frame clock, which only the debug console holds, where the original's runs on real time and stops only
+	/// under the game menu, the options screen or a message box. The door's press refills them too
+	/// (<c>0x004af871</c>), and the door is not a button here (Q92).
+	/// </remarks>
+	private const float RefreshEvery = 4f;
+
+	/// <summary>When the figures are next filled: the timer's first tick is a period after the window is made.</summary>
+	private float _nextRefresh = Time.Now + RefreshEvery;
+
+	/// <summary>How many finished days Users last month adds up - <c>MOV EDI,0x1e</c> at <c>0x004ade83</c>.</summary>
+	private const int UsersLastMonthDays = 30;
 
 	/// <summary>Speed, capacity and duration - the order <see cref="Sliders"/> is in.</summary>
 	private const int Speed = 0;
@@ -495,13 +513,16 @@ internal sealed class ParkObjectWindow : UiWindow
 	/// refresh writes the RIGHT cells of the same rows. Both orders agree, and they agree with the
 	/// rectangles the stream lays out, so the table below is read off three sources rather than one.
 	/// <para>
-	/// <b>Three of the seven figures are not answerable here and are counted rather than invented.</b>
+	/// <b>Two of the seven figures are not answerable here and are counted rather than invented.</b>
 	/// Excitement and reliability are type-9 bars skinned <c>ridestatbar.wct</c> that the engine computes
 	/// from the three sliders - <c>FUN_004e0560</c> divides two slider values by per-upgrade maxima this
-	/// decode has not read. Users last month sums the object's ring of customers over the last thirty game
-	/// days (<c>+0x1a8</c>), which this game does not keep, as it keeps none of the park analyser's months
-	/// that the hire screen's mini-balance reads.
+	/// decode has not read. Users last month sums the object's ring of customers over the last thirty finished
+	/// game days (<see cref="ParkObjectRings.Customers"/>).
 	/// State of repair and remaining life are bars too, read straight off the thing.
+	/// </para>
+	/// <para>
+	/// The figures are filled when a thing is shown (<c>FUN_004ae430</c>) and again every four seconds while the
+	/// window is open (<see cref="RefreshEvery"/>), as the original's are.
 	/// </para>
 	/// </remarks>
 	private void FillStats()
@@ -565,9 +586,10 @@ internal sealed class ParkObjectWindow : UiWindow
 		Unimplemented.Report( "RIDE_EXCITEMENT_BAR" );
 		Unimplemented.Report( "RIDE_RELIABILITY_BAR" );
 
-		// Users last month sums the thirty entries of the object's customers ring, +0x1a8 (FUN_004ade40,
-		// 0x004ade7d), saved at file 498 of the record. ParkWorld does not read the rings.
-		Unimplemented.Report( "RIDE_USERS_LAST_MONTH" );
+		// Users last month: the object's customers over the last thirty finished days, today's not among them
+		// (FUN_004ade40, 0x004ade7d), printed "%d" (0x0048ff8f).
+		if ( _stats.TryGetValue( 0x3e21, out var users ) )
+			users.Text = $"{state.RingsFor( ThingId ).Customers.LastDays( UsersLastMonthDays )}";
 
 		// The age is written as a bare number, and the original's wording for it is NOT known.
 		//
@@ -584,7 +606,8 @@ internal sealed class ParkObjectWindow : UiWindow
 		// the top, so a wrong offset would look exactly like a healthy ride. The number is the check,
 		// not the picture.
 		Log.Info( $"Ride window: thing {ThingId} stats age {(placed.Built.IsSet ? state.AgeInDays( placed ) : -1)} days," +
-			$" scrap {item.BuildPrice}, built {placed.Built.Year}-{placed.Built.Month:D2}-{placed.Built.Day:D2}," +
+			$" users {users?.Text ?? "-"}, scrap {item.BuildPrice}," +
+			$" built {placed.Built.Year}-{placed.Built.Month:D2}-{placed.Built.Day:D2}," +
 			$" repair {placed.StateOfRepair:R}, life {placed.RemainingLife:R}" );
 	}
 
@@ -973,8 +996,9 @@ internal sealed class ParkObjectWindow : UiWindow
 	/// <b>These are gauges, and treated as text they show nothing.</b> The labels
 	/// beside them are text cells and render fine; the value cells are not. <c>FUN_004ade40</c> hands
 	/// each of these four <c>((value &amp; 0xff) &lt;&lt; 10) / 100</c> - a 0..100 percentage mapped onto
-	/// 0..1024 - through the control's <c>+0x1c</c> entry, while the rows either side of them
-	/// (Users last month, Age, Scrap value) are given a string instead.
+	/// 0..1024 - through the control's <c>+0x1c</c> entry. Users last month and Scrap value go through the same
+	/// entry as a plain number, each to its own painter (<c>0x004adf28</c>, <c>0x004ae0da</c>); only Age is given a
+	/// string.
 	/// <para>
 	/// <b>The colour is chosen, not measured.</b> The original's gauge skin is not something this
 	/// project has read; what IS read is the proportion. So the fill is one flat colour rather than a
@@ -1181,6 +1205,12 @@ internal sealed class ParkObjectWindow : UiWindow
 		_broken.Visible = IsBroken();
 
 		ShowTheDoor();
+
+		if ( Time.Now < _nextRefresh )
+			return;
+
+		_nextRefresh = Time.Now + RefreshEvery;
+		FillStats();
 	}
 
 	/// <summary>

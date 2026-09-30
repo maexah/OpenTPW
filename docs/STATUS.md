@@ -1,10 +1,8 @@
 # Status
 
-Last updated: 2026-09-29.
-
-**This header names no branch and no sha, deliberately**: a line in the commit that moves the tip cannot name it.
-Read the current state from the repository, which cannot lag: `git log --oneline -1`. **`docs/QUEUE.md` is the work
-queue**, one item per session, taken from the top unless Alexah reorders.
+Last updated: 2026-09-30. **This header names no branch and no sha, deliberately**: a line in the commit that moves
+the tip cannot name it. Read the current state from the repository, which cannot lag: `git log --oneline -1`.
+**`docs/QUEUE.md` is the work queue**, one item per session, taken from the top unless Alexah reorders.
 
 ## Works
 
@@ -36,6 +34,8 @@ queue**, one item per session, taken from the top unless Alexah reorders.
   shelter in rain, a track ride 60% of its level plus its track's, an upgraded one on its own tier, no unclosed coaster.
   **A visit's excitement moves happiness by the kind's liking, and illness by how full they are.**
   **Every twelfth walking turn a guest may turn aside for a nearer thing, then go on; a toilet empties the need.**
+  **A visit is counted as the original counts it** (Q177b): a guest's rides, purchases and sideshows, a thing's
+  customers, served and satisfaction in thirty-day rings rolled daily; shown as Users last month and Rides Ridden.
 - People: guests and staff read from the save, drawn, walking, paying, queueing, boarding, interpolated between the
   248 ms steps. **Queuers walk to their own places, in a line**; one needing the toilet, or lost to the walk, is out.
   **A guest on a cell with no links, such as a sold thing's cleared ground, wanders to the nearest path.** **Guests
@@ -57,10 +57,9 @@ queue**, one item per session, taken from the top unless Alexah reorders.
 - Eight of the nine per-object windows are unbuilt. Setting patrol areas is deferred by Alexah; staff keep the save's.
   A walking member of staff is not entered in the cells they cross; only hiring and putting down place one.
 - Unbuilt: Q102-Q105, five queue-turn arms (the unhappy one held for Q85), spot animation (Q98), Q112's walk to path.
-- The park's door moves neither the gate (Q89) nor the advisor (Q90), nor a shut ride's model (Q91); the ride window's
-  door shows a shut ride but is not a button (Q92), and a bought queued thing starts open (Q93).
-- Nothing shows what the hand holds, a thing (`CARRY_PREVIEW_MARKERS`) or a candidate (`STAFF_CARRY_PREVIEW`), and
-  any cell on the map takes a candidate; the original's rule is decoded (Q40).
+- The park's door moves no gate (Q89), advisor (Q90) or shut ride's model (Q91); the ride window's door is no button
+  (Q92), and a bought queued thing starts open (Q93).
+- Nothing shows what the hand holds (`CARRY_PREVIEW_MARKERS`, `STAFF_CARRY_PREVIEW`); any cell takes a candidate (Q40).
 - The fly-in's fade to black is not drawn (Q61). Keys: Escape over the player slots opens the game menu (Q64) and closes
   no park screen (Q119); C (Q118) and Ctrl+H act on the press, F8 is not built (Q65); modifiers count as the frame ends
   (Q120). A disabled button still takes the pointer (Q66); presses the original stops reach the park (Q113, Q115, Q116).
@@ -69,8 +68,8 @@ queue**, one item per session, taken from the top unless Alexah reorders.
 - With no work the mechanic, handyman and entertainer stand where the original's walk about (Q133); staff make no
   sound (Q135). Guests and rides read `GameClock.Ticks / 8`, not `mGameTick` (Q132); a load brings one guest (Q26); the bus waits (Q131).
 - Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), a ride walked into in first person, a coaster's
-  excitement and level, a visit's satisfaction (Q177b), ingredient (Q177d) and balloon (Q177e); **a visit's own count is
-  not even counted** (Q177b). **The Hot Pot lets no rider off** (Q179); a load re-phases turns (Q180), misreads kept times (Q181).
+  excitement and level, a visit's ingredient (Q177d) and balloon (Q177e), the charge's sound. **The Hot Pot lets no
+  rider off** (Q179); a load re-phases turns (Q180), misreads kept times (Q181).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
   walk (Q121), and a park screen stays open over it (Q122). It walks onto entrances the original shuts (Q140).
@@ -78,7 +77,7 @@ queue**, one item per session, taken from the top unless Alexah reorders.
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q101, Q165, Q166, Q168, Q169-Q177, Q184 are ticked**; next **Q177b**. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q101, Q165, Q166, Q168, Q169-Q177b, Q184 are ticked**; next **Q177c**. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -101,19 +100,20 @@ Q88, Q101, Q165, Q166, Q168, Q169-Q177, Q184 are ticked**; next **Q177b**. Gaps 
   never reaches (the Hot Pot's capacity cut mid-ride, resting on `BUMP` unbuilt, Q45). Q170b's cleared illness, second switch,
   stale major, sale's clear and save's fields; Q171's bounds; Q172b's saved track ride, tier and coaster (Q167) and a Hot Pot
   rider's 42 (Q179); Q173's tier 3 and zero divisors. Q174b's raw re-entry and last-frame trigger (no run) and loop (census
-  only); Q174c's saved mark, timer and queue; Q175b's Rat Race; Q176's `0x80000000` draw; its let-go ran in a throwaway build.
+  only); Q174c's saved mark, timer and queue; Q175b's Rat Race; Q176's `0x80000000` draw (its let-go in a throwaway build);
+  Q177b's walk-away and a played save's counts; its satisfaction, census only (nothing here shows it).
 
 ## Numbers (take counts fresh; these go stale within a day)
 
 | | | measured |
 |---|---|---|
 | Opcodes | **74** of 106 | 2026-09-21, `case Opcode.` labels vs enum members |
-| Tests | **1350**, 0 fail, 0 skip with the game | 2026-09-29, after Q177 |
-| Tests without the game | **531** ran, **819** skipped, of 1350 | 2026-09-29, after Q177 |
-| Build warnings | 123 | 2026-09-29, after Q177 |
+| Tests | **1367**, 0 fail, 0 skip with the game | 2026-09-30, after Q177b |
+| Tests without the game | **537** ran, **830** skipped, of 1367 | 2026-09-30, after Q177b |
+| Build warnings | 123 | 2026-09-30, after Q177b |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-09-29 (Q177, the settle-up's bookkeeping: the decode).** `alexah/191-decode-the-settle-up`. **Earlier:** `190` (Q176),
+**2026-09-30 (Q177b, the settle-up's counts and the day rings).** `alexah/192-the-settle-ups-counts`. **Earlier:** `191` (Q177), `190` (Q176),
 `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

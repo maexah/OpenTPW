@@ -253,6 +253,7 @@ public sealed class ParkState
 	public void AddObject( ParkWorld.CatalogueObject placed )
 	{
 		_objects.Add( placed );
+		_rings[placed.ThingId] = new ParkObjectRings();
 
 		_nextObject[placed.ThingId] = _firstObject;
 		_firstObject = placed.ThingId;
@@ -270,9 +271,38 @@ public sealed class ParkState
 			return false;
 
 		_objects.RemoveAt( at );
+		_rings.Remove( thingId );
 		Unlink( thingId );
 
 		return true;
+	}
+
+	/// <summary>
+	/// What an object keeps of its days (<see cref="ParkObjectRings"/>). An object the state was never told of -
+	/// a test's - starts empty, as a thing just built does.
+	/// </summary>
+	public ParkObjectRings RingsFor( int thingId )
+	{
+		if ( !_rings.TryGetValue( thingId, out var rings ) )
+			_rings[thingId] = rings = new ParkObjectRings();
+
+		return rings;
+	}
+
+	/// <summary>
+	/// The day's change for every object - message <c>0xb</c>, which the calendar sends once a world tick at most,
+	/// after every thing's turn, to each object in ascending thing id (<c>0x004f8321</c>, <c>FUN_004dd320</c>).
+	/// </summary>
+	/// <remarks>
+	/// The original sends it to the objects its saved listener sets name; this rolls every object the park holds,
+	/// which is the same wherever a save lists them all.
+	/// </remarks>
+	public void RollTheDay()
+	{
+		foreach ( var thingId in _rings.Keys.Order() )
+			_rings[thingId].Roll();
+
+		Log.Info( $"The day's change: {_rings.Count} objects' rings rolled on {GameCalendar.Now:yyyy-MM-dd}" );
 	}
 
 	/// <summary>
@@ -417,6 +447,11 @@ public sealed class ParkState
 			// above seed nothing, and is still what stops a played park's takings being lost on load.
 			if ( thing.TotalTakings != 0 )
 				_takings[thing.ThingId] = thing.TotalTakings;
+
+			// Its days as the record left them. In the park that ships every finished day is nought; most entries are on
+			// 1 and wrapped, things 11 and 12 on 2, and thing 15 on 5 and not wrapped, with the heap's fill past its days.
+			if ( thing.Rings is { } rings )
+				_rings[thing.ThingId] = new ParkObjectRings( rings );
 		}
 
 		foreach ( var person in park.People )
@@ -643,15 +678,14 @@ public sealed class ParkState
 
 	/// <summary>
 	/// Credits an object with what a guest has just paid it - the object half of <c>FUN_004e16b0</c>,
-	/// which adds the price to <c>mTotalTakings</c> at <c>+0x180</c>.
+	/// which adds the price to <c>mTotalTakings</c> at <c>+0x180</c> and to today's takings at <c>+0x70</c>.
 	/// </summary>
 	/// <remarks>
 	/// <b>The bank's half is not built, and is counted.</b> <c>FUN_004e16b0</c> first deposits the price in the
 	/// park's bank through <c>FUN_004d0190</c> (<c>0x004e16c6</c>) - the balance, the park analyser's month cash in
 	/// and the bank's <c>mProfitThisYear</c>, the adds the gate fee's <c>FUN_004d0600</c> makes - so a charge moves the
-	/// balance there and does not move <see cref="Balance"/> here (<c>docs/QUEUE.md</c> Q96). Nor are the park
-	/// analyser's shop and sideshow month accumulators kept (<c>+0x20130</c>, <c>+0x20380</c>; a ride credits
-	/// neither), which the month's change pushes into 144-month rings: no screen here reads them.
+	/// balance there and does not move <see cref="Balance"/> here (<c>docs/QUEUE.md</c> Q96). The park analyser's
+	/// shop and sideshow month totals and the challenge posts are counted by the charge, which knows the kind.
 	/// </remarks>
 	public void TakeAt( int objectId, int amount )
 	{
@@ -661,6 +695,7 @@ public sealed class ParkState
 		Unimplemented.Report( "CHARGE_BANK_DEPOSIT" );
 
 		_takings[objectId] = TakingsFor( objectId ) + amount;
+		RingsFor( objectId ).Takings.Today += amount;
 	}
 
 	/// <summary>
@@ -689,6 +724,9 @@ public sealed class ParkState
 	/// <c>+0x180</c>, which a charge moves and <see cref="ParkWorld"/> cannot because it describes a file.
 	/// </summary>
 	private readonly Dictionary<int, int> _takings = [];
+
+	/// <summary>Each object's day rings and counts, by thing id - see <see cref="RingsFor"/>.</summary>
+	private readonly Dictionary<int, ParkObjectRings> _rings = [];
 
 	private readonly Dictionary<int, int> _queueHead = [];
 	private readonly Dictionary<int, int> _queueNext = [];

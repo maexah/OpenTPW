@@ -501,13 +501,14 @@ public sealed class ParkRideOperation
 	/// <para>
 	/// The byte is written on admission by <see cref="PeepBehaviour"/>'s roll through <see cref="Succeeds"/>,
 	/// and the "lost" arm docks <c>PeepInfo.MediumHappinessChange</c> (<c>DAT_0078505c</c>), both built.
-	/// Behind the gate come a sideshow's prize, the excitement match (<see cref="MatchTheExcitement"/>), the item's
-	/// effects, a toilet's relief (<see cref="UseTheToilet"/>) and a sideshow's winning cheer, in the original's
-	/// order. Counted and not kept: the cost of goods a shop or sideshow books against the object and the park's
-	/// balance (with the prize), the guest's event history, and after everything the happiness gained since
-	/// joining, the object's served count and a sideshow's thoughts, win or lose. Neither kept nor counted: the
-	/// guest's rides, purchases or sideshows played and the object's visit count (<c>FUN_004e1690</c>), which the
-	/// original keeps before the gate (<c>docs/exe/ride-operation.md</c>, "The settle-up's bookkeeping").
+	/// Before the gate, on both arms, the guest counts the visit by the item's kind and the object counts a
+	/// customer (<c>docs/exe/ride-operation.md</c>, "The settle-up's bookkeeping", steps 1 and 2). Behind the gate
+	/// come a sideshow's prize, the excitement match (<see cref="MatchTheExcitement"/>), the item's effects, a
+	/// toilet's relief (<see cref="UseTheToilet"/>) and a sideshow winner's count and cheer, in the original's order;
+	/// then three times the happiness gained since the guest joined the queue, averaged into the object's
+	/// satisfaction for the day, and the object's served count (steps 4, 5 and 7). Counted and not kept: the cost of
+	/// goods a shop or sideshow books against the object and the park's balance (with the prize), the guest's event
+	/// history, the park analyser's sample and a sideshow's thoughts, win or lose.
 	/// </para>
 	/// <para>
 	/// <b>What is NOT built, and why, each counted.</b> Three more happiness changes in <c>FUN_004fe1e0</c> each
@@ -526,20 +527,35 @@ public sealed class ParkRideOperation
 	/// charge, whatever the thing is: a shop, a sideshow or a toilet counts as much as a ride. The original reaches it
 	/// only when the exit routes (<c>0x005015e3</c>, <c>0x005015ef</c>); a guest this dismisses anyway (see
 	/// <see cref="Dismiss"/>) is remembered and charged anyway.
-	/// <b>Absent:</b> the three visit counters at <c>+0x1c4</c>/<c>+0x1c8</c>/<c>+0x1cc</c> chosen by the
-	/// descriptor's <c>+0x4ac</c>. The original's visitor window shows all three, and its all-visitors list shows
-	/// <c>mNumRides</c> as Rides Ridden, which this game's visitors screen counts as <c>VISITOR_RIDES_RIDDEN</c>.
 	/// </para>
 	/// </summary>
 	private void SettleUp( Peep peep, ParkWorld.CatalogueObject ride, ParkItemCatalogue? catalogue )
 	{
 		peep.RememberVisit( ride.ThingId );
 
-		Charge( peep, ride );
-
 		// No catalogue is a test asking about the money rather than about the visit, and an item the
 		// catalogue does not know cannot say what it does to anybody.
-		if ( catalogue == null || !catalogue.TryGet( ride.CatalogueId, out var item ) )
+		ParkItemCatalogue.Item? known = null;
+
+		if ( catalogue != null && catalogue.TryGet( ride.CatalogueId, out var found ) )
+			known = found;
+
+		// The guest counts the visit by the item's kind, before the charge (0x004fd9ac..0x004fd9d2).
+		if ( known is { } kind )
+			CountTheVisit( peep, kind.UiType );
+
+		Charge( peep, ride, known?.UiType );
+
+		// And the object counts a customer, won or lost (FUN_004e1690, 0x004fd9e2).
+		var rings = _state.RingsFor( ride.ThingId );
+		rings.CountCustomer();
+
+		// The original then takes the item's FatigueEffect off the guest's mTiredness, held to 0..100
+		// (0x004fd9e7..0x004fda00). Nothing raises mTiredness: the constructor zeroes it, a load restores the saved one
+		// (file 521, nought on every shipped guest), and a subtraction from nought is held at nought, so nothing is
+		// done here.
+
+		if ( known is not { } item )
 			return;
 
 		// <b>The gate, and it is the ROLL rather than a place in a queue.</b> Entering the thing writes
@@ -594,19 +610,55 @@ public sealed class ParkRideOperation
 			UseTheToilet( peep, ride );
 
 		// A shop stops at the effects, which is where its thirst, its litter and its five points of happiness
-		// come from; a sideshow's winner cheers.
+		// come from; a sideshow's winner is counted (0x004fe81f) and then cheers.
 		if ( item.UiType == SideshowUiType )
+		{
+			peep.NumSideshowsWon++;
 			peep.Happiness = Peep.Change( peep.Happiness, WinningIsWorth( item, ride ) );
+		}
 
-		// Then the original compares happiness with what the guest had on joining (+0x20c), logs "Happiness
-		// changed by %d since using object %d", averages three times the change into the object and, for a
-		// shop or sideshow, posts it to the park analyser; counts the object's served (FUN_004e19f0); and has a
-		// sideshow's winner think thought 5 - none of which is kept here.
-		Unimplemented.Report( "SETTLE_UP_HAPPINESS_SINCE_JOIN" );
-		Unimplemented.Report( "SETTLE_UP_OBJECT_VISIT_COUNT" );
+		// Three times the change since the join, each side truncated to its low byte (0x004fda1b..0x004fda47),
+		// logged and averaged into the object's satisfaction for the day (FUN_004e1e00). Happiness is not moved.
+		var change = 3 * (((int)peep.Happiness & 0xff) - ((int)peep.JoinHappiness & 0xff));
 
+		Log.Info( $"Person {peep.ThingId}: Happiness changed by {change} since using object {ride.ThingId}" );
+
+		rings.Satisfy( change );
+
+		// A shop posts change + 50 to the park analyser by its special ingredient and its appearance effect, a
+		// sideshow always (0x004fda92..0x004fdb2c); nothing reads those samples.
+		if ( item.UiType == SideshowUiType
+			|| (item.UiType == ShopUiType && (item.SpecialIngredient is >= 1 and <= 4 || item.AppearanceEffect is 1 or 2)) )
+			Unimplemented.Report( "SETTLE_UP_ANALYSER_SAMPLE" );
+
+		// Served, for every kind of object (FUN_004e19f0, 0x004fdb33).
+		rings.Served.Today++;
+
+		// A sideshow's winner thinks thought 5 and gains an event-history entry (0x004fdb38..0x004fdb7f).
 		if ( item.UiType == SideshowUiType )
 			Unimplemented.Report( "SETTLE_UP_SIDESHOW_THOUGHT" );
+	}
+
+	/// <summary>
+	/// The guest's count of the visit by the descriptor's <c>+0x4ac</c> (<c>0x004fd9b1</c>): a ride's rides ridden,
+	/// a shop's purchases made, a sideshow's sideshows played. A feature, a toilet among them, counts none.
+	/// </summary>
+	private static void CountTheVisit( Peep peep, int uiType )
+	{
+		switch ( uiType )
+		{
+			case RideUiType:
+				peep.NumRides++;
+				break;
+
+			case ShopUiType:
+				peep.NumShops++;
+				break;
+
+			case SideshowUiType:
+				peep.NumSideshows++;
+				break;
+		}
 	}
 
 	/// <summary>
@@ -669,6 +721,9 @@ public sealed class ParkRideOperation
 
 	/// <summary>A shop's <c>Info.WhichUIType</c>, the descriptor's <c>+0x4ac</c> 1.</summary>
 	public const int ShopUiType = 1;
+
+	/// <summary>A ride's <c>Info.WhichUIType</c>, the descriptor's <c>+0x4ac</c> 0.</summary>
+	public const int RideUiType = 0;
 
 	/// <summary>
 	/// What winning at a sideshow does to a guest's mood -
@@ -792,10 +847,11 @@ public sealed class ParkRideOperation
 	/// from the settle-up <c>FUN_004fd970</c> that <c>ExitRide</c> (<c>FUN_005014e0</c>) runs on the way out.
 	///
 	/// <para>
-	/// <b>A guest pays on LEAVING, not on boarding</b>, and the whole of the charge is three steps: read
-	/// the price from the object (<c>mPricePerUse</c>, <c>+0x194</c>), credit the object, and subtract it
-	/// from the guest's cash at <c>+0x1a0</c>. A price of nought skips all of it - which is this park's one
-	/// ride, priced free; the Jungle Spray charges 20 and the Drinks Shop 30.
+	/// <b>A guest pays on LEAVING, not on boarding</b>: read the price from the object (<c>mPricePerUse</c>,
+	/// <c>+0x194</c>), credit the object (<c>FUN_004e16b0</c>, <see cref="ParkState.TakeAt"/>), play a sound at the
+	/// guest, and subtract the price from the guest's cash at <c>+0x1a0</c>. A price of nought skips all of it -
+	/// which is this park's one ride, priced free; the Jungle Spray charges 20 and the Drinks Shop 30. Counted, not
+	/// built: the sound, and a shop's or sideshow's month totals in the park analyser and its challenge posts.
 	/// </para>
 	/// <para>
 	/// <b>There is no affordability test and no clamp, and both are the original's.</b> It subtracts
@@ -805,7 +861,7 @@ public sealed class ParkRideOperation
 	/// inventing a refusal the engine does not make.
 	/// </para>
 	/// </summary>
-	private void Charge( Peep peep, ParkWorld.CatalogueObject ride )
+	private void Charge( Peep peep, ParkWorld.CatalogueObject ride, int? uiType )
 	{
 		var price = ride.PricePerUse;
 
@@ -813,6 +869,18 @@ public sealed class ParkRideOperation
 			return;
 
 		_state.TakeAt( ride.ThingId, price );
+
+		// FUN_004e16b0's shop and sideshow arms add the price to the park analyser's month totals (+0x20130, 0x004e1711;
+		// +0x20380, 0x004e18a6), which the month's change pushes into its 144-month rings, and post it to the
+		// challenge manager, which takes it only while a challenge of that type is on. A ride's does neither.
+		if ( uiType is ShopUiType or SideshowUiType )
+		{
+			Unimplemented.Report( "CHARGE_ANALYSER_MONTH_TOTAL" );
+			Unimplemented.Report( "CHARGE_CHALLENGE_POST" );
+		}
+
+		// Sample 0xd0 at the guest (FUN_004faa00, 0x004fe1be..0x004fe1cb).
+		Unimplemented.Report( "CHARGE_SOUND" );
 
 		peep.Cash -= price;
 

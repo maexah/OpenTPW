@@ -94,7 +94,7 @@ public sealed class ParkWorld
 		int OperatingCapacity = 0, int OperatingDuration = 0, int OperatingSpeed = 0, int PricePerUse = 0,
 		int QueueSizeInCells = 0, int TotalTakings = 0,
 		float StateOfRepair = 0f, float RemainingLife = 0f, BuiltWhen Built = default, int RequestedService = 0,
-		int UpgradeLevel = 0, int MeshInstance = 0 )
+		int UpgradeLevel = 0, int MeshInstance = 0, ObjectRings? Rings = null )
 	{
 		/// <summary>
 		/// The bit that makes an object somewhere a guest can be <i>offered</i> - <c>FUN_004fcb10</c>, the
@@ -252,6 +252,40 @@ public sealed class ParkWorld
 		/// <inheritdoc cref="ExitCellX"/>
 		public int ExitCellY => ExitPos == 0 ? 0 : (ExitPos - 1) / MapSize;
 	}
+
+	/// <summary>
+	/// One of an object's six day rings as the record holds it: today's figure and the thirty finished days
+	/// before it (<c>docs/exe/ride-operation.md</c>, "The object's six day rings").
+	/// </summary>
+	/// <param name="CurrentEntry"><c>mCurrentEntry</c>, the last finished day's slot; −1 before the first day ends.</param>
+	/// <param name="NumEntries"><c>mNumEntries</c>, 30 in every record the game ships.</param>
+	/// <param name="WrappedAround"><c>mWrappedAround</c>, one byte: every slot has been filled once.</param>
+	/// <param name="Today"><c>mTemp</c>, today's figure so far.</param>
+	/// <param name="Days"><c>mData</c>, by slot. A slot not reached yet holds whatever the heap did.</param>
+	public sealed record DayRing( int CurrentEntry, int NumEntries, bool WrappedAround, int Today,
+		IReadOnlyList<int> Days )
+	{
+		/// <summary>How many days a ring holds, and so the room every object record leaves for one.</summary>
+		public const int Length = 30;
+
+		/// <summary>The bytes one ring takes in the record: four, four, one and four, then the thirty days.</summary>
+		public const int Size = 13 + (Length * 4);
+	}
+
+	/// <summary>
+	/// An object's six day rings and its two lifetime counts, in the serialiser's order (<c>FUN_004db7d0</c>;
+	/// FileFormats <c>saves.md</c>).
+	/// </summary>
+	/// <param name="Costs">Today's cost of goods, <c>+0xf8</c>.</param>
+	/// <param name="Takings">Today's takings, <c>+0x70</c>.</param>
+	/// <param name="NumCustomers"><c>mNumCustomers</c>, every settle-up since it was built.</param>
+	/// <param name="Customers">Today's customers, <c>+0x1a8</c>.</param>
+	/// <param name="NumWalkAways"><c>mNumWalkAways</c>, every refusal at its door since it was built.</param>
+	/// <param name="WalkAways">Today's walk-aways, <c>+0x230</c>.</param>
+	/// <param name="Served">Today's served, <c>+0x2b8</c>: the settle-ups past the win roll.</param>
+	/// <param name="Satisfaction">Today's satisfaction, <c>+0x340</c>.</param>
+	public sealed record ObjectRings( DayRing Costs, DayRing Takings, int NumCustomers, DayRing Customers,
+		int NumWalkAways, DayRing WalkAways, DayRing Served, DayRing Satisfaction );
 
 	/// <summary>Every catalogue object the walk found, placed or not, in the order the file lists them.</summary>
 	public IReadOnlyList<CatalogueObject> Objects => _objects;
@@ -490,6 +524,11 @@ public sealed class ParkWorld
 	/// <c>mCount</c> (<c>+0x2c</c>) - the person base's byte the walk to a chosen thing counts its turns on, and
 	/// which the minor decision runs at every twelfth of (<c>docs/exe/ride-operation.md</c>, "A second toilet").
 	/// </param>
+	/// <param name="NumRides">
+	/// <c>mNumRides</c> (<c>+0x1c4</c>) - rides ridden; <see cref="NumShops"/> (<c>+0x1c8</c>) and
+	/// <see cref="NumSideshows"/> (<c>+0x1cc</c>) are purchases made and sideshows played, and
+	/// <see cref="NumSideshowsWon"/> (<c>+0x1d0</c>) sideshows won: the visitor window's four counts.
+	/// </param>
 	public readonly record struct GuestState(
 		int State, int SavedState, int PersonType, int Cash, int ExitLevel,
 		float Happiness, float Thirst, float Hunger, float Toilet, float Vomit, float Litter,
@@ -497,7 +536,8 @@ public sealed class ParkWorld
 		int PaidAdmission = 0, int ParkOpeningWait = 0,
 		int QNext = 0, int QPrev = 0, int BeenAdmitted = 0, int QueueMoveDelay = 0,
 		IReadOnlyList<int>? PreviousRides = null, IReadOnlyList<int>? PreviousTemporaryRides = null,
-		int SavedMajorDest = 0, int WalkingTurns = 0 )
+		int SavedMajorDest = 0, int WalkingTurns = 0,
+		int NumRides = 0, int NumShops = 0, int NumSideshows = 0, int NumSideshowsWon = 0 )
 	{
 		/// <summary>How many things each of the two histories holds - <c>mPreviousRides[4]</c> and its twin.</summary>
 		public const int Remembered = 4;
@@ -1626,10 +1666,11 @@ public sealed class ParkWorld
 			// catalogue type is 1 or 2 unless this is non-zero.
 			IsTrackRideValid: ReadInt32At( start + 222 ),  // mIsTrackRideValid
 
+			// The six day rings and the two counts between them - see ReadRings.
+			Rings: ReadRings( start + 228 ),
+
 			// And the fields past the last ring. FUN_004db7d0 writes six thirty-entry rings of 133 bytes from
-			// 228, with mNumCustomers at 494 and mNumWalkAways at 631 between them, so these start at 1034. The
-			// rings and the two counts are not read here (FileFormats saves.md; docs/exe/ride-operation.md,
-			// "The settle-up's bookkeeping").
+			// 228, with mNumCustomers at 494 and mNumWalkAways at 631 between them, so these start at 1034.
 			OperatingCapacity: _data[start + 1034],          // mOperatingCapacity, one byte
 			OperatingDuration: _data[start + 1035],          // mOperatingDuration, one byte
 
@@ -1682,6 +1723,50 @@ public sealed class ParkWorld
 				ReadInt32At( start + 30 ), ReadInt32At( start + 34 ),
 				ReadInt32At( start + 38 ), ReadInt32At( start + 42 ),
 				ReadInt32At( start + 46 ), ReadInt32At( start + 50 ) ) );
+
+	/// <summary>
+	/// An object's rings and counts from 228 to 1034, in the serialiser's order (<c>FUN_004db7d0</c>): the costs
+	/// ring, the takings ring, <c>mNumCustomers</c>, the customers ring, <c>mNumWalkAways</c>, the walk-aways ring,
+	/// the served ring and the satisfaction ring.
+	/// </summary>
+	/// <remarks>
+	/// Each ring is read as thirty days whatever its <c>mNumEntries</c> says, because the record's fixed size is
+	/// what places everything after it: a ring of any other length would move every later field, and every
+	/// object record in the game's data holds 30 (a test pins it).
+	/// </remarks>
+	private ObjectRings ReadRings( int at )
+	{
+		var costs = ReadRing( ref at );
+		var takings = ReadRing( ref at );
+		var numCustomers = ReadInt32At( at );
+		at += 4;
+		var customers = ReadRing( ref at );
+		var numWalkAways = ReadInt32At( at );
+		at += 4;
+		var walkAways = ReadRing( ref at );
+		var served = ReadRing( ref at );
+		var satisfaction = ReadRing( ref at );
+
+		return new ObjectRings( costs, takings, numCustomers, customers, numWalkAways, walkAways, served,
+			satisfaction );
+	}
+
+	/// <summary>One ring as the loader reads it (<c>FUN_004e2c10</c>'s read arm): the entry, the count, the wrap
+	/// byte, today, then the days.</summary>
+	private DayRing ReadRing( ref int at )
+	{
+		var days = new int[DayRing.Length];
+
+		for ( var i = 0; i < days.Length; ++i )
+			days[i] = ReadInt32At( at + 13 + (i * 4) );
+
+		var ring = new DayRing( CurrentEntry: ReadInt32At( at ), NumEntries: ReadInt32At( at + 4 ),
+			WrappedAround: ReadByteAt( at + 8 ) != 0, Today: ReadInt32At( at + 9 ), Days: days );
+
+		at += DayRing.Size;
+
+		return ring;
+	}
 
 	/// <summary>
 	/// A person's record: the same head every thing has, and the two fields that make them drawable.
@@ -1804,6 +1889,12 @@ public sealed class ParkWorld
 			// mBeenAdmitted, fourth in the block's alphabetical order and the flag a queueing guest is
 			// let onto a ride by - see the field table above, which puts it at 410 and closes on 533.
 			BeenAdmitted: ReadInt32At( start + 410 ),
+			// What the visitor window counts, bumped by the settle-up (docs/exe/ride-operation.md, "The settle-up's
+			// bookkeeping", steps 1 and 3), in the block's alphabetical order after mMajorDest.
+			NumRides: ReadInt32At( start + 444 ),        // mNumRides
+			NumShops: ReadInt32At( start + 448 ),        // mNumShops
+			NumSideshows: ReadInt32At( start + 452 ),    // mNumSideshows
+			NumSideshowsWon: ReadInt32At( start + 456 ), // mNumSideshowsWon
 			// mQueueMoveDelay - four bytes sitting exactly between mQPrev at 488 and the mQueuePos byte
 			// at 494, which is what fixes them. The InQueue handler pauses on it before letting a
 			// guest re-take a place in a queue that has moved.

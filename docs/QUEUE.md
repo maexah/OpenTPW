@@ -2599,7 +2599,61 @@ artifacts are listed in `docs/history/README.md`.
   From Q171: the constructor sets a bought thing's `+0x198` and its `+0x18c` (`mQualityOfGoods`) to 50
   (`0x004db3b3`, `0x004db389`); `ParkBuilding.Constructed` writes neither, as the record carries neither.
 
-- [ ] **Q177b. The settle-up's counts: the visit, the guest's three, the object's day rings and satisfaction.** Found
+- [x] **Q177b. The settle-up's counts: the visit, the guest's three, the object's day rings and satisfaction.** Done
+  2026-09-30, `alexah/192-the-settle-ups-counts`. The settle-up now keeps steps 1, 2, 4, 5 and 7 and a sideshow
+  winner's count: the guest's `mNumRides`, `mNumShops`, `mNumSideshows` and `mNumSideshowsWon` (read from the record at
+  444..456, `Peep`), the object's customers before the gate, three times the happiness gained since the join averaged
+  into the day's satisfaction (`FUN_004e1e00`), and its served. Each object's six day rings and two counts are
+  `ParkObjectRings`, read from its record (`ParkWorld.ReadRings`, 228..1033), fresh for a thing built, dropped with a
+  thing sold, rolled on the day's change after the frame's turns (`ParkState.RollTheDay`, logging "The day's change");
+  the charge credits today's takings and the door's refusal counts the walk-away (`FUN_004e1670`). The join copies
+  happiness (`Peep.JoinHappiness`, not saved). The ride window's Users last month is the thirty finished days'
+  customers, refilled every four seconds while open as the original's timer does; the all-visitors list's Rides
+  Ridden is `mNumRides`. Console: `rings [thing]`, and `peeps` prints the four counts and the join. Newly counted
+  (reached, unbuilt): `SETTLE_UP_ANALYSER_SAMPLE`, `CHARGE_SOUND`, `CHARGE_ANALYSER_MONTH_TOTAL`, `CHARGE_CHALLENGE_POST`,
+  `DOOR_EVENT_HISTORY`; gone: `SETTLE_UP_OBJECT_VISIT_COUNT`, `SETTLE_UP_HAPPINESS_SINCE_JOIN`, `DOOR_WALK_AWAY_COUNT`,
+  `RIDE_USERS_LAST_MONTH`, `VISITOR_RIDES_RIDDEN`. Built and tested alone in a worktree: 1367 pass, 0 skip with the
+  game; 537 ran, 830 skipped without; 123 warnings.
+  - **Mapped** (`wf_99b6262c-a37`): three Opus readers in Ghidra (the arithmetic, the rings and the day's change, the
+    join's snapshot), each put to an Opus skeptic, and a Sonnet map of the code; reports in
+    `~/.cache/tpw-harnesses/q177b/map/`. Found beside the build: the settle-up's `+0xe8` is `FatigueEffect`, taken off
+    `mTiredness`, not a need relieved (a no-op: nothing raises it); the roll's order and signed wrap; the day test
+    compares the day of the month only, after every thing's turn, in ascending thing id; Users last month adds the
+    last min( filled, 30 ) finished days as unsigned figures, never today; a walk-away is counted only by the door's
+    price refusal; the window refills on a 4000 ms timer (`0x004af67b`); the all-visitors row adder's six sources
+    (`hud.md`).
+  - **Measured across the data**: all nine park files to hand (the shipped one and Alexah's eight) hold 30 in every
+    ring and close each record on 1034; the C# reader agrees with the independent Python walk on every one
+    (`~/.cache/tpw-harnesses/q177bsave/`, `q177/satisfaction/objrings.py`: jungle thing 236, 150 customers, 56 in the
+    last thirty days; guest totals 1703, 1378, 1065, 624). 287 of 339 played guests hold counts; none has won more
+    sideshows than it played.
+  - **Confirmed in the game** (silent, the stock jungle park, `save/` unchanged in every run; predicted first):
+    run 1 (`q177brun.py`, `q177b-run1/`): the ride window over the Belly Bounce printed **Users last month 5**, the
+    census's `last30` 5 (photographed, `window-users.png`), the logged changes 45 (a kind 3 joined at 40, cheered
+    15) and 15; the all-visitors list's Rides Ridden 1 on the two guests `peeps` counts one ride (`visitors.png`).
+    Run 3 (`q177brun2.py`, `q177b-run3/`, six guests at the Drinks Shop): day 7 held two drinks, 99 then 105, and the
+    census's satisfaction for it read **102**; every finished day matched the fold of its logged changes; customers
+    and served over thirty days 8, as logged. Run 4 (`q177brun4.py`, `q177b-run4/`): the same open window went from
+    Users last month **0 to 1** (Age 32 to 42) 1.26 s after the day's change, never reopened, fills every 4.0 s
+    (`users-before-after.png`).
+  - **Predictions wrong**: in run 1, my last-thirty count added every finished day where 43 had passed (the game's 5
+    is right: day 11's visit is past thirty); the kind 1 never rode in time (one rider a cycle, about 5.5 days); in
+    run 3, my "every later drinker logs 105" missed that guests joined either side of the `happy 70`.
+  - **Mutation** (`~/.cache/tpw-harnesses/q177b/mutate.py`, `mutate.out`): 34 mutants over four rounds, each red
+    against the tests that stood when it ran, except the two guards against adding an unfilled day, each equivalent
+    alone and red together; one hollow spot (a saved count reaching the guest) found and closed.
+  - **Reviewed** (`wf_ea5275a7-590`: the code against Ghidra, the C# and its tests, the docs, what else went stale;
+    each put to an Opus skeptic; reports in `~/.cache/tpw-harnesses/q177b/review/`): all taken. Among them: the
+    window's 4-second refresh (built), the charge's sound and a shop's or sideshow's analyser totals and challenge
+    posts and the door's event 10 (reached, now counted), tests that could not tell the six rings or the guests'
+    offsets apart (now patched-payload tests), and stale text in `ParkItemsScreen`, `ParkMapScreen`,
+    `ParkRideRecordTests`, `ParkVisitorsScreen`, `PLAYER-GAPS.md` and `hud.md`.
+  - **Not confirmed on screen**: satisfaction (no screen here shows it: the shop and sideshow windows and the map's
+    layers are unbuilt; census only); the walk-away (tested only; no guest was refused on price in the runs); a
+    saved park's counts (tested on a patched payload; no load of a played save).
+  - **Found:** the rings roll on `GameCalendar`'s edge, which counts from nought (a note under Q149).
+
+  The item as written: Found
   by Q177's decode (`ride-operation.md`, "The settle-up's bookkeeping", steps 1, 2, 4, 5 and 7). OpenTPW neither
   builds nor counts `FUN_004e1690` (the object's `mNumCustomers` and today's customers, every settle-up, before the
   gate) nor the guest's `mNumRides`, `mNumShops` and `mNumSideshows` (`CLAUDE.md` rule 4): count them first. Then read
@@ -3184,6 +3238,9 @@ artifacts are listed in `docs/history/README.md`.
   Confirm: the gadget's date on entering Lost Kingdom, predicted from 755 advances; a screenshot.
   Q165c gave the ride score and the object window's Age the original's calendar (`ParkState.CalendarNow`, from the
   save's `mGameTick`); the gadget's date and the weather's days still count from nought.
+  From Q177b: the objects' day rings roll on `GameCalendar.DayRolled` too, so their days turn about 18 world ticks
+  later than the original's after Lost Kingdom's load (its first changes at ticks 761, 784, 807), and a load never
+  rolls on its first tick where the file's `mDayAtLastUpdate` differs from the loaded date.
 - [ ] **Q150. Scripts and the thing sweep take a frame's ticks in two loops, where the original takes both per tick.**
   Found by the 2026-09-26 staleness audit. The original's park loop runs the scripts (`0x0054f56b`) and the thing
   sweep (`0x0054f7bb`) inside one loop over the frame's ticks. `ParkRides` and `ParkPeople` each loop over

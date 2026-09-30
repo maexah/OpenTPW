@@ -149,18 +149,18 @@ button. It only logs, and counts each click as `RESEARCH_BUTTON`.
       `FEATURE_WINDOW` for toilets, staff rooms, misc items and upgrades alike, and `STAFF_WINDOW`), and a visitor's
       reaches nothing counted. Close, delete, move and
       the two cycle arrows work.
-- [x] **The rides panel - 2026-09-21, with three rows still counted.** All three sliders take their
+- [x] **The rides panel - 2026-09-21; two rows still counted.** All three sliders take their
       range from the item and their value from the ride, and **save**: capacity 5 of 1..10 clicked to
       6 read back as 6 after the window was closed and reopened.
-      **The stats table fills four of its seven rows.** The four condition rows are GAUGES, not text -
+      **The stats table fills five of its seven rows.** The four condition rows are GAUGES, not text -
       `FUN_004ade40` hands each `((v & 0xff) << 10) / 100`, a 0..100 percentage onto a 0..1024 bar -
       which is why they rendered their labels perfectly and showed no values at all. State of repair
       and Remaining life are now drawn, from two floats at save **1074** and **1070** that nothing was
       reading; Belly Bounce measures **repair 100, life 100**. Age and Scrap value were already there.
-      **Excitement, Reliability and Users last month stay counted**, and not for want of a control:
-      the first two's inputs are named now (`park-engine.md`, the compiled `.sam` schema) and the guests'
-      choice computes the first (`ParkRideScore.ExcitementOf`), but neither bar is built; the third sums the
-      object's customers ring over thirty game days (file 498, `saves.md`), which `ParkWorld` does not read yet (Q177b).
+      **Excitement and Reliability stay counted**, and not for want of a control: their inputs are named now
+      (`park-engine.md`, the compiled `.sam` schema) and the guests' choice computes the first
+      (`ParkRideScore.ExcitementOf`), but neither bar is built. **Users last month** is the object's customers
+      over its last thirty finished game days (Q177b), read from the save's rings and kept by the settle-up.
       **The preview draws the ride's own model** - the one standing in the park, so it animates as the
       ride runs - fitted by a real bounding box, filling 93px of a 194px panel.
       **It orbited until the per-mesh box was fixed.** A burst of sixteen frames showed the centroid
@@ -192,9 +192,9 @@ button. It only logs, and counts each click as `RESEARCH_BUTTON`.
       Items counted **Small Toilet 3**, which the save's own `VisitableFlag` census independently
       records as three.
       **Three of the four screens' columns are filled only where this game has the number.** Rides
-      fill State Of Repair and Remaining Life; miscellaneous items fill both columns; shops,
-      sideshows, visitors' Time In Park and Rides Ridden stay blank and counted rather than carrying a
-      plausible wrong quantity. **UITEXT row 117 is literally `"?"`** - the original ships that visitor
+      fill State Of Repair and Remaining Life; miscellaneous items fill both columns; visitors' Rides Ridden
+      is the guest's `mNumRides` (Q177b); shops, sideshows and visitors' Time In Park stay blank and counted
+      rather than carrying a plausible wrong quantity. **UITEXT row 117 is literally `"?"`** - the original ships that visitor
       column unnamed too.
       **The screenshots found four defects every green check had passed.** A column heading 160px
       clear of its column and a tab strip that vanished with the list it hung off, both invisible at
@@ -412,9 +412,9 @@ from the crossing. So the arrival path they would take is the one the shipped sa
 - **It was built with 3, not after it** — exactly as the note below predicted. Built alone, departures
   drain the park and leave it that way, and that is not hypothetical: a defect in the vehicle handshake
   did drain it to nought for a while, which is what caught the fault.
-- **The day still never closes.** Guests leaving is built; a day *ending* is not, and no calendar
-  rollover is wired. That half of this line stands.
-- **Lives:** `GameCalendar.DayRolled`, which nothing reads yet.
+- **A day's end rolls only the objects' day rings** (`Level.Update` → `ParkState.RollTheDay`, Q177b); nothing
+  else is paced by it yet. That half of this line stands.
+- **Lives:** `GameCalendar.DayRolled`, which only the rings' roll reads.
 - **Gate:** the `peeps` census, with `pause` and `step <n>` to make a short-lived state observable.
 - **Same vehicle loop as item 3**, which is why they are now one job: a bus that drops off must also
   pick up, and a guest who goes home has to leave by something.
@@ -466,10 +466,10 @@ from the crossing. So the arrival path they would take is the one the shipped sa
   "Sideshow won - happiness up %d points" reads honestly. The test caught it.
 - **Still unbuilt, and named rather than quietly skipped:** the park analyser's shop and sideshow month
   accumulators (`+0x20130` / `+0x20380`), the ingredient's terms and the balloon and costume arms (`+0x198`,
-  `mAmountOfSpecialIngredient`; Q177d, Q177e), and the settle-up's bookkeeping (Q177b, Q177c): the cost of goods booked
-  and withdrawn, the event history, the happiness gained since joining, the served count and the sideshow's thoughts,
-  counted; the visit count and the guest's three counters, neither kept nor counted. `FUN_004fdcc0`'s excitement
-  match is built (Q169).
+  `mAmountOfSpecialIngredient`; Q177d, Q177e), and of the settle-up's bookkeeping the cost of goods booked and
+  withdrawn (Q177c), the event history, the analyser's sample and the sideshow's thoughts, counted. The visit counts,
+  the object's six day rings, the happiness gained since joining and the served count are kept (Q177b).
+  `FUN_004fdcc0`'s excitement match is built (Q169).
 - **One honest limit.** A park left entirely alone still rarely buys a *drink*: only a quarter of guests
   ever grow thirsty (`Peep.Tick` shares the drift by thing id) and by then their exit countdown has
   usually run out — measured, of 148 samples at thirst 50+, **73 were HeadingForExit and only 11

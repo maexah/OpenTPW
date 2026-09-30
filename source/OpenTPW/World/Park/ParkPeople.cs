@@ -2242,6 +2242,9 @@ public sealed class ParkPeople : Entity
 				// The two histories the ride score divides down by, newest first.
 				+ $"visits [{string.Join( ",", peep.PreviousRides )}] refused [{string.Join( ",", peep.PreviousTemporaryRides )}] "
 				+ $"speed {peep.PurposeSpeed} "
+				// The visitor window's four counts, and the happiness the settle-up measures a visit against.
+				+ $"rides {peep.NumRides} shops {peep.NumShops} sideshows {peep.NumSideshows} won {peep.NumSideshowsWon} "
+				+ $"joined {peep.JoinHappiness:0} "
 				// Where they ARE, without which a person whose needs change and whose position does not
 				// reads the same as one who moves.
 				+ $"at ({nav.Position.X / (float)FixedVector.One:0.000},"

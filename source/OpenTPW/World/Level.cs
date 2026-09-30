@@ -527,6 +527,13 @@ public class Level
 
 		Entity.All.ForEach( entity => entity.Update() );
 
+		// The day's change after every thing has had its turn, as the original's calendar sends it at the end of the
+		// world tick (0x00516695), so a settle-up in the same frame counts into the day that is closing. The edge is
+		// GameCalendar's, which counts from nought rather than from the save's clock, so after a load the days turn
+		// at other moments than the original's (docs/QUEUE.md Q149).
+		if ( Kind == Scene.Park && GameCalendar.DayRolled )
+			ParkState?.RollTheDay();
+
 		// Whatever was deleted during that walk leaves the list now the walk is over - see Entity.Delete.
 		Entity.ApplyDeletions();
 

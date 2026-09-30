@@ -10,10 +10,10 @@ namespace OpenTPW.Tests;
 ///
 /// <para>
 /// <b>What is really under test here is the ring arithmetic.</b> Five of these fields sit past six ring
-/// buffers whose size the record does not state. An empty ring writes 13 bytes, which totals 379 against
-/// the 1,099 the record occupies - a gap of exactly 720, or six rings of thirty four-byte entries. At
-/// thirty each the record closes on 1,099 exactly. That is an argument, not a measurement, so these tests
-/// check what it predicts against things a wrong offset could not produce.
+/// buffers, each stating its own length (<c>mNumEntries</c>, 30 in every shipped record, which
+/// <c>ParkSettleUpCountsTests</c> pins). An empty ring writes 13 bytes, which totals 379 against the 1,099 the
+/// record occupies - a gap of exactly 720, or six rings of thirty four-byte entries - and at thirty each the record
+/// closes on 1,099 exactly. These tests check what that predicts against things a wrong offset could not produce.
 /// </para>
 /// <para>
 /// <b>The weakest assertion here is that the takings are nought</b>, and it is kept as support rather than
