@@ -627,6 +627,13 @@ public sealed class ParkGuestSprites : ModelEntity
 	internal static (int Kind, int Bank) HeadOf( int kind, int bank )
 		=> (kind == ParkSpriteBanks.CostumeKind ? ParkSpriteBanks.CostumeHeadKind : ParkSpriteBanks.KidHeadKind, bank);
 
+	/// <summary>
+	/// A rider's head is drawn at 0.685 of a body's size: <c>FUN_0044b510</c> writes the float at <c>0x0074ced0</c> into
+	/// the head sprite's local 8 every frame (<c>0x0044ba1f</c>), its scale <c>+0xa4</c>, which the picker hands the draw
+	/// as the record's <c>+0x2c</c> (<c>0x005422b2</c>) and <c>FUN_00589410</c> multiplies by the span.
+	/// </summary>
+	internal const float HeadScale = 0.685f;
+
 	private bool DrawHead( int used, Vector3 seat, int frame, int kind, int bank, int alpha )
 	{
 		if ( !_banks.TryGetValue( HeadOf( kind, bank ), out var loaded ) || loaded.Bank.Sets.Length == 0 )
@@ -640,7 +647,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		if ( index < 0 || index >= loaded.Pictures.Length )
 			return false;
 
-		WriteQuad( used, seat, loaded.Pictures[index], false, alpha );
+		WriteQuad( used, seat, loaded.Pictures[index], false, alpha, HeadScale );
 
 		return true;
 	}
@@ -905,7 +912,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// more down their picture, which is to say on their feet.
 	/// </para>
 	/// </summary>
-	private void WriteQuad( int index, Vector3 centre, Region picture, bool mirrored, int alpha )
+	private void WriteQuad( int index, Vector3 centre, Region picture, bool mirrored, int alpha, float instanceScale = 1f )
 	{
 		if ( index < 0 || index * 4 >= _vertices.Length )
 			return;
@@ -926,7 +933,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		// Square to both the view and that across, which is the camera's own up with no roll in it.
 		var upward = across.Cross( forward ).Normal;
 
-		var scale = WorldPerReference / PictureReference;
+		var scale = instanceScale * WorldPerReference / PictureReference;
 
 		var left = across * (-picture.OriginX * scale);
 		var right = across * ((picture.Width - picture.OriginX) * scale);

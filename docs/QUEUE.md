@@ -3358,6 +3358,12 @@ artifacts are listed in `docs/history/README.md`.
     first, because the empty boat's random heading never pointed within 22 of its buoy; the test now aims it, and goes
     red. The negative nought: red. My heading prediction for +x was 128; the binary's constant, just over 1/π, gives 127.
   - Built and tested alone in a worktree: 1531 pass, 0 skip with the game; 630 ran, 901 skipped without; 123 warnings.
+  - **Then, at Alexah's word (2026-09-30): the riders' heads were "hilariously large".** Decoded: `FUN_0044b510` sets each
+    head sprite's scale to 0.685 every frame (`0x0074ced0`; `ride-operation.md`, "Which picture a head shows"); OpenTPW
+    drew it at a body's 1.0. Alexah chose the original's scale. Built (`ParkGuestSprites.HeadScale`, branch
+    `alexah/214-rider-heads-scale`). Confirmed (`q179d/heads1/`, silent, `save/` unchanged, 3 of 3 again): predicted
+    every head about 0.69 of its `run4/` height at the same camera; `heads1/compare.png` looked at, the heads about
+    two-thirds their old size, half a boat wide. No test pins the constant (a test of it would only restate it).
   - **Not confirmed:** the bump's impulse and the rim against the original's log (the replay skips boats near another
     or the rim; tested only); the boats' yaw sense is read from the frames, not measured; the wake under a boat is not
     drawn (`BUMPER_CAR_WAKE`).
