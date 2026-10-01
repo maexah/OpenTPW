@@ -3219,7 +3219,40 @@ artifacts are listed in `docs/history/README.md`.
     `ParkTrackRides` skips (types 5 and 9). Predict the ride's length (`VAR_DURATION` × 30 × 31 ms) before the run, and
     put the bug back (never set `0x20`).
 
-- [ ] **Q179b. The Hot Pot lets its riders off, from boats that float in its pot: the build.** From Q179's decode
+- [x] **Q179b. The Hot Pot lets its riders off, from boats that float in its pot: the build.** Done 2026-09-30,
+  `alexah/209-hot-pot-boats`; FileFormats `sam.md` gains the `Bumper.*Adjust` and `SupplementalMeshes` rows.
+  - **Built.** `ParkBumperCars` (beside `ParkTrackRideTable`, which owns it): the bumper family's record (state, wear,
+    duration, cars, seated, boarding and leaving lists, the arena) for each slot, the Hot Pot's template only (another
+    bumper type counted `BUMPER_TEMPLATE_n`), and the pool of 256 cars and 1024 list nodes; `RideScript.Bump`,
+    selectors 1-14, 16 and 17 as decoded, 16's 0 and 6's reopen copied, karts and water a counted no-op as before;
+    the track tick before the scripts in each 31 ms step (`ParkRides.OnUpdate`). `ParkBumperBoats` stands each live car
+    as its supplemental mesh (`b_car.md2`), synced after the entity pass, with its rider on seat node `Head1`
+    (`ParkGuestSprites.Seated`). Decoded here and written to `park.md`, "Where a bumper ride's cars float": the
+    placement, the arena centre (the item's `Bumper.*Adjust` plus the placer's offsets: the footprint's middle at every
+    turn), the template, the sine table, the draw's bob and heading. Said at the site: the height is the water mesh's
+    top (the original's surface lookup is not decoded); the generator is the cars' own. Counted: motion and target
+    (Q179c), the lead's sound, rocking, wake, splash, smoke, particles, the performance, saved car chunks. Console:
+    `bumpers`.
+  - **Confirmed in the game** (`q179b/q179brun.py`; `run2/`, `run3/`, `run4/` on the final build, silent, stock park,
+    Belly Bounce sold and the Hot Pot bought at (57,23); `save/` unchanged), predicted first, 5 of 5 each run:
+    capacity 4 and duration 25; before anyone boards the ride loading with 4 cars, none seated, 4 boats drawn, all at
+    rest; riders let off, every match reading excitement 42 (17, 9, 8 of them); never more than 4 seated; every go 750
+    track ticks from `BUMP 3` to empty (5, 3, 2 goes). Photographed and looked at: four boats floating empty in the
+    pot (`empty-z70-y135.png`, where Q179's `run3/` showed an empty pot), and four riders seated in four boats in a
+    go (`go-0-z55-y200.png`).
+  - Tests: `ParkBumperCarsTests` (11) and `HotPotScriptTests` (2, the real `bumper.RSE` driving the cars). Bugs put
+    back: the unload flag never set (3 red), the retarget not clearing it (1 red). Review `wf_76d88b08-ff2` (three
+    Opus): the sine table's peaks are 255 (the binary's rounded constant), `BUMP 1` with a literal calls nothing, the
+    retarget clears the unload, rounding toward nought, uncounted particles and the lead's sound, a boat that will not
+    load retried each frame, comment and doc drift; all fixed.
+  - **Not confirmed on screen:** the rocking, wake, splash and smoke (counted); the yaw's sense (a random heading
+    cannot show it; Q179c's motion will); break, wear, close, removal and a sale with riders aboard (tested only).
+    **A loaded park with a Hot Pot comes back with no cars** while its script resumes, so a save made mid-go never
+    lets its riders off (no worse than before; `SAVED_TRACK_RIDE_CARS` counts it). Tests read the static
+    `ParkState.Current` for the bind, which a later test could cross.
+  - Built and tested alone in a worktree: 1521 pass, 0 skip with the game; 620 ran, 901 skipped without; 123 warnings.
+
+  The item as written: From Q179's decode
   (`park.md`, "How a bumper ride ends a go, and lets its riders off"), and Alexah's account of the original
   (2026-09-30): *the Hot Pot's riders sit in bumper boats floating in the water on its top, as many boats as the
   capacity is set to; the boats sit empty in the pot, visible and floating idle, when it is not running.* That is

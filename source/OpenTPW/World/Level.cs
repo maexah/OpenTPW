@@ -339,6 +339,9 @@ public class Level
 		var rides = new ParkRides( ThemeName, park, catalogue, objects: objects );
 		load.Mark( "rides" );
 
+		// The bumper rides' cars, drawn from what the rides' track tick leaves them - so after the rides.
+		_ = new ParkBumperBoats( ThemeName, catalogue );
+
 		// And the park's people. After the ground, because a guest stands on the land and has to ask how
 		// high it is under them; they are sprites rather than models, so they are nothing to do with the
 		// objects above and only need the save that named them.
@@ -565,6 +568,10 @@ public class Level
 			GameCalendar.Update();
 
 		Entity.All.ForEach( entity => entity.Update() );
+
+		// The bumper rides' boats stood where this frame's track ticks left their cars, outside the walk above, which
+		// cannot take the entities a new boat adds.
+		ParkBumperBoats.Current?.Sync();
 
 		// The day's change after every thing has had its turn, as the original's calendar sends it at the end of the
 		// world tick (0x00516695), so a settle-up in the same frame counts into the day that is closing. The edge is

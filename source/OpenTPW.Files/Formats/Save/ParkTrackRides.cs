@@ -54,6 +54,11 @@ public sealed class ParkTrackRides
 	private const int RootType = 1;
 	private const int RideType = 3;
 	private const int SectionType = 4;
+	private const int CarType = 5;
+	private const int CarRecordType = 9;
+
+	/// <summary>How many car chunks (5) and car record chunks (9) the module steps over - what the loader restores whole.</summary>
+	public int CarChunks { get; private set; }
 
 	/// <summary>A chunk's header: its type, its own size and its whole size, a dword each.</summary>
 	private const int HeaderSize = 12;
@@ -110,6 +115,7 @@ public sealed class ParkTrackRides
 
 		var rides = new List<SavedTrackRide>();
 		var sections = new List<SavedTrackSection>();
+		var carChunks = 0;
 
 		for ( var at = start + rootOwn; at != end; )
 		{
@@ -126,6 +132,10 @@ public sealed class ParkTrackRides
 				rides.Add( new SavedTrackRide( ReadInt32At( at + 12 ), ReadInt32At( at + 16 ), ReadInt32At( at + 20 ),
 					ReadInt32At( at + 24 ), ReadInt32At( at + 28 ) ) );
 			}
+			else if ( type is CarType or CarRecordType )
+			{
+				++carChunks;
+			}
 			else if ( type == SectionType )
 			{
 				sections.Add( new SavedTrackSection( ReadInt32At( at + 12 ), ReadInt32At( at + 16 ),
@@ -140,6 +150,7 @@ public sealed class ParkTrackRides
 
 		_rides.AddRange( rides );
 		_sections.AddRange( sections );
+		CarChunks = carChunks;
 		ClosedOnTag = true;
 	}
 

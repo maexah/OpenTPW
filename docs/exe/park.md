@@ -987,7 +987,7 @@ A list node comes from `DAT_00877b8c`: `+0` peep, `+4` handle, `+8` seat node (-
 
 | Sel | Callee | What it does |
 |---|---|---|
-| 1 | `FUN_0054aa80` | With the ride not closed and a free node, pushes the peep onto the head of the boarding list; 1 or 0 in the register (a variable operand only). |
+| 1 | `FUN_0054aa80` | With the ride not closed and a free node, pushes the peep onto the head of the boarding list; 1 or 0 in the register. A literal operand skips the call and the write (`0x0055473d`). |
 | 2 | `FUN_0054ab40` | Pops the head of the leaving list and answers the peep or 0, into the variable and then the register. |
 | 3 | `FUN_00544f90` | Only in state 1, and not for the water family or -2: state 2, and every car of the ride timed to `+0x04` and retargeted; a Hot Pot car still flagged `0x4000` to anim 5. "Start Bump Ride". |
 | 4 | `FUN_00549db0( h, 0 )` | Not closed, and `+0x5c` below both `+0x64` and 64: launches a car from the pool, timed to `+0x04`; it takes the whole boarding list and seats it; the car or 0 in the register. |
@@ -1039,6 +1039,51 @@ empties the ride sets state 1, "Ride Over - reset to loading", except for the wa
 `DAT_00877b78`, or another car to chase; `FUN_00547f50` steps it) and their sounds and emitters are apart from the
 unload: nothing in the chain above reads a car's position. Go-karts and the water ride end their cars by reaching
 buoys instead (`FUN_005474b0`'s buoy arm, "GoKart Race Over"), so building them needs the steering.
+
+### Where a bumper ride's cars float
+
+Read for Q179b (the build of the section above), first-hand in Ghidra. **A car is launched where its arena is,** by
+`FUN_00549db0`: the first pool car not flagged live, zeroed, flagged live and `0x4000`, its record at `+0x9c`, its
+timer the duration (`+0x04`), its riders the whole boarding list, its mesh `+0x04` = cars (counted with it) mod the
+template's `+0x18`, plus `+0x14`, an index into the item's `SupplementalMeshes`, its model playing role `0xc` (the
+"no animation" sentinel, `RideAnimations.NoRole`) with flags 2, so it stands still; the first car of a ride is its lead
+(`+0x58`, flag `0x400000`). It is seated (`FUN_00549c60`), retargeted (`FUN_0054a040`) and flagged `0x4000000`, which
+the draw clears as it spawns particle `0xf`, a splash.
+
+**Where in the arena.** `FUN_0054a040`'s bumper arm (types -1, -3, -6, -11, -14), for a car still flagged `0x100000`:
+up to 100 tries of a radius `rand % arena` and an angle `rand & 0x1ff`, the point `x = centre + cos·r >> 8`,
+`z = centre - sin·r >> 8`, kept on the 100th try or the first clear of every other live car by their two radii
+(`+0x64`); then `0x4000` cleared, a heading `+0x50`/`+0x54` = `rand & 0x1ff`, the emitters looked up (`0x100` ids 2 and
+1), and for the Hot Pot alone flags `0x3000000` and a second model, supplemental mesh 0 (`b_wake.md2`). Its next
+target, a buoy or (3 in 16, with two cars or more) another car, is the motion's (Q179c). **The arena** is the
+collision object `FUN_00545890` lays at `+0xc0`: centre `+0x74`, `+0x78` = the placer's x and z plus `0x600`, radius
+`0x1200` for -1, `0x1100` for -11 and `0x1600` for -3, -6 and -14; its eight buoys ring it at `0xc00`. **The placer**
+(`FUN_00529e10`) passes x and z = (cell + `Bumper.<turn>XAdjust`/`YAdjust` + its own offset) × 3072, the offsets
+(4, 1), (1, -5), (-5, -2) and (-2, 4) for turns 0, 90, 180 and 270: for the Hot Pot's 5 × 5 the centre is the middle
+cell's centre at every turn, where its model's pot stands, (25, 25).
+
+**The Hot Pot's template** (`0x764178`): BumperType -1, duration 4350, car radius 768, mesh base 1 of 1, performance 50,
+most cars 8. **The pools** (`FUN_00544360`): 64 records of `0xd0`, 256 cars of `0xac`, and 1024 list nodes of `0x14`;
+a node is taken by `BUMP 1` and given back by `BUMP 2`, and a ride let go of (`FUN_00545610`, which removes every car
+and closes the ride first) keeps whatever its lists held. **The sine table** `DAT_00877358`: 512 steps,
+`ftol( sin( 2k × c ) × 256 )`, where `c` (the double at `0x700ec8`) is 0.00613591796875, just under π/512, so steps
+128 and 384 truncate to 255 and -255, not 256. Products of it are divided by 256 toward nought.
+
+**What rocks.** `BUMP 12` flags the car it fills `0x84000`, so `BUMP 3` turns only the cars `BUMP 12` filled to role 5
+(`b_carm`, looped, flags 1); an empty car stays at rest through the go, and every car is put back at rest when the
+ride is empty again (a car launched by `BUMP 4` with the boarding list aboard has had `0x4000` cleared, so it stays at
+rest too; the Hot Pot's script launches before it admits anyone). Each track tick counts a car's `+0x90` up
+(`FUN_005474b0`). **Every retarget** ends at the target step, which clears `0x20`, `0x100000`, `0x40000` and bits
+`0x52` whichever target it takes, so `BUMP 12` refilling a car still flagged to unload keeps its new rider.
+
+**The draw** (`FUN_00546280`, once a frame a ride): x and z × 1/307.2 (`DAT_00700edc`), so a cell is 10 units; the
+four corners at the car's radius along its heading each take a height from the scene under them (`FUN_00450ac0`,
+`FUN_00450ea0`, `FUN_004511a0`, not decoded), plus, for flag `0x1000000`, a bob of 0.00125 (`DAT_00700ef0`) × the sine
+of `+0x90` × 6, 4, 3 and 5, eased across the frame; the car stands at their average, pitched and rolled by their
+differences, turned `((heading - 0x100) & 0x1ff)` 512ths of a turn; its wake (flag `0x2000000`) trails it by its speed,
+0.7 higher. **A rider is attached to the car's seat node**, found as `0x80` and its seat id (`FUN_0044b220`) and
+attached by `FUN_0044b410`: the `b_car`'s one
+is `Head1` (id 1, flags `0x100000b1`); a second rider of a car has no node and is still counted seated.
 
 ### The ride object
 

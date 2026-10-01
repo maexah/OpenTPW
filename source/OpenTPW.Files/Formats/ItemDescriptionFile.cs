@@ -161,6 +161,30 @@ public sealed partial class ItemDescriptionFile
 	/// </summary>
 	public int BumperType => _bumperType ?? _category?.BumperType ?? 0;
 
+	/// <summary>
+	/// What the placer adds to the anchor cell, before its own fixed offset, to find a bumper ride's arena centre -
+	/// <c>Bumper.NorthXAdjust</c> to <c>Bumper.WestYAdjust</c>, descriptor <c>+0xa4</c>..<c>+0xc0</c>, read by
+	/// <c>FUN_00529e10</c> for the turn 0, 90, 180 or 270 (<c>docs/exe/park.md</c>, "Where a bumper ride's cars float").
+	/// Nought for a turn that is none of those, as the placer leaves it.
+	/// </summary>
+	public (int X, int Y) BumperAdjust( int angle ) => angle switch
+	{
+		0 => (_bumperAdjust[0] ?? _category?._bumperAdjust[0] ?? 0, _bumperAdjust[1] ?? _category?._bumperAdjust[1] ?? 0),
+		90 => (_bumperAdjust[2] ?? _category?._bumperAdjust[2] ?? 0, _bumperAdjust[3] ?? _category?._bumperAdjust[3] ?? 0),
+		180 => (_bumperAdjust[4] ?? _category?._bumperAdjust[4] ?? 0, _bumperAdjust[5] ?? _category?._bumperAdjust[5] ?? 0),
+		270 => (_bumperAdjust[6] ?? _category?._bumperAdjust[6] ?? 0, _bumperAdjust[7] ?? _category?._bumperAdjust[7] ?? 0),
+		_ => (0, 0)
+	};
+
+	/// <summary>
+	/// The meshes a ride loads beside its own model, by index - <c>SupplementalMeshes[n].FileName</c>, the table at
+	/// descriptor <c>+0x4bc</c> a bumper ride's car and wake are taken from (<c>FUN_00549db0</c>).
+	/// The Hot Pot's are <c>b_wake.md2</c> and <c>b_car.md2</c>; an index no file names is null.
+	/// </summary>
+	public IReadOnlyList<string?> SupplementalMeshes => _supplementalMeshes.Count > 0 || _category is null
+		? _supplementalMeshes
+		: _category.SupplementalMeshes;
+
 	/// <summary>What this adds to the park's draw - <c>Info.AttractionValue</c>. Belly Bounce overrides it to 25.</summary>
 	public int AttractionValue => _attractionValue ?? _category?.AttractionValue ?? 0;
 
@@ -490,6 +514,8 @@ public sealed partial class ItemDescriptionFile
 	private int? _excitementLevel;
 	private int? _goldenTicketCost;
 	private int? _bumperType;
+	private readonly int?[] _bumperAdjust = new int?[8];
+	private readonly List<string?> _supplementalMeshes = [];
 	private int? _attractionValue;
 	private int? _newAttractionDecayTime;
 	private int? _destroyParticleEffect;
@@ -735,6 +761,30 @@ public sealed partial class ItemDescriptionFile
 				case "Bumper.BumperType":
 					_bumperType = Number( line );
 					break;
+
+				case "Bumper.NorthXAdjust": _bumperAdjust[0] = Number( line ); break;
+				case "Bumper.NorthYAdjust": _bumperAdjust[1] = Number( line ); break;
+				case "Bumper.EastXAdjust": _bumperAdjust[2] = Number( line ); break;
+				case "Bumper.EastYAdjust": _bumperAdjust[3] = Number( line ); break;
+				case "Bumper.SouthXAdjust": _bumperAdjust[4] = Number( line ); break;
+				case "Bumper.SouthYAdjust": _bumperAdjust[5] = Number( line ); break;
+				case "Bumper.WestXAdjust": _bumperAdjust[6] = Number( line ); break;
+				case "Bumper.WestYAdjust": _bumperAdjust[7] = Number( line ); break;
+
+				case var mesh when mesh.StartsWith( "SupplementalMeshes[", StringComparison.Ordinal )
+					&& mesh.EndsWith( "].FileName", StringComparison.Ordinal ):
+				{
+					var digits = mesh["SupplementalMeshes[".Length..^"].FileName".Length];
+
+					if ( int.TryParse( digits, out var index ) && index is >= 0 and < 64 )
+					{
+						while ( _supplementalMeshes.Count <= index )
+							_supplementalMeshes.Add( null );
+
+						_supplementalMeshes[index] = Quoted( line );
+					}
+					break;
+				}
 
 				case "UsageInfo.GoldenTicketCost":
 					_goldenTicketCost = Number( line );

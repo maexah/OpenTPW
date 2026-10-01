@@ -744,6 +744,10 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// </summary>
 	internal static Vector3? Seated( ParkPeople? people, int thingId )
 	{
+		// A bumper boat carries its rider on its own seat node (FUN_0044b410 from FUN_00549c60).
+		if ( ParkBumperBoats.Current?.SeatOf( thingId ) is { } boat )
+			return boat;
+
 		if ( people == null || ParkObjects.Current is not { } objects )
 			return null;
 

@@ -108,8 +108,17 @@ public sealed class ParkItemCatalogue
 		bool DoHeadProcessing = false,
 
 		// What researching it costs - ItemDescriptionFile.ResearchCost. Nought is researched from the start: ParkResearch.
-		int ResearchCost = 0 )
+		int ResearchCost = 0,
+
+		// A bumper ride's arena: the placer's adjust for each turn, north, east, south and west, and the meshes its
+		// cars are made of - ItemDescriptionFile.BumperAdjust and SupplementalMeshes. See ParkBumperCars.
+		IReadOnlyList<(int X, int Y)>? BumperAdjusts = null, IReadOnlyList<string?>? SupplementalMeshes = null )
 	{
+		/// <summary>The placer's arena adjust for a turn - <see cref="ItemDescriptionFile.BumperAdjust"/>.</summary>
+		public (int X, int Y) BumperAdjustAt( int angle ) => BumperAdjusts is { Count: 4 } adjusts
+			? angle switch { 0 => adjusts[0], 90 => adjusts[1], 180 => adjusts[2], 270 => adjusts[3], _ => (0, 0) }
+			: (0, 0);
+
 		/// <summary>
 		/// A tier's starting speed and duration, <c>Upgrades[tier]</c> - what an upgraded ride's excitement divides its
 		/// own by (<c>FUN_004e0560</c>). Tier nought is the purchase's, <see cref="InitSpeed"/> and <see cref="InitDuration"/>.
@@ -295,7 +304,10 @@ public sealed class ParkItemCatalogue
 					description.InitDurationAt( 1 ), description.InitDurationAt( 2 ),
 					description.QueueWaitTimeConstantAt( 0 ), description.QueueWaitTimeConstantAt( 1 ),
 					description.QueueWaitTimeConstantAt( 2 ),
-					description.DoHeadProcessing, description.ResearchCost );
+					description.DoHeadProcessing, description.ResearchCost,
+					[description.BumperAdjust( 0 ), description.BumperAdjust( 90 ), description.BumperAdjust( 180 ),
+						description.BumperAdjust( 270 )],
+					description.SupplementalMeshes );
 
 			return true;
 		}

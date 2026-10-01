@@ -680,6 +680,42 @@ public static class DebugConsole
 
 				break;
 
+			// The bumper rides and their cars - ParkBumperCars: each ride's state, wear, duration, seated count and lists,
+			// then each live car's place, heading, timer, clip and riders, and how many boats are drawn.
+			case "bumpers":
+			{
+				if ( ParkState.Current?.TrackRides.Cars is not { } bumpers )
+				{
+					Reply( "bumpers: none - a park has to be loaded" );
+					break;
+				}
+
+				var report = new List<string>();
+
+				foreach ( var placed in ParkState.Current.Objects )
+				{
+					if ( bumpers.RideOf( placed.TrackRide ) is not { } ride )
+						continue;
+
+					report.Add( $"  ride 0x{placed.TrackRide:x} thing {placed.ThingId} state {ride.State} wear {ride.Wear} "
+						+ $"duration {ride.Duration} cars {ride.Cars} seated {ride.Seated} boarding [{string.Join( ",", ride.Boarding )}] "
+						+ $"leaving [{string.Join( ",", ride.Leaving )}] centre ({ride.CentreX},{ride.CentreZ})" );
+
+					foreach ( var car in bumpers.CarsOf( placed.TrackRide ) )
+					{
+						report.Add( $"    car at ({car.X},{car.Z}) heading {car.Heading} timer {car.Timer} anim {car.Animation} "
+							+ $"flags 0x{(int)car.Flags:x} riders [{string.Join( ",", car.Riders.Select( rider => $"{rider.Peep}@{rider.Seat}" ) )}]" );
+					}
+				}
+
+				Reply( $"bumpers {report.Count} track tick {bumpers.Ticks} boats drawn {ParkBumperBoats.Current?.Standing ?? 0}" );
+
+				foreach ( var entry in report )
+					Reply( entry );
+
+				break;
+			}
+
 			// Sets every guest's happiness - an instrument as `thirst` is, so that a dock of happiness can be
 			// seen: see ParkPeople.SetHappiness.
 			case "happy":

@@ -34,14 +34,24 @@ public sealed class ParkTrackRideTable
 	/// <summary>Each slot's sections in circuit order (<c>+0xbc</c>, linked through <c>+0x24</c>).</summary>
 	private readonly List<Section>[] _sections = new List<Section>[Slots];
 
+	/// <summary>The bumper family's records and the cars every ride shares - see <see cref="ParkBumperCars"/>.</summary>
+	public ParkBumperCars Cars { get; }
+
 	/// <param name="saved">The save's track-rides module, or null for a park with none.</param>
 	public ParkTrackRideTable( ParkTrackRides? saved = null )
 	{
+		Cars = new ParkBumperCars( this );
+
 		for ( var slot = 0; slot < Slots; ++slot )
 			_sections[slot] = [];
 
 		if ( saved == null )
 			return;
+
+		// The loader restores each car and its record whole (FUN_00543560, chunks 5 and 9); nothing here reads them,
+		// so a saved bumper ride comes back with no cars and its record fresh from its template.
+		for ( var chunk = 0; chunk < saved.CarChunks; ++chunk )
+			Unimplemented.Report( "SAVED_TRACK_RIDE_CARS" );
 
 		// The loader reads the records in file order, so a section laid before its ride's record finds no ride.
 		var next = 0;
@@ -78,6 +88,7 @@ public sealed class ParkTrackRideTable
 
 		_bumperType[slot] = bumperType;
 		_sections[slot].Clear();
+		Cars.Open( ride.Handle, bumperType );
 	}
 
 	/// <summary>
@@ -131,6 +142,7 @@ public sealed class ParkTrackRideTable
 
 			_bumperType[slot] = bumperType;
 			_sections[slot].Clear();
+			Cars.Open( HandleOf( slot ), bumperType );
 
 			return HandleOf( slot );
 		}
@@ -143,7 +155,8 @@ public sealed class ParkTrackRideTable
 
 	/// <summary>
 	/// Lets a ride's slot go - <c>FUN_00545610</c>, which the demolisher calls for any object with a handle
-	/// (<c>0x00528584</c>): nothing for a stale handle, else its sections go and <c>entry[0]</c> is nought.
+	/// (<c>0x00528584</c>): nothing for a stale handle, else its cars go, the ride closes, its sections go and
+	/// <c>entry[0]</c> is nought.
 	/// </summary>
 	public void Free( int handle )
 	{
@@ -151,6 +164,8 @@ public sealed class ParkTrackRideTable
 			return;
 
 		var slot = handle & 0xff;
+
+		Cars.Close( handle );
 
 		_bumperType[slot] = 0;
 		_sections[slot].Clear();

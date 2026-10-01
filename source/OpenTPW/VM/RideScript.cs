@@ -37,7 +37,7 @@ namespace OpenTPW;
 /// <b>Only the opcodes whose handlers were actually read are implemented.</b> Everything else is a
 /// no-op that <see cref="NotImplemented"/> counts, because a guessed instruction is worse than an
 /// absent one: it would run, produce a plausible number and take a branch nobody can account for.
-/// The ones left out include heads, lights, the date and time, bumper cars and tours.
+/// The ones left out include heads, lights, the date and time, and tours.
 /// </para>
 /// </summary>
 public sealed class RideScript
@@ -586,6 +586,21 @@ public sealed class RideScript
 	/// <c>COAST</c> op becomes a no-op, which is what the engine does when the handle it kept is null.
 	/// </summary>
 	public RideState? Ride { get; set; }
+
+	/// <summary>
+	/// The bumper rides and their cars, or null where there is no park - what <c>BUMP</c> works on, through
+	/// <see cref="TrackRide"/>.
+	/// </summary>
+	public ParkBumperCars? Bumpers { get; set; }
+
+	/// <summary>
+	/// The track-ride handle of this script's thing - its object's <c>+0x28</c>, which <c>BUMP</c>'s prologue reads through
+	/// the thing at <c>+0xac</c> (<c>0x0055470b</c>). Nought for a thing with none.
+	/// </summary>
+	public int TrackRide { get; set; }
+
+	/// <summary>The thing's <c>mIsTrackRideValid</c>, <c>+0x2c</c> - what <c>BUMP 5</c> answers.</summary>
+	public int TrackRideValid { get; set; }
 
 	/// <summary>Whether the script has run <c>COAST_INITIALISE</c>, which is how it claims its ride.</summary>
 	public bool Initialised { get; private set; }
@@ -1539,6 +1554,10 @@ public sealed class RideScript
 				Coast( operands );
 				break;
 
+			case Opcode.BUMP:
+				Bump( instruction, operands );
+				break;
+
 			default:
 				// An opcode with no case. Counted, never guessed, and reported, because a count nobody reads
 				// is the same silence as no count at all.
@@ -1627,6 +1646,143 @@ public sealed class RideScript
 				Unimplemented.Report( $"{Name}: COAST op out of 1..8" );
 				break;
 		}
+	}
+
+	/// <summary>
+	/// <c>BUMP</c>, a script's reach into its bumper ride - the track-ride record its thing's handle names, and the cars
+	/// of <see cref="ParkBumperCars"/>. <c>docs/exe/park.md</c>, "`BUMP` and `TOUR`" and "How a bumper ride ends a go".
+	///
+	/// <para>
+	/// The selector is fetched unresolved, as <c>COAST</c>'s is: a variable or a value outside 1..17, and 15, whose
+	/// table entry is the error logger, are the engine's "RSSE: Unknown bumper ride command", counted. <b>Only the
+	/// bumper family is built</b>: on a go-kart or water ride every <c>BUMP</c> is a counted no-op, because their cars
+	/// end a go by steering to buoys, which nothing here does.
+	/// </para>
+	/// </summary>
+	private void Bump( RideInstruction instruction, IReadOnlyList<RideOperand> operands )
+	{
+		var selector = operands[0].Kind == RideOperandKind.Literal ? operands[0].Value : -1;
+		var argument = operands[1];
+
+		if ( Bumpers is null || Bumpers.RideOf( TrackRide ) is null )
+		{
+			// No bumper record: a thing with no track handle, a karts or water ride, or a script with no park. Every
+			// callee checks the handle and does nothing for a stale one, but which of them write the register for a
+			// family not built is not worth guessing, so the whole instruction stays counted.
+			++NotImplemented;
+			Unimplemented.Report( $"{Name}: {instruction.Opcode} at {instruction.Address}" );
+			return;
+		}
+
+		var handle = TrackRide;
+
+		switch ( selector )
+		{
+			case 1:
+				// The tag is tested first (0x0055473d): a literal boards nobody and writes nothing.
+				if ( argument.Kind == RideOperandKind.Variable )
+					Result = Bumpers.Board( handle, Value( argument ) ) ? 1 : 0;
+				break;
+
+			case 2:
+				// The tag is tested first (0x00554777): a literal takes nobody off and writes nothing.
+				if ( argument.Kind == RideOperandKind.Variable )
+					Store( argument, Bumpers.TakeLeaving( handle ) );
+				break;
+
+			case 3:
+				Bumpers.Start( handle );
+				break;
+
+			case 4:
+				// The car's pointer in the original; its pool slot plus one here, which only a branch tests.
+				var car = Bumpers.Launch( handle );
+				Result = car is null ? 0 : IndexIn( Bumpers.All, car ) + 1;
+				break;
+
+			case 5:
+				Result = TrackRideValid;
+				break;
+
+			case 6:
+				Bumpers.Shut( handle );
+				break;
+
+			case 7:
+				Bumpers.OpenForLoading( handle );
+				break;
+
+			case 8:
+				if ( Value( argument ) != 0 )
+					Bumpers.Break( handle );
+				else
+					Bumpers.Fix( handle );
+				break;
+
+			case 9:
+				if ( Value( argument ) != 0 )
+					Bumpers.Wear( handle );
+				else
+					Bumpers.Fix( handle );
+				break;
+
+			case 10:
+				Bumpers.Empty( handle );
+				break;
+
+			case 11:
+				// The register first, then the operand when it is a variable - SUB's tail (0x00554913).
+				Store( argument, Bumpers.CarCount( handle ) );
+				break;
+
+			case 12:
+				Result = Bumpers.Fill( handle ) ? 1 : 0;
+				break;
+
+			case 13:
+			{
+				var value = Value( argument );
+				Bumpers.SetDuration( handle, value * ParkBumperCars.TicksPerDurationUnit );
+				Result = value;
+				break;
+			}
+
+			case 14:
+			{
+				// Laps, stored negative; no bumper ride runs any.
+				var value = Value( argument );
+				Bumpers.SetDuration( handle, -value );
+				Result = value;
+				break;
+			}
+
+			case 16:
+				// The operand is fetched and thrown away.
+				_ = Value( argument );
+				Result = Bumpers.RemoveACar( handle );
+				break;
+
+			case 17:
+				// A coaster-like ride's track pieces set running or still; no bumper ride has any.
+				Unimplemented.Report( "BUMP_17_TRACK_PIECES" );
+				break;
+
+			default:
+				++NotImplemented;
+				Unimplemented.Report( $"{Name}: RSSE: Unknown bumper ride command" );
+				break;
+		}
+	}
+
+	private static int IndexIn( IReadOnlyList<ParkBumperCars.Car> cars, ParkBumperCars.Car car )
+	{
+		for ( var i = 0; i < cars.Count; ++i )
+		{
+			if ( ReferenceEquals( cars[i], car ) )
+				return i;
+		}
+
+		return -1;
 	}
 
 	/// <summary>

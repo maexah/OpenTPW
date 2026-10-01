@@ -107,6 +107,7 @@ public sealed class ParkRides : Entity
 		// had - and would stop the one animation a player is waiting to watch.
 		script.Animations = PlayersFor( placed.ThingId, item );
 		script.Nodes = NodesFor( script, placed, item );
+		BindTrackRide( script, placed, item );
 
 		if ( script.Animations.Loaded > 0 )
 			_animated.Add( placed.ThingId );
@@ -343,6 +344,7 @@ public sealed class ParkRides : Entity
 				// what the model is posed from are the same one.
 				script.Animations = PlayersFor( placed.ThingId, item );
 				script.Nodes = NodesFor( script, placed, item );
+				BindTrackRide( script, placed, item );
 
 				if ( script.Animations.Loaded > 0 )
 					_animated.Add( placed.ThingId );
@@ -987,13 +989,35 @@ public sealed class ParkRides : Entity
 	}
 
 	/// <summary>
+	/// What <c>BUMP</c> works on: the thing's track-ride handle and <c>mIsTrackRideValid</c>, and the park's bumper rides,
+	/// with the ride's arena put where the thing stands (<see cref="ParkBumperCars.ArenaCentre"/>).
+	/// </summary>
+	private static void BindTrackRide( RideScript script, ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item )
+	{
+		script.TrackRide = placed.TrackRide;
+		script.TrackRideValid = placed.IsTrackRideValid;
+
+		if ( placed.TrackRide == 0 || ParkState.Current?.TrackRides.Cars is not { } cars )
+			return;
+
+		script.Bumpers = cars;
+
+		var (x, z) = ParkBumperCars.ArenaCentre( item, placed.CellX, placed.CellY, placed.Angle );
+		cars.Place( placed.TrackRide, x, z );
+	}
+
+	/// <summary>
 	/// One tick for every 31ms that has come due, which is where the original runs the whole script
-	/// system: <c>FUN_005516b0</c>, called once per park tick at <c>0x0054f56b</c>.
+	/// system: <c>FUN_005516b0</c>, called once per park tick - after the track tick, which counts the bumper cars'
+	/// goes (<see cref="ParkBumperCars.Tick"/>).
 	/// </summary>
 	protected override void OnUpdate()
 	{
 		for ( int i = 0; i < GameClock.TicksDue; ++i )
+		{
+			ParkState.Current?.TrackRides.Cars.Tick();
 			Scheduler.Advance( MillisecondsAt( i ) );
+		}
 
 		// And then, once, whatever those ticks asked for is shown. The engine advances its animation players
 		// in the scene draw (on-screen models from their scene-node callback, the rest by FUN_0044e410( 3 )),
