@@ -11,7 +11,7 @@ namespace OpenTPW.Tests;
 /// <para>
 /// These read real game files and are skipped where there is no installation: see <see cref="GameData"/>.
 /// Nothing here needs a graphics device. The peeps are built through the static factory rather than by
-/// constructing the entity, except in the arrival test, whose <see cref="ParkPeople"/> is left in
+/// constructing the entity, except in the arrival tests, whose <see cref="ParkPeople"/> each test's cleanup takes out of
 /// <see cref="Entity.All"/>.
 /// </para>
 /// </summary>
@@ -22,6 +22,10 @@ public class ParkPeopleTests
 
 	[TestInitialize]
 	public void MountTheGame() => data = GameData.Required();
+
+	/// <summary>Every <see cref="ParkPeople"/> a test made goes with it, out of <see cref="Entity.All"/> and <c>Current</c>.</summary>
+	[TestCleanup]
+	public void LetThePeopleGo() => TestRun.DeleteEvery<ParkPeople>();
 
 	private const string ShippedPark = "levels/jungle/Easymode.TPWI";
 

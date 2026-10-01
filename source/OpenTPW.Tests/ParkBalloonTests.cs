@@ -23,6 +23,10 @@ public class ParkBalloonTests
 
 	private BaseFileSystem Data() => data ??= FileSystem = GameData.Required();
 
+	/// <summary>Every <see cref="ParkPeople"/> a test made goes with it, out of <see cref="Entity.All"/> and <c>Current</c>.</summary>
+	[TestCleanup]
+	public void LetThePeopleGo() => TestRun.DeleteEvery<ParkPeople>();
+
 	private const int DrinksShop = 16;
 
 	private const int BalloonShop = 1209, Drinks = 1203;

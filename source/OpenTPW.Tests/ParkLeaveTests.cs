@@ -81,6 +81,7 @@ public class ParkLeaveTests
 		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
 		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
 		var people = new ParkPeople( world, new ParkBalance( Theme, easyMode: true ), null, new ParkState( world ) );
+		made.Add( people );
 		var member = people.Staff[0];
 
 		Assert.IsTrue( people.PickUp( member.ThingId ) );

@@ -738,7 +738,10 @@ public class ParkHandTests
 		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
 		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
 
-		return new ParkPeople( world, new ParkBalance( Theme, easyMode: true ), null, new ParkState( world ) );
+		var people = new ParkPeople( world, new ParkBalance( Theme, easyMode: true ), null, new ParkState( world ) );
+		made.Add( people );
+
+		return people;
 	}
 
 	/// <summary>A press and a release in the same instant, at the same place: the quickest click there is.</summary>

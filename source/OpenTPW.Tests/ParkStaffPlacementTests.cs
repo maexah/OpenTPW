@@ -25,8 +25,13 @@ public class ParkStaffPlacementTests
 	[TestInitialize]
 	public void MountTheGame() => FileSystem = data = GameData.Required();
 
+	/// <summary>The hand is emptied, and every <see cref="ParkPeople"/> a test made goes with it.</summary>
 	[TestCleanup]
-	public void EmptyTheHand() => ParkStaffPool.Drop();
+	public void EmptyTheHand()
+	{
+		ParkStaffPool.Drop();
+		TestRun.DeleteEvery<ParkPeople>();
+	}
 
 	/// <summary>
 	/// An untouched path cell inside the park, which the original's place-staff click accepts as well:

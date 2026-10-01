@@ -26,7 +26,7 @@ public class ParkPathBuildingTests
 	private BaseFileSystem data = null!;
 
 	[TestInitialize]
-	public void MountTheGame() => data = GameData.Required();
+	public void MountTheGame() => FileSystem = data = GameData.Required();
 
 	private ParkWorld World()
 	{

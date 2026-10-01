@@ -32,6 +32,10 @@ public class ParkStaffDrawingTests
 	[TestInitialize]
 	public void MountTheGame() => FileSystem = data = GameData.Required();
 
+	/// <summary>Every <see cref="ParkPeople"/> a test made goes with it, out of <see cref="Entity.All"/> and <c>Current</c>.</summary>
+	[TestCleanup]
+	public void LetThePeopleGo() => TestRun.DeleteEvery<ParkPeople>();
+
 	private ParkWorld World()
 	{
 		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );

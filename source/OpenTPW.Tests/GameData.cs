@@ -28,10 +28,7 @@ internal static class GameData
 		if ( _data != null )
 			return _data;
 
-		// Set before anything can stop: GameDir says where it looked through the log, and a test class that
-		// happened to run first would otherwise find no logger at all.
-		Log = new();
-
+		// GameDir says where it looked through the log, which TestRun makes before any test runs.
 		if ( !GameDir.Find( [] ) )
 			Assert.Inconclusive( "skipped: no Theme Park World installation found" );
 

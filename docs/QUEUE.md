@@ -3941,7 +3941,7 @@ artifacts are listed in `docs/history/README.md`.
   - **Not checked:** a real CloneCD or BIN/CUE dump, a multi-track `.bin`, bsdtar's arm (the host has 7z), the
     no-7z-no-bsdtar refusal.
 
-- [ ] **Q106. `APathCellCostsWhatTheBalanceFileSays` fails when its class runs alone.** Found by Q50h, on `main` as well.
+- [x] **Q106. `APathCellCostsWhatTheBalanceFileSays` fails when its class runs alone.** Found by Q50h, on `main` as well.
   `ParkPathBuildingTests`' `[TestInitialize]` keeps `GameData.Required()` in a field and never mounts it as the global
   `FileSystem`, so run by itself (`--filter FullyQualifiedName~ParkPathBuildingTests`) `levels/Standard.sam` does not
   load and the price answers -1; the whole suite passes only because an earlier class mounted it. Mount it as
@@ -3950,6 +3950,27 @@ artifacts are listed in `docs/history/README.md`.
   One more is `ParkPeopleTests.AnArrivalJoinsEveryListThatHasToKnowAboutIt` (the 2026-09-26 staleness audit): it never
   deletes its `ParkPeople`, which stays in `Entity.All` and `ParkPeople.Current` for every class after it. Clean up
   with `Delete()` and `Entity.ApplyDeletions()`, as `ParkQueueTurnTests` does.
+  - **Done 2026-10-01** on `alexah/239-tests-pass-alone`. Each of the 185 class names run alone with the game
+    (`--filter FullyQualifiedName~OpenTPW.Tests.<class>.`; `Probe` is a nested helper with no tests): four failed, not
+    the one named. `ParkPathBuildingTests` (unmounted, -1), and `ParkBankTests` (7), `ParkSettleUpCountsTests` (1) and
+    `PeepPaceTests` (3), which log and only `GameData.Required()` made the global `Log`. New `TestRun.cs`: an
+    `[AssemblyInitialize]` makes the log, as the game does first; `DeleteEvery<T>()` ends what a test made; and an
+    `[AssemblyCleanup]` fails the run if any `ParkPeople` is left in `Entity.All`. MSTest 2.2.7 reports a failed
+    assembly cleanup and still says "Passed!" (exit 0), so it calls `Environment.FailFast`, which aborts `dotnet test`
+    (exit 1) with the reason quoted. That check found twelve classes leaving one, not the one named: `ParkPeopleTests`,
+    `ParkBankTests`, `ParkBalloonTests`, `ParkCostumeTests`, `ParkGuestTypeTests`, `ParkStateTests`,
+    `ParkHappinessGaugeTests`, `ParkStaffPlacementTests`, `ParkStaffDrawingTests` and `ParkTickTests` now delete in a
+    `[TestCleanup]`; `ParkHandTests` and `ParkLeaveTests` add theirs to the `made` list they already clear.
+  - **Measured:** after, 184 of 184 classes pass alone, none leaving a `ParkPeople` (predicted 184). The suite 1572 pass
+    0 skip with the game, 645 ran 927 skipped without; 123 warnings. **Bugs put back:** the log's initialize emptied,
+    `ParkBankTests` alone 29 fail, `PeepPaceTests` 6; `ParkPathBuildingTests` unmounted, 1 fail; `ParkPeopleTests`'
+    cleanup emptied, the run aborts, exit 1, "2 ParkPeople left" (the first try, an `Assert` in the cleanup, stayed
+    green and was replaced).
+  - **Game** (`q106run.py`, `q106/run1`; nothing in the game changed): jungle loads, `rides` 15 with 16 scripts as
+    predicted; 13 unimplemented keys where 14 was predicted, `STAFF_NO_LINKS_WANDER` not reached this run. Shot
+    `q106/run1/park.png` looked at: the park, rides, paths, peeps and HUD. `save/` unchanged.
+  - **Not checked:** an order dependence through any other static (`ParkState.Current`, `Level.Current`, the options)
+    that running each class alone would not show; MSTest 2 has no random order.
 
 - [ ] **Q118. The camcorder key acts on its press, both ways.** Found by Q57. The original's C is shortcuts row 16
   (`0x0040c5c0`), run on the key's release as every row is (`FUN_0040c990`), and first person is left on a key-up whose

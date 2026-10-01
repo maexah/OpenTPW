@@ -33,6 +33,10 @@ public class ParkTickTests
 	[TestInitialize]
 	public void MountTheGame() => FileSystem = data = GameData.Required();
 
+	/// <summary>Every <see cref="ParkPeople"/> a test made goes with it, out of <see cref="Entity.All"/> and <c>Current</c>.</summary>
+	[TestCleanup]
+	public void LetThePeopleGo() => TestRun.DeleteEvery<ParkPeople>();
+
 	private const string ShippedPark = "levels/jungle/Easymode.TPWI";
 
 	private ParkWorld World()
