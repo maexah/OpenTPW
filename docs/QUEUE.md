@@ -3791,6 +3791,26 @@ artifacts are listed in `docs/history/README.md`.
   - **Not done:** the original's engine was not heard (its runs are silent); the volume's group scale
     (`FUN_006bb860`) and QMixer's volume unit are not read, so 68 is taken as 68 / 100.
 
+- [x] **Q203. Magenta under the Hot Pot.** Seen since Q172 ("magenta pads under the bought Hot Pot's entrance") and
+  in Q202's frames; fixed at Alexah's word 2026-10-01. Not fire, not the sign: `content/shaders/test.shader` bound 16
+  textures and draws flat magenta for any other index, and the pot's floor `jbb_floor` names 25 materials, its faces
+  on 16-24 (`m_grass3`, `pp_grsph`) between the logs. Over every readable `.md2` (2,117, 4,914 meshes) 49 meshes name
+  more than 16, at most 31 (FileFormats `models.md`, "Materials"): Lost Kingdom's Inca God base, both coasters' and
+  the mine cart's entrances and the 5x5 rocks among them. **Built:** `Material.TextureSlots` = 32, the shader's 32
+  bindings, and the five fillers (`LobbyModel`, `UiMesh`, `ParkGround`, `ParkPaths`, `ParkBuildMarkers`) sized by
+  it, rather than splitting such meshes into draws of 16. Thirty-three bindings is past Vulkan's guaranteed minimum
+  of 16 sampled images a stage; this machine's RADV (RX 6700 XT) reports 8,388,606 and llvmpipe 1,000,000, and no
+  other driver was measured.
+  - **Done 2026-10-01** on `alexah/233-hot-pot-magenta` (FileFormats: its branch 233). Tests: every shipped mesh fits
+    the slots (31 at most, 48 of the archives' 4,823 past 16, `wr_tunnel.md2` the one unread), and the shader binds
+    and picks each slot. Bug put back: 16 slots (both red), the old shader (1 red). Worktree: 1572 pass, 0 skip
+    with the game; 645 ran, 927 skipped without; 123 warnings; opcodes 77.
+  - **Game** (`q202/magenta.py`, silent, `save/` unchanged), flat magenta (r, b over 200, g under 15) counted,
+    predicted 0: the bought Hot Pot from two angles 0 and 0, where Q202's `run3/G-go.png` held 2,006; the lobby 0.
+    Shots `q202/mag2/hotpot-tooloff.png`, `hotpot2.png` looked at: the floor shows between the logs. The red and grey
+    squares on the water in `hotpot.png` are the queue tool's, gone with the tool put away.
+  - **Not checked:** the original was not run for this; its frame `q179b/orig/go-1.png` shows no magenta there.
+
 - [ ] **Q193. Write down the review's verified facts: saves, particles, sprites, audio.** Found by the fork review
   (fmt-assets-v1, fmt-assets-v2, gap5-1..gap5-4, gap3-6, world-sim-2, economy-6, economy-11, level-build-v2,
   gap3-8, fmt-assets-1, peeps-1, gap5-6, gap5-8, fmt-media-v2, ui-render-platform-v1, ui-render-platform-v2). No code.

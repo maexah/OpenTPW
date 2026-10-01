@@ -208,10 +208,10 @@ public sealed class ParkGround : ModelEntity
 
 		indices.Sort();
 
-		// Sixteen is what the material holds and what the shader switches over. Every park the game
-		// ships uses six, so this has room to spare; a park that wanted more would need the ground
-		// splitting across several models, and this says so rather than drawing the excess wrong.
-		var textures = new Texture[16];
+		// Material.TextureSlots is what the material holds and what the shader switches over. Every park
+		// the game ships uses six, so this has room to spare; a park that wanted more would need the
+		// ground splitting across several models, and this says so rather than drawing the excess wrong.
+		var textures = new Texture[Material.TextureSlots];
 		var directory = $"levels/{_themeName.ToLowerInvariant()}/terrain/textures";
 
 		if ( indices.Count > textures.Length )

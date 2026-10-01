@@ -112,7 +112,7 @@ internal sealed class UiMesh
 
 		public Part( ModelFile.Mesh mesh, bool isFrame )
 		{
-			var textures = new Texture[16];
+			var textures = new Texture[Material.TextureSlots];
 
 			for ( int i = 0; i < textures.Length; ++i )
 			{

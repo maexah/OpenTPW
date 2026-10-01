@@ -59,7 +59,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// <summary>The shader's own see-through bit - see <c>test.shader</c>'s <c>FLAG_TRANSLUCENT</c>.</summary>
 	private const uint Translucent = 2;
 
-	private readonly Texture[] _textures = new Texture[16];
+	private readonly Texture[] _textures = new Texture[Material.TextureSlots];
 
 	/// <summary>The strip last built, so the mesh is laid again only when it changes.</summary>
 	private string _built = string.Empty;

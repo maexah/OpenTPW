@@ -1,4 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -190,5 +192,57 @@ public class ModelTests
 
 		Assert.IsNotNull( emitter, "the same gate's particle emitter" );
 		Assert.AreEqual( 0x100u, emitter.IdFlags & 0x100u, $"its id flags were 0x{emitter.IdFlags:X}" );
+	}
+
+	/// <summary>
+	/// No mesh the game ships names more materials than the model shader binds (<see cref="Material.TextureSlots"/>):
+	/// 31 at most, the jungle Coaster3 preview's ground, and 48 of the archives' 4,823 meshes past the old 16, the Hot Pot's floor among them,
+	/// whose triangles on materials 16-24 drew magenta (Q203). Every <c>.md2</c> in every archive is read; one,
+	/// <c>wr_tunnel.md2</c>, does not parse.
+	/// </summary>
+	[TestMethod]
+	public void EveryShippedMeshFitsTheShadersTextureSlots()
+	{
+		int meshes = 0, overSixteen = 0, most = 0;
+		var unread = new List<string>();
+
+		foreach ( var wad in Directory.GetFiles( GameDir.Data, "*.wad", SearchOption.AllDirectories ) )
+		{
+			var directory = Path.GetRelativePath( GameDir.Data, Path.ChangeExtension( wad, null ) ).Replace( '\\', '/' );
+
+			foreach ( var member in data.GetFiles( directory ).Where( name => name.EndsWith( ".md2", StringComparison.OrdinalIgnoreCase ) ) )
+			{
+				ModelFile model;
+
+				try
+				{
+					model = Read( $"{directory}/{Path.GetFileName( member )}" );
+				}
+				catch ( Exception )
+				{
+					unread.Add( Path.GetFileName( member ) );
+					continue;
+				}
+
+				foreach ( var mesh in model.Meshes )
+				{
+					++meshes;
+					most = Math.Max( most, mesh.Materials.Length );
+					overSixteen += mesh.Materials.Length > 16 ? 1 : 0;
+				}
+			}
+		}
+
+		Assert.IsTrue( most <= Material.TextureSlots, $"a mesh names {most} materials" );
+		Assert.AreEqual( 31, most );
+		Assert.IsTrue( overSixteen > 0, "some meshes need more than sixteen" );
+		CollectionAssert.AreEqual( new[] { "wr_tunnel.md2" }, unread.Select( name => name.ToLowerInvariant() ).ToArray() );
+
+		var floor = Read( "levels/jungle/rides/bumper/bumper.MD2" ).Meshes.Single( mesh => mesh.Name.StartsWith( "jbb_floor", StringComparison.Ordinal ) );
+
+		Assert.AreEqual( 25, floor.Materials.Length, "the Hot Pot's floor" );
+		Assert.IsTrue( floor.Vertices.Any( vertex => vertex.TextureIndex >= 16 ), "and its triangles reach past sixteen" );
+
+		Console.WriteLine( $"meshes {meshes}, over sixteen {overSixteen}, most {most}" );
 	}
 }

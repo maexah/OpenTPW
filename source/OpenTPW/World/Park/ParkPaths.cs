@@ -169,7 +169,7 @@ public sealed class ParkPaths : ModelEntity
 
 		indices.Sort();
 
-		var textures = new Texture[16];
+		var textures = new Texture[Material.TextureSlots];
 		var directory = $"levels/{_themeName.ToLowerInvariant()}/terrain/pathtex";
 		var table = ReadTable();
 

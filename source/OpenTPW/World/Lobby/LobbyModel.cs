@@ -179,9 +179,9 @@ public sealed class LobbyModel
 
 			// Which of this mesh's materials had their texture swapped for one built at runtime. Only
 			// signs are, and a sign is see-through whatever the model says - see MaterialFlagsFor.
-			var substituted = new bool[16];
+			var substituted = new bool[Material.TextureSlots];
 
-			for ( int i = 0; i < 16; ++i )
+			for ( int i = 0; i < Material.TextureSlots; ++i )
 			{
 				if ( mesh.Materials.Length <= i || string.IsNullOrEmpty( mesh.Materials[i].Name ) )
 					textures.Add( Texture.Missing );

@@ -113,6 +113,7 @@ fragment {
         vec3 g_vLightTravels;
     } g_oUbo;
 
+    // Material.TextureSlots: 31 is the most materials any shipped mesh names (Q203).
     layout( set = 1, binding = 0 ) uniform texture2D Color0;
     layout( set = 1, binding = 1 ) uniform texture2D Color1;
     layout( set = 1, binding = 2 ) uniform texture2D Color2;
@@ -129,7 +130,23 @@ fragment {
     layout( set = 1, binding = 13 ) uniform texture2D Color13;
     layout( set = 1, binding = 14 ) uniform texture2D Color14;
     layout( set = 1, binding = 15 ) uniform texture2D Color15;
-    layout( set = 1, binding = 16 ) uniform sampler s_Color;
+    layout( set = 1, binding = 16 ) uniform texture2D Color16;
+    layout( set = 1, binding = 17 ) uniform texture2D Color17;
+    layout( set = 1, binding = 18 ) uniform texture2D Color18;
+    layout( set = 1, binding = 19 ) uniform texture2D Color19;
+    layout( set = 1, binding = 20 ) uniform texture2D Color20;
+    layout( set = 1, binding = 21 ) uniform texture2D Color21;
+    layout( set = 1, binding = 22 ) uniform texture2D Color22;
+    layout( set = 1, binding = 23 ) uniform texture2D Color23;
+    layout( set = 1, binding = 24 ) uniform texture2D Color24;
+    layout( set = 1, binding = 25 ) uniform texture2D Color25;
+    layout( set = 1, binding = 26 ) uniform texture2D Color26;
+    layout( set = 1, binding = 27 ) uniform texture2D Color27;
+    layout( set = 1, binding = 28 ) uniform texture2D Color28;
+    layout( set = 1, binding = 29 ) uniform texture2D Color29;
+    layout( set = 1, binding = 30 ) uniform texture2D Color30;
+    layout( set = 1, binding = 31 ) uniform texture2D Color31;
+    layout( set = 1, binding = 32 ) uniform sampler s_Color;
 
     // The only bit of a material's flag word we act on - see ModelFile.MaterialData.IsTranslucent
     // for how it was established and for what is known about the rest.
@@ -184,6 +201,22 @@ fragment {
         if ( texIndex == 13 ) vTextureSample = texture( sampler2D( Color13, s_Color ), finalTexCoords);
         if ( texIndex == 14 ) vTextureSample = texture( sampler2D( Color14, s_Color ), finalTexCoords);
         if ( texIndex == 15 ) vTextureSample = texture( sampler2D( Color15, s_Color ), finalTexCoords);
+        if ( texIndex == 16 ) vTextureSample = texture( sampler2D( Color16, s_Color ), finalTexCoords);
+        if ( texIndex == 17 ) vTextureSample = texture( sampler2D( Color17, s_Color ), finalTexCoords);
+        if ( texIndex == 18 ) vTextureSample = texture( sampler2D( Color18, s_Color ), finalTexCoords);
+        if ( texIndex == 19 ) vTextureSample = texture( sampler2D( Color19, s_Color ), finalTexCoords);
+        if ( texIndex == 20 ) vTextureSample = texture( sampler2D( Color20, s_Color ), finalTexCoords);
+        if ( texIndex == 21 ) vTextureSample = texture( sampler2D( Color21, s_Color ), finalTexCoords);
+        if ( texIndex == 22 ) vTextureSample = texture( sampler2D( Color22, s_Color ), finalTexCoords);
+        if ( texIndex == 23 ) vTextureSample = texture( sampler2D( Color23, s_Color ), finalTexCoords);
+        if ( texIndex == 24 ) vTextureSample = texture( sampler2D( Color24, s_Color ), finalTexCoords);
+        if ( texIndex == 25 ) vTextureSample = texture( sampler2D( Color25, s_Color ), finalTexCoords);
+        if ( texIndex == 26 ) vTextureSample = texture( sampler2D( Color26, s_Color ), finalTexCoords);
+        if ( texIndex == 27 ) vTextureSample = texture( sampler2D( Color27, s_Color ), finalTexCoords);
+        if ( texIndex == 28 ) vTextureSample = texture( sampler2D( Color28, s_Color ), finalTexCoords);
+        if ( texIndex == 29 ) vTextureSample = texture( sampler2D( Color29, s_Color ), finalTexCoords);
+        if ( texIndex == 30 ) vTextureSample = texture( sampler2D( Color30, s_Color ), finalTexCoords);
+        if ( texIndex == 31 ) vTextureSample = texture( sampler2D( Color31, s_Color ), finalTexCoords);
 
         vec3 vShading = g_oUbo.g_flParkLight > 0.5 ? vParkLight : vDiffuse + vAmbient;
         vec3 vOutColor = vTextureSample.xyz * vShading;

@@ -29,6 +29,12 @@ public enum MaterialFlags
 
 public partial class Material : Asset
 {
+	/// <summary>
+	/// How many textures <c>content/shaders/test.shader</c> binds (<c>Color0</c>..), and so how many materials a mesh can
+	/// draw with: 31 is the most any of the game's 4,914 meshes names (Q203).
+	/// </summary>
+	public const int TextureSlots = 32;
+
 	public Shader Shader { get; set; }
 
 	public Type UniformBufferType { get; } = typeof( ObjectUniformBuffer );

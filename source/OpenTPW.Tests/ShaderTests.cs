@@ -41,4 +41,23 @@ public class ShaderTests
 		Assert.AreEqual( 288, At( nameof( ObjectUniformBuffer.g_vLightTravels ) ) );
 		Assert.AreEqual( 304, System.Runtime.InteropServices.Marshal.SizeOf<ObjectUniformBuffer>() );
 	}
+
+	/// <summary>
+	/// test.shader binds <see cref="Material.TextureSlots"/> textures, one per material a mesh can draw with, and picks
+	/// each by its index; an index past them draws flat magenta (the Hot Pot's floor, Q203).
+	/// </summary>
+	[TestMethod]
+	public void TheModelShaderBindsEveryTextureSlot()
+	{
+		var text = File.ReadAllText( Path.Combine( AppContext.BaseDirectory, "content", "shaders", "test.shader" ) );
+
+		for ( var slot = 0; slot < Material.TextureSlots; ++slot )
+		{
+			StringAssert.Contains( text, $"binding = {slot} ) uniform texture2D Color{slot};" );
+			StringAssert.Contains( text, $"if ( texIndex == {slot} ) vTextureSample = texture( sampler2D( Color{slot}, s_Color )" );
+		}
+
+		StringAssert.Contains( text, $"binding = {Material.TextureSlots} ) uniform sampler s_Color;" );
+		Assert.IsFalse( text.Contains( $"Color{Material.TextureSlots};" ), "no slot past them" );
+	}
 }
