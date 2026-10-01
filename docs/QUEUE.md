@@ -3617,7 +3617,7 @@ artifacts are listed in `docs/history/README.md`.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q189. Light the park as the original does.** Found by the fork review (gap6-7, gap6-8, refute rank 4). The
+- [x] **Q189. Light the park as the original does.** Found by the fork review (gap6-7, gap6-8, refute rank 4). The
   model is decoded: models through `FUN_0057aa10` → `FUN_00574660` → `FUN_005741b0`, terrain through `FUN_0056f670` →
   `FUN_0056ef10` → `FUN_00574530` → `FUN_005741b0` (terrain normals `(dh·k, 1.0, dh·k)`, not normalised). Per vertex:
   the ambient as a colour (`ThemeEngine.AmbientLightLevel`'s R, G, B / 255: 0.333, 0.333, 0.408 in the base file and
@@ -3632,6 +3632,19 @@ artifacts are listed in `docs/history/README.md`.
   where −d·n falls below about 0.67. Confirm: the same view in the original under Proton and in ours, where shading
   appears predicted first. Not claimed here: that the original has no day and night; only a frame pair from the
   original a few game days apart may say so.
+  **Done 2026-10-01** on `alexah/226-light-the-park`. Facts written once: `park-engine.md`, "The lighting model" (blocking
+  unknown 2 settled; a row runs +Z), `park.md`'s ThemeEngine section; FileFormats `models.md` (heightfield `+0x20`/`+0x24`,
+  the authored height range, 5/5 files). Found on the way: the terrain's normals are `((h[x-1]-h[x+1])k, 1, (h[r-1]-h[r+1])k)`,
+  not normalised, `k` = 1/(`+0x24`-`+0x20`) (`FUN_0056e3f0`; jungle 1/70), and the last row steps back 128.
+  `ParkLight`, `test.shader` per vertex (clamped, rounded to a byte), `ParkGround.NormalAt` in the original's form. The lobby
+  and screen-drawn previews keep the old lighting. Game (`q189run.py`): log `jungle: lit per vertex by ambient (0.333,
+  0.333, 0.408) and a sun travelling (0.408, 0.408, -0.816)` as predicted; frame mean 127.7 -> 113.2 (0.886, predicted
+  0.85 +- 0.04); flat ground R, G x0.81-0.85, B x0.92-0.95 (predicted 0.82 / 0.92); the south-facing pillar ~unchanged.
+  Beside the original's opening view (`q187/orig/q187-08.png`, an earlier run under Proton; the lighting is set once),
+  `q189/before4`, `after4`: lawn (97,122) -> (81,104) against (82,100), kerb R 148 -> 122 against 122, brick nearer in all
+  three channels. Our blue runs higher than the original's on every surface; not the lighting, not chased. Review
+  `wf_4d901afb-06d` (two comments fixed; uniform-layout test added). Worktree: 1552 pass 0 skip; 635 ran 917 skipped
+  without; 123 warnings.
 
 - [ ] **Q190. Build `ADDHEAD` and `DELHEAD`.** Found by the fork review (vm-12; lead: Aluzed's fork, T-007 item 18).
   Six Lost Kingdom rides reach them (incagod, Monkey, Mumbo, PorkPie, Spider, Volcano); both are unbuilt and counted.

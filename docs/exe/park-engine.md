@@ -2150,14 +2150,64 @@ The two grids genuinely differ in packing, and both are pinned:
 
 Mixing them up is exactly the trap the cross-check warned about.
 
-**Still open:** whether a row maps to world +Z or -Z once drawn in 3D. It risks only a flipped camera convention, not a mirrored island.
+**A row runs +Z once drawn in 3D**: the terrain lighter `FUN_0056ef10` places row r at heightfield `+0x0c` + r × `+0x14` (10.0) in the original's Z ("The lighting model").
+
+---
+
+## The lighting model
+
+Decoded by the fork review (gap6-7, gap6-8, its refutation rank 4) and checked again for Q189. **The original lights
+a park per vertex in software, once per mesh, and hands Direct3D a finished colour.**
+
+**The lighter, `FUN_005741b0`.** It starts from the renderer ambient `0x00879ddc/e0/e4`, which `FUN_00458590` fills
+with `ThemeEngine.AmbientLightLevel`'s R, G, B / 255 (0.333, 0.333, 0.408 in the base file and all four themes'
+`Standard.sam`; `fantasy/Online_Standard.sam` alone carries 0xFFA0A0B0). For each directional light (`+0x50 & 0xf` =
+2) it adds the light's colour times `-(d.n)` when that is not negative. `d` is the light's direction taken into the
+model's space: `FUN_005743a0` inverts the model matrix (`FUN_00578b20`), turns `+0x2c` into `+0x38` with no
+translation (`FUN_00578d20` mode 3) and normalises it. The park makes one such light, the sun (`FUN_004584d0`, the only
+caller of the light constructor `FUN_00457e70`).
+
+**The sign.** `FUN_00458590` normalises `LightNormal` with +1.0 (`0x0074d0d8`) and never negates it, so (0.4, -0.8,
+0.4) is **the direction light travels**: the sun stands above, and a level face gets 0.816 of the sun's colour.
+
+**The vertex colour.** Models go through `FUN_00574660` (from `FUN_0057aa10`), the terrain through `FUN_00574530`
+(from `FUN_0056ef10`, from the terrain renderer `FUN_0056f670`); both do the same thing: each channel × 255.0
+(`0x007016e4`), rounded, clamped to 0..255, alpha 0xFF, ANDed with the channel mask at `[0x0087a248]+0x2c`
+(`AND EAX,[ECX+0x2c]` at `0x0057463f`). The mask is 0xFFFFFFFF in play; the frame renderer `FUN_00576ec0` narrows it
+for two passes gated on render-state `0x8`. With render-state `0x800` the colour is the mask itself, fullbright.
+The model lighter reads its normals from the mesh at `+0x64`, stride 12.
+
+**The terrain's normals are not unit length.** `FUN_0056ef10` builds one per vertex,
+`((h[x-1] - h[x+1]) * k, 1.0, (h[r-1] - h[r+1]) * k)`, with the one-sided difference at either end of a row and of
+a column, and nothing normalises it. `k` is terrain `+0x18`, set by `FUN_0056e3f0` to 1 / (heightfield `+0x24` -
+`+0x20`), the field's authored height range (FileFormats `models.md`, "Heightfield"), or 1/16 when the two are
+equal. The jungle's range is -10 to 60, so `k` is 1/70 where the true slope over the two cells either side would be
+1/20: **a hill is lit three and a half times flatter than it stands.** The last row takes its other height from
+`pfVar8[-0x80]`, 128 floats back, where every other row steps by the field's own width (97); in the jungle that
+changes 40 of the row's 97 normals. Rows are placed at `+0x0c + r × +0x14` in the original's Z, so a row runs +Z.
+
+**What it looks like.** With `DirectionalLightLevel` (1, 1, 0.847), any face whose `-(d.n)` is at or above about
+0.67 saturates to its texture's own brightness: all level ground, every top, and every face turned toward the sun
+(it stands to the low-x, low-y side of the park). Shading shows only below that; a face turned away gets the ambient
+alone, (85, 85, 104).
+
+**Set once.** `FUN_004080e0`, called only from the park load at `0x0054ed3f` in state 9, copies the four values to
+`0x008bd47c` (fog), `0x007a0b44` (ambient), `0x007a0b3c` (directional) and `0x007a0b30-38` (direction);
+`FUN_00458590` applies them at `0x0054ed64`. The sun is constructed earlier, at `0x0054eca4`, from those globals
+before they are filled. Nothing time-driven writes any of them; this does not on its own rule out a day-night look
+drawn some other way, which only frames of the original a few game days apart would show.
+
+**OpenTPW** lights a park this way in `content/shaders/test.shader` (per vertex, clamped, rounded to a byte) with
+`ParkLight` and `ParkGround.NormalAt`. The lobby and anything drawn on the screen keep the shader's old per-pixel
+lighting. Not checked: whether the original's mesh normals at `+0x64` are the same smoothed normals OpenTPW
+computes (`models.md`, "Normals").
 
 ---
 
 ## The blocking unknowns, worst first
 
 1. **Which grid size is authoritative**: 96x85 (mesh), 95x84 (`.sam` MapInfo), 95x85 (the engine's own derivation). **Nobody established whether `HeightfieldWidth` counts cells, vertices or cells-minus-one.**
-2. **The lighting model.** `LightNormal` was never traced to the shading dot product, so even travels-vs-toward is unconfirmed.
+2. ~~The lighting model.~~ Settled: see "The lighting model" above. `LightNormal` is the direction light travels.
 3. **The diagonal-choice bit** — see the terrain section. The cell's `0x0800` has no consumer found anywhere, and neither terrain pass tests `0x0004`, the RE pass's candidate.
 4. `base.MD2`'s container walking — the heightfield was found by validated signature search, **not** by walking the chunk table.
 5. `base.map`'s per-bit semantics beyond `0x08`.

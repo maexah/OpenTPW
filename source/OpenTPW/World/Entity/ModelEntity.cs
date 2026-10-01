@@ -62,7 +62,7 @@ public partial class ModelEntity : Entity
 			return;
 
 		Draw( Model, Camera.ViewMatrix, Camera.ProjMatrix, Level.SunLight?.Position ?? Vector3.Zero,
-			Level.SunLight?.Color ?? Vector3.One, Level.FogDensity, worldNormals: true );
+			Level.SunLight?.Color ?? Vector3.One, Level.FogDensity, worldNormals: true, parkLight: Level.ParkLight );
 	}
 
 	protected override void OnRenderTranslucent()
@@ -71,7 +71,7 @@ public partial class ModelEntity : Entity
 			return;
 
 		Draw( TranslucentModel, Camera.ViewMatrix, Camera.ProjMatrix, Level.SunLight?.Position ?? Vector3.Zero,
-			Level.SunLight?.Color ?? Vector3.One, Level.FogDensity, worldNormals: true );
+			Level.SunLight?.Color ?? Vector3.One, Level.FogDensity, worldNormals: true, parkLight: Level.ParkLight );
 	}
 
 	/// <summary>
@@ -108,7 +108,7 @@ public partial class ModelEntity : Entity
 
 	private void Draw( Model model, System.Numerics.Matrix4x4 view, System.Numerics.Matrix4x4 projection,
 		Vector3 lightPosition, Vector3 lightColor, float fogDensity, float ambient = 0f, bool worldNormals = false,
-		System.Numerics.Matrix4x4? transform = null )
+		System.Numerics.Matrix4x4? transform = null, ParkLight? parkLight = null )
 	{
 		var uniformBuffer = new ObjectUniformBuffer
 		{
@@ -125,6 +125,12 @@ public partial class ModelEntity : Entity
 			g_flFogDensity = fogDensity,
 			g_flAmbient = ambient,
 			g_flWorldNormals = worldNormals ? 1f : 0f,
+
+			// A park lights the scene per vertex as the original does; the lobby, and anything drawn
+			// on the screen through DrawOverlay, keep the shader's own lighting.
+			g_vAmbientColour = parkLight?.Ambient ?? Vector3.Zero,
+			g_flParkLight = parkLight != null ? 1f : 0f,
+			g_vLightTravels = parkLight?.Travels ?? Vector3.Zero,
 
 			_padding0 = 0,
 			_padding1 = 0,

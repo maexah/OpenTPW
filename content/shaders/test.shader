@@ -19,6 +19,10 @@ vertex {
         float g_flFogDensity;
         float g_flAmbient;
         float g_flWorldNormals;
+
+        vec3 g_vAmbientColour;
+        float g_flParkLight;
+        vec3 g_vLightTravels;
     } g_oUbo;
 
     layout(location = 0) out VS_OUT {
@@ -31,6 +35,7 @@ vertex {
 
     layout(location = 5) out flat int outTexIndex;
     layout(location = 6) out flat uint outMatFlags;
+    layout(location = 7) out vec3 vParkLight;
 
     void main() {
         vs_out.vTexCoords = texCoords;
@@ -55,6 +60,21 @@ vertex {
 
         outTexIndex = texIndex;
         outMatFlags = matFlags;
+
+        // A park is lit per vertex, as the original lights it (FUN_005741b0, docs/exe/park-engine.md,
+        // "The lighting model"): the ambient colour plus the sun's colour times -(d.n) where that is not
+        // negative, d being the direction the light travels taken into the model's space and normalised,
+        // n the normal as the model carries it. Each channel is clamped and rounded to a byte, and the
+        // card blends the result across the triangle. A sun-facing face therefore saturates to its
+        // texture's own brightness.
+        vParkLight = vec3(0.0);
+        if (g_oUbo.g_flParkLight > 0.5)
+        {
+            vec3 d = normalize(inverse(mat3(g_oUbo.g_mModel)) * g_oUbo.g_vLightTravels);
+            float facing = -dot(d, vec3(normal.x, normal.z, normal.y));
+            vec3 lit = g_oUbo.g_vAmbientColour + (g_oUbo.g_vLightColor * max(facing, 0.0));
+            vParkLight = round(clamp(lit, 0.0, 1.0) * 255.0) / 255.0;
+        }
     }
 }
 
@@ -69,6 +89,7 @@ fragment {
 
     layout(location = 5) in flat int texIndex;
     layout(location = 6) in flat uint outMatFlags;
+    layout(location = 7) in vec3 vParkLight;
 
     layout(location = 0) out vec4 fragColor;
 
@@ -86,6 +107,10 @@ fragment {
         float g_flFogDensity;
         float g_flAmbient;
         float g_flWorldNormals;
+
+        vec3 g_vAmbientColour;
+        float g_flParkLight;
+        vec3 g_vLightTravels;
     } g_oUbo;
 
     layout( set = 1, binding = 0 ) uniform texture2D Color0;
@@ -160,7 +185,7 @@ fragment {
         if ( texIndex == 14 ) vTextureSample = texture( sampler2D( Color14, s_Color ), finalTexCoords);
         if ( texIndex == 15 ) vTextureSample = texture( sampler2D( Color15, s_Color ), finalTexCoords);
 
-        vec3 vShading = vDiffuse + vAmbient;
+        vec3 vShading = g_oUbo.g_flParkLight > 0.5 ? vParkLight : vDiffuse + vAmbient;
         vec3 vOutColor = vTextureSample.xyz * vShading;
 
         // A material the model marks translucent keeps its texture's alpha; anything else is solid

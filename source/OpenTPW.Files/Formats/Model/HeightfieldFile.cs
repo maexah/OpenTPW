@@ -46,6 +46,15 @@ public sealed class HeightfieldFile
 	public float CellSizeY { get; private init; }
 
 	/// <summary>
+	/// The heights' authored range, low and high, at +0x20 and +0x24: whole numbers within 1.0 of the
+	/// lowest and highest height (jungle -10 and 60; the lobby 0 and 0). The original lights the ground
+	/// with its span - see <c>ParkGround.NormalAt</c>.
+	/// </summary>
+	public float HeightLow { get; private init; }
+
+	public float HeightHigh { get; private init; }
+
+	/// <summary>
 	/// One height per <i>vertex</i>, so there is one more of them in each direction than there are
 	/// cells: <c>(CellsX + 1) * (CellsY + 1)</c>, indexed <c>y * (CellsX + 1) + x</c>. Raw world units -
 	/// the vertical scale is 1, not a fixed-point fraction of anything.
@@ -149,6 +158,8 @@ public sealed class HeightfieldFile
 		CellsY = (int)ReadUInt32( data, offset + 0x1c );
 		CellSizeX = ReadSingle( data, offset + 0x10 );
 		CellSizeY = ReadSingle( data, offset + 0x14 );
+		HeightLow = ReadSingle( data, offset + 0x20 );
+		HeightHigh = ReadSingle( data, offset + 0x24 );
 
 		var heightsOffset = (int)ReadUInt32( data, offset + 0x28 );
 		var cellsOffset = (int)ReadUInt32( data, offset + 0x2c );

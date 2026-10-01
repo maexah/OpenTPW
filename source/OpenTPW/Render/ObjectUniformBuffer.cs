@@ -45,8 +45,8 @@ struct ObjectUniformBuffer
 	public float g_flFogDensity; // 4
 
 	/// <summary>
-	/// How much light a surface gets whichever way it faces. Zero means the shader's own 0.4, which
-	/// is what everything in the world is lit with - so nothing that doesn't set this changes.
+	/// How much light a surface gets whichever way it faces, outside a park's lighting. Zero means the
+	/// shader's own 0.4, which is what the lobby is lit with - so nothing that doesn't set this changes.
 	/// </summary>
 	public float g_flAmbient; // 4
 
@@ -66,4 +66,21 @@ struct ObjectUniformBuffer
 	/// </summary>
 	public float g_flWorldNormals; // 4
 	public float _padding4; // 4
+
+	/// <summary>
+	/// The park's ambient as a colour - <c>ThemeEngine.AmbientLightLevel</c>'s R, G, B / 255 - read only
+	/// when <see cref="g_flParkLight"/> is set. See <see cref="ParkLight"/>.
+	/// </summary>
+	public Vector3 g_vAmbientColour; // 12
+
+	/// <summary>
+	/// 1 to light per vertex the way the original lights a park (<c>FUN_005741b0</c>): the ambient
+	/// colour plus the sun's colour times the facing, each channel clamped. 0 keeps the lobby's and
+	/// the interface's lighting. Set by <see cref="ModelEntity"/> for scene draws in a park.
+	/// </summary>
+	public float g_flParkLight; // 4
+
+	/// <summary>The direction the park's sun light travels, in world space. Read with <see cref="g_flParkLight"/>.</summary>
+	public Vector3 g_vLightTravels; // 12
+	public float _padding5; // 4
 }

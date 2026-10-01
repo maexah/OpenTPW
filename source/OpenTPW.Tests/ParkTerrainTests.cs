@@ -70,6 +70,70 @@ public class ParkTerrainTests
 	}
 
 	/// <summary>
+	/// The block's +0x20 and +0x24 are the heights' authored range, which the original lights the ground
+	/// with. In every park each is a whole number within 1.0 of the field's own
+	/// lowest and highest height (fantasy says -9 where its lowest is -10).
+	/// </summary>
+	[TestMethod]
+	public void EveryParkCarriesItsHeightRange()
+	{
+		var expected = new System.Collections.Generic.Dictionary<string, (float Low, float High)>
+		{
+			["jungle"] = (-10f, 60f),
+			["fantasy"] = (-9f, 20f),
+			["hallow"] = (0f, 21f),
+			["space"] = (-10f, 28f),
+		};
+
+		foreach ( var theme in Themes )
+		{
+			var field = Landscape( theme );
+
+			Assert.AreEqual( expected[theme].Low, field.HeightLow, theme );
+			Assert.AreEqual( expected[theme].High, field.HeightHigh, theme );
+			Assert.IsTrue( field.Heights.Min() >= field.HeightLow - 1f && field.Heights.Max() <= field.HeightHigh + 1f, theme );
+		}
+	}
+
+	/// <summary>
+	/// The ground is lit with the original's own normal (FUN_0056ef10): nearer height minus further, times
+	/// one over the height range, 1.0 up, not normalised - and the last row reaches 128 floats back. A
+	/// normal worked out from the true slope and normalised lights the jungle's hills three and a half
+	/// times steeper than the original does.
+	/// </summary>
+	[TestMethod]
+	public void TheGroundNormalIsTheOriginals()
+	{
+		var field = Landscape( "jungle" );
+		var stride = field.CellsX + 1;
+		var k = 1f / 70f;
+
+		// The steepest interior vertex across X, so a normalised or true-slope normal cannot pass.
+		var (x, y) = Enumerable.Range( 1, field.CellsY - 1 )
+			.SelectMany( row => Enumerable.Range( 1, field.CellsX - 1 ).Select( col => (col, row) ) )
+			.MaxBy( v => System.Math.Abs( field.HeightAt( v.col - 1, v.row ) - field.HeightAt( v.col + 1, v.row ) ) );
+
+		var normal = ParkGround.NormalAt( field, x, y );
+
+		Assert.AreEqual( (field.HeightAt( x - 1, y ) - field.HeightAt( x + 1, y )) * k, normal.X, 1e-5f );
+		Assert.AreEqual( 1f, normal.Y );
+		Assert.AreEqual( (field.HeightAt( x, y - 1 ) - field.HeightAt( x, y + 1 )) * k, normal.Z, 1e-5f );
+		Assert.IsTrue( normal.Length > 1.01f, $"({x}, {y}) is steep, so its normal is longer than 1: {normal.Length}" );
+
+		// The last row, where the original steps back by 128 rather than by the row: at the vertex where
+		// those two heights differ most (40 of the jungle's 97 differ, by up to 2.0).
+		var last = field.CellsY;
+		var at = Enumerable.Range( 0, stride )
+			.MaxBy( col => System.Math.Abs( field.Heights[(last * stride) + col - 128] - field.HeightAt( col, last - 1 ) ) );
+		var edge = ParkGround.NormalAt( field, at, last );
+		var here = (last * stride) + at;
+
+		Assert.AreNotEqual( field.Heights[here - 128], field.HeightAt( at, last - 1 ), 0.5f, "the jungle's last row has no vertex to tell the two apart" );
+
+		Assert.AreEqual( (field.Heights[here - 128] - field.Heights[here]) * k, edge.Z, 1e-5f );
+	}
+
+	/// <summary>
 	/// The attribute map is 128 square in every park, and says so itself rather than being assumed.
 	/// </summary>
 	[TestMethod]

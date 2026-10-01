@@ -418,25 +418,36 @@ public sealed class ParkGround : ModelEntity
 	}
 
 	/// <summary>
-	/// The surface normal at a grid vertex, from how the land falls away either side of it. Central
-	/// differences rather than a face normal, so that a corner shared by four cells is lit as one
-	/// surface and the ground does not facet along its own grid.
+	/// The normal the original lights a grid vertex with (<c>FUN_0056ef10</c>; docs/exe/park-engine.md, "The
+	/// lighting model"): the height either side of it, nearer minus further, times one over the field's
+	/// height range, with 1.0 up - and <b>not normalised</b>. The range is wider than two cells, so a
+	/// slope lights flatter than it stands (jungle: one seventieth against a true one twentieth), and a
+	/// vertex at the grid's edge takes the one-sided difference.
+	///
+	/// <para>
+	/// The last row takes its other height 128 floats back rather than one row back: the original
+	/// steps by the map's 128 there where every other row steps by the field's own width.
+	/// </para>
 	///
 	/// <para>
 	/// <b>Returned with Y and Z swapped, on purpose.</b> Every other normal in the game arrives from a
-	/// .md2, where Y is up, and content/shaders/test.shader knows that: it swaps them back itself,
-	/// with <c>vec3(normal.x, normal.z, normal.y)</c>, because the positions beside them have already
-	/// been swapped by <see cref="LobbyModel"/>. A normal worked out here is in the engine's own Z-up
-	/// space and would be turned on its side by that same line - a flat (0,0,1) becoming (0,1,0), so
-	/// level ground would light as though it were a wall.
+	/// .md2, where Y is up, and content/shaders/test.shader swaps them back itself, so this is given in
+	/// that same Y-up form.
 	/// </para>
 	/// </summary>
 	internal static Vector3 NormalAt( HeightfieldFile field, int x, int y )
 	{
-		var slopeX = (field.HeightAt( x + 1, y ) - field.HeightAt( x - 1, y )) / (2f * field.CellSizeX);
-		var slopeY = (field.HeightAt( x, y + 1 ) - field.HeightAt( x, y - 1 )) / (2f * field.CellSizeY);
+		var span = field.HeightHigh - field.HeightLow;
+		var k = span == 0f ? 1f / 16f : 1f / span;
 
-		// Engine space would be (-slopeX, -slopeY, 1); this is that with Y and Z exchanged.
-		return new Vector3( -slopeX, 1f, -slopeY ).Normal;
+		var stride = field.CellsX + 1;
+		var here = (y * stride) + x;
+
+		var acrossX = field.HeightAt( x - 1, y ) - field.HeightAt( x + 1, y );
+		var acrossY = y < field.CellsY
+			? field.HeightAt( x, y - 1 ) - field.HeightAt( x, y + 1 )
+			: field.Heights[Math.Max( here - 128, 0 )] - field.Heights[here];
+
+		return new Vector3( acrossX * k, 1f, acrossY * k );
 	}
 }

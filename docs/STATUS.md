@@ -11,7 +11,8 @@ the tip cannot name it. Read the current state from the repository, which cannot
   in before the loading screen; **the island keys wait for that flight**, and **Escape cancels it** (the camera orbits
   again, the gate shuts, the panel comes back). **Enter, the arrows and Escape act on their release**, and
   **a left press on the lobby's view enters the park**.
-- Park: ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (5 of 6). The
+- Park: ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (5 of 6), **lit per
+  vertex as the original lights it** (ambient colour + clamped sun; the lobby keeps the old lighting). The
   camcorder walks the original's sweep pass for pass, **draws the peeps from their ground-level `.FPC` pictures**, and
   **a quick right click leaves it** (RMB cancel on). Leaving one lets go of all of it: nothing of a left park is held in the lobby, nor of any left scene's interface.
 - Building and staffing: purchase menu and hire screen, both reachable from Buy. Things bought, sold, moved, carried;
@@ -76,8 +77,8 @@ the tip cannot name it. Read the current state from the repository, which cannot
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q199, Q200, Q200b, Q201, Q201b, Q179, Q179b, Q179c, Q179d, Q180, Q181, Q181b, Q182, Q182b, Q183, Q185, Q186, Q187 are ticked**; next **Q188** (the object windows' P model), which Alexah wants worked together, not
-started alone. Then Q189 onwards, the rest of the fork review's Q185-Q197. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q199, Q200, Q200b, Q201, Q201b, Q179, Q179b, Q179c, Q179d, Q180, Q181, Q181b, Q182, Q182b, Q183, Q185, Q186, Q187, Q189 are ticked**; next **Q188** (the object windows' P model), which Alexah wants worked together, not
+started alone. Until then Q190 onwards, the rest of the fork review's Q185-Q197. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -108,11 +109,11 @@ started alone. Then Q189 onwards, the rest of the fork review's Q185-Q197. Gaps 
 | | | measured |
 |---|---|---|
 | Opcodes | **75** of 106 | 2026-09-30, `case Opcode.` labels vs enum members, after Q179b |
-| Tests | **1549**, 0 fail, 0 skip with the game | 2026-10-01, after Q187 |
-| Tests without the game | **634** ran, **915** skipped, of 1549 | 2026-10-01, after Q187 |
-| Build warnings | 123 | 2026-10-01, after Q187 |
+| Tests | **1552**, 0 fail, 0 skip with the game | 2026-10-01, after Q189 |
+| Tests without the game | **635** ran, **917** skipped, of 1552 | 2026-10-01, after Q189 |
+| Build warnings | 123 | 2026-10-01, after Q189 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-10-01 (Q187).** `alexah/225-first-person-sprites`: first person swaps the flagged sprite banks to `.FPC`. **Earlier:** `224` (Q186), `223` (Q185), `222` (Q183), `220` (Q182b), `218` (Q182), `217` (Q181b), `216` (Q181), `215` (Q180), `214` (heads), `213` (Q179d), `212` (Q179c), `209`-`211` (Q179b), `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-10-01 (Q189).** `alexah/226-light-the-park`: the park lit per vertex as the original lights it. **Earlier:** `225` (Q187), `224` (Q186), `223` (Q185), `222` (Q183), `220` (Q182b), `218` (Q182), `217` (Q181b), `216` (Q181), `215` (Q180), `214` (heads), `213` (Q179d), `212` (Q179c), `209`-`211` (Q179b), `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

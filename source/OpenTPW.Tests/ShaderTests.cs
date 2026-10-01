@@ -24,4 +24,21 @@ public class ShaderTests
 		var result = ShaderPreprocessor.PreprocessShader( path );
 		Assert.IsTrue( result.VertexShader.Length > 0 && result.FragmentShader.Length > 0 );
 	}
+
+	/// <summary>
+	/// The park's lighting fields sit where std140 puts them in content/shaders/test.shader's block: a
+	/// vec3 starts on 16 bytes and a float after it fills its fourth slot. If the struct and the block
+	/// drift apart, the park is lit from whatever bytes land there, and nothing else notices.
+	/// </summary>
+	[TestMethod]
+	public void TheParkLightFieldsSitWhereTheShaderReadsThem()
+	{
+		static int At( string field ) => (int)System.Runtime.InteropServices.Marshal.OffsetOf<ObjectUniformBuffer>( field );
+
+		Assert.AreEqual( 264, At( nameof( ObjectUniformBuffer.g_flWorldNormals ) ) );
+		Assert.AreEqual( 272, At( nameof( ObjectUniformBuffer.g_vAmbientColour ) ) );
+		Assert.AreEqual( 284, At( nameof( ObjectUniformBuffer.g_flParkLight ) ) );
+		Assert.AreEqual( 288, At( nameof( ObjectUniformBuffer.g_vLightTravels ) ) );
+		Assert.AreEqual( 304, System.Runtime.InteropServices.Marshal.SizeOf<ObjectUniformBuffer>() );
+	}
 }

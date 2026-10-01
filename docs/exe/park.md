@@ -125,6 +125,8 @@ All four `Standard.sam` files declare **identical** `MapInfo` (heightfield 95x84
 
 Alpha is 0 on the fog values and 255 on the light values; every channel reads sensibly, which is the evidence for the byte order. `hallow` also ships a commented-out alternate ambient/directional/LightNormal set — **do not "restore" it.**
 
+**How the original uses them** (`park-engine.md`, "The lighting model"): read once at the park load (`FUN_004080e0`, state 9) and never again. Every vertex gets `AmbientLightLevel` as a colour plus `DirectionalLightLevel` × −(d·n), d being `LightNormal`, the direction light travels; each channel is clamped (`FUN_005741b0`). Level ground and sun-facing faces saturate to their texture's full brightness. No time of day changes any of it.
+
 ## `Easymode.TPWI` — the Instant Action park
 
 Container: the preamble laid out in `park-engine.md`, "The save container" (a u32 version, 400 here and 500 in a player save; the loader's fields, FileFormats `saves.md`, "Header"; the `BILZ` header), then **a single zlib stream at file offset 0x629** which inflates 38,479 -> **1,608,309 bytes** with no trailing data. Only `jungle` ships one, which is why Lost Kingdom is the Instant Action park. Same container family as `.TPWS` (player park saves). OpenTPW inflates the `.TPWI` with `SaveReader` and walks its payload with `ParkWorld`; the game opens no `.TPWS` yet, though harnesses read them with `SaveReader`.
@@ -1682,7 +1684,7 @@ It makes one `ModelEntity` per mesh, resolves each material as `{textureDirector
 
 So **anything that computes its own normals in engine space must hand them over with Y and Z already exchanged**, or that line turns them on their side: a flat ground's `(0,0,1)` becomes `(0,1,0)` and level land is lit as though it were a wall. Ground lit that way renders dark and muddy, and **it is invisible in a build, because nothing is wrong except the picture.**
 
-Related: `vAmbient = g_flAmbient > 0.0 ? g_flAmbient : 0.4` — world draws leave `g_flAmbient` at zero and take the shader's flat 0.4, so geometry is never unlit. **If something looks black, suspect the normal, not the light.** And the shader's ambient is a single float, so `ThemeEngine.AmbientLightLevel` (a colour, 0xFF555568) cannot be applied without changing what every draw is handed.
+Related: in the lobby, `vAmbient = g_flAmbient > 0.0 ? g_flAmbient : 0.4`, so geometry is never unlit. In a park, `g_flParkLight` switches the shader to the original's lighting, per vertex: the ambient colour `g_vAmbientColour` plus the sun's colour times the facing to `g_vLightTravels`, clamped (`park-engine.md`, "The lighting model"). **If something looks black, suspect the normal, not the light.**
 
 **Careful:** `Vertex.Position` is **`OpenTPW.Vector3`**, not `System.Numerics.Vector3`, and both are in scope in any file that uses the engine — a plain `using System.Numerics` makes `Vector3` ambiguous.
 

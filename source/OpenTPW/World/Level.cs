@@ -9,6 +9,9 @@ public class Level
 	public RootPanel Hud { get; set; }
 	public Sun SunLight { get; set; }
 
+	/// <summary>A park's lighting, or null where the scene is not a park - see <see cref="OpenTPW.ParkLight"/>.</summary>
+	public ParkLight? ParkLight { get; set; }
+
 	/// <summary>
 	/// What distance fades to. Static so the shaders' per-draw uniform fill can reach it the same
 	/// way it reaches the sun.
@@ -240,25 +243,27 @@ public class Level
 		// orange.
 		FogColour = Balance.Colour( "ThemeEngine.FogColour", FogColour );
 
-		// LightNormal is written in the original's axes, where Y is up, so it swaps into this engine's
-		// Z-up space the same way a model's vertices do. It is read here as the direction the light
-		// travels, which puts the sun above the park rather than below it - the reading that makes
-		// physical sense, and a CHOICE rather than a finding: nothing traced it as far as the shading
-		// itself, so travels-versus-toward is still unconfirmed. Placed far enough away that its
-		// direction barely changes across a thousand-unit park, which is what makes a point light
-		// stand in for a sun.
+		// The park's light, as the original lights it (FUN_005741b0; docs/exe/park-engine.md, "The
+		// lighting model"): every vertex gets the ambient colour plus the sun's colour times its facing
+		// to the sun, each channel clamped. LightNormal is the direction the light travels - the original
+		// normalises it and never negates it - written in the original's Y-up axes, so it swaps into this
+		// engine's Z-up space the way a model's vertices do. All three are read once, as the original
+		// reads them once in state 9 (FUN_004080e0, applied by FUN_00458590).
 		var lightNormal = Balance.Vector( "LightNormal", new Vector3( 0.4f, -0.8f, 0.4f ) );
 		var travels = new Vector3( lightNormal.X, lightNormal.Z, lightNormal.Y ).Normal;
 
+		ParkLight = new ParkLight( Balance.Colour( "ThemeEngine.AmbientLightLevel", new Vector3( 0.333f ) ), travels );
+		Log.Info( $"{ThemeName}: lit per vertex by ambient {ParkLight.Ambient} and a sun travelling {travels}" );
+
 		SunLight = new Sun()
 		{
+			// Nothing in a park reads the position: the park's lighting takes only the direction. It is
+			// kept because ModelEntity hands it to the shader with every draw, and stands far along the
+			// sun's direction so that anything reading it would see the same sun.
 			Position = new Vector3( 480f, 425f, 0f ) - (travels * 4000f),
 
 			// ThemeEngine.DirectionalLightLevel, 0xFFFFFFD8 for every park the game ships - a white
-			// barely warmed at the blue end. AmbientLightLevel (0xFF555568) is deliberately not applied:
-			// the shader's ambient is one float, not a colour, and world draws leave it at zero and take
-			// the shader's own 0.4. Giving a park a coloured ambient means changing what every draw is
-			// handed, which is a job of its own.
+			// barely warmed at the blue end.
 			Color = Balance.Colour( "ThemeEngine.DirectionalLightLevel", Vector3.One )
 		};
 
