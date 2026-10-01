@@ -93,6 +93,34 @@ public static partial class Input
 	}
 
 	/// <summary>
+	/// Whether a key of this button's binding came up this frame with exactly the binding's modifiers held: the original's
+	/// key-up, which looks its row up by the key let go and the modifiers (<c>FUN_0040c990</c>), once however long the
+	/// key was held, its repeats included.
+	/// </summary>
+	/// <remarks>
+	/// Unlike <see cref="Released"/>, a modifier pressed or let go under the held key is no key-up. The modifiers are read
+	/// as the frame ends, as <see cref="NoModifierHeld"/> says (<c>docs/QUEUE.md</c> Q120).
+	/// </remarks>
+	public static bool KeyUp( InputButton button )
+	{
+		return !TextCaptured && KeyUpFrom( button, Keyboard.KeysDown, KeysReleased );
+	}
+
+	internal static bool KeyUpFrom( InputButton button, IReadOnlyCollection<Key> keysHeld, IReadOnlyCollection<Key> keysReleased )
+	{
+		if ( !Bindings.TryGetValue( button, out var binding ) || HeldIn( keysHeld ) != binding.Modifiers )
+			return false;
+
+		foreach ( var key in binding.Keys )
+		{
+			if ( keysReleased.Contains( key ) )
+				return true;
+		}
+
+		return false;
+	}
+
+	/// <summary>
 	/// Forgets every key currently held, for the windows where the game pumps the desktop's events
 	/// and throws them away: a loading screen, a minimised window, and a window without the focus.
 	/// </summary>

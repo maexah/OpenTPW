@@ -658,6 +658,8 @@ Camcorder mode is why a park loads a sky the orbit camera shows only as a margin
 
 It is **shortcuts action 16, key `'C'` (`0x43`), no modifier**, and it has two ways in — that key and the gadget button id 99.
 
+The key acts on its **release**, both ways. In orbit the park runs its tables on a key-up (`FUN_0040c990`; `scenes.md`, "The park Escape route"). In first person the viewfinder layer's `FUN_00488a00` latches on the key-down (`0x1000a`, `FUN_0040c900`) and on the key-up (`0x1000b`) leaves first person when the key is `0x1b` or `FUN_0040c870( key, modifiers )` finds action 16; action 15 calls `FUN_004a9380` instead.
+
 `FUN_00481a10` is:
 
     uVar2 = FUN_0046cff0();       // build a mode object, vtable 0x006fead0

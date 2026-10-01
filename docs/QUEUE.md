@@ -3972,12 +3972,26 @@ artifacts are listed in `docs/history/README.md`.
   - **Not checked:** an order dependence through any other static (`ParkState.Current`, `Level.Current`, the options)
     that running each class alone would not show; MSTest 2 has no random order.
 
-- [ ] **Q118. The camcorder key acts on its press, both ways.** Found by Q57. The original's C is shortcuts row 16
+- [x] **Q118. The camcorder key acts on its press, both ways.** Found by Q57. The original's C is shortcuts row 16
   (`0x0040c5c0`), run on the key's release as every row is (`FUN_0040c990`), and first person is left on a key-up whose
   action is camcorder (`FUN_00488a00`, the same exit as Escape's; `scenes.md`, "The park Escape route").
   `ParkOrbitCameraMode.Update` enters and `ParkCamcorderCameraMode.Update` leaves on `Input.Pressed( InputButton.CamcorderMode )`,
   and neither says so at the site. Confirm: hold C in orbit, then in first person - nothing until each release; `state`'s
   camera height and a screenshot.
+  - **Done 2026-10-01** on `alexah/240-camcorder-key-on-the-release`. Read again in Ghidra: `FUN_00488a00`'s key-down
+    (`0x1000a`) only latches (`FUN_0040c900`); its key-up (`0x1000b`) leaves first person when the key is `0x1b` or
+    `FUN_0040c870( key, modifiers )` finds action 16. New `Input.KeyUp`: a key of the binding let go this frame with
+    exactly its modifiers held, so a modifier pressed under the held key is no release (`Input.Released` would fire on
+    it). Both camera modes read it, each citing its address.
+  - **Tests.** `ParkCamcorderKeyOnReleaseTests`, 2: real key events through `Input.UpdateFrom` and `Camera.Update` over
+    the real modes. Four mutations, each predicted and each as predicted: either site back on `Pressed` turns both red;
+    `KeyUp` as the release edge, or without its modifier test, turns the Ctrl one red.
+  - **Confirmed in the game** (`q118confirm.py`, silent, jungle, 1280x720, C held 2.4 s through XTEST; `main` at
+    `86a29ce` as the control, `q118/control`, and the fix, `q118/fix`). `state`'s cam z: orbit 49. Control: mid-hold
+    already 5 (first person), the release changed nothing; held in first person, already back to 49. Fix: mid-hold 49,
+    after the release 5; held in first person 5, after the release 49 - all four as predicted. Shots looked at: the
+    gadget while held in orbit, the viewfinder frame after the release and while held down, the gadget again after.
+    save/ unchanged. Ctrl+C was not pressed in the game: it is Close Park; the test covers it.
 
 - [ ] **Q116. In first person a left press still reaches the park.** Found by Q56's review. Entering first person hides
   layer 0 (`FUN_004a2ac0( 0 )`, `park-engine.md`, "Whose a right press is"), so no press reaches `Park_MouseMessageProc`;

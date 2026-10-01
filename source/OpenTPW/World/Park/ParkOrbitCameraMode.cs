@@ -168,8 +168,10 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		// Down to the ground and back, the way the original's 'C' does - see ParkCamcorderCameraMode.
 		// Handled here rather than somewhere central because a camera mode is what knows when it should
 		// give way, which is how LobbyCameraMode takes its own keys. Not while a menu holds the park,
-		// or the key would swap the camera out from under an open window.
-		if ( Level.Current?.PausedByWindow() != true && Input.Pressed( InputButton.CamcorderMode ) )
+		// or the key would swap the camera out from under an open window. On the key's release: C is the shortcuts
+		// table's row 16 (0x0040c5c0), and the park runs its tables on a key-up (FUN_0040c990; docs/exe/scenes.md,
+		// "The park Escape route").
+		if ( Level.Current?.PausedByWindow() != true && Input.KeyUp( InputButton.CamcorderMode ) )
 		{
 			ParkCamcorderCameraMode.Enter();
 			return;

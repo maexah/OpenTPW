@@ -275,7 +275,9 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		if ( Level.Current?.PausedByWindow() == true )
 			return;
 
-		if ( Input.Pressed( InputButton.CamcorderMode ) )
+		// The viewfinder layer leaves first person on a key-up whose action is camcorder, found by key and modifier
+		// alike (0x00488a00), as Escape's exit is - see ParkFrontEnd.MenuKey.
+		if ( Input.KeyUp( InputButton.CamcorderMode ) )
 		{
 			Leave();
 			return;

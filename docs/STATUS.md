@@ -62,7 +62,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
   (Q92), and a bought queued thing starts open (Q93).
 - Nothing shows what the hand holds (`CARRY_PREVIEW_MARKERS`, `STAFF_CARRY_PREVIEW`); any cell takes a candidate (Q40).
 - The fly-in's fade to black is not drawn (Q61). Keys: Escape over the player slots opens the game menu (Q64) and closes
-  no park screen (Q119); C (Q118) and Ctrl+H act on the press, F8 is not built (Q65); modifiers count as the frame ends
+  no park screen (Q119); Ctrl+H acts on the press, F8 is not built (Q65); modifiers count as the frame ends
   (Q120). A disabled button still takes the pointer (Q66); presses the original stops reach the park (Q113, Q115, Q116).
 - The happiness gauge draws two copies of its bar, split down the middle (`docs/PLAYER-GAPS.md` gap 5; unmeasured).
   Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43). A voice is not clamped to 16 bits as the original's is, only the mix (`docs/exe/audio.md`).
@@ -77,8 +77,8 @@ the tip cannot name it. Read the current state from the repository, which cannot
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q199, Q200, Q200b, Q201, Q201b, Q179, Q179b, Q179c, Q179d, Q180, Q181, Q181b, Q182, Q182b, Q183, Q185, Q186, Q187, Q189, Q190, Q191, Q192, Q193, Q194, Q195, Q196, Q202, Q203, Q106 are ticked**; next **Q188** (the object windows' P model), which Alexah wants worked
-together, not started alone. Until then Q118, Q116, Q87, then Q197. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q199, Q200, Q200b, Q201, Q201b, Q179, Q179b, Q179c, Q179d, Q180, Q181, Q181b, Q182, Q182b, Q183, Q185, Q186, Q187, Q189, Q190, Q191, Q192, Q193, Q194, Q195, Q196, Q202, Q203, Q106, Q118 are ticked**; next **Q188** (the object windows' P model), which Alexah wants worked
+together, not started alone. Until then Q116, Q87, then Q197. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -108,12 +108,12 @@ together, not started alone. Until then Q118, Q116, Q87, then Q197. Gaps 4, 5, 7
 
 | | | measured |
 |---|---|---|
-| Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q106 |
-| Tests | **1572**, 0 fail, 0 skip with the game | 2026-10-01, after Q106 |
-| Tests without the game | **645** ran, **927** skipped, of 1572 | 2026-10-01, after Q106 |
-| Build warnings | 123 | 2026-10-01, after Q106 |
+| Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q118 |
+| Tests | **1574**, 0 fail, 0 skip with the game | 2026-10-01, after Q118 |
+| Tests without the game | **647** ran, **927** skipped, of 1574 | 2026-10-01, after Q118 |
+| Build warnings | 123 | 2026-10-01, after Q118 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-10-01 (Q106).** `alexah/239-tests-pass-alone`: every test class passes run alone; the run makes the log first and aborts if a test leaves a `ParkPeople` behind. **Earlier:** `238` (Q196), `236` (Q195), `235` (Q194), `234` (Q193), `233` (Q203), `232` (Q202), `231` (Q202 queued), `230` (Q192), `229` (Q191), `228` (heads follow), `227` (Q190), `226` (Q189), `225` (Q187), `224` (Q186), `223` (Q185), `222` (Q183), `220` (Q182b), `218` (Q182), `217` (Q181b), `216` (Q181), `215` (Q180), `214` (heads), `213` (Q179d), `212` (Q179c), `209`-`211` (Q179b), `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-10-01 (Q118).** `alexah/240-camcorder-key-on-the-release`: C goes down into first person and back up on its release, a modifier under it no release. **Earlier:** `239` (Q106), `238` (Q196), `236` (Q195), `235` (Q194), `234` (Q193), `233` (Q203), `232` (Q202), `231` (Q202 queued), `230` (Q192), `229` (Q191), `228` (heads follow), `227` (Q190), `226` (Q189), `225` (Q187), `224` (Q186), `223` (Q185), `222` (Q183), `220` (Q182b), `218` (Q182), `217` (Q181b), `216` (Q181), `215` (Q180), `214` (heads), `213` (Q179d), `212` (Q179c), `209`-`211` (Q179b), `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
