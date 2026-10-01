@@ -3466,11 +3466,15 @@ artifacts are listed in `docs/history/README.md`.
     (three or four ticks). Shots `S1-running`, `S2-bought`, looked at. No code; no test. Skeptics `wf_850d5f4f-228`
     (core held; added: a message box in a tick pauses the clock, the engine's clamp runs 65 ticks, a third timing ring).
 
-- [ ] **Q182b. A frame's ticks read one instant: the build.** From Q182's decode (`park.md`, difference 6). Hand every
-  tick of a frame one script instant and start a triggered clip at the frame's snapshot, where `ParkRides.MillisecondsAt`
-  steps each tick 31 ms on; its comment's reason (a one-tick `WAIT` coming due at once) does not hold for the engine,
-  whose deadline is set from the same instant the later ticks read. Reached at a hitch (a first load: 96 ms, Q182).
-  The engine's 2000 ms clamp also runs 65 ticks where `GameClock` runs 64. Confirm: a census of a script's `WAIT` and a clip's frame across a forced long frame, predicted first, and a shot.
+- [ ] **Q182b. Each tick keeps its own instant: say the deviation.** From Q182's decode (`park.md`, difference 6).
+  The engine hands every tick of a frame the frame's one instant, so a script's wait ends only on a frame boundary and a
+  clip triggered mid-catch-up starts from nought: frame-rate dependent (about 7 ms late at 144 fps, up to a frame at
+  10). Alexah, 2026-10-01: keep OpenTPW's frame-independent instants (`ParkRides.MillisecondsAt`, a tick 31 ms after
+  the last) as a deliberate deviation, not copied. Say it at `MillisecondsAt`, replacing its comment's reason (a
+  one-tick `WAIT` coming due at once, which does not hold for the engine), and at `RideScript.StartAnimation`; mark
+  difference 6 in `park.md` as kept by decision. Separately, match the engine's 2000 ms clamp, which runs 65 ticks
+  where `GameClock` runs 64 (`0x0054f49b`), or say that too. Confirm: a stall forced past 2 s, the tick count across
+  it in a census, predicted first, and a shot.
 
 - [ ] **Q183. A script's walks are stepped in its own turn, where the engine steps every script's once a frame.** Found
   by Q175's decode (`ride-operation.md`, `FUN_00557ab0` and `FUN_00557d80`). `RideScript.StepTheWalks` runs at the head
