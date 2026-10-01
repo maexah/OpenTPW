@@ -1,3 +1,4 @@
+using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.IO;
@@ -1077,6 +1078,129 @@ public class ParkTickTests
 		finally
 		{
 			people.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
+	/// <b>Every walk onto a ride in the shipped park is noticed within one tick of coming due</b> (Q183).
+	///
+	/// <para>
+	/// At a sixtieth of a second a frame runs at most one tick, so the tick a slot changes in is known to the
+	/// millisecond: its instant is <see cref="GameClock.Ticks"/> × 31. A slot first seen walking was started on
+	/// that instant, so it is due that plus its leg, and the tick it is first seen arrived must be no earlier than
+	/// that and less than a tick later. Three guests are sent to the Jungle Spray, whose legs (1100, 700, 1100 ms) come
+	/// due 16, 13 and 16 ms before a tick. They never walk off here: the lane's clip has no player without the
+	/// drawn park, so <c>GETANIM_CH</c> never lets them go, and a walk off is checked in
+	/// <see cref="RideScriptWalkTests.AFinishedWalkOffKeepsTheLegItWalked"/>. <b>Mutations:</b> stepping the walks
+	/// in each script's own turn instead (up to eight ticks late) and not stepping them from the park's tick at all
+	/// (nobody arrives) each fail an assertion here.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void EveryWalkIsNoticedWithinOneTickOfComingDue()
+	{
+		var world = World();
+		var state = new ParkState( world );
+		var catalogue = new ParkItemCatalogue( Theme, data );
+		var rides = new ParkRides( Theme, world, catalogue, data );
+
+		var people = new ParkPeople( world, new ParkBalance( Theme, easyMode: true ),
+			() => ParkRides.GateIsOpen, state, catalogue,
+			thingId => rides.Scheduler.Find( rides.ScriptFor( thingId ) ) );
+
+		const float Tick = GameClock.TickSeconds * 1000f;
+
+		// Per script and slot: the handle walking, the state last seen, and when its walk comes due.
+		var seen = new Dictionary<(int Script, int Slot), (int Handle, RideScript.WalkState State, float Due, int? Leg)>();
+		int arrivedOn = 0, arrivedOff = 0;
+		var sent = new HashSet<int>();
+		var sentArrived = new HashSet<int>();
+		float latest = float.MinValue;
+
+		try
+		{
+			EnterPark();
+
+			// Three guests on the stock Jungle Spray (thing 14), its three lanes' legs 1100, 700 and 1100 each way,
+			// as the console's admit and send make them (Q184): nobody chooses a walk-on ride in this run on their own.
+			const int JungleSpray = 14;
+
+			// Kind 3, as Q184's run: a kind 0 sent there goes on to another ride.
+			for ( var i = 0; i < 3; ++i )
+			{
+				var guest = people.AdmitInside( 55, 30, 3 );
+				Assert.AreNotEqual( 0, guest, "the park would not take a guest at (55,30)" );
+				Assert.IsNull( people.SendAsChosen( guest, JungleSpray ), "the guest would not go to the Jungle Spray" );
+				sent.Add( guest );
+			}
+
+			for ( var frame = 0; frame < 40000; ++frame )
+			{
+				Frame( AFrame );
+				rides.Update();
+				people.Update();
+
+				Assert.IsTrue( GameClock.TicksDue <= 1, $"frame {frame} ran {GameClock.TicksDue} ticks" );
+
+				if ( GameClock.TicksDue == 0 )
+					continue;
+
+				var instant = GameClock.Ticks * Tick;
+
+				foreach ( var script in rides.Scheduler.Scripts )
+				{
+					foreach ( var walking in script.Walking() )
+					{
+						var key = (script.Id, walking.Slot);
+						seen.TryGetValue( key, out var before );
+						var same = before.Handle == walking.Handle && before.State != RideScript.WalkState.Free;
+
+						if ( walking.State is RideScript.WalkState.WalkingOn or RideScript.WalkState.WalkingOff )
+						{
+							if ( !same || before.State != walking.State )
+								seen[key] = (walking.Handle, walking.State, instant + walking.Leg!.Value, walking.Leg);
+
+							continue;
+						}
+
+						if ( same && before.State is RideScript.WalkState.WalkingOn or RideScript.WalkState.WalkingOff
+							&& before.State != walking.State )
+						{
+							var late = instant - before.Due;
+							latest = Math.Max( latest, late );
+
+							Assert.IsTrue( late >= 0f && late < Tick,
+								$"script {script.Id} slot {walking.Slot}: {before.State} due {before.Due} noticed at {instant}, {late} ms after" );
+
+							if ( walking.State == RideScript.WalkState.Done )
+							{
+								++arrivedOff;
+								Assert.AreEqual( before.Leg, walking.Leg, "a finished walk off keeps the leg it walked" );
+							}
+							else
+							{
+								++arrivedOn;
+
+								if ( sent.Contains( walking.Handle ) )
+									sentArrived.Add( walking.Handle );
+							}
+						}
+
+						seen[key] = (walking.Handle, walking.State, before.Due, walking.Leg);
+					}
+				}
+			}
+
+			Console.WriteLine( $"{arrivedOn} arrived on, {arrivedOff} arrived off, latest {latest} ms after due" );
+
+			CollectionAssert.AreEquivalent( sent.ToList(), sentArrived.ToList(),
+				"each of the three guests sent should have arrived on a lane" );
+		}
+		finally
+		{
+			people.Delete();
+			rides.Delete();
 			Entity.ApplyDeletions();
 		}
 	}

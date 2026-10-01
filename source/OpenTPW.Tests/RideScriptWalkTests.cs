@@ -238,6 +238,7 @@ public class RideScriptWalkTests
 		{
 			clock += 600f;
 			script.Turn( clock );
+			script.StepTheWalks( clock );
 		}
 
 		Assert.AreEqual( 0, script["VAR_LETMEON"],
@@ -338,12 +339,52 @@ public class RideScriptWalkTests
 			Word( Opcode.END ) ) );
 
 		// Two turns, but the body runs to its END on the first, and a script that has ended takes no
-		// further turn: the stepper never runs again, the rider is still walking off when both WALKGETs
-		// ask, and both answer nought. Only NotImplemented is asserted.
+		// further turn. Nothing steps the walks here (the park's tick does), so the rider is still walking
+		// off when both WALKGETs ask, and both answer nought. Only NotImplemented is asserted.
 		off.Turn( 0f );
 		off.Turn( 10_000f );
 
 		Assert.AreEqual( 0, off.NotImplemented, "an instruction in the second script is unimplemented" );
+	}
+
+	/// <summary>
+	/// <b>A finished walk off keeps the leg it walked</b>: the engine writes its state alone (<c>0x00558018</c>), where
+	/// arriving on restamps start (<c>0x00557e79</c>). With no model every leg is 100 ms. Restamping the walk off's
+	/// start leaves its leg at nought or below, and fails this.
+	/// </summary>
+	[TestMethod]
+	public void AFinishedWalkOffKeepsTheLegItWalked()
+	{
+		var script = new RideScript( Build( walkSlots: 1,
+			Word( Opcode.WALKON ), Rider, 1, 1, 1, 1, 1, 1,
+			Word( Opcode.END ) ) );
+
+		script.Turn( 0f );
+		script.StepTheWalks( 31f );
+
+		Assert.AreEqual( RideScript.WalkState.WalkingOn, script.Walking().Single().State, "arrived before the leg was walked" );
+
+		script.StepTheWalks( 124f );
+
+		var carried = script.Walking().Single();
+		Assert.AreEqual( RideScript.WalkState.Carried, carried.State, "not arrived on once the leg was walked" );
+		Assert.IsNull( carried.Leg, "a rider being carried walks no leg" );
+
+		var off = new RideScript( Build( walkSlots: 1,
+			Word( Opcode.WALKON ), Rider, 1, 1, 1, 1, 1, 1,
+			Word( Opcode.WALKOFF ), Rider,
+			Word( Opcode.END ) ) );
+
+		off.Turn( 0f );
+		off.StepTheWalks( 93f );
+
+		Assert.AreEqual( RideScript.WalkState.WalkingOff, off.Walking().Single().State, "walked off before the leg was walked" );
+
+		off.StepTheWalks( 124f );
+
+		var done = off.Walking().Single();
+		Assert.AreEqual( RideScript.WalkState.Done, done.State, "not done once the walk off's leg was walked" );
+		Assert.AreEqual( 100, done.Leg, "a finished walk off keeps the leg it walked" );
 	}
 
 	/// <summary>
@@ -385,6 +426,7 @@ public class RideScriptWalkTests
 			clock += 600f;
 			animations.Advance( (int)clock );
 			script.Turn( clock );
+			script.StepTheWalks( clock );
 		}
 
 		Assert.AreEqual( 0, script["VAR_LETMEON"], "the sideshow never took the visitor on" );
@@ -395,6 +437,7 @@ public class RideScriptWalkTests
 			clock += 600f;
 			animations.Advance( (int)clock );
 			script.Turn( clock );
+			script.StepTheWalks( clock );
 		}
 
 		Assert.AreEqual( Rider, script["VAR_LETMEOFF"],
@@ -433,6 +476,7 @@ public class RideScriptWalkTests
 			{
 				clock += 600f;
 				script.Turn( clock );
+				script.StepTheWalks( clock );
 			}
 
 			if ( script["VAR_LETMEON"] == 0 )
@@ -551,6 +595,7 @@ public class RideScriptWalkTests
 			clock += 248f;
 			animations.Advance( (int)clock );
 			script.Turn( clock );
+			script.StepTheWalks( clock );
 
 			foreach ( var walking in script.Walking() )
 			{

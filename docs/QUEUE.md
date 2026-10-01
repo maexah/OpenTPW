@@ -3487,7 +3487,7 @@ artifacts are listed in `docs/history/README.md`.
     1544 pass 0 skip; 633 ran 911 skipped without; 123 warnings. Review `wf_f1594c0e-584` (Opus, read-only): every
     address held; the line said "frame" for the backlog, fixed.
 
-- [ ] **Q183. A script's walks are stepped in its own turn, where the engine steps every script's once a frame.** Found
+- [x] **Q183. A script's walks are stepped in its own turn, where the engine steps every script's once a frame.** Found
   by Q175's decode (`ride-operation.md`, `FUN_00557ab0` and `FUN_00557d80`). `RideScript.StepTheWalks` runs at the head
   of a running script's turn, every eighth tick, and restamps start at both arrivals; the engine's `FUN_00557ab0` steps
   every script in the list once a park frame, after the 31 ms catch-up loop (`0x0054fa08`), and restamps start only on
@@ -3500,6 +3500,18 @@ artifacts are listed in `docs/history/README.md`.
   the site. Match the restamp: start only on arriving on the ride (`0x00557e79`), the state alone on arriving off
   (`0x00558018`). Confirm: each promotion's instant against the clock in a census, within one tick, predicted first,
   and a shot.
+  - **Done 2026-10-01, `alexah/222-walks-once-a-tick`.** `RideScriptScheduler.StepTheWalks` steps every script's
+    walks, newest first, and `ParkRides.OnUpdate` calls it once a tick right after that tick's `Advance`, at its instant;
+    `Turn` no longer steps them. The deviation is said at both sites (`0x0054fa08`, now in `addresses.md`). Start is
+    restamped on arriving on only; a finished walk off keeps its leg, which the `rides` census now shows. Each arrival
+    logs `arrived on|off at T ms, due D, L ms after`. Game (`q183/run1/`, silent, stock jungle park, Q184's three kind-3
+    guests sent to the Jungle Spray, `save/` unchanged, predicted first): 6 of 6 arrivals, 13 ms after due for the 700
+    leg and 16 for each 1100, against up to 248 before; paused on one, `state` read ticks 381, × 31 = 11811 ms, its
+    arrival instant. Shots `on-handle44`, `on-handle45`, looked at. Tests: `ParkTickTests.EveryWalkIsNoticedWithinOne
+    TickOfComingDue` (the park run, three arrivals at 16, 13, 16) and `RideScriptWalkTests.AFinishedWalkOffKeepsTheLeg
+    ItWalked`; stepping in the turn again, dropping the park's call, and restamping the walk off each turn one red.
+    Worktree: 1546 pass 0 skip; 633 ran 913 skipped without; 123 warnings. Review `wf_00a61c40-a32` (Opus, read-only): no defect; three stale comments and the address row
+    fixed.
 
 - [ ] **Q185. Correct what our own pages say wrong.** Found by the fork review of 2026-09-30 (Aluzed's
   `github.com/aluzed/OpenTPW-decomp`; its items are named by id, and `CLAUDE.local.md` has the path), each re-checked

@@ -370,5 +370,16 @@ public sealed class RideScriptScheduler
 		}
 	}
 
+	/// <summary>
+	/// Carries every script's walking riders along and promotes the ones who have arrived - the engine's
+	/// <c>FUN_00557ab0</c>, which walks the whole list, due a turn or not. Called once a tick, after
+	/// <see cref="Advance"/>, where the engine calls it once a frame: see <see cref="RideScript.StepTheWalks"/>.
+	/// </summary>
+	public void StepTheWalks( float now )
+	{
+		for ( int i = _entries.Count - 1; i >= 0; --i )
+			_entries[i].Script.StepTheWalks( now );
+	}
+
 	private readonly record struct Entry( int Id, RideScript Script );
 }

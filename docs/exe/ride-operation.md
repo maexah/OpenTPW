@@ -2733,7 +2733,9 @@ the Totem's cart 0.063 from rest, worked out), but a ride left off screen mid-cy
 engine takes from a face of a morphing mesh is counted `WALK_NODE_ON_A_FACE` (none in Lost Kingdom). A miss, an unposed
 record, a negative id and a walking script with no model, which the engine's stepper does not survive, are counted
 (`WALK_NODE_MISS`, `WALK_NODE_UNPOSED`, `WALK_NODE_NEGATIVE_ID`, `WALK_NODES_NO_MODEL`) and walk the shortest leg. It
-also steps a script's walks inside that script's turn, where the engine steps every script's once a frame (Q183).
+steps every script's walks once a tick, after that tick's turns (`RideScriptScheduler.StepTheWalks`), where the engine
+steps them once a frame after its catch-up loop: kept by decision (Q183), so an arrival is noticed within 31 ms at any
+frame rate. Its restamp matches the engine's: start on arriving on, the state alone on arriving off.
 
 **Walk-slot declarations across Lost Kingdom** (header word `0x1c`): incagod 40; Lookout, Totem, tvsim 20; balloon, giftshop, steak 10; Hyenas, Junspray 3; Squark 1. `WALKGET` appears in all of them, which makes it the corpus's dominant dismissal.
 

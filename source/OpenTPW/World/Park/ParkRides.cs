@@ -1061,6 +1061,11 @@ public sealed class ParkRides : Entity
 			ParkState.Current?.TrackRides.Cars.Tick();
 			Scheduler.Advance( MillisecondsAt( i ) );
 			ParkState.Current?.TrackRides.Cars.PushSpeedWords();
+
+			// The walks after the scripts, as the engine's order has them, but once a tick where the engine's
+			// FUN_00557ab0 runs once a frame past this loop (0x0054fa08): a deviation kept by Alexah's decision,
+			// so an arrival is noticed within 31 ms whatever the frame rate (docs/QUEUE.md Q183).
+			Scheduler.StepTheWalks( MillisecondsAt( i ) );
 		}
 
 		// And then, once, whatever those ticks asked for is shown. The engine advances its animation players

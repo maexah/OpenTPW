@@ -282,7 +282,7 @@ public sealed class RideScript
 
 	/// <summary>
 	/// Every walk slot in use - the console's ride census, and what a test reads a leg from. The leg is the one being
-	/// walked, and null for a slot carried or done, whose start <see cref="StepTheWalks"/> has restamped.
+	/// walked, or for a slot done the walk off it walked, and null for a slot carried.
 	/// </summary>
 	public IEnumerable<(int Slot, int Handle, WalkState State, int From, int To, int? Leg)> Walking()
 	{
@@ -295,7 +295,7 @@ public sealed class RideScript
 
 			var off = walking.State is WalkState.WalkingOff or WalkState.Done;
 
-			var walked = walking.State is WalkState.WalkingOn or WalkState.WalkingOff;
+			var walked = walking.State is not WalkState.Carried;
 
 			yield return (slot, walking.Handle, walking.State, off ? walking.OffFrom : walking.WalkNode,
 				off ? walking.OffTo : walking.HeadNode, walked ? (int)(walking.Due - walking.Start) : null);
@@ -1108,8 +1108,9 @@ public sealed class RideScript
 		//
 		// A script reads channel state through RideAnimations.Trigger, RoleOn and AnimationOn, and all three
 		// read it as the last sweep left it, as the engine does (0x00473315).
-
-		StepTheWalks( now );
+		//
+		// Nor are the walks stepped here: the scheduler steps every script's after the tick's turns
+		// (RideScriptScheduler.StepTheWalks), so a turn sees them as the last tick left them.
 
 		while ( _budget > 0 && Running )
 			Step( now );
@@ -1126,14 +1127,17 @@ public sealed class RideScript
 	/// ride that swallowed its riders - the exact shape of green feature this project keeps catching.
 	/// </para>
 	/// <para>
-	/// <b>The cadence differs from the engine's and it is named rather than hidden.</b> There the stepper
-	/// runs once per script per FRAME, from the positioner <c>FUN_00557ab0</c>; here it runs once per
-	/// script TURN, which is every eighth tick unless <c>TURBO</c> asked otherwise. Because the ramp is
-	/// computed from the clock - <c>(now - start) * 1000 / (due - start)</c> - and not accumulated, a
-	/// coarser cadence samples the same ramp rather than running it slower: a rider still finishes at the
-	/// same instant, it is simply noticed up to a turn later. Start is restamped at both ends here; the engine
-	/// restamps it only on arriving on the ride (<c>0x00557e79</c>) and leaves a finished walk off's alone
-	/// (<c>0x00558018</c>), so its save keeps the walk off's leg; nothing here saves it (docs/QUEUE.md Q183).
+	/// <b>Its cadence is a deliberate deviation, kept by Alexah's decision</b> (docs/QUEUE.md Q183). The engine's
+	/// positioner <c>FUN_00557ab0</c> runs this for every script once a park FRAME, after the 31 ms catch-up loop
+	/// (<c>0x0054fa08</c>), which ties when an arrival is noticed to the frame rate (7 ms late at 144 fps, 33 at
+	/// 30). Here <see cref="RideScriptScheduler.StepTheWalks"/> runs it for every script once a TICK, after that
+	/// tick's turns: the engine's order (the walks after the scripts), and an arrival noticed within 31 ms, as
+	/// at the engine's own ~30 fps. The ramp is computed from the clock - <c>(now - start) * 1000 / (due - start)</c>
+	/// - and not accumulated, so the cadence only samples it: a rider finishes at the same instant either way.
+	/// </para>
+	/// <para>
+	/// Start is restamped only on arriving on the ride (<c>0x00557e79</c>); a finished walk off is given its
+	/// state alone (<c>0x00558018</c>), so it keeps the leg it walked, as the engine's save does.
 	/// </para>
 	/// <para>
 	/// <b>What is deliberately absent is every position.</b> The engine spends most of
@@ -1143,7 +1147,7 @@ public sealed class RideScript
 	/// <see cref="_bounceBase"/> already lives with.
 	/// </para>
 	/// </summary>
-	private void StepTheWalks( float now )
+	public void StepTheWalks( float now )
 	{
 		for ( var slot = 0; slot < _walk.Length; ++slot )
 		{
@@ -1158,11 +1162,20 @@ public sealed class RideScript
 
 			if ( leg <= 0f || (now - walking.Start) * WalkComplete / leg >= WalkComplete )
 			{
-				walking.State = walking.State == WalkState.WalkingOn
-					? WalkState.Carried
-					: WalkState.Done;
+				var on = walking.State == WalkState.WalkingOn;
 
-				walking.Start = now;
+				Log?.Info( $"{Name}: walk slot {slot} handle {walking.Handle} arrived {(on ? "on" : "off")} at {now} ms, "
+					+ $"due {walking.Due}, {now - walking.Due} ms after" );
+
+				if ( on )
+				{
+					walking.State = WalkState.Carried;
+					walking.Start = now;
+				}
+				else
+				{
+					walking.State = WalkState.Done;
+				}
 			}
 		}
 	}

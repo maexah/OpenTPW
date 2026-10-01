@@ -2272,7 +2272,7 @@ public sealed class ParkPeople : Entity
 
 			var aboard = script.Bouncing().ToArray();
 
-			// Every walk slot in use and, while it is walked, its leg, which is the whole of what a walk-on ride's timing
+			// Every walk slot in use and, while it is walked or once a walk off is done, its leg, which is the whole of what a walk-on ride's timing
 			// is: the one WALKON or WALKOFF worked out from the two nodes.
 			var walking = script.Walking().ToArray();
 
