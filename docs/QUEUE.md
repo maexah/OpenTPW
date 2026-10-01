@@ -3298,13 +3298,43 @@ artifacts are listed in `docs/history/README.md`.
   the go's length first (`VAR_DURATION` 25 × 30 × 31 ms = 23.25 s from `BUMP 3`); 4 boats photographed floating
   empty before anyone boards; riders let off, each match log reading excitement 42, no more than 4 on at once;
   and put the bug back (never set `0x20`) and see the new test go red.
-- [ ] **Q179c. The Hot Pot's boats move and bump each other during a go. Decode first.** Alexah (2026-09-30): *they
+- [x] **Q179c. The Hot Pot's boats move and bump each other during a go: the decode.** Done 2026-09-30,
+  `alexah/212-decode-the-hot-pot-motion`; FileFormats `sam.md` names the four bumper types and the speed they inherit.
+  - **Decoded** (`park.md`, "How a bumper ride's cars move"; the functions named `Bumper_*` and `TrackRides_Tick` in
+    Ghidra): the two passes of the track tick, the target (a chase 3 in 16, else a buoy, next or random, patience 3
+    buoys or 90 ticks), the lead pursuit, the steering (turn by the record's step; thrust only with `0x4000` and not
+    `0x80000`, so only a boat with riders in a go drives), the step (friction, the Hot Pot's own heading ease), the
+    pairwise bump (each pair kicked twice from one snapshot, restitution over 1024), the rim's reflection, and the
+    performance: the script's speed word, 60 as bought, lerped into thrust 10, friction 990, turn 11, restitution 1060.
+    Measured over all four bumper types' templates and arenas (-1, -6, -11, -14). Skeptics `wf_ab4da4ce-b87` (three
+    Opus): the double kick, the turn's flags, the terminal speed (247, not 262), -3's template, -6's friction 976,
+    the push on every scheduler visit; all corrected.
+  - **Confirmed against the original under Proton** (`q179c/boatlog.py`, the reference park patched to research the
+    Hot Pot, restored afterwards; its clock 1.56 times real time, so ticks only): predicted first, the record read
+    performance 60, thrust 10, friction 990, turn 11, restitution 1060; two goes of 750 ticks; the decoded step
+    reproduced 2308 of 2323 logged transitions exactly (the 15 others are three torn reads); top speed 228; no boat
+    past the rim; filled boats waiting swung their steering heading and stood still. Photographed (`q179b/orig/go-*`,
+    four boats moving with wakes) and plotted (`q179c/go1-paths.png`: the two boats with riders drive through the
+    buoys, the two empty ones move only when struck).
+  - **OpenTPW's baseline** (`q179c/baseline.py`, `base1/`, silent, `save/` unchanged): predicted first, in a go the four
+    boats stood where they were for 54 ticks and `BUMPER_CAR_MOTION` grew by exactly 4 × 54; photographed.
+  - **Not confirmed:** the bump's impulse and the rim's reflection were read in the disassembly and by the skeptics,
+    not replayed against the log (the step check skipped boats near another or the rim).
+
+  The item as written: Alexah (2026-09-30): *they
   have physics, and try to bump into each other during the ride's run.* Decode the bumper family's motion, which
   Q179 left out: `FUN_0054a040` (the next target: a random buoy of the eight `FUN_00545890` lays, or with chance
   3/16 another car of the ride when it has two or more), `FUN_00547f50` (the step: velocity, heading by atan2, and
   the emitters, none for the Hot Pot), and `FUN_00546c80`'s pairwise pass (`FUN_005497b0`, `FUN_005494d0`,
   `FUN_00547170`), with the fixed-point units and the arena radius (template `+0x08` 768, `+0xc0`). Measure over
   all four bumper scripts' cars. Confirm against the original under Proton: the boats' paths in a go, photographed.
+- [ ] **Q179d. The Hot Pot's boats move and bump each other during a go: the build.** From Q179c's decode (`park.md`,
+  "How a bumper ride's cars move"). In `ParkBumperCars`: the performance from the script's speed word, the target,
+  the chase, the steering, the step and the Hot Pot's heading ease, the pairwise bump and the rim, in the track tick's
+  two passes; the draws from the park's generator. The other types' particles and sounds stay counted. Confirm in the
+  game against `q179c/go1.jsonl`'s numbers: a go of 750 ticks, top speed under 247, no boat past the rim, only boats
+  with riders driving; photographed in a go; and put the bug back (thrust without `0x4000`) and see the test go red.
+
 - [ ] **Q180. A loaded park's scripts take their turns on the save's ticks.** Found by Q174c's decode (`park.md`, "The
   scheduler"). The `RSSE` module's header puts the scheduler's globals back (`0x005598d7`): its tick counter (6,055 in
   the shipped park) and the next script handle (16); each script keeps its saved handle at `+0x08`, so its turn

@@ -993,7 +993,7 @@ A list node comes from `DAT_00877b8c`: `+0` peep, `+4` handle, `+8` seat node (-
 | 4 | `FUN_00549db0( h, 0 )` | Not closed, and `+0x5c` below both `+0x64` and 64: launches a car from the pool, timed to `+0x04`; it takes the whole boarding list and seats it; the car or 0 in the register. |
 | 5 | none | Answers the object's `+0x2c`, `mIsTrackRideValid`. |
 | 6 | `FUN_00544a10` | Unless closed: state 0, the boarding list onto the leaving list's tail; bumper cars timed 0 and set `0x20`. "Close ride". |
-| 7 | `FUN_00544840` | Types -1, -2, -3 and -14: state 1, whatever it was. The karts and water, only from 0 (1 or 2, and the start buoy). Then the performance. "Open ride". |
+| 7 | `FUN_00544840` | Types -1, -2, -3, -6, -11 and -14: state 1, whatever it was. The karts and water, only from 0 (1 or 2, and the start buoy). Then the performance. "Open ride". |
 | 8 | `FUN_00544c80` / `FUN_00544e50` | Non-zero: `+0x54` = 2, smoke at each car's emitter, Hot Pot cars anim `0xc`. Zero: `+0x54` = 0, and only from 2 "Ride Fixed", smoke killed, anim 5. |
 | 9 | `FUN_00544c00` / `FUN_00544e50` | Non-zero: `+0x54` = 1, "Ride worn out". Zero: as 8's. |
 | 10 | `FUN_00544b50` | Removes every car (their riders to the leaving list), then closes. |
@@ -1055,7 +1055,7 @@ up to 100 tries of a radius `rand % arena` and an angle `rand & 0x1ff`, the poin
 `z = centre - sin·r >> 8`, kept on the 100th try or the first clear of every other live car by their two radii
 (`+0x64`); then `0x4000` cleared, a heading `+0x50`/`+0x54` = `rand & 0x1ff`, the emitters looked up (`0x100` ids 2 and
 1), and for the Hot Pot alone flags `0x3000000` and a second model, supplemental mesh 0 (`b_wake.md2`). Its next
-target, a buoy or (3 in 16, with two cars or more) another car, is the motion's (Q179c). **The arena** is the
+target, a buoy or (3 in 16, with two cars or more) another car, is the motion's ("How a bumper ride's cars move", below). **The arena** is the
 collision object `FUN_00545890` lays at `+0xc0`: centre `+0x74`, `+0x78` = the placer's x and z plus `0x600`, radius
 `0x1200` for -1, `0x1100` for -11 and `0x1600` for -3, -6 and -14; its eight buoys ring it at `0xc00`. **The placer**
 (`FUN_00529e10`) passes x and z = (cell + `Bumper.<turn>XAdjust`/`YAdjust` + its own offset) × 3072, the offsets
@@ -1084,6 +1084,133 @@ differences, turned `((heading - 0x100) & 0x1ff)` 512ths of a turn; its wake (fl
 0.7 higher. **A rider is attached to the car's seat node**, found as `0x80` and its seat id (`FUN_0044b220`) and
 attached by `FUN_0044b410`: the `b_car`'s one
 is `Head1` (id 1, flags `0x100000b1`); a second rider of a car has no node and is still counted seated.
+
+### How a bumper ride's cars move
+
+Read for Q179c, first-hand in Ghidra (the functions are named there, `Bumper_*` and `TrackRides_Tick`), checked by three
+skeptics (`wf_ab4da4ce-b87`) and against the original's memory in a go (below). Units are the placer's: 3072 to a cell,
+a heading in 512ths of a turn whose direction is (sin, cos) in (x, z), the sine table above, every product of it
+divided toward nought per axis. A heading from an offset is `ftol( 256 − atan2( dx, −dz ) × c × 256 )`, `c` the double
+at `0x700eb8` (0.3183...); `ftol` truncates. A distance (`Bumper_Distance`, `FUN_00549020`) is `ftol( sqrt )` of the
+offsets halved together until x is at most `0x8000` and z at most `0x7fff`, shifted back.
+
+**Each 31 ms track tick** (`TrackRides_Tick`, `FUN_00546c80`) makes two passes over every live car in the pool. The
+first, for each car: clear `0x200000`, `Bumper_CarTick` (`FUN_005474b0`: the timer above, then the target and the
+thrust), then, if still live, `Bumper_StepCar` (`FUN_00547f50`). The second, for each car: if its collision object
+lacks `0x80` and it lacks `0x200`, the bump against **every** other such car in the pool; then, for every car,
+`Bumper_KeepInObject` (`FUN_005497b0`), `Bumper_PushOffObstacles` (`FUN_005494d0`) and `Bumper_PlayCarSound`
+(`FUN_00547170`). Nothing in either pass reads the ride's state, so empty boats are pushed about and kept in the pot
+while the ride loads.
+
+| Car | | Record (`Bumper_SetPerformance`, `FUN_00545180`) | |
+|---|---|---|---|
+| `+0x34`, `+0x38` | x, z | `+0x20` | thrust, lerp of `+0x30` to `+0x40` |
+| `+0x3c`, `+0x40` | velocity | `+0x24` | friction, of `+0x34` to `+0x44`, in 1024ths |
+| `+0x44`, `+0x48` | the velocity after this tick's friction, before any bump | `+0x28` | turn, of `+0x38` to `+0x48`, 512ths a tick |
+| `+0x4c` | speed, `ftol( sqrt( vx² + vz² ) )` | `+0x2c` | restitution, of `+0x3c` to `+0x4c`, in 1024ths |
+| `+0x50` | steering heading | `+0x68` | arrival radius, 1024 for all four |
+| `+0x54`, `+0x58`, `+0x5c` | drawn heading; the heading it turns to; its turn this tick | `+0x90`, `+0x94` | the arena centre again |
+| `+0x64`, `+0x68` | radius (template `+0x08`); thrust bonus, 0 (launch zeroes it; only the karts' and water's arms write it) | `+0xa8`, `+0xac` | first buoy; buoys |
+| `+0x6c`, `+0x70` | the point steered at | | |
+| `+0x74`, `+0x78` | its offset from the target (x, z) | | |
+| `+0x7c`, `+0x80` | buoy slot; car chased (its pool index) | | |
+| `+0x8c` | patience | | |
+| `+0x98` | the collision object it is in | | |
+
+**The performance** is `clamp( p, 0, 100 )` at `+0x1c`, each of the four `lo + ( hi − lo ) × p / 100`. The placer lays
+it from the template (50); `BUMP 7` sets it again from `+0x1c`; the save loader from the saved dword (`0x00543788`);
+and **each scheduler visit of the ride's script pushes the script's speed word** (`0x00551844`, `FUN_005516b0`, through
+the thing's `+0x28`), whether or not a turn ran, logging "Set ride performance to %d". The word is the ride's operating
+speed, pushed by the constructor and an upgrade only when `InitSpeed` is over nought (else the loader's 50): 60 for
+all four bumper rides as bought, none of which sets `Upgrades[0].InitSpeed` over `Rides.sam`'s 60.
+
+| BumperType | ride | radius | thrust | friction | turn | restitution | at 60 | arena, buoys |
+|---|---|---|---|---|---|---|---|---|
+| -1 | jungle Hot Pot | 768 | 8-12 | 960-1010 | 8-14 | 1000-1100 | 10, 990, 11, 1060 | `0x1200`, ring `0xc00` |
+| -6, -14 | hallow and space `bumper` | 896 | 10-16 | 940-1000 | 6-12 | 1000-1100 | 13, 976, 9, 1060 | `0x1600`, ring `0x1000` |
+| -11 | fantasy `bbugs` | 896 | 10-16 | 940-1000 | 6-12 | 1000-1100 | 13, 976, 9, 1060 | `0x1100`, ring `0xb00` |
+
+(-3, which no item names, has duration 4350, radius 768 and -6's ranges and arena.) The ring is eight buoys, the
+first at the centre's (0, +ring), each next the last turned by `( x, z ) → ( (181x + 181z) / 256, (181z − 181x) / 256 )`,
+so the Hot Pot's are (0, 3072), (2172, 2172), (3071, 0), (2171, −2171), (0, −3069), (−2169, −2169), (−3067, 0),
+(−2168, 2168).
+
+**The next target** (`Bumper_Retarget`, `FUN_0054a040`, bumper arm, after the placement above). Unless the car holds
+`4` or `0x40000`, one draw of the park's generator (`FUN_00516330`): with its low four bits under 3, and the ride's
+`+0x5c` at least 2, it **chases a car**, chosen by a second draw `%` the count from the live cars of the same ride in
+a joined object, not itself, not flagged `0x20` (empty ones too); its pool index to `+0x80`, patience 90, flags
+`| 0x8004` with `2`, `8`, `0x10`, `0x20`, `0x40`, `0x40000` and `0x100000` cleared. Otherwise **a buoy**: if the car
+holds `8` (it was at one), a draw with its low four bits under 4 takes the next buoy after its own; else a draw `%`
+the ring's count steps on from the first. Flags `| 0x18008` with `2`, `4`, `0x10`, `0x20`, `0x40`, `0x40000` and
+`0x100000` cleared, patience 3. The lead's looped sound starts here when it has none, is flagged `0x4000`, is not
+unloading and the ride is running: at `BUMP 12`'s retarget, never at placement.
+
+**What a car steers at** (`Bumper_CarTick`).
+- **A car** (flag `4`, tested first): patience goes down every tick; at nought, or with the chased car not live or
+  flagged `0x20` or `0x40000`, retarget. Otherwise lead it: `t = min( distance / max( own speed, 1 ), 24 )`, its
+  own speed taken afresh from `+0x3c`; aim at the chased car's position plus its velocity × `t`; if that point is in
+  neither the chased car's object nor any other not flagged `0x40`, pull it inside the nearest joined one
+  (`Bumper_NearestJoinedObject`, `FUN_00549070`): the centre plus `(offset / 8) × radius / ( distance(offset / 8) + 32 )`.
+  `| 0x10000` every tick, so the point (plus the car's last offset) is taken again each time.
+- **A buoy** (flag `8`, `0x20` clear): `Bumper_SteerToward` the buoy. If the car holds both `0x8000` (every target
+  sets it, only a launch clears it) and `0x40000` (bumped), retarget. Within the arrival radius of the point steered at
+  (`<=`), patience goes down by one: at nought, retarget; otherwise take the ring's next buoy, the old x offset
+  becoming the z offset and the x offset `512 − draw % 1024`, and `| 0x10000`. Outside it the point stays fixed. So a
+  car rounds two more buoys after the one it chose, then chooses again.
+
+**The steering** (`Bumper_SteerToward`, `FUN_00547c60`). With `0x10000` and an object: if the bare target lies in an
+object joined to the car's (the same object for a bumper ride), the point steered at is the target plus the car's
+offset, and `0x10000` is cleared; if it lies in no object, the bare target is stored and the function answers −1 at
+once, no turn or thrust, which the caller reads as an arrival (unreachable here). Then the bearing
+`b = ( heading_to_point − +0x50 ) & 0x1ff`, folded to 0-256 with its side kept. **Turn**: if `b` is over half the
+record's turn (toward nought), `+0x50` moves the whole turn toward it, so it can overshoot; this needs `0x4000` and
+the ride not broken (`+0x54` 2). **Thrust**: if `b` is under `clamp( distance >> 9, 22, 48 )` (22 anywhere in the Hot
+Pot's pot), velocity `+= ( thrust + bonus ) × ( sin, cos )` of `+0x50`, three quarters of it in an object not whole
+(`& 0x1e` not `0x1e`); this needs `0x4000` without `0x80000`, and the ride not broken. `0x4000` is cleared at placement
+and at the end of the car's go, and set only by `BUMP 12`, with `0x80000`, which `BUMP 3` clears: **only a car with
+riders, in a go, drives**; a filled boat waiting for its go swings `+0x50` but does not move, and an empty boat only
+drifts where it is pushed.
+
+**The step** (`Bumper_StepCar`). Friction `k` is the record's; `k × 7 / 10` for a car flagged `0x80000` (tested
+first), else 1000 for a broken ride. Velocity `= v × k / 1024`, copied to `+0x44`; speed taken; position
+`+= velocity`. Then the heading, only while running (else `+0x5c` = 0): **the Hot Pot alone** turns its drawn heading
+toward the steering heading, `+0x58 = +0x50`, `+0x5c = wrap( +0x50 − +0x54 ) × speed / 1000`; every other bumper type
+turns toward its velocity's heading at the same rate. `+0x54 = ( +0x54 + +0x5c ) & 0x1ff`. Thrust is at most 9 an axis
+(the table peaks at 255), so a Hot Pot boat's steady speed is at most 247 a tick (232 along an axis), 2.4 to 2.6
+cells a second. Each tick it also moves the lead's looped sound to the car, pitched by speed / 3, and the emitter `+0x2c` to
+node `+0x24`; for types other than -1, every 32nd tick in a go, a draw of the private generator at `0x00877b90`
+(`× 214013 + 2531011`, which the Hot Pot draws too) spawns particle 1 one time in four. The draw (`FUN_00546280`)
+eases the car across the tick by its velocity and `+0x5c`, scaled by the draw's argument.
+
+**A bump** (in `TrackRides_Tick`, car A the outer loop's, B the inner's). With `0 < d < rA + rB`: `h` the heading
+from A to B, `u` the heading of A's `+0x44` less B's, minus `h`. **Closing** (`u` under 128 or over 384):
+`j = ftol |vA − vB| × cos u` (of the `+0x44` pair), `s = j × e / 1024` with B's restitution `e`; B's velocity
+`+= s × ( sin, cos ) h` and B `| 0x50000`; A's `−= ( j − s ) × ( sin, cos ) h`. No bump writes `+0x44`, so the pair's
+second meeting, from B's side, kicks again from the same snapshot with the roles swapped. At a restitution of 1060,
+`j − s` is negative once `j` is 29 or more, and A is pulled after B. **Not closing**: overlap
+`o = offset − offset × ( rA + rB ) / d` on each axis, B moved by `−o × e / 1024`, A by `o − o × e / 1024`; positions
+only. **The bump's sound** is asked only in the closing branch, when `s` is over 130 and neither car holds
+`0x200000` (then both do): code 3 ("CRUNCH") for the karts, 5 for the -3, -6, -11 and -14 arenas. The Hot Pot's
+boats bump silently.
+
+**Kept in the pot** (`Bumper_KeepInObject`). A car whose position leaves its object takes the first other object not
+flagged `0x40` that holds it, `| 0x10000`; in none, it is put on the rim: velocity (with this tick's bumps)
+`× e / 1024`, then turned by `2 × ( h_out − h_v ) − 256`, `h_out` the heading from the centre and `h_v` that of
+`+0x44`, which reflects it; position `centre + offset × radius / d`. `+0xa4`, the stuck count, is −1 for every bumper
+car, so it never counts. `Bumper_PushOffObstacles` acts on objects flagged `0x40`, which only the unused type −2 lays.
+
+**Measured in the original** (Q179c, `q179c/boatlog.py`, the reference park patched to research the Hot Pot, bought at
+speed 60 and capacity 4; its clock ran 1.56 times real time at 8 days' uptime, so only ticks were counted, not
+seconds). The record read performance 60, thrust 10, friction 990, turn 11, restitution 1060, as predicted. Two goes
+lasted 750 ticks each. The decoded step (turn, thrust, friction, position, with no other car within 2000 and the rim
+600 away) reproduced 2308 of 2323 logged transitions exactly; the other 15 fall on three pairs of adjacent ticks, read
+while the game was writing them. Top speed 228; no boat past the rim; all eight buoys targeted; chases seen. In the
+first go two boats held riders: they drove in long curves through the buoys, and the two empty boats moved only when
+struck. Filled boats waiting for the go swung `+0x50` and stood still. Photographed (`q179b/orig/go-*.png`) and plotted
+(`q179c/go1-paths.png`).
+
+**Differences a build must keep.** Every draw that steers is the park's generator, shared with everything else, so no
+two runs match boat for boat; a build matches the rules and the numbers, not the paths.
 
 ### The ride object
 

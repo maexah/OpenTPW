@@ -68,7 +68,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 - With no work the mechanic, handyman and entertainer stand where the original's walk about (Q133); staff make no
   sound (Q135). Guests and rides read `GameClock.Ticks / 8`, not `mGameTick` (Q132); a load brings one guest (Q26); the bus waits (Q131).
 - Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), a ride walked into in first person, a coaster's
-  excitement and level, the charge's sound. **The Hot Pot's boats stay where they were launched** (Q179c); a
+  excitement and level, the charge's sound. **The Hot Pot's boats stay where they were launched** (Q179d; decoded in Q179c); a
   load re-phases turns (Q180), misreads kept times (Q181).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
@@ -77,7 +77,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q199, Q200, Q200b, Q201, Q201b, Q179, Q179b are ticked**; next **Q179c** (decode first: the boats' motion); the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q199, Q200, Q200b, Q201, Q201b, Q179, Q179b, Q179c are ticked**; next **Q179d** (the build of the boats' motion); the fork review's Q185-Q197 follow Q183. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -101,7 +101,7 @@ Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q1
   stale major, sale's clear and save's fields; Q171's bounds; Q172b's saved track ride, tier and coaster (Q167) and a Hot Pot
   rider's 42 (Q179b); Q173's tier 3 and zero divisors. Q174b's raw re-entry and last-frame trigger (no run) and loop (census
   only); Q174c's saved mark, timer and queue; Q175b's Rat Race; Q176's `0x80000000` draw (its let-go in a throwaway build);
-  Q177b's walk-away and a played save's counts; its satisfaction, census only (nothing here shows it). Q177c's withdrawals off, red stamp, a sold coaster's nought, the ticket count and the year's change. Q177d's docks, fat, salt, the speed's hold and floor and a hire's speed. Q177e's balloon built again after a later visit, put away on boarding, deleted on going home, and read from a save; its bob and trail (census only). Q177f's low detail (two kids, one staff bank) and a theme with more than one costume. Q198b's promotion, loans, batch and six months in the red. Q200b's selection edges and the wheel's clamp of a short list. Q201b's mystery row and a played save's research. Q178b's refused line (no shipped file has one). Q179b's boat yaw sense (needs the original) and a saved Hot Pot (its cars not restored, counted).
+  Q177b's walk-away and a played save's counts; its satisfaction, census only (nothing here shows it). Q177c's withdrawals off, red stamp, a sold coaster's nought, the ticket count and the year's change. Q177d's docks, fat, salt, the speed's hold and floor and a hire's speed. Q177e's balloon built again after a later visit, put away on boarding, deleted on going home, and read from a save; its bob and trail (census only). Q177f's low detail (two kids, one staff bank) and a theme with more than one costume. Q198b's promotion, loans, batch and six months in the red. Q200b's selection edges and the wheel's clamp of a short list. Q201b's mystery row and a played save's research. Q178b's refused line (no shipped file has one). Q179b's boat yaw sense (needs the original) and a saved Hot Pot (its cars not restored, counted). Q179c's bump impulse and rim reflection: read, not replayed against the original's log.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
@@ -115,4 +115,4 @@ Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q1
 
 ## Recent
 
-**2026-09-30 (Q179b).** `alexah/209-hot-pot-boats`, then its heads and confirmations on `210`, the heads' facing on `211`. **Earlier:** `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-09-30 (Q179c).** `alexah/212-decode-the-hot-pot-motion`, confirmed against the original's memory. **Earlier:** `209`-`211` (Q179b), `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
