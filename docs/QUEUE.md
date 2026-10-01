@@ -3914,7 +3914,7 @@ artifacts are listed in `docs/history/README.md`.
     arithmetic, `FUN_00672cb3` (codec 10), which x87 precision the original decodes under, and the video emulation
     over all 9,412 frames (re-run here on three frames; the full run is the review's).
 
-- [ ] **Q196. `tpw-setup.sh` opens a raw disc image.** Found by the fork review (ui-render-platform-13). Its file
+- [x] **Q196. `tpw-setup.sh` opens a raw disc image.** Found by the fork review (ui-render-platform-13). Its file
   branch (`7z x`, then `bsdtar`) cannot open a CloneCD `.img` or a single-track BIN/CUE `.bin`: raw 2352-byte
   sectors, which both tools refuse. Aluzed's `tools/ccd-img-to-iso.py` (OpenTPW-decomp commit `907d58f`, MIT) turned
   a raw Mode 1 image made from our ISO back into a byte-identical ISO. In the `-f $DISC` branch, detect the 12-byte
@@ -3923,6 +3923,23 @@ artifacts are listed in `docs/history/README.md`.
   trailer (`docs/WORKFLOW.md`, "Commits"). Add the line to `tools/play-the-original/README.md`, "What you need".
   Confirm: the raw image made from `content/SimThemePark.iso` installs as the ISO does; claim real dumps only after
   one is tried.
+  - **Done 2026-10-01** on `alexah/238-raw-disc-image`. The `-f` branch tests the first 12 bytes for the sync
+    (`is_raw_image`) and `raw_to_iso` (python3, already required) copies bytes 16-2063 of each sector into
+    `$DEST/.disc-image.iso`, removed after unpacking. It refuses a cut-short image, any sector without the sync (audio)
+    and any not Mode 1, each with its own message. The fork's Mode 2 Form 1 arm is left out: the disc is Mode 1 and no
+    Mode 2 image could be tried. README "What you need" names `.img`/`.bin` and says no real dump has been tried.
+  - **Measured** (`~/.cache/tpw-q196/`, `mkraw.py`: sync, MSF header, mode 1, EDC/ECC zeroed; 254,110 sectors):
+    predicted the converted `.iso` byte-identical to `SimThemePark.iso`: md5 `7b88dd39...` both. Installed the ISO
+    and the raw image with `--no-menu` (host 7z): 2,487 game files, every md5 equal; only `play.sh` differs, by its
+    folder name; the temporary `.iso` gone. Refusals read on a mode 0, an audio and a cut-short image.
+  - **Bug back** (detection off): the raw install stops, 7z "Cannot open the file as archive", line 163.
+  - **Game:** the original from the raw install (`original.sh` with `TPW_ORIGINAL`, offscreen, silent): player screen
+    at 30.16 fps in the Wine log; shot `q196/orig-raw.png` looked at. OpenTPW `--game` that install (`q196run.py`):
+    predicted `rides` 15 with 16 scripts and q194's 13 keys; read 15, 16, and 14 keys, `STAFF_NO_LINKS_WANDER` once
+    more (its `save/` started empty, so the loading bar was untrained and the run's timing differed; the files are
+    identical). Shot `q196/run1/park.png` looked at: the jungle park, rides, paths, peeps and HUD.
+  - **Not checked:** a real CloneCD or BIN/CUE dump, a multi-track `.bin`, bsdtar's arm (the host has 7z), the
+    no-7z-no-bsdtar refusal.
 
 - [ ] **Q106. `APathCellCostsWhatTheBalanceFileSays` fails when its class runs alone.** Found by Q50h, on `main` as well.
   `ParkPathBuildingTests`' `[TestInitialize]` keeps `GameData.Required()` in a field and never mounts it as the global

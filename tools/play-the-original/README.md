@@ -11,7 +11,9 @@ app menu.
 
 ## What you need
 
-- Your game disc, or a disc image (`.iso`) of it.
+- Your game disc, or a disc image (`.iso`) of it. A raw image works too: a CloneCD `.img` or a single-track BIN/CUE
+  `.bin` (drag in the `.img` or `.bin`, not the `.ccd` or `.cue`). The script turns it into an `.iso` first. This
+  has been tried with a raw image made from an `.iso`, not yet with one made from a real disc.
 - **A no-CD version of the game's `.exe`. You have to get this yourself.** The `TP.exe` on the disc has old copy
   protection that doesn't work on modern computers.
 - About 3.5 GB of free space.

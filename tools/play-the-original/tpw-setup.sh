@@ -2,7 +2,7 @@
 # tpw-setup.sh - sets up the original Sim Theme Park / Theme Park World (1999) to run on Linux with Proton.
 #
 # What it does, in order:
-#   1. Copies your game disc (or its .iso) into ~/Games/TPW.
+#   1. Copies your game disc (or its .iso, or a raw .img or .bin of it) into ~/Games/TPW.
 #   2. Copies your no-CD .exe in beside it, as TP-nodisc.exe.
 #   3. Downloads GE-Proton 10-34 and MangoHud 0.8.4 from their official GitHub pages into ~/Games/TPW/.tools,
 #      and checks each download against a fixed checksum. (If GE-Proton 10-34 is already in Steam's folder, it uses that.)
@@ -19,7 +19,8 @@
 #
 # Usage:
 #   bash tpw-setup.sh                                  asks you for the disc and the .exe
-#   bash tpw-setup.sh --disc PATH --exe PATH           PATH for the disc can be a folder or an .iso
+#   bash tpw-setup.sh --disc PATH --exe PATH           PATH for the disc can be a folder, an .iso, or a raw
+#                                                      .img (CloneCD) or .bin (single-track BIN/CUE)
 #   options: --dir PATH (install somewhere other than ~/Games/TPW), --no-menu (no app menu entry)
 
 set -euo pipefail
@@ -77,6 +78,33 @@ sha_ok() { # sha_ok FILE ALGO SUM
 	[ "$got" = "$3" ]
 }
 
+# A raw disc image (a CloneCD .img, a single-track BIN/CUE .bin) keeps whole 2352-byte CD sectors, which 7z and bsdtar
+# refuse. It starts with a sector's 12-byte sync: 00, ten FF, 00.
+is_raw_image() { [ "$(head -c 12 "$1" | od -An -tx1 | tr -d ' \n')" = "00ffffffffffffffffffff00" ]; }
+
+# raw_to_iso IMAGE ISO: keeps the 2048 data bytes of each sector (16 to 2063 in a Mode 1 sector) and refuses any sector
+# that holds no files. Adapted from Aluzed's tools/ccd-img-to-iso.py (github.com/aluzed/OpenTPW-decomp, 907d58f), MIT.
+raw_to_iso() {
+	python3 - "$1" "$2" <<'EOF2'
+import sys
+SECTOR, SYNC = 2352, b"\x00" + b"\xff" * 10 + b"\x00"
+with open(sys.argv[1], "rb") as src, open(sys.argv[2], "wb") as dst:
+	n = 0
+	while True:
+		s = src.read(SECTOR)
+		if not s:
+			break
+		if len(s) < SECTOR:
+			sys.exit("Your disc image stops partway through a CD sector, so it looks cut short. Make it again.")
+		if s[:12] != SYNC:
+			sys.exit(f"Sector {n} of your disc image isn't a data sector (it may be music). Use an image of the game disc only.")
+		if s[15] != 1:
+			sys.exit(f"Sector {n} of your disc image is mode {s[15]}, and the game disc is mode 1. Is it the right disc?")
+		dst.write(s[16:16 + 2048])
+		n += 1
+EOF2
+}
+
 download() { # download URL FILE
 	if command -v curl >/dev/null; then curl -fL --retry 3 --progress-bar -o "$2" "$1"
 	elif command -v wget >/dev/null; then wget -q --show-progress -O "$2" "$1"
@@ -102,7 +130,7 @@ if [ -z "$DISC" ]; then
 	done
 fi
 if [ -z "$DISC" ]; then
-	DISC="$(ask_path "Drag your game disc's folder, or your .iso file, into this window, then press Enter:")"
+	DISC="$(ask_path "Drag your game disc's folder, or your disc image (.iso, .img or .bin), into this window, then press Enter:")"
 fi
 
 # Ask for the .exe now and check it, so nothing is copied if it's the wrong file.
@@ -125,11 +153,21 @@ elif [ -d "$DISC" ]; then
 	say "1/5  Copying the disc (about 500 MB)..."
 	cp -r "$DISC"/. "$DEST"/
 elif [ -f "$DISC" ]; then
-	say "1/5  Unpacking the .iso (about 500 MB)..."
-	if command -v 7z >/dev/null; then 7z x -y -o"$DEST" "$DISC" >/dev/null
-	elif command -v bsdtar >/dev/null; then bsdtar -xf "$DISC" -C "$DEST"
-	else die "I can't open .iso files on this computer. Double-click your .iso to open it like a disc, then run me again and drag the opened disc's folder in instead."; fi
-	has_disc_files "$DEST" || die "That .iso doesn't look like the game disc (there's no TP.ICD in it)."
+	say "1/5  Unpacking the disc image (about 500 MB)..."
+	ISO="$DISC"
+	if is_raw_image "$DISC"; then
+		info "It keeps whole CD sectors, so I'm turning it into an .iso first."
+		ISO="$DEST/.disc-image.iso"
+		msg="$(raw_to_iso "$DISC" "$ISO" 2>&1)" || { rm -f "$ISO"; die "${msg##*$'\n'}"; }
+	fi
+	if command -v 7z >/dev/null; then 7z x -y -o"$DEST" "$ISO" >/dev/null
+	elif command -v bsdtar >/dev/null; then bsdtar -xf "$ISO" -C "$DEST"
+	else
+		[ "$ISO" = "$DISC" ] || rm -f "$ISO"
+		die "I can't open .iso files on this computer. Double-click your .iso to open it like a disc, then run me again and drag the opened disc's folder in instead."
+	fi
+	[ "$ISO" = "$DISC" ] || rm -f "$ISO"
+	has_disc_files "$DEST" || die "That disc image doesn't look like the game disc (there's no TP.ICD in it)."
 else
 	die "I can't find '$DISC'."
 fi
