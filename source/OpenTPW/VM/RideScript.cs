@@ -2969,6 +2969,12 @@ public sealed class RideScript
 	private int Read( int index ) => index >= 0 && index < _variables.Length ? _variables[index] : 0;
 
 	/// <summary>
+	/// One of this script's variables by its place, 0 outside the count it declares - how <c>FUN_0055a3e0</c> reads a
+	/// sound script, an <c>EventMap.rse</c>, by index (<c>docs/exe/audio.md</c>, "What an EventMap's slots feed").
+	/// </summary>
+	public int VariableAt( int index ) => index >= 0 && index < Slots ? Read( index ) : 0;
+
+	/// <summary>
 	/// Writes a result as the shared store tail does (<c>0x00555939</c>): the result register whatever
 	/// happens, then the variable only when the destination is one. <c>ADD</c>, <c>COPY</c>,
 	/// <c>FORCEUNLIMBO</c>, <c>GETVARINCHILD</c> and <c>GETVARINPARENT</c> test their destination before they

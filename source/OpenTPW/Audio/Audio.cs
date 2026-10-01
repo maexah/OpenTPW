@@ -408,6 +408,9 @@ public static class Audio
 	/// </summary>
 	private static AudioListener _listener = new( Vector3.Zero, Vector3.Right );
 
+	/// <summary>The listener as <see cref="SetListener"/> last put it. Read under <see cref="Lock"/>.</summary>
+	internal static AudioListener Listener => _listener;
+
 	/// <summary>
 	/// How far a placed sound may be before it starts to fade - see
 	/// <see cref="AudioListener.AttenuationTo"/> for the law, which is one over the distance.

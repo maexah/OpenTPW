@@ -17,8 +17,12 @@ namespace OpenTPW;
 /// on it, reflected. The performance the thrust, friction, turn and restitution are read from is the script's speed word.
 /// </para>
 /// <para>
+/// <b>The lead car's engine</b> starts at its retarget in a go, follows it each tick pitched by its speed, and fades as
+/// it is taken off, through <see cref="Sounds"/> (<c>docs/exe/audio.md</c>, "What an EventMap's slots feed").
+/// </para>
+/// <para>
 /// <b>Not built, and counted where it is reached:</b> the go-karts' and the water ride's arms, whose scripts keep
-/// <c>BUMP</c> a counted no-op; the other bumper types' templates; the cars' sounds, smoke and splashes.
+/// <c>BUMP</c> a counted no-op; the other bumper types' templates; the cars' other sounds, smoke and splashes.
 /// </para>
 /// </summary>
 public sealed class ParkBumperCars
@@ -37,6 +41,38 @@ public sealed class ParkBumperCars
 
 	/// <summary>One map cell in the record's fixed point - 0xc00, so 307.2 a world unit at ten units a cell.</summary>
 	public const int CellUnits = 0xc00;
+
+	/// <summary>The <c>EventMap.rse</c> slot a lead car's looped sound is played from (<c>0x0054a366</c>).</summary>
+	public const int EngineSlot = 0;
+
+	/// <summary>The <c>EventMap.rse</c> slot naming the parameter the step sets to the speed / 3 (<c>0x0054856f</c>).</summary>
+	public const int SpeedSlot = 10;
+
+	/// <summary>
+	/// What a car's sound goes through: the park's <c>cat_rides</c> and the ride's own <c>EventMap.rse</c>, read by slot
+	/// (<see cref="ParkCarSounds"/>). Each answers what the original's call answers - a voice, or nothing once the voice
+	/// has gone, which empties the car's <c>+0x20</c>.
+	/// </summary>
+	public interface ISounds
+	{
+		/// <summary><c>FUN_0051eeb0</c> plays the ride's slot, then <c>FUN_0051c270</c> puts it at the car: a voice, or null.</summary>
+		object? Play( int ride, int slot, int x, int z );
+
+		/// <summary><c>FUN_0051c270</c>: the voice to the car's place; false once the voice has gone.</summary>
+		bool Move( object voice, int x, int z );
+
+		/// <summary><c>FUN_0051bc40</c>: the parameter the ride's slot names set to <paramref name="level"/>; false once gone.</summary>
+		bool SetParameter( object voice, int ride, int slot, int level );
+
+		/// <summary><c>Sound_StopFading</c>, with its 60.</summary>
+		void Fade( object voice );
+	}
+
+	/// <summary>Where the cars' sounds go; null, and none is played or held.</summary>
+	public ISounds? Sounds { get; set; }
+
+	/// <summary>How many looped sounds a lead car has started, for the census and the tests.</summary>
+	public int SoundsStarted { get; private set; }
 
 	/// <summary>A car's flag bits, <c>+0x00</c>.</summary>
 	[Flags]
@@ -241,6 +277,9 @@ public sealed class ParkBumperCars
 
 		/// <summary><c>+0x90</c>: counted up every track tick, the phase its bob is drawn at.</summary>
 		public int Phase { get; internal set; }
+
+		/// <summary><c>+0x20</c>: the looped sound it holds - the lead's engine - or null.</summary>
+		public object? Voice { get; internal set; }
 
 		/// <summary><c>+0x2c</c> not -1: smoke rising from its emitter while the ride is broken.</summary>
 		public bool Smoking { get; internal set; }
@@ -529,6 +568,7 @@ public sealed class ParkBumperCars
 		car.Heading = 0;
 		car.Phase = 0;
 		car.Smoking = false;
+		car.Voice = null;
 		car.VelocityX = car.VelocityZ = car.SteppedX = car.SteppedZ = car.Speed = 0;
 		car.Steering = car.Turn = car.SteerX = car.SteerZ = car.OffsetX = car.OffsetZ = car.Patience = 0;
 		car.Buoy = -1;
@@ -807,13 +847,18 @@ public sealed class ParkBumperCars
 			return;
 		}
 
-		if ( Unload( ride, car, particles: true ) != 0 )
-			return;
+		if ( Unload( ride, car, particles: true ) == 0 )
+		{
+			ride.State = RideState.Loading;
+			car.Flags &= ~(CarFlags)0x7e;
+			Log.Info( $"Bumper: ride 0x{car.Ride:x} empty and loading again at track tick {Ticks}" );
+			car.Animation = RideAnimations.NoRole;
+		}
 
-		ride.State = RideState.Loading;
-		car.Flags &= ~(CarFlags)0x7e;
-		Log.Info( $"Bumper: ride 0x{car.Ride:x} empty and loading again at track tick {Ticks}" );
-		car.Animation = RideAnimations.NoRole;
+		// Either way the unloading arm fades the held sound (0x005478fc) and keeps the handle: it goes once the fade
+		// has, when the step's move answers nought.
+		if ( car.Voice is { } voice )
+			Sounds?.Fade( voice );
 	}
 
 	/// <summary>
@@ -993,6 +1038,15 @@ public sealed class ParkBumperCars
 		}
 
 		car.Heading = (car.Heading + car.Turn) & 0x1ff;
+
+		// The held sound follows the car and is pitched by its speed (0x00548499..0x00548584); a voice that has gone
+		// answers nought, which empties +0x20 until the next retarget starts another.
+		if ( car.Voice is { } voice )
+		{
+			if ( Sounds is not { } sounds || !sounds.Move( voice, car.X, car.Z )
+				|| !sounds.SetParameter( voice, car.Ride, SpeedSlot, car.Speed / 3 ) )
+				car.Voice = null;
+		}
 	}
 
 	/// <summary>
@@ -1184,11 +1238,15 @@ public sealed class ParkBumperCars
 	{
 		if ( RideOf( car.Ride ) is not { } ride )
 		{
+			LetGoOfSound( car );
 			car.Flags = CarFlags.None;
 			return;
 		}
 
 		Unload( ride, car, particles: false );
+
+		// Every type but the go-karts fades its held sound (0x0054b065); the karts' arm plays slot 1, not built here.
+		LetGoOfSound( car );
 
 		if ( (car.Flags & CarFlags.Lead) != 0 )
 			ride.HasLead = false;
@@ -1204,6 +1262,18 @@ public sealed class ParkBumperCars
 			Log.Info( "Bumper: Ride Over - reset to loading" );
 			ride.State = RideState.Loading;
 		}
+	}
+
+	/// <summary><c>Sound_StopFading</c> on the car's held sound, which it then holds no more.</summary>
+	private void LetGoOfSound( Car car )
+	{
+		if ( car.Voice is not { } voice )
+			return;
+
+		Sounds?.Fade( voice );
+		car.Voice = null;
+
+		Log.Info( $"Bumper: car {car.Index} of ride 0x{car.Ride:x} taken off, its sound faded" );
 	}
 
 	/// <summary>
@@ -1236,10 +1306,11 @@ public sealed class ParkBumperCars
 				car.Flags |= CarFlags.Bobs | CarFlags.Wake;
 		}
 
-		// The lead car of a running ride, active and not unloading, starts its looped sound here; the unload fades it.
-		if ( ride.State == RideState.Running && (car.Flags & (CarFlags.Lead | CarFlags.Active | CarFlags.Unloading))
-			== (CarFlags.Lead | CarFlags.Active) )
-			Unimplemented.Report( "BUMPER_CAR_SOUND" );
+		// The lead car of a running ride, active, not unloading and holding no sound, starts its looped sound here
+		// (0x0054a250..0x0054a3a2); the step moves and pitches it, and taking the car off fades it.
+		if ( car.Voice is null && ride.State == RideState.Running
+			&& (car.Flags & (CarFlags.Lead | CarFlags.Active | CarFlags.Unloading)) == (CarFlags.Lead | CarFlags.Active) )
+			StartSound( car );
 
 		if ( (car.Flags & (CarFlags.Chasing | CarFlags.Bumped)) == 0 && (Draw() & 0xf) <= 2 && ride.Cars >= 2 )
 		{
@@ -1270,6 +1341,18 @@ public sealed class ParkBumperCars
 		car.Flags = (car.Flags & ~((CarFlags)0x40076 | CarFlags.New)) | CarFlags.AtBuoy | CarFlags.Resteer | CarFlags.Targeted;
 		car.Buoy = (from + steps) % ride.Buoys.Count;
 		car.Patience = 3;
+	}
+
+	/// <summary>The lead's looped sound, <see cref="EngineSlot"/> of its ride's <c>EventMap.rse</c>, put at the car.</summary>
+	private void StartSound( Car car )
+	{
+		if ( Sounds?.Play( car.Ride, EngineSlot, car.X, car.Z ) is not { } voice )
+			return;
+
+		car.Voice = voice;
+		++SoundsStarted;
+
+		Log.Info( $"Bumper: lead car {car.Index} of ride 0x{car.Ride:x} starts its sound at ({car.X}, {car.Z})" );
 	}
 
 	/// <summary>Whether a live car other than this one is closer than their two radii (<c>0x0054a0e0</c>..<c>0x0054a185</c>).</summary>

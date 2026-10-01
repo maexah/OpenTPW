@@ -1345,7 +1345,8 @@ a joined object, not itself, not flagged `0x20` (empty ones too); its pool index
 holds `8` (it was at one), a draw with its low four bits under 4 takes the next buoy after its own; else a draw `%`
 the ring's count steps on from the first. Flags `| 0x18008` with `2`, `4`, `0x10`, `0x20`, `0x40`, `0x40000` and
 `0x100000` cleared, patience 3. The lead's looped sound starts here when it has none, is flagged `0x4000`, is not
-unloading and the ride is running: at `BUMP 12`'s retarget, never at placement.
+unloading and the ride is running: at the go's own retarget (`BUMP 3`), never at placement or a fill, which find the
+ride loading (measured: the go's first tick; `audio.md`, "The bumper arm's engine").
 
 **What a car steers at** (`Bumper_CarTick`).
 - **A car** (flag `4`, tested first): patience goes down every tick; at nought, or with the chased car not live or
@@ -1379,7 +1380,8 @@ first), else 1000 for a broken ride. Velocity `= v × k / 1024`, copied to `+0x4
 toward the steering heading, `+0x58 = +0x50`, `+0x5c = wrap( +0x50 − +0x54 ) × speed / 1000`; every other bumper type
 turns toward its velocity's heading at the same rate. `+0x54 = ( +0x54 + +0x5c ) & 0x1ff`. Thrust is at most 9 an axis
 (the table peaks at 255), so a Hot Pot boat's steady speed is at most 247 a tick (232 along an axis), 2.4 to 2.6
-cells a second. Each tick it also moves the lead's looped sound to the car, pitched by speed / 3, and the emitter `+0x2c` to
+cells a second. Each tick it also moves the lead's looped sound to the car and sets the parameter the `EventMap`'s slot 10 names to
+speed / 3, which pitches it (`audio.md`, "A voice's two controllers"), and the emitter `+0x2c` to
 node `+0x24`; for types other than -1, every 32nd tick in a go, a draw of the private generator at `0x00877b90`
 (`× 214013 + 2531011`, which the Hot Pot draws too) spawns particle 1 one time in four. The draw (`FUN_00546280`)
 eases the car across the tick by its velocity and `+0x5c`, scaled by the draw's argument.

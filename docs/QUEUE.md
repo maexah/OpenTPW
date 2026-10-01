@@ -3751,7 +3751,7 @@ artifacts are listed in `docs/history/README.md`.
     opcodes, as predicted. The one ride-sound site OpenTPW reaches, the Hot Pot's lead car, is counted
     (`BUMPER_CAR_SOUND`) and unbuilt: Q202.
 
-- [ ] **Q202. The Hot Pot's lead car makes no sound.** Found by Q192 (`audio.md`, "What an EventMap's slots feed");
+- [x] **Q202. The Hot Pot's lead car makes no sound.** Found by Q192 (`audio.md`, "What an EventMap's slots feed");
   queued by Alexah 2026-10-01. `ParkBumperCars.Retarget` counts `BUMPER_CAR_SOUND` where `Bumper_Retarget`'s bumper
   arm (`0x0054a366`) plays the ride's `EventMap.rse` slot 0 through `FUN_0051eeb0` into the car's held voice
   `+0x20`, in the park's `cat_rides`: for the jungle `bumper`, effect 194 (an engine), 0 skipped. Read first, in
@@ -3763,6 +3763,33 @@ artifacts are listed in `docs/history/README.md`.
   the Hot Pot, as `Bump` says. Confirm: buy the Hot Pot, run a go, and show the voice starting, following the car,
   its parameter tracking the speed and fading at the end, in the log beside a screenshot; then the engine sample heard
   in the game's own mix, captured through the disk driver. Put the gate back and the new test must fail.
+  - **Done 2026-10-01** on `alexah/232-hot-pot-car-sound` (FileFormats: its branch 232). Decoded first-hand
+    (`audio.md`, "The bumper arm's engine" and "A voice's two controllers"; FileFormats `sound-categories.md`, the
+    variation header's volume, pitch and two controllers, measured over all 1,595 variations): the start's gate
+    (no voice, `0x404000`, running, not unloading), the step's move and parameter (16, slot 10, = speed / 3, every
+    bumper type), the pitch (-24..36 96ths of an octave by the tables at `0x00782f40`, one step on), and the fades.
+  - **Measured in the original first** (`q202/voicelog.py`, reference park patched and restored; shots
+    `q179b/orig/q202-*`): **my static read said the engine was a one-shot per retarget; the memory said otherwise** -
+    the lead's handle lived the whole go (557 ticks), went 8 ticks after the ride went back to loading, and a new
+    one came with the next go; no other boat held one. That led to the unloading arm's fade (`0x0054788e`), which
+    keeps the handle until the voice has gone.
+  - **Built:** `ParkBumperCars.ISounds` (the car's `+0x20` as `Car.Voice`), `ParkCarSounds` (the `EventMap` read by
+    slot through `RideScriptScheduler.SoundVariable`, `cat_rides` loaded by `ParkAudio`), `Voice.MoveTo` and
+    `SetRate`, the reader's new header fields; the `bumpers` census shows each car's sound.
+  - **Game** (`q202/run.py`, game's own mix by the disk driver, `save/` unchanged): run 1 caught a defect the
+    tests missed - the step's per-tick volume set cancelled the fade, so the engine sounded on after the go (fixed,
+    and a device-backed test added). Run 2, each predicted: L 4 boats loading, nothing held; G one start, the lead's,
+    194 `Engine.mp2`; F 49 censuses in the go, param = speed / 3, pitch and rate as decoded, place × 0.0033036, one
+    voice; E one fade, nothing held 2 s on, boats stay. Mix (`engine.py`, `scan.py`): the engine correlates 0.52-0.92
+    (median 0.67) in every half second of the go at the census's pitch; the mix falls to silence 0.4 s after the
+    go's last running census. Shots `q202/run2/G-go`, `F-go`, `E-after` looked at. Review `wf_c14d721e-f77` (one
+    finding: key 0 was a literal 0, not the effect's `+0x12`; fixed, and the fade test now drives key 16). Run 3 on
+    the final code: the same four matches, the engine 0.54-0.89 through the go, `save/` unchanged; shot looked at.
+  - **Bug put back, tests red:** the start replaced by the old counted no-op (3 red), the lead check dropped (3
+    red), the unloading fade dropped (1 red), the fade guard dropped (1 red).
+  - **Worktree:** 1570 pass, 0 skip with the game; 644 ran, 926 skipped without; 123 warnings; opcodes 77.
+  - **Not done:** the original's engine was not heard (its runs are silent); the volume's group scale
+    (`FUN_006bb860`) and QMixer's volume unit are not read, so 68 is taken as 68 / 100.
 
 - [ ] **Q193. Write down the review's verified facts: saves, particles, sprites, audio.** Found by the fork review
   (fmt-assets-v1, fmt-assets-v2, gap5-1..gap5-4, gap3-6, world-sim-2, economy-6, economy-11, level-build-v2,

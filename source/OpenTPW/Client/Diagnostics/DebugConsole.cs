@@ -730,11 +730,16 @@ public static class DebugConsole
 						report.Add( $"    car {car.Index} at ({car.X},{car.Z}) from centre {off} velocity ({car.VelocityX},{car.VelocityZ}) "
 							+ $"speed {car.Speed} steering {car.Steering} steer ({car.SteerX},{car.SteerZ}) {target} patience {car.Patience} "
 							+ $"heading {car.Heading} timer {car.Timer} anim {car.Animation} "
-							+ $"flags 0x{(int)car.Flags:x} riders [{string.Join( ",", car.Riders.Select( rider => $"{rider.Peep}@{rider.Seat}" ) )}]" );
+							+ $"flags 0x{(int)car.Flags:x} riders [{string.Join( ",", car.Riders.Select( rider => $"{rider.Peep}@{rider.Seat}" ) )}] "
+							+ ( car.Voice is ParkCarSounds.Held held
+								? $"sound effect {held.Effect} '{held.Voice.Name}' param {held.Values[1]} pitch {held.Pitch} rate {held.Voice.Rate:0.000} "
+									+ $"at ({held.Voice.Place?.X:0.0},{held.Voice.Place?.Y:0.0}) playing {held.Voice.Playing}"
+								: "sound none" ) );
 					}
 				}
 
-				Reply( $"bumpers {report.Count} track tick {bumpers.Ticks} boats drawn {ParkBumperBoats.Current?.Standing ?? 0}" );
+				Reply( $"bumpers {report.Count} track tick {bumpers.Ticks} boats drawn {ParkBumperBoats.Current?.Standing ?? 0} "
+					+ $"sounds started {bumpers.SoundsStarted}" );
 
 				foreach ( var entry in report )
 					Reply( entry );

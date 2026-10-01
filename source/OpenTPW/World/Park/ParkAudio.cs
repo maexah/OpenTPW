@@ -196,6 +196,12 @@ public sealed class ParkAudio : Entity
 	/// </remarks>
 	private readonly SoundCategory? _kids;
 
+	/// <summary>The park's <c>cat_rides</c>, which every <c>EventMap.rse</c> slot names an effect of.</summary>
+	private readonly SoundCategory? _rides;
+
+	/// <summary>The park's <c>cat_rides</c>, or null with no sound device or no such category.</summary>
+	internal SoundCategory? Rides => _rides is { IsValid: true } ? _rides : null;
+
 	/// <summary>The screams the rides are holding, each on its own clock - see <see cref="ParkScreams"/>.</summary>
 	private readonly ParkScreams _screams;
 
@@ -324,14 +330,11 @@ public sealed class ParkAudio : Entity
 
 		// A category names its banks relative to the LEVEL folder rather than to the folder its own
 		// .map files sit in - cat_music's bank path reads "Music\Music" - so the root is the level and
-		// the maps are the Music folder beside it. The other three park categories are deliberately
-		// not loaded: cat_ambient's effects are placed emitters that come out of the level's scape.omp
-		// (the OBJ_ chunk FUN_00550e00 reads, type 1 records), cat_rides wants somewhere for a ride's
-		// sounds to GO - the ride runtime itself exists and runs; what is missing is the sink, since
-		// RideEffects records that nothing it starts is drawn or heard - and cat_speech is where the
-		// advisor's five bank-1 responses play from (docs/exe/advisor-park.md, the response table's
-		// +0x10), and a park here says none of them. Loading cat_rides alone would decode three hundred
-		// and six samples for nothing that can yet be heard.
+		// the maps are the Music folder beside it. Two park categories are deliberately not loaded:
+		// cat_ambient's effects are placed emitters that come out of the level's scape.omp (the OBJ_ chunk
+		// FUN_00550e00 reads, type 1 records), and cat_speech is where the advisor's five bank-1 responses
+		// play from (docs/exe/advisor-park.md, the response table's +0x10), and a park here says none of
+		// them. cat_rides is loaded below, for the bumper cars' engines (ParkCarSounds).
 		var root = $"levels/{themeName.ToLowerInvariant()}";
 
 		_music = new SoundCategory( root, $"{root}/Music", "music" );
@@ -344,6 +347,13 @@ public sealed class ParkAudio : Entity
 
 		if ( !_ambient.IsValid )
 			Log.Warning( "Park audio: the global ambient category would not load, so the weather is silent" );
+
+		// The rides' own category, in the level's Sound folder, its banks again relative to the level
+		// ("Sound\Ride"). Every caller of the EventMap's slots plays into it ([0x00803a3c]).
+		_rides = new SoundCategory( root, $"{root}/Sound", "rides" );
+
+		if ( !_rides.IsValid )
+			Log.Warning( $"Park audio: {themeName} has no rides category in {root}/Sound, so the rides are silent" );
 
 		// And the guests' voices, which is where the screams are. Loaded now that something asks for
 		// them: the note above says a category with nowhere for its sounds to go is waste, and this one

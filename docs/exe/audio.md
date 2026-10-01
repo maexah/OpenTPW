@@ -158,8 +158,71 @@ layouts and the jungle values). `FUN_0055a3e0( script, slot )` answers the child
 
 So slot 10 is `VAR_PAR0` of the 11-variable layout and slots 5-8 are `VAR_PAR0`-`VAR_PAR3` of the 10-variable one. **No
 caller reads slot 2**, so the coasters' `VAR_EVT2` (69, not an effect in jungle's `cat_rides`) is never played. Not read:
-what sets the car's case to 2 or 4, the exact gate on each `Bumper_Retarget` arm, where `Bumper_StepCar`'s level comes
-from, and what `DAT_00785a2c` is. **OpenTPW plays none of these** and counts none of them yet.
+what sets the car's case to 2 or 4, the gates on the go-kart and water arms of `Bumper_Retarget`, and what
+`DAT_00785a2c` is. `FUN_0055a3e0` answers 0 for a script with no sound script or a slot past its variable count.
+
+### The bumper arm's engine (read for Q202, measured in the original)
+
+- **The start** (`Bumper_Retarget`, `0x0054a250`..`0x0054a3a2`): only when the car's `+0x20` is 0, its flags hold both
+  `0x4000` and `0x400000` (active and the lead), its ride's `+0x50` is 2 (running) and it lacks `0x20` (unloading). The
+  thing is found by walking the things for one of type 3 whose `+0x28` is the ride's handle; its script's slot 0 is
+  played (`FUN_0051eeb0( script, 0, cat_rides, 0, 0, 0, 0 )`) and the answer put at the car by `FUN_0051c270( voice,
+  x × f, 0, z × f )`, `f` the float at `0x00700f20` (0.0033036, so 302.7 record units to a world unit, where the boats
+  are drawn at 307.2), height 0. Both answers go into `+0x20`.
+- **Each step** (`Bumper_StepCar`'s bumper arm, `0x00548499`..`0x00548584`, every type of it, not only the Hot Pot):
+  while `+0x20` is not 0, `FUN_0051c270` moves it to the car, and `FUN_0051bc40( voice, slot 10, speed / 3 )` sets the
+  parameter slot 10 names (16 for the jungle `bumper`) to `+0x4c / 3`. Each answers the handle, or 0 once the voice
+  has gone (`FUN_006b6620`), and the answer goes back into `+0x20`, so a voice that has ended empties it and the next
+  retarget starts another. No ride state gates the step.
+- **The go's end** (`Bumper_CarTick`'s unloading arm for types -1, -3, -6, -11, -14, `0x0054788e`, by the byte map at
+  `0x00547c30`): after the unload, `Sound_StopFading( +0x20 )` with 60, every unloading tick, **without clearing
+  `+0x20`**; the handle goes when the voice has. **Taking a car off** (`FUN_0054ae50`, `0x0054b065`) fades it the same
+  way. The cars stay when a go ends; only `BUMP 10`, a sale or a capacity cut takes them off.
+- **Measured in the original** (Q202, `q202/voicelog.py`, the reference park patched to research the Hot Pot, bought
+  and queued; two goes logged every track tick): the lead boat's `+0x20` was non-zero from the go's first tick, the
+  same handle for all 557 ticks of it; the ride went back to loading at tick 29575 and `+0x20` read 0 from 29583, 8
+  ticks later; the next go's first tick held a new handle. No other boat held one.
+
+The effect is jungle 194, `Engine.mp2` (447 ms by the map), flagged `0x6` (below): a voice with no timer, so its own tick plays
+the sample again each time its channel ends and the handle lives for the whole go.
+
+## A voice's two controllers
+
+**Which class an effect's flags word makes** (`0x006b6774`..`0x006b67f2`, the play entry): bit `0x4` clear, a
+one-shot; `0x4` with `0x10`, `FUN_006be680`; `0x4` with `0x2`, `FUN_006be610` with `0x400`, `FUN_006be330` with
+`0x100`, else `FUN_006be090` (vtable `0x0070a338`, 194's class); `0x4` alone, `FUN_006bdd30` with `0x400` (the held
+chain), else `FUN_006bdc60`. **The voice's own flags** (`FUN_006bbe90`, `+0x30`): effect `0x8` gives `6`, effect `0x4`
+gives `2`, `0x200` gives `8`, `0x20` gives `0x200`, `+0x11` bit `0x40` gives `0x20000`. **A voice with `2` never
+times out** (`FUN_006bcb60`); one without it is freed at start + length + 250 ms. When its channel ends
+(`0x006bbe40`) it clears `1` and, unless it holds `0x40` or `0x4800`, is marked finished (`0x10`) and freed by the
+next service (`0x006b62d5`). Effect `0x8`'s voice bit `4` asks the mixer for a loop (`0x006be016`, request `0x40`).
+Which of these keeps 194's voice alive across its channel's end was **measured, not read**: the handle lived 557
+ticks over a 447 ms sample.
+
+**The controllers** (`[voice+0x4c]`, eight bytes, `FUN_006b7150`): four keys then four values. Key 0 is the effect
+record's `+0x12`; keys 1 and 2 are the variation header's bytes `+0x16` and `+0x1a` (`FUN_006bbf00`); key 3 is 0.
+`FUN_0051bc40( voice, id, level )` goes to the voice's vtable `+0x28` (`0x006bbb80`): every slot whose key is `id`'s
+low byte takes `level`'s low byte, and a match past slot 0, unless the voice holds `0x4000`, applies them
+(`0x006bbbe0`). Slot 0 is the held chains' zone parameter (above).
+
+**What they drive** (`0x006bc040`, asked with bit 1 for the volume and bit 2 for the pitch): the header's `u16` at
+`+0x18` with that bit takes slot 1's value; else `+0x1c` with that bit takes slot 2's; else none. With a value `v`,
+the volume is `v × (hi − lo) / 100 + lo` over the bytes `+0x0c`/`+0x0d` (`FUN_006bc090`) and the pitch the same over
+the signed bytes `+0x0e`/`+0x0f` (`FUN_006bc170`), the pair swapped first if out of order; with none, a draw from `lo`
+up to, not including, `hi` (`0x00fb1f20`'s generator). Bit 4 of the same masks is the held chain's wait (above).
+Measured over all 1,595 shipped variations: the masks use only bits 1, 2 and 4.
+
+**The pitch** goes to the mixer as a frequency (`FUN_006d2820`, request `0x20`): the channel's own rate times a
+table entry, `0x00782f40 + 4p` above nought and `0x00783540 + 4|p|` below, and those tables hold 2^(k/96) from k = 1,
+so a pitch `p` plays at 2^((p + 1) / 96) of the sample's rate above nought and 2^((p − 1) / 96) below, then
+`QSWaveMixSetFrequency`. **For 194**: key 16 at `+0x16`, mask `+0x18` = 2, pitch -24 to 36, volume 68 to 68: the speed
+/ 3 the step sets moves the pitch from -24 (0.835 of the sample's rate) at rest to +25 (1.207) at a boat's top speed of
+247, at volume 68.
+
+**OpenTPW** builds this for the bumper arm (`ParkBumperCars`, `ParkCarSounds`): the lead's engine looped at 68 / 100,
+moved and pitched each tick, faded with 60 taken as milliseconds. The volume's further scale by the groups' levels
+(`FUN_006bb860`) and QMixer's own volume scale are not read. The coasters', tour ride's and go-karts' slots are not
+built.
 
 ## Node lookup is by id AND a capability flag
 

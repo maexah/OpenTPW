@@ -107,7 +107,7 @@ public sealed class ParkRides : Entity
 		// had - and would stop the one animation a player is waiting to watch.
 		script.Animations = PlayersFor( placed.ThingId, item );
 		script.Nodes = NodesFor( script, placed, item );
-		BindTrackRide( script, placed, item );
+		BindTrackRide( script, placed, item, Scheduler );
 
 		if ( script.Animations.Loaded > 0 )
 			_animated.Add( placed.ThingId );
@@ -367,7 +367,7 @@ public sealed class ParkRides : Entity
 				// what the model is posed from are the same one.
 				script.Animations = PlayersFor( placed.ThingId, item );
 				script.Nodes = NodesFor( script, placed, item );
-				BindTrackRide( script, placed, item );
+				BindTrackRide( script, placed, item, Scheduler );
 
 				// The head table as it was saved, an empty one too, whose length the save gives (FUN_005597a0); after
 				// NodesFor, which sizes a fresh one and gives the heads their nodes. Only where ADDHEAD or DELHEAD reads it.
@@ -1047,7 +1047,8 @@ public sealed class ParkRides : Entity
 	/// What <c>BUMP</c> works on: the thing's track-ride handle and <c>mIsTrackRideValid</c>, and the park's bumper rides,
 	/// with the ride's arena put where the thing stands (<see cref="ParkBumperCars.ArenaCentre"/>).
 	/// </summary>
-	private static void BindTrackRide( RideScript script, ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item )
+	private static void BindTrackRide( RideScript script, ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item,
+		RideScriptScheduler scripts )
 	{
 		script.TrackRide = placed.TrackRide;
 		script.TrackRideValid = placed.IsTrackRideValid;
@@ -1056,6 +1057,9 @@ public sealed class ParkRides : Entity
 			return;
 
 		script.Bumpers = cars;
+
+		// The cars' sounds read the ride's EventMap through the scripts that hold them.
+		cars.Sounds ??= new ParkCarSounds( scripts );
 
 		var (x, z) = ParkBumperCars.ArenaCentre( item, placed.CellX, placed.CellY, placed.Angle );
 		cars.Place( placed.TrackRide, x, z );

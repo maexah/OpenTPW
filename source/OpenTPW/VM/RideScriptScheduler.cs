@@ -163,6 +163,14 @@ public sealed class RideScriptScheduler
 		return null;
 	}
 
+	/// <summary>
+	/// <c>FUN_0055a3e0( id, slot )</c>: the variable at <paramref name="slot"/> of the script that script
+	/// <paramref name="id"/>'s <c>SPAWNSOUND</c> loaded (its <see cref="RideScript.SoundChildId"/>), or 0 with no such
+	/// script or no such slot - which the engine logs and answers 0 to.
+	/// </summary>
+	public int SoundVariable( int id, int slot )
+		=> Find( id ) is { } script && Find( script.SoundChildId ) is { } sound ? sound.VariableAt( slot ) : 0;
+
 	/// <summary>Every script, newest first - the order all of the engine's registry walks take.</summary>
 	public IEnumerable<RideScript> NewestFirst()
 	{

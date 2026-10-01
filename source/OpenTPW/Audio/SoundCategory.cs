@@ -15,6 +15,7 @@ public sealed class SoundCategory
 	{
 		public int Id;
 		public TimeSpan RepeatDelay;
+		public int ParameterId;
 		/// <summary>
 		/// The weighted lists this effect picks between. Most effects have exactly one; hallow's
 		/// repeating ambient effects have three to ten, and space's five to fourteen - see
@@ -84,6 +85,7 @@ public sealed class SoundCategory
 			{
 				Id = file.Effects[i].Id,
 				RepeatDelay = file.Effects[i].RepeatDelay,
+				ParameterId = file.Effects[i].ParameterId,
 				Variations = i < lists.Count ? lists[i] : new List<List<SoundCategoryFile.Sample>>(),
 				Headers = i < headers.Count ? headers[i] : []
 			} );
@@ -195,6 +197,9 @@ public sealed class SoundCategory
 	/// </summary>
 	public IReadOnlyList<SoundCategoryFile.Variation> VariationsOf( int id )
 		=> _effects.FirstOrDefault( effect => effect.Id == id )?.Headers ?? [];
+
+	/// <summary>Effect <paramref name="id"/>'s parameter id, its record's <c>+0x12</c>, or 0 for none or an unknown effect.</summary>
+	public int ParameterOf( int id ) => _effects.FirstOrDefault( effect => effect.Id == id )?.ParameterId ?? 0;
 
 	/// <summary>
 	/// How long effect <paramref name="id"/> waits after finishing before it may replay. Dead by CODE: nothing

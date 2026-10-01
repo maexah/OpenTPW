@@ -57,7 +57,11 @@ public sealed class SoundCategoryFile
 	/// and space's ambient each carry one, and so does jungle's rides category (effect 218). Checked against
 	/// all thirty-one categories the game ships.
 	/// </param>
-	public readonly record struct Effect( int Id, TimeSpan RepeatDelay, int Variations );
+	/// <param name="ParameterId">
+	/// The byte at <c>+0x12</c>: the parameter id a held chain's zones are chosen by, its voice's key 0
+	/// (<c>0x006bbfb1</c>), or 0. Non-zero on exactly the records with bit <c>0x400</c>.
+	/// </param>
+	public readonly record struct Effect( int Id, TimeSpan RepeatDelay, int Variations, int ParameterId = 0 );
 
 	/// <summary>One sample an effect can pick, with the odds of it being the one picked.</summary>
 	/// <param name="Bank">Which of <see cref="Banks"/> it lives in, already zero-based.</param>
@@ -90,8 +94,23 @@ public sealed class SoundCategoryFile
 	/// share, where most files store a running total that the loader turns into shares.
 	/// </param>
 	/// <param name="Zones">Where a held voice may go next, by the value of its parameter.</param>
+	/// <param name="Volume">
+	/// The bytes at <c>+0x0c</c> and <c>+0x0d</c>: the range a voice's volume is taken from, 0-100 - at random, or by a
+	/// controller whose mask has bit 1 (<c>FUN_006bc090</c>).
+	/// </param>
+	/// <param name="Pitch">
+	/// The signed bytes at <c>+0x0e</c> and <c>+0x0f</c>: the range its pitch is taken from, in 96ths of an octave - at
+	/// random, or by a controller whose mask has bit 2 (<c>FUN_006bc170</c>).
+	/// </param>
+	/// <param name="FirstKey">
+	/// The byte at <c>+0x16</c>: the parameter id the voice's first controller answers to, 0 none. Its mask is
+	/// <paramref name="GapByParameter"/>, the <c>u16</c> at <c>+0x18</c>: bit 1 volume, bit 2 pitch, bit 4 the wait.
+	/// </param>
+	/// <param name="SecondKey">The byte at <c>+0x1a</c>: the second controller's parameter id, 0 none.</param>
+	/// <param name="SecondMask">The <c>u16</c> at <c>+0x1c</c>: the second controller's mask, read after the first's.</param>
 	public readonly record struct Variation( int Samples, int GapMin, int GapMax, int GapByParameter,
-		long Weight, IReadOnlyList<Zone> Zones );
+		long Weight, IReadOnlyList<Zone> Zones, (int Low, int High) Volume = default, (int Low, int High) Pitch = default,
+		int FirstKey = 0, int SecondKey = 0, int SecondMask = 0 );
 
 	/// <summary>
 	/// One 8-byte zone record: a held voice whose parameter lies within <paramref name="Low"/> to
@@ -214,7 +233,8 @@ public sealed class SoundCategoryFile
 			effects[i] = new Effect(
 				BitConverter.ToInt32( data, record ),
 				TimeSpan.FromMilliseconds( BitConverter.ToInt32( data, record + (EffectDelayField * 4) ) ),
-				BitConverter.ToInt32( data, record + (EffectVariationField * 4) ) );
+				BitConverter.ToInt32( data, record + (EffectVariationField * 4) ),
+				data[record + 0x12] );
 		}
 
 		return effects;
@@ -325,7 +345,8 @@ public sealed class SoundCategoryFile
 
 		foreach ( var effect in Effects )
 		{
-			var headers = new List<(int Samples, int Zones, int GapMin, int GapMax, int GapByParameter, long Weight)>();
+			var headers = new List<(int Samples, int Zones, int GapMin, int GapMax, int GapByParameter, long Weight,
+				(int, int) Volume, (int, int) Pitch, int FirstKey, int SecondKey, int SecondMask)>();
 			long previous = 0;
 
 			for ( int i = 0; i < effect.Variations; ++i )
@@ -341,7 +362,12 @@ public sealed class SoundCategoryFile
 					BitConverter.ToUInt16( _sfx, offset + 0x10 ),
 					BitConverter.ToUInt16( _sfx, offset + 0x12 ),
 					BitConverter.ToUInt16( _sfx, offset + 0x18 ),
-					runningTotals ? weight - previous : weight ) );
+					runningTotals ? weight - previous : weight,
+					(_sfx[offset + 0x0c], _sfx[offset + 0x0d]),
+					((sbyte)_sfx[offset + 0x0e], (sbyte)_sfx[offset + 0x0f]),
+					_sfx[offset + 0x16],
+					_sfx[offset + 0x1a],
+					BitConverter.ToUInt16( _sfx, offset + 0x1c ) ) );
 
 				previous = weight;
 				offset += VariationHeaderSize;
@@ -362,7 +388,7 @@ public sealed class SoundCategoryFile
 					zones[z] = new Zone( BitConverter.ToInt32( _sfx, offset ) - 1, _sfx[offset + 6], _sfx[offset + 7] );
 
 				variations.Add( new Variation( header.Samples, header.GapMin, header.GapMax, header.GapByParameter,
-					header.Weight, zones ) );
+					header.Weight, zones, header.Volume, header.Pitch, header.FirstKey, header.SecondKey, header.SecondMask ) );
 			}
 
 			effects.Add( variations );

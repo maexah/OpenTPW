@@ -26,8 +26,14 @@ public sealed class Voice
 
 	private volatile bool _stopped;
 
-	/// <summary>Where in the world this is sounding, or null for a sound with no place in it.</summary>
-	private readonly Vector3? _position;
+	/// <summary>
+	/// Where in the world this is sounding, or null for a sound with no place in it. A placed voice can be moved
+	/// (<see cref="MoveTo"/>); a flat one stays flat.
+	/// </summary>
+	private Vector3? _position;
+
+	/// <summary>How many source frames each output frame steps, 1 at the clip's own pitch - see <see cref="SetRate"/>.</summary>
+	private double _rate = 1.0;
 
 	/// <summary>
 	/// How much of this reaches each ear, 0 to 1, and where those are heading as of the last time the
@@ -191,6 +197,35 @@ public sealed class Voice
 			_paused = false;
 	}
 
+	/// <summary>
+	/// Moves a placed voice to <paramref name="position"/>, the original's <c>FUN_0051c270</c>; its balance glides there
+	/// over the next buffer, as it does when the listener moves. A flat voice is left flat.
+	/// </summary>
+	public void MoveTo( Vector3 position )
+	{
+		lock ( Audio.Lock )
+		{
+			if ( _position is null )
+				return;
+
+			_position = position;
+			Locate( Audio.Listener, immediately: false );
+		}
+	}
+
+	/// <summary>
+	/// Plays it faster or slower, and so higher or lower, by <paramref name="rate"/> - the frequency the original hands
+	/// the mixer over the sample's own (<c>FUN_006d2820</c>). Nearest-sample, as the rest of this mixer is.
+	/// </summary>
+	public void SetRate( float rate )
+	{
+		lock ( Audio.Lock )
+			_rate = Math.Clamp( rate, 0.01, 8.0 );
+	}
+
+	/// <summary>The rate <see cref="SetRate"/> last set.</summary>
+	internal double Rate => _rate;
+
 	/// <summary>Moves the volume to <paramref name="volume"/>, over <paramref name="seconds"/>.</summary>
 	public void SetVolume( float volume, float seconds = 0f )
 	{
@@ -353,7 +388,7 @@ public sealed class Voice
 				output[(i * 2) + 1] += samples[index + 1] * gain * frameRight;
 			}
 
-			_frame += 1.0;
+			_frame += _rate;
 		}
 
 		// Arrive exactly, rather than wherever a buffer's worth of additions landed, so nothing
