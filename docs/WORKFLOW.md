@@ -40,8 +40,11 @@ this removes a check: the adversarial verify and the review of applied edits sta
 | First-pass audit of a file, triaging notes, merging edits that agree, drafting queue items from verified findings, read-only sweeps | Sonnet | An Opus verifier checks every finding |
 | Adversarial verify, reviewing applied edits, anything in Ghidra, decoding, merges that disagree on a fact, code changes | Opus | A wrong answer here costs a session |
 
-A cheaper finder is safe only under an Opus verifier that also hunts misses; never Sonnet verifying Sonnet. Fable is
-billed as its own weekly bucket: trial it against Opus on one slice before using it for a stage.
+A cheaper finder is safe only under an Opus verifier that also hunts misses; never Sonnet verifying Sonnet.
+
+**Fable is a last resort.** Its tokens count against the weekly limit and the Fable limit at the same time, so it
+never saves budget. Use it only when Opus at high effort has failed to settle a question that blocks the work, and
+say so before launching it.
 
 **Before fanning out.**
 - Script what a script can first: heading citations, Q-number status, paths, `addresses.md`'s generator, test and
