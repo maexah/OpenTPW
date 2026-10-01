@@ -3924,6 +3924,34 @@ artifacts are listed in `docs/history/README.md`.
   Confirm: the raw image made from `content/SimThemePark.iso` installs as the ISO does; claim real dumps only after
   one is tried.
 
+- [ ] **Q106. `APathCellCostsWhatTheBalanceFileSays` fails when its class runs alone.** Found by Q50h, on `main` as well.
+  `ParkPathBuildingTests`' `[TestInitialize]` keeps `GameData.Required()` in a field and never mounts it as the global
+  `FileSystem`, so run by itself (`--filter FullyQualifiedName~ParkPathBuildingTests`) `levels/Standard.sam` does not
+  load and the price answers -1; the whole suite passes only because an earlier class mounted it. Mount it as
+  `ParkQueueRemeasureTests` does, and sweep the other test classes for the same order dependence. Confirm: each class
+  alone, green. No game run.
+  One more is `ParkPeopleTests.AnArrivalJoinsEveryListThatHasToKnowAboutIt` (the 2026-09-26 staleness audit): it never
+  deletes its `ParkPeople`, which stays in `Entity.All` and `ParkPeople.Current` for every class after it. Clean up
+  with `Delete()` and `Entity.ApplyDeletions()`, as `ParkQueueTurnTests` does.
+
+- [ ] **Q118. The camcorder key acts on its press, both ways.** Found by Q57. The original's C is shortcuts row 16
+  (`0x0040c5c0`), run on the key's release as every row is (`FUN_0040c990`), and first person is left on a key-up whose
+  action is camcorder (`FUN_00488a00`, the same exit as Escape's; `scenes.md`, "The park Escape route").
+  `ParkOrbitCameraMode.Update` enters and `ParkCamcorderCameraMode.Update` leaves on `Input.Pressed( InputButton.CamcorderMode )`,
+  and neither says so at the site. Confirm: hold C in orbit, then in first person - nothing until each release; `state`'s
+  camera height and a screenshot.
+
+- [ ] **Q116. In first person a left press still reaches the park.** Found by Q56's review. Entering first person hides
+  layer 0 (`FUN_004a2ac0( 0 )`, `park-engine.md`, "Whose a right press is"), so no press reaches `Park_MouseMessageProc`;
+  layer 1's `FUN_00488a00` hands a press to the camera table alone. Here `Level.WorldClick` runs in first person: a left
+  click on a path arms the path tool, one on a ride opens its window. Confirm: in first person, a left click
+  on a path, `tool` still None; a screenshot.
+
+- [ ] **Q87. `AdmitPerson` refuses where the original does not.** Found by Q50's decode. The original only logs a
+  wrong person (`0x004e092c`..`0x004e0982`) and lets go of the nominee before it tests `VAR_LETMEON`
+  (`0x004e09b0`); `ParkRideOperation.AdmitPerson` refuses the first and keeps the nominee on the second. Build the
+  original's order. Confirm: `rides` and `peeps` through one admission.
+
 - [ ] **Q197. A Full Simulation player's fresh park.** Found by the fork review (gap3-2..gap3-11, refute rank 2);
   queued by Alexah 2026-09-30, beyond the Easymode scope. The original builds it with no file: `FUN_00407d80`
   allocates the world and `FUN_00515540` builds the staff pool, the calendar, the arrival block, the 16,384 map cells
@@ -3959,10 +3987,6 @@ artifacts are listed in `docs/history/README.md`.
   all but the nominee and state 14 go. `ParkPathBuilding.ClearPathCell` re-walks nothing. First check it is reachable
   in Lost Kingdom, where every path before an entrance is NOMODIFY, and from the queue stamp's forced clear
   (`0x00534741`).
-- [ ] **Q87. `AdmitPerson` refuses where the original does not.** Found by Q50's decode. The original only logs a
-  wrong person (`0x004e092c`..`0x004e0982`) and lets go of the nominee before it tests `VAR_LETMEON`
-  (`0x004e09b0`); `ParkRideOperation.AdmitPerson` refuses the first and keeps the nominee on the second. Build the
-  original's order. Confirm: `rides` and `peeps` through one admission.
 - [ ] **Q89. The park's door does not command the gate. Decode first.** Found by Q50b's decode (`ride-operation.md`,
   "The closed ride"; `lobby.md`, "The park gate"). Opening the park writes the gate's `VAR_COMMAND` 1; closing writes 0,
   and only when `FUN_004c9130` counts nobody in the park and `VAR_STATUS` reads 1; 2 is the end-of-park routine's
@@ -4102,15 +4126,6 @@ artifacts are listed in `docs/history/README.md`.
   `GetBackOfQueue` row). Divide by the walked count (`ParkRideChoice.QueueCellsFor`) with it.
   Q165c built that half, the count to the first guest no longer queueing over the walked cells; the distance, the
   close-to-queue test and the effects divisor at the back-of-queue cell remain.
-- [ ] **Q106. `APathCellCostsWhatTheBalanceFileSays` fails when its class runs alone.** Found by Q50h, on `main` as well.
-  `ParkPathBuildingTests`' `[TestInitialize]` keeps `GameData.Required()` in a field and never mounts it as the global
-  `FileSystem`, so run by itself (`--filter FullyQualifiedName~ParkPathBuildingTests`) `levels/Standard.sam` does not
-  load and the price answers -1; the whole suite passes only because an earlier class mounted it. Mount it as
-  `ParkQueueRemeasureTests` does, and sweep the other test classes for the same order dependence. Confirm: each class
-  alone, green. No game run.
-  One more is `ParkPeopleTests.AnArrivalJoinsEveryListThatHasToKnowAboutIt` (the 2026-09-26 staleness audit): it never
-  deletes its `ParkPeople`, which stays in `Entity.All` and `ParkPeople.Current` for every class after it. Clean up
-  with `Delete()` and `Entity.ApplyDeletions()`, as `ParkQueueTurnTests` does.
 - [ ] **Q107. `Decide`'s stamps and the chooser's empty hand.** Found by Q53 (`ride-operation.md`, "The state-6 turn,
   in order", the split). The original restamps `+0x1fc` only when a wander fails (`0x004ff3f4`) and when the chooser
   finds nothing (`0x004ff4a3`); `Decide` restamps after a routed wander and before choosing. With nothing chosen the
@@ -4178,23 +4193,12 @@ artifacts are listed in `docs/history/README.md`.
   window's bare frame lets a left press through to `ClickWorldAt`, and a left press beside it acts on the park; and the
   buy screen opens over an object window and leaves it. One hit reading for both buttons. Confirm: with a ride's window
   open, a left click on its frame over a path does nothing; the gadget's Info beside the buy screen switches screens.
-- [ ] **Q116. In first person a left press still reaches the park.** Found by Q56's review. Entering first person hides
-  layer 0 (`FUN_004a2ac0( 0 )`, `park-engine.md`, "Whose a right press is"), so no press reaches `Park_MouseMessageProc`;
-  layer 1's `FUN_00488a00` hands a press to the camera table alone. Here `Level.WorldClick` runs in first person: a left
-  click on a path arms the path tool, one on a ride opens its window. Confirm: in first person, a left click
-  on a path, `tool` still None; a screenshot.
 - [ ] **Q117. A right click on a list row or an object window's preview.** Found by Q56. The all-staff, visitors and
   all-items lists answer a right click on a row (`0x402`) by moving the camera to that thing and closing the screen
   (`FUN_004867b0`: `0x0049602f`, `0x004934c5`, `0x00495584`); an object window's preview answers any click the same way
   (`LAB_0048d1a0`). The click is the UI library's (`hud.md`, "A click and a double click"; `WindowStack.RightClick`). Counted on the
   press as `LIST_ROW_RIGHT_CLICK`; the preview takes no pointer here (Q115), so its click is not counted. Confirm: a right
   click on a guest's row, the camera on that guest and the screen shut; a screenshot.
-- [ ] **Q118. The camcorder key acts on its press, both ways.** Found by Q57. The original's C is shortcuts row 16
-  (`0x0040c5c0`), run on the key's release as every row is (`FUN_0040c990`), and first person is left on a key-up whose
-  action is camcorder (`FUN_00488a00`, the same exit as Escape's; `scenes.md`, "The park Escape route").
-  `ParkOrbitCameraMode.Update` enters and `ParkCamcorderCameraMode.Update` leaves on `Input.Pressed( InputButton.CamcorderMode )`,
-  and neither says so at the site. Confirm: hold C in orbit, then in first person - nothing until each release; `state`'s
-  camera height and a screenshot.
 - [ ] **Q119. A plain Escape does not close the park screen in front.** Found by Q57's review. In the original the six
   management screens, an object window and the map take the focus as they open (`FUN_00485b70`, `FUN_004862a0`), and
   their key handler answers a plain Escape let go by closing the screen, and nothing more (`FUN_00488ba0`, `0x00488bc6`;
