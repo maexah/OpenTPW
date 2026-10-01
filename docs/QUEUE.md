@@ -3687,7 +3687,7 @@ artifacts are listed in `docs/history/README.md`.
     morphs the tentacles too. Review `wf_f5d32f08-574` (one agent): every address confirmed; heads looked up by
     node index, the ancestor walk guarded, the tentacle test made to move one corner; `follow2` after it, five heads on
     the tips (shot looked at). Worktree: 1559 pass 0 skip; 639 ran 920 skipped without; 123 warnings. Still counted: a head's picture turn (`RIDER_HEAD_TURN_AT_REST`).
-- [ ] **Q191. Read the `.hmp`, and lift the build squares over a built cell with it.** Found by the fork review
+- [x] **Q191. Read the `.hmp`, and lift the build squares over a built cell with it.** Found by the fork review
   (gap2-1..gap2-10, refute rank 9; lead: Aluzed's fork, the header). Build the reader with its consumer (rule 9).
   The layout, over all 435 files (jungle 110, fantasy 106, hallow 110, space 109): signature dwords `0xAB1E0003` and
   `0x00640005`; u16 cols (x) and rows (z); three offsets; a six-float box at `0x18` (min xyz, max xyz); one
@@ -3705,6 +3705,22 @@ artifacts are listed in `docs/history/README.md`.
   `park.md:142`; the reader's test runs over every shipped `.hmp`. Confirm: the squares over a built cell on raised
   ground beside the original's.
 
+  - **Done 2026-10-01** on `alexah/229-hmp-lift` (FileFormats: its branch 229). `ItemHeightMapFile` reads the file;
+    `ParkItemHeights` finds a cell's owner and reads its grid through the turn, counting `HMP_REBUILD` where the
+    original would rebuild (no shipped file does); `ParkBuildMarkers.LiftOver` lifts by `ceil10(trunc(v))` and the
+    corner adds the ground again, as `FUN_0053ddd0` does. Track-layer things (the park's hoarding, kinds 25/12) are
+    not built here, so a square over one is counted (`MARKER_LIFT_OVER_TRACK_THING`) and stays on the ground; the
+    walls the original drops from a lifted square are counted (`MARKER_LIFT_SIDE_FACES`). Docs: FileFormats `hmp.md`
+    (retitled), `models.md` `0x80`; `park.md`, `park-engine.md` "Placement feedback". The tests read all 435 files
+    (274 against their `.sam`) and the lift over the shipped park and a Bounce on the (76,64) hill; the turn, the
+    base and the lift each put back turned them red.
+  - **Confirmed in the game** (`q191run.py`, silent, `save/` unchanged): predicted then read `strip` lifts 20, 20, 10
+    over the Bounce, 40 over the fountain's middle, 40 on the hill (ground 37), 0 on a path; shots `q191/after2/`
+    looked at. **The original under Proton** (`q191/*.py`, face list and BlueprintMesh read live): (53,23) and (53,24)
+    lift 20, as predicted and as ours; shot `q179b/orig/q191-12.png`, side by side in `q191/side-by-side.png`.
+    **Not confirmed on screen:** the ground counted twice on raised ground, since the original's strip stops before a
+    raised out-of-park cell and Lost Kingdom builds nothing on raised ground; it rests on the code and the two halves
+    measured (`park-engine.md`).
 - [ ] **Q192. Write down the review's verified facts: rides, the script VM, ride sounds.** Found by the fork review
   (vm-2, vm-5, vm-14, vm-15, vm-v2..vm-v4, history-v3, rides-v3, fmt-media-v1, fmt-media-11, rides-v4, rides-v6,
   rides-8, rides-14, rides-15, gap5-17). No code. FileFormats `vm/instructions.md`: `DBGMSG` steps over its operand

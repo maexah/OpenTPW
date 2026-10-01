@@ -141,7 +141,7 @@ The inflated payload names the park's features by path — `data\levels\jungle\F
 
 ## Buildable items: the per-item archive
 
-An item is a `.wad` under `features/`, `shops/`, `rides/` or `sideshow/`, standing in for a directory of its own name, and everything inside is named after that stem: `<stem>.sam` (its description), `<stem>.MD2` (its model), `<stem>.hmp` (its footprint), `<stem>.sgn` (a name board — rides, and the `gates` and `sign1` features), plus `textures/` and `stexture/`. Jungle holds **67** items across those four folders.
+An item is a `.wad` under `features/`, `shops/`, `rides/` or `sideshow/`, standing in for a directory of its own name, and everything inside is named after that stem: `<stem>.sam` (its description), `<stem>.MD2` (its model), `<stem>.hmp` (its height over each cell of its footprint, with the footprint's marks: FileFormats `hmp.md`), `<stem>.sgn` (a name board — rides, and the `gates` and `sign1` features), plus `textures/` and `stexture/`. Jungle holds **67** items across those four folders.
 
 **An item ships only the art unique to it.** Everything else comes from the theme's shared archives — `sharetex.wad` (full size, pairs with `textures/`) and `ssharete.wad` (low detail, pairs with `stexture/`), 116 members each, and **all four themes ship both**. Without that fallback the eleven objects Lost Kingdom places were missing **40 distinct textures** and drew the not-found art on most of their surfaces. Every missing name was present in both archives.
 

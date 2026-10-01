@@ -28,7 +28,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
   `RET` stubs. A click on grass or path picks up the PATH tool (20 a cell) with its own squares and cursors; Backspace
   takes the last run up, Escape puts the tool away. QUEUE is 75, refunded. **A bought thing starts at its own price.**
 - **Placing a ride lays its queue's first cell before the entrance and hands over the queue tool there**, with the
-  original's coloured squares where a click will lay it; a click onto a path lays and joins it. Guests queue and ride. **The catalogue is Instant Action's**: each item's `Easy_` file laid over its own, 50 items where the theme has 67 (Q178b); **the buy list lists only the researched, the save's flags** (Q201b).
+  original's coloured squares where a click will lay it, **lifted over a built cell by its `.hmp`**; a click onto a path lays and joins it. Guests queue and ride. **The catalogue is Instant Action's**: each item's `Easy_` file laid over its own, 50 items where the theme has 67 (Q178b); **the buy list lists only the researched, the save's flags** (Q201b).
 - Spending: guests choose, queue for and buy from the Drinks Shop and the Jungle Spray; short of the price, they walk.
   **Each arrival is one of eight kinds, each with its own liking**, and **the choice is the original's whole score**:
   the kind just left is worth nothing, a new thing five times more for 184 sweeps, dear and golden-ticket rides more,
@@ -108,12 +108,12 @@ started alone. Until then Q191 onwards, the rest of the fork review's Q185-Q197.
 
 | | | measured |
 |---|---|---|
-| Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q190 |
-| Tests | **1559**, 0 fail, 0 skip with the game | 2026-10-01, after the heads followed |
-| Tests without the game | **639** ran, **920** skipped, of 1559 | 2026-10-01, after the heads followed |
-| Build warnings | 123 | 2026-10-01, after the heads followed |
+| Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q191 |
+| Tests | **1563**, 0 fail, 0 skip with the game | 2026-10-01, after Q191 |
+| Tests without the game | **639** ran, **924** skipped, of 1563 | 2026-10-01, after Q191 |
+| Build warnings | 123 | 2026-10-01, after Q191 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-10-01 (Q190).** `alexah/228-heads-follow-the-ride`: the heads follow the tentacles. **Earlier:** `227` (Q190), `226` (Q189), `225` (Q187), `224` (Q186), `223` (Q185), `222` (Q183), `220` (Q182b), `218` (Q182), `217` (Q181b), `216` (Q181), `215` (Q180), `214` (heads), `213` (Q179d), `212` (Q179c), `209`-`211` (Q179b), `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-10-01 (Q191).** `alexah/229-hmp-lift`: the `.hmp` read, the build squares lifted over a built cell. **Earlier:** `228` (heads follow), `227` (Q190), `226` (Q189), `225` (Q187), `224` (Q186), `223` (Q185), `222` (Q183), `220` (Q182b), `218` (Q182), `217` (Q181b), `216` (Q181), `215` (Q180), `214` (heads), `213` (Q179d), `212` (Q179c), `209`-`211` (Q179b), `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

@@ -21,9 +21,13 @@ namespace OpenTPW;
 /// <para>
 /// Four things are counted rather than guessed: the brightening and dimming that goes with the wave (the
 /// same sine scales the vertex's up vector, which this shader normalises away), the blink of a red square
-/// (a counter of unestablished unit), the turning of <c>m_link</c> and <c>m_end</c> to face the camera,
-/// and the extra lift over a cell of type 4, 9, 10, 7 or <c>0x1e</c> (<c>ceil10( FUN_00452ae0 )</c>, whose
-/// answer is not decoded).
+/// (a counter of unestablished unit), the turning of <c>m_link</c> and <c>m_end</c> to face the camera, and
+/// the walls a lifted square drops to a lower neighbour.
+/// </para>
+/// <para>
+/// <b>Over a built cell the square lifts by the height of what is built there, rounded up to ten</b>
+/// (<see cref="LiftOver"/>), and that lift is added to the ground's height again as the corner is laid, as
+/// <c>FUN_0053ddd0</c> does.
 /// </para>
 /// </para>
 /// </summary>
@@ -64,6 +68,9 @@ public sealed class ParkBuildMarkers : ModelEntity
 	private List<ParkPathBuilding.QueueSquare> _strip = [];
 
 	private Vertex[] _vertices = [];
+
+	/// <summary>How far each square of <see cref="_strip"/> is lifted over what is built under it - see <see cref="LiftOver"/>.</summary>
+	private float[] _lifts = [];
 
 	/// <summary>
 	/// Where the wave is, in radians - <c>DAT_00874fc0</c>, which <c>FUN_0053c3f0</c> raises by 0.1 each
@@ -127,13 +134,17 @@ public sealed class ParkBuildMarkers : ModelEntity
 			model.UpdateVertices( _vertices );
 	}
 
-	/// <summary>The squares the pointer is over now, for the debug console - the same list the mesh is built from.</summary>
-	public string Census() => _built.Length == 0 ? "none" : _built;
+	/// <summary>The squares the mesh holds now, each with its lift after a <c>^</c>, for the debug console.</summary>
+	public string Census() => _strip.Count == 0
+		? "none"
+		: string.Join( ";", _strip.Select( ( square, index ) => $"{square.X},{square.Y},{square.Marker}^{_lifts[index]:0}" ) );
 
 	private void Build( List<ParkPathBuilding.QueueSquare> strip )
 	{
 		TranslucentModel?.Delete();
 		TranslucentModel = null;
+		_strip = [];
+		_lifts = [];
 
 		if ( strip.Count == 0 || ParkGround.Current?.Heightfield is not { } field )
 			return;
@@ -146,13 +157,15 @@ public sealed class ParkBuildMarkers : ModelEntity
 		if ( strip.Any( square => square.Marker == ParkPathBuilding.MarkerRed ) )
 			Unimplemented.Report( "MARKER_RED_BLINK_TIMING" );
 
-		if ( Level.Current?.Park is { } park && strip.Any( square => ParkState.OnMap( square.X, square.Y )
-			&& ParkState.CellFor( park, square.X, square.Y ).Type is CellEdge.Footprint or CellEdge.RideEnd
-				or CellEdge.RideFarEnd or 7 or 0x1e ) )
-			Unimplemented.Report( "MARKER_LIFT_OVER_BUILT_CELL" );
-
 		_strip = strip.Where( square => square.X >= 0 && square.Y >= 0 && square.X < field.CellsX && square.Y < field.CellsY ).ToList();
+		_lifts = _strip.Select( square => ParkState.Current is { } state
+			? LiftOver( state, Level.Current?.Catalogue, field, square.X, square.Y )
+			: 0f ).ToArray();
 		_vertices = new Vertex[_strip.Count * 4];
+
+		// The original also walls a lifted square down to a lower neighbour (FUN_0053df30's other faces).
+		if ( _lifts.Any( lift => lift > 0f ) )
+			Unimplemented.Report( "MARKER_LIFT_SIDE_FACES" );
 
 		if ( Fill( field ) == 0 )
 			return;
@@ -183,32 +196,60 @@ public sealed class ParkBuildMarkers : ModelEntity
 	{
 		var vertex = 0;
 
-		foreach ( var (x, y, marker, _, _) in _strip )
+		for ( var square = 0; square < _strip.Count; ++square )
 		{
+			var (x, y, marker, _, _) = _strip[square];
 			var slot = Math.Max( 0, Array.IndexOf( Drawn, marker ) );
+			var lift = _lifts[square];
 
-			_vertices[vertex++] = Corner( field, x, y, new Vector2( 0f, 0f ), slot );
-			_vertices[vertex++] = Corner( field, x + 1, y, new Vector2( 1f, 0f ), slot );
-			_vertices[vertex++] = Corner( field, x + 1, y + 1, new Vector2( 1f, 1f ), slot );
-			_vertices[vertex++] = Corner( field, x, y + 1, new Vector2( 0f, 1f ), slot );
+			_vertices[vertex++] = Corner( field, x, y, new Vector2( 0f, 0f ), slot, lift );
+			_vertices[vertex++] = Corner( field, x + 1, y, new Vector2( 1f, 0f ), slot, lift );
+			_vertices[vertex++] = Corner( field, x + 1, y + 1, new Vector2( 1f, 1f ), slot, lift );
+			_vertices[vertex++] = Corner( field, x, y + 1, new Vector2( 0f, 1f ), slot, lift );
 		}
 
 		return vertex;
 	}
 
-	private Vertex Corner( HeightfieldFile field, int x, int y, Vector2 uv, int slot )
+	private Vertex Corner( HeightfieldFile field, int x, int y, Vector2 uv, int slot, float lift )
 	{
 		var (worldX, worldY) = (x * field.CellSizeX, y * field.CellSizeY);
 
 		return new()
 		{
-			Position = new Vector3( worldX, worldY, field.HeightAt( x, y ) + Lift + Wave( _phase, worldX, worldY ) ),
+			Position = new Vector3( worldX, worldY, field.HeightAt( x, y ) + lift + Lift + Wave( _phase, worldX, worldY ) ),
 			Normal = ParkGround.NormalAt( field, x, y ),
 			TexCoords = uv,
 			TexIndex = slot,
 			MatFlags = Translucent
 		};
 	}
+
+	/// <summary>
+	/// How far a square over a cell is lifted before the ground under its corner is added - the original's
+	/// <c>ceil10( trunc( FUN_00452ae0 ) )</c> (<c>0x005330ca</c>). Nought except over a cell of type 4, 7, 9, 10 or
+	/// <c>0x1e</c>; a cell of track kind 11, 12, 16, 17 or 25 is counted instead. <b>The height asked already
+	/// includes the ground under the thing, so on raised ground the ground is counted twice</b>, once here and once
+	/// as the corner is laid; this keeps that, as the original draws it.
+	/// </summary>
+	internal static float LiftOver( ParkState state, ParkItemCatalogue? catalogue, HeightfieldFile field, int x, int y )
+	{
+		var cell = state.Record( x, y );
+
+		if ( cell.Type is CellEdge.Footprint or 7 or CellEdge.RideEnd or CellEdge.RideFarEnd or CellEdge.Approach )
+			return CeilingTen( (int)ParkItemHeights.Over( state, catalogue, field, x, y ) );
+
+		// A cell of these track kinds holds a thing of the second cell layer (kind 25 its anchor, 12 and 17 naming
+		// it as parent), which the original asks for its height first (FUN_0053bf30); this park builds none of
+		// them, so the square stays on the ground.
+		if ( cell.TrackType is 11 or 12 or 16 or 17 or 25 )
+			Unimplemented.Report( "MARKER_LIFT_OVER_TRACK_THING" );
+
+		return 0f;
+	}
+
+	/// <summary>The original's <c>(t + 9) / 10 * 10.0</c>, integer division towards nought.</summary>
+	internal static float CeilingTen( int truncated ) => (truncated + 9) / 10 * 10f;
 
 	/// <summary>
 	/// How far the wave lifts a corner - <c>sin( phase + x + z )</c> in the original's own axes, its
@@ -222,5 +263,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 
 		if ( Current == this )
 			Current = null;
+
+		ParkItemHeights.Clear();
 	}
 }

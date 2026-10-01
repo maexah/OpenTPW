@@ -1336,9 +1336,32 @@ is one world unit, a tenth of a cell. The phase `DAT_00874fc0` gains 0.1 each re
 clock is paused (`FUN_0053c3f0`, `0x0053c755`..`0x0053c773`, gated on `FUN_004030c0`, IsPaused). The same
 sine scales the corner's up vector by `(sin + 1) / 2` (`0x00700e28` is −1.0, `0x00700de4` 0.5), so the
 squares also brighten and dim as they wave. Alexah, who played the original: *"they were translucent.
-They waved like a flag/water."* The lift is `ceil10(FUN_00452ae0)` over
-mType 4, 9, 10, 7 and `0x1e` cells and the track kinds, else nought; side faces are added toward a
-lower neighbour. **Red blinks**: `FUN_0053c8d0` drops texture 1 while `DAT_00763c98` is nought, which
+They waved like a flag/water."*
+
+**Over a built cell the square is lifted** (`FUN_00532fc0`, `0x005330ca` and its siblings). The record's height is
+`ceil10(trunc(FUN_00452ae0(x, y, null)))` + 1.5, where ceil10 is `(t + 9) / 10 * 10.0` in integer division. It is
+lifted only over a cell of mType 4, 9, 10, 7 or `0x1e`, or of track kind 11, 12, 16, 17 or 25; elsewhere the lift is
+nought. `FUN_00452ae0` finds the thing on the cell in two steps. First it reads the cell's track-layer record
+(`FUN_0053bf30`): its object at `+4`, or for kind 12 or 17 the object of the cell its `+0x10` names. Failing that, it
+reads the cell's thing id (`FUN_00527e80`), which must be an object (type byte 3). From that object it reads the
+`.hmp` at `+0xcc` and the root node's matrix (model `+0x78`; translation `+0x40`, `+0x44`, `+0x48`). It carries the
+cell's corner back into the object's unturned space by its rotation at model `+0x10`, a quarter turn at a time
+(`0x00452bb0`..`0x00452c1d`). It answers the `.hmp`'s cell-grid byte × 1/2.55 plus the root's world height. With no
+object, it answers the ground height at the cell's corner (`FUN_004527f0`). **The wave branch of `FUN_0053ddd0` then
+adds the ground height at each corner again**, so on raised ground the ground counts twice: once in the object's base
+or the fallback, and once here.
+
+Measured in the original under Proton on 2026-10-01 (the face list at `0x00820b00`, BlueprintMesh `DAT_00871f64`'s
+positions at `+0x64`):
+- The Belly Bounce's (53,23) and (53,24) carry a record height of 21.5 (lift 20), and their corners are drawn at
+  20.5 to 22.4 over ground 0.
+- (93,21) and (94,21), track kinds 25 and 12, lift 20 too. Their object is a 2×2 thing of the track layer: object 42,
+  root at ground 0, turned 180, with its own `.hmp`. The layer's kind-25 cells anchor such things (the roots of the two over (64,40) and
+  (76,40) stand at 5.0), and OpenTPW builds none of them.
+- A lifted square also gets walls down to a lower neighbour, records at 11.5 and 1.5 on the same cell.
+
+The double count on raised ground was not caught on one cell. The original's strip ends at the raised out-of-park
+cells before it draws a square there. **Red blinks**: `FUN_0053c8d0` drops texture 1 while `DAT_00763c98` is nought, which
 toggles on a counter (on past 1, off past 6) of an unestablished unit. Textures 8 to 14 take UVs turned by
 the camera's yaw (`DAT_00790a38`), so `m_link` and `m_end` stay upright on screen. The squares are
 see-through, by Alexah's own memory of the original; the blend state itself was not traced.
