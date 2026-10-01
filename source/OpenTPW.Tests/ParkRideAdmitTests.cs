@@ -94,10 +94,10 @@ public class ParkRideAdmitTests
 
 	/// <summary>
 	/// <b>The load-bearing refusal.</b> A full slot is not written over - doing so would drop whoever the
-	/// script had not taken yet.
+	/// script had not taken yet. The nomination is let go of first all the same (<c>0x004e09b0</c>).
 	/// </summary>
 	[TestMethod]
-	public void AFullSlotIsNotWrittenOverAndTheNominationSurvives()
+	public void AFullSlotIsNotWrittenOverAndTheNominationIsLetGo()
 	{
 		var park = new ParkState( parkIsClosed: false, visitorsToDate: 0 );
 		var script = Script();
@@ -114,8 +114,8 @@ public class ParkRideAdmitTests
 			.AdmitPerson( script, ride, 8 ), "refused while the slot is full" );
 
 		Assert.AreEqual( 7, script[ParkRideOperation.AdmitVariable], "the first guest is still there" );
-		Assert.AreEqual( 8, park.PersonBeingLoaded( Ride ),
-			"and the ride still holds its nominee rather than losing them" );
+		Assert.AreEqual( 0, park.PersonBeingLoaded( Ride ),
+			"and the ride let go of its nominee before it asked the slot, as the original does" );
 
 		// Once the script consumes and clears it - COPY VAR_LETMEON, 0 - the second may go in.
 		script.Set( ParkRideOperation.AdmitVariable, 0 );
@@ -124,20 +124,23 @@ public class ParkRideAdmitTests
 			.AdmitPerson( script, ride, 8 ), "an empty slot takes the next one" );
 	}
 
-	/// <summary>Somebody who is not the nominee is refused - the original's "admitting wrong person".</summary>
+	/// <summary>
+	/// Somebody who is not the nominee is admitted all the same - the original's "admitting wrong person"
+	/// is a log line, not a refusal - and the nominee is let go of.
+	/// </summary>
 	[TestMethod]
-	public void TheWrongPersonIsRefused()
+	public void TheWrongPersonIsOnlyLoggedAndAdmitted()
 	{
 		var park = new ParkState( parkIsClosed: false, visitorsToDate: 0 );
 		var script = Script();
 
 		park.NominateForLoading( Ride, 7 );
 
-		Assert.IsFalse( new ParkRideOperation( park, new Dictionary<int, Peep>() )
-			.AdmitPerson( script, TheRide(), 9 ), "9 was never nominated" );
+		Assert.IsTrue( new ParkRideOperation( park, new Dictionary<int, Peep>() )
+			.AdmitPerson( script, TheRide(), 9 ), "9 was never nominated, and is admitted" );
 
-		Assert.AreEqual( 0, script[ParkRideOperation.AdmitVariable], "nothing was handed over" );
-		Assert.AreEqual( 7, park.PersonBeingLoaded( Ride ), "and the real nominee stands" );
+		Assert.AreEqual( 9, script[ParkRideOperation.AdmitVariable], "the one who asked is handed over" );
+		Assert.AreEqual( 0, park.PersonBeingLoaded( Ride ), "and the nominee is let go of" );
 	}
 
 	/// <summary>A ride out of service admits nobody, on either of the two states that take it out.</summary>

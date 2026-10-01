@@ -1411,8 +1411,8 @@ public sealed class ParkState
 	/// <remarks>
 	/// <b>One at a time, which is the original's own shape rather than a simplification.</b>
 	/// <c>FUN_004e0aa0</c> is nothing but <c>person == object[+0x6c]</c>, so a ride holds exactly one
-	/// nominee; and <c>FUN_004e0900</c> asserts the person it is asked to admit is that one, printing
-	/// "admitting wrong person - check d..." when it is not.
+	/// nominee; and <c>FUN_004e0900</c> checks the person it is asked to admit is that one, printing
+	/// "admitting wrong person - check d..." when it is not and admitting them all the same.
 	/// </remarks>
 	public int PersonBeingLoaded( int objectId ) => _beingLoaded.GetValueOrDefault( objectId );
 

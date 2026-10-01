@@ -231,9 +231,10 @@ public sealed class ParkRideOperation
 	/// would drop whoever was already there, which is why the original refuses instead.
 	/// </para>
 	/// <para>
-	/// <b>Every refusal of the original's is reproduced.</b> The object's <c>+0x68</c> is <c>mCanLoad</c>,
-	/// which <see cref="ParkRideChoice.CanBeOffered"/> refuses on too, and the two ride states it refuses on
-	/// are the pair <see cref="ParkRideChoice"/> already names.
+	/// <b>Every refusal of the original's is reproduced, and no other.</b> The object's <c>+0x68</c> is
+	/// <c>mCanLoad</c>, which <see cref="ParkRideChoice.CanBeOffered"/> refuses on too, and the two ride
+	/// states it refuses on are the pair <see cref="ParkRideChoice"/> already names. Past those it lets go
+	/// of the nominee whoever asked, and a full slot refuses only after that.
 	/// </para>
 	/// <para>
 	/// <b>A ride closed while its nominee walked up refuses them here</b> - <see cref="Close"/> lets the
@@ -254,17 +255,24 @@ public sealed class ParkRideOperation
 		if ( ride.CanLoad == 0 )
 			return false;
 
-		// "admitting wrong person": the original only logs it and goes on, so refusing is a deviation (Q87).
-		if ( _state.PersonBeingLoaded( ride.ThingId ) != personId )
-			return false;
+		// "admitting wrong person": the original only logs it (0x004e092c) and admits whoever asked.
+		var nominee = _state.PersonBeingLoaded( ride.ThingId );
 
-		// The slot has to be empty. Asked BEFORE the nomination is let go of, so a refusal leaves the
-		// ride still holding its nominee; the original lets go first, a deviation (Q87;
-		// docs/exe/ride-operation.md, "At the door").
-		if ( script[AdmitVariable] != 0 )
-			return false;
+		if ( nominee != personId )
+			Log.Warning( $"Object {ride.ThingId}: mPersonBeingLoaded is {nominee}, but admitting person {personId}"
+				+ " - admitting wrong person" );
 
+		// The nomination is let go of BEFORE the slot is asked (0x004e09b0), so a refusal there leaves the
+		// ride free to call somebody else forward (docs/exe/ride-operation.md, "At the door").
 		_state.NominateForLoading( ride.ThingId, 0 );
+
+		if ( script[AdmitVariable] != 0 )
+		{
+			Log.Info( $"Object {ride.ThingId}: cannot admit person {personId}, "
+				+ $"script changed its mind about admission! ({script[AdmitVariable]})" );
+
+			return false;
+		}
 
 		return script.Set( AdmitVariable, personId );
 	}

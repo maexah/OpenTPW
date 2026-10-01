@@ -4008,10 +4008,19 @@ artifacts are listed in `docs/history/README.md`.
     the orbit click still arms it (`q116/fix/A`, `B1`, looked at); save/ unchanged. Left alone: first person still
     shows help row 442, "Left-click to extend this path".
 
-- [ ] **Q87. `AdmitPerson` refuses where the original does not.** Found by Q50's decode. The original only logs a
+- [x] **Q87. `AdmitPerson` refuses where the original does not.** Found by Q50's decode. The original only logs a
   wrong person (`0x004e092c`..`0x004e0982`) and lets go of the nominee before it tests `VAR_LETMEON`
   (`0x004e09b0`); `ParkRideOperation.AdmitPerson` refuses the first and keeps the nominee on the second. Build the
   original's order. Confirm: `rides` and `peeps` through one admission.
+  **Done 2026-10-01, `alexah/242-admit-person-order`.** Re-read `FUN_004e0900` in Ghidra: the wrong person is logged
+  (`"admitting wrong person - check d..."`) and admitted, `+0x6c` is zeroed at `0x004e09b0` whoever asked, and only
+  then a full `VAR_LETMEON` refuses with `"cannot admit person %d, script changed its mind about admission!"`.
+  `AdmitPerson` now does exactly that, with both lines logged. Tests: `TheWrongPersonIsOnlyLoggedAndAdmitted`, and
+  the full-slot test now asserts the nominee is let go. Bug back: refusing the wrong person reds both; asking the slot
+  before letting go reds the full-slot test. Game `q87run.py` → `q87/run1` (predicted, then read): `rides` 15 with 16
+  scripts, 2 "been AdmitPerson'd", 0 wrong person, 0 cannot admit, `peeps` 13 with one Riding, 14 unimplemented
+  keys; shot looked at; save/ unchanged. Neither changed arm is reached by the shipped park (Invite calls forward
+  only into an empty slot), so on screen this is "admissions still work", not the new arms firing.
 
 - [ ] **Q197. A Full Simulation player's fresh park.** Found by the fork review (gap3-2..gap3-11, refute rank 2);
   queued by Alexah 2026-09-30, beyond the Easymode scope. The original builds it with no file: `FUN_00407d80`
