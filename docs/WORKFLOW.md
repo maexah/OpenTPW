@@ -31,7 +31,8 @@ Four things about that gate, each of which has cost a session:
 Set by Alexah 2026-09-26, after one staleness audit spent about 40M subagent tokens and hit the weekly limit. None of
 this removes a check: the adversarial verify and the review of applied edits stay.
 
-**Model by stage.** Pass `model` per agent; omitting it runs Opus.
+**Model by stage.** Use the agent type for the stage: `tpw-gather` (Haiku), `tpw-sweep` (Sonnet, high effort) and
+`tpw-verify` (Opus, high effort), in `.claude/agents/`. Any other agent runs Sonnet unless `model` is passed.
 
 | Stage | Model | Why |
 |---|---|---|
