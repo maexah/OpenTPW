@@ -3748,8 +3748,21 @@ artifacts are listed in `docs/history/README.md`.
     `wf_43164183-37d` (7 findings, fixed; the `SPARK` reader scan re-run by hand). No code.
   - **Game** (`q192run.py`, silent, `save/` unchanged): park loads (shot `q192/run1/park.png` looked at); predicted
     `rides` 14 and read 15 (the Bus had arrived; I left it out); the `unimplemented` census names none of the eight
-    opcodes, as predicted. **Not done:** the ride-sound sites are reached by OpenTPW's bumper, kart and water cars and
-    are neither played nor counted (rule 4); that needs its own item.
+    opcodes, as predicted. The one ride-sound site OpenTPW reaches, the Hot Pot's lead car, is counted
+    (`BUMPER_CAR_SOUND`) and unbuilt: Q202.
+
+- [ ] **Q202. The Hot Pot's lead car makes no sound.** Found by Q192 (`audio.md`, "What an EventMap's slots feed");
+  queued by Alexah 2026-10-01. `ParkBumperCars.Retarget` counts `BUMPER_CAR_SOUND` where `Bumper_Retarget`'s bumper
+  arm (`0x0054a366`) plays the ride's `EventMap.rse` slot 0 through `FUN_0051eeb0` into the car's held voice
+  `+0x20`, in the park's `cat_rides`: for the jungle `bumper`, effect 194 (an engine), 0 skipped. Read first, in
+  Ghidra: the exact gate on that play (the code's comment says the running lead car, active and not unloading), how
+  the voice is held and looped, and the unload's fade. Then, each step, `Bumper_StepCar`'s Hot Pot arm moves a live
+  voice to the car (`FUN_0051c270`) and sets sound parameter slot 10 (`VAR_PAR0`, 16) to the speed / 3 through
+  `FUN_0051bc40`; `FUN_0054ae50` fades it as the car is taken off (only go-karts play slot 1 there). Read the slots
+  from the script's `SPAWNSOUND` child by index, never by a hard-coded id. `Bumper_PlayCarSound` stays silent for
+  the Hot Pot, as `Bump` says. Confirm: buy the Hot Pot, run a go, and show the voice starting, following the car,
+  its parameter tracking the speed and fading at the end, in the log beside a screenshot; then the engine sample heard
+  in the game's own mix, captured through the disk driver. Put the gate back and the new test must fail.
 
 - [ ] **Q193. Write down the review's verified facts: saves, particles, sprites, audio.** Found by the fork review
   (fmt-assets-v1, fmt-assets-v2, gap5-1..gap5-4, gap3-6, world-sim-2, economy-6, economy-11, level-build-v2,
