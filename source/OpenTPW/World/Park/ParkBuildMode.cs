@@ -8,7 +8,7 @@ namespace OpenTPW;
 /// <para>
 /// <b>It is a MODE, not a tool, and the binary names it so itself:</b> the two functions that write
 /// it record the replay actions <c>ACTION_SET_MODE</c> and <c>ACTION_SET_MODE_NR</c>. There are
-/// exactly three writers in the whole image, so the id table is closed - and of those ids only two
+/// exactly three writers in the whole image, so the list of what writes the mode is closed - and of its values only two
 /// matter here, <b>1 for path and 3 for queue</b>, fixed by the cursor table that registers
 /// <c>c_path.ani</c> and <c>c_queue.ani</c> against them.
 /// </para>

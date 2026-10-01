@@ -2430,8 +2430,29 @@ The queue run's (`0x00527541`) runs once the `0x81` retile pass is done.
 
 **`DAT_0081ae2c` is the MODE**, named by the replay actions its two setters record —
 `ACTION_SET_MODE` (`FUN_0052f200`) and `ACTION_SET_MODE_NR` (`FUN_0052f580`), from the dictionary
-`FUN_004041d0` prints verbatim. It has exactly **three writers** in the whole image, so the id table
-is closed.
+`FUN_004041d0` prints verbatim. It has exactly **three writers** in the whole image, so the list of
+what writes the mode is closed.
+
+Every action the recorder knows, as `FUN_004041d0` prints the dictionary (`Action recorder dictionary:`, strings
+`0x00747254` to `0x007475a8`); every name starts `ACTION_`. Each recorder call passes the id first (`FUN_00403d00`, ECX
+`0x785a08`):
+
+| Id | Name | Id | Name | Id | Name |
+|---|---|---|---|---|---|
+| 0 | `SET_MODE` | 55 | `COASTER_PLACENORMAL` | 64 | `COASTER_GENERATETRACKOLD` |
+| 5 | `SET_RIDE` | 56 | `COASTER_PLACESPECIAL` | 65 | `COASTER_BACKTRACK` |
+| 10 | `SET_RIDE_ROTATION` | 57 | `COASTER_LOFT` | 66 | `COASTER_SETEDITOLD` |
+| 15 | `LMB_DOWN` | 58 | `COASTER_ROTATE` | 67 | `COASTER_GENERATETRACK` |
+| 20 | `LMB_UP` | 59 | `COASTER_WOBBLE` | 68 | `COASTER_SETEDIT` |
+| 25 | `SET_MODE_NR` | 60 | `COASTER_MOVE` | 70 | `SET_RIDE_NAME_A` |
+| 30 | `SET_RIDE_TRACK` | 61 | `COASTER_STACKUP` | 75 | `SET_RIDE_NAME_B` |
+| 35 | `SET_RIDE_QUEUE` | 62 | `COASTER_STACKDOWN` | 80 | `SET_RIDE_NAME_A_WITH_MAPID` |
+| 40 | `LMB_DOWN_MODIFIED` | 63 | `COASTER_DELETEMULTI` | 85 | `SET_RIDE_NAME_B_WITH_MAPID` |
+| 45 | `LMB_UP_MODIFIED` | | | 999 | `NULL_DUMMY_PLACEHOLDER_USELESS_ACTION` |
+| 50 | `SET_SELECTED_OBJ` | | | | |
+
+The dictionary is not the whole set: `FUN_00447e10` records id 69 (`0x00447e25`), which it does not name. No call site
+passes 64, 66, 70, 75 or 999 as an immediate; some ids go in registers, so that does not mean they are unused.
 
 **But the recorded action is NOT what separates the two setters — the ANCHOR is.** `FUN_0052f200`
 clears `DAT_0081ede4`/`DAT_0081ede8` to `-1` on every call; `FUN_0052f580` never touches them. That

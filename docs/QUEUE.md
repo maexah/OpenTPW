@@ -3811,7 +3811,7 @@ artifacts are listed in `docs/history/README.md`.
     squares on the water in `hotpot.png` are the queue tool's, gone with the tool put away.
   - **Not checked:** the original was not run for this; its frame `q179b/orig/go-1.png` shows no magenta there.
 
-- [ ] **Q193. Write down the review's verified facts: saves, particles, sprites, audio.** Found by the fork review
+- [x] **Q193. Write down the review's verified facts: saves, particles, sprites, audio.** Found by the fork review
   (fmt-assets-v1, fmt-assets-v2, gap5-1..gap5-4, gap3-6, world-sim-2, economy-6, economy-11, level-build-v2,
   gap3-8, fmt-assets-1, peeps-1, gap5-6, gap5-8, fmt-media-v2, ui-render-platform-v1, ui-render-platform-v2). No code.
   FileFormats `saves.md`: the `PART` module ('LCTP', an enabled flag; the live system, `0x9e68` bytes: a `0x2c`
@@ -3828,6 +3828,21 @@ artifacts are listed in `docs/history/README.md`.
   80 it rejects are identical one-frame placeholders in global `speechHD.SDT`. Open, written as open: 336 entries
   decode past full scale; whether the original's voice decode saturates or wraps (the `0x006c82c0` family).
 
+  - **Done 2026-10-01** on `alexah/234-review-facts-saves-assets` (FileFormats: its branch 234). Every fact re-read in
+    Ghidra or across all the shipped data first (three read-only verifiers, `wf_0f99a8b7-33e`). FileFormats `saves.md`
+    (the game's two names for every module; new `TRAP`, `SYSG`, `STHC` sections), `particles.md` (`.emt`, the 0xA2
+    default), `sprites.md` (the engine's decoder, all 75 packs), `sounds.md` ("Decoding"); `docs/exe/saves.md`
+    ("Loading the modules"), `park-engine.md` (the action ids), `audio.md` ("How a voice is decoded"). Corrected on
+    the way: the `PART` magic is the game's `PTCL`, stored reversed like the tags; `GSYS`'s sixth dword is
+    uninitialised stack, 2 only by accident (`0x0075DBC8` in Easymode); the `ACTION_*` strings run `0x00747254` to
+    `0x007475a8`, with 80, 85 and 999 named and 69 recorded but unnamed; a placeholder's play length is 816 bytes,
+    408 samples. Settled, not open: the original **clamps** each voice to 16 bits as it decodes (`0x006c9270`'s clamp,
+    `0x006ca580`'s `PACKSSDW`); OpenTPW keeps NLayer's floats and clamps only the mix, said at `AudioClip.Samples`.
+    Also said at its site: our sprite decoder reads a 0 code as one byte, the engine's as two (no shipped picture has
+    one). Review `wf_d5b78449-ab4` (13 findings, fixed). Comments only in code; no new test, so no bug to put back.
+  - **Game** (`q193run.py`, silent, `save/` unchanged): predicted `rides` 15 with 16 scripts and the same 13
+    `unimplemented` keys as `q192/run1`; read 15, 16 and the same 13. Shot `q193/run1/park.png` looked at: the park
+    and its peeps drawn.
 - [ ] **Q194. Write down the review's verified facts: tickets, challenges, advisor, terrain.** Found by the fork
   review (economy-3..economy-5, economy-8, economy-9, economy-v1, economy-v2, history-11, ghidra-docs-20,
   world-sim-v1, world-sim-v2, world-sim-v4, world-sim-1, world-sim-7, gap5-5, ui-render-platform-v3,

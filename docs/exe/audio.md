@@ -327,6 +327,23 @@ At **`0x00711920`** — not `0x00711980`, which appears nowhere in the image. Th
 | `+0x88`, `+0x98` | `SetListenerPosition` |
 | `+0x94` | `SetFrequency` |
 
+## How a voice is decoded
+
+The MPEG voice class's constructor `0x006c82c0` sets its vtable `0x0070ae30`. Its read, slot `+0x1c` (`0x006c83c0`),
+calls slot `+0x5c` (`0x006c8630`, at `0x006c8429`), which goes to the decoder's `0x006d1ab0`, a byte copy. Frames
+are decoded in `0x006d17b0`: Layer II by `0x006cdf50`, Layer I by `0x006ce5a0`. Both use one of two synthesis
+routines, picked by `DAT_00fb2704`, and both write 16-bit samples.
+
+**Each voice is clamped to 16 bits as it is decoded, never wrapped.** The x87 routine `0x006c9270` makes its three
+word stores (`0x006c9415`, `0x006c947f`, `0x006c953e`) after `FISTP` and an explicit clamp to `0x7fff` and
+`0xffff8000`. Every one of the MMX routine `0x006ca580`'s 96 word stores stores a `PACKSSDW`, which saturates. 336
+shipped entries peak past full scale in a floating-point decode (FileFormats `sounds.md`, "Decoding"), so the clamp
+takes effect on those entries: ffmpeg's 16-bit decode clips them the same way. How QMixer adds 16-bit voices
+together is not in the executable.
+
+OpenTPW does not clamp a voice: `AudioClip` keeps NLayer's floats, up to 1.40, and only the final mix is clamped
+(`Audio.Mix`), so a clip past full scale played below full volume is louder at its peaks than the original's.
+
 ## Unknowns
 
 - **`FUN_0051c700` is NOT the distance-mapping feed.** It is the sound-detail ladder that interpolates the three `RadiusInfo[n].MINRADIUS` values (100.0 / 0.5 / 0 at SWITCH 25 / 50 / 75) from `data\sound.sam` and posts them to `0x006b5890` → `FUN_006b99c0` → `FUN_006b8180`, which latches `{on/off, radius}` and walks the voice array setting a per-voice LEVEL. That level comes from `FUN_006c4c80`, a **segment-versus-circle occlusion test that uses only the X and Z components** and ignores height entirely — so the pause's Y-lift cannot touch it either way. It never reaches `SetDistanceMapping`.

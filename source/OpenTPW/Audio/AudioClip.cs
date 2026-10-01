@@ -20,7 +20,11 @@ namespace OpenTPW;
 /// </summary>
 public sealed class AudioClip
 {
-	/// <summary>Interleaved samples, <see cref="Channels"/> per frame, nominally -1 to 1.</summary>
+	/// <summary>
+	/// Interleaved samples, <see cref="Channels"/> per frame, nominally -1 to 1. Not clamped: 336 shipped clips
+	/// peak past 1, where the original clamps each voice to 16 bits as it decodes (<c>0x006c9270</c>; docs/exe/audio.md,
+	/// "How a voice is decoded"). Only the final mix, in <c>Audio.Mix</c>, is clamped.
+	/// </summary>
 	public float[] Samples { get; }
 
 	public int Channels { get; }
@@ -44,8 +48,8 @@ public sealed class AudioClip
 	/// Decodes one MPEG stream, or returns null if it will not decode.
 	///
 	/// Null rather than an exception because a bank is loaded as a unit and one bad sample in it
-	/// should cost that sample, not the park's whole ambience. The decoder does throw on at least
-	/// one file that ships - an entry in global/Speech/speechHD.SDT - so this is not theoretical.
+	/// should cost that sample, not the park's whole ambience. The decoder throws on 80 entries that
+	/// ship, one single-frame placeholder in global/Speech/speechHD.SDT, so this is not theoretical.
 	/// </summary>
 	public static AudioClip? Decode( string name, byte[] data )
 	{

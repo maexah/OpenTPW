@@ -22,8 +22,8 @@ namespace OpenTPW;
 /// A row is a byte giving how many bytes the row takes, then codes. A code of n below zero repeats
 /// the next palette index -n times; one above zero is followed by n palette indices to copy. So
 /// <c>07 F1 00 02 F6 8F F1 00</c> is fifteen of index 0, then 0xF6 and 0x8F, then fifteen more of 0 -
-/// a 32-pixel row. Every picture in the particle packs comes out at exactly its width and height
-/// and uses exactly its data this way.
+/// a 32-pixel row. All 10,223 pictures in the game's 75 packs come out at exactly their width and
+/// height and use exactly their data this way.
 /// </para>
 /// </summary>
 public sealed class SpritePackFile : BaseFormat
@@ -96,6 +96,8 @@ public sealed class SpritePackFile : BaseFormat
 				}
 				else
 				{
+					// The engine takes a code of 0 as a repeat of nought, two bytes (0x00564790); this takes it as a
+					// copy of nought, one byte. No shipped picture has one.
 					for ( int n = 0; n < code && position < data.Length; ++n )
 						Put( rgba, width, x++, y, palette, data[position++] );
 				}
