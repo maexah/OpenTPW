@@ -27,6 +27,9 @@ public sealed class LobbyModel
 	/// </summary>
 	private readonly Dictionary<string, Vector3> _nodeOffsets = new( StringComparer.OrdinalIgnoreCase );
 
+	// The file, for TryGetDrawnNode.
+	private readonly ModelFile _file;
+
 	/// <summary>The origin the model was loaded at - see <see cref="TryGetNode"/>.</summary>
 	private readonly Vector3 _origin;
 
@@ -158,6 +161,7 @@ public sealed class LobbyModel
 		IReadOnlyList<AnimationFile>? clips = null )
 	{
 		var modelFile = new ModelFile( modelPath );
+		_file = modelFile;
 		var meshCount = modelFile.Meshes.Count;
 
 		Entities = new ModelEntity[meshCount];
@@ -280,12 +284,14 @@ public sealed class LobbyModel
 
 		// The same composition and the same Y/Z swizzle the meshes above go through, so a node lands
 		// in the world by the rule its model's geometry already landed by.
-		foreach ( var node in modelFile.Nodes )
+		for ( var index = 0; index < modelFile.Nodes.Count; ++index )
 		{
+			var node = modelFile.Nodes[index];
 			var name = node.Name.Trim();
 
 			if ( name.Length == 0 )
 				continue;
+
 
 			var placed = node.WorldTransform * Matrix4x4.CreateScale( scale );
 
@@ -482,6 +488,52 @@ public sealed class LobbyModel
 
 		return true;
 	}
+
+	/// <summary>
+	/// Where a node stands as the model is drawn this frame, rather than at rest as <see cref="TryGetPlacedNode"/> answers:
+	/// a node anchored on a face of its parent mesh stands on that face while a morph poses the mesh (the engine's pose
+	/// walk, <c>FUN_0044ab90</c>, <c>0x0044abf2</c>, and <c>FUN_0044b040</c>), and any other node goes where its nearest
+	/// mesh ancestor is drawn, as it rests in that mesh. Answers which of the two it took.
+	/// </summary>
+	/// <remarks>
+	/// The second is OpenTPW's: the engine poses every node of the tree, and this one turns and moves meshes only, so a
+	/// clip that turns a node which is not a mesh does not carry what hangs from it here.
+	/// </remarks>
+	public DrawnNode TryGetDrawnNode( int index, out Vector3 position )
+	{
+		position = default;
+
+		if ( index < 0 || index >= _file.Nodes.Count )
+			return DrawnNode.Missing;
+
+		var node = _file.Nodes[index];
+		var parent = node.ParentIndex;
+
+		if ( node.Face is { } face && (node.IdFlags & 0x40040) != 0 && parent >= 0 && parent < Entities.Length
+			&& Animators.FirstOrDefault( animator => animator.TargetIndex == parent ) is { Morphing: true } animator
+			&& ModelFile.PointOnFace( _file.Meshes[parent], face, animator.SourcePosition ) is { } local )
+		{
+			position = (Vector3)System.Numerics.Vector3.Transform( Swizzle( local.GetSystemVector3() ), Entities[parent].ModelMatrix );
+			return DrawnNode.OnAFace;
+		}
+
+		// The nearest ancestor that is a mesh: the first meshes are the first nodes. Guarded against a parent chain that loops.
+		var mesh = parent;
+
+		for ( var guard = _file.Nodes.Count; mesh >= Entities.Length && guard > 0; --guard )
+			mesh = _file.Nodes[mesh].ParentIndex;
+
+		if ( mesh < 0 || mesh >= Entities.Length || !Matrix4x4.Invert( _file.Meshes[mesh].WorldTransform, out var unplaced ) )
+			return TryGetPlacedNode( node.Name, out position ) ? DrawnNode.AtRest : DrawnNode.Missing;
+
+		var within = System.Numerics.Vector3.Transform( node.WorldTransform.Translation, unplaced );
+
+		position = (Vector3)System.Numerics.Vector3.Transform( Swizzle( within ), Entities[mesh].ModelMatrix );
+		return DrawnNode.OnAMesh;
+	}
+
+	/// <summary>A point in the file's axes (y up) as a mesh's vertices are built, z up.</summary>
+	private static System.Numerics.Vector3 Swizzle( System.Numerics.Vector3 file ) => new( file.X, file.Z, file.Y );
 
 	/// <summary>Where this model was last put - see <see cref="SetTransform"/>.</summary>
 	/// <remarks>
@@ -978,4 +1030,20 @@ public sealed class LobbyModel
 
 		return new MeshRotator( animations, entities, baseTransforms, localTransforms, offsets, parentIndices );
 	}
+}
+
+/// <summary>How <see cref="LobbyModel.TryGetDrawnNode"/> found a node.</summary>
+public enum DrawnNode
+{
+	/// <summary>No node of that name.</summary>
+	Missing,
+
+	/// <summary>On a face of its parent mesh, as a morph poses it.</summary>
+	OnAFace,
+
+	/// <summary>Where its nearest mesh ancestor is drawn.</summary>
+	OnAMesh,
+
+	/// <summary>At rest: it hangs from no mesh.</summary>
+	AtRest
 }

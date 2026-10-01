@@ -224,6 +224,9 @@ public sealed class RideNodes
 		return RidesAClip( node ) ? NodeEnd.RestPose : NodeEnd.Posed;
 	}
 
+	/// <summary>The index of head node <paramref name="id"/> in the model's nodes, or -1 - the drawn model's index too.</summary>
+	public int HeadIndex( int id ) => _model.FindNode( id, HeadSpace );
+
 	/// <summary>The name of head node <paramref name="id"/>, or null where the model has none - for the census.</summary>
 	public string? HeadName( int id ) => _model.FindNode( id, HeadSpace ) is var node && node >= 0 ? _nodes[node].Name : null;
 

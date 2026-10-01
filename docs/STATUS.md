@@ -46,7 +46,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
   rider count asks for, as the original's chain: a fresh sample every 1-3 s on **its own clock**, so a second ride in
   the same band is neither held up by it nor set off by its stop. **No queue grows past its ride's longest.** **A ride
   loops again after its ride's end** (the Aztec Mayhem). **A load resumes each wait and clip where its save left it, each script on its saved handle and tick** (Q180), **and each deadline it keeps in a variable** (Q181b). Each tick keeps its own instant and a stall runs 64 ticks, where the engine's run one instant a frame and 65: kept by decision (Q182b). **Every script's walks are stepped once a tick, after the scripts**, where the engine's are once a frame: kept by decision (Q183).
-  **A rider walks on and off for their two model nodes' distance**, as the original's (Q175b); a head on a moving part is counted at rest. **The Hot Pot floats a boat per unit of capacity in its pot, a rider's head seated in each, and lets them off after `VAR_DURATION` × 30 track ticks** (Q179b); **in a go the boats with riders steer through the buoys and chase, and bump each other off the rim** (Q179d). **`ADDHEAD` hangs a rider's head on a random free head node and `DELHEAD` takes it off**, drawn and saved (Q190).
+  **A rider walks on and off for their two model nodes' distance**, as the original's (Q175b); a head on a moving part is counted at rest. **The Hot Pot floats a boat per unit of capacity in its pot, a rider's head seated in each, and lets them off after `VAR_DURATION` × 30 track ticks** (Q179b); **in a go the boats with riders steer through the buoys and chase, and bump each other off the rim** (Q179d). **`ADDHEAD` hangs a rider's head on a random free head node and `DELHEAD` takes it off**, drawn on the tentacle or car as it moves, and saved (Q190).
 - **A thing bought this session is a member of the running park**: it takes its turn, appears in every census, joins the
   object chain the original keeps live, and carries the entry and exit cells derived from its own shape picture (Q1b).
 - The original runs under Proton as a reference (Q168, `docs/TOOLING.md`); the console's `admit`/`send` place a guest (Q184).
@@ -69,7 +69,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 - With no work the mechanic, handyman and entertainer stand where the original's walk about (Q133); staff make no
   sound (Q135). Guests and rides read `GameClock.Ticks / 8`, not `mGameTick` (Q132); a load brings one guest (Q26); the bus waits (Q131).
 - Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), a ride walked into in first person, a coaster's
-  excitement and level, the charge's sound, the Hot Pot's wake, a ride's head where its clip or morph carries it (Q190).
+  excitement and level, the charge's sound, the Hot Pot's wake, a ride head's picture turn (Q190).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
   walk (Q121), and a park screen stays open over it (Q122). It walks onto entrances the original shuts (Q140).
@@ -109,11 +109,11 @@ started alone. Until then Q191 onwards, the rest of the fork review's Q185-Q197.
 | | | measured |
 |---|---|---|
 | Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q190 |
-| Tests | **1557**, 0 fail, 0 skip with the game | 2026-10-01, after Q190 |
-| Tests without the game | **639** ran, **918** skipped, of 1557 | 2026-10-01, after Q190 |
-| Build warnings | 123 | 2026-10-01, after Q190 |
+| Tests | **1559**, 0 fail, 0 skip with the game | 2026-10-01, after the heads followed |
+| Tests without the game | **639** ran, **920** skipped, of 1559 | 2026-10-01, after the heads followed |
+| Build warnings | 123 | 2026-10-01, after the heads followed |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-10-01 (Q190).** `alexah/227-heads`: `ADDHEAD` and `DELHEAD`, the head table. **Earlier:** `226` (Q189), `225` (Q187), `224` (Q186), `223` (Q185), `222` (Q183), `220` (Q182b), `218` (Q182), `217` (Q181b), `216` (Q181), `215` (Q180), `214` (heads), `213` (Q179d), `212` (Q179c), `209`-`211` (Q179b), `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-10-01 (Q190).** `alexah/228-heads-follow-the-ride`: the heads follow the tentacles. **Earlier:** `227` (Q190), `226` (Q189), `225` (Q187), `224` (Q186), `223` (Q185), `222` (Q183), `220` (Q182b), `218` (Q182), `217` (Q181b), `216` (Q181), `215` (Q180), `214` (heads), `213` (Q179d), `212` (Q179c), `209`-`211` (Q179b), `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

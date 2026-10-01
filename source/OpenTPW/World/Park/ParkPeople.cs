@@ -2307,12 +2307,23 @@ public sealed class ParkPeople : Entity
 				var end = nodes.FindHead( head.Node, out var world );
 				var name = nodes.HeadName( head.Node ) ?? "";
 
-				// Beside it, where the drawn model stands the node of that name, which should agree.
-				var drawn = ParkObjects.Current is { } objects && objects.TryNodeOn( thing.ThingId, name, out var at )
-					? $"({at.X:0.0},{at.Y:0.0},{at.Z:0.0})"
-					: "not drawn";
+				// Beside it, where the drawn model stands the node of that name at rest, which should agree, and this frame,
+				// which the head is drawn at.
+				var rest = "not drawn";
+				var drawn = "not drawn";
 
-				return $"{head.Node}:{head.Handle} '{name}' {end} ({world.M41:0.0},{world.M43:0.0},{world.M42:0.0}) model {drawn}";
+				if ( ParkObjects.Current is { } objects )
+				{
+					if ( objects.TryNodeOn( thing.ThingId, name, out var at ) )
+						rest = $"({at.X:0.0},{at.Y:0.0},{at.Z:0.0})";
+
+					if ( objects.TryDrawnNodeOn( thing.ThingId, nodes.HeadIndex( head.Node ), out var now ) is var how
+						&& how != DrawnNode.Missing )
+						drawn = $"{how} ({now.X:0.0},{now.Y:0.0},{now.Z:0.0})";
+				}
+
+				return $"{head.Node}:{head.Handle} '{name}' {end} ({world.M41:0.0},{world.M43:0.0},{world.M42:0.0}) model {rest} "
+					+ $"drawn {drawn}";
 			} ).ToArray();
 
 			// Every walk slot in use and, while it is walked or once a walk off is done, its leg, which is the whole of what a walk-on ride's timing

@@ -112,7 +112,26 @@ public partial class ModelFile : BaseFormat
 		/// has one path and at most one node naming it, at 0.
 		/// </summary>
 		public int PathId { get; set; }
+
+		/// <summary>
+		/// Where this node sits on a face of its parent mesh, from its id record's pointer at +0x0C, or null where the
+		/// record has none (FileFormats models.md, "Which records have a position"). Set on the records whose flag
+		/// word carries <c>0x40</c>.
+		/// </summary>
+		public FaceAnchor? Face { get; set; }
 	}
+
+	/// <summary>
+	/// A node's place on a face of its parent mesh, the record its id record's +0x0C points at: the face, then
+	/// <c>FUN_0044b040</c>'s three floats. The point is the face's first corner lerped toward its second by
+	/// <see cref="U"/>, that lerped toward the third by <see cref="V"/>, then <see cref="Offset"/> along the face's
+	/// normal.
+	/// </summary>
+	/// <param name="Face">The face of the parent mesh, an index into its face list.</param>
+	/// <param name="U">The lerp from the first corner toward the second.</param>
+	/// <param name="V">The lerp from that toward the third.</param>
+	/// <param name="Offset">How far along the face's normal the node stands off it.</param>
+	public readonly record struct FaceAnchor( int Face, float U, float V, float Offset );
 
 	/// <summary>
 	/// A route stored in the model, in the model's own space: the bus, ferry and seaplane each
@@ -209,6 +228,21 @@ public partial class ModelFile : BaseFormat
 
 		/// <summary>Maps each entry of <see cref="Vertices"/> back to a source vertex index.</summary>
 		public ushort[] VertexOrder { get; set; } = Array.Empty<ushort>();
+
+		/// <summary>
+		/// Each face's entry in <see cref="FaceNormals"/>: the face record's first ushort, its low fifteen bits
+		/// (<c>0x0044ad11</c>).
+		/// </summary>
+		public ushort[] FaceNormalIndices { get; set; } = Array.Empty<ushort>();
+
+		/// <summary>
+		/// The face normals the mesh record's +0x64 points at, three floats each, as many as the faces name. The
+		/// engine reads them for a node anchored on a face (<see cref="FaceAnchor"/>); its morph routine does not write them.
+		/// </summary>
+		public Vector3[] FaceNormals { get; set; } = Array.Empty<Vector3>();
+
+		/// <summary>The offset of <see cref="FaceNormals"/> in the file, the mesh record's +0x64.</summary>
+		public uint FaceNormalOffset { get; set; }
 	}
 
 	public struct FrameData
@@ -378,7 +412,7 @@ public partial class ModelFile : BaseFormat
 				ushort faceCount = reader.ReadUInt16();
 				ushort vertexOrderLength = reader.ReadUInt16();
 				uint vertexOffset = reader.ReadUInt32();
-				_ = reader.ReadUInt32();
+				uint faceNormalOffset = reader.ReadUInt32();
 				uint uvOffset = reader.ReadUInt32();
 				uint materialOffset = reader.ReadUInt32();
 				uint faceOffset = reader.ReadUInt32();
@@ -459,6 +493,7 @@ public partial class ModelFile : BaseFormat
 					VertexCount = vertexCount,
 					VertexOrderLen = vertexOrderLength,
 					VertexOrderOffset = vertexOrderOffset,
+					FaceNormalOffset = faceNormalOffset,
 					TransformMatrix = transformMatrix,
 					BoundsMin = boundsMin,
 					BoundsMax = boundsMax,
@@ -565,10 +600,11 @@ public partial class ModelFile : BaseFormat
 				// Parse face data
 				reader.BaseStream.Seek( mesh.FaceOffset, SeekOrigin.Begin );
 				List<uint> indices = new List<uint>();
+				var normalIndices = new ushort[mesh.FaceCount];
 
 				for ( int i = 0; i < mesh.FaceCount; i++ )
 				{
-					reader.ReadUInt16(); // Skip _ptr
+					normalIndices[i] = (ushort)(reader.ReadUInt16() & 0x7fff);
 					ushort _a = reader.ReadUInt16();
 					ushort _b = reader.ReadUInt16();
 					ushort _c = reader.ReadUInt16();
@@ -580,6 +616,8 @@ public partial class ModelFile : BaseFormat
 				}
 
 				mesh.Indices = indices.ToArray();
+				mesh.FaceNormalIndices = normalIndices;
+				mesh.FaceNormals = ReadFaceNormals( reader, mesh.FaceNormalOffset, normalIndices );
 
 				CalculateNormals( mesh );
 			}
@@ -770,6 +808,67 @@ public partial class ModelFile : BaseFormat
 	}
 
 	/// <summary>
+	/// The point <paramref name="face"/> names on <paramref name="mesh"/>, in the mesh's own space, with each source
+	/// vertex where <paramref name="sourcePosition"/> says it stands - at rest, or as a morph poses it: the face's corners
+	/// lerped as <c>FUN_0044b040</c> lerps them, then the face's normal times the offset. Null where the face, a corner or
+	/// its normal is not in the mesh.
+	/// </summary>
+	public static Vector3? PointOnFace( Mesh mesh, FaceAnchor face, Func<int, Vector3> sourcePosition )
+	{
+		if ( face.Face < 0 || face.Face >= mesh.FaceNormalIndices.Length || (face.Face * 3) + 2 >= mesh.Indices.Length )
+			return null;
+
+		var normal = mesh.FaceNormalIndices[face.Face];
+
+		if ( normal >= mesh.FaceNormals.Length )
+			return null;
+
+		for ( var corner = 0; corner < 3; ++corner )
+		{
+			if ( mesh.Indices[(face.Face * 3) + corner] >= mesh.VertexOrder.Length )
+				return null;
+		}
+
+		// A corner is a drawn vertex, and a morph moves source vertices: the vertex order maps one to the other, as the
+		// engine's +0x94 table does (0x0044ac2a).
+		Vector3 Corner( int corner )
+		{
+			var drawn = (int)mesh.Indices[(face.Face * 3) + corner];
+
+			return sourcePosition( mesh.VertexOrder[drawn] );
+		}
+
+		var point = (Corner( 1 ) * face.U) + (Corner( 0 ) * (1f - face.U));
+		point = (Corner( 2 ) * face.V) + (point * (1f - face.V));
+
+		return point + (mesh.FaceNormals[normal] * face.Offset);
+	}
+
+	/// <summary>
+	/// The face normals at <paramref name="offset"/>, as many as the highest index a face names, or none where the
+	/// table would run past the file.
+	/// </summary>
+	private static Vector3[] ReadFaceNormals( BinaryReader reader, uint offset, ushort[] indices )
+	{
+		if ( offset == 0 || indices.Length == 0 )
+			return Array.Empty<Vector3>();
+
+		var count = indices.Max() + 1;
+
+		if ( offset + (12L * count) > reader.BaseStream.Length )
+			return Array.Empty<Vector3>();
+
+		reader.BaseStream.Seek( offset, SeekOrigin.Begin );
+
+		var normals = new Vector3[count];
+
+		for ( var i = 0; i < count; ++i )
+			normals[i] = new Vector3( reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle() );
+
+		return normals;
+	}
+
+	/// <summary>
 	/// Attaches each node's lookup id and flags, from the table the engine searches by id and flag
 	/// (0x0044b220).
 	///
@@ -813,6 +912,18 @@ public partial class ModelFile : BaseFormat
 			stream.Seek( table + (20L * r), SeekOrigin.Begin );
 			Nodes[node].IdFlags = reader.ReadUInt32();
 			Nodes[node].Id = (int)reader.ReadUInt32();
+			_ = reader.ReadUInt32();
+			var face = reader.ReadUInt32();
+
+			// The face record: its face, a ushort not read here (FUN_0044a640 steps back by it to a turn), and
+			// FUN_0044b040's three floats at +4, +8 and +0xc.
+			if ( face != 0 && face + 16L <= stream.Length )
+			{
+				stream.Seek( face, SeekOrigin.Begin );
+				var index = reader.ReadUInt16();
+				_ = reader.ReadUInt16();
+				Nodes[node].Face = new FaceAnchor( index, reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle() );
+			}
 		}
 	}
 

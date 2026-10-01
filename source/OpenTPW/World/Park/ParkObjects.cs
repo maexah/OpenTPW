@@ -93,6 +93,20 @@ public sealed class ParkObjects : Entity
 	}
 
 	/// <summary>
+	/// Where a node of a placed thing, by index, stands as the thing is drawn this frame - on its morphing face, or carried by
+	/// its mesh (<see cref="LobbyModel.TryGetDrawnNode"/>) - or <see cref="DrawnNode.Missing"/>.
+	/// </summary>
+	internal DrawnNode TryDrawnNodeOn( int thingId, int node, out Vector3 world )
+	{
+		if ( _standing.TryGetValue( thingId, out var standing ) )
+			return standing.Model.TryGetDrawnNode( node, out world );
+
+		world = default;
+
+		return DrawnNode.Missing;
+	}
+
+	/// <summary>
 	/// Where a placed thing stands, for a sound that belongs to the thing rather than to a node of it.
 	/// </summary>
 	/// <remarks>

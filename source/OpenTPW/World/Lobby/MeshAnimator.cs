@@ -49,6 +49,27 @@ public class MeshAnimator
 	private float _elapsed;
 	private bool _atRest;
 
+	// Whether _positions holds the morph last written - a UV-only clip moves no vertex.
+	private bool _morphed;
+
+	/// <summary>The mesh this animator morphs, by index into the model's meshes.</summary>
+	public int TargetIndex => _targetIndex;
+
+	/// <summary>
+	/// Whether the last pose wrote morph positions - standing in for the engine's runtime flag <c>0x200000</c>, which
+	/// <c>FUN_00472d70</c> sets on a mesh a clip carries a morph track for and a node anchored on one of its faces reads
+	/// (<c>0x0044ac00</c>).
+	/// </summary>
+	public bool Morphing => _morphed;
+
+	/// <summary>Where source vertex <paramref name="source"/> stands now, in the mesh's own space (the file's axes, y up).</summary>
+	public Vector3 SourcePosition( int source )
+	{
+		var positions = _morphed ? _positions : _restPositions;
+
+		return source >= 0 && source < positions.Length ? positions[source] : default;
+	}
+
 	public MeshAnimator( AnimationFile[] animations, int targetIndex, ModelFile.Mesh mesh,
 		Model[] models, Vertex[] restVertices )
 	{
@@ -126,6 +147,7 @@ public class MeshAnimator
 				_positions[v] = SamplePosition( morph, v, frame );
 
 			WritePositions( _positions );
+			_morphed = true;
 		}
 
 		if ( uv != null )
@@ -176,6 +198,7 @@ public class MeshAnimator
 	private void RestorePose()
 	{
 		WritePositions( _restPositions );
+		_morphed = false;
 
 		for ( int i = 0; i < _vertices.Length; ++i )
 			_vertices[i].TexCoords = _restUvs[i];

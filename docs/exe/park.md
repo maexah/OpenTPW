@@ -978,20 +978,36 @@ as its model's run (the ferry's and the Aztec Mayhem's empty), five of them hold
 off after `WALKOFF`. Every head node has a matrix (flags `0xb1` or `0xf1`); Mumbo's and the Crazy Ape's sit on a
 morphing face (`0x40040`), the other four's on a clip-driven ancestor.
 
+**Where a head on a morphing face stands.** The pose walk (`FUN_0044ab90`) tests the record's flags against `0x40040`
+(`0x0044abf2`) and its parent mesh for runtime `0x200000` (`0x0044ac00`; `FUN_00472d70` sets it on a mesh a clip carries
+a morph track for). With both, it reads
+the record's face anchor (models.md, "Node lookup ids"): the face's three corners through the mesh's `+0x94` vertex order
+(`0x0044ac2a`) from the posed positions at `+0x60`, the face's normal from `+0x64` by the face's first word `& 0x7fff`
+(`0x0044ad11`), all through the parent's matrix; `FUN_0044b040` lerps corner 0 toward 1 by `u` (`1 - u` from the `1.0` at `0x006fe2a0`),
+that toward 2 by `v`, and adds the normal times the offset; that is the stored translation. With flag `0x40000`,
+`FUN_0044a640` also turns the matrix to the face's edge and normal and a kept turn. The morph routine (`FUN_00471860`)
+writes `+0x60` and the bounds, not `+0x64`. Measured (`q190/faces`, all 2,073 readable models): every one of the 248
+anchors lands at rest on its node's stored place within 0.05 units but the Squark's `Head04`, 0.26.
+
 **After a load the head the save names is hung**: the Sun God's `head08`, which Alexah's save's table holds a rider on,
 read runtime flags `0x23` (attached) where its 31 others read `0x21` (`ride-operation.md`, "How long a leg lasts"). No
 caller of `FUN_0044b410` is on the load path, so what re-hangs it is not traced.
 
 **OpenTPW builds it** (Q190): `RideScript.AddHead`, `DeleteHead` and `Heads`, the table sized by `RideNodes.HeadCount`
 when `ParkRides.NodesFor` reads the model and put back from `SavedScript.Heads` at a load; `ParkGuestSprites.HeadOnRide`
-draws each rider in a table as their head on the node and no body, as a bumper boat's (Q179b). The `rides` census prints
+draws each rider in a table as their head on the node and no body, as a bumper boat's (Q179b), **where the node is
+drawn this frame** (`LobbyModel.TryGetDrawnNode`, `ModelFile.PointOnFace`): on its tentacle's face as the morph poses it,
+or, for a head on a turned arm, where its nearest mesh is drawn. The `rides` census prints
 `heads n/slots`, each node's position and the drawn model's node of the same name. *Departures*: a script without
 `ADDHEAD` or `DELHEAD` gets no table, which only those two read; the draw is the script's own generator, as `RAND`'s; a
 draw that never finds the free slot stops after 65,536 tries and takes the first free one (`ADDHEAD_DRAWS_EXHAUSTED`),
-where the engine would hang; and a head stands where its node rests, not where the clip or the morph has carried it
-(`RIDER_HEAD_REST_POSE`, `RIDER_HEAD_ON_A_FACE`). Confirmed in the game (`q190/run2`, `run3`): a bought Mumbo, 43
+where the engine would hang; a head follows its nearest mesh, where the engine poses every node of the tree, so a clip
+turning a node that is not a mesh would not carry its heads; and a head's picture is chosen by its node's turn at rest
+(`RIDER_HEAD_TURN_AT_REST`). Confirmed in the game (`q190/run2`, `run3`): a bought Mumbo, 43
 census lines with heads equal to riders from 0/5 to 5/5 and back, each head at the drawn node to 0.1; the shots show
-heads at the tentacles while it is full and none when it is empty, a little off the moving tentacles.
+heads at the tentacles while it is full and none when it is empty. Then on the tentacles as they move (`q190/follow1`):
+in a go each of Mumbo's five heads was drawn on its face and its height moved 5.0 to 8.3 units with its tentacle, the
+shot looked at; a Rocky Racers' four followed their cars (`q190/racers1`, 0.4 to 1.6 units), the shot looked at.
 
 ### The script-to-script family
 

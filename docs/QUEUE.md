@@ -3676,6 +3676,17 @@ artifacts are listed in `docs/history/README.md`.
     off the moving tentacles (the rest-pose departure). After the review, `run4` 4/4 again on the final code (4 aboard,
     `RIDER_HEAD_ON_A_FACE` 4x, once a head); its shot, the ride at rest, has heads on the tentacle tips. Not run: a loaded save's restored heads (Alexah's jungle save
     still throws in `ParkGuestSprites`, Q167's note), the other five rides, the original beside it.
+  - **Then, at Alexah's word (2026-10-01): the heads follow the ride** (branch `alexah/228-heads-follow-the-ride`).
+    Mumbo's heads stood at rest and clipped through the moving tentacles. Decoded the face anchor (`park.md`, "The head
+    table"; FileFormats `models.md`), measured on all 248 anchors (247 at rest within 0.05); `ModelFile.PointOnFace`,
+    `LobbyModel.TryGetDrawnNode` draw a head on its tentacle as the morph poses it, or where its car's mesh is drawn.
+    Tests: two more (at rest on the node, moved with the tentacle); U/V swapped, no normal offset and no vertex order each
+    put back and caught. Game (`q190brun.py`, `q190crun.py`, silent, `save/` unchanged): Mumbo's five heads moved 5.0 to
+    8.3 units in height with their tentacles in a go and sat on them in the shot (`follow1/go-1`); Rocky Racers' four
+    followed the cars (`racers1/go-1`). Predicted wrong: before the go the heads already moved, as the boarding clip
+    morphs the tentacles too. Review `wf_f5d32f08-574` (one agent): every address confirmed; heads looked up by
+    node index, the ancestor walk guarded, the tentacle test made to move one corner; `follow2` after it, five heads on
+    the tips (shot looked at). Worktree: 1559 pass 0 skip; 639 ran 920 skipped without; 123 warnings. Still counted: a head's picture turn (`RIDER_HEAD_TURN_AT_REST`).
 - [ ] **Q191. Read the `.hmp`, and lift the build squares over a built cell with it.** Found by the fork review
   (gap2-1..gap2-10, refute rank 9; lead: Aluzed's fork, the header). Build the reader with its consumer (rule 9).
   The layout, over all 435 files (jungle 110, fantasy 106, hallow 110, space 109): signature dwords `0xAB1E0003` and

@@ -672,8 +672,9 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// <summary>
 	/// Where the head <c>ADDHEAD</c> hung for this guest stands in the park, and which of the 56 pictures its node shows the
 	/// camera (<see cref="ParkBumperBoats.HeadFrame"/>), or null where no script holds a head of theirs on a node with a
-	/// position. The node is where the thing stands at rest, the walk family's departure (<see cref="RideNodes"/>), counted
-	/// as the head is hung (<see cref="RideScript.Heads"/>).
+	/// position. The head stands where the node is drawn this frame (<see cref="ParkObjects.TryDrawnNodeOn"/>): on the
+	/// tentacle a morph has moved, or carried by the arm a clip turns. The picture is chosen by the node's turn at rest,
+	/// counted as the head is hung (<see cref="RideScript.Heads"/>).
 	/// </summary>
 	internal static (Vector3 At, int Frame)? HeadOnRide( ParkPeople? people, int thingId )
 	{
@@ -685,8 +686,14 @@ public sealed class ParkGuestSprites : ModelEntity
 		if ( end is NodeEnd.Missing or NodeEnd.Unposed )
 			return null;
 
-		// The node's matrix is in the model's axes, y up, already turned and placed; the park's are z up.
+		// The node's matrix is in the model's axes, y up, already turned and placed; the park's are z up. Where the thing is
+		// drawn, the head goes where its node is drawn.
 		var at = new Vector3( world.M41, world.M43, world.M42 );
+
+		if ( ParkObjects.Current is { } objects
+			&& objects.TryDrawnNodeOn( script.ThingId, nodes.HeadIndex( node ), out var drawn ) != DrawnNode.Missing )
+			at = drawn;
+
 		var seen = Camera.Position - at;
 		var towards = new System.Numerics.Vector3( seen.X, seen.Z, seen.Y );
 		var rotation = world with { M41 = 0, M42 = 0, M43 = 0 };

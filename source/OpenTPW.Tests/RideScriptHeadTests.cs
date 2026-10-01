@@ -184,4 +184,80 @@ public class RideScriptHeadTests
 			Assert.AreEqual( NodeEnd.Missing, nodes.FindHead( count + 1, out _ ), $"{stem} has no head past it" );
 		}
 	}
+
+	/// <summary>Each source vertex of <paramref name="mesh"/> at rest, as the morph's own rest pose recovers them.</summary>
+	private static Vector3[] RestSources( ModelFile.Mesh mesh )
+	{
+		var rest = new Vector3[mesh.VertexCount];
+
+		for ( var i = 0; i < mesh.Vertices.Length && i < mesh.VertexOrder.Length; ++i )
+		{
+			if ( mesh.VertexOrder[i] < rest.Length )
+				rest[mesh.VertexOrder[i]] = mesh.Vertices[i].Position;
+		}
+
+		return rest;
+	}
+
+	/// <summary>
+	/// <b>Mumbo's and the Crazy Ape's heads sit on faces of their tentacles</b>, and at rest the face rule
+	/// (<c>FUN_0044b040</c>: two lerps across the face, then the face normal times the offset, in the parent mesh's space)
+	/// lands on each head node's own stored place - as it does for 247 of the game's 248 face-anchored records.
+	/// </summary>
+	[TestMethod]
+	public void AtRestEachFaceAnchoredHeadIsOnItsNode()
+	{
+		var data = GameData.Required();
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+
+		foreach ( var (stem, heads) in new[] { ("mumbo", 5), ("monkey", 16) } )
+		{
+			var item = catalogue.All.Single( item => item.Stem == stem );
+			using var stream = new MemoryStream( data.ReadAllBytes( $"{item.Directory}/{item.Stem}.MD2" ) );
+			var model = new ModelFile( stream );
+
+			for ( var id = 1; id <= heads; ++id )
+			{
+				var node = model.Nodes[model.FindNode( id, RideNodes.HeadSpace )];
+				var mesh = model.Meshes[node.ParentIndex];
+				var rest = RestSources( mesh );
+
+				Assert.IsNotNull( node.Face, $"{stem} head {id} is anchored on a face" );
+
+				var local = ModelFile.PointOnFace( mesh, node.Face!.Value, source => rest[source] )!.Value;
+				var placed = System.Numerics.Vector3.Transform( local.GetSystemVector3(), mesh.WorldTransform );
+
+				Assert.IsTrue( System.Numerics.Vector3.Distance( placed, node.WorldTransform.Translation ) < 0.05f,
+					$"{stem} head {id} ({node.Name}) at {placed}, its node at {node.WorldTransform.Translation}" );
+			}
+		}
+	}
+
+	/// <summary>
+	/// <b>A head follows its tentacle</b>: move the face's third corner, as a morph frame might, and the face point moves by
+	/// <c>v</c> times as much, the third corner's weight (the face normal, which the morph routine does not write, does not
+	/// turn).
+	/// </summary>
+	[TestMethod]
+	public void MovingTheTentacleMovesTheHeadWithIt()
+	{
+		var data = GameData.Required();
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+		var item = catalogue.All.Single( item => item.Stem == "mumbo" );
+		using var stream = new MemoryStream( data.ReadAllBytes( $"{item.Directory}/{item.Stem}.MD2" ) );
+		var model = new ModelFile( stream );
+		var node = model.Nodes[model.FindNode( 2, RideNodes.HeadSpace )];
+		var mesh = model.Meshes[node.ParentIndex];
+		var rest = RestSources( mesh );
+		var lift = new Vector3( 0.5f, 3f, -1f );
+		var face = node.Face!.Value;
+		var third = mesh.VertexOrder[mesh.Indices[(face.Face * 3) + 2]];
+
+		var before = ModelFile.PointOnFace( mesh, face, source => rest[source] )!.Value;
+		var after = ModelFile.PointOnFace( mesh, face, source => source == third ? rest[source] + lift : rest[source] )!.Value;
+
+		Assert.AreEqual( 3f * face.V, after.Y - before.Y, 1e-4f, "up with the tentacle, by the third corner's weight" );
+		Assert.AreEqual( 0.5f * face.V, after.X - before.X, 1e-4f );
+		Assert.AreEqual( -1f * face.V, after.Z - before.Z, 1e-4f );
+	}
 }
