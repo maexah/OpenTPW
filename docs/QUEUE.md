@@ -3721,7 +3721,7 @@ artifacts are listed in `docs/history/README.md`.
     **Not confirmed on screen:** the ground counted twice on raised ground, since the original's strip stops before a
     raised out-of-park cell and Lost Kingdom builds nothing on raised ground; it rests on the code and the two halves
     measured (`park-engine.md`).
-- [ ] **Q192. Write down the review's verified facts: rides, the script VM, ride sounds.** Found by the fork review
+- [x] **Q192. Write down the review's verified facts: rides, the script VM, ride sounds.** Found by the fork review
   (vm-2, vm-5, vm-14, vm-15, vm-v2..vm-v4, history-v3, rides-v3, fmt-media-v1, fmt-media-11, rides-v4, rides-v6,
   rides-8, rides-14, rides-15, gap5-17). No code. FileFormats `vm/instructions.md`: `DBGMSG` steps over its operand
   and does nothing (`0x00554243`); `ENABLELIGHT`, `DISABLELIGHT`, `SETLIGHT`, `COLOURLIGHT` take a light node id (mask
@@ -3734,6 +3734,22 @@ artifacts are listed in `docs/history/README.md`.
   `park.md`, its five callers named first. Track-ride and coaster keys (`SupplementalMeshes`, `asCarTypes`,
   `GTexture`, `coaster.sam`'s edge and select tables) into `park.md` and FileFormats `sam.md`. Open, and written as
   open: `FUN_00461f10` clears header bit `0x4` unless the load keeps it (the cars `FUN_00430130` loads).
+
+  - **Done 2026-10-01** on `alexah/230-review-facts-rides-vm` (FileFormats: its branch 230). Every fact re-read in
+    Ghidra or the data first (three read-only verifiers, `wf_638574f1-80e`). FileFormats `vm/instructions.md`
+    (`DBGMSG`, the four lights, `EVENT_EXT`, `SPARK`, `TOUR` 1 and 2, `MONTH`), `models.md` (`0x20000`), `sam.md`
+    (`coaster.sam`'s tables, `GTexture`, the jungle's `SupplementalMeshes`). `audio.md`, "What an EventMap's slots
+    feed", with the five callers named: the coaster's trains (`FUN_004392a0`), `Bumper_Retarget`,
+    `Bumper_PlayCarSound`, the go-karts' car removal (`FUN_0054ae50`) and the tour ride's new car (`FUN_0055a720`);
+    `park.md` (the EventMap layouts, the five missing ids, `GTexture`, the lights, `SPARK`, `TOUR` 1/2, the car's
+    mesh, bit `0x4` as open). Corrected on the way: `TOUR 1` passes the position ×300 and the facing in 4096ths;
+    `FUN_005da3c0` is a bare `RET`, so no complaint is ever printed; `TrackMaster` is `FUN_0042fad0`'s, not
+    `FUN_0042fd90`'s; the jungle has no `Balloon`; slot 10's level is constant only for the flying cars. Review
+    `wf_43164183-37d` (7 findings, fixed; the `SPARK` reader scan re-run by hand). No code.
+  - **Game** (`q192run.py`, silent, `save/` unchanged): park loads (shot `q192/run1/park.png` looked at); predicted
+    `rides` 14 and read 15 (the Bus had arrived; I left it out); the `unimplemented` census names none of the eight
+    opcodes, as predicted. **Not done:** the ride-sound sites are reached by OpenTPW's bumper, kart and water cars and
+    are neither played nor counted (rule 4); that needs its own item.
 
 - [ ] **Q193. Write down the review's verified facts: saves, particles, sprites, audio.** Found by the fork review
   (fmt-assets-v1, fmt-assets-v2, gap5-1..gap5-4, gap3-6, world-sim-2, economy-6, economy-11, level-build-v2,

@@ -141,7 +141,7 @@ The inflated payload names the park's features by path — `data\levels\jungle\F
 
 ## Buildable items: the per-item archive
 
-An item is a `.wad` under `features/`, `shops/`, `rides/` or `sideshow/`, standing in for a directory of its own name, and everything inside is named after that stem: `<stem>.sam` (its description), `<stem>.MD2` (its model), `<stem>.hmp` (its height over each cell of its footprint, with the footprint's marks: FileFormats `hmp.md`), `<stem>.sgn` (a name board — rides, and the `gates` and `sign1` features), plus `textures/` and `stexture/`. Jungle holds **67** items across those four folders.
+An item is a `.wad` under `features/`, `shops/`, `rides/` or `sideshow/`, standing in for a directory of its own name, and everything inside is named after that stem: `<stem>.sam` (its description), `<stem>.MD2` (its model), `<stem>.hmp` (its height over each cell of its footprint, with the footprint's marks: FileFormats `hmp.md`), `<stem>.sgn` (a name board — rides, and the `gates` and `sign1` features), plus `textures/` and `stexture/`. Jungle holds **67** items across those four folders. **A coaster WAD also carries `GTexture/`**, the track's textures (FileFormats `sam.md`): the coaster loader `FUN_0042fad0` formats `"%s\GTexture"` (`0x0074cb8c`) and hands it to the track builder `FUN_0042fd90`.
 
 **An item ships only the art unique to it.** Everything else comes from the theme's shared archives — `sharetex.wad` (full size, pairs with `textures/`) and `ssharete.wad` (low detail, pairs with `stexture/`), 116 members each, and **all four themes ship both**. Without that fallback the eleven objects Lost Kingdom places were missing **40 distinct textures** and drew the not-found art on most of their surfaces. Every missing name was present in both archives.
 
@@ -234,7 +234,7 @@ The engine's loader `FUN_00461f10` probes for an item's clips with a **12-entry 
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
-| `FUN_00461f10` | - | item loader; composes `"%s%s%c.md2"` and `"%s%s%c%d.md2"` — directory, stem, letter, optional number. Also the source of a model's channel count (its allocation argument) | read |
+| `FUN_00461f10` | - | item loader; composes `"%s%s%c.md2"` and `"%s%s%c%d.md2"` — directory, stem, letter, optional number. Also the source of a model's channel count (its allocation argument). **It clears header bit `0x4`** (relative animation, FileFormats `models.md`) and logs `0x0074d2c4` ("Ride %s has relative animation incorrectly set") unless its second argument has `0x20000` (`0x0046211a`..`0x0046214b`); `FUN_004629d0` sets that from bit `0x1000000` of its fifth (`0x00462ac1`), and its other call (`0x00462c07`) passes 0 and always strips. The track loader `FUN_0042fad0` passes `0x1013405` as `FUN_004629d0`'s fifth (`0x0042fca7`, `0x0042fd1e`) and keeps the bit; the car loader `FUN_00430130` (`0x00430150`) and the `SupplementalMeshes` loop (`0x00414373`) pass `0xc0` and would strip it. **Open:** which of the 25 bit-`0x4` models `FUN_00430130` loads, so whether any shipped car loses it | read |
 | `0x006fe6bc` | - | the twelve-entry letter table, **stride 8** | `MOV [ESP+0x14],0x6fe6bc` at `0x004622fb`, `MOV [ESP+0x20],0xc` at `0x00462303` |
 | `0x74d2b4` | - | format string `"%s%s%c%d.md2"` | read |
 | `0x74d2a8` | - | format string `"%s%s%c.md2"` | read |
@@ -910,7 +910,10 @@ builds. No `TRIGWAITANIM`, trigger or `WAIT4ANIM` decided apart in either phase.
 
 **Unexercised by shipped content:** `ADDOBJ` never uses type 6 or type 10, and `EVENT` never uses 7-10, so the whole custom-sound-bank path (`FUN_004145e0`) is decoded but untested by any shipped script.
 
-**Corpus:** `ADDOBJ` 644 uses / 164 files, `EVENT` 527/107, `KILLOBJ` 235/122, `FADEOBJ` 113/39, `SETOBJPARAM` 20, **`ADDOBJ_EXT` and `EVENT_EXT` 0 uses**. Node `-1` is the commonest operand in the whole corpus (277 of 644, 341 of 527). Tags run 0-1000 and two tags are killed that no `ADDOBJ` creates. Particle types use ids 1..95; sound types 6..220.
+**Corpus:** `ADDOBJ` 644 uses / 164 files, `EVENT` 527/107, `KILLOBJ` 235/122, `FADEOBJ` 113/39, `SETOBJPARAM` 20, **`ADDOBJ_EXT` and `EVENT_EXT` 0 uses**. Node `-1` is the commonest operand in the whole corpus (277 of 644, 341 of 527). Tags run 0-1000 and two tags are killed that no `ADDOBJ` creates. Particle types use ids 1..95; sound types 6..220. **Five shipped requests name an id their category lacks**: jungle
+`Speaker2`, `Speaker3` and `Speaker4` run `ADDOBJ 4 -1 6 1` (jungle's `cat_ambient` holds 177-182 and 190-192), and
+jungle `incagod` (word 332) and hallow `bumper` (word 188) run `EVENT 3 -1 43` (no theme's `cat_rides` has 43). What
+`Sound_PlayEffect`'s category lookup does with a missing id (the manager's vtable `+8`) is not read.
 
 ### `SETOBJPARAM` (12) and `DIPMUSIC` (104) — both buildable with no world
 
@@ -932,6 +935,26 @@ One operand, shipped **70x value 1 and 70x value 0**. It does **not** block — 
                                  FUN_00551320, which picks a sample from 0x4b..0x5a by variable 5.
 
 **`+0xcc` is the repair particle's handle** — a frame field, one slot, and `FUN_00558500` clears it on death. The killer is `FUN_00556a80`: it does `*(*(*(arg + 8) + 4) + 0x78)` with **no guard**, and its argument is `thingTable[frame+0xc8]` at `0x7a4610` — a table filled at runtime, indexed by the script's model handle with no guard. The sound side is safe (`FUN_0051bfc0` is `Sound_PlayEffect`, guarded on `DAT_00802bc8`/`DAT_00802bd4`), but that does not rescue it.
+
+### The lights (82-85) — decoded, unshipped
+
+`ENABLELIGHT` `0x00555c7a`, `DISABLELIGHT` `0x00555ccd`, `SETLIGHT` `0x00555d20`, `COLOURLIGHT` `0x00555d9a`. Each
+looks operand 1 up with `FUN_0044b220( thingTable[frame +0xc8], 0x20000, node )` (`0x7a4610`) and passes the index
+to `FUN_004587b0( thing id, index )` for the light. `ENABLELIGHT` calls `FUN_00458910`, which clears bit `0x10000000`
+of the light's `+0x50`; `DISABLELIGHT` calls `FUN_00458940`, which sets it. `SETLIGHT` multiplies its second operand
+by the float at `0x00700fe0` (0.01) and calls `FUN_004587e0( light, f )`, which scales the light's base colour by it;
+`COLOURLIGHT` calls `FUN_00458890( light, r × 0.01, g × 0.01, b × 0.01 )`, which writes the colour. **None checks for
+a missing node**: `FUN_0044b220` answers -1, and `FUN_004587b0` then reads the entry before the table, very likely a
+crash. No shipped script uses any of the four.
+
+### `SPARK` (105) at `0x005564ed` — spawns nothing
+
+It stores operands 1 and 2 as 16-bit particle-node ids at frame `+0xdc` and `+0xde`, resolves 3 and 4 and drops them,
+and checks each node with mask `0x100` through `FUN_00556b90`, passing the answer and `0x765b58` ("RSSE: Bad particle
+node in %s") to `FUN_005da3c0`, a bare `RET` in this build. It calls nothing that spawns or plays. In `0x00550000`-`0x00562000` the only
+word accesses at `+0xdc`/`+0xde` are its own four; the nine other hits there are dword accesses in the tour-record
+functions (`FUN_0055a620` to `FUN_0055e020`) and `FUN_0055f780`. Outside that range, unsearched. One shipped
+use, space `Plasma.RSE`; none in jungle. It stays counted.
 
 ### The limbo subsystem — and it needs no world
 
@@ -1040,6 +1063,23 @@ Ten handlers, and **every one reaches another script by ID through one global re
 
 **`SPAWNSOUND` is not dead storage.** `FUN_0055a3e0` takes a script id and a variable index, follows that script's `+0x14`, and answers one of the spawned script's variables — **29 callers, none in the interpreter**. That is the whole point of the opcode, and why all 28 uses load `EventMap.rse`.
 
+**What an `EventMap.rse` holds.** Only `COPY` literals into its variables, in **two layouts**, and the engine reads them
+**by index**, so one index names different variables in the two (what each slot feeds: `audio.md`, "What an EventMap's
+slots feed"). The seven jungle files:
+
+| Ride | Layout | `VAR_EVT0`.. | `VAR_PAR0`.. |
+|---|---|---|---|
+| `coaster1` | `VAR_EVT0-4`, `VAR_PAR0-4` (10) | 200, 216, 69, 203, 203 | 0, 0, 19, 0, 22 |
+| `coaster3`, `minecart` | the same | 204, 216, 69, 203, 203 | 17, 20, 19, 22, 22 |
+| `bumper`, `gokarts` | `VAR_EVT0-9`, `VAR_PAR0` (11) | 194, 195, 203, 199, 203 ×6 | 16 |
+| `tourride` | the same | 217, 203 ×9 | 21 |
+| `wateride` | the same | 200, 203 ×9 | 16 |
+
+**203 is not a sentinel**: the player skips only 0, and 203 is a real effect whose one sample is `Ride:blank.mp2`
+(9 ms), so it plays and is heard as nothing. The others in jungle's `cat_rides`: 194 an engine, 195 its stop, 199 a
+toot, 200 water, 204 a crumble, 216 the roller start and clicks, 217 wing flaps. 69 is not in jungle's
+`cat_rides`, and nothing reads slot 2.
+
 **The eleven names spawned never match their file's case** — scripts ask for `Effects.rse`, `clock.rse`, `worn.rse`, `anims.rse` where the archives hold `effects.RSE`, `Clock.RSE`, `Worn.RSE`, `Anims.RSE` — **so resolution must be case-insensitive or every spawn fails.** All four scripts that spawn inside a loop run `REMOVECHILD` first.
 
 **Corpus:** `SPAWNCHILD` 20/16, `SPAWNSOUND` 28/28, `REMOVECHILD` 4/4, `SETVARINCHILD` 7/3, `GETVARINCHILD` 9/2, `GETVARINPARENT` 10/8, `SETVARINPARENT` **0**, `GETREMOTEVAR` 2 (both in `zob.RSE`, both with a literal destination, so both are test-and-branch), `SETREMOTEVAR` 10/5, `FINDSCRIPTRAND` 5/5.
@@ -1118,7 +1158,7 @@ Dispatch at `0x005546f5`: `DEC EAX` / `CMP EAX,0x10` / `JA 0x00554c25` / `JMP [E
 
 Sel 5 reads `[ESI+0x2c]` directly with no call; sel 13 and 14 call the **same** function `0x00545100`, one scaling its argument by **30** (30 track ticks of 31 ms, not frames or seconds: "How a bumper ride ends a go", below) and the other negating it; sels 3, 6, 7 and 10 each make one call and return. **EDI is zero on entry to every selector's arm**, so sel 4 passes a literal 0; sels 8 and 9 choose their call by whether the resolved value is non-zero, and sel 17 acts only when the value differs from the word at `+0xe6`, which it then stores. **Two selectors store into operand 1**: sel 2 tests the tag first (`0x00554777`), so a literal takes nobody off and writes nothing, and sel 11 writes the register first (`0x00554913`, `SUB`'s tail), so `BUMP 11 0`, once in each theme's water ride, is a test of the answer. Sels 4, 5, 12, 13, 14 and 16 write the register with no destination, and sel 1 does for a variable operand (`0x00554758`); the others write none.
 
-**COAST and BUMP share one error handler; TOUR does not.** COAST's `JA` (after `CMP EAX,0x7`) and BUMP's `JA` (after `CMP EAX,0x10`) both jump to **`0x00554c25`**, which pushes `0x765bac` = **"RSSE: Unknown bumper ride command"** — so an out-of-range COAST command is reported as a *bumper* fault, logged through `FUN_005da3c0`. TOUR has its own at **`0x005546dc`** pushing `0x765bd0` = "RSSE: Unknown tour ride command", and TOUR's own dispatch is `DEC` / `CMP EAX,0x11` / `JMP [EAX*4 + 0x5569d0]`, so **18 selectors**. **Never write an engine string from memory or by analogy** — one was invented and caught only by reading `0x765bac`.
+**COAST and BUMP share one error handler; TOUR does not.** COAST's `JA` (after `CMP EAX,0x7`) and BUMP's `JA` (after `CMP EAX,0x10`) both jump to **`0x00554c25`**, which pushes `0x765bac` = **"RSSE: Unknown bumper ride command"** — so an out-of-range COAST command is reported as a *bumper* fault, logged through `FUN_005da3c0`. TOUR has its own at **`0x005546dc`** pushing `0x765bd0` = "RSSE: Unknown tour ride command", and TOUR's own dispatch is `DEC` / `CMP EAX,0x11` / `JMP [EAX*4 + 0x5569d0]`, so **18 selectors** (6, 7 and 13 are the error path). **`TOUR 1` (`0x00554318`) creates the tour ride**: it finds walk node 99 (`FUN_0044b220`, mask `0x800`), and with it calls `FUN_0055a620( thing +0xac, script +0x08, the node's position ×300, the facing in 4096ths of a turn, operand )`, keeping the answer at frame `+0x9c`; with no node it does nothing (its complaint `0x765bf0` goes to the bare `RET` `FUN_005da3c0`). `FUN_0055a620` takes one of slots 1..99 of `0x8791f8` for a `0x122c`-byte record (-1 when full), the operand at `+0x4c`, and `+0x30` 2500 for a non-zero operand, else 5000. All four shipped uses are `TOUR 1 0`. **`TOUR 2` (`0x0055441b`) destroys it** through `FUN_0055d3d0`, which the script's teardown `FUN_00558500` also calls (`0x00558536`), and fetches no operand; no shipped script uses it. **Never write an engine string from memory or by analogy** — one was invented and caught only by reading `0x765bac`.
 
 **`ScriptDefs.Bumper` is NOT a selector table — do not implement from it.** Its values are -1, 0, 7, 32, 38, 47, 54, 93, 115, 121, 134 and **18770**, and the dispatcher accepts only 1..17, so they cannot be selectors at all. `ScriptDefs.Coaster` matched COAST's table exactly, which makes the mismatch here easy to miss by analogy. Whatever those numbers are, they are not what `BUMP` switches on.
 
@@ -1207,7 +1247,7 @@ buoys instead (`FUN_005474b0`'s buoy arm, "GoKart Race Over"), so building them 
 Read for Q179b (the build of the section above), first-hand in Ghidra. **A car is launched where its arena is,** by
 `FUN_00549db0`: the first pool car not flagged live, zeroed, flagged live and `0x4000`, its record at `+0x9c`, its
 timer the duration (`+0x04`), its riders the whole boarding list, its mesh `+0x04` = cars (counted with it) mod the
-template's `+0x18`, plus `+0x14`, an index into the item's `SupplementalMeshes`, its model playing role `0xc` (the
+template's `+0x18`, plus `+0x14`, an index into the item's `SupplementalMeshes` (the item's loaded handles at `+0x4bc`, which `FUN_00413c10` fills at `0x0041434f`..`0x0041438b`, loading each name from `+0x244` on, the start taken from `ride-operation.md`'s `SupplementalMeshes[7]` at `+0x260`; whether the go-karts launch here, and not through the other readers of `+0x4bc` at `0x00543d00`, `0x0055aa00` and `0x0055e438`, is not traced), its model playing role `0xc` (the
 "no animation" sentinel, `RideAnimations.NoRole`) with flags 2, so it stands still; the first car of a ride is its lead
 (`+0x58`, flag `0x400000`). It is seated (`FUN_00549c60`), retargeted (`FUN_0054a040`) and flagged `0x4000000`, which
 the draw clears as it spawns particle `0xf`, a splash.

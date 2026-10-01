@@ -104,6 +104,7 @@ OpenTPW's `ParkScreams` builds exactly this: `ParkAudio.StopScream` releases not
 |---|---|---|---|
 | `0x0070a288` | — | vtable of the 8-byte forwarder at `DAT_00802bcc`: `+8` play → manager `+0x10` | Disassembly (`0x006b5dd6`, `0x006b5b4f`) |
 | `0x0070a2a0` | — | The sound manager's vtable: `+8` `0x006b8720` registers a category (→ `0x006bf330`), `+0x10` `0x006b87d0` plays, `+0x18` `0x006b89b0` stops a handle | Read from the image |
+| `0x0051b530` | — | The game's side of registering a category: a `cat_*` name to a handle through the manager's vtable `+4` (`DAT_00802bcc`); 0 when the sound system is down (`DAT_00802bc8`/`DAT_00802bd4`) or `FUN_0041e8e0` does not answer 1. Called by `Sound_RegisterGlobalCategories`, `FUN_0051ec50`, `FUN_0051e890` and `FUN_0051e8f0` | Decompiled |
 | `0x006bf330` | — | Registers a category: looks the name up and loads `<name>BANK.map` and `<name>SFX.map` into a 0x34-byte category. It does not play | Disassembly (`0x006bf3c2`, `0x006bf520`) |
 | `0x006b87d0` | — | Play. It reads no clock | Disassembly |
 | `0x006bb9f9` | — | The effect record's `+0xc` copied into the voice's priority | Disassembly |
@@ -134,6 +135,31 @@ In parks, in the ride-script engine. `FUN_005573d0` (its own error strings say `
 | `FUN_0044b220` | — | Node lookup by id **and** capability flag (see below) | Decompiled |
 | `+0x30` / `+0x34` / `+0x38` | — | Translation row of that stored matrix = emitter position | Decompiled |
 | `+0x20` / `+0x24` / `+0x28` | — | Direction row, normalised and sign-flipped on a flag bit = source cone | Decompiled |
+
+## What an EventMap's slots feed
+
+A track ride's or coaster's own sounds do not come from its script's `ADDOBJ` or `EVENT`: the ride engine reads them
+from the script's `SPAWNSOUND` child, its `EventMap.rse` (`park.md`, "The script-to-script family", has the two
+layouts and the jungle values). `FUN_0055a3e0( script, slot )` answers the child's variable at that index, and
+`FUN_0051eeb0( script, flags, category, slot, x, y, z )` plays it as an effect when it is not 0. **Every caller passes
+`[0x00803a3c]`, the park's `cat_rides`.**
+
+| Slot | Read by | Ride | What it does |
+|---|---|---|---|
+| 0 | `FUN_004392a0` (`0x0043932f`) | coaster, per train (list `DAT_00790fe0`) | plays it into the train's `+100`, after stopping the old voices; skipped while `DAT_00785a2c` is set |
+| 1 | `FUN_004392a0` (`0x00439363`) | the same | plays it into the train's `+0x68` |
+| 5-8 | `FUN_004392a0`, `FUN_004396e0` | the same | stored in the train at `+0x54`..`+0x60` (use not read) |
+| 0 | `Bumper_Retarget` `FUN_0054a040` (`0x0054a366`, `0x0054a682`, `0x0054a909`) | bumper, go-kart, water arms | plays it into the car's held voice `+0x20` |
+| 1 | `FUN_0054ae50` (`0x0054b01d`) | go-karts only (types -4, -7, -9, -10), as a car is taken off | plays it; every other type fades its voice |
+| 3 | `Bumper_PlayCarSound` `FUN_00547170` (`0x00547311`) | bumper, go-kart, water | case 2, the toot (logs "TOOT") |
+| 4 | the same (`0x00547425`) | the same | case 4 |
+| 0 | `FUN_0055a720` (`0x0055a944`) | tour ride, as a car is added | plays it at the car's position / 300 into `car+0xe0` |
+| 10 | `Bumper_StepCar` (×3) and `FUN_0055abf0` (×17) | track rides; the flying cars | a **parameter id**, not an effect: `FUN_0051bc40( voice, slot 10, level )`, levels 60/30/80/15 for the flying cars and computed for the track cars |
+
+So slot 10 is `VAR_PAR0` of the 11-variable layout and slots 5-8 are `VAR_PAR0`-`VAR_PAR3` of the 10-variable one. **No
+caller reads slot 2**, so the coasters' `VAR_EVT2` (69, not an effect in jungle's `cat_rides`) is never played. Not read:
+what sets the car's case to 2 or 4, the exact gate on each `Bumper_Retarget` arm, where `Bumper_StepCar`'s level comes
+from, and what `DAT_00785a2c` is. **OpenTPW plays none of these** and counts none of them yet.
 
 ## Node lookup is by id AND a capability flag
 
