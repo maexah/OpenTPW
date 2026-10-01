@@ -880,8 +880,8 @@ public sealed class ParkRides : Entity
 	/// every saved reading means what it meant; this park's clock is the tick count since the game began, and a
 	/// float, which at a saved reading's size (114,374,804 ms in the shipped park) would hold it only to 8 ms. So each
 	/// deadline and stamp keeps its distance from the save's moment instead, which is what any wait or clip compares.
-	/// Its one known consequence: a reading a script kept in a variable (<c>GETTIME</c> into <c>VAR_STARTNOW</c>) is
-	/// not moved, since nothing says which variables hold one (docs/QUEUE.md Q181).
+	/// Its one known consequence: a deadline a script kept in a variable (<c>GETTIME</c> into <c>VAR_STARTNOW</c>) is
+	/// not moved (docs/exe/park.md, "What a kept <c>GETTIME</c> reading is"; Q181b).
 	/// </para>
 	/// </summary>
 	private int? Moved( uint reading ) => _clock?.Since( reading ) is { } since ? _loaded + since : null;

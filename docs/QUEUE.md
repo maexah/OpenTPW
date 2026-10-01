@@ -3400,7 +3400,7 @@ artifacts are listed in `docs/history/README.md`.
     each failed a test. Review `wf_8ad60fc1-e89` (one agent): three findings, fixed (that test; saved handles only from a
     module read whole; a short header read as far as it goes).
 
-- [ ] **Q181. A `GETTIME` reading kept in a script variable across a load. Decode first.** Found by Q174c's probe
+- [x] **Q181. A `GETTIME` reading kept in a script variable across a load. Decode first.** Found by Q174c's probe
   (`q174c/clockvars.py`). `GETTIME` stores the clock raw; twelve Lost Kingdom ride scripts keep one in `VAR_STARTNOW`
   (`bumper`, `GoKarts`, `incagod`, `Lookout`, `Monkey`, `Mumbo`, `PorkPie`, `Spider`, `Totem`, `TourRide`, `Volcano`,
   `Wateride`), the gift shop in `VAR_TIMER1`, `end` in `VAR_ENDTIME`, and each subtracts it from the clock later. The engine's
@@ -3411,6 +3411,26 @@ artifacts are listed in `docs/history/README.md`.
   then choose: run the scripts on the save's own clock, as the engine does (a float clock holds 114 million ms only to
   8 ms), or move the readings a walk of the script finds. Confirm, after Q167: a loaded ride's cycle timed from
   `VAR_STARTNOW` ends when it would have without the load.
+  - **Decoded** (`park.md`, "What a kept `GETTIME` reading is"; branch `alexah/216-decode-the-kept-readings`): every
+    kept reading is a deadline, the clock plus 10,000 (5,000 once, 4,000 or 6,000 for `VAR_TIMER1`), read only by
+    `GETTIME VAR_TEMP; SUB VAR_TEMP, <deadline>, VAR_TEMP` and a sign branch; only `VAR_STARTNOW`, `VAR_TIMER1` and
+    `VAR_ENDTIME` keep one across turns, and `VAR_TEMP` and the result register only when a turn ends inside an
+    unlocked pair. Of Alexah's eight jungle holders, `mumbo`, `monkey` and `giftshop` read the stale one first. Chosen:
+    move the readings (Q181b), not the clock. Skeptics `wf_8ddcb5a1-fe2` (two Opus): eleven claims, five corrected, all
+    folded in.
+  - **Measured in the game** (`q181/run.py`, `run4/`; silent, stock park, `save/` unchanged), predicted first: a Hot
+    Pot with one rider and `VAR_STARTNOW` planted at the shipped clock plus 10,000 stayed loading for 14 s (1 of 1);
+    the control, 0, went 2.3 s after the write, predicted within 2 (a reading late). Shots `B1-still-loading`,
+    `A1-going`, looked at. No code changed but a comment.
+
+- [ ] **Q181b. Move a kept `GETTIME` deadline across a load.** From Q181's decode (`park.md`, "What a kept `GETTIME`
+  reading is"). At `ParkRides.Resume`, move through `Moved` every variable a walk of the script finds written only by
+  `GETTIME` and `ADD` to itself (`VAR_STARTNOW`, `VAR_TIMER1`, `VAR_ENDTIME`), never by name; and, when the saved
+  script stands on a `SUB` whose word before is `GETTIME V`, that `V` and the result register (check the save carries
+  `+0x48` and that `Resume` restores it). Say the deviation at the site. Tests: Mumbo's and Monkey's boarding timeouts
+  after a load, the gift shop's idle, a split pair; put each bug back. Confirm, after Q167 (or a planted reading if
+  Alexah's saves still will not load): a loaded Mumbo or Monkey starts its go 9.5 s or 7.3 s after the load with nobody
+  boarding, predicted first, a screenshot and the `rides` line.
 
 - [ ] **Q182. A frame's ticks and clips read one clock in the engine. Decode first.** Moved from Q174c, where Q174b's
   review left it as a note (`park.md`, difference 6). A triggered clip starts at the tick's own instant in OpenTPW

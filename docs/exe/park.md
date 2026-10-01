@@ -614,6 +614,57 @@ The other time opcodes:
 
 **`GETTIME` is NOT "how long the ride has been alive"** — that was the published docs' claim and it is wrong; it stores the shared clock verbatim. 172 uses / 57 scripts. **SETTIMER 40 uses and GETTIMER 21, across the same 18 scripts**, and all 21 GETTIMERs name a *literal* destination, so the answer lands in the result register and the write is skipped. **WAITABS has zero uses in all 308**, so it was deliberately left unimplemented.
 
+### What a kept `GETTIME` reading is, and what a load does to it (Q181)
+
+**Every reading a script keeps is a deadline, compared against a fresh reading by its sign.** Across all 308 files (197
+distinct bodies, `q181/writers.py`, an independent skeptic sweep agreeing), `GETTIME` names a variable every time, and
+only four: `VAR_STARTNOW` (51 bodies, 105 uses), `VAR_TEMP` (54), `VAR_TIMER1` (2: jungle `giftshop`, fantasy `Purse`)
+and `VAR_ENDTIME` (1: `End.RSE`, one body in all four themes). Each `GETTIME VAR_STARTNOW` is followed at once by
+`ADD VAR_STARTNOW, 10000` (104) or `5000` (jungle `Monkey` word 37); `VAR_TIMER1` by `ADD 4000` or `6000`, except a
+1-in-10 arm (`giftshop` 82, `Purse` 65) that stores the raw clock, due at once; `VAR_ENDTIME` by `ADD VAR_ENDTIME,
+VAR_TEMP` with 10000 copied in at word 4. Nothing else writes the three. Each is read only as `GETTIME VAR_TEMP; SUB
+VAR_TEMP, <deadline>, VAR_TEMP` (`SUB` stores op2 - op3, signed, `0x00551e58`), then `BRANCH_NV` for `VAR_STARTNOW`
+(the deadline passed: start the go) and `BRANCH_PV` for the other two (not yet: skip). So `VAR_STARTNOW` is "start
+10 s after the last boarder", not a start time. 11 of the 51 guard the test with `TEST VAR_ONRIDE` (each theme's bumper
+and go-karts, fantasy `bbugs`, space `rocket`, `zerog`, `zob`); the other 40, `Mumbo` and `Monkey` among them, start an
+empty go when it passes. All 54 `GETTIME VAR_TEMP` are followed at once by that `SUB`, so `VAR_TEMP` holds a raw reading
+only between those two words.
+
+**A turn can end between them.** The time slice is an instruction budget (`FUN_005516b0`, `0x00551701`..`0x0055173c`),
+so an unlocked pair can be split, leaving a raw reading in `VAR_TEMP` and in the result register `+0x48`, which
+`GETTIME` writes first (`0x00554b11`) and the save carries. Jungle's unlocked pairs: `bumper` 84, `incagod` 55, `Lookout`
+28, `Monkey` 51, `Mumbo` 28, `PorkPie` 28, `Spider` 29, `Totem` 21, `Volcano` 44, `giftshop` 59. `GoKarts` 57, `TourRide`
+143 and `Wateride` 78 sit inside `CRIT_LOCK`, and `End.RSE` 51 follows a `WAIT`, whose passing visit starts a turn
+(`0x00553817` zeroes the budget on each rewind): those four cannot split.
+
+**The engine's readings survive a load unchanged; OpenTPW's do not.** `FUN_005597a0` reads the variable block raw and
+writes no variable after it, and the load puts the `0x785970` clock back to the saved reading (`FUN_00415140` at
+`0x00415193`, through `FUN_004031f0`: offset = saved - now), on the load path where `FUN_00414d40`'s fourth argument is
+not 1 (`0x004150b5`; which loads pass 1 is not established). The clock is integer milliseconds (`FUN_00402f10`, the
+`QueryPerformanceCounter` count over frequency/1000, through `__ftol`). OpenTPW copies the variables raw
+(`ParkRides.Resume`) but runs its scripts on its own clock (`ParkRides.Moved`), far behind a save's, so `deadline - now`
+stays positive until OpenTPW's clock catches the save's: about 80 minutes for Alexah's jungle saves (4.82M ms), 31.8
+hours for one taken at the shipped park's clock. The shipped park keeps none. Of the eight holders in Alexah's jungle
+`New Save.TPWS` and `autosave.TPWS` (`q174c/clockvars.out`), five write before they read again (`spider` 128,
+`gokarts` 197, `tourride` 62/87, `incagod` 159, `porkpie` 125); three read the stale one first: `mumbo` 62 and
+`monkey` 85, saved on the branch back into their boarding loops, never start a go by the timeout, empty or not, until
+a boarder writes a fresh deadline or the ride fills (the engine starts them 9.5 s and 7.3 s after the load); `giftshop`
+59 and 84 never plays its idle `WAITANIM 2`, which nothing but the timer releases.
+
+**Measured in the game** (`q181/run.py`, `run4/`; silent, stock park, a Hot Pot bought at (57,23), one guest admitted
+and sent to it, `save/` unchanged), predicted first: with that guest seated in the boarding loop (word 120),
+`scriptvar VAR_STARTNOW 114384804` (the shipped park's clock plus the 10,000, what a load of such a save hands over)
+held it loading at seated 1 for every reading over 14 s; the control, `0`, put it into its go 2.3 s after the write
+(predicted within 2: one reading late). Shots `B1-still-loading` (boats idle) and `A1-going`, looked at. `run3/` shows
+the self-repair: a second guest boarded at 20 s, wrote a fresh deadline, and the go began about 13 s later.
+
+**The build moves the readings (Q181b), rather than running the scripts on the save's clock.** Both reproduce every
+shipped script; running on the save's clock would widen the float clock that scripts, animation players, the boats,
+the people and the lobby share, which cannot hold a saved reading to the millisecond. Moving completes the deviation
+`ParkRides.Moved` already makes for every other saved deadline. What a walk can find: a variable written only by
+`GETTIME` and `ADD` to itself (`VAR_STARTNOW`, `VAR_TIMER1`, `VAR_ENDTIME`); and, when a saved script stands on a `SUB`
+whose word before is `GETTIME V`, that `V` and the result register.
+
 ### `RAND` (28) at `0x00553932` — its bound is NOT resolved
 
 The generator at `0x00516330` is an LCG: `state = state * 0x19660d + 0x3c6ef35f`, rotated right 13, made positive by a `NEG` that hands `0x80000000` back as it is (`0x0051635f`). The opcode then does an **unsigned** `SHR 1` (`0x0055398f`), which turns that one state into `0x40000000`, so no draw is negative; `FINDSCRIPTRAND` halves the same way (`0x005560d0`), and `RideScript.NextDraw` does both, through `ParkGenerator.Draw` (Q176). Then `abs`, `MOVSX ECX,DI`, `INC ECX`, `IDIV`, **takes the remainder**, and `abs` again — so the range is **0 to the bound INCLUSIVE**. **The `MOVSX` is bare**: there is none of the `AND 0xff000000 / CMP 0x40000000` tag test every resolved value operand gets, so a bound tagged as a variable would be read as its own index. All 56 shipped uses name a literal (bounds 1-10 plus one 300 and one 5000), so the difference is invisible in the data and would have been wrong in code. **The state is the world's `mRandomSeed`** (`+0x1da708`, read from the save), and `FUN_00516370` is a plain setter called from eight places, none of them the script system, each of which resets it to an id: a guest's as the guest is made (`0x004fb19e`), at a costume's return (`0x004fe6a1`), at a balloon given and built again (`0x004fe6fc`, `0x0050205f`) and, where a theme has no costume heads, at a head's attach (`0x004fcafd`); a handyman's litter cell's (`0x004d71ca`); and two more (`0x004d94e2`, `0x004f7b7e`). Every draw in the park, `RAND`'s among them, steps that one state, so the original's numbers can be reproduced only by one shared generator started from the save and reset at the same eight points. OpenTPW keeps one per system (`ParkGenerator`), so it reproduces the arithmetic, not the numbers (`ride-operation.md`, "A held balloon").
@@ -726,7 +777,7 @@ What still differs: a new script's own start (the engine's `+0xa8` is `0xffff`, 
 the key 0); a channel carrying `0x40`, which advances against a second stopwatch (`DAT_007b4974`, `KOLC`'s second dword)
 that OpenTPW does not keep, and which no saved channel carries; the real time the engine's clock runs between its
 restore and the first tick, through the rest of the load (not measured), which OpenTPW does not count; a `GETTIME`
-reading kept in a variable, which is not moved (Q181); and the scheduler's tick counter and next handle, which the
+reading kept in a variable, which is not moved ("What a kept `GETTIME` reading is", Q181b); and the scheduler's tick counter and next handle, which the
 module's header puts back (`0x005598d7`), so each script keeps its one-in-eight turn phase across a load where OpenTPW
 restarts both (Q180).
 
