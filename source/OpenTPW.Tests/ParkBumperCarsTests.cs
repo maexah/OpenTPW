@@ -296,6 +296,30 @@ public class ParkBumperCarsTests
 	}
 }
 
+/// <summary>A rider in a boat is drawn as a head: which bank, and that every head bank the park can need is packed.</summary>
+[TestClass]
+public class RiderHeadTests
+{
+	[TestMethod]
+	public void AChildRidesAsTheirOwnHeadAndACostumeAsItsHead()
+	{
+		Assert.AreEqual( (ParkSpriteBanks.KidHeadKind, 5), ParkGuestSprites.HeadOf( ParkSpriteBanks.ChildKind, 5 ) );
+		Assert.AreEqual( (ParkSpriteBanks.CostumeHeadKind, 0), ParkGuestSprites.HeadOf( ParkSpriteBanks.CostumeKind, 0 ) );
+	}
+
+	[TestMethod]
+	public void EveryChildsAndCostumesHeadIsPacked()
+	{
+		var counts = new ParkSpriteBanks( KidBanks: 6, CostumeBanks: 1, BalloonSets: 4 );
+		var packed = ParkGuestSprites.BanksToPack( [], counts ).ToHashSet();
+
+		for ( var bank = 0; bank < 6; ++bank )
+			Assert.IsTrue( packed.Contains( (ParkSpriteBanks.KidHeadKind, bank) ), $"kid head {bank}" );
+
+		Assert.IsTrue( packed.Contains( (ParkSpriteBanks.CostumeHeadKind, 0) ), "the costume's head" );
+	}
+}
+
 /// <summary>The Hot Pot read from the game: its item's arena and its own script driving the cars through <c>BUMP</c>.</summary>
 [TestClass]
 public class HotPotScriptTests

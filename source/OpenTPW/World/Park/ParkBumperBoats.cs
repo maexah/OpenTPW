@@ -69,8 +69,11 @@ public sealed class ParkBumperBoats : Entity
 	/// <summary>How many boats are standing - for the census.</summary>
 	public int Standing => _boats.Count;
 
-	/// <summary>Where a rider sits in the world, or null when no boat carries them on a seat its model has.</summary>
-	internal Vector3? SeatOf( int peep )
+	/// <summary>
+	/// Where a rider sits in the world and the way their boat points (in a person's 2048ths of a turn), or null when no
+	/// boat carries them on a seat its model has.
+	/// </summary>
+	internal (Vector3 Seat, int Angle)? SeatOf( int peep )
 	{
 		if ( ParkState.Current?.TrackRides.Cars is not { } cars )
 			return null;
@@ -88,7 +91,7 @@ public sealed class ParkBumperBoats : Entity
 					continue;
 
 				return boat.Seats.TryGetValue( rider.Seat, out var node ) && boat.Model.TryGetPlacedNode( node, out var at )
-					? at
+					? (at, (car.Heading * 4) & 0x7ff)
 					: null;
 			}
 		}

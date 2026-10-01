@@ -3251,6 +3251,25 @@ artifacts are listed in `docs/history/README.md`.
     lets its riders off (no worse than before; `SAVED_TRACK_RIDE_CARS` counts it). Tests read the static
     `ParkState.Current` for the bind, which a later test could cross.
   - Built and tested alone in a worktree: 1521 pass, 0 skip with the game; 620 ran, 901 skipped without; 123 warnings.
+  - **Then, at Alexah's word (2026-09-30): the riders sat on top of their boats, whole.** A boat's rider is now drawn as
+    their head at the seat node and no body (`ParkGuestSprites.DrawHead`; `ride-operation.md`, "What the head is"): the
+    child's `Kidsheads` bank, or the costume's `Costumeheads`, set 0 frame 0, both kinds packed. The decode says the
+    original leaves the body standing where it boarded; Alexah chose head only. The original was not run: moving the
+    mouse on the desktop was refused by the session's permissions (the reference install's park was patched to research
+    the Hot Pot, then restored to the disc's bytes). Console: `scriptvar` writes a script variable as the engine would.
+  - **Every built path confirmed in the game** (`q179b/q179bconfirm.py`, `confirm2/`, silent, `save/` unchanged), 8 of
+    8, predicted first: A 4 riders drawn HEAD only at z 33.5; B `VAR_BREAKSTAT` 1: wear 2, all at rest, timers frozen,
+    and 0: rocking again, counting again; C `VAR_WORN` 1 reaches `BUMP 9` with a literal 0, the fix arm, so nothing is
+    worn and the go counts on; D the park's door mid-go: 4 riders off at 42 with time left, the ride closed 17 times with
+    the copied reopen between, and reopened a rider boards; E capacity cut to 1 in the ride window: `BUMP 16` leaves 1
+    boat, drawn; F sold mid-go: no ride, no boats, nobody riding. Photographed and looked at: `A-heads-*`, `B-broken`,
+    `D-closed`, `E-fewer-boats`, `F-sold`. `confirm1/` (5 of 8) was the same run with three predictions of mine wrong:
+    `BUMP 9`'s literal, the script closing again each pass, and a 90 s wait after the queue was turned away.
+  - Tests: `RiderHeadTests` (2), each red with its bug back (head banks not packed, a costume given the child's head). Built
+    and tested alone in a worktree: 1523 pass, 0 skip with the game; 622 ran, 901 skipped without; 123 warnings.
+  - **Still not confirmed, and why:** the yaw's and a head's facing sense (needs the original); a loaded park with a
+    Hot Pot (nothing here saves a park, and no save has one); the rocking, wake, splash, smoke, particles and the lead's
+    sound, which are not built, only counted.
 
   The item as written: From Q179's decode
   (`park.md`, "How a bumper ride ends a go, and lets its riders off"), and Alexah's account of the original

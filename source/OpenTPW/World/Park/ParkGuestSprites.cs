@@ -320,7 +320,9 @@ public sealed class ParkGuestSprites : ModelEntity
 		{
 			banks = banks
 				.Concat( Enumerable.Range( 0, counts.KidBanks ).Select( bank => (Type: ParkSpriteBanks.ChildKind, Bank: bank) ) )
-				.Concat( Enumerable.Range( 0, counts.CostumeBanks ).Select( bank => (Type: ParkSpriteBanks.CostumeKind, Bank: bank) ) );
+				.Concat( Enumerable.Range( 0, counts.CostumeBanks ).Select( bank => (Type: ParkSpriteBanks.CostumeKind, Bank: bank) ) )
+				.Concat( Enumerable.Range( 0, counts.KidBanks ).Select( bank => (Type: ParkSpriteBanks.KidHeadKind, Bank: bank) ) )
+				.Concat( Enumerable.Range( 0, counts.CostumeBanks ).Select( bank => (Type: ParkSpriteBanks.CostumeHeadKind, Bank: bank) ) );
 		}
 
 		return banks.Distinct();
@@ -535,8 +537,18 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		foreach ( var (person, sprite) in _people )
 		{
-			var (setNumber, frame, bankOffset) = Showing( people?.SpriteFor( person.ThingId ), sprite );
 			var (kind, bank) = LookOf( people, person, sprite );
+
+			// A rider in a bumper boat is drawn as their head on its seat, and no more.
+			if ( ParkBumperBoats.Current?.SeatOf( person.ThingId ) is { } boat )
+			{
+				if ( DrawHead( used, boat.Seat, boat.Angle, kind, bank, sprite.Alpha ) )
+					++used;
+
+				continue;
+			}
+
+			var (setNumber, frame, bankOffset) = Showing( people?.SpriteFor( person.ThingId ), sprite );
 
 			if ( !_banks.TryGetValue( (kind, bank + bankOffset), out var loaded ) )
 				continue;
@@ -596,6 +608,39 @@ public sealed class ParkGuestSprites : ModelEntity
 		} );
 
 		TranslucentModel.Draw();
+	}
+
+	/// <summary>
+	/// A rider's head on a ride's seat node - what <c>FUN_0044b410</c> hangs there: the head of the rider's own child bank
+	/// (kind 1), or of their costume's (kind 3) for a guest in costume, chosen by <c>FUN_004fcac0</c>; set 0, frame 0, the
+	/// sprite script at <c>0x74f558</c>. Answers whether a quad was written.
+	/// </summary>
+	/// <remarks>
+	/// <b>Two choices, said here.</b> The rider's body is not drawn: the original keeps it, standing, where the rider was
+	/// when they boarded (admission's <c>+0x28</c> = 1 stops the guest draw placing it), and Alexah's memory of the game
+	/// is a head in the boat and nothing else, which is what this draws (2026-09-30). And the head faces the boat's
+	/// heading; which way the original turns an attached head is not decoded.
+	/// </remarks>
+	/// <summary>The head bank for a rider drawn in a kind and bank - <c>FUN_004fcac0</c>: a costume's head for a costume, else the child's.</summary>
+	internal static (int Kind, int Bank) HeadOf( int kind, int bank )
+		=> (kind == ParkSpriteBanks.CostumeKind ? ParkSpriteBanks.CostumeHeadKind : ParkSpriteBanks.KidHeadKind, bank);
+
+	private bool DrawHead( int used, Vector3 seat, int angle, int kind, int bank, int alpha )
+	{
+		if ( !_banks.TryGetValue( HeadOf( kind, bank ), out var loaded ) || loaded.Bank.Sets.Length == 0 )
+		{
+			Unimplemented.Report( "RIDER_HEAD_BANK_MISSING" );
+			return false;
+		}
+
+		var index = Picture( loaded.Bank.Sets[0], 0, Facing( ParkWorld.Person.OctantOf( angle ) ), out var mirrored );
+
+		if ( index < 0 || index >= loaded.Pictures.Length )
+			return false;
+
+		WriteQuad( used, seat, loaded.Pictures[index], mirrored, alpha );
+
+		return true;
 	}
 
 	/// <summary>
@@ -744,10 +789,6 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// </summary>
 	internal static Vector3? Seated( ParkPeople? people, int thingId )
 	{
-		// A bumper boat carries its rider on its own seat node (FUN_0044b410 from FUN_00549c60).
-		if ( ParkBumperBoats.Current?.SeatOf( thingId ) is { } boat )
-			return boat;
-
 		if ( people == null || ParkObjects.Current is not { } objects )
 			return null;
 
@@ -1056,7 +1097,8 @@ public sealed class ParkGuestSprites : ModelEntity
 			// <b>The same override the drawing applies.</b> It computes a position of its own rather than
 			// reading the one the renderer used, so without it a rider drawn up on the ride would be
 			// reported at the cell they queued on.
-			var seated = Seated( people, person.ThingId );
+			var head = ParkBumperBoats.Current?.SeatOf( person.ThingId );
+			var seated = head?.Seat ?? Seated( people, person.ThingId );
 
 			if ( seated is { } seat )
 				(x, y) = (seat.X, seat.Y);
@@ -1073,7 +1115,7 @@ public sealed class ParkGuestSprites : ModelEntity
 				// interpolated frame moves them roughly 0.16 world units - which at one decimal place is
 				// barely above the printing granularity and could not be told from a jump.
 				$"drawn ({x:0.000},{y:0.000}) alpha {alpha:0.00}" +
-				$"{(seated is { } on ? $" SEATED z {on.Z:0.0}" : "")} " +
+				$"{(seated is { } on ? $" SEATED z {on.Z:0.0}" : "")}{(head is not null ? " HEAD only" : "")} " +
 				$"saved ({sprite.X:0.0},{sprite.Y:0.0}) " +
 				$"cellsize {cellX:0.##}x{cellY:0.##} walk {(walk == null ? "none" : "found")}";
 		}

@@ -1879,8 +1879,17 @@ child its id gives (`ParkPeople.Admit`, `ParkSpriteBanks.ChildOf`); a load reduc
 undresses (`ParkRideOperation.DressOrUndress`), counting event `0xb` (`SETTLE_UP_COSTUME_EVENT`); and a guest is drawn in
 `Peep.SpriteKind` and `SpriteBank` (`ParkGuestSprites`), every child and costume bank packed. Its departures: the costume's
 draw is the ride turn's generator; the picture changes at the settle-up, which the original's case `0xf` follows straight
-after, where OpenTPW never hides a rider at all (Q52); and no head is drawn on a ride here (`ADDHEAD`, Q190), so the
-costume heads wait on it. The `0x4000` custom-detail path is not reached: OpenTPW has only the three detail files. The
+after, where OpenTPW never hides a rider at all (Q52); and the only heads drawn here are a bumper boat's riders'
+(Q179b, `ParkGuestSprites.DrawHead`: the head of the rider's child bank, or their costume's), while `ADDHEAD`'s wait on
+Q190.
+
+**What the head is.** `FUN_0044b410` makes a world sprite (`FUN_00475a10( 0x0074f558, kind, bank )`) whose script is
+`SETSET 0`, local 13 = 0, local 16 = `0x3000080`, then a loop of `FRAME` local 13: set 0, frame 0 of a `Kidsheads` (kind
+1) or `Costumeheads` (kind 3) bank, seven directions. **The body:** admission to a thing with flag `0x20` sets the guest's
+`+0x28` to 1 and asks their sprite for the standing script (`0x00502136`, `FUN_004217f0( 3 )`), and the guest draw
+places the body only while `+0x28` is nought (`FUN_004fa030`), so the original leaves it standing where it boarded.
+OpenTPW draws no body for a boat's rider, by Alexah's account of the game (2026-09-30); which way an attached head faces
+is not decoded, and here it is the boat's heading. The `0x4000` custom-detail path is not reached: OpenTPW has only the three detail files. The
 staff folders' cap from the same key (`FUN_0041aa40`: one bank at `NUMKIDS` 0, else two; only the mechanics have two) is
 built with it, and a staff member's saved bank is brought within it as they are drawn.
 

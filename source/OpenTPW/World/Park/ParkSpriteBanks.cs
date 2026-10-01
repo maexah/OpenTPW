@@ -23,6 +23,12 @@ public sealed record ParkSpriteBanks( int KidBanks, int CostumeBanks, int Balloo
 	/// <summary>The sprite kind a costume is - <c>mESPSprite</c> 2, "costumes".</summary>
 	public const int CostumeKind = 2;
 
+	/// <summary>The kid heads, kind 1 (<c>Generic\Kidsheads</c>): a rider's head drawn on a ride's seat, by the child's own bank.</summary>
+	public const int KidHeadKind = 1;
+
+	/// <summary>The costume heads, kind 3 (<c>&lt;theme&gt;\Costumeheads</c>): a costumed rider's head, by the costume's bank.</summary>
+	public const int CostumeHeadKind = 3;
+
 	/// <summary>
 	/// How many kid banks the loader stops at - <c>FUN_0041a9d0</c>: two, four, six or
 	/// eight for <c>NUMKIDS</c> 0, 1, 2 or anything else, a negative included (its <c>JA</c> is unsigned). <c>low.sam</c>

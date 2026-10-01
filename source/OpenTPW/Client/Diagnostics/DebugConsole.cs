@@ -680,6 +680,24 @@ public static class DebugConsole
 
 				break;
 
+			// Writes one of a thing's script variables by name, as the engine writes VAR_BREAKSTAT, VAR_WORN and the rest
+			// from outside the script - an instrument for an arm nothing built here reaches yet (breakdowns, wear).
+			case "scriptvar":
+			{
+				if ( parts.Length < 4 || !int.TryParse( parts[1], out var varThing ) || !int.TryParse( parts[3], out var varValue )
+					|| ParkRides.Current is not { } varRides || varRides.ScriptFor( varThing ) is not (var varId and not 0)
+					|| varRides.Scheduler.Find( varId ) is not { } varScript )
+				{
+					Reply( "scriptvar: scriptvar <thing> <VAR_NAME> <value>, for a thing running a script" );
+					break;
+				}
+
+				Reply( varScript.Set( parts[2], varValue )
+					? $"scriptvar: thing {varThing} {parts[2]} = {varValue}"
+					: $"scriptvar: thing {varThing}'s script declares no {parts[2]}" );
+				break;
+			}
+
 			// The bumper rides and their cars - ParkBumperCars: each ride's state, wear, duration, seated count and lists,
 			// then each live car's place, heading, timer, clip and riders, and how many boats are drawn.
 			case "bumpers":
