@@ -180,6 +180,53 @@ public sealed class RideNodes
 		return RidesAClip( node ) ? NodeEnd.RestPose : NodeEnd.Posed;
 	}
 
+	/// <summary>
+	/// How many head slots the script loader gives a script on this model, <c>+0x4c</c>: the run of ids from 1 that the
+	/// head space finds, stopping at the first it does not (<c>FUN_005587f0</c>, <c>0x00558d8a</c>..<c>0x00558db7</c>).
+	/// </summary>
+	public int HeadCount()
+	{
+		var count = 0;
+
+		while ( _model.FindNode( count + 1, HeadSpace ) >= 0 )
+			++count;
+
+		return count;
+	}
+
+	/// <summary>
+	/// Where a head <c>ADDHEAD</c> hung on head node <paramref name="id"/> stands, as <see cref="Find"/> answers, and
+	/// the node's whole stored matrix, in the model's own axes (y up). A node with a head on it is stored whatever its
+	/// children (<c>docs/exe/ride-operation.md</c>, "How long a leg lasts": a record with something attached), so only a
+	/// node with no matrix at all is <see cref="NodeEnd.Unposed"/>.
+	/// </summary>
+	public NodeEnd FindHead( int id, out Numerics.Matrix4x4 world )
+	{
+		world = Numerics.Matrix4x4.Identity;
+
+		var node = _model.FindNode( id, HeadSpace );
+
+		if ( node < 0 )
+			return NodeEnd.Missing;
+
+		var flags = _nodes[node].IdFlags;
+
+		if ( (flags & HasMatrix) == 0 )
+			return NodeEnd.Unposed;
+
+		world = Stored( node );
+
+		var parent = _nodes[node].ParentIndex;
+
+		if ( (flags & FromAFace) != 0 && parent >= 0 && parent < _nodes.Length && _morphed[parent] )
+			return NodeEnd.OnAFace;
+
+		return RidesAClip( node ) ? NodeEnd.RestPose : NodeEnd.Posed;
+	}
+
+	/// <summary>The name of head node <paramref name="id"/>, or null where the model has none - for the census.</summary>
+	public string? HeadName( int id ) => _model.FindNode( id, HeadSpace ) is var node && node >= 0 ? _nodes[node].Name : null;
+
 	/// <summary>Whether the node, or anything it hangs from, is turned or moved by one of the thing's clips.</summary>
 	private bool RidesAClip( int node )
 	{
@@ -194,8 +241,16 @@ public sealed class RideNodes
 		return false;
 	}
 
-	/// <summary>The node's translation as the pose walk stores it: root first, each matrix local times parent.</summary>
+	/// <summary>The node's translation as the pose walk stores it.</summary>
 	private Numerics.Vector3 Posed( int node )
+	{
+		var world = Stored( node );
+
+		return new Numerics.Vector3( world.M41, world.M42, world.M43 );
+	}
+
+	/// <summary>The node's matrix as the pose walk stores it: root first, each matrix local times parent.</summary>
+	private Numerics.Matrix4x4 Stored( int node )
 	{
 		var chain = new List<int>();
 
@@ -209,7 +264,7 @@ public sealed class RideNodes
 		for ( var i = 1; i < chain.Count; ++i )
 			world = Compose( _nodes[chain[i]].LocalTransform, world );
 
-		return new Numerics.Vector3( world.M41, world.M42, world.M43 );
+		return world;
 	}
 
 	/// <summary>

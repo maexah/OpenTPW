@@ -1879,9 +1879,10 @@ child its id gives (`ParkPeople.Admit`, `ParkSpriteBanks.ChildOf`); a load reduc
 undresses (`ParkRideOperation.DressOrUndress`), counting event `0xb` (`SETTLE_UP_COSTUME_EVENT`); and a guest is drawn in
 `Peep.SpriteKind` and `SpriteBank` (`ParkGuestSprites`), every child and costume bank packed. Its departures: the costume's
 draw is the ride turn's generator; the picture changes at the settle-up, which the original's case `0xf` follows straight
-after, where OpenTPW never hides a rider at all (Q52); and the only heads drawn here are a bumper boat's riders'
-(Q179b, `ParkGuestSprites.DrawHead`: the head of the rider's child bank, or their costume's), while `ADDHEAD`'s wait on
-Q190.
+after, where OpenTPW never hides a rider at all (Q52); and the heads drawn here are a bumper boat's riders'
+(Q179b, `ParkGuestSprites.DrawHead`: the head of the rider's child bank, or their costume's) and `ADDHEAD`'s (Q190,
+`ParkGuestSprites.HeadOnRide`; `park.md`, "The head table"), while `WALKON` action 4's, the coasters' and the tour cars'
+are not drawn.
 
 **What the head is.** `FUN_0044b410` makes a world sprite (`FUN_00475a10( 0x0074f558, kind, bank )`) whose script is
 `SETSET 0`, local 13 = 0, local 16 = `0x3000080`, then a loop of `FRAME` local 13: set 0, frame 0 of a `Kidsheads` (kind

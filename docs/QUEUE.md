@@ -3646,7 +3646,7 @@ artifacts are listed in `docs/history/README.md`.
   `wf_4d901afb-06d` (two comments fixed; uniform-layout test added). Worktree: 1552 pass 0 skip; 635 ran 917 skipped
   without; 123 warnings.
 
-- [ ] **Q190. Build `ADDHEAD` and `DELHEAD`.** Found by the fork review (vm-12; lead: Aluzed's fork, T-007 item 18).
+- [x] **Q190. Build `ADDHEAD` and `DELHEAD`.** Found by the fork review (vm-12; lead: Aluzed's fork, T-007 item 18).
   Six Lost Kingdom rides reach them (incagod, Monkey, Mumbo, PorkPie, Spider, Volcano); both are unbuilt and counted.
   `ADDHEAD` (`0x00554c3e`) does nothing with no head table (`+0x30` null) or no free slot among the `+0x4c`;
   otherwise it draws from the world generator (`FUN_00516330` on `[0x007cf83c]`; SHR 1, abs, mod `+0x4c`,
@@ -3658,6 +3658,24 @@ artifacts are listed in `docs/history/README.md`.
   FileFormats `vm/instructions.md`. Confirm: a screenshot of riders on one of the six rides beside a census of its
   head slots, predicted first.
 
+  - **Built** (branch `alexah/227-heads`): `RideScript.AddHead`/`DeleteHead`/`Heads`, the table sized by
+    `RideNodes.HeadCount` in `ParkRides.NodesFor` (now read for a script carrying `ADDHEAD` too) and restored from the
+    save's head block (`SavedScript.Heads`, which `ParkScriptStates` had skipped as "two further blocks": the head table,
+    then the directory). `ParkGuestSprites.HeadOnRide` draws a rider in a table as their head on the node, no body; the
+    `rides` census prints `heads n/slots` with each node's position beside the drawn model's. Counts measured on all 67
+    jungle items and matched by every table in Alexah's played saves (`q190/heads`). Departures said at the sites:
+    no table for a script without the pair, the script's own generator, a 65,536-draw stop, heads at rest
+    (`RIDER_HEAD_REST_POSE`, `RIDER_HEAD_ON_A_FACE`). Docs: `park.md`, "The head table"; FileFormats `vm/instructions.md`,
+    `formats/saves.md`. Tests `RideScriptHeadTests` (5); the draw, the no-break, a register write and the count each put
+    back and caught. Review `wf_c271aa67-e3b` (one agent): every address confirmed, six comment and consistency
+    findings fixed (the gap counted once a head hung, a saved table only where the pair reads it). Worktree: 1557 pass 0 skip;
+    639 ran 918 skipped without; 123 warnings.
+  - **Confirmed in the game** (`q190run.py`, silent, `save/` unchanged): a bought Mumbo, predicted 0/5 then heads equal
+    to riders: `run3` 4/4 (0/5, 5/5 with each head at the drawn node to 0.1, 0/5 let off), `run2` 43 census lines all
+    heads = onride. Shots `run3/aboard-1`, `off` looked at: heads at the tentacles while full, none when empty, a little
+    off the moving tentacles (the rest-pose departure). After the review, `run4` 4/4 again on the final code (4 aboard,
+    `RIDER_HEAD_ON_A_FACE` 4x, once a head); its shot, the ride at rest, has heads on the tentacle tips. Not run: a loaded save's restored heads (Alexah's jungle save
+    still throws in `ParkGuestSprites`, Q167's note), the other five rides, the original beside it.
 - [ ] **Q191. Read the `.hmp`, and lift the build squares over a built cell with it.** Found by the fork review
   (gap2-1..gap2-10, refute rank 9; lead: Aluzed's fork, the header). Build the reader with its consumer (rule 9).
   The layout, over all 435 files (jungle 110, fantasy 106, hallow 110, space 109): signature dwords `0xAB1E0003` and

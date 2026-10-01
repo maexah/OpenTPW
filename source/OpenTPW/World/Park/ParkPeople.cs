@@ -2177,6 +2177,31 @@ public sealed class ParkPeople : Entity
 	}
 
 	/// <summary>
+	/// The script holding a head of this guest on one of its head nodes, and that node's id, or false where no script
+	/// does - <c>ADDHEAD</c>'s table, asked of the scripts for the reason <see cref="TrySeatOf"/> gives.
+	/// </summary>
+	internal bool TryHeadOf( int guestThingId, out RideScript? script, out int node )
+	{
+		if ( _scriptFor != null )
+		{
+			foreach ( var thing in _behaviour.State.Objects )
+			{
+				if ( _scriptFor( thing.ThingId ) is not { } candidate || !candidate.TryHeadNode( guestThingId, out node ) )
+					continue;
+
+				script = candidate;
+
+				return true;
+			}
+		}
+
+		script = null;
+		node = 0;
+
+		return false;
+	}
+
+	/// <summary>
 	/// What a ride's bounce node is called in its model - node nought is <c>body</c> and the rest are
 	/// <c>body01</c> upwards.
 	/// </summary>
@@ -2272,6 +2297,24 @@ public sealed class ParkPeople : Entity
 
 			var aboard = script.Bouncing().ToArray();
 
+			// Every head slot in use, and where its node stands in the park's axes as the drawing takes it, so a head
+			// can be checked against the picture: node:visitor, "unhung" where the model has no such node.
+			var heads = script.Heads().Select( head =>
+			{
+				if ( !head.Hung || script.Nodes is not { } nodes )
+					return $"{head.Node}:{head.Handle} unhung";
+
+				var end = nodes.FindHead( head.Node, out var world );
+				var name = nodes.HeadName( head.Node ) ?? "";
+
+				// Beside it, where the drawn model stands the node of that name, which should agree.
+				var drawn = ParkObjects.Current is { } objects && objects.TryNodeOn( thing.ThingId, name, out var at )
+					? $"({at.X:0.0},{at.Y:0.0},{at.Z:0.0})"
+					: "not drawn";
+
+				return $"{head.Node}:{head.Handle} '{name}' {end} ({world.M41:0.0},{world.M43:0.0},{world.M42:0.0}) model {drawn}";
+			} ).ToArray();
+
 			// Every walk slot in use and, while it is walked or once a walk off is done, its leg, which is the whole of what a walk-on ride's timing
 			// is: the one WALKON or WALKOFF worked out from the two nodes.
 			var walking = script.Walking().ToArray();
@@ -2324,6 +2367,7 @@ public sealed class ParkPeople : Entity
 				+ $"onride {Read( ParkRideOperation.OnRideVariable )} "
 				+ $"bouncing {aboard.Length}: {seats} "
 				+ $"walking {walking.Length}: {walks} "
+				+ $"heads {heads.Length}/{script.HeadSlots}: {(heads.Length == 0 ? "nobody" : string.Join( ", ", heads ))} "
 				+ $"channels [{Players()}]";
 		}
 	}

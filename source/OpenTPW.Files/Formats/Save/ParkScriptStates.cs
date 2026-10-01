@@ -45,9 +45,15 @@ namespace OpenTPW;
 /// </param>
 /// <param name="AnimationMark"><c>+0xbc</c>: <c>TRIGWAITANIM</c>'s mark, the role it waits for plus one; nought for none.</param>
 /// <param name="TimerDeadline"><c>+0xc4</c>: the deadline <c>SETTIMER</c> last set, a reading of the same clock; nought for none.</param>
+/// <param name="Heads">
+/// The head table, <c>+0x30</c>: the visitor <c>ADDHEAD</c> put on each head node, slot n on node n + 1, nought for a
+/// free slot. Its length is the saved block's, which <c>FUN_005597a0</c> takes as the count <c>+0x4c</c>; empty for a
+/// script with none. Null only where a record was made without a save.
+/// </param>
 public readonly record struct SavedScript( int Handle, int Position, int BodyWords, int[] Variables,
 	int CallIndex, int HeapIndex, int Result, int[] Stack,
-	uint WaitDeadline, uint AnimationDeadline, int LoopingKey, int AnimationMark, uint TimerDeadline );
+	uint WaitDeadline, uint AnimationDeadline, int LoopingKey, int AnimationMark, uint TimerDeadline,
+	int[]? Heads = null );
 
 /// <summary>
 /// The <c>RSSE</c> module of a park save: every running script's program counter and variables.
@@ -107,8 +113,8 @@ public readonly record struct SavedScript( int Handle, int Position, int BodyWor
 /// <b>What is deliberately not read.</b> The original restores a great deal more per script - the
 /// limbo, bounce and walk tables, the string blob and a run of 32-byte records - and the struct's other
 /// fields with them. Only the counter, the body length, the variables, the stack with its two indices, the
-/// result register and the five fields a clock or an animation keeps (the two wait deadlines, the looping
-/// key, <c>TRIGWAITANIM</c>'s mark and the timer) are taken, because they are what this program models; the
+/// result register, the five fields a clock or an animation keeps (the two wait deadlines, the looping
+/// key, <c>TRIGWAITANIM</c>'s mark and the timer) and the head table are taken, because they are what this program models; the
 /// rest are stepped over by length so that the walk still has to add up. A script's <i>name</i> is not in the struct at all
 /// and is recovered a different way - see <see cref="RideScript.TakeDeclaredName"/>.
 /// </para>
@@ -361,7 +367,9 @@ public sealed class ParkScriptStates
 
 		Skip( ReadInt32() * SubRecordSize );
 
-		Skip( ReadInt32() );
+		// The head table, by its length in bytes (0x00559d3d..0x00559da7), then the script's directory string (+0x38).
+		var heads = ReadInts( ReadInt32() / 4 );
+
 		Skip( ReadInt32() );
 
 		var guard = ReadString( ObjectGuard.Length );
@@ -379,7 +387,7 @@ public sealed class ParkScriptStates
 		// A handle twice over would make For() answer whichever came first, so the second is refused
 		// rather than quietly dropped.
 		var saved = new SavedScript( handle, position, length, variables, callIndex, heapIndex, result, stack,
-			waitDeadline, animationDeadline, loopingKey, animationMark, timerDeadline );
+			waitDeadline, animationDeadline, loopingKey, animationMark, timerDeadline, heads );
 
 		if ( !_byHandle.TryAdd( handle, saved ) )
 			throw new InvalidDataException( $"two saved scripts both call themselves handle {handle}" );

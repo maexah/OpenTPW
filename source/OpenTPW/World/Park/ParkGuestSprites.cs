@@ -598,6 +598,15 @@ public sealed class ParkGuestSprites : ModelEntity
 				continue;
 			}
 
+			// So is a rider whose head ADDHEAD hung on a ride's node.
+			if ( HeadOnRide( people, person.ThingId ) is { } hung )
+			{
+				if ( DrawHead( used, hung.At, hung.Frame, kind, bank, sprite.Alpha ) )
+					++used;
+
+				continue;
+			}
+
 			var (setNumber, frame, bankOffset) = Showing( people?.SpriteFor( person.ThingId ), sprite );
 
 			if ( !_banks.TryGetValue( (kind, bank + bankOffset), out var loaded ) )
@@ -661,6 +670,45 @@ public sealed class ParkGuestSprites : ModelEntity
 	}
 
 	/// <summary>
+	/// Where the head <c>ADDHEAD</c> hung for this guest stands in the park, and which of the 56 pictures its node shows the
+	/// camera (<see cref="ParkBumperBoats.HeadFrame"/>), or null where no script holds a head of theirs on a node with a
+	/// position. The node is where the thing stands at rest, the walk family's departure (<see cref="RideNodes"/>), counted
+	/// as the head is hung (<see cref="RideScript.Heads"/>).
+	/// </summary>
+	internal static (Vector3 At, int Frame)? HeadOnRide( ParkPeople? people, int thingId )
+	{
+		if ( people == null || !people.TryHeadOf( thingId, out var script, out var node ) || script?.Nodes is not { } nodes )
+			return null;
+
+		var end = nodes.FindHead( node, out var world );
+
+		if ( end is NodeEnd.Missing or NodeEnd.Unposed )
+			return null;
+
+		// The node's matrix is in the model's axes, y up, already turned and placed; the park's are z up.
+		var at = new Vector3( world.M41, world.M43, world.M42 );
+		var seen = Camera.Position - at;
+		var towards = new System.Numerics.Vector3( seen.X, seen.Z, seen.Y );
+		var rotation = world with { M41 = 0, M42 = 0, M43 = 0 };
+
+		if ( System.Numerics.Matrix4x4.Invert( rotation, out var inverse ) )
+			towards = System.Numerics.Vector3.TransformNormal( towards, inverse );
+
+		return (at, ParkBumperBoats.HeadFrame( towards ));
+	}
+
+	/// <summary>The head bank for a rider drawn in a kind and bank - <c>FUN_004fcac0</c>: a costume's head for a costume, else the child's.</summary>
+	internal static (int Kind, int Bank) HeadOf( int kind, int bank )
+		=> (kind == ParkSpriteBanks.CostumeKind ? ParkSpriteBanks.CostumeHeadKind : ParkSpriteBanks.KidHeadKind, bank);
+
+	/// <summary>
+	/// A rider's head is drawn at 0.685 of a body's size: <c>FUN_0044b510</c> writes the float at <c>0x0074ced0</c> into
+	/// the head sprite's local 8 every frame (<c>0x0044ba1f</c>), its scale <c>+0xa4</c>, which the picker hands the draw
+	/// as the record's <c>+0x2c</c> (<c>0x005422b2</c>) and <c>FUN_00589410</c> multiplies by the span.
+	/// </summary>
+	internal const float HeadScale = 0.685f;
+
+	/// <summary>
 	/// A rider's head on a ride's seat node - what <c>FUN_0044b410</c> hangs there: the head of the rider's own child bank
 	/// (kind 1), or of their costume's (kind 3) for a guest in costume, chosen by <c>FUN_004fcac0</c>; set 0, frame 0, the
 	/// sprite script at <c>0x74f558</c>. Answers whether a quad was written.
@@ -673,17 +721,6 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// <c>0x2000000</c>, so the drawing adds no direction of its own (<c>FUN_00542010</c>). The original also rolls the
 	/// quad to the node (locals 8 and 9), which is not drawn here (<c>RIDER_HEAD_ROLL</c>, counted as a boat is stood).
 	/// </remarks>
-	/// <summary>The head bank for a rider drawn in a kind and bank - <c>FUN_004fcac0</c>: a costume's head for a costume, else the child's.</summary>
-	internal static (int Kind, int Bank) HeadOf( int kind, int bank )
-		=> (kind == ParkSpriteBanks.CostumeKind ? ParkSpriteBanks.CostumeHeadKind : ParkSpriteBanks.KidHeadKind, bank);
-
-	/// <summary>
-	/// A rider's head is drawn at 0.685 of a body's size: <c>FUN_0044b510</c> writes the float at <c>0x0074ced0</c> into
-	/// the head sprite's local 8 every frame (<c>0x0044ba1f</c>), its scale <c>+0xa4</c>, which the picker hands the draw
-	/// as the record's <c>+0x2c</c> (<c>0x005422b2</c>) and <c>FUN_00589410</c> multiplies by the span.
-	/// </summary>
-	internal const float HeadScale = 0.685f;
-
 	private bool DrawHead( int used, Vector3 seat, int frame, int kind, int bank, int alpha )
 	{
 		if ( !_banks.TryGetValue( HeadOf( kind, bank ), out var loaded ) || loaded.Bank.Sets.Length == 0 )
@@ -1157,7 +1194,7 @@ public sealed class ParkGuestSprites : ModelEntity
 			// reading the one the renderer used, so without it a rider drawn up on the ride would be
 			// reported at the cell they queued on.
 			var head = ParkBumperBoats.Current?.SeatOf( person.ThingId );
-			var seated = head?.Seat ?? Seated( people, person.ThingId );
+			var seated = head?.Seat ?? HeadOnRide( people, person.ThingId )?.At ?? Seated( people, person.ThingId );
 
 			if ( seated is { } seat )
 				(x, y) = (seat.X, seat.Y);

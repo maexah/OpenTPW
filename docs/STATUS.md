@@ -42,11 +42,11 @@ the tip cannot name it. Read the current state from the repository, which cannot
   toilet, or lost to the walk, is out. **A guest on a cell with no links wanders to the nearest path.** **Guests arrive
   and staff take turns on the original's clock**, the save's `mGameTick`: a load 126 s in, then every 150 s or so; a
   guard idles 11 sweeps and sets off on the clock's low bits. Let off, they leave by the exit.
-- Rides: every placed thing runs its script; 75 of 106 opcodes built, the rest counted. A ride screams at the band its
+- Rides: every placed thing runs its script; 77 of 106 opcodes built, the rest counted. A ride screams at the band its
   rider count asks for, as the original's chain: a fresh sample every 1-3 s on **its own clock**, so a second ride in
   the same band is neither held up by it nor set off by its stop. **No queue grows past its ride's longest.** **A ride
   loops again after its ride's end** (the Aztec Mayhem). **A load resumes each wait and clip where its save left it, each script on its saved handle and tick** (Q180), **and each deadline it keeps in a variable** (Q181b). Each tick keeps its own instant and a stall runs 64 ticks, where the engine's run one instant a frame and 65: kept by decision (Q182b). **Every script's walks are stepped once a tick, after the scripts**, where the engine's are once a frame: kept by decision (Q183).
-  **A rider walks on and off for their two model nodes' distance**, as the original's (Q175b); a head on a moving part is counted at rest. **The Hot Pot floats a boat per unit of capacity in its pot, a rider's head seated in each, and lets them off after `VAR_DURATION` × 30 track ticks** (Q179b); **in a go the boats with riders steer through the buoys and chase, and bump each other off the rim** (Q179d).
+  **A rider walks on and off for their two model nodes' distance**, as the original's (Q175b); a head on a moving part is counted at rest. **The Hot Pot floats a boat per unit of capacity in its pot, a rider's head seated in each, and lets them off after `VAR_DURATION` × 30 track ticks** (Q179b); **in a go the boats with riders steer through the buoys and chase, and bump each other off the rim** (Q179d). **`ADDHEAD` hangs a rider's head on a random free head node and `DELHEAD` takes it off**, drawn and saved (Q190).
 - **A thing bought this session is a member of the running park**: it takes its turn, appears in every census, joins the
   object chain the original keeps live, and carries the entry and exit cells derived from its own shape picture (Q1b).
 - The original runs under Proton as a reference (Q168, `docs/TOOLING.md`); the console's `admit`/`send` place a guest (Q184).
@@ -69,7 +69,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 - With no work the mechanic, handyman and entertainer stand where the original's walk about (Q133); staff make no
   sound (Q135). Guests and rides read `GameClock.Ticks / 8`, not `mGameTick` (Q132); a load brings one guest (Q26); the bus waits (Q131).
 - Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), a ride walked into in first person, a coaster's
-  excitement and level, the charge's sound, the Hot Pot's wake.
+  excitement and level, the charge's sound, the Hot Pot's wake, a ride's head where its clip or morph carries it (Q190).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it
   cannot move, and leaving keeps the walk where the original's throws it away (Q25). A held right button there does not
   walk (Q121), and a park screen stays open over it (Q122). It walks onto entrances the original shuts (Q140).
@@ -77,8 +77,8 @@ the tip cannot name it. Read the current state from the repository, which cannot
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q199, Q200, Q200b, Q201, Q201b, Q179, Q179b, Q179c, Q179d, Q180, Q181, Q181b, Q182, Q182b, Q183, Q185, Q186, Q187, Q189 are ticked**; next **Q188** (the object windows' P model), which Alexah wants worked together, not
-started alone. Until then Q190 onwards, the rest of the fork review's Q185-Q197. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q199, Q200, Q200b, Q201, Q201b, Q179, Q179b, Q179c, Q179d, Q180, Q181, Q181b, Q182, Q182b, Q183, Q185, Q186, Q187, Q189, Q190 are ticked**; next **Q188** (the object windows' P model), which Alexah wants worked together, not
+started alone. Until then Q191 onwards, the rest of the fork review's Q185-Q197. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -102,18 +102,18 @@ started alone. Until then Q190 onwards, the rest of the fork review's Q185-Q197.
   stale major, sale's clear and save's fields; Q171's bounds; Q172b's saved track ride, tier and coaster (Q167) and a Hot Pot
   rider's 42 (Q179b); Q173's tier 3 and zero divisors. Q174b's raw re-entry and last-frame trigger (no run) and loop (census
   only); Q174c's saved mark, timer and queue; Q175b's Rat Race; Q176's `0x80000000` draw (its let-go in a throwaway build);
-  Q177b's walk-away and a played save's counts; its satisfaction, census only (nothing here shows it). Q177c's withdrawals off, red stamp, a sold coaster's nought, the ticket count and the year's change. Q177d's docks, fat, salt, the speed's hold and floor and a hire's speed. Q177e's balloon built again after a later visit, put away on boarding, deleted on going home, and read from a save; its bob and trail (census only). Q177f's low detail (two kids, one staff bank) and a theme with more than one costume. Q198b's promotion, loans, batch and six months in the red. Q200b's selection edges and the wheel's clamp of a short list. Q201b's mystery row and a played save's research. Q178b's refused line (no shipped file has one). Q179b's boat yaw sense (needs the original) and a saved Hot Pot (its cars not restored, counted). Q179c's bump impulse and rim reflection: read, not replayed against the original's log; Q179d builds them, tested only. Q180's newest-first order within a tick: tested only. Q181b's split pair, the gift shop's timer and a Monkey timed out (it filled): tested only.
+  Q177b's walk-away and a played save's counts; its satisfaction, census only (nothing here shows it). Q177c's withdrawals off, red stamp, a sold coaster's nought, the ticket count and the year's change. Q177d's docks, fat, salt, the speed's hold and floor and a hire's speed. Q177e's balloon built again after a later visit, put away on boarding, deleted on going home, and read from a save; its bob and trail (census only). Q177f's low detail (two kids, one staff bank) and a theme with more than one costume. Q198b's promotion, loans, batch and six months in the red. Q200b's selection edges and the wheel's clamp of a short list. Q201b's mystery row and a played save's research. Q178b's refused line (no shipped file has one). Q179b's boat yaw sense (needs the original) and a saved Hot Pot (its cars not restored, counted). Q179c's bump impulse and rim reflection: read, not replayed against the original's log; Q179d builds them, tested only. Q180's newest-first order within a tick: tested only. Q181b's split pair, the gift shop's timer and a Monkey timed out (it filled): tested only. Q190's heads restored from a save and its draw stop: tested only.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
 | | | measured |
 |---|---|---|
-| Opcodes | **75** of 106 | 2026-09-30, `case Opcode.` labels vs enum members, after Q179b |
-| Tests | **1552**, 0 fail, 0 skip with the game | 2026-10-01, after Q189 |
-| Tests without the game | **635** ran, **917** skipped, of 1552 | 2026-10-01, after Q189 |
-| Build warnings | 123 | 2026-10-01, after Q189 |
+| Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q190 |
+| Tests | **1557**, 0 fail, 0 skip with the game | 2026-10-01, after Q190 |
+| Tests without the game | **639** ran, **918** skipped, of 1557 | 2026-10-01, after Q190 |
+| Build warnings | 123 | 2026-10-01, after Q190 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-10-01 (Q189).** `alexah/226-light-the-park`: the park lit per vertex as the original lights it. **Earlier:** `225` (Q187), `224` (Q186), `223` (Q185), `222` (Q183), `220` (Q182b), `218` (Q182), `217` (Q181b), `216` (Q181), `215` (Q180), `214` (heads), `213` (Q179d), `212` (Q179c), `209`-`211` (Q179b), `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-10-01 (Q190).** `alexah/227-heads`: `ADDHEAD` and `DELHEAD`, the head table. **Earlier:** `226` (Q189), `225` (Q187), `224` (Q186), `223` (Q185), `222` (Q183), `220` (Q182b), `218` (Q182), `217` (Q181b), `216` (Q181), `215` (Q180), `214` (heads), `213` (Q179d), `212` (Q179c), `209`-`211` (Q179b), `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

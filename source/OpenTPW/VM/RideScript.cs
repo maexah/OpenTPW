@@ -281,6 +281,82 @@ public sealed class RideScript
 	}
 
 	/// <summary>
+	/// The head table, <c>+0x30</c>: the visitor <c>ADDHEAD</c> hung on each head node, slot n on node n + 1, nought
+	/// for a free slot - sized by <see cref="SizeHeads"/> from the thing's model, as the loader sizes it.
+	/// </summary>
+	private int[] _heads = [];
+
+	/// <summary>
+	/// Which head slots have a head hung on their node - <c>ADDHEAD</c>'s <c>FUN_0044b410</c>, which a slot whose node the
+	/// model lacks never reaches.
+	/// </summary>
+	private bool[] _hung = [];
+
+	/// <summary>
+	/// Whether the script carries <c>ADDHEAD</c> or <c>DELHEAD</c>, the only instructions that read the head table:
+	/// six Lost Kingdom rides (incagod, Monkey, Mumbo, PorkPie, Spider, Volcano).
+	/// </summary>
+	public bool UsesHeads => _file.Instructions.Any( instruction => instruction.Opcode is Opcode.ADDHEAD or Opcode.DELHEAD );
+
+	/// <summary>How many head slots the script has - the engine's <c>+0x4c</c>.</summary>
+	public int HeadSlots => _heads.Length;
+
+	/// <summary>
+	/// Gives the script a free head slot for each of <paramref name="count"/> head nodes (<see cref="RideNodes.HeadCount"/>),
+	/// as the loader does once for a script with a thing and a model (<c>FUN_005587f0</c>, <c>0x00558db9</c>).
+	/// </summary>
+	public void SizeHeads( int count )
+	{
+		_heads = new int[Math.Max( count, 0 )];
+		_hung = new bool[_heads.Length];
+	}
+
+	/// <summary>
+	/// Puts a saved head table back, at the length the save gives it (<c>FUN_005597a0</c>, <c>0x00559d3d</c>), each
+	/// visitor's head hung again on its node: the original's load leaves the head a save names attached, though no caller
+	/// of <c>FUN_0044b410</c> is on its path (<c>docs/exe/park.md</c>, "The head table").
+	/// </summary>
+	public void RestoreHeads( int[] saved )
+	{
+		SizeHeads( saved.Length );
+
+		for ( var slot = 0; slot < saved.Length; ++slot )
+		{
+			if ( saved[slot] != 0 )
+				Hang( slot, saved[slot] );
+		}
+	}
+
+	/// <summary>
+	/// Every head slot in use: its head node's id, the visitor on it, and whether a head hangs there - the census, the
+	/// drawing and a test.
+	/// </summary>
+	public IEnumerable<(int Node, int Handle, bool Hung)> Heads()
+	{
+		for ( var slot = 0; slot < _heads.Length; ++slot )
+		{
+			if ( _heads[slot] != 0 )
+				yield return (slot + 1, _heads[slot], _hung[slot]);
+		}
+	}
+
+	/// <summary>The head node a head of <paramref name="handle"/> hangs on, the first slot's, or false where none does.</summary>
+	public bool TryHeadNode( int handle, out int node )
+	{
+		for ( var slot = 0; handle != 0 && slot < _heads.Length; ++slot )
+		{
+			if ( _heads[slot] == handle && _hung[slot] )
+			{
+				node = slot + 1;
+				return true;
+			}
+		}
+
+		node = 0;
+		return false;
+	}
+
+	/// <summary>
 	/// Every walk slot in use - the console's ride census, and what a test reads a leg from. The leg is the one being
 	/// walked, or for a slot done the walk off it walked, and null for a slot carried.
 	/// </summary>
@@ -1598,6 +1674,14 @@ public sealed class RideScript
 
 			case Opcode.SETOBJPARAM:
 				SetObjectParameter( operands );
+				break;
+
+			case Opcode.ADDHEAD:
+				AddHead( Value( operands[0] ) );
+				break;
+
+			case Opcode.DELHEAD:
+				DeleteHead( Value( operands[0] ) );
 				break;
 
 			// Riding, for the rides that carry people on the ride itself rather than in cars. This is one
@@ -3157,6 +3241,81 @@ public sealed class RideScript
 		var left = (int)(_timerUntil - now);
 
 		return left < 0 ? 0 : left;
+	}
+
+	/// <summary>
+	/// <c>ADDHEAD</c> (<c>0x00554c3e</c>): puts <paramref name="handle"/> on a free head slot drawn at random and hangs
+	/// their head on that slot's node, or does nothing where the script has no head table or no free slot. It writes no
+	/// register. The draw is <c>RAND</c>'s, halved, taken modulo the slot count and drawn again until the slot is free
+	/// (<c>0x00554caf</c>..<c>0x00554ccb</c>), so each retry is one draw on this script's generator - the per-script
+	/// generator <see cref="NextRandom"/> says is a deviation. The head is drawn from the table
+	/// (<c>ParkGuestSprites</c>); a slot whose node the model lacks holds the visitor and shows no head, as the
+	/// engine's <c>-1</c> from <c>FUN_0044b220</c> does (<c>0x00554cf3</c>).
+	/// </summary>
+	/// <remarks>
+	/// <b>One departure</b>: where the engine would draw for ever, this stops after <see cref="HeadDraws"/> draws and
+	/// takes the first free slot, counted (<c>ADDHEAD_DRAWS_EXHAUSTED</c>), because a hang is not the game.
+	/// </remarks>
+	private void AddHead( int handle )
+	{
+		var free = Array.IndexOf( _heads, 0 );
+
+		if ( free < 0 )
+			return;
+
+		for ( var draw = 0; draw < HeadDraws; ++draw )
+		{
+			var slot = NextDraw() % _heads.Length;
+
+			if ( _heads[slot] == 0 )
+			{
+				Hang( slot, handle );
+				return;
+			}
+		}
+
+		Unimplemented.Report( "ADDHEAD_DRAWS_EXHAUSTED" );
+		Hang( free, handle );
+	}
+
+	/// <summary>
+	/// Stores <paramref name="handle"/> on <paramref name="slot"/> and hangs their head on node slot + 1 where the model has
+	/// it (<c>0x00554cd3</c>..<c>0x00554d13</c>). A script with no model hangs none; the engine, which never gives such a
+	/// script a table, never gets here. A head is drawn where its node rests, so one a clip carries is counted
+	/// <c>RIDER_HEAD_REST_POSE</c> (the Sun God's, Rocky Racers', the Tom Tom Twister's, Eruption's) and one on a morphing
+	/// face <c>RIDER_HEAD_ON_A_FACE</c> (Mumbo's, the Crazy Ape's), once a head hung.
+	/// </summary>
+	private void Hang( int slot, int handle )
+	{
+		_heads[slot] = handle;
+
+		var end = Nodes?.FindHead( slot + 1, out _ ) ?? NodeEnd.Missing;
+
+		_hung[slot] = end != NodeEnd.Missing;
+
+		if ( end == NodeEnd.RestPose )
+			Unimplemented.Report( "RIDER_HEAD_REST_POSE" );
+		else if ( end == NodeEnd.OnAFace )
+			Unimplemented.Report( "RIDER_HEAD_ON_A_FACE" );
+	}
+
+	/// <summary>How many draws <see cref="AddHead"/> makes before it gives up on the generator.</summary>
+	private const int HeadDraws = 1 << 16;
+
+	/// <summary>
+	/// <c>DELHEAD</c> (<c>0x00554d26</c>): takes <paramref name="handle"/>'s head off every slot holding them and frees
+	/// the slot, with no break after the first; it writes no register.
+	/// </summary>
+	private void DeleteHead( int handle )
+	{
+		for ( var slot = 0; slot < _heads.Length; ++slot )
+		{
+			if ( _heads[slot] == handle )
+			{
+				_heads[slot] = 0;
+				_hung[slot] = false;
+			}
+		}
 	}
 
 	/// <summary>

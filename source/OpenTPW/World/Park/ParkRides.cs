@@ -131,7 +131,7 @@ public sealed class ParkRides : Entity
 	/// <c>Info.DestroyParticleEffect</c> over the footprint, for the script named here and not for the ones it
 	/// takes with it; it is counted rather than drawn, because nothing here draws a particle effect in the
 	/// world rather than on the screen. <c>0x4</c> takes the heads <c>ADDHEAD</c> hung on the model off it,
-	/// and there are none to take: nothing here hangs one.
+	/// which here go with the script: a head is drawn from a live script's table (<see cref="RideScript.Heads"/>).
 	/// </para>
 	/// <para>
 	/// <b>A script that has already run off its end spawns nothing</b>, because the original's teardown finds
@@ -368,6 +368,11 @@ public sealed class ParkRides : Entity
 				script.Animations = PlayersFor( placed.ThingId, item );
 				script.Nodes = NodesFor( script, placed, item );
 				BindTrackRide( script, placed, item );
+
+				// The head table as it was saved, an empty one too, whose length the save gives (FUN_005597a0); after
+				// NodesFor, which sizes a fresh one and gives the heads their nodes. Only where ADDHEAD or DELHEAD reads it.
+				if ( script.UsesHeads && world.ScriptStates.For( placed.RideScript ) is { Heads: { } heads } )
+					script.RestoreHeads( heads );
 
 				if ( script.Animations.Loaded > 0 )
 					_animated.Add( placed.ThingId );
@@ -986,17 +991,25 @@ public sealed class ParkRides : Entity
 	}
 
 	/// <summary>
-	/// The model nodes a bound script walks its riders between, standing where its thing stands - read only for a
-	/// script that declares walk slots, the one family that asks (<see cref="RideNodes"/>). Null where the model will
-	/// not read, which leaves every leg the shortest, counted.
+	/// The model nodes a bound script walks its riders between or hangs their heads on, standing where its thing
+	/// stands - read only for a script that declares walk slots or carries <c>ADDHEAD</c>, the two families that ask
+	/// (<see cref="RideNodes"/>), and giving the second its head slots. Null where the model will not read, which
+	/// leaves every leg the shortest, counted, and no head slot.
 	/// </summary>
 	/// <remarks>
+	/// <para>
+	/// <b>The engine sizes a head table for every script with a thing and a model</b> (<c>FUN_005587f0</c>); only
+	/// <c>ADDHEAD</c> and <c>DELHEAD</c> read it, so a script without either is given none here, nor one from a save,
+	/// which changes nothing it does.
+	/// </para>
+	/// <para>
 	/// The fixed items bound from what stands rather than from the save are given none: no fixed item's script
-	/// declares a walk slot.
+	/// declares a walk slot or carries <c>ADDHEAD</c>.
+	/// </para>
 	/// </remarks>
 	private RideNodes? NodesFor( RideScript script, ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item )
 	{
-		if ( script.WalkSlots == 0 )
+		if ( script.WalkSlots == 0 && !script.UsesHeads )
 			return null;
 
 		RideNodes? nodes;
@@ -1008,21 +1021,24 @@ public sealed class ParkRides : Entity
 		}
 		catch ( Exception e )
 		{
-			Log.Warning( $"{ThemeName}: thing {placed.ThingId} ('{item.Name}') walks riders but its model will not "
-				+ $"read, so every leg is the shortest - {e.Message}" );
+			Log.Warning( $"{ThemeName}: thing {placed.ThingId} ('{item.Name}') walks or seats riders but its model "
+				+ $"will not read, so every leg is the shortest and no head is hung - {e.Message}" );
 
 			return null;
 		}
 
 		if ( nodes is null )
 		{
-			Log.Warning( $"{ThemeName}: thing {placed.ThingId} ('{item.Name}') walks riders but has no model, so every "
-				+ "leg is the shortest" );
+			Log.Warning( $"{ThemeName}: thing {placed.ThingId} ('{item.Name}') walks or seats riders but has no model, "
+				+ "so every leg is the shortest and no head is hung" );
 
 			return null;
 		}
 
 		nodes.Place( ParkObjects.OriginFor( placed.CellX, placed.CellY, placed.Angle ), placed.Angle );
+
+		if ( script.UsesHeads )
+			script.SizeHeads( nodes.HeadCount() );
 
 		return nodes;
 	}

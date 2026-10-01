@@ -953,6 +953,46 @@ Five handlers, every one working on the script's **own frame** rather than on an
 
 **One engine defect, to be reproduced deliberately rather than quietly fixed:** limboing a handle of **nought** writes it and counts it, but a slot holding nought is precisely what the engine calls free — so the tally and the slots part company and that guest can never be found again. No shipped script can reach it; all 24 guard the instruction with a test of the variable that would name the guest.
 
+### The head table — `ADDHEAD` and `DELHEAD`
+
+The script's `+0x30` is an array of `+0x4c` dwords, one per head node of its thing's model: slot *n* holds the visitor
+whose head hangs on head node *n* + 1, nought when free. The loader sizes it for every script with a thing and a model
+(`FUN_005587f0`, `0x00558d8a`..`0x00558db7`): it calls `FUN_0044b220( thing, 0x80, id )` for id 1 upwards and stops
+at the first `-1`, so the count is the run of head-space ids from 1. A load reads the table back from the save, its
+count from the block's length (`FUN_005597a0`, `0x00559d3d`..`0x00559da7`; FileFormats `saves.md`).
+
+    ADDHEAD(56)  00554c3e  operand resolved (variable, or the literal sign-extended). +0x30 null -> nothing.
+                           no slot holding 0 -> nothing. else draw FUN_00516330 on [0x007cf83c], SHR 1, abs,
+                           mod +0x4c, until the slot holds 0 (00554caf..00554ccb): store the visitor, then
+                           FUN_0044b220( thing, 0x80, slot + 1 ); -1 -> stop, the visitor kept; else
+                           FUN_0044b410( model, node, visitor ) hangs the head. No register write.
+    DELHEAD(57)  00554d26  +0x30 null or +0x4c <= 0 -> nothing. every slot equal to the visitor: find the
+                           node, FUN_0044b4c0 takes the head down where found, the slot is zeroed. No break,
+                           no register write.
+
+**Every count measured** (`q190/heads`, all 67 jungle items): the six that carry the pair have head runs Sun God 32,
+Crazy Ape 16, Mumbo 5, Rocky Racers 8, Tom Tom Twister 40 and Eruption 16; the ferry 1, the Inca Totem 13 and the Aztec
+Mayhem 27 have runs and no `ADDHEAD`. Alexah's played jungle saves carry a table in seven scripts, each exactly as long
+as its model's run (the ferry's and the Aztec Mayhem's empty), five of them holding riders. Five of the six scripts
+`HUSH` the rider as the head goes on and `HOP` them before `DELHEAD`; the Sun God puts it on after a walk on and takes it
+off after `WALKOFF`. Every head node has a matrix (flags `0xb1` or `0xf1`); Mumbo's and the Crazy Ape's sit on a
+morphing face (`0x40040`), the other four's on a clip-driven ancestor.
+
+**After a load the head the save names is hung**: the Sun God's `head08`, which Alexah's save's table holds a rider on,
+read runtime flags `0x23` (attached) where its 31 others read `0x21` (`ride-operation.md`, "How long a leg lasts"). No
+caller of `FUN_0044b410` is on the load path, so what re-hangs it is not traced.
+
+**OpenTPW builds it** (Q190): `RideScript.AddHead`, `DeleteHead` and `Heads`, the table sized by `RideNodes.HeadCount`
+when `ParkRides.NodesFor` reads the model and put back from `SavedScript.Heads` at a load; `ParkGuestSprites.HeadOnRide`
+draws each rider in a table as their head on the node and no body, as a bumper boat's (Q179b). The `rides` census prints
+`heads n/slots`, each node's position and the drawn model's node of the same name. *Departures*: a script without
+`ADDHEAD` or `DELHEAD` gets no table, which only those two read; the draw is the script's own generator, as `RAND`'s; a
+draw that never finds the free slot stops after 65,536 tries and takes the first free one (`ADDHEAD_DRAWS_EXHAUSTED`),
+where the engine would hang; and a head stands where its node rests, not where the clip or the morph has carried it
+(`RIDER_HEAD_REST_POSE`, `RIDER_HEAD_ON_A_FACE`). Confirmed in the game (`q190/run2`, `run3`): a bought Mumbo, 43
+census lines with heads equal to riders from 0/5 to 5/5 and back, each head at the drawn node to 0.1; the shots show
+heads at the tentacles while it is full and none when it is empty, a little off the moving tentacles.
+
 ### The script-to-script family
 
 Ten handlers, and **every one reaches another script by ID through one global registry** — no script ever holds a pointer to another.
