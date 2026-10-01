@@ -3493,8 +3493,13 @@ artifacts are listed in `docs/history/README.md`.
   every script in the list once a park frame, after the 31 ms catch-up loop (`0x0054fa08`), and restamps start only on
   arriving on the ride (`0x00557e79`; `0x00558018` writes the state alone). Both differences are named at their site,
   and a rider's arrival is noticed at most a turn late. Nothing in the engine reads start in state 4 but the save, which
-  copies it raw; nothing here reads it. Decide with the frame sweep (Q150,
-  Q182) whether to move it. Confirm: each promotion's instant against the clock in a census, predicted first.
+  copies it raw; nothing here reads it. **Alexah, 2026-10-01: step every script's walks once a tick, not once a
+  frame**, right after that tick's scripts (`ParkRides.OnUpdate`'s loop), so the original's order holds (the walks after
+  the scripts) and an arrival is noticed within one tick (31 ms), as at the engine's own ~30 fps, where once a frame would
+  tie it to the frame rate (7 ms late at 144 fps, 33 at 30) and the turn here is up to 248 ms late. Say that deviation at
+  the site. Match the restamp: start only on arriving on the ride (`0x00557e79`), the state alone on arriving off
+  (`0x00558018`). Confirm: each promotion's instant against the clock in a census, within one tick, predicted first,
+  and a shot.
 
 - [ ] **Q185. Correct what our own pages say wrong.** Found by the fork review of 2026-09-30 (Aluzed's
   `github.com/aluzed/OpenTPW-decomp`; its items are named by id, and `CLAUDE.local.md` has the path), each re-checked
