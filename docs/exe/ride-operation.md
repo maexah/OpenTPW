@@ -1888,8 +1888,18 @@ Q190.
 1) or `Costumeheads` (kind 3) bank, seven directions. **The body:** admission to a thing with flag `0x20` sets the guest's
 `+0x28` to 1 and asks their sprite for the standing script (`0x00502136`, `FUN_004217f0( 3 )`), and the guest draw
 places the body only while `+0x28` is nought (`FUN_004fa030`), so the original leaves it standing where it boarded.
-OpenTPW draws no body for a boat's rider, by Alexah's account of the game (2026-09-30); which way an attached head faces
-is not decoded, and here it is the boat's heading. The `0x4000` custom-detail path is not reached: OpenTPW has only the three detail files. The
+OpenTPW draws no body for a boat's rider, by Alexah's account of the game (2026-09-30).
+
+**Which picture a head shows** (Q179b). A head bank's 56 pictures run **eight headings to a row and seven rows from
+above to below**: row 0 the crown, row 3 level, row 6 the chin; FileFormats' "frames per direction 8, directions 7" is
+that grid read the body's way. The sprite's flag word `0x3000080` carries `0x2000000`, so the picker
+(`FUN_00542010`) adds no direction of its own and draws picture `first + frame`. The frame is written every draw by
+`FUN_0044b510`, for each node record flagged 2: it takes the camera into the node's own frame (the node's matrix
+inverted, then `DAT_00790a98`'s), normalises that direction, and walks 56 candidates, `(0, 1, 0)` tilted `r` × 30° about
+x (`0x006fe2c4`) and turned `c` × −45° about y (`0x006fe2bc`), keeping the first with the largest dot product above
+nought; rows 0 and 6 keep column 0, and the frame is `c + 8r` (`0x0044b9f5`). It then rolls the quad to the node (locals
+8 and 9, from `FUN_0046f200`), which OpenTPW does not draw (`RIDER_HEAD_ROLL`). The `b_car`'s `Head1` is turned half
+round and tilted about 5° from the boat, so a face points away from the boat's fan. OpenTPW: `ParkBumperBoats.HeadFrame`. The `0x4000` custom-detail path is not reached: OpenTPW has only the three detail files. The
 staff folders' cap from the same key (`FUN_0041aa40`: one bank at `NUMKIDS` 0, else two; only the mechanics have two) is
 built with it, and a staff member's saved bank is brought within it as they are drawn.
 

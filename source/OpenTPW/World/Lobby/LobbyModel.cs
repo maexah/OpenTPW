@@ -491,6 +491,9 @@ public sealed class LobbyModel
 	/// </remarks>
 	public Vector3 PlacedOrigin => _placedOrigin;
 
+	/// <summary>How this model was last turned - see <see cref="SetTransform"/>.</summary>
+	public Quaternion PlacedRotation => _placedRotation;
+
 	/// <summary>Moves every mesh of this model, keeping their relative placement.</summary>
 	public void SetOrigin( Vector3 origin )
 	{

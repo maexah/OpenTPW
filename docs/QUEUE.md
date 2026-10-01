@@ -3267,7 +3267,16 @@ artifacts are listed in `docs/history/README.md`.
     `BUMP 9`'s literal, the script closing again each pass, and a 90 s wait after the queue was turned away.
   - Tests: `RiderHeadTests` (2), each red with its bug back (head banks not packed, a costume given the child's head). Built
     and tested alone in a worktree: 1523 pass, 0 skip with the game; 622 ran, 901 skipped without; 123 warnings.
-  - **Still not confirmed, and why:** the yaw's and a head's facing sense (needs the original); a loaded park with a
+  - **Then the heads' facing, at Alexah's word: they always faced the camera.** Decoded (`ride-operation.md`, "Which
+    picture a head shows"): a head bank is 8 headings by 7 heights, and `FUN_0044b510` picks the one the seat node shows
+    the camera; the code had walked the heights column. Built (`ParkBumperBoats.HeadFrame`). Confirmed
+    (`q179b/q179bheads.py`, `heads1/`, silent, `save/` unchanged): A again, and H1, heads on boats an eighth of a turn
+    or more apart show different columns (frames 22, 28, 28, 27 for headings 475, 321, 325, 285); photographed from two
+    sides and looked at, every face points away from its boat's fan. H2 was mispredicted: turning the camera 90° moved
+    three columns by exactly −2 and one by −1, with rows moving between 2 and 3, because the camera orbits a ground point
+    near the boats, 33 units below the heads. `RiderHeadTests` gains the pick (red with row and column swapped). Built
+    and tested alone in a worktree: 1524 pass, 0 skip with the game; 623 ran, 901 skipped without; 123 warnings.
+  - **Still not confirmed, and why:** the boats' yaw sense (needs the original); a loaded park with a
     Hot Pot (nothing here saves a park, and no save has one); the rocking, wake, splash, smoke, particles and the lead's
     sound, which are not built, only counted.
 

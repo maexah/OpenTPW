@@ -307,6 +307,31 @@ public class RiderHeadTests
 		Assert.AreEqual( (ParkSpriteBanks.CostumeHeadKind, 0), ParkGuestSprites.HeadOf( ParkSpriteBanks.CostumeKind, 0 ) );
 	}
 
+	/// <summary>
+	/// <c>FUN_0044b510</c>'s pick, against directions whose answer the picture grid shows: from straight above the crown
+	/// (0), level and in front (24), each −45° turn about up the next column, from below the chin (48).
+	/// </summary>
+	[TestMethod]
+	public void AHeadShowsTheCameraThePictureForItsDirection()
+	{
+		static System.Numerics.Vector3 At( float tiltDegrees, float turnDegrees )
+		{
+			var tilt = tiltDegrees * System.MathF.PI / 180f;
+			var turn = turnDegrees * System.MathF.PI / 180f;
+			return new( System.MathF.Sin( tilt ) * System.MathF.Sin( turn ), System.MathF.Cos( tilt ), System.MathF.Sin( tilt ) * System.MathF.Cos( turn ) );
+		}
+
+		Assert.AreEqual( 0, ParkBumperBoats.HeadFrame( new( 0, 1, 0 ) ), "above" );
+		Assert.AreEqual( 0, ParkBumperBoats.HeadFrame( At( 5, -90 ) ), "nearly above keeps column 0" );
+		Assert.AreEqual( 24, ParkBumperBoats.HeadFrame( new( 0, 0, 1 ) ), "level, in front" );
+		Assert.AreEqual( 25, ParkBumperBoats.HeadFrame( At( 90, -45 ) ) );
+		Assert.AreEqual( 26, ParkBumperBoats.HeadFrame( new( -1, 0, 0 ) ) );
+		Assert.AreEqual( 30, ParkBumperBoats.HeadFrame( new( 1, 0, 0 ) ) );
+		Assert.AreEqual( 20, ParkBumperBoats.HeadFrame( At( 60, -180 ) ), "row 2, column 4" );
+		Assert.AreEqual( 48, ParkBumperBoats.HeadFrame( new( 0, -1, 0 ) ), "below" );
+		Assert.AreEqual( 9, ParkBumperBoats.HeadFrame( At( 32, -50 ) ), "the nearest of the 56" );
+	}
+
 	[TestMethod]
 	public void EveryChildsAndCostumesHeadIsPacked()
 	{

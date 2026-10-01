@@ -542,7 +542,7 @@ public sealed class ParkGuestSprites : ModelEntity
 			// A rider in a bumper boat is drawn as their head on its seat, and no more.
 			if ( ParkBumperBoats.Current?.SeatOf( person.ThingId ) is { } boat )
 			{
-				if ( DrawHead( used, boat.Seat, boat.Angle, kind, bank, sprite.Alpha ) )
+				if ( DrawHead( used, boat.Seat, boat.Frame, kind, bank, sprite.Alpha ) )
 					++used;
 
 				continue;
@@ -618,14 +618,16 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// <remarks>
 	/// <b>Two choices, said here.</b> The rider's body is not drawn: the original keeps it, standing, where the rider was
 	/// when they boarded (admission's <c>+0x28</c> = 1 stops the guest draw placing it), and Alexah's memory of the game
-	/// is a head in the boat and nothing else, which is what this draws (2026-09-30). And the head faces the boat's
-	/// heading; which way the original turns an attached head is not decoded.
+	/// is a head in the boat and nothing else, which is what this draws (2026-09-30). The picture is the one the seat node
+	/// shows the camera (<see cref="ParkBumperBoats.HeadFrame"/>); the sprite's flag word <c>0x3000080</c> carries
+	/// <c>0x2000000</c>, so the drawing adds no direction of its own (<c>FUN_00542010</c>). The original also rolls the
+	/// quad to the node (locals 8 and 9), which is not drawn here (<c>RIDER_HEAD_ROLL</c>, counted as a boat is stood).
 	/// </remarks>
 	/// <summary>The head bank for a rider drawn in a kind and bank - <c>FUN_004fcac0</c>: a costume's head for a costume, else the child's.</summary>
 	internal static (int Kind, int Bank) HeadOf( int kind, int bank )
 		=> (kind == ParkSpriteBanks.CostumeKind ? ParkSpriteBanks.CostumeHeadKind : ParkSpriteBanks.KidHeadKind, bank);
 
-	private bool DrawHead( int used, Vector3 seat, int angle, int kind, int bank, int alpha )
+	private bool DrawHead( int used, Vector3 seat, int frame, int kind, int bank, int alpha )
 	{
 		if ( !_banks.TryGetValue( HeadOf( kind, bank ), out var loaded ) || loaded.Bank.Sets.Length == 0 )
 		{
@@ -633,12 +635,12 @@ public sealed class ParkGuestSprites : ModelEntity
 			return false;
 		}
 
-		var index = Picture( loaded.Bank.Sets[0], 0, Facing( ParkWorld.Person.OctantOf( angle ) ), out var mirrored );
+		var index = loaded.Bank.Sets[0].First + frame;
 
 		if ( index < 0 || index >= loaded.Pictures.Length )
 			return false;
 
-		WriteQuad( used, seat, loaded.Pictures[index], mirrored, alpha );
+		WriteQuad( used, seat, loaded.Pictures[index], false, alpha );
 
 		return true;
 	}
@@ -1115,7 +1117,7 @@ public sealed class ParkGuestSprites : ModelEntity
 				// interpolated frame moves them roughly 0.16 world units - which at one decimal place is
 				// barely above the printing granularity and could not be told from a jump.
 				$"drawn ({x:0.000},{y:0.000}) alpha {alpha:0.00}" +
-				$"{(seated is { } on ? $" SEATED z {on.Z:0.0}" : "")}{(head is not null ? " HEAD only" : "")} " +
+				$"{(seated is { } on ? $" SEATED z {on.Z:0.0}" : "")}{(head is { } h ? $" HEAD only frame {h.Frame}" : "")} " +
 				$"saved ({sprite.X:0.0},{sprite.Y:0.0}) " +
 				$"cellsize {cellX:0.##}x{cellY:0.##} walk {(walk == null ? "none" : "found")}";
 		}
