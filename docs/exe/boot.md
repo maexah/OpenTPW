@@ -6,11 +6,14 @@ How the original game boots: `WinMain` takes a single-instance lock, builds the 
 
 1. 0x0045f640 takes a `CreateMutexA` lock, so only one copy runs.
 2. Setup: creates players (`Players_Construct`); sets the flag word (`Flags_LoadDefaults`); reads `save\config.tcf` (0x00424930); registers `MSWHEEL_ROLLMSG`. The install's `safemode.bat` copies `safemode.tcf`, 32 bytes, over `config.tcf`.
-3. Message loop. When idle and running (`DAT_007a1a14` bit 1):
+3. Message loop (`GetMessageA` once, `0x0045ab2a`; `PeekMessageA` here and in three other loops, `FUN_00479260`,
+   `FUN_004798e0` and `FUN_005f86e0`, whose waits are not traced; Q194). When idle and running (`DAT_007a1a14` bit 1):
    - **Once**, and every step must succeed or the game quits:
      1. 0x00419710 — language and string tables and the keyboard shortcuts, from `Data\Language\`.
      2. 0x0045f7a0 — **the disc check.** `FUN_005aa500` lists the CD drives (`FUN_005f87b0`, mask 8) and asks each for its volume label (`FUN_005f89f0`, `GetVolumeInformationA`); until one reads `TPWorld` it shows a Retry/Cancel box (`MessageBoxW`, type 0x15). Cancel fails the step, so the game quits.
-     3. `Window_Create` 0x0044e080 — the "Theme Park World" window and the D3D device.
+     3. `Window_Create` 0x0044e080 — the "Theme Park World" window and the D3D device. `DirectDrawCreate`, one of
+        `DDRAW.dll`'s only two imports, is called from `FUN_00563460` (`0x00563532`, `0x00563651`, `0x00564017`; also
+        its one `DirectDrawEnumerateA`, `0x00563574`) and `FUN_005fa2b0` (`0x005fa2bc`); Q194, from the bytes.
      4. `Boot_Init`.
    - **Every idle pass:** 0x005b5bf0, then `Game_StateMachine`. Its return value is ORed into `DAT_007a1a14`, where 2 means quit.
 4. On quit, `Game_Shutdown` 0x005503f0 runs. It first runs state 0xb if a park is up, then tears everything down.
@@ -40,6 +43,12 @@ How the original game boots: `WinMain` takes a single-instance lock, builds the 
 ## Main state machine — `Game_StateMachine` 0x0054e360
 
 The state is `DAT_0087906c`. The machine runs once `DAT_00879068` is set, at the end of boot init.
+
+Its head (`0x0054e381`..`0x0054e3dc`) keeps the frame's length: `0x00875030` = the clock `0x00785970` less
+`0x00875034`, in ms; after the print it stores the clock again in `0x00875034`. **The original's FPS print is off in the shipped game** (Q194; dead by
+CONTENT): when `[0x007b05d0]` (the mouse-manager object `0x007b05a8` `+0x28`) is non-zero it calls `FUN_0046c0d0`, which
+draws `"FPS: %4g"` (`0x0074d85c`, its only reference) of 1000 / the length at (0, 0) through `FUN_0057cb10`. The flag's
+one write is 0, in the initializer `FUN_0046c0b0`; a write through a pointer is not ruled out.
 
 | State | What happens |
 |---|---|
@@ -107,6 +116,9 @@ says so itself in the two places the 2.0 patch's readme promises:
 `Boot_Init` logs the build as "Compiled Mar 24 2000 at 15:14:05" (above). The PE link time, read from the `TP.ICD` the
 exe was dumped from (the dump's own header was overwritten), is 2000-03-24 15:14:32 UTC.
 OpenTPW draws neither version string yet.
+
+The import table also names eight EA online libraries, all shipped in the game folder: `weavoter`, `weachatr`,
+`weaauthr`, `weanewsr`, `weacityr`, `weauploadr`, `wearasr` and `weamailr.dll` (Q194).
 
 ## Under Wine and Proton
 

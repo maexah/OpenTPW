@@ -87,7 +87,7 @@ Mesh names are the park itself: `road_center`, `road_lhs`, `road_rhs`, `arrival_
 
 ## `.LND` — procedural-texture source, not the landscape
 
-Header: byte 0 = 3 (version?), 10 bytes of per-park values, then uint32 384, uint32 344, uint32 4 at offsets 11/15/19 — **the same 384/344/4 in all four parks** — then 4-byte quads. There is a section of 384 x 344 x 4 bytes = 528,384 somewhere in the middle, and ~1.8 MB beyond it. Sizes are park-specific (jungle 2,417,116; fantasy 2,196,802; hallow 2,447,361; space 2,241,690). The heights are not here: they are a block inside `base.MD2`, read by `HeightfieldFile` — see `park-engine.md`, "The heightfield lives inside base.MD2". The engine loads `base.lnd` only when `DAT_007a1a8c & 0x2000` is set (`park-engine.md`, "base.lnd is not the heightfield").
+Header: byte 0 = 3, a version the engine checks (`FUN_00560ff0` refuses any other; `park-engine.md`, "The blocking unknowns", 6), 10 bytes of per-park values, then uint32 384, uint32 344, uint32 4 at offsets 11/15/19 — **the same 384/344/4 in all four parks** — then 4-byte quads. There is a section of 384 x 344 x 4 bytes = 528,384 somewhere in the middle, and ~1.8 MB beyond it. Sizes are park-specific (jungle 2,417,116; fantasy 2,196,802; hallow 2,447,361; space 2,241,690). The heights are not here: they are a block inside `base.MD2`, read by `HeightfieldFile` — see `park-engine.md`, "The heightfield lives inside base.MD2". The engine loads `base.lnd` only when `DAT_007a1a8c & 0x2000` is set (`park-engine.md`, "base.lnd is not the heightfield").
 
 ## `Standard.sam` — the park's specification, and the simulation's balance file
 
@@ -238,6 +238,7 @@ The engine's loader `FUN_00461f10` probes for an item's clips with a **12-entry 
 | `0x006fe6bc` | - | the twelve-entry letter table, **stride 8** | `MOV [ESP+0x14],0x6fe6bc` at `0x004622fb`, `MOV [ESP+0x20],0xc` at `0x00462303` |
 | `0x74d2b4` | - | format string `"%s%s%c%d.md2"` | read |
 | `0x74d2a8` | - | format string `"%s%s%c.md2"` | read |
+| `FUN_0044a220` | - | the probe: whether the composed name exists (one call site, `0x0046240e`, with flags `DAT_007a445c ? 2 : 0`). Flag 2 looks the basename up in a preloaded name list (`FUN_00461820`; −1 when `DAT_007a445c` is 0); without flag 4 that answer stands, otherwise, or on a miss, it opens and closes the file (`FUN_0046f120`). It loads nothing; the loader is `FUN_0046dcf0` (`FUN_0046d6d0`, then `FUN_0045ba70`, `FUN_0046ead0`) | Ghidra, Q194 |
 | `FUN_004629d0` | - | loads a whole second model+animation set as `"p%s"`. A leading `P` is a **prefix**, not a suffix; **what it is for is not known** | read |
 | `FUN_00463060` | - | build path: checks role 0 exists, triggers it, then starts `0xd` at once (not a clip — it binds nothing; it sets the freeze flag `0x2` and re-stamps the channel's timers, so role 0's clip holds at frame nought) | read |
 | `FUN_004647a0` | - | save load: overwrites every animation channel with the saved state and restores the per-node flag words with it | read |

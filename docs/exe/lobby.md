@@ -41,6 +41,7 @@ keys act on the release").
 | `0x00477310` | — | 9-slice path, taken for `!`-prefixed meshes | Disassembly |
 | `0x00419710` | — | `.bf4` font loader: ids out of `Language\English\residx.dat`, 13 slots x 4 resolution sets | Disassembly; the `.bf4` format is written up in the FileFormats docs |
 | `0x00485a70` | — | The font in a slot: `CMP ECX,0xd` / `JNC` answers null for any slot from 13 up, and, the compare being unsigned, for a negative one; otherwise `0x0078b54c + (slot + set * 13) * 0x18`, the set in `0x0078b534`. One flat table, 13 slots to a set, so every set is the same length by construction | Disassembly, read first-hand |
+| `FUN_006b0480` | — | The font object's constructor (one call, `0x006b06ef`), storing vtable `0x0070a158`. Slot 13 (`+0x34`) is `FUN_006b4aa0`, the glyph unpacker, reached only through the vtable; slots 14 and 15 are the blend blitters `0x006b0760` (RGB555) and `0x006b0c50` (RGB565). The unpacker's nibble helpers: `0x006b54a0` reads, `0x006b54c0` steps, `0x006b5450` writes, high nibble first. The packings are FileFormats `fonts.md`'s | Q194, from the bytes; function bounds not re-read in Ghidra |
 
 ## Instant Action vs Full Simulation
 

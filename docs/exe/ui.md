@@ -9,6 +9,8 @@ He is placed in screen space in the lower right from the engine's own numbers, a
 | Address / value | Original name | What it is | Evidence |
 |---|---|---|---|
 | `0x00598b20` | — | The gesture chain: clip 14, then a random clip 1-10 covering the sample plus 500 ms, then clip 15 | Ghidra; matched in game |
+| `0x00790398` | — | His record array, stride `0xb0`, the model handle at `+4` (`0x0079039c`). `FUN_00429ba0` builds record N: loads `Advisor.md2` (or `Advisor_%s.md2`), runs the channel reset `FUN_00473e30( model, 1, 1, 1 )`, sets `model+4 \|= 4` and `model+200` = record `+8`. Every reference to `0x0079039c` is in `0x00429ba0`..`0x00429ff3` | Ghidra, Q194 |
+| `FUN_00429e90` | — | Plays the chain's **first** clip: logs "Initial advisor call", then `FUN_004732a0( model, role 5, clip − 1, flags 0x10, 1.0, channel 0 )`, or returns 1000 with no model. Its one caller, `Advisor_SayResponse` (`0x005993d5`), passes the clip word at `0x00f79718` masked by `0xff80ffff`. `Advisor_Update` plays each later clip itself (`0x005999e3`..`0x00599a85`): when channel 0 has nothing queued (`FUN_00473ff0` answers `0xc`) it calls the trigger with flags 0, so each clip queues behind the running one by the trigger's ordinary rule (`park.md`); a masked word of 0 ends the list. What flag `0x10` means is not decoded | Ghidra, Q194 |
 | clip 14 / clip 15 | — | Rise and drop. Position channel `0x1` raises him from below in 14 and drops him in 15; he is hidden once 15 finishes | Ghidra + animation data |
 | channel `0x1` | — | Position keys. Documented in `AnimationFile`, not in the advisor's own files | Animation data |
 | channel `0x20000` | — | Visibility keys — this is what blinks him. Also documented in `AnimationFile` | Animation data |

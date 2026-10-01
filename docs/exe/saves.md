@@ -118,6 +118,16 @@ nonzero(`+0x26`, `+0x27`).
 immediately, with advisor line `0x189`. An Instant Action player gets no key, hears advisor line `0x18a`, may enter any
 island, and has ticket awards switched off entirely.
 
+**What an award returns** (Q194; the checkers are `ride-operation.md`, "Golden tickets"). `FUN_005af810` (Local) returns
+0 when the park holds the ticket already; otherwise it sets it, counts `T`, and returns 1 (ticket only) unless
+`T / 3` + (`+0x20`) is above nought and `T % 3` is 0, when it returns 3 (ticket, key and park) if a theme's key
+requirement equals the new key count and 2 (ticket and key) if not. `FUN_005afb00` (Secret) does the same on `+0x26 + i`.
+`FUN_005af940` (Global, given the measured value) differs: if the player holds global flag `i` (`+0x18 + i`) and this
+park does not hold the record, it looks for another of the player's parks holding it with a **smaller** stored value,
+moves the record here with the new value and returns 4 ("Global ticket award moved here"; no new ticket), else 0. A
+park that holds the record never has its value raised. A player without flag `i` gets it, the record on this park,
+and 1, 2 or 3 as above.
+
 ## Which option lives where
 
 | Option | Lives in |

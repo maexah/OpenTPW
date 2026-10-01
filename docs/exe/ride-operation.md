@@ -1833,9 +1833,9 @@ Alexah's two played Lost Kingdom saves, written by the original, which hold 29 a
    slot (`FUN_00475730`), so the slot still names the balloon. Every saved balloon is kind 10, bank 0, frame 0, alpha 255,
    on script 1650 at 1652.
 10. **What reads it.** Case 9 of the challenge check `FUN_004d1660` counts the guests on counting cells who hold one
-    against all of them (`FUN_004c9530` over `FUN_004c9130`); case 10 counts costumes the same way. Lost Kingdom's
-    `ChallengesInThisLevel[7]` has `ChallengeType` 9; that the file's numbers are the switch's is not checked. Nothing
-    reads it for happiness or a need.
+    against all of them (`FUN_004c9530` over `FUN_004c9130`); case 10 counts costumes the same way. Lost Kingdom
+    reaches case 9 through `ChallengesInThisLevel[1]` = 15, `Challenges[15]` (an index, not a Type: "Challenges",
+    below). Nothing reads it for happiness or a need.
 
 **OpenTPW builds it** (`Balloon`, `ParkRideOperation.GiveABalloon` and `Dismiss`, `Peep.SetState` and `Peep.Tick`,
 `ParkPeople`, `ParkGuestSprites.DrawBalloons`), counting the event (`SETTLE_UP_BALLOON_EVENT`) and the thought picker's
@@ -2075,7 +2075,7 @@ every offline park. The deposit, `FUN_004d0190` ("Spending", above), has no such
 **So a drink nets the park +10** (30 in, 20 out), a Jungle Spray play won −30 (20 in, 50 out, 50 to the guest) and one
 lost +20. The challenge posts land only while a challenge of that type is current and on; the challenge system switches
 on only in game type 0 and after the days at `0x007857c8` (`DaysUntilFirstChallenge` by key order; `FUN_004d1e90`), and Easymode's manager (thing 10) saves it
-off.
+off ("Challenges", below).
 
 **The detail, re-read for Q177c** (`wf_245f2fbd-cf9`: three Opus readers in Ghidra and a code map, each put to an
 Opus skeptic; reports in `~/.cache/tpw-harnesses/q177c/map/`):
@@ -2166,7 +2166,7 @@ every such purchase, as no list of ticket-bought items is kept) and a kart or wa
   (`0x0059e9f0`, `0x0059ea70`, `0x0059eaf0`) score only while the balance is below nought and `FUN_004d0810` answers
   nought (it looks over the eight loans; what it asks is not decoded), by `FUN_004d0260`'s time since `mTurnEnteredRed`
   over 30 days: under 3 months, 3 or 4, and exactly 5, the month before the end.
-- `mProfitThisYear`: golden ticket 4 when it passes the global at `0x007857a0` (`GoldenTicketLocal.ProfitYear` by key order; `FUN_004d4bc0`, `0x004d4d6b`) and
+- `mProfitThisYear`: golden ticket Local 4 when it passes the global at `0x007857a0` (`GoldenTicketLocal.ProfitYear` by key order; `FUN_004d4bc0`, `0x004d4d6b`; "Golden tickets", below) and
   advisor row 318 near it, both in game type 0 only. It is zeroed on the year's change (`0x004d034e`), not on entering a
   park: the original entered Easymode with −12013 and read −11888 after five gate fees.
 - The object's cost ring and total: the all-items "Profit Last Month" (`FUN_004e1c70`: up to 30 finished days of
@@ -2181,6 +2181,93 @@ every such purchase, as no list of ticket-bought items is kept) and a kart or wa
   ("Other costs", "Balance": `hud.md`), the staff-costs and loans screens, and the gadget's icon beside the money
   (`FUN_004a0e30`, control `0x31`, frame 1 when last month's cash in was below its total costs; likely the red down arrow beside the
   money in the original's frame, though which picture each frame is was not established).
+
+### Golden tickets
+
+Re-read for Q194 from the fork review (`economy-8`, `economy-9`; `wf_cba77d07-b66`, a read-only Opus verifier in
+Ghidra and over every shipped `.sam`). **None of it is built in OpenTPW**: Q141 is the item.
+
+**The tick.** `FUN_004d4a00`, from `FUN_004d7b20` (`0x004d7b60`) once a thing sweep (`0x00516695`), does nothing unless
+the game type `DAT_00fb3b7c` is 0 (`0x004d4a31`..`0x004d4a40`), so play awards no ticket in Instant Action or online
+(`saves.md`, "Keys and tickets"). It runs the six Local tickets (`FUN_004d4bc0`), the four Global (`FUN_004d4e50`), then
+the Secret. Each ticket is tested and awarded alone, never "all met", and **every threshold compare is a signed strict `>`**
+(`CMP` then `JLE` past). The thresholds are the balance globals by key order (`park-engine.md`, "How a key finds its
+global"): `GoldenTicketLocal`'s seven keys at `0x00785790`..`0x007857a8`, `GoldenTicketGlobal`'s five at
+`0x007857ac`..`0x007857bc`, all ints. Their values per theme are FileFormats `sam.md`'s.
+
+| Ticket | Passes when | Threshold |
+|---|---|---|
+| Local 0 | the analyser's cumulative visitors (`FUN_004c94c0`, `+0x21c08`) | `Visitors` `0x00785790` |
+| Local 1 | people in the park (`FUN_004c9130`) | `PeopleInPark` `0x00785794` |
+| Local 2 | the average happiness (`FUN_004c7bb0`: each counted peep's `+0x19c` truncated to a byte, summed, over the count; 0.0 when nobody is counted or the park is shut) `>` `Happiness`, **and** people in the park `>` `AtLeastThisManyHappyPeople` | `0x00785798`, `0x0078579c` |
+| Local 3 | `FUN_004ca6b0()` is true; no `.sam` key. Partly decoded: false when `FUN_00503b30(5)` counts anything on the thing at world `+0x1da722`; otherwise true only if every item of a list (`FUN_00412e60`/`FUN_00412e70`) has `WhichUIType` (`+0x4ac`) 4, or a `CControlManager` record with `+0x18` non-zero (how many stand in the park), or a `GoldenTicketCost` (`+0xc4`). "One of every item built" is a reading, not a decode | none |
+| Local 4 | the bank's `mProfitThisYear` (`+0x124`, below) | `ProfitYear` `0x007857a0` |
+| Local 5 | `FUN_004c94d0(RecentVisitorMonths)` (cumulative visitors less the monthly ring's entry that many months back: ring `+0x20824`, index `+0x20a64`, size `+0x20a68`, wrapped `+0x20a6c`; 0 when it does not reach back) `>` `RecentVisitors`, **and** a span from `FUN_004f8800` in 30-day months (`/ 0x1792f8648000`) `>` `RecentVisitorMonths` | `0x007857a4`, `0x007857a8` |
+| Global 0 | `FUN_004cc920(&id, 0)`: the truncated maximum of `FUN_0043e0e0`'s float over kind-3 objects passing `FUN_004e2b50`; logged "coaster height" (the measure is not decoded) | `CoasterHeight` `0x007857ac` |
+| Global 1 | `FUN_004cc3b0`: the highest excitement (`FUN_004e0860`) over rides of `WhichTrackType` 1, car track | `GokartExcitement` `0x007857b0` |
+| Global 2 | `FUN_004cc6f0(&id, 2)`: the longest `FUN_00545310` section list over rides of `WhichTrackType` 2, water | `WaterLength` `0x007857b4` |
+| Global 3 | `FUN_004cd7f0`: the cells of kind 9, 10, 4 or `0x15`, or whose record is track type 11, 13, 16, 18 or 25 (`hud.md`'s cell predicates) | `MinCellsCovered` `0x007857bc` |
+| Secret | progress `+0x26` clear and `FUN_004cd720() == 100` exactly: the whole percentage of the cells not of kind 2, 7 or `0x1e` whose 10-byte record (`FUN_004d8410`, world `+0x1b1104`) has a word at `+6` above 0 (what `+6` holds is not decoded) | none |
+
+`MinCellsOwned` (`0x007857b8`) has no reader: no dword of the executable holds the address. The Local tickets first skip
+one the park holds (`FUN_005af7f0(i)`); the Globals have no such test, because the award itself decides
+(`saves.md`, "Keys and tickets", for its four results and the record that moves between parks). Only index 0 of the
+Secret is ever awarded (`FUN_005afb00`'s one caller, `0x004d4a84`), so nothing found sets `+0x27`.
+
+**Telling the world.** `FUN_004d4fa0` (Local), `FUN_004d5270` (Global) and `FUN_004d5870` (Secret), each reached only
+from its checker, take the ticket index and the award's result, log "Won a ... golden ticket", and post one advisor
+message through `FUN_0059b590`: results 1, 2, 3 (ticket; ticket and key; ticket, key and park) post `0xd7`-`0xd9`
+(Local), `0xdc`-`0xde` (Global) and `0xe1`-`0xe3` (Secret); a Global result 4, the record moved here, posts `0xea`-`0xed`
+by index (coaster height, go-kart excitement, water length, big park). Their lines are `advisor-park.md`'s, "The message-to-sample rule". The
+cheat rows award Local and Global tickets in any game type (Q141's note).
+
+### Challenges
+
+Re-read for Q194 from the fork review (`economy-3`..`economy-5`, `economy-v1`, `economy-v2`, `ghidra-docs-20`;
+`wf_cba77d07-b66`). **None of it is built in OpenTPW**; nothing queues it yet. Game type 0 only, so Lost Kingdom's
+Easymode never runs one (its manager's saved `mSystemSwitchedOn` is 0), and a Full Simulation does (Alexah's jungle save
+has won #1). The manager is thing 10, model 19, saved as FileFormats `saves.md`'s "The challenge manager (model 19)".
+
+**The pool.** `FUN_004d1ce0` clears the 20 slots (`0x30` bytes each from manager `+0xc`), loads `data/challenges.sam`
+into 40-byte records ("Loading challenges.sam went horribly wrong! Shout at Bjarne!" on failure), and walks the 20
+dwords `0x007857d4`..`0x00785823`, `ChallengesInThisLevel[0..19]`: each value of 1 or more is a **1-based index into
+`Challenges[]`, not a Type**, copied into the first empty slot, so slots fill in list order
+(FileFormats `sam.md` has the lists).
+
+**The offer.** `FUN_004d2a70` does nothing while `mChallengeOn` (`+0x3d9`) or `mWaitingForReply` (`+0x3da`) is set;
+otherwise it zeroes `mValue` and scans round robin from `mCurrentChallenge` + 1 (or 0) over the 20 slots for the first
+with a Type, not won (`+0x2c`), declined fewer than `DeclinesToForfeit` times (`+0x28` against `0x007857cc`) and
+`Independent` (`+0x1d`): a follow-up is never offered cold. It logs "Challenge %d is being offered!", stores the slot and
+calls `FUN_004d2c50`, which on non-zero sets `mWaitingForReply`. How a follow-up is found ("Followup challenge %d is
+being offered") is not traced.
+
+**The pacing.** The five `Challenges.*` keys sit at `0x007857c0`..`0x007857d0` by key order: `DaysAfterCompletedChallenge`,
+`DaysAfterDeclinedChallenge` (readers not traced), `DaysUntilFirstChallenge` (`0x007857c8`), `DeclinesToForfeit` (`0x007857cc`)
+and `ShortTimeLeftWarningAt` (`0x007857d0`). `FUN_004d1e90`, the daily tick: with the system off, it needs the park open
+(`FUN_004c9050`) and `FUN_004f8800`'s time in whole days (`/ 0xC92A69C000`) at least `0x007857c8`, then switches it on
+and offers at once. Later offers wait for `mNextChallengeEventTime` (`+0x3d0`, an absolute time on the park calendar).
+While one is on, a pass of `FUN_004d1660(…, 0)` before the deadline wins (`FUN_004d2fb0`); at the deadline
+`FUN_004d2840` runs, then `FUN_004d1660(…, 1)` wins or loses (`FUN_004d3140`). When `TargetTime` is non-zero and the
+time **left**, in days × 100 / `TargetTime`, is below `0x007857d0`, it raises message `0x17f` (`FUN_0040f7a0`).
+
+**The win test**, `FUN_004d1660(slot, &value, atEnd)`, by Type; with `CheckAtEndOnly` (`+0x1c`) set it tests only at the
+end. None of the metric helpers named here is decoded.
+
+| Type | Wins when |
+|---|---|
+| 1-8, 11, 12, 13, 16, 17, 20, 22 | the posted counter ≥ `TargetVal` (the posts for 1-8, 12, 13 are the economy feed's, `FUN_004e16b0` under "Spending") |
+| 9, 10 | `FUN_004c9530` (or `FUN_004c95d0`) × 100 / people in the park ≥ `TargetVal` |
+| 14, 15, 18 | `FUN_004cc810` unfiltered, `FUN_004cc4b0`, `FUN_004cc810(TargetObj)` ≥ `TargetVal`, storing the thing found at `+0x2e` for the follow-up |
+| 19 | `FUN_004cc810(TargetObj)` `> 2`, hard-coded; both entries' `TargetVal` is 3 |
+| 21, 28 | `FUN_004cc5d0(TargetObj)`, `FUN_004ca820(TargetObj)` ≥ `TargetVal` |
+| 24, 25, 27 | the counter / `TargetTime` ≥ `TargetVal` |
+| 29 | `FUN_004c9c00` of the staff model from `TargetStaffType` 0→5, 1→4, 2→6, 3→7, 4→8 |
+| 30, 31, 32 | `FUN_004ca8c0(TargetObj)` `> 0` |
+| 33 | `FUN_004ca8c0` `> 0` for both `TargetObj` and `TargetObj2` |
+| 0, 23, 26, other | no case: never won |
+
+So #27 ("Add upgrade to Taptastic Rapids", Type 31) tests only its `TargetObj` 4160, which #26 has just required, and
+ignores `TargetObj2`; its comment and the executable disagree.
 
 ### The month's change: the training, the analyser, the bank and the wages
 

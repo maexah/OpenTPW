@@ -3843,7 +3843,7 @@ artifacts are listed in `docs/history/README.md`.
   - **Game** (`q193run.py`, silent, `save/` unchanged): predicted `rides` 15 with 16 scripts and the same 13
     `unimplemented` keys as `q192/run1`; read 15, 16 and the same 13. Shot `q193/run1/park.png` looked at: the park
     and its peeps drawn.
-- [ ] **Q194. Write down the review's verified facts: tickets, challenges, advisor, terrain.** Found by the fork
+- [x] **Q194. Write down the review's verified facts: tickets, challenges, advisor, terrain.** Found by the fork
   review (economy-3..economy-5, economy-8, economy-9, economy-v1, economy-v2, history-11, ghidra-docs-20,
   world-sim-v1, world-sim-v2, world-sim-v4, world-sim-1, world-sim-7, gap5-5, ui-render-platform-v3,
   ghidra-docs-11..ghidra-docs-13, gap5-7, gap5-9, gap5-11, fmt-media-8, gap5-14, history-1). No code. Golden
@@ -3858,6 +3858,29 @@ artifacts are listed in `docs/history/README.md`.
   (`FUN_0055f780`, `FUN_0055e780`, `FUN_0056e7e0`, up to `FUN_004504c0`). The loose addresses to their pages: the
   gated FPS print `FUN_0046c0d0`, the DirectDraw callers, the sprite-under-cursor lookup `FUN_00532bd0`, the file probe
   `FUN_0044a220`, the font blitters. Measure the challenge's 937-byte record before writing any of its offsets.
+
+  - **Done 2026-10-01** on `alexah/235-review-facts-tickets-challenges` (FileFormats: its branch 235). Every fact
+    re-read in Ghidra or across all the shipped data first (four read-only Opus verifiers, `wf_cba77d07-b66`; the
+    challenge manager's record measured in ten distinct park files). `ride-operation.md`: new "Golden tickets" (six
+    Local, four Global, the Secret; ticket 3 and the Secret partly decoded; `MinCellsOwned` unread) and "Challenges"
+    (pool, offer, pacing, win test). `saves.md`: an award's four results and the Global record that moves between
+    parks. `advisor-park.md`: the two unread `GeneralAdvisor` keys (no global gap), the kinds table (0, 2 and 7 added,
+    1 corrected), the ticket messages' lines. `ui.md`: `0x00790398` and `FUN_00429e90`. `park-engine.md`: unknown 6's
+    entry point and `FUN_00532bd0`. `park.md`: the probe `FUN_0044a220`, `.LND`'s version check. `boot.md`: the
+    DirectDraw callers, the other message loops, the FPS print (dead by CONTENT), the `wea*.dll` imports;
+    `render-states.md` the software renderer; `lobby.md` the font object. FileFormats `sam.md` (the ticket thresholds
+    per theme, `Challenges.*`, `ChallengesInThisLevel` as indexes and its four lists, the `Type` meanings),
+    `saves.md` ("The challenge manager (model 19)"), `models.md` (flag `0x20` in 880 of 2,129, re-counted),
+    `fonts.md`. Corrected on the way: `ChallengesInThisLevel[7]` = 9 is `Challenges[9]`, Type 20, not Type 9
+    (`ride-operation.md` said otherwise); with `DAT_007a1a8c & 0x2000` off the `base.lnd` call is skipped silently, the
+    "not allowed" log is another flag's (`park-engine.md` said otherwise); `FUN_00429e90` plays only a line's first
+    clip; #27's `TargetObj2` is ignored. Review `wf_83f27a06-521` (9 findings, fixed). Docs only; no test, so no bug
+    to put back.
+  - **Game** (`q194run.py`, silent, `save/` unchanged): predicted `rides` 15 with 16 scripts and the same 13
+    `unimplemented` keys as `q193/run1`; read 15, 16 and the same 13. Shot `q194/run1/park.png` looked at: the park,
+    its rides and peeps drawn, 0 tickets and 0 keys on the HUD.
+  - **Not checked:** the readers of `DaysAfterCompletedChallenge`/`DaysAfterDeclinedChallenge`, the follow-up lookup,
+    which `GoldTicketNearTo*` row reads which threshold, every metric helper; the Ghidra server dropped mid-run.
 
 - [ ] **Q195. Write down the movie player, and the emulator as an instrument.** Found by the fork review (gap4-1..
   gap4-14, fmt-media-4..fmt-media-7, ghidra-docs-v3, history-4). The movies stay cut (section G) and

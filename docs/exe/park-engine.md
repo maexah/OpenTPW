@@ -10,7 +10,7 @@ What `testme.exe` says about park loading, terrain, the camera, the clock, the s
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
-| `DAT_007a1a8c & 0x2000` | — | Gate on loading `base.lnd` at all; with the flag off the engine logs `"Procedural textures not allowed"` | Three agents concluded this independently |
+| `DAT_007a1a8c & 0x2000` | — | Gate on loading `base.lnd` at all (`FUN_004504c0`, `0x004507a7`); with the flag off the call is skipped and nothing is logged. `"Procedural textures not allowed"` is `FUN_0056dfe0`'s, when `DAT_008bd550 & 0x10000000` is set, and logged only under the debug bit `DAT_008bd508 & 0x2000000` ("The blocking unknowns", 6) | Ghidra, Q194 |
 
 **Skip it entirely for a first renderer.** Rendering its second section looks like stacked texture tiles rather than a park, which is the symptom of treating it as terrain.
 
@@ -946,6 +946,14 @@ id in `FUN_0045d560`:
 Written as a **16-bit** store, 0 when the point is off the map. The "y" is really the **Z** component of
 the world hit point. The hovered *thing* is latched separately into the mouse-manager object at
 `0x007b05a8`, and a click **snapshots** it (`FUN_0048c960`) rather than re-reading it live.
+
+**The thing under a sprite** (Q194): `FUN_00532bd0` stores the pointer at `0x008bd4f0`/`0x008bd4f4` as x / 1024 − 1 and
+y / 767.5 − 1. When the sprite draw has latched a sprite under it (`DAT_008bd4fc`: cleared at each pass by
+`FUN_0058a770`, set at `0x0058931a` by `FUN_005890e0`'s squared-distance test), it takes that sprite's script
+(`FUN_00475ef0`) and walks the hovered cell, then its eight neighbours (pairs at `0x0081ed40`, filled by the initializer
+`0x00532b30`), returning the first thing of kind 1, 4, 5, 6, 7, 8 or `0x12` on the cell's thing list whose `+0x0c`
+script is the sprite's. Its one caller, `FUN_00540b30` (from `FUN_00475430`), stores the answer at `0x00877350` and hands
+the previous one to `FUN_00423b50` on `0x007b05a8`.
 
 **The type-3 handlers do NOT test the cell for zero** before unpacking it; the out-of-range value is
 caught downstream by the bounds test inside the callees instead.
@@ -2234,7 +2242,21 @@ computes (`models.md`, "Normals").
 3. **The diagonal-choice bit** — see the terrain section. The cell's `0x0800` has no consumer found anywhere, and neither terrain pass tests `0x0004`, the RE pass's candidate.
 4. `base.MD2`'s container walking — the heightfield was found by validated signature search, **not** by walking the chunk table.
 5. `base.map`'s per-bit semantics beyond `0x08`.
-6. The procedural compositor.
+6. **The procedural compositor.** Its entry point (Q194): `FUN_004504c0` (from `FUN_00457a90` on a park's load, and
+   from the lobby's `FUN_005d84a0`) passes the gate above, builds `%sbase.lnd` and calls `FUN_0056dfe0`, which (unless
+   refused) calls `FUN_0056e550` on `DAT_00879d60`. That needs `DAT_008bd524 == 1` (not identified), logs "Attempting to
+   initialize procedural textures", and through `FUN_005723f0` allocates the tile buffers (`FUN_0055f720`,
+   `DAT_008798c8`) and reads the file (`FUN_00560ff0`, which refuses it unless byte 0 is 3), then sets
+   `DAT_008bd550 |= 4`. What sets `0x2000` from `PROCEDURALTEXTURING` (0, 2, 2 in `low`, `med`, `high.sam`) is not traced.
+   - `FUN_0055f780`, a 6,256-byte MMX thiscall, composites one tile (callers `FUN_00572440`, and `FUN_00572630` from
+     `FUN_0057ace0`): unless all four corner samples' channel 0 are `0xff` it fills the tile grey (`0x7f7f7f00`);
+     otherwise it upsamples channels 1-3 with `FUN_0055e780` into `DAT_008798a8`, `DAT_008798b8`, `DAT_00879398` and
+     blends up to thirteen source textures with modulo wrap. Only its first ~180 of 2,681 decompiled lines are read.
+   - `FUN_0055e780` is a bilinear **up**sample: one byte channel's 5 × 5 samples to an N × N tile, N = 4 × (w >> 2).
+   - `FUN_0056e7e0` is the separate visible-cell pass: a quadtree over map cells that projects each rectangle's height
+     box, culls it, and splits it, `FUN_0056e780` keeping each of 128 rows' x span. `FUN_00576a00` calls both
+     branches: `FUN_0056ea90` for the spans, `FUN_00576910` → `FUN_0056f090` → `FUN_00572440` → `FUN_0055f780` for
+     the tiles. No sprite passes through any of them.
 7. The park camera's terrain-following sampler — probably real, identity disputed between agents.
 
 ---

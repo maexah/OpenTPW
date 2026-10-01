@@ -12,7 +12,10 @@ material flag.
 ## Device and how a state reaches it
 
 DirectDraw + Direct3D 6 immediate mode. The binary imports `DDRAW.DLL` only; the device comes back
-from `QueryInterface`, so there is no `d3dim` import to find. The device vtable is `IDirect3DDevice3`.
+from `QueryInterface`, so there is no `d3dim` import to find. The device vtable is `IDirect3DDevice3`. The executable also carries a software
+renderer ("MMX Software Renderer, by Martin Griffiths, 1998/9", `0x006ef770`) and two refusals of the hardware path,
+" -- Detected Voodoo1, failing HAL init." (`0x007689d0`) and " -- Detected PowerVR1, failing HAL init." (`0x0076637c`);
+which code reads them is not traced (Q194, from the bytes). DirectDraw's two callers are `boot.md`'s step 3.3.
 
 | Address / value | Original name | What it is | Evidence |
 |---|---|---|---|
