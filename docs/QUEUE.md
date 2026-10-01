@@ -3543,7 +3543,9 @@ artifacts are listed in `docs/history/README.md`.
     `SaveReader.cs` (its reads unchanged), `IslandPanel.cs`, `RideNodes.cs` and `RideScript.cs` (the cells, not the
     model's box). Also found: the online-header flag reads an author header on any non-zero value (FileFormats
     `saves.md`), `0x00550d80` has five callers and the constructor `0x00550ca0` 85 call sites under 26 guards
-    (`boot.md`). No game run, as the item says. Review `wf_6dac9b6e-f43` (three Opus, read-only): the claims hold;
+    (`boot.md`). The item asks no game run; one was made for `SaveReader`'s comment edit (`q185/run1/`, silent,
+    `save/` unchanged): the shipped park loads, `rides` lists 14 object scripts, handles 1-15 less 5, as saved
+    (predicted 14 for its `scripts` field, which reads 16 with the two no object holds); shot `park` looked at. Review `wf_6dac9b6e-f43` (three Opus, read-only): the claims hold;
     seven findings, fixed. Worktree: 1546 pass 0 skip; 633 ran 913 skipped
     without; 123 warnings.
 
