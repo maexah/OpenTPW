@@ -59,7 +59,7 @@ public class RideScriptTests
 	/// <summary>Parsed once and kept - 308 files is more than each test wants to read again.</summary>
 	private static (string Path, RideScriptFile Script)[]? _scripts;
 
-	private static (string Path, RideScriptFile Script)[] Scripts()
+	internal static (string Path, RideScriptFile Script)[] Scripts()
 	{
 		return _scripts ??= [.. EveryScriptPath().Select( path => (path, new RideScriptFile( path )) )];
 	}

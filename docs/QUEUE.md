@@ -3423,7 +3423,7 @@ artifacts are listed in `docs/history/README.md`.
     the control, 0, went 2.3 s after the write, predicted within 2 (a reading late). Shots `B1-still-loading`,
     `A1-going`, looked at. No code changed but a comment.
 
-- [ ] **Q181b. Move a kept `GETTIME` deadline across a load.** From Q181's decode (`park.md`, "What a kept `GETTIME`
+- [x] **Q181b. Move a kept `GETTIME` deadline across a load.** From Q181's decode (`park.md`, "What a kept `GETTIME`
   reading is"). At `ParkRides.Resume`, move through `Moved` every variable a walk of the script finds written only by
   `GETTIME` and `ADD` to itself (`VAR_STARTNOW`, `VAR_TIMER1`, `VAR_ENDTIME`), never by name; and, when the saved
   script stands on a `SUB` whose word before is `GETTIME V`, that `V` and the result register (check the save carries
@@ -3431,6 +3431,22 @@ artifacts are listed in `docs/history/README.md`.
   after a load, the gift shop's idle, a split pair; put each bug back. Confirm, after Q167 (or a planted reading if
   Alexah's saves still will not load): a loaded Mumbo or Monkey starts its go 9.5 s or 7.3 s after the load with nobody
   boarding, predicted first, a screenshot and the `rides` line.
+  - **Built** (branch `alexah/217-move-kept-readings`): `RideScript.MoveKeptReadings`, from `ParkRides.Resume`, through
+    `Moved`; the walk (`KeptReadings`) keeps a variable `GETTIME` writes that appears only as `GETTIME`'s destination,
+    `ADD`'s first operand or a `SUB`'s read: 51, 2 and 1 bodies, as Q181's sweep. A saved `SUB` after `GETTIME V` moves
+    `V` and the register; nought stays. The load's line counts them (`kept clock readings moved`) and names each script.
+  - **Confirmed in the game** (`q181b/run.py`; silent; a COPY of Alexah's jungle `New Save.TPWS` laid as `Easymode.TPWI`
+    in a symlinked game folder with its own `save/`; the real `save/` unchanged): the load moved 5, predicted 8 - the tour
+    ride, Inca god and gift shop are not in the Instant Action catalogue, so nothing binds them (Q186). That save crashes
+    `ParkGuestSprites` (note under Q167), so the timing ran on a throwaway build stepping past it, never committed:
+    Mumbo, 1 rider, nobody boarding, left its loop at +313 ticks (predicted 307-315), `run3/`; with the move taken out it
+    was still looping at +401, `control1/`. Monkey went at +190 both times because two guests filled it, so it tested
+    the fill, not the deadline. Shots `B-mumbo-boarding`, `A-mumbo-later` and the control's, looked at. Tests
+    (`RideScriptKeptReadingsTests`): Mumbo, Monkey, the gift shop, a split pair, nought, an unsplit `VAR_TEMP`, the
+    corpus; five planted bugs each failed one. No `ParkRides`-level test: no shipped placed script declares
+    `VAR_STARTNOW`, so removing the call in `Resume` leaves the suite green; the game run is its proof. Worktree: 1544
+    pass 0 skip; 633 ran 911 skipped without; 123 warnings. Review (one Opus agent, read-only): no defect; a count
+    made with no save clock now is not made, and no branch lands on any of the 57 `GETTIME`-`SUB` pairs.
 
 - [ ] **Q182. A frame's ticks and clips read one clock in the engine. Decode first.** Moved from Q174c, where Q174b's
   review left it as a note (`park.md`, difference 6). A triggered clip starts at the tick's own instant in OpenTPW
@@ -4676,6 +4692,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   - **Note (Q174c's probe):** the `RSYS` channel module does not walk to its end in the jungle `New Save.TPWS` and
     `autosave.TPWS` (206 channels read, the cursor off the module's end), so `ParkThingStates` refuses it and none of
     their channels is restored; the fantasy and hallow saves and the shipped park walk closed (`q174cprobe/out.txt`).
+  - **Note (Q181b):** a park built from the jungle `New Save.TPWS` throws in `ParkGuestSprites` (`People.ToDictionary` by
+    `SpriteSlot`: two people share slot 0), after the scripts are bound; the game exits (`q181b/run1/run.log`).
   - **Note (fork review, 2026-09-30):** `restart.INTS` is the original's own fresh park. `FUN_00550b30` writes the new world's
     state once, on the first state-0xf frame, and Restart Park (`FUN_005ac5f0`) loads it back. Each of the three holds
     twelve things (the ten managers, then the unplaced gates and lights, catalogue objects x601 and x603), no people

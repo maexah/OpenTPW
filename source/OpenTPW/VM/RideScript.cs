@@ -919,6 +919,92 @@ public sealed class RideScript
 	}
 
 	/// <summary>
+	/// Moves every clock reading a load hands this script in its variables or its result register onto the clock it
+	/// runs on, by <paramref name="move"/>, as the caller moves the struct's own deadlines (<c>ParkRides.Resume</c>).
+	///
+	/// <para>
+	/// <b>A deviation, and the rest of <c>ParkRides.Moved</c>'s.</b> The engine copies the variables raw and puts its
+	/// clock back to the saved reading (<c>FUN_00415140</c>, <c>0x00415193</c>), so a kept reading means what it meant;
+	/// here the clock is not put back, so each reading is moved instead. Which variables hold one is found by a walk
+	/// of the script, never by name (<see cref="KeptReadings"/>); and where the save stands on a <c>SUB</c> right after
+	/// <c>GETTIME V</c>, a turn split the pair, so <c>V</c> and the register (which <c>GETTIME</c> writes first,
+	/// <c>0x00554b11</c>) hold a raw reading too (docs/exe/park.md, "What a kept <c>GETTIME</c> reading is"). Nought
+	/// is a variable never written, and stays.
+	/// </para>
+	/// </summary>
+	/// <returns>How many readings were moved.</returns>
+	internal int MoveKeptReadings( Func<int, int> move )
+	{
+		var readings = new HashSet<int>( KeptReadings( _file ) );
+		var split = SplitReading();
+
+		if ( split is { } pending )
+			readings.Add( pending );
+
+		var moved = 0;
+
+		foreach ( var slot in readings )
+		{
+			if ( slot < 0 || slot >= _variables.Length || _variables[slot] == 0 )
+				continue;
+
+			_variables[slot] = move( _variables[slot] );
+			++moved;
+		}
+
+		if ( split is not null && Result != 0 )
+		{
+			Result = move( Result );
+			++moved;
+		}
+
+		return moved;
+	}
+
+	/// <summary>
+	/// The variables a script keeps a clock reading in: each one <c>GETTIME</c> writes, and that appears nowhere
+	/// but as <c>GETTIME</c>'s destination, <c>ADD</c>'s first operand or a <c>SUB</c>'s operand read. In the
+	/// shipped scripts that is <c>VAR_STARTNOW</c>, <c>VAR_TIMER1</c> and <c>VAR_ENDTIME</c>, and never
+	/// <c>VAR_TEMP</c>, which a <c>SUB</c> writes.
+	/// </summary>
+	internal static IReadOnlyList<int> KeptReadings( RideScriptFile file )
+	{
+		var read = new HashSet<int>();
+		var other = new HashSet<int>();
+
+		foreach ( var instruction in file.Instructions )
+		{
+			for ( var at = 0; at < instruction.Operands.Count; ++at )
+			{
+				if ( instruction.Operands[at] is not { Kind: RideOperandKind.Variable, Value: var slot } )
+					continue;
+
+				if ( instruction.Opcode == Opcode.GETTIME && at == 0 )
+					read.Add( slot );
+				else if ( !(instruction.Opcode == Opcode.ADD && at == 0) && !(instruction.Opcode == Opcode.SUB && at > 0) )
+					other.Add( slot );
+			}
+		}
+
+		return [.. read.Except( other ).Order()];
+	}
+
+	/// <summary>
+	/// The variable a turn left holding a raw reading: where this script stands on a <c>SUB</c> whose word before is
+	/// <c>GETTIME V</c>, that <c>V</c>; otherwise null.
+	/// </summary>
+	private int? SplitReading()
+	{
+		if ( !_atAddress.TryGetValue( Position, out var here ) || here.Opcode != Opcode.SUB )
+			return null;
+
+		return _file.Instructions.FirstOrDefault( before => before.Opcode == Opcode.GETTIME
+			&& before.Address + 1 + before.Operands.Count == Position ) is { Operands: [{ Kind: RideOperandKind.Variable, Value: var slot }] }
+			? slot
+			: null;
+	}
+
+	/// <summary>
 	/// Takes the name this script gives itself, without running any of it.
 	///
 	/// <para>

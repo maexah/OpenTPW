@@ -462,7 +462,8 @@ public sealed class ParkRides : Entity
 			$"; {Animated} of them can see their own animations" +
 			$"; {Resumed} resumed where the save left them" +
 			(NotResumed > 0 ? $" and {NotResumed} did not" : "") +
-			$"; {ChannelsRestored} animation channels put back" );
+			$"; {ChannelsRestored} animation channels put back" +
+			$"; {KeptReadingsMoved} kept clock readings moved" );
 	}
 
 	/// <summary>
@@ -597,6 +598,12 @@ public sealed class ParkRides : Entity
 	/// </para>
 	/// </summary>
 	public int NotResumed { get; private set; }
+
+	/// <summary>
+	/// How many clock readings the resumed scripts kept in their variables or result registers, moved onto this
+	/// park's clock (<see cref="RideScript.MoveKeptReadings"/>). The shipped park keeps none.
+	/// </summary>
+	public int KeptReadingsMoved { get; private set; }
 
 	/// <summary>
 	/// Puts one thing's animation channels back where the park file left them.
@@ -861,6 +868,15 @@ public sealed class ParkRides : Entity
 			channels ? saved.LoopingKey : script.LoopingKey, channels ? saved.AnimationMark : script.AnimationMark,
 			OnThisClock( saved.TimerDeadline ) ?? 0f );
 
+		// And the deadlines it keeps in its own variables, a deviation said at RideScript.MoveKeptReadings.
+		// Only where the save's clock reads, as the struct's own deadlines are moved.
+		var kept = _clock?.Reading is not null ? script.MoveKeptReadings( reading => Moved( unchecked((uint)reading) )!.Value ) : 0;
+
+		if ( kept > 0 )
+			Log.Info( $"{ThemeName}: thing {placed.ThingId} (script {saved.Handle} at word {saved.Position}) had {kept} kept clock readings moved" );
+
+		KeptReadingsMoved += kept;
+
 		++Resumed;
 	}
 
@@ -880,8 +896,8 @@ public sealed class ParkRides : Entity
 	/// every saved reading means what it meant; this park's clock is the tick count since the game began, and a
 	/// float, which at a saved reading's size (114,374,804 ms in the shipped park) would hold it only to 8 ms. So each
 	/// deadline and stamp keeps its distance from the save's moment instead, which is what any wait or clip compares.
-	/// Its one known consequence: a deadline a script kept in a variable (<c>GETTIME</c> into <c>VAR_STARTNOW</c>) is
-	/// not moved (docs/exe/park.md, "What a kept <c>GETTIME</c> reading is"; Q181b).
+	/// A deadline a script kept in a variable (<c>GETTIME</c> into <c>VAR_STARTNOW</c>) is moved the same way
+	/// (<see cref="RideScript.MoveKeptReadings"/>).
 	/// </para>
 	/// </summary>
 	private int? Moved( uint reading ) => _clock?.Since( reading ) is { } since ? _loaded + since : null;
