@@ -53,7 +53,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 
 ## Does not
 
-- No screen sets the training budgets or buys a loan; six months in the red is counted, not an end (Q198b). No litter, day ending, saving a park back, video,
+- No screen sets the training budgets or buys a loan; six months in the red is counted, not an end (Q198b). No litter, day ending, saving a park back, video (the player is decoded: `docs/exe/boot.md`),
   networking. Research is inert. **A Full Simulation player is handed the Instant Action park**, counted (Q186). In a park the advisor says the gadget's opening line and no more (`docs/PLAYER-GAPS.md` gap 4).
 - Eight of the nine per-object windows are unbuilt. Setting patrol areas is deferred by Alexah; staff keep the save's.
   A walking member of staff is not entered in the cells they cross; only hiring and putting down place one.
@@ -108,12 +108,12 @@ started alone. Until then Q195 onwards, the rest of the fork review's Q185-Q197.
 
 | | | measured |
 |---|---|---|
-| Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q194 |
-| Tests | **1572**, 0 fail, 0 skip with the game | 2026-10-01, after Q194 |
-| Tests without the game | **645** ran, **927** skipped, of 1572 | 2026-10-01, after Q194 |
-| Build warnings | 123 | 2026-10-01, after Q194 |
+| Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q195 |
+| Tests | **1572**, 0 fail, 0 skip with the game | 2026-10-01, after Q195 |
+| Tests without the game | **645** ran, **927** skipped, of 1572 | 2026-10-01, after Q195 |
+| Build warnings | 123 | 2026-10-01, after Q195 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-10-01 (Q194).** `alexah/235-review-facts-tickets-challenges`: the fork review's golden-ticket, challenge, advisor and terrain facts written down; none of them is built. **Earlier:** `234` (Q193), `233` (Q203), `232` (Q202), `231` (Q202 queued), `230` (Q192), `229` (Q191), `228` (heads follow), `227` (Q190), `226` (Q189), `225` (Q187), `224` (Q186), `223` (Q185), `222` (Q183), `220` (Q182b), `218` (Q182), `217` (Q181b), `216` (Q181), `215` (Q180), `214` (heads), `213` (Q179d), `212` (Q179c), `209`-`211` (Q179b), `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-10-01 (Q195).** `alexah/236-movie-player`: the executable's movie player written down, and running its own routines under unicorn as an instrument; the movies stay unbuilt. **Earlier:** `235` (Q194), `234` (Q193), `233` (Q203), `232` (Q202), `231` (Q202 queued), `230` (Q192), `229` (Q191), `228` (heads follow), `227` (Q190), `226` (Q189), `225` (Q187), `224` (Q186), `223` (Q185), `222` (Q183), `220` (Q182b), `218` (Q182), `217` (Q181b), `216` (Q181), `215` (Q180), `214` (heads), `213` (Q179d), `212` (Q179c), `209`-`211` (Q179b), `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

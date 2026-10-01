@@ -1,6 +1,6 @@
 # Tooling recipes
 
-The planned recipes file (`docs/README.md`). This is its first section. The recipes `docs/MEMORY-DIET.md` still owes
+The planned recipes file (`docs/README.md`). It has two sections so far. The recipes `docs/MEMORY-DIET.md` still owes
 it stay owed. Machine paths are in `CLAUDE.local.md`, "The original under Proton".
 
 ## The original under Proton
@@ -96,3 +96,28 @@ fills the screen.
   uses a no-CD exe; the reference install uses `testme.exe`.
 - **Not a player's install.** Players use `tools/play-the-original/` (the guide and `tpw-setup.sh`). The reference
   install was made with that same script, with `--exe testme.exe --no-menu`.
+
+## The executable's own routines under unicorn
+
+A leaf routine that touches no Windows API, no thread and no object built at run time can be run unchanged under the
+unicorn CPU emulator, on the game's real data, without launching the game. Its output is the original's own, so it is
+a bit-exact test oracle for a port. The fork review (2026-09-30) did this for the movie player (`docs/exe/boot.md`,
+"The movie player"): the dequant table `FUN_006710c0`, the TQI macroblock decoder `FUN_006747d0` on all 9,412 frames
+of the nine movies, and the stereo ADPCM `FUN_00672210` on every audio chunk. Q195 re-ran the table and the audio: the
+table equals the formula read in Ghidra, and the audio equals ffmpeg's `adpcm_ea` sample for sample in all nine.
+
+**How.** Map `testme.exe`'s headers and sections at its image base (`pefile`), map a stack, a scratch area for the
+arguments, and a sentinel address holding `HLT`. Push the arguments and the sentinel as the return address, then
+`emu_start( function, sentinel )`. The scripts are `emu.py` (video), `audio_emu.py` and `full.py` in the review's
+`tqi/` folder, with their own venv (`CLAUDE.local.md`); a three-frame run takes under a second.
+
+**Caveats.**
+- **Set the x87 control word.** Code that rounds through the FPU depends on its precision. The movie runs used
+  `0x027F` (53-bit, the Windows default); 64-bit gives the same pixels, 24-bit changes 37.5% of one frame's samples.
+  Which one the original runs under is a measurement in the original, not an assumption.
+- **Read the entry convention from the disassembly.** Many leaves take registers, not the stack
+  (`FUN_006747d0`: `ESI`, `EBP`, `EDI`), and write into their caller's stack frame; the harness plays the caller.
+- **Tables built at run time are not in the image.** They read as zero, so run their builder first (the colour tables
+  of `FUN_00670350`), or the result is silently wrong.
+- **A routine that calls the C runtime** (`__ftol` here) works, because that code is in the image too. One that calls
+  an import does not, unless the harness stubs it.

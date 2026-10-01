@@ -1,6 +1,6 @@
 # Boot sequence
 
-How the original game boots: `WinMain` takes a single-instance lock, builds the players, loads the flag word and `config.tcf`, then enters a message loop whose idle pass runs a four-step one-time init (language tables, the disc check, the window and D3D device, `Boot_Init`) followed by `Game_StateMachine` on every pass. Boot init picks texture folders, parses options and settings, seeds the random number generator, starts sound, and holds a loading screen while the UI loads. The state machine then walks the two intro movies, the front-end load, the lobby loop, the park load and the in-park loop, and back out again; a single bit of the flag word (0x200) decides whether the front end exists at all. Traced in `/testme.exe` with headless Ghidra. The named functions below (`Boot_Init`, `Game_StateMachine` and the rest) were named in the Ghidra project at the same time; every bare address is still an unidentified `FUN_<address>` there. OpenTPW does not follow this sequence yet — it goes straight to the lobby behind the bar loading screen. What it skips on the way is counted once a run in `Game.Run`, before the first lobby: `BOOT_SPLASH` and `BOOT_LEGAL_SCREEN` (`ui.md`, "Loading screen"), and `INTRO_MOVIE_BULLFROG` and `INTRO_MOVIE_PARK` (states 5 and 7). The front end's flag 0x200 is always set here, so the movies are always reached, and all nine `.tgq` ship in `Data\Movies`. The lobby plan cut these (`docs/QUEUE.md`, section G).
+How the original game boots: `WinMain` takes a single-instance lock, builds the players, loads the flag word and `config.tcf`, then enters a message loop whose idle pass runs a four-step one-time init (language tables, the disc check, the window and D3D device, `Boot_Init`) followed by `Game_StateMachine` on every pass. Boot init picks texture folders, parses options and settings, seeds the random number generator, starts sound, and holds a loading screen while the UI loads. The state machine then walks the two intro movies, the front-end load, the lobby loop, the park load and the in-park loop, and back out again; a single bit of the flag word (0x200) decides whether the front end exists at all. Traced in `/testme.exe` with headless Ghidra. The named functions below (`Boot_Init`, `Game_StateMachine` and the rest) were named in the Ghidra project at the same time; every bare address is still an unidentified `FUN_<address>` there. OpenTPW does not follow this sequence yet — it goes straight to the lobby behind the bar loading screen. What it skips on the way is counted once a run in `Game.Run`, before the first lobby: `BOOT_SPLASH` and `BOOT_LEGAL_SCREEN` (`ui.md`, "Loading screen"), and `INTRO_MOVIE_BULLFROG` and `INTRO_MOVIE_PARK` (states 5 and 7; "The movie player" below). The front end's flag 0x200 is always set here, so the movies are always reached, and all nine `.tgq` ship in `Data\Movies`. The lobby plan cut these (`docs/QUEUE.md`, section G).
 
 ## WinMain — `WinMain_Main` 0x0045a960
 
@@ -66,6 +66,85 @@ one write is 0, in the initializer `FUN_0046c0b0`; a write through a pointer is 
 | 0xd | Goes to 0xe, which calls `Advisor_StopQuietly(1)` (0x005996d0) to stop the advisor and 0x005ac5f0, then goes back to 10. |
 | 0xb | **Leave the park:** teardown. Then 0xc (quit) if `DAT_00879088` == 3 or there is no front end; otherwise 9 if another park is pending (+0x3f0), else 1, back to the lobby. |
 | 0xc | Final teardown of the players and online objects; sets the quit bit. |
+
+## The movie player (states 5 to 8)
+
+What the executable does with a `.tgq`, written down for when the movies are taken up (Q195). OpenTPW plays none; it
+counts `INTRO_MOVIE_BULLFROG` and `INTRO_MOVIE_PARK`. The file's bytes are FileFormats `video.md`; this is the code.
+Every function below was read in Ghidra, and the dequant builder, the macroblock decoder and the stereo ADPCM decoder
+were also run unchanged on the shipped movies (`docs/TOOLING.md`, "The executable's own routines under unicorn").
+
+**Starting one.** `Intro_PlayBullfrogMovie` resolves the path and calls `FUN_0051b010( file, hwnd, x, y, 0 )`. That
+refuses unless the player exists (`DAT_00802bc0`) and none is playing (`DAT_00802bbc`), fills the player's settings at
+`DAT_008023f0`, creates it with `FUN_0066f4e0`, and sets its volume with `FUN_0066f520` to
+`DAT_00802ba8 * 10000 / 1023 - 10000`, in hundredths of a decibel.
+
+**The chunk reader `FUN_0066e410`.** Reads the 8-byte chunk header with `mmioRead`; the size counts the header. It
+takes every FourCC in both byte orders. Video frames go to the queue (`FUN_0066e840`) with a codec type:
+
+| FourCC | Type | Frame decoder (`FUN_00670c20`) | Shipped movies |
+|---|---|---|---|
+| `kVGT`/`TGVk` | 1 | `FUN_006777d0`, then `FUN_006779e0` | none |
+| `fVGT`/`TGVf` | 2 | `FUN_00677310`, then `FUN_006779e0` | none |
+| `pQGT`/`MUVf` | 3 | table `FUN_00671000` (into `DAT_00fb7820`), then `FUN_00671230`/`FUN_00671540`; block decoder `FUN_00672e60` | none |
+| `pIQT`/`UV2f` | 4 | TQI, below | all nine |
+| `MADk`, `MADm`, `MADe` (and reversed) | 5, 6, 7 | `FUN_006771a0` | none |
+
+`SCHl`/`1SNh` go to `FUN_0066ed60`, `SCDl`/`1SNd`/`SNDC` to `FUN_0066e9a0`, `SCCl`/`SCLl` are skipped, and
+`SCEl`/`1SNe`/`SEND` end the file. Types 1, 2, 3 and 5 to 7 are dead by CONTENT.
+
+**A TQI frame (type 4).** `FUN_00670890` reads the header: width, height, the quant byte, and the flags byte's bit 1
+(player `+0x40`) and bit 0 (`+0x44`). `FUN_00670c20` then builds the dequant table with
+`FUN_006710c0( player + 0x408, quant )` and walks the macroblocks in raster order with `FUN_00671800`,
+`FUN_006718a0` or `FUN_00671940` by output format. In `FUN_00671800` flag bit 1 picks `FUN_0067519d` over
+`FUN_00675579`; every shipped frame sets it. All five per-macroblock wrappers call `FUN_006747d0`.
+
+- **Dequant table `FUN_006710c0`.** Quant 100 gives `Q[i] = A[i] * 8`. Any other quant gives
+  `f = (107.0 - quant) * 0.0625`, then `Q[i] = (A[i] * ftol( M[i] * f * 65536 )) >> 16`, rounded up when bit 15 is set.
+  `Q[0]` is always `A[0] * 8` = 65,536. `A` (`0x00705c88`, 64 int32) is the AAN scale table with 8192 for 1.0. `M`
+  (`0x00705d88`, 64 int32) is the MPEG-1 default intra matrix. Every shipped frame has quant 99, so `f` = 0.5 and one
+  table serves them all: 65536, 47248, 59565, ... It is not FFmpeg's `eatqi` table.
+- **Macroblock `FUN_006747d0`.** Register convention: `ESI` = the table, `EBP` = the bitstream, `EDI` = the bit
+  position. It reads little-endian dwords, most significant bit first (`SHLD`). Six blocks: four luma, then Cb, then
+  Cr. Each starts with a DC size code from `0x00fbb92c` (luma) or `0x00fbb9ac` (chroma), added to its predictor at
+  table `+0x100`, `+0x104` or `+0x108`. The block tail `FUN_00674ab9` stores `DC * Q[0]` and decodes the AC codes
+  through `0x00fbb69c` and the tables after it. `0x41` ends the block. `0x42` escapes to a 6-bit run and an 8-bit
+  level, where level 0 reads 8 more bits and level `0x80` reads 8 more bits less 256. Each level times `Q[s]` goes to
+  slot `s` of the scan table `0x00fbb5b0`. Nothing else happens to a coefficient: no MPEG-1 mismatch step, no clamp.
+- **IDCT.** A block with no AC is filled with `DC * Q[0] >> 17`. Otherwise eight calls of `FUN_0067673c` run over
+  the stored rows (a row whose entries 1 to 7 are zero is copied), then eight of `FUN_00676965`, which shifts right
+  by 17. The output is pixel / 2, a 7-bit domain. Constants at `0x00fbb598`: `0x5a82799a` (1/√2 through `IMUL` and
+  `SHL 1`), 0.5411961, 1.306563, 0.3826834, and 1.5 × 2^52, the float-to-integer rounding constant. The odd part
+  rounds through the x87, so the result depends on its precision (the warning below).
+- **Colour.** `FUN_00670350` (one caller, `0x006701b7`) builds the YCbCr-to-display tables at run time; it writes
+  around `0x00fb9030` (Y), `0x00fb9830` (Cb) and `0x00fba030` (Cr), and the per-channel clamps at `0x00fba730`,
+  `0x00fbabf8` and `0x00fbb010`. They read zero in the image.
+  The constants it reads are -0.5, 0.3441, 0.5, -1.772, 0.7141 and -1.402 (`0x00705e88`..`0x00705eb0`), BT.601's to
+  four places. How it combines them is **not decoded**.
+
+The other codecs' addresses are not TQI's: `DAT_00fb7820` is type 3's table, `FUN_00677140` is the MAD codec's 8×8
+fill from `0x00fbc14c` (reached only from `FUN_006771a0`, types 5 to 7), and `0x00fbc018`..`0x00fbc028` is a second
+copy of the IDCT constants above, read only by `FUN_006780c1` and `FUN_00678224`.
+
+**Audio.** `FUN_0066ed60` reads the `SCHl` header. Its defaults are 16 bits, 1 channel, 22,050 Hz and codec 0. Tag
+`0x81` sets the bits, `0x82` the channels, `0x83` the codec and `0x84` the rate; tag `0x8A` ends it. No shipped
+movie sets the rate. `FUN_0066e9a0` decodes one `SCDl` by codec. It is called only while audio is on (`+0x84`), and only for the audio chunk whose place in
+a run of consecutive audio chunks equals `+0x7c`; any other chunk resets the count.
+
+- **0**, PCM16. Stereo is copied; mono is written to both channels.
+- **7**, EA ADPCM. Stereo goes to `FUN_00672210`, `(size - 12) / 30` blocks of 28 samples; every shipped movie
+  takes this path. Mono goes to `FUN_00672090`, `(size - 12) / 15` blocks of 28 samples, written to both channels.
+- **10** goes to `FUN_00672cb3`, not read.
+
+The ADPCM step, per channel: `s = ((nibble << 28) >> (shift + 8)) + cur * c1 + prev * c2 + 0x80 >> 8`, clamped to 16
+bits. `c1` is from `0x00705ec8` (0, 240, 460, 392) and `c2` from `0x00705ed8` (0, 0, -208, -220). The exe decodes
+whole blocks, so it yields a few samples more than the header counts (`bf.tgq`: 194,824 per channel against 194,815). The chunk and the decoded buffers are
+counted with `InterlockedIncrement`, which suggests a separate decoding thread.
+
+**Not established.** Which x87 precision the original decodes under. The unicorn runs used `0x027F` (53-bit, the
+Windows default); 64-bit gives the same pixels; 24-bit (Direct3D's default) changes 37.5% of the samples of
+`bf.tgq` frame 120, by up to 46 of 127 (`fpcw.py`). A movie port should not claim bit-exact until the decoding thread's control word is read in the
+original under Proton. Also unread: the colour tables' arithmetic and the skip key `0x006595a8`.
 
 ## Tick rates
 
@@ -184,6 +263,19 @@ Evidence is a Ghidra trace of `/testme.exe` throughout; the column names what in
 | 0x0051b300 | | Returns nonzero when a movie has ended. | States 6 and 8 |
 | 0x0051b350 | | Stops the playing movie. | Skip path |
 | 0x0054e070 | `Intro_PlayParkMovie` | Plays one park movie chosen by day-of-month & 7. | Filename strings |
+| 0x0051b010 | | Starts a movie: fills the settings at `DAT_008023f0`, creates the player, sets its volume ("The movie player"). | Decompile |
+| 0x0066e410 | | The movie chunk reader: FourCC to codec type, audio chunks to `FUN_0066e9a0`. | Decompile |
+| 0x00670c20 | | The movie frame decoder, by codec type; case 4 is TQI. | Decompile |
+| 0x00670890 | | Reads a frame header (TQI: width, height, quant, flags). | Decompile |
+| 0x006710c0 | | Builds the TQI dequant table at player `+0x408` from the quant byte. | Disassembly; run under unicorn |
+| 0x006747d0 | | Decodes one TQI macroblock (six blocks); `FUN_00674ab9` is its block tail. | Disassembly; run under unicorn |
+| 0x0067673c | | TQI IDCT, first pass over the stored rows. | Disassembly |
+| 0x00676965 | | TQI IDCT, second pass, `SAR 17`. | Disassembly |
+| 0x00670350 | | Builds the movie colour tables at run time. **Arithmetic not decoded.** | Decompile (references only) |
+| 0x0066ed60 | | Reads the movie's `SCHl` audio header tags. | Decompile |
+| 0x0066e9a0 | | Decodes one `SCDl` audio chunk by codec. | Decompile |
+| 0x00672210 | | Stereo EA ADPCM. | Decompile; run under unicorn |
+| 0x00672090 | | Mono EA ADPCM; no shipped movie reaches it. | Decompile |
 | 0x00550950 | | Loads weather and shadow textures: snow, raindrop, lightning, alphkid. | Texture names |
 | 0x00429ba0 | | Loads the advisor model from `%s\Global\Advisor`. | Path string |
 | 0x005d5770 | | Constructs the lobby object. | State 1 |

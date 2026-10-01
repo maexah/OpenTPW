@@ -3882,7 +3882,7 @@ artifacts are listed in `docs/history/README.md`.
   - **Not checked:** the readers of `DaysAfterCompletedChallenge`/`DaysAfterDeclinedChallenge`, the follow-up lookup,
     which `GoldTicketNearTo*` row reads which threshold, every metric helper; the Ghidra server dropped mid-run.
 
-- [ ] **Q195. Write down the movie player, and the emulator as an instrument.** Found by the fork review (gap4-1..
+- [x] **Q195. Write down the movie player, and the emulator as an instrument.** Found by the fork review (gap4-1..
   gap4-14, fmt-media-4..fmt-media-7, ghidra-docs-v3, history-4). The movies stay cut (section G) and
   `INTRO_MOVIE_BULLFROG` and `INTRO_MOVIE_PARK` stay counted; this writes down what the executable does, for when they
   are taken up. `boot.md` beside `Intro_PlayBullfrogMovie`: the chain (`FUN_0051b010`, the chunk reader
@@ -3893,6 +3893,26 @@ artifacts are listed in `docs/history/README.md`.
   one short section on running the executable's own leaf routines under unicorn as a bit-exact oracle, which ran the
   dequant, the macroblock decoder and the ADPCM over all 9,412 frames, and its caveats (x87 precision, register
   conventions, tables built at run time). Never port the fork's `TqiDecoder` (tuned, and derived from jsmpeg).
+
+  - **Done 2026-10-01** on `alexah/236-movie-player` (FileFormats: its branch 236). Solo, no workflow: the week's usage
+    was at 97% (rule 18). Every function named above re-read in Ghidra first; the TQI DC tables checked entry by entry
+    against MPEG-1's; the colour stage's six constants read (BT.601's, to four places; how they combine is still
+    undecoded). `boot.md`: new "The movie player" (the start call and its volume, the chunk reader's FourCC table, the
+    TQI frame, dequant formula, macroblock, IDCT and colour stage, the audio header and chunk decoders, what is not
+    established) and thirteen address rows. FileFormats `video.md` rewritten (`*.tgq`; the chunk census of all nine,
+    the `pIQT` header, the bitstream, `SCHl` tags, the `SCDl` layout; "rumored UV2f" dropped: the game reads it as
+    `pIQT`). `TOOLING.md`: "The executable's own routines under unicorn". `tgqscan.py` predicted and read every count
+    in the table (9,412 frames, all 320 x 352, quant 99, bytes 5-7 = 20/22/3, `SCDl` sums = tag `0x85`, every chunk
+    the predicted size). Re-ran the instrument: the emulated table equals the Ghidra formula, and `FUN_00672210` equals
+    ffmpeg in all nine; `fpcw.py` reproduced the precision warning (24-bit changes 37.5% of `bf.tgq` frame 120's
+    samples, by up to 46). `DECISIONS.md` already called `FUN_00672e60` the type-3 decoder (gap4-11), so unchanged.
+    Docs only; no test, so no bug to put back.
+  - **Game** (`q195run.py`, silent, `save/` unchanged): predicted `rides` 15 with 16 scripts, the same 13
+    `unimplemented` keys as `q194/run1`, `INTRO_MOVIE_BULLFROG` and `INTRO_MOVIE_PARK` 1 each; read 15, 16, the same
+    13, 1 and 1. Shot `q195/run1/park.png` looked at: the jungle park, its rides, paths and peeps drawn, the HUD up.
+  - **Not checked:** the TQI AC tables entry by entry (ffmpeg staying in step is the evidence), the colour tables'
+    arithmetic, `FUN_00672cb3` (codec 10), which x87 precision the original decodes under, and the video emulation
+    over all 9,412 frames (re-run here on three frames; the full run is the review's).
 
 - [ ] **Q196. `tpw-setup.sh` opens a raw disc image.** Found by the fork review (ui-render-platform-13). Its file
   branch (`7z x`, then `bsdtar`) cannot open a CloneCD `.img` or a single-track BIN/CUE `.bin`: raw 2352-byte
