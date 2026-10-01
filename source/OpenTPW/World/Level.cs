@@ -75,7 +75,8 @@ public class Level
 	/// </summary>
 	/// <remarks>
 	/// <b>True, because the only park file this loads is Easymode.TPWI</b> - see ReadPark, which names it outright
-	/// and unconditionally - and the original runs that file only in type 2 (<c>FUN_005c8190</c>; Q186). The park it
+	/// and unconditionally - and the original runs that file only in type 2 (<c>FUN_005c8190</c>). A deviation for a
+	/// Full Simulation player, who is given this balance too and is counted as FULL_SIMULATION_NEW_PARK. The park it
 	/// reads carries nought APR on all eight of its loans, which matches Easy_Standard.sam and the global file
 	/// nowhere. If a park that is NOT the easy one is ever loaded, this has to move with it rather than stay true.
 	/// </remarks>
@@ -282,6 +283,7 @@ public class Level
 		// it says. It inflates to a megabyte and a half, so reading it three times would be careless.
 		var park = ReadPark( ThemeName );
 		load.Mark( "the save" );
+		CountAFullSimulationPark();
 
 		// Kept on the level as well as handed round below, so that the interface can show what the file
 		// says without opening a megabyte and a half a second time - see the Park property. Anything running
@@ -397,6 +399,18 @@ public class Level
 	}
 
 	/// <summary>
+	/// <b>A deviation, counted:</b> a new Full Simulation player's first park is built fresh in the original
+	/// (<c>FUN_00407d80</c>, <c>FUN_00515540</c>) and loads no file; here every player is handed the Easymode park
+	/// and its <c>Easy_</c> balance. Counted here, where the player is known, because ReadPark takes only a theme;
+	/// a console <c>park</c> with nobody picked has no player and is not counted. <c>docs/PLAYER-GAPS.md</c> gap 7.
+	/// </summary>
+	internal static void CountAFullSimulationPark()
+	{
+		if ( Players.Roster.Current is { InstantAction: false } )
+			Unimplemented.Report( "FULL_SIMULATION_NEW_PARK" );
+	}
+
+	/// <summary>
 	/// The park file for a theme, walked, or null where there is nothing to read.
 	///
 	/// <para>
@@ -406,9 +420,11 @@ public class Level
 	/// is reported as such.
 	/// </para>
 	/// <para>
-	/// This reads the copy that ships beside the level rather than the player's own. Nothing writes a park
-	/// back yet, so the two are identical; when saving exists, this is the line that has to start asking
-	/// which player is playing.
+	/// This reads the copy that ships beside the level rather than the player's own, for every player. For an
+	/// Instant Action player the two are identical, as nothing writes a park back yet. <b>A deviation for a Full
+	/// Simulation player</b>, whose first park the original builds fresh and loads no file for; the caller counts
+	/// it as FULL_SIMULATION_NEW_PARK. When saving exists, this is the line that has to start asking which player
+	/// is playing.
 	/// </para>
 	/// </summary>
 	private static ParkWorld? ReadPark( string themeName )

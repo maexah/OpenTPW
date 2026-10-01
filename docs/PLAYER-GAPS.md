@@ -426,6 +426,9 @@ from the crossing. So the arrival path they would take is the one the shipped sa
 - **The real cost is not the button.** **Only Alexah's own `.TPWS` saves have been read**, in harnesses — the
   reader must not be assumed to generalise from them and the one file the game ships. `docs/exe/saves.md` also records an unreconciled
   divergence between the traced preamble byte counts and what the shipped file measures.
+- **A Full Simulation player is handed the Instant Action park** (`Easymode.TPWI` and the `Easy_` balance), where the
+  original builds their first park fresh from no file (Q197). Counted as `FULL_SIMULATION_NEW_PARK`; kept meanwhile by
+  Alexah's choice (2026-10-01), because the empty-park path cannot run a jungle park today.
 
 ---
 

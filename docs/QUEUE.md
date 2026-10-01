@@ -3549,7 +3549,7 @@ artifacts are listed in `docs/history/README.md`.
     seven findings, fixed. Worktree: 1546 pass 0 skip; 633 ran 913 skipped
     without; 123 warnings.
 
-- [ ] **Q186. A Full Simulation player is handed the Instant Action park, and nothing counts it.** Found by the fork
+- [x] **Q186. A Full Simulation player is handed the Instant Action park, and nothing counts it.** Found by the fork
   review (gap3-3, gap3-9, refute rank 2). In the original a new Full Simulation player's first park loads no file:
   the new world (`FUN_00407d80`, `FUN_00515540`) and the level load build it fresh (Q197). OpenTPW gives every player
   `Easymode.TPWI` and the `Easy_` balance (`Level.ReadPark`). Count `FULL_SIMULATION_NEW_PARK` where `Level` knows the
@@ -3561,6 +3561,11 @@ artifacts are listed in `docs/history/README.md`.
   `unimplemented` census: a Full Simulation player made for the run counts it once on entering Lost Kingdom, an
   Instant Action control does not; put the condition back to show the control count. Delete only the player folder
   the run made.
+  **Done 2026-10-01** on `alexah/224-full-simulation-new-park`. Alexah chose: keep Easymode meanwhile. `Level.CountAFullSimulationPark`,
+  called after `ReadPark`, counts `FULL_SIMULATION_NEW_PARK`; the deviation is said at `ReadPark` and `InstantAction`. Game
+  (`q186confirm.py`, players made at the slots, entered by `enter`): `q186/fs1/` Full Simulation 1x, 1x 5 s later
+  (predicted 1); `q186/ia1/` Instant Action 0x (predicted 0); shots looked at; only the run's player folders deleted,
+  `save/` unchanged. Test `LevelFullSimulationParkTests`: the condition dropped and the report dropped each go red.
 
 - [ ] **Q187. First person keeps the top-view sprites where the original swaps to `.FPC`.** Found by the fork review
   (peeps-v1, peeps-v2, gap6-2, refute rank 5). Every sprite bank loads as `.TPC`. Entering first person
