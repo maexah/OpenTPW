@@ -3421,8 +3421,9 @@ public sealed class RideScript
 		//
 		// A clip starts at this tick's own instant, where the engine stamps a fresh start with the frame's
 		// clock snapshot (0x00472bff), the one its advance reads: so a clip triggered at tick i of a frame
-		// running k ticks is (k-1-i) x 31ms in at that frame's sweep here and nought there - a deviation
-		// reached only when a frame runs more than one tick (docs/QUEUE.md Q182).
+		// running k ticks is (k-1-i) x 31ms in at that frame's sweep here and nought there. A DELIBERATE
+		// deviation, kept by Alexah's decision so a clip's timing does not hang on the frame rate; it shows
+		// only when a frame runs more than one tick (docs/exe/park.md, difference 6).
 		return Animations.Trigger( role, entry, flags, 1f, (int)now, channel );
 	}
 

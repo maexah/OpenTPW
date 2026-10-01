@@ -100,6 +100,17 @@ public static class GameClock
 	/// lobby's backlog because it has a world to keep consistent - dropping two seconds of ticks
 	/// there loses two seconds of everything the tick drives, where in the lobby it loses some
 	/// particles.
+	///
+	/// <para>
+	/// <b>A capped frame runs 64 ticks here and 65 in the engine, a deliberate deviation kept by
+	/// Alexah's decision.</b> The engine steps while <c>now</c> is past its last stepped time, adding 31
+	/// to that (<c>0x0054f4ad</c>, <c>0x0054f4c4</c>), so each tick runs at the START of its 31 ms and
+	/// the count is rounded up; <see cref="Update"/> runs one when a whole 31 ms is owed, at its end, and
+	/// rounds down. Both re-base to <c>now - cap</c>, so the engine ends each capped frame one tick further
+	/// on (the lobby: 17 against 16); matching it would move the phase of
+	/// every tick and the interpolation that reads <see cref="PartialTick"/>
+	/// (<c>docs/exe/park.md</c>, difference 6).
+	/// </para>
 	/// </summary>
 	public const float ParkCatchUp = 2f;
 
@@ -223,9 +234,13 @@ public static class GameClock
 		var elapsed = paused || _rebased ? 0f : Time.RawDelta;
 		_rebased = false;
 
-		_owed = MathF.Min( _owed + elapsed, catchUp );
+		var backlog = _owed + elapsed;
+		_owed = MathF.Min( backlog, catchUp );
 
 		TicksDue = (int)(_owed / TickSeconds);
+
+		if ( backlog > catchUp )
+			Log?.Info( $"clock: a {backlog * 1000f:F0} ms backlog capped at {catchUp * 1000f:F0} ms, {TicksDue} ticks run" );
 		_owed -= TicksDue * TickSeconds;
 		Ticks += TicksDue;
 	}

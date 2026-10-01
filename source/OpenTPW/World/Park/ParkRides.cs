@@ -1075,11 +1075,17 @@ public sealed class ParkRides : Entity
 	/// to this clock unchanged, and the engine's is a millisecond counter ending at <c>timeGetTime</c>.
 	///
 	/// <para>
+	/// <b>A deliberate deviation, kept by Alexah's decision</b> (<c>docs/exe/park.md</c>, difference 6). The
+	/// engine hands every tick of a catch-up the frame's one instant (<c>now</c> read at <c>0x0054f47f</c>,
+	/// above the loop), so a script's <c>WAIT</c> ends only on a frame boundary and a clip triggered
+	/// mid-catch-up starts from nought: its timing hangs on the frame rate, about 7 ms late at 144 fps and up
+	/// to a frame at 10. Here each tick's instant is 31 ms after the last, whatever the frame rate.
+	/// </para>
+	/// <para>
 	/// Worked back from the tick number rather than read from <see cref="GameClock.Now"/>, which is one
-	/// value for the whole frame: after a long frame several ticks come due at once, and handing them all
-	/// the same instant would let a <c>WAIT</c> of a single tick come due immediately. By the time an
-	/// entity updates, <see cref="GameClock.Ticks"/> already counts this frame's ticks, so the first of
-	/// them is that many less <see cref="GameClock.TicksDue"/>, plus one.
+	/// value for the whole frame. By the time an entity updates, <see cref="GameClock.Ticks"/> already
+	/// counts this frame's ticks, so the first of them is that many less <see cref="GameClock.TicksDue"/>,
+	/// plus one.
 	/// </para>
 	/// </summary>
 	private static float MillisecondsAt( int index )

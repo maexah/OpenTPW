@@ -3466,7 +3466,7 @@ artifacts are listed in `docs/history/README.md`.
     (three or four ticks). Shots `S1-running`, `S2-bought`, looked at. No code; no test. Skeptics `wf_850d5f4f-228`
     (core held; added: a message box in a tick pauses the clock, the engine's clamp runs 65 ticks, a third timing ring).
 
-- [ ] **Q182b. Each tick keeps its own instant: say the deviation.** From Q182's decode (`park.md`, difference 6).
+- [x] **Q182b. Each tick keeps its own instant: say the deviation.** From Q182's decode (`park.md`, difference 6).
   The engine hands every tick of a frame the frame's one instant, so a script's wait ends only on a frame boundary and a
   clip triggered mid-catch-up starts from nought: frame-rate dependent (about 7 ms late at 144 fps, up to a frame at
   10). Alexah, 2026-10-01: keep OpenTPW's frame-independent instants (`ParkRides.MillisecondsAt`, a tick 31 ms after
@@ -3475,6 +3475,17 @@ artifacts are listed in `docs/history/README.md`.
   difference 6 in `park.md` as kept by decision. Separately, match the engine's 2000 ms clamp, which runs 65 ticks
   where `GameClock` runs 64 (`0x0054f49b`), or say that too. Confirm: a stall forced past 2 s, the tick count across
   it in a census, predicted first, and a shot.
+  - **Done 2026-10-01, `alexah/220-say-the-tick-instant`.** Said at `ParkRides.MillisecondsAt` (its old reason
+    replaced), `RideScript.StartAnimation`, and difference 6 in `park.md`, marked kept by decision. The 65 is the
+    engine's loop test, `while now > last` (`0x0054f4ad`): a tick runs at the start of its 31 ms, ours at the end.
+    Matching it moves every tick's phase and `PartialTick`, so Alexah chose (2026-10-01) to keep 64 and say it, at
+    `GameClock.ParkCatchUp` (the lobby's 17 against 16 too). A capped frame now logs its count. Game (`q182b/run2/`,
+    silent, stock jungle park, `save/` unchanged, predicted first, 2 of 2; `run1/` the same before the line's wording
+    was fixed): a 3 s `SIGSTOP` stall logged `a 3014 ms backlog capped at 2000 ms, 64 ticks run`; `state` ticks 177 to
+    241, 64 against 64.2 predicted. Shots `S1-before`, `S3-after` (the date on to 1/2, guests walked on), looked at.
+    Test: the cap test now pins the 16 ms left owed too; rounding up instead turns it and four others red. Worktree:
+    1544 pass 0 skip; 633 ran 911 skipped without; 123 warnings. Review `wf_f1594c0e-584` (Opus, read-only): every
+    address held; the line said "frame" for the backlog, fixed.
 
 - [ ] **Q183. A script's walks are stepped in its own turn, where the engine steps every script's once a frame.** Found
   by Q175's decode (`ride-operation.md`, `FUN_00557ab0` and `FUN_00557d80`). `RideScript.StepTheWalks` runs at the head

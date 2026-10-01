@@ -807,6 +807,13 @@ kept the bit. No Lost Kingdom item lacks a role, and the Easymode save's 163 cha
 `ParkRides.MillisecondsAt`), where the engine stamps a fresh start with the frame's snapshot `DAT_007b496c`
 (`FUN_00472bc0`, `0x00472bff`), the one its advance reads (`0x004736b3`). So a clip triggered at tick i of a frame
 running k ticks is (k-1-i) × 31 ms in at that frame's sweep here and nought there, up to 1953 ms at the 64-tick cap.
+**Kept by decision** (Alexah, 2026-10-01, Q182b): the engine's one instant a frame makes a script's timing hang on the
+frame rate, so OpenTPW keeps each tick's own instant 31 ms after the last, said at `ParkRides.MillisecondsAt` and
+`RideScript.StartAnimation`. **The cap is kept too**: the engine's loop steps while `now` is past its last stepped time
+(`0x0054f4ad`, the lobby `0x0054e77c`), so each tick runs at the start of its 31 ms and a capped frame runs 65 (the
+lobby 17); `GameClock` runs one when a whole 31 ms is owed and runs 64 (16). Matching it would move every tick's phase
+and the interpolation; said at `GameClock.ParkCatchUp`. Measured (Q182b, `q182b/run2/`, predicted first): a 3 s
+`SIGSTOP` stall logged `a 3014 ms backlog capped at 2000 ms, 64 ticks run`, and `state` moved 177 to 241.
 
 **What the engine's ticks read across one frame (Q182).** The park frame reads the clock `0x785970` twice, back to back,
 above the catch-up loop: `FUN_00473440` at `0x0054f475` takes the snapshot `DAT_007b496c`, and `0x0054f47f` takes the

@@ -131,8 +131,11 @@ public class GameClockTests
 	{
 		Frame( 2.5f, catchUp: GameClock.ParkCatchUp );
 
-		// Capped at two seconds: 2 / 0.031 = 64.5.
+		// Capped at two seconds: 2 / 0.031 = 64.5, rounded down. The engine rounds up to 65, and that one tick
+		// is a deviation kept by decision (GameClock.ParkCatchUp); 16 ms stays owed, so the next tick is 15 ms
+		// off, as the engine's is.
 		Assert.AreEqual( 64, GameClock.TicksDue );
+		Assert.AreEqual( 16f / 31f, GameClock.PartialTick, 0.01f );
 
 		// Where the frame clamp, had it been what counted, would have allowed three.
 		Assert.AreEqual( 0.1f, Time.Delta, 0.0001f );
