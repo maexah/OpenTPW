@@ -23,7 +23,7 @@ How the original game boots: `WinMain` takes a single-instance lock, builds the 
 |---|---|
 | 0x1 | Fullscreen or windowed. |
 | 0x200 | **Front end.** Set: intro movies, then the lobby. Clear: straight into state 9 (a park), and leaving the park quits. Nothing found clears it. |
-| 0x800000, 0x1000000, 0x2000000 | Game types 0, 1 and 2 (0x00550ca0 and 0x00550d80, "SetGameType"). Type 1 runs the ONLINE CHAT init. |
+| 0x800000, 0x1000000, 0x2000000 | Game types 0, 1 and 2, set by 0x00550d80, "SetGameType"; the mode object's constructor 0x00550ca0 derives the type from them and rewrites them. Type 1 runs the ONLINE CHAT init. |
 
 ## Boot init — `Boot_Init` 0x0054dcf0 (once)
 
@@ -154,8 +154,8 @@ Evidence is a Ghidra trace of `/testme.exe` throughout; the column names what in
 | 0x005503f0 | `Game_Shutdown` | Runs state 0xb if a park is up, then tears everything down. | Decompile |
 | `DAT_007a1a14` | | Run/quit word: bit 1 running, 2 quit. | Message loop |
 | `DAT_007a1a8c` | | The flag word. | See the flag-word table |
-| 0x00550ca0 | "SetGameType" | Sets game type 0/1/2 in the flag word. | String |
-| 0x00550d80 | "SetGameType" | Second of the pair. | String |
+| 0x00550ca0 | | The mode object's constructor, run once per caller's static guard (26 guard bytes across its 85 call sites): derives the type from the flag word (`0x2000000` gives 2, `0x1000000` gives 1, otherwise 0) and writes the type and its bit back. Its "Invalid GameType in SetGameType" assert has a constant true condition, so never fires. | Decompile |
+| 0x00550d80 | SetGameType | The only setter taking a type: stores it and sets its one flag bit, asserting `< 3`. Five callers: Select (`0x005c85ae`), 0 or 2 by `gms.dat +0x24`; `Game_StateMachine`, which tests the same byte and pushes 0 (`0x005501b4`) or `EBP`, not resolved (`0x00550179`); `0x004c0876` and `0x005e273e` with 1. | Decompile, call sites |
 | 0x004688b0 | | Picks texture folders by the detail setting: `stexture`/`ssharete` or `textures`/`sharetex`. | Folder-name strings |
 | `DAT_00785874` | | The texture detail setting read by 0x004688b0. | Read site |
 | 0x005d55a0 | | Checks the "Authorization Stamp" and logs the result. | String |

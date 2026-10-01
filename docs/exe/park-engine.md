@@ -208,7 +208,7 @@ The attribute array on disk packs the other way round — see "Axis and handedne
 
 ## Standard.sam is a generic Bullfrog balance file, loaded twice and merged
 
-`data/levels/Standard.sam` is read first for defaults, then the theme's own file as an **override onto the same dictionary** (`FUN_005156a0`), then a third `Easy_Standard.sam` pass. **A loader must merge, not replace** — values absent from the theme file keep the global value. The format is `Group[idx].Field value` with `#` comments.
+`data/levels/Standard.sam` is read first for defaults, then the theme's own file as an **override onto the same dictionary** (`FUN_005156a0`), then, in game type 2 (Instant Action) only, a third `Easy_Standard.sam` pass (`0x00515811`..`0x0051585c`). **A loader must merge, not replace** — values absent from the theme file keep the global value. The format is `Group[idx].Field value` with `#` comments.
 
 ### How a key finds its global
 
@@ -366,29 +366,12 @@ Two cautions from how this went. An earlier check listed the two reference folde
 
 ## The save container
 
-Measured against the shipped file `data/levels/jungle/Easymode.TPWI` (38,479 bytes).
-
-Container: a fixed **1549-byte preamble**, then a **`'BILZ'`-tagged zlib block**. `1549 = 0x60D`, `+28` header = `0x629` where the zlib stream (`78 9c`) starts; the dword at `0x611` is 1,608,309, the inflated size; `1549 + 36930 = 38479`, the file length. **The 28-byte header *includes* the 4-byte tag** — an easy off-by-four.
-
-| Offset | What it is | Confidence |
-|---|---|---|
-| `0x000` | u32 **version** = **400**. It is a version, not a "magic number - F4 01 00 00"; `OpenTPW.FileFormats`' `saves.md` repeats that mistake on `master`; the correction waits on its `docs/item-footprints` branch. Requiring 500 rejects the shipped file | Measured |
-| `0x004` | A zero pad byte before the copyright | Measured |
-| `0x005` | The copyright text, **UTF-16LE**: `54 00 48 00 45 00 ...` = "THE SAVE GAME DATA" wide. `ReadChars(824)` treats those as 8-bit and yields 824 half-characters interleaved with nulls — **824 is a byte count, not a character count** | Measured |
-| `0x604` | The type, `00 01 22 19` | Measured |
-| `0x608` | The version byte `0x85` = 133 | Measured |
-| `0x60D` | `"BILZ"` tag | Measured |
-| `0x611` | u32 **uncompressed** size, 1,608,309 | Measured |
-| `0x615` | u32 **total block size including the 28-byte header**, 36,930 | Measured |
-| `0x619` | 15 — **unknown field** | Measured, meaning unknown |
-| `0x61d` | 9 — **unknown field** | Measured, meaning unknown |
-| `0x621` | 0 — **unknown field** | Measured, meaning unknown |
-| `0x625` | 0 — **unknown field** | Measured, meaning unknown |
-| `0x629` | Start of the zlib stream (`78 9c`) | Measured |
-
-Bytes `0x600..0x60C` are `00 00 00 00 00 | 01 22 19 85 | 00 00 00 00`.
-
-**One recorded defect is withdrawn.** The claim that a reader "reads the copyright and type fields one byte early — they start at 5 and 0x605, not 4 and 0x604" is **wrong about the type**: the type is at `0x604` and the version byte at `0x608`, exactly where `SaveReader` already reads them. **Only the copyright read was off, by the pad byte at 4, and `SaveReader` steps over the notice.** The container walk — `"BILZ"` at `0x60D`, then dword, dword, 16 bytes, landing at `0x629` — is therefore correct.
+The preamble's fields are laid out in FileFormats `saves.md`, "Header", by the loader's own reads (`FUN_00416240`;
+`saves.md` here, "Preamble"), and all nine park files here agree with it. Measured on the shipped
+`data/levels/jungle/Easymode.TPWI` (38,479 bytes): `BILZ` at `1549 = 0x60D`, `+28` header = `0x629` where the zlib
+stream (`78 9c`) starts; the dword at `0x611` is 1,608,309, the inflated size; `1549 + 36930 = 38479`, the file
+length. **The 28-byte header *includes* the 4-byte tag** — an easy off-by-four. The four dwords at `0x619` read
+15, 9, 0, 0, meaning unknown.
 
 **No height array is stored in a save.**
 

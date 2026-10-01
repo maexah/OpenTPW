@@ -2145,7 +2145,7 @@ public sealed class RideScript
 	/// whole unit.
 	/// </para>
 	/// <para>
-	/// An end the engine would take from a miss, from an unposed record or from the model's bounding box is dead by
+	/// An end the engine would take from a miss, from an unposed record or from the thing's cells is dead by
 	/// content - every node the shipped scripts name is found and stored - and so is a walking script with no model,
 	/// which the engine does not survive; each is counted rather than built, and the leg is the floor.
 	/// </para>
@@ -2200,7 +2200,7 @@ public sealed class RideScript
 				return false;
 
 			default:
-				// A negative id, which FUN_00556b90 answers from the model's bounding box.
+				// A negative id, which FUN_00556b90 answers from the centre of the thing's cells (FUN_00466b70).
 				Unimplemented.Report( "WALK_NODE_NEGATIVE_ID" );
 				return false;
 		}

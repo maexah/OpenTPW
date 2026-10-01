@@ -76,7 +76,7 @@ the tip cannot name it. Read the current state from the repository, which cannot
 ## Next
 
 `docs/QUEUE.md`, from the top: **Q1-Q12, Q34-Q36, Q39, Q41, Q42, Q44-Q50h, Q53, Q53b, Q56, Q57, Q59, Q67-Q71, Q82-Q84,
-Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q199, Q200, Q200b, Q201, Q201b, Q179, Q179b, Q179c, Q179d, Q180, Q181, Q181b, Q182, Q182b, Q183 are ticked**; next **Q185** (correct what our own pages say wrong), the first of the fork review's Q185-Q197. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q199, Q200, Q200b, Q201, Q201b, Q179, Q179b, Q179c, Q179d, Q180, Q181, Q181b, Q182, Q182b, Q183, Q185 are ticked**; next **Q186** (a Full Simulation player is handed the Instant Action park), the second of the fork review's Q185-Q197. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -107,11 +107,11 @@ Q88, Q96, Q101, Q165, Q166, Q168, Q169-Q177f, Q184, Q178, Q178b, Q198, Q198b, Q1
 | | | measured |
 |---|---|---|
 | Opcodes | **75** of 106 | 2026-09-30, `case Opcode.` labels vs enum members, after Q179b |
-| Tests | **1546**, 0 fail, 0 skip with the game | 2026-10-01, after Q183 |
-| Tests without the game | **633** ran, **913** skipped, of 1546 | 2026-10-01, after Q183 |
-| Build warnings | 123 | 2026-10-01, after Q183 |
+| Tests | **1546**, 0 fail, 0 skip with the game | 2026-10-01, after Q185 |
+| Tests without the game | **633** ran, **913** skipped, of 1546 | 2026-10-01, after Q185 |
+| Build warnings | 123 | 2026-10-01, after Q185 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-10-01 (Q183).** `alexah/222-walks-once-a-tick`: every script's walks stepped once a tick after the scripts; an arrival 13-16 ms after due, not up to 248. **Earlier:** `220` (Q182b), `218` (Q182), `217` (Q181b), `216` (Q181), `215` (Q180), `214` (heads), `213` (Q179d), `212` (Q179c), `209`-`211` (Q179b), `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
+**2026-10-01 (Q185).** `alexah/223-correct-our-pages`: seven wrong claims in our pages corrected against Ghidra, docs and comments only. **Earlier:** `222` (Q183), `220` (Q182b), `218` (Q182), `217` (Q181b), `216` (Q181), `215` (Q180), `214` (heads), `213` (Q179d), `212` (Q179c), `209`-`211` (Q179b), `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

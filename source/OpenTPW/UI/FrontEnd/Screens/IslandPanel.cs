@@ -40,8 +40,8 @@ namespace OpenTPW.UI;
 /// <b>Instant Action.</b> A player in an Instant Action game has no golden keys at all, and the panel
 /// shows them none. IslandPanel_Refresh hides the price and the count and disables both island arrows
 /// whenever the game type is 2 - all four in one call, 0x004b9840 - and the game type is 2 for exactly
-/// the players whose gms.dat says Instant Action (0x005c83b0 reads the byte at +0x24 and hands it to
-/// SetGameType). The arrows are disabled rather than hidden: the button's setter at 0x0065da8d puts
+/// the players whose gms.dat says Instant Action (0x005c83b0 tests the byte at +0x24 and hands
+/// SetGameType 2 when it is set, 0 when not). The arrows are disabled rather than hidden: the button's setter at 0x0065da8d puts
 /// flag 0x2 on the control and its part picker at 0x00668820 draws part 1 - the disabled one - for
 /// that flag. Pressing them would do nothing anyway, because the handlers behind them (0x005e1ee0 and
 /// 0x005e1f40) return unless the game type is not 2. So the lobby stays on the island it opened on,

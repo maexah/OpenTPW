@@ -125,12 +125,12 @@ In parks, in the ride-script engine. `FUN_005573d0` (its own error strings say `
 `FUN_00556b90` resolves the location two ways:
 
 - **Given a node id**: `FUN_0044b220` finds the lookup record; position is the translation row (`+0x30` / `+0x34` / `+0x38`) of the world matrix the pose walk last stored for that record, (0, 0, 0) for one never stored; a miss returns 0 having written nothing (`ride-operation.md`, "How long a leg lasts, and where its ends are"). Optionally direction is `+0x20` / `+0x24` / `+0x28`, normalised and sign-flipped on a flag bit — that direction is the source cone.
-- **Otherwise**: the middle of the thing's model box in x and z (`FUN_00466b70`), or `(0, 0, 0)` with no model (`park.md`, "The effect subsystem").
+- **Otherwise**: the centre of the thing's cell rectangle ×10 in x and z, at the model node's base height (`0x00556d52`): it takes `FUN_00466b70`'s box and drops its heights. `(0, 0, 0)` with no model or no `.hmp` (`park.md`, "The effect subsystem").
 
 | Address | Original name | What it is | Evidence |
 |---|---|---|---|
 | `FUN_005573d0` | — | Ride-script sound/particle spawn; object types 3–10 → `Sound_PlayEffect`, types 1–2 → `Particles_Spawn`, same resolved location | Its error strings are prefixed `RSSE:` |
-| `FUN_00556b90` | — | Resolves a script location: node id → the record's stored world matrix, else the middle of the model's box in x and z, or `(0, 0, 0)` with no model | Decompiled |
+| `FUN_00556b90` | — | Resolves a script location: node id → the record's stored world matrix, else the centre of the thing's cell rectangle ×10 in x and z at the node's base height, or `(0, 0, 0)` with no model or no `.hmp` | Decompiled |
 | `FUN_0044b220` | — | Node lookup by id **and** capability flag (see below) | Decompiled |
 | `+0x30` / `+0x34` / `+0x38` | — | Translation row of that stored matrix = emitter position | Decompiled |
 | `+0x20` / `+0x24` / `+0x28` | — | Direction row, normalised and sign-flipped on a flag bit = source cone | Decompiled |

@@ -48,8 +48,8 @@ The mode is one global, and it is the reason this project loads only one park fi
 
 | Address / value | Original name | What it is | Evidence |
 |---|---|---|---|
-| `gms.dat +0x24` | — | The Instant Action byte, read when a player is picked. **0 = Full Simulation, 2 = Instant Action.** A third type `1` exists and is **not identified** | Save layout; the value handed to SetGameType |
-| `0x005c83b0` -> `0x00550d80` | SetGameType | Sets the mode. Its assert string "Invalid GameType in SetGameType" names it | Assert string in the binary |
+| `gms.dat +0x24` | — | The Instant Action byte, read when a player is picked (`FUN_005afc40`). **0 = Full Simulation, 1 = Instant Action.** Select maps it to game type 0 or 2; type 1, the online type, never comes from `gms.dat` | Select's two pushes, `0x005c8579` and `0x005c85a7` |
+| `0x005c83b0` -> `0x00550d80` | SetGameType | The setter of the mode, called here at `0x005c85ae` with 0 or 2; `Game_StateMachine` tests the same byte (`boot.md`, `0x00550d80`). Its assert string "Invalid GameType in SetGameType" names it | Decompile |
 | `DAT_00fb3b7c` | — | The mode object's first dword — what every reader tests | Every call site reads this dword |
 | `0x004a6a50` | FrontEnd_ClosePlayerSlots | Closing the player slots. In Full Simulation a new player gets **1 golden key** here, by calling `PlayerProgress_AddKey`; in Instant Action it skips that call and queues response 394 in place of the advisor tour | Disassembly; Ghidra body `004a6a50-004a6b76` |
 | `0x005afc30` | PlayerProgress_AddKey | Adds the golden key. A four-byte body, so a thunk or stub onto the real routine. Called by `FrontEnd_ClosePlayerSlots`, and only in Full Simulation | Ghidra body `005afc30-005afc33`. A separate function from `FrontEnd_ClosePlayerSlots`, which calls it |

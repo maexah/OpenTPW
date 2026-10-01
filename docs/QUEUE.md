@@ -3513,7 +3513,7 @@ artifacts are listed in `docs/history/README.md`.
     Worktree: 1546 pass 0 skip; 633 ran 913 skipped without; 123 warnings. Review `wf_00a61c40-a32` (Opus, read-only): no defect; three stale comments and the address row
     fixed.
 
-- [ ] **Q185. Correct what our own pages say wrong.** Found by the fork review of 2026-09-30 (Aluzed's
+- [x] **Q185. Correct what our own pages say wrong.** Found by the fork review of 2026-09-30 (Aluzed's
   `github.com/aluzed/OpenTPW-decomp`; its items are named by id, and `CLAUDE.local.md` has the path), each re-checked
   by an independent refuter. Docs only, lines as of `537428f`:
   - FileFormats `vm/instructions.md`, `WAITABS`: the engine adds the operand to the clock unscaled (`0x005538c9`), so
@@ -3537,6 +3537,15 @@ artifacts are listed in `docs/history/README.md`.
   - Label the unused `NAudio` reference in `OpenTPW.csproj` (only ModKit's `SoundViewer` uses NAudio; rule 3).
   The FileFormats edit goes on a branch fast-forwarded into `master` with this one. Confirm: no game run; grep each
   corrected claim afterwards and find no stale copy.
+  - **Done 2026-10-01, `alexah/223-correct-our-pages`** (FileFormats: the same branch name). Each claim re-read in
+    Ghidra first. Corrected as listed, and the stale copies the greps and the review found: `park-engine.md`, "The save
+    container" (the old cut, now a pointer), `park.md`'s container line, `saves.md`'s header branches, the comments in
+    `SaveReader.cs` (its reads unchanged), `IslandPanel.cs`, `RideNodes.cs` and `RideScript.cs` (the cells, not the
+    model's box). Also found: the online-header flag reads an author header on any non-zero value (FileFormats
+    `saves.md`), `0x00550d80` has five callers and the constructor `0x00550ca0` 85 call sites under 26 guards
+    (`boot.md`). No game run, as the item says. Review `wf_6dac9b6e-f43` (three Opus, read-only): the claims hold;
+    seven findings, fixed. Worktree: 1546 pass 0 skip; 633 ran 913 skipped
+    without; 123 warnings.
 
 - [ ] **Q186. A Full Simulation player is handed the Instant Action park, and nothing counts it.** Found by the fork
   review (gap3-3, gap3-9, refute rank 2). In the original a new Full Simulation player's first park loads no file:

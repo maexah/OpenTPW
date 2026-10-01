@@ -41,6 +41,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- Dead by CODE: nothing in this project uses NAudio; only ModKit's SoundViewer does, through its own reference. -->
 		<PackageReference Include="NAudio" Version="2.2.1" />
 		<PackageReference Include="NeoVeldrid" Version="1.2.1" />
 		<PackageReference Include="NeoVeldrid.SDL2" Version="1.2.1" />

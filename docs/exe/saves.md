@@ -1,7 +1,7 @@
 # Saves: `Config.tcf`, `gms.dat`, `.TPWS`
 
-The byte layouts on this page are duplicated in the FileFormats clone (`formats/options-and-players.md` on its
-`docs/save-files` branch, `formats/saves.md` on `docs/sam-and-saves-corrections`), which is the authority for bytes.
+The byte layouts on this page are duplicated in the FileFormats clone (`formats/options-and-players.md` and
+`formats/saves.md`), which is the authority for bytes.
 This page is for what the executable does with them.
 
 Where the original writes what the player changes. Three kinds of file: `save\Config.tcf` holds machine options
@@ -136,46 +136,19 @@ Alongside them: `restart.INTS`, `Refresh.INTS` (written around a sound-quality c
 ### Version is 400 **or** 500
 
 The container opens with a dword version. **The shipped park reads 400; a saved park reads 500.** It is a version, not
-a magic number — reading it as four bytes of "F4 01 00 00 magic" is what hid the distinction, and the FileFormats
-`saves.md` still reads it that way on `master` (corrected on its `docs/sam-and-saves-corrections` branch). `SaveReader`
-accepts both and reports any other number it finds; `ParkSaveTests.TheShippedParkIsVersion400` pins that.
+a magic number — reading it as four bytes of "F4 01 00 00 magic" is what hid the distinction; the FileFormats
+`saves.md`, "Header", reads it as a version. `SaveReader` accepts both and reports any other number it finds;
+`ParkSaveTests.TheShippedParkIsVersion400` pins that.
 
 ### Preamble
 
-Measured from `data/levels/jungle/Easymode.TPWI`, the one file of this shape that ships. A fixed 1549-byte preamble
-precedes the compressed block.
-
-| Offset | Size | Field | What it is |
-|---|---|---|---|
-| `0x0000` | 4 | version | 400 shipped, 500 saved |
-| `0x0004` | 1 | padding | zero |
-| `0x0005`–`0x033C` | 824 | copyright notice | EA legal text, UTF-16 — 824 **bytes**, so 412 characters |
-| `0x033D`–`0x0603` | 711 | padding | all zero |
-| `0x0604` | 4 | file type | `00 01 22 19` |
-| `0x0608` | 1 | file version | 133 (`0x85`) |
-| `0x0609` | 1 | online flag | 0 = offline save, 1 = `upload.LAYS` |
-| `0x060A` | 3 | padding | zero in the shipped park (`0x060A`–`0x060C`); where the online block's start sits against it is not settled |
-| — | var | online block | `0x060C`–`0x0846`, **only** when the online flag is set; contents unknown |
-| `0x060D` | 4 | tag | `BILZ` |
-| `0x0611` | 4 | inflated size | what the payload expands to |
-| `0x0615` | 4 | block size | the whole block, tag and header included |
-| `0x0619` | 16 | unknown | 15, 9, 0, 0 in the shipped park |
-| `0x0629` | var | ZLIB stream | runs to the end of the file |
-
-The 28-byte block header counts the tag, so it is 4 + 24, not 4 + 28.
-
-The body inflates to modules, each **followed** by a four-character marker (`WRLD`, `PART`, `CLOK`, ...).
-
-**Divergence, unresolved.** The Ghidra trace described the preamble as a language byte, `0x500` bytes of UTF-16 EA
-legal text, a `0x100`-byte block, then two dwords with an optional author block. The byte counts above are what the
-shipped file actually measures and disagree with that reading; which fields the trace was naming — in particular
-whether byte `0x0004` is a language byte and where an author block would sit — is not settled.
-
-**This preamble is measured from `Easymode.TPWI` alone**, a shipped Instant Action starter. `SaveReader`
-reads Alexah's Full Simulation `.TPWS` saves in harnesses (Q165c, Q175, Q175b), and the original loads a copy of one
-(`TOOLING.md` 12), but everything above is measured from that one file or traced from the
-executable, so the reader must **not** be assumed to generalise to a real saved park — the version difference is
-already one proven case where it does not.
+The fixed 1549 bytes before the compressed block are laid out in the FileFormats `saves.md`, "Header", by the loader's
+own reads: `FUN_00414d40` reads the version, then `FUN_00416240` a byte, the `0x500`-byte legal text (checked by
+`FUN_005f7e60`), a `0x100`-byte block (`FUN_0051ab60`), the magic read big-endian against `0x01221985`
+(`DAT_00749870`) and the online-header flag dword; with the flag nought, `BILZ` follows at `0x60D`, and with it set
+an author header comes first (`FUN_00418da0`). All nine park files here agree with
+it: the shipped `Easymode.TPWI` and the eight Alexah's Full Simulation play wrote (`CLAUDE.local.md`). The body
+inflates to modules, each **followed** by a four-character marker (`WRLD`, `PART`, `CLOK`, ...).
 
 The compression routine `FUN_005f8050` has not been identified.
 
@@ -199,7 +172,8 @@ Confirmed in the running game: `safemode.tcf` round-trips byte for byte; create 
 back screen with key 1 and per-player options restored; delete works; an Instant Action player gets no key, response
 394 (sample 469), and `easymode.TPWI` copied in.
 
-**Not verified against files written by the real game** — no such files exist locally.
+The original's own `Config.tcf` and `gms.dat` exist, in Alexah's Full Simulation saves (`CLAUDE.local.md`); the
+readers above have not been checked against them.
 
 Caution: a run of the game writes into the real installation's `save/` (`Config.tcf`, `opentpw.cfg`, player folders).
 Never empty it: delete only what that run created (`CLAUDE.md` rule 12).
@@ -209,4 +183,3 @@ Never empty it: delete only what that run created (`CLAUDE.md` rule 12).
 - The park body's compression (`FUN_005f8050`).
 - What "tcf" stands for.
 - The theme list's own names.
-- The preamble divergence above.

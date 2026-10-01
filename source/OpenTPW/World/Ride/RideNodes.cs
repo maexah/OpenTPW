@@ -153,7 +153,7 @@ public sealed class RideNodes
 	{
 		position = default;
 
-		// A negative id takes the model's bounding box instead (FUN_00466b70); no shipped walk names one.
+		// A negative id takes the centre of the thing's cells instead (FUN_00466b70); no shipped walk names one.
 		if ( id < 0 )
 			return NodeEnd.NegativeId;
 
@@ -276,6 +276,6 @@ public enum NodeEnd
 	/// <summary>Found with no stored matrix: the engine reads (0, 0, 0) while nothing is attached to it.</summary>
 	Unposed,
 
-	/// <summary>A negative id, which the engine answers from the model's bounding box.</summary>
+	/// <summary>A negative id, which the engine answers from the centre of the thing's cells.</summary>
 	NegativeId
 }

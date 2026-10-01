@@ -36,8 +36,8 @@ public class SaveReader : BaseFormat
 	}
 
 	/// <summary>
-	/// Where the 'BILZ' block starts, which is the same in every file of this shape: a fixed 1549-byte
-	/// preamble of version, copyright and zeros comes first.
+	/// Where the 'BILZ' block starts in a file with no author header: after a fixed 1549-byte preamble
+	/// of version, a byte, legal text, a 0x100-byte block, magic and the online-header flag.
 	/// </summary>
 	private const int BlockStart = 0x60D;
 
@@ -47,19 +47,13 @@ public class SaveReader : BaseFormat
 
 		/*
 			
-		Header
+		Header, as the loader FUN_00416240 reads it (FileFormats saves.md, "Header")
 			4 bytes: Version - 400 in the shipped park, 500 in a saved one (NOT a magic number)
-			1 byte:  Padding
-			Copyright notice - 0x0005 to 0x033C, 824 bytes of UTF-16 = 412 characters
-			Padding - 0x033D to 0x0603, all zero
-			
-		File info
-			4 bytes: File type (00 01 22 19)
-			1 byte: File version (0x85 = 133)
-			1 byte: Online flag (00 = offline save, 01 = upload.LAYS)
-			2 bytes: Padding (0x060A-0x060B)
-			If online flag set: 	Unknown data - 0x060C to 0x0846
-			1 byte: Padding (0x060C) - so BILZ is at 0x060D
+			1 byte:  Read and not checked; 0
+			0x500 bytes: Legal text from 0x005, UTF-16 (824 bytes of notice), then zeros
+			0x100 bytes: From 0x505, validated by FUN_0051ab60; zero
+			4 bytes: Magic at 0x605, big-endian 0x01221985, stored 01 22 19 85
+			4 bytes: Online-header flag at 0x609; an author header follows it when not 0
 			
 		Data	
 			## ZLIB Header ##
@@ -72,17 +66,17 @@ public class SaveReader : BaseFormat
 		*/
 
 		// Not a magic number - it is a version (docs/exe/saves.md). data/levels/jungle/Easymode.TPWI
-		// carries 400; 500 is what a saved park is expected to carry, so both are allowed and
+		// carries 400 and every park the original saved carries 500, so both are allowed and
 		// anything else says what it actually found rather than printing bytes.
 		var version = memoryStream.ReadUInt32();
 
 		if ( version != 400 && version != 500 )
 			throw new Exception( $"Save version {version} is not one this can read (400 or 500)" );
 
-		// Then one pad byte, and 824 bytes of copyright notice from 0x005 to 0x33C - which is UTF-16,
-		// not single bytes, so the 824 is a byte count and the notice is 412 characters. Reading it
-		// as characters gives every other byte as a null. Nothing wants it, so it is stepped over
-		// rather than decoded; what follows it, 0x33D to 0x603, is 711 bytes of zero.
+		// The byte, the legal text and the 0x100-byte block are stepped over, not checked. The reads
+		// below cut the same bytes at other places than the loader does: 0x604 to 0x607 are the zero
+		// before the magic and its first three bytes, the 133 is the magic's last byte, and the online
+		// byte and its "padding" are the flag dword, which the loader reads whole.
 		memoryStream.Seek( 0x0604, SeekOrigin.Begin );
 
 		var fileType = memoryStream.ReadInt32();
