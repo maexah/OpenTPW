@@ -1873,7 +1873,10 @@ F2 hides the HUD). The screens are modal here for the left press, which the orig
 hand, but that also shuts out the gadget beside them, and the object window's frame lets a left press through (Q115);
 `ParkScreen` gives the right press beside them back to the park. The gadget's body outline, its aerial and its arm take
 no press here, so a press on them is the park's (Q113). A right press on a list row is counted,
-`LIST_ROW_RIGHT_CLICK` (Q117).
+`LIST_ROW_RIGHT_CLICK` (Q117). `Level.LeftPressTaken` keeps a left press off the park in first person too (Q116): the
+viewfinder layer's `FUN_00488a00` gives a press (`0x10005`) to the key table (`FUN_0040c900`) and every message to
+`FUN_0042a760`, where a left press only sets bit 1 of the camera's button state `DAT_00790aac` (what reads that bit is
+not traced here).
 
 **Escape** is the game table's row 0, `0x0040c180`, run on the key's **release**. If the staff/visitor locator
 is open (`DAT_007cc2f0`) it retracts the arm and answers 1 (`FUN_004816b0`). Otherwise, over any mode but 0 or 1,

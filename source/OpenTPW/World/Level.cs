@@ -890,12 +890,21 @@ public class Level
 			return;
 		}
 
-		if ( !pressed || UI.WindowStack.PointerTaken )
+		if ( !pressed || LeftPressTaken( UI.WindowStack.PointerTaken ) )
 			return;
 
 		if ( ParkPicking.TryCell( out var cellX, out var cellY ) )
 			Log.Info( ClickWorldAt( cellX, cellY, ParkPicking.ThingUnderCursor ) );
 	}
+
+	/// <summary>
+	/// Whether a left press is the interface's rather than the park's, given whether a window took it
+	/// (<see cref="UI.WindowStack.PointerTaken"/>): in first person always, since entering it hides the park's own layer
+	/// (<c>0x004a2ac0</c>) and the viewfinder's layer hands a press to the camera table alone (<c>FUN_00488a00</c>;
+	/// <c>docs/exe/park-engine.md</c>, "Whose a right press is").
+	/// </summary>
+	internal static bool LeftPressTaken( bool byAWindow )
+		=> ParkCamcorderCameraMode.Active || byAWindow;
 
 	/// <summary>
 	/// Whether a right press is the interface's rather than the park's, given whether a window took it

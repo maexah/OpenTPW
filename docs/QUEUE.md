@@ -3993,11 +3993,20 @@ artifacts are listed in `docs/history/README.md`.
     gadget while held in orbit, the viewfinder frame after the release and while held down, the gadget again after.
     save/ unchanged. Ctrl+C was not pressed in the game: it is Close Park; the test covers it.
 
-- [ ] **Q116. In first person a left press still reaches the park.** Found by Q56's review. Entering first person hides
+- [x] **Q116. In first person a left press still reaches the park.** Found by Q56's review. Entering first person hides
   layer 0 (`FUN_004a2ac0( 0 )`, `park-engine.md`, "Whose a right press is"), so no press reaches `Park_MouseMessageProc`;
   layer 1's `FUN_00488a00` hands a press to the camera table alone. Here `Level.WorldClick` runs in first person: a left
   click on a path arms the path tool, one on a ride opens its window. Confirm: in first person, a left click
   on a path, `tool` still None; a screenshot.
+  - **Done 2026-10-01** on `alexah/241-first-person-left-press`. Read again in Ghidra: `FUN_00488a00` sends a press
+    to the key table and `FUN_0042a760`, whose left press only sets `DAT_00790aac` bit 1; nothing picks the park. New
+    `Level.LeftPressTaken` (first person, or a window took it) guards `WorldClick` and the console's `click`, which now
+    answers "first person took". Test `InFirstPersonALeftPressOnAPathArmsNothing` (the orbit press arms the path tool,
+    the first-person one nothing); first person put back out of the predicate turns it red. Game `q116confirm.py`:
+    control (main) a real left click on path (47,24) in first person armed the path tool, its square drawn
+    (`q116/control/B1`); fix: tool 0 after `click` and a real click, hand empty, windows gadget and viewfinder only,
+    the orbit click still arms it (`q116/fix/A`, `B1`, looked at); save/ unchanged. Left alone: first person still
+    shows help row 442, "Left-click to extend this path".
 
 - [ ] **Q87. `AdmitPerson` refuses where the original does not.** Found by Q50's decode. The original only logs a
   wrong person (`0x004e092c`..`0x004e0982`) and lets go of the nominee before it tests `VAR_LETMEON`

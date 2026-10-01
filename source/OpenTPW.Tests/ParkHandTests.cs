@@ -387,6 +387,64 @@ public class ParkHandTests
 	}
 
 	/// <summary>
+	/// <b>In first person no left press is the park's</b>: entering it hides the park's own layer (<c>0x004a2ac0</c>), and
+	/// the viewfinder's layer hands a press to the camera table alone (<c>FUN_00488a00</c>). The same press on a path in
+	/// the orbit view picks up the path tool, so the park is shown able to take it.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> first person left out of <see cref="Level.LeftPressTaken"/> arms the path tool.
+	/// </remarks>
+	[TestMethod]
+	public void InFirstPersonALeftPressOnAPathArmsNothing()
+	{
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var current = typeof( ParkState ).GetProperty( nameof( ParkState.Current ) )!;
+		var cell = typeof( ParkPicking ).GetProperty( nameof( ParkPicking.Cell ) )!;
+		var (levelBefore, stateBefore, cellBefore) = (Level.Current, ParkState.Current, ParkPicking.Cell);
+		var worldClick = typeof( Level ).GetMethod( "WorldClick", BindingFlags.Instance | BindingFlags.NonPublic )!;
+
+		try
+		{
+			var level = ALevel();
+			var state = new ParkState( world );
+
+			typeof( Level ).GetProperty( nameof( Level.Park ) )!.SetValue( level, world );
+			typeof( Level ).GetProperty( nameof( Level.ParkState ) )!.SetValue( level, state );
+			current.SetValue( null, state );
+			Level.Current = level;
+
+			var (x, y) = Enumerable.Range( 0, ParkWorld.MapSize * ParkWorld.MapSize )
+				.Select( i => (X: i % ParkWorld.MapSize, Y: i / ParkWorld.MapSize) )
+				.First( c => ParkState.CellFor( world, c.X, c.Y ) is { Type: CellEdge.Path, TrackType: 0 } );
+
+			cell.SetValue( null, y * ParkWorld.MapSize + x + 1 );
+
+			foreach ( var firstPerson in new[] { true, false } )
+			{
+				InFirstPerson( firstPerson );
+
+				foreach ( var down in new[] { true, false } )
+				{
+					Input.Mouse = new() { Left = down, Position = new Vector2( 1024, 600 ) };
+					worldClick.Invoke( level, [] );
+				}
+
+				if ( firstPerson )
+					Assert.AreEqual( ParkBuildMode.None, ParkBuildMode.Current, $"in first person a press on the path at ({x},{y}) arms nothing" );
+				else
+					Assert.AreEqual( ParkBuildMode.Path, ParkBuildMode.Current, $"and in the orbit view the same press picks up the path tool" );
+			}
+		}
+		finally
+		{
+			Level.Current = levelBefore;
+			current.SetValue( null, stateBefore );
+			cell.SetValue( null, cellBefore );
+		}
+	}
+
+	/// <summary>
 	/// <b>A message box takes every right press</b>, off its controls as on them: the original's covers the park's layer
 	/// with a control the size of the screen (<c>0x0047eda3</c>), as the game menu does, and the options and map screens
 	/// hide that layer.

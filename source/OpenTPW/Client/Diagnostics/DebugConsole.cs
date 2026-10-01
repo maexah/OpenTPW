@@ -1184,6 +1184,12 @@ public static class DebugConsole
 					break;
 				}
 
+				if ( Level.LeftPressTaken( false ) )
+				{
+					Reply( $"click: first person took ({Argument( 1 ):F0},{Argument( 2 ):F0})" );
+					break;
+				}
+
 				if ( !ParkPicking.TryCellAt( Argument( 1 ), Argument( 2 ), out var clickX, out var clickY ) )
 				{
 					Reply( "click: that point is not over the map" );
