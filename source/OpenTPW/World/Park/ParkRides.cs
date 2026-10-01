@@ -277,7 +277,25 @@ public sealed class ParkRides : Entity
 				+ $"starts afresh at the load - {_clock.Problem}" );
 		}
 
-		foreach ( var placed in world.Objects )
+		// The scheduler's own state as the park was saved: its tick, so each script keeps the phase of its one turn in
+		// eight, and the next handle, so a script made from here on is numbered past every saved one.
+		if ( world.ScriptStates.Problem == null )
+			Scheduler.Restore( world.ScriptStates.Tick, world.ScriptStates.NextHandle );
+
+		// In the order the module holds the scripts, which the engine's reader inserts one by one at the head of its
+		// list (0x005599d3), so that the scheduler's newest-first walk takes their turns as the engine's does. A thing
+		// with no saved script comes after, numbered afresh.
+		// Only from a module that read whole, as the next handle is restored only then: one that stopped part-way
+		// could have the counter hand out a handle a script it did not reach was saved under.
+		var saveOrder = new Dictionary<int, int>();
+
+		for ( var at = 0; world.ScriptStates.Problem == null && at < world.ScriptStates.Order.Count; ++at )
+			saveOrder[world.ScriptStates.Order[at]] = at;
+
+		var inSaveOrder = world.Objects
+			.OrderBy( placed => saveOrder.TryGetValue( placed.RideScript, out var at ) ? at : int.MaxValue );
+
+		foreach ( var placed in inSaveOrder )
 		{
 			// Everything this park actually stood up, which is not the same as everything it placed. The gate
 			// and the traffic lights carry no position of their own - the engine builds those two by name out
@@ -293,10 +311,15 @@ public sealed class ParkRides : Entity
 			if ( !catalogue.TryGet( placed.CatalogueId, out var item ) )
 				continue;
 
-			// Through the scheduler rather than around it, so the ids come from one counter that is only
-			// ever incremented - the engine's DAT_008791a8, which starts at 1 and never reuses an id, so
-			// nothing can be left holding one that has quietly come to mean a different script.
-			var id = Scheduler.Spawn( ScriptPathFor( item ) );
+			// Under its saved handle, which the engine's reader keeps with the rest of the struct (FUN_005597a0): it
+			// decides the script's turns and is the id every other script has stored for it. One the save does not
+			// hold comes from the scheduler's counter, the engine's DAT_008791a8, which never reuses an id.
+			var id = saveOrder.ContainsKey( placed.RideScript )
+				? Scheduler.Spawn( ScriptPathFor( item ), placed.RideScript )
+				: 0;
+
+			if ( id == 0 )
+				id = Scheduler.Spawn( ScriptPathFor( item ) );
 
 			if ( id == 0 )
 			{

@@ -137,6 +137,12 @@ public sealed class ParkScriptStates
 	/// </summary>
 	private const int DiscardedDwords = 5;
 
+	/// <summary>The tick counter's place in the header block.</summary>
+	private const int TickDword = 1;
+
+	/// <summary>The next handle's place in the header block.</summary>
+	private const int NextHandleDword = 2;
+
 	/// <summary>Where the program counter sits in the saved struct - <c>+0x3c</c>, so dword 15.</summary>
 	private const int PositionDword = 15;
 
@@ -192,6 +198,7 @@ public sealed class ParkScriptStates
 	private int _at;
 
 	private readonly Dictionary<int, SavedScript> _byHandle = [];
+	private readonly List<int> _order = [];
 
 	/// <summary>
 	/// Why the read stopped, or null where it did not. A surprise here is recorded rather than thrown:
@@ -208,6 +215,24 @@ public sealed class ParkScriptStates
 
 	/// <summary>The scripts that were read, by the handle an object record names them with.</summary>
 	public IReadOnlyDictionary<int, SavedScript> ByHandle => _byHandle;
+
+	/// <summary>
+	/// The handles in the order the module holds them. The engine's reader puts each at the head of its list as it
+	/// reads it (<c>0x005599d3</c>), so a loaded park takes its turns within a tick in the reverse of this order.
+	/// </summary>
+	public IReadOnlyList<int> Order => _order;
+
+	/// <summary>
+	/// The scheduler's tick counter as the park was saved, <c>DAT_008791a4</c>: the header block's second dword, which
+	/// <c>FUN_005597a0</c> reads straight over the scheduler's globals (<c>0x005598d7</c>). Nought where it did not read.
+	/// </summary>
+	public int Tick { get; private set; }
+
+	/// <summary>
+	/// The handle the next new script will be given, <c>DAT_008791a8</c>: the header block's third dword. Nought where
+	/// it did not read.
+	/// </summary>
+	public int NextHandle { get; private set; }
 
 	/// <summary>
 	/// Reads the module out of the inflated payload - what <see cref="SaveReader.ReadFile"/> hands
@@ -237,9 +262,16 @@ public sealed class ParkScriptStates
 
 		Skip( Magic.Length );
 
-		// The header block, whose contents are the subsystem's own globals rather than anything about a
-		// script, so it is stepped over by its own length.
-		Skip( ReadInt32() );
+		// The header block: the subsystem's own globals from 0x008791a0, read over them whole - the initialised
+		// flag, the tick counter, the next handle, the script count and a stale list pointer.
+		// A shorter block leaves the rest of the globals as the reset set them, so it is read as far as it goes.
+		var header = ReadInt32();
+		var headerAt = _at;
+
+		Skip( header );
+
+		var tick = header > TickDword * 4 ? ReadInt32At( headerAt + (TickDword * 4) ) : 0;
+		var nextHandle = header > NextHandleDword * 4 ? ReadInt32At( headerAt + (NextHandleDword * 4) ) : 0;
 		Skip( DiscardedDwords * 4 );
 
 		Declared = ReadInt32();
@@ -253,6 +285,10 @@ public sealed class ParkScriptStates
 			ReadScript( structSize );
 
 		ClosedOnGuard = true;
+
+		// Only once every record has read, so a module that stops part-way leaves the scheduler starting afresh.
+		Tick = tick;
+		NextHandle = nextHandle;
 	}
 
 	/// <summary>
@@ -347,6 +383,8 @@ public sealed class ParkScriptStates
 
 		if ( !_byHandle.TryAdd( handle, saved ) )
 			throw new InvalidDataException( $"two saved scripts both call themselves handle {handle}" );
+
+		_order.Add( handle );
 	}
 
 	private int[] ReadInts( int count )

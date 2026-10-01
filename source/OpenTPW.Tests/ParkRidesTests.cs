@@ -263,6 +263,68 @@ public class ParkRidesTests
 	}
 
 	/// <summary>
+	/// <b>A loaded park's scripts take their turns on the save's ticks.</b> Each keeps its saved handle and the tick
+	/// counts on from the saved 6,055, so the camera on handle 8 is due when <c>6055 + n</c> is a multiple of eight
+	/// and the one on handle 9 a tick later. Both waits are past by the 76th tick, so they pass on the 81st and the
+	/// 82nd, one each; numbered afresh from tick nought, they passed on the 79th and 80th.
+	/// </summary>
+	[TestMethod]
+	public void ALoadedParksScriptsTakeTheirTurnsOnTheSavesTicks()
+	{
+		var world = World();
+		var rides = Bind( world, Catalogue() );
+
+		Assert.AreEqual( 6055, rides.Scheduler.Tick, "the saved tick" );
+
+		// The module holds them from 15 down, each put at the head as it is read, so the turns go from the lowest up.
+		// The gates (15) and the lights (2, 1) stand nowhere a test draws, so they are not bound here.
+		CollectionAssert.AreEqual( new[] { 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14 },
+			rides.Scheduler.NewestFirst().Select( script => script.Id ).ToArray(), "the order of turns within a tick" );
+
+		foreach ( var placed in world.Objects.Where( o => rides.ScriptFor( o.ThingId ) != 0 ) )
+			Assert.AreEqual( placed.RideScript, rides.ScriptFor( placed.ThingId ), $"thing {placed.ThingId}'s saved handle" );
+
+		var cameras = world.Objects.Where( o => o.CatalogueId == SecurityCamera )
+			.ToDictionary( o => o.RideScript, o => rides.Scheduler.Find( rides.ScriptFor( o.ThingId ) )! );
+
+		CollectionAssert.AreEquivalent( new[] { 8, 9 }, cameras.Keys.ToArray(), "the cameras' saved handles" );
+
+		int RoleOf( int handle ) => cameras[handle].Animations!.Channel( 0 )!.AnimID;
+
+		for ( var tick = 1; tick <= 80; ++tick )
+			rides.Scheduler.Advance( rides.LoadedAt + (tick * 31f) );
+
+		Assert.AreEqual( 6, RoleOf( 8 ), "handle 8 still waiting at the 80th" );
+		Assert.AreEqual( 6, RoleOf( 9 ), "handle 9 still waiting at the 80th" );
+
+		rides.Scheduler.Advance( rides.LoadedAt + (81 * 31f) );
+
+		Assert.AreEqual( 4, RoleOf( 8 ), "handle 8 passes on the 81st" );
+		Assert.AreEqual( 6, RoleOf( 9 ), "handle 9 not yet" );
+
+		rides.Scheduler.Advance( rides.LoadedAt + (82 * 31f) );
+
+		Assert.AreEqual( 4, RoleOf( 9 ), "handle 9 passes on the 82nd" );
+	}
+
+	/// <summary>A thing bought after a load is numbered past every saved script, from the saved next handle.</summary>
+	[TestMethod]
+	public void AThingBoughtAfterALoadTakesTheSavedNextHandle()
+	{
+		var world = World();
+		var catalogue = Catalogue();
+		var rides = Bind( world, catalogue );
+
+		Assert.IsTrue( catalogue.TryGet( SecurityCamera, out var item ), "the jungle offers a camera" );
+
+		var placed = new ParkWorld.CatalogueObject( ThingId: 900, CatalogueId: SecurityCamera,
+			RawX: 20 << 8, RawY: 12 << 8, Angle: 0 );
+
+		Assert.IsTrue( rides.BindNew( placed, item ), "a camera has a script" );
+		Assert.AreEqual( 16, rides.ScriptFor( 900 ), "the save's next handle" );
+	}
+
+	/// <summary>
 	/// <b>The load's moment is the clock the park's ticks run on</b>, the last tick's instant as the load finds it,
 	/// which is where the save's own moment is put; every saved deadline keeps its distance from it. With the game
 	/// clock 64 ticks further on, the cameras' waits end 2,329 and 2,341 ms after that instant, not after nought.

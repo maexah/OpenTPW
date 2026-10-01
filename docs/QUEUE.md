@@ -3375,7 +3375,8 @@ artifacts are listed in `docs/history/README.md`.
   game against `q179c/go1.jsonl`'s numbers: a go of 750 ticks, top speed under 247, no boat past the rim, only boats
   with riders driving; photographed in a go; and put the bug back (thrust without `0x4000`) and see the test go red.
 
-- [ ] **Q180. A loaded park's scripts take their turns on the save's ticks.** Found by Q174c's decode (`park.md`, "The
+- [x] **Q180. A loaded park's scripts take their turns on the save's ticks.** Done 2026-09-30,
+  `alexah/215-saved-script-ticks`; FileFormats the same branch (the records are stored newest first). Found by Q174c's decode (`park.md`, "The
   scheduler"). The `RSSE` module's header puts the scheduler's globals back (`0x005598d7`): its tick counter (6,055 in
   the shipped park) and the next script handle (16); each script keeps its saved handle at `+0x08`, so its turn
   (`(handle ^ tick) & 7`, `0x005516e9`) keeps its phase across the load, and each is put at the head of the list
@@ -3385,6 +3386,19 @@ artifacts are listed in `docs/history/README.md`.
   ticks 76 to 83 here. Keep the saved handles, the saved tick and the next handle (mind every reader of a script's id:
   `FINDSCRIPT`, `COAST`'s ride handle). Confirm: `rides` over the cameras through their first wait after a load, each
   passing on the tick the engine's rule gives.
+  - **Built:** `ParkScriptStates` reads the header's tick and next handle and keeps the records' order;
+    `ParkRides` restores both (`RideScriptScheduler.Restore`) and binds each saved script under its own handle in that
+    order (`Spawn( name, id )`), anything else numbered from the next handle; `Advance` walks newest first, as
+    `FUN_005516b0` walks from the head, over a copy (a departure, said at the site). `FINDSCRIPT` and `COAST` needed
+    nothing: every reader reaches a script through the registry by the id it was bound under. Console: `rides` prints
+    the tick, and each line the script's handle and position.
+  - **Confirmed in the game** (`q180/run.py`, `run1/`; silent, stock park, `save/` unchanged), predicted first: the
+    load reads tick 6055 with the cameras on handles 8 and 9 at word 14, role 6; stepped a frame at a time, handle 8
+    leaves word 14 on tick 6136 (last read waiting at 6135) and handle 9 on 6137, both onto role 4 (2 of 2). Shots
+    `B1-before` (camera down) and `A-after-both` (up), looked at. Tests: the cameras' 81st and 82nd ticks, the order
+    of turns, the header, a bought thing's handle 16, the newest-first walk, a script killed mid-walk; six planted bugs
+    each failed a test. Review `wf_8ad60fc1-e89` (one agent): three findings, fixed (that test; saved handles only from a
+    module read whole; a short header read as far as it goes).
 
 - [ ] **Q181. A `GETTIME` reading kept in a script variable across a load. Decode first.** Found by Q174c's probe
   (`q174c/clockvars.py`). `GETTIME` stores the clock raw; twelve Lost Kingdom ride scripts keep one in `VAR_STARTNOW`

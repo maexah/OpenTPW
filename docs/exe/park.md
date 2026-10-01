@@ -552,7 +552,12 @@ the initialised flag, the tick counter, the next script handle (`DAT_008791a8`, 
 `+0x08` and then increments, `0x00558c07`..`0x00558c1c`), the script count and a stale list pointer. The shipped park's
 read `1, 6055, 16, 14` and a pointer. Each script keeps its saved handle, so its one-in-eight turn phase carries across
 the load, and each is inserted at the head of the list (`0x005599d3`, `0x005599f4`), so a save and load reverses the
-order scripts take their turns within a tick. OpenTPW restarts the tick at nought and numbers its scripts itself (Q180).
+order scripts take their turns within a tick. **OpenTPW does the same** (Q180): `ParkRides` restores the tick and the
+next handle (`RideScriptScheduler.Restore`) and binds each saved script under its own handle in the module's order, and
+the scheduler walks newest first, as `FUN_005516b0` walks from the head. In the shipped park the cameras (handles 8 and
+9) leave their saved `WAIT` on ticks 6,136 and 6,137, the first turns after it ends. A thing with no saved script, and
+one bought later, is numbered from the next handle. *Departure*: the scheduler walks a copy of its list, so a script
+taken down in another's turn gets none that tick, where the engine would follow the dead record's next pointer.
 
 **A script gets a turn only every eighth tick, staggered by its id** — unless `+0xb8` is set, which makes it run every tick. **`TURBO` is what sets that byte** (`0x005542b9` writes `[EBP+0xb8]`), so TURBO means "run me every tick", not "run me faster". **`TURBO` stores the RAW low byte of its operand word**, not a resolved value — harmless because all 20 shipped uses are literals, and they are exactly **ten `1`s and ten `0`s**, a boolean confirmed by the data.
 

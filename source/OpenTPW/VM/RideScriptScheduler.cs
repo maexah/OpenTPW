@@ -13,8 +13,9 @@ namespace OpenTPW;
 ///
 /// <para>
 /// <b>The counter moves before any script runs</b>, which is why the first tick is 1 and not 0 - it
-/// decides who runs on it. A script that has stopped is dropped at the end of the same tick, as the
-/// engine unregisters one whose program counter has gone negative.
+/// decides who runs on it. A loaded park starts it from the save's instead (<see cref="Restore"/>). The walk
+/// is newest first, as the engine's is from the head of its list. A script that has stopped is dropped at the
+/// end of the same tick, as the engine unregisters one whose program counter has gone negative.
 /// </para>
 ///
 /// <para>
@@ -32,6 +33,7 @@ public sealed class RideScriptScheduler
 	public const int TicksBetweenTurns = RideScript.TicksBetweenTurns;
 
 	private readonly List<Entry> _entries = [];
+	private readonly List<Entry> _walk = [];
 
 	/// <summary>
 	/// The highest id handed out or taken in, so a script from <see cref="Spawn"/> gets one nothing else
@@ -91,7 +93,7 @@ public sealed class RideScriptScheduler
 	/// <summary>How many turns have been handed out in total - one per script per tick it was due.</summary>
 	public int TurnsGiven { get; private set; }
 
-	/// <summary>The scripts still being run, in the order they were added.</summary>
+	/// <summary>The scripts still being run, oldest first: the reverse of the order they take their turns in.</summary>
 	public IEnumerable<RideScript> Scripts => _entries.Select( entry => entry.Script );
 
 	/// <summary>
@@ -173,18 +175,39 @@ public sealed class RideScriptScheduler
 	/// - or nought where nothing was loaded, which is what the engine's loader answers when it cannot open
 	/// the file, and what both spawning instructions test.
 	/// </summary>
-	public int Spawn( string name )
+	public int Spawn( string name ) => Spawn( name, _lastId + 1 );
+
+	/// <summary>
+	/// Loads a script under an id the caller already has - a loaded park's saved handle, which the engine's
+	/// reader keeps at <c>+0x08</c> with the rest of the struct (<c>FUN_005597a0</c>) - answering it, or nought
+	/// where nothing was loaded or the id is taken.
+	/// </summary>
+	public int Spawn( string name, int id )
 	{
+		if ( id <= 0 || Find( id ) is not null )
+			return 0;
+
 		var script = Loader?.Invoke( name );
 
 		if ( script is null )
 			return 0;
 
-		var id = _lastId + 1;
-
 		Add( id, script );
 
 		return id;
+	}
+
+	/// <summary>
+	/// Puts back the two globals a park save carries, the tick counter and the next handle (<c>FUN_005597a0</c>
+	/// reads them over <c>DAT_008791a4</c> and <c>DAT_008791a8</c>, <c>0x005598d7</c>), so each loaded script
+	/// takes its turns on the ticks it had and a new one is numbered past every saved one.
+	/// </summary>
+	public void Restore( int tick, int nextHandle )
+	{
+		Tick = tick;
+
+		if ( nextHandle - 1 > _lastId )
+			_lastId = nextHandle - 1;
 	}
 
 	/// <summary>
@@ -307,13 +330,20 @@ public sealed class RideScriptScheduler
 	{
 		++Tick;
 
-		// Indexed rather than foreach because a script's turn must not be able to disturb the walk, and
-		// because the engine's own walk is over a list it is prepared to have change under it.
-		for ( int i = 0; i < _entries.Count; ++i )
+		// Newest first, as the engine walks its list from the head (FUN_005516b0), where its loader and a park
+		// load both insert. Over a copy, so a script spawned in a turn waits for the next tick, as one put at
+		// the head behind the walk does, and one taken down in a turn gets none.
+		_walk.Clear();
+		_walk.AddRange( _entries );
+
+		for ( int i = _walk.Count - 1; i >= 0; --i )
 		{
-			var entry = _entries[i];
+			var entry = _walk[i];
 
 			if ( !RunsOn( entry.Id, Tick, entry.Script.EveryTick ) )
+				continue;
+
+			if ( !_entries.Contains( entry ) )
 				continue;
 
 			++TurnsGiven;

@@ -216,4 +216,77 @@ public class RideScriptSchedulerTests
 		Assert.IsTrue( scheduler.Remove( 4 ), "the script was not removed" );
 		Assert.AreEqual( 0, scheduler.Count, "it is still there" );
 	}
+
+	/// <summary>
+	/// <b>The newest script takes its turn first</b>, as the engine walks its list from the head, where every script
+	/// is put (<c>FUN_005516b0</c>). Ids 0 and 8 are both due on tick 8, and each mutes the music by its own value;
+	/// the one the oldest sets is what is left, because it ran last.
+	/// </summary>
+	[TestMethod]
+	public void TheNewestScriptTakesItsTurnFirst()
+	{
+		static RideScript Dips( int value ) => new( Build( 50,
+			Word( Opcode.DIPMUSIC ), value, Word( Opcode.ENDSLICE ), Word( Opcode.NOP ) ) );
+
+		var scheduler = new RideScriptScheduler();
+
+		scheduler.Add( 0, Dips( 1 ) );
+		scheduler.Add( 8, Dips( 2 ) );
+
+		for ( int tick = 0; tick < 8; ++tick )
+			scheduler.Advance( 0f );
+
+		Assert.AreEqual( 1, scheduler.MusicDip, "the older script's turn came first" );
+	}
+
+	/// <summary>
+	/// <b>A park's saved tick and next handle are put back.</b> With the tick at 6,055, handle 9 is due when
+	/// <c>(9 ^ tick) &amp; 7</c> is nought, at 6,057: the second tick after, where from nought it is the ninth. A
+	/// script spawned afterwards is numbered from the saved next handle, and a saved handle cannot be taken twice.
+	/// </summary>
+	[TestMethod]
+	public void ASavedTickAndNextHandleArePutBack()
+	{
+		var scheduler = new RideScriptScheduler { Loader = _ => Idle() };
+
+		scheduler.Restore( 6055, 16 );
+
+		Assert.AreEqual( 9, scheduler.Spawn( "saved", 9 ), "a saved handle is kept" );
+		Assert.AreEqual( 0, scheduler.Spawn( "again", 9 ), "and not given twice" );
+		Assert.AreEqual( 16, scheduler.Spawn( "new" ), "a new script is numbered from the saved next handle" );
+
+		var saved = scheduler.Find( 9 )!;
+
+		scheduler.Advance( 0f );
+
+		Assert.AreEqual( 0, saved.Position, "not due on 6,056" );
+
+		scheduler.Advance( 0f );
+
+		Assert.AreEqual( 6057, scheduler.Tick, "the tick counts on from the saved one" );
+		Assert.AreEqual( 1, saved.Position, "due on 6,057" );
+	}
+
+	/// <summary>
+	/// <b>A script taken down in another's turn gets none of its own that tick.</b> Ids 16 and 8 are both due on
+	/// tick 8; the newer, 8, takes its turn first and its <c>REMOVECHILD</c> kills 16, which then never runs.
+	/// </summary>
+	[TestMethod]
+	public void AScriptTakenDownInAnothersTurnGetsNoTurn()
+	{
+		var child = Idle();
+		var parent = new RideScript( Build( 50, Word( Opcode.REMOVECHILD ), Word( Opcode.ENDSLICE ), Word( Opcode.NOP ) ) );
+		var scheduler = new RideScriptScheduler();
+
+		scheduler.Add( 16, child );
+		scheduler.Add( 8, parent );
+		parent.ChildId = 16;
+
+		for ( int tick = 0; tick < 8; ++tick )
+			scheduler.Advance( 0f );
+
+		Assert.IsNull( scheduler.Find( 16 ), "the child was taken down" );
+		Assert.AreEqual( 0, child.Position, "and took no turn after it" );
+		Assert.AreEqual( 1, scheduler.TurnsGiven, "only the parent's turn was given" );
+	}
 }

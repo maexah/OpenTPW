@@ -459,4 +459,21 @@ public class ParkScriptStateTests
 		Assert.AreEqual( 3, all.Count( c => c.Role != ParkThingStates.NoRole && c.QueuedFlags == 0x1 ),
 			"though three running channels keep the loop flag of a queue that has emptied, which the engine leaves behind" );
 	}
+
+	/// <summary>
+	/// <b>The module's header is the scheduler's globals</b> (<c>FUN_005597a0</c> reads it over <c>0x008791a0</c>,
+	/// <c>0x005598d7</c>): the shipped park was saved on tick 6,055 with 16 the next handle, and its fourteen scripts
+	/// run from handle 15 down to 1, 5 missing.
+	/// </summary>
+	[TestMethod]
+	public void TheHeaderCarriesTheSchedulersTickAndNextHandle()
+	{
+		var states = Park().ScriptStates;
+
+		Assert.IsNull( states.Problem, "the module reads" );
+		Assert.AreEqual( 6055, states.Tick, "the saved tick" );
+		Assert.AreEqual( 16, states.NextHandle, "the saved next handle" );
+		CollectionAssert.AreEqual( new[] { 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 4, 3, 2, 1 }, states.Order.ToArray(),
+			"the scripts in the module's order" );
+	}
 }

@@ -2296,6 +2296,8 @@ public sealed class ParkPeople : Entity
 				} ) );
 
 			yield return $"thing {thing.ThingId,2} cat {thing.CatalogueId} '{script.Name}' "
+				// Its handle, which decides its turns with the scheduler's tick, and where it stands.
+				+ $"script {script.Id} at {script.Position} "
 				// The nominee, because a stale one is invisible otherwise: Invite bails while somebody is
 				// nominated, and the only thing that clears a stale nomination is DropUnreadyNominee,
 				// run on a turn that does not invite. A queue stuck on that would look exactly like a quiet ride.
