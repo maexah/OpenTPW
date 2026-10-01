@@ -3448,13 +3448,29 @@ artifacts are listed in `docs/history/README.md`.
     pass 0 skip; 633 ran 911 skipped without; 123 warnings. Review (one Opus agent, read-only): no defect; a count
     made with no save clock now is not made, and no branch lands on any of the 57 `GETTIME`-`SUB` pairs.
 
-- [ ] **Q182. A frame's ticks and clips read one clock in the engine. Decode first.** Moved from Q174c, where Q174b's
+- [x] **Q182. A frame's ticks and clips read one clock in the engine. Decode first.** Moved from Q174c, where Q174b's
   review left it as a note (`park.md`, difference 6). A triggered clip starts at the tick's own instant in OpenTPW
   (`RideScript.StartAnimation`, `ParkRides.MillisecondsAt`), where the engine stamps a fresh start with the frame's
   snapshot `DAT_007b496c` (`FUN_00472bc0`, `0x00472bff`), the one its advance reads (`0x004736b3`); its scripts' own
   deadlines read the live clock (`0x0055299d`), which barely moves through a catch-up, where each tick here has its own
   instant 31 ms on. Reached only when a frame runs more than one tick; not measured. Decode how far the live clock moves
-  across one frame's ticks, then build.
+  across one frame's ticks, then build (Q182b).
+  - **Done 2026-10-01, `alexah/218-decode-the-frame-clock`. Decode only.** `park.md`, difference 6, "What the engine's
+    ticks read across one frame": the frame reads the clock twice above the catch-up loop (snapshot `0x0054f475`, `now`
+    `0x0054f47f`) and nothing in the loop moves it; its one stepper `FUN_00402ef0` runs once a drawn frame and only
+    while latched, which nothing offline sets. So every tick of a catch-up sees the frame's `now` plus its own running
+    time. The original was not run: this computer is up 8 days, so its clock holds only multiples of 64 ms (Alexah
+    warned the same); the per-tick running time stays unmeasured, the `GetTickCount` rings named as the instrument.
+  - **Measured in the game** (`q182/run1/`, silent, stock jungle park, `save/` unchanged, predicted first, 2 of 2): worst
+    frames 7.04, 7.05, 7.13 ms at 143.9 fps, so no frame ran two ticks; a first Hot Pot put down took one 96.14 ms frame
+    (three or four ticks). Shots `S1-running`, `S2-bought`, looked at. No code; no test. Skeptics `wf_850d5f4f-228`
+    (core held; added: a message box in a tick pauses the clock, the engine's clamp runs 65 ticks, a third timing ring).
+
+- [ ] **Q182b. A frame's ticks read one instant: the build.** From Q182's decode (`park.md`, difference 6). Hand every
+  tick of a frame one script instant and start a triggered clip at the frame's snapshot, where `ParkRides.MillisecondsAt`
+  steps each tick 31 ms on; its comment's reason (a one-tick `WAIT` coming due at once) does not hold for the engine,
+  whose deadline is set from the same instant the later ticks read. Reached at a hitch (a first load: 96 ms, Q182).
+  The engine's 2000 ms clamp also runs 65 ticks where `GameClock` runs 64. Confirm: a census of a script's `WAIT` and a clip's frame across a forced long frame, predicted first, and a shot.
 
 - [ ] **Q183. A script's walks are stepped in its own turn, where the engine steps every script's once a frame.** Found
   by Q175's decode (`ride-operation.md`, `FUN_00557ab0` and `FUN_00557d80`). `RideScript.StepTheWalks` runs at the head

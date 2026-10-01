@@ -805,10 +805,42 @@ kept the bit. No Lost Kingdom item lacks a role, and the Easymode save's 163 cha
 
 **6. A clip starts at the tick's own instant in OpenTPW** (`RideScript.StartAnimation` passes the tick's `now`,
 `ParkRides.MillisecondsAt`), where the engine stamps a fresh start with the frame's snapshot `DAT_007b496c`
-(`FUN_00472bc0`, `0x00472bff`), the one its advance reads (`0x004736b3`); its scripts' own deadlines read the live clock
-(`0x0055299d`), which barely moves through a catch-up. So a clip triggered at tick i of a frame running k ticks is
-(k-1-i) × 31 ms in at that frame's sweep here and nought there, up to 1953 ms at the 64-tick cap. Reached only when a
-frame runs more than one tick; not measured.
+(`FUN_00472bc0`, `0x00472bff`), the one its advance reads (`0x004736b3`). So a clip triggered at tick i of a frame
+running k ticks is (k-1-i) × 31 ms in at that frame's sweep here and nought there, up to 1953 ms at the 64-tick cap.
+
+**What the engine's ticks read across one frame (Q182).** The park frame reads the clock `0x785970` twice, back to back,
+above the catch-up loop: `FUN_00473440` at `0x0054f475` takes the snapshot `DAT_007b496c`, and `0x0054f47f` takes the
+loop's `now` (`0x008786bc`). The loop then runs while `now` is past its last stepped time `0x00878c74`, adding 31 to that
+(`0x0054f4c4`) and never reading the clock again (back edge `0x0054f8da`); with the backlog clamped to `now - 2000`
+(`0x0054f49b`) that is at most 65 ticks, where OpenTPW's clamp runs 64. **Nothing in the loop steps the clock**; the one
+thing in it that touches it is a message box opened in a tick, which pauses it (`FUN_004092a0`, `0x004092c8`), so the
+frequent case is frozen, not stepped. Its
+one stepper, `FUN_00402ef0` (`+0x3c += +0x40`), has one caller chain, `FUN_00409260` ← `FUN_0040f220` ← the scene draw
+`0x0054e2f7`, once a drawn frame, and the clock reads `+0x3c` only while latched (`FUN_00402f10`); the park frame
+unlatches it each pass (`FUN_00402ed0` at `0x0054f470`) unless `[0x00878128]` is set, which nothing offline sets
+(`park-engine.md`, "The game clock"). Latched, the step is `1000 / 0x20` = 31 a drawn frame, so the frames run one tick
+each. Unlatched, each read is the raw clock (`QueryPerformanceCounter` scaled to ms, `0x005f5f10`) added to the
+accumulator: **across a frame's k ticks the live clock moves only by the real time those ticks take to run**, whatever
+k is. The readers inside the ticks (every call of `0x00402d70` whose function the loop's callees reach, with the RSSE
+handlers reached by the dispatcher's table): the handlers' deadline reads (`WAIT` at `0x005529a2` and twenty more in
+`0x00551f33`..`0x0055645d`), `RSSE_BOUNCE`/`UNBOUNCE`/`FORCEUNBOUNCE`, the walk legs (`FUN_00556f40`, `FUN_005571a0`,
+`FUN_00557160`), the every-second-tick scheduler `FUN_00475360` (`0x0047537d`) and `FUN_004758f0` (reached from both sides). The per-frame readers
+past the loop: `FUN_00557ab0`/`FUN_00557d80` (the walks' arrivals), `FUN_005580a0` and `FUN_0057ff60`. So in the engine
+every tick of a catch-up sees one instant, the frame's `now` plus its own running time, and a script's `WAIT` set in its
+first tick cannot come due in a later tick of the same frame; here each tick's instant is 31 ms past the last
+(`ParkRides.MillisecondsAt`). How long the original's ticks took to run was not measured: on this computer, up 8 days,
+its accumulator holds only multiples of 64 ms (`park-engine.md`, "The park clock loses precision with uptime"), which
+is coarser than the quantity asked. Its own per-tick timings are kept by `GetTickCount` (`[0x006fd1d0]`) in eight-slot
+shift registers around `Particles_Tick` (`0x008780e8`..), the RSSE tick (`0x008780c8`..) and `FUN_00475360`
+(`0x00878108`..), the instrument for a run after a restart.
+
+**How often OpenTPW reaches it** (Q182, silent, the stock jungle park, `save/` unchanged, `q182/run1/`, each reading
+predicted first). A frame under 31 ms runs at most one tick, since what is owed after a frame is under one tick; one of
+62 ms or more runs at least two. Running, three 240-frame windows at 143.9 fps: worst frames 7.04, 7.05 and 7.13 ms, so
+no sampled frame ran two ticks (each window is 1.7 s of the 3 s between readings). Putting down a Hot Pot (its model
+loaded the first time and the ground rebuilt under it): one frame of 96.14 ms, so that frame ran three or four ticks,
+and a clip triggered in any but the last of them met the difference; 3 s later the worst was 27.71 ms.
+So it is reached at a hitch (a first load, a stall), not in steady play at this frame rate.
 
 On the same fields and unbuilt: `TRIGANIMSPEED` arms `+0xa4` and sets `+0xa8`, and OpenTPW counts it, so jungle `Gates`
 @80 passes its `WAIT4ANIM` about 0.1 to 0.3 s early and its clip at four times the speed is not played; and every
