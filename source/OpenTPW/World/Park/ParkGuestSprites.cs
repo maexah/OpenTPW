@@ -93,6 +93,8 @@ public sealed class ParkGuestSprites : ModelEntity
 
 	/// <summary>How many banks of each guest kind the park draws over, or null - see the constructor.</summary>
 	private readonly ParkSpriteBanks? _counts;
+	private string? _themeName;
+	private ParkWorld? _park;
 
 	private Texture? _atlas;
 	private Region? _plain;
@@ -109,8 +111,8 @@ public sealed class ParkGuestSprites : ModelEntity
 	private static float _bobCount;
 
 	/// <summary>
-	/// The pool this park is drawing with, so the debug console can read the census back. Same
-	/// arrangement as <see cref="ParkGround.Current"/>, and it exists for the console alone.
+	/// The pool this park is drawing with: the debug console reads the census back through it, <see cref="ParkPeople"/>
+	/// adds and removes people, and the camcorder swaps the pictures. Same arrangement as <see cref="ParkGround.Current"/>.
 	/// </summary>
 	internal static ParkGuestSprites? Current { get; private set; }
 
@@ -242,6 +244,8 @@ public sealed class ParkGuestSprites : ModelEntity
 		}
 
 		Current = this;
+		_themeName = themeName;
+		_park = park;
 
 		// Only the banks BanksToPack names: the staff's worn, every child and costume bank the park counts, and the
 		// balloons'. Loading every person bank in the archive would be 5,316 pictures and an atlas 13,885 pixels tall, past
@@ -260,6 +264,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	{
 		var pictures = new List<SpritePicture>();
 		var placed = new List<(int Type, int Bank, int First, int Count, SpriteBankFile File)>();
+		var fromFirstPerson = new List<string>();
 
 		foreach ( var key in BanksToPack( _people.Select( p => p.Sprite ), _counts ) )
 		{
@@ -279,7 +284,10 @@ public sealed class ParkGuestSprites : ModelEntity
 			try
 			{
 				var bank = new SpriteBankFile( files[key.Bank] );
-				var pack = new SpritePackFile( Path.ChangeExtension( files[key.Bank], ".TPC" ) );
+				var pack = new SpritePackFile( PackFor( files[key.Bank], bank, FirstPerson ) );
+
+				if ( FirstPerson && bank.UsesFirstPersonPictures )
+					fromFirstPerson.Add( $"{key.Type}:{Path.GetFileNameWithoutExtension( files[key.Bank] )}" );
 
 				placed.Add( (key.Type, key.Bank, pictures.Count, pack.Pictures.Length, bank) );
 				pictures.AddRange( pack.Pictures );
@@ -303,6 +311,46 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		foreach ( var (type, bank, first, count, file) in placed )
 			_banks[(type, bank)] = new Loaded( file, regions[first..(first + count)] );
+
+		Log.Info( $"Guests: {placed.Count} sprite banks packed, {fromFirstPerson.Count} from .FPC, {pictures.Count - 1} pictures" +
+			(fromFirstPerson.Count > 0 ? $" ({string.Join( ", ", fromFirstPerson )})" : "") );
+	}
+
+	/// <summary>
+	/// The picture pack a bank is drawn from: its <c>.FPC</c> in first person when the bank says it has one, otherwise its
+	/// <c>.TPC</c> (<c>SpriteBank_Load</c> at <c>0x00540d90</c>; <c>FUN_00542420</c> and <c>FUN_00542640</c> swap them).
+	/// </summary>
+	internal static string PackFor( string bankPath, SpriteBankFile bank, bool firstPerson )
+		=> Path.ChangeExtension( bankPath, firstPerson && bank.UsesFirstPersonPictures ? ".FPC" : ".TPC" );
+
+	/// <summary>Whether the packs in the atlas are first person's. A park loads with the top view's (state 9 calls
+	/// <c>0x00540900( 0, 0 )</c>).</summary>
+	internal bool FirstPerson { get; private set; }
+
+	/// <summary>
+	/// Draws each bank whose flag says so from its pictures for first person, or back from the top view's, as entering and leaving first
+	/// person do (<c>0x0042af85</c>, <c>0x0042afba</c>; docs/exe/park-engine.md, "Entering and leaving first person").
+	/// <b>A deviation in how, not in what:</b> the original reloads only the flagged banks into their own textures; here
+	/// every picture shares one atlas, so the atlas is packed again whole and the old one let go.
+	/// </summary>
+	internal void UseFirstPersonPictures( bool firstPerson )
+	{
+		if ( FirstPerson == firstPerson || _themeName == null || _park == null )
+			return;
+
+		FirstPerson = firstPerson;
+
+		var old = _atlas;
+		_atlas = null;
+		_banks.Clear();
+
+		Load( _themeName, _park );
+
+		// A model already built still samples the old atlas, so it is built again before that atlas goes.
+		if ( _atlas != null && (TranslucentModel != null || _people.Count > 0) )
+			Build();
+
+		old?.Delete();
 	}
 
 	/// <summary>
@@ -418,6 +466,8 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		material.Set( "Color", _atlas! );
 
+		// The model this replaces is let go with its buffers and material; Delete defers the release past frames in flight.
+		TranslucentModel?.Delete();
 		TranslucentModel = new Model( _vertices, indices, material );
 		TranslucentModel.EnableFrequentUpdates( _vertices );
 	}

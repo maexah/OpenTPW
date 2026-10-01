@@ -833,6 +833,16 @@ whose `+0x4ac` is nought gets `FUN_004e15b0( 0 )` instead.
   (`0x0042af37`..`0x0042af80`). The yaw stays as the orbit had it.
 - **Leaving** puts the saved point of interest and yaw back (`0x0042af8c`..`0x0042afb4`). **The walk is thrown
   away**: the orbit camera returns to where it was before first person.
+- **The sprites swap.** Entering ends by calling `FUN_00542420` (`0x0042af85`), leaving by calling `FUN_00542640`
+  (`0x0042afba`). `FUN_00542420` runs only while `DAT_00763f80` is 1, sets it to 0, and reloads every loaded bank
+  whose `+0x205` (the `.ESP` byte `0x10C`) is set from its `.fpc` (the static at `0x00875fe8`, built from
+  `0x00747970` at startup); `FUN_00542640` is its mirror, run only while the flag is 0, back to `.tpc`
+  (`0x00876270`). Each frees the bank's old pictures and reloads them through `SpritePack_Load`. `DAT_00763f28`,
+  which picks `.tpc`/`.fpc` over `.tps`/`.fps` (`0x008757a8`, `0x00875598`), is 1 in the image and nothing writes
+  it, so the `.tps`/`.fps` arms are never taken. An `.FPC` picture is the same figure seen from ground level
+  (FileFormats, "Sprites"). The ride view's `FUN_0042a560` also ends in the swap (`0x0042a6ee`): to `.FPC` when its
+  second argument is 1 or flag `0x02` is set, otherwise back to `.TPC`. Its callers' second argument is not traced,
+  and OpenTPW reaches no ride view.
 
 The pick point is written only by `FUN_0045bf90` (called at `0x0054e2d5`, and only while `& 0x16` is clear). It is
 a terrain hit inside its own cell's rectangle, with the cells clamped to the 96 by 85 heightfield, or a point on a

@@ -176,7 +176,7 @@ Evidence is a Ghidra trace of `/testme.exe` throughout; the column names what in
 | 0x00429ba0 | | Loads the advisor model from `%s\Global\Advisor`. | Path string |
 | 0x005d5770 | | Constructs the lobby object. | State 1 |
 | `DAT_00f82884` | | Holds the lobby object; +0x14 == 1 keeps the lobby loop running. | States 1 and 2 |
-| 0x00540900 | | Called (0,1) at the end of the front-end load. | State 1 |
+| 0x00540900 | | Readies the sprite banks for a scene. Its first argument's low byte goes to `DAT_008768fc`, which lets `SpriteBank_Load` (0x00540d90) take a flagged bank's `.FPC`, and `DAT_00763f80` is set to 1 when that byte is 0 (the `.TPC`s are in). Called (0,1) at the end of the front-end load (0x0054e688) and (0,0) by state 9's park load (0x0054ed2c, `EDI` zeroed at 0x0054e913), so every scene loads its banks from `.TPC`; first person swaps them (`park-engine.md`, "Entering and leaving first person"). Its second argument is not traced. | States 1 and 9 |
 | 0x006591e3 | | Opens the bracket around the front-end load. | State 1 |
 | 0x00659201 | | Closes that bracket. | State 1 |
 | 0x00520130 | `Particles_Tick` | The 31 ms tick body; the lobby's entire tick, and the first of a park's. | 0x0054e77c..0x0054e79d |

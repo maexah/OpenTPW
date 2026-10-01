@@ -3567,7 +3567,7 @@ artifacts are listed in `docs/history/README.md`.
   (predicted 1); `q186/ia1/` Instant Action 0x (predicted 0); shots looked at; only the run's player folders deleted,
   `save/` unchanged. Test `LevelFullSimulationParkTests`: the condition dropped and the report dropped each go red.
 
-- [ ] **Q187. First person keeps the top-view sprites where the original swaps to `.FPC`.** Found by the fork review
+- [x] **Q187. First person keeps the top-view sprites where the original swaps to `.FPC`.** Found by the fork review
   (peeps-v1, peeps-v2, gap6-2, refute rank 5). Every sprite bank loads as `.TPC`. Entering first person
   (`FUN_0042ae70` calls `FUN_00542420` at `0x0042af85`) reloads every bank whose `.ESP` byte `0x10C` is set from its
   `.FPC`, and leaving swaps back (`FUN_00542640` at `0x0042afba`); an `.FPC` picture is the same figure seen from
@@ -3583,6 +3583,21 @@ artifacts are listed in `docs/history/README.md`.
   `.TPC`. `ParkGuestSprites` builds one atlas from every picture, so rebuild it on the swap or hold both sets, and say
   which at the site. Confirm: a first-person screenshot of the original under Proton beside ours, the upright figures
   predicted before looking.
+  **Done 2026-10-01** on `alexah/225-first-person-sprites`. Facts written once: `boot.md` (`0x00540900`), `park-engine.md`
+  ("Entering and leaving first person", the swap and the ride view's `0x0042a6ee`), `lobby.md` (`SpriteBank_Load`, the
+  four statics found); FileFormats `sprites.md` (`0x10C`, 27/2/17, `SPR_EX` 219/210, the `.FPC` taller for its width in all
+  29 pairs). `SpriteBankFile.UsesFirstPersonPictures`; `ParkGuestSprites.UseFirstPersonPictures`, called by
+  `ParkCamcorderCameraMode.Enter` and `Leave`, packs the atlas again whole (the deviation in how is said at the site).
+  `FIRST_PERSON_SPRITE_SWAP` was not added: the swap is built, and nothing unbuilt is left on the path. Game (`q187run.py`):
+  `q187/run2/` the log reads 20 banks, 0 from `.FPC` at load, **12** on entering (predicted 10, wrong: the park packs six kid
+  banks and five staff and entertainer banks, not eight and one; the eight left are the six kid heads, the costume head
+  and the balloons, all unflagged), 0 on leaving; `pair-fix` against `pair-control` (main's build) from the same places,
+  looked at: the near child seen from above becomes upright and face-on. The original under Proton, first person in the
+  reference park, `q187/orig/q187-13.png`, looked at: a handyman and a child upright at eye level, as predicted. Tests
+  `ParkGuestArtTests`: the flag never read and the pack always `.TPC` each go red. `save/` unchanged. Review
+  `wf_8cf0bcf7-43d`: `Build` never deleted the model it replaced (on `Add` and `Remove` too), fixed, `q187/run5/` re-run
+  20/12/0 and looked at; three comment and naming nits fixed; the decode's claims held. Worktree: 1549 pass 0 skip; 634
+  ran 915 skipped without; 123 warnings.
 
 - [ ] **Q188. The object windows draw the park's own model where the original previews its P model.** Found by the
   fork review (ghidra-docs-6, ghidra-docs-v2, refute rank 6; lead: Aluzed's fork, `docs/08`). For every item but the

@@ -120,7 +120,7 @@ BGRA palette).
 | `0x0051ef30` | Particles_Render | Draws the screen particles. **The only caller of Sprites_LookUp** | `get_xrefs_to` |
 | `0x0057c620` | SpriteBatch_DrawParticles | The batch draw, where the screen mapping is applied | Disassembly |
 | `0x005423a0` | Sprites_LookUp | Sprite set lookup, keyed `bank<<4 \| set` | Disassembly |
-| `0x00540d90` | SpriteBank_Load | Picks between a `.TPC` and the `.FPC` beside it from the ESP byte at `0x10C`. The selecting constants **read back EMPTY in Ghidra and are NOT identified** | Disassembly; attempted constant read |
+| `0x00540d90` | SpriteBank_Load | Reads the ESP byte `0x10C` into the bank's `+0x205`, and loads the `.fpc` when that is set and `DAT_008768fc` is not 0, otherwise the `.tpc`. The four extensions are statics built at startup (`.tps` `0x008757a8`, `.tpc` `0x00876270`, `.fps` `0x00875598`, `.fpc` `0x00875fe8`, from the strings at `0x00747958`..`0x00747970`), which is why they read back empty in the image. `DAT_008768fc` is always 0 when a scene loads (boot.md, `0x00540900`), so every bank loads from `.tpc`; first person swaps them (`park-engine.md`, "Entering and leaving first person") | Disassembly; `get_xrefs_to` |
 | `0x00582170` | — | Sprites are flushed here, after all UI models, at depth 0, LESSEQUAL, with no depth write | Disassembly |
 | `+0x14` | — | A particle's position within its record | Field read in the step routine |
 | `0x0078d90e` | — | The glint gate byte = **Popup Help** (options case `0x1d4c3`, label UIStrings 327) | Options screen wiring |
@@ -189,8 +189,8 @@ started by clip-word flags that only gesture rows 1 and 13 carry (`scenes.md`, "
 advisor's golden-ticket lines use those rows. Nothing here awards a golden ticket, so nothing reaches them, and they have
 no counter.
 `.TPC` and `.FPC` are **not** open questions — all 46 `.TPC` and all 29 `.FPC` files in
-`esprites.wad` are version 3 (second word 3); an `.FPC` and the `.TPC` beside it share a picture
-count and differ only in size.
+`esprites.wad` are version 3 (second word 3); an `.FPC` is the figure seen from ground level, for first
+person (FileFormats, "Sprites", has the counts).
 
 Ghidra names added along the way: `Particles_Tick`, `Particles_Emit`, `Particles_EmitRing`,
 `Particles_StepParticles`, `Particles_StepEffectors`, `Particles_SpawnEffector`, `Particles_Move`,

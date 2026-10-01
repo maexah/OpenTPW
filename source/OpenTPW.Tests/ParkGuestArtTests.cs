@@ -110,4 +110,55 @@ public class ParkGuestArtTests
 		CollectionAssert.AreNotEqual( Worn( Swept( Kids ) ), Worn( loaded ),
 			"a plain sweep must resolve the same banks to different children, or this test proves nothing" );
 	}
+
+	/// <summary>Every <c>.ESP</c> in <c>esprites.wad</c>, theme folder by kind folder.</summary>
+	private string[] EveryBank() =>
+		[.. data.GetDirectories( "esprites" ).SelectMany( data.GetDirectories ).SelectMany( Swept )];
+
+	/// <summary>Whether the bank's folder holds a pack of that extension beside it. <c>FileExists</c> does not look inside
+	/// an archive, so the folder is listed instead.</summary>
+	private bool PackExists( string bank, string extension ) =>
+		data.GetFiles( Path.GetDirectoryName( bank )! ).Any( file =>
+			string.Equals( file, Path.ChangeExtension( bank, extension ), StringComparison.OrdinalIgnoreCase ) );
+
+	/// <summary>
+	/// Byte <c>0x10C</c> over all 46 banks: set on 27, and every one of those has an <c>.FPC</c> to swap to; clear on the
+	/// 17 with none; and clear on two that do have one, <c>Jungle\Entertainers\SPR_EX</c> and <c>Space\Costumes\SPR_SK</c>,
+	/// which first person therefore leaves as they are.
+	/// </summary>
+	[TestMethod]
+	public void FirstPersonSwapsTheBanksWhoseFlagIsSetAndOnlyThose()
+	{
+		var banks = EveryBank();
+		Assert.AreEqual( 46, banks.Length, "banks in esprites.wad" );
+
+		var flagged = banks.Where( bank => new SpriteBankFile( new MemoryStream( data.ReadAllBytes( bank ) ) ).UsesFirstPersonPictures )
+			.ToArray();
+
+		Assert.AreEqual( 27, flagged.Length, "banks with byte 0x10C set" );
+		Assert.IsTrue( flagged.All( bank => PackExists( bank, ".FPC" ) ), "every flagged bank has an .FPC" );
+		Assert.AreEqual( 17, banks.Count( bank => !PackExists( bank, ".FPC" ) ), "banks with no .FPC" );
+
+		CollectionAssert.AreEquivalent( new[] { "SPR_EX", "SPR_SK" },
+			Names( [.. banks.Except( flagged ).Where( bank => PackExists( bank, ".FPC" ) )] ),
+			"the two with an .FPC that first person does not use" );
+	}
+
+	/// <summary>
+	/// Which pack a bank is drawn from: a kid's body from its <c>.FPC</c> in first person and its <c>.TPC</c> otherwise; a
+	/// kid's head, whose flag is clear and which has no <c>.FPC</c>, from its <c>.TPC</c> either way.
+	/// </summary>
+	[TestMethod]
+	public void AKidsBodyIsDrawnFromItsFpcInFirstPersonAndItsHeadIsNot()
+	{
+		string Pack( string bank, bool firstPerson ) => Path.GetExtension( ParkGuestSprites.PackFor( bank,
+			new SpriteBankFile( new MemoryStream( data.ReadAllBytes( bank ) ) ), firstPerson ) ).ToUpperInvariant();
+
+		var body = $"{Kids}/SPR_BE.ESP";
+		var head = "esprites/Generic/Kidsheads/SPR_BE.ESP";
+
+		Assert.AreEqual( ".FPC", Pack( body, true ), "a body in first person" );
+		Assert.AreEqual( ".TPC", Pack( body, false ), "a body from above" );
+		Assert.AreEqual( ".TPC", Pack( head, true ), "a head in first person" );
+	}
 }

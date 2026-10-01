@@ -194,6 +194,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		Active = true;
 
 		Camera.SetCameraMode<ParkCamcorderCameraMode>();
+		ParkGuestSprites.Current?.UseFirstPersonPictures( true );
 	}
 
 	/// <summary>
@@ -205,6 +206,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		ParkOrbitCameraMode.PointOfInterest = new Vector3( Stand.X, Stand.Y, 0f );
 		ParkOrbitCameraMode.Yaw = Yaw;
 		Active = false;
+		ParkGuestSprites.Current?.UseFirstPersonPictures( false );
 
 		// Only a park gets the park camera. Nothing should be able to ask for this outside one, but
 		// handing the lobby a camera that orbits park coordinates is a bad enough outcome to be worth

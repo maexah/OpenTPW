@@ -14,7 +14,9 @@ namespace OpenTPW;
 /// <list type="table">
 /// <item><term>0x000, 12 bytes</term><description><c>ESP_FILE2.00</c></description></item>
 /// <item><term>0x00C, 256 bytes</term><description>A name - <c>SPR_PA.TPS</c> - NUL-padded</description></item>
-/// <item><term>0x10C, 2 bytes</term><description>Two flags; the first steers which picture pack is loaded</description></item>
+/// <item><term>0x10C, 1 byte</term><description>Whether first person draws this bank from its <c>.FPC</c> - see
+/// <see cref="UsesFirstPersonPictures"/></description></item>
+/// <item><term>0x10D, 1 byte</term><description>A second flag, read into the bank's <c>+0x206</c>; its use is not traced</description></item>
 /// <item><term>0x10E, 16 x 4 bytes</term><description>The sets - see <see cref="SpriteSet"/></description></item>
 /// <item><term>0x14E, 16 bytes</term><description>Four groups of four bytes, read rather than merely
 /// counted: <c>FUN_00540c70</c> takes a state of 0 to 3 and hands back that group's first two bytes as a
@@ -38,6 +40,13 @@ public sealed class SpriteBankFile : BaseFormat
 
 	public SpriteSet[] Sets { get; private set; } = [];
 
+	/// <summary>
+	/// Byte <c>0x10C</c>, read into the bank's <c>+0x205</c>: in first person the game reloads this bank from the
+	/// <c>.FPC</c> beside its <c>.TPC</c>, the same figure seen from ground level (<c>FUN_00542420</c>;
+	/// docs/exe/park-engine.md, "Entering and leaving first person").
+	/// </summary>
+	public bool UsesFirstPersonPictures { get; private set; }
+
 	public SpriteBankFile( string path )
 	{
 		ReadFromFile( path );
@@ -60,7 +69,8 @@ public sealed class SpriteBankFile : BaseFormat
 		var end = Array.IndexOf( name, (byte)0 );
 		Name = Encoding.ASCII.GetString( name, 0, end < 0 ? name.Length : end );
 
-		_ = reader.ReadBytes( 2 );
+		UsesFirstPersonPictures = reader.ReadByte() != 0;
+		_ = reader.ReadByte();
 
 		Sets = new SpriteSet[16];
 		for ( int i = 0; i < Sets.Length; ++i )
