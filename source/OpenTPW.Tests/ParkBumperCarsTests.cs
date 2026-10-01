@@ -131,6 +131,205 @@ public class ParkBumperCarsTests
 		Assert.AreEqual( 0, cars.TakeLeaving( handle ) );
 	}
 
+	/// <summary>
+	/// The performance lerps the template's four ranges: at 60, the speed word every bumper ride is bought at, the
+	/// record the original's memory read (thrust 10, friction 990, turn 11, restitution 1060); at the template's 50 before.
+	/// </summary>
+	[TestMethod]
+	public void ThePerformanceLerpsTheTemplatesRanges()
+	{
+		var (table, handle) = Ride();
+		var ride = table.Cars.RideOf( handle )!;
+
+		Assert.AreEqual( (50, 10, 985, 11, 1050), (ride.Performance, ride.Thrust, ride.Friction, ride.TurnRate, ride.Restitution) );
+
+		table.Cars.BindSpeedWord( handle, 60 );
+		table.Cars.PushSpeedWords();
+
+		Assert.AreEqual( (60, 10, 990, 11, 1060), (ride.Performance, ride.Thrust, ride.Friction, ride.TurnRate, ride.Restitution) );
+
+		table.Cars.SetPerformance( handle, 140 );
+		Assert.AreEqual( (100, 12, 1010, 14, 1100), (ride.Performance, ride.Thrust, ride.Friction, ride.TurnRate, ride.Restitution), "clamped to 100" );
+	}
+
+	/// <summary>
+	/// A heading from an offset: (sin, cos) in (x, z), so +z heads 0 and +x 127, the constant being just over 1/π and
+	/// the result truncated; and no offset at all heads 256, as the binary's negated integer loads +0, which a bump
+	/// between two boats at rest reads.
+	/// </summary>
+	[TestMethod]
+	public void AHeadingFromAnOffset()
+	{
+		Assert.AreEqual( 0, ParkBumperCars.HeadingOf( 0, 1000 ) & 0x1ff );
+		Assert.AreEqual( 127, ParkBumperCars.HeadingOf( 1000, 0 ) );
+		Assert.AreEqual( 256, ParkBumperCars.HeadingOf( 0, 0 ) );
+	}
+
+	/// <summary>The Hot Pot's eight buoys, as <c>park.md</c> lists them from the laying's arithmetic.</summary>
+	[TestMethod]
+	public void TheBuoysRingTheArena()
+	{
+		var (table, handle) = Ride();
+
+		CollectionAssert.AreEqual(
+			new[] { (0, 3072), (2172, 2172), (3071, 0), (2171, -2171), (0, -3069), (-2169, -2169), (-3067, 0), (-2168, 2168) },
+			table.Cars.RideOf( handle )!.Buoys.ToArray() );
+	}
+
+	/// <summary>
+	/// A boat with a rider drives in a go; a boat with none, on a ride of its own, never moves, nor does a filled boat
+	/// waiting for its go - the thrust needs <c>0x4000</c> and not <c>0x80000</c>.
+	/// </summary>
+	[TestMethod]
+	public void OnlyABoatWithARiderInAGoDrives()
+	{
+		var table = new ParkTrackRideTable();
+		var cars = table.Cars;
+		var full = table.Take( HotPot );
+		var empty = table.Take( HotPot );
+
+		cars.Place( full, Centre, Centre );
+		cars.Place( empty, Centre + 20 * ParkBumperCars.CellUnits, Centre );
+
+		foreach ( var handle in new[] { full, empty } )
+		{
+			cars.OpenForLoading( handle );
+			cars.Launch( handle );
+		}
+
+		Assert.IsTrue( cars.Board( full, 101 ) );
+		Assert.IsTrue( cars.Fill( full ) );
+
+		var driver = cars.CarsOf( full ).Single();
+		var idle = cars.CarsOf( empty ).Single();
+		var waitingAt = (driver.X, driver.Z);
+
+		for ( var tick = 0; tick < 100; ++tick )
+			cars.Tick();
+
+		Assert.AreEqual( waitingAt, (driver.X, driver.Z), "a filled boat waiting for its go stands still" );
+
+		cars.Start( full );
+		cars.Start( empty );
+		cars.Tick();
+
+		// Pointed straight at the point it steers at, so only the flags stand between it and the thrust.
+		idle.Steering = ParkBumperCars.HeadingOf( idle.SteerX - idle.X, idle.SteerZ - idle.Z );
+
+		var restAt = (idle.X, idle.Z);
+		var fastest = 0;
+
+		for ( var tick = 0; tick < 700; ++tick )
+		{
+			cars.Tick();
+			fastest = System.Math.Max( fastest, driver.Speed );
+
+			Assert.AreEqual( 0, idle.Speed, $"the empty boat drifts only when struck, tick {tick}" );
+		}
+
+		Assert.AreEqual( restAt, (idle.X, idle.Z) );
+		Assert.IsTrue( fastest > 150 && fastest <= 247, $"the boat with a rider drives, under the steady 247: {fastest}" );
+	}
+
+	/// <summary>
+	/// Four boats with riders through a whole go: never past the rim, never over the top speed, bumping each other, and
+	/// let off after 750 ticks.
+	/// </summary>
+	[TestMethod]
+	public void AFullGoStaysInThePotUnderTopSpeedAndBumps()
+	{
+		var (table, handle) = Ride();
+		var cars = table.Cars;
+		var ride = cars.RideOf( handle )!;
+
+		cars.BindSpeedWord( handle, 60 );
+		cars.PushSpeedWords();
+		cars.OpenForLoading( handle );
+
+		for ( var i = 0; i < 4; ++i )
+			cars.Launch( handle );
+
+		for ( var i = 0; i < 4; ++i )
+		{
+			Assert.IsTrue( cars.Board( handle, 101 + i ) );
+			Assert.IsTrue( cars.Fill( handle ) );
+		}
+
+		cars.SetDuration( handle, 750 );
+		cars.Start( handle );
+
+		var fastest = 0;
+		var bumps = 0;
+		var chases = 0;
+
+		for ( var tick = 0; tick < 750; ++tick )
+		{
+			cars.Tick();
+
+			foreach ( var car in cars.CarsOf( handle ) )
+			{
+				fastest = System.Math.Max( fastest, car.Speed );
+
+				if ( (car.Flags & ParkBumperCars.CarFlags.Bumped) != 0 )
+					++bumps;
+
+				if ( (car.Flags & ParkBumperCars.CarFlags.Chasing) != 0 )
+					++chases;
+
+				Assert.IsTrue( ParkBumperCars.Distance( car.X - Centre, car.Z - Centre ) <= ride.ArenaRadius, $"in the pot at tick {tick}" );
+			}
+		}
+
+		Assert.IsTrue( fastest <= 247, $"top speed {fastest}" );
+		Assert.IsTrue( bumps > 0, "the boats bump" );
+		Assert.IsTrue( chases > 0, "the boats chase" );
+		Assert.AreEqual( ParkBumperCars.RideState.Loading, ride.State, "the go over after 750 ticks" );
+		Assert.AreEqual( 4, ride.Leaving.Count );
+	}
+
+	/// <summary>
+	/// A closing pair meets twice from one snapshot: the struck boat is kicked along the line between them, and the
+	/// second meeting, from its side, kicks the first back, so a boat driving into one at rest stops and sends it on.
+	/// </summary>
+	[TestMethod]
+	public void ABumpKicksTheStruckBoatOnAndStopsTheOther()
+	{
+		var (table, handle) = Ride();
+		var cars = table.Cars;
+		cars.OpenForLoading( handle );
+
+		var a = cars.Launch( handle )!;
+		var b = cars.Launch( handle )!;
+
+		(a.X, a.Z, a.VelocityX, a.VelocityZ) = (Centre - 500, Centre, 200, 0);
+		(b.X, b.Z, b.VelocityX, b.VelocityZ) = (Centre + 500, Centre, 0, 0);
+
+		cars.Tick();
+
+		Assert.IsTrue( b.VelocityX > 150, $"struck and sent on: {b.VelocityX}" );
+		Assert.IsTrue( System.Math.Abs( a.VelocityX ) < 10, $"stopped: {a.VelocityX}" );
+		Assert.AreEqual( ParkBumperCars.CarFlags.Bumped, b.Flags & ParkBumperCars.CarFlags.Bumped );
+		Assert.AreEqual( ParkBumperCars.CarFlags.Bumped, a.Flags & ParkBumperCars.CarFlags.Bumped, "struck in turn at the second meeting" );
+	}
+
+	/// <summary>A boat past the rim is put back on it, its velocity turned inward.</summary>
+	[TestMethod]
+	public void TheRimReflectsABoat()
+	{
+		var (table, handle) = Ride();
+		var cars = table.Cars;
+		cars.OpenForLoading( handle );
+
+		var car = cars.Launch( handle )!;
+		(car.X, car.Z, car.VelocityX, car.VelocityZ) = (Centre + 0x1200 - 50, Centre, 200, 0);
+
+		cars.Tick();
+
+		Assert.AreEqual( Centre + 0x1200, car.X, "on the rim" );
+		Assert.AreEqual( Centre, car.Z );
+		Assert.IsTrue( car.VelocityX < -150, $"reflected inward: {car.VelocityX}" );
+	}
+
 	[TestMethod]
 	public void AGoOfNoTicksNeverUnloads()
 	{

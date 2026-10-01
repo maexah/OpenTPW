@@ -717,11 +717,18 @@ public static class DebugConsole
 
 					report.Add( $"  ride 0x{placed.TrackRide:x} thing {placed.ThingId} state {ride.State} wear {ride.Wear} "
 						+ $"duration {ride.Duration} cars {ride.Cars} seated {ride.Seated} boarding [{string.Join( ",", ride.Boarding )}] "
-						+ $"leaving [{string.Join( ",", ride.Leaving )}] centre ({ride.CentreX},{ride.CentreZ})" );
+						+ $"leaving [{string.Join( ",", ride.Leaving )}] centre ({ride.CentreX},{ride.CentreZ}) "
+						+ $"performance {ride.Performance} thrust {ride.Thrust} friction {ride.Friction} turn {ride.TurnRate} "
+						+ $"restitution {ride.Restitution}" );
 
 					foreach ( var car in bumpers.CarsOf( placed.TrackRide ) )
 					{
-						report.Add( $"    car at ({car.X},{car.Z}) heading {car.Heading} timer {car.Timer} anim {car.Animation} "
+						var off = ParkBumperCars.Distance( car.X - ride.CentreX, car.Z - ride.CentreZ );
+						var target = (car.Flags & ParkBumperCars.CarFlags.Chasing) != 0 ? $"chase {car.Chased}" : $"buoy {car.Buoy}";
+
+						report.Add( $"    car {car.Index} at ({car.X},{car.Z}) from centre {off} velocity ({car.VelocityX},{car.VelocityZ}) "
+							+ $"speed {car.Speed} steering {car.Steering} steer ({car.SteerX},{car.SteerZ}) {target} patience {car.Patience} "
+							+ $"heading {car.Heading} timer {car.Timer} anim {car.Animation} "
 							+ $"flags 0x{(int)car.Flags:x} riders [{string.Join( ",", car.Riders.Select( rider => $"{rider.Peep}@{rider.Seat}" ) )}]" );
 					}
 				}

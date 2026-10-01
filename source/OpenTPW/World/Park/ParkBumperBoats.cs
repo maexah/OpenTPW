@@ -312,35 +312,45 @@ public sealed class ParkBumperBoats : Entity
 
 	/// <summary>
 	/// Stands a boat where its car floats - <c>FUN_00546280</c>: the position at 1/307.2 of a unit, the heading as
-	/// <c>((heading - 0x100) &amp; 0x1ff)</c> 512ths of a turn, and the four corners' bob averaged.
+	/// <c>((heading - 0x100) &amp; 0x1ff)</c> 512ths of a turn, and the four corners' bob averaged, each eased back
+	/// from this tick's toward the last by the part of a tick not yet come: the park passes
+	/// <c>(now - stepped) / 31</c>, between -1 and 0, since its catch-up loop steps past now (<c>0x0054fa0d</c>).
 	/// </summary>
 	private void Put( Boat boat, ParkBumperCars.Car car, ParkState state )
 	{
 		var field = ParkGround.Current?.Heightfield;
 		var cellX = field?.CellSizeX ?? 10f;
 		var cellY = field?.CellSizeY ?? 10f;
+		var ease = Math.Clamp( GameClock.PartialTick, 0f, 1f ) - 1f;
 
-		var x = car.X / (float)ParkBumperCars.CellUnits * cellX;
-		var y = car.Z / (float)ParkBumperCars.CellUnits * cellY;
+		var x = (car.X + car.VelocityX * ease) / ParkBumperCars.CellUnits * cellX;
+		var y = (car.Z + car.VelocityZ * ease) / ParkBumperCars.CellUnits * cellY;
 
 		var height = WaterUnder( car.Ride, state ) ?? field?.HeightAtWorld( x, y ) ?? 0f;
 
 		// Each corner bobs on its own multiple of the phase, 6, 4, 3 and 5 (0x0054658c..0x005466c0); their average is
-		// the height. The original eases each between this tick's step and the last by the frame's fraction; this
-		// takes the tick's own.
+		// the height.
 		if ( (car.Flags & ParkBumperCars.CarFlags.Bobs) != 0 )
 		{
-			var bob = ParkBumperCars.Sine( car.Phase * 6 ) + ParkBumperCars.Sine( car.Phase * 4 )
-				+ ParkBumperCars.Sine( car.Phase * 3 ) + ParkBumperCars.Sine( car.Phase * 5 );
+			var bob = Bob( car.Phase, 6, ease ) + Bob( car.Phase, 4, ease ) + Bob( car.Phase, 3, ease ) + Bob( car.Phase, 5, ease );
 
 			height += bob * BobScale * 0.25f;
 		}
 
-		// The original passes this as the third of the angles it turns the model by. Which way round it reads on this
-		// map is not pinned: a random heading looks the same either way, and Q179c's motion settles it.
-		var yaw = ((car.Heading - 0x100) & 0x1ff) * (MathF.Tau / 512f);
+		// The original passes this as the third of the angles it turns the model by, its heading eased back by its turn,
+		// truncated to a whole 512th (0x00546409..0x00546439).
+		var heading = car.Heading - (int)(car.Turn * -ease);
+		var yaw = ((heading - 0x100) & 0x1ff) * (MathF.Tau / 512f);
 
 		boat.Model.SetTransform( new Vector3( x, y, height ), Quaternion.CreateFromAxisAngle( System.Numerics.Vector3.UnitZ, -yaw ) );
+	}
+
+	/// <summary>One corner's bob, eased back toward the last tick's: <c>s[p×m] + (s[p×m] - s[p×m - m]) × ease</c>.</summary>
+	private static float Bob( int phase, int multiple, float ease )
+	{
+		var now = ParkBumperCars.Sine( phase * multiple );
+
+		return now + (now - ParkBumperCars.Sine( phase * multiple - multiple )) * ease;
 	}
 
 	/// <summary>

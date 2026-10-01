@@ -3328,7 +3328,41 @@ artifacts are listed in `docs/history/README.md`.
   the emitters, none for the Hot Pot), and `FUN_00546c80`'s pairwise pass (`FUN_005497b0`, `FUN_005494d0`,
   `FUN_00547170`), with the fixed-point units and the arena radius (template `+0x08` 768, `+0xc0`). Measure over
   all four bumper scripts' cars. Confirm against the original under Proton: the boats' paths in a go, photographed.
-- [ ] **Q179d. The Hot Pot's boats move and bump each other during a go: the build.** From Q179c's decode (`park.md`,
+- [x] **Q179d. The Hot Pot's boats move and bump each other during a go: the build.** Done 2026-09-30,
+  `alexah/213-hot-pot-boats-move`. No FileFormats change.
+  - **Built** (`ParkBumperCars`): the performance from the script's speed word (the item's starting speed, 60, kept on
+    the record at bind and pushed after each tick's scripts, as the scheduler's visit does; `RideScript` keeps no speed
+    word, Q155), the template's four ranges and the eight buoys; the target (chase 3 in 16, buoy next or random,
+    patience), the lead pursuit, the steering, the step with the Hot Pot's heading ease, the pairwise bump from the
+    stepped snapshot and the rim's reflection, in the track tick's two passes. The draw eases each boat back across the
+    tick, as the original's, whose argument was read here (`park.md`, "Read for the build (Q179d)"). Departures said at
+    the site: the generator is the cars' own (`ParkGenerator`); arenas are searched in slot order. Counted: another
+    ride's arena as a target, the karts' and water's targets. Console: `bumpers` gains velocity, speed, steering, the
+    point steered at, the target, patience and the record's four values.
+  - **Confirmed in the game** (`q179d/run.py`, `run2/`; `run3.py`, `run3/`; silent, stock park, Belly Bounce sold, Hot
+    Pot bought at (57,23); `save/` unchanged), predicted first, 3 of 3 each: W the record reads performance 60, thrust
+    10, friction 990, turn 11, restitution 1060, four empty boats at speed 0; G (run2, four goes, every boat ridden)
+    top speed 236, never past 4608 of the centre; L every go 750 track ticks (four of four); E (run3, two riders sent)
+    the two ridden boats drove 80663 and 71066 units, the two empty ones stood still in 44 of 75 samples, moving only
+    after a strike, top 189; R OpenTPW's per-tick census replayed through Q179c's `stepcheck.py` model: 98 exact, none
+    mismatched. Photographed and looked at: `run2/pot3.png` and `run3/pot3.png`, the boats moved between frames, each
+    toward its rider's face with the fan behind, as in the original's `q179b/orig/go-pair.png`; the empty boat stays put.
+  - Review (one Opus, read-only, against the disassembly): `HeadingOf( 0, 0 )` gave 0 where the binary's negated
+    integer loads +0 and gives 256, which turns the bump's branch for two boats at rest; the drawn heading's ease is
+    truncated; a comment's "under 1/π". All fixed. **`run4/` on the final build**, predicted first, 3 of 3: W again; E
+    the two ridden boats 80610 and 70952 units, the empty ones still in 44 of 74, top 188, at most 4594 out; R 285 exact,
+    none mismatched; `run4/pot3.png` looked at: in a one-rider go the three empty boats stand where they float in all
+    three frames while the ridden one crosses the pot.
+  - Tests: seven in `ParkBumperCarsTests` (performance, heading, ring, only a ridden boat in a go drives, a full go in the
+    pot under 247 with bumps and chases, the double kick, the rim). Bugs put back: thrust without `0x4000` was green at
+    first, because the empty boat's random heading never pointed within 22 of its buoy; the test now aims it, and goes
+    red. The negative nought: red. My heading prediction for +x was 128; the binary's constant, just over 1/π, gives 127.
+  - Built and tested alone in a worktree: 1531 pass, 0 skip with the game; 630 ran, 901 skipped without; 123 warnings.
+  - **Not confirmed:** the bump's impulse and the rim against the original's log (the replay skips boats near another
+    or the rim; tested only); the boats' yaw sense is read from the frames, not measured; the wake under a boat is not
+    drawn (`BUMPER_CAR_WAKE`).
+
+  The item as written: From Q179c's decode (`park.md`,
   "How a bumper ride's cars move"). In `ParkBumperCars`: the performance from the script's speed word, the target,
   the chase, the steering, the step and the Hot Pot's heading ease, the pairwise bump and the rim, in the track tick's
   two passes; the draws from the park's generator. The other types' particles and sounds stay counted. Confirm in the

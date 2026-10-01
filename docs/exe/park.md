@@ -1212,6 +1212,18 @@ struck. Filled boats waiting for the go swung `+0x50` and stood still. Photograp
 **Differences a build must keep.** Every draw that steers is the park's generator, shared with everything else, so no
 two runs match boat for boat; a build matches the rules and the numbers, not the paths.
 
+**Read for the build (Q179d), first-hand.** The arena is laid flags `0x1f` (live, all four quadrants, round), so it is
+whole and the three-quarter thrust is never taken; `Bumper_PointInObject` (`FUN_005493f0`) holds a point on its centre
+or at a distance (halved as above) no more than its radius. A bumper ring's buoys are flagged 1 alone and hold no object
+(`+0x18` 0), so the arrival takes the next buoy without the object check. `Bumper_LaunchCar` (`FUN_00549db0`) zeroes the
+car, sets `+0x7c` and `+0x80` to −1, and puts at `+0x98` the first object that holds the arena's centre. The chase list
+is built by pushing each candidate on its head in pool order, so the draw counts back from the last. **The draw eases
+back, not ahead**: `Game_StateMachine` passes `FUN_00519060` (and so `FUN_00546280`) `(DAT_008786bc − DAT_00878c74) ×
+1/31` (`0x0054fa0d`..`0x0054fa33`), the clock less the last stepped time, which the catch-up loop has carried past it
+(`0x0054f4c4`), so between −1 and 0; a car is drawn at its position plus its velocity times that, its heading less
+`+0x5c` times it, and each corner's bob `s[p×m] + (s[p×m] − s[p×m − m]) ×` it. OpenTPW's own per-tick census, replayed
+through Q179c's step check, matched 285 transitions of 285 (`q179d/run4/`).
+
 ### The ride object
 
 **The ride object is twelve functions around `0x0043b050`**: b050, b080, b0c0, b0e0, b130, b1f0, b220, b270, b2b0, b2f0, b330, b390. COAST reaches **eight** of them; b080, b0c0, b130 and b390 are reached from elsewhere (`FUN_0043b2b0` is also called by the VM loop `FUN_005516b0` and by `FUN_00447e30`), so they are the ride's own behaviour rather than the script's view of it.

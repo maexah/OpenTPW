@@ -1004,6 +1004,10 @@ public sealed class ParkRides : Entity
 
 		var (x, z) = ParkBumperCars.ArenaCentre( item, placed.CellX, placed.CellY, placed.Angle );
 		cars.Place( placed.TrackRide, x, z );
+
+		// The speed word the object constructor pushes (0x004db534), which the scheduler then pushes into the ride's
+		// performance at each visit: the item's starting speed when over nought, else the loader's 50.
+		cars.BindSpeedWord( placed.TrackRide, item.InitSpeed > 0 ? item.InitSpeed : 50 );
 	}
 
 	/// <summary>
@@ -1017,6 +1021,7 @@ public sealed class ParkRides : Entity
 		{
 			ParkState.Current?.TrackRides.Cars.Tick();
 			Scheduler.Advance( MillisecondsAt( i ) );
+			ParkState.Current?.TrackRides.Cars.PushSpeedWords();
 		}
 
 		// And then, once, whatever those ticks asked for is shown. The engine advances its animation players
