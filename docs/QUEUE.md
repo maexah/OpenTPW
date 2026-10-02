@@ -4749,6 +4749,13 @@ artifacts are listed in `docs/history/README.md`.
   days, `weather.md`). `ParkPathTests`' summary says "SEVEN tests fail" without the `ReferenceEquals` guard, measured
   when sixteen classes built an edge test; twenty do now: take the guard out again in a worktree and write the count
   taken, or drop it. No game run.
+- [ ] **Q204. Load the area-only notes only in their area.** Claude Code loads a `.claude/rules/*.md` file whose
+  `paths:` front matter matches an open file, and no other time. Move the sections of `CLAUDE.local.md` (and any of
+  `CLAUDE.md`) that serve one area only - the capture recipe, the original under Proton, the 2.0 patch's evidence - into
+  such files, keyed to the source and harness paths they serve, so a session that never opens them never loads them.
+  Measure both files' size before and after, and confirm in a fresh session that a matching file brings its rule in
+  and a non-matching one does not. Borrowed from Rootstock (github.com/Mazhron/rootstock-os); nothing else of it is
+  taken. Alexah's yes 2026-10-01, for after the weekly reset. No game run.
 
 ## C. Alexah's list: cause known, one session each
 
