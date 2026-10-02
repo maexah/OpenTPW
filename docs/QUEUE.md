@@ -4756,6 +4756,12 @@ artifacts are listed in `docs/history/README.md`.
   Measure both files' size before and after, and confirm in a fresh session that a matching file brings its rule in
   and a non-matching one does not. Borrowed from Rootstock (github.com/Mazhron/rootstock-os); nothing else of it is
   taken. Alexah's yes 2026-10-01, for after the weekly reset. No game run.
+- [ ] **Q205. Move the ticked items out of the live queue.** `docs/QUEUE.md` is 528 KB, mostly ticked entries, and
+  every session greps or reads into it. By script, move each ticked item verbatim, in queue order and under its
+  section heading, into a file in `docs/history/` listed in `docs/history/README.md`, leaving the open items where they
+  stand. Then repoint what says the ticked entries live in `QUEUE.md` (`docs/STATUS.md`'s "Next", `docs/WORKFLOW.md`,
+  the memory index) and check every Q-number still resolves to exactly one entry across the two files. Alexah's yes
+  2026-10-01. No game run.
 
 ## C. Alexah's list: cause known, one session each
 
