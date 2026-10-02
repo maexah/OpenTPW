@@ -78,6 +78,20 @@ say so before launching it.
 - Executable facts go into `docs/exe/` in the same commit; file-format facts go into the FileFormats docs clone (a separate repo) in the same session. A fact only in a commit message or a memory file is a fact the next session will not find.
 - Credit outside work that led to a fact. When another project pointed at it first (Aluzed's OpenTPW-decomp fork, reviewed 2026-09-30, Q185-Q197), the message carries `Lead: Aluzed's OpenTPW-decomp fork (github.com/aluzed/OpenTPW-decomp, <ticket or commit>); established here by <the addresses traced or the data measured>`, and the docs page that records the fact says in one line that the fork pointed at it first. Code adapted from it keeps its MIT notice in a header line and carries an `Adapted-from: aluzed/OpenTPW-decomp@<commit> (Aluzed, MIT)` trailer. A fact the review found with no lead from the fork needs no fork credit.
 
+## READMEs
+
+The two READMEs (this repo's and the FileFormats clone's) are written for players and newcomers (Alexah, 2026-10-02).
+
+- **One layout.** Centred title, a one-line tagline, then a line linking both repos with the current one in bold.
+  Sections in this order: What this is, how far along it is, Quick start, the repo's own sections, Contributing, License.
+- **One voice.** Speak to the reader as "you", in short, plain, present-tense sentences. Say what to do, not how it
+  came about: no history, no storytelling. The same thing is said in the same words in both files.
+- **Simple first.** Write the main text for someone who has never used a terminal: numbered steps, everyday words.
+  Technical detail and terms (Joliet, environment variables) go in a `<details>` block titled "For technical users".
+- **Nothing that goes stale.** No counts, dates or test numbers; link `docs/STATUS.md` instead. A list kept by hand
+  (the FileFormats page table) is named in the steps for adding to it.
+- **Look at it rendered,** at phone width too, before asking to push.
+
 ## Verifying
 
 - Build with `--no-incremental`, then `dotnet test --no-build` with `OPENTPW_GAME_PATH` set; without it the game-data tests skip, so read the skip count, not just "Passed!". Take the counts fresh; never compare against a remembered number.

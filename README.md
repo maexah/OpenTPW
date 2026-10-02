@@ -5,38 +5,41 @@
     <p align="center">
         An open-source re-implementation of <a href="https://en.wikipedia.org/wiki/Theme_Park_World">Sim Theme Park / Theme Park World</a>.
     </p>
+    <p align="center">
+        <b>OpenTPW</b> · <a href="https://github.com/OpenTPW/OpenTPW.FileFormats">File Formats</a>
+    </p>
 </p>
 
 ![The lobby looking out on Halloween World: the park gates and their name board, the tree with the carved face, a bolt of lightning over the island, and the advisor on screen](.github/screenshot.png)
 
 ## What this is
 
-Theme Park World (1999) is hard to run on a modern machine. OpenTPW re-implements the game's engine on top of your own copy of the original: it reads the game's real data files - models, textures, sounds, fonts and saves - and draws them with Vulkan.
+OpenTPW re-implements the engine of Theme Park World (1999) so it runs on modern computers. It reads the data files from your own copy of the game - models, textures, sounds, fonts and saves - and draws them with Vulkan.
 
-**You need a legal copy of the original game.** OpenTPW ships no game content. It is an engine, not a download.
+**You need your own copy of the original game.** This repository ships no game content.
 
 ## Can I play it yet?
 
-**Not yet.** It is a work in progress, and it is worth knowing what to expect before you try it:
+**Not yet.** OpenTPW is a work in progress. What works today:
 
 - **The lobby works.** The four islands, the front end, the advisor, weather, the options screen and your saved players.
 - **Only Lost Kingdom is partly working, and only from the park the game ships already built.** Enter it and the park runs: guests arrive, queue, ride and buy things; you can buy, sell and move rides, hire staff and lay paths.
 - **A fresh, empty park does not work, on any of the four islands.**
 - **There is no way to finish or keep a park.** No finances, no litter, and nothing saves a park back.
 
-[`docs/STATUS.md`](docs/STATUS.md) has the full, current list of what works and what does not.
+[`docs/STATUS.md`](docs/STATUS.md) lists everything that works and everything that does not.
 
-Want to play the original game on Linux in the meantime? [`tools/play-the-original`](tools/play-the-original/README.md)
-sets it up with Proton. You need your own disc and your own no-CD `.exe`.
+To play the original game on Linux, [`tools/play-the-original`](tools/play-the-original/README.md) sets it up with
+Proton. You need your own disc and your own no-CD `.exe`.
 
 ### Which version of the game?
 
-OpenTPW has only been tested with the **American release, Sim Theme Park**. Theme Park World, the release sold elsewhere, uses the same engine and data and **should** work, but nobody has tried it yet. If you do, please report how it goes.
+OpenTPW is tested only with the **American release, Sim Theme Park**. Theme Park World, the release sold elsewhere, uses the same engine and data and **should** work, but is untested. If you try it, please report how it goes.
 
 ## Quick start
 
 1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
-2. Copy your game disc to a folder you can write to. *How* you copy it matters - see [Getting the game's files](#getting-the-games-files).
+2. Copy your game disc to a folder - see [Getting the game's files](#getting-the-games-files).
 3. Build and run:
 
 ```sh
@@ -44,31 +47,34 @@ dotnet build source/OpenTPW.sln
 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game "/path/to/Sim Theme Park"
 ```
 
-That is the whole setup. The libraries OpenTPW needs travel with the build.
-
-The one thing you may need to install is a **Vulkan driver**. On Windows and macOS your graphics driver already provides it. On Linux, install your distribution's Vulkan loader (`libvulkan1`, `vulkan-loader` or `vulkan-icd-loader`, depending on the distribution) and Mesa or your GPU vendor's driver.
+The build includes every library OpenTPW needs. You may also need a **Vulkan driver**. On Windows and macOS your graphics driver already provides it. On Linux, install your distribution's Vulkan loader (`libvulkan1`, `vulkan-loader` or `vulkan-icd-loader`, depending on the distribution) and Mesa or your GPU vendor's driver.
 
 ## Getting the game's files
 
-**Copy the disc keeping its long file names.** This is the most common way to end up with a copy that cannot work. A CD carries two sets of file names, and the plain one is uppercase and cut short - `CHALLE~0.SAM` where the game asks for `Challenges.sam`. Mount the disc and copy from the mount, or use a tool that keeps the long (Joliet) names. OpenTPW notices a short-name copy and tells you.
+1. Put the game disc in your computer. If you have a disc image (an `.iso` file), double-click it instead.
+2. Open the disc in your file manager, the same way you open any folder.
+3. Copy **everything** on it into a new folder, for example `Sim Theme Park` in your Documents.
+4. Start OpenTPW and give it that folder, as in [Quick start](#quick-start). Put the folder's name in quotes.
 
-**Telling OpenTPW where the game is.** Either put the build in the game's folder, next to where `TP.exe` was, or point at the folder:
+If OpenTPW says the file names **"have been cut short"**, the copy went wrong. Delete the folder and copy the disc
+again by dragging the files in your file manager.
 
-```sh
-OpenTPW --game "/path/to/Sim Theme Park"
-OPENTPW_GAME_PATH="/path/to/Sim Theme Park" OpenTPW
-```
-
-Quote the path if it has spaces in it. If OpenTPW cannot find the game, it stops and lists every folder it looked in.
+If OpenTPW says it **cannot find the game**, check the folder you gave it. It lists every folder it looked in.
 
 <details>
-<summary>Exactly where it looks</summary>
+<summary>For technical users</summary>
 
-A folder counts as the game when it contains a `data` folder with the game's `levels` inside it. Capitalisation never matters.
+**File names.** A CD holds two sets of file names. The short set is uppercase and cut to eight letters
+(`CHALLE~0.SAM` instead of `Challenges.sam`), and the game cannot use it. Mount the disc and copy from the mount, or
+use a tool that keeps the long (Joliet) names.
 
-It tries, in order: `--game` on the command line, `OPENTPW_GAME_PATH`, the `GamePath` setting if you have changed it, the folder the build sits in, the working directory, and the default Windows install location. It does not search parent folders.
+**Where OpenTPW looks.** A folder counts as the game when it has a `data` folder with `levels` inside it, in any
+capitalisation. OpenTPW tries, in order: `--game` on the command line, `OPENTPW_GAME_PATH`, the `GamePath` setting
+if you have changed it, the folder the build sits in, the working directory, and the default Windows install
+location. It does not search parent folders.
 
-Saves go to `save/` beside the game's data, where the original keeps them, so the options and players saved by one are seen by the other.
+**Saves** go to `save/` beside the game's data, where the original keeps them, so the original and OpenTPW share
+options and players.
 
 </details>
 
@@ -94,12 +100,12 @@ Saves go to `save/` beside the game's data, where the original keeps them, so th
 | Windows x64, arm64 | ✅ | ❔ Not run recently |
 | macOS Intel, Apple Silicon | ✅ | ❔ Never run |
 
-Vulkan is the only graphics backend on every platform; macOS reaches it through MoltenVK, which ships with the build. Only Linux x64 is tested - bug reports from anything else are very welcome.
+Every platform draws with Vulkan; on macOS through MoltenVK, which ships with the build. Only Linux x64 is tested. Bug reports from other platforms are very welcome.
 
 <details>
 <summary>Linux on Wayland</summary>
 
-The SDL that ships with OpenTPW has no Wayland backend, so a Wayland session runs it through XWayland. That works, but scales and handles input a little differently, and without XWayland installed it will not start. If your distribution's SDL2 is better, use it:
+The SDL that ships with OpenTPW has no Wayland backend, so it runs through XWayland. Scaling and input then differ a little, and without XWayland it does not start. To use your distribution's SDL2 instead:
 
 ```sh
 OPENTPW_SYSTEM_SDL=1 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game "/path/to/Sim Theme Park"
@@ -109,11 +115,11 @@ OPENTPW_SYSTEM_SDL=1 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game 
 
 ## Troubleshooting
 
-**"Theme Park World was not found."** Point OpenTPW at the game with `--game <folder>` or `OPENTPW_GAME_PATH`, or put the build in the game's folder.
+**"Theme Park World was not found."** Check the folder you gave OpenTPW - see [Getting the game's files](#getting-the-games-files).
 
 **"its names have been cut short."** The disc was copied without its long file names. Copy it again - see [Getting the game's files](#getting-the-games-files).
 
-**It stops before a window appears, saying it could not load a native library.** This is almost always the Vulkan loader or the graphics driver. Install your distribution's Vulkan loader and your GPU's driver.
+**It stops before a window appears, saying it could not load a native library.** Install your distribution's Vulkan loader and your GPU's driver.
 
 **On Wayland the window scales oddly, or SDL says "No available video device".** Install XWayland, or see [Linux on Wayland](#platforms).
 
@@ -126,7 +132,48 @@ dotnet build source/OpenTPW.sln
 dotnet test source/OpenTPW.sln
 ```
 
-Most tests read the real game files and skip when the game is not found; set `OPENTPW_GAME_PATH` to run them all. `OPENTPW_DEBUG_CONSOLE=1` reads commands from standard input, for driving a run.
+Most tests read the real game files and skip when the game is not found; set `OPENTPW_GAME_PATH` to run them all.
+
+<details>
+<summary>Launch options and the debug console</summary>
+
+**Launch options**
+
+| Option | Does |
+|--------|------|
+| `--game <folder>` | Use the game in this folder. `--game=<folder>` also works. |
+| `OPENTPW_GAME_PATH=<folder>` | The same, as an environment variable. |
+| `OPENTPW_SYSTEM_SDL=1` | Use your system's SDL2 instead of the one in the build. |
+| `OPENTPW_DEBUG_CONSOLE=1` | Turn on the debug console. |
+
+**Opening the debug console.** Start OpenTPW from a terminal with `OPENTPW_DEBUG_CONSOLE=1` set, then type commands
+into that terminal and press Enter. Every reply starts with `[dbg]`.
+
+```sh
+OPENTPW_DEBUG_CONSOLE=1 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game "/path/to/Sim Theme Park"
+```
+
+On Windows, run `set OPENTPW_DEBUG_CONSOLE=1` first, then start OpenTPW in the same window.
+
+**Commands.** Most take numbers after the name, for example `island 2` or `step 10`. Many work only in a park.
+
+| For | Commands |
+|-----|----------|
+| Going places | `lobby`, `island`, `enter`, `park`, `reload`, `quit` |
+| Time | `pause`, `resume`, `step` |
+| Lobby camera and weather | `orbit`, `freeze`, `unfreeze`, `attract`, `aim`, `settle`, `near`, `rain`, `weather`, `strike`, `bolt` |
+| Park camera | `camera`, `camcorder`, `facing`, `walk` |
+| Sound | `volume`, `mute`, `sound`, `voices`, `place`, `speech`, `advisor`, `greet`, `duck` |
+| Reading the park | `guests`, `peeps`, `staff`, `candidates`, `rides`, `vehicles`, `paths`, `arrivals`, `objects`, `catalogue`, `money`, `rings`, `spend`, `why`, `cell`, `drawn`, `scriptvar`, `bumpers` |
+| Changing guests | `arrive`, `admit`, `send`, `load`, `depart`, `happy`, `cash`, `thirst`, `balloon`, `toilet` |
+| Building and staff | `buy`, `put`, `sell`, `move`, `path`, `delpath`, `queue`, `delqueue`, `hire`, `fire`, `pickup`, `putstaff`, `carry`, `drop`, `hand`, `strip`, `tool` |
+| Mouse, keys and windows | `pick`, `click`, `rightclick`, `rmbcancel`, `worldclick`, `hover`, `pointer`, `backspace`, `menu`, `buyscreen`, `hirescreen`, `openthing`, `screen`, `windows`, `control`, `state` |
+| Measuring | `stats`, `assets`, `parks`, `huds`, `water`, `size`, `unimplemented` |
+
+Each command's arguments are in [`DebugConsole.cs`](source/OpenTPW/Client/Diagnostics/DebugConsole.cs), one `case`
+per command. Add a new command to this table.
+
+</details>
 
 - [`docs/STATUS.md`](docs/STATUS.md) - what works and what does not.
 - [`docs/QUEUE.md`](docs/QUEUE.md) - the work queue.
@@ -144,18 +191,18 @@ Most tests read the real game files and skip when the game is not found; set `OP
 | Textures (.WCT) | ✅ |
 | Settings (.SAM) | ✅ |
 | Sounds (.SDT, .MP2) | ✅ |
-| Strings (.BFMU, .BFST) | ⚠️ Read; four long strings are cut short |
+| Strings (.BFMU, .BFST) | ⚠️ Read; a few long strings are cut short |
 | Fonts (.BF4) | ✅ |
 | Lip sync (.LIP) | ✅ |
 | Particles (.PLB, .ESP, .TPC) | ✅ |
 | Machine and player saves (Config.tcf, gms.dat) | ✅ |
 | Map data (.MAP) | ✅ |
 | Texture tables (.TCT) | ✅ |
-| Models (.MD2) | ⚠️ Meshes load; five of the animation channel kinds are decoded |
+| Models (.MD2) | ⚠️ Meshes load; some animation channel kinds are not decoded yet |
 | Sound categories (cat_\*.map) | ⚠️ Decoded; a few fields are unnamed |
 | Park signs (.SGN) | ⚠️ Read and drawn; a gradient fill is drawn flat |
 | Park saves (.TPWS) | ⚠️ Read, only Lost Kingdom's shipped save tested; nothing writes one |
-| Ride scripts (.RSE) | ⚠️ Every shipped script runs; 74 of 106 instructions built |
+| Ride scripts (.RSE) | ⚠️ Every shipped script runs; some instructions are not built yet |
 | Materials (.MTR) | ❌ |
 | Video (.TQI) | ❌ |
 
