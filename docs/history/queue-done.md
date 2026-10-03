@@ -4027,7 +4027,10 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   populated close waits for the last guest (retry tick 60); staff outside block ticks 780/810/840,
   inside closes at 870, then reopens. Screenshots + predicted census: `docs/exe/park-gate.md`.
   Twelve regressions, eleven restored defects fail (occupancy fixture repaired); 1679 tests pass.
-  Saved-closed restoration remains test-verified only; Q90 unchanged.
+  Saved-closed follow-up `alexah/261-q89b-saved-gate-proof`: unchanged original restart loads 0/0,
+  opens 1/1, closes 0/0 and reopens 1/1, with screenshots and predicted census. A labelled
+  one-field stock fixture preserves saved 1/1 while closed. Evidence: `docs/exe/park-gate.md`;
+  original saves unchanged, no code change, Q90 unchanged.
 
 ## B. Docs and comments
 

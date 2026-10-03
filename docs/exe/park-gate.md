@@ -135,13 +135,45 @@ by the fresh-park run. Earlier exploratory runs changed only loading-count cache
 OK-button ID; one staff fixture had no inside guests and therefore correctly took the
 immediate close. Both were corrected before the completed runs.
 
+**Saved-closed follow-up (2026-10-03, `alexah/261-q89b-saved-gate-proof`).** The initial
+completion omitted this required runtime case; it is now checked separately from a fresh
+park. An unchanged copy of the original game's FullSimCheated `jungle/restart.INTS`
+(SHA-256 `84887acabaf850cd06e77b11034845941c47227570159cad7dc9a2a94fa05db9`)
+was loaded through `Level.ReadPark` and the production save reader. A private game overlay
+supplied that copy as `levels/jungle/Easymode.TPWI`; no profile was created. This verifies
+the saved-world loader, not a save-selection UI or writing a played park back.
+
+The reader reports closed 1, gate 11, saved PC 0 and command/status 0/0. Pausing before
+loading gave tick 0, closed 1, command/status 0/0, guests 0 and staff outside 0. The real
+entry-price door then opened at tick 21 (1/1), closed at 37 (0/0) and reopened at 53 (1/1).
+All three kept both censuses at zero. The closed screenshot at tick 4 and the three door
+screenshots visibly agree. Evidence below `~/.cache/tpw-harnesses/q89b/saved-proof/`:
+`closed-summary.log`, `closed-runtime/run.log`, and that directory's `saved-closed.png`,
+`saved-reopened.png`, `saved-closed-again.png`, `saved-reopened-again.png`.
+
+A second, explicitly instrumented stock-park copy changes only `ParkClosed` from 0 to 1;
+all other inflated payload bytes are identical. The production reader confirms its saved
+gate record still exactly matches stock (PC 3, variables 1/1/0). Loaded while paused, it
+kept command/status 1/1 at tick 755 and after four sweeps at 759, before the next retry
+at tick 780, despite closed 1 and both censuses zero. Reopening through the door while paused changed closed to 0 and kept
+1/1. `pending2-summary.log` and `pending-runtime2/` hold the matching `run.log`,
+`saved-pending.png` and `saved-reopened.png`; these record this preservation check; the full close/reopen cycle is the
+unchanged-save run above. This does not separately observe every restored VM field.
+
+`fixtures.json`, `fixture-probe.jsonl`, `setup.py` and `confirm-saved.py` record setup and
+checks. Original save, stock park and production save hashes stayed unchanged. Only the
+private closed overlay's loading-count cache changed, and was retained. The first pending
+run correctly preserved 1/1 but its later zero-guest expectation was wrong: eight saved
+guests entered after reopening. That failed harness run is retained; the completed pending
+check observes reopening while paused. No production code change was needed.
+
 **Regression limits.** `ParkGateTests` covers ordinary script close/reopen, changed-door and
 status guards, census types and guest activities, exact world-sweep cadence through the real
 update, staff-kind and non-idle activity guards, fired-staff removal, fresh closed startup,
 missing saved gate state and saved closed commands 0/1 without counter/variable clobbering.
-Saved-closed restoration, missing saved state and every staff kind were test-verified, not
-runtime-verified; the photographed outside blocker was the mechanic. Invalid program-counter
-fallback and malformed positions were source-reviewed only. No advisor behavior was implemented.
+Missing saved state and every staff kind were test-verified, not runtime-verified; the
+photographed outside blocker was the mechanic. Saved-closed runtime proof is above. Invalid
+program-counter fallback and malformed positions were source-reviewed only. No advisor behavior was implemented.
 
 Primary artifacts: `q89/door-census.txt`, `census-followup.txt`, `cell-types-writer.txt`,
 `tick-opcode-table.txt`, `gates-listings.txt`, `content-check.json`, `corpus.log`, in the

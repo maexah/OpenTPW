@@ -39,7 +39,7 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 ## Not verified on screen
 
-- Q89b saved-closed script restoration, missing saved state and all outside staff kinds: tested only; the running staff guard was photographed with the mechanic.
+- Q89b missing saved state and all outside staff kinds: tested only; the running staff guard was photographed with the mechanic.
 
 - Q86 populated-queue release is instrumented; no normal player sequence established. Nominee/state-14 exemptions tested only.
 - **The RIDER on a ride bought this session**: measured five times, not photographed (the console has no pitch).
@@ -63,7 +63,7 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 ## Recent
 
-**2026-10-03 (Q89b).** Gate open/close/reopen confirmed at the entry-price door with screenshots and predicted command/status/census. One guest delayed closure until retry tick 60; outside staff blocked ticks 780/810/840, then moving inside allowed close at 870 and reopening. All eleven mutations fail after repairing an occupancy fixture; 1679 tests pass. Independent applied review through relayed evidence passed. `docs/exe/park-gate.md`.
+**2026-10-03 (Q89b).** Required saved-closed runtime proof completed on `alexah/261-q89b-saved-gate-proof`: an unchanged original restart loads closed, opens, closes and reopens, with predicted census and screenshots. A labelled one-field fixture also preserves saved command/status 1/1 in a closed park. Original saves unchanged; no code change. Gate open/close/reopen confirmed at the entry-price door with screenshots and predicted command/status/census. One guest delayed closure until retry tick 60; outside staff blocked ticks 780/810/840, then moving inside allowed close at 870 and reopening. All eleven mutations fail after repairing an occupancy fixture; 1679 tests pass. Independent applied review through relayed evidence passed. `docs/exe/park-gate.md`.
 
 **2026-10-03 (Q89).** Gate commands decoded, not built: **0** ordinary close, **2** end sequence with a terminal yield loop. Guest census uses cell types **0/1/3/9/10**; a newly traced **30-world-sweep** retry also waits for staff outside. Private Ghidra identity verified, four gate scripts freshly extracted and 308-script corpus checked. `docs/exe/park-gate.md`; implementation, regression mutation and runtime screenshot/census remain Q89b.
 
