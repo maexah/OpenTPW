@@ -8,13 +8,18 @@ file does not, so where the two differ `CLAUDE.md` wins.
 - See `CLAUDE.md`, Branches. Fast-forward with `git checkout main && git merge --ff-only <branch>`; this
   sandbox refuses `git branch -f main`.
 - Name a branch for what it changes, not with a phrase.
+- **A merged task branch is deleted, on origin and locally** (Alexah, 2026-10-03): once it is inside `main` and
+  `main` is pushed, it holds nothing `main` does not. Keep only the newest, so the next branch number can still be
+  read from `git branch -a`. Delete with `git branch -d`, which refuses a branch that is not merged, and check
+  `git merge-base --is-ancestor <tip> <server main>` before deleting one from origin. A local branch left behind
+  would go back up at the next push. `alexah/162-audit-open-questions` is kept: it is not merged.
 - The FileFormats clone runs the same way with `master` in place of `main`: a task's docs go on a branch off `master`,
   fast-forwarded into `master` when OpenTPW's `main` is, and pushed together (Alexah, 2026-09-29).
 
 ## Pushing
 
 - **Never push, and never open a pull request, without a fresh yes from Alexah.** Commit locally as work finishes. Say what is ready, which branches, and where it would go. Then wait.
-- When the yes comes, it covers everything of Alexah's that is not yet up. Survey every local branch in **both** clones against origin with `git ls-remote`, not a remembered list, and do not narrow it to what you named. Two stay behind unless asked for by name: a branch carrying an open pull request, and `wf-review-*` scratch branches.
+- When the yes comes, it covers everything of Alexah's that is not yet up. Survey every local branch in **both** clones against origin with `git ls-remote`, not a remembered list, and do not narrow it to what you named. Two stay behind unless asked for by name: a branch carrying an open pull request, and `wf-review-*` scratch branches. `git ls-remote upstream 'refs/pull/*'` lists closed pull requests too, so read a pull request's state (`https://api.github.com/repos/<owner>/<repo>/pulls/<n>`, no login needed) before holding its branch back.
 - Push only to `origin` (Alexah's fork), one explicit refspec per branch, no force, no pull request. Run it with `GIT_TERMINAL_PROMPT=0` and the askpass variables unset so a missing login fails fast, then read the tips back with `git ls-remote origin`.
 - Before a push, every commit is built **and tested** alone in a throwaway worktree. CI is refused; this ritual is what replaces it.
 - Stage files explicitly. Never `git add -A`. Check `git worktree list` and `git branch --list 'worktree-*'` for leftovers from review agents.
