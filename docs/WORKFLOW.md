@@ -31,8 +31,11 @@ Four things about that gate, each of which has cost a session:
 Set by Alexah 2026-09-26, after one staleness audit spent about 40M subagent tokens and hit the weekly limit. None of
 this removes a check: the adversarial verify and the review of applied edits stay.
 
-**Model by stage.** Use the agent type for the stage: `tpw-gather` (Haiku), `tpw-sweep` (Sonnet, high effort) and
-`tpw-verify` (Opus, high effort), in `.claude/agents/`. Any other agent runs Sonnet unless `model` is passed.
+**Model by stage.** Every agent names its type: `tpw-gather` (Haiku), `tpw-sweep` (Sonnet, high effort) or
+`tpw-verify` (Opus, high effort), in `.claude/agents/`. In a workflow script that is `agentType: 'tpw-gather'` on every
+`agent()` call; with the Agent tool it is `subagent_type`. **A workflow agent with no type and no `model` inherits the
+main session's model, which is Opus**, so an untyped agent is an Opus agent, whatever it was handed. After a run,
+`bytype.py` prints its agents by type and model; a `workflow-subagent` row is a call that left the type off.
 
 | Stage | Model | Why |
 |---|---|---|
@@ -41,6 +44,16 @@ this removes a check: the adversarial verify and the review of applied edits sta
 | Adversarial verify, reviewing applied edits, anything in Ghidra, decoding, merges that disagree on a fact, code changes | Opus | A wrong answer here costs a session |
 
 A cheaper finder is safe only under an Opus verifier that also hunts misses; never Sonnet verifying Sonnet.
+
+**Opus does not do the lookups.** Ahead of each verify stage, a `tpw-gather` stage (or the script itself) runs the
+greps and listings the verifier will need and writes them to one evidence file per agent. The verifier is handed that
+path, judges, and does the Ghidra work. It still greps when it has to chase something the evidence does not cover.
+
+**Calls.** Every call re-reads the agent's whole context, so an agent costs its calls times its context; the results
+themselves are small. Batch them: several greps in one command, several addresses in one Ghidra `run_python`.
+`tpw-gather` reports what is left at about 25 calls and `tpw-sweep` at about 60; both numbers are provisional and are
+reset from measured runs at the weekly usage look. **`tpw-verify` has no limit**: a check is never thinned to save
+tokens (Alexah, 2026-10-03).
 
 **Fable is a last resort.** Its tokens count against the weekly limit and the Fable limit at the same time, so it
 never saves budget. Use it only when Opus at high effort has failed to settle a question that blocks the work, and
