@@ -1,8 +1,8 @@
 # Ride hoardings
 
-Q91, decoded 2026-10-03 against the 2.0 `testme.exe`. **Decoded, not implemented or verified on screen.**
+Q91 decoded and Q91b implemented 2026-10-03 against the 2.0 `testme.exe`. **Closed/open hoardings are built and confirmed on screen.**
 The close/open calls raise and lower a separate, generated hoarding mesh around the ride. They change its
-texture choice, vertices and UVs; they do not replace the ride model or fade its opacity. Q91b is the build.
+texture choice, vertices and UVs; they do not replace the ride model or fade its opacity.
 
 ## Construction and ownership
 
@@ -11,7 +11,7 @@ texture choice, vertices and UVs; they do not replace the ride model or fade its
 | `0x00744be4`, `0x00744c20` | `Shape`, `Hoarding` | Item schema type 11 blocks with parser modes 1 and 2. The existing file syntax is documented in FileFormats `sam.md`, “Info.Shape is a block, not a value”. | Fresh schema bytes; schema/base accessors `00412c90`/`005b0d60` and `00401030` slot walk |
 | `0x00414163`–`0x00414175` | — | The item loader passes descriptor `+0x18` and `+0x1c` as shape and hoarding to `FUN_004629d0`. Its other model-loading arm does the same at `0x004141c7`. | Raw call arguments; schema |
 | `0x00462d88`–`0x00462dac` | — | Builds hoardings only when loader flag `0x8` is set and the hoarding argument is non-null; passes the current theme string, model definition and hoarding block to `FUN_00452e70`. | Raw instructions |
-| `FUN_00452e70` | — | Requires the base model's node count at `[model+8]+0xc` to exceed one. Generates panels from the parsed block's edge bits `1/4/0x10/0x40`, sorts their angle keys through `FUN_00470630`, and creates a mesh named `Hoardings`. Each panel has four vertices and four triangles (opposite-facing pairs). | Raw generation and index writes, `0x00453283`–`0x0045403c`; decompiler stack recovery is unreliable here |
+| `FUN_00452e70` | — | Requires the base model's node count at `[model+8]+0xc` to exceed one. Generates panels from the parsed block's edge bits `1/4/0x10/0x40`, sorts their angle keys through `FUN_00470630`, and creates a mesh named `Hoardings`. Each panel has four vertices and four triangles (opposite-facing pairs). | Raw generation and index writes, `0x00453283`–`0x0045403c`; Q91b repaired the private decompiler stack probe and checked the raw operations |
 | Model `+0xb0` | — | Hoarding definition: panel count, two grid dimensions, endpoint-pair array; published at `0x00454012`–`0x00454039` (`+0xb0` at `0x00454028`, `+0xb4` at `0x00454033`). Null disables close/open effects. | Generator tail; consumers `00454190`, `004543c0` |
 | Model `+0xb4` | — | Generated hoarding mesh, cloned per model instance by `FUN_004557c0` → `FUN_00455690`. It owns mutable vertex/UV/material-instance data. | Construction and clone calls |
 | Model `+0xb8`, `+0xbc` | — | Float progress and signed progress rate. Close/open preserve current progress, allowing reversal. | `00454550`, `004547c0`, `004548f0` |
@@ -20,9 +20,12 @@ texture choice, vertices and UVs; they do not replace the ride model or fade its
 | `FUN_00455ad0` | — | Removes a registered child before releasing its generated allocations and clearing `+0xb4`. | Destructor |
 
 The hoarding mesh is additional geometry; the ride's ordinary animation continues separately.
-`Info.Hoarding` is the data key. OpenTPW's `ItemDescriptionFile` recognizes its block delimiters but
-skips its contents; only `Info.Shape` is parsed into a grid. The old `RideInfo.Hoarding` property is not
-this loader's implementation. Both `CLOSED_RIDE_MODEL_CHANGE` and `OPENED_RIDE_MODEL_CHANGE` remain counted.
+`Info.Hoarding` is read by `ItemHoarding` through `ItemDescriptionFile`, with category fallback.
+`ParkObjects` creates a separate `ParkRideHoarding` per eligible placed instance. Selling, moving or
+leaving deletes its render entity; `ParkState` removes the associated state when the object leaves.
+Close/open now call that state, replacing both model-change counters. The ordinary ride model continues
+its own animation. Generated panels use duplicate back-face vertices for opposite normals (eight
+vertices and four triangles per panel); the original shares four vertices across its four triangles.
 
 ## Four texture choices
 
@@ -89,9 +92,12 @@ clamped progress is unchanged: at 1 it clears closing bit `0x40`; at 0 with open
 
 The saved-model restore path (`FUN_004647a0` → `004547f0`) restores progress and selection/movement flags,
 reactivates when marked active, reapplies the panel deformation and texture, and recovers the rate from
-closing/opening bits. A build must preserve that behavior; the saved byte layout is outside this decode.
+closing/opening bits. Q91b implements this through `ParkThingStates` and `RideHoardingState.Restore`.
+The packed file fields and slot-handle relationship are documented in FileFormats `saves.md`, SYSR.
+`ParkObjects` hydrates only its initial saved instances, then discards that lookup so later placements
+cannot reuse stale saved state.
 
-## Evidence and next session
+## Decode evidence
 
 Fresh Ghidra project copy: all 20 source-project files hash-matched before opening; original project and
 locks preserved. Program identity: SHA256 `cf0ffd955077eca146d75ee46c45b8a0786fb757a8f7d204b1aed8ec5a1ee4cb`,
@@ -101,9 +107,74 @@ image base `0x00400000`, `x86:LE:32:default`. Evidence is in scratch `q91/`: `in
 `instance-copy-and-schema-base.txt`. These are fresh executable reads;
 no new shipped-file layout or corpus-count claim is made.
 
-Q91b must implement the data-driven hoarding geometry/material/lifecycle and confirm Belly Bounce before,
-after closing and after reopening with screenshots **and** predicted log/census values. Measure the real
-panel count before choosing a numeric runtime prediction; do not replace the `Info.Hoarding` outline with a
-bounding rectangle. The exact glyph-to-edge parser and complete corner-fitting algorithm need to be followed
-when porting them. No regression test, mutation run, game launch, screenshot or runtime census is claimed
-for this decode-only session. The visual bug remains unresolved.
+## Q91b geometry verification
+
+The private project's `0x0067b110` stack-probe call received Ghidra's `alloca_probe` fixup, recovering
+`FUN_00452e70`'s large local frame. Raw instructions were also checked. No original project was edited.
+The first mesh's source positions are used in file order, transformed by its matrix; OpenTPW retains
+that order before its ordinary render-vertex reorder. The shipped corpus has 129 outlines in 274 item
+archives, all with at least four finite first-mesh source vertices. Each first mesh's local and world
+matrix agrees in this corpus. The generated panel count equals the number of selected outline edges.
+
+For each cell's four grid corners, `0x004535eb`–`0x00453653` streams the **second nearest** source vertex
+in the X/Z plane and takes half its displacement from the corner. It does not fit a bounding rectangle.
+The two comparisons have different float-store points: a new nearest compares the wider distance;
+the second comparison uses a float-rounded distance. Source order therefore matters at ties. The
+1×1 shortcut at `0x004536de`–`0x00453716` has asymmetric corrections, including positive X for both
+lower corners; this is retained. Adjacent edge bits control the endpoint extensions.
+
+Panel insertion order is row-major, north/east/south/west. The key is the panel midpoint's angle about
+the grid centre, plus `3.9269909858703613`, modulo `6.2831854820251465`, stored as float. Sorting is
+stable, matching `FUN_00470630`'s left-first equality branch. This order drives the stagger.
+
+`FUN_00454050` maps unadjusted grid endpoints into the rotated terrain rectangle, adds `0.1` before
+integer truncation, then `FUN_00454190` uses half the height difference from the model's origin.
+The direct quarter-turn implementation is tested against that normalized-rectangle formula at 80
+endpoints on uneven shipped terrain. Corner corrections affect X/Y placement, not the terrain probe.
+
+Explicit deviations and limits:
+
+- C# double intermediates approximate x87 extended precision. Stored float rounding points are retained;
+  bit-identical choices for every possible nearly equal distance are not proven.
+- Fewer than two source vertices in a non-singleton outline are rejected with `HOARDING_DEGENERATE_BASE`.
+  The original leaves some corner values unset. No shipped outline reaches this case. The parser rejects
+  more than twenty rows, including blank rows, instead of reproducing the original's unsafe overflow.
+- Movement uses `GameClock.Delta`, the park-pause-gated `Time.Delta`. The engine exposes normal rate only;
+  the original uses a scaled pausable clock. Debug stepping supplies 1/60 second per step.
+
+## Q91b confirmation and regression evidence
+
+Evidence root: `/home/alex/.cache/tpw-harnesses/q91b/`. The final game run uses a private copy of the
+save directory, with real pointer clicks on the entry-price door and its dismiss button. Original
+save hashes are checked after the run. Belly Bounce is thing 13; its outline predicts **12 panels**.
+Before each census read, the harness prints the predicted panel count, Closed texture and progress:
+
+| Capture | Predicted and observed progress | Active | Visible result |
+|---|---|---|---|
+| `runtime-final/before-close.png` | 0.000000 | 0 | No hoardings |
+| `runtime-final/closing-one-second.png` | 0.200000 | 1 | Staggered panels rising |
+| `runtime-final/after-close.png` | 1.000000 | 1 | Closed panels around Belly Bounce |
+| `runtime-final/after-reopen.png` | 0.000000 | 0 | Panels retracted and hidden |
+
+Paired numeric evidence: `runtime-final-summary.log` and `runtime-final/run.log`. Closed and reopened
+endpoints use 310 and 210 total debug steps, including the update that clears movement/visibility.
+Earlier unobscured endpoint captures are in `runtime-visible/`; the earlier `runtime-instant/` captures
+were obscured by the window and are not screen proof.
+
+`RideHoardingTests` adds twelve regressions: parser, exact edge count, sparse second-nearest fitting,
+singleton asymmetry, timing/reversal/endpoint cleanup, warning preservation, height/UV staggering,
+saved flags/progress and object-slot pairing, real close/open wiring, terrain quarter turns and the
+full shipped outline corpus. Ten separately restored bugs all fail these tests: close/open unwired,
+missing geometry, nearest instead of second-nearest, overwritten warning texture, frozen progress,
+lost saved progress, missing terrain half-factor, missing height stagger and missing UV movement.
+The source is restored and the tests pass again (`mutation-summary.log`, `mutations.json`,
+`restored-test.log`). The exact-commit full-suite gate is recorded in `exact-result.json`.
+
+Independent applied review: `alex_verify` (requested Astra/high) checked relayed source and fresh raw
+Ghidra evidence, confirmed the corner, ordering, terrain, flag and lifetime logic, and found no blocking
+defect. Its direct filesystem sandbox was unavailable; it did not independently execute the tests or
+runtime. The finite-source corpus assertion it requested is included.
+
+Not confirmed on screen: non-Closed warning textures, a nonzero saved hoarding restored in the game,
+and slope/quarter-turn edge cases. Those state/geometry paths are tested. Equality to the original's
+x87 output at every near-tie is unproven. Q92 (ride-window door) remains separate and unbuilt.

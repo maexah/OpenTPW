@@ -4055,6 +4055,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   0/8/16/24), progress rates +0.2/−0.3 per engine-clock second, staggered vertex/UV animation and guarded
   warning selection. `docs/exe/ride-hoardings.md`. No runtime screenshot/census, implementation or mutation
   claimed; Q91b carries the build and confirmation.
+- [x] **Q91b. Build the closed/open ride hoardings.** Q91's decode is in `docs/exe/ride-hoardings.md`.
+  Parse `Info.Hoarding`, build the original outline's generated panels with its terrain/corner fitting,
+  four MiscMesh textures, staggered height/UV animation, warning-selection guards and per-instance lifecycle.
+  Follow the original block parser and complete corner algorithm when porting; no bounding-box substitute.
+  Restore saved progress/flags. Use `Time.Delta` for movement; keep engine-clock pause/rate behavior explicit.
+  Remove `CLOSED_RIDE_MODEL_CHANGE` and `OPENED_RIDE_MODEL_CHANGE` only when built. Confirm: photograph
+  Belly Bounce before and after the park door closes and after reopening, paired with a predicted census/log
+  of panel count, texture and progress. Add regression tests; restore the bug and prove the new tests fail.
+  Done 2026-10-03 on `alexah/265-q91b-ride-hoardings`: twelve panels, Closed, progress 0/0.2/1/0
+  photographed and predicted. Twelve tests, ten restored bugs fail; full suite 1711 passes.
+  Details, deviations and screen-proof limits: `docs/exe/ride-hoardings.md`.
 
 ## B. Docs and comments
 

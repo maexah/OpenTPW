@@ -4,6 +4,8 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 ## Works
 
+- **Closing raises ride hoardings; reopening retracts them** (Q91b). Belly Bounce has twelve outline panels, with staggered height/UV movement. The running game matches predicted progress 0 → 0.2 → 1 → 0; four textures, warning guards and saved state are built.
+
 - **The park door posts advisor messages** (Q90b): stock score 20 remains silent below the strict >25 threshold; a private score-26 fixture confirms both opening and closing lines in rotation. Message priority, duplicate caps and per-message cooldowns are built. Saved advisor histories remain counted.
 
 - **The entry-price door moves the gate, which reopens after closing** (Q89b). Closing waits for guests on the decoded cell types; every 30 world sweeps it retries, also waiting for staff outside. Fresh closed gates stay in normal dispatch; valid saved scripts keep their state.
@@ -27,7 +29,7 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 - No screen sets the training budgets or buys a loan; six months in the red is counted, not an end (Q198b). No litter, day ending, saving a park back, video (the player is decoded: `docs/exe/boot.md`), networking. Research is inert. In a park the advisor says the gadget's opening line and no more (`docs/PLAYER-GAPS.md` gap 4).
 - Eight of the nine per-object windows are unbuilt. Setting patrol areas is deferred by Alexah; staff keep the save's. A walking member of staff is not entered in the cells they cross; only hiring and putting down place one.
 - Unbuilt: Q102-Q105, four queue-turn arms, spot animation (Q98), Q112's walk to path.
-- The park's door lacks shut ride hoardings (Q91b); the ride window's door is no button (Q92), and a bought queued thing starts open (Q93).
+- The ride window's door is no button (Q92), and a bought queued thing starts open (Q93).
 - Nothing shows what the hand holds (`CARRY_PREVIEW_MARKERS`, `STAFF_CARRY_PREVIEW`); any cell takes a candidate (Q40).
 - The fly-in's fade to black is not drawn (Q61). Keys: Escape over the player slots opens the game menu (Q64) and closes no park screen (Q119); Ctrl+H acts on the press, F8 is not built (Q65); modifiers count as the frame ends (Q120). A disabled button still takes the pointer (Q66); presses the original stops reach the park (Q113, Q115).
 - The happiness gauge draws two copies of its bar, split down the middle (`docs/PLAYER-GAPS.md` gap 5; unmeasured). Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43). A voice is not clamped to 16 bits as the original's is, only the mix (`docs/exe/audio.md`).
@@ -37,9 +39,11 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q91b**, build the decoded closed/open ride hoardings (`docs/exe/ride-hoardings.md`). Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q92**, build the ride-window door. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
+
+- Q91b non-Closed warning textures, nonzero saved hoarding restoration and slope/quarter-turn edge cases: tested only. Exact x87 agreement at every nearly equal corner distance is unproven.
 
 - Q90b saved advisor histories are unbuilt; full-slot eviction, exact cooldown boundary, rotation wrap and zero playback-return consumption are tested only; actual busy/disabled speaker guards are code-reviewed only.
 
@@ -60,12 +64,14 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 | | | measured |
 |---|---|---|
 | Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q87 |
-| Tests | **1699**, 0 fail, 0 skip with the game | 2026-10-03, Q90b |
+| Tests | **1711**, 0 fail, 0 skip with the game | 2026-10-03, Q91b |
 | Tests without the game | **647** ran, **928** skipped, of 1575 | 2026-10-01, after Q87 |
 | Build warnings | 121 | 2026-10-03, archive exact reads |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-10-03 (Q91b).** Closed/open hoardings implemented and confirmed with real-pointer screenshots plus predicted 12-panel/Closed/progress census, including the 0.2 midpoint. Twelve regressions, ten mutations fail; restored full suite passes 1711. Corpus: 274 items, 129 outlines; all 161 shipped saved model progress values finite and within 0–1. Independent applied review found no blocking defect; its source access required relayed evidence. Original saves and Ghidra project preserved. `docs/exe/ride-hoardings.md`.
 
 **2026-10-03 (Q91).** Decode only: closing raises a separate generated hoarding mesh; opening retracts it. Four texture frames and guarded warning selection, +0.2/−0.3 progress rates, staggered vertex/UV movement and delayed endpoint cleanup decoded in private Ghidra. `docs/exe/ride-hoardings.md`. Not built or confirmed on screen; Q91b carries runtime proof and mutation.
 

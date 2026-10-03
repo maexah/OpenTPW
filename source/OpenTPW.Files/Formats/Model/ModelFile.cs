@@ -202,6 +202,8 @@ public partial class ModelFile : BaseFormat
 		public uint VertexOrderLen { get; set; }
 		public uint VertexOrderOffset { get; set; }
 		public Vertex[] Vertices { get; set; }
+		/// <summary>Unreordered source positions, used by the hoarding corner fitter.</summary>
+		public Vector3[] SourceVertices { get; set; } = [];
 		public uint[] Indices { get; set; }
 		public Vector2[] TexCoords { get; set; }
 		/// <summary>This mesh's own transform, relative to its parent node.</summary>
@@ -563,6 +565,8 @@ public partial class ModelFile : BaseFormat
 					vertices.AddRange( points );
 					c -= (uint)elem;
 				}
+
+				mesh.SourceVertices = vertices.Take( (int)mesh.VertexCount ).ToArray();
 
 				// Read vertex order
 				reader.BaseStream.Seek( mesh.VertexOrderOffset, SeekOrigin.Begin );

@@ -32,6 +32,9 @@ public sealed class ParkObjects : Entity
 	public string ThemeName { get; }
 
 	private readonly List<LobbyModel> _models = [];
+	private readonly Dictionary<int, ParkRideHoarding> _hoardings = [];
+	private readonly Dictionary<int, SavedThing> _savedHoardings = [];
+	internal IEnumerable<string> HoardingCensus() => _hoardings.OrderBy( p => p.Key ).Select( p => p.Value.Census );
 
 	/// <summary>
 	/// What one placed thing is made of: the model standing in the park, the twelve animation roles its
@@ -211,6 +214,14 @@ public sealed class ParkObjects : Entity
 		if ( world == null || catalogue == null )
 			return;
 
+		if ( world is ParkWorld savedWorld )
+		{
+			var states = savedWorld.ThingStates( id => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1 );
+			if ( states.Problem == null )
+				foreach ( var saved in states.Things ) _savedHoardings[saved.Slot + 1] = saved;
+			else Log.Warning( $"Hoarding restore: {states.Problem}" );
+		}
+
 		var wanted = world.Objects.Where( item => item.IsPlaced ).ToArray();
 
 		if ( wanted.Length == 0 )
@@ -221,6 +232,8 @@ public sealed class ParkObjects : Entity
 
 		foreach ( var item in wanted )
 			Place( item, catalogue );
+
+		_savedHoardings.Clear();
 
 		Log.Info( $"{themeName}: {Placed} of {wanted.Length} objects stand in the park" );
 	}
@@ -259,6 +272,7 @@ public sealed class ParkObjects : Entity
 		if ( !_standing.TryGetValue( thingId, out var standing ) )
 			return false;
 
+		if ( _hoardings.Remove( thingId, out var hoarding ) ) hoarding.Delete();
 		_standing.Remove( thingId );
 		_models.Remove( standing.Model );
 
@@ -312,6 +326,21 @@ public sealed class ParkObjects : Entity
 
 			_models.Add( model );
 			_standing[placed.ThingId] = new Standing( model, animations, placed.CatalogueId );
+
+			if ( item.Hoarding is { } outline && model.Source.Nodes.Count > 1 && model.Source.Meshes.Count > 0
+				&& ParkState.Current is { } state )
+			{
+				var mesh = model.Source.Meshes[0];
+				var source = mesh.SourceVertices.Select( v => System.Numerics.Vector3.Transform( v.GetSystemVector3(), mesh.WorldTransform ) ).ToArray();
+				var panels = RideHoardingGeometry.Build( outline, source );
+				if ( panels.Length > 0 )
+				{
+					var progress = state.BindHoarding( placed.ThingId );
+					if ( _savedHoardings.TryGetValue( placed.MeshInstance, out var saved ) && saved.CatalogueId == placed.CatalogueId )
+						progress.Restore( saved.HoardingFlags, saved.HoardingProgress );
+					_hoardings[placed.ThingId] = new ParkRideHoarding( ThemeName, placed.ThingId, panels, progress, origin, turn );
+				}
+			}
 
 			// Where it actually ended up, against where the save says it belongs. The two are worked out
 			// from completely separate things - this from the item's own footprint carried through its
@@ -718,6 +747,9 @@ public sealed class ParkObjects : Entity
 	/// </summary>
 	protected override void OnDelete()
 	{
+		foreach ( var hoarding in _hoardings.Values ) hoarding.Delete();
+		_hoardings.Clear();
+		_savedHoardings.Clear();
 		if ( Current == this )
 			Current = null;
 

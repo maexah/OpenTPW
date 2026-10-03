@@ -120,7 +120,7 @@ The offer gate `FUN_004dd920` refuses 1 and 4 by number, 2 through `mCanLoad`, a
 | `FUN_004e0e60` | SetState | Writes `mState` and runs the side effects. | Disassembly |
 | `FUN_004e0a70` | — | Four lines: `script[VAR_LETMEON] != mFirstInQ`, the gate in front of completion. | Disassembly |
 | `FUN_004e0ac0` | — | Tells the object to forget a person. | Disassembly |
-| `FUN_00454550` | — | Raises generated ride hoardings; kinds 1/2/4/8 select texture-frame byte offsets 0/8/16/24. Model `+0xbc` is signed progress rate. Full guards, texture names and vertex/UV animation: [Ride hoardings](ride-hoardings.md). **Eleven callers**: `FUN_004e14e0` with 2 (broken, `0x004e1542`) or 4 (condemned, `0x004e1584`); every close with 1 - SetState 1, 2 and 4 (`0x004e0f20`, `0x004e101f`, `0x004e1123`), `FUN_004df300` (`0x004df37e`), `FUN_004df150` (`0x004df265`), `FUN_004dfe30` (`0x004dfeed`), the repair `FUN_004df8f0` (`0x004dfd65`), the constructor (`0x004db78e`); `FUN_004e0050` with 8 (`0x004e0098`). `FUN_004547c0` is its counterpart on every open (`+0xbc` = -0.3f, seven callers: `0x004de462`, `0x004df413`, `0x004dfc11`, `0x004dfc95`, `0x004e0017`, `0x004e010b`, `0x004e0191`). Decoded Q91; not yet implemented or confirmed on screen. | E8 scan, disassembly |
+| `FUN_00454550` | — | Raises generated ride hoardings; kinds 1/2/4/8 select texture-frame byte offsets 0/8/16/24. Model `+0xbc` is signed progress rate. Full guards, texture names and vertex/UV animation: [Ride hoardings](ride-hoardings.md). **Eleven callers**: `FUN_004e14e0` with 2 (broken, `0x004e1542`) or 4 (condemned, `0x004e1584`); every close with 1 - SetState 1, 2 and 4 (`0x004e0f20`, `0x004e101f`, `0x004e1123`), `FUN_004df300` (`0x004df37e`), `FUN_004df150` (`0x004df265`), `FUN_004dfe30` (`0x004dfeed`), the repair `FUN_004df8f0` (`0x004dfd65`), the constructor (`0x004db78e`); `FUN_004e0050` with 8 (`0x004e0098`). `FUN_004547c0` is its counterpart on every open (`+0xbc` = -0.3f, seven callers: `0x004de462`, `0x004df413`, `0x004dfc11`, `0x004dfc95`, `0x004e0017`, `0x004e010b`, `0x004e0191`). Decoded Q91; built and confirmed on screen in Q91b (`ride-hoardings.md`). | E8 scan, disassembly |
 | `+0x19c` | `mState` | The object's state byte. | Disassembly |
 | `+0x33` bit 0 | RunsContinuously | Descriptor `+0x48`, set by `FUN_004db090`. It lets a ride invite while running. | Disassembly |
 
@@ -731,9 +731,8 @@ touch it.
 **OpenTPW builds** the door's two arms (`ParkState.SetParkClosed` → `ParkPeople.DoorMoved`), the close, the open,
 the guard and `FUN_004de4a0` (`ParkRideOperation.Close`, `Open`, `MayOpen`, `BackOfQueueConnected`), the completion,
 the reopen, the queue-path bit on a bought thing (`ParkBuilding.FlagsFor`) and the ride window's door switch following
-`mCanLoad`. **Counted:** the gate's command (`PARK_DOOR_COMMANDS_THE_GATE`), the `0x13` message
-(`PARK_CLOSED_ADVISOR_MESSAGE`, `PARK_OPENED_ADVISOR_MESSAGE`), the model changes (`CLOSED_RIDE_MODEL_CHANGE`,
-`OPENED_RIDE_MODEL_CHANGE`), the coaster's closed circuit, which the guard lets through where the choice refuses
+`mCanLoad`. The generated closed/open hoardings are built and confirmed in Q91b (`ride-hoardings.md`). **Counted:** the gate's command (`PARK_DOOR_COMMANDS_THE_GATE`), the `0x13` message
+(`PARK_CLOSED_ADVISOR_MESSAGE`, `PARK_OPENED_ADVISOR_MESSAGE`), the coaster's closed circuit, which the guard lets through where the choice refuses
 without it (`OPEN_GUARD_COASTER_TRACK_RECORD`; `ParkRideChoice.CircuitClosed`), the constructor's close (`BOUGHT_QUEUED_THING_STARTS_CLOSED`), the ride window's
 status box and greyed door (`RIDE_WINDOW_CLOSED_STATUS`, `RIDE_WINDOW_DOOR_GREYED`) and the all-items row colour
 (`ALL_ITEMS_CLOSED_ROW_COLOUR`). **Not built:** the ride window's door as a button

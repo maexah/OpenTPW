@@ -112,7 +112,8 @@ public sealed class ParkItemCatalogue
 
 		// A bumper ride's arena: the placer's adjust for each turn, north, east, south and west, and the meshes its
 		// cars are made of - ItemDescriptionFile.BumperAdjust and SupplementalMeshes. See ParkBumperCars.
-		IReadOnlyList<(int X, int Y)>? BumperAdjusts = null, IReadOnlyList<string?>? SupplementalMeshes = null )
+		IReadOnlyList<(int X, int Y)>? BumperAdjusts = null, IReadOnlyList<string?>? SupplementalMeshes = null,
+		ItemHoarding? Hoarding = null )
 	{
 		/// <summary>The placer's arena adjust for a turn - <see cref="ItemDescriptionFile.BumperAdjust"/>.</summary>
 		public (int X, int Y) BumperAdjustAt( int angle ) => BumperAdjusts is { Count: 4 } adjusts
@@ -325,7 +326,7 @@ public sealed class ParkItemCatalogue
 					description.DoHeadProcessing, description.ResearchCost,
 					[description.BumperAdjust( 0 ), description.BumperAdjust( 90 ), description.BumperAdjust( 180 ),
 						description.BumperAdjust( 270 )],
-					description.SupplementalMeshes );
+					description.SupplementalMeshes, description.Hoarding );
 
 			return true;
 		}

@@ -1230,7 +1230,7 @@ public sealed class ParkRideOperation
 	/// (<c>docs/exe/ride-operation.md</c>, "The closed ride").
 	/// </summary>
 	/// <remarks>
-	/// Its last call, <c>FUN_00454550( model, 1 )</c>, changes the ride's model, and nothing here draws it.
+	/// Its last call, <c>FUN_00454550( model, 1 )</c>, raises the separate hoarding panels.
 	/// </remarks>
 	public void Close( RideScript? script, int rideId )
 	{
@@ -1243,7 +1243,7 @@ public sealed class ParkRideOperation
 		_state.NominateForLoading( rideId, 0 );
 		script?.Set( ClosedVariable, 1 );
 
-		Unimplemented.Report( "CLOSED_RIDE_MODEL_CHANGE" );
+		_state.HoardingFor( rideId )?.Close();
 	}
 
 	/// <summary>
@@ -1254,7 +1254,7 @@ public sealed class ParkRideOperation
 	/// <b>The original asks <see cref="MayOpen"/> again first and opens whatever it answers</b>, logging
 	/// "Opening non-openable ride!" five times when it refuses (<c>0x004df3ea</c>). Every caller here has just
 	/// asked it, so the second asking is left out. <c>FUN_004547c0( model )</c>, the model's side of opening,
-	/// is not drawn.
+	/// retracts the hoarding panels.
 	/// </remarks>
 	public void Open( RideScript? script, int rideId )
 	{
@@ -1264,7 +1264,7 @@ public sealed class ParkRideOperation
 		Log.Info( $"Object {rideId}: opened" );
 
 		_state.ReplaceObject( ride with { CanLoad = 1 } );
-		Unimplemented.Report( "OPENED_RIDE_MODEL_CHANGE" );
+		_state.HoardingFor( rideId )?.Open();
 		script?.Set( ClosedVariable, 0 );
 
 		if ( _state.TryObject( rideId, out var opened ) )

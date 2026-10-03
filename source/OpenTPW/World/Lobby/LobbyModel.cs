@@ -29,6 +29,7 @@ public sealed class LobbyModel
 
 	// The file, for TryGetDrawnNode.
 	private readonly ModelFile _file;
+	internal ModelFile Source => _file;
 
 	/// <summary>The origin the model was loaded at - see <see cref="TryGetNode"/>.</summary>
 	private readonly Vector3 _origin;

@@ -1730,6 +1730,10 @@ public static class DebugConsole
 
 			// What is standing in the park NOW, which is the save's list plus what has been built and
 			// minus what has been sold - the census that says whether buying actually changed anything.
+			case "hoardings":
+				foreach ( var hoardingLine in ParkObjects.Current?.HoardingCensus() ?? [] ) Reply( hoardingLine );
+				break;
+
 			case "objects":
 				var standing = ParkBuilding.Census().ToArray();
 

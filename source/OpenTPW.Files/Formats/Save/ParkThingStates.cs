@@ -39,10 +39,11 @@ public readonly record struct SavedChannel( int Role, int Entry, int Flags, floa
 /// <summary>
 /// One thing as a park save left its MODEL: the animation channels it was running.
 /// </summary>
-/// <param name="CatalogueId">The item this thing is, which is how a record is matched to a thing.</param>
+/// <param name="CatalogueId">The item definition this model uses; Slot identifies the saved model instance.</param>
 /// <param name="Slot">Where it sat in the module, kept so a caller can say which record it took.</param>
 /// <param name="Channels">Its channels, in order.</param>
-public readonly record struct SavedThing( int CatalogueId, int Slot, SavedChannel[] Channels );
+public readonly record struct SavedThing( int CatalogueId, int Slot, SavedChannel[] Channels,
+	uint HoardingFlags = 0, float HoardingProgress = 0f );
 
 /// <summary>
 /// The <c>RSYS</c> module of a park save: what every thing's model was doing when it was saved.
@@ -270,7 +271,9 @@ public sealed class ParkThingStates
 		if ( _at > _data.Length )
 			throw new InvalidDataException( $"slot {slot}'s channels run past the end of the payload" );
 
-		_things.Add( new SavedThing( catalogueId, slot, channels ) );
+		// FUN_004647a0 maps the packed RSYS word to model bits 0x20..0x800 and restores +0xb8.
+		_things.Add( new SavedThing( catalogueId, slot, channels,
+			(uint)ReadInt32At( record + 0x1d ) & 0x7f, ReadSingleAt( record + 0x23 ) ) );
 	}
 
 	/// <summary>The module's start, found the same way and for the same reason as the script module's.</summary>

@@ -613,6 +613,9 @@ public sealed partial class ItemDescriptionFile
 	/// </summary>
 	public IReadOnlyList<int> CellKinds => _cellKinds ?? _category?.CellKinds ?? [];
 
+	private ItemHoarding? _hoarding;
+	public ItemHoarding? Hoarding => _hoarding ?? _category?.Hoarding;
+
 	private void Read( string text )
 	{
 		var lines = text.Split( '\n' );
@@ -682,6 +685,10 @@ public sealed partial class ItemDescriptionFile
 				case "Info.EngineFootprintHeightOverride":
 					if ( int.TryParse( ValueOf( line ), out var overrideDepth ) && overrideDepth > 0 )
 						FootprintDepth = overrideDepth;
+					break;
+
+				case "Info.Hoarding":
+					_hoarding = ItemHoarding.Read( lines, i );
 					break;
 
 				case "Info.Shape":

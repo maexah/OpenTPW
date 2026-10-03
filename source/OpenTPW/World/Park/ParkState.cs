@@ -142,6 +142,10 @@ public sealed class ParkState
 	public int ChangedCells => _records.Count;
 
 	private readonly List<ParkWorld.CatalogueObject> _objects = [];
+	private readonly Dictionary<int, RideHoardingState> _hoardings = [];
+	internal RideHoardingState? HoardingFor( int thingId ) => _hoardings.GetValueOrDefault( thingId );
+	internal RideHoardingState BindHoarding( int thingId ) => _hoardings.TryGetValue( thingId, out var known )
+		? known : _hoardings[thingId] = new RideHoardingState();
 
 	/// <summary>
 	/// Everything standing in the park <i>now</i>, which is the save's list plus whatever has been
@@ -272,6 +276,7 @@ public sealed class ParkState
 			return false;
 
 		_objects.RemoveAt( at );
+		_hoardings.Remove( thingId );
 		_rings.Remove( thingId );
 		Unlink( thingId );
 
