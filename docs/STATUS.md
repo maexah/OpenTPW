@@ -4,6 +4,8 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 ## Works
 
+- **The park door posts advisor messages** (Q90b): stock score 20 remains silent below the strict >25 threshold; a private score-26 fixture confirms both opening and closing lines in rotation. Message priority, duplicate caps and per-message cooldowns are built. Saved advisor histories remain counted.
+
 - **The entry-price door moves the gate, which reopens after closing** (Q89b). Closing waits for guests on the decoded cell types; every 30 world sweeps it retries, also waiting for staff outside. Fresh closed gates stay in normal dispatch; valid saved scripts keep their state.
 
 - **Full Simulation starts an empty park without a save file**: twelve reserved things, gate 11/light 12, closed, fee 20, cash 50,000 and regular loans. The fixed paths and initial boundary come from theme data (Q197).
@@ -25,7 +27,7 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 - No screen sets the training budgets or buys a loan; six months in the red is counted, not an end (Q198b). No litter, day ending, saving a park back, video (the player is decoded: `docs/exe/boot.md`), networking. Research is inert. In a park the advisor says the gadget's opening line and no more (`docs/PLAYER-GAPS.md` gap 4).
 - Eight of the nine per-object windows are unbuilt. Setting patrol areas is deferred by Alexah; staff keep the save's. A walking member of staff is not entered in the cells they cross; only hiring and putting down place one.
 - Unbuilt: Q102-Q105, four queue-turn arms, spot animation (Q98), Q112's walk to path.
-- The park's door lacks advisor message routing (Q90b; Q90 decoded stock score 20 below the speech threshold 25) or shut ride model change (Q91); the ride window's door is no button (Q92), and a bought queued thing starts open (Q93).
+- The park's door lacks shut ride model change (Q91); the ride window's door is no button (Q92), and a bought queued thing starts open (Q93).
 - Nothing shows what the hand holds (`CARRY_PREVIEW_MARKERS`, `STAFF_CARRY_PREVIEW`); any cell takes a candidate (Q40).
 - The fly-in's fade to black is not drawn (Q61). Keys: Escape over the player slots opens the game menu (Q64) and closes no park screen (Q119); Ctrl+H acts on the press, F8 is not built (Q65); modifiers count as the frame ends (Q120). A disabled button still takes the pointer (Q66); presses the original stops reach the park (Q113, Q115).
 - The happiness gauge draws two copies of its bar, split down the middle (`docs/PLAYER-GAPS.md` gap 5; unmeasured). Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43). A voice is not clamped to 16 bits as the original's is, only the mix (`docs/exe/audio.md`).
@@ -35,9 +37,11 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q90b**, build the decoded park-door advisor message path, preserving stock silence and confirming audible lines with a labelled score-26 fixture. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q91**, decode the closed/open ride model change; decode only before implementation. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
+
+- Q90b saved advisor histories are unbuilt; full-slot eviction, exact cooldown boundary, rotation wrap and zero playback-return consumption are tested only; actual busy/disabled speaker guards are code-reviewed only.
 
 - Q89b missing saved state and all outside staff kinds: tested only; the running staff guard was photographed with the mechanic.
 
@@ -56,12 +60,14 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 | | | measured |
 |---|---|---|
 | Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q87 |
-| Tests | **1679**, 0 fail, 0 skip with the game | 2026-10-03, Q89b |
+| Tests | **1699**, 0 fail, 0 skip with the game | 2026-10-03, Q90b |
 | Tests without the game | **647** ran, **928** skipped, of 1575 | 2026-10-01, after Q87 |
 | Build warnings | 121 | 2026-10-03, archive exact reads |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-10-03 (Q90b).** Park-door routing implemented and confirmed by real-pointer screenshots and predicted message/voice logs: stock 0 attempts, two pending; private score-26 responses/samples 308/342, 310/344, 309/343, 311/345. All 14 mutations fail, 1699 tests pass. Independent review corrected response duration and catch-up timing; original data/saves unchanged. `docs/exe/advisor-park.md`.
 
 **2026-10-03 (Q90).** Decode only: door events 3/4 map to messages 128/129, responses 308–311 and samples 342–345. Shipped scores 20 fail the tick's strict >25 gate; low-score slots remain pending. Private Ghidra identity, fresh metadata/schema reconstruction and independent review; `docs/exe/advisor-park.md`. No implementation, regression mutation or runtime screenshot/log claimed; Q90b is next.
 

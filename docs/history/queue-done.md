@@ -4036,6 +4036,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   below the tick's strict **>25** threshold: stock silence is expected, though OpenTPW still lacks the posting/gate
   path. Low-score slots remain occupied in the tick. Fresh Ghidra initializer/schema reconstruction and independent
   review; `docs/exe/advisor-park.md`, Q90. No implementation or runtime confirmation this session; Q90b follows.
+- [x] **Q90b. Build the decoded park-door advisor message path, preserving stock silence.** Q90 decoded
+  `docs/exe/advisor-park.md`: door events 3/4 always post messages `0x80`/`0x81`, including unchanged states.
+  Derive scores and thresholds from data; one pending instance per message, category-0 cooldown, priority queue,
+  and two-line histories. Remove `PARK_OPENED_ADVISOR_MESSAGE` / `PARK_CLOSED_ADVISOR_MESSAGE` only when built.
+  Confirm: predict **0** spoken door announcements at stock score 20 / threshold 25, then press the real door and
+  capture a screenshot AND message/score/threshold log. In a labelled private configuration fixture with only
+  both scores raised to 26 before posting, predict and confirm the opening/closing response/sample sequence (342/343, 344/345)
+  on screen and in the log. Stock silence is fidelity, not a reason to force speech. Add regression for routing,
+  repeated states, duplicate cap, strict 25 boundary, cooldown, priority and rotation; restore defects and require
+  the new tests to fail. Build/test the exact commit alone in a throwaway worktree.
+  **Confirmed (2026-10-03):** real door screenshots plus logs: stock **0** attempts / **2** pending; private score-26
+  response/sample sequence **308/342, 310/344, 309/343, 311/345**. All **14** restored defects fail; **1699** tests pass,
+  no skips. Independent applied review passed after timing corrections. `docs/exe/advisor-park.md`; branch
+  `alexah/263-q90b-advisor-door`. Saved histories remain counted; original data and saves unchanged.
 
 ## B. Docs and comments
 

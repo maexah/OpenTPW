@@ -1602,6 +1602,10 @@ public sealed class ParkPeople : Entity
 
 			// The park's own clock goes one up before anything in the sweep runs (FUN_00516380, 0x00516394).
 			State.AdvanceGameTick();
+			// Every catch-up sweep sees the same response clock, as FUN_00402d80 does.
+			// GameClock.Now keeps the engine's existing clamped-frame timing deviation.
+			State.AdvisorMessages?.Tick( State.GameTick, (long)(GameClock.Now * 1000),
+				(response, sample) => Advisor.Current?.PlayParkResponse( response, sample ) ?? 0 );
 
 			// <b>The number handed on is the THING tick, not the game tick, and that is not cosmetic.</b>
 			// Peep.Tick spreads guests across four slots by (id & 3) == (tick & 3); every 31 ms game tick that

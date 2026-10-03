@@ -659,7 +659,7 @@ public sealed class ParkState
 	/// <para>
 	/// The people command the gate script - opening writes 1, closing writes 0
 	/// only when nobody is in the park and the gate reads open (<c>0x0051a0e8</c>..<c>0x0051a161</c>) - and
-	/// each still counts a type-<c>0x13</c> message, 3 open or 4 closed, which the advisor answers with its own
+	/// each posts a type-<c>0x13</c> message, 3 open or 4 closed, which the advisor answers with its own
 	/// message <c>0x80</c> or <c>0x81</c>; the message is posted whether or not anything changed.
 	/// </para>
 	/// </remarks>
@@ -672,14 +672,17 @@ public sealed class ParkState
 			DoorMoved?.Invoke( closed );
 		}
 
-		Unimplemented.Report( closed ? "PARK_CLOSED_ADVISOR_MESSAGE" : "PARK_OPENED_ADVISOR_MESSAGE" );
+		AdvisorMessages?.PostDoor( closed, GameTick );
 	}
 
 	/// <summary>
 	/// Who closes and opens the rides when the park's door moves - the park's people, which set it when they
-	/// are made (<c>ParkPeople.DoorMoved</c>). With nobody set, <see cref="SetParkClosed"/> moves the flag alone.
+	/// are made (<c>ParkPeople.DoorMoved</c>). With nobody set, the flag and advisor still receive the request.
 	/// </summary>
 	internal Action<bool>? DoorMoved { get; set; }
+
+	/// <summary>The park's posted advisor messages, installed during level setup.</summary>
+	internal ParkAdvisorMessages? AdvisorMessages { get; set; }
 
 	/// <summary>
 	/// Takes an admission fee - the bank's <c>FUN_004d0600</c>: onto the balance and <see cref="ProfitThisYear"/>,

@@ -275,7 +275,12 @@ public class Level
 
 		var park = CreatePark( ThemeName, Balance, catalogue );
 		Park = park;
-		ParkState = new ParkState( park );
+		ParkState = new ParkState( park )
+		{
+			AdvisorMessages = new ParkAdvisorMessages( new SettingsFile( "Advisor/Advisor.sam" ) )
+		};
+		// Saved advisor histories are not restored yet; fresh histories follow FUN_00599e70.
+		if ( park?.Save != null ) Unimplemented.Report( "PARK_ADVISOR_SAVED_HISTORY" );
 		load.Mark( "park state" );
 
 		Research = park == null || catalogue == null ? null : new ParkResearch( park.ObjectControlRecords, catalogue );
@@ -359,7 +364,7 @@ public class Level
 		// while he talks, and the teardown runs in the order things were made, so a park's sound and its
 		// weather end before he does. Advisor_Update runs from a park's loop (0x0054f9f9) exactly as it
 		// runs from the lobby's (0x0054e6df) - he is the same speaker in both scenes, and what differs is
-		// who hands him lines. A park's are in ParkFrontEnd, through UI.ParkLines.
+		// who hands him lines: UI.ParkLines for its screens, ParkAdvisorMessages for its door.
 		_ = new Advisor();
 		load.Mark( "advisor" );
 

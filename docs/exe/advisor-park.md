@@ -23,8 +23,8 @@ Concrete message-to-response pairs seen in the dispatch: message `8` → respons
 
 **The shipped settings suppress both announcements.** The door posts advisor messages, but their score is
 **20** and the tick requires **strictly more than 25**. Silence alone therefore does not prove a missing
-feature. OpenTPW still lacks the message/gate path (`ParkState.SetParkClosed` counts it); Q90b builds that
-path while preserving the decoded stock silence. No game was launched for this decode and no speech was
+feature. Q90b implements this message/gate path while preserving the decoded stock silence (below).
+No game was launched for Q90's decode and no speech was
 confirmed on screen. The following runtime expectations are predictions from executable instructions and data.
 
 ### Door event, message, response and sample are different numbers
@@ -116,7 +116,7 @@ with a screenshot and message/score/threshold log. To exercise the audible branc
 private configuration fixture raising only both door scores to **26** before posting, leaving the threshold at 25.
 Read or explicitly reset the two histories before predicting the response/sample sequence: event 10 in
 `FUN_0059ae20` sets every rotation index to −1, so each message then selects line 0, then 1, then 0.
-A saved history may begin elsewhere; fresh-constructor initialization was not traced here. Confirm both the actual door action and
+A saved history may begin elsewhere; Q90b traces the fresh constructor below. Confirm both the actual door action and
 advisor on screen with its matching log. Cover alternating lines, same-state posting, duplicate suppression,
 the strict 25 boundary, per-message cooldown and queue priority in regression tests; restore the missing
 route and threshold defects separately and require the new tests to fail. Never hard-code an unconditional
@@ -345,3 +345,66 @@ The ids seen so far: `0xbc` when buy opens, `0xbd` when hire opens, `0xc6` and `
 | The u16 at message `+0x00` | Unknown — it is written by `FUN_0059c0a0` but is not the gating id |
 | `Welcome` (section 2) | Looks like a **stub**: group 2 holds four rows, all `sample=1, anim=16`, and sample 1 is an *OpenPark* line. The park welcome probably has no audio of its own |
 | Responses 399-402 | All carry sample 1, an `OpenPark` line — the same stub shape |
+
+## Q90b — the posted door path (2026-10-03)
+
+`ParkState.SetParkClosed` posts on every request, including an unchanged state. `ParkAdvisorMessages`
+reads the two scores, strict consideration threshold and category-0 cooldown/say-once setting from
+`Advisor/Advisor.sam`. Its eight slots retain low scores, cap each door message at one pending copy,
+replace only a strictly lower minimum when full, and select the first highest slot. Opening does not
+withdraw a pending close, or vice versa. Each message rotates its own two responses only after the
+helper succeeds; a busy/disabled speaker returning zero still consumes the message and records history.
+The existing speaker owns the model, voice, gestures and pause. No arbitrary sample is queued at the door.
+
+Fresh Ghidra follow-up in the same private, identity-checked Q90 project resolves two implementation details:
+
+- `FUN_00599e70` clears eight occupied flags and all 351 histories: last-said tick 0, rotation −1,
+  said flag 0, slap count 0. The implementation starts the door histories this way.
+- `FUN_005989c0` fills the clip-length array through indexed writes starting at `0x00f796c8`, then zeros
+  **clip 14 only** (`0x00f796fc`). `0x00f79700` holds **clip 15's duration**, despite being zero in the image.
+  `FUN_00598b20` includes it in the gesture-chain sum, and `Advisor_SayResponse` adds it **again** at
+  `0x005994ac`, plus 1,000 ms. The scheduler adds another 1,000 ms. The park speaker preserves both additions.
+- `FUN_0059c610` tests metadata category 1, so the global class gate does not suppress the category-0 doors.
+
+The per-message cooldown reads the incremented `ParkState.GameTick`, shifted by two. The response wait
+reads one `GameClock.Now` instant for all catch-up sweeps in a frame. That clock inherits OpenTPW's
+existing clamped-frame timing deviation; it is not the synthetic tick number multiplied by 31 ms.
+Saved advisor histories remain unbuilt and loads count `PARK_ADVISOR_SAVED_HISTORY`. Other posted park
+messages, the analyser and withdrawal/slap paths are outside Q90b; no claim of a complete park advisor.
+
+Evidence is in `~/.cache/tpw-harnesses/q90b/`; fresh executable queries remain in `q90/q90b-*.txt`.
+The private stock and score-26 game views use copied saves. Only two digits differ in the latter's
+advisor configuration: both door scores 20 → 26. The shipped configuration and original saves remain
+unchanged. Each confirmation presses the entry-price door with XTEST pointer input, after predicting
+its result; the scene and speaker use the real game paths and `SDL_AUDIODRIVER=dummy`.
+
+Predicted and observed in the running game (`runtime-stock-final/`, `runtime-score26-final/`):
+
+| Fixture / real door press | Message / score / threshold | Response / sample | Result |
+|---|---|---|---|
+| Stock open, then close | 128 / 20 / 25; 129 / 20 / 25 | none | 0 attempts, 2 pending |
+| Score-26 open | 128 / 26 / 25 | 308 / 342 | world tick 99, history 0 |
+| Score-26 close | 129 / 26 / 25 | 310 / 344 | world tick 153, history 0 |
+| Score-26 open after cooldown | 128 / 26 / 25 | 309 / 343 | world tick 711, history 1 |
+| Score-26 close after cooldown | 129 / 26 / 25 | 311 / 345 | world tick 757, history 1 |
+
+The six PNGs show the real door states; all four score-26 frames show the advisor. Each has its
+message/score/threshold census and the four have `voicePlaying=True` plus `sp_342/344/343/345.mp2`
+speech voices in `run.log`. No sound was sent to the desktop speakers. The stock control waits for the
+unrelated screen-help line to finish before pressing the door. `runtime-results.json` independently
+checks all four actual response durations against each logged gesture chain plus the shipped ending
+clip's 666 ms plus 1,000 ms. Example: 8,166 → 9,832 ms, then the scheduler adds 1,000 ms.
+
+Regression: 20 new cases cover stock data, actual `SetParkClosed` routing and unchanged states,
+duplicate retention, strict and configurable thresholds, the helper's inclusive recheck, shifted
+cooldown boundaries, independent rotating histories, zero speaker returns, priority/ties/eight-slot
+replacement, waits and real catch-up ticking. All 14 restored defects fail (`mutations.json`,
+`review-mutations.json`); restored full suite: **1,699 passed, 0 failed, 0 skipped** with game data.
+Independent applied-code review found the extra end-clip duration and catch-up-clock errors; both
+were corrected and their restored defects fail. `SimulationClockScope` isolates the new tick tests.
+
+Not confirmed on screen: saved advisor histories, full-slot eviction, the exact cooldown boundary,
+rotation back to line 0, and zero playback-return consumption. Those applicable to the new path are
+regression-tested; the actual busy/disabled speaker guards are code-reviewed only, and saved histories
+remain counted. The first score-26 capture was partial because
+its harness deadline was too short for the cooldown step; the completed final run replaces that proof.

@@ -550,6 +550,7 @@ public static class DebugConsole
 
 			case "advisor":
 				Reply( Advisor.Current?.State() ?? "no advisor" );
+				if ( ParkState.Current?.AdvisorMessages is { } messages ) Reply( messages.Census() );
 				break;
 
 			case "greet":

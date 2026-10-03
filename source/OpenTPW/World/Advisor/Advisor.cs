@@ -262,6 +262,7 @@ public sealed class Advisor : Entity
 		if ( _pending != 0 && _now >= _speakAt )
 		{
 			_voice = _speech.Play( _pending, SpeechVolume, respectDelay: false, bus: AudioBus.Speech );
+			Log.Info( $"Advisor: sample={_pending} voicePlaying={_voice is { Playing: true }}" );
 			_pending = 0;
 		}
 
@@ -360,6 +361,25 @@ public sealed class Advisor : Entity
 	}
 
 	internal void Add( int sample, bool flush ) => Add( sample, flush, cue: null );
+
+	/// <summary>Advisor_SayResponse's direct park path; a busy or disabled speaker returns zero.</summary>
+	internal int PlayParkResponse( int response, int sample )
+	{
+		if ( Busy || _paused || !CanSpeak )
+		{
+			Log.Info( $"Advisor: response={response} sample={sample} playback=refused" );
+			return 0;
+		}
+		_speech ??= new SoundCategory( "global", "global/Speech", "speech" );
+		if ( !_speech.IsValid ) return 0;
+		Speak( sample, cue: null );
+		// The response adds clip 15 again after the gesture chain (005994ac); docs/exe/advisor-park.md.
+		Log.Info( $"Advisor: response={response} sample={sample} playback=started" );
+		return ParkResponseDuration( (int)MathF.Round( (_gesturesEndAt - _speakAt) * 1000f ), ClipMilliseconds( EndClip ) );
+	}
+
+	internal static int ParkResponseDuration( int gesturesMilliseconds, int endClipMilliseconds )
+		=> gesturesMilliseconds + endClipMilliseconds + 1000;
 
 	/// <summary>
 	/// <see cref="Add(int, bool)"/>, with <paramref name="cue"/> called <paramref name="cueSeconds"/> after he is
