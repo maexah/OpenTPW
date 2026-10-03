@@ -892,8 +892,8 @@ public static class ParkPathBuilding
 			return false;
 		}
 
-		// The neighbours are unlinked BEFORE the cell is reset, while its own mask is still intact.
-		Unlink( state, park, x, y );
+		// Each entrance is notified after both link bits go, before the cell is reset.
+		Unlink( state, park, x, y, remeasureEntrances: true );
 
 		state.SetRecord( x, y, Cleared( ParkState.CellFor( park, x, y ) ) with { OverlapCounter = 0 } );
 
@@ -1009,7 +1009,7 @@ public static class ParkPathBuilding
 		if ( !ParkState.OnMap( x, y ) || ParkState.CellFor( park, x, y ).Type != PathType )
 			return;
 
-		Unlink( state, park, x, y );
+		Unlink( state, park, x, y, remeasureEntrances: true );
 
 		state.SetRecord( x, y, ParkState.CellFor( park, x, y ) with
 		{
@@ -1599,8 +1599,9 @@ public static class ParkPathBuilding
 
 	/// <summary>
 	/// Clears this cell's bit from every neighbour it was joined to, and retiles each of them.
+	/// Path clearing also removes each local bit and remeasures the entrance just detached.
 	/// </summary>
-	internal static void Unlink( ParkState state, IParkInitialState park, int x, int y )
+	internal static void Unlink( ParkState state, IParkInitialState park, int x, int y, bool remeasureEntrances = false )
 	{
 		var cell = ParkState.CellFor( park, x, y );
 
@@ -1611,10 +1612,25 @@ public static class ParkPathBuilding
 
 			var nb = ParkState.CellFor( park, x + acrossBy, y + downBy );
 
+			if ( remeasureEntrances )
+			{
+				var current = ParkState.CellFor( park, x, y );
+				state.SetRecord( x, y, current with { Neighbours = (byte)(current.Neighbours & ~bit) } );
+			}
+
 			state.SetRecord( x + acrossBy, y + downBy,
 				nb with { Neighbours = (byte)(nb.Neighbours & ~CellEdge.Opposite( bit )) } );
 
 			Retile( state, park, x + acrossBy, y + downBy );
+
+			// ClearCell measures each cardinal entrance after BOTH link bits go, before the next side.
+			// Forced queue-over-path clearing does too (0x0053694b; docs/exe/ride-operation.md, Q86).
+			if ( remeasureEntrances && cell.Type == PathType && nb.Type == CellEdge.RideEnd
+				&& bit is 0x01 or 0x04 or 0x10 or 0x40 && OwnerOf( state, nb ) is var owner && owner != 0 )
+			{
+				Log.Info( $"Path clear: ({x},{y}) unlinked entrance ({x + acrossBy},{y + downBy}), remeasuring thing {owner}" );
+				state.RemeasureQueue( owner );
+			}
 		}
 	}
 

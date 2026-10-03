@@ -52,11 +52,6 @@ artifacts are listed in `docs/history/README.md`.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q86. Clearing a path joined to an entrance puts its whole queue out.** Found by Q50's decode. `ClearCell`'s
-  path arm re-walks the entrance owner's queue (`0x0053694b`) after unlinking both sides, so the queue measures 0 and
-  all but the nominee and state 14 go. `ParkPathBuilding.ClearPathCell` re-walks nothing. First check it is reachable
-  in Lost Kingdom, where every path before an entrance is NOMODIFY, and from the queue stamp's forced clear
-  (`0x00534741`).
 - [ ] **Q89. The park's door does not command the gate. Decode first.** Found by Q50b's decode (`ride-operation.md`,
   "The closed ride"; `lobby.md`, "The park gate"). Opening the park writes the gate's `VAR_COMMAND` 1; closing writes 0,
   and only when `FUN_004c9130` counts nobody in the park and `VAR_STATUS` reads 1; 2 is the end-of-park routine's

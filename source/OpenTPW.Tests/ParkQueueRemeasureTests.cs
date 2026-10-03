@@ -105,6 +105,155 @@ public class ParkQueueRemeasureTests
 			"the queue measures one cell after the cut" );
 	}
 
+	/// <summary>
+	/// A path-faced entrance fixture exercises ClearCell, including the queue stamp's forced call.
+	/// The stock Belly Bounce has a protected queue node; this is deliberately a synthetic path stub.
+	/// </summary>
+	[TestMethod]
+	[DataRow( 0 )]
+	[DataRow( 1 )]
+	[DataRow( 2 )]
+	public void ClearingAnEntrancePathPutsOutTheQueueExceptNomineeAndEnteringGuest( int mode )
+	{
+		var park = Open();
+
+		try
+		{
+			var ride = park.State.Objects.Single( o => o.ThingId == BellyBounce );
+			var stub = ParkState.CellFor( park.World, 52, 22 );
+			park.State.SetRecord( 52, 22, stub with
+			{
+				Type = CellEdge.Path, Flags = mode == 0 ? (ushort)0 : (ushort)ParkPathBuilding.NoModify,
+				ParentId = 0, OverlapCounter = 0
+			} );
+			var queued = Queue( park, 4 );
+			queued[1].SetState( PeepState.EnteringRide, tick: 1, new Random( 1 ) );
+			park.State.NominateForLoading( BellyBounce, queued[2].ThingId );
+
+			Assert.IsTrue( ParkRideChoice.QueueCellsFor( park.World, ride ).Cells > 0, "linked before the clear" );
+
+			if ( mode == 0 )
+				Assert.IsTrue( ParkPathBuilding.ClearPathCell( park.State, park.World, 52, 22, stepped: true ) );
+			else if ( mode == 1 )
+				ParkPathBuilding.ForceClearPath( park.State, park.World, 52, 22 );
+			else
+				ParkPathBuilding.StampQueueCell( park.State, park.World, 52, 22, 51, 22, ride, firstOfRun: false );
+
+			Assert.AreEqual( 0, ParkRideChoice.QueueCellsFor( park.World, ride ).Cells, "entrance unlinked before measuring" );
+			AssertPutOut( park, queued[0], "the path left no queue" );
+			AssertPutOut( park, queued[3], "the walk continued past the exemptions" );
+			AssertStillQueueing( park, queued[1], "state 14 is exempt" );
+			AssertStillQueueing( park, queued[2], "the nominee is exempt" );
+			Assert.AreEqual( 2, park.State.QueueLength( BellyBounce ) );
+			Assert.AreEqual( queued[2].ThingId, park.State.NextInQueue( queued[1].ThingId ) );
+		}
+		finally
+		{
+			Close( park );
+		}
+	}
+
+	[TestMethod]
+	[DataRow( true )]
+	[DataRow( false )]
+	public void ARefusedEntrancePathClearDoesNotPutOutItsQueue( bool protectedPath )
+	{
+		var park = Open();
+
+		try
+		{
+			var stub = ParkState.CellFor( park.World, 52, 22 );
+			park.State.SetRecord( 52, 22, stub with
+			{
+				Type = CellEdge.Path, Flags = protectedPath ? (ushort)ParkPathBuilding.NoModify : (ushort)0,
+				OverlapCounter = 1
+			} );
+			var queued = Queue( park, 2 );
+
+			Assert.IsFalse( ParkPathBuilding.ClearPathCell( park.State, park.World, 52, 22, stepped: true ) );
+			foreach ( var peep in queued )
+				AssertStillQueueing( park, peep, protectedPath ? "NOMODIFY" : "overlap remains" );
+			Assert.IsFalse( park.State.QueueWasInvalidated( BellyBounce ), "no measure on a refused clear" );
+		}
+		finally
+		{
+			Close( park );
+		}
+	}
+
+	[TestMethod]
+	[DataRow( 0x01, 0, -1, CellEdge.RideEnd, true, true )]
+	[DataRow( 0x04, 1, 0, CellEdge.RideEnd, true, true )]
+	[DataRow( 0x10, 0, 1, CellEdge.RideEnd, true, true )]
+	[DataRow( 0x40, -1, 0, CellEdge.RideEnd, true, true )]
+	[DataRow( 0x02, 1, -1, CellEdge.RideEnd, true, false )]
+	[DataRow( 0x01, 0, -1, CellEdge.RideFarEnd, true, false )]
+	[DataRow( 0x01, 0, -1, CellEdge.RideEnd, false, false )]
+	public void PathClearMeasuresOnlyOwnedCardinalEntrancesAfterBothBitsGo(
+		int bit, int dx, int dy, int type, bool owned, bool expected )
+	{
+		var park = Open();
+
+		try
+		{
+			var ride = park.State.Objects.Single( o => o.ThingId == BellyBounce );
+			var path = ParkState.CellFor( park.World, 20, 20 );
+			park.State.SetRecord( 20, 20, path with { Type = CellEdge.Path, Neighbours = (byte)bit, Flags = 0 } );
+			park.State.SetRecord( 20 + dx, 20 + dy, path with
+			{
+				Type = type, Neighbours = (byte)CellEdge.Opposite( bit ),
+				ParentId = owned ? (ushort)MapStep.CellId( ride.CellX, ride.CellY ) : (ushort)0
+			} );
+			var measured = 0;
+			park.State.QueueRemeasured = id =>
+			{
+				++measured;
+				Assert.AreEqual( BellyBounce, id );
+				Assert.AreEqual( 0, ParkState.CellFor( park.World, 20, 20 ).Neighbours );
+				Assert.AreEqual( 0, ParkState.CellFor( park.World, 20 + dx, 20 + dy ).Neighbours );
+				Assert.AreEqual( CellEdge.Path, ParkState.CellFor( park.World, 20, 20 ).Type,
+					"notify before the cell reset" );
+			};
+
+			ParkPathBuilding.ForceClearPath( park.State, park.World, 20, 20 );
+
+			Assert.AreEqual( expected ? 1 : 0, measured );
+		}
+		finally
+		{
+			Close( park );
+		}
+	}
+
+	[TestMethod]
+	public void PathClearMeasuresEachEntranceBeforeUnlinkingTheNextSide()
+	{
+		var park = Open();
+
+		try
+		{
+			var ride = park.State.Objects.Single( o => o.ThingId == BellyBounce );
+			var path = ParkState.CellFor( park.World, 20, 20 );
+			park.State.SetRecord( 20, 20, path with { Type = CellEdge.Path, Neighbours = 0x11, Flags = 0 } );
+			foreach ( var dy in new[] { -1, 1 } )
+				park.State.SetRecord( 20, 20 + dy, path with
+				{
+					Type = CellEdge.RideEnd, Neighbours = dy < 0 ? (byte)0x10 : (byte)0x01,
+					ParentId = (ushort)MapStep.CellId( ride.CellX, ride.CellY )
+				} );
+			var masks = new System.Collections.Generic.List<byte>();
+			park.State.QueueRemeasured = id => masks.Add( ParkState.CellFor( park.World, 20, 20 ).Neighbours );
+
+			ParkPathBuilding.ForceClearPath( park.State, park.World, 20, 20 );
+
+			CollectionAssert.AreEqual( new byte[] { 0x10, 0 }, masks.ToArray(), "north notified before south unlinks" );
+		}
+		finally
+		{
+			Close( park );
+		}
+	}
+
 	private static void AssertStillQueueing( Park park, Peep peep, string why )
 	{
 		Assert.AreEqual( BellyBounce, peep.MajorDest, $"guest {peep.ThingId} still names the ride: {why}" );

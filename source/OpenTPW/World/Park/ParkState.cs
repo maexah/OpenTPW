@@ -1378,7 +1378,8 @@ public sealed class ParkState
 	/// is told (<i>"Telling people in queue to reevaluate"</i>), so whoever now stands past its end is put out,
 	/// and a closed ride whose queue now joins something is opened again - see
 	/// <see cref="ParkPeople.QueueRemeasured"/>, which does both. Every cell edit that can change a queue calls
-	/// this at the end of its transaction, and the sale's drain once for each run it clears.
+	/// this at the end of its transaction, the sale's drain once for each run it clears, and a path clear
+	/// after unlinking each cardinal entrance.
 	/// </summary>
 	public void RemeasureQueue( int objectId )
 	{

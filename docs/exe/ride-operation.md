@@ -517,7 +517,7 @@ object in `ECX`:
 | `0x00526118` | the queue-edit arm (`0x14`), after `FUN_00530120` detaches the back | no | `ParkPathBuilding.EditQueue` |
 | `0x00527541` | a queue run laid (mode 3) | no | `LayQueue`, `RunQueue` |
 | `0x00534858` | the stamp: path laid over a queue cell | **yes** | `LayPathRun`, `ParkBuilding.LayPathStub` |
-| `0x0053694b` | `ClearCell`'s path arm, a path joined to an entrance cleared: the link goes first, so the queue measures **0** and all but the nominee and state 14 go | **yes** | not built: `ClearPathCell` re-walks no entrance |
+| `0x0053694b` | `ClearCell`'s path arm, a path joined to an entrance cleared: the link goes first, so the queue measures **0** and all but the nominee and state 14 go | **yes** | built (Q86): `ClearPathCell` and `ForceClearPath`, after each entrance is unlinked |
 | `0x0052ffec` | `FUN_0052fe50`, the backtrack: Backspace with the queue tool (`FUN_0052fe50(0,1)` at `0x0040beb3`, gated on a vtable answer of 3), and the demolisher's drain before the destructor | **yes** | Backspace counted (`BACKSPACE_UNDO_QUEUE_RUN`); the drain, `ParkPathBuilding.DrainQueue` |
 
 The console's `delqueue` (`LiftQueue`) re-measures too. In Lost Kingdom the one queue that could be cut is the Belly
@@ -527,6 +527,49 @@ lets path over a queue cell only when the cell's `mNeighbours` has exactly one b
 `0x00535ce0`..`0x00535ce9`) and the cell that way is a queue cell (`0x00535ced`..`0x00535cfe`); otherwise it answers
 red (`0x00535d12`). All four cells carry two bits (0x50, 0x44, 0x44, 0x44). The console's `path`, which Q50's game
 run used, calls `LayPathRun` without the verdict.
+
+#### Q86: clearing a path joined to an entrance
+
+Re-read 2026-10-03 in a private headless Ghidra project, copied and hash-checked against the original project.
+`testme.exe` SHA-256 `cf0ffd955077eca146d75ee46c45b8a0786fb757a8f7d204b1aed8ec5a1ee4cb` matches the reference binary.
+`FUN_005367a0` clears the path's link (`0x00536854`), the neighbour's opposite link (`0x00536877`), and retiles the
+neighbour (`0x0053687e`). It then calls `FUN_004de1f0` at `0x0053694b` only for source type 1, neighbour type 9,
+a cardinal side, a nonzero neighbour parent, and a resolved class-3 thing. This happens **per side**, before the
+next side is unlinked and before the path is reset. A normal single-linked entrance now has no queue: its guests
+are put out for 15 happiness, except the nominee and raw state 14. An exit or diagonal entrance is not notified.
+
+The queue stamp `FUN_005346d0` raises `DAT_0081d7a8` around its call to this same clear (`0x00534741`). Force bypasses
+NOMODIFY and the overlap counter, but **does not bypass entrance notification**. OpenTPW's two clearing helpers
+share this notification through `Unlink`; other callers retain their own notification rules. Refused ordinary
+clears still do nothing to the queue. A `Path clear:` log records each entrance notified.
+
+**Reachability checked before confirmation.** The stock Drinks Shop's faced path `(43,29)` is NOMODIFY; deleting it
+is refused. The queue tool also refuses protected path in the middle of a run; at a run's end it joins the path
+without converting it. A sale retains a shared path's protection while another entrance/exit remains. No normal
+player sequence ejecting an already populated queue through this arm was established.
+
+A normal placement **does** reach the arm: lay ordinary path at `(61,22)`, then buy a Belly Bounce at `(60,23)`.
+The object is registered before `MarkWaysInAndOut` links its entrance; the queue stub then force-clears the path.
+Predicted **one notification, zero ejections**; observed one `Path clear:` line for new thing 43, no ejections, and
+the ride and queue node photographed. Its entrance is unlinked at this point; the queue tool reconnects the node.
+The stock Drinks Shop delete predicted **zero cells removed** and retained its path and entrance link as expected.
+
+**Populated-queue confirmation is instrumented.** A temporary console fixture (not shipped) creates four guests
+at the Drinks Shop, joins them to its queue at happiness 50, and leaves the simulation paused. In the ordinary
+case it removes NOMODIFY and zeroes overlap, then uses the normal `delpath 43 29`. In the forced case protection
+remains and the fixture calls `StampQueueCell` directly, bypassing the player verdict. For **each** case, predicted
+four guests/one cell before, **zero guests/zero cells after**, with **four release logs at happiness 35**. Both
+runs matched: guests 43–46 became Deciding, destination 0, and stayed at their feet. Before/after screenshots show
+the four guests and the path removed or replaced by queue. Their internal state and happiness are census evidence,
+not readable from their pictures. The nominee and state-14 exceptions were tested, not photographed.
+
+Evidence in the local `q86/` harness directory: `clear-cell.txt`, `clear-path-asm.txt`, `stamp.txt`, `ghidra-copy.json`,
+`runtime-results.json`, `predictions.txt`, `instrumentation.patch`; `reachability/`, `placement/`, `ordinary/` and
+`forced/` each hold `run.log`, two screenshots and same-run save manifests. All four save comparisons were unchanged.
+Thirteen new regression cases cover both clearing helpers, the actual stamp caller, exemptions, refusals, cardinal
+and owner guards, both link bits, and per-side timing. Restoring both missing notifications failed **8 of 20**
+`ParkQueueRemeasureTests`; restoring the fix passed the full **1,667** tests, none skipped. Independent Astra review
+checked the applied change and the supplied Ghidra evidence; runtime and build checks were run by the parent.
 
 #### The sale's drain - `FUN_00530120` and `FUN_0052fe50`
 

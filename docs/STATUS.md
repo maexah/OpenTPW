@@ -8,7 +8,7 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 - Lobby: four islands, front end, advisor, weather, particles, options, saves, the island gate, and the attract camera flying around all four islands with all four heard at once. Enter swings the camera onto the gate, opens it and flies in before the loading screen; **the island keys wait for that flight**, and **Escape cancels it** (the camera orbits again, the gate shuts, the panel comes back). **Enter, the arrows and Escape act on their release**, and **a left press on the lobby's view enters the park**.
 - Park: ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (5 of 6), **lit per vertex as the original lights it** (ambient colour + clamped sun; the lobby keeps the old lighting), **every material a mesh names drawn** (Q203). The camcorder walks the original's sweep pass for pass, **draws the peeps from their ground-level `.FPC` pictures**, and **a quick right click leaves it** (RMB cancel on). Leaving one lets go of all of it: nothing of a left park is held in the lobby, nor of any left scene's interface.
-- Building and staffing: purchase menu and hire screen, both reachable from Buy. Things bought, sold, moved, carried; staff hired, fired, picked up, put down. **Selling or moving a thing puts its riders and queuers off where they stand**, staff resting there get up, and its script goes with it. **Cutting a queue puts out whoever stands past its new end.** A staff drop the park refuses keeps the candidate. **The hand holds one thing and lets go of it the original's ways** (quick right click with RMB cancel on, Escape, Delete, the camcorder, a new pickup, leaving); a moved thing stays in it until a cell takes it. A placed ride's window opens from a click **anywhere on its footprint**.
+- Building and staffing: purchase menu and hire screen, both reachable from Buy. Things bought, sold, moved, carried; staff hired, fired, picked up, put down. **Selling or moving a thing puts its riders and queuers off where they stand**, staff resting there get up, and its script goes with it. **Cutting a queue puts out whoever stands past its new end.** Clearing a path linked to an entrance remeasures its queue, including a forced queue stamp (Q86). A staff drop the park refuses keeps the candidate. **The hand holds one thing and lets go of it the original's ways** (quick right click with RMB cancel on, Escape, Delete, the camcorder, a new pickup, leaving); a moved thing stays in it until a cell takes it. A placed ride's window opens from a click **anywhere on its footprint**.
 - Information and money: Info and Money open all-staff, all-items, all-visitors and entry-price screens; **the all-visitors list keeps its rows and its scroll, rewritten in place, a row added and removed as a guest comes and goes** (Q200b). **The entry-price door shuts the park and every ride a guest may be offered**, drawn down when shut: a shut ride turns its queue away one head a sweep, for 15, and opening the door or editing its queue opens it again. **The bank moves as the original's** (Q177c, Q96): a charge is banked and a sale's cost of goods withdrawn, so a drink nets the park 10. **The month's change trains, runs the bank's turn and pays each wage** (Q198b): the shipped park's month costs 538.
 - Building by POINTING - click to anchor, click to commit, no drag, because both of the original's drag slots are bare `RET` stubs. A click on grass or path picks up the PATH tool (20 a cell) with its own squares and cursors; Backspace takes the last run up, Escape puts the tool away. QUEUE is 75, refunded. **A bought thing starts at its own price.**
 - **Placing a ride lays its queue's first cell before the entrance and hands over the queue tool there**, with the original's coloured squares where a click will lay it, **lifted over a built cell by its `.hmp`**; a click onto a path lays and joins it. Guests queue and ride. **The catalogue follows the player mode**: Instant Action lays each item's `Easy_` file over its own (50 items); Full Simulation uses the regular 67 (Q197); **the buy list lists only the researched, the save's flags** (Q201b).
@@ -33,10 +33,11 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q86**, clearing a path joined to an entrance must put its queue out. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q89**, decode the park door’s gate command and its empty-park census; decode only next session. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
+- Q86 populated-queue release is instrumented; no normal player sequence established. Nominee/state-14 exemptions tested only.
 - **The RIDER on a ride bought this session**: measured five times, not photographed (the console has no pitch).
 - `SpriteScript.ScheduleFrom` and `DropUnreadyNominee`: unwiring either leaves the suite green.
 - Nothing the game ships reaches the critical-section cap (Q11), Q68b's ferry and seaplane let-go, Q82b's stamp ahead of the clock, state 6's wait or Q83b's stack errors: tested only; nor a sale's staff half, as nobody rests yet (Q36).
@@ -51,12 +52,14 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 | | | measured |
 |---|---|---|
 | Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q87 |
-| Tests | **1654**, 0 fail, 0 skip with the game | 2026-10-03, Q206 |
+| Tests | **1667**, 0 fail, 0 skip with the game | 2026-10-03, Q86 |
 | Tests without the game | **647** ran, **928** skipped, of 1575 | 2026-10-01, after Q87 |
 | Build warnings | 121 | 2026-10-03, archive exact reads |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-10-03 (Q86).** Path clears remeasure linked entrances after both link bits go. Predicted and observed one notification during queued placement, and zero cells removed by a protected stock-path delete. Two instrumented four-guest runs matched queue 4→0, cells 1→0 and happiness 50→35, with screenshots and logs. Eight tests fail with the bug restored. Reachability limits and evidence: `docs/exe/ride-operation.md`, Q86.
 
 **2026-10-03 (Q206).** Staff queue/approach wandering reproduced and fixed; `docs/exe/staff-wandering.md`. Predicted zero excursions in two 120-second runs; observed zero in 3,840 guard/researcher census rows, with screenshots and continued movement. Restoring the bug fails nine tests; removing containment or the patrol type gate fails three each. Original destination filters restored; their use during physical movement is an explicit containment deviation. Q112 recovery from unlinked terrain remains open. Independent applied review passed through relayed primary evidence (child filesystem access unavailable).
 

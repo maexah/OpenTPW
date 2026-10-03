@@ -3996,6 +3996,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Predicted zero queue/approach excursions: zero across 3,840 staff census rows in two 120-second game runs,
   screenshots inspected. Restored bug fails nine tests; containment and patrol type mutations fail three each.
   1,654 tests pass with game data, none skipped. Evidence and limitations: `docs/exe/staff-wandering.md`.
+- [x] **Q86. Clearing a path joined to an entrance puts its whole queue out.** Found by Q50's decode. `ClearCell`'s
+  path arm re-walks the entrance owner's queue (`0x0053694b`) after unlinking both sides, so the queue measures 0 and
+  all but the nominee and state 14 go. `ParkPathBuilding.ClearPathCell` re-walks nothing. First check it is reachable
+  in Lost Kingdom, where every path before an entrance is NOMODIFY, and from the queue stamp's forced clear
+  (`0x00534741`).
+  Completed on `alexah/258-q86-path-clear-queue`; decode, runtime evidence and reachability limits in
+  `docs/exe/ride-operation.md`, "Q86: clearing a path joined to an entrance". Normal placement reaches an empty
+  queue; populated-queue release confirmed with explicit instrumentation.
 
 ## B. Docs and comments
 
