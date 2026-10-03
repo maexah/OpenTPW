@@ -4050,6 +4050,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   response/sample sequence **308/342, 310/344, 309/343, 311/345**. All **14** restored defects fail; **1699** tests pass,
   no skips. Independent applied review passed after timing corrections. `docs/exe/advisor-park.md`; branch
   `alexah/263-q90b-advisor-door`. Saved histories remain counted; original data and saves unchanged.
+- [x] **Q91. A ride's model does not change as it closes and opens. Decode first.** Decoded only on
+  `alexah/264-q91-closed-ride-decode`: separate generated hoardings, four texture frames (byte offsets
+  0/8/16/24), progress rates +0.2/−0.3 per engine-clock second, staggered vertex/UV animation and guarded
+  warning selection. `docs/exe/ride-hoardings.md`. No runtime screenshot/census, implementation or mutation
+  claimed; Q91b carries the build and confirmation.
 
 ## B. Docs and comments
 

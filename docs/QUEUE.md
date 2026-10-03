@@ -52,11 +52,14 @@ artifacts are listed in `docs/history/README.md`.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q91. A ride's model does not change as it closes and opens. Decode first.** Found by Q50b's decode. Every
-  close calls `FUN_00454550( model, 1 )` and every open `FUN_004547c0( model )` (`ride-operation.md`, the
-  `FUN_00454550` row); the model loader around them names `Hoardings`, and nothing parses or reads `RideInfo.Hoarding`.
-  Counted `CLOSED_RIDE_MODEL_CHANGE`, `OPENED_RIDE_MODEL_CHANGE`. Decode what the four texture offsets and `+0xbc` draw,
-  then build. Confirm: photograph the Belly Bounce before and after the door.
+- [ ] **Q91b. Build the closed/open ride hoardings.** Q91's decode is in `docs/exe/ride-hoardings.md`.
+  Parse `Info.Hoarding`, build the original outline's generated panels with its terrain/corner fitting,
+  four MiscMesh textures, staggered height/UV animation, warning-selection guards and per-instance lifecycle.
+  Follow the original block parser and complete corner algorithm when porting; no bounding-box substitute.
+  Restore saved progress/flags. Use `Time.Delta` for movement; keep engine-clock pause/rate behavior explicit.
+  Remove `CLOSED_RIDE_MODEL_CHANGE` and `OPENED_RIDE_MODEL_CHANGE` only when built. Confirm: photograph
+  Belly Bounce before and after the park door closes and after reopening, paired with a predicted census/log
+  of panel count, texture and progress. Add regression tests; restore the bug and prove the new tests fail.
 - [ ] **Q92. The ride window's door is not built.** Found by Q50b's decode. `FUN_004af600` case `0x3e38` →
   `FUN_0048ccf0` closes with `FUN_004df300` or opens with `FUN_004df390`, unguarded; `FUN_004ad4e0` sets the switch
   from `mCanLoad`, greys it for a closed ride the guard refuses, and the window's box (`0x3e25`) shows status code 1,
