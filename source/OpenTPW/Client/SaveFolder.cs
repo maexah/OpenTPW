@@ -34,6 +34,10 @@ internal static class SaveFolder
 
 	private static string[]? _themes;
 
+	// A failed load leaves defaults in memory. A later readable destination does not make those
+	// defaults safe to write over it. Scoped to the mapped filesystem so another installation is independent.
+	private static BaseFileSystem? _unreadConfig;
+
 	/// <summary>
 	/// The themes every player has a folder and a park record for: the folders under data\levels that hold
 	/// a global.sam - fantasy, hallow, jungle and space. The original walks a list of its own (0x00786b90)
@@ -47,15 +51,23 @@ internal static class SaveFolder
 	/// <summary>Reads save\Config.tcf into the options, if there is one - as the original does before anything else starts (0x00424930).</summary>
 	public static void LoadConfig()
 	{
+		_unreadConfig = SaveFileSystem;
 		if ( Find( ConfigName ) is not { } path )
+		{
+			_unreadConfig = null;
 			return;
+		}
 
 		try
 		{
 			using var stream = SaveFileSystem.OpenRead( path );
 
 			if ( ConfigFile.Read( stream ) is { } file )
+			{
 				GameOptions.Current.Apply( file );
+				if ( file.CanWrite )
+					_unreadConfig = null;
+			}
 
 			Log.Info( $"Saves: read the options from {path}" );
 		}
@@ -68,10 +80,21 @@ internal static class SaveFolder
 	/// <summary>Writes the machine's options to save\Config.tcf - the options screen's tick (0x004237f0), and a player being saved (0x00424820).</summary>
 	public static void SaveConfig()
 	{
-		var path = Find( ConfigName ) ?? ConfigName;
+		var path = ConfigName;
 
 		try
 		{
+			if ( ReferenceEquals( _unreadConfig, SaveFileSystem ) )
+				throw new InvalidDataException( "the options were not loaded successfully; leaving the original unchanged" );
+
+			if ( Find( ConfigName ) is { } existing )
+			{
+				path = existing;
+				using var original = SaveFileSystem.OpenRead( path );
+				if ( ConfigFile.Read( original ) is not { CanWrite: true } )
+					throw new InvalidDataException( "the existing options were not fully understood; leaving them unchanged" );
+			}
+
 			using var memory = new MemoryStream();
 			GameOptions.Current.ToConfigFile().Write( memory );
 
@@ -282,12 +305,24 @@ internal static class SaveFolder
 	public static void SavePlayer( int slot, string name, PlayerFile file )
 	{
 		var folder = PlayerFolder( slot, name );
-		var path = Find( PlayerFileName, folder ) ?? Path.Join( folder, PlayerFileName );
-
-		file.Options = GameOptions.Current.ToPlayerOptions();
+		var path = Path.Join( folder, PlayerFileName );
 
 		try
 		{
+			// A readable prefix is useful in memory, but never permission to replace the original.
+			// Recheck the destination too: LoadPlayer may have failed and left a default PlayerFile.
+			if ( !file.CanWrite )
+				throw new InvalidDataException( "the player was not fully understood; leaving the original unchanged" );
+
+			if ( Find( PlayerFileName, folder ) is { } existing )
+			{
+				path = existing;
+				using var original = SaveFileSystem.OpenRead( path );
+				if ( !PlayerFile.Read( original ).CanWrite )
+					throw new InvalidDataException( "the existing player was not fully understood; leaving it unchanged" );
+			}
+
+			file.Options = GameOptions.Current.ToPlayerOptions();
 			using var memory = new MemoryStream();
 			file.Write( memory );
 

@@ -51,7 +51,9 @@ internal sealed class Players
 		Current = null;
 
 		foreach ( var (slot, name, file) in SaveFolder.ScanPlayers() )
-			_slots[slot] = new Player( slot, name, file ?? new PlayerFile() );
+			// A failed read is not a new player. Keep the fallback read-only even if the original
+			// becomes readable before saving; only a successful select may replace this state.
+			_slots[slot] = new Player( slot, name, file ?? PlayerFile.Read( Stream.Null ) );
 
 		if ( UsedSlots > 0 )
 			Log.Info( $"Front end: {UsedSlots} saved player(s)" );

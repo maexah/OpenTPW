@@ -71,6 +71,12 @@ public sealed class PlayerFile
 	/// <summary>Whether <see cref="Read"/> got to the end of the file - see the class remarks.</summary>
 	public bool IsComplete { get; private set; } = true;
 
+	/// <summary>
+	/// Whether writing can preserve every understood record. A partial read, an unfamiliar version or
+	/// trailing data makes the file read-only. This is OpenTPW's preservation policy, not the original's.
+	/// </summary>
+	public bool CanWrite { get; private set; } = true;
+
 	/// <summary>Whether it holds the player's options whole - always, for a file made here rather than read.</summary>
 	public bool HasOptions { get; private set; } = true;
 
@@ -107,7 +113,7 @@ public sealed class PlayerFile
 
 	public static PlayerFile Read( Stream stream )
 	{
-		var file = new PlayerFile { HasOptions = false };
+		var file = new PlayerFile { HasOptions = false, CanWrite = false };
 
 		try
 		{
@@ -123,6 +129,7 @@ public sealed class PlayerFile
 			}
 
 			file.Record( record );
+			file.CanWrite = version == CurrentVersion && stream.ReadByte() == -1;
 		}
 		catch ( Exception e ) when ( e is EndOfStreamException or InvalidDataException )
 		{
@@ -134,6 +141,9 @@ public sealed class PlayerFile
 
 	public void Write( Stream stream )
 	{
+		if ( !CanWrite )
+			throw new InvalidDataException( "The player file was not fully understood; writing it would discard unread data" );
+
 		var record = RecordStream.ForWriting( stream );
 
 		var version = CurrentVersion;

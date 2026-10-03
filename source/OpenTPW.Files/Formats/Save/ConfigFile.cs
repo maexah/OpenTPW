@@ -47,6 +47,9 @@ public sealed class ConfigFile
 	public int MovieVolume;
 	public int AudioQuality;
 
+	/// <summary>Only the complete known version may be rewritten; unknown data stays on disk.</summary>
+	public bool CanWrite { get; private set; } = true;
+
 	/// <summary>Reads the file, or null for one whose version is 0 - which the original takes as "keep the defaults".</summary>
 	public static ConfigFile? Read( Stream stream )
 	{
@@ -60,11 +63,15 @@ public sealed class ConfigFile
 
 		var file = new ConfigFile();
 		file.Record( record );
+		file.CanWrite = version == CurrentVersion && stream.ReadByte() == -1;
 		return file;
 	}
 
 	public void Write( Stream stream )
 	{
+		if ( !CanWrite )
+			throw new InvalidDataException( "The options file was not fully understood; writing it would discard unread data" );
+
 		var record = RecordStream.ForWriting( stream );
 
 		var version = CurrentVersion;

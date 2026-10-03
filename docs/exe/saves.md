@@ -212,11 +212,23 @@ Confirmed in the running game: `safemode.tcf` round-trips byte for byte; create 
 back screen with key 1 and per-player options restored; delete works; an Instant Action player gets no key, response
 394 (sample 469), and `easymode.TPWI` copied in.
 
-The original's own `Config.tcf` and `gms.dat` exist, in Alexah's Full Simulation saves (`CLAUDE.local.md`); the
-readers above have not been checked against them.
+The original's own `Config.tcf` and `gms.dat` exist, in Alexah's Full Simulation saves (`CLAUDE.local.md`).
+A disposable copy of the Full Simulation profile reads complete: four parks, one unlocked ride and one key;
+an award persists as two keys. A truncated copy remains unchanged when a default profile is offered for saving.
+The original machine options have not been checked here.
 
 Caution: a run of the game writes into the real installation's `save/` (`Config.tcf`, `opentpw.cfg`, player folders).
 Never empty it: delete only what that run created (`CLAUDE.md` rule 12).
+
+### OpenTPW preservation policy
+
+OpenTPW may display the readable prefix of an incomplete player, but refuses to write it back. `PlayerFile.CanWrite`
+requires a complete version-12 record with no trailing bytes; machine options require version 1 with no trailing
+bytes. `SaveFolder` also rechecks an existing destination before replacing it, so a failed load followed by default
+in-memory state cannot overwrite unread data. This is a deliberate preservation policy, not recovered executable
+behaviour. A player loaded read-only can still be selected, but their changes remain in memory and the log says why.
+`ProfilePreservationTests` drives selection, key awards and deselection over disposable files, including truncation,
+unknown versions, invalid counts, trailing bytes and a destination damaged after selection.
 
 ## Unresolved
 
