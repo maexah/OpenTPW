@@ -33,8 +33,9 @@ this removes a check: the adversarial verify and the review of applied edits sta
 
 **Model by stage.** Every agent names its type: `tpw-gather` (Haiku), `tpw-sweep` (Sonnet, high effort) or
 `tpw-verify` (Opus, high effort), in `.claude/agents/`. In a workflow script that is `agentType: 'tpw-gather'` on every
-`agent()` call; with the Agent tool it is `subagent_type`. **A workflow agent with no type and no `model` inherits the
-main session's model, which is Opus**, so an untyped agent is an Opus agent, whatever it was handed. After a run,
+`agent()` call; with the Agent tool it is `subagent_type`. **An agent with no type is not matched to its stage**: every
+workflow agent to 2026-10-01 ran untyped, and almost all of them ran Opus whatever they were handed. A hook on this
+machine (`.claude/hooks/workflow-agent-type.py`) refuses a workflow script with an untyped `agent()` call. After a run,
 `bytype.py` prints its agents by type and model; a `workflow-subagent` row is a call that left the type off.
 
 | Stage | Model | Why |
