@@ -3965,6 +3965,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   gave them. No `.hmp` needs generating. Write the chain into `boot.md`'s step 9 rows and beside `park-engine.md`'s
   allocation paragraph first, then build from the empty-park path, after Q186. Confirm against jungle `restart.INTS`
   (Q167's note): the twelve things, the fee, the APRs and the repayments; then a screenshot of the empty park.
+- [x] **Q85. New guests start unhappy: the decode.** Done 2026-10-03,
+  `alexah/255-q85-arrival-decode`. Decode only; the build and game confirmation are Q85b.
+  `docs/exe/guest-arrivals.md`: constructor happiness **50**, thirst/hunger **0..49**, toilet **0..29**,
+  cash/exit/prankery formulas, eight direct pre-reseed draws plus the base speed and child-bank draw,
+  the ID reseed, both arrival callers, existing ride happiness gains, and the below-10 queue arm.
+  Fresh headless Ghidra instructions against the hash-matched reference; no runtime confirmation claimed.
 
 ## B. Docs and comments
 

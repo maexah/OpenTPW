@@ -52,23 +52,18 @@ artifacts are listed in `docs/history/README.md`.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q85. A guest who arrives starts with happiness nought, and stays there. Decode first.** Found by Q50's game
-  runs: every one of the 33 guests who arrived (30 by `load 30`) read `happy 0` in `peeps`, none above it in nine minutes,
-  while the save's 13 kept theirs (most at 50) until they went home, all by about four minutes, so a dock on anyone left
-  clamps and shows nothing. `ParkPeople`'s new-guest record writes `Happiness: 0f` (and nought thirst, hunger,
-  toilet, vomit, litter) with no note. Decode what the guest constructor `FUN_004faec0` and the arrival give a new
-  guest, and whether a ride's settle-up should raise it, then build it. Confirm: `load 30`, `peeps` over a few
-  minutes. **Then build the `InQueue` turn's unhappy arm** (`QUEUE_TURN_UNHAPPY` in `PeepBehaviour.QueueTurn`): below
-  happiness 10, thought `0xb`, out. Alexah held it at Q50d (2026-09-24) until arrivals start at the original's 50
-  (`FUN_004faec0`, `0x004fb075`), since at nought it would put every arrival out of every queue it joins;
-  `ParkQueueTurnTests.AnUnhappyQueuerStaysUntilArrivalsHaveTheOriginalsHappiness` pins the hold and turns round with it.
-  From Q165b: the constructor's eight unconditional draws on the world generator are the exit level's variation
-  (`0x004faff8`), the kind (`0x004fb01f`, built), the cash's variation (`0x004fb046`), thirst and hunger `% 50` (`+0x1a4`,
-  `+0x1a8`), toilet `% 30` (`+0x1ac`), one discarded (`0x004fb109`), and `+0x1c0` set to 100 when `% 100` is under
-  `PrankeryLikelihood` (`0x004fb114`); two more follow when `FUN_004fa990` answers nought (`0x004fb201`, `0x004fb21c`).
-  From Q169: the excitement match reads the arrival's hunger, so an OpenTPW arrival whose id does not divide by four
-  (the three quarters whose hunger never drifts) takes 35 on every Totem ride until they eat, where the original's,
-  drawn `% 50`, take 35, 28, 21 or 14.
+- [ ] **Q85b. Build the decoded new-guest values, then the unhappy queue arm.** Q85's decode is
+  `docs/exe/guest-arrivals.md`. Implement the constructor's initial happiness and needs, cash/exit variation
+  and prankery, retaining the decoded draw order and stating any remaining generator/arrival-path deviation.
+  `ParkPeople.Admit` still starts happiness/needs at zero, fixes cash/exit level and drops prankery.
+  The ride excitement gain already exists; verify it through a real arrival rather than rebuilding it.
+  Then replace `QUEUE_TURN_UNHAPPY` in `PeepBehaviour.QueueTurn`: below happiness 10 (the truncated low byte),
+  after the original's earlier guards and 30-tick window, thought `0xb`, out by the common leave path.
+  Turn around `ParkQueueTurnTests.AnUnhappyQueuerStaysUntilArrivalsHaveTheOriginalsHappiness`.
+  Confirm: `load 30`, `peeps` over a few minutes, initial happiness **50**, later gains distinguished from
+  departures; a screenshot AND the corresponding census/log. Predict each measured count before reading it.
+  Cover the real constructor and queue boundaries; restore the zero initialization and held queue arm,
+  re-run the new tests and strengthen any that stay green. Build/test the exact commit alone in a worktree.
 - [ ] **Q86. Clearing a path joined to an entrance puts its whole queue out.** Found by Q50's decode. `ClearCell`'s
   path arm re-walks the entrance owner's queue (`0x0053694b`) after unlinking both sides, so the queue measures 0 and
   all but the nominee and state 14 go. `ParkPathBuilding.ClearPathCell` re-walks nothing. First check it is reachable

@@ -22,7 +22,7 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 - No screen sets the training budgets or buys a loan; six months in the red is counted, not an end (Q198b). No litter, day ending, saving a park back, video (the player is decoded: `docs/exe/boot.md`), networking. Research is inert. In a park the advisor says the gadget's opening line and no more (`docs/PLAYER-GAPS.md` gap 4).
 - Eight of the nine per-object windows are unbuilt. Setting patrol areas is deferred by Alexah; staff keep the save's. A walking member of staff is not entered in the cells they cross; only hiring and putting down place one.
-- Unbuilt: Q102-Q105, five queue-turn arms (the unhappy one held for Q85), spot animation (Q98), Q112's walk to path.
+- Unbuilt: Q102-Q105, five queue-turn arms (the unhappy one held for Q85b), spot animation (Q98), Q112's walk to path.
 - The park's door moves no gate (Q89), advisor (Q90) or shut ride's model (Q91); the ride window's door is no button (Q92), and a bought queued thing starts open (Q93).
 - Nothing shows what the hand holds (`CARRY_PREVIEW_MARKERS`, `STAFF_CARRY_PREVIEW`); any cell takes a candidate (Q40).
 - The fly-in's fade to black is not drawn (Q61). Keys: Escape over the player slots opens the game menu (Q64) and closes no park screen (Q119); Ctrl+H acts on the press, F8 is not built (Q65); modifiers count as the frame ends (Q120). A disabled button still takes the pointer (Q66); presses the original stops reach the park (Q113, Q115).
@@ -33,7 +33,7 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q85**, decode first (new arrivals' happiness). **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q85b**, build the decoded arrivals and unhappy queue arm; Q85's findings are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -57,6 +57,8 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-10-03 (Q85, decode only).** Headless Ghidra confirms constructor happiness 50, random needs, cash/exit variation and prankery; normal arrival keeps them. The world-generator reseed and draw order are recorded in `docs/exe/guest-arrivals.md`. Ride happiness gains already exist in OpenTPW. Arrival initialization and the unhappy queue arm remain unbuilt; no new screen or census confirmation.
 
 **2026-10-03 (Q197).** Fresh Full Simulation startup confirmed by screenshot ($50,000, empty Lost Kingdom) and predicted startup census (12 things, 0 peeps, 16,384 cells, closed, fee and eight loans). All 16,384 reference cells agree except four cosmetic random path-art variants, counted; both fixed objects and manager IDs agree. Bug restoration fails the new test. Source review covered the applied core through relayed evidence; direct reviewer shell access was unavailable. Save/load of a played park remains unbuilt.
 

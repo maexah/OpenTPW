@@ -1342,9 +1342,10 @@ the balance stack sets, plus one. The two global files, `data/levels/Standard.sa
 the other is loaded, `FUN_005156a0`), each set rows 0 to 7, and no theme file sets a row: 8 in every shipped park,
 which OpenTPW takes as the constant `ParkWorld.GuestState.PersonTypes`. The person base's constructor draws first,
 the base speed `% 5` (`FUN_004f8940`, `0x004f89e1`; "Where a WALKING peep is drawn"); then the kind is the second of
-the guest constructor's eight unconditional draws, after the exit level's variation (`0x004faff8`) and before the
+the guest constructor's eight direct pre-reseed draws, after the exit level's variation (`0x004faff8`) and before the
 cash's (`0x004fb046`); the five after it set thirst and hunger (`% 50`), toilet (`% 30`), one discarded, and the
-prankery byte `+0x1c0` against `PrankeryLikelihood`, and two more follow on one branch (Q85). OpenTPW draws the kind
+prankery byte `+0x1c0` against `PrankeryLikelihood`. The later ID reseed, child-bank draw and two conditional
+destination draws are decoded in [guest-arrivals.md](guest-arrivals.md) (Q85). OpenTPW draws the kind
 and then the base speed, from `System.Random`, and varies neither cash nor exit level (`park.md`, "What a new guest's
 fields come from"), so the ranges are the original's and the sequence is not.
 
